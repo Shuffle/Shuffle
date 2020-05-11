@@ -28,4 +28,6 @@ echo "Setting up backend"
 cd ../backend/go-app
 go build
 go test
+
 #gcloud app deploy $GOPATH/src/github.com/frikky/shuffle/app.yaml
+echo "This script is not finished. Please follow the docker installation guide here: https://github.com/frikky/shuffle/blob/master/install-guide.md"
