@@ -1,0 +1,228 @@
+name: Uber API
+is_valid: true
+id: 795ed46f-2dbd-43d6-9d0c-1f6b9cce14ea
+link: ""
+app_version: 1.0.0
+generated: true
+sharing: false
+verified: false
+tested: false
+owner: 2501f368-edf2-4fee-bb7e-457d65d7410c
+private_id: f97a44dd-f1c3-48ae-b46f-ceb19ce3039c
+description: Move your app forward with the Uber API
+environment: cloud
+smallimage: ""
+large_image: ""
+contact_info:
+  name: ""
+  url: ""
+actions:
+- description: The Time Estimates endpoint returns ETAs for all products offered at
+    a given location, with the responses expressed as integers in seconds. We recommend
+    that this endpoint be called every minute to provide the most accurate, up-to-date
+    ETAs.
+  name: get_time_estimates
+  nodetype: action
+  environment: cloud
+  sharing: false
+  privateid: ""
+  appid: ""
+  tested: false
+  parameters:
+  - description: The URL of the app
+    name: url
+    example: ""
+    multiline: false
+    required: true
+    schema:
+      type: string
+  - description: Latitude component of start location.
+    name: start_latitude
+    example: ""
+    multiline: false
+    required: true
+    schema:
+      type: string
+  - description: Longitude component of start location.
+    name: start_longitude
+    example: ""
+    multiline: false
+    required: true
+    schema:
+      type: string
+  - description: Unique customer identifier to be used for experience customization.
+    name: customer_uuid
+    example: ""
+    multiline: false
+    required: false
+    schema:
+      type: string
+  - description: Unique identifier representing a specific product for a given latitude
+      & longitude.
+    name: product_id
+    example: ""
+    multiline: false
+    required: false
+    schema:
+      type: string
+  returns:
+    schema:
+      type: string
+- description: The User Activity endpoint returns data about a user's lifetime activity
+    with Uber. The response will include pickup locations and times, dropoff locations
+    and times, the distance of past requests, and information about which products
+    were requested.<br><br>The history array in the response will have a maximum length
+    based on the limit parameter. The response value count may exceed limit, therefore
+    subsequent API requests may be necessary.
+  name: get_user_activity
+  nodetype: action
+  environment: cloud
+  sharing: false
+  privateid: ""
+  appid: ""
+  tested: false
+  parameters:
+  - description: The URL of the app
+    name: url
+    example: ""
+    multiline: false
+    required: true
+    schema:
+      type: string
+  - description: Offset the list of returned results by this amount. Default is zero.
+    name: offset
+    example: ""
+    multiline: false
+    required: false
+    schema:
+      type: string
+  - description: Number of items to retrieve. Default is 5, maximum is 100.
+    name: limit
+    example: ""
+    multiline: false
+    required: false
+    schema:
+      type: string
+  returns:
+    schema:
+      type: string
+- description: The User Profile endpoint returns information about the Uber user that
+    has authorized with the application.
+  name: get_user_profile
+  nodetype: action
+  environment: cloud
+  sharing: false
+  privateid: ""
+  appid: ""
+  tested: false
+  parameters:
+  - description: The URL of the app
+    name: url
+    example: ""
+    multiline: false
+    required: true
+    schema:
+      type: string
+  returns:
+    schema:
+      type: string
+- description: The Products endpoint returns information about the Uber products offered
+    at a given location. The response includes the display name and other details
+    about each product, and lists the products in the proper display order.
+  name: get_product_types
+  nodetype: action
+  environment: cloud
+  sharing: false
+  privateid: ""
+  appid: ""
+  tested: false
+  parameters:
+  - description: The URL of the app
+    name: url
+    example: ""
+    multiline: false
+    required: true
+    schema:
+      type: string
+  - description: Latitude component of location.
+    name: latitude
+    example: ""
+    multiline: false
+    required: true
+    schema:
+      type: string
+  - description: Longitude component of location.
+    name: longitude
+    example: ""
+    multiline: false
+    required: true
+    schema:
+      type: string
+  returns:
+    schema:
+      type: string
+- description: The Price Estimates endpoint returns an estimated price range for each
+    product offered at a given location. The price estimate is provided as a formatted
+    string with the full price range and the localized currency symbol.<br><br>The
+    response also includes low and high estimates, and the [ISO 4217](http://en.wikipedia.org/wiki/ISO_4217)
+    currency code for situations requiring currency conversion. When surge is active
+    for a particular product, its surge_multiplier will be greater than 1, but the
+    price estimate already factors in this multiplier.
+  name: get_price_estimates
+  nodetype: action
+  environment: cloud
+  sharing: false
+  privateid: ""
+  appid: ""
+  tested: false
+  parameters:
+  - description: The URL of the app
+    name: url
+    example: ""
+    multiline: false
+    required: true
+    schema:
+      type: string
+  - description: Latitude component of start location.
+    name: start_latitude
+    example: ""
+    multiline: false
+    required: true
+    schema:
+      type: string
+  - description: Longitude component of start location.
+    name: start_longitude
+    example: ""
+    multiline: false
+    required: true
+    schema:
+      type: string
+  - description: Latitude component of end location.
+    name: end_latitude
+    example: ""
+    multiline: false
+    required: true
+    schema:
+      type: string
+  - description: Longitude component of end location.
+    name: end_longitude
+    example: ""
+    multiline: false
+    required: true
+    schema:
+      type: string
+  returns:
+    schema:
+      type: string
+authentication:
+  required: true
+  parameters:
+  - description: ""
+    id: ""
+    name: ""
+    example: ""
+    value: ""
+    multiline: false
+    required: true
+    in: ""
+    scheme: ""

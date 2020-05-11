@@ -1,0 +1,14 @@
+version: '3.4'
+services:
+  thehive4py:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - env.txt
+    restart: "no"
+    deploy:
+      mode: replicated
+      replicas: 10
+      restart_policy:
+        condition: none

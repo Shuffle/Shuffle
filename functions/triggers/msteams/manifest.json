@@ -1,0 +1,50 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.5/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.5",
+  "version": "1.0.0",
+  "id": "9a2a2a63-c63c-4487-baf0-4ff3f4873a7f",
+  "packageName": "com.example.myapp",
+  "devicePermissions" : [],
+  "developer": {
+    "name": "@frikkylikeme",
+    "websiteUrl": "https://shuffler.io/",
+    "privacyUrl": "https://shuffler.io/privacy",
+    "termsOfUseUrl": "https://shuffler.io/tos"
+  },
+  "localizationInfo": {
+    "defaultLanguageTag": "en-us"
+  },
+  "name": {
+    "short": "Shuffle",
+    "full": "Shuffle"
+  },
+  "description": {
+    "short": "Shuffle is a workflow automation platform",
+    "full": "Shuffle is a workflow automation platform. Find more info at https://shuffler.io"
+  },
+  "icons": {
+    "outline": "outline.png",
+    "color": "color.png"
+  },
+  "accentColor": "#15202b",
+  "bots": [
+    {
+      "botId": "9a2a2a63-c63c-4487-baf0-4ff3f4873a7f",
+      "needsChannelSelector": false,
+      "isNotificationOnly": false,
+      "scopes": [ "team", "personal", "groupchat" ],
+      "supportsFiles": false,
+      "commandLists": [
+        {
+          "scopes": [ "team", "groupchat", "personal" ],
+          "commands": [
+            {
+              "title": "test",
+              "description": "THIS IS FOR TESTING"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

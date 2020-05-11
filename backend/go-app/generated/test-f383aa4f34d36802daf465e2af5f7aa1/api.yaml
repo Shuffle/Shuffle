@@ -1,0 +1,31 @@
+name: test
+is_valid: true
+id: a29d4143-fa3b-4456-86c4-fee2d402ddf6
+link: https://test.com
+app_version: 1.0.0
+generated: true
+sharing: false
+verified: false
+tested: false
+owner: c2dbe917-f982-40ed-9045-462872c4ca1e
+private_id: f383aa4f34d36802daf465e2af5f7aa1
+description: test
+environment: cloud
+smallimage: ""
+large_image: ""
+contact_info:
+  name: ""
+  url: ""
+actions: []
+authentication:
+  required: true
+  parameters:
+  - description: ""
+    id: ""
+    name: ""
+    example: ""
+    value: ""
+    multiline: false
+    required: true
+    in: ""
+    scheme: ""

@@ -1,0 +1,31 @@
+name: a
+is_valid: true
+id: 31e2332c-8baa-41e9-98af-c2457d64d946
+link: ""
+app_version: 1.0.0
+generated: true
+sharing: false
+verified: false
+tested: false
+owner: c2dbe917-f982-40ed-9045-462872c4ca1e
+private_id: 757f74fead843a8d9b5a954d2fadfa69
+description: ""
+environment: cloud
+smallimage: ""
+large_image: ""
+contact_info:
+  name: ""
+  url: ""
+actions: []
+authentication:
+  required: true
+  parameters:
+  - description: ""
+    id: ""
+    name: ""
+    example: ""
+    value: ""
+    multiline: false
+    required: true
+    in: ""
+    scheme: ""

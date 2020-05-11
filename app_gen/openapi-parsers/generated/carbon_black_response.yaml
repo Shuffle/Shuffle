@@ -1,0 +1,235 @@
+components:
+  schemas:
+    tmp0:
+      properties:
+        cb_version:
+          type: string
+        company_name:
+          type: string
+        copied_mod_len:
+          type: string
+        digsig_issuer:
+          type: string
+        digsig_prog_name:
+          type: string
+        digsig_publisher:
+          type: string
+        digsig_result:
+          type: string
+        digsig_result_code:
+          type: string
+        digsig_sign_time:
+          type: string
+        digsig_subject:
+          type: string
+        endpoint:
+          type: string
+        event_partition_id:
+          type: string
+        facet_id:
+          type: string
+        file_desc:
+          type: string
+        file_version:
+          type: string
+        group:
+          type: string
+        host_count:
+          type: string
+        internal_name:
+          type: string
+        is_64bit:
+          type: string
+        is_executable_image:
+          type: string
+        last_seen:
+          type: string
+        legal_copyright:
+          type: string
+        md5:
+          type: string
+        observed_filename:
+          type: string
+        orig_mod_len:
+          type: string
+        original_filename:
+          type: string
+        os_type:
+          type: string
+        product_name:
+          type: string
+        product_version:
+          type: string
+        server_added_timestamp:
+          type: string
+        signed:
+          type: string
+        timestamp:
+          type: string
+        watchlists:
+          type: string
+      type: object
+    tmp1:
+      properties:
+        message:
+          type: string
+      type: object
+    tmp2:
+      properties:
+        childproc_count:
+          type: string
+        cmdline:
+          type: string
+        comms_ip:
+          type: string
+        crossproc_count:
+          type: string
+        emet_config:
+          type: string
+        emet_count:
+          type: string
+        filemod_count:
+          type: string
+        filtering_known_dlls:
+          type: string
+        group:
+          type: string
+        host_type:
+          type: string
+        hostname:
+          type: string
+        id:
+          type: string
+        interface_ip:
+          type: string
+        last_server_update:
+          type: string
+        last_update:
+          type: string
+        modload_count:
+          type: string
+        netconn_count:
+          type: string
+        os_type:
+          type: string
+        parent_id:
+          type: string
+        parent_name:
+          type: string
+        parent_pid:
+          type: string
+        parent_unique_id:
+          type: string
+        path:
+          type: string
+        process_md5:
+          type: string
+        process_name:
+          type: string
+        process_pid:
+          type: string
+        processblock_count:
+          type: string
+        regmod_count:
+          type: string
+        segment_id:
+          type: string
+        sensor_id:
+          type: string
+        start:
+          type: string
+        terminated:
+          type: string
+        unique_id:
+          type: string
+        username:
+          type: string
+      type: object
+    tmp3:
+      properties:
+        message:
+          type: string
+      type: object
+  securitySchemes: {}
+info:
+  contact:
+    email: frikky@shuffler.io
+    name: '@frikkylikeme'
+    url: https://twitter.com/frikkylikeme
+  description: Automated generation of Carbon Black Response
+  title: Carbon Black Response
+  version: 1.0.0
+openapi: 3.0.2
+paths:
+  tmp0:
+    post:
+      description: Carbon Black Response Binary Search
+      parameters:
+      - description: Query
+        in: query
+        name: Query
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tmp0'
+          description: Successful request
+      summary: Carbon Black Response Binary Search
+  tmp1:
+    post:
+      description: Carbon Black Response Isolate Sensor
+      parameters:
+      - description: Hostname of a sensor to isolate.
+        in: query
+        name: Hostname
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tmp1'
+          description: Successful request
+      summary: Carbon Black Response Isolate Sensor
+  tmp2:
+    post:
+      description: Carbon Black Response Process Search
+      parameters:
+      - description: Query
+        in: query
+        name: Query
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tmp2'
+          description: Successful request
+      summary: Carbon Black Response Process Search
+  tmp3:
+    post:
+      description: Carbon Black Response Unisolate Sensor
+      parameters:
+      - description: Hostname of a sensor to unisolate.
+        in: query
+        name: Hostname
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tmp3'
+          description: Successful request
+      summary: Carbon Black Response Unisolate Sensor

@@ -1,0 +1,166 @@
+components:
+  schemas:
+    tmp0:
+      properties:
+        bid:
+          type: string
+        cve:
+          type: string
+        description:
+          type: string
+        msb:
+          type: string
+        osvdb:
+          type: string
+        source:
+          type: string
+      type: object
+    tmp1:
+      properties:
+        data:
+          type: string
+        domains:
+          type: string
+        hostnames:
+          type: string
+        ip:
+          type: string
+        location.area_code:
+          type: string
+        location.city:
+          type: string
+        location.country_code:
+          type: string
+        location.country_name:
+          type: string
+        location.dma_code:
+          type: string
+        location.latitude:
+          type: string
+        location.longitude:
+          type: string
+        location.postal_code:
+          type: string
+        location.region_code:
+          type: string
+        org:
+          type: string
+        os:
+          type: string
+        port:
+          type: string
+        transport:
+          type: string
+      type: object
+    tmp2:
+      properties:
+        devicetype:
+          type: string
+        domains:
+          type: string
+        hostnames:
+          type: string
+        ip_str:
+          type: string
+        isp:
+          type: string
+        location.area_code:
+          type: string
+        location.city:
+          type: string
+        location.country_code:
+          type: string
+        location.country_name:
+          type: string
+        location.dma_code:
+          type: string
+        location.latitude:
+          type: string
+        location.longitude:
+          type: string
+        location.postal_code:
+          type: string
+        org:
+          type: string
+        os:
+          type: string
+        port:
+          type: string
+        product:
+          type: string
+        timestamp:
+          type: string
+        title:
+          type: string
+      type: object
+  securitySchemes: {}
+info:
+  contact:
+    email: frikky@shuffler.io
+    name: '@frikkylikeme'
+    url: https://twitter.com/frikkylikeme
+  description: Automated generation of Shodan
+  title: Shodan
+  version: 1.0.0
+openapi: 3.0.2
+paths:
+  tmp0:
+    post:
+      description: Search across a variety of data sources for exploits
+      parameters:
+      - description: Search query used to search the database of known exploits
+        in: query
+        name: Query
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tmp0'
+          description: Successful request
+      summary: Shodan Exploit Search
+  tmp1:
+    post:
+      description: Search all services that have been found on the given host IP
+      parameters:
+      - description: Host IP address
+        in: query
+        name: IP
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tmp1'
+          description: Successful request
+      summary: Shodan Host
+  tmp2:
+    post:
+      description: Search the SHODAN database
+      parameters:
+      - description: Keyword to search Shodan for
+        in: query
+        name: Query
+        required: true
+        schema:
+          type: string
+      - description: 'Max number of results to return. Default: ''Infinite'''
+        in: body
+        name: Limit
+        required: false
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tmp2'
+          description: Successful request
+      summary: Shodan Search

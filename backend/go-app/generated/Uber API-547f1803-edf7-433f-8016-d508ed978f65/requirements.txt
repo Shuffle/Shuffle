@@ -1,0 +1,3 @@
+# No extra requirements needed
+requests
+urllib3

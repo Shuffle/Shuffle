@@ -1,0 +1,559 @@
+components:
+  schemas:
+    tmp0:
+      properties:
+        outcome:
+          type: string
+      type: object
+    tmp1:
+      properties:
+        allRansomwareProcessesSuspended:
+          type: string
+        closeTime:
+          type: string
+        closerName:
+          type: string
+        creationTime:
+          type: string
+        customClassification:
+          type: string
+        decisionFeature:
+          type: string
+        detectionType:
+          type: string
+        elementDisplayName:
+          type: string
+        hasRansomwareSuspendedProcesses:
+          type: string
+        isBlocked:
+          type: string
+        malopActivityTypes:
+          type: string
+        malopLastUpdateTime:
+          type: string
+        malopStartTime:
+          type: string
+        managementStatus:
+          type: string
+        rootCauseElementNames:
+          type: string
+        rootCauseElementTypes:
+          type: string
+      type: object
+    tmp2:
+      properties:
+        blocking:
+          type: string
+        direction:
+          type: string
+        domain:
+          type: string
+        ipAddress:
+          type: string
+        ipAddressString:
+          type: string
+        lastUpdated:
+          type: string
+        port:
+          type: string
+        ruleId:
+          type: string
+      type: object
+    tmp3:
+      properties:
+        blacklistClassification:
+          type: string
+        classificationLink:
+          type: string
+        containsTorDomain:
+          type: string
+        domainClassificationSuspicion:
+          type: string
+        domainNameUniqueId:
+          type: string
+        elementDisplayName:
+          type: string
+        everResolvedDomain:
+          type: string
+        everResolvedSecondLevelDomain:
+          type: string
+        extendedDisplayId:
+          type: string
+        federationSegments:
+          type: string
+        getIpDiscoveryDomainList:
+          type: string
+        hasMalops:
+          type: string
+        hasResolvedClassificationEvidence:
+          type: string
+        hasSuspicions:
+          type: string
+        indifferentClassification:
+          type: string
+        isDomainMalicious:
+          type: string
+        isInIpDiscoveryDomainList:
+          type: string
+        isInternalDomain:
+          type: string
+        isInternalDomainByName:
+          type: string
+        isReverseLookup:
+          type: string
+        isTorrentDomain:
+          type: string
+        lookupDomainClassification:
+          type: string
+        maliciousClassification:
+          type: string
+        maliciousClassificationString:
+          type: string
+        maliciousClassificationType:
+          type: string
+        malwareClassification:
+          type: string
+        name:
+          type: string
+        relatedToMalop:
+          type: string
+        rootCauseKey:
+          type: string
+        secondLevelDomain:
+          type: string
+        sinkholedClassification:
+          type: string
+        sinkholedClassificationEvidence:
+          type: string
+        topLevelDomain:
+          type: string
+        unknownClassification:
+          type: string
+        unresolvedClassification:
+          type: string
+        unwantedClassification:
+          type: string
+        whitelistClassification:
+          type: string
+      type: object
+    tmp4:
+      properties:
+        attemptExecutionProcessSuspicion:
+          type: string
+        attributes:
+          type: string
+        blackListClassification:
+          type: string
+        canonizedPath:
+          type: string
+        classificationLink:
+          type: string
+        correctedPath:
+          type: string
+        createdTime:
+          type: string
+        detectionEventData:
+          type: string
+        dualExtensionName:
+          type: string
+        elementDisplayName:
+          type: string
+        extendedDisplayId:
+          type: string
+        extension:
+          type: string
+        extensionRecord:
+          type: string
+        extensionType:
+          type: string
+        externalProductClassification:
+          type: string
+        externalProductClassificationIsSigned:
+          type: string
+        externalProductClassificationSignatureVerificationStatus:
+          type: string
+        externalProductClassificationSignatureVerified:
+          type: string
+        externalProductClassificationSignatureVerifiedByVerificationStatus:
+          type: string
+        externalProductClassificationType:
+          type: string
+        federationSegments:
+          type: string
+        fileHasSystem32SubDirectories:
+          type: string
+        fileHasSystemSubDirectories:
+          type: string
+        fileHashUniqueId:
+          type: string
+        fileInSystemPath:
+          type: string
+        fileReputationSuspicion:
+          type: string
+        fileReputationSuspicionDecision:
+          type: string
+        fileVersionSuspicionDecision:
+          type: string
+        getNetworkScannersNames:
+          type: string
+        getToolsForUnusualNetworkEvidence:
+          type: string
+        hackingToolClassification:
+          type: string
+        hasAutorun:
+          type: string
+        hasClassification:
+          type: string
+        hasInternalName:
+          type: string
+        hasLegitClassification:
+          type: string
+        hasMalops:
+          type: string
+        hasNonLegitClassification:
+          type: string
+        hasNonLegitClassificationEvidence:
+          type: string
+        hasProductClassification:
+          type: string
+        hasRansomwareClassificationSubType:
+          type: string
+        hasSuspicions:
+          type: string
+        identifiedProduct:
+          type: string
+        indifferentClassification:
+          type: string
+        isDocument:
+          type: string
+        isExecutable:
+          type: string
+        isFromRemovableDevice:
+          type: string
+        isFromTemp:
+          type: string
+        isNoTypeFoundClassification:
+          type: string
+        isPEFile:
+          type: string
+        isProcessImageFile:
+          type: string
+        isScreenSaver:
+          type: string
+        isSigned:
+          type: string
+        isSuspicious:
+          type: string
+        lastDetectionEventData:
+          type: string
+        maliciousClassification:
+          type: string
+        maliciousClassificationString:
+          type: string
+        maliciousClassificationType:
+          type: string
+        maliciousToolClassification:
+          type: string
+        malwareClassification:
+          type: string
+        malwareClassificationEvidence:
+          type: string
+        malwareType:
+          type: string
+        md5:
+          type: string
+        md5String:
+          type: string
+        missingInterperterSectionValue:
+          type: string
+        modifiedTime:
+          type: string
+        name:
+          type: string
+        nameWithoutExtension:
+          type: string
+        path:
+          type: string
+        peSignedAndVerified:
+          type: string
+        productClassificationType:
+          type: string
+        productType:
+          type: string
+        profileId:
+          type: string
+        ransomwareClassification:
+          type: string
+        reasonSignatureVerificationStatus:
+          type: string
+        relatedToMalop:
+          type: string
+        reportedByAntiMalwareEvidence:
+          type: string
+        reportedByAntiMalwareSuspicion:
+          type: string
+        rootCauseKey:
+          type: string
+        sha1:
+          type: string
+        sha1String:
+          type: string
+        signatureVerified:
+          type: string
+        signatureVerifiedByVerificationStatus:
+          type: string
+        signatureVerifiedInternalOrExternal:
+          type: string
+        signedByApple:
+          type: string
+        signedByLinux:
+          type: string
+        signedByMicrosoft:
+          type: string
+        signedByOperatingSystem:
+          type: string
+        signedInternalOrExternal:
+          type: string
+        size:
+          type: string
+        suspiciousClassification:
+          type: string
+        suspiciousScreenSaverCondition:
+          type: string
+        unknownClassification:
+          type: string
+        unsignedPeFileEvidence:
+          type: string
+        unwantedClassification:
+          type: string
+        whitelistClassification:
+          type: string
+      type: object
+    tmp5:
+      properties:
+        address:
+          type: string
+        addressInternalExternalLocal:
+          type: string
+        addressString:
+          type: string
+        blackListClassification:
+          type: string
+        countryCode:
+          type: string
+        countryName:
+          type: string
+        countryNameOrNotExternalType:
+          type: string
+        elementDisplayName:
+          type: string
+        extendedDisplayId:
+          type: string
+        federationSegments:
+          type: string
+        geolocationLookup:
+          type: string
+        hasMalops:
+          type: string
+        hasSuspicions:
+          type: string
+        isDynamicConfiguration:
+          type: string
+        isExternalAddress:
+          type: string
+        isInternalAddress:
+          type: string
+        isLocalAddress:
+          type: string
+        latitude:
+          type: string
+        longitude:
+          type: string
+        lookupIpClassification:
+          type: string
+        maliciousClassification:
+          type: string
+        maliciousClassificationType:
+          type: string
+        rootCauseKey:
+          type: string
+        uniqueIpAddressHash:
+          type: string
+        version:
+          type: string
+        whiteListClassification:
+          type: string
+      type: object
+  securitySchemes: {}
+info:
+  contact:
+    email: frikky@shuffler.io
+    name: '@frikkylikeme'
+    url: https://twitter.com/frikkylikeme
+  description: Automated generation of Cyberreason
+  title: Cyberreason
+  version: 1.0.0
+openapi: 3.0.2
+paths:
+  tmp0:
+    post:
+      description: CyberReason Block or Unblock an Item
+      parameters:
+      - description: Either 'blacklist' or 'whitelist'
+        in: query
+        name: Action
+        required: true
+        schema:
+          type: string
+      - description: IP, Domain, or Hash CSV values to blacklist or whitelist
+        in: query
+        name: Values
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tmp0'
+          description: Successful request
+      summary: CyberReason Block Item
+  tmp1:
+    post:
+      description: CyberReason get alerts from MalOps
+      parameters: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tmp1'
+          description: Successful request
+      summary: CyberReason Get MalOps Alerts
+  tmp2:
+    post:
+      description: CyberReason isolate a host by port
+      parameters:
+      - description: IP to block
+        in: query
+        name: IP
+        required: true
+        schema:
+          type: string
+      - description: Direction to block traffic, one of 'ALL', 'INCOMING', 'OUTGOING'
+        in: query
+        name: Direction to block
+        required: true
+        schema:
+          type: string
+      - description: Port to block
+        in: query
+        name: Port
+        required: true
+        schema:
+          type: string
+      - description: If true will isolate, false will remove from isolation
+        in: query
+        name: Block
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tmp2'
+          description: Successful request
+      summary: CyberReason Isolate Host
+  tmp3:
+    post:
+      description: Check CyberReason for a domain
+      parameters:
+      - description: Limit of results to return
+        in: body
+        name: Limit
+        required: false
+        schema:
+          type: string
+      - description: Timeout
+        in: body
+        name: Timeout (ms)
+        required: false
+        schema:
+          type: string
+      - description: Domain to search for
+        in: query
+        name: Domain
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tmp3'
+          description: Successful request
+      summary: CyberReason Query for Domain
+  tmp4:
+    post:
+      description: Check CyberReason for a hash
+      parameters:
+      - description: Limit of results to return
+        in: body
+        name: Limit
+        required: false
+        schema:
+          type: string
+      - description: Timeout
+        in: body
+        name: Timeout (ms)
+        required: false
+        schema:
+          type: string
+      - description: Hash to search for
+        in: query
+        name: Hash
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tmp4'
+          description: Successful request
+      summary: CyberReason Query for Hash
+  tmp5:
+    post:
+      description: Check CyberReason for a IP
+      parameters:
+      - description: Limit of results to return
+        in: body
+        name: Limit
+        required: false
+        schema:
+          type: string
+      - description: Timeout
+        in: body
+        name: Timeout (ms)
+        required: false
+        schema:
+          type: string
+      - description: IP to search for
+        in: query
+        name: IP
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tmp5'
+          description: Successful request
+      summary: CyberReason Query for IP
