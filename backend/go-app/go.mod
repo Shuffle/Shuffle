@@ -17,6 +17,7 @@ require (
 	github.com/go-git/go-billy/v5 v5.0.0
 	github.com/go-git/go-git/v5 v5.0.0
 	github.com/google/go-github/v28 v28.1.1
+	github.com/gorilla/handlers v1.4.2 // indirect
 	github.com/gorilla/mux v1.7.4
 	github.com/h2non/filetype v1.0.12
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect

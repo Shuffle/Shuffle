@@ -316,13 +316,14 @@ type HookAction struct {
 }
 
 type Hook struct {
-	Id      string       `json:"id" datastore:"id"`
-	Info    Info         `json:"info" datastore:"info"`
-	Actions []HookAction `json:"actions" datastore:"actions"`
-	Type    string       `json:"type" datastore:"type"`
-	Owner   string       `json:"owner" datastore:"owner"`
-	Status  string       `json:"status" datastore:"status"`
-	Running bool         `json:"running" datastore:"running"`
+	Id        string       `json:"id" datastore:"id"`
+	Info      Info         `json:"info" datastore:"info"`
+	Actions   []HookAction `json:"actions" datastore:"actions"`
+	Type      string       `json:"type" datastore:"type"`
+	Owner     string       `json:"owner" datastore:"owner"`
+	Status    string       `json:"status" datastore:"status"`
+	Workflows []string     `json:"workflows" datastore:"workflows"`
+	Running   bool         `json:"running" datastore:"running"`
 }
 
 func createFileFromFile(ctx context.Context, bucket *storage.BucketHandle, remotePath, localPath string) error {
@@ -1332,7 +1333,7 @@ func handleSettings(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("%s  %s", session.Session, UserInfo.Session)
+	//log.Printf("%s  %s", session.Session, UserInfo.Session)
 	if session.Session != UserInfo.Session {
 		log.Printf("Session %s is not the latest. %s", session.Username, err)
 		resp.WriteHeader(401)
@@ -1394,7 +1395,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("%s  %s", session.Session, UserInfo.Session)
+	//log.Printf("%s  %s", session.Session, UserInfo.Session)
 	if session.Session != UserInfo.Session {
 		log.Printf("Session %s is not the latest. %s", session.Username, err)
 		resp.WriteHeader(401)
@@ -1833,7 +1834,7 @@ func handleGetEnvironments(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("Existing environments: %s", string(newjson))
+	//log.Printf("Existing environments: %s", string(newjson))
 
 	resp.WriteHeader(200)
 	resp.Write(newjson)
@@ -2708,46 +2709,88 @@ func handleNewSchedule(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(`{"success": true, "message": "Created new service"}`))
 }
 
-func handleWebhookRedirect(resp http.ResponseWriter, request *http.Request) {
+// Does the webhook
+func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
+	// 1. Get callback data
+	// 2. Load the configuration
+	// 3. Execute the workflow
+
 	path := strings.Split(request.URL.String(), "/")
 	if len(path) < 4 {
 		resp.WriteHeader(403)
+		resp.Write([]byte(`{"success": false}`))
 		return
 	}
 
-	//http.Redirect(resp, request, "http://www.google.com", 301)
-	//https://europe-west1-shuffler.cloudfunctions.net/webhook_e843bfe2-fc36-4fa5-b682-97cdfa0c0091
+	// 1. Get config with hookId
+	//fmt.Sprintf("%s/api/v1/hooks/%s", callbackUrl, hookId)
+	ctx := context.Background()
+	location := strings.Split(request.URL.String(), "/")
 
-	body, err := ioutil.ReadAll(request.Body)
+	var hookId string
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		hookId = location[4]
+	}
+
+	// ID: webhook_<UID>
+	if len(hookId) != 44 {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "message": "ID not valid"}`))
+		return
+	}
+
+	hookId = hookId[8:len(hookId)]
+
+	log.Printf("HookID: %s", hookId)
+	hook, err := getHook(ctx, hookId)
 	if err != nil {
-		http.Error(resp, err.Error(), http.StatusInternalServerError)
+		log.Printf("Failed getting hook: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
 		return
 	}
 
-	// you can reassign the body if you need to parse it as multipart
-	request.Body = ioutil.NopCloser(bytes.NewReader(body))
+	log.Printf("HOOK FOUND: %#v", hook)
+	// Execute the workflow
+	//executeWorkflow(resp, request)
 
-	// create a new url from the raw RequestURI sent by the client
-	proxyScheme := "https"
-	url := fmt.Sprintf("%s://%s-%s.cloudfunctions.net/%s", proxyScheme, defaultLocation, gceProject, path[3])
-	log.Println(url)
-
-	proxyReq, err := http.NewRequest(request.Method, url, bytes.NewReader(body))
-
-	// We may want to filter some headers, otherwise we could just use a shallow copy
-	// proxyReq.Header = req.Header
-	proxyReq.Header = make(http.Header)
-	for h, val := range request.Header {
-		proxyReq.Header[h] = val
-	}
-
-	httpClient := &http.Client{}
-	newresp, err := httpClient.Do(proxyReq)
-	if err != nil {
-		http.Error(resp, err.Error(), http.StatusBadGateway)
+	//resp.WriteHeader(200)
+	//resp.Write([]byte(`{"success": true}`))
+	if hook.Status == "stopped" {
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "The webhook isn't running. Click start to start it"}`)))
 		return
 	}
-	defer newresp.Body.Close()
+
+	if len(hook.Workflows) == 0 {
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "No workflows are defined"}`)))
+		return
+	}
+
+	for _, item := range hook.Workflows {
+		log.Printf("Running for workflow: %s", item)
+		workflow := Workflow{
+			ID: "",
+		}
+
+		workflowExecution, executionResp, err := handleExecution(item, workflow, request)
+
+		if err == nil {
+			resp.WriteHeader(200)
+			resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
+			return
+		}
+
+		resp.WriteHeader(500)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, executionResp)))
+	}
 }
 
 // Starts a new webhook
@@ -2780,6 +2823,9 @@ func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
+
+	log.Println("Data: %s", string(body))
+
 	ctx := context.Background()
 	var requestdata requestData
 	err = yaml.Unmarshal([]byte(body), &requestdata)
@@ -2827,7 +2873,8 @@ func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	hook := Hook{
-		Id: newId,
+		Id:        newId,
+		Workflows: []string{requestdata.Workflow},
 		Info: Info{
 			Name:        requestdata.Name,
 			Description: requestdata.Description,
@@ -2847,6 +2894,9 @@ func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 		Running: false,
 	}
 
+	log.Printf("Hello")
+
+	// FIXME: Add cloud function execution?
 	//b, err := json.Marshal(hook)
 	//if err != nil {
 	//	log.Printf("Failed marshalling: %s", err)
@@ -2855,21 +2905,21 @@ func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 	//	return
 	//}
 
-	environmentVariables := map[string]string{
-		"FUNCTION_APIKEY": user.ApiKey,
-		"CALLBACKURL":     "https://shuffler.io",
-		"HOOKID":          hook.Id,
-	}
+	//environmentVariables := map[string]string{
+	//	"FUNCTION_APIKEY": user.ApiKey,
+	//	"CALLBACKURL":     "https://shuffler.io",
+	//	"HOOKID":          hook.Id,
+	//}
 
-	applocation := fmt.Sprintf("gs://%s/triggers/webhook.zip", bucketName)
-	hookname := fmt.Sprintf("webhook_%s", hook.Id)
-	err = deployWebhookFunction(ctx, hookname, defaultLocation, applocation, environmentVariables)
-	if err != nil {
-		log.Printf("Error deploying hook: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Issue with starting hook. Please wait a second and try again"}`)))
-		return
-	}
+	//applocation := fmt.Sprintf("gs://%s/triggers/webhook.zip", bucketName)
+	//hookname := fmt.Sprintf("webhook_%s", hook.Id)
+	//err = deployWebhookFunction(ctx, hookname, defaultLocation, applocation, environmentVariables)
+	//if err != nil {
+	//	log.Printf("Error deploying hook: %s", err)
+	//	resp.WriteHeader(401)
+	//	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Issue with starting hook. Please wait a second and try again"}`)))
+	//	return
+	//}
 
 	hook.Status = "running"
 	hook.Running = true
@@ -5465,6 +5515,7 @@ func init() {
 	var err error
 	ctx := context.Background()
 
+	log.Printf("Running INIT process")
 	dbclient, err = datastore.NewClient(ctx, gceProject)
 	if err != nil {
 		log.Fatalf("DBclient error during init: %s", err)
@@ -5483,11 +5534,11 @@ func init() {
 		}
 	}
 
-	r := mux.NewRouter()
-	r.HandleFunc("_ah/health", healthCheckHandler)
+	log.Printf("Finished INIT")
 
-	// Webhook redirect to the correct cloud function
-	r.HandleFunc("/functions/webhooks/{key}", handleWebhookRedirect).Methods("POST", "OPTIONS")
+	r := mux.NewRouter()
+	r.HandleFunc("/api/v1/_ah/health", healthCheckHandler)
+
 	// Sends an email if the right things are specified
 	r.HandleFunc("/functions/sendmail", handleSendalert).Methods("POST", "OPTIONS")
 	r.HandleFunc("/functions/outlook/register", handleNewOutlookRegister).Methods("GET", "OPTIONS")
@@ -5552,11 +5603,17 @@ func init() {
 	r.HandleFunc("/api/v1/workflows/{key}", getSpecificWorkflow).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}", saveWorkflow).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}", deleteWorkflow).Methods("DELETE", "OPTIONS")
+
+	// Triggers
+	// Webhook redirect to the correct cloud function
 	r.HandleFunc("/api/v1/hooks/new", handleNewHook).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/hooks/{key}", handleWebhookCallback).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/hooks/{key}/delete", handleDeleteHook).Methods("DELETE", "OPTIONS")
+
+	// Trigger hmm
 	r.HandleFunc("/api/v1/triggers/{key}", handleGetSpecificTrigger).Methods("GET", "OPTIONS")
 
-	// Weird API's for random things
+	// OpenAPI configuration
 	r.HandleFunc("/api/v1/verify_swagger", verifySwagger).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/verify_openapi", verifySwagger).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/get_openapi_uri", echoOpenapiData).Methods("POST", "OPTIONS")

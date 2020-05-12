@@ -167,21 +167,23 @@ type Action struct {
 
 // Added environment for location to execute
 type Trigger struct {
-	AppName     string                       `json:"app_name" datastore:"app_name"`
-	Status      string                       `json:"status" datastore:"status"`
-	AppVersion  string                       `json:"app_version" datastore:"app_version"`
-	Errors      []string                     `json:"errors" datastore:"errors"`
-	ID          string                       `json:"id" datastore:"id"`
-	IsValid     bool                         `json:"is_valid" datastore:"is_valid"`
-	IsStartNode bool                         `json:"isStartNode" datastore:"isStartNode"`
-	Label       string                       `json:"label" datastore:"label"`
-	SmallImage  string                       `json:"small_image" datastore:"small_image,noindex" required:false yaml:"small_image"`
-	LargeImage  string                       `json:"large_image" datastore:"large_image,noindex" yaml:"large_image" required:false`
-	Environment string                       `json:"environment" datastore:"environment"`
-	TriggerType string                       `json:"trigger_type" datastore:"trigger_type"`
-	Name        string                       `json:"name" datastore:"name"`
-	Parameters  []WorkflowAppActionParameter `json:"parameters" datastore: "parameters,noindex"`
-	Position    struct {
+	AppName         string                       `json:"app_name" datastore:"app_name"`
+	Description     string                       `json:"description" datastore:"description"`
+	LongDescription string                       `json:"long_description" datastore:"long_description"`
+	Status          string                       `json:"status" datastore:"status"`
+	AppVersion      string                       `json:"app_version" datastore:"app_version"`
+	Errors          []string                     `json:"errors" datastore:"errors"`
+	ID              string                       `json:"id" datastore:"id"`
+	IsValid         bool                         `json:"is_valid" datastore:"is_valid"`
+	IsStartNode     bool                         `json:"isStartNode" datastore:"isStartNode"`
+	Label           string                       `json:"label" datastore:"label"`
+	SmallImage      string                       `json:"small_image" datastore:"small_image,noindex" required:false yaml:"small_image"`
+	LargeImage      string                       `json:"large_image" datastore:"large_image,noindex" yaml:"large_image" required:false`
+	Environment     string                       `json:"environment" datastore:"environment"`
+	TriggerType     string                       `json:"trigger_type" datastore:"trigger_type"`
+	Name            string                       `json:"name" datastore:"name"`
+	Parameters      []WorkflowAppActionParameter `json:"parameters" datastore: "parameters,noindex"`
+	Position        struct {
 		X float64 `json:"x" datastore:"x"`
 		Y float64 `json:"y" datastore:"y"`
 	} `json:"position"`
@@ -1546,74 +1548,17 @@ func cleanupExecutions(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte("OK"))
 }
 
-func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	user, err := handleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("Api authentication failed in execute workflow: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	location := strings.Split(request.URL.String(), "/")
-
-	var fileId string
-	if location[1] == "api" {
-		if len(location) <= 4 {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
+func handleExecution(id string, workflow Workflow, request *http.Request) (WorkflowExecution, string, error) {
+	ctx := context.Background()
+	if workflow.ID == "" || workflow.ID != id {
+		log.Printf("UPDATING WORKFLOW")
+		tmpworkflow, err := getWorkflow(ctx, id)
+		if err != nil {
+			log.Printf("Failed getting the workflow locally: %s", err)
+			return WorkflowExecution{}, "Failed getting workflow", err
 		}
 
-		fileId = location[4]
-	}
-
-	if len(fileId) != 36 {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Workflow ID to execute is not valid"}`))
-		return
-	}
-
-	//memcacheName := fmt.Sprintf("%s_%s", user.Username, fileId)
-	var workflow Workflow
-	ctx := context.Background()
-	//if item, err := memcache.Get(ctx, memcacheName); err == memcache.ErrCacheMiss {
-	//	// Not in cache
-	//	log.Printf("Workflow %s not in cache.", memcacheName)
-	tmpworkflow, err := getWorkflow(ctx, fileId)
-	if err != nil {
-		log.Printf("Failed getting the workflow locally: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	workflow = *tmpworkflow
-	//} else if err != nil {
-	//	log.Printf("Error getting item: %v", err)
-	//} else {
-	//	// FIXME - verify if value is ok? Can unmarshal etc.
-	//	log.Printf("Got workflow %s from cache", fileId)
-	//	err = json.Unmarshal(item.Value, &workflow)
-	//	if err != nil {
-	//		log.Printf("Failed cache unmarshal in executeworkflow for %s", fileId)
-	//		resp.WriteHeader(401)
-	//		resp.Write([]byte(`{"success": false}`))
-	//	}
-	//}
-
-	// FIXME - have a check for org etc too..
-	// FIXME - admin check like this? idk
-	if user.Id != workflow.Owner && user.Role != "admin" && user.Role != "scheduler" && user.Role != fmt.Sprintf("workflow_%s", fileId) {
-		log.Printf("Wrong user (%s) for workflow %s (execute)", user.Username, workflow.ID)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
+		workflow = *tmpworkflow
 	}
 
 	if len(workflow.Actions) == 0 {
@@ -1631,17 +1576,13 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	if !workflow.IsValid {
 		log.Printf("Stopped execution as workflow %s is not valid.", workflow.ID)
-		resp.WriteHeader(403)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "workflow %s is invalid"}`, workflow.ID)))
-		return
+		return WorkflowExecution{}, fmt.Sprintf(`workflow %s is invalid`, workflow.ID), errors.New("Failed getting workflow")
 	}
 
 	workflowBytes, err := json.Marshal(workflow)
 	if err != nil {
 		log.Printf("Failed workflow unmarshal in execution: %s", err)
-		resp.WriteHeader(http.StatusInternalServerError)
-		resp.Write([]byte(`{"success": false}`))
-		return
+		return WorkflowExecution{}, "", err
 	}
 
 	//log.Println(workflow)
@@ -1649,29 +1590,22 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 	err = json.Unmarshal(workflowBytes, &workflowExecution.Workflow)
 	if err != nil {
 		log.Printf("Failed execution unmarshaling: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
+		return WorkflowExecution{}, "Failed unmarshal during execution", err
 	}
 
 	makeNew := true
 	if request.Method == "POST" {
-
 		body, err := ioutil.ReadAll(request.Body)
 		if err != nil {
-			log.Printf("Failed hook unmarshaling: %s", err)
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
+			log.Printf("Failed request POST read: %s", err)
+			return WorkflowExecution{}, "Failed getting body", err
 		}
 
 		var execution ExecutionRequest
 		err = json.Unmarshal(body, &execution)
 		if err != nil {
 			log.Printf("Failed execution POST unmarshaling: %s", err)
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
+			return WorkflowExecution{}, "", err
 		}
 
 		// FIXME - this should have "execution_argument" from executeWorkflow frontend
@@ -1706,16 +1640,12 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 				oldExecution, err := getWorkflowExecution(ctx, referenceId[0])
 				if err != nil {
 					log.Printf("Failed getting execution (execution) %s: %s", referenceId[0], err)
-					resp.WriteHeader(401)
-					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting execution ID %s because it doesn't exist."}`, referenceId[0])))
-					return
+					return WorkflowExecution{}, fmt.Sprintf("Failed getting execution ID %s because it doesn't exist.", referenceId[0]), err
 				}
 
-				if oldExecution.Workflow.ID != fileId {
+				if oldExecution.Workflow.ID != id {
 					log.Println("Wrong workflowid!")
-					resp.WriteHeader(401)
-					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad ID %s"}`, referenceId)))
-					return
+					return WorkflowExecution{}, fmt.Sprintf("Bad ID %s", referenceId), errors.New("Bad ID")
 				}
 
 				newResults := []ActionResult{}
@@ -1745,14 +1675,10 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 				err = setWorkflowExecution(ctx, *oldExecution)
 				if err != nil {
 					log.Printf("Error saving workflow execution actionresult setting: %s", err)
-					resp.WriteHeader(401)
-					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed setting workflowexecution actionresult in execution: %s"}`, err)))
-					return
+					return WorkflowExecution{}, fmt.Sprintf("Failed setting workflowexecution actionresult in execution: %s", err), err
 				}
 
-				resp.WriteHeader(200)
-				resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Updating %s with your information."}`, referenceId[0])))
-				return
+				return WorkflowExecution{}, "", nil
 			}
 		}
 
@@ -1762,9 +1688,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 			oldExecution, err := getWorkflowExecution(ctx, referenceId[0])
 			if err != nil {
 				log.Printf("Failed getting execution (execution) %s: %s", referenceId[0], err)
-				resp.WriteHeader(401)
-				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting execution ID %s because it doesn't exist."}`, referenceId[0])))
-				return
+				return WorkflowExecution{}, fmt.Sprintf("Failed getting execution ID %s because it doesn't exist.", referenceId[0]), err
 			}
 
 			workflowExecution = *oldExecution
@@ -1790,9 +1714,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - regex uuid, and check if already exists?
 	if len(workflowExecution.ExecutionId) != 36 {
 		log.Printf("Invalid uuid: %s", workflowExecution.ExecutionId)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Invalid uuid."}`))
-		return
+		return WorkflowExecution{}, "Invalid uuid", err
 	}
 
 	// FIXME - find owner of workflow
@@ -1841,9 +1763,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 		//log.Println(action.Environment)
 
 		if action.Environment == "" {
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Environment is not defined for %s"}`, action.Name)))
-			return
+			return WorkflowExecution{}, fmt.Sprintf("Environment is not defined for %s", action.Name), errors.New("Environment not defined!")
 		}
 		newActions = append(newActions, action)
 	}
@@ -1875,9 +1795,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 	err = setWorkflowExecution(ctx, workflowExecution)
 	if err != nil {
 		log.Printf("Error saving workflow execution for updates %s: %s", topic, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed setting workflowexecution"}`)))
-		return
+		return WorkflowExecution{}, "Failed getting workflowexecution", err
 	}
 
 	log.Printf("Environments: %#v", environments)
@@ -1914,32 +1832,71 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	//body, err := json.Marshal(workflow)
-	//if err != nil {
-	//	log.Printf("Failed workflow SET marshalling: %s", err)
-	//	resp.WriteHeader(http.StatusInternalServerError)
-	//	resp.Write([]byte(`{"success": false}`))
-	//	return
-	//}
+	return workflowExecution, "", nil
+}
 
-	//item := &memcache.Item{
-	//	Key:        memcacheName,
-	//	Value:      body,
-	//	Expiration: time.Minute * 10,
-	//}
-	//if err := memcache.Add(ctx, item); err == memcache.ErrNotStored {
-	//	if err := memcache.Set(ctx, item); err != nil {
-	//		log.Printf("Error setting item: %v", err)
-	//	}
-	//} else if err != nil {
-	//	log.Printf("error adding item: %v", err)
-	//} else {
-	//	log.Printf("Set cache for %s", item.Key)
-	//}
+func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
 
-	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
-	return
+	user, err := handleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("Api authentication failed in execute workflow: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	location := strings.Split(request.URL.String(), "/")
+
+	var fileId string
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		fileId = location[4]
+	}
+
+	if len(fileId) != 36 {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Workflow ID to execute is not valid"}`))
+		return
+	}
+
+	//memcacheName := fmt.Sprintf("%s_%s", user.Username, fileId)
+	ctx := context.Background()
+	workflow, err := getWorkflow(ctx, fileId)
+	if err != nil {
+		log.Printf("Failed getting the workflow locally: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// FIXME - have a check for org etc too..
+	// FIXME - admin check like this? idk
+	if user.Id != workflow.Owner && user.Role != "admin" && user.Role != "scheduler" && user.Role != fmt.Sprintf("workflow_%s", fileId) {
+		log.Printf("Wrong user (%s) for workflow %s (execute)", user.Username, workflow.ID)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	workflowExecution, executionResp, err := handleExecution(fileId, *workflow, request)
+
+	if err == nil {
+		resp.WriteHeader(200)
+		resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
+		return
+	}
+
+	resp.WriteHeader(500)
+	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, executionResp)))
 }
 
 func stopSchedule(resp http.ResponseWriter, request *http.Request) {
@@ -3434,21 +3391,21 @@ func handleDeleteHook(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// This is here to force stop and remove the old webhook
-	image := "webhook"
-	err = removeWebhookFunction(ctx, fileId)
-	if err != nil {
-		log.Printf("Function removal issue for %s-%s: %s", image, fileId, err)
-		if strings.Contains(err.Error(), "does not exist") {
-			resp.WriteHeader(200)
-			resp.Write([]byte(`{"success": true, "reason": "Stopped webhook"}`))
+	//image := "webhook"
+	//err = removeWebhookFunction(ctx, fileId)
+	//if err != nil {
+	//	log.Printf("Function removal issue for %s-%s: %s", image, fileId, err)
+	//	if strings.Contains(err.Error(), "does not exist") {
+	//		resp.WriteHeader(200)
+	//		resp.Write([]byte(`{"success": true, "reason": "Stopped webhook"}`))
 
-		} else {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false, "reason": "Couldn't stop webhook, please try again later"}`))
-		}
+	//	} else {
+	//		resp.WriteHeader(401)
+	//		resp.Write([]byte(`{"success": false, "reason": "Couldn't stop webhook, please try again later"}`))
+	//	}
 
-		return
-	}
+	//	return
+	//}
 
 	log.Printf("Successfully deleted webhook %s", fileId)
 	resp.WriteHeader(200)

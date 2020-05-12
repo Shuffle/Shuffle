@@ -1,5 +1,5 @@
 # Shuffle 
-[Shuffler](https://shuffler.io) is an automation platform for your security stack. It leverages docker for scaling and OpenAPI for integrations. It has the possibility to run across multiple isolated environments, and gives you powerful tools to track progress.
+[Shuffle](https://shuffler.io) is an automation platform for your security stack. It leverages docker for scaling and OpenAPI for integrations. It has the possibility to run across multiple isolated environments, and gives you powerful tools to track progress.
 
 ## Try it
 Check out the [installation guide](https://github.com/frikky/shuffle/blob/master/install-guide.md)
