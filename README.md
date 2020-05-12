@@ -16,9 +16,6 @@ Documentation can be found on https://shuffler.io/docs/about or in your own inst
 * App creator for [OpenAPI](https://github.com/frikky/OpenAPI-security-definitions)
 * Easy to learn Python library for custom apps
 
-## License
-Shuffle is an open source and free software released under the AGPL (Affero General Public License). 
-
 ### Setup - Local
 Frontend - requires [npm](https://nodejs.org/en/download/)/[yarn](https://yarnpkg.com/lang/en/docs/install/#debian-stable)/your preferred manager. Runs independently from backend - edit frontend/src/App.yaml to change from localhost to prod setting.
 ```bash
