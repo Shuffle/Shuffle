@@ -1775,6 +1775,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	onpremExecution := false
 	environments := []string{}
 	for _, action := range workflowExecution.Workflow.Actions {
+		log.Printf("ENV: %#v", action.Environment)
 		if action.Environment != cloudname {
 			found := false
 			for _, env := range environments {
@@ -2414,51 +2415,48 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 
 	// FIXME - check whether it's in use and maybe restrict again for later?
 	// FIXME - actually delete other than private apps too..
+	private := false
 	if app.Downloaded {
-		log.Printf("Deleting downloaded app (anyone can do this)")
+		log.Printf("Deleting downloaded app (authenticated users can do this)")
 	} else if user.Id != app.Owner && user.Role != "admin" {
 		log.Printf("Wrong user (%s) for app %s (delete)", user.Username, app.Name)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
+	} else {
+		private = true
 	}
 
 	// Not really deleting it, just removing from user cache
-	var privateApps []WorkflowApp
-	for _, item := range user.PrivateApps {
-		log.Println(item.ID, fileId)
-		if item.ID == fileId {
-			continue
+	if private {
+		log.Printf("Deleting private app")
+		var privateApps []WorkflowApp
+		for _, item := range user.PrivateApps {
+			log.Println(item.ID, fileId)
+			if item.ID == fileId {
+				continue
+			}
+
+			privateApps = append(privateApps, item)
 		}
 
-		privateApps = append(privateApps, item)
-	}
-
-	user.PrivateApps = privateApps
-	err = setUser(ctx, &user)
-	if err != nil {
-		log.Printf("Failed removing %s app for user %s: %s", app.Name, user.Username, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": true"}`)))
-		return
-	}
-
-	// Delete memcache for user
-	// Check cookie
-	c, err := request.Cookie("session_token")
-	if err != nil {
-		log.Printf("User doesn't have sessiontoken on pw change: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "You're not logged in."}`)))
-		return
-	}
-	sessionToken := c.Value
-	session, err := getSession(ctx, sessionToken)
-	if err != nil {
-		log.Printf("Session %s doesn't exist: %s", session.Session, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "You're not logged in"}`))
-		return
+		user.PrivateApps = privateApps
+		err = setUser(ctx, &user)
+		if err != nil {
+			log.Printf("Failed removing %s app for user %s: %s", app.Name, user.Username, err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": true"}`)))
+			return
+		}
+	} else {
+		log.Printf("Deleting public app")
+		err = DeleteKey(ctx, "workflowapp", fileId)
+		if err != nil {
+			log.Printf("Failed deleting workflowapp")
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed deleting workflow app"}`)))
+			return
+		}
 	}
 
 	//err = memcache.Delete(request.Context(), sessionToken)
