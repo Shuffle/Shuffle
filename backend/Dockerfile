@@ -7,7 +7,6 @@ ADD ./go-app/main.go /app
 ADD ./go-app/walkoff.go /app
 ADD ./go-app/docker.go /app
 ADD ./go-app/codegen.go /app
-ADD ./go-app/webhook.go /app
 
 ADD ./go-app/go.mod /app
 
