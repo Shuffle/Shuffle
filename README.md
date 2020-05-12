@@ -10,7 +10,7 @@ Documentation can be found on https://shuffler.io/docs/about or in your own inst
 * Updates after migrating from SaaS to open source
 
 ## Features
-* Premade workflows for Email, TheHive, C rtex MISP
+* Premade workflows for TheHive and MISP
 * Premade apps for a number of security tools
 * Simple workflow editor 
 * App creator for [OpenAPI](https://github.com/frikky/OpenAPI-security-definitions)
