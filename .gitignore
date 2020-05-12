@@ -12,9 +12,6 @@ backend/go-app/generated*
 functions/generated_apps
 *.zip
 
-*.png
-*.jpeg
-*.jpg
 
 backend/onprem/app_sdk/apps
 *test.py
