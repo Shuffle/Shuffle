@@ -531,6 +531,7 @@ const Apps = (props) => {
 		.then((response) => {
 			if (response.status === 200) {
 				alert.success("Successfully deleted app")		
+				getApps()
 			} else {
 				alert.error("Failed deleting app")		
 			}
