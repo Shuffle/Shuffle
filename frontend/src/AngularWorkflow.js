@@ -24,7 +24,7 @@ import FormGroup from '@material-ui/core/FormGroup';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Checkbox from '@material-ui/core/Checkbox';
 
-
+import CreateIcon from '@material-ui/icons/Create';
 import PlayArrowIcon from '@material-ui/icons/PlayArrow';
 import AspectRatioIcon from '@material-ui/icons/AspectRatio';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
@@ -215,6 +215,8 @@ const AngularWorkflow = (props) => {
 		});
 	}
 
+	// Controls the colors and direction of execution results.
+	// Style is in defaultCytoscapeStyle.js
 	const handleUpdateResults = (responseJson) => {
 		//console.log(responseJson)
 		// Loop nodes and find results
@@ -243,8 +245,8 @@ const AngularWorkflow = (props) => {
 						currentnode.removeClass('success-highlight')
 						currentnode.removeClass('failure-highlight')
 						currentnode.removeClass('awaiting-data-highlight')
-						currentnode.addClass('executing-highlight')
 						incomingEdges.addClass('success-highlight')
+						currentnode.addClass('executing-highlight')
 						break
 					case "WAITING": 
 						currentnode.removeClass('not-executing-highlight')
@@ -325,11 +327,11 @@ const AngularWorkflow = (props) => {
 					curelements[i].removeClass("executing-highlight")	
 					curelements[i].addClass("failure-highlight")	
 				} else {
-					curelements[i].removeClass('not-executing-highlight')
-					curelements[i].removeClass('executing-highlight')
-					curelements[i].removeClass('success-highlight')
-					curelements[i].removeClass('awaiting-data-highlight')
-					curelements[i].removeClass('failure-highlight')
+					//curelements[i].removeClass('not-executing-highlight')
+					//curelements[i].removeClass('executing-highlight')
+					//curelements[i].removeClass('success-highlight')
+					//curelements[i].removeClass('awaiting-data-highlight')
+					//curelements[i].removeClass('failure-highlight')
 				}
 			}
 		} else if (responseJson.status === "FINISHED") {
@@ -412,7 +414,7 @@ const AngularWorkflow = (props) => {
 
 		setLastSaved(true)
 		fetch(globalUrl+"/api/v1/workflows/"+props.match.params.key, {
-    	  	method: 'PUT',
+    	  method: 'PUT',
 				headers: {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json',
@@ -1378,7 +1380,7 @@ const AngularWorkflow = (props) => {
 
 		return (
 			<div style={appViewStyle}>
-				<div style={appScrollStyle}>
+				<div style={variableScrollStyle}>
 					{workflow.workflow_variables.map(variable=> {
 						return (
 							<div>
@@ -2265,23 +2267,29 @@ const AngularWorkflow = (props) => {
 								<div style={{flex: "10"}}> 
 									<b>{data.name}: </b> 
 								</div>
-								<div style={{cursor: "pointer", color: staticcolor}} onClick={() => {
-										changeActionParameterVariant("STATIC_VALUE", count) 
+								<Tooltip color="primary" title="Static data" placement="top">
+									<div style={{cursor: "pointer", color: staticcolor}} onClick={() => {
+											changeActionParameterVariant("STATIC_VALUE", count) 
+										}}>
+										<CreateIcon />
+									</div>
+								</Tooltip>
+								&nbsp;|&nbsp;
+								<Tooltip color="primary" title="Data from previous action" placement="top">
+									<div style={{cursor: "pointer", color: actioncolor}} onClick={() => {
+										changeActionParameterVariant("ACTION_RESULT", count) 
 									}}>
-									static  
-								</div>
+										<AppsIcon />
+									</div>
+								</Tooltip>
 								&nbsp;|&nbsp;
-								<div style={{cursor: "pointer", color: actioncolor}} onClick={() => {
-									changeActionParameterVariant("ACTION_RESULT", count) 
-								}}>
-									action	
-								</div>
-								&nbsp;|&nbsp;
-								<div style={{cursor: "pointer", color: varcolor}} onClick={() => {
-									changeActionParameterVariant("WORKFLOW_VARIABLE", count) 
-								}}>
-									var	
-								</div>
+								<Tooltip color="primary" title="Use local variable" placement="top">
+									<div style={{cursor: "pointer", color: varcolor}} onClick={() => {
+										changeActionParameterVariant("WORKFLOW_VARIABLE", count) 
+									}}>
+										<FavoriteBorderIcon />
+									</div>
+								</Tooltip>
 							</div>	
 							{datafield}
 						</div>
@@ -3941,14 +3949,17 @@ const AngularWorkflow = (props) => {
 		return null 
 	}
 
+	const cytoscapeViewWidths = 600
 	const bottomBarStyle = {
 		position: "fixed", 
 		right: 20, 
 		left: leftBarSize,
 		bottom: 0, 
-		minWidth: "100%", 
+		minWidth: cytoscapeViewWidths, 
+		maxWidth: cytoscapeViewWidths,
 		marginLeft: 20,
 		marginBottom: 20,
+		zIndex: 10, 
 	}
 
 	const topBarStyle= {
@@ -3956,7 +3967,8 @@ const AngularWorkflow = (props) => {
 		right: 0, 
 		left: leftBarSize,
 		top: appBarSize, 
-		minWidth: "60%", 
+		minWidth: cytoscapeViewWidths, 
+		maxWidth: cytoscapeViewWidths,
 		marginLeft: 20,
 		marginBottom: 20,
 	}

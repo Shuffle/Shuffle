@@ -8,6 +8,9 @@ import ListItem from '@material-ui/core/ListItem';
 
 import Button from '@material-ui/core/Button';
 import HomeIcon from '@material-ui/icons/Home';
+import PolymerIcon from '@material-ui/icons/Polymer';
+import AppsIcon from '@material-ui/icons/Apps';
+import DescriptionIcon from '@material-ui/icons/Description';
 import Grid from '@material-ui/core/Grid';
 
 const hoverColor = "#f85a3e"
@@ -138,12 +141,18 @@ const Header = props => {
 				<List style={{display: "flex", flexDirect: "row", flex: "1"}} component="nav">
        			<ListItem style={{textAlign: "center"}}>
 							<Link to="/workflows" style={hrefStyle}>
-									<div onMouseOver={handleSoarHover} onMouseOut={handleSoarHoverOut} style={{color: SoarHoverColor, cursor: "pointer"}}>Workflows</div> 
+								<div onMouseOver={handleSoarHover} onMouseOut={handleSoarHoverOut} style={{color: SoarHoverColor, cursor: "pointer", display: "flex"}}>
+									<PolymerIcon style={{marginRight: "5px"}} />
+									<span style={{marginTop: 2}}>Workflows</span>
+								</div> 
 							</Link>
        			</ListItem>
        			<ListItem style={{textAlign: "center"}}>
 							<Link to="/apps" style={hrefStyle}>
-									<div onMouseOver={handleHelpHover} onMouseOut={handleHelpHoverOut} style={{color: HelpHoverColor, cursor: "pointer"}}>Apps</div> 
+									<div onMouseOver={handleHelpHover} onMouseOut={handleHelpHoverOut} style={{color: HelpHoverColor, cursor: "pointer", display: "flex",}}>
+										<AppsIcon style={{marginRight: "5px"}} />
+										<span style={{marginTop: 2}}>Apps</span>
+									</div>
 							</Link>
        			</ListItem>
 						{/*
@@ -155,7 +164,10 @@ const Header = props => {
 						*/}
        			<ListItem style={{textAlign: "center"}}>
 							<Link to="/docs/about" style={hrefStyle}>
-									<div onMouseOver={handleDocsHover} onMouseOut={handleDocsHoverOut} style={{color: DocsHoverColor, cursor: "pointer"}}>Docs</div> 
+									<div onMouseOver={handleDocsHover} onMouseOut={handleDocsHoverOut} style={{color: DocsHoverColor, cursor: "pointer", display: "flex"}}>
+										<DescriptionIcon style={{marginRight: "5px"}} />
+										<span style={{marginTop: 2}}>Docs</span>
+									</div>
 							</Link>
        			</ListItem>
 					{/*

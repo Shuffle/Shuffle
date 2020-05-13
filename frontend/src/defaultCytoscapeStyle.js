@@ -115,6 +115,8 @@ const data = [{
 			selector: '.success-highlight',
 			css: {
 				'background-color': '#399645',
+				'border-color': '#399645',
+				'border-width': '5px',
 				'transition-property': 'background-color',
 				'transition-duration': '0.5s',
 			},
@@ -123,6 +125,8 @@ const data = [{
 			selector: '.failure-highlight',
 			css: {
 				'background-color': '#8e3530',
+				'border-color': '#8e3530',
+				'border-width': '5px',
 				'transition-property': 'background-color',
 				'transition-duration': '0.5s',
 			},
@@ -141,7 +145,8 @@ const data = [{
 			css: {
 				'background-color': '#ffef47',
 				'border-color': '#ffef47',
-				'transition-property': '#ffef47',
+				'border-width': '5px',
+				'transition-property': 'border-width',
 				'transition-duration': '0.25s',
 			},
 		},
@@ -149,6 +154,8 @@ const data = [{
 			selector: '.awaiting-data-highlight',
 			css: {
 				'background-color': '#f4ad42',
+				'border-color': '#f4ad42',
+				'border-width': '5px',
 				'transition-property': 'background-color',
 				'transition-duration': '0.5s',
 			},

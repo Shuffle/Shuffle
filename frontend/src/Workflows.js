@@ -3,6 +3,7 @@ import { useInterval } from 'react-powerhooks';
 
 import Grid from '@material-ui/core/Grid';
 import Paper from '@material-ui/core/Paper';
+import Tooltip from '@material-ui/core/Tooltip';
 import Divider from '@material-ui/core/Divider';
 import Button from '@material-ui/core/Button';
 import TextField from '@material-ui/core/TextField';
@@ -10,10 +11,13 @@ import FormControl from '@material-ui/core/FormControl';
 import IconButton from '@material-ui/core/IconButton';
 import Menu from '@material-ui/core/Menu';
 import MenuItem from '@material-ui/core/MenuItem';
-import MoreVertIcon from '@material-ui/icons/MoreVert';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Switch from '@material-ui/core/Switch';
 
+import CachedIcon from '@material-ui/icons/Cached';
+import EditIcon from '@material-ui/icons/Edit';
+import MoreVertIcon from '@material-ui/icons/MoreVert';
+import PlayArrowIcon from '@material-ui/icons/PlayArrow';
 //import JSONPretty from 'react-json-pretty';
 //import JSONPrettyMon from 'react-json-pretty/dist/monikai'
 import ReactJson from 'react-json-view'
@@ -43,8 +47,9 @@ const Workflows = (props) => {
 	const [collapseJson, setCollapseJson] = React.useState(false)
 
 	const [modalOpen, setModalOpen] = React.useState(false);
-	const [newWorkflowName, setNewWorkflowname] = React.useState("");
+	const [newWorkflowName, setNewWorkflowName] = React.useState("");
 	const [newWorkflowDescription, setNewWorkflowDescription] = React.useState("");
+	const [editingWorkflow, setEditingWorkflow] = React.useState({})
 	const { start, stop } = useInterval({
 	  	duration: 5000,
 	  	startImmediate: false,
@@ -347,21 +352,28 @@ const Workflows = (props) => {
 									aria-label="more"
 									aria-controls="long-menu"
 									aria-haspopup="true"
+									style={{color: "white"}}
 									onClick={menuClick}
 								  >
 									<MoreVertIcon />
 								</IconButton>
 	  							<Menu
-      							  id="long-menu"
-								  anchorEl={anchorEl}
-      							  keepMounted
-      							  open={open}
-								  onClose={() => {
+      							id="long-menu"
+								  	anchorEl={anchorEl}
+      							keepMounted
+      							open={open}
+								  	onClose={() => {
 									  setOpen(false)
 									  setAnchorEl(null)
 								  }}
-      							>
+      					>
 
+								<MenuItem style={{backgroundColor: surfaceColor, color: "white"}} onClick={() => {
+									setModalOpen(true)
+									setEditingWorkflow(data)
+									setNewWorkflowName(data.name)
+									setNewWorkflowDescription(data.description)
+								}} key={"change"}>{"Change name"}</MenuItem>
 								<MenuItem style={{backgroundColor: surfaceColor, color: "white"}} onClick={() => {
 									copyWorkflow(data)		
 									setOpen(false)
@@ -381,9 +393,17 @@ const Workflows = (props) => {
 						<div style={{display: "flex", flex: "1"}}>
 							<Grid item style={{flex: "1", justifyContent: "center"}}>
 								<a href={"/workflows/"+data.id}>
-									<Button style={{}} color="primary" variant="outlined" onClick={() => {}}>Edit</Button> 				
+									<Tooltip color="primary" title="Edit workflow" placement="bottom">
+										<Button style={{}} color="primary" variant="outlined" style={{marginRight: 10}} onClick={() => {}}>
+											<EditIcon />
+										</Button> 				
+									</Tooltip>
 								</a>
-								<Button style={{}} color="primary" variant="outlined" onClick={() => executeWorkflow(data.id)}>Execute</Button> 				
+								<Tooltip color="primary" title="Execute workflow" placement="bottom">
+									<Button style={{}} color="primary" variant="outlined" onClick={() => executeWorkflow(data.id)}>
+										<PlayArrowIcon />
+									</Button> 				
+								</Tooltip>
 							</Grid>
 						</div>
 					</Grid>
@@ -504,7 +524,6 @@ const Workflows = (props) => {
 			*/
 		}
 
-		console.log(data)
 		return (
 			<Paper square style={resultPaperAppStyle} onClick={() => {}}>
 				<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", marginRight: "5px", width: boxWidth, backgroundColor: boxColor}}>
@@ -555,7 +574,6 @@ const Workflows = (props) => {
 	const ExecutionDetails = () => {
 		var starttime = new Date(selectedExecution.started_at*1000)
 		var endtime = new Date(selectedExecution.started_at*1000)
-		console.log(selectedExecution)
 
 		const arg = selectedExecution.execution_argument !== undefined && selectedExecution.execution_argument.length > 0 ? 
 			<div>
@@ -629,13 +647,24 @@ const Workflows = (props) => {
 		if (newWorkflowName.length === 0) {
 			return
 		}
-		var workflowdata = {
-			"name": newWorkflowName,
-			"description": newWorkflowDescription,
+
+		var method = "POST"
+		var extraData = ""
+		var workflowdata = {}
+
+		if (editingWorkflow.id !== undefined) {
+			method = "PUT"
+			extraData = "/"+editingWorkflow.id
+			workflowdata = editingWorkflow
 		}
 
-		fetch(globalUrl+"/api/v1/workflows", {
-    	  	method: 'POST',
+		workflowdata["name"] = newWorkflowName
+		workflowdata["description"] = newWorkflowDescription
+		//console.log(workflowdata)
+		//return
+
+		fetch(globalUrl+"/api/v1/workflows"+extraData, {
+    	  method: method,
 				headers: {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json',
@@ -650,9 +679,13 @@ const Workflows = (props) => {
 			}
 			return response.json()
 		})
-    	.then((responseJson) => {
-			window.location.pathname = "/workflows/"+responseJson["id"] 
-    	})
+    .then((responseJson) => {
+			if (method === "POST") {
+				window.location.pathname = "/workflows/"+responseJson["id"] 
+			} else { 
+				alert.info("Successfully changed basic info for workflow")
+			}
+    })
 		.catch(error => {
 			alert.error(error.toString())
 		});
@@ -674,7 +707,7 @@ const Workflows = (props) => {
 			<DialogTitle><div style={{color: "white"}}>New workflow</div></DialogTitle>
 				<DialogContent>
 					<TextField
-						onBlur={(event) => setNewWorkflowname(event.target.value)}
+						onBlur={(event) => setNewWorkflowName(event.target.value)}
 						InputProps={{
 							style:{
 								color: "white",
@@ -683,6 +716,7 @@ const Workflows = (props) => {
 						color="primary"
 						placeholder="Name"
 						margin="dense"
+						defaultValue={newWorkflowName}
 						fullWidth
 					  />
 					<TextField
@@ -693,6 +727,7 @@ const Workflows = (props) => {
 							},
 						}}
 						color="primary"
+						defaultValue={newWorkflowDescription}
 						placeholder="Description"
 						margin="dense"
 						fullWidth
@@ -700,15 +735,15 @@ const Workflows = (props) => {
 
 				</DialogContent>
 				<DialogActions>
-	        	  	<Button style={{}} onClick={() => setModalOpen(false)} color="primary">
-	        	    	Cancel
-	        	  	</Button>
-	        	  	<Button style={{}} disabled={newWorkflowName.length === 0} onClick={() => {
+					<Button style={{}} onClick={() => setModalOpen(false)} color="primary">
+						Cancel
+					</Button>
+					<Button style={{}} disabled={newWorkflowName.length === 0} onClick={() => {
 						setNewWorkflow()
 						setModalOpen(false)
 					}} color="primary">
-	        	    	Submit	
-	        	  	</Button>
+	        	Submit	
+	        </Button>
 				</DialogActions>
 			</FormControl>
 		</Dialog>
@@ -763,7 +798,9 @@ const Workflows = (props) => {
 						<h2>Executions</h2> 
 					</div>
 					<div style={{flex: "1"}}>
-						<Button color="primary" style={{marginTop: "20px"}} variant="outlined" onClick={() => {alert.info("Refreshing executions"); getWorkflowExecution(selectedWorkflow.id)}}>Refresh</Button> 				
+						<Button color="primary" style={{marginTop: "20px"}} variant="outlined" onClick={() => {alert.info("Refreshing executions"); getWorkflowExecution(selectedWorkflow.id)}}>
+							<CachedIcon />
+						</Button> 				
 					</div>
 				</div>
 				<Divider style={{marginBottom: "10px", height: "1px", width: "100%", backgroundColor: dividerColor}}/>
