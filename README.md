@@ -17,7 +17,6 @@ Documentation can be found on https://shuffler.io/docs/about or in your own inst
 * Easy to learn Python library for custom apps
 
 ## In the works
-* Full OpenAPI support with authentication schemes in App creator
 * User run statistics - Dashboard
 * Debug view for manual executions
 
@@ -84,12 +83,14 @@ There will be a major overhaul to the backend specifically. I'm currently moving
 - * Docker-compose- Frontend, backend, db & orborus 
 - * Configuration - Write setup documentation - Did for docker
 - * Remove orborus? Can deploy straight, but that would be weird - Won't do this yet
+- * Full OpenAPI support with authentication schemes in App creator (not Oauth2 yet)
 - Workflows 		- IMPORT DEFAULT WORKFLOWS - Create some towards e.g. TheHive & MISP.
 - Documentation - General documentation /docs rewrite
 - API doc				- 1. In Shuffle. 2. In e.g. python
-- Add secret to orborus 
+- Add random secret to orborus 
 - Change workflow name
 - Fix scheduler
+- Use variables in e.g. JSON body
 
 ```
 # 1. export DATASTORE_EMULATOR_HOST=0.0.0.0:8000
