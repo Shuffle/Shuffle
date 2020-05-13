@@ -5242,6 +5242,7 @@ func validateSwagger(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(`{"success": false}`))
 }
 
+// Creates an app from the app builder
 func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {

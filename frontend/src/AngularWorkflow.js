@@ -1859,8 +1859,18 @@ const AngularWorkflow = (props) => {
 					{filteredApps.map(app=> {
 						// FIXME - add label to apps, as this might be slow with A LOT of apps
 						var newAppname = app.name
-						newAppname = newAppname.replace("_", " ")
-						newAppname = newAppname.charAt(0).toUpperCase()+newAppname.substring(1)
+						newAppname = newAppname.replace("_", " ").charAt(0).toUpperCase()+newAppname.substring(1)
+						const maxlen = 24
+						if (newAppname.length > maxlen) {
+							newAppname = newAppname.slice(0, maxlen)+".."
+						}
+
+						// Description fucks this up - fix overflow :)
+						//const maxdesclen = 5
+						//var desc = app.description
+						//if (newAppname.length > maxdesclen) {
+						//	desc = desc.slice(0, maxdesclen)+".."
+						//}
 
 						const image = "url("+app.large_image+")"
 						return(
@@ -1881,13 +1891,13 @@ const AngularWorkflow = (props) => {
 										<div style={{height: 80, width: 80, backgroundImage: image, backgroundSize: "cover", backgroundRepeat: "no-repeat"}} />
 									</Grid>
 									<Grid style={{display: "flex", flexDirection: "column", marginLeft: "20px"}}>
-										<Grid item style={{flex: "1"}}>
+										<Grid item style={{flex: 1}}>
 											<h4 style={{marginBottom: "0px", marginTop: "5px"}}>{newAppname}</h4>
 										</Grid>
-										<Grid item style={{flex: "1"}}>
-											Description
+										<Grid item style={{flex: 1, width: "100%", }}>
+											Short description...
 										</Grid>
-										<Grid item style={{flex: "1"}}>
+										<Grid item style={{flex: 1}}>
 											Version: {app.app_version}	
 										</Grid>
 									</Grid>
@@ -4303,6 +4313,7 @@ const AngularWorkflow = (props) => {
 					fullWidth
 					type="text"
 					color="primary"
+					disabled={true}
 					placeholder="Bearer token" 
 					defaultValue={selectedApp.link}
 					onChange={(event) => {
@@ -4318,6 +4329,7 @@ const AngularWorkflow = (props) => {
 		)
 	}
 
+	// This whole part is redundant. Made it part of Arguments instead.
 	const authenticationModal = authenticationModalOpen ? 
 		<Dialog modal 
 			open={authenticationModalOpen} 
@@ -4337,7 +4349,7 @@ const AngularWorkflow = (props) => {
 			<DialogContent>
 				<a href="/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is this?</a>
 				<div />
-				<EndpointData />
+				{selectedApp.link.length > 0 ? <EndpointData /> : null}
 				<div style={{marginTop: 15, marginBottom: 15, }}/>
 				<AuthenticationData />
 			</DialogContent>

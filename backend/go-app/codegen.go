@@ -293,8 +293,8 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 	urlInline := ""
 	//log.Printf("URL: %s", url)
 	if !strings.HasPrefix(strings.ToLower(url), "http") {
-		urlParameter = ", baseurl"
-		urlInline = "{baseurl}"
+		urlParameter = ", url"
+		urlInline = "{url}"
 	}
 
 	if len(parameters) > 0 {
@@ -318,6 +318,9 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 			break
 		}
 	}
+
+	// Extra param for url if it's changeable
+	// Extra param for authentication scheme(s)
 
 	data := fmt.Sprintf(`    async def %s(self%s%s%s%s%s):
         headers={}
@@ -354,7 +357,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (WorkflowApp, []stri
 	}
 
 	api.AppVersion = "1.0.0"
-	api.Environment = "cloud"
+	api.Environment = "Shuffle"
 	api.SmallImage = ""
 	api.LargeImage = ""
 	api.Sharing = false
@@ -387,6 +390,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (WorkflowApp, []stri
 			api.Authentication.Parameters[0].Name = securitySchemes["BearerAuth"].Value.Name
 			api.Authentication.Parameters[0].In = securitySchemes["BearerAuth"].Value.In
 			api.Authentication.Parameters[0].Scheme = securitySchemes["BearerAuth"].Value.Scheme
+			log.Printf("HANDLE BEARER AUTH")
 			extraParameters = append(extraParameters, WorkflowAppActionParameter{
 				Name:        "apikey",
 				Description: "The apikey to use",
@@ -402,6 +406,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (WorkflowApp, []stri
 			api.Authentication.Parameters[0].Name = securitySchemes["ApiKeyAuth"].Value.Name
 			api.Authentication.Parameters[0].In = securitySchemes["ApiKeyAuth"].Value.In
 			api.Authentication.Parameters[0].Scheme = securitySchemes["ApiKeyAuth"].Value.Scheme
+			log.Printf("HANDLE APIKEY AUTH")
 			extraParameters = append(extraParameters, WorkflowAppActionParameter{
 				Name:        "apikey",
 				Description: "The apikey to use",
@@ -437,6 +442,8 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (WorkflowApp, []stri
 			})
 		}
 	}
+
+	// Adds a link parameter if it's not already defined
 	if len(api.Link) == 0 {
 		extraParameters = append(extraParameters, WorkflowAppActionParameter{
 			Name:        "url",
@@ -454,6 +461,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (WorkflowApp, []stri
 	pythonFunctions := []string{}
 
 	for actualPath, path := range swagger.Paths {
+
 		//log.Printf("%#v", path)
 		//log.Printf("%#v", actualPath)
 
@@ -762,10 +770,13 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 	action := WorkflowAppAction{
 		Description: path.Get.Description,
 		Name:        fmt.Sprintf("%s %s", "Get", path.Get.Summary),
+		Label:       fmt.Sprintf(path.Get.Summary),
 		NodeType:    "action",
 		Environment: api.Environment,
 		Parameters:  extraParameters,
 	}
+
+	log.Printf("FUNCTION: %#v", action)
 
 	action.Returns.Schema.Type = "string"
 	baseUrl := fmt.Sprintf("%s%s", api.Link, actualPath)

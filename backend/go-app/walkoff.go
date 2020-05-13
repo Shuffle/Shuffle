@@ -107,6 +107,7 @@ type WorkflowAppAction struct {
 	Description    string                       `json:"description" datastore:"description"`
 	ID             string                       `json:"id" datastore:"id" yaml:"id,omitempty"`
 	Name           string                       `json:"name" datastore:"name"`
+	Label          string                       `json:"label" datastore:"label"`
 	NodeType       string                       `json:"node_type" datastore:"node_type"`
 	Environment    string                       `json:"environment" datastore:"environment"`
 	Sharing        bool                         `json:"sharing" datastore:"sharing"`

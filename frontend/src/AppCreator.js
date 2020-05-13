@@ -1148,8 +1148,8 @@ const AppCreator = (props) => {
 						</div>
 					</div>
 					<Divider style={{marginBottom: "10px", marginTop: "30px", height: "1px", width: "100%", backgroundColor: "grey"}}/>
-					<h4 style={{marginBottom: "10px"}}>General API information</h4>
-					Base URL 
+					<h3 style={{marginBottom: "10px"}}>API information</h3>
+					Base URL - leave empty if user changeable
 					<TextField
 						color="primary"
 						style={{backgroundColor: inputColor, marginTop: "5px"}}
@@ -1170,7 +1170,7 @@ const AppCreator = (props) => {
 						margin="normal"
 						variant="outlined"
 						value={baseUrl}
-						helperText={<div style={{color:"white", marginBottom: "2px",}}>Must start with http(s):// and CANT end with /. Can be empty if you its a variable.</div>}
+						helperText={<div style={{color:"white", marginBottom: "2px",}}>Must start with http(s):// and CANT end with /. </div>}
 						placeholder="https://api.example.com"
 						onChange={e => setBaseUrl(e.target.value)}
 					/>

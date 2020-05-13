@@ -319,8 +319,10 @@ const Apps = (props) => {
 			<div>
 				<h2>{newAppname}</h2>
 				<p>{description}</p>
-				<p>{selectedApp.id}</p>
-				<p>{selectedApp.privateId}</p>
+				<Divider style={{marginBottom: "10px", marginTop: "10px", backgroundColor: dividerColor}}/>
+				<p>URL: {selectedApp.link}</p>
+				<p>ID: {selectedApp.id}</p>
+				<p>PrivateID: {selectedApp.privateId}</p>
 				{editButton}
 				{deleteButton}
 			</div>

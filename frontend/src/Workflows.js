@@ -474,7 +474,7 @@ const Workflows = (props) => {
 
 		var t = new Date(data.started_at*1000)
 		var showResult = data.result.trim()
-		if (showResult.startsWith("{") && showResult.endsWith("}")) {
+		if ((showResult.startsWith("{") && showResult.endsWith("}")) || (showResult.startsWith("[{") && showResult.endsWith("}]"))) {
 			//showResult = <JSONPretty 
 			//				id="json-pretty" 
 			//				theme={JSONPrettyMon} 
