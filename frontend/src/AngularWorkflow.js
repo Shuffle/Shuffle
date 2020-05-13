@@ -700,7 +700,7 @@ const AngularWorkflow = (props) => {
 
 			const curapp = apps.find(a => a.name === curaction.app_name && a.app_version === curaction.app_version)
 			if (!curapp || curapp === undefined) {
-				//console.log("App "+curaction.app_name+":"+curaction.app_version+" not found error")
+				alert.error("App "+curaction.app_name+" not found. Did someone delete it?")
 				return
 			}
 
@@ -2421,6 +2421,9 @@ const AngularWorkflow = (props) => {
 				>
 					{selectedApp.actions.map(data => {
 						var newActionname = data.name
+						if (data.label !== undefined && data.label !== null && data.label.length > 0) {
+							newActionname = data.label
+						}
 						// ROFL FIXME - loop
 						newActionname = newActionname.replace("_", " ")
 						newActionname = newActionname.replace("_", " ")

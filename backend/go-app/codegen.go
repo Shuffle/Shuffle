@@ -689,6 +689,7 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 	action := WorkflowAppAction{
 		Description: path.Connect.Description,
 		Name:        fmt.Sprintf("%s %s", "Connect", path.Connect.Summary),
+		Label:       fmt.Sprintf(path.Connect.Summary),
 		NodeType:    "action",
 		Environment: api.Environment,
 		Parameters:  extraParameters,
@@ -857,6 +858,7 @@ func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 	action := WorkflowAppAction{
 		Description: path.Head.Description,
 		Name:        fmt.Sprintf("%s %s", "Head", path.Head.Summary),
+		Label:       fmt.Sprintf(path.Head.Summary),
 		NodeType:    "action",
 		Environment: api.Environment,
 		Parameters:  extraParameters,
@@ -938,6 +940,7 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 	action := WorkflowAppAction{
 		Description: path.Delete.Description,
 		Name:        fmt.Sprintf("%s %s", "Delete", path.Delete.Summary),
+		Label:       fmt.Sprintf(path.Delete.Summary),
 		NodeType:    "action",
 		Environment: api.Environment,
 		Parameters:  extraParameters,
@@ -1020,6 +1023,7 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 	action := WorkflowAppAction{
 		Description: path.Post.Description,
 		Name:        fmt.Sprintf("%s %s", "Post", path.Post.Summary),
+		Label:       fmt.Sprintf(path.Post.Summary),
 		NodeType:    "action",
 		Environment: api.Environment,
 		Parameters:  extraParameters,
@@ -1112,6 +1116,7 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 	action := WorkflowAppAction{
 		Description: path.Patch.Description,
 		Name:        fmt.Sprintf("%s %s", "Patch", path.Patch.Summary),
+		Label:       fmt.Sprintf(path.Patch.Summary),
 		NodeType:    "action",
 		Environment: api.Environment,
 		Parameters:  extraParameters,
@@ -1204,6 +1209,7 @@ func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 	action := WorkflowAppAction{
 		Description: path.Put.Description,
 		Name:        fmt.Sprintf("%s %s", "Put", path.Put.Summary),
+		Label:       fmt.Sprintf(path.Put.Summary),
 		NodeType:    "action",
 		Environment: api.Environment,
 		Parameters:  extraParameters,
