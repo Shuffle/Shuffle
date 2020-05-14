@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 import time 
 import json
 import logging
@@ -63,7 +64,7 @@ class AppBase:
 
         # Add async logger
         # self.console_logger.handlers[0].stream.set_execution_id()
-        self.logger.info("Before initial stream result")
+        #self.logger.info("Before initial stream result")
         try:
             ret = requests.post("%s%s" % (self.url, stream_path), headers=headers, json=action_result)
             self.logger.info("Workflow: %d" % ret.status_code)
@@ -72,7 +73,8 @@ class AppBase:
         except requests.exceptions.ConnectionError as e:
             print("Connectionerror: %s" %  e)
             return
-        self.logger.info("AFTER initial stream result")
+        #self.logger.info("AFTER initial stream result")
+        self.logger.info("THIS IS THE NEW UPDATE")
 
         # Verify whether there are any parameters with ACTION_RESULT required
         # If found, we get the full results list from backend
@@ -105,13 +107,102 @@ class AppBase:
 
         self.logger.info("AFTER FULLEXEC stream result")
 
+        # Takes a workflow execution as argument
+        # Returns a string if the result is single, or a list if it's a list
+        # Not implemented: lists
+        def get_json_value(execution_data, input_data):
+            parsersplit = input_data.split(".")
+            actionname = parsersplit[0][1:]
+            print(f"Actionname: {actionname}")
+        
+            # 1. Find the action
+            baseresult = ""
+            try: 
+                if actionname.lower() == "exec": 
+                    baseresult = execution_data["execution_argument"]
+                else:
+                    for result in execution_data["results"]:
+                        if result["action"]["label"].lower() == actionname.lower():
+                            baseresult = result["result"]
+                            break
+            except KeyError as error:
+                print(f"Error: {error}")
+
+            print(f"After first trycatch")
+        
+            # 2. Find the JSON data
+            if len(baseresult) == 0:
+                return ""
+        
+            if len(parsersplit) == 1:
+                return baseresult
+        
+            baseresult = baseresult.replace("\'", "\"")
+            basejson = {}
+            try:
+                basejson = json.loads(baseresult)
+            except json.decoder.JSONDecodeError as e:
+                return baseresult
+        
+            try:
+                for value in parsersplit[1:]:
+                    if value == "#":
+                        print("HANDLE RECURSIVE LOOP")
+                        pass
+                    else:
+                        if isinstance(basejson[value], str):
+                            print(f"LOADING STRING {basejson[value]} AS JSON?")
+                            try:
+                                parsedjson = json.loads(basejson[value])
+                            except json.decoder.JSONDecodeError as e:
+                                print("RETURNING BECAUSE {basejson[value]} is a normal string")  
+                                return basejson
+                        else:
+                            basejson = basejson[value]
+            except KeyError as e:
+                print(f"Keyerror: {e}")
+                return basejson
+            except IndexError as e:
+                print(f"Indexerror: {e}")
+                return basejson
+        
+            return basejson
+
+
+
         def parse_params(action, fullexecution, parameter):
             jsonparsevalue = "$."
+
+            # Regex to find all the things
+            if parameter["variant"] == "STATIC_VALUE":
+                data = parameter["value"]
+                self.logger.debug(f"\n\nHandle static data with JSON: {data}\n\n")
+
+                match = ".*([$]{1}(\w+\.?){1,})"
+                actualitem = re.findall(match, data, re.MULTILINE)
+                self.logger.info("PARSED: %s" % actualitem)
+                if len(actualitem) > 0:
+                    for replace in actualitem:
+                        try:
+                            to_be_replaced = replace[0]
+                        except IndexError:
+                            continue
+
+                        value = get_json_value(fullexecution, to_be_replaced)
+                        
+                        # Check if json inside string
+                        if isinstance(value, str) > 0:
+                            print(f"VALUE: {value}")
+
+                self.logger.info(f"CONVERT DATA FROM {parameter['value']} to {data}")
+                parameter["value"] = data
+
             if parameter["variant"] == "WORKFLOW_VARIABLE":
                 for item in fullexecution["workflow"]["workflow_variables"]:
                     if parameter["action_field"] == item["name"]:
                         parameter["value"] = item["value"]
                         break
+
             elif parameter["variant"] == "ACTION_RESULT":
                 # FIXME - calculate value based on action_field and $if prominent
                 # FIND THE RIGHT LABEL
@@ -258,6 +349,7 @@ class AppBase:
 
                     print(sourcevalue)
                     destinationvalue = condition["destination"]["value"]
+
                     if condition["destination"]["variant"]== "" or condition["destination"]["variant"]== "STATIC_VALUE":
                         condition["destination"]["variant"] = "STATIC_VALUE"
                     else:
@@ -398,7 +490,7 @@ class AppBase:
         action_result["completed_at"] = int(time.time())
 
         # I wonder if this actually works 
-        self.logger.info("Before last stream result")
+        #self.logger.info("Before last stream result")
         try:
             ret = requests.post("%s%s" % (self.url, stream_path), headers=headers, json=action_result)
             self.logger.info("Result: %d" % ret.status_code)

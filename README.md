@@ -87,8 +87,8 @@ There will be a major overhaul to the backend specifically. I'm currently moving
 - * Full OpenAPI support with authentication schemes in App creator (not Oauth2 yet)
 - * Change workflow name
 - * User run statistics 
+- Extended result data usage, build json with answers, not just "from previous action"
 - Workflows 		- IMPORT DEFAULT WORKFLOWS - Create some towards e.g. TheHive & MISP.
-- Extended data usage - build json with answers
 - Documentation - General documentation /docs rewrite
 - API doc				- 1. In Shuffle. 2. In e.g. python
 - Fix scheduler

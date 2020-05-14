@@ -1028,8 +1028,6 @@ const AngularWorkflow = (props) => {
 		}, {
 			duration: animationDuration,	
 		})
-
-		console.log(previousnodecolor)
 	}
 
 	const onNodeHover = (event) => {
@@ -2134,8 +2132,12 @@ const AngularWorkflow = (props) => {
 						var staticcolor = "inherit"
 						var actioncolor = "inherit"
 						var varcolor = "inherit"
-						var multiline = false
+						var multiline
 						if (data.multiline !== undefined && data.multiline !== null && data.multiline === true) {
+							multiline = true
+						}
+
+						if (data.value.startsWith("{") && data.value.endsWith("}")) {
 							multiline = true
 						}
 
@@ -2165,12 +2167,24 @@ const AngularWorkflow = (props) => {
 								onChange={(event) => {
 									changeActionParameter(event, count)
 								}}
+								onBlur={(event) => {
+									// Super basic check
+									if (event.target.value.startsWith("{")) {
+										console.log("VALIDATING JSON")
+										try {
+											JSON.parse(event.target.value)
+										} catch (e) {
+											alert.error("Failed to parse json")
+										}
+									}
+								}}
 							/>
 
 
 						// Remap data based on variant
 						if (data.variant === "STATIC_VALUE") {
 							staticcolor = "#f85a3e"	
+							console.log("DATA IS STATIC")
 						} else if (data.variant === "ACTION_RESULT") {
 							// Gets the parents of the current node
 							var parents = getParents(selectedAction)
@@ -2390,7 +2404,7 @@ const AngularWorkflow = (props) => {
 			<div style={{marginTop: "20px"}}>
 				Environment:
 				<Select
-					value={selectedActionEnvironment.Name === undefined ? "" : selectedActionEnvironment.Name}
+					value={selectedActionEnvironment === undefined || selectedActionEnvironment.Name === undefined ? "" : selectedActionEnvironment.Name}
 					PaperProps={{
 						style: {
 							backgroundColor: inputColor,
@@ -2597,12 +2611,13 @@ const AngularWorkflow = (props) => {
 	}
 
 	const AppConditionHandler = (props) => {
-  		const { tmpdata, type } = props;
+  	const { tmpdata, type } = props;
 
 		if (tmpdata === undefined) {
 			return tmpdata
 		}
 		const [data, ] = useState(tmpdata)
+		const [multiline, setMultiline] = useState(false)
 
 		if (data.variant === "") {
 			data.variant = "STATIC_VALUE"
@@ -2611,9 +2626,8 @@ const AngularWorkflow = (props) => {
 		var staticcolor = "inherit"
 		var actioncolor = "inherit"
 		var varcolor = "inherit"
-		var multiline = false
 		if (data.multiline !== undefined && data.multiline !== null && data.multiline === true) {
-			multiline = true
+			setMultiline(true)
 		}
 
 		var placeholder = "Static value"
@@ -2635,10 +2649,14 @@ const AngularWorkflow = (props) => {
 				}}
 				fullWidth
 				multiline={multiline}
-				rows="5"
+				rows={5}
 				color="primary"
 				defaultValue={data.value}
 				placeholder={placeholder}
+				onClick={() => {
+					console.log("CHANGE FIELD")
+					setMultiline(!multiline)
+				}}
 				onBlur={(e) => {
 					changeActionVariable(data.action_field, e.target.value)
 				}}
@@ -2701,12 +2719,12 @@ const AngularWorkflow = (props) => {
 				setCurrentView("variables")
 				datafield = 
 				<div>
-				<div>
-					Looks like you don't have any variables yet.  
-				</div>
-				<div style={{width: "100%", margin: "auto"}}>
-					<Button style={{margin: "auto", marginTop: "10px",}} color="primary" variant="outlined" onClick={() => setVariablesModalOpen(true)}>New workflow variable</Button> 				
-				</div>
+					<div>
+						Looks like you don't have any variables yet.  
+					</div>
+					<div style={{width: "100%", margin: "auto"}}>
+						<Button style={{margin: "auto", marginTop: "10px",}} color="primary" variant="outlined" onClick={() => setVariablesModalOpen(true)}>New workflow variable</Button> 				
+					</div>
 				</div>
 			} else {
 				// FIXME - this is a shitty solution that needs re-renders all the time
@@ -4022,6 +4040,7 @@ const AngularWorkflow = (props) => {
 							}}
 							color="secondary"
 							placeholder={"Execution Argument"}
+							defaultValue={executionText}
 							onBlur={(e) => {
 								setExecutionText(e.target.value)
 							}}

@@ -86,7 +86,7 @@ const Workflows = (props) => {
 				if (isLoggedIn) {
 					alert.error("An error occurred while loading workflows")
 				} else {
-					window.location.pathname = "/login"
+					window.location = "/login"
 				}
 
 				return
@@ -493,15 +493,17 @@ const Workflows = (props) => {
 		}
 
 		var t = new Date(data.started_at*1000)
+		var jsonvalid = true
 		var showResult = data.result.trim()
-		if ((showResult.startsWith("{") && showResult.endsWith("}")) || (showResult.startsWith("[{") && showResult.endsWith("}]"))) {
-			//showResult = <JSONPretty 
-			//				id="json-pretty" 
-			//				theme={JSONPrettyMon} 
-			//				data={showResult}/>
-			
-			showResult = replaceAll(showResult, " None", " \"None\"");
-			console.log(showResult)
+		showResult = replaceAll(showResult, " None", " \"None\"");
+		try {
+			JSON.parse(showResult)
+		} catch (e) {
+			jsonvalid = false
+		}
+
+		console.log("VALID: ", jsonvalid)
+		if (jsonvalid) {
 			showResult = <ReactJson 
 				src={JSON.parse(showResult)} 
 				theme="solarized" 
@@ -531,13 +533,13 @@ const Workflows = (props) => {
 				<Grid container style={{margin: "10px 10px 10px 10px", flex: "1"}}>
 					<Grid style={{display: "flex", flexDirection: "column", width: "100%"}}>
 						<Grid item style={{flex: "1"}}>
-							<h4 style={{marginBottom: "0px", marginTop: "10px"}}><b>Status</b>: {data.status}</h4>
+							<h4 style={{marginBottom: "0px", marginTop: "10px"}}><b>Name</b>: {data.action.label}</h4>
 						</Grid>
 						<Grid item style={{flex: "1", justifyContent: "center"}}>
 							App: {data.action.app_name}, Version: {data.action.app_version}
 						</Grid>
 						<Grid item style={{flex: "1", justifyContent: "center"}}>
-							Action: {data.action.name}, Environment: {data.action.environment}
+							Action: {data.action.name}, Environment: {data.action.environment}, Status: {data.status}
 						</Grid>
 						<div style={{display: "flex", flex: "1"}}>
 							<Grid item style={{flex: "10", justifyContent: "center"}}>
@@ -578,25 +580,30 @@ const Workflows = (props) => {
 		var parsedArgument = selectedExecution.execution_argument
 		if (selectedExecution.execution_argument !== undefined && selectedExecution.execution_argument.length > 0) {
 			parsedArgument = replaceAll(parsedArgument, " None", " \"None\"");
+		}	
+
+		var arg = null
+		if (selectedExecution.execution_argument !== undefined && selectedExecution.execution_argument.length > 0) {
+			var jsonvalid = false
+			var showResult = selectedExecution.execution_argument.trim()
+			showResult = replaceAll(showResult, " None", " \"None\"");
+			try {
+				JSON.parse(showResult)
+			} catch (e) {
+				jsonvalid = false
+			}
+
+			arg = jsonvalid ? 
+				<ReactJson 
+					src={JSON.parse(showResult)} 
+					theme="solarized" 
+					collapsed={true}
+					displayDataTypes={false}
+					name={"Execution argument"}
+				/>
+			: showResult
 		}
 
-		const arg = selectedExecution.execution_argument !== undefined && selectedExecution.execution_argument.length > 0 ? 
-			<div>
-				Execution argument: {(parsedArgument.startsWith("{") && parsedArgument.endsWith("}")) || (parsedArgument.startsWith("[{") && parsedArgument.endsWith("}]")) ?
-					<div>
-						<ReactJson 
-							src={JSON.parse(parsedArgument)} 
-							theme="solarized" 
-							collapsed={true}
-							displayDataTypes={false}
-							name={"Execution argument"}
-						/>
-					</div>
-					:
-					selectedExecution.execution_argument
-					}
-			</div>
-			: null
 		/*
 		<div>
 			ID: {selectedExecution.execution_id}
