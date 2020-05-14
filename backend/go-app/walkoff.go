@@ -274,6 +274,62 @@ type ExecutionRequestWrapper struct {
 	Data []ExecutionRequest `json:"data"`
 }
 
+// This might be... a bit off, but that's fine :)
+// This might also be stupid, as we want timelines and such
+// Anyway, these are super basic stupid stats.
+func increaseStatisticsField(ctx context.Context, fieldname, id string, amount int64) error {
+
+	// 1. Get current stats
+	// 2. Increase field(s)
+	// 3. Put new stats
+	statisticsId := "global_statistics"
+	nameKey := fieldname
+	key := datastore.NameKey(statisticsId, nameKey, nil)
+
+	statisticsItem := StatisticsItem{}
+	newData := StatisticsData{
+		Timestamp: int64(time.Now().Unix()),
+		Amount:    amount,
+		Id:        id,
+	}
+
+	if err := dbclient.Get(ctx, key, &statisticsItem); err != nil {
+		// Should init
+		if strings.Contains(fmt.Sprintf("%s", err), "entity") {
+			statisticsItem = StatisticsItem{
+				Total:     amount,
+				Fieldname: fieldname,
+				Data: []StatisticsData{
+					newData,
+				},
+			}
+
+			if _, err := dbclient.Put(ctx, key, &statisticsItem); err != nil {
+				log.Printf("Error setting base stats: %s", err)
+				return err
+			}
+
+			return nil
+		}
+		//log.Printf("STATSERR: %s", err)
+
+		return err
+	}
+
+	statisticsItem.Total += amount
+	statisticsItem.Data = append(statisticsItem.Data, newData)
+
+	// New struct, to not add body, author etc
+	if _, err := dbclient.Put(ctx, key, &statisticsItem); err != nil {
+		log.Printf("Error stats to %s: %s", fieldname, err)
+		return err
+	}
+
+	log.Printf("Stats: %#v", statisticsItem)
+
+	return nil
+}
+
 func setWorkflowQueue(ctx context.Context, executionRequests ExecutionRequestWrapper, id string) error {
 	key := datastore.NameKey("workflowqueue", id, nil)
 
@@ -607,6 +663,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 
 	if workflowExecution.Status == "FINISHED" {
 		log.Printf("Workflowexecution is already FINISHED. No further action can be taken")
+
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflowexecution is already finished because of %s with status %s"}`, workflowExecution.LastNode, workflowExecution.Status)))
 		return
@@ -615,6 +672,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	// Not sure what's up here
 	// FIXME - remove comment
 	if workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
+
 		log.Printf("Workflowexecution is already aborted. No further action can be taken")
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflowexecution is aborted because of %s with result %s and status %s"}`, workflowExecution.LastNode, workflowExecution.Result, workflowExecution.Status)))
@@ -645,6 +703,18 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 
 		workflowExecution.Result = lastResult
 		workflowExecution.Results = newResults
+
+		if workflowExecution.Status == "ABORTED" {
+			err = increaseStatisticsField(ctx, "workflow_executions_aborted", workflowExecution.Workflow.ID, 1)
+			if err != nil {
+				log.Printf("Failed to increase aborted execution stats: %s", err)
+			}
+		} else if workflowExecution.Status == "FAILURE" {
+			err = increaseStatisticsField(ctx, "workflow_executions_failure", workflowExecution.Workflow.ID, 1)
+			if err != nil {
+				log.Printf("Failed to increase failure execution stats: %s", err)
+			}
+		}
 	}
 
 	// This means it should continue I think :)
@@ -721,6 +791,11 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 			workflowExecution.CompletedAt = int64(time.Now().Unix())
 			if workflowExecution.LastNode == "" {
 				workflowExecution.LastNode = actionResult.Action.ID
+			}
+
+			err = increaseStatisticsField(ctx, "workflow_executions_success", workflowExecution.Workflow.ID, 1)
+			if err != nil {
+				log.Printf("Failed to increase success execution stats: %s", err)
 			}
 		}
 	}
@@ -1491,6 +1566,11 @@ func abortExecution(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	err = increaseStatisticsField(ctx, "workflow_executions_aborted", workflowExecution.Workflow.ID, 1)
+	if err != nil {
+		log.Printf("Failed to increase aborted execution stats: %s", err)
+	}
+
 	// FIXME - allowed to edit it? idk
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
@@ -1832,6 +1912,11 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 				log.Printf("Failed adding to db: %s", err)
 			}
 		}
+	}
+
+	err = increaseStatisticsField(ctx, "workflow_executions", workflow.ID, 1)
+	if err != nil {
+		log.Printf("Failed to increase stats execution stats: %s", err)
 	}
 
 	return workflowExecution, "", nil
@@ -2460,6 +2545,10 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	err = increaseStatisticsField(ctx, "total_apps_deleted", fileId, 1)
+	if err != nil {
+		log.Printf("Failed to increase total apps loaded stats: %s", err)
+	}
 	//err = memcache.Delete(request.Context(), sessionToken)
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": true}`))
@@ -3041,6 +3130,16 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 				if err != nil {
 					log.Printf("Failed setting workflowapp: %s", err)
 					return err
+				}
+
+				err = increaseStatisticsField(ctx, "total_apps_created", workflowapp.ID, 1)
+				if err != nil {
+					log.Printf("Failed to increase total apps created stats: %s", err)
+				}
+
+				err = increaseStatisticsField(ctx, "total_apps_loaded", workflowapp.ID, 1)
+				if err != nil {
+					log.Printf("Failed to increase total apps loaded stats: %s", err)
 				}
 
 				log.Printf("Added %s:%s to the database", workflowapp.Name, workflowapp.AppVersion)

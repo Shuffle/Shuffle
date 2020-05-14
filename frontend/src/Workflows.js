@@ -357,15 +357,15 @@ const Workflows = (props) => {
 								  >
 									<MoreVertIcon />
 								</IconButton>
-	  							<Menu
-      							id="long-menu"
-								  	anchorEl={anchorEl}
-      							keepMounted
-      							open={open}
-								  	onClose={() => {
-									  setOpen(false)
-									  setAnchorEl(null)
-								  }}
+	  						<Menu
+									id="long-menu"
+									anchorEl={anchorEl}
+									keepMounted
+									open={open}
+									onClose={() => {
+										setOpen(false)
+										setAnchorEl(null)
+									}}
       					>
 
 								<MenuItem style={{backgroundColor: surfaceColor, color: "white"}} onClick={() => {

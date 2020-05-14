@@ -79,6 +79,35 @@ type ExecutionInfo struct {
 	DailyOnpremExecutions   int64 `json:"daily_onprem_executions" datastore:"daily_onprem_executions"`
 }
 
+type StatisticsData struct {
+	Timestamp int64  `json:"timestamp" datastore:"timestamp"`
+	Id        string `json:"id" datastore:"id"`
+	Amount    int64  `json:"amount" datastore:"amount"`
+}
+
+type StatisticsItem struct {
+	Total     int64            `json:"total" datastore:"total"`
+	Fieldname string           `json:"field_name" datastore:"field_name"`
+	Data      []StatisticsData `json:"data" datastore:"data"`
+}
+
+// "Execution by status"
+// Execution history
+//type GlobalStatistics struct {
+//	BackendExecutions     int64            `json:"backend_executions" datastore:"backend_executions"`
+//	WorkflowCount         int64            `json:"workflow_count" datastore:"workflow_count"`
+//	ExecutionCount        int64            `json:"execution_count" datastore:"execution_count"`
+//	ExecutionSuccessCount int64            `json:"execution_success_count" datastore:"execution_success_count"`
+//	ExecutionAbortCount   int64            `json:"execution_abort_count" datastore:"execution_abort_count"`
+//	ExecutionFailureCount int64            `json:"execution_failure_count" datastore:"execution_failure_count"`
+//	ExecutionPendingCount int64            `json:"execution_pending_count" datastore:"execution_pending_count"`
+//	AppUsageCount         int64            `json:"app_usage_count" datastore:"app_usage_count"`
+//	TotalAppsCount        int64            `json:"total_apps_count" datastore:"total_apps_count"`
+//	SelfMadeAppCount      int64            `json:"self_made_app_count" datastore:"self_made_app_count"`
+//	WebhookUsageCount     int64            `json:"webhook_usage_count" datastore:"webhook_usage_count"`
+//	Baseline              map[string]int64 `json:"baseline" datastore:"baseline"`
+//}
+
 type ParsedOpenApi struct {
 	Body    string `datastore:"body,noindex" json:"body"`
 	ID      string `datastore:"id" json:"id"`
@@ -2783,6 +2812,11 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		workflowExecution, executionResp, err := handleExecution(item, workflow, request)
 
 		if err == nil {
+			err = increaseStatisticsField(ctx, "total_webhooks_ran", workflowExecution.Workflow.ID, 1)
+			if err != nil {
+				log.Printf("Failed to increase total apps loaded stats: %s", err)
+			}
+
 			resp.WriteHeader(200)
 			resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
 			return
@@ -4481,6 +4515,55 @@ func handleGetOutlookFolders(resp http.ResponseWriter, request *http.Request) {
 	resp.Write(b)
 }
 
+func handleGetSpecificStats(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	_, err := handleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("Api authentication failed in getting specific workflow: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	location := strings.Split(request.URL.String(), "/")
+
+	var statsId string
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		statsId = location[4]
+	}
+
+	ctx := context.Background()
+	statisticsId := "global_statistics"
+	nameKey := statsId
+	key := datastore.NameKey(statisticsId, nameKey, nil)
+	statisticsItem := StatisticsItem{}
+	if err := dbclient.Get(ctx, key, &statisticsItem); err != nil {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	b, err := json.Marshal(statisticsItem)
+	if err != nil {
+		log.Println("Failed to marshal data: %s", err)
+		resp.WriteHeader(401)
+		return
+	}
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(b))
+}
+
 func handleGetSpecificTrigger(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -5503,6 +5586,15 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	setOpenApiDatastore(ctx, api.ID, parsed)
+	err = increaseStatisticsField(ctx, "total_apps_created", api.ID, 1)
+	if err != nil {
+		log.Printf("Failed to increase success execution stats: %s", err)
+	}
+
+	err = increaseStatisticsField(ctx, "openapi_apps_created", api.ID, 1)
+	if err != nil {
+		log.Printf("Failed to increase success execution stats: %s", err)
+	}
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": true}`))
@@ -5520,6 +5612,11 @@ func init() {
 	dbclient, err = datastore.NewClient(ctx, gceProject)
 	if err != nil {
 		log.Fatalf("DBclient error during init: %s", err)
+	}
+
+	err = increaseStatisticsField(ctx, "backend_executions", "", 1)
+	if err != nil {
+		log.Printf("Failed increasing local stats: %s", err)
 	}
 
 	count, err := getEnvironmentCount()
@@ -5554,15 +5651,9 @@ func init() {
 
 	r.HandleFunc("/api/v1/getenvironments", handleGetEnvironments).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/setenvironments", handleSetEnvironments).Methods("PUT", "OPTIONS")
-	//r.HandleFunc("/api/v1/register/{key}", handleRegisterVerification).Methods("GET", "OPTIONS")
-
 	r.HandleFunc("/api/v1/getinfo", handleInfo).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/getsettings", handleSettings).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/generateapikey", handleApiGeneration).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/passwordchange", handlePasswordChange).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/passwordresetmail", handlePasswordResetMail).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/passwordreset", handlePasswordReset).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/contact", handleContact).Methods("POST", "OPTIONS")
 
 	r.HandleFunc("/api/v1/docs", getDocList).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/docs/{key}", getDocs).Methods("GET", "OPTIONS")
@@ -5613,6 +5704,8 @@ func init() {
 
 	// Trigger hmm
 	r.HandleFunc("/api/v1/triggers/{key}", handleGetSpecificTrigger).Methods("GET", "OPTIONS")
+
+	r.HandleFunc("/api/v1/stats/{key}", handleGetSpecificStats).Methods("GET", "OPTIONS")
 
 	// OpenAPI configuration
 	r.HandleFunc("/api/v1/verify_swagger", verifySwagger).Methods("POST", "OPTIONS")

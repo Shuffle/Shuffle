@@ -4016,7 +4016,7 @@ const AngularWorkflow = (props) => {
 								},
 							}}
 							color="secondary"
-							placeholder={"Optional argument"}
+							placeholder={"Execution Argument"}
 							onBlur={(e) => {
 								setExecutionText(e.target.value)
 							}}

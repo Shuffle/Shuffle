@@ -76,14 +76,8 @@ const App = (message, props) => {
 	if (dataset === false) {
 		checkLogin() 
 		setDataset(true)
-  		initializeReactGA() 
-  	}
-  })
+  }})
 
-  function initializeReactGA() {
-  }
-
-	console.log(window.location)
 	if (isLoaded && !isLoggedIn && (!window.location.pathname.startsWith("/login") && (!window.location.pathname.startsWith("/docs") && (!window.location.pathname.startsWith("/adminsetup"))))) {
 		window.location = "login"
 	}

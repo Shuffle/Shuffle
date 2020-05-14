@@ -103,20 +103,6 @@ const Header = props => {
   	const loginTextBrowser = !isLoggedIn ? 
     	<div style={{display: "flex"}}>
 			<List style={{display: "flex", flexDirect: "row"}} component="nav">
-				<ListItem style={{textAlign: "center", minWidth: "120px"}}>
-					<Link to="/" style={hrefStyle}>
-						<div onMouseOver={handleHomeHover} onMouseOut={handleHomeHoverOut} style={{color: HomeHoverColor, cursor: "pointer"}}> 
-							<Grid container direction="row" alignItems="center">
-								<Grid item>
-									<HomeIcon style={{marginTop: "3px", marginRight: "5px"}} />
-								</Grid>
-								<Grid item>
-									Shuffle
-								</Grid>
-							</Grid>
-						</div>
-					</Link>
-				</ListItem>
 				<ListItem style={{textAlign: "center", marginLeft: "0px"}}>
 					<Link to ="/docs/about" style={hrefStyle}>
 						<div onMouseOver={handleSoarHover} onMouseOut={handleSoarHoverOut} style={{color: SoarHoverColor, cursor: "pointer"}}>

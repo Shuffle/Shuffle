@@ -3,6 +3,7 @@ import React, {useState} from 'react';
 import classNames from "classnames";
 // react plugin used to create charts
 import { Line, Bar } from "react-chartjs-2";
+import { useAlert } from "react-alert";
 
 // https://demos.creative-tim.com/black-dashboard-react/?ref=appseed#/admin/dashboard
 
@@ -38,12 +39,87 @@ import {
 // This is the start of a dashboard that can be used. 
 // What data do we fill in here? Idk
 const Dashboard = (props) => {
+  const { globalUrl } = props;
+	const alert = useAlert()
 	const [bigChartData, setBgChartData] = useState("data1");
+	const [firstRequest, setFirstRequest] = useState(true);
+	const [stats, setStats] = useState({})
+	const [changeme, setChangeme] = useState("")
 	
 	document.title = "Shuffle - dashboard"
 
+	const fetchdata = (stats_id) => {
+		fetch(globalUrl+"/api/v1/stats/"+stats_id, {
+    	  method: 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json',
+				},
+	  		credentials: "include",
+    })
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for stream results :O!")
+			}
+
+			return response.json()
+		})
+		.then((responseJson) => {
+			console.log("DATA: ", responseJson)
+			stats[stats_id] = responseJson
+			setStats(stats)
+			// Used to force updates
+			setChangeme(stats_id)
+		})
+		.catch(error => {
+			alert.error("ERROR: "+error.toString())
+		});
+	}
+
+	const variables = [
+		"backend_executions",
+		"workflow_executions",
+		"workflow_executions_aborted",
+		"workflow_executions_success",
+		"total_apps_created",
+		"total_apps_loaded",
+		"openapi_apps_created",
+		"total_apps_deleted",
+		"total_webhooks_ran",
+	]
+
+	if (firstRequest) {
+		setFirstRequest(false)	
+
+		for (var key in variables) {
+			fetchdata(variables[key])
+		}
+	}
+
+
+	const newdata = Object.getOwnPropertyNames(stats).length > 0 ?
+		<div>
+			{variables.map(data => {
+				if (stats[data] === undefined || stats[data] === null) {
+					return null
+				}
+
+				if (stats[data].total === undefined) {
+					return null
+				}
+
+				return (
+					<div>
+						{data}: {stats[data].total}
+					</div>
+				)
+			})}
+		</div>
+		: null
+
 	const data = 
 		<div className="content">
+			{newdata}
 			<Row>
 				<Col xs="12">
 					<Card className="card-chart">

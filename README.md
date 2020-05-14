@@ -19,6 +19,7 @@ Documentation can be found on https://shuffler.io/docs/about or in your own inst
 ## In the works
 * User run statistics - Dashboard
 * Debug view for manual executions
+* App versioning
 
 ### Setup - Local
 Frontend - requires [npm](https://nodejs.org/en/download/)/[yarn](https://yarnpkg.com/lang/en/docs/install/#debian-stable)/your preferred manager. Runs independently from backend - edit frontend/src/App.yaml to change from localhost to prod setting.
