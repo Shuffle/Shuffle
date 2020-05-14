@@ -17,7 +17,7 @@ Documentation can be found on https://shuffler.io/docs/about or in your own inst
 * Easy to learn Python library for custom apps
 
 ## In the works
-* User run statistics - Dashboard
+* Dashboard - Statistics are implemented
 * Debug view for manual executions
 * App versioning
 
@@ -86,7 +86,9 @@ There will be a major overhaul to the backend specifically. I'm currently moving
 - * Remove orborus? Can deploy straight, but that would be weird - Won't do this yet
 - * Full OpenAPI support with authentication schemes in App creator (not Oauth2 yet)
 - * Change workflow name
+- * User run statistics 
 - Workflows 		- IMPORT DEFAULT WORKFLOWS - Create some towards e.g. TheHive & MISP.
+- Extended data usage - build json with answers
 - Documentation - General documentation /docs rewrite
 - API doc				- 1. In Shuffle. 2. In e.g. python
 - Fix scheduler
