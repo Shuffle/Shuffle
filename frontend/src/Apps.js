@@ -626,7 +626,6 @@ const Apps = (props) => {
 
 	const errorText = openApiError.length > 0 ? <div>Error: {openApiError}</div> : null
 	const circularLoader = validation ? <CircularProgress color="primary" /> : null
-	console.log(validation)
 	const modalView = openApiModal ? 
 		<Dialog modal 
 			open={openApiModal}

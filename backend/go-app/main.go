@@ -2965,6 +2965,11 @@ func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	err = increaseStatisticsField(ctx, "total_workflow_triggers", requestdata.Workflow, 1)
+	if err != nil {
+		log.Printf("Failed to increase total workflows: %s", err)
+	}
+
 	log.Println("Generating new hook")
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": true}`))

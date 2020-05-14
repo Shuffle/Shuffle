@@ -325,7 +325,7 @@ func increaseStatisticsField(ctx context.Context, fieldname, id string, amount i
 		return err
 	}
 
-	log.Printf("Stats: %#v", statisticsItem)
+	//log.Printf("Stats: %#v", statisticsItem)
 
 	return nil
 }
@@ -936,6 +936,10 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	log.Printf("Saved new workflow %s with name %s", workflow.ID, workflow.Name)
+	err = increaseStatisticsField(ctx, "total_workflows", workflow.ID, 1)
+	if err != nil {
+		log.Printf("Failed to increase total workflows: %s", err)
+	}
 
 	if len(workflow.Actions) == 0 {
 		workflow.Actions = []Action{}
@@ -1047,6 +1051,11 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 				log.Printf("Failed to delete email sub: %s", err)
 			}
 		}
+
+		err = increaseStatisticsField(ctx, "total_workflow_triggers", workflow.ID, -1)
+		if err != nil {
+			log.Printf("Failed to increase total workflows: %s", err)
+		}
 	}
 
 	// FIXME - maybe delete workflow executions
@@ -1057,6 +1066,11 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "Failed deleting key"}`))
 		return
+	}
+
+	err = increaseStatisticsField(ctx, "total_workflows", fileId, -1)
+	if err != nil {
+		log.Printf("Failed to increase total workflows: %s", err)
 	}
 
 	//memcacheName := fmt.Sprintf("%s_%s", user.Username, fileId)
@@ -1109,31 +1123,13 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	log.Println("GetWorkflow start")
 
-	tmpworkflow := Workflow{}
-	//	memcacheName := fmt.Sprintf("%s_%s", user.Username, fileId)
-	//	if item, err := memcache.Get(ctx, memcacheName); err == memcache.ErrCacheMiss {
-	//		// Not in cache
-	//		log.Printf("User workflow %s not in cache.", memcacheName)
-	//		tmpworkflow, err = getWorkflow(ctx, fileId)
-	//		if err != nil {
-	//			log.Printf("Failed getting the workflow locally: %s", err)
-	//			resp.WriteHeader(401)
-	//			resp.Write([]byte(`{"success": false}`))
-	//			return
-	//		}
-	//	} else if err != nil {
-	//		log.Printf("Error getting item: %v", err)
-	//	} else {
-	//		log.Printf("Got workflow %s from cache", fileId)
-	//		// FIXME - verify if value is ok? Can unmarshal etc.
-	//		err = json.Unmarshal(item.Value, &tmpworkflow)
-	//		if err != nil {
-	//			log.Printf("Failed unmarshaling allworkflowapps from memcache: %s", err)
-	//			resp.WriteHeader(401)
-	//			resp.Write([]byte(`{"success": false}`))
-	//			return
-	//		}
-	//	}
+	tmpworkflow, err := getWorkflow(ctx, fileId)
+	if err != nil {
+		log.Printf("Failed getting the workflow locally: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
 
 	log.Println("GetWorkflow end")
 
@@ -1144,6 +1140,8 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
+
+	//Actions           []Action   `json:"actions" datastore:"actions,noindex"`
 
 	log.Printf("Hello")
 	body, err := ioutil.ReadAll(request.Body)
@@ -1179,7 +1177,6 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	log.Println("Pre")
 	for _, action := range workflow.Actions {
 		allNodes = append(allNodes, action.ID)
-		log.Printf("ENV: %s", action.Environment)
 		if action.Environment == "" {
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "An environment for %s is required"}`, action.Label)))
@@ -1394,30 +1391,12 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	//newbody, err := json.Marshal(workflow)
-	////newbody, err := json.Marshal(workflowapps)
-	//if err != nil {
-	//	log.Printf("Failed unmarshalling all apps: %s", err)
-	//	resp.WriteHeader(401)
-	//	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed unpacking workflow apps"}`)))
-	//	return
-	//}
-
-	//memcacheName = fmt.Sprintf("%s_%s", user.Username, fileId)
-	//item := &memcache.Item{
-	//	Key:        memcacheName,
-	//	Value:      newbody,
-	//	Expiration: time.Minute * 10,
-	//}
-	//if err := memcache.Add(ctx, item); err == memcache.ErrNotStored {
-	//	if err := memcache.Set(ctx, item); err != nil {
-	//		log.Printf("Error setting item: %v", err)
-	//	}
-	//} else if err != nil {
-	//	log.Printf("error adding item: %v", err)
-	//} else {
-	//	//log.Printf("Set cache for %s", item.Key)
-	//}
+	totalOldActions := len(tmpworkflow.Actions)
+	totalNewActions := len(workflow.Actions)
+	err = increaseStatisticsField(ctx, "total_workflow_actions", workflow.ID, int64(totalNewActions-totalOldActions))
+	if err != nil {
+		log.Printf("Failed to change total actions data: %s", err)
+	}
 
 	log.Printf("Saved new version of workflow %s", fileId)
 	resp.WriteHeader(200)
@@ -3477,6 +3456,13 @@ func handleDeleteHook(resp http.ResponseWriter, request *http.Request) {
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
+	}
+
+	if len(hook.Workflows) > 0 {
+		err = increaseStatisticsField(ctx, "total_workflow_triggers", hook.Workflows[0], -1)
+		if err != nil {
+			log.Printf("Failed to increase total workflows: %s", err)
+		}
 	}
 
 	hook.Status = "stopped"

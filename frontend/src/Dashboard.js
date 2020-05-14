@@ -1,4 +1,5 @@
 import React, {useState} from 'react';
+import { useInterval } from 'react-powerhooks';
 // nodejs library that concatenates classes
 import classNames from "classnames";
 // react plugin used to create charts
@@ -76,6 +77,7 @@ const Dashboard = (props) => {
 		});
 	}
 
+	// All these are currently tracked.
 	const variables = [
 		"backend_executions",
 		"workflow_executions",
@@ -86,19 +88,37 @@ const Dashboard = (props) => {
 		"openapi_apps_created",
 		"total_apps_deleted",
 		"total_webhooks_ran",
+		"total_workflows",
+		"total_workflow_actions",
+		"total_workflow_triggers",
 	]
 
-	if (firstRequest) {
-		setFirstRequest(false)	
-
+	const runUpdate = () => {
 		for (var key in variables) {
 			fetchdata(variables[key])
 		}
 	}
 
+	// Refresh every 60 seconds
+	const autoUpdate = 60000
+	const { start, stop } = useInterval({
+		duration: autoUpdate,
+		startImmediate: false,
+		callback: () => {
+			runUpdate()
+		}
+	});
+
+	if (firstRequest) {
+		setFirstRequest(false)	
+		start()
+		runUpdate()
+	}
+
 
 	const newdata = Object.getOwnPropertyNames(stats).length > 0 ?
 		<div>
+			Autoupdate every {autoUpdate/1000} seconds
 			{variables.map(data => {
 				if (stats[data] === undefined || stats[data] === null) {
 					return null
