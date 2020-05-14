@@ -150,13 +150,14 @@ class AppBase:
                         print("HANDLE RECURSIVE LOOP")
                         pass
                     else:
+                        print("BASE: ", basejson)
                         if isinstance(basejson[value], str):
-                            print(f"LOADING STRING {basejson[value]} AS JSON?")
+                            print(f"LOADING STRING '%s' AS JSON" % basejson[value]) 
                             try:
-                                parsedjson = json.loads(basejson[value])
+                                basejson = json.loads(basejson[value])
                             except json.decoder.JSONDecodeError as e:
-                                print("RETURNING BECAUSE {basejson[value]} is a normal string")  
-                                return basejson
+                                print("RETURNING BECAUSE '%s' IS A NORMAL STRING" % basejson[value])
+                                return basejson[value]
                         else:
                             basejson = basejson[value]
             except KeyError as e:
@@ -167,8 +168,6 @@ class AppBase:
                 return basejson
         
             return basejson
-
-
 
         def parse_params(action, fullexecution, parameter):
             jsonparsevalue = "$."
@@ -189,13 +188,15 @@ class AppBase:
                             continue
 
                         value = get_json_value(fullexecution, to_be_replaced)
-                        
-                        # Check if json inside string
-                        if isinstance(value, str) > 0:
-                            print(f"VALUE: {value}")
+                        if isinstance(value, str):
+                            parameter["value"] = value 
+                        elif isinstance(value, dict):
+                            parameter["value"] = json.dumps(value)
 
-                self.logger.info(f"CONVERT DATA FROM {parameter['value']} to {data}")
-                parameter["value"] = data
+                        # Check if json inside string
+
+                #self.logger.info(f"CONVERT DATA FROM {parameter['value']} to {data}")
+                #parameter["value"] = data
 
             if parameter["variant"] == "WORKFLOW_VARIABLE":
                 for item in fullexecution["workflow"]["workflow_variables"]:

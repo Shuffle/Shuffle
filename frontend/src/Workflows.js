@@ -509,7 +509,7 @@ const Workflows = (props) => {
 				theme="solarized" 
 				collapsed={collapseJson}
 				displayDataTypes={false}
-				name={"Results for "+data.action.name}
+				name={"Results for "+data.action.label}
 			/>
 		} else {
 			// FIXME - have everything parsed as json, either just for frontend
