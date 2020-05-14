@@ -575,9 +575,26 @@ const Workflows = (props) => {
 		var starttime = new Date(selectedExecution.started_at*1000)
 		var endtime = new Date(selectedExecution.started_at*1000)
 
+		var parsedArgument = selectedExecution.execution_argument
+		if (selectedExecution.execution_argument !== undefined && selectedExecution.execution_argument.length > 0) {
+			parsedArgument = replaceAll(parsedArgument, " None", " \"None\"");
+		}
+
 		const arg = selectedExecution.execution_argument !== undefined && selectedExecution.execution_argument.length > 0 ? 
 			<div>
-				Argument: {selectedExecution.execution_argument}
+				Execution argument: {(parsedArgument.startsWith("{") && parsedArgument.endsWith("}")) || (parsedArgument.startsWith("[{") && parsedArgument.endsWith("}]")) ?
+					<div>
+						<ReactJson 
+							src={JSON.parse(parsedArgument)} 
+							theme="solarized" 
+							collapsed={true}
+							displayDataTypes={false}
+							name={"Execution argument"}
+						/>
+					</div>
+					:
+					selectedExecution.execution_argument
+					}
 			</div>
 			: null
 		/*
@@ -602,9 +619,6 @@ const Workflows = (props) => {
 					</div>
 					<div>
 						Finished: {endtime.toISOString()}
-					</div>
-					<div>
-						Result: {selectedExecution.result}
 					</div>
 					<div>
 						Last node: {selectedExecution.last_node}

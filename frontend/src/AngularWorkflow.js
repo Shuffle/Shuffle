@@ -801,7 +801,6 @@ const AngularWorkflow = (props) => {
 			workflow.start = node.data('id')
 			setWorkflow(workflow)
 		}
-
 	}
 
 	const onEdgeRemoved = (event) => {
@@ -1642,8 +1641,6 @@ const AngularWorkflow = (props) => {
 				}
 
 				newNodeId = uuid.v4()
-				console.log(data)
-
 				const newposition = {
 					"x": e.pageX-cycontainer.offsetLeft,
 					"y": e.pageY-cycontainer.offsetTop,
@@ -1669,6 +1666,10 @@ const AngularWorkflow = (props) => {
 					name: data.name,
 					isStartNode: false,
 					position: newposition,
+				}
+
+				if (data.trigger_type === "WEBHOOK") {
+					newAppData.status = "running"
 				}
 
 				// Can all the data be in here? hmm
@@ -1714,6 +1715,10 @@ const AngularWorkflow = (props) => {
 				}
 
 				setWorkflow(workflow)
+				if (data.trigger_type === "WEBHOOK") {
+					newWebhook(newAppData)
+					saveWorkflow(workflow)
+				}
 			}
 		}
 	}

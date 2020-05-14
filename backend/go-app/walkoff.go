@@ -774,7 +774,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	log.Printf("Checking results %d vs %d", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extraInputs)
+	//log.Printf("Checking results %d vs %d", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extraInputs)
 	if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions)+extraInputs {
 		finished := true
 		for _, result := range workflowExecution.Results {
@@ -1611,7 +1611,6 @@ func cleanupExecutions(resp http.ResponseWriter, request *http.Request) {
 func handleExecution(id string, workflow Workflow, request *http.Request) (WorkflowExecution, string, error) {
 	ctx := context.Background()
 	if workflow.ID == "" || workflow.ID != id {
-		log.Printf("UPDATING WORKFLOW")
 		tmpworkflow, err := getWorkflow(ctx, id)
 		if err != nil {
 			log.Printf("Failed getting the workflow locally: %s", err)
@@ -1666,6 +1665,10 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		if err != nil {
 			log.Printf("Failed execution POST unmarshaling: %s", err)
 			return WorkflowExecution{}, "", err
+		}
+
+		if execution.Start == "" && len(body) > 0 {
+			execution.ExecutionArgument = string(body)
 		}
 
 		// FIXME - this should have "execution_argument" from executeWorkflow frontend
@@ -1835,7 +1838,6 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	onpremExecution := false
 	environments := []string{}
 	for _, action := range workflowExecution.Workflow.Actions {
-		log.Printf("ENV: %#v", action.Environment)
 		if action.Environment != cloudname {
 			found := false
 			for _, env := range environments {
@@ -1858,8 +1860,6 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		log.Printf("Error saving workflow execution for updates %s: %s", topic, err)
 		return WorkflowExecution{}, "Failed getting workflowexecution", err
 	}
-
-	log.Printf("Environments: %#v", environments)
 
 	// Adds queue for onprem execution
 	// FIXME - add specifics to executionRequest, e.g. specific environment (can run multi onprem)
