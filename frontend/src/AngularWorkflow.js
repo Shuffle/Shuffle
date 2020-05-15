@@ -186,6 +186,7 @@ const AngularWorkflow = (props) => {
 		})
 		.then((responseJson) => {
 			if (responseJson.length > 0) {
+				// FIXME: Sort this by time
 				setWorkflowExecutions(responseJson)
 			}
 			//setWorkflowExecutions(responseJson)
@@ -203,7 +204,7 @@ const AngularWorkflow = (props) => {
 					return (
 						<div>
 							{new Date(data.started_at*1000).toISOString()}
-							, status: {data.status}
+							, {data.status}
 							{data.execution_argument.length > 0 ? ", "+data.execution_argument : ", "}
 							{data.result.length > 0 ? ", "+data.result : ", "}
 						</div>
