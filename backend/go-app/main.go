@@ -36,6 +36,10 @@ import (
 	"github.com/google/go-github/v28/github"
 	"golang.org/x/oauth2"
 
+	"github.com/go-git/go-billy/v5/memfs"
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/storage/memory"
+
 	// Random
 	xj "github.com/basgys/goxml2json"
 	gyaml "github.com/ghodss/yaml"
@@ -5637,6 +5641,30 @@ func init() {
 		}
 	}
 
+	// Getting apps to see if we should initialize a test
+	workflowapps, err := getAllWorkflowApps(ctx)
+	if err != nil {
+		log.Printf("Failed getting apps: %s", err)
+	} else if err == nil && len(workflowapps) == 0 {
+		log.Printf("Apps: loading TEST")
+		fs := memfs.New()
+		storer := memory.NewStorage()
+		r, err := git.Clone(storer, fs, &git.CloneOptions{
+			URL: "https://github.com/frikky/shuffle-apps",
+		})
+
+		if err != nil {
+			log.Printf("Failed loading repo into memory: %s", err)
+		}
+
+		dir, err := fs.ReadDir("")
+		if err != nil {
+			log.Printf("FAiled reading folder: %s", err)
+		}
+		_ = r
+		iterateAppGithubFolders(fs, dir, "", "testing")
+	}
+
 	log.Printf("Finished INIT")
 
 	r := mux.NewRouter()
@@ -5673,6 +5701,7 @@ func init() {
 
 	// Apps
 	r.HandleFunc("/api/v1/apps/get_existing", loadExistingApps).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/get_existing/{appname}", loadExistingApps).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/validate", validateAppInput).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}", deleteWorkflowApp).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}/config", getWorkflowAppConfig).Methods("GET", "OPTIONS")

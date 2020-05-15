@@ -163,6 +163,8 @@ const AppCreator = (props) => {
 				alert.error("Failed to verify")
 			} else {
 				const data = JSON.parse(responseJson.body)
+				console.log("LOADED IMAGE: ", data.image)
+				setFileBase64(data.image)
 				parseOpenapiData(data)
 			}
 		})
@@ -338,17 +340,17 @@ const AppCreator = (props) => {
   			  "description": description,
   			  "version": "1.0",
   			},
-			"servers": [{"url": baseUrl}],
+				"servers": [{"url": baseUrl}],
   			"host": host,
   			"basePath": basePath,
   			"schemes": schemes,
   			"paths": {},
-			"editing": isEditing,
-			"components": {
-				"securitySchemes": {},
-			},
-			"image": fileBase64,
-			"id": props.match.params.appid,
+				"editing": isEditing,
+				"components": {
+					"securitySchemes": {},
+				},
+				"image": fileBase64,
+				"id": props.match.params.appid,
   			"securityDefinitions": {},
 		}
 
@@ -362,9 +364,10 @@ const AppCreator = (props) => {
 			data.info["contact"] = contact
 		}
 
+		console.log("LOADED IMAGE: ", data.image)
+
 		for (var key in actions) {
 			const item = actions[key]
-			console.log(item)
 			if (item.errors.length > 0) {
 				alert.error("Saving with error in action "+item.name)
 			}
@@ -373,8 +376,6 @@ const AppCreator = (props) => {
 				item.name = item.description
 			}
 
-			console.log(data.paths)
-			console.log(item)
 			if (data.paths[item.url] === null || data.paths[item.url] === undefined) {
 				data.paths[item.url] = {}
 			}
@@ -456,7 +457,6 @@ const AppCreator = (props) => {
 			}
 		}
 
-		console.log(data)
 		fetch(globalUrl+"/api/v1/verify_openapi", {
     	  	method: 'POST',
 				headers: {
@@ -475,7 +475,6 @@ const AppCreator = (props) => {
 			return response.json()
 		})
 		.then((responseJson) => {
-			console.log(responseJson)
 			if (!responseJson.success) {
 				setErrorCode(responseJson.reason)
 				alert.error("Failed to verify: ")
@@ -1051,13 +1050,12 @@ const AppCreator = (props) => {
 	var image = ""
 	const editHeaderImage = (event) => {
 		const file = event.target.value
-		console.log(file)
 		const actualFile = event.target.files[0]
 		const fileObject = URL.createObjectURL(actualFile)
 		setFile(fileObject)
 	}
 
-	if (file !== "" && fileBase64 === "") {
+	if (file !== "") {
 		const img = document.getElementById('logo')
 		var canvas = document.createElement('canvas')
 		var ctx = canvas.getContext('2d')
@@ -1067,7 +1065,9 @@ const AppCreator = (props) => {
 			ctx.drawImage(img, 0, 0)
 			const canvasUrl = canvas.toDataURL()
 			console.log(canvasUrl)
-			setFileBase64(canvasUrl)
+			if (canvasUrl !== fileBase64) {
+				setFileBase64(canvasUrl)
+			}
 		}
 
 		//console.log(img.width)
@@ -1082,7 +1082,8 @@ const AppCreator = (props) => {
 	//	</div> :
 	//	<img src={file} id="logo" style={{width: "100%", height: "100%"}} />
 
-	const imageInfo = <img src={file} alt="Click to upload an image" id="logo" style={{width: "100%", height: "100%"}} />
+	const imageData = file.length > 0 ? file : fileBase64 
+	const imageInfo = <img src={imageData} alt="Click to upload an image" id="logo" style={{width: 174, height: 174}} />
 
 	// Random names for type & autoComplete. Didn't research :^)
 	const landingpageDataBrowser = 

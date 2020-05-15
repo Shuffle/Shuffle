@@ -167,9 +167,9 @@ const Apps = (props) => {
 		}
 
 		var imageline = data.large_image.length === 0 ?
-			<img alt="" style={{width: 100}} />
+			<img alt="Image missing" style={{width: 100, height: 100}} />
 			: 
-			<img alt="" src={data.large_image} style={{width: 100, height: 100, objectFit: "cover"}} />
+			<img alt={data.title} src={data.large_image} style={{width: 100, height: 100, maxWidth: "100%"}} />
 
 		// FIXME - add label to apps, as this might be slow with A LOT of apps
 		var newAppname = data.name

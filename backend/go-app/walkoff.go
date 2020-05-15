@@ -2608,7 +2608,12 @@ func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 	// Just need to be logged in
 	// FIXME - need to be logged in?
 	user, userErr := handleApiAuthentication(resp, request)
-	_ = userErr
+	if userErr != nil {
+		log.Printf("Api authentication failed in get all apps: %s", userErr)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
 
 	//if item, err := memcache.Get(ctx, memcacheName); err == memcache.ErrCacheMiss {
 	//	// Not in cache
@@ -2986,27 +2991,33 @@ func loadExistingApps(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("FAiled reading folder: %s", err)
 	}
 	_ = r
-	iterateAppGithubFolders(fs, dir, "")
+	iterateAppGithubFolders(fs, dir, "", "")
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 }
 
-func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra string) error {
+// Onlyname is used to
+func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string) error {
 	var err error
 	runUpload := false
 	for _, file := range dir {
+		if len(onlyname) > 0 && file.Name() != onlyname {
+			continue
+		}
+
 		// Folder?
 		switch mode := file.Mode(); {
 		case mode.IsDir():
 			tmpExtra := fmt.Sprintf("%s%s/", extra, file.Name())
 			dir, err := fs.ReadDir(tmpExtra)
 			if err != nil {
+				log.Printf("Failed to read dir: %s", err)
 				break
 			}
 
 			// Go routine? Hmm, this can be super quick I guess
-			err = iterateAppGithubFolders(fs, dir, tmpExtra)
+			err = iterateAppGithubFolders(fs, dir, tmpExtra, "")
 			if err != nil {
 				break
 			}

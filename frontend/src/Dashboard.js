@@ -43,11 +43,15 @@ const Dashboard = (props) => {
   const { globalUrl } = props;
 	const alert = useAlert()
 	const [bigChartData, setBgChartData] = useState("data1");
+	const [dayAmount, setDayAmount] = useState(7);
 	const [firstRequest, setFirstRequest] = useState(true);
 	const [stats, setStats] = useState({})
 	const [changeme, setChangeme] = useState("")
+	const [statsRan, setStatsRan] = useState(false)
 	
 	document.title = "Shuffle - dashboard"
+	var dayGraphLabels = [60, 80, 65, 130, 80, 105, 90, 130, 70, 115, 60, 130]
+	var dayGraphData = [60, 80, 65, 130, 80, 105, 90, 130, 70, 115, 60, 130]
 
 	const fetchdata = (stats_id) => {
 		fetch(globalUrl+"/api/v1/stats/"+stats_id, {
@@ -60,13 +64,12 @@ const Dashboard = (props) => {
     })
 		.then((response) => {
 			if (response.status !== 200) {
-				console.log("Status not 200 for stream results :O!")
+				console.log("Status not 200 for "+stats_id)
 			}
 
 			return response.json()
 		})
 		.then((responseJson) => {
-			console.log("DATA: ", responseJson)
 			stats[stats_id] = responseJson
 			setStats(stats)
 			// Used to force updates
@@ -75,6 +78,92 @@ const Dashboard = (props) => {
 		.catch(error => {
 			alert.error("ERROR: "+error.toString())
 		});
+	}
+
+	let chart1_2_options = {
+		maintainAspectRatio: false,
+		legend: {
+			display: false
+		},
+		tooltips: {
+			backgroundColor: "#f5f5f5",
+			titleFontColor: "#333",
+			bodyFontColor: "#666",
+			bodySpacing: 4,
+			xPadding: 12,
+			mode: "nearest",
+			intersect: 0,
+			position: "nearest"
+		},
+		responsive: true,
+		scales: {
+			yAxes: [
+				{
+					barPercentage: 1.6,
+					gridLines: {
+						drawBorder: false,
+						color: "rgba(29,140,248,0.0)",
+						zeroLineColor: "transparent"
+					},
+					ticks: {
+						suggestedMin: 60,
+						suggestedMax: 125,
+						padding: 20,
+						fontColor: "#9a9a9a"
+					}
+				}
+			],
+			xAxes: [
+				{
+					barPercentage: 1.6,
+					gridLines: {
+						drawBorder: false,
+						color: "rgba(29,140,248,0.1)",
+						zeroLineColor: "transparent"
+					},
+					ticks: {
+						padding: 20,
+						fontColor: "#9a9a9a"
+					}
+				}
+			]
+		}
+	}
+
+	const dayGraph = {
+		data: canvas => {
+			let ctx = canvas.getContext("2d");
+
+			let gradientStroke = ctx.createLinearGradient(0, 230, 0, 50);
+
+			gradientStroke.addColorStop(1, "rgba(29,140,248,0.2)");
+			gradientStroke.addColorStop(0.4, "rgba(29,140,248,0.0)");
+			gradientStroke.addColorStop(0, "rgba(29,140,248,0)"); //blue colors
+
+			return {
+				labels: dayGraphLabels,
+				datasets: [
+					{
+						label: "My First dataset",
+						fill: true,
+						backgroundColor: gradientStroke,
+						borderColor: "#1f8ef1",
+						borderWidth: 2,
+						borderDash: [],
+						borderDashOffset: 0.0,
+						pointBackgroundColor: "#1f8ef1",
+						pointBorderColor: "rgba(255,255,255,0)",
+						pointHoverBackgroundColor: "#1f8ef1",
+						pointBorderWidth: 20,
+						pointHoverRadius: 4,
+						pointHoverBorderWidth: 15,
+						pointRadius: 4,
+						data: dayGraphData,
+					}
+				]
+			}
+  	},
+  	options: chart1_2_options,
 	}
 
 	// All these are currently tracked.
@@ -107,14 +196,73 @@ const Dashboard = (props) => {
 		callback: () => {
 			runUpdate()
 		}
-	});
+	})
 
 	if (firstRequest) {
+		console.log("HELO")
 		setFirstRequest(false)	
 		start()
 		runUpdate()
-	}
+	} else if (!statsRan) {
+		// FIXME: Run this under runUpdate schedule?
+		// 1. Fix labels in dayGraphy.data
+		// 2. Add data to the daygraph
+		
+		// Every time there's an update :)
 
+		// This should probably be done in the backend.. bleh
+		if (stats["workflow_executions"] !== undefined && stats["workflow_executions"] !== null && stats["workflow_executions"].data !== undefined) {
+			setStatsRan(true)
+			//console.log("NEW DATA?: ", stats)
+			console.log('SET WORKFLOW: ', stats["workflow_executions"])
+			//var curday = startDate.getDate()
+
+			// Index = what day are we on
+
+			// 0 = today
+			var newDayGraphLabels = []
+			var newDayGraphData = []
+			for (var i = dayAmount; i > 0; i--) {
+				var enddate = new Date()
+				enddate.setDate(-i)
+				enddate.setHours(23,59,59,999)
+
+				var startdate = new Date()
+				startdate.setDate(-i)
+				startdate.setHours(0,0,0,0)
+
+				var endtime = enddate.getTime()/1000
+				var starttime = startdate.getTime()/1000
+
+				console.log("START: ", starttime, "END: ", endtime, "Data: ", stats["workflow_executions"])
+				for (var key in stats["workflow_executions"].data) {
+					const item = stats["workflow_executions"]["data"][key]
+					console.log("ITEM: ", item.timestamp, endtime)
+					console.log(endtime-starttime)
+					if (endtime-starttime > endtime-item.timestamp && endtime.timestamp >= 0) {
+						console.log("HIT? ")
+					}
+					console.log(item.timestamp-endtime)
+					//console.log(item.timestamp-endtime)
+					break
+					if (item.timestamp > endtime && item.timestamp < starttime) {
+						if (newDayGraphData[i-1] === undefined) {
+							newDayGraphData[i-1] = 1
+						} else {
+							newDayGraphData[i-1] += 1
+						}
+
+						//break
+					}
+				}
+				
+				newDayGraphLabels.push(i)
+			}
+
+			console.log(newDayGraphLabels)
+			console.log(newDayGraphData)
+		}
+	}
 
 	const newdata = Object.getOwnPropertyNames(stats).length > 0 ?
 		<div>
@@ -142,12 +290,20 @@ const Dashboard = (props) => {
 			{newdata}
 			<Row>
 				<Col xs="12">
+					<div className="chart-area">
+						<Line
+							data={dayGraph.data}
+							options={dayGraph.options}
+						/>
+					</div>
+				</Col>
+				<Col xs="12">
 					<Card className="card-chart">
 						<CardHeader>
 							<Row>
 								<Col className="text-left" sm="6">
 									<h5 className="card-category">Total Shipments</h5>
-									<CardTitle tag="h2">Performance</CardTitle>
+									<CardTitle tag="h2">Workflows</CardTitle>
 								</Col>
 								<Col sm="6">
 									<ButtonGroup
@@ -304,4 +460,4 @@ const Dashboard = (props) => {
 	return dataWrapper 
 }
 
-export default Dashboard;
+export default Dashboard
