@@ -777,16 +777,21 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	//log.Printf("Checking results %d vs %d", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extraInputs)
 	if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions)+extraInputs {
 		finished := true
+		lastResult := ""
 		for _, result := range workflowExecution.Results {
 			if result.Status != "SUCCESS" && result.Status != "FINISHED" {
 				finished = false
 				break
 			}
+
+			lastResult = result.Result
 		}
 
 		if finished {
 			log.Printf("Execution of %s finished.", workflowExecution.ExecutionId)
 			//log.Println("Might be finished based on length of results and everything being SUCCESS or FINISHED - VERIFY THIS. Setting status to finished.")
+
+			workflowExecution.Result = lastResult
 			workflowExecution.Status = "FINISHED"
 			workflowExecution.CompletedAt = int64(time.Now().Unix())
 			if workflowExecution.LastNode == "" {

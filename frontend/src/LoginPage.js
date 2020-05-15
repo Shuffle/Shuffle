@@ -47,7 +47,7 @@ const LoginDialog = props => {
 	const [loginInfo, setLoginInfo] = useState("");
 
 	const handleValidateForm = () => {
-		return (username.length > 1 && password.length > 8);
+		return (username.length > 1 && password.length > 1);
 	}
 
 	if (isLoggedIn === true) {

@@ -155,27 +155,75 @@ const AngularWorkflow = (props) => {
 	const [AppsHoverColor, setAppsHoverColor] = useState(hoverOutColor);
 	const [VariablesHoverColor, setVariablesHoverColor] = useState(hoverOutColor);
 	const [HookHoverColor, setHookHoverColor] = useState(hoverOutColor);
+	const [appAdded, setAppAdded] = useState(false)
 	const [update, setUpdate] = useState("");
+	const [workflowExecutions, setWorkflowExecutions] = React.useState([]);
 
 	const [elements, setElements] = useState([])
 	const { start, stop } = useInterval({
 	  	duration: 5000,
 	  	startImmediate: false,
 	  	callback: () => {
-			fetchUpdates()
+				fetchUpdates()
 	  	}
 	});
 
-	const fetchUpdates = () => {
-		fetch(globalUrl+"/api/v1/streams/results", {
-    	  	method: 'POST',
+	const getWorkflowExecution = (id) => {
+		fetch(globalUrl+"/api/v1/workflows/"+id+"/executions", {
+    	  method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json',
 				},
-				body: JSON.stringify(executionRequest),
 	  			credentials: "include",
     		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for WORKFLOW EXECUTION :O!")
+			}
+
+			return response.json()
+		})
+		.then((responseJson) => {
+			if (responseJson.length > 0) {
+				setWorkflowExecutions(responseJson)
+			}
+			//setWorkflowExecutions(responseJson)
+		})
+		.catch(error => {
+			alert.error(error.toString())
+		});
+	}
+
+	const debugView = workflowExecutions.length > 0 ? 
+		<Draggable> 
+			<div style={{color: "white", position: "fixed", top: appBarSize+65, left: leftBarSize+20, zIndex: 5000, backgroundColor: "rgba(0,0,0,0.1)", minHeight: 100, padding: 15, maxHeight: 100, maxWidth: 500, overflowX: "hidden",}}>
+				{workflowExecutions.slice(0,25).map(data => {
+					console.log("DATA: ", data)
+					return (
+						<div>
+							{new Date(data.started_at*1000).toISOString()}
+							, status: {data.status}
+							{data.execution_argument.length > 0 ? ", "+data.execution_argument : ", "}
+							{data.result.length > 0 ? ", "+data.result : ", "}
+						</div>
+					)
+					return 
+				})}
+			</div>
+		</Draggable>
+		: null
+
+	const fetchUpdates = () => {
+		fetch(globalUrl+"/api/v1/streams/results", {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+			body: JSON.stringify(executionRequest),
+				credentials: "include",
+			})
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for stream results :O!")
@@ -185,6 +233,7 @@ const AngularWorkflow = (props) => {
 		})
 		.then((responseJson) => {
 			handleUpdateResults(responseJson)
+			getWorkflowExecution(props.match.params.key)
 		})
 		.catch(error => {
 			alert.error(error.toString())
@@ -965,6 +1014,7 @@ const AngularWorkflow = (props) => {
 			getWorkflow()
 			getApps()
 			getEnvironments()
+			getWorkflowExecution(props.match.params.key)
 			return
 		} 
 
@@ -4006,6 +4056,21 @@ const AngularWorkflow = (props) => {
 		)
 	}
 
+	const NoActionsBar = () => {
+		if (workflow.actions.length === 0 || !appAdded) {
+			return (
+				<div style={{position: "fixed", width: "100%", top: 300}}>
+					<div style={{width: 300, margin: "auto"}}>
+						<h3></h3>
+					</div>
+				</div>
+			)
+		} 
+
+		return null
+	}
+
+
 	const BottomCytoscapeBar = () => {
 		const boxSize = 100
 		const executionButton = executionRunning ? 
@@ -4166,6 +4231,8 @@ const AngularWorkflow = (props) => {
 			<RightSideBar />
 			<BottomCytoscapeBar />
 			<TopCytoscapeBar />
+			<NoActionsBar />
+			{debugView}
 		</div> 
 		: 
 		<div style={{color: "white"}}>

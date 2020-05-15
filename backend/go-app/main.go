@@ -18,7 +18,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"regexp"
+	//"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -797,43 +797,44 @@ func parseLoginParameters(resp http.ResponseWriter, request *http.Request) (logi
 }
 
 // Can check against HIBP etc?
+// Removed for localhost
 func checkPasswordStrength(password string) error {
 	// Check password strength here
-	if len(password) < 10 {
-		return errors.New("Minimum password length is 10.")
-	}
+	//if len(password) < 10 {
+	//	return errors.New("Minimum password length is 10.")
+	//}
 
-	if len(password) > 128 {
-		return errors.New("Maximum password length is 128.")
-	}
+	//if len(password) > 128 {
+	//	return errors.New("Maximum password length is 128.")
+	//}
 
-	re := regexp.MustCompile("[0-9]+")
-	if len(re.FindAllString(password, -1)) == 0 {
-		return errors.New("Password must contain a number")
-	}
+	//re := regexp.MustCompile("[0-9]+")
+	//if len(re.FindAllString(password, -1)) == 0 {
+	//	return errors.New("Password must contain a number")
+	//}
 
-	re = regexp.MustCompile("[a-z]+")
-	if len(re.FindAllString(password, -1)) == 0 {
-		return errors.New("Password must contain a lower case char")
-	}
+	//re = regexp.MustCompile("[a-z]+")
+	//if len(re.FindAllString(password, -1)) == 0 {
+	//	return errors.New("Password must contain a lower case char")
+	//}
 
-	re = regexp.MustCompile("[A-Z]+")
-	if len(re.FindAllString(password, -1)) == 0 {
-		return errors.New("Password must contain an upper case char")
-	}
+	//re = regexp.MustCompile("[A-Z]+")
+	//if len(re.FindAllString(password, -1)) == 0 {
+	//	return errors.New("Password must contain an upper case char")
+	//}
 
 	return nil
 }
 
-// Fuck emails
+// No more emails :)
 func checkUsername(Username string) error {
 	// Stupid first check of email loool
-	if !strings.Contains(Username, "@") || !strings.Contains(Username, ".") {
-		return errors.New("Invalid Username")
-	}
+	//if !strings.Contains(Username, "@") || !strings.Contains(Username, ".") {
+	//	return errors.New("Invalid Username")
+	//}
 
 	if len(Username) < 4 {
-		return errors.New("Minimum Username length is 2")
+		return errors.New("Minimum Username length is 4")
 	}
 
 	return nil

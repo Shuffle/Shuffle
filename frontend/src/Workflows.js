@@ -619,6 +619,12 @@ const Workflows = (props) => {
 						Results: {resultsLength}
 					</div>
 					<div>
+						Results: {resultsLength}
+					</div>
+					<div>
+						Result: {selectedExecution.result}
+					</div>
+					<div>
 						Status: {selectedExecution.status}
 					</div>
 					<div>
