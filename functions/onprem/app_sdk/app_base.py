@@ -189,9 +189,9 @@ class AppBase:
 
                         value = get_json_value(fullexecution, to_be_replaced)
                         if isinstance(value, str):
-                            parameter["value"] = value 
+                            parameter["value"] = parameter["value"].replace(to_be_replaced, value)
                         elif isinstance(value, dict):
-                            parameter["value"] = json.dumps(value)
+                            parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value))
 
                         # Check if json inside string
 

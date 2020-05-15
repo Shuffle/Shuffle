@@ -198,15 +198,15 @@ const AngularWorkflow = (props) => {
 
 	const debugView = workflowExecutions.length > 0 ? 
 		<Draggable> 
-			<div style={{color: "white", position: "fixed", top: appBarSize+65, left: leftBarSize+20, zIndex: 5000, backgroundColor: "rgba(0,0,0,0.1)", minHeight: 100, padding: 15, maxHeight: 100, maxWidth: 500, overflowX: "hidden",}}>
-				{workflowExecutions.slice(0,25).map(data => {
-					console.log("DATA: ", data)
+			<div style={{color: "white", position: "fixed", top: appBarSize+65, left: leftBarSize+20, zIndex: 5000, minHeight: 100, padding: 15, maxHeight: 100, maxWidth: 500, overflowX: "hidden",}}>
+				{workflowExecutions.slice(0,15).map(data => {
 					return (
 						<div>
 							{new Date(data.started_at*1000).toISOString()}
 							, {data.status}
-							{data.execution_argument.length > 0 ? ", "+data.execution_argument : ", "}
 							{data.result.length > 0 ? ", "+data.result : ", "}
+							{data.execution_argument.length > 0 ? ", "+data.execution_argument : ", "}
+							<Divider style={{backgroundColor: "white"}}/>
 						</div>
 					)
 					return 
@@ -223,8 +223,8 @@ const AngularWorkflow = (props) => {
 				'Accept': 'application/json',
 			},
 			body: JSON.stringify(executionRequest),
-				credentials: "include",
-			})
+			credentials: "include",
+		})
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for stream results :O!")
@@ -234,7 +234,6 @@ const AngularWorkflow = (props) => {
 		})
 		.then((responseJson) => {
 			handleUpdateResults(responseJson)
-			getWorkflowExecution(props.match.params.key)
 		})
 		.catch(error => {
 			alert.error(error.toString())

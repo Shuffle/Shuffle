@@ -54,7 +54,7 @@ const Workflows = (props) => {
 	  	duration: 5000,
 	  	startImmediate: false,
 	  	callback: () => {
-			getWorkflowExecution(selectedWorkflow.id) 
+				getWorkflowExecution(selectedWorkflow.id) 
 	  	}
 	});
 
@@ -395,7 +395,7 @@ const Workflows = (props) => {
 								<a href={"/workflows/"+data.id}>
 									<Tooltip color="primary" title="Edit workflow" placement="bottom">
 										<Button style={{}} color="primary" variant="outlined" style={{marginRight: 10}} onClick={() => {}}>
-											<EditIcon />
+											<EditIcon style={{marginRight: 10}}/> Edit
 										</Button> 				
 									</Tooltip>
 								</a>
@@ -502,7 +502,7 @@ const Workflows = (props) => {
 			jsonvalid = false
 		}
 
-		console.log("VALID: ", jsonvalid)
+		//console.log("VALID: ", jsonvalid)
 		if (jsonvalid) {
 			showResult = <ReactJson 
 				src={JSON.parse(showResult)} 
@@ -584,9 +584,11 @@ const Workflows = (props) => {
 
 		var arg = null
 		if (selectedExecution.execution_argument !== undefined && selectedExecution.execution_argument.length > 0) {
-			var jsonvalid = false
+			var jsonvalid = true
+
 			var showResult = selectedExecution.execution_argument.trim()
 			showResult = replaceAll(showResult, " None", " \"None\"");
+
 			try {
 				JSON.parse(showResult)
 			} catch (e) {
@@ -599,7 +601,30 @@ const Workflows = (props) => {
 					theme="solarized" 
 					collapsed={true}
 					displayDataTypes={false}
-					name={"Execution argument"}
+					name={"Execution argument / webhook"}
+				/>
+			: showResult
+		}
+
+		var lastresult = null
+		if (selectedExecution.result !== undefined && selectedExecution.result.length > 0) {
+			var jsonvalid = true
+			var showResult = selectedExecution.result.trim()
+			showResult = replaceAll(showResult, " None", " \"None\"");
+
+			try {
+				JSON.parse(showResult)
+			} catch (e) {
+				jsonvalid = false
+			}
+
+			lastresult = jsonvalid ? 
+				<ReactJson 
+					src={JSON.parse(showResult)} 
+					theme="solarized" 
+					collapsed={true}
+					displayDataTypes={false}
+					name={"Last result from execution"}
 				/>
 			: showResult
 		}
@@ -611,32 +636,25 @@ const Workflows = (props) => {
 		*/
 		if (Object.getOwnPropertyNames(selectedExecution).length > 0 && selectedExecution.workflow.actions !== null) {
 			return (
-				<div >
+				<div>
 					<div>
-						Actions: {selectedExecution.workflow.actions.length}
+						<b>Status:</b> {selectedExecution.status}
 					</div>
 					<div>
-						Results: {resultsLength}
+						<b>Started:</b> {starttime.toISOString()}
 					</div>
 					<div>
-						Results: {resultsLength}
+						<b>Finished:</b> {endtime.toISOString()}
 					</div>
 					<div>
-						Result: {selectedExecution.result}
+						<b>Last node:</b> {selectedExecution.last_node}
 					</div>
 					<div>
-						Status: {selectedExecution.status}
+						<b>Last Result:</b> {lastresult}
 					</div>
-					<div>
-						Starttime: {starttime.toISOString()}
+					<div style={{marginTop: 10}}>
+						{arg}
 					</div>
-					<div>
-						Finished: {endtime.toISOString()}
-					</div>
-					<div>
-						Last node: {selectedExecution.last_node}
-					</div>
-					{arg}
 					<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: dividerColor}}/>
 					{resultsHandler}
 				</div> 
@@ -825,7 +843,10 @@ const Workflows = (props) => {
 						<h2>Executions</h2> 
 					</div>
 					<div style={{flex: "1"}}>
-						<Button color="primary" style={{marginTop: "20px"}} variant="outlined" onClick={() => {alert.info("Refreshing executions"); getWorkflowExecution(selectedWorkflow.id)}}>
+						<Button color="primary" style={{marginTop: "20px"}} variant="outlined" onClick={() => {
+								alert.info("Refreshing executions"); 
+								getWorkflowExecution(selectedWorkflow.id)
+							}}>
 							<CachedIcon />
 						</Button> 				
 					</div>
