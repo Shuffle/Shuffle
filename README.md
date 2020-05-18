@@ -1,6 +1,9 @@
 # Shuffle 
 [Shuffle](https://shuffler.io) is an automation platform for your security stack. It leverages docker for scaling and OpenAPI for integrations. It has the possibility to run across multiple isolated environments, and gives you powerful tools to track progress.
 
+
+![Example Shuffle webhook integration](shuffle_webhook.png)
+
 ## Try it
 Check out the [installation guide](https://github.com/frikky/shuffle/blob/master/install-guide.md)
 
@@ -54,10 +57,6 @@ Below is the folder structure with a short explanation
 │   └── triggers 			# Custom triggers used in https://shuffler.io/workflows
 └ docker-compose.yml 	# Used for deployments
 ```
-
-# Architecture
-A basic image of how everything fits together, including legacy (left side)
-![](architecture.png)
 
 # Technology
 GCP was chosen because why not use the best thingies. "Serverless" \o/

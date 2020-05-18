@@ -39,7 +39,7 @@ import { positions, Provider } from "react-alert";
 
 // Testing - localhost
 //const globalUrl = "http://192.168.3.6:5001"
-//console.log("HOST: ", process.env)
+console.log("HOST: ", process.env)
 
 
 // Production - backend proxy forwarding in nginx

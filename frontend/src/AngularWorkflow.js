@@ -798,7 +798,9 @@ const AngularWorkflow = (props) => {
 				break
 			} else if (workflow.branches[key].destination_id === edge.target && workflow.branches[key].source_id === edge.source) {
 				// Checks if NOT trigger
-				if (workflow.triggers !== undefined && workflow.triggers.find(data => data.id === workflow.branches[key].source_id).length === 0) {
+				//workflow.triggers.find(data => data.id === workflow.branches[key].source_id).length === 0)
+				const triggercheck = workflow.triggers.find(data => data.id === workflow.branches[key].source_id)
+				if (workflow.triggers !== undefined && triggercheck !== undefined && triggercheck.length === 0) {
 					alert.error("That pointer already exists")
 					event.target.remove()
 				}
