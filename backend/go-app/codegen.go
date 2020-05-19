@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/zip"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -83,16 +84,11 @@ func formatAppfile(filedata string) (string, string) {
 }
 
 // Streams the data into a zip to be used for a cloud function
-func streamZipdata(ctx context.Context, client *storage.Client, identifier, pythoncode, requirements string) (string, error) {
-	bucket := client.Bucket(bucketName)
-
+func streamZipdata(ctx context.Context, identifier, pythoncode, requirements string) (string, error) {
 	filename := fmt.Sprintf("generated_cloudfunctions/%s.zip", identifier)
 
-	obj := bucket.Object(filename)
-	storageWriter := obj.NewWriter(ctx)
-	defer storageWriter.Close()
-
-	zipWriter := zip.NewWriter(storageWriter)
+	buf := new(bytes.Buffer)
+	zipWriter := zip.NewWriter(buf)
 
 	zipFile, err := zipWriter.Create("main.py")
 	if err != nil {
@@ -123,7 +119,7 @@ func streamZipdata(ctx context.Context, client *storage.Client, identifier, pyth
 	return filename, nil
 }
 
-func getAppbase(ctx context.Context, client *storage.Client) ([]byte, []byte, error) {
+func getAppbase() ([]byte, []byte, error) {
 	// 1. Have baseline in bucket/generated_apps/baseline
 	// 2. Copy the baseline to a new folder with identifier name
 	static := "../../functions/static_baseline.py"

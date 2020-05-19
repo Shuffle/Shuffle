@@ -5403,13 +5403,13 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	// Test = client side with fetch?
 
 	ctx := context.Background()
-	client, err := storage.NewClient(ctx)
-	if err != nil {
-		log.Printf("Failed to create client (storage): %v", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Failed creating client"}`))
-		return
-	}
+	//client, err := storage.NewClient(ctx)
+	//if err != nil {
+	//	log.Printf("Failed to create client (storage): %v", err)
+	//	resp.WriteHeader(401)
+	//	resp.Write([]byte(`{"success": false, "reason": "Failed creating client"}`))
+	//	return
+	//}
 
 	swagger, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData(body)
 	if err != nil {
@@ -5486,7 +5486,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// 2. Get all the required code
-	appbase, staticBaseline, err := getAppbase(ctx, client)
+	appbase, staticBaseline, err := getAppbase()
 	if err != nil {
 		log.Printf("Failed getting appbase: %s", err)
 		resp.WriteHeader(500)
@@ -5505,7 +5505,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	//log.Println(stitched)
 
 	// 3. Zip and stream it directly in the directory
-	_, err = streamZipdata(ctx, client, identifier, stitched, "requests\nurllib3")
+	_, err = streamZipdata(ctx, identifier, stitched, "requests\nurllib3")
 	if err != nil {
 		log.Printf("Zipfile error: %s", err)
 		resp.WriteHeader(500)
