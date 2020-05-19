@@ -36,12 +36,12 @@ type ExecutionRequestWrapper struct {
 }
 
 type ExecutionRequest struct {
-	ExecutionId       string   `json:"execution_id"`
-	WorkflowId        string   `json:"workflow_id"`
-	Authorization     string   `json:"authorization"`
-	ExecutionArgument string   `json:"execution_argument"`
-	Environments      []string `json:"environments"`
-	Status            string   `json:"status"`
+	ExecutionId       string `json:"execution_id"`
+	ExecutionArgument string `json:"execution_argument"`
+	WorkflowId        string `json:"workflow_id"`
+	Authorization     string `json:"authorization"`
+	Status            string `json:"status"`
+	Type              string `json:"type"`
 }
 
 // Deploys the internal worker whenever something happens
@@ -207,6 +207,7 @@ func main() {
 			time.Sleep(time.Duration(sleepTime) * time.Second)
 			continue
 		}
+
 		// FIXME - add check for StatusCode
 		if newresp.StatusCode != 200 {
 			if hasStarted {
@@ -243,7 +244,8 @@ func main() {
 		}
 
 		if hasStarted && len(executionRequests.Data) > 0 {
-			log.Println(string(body))
+			log.Printf("Body: %s", string(body))
+			// Type string `json:"type"`
 		}
 
 		if len(executionRequests.Data) == 0 {
@@ -259,7 +261,13 @@ func main() {
 		// New, abortable version. Should check executionid and remove everything else
 		var toBeRemoved ExecutionRequestWrapper
 		for _, execution := range executionRequests.Data {
-			log.Println(execution.ExecutionArgument)
+			log.Printf("Argument: %#v", execution.ExecutionArgument)
+
+			if execution.Type == "schedule" {
+				log.Printf("SOMETHING ELSE :O: %s", execution.Type)
+				continue
+			}
+
 			if execution.Status == "ABORT" || execution.Status == "FAILED" {
 				log.Printf("Executionstatus issue: ", execution.Status)
 			}

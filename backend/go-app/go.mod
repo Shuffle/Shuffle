@@ -8,6 +8,7 @@ require (
 	cloud.google.com/go/pubsub v1.3.1
 	cloud.google.com/go/storage v1.7.0
 	github.com/basgys/goxml2json v1.1.0
+	github.com/carlescere/scheduler v0.0.0-20170109141437-ee74d2f83d82 // indirect
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v1.13.1
 	github.com/docker/go-connections v0.4.0

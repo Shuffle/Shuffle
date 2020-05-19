@@ -28,6 +28,8 @@ import (
 	"github.com/go-git/go-git/v5"
 
 	"github.com/go-git/go-git/v5/storage/memory"
+
+	newscheduler "github.com/carlescere/scheduler"
 	//"github.com/gorilla/websocket"
 	//"google.golang.org/appengine"
 	//"google.golang.org/appengine/memcache"
@@ -53,6 +55,17 @@ var shuffleTestPath = "./shuffle-test-258209-5a2e8d7e508a.json"
 //		return true
 //	},
 //}
+
+type ExecutionRequest struct {
+	ExecutionId       string   `json:"execution_id"`
+	ExecutionArgument string   `json:"execution_argument"`
+	WorkflowId        string   `json:"workflow_id"`
+	Environments      []string `json:"environments"`
+	Authorization     string   `json:"authorization"`
+	Status            string   `json:"status"`
+	Start             string   `json:"start"`
+	Type              string   `json:"type"`
+}
 
 type Org struct {
 	Name  string `json:"name"`
@@ -371,14 +384,7 @@ func getWorkflowQueue(ctx context.Context, id string) (ExecutionRequestWrapper, 
 
 // Frequency = cronjob OR minutes between execution
 func createSchedule(ctx context.Context, scheduleId, workflowId, name, frequency string, body []byte) error {
-	c, err := scheduler.NewCloudSchedulerClient(ctx)
-	if err != nil {
-		log.Printf("%s", err)
-		return err
-	}
-
 	testSplit := strings.Split(frequency, "*")
-	log.Println(len(testSplit))
 	cronJob := ""
 	if len(testSplit) > 5 {
 		cronJob = frequency
@@ -400,31 +406,61 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, frequency
 		return errors.New("cronJob isn't formatted correctly")
 	}
 
-	req := &schedulerpb.CreateJobRequest{
-		Parent: fmt.Sprintf("projects/%s/locations/europe-west2", gceProject),
-		Job: &schedulerpb.Job{
-			Name:        fmt.Sprintf("projects/%s/locations/europe-west2/jobs/schedule_%s", gceProject, scheduleId),
-			Schedule:    cronJob,
-			Description: name,
-			Target: &schedulerpb.Job_HttpTarget{
-				HttpTarget: &schedulerpb.HttpTarget{
-					Uri:        fmt.Sprintf("https://shuffler.io/api/v1/workflows/%s/execute", workflowId),
-					HttpMethod: 1,
-					Headers: map[string]string{
-						"Authorization": "",
-					},
-					Body: body,
-				},
-			},
-		},
-		// TODO: Fill request struct fields.
+	log.Printf("CRON: %s, body: %s", cronJob, string(body))
+
+	// FIXME:
+	// This may run multiple places if multiple servers,
+	// but that's a future problem
+	job := func() {
+		request := &http.Request{
+			Method: "POST",
+			Body:   ioutil.NopCloser(strings.NewReader(string(body))),
+		}
+
+		_, _, err := handleExecution(workflowId, Workflow{}, request)
+		if err == nil {
+			log.Printf("Failed to execute: %s", err)
+		}
 	}
-	resp, err := c.CreateJob(ctx, req)
+
+	// FIXME - Create a real schedule based on cron:
+	// 1. Parse the cron in a function to match this schedule
+	// 2. Make main init check for schedules that aren't running
+	_, err := newscheduler.Every(5).Seconds().NotImmediately().Run(job)
 	if err != nil {
-		log.Printf("%s", err)
+		log.Printf("Failed to schedule workflow: %s", err)
 		return err
 	}
-	_ = resp
+
+	return errors.New("ERROR!!")
+
+	//log.Printf("REQUEST: %#v", executionRequest)
+
+	//req := &schedulerpb.CreateJobRequest{
+	//	Parent: fmt.Sprintf("projects/%s/locations/europe-west2", gceProject),
+	//	Job: &schedulerpb.Job{
+	//		Name:        fmt.Sprintf("projects/%s/locations/europe-west2/jobs/schedule_%s", gceProject, scheduleId),
+	//		Schedule:    cronJob,
+	//		Description: name,
+	//		Target: &schedulerpb.Job_HttpTarget{
+	//			HttpTarget: &schedulerpb.HttpTarget{
+	//				Uri:        fmt.Sprintf("https://shuffler.io/api/v1/workflows/%s/execute", workflowId),
+	//				HttpMethod: 1,
+	//				Headers: map[string]string{
+	//					"Authorization": "",
+	//				},
+	//				Body: body,
+	//			},
+	//		},
+	//	},
+	//	// TODO: Fill request struct fields.
+	//}
+	//resp, err := c.CreateJob(ctx, req)
+	//if err != nil {
+	//	log.Printf("%s", err)
+	//	return err
+	//}
+	//_ = resp
 
 	return nil
 }
@@ -1441,15 +1477,6 @@ func getWorkflowLocal(fileId string, request *http.Request) ([]byte, error) {
 	}
 
 	return body, nil
-}
-
-type ExecutionRequest struct {
-	ExecutionId       string   `json:"execution_id"`
-	ExecutionArgument string   `json:"execution_argument"`
-	WorkflowId        string   `json:"workflow_id"`
-	Authorization     string   `json:"authorization"`
-	Environments      []string `json:"environments"`
-	Start             string   `json:"start"`
 }
 
 func abortExecution(resp http.ResponseWriter, request *http.Request) {
