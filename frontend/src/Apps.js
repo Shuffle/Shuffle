@@ -55,6 +55,11 @@ const Apps = (props) => {
 	useEffect(() => {
 		if (apps.length <= 0 && firstrequest) {
 			document.title = "Shuffle - Apps"
+
+			if (!isLoggedIn && isLoaded) {
+				window.location = "/login"
+			}
+
 			setFirstrequest(false)
 			getApps()
 		}
@@ -79,7 +84,7 @@ const Apps = (props) => {
 
 	const getApps = () => {
 		fetch(globalUrl+"/api/v1/workflows/apps", {
-    	  	method: 'GET',
+    	  method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json',
@@ -93,7 +98,7 @@ const Apps = (props) => {
 
 			return response.json()
 		})
-    	.then((responseJson) => {
+    .then((responseJson) => {
 			setApps(responseJson)
 			setFilteredApps(responseJson)
 			if (responseJson.length > 0) {
@@ -452,15 +457,7 @@ const Apps = (props) => {
 			</div>
 		</div>
 		: 
-		<div style={{width: "600px", margin: "auto", color: "white", paddingBottom: "50px"}}>
-			<h2>Available integrations</h2> 
-			<Divider style={{marginBottom: "10px", height: "1px", width: "100%", backgroundColor: dividerColor}}/>
-			{apps.map(data => {
-				return (
-					appPaper(data)
-				)
-			})}
-		</div>
+		null
 
 	// Gets the URL itself (hopefully this works in most cases?
 	// Will then forward the data to an internal endpoint to validate the api

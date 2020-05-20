@@ -22,6 +22,7 @@ import PlayArrowIcon from '@material-ui/icons/PlayArrow';
 //import JSONPrettyMon from 'react-json-pretty/dist/monikai'
 import ReactJson from 'react-json-view'
 
+import {Link} from 'react-router-dom';
 import { useAlert } from "react-alert";
 
 import Dialog from '@material-ui/core/Dialog';
@@ -398,13 +399,13 @@ const Workflows = (props) => {
 							}
 						}}>
 							<Grid item style={{flex: "1", justifyContent: "center"}}>
-								<a href={"/workflows/"+data.id}>
+								<Link to={"/workflows/"+data.id}>
 									<Tooltip color="primary" title="Edit workflow" placement="bottom">
 										<Button style={{}} color="primary" variant="text" style={{marginRight: 10}} onClick={() => {}}>
 											<EditIcon style={{marginRight: 10}}/> Edit
 										</Button> 				
 									</Tooltip>
-								</a>
+								</Link>
 								<Tooltip color="primary" title="Execute workflow" placement="bottom">
 									<Button style={{}} color="secondary" variant="text" onClick={() => executeWorkflow(data.id)}>
 										<PlayArrowIcon />
@@ -889,7 +890,7 @@ const Workflows = (props) => {
 				</div>
 				<div>
 					<p>
-						<b>Shuffle</b> is a flexible, easy to use, automation framework allowing users to integrate their services and devices to reduce the amount of manual labor required for those tasks. <a href="/docs/workflows" style={{textDecoration: "none", color: "#f85a3e"}}>Click here for more information.</a>
+						<b>Shuffle</b> is a flexible, easy to use, automation framework allowing users to integrate their services and devices to reduce the amount of manual labor required for those tasks. <Link to="/docs/workflows" style={{textDecoration: "none", color: "#f85a3e"}}>Click here for more information.</Link>
 					</p>
 				</div>
 				<div>

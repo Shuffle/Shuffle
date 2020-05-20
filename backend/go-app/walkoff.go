@@ -1338,86 +1338,102 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	// Check every app action and param to see whether they exist
 	newActions = []Action{}
 	for _, action := range workflow.Actions {
-		curapp := WorkflowApp{}
-		// FIXME - can this work with ONLY AppID?
-		for _, app := range workflowApps {
-			if app.ID == action.AppID {
-				curapp = app
+		reservedApps := []string{
+			"0ca8887e-b4af-4e3e-887c-87e9d3bc3d3e",
+		}
+
+		builtin := false
+		for _, id := range reservedApps {
+			if id == action.AppID {
+				builtin = true
 				break
 			}
-
-			if app.Name == action.AppName && app.AppVersion == action.AppVersion {
-				curapp = app
-				break
-			}
 		}
 
-		// Check to see if the whole app is valid
-		if curapp.Name != action.AppName {
-			log.Printf("App %s doesn't exist.", action.AppName)
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "App %s doesn't exist"}`, action.AppName)))
-			return
-		}
+		if builtin {
+			newActions = append(newActions, action)
+		} else {
+			curapp := WorkflowApp{}
+			// FIXME - can this work with ONLY AppID?
+			for _, app := range workflowApps {
+				if app.ID == action.AppID {
+					curapp = app
+					break
+				}
 
-		// Check tosee if the appaction is valid
-		curappaction := WorkflowAppAction{}
-		for _, curAction := range curapp.Actions {
-			if action.Name == curAction.Name {
-				curappaction = curAction
-				break
-			}
-			log.Println(action.Name, curAction.Name)
-		}
-
-		// Check to see if the action is valid
-		if curappaction.Name != action.Name {
-			log.Printf("Appaction %s doesn't exist.", action.Name)
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		// FIXME - check all parameters to see if they're valid
-		// Includes checking required fields
-
-		newParams := []WorkflowAppActionParameter{}
-		for _, param := range curappaction.Parameters {
-			found := false
-
-			// Handles check for parameter exists + value not empty in used fields
-			for _, actionParam := range action.Parameters {
-				if actionParam.Name == param.Name {
-					found = true
-
-					if actionParam.Value == "" && actionParam.Variant == "STATIC_VALUE" && actionParam.Required == true {
-						log.Printf("Appaction %s with required param '%s' is empty.", action.Name, param.Name)
-						resp.WriteHeader(401)
-						resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Appaction %s with required param '%s' is empty."}`, action.Name, param.Name)))
-						return
-
-					}
-
-					if actionParam.Variant == "" {
-						actionParam.Variant = "STATIC_VALUE"
-					}
-
-					newParams = append(newParams, actionParam)
+				if app.Name == action.AppName && app.AppVersion == action.AppVersion {
+					curapp = app
+					break
 				}
 			}
 
-			// Handles check for required params
-			if !found && param.Required {
-				log.Printf("Appaction %s with required param %s doesn't exist.", action.Name, param.Name)
+			// Check to see if the whole app is valid
+			if curapp.Name != action.AppName {
+				log.Printf("App %s doesn't exist.", action.AppName)
+				resp.WriteHeader(401)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "App %s doesn't exist"}`, action.AppName)))
+				return
+			}
+
+			// Check tosee if the appaction is valid
+			curappaction := WorkflowAppAction{}
+			for _, curAction := range curapp.Actions {
+				if action.Name == curAction.Name {
+					curappaction = curAction
+					break
+				}
+				log.Println(action.Name, curAction.Name)
+			}
+
+			// Check to see if the action is valid
+			if curappaction.Name != action.Name {
+				log.Printf("Appaction %s doesn't exist.", action.Name)
 				resp.WriteHeader(401)
 				resp.Write([]byte(`{"success": false}`))
 				return
 			}
 
-		}
+			// FIXME - check all parameters to see if they're valid
+			// Includes checking required fields
 
-		action.Parameters = newParams
-		newActions = append(newActions, action)
+			newParams := []WorkflowAppActionParameter{}
+			for _, param := range curappaction.Parameters {
+				found := false
+
+				// Handles check for parameter exists + value not empty in used fields
+				for _, actionParam := range action.Parameters {
+					if actionParam.Name == param.Name {
+						found = true
+
+						if actionParam.Value == "" && actionParam.Variant == "STATIC_VALUE" && actionParam.Required == true {
+							log.Printf("Appaction %s with required param '%s' is empty.", action.Name, param.Name)
+							resp.WriteHeader(401)
+							resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Appaction %s with required param '%s' is empty."}`, action.Name, param.Name)))
+							return
+
+						}
+
+						if actionParam.Variant == "" {
+							actionParam.Variant = "STATIC_VALUE"
+						}
+
+						newParams = append(newParams, actionParam)
+					}
+				}
+
+				// Handles check for required params
+				if !found && param.Required {
+					log.Printf("Appaction %s with required param %s doesn't exist.", action.Name, param.Name)
+					resp.WriteHeader(401)
+					resp.Write([]byte(`{"success": false}`))
+					return
+				}
+
+			}
+
+			action.Parameters = newParams
+			newActions = append(newActions, action)
+		}
 	}
 
 	workflow.Actions = newActions

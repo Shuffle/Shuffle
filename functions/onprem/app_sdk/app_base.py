@@ -122,9 +122,11 @@ class AppBase:
                     baseresult = execution_data["execution_argument"]
                 else:
                     for result in execution_data["results"]:
-                        if result["action"]["label"].lower() == actionname.lower():
+                        resultlabel = result["action"]["label"].replace(" ", "_", -1)
+                        if resultlabel.lower() == actionname.lower():
                             baseresult = result["result"]
                             break
+
             except KeyError as error:
                 print(f"Error: {error}")
 
@@ -143,9 +145,14 @@ class AppBase:
                 basejson = json.loads(baseresult)
             except json.decoder.JSONDecodeError as e:
                 return baseresult
+
+            def loop_recursion(data):
+                for value in data:
+                    pass
         
             try:
                 for value in parsersplit[1:]:
+                    print("VALUE: %s", value)
                     if value == "#":
                         print("HANDLE RECURSIVE LOOP")
                         pass
@@ -177,7 +184,7 @@ class AppBase:
                 data = parameter["value"]
                 self.logger.debug(f"\n\nHandle static data with JSON: {data}\n\n")
 
-                match = ".*([$]{1}(\w+\.?){1,})"
+                match = ".*([$]{1}([a-zA-Z0-9()# _-]+\.?){1,})"
                 actualitem = re.findall(match, data, re.MULTILINE)
                 self.logger.info("PARSED: %s" % actualitem)
                 if len(actualitem) > 0:
@@ -450,17 +457,15 @@ class AppBase:
                         calltimes = 1
                         result = ""
                         paramiter = []
-                        for parameter in action["parameters"]:
-                            #self.logger.info(parameter)
-                            #print(fullexecution)
 
-                            
+                        all_executions = []
+                        for parameter in action["parameters"]:
                             check, value = parse_params(action, fullexecution, parameter)
                             if check:
                                 raise Exception(check)
 
+                            if isinstance(value, list):
                             params[parameter["name"]] = value
-                            # p["value"]
                         
                         # FIXME - this is horrible, but works for now
                         #for i in range(calltimes):
