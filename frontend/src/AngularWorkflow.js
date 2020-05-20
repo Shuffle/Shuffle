@@ -160,7 +160,7 @@ const AngularWorkflow = (props) => {
 
 	const [elements, setElements] = useState([])
 	const { start, stop } = useInterval({
-	  	duration: 5000,
+	  	duration: 2500,
 	  	startImmediate: false,
 	  	callback: () => {
 				fetchUpdates()
@@ -285,6 +285,7 @@ const AngularWorkflow = (props) => {
 				currentnode = currentnode[0]
 				const outgoingEdges = currentnode.outgoers('edge')
 				const incomingEdges = currentnode.incomers('edge')
+				console.log("NODE: ", currentnode)
 
 				//currentnode.removeClass('success-highlight failure-highlight executing-highlight')
 				switch (item.status) {
@@ -335,7 +336,19 @@ const AngularWorkflow = (props) => {
 						// FIXME - add outgoing nodes to executing
 						//const outgoingNodes = outgoingEdges.find().data().target
 						if (outgoingEdges.length > 0) {
-							outgoingEdges.addClass('success-highlight')
+							for (var i = 0; i < outgoingEdges.length; i++) {
+								const edge = outgoingEdges[i]
+								const targetnode = cy.getElementById(edge.data().target)
+								if (targetnode !== undefined && !targetnode.classes().includes("success-highlight") && !targetnode.classes().includes("failure-highlight")) {
+									targetnode.removeClass('not-executing-highlight')
+									targetnode.removeClass('success-highlight')
+									targetnode.removeClass('failure-highlight')
+									targetnode.removeClass('awaiting-data-highlight')
+									targetnode.addClass('executing-highlight')
+								}
+							}
+
+							// const outgoingEdges = currentnode.outgoers('edge')
 						}
 						break
 					case "FAILURE": 
@@ -359,6 +372,7 @@ const AngularWorkflow = (props) => {
 						currentnode.addClass('awaiting-data-highlight')
 						break
 					default:
+						console.log("DEFAULT?")
 						break
 				}
 			}
@@ -501,6 +515,7 @@ const AngularWorkflow = (props) => {
 
 		cy.elements().removeClass('success-highlight failure-highlight executing-highlight')
 		firstnode[0].addClass('executing-highlight')
+
 		return true
 	}
 
@@ -730,8 +745,13 @@ const AngularWorkflow = (props) => {
 	}
 
 	const onEdgeSelect = (event) => {
-		setSelectedEdgeIndex(workflow.branches.findIndex(data => data.id === event.target.data()["id"]))
-		setSelectedEdge(event.target.data())
+		const triggercheck = workflow.triggers.find(trigger => trigger.id === event.target.data()["source"])
+		if (triggercheck === undefined) {
+			setSelectedEdgeIndex(workflow.branches.findIndex(data => data.id === event.target.data()["id"]))
+			setSelectedEdge(event.target.data())
+		} else {
+			alert.info("Can't edit branches from triggers") 
+		}
 	}
 
 	const onNodeSelect = (event) => {
@@ -759,14 +779,13 @@ const AngularWorkflow = (props) => {
 				env = environments[0]
 			}
 
-			console.log(curapp)
+			console.log("Selected: ", data.id)
 
 			setRequiresAuthentication(curapp.authentication.required)
 			setSelectedApp(curapp)
 			setSelectedActionEnvironment(env)
 			setSelectedActionName(curaction.name)
 			setSelectedAction(curaction)
-			console.timeEnd("ACTIONSTART")
 		} else if (data.type === "TRIGGER") {
 			//console.log("Should handle trigger "+data.triggertype)
 			//console.log(data)
@@ -1626,6 +1645,8 @@ const AngularWorkflow = (props) => {
 							<img alt="" style={{width: "80px"}} />
 							: 
 							<img alt="" src={trigger.large_image} style={{width: 80, height: 80}} />
+
+						const color = trigger.is_valid ? "green" : "orange"
 						return(
 							<Draggable 
 								onDrag={(e) => {handleTriggerDrag(e, trigger)}}
@@ -1637,7 +1658,7 @@ const AngularWorkflow = (props) => {
 								}}
 							>
 							<Paper square style={paperAppStyle} onClick={() => {}}>
-								<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: "2px", backgroundColor: "orange", marginRight: "5px"}}>
+								<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: "2px", backgroundColor: color, marginRight: "5px"}}>
 								</div>
 								<Grid container style={{margin: "10px 10px 10px 10px", flex: "10"}}>
 									<Grid item>
@@ -2235,7 +2256,6 @@ const AngularWorkflow = (props) => {
 						// Remap data based on variant
 						if (data.variant === "STATIC_VALUE") {
 							staticcolor = "#f85a3e"	
-							console.log("DATA IS STATIC")
 						} else if (data.variant === "ACTION_RESULT") {
 							// Gets the parents of the current node
 							var parents = getParents(selectedAction)
@@ -2706,7 +2726,6 @@ const AngularWorkflow = (props) => {
 				placeholder={placeholder}
 				onClick={() => {
 					console.log("CHANGE FIELD")
-					setMultiline(!multiline)
 				}}
 				onBlur={(e) => {
 					changeActionVariable(data.action_field, e.target.value)

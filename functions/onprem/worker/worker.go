@@ -22,6 +22,7 @@ import (
 var environment = os.Getenv("ENVIRONMENT_NAME")
 var baseUrl = os.Getenv("BASE_URL")
 var baseimagename = "frikky/shuffle"
+var sleepTime = 2
 
 type Condition struct {
 	AppName     string   `json:"app_name"`
@@ -210,11 +211,11 @@ type WorkflowAppAction struct {
 }
 
 // removes every container except itself (worker)
-func shutdown(executionId string) {
+func shutdown(executionId, workflowId string) {
 	dockercli, err := dockerclient.NewEnvClient()
 	if err != nil {
 		log.Printf("Unable to create docker client: %s", err)
-		shutdown(executionId)
+		os.Exit(3)
 	}
 
 	containerOptions := types.ContainerListOptions{
@@ -243,9 +244,9 @@ func shutdown(executionId string) {
 	}
 
 	// FIXME: Add an API call to the backend
-	workflowid := "d0496ad4-d682-4506-bbf9-f926358a4b2a"
-	fullUrl := fmt.Sprintf("%s/api/v1/workflows/%s/executions/%s/abort", baseUrl, workflowid, executionId)
-	log.Printf("ShutdownURL: %s", fullUrl)
+	// fmt.Sprintf("AUTHORIZATION=%s", workflowExecution.Authorization),
+
+	fullUrl := fmt.Sprintf("%s/api/v1/workflows/%s/executions/%s/abort", baseUrl, workflowId, executionId)
 	req, err := http.NewRequest(
 		"GET",
 		fullUrl,
@@ -256,6 +257,8 @@ func shutdown(executionId string) {
 		log.Println("Failed building request: %s", err)
 	}
 
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("Authorization", authorization)
 	client := &http.Client{}
 	_, err = client.Do(req)
 	if err != nil {
@@ -339,12 +342,11 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 	dockercli, err := dockerclient.NewEnvClient()
 	if err != nil {
 		log.Printf("Unable to create docker client: %s", err)
-		shutdown(workflowExecution.ExecutionId)
+		shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
 	}
 
 	onpremApps := []string{}
 	startAction := workflowExecution.Workflow.Start
-	sleepTime := 5
 	toExecuteOnprem := []string{}
 	parents := map[string][]string{}
 	children := map[string][]string{}
@@ -614,13 +616,13 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 
 		if workflowExecution.Status == "FINISHED" || workflowExecution.Status == "SUCCESS" {
 			log.Printf("Workflow %s is finished. Exiting worker.", workflowExecution.ExecutionId)
-			shutdown(workflowExecution.ExecutionId)
+			shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
 		}
 
 		log.Printf("Status: %s, Results: %d, actions: %d", workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
 		if workflowExecution.Status != "EXECUTING" {
 			log.Printf("Exiting as worker execution has status %s!", workflowExecution.Status)
-			shutdown(workflowExecution.ExecutionId)
+			shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
 		}
 
 		if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions) {
@@ -689,7 +691,7 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 
 			if shutdownCheck {
 				log.Println("BREAKING BECAUSE RESULTS IS SAME LENGTH AS ACTIONS. SHOULD CHECK ALL RESULTS FOR WHETHER THEY'RE DONE")
-				shutdown(workflowExecution.ExecutionId)
+				shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
 			}
 		}
 		time.Sleep(time.Duration(sleepTime) * time.Second)
@@ -740,12 +742,12 @@ func main() {
 
 	if len(authorization) == 0 {
 		log.Println("No AUTHORIZATION key set in env")
-		shutdown(executionId)
+		shutdown(executionId, "")
 	}
 
 	if len(executionId) == 0 {
 		log.Println("No EXECUTIONID key set in env")
-		shutdown(executionId)
+		shutdown(executionId, "")
 	}
 
 	// FIXME - tmp
@@ -759,7 +761,7 @@ func main() {
 
 	if err != nil {
 		log.Println("Failed making request builder")
-		shutdown(executionId)
+		shutdown(executionId, "")
 	}
 
 	for {
@@ -793,7 +795,7 @@ func main() {
 
 		if workflowExecution.Status == "FINISHED" || workflowExecution.Status == "SUCCESS" {
 			log.Printf("Workflow %s is finished. Exiting worker.", workflowExecution.ExecutionId)
-			shutdown(executionId)
+			shutdown(executionId, workflowExecution.Workflow.ID)
 		}
 
 		if workflowExecution.Status == "EXECUTING" || workflowExecution.Status == "RUNNING" {
@@ -801,11 +803,11 @@ func main() {
 			err = handleExecution(client, req, workflowExecution)
 			if err != nil {
 				log.Printf("Workflow %s is finished: %s", workflowExecution.ExecutionId, err)
-				shutdown(executionId)
+				shutdown(executionId, workflowExecution.Workflow.ID)
 			}
 		} else {
 			log.Printf("Workflow %s has status %s. Exiting worker.", workflowExecution.ExecutionId, workflowExecution.Status)
-			shutdown(executionId)
+			shutdown(executionId, workflowExecution.Workflow.ID)
 		}
 
 		//log.Println(string(body))

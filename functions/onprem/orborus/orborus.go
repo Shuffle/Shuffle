@@ -29,6 +29,11 @@ var baseimagename = "frikky/shuffle"
 var dockerApiVersion = os.Getenv("DOCKER_API_VERSION")
 var environment = os.Getenv("ENVIRONMENT_NAME")
 var orgId = os.Getenv("ORG_ID")
+
+// Starts jobs in bulk, so this could be increased
+var sleepTime = 3
+
+// Timeout if somethinc rashes
 var workerTimeout = 600
 
 type ExecutionRequestWrapper struct {
@@ -173,7 +178,6 @@ func main() {
 	log.Printf("--- Finished configuring docker environment ---\n")
 
 	// FIXME - time limit
-	sleepTime := 10
 	client := &http.Client{}
 
 	fullUrl := fmt.Sprintf("%s/api/v1/workflows/queue", baseUrl)

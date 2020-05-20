@@ -114,8 +114,8 @@ const data = [{
 		{
 			selector: '.success-highlight',
 			css: {
-				'background-color': '#399645',
-				'border-color': '#399645',
+				'background-color': '#41dcab',
+				'border-color': '#41dcab',
 				'border-width': '5px',
 				'transition-property': 'background-color',
 				'transition-duration': '0.5s',
@@ -136,6 +136,7 @@ const data = [{
 			css: {
 				'background-color': 'grey',
 				'border-color': 'grey',
+				'border-width': '5px',
 				'transition-property': '#ffef47',
 				'transition-duration': '0.25s',
 			},

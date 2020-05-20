@@ -1790,7 +1790,6 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		}
 
 		if len(workflowExecution.ExecutionId) == 0 {
-			log.Println("Making new executionId!")
 			sessionToken := uuid.NewV4()
 			workflowExecution.ExecutionId = sessionToken.String()
 		} else {
