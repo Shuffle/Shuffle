@@ -261,7 +261,9 @@ func main() {
 		// New, abortable version. Should check executionid and remove everything else
 		var toBeRemoved ExecutionRequestWrapper
 		for _, execution := range executionRequests.Data {
-			log.Printf("Argument: %#v", execution.ExecutionArgument)
+			if len(execution.ExecutionArgument) > 0 {
+				log.Printf("Argument: %#v", execution.ExecutionArgument)
+			}
 
 			if execution.Type == "schedule" {
 				log.Printf("SOMETHING ELSE :O: %s", execution.Type)

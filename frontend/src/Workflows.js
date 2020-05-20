@@ -333,18 +333,19 @@ const Workflows = (props) => {
 		}
 
 		return (
-			<Paper square style={paperAppStyle} onClick={() => {
-				if (selectedWorkflow.id !== data.id) {
-					setSelectedWorkflow(data)
-					getWorkflowExecution(data.id)
-				}
+			<Paper square style={paperAppStyle} onClick={(e) => {
 			}}>
 				<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: boxWidth, backgroundColor: boxColor}}>
 				</div>
 				<Grid container style={{margin: "10px 10px 10px 10px", flex: "1"}}>
 					<Grid style={{display: "flex", flexDirection: "column", width: "100%"}}>
 						<Grid item style={{flex: "1", display: "flex"}}>
-							<div style={{flex: "10"}}>
+							<div style={{flex: "10",}} onClick={() => {
+								if (selectedWorkflow.id !== data.id) {
+									setSelectedWorkflow(data)
+									getWorkflowExecution(data.id)
+								}
+							}}>
 								<h3 style={{marginBottom: "0px", marginTop: "10px"}}>{data.name}</h3>
 							</div>
 							<div style={{flex: "1"}}>
@@ -390,17 +391,22 @@ const Workflows = (props) => {
       							</Menu>
 							</div>
 						</Grid>
-						<div style={{display: "flex", flex: "1"}}>
+						<div style={{display: "flex", flex: "1"}} onClick={() => {
+							if (selectedWorkflow.id !== data.id) {
+								setSelectedWorkflow(data)
+								getWorkflowExecution(data.id)
+							}
+						}}>
 							<Grid item style={{flex: "1", justifyContent: "center"}}>
 								<a href={"/workflows/"+data.id}>
 									<Tooltip color="primary" title="Edit workflow" placement="bottom">
-										<Button style={{}} color="primary" variant="outlined" style={{marginRight: 10}} onClick={() => {}}>
+										<Button style={{}} color="primary" variant="text" style={{marginRight: 10}} onClick={() => {}}>
 											<EditIcon style={{marginRight: 10}}/> Edit
 										</Button> 				
 									</Tooltip>
 								</a>
 								<Tooltip color="primary" title="Execute workflow" placement="bottom">
-									<Button style={{}} color="primary" variant="outlined" onClick={() => executeWorkflow(data.id)}>
+									<Button style={{}} color="secondary" variant="text" onClick={() => executeWorkflow(data.id)}>
 										<PlayArrowIcon />
 									</Button> 				
 								</Tooltip>
@@ -840,7 +846,7 @@ const Workflows = (props) => {
 			<div style={{flex: viewSize.executionsView, marginLeft: "10px", marginRight: "10px"}}>
 				<div style={{display: "flex"}}>
 					<div style={{flex: "10"}}>
-						<h2>Executions</h2> 
+						<h2>Executions: {selectedWorkflow.name}</h2> 
 					</div>
 					<div style={{flex: "1"}}>
 						<Button color="primary" style={{marginTop: "20px"}} variant="outlined" onClick={() => {

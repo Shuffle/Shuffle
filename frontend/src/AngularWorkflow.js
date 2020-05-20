@@ -80,7 +80,6 @@ const splitter = "|~|"
 //const referenceUrl = "https://shuffler.io/functions/webhooks/"
 //const referenceUrl = window.location.origin+"/api/v1/hooks/"
 
-console.log(window.location)
 const AngularWorkflow = (props) => {
   const { globalUrl, isLoggedIn, isLoaded } = props;
 	const referenceUrl = globalUrl+"/api/v1/hooks/"
@@ -1261,11 +1260,11 @@ const AngularWorkflow = (props) => {
 
 	//const submitSchedule = (id, name, frequency, executionArg) => {
 	const submitSchedule = (trigger, triggerindex) => {
-		const cronSplit = workflow.triggers[triggerindex].parameters[0].value.split("*")
-		if (cronSplit.length <= 5 || cronSplit.length > 6) {
-			alert.error("Error: Bad cron, example run every 1 minute: */1 * * * *")
-			return
-		}
+		//const cronSplit = workflow.triggers[triggerindex].parameters[0].value.split("*")
+		//if (cronSplit.length <= 5 || cronSplit.length > 6) {
+		//	alert.error("Error: Bad cron, example run every 1 minute: */1 * * * *")
+		//	return
+		//}
 
 		if (trigger.name.length <= 0) {
 			alert.error("Error: name can't be empty")
@@ -3892,7 +3891,7 @@ const AngularWorkflow = (props) => {
 		if (Object.getOwnPropertyNames(selectedTrigger).length > 0 && workflow.triggers[selectedTriggerIndex] !== undefined) {
 			if (workflow.triggers[selectedTriggerIndex].parameters === undefined || workflow.triggers[selectedTriggerIndex].parameters === null || workflow.triggers[selectedTriggerIndex].parameters.length === 0) {
 				workflow.triggers[selectedTriggerIndex].parameters = []
-				workflow.triggers[selectedTriggerIndex].parameters[0] = {"name": "cron", "value": "*/15 * * * *"}
+				workflow.triggers[selectedTriggerIndex].parameters[0] = {"name": "cron", "value": "120"}
 				workflow.triggers[selectedTriggerIndex].parameters[1] = {"name": "execution_argument", "value": '{"example": {"json": "is cool"}}'}
 				setWorkflow(workflow)
 			}
@@ -3953,7 +3952,7 @@ const AngularWorkflow = (props) => {
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
 								<div style={{flex: "10"}}> 
-									<b>Cron: </b> 
+									<b>Run how often (seconds)? </b> 
 								</div>
 							</div>
 							<TextField
@@ -3968,6 +3967,7 @@ const AngularWorkflow = (props) => {
 									},
 								}}
 								fullWidth
+								disabled={workflow.triggers[selectedTriggerIndex].status === "running"}
 								defaultValue={workflow.triggers[selectedTriggerIndex].parameters[0].value}
 								color="primary"
 								placeholder="defaultValue"
@@ -3992,6 +3992,7 @@ const AngularWorkflow = (props) => {
 										fontSize: "1em",
 									},
 								}}
+								disabled={workflow.triggers[selectedTriggerIndex].status === "running"}
 								fullWidth
 								rows="6"
 								multiline

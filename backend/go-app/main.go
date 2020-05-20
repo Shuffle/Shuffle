@@ -42,6 +42,7 @@ import (
 
 	// Random
 	xj "github.com/basgys/goxml2json"
+	newscheduler "github.com/carlescere/scheduler"
 	gyaml "github.com/ghodss/yaml"
 	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -231,10 +232,12 @@ type AppInfo struct {
 	DestinationApp ScheduleApp `json:"destinationapp,omitempty" datastore:"destinationapp,noindex"`
 }
 
-// Used for the api integrator
-//Username string `datastore:"Username,noindex"`
+// May 2020: Reused for onprem schedules - Id, Seconds, WorkflowId and argument
 type ScheduleOld struct {
 	Id                   string       `json:"id" datastore:"id"`
+	Seconds              int          `json:"seconds" datastore:"seconds"`
+	WorkflowId           string       `json:"workflow_id datastore:"workflow_id", `
+	Argument             string       `json:"argument" datastore:"argument"`
 	AppInfo              AppInfo      `json:"appinfo" datastore:"appinfo,noindex"`
 	Finished             bool         `json:"finished" finished:"id"`
 	BaseAppLocation      string       `json:"base_app_location" datastore:"baseapplocation,noindex"`
@@ -5624,11 +5627,13 @@ func init() {
 		log.Fatalf("DBclient error during init: %s", err)
 	}
 
+	// Setting stats for backend starts (failure count as well)
 	err = increaseStatisticsField(ctx, "backend_executions", "", 1)
 	if err != nil {
 		log.Printf("Failed increasing local stats: %s", err)
 	}
 
+	// Gets environments and inits if it doesn't exist
 	count, err := getEnvironmentCount()
 	if count == 0 && err == nil {
 		item := Environment{
@@ -5664,6 +5669,35 @@ func init() {
 		}
 		_ = r
 		iterateAppGithubFolders(fs, dir, "", "testing")
+	}
+
+	// Gets schedules and starts them
+	schedules, err := getAllSchedules(ctx)
+	if err != nil {
+		log.Printf("Failed getting schedules during service init: %s", err)
+	} else {
+		log.Printf("Setting up %d schedule(s)", len(schedules))
+		for _, schedule := range schedules {
+			job := func() {
+				request := &http.Request{
+					Method: "POST",
+					Body:   ioutil.NopCloser(strings.NewReader(schedule.Argument)),
+				}
+
+				_, _, err := handleExecution(schedule.WorkflowId, Workflow{}, request)
+				if err != nil {
+					log.Printf("Failed to execute: %s", err)
+				}
+			}
+
+			jobret, err := newscheduler.Every(schedule.Seconds).Seconds().NotImmediately().Run(job)
+			if err != nil {
+				log.Printf("Failed to schedule workflow: %s", err)
+				// FIXME: what now? lol:w
+			}
+
+			scheduledJobs[schedule.Id] = jobret
+		}
 	}
 
 	log.Printf("Finished INIT")

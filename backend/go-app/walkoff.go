@@ -27,9 +27,8 @@ import (
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
 
-	"github.com/go-git/go-git/v5/storage/memory"
-
 	newscheduler "github.com/carlescere/scheduler"
+	"github.com/go-git/go-git/v5/storage/memory"
 	//"github.com/gorilla/websocket"
 	//"google.golang.org/appengine"
 	//"google.golang.org/appengine/memcache"
@@ -43,6 +42,7 @@ var baseEnvironment = "onprem"
 var cloudname = "cloud"
 
 var defaultLocation = "europe-west2"
+var scheduledJobs = map[string]*newscheduler.Job{}
 
 // To test out firestore before potential merge
 var shuffleTestProject = "shuffle-test-258209"
@@ -384,29 +384,35 @@ func getWorkflowQueue(ctx context.Context, id string) (ExecutionRequestWrapper, 
 
 // Frequency = cronjob OR minutes between execution
 func createSchedule(ctx context.Context, scheduleId, workflowId, name, frequency string, body []byte) error {
+	var err error
 	testSplit := strings.Split(frequency, "*")
 	cronJob := ""
+	newfrequency := 0
+
 	if len(testSplit) > 5 {
 		cronJob = frequency
 	} else {
-		newfrequency, err := strconv.Atoi(frequency)
+		newfrequency, err = strconv.Atoi(frequency)
 		if err != nil {
+			log.Printf("Failed to parse time: %s", err)
 			return err
 		}
-
-		_ = newfrequency
 
 		//if int(newfrequency) < 60 {
 		//	cronJob = fmt.Sprintf("*/%s * * * *")
 		//} else if int(newfrequency) <
-		log.Println("FIXME: SHOULD DO Frequency (minutes) to CRON")
 	}
 
-	if len(cronJob) == 0 {
+	// Reverse. Can't handle CRON, only numbers
+	if len(cronJob) > 0 {
 		return errors.New("cronJob isn't formatted correctly")
 	}
 
-	log.Printf("CRON: %s, body: %s", cronJob, string(body))
+	if newfrequency < 1 {
+		return errors.New("Frequency has to be more than 0")
+	}
+
+	//log.Printf("CRON: %s, body: %s", cronJob, string(body))
 
 	// FIXME:
 	// This may run multiple places if multiple servers,
@@ -418,49 +424,42 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, frequency
 		}
 
 		_, _, err := handleExecution(workflowId, Workflow{}, request)
-		if err == nil {
+		if err != nil {
 			log.Printf("Failed to execute: %s", err)
 		}
 	}
 
-	// FIXME - Create a real schedule based on cron:
-	// 1. Parse the cron in a function to match this schedule
-	// 2. Make main init check for schedules that aren't running
-	_, err := newscheduler.Every(5).Seconds().NotImmediately().Run(job)
+	log.Printf("Starting frequency: %d", newfrequency)
+	jobret, err := newscheduler.Every(newfrequency).Seconds().NotImmediately().Run(job)
 	if err != nil {
 		log.Printf("Failed to schedule workflow: %s", err)
 		return err
 	}
 
-	return errors.New("ERROR!!")
+	//scheduledJobs = append(scheduledJobs, jobret)
+	scheduledJobs[scheduleId] = jobret
 
-	//log.Printf("REQUEST: %#v", executionRequest)
+	// Doesn't need running/not running. If stopped, we just delete it.
+	timeNow := int64(time.Now().Unix())
+	schedule := ScheduleOld{
+		Id:                   scheduleId,
+		WorkflowId:           workflowId,
+		Argument:             string(body),
+		Seconds:              newfrequency,
+		CreationTime:         timeNow,
+		LastModificationtime: timeNow,
+		LastRuntime:          timeNow,
+	}
 
-	//req := &schedulerpb.CreateJobRequest{
-	//	Parent: fmt.Sprintf("projects/%s/locations/europe-west2", gceProject),
-	//	Job: &schedulerpb.Job{
-	//		Name:        fmt.Sprintf("projects/%s/locations/europe-west2/jobs/schedule_%s", gceProject, scheduleId),
-	//		Schedule:    cronJob,
-	//		Description: name,
-	//		Target: &schedulerpb.Job_HttpTarget{
-	//			HttpTarget: &schedulerpb.HttpTarget{
-	//				Uri:        fmt.Sprintf("https://shuffler.io/api/v1/workflows/%s/execute", workflowId),
-	//				HttpMethod: 1,
-	//				Headers: map[string]string{
-	//					"Authorization": "",
-	//				},
-	//				Body: body,
-	//			},
-	//		},
-	//	},
-	//	// TODO: Fill request struct fields.
-	//}
-	//resp, err := c.CreateJob(ctx, req)
-	//if err != nil {
-	//	log.Printf("%s", err)
-	//	return err
-	//}
-	//_ = resp
+	err = setSchedule(ctx, schedule)
+	if err != nil {
+		log.Printf("Failed to set schedule: %s", err)
+		return err
+	}
+
+	// FIXME - Create a real schedule based on cron:
+	// 1. Parse the cron in a function to match this schedule
+	// 2. Make main init check for schedules that aren't running
 
 	return nil
 }
@@ -1692,11 +1691,12 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 			return WorkflowExecution{}, "Failed getting body", err
 		}
 
+		// This one doesn't really matter.
 		var execution ExecutionRequest
 		err = json.Unmarshal(body, &execution)
 		if err != nil {
-			log.Printf("Failed execution POST unmarshaling: %s", err)
-			return WorkflowExecution{}, "", err
+			//log.Printf("Failed execution POST unmarshaling - still continue: %s", err)
+			//return WorkflowExecution{}, "", err
 		}
 
 		if execution.Start == "" && len(body) > 0 {
@@ -1708,7 +1708,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 			workflowExecution.ExecutionArgument = execution.ExecutionArgument
 		}
 
-		log.Printf("Execution data: %#v", execution)
+		//log.Printf("Execution data: %#v", execution)
 		if len(execution.Start) == 36 {
 			log.Printf("SHOULD START ON NODE %s", execution.Start)
 			workflow.Start = execution.Start
@@ -1916,7 +1916,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 				executionRequestWrapper.Data = append(executionRequestWrapper.Data, executionRequest)
 			}
 
-			log.Printf("Execution request: %#v", executionRequest)
+			//log.Printf("Execution request: %#v", executionRequest)
 
 			err = setWorkflowQueue(ctx, executionRequestWrapper, environment)
 			if err != nil {
@@ -2086,7 +2086,117 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 	return
 }
 
+func stopScheduleGCP(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	user, err := handleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("Api authentication failed in schedule workflow: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	location := strings.Split(request.URL.String(), "/")
+
+	var fileId string
+	var scheduleId string
+	if location[1] == "api" {
+		if len(location) <= 6 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		fileId = location[4]
+		scheduleId = location[6]
+	}
+
+	if len(fileId) != 36 {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Workflow ID to stop schedule is not valid"}`))
+		return
+	}
+
+	if len(scheduleId) != 36 {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Schedule ID not valid"}`))
+		return
+	}
+
+	ctx := context.Background()
+	workflow, err := getWorkflow(ctx, fileId)
+	if err != nil {
+		log.Printf("Failed getting the workflow locally: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// FIXME - have a check for org etc too..
+	// FIXME - admin check like this? idk
+	if user.Id != workflow.Owner && user.Role != "admin" && user.Role != "scheduler" {
+		log.Printf("Wrong user (%s) for workflow %s (stop schedule)", user.Username, workflow.ID)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if len(workflow.Actions) == 0 {
+		workflow.Actions = []Action{}
+	}
+	if len(workflow.Branches) == 0 {
+		workflow.Branches = []Branch{}
+	}
+	if len(workflow.Triggers) == 0 {
+		workflow.Triggers = []Trigger{}
+	}
+	if len(workflow.Errors) == 0 {
+		workflow.Errors = []string{}
+	}
+
+	err = deleteSchedule(ctx, scheduleId)
+	if err != nil {
+		if strings.Contains(err.Error(), "Job not found") {
+			resp.WriteHeader(200)
+			resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+		} else {
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed stopping schedule"}`)))
+		}
+		return
+	}
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+	return
+}
+
 func deleteSchedule(ctx context.Context, id string) error {
+	log.Printf("Should stop schedule %s!", id)
+	//newscheduler "github.com/carlescere/scheduler"
+	log.Printf("Schedules: %#v", scheduledJobs)
+	if value, exists := scheduledJobs[id]; exists {
+		log.Printf("STOP THIS ONE: %s", value)
+		// Looks like this does the trick? Hurr
+		value.Lock()
+		err := DeleteKey(ctx, "schedules", id)
+		if err != nil {
+			log.Printf("Failed to delete schedule: %s", err)
+			return err
+		}
+	} else {
+		// FIXME - allow it to kind of stop anyway?
+		return errors.New("Can't find the schedule.")
+	}
+
+	return nil
+}
+
+func deleteScheduleGCP(ctx context.Context, id string) error {
 	c, err := scheduler.NewCloudSchedulerClient(ctx)
 	if err != nil {
 		log.Printf("%s", err)
@@ -2208,19 +2318,15 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	type tmp struct {
-		ExecutionArgument string `json:"execution_argument"`
-	}
-
-	var tmpArg tmp
-	tmpArg.ExecutionArgument = schedule.ExecutionArgument
-	scheduleArg, err := json.Marshal(tmpArg)
+	scheduleArg, err := json.Marshal(schedule.ExecutionArgument)
 	if err != nil {
 		log.Printf("Failed scheduleArg marshal: %s", err)
 		resp.WriteHeader(http.StatusInternalServerError)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
+
+	log.Printf("Schedulearg: %s", string(scheduleArg))
 
 	err = createSchedule(
 		ctx,
@@ -3315,7 +3421,7 @@ func getWorkflowExecutions(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// Query for the specifci workflowId
-	q := datastore.NewQuery("workflowexecution").Filter("workflow_id =", fileId)
+	q := datastore.NewQuery("workflowexecution").Filter("workflow_id =", fileId).Limit(50)
 	var workflowExecutions []WorkflowExecution
 	_, err = dbclient.GetAll(ctx, q, &workflowExecutions)
 	if err != nil {
@@ -3340,6 +3446,18 @@ func getWorkflowExecutions(resp http.ResponseWriter, request *http.Request) {
 
 	resp.WriteHeader(200)
 	resp.Write(newjson)
+}
+
+func getAllSchedules(ctx context.Context) ([]ScheduleOld, error) {
+	var schedules []ScheduleOld
+	q := datastore.NewQuery("schedules")
+
+	_, err := dbclient.GetAll(ctx, q, &schedules)
+	if err != nil {
+		return []ScheduleOld{}, err
+	}
+
+	return schedules, nil
 }
 
 func getAllWorkflowApps(ctx context.Context) ([]WorkflowApp, error) {
