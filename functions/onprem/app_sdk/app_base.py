@@ -109,10 +109,9 @@ class AppBase:
 
         # Takes a workflow execution as argument
         # Returns a string if the result is single, or a list if it's a list
-        # Not implemented: lists
         def get_json_value(execution_data, input_data):
             parsersplit = input_data.split(".")
-            actionname = parsersplit[0][1:]
+            actionname = parsersplit[0][1:].replace(" ", "_", -1)
             print(f"Actionname: {actionname}")
         
             # 1. Find the action
@@ -122,14 +121,14 @@ class AppBase:
                     baseresult = execution_data["execution_argument"]
                 else:
                     for result in execution_data["results"]:
-                        resultlabel = result["action"]["label"].replace(" ", "_", -1)
+                        resultlabel = result["action"]["label"].replace(" ", "_", -1).lower()
                         if resultlabel.lower() == actionname.lower():
                             baseresult = result["result"]
                             break
-
+        
             except KeyError as error:
                 print(f"Error: {error}")
-
+        
             print(f"After first trycatch")
         
             # 2. Find the JSON data
@@ -145,19 +144,24 @@ class AppBase:
                 basejson = json.loads(baseresult)
             except json.decoder.JSONDecodeError as e:
                 return baseresult
-
-            def loop_recursion(data):
-                for value in data:
-                    pass
         
             try:
+                cnt = 0
                 for value in parsersplit[1:]:
-                    print("VALUE: %s", value)
+                    cnt += 1
+        
                     if value == "#":
-                        print("HANDLE RECURSIVE LOOP")
-                        pass
+                        # FIXME - not recursive - should go deeper if there are more #
+                        print("HANDLE RECURSIVE LOOP ")
+                        returnlist = []
+                        for innervalue in basejson:
+                            #print("Value: %s" % value[parsersplit[cnt+1]])
+                            returnlist.append(innervalue[parsersplit[cnt+1]])
+        
+                        # Example format: ${[]}$
+                        return "${%s%s}$" % (parsersplit[cnt+1], json.dumps(returnlist))
+        
                     else:
-                        print("BASE: ", basejson)
                         if isinstance(basejson[value], str):
                             print(f"LOADING STRING '%s' AS JSON" % basejson[value]) 
                             try:
@@ -167,12 +171,11 @@ class AppBase:
                                 return basejson[value]
                         else:
                             basejson = basejson[value]
+        
             except KeyError as e:
-                print(f"Keyerror: {e}")
-                return basejson
+                return "KeyError: %s" % e
             except IndexError as e:
-                print(f"Indexerror: {e}")
-                return basejson
+                return "IndexError: %s" % e
         
             return basejson
 
@@ -199,8 +202,6 @@ class AppBase:
                             parameter["value"] = parameter["value"].replace(to_be_replaced, value)
                         elif isinstance(value, dict):
                             parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value))
-
-                        # Check if json inside string
 
                 #self.logger.info(f"CONVERT DATA FROM {parameter['value']} to {data}")
                 #parameter["value"] = data
@@ -459,17 +460,58 @@ class AppBase:
                         paramiter = []
 
                         all_executions = []
+
+                        multiexecution = False
                         for parameter in action["parameters"]:
                             check, value = parse_params(action, fullexecution, parameter)
                             if check:
                                 raise Exception(check)
 
-                            if isinstance(value, list):
-                            params[parameter["name"]] = value
+                            # Custom format for ${name[0,1]}$
+                            submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"
+                            actualitem = re.findall(submatch, value, re.MULTILINE)
+                            if len(actualitem) > 0:
+                                multiexecution = True
+
+                                # 1. Find the length of the longest array
+                                # 2. Build an array with the base values based on parameter["value"] 
+                                # 3. Get the n'th value of the generated list from values
+                                # 4. Execute all n answers 
+                                replacements = {}
+                                for replace in actualitem:
+                                    try:
+                                        to_be_replaced = replace[0]
+                                        actualitem = replace[2]
+                                    except IndexError:
+                                        continue
+
+                                    itemlist = json.loads(actualitem)
+                                    if len(itemlist) > minlength:
+                                        minlength = len(itemlist)
+
+                                    replacements[to_be_replaced] = actualitem
+
+                                resultarray = []
+                                for i in range(0, minlength): 
+                                    tmpitem = json.loads(json.dumps(parameter["value"]))
+
+                                    for key, value in replacements.items():
+                                        replacement = json.loads(value)[i]
+                                        tmpitem = tmpitem.replace(key, replacement, -1)
+
+                                    resultarray.append(tmpitem)
+
+                                # With this parameter ready, add it to... a greater list of parameters. Rofl
+                                print(resultarray[0])
+                            else:
+                                params[parameter["name"]] = value
                         
                         # FIXME - this is horrible, but works for now
                         #for i in range(calltimes):
-                        result += await func(**params)
+                        if not multiexecution:
+                            result += await func(**params)
+                        else:
+                            print("SHOULD RUN MULTI EXECUTION")
 
                     action_result["status"] = "SUCCESS" 
                     action_result["result"] = str(result)
