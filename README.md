@@ -8,6 +8,12 @@
 ## Try it
 Check out the [installation guide](https://github.com/frikky/shuffle/blob/master/install-guide.md)
 
+## Related repositories
+* Apps: https://github.com/frikky/shuffle-apps
+* Workflows: https://github.com/frikky/shuffle-workflows (empty)
+* Documentation: https://github.com/frikky/shuffle-docs
+* OpenAPI apps: https://github.com/frikky/OpenAPI-security-definitions
+
 ## Documentation
 Documentation can be found on https://shuffler.io/docs/about or in your own instance. Currently lacking: 
 * API documentation 
