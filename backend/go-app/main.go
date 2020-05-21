@@ -170,6 +170,7 @@ type User struct {
 	CreationTime      int64         `datastore:"creation_time" json:"creation_time"`
 }
 
+// timeout maybe? idk
 type session struct {
 	Username string `datastore:"Username,noindex"`
 	Session  string `datastore:"session,noindex"`
@@ -1399,19 +1400,6 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - check memcache here
 	// Get the item from the memcache
 	ctx := context.Background()
-	//if item, err := memcache.Get(ctx, c.Value); err == memcache.ErrCacheMiss {
-	//	// Not in cache
-	//} else if err != nil {
-	//	log.Printf("Error getting item: %v", err)
-	//} else {
-	//	var Userdata User
-	//	err = json.Unmarshal(item.Value, &Userdata)
-	//	if err == nil {
-	//		resp.WriteHeader(200)
-	//		resp.Write([]byte(`{"success": true, "reason": "OK"}`))
-	//		return
-	//	}
-	//}
 
 	sessionToken := c.Value
 	session, err := getSession(ctx, sessionToken)
@@ -1440,7 +1428,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	expiration := time.Now().Add(1200 * time.Second)
+	expiration := time.Now().Add(3600 * time.Second)
 	http.SetCookie(resp, &http.Cookie{
 		Name:    "session_token",
 		Value:   UserInfo.Session,
@@ -1448,31 +1436,6 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	})
 
 	returnData := fmt.Sprintf(`{"success": true, "cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]}`, UserInfo.Session, expiration.Unix())
-
-	//b, err := json.Marshal(UserInfo)
-	//if err != nil {
-	//	log.Printf("Failed marshalling: %s", err)
-	//	resp.WriteHeader(401)
-	//	resp.Write([]byte(`{"success": false}`))
-	//	return
-	//}
-
-	// Adding to cache here
-	// Only keeping it in for 24 hours
-	//item := &memcache.Item{
-	//	Key:        c.Value,
-	//	Value:      b,
-	//	Expiration: time.Hour * 24,
-	//}
-	//if err := memcache.Add(ctx, item); err == memcache.ErrNotStored {
-	//	if err := memcache.Set(ctx, item); err != nil {
-	//		log.Printf("Error setting item: %v", err)
-	//	}
-	//} else if err != nil {
-	//	log.Printf("error adding item: %v", err)
-	//} else {
-	//	log.Printf("Set cache for %s", item.Key)
-	//}
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(returnData))
@@ -2008,7 +1971,7 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - have timeout here
 	if len(Userdata.Session) != 0 {
 		//log.Println("Nonexisting session")
-		expiration := time.Now().Add(1200 * time.Second)
+		expiration := time.Now().Add(3600 * time.Second)
 
 		http.SetCookie(resp, &http.Cookie{
 			Name:    "session_token",
@@ -2034,7 +1997,7 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 	http.SetCookie(resp, &http.Cookie{
 		Name:    "session_token",
 		Value:   sessionToken.String(),
-		Expires: time.Now().Add(1200 * time.Second),
+		Expires: time.Now().Add(3600 * time.Second),
 	})
 
 	// ADD TO DATABASE

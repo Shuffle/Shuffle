@@ -343,6 +343,7 @@ func runFilter(workflowExecution WorkflowExecution, action Action) {
 		if action.Parameters[0].Variant == "ACTION_RESULT" {
 			param := action.Parameters[0]
 			value := param.Value
+			_ = value
 
 			// Loop cases.. Hmm, that's tricky
 		}
@@ -398,21 +399,25 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 	}
 
 	pullOptions := types.ImagePullOptions{}
+	_ = pullOptions
 	for _, image := range onpremApps {
 		log.Printf("Image: %s", image)
+		// Kind of gambling that the image exists.
 		if strings.Contains(image, " ") {
 			image = strings.ReplaceAll(image, " ", "-")
 		}
 
-		reader, err := dockercli.ImagePull(context.Background(), image, pullOptions)
-		if err != nil {
-			log.Printf("Failed getting %s. The app is missing or some other issue", image)
-			//shutdown(workflowExecution.ExecutionId)
-		}
+		// FIXME: Reimplement for speed later
+		// Skip to make it faster
+		//reader, err := dockercli.ImagePull(context.Background(), image, pullOptions)
+		//if err != nil {
+		//	log.Printf("Failed getting %s. The app is missing or some other issue", image)
+		//	shutdown(workflowExecution.ExecutionId)
+		//}
 
-		//io.Copy(os.Stdout, reader)
-		_ = reader
-		log.Printf("Successfully downloaded and built %s", image)
+		////io.Copy(os.Stdout, reader)
+		//_ = reader
+		//log.Printf("Successfully downloaded and built %s", image)
 	}
 
 	// Process the parents etc. How?

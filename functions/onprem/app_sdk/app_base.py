@@ -86,8 +86,6 @@ class AppBase:
                 "execution_id": self.current_execution_id
             }
 
-            self.logger.info("Auth: %s", tmpdata)
-
             self.logger.info("Before FULLEXEC stream result")
             ret = requests.post(
                 "%s/api/v1/streams/results" % (self.url), 
@@ -202,6 +200,13 @@ class AppBase:
                             parameter["value"] = parameter["value"].replace(to_be_replaced, value)
                         elif isinstance(value, dict):
                             parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value))
+                        else:
+                            print("Unknown type %s" % type(value))
+                            try:
+                                parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value))
+                            except json.decoder.JSONDecodeError as e:
+                                parameter["value"] = parameter["value"].replace(to_be_replaced, value)
+
 
             if parameter["variant"] == "WORKFLOW_VARIABLE":
                 for item in fullexecution["workflow"]["workflow_variables"]:
@@ -228,6 +233,8 @@ class AppBase:
 
                 if parameter["value"].startswith(jsonparsevalue):
                     fullname += parameter["value"][2:]
+                else:
+                    fullname = "$%s" % parameter["action_field"]
 
                 self.logger.info("Fullname: %s" % fullname)
                 actualitem = re.findall(match, fullname, re.MULTILINE)
@@ -237,13 +244,23 @@ class AppBase:
                         try:
                             to_be_replaced = replace[0]
                         except IndexError:
+                            print("Nothing to replace?: " % e)
                             continue
+                        
+                        # This will never be a loop aka multi argument
+                        parameter["value"] = to_be_replaced 
 
                         value = get_json_value(fullexecution, to_be_replaced)
                         if isinstance(value, str):
                             parameter["value"] = parameter["value"].replace(to_be_replaced, value)
                         elif isinstance(value, dict):
                             parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value))
+                        else:
+                            print("Unknown type %s" % type(value))
+                            try:
+                                parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value))
+                            except json.decoder.JSONDecodeError as e:
+                                parameter["value"] = parameter["value"].replace(to_be_replaced, value)
 
             return "", parameter["value"]
 
@@ -459,12 +476,14 @@ class AppBase:
                                 # With this parameter ready, add it to... a greater list of parameters. Rofl
                                 multi_parameters[parameter["name"]] = resultarray
                             else:
+                                print("Hello, in here?: %s" % value)
                                 params[parameter["name"]] = value
                                 multi_parameters[parameter["name"]] = value 
                         
                         # FIXME - this is horrible, but works for now
                         #for i in range(calltimes):
                         if not multiexecution:
+                            print("Params: %s" % params)
                             print("RUNNING NORMAL EXECUTION")
                             result += await func(**params)
                         else:
@@ -473,6 +492,7 @@ class AppBase:
                             # 2. Find the right value from the parsed multi_params
 
                             results = []
+                            json_object = False
                             for i in range(0, minlength):
                                 # To be able to use the results as a list:
                                 baseparams = json.loads(json.dumps(multi_parameters))
@@ -489,11 +509,28 @@ class AppBase:
                                     baseparams[key] = "KeyError: %s" % e
 
                                 #print("Running with params %s" % baseparams) 
-                                results.append(await func(**baseparams))
+                                ret = await func(**baseparams)
+                                print("Inner ret: %s" % ret)
+                                    
+                                try:
+                                    results.append(json.loads(ret))
+                                    json_object = True
+                                except json.decoder.JSONDecodeError as e:
+                                    results.append(ret)
 
                             # Dump the result as a string of a list
-                            result = json.dumps(", ".join(results))
-
+                            print("RESULTS: %s" % results)
+                            if isinstance(results, list):
+                                print("JSON OBJECT? ", json_object)
+                                if json_object:
+                                    result = json.dumps(results)
+                                else:
+                                    result = "[\""+"\", \"".join(results)+"\"]"
+                            else:
+                                print("Normal result?")
+                                result = results
+                                
+                            print("RESULT: %s" % result)
 
                     action_result["status"] = "SUCCESS" 
                     action_result["result"] = str(result)
@@ -520,7 +557,7 @@ class AppBase:
         action_result["completed_at"] = int(time.time())
 
         # I wonder if this actually works 
-        #self.logger.info("Before last stream result")
+        self.logger.info("Before last stream result")
         try:
             ret = requests.post("%s%s" % (self.url, stream_path), headers=headers, json=action_result)
             self.logger.info("Result: %d" % ret.status_code)

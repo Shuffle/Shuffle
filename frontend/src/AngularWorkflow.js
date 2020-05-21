@@ -737,11 +737,11 @@ const AngularWorkflow = (props) => {
     	.then((responseJson) => {
 			// FIXME - handle versions on left bar
 			//handleAppVersioning(responseJson)
-			var tmpapps = []
-			tmpapps = tmpapps.concat(getExtraApps())
-			tmpapps = tmpapps.concat(responseJson)
-			setApps(tmpapps)
-			setFilteredApps(tmpapps)
+			//var tmpapps = []
+			//tmpapps = tmpapps.concat(getExtraApps())
+			//tmpapps = tmpapps.concat(responseJson)
+			setApps(responseJson)
+			setFilteredApps(responseJson)
     })
 		.catch(error => {
 			alert.error(error.toString())
