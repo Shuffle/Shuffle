@@ -1,6 +1,7 @@
 # Shuffle 
 [Shuffle](https://shuffler.io) is an automation platform for your security stack. It leverages docker for scaling and OpenAPI for integrations. It has the possibility to run across multiple isolated environments, and gives you powerful tools to track progress.
 
+**It's in BETA, so be careful**
 
 ![Example Shuffle webhook integration](shuffle_webhook.png)
 
@@ -99,6 +100,10 @@ There will be a major overhaul to the backend specifically. I'm currently moving
 # 2. docker run -p 8000:8000 google/cloud-sdk gcloud beta emulators datastore start --project=shuffle --host-port 0.0.0.0:8000 --no-store-on-disk
 ```
 * Mail: Use appengine and connect to sendmail
+
+# Update for users:
+* Build from scratch (docker-compose)
+* Push stable builds to Dockerhub 
 
 ### Migration issues:
 * Some workflows where items have multiple parents don't work.

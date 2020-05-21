@@ -1,9 +1,7 @@
 version: '3'
-# Remove database port
-# Remove backend port
 services:
   frontend:
-    build: ./frontend
+    #build: ./frontend
     image: frikky/shuffle:frontend
     container_name: shuffle-frontend
     hostname: shuffle-frontend
@@ -12,8 +10,10 @@ services:
     networks:
       - shuffle
     restart: unless-stopped
+    depends_on:
+      - backend
   database:
-    build: ./backend/database
+    #build: ./backend/database
     image: frikky/shuffle:database
     container_name: shuffle-database
     hostname: shuffle-database
@@ -23,12 +23,13 @@ services:
     volumes:
       - /etc/shuffle:/etc/shuffle
   backend:
-    build: ./backend
+    #build: ./backend
     image: frikky/shuffle:backend
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
+    # Here for debugging:
     ports: 
-      - "${BACKEND_PORT}:${BACKEND_PORT}"
+      - "${BACKEND_PORT}:5001"
     networks:
       - shuffle
     volumes: 
@@ -36,13 +37,11 @@ services:
     environment: 
       - ORG_ID=${ORG_ID}
       - DATASTORE_EMULATOR_HOST=shuffle-database:8000
-      - BACKEND_PORT=${BACKEND_PORT}
     restart: unless-stopped
     depends_on:
       - database
-      - frontend
   orborus:
-    build: ./functions/onprem/orborus
+    #build: ./functions/onprem/orborus
     image: frikky/shuffle:orborus
     container_name: shuffle-orborus
     hostname: shuffle-orborus
@@ -56,10 +55,10 @@ services:
       - BASE_URL=http://${OUTER_HOSTNAME}:${BACKEND_PORT}
     restart: unless-stopped
   app_sdk:
-    build: ./functions/onprem/app_sdk
+    #build: ./functions/onprem/app_sdk
     image: frikky/shuffle:app_sdk
   worker:
-    build: ./functions/onprem/worker
+    #build: ./functions/onprem/worker
     image: frikky/shuffle:worker
 networks:
   shuffle:
