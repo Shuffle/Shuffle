@@ -21,7 +21,14 @@ cd shuffle
 docker-compose up -d
 ```
 
-3. Useful info:
+## After installation 
+1. After installation, go to http://localhost:3001/adminsetup (or your servername)
+
+2. Now set up your admin account (username & password). Shuffle doesn't have a default username and password.
+
+![Admin account setup](shuffle_adminaccount.png)
+
+## Useful info
 * The server is available on http://localhost:3001 (or your servername)
-* Further configuration in docker-compose.yml and .env.
+* Further configurations can be done in docker-compose.yml and .env.
 * Default database location is /etc/shuffle

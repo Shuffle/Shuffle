@@ -8,7 +8,7 @@ services:
     container_name: shuffle-frontend
     hostname: shuffle-frontend
     ports:
-      - "3001:80"
+      - "${FRONTEND_PORT}:80"
     networks:
       - shuffle
     restart: unless-stopped
@@ -17,8 +17,6 @@ services:
     image: frikky/shuffle:database
     container_name: shuffle-database
     hostname: shuffle-database
-    ports:
-      - "8000:8000"
     networks:
       - shuffle
     restart: unless-stopped
