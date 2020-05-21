@@ -174,7 +174,7 @@ const Workflows = (props) => {
 		})
 		.then((responseJson) => {
 			setWorkflowExecutions(responseJson)
-			if (responseJson.length > 0 && Object.getOwnPropertyNames(selectedExecution).length === 0) {
+			if (responseJson.length > 0) {
 				setSelectedExecution(responseJson[0])
 			}
 		})

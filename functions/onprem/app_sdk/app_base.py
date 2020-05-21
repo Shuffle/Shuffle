@@ -181,13 +181,13 @@ class AppBase:
 
         def parse_params(action, fullexecution, parameter):
             jsonparsevalue = "$."
+            match = ".*([$]{1}([a-zA-Z0-9()# _-]+\.?){1,})"
 
             # Regex to find all the things
             if parameter["variant"] == "STATIC_VALUE":
                 data = parameter["value"]
                 self.logger.debug(f"\n\nHandle static data with JSON: {data}\n\n")
 
-                match = ".*([$]{1}([a-zA-Z0-9()# _-]+\.?){1,})"
                 actualitem = re.findall(match, data, re.MULTILINE)
                 self.logger.info("PARSED: %s" % actualitem)
                 if len(actualitem) > 0:
@@ -203,9 +203,6 @@ class AppBase:
                         elif isinstance(value, dict):
                             parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value))
 
-                #self.logger.info(f"CONVERT DATA FROM {parameter['value']} to {data}")
-                #parameter["value"] = data
-
             if parameter["variant"] == "WORKFLOW_VARIABLE":
                 for item in fullexecution["workflow"]["workflow_variables"]:
                     if parameter["action_field"] == item["name"]:
@@ -218,81 +215,35 @@ class AppBase:
                 # GET THE LABEL'S RESULT 
                 
                 tmpvalue = ""
-                print(parameter["action_field"])
+                self.logger.info("ACTION FIELD: %s" % parameter["action_field"])
+
+                #"$%s%s" % 
+                fullname = "$"
 
                 if parameter["action_field"] == "Execution Argument":
                     tmpvalue = fullexecution["execution_argument"]
+                    fullname += "exec"
                 else:
-                    self.logger.info("WORKFLOW EXEC BELOW")
-                    self.logger.info(fullexecution)
-                    self.logger.info(fullexecution["results"])
-                    self.logger.info(fullexecution["workflow"]["actions"])
-                    self.logger.info("ACTIONS ABOVE")
-                    # redundancy..
+                    fullname += parameter["action_field"]
 
-                    tmpid = ""
-                    for item in fullexecution["workflow"]["actions"]:
-                        if item["label"] == parameter["action_field"]:
-                            tmpid = item["id"]
-
-                    if not tmpid:
-                        self.logger.error("Value not found for that id: %s. Exiting" % parameter["action_field"])
-                        raise Exception("Value for %s was not found in workflow actions" % parameter["action_field"])
-
-                    for subresult in fullexecution["results"]:
-                        if subresult["action"]["id"] == tmpid:
-                            tmpvalue = subresult["result"]
-                            break
-
-                    if not tmpvalue:
-                        self.logger.error("Value not found for label %s. Exiting" % parameter["action_field"])
-                        raise Exception("Value for %s was not found" % parameter["action_field"])
-
-                # Override locally with JSON data 
                 if parameter["value"].startswith(jsonparsevalue):
-                    parsersplit = parameter["value"].split(".")
+                    fullname += parameter["value"][2:]
 
-                    # Convert to json here
-                    self.logger.info("JSON HANDLING: %s" % tmpvalue)
-                    tmpvalue = tmpvalue.replace("\'", "\"")
-                    try:
-                        if isinstance(tmpvalue, str):
-                            newtmp = json.loads(tmpvalue)
-                    except json.decoder.JSONDecodeError as e:
-                        raise Exception("JSON error: %s" % e)
+                self.logger.info("Fullname: %s" % fullname)
+                actualitem = re.findall(match, fullname, re.MULTILINE)
+                self.logger.info("PARSED: %s" % actualitem)
+                if len(actualitem) > 0:
+                    for replace in actualitem:
+                        try:
+                            to_be_replaced = replace[0]
+                        except IndexError:
+                            continue
 
-                    try:
-                        #previousvalue = parsersplit[1]
-                        for value in parsersplit[1:]:
-                            # Might need to be recursive here, because it can go
-                            # multiple layers ($.result.#.test.users.#.name)
-                            # That would give executions of:
-                            # 1 + result.length + users.length
-                            # This is also just for one param
-                            #if parsersplit[1:][count] == "#":
-                            if value == "#":
-                                # This means we already have an array
-                                # for item in newtmp:
-                                self.logger.info("THERE SHOULD BE A LOOP HERE")
-                                # This works, but it needs to be split into multiples hurr
-                                # Whenever there is a loop, there is a need to 
-                                # check whether there are more loops, then do 
-                                # recursion to all the bottom leaves
-
-                                #paramnamevalue.append(newtmp
-                                newtmp = newtmp[0]
-                                # Choose numero uno which will then be handled by the next again
-                                # params[parameter["name"]].append(value.nextitem)
-                            else:
-                                newtmp = newtmp[value]
-                    except KeyError as e:
-                        return "KeyError: %s" % e, ""
-                    except IndexError as e:
-                        return "IndexError: %s" % e, ""
-
-                    parameter["value"] = str(newtmp)
-                else:
-                    parameter["value"] = tmpvalue
+                        value = get_json_value(fullexecution, to_be_replaced)
+                        if isinstance(value, str):
+                            parameter["value"] = parameter["value"].replace(to_be_replaced, value)
+                        elif isinstance(value, dict):
+                            parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value))
 
             return "", parameter["value"]
 
@@ -457,22 +408,25 @@ class AppBase:
                         # which is super fast, but has a bad overview (potentially good tho)
                         calltimes = 1
                         result = ""
-                        paramiter = []
 
                         all_executions = []
 
+                        # Multi_parameter has the data for each. variable
+                        minlength = 0
+                        multi_parameters = json.loads(json.dumps(params))
                         multiexecution = False
                         for parameter in action["parameters"]:
                             check, value = parse_params(action, fullexecution, parameter)
                             if check:
                                 raise Exception(check)
 
-                            # Custom format for ${name[0,1]}$
+                            # Custom format for ${name[0,1,2,...]}$
                             submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"
                             actualitem = re.findall(submatch, value, re.MULTILINE)
                             if len(actualitem) > 0:
                                 multiexecution = True
-
+                                
+                                # This is here to handle for loops within variables.. kindof
                                 # 1. Find the length of the longest array
                                 # 2. Build an array with the base values based on parameter["value"] 
                                 # 3. Get the n'th value of the generated list from values
@@ -491,10 +445,11 @@ class AppBase:
 
                                     replacements[to_be_replaced] = actualitem
 
+                                # This is a result array for JUST this value.. 
+                                # What if there are more?
                                 resultarray = []
                                 for i in range(0, minlength): 
                                     tmpitem = json.loads(json.dumps(parameter["value"]))
-
                                     for key, value in replacements.items():
                                         replacement = json.loads(value)[i]
                                         tmpitem = tmpitem.replace(key, replacement, -1)
@@ -502,16 +457,43 @@ class AppBase:
                                     resultarray.append(tmpitem)
 
                                 # With this parameter ready, add it to... a greater list of parameters. Rofl
-                                print(resultarray[0])
+                                multi_parameters[parameter["name"]] = resultarray
                             else:
                                 params[parameter["name"]] = value
+                                multi_parameters[parameter["name"]] = value 
                         
                         # FIXME - this is horrible, but works for now
                         #for i in range(calltimes):
                         if not multiexecution:
+                            print("RUNNING NORMAL EXECUTION")
                             result += await func(**params)
                         else:
-                            print("SHOULD RUN MULTI EXECUTION")
+                            print("MULTI EXECUTION: ", multi_parameters)
+                            # 1. Use number of executions based on longest array
+                            # 2. Find the right value from the parsed multi_params
+
+                            results = []
+                            for i in range(0, minlength):
+                                # To be able to use the results as a list:
+                                baseparams = json.loads(json.dumps(multi_parameters))
+                                
+                                try:
+                                    for key, value in baseparams.items():
+                                        if isinstance(value, list):
+                                            baseparams[key] = value[i]
+                                except IndexError as e:
+                                    print("IndexError: %s" % e)
+                                    baseparams[key] = "IndexError: %s" % e
+                                except KeyError as e:
+                                    print("KeyError: %s" % e)
+                                    baseparams[key] = "KeyError: %s" % e
+
+                                #print("Running with params %s" % baseparams) 
+                                results.append(await func(**baseparams))
+
+                            # Dump the result as a string of a list
+                            result = json.dumps(", ".join(results))
+
 
                     action_result["status"] = "SUCCESS" 
                     action_result["result"] = str(result)
