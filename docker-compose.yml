@@ -52,7 +52,7 @@ services:
     environment:
       - ORG_ID=${ORG_ID}
       - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
-      - BASE_URL=http://${OUTER_HOSTNAME}:{BACKEND_PORT}
+      - BASE_URL=http://${OUTER_HOSTNAME}:${BACKEND_PORT}
     restart: unless-stopped
   app_sdk:
     #build: ./functions/onprem/app_sdk

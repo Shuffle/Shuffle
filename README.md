@@ -25,8 +25,8 @@ Documentation can be found on https://shuffler.io/docs/about or in your own inst
 * Debug view for manual executions
 * App versioning
 
-### Setup - Local
-Frontend - requires [npm](https://nodejs.org/en/download/)/[yarn](https://yarnpkg.com/lang/en/docs/install/#debian-stable)/your preferred manager. Runs independently from backend - edit frontend/src/App.yaml to change from localhost to prod setting.
+### Setup - Local development 
+Frontend - requires [npm](https://nodejs.org/en/download/)/[yarn](https://yarnpkg.com/lang/en/docs/install/#debian-stable)/your preferred manager. Runs independently from backend - edit frontend/src/App.yaml (line 46~) from window.location.origin to http://YOUR IP:5001
 ```bash
 cd frontend
 npm i
@@ -37,9 +37,21 @@ Backend - API calls - requires [>=go1.13](https://golang.org/dl/) and [gcloud](h
 ```bash
 cd backend/go-app
 go build
-sudo apt -y update && sudo apt -y upgrade && sudo apt install -y google-cloud-sdk-app-engine-python google-cloud-sdk-app-engine-python google-cloud-sdk-datastore-emulator google-cloud-sdk-app-engine-go 
 go run *.go
 ```
+
+Database - Datastore:
+```
+docker run -p 8000:8000 google/cloud-sdk gcloud beta emulators datastore start --project=shuffle --host-port 0.0.0.0:8000 --no-store-on-disk
+```
+
+Orborus - Execution of Workflows:
+PS: This requires some specific environment variables.
+```
+cd functions/onprem/orborus
+go run orborus.go
+```
+
 
 ### Project overview
 Below is the folder structure with a short explanation
