@@ -6,7 +6,7 @@ services:
     container_name: shuffle-frontend
     hostname: shuffle-frontend
     ports:
-      - "3001:80"
+      - "${FRONTEND_PORT}:80"
     networks:
       - shuffle
     restart: unless-stopped
