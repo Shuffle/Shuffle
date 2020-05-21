@@ -78,6 +78,7 @@ type WorkflowExecution struct {
 type Action struct {
 	AppName     string                       `json:"app_name" datastore:"app_name"`
 	AppVersion  string                       `json:"app_version" datastore:"app_version"`
+	AppID       string                       `json:"app_id" datastore:"app_id"`
 	Errors      []string                     `json:"errors" datastore:"errors"`
 	ID          string                       `json:"id" datastore:"id"`
 	IsValid     bool                         `json:"is_valid" datastore:"is_valid"`
@@ -258,7 +259,7 @@ func shutdown(executionId, workflowId string) {
 	}
 
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Authorization", authorization)
+	//req.Header.Add("Authorization", authorization)
 	client := &http.Client{}
 	_, err = client.Do(req)
 	if err != nil {
@@ -336,6 +337,22 @@ func removeContainer(containername string) error {
 	return nil
 }
 
+func runFilter(workflowExecution WorkflowExecution, action Action) {
+	// 1. Get the parameter $.#.id
+	if action.Label == "filter_cases" && len(action.Parameters) > 0 {
+		if action.Parameters[0].Variant == "ACTION_RESULT" {
+			param := action.Parameters[0]
+			value := param.Value
+			_ = value
+
+			// Loop cases.. Hmm, that's tricky
+		}
+	} else {
+		log.Printf("No handler for filter %s with %d params", action.Label, len(action.Parameters))
+	}
+
+}
+
 func handleExecution(client *http.Client, req *http.Request, workflowExecution WorkflowExecution) error {
 	// if no onprem runs (shouldn't happen, but extra check), exit
 	// if there are some, load the images ASAP for the app
@@ -364,7 +381,6 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 		}
 
 		toExecuteOnprem = append(toExecuteOnprem, action.ID)
-
 		actionName := fmt.Sprintf("%s:%s_%s", baseimagename, action.AppName, action.AppVersion)
 		found := false
 		for _, app := range onpremApps {
@@ -383,21 +399,25 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 	}
 
 	pullOptions := types.ImagePullOptions{}
+	_ = pullOptions
 	for _, image := range onpremApps {
 		log.Printf("Image: %s", image)
+		// Kind of gambling that the image exists.
 		if strings.Contains(image, " ") {
 			image = strings.ReplaceAll(image, " ", "-")
 		}
 
-		reader, err := dockercli.ImagePull(context.Background(), image, pullOptions)
-		if err != nil {
-			log.Printf("Failed getting %s. The app is missing or some other issue", image)
-			//shutdown(workflowExecution.ExecutionId)
-		}
+		// FIXME: Reimplement for speed later
+		// Skip to make it faster
+		//reader, err := dockercli.ImagePull(context.Background(), image, pullOptions)
+		//if err != nil {
+		//	log.Printf("Failed getting %s. The app is missing or some other issue", image)
+		//	shutdown(workflowExecution.ExecutionId)
+		//}
 
-		//io.Copy(os.Stdout, reader)
-		_ = reader
-		log.Printf("Successfully downloaded and built %s", image)
+		////io.Copy(os.Stdout, reader)
+		//_ = reader
+		//log.Printf("Successfully downloaded and built %s", image)
 	}
 
 	// Process the parents etc. How?
@@ -555,9 +575,16 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 
 			// marshal action and put it in there rofl
 			log.Printf("Time to execute %s with app %s:%s, function %s, env %s with %d parameters.", action.ID, action.AppName, action.AppVersion, action.Name, action.Environment, len(action.Parameters))
+
 			actionData, err := json.Marshal(action)
 			if err != nil {
 				log.Printf("Failed unmarshalling action: %s", err)
+				continue
+			}
+
+			if action.AppID == "0ca8887e-b4af-4e3e-887c-87e9d3bc3d3e" {
+				log.Printf("\nShould run filter: %#v\n\n", action)
+				runFilter(workflowExecution, action)
 				continue
 			}
 

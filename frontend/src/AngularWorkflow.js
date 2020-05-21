@@ -285,7 +285,6 @@ const AngularWorkflow = (props) => {
 				currentnode = currentnode[0]
 				const outgoingEdges = currentnode.outgoers('edge')
 				const incomingEdges = currentnode.incomers('edge')
-				console.log("NODE: ", currentnode)
 
 				//currentnode.removeClass('success-highlight failure-highlight executing-highlight')
 				switch (item.status) {
@@ -668,6 +667,56 @@ const AngularWorkflow = (props) => {
 	//	// FIXME - handle this, as we can't have more than one of each :)
 	//	//setVersionedApps(newapps)
 	//}
+	
+	// Builtin actions that should ran in Worker and not apps	
+	const getExtraApps = () => {
+		const data = [{
+			name: "Filter",
+			is_valid: true,
+			id: "0ca8887e-b4af-4e3e-887c-87e9d3bc3d3e",
+			link: "https://shuffler.io",
+			app_version: "1.0.0",
+			generated: true,
+			downloaded: false,
+			sharing: false,
+			verified: false,
+			tested: false,
+			owner: "",
+			private_id: "",
+			description: "Filter",
+			environment: "Shuffle",
+			small_image: "",
+			large_image: "",
+			contact_info: {name: "", url: ""},
+			authentication: {required: false, parameters: [],},
+			actions: [{
+				description: "Filter cases",
+				id: "",
+				name: "filter_cases",
+				node_type: "action",
+				environment: "Shuffle",
+				sharing: false,
+				private_id: "",
+				app_id: "",
+				authentication: null,
+				tested: true,
+				parameters: [{
+					description: "",
+					id: "",
+					name: "Field to look for",
+					example: "$testing_1.#.id",
+					value: "",
+					multiline: true,
+					action_field: "",
+					variant: "",
+					required: true,
+					schema: {type: "string"},
+				}]
+			}],
+		}]
+
+		return data
+	}
 
 	const getApps = () => {
 		fetch(globalUrl+"/api/v1/workflows/apps", {
@@ -688,9 +737,12 @@ const AngularWorkflow = (props) => {
     	.then((responseJson) => {
 			// FIXME - handle versions on left bar
 			//handleAppVersioning(responseJson)
+			//var tmpapps = []
+			//tmpapps = tmpapps.concat(getExtraApps())
+			//tmpapps = tmpapps.concat(responseJson)
 			setApps(responseJson)
 			setFilteredApps(responseJson)
-    	})
+    })
 		.catch(error => {
 			alert.error(error.toString())
 		});
@@ -780,6 +832,7 @@ const AngularWorkflow = (props) => {
 			}
 
 			console.log("Selected: ", data.id)
+			console.log(curaction)
 
 			setRequiresAuthentication(curapp.authentication.required)
 			setSelectedApp(curapp)
@@ -1848,7 +1901,7 @@ const AngularWorkflow = (props) => {
 					authentication: [],
 				}
 
-				console.log(newAppData)
+				// const image = "url("+app.large_image+")"
 
 				// FIXME - find the cytoscape offset position 
 				// Can this be done with zoom calculations?
@@ -2358,7 +2411,8 @@ const AngularWorkflow = (props) => {
 									<b>{data.name}: </b> 
 								</div>
 								<Tooltip color="primary" title="Static data" placement="top">
-									<div style={{cursor: "pointer", color: staticcolor}} onClick={() => {
+									<div style={{cursor: "pointer", color: staticcolor}} onClick={(e) => {
+											e.preventDefault()
 											changeActionParameterVariant("STATIC_VALUE", count) 
 										}}>
 										<CreateIcon />
@@ -2366,7 +2420,8 @@ const AngularWorkflow = (props) => {
 								</Tooltip>
 								&nbsp;|&nbsp;
 								<Tooltip color="primary" title="Data from previous action" placement="top">
-									<div style={{cursor: "pointer", color: actioncolor}} onClick={() => {
+									<div style={{cursor: "pointer", color: actioncolor}} onClick={(e) => {
+										e.preventDefault()
 										changeActionParameterVariant("ACTION_RESULT", count) 
 									}}>
 										<AppsIcon />
@@ -2374,7 +2429,8 @@ const AngularWorkflow = (props) => {
 								</Tooltip>
 								&nbsp;|&nbsp;
 								<Tooltip color="primary" title="Use local variable" placement="top">
-									<div style={{cursor: "pointer", color: varcolor}} onClick={() => {
+									<div style={{cursor: "pointer", color: varcolor}} onClick={(e) => {
+										e.preventDefault()
 										changeActionParameterVariant("WORKFLOW_VARIABLE", count) 
 									}}>
 										<FavoriteBorderIcon />
