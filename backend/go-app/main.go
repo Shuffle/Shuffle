@@ -5580,18 +5580,9 @@ func healthCheckHandler(resp http.ResponseWriter, request *http.Request) {
 	fmt.Fprint(resp, "OK")
 }
 
-func init() {
-	var err error
-	ctx := context.Background()
-
-	log.Printf("Running INIT process")
-	dbclient, err = datastore.NewClient(ctx, gceProject)
-	if err != nil {
-		log.Fatalf("DBclient error during init: %s", err)
-	}
-
+func runInit(ctx context.Context) {
 	// Setting stats for backend starts (failure count as well)
-	err = increaseStatisticsField(ctx, "backend_executions", "", 1)
+	err := increaseStatisticsField(ctx, "backend_executions", "", 1)
 	if err != nil {
 		log.Printf("Failed increasing local stats: %s", err)
 	}
@@ -5664,6 +5655,19 @@ func init() {
 	}
 
 	log.Printf("Finished INIT")
+}
+
+func init() {
+	var err error
+	ctx := context.Background()
+
+	log.Printf("Running INIT process")
+	dbclient, err = datastore.NewClient(ctx, gceProject)
+	if err != nil {
+		log.Printf("DBclient error during init: %s", err)
+	}
+
+	go runInit(ctx)
 
 	r := mux.NewRouter()
 	r.HandleFunc("/api/v1/_ah/health", healthCheckHandler)
