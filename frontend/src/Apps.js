@@ -338,11 +338,11 @@ const Apps = (props) => {
 			<div>
 				<Paper square style={uploadViewPaperStyle}>
 					<div style={{width: "100%", margin: 25}}>
-						<h2>App creation</h2>
-						<Link to="/docs/apps" style={{textDecoration: "none", color: "#f85a3e"}}>What are apps?</Link>
-						&nbsp;- <a href="https://swagger.io/specification/" style={{textDecoration: "none", color: "#f85a3e"}}>OpenAPI specification</a>
+						<h2>App Creator</h2>
+						<a href="https://github.com/frikky/OpenAPI-security-definitions" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">Security API's</a>
+						&nbsp;- <a href="https://apis.guru/browse-apis/" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">OpenAPI directory</a>
 						<div/>
-						Apps are how you interact with workflows, and are used to execute workflows. They are created with the app creator, using OpenAPI specification or manually in python.
+						Apps interact with eachother in workflows. They are created with the app creator, using OpenAPI specification or manually in python. Use the links above to find potential apps you're looking for using OpenAPI or make one from scratch. There's 1000+ available.
 						<div/>
 						<div style={{marginTop: 20}}>
 							<Button

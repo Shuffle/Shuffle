@@ -3921,6 +3921,14 @@ func setBadMemcache(ctx context.Context, path string) {
 	//}
 }
 
+type Result struct {
+	Success bool     `json:"success"`
+	Reason  string   `json:"reason"`
+	List    []string `json:"list"`
+}
+
+var docs_list = Result{List: []string{}}
+
 func getDocList(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -3939,11 +3947,24 @@ func getDocList(resp http.ResponseWriter, request *http.Request) {
 	//	return
 	//}
 
+	if len(docs_list.List) > 0 {
+		b, err := json.Marshal(docs_list)
+		if err != nil {
+			log.Printf("Failed marshaling result: %s", err)
+			//http.Error(resp, err.Error(), 500)
+		} else {
+			resp.WriteHeader(200)
+			resp.Write(b)
+			return
+		}
+	}
+
 	client := github.NewClient(nil)
-	_, item1, _, err := client.Repositories.GetContents(ctx, "shaffuru", "shuffle-docs", "docs", nil)
+	_, item1, _, err := client.Repositories.GetContents(ctx, "frikky", "shuffle-docs", "docs", nil)
 	if err != nil {
+		log.Printf("Github error: %s", err)
 		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error listing directory"`)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error listing directory: %s"`, err)))
 		return
 	}
 
@@ -3964,16 +3985,12 @@ func getDocList(resp http.ResponseWriter, request *http.Request) {
 
 	log.Println(names)
 
-	type Result struct {
-		Success bool     `json:"success"`
-		Reason  string   `json:"reason"`
-		List    []string `json:"list"`
-	}
-
 	var result Result
 	result.Success = true
 	result.Reason = "Success"
 	result.List = names
+	docs_list = result
+
 	b, err := json.Marshal(result)
 	if err != nil {
 		http.Error(resp, err.Error(), 500)
@@ -4001,6 +4018,8 @@ func getDocList(resp http.ResponseWriter, request *http.Request) {
 }
 
 // r.HandleFunc("/api/v1/docs/{key}", getDocs).Methods("GET", "OPTIONS")
+var alldocs = map[string][]byte{}
+
 func getDocs(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -4016,16 +4035,15 @@ func getDocs(resp http.ResponseWriter, request *http.Request) {
 
 	//ctx := context.Background()
 	docPath := fmt.Sprintf("https://raw.githubusercontent.com/shaffuru/shuffle-docs/master/docs/%s.md", location[4])
-	//if item, err := memcache.Get(ctx, docPath); err == memcache.ErrCacheMiss {
-	//	// Not in cache
-	//} else if err != nil {
-	//	// Error with cache
-	//	log.Printf("Error getting item: %v", err)
-	//} else {
-	//	resp.WriteHeader(200)
-	//	resp.Write([]byte(item.Value))
-	//	return
-	//}
+	//location[4]
+	//var, ok := alldocs["asd"]
+	key, ok := alldocs[fmt.Sprintf("%s", location[4])]
+	// Custom cache for github issues lol
+	if ok {
+		resp.WriteHeader(200)
+		resp.Write(key)
+		return
+	}
 
 	client := &http.Client{}
 	req, err := http.NewRequest(
@@ -4077,6 +4095,8 @@ func getDocs(resp http.ResponseWriter, request *http.Request) {
 		//setBadMemcache(ctx, docPath)
 		return
 	}
+
+	alldocs[location[4]] = b
 
 	// Add to cache if it doesn't exist
 	//item := &memcache.Item{
