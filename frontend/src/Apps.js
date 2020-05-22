@@ -30,6 +30,7 @@ const Apps = (props) => {
   const { globalUrl, isLoggedIn, isLoaded } = props;
 
 	//const [workflows, setWorkflows] = React.useState([]);
+	const baseRepository = "https://github.com/frikky/shuffle-apps"
 	const alert = useAlert()
 	const [selectedApp, setSelectedApp] = React.useState({});
 	const [firstrequest, setFirstrequest] = React.useState(true)
@@ -45,6 +46,9 @@ const Apps = (props) => {
 	const [openApiModal, setOpenApiModal] = React.useState(false);
 	const [openApiModalType, setOpenApiModalType] = React.useState("");
 	const [openApiError, setOpenApiError] = React.useState("")
+	const [field1, setField1] = React.useState("")
+	const [field2, setField2] = React.useState("")
+
 	const { start, stop } = useInterval({
 	  	duration: 5000,
 	  	startImmediate: false,
@@ -406,10 +410,10 @@ const Apps = (props) => {
 							color="primary"
 							style={{margin: 5, maxHeight: 50, marginTop: 10}}
 							onClick={() => {
-								getExistingApps()
+								getSpecificApps(baseRepository)
 							}}
 						>
-							Load existing apps
+							Load apps
 						</Button>
 						<Button
 							variant="outlined"
@@ -417,10 +421,11 @@ const Apps = (props) => {
 							color="primary"
 							style={{margin: 5, maxHeight: 50, marginTop: 10}}
 							onClick={() => {
+								setOpenApi(baseRepository)
 								setLoadAppsModalOpen(true)
 							}}
 						>
-							Upload from github
+							Download from URL
 						</Button>
 					</div>
 					<TextField
@@ -471,28 +476,38 @@ const Apps = (props) => {
 		: 
 		null
 
-	// Gets the URL itself (hopefully this works in most cases?
-	// Will then forward the data to an internal endpoint to validate the api
-	const getExistingApps = () => {
+	// Load data e.g. from github
+	const getSpecificApps = (url) => {
 		setValidation(true)
 
 		setIsLoading(true)
 		start()
 
-		alert.success("Downloading and building apps. Feel free to move around meanwhile.")
+		const parsedData = {
+			"url": url,
+		}
+
+		if (field1.length > 0) {
+			parsedData["field_1"] = field1
+		}
+
+		if (field2.length > 0) {
+			parsedData["field_2"] = field2
+		}
+
+		alert.success("Getting specific apps from your URL.")
 		var cors = "cors"
 		fetch(globalUrl+"/api/v1/apps/get_existing", {
-    	method: "GET",
+    	method: "POST",
 			mode: "cors",
 			headers: {
 				'Accept': 'application/json',
 			},
+			body: JSON.stringify(parsedData),
 	  	credentials: "include",
 		})
 		.then((response) => {
-			if (response.status !== 200) {
-				alert.success("Failed loading.")
-			} else {
+			if (response.status === 200) {
 				response.text().then(function (text) {
 					console.log("RETURN: ", text)
 					alert.success("Loaded existing apps!")
@@ -500,6 +515,16 @@ const Apps = (props) => {
 			}
 			setIsLoading(false)
 			stop()
+
+			return response.json()
+		})
+    .then((responseJson) => {
+				console.log("DATA: ", responseJson)
+				if (responseJson.reason !== undefined) {
+					alert.error("Failed loading: "+responseJson.reason)
+				} else {
+					alert.error("Failed loading")
+				}
 		})
 		.catch(error => {
 			alert.error(error.toString())
@@ -636,9 +661,8 @@ const Apps = (props) => {
 
 
 	const handleGithubValidation = () => {
-		console.log("VALIDATE")
-		setValidation(true)
-		//const circularLoader = validation ? <CircularProgress color="primary" /> : null
+		getSpecificApps(openApi)
+		setLoadAppsModalOpen(false)
 	}
 
 	const appsModalLoad = loadAppsModalOpen ? 
@@ -647,6 +671,8 @@ const Apps = (props) => {
 			onClose={() => {
 				setOpenApi("")
 				setLoadAppsModalOpen(false)
+				setField1("")
+				setField2("")
 			}}
 			PaperProps={{
 				style: {
@@ -663,11 +689,12 @@ const Apps = (props) => {
 				</div>
 			</DialogTitle>
 			<DialogContent style={{color: "rgba(255,255,255,0.65)"}}>
-				Github repository
+				Repository (supported: github, gitlab, bitbucket)
 				<TextField
 					style={{backgroundColor: inputColor}}
 					variant="outlined"
 					margin="normal"
+					defaultValue="https://github.com/frikky/shuffle-apps"
 					InputProps={{
 						style:{
 							color: "white",
@@ -679,6 +706,8 @@ const Apps = (props) => {
 					placeholder="https://github.com/frikky/shuffle-apps"
 					fullWidth
 					/>
+
+				<span style={{marginTop: 10}}>Authentication (optional - private repos etc):</span>
 				<div style={{display: "flex"}}>
 					<TextField
 						style={{flex: 1, backgroundColor: inputColor}}
@@ -691,8 +720,9 @@ const Apps = (props) => {
 								fontSize: "1em",
 							},
 						}}
-						onChange={e => setOpenApi(e.target.value)}
-						placeholder="https://github.com/frikky/shuffle-apps"
+						onChange={e => setField1(e.target.value)}
+						type="username"
+						placeholder="Username / APIkey (optional)"
 						fullWidth
 						/>
 					<TextField
@@ -706,8 +736,9 @@ const Apps = (props) => {
 								fontSize: "1em",
 							},
 						}}
-						onChange={e => setOpenApi(e.target.value)}
-						placeholder="https://github.com/frikky/shuffle-apps"
+						onChange={e => setField2(e.target.value)}
+						type="password"
+						placeholder="Password (optional)"
 						fullWidth
 						/>
 				</div>
@@ -718,6 +749,7 @@ const Apps = (props) => {
 					Cancel
 				</Button>
 	      <Button style={{borderRadius: "0px"}} disabled={openApi.length === 0 || !openApi.includes("http")} onClick={() => {
+					handleGithubValidation() 
 				}} color="primary">
 	        Submit	
 	      </Button>

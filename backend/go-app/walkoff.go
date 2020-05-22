@@ -26,6 +26,7 @@ import (
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
+	http2 "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 
 	newscheduler "github.com/carlescere/scheduler"
 	"github.com/go-git/go-git/v5/storage/memory"
@@ -3113,7 +3114,7 @@ func deployWebhookFunction(ctx context.Context, name, localization, applocation 
 	return nil
 }
 
-func loadExistingApps(resp http.ResponseWriter, request *http.Request) {
+func loadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
 		return
@@ -3129,22 +3130,83 @@ func loadExistingApps(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		log.Printf("Error with body read: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// Field1 & 2 can be a lot of things..
+	type tmpStruct struct {
+		URL    string `json:"url"`
+		Field1 string `json:"field_1"`
+		Field2 string `json:"field_2"`
+	}
+	//log.Printf("Body: %s", string(body))
+
+	var tmpBody tmpStruct
+	err = json.Unmarshal(body, &tmpBody)
+	if err != nil {
+		log.Printf("Error with unmarshal tmpBody: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
 	fs := memfs.New()
-	storer := memory.NewStorage()
-	r, err := git.Clone(storer, fs, &git.CloneOptions{
-		URL: "https://github.com/frikky/shuffle-apps",
-	})
 
-	if err != nil {
-		log.Printf("Failed loading repo into memory: %s", err)
-	}
+	if strings.Contains(tmpBody.URL, "github") || strings.Contains(tmpBody.URL, "gitlab") || strings.Contains(tmpBody.URL, "bitbucket") {
+		cloneOptions := &git.CloneOptions{
+			URL: tmpBody.URL,
+		}
 
-	dir, err := fs.ReadDir("/")
-	if err != nil {
-		log.Printf("FAiled reading folder: %s", err)
+		// FIXME: Better auth.
+		if len(tmpBody.Field1) > 0 && len(tmpBody.Field2) > 0 {
+			cloneOptions.Auth = &http2.BasicAuth{
+				Username: tmpBody.Field1,
+				Password: tmpBody.Field2,
+			}
+		}
+
+		storer := memory.NewStorage()
+		r, err := git.Clone(storer, fs, cloneOptions)
+		if err != nil {
+			log.Printf("Failed loading repo into memory: %s", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+			return
+		}
+
+		dir, err := fs.ReadDir("/")
+		if err != nil {
+			log.Printf("FAiled reading folder: %s", err)
+		}
+		_ = r
+		iterateAppGithubFolders(fs, dir, "", "")
+
+	} else if strings.Contains(tmpBody.URL, "s3") {
+		//https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
+
+		//sess := session.Must(session.NewSession())
+		//downloader := s3manager.NewDownloader(sess)
+
+		//// Write the contents of S3 Object to the file
+		//storer := memory.NewStorage()
+		//n, err := downloader.Download(storer, &s3.GetObjectInput{
+		//	Bucket: aws.String(myBucket),
+		//	Key:    aws.String(myString),
+		//})
+		//if err != nil {
+		//	return fmt.Errorf("failed to download file, %v", err)
+		//}
+		//fmt.Printf("file downloaded, %d bytes\n", n)
+	} else {
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s is unsupported"}`, tmpBody.URL)))
+		return
 	}
-	_ = r
-	iterateAppGithubFolders(fs, dir, "", "")
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))

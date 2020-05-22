@@ -28,6 +28,7 @@ require (
 	google.golang.org/api v0.23.0
 	google.golang.org/appengine v1.6.6
 	google.golang.org/genproto v0.0.0-20200507105951-43844f6eee31
+	gopkg.in/src-d/go-git.v4 v4.13.1 // indirect
 	gopkg.in/yaml.v2 v2.2.8
 	gopkg.in/yaml.v3 v3.0.0-20200506231410-2ff61e1afc86
 )

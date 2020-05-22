@@ -5621,30 +5621,6 @@ func runInit(ctx context.Context) {
 		}
 	}
 
-	// Getting apps to see if we should initialize a test
-	workflowapps, err := getAllWorkflowApps(ctx)
-	if err != nil {
-		log.Printf("Failed getting apps: %s", err)
-	} else if err == nil && len(workflowapps) == 0 {
-		log.Printf("Apps: loading TEST")
-		fs := memfs.New()
-		storer := memory.NewStorage()
-		r, err := git.Clone(storer, fs, &git.CloneOptions{
-			URL: "https://github.com/frikky/shuffle-apps",
-		})
-
-		if err != nil {
-			log.Printf("Failed loading repo into memory: %s", err)
-		}
-
-		dir, err := fs.ReadDir("")
-		if err != nil {
-			log.Printf("FAiled reading folder: %s", err)
-		}
-		_ = r
-		iterateAppGithubFolders(fs, dir, "", "testing")
-	}
-
 	// Gets schedules and starts them
 	schedules, err := getAllSchedules(ctx)
 	if err != nil {
@@ -5672,6 +5648,33 @@ func runInit(ctx context.Context) {
 
 			scheduledJobs[schedule.Id] = jobret
 		}
+	}
+
+	// Getting apps to see if we should initialize a test
+	workflowapps, err := getAllWorkflowApps(ctx)
+	if err != nil {
+		log.Printf("Failed getting apps: %s", err)
+	} else if err == nil && len(workflowapps) == 0 {
+		log.Printf("Apps: loading TEST")
+		fs := memfs.New()
+		storer := memory.NewStorage()
+		r, err := git.Clone(storer, fs, &git.CloneOptions{
+			URL: "https://github.com/frikky/shuffle-apps",
+		})
+
+		if err != nil {
+			log.Printf("Failed loading repo into memory: %s", err)
+		}
+
+		dir, err := fs.ReadDir("")
+		if err != nil {
+			log.Printf("Failed reading folder: %s", err)
+		}
+		_ = r
+		//iterateAppGithubFolders(fs, dir, "", "testing")
+
+		// FIXME: Get all the apps?
+		iterateAppGithubFolders(fs, dir, "", "")
 	}
 
 	log.Printf("Finished INIT")
@@ -5721,9 +5724,8 @@ func init() {
 	r.HandleFunc("/api/v1/streams", handleWorkflowQueue).Methods("POST")
 	r.HandleFunc("/api/v1/streams/results", handleGetStreamResults).Methods("POST", "OPTIONS")
 
-	// Apps
-	r.HandleFunc("/api/v1/apps/get_existing", loadExistingApps).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/apps/get_existing/{appname}", loadExistingApps).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/get_existing", loadSpecificApps).Methods("POST", "OPTIONS")
+
 	r.HandleFunc("/api/v1/apps/validate", validateAppInput).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}", deleteWorkflowApp).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}/config", getWorkflowAppConfig).Methods("GET", "OPTIONS")

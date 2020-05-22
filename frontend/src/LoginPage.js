@@ -172,7 +172,7 @@ const LoginDialog = props => {
 	const basedata = 
 		<div style={bodyDivStyle}>
 			<Paper style={boxStyle}>
-      			<form onSubmit={onSubmit} style={{margin: "15px 15px 15px 15px"}}>
+      	<form onSubmit={onSubmit} style={{margin: "15px 15px 15px 15px", color: "white",}}>
 					<h2>{formtitle}</h2>
 					Username
 					<div>
