@@ -1525,10 +1525,10 @@ const AngularWorkflow = (props) => {
 												<MoreVertIcon />
 											</IconButton>
 											<Menu
-      										  id="long-menu"
-											  anchorEl={anchorEl}
-      										  keepMounted
-      										  open={open}
+      										id="long-menu"
+											  	anchorEl={anchorEl}
+													keepMounted
+													open={open}
 						  					  PaperProps={{
 						  					    style: {
 						  					    	backgroundColor: surfaceColor,
@@ -2299,7 +2299,7 @@ const AngularWorkflow = (props) => {
 										try {
 											JSON.parse(event.target.value)
 										} catch (e) {
-											alert.error("Failed to parse json")
+											alert.error("Failed to parse json: ", e)
 										}
 									}
 								}}
@@ -2939,23 +2939,32 @@ const AngularWorkflow = (props) => {
 				<div style={{flex: "10"}}> 
 					<b>{data.name} </b> 
 				</div>
-				<div style={{cursor: "pointer", color: staticcolor}} onClick={() => {
-					changeActionParameterVariant("STATIC_VALUE") 
+				<Tooltip color="primary" title="Static data" placement="top">
+					<div style={{cursor: "pointer", color: staticcolor}} onClick={(e) => {
+							e.preventDefault()
+							changeActionParameterVariant("STATIC_VALUE") 
+						}}>
+						<CreateIcon />
+					</div>
+				</Tooltip>
+				&nbsp;|&nbsp;
+				<Tooltip color="primary" title="Data from previous action" placement="top">
+					<div style={{cursor: "pointer", color: actioncolor}} onClick={(e) => {
+						e.preventDefault()
+						changeActionParameterVariant("ACTION_RESULT") 
 					}}>
-					static  
-				</div>
+						<AppsIcon />
+					</div>
+				</Tooltip>
 				&nbsp;|&nbsp;
-				<div style={{cursor: "pointer", color: actioncolor}} onClick={() => {
-					changeActionParameterVariant("ACTION_RESULT") 
-				}}>
-					action	
-				</div>
-				&nbsp;|&nbsp;
-				<div style={{cursor: "pointer", color: varcolor}} onClick={() => {
-					changeActionParameterVariant("WORKFLOW_VARIABLE") 
-				}}>
-					var	
-				</div>
+				<Tooltip color="primary" title="Use local variable" placement="top">
+					<div style={{cursor: "pointer", color: varcolor}} onClick={(e) => {
+						e.preventDefault()
+						changeActionParameterVariant("WORKFLOW_VARIABLE") 
+					}}>
+						<FavoriteBorderIcon />
+					</div>
+				</Tooltip>
 			</div>	
 			{datafield}
 		</div>
@@ -3091,8 +3100,16 @@ const AngularWorkflow = (props) => {
 			const [anchorEl, setAnchorEl] = React.useState(null);
 
 			const deleteCondition = (conditionIndex) => {
-				//selectedEdge.conditions.splice(conditionIndex, 1) 
-				//setSelectedEdge(selectedEdge)
+				console.log(selectedEdge)
+				if (selectedEdge.conditions.length === 1) {
+					selectedEdge.conditions = []
+				} else {
+					selectedEdge.conditions.splice(conditionIndex, 1) 
+				}
+
+				setSelectedEdge(selectedEdge)
+				setOpen(false)
+				setUpdate("delete "+conditionIndex)
 			}
 
 			const paperVariableStyle = {
@@ -3108,6 +3125,7 @@ const AngularWorkflow = (props) => {
 			}
 
 			const menuClick = (event) => {
+				console.log("MENU CLICK")
 				setOpen(!open)
 				setAnchorEl(event.currentTarget);
 			}
