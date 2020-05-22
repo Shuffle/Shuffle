@@ -55,12 +55,6 @@ services:
       - BASE_URL=http://${OUTER_HOSTNAME}:${BACKEND_PORT}
       - DOCKER_API_VERSION=1.40
     restart: unless-stopped
-  app_sdk:
-    #build: ./functions/onprem/app_sdk
-    image: frikky/shuffle:app_sdk
-  worker:
-    #build: ./functions/onprem/worker
-    image: frikky/shuffle:worker
 networks:
   shuffle:
     driver: bridge
