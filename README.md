@@ -1,7 +1,7 @@
 # Shuffle 
-[Shuffle](https://shuffler.io) is an automation platform for your security stack. It leverages docker for scaling and OpenAPI for integrations. It has the possibility to run across multiple isolated environments, and gives you powerful tools to track progress.
+[Shuffle](https://shuffler.io) is an automation platform for your security stack (SOAR). It uses Docker for scaling and OpenAPI for integrations. Shuffle has the possibility to run across multiple isolated environments and tracks progress for you.
 
-**It's in BETA, so be careful**
+**It's in BETA**, but if you want to implement Shuffle - [get in touch](https://shuffler.io/contact), send a mail to [frikky@shuffler.io](mailto:frikky@shuffler.io) or on twitter [@frikkylikeme](https://twitter.com/frikkylikeme)
 
 ![Example Shuffle webhook integration](shuffle_webhook.png)
 
@@ -31,6 +31,7 @@ Documentation can be found on https://shuffler.io/docs/about or in your own inst
 * Dashboard - Statistics are implemented
 * Debug view for manual executions
 * App versioning
+
 
 ### Setup - Local development 
 Frontend - requires [npm](https://nodejs.org/en/download/)/[yarn](https://yarnpkg.com/lang/en/docs/install/#debian-stable)/your preferred manager. Runs independently from backend - edit frontend/src/App.yaml (line 46~) from window.location.origin to http://YOUR IP:5001
