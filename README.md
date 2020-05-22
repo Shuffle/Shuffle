@@ -32,6 +32,8 @@ Documentation can be found on https://shuffler.io/docs/about or in your own inst
 * Debug view for manual executions
 * App versioning
 
+## Support
+Open an issue on Github, or [join the gitter chat](https://gitter.im/Shuffle-SOAR/community). For other / private requests: [frikky@shuffler.io](mailto:frikky@shuffler.io)
 
 ### Setup - Local development 
 Frontend - requires [npm](https://nodejs.org/en/download/)/[yarn](https://yarnpkg.com/lang/en/docs/install/#debian-stable)/your preferred manager. Runs independently from backend - edit frontend/src/App.yaml (line 46~) from window.location.origin to http://YOUR IP:5001
