@@ -53,6 +53,7 @@ services:
       - ORG_ID=${ORG_ID}
       - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
       - BASE_URL=http://${OUTER_HOSTNAME}:${BACKEND_PORT}
+      - DOCKER_API_VERSION=1.40
     restart: unless-stopped
   app_sdk:
     #build: ./functions/onprem/app_sdk
