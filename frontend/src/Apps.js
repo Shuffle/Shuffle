@@ -38,6 +38,7 @@ const Apps = (props) => {
 	const [filteredApps, setFilteredApps] = React.useState([])
 	const [validation, setValidation] = React.useState(false)
 	const [isLoading, setIsLoading] = React.useState(false)
+	const [appSearchLoading, setAppSearchLoading] = React.useState(false)
 
 	const [openApi, setOpenApi] = React.useState("")
 	const [openApiData, setOpenApiData] = React.useState("")
@@ -109,7 +110,7 @@ const Apps = (props) => {
 			if (responseJson.length > 0) {
 				setSelectedApp(responseJson[0])
 			}
-    	})
+    })
 		.catch(error => {
 			alert.error(error.toString())
 		});
@@ -254,33 +255,6 @@ const Apps = (props) => {
 		marginBottom: 10, 
 	}
 
-	//const handleFile = (event) =>{
-	//	const formData = new FormData();
-	//	formData.append('file', event.target.files[0]);
-
-	//	fetch(globalUrl+"/api/v1/workflows/apps/validate", {
-    //	  	method: 'POST',
-	//			headers: {
-	//				'Accept': 'application/json',
-	//			},
-	//			body: formData,
-	//  			credentials: "include",
-    //		})
-	//	.then((response) => {
-	//		if (response.status !== 200) {
-	//			console.log("Status not 200 for apps :O!")
-	//			return 
-	//		}
-	//		return response.json()
-	//	})
-    //	.then((responseJson) => {
-	//		console.log(responseJson)
-    //	})
-	//	.catch(error => {
-	//		alert.error(error.toString())
-	//	});
-	//}
-
 	const UploadView = () => {
 		//var imageline = selectedApp.large_image === undefined || selectedApp.large_image.length === 0 ?
 		//	<img alt="" style={{width: "80px"}} />
@@ -386,7 +360,13 @@ const Apps = (props) => {
 	const handleSearchChange = (event) => {
 		const searchfield = event.target.value.toLowerCase()
 		const newapps = apps.filter(data => data.name.toLowerCase().includes(searchfield) || data.description.toLowerCase().includes(searchfield))
-		setFilteredApps(newapps)
+
+		if (newapps.length === 0 && !appSearchLoading) {
+			setAppSearchLoading(true)
+			runAppSearch(searchfield)
+		} else {
+			setFilteredApps(newapps)
+		}
 	}
 
 	const appView = isLoggedIn ? 
@@ -461,6 +441,12 @@ const Apps = (props) => {
 								<h4>
 									Try a broader search term. E.g. "http" or "TheHive"	
 								</h4>
+								<div/>
+
+								{appSearchLoading ? 
+									<CircularProgress color="primary" style={{margin: "auto"}}/>
+									: null
+								}
 							</Paper>
 						: 
 						<Paper square style={uploadViewPaperStyle}>
@@ -572,6 +558,29 @@ const Apps = (props) => {
 				alert.error("Failed deleting app")		
 			}
 		})
+		.catch(error => {
+			alert.error(error.toString())
+		});
+	}
+
+	const runAppSearch = (searchterm) => {
+		const data = {"search": searchterm}
+
+		fetch(globalUrl+"/api/v1/apps/search", {
+    	method: 'POST',
+			headers: {
+				'Accept': 'application/json',
+			},
+			body: JSON.stringify(data),
+	  	credentials: "include",
+		})
+		.then((response) => {
+			setAppSearchLoading(false)
+			return response.json()
+		})
+    .then((responseJson) => {
+			console.log(responseJson)
+    })
 		.catch(error => {
 			alert.error(error.toString())
 		});

@@ -5743,15 +5743,16 @@ func init() {
 	r.HandleFunc("/api/v1/streams", handleWorkflowQueue).Methods("POST")
 	r.HandleFunc("/api/v1/streams/results", handleGetStreamResults).Methods("POST", "OPTIONS")
 
+	// App specific
 	r.HandleFunc("/api/v1/apps/get_existing", loadSpecificApps).Methods("POST", "OPTIONS")
-
 	r.HandleFunc("/api/v1/apps/validate", validateAppInput).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}", deleteWorkflowApp).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}/config", getWorkflowAppConfig).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps", getWorkflowApps).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps", setNewWorkflowApp).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/search", getSpecificApps).Methods("POST", "OPTIONS")
 
-	// Legacy things
+	// Legacy app things
 	r.HandleFunc("/api/v1/workflows/apps/validate", validateAppInput).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/apps", getWorkflowApps).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/apps", setNewWorkflowApp).Methods("PUT", "OPTIONS")

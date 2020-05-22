@@ -2917,6 +2917,51 @@ func handleGetfile(resp http.ResponseWriter, request *http.Request) ([]byte, err
 	return buf.Bytes(), nil
 }
 
+func getSpecificApps(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	// Just need to be logged in
+	// FIXME - should have some permissions?
+	_, err := handleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("Api authentication failed in set new app: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		log.Printf("Error with body read: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	type tmpStruct struct {
+		Search string `json:"search"`
+	}
+
+	var tmpBody tmpStruct
+	err = json.Unmarshal(body, &tmpBody)
+	if err != nil {
+		log.Printf("Error with unmarshal tmpBody: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// FIXME - continue the search here with github repos etc.
+	// Caching might be smart :D
+	log.Printf("Body: %s", string(body))
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+}
+
 func validateAppInput(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {

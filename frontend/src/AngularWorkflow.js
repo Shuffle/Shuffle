@@ -90,8 +90,8 @@ const AngularWorkflow = (props) => {
 	const [cystyle, ] = useState(cytoscapestyle) 
 	const [cy, setCy] = React.useState()
 		
+	const [appSearch, setAppSearch] = React.useState("")
 	const [currentView, setCurrentView] = React.useState("apps")
-	const [, setAppSearchValue] = React.useState("")
 	const [triggerAuthentication, setTriggerAuthentication] = React.useState({})
 	const [triggerFolders, setTriggerFolders] = React.useState([])
 
@@ -1385,10 +1385,6 @@ const AngularWorkflow = (props) => {
 		});
 	}
 
-	const setAppSearch = (event) => {
-		setFilteredApps(apps.filter(app => app.name.includes(event.target.value)))
-	}
-
 	const appViewStyle = {
 		marginLeft: "5px",
 		marginRight: "5px",
@@ -1568,6 +1564,7 @@ const AngularWorkflow = (props) => {
 	}
 	
 	const HandleLeftView = () => {
+		// Defaults to apps.
 		var thisview = <AppView />
 		if (currentView === "triggers") {
 			thisview = <TriggersView />
@@ -1577,14 +1574,6 @@ const AngularWorkflow = (props) => {
 
 		return(
 			<div>
-				<div style={{cursor: "pointer", height: 20, marginLeft: 10, marginTop: 10}} onClick={() => {
-					setLeftViewOpen(false)
-					setLeftBarSize(50)
-				}}>
-					<Tooltip color="primary" title="Minimize" placement="top">
-						<KeyboardArrowLeftIcon />
-					</Tooltip>
-				</div>
 				<Divider style={{marginTop: 10, height: 1, width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 				<div style={{minHeight: bodyHeight-appBarSize-150, maxHeight: bodyHeight-appBarSize-100}}>	
 					{thisview}
@@ -1981,11 +1970,36 @@ const AngularWorkflow = (props) => {
 		overflowX: "hidden",
 	}
 
+	const runAppSearch = (event) => {
+		setAppSearch(event.target.value)
+		setFilteredApps(apps.filter(app => app.name.toLowerCase().includes(event.target.value.trim().toLowerCase())))
+	}
+
 	const AppView = () => {
 		return(
 			<div style={appViewStyle}>
 				<div style={{flex: "1"}}>
 					<div style={appScrollStyle}>
+					{/*
+					<TextField
+						style={{backgroundColor: inputColor}} 
+						InputProps={{
+							style:{
+								color: "white",
+								minHeight: "50px", 
+								marginLeft: "5px",
+								maxWidth: "95%",
+								fontSize: "1em",
+							},
+						}}
+						fullWidth
+						color="primary"
+						placeholder={"Search apps"}
+						onChange={(event) => {
+							runAppSearch(event)
+						}}
+					/>
+					*/}
 					{filteredApps.map(app=> {
 						// FIXME - add label to apps, as this might be slow with A LOT of apps
 						var newAppname = app.name
