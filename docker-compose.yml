@@ -39,6 +39,7 @@ services:
     environment: 
       - ORG_ID=${ORG_ID}
       - DATASTORE_EMULATOR_HOST=shuffle-database:8000
+      - APP_DOWNLOAD_LOCATION=${APP_DOWNLOAD_LOCATION}
     restart: unless-stopped
     depends_on:
       - database

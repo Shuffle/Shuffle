@@ -51,6 +51,7 @@ import (
 	// Web
 	// "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	http2 "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 	// Old items (cloud)
 	// "google.golang.org/appengine"
 	// "google.golang.org/appengine/memcache"
@@ -5658,9 +5659,27 @@ func runInit(ctx context.Context) {
 		log.Printf("Apps: loading TEST")
 		fs := memfs.New()
 		storer := memory.NewStorage()
-		r, err := git.Clone(storer, fs, &git.CloneOptions{
-			URL: "https://github.com/frikky/shuffle-apps",
-		})
+
+		url := os.Getenv("APP_DOWNLOAD_LOCATION")
+		if len(url) == 0 {
+			url = "https://github.com/frikky/shuffle-apps"
+		}
+
+		username := os.Getenv("APP_DOWNLOAD_AUTH_USERNAME")
+		password := os.Getenv("APP_DOWNLOAD_AUTH_PASSWORD")
+		cloneOptions := &git.CloneOptions{
+			URL: url,
+		}
+
+		if len(username) > 0 && len(password) > 0 {
+			cloneOptions.Auth = &http2.BasicAuth{
+				Username: username,
+				Password: password,
+			}
+		}
+		log.Printf("Getting apps from %s", url)
+
+		r, err := git.Clone(storer, fs, cloneOptions)
 
 		if err != nil {
 			log.Printf("Failed loading repo into memory: %s", err)
