@@ -6,7 +6,8 @@
 ![Example Shuffle webhook integration](shuffle_webhook.png)
 
 ## Try it
-Check out the [installation guide](https://github.com/frikky/shuffle/blob/master/install-guide.md)
+Self-hosted: Check out the [installation guide](https://github.com/frikky/shuffle/blob/master/install-guide.md). 
+Cloud: Register at https://shuffler.io/register and get cooking (there are some differences!)
 
 ## Related repositories
 * Apps: https://github.com/frikky/shuffle-apps
