@@ -38,12 +38,12 @@ import AlertTemplate from "react-alert-template-basic";
 import { positions, Provider } from "react-alert";
 
 // Testing - localhost
-const globalUrl = "http://192.168.3.6:5001"
+//const globalUrl = "http://192.168.3.6:5001"
 //console.log("HOST: ", process.env)
 
 
 // Production - backend proxy forwarding in nginx
-//const globalUrl = window.location.origin
+const globalUrl = window.location.origin
 
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
