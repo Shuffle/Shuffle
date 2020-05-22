@@ -17,7 +17,7 @@ The Docker setup is done with docker-compose and is a single command to get set 
 2. Run docker-compose.
 ```
 git clone https://github.com/frikky/shuffle
-cd Shuffle
+cd shuffle
 docker-compose up -d
 ```
 
