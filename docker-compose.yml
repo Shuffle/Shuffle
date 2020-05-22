@@ -17,6 +17,8 @@ services:
     image: frikky/shuffle:database
     container_name: shuffle-database
     hostname: shuffle-database
+    ports:
+      - "8000:8000"
     networks:
       - shuffle
     restart: unless-stopped

@@ -1980,7 +1980,7 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 		})
 
 		loginData = fmt.Sprintf(`{"success": true, "cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]}`, Userdata.Session, expiration.Unix())
-		log.Printf("SESSION LENGTH MORE THAN 0 IN LOGIN: %s", Userdata.Session)
+		//log.Printf("SESSION LENGTH MORE THAN 0 IN LOGIN: %s", Userdata.Session)
 
 		err = SetSession(ctx, *Userdata, Userdata.Session)
 		if err != nil {

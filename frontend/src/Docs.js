@@ -64,7 +64,7 @@ const Docs = (props) => {
 			if (parent !== null) {
 				var elements = parent.getElementsByTagName('h2')
 
-				const name = window.location.hash.slice(1, window.location.hash.lenth).toLowerCase().split("%20").join(" ")
+				const name = window.location.hash.slice(1, window.location.hash.lenth).toLowerCase().split("%20").join(" ").split("_").join(" ")
 
 				console.log(name)
 				var found = false
@@ -167,6 +167,9 @@ const Docs = (props) => {
 	}
 
 	function OuterLink(props) {
+		if (props.href.includes("http") || props.href.includes("mailto")) {
+			return <a href={props.href} style={{color: "#f85a3e", textDecoration: "none"}}>{props.children}</a>
+		}
 		return <Link to={props.href} style={{color: "#f85a3e", textDecoration: "none"}}>{props.children}</Link>
 	}
 

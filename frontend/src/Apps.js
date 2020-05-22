@@ -41,6 +41,7 @@ const Apps = (props) => {
 	const [openApi, setOpenApi] = React.useState("")
 	const [openApiData, setOpenApiData] = React.useState("")
 	const [appValidation, setAppValidation] = React.useState("")
+	const [loadAppsModalOpen, setLoadAppsModalOpen] = React.useState(false);
 	const [openApiModal, setOpenApiModal] = React.useState(false);
 	const [openApiModalType, setOpenApiModalType] = React.useState("");
 	const [openApiError, setOpenApiError] = React.useState("")
@@ -400,15 +401,26 @@ const Apps = (props) => {
 						</div>
 						{isLoading ? <CircularProgress style={{marginTop: 13, marginRight: 15}} /> : null}
 						<Button
-							variant="contained"
+							variant="outlined"
 							component="label"
 							color="primary"
-							style={{maxHeight: 50, marginTop: 10}}
+							style={{margin: 5, maxHeight: 50, marginTop: 10}}
 							onClick={() => {
 								getExistingApps()
 							}}
 						>
 							Load existing apps
+						</Button>
+						<Button
+							variant="outlined"
+							component="label"
+							color="primary"
+							style={{margin: 5, maxHeight: 50, marginTop: 10}}
+							onClick={() => {
+								setLoadAppsModalOpen(true)
+							}}
+						>
+							Upload from github
 						</Button>
 					</div>
 					<TextField
@@ -621,6 +633,98 @@ const Apps = (props) => {
 		window.location.href = "/apps/new?id="+appValidation
 	}
 
+
+
+	const handleGithubValidation = () => {
+		console.log("VALIDATE")
+		setValidation(true)
+		//const circularLoader = validation ? <CircularProgress color="primary" /> : null
+	}
+
+	const appsModalLoad = loadAppsModalOpen ? 
+		<Dialog modal 
+			open={loadAppsModalOpen}
+			onClose={() => {
+				setOpenApi("")
+				setLoadAppsModalOpen(false)
+			}}
+			PaperProps={{
+				style: {
+					backgroundColor: surfaceColor,
+					color: "white",
+					minWidth: "800px",
+					minHeight: "320px",
+				},
+			}}
+		>
+			<DialogTitle>
+				<div style={{color: "rgba(255,255,255,0.9)"}}>
+					Load from github repo
+				</div>
+			</DialogTitle>
+			<DialogContent style={{color: "rgba(255,255,255,0.65)"}}>
+				Github repository
+				<TextField
+					style={{backgroundColor: inputColor}}
+					variant="outlined"
+					margin="normal"
+					InputProps={{
+						style:{
+							color: "white",
+							height: "50px",
+							fontSize: "1em",
+						},
+					}}
+					onChange={e => setOpenApi(e.target.value)}
+					placeholder="https://github.com/frikky/shuffle-apps"
+					fullWidth
+					/>
+				<div style={{display: "flex"}}>
+					<TextField
+						style={{flex: 1, backgroundColor: inputColor}}
+						variant="outlined"
+						margin="normal"
+						InputProps={{
+							style:{
+								color: "white",
+								height: "50px",
+								fontSize: "1em",
+							},
+						}}
+						onChange={e => setOpenApi(e.target.value)}
+						placeholder="https://github.com/frikky/shuffle-apps"
+						fullWidth
+						/>
+					<TextField
+						style={{flex: 1, backgroundColor: inputColor}}
+						variant="outlined"
+						margin="normal"
+						InputProps={{
+							style:{
+								color: "white",
+								height: "50px",
+								fontSize: "1em",
+							},
+						}}
+						onChange={e => setOpenApi(e.target.value)}
+						placeholder="https://github.com/frikky/shuffle-apps"
+						fullWidth
+						/>
+				</div>
+			</DialogContent>
+			<DialogActions>
+				{circularLoader}
+				<Button style={{borderRadius: "0px"}} onClick={() => setLoadAppsModalOpen(false)} color="primary">
+					Cancel
+				</Button>
+	      <Button style={{borderRadius: "0px"}} disabled={openApi.length === 0 || !openApi.includes("http")} onClick={() => {
+				}} color="primary">
+	        Submit	
+	      </Button>
+			</DialogActions>
+		</Dialog>
+		: null
+
 	const errorText = openApiError.length > 0 ? <div>Error: {openApiError}</div> : null
 	const circularLoader = validation ? <CircularProgress color="primary" /> : null
 	const modalView = openApiModal ? 
@@ -693,11 +797,11 @@ const Apps = (props) => {
 	        	  	<Button style={{borderRadius: "0px"}} onClick={() => setOpenApiModal(false)} color="primary">
 	        	    	Cancel
 	        	  	</Button>
-	        	  	<Button style={{borderRadius: "0px"}} disabled={appValidation.length === 0} onClick={() => {
+	      	<Button style={{borderRadius: "0px"}} disabled={appValidation.length === 0} onClick={() => {
 						redirectOpenApi()
 					}} color="primary">
 	        	    	Submit	
-	        	  	</Button>
+	        </Button>
 				</DialogActions>
 			</FormControl>
 		</Dialog>
@@ -708,6 +812,7 @@ const Apps = (props) => {
 		<div>
 			{appView}
 			{modalView}
+			{appsModalLoad}
 		</div>
 		:
 		<div>
