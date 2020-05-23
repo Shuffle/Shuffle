@@ -2338,10 +2338,15 @@ const AngularWorkflow = (props) => {
 							<div>
 								<Select
 								PaperProps={{
-				    			  style: {
-				    			  	backgroundColor: inputColor,
-				    			  }
-				    			}}
+				    			style: {
+				    			  backgroundColor: inputColor,
+				    			}
+				    		}}
+								SelectDisplayProps={{
+									style: {
+										marginLeft: 10,
+									}
+								}}
 								value={selectedActionParameters[count].action_field}
 								fullWidth
 								onChange={(e) => {
@@ -2392,10 +2397,15 @@ const AngularWorkflow = (props) => {
 								datafield = 
 								<Select
 									PaperProps={{
-				    			  		style: {
-				    			  			backgroundColor: inputColor,
-				    			  		}
-				    				}}
+				    			  style: {
+				    			  	backgroundColor: inputColor,
+				    			  }
+				    			}}
+									SelectDisplayProps={{
+										style: {
+											marginLeft: 10,
+										}
+									}}
 									fullWidth
 									value={selectedAction.parameters[count].action_field}
 									onChange={(e) => {
@@ -2551,6 +2561,11 @@ const AngularWorkflow = (props) => {
 							backgroundColor: inputColor,
 						}
 					}}
+					SelectDisplayProps={{
+						style: {
+							marginLeft: 10,
+						}
+					}}
 					fullWidth
 					onChange={(e) => {
 						const env = environments.find(a => a.Name === e.target.value)
@@ -2586,6 +2601,11 @@ const AngularWorkflow = (props) => {
 					fullWidth
 					onChange={setNewSelectedAction}
 					style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+					SelectDisplayProps={{
+						style: {
+							marginLeft: 10,
+						}
+					}}
 				>
 					{selectedApp.actions.map(data => {
 						var newActionname = data.name
@@ -2820,18 +2840,23 @@ const AngularWorkflow = (props) => {
 			datafield = 
 			<div>
 				<Select
-				value={data.action_field}
-				fullWidth
-				onChange={(e) => {
-					changeActionVariable(e.target.value, data.value)
-				}}
-				style={{backgroundColor: inputColor, color: "white", height: "50px"}}
-				>
-				{parents.map(data => (
-					<MenuItem style={{backgroundColor: inputColor, color: "white"}}  value={data.label}>
-						{data.label}
-					</MenuItem>
-				))}
+					value={data.action_field}
+					fullWidth
+					onChange={(e) => {
+						changeActionVariable(e.target.value, data.value)
+					}}
+					style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+					>
+					{parents.map(data => (
+						<MenuItem style={{backgroundColor: inputColor, color: "white"}}  value={data.label}>
+							{data.label}
+						</MenuItem>
+					))}
+					SelectDisplayProps={{
+						style: {
+							marginLeft: 10,
+						}
+					}}
 			</Select>
 			<TextField
 				style={{backgroundColor: inputColor}} 
@@ -2872,11 +2897,16 @@ const AngularWorkflow = (props) => {
 				<Select
 					fullWidth
 					value={data.action_field}
-				    PaperProps={{
-				      style: {
-				      	backgroundColor: inputColor,
-				      }
-				    }}
+				  PaperProps={{
+				    style: {
+				      backgroundColor: inputColor,
+				    }
+				  }}
+					SelectDisplayProps={{
+						style: {
+							marginLeft: 10,
+						}
+					}}
 					onChange={(e) => {
 						changeActionVariable(e.target.value, data.value)
 					}}
@@ -3382,11 +3412,16 @@ const AngularWorkflow = (props) => {
 							value={selectedTrigger.parameters[0].value.split(splitter)}
 							style={{backgroundColor: inputColor, color: "white"}}
 							PaperProps={{
-				    			style: {
+				    		style: {
 									height: "200px",
-				    			  	backgroundColor: inputColor,
-				    			}
-				    		}}
+				    			backgroundColor: inputColor,
+				    		}
+				    	}}
+							SelectDisplayProps={{
+								style: {
+									marginLeft: 10,
+								}
+							}}
 							onChange={(e) => {
 								//setTriggerFolderWrapper(e)
 								setTriggerFolderWrapperMulti(e)

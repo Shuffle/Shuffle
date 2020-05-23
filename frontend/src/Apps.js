@@ -3,13 +3,16 @@ import React, { useEffect} from 'react';
 import { useInterval } from 'react-powerhooks';
 
 import Grid from '@material-ui/core/Grid';
+import Select from '@material-ui/core/Select';
 import Paper from '@material-ui/core/Paper';
 import Divider from '@material-ui/core/Divider';
 import ButtonBase from '@material-ui/core/ButtonBase';
 import Button from '@material-ui/core/Button';
 import TextField from '@material-ui/core/TextField';
 import FormControl from '@material-ui/core/FormControl';
+import MenuItem from '@material-ui/core/MenuItem';
 import Tooltip from '@material-ui/core/Tooltip';
+import Input from '@material-ui/core/Input';
 import YAML from 'yaml'
 import {Link} from 'react-router-dom';
 
@@ -39,6 +42,7 @@ const Apps = (props) => {
 	const [validation, setValidation] = React.useState(false)
 	const [isLoading, setIsLoading] = React.useState(false)
 	const [appSearchLoading, setAppSearchLoading] = React.useState(false)
+	const [selectedAction, setSelectedAction] = React.useState({})
 
 	const [openApi, setOpenApi] = React.useState("")
 	const [openApiData, setOpenApiData] = React.useState("")
@@ -109,6 +113,9 @@ const Apps = (props) => {
 			setFilteredApps(responseJson)
 			if (responseJson.length > 0) {
 				setSelectedApp(responseJson[0])
+				if (responseJson[0].actions.length > 0) {
+					setSelectedAction(responseJson[0].actions[0])
+				}
 			}
     })
 		.catch(error => {
@@ -211,6 +218,10 @@ const Apps = (props) => {
 			<Paper square style={paperAppStyle} onClick={() => {
 				if (selectedApp.id !== data.id) {
 					setSelectedApp(data)
+					if (data.actions.length > 0) {
+						console.log(data.actions[0])
+						setSelectedAction(data.actions[0])
+					}
 				}
 			}}>
 				<Grid container style={{margin: 10, flex: "10"}}>
@@ -304,9 +315,66 @@ const Apps = (props) => {
 				<h2>{newAppname}</h2>
 				<p>{description}</p>
 				<Divider style={{marginBottom: "10px", marginTop: "10px", backgroundColor: dividerColor}}/>
-				<p>URL: {selectedApp.link}</p>
+				{selectedApp.link.length > 0 ? <p>URL: {selectedApp.link}</p> : null}
 				<p>ID: {selectedApp.id}</p>
-				<p>PrivateID: {selectedApp.privateId}</p>
+				{selectedApp.privateId !== undefined && selectedApp.privateId.length > 0 ? <p>PrivateID: {selectedApp.privateId}</p> : null}
+			
+				<div style={{marginTop: 15, marginBottom: 15}}>
+					<b>Actions</b>
+					{selectedAction.label}
+					<Select
+						fullWidth
+						value={selectedAction}
+						onChange={(event) => {
+							setSelectedAction(event.target.value)
+						}}
+						style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+						SelectDisplayProps={{
+							style: {
+								marginLeft: 10,
+							}
+						}}
+					>
+						{selectedApp.actions.map(data => {
+								var newActionname = data.label !== undefined && data.label.length > 0 ? data.label : data.name
+
+								// ROFL FIXME - loop
+								newActionname = newActionname.replace("_", " ")
+								newActionname = newActionname.replace("_", " ")
+								newActionname = newActionname.replace("_", " ")
+								newActionname = newActionname.replace("_", " ")
+								newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
+								return (
+									<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+										{newActionname}
+
+									</MenuItem>
+								)
+							})}
+					</Select>
+				</div>
+
+				{selectedAction.parameters !== undefined ? 
+					<div style={{marginTop: 15, marginBottom: 15}}>
+						<b>Arguments</b>
+						{selectedAction.parameters.map(data => {
+								var itemColor = "#f85a3e"
+								if (!data.required) {
+									itemColor = "#ffeb3b"
+								}
+
+								const circleSize = 10
+								return (
+									<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+										<div style={{width: circleSize, height: circleSize, borderRadius: circleSize / 2, backgroundColor: itemColor, marginRight: "10px"}}/>
+										{data.name}
+
+									</MenuItem>
+								)
+							})}
+					</div>
+				: null}
+
 				{editButton}
 				{deleteButton}
 			</div>
@@ -384,6 +452,7 @@ const Apps = (props) => {
 							<h2>Available integrations</h2> 
 						</div>
 						{isLoading ? <CircularProgress style={{marginTop: 13, marginRight: 15}} /> : null}
+						{/*
 						<Button
 							variant="outlined"
 							component="label"
@@ -395,6 +464,7 @@ const Apps = (props) => {
 						>
 							Load apps
 						</Button>
+						*/}
 						<Button
 							variant="outlined"
 							component="label"
