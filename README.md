@@ -1,12 +1,19 @@
 # Shuffle 
-[Shuffle](https://shuffler.io) is an automation platform for your security stack. It leverages docker for scaling and OpenAPI for integrations. It has the possibility to run across multiple isolated environments, and gives you powerful tools to track progress.
+[Shuffle](https://shuffler.io) is an automation platform for your security stack (SOAR). It uses Docker for scaling and OpenAPI for integrations. Shuffle has the possibility to run across multiple isolated environments and tracks progress for you.
 
-**It's in BETA, so be careful**
+**It's in BETA**, but if you want to implement Shuffle - [get in touch](https://shuffler.io/contact), send a mail to [frikky@shuffler.io](mailto:frikky@shuffler.io) or on twitter [@frikkylikeme](https://twitter.com/frikkylikeme)
 
 ![Example Shuffle webhook integration](shuffle_webhook.png)
 
 ## Try it
-Check out the [installation guide](https://github.com/frikky/shuffle/blob/master/install-guide.md)
+* Self-hosted: Check out the [installation guide](https://github.com/frikky/shuffle/blob/master/install-guide.md). 
+* Cloud: Register at https://shuffler.io/register and get cooking (there are some differences!)
+
+## Related repositories
+* Apps: https://github.com/frikky/shuffle-apps
+* Workflows: https://github.com/frikky/shuffle-workflows (empty)
+* Documentation: https://github.com/frikky/shuffle-docs
+* OpenAPI apps: https://github.com/frikky/OpenAPI-security-definitions
 
 ## Documentation
 Documentation can be found on https://shuffler.io/docs/about or in your own instance. Currently lacking: 
@@ -25,8 +32,11 @@ Documentation can be found on https://shuffler.io/docs/about or in your own inst
 * Debug view for manual executions
 * App versioning
 
-### Setup - Local
-Frontend - requires [npm](https://nodejs.org/en/download/)/[yarn](https://yarnpkg.com/lang/en/docs/install/#debian-stable)/your preferred manager. Runs independently from backend - edit frontend/src/App.yaml to change from localhost to prod setting.
+## Support
+Open an issue on Github, or [join the gitter chat](https://gitter.im/Shuffle-SOAR/community). For other / private requests: [frikky@shuffler.io](mailto:frikky@shuffler.io)
+
+### Setup - Local development 
+Frontend - requires [npm](https://nodejs.org/en/download/)/[yarn](https://yarnpkg.com/lang/en/docs/install/#debian-stable)/your preferred manager. Runs independently from backend - edit frontend/src/App.yaml (line 46~) from window.location.origin to http://YOUR IP:5001
 ```bash
 cd frontend
 npm i
@@ -37,9 +47,21 @@ Backend - API calls - requires [>=go1.13](https://golang.org/dl/) and [gcloud](h
 ```bash
 cd backend/go-app
 go build
-sudo apt -y update && sudo apt -y upgrade && sudo apt install -y google-cloud-sdk-app-engine-python google-cloud-sdk-app-engine-python google-cloud-sdk-datastore-emulator google-cloud-sdk-app-engine-go 
 go run *.go
 ```
+
+Database - Datastore:
+```
+docker run -p 8000:8000 google/cloud-sdk gcloud beta emulators datastore start --project=shuffle --host-port 0.0.0.0:8000 --no-store-on-disk
+```
+
+Orborus - Execution of Workflows:
+PS: This requires some specific environment variables.
+```
+cd functions/onprem/orborus
+go run orborus.go
+```
+
 
 ### Project overview
 Below is the folder structure with a short explanation
