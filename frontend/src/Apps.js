@@ -79,6 +79,7 @@ const Apps = (props) => {
 		color: "#ffffff",
 		width: "100%",
 		display: "flex",
+		margin: 20, 
 	}
 
 	const paperAppStyle = {
@@ -248,9 +249,11 @@ const Apps = (props) => {
 					</Grid>
 				</Grid>
 				<Grid container style={{margin: "10px 10px 10px 10px", flex: "1"}} onClick={() => {downloadApp(data)}}>
+					{/*
 					<Tooltip title={"Download"} style={{marginTop: "28px", width: "100%"}} aria-label={data.name}>
 						<CloudDownload /> 
 					</Tooltip>
+					*/}
 				</Grid>
 			</Paper>
 		)
@@ -321,7 +324,6 @@ const Apps = (props) => {
 			
 				<div style={{marginTop: 15, marginBottom: 15}}>
 					<b>Actions</b>
-					{selectedAction.label}
 					<Select
 						fullWidth
 						value={selectedAction}
@@ -438,15 +440,15 @@ const Apps = (props) => {
 	}
 
 	const appView = isLoggedIn ? 
-		<div style={{width: 1366, margin: "auto"}}>
+		<div style={{maxWidth: 1366, margin: "auto",}}>
 			<div style={appViewStyle}>	
-				<div style={{flex: "1", marginLeft: "10px", marginRight: "10px"}}>
+				<div style={{flex: "1", marginLeft: 10, marginRight: 10}}>
 					<h2>Upload</h2>
 					<div style={{marginTop: 20}}/>
 					<UploadView />
 				</div>
 				<Divider style={{marginBottom: "10px", marginTop: "10px", height: "100%", width: "1px", backgroundColor: dividerColor}}/>
-				<div style={{flex: 1, marginLeft: "10px", marginRight: "10px"}}>
+				<div style={{flex: 1, marginLeft: 10, marginRight: 10}}>
 					<div style={{display: "flex"}}>
 						<div style={{flex: 10}}>
 							<h2>Available integrations</h2> 
@@ -499,7 +501,7 @@ const Apps = (props) => {
 					<div style={{marginTop: 15}}>
 						{apps.length > 0 ? 
 							filteredApps.length > 0 ? 
-								<div style={{maxHeight: "80vh", overflowY: "scroll"}}>
+								<div style={{maxHeight: "78vh", overflowY: "scroll"}}>
 									{filteredApps.map(app => {
 										return (
 											appPaper(app)

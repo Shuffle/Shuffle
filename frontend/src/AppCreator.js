@@ -35,6 +35,7 @@ const actionListStyle = {
 	marginTop: "5px",
 	backgroundColor: inputColor,
 	display: "flex", 
+	color: "white",
 }
 
 const boxStyle = {
@@ -1013,7 +1014,7 @@ const AppCreator = (props) => {
 		</Dialog>
 
 	const actionView = 
-		<div>
+		<div style={{color: "white"}}>
 			<h2>Actions</h2>
 			Actions are the tasks performed by an app. Read more about actions and apps
 			<a href="/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}> here</a>.
@@ -1038,7 +1039,7 @@ const AppCreator = (props) => {
 		</div>
 
 	const testView = 
-		<div>
+		<div style={{color: "white"}}>
 			<h2>Test</h2>
 			Test an action to see whether it performs in an expected way. 
 			<a href="/docs/apps#testing" style={{textDecoration: "none", color: "#f85a3e"}}>&nbsp;Click here to learn more about testing</a>.
@@ -1087,18 +1088,18 @@ const AppCreator = (props) => {
 
 	// Random names for type & autoComplete. Didn't research :^)
 	const landingpageDataBrowser = 
-		<div style={{paddingBottom: "100px"}}>
+		<div style={{paddingBottom: 100, color: "white",}}>
 				<Paper style={boxStyle}>
-					<h2 style={{marginBottom: "10px"}}>General information</h2>
+					<h2 style={{marginBottom: "10px", color: "white"}}>General information</h2>
 					<a href="/docs/apps#create" style={{textDecoration: "none", color: "#f85a3e"}}>Click here to learn more about app creation</a>
-					<div style={{flex: "1", display: "flex", flexDirection: "row"}}>
+					<div style={{color: "white", flex: "1", display: "flex", flexDirection: "row"}}>
 					 	<Tooltip title="Click to edit the app's image" placement="bottom">
 							<div style={{flex: "1", margin: 10, border: "1px solid #f85a3e", cursor: "pointer", backgroundColor: inputColor, maxWidth: 174, maxHeight: 174}} onClick={() => {upload.click()}}>
 								<input hidden type="file" ref={(ref) => upload = ref} onChange={editHeaderImage} />
 								{imageInfo}
 							</div>
 						</Tooltip>
-						<div style={{flex: "3"}}>
+						<div style={{flex: "3", color: "white",}}>
 							<div style={{marginTop: "10px"}}/>
 							Name	
 							<TextField
@@ -1149,8 +1150,8 @@ const AppCreator = (props) => {
 						</div>
 					</div>
 					<Divider style={{marginBottom: "10px", marginTop: "30px", height: "1px", width: "100%", backgroundColor: "grey"}}/>
-					<h3 style={{marginBottom: "10px"}}>API information</h3>
-					Base URL - leave empty if user changeable
+					<h3 style={{marginBottom: "10px", color: "white",}}>API information</h3>
+					<span style={{color: "white"}}>Base URL - leave empty if user changeable</span>
 					<TextField
 						color="primary"
 						style={{backgroundColor: inputColor, marginTop: "5px"}}
@@ -1176,7 +1177,7 @@ const AppCreator = (props) => {
 						onChange={e => setBaseUrl(e.target.value)}
 					/>
 					<FormControl style={{marginTop: "15px",}} variant="outlined">
-						<h5 style={{marginBottom: "10px"}}>Authentication</h5>
+						<h5 style={{marginBottom: "10px", color: "white",}}>Authentication</h5>
 						<Select
 							fullWidth
 							onChange={(e) => {
@@ -1213,12 +1214,8 @@ const AppCreator = (props) => {
 
 	const loadedCheck = isLoaded && isAppLoaded && !firstrequest ? 
 		<div>
-			<BrowserView>
-				<div style={bodyDivStyle}>{landingpageDataBrowser}</div>
-				{newActionModal} 
-			</BrowserView>
-			<MobileView>
-			</MobileView>
+			<div style={bodyDivStyle}>{landingpageDataBrowser}</div>
+			{newActionModal} 
 		</div>
 		:
 		<div>

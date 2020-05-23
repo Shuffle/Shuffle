@@ -10,9 +10,9 @@ import MenuItem from '@material-ui/core/MenuItem';
 import {Link} from 'react-router-dom';
 
 const Body = {
-  	maxWidth: '1000px',
-  	minWidth: '768px',
-  	margin: 'auto',
+  maxWidth: '1000px',
+  minWidth: '768px',
+  margin: 'auto',
 	display: "flex",
 	heigth: "100%",
 	color: "white",
@@ -52,7 +52,7 @@ const Docs = (props) => {
 		if (firstrequest) {
 			setFirstrequest(false)
 			fetchDocList()
-			fetchDocs()
+			fetchDocs(props.match.params.key)
 			return
 		}
 
@@ -142,8 +142,8 @@ const Docs = (props) => {
 		.catch(error => {});
 	}
 
-	const fetchDocs = () => {
-		fetch(globalUrl+"/api/v1/docs/"+props.match.params.key, {
+	const fetchDocs = (docId) => {
+		fetch(globalUrl+"/api/v1/docs/"+docId, {
     	  	method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',
@@ -164,6 +164,8 @@ const Docs = (props) => {
 	const markdownStyle = {
 		color: "rgba(255, 255, 255, 0.65)", 
 		flex: "1",
+		maxWidth: 750,
+		overflow: "hidden",
 	}
 
 	function OuterLink(props) {
@@ -196,12 +198,12 @@ const Docs = (props) => {
 					</li>
 					{list.map(item => {
 						const path = "/docs/"+item
-						const newname = item.charAt(0).toUpperCase()+item.substring(1)
+						const newname = item.charAt(0).toUpperCase()+item.substring(1).split("_").join(" ")
 						return (
 							<li style={{marginTop: "10px"}}>
-								<a style={hrefStyle} href={path}>
+								<Link style={hrefStyle} to={path} onClick={() => {fetchDocs(item)}}>
 									<h2>{newname}</h2>
-								</a>
+								</Link>
 							</li>
 						)
 					})}
@@ -241,7 +243,7 @@ const Docs = (props) => {
 			>
 			{list.map(item => {
 				const path = "/docs/"+item
-				const newname = item.charAt(0).toUpperCase()+item.substring(1)
+				const newname = item.charAt(0).toUpperCase()+item.substring(1).split("_").join(" ")
 				return (
 					<MenuItem onClick={() => {window.location.pathname = path}}>{newname}</MenuItem>
 				)
