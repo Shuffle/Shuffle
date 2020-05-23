@@ -1,7 +1,0 @@
-{
-	"clientID": "70e37005-c954-4290-b573-d4b94e484336",
-	"clientSecret": ".eNw/A[kQFB5zL.agvRputdEJENeJ392",
-	"RedirectURL":  "https://44d84ee7.ngrok.io/functions/outlook/register",
-	"AuthURL":  "https://login.microsoftonline.com/common/oauth2/authorize",
-	"TokenURL": "https://login.microsoftonline.com/common/oauth2/token"
-}
