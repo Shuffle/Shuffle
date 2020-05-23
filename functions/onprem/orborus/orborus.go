@@ -19,6 +19,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	network "github.com/docker/docker/api/types/network"
 	dockerclient "github.com/docker/docker/client"
 	//network "github.com/docker/docker/api/types/network"
 	//natting "github.com/docker/go-connections/nat"
@@ -26,6 +27,7 @@ import (
 
 var baseUrl = os.Getenv("BASE_URL")
 var baseimagename = "frikky/shuffle"
+
 var dockerApiVersion = os.Getenv("DOCKER_API_VERSION")
 var environment = os.Getenv("ENVIRONMENT_NAME")
 var orgId = os.Getenv("ORG_ID")
@@ -67,14 +69,32 @@ func deployWorker(cli *dockerclient.Client, image string, identifier string, env
 		Image: image,
 		Env:   env,
 	}
-	//Volumes: map[string]struct{}{
-	//	"/var/run/docker.sock": {},
-	//},
+
+	// Set the network
+	networkConfig := &network.NetworkingConfig{}
+	if baseUrl == "http://shuffle-backend:5001" {
+		networkConfig = &network.NetworkingConfig{
+			EndpointsConfig: map[string]*network.EndpointSettings{
+				"shuffle_shuffle": {
+					NetworkID: "shuffle_shuffle",
+				},
+			},
+		}
+	} else {
+		//log.Printf("Bad config: %s. Using default.", baseUrl)
+	}
+
+	//test := &network.EndpointSettings{
+	//	Gateway: "helo",
+	//}
+	//NetworkID
+	//if connect.EndpointConfig.NetworkID != "NetworkID" {
 
 	cont, err := cli.ContainerCreate(
 		context.Background(),
 		config,
 		hostConfig,
+		networkConfig,
 		nil,
 		identifier,
 	)
@@ -84,8 +104,12 @@ func deployWorker(cli *dockerclient.Client, image string, identifier string, env
 		return err
 	}
 
-	cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
-	log.Printf("Container %s is created", cont.ID)
+	err = cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
+	if err != nil {
+		log.Printf("Failed to start container: %s", err)
+	} else {
+		log.Printf("Container %s is created", cont.ID)
+	}
 	return nil
 }
 
@@ -283,9 +307,12 @@ func main() {
 			env := []string{
 				fmt.Sprintf("AUTHORIZATION=%s", execution.Authorization),
 				fmt.Sprintf("EXECUTIONID=%s", execution.ExecutionId),
-				fmt.Sprintf("DOCKER_API_VERSION=%s", dockerApiVersion),
 				fmt.Sprintf("ENVIRONMENT_NAME=%s", environment),
 				fmt.Sprintf("BASE_URL=%s", baseUrl),
+			}
+
+			if dockerApiVersion != "" {
+				env = append(env, fmt.Sprintf("DOCKER_API_VERSION=%s", dockerApiVersion))
 			}
 
 			err = deployWorker(dockercli, workerImage, containerName, env)
@@ -360,7 +387,8 @@ func main() {
 				continue
 			}
 
-			log.Println(string(body))
+			_ = body
+			//log.Println(string(body))
 
 			// FIXME - remove these
 			//log.Println(string(body))

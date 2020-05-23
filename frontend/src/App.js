@@ -52,10 +52,10 @@ const theme = createMuiTheme({
 	palette: {
 		primary: {
 			main: "#f85a3e"
-      	},
-      	secondary: {
-        	main: '#e8eaf6',
-      	},
+    },
+    secondary: {
+      main: '#e8eaf6',
+    },
    },
    typography: { 
       useNextVariants: true

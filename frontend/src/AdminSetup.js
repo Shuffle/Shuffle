@@ -141,7 +141,7 @@ const AdminAccount = props => {
 	const basedata = 
 		<div style={bodyDivStyle}>
 			<Paper style={boxStyle}>
-      			<form onSubmit={onSubmit} style={{margin: "15px 15px 15px 15px"}}>
+      	<form onSubmit={onSubmit} style={{color: "white", margin: "15px 15px 15px 15px"}}>
 					<h2>{formtitle}</h2>
 					Username
 					<div>

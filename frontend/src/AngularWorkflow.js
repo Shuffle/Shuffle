@@ -90,8 +90,8 @@ const AngularWorkflow = (props) => {
 	const [cystyle, ] = useState(cytoscapestyle) 
 	const [cy, setCy] = React.useState()
 		
+	const [appSearch, setAppSearch] = React.useState("")
 	const [currentView, setCurrentView] = React.useState("apps")
-	const [, setAppSearchValue] = React.useState("")
 	const [triggerAuthentication, setTriggerAuthentication] = React.useState({})
 	const [triggerFolders, setTriggerFolders] = React.useState([])
 
@@ -1385,10 +1385,6 @@ const AngularWorkflow = (props) => {
 		});
 	}
 
-	const setAppSearch = (event) => {
-		setFilteredApps(apps.filter(app => app.name.includes(event.target.value)))
-	}
-
 	const appViewStyle = {
 		marginLeft: "5px",
 		marginRight: "5px",
@@ -1525,10 +1521,10 @@ const AngularWorkflow = (props) => {
 												<MoreVertIcon />
 											</IconButton>
 											<Menu
-      										  id="long-menu"
-											  anchorEl={anchorEl}
-      										  keepMounted
-      										  open={open}
+      										id="long-menu"
+											  	anchorEl={anchorEl}
+													keepMounted
+													open={open}
 						  					  PaperProps={{
 						  					    style: {
 						  					    	backgroundColor: surfaceColor,
@@ -1568,6 +1564,7 @@ const AngularWorkflow = (props) => {
 	}
 	
 	const HandleLeftView = () => {
+		// Defaults to apps.
 		var thisview = <AppView />
 		if (currentView === "triggers") {
 			thisview = <TriggersView />
@@ -1577,14 +1574,6 @@ const AngularWorkflow = (props) => {
 
 		return(
 			<div>
-				<div style={{cursor: "pointer", height: 20, marginLeft: 10, marginTop: 10}} onClick={() => {
-					setLeftViewOpen(false)
-					setLeftBarSize(50)
-				}}>
-					<Tooltip color="primary" title="Minimize" placement="top">
-						<KeyboardArrowLeftIcon />
-					</Tooltip>
-				</div>
 				<Divider style={{marginTop: 10, height: 1, width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 				<div style={{minHeight: bodyHeight-appBarSize-150, maxHeight: bodyHeight-appBarSize-100}}>	
 					{thisview}
@@ -1981,11 +1970,36 @@ const AngularWorkflow = (props) => {
 		overflowX: "hidden",
 	}
 
+	const runAppSearch = (event) => {
+		setAppSearch(event.target.value)
+		setFilteredApps(apps.filter(app => app.name.toLowerCase().includes(event.target.value.trim().toLowerCase())))
+	}
+
 	const AppView = () => {
 		return(
 			<div style={appViewStyle}>
 				<div style={{flex: "1"}}>
 					<div style={appScrollStyle}>
+					{/*
+					<TextField
+						style={{backgroundColor: inputColor}} 
+						InputProps={{
+							style:{
+								color: "white",
+								minHeight: "50px", 
+								marginLeft: "5px",
+								maxWidth: "95%",
+								fontSize: "1em",
+							},
+						}}
+						fullWidth
+						color="primary"
+						placeholder={"Search apps"}
+						onChange={(event) => {
+							runAppSearch(event)
+						}}
+					/>
+					*/}
 					{filteredApps.map(app=> {
 						// FIXME - add label to apps, as this might be slow with A LOT of apps
 						var newAppname = app.name
@@ -2299,7 +2313,7 @@ const AngularWorkflow = (props) => {
 										try {
 											JSON.parse(event.target.value)
 										} catch (e) {
-											alert.error("Failed to parse json")
+											alert.error("Failed to parse json: ", e)
 										}
 									}
 								}}
@@ -2324,10 +2338,15 @@ const AngularWorkflow = (props) => {
 							<div>
 								<Select
 								PaperProps={{
-				    			  style: {
-				    			  	backgroundColor: inputColor,
-				    			  }
-				    			}}
+				    			style: {
+				    			  backgroundColor: inputColor,
+				    			}
+				    		}}
+								SelectDisplayProps={{
+									style: {
+										marginLeft: 10,
+									}
+								}}
 								value={selectedActionParameters[count].action_field}
 								fullWidth
 								onChange={(e) => {
@@ -2378,10 +2397,15 @@ const AngularWorkflow = (props) => {
 								datafield = 
 								<Select
 									PaperProps={{
-				    			  		style: {
-				    			  			backgroundColor: inputColor,
-				    			  		}
-				    				}}
+				    			  style: {
+				    			  	backgroundColor: inputColor,
+				    			  }
+				    			}}
+									SelectDisplayProps={{
+										style: {
+											marginLeft: 10,
+										}
+									}}
 									fullWidth
 									value={selectedAction.parameters[count].action_field}
 									onChange={(e) => {
@@ -2537,6 +2561,11 @@ const AngularWorkflow = (props) => {
 							backgroundColor: inputColor,
 						}
 					}}
+					SelectDisplayProps={{
+						style: {
+							marginLeft: 10,
+						}
+					}}
 					fullWidth
 					onChange={(e) => {
 						const env = environments.find(a => a.Name === e.target.value)
@@ -2572,6 +2601,11 @@ const AngularWorkflow = (props) => {
 					fullWidth
 					onChange={setNewSelectedAction}
 					style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+					SelectDisplayProps={{
+						style: {
+							marginLeft: 10,
+						}
+					}}
 				>
 					{selectedApp.actions.map(data => {
 						var newActionname = data.name
@@ -2806,18 +2840,23 @@ const AngularWorkflow = (props) => {
 			datafield = 
 			<div>
 				<Select
-				value={data.action_field}
-				fullWidth
-				onChange={(e) => {
-					changeActionVariable(e.target.value, data.value)
-				}}
-				style={{backgroundColor: inputColor, color: "white", height: "50px"}}
-				>
-				{parents.map(data => (
-					<MenuItem style={{backgroundColor: inputColor, color: "white"}}  value={data.label}>
-						{data.label}
-					</MenuItem>
-				))}
+					value={data.action_field}
+					fullWidth
+					onChange={(e) => {
+						changeActionVariable(e.target.value, data.value)
+					}}
+					style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+					>
+					{parents.map(data => (
+						<MenuItem style={{backgroundColor: inputColor, color: "white"}}  value={data.label}>
+							{data.label}
+						</MenuItem>
+					))}
+					SelectDisplayProps={{
+						style: {
+							marginLeft: 10,
+						}
+					}}
 			</Select>
 			<TextField
 				style={{backgroundColor: inputColor}} 
@@ -2858,11 +2897,16 @@ const AngularWorkflow = (props) => {
 				<Select
 					fullWidth
 					value={data.action_field}
-				    PaperProps={{
-				      style: {
-				      	backgroundColor: inputColor,
-				      }
-				    }}
+				  PaperProps={{
+				    style: {
+				      backgroundColor: inputColor,
+				    }
+				  }}
+					SelectDisplayProps={{
+						style: {
+							marginLeft: 10,
+						}
+					}}
 					onChange={(e) => {
 						changeActionVariable(e.target.value, data.value)
 					}}
@@ -2939,23 +2983,32 @@ const AngularWorkflow = (props) => {
 				<div style={{flex: "10"}}> 
 					<b>{data.name} </b> 
 				</div>
-				<div style={{cursor: "pointer", color: staticcolor}} onClick={() => {
-					changeActionParameterVariant("STATIC_VALUE") 
+				<Tooltip color="primary" title="Static data" placement="top">
+					<div style={{cursor: "pointer", color: staticcolor}} onClick={(e) => {
+							e.preventDefault()
+							changeActionParameterVariant("STATIC_VALUE") 
+						}}>
+						<CreateIcon />
+					</div>
+				</Tooltip>
+				&nbsp;|&nbsp;
+				<Tooltip color="primary" title="Data from previous action" placement="top">
+					<div style={{cursor: "pointer", color: actioncolor}} onClick={(e) => {
+						e.preventDefault()
+						changeActionParameterVariant("ACTION_RESULT") 
 					}}>
-					static  
-				</div>
+						<AppsIcon />
+					</div>
+				</Tooltip>
 				&nbsp;|&nbsp;
-				<div style={{cursor: "pointer", color: actioncolor}} onClick={() => {
-					changeActionParameterVariant("ACTION_RESULT") 
-				}}>
-					action	
-				</div>
-				&nbsp;|&nbsp;
-				<div style={{cursor: "pointer", color: varcolor}} onClick={() => {
-					changeActionParameterVariant("WORKFLOW_VARIABLE") 
-				}}>
-					var	
-				</div>
+				<Tooltip color="primary" title="Use local variable" placement="top">
+					<div style={{cursor: "pointer", color: varcolor}} onClick={(e) => {
+						e.preventDefault()
+						changeActionParameterVariant("WORKFLOW_VARIABLE") 
+					}}>
+						<FavoriteBorderIcon />
+					</div>
+				</Tooltip>
 			</div>	
 			{datafield}
 		</div>
@@ -3091,8 +3144,16 @@ const AngularWorkflow = (props) => {
 			const [anchorEl, setAnchorEl] = React.useState(null);
 
 			const deleteCondition = (conditionIndex) => {
-				//selectedEdge.conditions.splice(conditionIndex, 1) 
-				//setSelectedEdge(selectedEdge)
+				console.log(selectedEdge)
+				if (selectedEdge.conditions.length === 1) {
+					selectedEdge.conditions = []
+				} else {
+					selectedEdge.conditions.splice(conditionIndex, 1) 
+				}
+
+				setSelectedEdge(selectedEdge)
+				setOpen(false)
+				setUpdate("delete "+conditionIndex)
 			}
 
 			const paperVariableStyle = {
@@ -3108,6 +3169,7 @@ const AngularWorkflow = (props) => {
 			}
 
 			const menuClick = (event) => {
+				console.log("MENU CLICK")
 				setOpen(!open)
 				setAnchorEl(event.currentTarget);
 			}
@@ -3350,11 +3412,16 @@ const AngularWorkflow = (props) => {
 							value={selectedTrigger.parameters[0].value.split(splitter)}
 							style={{backgroundColor: inputColor, color: "white"}}
 							PaperProps={{
-				    			style: {
+				    		style: {
 									height: "200px",
-				    			  	backgroundColor: inputColor,
-				    			}
-				    		}}
+				    			backgroundColor: inputColor,
+				    		}
+				    	}}
+							SelectDisplayProps={{
+								style: {
+									marginLeft: 10,
+								}
+							}}
 							onChange={(e) => {
 								//setTriggerFolderWrapper(e)
 								setTriggerFolderWrapperMulti(e)

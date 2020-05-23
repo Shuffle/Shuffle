@@ -51,6 +51,7 @@ import (
 	// Web
 	// "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	http2 "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 	// Old items (cloud)
 	// "google.golang.org/appengine"
 	// "google.golang.org/appengine/memcache"
@@ -1980,7 +1981,7 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 		})
 
 		loginData = fmt.Sprintf(`{"success": true, "cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]}`, Userdata.Session, expiration.Unix())
-		log.Printf("SESSION LENGTH MORE THAN 0 IN LOGIN: %s", Userdata.Session)
+		//log.Printf("SESSION LENGTH MORE THAN 0 IN LOGIN: %s", Userdata.Session)
 
 		err = SetSession(ctx, *Userdata, Userdata.Session)
 		if err != nil {
@@ -3921,6 +3922,14 @@ func setBadMemcache(ctx context.Context, path string) {
 	//}
 }
 
+type Result struct {
+	Success bool     `json:"success"`
+	Reason  string   `json:"reason"`
+	List    []string `json:"list"`
+}
+
+var docs_list = Result{List: []string{}}
+
 func getDocList(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -3939,11 +3948,24 @@ func getDocList(resp http.ResponseWriter, request *http.Request) {
 	//	return
 	//}
 
+	if len(docs_list.List) > 0 {
+		b, err := json.Marshal(docs_list)
+		if err != nil {
+			log.Printf("Failed marshaling result: %s", err)
+			//http.Error(resp, err.Error(), 500)
+		} else {
+			resp.WriteHeader(200)
+			resp.Write(b)
+			return
+		}
+	}
+
 	client := github.NewClient(nil)
-	_, item1, _, err := client.Repositories.GetContents(ctx, "shaffuru", "shuffle-docs", "docs", nil)
+	_, item1, _, err := client.Repositories.GetContents(ctx, "frikky", "shuffle-docs", "docs", nil)
 	if err != nil {
+		log.Printf("Github error: %s", err)
 		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error listing directory"`)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error listing directory: %s"`, err)))
 		return
 	}
 
@@ -3964,16 +3986,12 @@ func getDocList(resp http.ResponseWriter, request *http.Request) {
 
 	log.Println(names)
 
-	type Result struct {
-		Success bool     `json:"success"`
-		Reason  string   `json:"reason"`
-		List    []string `json:"list"`
-	}
-
 	var result Result
 	result.Success = true
 	result.Reason = "Success"
 	result.List = names
+	docs_list = result
+
 	b, err := json.Marshal(result)
 	if err != nil {
 		http.Error(resp, err.Error(), 500)
@@ -4001,6 +4019,8 @@ func getDocList(resp http.ResponseWriter, request *http.Request) {
 }
 
 // r.HandleFunc("/api/v1/docs/{key}", getDocs).Methods("GET", "OPTIONS")
+var alldocs = map[string][]byte{}
+
 func getDocs(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -4016,16 +4036,15 @@ func getDocs(resp http.ResponseWriter, request *http.Request) {
 
 	//ctx := context.Background()
 	docPath := fmt.Sprintf("https://raw.githubusercontent.com/shaffuru/shuffle-docs/master/docs/%s.md", location[4])
-	//if item, err := memcache.Get(ctx, docPath); err == memcache.ErrCacheMiss {
-	//	// Not in cache
-	//} else if err != nil {
-	//	// Error with cache
-	//	log.Printf("Error getting item: %v", err)
-	//} else {
-	//	resp.WriteHeader(200)
-	//	resp.Write([]byte(item.Value))
-	//	return
-	//}
+	//location[4]
+	//var, ok := alldocs["asd"]
+	key, ok := alldocs[fmt.Sprintf("%s", location[4])]
+	// Custom cache for github issues lol
+	if ok {
+		resp.WriteHeader(200)
+		resp.Write(key)
+		return
+	}
 
 	client := &http.Client{}
 	req, err := http.NewRequest(
@@ -4077,6 +4096,8 @@ func getDocs(resp http.ResponseWriter, request *http.Request) {
 		//setBadMemcache(ctx, docPath)
 		return
 	}
+
+	alldocs[location[4]] = b
 
 	// Add to cache if it doesn't exist
 	//item := &memcache.Item{
@@ -5601,30 +5622,6 @@ func runInit(ctx context.Context) {
 		}
 	}
 
-	// Getting apps to see if we should initialize a test
-	workflowapps, err := getAllWorkflowApps(ctx)
-	if err != nil {
-		log.Printf("Failed getting apps: %s", err)
-	} else if err == nil && len(workflowapps) == 0 {
-		log.Printf("Apps: loading TEST")
-		fs := memfs.New()
-		storer := memory.NewStorage()
-		r, err := git.Clone(storer, fs, &git.CloneOptions{
-			URL: "https://github.com/frikky/shuffle-apps",
-		})
-
-		if err != nil {
-			log.Printf("Failed loading repo into memory: %s", err)
-		}
-
-		dir, err := fs.ReadDir("")
-		if err != nil {
-			log.Printf("FAiled reading folder: %s", err)
-		}
-		_ = r
-		iterateAppGithubFolders(fs, dir, "", "testing")
-	}
-
 	// Gets schedules and starts them
 	schedules, err := getAllSchedules(ctx)
 	if err != nil {
@@ -5652,6 +5649,51 @@ func runInit(ctx context.Context) {
 
 			scheduledJobs[schedule.Id] = jobret
 		}
+	}
+
+	// Getting apps to see if we should initialize a test
+	workflowapps, err := getAllWorkflowApps(ctx)
+	if err != nil {
+		log.Printf("Failed getting apps: %s", err)
+	} else if err == nil && len(workflowapps) == 0 {
+		log.Printf("Apps: loading TEST")
+		fs := memfs.New()
+		storer := memory.NewStorage()
+
+		url := os.Getenv("APP_DOWNLOAD_LOCATION")
+		if len(url) == 0 {
+			url = "https://github.com/frikky/shuffle-apps"
+		}
+
+		username := os.Getenv("APP_DOWNLOAD_AUTH_USERNAME")
+		password := os.Getenv("APP_DOWNLOAD_AUTH_PASSWORD")
+		cloneOptions := &git.CloneOptions{
+			URL: url,
+		}
+
+		if len(username) > 0 && len(password) > 0 {
+			cloneOptions.Auth = &http2.BasicAuth{
+				Username: username,
+				Password: password,
+			}
+		}
+		log.Printf("Getting apps from %s", url)
+
+		r, err := git.Clone(storer, fs, cloneOptions)
+
+		if err != nil {
+			log.Printf("Failed loading repo into memory: %s", err)
+		}
+
+		dir, err := fs.ReadDir("")
+		if err != nil {
+			log.Printf("Failed reading folder: %s", err)
+		}
+		_ = r
+		//iterateAppGithubFolders(fs, dir, "", "testing")
+
+		// FIXME: Get all the apps?
+		iterateAppGithubFolders(fs, dir, "", "")
 	}
 
 	log.Printf("Finished INIT")
@@ -5701,16 +5743,16 @@ func init() {
 	r.HandleFunc("/api/v1/streams", handleWorkflowQueue).Methods("POST")
 	r.HandleFunc("/api/v1/streams/results", handleGetStreamResults).Methods("POST", "OPTIONS")
 
-	// Apps
-	r.HandleFunc("/api/v1/apps/get_existing", loadExistingApps).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/apps/get_existing/{appname}", loadExistingApps).Methods("GET", "OPTIONS")
+	// App specific
+	r.HandleFunc("/api/v1/apps/get_existing", loadSpecificApps).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/validate", validateAppInput).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}", deleteWorkflowApp).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}/config", getWorkflowAppConfig).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps", getWorkflowApps).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps", setNewWorkflowApp).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/search", getSpecificApps).Methods("POST", "OPTIONS")
 
-	// Legacy things
+	// Legacy app things
 	r.HandleFunc("/api/v1/workflows/apps/validate", validateAppInput).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/apps", getWorkflowApps).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/apps", setNewWorkflowApp).Methods("PUT", "OPTIONS")

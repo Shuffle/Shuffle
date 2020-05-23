@@ -16,6 +16,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	network "github.com/docker/docker/api/types/network"
 	dockerclient "github.com/docker/docker/client"
 )
 
@@ -284,10 +285,24 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		Env:   env,
 	}
 
+	networkConfig := &network.NetworkingConfig{}
+	if baseUrl == "http://shuffle-backend:5001" {
+		networkConfig = &network.NetworkingConfig{
+			EndpointsConfig: map[string]*network.EndpointSettings{
+				"shuffle_shuffle": {
+					NetworkID: "shuffle_shuffle",
+				},
+			},
+		}
+	} else {
+		log.Printf("Bad config: %s. Using default network", baseUrl)
+	}
+
 	cont, err := cli.ContainerCreate(
 		context.Background(),
 		config,
 		hostConfig,
+		networkConfig,
 		nil,
 		identifier,
 	)
@@ -375,6 +390,7 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 		children[branch.SourceID] = append(children[branch.SourceID], branch.DestinationID)
 	}
 
+	log.Printf("Actions: %d", len(workflowExecution.Workflow.Actions))
 	for _, action := range workflowExecution.Workflow.Actions {
 		if action.Environment != environment {
 			continue
@@ -395,7 +411,7 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 	}
 
 	if len(onpremApps) == 0 {
-		return errors.New("No apps to handle onprem")
+		return errors.New(fmt.Sprintf("No apps to handle onprem (%s)", environment))
 	}
 
 	pullOptions := types.ImagePullOptions{}

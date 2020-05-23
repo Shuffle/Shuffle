@@ -10,9 +10,9 @@ import MenuItem from '@material-ui/core/MenuItem';
 import {Link} from 'react-router-dom';
 
 const Body = {
-  	maxWidth: '1000px',
-  	minWidth: '768px',
-  	margin: 'auto',
+  maxWidth: '1000px',
+  minWidth: '768px',
+  margin: 'auto',
 	display: "flex",
 	heigth: "100%",
 	color: "white",
@@ -32,7 +32,7 @@ const hrefStyle = {
 }
 
 const Docs = (props) => {
-  	const { isLoaded, globalUrl } = props;
+  const { isLoaded, globalUrl } = props;
 
 	const [data, setData] = useState("");
 	const [firstrequest, setFirstrequest] = useState(true);
@@ -52,19 +52,84 @@ const Docs = (props) => {
 		if (firstrequest) {
 			setFirstrequest(false)
 			fetchDocList()
-			fetchDocs()
+			fetchDocs(props.match.params.key)
 			return
+		}
+
+		// Continue this, and find the h2 with the data in it lol
+		if (window.location.hash.length > 0) {
+			console.log("HELLO")
+
+			var parent = document.getElementById("markdown_wrapper")
+			if (parent !== null) {
+				var elements = parent.getElementsByTagName('h2')
+
+				const name = window.location.hash.slice(1, window.location.hash.lenth).toLowerCase().split("%20").join(" ").split("_").join(" ")
+
+				console.log(name)
+				var found = false
+				for (var key in elements) {
+					const element = elements[key]
+					if (element.innerHTML === undefined) {
+						continue
+					}
+
+					// Fix location..
+					if (element.innerHTML.toLowerCase() === name) {
+						element.scrollIntoView({behavior: "smooth"})
+						found = true
+						//element.scrollTo({
+						//	top: element.offsetTop-100,
+						//	behavior: "smooth"
+						//})
+					}
+				}
+
+				// H#
+				if (!found) {
+					var elements = parent.getElementsByTagName('h3')
+					console.log(name)
+					var found = false
+					for (var key in elements) {
+						const element = elements[key]
+						if (element.innerHTML === undefined) {
+							continue
+						}
+
+						// Fix location..
+						if (element.innerHTML.toLowerCase() === name) {
+							element.scrollIntoView({behavior: "smooth"})
+							found = true
+							//element.scrollTo({
+							//	top: element.offsetTop-100,
+							//	behavior: "smooth"
+							//})
+						}
+					}
+				}
+			}
+			//console.log(element)
+
+			//console.log("NAME: ", name)
+			//console.log(document.body.innerHTML)
+			//   parent = document.getElementById(parent);
+
+			//var descendants = parent.getElementsByTagName(tagname);
+
+			// this.scrollDiv.current.scrollIntoView({ behavior: 'smooth' });
+
+			//$(".parent").find("h2:contains('Statistics')").parent();
 		}
 	})
 
 	const fetchDocList = () => {
 		fetch(globalUrl+"/api/v1/docs", {
-    	  	method: 'GET',
-				headers: {
-					'Content-Type': 'application/json',
-					'Accept': 'application/json',
-				},
-    		})
+    	method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+    })
 		.then((response) => response.json())
     	.then((responseJson) => {
 			if (responseJson.success) {
@@ -77,8 +142,8 @@ const Docs = (props) => {
 		.catch(error => {});
 	}
 
-	const fetchDocs = () => {
-		fetch(globalUrl+"/api/v1/docs/"+props.match.params.key, {
+	const fetchDocs = (docId) => {
+		fetch(globalUrl+"/api/v1/docs/"+docId, {
     	  	method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',
@@ -99,10 +164,15 @@ const Docs = (props) => {
 	const markdownStyle = {
 		color: "rgba(255, 255, 255, 0.65)", 
 		flex: "1",
+		maxWidth: 750,
+		overflow: "hidden",
 	}
 
-	function Link(props) {
-		return <a href={props.href} style={{color: "#f85a3e", textDecoration: "none"}}>{props.children}</a>
+	function OuterLink(props) {
+		if (props.href.includes("http") || props.href.includes("mailto")) {
+			return <a href={props.href} style={{color: "#f85a3e", textDecoration: "none"}}>{props.children}</a>
+		}
+		return <Link to={props.href} style={{color: "#f85a3e", textDecoration: "none"}}>{props.children}</Link>
 	}
 
 	function Img(props) {
@@ -117,7 +187,7 @@ const Docs = (props) => {
 	//	);
 	//}
 
-  	const postDataBrowser = 
+  const postDataBrowser = 
 		<div style={Body}>
 			<div style={SideBar}>
 				<ul style={{listStyle: "none", paddingLeft: "0"}}>
@@ -128,22 +198,23 @@ const Docs = (props) => {
 					</li>
 					{list.map(item => {
 						const path = "/docs/"+item
-						const newname = item.charAt(0).toUpperCase()+item.substring(1)
+						const newname = item.charAt(0).toUpperCase()+item.substring(1).split("_").join(" ")
 						return (
 							<li style={{marginTop: "10px"}}>
-								<a style={hrefStyle} href={path}>
+								<Link style={hrefStyle} to={path} onClick={() => {fetchDocs(item)}}>
 									<h2>{newname}</h2>
-								</a>
+								</Link>
 							</li>
 						)
 					})}
 				</ul>
 			</div>
-			<div style={markdownStyle}>
+			<div id="markdown_wrapper" style={markdownStyle}>
 				<ReactMarkdown 
+					id="markdown_wrapper" 
 					escapeHtml={false}
 					source={data} 
-	 				renderers={{link: Link, image: Img}}
+	 				renderers={{link: OuterLink, image: Img}}
 				/>
 			</div>
 		</div>
@@ -172,7 +243,7 @@ const Docs = (props) => {
 			>
 			{list.map(item => {
 				const path = "/docs/"+item
-				const newname = item.charAt(0).toUpperCase()+item.substring(1)
+				const newname = item.charAt(0).toUpperCase()+item.substring(1).split("_").join(" ")
 				return (
 					<MenuItem onClick={() => {window.location.pathname = path}}>{newname}</MenuItem>
 				)
@@ -180,9 +251,10 @@ const Docs = (props) => {
 			</Menu>
 			<div style={markdownStyle}>
 				<ReactMarkdown 
+					id="markdown_wrapper" 
 					escapeHtml={false}
 					source={data} 
-	 				renderers={{link: Link, image: Img}}
+	 				renderers={{link: OuterLink, image: Img}}
 				/>
 			</div>
 			<Divider style={{marginTop: "10px", marginBottom: "10px", backgroundColor: dividerColor}}/>

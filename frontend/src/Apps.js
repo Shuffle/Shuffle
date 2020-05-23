@@ -3,13 +3,16 @@ import React, { useEffect} from 'react';
 import { useInterval } from 'react-powerhooks';
 
 import Grid from '@material-ui/core/Grid';
+import Select from '@material-ui/core/Select';
 import Paper from '@material-ui/core/Paper';
 import Divider from '@material-ui/core/Divider';
 import ButtonBase from '@material-ui/core/ButtonBase';
 import Button from '@material-ui/core/Button';
 import TextField from '@material-ui/core/TextField';
 import FormControl from '@material-ui/core/FormControl';
+import MenuItem from '@material-ui/core/MenuItem';
 import Tooltip from '@material-ui/core/Tooltip';
+import Input from '@material-ui/core/Input';
 import YAML from 'yaml'
 import {Link} from 'react-router-dom';
 
@@ -30,6 +33,7 @@ const Apps = (props) => {
   const { globalUrl, isLoggedIn, isLoaded } = props;
 
 	//const [workflows, setWorkflows] = React.useState([]);
+	const baseRepository = "https://github.com/frikky/shuffle-apps"
 	const alert = useAlert()
 	const [selectedApp, setSelectedApp] = React.useState({});
 	const [firstrequest, setFirstrequest] = React.useState(true)
@@ -37,13 +41,19 @@ const Apps = (props) => {
 	const [filteredApps, setFilteredApps] = React.useState([])
 	const [validation, setValidation] = React.useState(false)
 	const [isLoading, setIsLoading] = React.useState(false)
+	const [appSearchLoading, setAppSearchLoading] = React.useState(false)
+	const [selectedAction, setSelectedAction] = React.useState({})
 
 	const [openApi, setOpenApi] = React.useState("")
 	const [openApiData, setOpenApiData] = React.useState("")
 	const [appValidation, setAppValidation] = React.useState("")
+	const [loadAppsModalOpen, setLoadAppsModalOpen] = React.useState(false);
 	const [openApiModal, setOpenApiModal] = React.useState(false);
 	const [openApiModalType, setOpenApiModalType] = React.useState("");
 	const [openApiError, setOpenApiError] = React.useState("")
+	const [field1, setField1] = React.useState("")
+	const [field2, setField2] = React.useState("")
+
 	const { start, stop } = useInterval({
 	  	duration: 5000,
 	  	startImmediate: false,
@@ -69,6 +79,7 @@ const Apps = (props) => {
 		color: "#ffffff",
 		width: "100%",
 		display: "flex",
+		margin: 20, 
 	}
 
 	const paperAppStyle = {
@@ -103,8 +114,11 @@ const Apps = (props) => {
 			setFilteredApps(responseJson)
 			if (responseJson.length > 0) {
 				setSelectedApp(responseJson[0])
+				if (responseJson[0].actions.length > 0) {
+					setSelectedAction(responseJson[0].actions[0])
+				}
 			}
-    	})
+    })
 		.catch(error => {
 			alert.error(error.toString())
 		});
@@ -205,6 +219,10 @@ const Apps = (props) => {
 			<Paper square style={paperAppStyle} onClick={() => {
 				if (selectedApp.id !== data.id) {
 					setSelectedApp(data)
+					if (data.actions.length > 0) {
+						console.log(data.actions[0])
+						setSelectedAction(data.actions[0])
+					}
 				}
 			}}>
 				<Grid container style={{margin: 10, flex: "10"}}>
@@ -231,9 +249,11 @@ const Apps = (props) => {
 					</Grid>
 				</Grid>
 				<Grid container style={{margin: "10px 10px 10px 10px", flex: "1"}} onClick={() => {downloadApp(data)}}>
+					{/*
 					<Tooltip title={"Download"} style={{marginTop: "28px", width: "100%"}} aria-label={data.name}>
 						<CloudDownload /> 
 					</Tooltip>
+					*/}
 				</Grid>
 			</Paper>
 		)
@@ -248,33 +268,6 @@ const Apps = (props) => {
 		display: "flex",
 		marginBottom: 10, 
 	}
-
-	//const handleFile = (event) =>{
-	//	const formData = new FormData();
-	//	formData.append('file', event.target.files[0]);
-
-	//	fetch(globalUrl+"/api/v1/workflows/apps/validate", {
-    //	  	method: 'POST',
-	//			headers: {
-	//				'Accept': 'application/json',
-	//			},
-	//			body: formData,
-	//  			credentials: "include",
-    //		})
-	//	.then((response) => {
-	//		if (response.status !== 200) {
-	//			console.log("Status not 200 for apps :O!")
-	//			return 
-	//		}
-	//		return response.json()
-	//	})
-    //	.then((responseJson) => {
-	//		console.log(responseJson)
-    //	})
-	//	.catch(error => {
-	//		alert.error(error.toString())
-	//	});
-	//}
 
 	const UploadView = () => {
 		//var imageline = selectedApp.large_image === undefined || selectedApp.large_image.length === 0 ?
@@ -325,9 +318,65 @@ const Apps = (props) => {
 				<h2>{newAppname}</h2>
 				<p>{description}</p>
 				<Divider style={{marginBottom: "10px", marginTop: "10px", backgroundColor: dividerColor}}/>
-				<p>URL: {selectedApp.link}</p>
+				{selectedApp.link.length > 0 ? <p>URL: {selectedApp.link}</p> : null}
 				<p>ID: {selectedApp.id}</p>
-				<p>PrivateID: {selectedApp.privateId}</p>
+				{selectedApp.privateId !== undefined && selectedApp.privateId.length > 0 ? <p>PrivateID: {selectedApp.privateId}</p> : null}
+			
+				<div style={{marginTop: 15, marginBottom: 15}}>
+					<b>Actions</b>
+					<Select
+						fullWidth
+						value={selectedAction}
+						onChange={(event) => {
+							setSelectedAction(event.target.value)
+						}}
+						style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+						SelectDisplayProps={{
+							style: {
+								marginLeft: 10,
+							}
+						}}
+					>
+						{selectedApp.actions.map(data => {
+								var newActionname = data.label !== undefined && data.label.length > 0 ? data.label : data.name
+
+								// ROFL FIXME - loop
+								newActionname = newActionname.replace("_", " ")
+								newActionname = newActionname.replace("_", " ")
+								newActionname = newActionname.replace("_", " ")
+								newActionname = newActionname.replace("_", " ")
+								newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
+								return (
+									<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+										{newActionname}
+
+									</MenuItem>
+								)
+							})}
+					</Select>
+				</div>
+
+				{selectedAction.parameters !== undefined ? 
+					<div style={{marginTop: 15, marginBottom: 15}}>
+						<b>Arguments</b>
+						{selectedAction.parameters.map(data => {
+								var itemColor = "#f85a3e"
+								if (!data.required) {
+									itemColor = "#ffeb3b"
+								}
+
+								const circleSize = 10
+								return (
+									<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+										<div style={{width: circleSize, height: circleSize, borderRadius: circleSize / 2, backgroundColor: itemColor, marginRight: "10px"}}/>
+										{data.name}
+
+									</MenuItem>
+								)
+							})}
+					</div>
+				: null}
+
 				{editButton}
 				{deleteButton}
 			</div>
@@ -338,11 +387,11 @@ const Apps = (props) => {
 			<div>
 				<Paper square style={uploadViewPaperStyle}>
 					<div style={{width: "100%", margin: 25}}>
-						<h2>App creation</h2>
-						<Link to="/docs/apps" style={{textDecoration: "none", color: "#f85a3e"}}>What are apps?</Link>
-						&nbsp;- <a href="https://swagger.io/specification/" style={{textDecoration: "none", color: "#f85a3e"}}>OpenAPI specification</a>
+						<h2>App Creator</h2>
+						<a href="https://github.com/frikky/OpenAPI-security-definitions" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">Security API's</a>
+						&nbsp;- <a href="https://apis.guru/browse-apis/" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">OpenAPI directory</a>
 						<div/>
-						Apps are how you interact with workflows, and are used to execute workflows. They are created with the app creator, using OpenAPI specification or manually in python.
+						Apps interact with eachother in workflows. They are created with the app creator, using OpenAPI specification or manually in python. Use the links above to find potential apps you're looking for using OpenAPI or make one from scratch. There's 1000+ available.
 						<div/>
 						<div style={{marginTop: 20}}>
 							<Button
@@ -381,34 +430,54 @@ const Apps = (props) => {
 	const handleSearchChange = (event) => {
 		const searchfield = event.target.value.toLowerCase()
 		const newapps = apps.filter(data => data.name.toLowerCase().includes(searchfield) || data.description.toLowerCase().includes(searchfield))
-		setFilteredApps(newapps)
+
+		if (newapps.length === 0 && !appSearchLoading) {
+			setAppSearchLoading(true)
+			runAppSearch(searchfield)
+		} else {
+			setFilteredApps(newapps)
+		}
 	}
 
 	const appView = isLoggedIn ? 
-		<div style={{width: 1366, margin: "auto"}}>
+		<div style={{maxWidth: 1366, margin: "auto",}}>
 			<div style={appViewStyle}>	
-				<div style={{flex: "1", marginLeft: "10px", marginRight: "10px"}}>
+				<div style={{flex: "1", marginLeft: 10, marginRight: 10}}>
 					<h2>Upload</h2>
 					<div style={{marginTop: 20}}/>
 					<UploadView />
 				</div>
 				<Divider style={{marginBottom: "10px", marginTop: "10px", height: "100%", width: "1px", backgroundColor: dividerColor}}/>
-				<div style={{flex: 1, marginLeft: "10px", marginRight: "10px"}}>
+				<div style={{flex: 1, marginLeft: 10, marginRight: 10}}>
 					<div style={{display: "flex"}}>
 						<div style={{flex: 10}}>
 							<h2>Available integrations</h2> 
 						</div>
 						{isLoading ? <CircularProgress style={{marginTop: 13, marginRight: 15}} /> : null}
+						{/*
 						<Button
-							variant="contained"
+							variant="outlined"
 							component="label"
 							color="primary"
-							style={{maxHeight: 50, marginTop: 10}}
+							style={{margin: 5, maxHeight: 50, marginTop: 10}}
 							onClick={() => {
-								getExistingApps()
+								getSpecificApps(baseRepository)
 							}}
 						>
-							Load existing apps
+							Load apps
+						</Button>
+						*/}
+						<Button
+							variant="outlined"
+							component="label"
+							color="primary"
+							style={{margin: 5, maxHeight: 50, marginTop: 10}}
+							onClick={() => {
+								setOpenApi(baseRepository)
+								setLoadAppsModalOpen(true)
+							}}
+						>
+							Download from URL
 						</Button>
 					</div>
 					<TextField
@@ -432,7 +501,7 @@ const Apps = (props) => {
 					<div style={{marginTop: 15}}>
 						{apps.length > 0 ? 
 							filteredApps.length > 0 ? 
-								<div style={{maxHeight: "80vh", overflowY: "scroll"}}>
+								<div style={{maxHeight: "78vh", overflowY: "scroll"}}>
 									{filteredApps.map(app => {
 										return (
 											appPaper(app)
@@ -444,6 +513,12 @@ const Apps = (props) => {
 								<h4>
 									Try a broader search term. E.g. "http" or "TheHive"	
 								</h4>
+								<div/>
+
+								{appSearchLoading ? 
+									<CircularProgress color="primary" style={{margin: "auto"}}/>
+									: null
+								}
 							</Paper>
 						: 
 						<Paper square style={uploadViewPaperStyle}>
@@ -459,28 +534,38 @@ const Apps = (props) => {
 		: 
 		null
 
-	// Gets the URL itself (hopefully this works in most cases?
-	// Will then forward the data to an internal endpoint to validate the api
-	const getExistingApps = () => {
+	// Load data e.g. from github
+	const getSpecificApps = (url) => {
 		setValidation(true)
 
 		setIsLoading(true)
 		start()
 
-		alert.success("Downloading and building apps. Feel free to move around meanwhile.")
+		const parsedData = {
+			"url": url,
+		}
+
+		if (field1.length > 0) {
+			parsedData["field_1"] = field1
+		}
+
+		if (field2.length > 0) {
+			parsedData["field_2"] = field2
+		}
+
+		alert.success("Getting specific apps from your URL.")
 		var cors = "cors"
 		fetch(globalUrl+"/api/v1/apps/get_existing", {
-    	method: "GET",
+    	method: "POST",
 			mode: "cors",
 			headers: {
 				'Accept': 'application/json',
 			},
+			body: JSON.stringify(parsedData),
 	  	credentials: "include",
 		})
 		.then((response) => {
-			if (response.status !== 200) {
-				alert.success("Failed loading.")
-			} else {
+			if (response.status === 200) {
 				response.text().then(function (text) {
 					console.log("RETURN: ", text)
 					alert.success("Loaded existing apps!")
@@ -488,6 +573,16 @@ const Apps = (props) => {
 			}
 			setIsLoading(false)
 			stop()
+
+			return response.json()
+		})
+    .then((responseJson) => {
+				console.log("DATA: ", responseJson)
+				if (responseJson.reason !== undefined) {
+					alert.error("Failed loading: "+responseJson.reason)
+				} else {
+					alert.error("Failed loading")
+				}
 		})
 		.catch(error => {
 			alert.error(error.toString())
@@ -535,6 +630,29 @@ const Apps = (props) => {
 				alert.error("Failed deleting app")		
 			}
 		})
+		.catch(error => {
+			alert.error(error.toString())
+		});
+	}
+
+	const runAppSearch = (searchterm) => {
+		const data = {"search": searchterm}
+
+		fetch(globalUrl+"/api/v1/apps/search", {
+    	method: 'POST',
+			headers: {
+				'Accept': 'application/json',
+			},
+			body: JSON.stringify(data),
+	  	credentials: "include",
+		})
+		.then((response) => {
+			setAppSearchLoading(false)
+			return response.json()
+		})
+    .then((responseJson) => {
+			console.log(responseJson)
+    })
 		.catch(error => {
 			alert.error(error.toString())
 		});
@@ -621,6 +739,105 @@ const Apps = (props) => {
 		window.location.href = "/apps/new?id="+appValidation
 	}
 
+
+
+	const handleGithubValidation = () => {
+		getSpecificApps(openApi)
+		setLoadAppsModalOpen(false)
+	}
+
+	const appsModalLoad = loadAppsModalOpen ? 
+		<Dialog modal 
+			open={loadAppsModalOpen}
+			onClose={() => {
+				setOpenApi("")
+				setLoadAppsModalOpen(false)
+				setField1("")
+				setField2("")
+			}}
+			PaperProps={{
+				style: {
+					backgroundColor: surfaceColor,
+					color: "white",
+					minWidth: "800px",
+					minHeight: "320px",
+				},
+			}}
+		>
+			<DialogTitle>
+				<div style={{color: "rgba(255,255,255,0.9)"}}>
+					Load from github repo
+				</div>
+			</DialogTitle>
+			<DialogContent style={{color: "rgba(255,255,255,0.65)"}}>
+				Repository (supported: github, gitlab, bitbucket)
+				<TextField
+					style={{backgroundColor: inputColor}}
+					variant="outlined"
+					margin="normal"
+					defaultValue="https://github.com/frikky/shuffle-apps"
+					InputProps={{
+						style:{
+							color: "white",
+							height: "50px",
+							fontSize: "1em",
+						},
+					}}
+					onChange={e => setOpenApi(e.target.value)}
+					placeholder="https://github.com/frikky/shuffle-apps"
+					fullWidth
+					/>
+
+				<span style={{marginTop: 10}}>Authentication (optional - private repos etc):</span>
+				<div style={{display: "flex"}}>
+					<TextField
+						style={{flex: 1, backgroundColor: inputColor}}
+						variant="outlined"
+						margin="normal"
+						InputProps={{
+							style:{
+								color: "white",
+								height: "50px",
+								fontSize: "1em",
+							},
+						}}
+						onChange={e => setField1(e.target.value)}
+						type="username"
+						placeholder="Username / APIkey (optional)"
+						fullWidth
+						/>
+					<TextField
+						style={{flex: 1, backgroundColor: inputColor}}
+						variant="outlined"
+						margin="normal"
+						InputProps={{
+							style:{
+								color: "white",
+								height: "50px",
+								fontSize: "1em",
+							},
+						}}
+						onChange={e => setField2(e.target.value)}
+						type="password"
+						placeholder="Password (optional)"
+						fullWidth
+						/>
+				</div>
+			</DialogContent>
+			<DialogActions>
+				{circularLoader}
+				<Button style={{borderRadius: "0px"}} onClick={() => setLoadAppsModalOpen(false)} color="primary">
+					Cancel
+				</Button>
+	      <Button style={{borderRadius: "0px"}} disabled={openApi.length === 0 || !openApi.includes("http")} onClick={() => {
+					handleGithubValidation() 
+				}} color="primary">
+	        Submit	
+	      </Button>
+			</DialogActions>
+		</Dialog>
+		: null
+
 	const errorText = openApiError.length > 0 ? <div>Error: {openApiError}</div> : null
 	const circularLoader = validation ? <CircularProgress color="primary" /> : null
 	const modalView = openApiModal ? 
@@ -693,11 +910,11 @@ const Apps = (props) => {
 	        	  	<Button style={{borderRadius: "0px"}} onClick={() => setOpenApiModal(false)} color="primary">
 	        	    	Cancel
 	        	  	</Button>
-	        	  	<Button style={{borderRadius: "0px"}} disabled={appValidation.length === 0} onClick={() => {
+	      	<Button style={{borderRadius: "0px"}} disabled={appValidation.length === 0} onClick={() => {
 						redirectOpenApi()
 					}} color="primary">
 	        	    	Submit	
-	        	  	</Button>
+	        </Button>
 				</DialogActions>
 			</FormControl>
 		</Dialog>
@@ -708,6 +925,7 @@ const Apps = (props) => {
 		<div>
 			{appView}
 			{modalView}
+			{appsModalLoad}
 		</div>
 		:
 		<div>
