@@ -29,6 +29,7 @@ import (
 	http2 "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 
 	newscheduler "github.com/carlescere/scheduler"
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-git/go-git/v5/storage/memory"
 	//"github.com/gorilla/websocket"
 	//"google.golang.org/appengine"
@@ -3255,6 +3256,113 @@ func loadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+}
+
+func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string) error {
+	for _, file := range dir {
+		if len(onlyname) > 0 && file.Name() != onlyname {
+			continue
+		}
+
+		// Folder?
+		switch mode := file.Mode(); {
+		case mode.IsDir():
+			tmpExtra := fmt.Sprintf("%s%s/", extra, file.Name())
+			dir, err := fs.ReadDir(tmpExtra)
+			if err != nil {
+				log.Printf("Failed to read dir: %s", err)
+				break
+			}
+
+			// Go routine? Hmm, this can be super quick I guess
+			err = iterateOpenApiGithub(fs, dir, tmpExtra, "")
+			if err != nil {
+				break
+			}
+		case mode.IsRegular():
+			// Check the file
+			filename := file.Name()
+			if strings.Contains(filename, "yaml") || strings.Contains(filename, "yml") {
+				//log.Printf("Found file: %s", filename)
+				tmpExtra := fmt.Sprintf("%s%s/", extra, file.Name())
+
+				fileReader, err := fs.Open(tmpExtra)
+				if err != nil {
+					continue
+				}
+
+				readFile, err := ioutil.ReadAll(fileReader)
+				if err != nil {
+					log.Printf("Filereader error yaml: %s", err)
+					continue
+				}
+
+				// 1. This parses OpenAPI v2 to v3 etc, for use.
+				parsedOpenApi, err := handleSwaggerValidation(readFile)
+				if err != nil {
+					log.Printf("Validation error: %s", err)
+					continue
+				}
+
+				log.Printf("%#v", parsedOpenApi)
+
+				// 2. With parsedOpenApi.ID:
+				//http://localhost:3000/apps/new?id=06b1376f77b0563a3b1747a3a1253e88
+
+				// 3. Load this as a "standby" app
+				// FIXME: This should be a function ROFL
+				//log.Printf("%s", string(readFile))
+				swagger, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData([]byte(parsedOpenApi.Body))
+				if err != nil {
+					log.Printf("Swagger validation error in loop: %s", err)
+					continue
+				}
+
+				if strings.Contains(swagger.Info.Title, " ") {
+					strings.Replace(swagger.Info.Title, " ", "", -1)
+				}
+
+				basePath, err := buildStructure(swagger, parsedOpenApi.ID)
+				if err != nil {
+					log.Printf("Failed to build base structure in loop: %s", err)
+					continue
+				}
+
+				log.Printf("Should generate yaml")
+				api, pythonfunctions, err := generateYaml(swagger, parsedOpenApi.ID)
+				if err != nil {
+					log.Printf("Failed building and generating yaml in loop: %s", err)
+					continue
+				}
+
+				// FIXME: Configure user?
+				api.Owner = ""
+				err = dumpApi(basePath, api)
+				if err != nil {
+					log.Printf("Failed dumping yaml in loop: %s", err)
+					continue
+				}
+
+				// FIXME: Should this continue on activation?
+
+				identifier := fmt.Sprintf("%s-%s", swagger.Info.Title, parsedOpenApi.ID)
+				classname := strings.Replace(identifier, " ", "", -1)
+				classname = strings.Replace(classname, "-", "", -1)
+				parsedCode, err := dumpPython(basePath, classname, swagger.Info.Version, pythonfunctions)
+				if err != nil {
+					log.Printf("Failed dumping python in loop: %s", err)
+					continue
+				}
+
+				identifier = strings.Replace(identifier, " ", "-", -1)
+				identifier = strings.Replace(identifier, "_", "-", -1)
+
+				return nil
+			}
+		}
+	}
+
+	return nil
 }
 
 // Onlyname is used to
