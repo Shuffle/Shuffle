@@ -1,12 +1,13 @@
 version: '3'
 services:
   frontend:
-    #build: ./frontend
+    build: ./frontend
     image: frikky/shuffle:frontend
     container_name: shuffle-frontend
     hostname: shuffle-frontend
     ports:
       - "${FRONTEND_PORT}:80"
+      - "3002:443"
     networks:
       - shuffle
     restart: unless-stopped
@@ -57,12 +58,6 @@ services:
       - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
       - BASE_URL=http://${OUTER_HOSTNAME}:${BACKEND_PORT}
     restart: unless-stopped
-  app_sdk:
-    #build: ./functions/onprem/app_sdk
-    image: frikky/shuffle:app_sdk
-  worker:
-    #build: ./functions/onprem/worker
-    image: frikky/shuffle:worker
 networks:
   shuffle:
     driver: bridge

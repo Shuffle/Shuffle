@@ -21,13 +21,13 @@ RUN mkdir -p /usr/share/nginx/html/js
 RUN mkdir -p /usr/share/nginx/html/img
 
 COPY --from=builder /usr/src/app/build /usr/share/nginx/html
+
+#Localhost certificate challenge: Y#XwrJ#DoZGz2w6x
 COPY --from=builder /usr/src/app/certs/fullchain.pem /etc/nginx/fullchain.cert.pem
 COPY --from=builder /usr/src/app/certs/privkey.pem /etc/nginx/privkey.pem
 
-# Test
-COPY --from=builder /usr/src/app/nginxtest.conf /etc/nginx/nginx.conf
 # Prod
-#COPY --from=builder /usr/src/app/nginx.conf /etc/nginx/nginx.conf
+COPY --from=builder /usr/src/app/nginx.conf /etc/nginx/nginx.conf
 
 EXPOSE 80
 EXPOSE 443
