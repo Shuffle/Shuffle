@@ -5181,7 +5181,7 @@ func handleSwaggerValidation(body []byte) (ParsedOpenApi, error) {
 		if err != nil {
 			log.Printf("Yaml error: %s", err)
 		} else {
-			log.Printf("Successfully parsed YAML!")
+			//log.Printf("Successfully parsed YAML!")
 		}
 	} else {
 		isJson = true
@@ -5193,8 +5193,8 @@ func handleSwaggerValidation(body []byte) (ParsedOpenApi, error) {
 	}
 
 	if strings.HasPrefix(version.Swagger, "3.") || strings.HasPrefix(version.OpenAPI, "3.") {
-		log.Println("Handling v3 API")
-		swagger, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData(body)
+		//log.Println("Handling v3 API")
+		_, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData(body)
 		if err != nil {
 			return ParsedOpenApi{}, err
 		}
@@ -5203,18 +5203,18 @@ func handleSwaggerValidation(body []byte) (ParsedOpenApi, error) {
 		hasher.Write(body)
 		idstring = hex.EncodeToString(hasher.Sum(nil))
 
-		log.Printf("Swagger v3 validation success with ID %s!", idstring)
-		log.Printf("Paths: %d", len(swagger.Paths))
+		//log.Printf("Swagger v3 validation success with ID %s!", idstring)
+		//log.Printf("Paths: %d", len(swagger.Paths))
 
 		if !isJson {
-			log.Printf("FIXME: NEED TO TRANSFORM FROM YAML TO JSON for %s", idstring)
+			//log.Printf("FIXME: NEED TO TRANSFORM FROM YAML TO JSON for %s", idstring)
 		}
 
 		//return nil
 		//return ParsedOpenApi{}, err
 	} else { //strings.HasPrefix(version.Swagger, "2.") || strings.HasPrefix(version.OpenAPI, "2.") {
 		// Convert
-		log.Println("Handling v2 API")
+		//log.Println("Handling v2 API")
 		var swagger openapi2.Swagger
 		//log.Println(string(body))
 		err = json.Unmarshal(body, &swagger)
@@ -5225,7 +5225,7 @@ func handleSwaggerValidation(body []byte) (ParsedOpenApi, error) {
 				log.Printf("Yaml error: %s", err)
 				return ParsedOpenApi{}, err
 			} else {
-				log.Printf("Valid yaml!")
+				//log.Printf("Valid yaml!")
 			}
 
 		}
@@ -5246,9 +5246,9 @@ func handleSwaggerValidation(body []byte) (ParsedOpenApi, error) {
 		hasher.Write(swaggerdata)
 		idstring = hex.EncodeToString(hasher.Sum(nil))
 		if !isJson {
-			log.Printf("FIXME: NEED TO TRANSFORM FROM YAML TO JSON for %s?", idstring)
+			//log.Printf("FIXME: NEED TO TRANSFORM FROM YAML TO JSON for %s?", idstring)
 		}
-		log.Printf("Swagger v2 -> v3 validation success with ID %s!", idstring)
+		//log.Printf("Swagger v2 -> v3 validation success with ID %s!", idstring)
 
 		ctx := context.Background()
 		err = setOpenApiDatastore(ctx, idstring, parsed)
@@ -5544,7 +5544,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("Should generate yaml")
+	//log.Printf("Should generate yaml")
 	api, pythonfunctions, err := generateYaml(swagger, newmd5)
 	if err != nil {
 		log.Printf("Failed building and generating yaml: %s", err)

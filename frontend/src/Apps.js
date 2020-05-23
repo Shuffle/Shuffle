@@ -186,7 +186,7 @@ const Apps = (props) => {
 		}
 
 		var imageline = data.large_image.length === 0 ?
-			<img alt="Image missing" style={{width: 100, height: 100}} />
+			<img alt={data.title} style={{width: 100, height: 100}} />
 			: 
 			<img alt={data.title} src={data.large_image} style={{width: 100, height: 100, maxWidth: "100%"}} />
 
@@ -356,7 +356,7 @@ const Apps = (props) => {
 					</Select>
 				</div>
 
-				{selectedAction.parameters !== undefined ? 
+				{selectedAction.parameters !== undefined && selectedAction.parameters !== null ? 
 					<div style={{marginTop: 15, marginBottom: 15}}>
 						<b>Arguments</b>
 						{selectedAction.parameters.map(data => {

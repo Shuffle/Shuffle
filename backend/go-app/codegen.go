@@ -366,7 +366,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (WorkflowApp, []stri
 
 	securitySchemes := swagger.Components.SecuritySchemes
 	if securitySchemes != nil {
-		log.Printf("%#v", securitySchemes)
+		//log.Printf("%#v", securitySchemes)
 
 		api.Authentication = Authentication{
 			Required: true,
@@ -386,7 +386,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (WorkflowApp, []stri
 			api.Authentication.Parameters[0].Name = securitySchemes["BearerAuth"].Value.Name
 			api.Authentication.Parameters[0].In = securitySchemes["BearerAuth"].Value.In
 			api.Authentication.Parameters[0].Scheme = securitySchemes["BearerAuth"].Value.Scheme
-			log.Printf("HANDLE BEARER AUTH")
+			//log.Printf("HANDLE BEARER AUTH")
 			extraParameters = append(extraParameters, WorkflowAppActionParameter{
 				Name:        "apikey",
 				Description: "The apikey to use",
@@ -402,7 +402,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (WorkflowApp, []stri
 			api.Authentication.Parameters[0].Name = securitySchemes["ApiKeyAuth"].Value.Name
 			api.Authentication.Parameters[0].In = securitySchemes["ApiKeyAuth"].Value.In
 			api.Authentication.Parameters[0].Scheme = securitySchemes["ApiKeyAuth"].Value.Scheme
-			log.Printf("HANDLE APIKEY AUTH")
+			//log.Printf("HANDLE APIKEY AUTH")
 			extraParameters = append(extraParameters, WorkflowAppActionParameter{
 				Name:        "apikey",
 				Description: "The apikey to use",
@@ -789,11 +789,11 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 	optionalParameters := []WorkflowAppActionParameter{}
 	if len(path.Get.Parameters) > 0 {
 		for _, param := range path.Get.Parameters {
-			if param.Value.Schema.Ref == "" {
+			//log.Printf("TYPE: %#v", param.Value.Schema)
+			if param.Value.Schema == nil {
 				continue
 			}
 
-			log.Printf("TYPE: %#v", param.Value.Schema)
 			curParam := WorkflowAppActionParameter{
 				Name:        param.Value.Name,
 				Description: param.Value.Description,

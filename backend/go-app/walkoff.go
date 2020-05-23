@@ -2959,7 +2959,6 @@ func getSpecificApps(resp http.ResponseWriter, request *http.Request) {
 
 	// FIXME - continue the search here with github repos etc.
 	// Caching might be smart :D
-	log.Printf("Body: %s", string(body))
 	ctx := context.Background()
 	workflowapps, err := getAllWorkflowApps(ctx)
 	if err != nil {
@@ -2978,7 +2977,7 @@ func getSpecificApps(resp http.ResponseWriter, request *http.Request) {
 			appName := strings.ToLower(app.Name)
 			appDesc := strings.ToLower(app.Description)
 			if strings.Contains(appName, search) || strings.Contains(appDesc, search) {
-				log.Printf("Name: %s, Generated: %s, Activated: %s", app.Name, strconv.FormatBool(app.Generated), strconv.FormatBool(app.Activated))
+				//log.Printf("Name: %s, Generated: %s, Activated: %s", app.Name, strconv.FormatBool(app.Generated), strconv.FormatBool(app.Activated))
 				returnValues = append(returnValues, app)
 			}
 		}
@@ -2992,7 +2991,6 @@ func getSpecificApps(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	returnData := fmt.Sprintf(`{"success": true, "reason": %s}`, string(newbody))
-	log.Printf("Return: %s", returnData)
 	resp.WriteHeader(200)
 	resp.Write([]byte(returnData))
 }
@@ -3293,6 +3291,13 @@ func loadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 }
 
 func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string) error {
+
+	ctx := context.Background()
+	workflowapps, err := getAllWorkflowApps(ctx)
+	appCounter := 0
+	if err != nil {
+		log.Printf("Failed to get existing generated apps")
+	}
 	for _, file := range dir {
 		if len(onlyname) > 0 && file.Name() != onlyname {
 			continue
@@ -3317,7 +3322,8 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 			// Check the file
 			filename := file.Name()
 			if strings.Contains(filename, "yaml") || strings.Contains(filename, "yml") {
-				log.Printf("File: %s", filename)
+				appCounter += 1
+				//log.Printf("File: %s", filename)
 				//log.Printf("Found file: %s", filename)
 				tmpExtra := fmt.Sprintf("%s%s/", extra, file.Name())
 
@@ -3347,7 +3353,7 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 				//log.Printf("%s", string(readFile))
 				swagger, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData([]byte(parsedOpenApi.Body))
 				if err != nil {
-					log.Printf("Swagger validation error in loop: %s", err)
+					log.Printf("Swagger validation error in loop (%s): %s", filename, err)
 					continue
 				}
 
@@ -3355,10 +3361,10 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 					strings.Replace(swagger.Info.Title, " ", "", -1)
 				}
 
-				log.Printf("Should generate yaml")
+				//log.Printf("Should generate yaml")
 				api, _, err := generateYaml(swagger, parsedOpenApi.ID)
 				if err != nil {
-					log.Printf("Failed building and generating yaml in loop: %s", err)
+					log.Printf("Failed building and generating yaml in loop (%s): %s", filename, err)
 					continue
 				}
 
@@ -3369,18 +3375,36 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 				api.Generated = true
 				api.Activated = false
 
-				ctx := context.Background()
-				err = setWorkflowAppDatastore(ctx, api, api.ID)
-				if err != nil {
-					log.Printf("Failed setting workflowapp in loop: %s", err)
-					continue
-				} else {
-					log.Printf("Added %s:%s to the database from OpenAPI repo", api.Name, api.AppVersion)
+				found := false
+				for _, app := range workflowapps {
+					if app.ID == api.ID {
+						found = true
+						break
+					} else if app.Name == api.Name && app.AppVersion == api.AppVersion {
+						found = true
+						break
+					}
 				}
 
-				return nil
+				if !found {
+					err = setWorkflowAppDatastore(ctx, api, api.ID)
+					if err != nil {
+						log.Printf("Failed setting workflowapp in loop: %s", err)
+						continue
+					} else {
+						log.Printf("Added %s:%s to the database from OpenAPI repo", api.Name, api.AppVersion)
+					}
+				} else {
+					//log.Printf("Skipped upload of %s (%s)", api.Name, api.ID)
+				}
+
+				//return nil
 			}
 		}
+	}
+
+	if appCounter > 0 {
+		log.Printf("Preloaded %d OpenApi apps in %s!", appCounter, extra)
 	}
 
 	return nil
