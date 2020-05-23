@@ -652,6 +652,11 @@ const Apps = (props) => {
 		})
     .then((responseJson) => {
 			console.log(responseJson)
+			if (responseJson.success) {
+				if (responseJson.reason !== undefined && responseJson.reason.length > 0) {
+					setFilteredApps(responseJson.reason)
+				}
+			}
     })
 		.catch(error => {
 			alert.error(error.toString())

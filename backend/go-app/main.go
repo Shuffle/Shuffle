@@ -5210,8 +5210,6 @@ func handleSwaggerValidation(body []byte) (ParsedOpenApi, error) {
 			log.Printf("FIXME: NEED TO TRANSFORM FROM YAML TO JSON for %s", idstring)
 		}
 
-		log.Printf("Body: %s", string(swaggerdata))
-
 		//return nil
 		//return ParsedOpenApi{}, err
 	} else { //strings.HasPrefix(version.Swagger, "2.") || strings.HasPrefix(version.OpenAPI, "2.") {
@@ -5261,7 +5259,6 @@ func handleSwaggerValidation(body []byte) (ParsedOpenApi, error) {
 
 	}
 
-	log.Printf("Down here?")
 	if len(swaggerdata) > 0 {
 		body = swaggerdata
 	}

@@ -773,8 +773,6 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 		Parameters:  extraParameters,
 	}
 
-	log.Printf("FUNCTION: %#v", action)
-
 	action.Returns.Schema.Type = "string"
 	baseUrl := fmt.Sprintf("%s%s", api.Link, actualPath)
 
@@ -791,6 +789,11 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 	optionalParameters := []WorkflowAppActionParameter{}
 	if len(path.Get.Parameters) > 0 {
 		for _, param := range path.Get.Parameters {
+			if param.Value.Schema.Ref == "" {
+				continue
+			}
+
+			log.Printf("TYPE: %#v", param.Value.Schema)
 			curParam := WorkflowAppActionParameter{
 				Name:        param.Value.Name,
 				Description: param.Value.Description,
@@ -1013,7 +1016,7 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 
 func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string, firstQuery bool) (WorkflowAppAction, string) {
 	// What to do with this, hmm
-	log.Printf("PATH: %s", actualPath)
+	//log.Printf("PATH: %s", actualPath)
 	functionName := fixFunctionName(path.Post.Summary, actualPath)
 
 	action := WorkflowAppAction{

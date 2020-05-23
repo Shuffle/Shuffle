@@ -86,10 +86,11 @@ type WorkflowApp struct {
 	Downloaded  bool   `json:"downloaded" yaml:"downloaded" required:false datastore:"downloaded"`
 	Sharing     bool   `json:"sharing" yaml:"sharing" required:false datastore:"sharing"`
 	Verified    bool   `json:"verified" yaml:"verified" required:false datastore:"verified"`
+	Activated   bool   `json:"activated" yaml:"activated" required:false datastore:"activated"`
 	Tested      bool   `json:"tested" yaml:"tested" required:false datastore:"tested"`
 	Owner       string `json:"owner" datastore:"owner" yaml:"owner"`
 	PrivateID   string `json:"private_id" yaml:"private_id" required:false datastore:"private_id"`
-	Description string `json:"description" datastore:"description" required:false yaml:"description"`
+	Description string `json:"description" datastore:"description,noindex" required:false yaml:"description"`
 	Environment string `json:"environment" datastore:"environment" required:true yaml:"environment"`
 	SmallImage  string `json:"small_image" datastore:"small_image,noindex" required:false yaml:"small_image"`
 	LargeImage  string `json:"large_image" datastore:"large_image,noindex" yaml:"large_image" required:false`
@@ -2918,6 +2919,7 @@ func handleGetfile(resp http.ResponseWriter, request *http.Request) ([]byte, err
 	return buf.Bytes(), nil
 }
 
+// Basically a search for apps that aren't activated yet
 func getSpecificApps(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -2958,9 +2960,41 @@ func getSpecificApps(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - continue the search here with github repos etc.
 	// Caching might be smart :D
 	log.Printf("Body: %s", string(body))
+	ctx := context.Background()
+	workflowapps, err := getAllWorkflowApps(ctx)
+	if err != nil {
+		log.Printf("Error: Failed getting workflowapps: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
 
+	returnValues := []WorkflowApp{}
+	search := strings.ToLower(tmpBody.Search)
+	for _, app := range workflowapps {
+		if !app.Activated && app.Generated {
+			// This might be heavy with A LOT
+			// Not too worried with todays tech tbh..
+			appName := strings.ToLower(app.Name)
+			appDesc := strings.ToLower(app.Description)
+			if strings.Contains(appName, search) || strings.Contains(appDesc, search) {
+				log.Printf("Name: %s, Generated: %s, Activated: %s", app.Name, strconv.FormatBool(app.Generated), strconv.FormatBool(app.Activated))
+				returnValues = append(returnValues, app)
+			}
+		}
+	}
+
+	newbody, err := json.Marshal(returnValues)
+	if err != nil {
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed unpacking workflow executions"}`)))
+		return
+	}
+
+	returnData := fmt.Sprintf(`{"success": true, "reason": %s}`, string(newbody))
+	log.Printf("Return: %s", returnData)
 	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+	resp.Write([]byte(returnData))
 }
 
 func validateAppInput(resp http.ResponseWriter, request *http.Request) {
@@ -3283,6 +3317,7 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 			// Check the file
 			filename := file.Name()
 			if strings.Contains(filename, "yaml") || strings.Contains(filename, "yml") {
+				log.Printf("File: %s", filename)
 				//log.Printf("Found file: %s", filename)
 				tmpExtra := fmt.Sprintf("%s%s/", extra, file.Name())
 
@@ -3304,8 +3339,6 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 					continue
 				}
 
-				log.Printf("%#v", parsedOpenApi)
-
 				// 2. With parsedOpenApi.ID:
 				//http://localhost:3000/apps/new?id=06b1376f77b0563a3b1747a3a1253e88
 
@@ -3322,14 +3355,8 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 					strings.Replace(swagger.Info.Title, " ", "", -1)
 				}
 
-				basePath, err := buildStructure(swagger, parsedOpenApi.ID)
-				if err != nil {
-					log.Printf("Failed to build base structure in loop: %s", err)
-					continue
-				}
-
 				log.Printf("Should generate yaml")
-				api, pythonfunctions, err := generateYaml(swagger, parsedOpenApi.ID)
+				api, _, err := generateYaml(swagger, parsedOpenApi.ID)
 				if err != nil {
 					log.Printf("Failed building and generating yaml in loop: %s", err)
 					continue
@@ -3337,25 +3364,19 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 
 				// FIXME: Configure user?
 				api.Owner = ""
-				err = dumpApi(basePath, api)
+				api.ID = parsedOpenApi.ID
+				api.IsValid = true
+				api.Generated = true
+				api.Activated = false
+
+				ctx := context.Background()
+				err = setWorkflowAppDatastore(ctx, api, api.ID)
 				if err != nil {
-					log.Printf("Failed dumping yaml in loop: %s", err)
+					log.Printf("Failed setting workflowapp in loop: %s", err)
 					continue
+				} else {
+					log.Printf("Added %s:%s to the database from OpenAPI repo", api.Name, api.AppVersion)
 				}
-
-				// FIXME: Should this continue on activation?
-
-				identifier := fmt.Sprintf("%s-%s", swagger.Info.Title, parsedOpenApi.ID)
-				classname := strings.Replace(identifier, " ", "", -1)
-				classname = strings.Replace(classname, "-", "", -1)
-				parsedCode, err := dumpPython(basePath, classname, swagger.Info.Version, pythonfunctions)
-				if err != nil {
-					log.Printf("Failed dumping python in loop: %s", err)
-					continue
-				}
-
-				identifier = strings.Replace(identifier, " ", "-", -1)
-				identifier = strings.Replace(identifier, "_", "-", -1)
 
 				return nil
 			}
@@ -3583,6 +3604,7 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	workflowapp.ID = uuid.NewV4().String()
 	workflowapp.IsValid = true
 	workflowapp.Generated = false
+	workflowapp.Activated = true
 
 	err = setWorkflowAppDatastore(ctx, workflowapp, workflowapp.ID)
 	if err != nil {
