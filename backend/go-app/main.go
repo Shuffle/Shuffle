@@ -5248,12 +5248,9 @@ func handleSwaggerValidation(body []byte) (ParsedOpenApi, error) {
 		body = swaggerdata
 	}
 
-	//parsed := ParsedOpenApi{}
-	if !isJson {
-		//yaml.l
-		log.Printf("Parsing from YAML to json!")
-		body = swaggerdata
-	}
+	// Overwrite with new json data
+	_ = isJson
+	body = swaggerdata
 
 	// Parsing it to swagger 3
 	parsed = ParsedOpenApi{

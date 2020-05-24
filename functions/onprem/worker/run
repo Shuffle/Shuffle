@@ -1,15 +1,15 @@
 echo "Compiling program"
-CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o worker.bin .
+#CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o worker.bin .
 
 echo "Fixing docker env"
-docker rmi frikky/shuffle:worker --force
-docker build . -t frikky/shuffle:worker
-docker push frikky/shuffle:worker
+#docker rmi frikky/shuffle:worker --force
+#docker build . -t frikky/shuffle:worker
+#docker push frikky/shuffle:worker
 
-#docker run \
-#	--env "AUTHORIZATION=ASD" \
-#	--env "DOCKER_API_VERSION=1.39" \
-#	--env "EXECUTIONID=ASD" \
-#	--env "BASE_URI=$BASE_URI" \
-#	-v /var/run/docker.sock:/var/run/docker.sock \
-#	frikky/shuffle:worker
+docker run \
+	--env "AUTHORIZATION=ASD" \
+	--env "DOCKER_API_VERSION=1.39" \
+	--env "EXECUTIONID=ASD" \
+	--env "BASE_URI=$BASE_URI" \
+	-v /var/run/docker.sock:/var/run/docker.sock \
+	frikky/shuffle:worker

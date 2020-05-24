@@ -32,7 +32,7 @@ import DialogContent from '@material-ui/core/DialogContent';
 const surfaceColor = "#27292D"
 
 const Workflows = (props) => {
-  	const { globalUrl, isLoggedIn, isLoaded, } = props;
+  const { globalUrl, isLoggedIn, isLoaded, } = props;
 	document.title = "Shuffle - Workflows"
 
 	const alert = useAlert()
@@ -158,7 +158,7 @@ const Workflows = (props) => {
 
 	const getWorkflowExecution = (id) => {
 		fetch(globalUrl+"/api/v1/workflows/"+id+"/executions", {
-    	  	method: 'GET',
+    	  method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json',
@@ -186,7 +186,7 @@ const Workflows = (props) => {
 	const abortExecution = (workflowid, executionid) => {
 		alert.success("Aborting execution")
 		fetch(globalUrl+"/api/v1/workflows/"+workflowid+"/executions/"+executionid+"/abort", {
-    	  	method: 'GET',
+    	  method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json',
@@ -210,7 +210,7 @@ const Workflows = (props) => {
 		alert.show("Executing workflow "+id)
 		setTrackingId(id)
 		fetch(globalUrl+"/api/v1/workflows/"+id+"/execute", {
-    	  	method: 'GET',
+    	  method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json',
@@ -290,7 +290,7 @@ const Workflows = (props) => {
 	const deleteWorkflow = (id) => {
 		alert.success("Deleted workflow "+id)
 		fetch(globalUrl+"/api/v1/workflows/"+id, {
-    	  	method: 'DELETE',
+    	  method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json',

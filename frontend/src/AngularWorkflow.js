@@ -3,7 +3,9 @@ import { useInterval } from 'react-powerhooks';
 
 import uuid from "uuid";
 
+import {Link} from 'react-router-dom';
 import TextField from '@material-ui/core/TextField';
+import Drawer from '@material-ui/core/Drawer';
 import Button from '@material-ui/core/Button';
 import Paper from '@material-ui/core/Paper';
 import Grid from '@material-ui/core/Grid';
@@ -23,7 +25,11 @@ import Input from '@material-ui/core/Input';
 import FormGroup from '@material-ui/core/FormGroup';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Checkbox from '@material-ui/core/Checkbox';
+import Breadcrumbs from '@material-ui/core/Breadcrumbs';
+import CircularProgress from '@material-ui/core/CircularProgress';
+import ReactJson from 'react-json-view'
 
+import PolymerIcon from '@material-ui/icons/Polymer';
 import CreateIcon from '@material-ui/icons/Create';
 import PlayArrowIcon from '@material-ui/icons/PlayArrow';
 import AspectRatioIcon from '@material-ui/icons/AspectRatio';
@@ -111,6 +117,7 @@ const AngularWorkflow = (props) => {
 	const [workflowDone, setWorkflowDone] = React.useState(false)
 	const [localFirstrequest, setLocalFirstrequest] = React.useState(true)
 	const [requiresAuthentication, setRequiresAuthentication] = React.useState(true)
+	const [rightSideBarOpen, setRightSideBarOpen] = React.useState(false)
 
 	const [variableAnchorEl, setVariableAnchorEl] = React.useState(null)
 
@@ -148,6 +155,8 @@ const AngularWorkflow = (props) => {
 
 	const [, setExecutingNodes] = React.useState([])
 	const [executionRunning, setExecutionRunning] = React.useState(false)
+	const [executionModalOpen, setExecutionModalOpen] = React.useState(true)
+	const [executionData, setExecutionData] = React.useState({})
 
 	const [lastSaved, setLastSaved] = React.useState(true)
 
@@ -269,6 +278,11 @@ const AngularWorkflow = (props) => {
 		//console.log(responseJson)
 		// Loop nodes and find results
 		// Update on every interval? idk
+
+		if (JSON.stringify(responseJson) !== JSON.stringify(executionData)) {
+			console.log("Executiondata: ", responseJson)
+			setExecutionData(responseJson)
+		}
 		if (responseJson.execution_id !== executionRequest.execution_id) {
 			cy.elements().removeClass('success-highlight failure-highlight executing-highlight')
 			return
@@ -640,6 +654,8 @@ const AngularWorkflow = (props) => {
 				"authorization": responseJson.authorization,
 			})
 			setExecutingNodes([workflow.start])
+			setExecutionData({})
+			setExecutionModalOpen(true)
 			start()
 		})
 		.catch(error => {
@@ -792,7 +808,8 @@ const AngularWorkflow = (props) => {
 		//setSelectedTriggerIndex(-1)	
 		//setTriggerFolders([])	
 
-		//setLocalFirstrequest(true)
+		// Can be used for right side view
+		setRightSideBarOpen(false)
 		console.timeEnd("UNSELECT")
 	}
 
@@ -2520,10 +2537,10 @@ const AngularWorkflow = (props) => {
 
 	const appApiView = Object.getOwnPropertyNames(selectedAction).length > 0 && Object.getOwnPropertyNames(selectedApp).length > 0 ? 
 		<div style={appApiViewStyle}>
-			<div style={{display: "flex", height: "40px", marginBottom: 30}}>
+			<div style={{display: "flex", height: 40, marginBottom: 30}}>
 				<div style={{flex: "1"}}>
 					<h3 style={{marginBottom: "5px"}}>{selectedAction.app_name}</h3>
-					<a href="/docs/apps" style={{textDecoration: "none", color: "#f85a3e"}}>What are apps?</a>
+					<Link to="/docs/apps" style={{textDecoration: "none", color: "#f85a3e"}}>What are apps?</Link>
 				</div>
 				<div style={{flex: "1"}}>
 					<Button disabled={selectedAction.id === workflow.start} style={{zIndex: 5000, marginTop: "15px",}} color="primary" variant="outlined" onClick={(e) => {
@@ -2635,7 +2652,7 @@ const AngularWorkflow = (props) => {
 		: null 
 
 
-	const headerSize = 74
+	const headerSize = 68
 	const rightsidebarStyle = {
 		position: "fixed", 
 		right: 0, 
@@ -3248,7 +3265,7 @@ const AngularWorkflow = (props) => {
 				<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 					<div style={{flex: "1"}}>
 						<h3 style={{marginBottom: "5px"}} >Branch: Conditions - {selectedEdgeIndex}</h3>
-						<a href="/docs/conditions" style={{textDecoration: "none", color: "#f85a3e"}}>What are conditions?</a>
+						<Link to="/docs/conditions" style={{textDecoration: "none", color: "#f85a3e"}}>What are conditions?</Link>
 					</div>
 				</div>
 				<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -3478,7 +3495,7 @@ const AngularWorkflow = (props) => {
 				<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 					<div style={{flex: "1"}}>
 						<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}: {selectedTrigger.status}</h3>
-						<a href="/docs/webhooks" style={{textDecoration: "none", color: "#f85a3e"}}>What are webhooks?</a>
+						<Link to="/docs/triggers#webhook" style={{textDecoration: "none", color: "#f85a3e"}}>What are webhooks?</Link>
 					</div>
 				</div>
 				<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -3564,7 +3581,7 @@ const AngularWorkflow = (props) => {
 					<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 						<div style={{flex: "1"}}>
 							<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}: {selectedTrigger.status}</h3>
-							<a href="/docs/webhooks" style={{textDecoration: "none", color: "#f85a3e"}}>What are webhooks?</a>
+							<Link to="/docs/triggers#webhook" style={{textDecoration: "none", color: "#f85a3e"}}>What are webhooks?</Link>
 						</div>
 					</div>
 					<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -3914,7 +3931,7 @@ const AngularWorkflow = (props) => {
 					<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 						<div style={{flex: "1"}}>
 							<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}: {selectedTrigger.status}</h3>
-							<a href="/docs/schedules" style={{textDecoration: "none", color: "#f85a3e"}}>What are schedules?</a>
+							<Link to="/docs/triggers#schedule" style={{textDecoration: "none", color: "#f85a3e"}}>What are schedules?</Link>
 						</div>
 					</div>
 					<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -4043,7 +4060,7 @@ const AngularWorkflow = (props) => {
 					<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 						<div style={{flex: "1"}}>
 							<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}: {selectedTrigger.status}</h3>
-							<a href="/docs/schedules" style={{textDecoration: "none", color: "#f85a3e"}}>What are schedules?</a>
+							<Link to="/docs/triggers#schedule" style={{textDecoration: "none", color: "#f85a3e"}}>What are schedules?</Link>
 						</div>
 					</div>
 					<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -4195,7 +4212,17 @@ const AngularWorkflow = (props) => {
 		return (
 			<div style={topBarStyle}>	
 				<div style={{margin: 10}}>
-					<h3>Editing workflow {workflow.name}</h3>
+					<Breadcrumbs aria-label="breadcrumb" separator="›" style={{color: "white",}}>
+						<Link to="/workflows" style={{textDecoration: "none", color: "inherit",}}>
+							<h2 style={{color: "rgba(255,255,255,0.5)"}}>
+								<PolymerIcon style={{marginRight: 10}} />
+								Workflows
+							</h2>
+						</Link>
+						<h2>
+							{workflow.name}
+						</h2>
+					</Breadcrumbs>
 				</div>
 			</div>
 		)
@@ -4219,7 +4246,7 @@ const AngularWorkflow = (props) => {
 	const BottomCytoscapeBar = () => {
 		const boxSize = 100
 		const executionButton = executionRunning ? 
-			<Tooltip color="primary" title="Stop running workflow (ctrl+a)" placement="top">
+			<Tooltip color="primary" title="Stop execution" placement="top">
 				<Button style={{height: boxSize, width: boxSize}} color="secondary" variant="contained" onClick={() => {
 					abortExecution()
 				}}>
@@ -4227,7 +4254,7 @@ const AngularWorkflow = (props) => {
 				</Button> 
 			</Tooltip>
 			:
-			<Tooltip color="primary" title="Execute workflow once (ctrl+a)" placement="top">
+			<Tooltip color="primary" title="Test execution" placement="top">
 				<Button disabled={executionRequestStarted} style={{height: boxSize, width: boxSize}} color="primary" variant="contained" onClick={() => {
 					executeWorkflow()
 				}}>
@@ -4281,6 +4308,7 @@ const AngularWorkflow = (props) => {
 	const RightSideBar = () => {
 		setLastSaved(false)
 		if (Object.getOwnPropertyNames(selectedAction).length > 0 && Object.getOwnPropertyNames(selectedApp).length > 0) {
+			setRightSideBarOpen(true)
 			//console.time('ACTIONSTART');
 			return(
 				<div style={rightsidebarStyle}>	
@@ -4289,6 +4317,7 @@ const AngularWorkflow = (props) => {
 			)
 		} else if (Object.getOwnPropertyNames(selectedTrigger).length > 0) {
 			if (selectedTrigger.trigger_type === "SCHEDULE") {
+				setRightSideBarOpen(true)
 				console.log("SCHEDULE")
 				return(
 					<div style={rightsidebarStyle}>	
@@ -4296,6 +4325,7 @@ const AngularWorkflow = (props) => {
 					</div>
 				)
 			} else if (selectedTrigger.trigger_type === "WEBHOOK") {
+				setRightSideBarOpen(true)
 				console.log("WEBHOOK")
 				return(
 					<div style={rightsidebarStyle}>	
@@ -4303,6 +4333,7 @@ const AngularWorkflow = (props) => {
 					</div>
 				)
 			} else if (selectedTrigger.trigger_type === "EMAIL") {
+				setRightSideBarOpen(true)
 				console.log("EMAIL")
 				return(
 					<div style={rightsidebarStyle}>	
@@ -4310,6 +4341,7 @@ const AngularWorkflow = (props) => {
 					</div>
 				)
 			} else if (selectedTrigger.trigger_type === "USERINPUT") {
+				setRightSideBarOpen(true)
 				console.log("USER INPUT SIDEBAR")
 				return(
 					<div style={rightsidebarStyle}>	
@@ -4323,6 +4355,7 @@ const AngularWorkflow = (props) => {
 				return null
 			}
 		} else if (Object.getOwnPropertyNames(selectedEdge).length > 0) {
+			setRightSideBarOpen(true)
 			return(
 				<div style={rightsidebarStyle}>	
 					<EdgeSidebar />
@@ -4356,6 +4389,59 @@ const AngularWorkflow = (props) => {
 				</div>
 		</div>
 
+	const ExecutionModal = () => {
+		return (
+			<Drawer anchor={"right"} open={executionModalOpen} onClose={() => setExecutionModalOpen(false)}>
+				<div style={{padding: 20, maxWidth: 250, minWidth: 250,}}>
+					<h2>Executing Workflow</h2>	
+					<Divider />
+					<h3>Execution Argument: </h3>{executionText}
+					{executionData.status !== undefined && executionData.status.length > 0 ?
+						<div>
+							<h3>Status: </h3>{executionData.status}
+						</div>
+						: null
+					}
+					<h3>Results: </h3>
+					{executionData.results === undefined || executionData.results === null || executionData.results.length === 0 ?
+						<CircularProgress />
+						:
+						executionData.results.map(data => {
+							var showResult = data.result.trim()
+							showResult.split(" None").join(" \"None\"")
+							//showResult = replaceAll(showResult, " None", " \"None\"");
+							var jsonvalid = true
+							try {
+								JSON.parse(showResult)
+							} catch (e) {
+								jsonvalid = false
+							}
+
+							return (
+								<div style={{margin: 10, border: "1px solid rgba(0,0,0,0.5)"}}>
+									<div style={{width: 17, height: 17, borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: 10}}/>
+									<b>Name:</b> {data.action.label}<div/>
+									<b>Status:</b> {data.status}<div/>
+									<b>Result:</b>&nbsp;
+									{jsonvalid ? <ReactJson 
+											src={JSON.parse(showResult)} 
+											theme="solarized" 
+											collapsed={false}
+											displayDataTypes={false}
+											name={"Results for "+data.action.label}
+										/>
+									: 
+									data.result
+									}
+								</div>
+							)
+						})
+					}
+				</div>
+			</Drawer>
+		)
+	}
+	
 	const newView = isLoggedIn ?
 		<div style={{color: "white"}}>
 			<div style={{display: "flex", borderTop: "1px solid rgba(91, 96, 100, 1)"}}>
@@ -4373,6 +4459,7 @@ const AngularWorkflow = (props) => {
 					}}
 				/>
 			</div>
+			<ExecutionModal />
 			<RightSideBar />
 			<BottomCytoscapeBar />
 			<TopCytoscapeBar />
@@ -4383,7 +4470,7 @@ const AngularWorkflow = (props) => {
 		<div style={{color: "white"}}>
 			TMP FOR NOT LOGGED IN 
 		</div>
-
+	
 	const variablesModal = variablesModalOpen ? 
 		<Dialog modal 
 			open={variablesModalOpen} 
@@ -4598,7 +4685,7 @@ const AngularWorkflow = (props) => {
 		>
 			<DialogTitle><div style={{color: "white"}}>Authentication for {selectedApp.name}</div></DialogTitle>
 			<DialogContent>
-				<a href="/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is this?</a>
+				<Link to="/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is this?</Link>
 				<div />
 				{selectedApp.link.length > 0 ? <EndpointData /> : null}
 				<div style={{marginTop: 15, marginBottom: 15, }}/>

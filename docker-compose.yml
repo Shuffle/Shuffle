@@ -46,7 +46,7 @@ services:
       - database
   orborus:
     #build: ./functions/onprem/orborus
-    image: frikky/shuffle:orborus
+    image: frikky/orborus:latest
     container_name: shuffle-orborus
     hostname: shuffle-orborus
     networks:

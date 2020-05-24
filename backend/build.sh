@@ -4,6 +4,7 @@ docker rm shuffle-backend
 docker rmi frikky/shuffle:backend 
 
 docker build . -t frikky/shuffle:backend
+docker push frikky/shuffle:backend
 
 echo "Starting server"
 #docker run -it \
