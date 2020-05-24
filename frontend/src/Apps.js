@@ -12,6 +12,8 @@ import TextField from '@material-ui/core/TextField';
 import FormControl from '@material-ui/core/FormControl';
 import MenuItem from '@material-ui/core/MenuItem';
 import Tooltip from '@material-ui/core/Tooltip';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
+import Switch from '@material-ui/core/Switch';
 import Input from '@material-ui/core/Input';
 import YAML from 'yaml'
 import {Link} from 'react-router-dom';
@@ -43,6 +45,7 @@ const Apps = (props) => {
 	const [isLoading, setIsLoading] = React.useState(false)
 	const [appSearchLoading, setAppSearchLoading] = React.useState(false)
 	const [selectedAction, setSelectedAction] = React.useState({})
+	const [searchBackend, setSearchBackend] = React.useState(false)
 
 	const [openApi, setOpenApi] = React.useState("")
 	const [openApiData, setOpenApiData] = React.useState("")
@@ -454,7 +457,8 @@ const Apps = (props) => {
 		const searchfield = event.target.value.toLowerCase()
 		const newapps = apps.filter(data => data.name.toLowerCase().includes(searchfield) || data.description.toLowerCase().includes(searchfield))
 
-		if (newapps.length === 0 && !appSearchLoading) {
+		if ((newapps.length === 0 || searchBackend) && !appSearchLoading) {
+
 			setAppSearchLoading(true)
 			runAppSearch(searchfield)
 		} else {
@@ -477,19 +481,11 @@ const Apps = (props) => {
 							<h2>Available integrations</h2> 
 						</div>
 						{isLoading ? <CircularProgress style={{marginTop: 13, marginRight: 15}} /> : null}
-						{/*
-						<Button
-							variant="outlined"
-							component="label"
-							color="primary"
-							style={{margin: 5, maxHeight: 50, marginTop: 10}}
-							onClick={() => {
-								getSpecificApps(baseRepository)
-							}}
-						>
-							Load apps
-						</Button>
-						*/}
+				    <FormControlLabel
+							style={{color: "white", marginBottom: "0px", marginTop: "10px"}}
+							label=<div style={{color: "white"}}>Search OpenAPI</div>
+							control={<Switch checked={searchBackend} onChange={() => {setSearchBackend(!searchBackend)}} />}
+						/>
 						<Button
 							variant="outlined"
 							component="label"
@@ -534,7 +530,7 @@ const Apps = (props) => {
 							: 
 							<Paper square style={uploadViewPaperStyle}>
 								<h4>
-									Try a broader search term, e.g. "http", "alert", "ticket" etc.
+									Try a broader search term, e.g. "http", "alert", "ticket" etc. 
 								</h4>
 								<div/>
 
