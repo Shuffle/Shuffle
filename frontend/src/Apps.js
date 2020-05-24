@@ -262,7 +262,7 @@ const Apps = (props) => {
 	const dividerColor = "rgb(225, 228, 232)"
 	const uploadViewPaperStyle = {
 		minWidth: "100%",
-		maxWidth: "100%",
+		maxWidth: 662.5,
 		color: "white",
 		backgroundColor: surfaceColor,
 		display: "flex",
@@ -285,9 +285,10 @@ const Apps = (props) => {
 
 		var description = selectedApp.description
 
-		const url = "/apps/edit/"+selectedApp.id
+		const editUrl = "/apps/edit/"+selectedApp.id
+		const activateUrl = "/apps/new?id="+selectedApp.id
 		var editButton = selectedApp.activated && selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated ?
-			<Link to={url} style={{textDecoration: "none"}}>
+			<Link to={editUrl} style={{textDecoration: "none"}}>
 				<Button
 					variant="outlined"
 					component="label"
@@ -298,9 +299,9 @@ const Apps = (props) => {
 				</Button></Link> : null
 
 		var activateButton = selectedApp.generated && !selectedApp.activated ?
-			<Link to={url} style={{textDecoration: "none"}}>
+			<Link to={activateUrl} style={{textDecoration: "none"}}>
 				<Button
-					variant="outlined"
+					variant="contained"
 					component="label"
 					color="primary"
 					style={{marginTop: "10px"}}
@@ -308,8 +309,7 @@ const Apps = (props) => {
 					Activate App	
 				</Button></Link> : null
 
-
-		var deleteButton = (selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated) || (selectedApp.downloaded != undefined && selectedApp.downloaded == true) ?
+		var deleteButton = ((selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated) || (selectedApp.downloaded != undefined && selectedApp.downloaded == true)) && activateButton === null ?
 				<Button
 					variant="outlined"
 					component="label"
@@ -322,16 +322,30 @@ const Apps = (props) => {
 					Delete app	
 				</Button> : null
 
+		var imageline = selectedApp.large_image === undefined || selectedApp.large_image.length === 0 ?
+			<img alt={selectedApp.title} style={{width: 100, height: 100}} />
+			: 
+			<img alt={selectedApp.title} src={selectedApp.large_image} style={{width: 100, height: 100, maxWidth: "100%"}} />
 
 		//fetch(globalUrl+"/api/v1/get_openapi/"+urlParams.get("id"), {
 		var baseInfo = newAppname.length > 0 ?
 			<div>
-				<h2>{newAppname}</h2>
-				<p>{description}</p>
+				<div style={{display: "flex"}}>
+					<div style={{marginRight: 15, marginTop: 10}}>
+						{imageline}
+					</div>
+					<div style={{maxWidth: "75%", overflow: "hidden"}}>
+						<h2>{newAppname}</h2>
+						<p>{description}</p>
+					</div>
+				</div>
+				{activateButton}
+				{editButton}
+				{deleteButton}
 				<Divider style={{marginBottom: "10px", marginTop: "10px", backgroundColor: dividerColor}}/>
-				{selectedApp.link.length > 0 ? <p>URL: {selectedApp.link}</p> : null}
-				<p>ID: {selectedApp.id}</p>
-				{selectedApp.privateId !== undefined && selectedApp.privateId.length > 0 ? <p>PrivateID: {selectedApp.privateId}</p> : null}
+				{selectedApp.link.length > 0 ? <p><b>URL:</b> {selectedApp.link}</p> : null}
+				<p><b>ID:</b> {selectedApp.id}</p>
+				{selectedApp.privateId !== undefined && selectedApp.privateId.length > 0 ? <p><b>PrivateID:</b> {selectedApp.privateId}</p> : null}
 			
 				<div style={{marginTop: 15, marginBottom: 15}}>
 					<b>Actions</b>
@@ -387,10 +401,6 @@ const Apps = (props) => {
 							})}
 					</div>
 				: null}
-
-				{activateButton}
-				{editButton}
-				{deleteButton}
 			</div>
 			: 
 			null
@@ -490,7 +500,7 @@ const Apps = (props) => {
 								setLoadAppsModalOpen(true)
 							}}
 						>
-							Download from URL
+							Download more apps 
 						</Button>
 					</div>
 					<TextField

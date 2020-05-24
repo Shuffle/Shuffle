@@ -361,6 +361,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (WorkflowApp, []stri
 	api.Tested = false
 	api.PrivateID = newmd5
 	api.Generated = true
+	api.Activated = true
 	// Setting up security schemes
 	extraParameters := []WorkflowAppActionParameter{}
 

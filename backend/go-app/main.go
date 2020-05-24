@@ -5194,24 +5194,21 @@ func handleSwaggerValidation(body []byte) (ParsedOpenApi, error) {
 
 	if strings.HasPrefix(version.Swagger, "3.") || strings.HasPrefix(version.OpenAPI, "3.") {
 		//log.Println("Handling v3 API")
-		_, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData(body)
+		swaggerv3, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData(body)
 		if err != nil {
 			return ParsedOpenApi{}, err
 		}
 
-		hasher := md5.New()
-		hasher.Write(body)
-		idstring = hex.EncodeToString(hasher.Sum(nil))
-
-		//log.Printf("Swagger v3 validation success with ID %s!", idstring)
-		//log.Printf("Paths: %d", len(swagger.Paths))
-
-		if !isJson {
-			//log.Printf("FIXME: NEED TO TRANSFORM FROM YAML TO JSON for %s", idstring)
+		swaggerdata, err = json.Marshal(swaggerv3)
+		if err != nil {
+			log.Printf("Failed unmarshaling v3 data: %s", err)
+			return ParsedOpenApi{}, err
 		}
 
-		//return nil
-		//return ParsedOpenApi{}, err
+		hasher := md5.New()
+		hasher.Write(swaggerdata)
+		idstring = hex.EncodeToString(hasher.Sum(nil))
+
 	} else { //strings.HasPrefix(version.Swagger, "2.") || strings.HasPrefix(version.OpenAPI, "2.") {
 		// Convert
 		//log.Println("Handling v2 API")
@@ -5245,21 +5242,16 @@ func handleSwaggerValidation(body []byte) (ParsedOpenApi, error) {
 		hasher := md5.New()
 		hasher.Write(swaggerdata)
 		idstring = hex.EncodeToString(hasher.Sum(nil))
-		if !isJson {
-			//log.Printf("FIXME: NEED TO TRANSFORM FROM YAML TO JSON for %s?", idstring)
-		}
-		//log.Printf("Swagger v2 -> v3 validation success with ID %s!", idstring)
-
-		ctx := context.Background()
-		err = setOpenApiDatastore(ctx, idstring, parsed)
-		if err != nil {
-			log.Printf("Failed uploading openapi2 to datastore: %s", err)
-			return ParsedOpenApi{}, err
-		}
-
 	}
 
 	if len(swaggerdata) > 0 {
+		body = swaggerdata
+	}
+
+	//parsed := ParsedOpenApi{}
+	if !isJson {
+		//yaml.l
+		log.Printf("Parsing from YAML to json!")
 		body = swaggerdata
 	}
 
@@ -5695,14 +5687,6 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Println(len(user.PrivateApps))
-	c, err := request.Cookie("session_token")
-	if err == nil {
-		//log.Printf("Should've deleted cache for %s with token %s", user.Username, c.Value)
-		//err = memcache.Delete(request.Context(), c.Value)
-		//err = memcache.Delete(request.Context(), user.ApiKey)
-	}
-
 	parsed := ParsedOpenApi{
 		ID:   api.ID,
 		Body: string(body),
@@ -5836,7 +5820,7 @@ func runInit(ctx context.Context) {
 	if err != nil {
 		log.Printf("Failed loading repo %s into memory: %s", err)
 	} else {
-		log.Printf("Finished getting data.. Now looking for updates")
+		log.Printf("Finished git clone. Looking for updates to the repo.")
 		dir, err := fs.ReadDir("")
 		if err != nil {
 			log.Printf("Failed reading folder: %s", err)

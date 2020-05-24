@@ -2704,7 +2704,6 @@ func getWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	location := strings.Split(request.URL.String(), "/")
-	log.Printf("%#v", location)
 	var fileId string
 	if location[1] == "api" {
 		if len(location) <= 4 {
@@ -2732,14 +2731,22 @@ func getWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	log.Printf("Getting app %s", fileId)
 	parsedApi, err := getOpenApiDatastore(ctx, fileId)
 	if err != nil {
+		log.Printf("OpenApi doesn't exist for: %s - err: %s", fileId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
 
-	parsedApi.Success = true
+	//log.Printf("Parsed API: %#v", parsedApi)
+	if len(parsedApi.ID) > 0 {
+		parsedApi.Success = true
+	} else {
+		parsedApi.Success = false
+	}
+
 	data, err := json.Marshal(parsedApi)
 	if err != nil {
 		resp.WriteHeader(422)
@@ -3393,6 +3400,13 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 						continue
 					} else {
 						log.Printf("Added %s:%s to the database from OpenAPI repo", api.Name, api.AppVersion)
+
+						// Set OpenAPI datastore
+						err = setOpenApiDatastore(ctx, parsedOpenApi.ID, parsedOpenApi)
+						if err != nil {
+							log.Printf("Failed uploading openapi to datastore in loop: %s", err)
+							continue
+						}
 					}
 				} else {
 					//log.Printf("Skipped upload of %s (%s)", api.Name, api.ID)
