@@ -1,0 +1,8 @@
+# App_sdk
+App_sdk development is continued here: https://github.com/frikky/Shuffle-apps/tree/master/app_sdk
+
+# Added static:baseline.py
+It's used for python code generation and should be under MIT.
+
+# LICENSE
+Everything in this folder is MIT, not AGPLv3

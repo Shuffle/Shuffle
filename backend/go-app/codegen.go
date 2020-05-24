@@ -122,8 +122,8 @@ func streamZipdata(ctx context.Context, identifier, pythoncode, requirements str
 func getAppbase() ([]byte, []byte, error) {
 	// 1. Have baseline in bucket/generated_apps/baseline
 	// 2. Copy the baseline to a new folder with identifier name
-	static := "../../functions/static_baseline.py"
-	appbase := "../../functions/onprem/app_sdk/app_base.py"
+	static := "../app_sdk/static_baseline.py"
+	appbase := "../app_sdk/app_base.py"
 
 	staticData, err := ioutil.ReadFile(static)
 	if err != nil {
