@@ -5824,6 +5824,9 @@ func runInit(ctx context.Context) {
 
 	log.Printf("Downloading OpenAPI data for search - EXTRA APPS")
 	apis := "https://github.com/frikky/OpenAPI-security-definitions"
+
+	// THis gets memory problems hahah
+	//apis := "https://github.com/APIs-guru/openapi-directory"
 	fs := memfs.New()
 	storer := memory.NewStorage()
 	cloneOptions := &git.CloneOptions{
@@ -5833,6 +5836,7 @@ func runInit(ctx context.Context) {
 	if err != nil {
 		log.Printf("Failed loading repo %s into memory: %s", err)
 	} else {
+		log.Printf("Finished getting data.. Now looking for updates")
 		dir, err := fs.ReadDir("")
 		if err != nil {
 			log.Printf("Failed reading folder: %s", err)

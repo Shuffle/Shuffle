@@ -36,15 +36,16 @@ Documentation can be found on https://shuffler.io/docs/about or in your own inst
 Open an issue on Github, or [join the gitter chat](https://gitter.im/Shuffle-SOAR/community). For other / private requests: [frikky@shuffler.io](mailto:frikky@shuffler.io)
 
 ### Setup - Local development 
-Frontend - requires [npm](https://nodejs.org/en/download/)/[yarn](https://yarnpkg.com/lang/en/docs/install/#debian-stable)/your preferred manager. Runs independently from backend - edit frontend/src/App.yaml (line 46~) from window.location.origin to http://YOUR IP:5001
+Frontend - requires [npm](https://nodejs.org/en/download/)/[yarn](https://yarnpkg.com/lang/en/docs/install/#debian-stable)/your preferred manager. Runs independently from backend - edit frontend/src/App.yaml (line 44~) from window.location.origin to http://YOUR IP:5001
 ```bash
 cd frontend
 npm i
 npm start
 ```
 
-Backend - API calls - requires [>=go1.13](https://golang.org/dl/) and [gcloud](https://cloud.google.com/sdk/install) 
+Backend - API calls - requires [>=go1.13](https://golang.org/dl/) 
 ```bash
+export DATASTORE_EMULATOR_HOST=0.0.0.0:8000
 cd backend/go-app
 go build
 go run *.go

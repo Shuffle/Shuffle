@@ -511,7 +511,7 @@ const Apps = (props) => {
 							: 
 							<Paper square style={uploadViewPaperStyle}>
 								<h4>
-									Try a broader search term. E.g. "http" or "TheHive"	
+									Try a broader search term, e.g. "http", "alert", "ticket" etc.
 								</h4>
 								<div/>
 
@@ -651,7 +651,7 @@ const Apps = (props) => {
 			return response.json()
 		})
     .then((responseJson) => {
-			console.log(responseJson)
+			//console.log(responseJson)
 			if (responseJson.success) {
 				if (responseJson.reason !== undefined && responseJson.reason.length > 0) {
 					setFilteredApps(responseJson.reason)
