@@ -38,10 +38,10 @@ import AlertTemplate from "react-alert-template-basic";
 import { positions, Provider } from "react-alert";
 
 // Testing - localhost
-//const globalUrl = "http://192.168.3.6:5001"
+const globalUrl = "http://192.168.3.6:5001"
 
 // Production - backend proxy forwarding in nginx
-const globalUrl = window.location.origin
+//const globalUrl = window.location.origin
 
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
@@ -77,7 +77,7 @@ const App = (message, props) => {
   }})
 
 	if (isLoaded && !isLoggedIn && (!window.location.pathname.startsWith("/login") && (!window.location.pathname.startsWith("/docs") && (!window.location.pathname.startsWith("/adminsetup"))))) {
-		window.location = "login"
+		window.location = "/login"
 	}
 
   const checkLogin = () => {

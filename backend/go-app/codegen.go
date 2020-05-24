@@ -218,7 +218,7 @@ func buildStructure(swagger *openapi3.Swagger, curHash string) (string, error) {
 
 	// adding md5 based on input data to not overwrite earlier data.
 	generatedPath := "generated"
-	subpath := "../../app_gen/openapi/"
+	subpath := "../app_gen/openapi/"
 	identifier := fmt.Sprintf("%s-%s", swagger.Info.Title, curHash)
 	appPath := fmt.Sprintf("%s/%s", generatedPath, identifier)
 
@@ -704,6 +704,9 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 	optionalParameters := []WorkflowAppActionParameter{}
 	if len(path.Connect.Parameters) > 0 {
 		for _, param := range path.Connect.Parameters {
+			if param.Value.Schema == nil {
+				continue
+			}
 			curParam := WorkflowAppActionParameter{
 				Name:        param.Value.Name,
 				Description: param.Value.Description,
@@ -876,6 +879,9 @@ func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 	optionalParameters := []WorkflowAppActionParameter{}
 	if len(path.Head.Parameters) > 0 {
 		for _, param := range path.Head.Parameters {
+			if param.Value.Schema == nil {
+				continue
+			}
 			curParam := WorkflowAppActionParameter{
 				Name:        param.Value.Name,
 				Description: param.Value.Description,
@@ -958,6 +964,9 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 	optionalParameters := []WorkflowAppActionParameter{}
 	if len(path.Delete.Parameters) > 0 {
 		for _, param := range path.Delete.Parameters {
+			if param.Value.Schema == nil {
+				continue
+			}
 			curParam := WorkflowAppActionParameter{
 				Name:        param.Value.Name,
 				Description: param.Value.Description,
@@ -1052,6 +1061,9 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 	}
 	if len(path.Post.Parameters) > 0 {
 		for _, param := range path.Post.Parameters {
+			if param.Value.Schema == nil {
+				continue
+			}
 			curParam := WorkflowAppActionParameter{
 				Name:        param.Value.Name,
 				Description: param.Value.Description,
@@ -1145,6 +1157,9 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 	}
 	if len(path.Patch.Parameters) > 0 {
 		for _, param := range path.Patch.Parameters {
+			if param.Value.Schema == nil {
+				continue
+			}
 			curParam := WorkflowAppActionParameter{
 				Name:        param.Value.Name,
 				Description: param.Value.Description,
@@ -1238,6 +1253,9 @@ func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 	}
 	if len(path.Put.Parameters) > 0 {
 		for _, param := range path.Put.Parameters {
+			if param.Value.Schema == nil {
+				continue
+			}
 			curParam := WorkflowAppActionParameter{
 				Name:        param.Value.Name,
 				Description: param.Value.Description,

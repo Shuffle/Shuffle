@@ -12,6 +12,9 @@ backend/go-app/generated*
 functions/generated_apps
 *.zip
 
+*openapi-parsers/generated/*
+*openapi-parsers/other/*
+
 
 backend/onprem/app_sdk/apps
 *test.py

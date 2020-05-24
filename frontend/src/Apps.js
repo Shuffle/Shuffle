@@ -286,7 +286,7 @@ const Apps = (props) => {
 		var description = selectedApp.description
 
 		const url = "/apps/edit/"+selectedApp.id
-		var editButton = selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated ?
+		var editButton = selectedApp.activated && selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated ?
 			<Link to={url} style={{textDecoration: "none"}}>
 				<Button
 					variant="outlined"
@@ -295,6 +295,17 @@ const Apps = (props) => {
 					style={{marginTop: "10px"}}
 				>
 					Edit app	
+				</Button></Link> : null
+
+		var activateButton = selectedApp.generated && !selectedApp.activated ?
+			<Link to={url} style={{textDecoration: "none"}}>
+				<Button
+					variant="outlined"
+					component="label"
+					color="primary"
+					style={{marginTop: "10px"}}
+				>
+					Activate App	
 				</Button></Link> : null
 
 
@@ -377,6 +388,7 @@ const Apps = (props) => {
 					</div>
 				: null}
 
+				{activateButton}
 				{editButton}
 				{deleteButton}
 			</div>
@@ -384,11 +396,12 @@ const Apps = (props) => {
 			null
 
 		return(
-			<div>
+			<div style={{}}>
 				<Paper square style={uploadViewPaperStyle}>
 					<div style={{width: "100%", margin: 25}}>
 						<h2>App Creator</h2>
-						<a href="https://github.com/frikky/OpenAPI-security-definitions" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">Security API's</a>
+						<a href="/docs/apps" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">How it works</a>
+						&nbsp;- <a href="https://github.com/frikky/OpenAPI-security-definitions" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">Security API's</a>
 						&nbsp;- <a href="https://apis.guru/browse-apis/" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">OpenAPI directory</a>
 						<div/>
 						Apps interact with eachother in workflows. They are created with the app creator, using OpenAPI specification or manually in python. Use the links above to find potential apps you're looking for using OpenAPI or make one from scratch. There's 1000+ available.
@@ -445,7 +458,7 @@ const Apps = (props) => {
 				<div style={{flex: "1", marginLeft: 10, marginRight: 10}}>
 					<h2>Upload</h2>
 					<div style={{marginTop: 20}}/>
-					<UploadView />
+					<UploadView/>
 				</div>
 				<Divider style={{marginBottom: "10px", marginTop: "10px", height: "100%", width: "1px", backgroundColor: dividerColor}}/>
 				<div style={{flex: 1, marginLeft: 10, marginRight: 10}}>

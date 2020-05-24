@@ -5698,7 +5698,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	log.Println(len(user.PrivateApps))
 	c, err := request.Cookie("session_token")
 	if err == nil {
-		log.Printf("Should've deleted cache for %s with token %s", user.Username, c.Value)
+		//log.Printf("Should've deleted cache for %s with token %s", user.Username, c.Value)
 		//err = memcache.Delete(request.Context(), c.Value)
 		//err = memcache.Delete(request.Context(), user.ApiKey)
 	}
