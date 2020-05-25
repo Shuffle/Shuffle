@@ -4582,7 +4582,6 @@ const AngularWorkflow = (props) => {
 					}}
 				/>
 			</div>
-			e
 			{executionModal}
 			<RightSideBar />
 			<BottomCytoscapeBar />
