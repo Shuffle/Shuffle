@@ -638,10 +638,6 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	//for _, action := range workflowExecution.Workflow.Actions {
-	//	log.Printf("Name: %s, Env: %s", action.Name, action.Environment)
-	//}
-
 	newjson, err := json.Marshal(workflowExecution)
 	if err != nil {
 		resp.WriteHeader(401)
@@ -3711,7 +3707,7 @@ func getWorkflowExecutions(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// Query for the specifci workflowId
-	q := datastore.NewQuery("workflowexecution").Filter("workflow_id =", fileId).Limit(50)
+	q := datastore.NewQuery("workflowexecution").Filter("workflow_id =", fileId).Order("-started_at").Limit(50)
 	var workflowExecutions []WorkflowExecution
 	_, err = dbclient.GetAll(ctx, q, &workflowExecutions)
 	if err != nil {
