@@ -12,6 +12,8 @@ import TextField from '@material-ui/core/TextField';
 import FormControl from '@material-ui/core/FormControl';
 import MenuItem from '@material-ui/core/MenuItem';
 import Tooltip from '@material-ui/core/Tooltip';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
+import Switch from '@material-ui/core/Switch';
 import Input from '@material-ui/core/Input';
 import YAML from 'yaml'
 import {Link} from 'react-router-dom';
@@ -43,6 +45,7 @@ const Apps = (props) => {
 	const [isLoading, setIsLoading] = React.useState(false)
 	const [appSearchLoading, setAppSearchLoading] = React.useState(false)
 	const [selectedAction, setSelectedAction] = React.useState({})
+	const [searchBackend, setSearchBackend] = React.useState(false)
 
 	const [openApi, setOpenApi] = React.useState("")
 	const [openApiData, setOpenApiData] = React.useState("")
@@ -186,7 +189,7 @@ const Apps = (props) => {
 		}
 
 		var imageline = data.large_image.length === 0 ?
-			<img alt="Image missing" style={{width: 100, height: 100}} />
+			<img alt={data.title} style={{width: 100, height: 100}} />
 			: 
 			<img alt={data.title} src={data.large_image} style={{width: 100, height: 100, maxWidth: "100%"}} />
 
@@ -262,7 +265,7 @@ const Apps = (props) => {
 	const dividerColor = "rgb(225, 228, 232)"
 	const uploadViewPaperStyle = {
 		minWidth: "100%",
-		maxWidth: "100%",
+		maxWidth: 662.5,
 		color: "white",
 		backgroundColor: surfaceColor,
 		display: "flex",
@@ -285,9 +288,10 @@ const Apps = (props) => {
 
 		var description = selectedApp.description
 
-		const url = "/apps/edit/"+selectedApp.id
-		var editButton = selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated ?
-			<Link to={url} style={{textDecoration: "none"}}>
+		const editUrl = "/apps/edit/"+selectedApp.id
+		const activateUrl = "/apps/new?id="+selectedApp.id
+		var editButton = selectedApp.activated && selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated ?
+			<Link to={editUrl} style={{textDecoration: "none"}}>
 				<Button
 					variant="outlined"
 					component="label"
@@ -297,8 +301,18 @@ const Apps = (props) => {
 					Edit app	
 				</Button></Link> : null
 
+		var activateButton = selectedApp.generated && !selectedApp.activated ?
+			<Link to={activateUrl} style={{textDecoration: "none"}}>
+				<Button
+					variant="contained"
+					component="label"
+					color="primary"
+					style={{marginTop: "10px"}}
+				>
+					Activate App	
+				</Button></Link> : null
 
-		var deleteButton = (selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated) || (selectedApp.downloaded != undefined && selectedApp.downloaded == true) ?
+		var deleteButton = ((selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated) || (selectedApp.downloaded != undefined && selectedApp.downloaded == true)) && activateButton === null ?
 				<Button
 					variant="outlined"
 					component="label"
@@ -311,16 +325,30 @@ const Apps = (props) => {
 					Delete app	
 				</Button> : null
 
+		var imageline = selectedApp.large_image === undefined || selectedApp.large_image.length === 0 ?
+			<img alt={selectedApp.title} style={{width: 100, height: 100}} />
+			: 
+			<img alt={selectedApp.title} src={selectedApp.large_image} style={{width: 100, height: 100, maxWidth: "100%"}} />
 
 		//fetch(globalUrl+"/api/v1/get_openapi/"+urlParams.get("id"), {
 		var baseInfo = newAppname.length > 0 ?
 			<div>
-				<h2>{newAppname}</h2>
-				<p>{description}</p>
+				<div style={{display: "flex"}}>
+					<div style={{marginRight: 15, marginTop: 10}}>
+						{imageline}
+					</div>
+					<div style={{maxWidth: "75%", overflow: "hidden"}}>
+						<h2>{newAppname}</h2>
+						<p>{description}</p>
+					</div>
+				</div>
+				{activateButton}
+				{editButton}
+				{deleteButton}
 				<Divider style={{marginBottom: "10px", marginTop: "10px", backgroundColor: dividerColor}}/>
-				{selectedApp.link.length > 0 ? <p>URL: {selectedApp.link}</p> : null}
-				<p>ID: {selectedApp.id}</p>
-				{selectedApp.privateId !== undefined && selectedApp.privateId.length > 0 ? <p>PrivateID: {selectedApp.privateId}</p> : null}
+				{selectedApp.link.length > 0 ? <p><b>URL:</b> {selectedApp.link}</p> : null}
+				<p><b>ID:</b> {selectedApp.id}</p>
+				{selectedApp.privateId !== undefined && selectedApp.privateId.length > 0 ? <p><b>PrivateID:</b> {selectedApp.privateId}</p> : null}
 			
 				<div style={{marginTop: 15, marginBottom: 15}}>
 					<b>Actions</b>
@@ -356,7 +384,7 @@ const Apps = (props) => {
 					</Select>
 				</div>
 
-				{selectedAction.parameters !== undefined ? 
+				{selectedAction.parameters !== undefined && selectedAction.parameters !== null ? 
 					<div style={{marginTop: 15, marginBottom: 15}}>
 						<b>Arguments</b>
 						{selectedAction.parameters.map(data => {
@@ -376,19 +404,17 @@ const Apps = (props) => {
 							})}
 					</div>
 				: null}
-
-				{editButton}
-				{deleteButton}
 			</div>
 			: 
 			null
 
 		return(
-			<div>
+			<div style={{}}>
 				<Paper square style={uploadViewPaperStyle}>
 					<div style={{width: "100%", margin: 25}}>
 						<h2>App Creator</h2>
-						<a href="https://github.com/frikky/OpenAPI-security-definitions" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">Security API's</a>
+						<a href="/docs/apps" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">How it works</a>
+						&nbsp;- <a href="https://github.com/frikky/OpenAPI-security-definitions" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">Security API's</a>
 						&nbsp;- <a href="https://apis.guru/browse-apis/" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">OpenAPI directory</a>
 						<div/>
 						Apps interact with eachother in workflows. They are created with the app creator, using OpenAPI specification or manually in python. Use the links above to find potential apps you're looking for using OpenAPI or make one from scratch. There's 1000+ available.
@@ -431,7 +457,8 @@ const Apps = (props) => {
 		const searchfield = event.target.value.toLowerCase()
 		const newapps = apps.filter(data => data.name.toLowerCase().includes(searchfield) || data.description.toLowerCase().includes(searchfield))
 
-		if (newapps.length === 0 && !appSearchLoading) {
+		if ((newapps.length === 0 || searchBackend) && !appSearchLoading) {
+
 			setAppSearchLoading(true)
 			runAppSearch(searchfield)
 		} else {
@@ -445,7 +472,7 @@ const Apps = (props) => {
 				<div style={{flex: "1", marginLeft: 10, marginRight: 10}}>
 					<h2>Upload</h2>
 					<div style={{marginTop: 20}}/>
-					<UploadView />
+					<UploadView/>
 				</div>
 				<Divider style={{marginBottom: "10px", marginTop: "10px", height: "100%", width: "1px", backgroundColor: dividerColor}}/>
 				<div style={{flex: 1, marginLeft: 10, marginRight: 10}}>
@@ -454,19 +481,11 @@ const Apps = (props) => {
 							<h2>Available integrations</h2> 
 						</div>
 						{isLoading ? <CircularProgress style={{marginTop: 13, marginRight: 15}} /> : null}
-						{/*
-						<Button
-							variant="outlined"
-							component="label"
-							color="primary"
-							style={{margin: 5, maxHeight: 50, marginTop: 10}}
-							onClick={() => {
-								getSpecificApps(baseRepository)
-							}}
-						>
-							Load apps
-						</Button>
-						*/}
+				    <FormControlLabel
+							style={{color: "white", marginBottom: "0px", marginTop: "10px"}}
+							label=<div style={{color: "white"}}>Search OpenAPI</div>
+							control={<Switch checked={searchBackend} onChange={() => {setSearchBackend(!searchBackend)}} />}
+						/>
 						<Button
 							variant="outlined"
 							component="label"
@@ -477,7 +496,7 @@ const Apps = (props) => {
 								setLoadAppsModalOpen(true)
 							}}
 						>
-							Download from URL
+							Download more apps 
 						</Button>
 					</div>
 					<TextField
@@ -511,7 +530,7 @@ const Apps = (props) => {
 							: 
 							<Paper square style={uploadViewPaperStyle}>
 								<h4>
-									Try a broader search term. E.g. "http" or "TheHive"	
+									Try a broader search term, e.g. "http", "alert", "ticket" etc. 
 								</h4>
 								<div/>
 
@@ -651,7 +670,12 @@ const Apps = (props) => {
 			return response.json()
 		})
     .then((responseJson) => {
-			console.log(responseJson)
+			//console.log(responseJson)
+			if (responseJson.success) {
+				if (responseJson.reason !== undefined && responseJson.reason.length > 0) {
+					setFilteredApps(responseJson.reason)
+				}
+			}
     })
 		.catch(error => {
 			alert.error(error.toString())

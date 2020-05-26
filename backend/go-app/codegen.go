@@ -122,8 +122,8 @@ func streamZipdata(ctx context.Context, identifier, pythoncode, requirements str
 func getAppbase() ([]byte, []byte, error) {
 	// 1. Have baseline in bucket/generated_apps/baseline
 	// 2. Copy the baseline to a new folder with identifier name
-	static := "../../functions/static_baseline.py"
-	appbase := "../../functions/onprem/app_sdk/app_base.py"
+	static := "../app_sdk/static_baseline.py"
+	appbase := "../app_sdk/app_base.py"
 
 	staticData, err := ioutil.ReadFile(static)
 	if err != nil {
@@ -218,7 +218,7 @@ func buildStructure(swagger *openapi3.Swagger, curHash string) (string, error) {
 
 	// adding md5 based on input data to not overwrite earlier data.
 	generatedPath := "generated"
-	subpath := "../../app_gen/openapi/"
+	subpath := "../app_gen/openapi/"
 	identifier := fmt.Sprintf("%s-%s", swagger.Info.Title, curHash)
 	appPath := fmt.Sprintf("%s/%s", generatedPath, identifier)
 
@@ -361,12 +361,13 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (WorkflowApp, []stri
 	api.Tested = false
 	api.PrivateID = newmd5
 	api.Generated = true
+	api.Activated = true
 	// Setting up security schemes
 	extraParameters := []WorkflowAppActionParameter{}
 
 	securitySchemes := swagger.Components.SecuritySchemes
 	if securitySchemes != nil {
-		log.Printf("%#v", securitySchemes)
+		//log.Printf("%#v", securitySchemes)
 
 		api.Authentication = Authentication{
 			Required: true,
@@ -386,7 +387,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (WorkflowApp, []stri
 			api.Authentication.Parameters[0].Name = securitySchemes["BearerAuth"].Value.Name
 			api.Authentication.Parameters[0].In = securitySchemes["BearerAuth"].Value.In
 			api.Authentication.Parameters[0].Scheme = securitySchemes["BearerAuth"].Value.Scheme
-			log.Printf("HANDLE BEARER AUTH")
+			//log.Printf("HANDLE BEARER AUTH")
 			extraParameters = append(extraParameters, WorkflowAppActionParameter{
 				Name:        "apikey",
 				Description: "The apikey to use",
@@ -402,7 +403,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (WorkflowApp, []stri
 			api.Authentication.Parameters[0].Name = securitySchemes["ApiKeyAuth"].Value.Name
 			api.Authentication.Parameters[0].In = securitySchemes["ApiKeyAuth"].Value.In
 			api.Authentication.Parameters[0].Scheme = securitySchemes["ApiKeyAuth"].Value.Scheme
-			log.Printf("HANDLE APIKEY AUTH")
+			//log.Printf("HANDLE APIKEY AUTH")
 			extraParameters = append(extraParameters, WorkflowAppActionParameter{
 				Name:        "apikey",
 				Description: "The apikey to use",
@@ -704,6 +705,9 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 	optionalParameters := []WorkflowAppActionParameter{}
 	if len(path.Connect.Parameters) > 0 {
 		for _, param := range path.Connect.Parameters {
+			if param.Value.Schema == nil {
+				continue
+			}
 			curParam := WorkflowAppActionParameter{
 				Name:        param.Value.Name,
 				Description: param.Value.Description,
@@ -773,8 +777,6 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 		Parameters:  extraParameters,
 	}
 
-	log.Printf("FUNCTION: %#v", action)
-
 	action.Returns.Schema.Type = "string"
 	baseUrl := fmt.Sprintf("%s%s", api.Link, actualPath)
 
@@ -791,6 +793,11 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 	optionalParameters := []WorkflowAppActionParameter{}
 	if len(path.Get.Parameters) > 0 {
 		for _, param := range path.Get.Parameters {
+			//log.Printf("TYPE: %#v", param.Value.Schema)
+			if param.Value.Schema == nil {
+				continue
+			}
+
 			curParam := WorkflowAppActionParameter{
 				Name:        param.Value.Name,
 				Description: param.Value.Description,
@@ -873,6 +880,9 @@ func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 	optionalParameters := []WorkflowAppActionParameter{}
 	if len(path.Head.Parameters) > 0 {
 		for _, param := range path.Head.Parameters {
+			if param.Value.Schema == nil {
+				continue
+			}
 			curParam := WorkflowAppActionParameter{
 				Name:        param.Value.Name,
 				Description: param.Value.Description,
@@ -955,6 +965,9 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 	optionalParameters := []WorkflowAppActionParameter{}
 	if len(path.Delete.Parameters) > 0 {
 		for _, param := range path.Delete.Parameters {
+			if param.Value.Schema == nil {
+				continue
+			}
 			curParam := WorkflowAppActionParameter{
 				Name:        param.Value.Name,
 				Description: param.Value.Description,
@@ -1013,7 +1026,7 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 
 func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string, firstQuery bool) (WorkflowAppAction, string) {
 	// What to do with this, hmm
-	log.Printf("PATH: %s", actualPath)
+	//log.Printf("PATH: %s", actualPath)
 	functionName := fixFunctionName(path.Post.Summary, actualPath)
 
 	action := WorkflowAppAction{
@@ -1049,6 +1062,9 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 	}
 	if len(path.Post.Parameters) > 0 {
 		for _, param := range path.Post.Parameters {
+			if param.Value.Schema == nil {
+				continue
+			}
 			curParam := WorkflowAppActionParameter{
 				Name:        param.Value.Name,
 				Description: param.Value.Description,
@@ -1142,6 +1158,9 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 	}
 	if len(path.Patch.Parameters) > 0 {
 		for _, param := range path.Patch.Parameters {
+			if param.Value.Schema == nil {
+				continue
+			}
 			curParam := WorkflowAppActionParameter{
 				Name:        param.Value.Name,
 				Description: param.Value.Description,
@@ -1235,6 +1254,9 @@ func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 	}
 	if len(path.Put.Parameters) > 0 {
 		for _, param := range path.Put.Parameters {
+			if param.Value.Schema == nil {
+				continue
+			}
 			curParam := WorkflowAppActionParameter{
 				Name:        param.Value.Name,
 				Description: param.Value.Description,

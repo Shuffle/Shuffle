@@ -37,13 +37,13 @@ import { createMuiTheme } from '@material-ui/core/styles';
 import AlertTemplate from "react-alert-template-basic";
 import { positions, Provider } from "react-alert";
 
-// Testing - localhost
-//const globalUrl = "http://192.168.3.6:5001"
-//console.log("HOST: ", process.env)
-
-
 // Production - backend proxy forwarding in nginx
-const globalUrl = window.location.origin
+var globalUrl = window.location.origin
+if (window.location.protocol == "http:" && window.location.port === "3000") {
+	globalUrl = "http://192.168.3.6:5001"
+}
+console.log(window.location)
+console.log(globalUrl)
 
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
@@ -79,7 +79,7 @@ const App = (message, props) => {
   }})
 
 	if (isLoaded && !isLoggedIn && (!window.location.pathname.startsWith("/login") && (!window.location.pathname.startsWith("/docs") && (!window.location.pathname.startsWith("/adminsetup"))))) {
-		window.location = "login"
+		window.location = "/login"
 	}
 
   const checkLogin = () => {

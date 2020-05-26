@@ -29,6 +29,7 @@ import (
 	http2 "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 
 	newscheduler "github.com/carlescere/scheduler"
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-git/go-git/v5/storage/memory"
 	//"github.com/gorilla/websocket"
 	//"google.golang.org/appengine"
@@ -85,10 +86,11 @@ type WorkflowApp struct {
 	Downloaded  bool   `json:"downloaded" yaml:"downloaded" required:false datastore:"downloaded"`
 	Sharing     bool   `json:"sharing" yaml:"sharing" required:false datastore:"sharing"`
 	Verified    bool   `json:"verified" yaml:"verified" required:false datastore:"verified"`
+	Activated   bool   `json:"activated" yaml:"activated" required:false datastore:"activated"`
 	Tested      bool   `json:"tested" yaml:"tested" required:false datastore:"tested"`
 	Owner       string `json:"owner" datastore:"owner" yaml:"owner"`
 	PrivateID   string `json:"private_id" yaml:"private_id" required:false datastore:"private_id"`
-	Description string `json:"description" datastore:"description" required:false yaml:"description"`
+	Description string `json:"description" datastore:"description,noindex" required:false yaml:"description"`
 	Environment string `json:"environment" datastore:"environment" required:true yaml:"environment"`
 	SmallImage  string `json:"small_image" datastore:"small_image,noindex" required:false yaml:"small_image"`
 	LargeImage  string `json:"large_image" datastore:"large_image,noindex" yaml:"large_image" required:false`
@@ -635,10 +637,6 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad authorization key or execution_id might not exist."}`)))
 		return
 	}
-
-	//for _, action := range workflowExecution.Workflow.Actions {
-	//	log.Printf("Name: %s, Env: %s", action.Name, action.Environment)
-	//}
 
 	newjson, err := json.Marshal(workflowExecution)
 	if err != nil {
@@ -2702,7 +2700,6 @@ func getWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	location := strings.Split(request.URL.String(), "/")
-	log.Printf("%#v", location)
 	var fileId string
 	if location[1] == "api" {
 		if len(location) <= 4 {
@@ -2730,14 +2727,22 @@ func getWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	log.Printf("Getting app %s", fileId)
 	parsedApi, err := getOpenApiDatastore(ctx, fileId)
 	if err != nil {
+		log.Printf("OpenApi doesn't exist for: %s - err: %s", fileId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
 
-	parsedApi.Success = true
+	//log.Printf("Parsed API: %#v", parsedApi)
+	if len(parsedApi.ID) > 0 {
+		parsedApi.Success = true
+	} else {
+		parsedApi.Success = false
+	}
+
 	data, err := json.Marshal(parsedApi)
 	if err != nil {
 		resp.WriteHeader(422)
@@ -2917,6 +2922,7 @@ func handleGetfile(resp http.ResponseWriter, request *http.Request) ([]byte, err
 	return buf.Bytes(), nil
 }
 
+// Basically a search for apps that aren't activated yet
 func getSpecificApps(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -2956,10 +2962,40 @@ func getSpecificApps(resp http.ResponseWriter, request *http.Request) {
 
 	// FIXME - continue the search here with github repos etc.
 	// Caching might be smart :D
-	log.Printf("Body: %s", string(body))
+	ctx := context.Background()
+	workflowapps, err := getAllWorkflowApps(ctx)
+	if err != nil {
+		log.Printf("Error: Failed getting workflowapps: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
 
+	returnValues := []WorkflowApp{}
+	search := strings.ToLower(tmpBody.Search)
+	for _, app := range workflowapps {
+		if !app.Activated && app.Generated {
+			// This might be heavy with A LOT
+			// Not too worried with todays tech tbh..
+			appName := strings.ToLower(app.Name)
+			appDesc := strings.ToLower(app.Description)
+			if strings.Contains(appName, search) || strings.Contains(appDesc, search) {
+				//log.Printf("Name: %s, Generated: %s, Activated: %s", app.Name, strconv.FormatBool(app.Generated), strconv.FormatBool(app.Activated))
+				returnValues = append(returnValues, app)
+			}
+		}
+	}
+
+	newbody, err := json.Marshal(returnValues)
+	if err != nil {
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed unpacking workflow executions"}`)))
+		return
+	}
+
+	returnData := fmt.Sprintf(`{"success": true, "reason": %s}`, string(newbody))
 	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+	resp.Write([]byte(returnData))
 }
 
 func validateAppInput(resp http.ResponseWriter, request *http.Request) {
@@ -3257,6 +3293,133 @@ func loadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 }
 
+func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string) error {
+
+	ctx := context.Background()
+	workflowapps, err := getAllWorkflowApps(ctx)
+	appCounter := 0
+	if err != nil {
+		log.Printf("Failed to get existing generated apps")
+	}
+	for _, file := range dir {
+		if len(onlyname) > 0 && file.Name() != onlyname {
+			continue
+		}
+
+		// Folder?
+		switch mode := file.Mode(); {
+		case mode.IsDir():
+			tmpExtra := fmt.Sprintf("%s%s/", extra, file.Name())
+			dir, err := fs.ReadDir(tmpExtra)
+			if err != nil {
+				log.Printf("Failed to read dir: %s", err)
+				break
+			}
+
+			// Go routine? Hmm, this can be super quick I guess
+			err = iterateOpenApiGithub(fs, dir, tmpExtra, "")
+			if err != nil {
+				break
+			}
+		case mode.IsRegular():
+			// Check the file
+			filename := file.Name()
+			if strings.Contains(filename, "yaml") || strings.Contains(filename, "yml") {
+				appCounter += 1
+				//log.Printf("File: %s", filename)
+				//log.Printf("Found file: %s", filename)
+				tmpExtra := fmt.Sprintf("%s%s/", extra, file.Name())
+
+				fileReader, err := fs.Open(tmpExtra)
+				if err != nil {
+					continue
+				}
+
+				readFile, err := ioutil.ReadAll(fileReader)
+				if err != nil {
+					log.Printf("Filereader error yaml: %s", err)
+					continue
+				}
+
+				// 1. This parses OpenAPI v2 to v3 etc, for use.
+				parsedOpenApi, err := handleSwaggerValidation(readFile)
+				if err != nil {
+					log.Printf("Validation error: %s", err)
+					continue
+				}
+
+				// 2. With parsedOpenApi.ID:
+				//http://localhost:3000/apps/new?id=06b1376f77b0563a3b1747a3a1253e88
+
+				// 3. Load this as a "standby" app
+				// FIXME: This should be a function ROFL
+				//log.Printf("%s", string(readFile))
+				swagger, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData([]byte(parsedOpenApi.Body))
+				if err != nil {
+					log.Printf("Swagger validation error in loop (%s): %s", filename, err)
+					continue
+				}
+
+				if strings.Contains(swagger.Info.Title, " ") {
+					strings.Replace(swagger.Info.Title, " ", "", -1)
+				}
+
+				//log.Printf("Should generate yaml")
+				api, _, err := generateYaml(swagger, parsedOpenApi.ID)
+				if err != nil {
+					log.Printf("Failed building and generating yaml in loop (%s): %s", filename, err)
+					continue
+				}
+
+				// FIXME: Configure user?
+				api.Owner = ""
+				api.ID = parsedOpenApi.ID
+				api.IsValid = true
+				api.Generated = true
+				api.Activated = false
+
+				found := false
+				for _, app := range workflowapps {
+					if app.ID == api.ID {
+						found = true
+						break
+					} else if app.Name == api.Name && app.AppVersion == api.AppVersion {
+						found = true
+						break
+					}
+				}
+
+				if !found {
+					err = setWorkflowAppDatastore(ctx, api, api.ID)
+					if err != nil {
+						log.Printf("Failed setting workflowapp in loop: %s", err)
+						continue
+					} else {
+						log.Printf("Added %s:%s to the database from OpenAPI repo", api.Name, api.AppVersion)
+
+						// Set OpenAPI datastore
+						err = setOpenApiDatastore(ctx, parsedOpenApi.ID, parsedOpenApi)
+						if err != nil {
+							log.Printf("Failed uploading openapi to datastore in loop: %s", err)
+							continue
+						}
+					}
+				} else {
+					//log.Printf("Skipped upload of %s (%s)", api.Name, api.ID)
+				}
+
+				//return nil
+			}
+		}
+	}
+
+	if appCounter > 0 {
+		log.Printf("Preloaded %d OpenApi apps in %s!", appCounter, extra)
+	}
+
+	return nil
+}
+
 // Onlyname is used to
 func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string) error {
 	var err error
@@ -3475,6 +3638,7 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	workflowapp.ID = uuid.NewV4().String()
 	workflowapp.IsValid = true
 	workflowapp.Generated = false
+	workflowapp.Activated = true
 
 	err = setWorkflowAppDatastore(ctx, workflowapp, workflowapp.ID)
 	if err != nil {
@@ -3543,7 +3707,7 @@ func getWorkflowExecutions(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// Query for the specifci workflowId
-	q := datastore.NewQuery("workflowexecution").Filter("workflow_id =", fileId).Limit(50)
+	q := datastore.NewQuery("workflowexecution").Filter("workflow_id =", fileId).Order("-started_at").Limit(50)
 	var workflowExecutions []WorkflowExecution
 	_, err = dbclient.GetAll(ctx, q, &workflowExecutions)
 	if err != nil {

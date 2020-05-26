@@ -146,6 +146,9 @@ func initializeImages(dockercli *dockerclient.Client) {
 	ctx := context.Background()
 
 	// check whether theyre the same first
+	//version := "0.1.0"
+	// fmt.Sprintf("docker.pkg.github.com/frikky/shuffle/orborus:%s", version),
+	// fmt.Sprintf("docker.pkg.github.com/frikky/shuffle/worker:%s", version),
 	images := []string{
 		fmt.Sprintf("docker.io/%s:app_sdk", baseimagename),
 		fmt.Sprintf("docker.io/%s:worker", baseimagename),
@@ -155,7 +158,7 @@ func initializeImages(dockercli *dockerclient.Client) {
 	for _, image := range images {
 		reader, err := dockercli.ImagePull(ctx, image, pullOptions)
 		if err != nil {
-			log.Printf("Failed getting %s", image)
+			log.Printf("Failed getting %s: %s", image, err)
 			continue
 		}
 
@@ -197,6 +200,10 @@ func main() {
 
 	log.Printf("--- Setting up Docker environment. Downloading worker and App SDK! ---")
 	initializeImages(dockercli)
+
+	//workerName := "worker"
+	//workerVersion := "0.1.0"
+	//workerImage := fmt.Sprintf("docker.pkg.github.com/frikky/shuffle/%s:%s", workerName, workerVersion)
 	workerImage := fmt.Sprintf("%s:worker", baseimagename)
 
 	log.Printf("--- Finished configuring docker environment ---\n")

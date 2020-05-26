@@ -168,6 +168,7 @@ func sendRequest(token OauthToken, message TeamsHook) error {
 	return nil
 }
 
+// If you're finding this: its from a test project :)
 func get_accesstoken() (OauthToken, error) {
 	client_id := "9a2a2a63-c63c-4487-baf0-4ff3f4873a7f"
 	client_secret := ":3]D6oFimiXbuV20xH?Dzu@LR*6IFVbq"

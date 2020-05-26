@@ -5148,6 +5148,121 @@ func echoOpenapiData(resp http.ResponseWriter, request *http.Request) {
 	resp.Write(urlbody)
 }
 
+func handleSwaggerValidation(body []byte) (ParsedOpenApi, error) {
+	type versionCheck struct {
+		Swagger        string `datastore:"swagger" json:"swagger" yaml:"swagger"`
+		SwaggerVersion string `datastore:"swaggerVersion" json:"swaggerVersion" yaml:"swaggerVersion"`
+		OpenAPI        string `datastore:"openapi" json:"openapi" yaml:"openapi"`
+	}
+
+	//body = []byte(`swagger: "2.0"`)
+	//body = []byte(`swagger: '1.0'`)
+	//newbody := string(body)
+	//newbody = strings.TrimSpace(newbody)
+	//body = []byte(newbody)
+	//log.Println(string(body))
+	//tmpbody, err := yaml.YAMLToJSON(body)
+	//log.Println(err)
+	//log.Println(string(tmpbody))
+
+	// This has to be done in a weird way because Datastore doesn't
+	// support map[string]interface and similar (openapi3.Swagger)
+	var version versionCheck
+
+	parsed := ParsedOpenApi{}
+	swaggerdata := []byte{}
+	idstring := ""
+
+	isJson := false
+	err := json.Unmarshal(body, &version)
+	if err != nil {
+		//log.Printf("Json err: %s", err)
+		err = yaml.Unmarshal(body, &version)
+		if err != nil {
+			log.Printf("Yaml error: %s", err)
+		} else {
+			//log.Printf("Successfully parsed YAML!")
+		}
+	} else {
+		isJson = true
+		log.Printf("Successfully parsed JSON!")
+	}
+
+	if len(version.SwaggerVersion) > 0 && len(version.Swagger) == 0 {
+		version.Swagger = version.SwaggerVersion
+	}
+
+	if strings.HasPrefix(version.Swagger, "3.") || strings.HasPrefix(version.OpenAPI, "3.") {
+		//log.Println("Handling v3 API")
+		swaggerv3, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData(body)
+		if err != nil {
+			return ParsedOpenApi{}, err
+		}
+
+		swaggerdata, err = json.Marshal(swaggerv3)
+		if err != nil {
+			log.Printf("Failed unmarshaling v3 data: %s", err)
+			return ParsedOpenApi{}, err
+		}
+
+		hasher := md5.New()
+		hasher.Write(swaggerdata)
+		idstring = hex.EncodeToString(hasher.Sum(nil))
+
+	} else { //strings.HasPrefix(version.Swagger, "2.") || strings.HasPrefix(version.OpenAPI, "2.") {
+		// Convert
+		//log.Println("Handling v2 API")
+		var swagger openapi2.Swagger
+		//log.Println(string(body))
+		err = json.Unmarshal(body, &swagger)
+		if err != nil {
+			//log.Printf("Json error? %s", err)
+			err = gyaml.Unmarshal(body, &swagger)
+			if err != nil {
+				log.Printf("Yaml error: %s", err)
+				return ParsedOpenApi{}, err
+			} else {
+				//log.Printf("Valid yaml!")
+			}
+
+		}
+
+		swaggerv3, err := openapi2conv.ToV3Swagger(&swagger)
+		if err != nil {
+			log.Printf("Failed converting from openapi2 to 3: %s", err)
+			return ParsedOpenApi{}, err
+		}
+
+		swaggerdata, err = json.Marshal(swaggerv3)
+		if err != nil {
+			log.Printf("Failed unmarshaling v3 data: %s", err)
+			return ParsedOpenApi{}, err
+		}
+
+		hasher := md5.New()
+		hasher.Write(swaggerdata)
+		idstring = hex.EncodeToString(hasher.Sum(nil))
+	}
+
+	if len(swaggerdata) > 0 {
+		body = swaggerdata
+	}
+
+	// Overwrite with new json data
+	_ = isJson
+	body = swaggerdata
+
+	// Parsing it to swagger 3
+	parsed = ParsedOpenApi{
+		ID:      idstring,
+		Body:    string(body),
+		Success: true,
+	}
+
+	return parsed, err
+}
+
+// FIXME: Migrate this to use handleSwaggerValidation()
 func validateSwagger(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -5418,7 +5533,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("Should generate yaml")
+	//log.Printf("Should generate yaml")
 	api, pythonfunctions, err := generateYaml(swagger, newmd5)
 	if err != nil {
 		log.Printf("Failed building and generating yaml: %s", err)
@@ -5569,14 +5684,6 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Println(len(user.PrivateApps))
-	c, err := request.Cookie("session_token")
-	if err == nil {
-		log.Printf("Should've deleted cache for %s with token %s", user.Username, c.Value)
-		//err = memcache.Delete(request.Context(), c.Value)
-		//err = memcache.Delete(request.Context(), user.ApiKey)
-	}
-
 	parsed := ParsedOpenApi{
 		ID:   api.ID,
 		Body: string(body),
@@ -5656,7 +5763,7 @@ func runInit(ctx context.Context) {
 	if err != nil {
 		log.Printf("Failed getting apps: %s", err)
 	} else if err == nil && len(workflowapps) == 0 {
-		log.Printf("Apps: loading TEST")
+		log.Printf("Downloading default workflow apps")
 		fs := memfs.New()
 		storer := memory.NewStorage()
 
@@ -5694,6 +5801,30 @@ func runInit(ctx context.Context) {
 
 		// FIXME: Get all the apps?
 		iterateAppGithubFolders(fs, dir, "", "")
+	}
+
+	log.Printf("Downloading OpenAPI data for search - EXTRA APPS")
+	apis := "https://github.com/frikky/OpenAPI-security-definitions"
+
+	// THis gets memory problems hahah
+	//apis := "https://github.com/APIs-guru/openapi-directory"
+	fs := memfs.New()
+	storer := memory.NewStorage()
+	cloneOptions := &git.CloneOptions{
+		URL: apis,
+	}
+	_, err = git.Clone(storer, fs, cloneOptions)
+	if err != nil {
+		log.Printf("Failed loading repo %s into memory: %s", err)
+	} else {
+		log.Printf("Finished git clone. Looking for updates to the repo.")
+		dir, err := fs.ReadDir("")
+		if err != nil {
+			log.Printf("Failed reading folder: %s", err)
+		}
+
+		iterateOpenApiGithub(fs, dir, "", "")
+		log.Printf("Finished downloading extra API samples")
 	}
 
 	log.Printf("Finished INIT")

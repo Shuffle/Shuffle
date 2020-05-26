@@ -17,3 +17,6 @@ The point of this folder is to make GCP Cloud functions able to run default WALK
 * class AppBase
 * class <APP>
 * Runner
+
+## Update may 2020:
+Moved static_baseline to ./onprem/app_sdk because of license.

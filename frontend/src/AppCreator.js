@@ -81,7 +81,7 @@ const AppCreator = (props) => {
 	const [actionsModalOpen, setActionsModalOpen] = useState(false);
 	const [authenticationOption, setAuthenticationOption] = useState(authenticationOptions[0]);
 	const [parameterName, setParameterName] = useState("");
-	const [parameterLocation, setParameterLocation] = useState(apikeySelection[0]);
+	const [parameterLocation, setParameterLocation] = useState(apikeySelection.length > 0 ? apikeySelection[0] : "");
 	const [urlPath, setUrlPath] = useState("");
 	//const [urlPathQueries, setUrlPathQueries] = useState([{"name": "test", "required": false}]);
 	const [urlPathQueries, setUrlPathQueries] = useState([]);
@@ -161,7 +161,7 @@ const AppCreator = (props) => {
 		.then((responseJson) => {
   			setIsAppLoaded(true)
 			if (!responseJson.success) {
-				alert.error("Failed to verify")
+				alert.error("Failed to get the app")
 			} else {
 				const data = JSON.parse(responseJson.body)
 				console.log("LOADED IMAGE: ", data.image)
@@ -263,9 +263,12 @@ const AppCreator = (props) => {
 					break
 				} else if (value.type === "apiKey") {
 					setAuthenticationOption("API key")
-  					setParameterName(value.name)
+  				setParameterName(value.name)
+
+					value.in = value.in.charAt(0).toUpperCase() + value.in.slice(1);
 					setParameterLocation(value.in)
 					if (!apikeySelection.includes(value.in)) {
+						console.log("APIKEY SELECT: ", apikeySelection)
 						alert.error("Might be error in setting up API key authentication")
 					}
 					break
@@ -593,6 +596,9 @@ const AppCreator = (props) => {
 		setActions(actions)
 	}
 
+	console.log("Option: ", authenticationOption)
+	console.log("Location: ", parameterLocation)
+  console.log("Name: ", parameterName)
 	const apiKey = authenticationOption === "API key" ? 
 		<div>
 			<h4>API key</h4>
@@ -605,6 +611,7 @@ const AppCreator = (props) => {
 				id="standard-required"
 				margin="normal"
 				variant="outlined"
+				defaultValue={parameterName}
 				helperText={<div style={{color:"white", marginBottom: "2px",}}>Can't be empty. Can't contain any of the following characters: !#$%&'^+-._~|]+$</div>}
 				onChange={e => setParameterName(e.target.value)}	
 				InputProps={{
@@ -628,13 +635,18 @@ const AppCreator = (props) => {
 					name: 'age',
 					id: 'outlined-age-simple',
 				}}
-				>
-							>
-				{apikeySelection.map(data => (
-					<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
-						{data}
-					</MenuItem>
-				))}
+			>
+				{apikeySelection.map(data => {
+					if (data === undefined) {
+						return null
+					}
+
+					return (
+						<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+							{data}
+						</MenuItem>
+					)}
+				)}
 			</Select>
 			<Divider style={{marginBottom: "10px", marginTop: "30px", height: "1px", width: "100%", backgroundColor: "grey"}}/>
 		</div>
