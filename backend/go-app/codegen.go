@@ -637,6 +637,7 @@ func getRunner(classname string) string {
 	return fmt.Sprintf(`
 # Run the actual thing after we've checked params
 def run(request):
+    print("Started execution!")
     action = request.get_json() 
     print(action)
     print(type(action))

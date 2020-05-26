@@ -5748,10 +5748,10 @@ func runInit(ctx context.Context) {
 				}
 			}
 
+			//log.Printf("Schedule time: every %d seconds", schedule.Seconds)
 			jobret, err := newscheduler.Every(schedule.Seconds).Seconds().NotImmediately().Run(job)
 			if err != nil {
 				log.Printf("Failed to schedule workflow: %s", err)
-				// FIXME: what now? lol:w
 			}
 
 			scheduledJobs[schedule.Id] = jobret

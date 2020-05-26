@@ -4118,7 +4118,7 @@ const AngularWorkflow = (props) => {
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
 								<div style={{flex: "10"}}> 
-									<b>Run how often (seconds)? </b> 
+									<b>Interval (seconds) </b> 
 								</div>
 							</div>
 							<TextField
@@ -4489,7 +4489,7 @@ const AngularWorkflow = (props) => {
 					<h2>Executing Workflow</h2>	
 					{executionData.execution_argument !== undefined && executionData.execution_argument.length > 0 ?
 					<div>
-						<h3>Execution Argument: </h3>{executionText}
+						<h3>Execution Argument: </h3>{executionData.execution_argument}
 					</div>
 					: null }
 					{executionData.status !== undefined && executionData.status.length > 0 ?

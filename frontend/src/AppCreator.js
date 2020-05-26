@@ -600,7 +600,7 @@ const AppCreator = (props) => {
 	console.log("Location: ", parameterLocation)
   console.log("Name: ", parameterName)
 	const apiKey = authenticationOption === "API key" ? 
-		<div>
+		<div style={{color: "white"}}>
 			<h4>API key</h4>
 			<TextField
 				required

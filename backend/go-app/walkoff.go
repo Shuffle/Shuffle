@@ -2340,7 +2340,16 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("Schedulearg: %s", string(scheduleArg))
+	// Clean up garbage. This might be wrong in some very specific use-cases
+	parsedBody := string(scheduleArg)
+	parsedBody = strings.Replace(parsedBody, "\\\"", "\"", -1)
+	if len(parsedBody) > 0 {
+		if string(parsedBody[0]) == `"` && string(parsedBody[len(parsedBody)-1]) == "\"" {
+			parsedBody = parsedBody[1 : len(parsedBody)-1]
+		}
+	}
+
+	log.Printf("Schedulearg: %s", parsedBody)
 
 	err = createSchedule(
 		ctx,
@@ -2348,7 +2357,7 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 		workflow.ID,
 		schedule.Name,
 		schedule.Frequency,
-		scheduleArg,
+		[]byte(parsedBody),
 	)
 
 	// FIXME - real error message lol
@@ -3325,7 +3334,6 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 			// Check the file
 			filename := file.Name()
 			if strings.Contains(filename, "yaml") || strings.Contains(filename, "yml") {
-				appCounter += 1
 				//log.Printf("File: %s", filename)
 				//log.Printf("Found file: %s", filename)
 				tmpExtra := fmt.Sprintf("%s%s/", extra, file.Name())
@@ -3395,6 +3403,7 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 						log.Printf("Failed setting workflowapp in loop: %s", err)
 						continue
 					} else {
+						appCounter += 1
 						log.Printf("Added %s:%s to the database from OpenAPI repo", api.Name, api.AppVersion)
 
 						// Set OpenAPI datastore
