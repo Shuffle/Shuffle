@@ -4,6 +4,7 @@ import { useInterval } from 'react-powerhooks';
 import uuid from "uuid";
 
 import {Link} from 'react-router-dom';
+import { Prompt } from 'react-router'
 import TextField from '@material-ui/core/TextField';
 import Drawer from '@material-ui/core/Drawer';
 import Button from '@material-ui/core/Button';
@@ -28,6 +29,7 @@ import Checkbox from '@material-ui/core/Checkbox';
 import Breadcrumbs from '@material-ui/core/Breadcrumbs';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import ReactJson from 'react-json-view'
+import { useBeforeunload } from 'react-beforeunload';
 
 import DirectionsRunIcon from '@material-ui/icons/DirectionsRun';
 import PolymerIcon from '@material-ui/icons/Polymer';
@@ -169,6 +171,9 @@ const AngularWorkflow = (props) => {
 	const [update, setUpdate] = useState("");
 	const [workflowExecutions, setWorkflowExecutions] = React.useState([]);
 
+	const unloadText = 'Are you sure you want to leave?'
+	useBeforeunload(() => unloadText)
+
 	const [elements, setElements] = useState([])
 	const { start, stop } = useInterval({
 	  	duration: 2500,
@@ -176,7 +181,7 @@ const AngularWorkflow = (props) => {
 	  	callback: () => {
 				fetchUpdates()
 	  	}
-	});
+	})
 
 	const getWorkflowExecution = (id) => {
 		fetch(globalUrl+"/api/v1/workflows/"+id+"/executions", {
@@ -4843,6 +4848,10 @@ const AngularWorkflow = (props) => {
 
 	return (
 		<div>	
+		  <Prompt
+				when={true}
+				message={unloadText}
+			/>
 			{loadedCheck}
 		</div>	
 	)
