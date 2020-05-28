@@ -822,10 +822,14 @@ const AngularWorkflow = (props) => {
 
 	const onEdgeSelect = (event) => {
 		setRightSideBarOpen(true)
+
 		const triggercheck = workflow.triggers.find(trigger => trigger.id === event.target.data()["source"])
 		if (triggercheck === undefined) {
 			setSelectedEdgeIndex(workflow.branches.findIndex(data => data.id === event.target.data()["id"]))
 			setSelectedEdge(event.target.data())
+
+			setSelectedAction({})
+			setSelectedTrigger({})
 		} else {
 			alert.info("Can't edit branches from triggers") 
 		}
