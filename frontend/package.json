@@ -51,6 +51,7 @@
     "react-router-dom": "^4.3.1",
     "react-scripts": "^2.1.8",
     "reactstrap": "^7.1.0",
+    "shellwords": "^0.1.1",
     "simplebar": "^4.2.3",
     "styled-components": "^4.4.0",
     "websocket": "^1.0.30",

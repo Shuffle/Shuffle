@@ -4,12 +4,14 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 
 	"cloud.google.com/go/storage"
@@ -365,6 +367,20 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (WorkflowApp, []stri
 	// Setting up security schemes
 	extraParameters := []WorkflowAppActionParameter{}
 
+	if val, ok := swagger.Info.ExtensionProps.Extensions["x-logo"]; ok {
+		j, err := json.Marshal(&val)
+		if err == nil {
+			if j[0] == 0x22 && j[len(j)-1] == 0x22 {
+				j = j[1 : len(j)-1]
+			}
+
+			//log.Printf("%s", j)
+			api.SmallImage = string(j)
+			api.LargeImage = string(j)
+			log.Printf("Set images!")
+		}
+	}
+
 	securitySchemes := swagger.Components.SecuritySchemes
 	if securitySchemes != nil {
 		//log.Printf("%#v", securitySchemes)
@@ -719,6 +735,24 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 				},
 			}
 
+			// FIXME: Example & Multiline
+			if param.Value.Example != nil {
+				curParam.Example = param.Value.Example.(string)
+
+				if param.Value.Name == "body" {
+					curParam.Value = param.Value.Example.(string)
+				}
+			}
+			if val, ok := param.Value.ExtensionProps.Extensions["multiline"]; ok {
+				j, err := json.Marshal(&val)
+				if err == nil {
+					b, err := strconv.ParseBool(string(j))
+					if err == nil {
+						curParam.Multiline = b
+					}
+				}
+			}
+
 			if param.Value.Required {
 				action.Parameters = append(action.Parameters, curParam)
 			} else {
@@ -809,6 +843,24 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 				},
 			}
 
+			// FIXME: Example & Multiline
+			if param.Value.Example != nil {
+				curParam.Example = param.Value.Example.(string)
+
+				if param.Value.Name == "body" {
+					curParam.Value = param.Value.Example.(string)
+				}
+			}
+			if val, ok := param.Value.ExtensionProps.Extensions["multiline"]; ok {
+				j, err := json.Marshal(&val)
+				if err == nil {
+					b, err := strconv.ParseBool(string(j))
+					if err == nil {
+						curParam.Multiline = b
+					}
+				}
+			}
+
 			if param.Value.Required {
 				action.Parameters = append(action.Parameters, curParam)
 			} else {
@@ -892,6 +944,24 @@ func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 				Schema: SchemaDefinition{
 					Type: param.Value.Schema.Value.Type,
 				},
+			}
+
+			// FIXME: Example & Multiline
+			if param.Value.Example != nil {
+				curParam.Example = param.Value.Example.(string)
+
+				if param.Value.Name == "body" {
+					curParam.Value = param.Value.Example.(string)
+				}
+			}
+			if val, ok := param.Value.ExtensionProps.Extensions["multiline"]; ok {
+				j, err := json.Marshal(&val)
+				if err == nil {
+					b, err := strconv.ParseBool(string(j))
+					if err == nil {
+						curParam.Multiline = b
+					}
+				}
 			}
 
 			if param.Value.Required {
@@ -979,6 +1049,24 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 				},
 			}
 
+			// FIXME: Example & Multiline
+			if param.Value.Example != nil {
+				curParam.Example = param.Value.Example.(string)
+
+				if param.Value.Name == "body" {
+					curParam.Value = param.Value.Example.(string)
+				}
+			}
+			if val, ok := param.Value.ExtensionProps.Extensions["multiline"]; ok {
+				j, err := json.Marshal(&val)
+				if err == nil {
+					b, err := strconv.ParseBool(string(j))
+					if err == nil {
+						curParam.Multiline = b
+					}
+				}
+			}
+
 			if param.Value.Required {
 				action.Parameters = append(action.Parameters, curParam)
 			} else {
@@ -1049,23 +1137,27 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 	firstQuery = true
 	optionalQueries := []string{}
 	parameters := []string{}
-	optionalParameters := []WorkflowAppActionParameter{
-		WorkflowAppActionParameter{
-			Name:        "body",
-			Description: "The body to use",
-			Multiline:   true,
-			Required:    false,
-			Example:     `{"username": "test"}`,
-			Schema: SchemaDefinition{
-				Type: "string",
+	optionalParameters := []WorkflowAppActionParameter{}
+	/*
+			WorkflowAppActionParameter{
+				Name:        "body",
+				Description: "The body to use",
+				Multiline:   true,
+				Required:    false,
+				Example:     `{"username": "test"}`,
+				Schema: SchemaDefinition{
+					Type: "string",
+				},
 			},
-		},
-	}
+		}
+	*/
 	if len(path.Post.Parameters) > 0 {
 		for _, param := range path.Post.Parameters {
 			if param.Value.Schema == nil {
 				continue
 			}
+
+			log.Printf("PARAM: %#v", param.Value)
 			curParam := WorkflowAppActionParameter{
 				Name:        param.Value.Name,
 				Description: param.Value.Description,
@@ -1074,6 +1166,24 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 				Schema: SchemaDefinition{
 					Type: param.Value.Schema.Value.Type,
 				},
+			}
+
+			// FIXME: Example & Multiline
+			if param.Value.Example != nil {
+				curParam.Example = param.Value.Example.(string)
+
+				if param.Value.Name == "body" {
+					curParam.Value = param.Value.Example.(string)
+				}
+			}
+			if val, ok := param.Value.ExtensionProps.Extensions["multiline"]; ok {
+				j, err := json.Marshal(&val)
+				if err == nil {
+					b, err := strconv.ParseBool(string(j))
+					if err == nil {
+						curParam.Multiline = b
+					}
+				}
 			}
 
 			if param.Value.Required {
@@ -1172,6 +1282,24 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 				},
 			}
 
+			// FIXME: Example & Multiline
+			if param.Value.Example != nil {
+				curParam.Example = param.Value.Example.(string)
+
+				if param.Value.Name == "body" {
+					curParam.Value = param.Value.Example.(string)
+				}
+			}
+			if val, ok := param.Value.ExtensionProps.Extensions["multiline"]; ok {
+				j, err := json.Marshal(&val)
+				if err == nil {
+					b, err := strconv.ParseBool(string(j))
+					if err == nil {
+						curParam.Multiline = b
+					}
+				}
+			}
+
 			if param.Value.Required {
 				action.Parameters = append(action.Parameters, curParam)
 			} else {
@@ -1241,18 +1369,20 @@ func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 	firstQuery = true
 	optionalQueries := []string{}
 	parameters := []string{}
-	optionalParameters := []WorkflowAppActionParameter{
-		WorkflowAppActionParameter{
-			Name:        "body",
-			Description: "The body to use",
-			Multiline:   true,
-			Required:    false,
-			Example:     `{"username": "test"}`,
-			Schema: SchemaDefinition{
-				Type: "string",
+	optionalParameters := []WorkflowAppActionParameter{}
+	/*
+			WorkflowAppActionParameter{
+				Name:        "body",
+				Description: "The body to use",
+				Multiline:   true,
+				Required:    false,
+				Example:     `{"username": "test"}`,
+				Schema: SchemaDefinition{
+					Type: "string",
+				},
 			},
-		},
-	}
+		}
+	*/
 	if len(path.Put.Parameters) > 0 {
 		for _, param := range path.Put.Parameters {
 			if param.Value.Schema == nil {
@@ -1266,6 +1396,24 @@ func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 				Schema: SchemaDefinition{
 					Type: param.Value.Schema.Value.Type,
 				},
+			}
+
+			// FIXME: Example & Multiline
+			if param.Value.Example != nil {
+				curParam.Example = param.Value.Example.(string)
+
+				if param.Value.Name == "body" {
+					curParam.Value = param.Value.Example.(string)
+				}
+			}
+			if val, ok := param.Value.ExtensionProps.Extensions["multiline"]; ok {
+				j, err := json.Marshal(&val)
+				if err == nil {
+					b, err := strconv.ParseBool(string(j))
+					if err == nil {
+						curParam.Multiline = b
+					}
+				}
 			}
 
 			if param.Value.Required {

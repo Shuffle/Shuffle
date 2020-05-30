@@ -5543,10 +5543,6 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	api.Owner = user.Id
-	if len(test.Image) > 0 {
-		api.SmallImage = test.Image
-		api.LargeImage = test.Image
-	}
 
 	err = dumpApi(basePath, api)
 	if err != nil {
@@ -5569,7 +5565,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 
 	identifier = strings.Replace(identifier, " ", "-", -1)
 	identifier = strings.Replace(identifier, "_", "-", -1)
-	log.Printf("Successfully uploaded %s to bucket. Proceeding to cloud function", identifier)
+	log.Printf("Successfully parsed %s. Proceeding to docker container", identifier)
 
 	// Now that the baseline is setup, we need to make it into a cloud function
 	// 1. Upload the API to datastore for use

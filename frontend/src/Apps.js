@@ -117,10 +117,12 @@ const Apps = (props) => {
 			setFilteredApps(responseJson)
 			if (responseJson.length > 0) {
 				setSelectedApp(responseJson[0])
-				if (responseJson[0].actions.length > 0) {
+				if (responseJson[0].actions !== null && responseJson[0].actions.length > 0) {
 					setSelectedAction(responseJson[0].actions[0])
+				} else {
+					setSelectedAction({})
 				}
-			}
+			} 
     })
 		.catch(error => {
 			alert.error(error.toString())
@@ -188,6 +190,7 @@ const Apps = (props) => {
 			boxColor = "green"
 		}
 
+		console.log("IMG: ", data.large_image)
 		var imageline = data.large_image.length === 0 ?
 			<img alt={data.title} style={{width: 100, height: 100}} />
 			: 
@@ -222,9 +225,11 @@ const Apps = (props) => {
 			<Paper square style={paperAppStyle} onClick={() => {
 				if (selectedApp.id !== data.id) {
 					setSelectedApp(data)
-					if (data.actions.length > 0) {
+					if (data.actions !== undefined && data.actions !== null && data.actions.length > 0) {
 						console.log(data.actions[0])
 						setSelectedAction(data.actions[0])
+					} else {
+						setSelectedAction({})
 					}
 				}
 			}}>
@@ -352,36 +357,42 @@ const Apps = (props) => {
 			
 				<div style={{marginTop: 15, marginBottom: 15}}>
 					<b>Actions</b>
-					<Select
-						fullWidth
-						value={selectedAction}
-						onChange={(event) => {
-							setSelectedAction(event.target.value)
-						}}
-						style={{backgroundColor: inputColor, color: "white", height: "50px"}}
-						SelectDisplayProps={{
-							style: {
-								marginLeft: 10,
-							}
-						}}
-					>
-						{selectedApp.actions.map(data => {
-								var newActionname = data.label !== undefined && data.label.length > 0 ? data.label : data.name
+					{selectedApp.actions !== null && selectedApp.actions.length > 0 ?
+						<Select
+							fullWidth
+							value={selectedAction}
+							onChange={(event) => {
+								setSelectedAction(event.target.value)
+							}}
+							style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+							SelectDisplayProps={{
+								style: {
+									marginLeft: 10,
+								}
+							}}
+						>
+							{selectedApp.actions.map(data => {
+									var newActionname = data.label !== undefined && data.label.length > 0 ? data.label : data.name
 
-								// ROFL FIXME - loop
-								newActionname = newActionname.replace("_", " ")
-								newActionname = newActionname.replace("_", " ")
-								newActionname = newActionname.replace("_", " ")
-								newActionname = newActionname.replace("_", " ")
-								newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
-								return (
-									<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
-										{newActionname}
+									// ROFL FIXME - loop
+									newActionname = newActionname.replace("_", " ")
+									newActionname = newActionname.replace("_", " ")
+									newActionname = newActionname.replace("_", " ")
+									newActionname = newActionname.replace("_", " ")
+									newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
+									return (
+										<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+											{newActionname}
 
-									</MenuItem>
-								)
-							})}
-					</Select>
+										</MenuItem>
+									)
+								})}
+						</Select>
+						: 
+						<div style={{marginTop: 10}}>
+							There are no actions defined for this app.
+						</div>
+					}
 				</div>
 
 				{selectedAction.parameters !== undefined && selectedAction.parameters !== null ? 

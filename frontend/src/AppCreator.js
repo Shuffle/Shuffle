@@ -2,6 +2,7 @@ import React, {useState, useEffect} from 'react';
 import { makeStyles } from '@material-ui/styles';
 import {BrowserView, MobileView} from "react-device-detect";
 
+import {Link} from 'react-router-dom';
 import Paper from '@material-ui/core/Paper';
 import Button from '@material-ui/core/Button';
 import Divider from '@material-ui/core/Divider';
@@ -18,6 +19,7 @@ import CheckCircleIcon from '@material-ui/icons/CheckCircle';
 
 import ErrorOutline from '@material-ui/icons/ErrorOutline';
 import { useAlert } from "react-alert";
+import words from "shellwords"
 
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
@@ -55,7 +57,118 @@ const useStyles = makeStyles({
 	notchedOutline: {
 		borderColor: "#f85a3e !important"
 	},
-});
+})
+
+
+function rewrite(args) {
+  return args.reduce(function(args, a){
+    if (0 == a.indexOf('-X')) {
+      args.push('-X')
+      args.push(a.slice(2))
+    } else {
+      args.push(a)
+    }
+
+    return args
+  }, [])
+}
+
+function parseField(s) {
+  return s.split(/: (.+)/)
+}
+
+function isURL(s) {
+  return /^https?:\/\//.test(s)
+}
+
+const parseCurl = (s) => {
+	//console.log("CURL: ", s)
+
+  if (0 != s.indexOf('curl ')) {
+		console.log("Not curl start")
+		return ""
+	}
+
+  var args = rewrite(words.split(s))
+  var out = { method: 'GET', header: {} }
+  var state = ''
+
+  args.forEach(function(arg){
+    switch (true) {
+      case isURL(arg):
+        out.url = arg
+        break;
+
+      case arg == '-A' || arg == '--user-agent':
+        state = 'user-agent'
+        break;
+
+      case arg == '-H' || arg == '--header':
+        state = 'header'
+        break;
+
+      case arg == '-d' || arg == '--data' || arg == '--data-ascii':
+        state = 'data'
+        break;
+
+      case arg == '-u' || arg == '--user':
+        state = 'user'
+        break;
+
+      case arg == '-I' || arg == '--head':
+        out.method = 'HEAD'
+        break;
+
+      case arg == '-X' || arg == '--request':
+        state = 'method'
+        break;
+
+      case arg == '-b' || arg =='--cookie':
+        state = 'cookie'
+        break;
+
+      case arg == '--compressed':
+        out.header['Accept-Encoding'] = out.header['Accept-Encoding'] || 'deflate, gzip'
+        break;
+
+      case !!arg:
+        switch (state) {
+          case 'header':
+            var field = parseField(arg)
+            out.header[field[0]] = field[1]
+            state = ''
+            break;
+          case 'user-agent':
+            out.header['User-Agent'] = arg
+            state = ''
+            break;
+          case 'data':
+            if (out.method == 'GET' || out.method == 'HEAD') out.method = 'POST'
+            out.header['Content-Type'] = out.header['Content-Type'] || 'application/x-www-form-urlencoded'
+            out.body = out.body
+              ? out.body + '&' + arg
+              : arg
+            state = ''
+            break;
+          case 'user':
+            out.header['Authorization'] = 'Basic ' + btoa(arg)
+            state = ''
+            break;
+          case 'method':
+            out.method = arg
+            state = ''
+            break;
+          case 'cookie':
+            out.header['Set-Cookie'] = arg
+            state = ''
+            break;
+        }
+        break;
+    }
+  })
+
+	return out
+}
 
 // Should be different if logged in :|
 const AppCreator = (props) => {
@@ -144,13 +257,13 @@ const AppCreator = (props) => {
 
 	const handleEditApp = () => {
 		fetch(globalUrl+"/api/v1/apps/"+props.match.params.appid+"/config", {
-    	  	method: 'GET',
+    	  method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json',
 				},
-	  			credentials: "include",
-    		})
+	  		credentials: "include",
+    })
 		.then((response) => {
 			if (response.status !== 200) {
 				window.location.pathname = "/apps"
@@ -164,9 +277,7 @@ const AppCreator = (props) => {
 				alert.error("Failed to get the app")
 			} else {
 				const data = JSON.parse(responseJson.body)
-				console.log("LOADED IMAGE: ", data.image)
-				setFileBase64(data.image)
-				parseOpenapiData(data)
+				parseIncomingOpenapiData(data)
 			}
 		})
 		.catch(error => {
@@ -184,13 +295,13 @@ const AppCreator = (props) => {
 		}
 
 		fetch(globalUrl+"/api/v1/get_openapi/"+urlParams.get("id"), {
-    	  	method: 'GET',
-				headers: {
-					'Content-Type': 'application/json',
-					'Accept': 'application/json',
-				},
-	  			credentials: "include",
-    		})
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+				credentials: "include",
+		})
 		.then((response) => {
 			if (response.status !== 200) {
 				throw new Error("NOT 200 :O")
@@ -199,12 +310,12 @@ const AppCreator = (props) => {
 			return response.json()
 		})
 		.then((responseJson) => {
-  			setIsAppLoaded(true)
+  		setIsAppLoaded(true)
 			if (!responseJson.success) {
 				alert.error("Failed to verify")
 			} else {
 				const data = JSON.parse(responseJson.body)
-				parseOpenapiData(data)
+				parseIncomingOpenapiData(data)
 			}
 		})
 		.catch(error => {
@@ -227,13 +338,19 @@ const AppCreator = (props) => {
 	}
 
 	// Sets the data up as it should be at later points
-	const parseOpenapiData = (data) => {
+	// This is the data FROM the database, not what's being saved
+	const parseIncomingOpenapiData = (data) => {
 		setBasedata(data)
-
 
 		setName(data.info.title)
 		setDescription(data.info.description)
 		document.title = "Apps - "+data.info.title
+
+		console.log(data.info["x-logo"])
+		if (data.info !== null && data.info !== undefined && data.info["x-logo"] !== undefined) {
+			setFileBase64(data.info["x-logo"])
+			console.log("IMG: ", data.inf0["x-logo"])
+		}
 
 		if (data.info.contact != undefined) {
 			setContact(data.info.contact)
@@ -243,7 +360,7 @@ const AppCreator = (props) => {
 			setBaseUrl(data.servers[0].url)
 		} 
 
-		console.log(data)
+
 
 		// This is annoying (:
 		var securitySchemes = data.components.securityDefinitions
@@ -295,9 +412,6 @@ const AppCreator = (props) => {
 					"errors": [],
 				}
 
-				//console.log(`${path}: ${method}`);
-				//console.log(methodvalue)
-
 				for (var key in methodvalue.parameters) {
 					const parameter = methodvalue.parameters[key]
 					if (parameter.in === "query") {
@@ -323,12 +437,12 @@ const AppCreator = (props) => {
 			}
 		}
 
-		console.log(newActions)
 		setActions(newActions)
 	}
 				
+	// Saving the app that's been configured.
 	const submitApp = () => {
-		alert.info("Uploading private app " + name)
+		alert.info("Uploading and building app " + name)
 		setErrorCode("")
 
 		// Format the information 	
@@ -336,6 +450,7 @@ const AppCreator = (props) => {
 		const host = splitBase[2]
 		const schemes = [splitBase[0]]
 		const basePath = "/"+(splitBase.slice(3, )).join("/")
+		console.log("IMAGE: ", fileBase64)
 		
 		const data = {
   			"swagger": "3.0",
@@ -343,6 +458,7 @@ const AppCreator = (props) => {
   			  "title": name,
   			  "description": description,
   			  "version": "1.0",
+					"x-logo": fileBase64,
   			},
 				"servers": [{"url": baseUrl}],
   			"host": host,
@@ -353,7 +469,6 @@ const AppCreator = (props) => {
 				"components": {
 					"securitySchemes": {},
 				},
-				"image": fileBase64,
 				"id": props.match.params.appid,
   			"securityDefinitions": {},
 		}
@@ -368,7 +483,7 @@ const AppCreator = (props) => {
 			data.info["contact"] = contact
 		}
 
-		console.log("LOADED IMAGE: ", data.image)
+		//console.log("LOADED IMAGE: ", data.image)
 
 		for (var key in actions) {
 			const item = actions[key]
@@ -440,6 +555,23 @@ const AppCreator = (props) => {
 					//console.log(queryitem)
 				}
 			}
+
+			if (item.body.length > 0) {
+				console.log("HANDLE BODY!")
+				newitem = {
+					"in": "body",
+					"name": "body",
+					"multiline": true,
+					"description": "Generated by shuffler.io OpenAPI",
+					"required": false,
+					"example": item.body,
+					"schema": {
+						"type": "string",
+					},
+				}
+
+				data.paths[item.url][item.method.toLowerCase()].parameters.push(newitem)
+			}
 		}
 
 		if (authenticationOption === "API key") {
@@ -462,7 +594,7 @@ const AppCreator = (props) => {
 		}
 
 		fetch(globalUrl+"/api/v1/verify_openapi", {
-    	  	method: 'POST',
+    	  method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json',
@@ -495,9 +627,9 @@ const AppCreator = (props) => {
 	}
 
 	const bearerAuth = authenticationOption === "Bearer auth" ? 
-		<div>
+		<div style={{color: "white"}}>
 			<h4>
-				<a href="https://swagger.io/docs/specification/authentication/bearer-authentication/" style={{textDecoriation: "none", color: "#f85a3e"}}>
+				<a target="_blank" href="https://swagger.io/docs/specification/authentication/bearer-authentication/" style={{textDecoriation: "none", color: "#f85a3e"}}>
 					Bearer auth
 				</a>
 			</h4>
@@ -508,9 +640,9 @@ const AppCreator = (props) => {
 
 	// Basicauth
 	const basicAuth = authenticationOption === "Basic auth" ? 
-		<div>
+		<div style={{color: "white"}}>
 			<h4>
-				<a href="https://swagger.io/docs/specification/authentication/basic-authentication/" style={{textDecoriation: "none", color: "#f85a3e"}}>
+				<a target="_blank" href="https://swagger.io/docs/specification/authentication/basic-authentication/" style={{textDecoriation: "none", color: "#f85a3e"}}>
 					Basic authentication
 				</a>
 			</h4>
@@ -596,9 +728,9 @@ const AppCreator = (props) => {
 		setActions(actions)
 	}
 
-	console.log("Option: ", authenticationOption)
-	console.log("Location: ", parameterLocation)
-  console.log("Name: ", parameterName)
+	//console.log("Option: ", authenticationOption)
+	//console.log("Location: ", parameterLocation)
+  //console.log("Name: ", parameterName)
 	const apiKey = authenticationOption === "API key" ? 
 		<div style={{color: "white"}}>
 			<h4>API key</h4>
@@ -818,13 +950,30 @@ const AppCreator = (props) => {
 	}
 
 	const UrlPathParameters = () => {
+		var paths = []
+		var queries = []
+
 		if (urlPath.includes("{") && urlPath.includes("}")) {
-			var values = []
 			var tmpWord = ""
 			var record = false
+
+			var query = false
 			for (var key in urlPath) {
+				if (urlPath[key] === "?") {
+					query = true
+				}
+
 				if (urlPath[key] === "}") {
-					values.push(tmpWord)
+					if (tmpWord === parameterName) {
+						tmpWord = ""
+						record = false
+						continue
+					} else if (query) {
+						queries.push(tmpWord)
+					} else {
+						paths.push(tmpWord)
+					}
+
 					tmpWord = ""
 					record = false
 				}
@@ -833,24 +982,75 @@ const AppCreator = (props) => {
 					tmpWord += urlPath[key]
 				}
 
-				if (urlPath[key] === "{" && urlPath[key-1] === "/") {
+				//if (urlPath[key] === "{" && urlPath[key-1] === "/") {
+				if (urlPath[key] === "{") {
 					record = true
 				}
 			}
-
-			if (!currentAction.paths === values) {
-				currentAction.paths = values
-				setCurrentAction(currentAction)
-			}
-
-			return (
-				<div>
-					Required parameters: {values.join(", ")}
-				</div>
-			)
 		}
 
-		return null
+		if (urlPath.includes("<") && urlPath.includes(">")) {
+			var tmpWord = ""
+			var record = false
+
+			var query = false
+			for (var key in urlPath) {
+				if (urlPath[key] === "?") {
+					query = true
+				}
+
+				if (urlPath[key] === ">") {
+					if (tmpWord === parameterName) {
+						tmpWord = ""
+						record = false
+						continue
+					} else if (query) {
+						queries.push(tmpWord)
+					} else {
+						paths.push(tmpWord)
+					}
+
+					tmpWord = ""
+					record = false
+				}
+
+				if (record) {
+					tmpWord += urlPath[key]
+				}
+
+				//if (urlPath[key] === "{" && urlPath[key-1] === "/") {
+				if (urlPath[key] === "<") {
+					record = true
+				}
+			}
+		}
+
+		if (currentAction.paths !== paths) {
+			setActionField("paths", paths)
+		} 
+
+		console.log("QUERIES: ", queries)
+		var tmpQueries = [] 
+
+		// No overlapping of names
+		for (var key in queries) {
+			const tmpquery = queries[key]
+			const found = tmpQueries.find(query => query.name === tmpquery)
+			if (found === undefined) {
+				tmpQueries.push({"name": queries[key], required: true})
+			}
+		}
+
+		// FIXME: Frontend isn't updating..
+		if (JSON.stringify(tmpQueries) !== JSON.stringify(urlPathQueries)) {
+			setUrlPathQueries(tmpQueries)
+		}
+
+		return paths.length > 0 ? 
+			<div>
+				Required parameters: {paths.join(", ")}
+			</div>
+		: null
 	}
 
 	const newActionModal = 
@@ -878,7 +1078,7 @@ const AppCreator = (props) => {
 			<FormControl style={{backgroundColor: surfaceColor, color: "white",}}>
 				<DialogTitle><div style={{color: "white"}}>New action</div></DialogTitle>
 				<DialogContent>
-					<a href="/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more about app creation</a>
+					<Link target="_blank" to="/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more about actions</Link>
 					<div style={{marginTop: "15px"}}/>
 					Name
 					<TextField
@@ -891,7 +1091,14 @@ const AppCreator = (props) => {
 						margin="normal"
 						variant="outlined"
 						defaultValue={currentAction["name"]}
-						onChange={e => setActionField("name", e.target.value)}
+						onChange={e => {
+							// Fix basic issues in frontend. Python functions run a-zA-Z0-9_
+							const regex = /[A-Z-a-z0-9 _]/g;
+							const found = e.target.value.match(regex);
+							if (found !== null) {
+								setActionField("name", found.join(""))
+							}
+						}}
 						key={currentAction}
 						InputProps={{
 							classes: {
@@ -951,7 +1158,7 @@ const AppCreator = (props) => {
 						))}
 					</Select>
 					<div style={{marginTop: "15px"}} />
-					URL path
+					URL path / Curl statement
 					<TextField
 						required
 						style={{flex: "1", marginRight: "15px", marginTop: "5px", backgroundColor: inputColor}}
@@ -966,7 +1173,7 @@ const AppCreator = (props) => {
 							setUrlPath(e.target.value)
 							console.log(e.target.value)
 						}}
-						helperText={<div style={{color:"white", marginBottom: "2px",}}>The path to use. Must start with /. Add {"{variable}"} to have path variables</div>}
+						helperText={<div style={{color:"white", marginBottom: "2px",}}>The path to use. Must start with /. Use {"{variablename}"} to have path variables</div>}
 						InputProps={{
 							classes: {
 								notchedOutline: classes.notchedOutline,
@@ -975,6 +1182,55 @@ const AppCreator = (props) => {
 							style:{
 								color: "white",
 							},
+						}}
+						onBlur={event => {
+							var parsedurl = event.target.value
+							if (parsedurl.startsWith("curl")) {
+								const request = parseCurl(event.target.value)
+								console.log(request)
+								if (request.method.toUpperCase() !== currentAction.Method) {
+									setCurrentActionMethod(request.method.toUpperCase())
+									setActionField("method", request.method.toUpperCase())
+								}
+
+								if (request.header !== undefined && request.header !== null) {
+									var headers = ""
+									for (let [key, value] of Object.entries(request.header)) {
+										headers += key+"="+value+"\n"
+									}
+
+									setActionField("headers", headers)
+								}
+
+								if (request.body !== undefined && request.body !== null) {
+									setActionField("body", request.body)
+								}
+
+								// Parse URL
+								parsedurl = request.url
+							}
+
+							if (parsedurl.startsWith("http") || parsedurl.startsWith("ftp")) {
+								if (parsedurl !== undefined && parsedurl.includes(parameterName)) {
+									// Remove <> etc.
+									// 
+									
+									console.log("IT HAS THE PARAM NAME!")
+									const newurl = new URL(encodeURI(parsedurl))
+									newurl.searchParams.delete(parameterName)
+									parsedurl = decodeURI(newurl.href)
+								}
+
+								// Remove the base URL itself
+								if (parsedurl !== undefined && baseUrl !== undefined && baseUrl.length > 0 && parsedurl.includes(baseUrl)) {
+									parsedurl = parsedurl.replace(baseUrl, "")
+								}
+
+								// Check URL query && headers 
+								setActionField("url", parsedurl)
+								setUrlPath(parsedurl)
+							}
+							//console.log("URL: ", request.url)
 						}}
 					/>
 					<UrlPathParameters />
@@ -1029,7 +1285,7 @@ const AppCreator = (props) => {
 		<div style={{color: "white"}}>
 			<h2>Actions</h2>
 			Actions are the tasks performed by an app. Read more about actions and apps
-			<a href="/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}> here</a>.
+			<Link target="_blank" to="/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}> here</Link>.
 			<div>
 				{loopActions}
 				<Button color="primary" style={{marginTop: "20px", borderRadius: "0px"}} variant="outlined" onClick={() => {
@@ -1054,7 +1310,7 @@ const AppCreator = (props) => {
 		<div style={{color: "white"}}>
 			<h2>Test</h2>
 			Test an action to see whether it performs in an expected way. 
-			<a href="/docs/apps#testing" style={{textDecoration: "none", color: "#f85a3e"}}>&nbsp;Click here to learn more about testing</a>.
+			<Link target="_blank" to="/docs/apps#testing" style={{textDecoration: "none", color: "#f85a3e"}}>&nbsp;TBD: Click here to learn more about testing</Link>.
 			<div>
 				Test :)
 			</div>
@@ -1071,14 +1327,23 @@ const AppCreator = (props) => {
 	if (file !== "") {
 		const img = document.getElementById('logo')
 		var canvas = document.createElement('canvas')
+		canvas.width = 174
+		canvas.height = 174
 		var ctx = canvas.getContext('2d')
 
 		img.onload = function() {
 			// img, x, y, width, height
-			ctx.drawImage(img, 0, 0)
+			//ctx.drawImage(img, 174, 174)
+			console.log("IMG natural: ", img.naturalWidth, img.naturalHeight)
+			//ctx.drawImage(img, 0, 0, 174, 174)
+			ctx.drawImage(img, 
+				0, 0, img.width, img.height, 
+				0, 0, canvas.width, canvas.height
+			)
+
 			const canvasUrl = canvas.toDataURL()
-			console.log(canvasUrl)
 			if (canvasUrl !== fileBase64) {
+				console.log("SET URL TO: ", canvasUrl)
 				setFileBase64(canvasUrl)
 			}
 		}
@@ -1096,14 +1361,14 @@ const AppCreator = (props) => {
 	//	<img src={file} id="logo" style={{width: "100%", height: "100%"}} />
 
 	const imageData = file.length > 0 ? file : fileBase64 
-	const imageInfo = <img src={imageData} alt="Click to upload an image" id="logo" style={{width: 174, height: 174}} />
+	const imageInfo = <img src={imageData} alt="Click to upload an image" id="logo" style={{}} />
 
 	// Random names for type & autoComplete. Didn't research :^)
 	const landingpageDataBrowser = 
 		<div style={{paddingBottom: 100, color: "white",}}>
 				<Paper style={boxStyle}>
 					<h2 style={{marginBottom: "10px", color: "white"}}>General information</h2>
-					<a href="/docs/apps#create" style={{textDecoration: "none", color: "#f85a3e"}}>Click here to learn more about app creation</a>
+					<Link target="_blank" to="/docs/apps#create_openapi_app" style={{textDecoration: "none", color: "#f85a3e"}}>Click here to learn more about app creation</Link>
 					<div style={{color: "white", flex: "1", display: "flex", flexDirection: "row"}}>
 					 	<Tooltip title="Click to edit the app's image" placement="bottom">
 							<div style={{flex: "1", margin: 10, border: "1px solid #f85a3e", cursor: "pointer", backgroundColor: inputColor, maxWidth: 174, maxHeight: 174}} onClick={() => {upload.click()}}>
@@ -1120,11 +1385,11 @@ const AppCreator = (props) => {
 								fullWidth={true}
 								placeholder="Name"
 								type="name"
-							  	id="standard-required"
+							  id="standard-required"
 								margin="normal"
 								variant="outlined"
 								value={name}
-      	 						onChange={e => setName(e.target.value)}
+      	 					onChange={e => setName(e.target.value)}
 								color="primary"
 								InputProps={{
 									style:{
@@ -1187,6 +1452,19 @@ const AppCreator = (props) => {
 						helperText={<div style={{color:"white", marginBottom: "2px",}}>Must start with http(s):// and CANT end with /. </div>}
 						placeholder="https://api.example.com"
 						onChange={e => setBaseUrl(e.target.value)}
+						onBlur={(event) => {
+							var tmpstring = event.target.value.trim()
+							if (tmpstring.endsWith("/")) {
+									tmpstring = tmpstring.slice(0, -1)
+							}
+							if (tmpstring.length > 4 && !tmpstring.startsWith("http") && !tmpstring.startsWith("ftp")) {
+								alert.error("URL must start with http(s)://")
+							}
+
+							//if (authenticationOption === "No authentication" && 
+
+							setBaseUrl(tmpstring)
+						}}
 					/>
 					<FormControl style={{marginTop: "15px",}} variant="outlined">
 						<h5 style={{marginBottom: "10px", color: "white",}}>Authentication</h5>
@@ -1196,7 +1474,7 @@ const AppCreator = (props) => {
 								setAuthenticationOption(e.target.value) 
 							}}
 							value={authenticationOption}
-							style={{backgroundColor: inputColor, paddingLeft: "10px", color: "white", height: "50px"}}
+							style={{backgroundColor: inputColor, color: "white", height: "50px"}}
 							>
 							{authenticationOptions.map(data => (
 								<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
