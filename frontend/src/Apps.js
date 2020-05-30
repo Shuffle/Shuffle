@@ -19,6 +19,9 @@ import YAML from 'yaml'
 import {Link} from 'react-router-dom';
 
 import CloudDownload from '@material-ui/icons/CloudDownload';
+import EditIcon from '@material-ui/icons/Edit';
+import DeleteIcon from '@material-ui/icons/Delete';
+
 import { useAlert } from "react-alert";
 
 import Dialog from '@material-ui/core/Dialog';
@@ -132,7 +135,7 @@ const Apps = (props) => {
 	const downloadApp = (inputdata) => {
 		const id = inputdata.id
 
-		alert.info("Preparing download.")	
+		alert.info("Downloading..")	
 		fetch(globalUrl+"/api/v1/apps/"+id+"/config", {
     	  	method: 'GET',
 				headers: {
@@ -255,14 +258,15 @@ const Apps = (props) => {
 							</Grid>
 						</Grid>
 					</Grid>
-				</Grid>
+				</Grid>	
+
+				{data.activated && data.private_id !== undefined && data.private_id.length > 0 && data.generated ?
 				<Grid container style={{margin: "10px 10px 10px 10px", flex: "1"}} onClick={() => {downloadApp(data)}}>
-					{/*
 					<Tooltip title={"Download"} style={{marginTop: "28px", width: "100%"}} aria-label={data.name}>
 						<CloudDownload /> 
 					</Tooltip>
-					*/}
 				</Grid>
+				: null}
 			</Paper>
 		)
 	}
@@ -295,15 +299,28 @@ const Apps = (props) => {
 
 		const editUrl = "/apps/edit/"+selectedApp.id
 		const activateUrl = "/apps/new?id="+selectedApp.id
+
+		var downloadButton = selectedApp.activated && selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated ?
+				<Button
+					onClick={() => {downloadApp(selectedApp)}}
+					variant="outlined"
+					component="label"
+					color="primary"
+					style={{marginTop: 10, marginRight: 8}}
+				>
+					<CloudDownload /> 
+				</Button>
+			: null
+
 		var editButton = selectedApp.activated && selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated ?
 			<Link to={editUrl} style={{textDecoration: "none"}}>
 				<Button
 					variant="outlined"
 					component="label"
 					color="primary"
-					style={{marginTop: "10px"}}
+					style={{marginTop: 10, marginRight: 10,}}
 				>
-					Edit app	
+					<EditIcon />
 				</Button></Link> : null
 
 		var activateButton = selectedApp.generated && !selectedApp.activated ?
@@ -312,7 +329,7 @@ const Apps = (props) => {
 					variant="contained"
 					component="label"
 					color="primary"
-					style={{marginTop: "10px"}}
+					style={{marginTop: 10}}
 				>
 					Activate App	
 				</Button></Link> : null
@@ -327,7 +344,7 @@ const Apps = (props) => {
 						deleteApp(selectedApp.id)
 					}}
 				>
-					Delete app	
+					<DeleteIcon />
 				</Button> : null
 
 		var imageline = selectedApp.large_image === undefined || selectedApp.large_image.length === 0 ?
@@ -348,6 +365,7 @@ const Apps = (props) => {
 					</div>
 				</div>
 				{activateButton}
+				{downloadButton}
 				{editButton}
 				{deleteButton}
 				<Divider style={{marginBottom: "10px", marginTop: "10px", backgroundColor: dividerColor}}/>
@@ -464,8 +482,8 @@ const Apps = (props) => {
 		)
 	}
 
-	const handleSearchChange = (event) => {
-		const searchfield = event.target.value.toLowerCase()
+	const handleSearchChange = (search) => {
+		const searchfield = search.toLowerCase()
 		const newapps = apps.filter(data => data.name.toLowerCase().includes(searchfield) || data.description.toLowerCase().includes(searchfield))
 
 		if ((newapps.length === 0 || searchBackend) && !appSearchLoading) {
@@ -495,7 +513,10 @@ const Apps = (props) => {
 				    <FormControlLabel
 							style={{color: "white", marginBottom: "0px", marginTop: "10px"}}
 							label=<div style={{color: "white"}}>Search OpenAPI</div>
-							control={<Switch checked={searchBackend} onChange={() => {setSearchBackend(!searchBackend)}} />}
+							control={<Switch checked={searchBackend} onChange={() => {
+								handleSearchChange("")
+								setSearchBackend(!searchBackend)}
+							} />}
 						/>
 						<Button
 							variant="outlined"
@@ -525,7 +546,7 @@ const Apps = (props) => {
 						color="primary"
 						placeholder={"Search apps"}
 						onChange={(event) => {
-							handleSearchChange(event)
+							handleSearchChange(event.target.value)
 						}}
 					/>
 					<div style={{marginTop: 15}}>
