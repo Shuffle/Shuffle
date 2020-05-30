@@ -1127,10 +1127,12 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 		Parameters:  extraParameters,
 	}
 
+	if path.Post.RequestBody != nil {
+		log.Printf("FUNCTION: %#v", path.Post.RequestBody)
+	}
+
 	action.Returns.Schema.Type = "string"
 	baseUrl := fmt.Sprintf("%s%s", api.Link, actualPath)
-
-	//log.Println(path.Parameters)
 
 	// Parameters:  []WorkflowAppActionParameter{},
 	// FIXME - add data for POST stuff
