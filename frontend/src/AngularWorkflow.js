@@ -2207,7 +2207,6 @@ const AngularWorkflow = (props) => {
 			
 			if ((selectedVariableParameter === null || selectedVariableParameter === undefined) && (workflow.workflow_variables !== null && workflow.workflow_variables.length > 0)) {
 				// FIXME - this is the bad thing
-				console.log("Does it go here or what?")
 				setSelectedVariableParameter(workflow.workflow_variables[0].name)
 			} 
 

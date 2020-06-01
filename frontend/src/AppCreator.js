@@ -369,6 +369,7 @@ const AppCreator = (props) => {
 			securitySchemes = data.components.securitySchemes
 		} 
 
+		// FIXME: Have multiple authentication options?
 		if (securitySchemes !== undefined) {
 			console.log("Am I in here?")
 			for (const [key, value] of Object.entries(securitySchemes)) {
@@ -377,7 +378,6 @@ const AppCreator = (props) => {
 					break
 				} else if (value.type === "apiKey") {
 					setAuthenticationOption("API key")
-  				setParameterName(value.name)
 
 					value.in = value.in.charAt(0).toUpperCase() + value.in.slice(1);
 					setParameterLocation(value.in)
@@ -385,6 +385,8 @@ const AppCreator = (props) => {
 						console.log("APIKEY SELECT: ", apikeySelection)
 						alert.error("Might be error in setting up API key authentication")
 					}
+
+  				setParameterName(value.name)
 					break
 				} else if (value.scheme === "basic") {
 					setAuthenticationOption("Basic auth")

@@ -35,6 +35,8 @@ const data = [{
 				'shape': 'square',
 				'background-color': '#213243',
 				'border-color': '#81c784',
+				'background-width': '100%',
+				'background-height': '100%',
 			},
 		},
 		{
