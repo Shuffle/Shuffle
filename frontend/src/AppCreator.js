@@ -1421,7 +1421,7 @@ const AppCreator = (props) => {
 	//	<img src={file} id="logo" style={{width: "100%", height: "100%"}} />
 
 	const imageData = file.length > 0 ? file : fileBase64 
-	const imageInfo = <img src={imageData} alt="Click to upload an image" id="logo" style={{}} />
+	const imageInfo = <img src={imageData} alt="Click to upload an image" id="logo" style={{maxWidth: 174, maxHeight: 174,}} />
 
 	// Random names for type & autoComplete. Didn't research :^)
 	const landingpageDataBrowser = 
