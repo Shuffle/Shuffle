@@ -16,7 +16,7 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/getkin/kin-openapi/openapi3"
-	"github.com/satori/go.uuid"
+	//"github.com/satori/go.uuid"
 	"gopkg.in/yaml.v2"
 )
 
@@ -347,7 +347,11 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (WorkflowApp, []stri
 
 	api.Name = swagger.Info.Title
 	api.Description = swagger.Info.Description
-	api.ID = uuid.NewV4().String()
+
+	// FIXME: Versioning issue?
+	api.ID = newmd5
+	//uuid.NewV4().String()
+
 	api.IsValid = true
 	api.Link = swagger.Servers[0].URL // host doesnt exist lol
 	if strings.HasSuffix(api.Link, "/") {
@@ -722,7 +726,7 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 	optionalParameters := []WorkflowAppActionParameter{}
 	if len(path.Connect.Parameters) > 0 {
 		for _, param := range path.Connect.Parameters {
-			if param.Value.Schema == nil {
+			if param.Value.Schema == nil || param.Value.In == "header" {
 				continue
 			}
 			curParam := WorkflowAppActionParameter{
@@ -828,8 +832,7 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 	optionalParameters := []WorkflowAppActionParameter{}
 	if len(path.Get.Parameters) > 0 {
 		for _, param := range path.Get.Parameters {
-			//log.Printf("TYPE: %#v", param.Value.Schema)
-			if param.Value.Schema == nil {
+			if param.Value.Schema == nil || param.Value.In == "header" {
 				continue
 			}
 
@@ -933,7 +936,7 @@ func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 	optionalParameters := []WorkflowAppActionParameter{}
 	if len(path.Head.Parameters) > 0 {
 		for _, param := range path.Head.Parameters {
-			if param.Value.Schema == nil {
+			if param.Value.Schema == nil || param.Value.In == "header" {
 				continue
 			}
 			curParam := WorkflowAppActionParameter{
@@ -1036,7 +1039,7 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 	optionalParameters := []WorkflowAppActionParameter{}
 	if len(path.Delete.Parameters) > 0 {
 		for _, param := range path.Delete.Parameters {
-			if param.Value.Schema == nil {
+			if param.Value.Schema == nil || param.Value.In == "header" {
 				continue
 			}
 			curParam := WorkflowAppActionParameter{
@@ -1140,26 +1143,13 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 	optionalQueries := []string{}
 	parameters := []string{}
 	optionalParameters := []WorkflowAppActionParameter{}
-	/*
-			WorkflowAppActionParameter{
-				Name:        "body",
-				Description: "The body to use",
-				Multiline:   true,
-				Required:    false,
-				Example:     `{"username": "test"}`,
-				Schema: SchemaDefinition{
-					Type: "string",
-				},
-			},
-		}
-	*/
+
 	if len(path.Post.Parameters) > 0 {
 		for _, param := range path.Post.Parameters {
-			if param.Value.Schema == nil {
+			if param.Value.Schema == nil || param.Value.In == "header" {
 				continue
 			}
 
-			log.Printf("PARAM: %#v", param.Value)
 			curParam := WorkflowAppActionParameter{
 				Name:        param.Value.Name,
 				Description: param.Value.Description,
@@ -1257,21 +1247,10 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 	firstQuery = true
 	optionalQueries := []string{}
 	parameters := []string{}
-	optionalParameters := []WorkflowAppActionParameter{
-		WorkflowAppActionParameter{
-			Name:        "body",
-			Description: "The body to use",
-			Multiline:   true,
-			Required:    false,
-			Example:     `{"username": "test"}`,
-			Schema: SchemaDefinition{
-				Type: "string",
-			},
-		},
-	}
+	optionalParameters := []WorkflowAppActionParameter{}
 	if len(path.Patch.Parameters) > 0 {
 		for _, param := range path.Patch.Parameters {
-			if param.Value.Schema == nil {
+			if param.Value.Schema == nil || param.Value.In == "header" {
 				continue
 			}
 			curParam := WorkflowAppActionParameter{
@@ -1372,22 +1351,10 @@ func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 	optionalQueries := []string{}
 	parameters := []string{}
 	optionalParameters := []WorkflowAppActionParameter{}
-	/*
-			WorkflowAppActionParameter{
-				Name:        "body",
-				Description: "The body to use",
-				Multiline:   true,
-				Required:    false,
-				Example:     `{"username": "test"}`,
-				Schema: SchemaDefinition{
-					Type: "string",
-				},
-			},
-		}
-	*/
+
 	if len(path.Put.Parameters) > 0 {
 		for _, param := range path.Put.Parameters {
-			if param.Value.Schema == nil {
+			if param.Value.Schema == nil || param.Value.In == "header" {
 				continue
 			}
 			curParam := WorkflowAppActionParameter{

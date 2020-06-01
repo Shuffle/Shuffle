@@ -2745,6 +2745,9 @@ func getWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	//log.Printf("%#v", parsedApi)
+	log.Printf("API LEN: %d, ID: %s", len(parsedApi.Body), fileId)
+
 	//log.Printf("Parsed API: %#v", parsedApi)
 	if len(parsedApi.ID) > 0 {
 		parsedApi.Success = true
