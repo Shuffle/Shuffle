@@ -5528,7 +5528,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	//log.Printf("Should generate yaml")
-	api, pythonfunctions, err := generateYaml(swagger, newmd5)
+	swagger, api, pythonfunctions, err := generateYaml(swagger, newmd5)
 	if err != nil {
 		log.Printf("Failed building and generating yaml: %s", err)
 		resp.WriteHeader(500)
@@ -5536,8 +5536,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("PATHS: %#v", swagger.Paths["/comments/put"])
-	log.Printf("Functions: %d", len(swagger.Paths))
+	log.Printf("Functions: %d", swagger.Paths)
 	log.Printf("Actions: %d", len(api.Actions))
 	api.Owner = user.Id
 
@@ -5693,6 +5692,9 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "%"}`, err)))
 	}
+
+	// Backup every single one
+	setOpenApiDatastore(ctx, api.ID, parsed)
 
 	err = increaseStatisticsField(ctx, "total_apps_created", newmd5, 1)
 	if err != nil {

@@ -16,6 +16,8 @@ import DialogActions from '@material-ui/core/DialogActions';
 import TextField from '@material-ui/core/TextField';
 import Tooltip from '@material-ui/core/Tooltip';
 import CheckCircleIcon from '@material-ui/icons/CheckCircle';
+import Breadcrumbs from '@material-ui/core/Breadcrumbs';
+import AppsIcon from '@material-ui/icons/Apps';
 
 import ErrorOutline from '@material-ui/icons/ErrorOutline';
 import { useAlert } from "react-alert";
@@ -587,7 +589,7 @@ const AppCreator = (props) => {
 					"required": required,
 					"content": {
 						"example": {
-							"example": "test",
+							"example": item.body,
 						},
 					},
 				}
@@ -1426,6 +1428,17 @@ const AppCreator = (props) => {
 	// Random names for type & autoComplete. Didn't research :^)
 	const landingpageDataBrowser = 
 		<div style={{paddingBottom: 100, color: "white",}}>
+				<Breadcrumbs aria-label="breadcrumb" separator="›" style={{color: "white",}}>
+					<Link to="/apps" style={{textDecoration: "none", color: "inherit",}}>
+						<h2 style={{color: "rgba(255,255,255,0.5)"}}>
+							<AppsIcon style={{marginRight: 10}} />
+							Apps	
+						</h2>
+					</Link>
+					<h2>
+						{name}
+					</h2>
+				</Breadcrumbs>
 				<Paper style={boxStyle}>
 					<h2 style={{marginBottom: "10px", color: "white"}}>General information</h2>
 					<Link target="_blank" to="/docs/apps#create_openapi_app" style={{textDecoration: "none", color: "#f85a3e"}}>Click here to learn more about app creation</Link>

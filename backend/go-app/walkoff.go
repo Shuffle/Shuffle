@@ -1355,15 +1355,16 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 			curapp := WorkflowApp{}
 			// FIXME - can this work with ONLY AppID?
 			for _, app := range workflowApps {
+				log.Printf("Name Version: %s_%s, other: %s_%s", app.Name, app.AppVersion, action.AppName, action.AppVersion)
 				if app.ID == action.AppID {
 					curapp = app
 					break
 				}
 
-				if app.Name == action.AppName && app.AppVersion == action.AppVersion {
-					curapp = app
-					break
-				}
+				//if app.Name == action.AppName && app.AppVersion == action.AppVersion {
+				//	curapp = app
+				//	break
+				//}
 			}
 
 			// Check to see if the whole app is valid
@@ -1377,11 +1378,11 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 			// Check tosee if the appaction is valid
 			curappaction := WorkflowAppAction{}
 			for _, curAction := range curapp.Actions {
+				log.Printf("Same? %s - %s", action.Name, curAction.Name)
 				if action.Name == curAction.Name {
 					curappaction = curAction
 					break
 				}
-				log.Println(action.Name, curAction.Name)
 			}
 
 			// Check to see if the action is valid
@@ -3376,7 +3377,7 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 				}
 
 				//log.Printf("Should generate yaml")
-				api, _, err := generateYaml(swagger, parsedOpenApi.ID)
+				swagger, api, _, err := generateYaml(swagger, parsedOpenApi.ID)
 				if err != nil {
 					log.Printf("Failed building and generating yaml in loop (%s): %s", filename, err)
 					continue

@@ -2639,27 +2639,28 @@ const AngularWorkflow = (props) => {
 					SelectDisplayProps={{
 						style: {
 							marginLeft: 10,
+							maxHeight: 200,
 						}
 					}}
 				>
-					{selectedApp.actions.map(data => {
-						var newActionname = data.name
-						if (data.label !== undefined && data.label !== null && data.label.length > 0) {
-							newActionname = data.label
-						}
-						// ROFL FIXME - loop
-						newActionname = newActionname.replace("_", " ")
-						newActionname = newActionname.replace("_", " ")
-						newActionname = newActionname.replace("_", " ")
-						newActionname = newActionname.replace("_", " ")
-						newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
-						return (
-						<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data.name}>
-							{newActionname}
+						{selectedApp.actions.map(data => {
+							var newActionname = data.name
+							if (data.label !== undefined && data.label !== null && data.label.length > 0) {
+								newActionname = data.label
+							}
+							// ROFL FIXME - loop
+							newActionname = newActionname.replace("_", " ")
+							newActionname = newActionname.replace("_", " ")
+							newActionname = newActionname.replace("_", " ")
+							newActionname = newActionname.replace("_", " ")
+							newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
+							return (
+							<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data.name}>
+								{newActionname}
 
-						</MenuItem>
-						)
-					})}
+							</MenuItem>
+							)
+						})}
 				</Select>
 				<div style={{marginTop: "10px", borderColor: "white", borderWidth: "2px", marginBottom: 200}}>
 						<AppActionArguments key={selectedAction.id} selectedAction={selectedAction} />

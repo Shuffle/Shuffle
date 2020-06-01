@@ -247,8 +247,6 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 	queryString := ""
 	queryData := ""
 
-	log.Printf("URL START: %s", url)
-
 	// FIXME - this might break - need to check if ? or & should be set as query
 	parameterData := ""
 	if len(optionalQueries) > 0 {
@@ -337,7 +335,6 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 
 	// Extra param for url if it's changeable
 	// Extra param for authentication scheme(s)
-	log.Printf("URL OTHER: %s", url)
 	data := fmt.Sprintf(`    async def %s(self%s%s%s%s%s):
         headers={}
         url=f"%s%s"
@@ -362,23 +359,21 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 		bodyAddin,
 	)
 
-	log.Printf("DATA: %s", data)
-
 	//log.Println(data)
 	//log.Println(functionname)
 	return functionname, data
 }
 
-func generateYaml(swagger *openapi3.Swagger, newmd5 string) (WorkflowApp, []string, error) {
+func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, WorkflowApp, []string, error) {
 	api := WorkflowApp{}
 	//log.Printf("%#v", swagger.Info)
 
 	if len(swagger.Info.Title) == 0 {
-		return WorkflowApp{}, []string{}, errors.New("Swagger.Info.Title can't be empty.")
+		return swagger, WorkflowApp{}, []string{}, errors.New("Swagger.Info.Title can't be empty.")
 	}
 
 	if len(swagger.Servers) == 0 {
-		return WorkflowApp{}, []string{}, errors.New("Swagger.Servers can't be empty. Add 'servers':[{'url':'hostname.com'}'")
+		return swagger, WorkflowApp{}, []string{}, errors.New("Swagger.Servers can't be empty. Add 'servers':[{'url':'hostname.com'}'")
 	}
 
 	api.Name = swagger.Info.Title
@@ -512,12 +507,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (WorkflowApp, []stri
 	// This is the python code to be generated
 	// Could just as well be go at this point lol
 	pythonFunctions := []string{}
-
 	for actualPath, path := range swagger.Paths {
-
-		//log.Printf("%#v", path)
-		//log.Printf("%#v", actualPath)
-
 		// FIXME: Add everything from here:
 		// https://godoc.org/github.com/getkin/kin-openapi/openapi3#PathItem
 		firstQuery := true
@@ -556,9 +546,19 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (WorkflowApp, []stri
 			api.Actions = append(api.Actions, action)
 			pythonFunctions = append(pythonFunctions, curCode)
 		}
+
+		// Has to be here because its used differently above.
+		// FIXING this is done during export instead?
+		//log.Printf("OLDPATH: %s", actualPath)
+		//if strings.Contains(actualPath, "?") {
+		//	actualPath = strings.Split(actualPath, "?")[0]
+		//}
+
+		//log.Printf("NEWPATH: %s", actualPath)
+		//newPaths[actualPath] = path
 	}
 
-	return api, pythonFunctions, nil
+	return swagger, api, pythonFunctions, nil
 }
 
 // FIXME - have this give a real version?
@@ -1184,7 +1184,7 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 	}
 
 	if path.Post.RequestBody != nil {
-		log.Printf("FUNCTION: %#v", path.Post.RequestBody)
+		log.Printf("RequestBody: %#v", path.Post.RequestBody)
 	}
 
 	action.Returns.Schema.Type = "string"

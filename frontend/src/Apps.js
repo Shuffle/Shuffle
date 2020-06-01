@@ -2,6 +2,7 @@ import React, { useEffect} from 'react';
 
 import { useInterval } from 'react-powerhooks';
 
+import AppsIcon from '@material-ui/icons/Apps';
 import Grid from '@material-ui/core/Grid';
 import Select from '@material-ui/core/Select';
 import Paper from '@material-ui/core/Paper';
@@ -17,6 +18,7 @@ import Switch from '@material-ui/core/Switch';
 import Input from '@material-ui/core/Input';
 import YAML from 'yaml'
 import {Link} from 'react-router-dom';
+import Breadcrumbs from '@material-ui/core/Breadcrumbs';
 
 import CloudDownload from '@material-ui/icons/CloudDownload';
 import EditIcon from '@material-ui/icons/Edit';
@@ -137,13 +139,13 @@ const Apps = (props) => {
 
 		alert.info("Downloading..")	
 		fetch(globalUrl+"/api/v1/apps/"+id+"/config", {
-    	  	method: 'GET',
-				headers: {
-					'Content-Type': 'application/json',
-					'Accept': 'application/json',
-				},
-	  			credentials: "include",
-    		})
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+			credentials: "include",
+		})
 		.then((response) => {
 			if (response.status !== 200) {
 				window.location.pathname = "/apps"
@@ -155,12 +157,22 @@ const Apps = (props) => {
 			if (!responseJson.success) {
 				alert.error("Failed to download file")
 			} else {
-				const data = YAML.stringify(YAML.parse(responseJson.body))
+				const inputdata = YAML.parse(responseJson.body)
+				const newpaths = {}
+				Object.keys(inputdata["paths"]).forEach(function(key) {
+					newpaths[key.split("?")[0]] = inputdata.paths[key]
+				})
 
-				var name = inputdata.name
+				inputdata.paths = newpaths
+				console.log("INPUT: ", inputdata)
+				var name = inputdata.info.title
 				name = name.replace(/ /g, "_", -1)
 				name = name.toLowerCase()
 
+				delete inputdata.id
+				delete inputdata.editing
+
+				const data = YAML.stringify(inputdata)
 				var blob = new Blob( [ data ], {
 					type: 'application/octet-stream'
 				})
@@ -193,7 +205,6 @@ const Apps = (props) => {
 			boxColor = "green"
 		}
 
-		console.log("IMG: ", data.large_image)
 		var imageline = data.large_image.length === 0 ?
 			<img alt={data.title} style={{width: 100, height: 100}} />
 			: 
@@ -498,9 +509,22 @@ const Apps = (props) => {
 	const appView = isLoggedIn ? 
 		<div style={{maxWidth: 1366, margin: "auto",}}>
 			<div style={appViewStyle}>	
-				<div style={{flex: "1", marginLeft: 10, marginRight: 10}}>
-					<h2>Upload</h2>
-					<div style={{marginTop: 20}}/>
+				<div>
+					<Breadcrumbs aria-label="breadcrumb" separator="›" style={{color: "white",}}>
+						<Link to="/apps" style={{textDecoration: "none", color: "inherit",}}>
+							<h2 style={{color: "rgba(255,255,255,0.5)"}}>
+								<AppsIcon style={{marginRight: 10}} />
+								App upload
+							</h2>
+						</Link>
+						{selectedApp.activated && selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated ?
+							<Link to={`/apps/edit/${selectedApp.id}`} style={{textDecoration: "none", color: "inherit",}}>
+								<h2>
+									{selectedApp.name}
+								</h2>
+							</Link>
+						: null}
+					</Breadcrumbs>
 					<UploadView/>
 				</div>
 				<Divider style={{marginBottom: "10px", marginTop: "10px", height: "100%", width: "1px", backgroundColor: dividerColor}}/>
@@ -988,11 +1012,7 @@ const Apps = (props) => {
 		</div>
 
 	// Maybe use gridview or something, idk
-	return (
-		<div>
-			{loadedCheck}
-		</div>
-	)
+	return loadedCheck
 }
 
 export default Apps 
