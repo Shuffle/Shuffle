@@ -510,39 +510,38 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 	for actualPath, path := range swagger.Paths {
 		// FIXME: Add everything from here:
 		// https://godoc.org/github.com/getkin/kin-openapi/openapi3#PathItem
-		firstQuery := true
 		if path.Get != nil {
-			action, curCode := handleGet(swagger, api, extraParameters, path, actualPath, firstQuery)
+			action, curCode := handleGet(swagger, api, extraParameters, path, actualPath)
 			api.Actions = append(api.Actions, action)
 			pythonFunctions = append(pythonFunctions, curCode)
 		}
 		if path.Connect != nil {
-			action, curCode := handleConnect(swagger, api, extraParameters, path, actualPath, firstQuery)
+			action, curCode := handleConnect(swagger, api, extraParameters, path, actualPath)
 			api.Actions = append(api.Actions, action)
 			pythonFunctions = append(pythonFunctions, curCode)
 		}
 		if path.Head != nil {
-			action, curCode := handleHead(swagger, api, extraParameters, path, actualPath, firstQuery)
+			action, curCode := handleHead(swagger, api, extraParameters, path, actualPath)
 			api.Actions = append(api.Actions, action)
 			pythonFunctions = append(pythonFunctions, curCode)
 		}
 		if path.Delete != nil {
-			action, curCode := handleDelete(swagger, api, extraParameters, path, actualPath, firstQuery)
+			action, curCode := handleDelete(swagger, api, extraParameters, path, actualPath)
 			api.Actions = append(api.Actions, action)
 			pythonFunctions = append(pythonFunctions, curCode)
 		}
 		if path.Post != nil {
-			action, curCode := handlePost(swagger, api, extraParameters, path, actualPath, firstQuery)
+			action, curCode := handlePost(swagger, api, extraParameters, path, actualPath)
 			api.Actions = append(api.Actions, action)
 			pythonFunctions = append(pythonFunctions, curCode)
 		}
 		if path.Patch != nil {
-			action, curCode := handlePatch(swagger, api, extraParameters, path, actualPath, firstQuery)
+			action, curCode := handlePatch(swagger, api, extraParameters, path, actualPath)
 			api.Actions = append(api.Actions, action)
 			pythonFunctions = append(pythonFunctions, curCode)
 		}
 		if path.Put != nil {
-			action, curCode := handlePut(swagger, api, extraParameters, path, actualPath, firstQuery)
+			action, curCode := handlePut(swagger, api, extraParameters, path, actualPath)
 			api.Actions = append(api.Actions, action)
 			pythonFunctions = append(pythonFunctions, curCode)
 		}
@@ -736,7 +735,7 @@ func fixFunctionName(functionName, actualPath string) string {
 	return functionName
 }
 
-func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string, firstQuery bool) (WorkflowAppAction, string) {
+func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string) (WorkflowAppAction, string) {
 	// What to do with this, hmm
 	functionName := fixFunctionName(path.Connect.Summary, actualPath)
 
@@ -756,7 +755,7 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 
 	// Parameters:  []WorkflowAppActionParameter{},
 	// FIXME - add data for POST stuff
-	firstQuery = true
+	firstQuery := true
 	optionalQueries := []string{}
 	parameters := []string{}
 	optionalParameters := []WorkflowAppActionParameter{}
@@ -818,11 +817,10 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 
 				if firstQuery {
 					baseUrl = fmt.Sprintf("%s?%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
 				} else {
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
 				}
+				firstQuery = false
 			}
 
 		}
@@ -843,7 +841,7 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 	return action, curCode
 }
 
-func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string, firstQuery bool) (WorkflowAppAction, string) {
+func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string) (WorkflowAppAction, string) {
 	// What to do with this, hmm
 	functionName := fixFunctionName(path.Get.Summary, actualPath)
 
@@ -863,7 +861,7 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 
 	// Parameters:  []WorkflowAppActionParameter{},
 	// FIXME - add data for POST stuff
-	firstQuery = true
+	firstQuery := true
 	optionalQueries := []string{}
 
 	// FIXME - remove this when authentication is properly introduced
@@ -930,11 +928,12 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 
 				if firstQuery {
 					baseUrl = fmt.Sprintf("%s?%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
 				} else {
+					log.Printf("NOT FIRST QUERY!: %s", baseUrl)
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
+					log.Printf("AFTER: %s", baseUrl)
 				}
+				firstQuery = false
 			}
 
 		}
@@ -955,7 +954,7 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 	return action, curCode
 }
 
-func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string, firstQuery bool) (WorkflowAppAction, string) {
+func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string) (WorkflowAppAction, string) {
 	// What to do with this, hmm
 	functionName := fixFunctionName(path.Head.Summary, actualPath)
 
@@ -975,7 +974,7 @@ func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 
 	// Parameters:  []WorkflowAppActionParameter{},
 	// FIXME - add data for POST stuff
-	firstQuery = true
+	firstQuery := true
 	optionalQueries := []string{}
 	parameters := []string{}
 	optionalParameters := []WorkflowAppActionParameter{}
@@ -1037,11 +1036,10 @@ func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 
 				if firstQuery {
 					baseUrl = fmt.Sprintf("%s?%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
 				} else {
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
 				}
+				firstQuery = false
 			}
 
 		}
@@ -1062,7 +1060,7 @@ func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 	return action, curCode
 }
 
-func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string, firstQuery bool) (WorkflowAppAction, string) {
+func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string) (WorkflowAppAction, string) {
 	// What to do with this, hmm
 	functionName := fixFunctionName(path.Delete.Summary, actualPath)
 
@@ -1082,7 +1080,7 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 
 	// Parameters:  []WorkflowAppActionParameter{},
 	// FIXME - add data for POST stuff
-	firstQuery = true
+	firstQuery := true
 	optionalQueries := []string{}
 	parameters := []string{}
 	optionalParameters := []WorkflowAppActionParameter{}
@@ -1144,11 +1142,10 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 
 				if firstQuery {
 					baseUrl = fmt.Sprintf("%s?%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
 				} else {
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
 				}
+				firstQuery = false
 			}
 
 		}
@@ -1169,7 +1166,7 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 	return action, curCode
 }
 
-func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string, firstQuery bool) (WorkflowAppAction, string) {
+func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string) (WorkflowAppAction, string) {
 	// What to do with this, hmm
 	//log.Printf("PATH: %s", actualPath)
 	functionName := fixFunctionName(path.Post.Summary, actualPath)
@@ -1192,7 +1189,7 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 
 	// Parameters:  []WorkflowAppActionParameter{},
 	// FIXME - add data for POST stuff
-	firstQuery = true
+	firstQuery := true
 	optionalQueries := []string{}
 	parameters := []string{}
 	optionalParameters := []WorkflowAppActionParameter{}
@@ -1256,11 +1253,10 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 
 				if firstQuery {
 					baseUrl = fmt.Sprintf("%s?%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
 				} else {
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
 				}
+				firstQuery = false
 			}
 
 		}
@@ -1281,7 +1277,7 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 	return action, curCode
 }
 
-func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string, firstQuery bool) (WorkflowAppAction, string) {
+func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string) (WorkflowAppAction, string) {
 	// What to do with this, hmm
 	functionName := fixFunctionName(path.Patch.Summary, actualPath)
 
@@ -1301,7 +1297,7 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 
 	// Parameters:  []WorkflowAppActionParameter{},
 	// FIXME - add data for POST stuff
-	firstQuery = true
+	firstQuery := true
 	optionalQueries := []string{}
 	parameters := []string{}
 	optionalParameters := []WorkflowAppActionParameter{}
@@ -1363,11 +1359,10 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 
 				if firstQuery {
 					baseUrl = fmt.Sprintf("%s?%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
 				} else {
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
 				}
+				firstQuery = false
 			}
 
 		}
@@ -1388,7 +1383,7 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 	return action, curCode
 }
 
-func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string, firstQuery bool) (WorkflowAppAction, string) {
+func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string) (WorkflowAppAction, string) {
 	// What to do with this, hmm
 	functionName := fixFunctionName(path.Put.Summary, actualPath)
 
@@ -1408,7 +1403,7 @@ func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 
 	// Parameters:  []WorkflowAppActionParameter{},
 	// FIXME - add data for POST stuff
-	firstQuery = true
+	firstQuery := true
 	optionalQueries := []string{}
 	parameters := []string{}
 	optionalParameters := []WorkflowAppActionParameter{}
@@ -1471,11 +1466,10 @@ func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 
 				if firstQuery {
 					baseUrl = fmt.Sprintf("%s?%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
 				} else {
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
 				}
+				firstQuery = false
 			}
 
 		}

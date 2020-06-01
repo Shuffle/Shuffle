@@ -807,11 +807,12 @@ const AngularWorkflow = (props) => {
 
 		// FIXME - check if they have value before overriding like this for no reason.
 		// Would save a lot of time (400~ ms -> 30ms)
-		//setSelectedAction({})
+		//console.log("ACTION: ", selectedAction)
+		//console.log("APP: ", selectedApp)
+		setSelectedAction({})
 		//setSelectedApp({})
 		//setSelectedTrigger({})
 		//setSelectedEdge({})
-
 
 		// setSelectedTriggerIndex(-1)	
 		//setSelectedActionEnvironment({})
@@ -2635,7 +2636,7 @@ const AngularWorkflow = (props) => {
 					value={selectedActionName}
 					fullWidth
 					onChange={setNewSelectedAction}
-					style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+					style={{backgroundColor: inputColor, color: "white", height: 50}}
 					SelectDisplayProps={{
 						style: {
 							marginLeft: 10,
@@ -2643,24 +2644,24 @@ const AngularWorkflow = (props) => {
 						}
 					}}
 				>
-						{selectedApp.actions.map(data => {
-							var newActionname = data.name
-							if (data.label !== undefined && data.label !== null && data.label.length > 0) {
-								newActionname = data.label
-							}
-							// ROFL FIXME - loop
-							newActionname = newActionname.replace("_", " ")
-							newActionname = newActionname.replace("_", " ")
-							newActionname = newActionname.replace("_", " ")
-							newActionname = newActionname.replace("_", " ")
-							newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
-							return (
-							<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data.name}>
-								{newActionname}
+					{selectedApp.actions.map(data => {
+						var newActionname = data.name
+						if (data.label !== undefined && data.label !== null && data.label.length > 0) {
+							newActionname = data.label
+						}
+						// ROFL FIXME - loop
+						newActionname = newActionname.replace("_", " ")
+						newActionname = newActionname.replace("_", " ")
+						newActionname = newActionname.replace("_", " ")
+						newActionname = newActionname.replace("_", " ")
+						newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
+						return (
+						<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data.name}>
+							{newActionname}
 
-							</MenuItem>
-							)
-						})}
+						</MenuItem>
+						)
+					})}
 				</Select>
 				<div style={{marginTop: "10px", borderColor: "white", borderWidth: "2px", marginBottom: 200}}>
 						<AppActionArguments key={selectedAction.id} selectedAction={selectedAction} />
@@ -4521,7 +4522,7 @@ const AngularWorkflow = (props) => {
 					<div style={{display: "flex", marginTop: 10, marginBottom: 30,}}>
 						<b>Actions</b>
 						<div>
-							{executionData.status !== undefined && executionData.status !== "ABORTED" && executionData.status !== "FINISHED" ? <CircularProgress style={{marginLeft: 20}}/> : null}
+							{executionData.status !== undefined && executionData.status !== "ABORTED" && executionData.status !== "FINISHED" && executionData.status !== "FAILURE" ? <CircularProgress style={{marginLeft: 20}}/> : null}
 						</div>
 					</div>
 					{executionData.results === undefined || executionData.results === null || executionData.results.length === 0 && executionData.status === "EXECUTING" ?

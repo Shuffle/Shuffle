@@ -1355,12 +1355,12 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 			curapp := WorkflowApp{}
 			// FIXME - can this work with ONLY AppID?
 			for _, app := range workflowApps {
-				log.Printf("Name Version: %s_%s, other: %s_%s", app.Name, app.AppVersion, action.AppName, action.AppVersion)
 				if app.ID == action.AppID {
 					curapp = app
 					break
 				}
 
+				// Has to NOT be generated
 				//if app.Name == action.AppName && app.AppVersion == action.AppVersion {
 				//	curapp = app
 				//	break

@@ -43,6 +43,7 @@ const actionListStyle = {
 }
 
 const boxStyle = {
+	color: "white",
 	flex: "1",
 	marginLeft: "10px",
 	marginRight: "10px",
@@ -672,8 +673,10 @@ const AppCreator = (props) => {
 		})
 		.then((responseJson) => {
 			if (!responseJson.success) {
-				setErrorCode(responseJson.reason)
-				alert.error("Failed to verify: ")
+				if (responseJson.reason !== undefined) {
+					setErrorCode(responseJson.reason)
+					alert.error("Failed to verify: "+responseJson.reason)
+				}
 			} else {
 				alert.success("Successfully uploaded openapi")
 				if (window.location.pathname.includes("/new")) {
@@ -940,6 +943,9 @@ const AppCreator = (props) => {
 	const setActionField = (field, value) => {
 		currentAction[field] = value
 		setCurrentAction(currentAction)	
+		//if (updater !== value) {
+		//	setUpdater(value)
+		//}
 	}
 
 	const bodyInfo = actionBodyRequest.includes(currentActionMethod) ?
@@ -1114,6 +1120,7 @@ const AppCreator = (props) => {
 			open={actionsModalOpen} 
 			fullWidth
 			onClose={() => {
+				console.log("CLOSED?")
 				setUrlPath("")
 				setCurrentAction({
 					"name": "",
@@ -1139,7 +1146,7 @@ const AppCreator = (props) => {
 					Name
 					<TextField
 						required
-						style={{flex: "1", marginTop: "5px", marginRight: "15px", backgroundColor: inputColor}}
+						style={{flex: "1", marginTop: 5, marginRight: 15, backgroundColor: inputColor}}
 						fullWidth={true}
 						placeholder="Name"
 						type="name"
@@ -1148,9 +1155,14 @@ const AppCreator = (props) => {
 						variant="outlined"
 						defaultValue={currentAction["name"]}
 						onChange={e => {
+							setActionField("name", e.target.value)
+						}}
+						onBlur={e => {
 							// Fix basic issues in frontend. Python functions run a-zA-Z0-9_
-							const regex = /[A-Z-a-z0-9 _]/g;
+							console.log(e.target.value)
+							const regex = /[A-Za-z0-9 _]/g;
 							const found = e.target.value.match(regex);
+							console.log("FOUND: ", found)
 							if (found !== null) {
 								setActionField("name", found.join(""))
 							}
@@ -1165,7 +1177,7 @@ const AppCreator = (props) => {
 							},
 						}}
 					/>
-					<div style={{marginTop: "10px"}}/>
+					<div style={{marginTop: 10}}/>
 					Description
 					<TextField
 						required
@@ -1327,15 +1339,16 @@ const AppCreator = (props) => {
 					{bodyInfo}
 				</DialogContent>
 				<DialogActions>
-	        	  	<Button style={{borderRadius: "0px"}} onClick={() => {
-						setActionsModalOpen(false)}}>
-						Cancel	
-					</Button>
-	        	  	<Button color="primary" variant="outlined" style={{borderRadius: "0px"}} onClick={() => {
+	      <Button style={{borderRadius: "0px"}} onClick={() => {
+					setActionsModalOpen(false)}}>
+					Cancel	
+				</Button>
+	      <Button color="primary" variant="outlined" style={{borderRadius: "0px"}} onClick={() => {
 						const errors = getActionErrors()		
 						addActionToView(errors)
 						setActionsModalOpen(false)
 						setUrlPathQueries([]) 
+						setUrlPath("")
 					}}>
 						Submit	
 					</Button>
@@ -1462,7 +1475,7 @@ const AppCreator = (props) => {
 								margin="normal"
 								variant="outlined"
 								value={name}
-      	 					onChange={e => setName(e.target.value)}
+      	 				onChange={e => setName(e.target.value)}
 								color="primary"
 								InputProps={{
 									style:{
@@ -1570,7 +1583,7 @@ const AppCreator = (props) => {
 					}}>
 						Save	
 					</Button>
-					{errorCode}
+					{errorCode.length > 0 ? `Error: ${errorCode}` : null}
 				</Paper>
 		</div>
 

@@ -1906,6 +1906,7 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		return
 	}
 
 	if count == 0 {
@@ -5536,8 +5537,26 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("Functions: %d", swagger.Paths)
-	log.Printf("Actions: %d", len(api.Actions))
+	// FIXME: CHECK IF SAME NAME AS NORMAL APP
+	// Can't overwrite existing normal app
+	workflowApps, err := getAllWorkflowApps(ctx)
+	if err != nil {
+		log.Printf("Failed getting all workflow apps from database to verify: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Failed to verify existence"}`))
+		return
+	}
+
+	// Same name only?
+	lowerName := strings.ToLower(swagger.Info.Title)
+	for _, app := range workflowApps {
+		if app.Downloaded && !app.Generated && strings.ToLower(app.Name) == lowerName {
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Normal app with name %s already exists. Delete it first."}`, swagger.Info.Title)))
+			return
+		}
+	}
+
 	api.Owner = user.Id
 
 	err = dumpApi(basePath, api)
@@ -5843,7 +5862,7 @@ func init() {
 	log.Printf("Running INIT process")
 	dbclient, err = datastore.NewClient(ctx, gceProject)
 	if err != nil {
-		log.Printf("DBclient error during init: %s", err)
+		panic(fmt.Sprintf("DBclient error during init: %s", err))
 	}
 
 	go runInit(ctx)
