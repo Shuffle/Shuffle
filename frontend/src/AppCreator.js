@@ -1262,6 +1262,11 @@ const AppCreator = (props) => {
 								parsedurl = request.url
 							}
 
+							if (parsedurl.includes("<") && parsedurl.includes(">")) {
+								parsedurl = parsedurl.split("<").join("{")
+								parsedurl = parsedurl.split(">").join("}")
+							}
+
 							if (parsedurl.startsWith("http") || parsedurl.startsWith("ftp")) {
 								if (parsedurl !== undefined && parsedurl.includes(parameterName)) {
 									// Remove <> etc.
@@ -1282,6 +1287,7 @@ const AppCreator = (props) => {
 								setActionField("url", parsedurl)
 								setUrlPath(parsedurl)
 							}
+
 							//console.log("URL: ", request.url)
 						}}
 					/>

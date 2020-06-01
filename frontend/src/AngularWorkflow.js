@@ -4485,7 +4485,7 @@ const AngularWorkflow = (props) => {
 				}
 			</div>
 			:
-			<div style={{padding: 25, }}>
+			<div style={{padding: 25, maxWidth: 365, overflowX: "hidden",}}>
 				<Breadcrumbs aria-label="breadcrumb" separator="›" style={{color: "white", fontSize: 16}}>
 					<h2 style={{color: "rgba(255,255,255,0.5)", cursor: "pointer"}} onClick={() => {setExecutionModalView(0)}}>
 						<DirectionsRunIcon  style={{marginRight: 10}} />
