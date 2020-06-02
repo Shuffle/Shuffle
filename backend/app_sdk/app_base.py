@@ -114,18 +114,29 @@ class AppBase:
         
             # 1. Find the action
             baseresult = ""
+            actionname_lower = actionname.lower()
             try: 
-                if actionname.lower() == "exec": 
+                if actionname_lower == "exec": 
                     baseresult = execution_data["execution_argument"]
                 else:
                     for result in execution_data["results"]:
                         resultlabel = result["action"]["label"].replace(" ", "_", -1).lower()
-                        if resultlabel.lower() == actionname.lower():
+                        if resultlabel.lower() == actionname_lower:
                             baseresult = result["result"]
                             break
+                    
+                    print("BEFORE VARIABLES!")
+                    if len(baseresult) == 0:
+                        print("Variables: %s" % execution_data["workflow"]["workflow_variables"])
+                        for variable in execution_data["workflow"]["workflow_variables"]:
+                            variablename = variable["name"].replace(" ", "_", -1).lower()
+
+                            if variablename.lower() == actionname_lower:
+                                baseresult = variable["value"]
+                                break
         
             except KeyError as error:
-                print(f"Error: {error}")
+                print(f"KeyError in JSON: {error}")
         
             print(f"After first trycatch")
         
@@ -187,7 +198,7 @@ class AppBase:
                 self.logger.debug(f"\n\nHandle static data with JSON: {data}\n\n")
 
                 actualitem = re.findall(match, data, re.MULTILINE)
-                self.logger.info("PARSED: %s" % actualitem)
+                self.logger.info("STATIC PARSED: %s" % actualitem)
                 if len(actualitem) > 0:
                     for replace in actualitem:
                         try:
@@ -238,7 +249,7 @@ class AppBase:
 
                 self.logger.info("Fullname: %s" % fullname)
                 actualitem = re.findall(match, fullname, re.MULTILINE)
-                self.logger.info("PARSED: %s" % actualitem)
+                self.logger.info("ACTION PARSED: %s" % actualitem)
                 if len(actualitem) > 0:
                     for replace in actualitem:
                         try:
