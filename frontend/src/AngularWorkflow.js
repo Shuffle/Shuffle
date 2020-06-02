@@ -172,7 +172,11 @@ const AngularWorkflow = (props) => {
 	const [workflowExecutions, setWorkflowExecutions] = React.useState([]);
 
 	const unloadText = 'Are you sure you want to leave?'
-	useBeforeunload(() => unloadText)
+	useBeforeunload(() => {
+		if (!lastSaved) {
+			return unloadText
+		}
+	})
 
 	const [elements, setElements] = useState([])
 	const { start, stop } = useInterval({
@@ -828,6 +832,7 @@ const AngularWorkflow = (props) => {
 
 	const onEdgeSelect = (event) => {
 		setRightSideBarOpen(true)
+		setLastSaved(false)
 
 		const triggercheck = workflow.triggers.find(trigger => trigger.id === event.target.data()["source"])
 		if (triggercheck === undefined) {
@@ -843,6 +848,7 @@ const AngularWorkflow = (props) => {
 
 	const onNodeSelect = (event) => {
 		const data = event.target.data()
+		setLastSaved(false)
 		//console.log(data)
 
 		if (data.type === "ACTION") {
@@ -949,7 +955,7 @@ const AngularWorkflow = (props) => {
 	}
 
 	const onNodeAdded = (event) => {
-		//setLastSaved(false)
+		setLastSaved(false)
 		const node = event.target
 
 		if (node.isNode() && cy.nodes().size() === 1) {
@@ -960,6 +966,7 @@ const AngularWorkflow = (props) => {
 	}
 
 	const onEdgeRemoved = (event) => {
+		setLastSaved(false)
 		const edge = event.target
 
 		workflow.branches = workflow.branches.filter(a => a.id !== edge.data().id)
@@ -980,6 +987,7 @@ const AngularWorkflow = (props) => {
 	const onNodeRemoved = (event) => {
 		const node = event.target
 		const data = node.data()
+		setLastSaved(false)
 
 		//var currentnode = cy.getElementById(data.id)
 		//if (currentnode.length === 0) {
@@ -4340,7 +4348,6 @@ const AngularWorkflow = (props) => {
 			return null
 		}
 
-		setLastSaved(false)
 		if (Object.getOwnPropertyNames(selectedAction).length > 0 && Object.getOwnPropertyNames(selectedApp).length > 0) {
 			//console.time('ACTIONSTART');
 			return(
@@ -4850,7 +4857,7 @@ const AngularWorkflow = (props) => {
 	return (
 		<div>	
 		  <Prompt
-				when={true}
+				when={!lastSaved}
 				message={unloadText}
 			/>
 			{loadedCheck}
