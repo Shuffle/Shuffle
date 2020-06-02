@@ -3,6 +3,7 @@ import React, {useState, useEffect} from 'react';
 import Paper from '@material-ui/core/Paper';
 import Button from '@material-ui/core/Button';
 import Divider from '@material-ui/core/Divider';
+import {Link} from 'react-router-dom';
 
 import TextField from '@material-ui/core/TextField';
 
@@ -51,6 +52,7 @@ const Settings = (props) => {
 	
 	const boxStyle = {
 		flex: "1",
+		color: "white",
 		marginLeft: "10px",
 		marginRight: "10px",
 		paddingLeft: "30px",
@@ -181,6 +183,7 @@ const Settings = (props) => {
 			<div style={{display: "flex", marginTop: "80px"}}>
 				<Paper style={boxStyle}>
 					<h2>APIKEY</h2>
+					<Link to="/docs/api#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is the API key used for?</Link>
 					<TextField
 						style={{backgroundColor: inputColor, flex: "1"}}
 						InputProps={{

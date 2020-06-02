@@ -371,7 +371,7 @@ const Admin = (props) => {
 				<Tabs
 					value={curTab}
 					indicatorColor="primary"
-					textColor="primary"
+					textColor="white"
 					onChange={setConfig}
 					aria-label="disabled tabs example"
 				>

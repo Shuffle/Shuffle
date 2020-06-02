@@ -42,8 +42,6 @@ var globalUrl = window.location.origin
 if (window.location.protocol == "http:" && window.location.port === "3000") {
 	globalUrl = "http://192.168.3.6:5001"
 }
-console.log(window.location)
-console.log(globalUrl)
 
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
