@@ -18,6 +18,8 @@ import CachedIcon from '@material-ui/icons/Cached';
 import EditIcon from '@material-ui/icons/Edit';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
 import PlayArrowIcon from '@material-ui/icons/PlayArrow';
+import AddIcon from '@material-ui/icons/Add';
+import PublishIcon from '@material-ui/icons/Publish';
 //import JSONPretty from 'react-json-pretty';
 //import JSONPrettyMon from 'react-json-pretty/dist/monikai'
 import ReactJson from 'react-json-view'
@@ -881,9 +883,15 @@ const Workflows = (props) => {
 						<h2>Workflows</h2> 
 					</div>
 					<div style={{marginTop: 20}}>
-						<Button color="primary" style={{}} variant="outlined" onClick={() => setModalOpen(true)}>New</Button> 				
-						<Button color="primary" style={{}} variant="outlined" onClick={() => upload.click()}>Import</Button> 				
-						<input hidden type="file" ref={(ref) => upload = ref} onChange={importFiles} />
+					 	<Tooltip color="primary" title={"Create new workflow"} placement="top">
+							<Button color="primary" style={{}} variant="text" onClick={() => setModalOpen(true)}><AddIcon /></Button> 				
+						</Tooltip>
+					 	<Tooltip color="primary" title={"Import workflows"} placement="top">
+							<Button color="primary" style={{}} variant="text" onClick={() => upload.click()}>
+								<PublishIcon />
+							</Button> 				
+						</Tooltip>
+						<input hidden type="file" multiple="multiple" ref={(ref) => upload = ref} onChange={importFiles} />
 					</div>
 				</div>
 				<Divider style={{marginBottom: "10px", height: "1px", width: "100%", backgroundColor: dividerColor}}/>
@@ -902,7 +910,7 @@ const Workflows = (props) => {
 						<h2>Executions: {selectedWorkflow.name}</h2> 
 					</div>
 					<div style={{flex: "1"}}>
-						<Button color="primary" style={{marginTop: "20px"}} variant="outlined" onClick={() => {
+						<Button color="primary" style={{marginTop: "20px"}} variant="text" onClick={() => {
 								alert.info("Refreshing executions"); 
 								getWorkflowExecution(selectedWorkflow.id)
 							}}>
