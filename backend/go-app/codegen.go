@@ -929,9 +929,7 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 				if firstQuery {
 					baseUrl = fmt.Sprintf("%s?%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
 				} else {
-					log.Printf("NOT FIRST QUERY!: %s", baseUrl)
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					log.Printf("AFTER: %s", baseUrl)
 				}
 				firstQuery = false
 			}

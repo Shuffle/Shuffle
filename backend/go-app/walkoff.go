@@ -1378,7 +1378,6 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 			// Check tosee if the appaction is valid
 			curappaction := WorkflowAppAction{}
 			for _, curAction := range curapp.Actions {
-				log.Printf("Same? %s - %s", action.Name, curAction.Name)
 				if action.Name == curAction.Name {
 					curappaction = curAction
 					break
