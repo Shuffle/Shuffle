@@ -1906,6 +1906,7 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		return
 	}
 
 	if count == 0 {
@@ -2112,7 +2113,6 @@ func SetSession(ctx context.Context, Userdata User, value string) error {
 func setOpenApiDatastore(ctx context.Context, id string, data ParsedOpenApi) error {
 	k := datastore.NameKey("openapi3", id, nil)
 	if _, err := dbclient.Put(ctx, k, &data); err != nil {
-		log.Println(err)
 		return err
 	}
 
@@ -5075,6 +5075,8 @@ func getOpenapi(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	log.Printf("API LENGTH GET: %d, ID: %s", len(parsedApi.Body), id)
+
 	parsedApi.Success = true
 	data, err := json.Marshal(parsedApi)
 	if err != nil {
@@ -5505,13 +5507,6 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	// Test = client side with fetch?
 
 	ctx := context.Background()
-	//client, err := storage.NewClient(ctx)
-	//if err != nil {
-	//	log.Printf("Failed to create client (storage): %v", err)
-	//	resp.WriteHeader(401)
-	//	resp.Write([]byte(`{"success": false, "reason": "Failed creating client"}`))
-	//	return
-	//}
 
 	swagger, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData(body)
 	if err != nil {
@@ -5534,7 +5529,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	//log.Printf("Should generate yaml")
-	api, pythonfunctions, err := generateYaml(swagger, newmd5)
+	swagger, api, pythonfunctions, err := generateYaml(swagger, newmd5)
 	if err != nil {
 		log.Printf("Failed building and generating yaml: %s", err)
 		resp.WriteHeader(500)
@@ -5542,11 +5537,27 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	api.Owner = user.Id
-	if len(test.Image) > 0 {
-		api.SmallImage = test.Image
-		api.LargeImage = test.Image
+	// FIXME: CHECK IF SAME NAME AS NORMAL APP
+	// Can't overwrite existing normal app
+	workflowApps, err := getAllWorkflowApps(ctx)
+	if err != nil {
+		log.Printf("Failed getting all workflow apps from database to verify: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Failed to verify existence"}`))
+		return
 	}
+
+	// Same name only?
+	lowerName := strings.ToLower(swagger.Info.Title)
+	for _, app := range workflowApps {
+		if app.Downloaded && !app.Generated && strings.ToLower(app.Name) == lowerName {
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Normal app with name %s already exists. Delete it first."}`, swagger.Info.Title)))
+			return
+		}
+	}
+
+	api.Owner = user.Id
 
 	err = dumpApi(basePath, api)
 	if err != nil {
@@ -5569,7 +5580,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 
 	identifier = strings.Replace(identifier, " ", "-", -1)
 	identifier = strings.Replace(identifier, "_", "-", -1)
-	log.Printf("Successfully uploaded %s to bucket. Proceeding to cloud function", identifier)
+	log.Printf("Successfully parsed %s. Proceeding to docker container", identifier)
 
 	// Now that the baseline is setup, we need to make it into a cloud function
 	// 1. Upload the API to datastore for use
@@ -5684,24 +5695,38 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	log.Printf("DO I REACH HERE WHEN SAVING?")
 	parsed := ParsedOpenApi{
-		ID:   api.ID,
+		ID:   newmd5,
 		Body: string(body),
 	}
 
+	log.Printf("API LENGTH: %d, ID: %s", len(parsed.Body), newmd5)
+	// FIXME: Might cause versioning issues if we re-use the same!!
+	// FIXME: Need a way to track different versions of the same app properly.
+	// Hint: Save API.id somewhere, and use newmd5 to save latest version
+	err = setOpenApiDatastore(ctx, newmd5, parsed)
+	if err != nil {
+		log.Printf("Failed saving to datastore: %s", err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "%"}`, err)))
+	}
+
+	// Backup every single one
 	setOpenApiDatastore(ctx, api.ID, parsed)
-	err = increaseStatisticsField(ctx, "total_apps_created", api.ID, 1)
+
+	err = increaseStatisticsField(ctx, "total_apps_created", newmd5, 1)
 	if err != nil {
 		log.Printf("Failed to increase success execution stats: %s", err)
 	}
 
-	err = increaseStatisticsField(ctx, "openapi_apps_created", api.ID, 1)
+	err = increaseStatisticsField(ctx, "openapi_apps_created", newmd5, 1)
 	if err != nil {
 		log.Printf("Failed to increase success execution stats: %s", err)
 	}
 
 	resp.WriteHeader(200)
-	resp.Write([]byte(`{"success": true}`))
+	resp.Write([]byte(fmt.Sprintf(`{"success": true, "id": "%s"}`, api.ID)))
 }
 
 func healthCheckHandler(resp http.ResponseWriter, request *http.Request) {
@@ -5748,10 +5773,10 @@ func runInit(ctx context.Context) {
 				}
 			}
 
+			//log.Printf("Schedule time: every %d seconds", schedule.Seconds)
 			jobret, err := newscheduler.Every(schedule.Seconds).Seconds().NotImmediately().Run(job)
 			if err != nil {
 				log.Printf("Failed to schedule workflow: %s", err)
-				// FIXME: what now? lol:w
 			}
 
 			scheduledJobs[schedule.Id] = jobret
@@ -5837,7 +5862,7 @@ func init() {
 	log.Printf("Running INIT process")
 	dbclient, err = datastore.NewClient(ctx, gceProject)
 	if err != nil {
-		log.Printf("DBclient error during init: %s", err)
+		panic(fmt.Sprintf("DBclient error during init: %s", err))
 	}
 
 	go runInit(ctx)

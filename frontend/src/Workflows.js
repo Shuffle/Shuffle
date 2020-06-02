@@ -886,15 +886,15 @@ const Workflows = (props) => {
 		<div style={emptyWorkflowStyle}>	
 			<Paper style={boxStyle}>
 				<div>
-					<h2>Welcome to Shuffle!</h2>
+					<h2>Welcome to Shuffle</h2>
 				</div>
 				<div>
 					<p>
-						<b>Shuffle</b> is a flexible, easy to use, automation framework allowing users to integrate their services and devices to reduce the amount of manual labor required for those tasks. <Link to="/docs/workflows" style={{textDecoration: "none", color: "#f85a3e"}}>Click here for more information.</Link>
+						<b>Shuffle</b> is a flexible, easy to use, automation platform allowing users to integrate their services and devices freely. It's made to significantly reduce the amount of manual labor, and is focused on security applications. <Link to="/docs/about" style={{textDecoration: "none", color: "#f85a3e"}}>Click here to learn more.</Link>
 					</p>
 				</div>
 				<div>
-					If you want to jump straight into it, click the following button to create your first workflow: 
+					If you want to jump straight into it, click here to create your first workflow: 
 				</div>
 				<div>
 					<Button color="primary" style={{marginTop: "20px",}} variant="outlined" onClick={() => setModalOpen(true)}>New workflow</Button> 				

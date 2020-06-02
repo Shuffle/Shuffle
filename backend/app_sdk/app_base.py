@@ -588,6 +588,7 @@ class AppBase:
         logging.basicConfig(format="{asctime} - {name} - {levelname}:{message}", style='{')
         logger = logging.getLogger(f"{cls.__name__}")
         logger.setLevel(logging.DEBUG)
+        print("Started execution!!")
 
         app = cls(redis=None, logger=logger, console_logger=logger)
 

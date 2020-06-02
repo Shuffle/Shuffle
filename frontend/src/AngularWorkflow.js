@@ -4,6 +4,7 @@ import { useInterval } from 'react-powerhooks';
 import uuid from "uuid";
 
 import {Link} from 'react-router-dom';
+import { Prompt } from 'react-router'
 import TextField from '@material-ui/core/TextField';
 import Drawer from '@material-ui/core/Drawer';
 import Button from '@material-ui/core/Button';
@@ -28,6 +29,7 @@ import Checkbox from '@material-ui/core/Checkbox';
 import Breadcrumbs from '@material-ui/core/Breadcrumbs';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import ReactJson from 'react-json-view'
+import { useBeforeunload } from 'react-beforeunload';
 
 import DirectionsRunIcon from '@material-ui/icons/DirectionsRun';
 import PolymerIcon from '@material-ui/icons/Polymer';
@@ -169,6 +171,9 @@ const AngularWorkflow = (props) => {
 	const [update, setUpdate] = useState("");
 	const [workflowExecutions, setWorkflowExecutions] = React.useState([]);
 
+	const unloadText = 'Are you sure you want to leave?'
+	useBeforeunload(() => unloadText)
+
 	const [elements, setElements] = useState([])
 	const { start, stop } = useInterval({
 	  	duration: 2500,
@@ -176,7 +181,7 @@ const AngularWorkflow = (props) => {
 	  	callback: () => {
 				fetchUpdates()
 	  	}
-	});
+	})
 
 	const getWorkflowExecution = (id) => {
 		fetch(globalUrl+"/api/v1/workflows/"+id+"/executions", {
@@ -798,16 +803,17 @@ const AngularWorkflow = (props) => {
 	}
 
 	const onUnselect = (event) => {
-		//console.log("Unselect?")
 		console.time("UNSELECT")
 
 		// FIXME - check if they have value before overriding like this for no reason.
 		// Would save a lot of time (400~ ms -> 30ms)
-		//setSelectedActionName({})
+		//console.log("ACTION: ", selectedAction)
+		//console.log("APP: ", selectedApp)
 		setSelectedAction({})
-		setSelectedApp({})
-		setSelectedTrigger({})
-		setSelectedEdge({})
+		//setSelectedApp({})
+		//setSelectedTrigger({})
+		//setSelectedEdge({})
+
 		// setSelectedTriggerIndex(-1)	
 		//setSelectedActionEnvironment({})
 		//setSelectedEdge({})
@@ -821,10 +827,15 @@ const AngularWorkflow = (props) => {
 	}
 
 	const onEdgeSelect = (event) => {
+		setRightSideBarOpen(true)
+
 		const triggercheck = workflow.triggers.find(trigger => trigger.id === event.target.data()["source"])
 		if (triggercheck === undefined) {
 			setSelectedEdgeIndex(workflow.branches.findIndex(data => data.id === event.target.data()["id"]))
 			setSelectedEdge(event.target.data())
+
+			setSelectedAction({})
+			setSelectedTrigger({})
 		} else {
 			alert.info("Can't edit branches from triggers") 
 		}
@@ -837,7 +848,7 @@ const AngularWorkflow = (props) => {
 		if (data.type === "ACTION") {
 			// FIXME - unselect
 			//console.log(cy.elements('[_id!="${data._id}"]`))
-			console.time('ACTIONSTART');
+			// Does it choose the wrong action?
 			const curaction = workflow.actions.find(a => a.id === data.id)
 			if (!curaction || curaction === undefined) { 
 				//console.log("Action not found error")
@@ -855,25 +866,24 @@ const AngularWorkflow = (props) => {
 				env = environments[0]
 			}
 
-			console.log("Selected: ", data.id)
-			console.log(curaction)
-
-			setRequiresAuthentication(curapp.authentication.required)
 			setSelectedApp(curapp)
+			setSelectedAction(curaction)
 			setSelectedActionEnvironment(env)
 			setSelectedActionName(curaction.name)
-			setSelectedAction(curaction)
+			setRequiresAuthentication(curapp.authentication.required)
 		} else if (data.type === "TRIGGER") {
 			//console.log("Should handle trigger "+data.triggertype)
 			//console.log(data)
 
 			setSelectedTriggerIndex(workflow.triggers.findIndex(a => a.id === data.id))
 			setSelectedTrigger(data)
-			setSelectedActionEnvironment(data.env)
 			setSelectedActionName(data.name)
+			setSelectedActionEnvironment(data.env)
 		} else {
-			console.log("Should handle type "+data.type)
+			alert.error("Can't handle "+data.type)
 		}
+
+		setRightSideBarOpen(true)
 	}
 
 	const onEdgeAdded = (event) => {
@@ -2103,8 +2113,9 @@ const AngularWorkflow = (props) => {
 	const setNewSelectedAction = (e) => {
 		const newaction = selectedApp.actions.find(a => a.name === e.target.value)
 
+		// Does this one find the wrong one?
 		selectedAction.name = newaction.name
-		selectedAction.parameters = newaction.parameters 
+		selectedAction.parameters = JSON.parse(JSON.stringify(newaction.parameters))
 
 		// FIXME - this is broken sometimes lol
 		//var env = environments.find(a => a.name === newaction.environment)
@@ -2180,7 +2191,7 @@ const AngularWorkflow = (props) => {
 	// Dropdown -> static, action, local env, global env
 	// VALUE (JSON)
 	// {data.name}, {data.description}, {data.required}, {data.schema.type}
-	const AppActionArguments = () => {
+	const AppActionArguments = (props) => {
 		const [selectedActionParameters, setSelectedActionParameters] = React.useState([])
 		const [selectedVariableParameter, setSelectedVariableParameter] = React.useState()
 
@@ -2189,7 +2200,10 @@ const AngularWorkflow = (props) => {
 				if (requiresAuthentication) {
 					console.log("ADD AUTHENTICATION FIELDS")
 				}
-				setSelectedActionParameters(selectedAction.parameters)
+
+				if (selectedAction.parameters !== null && selectedAction.parameters.length > 0) {
+					setSelectedActionParameters(selectedAction.parameters)
+				}
 			}
 			
 			if ((selectedVariableParameter === null || selectedVariableParameter === undefined) && (workflow.workflow_variables !== null && workflow.workflow_variables.length > 0)) {
@@ -2201,20 +2215,20 @@ const AngularWorkflow = (props) => {
 
 		const changeActionParameter = (event, count) => {
 			selectedActionParameters[count].value = event.target.value
-			selectedAction.parameters = selectedActionParameters
+			selectedAction.parameters[count].value = event.target.value
 			setSelectedAction(selectedAction)
+			//setUpdate(event.target.value)
 		}
-
 
 		const changeActionParameterVariable = (fieldvalue, count) => {
 			setSelectedVariableParameter(fieldvalue)
 
 			// this isn't updated anywhere in the workflow
-			setSelectedActionName({})
-			setSelectedAction({})
-			setSelectedTrigger({})
-			setSelectedApp({})
-			setSelectedEdge({})
+			// setSelectedActionName({})
+			// setSelectedAction({})
+			// setSelectedTrigger({})
+			// setSelectedApp({})
+			// setSelectedEdge({})
 
 			selectedActionParameters[count].action_field = fieldvalue 
 			selectedAction.parameters = selectedActionParameters
@@ -2222,6 +2236,7 @@ const AngularWorkflow = (props) => {
 			setSelectedActionName(selectedActionName)
 			setSelectedApp(selectedApp)
 			setSelectedAction(selectedAction)
+			setUpdate(fieldvalue)
 		}
 
 		// Sets ACTION_RESULT things
@@ -2236,11 +2251,6 @@ const AngularWorkflow = (props) => {
 			selectedActionParameters[count].action_field = fieldvalue
 			selectedAction.parameters = selectedActionParameters
 
-			setSelectedActionName({})
-			setSelectedAction({})
-			setSelectedTrigger({})
-			setSelectedApp({})
-			setSelectedEdge({})
 			// FIXME - check if startnode
 
 			// Set value 
@@ -2248,6 +2258,7 @@ const AngularWorkflow = (props) => {
 			setSelectedApp(selectedApp)
 
 			setSelectedAction(selectedAction)
+			setUpdate(fieldvalue)
 		}
 
 		const changeActionParameterVariant = (data, count) => {
@@ -2283,7 +2294,8 @@ const AngularWorkflow = (props) => {
 			setSelectedAction(selectedAction)
 		}
 
-		if (Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters) {
+		// FIXME: Issue #40 - selectedActionParameters not reset
+		if (Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters.length > 0) {
 			return (
 				<div style={{marginTop: "30px"}}>
 					<b>Arguments</b>
@@ -2300,7 +2312,7 @@ const AngularWorkflow = (props) => {
 							multiline = true
 						}
 
-						if (data.value.startsWith("{") && data.value.endsWith("}")) {
+						if (data.value !== undefined && data.value.startsWith("{") && data.value.endsWith("}")) {
 							multiline = true
 						}
 
@@ -2577,7 +2589,7 @@ const AngularWorkflow = (props) => {
 			/>
 
 			<div style={{marginTop: "20px"}}>
-				Environment:
+				Environment
 				<Select
 					value={selectedActionEnvironment === undefined || selectedActionEnvironment.Name === undefined ? "" : selectedActionEnvironment.Name}
 					PaperProps={{
@@ -2624,10 +2636,11 @@ const AngularWorkflow = (props) => {
 					value={selectedActionName}
 					fullWidth
 					onChange={setNewSelectedAction}
-					style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+					style={{backgroundColor: inputColor, color: "white", height: 50}}
 					SelectDisplayProps={{
 						style: {
 							marginLeft: 10,
+							maxHeight: 200,
 						}
 					}}
 				>
@@ -2651,7 +2664,7 @@ const AngularWorkflow = (props) => {
 					})}
 				</Select>
 				<div style={{marginTop: "10px", borderColor: "white", borderWidth: "2px", marginBottom: 200}}>
-					<AppActionArguments key={"hey"} />
+						<AppActionArguments key={selectedAction.id} selectedAction={selectedAction} />
 
 				</div>
 			</div>
@@ -4118,7 +4131,7 @@ const AngularWorkflow = (props) => {
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
 								<div style={{flex: "10"}}> 
-									<b>Run how often (seconds)? </b> 
+									<b>Interval (seconds) </b> 
 								</div>
 							</div>
 							<TextField
@@ -4323,9 +4336,12 @@ const AngularWorkflow = (props) => {
 	}
 
 	const RightSideBar = () => {
+		if (!rightSideBarOpen) {
+			return null
+		}
+
 		setLastSaved(false)
 		if (Object.getOwnPropertyNames(selectedAction).length > 0 && Object.getOwnPropertyNames(selectedApp).length > 0) {
-			setRightSideBarOpen(true)
 			//console.time('ACTIONSTART');
 			return(
 				<div style={rightsidebarStyle}>	
@@ -4334,7 +4350,6 @@ const AngularWorkflow = (props) => {
 			)
 		} else if (Object.getOwnPropertyNames(selectedTrigger).length > 0) {
 			if (selectedTrigger.trigger_type === "SCHEDULE") {
-				setRightSideBarOpen(true)
 				console.log("SCHEDULE")
 				return(
 					<div style={rightsidebarStyle}>	
@@ -4342,24 +4357,18 @@ const AngularWorkflow = (props) => {
 					</div>
 				)
 			} else if (selectedTrigger.trigger_type === "WEBHOOK") {
-				setRightSideBarOpen(true)
-				console.log("WEBHOOK")
 				return(
 					<div style={rightsidebarStyle}>	
 						<WebhookSidebar />
 					</div>
 				)
 			} else if (selectedTrigger.trigger_type === "EMAIL") {
-				setRightSideBarOpen(true)
-				console.log("EMAIL")
 				return(
 					<div style={rightsidebarStyle}>	
 						<EmailSidebar />
 					</div>
 				)
 			} else if (selectedTrigger.trigger_type === "USERINPUT") {
-				setRightSideBarOpen(true)
-				console.log("USER INPUT SIDEBAR")
 				return(
 					<div style={rightsidebarStyle}>	
 						<UserinputSidebar />
@@ -4372,7 +4381,6 @@ const AngularWorkflow = (props) => {
 				return null
 			}
 		} else if (Object.getOwnPropertyNames(selectedEdge).length > 0) {
-			setRightSideBarOpen(true)
 			return(
 				<div style={rightsidebarStyle}>	
 					<EdgeSidebar />
@@ -4478,7 +4486,7 @@ const AngularWorkflow = (props) => {
 				}
 			</div>
 			:
-			<div style={{padding: 25, }}>
+			<div style={{padding: 25, maxWidth: 365, overflowX: "hidden",}}>
 				<Breadcrumbs aria-label="breadcrumb" separator="›" style={{color: "white", fontSize: 16}}>
 					<h2 style={{color: "rgba(255,255,255,0.5)", cursor: "pointer"}} onClick={() => {setExecutionModalView(0)}}>
 						<DirectionsRunIcon  style={{marginRight: 10}} />
@@ -4489,7 +4497,7 @@ const AngularWorkflow = (props) => {
 					<h2>Executing Workflow</h2>	
 					{executionData.execution_argument !== undefined && executionData.execution_argument.length > 0 ?
 					<div>
-						<h3>Execution Argument: </h3>{executionText}
+						<h3>Execution Argument: </h3>{executionData.execution_argument}
 					</div>
 					: null }
 					{executionData.status !== undefined && executionData.status.length > 0 ?
@@ -4514,7 +4522,7 @@ const AngularWorkflow = (props) => {
 					<div style={{display: "flex", marginTop: 10, marginBottom: 30,}}>
 						<b>Actions</b>
 						<div>
-							{executionData.status !== undefined && executionData.status !== "ABORTED" && executionData.status !== "FINISHED" ? <CircularProgress style={{marginLeft: 20}}/> : null}
+							{executionData.status !== undefined && executionData.status !== "ABORTED" && executionData.status !== "FINISHED" && executionData.status !== "FAILURE" ? <CircularProgress style={{marginLeft: 20}}/> : null}
 						</div>
 					</div>
 					{executionData.results === undefined || executionData.results === null || executionData.results.length === 0 && executionData.status === "EXECUTING" ?
@@ -4841,6 +4849,10 @@ const AngularWorkflow = (props) => {
 
 	return (
 		<div>	
+		  <Prompt
+				when={true}
+				message={unloadText}
+			/>
 			{loadedCheck}
 		</div>	
 	)

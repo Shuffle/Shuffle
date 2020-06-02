@@ -2,6 +2,7 @@ import React, { useEffect} from 'react';
 
 import { useInterval } from 'react-powerhooks';
 
+import AppsIcon from '@material-ui/icons/Apps';
 import Grid from '@material-ui/core/Grid';
 import Select from '@material-ui/core/Select';
 import Paper from '@material-ui/core/Paper';
@@ -17,8 +18,12 @@ import Switch from '@material-ui/core/Switch';
 import Input from '@material-ui/core/Input';
 import YAML from 'yaml'
 import {Link} from 'react-router-dom';
+import Breadcrumbs from '@material-ui/core/Breadcrumbs';
 
 import CloudDownload from '@material-ui/icons/CloudDownload';
+import EditIcon from '@material-ui/icons/Edit';
+import DeleteIcon from '@material-ui/icons/Delete';
+
 import { useAlert } from "react-alert";
 
 import Dialog from '@material-ui/core/Dialog';
@@ -117,10 +122,12 @@ const Apps = (props) => {
 			setFilteredApps(responseJson)
 			if (responseJson.length > 0) {
 				setSelectedApp(responseJson[0])
-				if (responseJson[0].actions.length > 0) {
+				if (responseJson[0].actions !== null && responseJson[0].actions.length > 0) {
 					setSelectedAction(responseJson[0].actions[0])
+				} else {
+					setSelectedAction({})
 				}
-			}
+			} 
     })
 		.catch(error => {
 			alert.error(error.toString())
@@ -130,15 +137,15 @@ const Apps = (props) => {
 	const downloadApp = (inputdata) => {
 		const id = inputdata.id
 
-		alert.info("Preparing download.")	
+		alert.info("Downloading..")	
 		fetch(globalUrl+"/api/v1/apps/"+id+"/config", {
-    	  	method: 'GET',
-				headers: {
-					'Content-Type': 'application/json',
-					'Accept': 'application/json',
-				},
-	  			credentials: "include",
-    		})
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+			credentials: "include",
+		})
 		.then((response) => {
 			if (response.status !== 200) {
 				window.location.pathname = "/apps"
@@ -150,12 +157,22 @@ const Apps = (props) => {
 			if (!responseJson.success) {
 				alert.error("Failed to download file")
 			} else {
-				const data = YAML.stringify(YAML.parse(responseJson.body))
+				const inputdata = YAML.parse(responseJson.body)
+				const newpaths = {}
+				Object.keys(inputdata["paths"]).forEach(function(key) {
+					newpaths[key.split("?")[0]] = inputdata.paths[key]
+				})
 
-				var name = inputdata.name
+				inputdata.paths = newpaths
+				console.log("INPUT: ", inputdata)
+				var name = inputdata.info.title
 				name = name.replace(/ /g, "_", -1)
 				name = name.toLowerCase()
 
+				delete inputdata.id
+				delete inputdata.editing
+
+				const data = YAML.stringify(inputdata)
 				var blob = new Blob( [ data ], {
 					type: 'application/octet-stream'
 				})
@@ -222,9 +239,11 @@ const Apps = (props) => {
 			<Paper square style={paperAppStyle} onClick={() => {
 				if (selectedApp.id !== data.id) {
 					setSelectedApp(data)
-					if (data.actions.length > 0) {
+					if (data.actions !== undefined && data.actions !== null && data.actions.length > 0) {
 						console.log(data.actions[0])
 						setSelectedAction(data.actions[0])
+					} else {
+						setSelectedAction({})
 					}
 				}
 			}}>
@@ -250,14 +269,15 @@ const Apps = (props) => {
 							</Grid>
 						</Grid>
 					</Grid>
-				</Grid>
+				</Grid>	
+
+				{data.activated && data.private_id !== undefined && data.private_id.length > 0 && data.generated ?
 				<Grid container style={{margin: "10px 10px 10px 10px", flex: "1"}} onClick={() => {downloadApp(data)}}>
-					{/*
 					<Tooltip title={"Download"} style={{marginTop: "28px", width: "100%"}} aria-label={data.name}>
 						<CloudDownload /> 
 					</Tooltip>
-					*/}
 				</Grid>
+				: null}
 			</Paper>
 		)
 	}
@@ -290,15 +310,28 @@ const Apps = (props) => {
 
 		const editUrl = "/apps/edit/"+selectedApp.id
 		const activateUrl = "/apps/new?id="+selectedApp.id
+
+		var downloadButton = selectedApp.activated && selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated ?
+				<Button
+					onClick={() => {downloadApp(selectedApp)}}
+					variant="outlined"
+					component="label"
+					color="primary"
+					style={{marginTop: 10, marginRight: 8}}
+				>
+					<CloudDownload /> 
+				</Button>
+			: null
+
 		var editButton = selectedApp.activated && selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated ?
 			<Link to={editUrl} style={{textDecoration: "none"}}>
 				<Button
 					variant="outlined"
 					component="label"
 					color="primary"
-					style={{marginTop: "10px"}}
+					style={{marginTop: 10, marginRight: 10,}}
 				>
-					Edit app	
+					<EditIcon />
 				</Button></Link> : null
 
 		var activateButton = selectedApp.generated && !selectedApp.activated ?
@@ -307,7 +340,7 @@ const Apps = (props) => {
 					variant="contained"
 					component="label"
 					color="primary"
-					style={{marginTop: "10px"}}
+					style={{marginTop: 10}}
 				>
 					Activate App	
 				</Button></Link> : null
@@ -322,7 +355,7 @@ const Apps = (props) => {
 						deleteApp(selectedApp.id)
 					}}
 				>
-					Delete app	
+					<DeleteIcon />
 				</Button> : null
 
 		var imageline = selectedApp.large_image === undefined || selectedApp.large_image.length === 0 ?
@@ -343,6 +376,7 @@ const Apps = (props) => {
 					</div>
 				</div>
 				{activateButton}
+				{downloadButton}
 				{editButton}
 				{deleteButton}
 				<Divider style={{marginBottom: "10px", marginTop: "10px", backgroundColor: dividerColor}}/>
@@ -352,36 +386,42 @@ const Apps = (props) => {
 			
 				<div style={{marginTop: 15, marginBottom: 15}}>
 					<b>Actions</b>
-					<Select
-						fullWidth
-						value={selectedAction}
-						onChange={(event) => {
-							setSelectedAction(event.target.value)
-						}}
-						style={{backgroundColor: inputColor, color: "white", height: "50px"}}
-						SelectDisplayProps={{
-							style: {
-								marginLeft: 10,
-							}
-						}}
-					>
-						{selectedApp.actions.map(data => {
-								var newActionname = data.label !== undefined && data.label.length > 0 ? data.label : data.name
+					{selectedApp.actions !== null && selectedApp.actions.length > 0 ?
+						<Select
+							fullWidth
+							value={selectedAction}
+							onChange={(event) => {
+								setSelectedAction(event.target.value)
+							}}
+							style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+							SelectDisplayProps={{
+								style: {
+									marginLeft: 10,
+								}
+							}}
+						>
+							{selectedApp.actions.map(data => {
+									var newActionname = data.label !== undefined && data.label.length > 0 ? data.label : data.name
 
-								// ROFL FIXME - loop
-								newActionname = newActionname.replace("_", " ")
-								newActionname = newActionname.replace("_", " ")
-								newActionname = newActionname.replace("_", " ")
-								newActionname = newActionname.replace("_", " ")
-								newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
-								return (
-									<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
-										{newActionname}
+									// ROFL FIXME - loop
+									newActionname = newActionname.replace("_", " ")
+									newActionname = newActionname.replace("_", " ")
+									newActionname = newActionname.replace("_", " ")
+									newActionname = newActionname.replace("_", " ")
+									newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
+									return (
+										<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+											{newActionname}
 
-									</MenuItem>
-								)
-							})}
-					</Select>
+										</MenuItem>
+									)
+								})}
+						</Select>
+						: 
+						<div style={{marginTop: 10}}>
+							There are no actions defined for this app.
+						</div>
+					}
 				</div>
 
 				{selectedAction.parameters !== undefined && selectedAction.parameters !== null ? 
@@ -453,8 +493,8 @@ const Apps = (props) => {
 		)
 	}
 
-	const handleSearchChange = (event) => {
-		const searchfield = event.target.value.toLowerCase()
+	const handleSearchChange = (search) => {
+		const searchfield = search.toLowerCase()
 		const newapps = apps.filter(data => data.name.toLowerCase().includes(searchfield) || data.description.toLowerCase().includes(searchfield))
 
 		if ((newapps.length === 0 || searchBackend) && !appSearchLoading) {
@@ -469,9 +509,22 @@ const Apps = (props) => {
 	const appView = isLoggedIn ? 
 		<div style={{maxWidth: 1366, margin: "auto",}}>
 			<div style={appViewStyle}>	
-				<div style={{flex: "1", marginLeft: 10, marginRight: 10}}>
-					<h2>Upload</h2>
-					<div style={{marginTop: 20}}/>
+				<div>
+					<Breadcrumbs aria-label="breadcrumb" separator="›" style={{color: "white",}}>
+						<Link to="/apps" style={{textDecoration: "none", color: "inherit",}}>
+							<h2 style={{color: "rgba(255,255,255,0.5)"}}>
+								<AppsIcon style={{marginRight: 10}} />
+								App upload
+							</h2>
+						</Link>
+						{selectedApp.activated && selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated ?
+							<Link to={`/apps/edit/${selectedApp.id}`} style={{textDecoration: "none", color: "inherit",}}>
+								<h2>
+									{selectedApp.name}
+								</h2>
+							</Link>
+						: null}
+					</Breadcrumbs>
 					<UploadView/>
 				</div>
 				<Divider style={{marginBottom: "10px", marginTop: "10px", height: "100%", width: "1px", backgroundColor: dividerColor}}/>
@@ -484,7 +537,10 @@ const Apps = (props) => {
 				    <FormControlLabel
 							style={{color: "white", marginBottom: "0px", marginTop: "10px"}}
 							label=<div style={{color: "white"}}>Search OpenAPI</div>
-							control={<Switch checked={searchBackend} onChange={() => {setSearchBackend(!searchBackend)}} />}
+							control={<Switch checked={searchBackend} onChange={() => {
+								handleSearchChange("")
+								setSearchBackend(!searchBackend)}
+							} />}
 						/>
 						<Button
 							variant="outlined"
@@ -514,7 +570,7 @@ const Apps = (props) => {
 						color="primary"
 						placeholder={"Search apps"}
 						onChange={(event) => {
-							handleSearchChange(event)
+							handleSearchChange(event.target.value)
 						}}
 					/>
 					<div style={{marginTop: 15}}>
@@ -956,11 +1012,7 @@ const Apps = (props) => {
 		</div>
 
 	// Maybe use gridview or something, idk
-	return (
-		<div>
-			{loadedCheck}
-		</div>
-	)
+	return loadedCheck
 }
 
 export default Apps 

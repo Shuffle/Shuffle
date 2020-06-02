@@ -4,17 +4,19 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 
 	"cloud.google.com/go/storage"
 	"github.com/getkin/kin-openapi/openapi3"
-	"github.com/satori/go.uuid"
+	//"github.com/satori/go.uuid"
 	"gopkg.in/yaml.v2"
 )
 
@@ -277,7 +279,13 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 			if swagger.Components.SecuritySchemes["ApiKeyAuth"].Value.In == "header" {
 				authenticationSetup = fmt.Sprintf("headers[\"%s\"] = apikey", swagger.Components.SecuritySchemes["ApiKeyAuth"].Value.Name)
 			} else if swagger.Components.SecuritySchemes["ApiKeyAuth"].Value.In == "query" {
-				authenticationSetup = fmt.Sprintf("url+=f\"?%s={apikey}\"", swagger.Components.SecuritySchemes["ApiKeyAuth"].Value.Name)
+				// This might suck lol
+				key := "?"
+				if strings.Contains(url, "?") {
+					key = "&"
+				}
+
+				authenticationSetup = fmt.Sprintf("url+=f\"%s%s={apikey}\"", key, swagger.Components.SecuritySchemes["ApiKeyAuth"].Value.Name)
 			}
 		}
 	}
@@ -306,46 +314,75 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 
 	bodyParameter := ""
 	bodyAddin := ""
+	bodyFormatter := ""
 	postParameters := []string{"post", "patch", "put"}
 	for _, item := range postParameters {
 		if method == item {
 			bodyParameter = ", body=\"\""
-			bodyAddin = ", json=body"
+			bodyAddin = ", data=body"
+
+			// FIXME: Does JSON data work?
+			bodyFormatter = `
+        if (body.startswith("{") and body.endswith("}")) or (body.startswith("[") and body.endswith("]")):
+            try:
+                body = json.dumps(body)
+            except:
+                pass
+		`
 			break
 		}
 	}
 
 	// Extra param for url if it's changeable
 	// Extra param for authentication scheme(s)
-
 	data := fmt.Sprintf(`    async def %s(self%s%s%s%s%s):
         headers={}
         url=f"%s%s"
         %s
         %s
+				%s
         return requests.%s(url, headers=headers%s%s).text
-	`, functionname, authenticationParameter, urlParameter, parameterData, queryString, bodyParameter, urlInline, url, authenticationSetup, queryData, method, authenticationAddin, bodyAddin)
+		`,
+		functionname,
+		authenticationParameter,
+		urlParameter,
+		parameterData,
+		queryString,
+		bodyParameter,
+		urlInline,
+		url,
+		authenticationSetup,
+		queryData,
+		bodyFormatter,
+		method,
+		authenticationAddin,
+		bodyAddin,
+	)
 
 	//log.Println(data)
 	//log.Println(functionname)
 	return functionname, data
 }
 
-func generateYaml(swagger *openapi3.Swagger, newmd5 string) (WorkflowApp, []string, error) {
+func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, WorkflowApp, []string, error) {
 	api := WorkflowApp{}
 	//log.Printf("%#v", swagger.Info)
 
 	if len(swagger.Info.Title) == 0 {
-		return WorkflowApp{}, []string{}, errors.New("Swagger.Info.Title can't be empty.")
+		return swagger, WorkflowApp{}, []string{}, errors.New("Swagger.Info.Title can't be empty.")
 	}
 
 	if len(swagger.Servers) == 0 {
-		return WorkflowApp{}, []string{}, errors.New("Swagger.Servers can't be empty. Add 'servers':[{'url':'hostname.com'}'")
+		return swagger, WorkflowApp{}, []string{}, errors.New("Swagger.Servers can't be empty. Add 'servers':[{'url':'hostname.com'}'")
 	}
 
 	api.Name = swagger.Info.Title
 	api.Description = swagger.Info.Description
-	api.ID = uuid.NewV4().String()
+
+	// FIXME: Versioning issue?
+	api.ID = newmd5
+	//uuid.NewV4().String()
+
 	api.IsValid = true
 	api.Link = swagger.Servers[0].URL // host doesnt exist lol
 	if strings.HasSuffix(api.Link, "/") {
@@ -364,6 +401,20 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (WorkflowApp, []stri
 	api.Activated = true
 	// Setting up security schemes
 	extraParameters := []WorkflowAppActionParameter{}
+
+	if val, ok := swagger.Info.ExtensionProps.Extensions["x-logo"]; ok {
+		j, err := json.Marshal(&val)
+		if err == nil {
+			if j[0] == 0x22 && j[len(j)-1] == 0x22 {
+				j = j[1 : len(j)-1]
+			}
+
+			//log.Printf("%s", j)
+			api.SmallImage = string(j)
+			api.LargeImage = string(j)
+			log.Printf("Set images!")
+		}
+	}
 
 	securitySchemes := swagger.Components.SecuritySchemes
 	if securitySchemes != nil {
@@ -456,53 +507,57 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (WorkflowApp, []stri
 	// This is the python code to be generated
 	// Could just as well be go at this point lol
 	pythonFunctions := []string{}
-
 	for actualPath, path := range swagger.Paths {
-
-		//log.Printf("%#v", path)
-		//log.Printf("%#v", actualPath)
-
 		// FIXME: Add everything from here:
 		// https://godoc.org/github.com/getkin/kin-openapi/openapi3#PathItem
-		firstQuery := true
 		if path.Get != nil {
-			action, curCode := handleGet(swagger, api, extraParameters, path, actualPath, firstQuery)
+			action, curCode := handleGet(swagger, api, extraParameters, path, actualPath)
 			api.Actions = append(api.Actions, action)
 			pythonFunctions = append(pythonFunctions, curCode)
 		}
 		if path.Connect != nil {
-			action, curCode := handleConnect(swagger, api, extraParameters, path, actualPath, firstQuery)
+			action, curCode := handleConnect(swagger, api, extraParameters, path, actualPath)
 			api.Actions = append(api.Actions, action)
 			pythonFunctions = append(pythonFunctions, curCode)
 		}
 		if path.Head != nil {
-			action, curCode := handleHead(swagger, api, extraParameters, path, actualPath, firstQuery)
+			action, curCode := handleHead(swagger, api, extraParameters, path, actualPath)
 			api.Actions = append(api.Actions, action)
 			pythonFunctions = append(pythonFunctions, curCode)
 		}
 		if path.Delete != nil {
-			action, curCode := handleDelete(swagger, api, extraParameters, path, actualPath, firstQuery)
+			action, curCode := handleDelete(swagger, api, extraParameters, path, actualPath)
 			api.Actions = append(api.Actions, action)
 			pythonFunctions = append(pythonFunctions, curCode)
 		}
 		if path.Post != nil {
-			action, curCode := handlePost(swagger, api, extraParameters, path, actualPath, firstQuery)
+			action, curCode := handlePost(swagger, api, extraParameters, path, actualPath)
 			api.Actions = append(api.Actions, action)
 			pythonFunctions = append(pythonFunctions, curCode)
 		}
 		if path.Patch != nil {
-			action, curCode := handlePatch(swagger, api, extraParameters, path, actualPath, firstQuery)
+			action, curCode := handlePatch(swagger, api, extraParameters, path, actualPath)
 			api.Actions = append(api.Actions, action)
 			pythonFunctions = append(pythonFunctions, curCode)
 		}
 		if path.Put != nil {
-			action, curCode := handlePut(swagger, api, extraParameters, path, actualPath, firstQuery)
+			action, curCode := handlePut(swagger, api, extraParameters, path, actualPath)
 			api.Actions = append(api.Actions, action)
 			pythonFunctions = append(pythonFunctions, curCode)
 		}
+
+		// Has to be here because its used differently above.
+		// FIXING this is done during export instead?
+		//log.Printf("OLDPATH: %s", actualPath)
+		//if strings.Contains(actualPath, "?") {
+		//	actualPath = strings.Split(actualPath, "?")[0]
+		//}
+
+		//log.Printf("NEWPATH: %s", actualPath)
+		//newPaths[actualPath] = path
 	}
 
-	return api, pythonFunctions, nil
+	return swagger, api, pythonFunctions, nil
 }
 
 // FIXME - have this give a real version?
@@ -637,6 +692,7 @@ func getRunner(classname string) string {
 	return fmt.Sprintf(`
 # Run the actual thing after we've checked params
 def run(request):
+    print("Started execution!")
     action = request.get_json() 
     print(action)
     print(type(action))
@@ -679,7 +735,7 @@ func fixFunctionName(functionName, actualPath string) string {
 	return functionName
 }
 
-func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string, firstQuery bool) (WorkflowAppAction, string) {
+func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string) (WorkflowAppAction, string) {
 	// What to do with this, hmm
 	functionName := fixFunctionName(path.Connect.Summary, actualPath)
 
@@ -699,13 +755,13 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 
 	// Parameters:  []WorkflowAppActionParameter{},
 	// FIXME - add data for POST stuff
-	firstQuery = true
+	firstQuery := true
 	optionalQueries := []string{}
 	parameters := []string{}
 	optionalParameters := []WorkflowAppActionParameter{}
 	if len(path.Connect.Parameters) > 0 {
 		for _, param := range path.Connect.Parameters {
-			if param.Value.Schema == nil {
+			if param.Value.Schema == nil || param.Value.In == "header" {
 				continue
 			}
 			curParam := WorkflowAppActionParameter{
@@ -716,6 +772,24 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 				Schema: SchemaDefinition{
 					Type: param.Value.Schema.Value.Type,
 				},
+			}
+
+			// FIXME: Example & Multiline
+			if param.Value.Example != nil {
+				curParam.Example = param.Value.Example.(string)
+
+				if param.Value.Name == "body" {
+					curParam.Value = param.Value.Example.(string)
+				}
+			}
+			if val, ok := param.Value.ExtensionProps.Extensions["multiline"]; ok {
+				j, err := json.Marshal(&val)
+				if err == nil {
+					b, err := strconv.ParseBool(string(j))
+					if err == nil {
+						curParam.Multiline = b
+					}
+				}
 			}
 
 			if param.Value.Required {
@@ -737,13 +811,16 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 
 				parameters = append(parameters, param.Value.Name)
 
+				if strings.Contains(baseUrl, fmt.Sprintf("%s={%s}", param.Value.Name, param.Value.Name)) {
+					continue
+				}
+
 				if firstQuery {
 					baseUrl = fmt.Sprintf("%s?%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
 				} else {
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
 				}
+				firstQuery = false
 			}
 
 		}
@@ -764,7 +841,7 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 	return action, curCode
 }
 
-func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string, firstQuery bool) (WorkflowAppAction, string) {
+func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string) (WorkflowAppAction, string) {
 	// What to do with this, hmm
 	functionName := fixFunctionName(path.Get.Summary, actualPath)
 
@@ -784,7 +861,7 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 
 	// Parameters:  []WorkflowAppActionParameter{},
 	// FIXME - add data for POST stuff
-	firstQuery = true
+	firstQuery := true
 	optionalQueries := []string{}
 
 	// FIXME - remove this when authentication is properly introduced
@@ -793,8 +870,7 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 	optionalParameters := []WorkflowAppActionParameter{}
 	if len(path.Get.Parameters) > 0 {
 		for _, param := range path.Get.Parameters {
-			//log.Printf("TYPE: %#v", param.Value.Schema)
-			if param.Value.Schema == nil {
+			if param.Value.Schema == nil || param.Value.In == "header" {
 				continue
 			}
 
@@ -806,6 +882,24 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 				Schema: SchemaDefinition{
 					Type: param.Value.Schema.Value.Type,
 				},
+			}
+
+			// FIXME: Example & Multiline
+			if param.Value.Example != nil {
+				curParam.Example = param.Value.Example.(string)
+
+				if param.Value.Name == "body" {
+					curParam.Value = param.Value.Example.(string)
+				}
+			}
+			if val, ok := param.Value.ExtensionProps.Extensions["multiline"]; ok {
+				j, err := json.Marshal(&val)
+				if err == nil {
+					b, err := strconv.ParseBool(string(j))
+					if err == nil {
+						curParam.Multiline = b
+					}
+				}
 			}
 
 			if param.Value.Required {
@@ -827,13 +921,17 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 
 				parameters = append(parameters, param.Value.Name)
 
+				// Skipping simial
+				if strings.Contains(baseUrl, fmt.Sprintf("%s={%s}", param.Value.Name, param.Value.Name)) {
+					continue
+				}
+
 				if firstQuery {
 					baseUrl = fmt.Sprintf("%s?%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
 				} else {
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
 				}
+				firstQuery = false
 			}
 
 		}
@@ -854,7 +952,7 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 	return action, curCode
 }
 
-func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string, firstQuery bool) (WorkflowAppAction, string) {
+func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string) (WorkflowAppAction, string) {
 	// What to do with this, hmm
 	functionName := fixFunctionName(path.Head.Summary, actualPath)
 
@@ -874,13 +972,13 @@ func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 
 	// Parameters:  []WorkflowAppActionParameter{},
 	// FIXME - add data for POST stuff
-	firstQuery = true
+	firstQuery := true
 	optionalQueries := []string{}
 	parameters := []string{}
 	optionalParameters := []WorkflowAppActionParameter{}
 	if len(path.Head.Parameters) > 0 {
 		for _, param := range path.Head.Parameters {
-			if param.Value.Schema == nil {
+			if param.Value.Schema == nil || param.Value.In == "header" {
 				continue
 			}
 			curParam := WorkflowAppActionParameter{
@@ -891,6 +989,24 @@ func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 				Schema: SchemaDefinition{
 					Type: param.Value.Schema.Value.Type,
 				},
+			}
+
+			// FIXME: Example & Multiline
+			if param.Value.Example != nil {
+				curParam.Example = param.Value.Example.(string)
+
+				if param.Value.Name == "body" {
+					curParam.Value = param.Value.Example.(string)
+				}
+			}
+			if val, ok := param.Value.ExtensionProps.Extensions["multiline"]; ok {
+				j, err := json.Marshal(&val)
+				if err == nil {
+					b, err := strconv.ParseBool(string(j))
+					if err == nil {
+						curParam.Multiline = b
+					}
+				}
 			}
 
 			if param.Value.Required {
@@ -912,13 +1028,16 @@ func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 
 				parameters = append(parameters, param.Value.Name)
 
+				if strings.Contains(baseUrl, fmt.Sprintf("%s={%s}", param.Value.Name, param.Value.Name)) {
+					continue
+				}
+
 				if firstQuery {
 					baseUrl = fmt.Sprintf("%s?%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
 				} else {
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
 				}
+				firstQuery = false
 			}
 
 		}
@@ -939,7 +1058,7 @@ func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 	return action, curCode
 }
 
-func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string, firstQuery bool) (WorkflowAppAction, string) {
+func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string) (WorkflowAppAction, string) {
 	// What to do with this, hmm
 	functionName := fixFunctionName(path.Delete.Summary, actualPath)
 
@@ -959,13 +1078,13 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 
 	// Parameters:  []WorkflowAppActionParameter{},
 	// FIXME - add data for POST stuff
-	firstQuery = true
+	firstQuery := true
 	optionalQueries := []string{}
 	parameters := []string{}
 	optionalParameters := []WorkflowAppActionParameter{}
 	if len(path.Delete.Parameters) > 0 {
 		for _, param := range path.Delete.Parameters {
-			if param.Value.Schema == nil {
+			if param.Value.Schema == nil || param.Value.In == "header" {
 				continue
 			}
 			curParam := WorkflowAppActionParameter{
@@ -976,6 +1095,24 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 				Schema: SchemaDefinition{
 					Type: param.Value.Schema.Value.Type,
 				},
+			}
+
+			// FIXME: Example & Multiline
+			if param.Value.Example != nil {
+				curParam.Example = param.Value.Example.(string)
+
+				if param.Value.Name == "body" {
+					curParam.Value = param.Value.Example.(string)
+				}
+			}
+			if val, ok := param.Value.ExtensionProps.Extensions["multiline"]; ok {
+				j, err := json.Marshal(&val)
+				if err == nil {
+					b, err := strconv.ParseBool(string(j))
+					if err == nil {
+						curParam.Multiline = b
+					}
+				}
 			}
 
 			if param.Value.Required {
@@ -997,13 +1134,16 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 
 				parameters = append(parameters, param.Value.Name)
 
+				if strings.Contains(baseUrl, fmt.Sprintf("%s={%s}", param.Value.Name, param.Value.Name)) {
+					continue
+				}
+
 				if firstQuery {
 					baseUrl = fmt.Sprintf("%s?%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
 				} else {
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
 				}
+				firstQuery = false
 			}
 
 		}
@@ -1024,7 +1164,7 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 	return action, curCode
 }
 
-func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string, firstQuery bool) (WorkflowAppAction, string) {
+func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string) (WorkflowAppAction, string) {
 	// What to do with this, hmm
 	//log.Printf("PATH: %s", actualPath)
 	functionName := fixFunctionName(path.Post.Summary, actualPath)
@@ -1038,33 +1178,26 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 		Parameters:  extraParameters,
 	}
 
+	if path.Post.RequestBody != nil {
+		log.Printf("RequestBody: %#v", path.Post.RequestBody)
+	}
+
 	action.Returns.Schema.Type = "string"
 	baseUrl := fmt.Sprintf("%s%s", api.Link, actualPath)
 
-	//log.Println(path.Parameters)
-
 	// Parameters:  []WorkflowAppActionParameter{},
 	// FIXME - add data for POST stuff
-	firstQuery = true
+	firstQuery := true
 	optionalQueries := []string{}
 	parameters := []string{}
-	optionalParameters := []WorkflowAppActionParameter{
-		WorkflowAppActionParameter{
-			Name:        "body",
-			Description: "The body to use",
-			Multiline:   true,
-			Required:    false,
-			Example:     `{"username": "test"}`,
-			Schema: SchemaDefinition{
-				Type: "string",
-			},
-		},
-	}
+	optionalParameters := []WorkflowAppActionParameter{}
+
 	if len(path.Post.Parameters) > 0 {
 		for _, param := range path.Post.Parameters {
-			if param.Value.Schema == nil {
+			if param.Value.Schema == nil || param.Value.In == "header" {
 				continue
 			}
+
 			curParam := WorkflowAppActionParameter{
 				Name:        param.Value.Name,
 				Description: param.Value.Description,
@@ -1073,6 +1206,24 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 				Schema: SchemaDefinition{
 					Type: param.Value.Schema.Value.Type,
 				},
+			}
+
+			// FIXME: Example & Multiline
+			if param.Value.Example != nil {
+				curParam.Example = param.Value.Example.(string)
+
+				if param.Value.Name == "body" {
+					curParam.Value = param.Value.Example.(string)
+				}
+			}
+			if val, ok := param.Value.ExtensionProps.Extensions["multiline"]; ok {
+				j, err := json.Marshal(&val)
+				if err == nil {
+					b, err := strconv.ParseBool(string(j))
+					if err == nil {
+						curParam.Multiline = b
+					}
+				}
 			}
 
 			if param.Value.Required {
@@ -1094,13 +1245,16 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 
 				parameters = append(parameters, param.Value.Name)
 
+				if strings.Contains(baseUrl, fmt.Sprintf("%s={%s}", param.Value.Name, param.Value.Name)) {
+					continue
+				}
+
 				if firstQuery {
 					baseUrl = fmt.Sprintf("%s?%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
 				} else {
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
 				}
+				firstQuery = false
 			}
 
 		}
@@ -1121,7 +1275,7 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 	return action, curCode
 }
 
-func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string, firstQuery bool) (WorkflowAppAction, string) {
+func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string) (WorkflowAppAction, string) {
 	// What to do with this, hmm
 	functionName := fixFunctionName(path.Patch.Summary, actualPath)
 
@@ -1141,24 +1295,13 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 
 	// Parameters:  []WorkflowAppActionParameter{},
 	// FIXME - add data for POST stuff
-	firstQuery = true
+	firstQuery := true
 	optionalQueries := []string{}
 	parameters := []string{}
-	optionalParameters := []WorkflowAppActionParameter{
-		WorkflowAppActionParameter{
-			Name:        "body",
-			Description: "The body to use",
-			Multiline:   true,
-			Required:    false,
-			Example:     `{"username": "test"}`,
-			Schema: SchemaDefinition{
-				Type: "string",
-			},
-		},
-	}
+	optionalParameters := []WorkflowAppActionParameter{}
 	if len(path.Patch.Parameters) > 0 {
 		for _, param := range path.Patch.Parameters {
-			if param.Value.Schema == nil {
+			if param.Value.Schema == nil || param.Value.In == "header" {
 				continue
 			}
 			curParam := WorkflowAppActionParameter{
@@ -1169,6 +1312,24 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 				Schema: SchemaDefinition{
 					Type: param.Value.Schema.Value.Type,
 				},
+			}
+
+			// FIXME: Example & Multiline
+			if param.Value.Example != nil {
+				curParam.Example = param.Value.Example.(string)
+
+				if param.Value.Name == "body" {
+					curParam.Value = param.Value.Example.(string)
+				}
+			}
+			if val, ok := param.Value.ExtensionProps.Extensions["multiline"]; ok {
+				j, err := json.Marshal(&val)
+				if err == nil {
+					b, err := strconv.ParseBool(string(j))
+					if err == nil {
+						curParam.Multiline = b
+					}
+				}
 			}
 
 			if param.Value.Required {
@@ -1190,13 +1351,16 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 
 				parameters = append(parameters, param.Value.Name)
 
+				if strings.Contains(baseUrl, fmt.Sprintf("%s={%s}", param.Value.Name, param.Value.Name)) {
+					continue
+				}
+
 				if firstQuery {
 					baseUrl = fmt.Sprintf("%s?%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
 				} else {
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
 				}
+				firstQuery = false
 			}
 
 		}
@@ -1217,7 +1381,7 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 	return action, curCode
 }
 
-func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string, firstQuery bool) (WorkflowAppAction, string) {
+func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string) (WorkflowAppAction, string) {
 	// What to do with this, hmm
 	functionName := fixFunctionName(path.Put.Summary, actualPath)
 
@@ -1237,24 +1401,14 @@ func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 
 	// Parameters:  []WorkflowAppActionParameter{},
 	// FIXME - add data for POST stuff
-	firstQuery = true
+	firstQuery := true
 	optionalQueries := []string{}
 	parameters := []string{}
-	optionalParameters := []WorkflowAppActionParameter{
-		WorkflowAppActionParameter{
-			Name:        "body",
-			Description: "The body to use",
-			Multiline:   true,
-			Required:    false,
-			Example:     `{"username": "test"}`,
-			Schema: SchemaDefinition{
-				Type: "string",
-			},
-		},
-	}
+	optionalParameters := []WorkflowAppActionParameter{}
+
 	if len(path.Put.Parameters) > 0 {
 		for _, param := range path.Put.Parameters {
-			if param.Value.Schema == nil {
+			if param.Value.Schema == nil || param.Value.In == "header" {
 				continue
 			}
 			curParam := WorkflowAppActionParameter{
@@ -1265,6 +1419,24 @@ func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 				Schema: SchemaDefinition{
 					Type: param.Value.Schema.Value.Type,
 				},
+			}
+
+			// FIXME: Example & Multiline
+			if param.Value.Example != nil {
+				curParam.Example = param.Value.Example.(string)
+
+				if param.Value.Name == "body" {
+					curParam.Value = param.Value.Example.(string)
+				}
+			}
+			if val, ok := param.Value.ExtensionProps.Extensions["multiline"]; ok {
+				j, err := json.Marshal(&val)
+				if err == nil {
+					b, err := strconv.ParseBool(string(j))
+					if err == nil {
+						curParam.Multiline = b
+					}
+				}
 			}
 
 			if param.Value.Required {
@@ -1286,13 +1458,16 @@ func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 
 				parameters = append(parameters, param.Value.Name)
 
+				if strings.Contains(baseUrl, fmt.Sprintf("%s={%s}", param.Value.Name, param.Value.Name)) {
+					continue
+				}
+
 				if firstQuery {
 					baseUrl = fmt.Sprintf("%s?%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
 				} else {
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
-					firstQuery = false
 				}
+				firstQuery = false
 			}
 
 		}

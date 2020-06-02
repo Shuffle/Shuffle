@@ -24,7 +24,7 @@ services:
       - shuffle
     restart: unless-stopped
     volumes:
-      - /etc/shuffle:/etc/shuffle
+      - ${DB_LOCATION}:/etc/shuffle
   backend:
     #build: ./backend
     image: frikky/shuffle:backend
