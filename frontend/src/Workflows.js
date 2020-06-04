@@ -18,6 +18,8 @@ import CachedIcon from '@material-ui/icons/Cached';
 import EditIcon from '@material-ui/icons/Edit';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
 import PlayArrowIcon from '@material-ui/icons/PlayArrow';
+import AddIcon from '@material-ui/icons/Add';
+import PublishIcon from '@material-ui/icons/Publish';
 //import JSONPretty from 'react-json-pretty';
 //import JSONPrettyMon from 'react-json-pretty/dist/monikai'
 import ReactJson from 'react-json-view'
@@ -36,6 +38,9 @@ const Workflows = (props) => {
 	document.title = "Shuffle - Workflows"
 
 	const alert = useAlert()
+
+	var upload = ""
+	const [file, setFile] = React.useState("");
 
 	const [workflows, setWorkflows] = React.useState([]);
 	const [selectedWorkflow, setSelectedWorkflow] = React.useState({});
@@ -314,7 +319,7 @@ const Workflows = (props) => {
 
 	// dropdown with copy etc I guess
 	const WorkflowPaper = (props) => {
-  		const { data } = props;
+  	const { data } = props;
 		const [open, setOpen] = React.useState(false);
 		const [anchorEl, setAnchorEl] = React.useState(null);
 
@@ -695,10 +700,8 @@ const Workflows = (props) => {
 		)
 	}
 
-	const setNewWorkflow = () => {
-		if (newWorkflowName.length === 0) {
-			return
-		}
+	// Can create and set workflows
+	const setNewWorkflow = (name, description, editingWorkflow, redirect) => {
 
 		var method = "POST"
 		var extraData = ""
@@ -710,12 +713,12 @@ const Workflows = (props) => {
 			workflowdata = editingWorkflow
 		}
 
-		workflowdata["name"] = newWorkflowName
-		workflowdata["description"] = newWorkflowDescription
+		workflowdata["name"] = name 
+		workflowdata["description"] = description 
 		//console.log(workflowdata)
 		//return
 
-		fetch(globalUrl+"/api/v1/workflows"+extraData, {
+		return fetch(globalUrl+"/api/v1/workflows"+extraData, {
     	  method: method,
 				headers: {
 					'Content-Type': 'application/json',
@@ -732,15 +735,69 @@ const Workflows = (props) => {
 			return response.json()
 		})
     .then((responseJson) => {
-			if (method === "POST") {
+			if (method === "POST" && redirect) {
 				window.location.pathname = "/workflows/"+responseJson["id"] 
+			} else if (!redirect) {
+				// Update :)		
+				getAvailableWorkflows()
 			} else { 
 				alert.info("Successfully changed basic info for workflow")
 			}
+
+			return responseJson
     })
 		.catch(error => {
 			alert.error(error.toString())
 		});
+	}
+
+
+	const importFiles = (event) => {
+		const file = event.target.value
+		if (event.target.files.length > 0) {
+			for (var key in event.target.files) {
+				const file = event.target.files[key]
+				if (file.type !== "application/json") {
+					//alert.error("File has to contain json.")
+					continue
+				}
+
+  			const reader = new FileReader()
+				// Waits for the read
+	  		reader.addEventListener('load', (event) => {
+					var data = reader.result
+					try {
+						data = JSON.parse(reader.result)
+					} catch (e) {
+						alert.error("Invalid JSON: "+e)
+						return
+					}
+
+					// Initialize the workflow itself
+					const ret = setNewWorkflow(data.name, data.description, {}, false)
+					.then((response) => {
+						if (response !== undefined) {
+							// SET THE FULL THING
+							data.id = response.id
+
+							// Actually create it
+							const ret = setNewWorkflow(data.name, data.description, data, false)
+							.then((response) => {
+								if (response !== undefined) {
+									alert.success("Successfully created "+data.name)
+								}
+							})
+						}
+					})
+					.catch(error => {
+						alert.error("Import error: "+error.toString())
+					});
+				})
+
+				// Actually reads
+		  	reader.readAsText(file)
+			}
+		}
 	}
 
 	const modalView = modalOpen ? 
@@ -791,7 +848,7 @@ const Workflows = (props) => {
 						Cancel
 					</Button>
 					<Button style={{}} disabled={newWorkflowName.length === 0} onClick={() => {
-						setNewWorkflow()
+						setNewWorkflow(newWorkflowName, newWorkflowDescription, {}, true)
 						setModalOpen(false)
 					}} color="primary">
 	        	Submit	
@@ -825,13 +882,16 @@ const Workflows = (props) => {
 					<div style={{flex: "4"}}>
 						<h2>Workflows</h2> 
 					</div>
-					<div style={{flex: "1", display: "flex", flexDirection: "row"}}>
-						<div>
-							<Button disabled={true} color="primary" style={{marginTop: "20px",}} variant="outlined" onClick={() => setModalOpen(true)}>Import</Button> 				
-						</div>
-						<div>
-							<Button color="primary" style={{marginTop: "20px",}} variant="outlined" onClick={() => setModalOpen(true)}>New</Button> 				
-						</div>
+					<div style={{marginTop: 20}}>
+					 	<Tooltip color="primary" title={"Create new workflow"} placement="top">
+							<Button color="primary" style={{}} variant="text" onClick={() => setModalOpen(true)}><AddIcon /></Button> 				
+						</Tooltip>
+					 	<Tooltip color="primary" title={"Import workflows"} placement="top">
+							<Button color="primary" style={{}} variant="text" onClick={() => upload.click()}>
+								<PublishIcon />
+							</Button> 				
+						</Tooltip>
+						<input hidden type="file" multiple="multiple" ref={(ref) => upload = ref} onChange={importFiles} />
 					</div>
 				</div>
 				<Divider style={{marginBottom: "10px", height: "1px", width: "100%", backgroundColor: dividerColor}}/>
@@ -850,7 +910,7 @@ const Workflows = (props) => {
 						<h2>Executions: {selectedWorkflow.name}</h2> 
 					</div>
 					<div style={{flex: "1"}}>
-						<Button color="primary" style={{marginTop: "20px"}} variant="outlined" onClick={() => {
+						<Button color="primary" style={{marginTop: "20px"}} variant="text" onClick={() => {
 								alert.info("Refreshing executions"); 
 								getWorkflowExecution(selectedWorkflow.id)
 							}}>

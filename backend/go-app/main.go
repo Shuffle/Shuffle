@@ -2158,22 +2158,18 @@ func setUser(ctx context.Context, data *User) error {
 	return nil
 }
 
+// Used for testing only. Shouldn't impact production.
 func handleCors(resp http.ResponseWriter, request *http.Request) bool {
+	allowedOrigins := "http://localhost:3000"
 
-	// FIXME - this is to handle multiple frontends in test rofl
-	origin := request.Header["Origin"]
 	resp.Header().Set("Vary", "Origin")
-	if len(origin) > 0 {
-		resp.Header().Set("Access-Control-Allow-Origin", origin[0])
-	} else {
-		resp.Header().Set("Access-Control-Allow-Origin", "http://localhost:4201")
-	}
-	//resp.Header().Set("Access-Control-Allow-Origin", "http://localhost:8000")
 	resp.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, X-Requested-With, remember-me")
 	resp.Header().Set("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE")
 	resp.Header().Set("Access-Control-Allow-Credentials", "true")
+	resp.Header().Set("Access-Control-Allow-Origin", allowedOrigins)
 
 	if request.Method == "OPTIONS" {
+
 		resp.WriteHeader(200)
 		resp.Write([]byte("OK"))
 		return true

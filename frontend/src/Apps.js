@@ -56,6 +56,7 @@ const Apps = (props) => {
 	const [openApiData, setOpenApiData] = React.useState("")
 	const [appValidation, setAppValidation] = React.useState("")
 	const [loadAppsModalOpen, setLoadAppsModalOpen] = React.useState(false);
+	const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
 	const [openApiModal, setOpenApiModal] = React.useState(false);
 	const [openApiModalType, setOpenApiModalType] = React.useState("");
 	const [openApiError, setOpenApiError] = React.useState("")
@@ -352,7 +353,7 @@ const Apps = (props) => {
 					color="primary"
 					style={{marginLeft: 5, marginTop: 10}}
 					onClick={() => {
-						deleteApp(selectedApp.id)
+						setDeleteModalOpen(true)
 					}}
 				>
 					<DeleteIcon />
@@ -819,12 +820,41 @@ const Apps = (props) => {
 		window.location.href = "/apps/new?id="+appValidation
 	}
 
-
-
 	const handleGithubValidation = () => {
 		getSpecificApps(openApi)
 		setLoadAppsModalOpen(false)
 	}
+
+	const deleteModal = deleteModalOpen ? 
+		<Dialog modal 
+			open={deleteModalOpen}
+			onClose={() => {
+				setDeleteModalOpen(false)
+			}}
+			PaperProps={{
+				style: {
+					backgroundColor: surfaceColor,
+					color: "white",
+					minWidth: 500,
+				},
+			}}
+		>
+			<DialogTitle>
+				<div style={{textAlign: "center", color: "rgba(255,255,255,0.9)"}}>
+					Are you sure? <div/>Some workflows may stop working.
+				</div>
+			</DialogTitle>
+			<DialogContent style={{color: "rgba(255,255,255,0.65)", textAlign: "center"}}>
+				<Button style={{}} onClick={() => {deleteApp(selectedApp.id); setDeleteModalOpen(false)}} color="primary">
+					Yes
+				</Button>
+				<Button variant="outlined" style={{}} onClick={() => {setDeleteModalOpen(false)}} color="primary">
+					No
+				</Button>
+			</DialogContent>
+			
+		</Dialog>
+	: null
 
 	const appsModalLoad = loadAppsModalOpen ? 
 		<Dialog modal 
@@ -1006,6 +1036,7 @@ const Apps = (props) => {
 			{appView}
 			{modalView}
 			{appsModalLoad}
+			{deleteModal}
 		</div>
 		:
 		<div>

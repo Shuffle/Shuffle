@@ -172,7 +172,11 @@ const AngularWorkflow = (props) => {
 	const [workflowExecutions, setWorkflowExecutions] = React.useState([]);
 
 	const unloadText = 'Are you sure you want to leave?'
-	useBeforeunload(() => unloadText)
+	useBeforeunload(() => {
+		if (!lastSaved) {
+			return unloadText
+		}
+	})
 
 	const [elements, setElements] = useState([])
 	const { start, stop } = useInterval({
@@ -810,7 +814,7 @@ const AngularWorkflow = (props) => {
 		//console.log("ACTION: ", selectedAction)
 		//console.log("APP: ", selectedApp)
 		setSelectedAction({})
-		//setSelectedApp({})
+		setSelectedApp({})
 		//setSelectedTrigger({})
 		//setSelectedEdge({})
 
@@ -828,6 +832,7 @@ const AngularWorkflow = (props) => {
 
 	const onEdgeSelect = (event) => {
 		setRightSideBarOpen(true)
+		setLastSaved(false)
 
 		const triggercheck = workflow.triggers.find(trigger => trigger.id === event.target.data()["source"])
 		if (triggercheck === undefined) {
@@ -843,6 +848,8 @@ const AngularWorkflow = (props) => {
 
 	const onNodeSelect = (event) => {
 		const data = event.target.data()
+		console.log("NODE: ", data)
+		setLastSaved(false)
 		//console.log(data)
 
 		if (data.type === "ACTION") {
@@ -949,7 +956,7 @@ const AngularWorkflow = (props) => {
 	}
 
 	const onNodeAdded = (event) => {
-		//setLastSaved(false)
+		setLastSaved(false)
 		const node = event.target
 
 		if (node.isNode() && cy.nodes().size() === 1) {
@@ -960,6 +967,7 @@ const AngularWorkflow = (props) => {
 	}
 
 	const onEdgeRemoved = (event) => {
+		setLastSaved(false)
 		const edge = event.target
 
 		workflow.branches = workflow.branches.filter(a => a.id !== edge.data().id)
@@ -980,6 +988,7 @@ const AngularWorkflow = (props) => {
 	const onNodeRemoved = (event) => {
 		const node = event.target
 		const data = node.data()
+		setLastSaved(false)
 
 		//var currentnode = cy.getElementById(data.id)
 		//if (currentnode.length === 0) {
@@ -2556,10 +2565,16 @@ const AngularWorkflow = (props) => {
 
 	const appApiView = Object.getOwnPropertyNames(selectedAction).length > 0 && Object.getOwnPropertyNames(selectedApp).length > 0 ? 
 		<div style={appApiViewStyle}>
-			<div style={{display: "flex", height: 40, marginBottom: 30}}>
-				<div style={{flex: "1"}}>
-					<h3 style={{marginBottom: "5px"}}>{selectedAction.app_name}</h3>
+			<div style={{display: "flex", minHeight: 40, marginBottom: 30}}>
+				<div style={{flex: 1}}>
+					<h3 style={{marginBottom: 5}}>{selectedAction.app_name}</h3>
 					<Link to="/docs/apps" style={{textDecoration: "none", color: "#f85a3e"}}>What are apps?</Link>
+					{selectedAction.errors !== null && selectedAction.errors.length > 0 ? 
+						<div>
+							Errors: {selectedAction.errors.join("\n")}
+						</div>
+						: null
+					}
 				</div>
 				<div style={{flex: "1"}}>
 					<Button disabled={selectedAction.id === workflow.start} style={{zIndex: 5000, marginTop: "15px",}} color="primary" variant="outlined" onClick={(e) => {
@@ -4340,7 +4355,6 @@ const AngularWorkflow = (props) => {
 			return null
 		}
 
-		setLastSaved(false)
 		if (Object.getOwnPropertyNames(selectedAction).length > 0 && Object.getOwnPropertyNames(selectedApp).length > 0) {
 			//console.time('ACTIONSTART');
 			return(
@@ -4850,7 +4864,7 @@ const AngularWorkflow = (props) => {
 	return (
 		<div>	
 		  <Prompt
-				when={true}
+				when={!lastSaved}
 				message={unloadText}
 			/>
 			{loadedCheck}

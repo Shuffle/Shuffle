@@ -909,7 +909,7 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 			}
 
 			if param.Value.In == "path" {
-				//log.Printf("PATH!: %s", param.Value.Name)
+				log.Printf("PATH!: %s", param.Value.Name)
 				parameters = append(parameters, param.Value.Name)
 				//baseUrl = fmt.Sprintf("%s%s", baseUrl)
 			} else if param.Value.In == "query" {

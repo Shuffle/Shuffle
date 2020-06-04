@@ -101,10 +101,10 @@ const data = [{
 			},
 		},
 		{
-			selector: 'node[?hasErrors]',
+			selector: "node[!is_valid]",
 			css: {
-				'color': '#991818',
-				'font-style': 'italic',
+				'border-color': 'red',
+				'border-width': '10px',
 			},
 		},
 		{

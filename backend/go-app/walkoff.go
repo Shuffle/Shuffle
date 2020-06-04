@@ -1182,7 +1182,6 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	//Actions           []Action   `json:"actions" datastore:"actions,noindex"`
 
-	log.Printf("Hello")
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		log.Printf("Failed hook unmarshaling: %s", err)
@@ -1191,7 +1190,6 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("Hello2")
 	var workflow Workflow
 	err = json.Unmarshal([]byte(body), &workflow)
 	//log.Printf(string(body))
@@ -1216,12 +1214,23 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	log.Println("Pre")
 	for _, action := range workflow.Actions {
 		allNodes = append(allNodes, action.ID)
+
 		if action.Environment == "" {
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "An environment for %s is required"}`, action.Label)))
 			return
 			action.IsValid = true
 		}
+
+		// FIXME: Have a good way of tracking errors. ID's or similar.
+		if !action.IsValid {
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Node %s is invalid and needs to be remade."}`, action.Label)))
+			return
+			action.IsValid = true
+			action.Errors = []string{}
+		}
+
 		newActions = append(newActions, action)
 	}
 
@@ -2653,6 +2662,65 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 		private = true
 	}
 
+	q := datastore.NewQuery("workflow")
+	var workflows []Workflow
+	_, err = dbclient.GetAll(ctx, q, &workflows)
+	if err != nil {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "}`))
+		return
+	}
+
+	for _, workflow := range workflows {
+		found := false
+
+		newActions := []Action{}
+		for _, action := range workflow.Actions {
+			if action.AppName == app.Name && action.AppVersion == app.AppVersion {
+				found = true
+				action.Errors = append(action.Errors, "App has been deleted")
+				action.IsValid = false
+			}
+
+			newActions = append(newActions, action)
+		}
+
+		if found {
+			workflow.IsValid = false
+			workflow.Errors = append(workflow.Errors, fmt.Sprintf("App %s_%s has been deleted", app.Name, app.AppVersion))
+			workflow.Actions = newActions
+
+			for _, trigger := range workflow.Triggers {
+				log.Printf("TRIGGER: %#v", trigger)
+				//err = deleteSchedule(ctx, scheduleId)
+				//if err != nil {
+				//	if strings.Contains(err.Error(), "Job not found") {
+				//		resp.WriteHeader(200)
+				//		resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+				//	} else {
+				//		resp.WriteHeader(401)
+				//		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed stopping schedule"}`)))
+				//	}
+				//	return
+				//}
+			}
+
+			err = setWorkflow(ctx, workflow, workflow.ID)
+			if err != nil {
+				log.Printf("Failed setting workflow when deleting app: %s", err)
+				continue
+			} else {
+				log.Printf("Set %s (%s) to have errors", workflow.ID, workflow.Name)
+			}
+
+		}
+
+	}
+
+	//resp.WriteHeader(200)
+	//resp.Write([]byte(`{"success": true}`))
+	//return
+
 	// Not really deleting it, just removing from user cache
 	if private {
 		log.Printf("Deleting private app")
@@ -2675,6 +2743,7 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 			return
 		}
 	} else {
+
 		log.Printf("Deleting public app")
 		err = DeleteKey(ctx, "workflowapp", fileId)
 		if err != nil {
