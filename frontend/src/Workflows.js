@@ -319,7 +319,7 @@ const Workflows = (props) => {
 
 	// dropdown with copy etc I guess
 	const WorkflowPaper = (props) => {
-  		const { data } = props;
+  	const { data } = props;
 		const [open, setOpen] = React.useState(false);
 		const [anchorEl, setAnchorEl] = React.useState(null);
 

@@ -814,7 +814,7 @@ const AngularWorkflow = (props) => {
 		//console.log("ACTION: ", selectedAction)
 		//console.log("APP: ", selectedApp)
 		setSelectedAction({})
-		//setSelectedApp({})
+		setSelectedApp({})
 		//setSelectedTrigger({})
 		//setSelectedEdge({})
 
@@ -848,6 +848,7 @@ const AngularWorkflow = (props) => {
 
 	const onNodeSelect = (event) => {
 		const data = event.target.data()
+		console.log("NODE: ", data)
 		setLastSaved(false)
 		//console.log(data)
 
@@ -2564,10 +2565,16 @@ const AngularWorkflow = (props) => {
 
 	const appApiView = Object.getOwnPropertyNames(selectedAction).length > 0 && Object.getOwnPropertyNames(selectedApp).length > 0 ? 
 		<div style={appApiViewStyle}>
-			<div style={{display: "flex", height: 40, marginBottom: 30}}>
-				<div style={{flex: "1"}}>
-					<h3 style={{marginBottom: "5px"}}>{selectedAction.app_name}</h3>
+			<div style={{display: "flex", minHeight: 40, marginBottom: 30}}>
+				<div style={{flex: 1}}>
+					<h3 style={{marginBottom: 5}}>{selectedAction.app_name}</h3>
 					<Link to="/docs/apps" style={{textDecoration: "none", color: "#f85a3e"}}>What are apps?</Link>
+					{selectedAction.errors !== null && selectedAction.errors.length > 0 ? 
+						<div>
+							Errors: {selectedAction.errors.join("\n")}
+						</div>
+						: null
+					}
 				</div>
 				<div style={{flex: "1"}}>
 					<Button disabled={selectedAction.id === workflow.start} style={{zIndex: 5000, marginTop: "15px",}} color="primary" variant="outlined" onClick={(e) => {
