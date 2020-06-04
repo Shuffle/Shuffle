@@ -374,7 +374,6 @@ const AppCreator = (props) => {
 
 		// FIXME: Have multiple authentication options?
 		if (securitySchemes !== undefined) {
-			console.log("Am I in here?")
 			for (const [key, value] of Object.entries(securitySchemes)) {
 				if (value.scheme === "bearer") {
 					setAuthenticationOption("Bearer auth")
@@ -524,6 +523,8 @@ const AppCreator = (props) => {
 				"description": item.description,
 				"parameters": []
 			}
+
+			console.log("ACTION: ", item)
 
 			if (item.queries.length > 0) {
 				for (var querykey in item.queries) {
@@ -943,9 +944,7 @@ const AppCreator = (props) => {
 	const setActionField = (field, value) => {
 		currentAction[field] = value
 		setCurrentAction(currentAction)	
-		//if (updater !== value) {
-		//	setUpdater(value)
-		//}
+		console.log("ACTION: ", currentAction)
 	}
 
 	const bodyInfo = actionBodyRequest.includes(currentActionMethod) ?
@@ -1088,7 +1087,7 @@ const AppCreator = (props) => {
 			}
 		}
 
-		if (currentAction.paths !== paths) {
+		if (currentAction.paths !== paths && urlPath.length > 0) {
 			setActionField("paths", paths)
 		} 
 
@@ -1159,10 +1158,8 @@ const AppCreator = (props) => {
 						}}
 						onBlur={e => {
 							// Fix basic issues in frontend. Python functions run a-zA-Z0-9_
-							console.log(e.target.value)
 							const regex = /[A-Za-z0-9 _]/g;
 							const found = e.target.value.match(regex);
-							console.log("FOUND: ", found)
 							if (found !== null) {
 								setActionField("name", found.join(""))
 							}
