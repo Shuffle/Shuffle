@@ -33,7 +33,39 @@ docker-compose up -d
 * Further configurations can be done in docker-compose.yml and .env.
 * Default database location is /etc/shuffle
 
+### Execution problems
+If you have problems with your first execution (hello world), you might need to set the correct Docker API version. Here's how:
 
+1. Find your API version by running "docker version"
+```
+$ docker version
+
+Client:
+ Version:      17.09.1-ce
+ API version:  1.32 # <-- this one
+ Go version:   go1.8.3
+ Git commit:   19e2cf6
+ Built:        Thu Dec  7 22:24:16 2017
+ OS/Arch:      linux/amd64
+
+Server:
+ Version:      17.09.1-ce
+ API version:  1.32 (minimum version 1.12)
+ Go version:   go1.8.3
+ Git commit:   19e2cf6
+ Built:        Thu Dec  7 22:22:56 2017
+ OS/Arch:      linux/amd64
+ Experimental: false
+```
+
+2. Open docker-compose.yml and change the line with "DOCKER_API_VERSION" to your version.
+3. Restart docker-compose
+```
+docker-compose down
+docker-compose up
+```
+
+Related issue: #47
 
 ## Local development installation 
 Frontend - requires [npm](https://nodejs.org/en/download/)/[yarn](https://yarnpkg.com/lang/en/docs/install/#debian-stable)/your preferred manager. Runs independently from backend - edit frontend/src/App.yaml (line 44~) from window.location.origin to http://YOUR IP:5001
