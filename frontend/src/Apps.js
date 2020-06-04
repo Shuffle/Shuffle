@@ -20,6 +20,8 @@ import YAML from 'yaml'
 import {Link} from 'react-router-dom';
 import Breadcrumbs from '@material-ui/core/Breadcrumbs';
 
+import CloudUploadIcon from '@material-ui/icons/CloudUpload';
+import PublishIcon from '@material-ui/icons/Publish';
 import CloudDownload from '@material-ui/icons/CloudDownload';
 import EditIcon from '@material-ui/icons/Edit';
 import DeleteIcon from '@material-ui/icons/Delete';
@@ -462,7 +464,7 @@ const Apps = (props) => {
 						<div/>
 						<div style={{marginTop: 20}}>
 							<Button
-								variant="outlined"
+								variant="text"
 								component="label"
 								color="primary"
 								style={{marginRight: 10, }}
@@ -470,11 +472,12 @@ const Apps = (props) => {
 									setOpenApiModal(true)
 								}}
 							>
-								Create from OpenAPI 	
+								<PublishIcon  style={{marginRight: 5}} /> Create from OpenAPI 	
 							</Button>
-							<Link to="/apps/new" style={{textDecoration: "none", color: "#f85a3e"}}>
+							&nbsp;OR&nbsp;
+							<Link to="/apps/new" style={{marginLeft: 5, textDecoration: "none", color: "#f85a3e"}}>
 								<Button
-									variant="outlined"
+									variant="text"
 									component="label"
 									color="primary"
 									style={{}}
@@ -543,18 +546,20 @@ const Apps = (props) => {
 								setSearchBackend(!searchBackend)}
 							} />}
 						/>
-						<Button
-							variant="outlined"
-							component="label"
-							color="primary"
-							style={{margin: 5, maxHeight: 50, marginTop: 10}}
-							onClick={() => {
-								setOpenApi(baseRepository)
-								setLoadAppsModalOpen(true)
-							}}
-						>
-							Download more apps 
-						</Button>
+						<Tooltip title={"Upload from Github"} style={{marginTop: "28px", width: "100%"}} aria-label={"Upload"}>
+							<Button
+								variant="outlined"
+								component="label"
+								color="primary"
+								style={{margin: 5, maxHeight: 50, marginTop: 10}}
+								onClick={() => {
+									setOpenApi(baseRepository)
+									setLoadAppsModalOpen(true)
+								}}
+							>
+								<CloudUploadIcon />
+							</Button>
+						</Tooltip>
 					</div>
 					<TextField
 						style={{backgroundColor: inputColor}} 
@@ -574,10 +579,10 @@ const Apps = (props) => {
 							handleSearchChange(event.target.value)
 						}}
 					/>
-					<div style={{marginTop: 15}}>
+					<div style={{marginTop: 15, height: "100%", paddingBottom: 150,}}>
 						{apps.length > 0 ? 
 							filteredApps.length > 0 ? 
-								<div style={{maxHeight: "78vh", overflowY: "scroll"}}>
+								<div style={{maxHeight: "75vh", overflowY: "scroll"}}>
 									{filteredApps.map(app => {
 										return (
 											appPaper(app)

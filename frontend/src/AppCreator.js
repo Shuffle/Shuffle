@@ -1261,6 +1261,10 @@ const AppCreator = (props) => {
 								if (request.header !== undefined && request.header !== null) {
 									var headers = []
 									for (let [key, value] of Object.entries(request.header)) {
+										if (parameterName !== undefined && key.toLowerCase() === parameterName.toLowerCase()) {
+											continue
+										}
+
 										headers += key+"="+value+"\n"
 									}
 
