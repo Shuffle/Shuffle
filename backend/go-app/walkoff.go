@@ -428,7 +428,7 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, frequency
 
 		_, _, err := handleExecution(workflowId, Workflow{}, request)
 		if err != nil {
-			log.Printf("Failed to execute: %s", err)
+			log.Printf("Failed to execute %s: %s", workflowId, err)
 		}
 	}
 
@@ -1058,7 +1058,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflow, err := getWorkflow(ctx, fileId)
 	if err != nil {
-		log.Printf("Failed getting the workflow locally: %s", err)
+		log.Printf("Failed getting the workflow locally (delete workflow): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -1128,7 +1128,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Println("Start")
+	//log.Println("Start")
 	user, userErr := handleApiAuthentication(resp, request)
 	if userErr != nil {
 		log.Printf("Api authentication failed in edit workflow: %s", userErr)
@@ -1137,7 +1137,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Println("PostUser")
+	//log.Println("PostUser")
 	location := strings.Split(request.URL.String(), "/")
 
 	var fileId string
@@ -1164,7 +1164,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	tmpworkflow, err := getWorkflow(ctx, fileId)
 	if err != nil {
-		log.Printf("Failed getting the workflow locally: %s", err)
+		log.Printf("Failed getting the workflow locally (save workflow): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -1211,7 +1211,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - this shouldn't be necessary with proper API checks
 	newActions := []Action{}
 	allNodes := []string{}
-	log.Println("Pre")
+	//log.Println("Pre")
 	for _, action := range workflow.Actions {
 		allNodes = append(allNodes, action.ID)
 
@@ -1237,7 +1237,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	workflow.Actions = newActions
 
 	for _, trigger := range workflow.Triggers {
-		log.Println("TRIGGERS")
+		//log.Println("TRIGGERS")
 		allNodes = append(allNodes, trigger.ID)
 	}
 
@@ -1260,7 +1260,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	foundNodes := []string{}
 	for _, node := range allNodes {
 		for _, branch := range workflow.Branches {
-			log.Println("branch")
+			//log.Println("branch")
 			//log.Println(node)
 			//log.Println(branch.DestinationID)
 			if node == branch.DestinationID || node == branch.SourceID {
@@ -1668,7 +1668,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	if workflow.ID == "" || workflow.ID != id {
 		tmpworkflow, err := getWorkflow(ctx, id)
 		if err != nil {
-			log.Printf("Failed getting the workflow locally: %s", err)
+			log.Printf("Failed getting the workflow locally (execution cleanup): %s", err)
 			return WorkflowExecution{}, "Failed getting workflow", err
 		}
 
@@ -1993,7 +1993,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflow, err := getWorkflow(ctx, fileId)
 	if err != nil {
-		log.Printf("Failed getting the workflow locally: %s", err)
+		log.Printf("Failed getting the workflow locally (execute workflow): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -2064,7 +2064,7 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflow, err := getWorkflow(ctx, fileId)
 	if err != nil {
-		log.Printf("Failed getting the workflow locally: %s", err)
+		log.Printf("Failed getting the workflow locally (stop schedule): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -2153,7 +2153,7 @@ func stopScheduleGCP(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflow, err := getWorkflow(ctx, fileId)
 	if err != nil {
-		log.Printf("Failed getting the workflow locally: %s", err)
+		log.Printf("Failed getting the workflow locally (stop schedule GCP): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -2275,7 +2275,7 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflow, err := getWorkflow(ctx, fileId)
 	if err != nil {
-		log.Printf("Failed getting the workflow locally: %s", err)
+		log.Printf("Failed getting the workflow locally (schedule workflow): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -3773,7 +3773,7 @@ func getWorkflowExecutions(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflow, err := getWorkflow(ctx, fileId)
 	if err != nil {
-		log.Printf("Failed getting the workflow locally: %s", err)
+		log.Printf("Failed getting the workflow locally (get executions): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return

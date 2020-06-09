@@ -372,30 +372,6 @@ const AppCreator = (props) => {
 			securitySchemes = data.components.securitySchemes
 		} 
 
-		// FIXME: Have multiple authentication options?
-		if (securitySchemes !== undefined) {
-			for (const [key, value] of Object.entries(securitySchemes)) {
-				if (value.scheme === "bearer") {
-					setAuthenticationOption("Bearer auth")
-					break
-				} else if (value.type === "apiKey") {
-					setAuthenticationOption("API key")
-
-					value.in = value.in.charAt(0).toUpperCase() + value.in.slice(1);
-					setParameterLocation(value.in)
-					if (!apikeySelection.includes(value.in)) {
-						console.log("APIKEY SELECT: ", apikeySelection)
-						alert.error("Might be error in setting up API key authentication")
-					}
-
-  				setParameterName(value.name)
-					break
-				} else if (value.scheme === "basic") {
-					setAuthenticationOption("Basic auth")
-					break
-				}
-			}
-		}
 
 		console.log(data)
 
@@ -451,9 +427,36 @@ const AppCreator = (props) => {
 			}
 		}
 
+
+		// FIXME: Have multiple authentication options?
+		if (securitySchemes !== undefined) {
+			for (const [key, value] of Object.entries(securitySchemes)) {
+				if (value.scheme === "bearer") {
+					setAuthenticationOption("Bearer auth")
+					break
+				} else if (value.type === "apiKey") {
+					setAuthenticationOption("API key")
+
+					value.in = value.in.charAt(0).toUpperCase() + value.in.slice(1);
+					setParameterLocation(value.in)
+					if (!apikeySelection.includes(value.in)) {
+						console.log("APIKEY SELECT: ", apikeySelection)
+						alert.error("Might be error in setting up API key authentication")
+					}
+
+					console.log("PARAM NAME: ", value.name)
+  				setParameterName(value.name)
+					break
+				} else if (value.scheme === "basic") {
+					setAuthenticationOption("Basic auth")
+					break
+				}
+			}
+		}
+
 		setActions(newActions)
 	}
-				
+
 	// Saving the app that's been configured.
 	const submitApp = () => {
 		alert.info("Uploading and building app " + name)
@@ -810,7 +813,7 @@ const AppCreator = (props) => {
 				id="standard-required"
 				margin="normal"
 				variant="outlined"
-				defaultValue={parameterName}
+				value={parameterName}
 				helperText={<div style={{color:"white", marginBottom: "2px",}}>Can't be empty. Can't contain any of the following characters: !#$%&'^+-._~|]+$</div>}
 				onChange={e => setParameterName(e.target.value)}	
 				InputProps={{
@@ -926,11 +929,13 @@ const AppCreator = (props) => {
 							{data.method} - {url} - {data.name}
 							</div>
 						</Tooltip>
+						{/*
 					 	<Tooltip title="Test action" placement="bottom">
 							<div style={{color: "#f85a3e", cursor: "pointer", marginRight: "10px", }} onClick={() => {testAction(index)}}>
 								Test
 							</div>
 						</Tooltip>
+						*/}
 					 	<Tooltip title="Delete action" placement="bottom">
 							<div style={{color: "#f85a3e", cursor: "pointer"}} onClick={() => {deleteAction(index)}}>
 								Delete
@@ -1576,13 +1581,15 @@ const AppCreator = (props) => {
 					<div style={{marginTop: "25px"}}>
 						{actionView}
 					</div>
+					{/*
 					<Divider style={{marginBottom: "10px", marginTop: "30px", height: "1px", width: "100%", backgroundColor: "grey"}}/>
 						{testView}
+					*/}
 
 	        <Button color="primary" variant="contained" style={{borderRadius: "0px", marginTop: "30px", height: "50px",}} onClick={() => {
 						submitApp()
 					}}>
-						Save	
+						Save
 					</Button>
 					{errorCode.length > 0 ? `Error: ${errorCode}` : null}
 				</Paper>

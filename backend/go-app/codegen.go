@@ -799,7 +799,6 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 			}
 
 			if param.Value.In == "path" {
-				//log.Printf("PATH!: %s", param.Value.Name)
 				parameters = append(parameters, param.Value.Name)
 				//baseUrl = fmt.Sprintf("%s%s", baseUrl)
 			} else if param.Value.In == "query" {
@@ -909,7 +908,6 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 			}
 
 			if param.Value.In == "path" {
-				log.Printf("PATH!: %s", param.Value.Name)
 				parameters = append(parameters, param.Value.Name)
 				//baseUrl = fmt.Sprintf("%s%s", baseUrl)
 			} else if param.Value.In == "query" {
@@ -1016,7 +1014,6 @@ func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 			}
 
 			if param.Value.In == "path" {
-				//log.Printf("PATH!: %s", param.Value.Name)
 				parameters = append(parameters, param.Value.Name)
 				//baseUrl = fmt.Sprintf("%s%s", baseUrl)
 			} else if param.Value.In == "query" {
@@ -1122,7 +1119,6 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 			}
 
 			if param.Value.In == "path" {
-				//log.Printf("PATH!: %s", param.Value.Name)
 				parameters = append(parameters, param.Value.Name)
 				//baseUrl = fmt.Sprintf("%s%s", baseUrl)
 			} else if param.Value.In == "query" {
@@ -1178,9 +1174,9 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 		Parameters:  extraParameters,
 	}
 
-	if path.Post.RequestBody != nil {
-		log.Printf("RequestBody: %#v", path.Post.RequestBody)
-	}
+	//if path.Post.RequestBody != nil {
+	//	log.Printf("RequestBody: %#v", path.Post.RequestBody)
+	//}
 
 	action.Returns.Schema.Type = "string"
 	baseUrl := fmt.Sprintf("%s%s", api.Link, actualPath)
@@ -1233,7 +1229,6 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 			}
 
 			if param.Value.In == "path" {
-				//log.Printf("PATH!: %s", param.Value.Name)
 				parameters = append(parameters, param.Value.Name)
 				//baseUrl = fmt.Sprintf("%s%s", baseUrl)
 			} else if param.Value.In == "query" {
@@ -1339,7 +1334,6 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 			}
 
 			if param.Value.In == "path" {
-				//log.Printf("PATH!: %s", param.Value.Name)
 				parameters = append(parameters, param.Value.Name)
 				//baseUrl = fmt.Sprintf("%s%s", baseUrl)
 			} else if param.Value.In == "query" {
@@ -1446,7 +1440,6 @@ func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 			}
 
 			if param.Value.In == "path" {
-				//log.Printf("PATH!: %s", param.Value.Name)
 				parameters = append(parameters, param.Value.Name)
 				//baseUrl = fmt.Sprintf("%s%s", baseUrl)
 			} else if param.Value.In == "query" {

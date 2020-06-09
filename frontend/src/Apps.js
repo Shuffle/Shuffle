@@ -462,7 +462,8 @@ const Apps = (props) => {
 						<div/>
 						Apps interact with eachother in workflows. They are created with the app creator, using OpenAPI specification or manually in python. Use the links above to find potential apps you're looking for using OpenAPI or make one from scratch. There's 1000+ available.
 						<div/>
-						<div style={{marginTop: 20}}>
+						<Divider style={{height: 1, backgroundColor: dividerColor, marginTop: 20, marginBottom: 20}} />
+						<div style={{}}>
 							<Button
 								variant="text"
 								component="label"
@@ -546,7 +547,7 @@ const Apps = (props) => {
 								setSearchBackend(!searchBackend)}
 							} />}
 						/>
-						<Tooltip title={"Upload from Github"} style={{marginTop: "28px", width: "100%"}} aria-label={"Upload"}>
+						<Tooltip title={"Download from Github"} style={{marginTop: "28px", width: "100%"}} aria-label={"Upload"}>
 							<Button
 								variant="outlined"
 								component="label"
@@ -579,10 +580,10 @@ const Apps = (props) => {
 							handleSearchChange(event.target.value)
 						}}
 					/>
-					<div style={{marginTop: 15, height: "100%", paddingBottom: 150,}}>
+					<div style={{marginTop: 15}}>
 						{apps.length > 0 ? 
 							filteredApps.length > 0 ? 
-								<div style={{maxHeight: "75vh", overflowY: "scroll"}}>
+								<div style={{height: "75vh", overflowY: "scroll"}}>
 									{filteredApps.map(app => {
 										return (
 											appPaper(app)

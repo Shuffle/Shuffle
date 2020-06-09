@@ -1560,6 +1560,7 @@ const AngularWorkflow = (props) => {
 												aria-controls="long-menu"
 												aria-haspopup="true"
 												onClick={menuClick}
+												style={{color: "white"}}
 											  >
 												<MoreVertIcon />
 											</IconButton>
@@ -1965,7 +1966,7 @@ const AngularWorkflow = (props) => {
 						node.data.type = "ACTION"
 						node.isStartNode = action["id"] === workflow.start
 
-						return node;
+						return node
 					})
 
 					const tmpelements = [].concat(actions)
@@ -2001,8 +2002,10 @@ const AngularWorkflow = (props) => {
 		}
 	}
 
-	const handleDragStop = (e) => {
+	const handleDragStop = (e, app) => {
 		newNodeId = ""
+		console.log("STOP!: ", e)
+		console.log("APP!: ", app)
 	}
 
 	const appScrollStyle = {
@@ -2063,7 +2066,7 @@ const AngularWorkflow = (props) => {
 						return(
 							<Draggable 
 								onDrag={(e) => {handleAppDrag(e, app)}}
-								onStop={(e) => {handleDragStop(e)}}
+								onStop={(e) => {handleDragStop(e, app)}}
 								dragging={false}
 								position={{
 									x: 0,
@@ -2703,11 +2706,11 @@ const AngularWorkflow = (props) => {
 	}
 
 	const setTriggerFolderWrapperMulti = event => {
-	    const { options } = event.target;
-	    const value = [];
+	    const { options } = event.target
+	    const value = []
 	    for (let i = 0, l = options.length; i < l; i += 1) {
 	      if (options[i].selected) {
-	        value.push(options[i].value);
+	        value.push(options[i].value)
 	      }
 	    }
 
@@ -2783,7 +2786,7 @@ const AngularWorkflow = (props) => {
 		if (splitItems.includes(value)) {
 			for( var i = 0; i < splitItems.length; i++){ 
 			   	if (splitItems[i] === value) {
-			     	splitItems.splice(i, 1); 
+			     	splitItems.splice(i, 1) 
 			   	}
 			}
 
@@ -2793,7 +2796,7 @@ const AngularWorkflow = (props) => {
 
 		for( var i = 0; i < splitItems.length; i++){ 
 			if (splitItems[i] === "") {
-				splitItems.splice(i, 1); 
+				splitItems.splice(i, 1) 
 			}
 		}
 		
@@ -2824,7 +2827,7 @@ const AngularWorkflow = (props) => {
 	}
 
 	const AppConditionHandler = (props) => {
-  	const { tmpdata, type } = props;
+  	const { tmpdata, type } = props
 
 		if (tmpdata === undefined) {
 			return tmpdata
@@ -3192,8 +3195,8 @@ const AngularWorkflow = (props) => {
 
 	const EdgeSidebar = () => {
 		const ConditionHandler = (condition, index) => {
-			const [open, setOpen] = React.useState(false);
-			const [anchorEl, setAnchorEl] = React.useState(null);
+			const [open, setOpen] = React.useState(false)
+			const [anchorEl, setAnchorEl] = React.useState(null)
 
 			const deleteCondition = (conditionIndex) => {
 				console.log(selectedEdge)
@@ -3223,7 +3226,7 @@ const AngularWorkflow = (props) => {
 			const menuClick = (event) => {
 				console.log("MENU CLICK")
 				setOpen(!open)
-				setAnchorEl(event.currentTarget);
+				setAnchorEl(event.currentTarget)
 			}
 
 			return (
@@ -3363,7 +3366,7 @@ const AngularWorkflow = (props) => {
 			})
 			.catch(error => {
 				console.log(error.toString())
-			});
+			})
 		}
 
 		const getTriggerAuth = () => {
@@ -3384,7 +3387,7 @@ const AngularWorkflow = (props) => {
 			})
 			.catch(error => {
 				console.log(error.toString())
-			});
+			})
 		}
 
 		// Getting the triggers and the folders if they exist
@@ -3426,8 +3429,8 @@ const AngularWorkflow = (props) => {
 					})
 					.catch(error => {
 						console.log(error.toString())
-					});
-				}, 2500);
+					})
+				}, 2500)
 
 				console.log(data)
 				saveWorkflow(workflow)
@@ -3801,7 +3804,7 @@ const AngularWorkflow = (props) => {
 		})
 		.catch(error => {
 			alert.error(error.toString())
-		});
+		})
 	}
 
 	const startMailSub = (trigger, triggerindex) => {
@@ -3857,7 +3860,7 @@ const AngularWorkflow = (props) => {
 		})
 		.catch(error => {
 			alert.error(error.toString())
-		});
+		})
 	}
 
 	const newWebhook = (trigger) => {
@@ -3903,7 +3906,7 @@ const AngularWorkflow = (props) => {
     	})
 		.catch(error => {
     		console.log(error.toString())
-		});
+		})
 	}
 
 	const deleteWebhook = (trigger, triggerindex) => {
@@ -3942,7 +3945,7 @@ const AngularWorkflow = (props) => {
 		})
 		.catch(error => {
 			alert.error(error.toString())
-		});
+		})
 	}
 
 	const UserinputSidebar = () => {
@@ -4356,7 +4359,7 @@ const AngularWorkflow = (props) => {
 		}
 
 		if (Object.getOwnPropertyNames(selectedAction).length > 0 && Object.getOwnPropertyNames(selectedApp).length > 0) {
-			//console.time('ACTIONSTART');
+			//console.time('ACTIONSTART')
 			return(
 				<div style={rightsidebarStyle}>	
 					{appApiView}
@@ -4545,7 +4548,7 @@ const AngularWorkflow = (props) => {
 						executionData.results.map(data => {
 							var showResult = data.result.trim()
 							showResult.split(" None").join(" \"None\"")
-							//showResult = replaceAll(showResult, " None", " \"None\"");
+							//showResult = replaceAll(showResult, " None", " \"None\"")
 							var jsonvalid = true
 							try {
 								JSON.parse(showResult)
@@ -4569,7 +4572,7 @@ const AngularWorkflow = (props) => {
 									{jsonvalid ? <ReactJson 
 											src={JSON.parse(showResult)} 
 											theme="solarized" 
-											collapsed={false}
+											collapsed={true}
 											displayDataTypes={false}
 											name={"Results for "+data.action.label}
 										/>
@@ -4872,4 +4875,4 @@ const AngularWorkflow = (props) => {
 	)
 }
 
-export default AngularWorkflow; 
+export default AngularWorkflow 
