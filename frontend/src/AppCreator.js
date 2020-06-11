@@ -1588,14 +1588,14 @@ const AppCreator = (props) => {
 					{bearerAuth}
 					{apiKey}
 
-					{authenticationOption === "No authentication" ? null :
+					{/*authenticationOption === "No authentication" ? null :
 						<FormControlLabel
 							style={{color: "white", marginBottom: 0, marginTop: 20}}
 							label=<div style={{color: "white"}}>Authentication required (default true)</div>
 							control={<Switch checked={authenticationRequired} onChange={() => {
 								setAuthenticationRequired(!authenticationRequired)
 							}} />}
-					/>}
+					/>*/}
 					<Divider style={{marginBottom: "10px", marginTop: "30px", height: "1px", width: "100%", backgroundColor: "grey"}}/>
 					<div style={{marginTop: "25px"}}>
 						{actionView}

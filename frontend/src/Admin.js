@@ -8,7 +8,8 @@ import ListItem from '@material-ui/core/ListItem';
 import Button from '@material-ui/core/Button';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
-
+import ListItemText from '@material-ui/core/ListItemText';
+import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
 
 import { useAlert } from "react-alert";
 
@@ -29,8 +30,38 @@ const Admin = (props) => {
 	const [curTab, setCurTab] = React.useState(0);
 	const [users, setUsers] = React.useState([]);
 	const [environments, setEnvironments] = React.useState([]);
+	const [schedules, setSchedules] = React.useState([])
 
 	const alert = useAlert()
+
+	const deleteSchedule = (data) => {
+		// FIXME - add some check here ROFL
+		console.log("INPUT: ", data)
+
+		// Just use this one?
+		const url = globalUrl+'/api/v1/workflows/'+data["workflow_id datastore:"]+"/schedule/"+data.id
+		console.log("URL: ", url)
+		fetch(url, {
+			method: 'DELETE',
+	  	credentials: "include",
+			headers: {
+				'Content-Type': 'application/json',
+			},
+		})
+		.then(response =>
+			response.json().then(responseJson => {
+				if (responseJson["success"] === false) {
+					alert.error("Failed stopping schedule")
+				} else {
+					getSchedules()
+					alert.success("Successfully stopped schedule!")
+				}
+			}),
+		)
+		.catch(error => {
+			console.log("Error in userdata: ", error)
+		});
+	}
 
 	const submitUser = (data) => {
 		// FIXME - add some check here ROFL
@@ -129,6 +160,31 @@ const Admin = (props) => {
 		)
 		.catch(error => {
 			console.log("Error in userdata: ", error)
+		});
+	}
+
+	const getSchedules = () => {
+		fetch(globalUrl+"/api/v1/workflows/schedules", {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+			credentials: "include",
+    })
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for apps :O!")
+				return
+			}
+
+			return response.json()
+		})
+    .then((responseJson) => {
+			setSchedules(responseJson)
+		})
+		.catch(error => {
+			alert.error(error.toString())
 		});
 	}
 
@@ -329,6 +385,54 @@ const Admin = (props) => {
 		</div>
 		: null
 
+	const schedulesView = curTab === 2 ?
+		<div>
+			<h2>	
+				Schedules	
+			</h2>
+			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
+			<List>
+				<ListItem>
+					<ListItemText
+						primary="Interval (seconds)"
+						style={{maxWidth: 200}}
+					/>
+					<ListItemText
+						primary="Argument"
+						style={{maxWidth: 400, overflow: "hidden"}}
+					/>
+					<ListItemText
+						primary="Actions"
+					/>
+				</ListItem>
+				{schedules === undefined || schedules === null ? null : schedules.map(schedule => {
+					return (
+						<ListItem>
+							<ListItemText
+								style={{maxWidth: 200}}
+								primary={schedule.seconds}
+							/>
+							<ListItemText
+								primary={schedule.argument}
+								style={{maxWidth: 400, overflow: "hidden"}}
+							/>
+							<ListItemText>
+								<Button 
+									style={{}} 
+									variant="contained"
+									color="primary"
+									onClick={() => deleteSchedule(schedule)}
+								>
+									Delete	
+								</Button>
+							</ListItemText>
+						</ListItem>
+					)
+				})}
+			</List>
+		</div>
+		: null
+
 	const environmentView = curTab === 1 ?
 		<div>
 			<h2>	
@@ -359,6 +463,8 @@ const Admin = (props) => {
 	const setConfig = (event, newValue) => {
 		if (newValue === 1) {
 			getEnvironments()
+		} else if (newValue === 2) {
+			getSchedules()
 		}
 
 		setModalUser({})
@@ -377,10 +483,12 @@ const Admin = (props) => {
 				>
 					<Tab label="Users" />
 					<Tab label="Environments"/>
+					<Tab label="Schedules"/>
 				</Tabs>
 				<div style={{marginBottom: 10}}/>
 				{usersView}	
 				{environmentView}
+				{schedulesView}
 			</Paper>
 		</div>
 

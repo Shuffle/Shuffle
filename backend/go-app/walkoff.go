@@ -2021,6 +2021,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 }
 
 func stopSchedule(resp http.ResponseWriter, request *http.Request) {
+	log.Printf("Delete?")
 	cors := handleCors(resp, request)
 	if cors {
 		return
@@ -2077,19 +2078,6 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
-	}
-
-	if len(workflow.Actions) == 0 {
-		workflow.Actions = []Action{}
-	}
-	if len(workflow.Branches) == 0 {
-		workflow.Branches = []Branch{}
-	}
-	if len(workflow.Triggers) == 0 {
-		workflow.Triggers = []Trigger{}
-	}
-	if len(workflow.Errors) == 0 {
-		workflow.Errors = []string{}
 	}
 
 	err = deleteSchedule(ctx, scheduleId)
