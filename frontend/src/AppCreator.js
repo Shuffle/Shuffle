@@ -4,11 +4,13 @@ import {BrowserView, MobileView} from "react-device-detect";
 
 import {Link} from 'react-router-dom';
 import Paper from '@material-ui/core/Paper';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Button from '@material-ui/core/Button';
 import Divider from '@material-ui/core/Divider';
 import Select from '@material-ui/core/Select';
 import MenuItem from '@material-ui/core/MenuItem';
 import FormControl from '@material-ui/core/FormControl';
+import Switch from '@material-ui/core/Switch';
 import Dialog from '@material-ui/core/Dialog';
 import DialogTitle from '@material-ui/core/DialogTitle';
 import DialogContent from '@material-ui/core/DialogContent';
@@ -196,6 +198,7 @@ const AppCreator = (props) => {
 	const [updater, setUpdater] = useState("tmp")
 	const [baseUrl, setBaseUrl] = useState("");
 	const [actionsModalOpen, setActionsModalOpen] = useState(false);
+	const [authenticationRequired, setAuthenticationRequired] = useState(false);
 	const [authenticationOption, setAuthenticationOption] = useState(authenticationOptions[0]);
 	const [parameterName, setParameterName] = useState("");
 	const [parameterLocation, setParameterLocation] = useState(apikeySelection.length > 0 ? apikeySelection[0] : "");
@@ -433,6 +436,7 @@ const AppCreator = (props) => {
 			for (const [key, value] of Object.entries(securitySchemes)) {
 				if (value.scheme === "bearer") {
 					setAuthenticationOption("Bearer auth")
+					setAuthenticationRequired(true)
 					break
 				} else if (value.type === "apiKey") {
 					setAuthenticationOption("API key")
@@ -446,9 +450,11 @@ const AppCreator = (props) => {
 
 					console.log("PARAM NAME: ", value.name)
   				setParameterName(value.name)
+					setAuthenticationRequired(true)
 					break
 				} else if (value.scheme === "basic") {
 					setAuthenticationOption("Basic auth")
+					setAuthenticationRequired(true)
 					break
 				}
 			}
@@ -704,7 +710,6 @@ const AppCreator = (props) => {
 				</a>
 			</h4>
 			Users will be required to submit their API as the header "Authorization: Bearer APIKEY"
-			<Divider style={{marginBottom: "10px", marginTop: "30px", height: "1px", width: "100%", backgroundColor: "grey"}}/>
 		</div>
 		: null
 
@@ -717,7 +722,6 @@ const AppCreator = (props) => {
 				</a>
 			</h4>
 			Users will be required to submit a valid username and password before using the API
-			<Divider style={{marginBottom: "10px", marginTop: "30px", height: "1px", width: "100%", backgroundColor: "grey"}}/>
 		</div>
 		: null
 
@@ -850,7 +854,6 @@ const AppCreator = (props) => {
 					)}
 				)}
 			</Select>
-			<Divider style={{marginBottom: "10px", marginTop: "30px", height: "1px", width: "100%", backgroundColor: "grey"}}/>
 		</div>
 		: null
 
@@ -1559,11 +1562,17 @@ const AppCreator = (props) => {
 						}}
 					/>
 					<FormControl style={{marginTop: "15px",}} variant="outlined">
-						<h5 style={{marginBottom: "10px", color: "white",}}>Authentication</h5>
+						<h5 style={{marginBottom: "10px", color: "white",}}>Authentication
+						</h5>
 						<Select
 							fullWidth
 							onChange={(e) => {
 								setAuthenticationOption(e.target.value) 
+								if (e.target.value === "No authentication") {
+									setAuthenticationRequired(false)
+								} else {
+									setAuthenticationRequired(true)
+								}
 							}}
 							value={authenticationOption}
 							style={{backgroundColor: inputColor, color: "white", height: "50px"}}
@@ -1578,6 +1587,16 @@ const AppCreator = (props) => {
 					{basicAuth}
 					{bearerAuth}
 					{apiKey}
+
+					{authenticationOption === "No authentication" ? null :
+						<FormControlLabel
+							style={{color: "white", marginBottom: 0, marginTop: 20}}
+							label=<div style={{color: "white"}}>Authentication required (default true)</div>
+							control={<Switch checked={authenticationRequired} onChange={() => {
+								setAuthenticationRequired(!authenticationRequired)
+							}} />}
+					/>}
+					<Divider style={{marginBottom: "10px", marginTop: "30px", height: "1px", width: "100%", backgroundColor: "grey"}}/>
 					<div style={{marginTop: "25px"}}>
 						{actionView}
 					</div>

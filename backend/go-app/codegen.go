@@ -242,6 +242,7 @@ func buildStructure(swagger *openapi3.Swagger, curHash string) (string, error) {
 	return appPath, nil
 }
 
+// This function generates the python code that's being used.
 func makePythoncode(swagger *openapi3.Swagger, name, url, method string, parameters, optionalQueries []string) (string, string) {
 	method = strings.ToLower(method)
 	queryString := ""
@@ -259,9 +260,6 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 		}
 	}
 
-	// How to add authentication?
-	// I think it should be like:
-	// async def(self, auth, baseurl, data):
 	// api.Authentication.Parameters[0].Value = "BearerAuth"
 	authenticationParameter := ""
 	authenticationSetup := ""
@@ -270,14 +268,15 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 	if swagger.Components.SecuritySchemes != nil {
 		if swagger.Components.SecuritySchemes["BearerAuth"] != nil {
 			authenticationParameter = ", apikey"
-			authenticationSetup = "headers[\"Authorization\"] = f\"Bearer {apikey}\""
+			authenticationSetup = "if apikey != \" \": headers[\"Authorization\"] = f\"Bearer {apikey}\""
 		} else if swagger.Components.SecuritySchemes["BasicAuth"] != nil {
 			authenticationParameter = ", username, password"
 			authenticationAddin = ", auth=(username, password)"
 		} else if swagger.Components.SecuritySchemes["ApiKeyAuth"] != nil {
 			authenticationParameter = ", apikey"
 			if swagger.Components.SecuritySchemes["ApiKeyAuth"].Value.In == "header" {
-				authenticationSetup = fmt.Sprintf("headers[\"%s\"] = apikey", swagger.Components.SecuritySchemes["ApiKeyAuth"].Value.Name)
+				// This is a way to bypass apikeys by passing " "
+				authenticationSetup = fmt.Sprintf(`if apikey != " ": headers["%s"] = apikey`, swagger.Components.SecuritySchemes["ApiKeyAuth"].Value.Name)
 			} else if swagger.Components.SecuritySchemes["ApiKeyAuth"].Value.In == "query" {
 				// This might suck lol
 				key := "?"
@@ -285,7 +284,7 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 					key = "&"
 				}
 
-				authenticationSetup = fmt.Sprintf("url+=f\"%s%s={apikey}\"", key, swagger.Components.SecuritySchemes["ApiKeyAuth"].Value.Name)
+				authenticationSetup = fmt.Sprintf("if apikey != \" \": url+=f\"%s%s={apikey}\"", key, swagger.Components.SecuritySchemes["ApiKeyAuth"].Value.Name)
 			}
 		}
 	}
@@ -444,6 +443,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 				Description: "The apikey to use",
 				Multiline:   false,
 				Required:    true,
+				Example:     "The API key to use. Space = skip",
 				Schema: SchemaDefinition{
 					Type: "string",
 				},
@@ -460,6 +460,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 				Description: "The apikey to use",
 				Multiline:   false,
 				Required:    true,
+				Example:     "The API key to use. Space = skip",
 				Schema: SchemaDefinition{
 					Type: "string",
 				},
@@ -475,6 +476,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 				Description: "The username to use",
 				Multiline:   false,
 				Required:    true,
+				Example:     "The username to use",
 				Schema: SchemaDefinition{
 					Type: "string",
 				},
@@ -484,6 +486,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 				Description: "The password to use",
 				Multiline:   false,
 				Required:    true,
+				Example:     "The password to use",
 				Schema: SchemaDefinition{
 					Type: "string",
 				},
