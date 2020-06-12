@@ -14,6 +14,7 @@ import MenuItem from '@material-ui/core/MenuItem';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Switch from '@material-ui/core/Switch';
 
+import CircularProgress from '@material-ui/core/CircularProgress';
 import CachedIcon from '@material-ui/icons/Cached';
 import EditIcon from '@material-ui/icons/Edit';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
@@ -31,6 +32,9 @@ import Dialog from '@material-ui/core/Dialog';
 import DialogTitle from '@material-ui/core/DialogTitle';
 import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
+import CloudDownloadIcon from '@material-ui/icons/CloudDownload';
+
+const inputColor = "#383B40"
 const surfaceColor = "#27292D"
 
 const Workflows = (props) => {
@@ -51,6 +55,10 @@ const Workflows = (props) => {
 	const [, setTrackingId] = React.useState("")
 
 	const [collapseJson, setCollapseJson] = React.useState(false)
+	const [field1, setField1] = React.useState("")
+	const [field2, setField2] = React.useState("")
+	const [downloadUrl, setDownloadUrl] = React.useState("https://github.com/frikky/shuffle-workflows")
+	const [loadWorkflowsModalOpen, setLoadWorkflowsModalOpen] = React.useState(false)
 
 	const [modalOpen, setModalOpen] = React.useState(false);
 	const [newWorkflowName, setNewWorkflowName] = React.useState("");
@@ -173,6 +181,7 @@ const Workflows = (props) => {
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for WORKFLOW EXECUTION :O!")
+				alert.error("Failed loading executions for current workflow")
 			}
 
 			return response.json()
@@ -758,7 +767,10 @@ const Workflows = (props) => {
 			for (var key in event.target.files) {
 				const file = event.target.files[key]
 				if (file.type !== "application/json") {
-					//alert.error("File has to contain json.")
+					if (file.type !== undefined) {
+						alert.error("File has to contain valid json")
+					}
+
 					continue
 				}
 
@@ -798,6 +810,8 @@ const Workflows = (props) => {
 		  	reader.readAsText(file)
 			}
 		}
+
+		setLoadWorkflowsModalOpen(false)
 	}
 
 	const modalView = modalOpen ? 
@@ -886,9 +900,16 @@ const Workflows = (props) => {
 					 	<Tooltip color="primary" title={"Create new workflow"} placement="top">
 							<Button color="primary" style={{}} variant="text" onClick={() => setModalOpen(true)}><AddIcon /></Button> 				
 						</Tooltip>
+						{/*
 					 	<Tooltip color="primary" title={"Import workflows"} placement="top">
 							<Button color="primary" style={{}} variant="text" onClick={() => upload.click()}>
 								<PublishIcon />
+							</Button> 				
+						</Tooltip>
+						*/}
+					 	<Tooltip color="primary" title={"Download workflows"} placement="top">
+							<Button color="primary" style={{}} variant="text" onClick={() => setLoadWorkflowsModalOpen(true)}>
+								<CloudDownloadIcon />
 							</Button> 				
 						</Tooltip>
 						<input hidden type="file" multiple="multiple" ref={(ref) => upload = ref} onChange={importFiles} />
@@ -962,10 +983,160 @@ const Workflows = (props) => {
 			</Paper>
 		</div>
 
+
+	const importWorkflowsFromUrl = (url) => {
+		console.log("IMPORT WORKFLOWS FROM ", downloadUrl)
+
+		const parsedData = {
+			"url": url,
+		}
+
+		if (field1.length > 0) {
+			parsedData["field_1"] = field1
+		}
+
+		if (field2.length > 0) {
+			parsedData["field_2"] = field2
+		}
+
+		alert.success("Getting specific workflows from your URL.")
+		var cors = "cors"
+		fetch(globalUrl+"/api/v1/workflows/download_remote", {
+    	method: "POST",
+			mode: "cors",
+			headers: {
+				'Accept': 'application/json',
+			},
+			body: JSON.stringify(parsedData),
+	  	credentials: "include",
+		})
+		.then((response) => {
+			if (response.status === 200) {
+				response.text().then(function (text) {
+					console.log("RETURN: ", text)
+					alert.success("Loaded existing apps!")
+				})
+			}
+
+			return response.json()
+		})
+    .then((responseJson) => {
+				console.log("DATA: ", responseJson)
+				if (responseJson.reason !== undefined) {
+					alert.error("Failed loading: "+responseJson.reason)
+				} else {
+					alert.error("Failed loading")
+				}
+		})
+		.catch(error => {
+			alert.error(error.toString())
+		})
+	}
+
+	const handleGithubValidation = () => {
+		importWorkflowsFromUrl(downloadUrl)
+		setLoadWorkflowsModalOpen(false)
+	}
+
+	const workflowDownloadModalOpen = loadWorkflowsModalOpen ? 
+		<Dialog modal 
+			open={loadWorkflowsModalOpen}
+			onClose={() => {
+			}}
+			PaperProps={{
+				style: {
+					backgroundColor: surfaceColor,
+					color: "white",
+					minWidth: "800px",
+					minHeight: "320px",
+				},
+			}}
+		>
+			<DialogTitle>
+				<div style={{color: "rgba(255,255,255,0.9)"}}>
+					Load workflows from github repo
+					<div style={{float: "right"}}>
+						<Tooltip color="primary" title={"Import manually"} placement="top">
+							<Button color="primary" style={{}} variant="text" onClick={() => upload.click()}>
+								<PublishIcon />
+							</Button> 				
+						</Tooltip>
+					</div>
+				</div>
+			</DialogTitle>
+			<DialogContent style={{color: "rgba(255,255,255,0.65)"}}>
+				Repository (supported: github, gitlab, bitbucket)
+				<TextField
+					style={{backgroundColor: inputColor}}
+					variant="outlined"
+					margin="normal"
+					value={downloadUrl}
+					InputProps={{
+						style:{
+							color: "white",
+							height: "50px",
+							fontSize: "1em",
+						},
+					}}
+					onChange={e => setDownloadUrl(e.target.value)}
+					placeholder="https://github.com/frikky/shuffle-apps"
+					fullWidth
+					/>
+
+				<span style={{marginTop: 10}}>Authentication (optional - private repos etc):</span>
+				<div style={{display: "flex"}}>
+					<TextField
+						style={{flex: 1, backgroundColor: inputColor}}
+						variant="outlined"
+						margin="normal"
+						InputProps={{
+							style:{
+								color: "white",
+								height: "50px",
+								fontSize: "1em",
+							},
+						}}
+						onChange={e => setField1(e.target.value)}
+						type="username"
+						placeholder="Username / APIkey (optional)"
+						fullWidth
+						/>
+					<TextField
+						style={{flex: 1, backgroundColor: inputColor}}
+						variant="outlined"
+						margin="normal"
+						InputProps={{
+							style:{
+								color: "white",
+								height: "50px",
+								fontSize: "1em",
+							},
+						}}
+						onChange={e => setField2(e.target.value)}
+						type="password"
+						placeholder="Password (optional)"
+						fullWidth
+						/>
+				</div>
+			</DialogContent>
+			<DialogActions>
+				<Button style={{borderRadius: "0px"}} onClick={() => setLoadWorkflowsModalOpen(false)} color="primary">
+					Cancel
+				</Button>
+	      <Button style={{borderRadius: "0px"}} disabled={downloadUrl.length === 0 || !downloadUrl.includes("http")} onClick={() => {
+					handleGithubValidation() 
+				}} color="primary">
+	        Submit	
+	      </Button>
+			</DialogActions>
+		</Dialog>
+		: null
+
 	const loadedCheck = isLoaded && isLoggedIn && workflowDone ? 
 		<div>
 			{workflowView}
 			{modalView}
+			{workflowDownloadModalOpen}
 		</div>
 		:
 		<div>

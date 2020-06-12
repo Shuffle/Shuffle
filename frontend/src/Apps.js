@@ -20,7 +20,7 @@ import YAML from 'yaml'
 import {Link} from 'react-router-dom';
 import Breadcrumbs from '@material-ui/core/Breadcrumbs';
 
-import CloudUploadIcon from '@material-ui/icons/CloudUpload';
+import CloudDownloadIcon from '@material-ui/icons/CloudDownload';
 import PublishIcon from '@material-ui/icons/Publish';
 import CloudDownload from '@material-ui/icons/CloudDownload';
 import EditIcon from '@material-ui/icons/Edit';
@@ -457,7 +457,7 @@ const Apps = (props) => {
 					<div style={{width: "100%", margin: 25}}>
 						<h2>App Creator</h2>
 						<a href="/docs/apps" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">How it works</a>
-						&nbsp;- <a href="https://github.com/frikky/OpenAPI-security-definitions" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">Security API's</a>
+						&nbsp;- <a href="https://github.com/frikky/security-openapis" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">Security API's</a>
 						&nbsp;- <a href="https://apis.guru/browse-apis/" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">OpenAPI directory</a>
 						<div/>
 						Apps interact with eachother in workflows. They are created with the app creator, using OpenAPI specification or manually in python. Use the links above to find potential apps you're looking for using OpenAPI or make one from scratch. There's 1000+ available.
@@ -558,7 +558,7 @@ const Apps = (props) => {
 									setLoadAppsModalOpen(true)
 								}}
 							>
-								<CloudUploadIcon />
+								<CloudDownloadIcon />
 							</Button>
 						</Tooltip>
 					</div>
@@ -1023,13 +1023,13 @@ const Apps = (props) => {
 				</DialogContent>
 				<DialogActions>
 					{circularLoader}
-	        	  	<Button style={{borderRadius: "0px"}} onClick={() => setOpenApiModal(false)} color="primary">
-	        	    	Cancel
-	        	  	</Button>
+						<Button style={{borderRadius: "0px"}} onClick={() => setOpenApiModal(false)} color="primary">
+							Cancel
+						</Button>
 	      	<Button style={{borderRadius: "0px"}} disabled={appValidation.length === 0} onClick={() => {
 						redirectOpenApi()
 					}} color="primary">
-	        	    	Submit	
+	        	Submit	
 	        </Button>
 				</DialogActions>
 			</FormControl>

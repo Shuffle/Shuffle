@@ -5883,7 +5883,7 @@ func runInit(ctx context.Context) {
 	}
 
 	log.Printf("Downloading OpenAPI data for search - EXTRA APPS")
-	apis := "https://github.com/frikky/OpenAPI-security-definitions"
+	apis := "https://github.com/frikky/security-openapis"
 
 	// THis gets memory problems hahah
 	//apis := "https://github.com/APIs-guru/openapi-directory"
@@ -5973,6 +5973,7 @@ func init() {
 	r.HandleFunc("/api/v1/workflows", getWorkflows).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows", setNewWorkflow).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/schedules", handleGetSchedules).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/download_remote", loadSpecificWorkflows).Methods("POST", "OPTIONS")
 	//r.HandleFunc("/api/v1/workflows/{key}/execute_fs", executeWorkflowFS)
 	r.HandleFunc("/api/v1/workflows/{key}/execute", executeWorkflow).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/schedule", scheduleWorkflow).Methods("POST", "OPTIONS")

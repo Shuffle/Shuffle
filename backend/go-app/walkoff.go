@@ -3264,6 +3264,114 @@ func deployWebhookFunction(ctx context.Context, name, localization, applocation 
 	return nil
 }
 
+func loadSpecificWorkflows(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	// Just need to be logged in
+	// FIXME - should have some permissions?
+	user, err := handleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("Api authentication failed in load apps: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Role != "admin" {
+		log.Printf("Wrong user (%s) when downloading from github", user.Username)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		log.Printf("Error with body read: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// Field1 & 2 can be a lot of things..
+	type tmpStruct struct {
+		URL    string `json:"url"`
+		Field1 string `json:"field_1"`
+		Field2 string `json:"field_2"`
+	}
+	//log.Printf("Body: %s", string(body))
+
+	var tmpBody tmpStruct
+	err = json.Unmarshal(body, &tmpBody)
+	if err != nil {
+		log.Printf("Error with unmarshal tmpBody: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	fs := memfs.New()
+
+	if strings.Contains(tmpBody.URL, "github") || strings.Contains(tmpBody.URL, "gitlab") || strings.Contains(tmpBody.URL, "bitbucket") {
+		cloneOptions := &git.CloneOptions{
+			URL: tmpBody.URL,
+		}
+
+		// FIXME: Better auth.
+		if len(tmpBody.Field1) > 0 && len(tmpBody.Field2) > 0 {
+			cloneOptions.Auth = &http2.BasicAuth{
+
+				Username: tmpBody.Field1,
+				Password: tmpBody.Field2,
+			}
+		}
+
+		storer := memory.NewStorage()
+		r, err := git.Clone(storer, fs, cloneOptions)
+		if err != nil {
+			log.Printf("Failed loading repo into memory: %s", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+			return
+		}
+
+		dir, err := fs.ReadDir("/")
+		if err != nil {
+			log.Printf("FAiled reading folder: %s", err)
+		}
+		_ = r
+
+		log.Printf("Starting workflow folder iteration")
+		iterateWorkflowGithubFolders(fs, dir, "", "")
+
+	} else if strings.Contains(tmpBody.URL, "s3") {
+		//https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
+
+		//sess := session.Must(session.NewSession())
+		//downloader := s3manager.NewDownloader(sess)
+
+		//// Write the contents of S3 Object to the file
+		//storer := memory.NewStorage()
+		//n, err := downloader.Download(storer, &s3.GetObjectInput{
+		//	Bucket: aws.String(myBucket),
+		//	Key:    aws.String(myString),
+		//})
+		//if err != nil {
+		//	return fmt.Errorf("failed to download file, %v", err)
+		//}
+		//fmt.Printf("file downloaded, %d bytes\n", n)
+	} else {
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s is unsupported. Try e.g. github"}`, tmpBody.URL)))
+		return
+	}
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+}
+
 func loadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -3487,6 +3595,67 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 	}
 
 	return nil
+}
+
+// Onlyname is used to
+func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string) error {
+	var err error
+
+	for _, file := range dir {
+		if len(onlyname) > 0 && file.Name() != onlyname {
+			continue
+		}
+
+		// Folder?
+		switch mode := file.Mode(); {
+		case mode.IsDir():
+			tmpExtra := fmt.Sprintf("%s%s/", extra, file.Name())
+			dir, err := fs.ReadDir(tmpExtra)
+			if err != nil {
+				log.Printf("Failed to read dir: %s", err)
+				break
+			}
+
+			// Go routine? Hmm, this can be super quick I guess
+			err = iterateWorkflowGithubFolders(fs, dir, tmpExtra, "")
+			if err != nil {
+				break
+			}
+		case mode.IsRegular():
+			// Check the file
+			filename := file.Name()
+			if strings.HasSuffix(filename, ".json") {
+				path := fmt.Sprintf("%s%s", extra, file.Name())
+				fileReader, err := fs.Open(path)
+				if err != nil {
+					log.Printf("Error reading file: %s", err)
+					continue
+				}
+
+				readFile, err := ioutil.ReadAll(fileReader)
+				if err != nil {
+					log.Printf("Error reading file: %s", err)
+					continue
+				}
+
+				var workflow Workflow
+				err = json.Unmarshal(readFile, &workflow)
+				if err != nil {
+					continue
+				}
+
+				ctx := context.Background()
+				err = setWorkflow(ctx, workflow, workflow.ID)
+				if err != nil {
+					log.Printf("Failed setting (download) workflow: %s", err)
+					continue
+				}
+				log.Printf("Uploaded workflow %s!", filename)
+			}
+		}
+	}
+
+	return err
 }
 
 // Onlyname is used to
