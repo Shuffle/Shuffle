@@ -411,7 +411,6 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 			//log.Printf("%s", j)
 			api.SmallImage = string(j)
 			api.LargeImage = string(j)
-			log.Printf("Set images!")
 		}
 	}
 

@@ -262,7 +262,7 @@ const AngularWorkflow = (props) => {
 	const abortExecution = () => {
 		setExecutionRunning(false)
 
-		alert.success("Aborting execution")
+		alert.info("Aborting execution")
 		fetch(globalUrl+"/api/v1/workflows/"+props.match.params.key+"/executions/"+executionRequest.execution_id+"/abort", {
     	  	method: 'GET',
 				headers: {
@@ -274,7 +274,9 @@ const AngularWorkflow = (props) => {
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for WORKFLOW EXECUTION :O!")
-			} 
+			} else {
+				alert.success("Execution aborted")
+			}
 
 			return response.json()
 		})
@@ -657,7 +659,13 @@ const AngularWorkflow = (props) => {
 		.then((responseJson) => {
 			if (!responseJson.success) {
 				alert.error("Failed to start: "+responseJson.reason)
+				setExecutionRunning(false)
+				setExecutionRequestStarted(false)
 				stop()
+
+				for (var i = 0; i < curelements.length; i++) {
+					curelements[i].removeClass("not-executing-highlight")
+				}
 				return	
 			} else {
 				setExecutionRunning(true)
@@ -4482,11 +4490,13 @@ const AngularWorkflow = (props) => {
 										<div style={{ marginTop: "auto", marginBottom: "auto", marginRight: 15, }}>
 											{timestamp}
 										</div>
-										<Tooltip color="primary" title={resultsLength+" actions ran"} placement="top">
-											<div style={{marginRight: 10, marginTop: "auto", marginBottom: "auto",}}>
-												{resultsLength}/{data.workflow.actions.length}
-											</div>
-										</Tooltip>
+										{data.workflow.actions !== null ? 
+											<Tooltip color="primary" title={resultsLength+" actions ran"} placement="top">
+												<div style={{marginRight: 10, marginTop: "auto", marginBottom: "auto",}}>
+													{resultsLength}/{data.workflow.actions.length}
+												</div>
+											</Tooltip>
+											: null}
 									</div>
 									<Tooltip title={"Inspect execution"} placement="top">
 										<KeyboardArrowRightIcon style={{marginTop: "auto", marginBottom: "auto"}}/>
