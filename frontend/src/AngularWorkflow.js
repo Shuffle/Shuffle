@@ -1401,7 +1401,6 @@ const AngularWorkflow = (props) => {
 		display: "flex",
 	}
 
-
 	const paperVariableStyle = {
 		minHeight: "50px",
 		maxHeight: "50px",

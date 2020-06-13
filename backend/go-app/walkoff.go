@@ -1475,7 +1475,6 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	log.Printf("NewActions: %#v", newActions)
 	workflow.Actions = newActions
 	workflow.IsValid = true
 

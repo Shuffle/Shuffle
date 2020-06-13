@@ -512,9 +512,9 @@ const Apps = (props) => {
 	}
 
 	const appView = isLoggedIn ? 
-		<div style={{maxWidth: 1366, margin: "auto",}}>
+		<div style={{maxWidth: window.innerWidth > 1366 ? 1366 : 1200, margin: "auto",}}>
 			<div style={appViewStyle}>	
-				<div>
+				<div style={{flex: 1}}>
 					<Breadcrumbs aria-label="breadcrumb" separator="›" style={{color: "white",}}>
 						<Link to="/apps" style={{textDecoration: "none", color: "inherit",}}>
 							<h2 style={{color: "rgba(255,255,255,0.5)"}}>
@@ -532,10 +532,10 @@ const Apps = (props) => {
 					</Breadcrumbs>
 					<UploadView/>
 				</div>
-				<Divider style={{marginBottom: "10px", marginTop: "10px", height: "100%", width: "1px", backgroundColor: dividerColor}}/>
+				<Divider style={{marginBottom: 10, marginTop: 10, height: "100%", width: 1, backgroundColor: dividerColor}}/>
 				<div style={{flex: 1, marginLeft: 10, marginRight: 10}}>
 					<div style={{display: "flex"}}>
-						<div style={{flex: 10}}>
+						<div style={{flex: 1}}>
 							<h2>Available integrations</h2> 
 						</div>
 						{isLoading ? <CircularProgress style={{marginTop: 13, marginRight: 15}} /> : null}

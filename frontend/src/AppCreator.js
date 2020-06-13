@@ -67,7 +67,7 @@ const useStyles = makeStyles({
 
 const rewrite = (args) => {
   return args.reduce(function(args, a){
-    if (0 == a.indexOf('-X')) {
+    if (0 === a.indexOf('-X')) {
       args.push('-X')
       args.push(a.slice(2))
     } else {
@@ -105,35 +105,35 @@ const parseCurl = (s) => {
         out.url = arg
         break;
 
-      case arg == '-A' || arg == '--user-agent':
+      case arg === '-A' || arg === '--user-agent':
         state = 'user-agent'
         break;
 
-      case arg == '-H' || arg == '--header':
+      case arg === '-H' || arg === '--header':
         state = 'header'
         break;
 
-      case arg == '-d' || arg == '--data' || arg == '--data-ascii':
+      case arg === '-d' || arg === '--data' || arg === '--data-ascii':
         state = 'data'
         break;
 
-      case arg == '-u' || arg == '--user':
+      case arg === '-u' || arg === '--user':
         state = 'user'
         break;
 
-      case arg == '-I' || arg == '--head':
+      case arg === '-I' || arg === '--head':
         out.method = 'HEAD'
         break;
 
-      case arg == '-X' || arg == '--request':
+      case arg === '-X' || arg === '--request':
         state = 'method'
         break;
 
-      case arg == '-b' || arg =='--cookie':
+      case arg === '-b' || arg === '--cookie':
         state = 'cookie'
         break;
 
-      case arg == '--compressed':
+      case arg === '--compressed':
         out.header['Accept-Encoding'] = out.header['Accept-Encoding'] || 'deflate, gzip'
         break;
 
@@ -149,7 +149,7 @@ const parseCurl = (s) => {
             state = ''
             break;
           case 'data':
-            if (out.method == 'GET' || out.method == 'HEAD') out.method = 'POST'
+            if (out.method === 'GET' || out.method === 'HEAD') out.method = 'POST'
             out.header['Content-Type'] = out.header['Content-Type'] || 'application/x-www-form-urlencoded'
             out.body = out.body
               ? out.body + '&' + arg
