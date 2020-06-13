@@ -32,7 +32,7 @@ const hrefStyle = {
 }
 
 const Docs = (props) => {
-  const { isLoaded, globalUrl } = props;
+  const { isLoaded, globalUrl, inputColor } = props;
 
 	const [data, setData] = useState("");
 	const [firstrequest, setFirstrequest] = useState(true);
@@ -179,6 +179,23 @@ const Docs = (props) => {
 		return <img style={{maxWidth: "100%"}} alt={props.alt} src={props.src}/>
 	}
 
+	function CodeHandler(props) {
+		return <code style={{padding: 5, backgroundColor: inputColor}}>{props.value}</code>
+	}
+
+	function Heading(props) {
+		const element = React.createElement(`h${props.level}`, {style: {marginTop: 25}}, props.children)
+		console.log(props)
+		return (
+			<span>
+				<Divider style={{width: "90%", marginTop: 25, backgroundColor: inputColor}} />
+				{element}
+			</span>
+		)
+	}
+	//React.createElement("p", {style: {color: "red", backgroundColor: "blue"}}, this.props.paragraph)
+
+
 	//function unicodeToChar(text) {
 	//	return text.replace(/\\u[\dA-F]{4}/gi, 
 	//   		function (match) {
@@ -214,7 +231,12 @@ const Docs = (props) => {
 					id="markdown_wrapper" 
 					escapeHtml={false}
 					source={data} 
-	 				renderers={{link: OuterLink, image: Img}}
+	 				renderers={{
+						link: OuterLink, 
+						image: Img,
+						code: CodeHandler,
+						heading: Heading,
+					}}
 				/>
 			</div>
 		</div>

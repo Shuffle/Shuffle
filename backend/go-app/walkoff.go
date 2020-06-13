@@ -3661,7 +3661,6 @@ func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra 
 // Onlyname is used to
 func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string) error {
 	var err error
-	runUpload := false
 	for _, file := range dir {
 		if len(onlyname) > 0 && file.Name() != onlyname {
 			continue
@@ -3688,83 +3687,71 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 			if filename == "Dockerfile" {
 				log.Printf("Handle Dockerfile in location %s", extra)
 
-				extraSplit := strings.Split(extra, "/")
-				tags := []string{}
-				if len(extraSplit) > 1 {
-					tags = []string{
-						fmt.Sprintf("%s:%s_%s", baseDockerName, strings.ReplaceAll(extraSplit[0], " ", "-"), extraSplit[1]),
-						// Version = folder of last part of extra
-						// Name = first folder of extra
-					}
-				} else {
-					// Skip
-					runUpload = false
-					log.Printf("Skipping folder %s because the extra variable is empty~", extra)
-					break
-					//return nil
-				}
-
-				/// Only upload if successful and no errors
-				err := buildImageMemory(fs, tags, extra)
-				if err != nil {
-					log.Printf("Failed image build memory: %s", err)
-					runUpload = false
-				} else {
-					runUpload = true
-				}
-			}
-		}
-	}
-
-	// Done sequentailly to prevent bad uploads
-	if runUpload && err == nil {
-		for _, file := range dir {
-			if file.Name() == "api.yaml" || file.Name() == "api.yaml" {
-				log.Printf("Run update of %sapi.yaml in backend if it doesn't exist!!", extra)
-				fullPath := fmt.Sprintf("%s%s", extra, file.Name())
-
+				// Try api.yaml and api.yml
+				fullPath := fmt.Sprintf("%s%s", extra, "api.yaml")
 				fileReader, err := fs.Open(fullPath)
 				if err != nil {
-					return err
+					fullPath = fmt.Sprintf("%s%s", extra, "api.yml")
+					fileReader, err = fs.Open(fullPath)
+					if err != nil {
+						log.Printf("Failed finding api.yaml/yml: %s", err)
+						continue
+					}
 				}
 
 				readFile, err := ioutil.ReadAll(fileReader)
 				if err != nil {
-					log.Printf("Filereader error: %s", err)
-					return err
+					log.Printf("Failed reading %s: %s", fullPath, err)
+					continue
 				}
 
 				var workflowapp WorkflowApp
 				err = gyaml.Unmarshal(readFile, &workflowapp)
 				if err != nil {
-					log.Printf("Failed api.yaml unmarshal: %s", err)
-					return err
+					log.Printf("Failed unmarshaling %s: %s", fullPath, err)
+					continue
 				}
 
-				log.Printf("APIName: %s", workflowapp.Name)
-				extraSplit := strings.Split(extra, "/")
-				appName := fmt.Sprintf("%s_%s", strings.ReplaceAll(extraSplit[0], " ", "-"), extraSplit[1])
+				newName := workflowapp.Name
+				newName = strings.ReplaceAll(newName, " ", "-")
+
+				tags := []string{
+					fmt.Sprintf("%s:%s_%s", baseDockerName, newName, workflowapp.AppVersion),
+				}
 
 				ctx := context.Background()
 				allapps, err := getAllWorkflowApps(ctx)
 				if err != nil {
 					log.Printf("Failed getting apps to verify: %s", err)
-					return err
+					continue
+					//return err
 				}
 
 				log.Printf("APPS: %d", len(allapps))
 
+				// Make an option to override existing apps?
+				removeApps := []string{}
 				for _, app := range allapps {
 					if app.Name == workflowapp.Name && app.AppVersion == workflowapp.AppVersion {
-						log.Printf("App upload for %s:%s already exists.", app.Name, app.AppVersion)
-						return errors.New(fmt.Sprintf("App %s already exists. ", appName))
+						//log.Printf("App upload for %s:%s already exists.", app.Name, app.AppVersion)
+						log.Printf("Overriding app %s:%s as it exists.", app.Name, app.AppVersion)
+						removeApps = append(removeApps, app.ID)
 					}
 				}
 
 				err = checkWorkflowApp(workflowapp)
 				if err != nil {
 					log.Printf("%s for app %s:%s", err, workflowapp.Name, workflowapp.AppVersion)
-					return err
+					continue
+				}
+
+				if len(removeApps) > 0 {
+					for _, item := range removeApps {
+						err = DeleteKey(ctx, "workflowapp", item)
+						if err != nil {
+							log.Printf("Failed deleting %s", item)
+						}
+					}
 				}
 
 				//if workflowapp.Environment == "" {
@@ -3780,7 +3767,8 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 				err = setWorkflowAppDatastore(ctx, workflowapp, workflowapp.ID)
 				if err != nil {
 					log.Printf("Failed setting workflowapp: %s", err)
-					return err
+					continue
+					//return err
 				}
 
 				err = increaseStatisticsField(ctx, "total_apps_created", workflowapp.ID, 1)
@@ -3794,8 +3782,16 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 				}
 
 				log.Printf("Added %s:%s to the database", workflowapp.Name, workflowapp.AppVersion)
-				//memcache.Delete(ctx, "all_apps")
-				//os.Exit(3)
+
+				/// Only upload if successful and no errors
+				err = buildImageMemory(fs, tags, extra)
+				if err != nil {
+					log.Printf("Failed image build memory: %s", err)
+				} else {
+					if len(tags) > 0 {
+						log.Printf("Successfully built image %s", tags[0])
+					}
+				}
 			}
 		}
 	}

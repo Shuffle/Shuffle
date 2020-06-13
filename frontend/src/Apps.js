@@ -648,10 +648,7 @@ const Apps = (props) => {
 		})
 		.then((response) => {
 			if (response.status === 200) {
-				response.text().then(function (text) {
-					console.log("RETURN: ", text)
-					alert.success("Loaded existing apps!")
-				})
+				alert.success("Loaded existing apps!")
 			}
 			setIsLoading(false)
 			stop()
@@ -662,11 +659,10 @@ const Apps = (props) => {
 				console.log("DATA: ", responseJson)
 				if (responseJson.reason !== undefined) {
 					alert.error("Failed loading: "+responseJson.reason)
-				} else {
-					alert.error("Failed loading")
 				}
 		})
 		.catch(error => {
+			console.log("ERROR: ", error.toString())
 			alert.error(error.toString())
 		})
 	}
