@@ -20,6 +20,8 @@ import YAML from 'yaml'
 import {Link} from 'react-router-dom';
 import Breadcrumbs from '@material-ui/core/Breadcrumbs';
 
+import CloudDownloadIcon from '@material-ui/icons/CloudDownload';
+import PublishIcon from '@material-ui/icons/Publish';
 import CloudDownload from '@material-ui/icons/CloudDownload';
 import EditIcon from '@material-ui/icons/Edit';
 import DeleteIcon from '@material-ui/icons/Delete';
@@ -455,14 +457,15 @@ const Apps = (props) => {
 					<div style={{width: "100%", margin: 25}}>
 						<h2>App Creator</h2>
 						<a href="/docs/apps" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">How it works</a>
-						&nbsp;- <a href="https://github.com/frikky/OpenAPI-security-definitions" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">Security API's</a>
+						&nbsp;- <a href="https://github.com/frikky/security-openapis" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">Security API's</a>
 						&nbsp;- <a href="https://apis.guru/browse-apis/" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">OpenAPI directory</a>
 						<div/>
 						Apps interact with eachother in workflows. They are created with the app creator, using OpenAPI specification or manually in python. Use the links above to find potential apps you're looking for using OpenAPI or make one from scratch. There's 1000+ available.
 						<div/>
-						<div style={{marginTop: 20}}>
+						<Divider style={{height: 1, backgroundColor: dividerColor, marginTop: 20, marginBottom: 20}} />
+						<div style={{}}>
 							<Button
-								variant="outlined"
+								variant="text"
 								component="label"
 								color="primary"
 								style={{marginRight: 10, }}
@@ -470,11 +473,12 @@ const Apps = (props) => {
 									setOpenApiModal(true)
 								}}
 							>
-								Create from OpenAPI 	
+								<PublishIcon  style={{marginRight: 5}} /> Create from OpenAPI 	
 							</Button>
-							<Link to="/apps/new" style={{textDecoration: "none", color: "#f85a3e"}}>
+							&nbsp;OR&nbsp;
+							<Link to="/apps/new" style={{marginLeft: 5, textDecoration: "none", color: "#f85a3e"}}>
 								<Button
-									variant="outlined"
+									variant="text"
 									component="label"
 									color="primary"
 									style={{}}
@@ -508,9 +512,9 @@ const Apps = (props) => {
 	}
 
 	const appView = isLoggedIn ? 
-		<div style={{maxWidth: 1366, margin: "auto",}}>
+		<div style={{maxWidth: window.innerWidth > 1366 ? 1366 : 1200, margin: "auto",}}>
 			<div style={appViewStyle}>	
-				<div>
+				<div style={{flex: 1}}>
 					<Breadcrumbs aria-label="breadcrumb" separator="›" style={{color: "white",}}>
 						<Link to="/apps" style={{textDecoration: "none", color: "inherit",}}>
 							<h2 style={{color: "rgba(255,255,255,0.5)"}}>
@@ -528,10 +532,10 @@ const Apps = (props) => {
 					</Breadcrumbs>
 					<UploadView/>
 				</div>
-				<Divider style={{marginBottom: "10px", marginTop: "10px", height: "100%", width: "1px", backgroundColor: dividerColor}}/>
+				<Divider style={{marginBottom: 10, marginTop: 10, height: "100%", width: 1, backgroundColor: dividerColor}}/>
 				<div style={{flex: 1, marginLeft: 10, marginRight: 10}}>
 					<div style={{display: "flex"}}>
-						<div style={{flex: 10}}>
+						<div style={{flex: 1}}>
 							<h2>Available integrations</h2> 
 						</div>
 						{isLoading ? <CircularProgress style={{marginTop: 13, marginRight: 15}} /> : null}
@@ -543,18 +547,20 @@ const Apps = (props) => {
 								setSearchBackend(!searchBackend)}
 							} />}
 						/>
-						<Button
-							variant="outlined"
-							component="label"
-							color="primary"
-							style={{margin: 5, maxHeight: 50, marginTop: 10}}
-							onClick={() => {
-								setOpenApi(baseRepository)
-								setLoadAppsModalOpen(true)
-							}}
-						>
-							Download more apps 
-						</Button>
+						<Tooltip title={"Download from Github"} style={{marginTop: "28px", width: "100%"}} aria-label={"Upload"}>
+							<Button
+								variant="outlined"
+								component="label"
+								color="primary"
+								style={{margin: 5, maxHeight: 50, marginTop: 10}}
+								onClick={() => {
+									setOpenApi(baseRepository)
+									setLoadAppsModalOpen(true)
+								}}
+							>
+								<CloudDownloadIcon />
+							</Button>
+						</Tooltip>
 					</div>
 					<TextField
 						style={{backgroundColor: inputColor}} 
@@ -577,7 +583,7 @@ const Apps = (props) => {
 					<div style={{marginTop: 15}}>
 						{apps.length > 0 ? 
 							filteredApps.length > 0 ? 
-								<div style={{maxHeight: "78vh", overflowY: "scroll"}}>
+								<div style={{height: "75vh", overflowY: "scroll"}}>
 									{filteredApps.map(app => {
 										return (
 											appPaper(app)
@@ -642,10 +648,7 @@ const Apps = (props) => {
 		})
 		.then((response) => {
 			if (response.status === 200) {
-				response.text().then(function (text) {
-					console.log("RETURN: ", text)
-					alert.success("Loaded existing apps!")
-				})
+				alert.success("Loaded existing apps!")
 			}
 			setIsLoading(false)
 			stop()
@@ -656,11 +659,10 @@ const Apps = (props) => {
 				console.log("DATA: ", responseJson)
 				if (responseJson.reason !== undefined) {
 					alert.error("Failed loading: "+responseJson.reason)
-				} else {
-					alert.error("Failed loading")
 				}
 		})
 		.catch(error => {
+			console.log("ERROR: ", error.toString())
 			alert.error(error.toString())
 		})
 	}
@@ -1017,13 +1019,13 @@ const Apps = (props) => {
 				</DialogContent>
 				<DialogActions>
 					{circularLoader}
-	        	  	<Button style={{borderRadius: "0px"}} onClick={() => setOpenApiModal(false)} color="primary">
-	        	    	Cancel
-	        	  	</Button>
+						<Button style={{borderRadius: "0px"}} onClick={() => setOpenApiModal(false)} color="primary">
+							Cancel
+						</Button>
 	      	<Button style={{borderRadius: "0px"}} disabled={appValidation.length === 0} onClick={() => {
 						redirectOpenApi()
 					}} color="primary">
-	        	    	Submit	
+	        	Submit	
 	        </Button>
 				</DialogActions>
 			</FormControl>

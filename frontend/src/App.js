@@ -147,13 +147,13 @@ const App = (message, props) => {
   // This is a mess hahahah
   return (
 	<MuiThemeProvider theme={theme}>
-	<CookiesProvider>
-		<BrowserRouter>
-			<Provider template={AlertTemplate} {...options}>
-  			{includedData}
-			</Provider>
-		</BrowserRouter>
-	</CookiesProvider>
+		<CookiesProvider>
+			<BrowserRouter>
+				<Provider template={AlertTemplate} {...options}>
+					{includedData}
+				</Provider>
+			</BrowserRouter>
+		</CookiesProvider>
 	</MuiThemeProvider>
   );
 };

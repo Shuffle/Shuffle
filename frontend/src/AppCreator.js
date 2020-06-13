@@ -4,11 +4,13 @@ import {BrowserView, MobileView} from "react-device-detect";
 
 import {Link} from 'react-router-dom';
 import Paper from '@material-ui/core/Paper';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Button from '@material-ui/core/Button';
 import Divider from '@material-ui/core/Divider';
 import Select from '@material-ui/core/Select';
 import MenuItem from '@material-ui/core/MenuItem';
 import FormControl from '@material-ui/core/FormControl';
+import Switch from '@material-ui/core/Switch';
 import Dialog from '@material-ui/core/Dialog';
 import DialogTitle from '@material-ui/core/DialogTitle';
 import DialogContent from '@material-ui/core/DialogContent';
@@ -65,7 +67,7 @@ const useStyles = makeStyles({
 
 const rewrite = (args) => {
   return args.reduce(function(args, a){
-    if (0 == a.indexOf('-X')) {
+    if (0 === a.indexOf('-X')) {
       args.push('-X')
       args.push(a.slice(2))
     } else {
@@ -103,35 +105,35 @@ const parseCurl = (s) => {
         out.url = arg
         break;
 
-      case arg == '-A' || arg == '--user-agent':
+      case arg === '-A' || arg === '--user-agent':
         state = 'user-agent'
         break;
 
-      case arg == '-H' || arg == '--header':
+      case arg === '-H' || arg === '--header':
         state = 'header'
         break;
 
-      case arg == '-d' || arg == '--data' || arg == '--data-ascii':
+      case arg === '-d' || arg === '--data' || arg === '--data-ascii':
         state = 'data'
         break;
 
-      case arg == '-u' || arg == '--user':
+      case arg === '-u' || arg === '--user':
         state = 'user'
         break;
 
-      case arg == '-I' || arg == '--head':
+      case arg === '-I' || arg === '--head':
         out.method = 'HEAD'
         break;
 
-      case arg == '-X' || arg == '--request':
+      case arg === '-X' || arg === '--request':
         state = 'method'
         break;
 
-      case arg == '-b' || arg =='--cookie':
+      case arg === '-b' || arg === '--cookie':
         state = 'cookie'
         break;
 
-      case arg == '--compressed':
+      case arg === '--compressed':
         out.header['Accept-Encoding'] = out.header['Accept-Encoding'] || 'deflate, gzip'
         break;
 
@@ -147,7 +149,7 @@ const parseCurl = (s) => {
             state = ''
             break;
           case 'data':
-            if (out.method == 'GET' || out.method == 'HEAD') out.method = 'POST'
+            if (out.method === 'GET' || out.method === 'HEAD') out.method = 'POST'
             out.header['Content-Type'] = out.header['Content-Type'] || 'application/x-www-form-urlencoded'
             out.body = out.body
               ? out.body + '&' + arg
@@ -196,6 +198,7 @@ const AppCreator = (props) => {
 	const [updater, setUpdater] = useState("tmp")
 	const [baseUrl, setBaseUrl] = useState("");
 	const [actionsModalOpen, setActionsModalOpen] = useState(false);
+	const [authenticationRequired, setAuthenticationRequired] = useState(false);
 	const [authenticationOption, setAuthenticationOption] = useState(authenticationOptions[0]);
 	const [parameterName, setParameterName] = useState("");
 	const [parameterLocation, setParameterLocation] = useState(apikeySelection.length > 0 ? apikeySelection[0] : "");
@@ -372,30 +375,6 @@ const AppCreator = (props) => {
 			securitySchemes = data.components.securitySchemes
 		} 
 
-		// FIXME: Have multiple authentication options?
-		if (securitySchemes !== undefined) {
-			for (const [key, value] of Object.entries(securitySchemes)) {
-				if (value.scheme === "bearer") {
-					setAuthenticationOption("Bearer auth")
-					break
-				} else if (value.type === "apiKey") {
-					setAuthenticationOption("API key")
-
-					value.in = value.in.charAt(0).toUpperCase() + value.in.slice(1);
-					setParameterLocation(value.in)
-					if (!apikeySelection.includes(value.in)) {
-						console.log("APIKEY SELECT: ", apikeySelection)
-						alert.error("Might be error in setting up API key authentication")
-					}
-
-  				setParameterName(value.name)
-					break
-				} else if (value.scheme === "basic") {
-					setAuthenticationOption("Basic auth")
-					break
-				}
-			}
-		}
 
 		console.log(data)
 
@@ -451,9 +430,39 @@ const AppCreator = (props) => {
 			}
 		}
 
+
+		// FIXME: Have multiple authentication options?
+		if (securitySchemes !== undefined) {
+			for (const [key, value] of Object.entries(securitySchemes)) {
+				if (value.scheme === "bearer") {
+					setAuthenticationOption("Bearer auth")
+					setAuthenticationRequired(true)
+					break
+				} else if (value.type === "apiKey") {
+					setAuthenticationOption("API key")
+
+					value.in = value.in.charAt(0).toUpperCase() + value.in.slice(1);
+					setParameterLocation(value.in)
+					if (!apikeySelection.includes(value.in)) {
+						console.log("APIKEY SELECT: ", apikeySelection)
+						alert.error("Might be error in setting up API key authentication")
+					}
+
+					console.log("PARAM NAME: ", value.name)
+  				setParameterName(value.name)
+					setAuthenticationRequired(true)
+					break
+				} else if (value.scheme === "basic") {
+					setAuthenticationOption("Basic auth")
+					setAuthenticationRequired(true)
+					break
+				}
+			}
+		}
+
 		setActions(newActions)
 	}
-				
+
 	// Saving the app that's been configured.
 	const submitApp = () => {
 		alert.info("Uploading and building app " + name)
@@ -701,7 +710,6 @@ const AppCreator = (props) => {
 				</a>
 			</h4>
 			Users will be required to submit their API as the header "Authorization: Bearer APIKEY"
-			<Divider style={{marginBottom: "10px", marginTop: "30px", height: "1px", width: "100%", backgroundColor: "grey"}}/>
 		</div>
 		: null
 
@@ -714,7 +722,6 @@ const AppCreator = (props) => {
 				</a>
 			</h4>
 			Users will be required to submit a valid username and password before using the API
-			<Divider style={{marginBottom: "10px", marginTop: "30px", height: "1px", width: "100%", backgroundColor: "grey"}}/>
 		</div>
 		: null
 
@@ -810,7 +817,7 @@ const AppCreator = (props) => {
 				id="standard-required"
 				margin="normal"
 				variant="outlined"
-				defaultValue={parameterName}
+				value={parameterName}
 				helperText={<div style={{color:"white", marginBottom: "2px",}}>Can't be empty. Can't contain any of the following characters: !#$%&'^+-._~|]+$</div>}
 				onChange={e => setParameterName(e.target.value)}	
 				InputProps={{
@@ -847,7 +854,6 @@ const AppCreator = (props) => {
 					)}
 				)}
 			</Select>
-			<Divider style={{marginBottom: "10px", marginTop: "30px", height: "1px", width: "100%", backgroundColor: "grey"}}/>
 		</div>
 		: null
 
@@ -926,11 +932,13 @@ const AppCreator = (props) => {
 							{data.method} - {url} - {data.name}
 							</div>
 						</Tooltip>
+						{/*
 					 	<Tooltip title="Test action" placement="bottom">
 							<div style={{color: "#f85a3e", cursor: "pointer", marginRight: "10px", }} onClick={() => {testAction(index)}}>
 								Test
 							</div>
 						</Tooltip>
+						*/}
 					 	<Tooltip title="Delete action" placement="bottom">
 							<div style={{color: "#f85a3e", cursor: "pointer"}} onClick={() => {deleteAction(index)}}>
 								Delete
@@ -1261,6 +1269,10 @@ const AppCreator = (props) => {
 								if (request.header !== undefined && request.header !== null) {
 									var headers = []
 									for (let [key, value] of Object.entries(request.header)) {
+										if (parameterName !== undefined && key.toLowerCase() === parameterName.toLowerCase()) {
+											continue
+										}
+
 										headers += key+"="+value+"\n"
 									}
 
@@ -1550,11 +1562,17 @@ const AppCreator = (props) => {
 						}}
 					/>
 					<FormControl style={{marginTop: "15px",}} variant="outlined">
-						<h5 style={{marginBottom: "10px", color: "white",}}>Authentication</h5>
+						<h5 style={{marginBottom: "10px", color: "white",}}>Authentication
+						</h5>
 						<Select
 							fullWidth
 							onChange={(e) => {
 								setAuthenticationOption(e.target.value) 
+								if (e.target.value === "No authentication") {
+									setAuthenticationRequired(false)
+								} else {
+									setAuthenticationRequired(true)
+								}
 							}}
 							value={authenticationOption}
 							style={{backgroundColor: inputColor, color: "white", height: "50px"}}
@@ -1569,16 +1587,28 @@ const AppCreator = (props) => {
 					{basicAuth}
 					{bearerAuth}
 					{apiKey}
+
+					{/*authenticationOption === "No authentication" ? null :
+						<FormControlLabel
+							style={{color: "white", marginBottom: 0, marginTop: 20}}
+							label=<div style={{color: "white"}}>Authentication required (default true)</div>
+							control={<Switch checked={authenticationRequired} onChange={() => {
+								setAuthenticationRequired(!authenticationRequired)
+							}} />}
+					/>*/}
+					<Divider style={{marginBottom: "10px", marginTop: "30px", height: "1px", width: "100%", backgroundColor: "grey"}}/>
 					<div style={{marginTop: "25px"}}>
 						{actionView}
 					</div>
+					{/*
 					<Divider style={{marginBottom: "10px", marginTop: "30px", height: "1px", width: "100%", backgroundColor: "grey"}}/>
 						{testView}
+					*/}
 
 	        <Button color="primary" variant="contained" style={{borderRadius: "0px", marginTop: "30px", height: "50px",}} onClick={() => {
 						submitApp()
 					}}>
-						Save	
+						Save
 					</Button>
 					{errorCode.length > 0 ? `Error: ${errorCode}` : null}
 				</Paper>

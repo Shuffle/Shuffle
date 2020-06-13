@@ -428,7 +428,7 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, frequency
 
 		_, _, err := handleExecution(workflowId, Workflow{}, request)
 		if err != nil {
-			log.Printf("Failed to execute: %s", err)
+			log.Printf("Failed to execute %s: %s", workflowId, err)
 		}
 	}
 
@@ -966,18 +966,10 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 	workflow.Sharing = "private"
 
 	ctx := context.Background()
-	err = setWorkflow(ctx, workflow, workflow.ID)
-	if err != nil {
-		log.Printf("Failed setting workflow: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
 	log.Printf("Saved new workflow %s with name %s", workflow.ID, workflow.Name)
 	err = increaseStatisticsField(ctx, "total_workflows", workflow.ID, 1)
 	if err != nil {
-		log.Printf("Failed to increase total workflows: %s", err)
+		log.Printf("Failed to increase total workflows stats: %s", err)
 	}
 
 	if len(workflow.Actions) == 0 {
@@ -1003,6 +995,37 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 		newActions = append(newActions, action)
 	}
 
+	// Initialized without functions = adding a hello world node.
+	if len(newActions) == 0 {
+		log.Printf("APPENDING NEW APP FOR NEW WORKFLOW")
+		//nodeId := "40447f30-fa44-4a4f-a133-4ee710368737"
+		//workflow.Start = nodeId
+		//newActions = append(newActions, Action{
+		//	Label:       "Start node",
+		//	Name:        "hello_world",
+		//	AppName:     "testing",
+		//	Environment: "Shuffle",
+		//	Parameters:  []WorkflowAppActionParameter{},
+		//	Position: struct {
+		//		X float64 "json:\"x\" datastore:\"x\""
+		//		Y float64 "json:\"y\" datastore:\"y\""
+		//	}{X: 449.5, Y: 446},
+		//	Priority:    0,
+		//	AppVersion:  "1.0.0",
+		//	AppID:       "c567fc10-9c15-403e-b72c-6550e9e76bc8",
+		//	Errors:      []string{},
+		//	ID:          nodeId,
+		//	IsValid:     true,
+		//	IsStartNode: true,
+		//	Sharing:     true,
+		//	PrivateID:   "",
+		//	SmallImage:  "",
+		//	LargeImage:  "data:image/png;base64,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",
+		//})
+	} else {
+		log.Printf("Has actions already?")
+	}
+
 	workflow.Actions = newActions
 	workflow.IsValid = true
 
@@ -1010,6 +1033,14 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		log.Printf("Failed workflow json setting marshalling: %s", err)
 		resp.WriteHeader(http.StatusInternalServerError)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	err = setWorkflow(ctx, workflow, workflow.ID)
+	if err != nil {
+		log.Printf("Failed setting workflow: %s", err)
+		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
@@ -1058,7 +1089,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflow, err := getWorkflow(ctx, fileId)
 	if err != nil {
-		log.Printf("Failed getting the workflow locally: %s", err)
+		log.Printf("Failed getting the workflow locally (delete workflow): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -1128,7 +1159,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Println("Start")
+	//log.Println("Start")
 	user, userErr := handleApiAuthentication(resp, request)
 	if userErr != nil {
 		log.Printf("Api authentication failed in edit workflow: %s", userErr)
@@ -1137,7 +1168,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Println("PostUser")
+	//log.Println("PostUser")
 	location := strings.Split(request.URL.String(), "/")
 
 	var fileId string
@@ -1164,7 +1195,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	tmpworkflow, err := getWorkflow(ctx, fileId)
 	if err != nil {
-		log.Printf("Failed getting the workflow locally: %s", err)
+		log.Printf("Failed getting the workflow locally (save workflow): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -1211,7 +1242,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - this shouldn't be necessary with proper API checks
 	newActions := []Action{}
 	allNodes := []string{}
-	log.Println("Pre")
+	//log.Println("Pre")
 	for _, action := range workflow.Actions {
 		allNodes = append(allNodes, action.ID)
 
@@ -1237,7 +1268,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	workflow.Actions = newActions
 
 	for _, trigger := range workflow.Triggers {
-		log.Println("TRIGGERS")
+		//log.Println("TRIGGERS")
 		allNodes = append(allNodes, trigger.ID)
 	}
 
@@ -1260,7 +1291,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	foundNodes := []string{}
 	for _, node := range allNodes {
 		for _, branch := range workflow.Branches {
-			log.Println("branch")
+			//log.Println("branch")
 			//log.Println(node)
 			//log.Println(branch.DestinationID)
 			if node == branch.DestinationID || node == branch.SourceID {
@@ -1462,7 +1493,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("Failed to change total actions data: %s", err)
 	}
 
-	log.Printf("Saved new version of workflow %s", fileId)
+	log.Printf("Saved new version of workflow %s (%s)", workflow.Name, fileId)
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": true}`))
 }
@@ -1668,7 +1699,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	if workflow.ID == "" || workflow.ID != id {
 		tmpworkflow, err := getWorkflow(ctx, id)
 		if err != nil {
-			log.Printf("Failed getting the workflow locally: %s", err)
+			log.Printf("Failed getting the workflow locally (execution cleanup): %s", err)
 			return WorkflowExecution{}, "Failed getting workflow", err
 		}
 
@@ -1736,6 +1767,18 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		if len(execution.Start) == 36 {
 			log.Printf("SHOULD START ON NODE %s", execution.Start)
 			workflow.Start = execution.Start
+
+			found := false
+			for _, action := range workflow.Actions {
+				if action.ID == workflow.Start {
+					found = true
+				}
+			}
+
+			if !found {
+				log.Printf("ACTION %s WAS NOT FOUND!", workflow.Start)
+				return WorkflowExecution{}, fmt.Sprintf("Startnode %s was not found in actions", workflow.Start), errors.New(fmt.Sprintf("Startnode %s was not found in actions", workflow.Start))
+			}
 		}
 
 		if len(execution.ExecutionId) == 36 {
@@ -1993,7 +2036,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflow, err := getWorkflow(ctx, fileId)
 	if err != nil {
-		log.Printf("Failed getting the workflow locally: %s", err)
+		log.Printf("Failed getting the workflow locally (execute workflow): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -2021,6 +2064,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 }
 
 func stopSchedule(resp http.ResponseWriter, request *http.Request) {
+	log.Printf("Delete?")
 	cors := handleCors(resp, request)
 	if cors {
 		return
@@ -2064,7 +2108,7 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflow, err := getWorkflow(ctx, fileId)
 	if err != nil {
-		log.Printf("Failed getting the workflow locally: %s", err)
+		log.Printf("Failed getting the workflow locally (stop schedule): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -2077,19 +2121,6 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
-	}
-
-	if len(workflow.Actions) == 0 {
-		workflow.Actions = []Action{}
-	}
-	if len(workflow.Branches) == 0 {
-		workflow.Branches = []Branch{}
-	}
-	if len(workflow.Triggers) == 0 {
-		workflow.Triggers = []Trigger{}
-	}
-	if len(workflow.Errors) == 0 {
-		workflow.Errors = []string{}
 	}
 
 	err = deleteSchedule(ctx, scheduleId)
@@ -2153,7 +2184,7 @@ func stopScheduleGCP(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflow, err := getWorkflow(ctx, fileId)
 	if err != nil {
-		log.Printf("Failed getting the workflow locally: %s", err)
+		log.Printf("Failed getting the workflow locally (stop schedule GCP): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -2275,7 +2306,7 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflow, err := getWorkflow(ctx, fileId)
 	if err != nil {
-		log.Printf("Failed getting the workflow locally: %s", err)
+		log.Printf("Failed getting the workflow locally (schedule workflow): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -3276,6 +3307,114 @@ func deployWebhookFunction(ctx context.Context, name, localization, applocation 
 	return nil
 }
 
+func loadSpecificWorkflows(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	// Just need to be logged in
+	// FIXME - should have some permissions?
+	user, err := handleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("Api authentication failed in load apps: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Role != "admin" {
+		log.Printf("Wrong user (%s) when downloading from github", user.Username)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		log.Printf("Error with body read: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// Field1 & 2 can be a lot of things..
+	type tmpStruct struct {
+		URL    string `json:"url"`
+		Field1 string `json:"field_1"`
+		Field2 string `json:"field_2"`
+	}
+	//log.Printf("Body: %s", string(body))
+
+	var tmpBody tmpStruct
+	err = json.Unmarshal(body, &tmpBody)
+	if err != nil {
+		log.Printf("Error with unmarshal tmpBody: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	fs := memfs.New()
+
+	if strings.Contains(tmpBody.URL, "github") || strings.Contains(tmpBody.URL, "gitlab") || strings.Contains(tmpBody.URL, "bitbucket") {
+		cloneOptions := &git.CloneOptions{
+			URL: tmpBody.URL,
+		}
+
+		// FIXME: Better auth.
+		if len(tmpBody.Field1) > 0 && len(tmpBody.Field2) > 0 {
+			cloneOptions.Auth = &http2.BasicAuth{
+
+				Username: tmpBody.Field1,
+				Password: tmpBody.Field2,
+			}
+		}
+
+		storer := memory.NewStorage()
+		r, err := git.Clone(storer, fs, cloneOptions)
+		if err != nil {
+			log.Printf("Failed loading repo into memory: %s", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+			return
+		}
+
+		dir, err := fs.ReadDir("/")
+		if err != nil {
+			log.Printf("FAiled reading folder: %s", err)
+		}
+		_ = r
+
+		log.Printf("Starting workflow folder iteration")
+		iterateWorkflowGithubFolders(fs, dir, "", "")
+
+	} else if strings.Contains(tmpBody.URL, "s3") {
+		//https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
+
+		//sess := session.Must(session.NewSession())
+		//downloader := s3manager.NewDownloader(sess)
+
+		//// Write the contents of S3 Object to the file
+		//storer := memory.NewStorage()
+		//n, err := downloader.Download(storer, &s3.GetObjectInput{
+		//	Bucket: aws.String(myBucket),
+		//	Key:    aws.String(myString),
+		//})
+		//if err != nil {
+		//	return fmt.Errorf("failed to download file, %v", err)
+		//}
+		//fmt.Printf("file downloaded, %d bytes\n", n)
+	} else {
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s is unsupported. Try e.g. github"}`, tmpBody.URL)))
+		return
+	}
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+}
+
 func loadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -3502,9 +3641,69 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 }
 
 // Onlyname is used to
+func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string) error {
+	var err error
+
+	for _, file := range dir {
+		if len(onlyname) > 0 && file.Name() != onlyname {
+			continue
+		}
+
+		// Folder?
+		switch mode := file.Mode(); {
+		case mode.IsDir():
+			tmpExtra := fmt.Sprintf("%s%s/", extra, file.Name())
+			dir, err := fs.ReadDir(tmpExtra)
+			if err != nil {
+				log.Printf("Failed to read dir: %s", err)
+				break
+			}
+
+			// Go routine? Hmm, this can be super quick I guess
+			err = iterateWorkflowGithubFolders(fs, dir, tmpExtra, "")
+			if err != nil {
+				break
+			}
+		case mode.IsRegular():
+			// Check the file
+			filename := file.Name()
+			if strings.HasSuffix(filename, ".json") {
+				path := fmt.Sprintf("%s%s", extra, file.Name())
+				fileReader, err := fs.Open(path)
+				if err != nil {
+					log.Printf("Error reading file: %s", err)
+					continue
+				}
+
+				readFile, err := ioutil.ReadAll(fileReader)
+				if err != nil {
+					log.Printf("Error reading file: %s", err)
+					continue
+				}
+
+				var workflow Workflow
+				err = json.Unmarshal(readFile, &workflow)
+				if err != nil {
+					continue
+				}
+
+				ctx := context.Background()
+				err = setWorkflow(ctx, workflow, workflow.ID)
+				if err != nil {
+					log.Printf("Failed setting (download) workflow: %s", err)
+					continue
+				}
+				log.Printf("Uploaded workflow %s!", filename)
+			}
+		}
+	}
+
+	return err
+}
+
+// Onlyname is used to
 func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string) error {
 	var err error
-	runUpload := false
 	for _, file := range dir {
 		if len(onlyname) > 0 && file.Name() != onlyname {
 			continue
@@ -3531,83 +3730,71 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 			if filename == "Dockerfile" {
 				log.Printf("Handle Dockerfile in location %s", extra)
 
-				extraSplit := strings.Split(extra, "/")
-				tags := []string{}
-				if len(extraSplit) > 1 {
-					tags = []string{
-						fmt.Sprintf("%s:%s_%s", baseDockerName, strings.ReplaceAll(extraSplit[0], " ", "-"), extraSplit[1]),
-						// Version = folder of last part of extra
-						// Name = first folder of extra
-					}
-				} else {
-					// Skip
-					runUpload = false
-					log.Printf("Skipping folder %s because the extra variable is empty~", extra)
-					break
-					//return nil
-				}
-
-				/// Only upload if successful and no errors
-				err := buildImageMemory(fs, tags, extra)
-				if err != nil {
-					log.Printf("Failed image build memory: %s", err)
-					runUpload = false
-				} else {
-					runUpload = true
-				}
-			}
-		}
-	}
-
-	// Done sequentailly to prevent bad uploads
-	if runUpload && err == nil {
-		for _, file := range dir {
-			if file.Name() == "api.yaml" || file.Name() == "api.yaml" {
-				log.Printf("Run update of %sapi.yaml in backend if it doesn't exist!!", extra)
-				fullPath := fmt.Sprintf("%s%s", extra, file.Name())
-
+				// Try api.yaml and api.yml
+				fullPath := fmt.Sprintf("%s%s", extra, "api.yaml")
 				fileReader, err := fs.Open(fullPath)
 				if err != nil {
-					return err
+					fullPath = fmt.Sprintf("%s%s", extra, "api.yml")
+					fileReader, err = fs.Open(fullPath)
+					if err != nil {
+						log.Printf("Failed finding api.yaml/yml: %s", err)
+						continue
+					}
 				}
 
 				readFile, err := ioutil.ReadAll(fileReader)
 				if err != nil {
-					log.Printf("Filereader error: %s", err)
-					return err
+					log.Printf("Failed reading %s: %s", fullPath, err)
+					continue
 				}
 
 				var workflowapp WorkflowApp
 				err = gyaml.Unmarshal(readFile, &workflowapp)
 				if err != nil {
-					log.Printf("Failed api.yaml unmarshal: %s", err)
-					return err
+					log.Printf("Failed unmarshaling %s: %s", fullPath, err)
+					continue
 				}
 
-				log.Printf("APIName: %s", workflowapp.Name)
-				extraSplit := strings.Split(extra, "/")
-				appName := fmt.Sprintf("%s_%s", strings.ReplaceAll(extraSplit[0], " ", "-"), extraSplit[1])
+				newName := workflowapp.Name
+				newName = strings.ReplaceAll(newName, " ", "-")
+
+				tags := []string{
+					fmt.Sprintf("%s:%s_%s", baseDockerName, newName, workflowapp.AppVersion),
+				}
 
 				ctx := context.Background()
 				allapps, err := getAllWorkflowApps(ctx)
 				if err != nil {
 					log.Printf("Failed getting apps to verify: %s", err)
-					return err
+					continue
+					//return err
 				}
 
 				log.Printf("APPS: %d", len(allapps))
 
+				// Make an option to override existing apps?
+				removeApps := []string{}
 				for _, app := range allapps {
 					if app.Name == workflowapp.Name && app.AppVersion == workflowapp.AppVersion {
-						log.Printf("App upload for %s:%s already exists.", app.Name, app.AppVersion)
-						return errors.New(fmt.Sprintf("App %s already exists. ", appName))
+						//log.Printf("App upload for %s:%s already exists.", app.Name, app.AppVersion)
+						log.Printf("Overriding app %s:%s as it exists.", app.Name, app.AppVersion)
+						removeApps = append(removeApps, app.ID)
 					}
 				}
 
 				err = checkWorkflowApp(workflowapp)
 				if err != nil {
 					log.Printf("%s for app %s:%s", err, workflowapp.Name, workflowapp.AppVersion)
-					return err
+					continue
+				}
+
+				if len(removeApps) > 0 {
+					for _, item := range removeApps {
+						err = DeleteKey(ctx, "workflowapp", item)
+						if err != nil {
+							log.Printf("Failed deleting %s", item)
+						}
+					}
 				}
 
 				//if workflowapp.Environment == "" {
@@ -3623,7 +3810,8 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 				err = setWorkflowAppDatastore(ctx, workflowapp, workflowapp.ID)
 				if err != nil {
 					log.Printf("Failed setting workflowapp: %s", err)
-					return err
+					continue
+					//return err
 				}
 
 				err = increaseStatisticsField(ctx, "total_apps_created", workflowapp.ID, 1)
@@ -3637,8 +3825,16 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 				}
 
 				log.Printf("Added %s:%s to the database", workflowapp.Name, workflowapp.AppVersion)
-				//memcache.Delete(ctx, "all_apps")
-				//os.Exit(3)
+
+				/// Only upload if successful and no errors
+				err = buildImageMemory(fs, tags, extra)
+				if err != nil {
+					log.Printf("Failed image build memory: %s", err)
+				} else {
+					if len(tags) > 0 {
+						log.Printf("Successfully built image %s", tags[0])
+					}
+				}
 			}
 		}
 	}
@@ -3773,7 +3969,7 @@ func getWorkflowExecutions(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflow, err := getWorkflow(ctx, fileId)
 	if err != nil {
-		log.Printf("Failed getting the workflow locally: %s", err)
+		log.Printf("Failed getting the workflow locally (get executions): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return

@@ -238,7 +238,7 @@ type AppInfo struct {
 type ScheduleOld struct {
 	Id                   string       `json:"id" datastore:"id"`
 	Seconds              int          `json:"seconds" datastore:"seconds"`
-	WorkflowId           string       `json:"workflow_id datastore:"workflow_id", `
+	WorkflowId           string       `json:"workflow_id" datastore:"workflow_id", `
 	Argument             string       `json:"argument" datastore:"argument"`
 	AppInfo              AppInfo      `json:"appinfo" datastore:"appinfo,noindex"`
 	Finished             bool         `json:"finished" finished:"id"`
@@ -1803,6 +1803,49 @@ func getUserCount() (int, error) {
 	return count, nil
 }
 
+func handleGetSchedules(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	user, err := handleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("Api authentication failed in set new workflowhandler: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Role != "admin" {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Admin required"}`))
+		return
+	}
+
+	ctx := context.Background()
+	schedules, err := getAllSchedules(ctx)
+	if err != nil {
+		log.Printf("Failed getting schedules: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Couldn't get schedules"}`))
+		return
+	}
+
+	newjson, err := json.Marshal(schedules)
+	if err != nil {
+		log.Printf("Failed unmarshal: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed unpacking environments"}`)))
+		return
+	}
+
+	//log.Printf("Existing environments: %s", string(newjson))
+
+	resp.WriteHeader(200)
+	resp.Write(newjson)
+}
+
 func handleGetEnvironments(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -2635,6 +2678,21 @@ func handleDeleteSchedule(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	user, err := handleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("Api authentication failed in set new workflowhandler: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// FIXME: IAM - Get workflow and check owner
+	if user.Role != "admin" {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Admin required"}`))
+		return
+	}
+
 	location := strings.Split(request.URL.String(), "/")
 
 	var workflowId string
@@ -2655,7 +2713,7 @@ func handleDeleteSchedule(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	err := DeleteKey(ctx, "schedules", workflowId)
+	err = DeleteKey(ctx, "schedules", workflowId)
 	if err != nil {
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "message": "Can't delete"}`))
@@ -4648,7 +4706,7 @@ func handleDeleteOutlookSub(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflow, err := getWorkflow(ctx, workflowId)
 	if err != nil {
-		log.Printf("Failed getting the workflow locally: %s", err)
+		log.Printf("Failed getting the workflow locally (delete outlook): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -4782,7 +4840,7 @@ func createOutlookSub(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflow, err := getWorkflow(ctx, workflowId)
 	if err != nil {
-		log.Printf("Failed getting the workflow locally: %s", err)
+		log.Printf("Failed getting the workflow locally (outlook sub): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -5765,7 +5823,7 @@ func runInit(ctx context.Context) {
 
 				_, _, err := handleExecution(schedule.WorkflowId, Workflow{}, request)
 				if err != nil {
-					log.Printf("Failed to execute: %s", err)
+					log.Printf("Failed to execute %s: %s", schedule.WorkflowId, err)
 				}
 			}
 
@@ -5825,7 +5883,7 @@ func runInit(ctx context.Context) {
 	}
 
 	log.Printf("Downloading OpenAPI data for search - EXTRA APPS")
-	apis := "https://github.com/frikky/OpenAPI-security-definitions"
+	apis := "https://github.com/frikky/security-openapis"
 
 	// THis gets memory problems hahah
 	//apis := "https://github.com/APIs-guru/openapi-directory"
@@ -5897,6 +5955,7 @@ func init() {
 
 	// App specific
 	r.HandleFunc("/api/v1/apps/get_existing", loadSpecificApps).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/download_remote", loadSpecificApps).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/validate", validateAppInput).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}", deleteWorkflowApp).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}/config", getWorkflowAppConfig).Methods("GET", "OPTIONS")
@@ -5914,6 +5973,8 @@ func init() {
 	/* Everything below here increases the counters*/
 	r.HandleFunc("/api/v1/workflows", getWorkflows).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows", setNewWorkflow).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/schedules", handleGetSchedules).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/download_remote", loadSpecificWorkflows).Methods("POST", "OPTIONS")
 	//r.HandleFunc("/api/v1/workflows/{key}/execute_fs", executeWorkflowFS)
 	r.HandleFunc("/api/v1/workflows/{key}/execute", executeWorkflow).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/schedule", scheduleWorkflow).Methods("POST", "OPTIONS")
