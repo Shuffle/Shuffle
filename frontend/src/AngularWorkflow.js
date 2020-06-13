@@ -62,8 +62,6 @@ import cxtmenu from 'cytoscape-cxtmenu';
 import { w3cwebsocket as W3CWebSocket } from "websocket";
 import { useAlert } from "react-alert";
 
-const hoverColor = "#f85a3e"
-const hoverOutColor = "#e8eaf6"
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
 
@@ -1142,7 +1140,6 @@ const AngularWorkflow = (props) => {
 	}
 
 	const onNodeHover = (event) => {
-		//event.target.style("border-width", "5px")
 		event.target.animate({
 			style: {
 				"border-width": "5px",
@@ -1156,24 +1153,22 @@ const AngularWorkflow = (props) => {
 	}
 
 	const onEdgeHoverOut = (event) => {
-		//event.target.removeStyle()
+		event.target.removeStyle()
 	}
 
 	// This is here to have a proper transition for lines
 	const onEdgeHover = (event) => {
-
-		//console.log(event.target.data())
-		//const sourcecolor = cy.getElementById(event.target.data("source")).style("border-color")
-		//const targetcolor = cy.getElementById(event.target.data("target")).style("border-color")
-		//event.target.animate({
-		//	style: {
-		//		"line-fill": "linear-gradient",
-		//		'target-arrow-color': targetcolor,
-		//		"line-gradient-stop-colors": [sourcecolor, targetcolor],
-		//		"line-gradient-stop-positions": [0, 1],
-		//	},
-		//	duration: 0,
-		//})
+		const sourcecolor = cy.getElementById(event.target.data("source")).style("border-color")
+		const targetcolor = cy.getElementById(event.target.data("target")).style("border-color")
+		event.target.animate({
+			style: {
+				"line-fill": "linear-gradient",
+				'target-arrow-color': targetcolor,
+				"line-gradient-stop-colors": [sourcecolor, targetcolor],
+				"line-gradient-stop-positions": [0, 1],
+			},
+			duration: 0,
+		})
 	}
 
 
