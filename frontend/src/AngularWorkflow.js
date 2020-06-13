@@ -10,6 +10,8 @@ import Drawer from '@material-ui/core/Drawer';
 import Button from '@material-ui/core/Button';
 import Paper from '@material-ui/core/Paper';
 import Grid from '@material-ui/core/Grid';
+import Tabs from '@material-ui/core/Tabs';
+import Tab from '@material-ui/core/Tab';
 import ButtonBase from '@material-ui/core/ButtonBase';
 import Tooltip from '@material-ui/core/Tooltip';
 import Select from '@material-ui/core/Select';
@@ -100,7 +102,7 @@ const AngularWorkflow = (props) => {
 	const [cy, setCy] = React.useState()
 		
 	const [appSearch, setAppSearch] = React.useState("")
-	const [currentView, setCurrentView] = React.useState("apps")
+	const [currentView, setCurrentView] = React.useState(0)
 	const [triggerAuthentication, setTriggerAuthentication] = React.useState({})
 	const [triggerFolders, setTriggerFolders] = React.useState([])
 
@@ -164,9 +166,6 @@ const AngularWorkflow = (props) => {
 
 	const [lastSaved, setLastSaved] = React.useState(true)
 
-	const [AppsHoverColor, setAppsHoverColor] = useState(hoverOutColor);
-	const [VariablesHoverColor, setVariablesHoverColor] = useState(hoverOutColor);
-	const [HookHoverColor, setHookHoverColor] = useState(hoverOutColor);
 	const [appAdded, setAppAdded] = useState(false)
 	const [update, setUpdate] = useState("");
 	const [workflowExecutions, setWorkflowExecutions] = React.useState([]);
@@ -549,68 +548,6 @@ const AngularWorkflow = (props) => {
 		return true
 	}
 
-	const executeWorkflowWebsocket = () => {
-		if (!lastSaved) {
-			//alert.error("You might have forgotten to save before executing.")
-			console.log("FIXME: Might have forgotten to save before executing.")
-		}
-
-		var returncheck = monitorUpdates()
-		if (!returncheck) {
-			alert.error("No startnode set.")
-			return
-		}
-
-		setVisited([])
-		setExecutionRunning(true)
-		setExecutionRequest({})
-
-		var curelements = cy.elements()
-		for (var i = 0; i < curelements.length; i++) {
-			curelements[i].addClass("not-executing-highlight")
-		}
-
-		if (executionText.length > 0) { 
-			alert.success("Starting execution with argument "+executionText)
-		} else {
-			alert.success("Starting execution")
-		}
-
-		const data = {"execution_argument": executionText}
-		fetch(globalUrl+"/api/v1/workflows/"+props.match.params.key+"/execute_fs", {
-    	  	method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'Accept': 'application/json',
-				},
-	  			credentials: "include",
-				body: JSON.stringify(data),
-    		})
-		.then((response) => {
-			if (response.status !== 200) {
-				console.log("Status not 200 for WORKFLOW EXECUTION :O!")
-			}
-
-			return response.json()
-		})
-		.then((responseJson) => {
-			if (!responseJson.success) {
-				alert.error("Failed to start: "+responseJson.reason)
-				stop()
-				return	
-			}
-
-			setExecutionRequest({
-				"execution_id": responseJson.execution_id,
-				"authorization": responseJson.authorization,
-			})
-			setExecutingNodes([workflow.start])
-		})
-		.catch(error => {
-			alert.error(error.toString())
-		});
-	}
-
 	const executeWorkflow = () => {
 		if (!lastSaved) {
 			//alert.error("You might have forgotten to save before executing.")
@@ -641,14 +578,14 @@ const AngularWorkflow = (props) => {
 
 		const data = {"execution_argument": executionText, "start": workflow.start}
 		fetch(globalUrl+"/api/v1/workflows/"+props.match.params.key+"/execute", {
-    	  	method: 'POST',
+    	  method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json',
 				},
 	  			credentials: "include",
 				body: JSON.stringify(data),
-    		})
+    	})
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for WORKFLOW EXECUTION :O!")
@@ -1437,16 +1374,17 @@ const AngularWorkflow = (props) => {
 	}
 
 	const appViewStyle = {
-		marginLeft: "5px",
-		marginRight: "5px",
+		marginLeft: 5,
+		marginRight: 5,
 		display: "flex",
 		flexDirection: "column",
+		height: "100%",
 	}
 
 	const scrollStyle = {
-		marginTop: "10px",
+		marginTop: 10,
 		overflow: "scroll",
-		height: "66vh",
+		height: "100%",
 		overflowX: "auto",
 		overflowY: "auto",
 	}
@@ -1463,36 +1401,6 @@ const AngularWorkflow = (props) => {
 		display: "flex",
 	}
 
-	// All this is stupid lmao
-	const handleHookHover = () => {
-    	setHookHoverColor(hoverColor)
-    	setAppsHoverColor(hoverOutColor)
-    	setVariablesHoverColor(hoverOutColor)
-  	}
-
-	const handleHookHoverOut = () => {
-    	setHookHoverColor(hoverOutColor)
-  	}
-
-	const handleAppsHover = () => {
-    	setAppsHoverColor(hoverColor)
-    	setHookHoverColor(hoverOutColor)
-    	setVariablesHoverColor(hoverOutColor)
-  	}
-
-	const handleAppsHoverOut = () => {
-    	setAppsHoverColor(hoverOutColor)
-  	}
-
-	const handleVariablesHover = () => {
-    	setVariablesHoverColor(hoverColor)
-    	setHookHoverColor(hoverOutColor)
-    	setAppsHoverColor(hoverOutColor)
-  	}
-
-	const handleVariablesHoverOut = () => {
-    setVariablesHoverColor(hoverOutColor)
-  }
 
 	const paperVariableStyle = {
 		minHeight: "50px",
@@ -1614,57 +1522,77 @@ const AngularWorkflow = (props) => {
 			</div>
 		)
 	}
+
+	const curTab = 0
+	const handleSetTab = (event, newValue) => {
+		setCurrentView(newValue)
+	}
 	
 	const HandleLeftView = () => {
 		// Defaults to apps.
 		var thisview = <AppView />
-		if (currentView === "triggers") {
+		if (currentView === 1) {
 			thisview = <TriggersView />
-		} else if (currentView === "variables") {
+		} else if (currentView === 2) {
 			thisview = <VariablesView />
+		}
+
+		const tabStyle = {
+			maxWidth: leftBarSize/3,
+			minWidth: leftBarSize/3,
+			flex: 1,
+			textTransform: "none",
+		}
+
+		const iconStyle = {
+			marginTop: 3,
+			marginRight: 5,
 		}
 
 		return(
 			<div>
-				<Divider style={{marginTop: 10, height: 1, width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
-				<div style={{minHeight: bodyHeight-appBarSize-150, maxHeight: bodyHeight-appBarSize-100}}>	
+				<div style={{minHeight: bodyHeight-appBarSize-50, maxHeight: bodyHeight-appBarSize-50}}>	
 					{thisview}
 				</div>
-				<div style={{bottom: 0, left: 0}}>
-					<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
-					<div style={{display: "flex"}}> 
-						<div style={{flex: "1", marginLeft: "10px", marginTop: "10px", color: AppsHoverColor, cursor: "pointer", textAlign: "center"}} onMouseOver={handleAppsHover} onMouseOut={handleAppsHoverOut} onClick={() => {setCurrentView("apps")}}> 
-							<Grid container direction="row" alignItems="center">
-							  	<Grid item>
-									<AppsIcon style={{marginTop: "3px", marginRight: "5px"}} />
-								</Grid>
+				<Divider style={{backgroundColor: "rgb(91, 96, 100)"}}/>
+				<Tabs
+					value={currentView}
+					indicatorColor="primary"
+					textColor="white"
+					onChange={handleSetTab}
+					aria-label="Left sidebar tab"
+				>
+					<Tab label={
+						<Grid container direction="row" alignItems="center">
 								<Grid item>
-									Apps
-								</Grid>
+								<AppsIcon style={iconStyle} />
 							</Grid>
-						</div>
-						<div style={{flex: "1", marginLeft: "10px", marginTop: "10px", color: HookHoverColor, cursor: "pointer"}} onMouseOver={handleHookHover} onMouseOut={handleHookHoverOut} onClick={() => {setCurrentView("triggers")}}> 
-							<Grid container direction="row" alignItems="center">
-							  	<Grid item>
-									<ScheduleIcon style={{marginTop: "3px", marginRight: "5px"}} />
-								</Grid>
+							<Grid item>
+								Apps
+							</Grid>
+						</Grid>
+					} style={tabStyle} />
+					<Tab label={
+						<Grid container direction="row" alignItems="center">
 								<Grid item>
-									Triggers
-								</Grid>
+								<ScheduleIcon style={iconStyle} />
 							</Grid>
-						</div>
-						<div style={{flex: "1", marginLeft: "10px", marginTop: "10px", color: VariablesHoverColor, cursor: "pointer"}} onMouseOver={handleVariablesHover} onMouseOut={handleVariablesHoverOut} onClick={() => {setCurrentView("variables")}}> 
-							<Grid container direction="row" alignItems="center">
-							  	<Grid item>
-									<FavoriteBorderIcon style={{marginTop: "3px", marginRight: "5px"}} />
-								</Grid>
+							<Grid item>
+								Triggers
+							</Grid>
+						</Grid>
+					}	style={tabStyle} />
+					<Tab label={
+						<Grid container direction="row" alignItems="center">
 								<Grid item>
-									Variables
-								</Grid>
+								<FavoriteBorderIcon style={iconStyle} />
 							</Grid>
-						</div>
-					</div>
-				</div>
+							<Grid item>
+								Variables
+							</Grid>
+						</Grid>
+					}style={tabStyle} />
+				</Tabs>
 			</div>
 		)
 	}
@@ -2018,8 +1946,8 @@ const AngularWorkflow = (props) => {
 
 	const appScrollStyle = {
 		overflow: "scroll",
-		maxHeight: bodyHeight-appBarSize-150,
-		minHeight: bodyHeight-appBarSize-150,
+		maxHeight: bodyHeight-appBarSize-55,
+		minHeight: bodyHeight-appBarSize-55,
 		overflowY: "auto",
 		overflowX: "hidden",
 	}
@@ -2075,6 +2003,7 @@ const AngularWorkflow = (props) => {
 							<Draggable 
 								onDrag={(e) => {handleAppDrag(e, app)}}
 								onStop={(e) => {handleDragStop(e, app)}}
+								key={app.id}
 								dragging={false}
 								position={{
 									x: 0,
@@ -2438,7 +2367,7 @@ const AngularWorkflow = (props) => {
 						} else if (data.variant === "WORKFLOW_VARIABLE") {
 							varcolor = "#f85a3e"
 							if (workflow.workflow_variables === null || workflow.workflow_variables === undefined || workflow.workflow_variables.length === 0) {
-								setCurrentView("variables")
+								setCurrentView(2)
 								datafield = 
 								<div>
 								<div>
@@ -2944,7 +2873,7 @@ const AngularWorkflow = (props) => {
 		} else if (data.variant === "WORKFLOW_VARIABLE") {
 			varcolor = "#f85a3e"
 			if (workflow.workflow_variables === null || workflow.workflow_variables === undefined || workflow.workflow_variables.length === 0) {
-				setCurrentView("variables")
+				setCurrentView(2)
 				datafield = 
 				<div>
 					<div>
@@ -4621,7 +4550,6 @@ const AngularWorkflow = (props) => {
 			<RightSideBar />
 			<BottomCytoscapeBar />
 			<TopCytoscapeBar />
-			<NoActionsBar />
 		</div> 
 		: 
 		<div style={{color: "white"}}>
