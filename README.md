@@ -3,7 +3,7 @@
 
 **It's in BETA** - [Get in touch](https://shuffler.io/contact), send a mail to [frikky@shuffler.io](mailto:frikky@shuffler.io) or poke me on twitter [@frikkylikeme](https://twitter.com/frikkylikeme)
 
-![Example Shuffle webhook integration](shuffle_webhook.png)
+![Example Shuffle webhook integration](https://github.com/frikky/Shuffle/blob/master/frontend/src/assets/img/shuffle_webhook.png)
 
 ## Getting started 
 * Self-hosted: Check out the [installation guide](https://github.com/frikky/shuffle/blob/master/install-guide.md) and [getting started](https://shuffler.io/docs/getting_started)
