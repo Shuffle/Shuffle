@@ -58,8 +58,6 @@ const Docs = (props) => {
 
 		// Continue this, and find the h2 with the data in it lol
 		if (window.location.hash.length > 0) {
-			console.log("HELLO")
-
 			var parent = document.getElementById("markdown_wrapper")
 			if (parent !== null) {
 				var elements = parent.getElementsByTagName('h2')
@@ -166,6 +164,7 @@ const Docs = (props) => {
 		flex: "1",
 		maxWidth: 750,
 		overflow: "hidden",
+		paddingBottom: 200, 
 	}
 
 	function OuterLink(props) {
@@ -180,15 +179,20 @@ const Docs = (props) => {
 	}
 
 	function CodeHandler(props) {
-		return <code style={{padding: 5, backgroundColor: inputColor}}>{props.value}</code>
+		return (
+			<pre style={{padding: 10, minWidth: "50%", maxWidth: "100%", backgroundColor: inputColor}}>
+				<code>
+					{props.value}
+				</code>
+			</pre>
+		)
 	}
 
 	function Heading(props) {
 		const element = React.createElement(`h${props.level}`, {style: {marginTop: 25}}, props.children)
-		console.log(props)
 		return (
 			<span>
-				<Divider style={{width: "90%", marginTop: 25, backgroundColor: inputColor}} />
+				{props.level !== 1 ? <Divider style={{width: "90%", marginTop: 25, backgroundColor: inputColor}} /> : null}
 				{element}
 			</span>
 		)
@@ -208,11 +212,6 @@ const Docs = (props) => {
 		<div style={Body}>
 			<div style={SideBar}>
 				<ul style={{listStyle: "none", paddingLeft: "0"}}>
-					<li style={{marginTop: "10px"}}>
-						<a style={hrefStyle} href="/">
-							<h2>Home</h2>
-						</a>
-					</li>
 					{list.map(item => {
 						const path = "/docs/"+item
 						const newname = item.charAt(0).toUpperCase()+item.substring(1).split("_").join(" ")

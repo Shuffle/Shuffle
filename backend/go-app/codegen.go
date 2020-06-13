@@ -379,8 +379,6 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 		verifyAddin,
 	)
 
-	log.Printf("CODE: %s", data)
-
 	//log.Println(data)
 	//log.Println(functionname)
 	return functionname, data
