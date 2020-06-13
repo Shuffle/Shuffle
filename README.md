@@ -13,16 +13,16 @@
 [1. Introducing Shuffle](https://medium.com/security-operation-capybara/introducing-shuffle-an-open-source-soar-platform-part-1-58a529de7d12)
 [2. Getting started with Shuffle](https://medium.com/security-operation-capybara/getting-started-with-shuffle-an-open-source-soar-platform-part-2-1d7c67a64244)
 
+## Documentation
+[Documentation](https://shuffler.io/docs) can be found on https://shuffler.io/docs/about or in your own instance. Currently lacking: 
+* API documentation 
+* Updates after migrating from SaaS to open source
+
 ## Related repositories
 * Apps: https://github.com/frikky/shuffle-apps
 * Workflows: https://github.com/frikky/shuffle-workflows (empty)
 * Security OpenAPI apps: https://github.com/frikky/OpenAPI-security-definitions
 * Documentation: https://github.com/frikky/shuffle-docs
-
-## Documentation
-Documentation can be found on https://shuffler.io/docs/about or in your own instance. Currently lacking: 
-* API documentation 
-* Updates after migrating from SaaS to open source
 
 ## Features
 * Simple workflow automation editor 

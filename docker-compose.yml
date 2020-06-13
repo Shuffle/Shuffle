@@ -1,7 +1,7 @@
 version: '3'
 services:
   frontend:
-    #build: ./frontend
+    build: ./frontend
     image: frikky/shuffle:frontend
     container_name: shuffle-frontend
     hostname: shuffle-frontend
@@ -14,7 +14,7 @@ services:
     depends_on:
       - backend
   backend:
-    #build: ./backend
+    build: ./backend
     image: frikky/shuffle:backend
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
