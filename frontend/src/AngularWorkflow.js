@@ -62,8 +62,6 @@ import cxtmenu from 'cytoscape-cxtmenu';
 import { w3cwebsocket as W3CWebSocket } from "websocket";
 import { useAlert } from "react-alert";
 
-const hoverColor = "#f85a3e"
-const hoverOutColor = "#e8eaf6"
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
 
@@ -1142,7 +1140,6 @@ const AngularWorkflow = (props) => {
 	}
 
 	const onNodeHover = (event) => {
-		//event.target.style("border-width", "5px")
 		event.target.animate({
 			style: {
 				"border-width": "5px",
@@ -1156,24 +1153,22 @@ const AngularWorkflow = (props) => {
 	}
 
 	const onEdgeHoverOut = (event) => {
-		//event.target.removeStyle()
+		event.target.removeStyle()
 	}
 
 	// This is here to have a proper transition for lines
 	const onEdgeHover = (event) => {
-
-		//console.log(event.target.data())
-		//const sourcecolor = cy.getElementById(event.target.data("source")).style("border-color")
-		//const targetcolor = cy.getElementById(event.target.data("target")).style("border-color")
-		//event.target.animate({
-		//	style: {
-		//		"line-fill": "linear-gradient",
-		//		'target-arrow-color': targetcolor,
-		//		"line-gradient-stop-colors": [sourcecolor, targetcolor],
-		//		"line-gradient-stop-positions": [0, 1],
-		//	},
-		//	duration: 0,
-		//})
+		const sourcecolor = cy.getElementById(event.target.data("source")).style("border-color")
+		const targetcolor = cy.getElementById(event.target.data("target")).style("border-color")
+		event.target.animate({
+			style: {
+				"line-fill": "linear-gradient",
+				'target-arrow-color': targetcolor,
+				"line-gradient-stop-colors": [sourcecolor, targetcolor],
+				"line-gradient-stop-positions": [0, 1],
+			},
+			duration: 0,
+		})
 	}
 
 
@@ -2286,6 +2281,7 @@ const AngularWorkflow = (props) => {
 								rows="5"
 								color="primary"
 								defaultValue={data.value}
+								type={placeholder.includes("***") ? "password" : "text"}
 								placeholder={placeholder}
 								onChange={(event) => {
 									changeActionParameter(event, count)
@@ -2416,7 +2412,7 @@ const AngularWorkflow = (props) => {
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: "10px"}}/>
 								<div style={{flex: "10"}}> 
-									<b>{data.name}: </b> 
+									<b>{data.name} </b> 
 								</div>
 								<Tooltip color="primary" title="Static data" placement="top">
 									<div style={{cursor: "pointer", color: staticcolor}} onClick={(e) => {
@@ -2502,6 +2498,13 @@ const AngularWorkflow = (props) => {
 		//setStartNode(selectedAction.id)
 	}
 
+	function sortByKey(array, key) {
+	  return array.sort(function(a, b) {
+			var x = a[key]; var y = b[key]
+			return ((x < y) ? -1 : ((x > y) ? 1 : 0))
+		})
+	}
+
 	const appApiView = Object.getOwnPropertyNames(selectedAction).length > 0 && Object.getOwnPropertyNames(selectedApp).length > 0 ? 
 		<div style={appApiViewStyle}>
 			<div style={{display: "flex", minHeight: 40, marginBottom: 30}}>
@@ -2583,7 +2586,7 @@ const AngularWorkflow = (props) => {
 			: null*/}
 			<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 			<div style={{flex: "6", marginTop: "20px"}}>
-				<div>
+				<div style={{marginBottom: 5}}>
 					<b>Actions</b>
 				</div>
 				<Select
@@ -2598,7 +2601,7 @@ const AngularWorkflow = (props) => {
 						}
 					}}
 				>
-					{selectedApp.actions.map(data => {
+					{sortByKey(selectedApp.actions, "label").map(data => {
 						var newActionname = data.name
 						if (data.label !== undefined && data.label !== null && data.label.length > 0) {
 							newActionname = data.label
@@ -2610,13 +2613,17 @@ const AngularWorkflow = (props) => {
 						newActionname = newActionname.replace("_", " ")
 						newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
 						return (
-						<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data.name}>
+						<MenuItem style={{maxWidth: 400, overflowX: "hidden", backgroundColor: inputColor, color: "white"}} value={data.name}>
 							{newActionname}
 
 						</MenuItem>
 						)
 					})}
 				</Select>
+				{selectedAction.description !== undefined && selectedAction.description.length > 0 ?
+				<div style={{marginTop: 10, marginBottom: 10, maxHeight: 60, overflow: "hidden"}}>
+					{selectedAction.description}
+				</div> : null}
 				<div style={{marginTop: "10px", borderColor: "white", borderWidth: "2px", marginBottom: 200}}>
 						<AppActionArguments key={selectedAction.id} selectedAction={selectedAction} />
 
@@ -4541,6 +4548,9 @@ const AngularWorkflow = (props) => {
 					boxSelectionEnabled={true}
 					autounselectify={false}
 					cy={(incy) => {
+						// FIXME: There's something specific loading when
+						// you do the first hover of a node. Why is this different?
+						console.log("CY: ", incy)
 						setCy(incy)
 					}}
 				/>
