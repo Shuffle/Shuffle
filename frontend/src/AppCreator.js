@@ -614,10 +614,23 @@ const AppCreator = (props) => {
 				const headersSplit = item.headers.split("\n")
 				for (var key in headersSplit) {
 					const header = headersSplit[key]
+					console.log("HEADER: ", header)
 					var key = ""
 					var value = ""
-					if (header.length > 0 && header.includes("=")) {
+					if (header.length > 0 && header.includes("= ")) {
+						const headersplit = header.split("= ")
+						key = headersplit[0]	
+						value = headersplit[1]	
+					} else if (header.length > 0 && header.includes("=")) {
 						const headersplit = header.split("=")
+						key = headersplit[0]	
+						value = headersplit[1]	
+					} else if (header.length > 0 && header.includes(": ")) {
+						const headersplit = header.split(": ")
+						key = headersplit[0]	
+						value = headersplit[1]	
+					} else if (header.length > 0 && header.includes(":")) {
+						const headersplit = header.split(":")
 						key = headersplit[0]	
 						value = headersplit[1]	
 					} else {
@@ -1273,6 +1286,10 @@ const AppCreator = (props) => {
 											continue
 										}
 
+										if (key === "Authorization" && authenticationOption === "Bearer auth") {
+											continue
+										} 
+
 										headers += key+"="+value+"\n"
 									}
 
@@ -1284,33 +1301,37 @@ const AppCreator = (props) => {
 								}
 
 								// Parse URL
-								parsedurl = request.url
+								if (request.url !== undefined) {
+									parsedurl = request.url
+								}
 							}
 
-							if (parsedurl.includes("<") && parsedurl.includes(">")) {
-								parsedurl = parsedurl.split("<").join("{")
-								parsedurl = parsedurl.split(">").join("}")
-							}
-
-							if (parsedurl.startsWith("http") || parsedurl.startsWith("ftp")) {
-								if (parsedurl !== undefined && parsedurl.includes(parameterName)) {
-									// Remove <> etc.
-									// 
-									
-									console.log("IT HAS THE PARAM NAME!")
-									const newurl = new URL(encodeURI(parsedurl))
-									newurl.searchParams.delete(parameterName)
-									parsedurl = decodeURI(newurl.href)
+							if (parsedurl !== undefined) {
+								if (parsedurl.includes("<") && parsedurl.includes(">")) {
+									parsedurl = parsedurl.split("<").join("{")
+									parsedurl = parsedurl.split(">").join("}")
 								}
 
-								// Remove the base URL itself
-								if (parsedurl !== undefined && baseUrl !== undefined && baseUrl.length > 0 && parsedurl.includes(baseUrl)) {
-									parsedurl = parsedurl.replace(baseUrl, "")
-								}
+								if (parsedurl.startsWith("http") || parsedurl.startsWith("ftp")) {
+									if (parsedurl !== undefined && parsedurl.includes(parameterName)) {
+										// Remove <> etc.
+										// 
+										
+										console.log("IT HAS THE PARAM NAME!")
+										const newurl = new URL(encodeURI(parsedurl))
+										newurl.searchParams.delete(parameterName)
+										parsedurl = decodeURI(newurl.href)
+									}
 
-								// Check URL query && headers 
-								setActionField("url", parsedurl)
-								setUrlPath(parsedurl)
+									// Remove the base URL itself
+									if (parsedurl !== undefined && baseUrl !== undefined && baseUrl.length > 0 && parsedurl.includes(baseUrl)) {
+										parsedurl = parsedurl.replace(baseUrl, "")
+									}
+
+									// Check URL query && headers 
+									setActionField("url", parsedurl)
+									setUrlPath(parsedurl)
+								}
 							}
 
 							//console.log("URL: ", request.url)

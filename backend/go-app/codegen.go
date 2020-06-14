@@ -243,7 +243,7 @@ func buildStructure(swagger *openapi3.Swagger, curHash string) (string, error) {
 }
 
 // This function generates the python code that's being used.
-func makePythoncode(swagger *openapi3.Swagger, name, url, method string, parameters, optionalQueries []string) (string, string) {
+func makePythoncode(swagger *openapi3.Swagger, name, url, method string, parameters, optionalQueries, headers []string) (string, string) {
 	method = strings.ToLower(method)
 	queryString := ""
 	queryData := ""
@@ -349,10 +349,33 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 		}
 	}
 
+	preparedHeaders := "headers={}"
+	if len(headers) > 0 {
+		preparedHeaders = "headers={"
+		for count, header := range headers {
+			headerSplit := strings.Split(header, "=")
+			added := false
+			if len(headerSplit) == 2 {
+				if strings.Contains(preparedHeaders, headerSplit[0]) {
+					continue
+				}
+
+				preparedHeaders += fmt.Sprintf(`"%s": "%s"`, headerSplit[0], headerSplit[1])
+				added = true
+			}
+
+			if count != len(headers)-1 && added {
+				preparedHeaders += ","
+			}
+		}
+
+		preparedHeaders += "}"
+	}
+
 	// Extra param for url if it's changeable
 	// Extra param for authentication scheme(s)
 	data := fmt.Sprintf(`    async def %s(self%s%s%s%s%s%s):
-        headers={}
+        %s
         url=f"%s%s"
         %s
         %s
@@ -367,6 +390,7 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 		queryString,
 		bodyParameter,
 		verifyParam,
+		preparedHeaders,
 		urlInline,
 		url,
 		verifyWrapper,
@@ -531,7 +555,11 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 	// Could just as well be go at this point lol
 	pythonFunctions := []string{}
 	for actualPath, path := range swagger.Paths {
-		// FIXME: Add everything from here:
+		actualPath = strings.Replace(actualPath, " ", "_", -1)
+		actualPath = strings.Replace(actualPath, ".", "", -1)
+		actualPath = strings.Replace(actualPath, ".", "", -1)
+		actualPath = strings.Replace(actualPath, "\\", "", -1)
+
 		// https://godoc.org/github.com/getkin/kin-openapi/openapi3#PathItem
 		if path.Get != nil {
 			action, curCode := handleGet(swagger, api, extraParameters, path, actualPath)
@@ -808,13 +836,26 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 		}
 	}
 
+	headersFound := []string{}
 	if len(path.Connect.Parameters) > 0 {
-		for _, param := range path.Connect.Parameters {
-			if param.Value.Schema == nil || param.Value.In == "header" {
+		for counter, param := range path.Connect.Parameters {
+			if param.Value.Schema == nil {
+				continue
+			} else if param.Value.In == "header" {
+				headersFound = append(headersFound, fmt.Sprintf("%s=%s", param.Value.Name, param.Value.Example))
 				continue
 			}
+
+			parsedName := param.Value.Name
+			parsedName = strings.ReplaceAll(parsedName, " ", "_")
+			parsedName = strings.ReplaceAll(parsedName, ",", "_")
+			parsedName = strings.ReplaceAll(parsedName, ".", "_")
+			parsedName = strings.ReplaceAll(parsedName, "|", "_")
+			param.Value.Name = parsedName
+			path.Connect.Parameters[counter].Value.Name = parsedName
+
 			curParam := WorkflowAppActionParameter{
-				Name:        param.Value.Name,
+				Name:        parsedName,
 				Description: param.Value.Description,
 				Multiline:   false,
 				Required:    param.Value.Required,
@@ -841,14 +882,8 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 				}
 			}
 
-			if param.Value.Required {
-				action.Parameters = append(action.Parameters, curParam)
-			} else {
-				optionalParameters = append(optionalParameters, curParam)
-			}
-
 			if param.Value.In == "path" {
-				parameters = append(parameters, param.Value.Name)
+				parameters = append(parameters, curParam.Name)
 				//baseUrl = fmt.Sprintf("%s%s", baseUrl)
 			} else if param.Value.In == "query" {
 				//log.Printf("QUERY!: %s", param.Value.Name)
@@ -871,6 +906,12 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 				firstQuery = false
 			}
 
+			if param.Value.Required {
+				action.Parameters = append(action.Parameters, curParam)
+			} else {
+				optionalParameters = append(optionalParameters, curParam)
+			}
+
 		}
 	}
 
@@ -880,7 +921,7 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 		action.Parameters = append(action.Parameters, optionalParam)
 	}
 
-	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "connect", parameters, optionalQueries)
+	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "connect", parameters, optionalQueries, headersFound)
 
 	if len(functionname) > 0 {
 		action.Name = functionname
@@ -904,8 +945,6 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 
 	action.Returns.Schema.Type = "string"
 	baseUrl := fmt.Sprintf("%s%s", api.Link, actualPath)
-
-	//log.Println(path.Parameters)
 
 	// Parameters:  []WorkflowAppActionParameter{},
 	// FIXME - add data for POST stuff
@@ -941,14 +980,26 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 		}
 	}
 
+	headersFound := []string{}
 	if len(path.Get.Parameters) > 0 {
-		for _, param := range path.Get.Parameters {
-			if param.Value.Schema == nil || param.Value.In == "header" {
+		for counter, param := range path.Get.Parameters {
+			if param.Value.Schema == nil {
+				continue
+			} else if param.Value.In == "header" {
+				headersFound = append(headersFound, fmt.Sprintf("%s=%s", param.Value.Name, param.Value.Example))
 				continue
 			}
 
+			parsedName := param.Value.Name
+			parsedName = strings.ReplaceAll(parsedName, " ", "_")
+			parsedName = strings.ReplaceAll(parsedName, ",", "_")
+			parsedName = strings.ReplaceAll(parsedName, ".", "_")
+			parsedName = strings.ReplaceAll(parsedName, "|", "_")
+			param.Value.Name = parsedName
+			path.Get.Parameters[counter].Value.Name = parsedName
+
 			curParam := WorkflowAppActionParameter{
-				Name:        param.Value.Name,
+				Name:        parsedName,
 				Description: param.Value.Description,
 				Multiline:   false,
 				Required:    param.Value.Required,
@@ -975,14 +1026,8 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 				}
 			}
 
-			if param.Value.Required {
-				action.Parameters = append(action.Parameters, curParam)
-			} else {
-				optionalParameters = append(optionalParameters, curParam)
-			}
-
 			if param.Value.In == "path" {
-				parameters = append(parameters, param.Value.Name)
+				parameters = append(parameters, curParam.Name)
 				//baseUrl = fmt.Sprintf("%s%s", baseUrl)
 			} else if param.Value.In == "query" {
 				//log.Printf("QUERY!: %s", param.Value.Name)
@@ -1005,6 +1050,11 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 				}
 				firstQuery = false
 			}
+			if param.Value.Required {
+				action.Parameters = append(action.Parameters, curParam)
+			} else {
+				optionalParameters = append(optionalParameters, curParam)
+			}
 
 		}
 	}
@@ -1015,7 +1065,7 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 		action.Parameters = append(action.Parameters, optionalParam)
 	}
 
-	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "get", parameters, optionalQueries)
+	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "get", parameters, optionalQueries, headersFound)
 
 	if len(functionname) > 0 {
 		action.Name = functionname
@@ -1073,13 +1123,27 @@ func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 			})
 		}
 	}
+
+	headersFound := []string{}
 	if len(path.Head.Parameters) > 0 {
-		for _, param := range path.Head.Parameters {
-			if param.Value.Schema == nil || param.Value.In == "header" {
+		for counter, param := range path.Head.Parameters {
+			if param.Value.Schema == nil {
+				continue
+			} else if param.Value.In == "header" {
+				headersFound = append(headersFound, fmt.Sprintf("%s=%s", param.Value.Name, param.Value.Example))
 				continue
 			}
+
+			parsedName := param.Value.Name
+			parsedName = strings.ReplaceAll(parsedName, " ", "_")
+			parsedName = strings.ReplaceAll(parsedName, ",", "_")
+			parsedName = strings.ReplaceAll(parsedName, ".", "_")
+			parsedName = strings.ReplaceAll(parsedName, "|", "_")
+			param.Value.Name = parsedName
+			path.Head.Parameters[counter].Value.Name = parsedName
+
 			curParam := WorkflowAppActionParameter{
-				Name:        param.Value.Name,
+				Name:        parsedName,
 				Description: param.Value.Description,
 				Multiline:   false,
 				Required:    param.Value.Required,
@@ -1106,14 +1170,8 @@ func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 				}
 			}
 
-			if param.Value.Required {
-				action.Parameters = append(action.Parameters, curParam)
-			} else {
-				optionalParameters = append(optionalParameters, curParam)
-			}
-
 			if param.Value.In == "path" {
-				parameters = append(parameters, param.Value.Name)
+				parameters = append(parameters, curParam.Name)
 				//baseUrl = fmt.Sprintf("%s%s", baseUrl)
 			} else if param.Value.In == "query" {
 				//log.Printf("QUERY!: %s", param.Value.Name)
@@ -1136,6 +1194,12 @@ func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 				firstQuery = false
 			}
 
+			if param.Value.Required {
+				action.Parameters = append(action.Parameters, curParam)
+			} else {
+				optionalParameters = append(optionalParameters, curParam)
+			}
+
 		}
 	}
 
@@ -1145,7 +1209,7 @@ func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 		action.Parameters = append(action.Parameters, optionalParam)
 	}
 
-	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "head", parameters, optionalQueries)
+	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "head", parameters, optionalQueries, headersFound)
 
 	if len(functionname) > 0 {
 		action.Name = functionname
@@ -1203,13 +1267,27 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 			})
 		}
 	}
+
+	headersFound := []string{}
 	if len(path.Delete.Parameters) > 0 {
-		for _, param := range path.Delete.Parameters {
-			if param.Value.Schema == nil || param.Value.In == "header" {
+		for counter, param := range path.Delete.Parameters {
+			if param.Value.Schema == nil {
+				continue
+			} else if param.Value.In == "header" {
+				headersFound = append(headersFound, fmt.Sprintf("%s=%s", param.Value.Name, param.Value.Example))
 				continue
 			}
+
+			parsedName := param.Value.Name
+			parsedName = strings.ReplaceAll(parsedName, " ", "_")
+			parsedName = strings.ReplaceAll(parsedName, ",", "_")
+			parsedName = strings.ReplaceAll(parsedName, ".", "_")
+			parsedName = strings.ReplaceAll(parsedName, "|", "_")
+			param.Value.Name = parsedName
+			path.Delete.Parameters[counter].Value.Name = parsedName
+
 			curParam := WorkflowAppActionParameter{
-				Name:        param.Value.Name,
+				Name:        parsedName,
 				Description: param.Value.Description,
 				Multiline:   false,
 				Required:    param.Value.Required,
@@ -1236,14 +1314,8 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 				}
 			}
 
-			if param.Value.Required {
-				action.Parameters = append(action.Parameters, curParam)
-			} else {
-				optionalParameters = append(optionalParameters, curParam)
-			}
-
 			if param.Value.In == "path" {
-				parameters = append(parameters, param.Value.Name)
+				parameters = append(parameters, curParam.Name)
 				//baseUrl = fmt.Sprintf("%s%s", baseUrl)
 			} else if param.Value.In == "query" {
 				//log.Printf("QUERY!: %s", param.Value.Name)
@@ -1266,6 +1338,12 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 				firstQuery = false
 			}
 
+			if param.Value.Required {
+				action.Parameters = append(action.Parameters, curParam)
+			} else {
+				optionalParameters = append(optionalParameters, curParam)
+			}
+
 		}
 	}
 
@@ -1275,7 +1353,7 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 		action.Parameters = append(action.Parameters, optionalParam)
 	}
 
-	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "delete", parameters, optionalQueries)
+	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "delete", parameters, optionalQueries, headersFound)
 
 	if len(functionname) > 0 {
 		action.Name = functionname
@@ -1297,10 +1375,6 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 		Environment: api.Environment,
 		Parameters:  extraParameters,
 	}
-
-	//if path.Post.RequestBody != nil {
-	//	log.Printf("RequestBody: %#v", path.Post.RequestBody)
-	//}
 
 	action.Returns.Schema.Type = "string"
 	baseUrl := fmt.Sprintf("%s%s", api.Link, actualPath)
@@ -1337,14 +1411,26 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 		}
 	}
 
+	headersFound := []string{}
 	if len(path.Post.Parameters) > 0 {
-		for _, param := range path.Post.Parameters {
-			if param.Value.Schema == nil || param.Value.In == "header" {
+		for counter, param := range path.Post.Parameters {
+			if param.Value.Schema == nil {
+				continue
+			} else if param.Value.In == "header" {
+				headersFound = append(headersFound, fmt.Sprintf("%s=%s", param.Value.Name, param.Value.Example))
 				continue
 			}
 
+			parsedName := param.Value.Name
+			parsedName = strings.ReplaceAll(parsedName, " ", "_")
+			parsedName = strings.ReplaceAll(parsedName, ",", "_")
+			parsedName = strings.ReplaceAll(parsedName, ".", "_")
+			parsedName = strings.ReplaceAll(parsedName, "|", "_")
+			param.Value.Name = parsedName
+			path.Post.Parameters[counter].Value.Name = parsedName
+
 			curParam := WorkflowAppActionParameter{
-				Name:        param.Value.Name,
+				Name:        parsedName,
 				Description: param.Value.Description,
 				Multiline:   false,
 				Required:    param.Value.Required,
@@ -1357,7 +1443,7 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 			if param.Value.Example != nil {
 				curParam.Example = param.Value.Example.(string)
 
-				if param.Value.Name == "body" {
+				if parsedName == "body" {
 					curParam.Value = param.Value.Example.(string)
 				}
 			}
@@ -1371,14 +1457,8 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 				}
 			}
 
-			if param.Value.Required {
-				action.Parameters = append(action.Parameters, curParam)
-			} else {
-				optionalParameters = append(optionalParameters, curParam)
-			}
-
 			if param.Value.In == "path" {
-				parameters = append(parameters, param.Value.Name)
+				parameters = append(parameters, curParam.Name)
 				//baseUrl = fmt.Sprintf("%s%s", baseUrl)
 			} else if param.Value.In == "query" {
 				//log.Printf("QUERY!: %s", param.Value.Name)
@@ -1401,6 +1481,11 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 				firstQuery = false
 			}
 
+			if param.Value.Required {
+				action.Parameters = append(action.Parameters, curParam)
+			} else {
+				optionalParameters = append(optionalParameters, curParam)
+			}
 		}
 	}
 
@@ -1410,7 +1495,7 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 		action.Parameters = append(action.Parameters, optionalParam)
 	}
 
-	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "post", parameters, optionalQueries)
+	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "post", parameters, optionalQueries, headersFound)
 
 	if len(functionname) > 0 {
 		action.Name = functionname
@@ -1468,13 +1553,27 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 			})
 		}
 	}
+
+	headersFound := []string{}
 	if len(path.Patch.Parameters) > 0 {
-		for _, param := range path.Patch.Parameters {
-			if param.Value.Schema == nil || param.Value.In == "header" {
+		for counter, param := range path.Patch.Parameters {
+			if param.Value.Schema == nil {
+				continue
+			} else if param.Value.In == "header" {
+				headersFound = append(headersFound, fmt.Sprintf("%s=%s", param.Value.Name, param.Value.Example))
 				continue
 			}
+
+			parsedName := param.Value.Name
+			parsedName = strings.ReplaceAll(parsedName, " ", "_")
+			parsedName = strings.ReplaceAll(parsedName, ",", "_")
+			parsedName = strings.ReplaceAll(parsedName, ".", "_")
+			parsedName = strings.ReplaceAll(parsedName, "|", "_")
+			param.Value.Name = parsedName
+			path.Patch.Parameters[counter].Value.Name = parsedName
+
 			curParam := WorkflowAppActionParameter{
-				Name:        param.Value.Name,
+				Name:        parsedName,
 				Description: param.Value.Description,
 				Multiline:   false,
 				Required:    param.Value.Required,
@@ -1501,14 +1600,8 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 				}
 			}
 
-			if param.Value.Required {
-				action.Parameters = append(action.Parameters, curParam)
-			} else {
-				optionalParameters = append(optionalParameters, curParam)
-			}
-
 			if param.Value.In == "path" {
-				parameters = append(parameters, param.Value.Name)
+				parameters = append(parameters, curParam.Name)
 				//baseUrl = fmt.Sprintf("%s%s", baseUrl)
 			} else if param.Value.In == "query" {
 				//log.Printf("QUERY!: %s", param.Value.Name)
@@ -1531,6 +1624,11 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 				firstQuery = false
 			}
 
+			if param.Value.Required {
+				action.Parameters = append(action.Parameters, curParam)
+			} else {
+				optionalParameters = append(optionalParameters, curParam)
+			}
 		}
 	}
 
@@ -1540,7 +1638,7 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 		action.Parameters = append(action.Parameters, optionalParam)
 	}
 
-	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "patch", parameters, optionalQueries)
+	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "delete", parameters, optionalQueries, headersFound)
 
 	if len(functionname) > 0 {
 		action.Name = functionname
@@ -1599,13 +1697,26 @@ func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 		}
 	}
 
+	headersFound := []string{}
 	if len(path.Put.Parameters) > 0 {
-		for _, param := range path.Put.Parameters {
-			if param.Value.Schema == nil || param.Value.In == "header" {
+		for counter, param := range path.Put.Parameters {
+			if param.Value.Schema == nil {
+				continue
+			} else if param.Value.In == "header" {
+				headersFound = append(headersFound, fmt.Sprintf("%s=%s", param.Value.Name, param.Value.Example))
 				continue
 			}
+
+			parsedName := param.Value.Name
+			parsedName = strings.ReplaceAll(parsedName, " ", "_")
+			parsedName = strings.ReplaceAll(parsedName, ",", "_")
+			parsedName = strings.ReplaceAll(parsedName, ".", "_")
+			parsedName = strings.ReplaceAll(parsedName, "|", "_")
+			param.Value.Name = parsedName
+			path.Put.Parameters[counter].Value.Name = parsedName
+
 			curParam := WorkflowAppActionParameter{
-				Name:        param.Value.Name,
+				Name:        parsedName,
 				Description: param.Value.Description,
 				Multiline:   false,
 				Required:    param.Value.Required,
@@ -1632,12 +1743,6 @@ func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 				}
 			}
 
-			if param.Value.Required {
-				action.Parameters = append(action.Parameters, curParam)
-			} else {
-				optionalParameters = append(optionalParameters, curParam)
-			}
-
 			if param.Value.In == "path" {
 				parameters = append(parameters, param.Value.Name)
 				//baseUrl = fmt.Sprintf("%s%s", baseUrl)
@@ -1662,6 +1767,12 @@ func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 				firstQuery = false
 			}
 
+			if param.Value.Required {
+				action.Parameters = append(action.Parameters, curParam)
+			} else {
+				optionalParameters = append(optionalParameters, curParam)
+			}
+
 		}
 	}
 
@@ -1671,7 +1782,7 @@ func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 		action.Parameters = append(action.Parameters, optionalParam)
 	}
 
-	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "put", parameters, optionalQueries)
+	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "delete", parameters, optionalQueries, headersFound)
 
 	if len(functionname) > 0 {
 		action.Name = functionname
