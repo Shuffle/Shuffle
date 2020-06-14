@@ -2281,6 +2281,7 @@ const AngularWorkflow = (props) => {
 								rows="5"
 								color="primary"
 								defaultValue={data.value}
+								type={placeholder.includes("***") ? "password" : "text"}
 								placeholder={placeholder}
 								onChange={(event) => {
 									changeActionParameter(event, count)
@@ -2585,7 +2586,7 @@ const AngularWorkflow = (props) => {
 			: null*/}
 			<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 			<div style={{flex: "6", marginTop: "20px"}}>
-				<div>
+				<div style={{marginBottom: 5}}>
 					<b>Actions</b>
 				</div>
 				<Select

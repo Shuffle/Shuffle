@@ -21,8 +21,8 @@
 
 ## Related repositories
 * Apps: https://github.com/frikky/shuffle-apps
-* Workflows: https://github.com/frikky/shuffle-workflows (empty)
-* Security OpenAPI apps: https://github.com/frikky/OpenAPI-security-definitions
+* Workflows: https://github.com/frikky/shuffle-workflows
+* Security OpenAPI apps: https://github.com/frikky/security-openapis
 * Documentation: https://github.com/frikky/shuffle-docs
 
 ## Features

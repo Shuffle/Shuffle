@@ -73,12 +73,9 @@ class AppBase:
         except requests.exceptions.ConnectionError as e:
             print("Connectionerror: %s" %  e)
             return
-        #self.logger.info("AFTER initial stream result")
-        self.logger.info("THIS IS THE NEW UPDATE")
 
         # Verify whether there are any parameters with ACTION_RESULT required
         # If found, we get the full results list from backend
-        
         fullexecution = {}
         try:
             tmpdata = {
@@ -195,10 +192,9 @@ class AppBase:
             # Regex to find all the things
             if parameter["variant"] == "STATIC_VALUE":
                 data = parameter["value"]
-                self.logger.debug(f"\n\nHandle static data with JSON: {data}\n\n")
-
                 actualitem = re.findall(match, data, re.MULTILINE)
-                self.logger.info("STATIC PARSED: %s" % actualitem)
+                #self.logger.debug(f"\n\nHandle static data with JSON: {data}\n\n")
+                #self.logger.info("STATIC PARSED: %s" % actualitem)
                 if len(actualitem) > 0:
                     for replace in actualitem:
                         try:
@@ -487,7 +483,6 @@ class AppBase:
                                 # With this parameter ready, add it to... a greater list of parameters. Rofl
                                 multi_parameters[parameter["name"]] = resultarray
                             else:
-                                print("Hello, in here?: %s" % value)
                                 params[parameter["name"]] = value
                                 multi_parameters[parameter["name"]] = value 
                         

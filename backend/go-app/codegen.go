@@ -243,6 +243,7 @@ func buildStructure(swagger *openapi3.Swagger, curHash string) (string, error) {
 }
 
 // This function generates the python code that's being used.
+// This is really meta when you program it. Handling parameters is hard here.
 func makePythoncode(swagger *openapi3.Swagger, name, url, method string, parameters, optionalQueries, headers []string) (string, string) {
 	method = strings.ToLower(method)
 	queryString := ""
