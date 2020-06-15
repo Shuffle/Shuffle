@@ -1,7 +1,7 @@
 version: '3'
 services:
   frontend:
-    #build: ./frontend
+    build: ./frontend
     image: frikky/shuffle:frontend
     container_name: shuffle-frontend
     hostname: shuffle-frontend
@@ -25,6 +25,7 @@ services:
       - shuffle
     volumes: 
       - /var/run/docker.sock:/var/run/docker.sock 
+      - ${APP_HOTLOAD_LOCATION}=/shuffle-apps     # Local 
     environment: 
       - ORG_ID=${ORG_ID}
       - DATASTORE_EMULATOR_HOST=shuffle-database:8000

@@ -20,6 +20,7 @@ import YAML from 'yaml'
 import {Link} from 'react-router-dom';
 import Breadcrumbs from '@material-ui/core/Breadcrumbs';
 
+import CachedIcon from '@material-ui/icons/Cached';
 import CloudDownloadIcon from '@material-ui/icons/CloudDownload';
 import PublishIcon from '@material-ui/icons/Publish';
 import CloudDownload from '@material-ui/icons/CloudDownload';
@@ -348,7 +349,7 @@ const Apps = (props) => {
 					Activate App	
 				</Button></Link> : null
 
-		var deleteButton = ((selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated) || (selectedApp.downloaded != undefined && selectedApp.downloaded === true)) && activateButton === null ?
+		var deleteButton = ((selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated) || (selectedApp.downloaded != undefined && selectedApp.downloaded == true)) && activateButton === null ?
 				<Button
 					variant="outlined"
 					component="label"
@@ -536,7 +537,7 @@ const Apps = (props) => {
 				<div style={{flex: 1, marginLeft: 10, marginRight: 10}}>
 					<div style={{display: "flex"}}>
 						<div style={{flex: 1}}>
-							<h2>Available integrations</h2> 
+							<h2>All apps</h2> 
 						</div>
 						{isLoading ? <CircularProgress style={{marginTop: 13, marginRight: 15}} /> : null}
 				    <FormControlLabel
@@ -547,6 +548,19 @@ const Apps = (props) => {
 								setSearchBackend(!searchBackend)}
 							} />}
 						/>
+						<Tooltip title={"Reload apps locally"} style={{marginTop: "28px", width: "100%"}} aria-label={"Upload"}>
+							<Button
+								variant="outlined"
+								component="label"
+								color="primary"
+								style={{margin: 5, maxHeight: 50, marginTop: 10}}
+								onClick={() => {
+									hotloadApps()
+								}}
+							>
+								<CachedIcon />
+							</Button>
+						</Tooltip>
 						<Tooltip title={"Download from Github"} style={{marginTop: "28px", width: "100%"}} aria-label={"Upload"}>
 							<Button
 								variant="outlined"
@@ -665,6 +679,35 @@ const Apps = (props) => {
 			console.log("ERROR: ", error.toString())
 			alert.error(error.toString())
 		})
+	}
+
+	// Locally hotloads app from folder
+	const hotloadApps = () => {
+		alert.info("Hotloading apps from location in .env")
+		setIsLoading(true)
+		fetch(globalUrl+"/api/v1/apps/run_hotload", {
+			mode: "cors",
+			headers: {
+				'Accept': 'application/json',
+			},
+	  	credentials: "include",
+		})
+		.then((response) => {
+			setIsLoading(false)
+			if (response.status === 200) {
+				alert.success("Hotloaded apps!")
+			}
+
+			return response.json()
+		})
+		.then((responseJson) => {
+			if (responseJson.reason !== undefined && responseJson.reason.length > 0) {
+				alert.info("Hotloading: ", responseJson.reason)
+			}
+    })
+		.catch(error => {
+			alert.error(error.toString())
+		});
 	}
 
 	// Gets the URL itself (hopefully this works in most cases?

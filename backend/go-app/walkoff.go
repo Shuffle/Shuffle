@@ -3444,6 +3444,7 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	log.Printf("Hotloading from %s", location)
 	err = handleAppHotload(location)
 	if err != nil {
 		resp.WriteHeader(500)
@@ -3699,13 +3700,13 @@ func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra 
 			dir, err := fs.ReadDir(tmpExtra)
 			if err != nil {
 				log.Printf("Failed to read dir: %s", err)
-				break
+				continue
 			}
 
 			// Go routine? Hmm, this can be super quick I guess
 			err = iterateWorkflowGithubFolders(fs, dir, tmpExtra, "")
 			if err != nil {
-				break
+				continue
 			}
 		case mode.IsRegular():
 			// Check the file
@@ -3759,28 +3760,32 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 			dir, err := fs.ReadDir(tmpExtra)
 			if err != nil {
 				log.Printf("Failed to read dir: %s", err)
-				break
+				continue
 			}
 
 			// Go routine? Hmm, this can be super quick I guess
 			err = iterateAppGithubFolders(fs, dir, tmpExtra, "")
 			if err != nil {
-				break
+				log.Printf("Error reading folder: %s", err)
+				continue
 			}
 		case mode.IsRegular():
 			// Check the file
 			filename := file.Name()
 			if filename == "Dockerfile" {
-
 				// Quick Dockerfile check
-				dockerdata, err := ioutil.ReadFile(fmt.Sprintf("%sDockerfile", extra))
-				if err != nil {
-					continue
-				}
+				//dockerfile := fmt.Sprintf("%sDockerfile", extra)
+				//log.Printf("Handling Dockerfile %s", dockerfile)
+				//dockerdata, err := ioutil.ReadFile(dockerfile)
+				//if err != nil {
+				//	log.Printf("Failed to read dockerfile")
+				//	continue
+				//}
 
-				if len(dockerdata) == 0 {
-					continue
-				}
+				//if len(dockerdata) == 0 {
+				//	log.Printf("Dockerfile is empty")
+				//	continue
+				//}
 
 				log.Printf("Handle Dockerfile in location %s", extra)
 

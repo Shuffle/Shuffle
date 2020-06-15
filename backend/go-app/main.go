@@ -39,7 +39,6 @@ import (
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
-	"github.com/go-git/go-billy/v5/osfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/storage/memory"
 
@@ -5794,8 +5793,9 @@ func healthCheckHandler(resp http.ResponseWriter, request *http.Request) {
 
 // Creates osfs from folderpath with a basepath as directory base
 func createFs(basepath, pathname string) (billy.Filesystem, error) {
-	fs := osfs.New("")
+	log.Printf("base: %s, pathname: %s", basepath, pathname)
 
+	fs := memfs.New()
 	err := filepath.Walk(pathname,
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
@@ -5806,7 +5806,10 @@ func createFs(basepath, pathname string) (billy.Filesystem, error) {
 				return nil
 			}
 
-			fullpath := fmt.Sprintf("%s%s", basepath, path)
+			// Fix the inner path here
+			newpath := strings.ReplaceAll(path, pathname, "")
+			fullpath := fmt.Sprintf("%s%s", basepath, newpath)
+			log.Printf("Fullpath: %s", fullpath)
 			switch mode := info.Mode(); {
 			case mode.IsDir():
 				err = fs.MkdirAll(fullpath, 0644)
@@ -5845,23 +5848,23 @@ func createFs(basepath, pathname string) (billy.Filesystem, error) {
 }
 
 // Hotloads new apps from a folder
-// FIXME: Not finished
 func handleAppHotload(location string) error {
 	basepath := "base"
 	fs, err := createFs(basepath, location)
 	if err != nil {
-		log.Printf("Failed making files and stuff: %s", err)
+		log.Printf("Failed memfs creation - probably bad path: %s", err)
 		return err
 	} else {
-		log.Printf("Hotloading from %s finished", location)
+		log.Printf("Memfs creation from %s done", location)
 	}
 
-	dir, err := fs.ReadDir(basepath)
+	dir, err := fs.ReadDir("")
 	if err != nil {
 		log.Printf("Failed reading folder: %s", err)
 		return err
 	}
 
+	log.Printf("Reading app folder: %#v", dir)
 	err = iterateAppGithubFolders(fs, dir, "", "")
 	if err != nil {
 		log.Printf("Err: %s", err)
