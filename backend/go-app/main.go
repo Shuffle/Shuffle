@@ -5809,7 +5809,6 @@ func createFs(basepath, pathname string) (billy.Filesystem, error) {
 			// Fix the inner path here
 			newpath := strings.ReplaceAll(path, pathname, "")
 			fullpath := fmt.Sprintf("%s%s", basepath, newpath)
-			log.Printf("Fullpath: %s", fullpath)
 			switch mode := info.Mode(); {
 			case mode.IsDir():
 				err = fs.MkdirAll(fullpath, 0644)
