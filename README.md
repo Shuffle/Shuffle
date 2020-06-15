@@ -3,20 +3,29 @@
 
 **It's in BETA** - [Get in touch](https://shuffler.io/contact), send a mail to [frikky@shuffler.io](mailto:frikky@shuffler.io) or poke me on twitter [@frikkylikeme](https://twitter.com/frikkylikeme)
 
-![Example Shuffle webhook integration](shuffle_webhook.png)
+![Example Shuffle webhook integration](https://github.com/frikky/Shuffle/blob/master/frontend/src/assets/img/shuffle_webhook.png)
 
 ## Try it
 * Self-hosted: Check out the [installation guide](https://github.com/frikky/shuffle/blob/master/install-guide.md). 
-* Cloud: Register at https://shuffler.io/register and get cooking (old, missing a lot of features)
+* Cloud: Register at https://shuffler.io/register and get cooking (missing a lot of features)
+
+## Getting started 
+* Self-hosted: Check out the [installation guide](https://github.com/frikky/shuffle/blob/master/install-guide.md) and [getting started](https://shuffler.io/docs/getting_started)
+* Cloud: Register at https://shuffler.io/register and get cooking (there are some differences!)
+
+## Blogposts
+* [1. Introducing Shuffle](https://medium.com/security-operation-capybara/introducing-shuffle-an-open-source-soar-platform-part-1-58a529de7d12)
+* [2. Getting started with Shuffle](https://medium.com/security-operation-capybara/getting-started-with-shuffle-an-open-source-soar-platform-part-2-1d7c67a64244)
+* [3. Integrating Shuffle with Virustotal and TheHive](https://medium.com/@Frikkylikeme/integrating-shuffle-with-virustotal-and-thehive-open-source-soar-part-3-8e2e0d3396a9)
+
+## Documentation
+[Documentation](https://shuffler.io/docs) can be found on https://shuffler.io/docs and is written in https://github.com/frikky/shuffle-docs.
 
 ## Related repositories
 * Apps: https://github.com/frikky/shuffle-apps
-* Workflows: https://github.com/frikky/shuffle-workflows (empty)
-* Security OpenAPI apps: https://github.com/frikky/OpenAPI-security-definitions
+* Workflows: https://github.com/frikky/shuffle-workflows
+* Security OpenAPI apps: https://github.com/frikky/security-openapis
 * Documentation: https://github.com/frikky/shuffle-docs
-
-## Documentation
-Documentation can be found on https://shuffler.io/docs.
 
 ## Features
 * Simple workflow automation editor 

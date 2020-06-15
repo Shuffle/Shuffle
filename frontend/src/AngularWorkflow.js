@@ -10,6 +10,8 @@ import Drawer from '@material-ui/core/Drawer';
 import Button from '@material-ui/core/Button';
 import Paper from '@material-ui/core/Paper';
 import Grid from '@material-ui/core/Grid';
+import Tabs from '@material-ui/core/Tabs';
+import Tab from '@material-ui/core/Tab';
 import ButtonBase from '@material-ui/core/ButtonBase';
 import Tooltip from '@material-ui/core/Tooltip';
 import Select from '@material-ui/core/Select';
@@ -60,8 +62,6 @@ import cxtmenu from 'cytoscape-cxtmenu';
 import { w3cwebsocket as W3CWebSocket } from "websocket";
 import { useAlert } from "react-alert";
 
-const hoverColor = "#f85a3e"
-const hoverOutColor = "#e8eaf6"
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
 
@@ -100,7 +100,7 @@ const AngularWorkflow = (props) => {
 	const [cy, setCy] = React.useState()
 		
 	const [appSearch, setAppSearch] = React.useState("")
-	const [currentView, setCurrentView] = React.useState("apps")
+	const [currentView, setCurrentView] = React.useState(0)
 	const [triggerAuthentication, setTriggerAuthentication] = React.useState({})
 	const [triggerFolders, setTriggerFolders] = React.useState([])
 
@@ -164,9 +164,6 @@ const AngularWorkflow = (props) => {
 
 	const [lastSaved, setLastSaved] = React.useState(true)
 
-	const [AppsHoverColor, setAppsHoverColor] = useState(hoverOutColor);
-	const [VariablesHoverColor, setVariablesHoverColor] = useState(hoverOutColor);
-	const [HookHoverColor, setHookHoverColor] = useState(hoverOutColor);
 	const [appAdded, setAppAdded] = useState(false)
 	const [update, setUpdate] = useState("");
 	const [workflowExecutions, setWorkflowExecutions] = React.useState([]);
@@ -262,7 +259,7 @@ const AngularWorkflow = (props) => {
 	const abortExecution = () => {
 		setExecutionRunning(false)
 
-		alert.success("Aborting execution")
+		alert.info("Aborting execution")
 		fetch(globalUrl+"/api/v1/workflows/"+props.match.params.key+"/executions/"+executionRequest.execution_id+"/abort", {
     	  	method: 'GET',
 				headers: {
@@ -274,7 +271,9 @@ const AngularWorkflow = (props) => {
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for WORKFLOW EXECUTION :O!")
-			} 
+			} else {
+				alert.success("Execution aborted")
+			}
 
 			return response.json()
 		})
@@ -547,68 +546,6 @@ const AngularWorkflow = (props) => {
 		return true
 	}
 
-	const executeWorkflowWebsocket = () => {
-		if (!lastSaved) {
-			//alert.error("You might have forgotten to save before executing.")
-			console.log("FIXME: Might have forgotten to save before executing.")
-		}
-
-		var returncheck = monitorUpdates()
-		if (!returncheck) {
-			alert.error("No startnode set.")
-			return
-		}
-
-		setVisited([])
-		setExecutionRunning(true)
-		setExecutionRequest({})
-
-		var curelements = cy.elements()
-		for (var i = 0; i < curelements.length; i++) {
-			curelements[i].addClass("not-executing-highlight")
-		}
-
-		if (executionText.length > 0) { 
-			alert.success("Starting execution with argument "+executionText)
-		} else {
-			alert.success("Starting execution")
-		}
-
-		const data = {"execution_argument": executionText}
-		fetch(globalUrl+"/api/v1/workflows/"+props.match.params.key+"/execute_fs", {
-    	  	method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'Accept': 'application/json',
-				},
-	  			credentials: "include",
-				body: JSON.stringify(data),
-    		})
-		.then((response) => {
-			if (response.status !== 200) {
-				console.log("Status not 200 for WORKFLOW EXECUTION :O!")
-			}
-
-			return response.json()
-		})
-		.then((responseJson) => {
-			if (!responseJson.success) {
-				alert.error("Failed to start: "+responseJson.reason)
-				stop()
-				return	
-			}
-
-			setExecutionRequest({
-				"execution_id": responseJson.execution_id,
-				"authorization": responseJson.authorization,
-			})
-			setExecutingNodes([workflow.start])
-		})
-		.catch(error => {
-			alert.error(error.toString())
-		});
-	}
-
 	const executeWorkflow = () => {
 		if (!lastSaved) {
 			//alert.error("You might have forgotten to save before executing.")
@@ -639,14 +576,14 @@ const AngularWorkflow = (props) => {
 
 		const data = {"execution_argument": executionText, "start": workflow.start}
 		fetch(globalUrl+"/api/v1/workflows/"+props.match.params.key+"/execute", {
-    	  	method: 'POST',
+    	  method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json',
 				},
 	  			credentials: "include",
 				body: JSON.stringify(data),
-    		})
+    	})
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for WORKFLOW EXECUTION :O!")
@@ -657,7 +594,13 @@ const AngularWorkflow = (props) => {
 		.then((responseJson) => {
 			if (!responseJson.success) {
 				alert.error("Failed to start: "+responseJson.reason)
+				setExecutionRunning(false)
+				setExecutionRequestStarted(false)
 				stop()
+
+				for (var i = 0; i < curelements.length; i++) {
+					curelements[i].removeClass("not-executing-highlight")
+				}
 				return	
 			} else {
 				setExecutionRunning(true)
@@ -1197,7 +1140,6 @@ const AngularWorkflow = (props) => {
 	}
 
 	const onNodeHover = (event) => {
-		//event.target.style("border-width", "5px")
 		event.target.animate({
 			style: {
 				"border-width": "5px",
@@ -1211,24 +1153,22 @@ const AngularWorkflow = (props) => {
 	}
 
 	const onEdgeHoverOut = (event) => {
-		//event.target.removeStyle()
+		event.target.removeStyle()
 	}
 
 	// This is here to have a proper transition for lines
 	const onEdgeHover = (event) => {
-
-		//console.log(event.target.data())
-		//const sourcecolor = cy.getElementById(event.target.data("source")).style("border-color")
-		//const targetcolor = cy.getElementById(event.target.data("target")).style("border-color")
-		//event.target.animate({
-		//	style: {
-		//		"line-fill": "linear-gradient",
-		//		'target-arrow-color': targetcolor,
-		//		"line-gradient-stop-colors": [sourcecolor, targetcolor],
-		//		"line-gradient-stop-positions": [0, 1],
-		//	},
-		//	duration: 0,
-		//})
+		const sourcecolor = cy.getElementById(event.target.data("source")).style("border-color")
+		const targetcolor = cy.getElementById(event.target.data("target")).style("border-color")
+		event.target.animate({
+			style: {
+				"line-fill": "linear-gradient",
+				'target-arrow-color': targetcolor,
+				"line-gradient-stop-colors": [sourcecolor, targetcolor],
+				"line-gradient-stop-positions": [0, 1],
+			},
+			duration: 0,
+		})
 	}
 
 
@@ -1429,16 +1369,17 @@ const AngularWorkflow = (props) => {
 	}
 
 	const appViewStyle = {
-		marginLeft: "5px",
-		marginRight: "5px",
+		marginLeft: 5,
+		marginRight: 5,
 		display: "flex",
 		flexDirection: "column",
+		height: "100%",
 	}
 
 	const scrollStyle = {
-		marginTop: "10px",
+		marginTop: 10,
 		overflow: "scroll",
-		height: "66vh",
+		height: "100%",
 		overflowX: "auto",
 		overflowY: "auto",
 	}
@@ -1454,37 +1395,6 @@ const AngularWorkflow = (props) => {
 		cursor: "pointer",
 		display: "flex",
 	}
-
-	// All this is stupid lmao
-	const handleHookHover = () => {
-    	setHookHoverColor(hoverColor)
-    	setAppsHoverColor(hoverOutColor)
-    	setVariablesHoverColor(hoverOutColor)
-  	}
-
-	const handleHookHoverOut = () => {
-    	setHookHoverColor(hoverOutColor)
-  	}
-
-	const handleAppsHover = () => {
-    	setAppsHoverColor(hoverColor)
-    	setHookHoverColor(hoverOutColor)
-    	setVariablesHoverColor(hoverOutColor)
-  	}
-
-	const handleAppsHoverOut = () => {
-    	setAppsHoverColor(hoverOutColor)
-  	}
-
-	const handleVariablesHover = () => {
-    	setVariablesHoverColor(hoverColor)
-    	setHookHoverColor(hoverOutColor)
-    	setAppsHoverColor(hoverOutColor)
-  	}
-
-	const handleVariablesHoverOut = () => {
-    setVariablesHoverColor(hoverOutColor)
-  }
 
 	const paperVariableStyle = {
 		minHeight: "50px",
@@ -1560,6 +1470,7 @@ const AngularWorkflow = (props) => {
 												aria-controls="long-menu"
 												aria-haspopup="true"
 												onClick={menuClick}
+												style={{color: "white"}}
 											  >
 												<MoreVertIcon />
 											</IconButton>
@@ -1605,57 +1516,77 @@ const AngularWorkflow = (props) => {
 			</div>
 		)
 	}
+
+	const curTab = 0
+	const handleSetTab = (event, newValue) => {
+		setCurrentView(newValue)
+	}
 	
 	const HandleLeftView = () => {
 		// Defaults to apps.
 		var thisview = <AppView />
-		if (currentView === "triggers") {
+		if (currentView === 1) {
 			thisview = <TriggersView />
-		} else if (currentView === "variables") {
+		} else if (currentView === 2) {
 			thisview = <VariablesView />
+		}
+
+		const tabStyle = {
+			maxWidth: leftBarSize/3,
+			minWidth: leftBarSize/3,
+			flex: 1,
+			textTransform: "none",
+		}
+
+		const iconStyle = {
+			marginTop: 3,
+			marginRight: 5,
 		}
 
 		return(
 			<div>
-				<Divider style={{marginTop: 10, height: 1, width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
-				<div style={{minHeight: bodyHeight-appBarSize-150, maxHeight: bodyHeight-appBarSize-100}}>	
+				<div style={{minHeight: bodyHeight-appBarSize-50, maxHeight: bodyHeight-appBarSize-50}}>	
 					{thisview}
 				</div>
-				<div style={{bottom: 0, left: 0}}>
-					<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
-					<div style={{display: "flex"}}> 
-						<div style={{flex: "1", marginLeft: "10px", marginTop: "10px", color: AppsHoverColor, cursor: "pointer", textAlign: "center"}} onMouseOver={handleAppsHover} onMouseOut={handleAppsHoverOut} onClick={() => {setCurrentView("apps")}}> 
-							<Grid container direction="row" alignItems="center">
-							  	<Grid item>
-									<AppsIcon style={{marginTop: "3px", marginRight: "5px"}} />
-								</Grid>
+				<Divider style={{backgroundColor: "rgb(91, 96, 100)"}}/>
+				<Tabs
+					value={currentView}
+					indicatorColor="primary"
+					textColor="white"
+					onChange={handleSetTab}
+					aria-label="Left sidebar tab"
+				>
+					<Tab label={
+						<Grid container direction="row" alignItems="center">
 								<Grid item>
-									Apps
-								</Grid>
+								<AppsIcon style={iconStyle} />
 							</Grid>
-						</div>
-						<div style={{flex: "1", marginLeft: "10px", marginTop: "10px", color: HookHoverColor, cursor: "pointer"}} onMouseOver={handleHookHover} onMouseOut={handleHookHoverOut} onClick={() => {setCurrentView("triggers")}}> 
-							<Grid container direction="row" alignItems="center">
-							  	<Grid item>
-									<ScheduleIcon style={{marginTop: "3px", marginRight: "5px"}} />
-								</Grid>
+							<Grid item>
+								Apps
+							</Grid>
+						</Grid>
+					} style={tabStyle} />
+					<Tab label={
+						<Grid container direction="row" alignItems="center">
 								<Grid item>
-									Triggers
-								</Grid>
+								<ScheduleIcon style={iconStyle} />
 							</Grid>
-						</div>
-						<div style={{flex: "1", marginLeft: "10px", marginTop: "10px", color: VariablesHoverColor, cursor: "pointer"}} onMouseOver={handleVariablesHover} onMouseOut={handleVariablesHoverOut} onClick={() => {setCurrentView("variables")}}> 
-							<Grid container direction="row" alignItems="center">
-							  	<Grid item>
-									<FavoriteBorderIcon style={{marginTop: "3px", marginRight: "5px"}} />
-								</Grid>
+							<Grid item>
+								Triggers
+							</Grid>
+						</Grid>
+					}	style={tabStyle} />
+					<Tab label={
+						<Grid container direction="row" alignItems="center">
 								<Grid item>
-									Variables
-								</Grid>
+								<FavoriteBorderIcon style={iconStyle} />
 							</Grid>
-						</div>
-					</div>
-				</div>
+							<Grid item>
+								Variables
+							</Grid>
+						</Grid>
+					}style={tabStyle} />
+				</Tabs>
 			</div>
 		)
 	}
@@ -1965,7 +1896,7 @@ const AngularWorkflow = (props) => {
 						node.data.type = "ACTION"
 						node.isStartNode = action["id"] === workflow.start
 
-						return node;
+						return node
 					})
 
 					const tmpelements = [].concat(actions)
@@ -2001,14 +1932,16 @@ const AngularWorkflow = (props) => {
 		}
 	}
 
-	const handleDragStop = (e) => {
+	const handleDragStop = (e, app) => {
 		newNodeId = ""
+		console.log("STOP!: ", e)
+		console.log("APP!: ", app)
 	}
 
 	const appScrollStyle = {
 		overflow: "scroll",
-		maxHeight: bodyHeight-appBarSize-150,
-		minHeight: bodyHeight-appBarSize-150,
+		maxHeight: bodyHeight-appBarSize-55,
+		minHeight: bodyHeight-appBarSize-55,
 		overflowY: "auto",
 		overflowX: "hidden",
 	}
@@ -2063,7 +1996,8 @@ const AngularWorkflow = (props) => {
 						return(
 							<Draggable 
 								onDrag={(e) => {handleAppDrag(e, app)}}
-								onStop={(e) => {handleDragStop(e)}}
+								onStop={(e) => {handleDragStop(e, app)}}
+								key={app.id}
 								dragging={false}
 								position={{
 									x: 0,
@@ -2347,6 +2281,7 @@ const AngularWorkflow = (props) => {
 								rows="5"
 								color="primary"
 								defaultValue={data.value}
+								type={placeholder.includes("***") ? "password" : "text"}
 								placeholder={placeholder}
 								onChange={(event) => {
 									changeActionParameter(event, count)
@@ -2427,7 +2362,7 @@ const AngularWorkflow = (props) => {
 						} else if (data.variant === "WORKFLOW_VARIABLE") {
 							varcolor = "#f85a3e"
 							if (workflow.workflow_variables === null || workflow.workflow_variables === undefined || workflow.workflow_variables.length === 0) {
-								setCurrentView("variables")
+								setCurrentView(2)
 								datafield = 
 								<div>
 								<div>
@@ -2477,7 +2412,7 @@ const AngularWorkflow = (props) => {
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: "10px"}}/>
 								<div style={{flex: "10"}}> 
-									<b>{data.name}: </b> 
+									<b>{data.name} </b> 
 								</div>
 								<Tooltip color="primary" title="Static data" placement="top">
 									<div style={{cursor: "pointer", color: staticcolor}} onClick={(e) => {
@@ -2563,6 +2498,13 @@ const AngularWorkflow = (props) => {
 		//setStartNode(selectedAction.id)
 	}
 
+	function sortByKey(array, key) {
+	  return array.sort(function(a, b) {
+			var x = a[key]; var y = b[key]
+			return ((x < y) ? -1 : ((x > y) ? 1 : 0))
+		})
+	}
+
 	const appApiView = Object.getOwnPropertyNames(selectedAction).length > 0 && Object.getOwnPropertyNames(selectedApp).length > 0 ? 
 		<div style={appApiViewStyle}>
 			<div style={{display: "flex", minHeight: 40, marginBottom: 30}}>
@@ -2644,7 +2586,7 @@ const AngularWorkflow = (props) => {
 			: null*/}
 			<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 			<div style={{flex: "6", marginTop: "20px"}}>
-				<div>
+				<div style={{marginBottom: 5}}>
 					<b>Actions</b>
 				</div>
 				<Select
@@ -2659,7 +2601,7 @@ const AngularWorkflow = (props) => {
 						}
 					}}
 				>
-					{selectedApp.actions.map(data => {
+					{sortByKey(selectedApp.actions, "label").map(data => {
 						var newActionname = data.name
 						if (data.label !== undefined && data.label !== null && data.label.length > 0) {
 							newActionname = data.label
@@ -2671,13 +2613,17 @@ const AngularWorkflow = (props) => {
 						newActionname = newActionname.replace("_", " ")
 						newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
 						return (
-						<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data.name}>
+						<MenuItem style={{maxWidth: 400, overflowX: "hidden", backgroundColor: inputColor, color: "white"}} value={data.name}>
 							{newActionname}
 
 						</MenuItem>
 						)
 					})}
 				</Select>
+				{selectedAction.description !== undefined && selectedAction.description.length > 0 ?
+				<div style={{marginTop: 10, marginBottom: 10, maxHeight: 60, overflow: "hidden"}}>
+					{selectedAction.description}
+				</div> : null}
 				<div style={{marginTop: "10px", borderColor: "white", borderWidth: "2px", marginBottom: 200}}>
 						<AppActionArguments key={selectedAction.id} selectedAction={selectedAction} />
 
@@ -2703,11 +2649,11 @@ const AngularWorkflow = (props) => {
 	}
 
 	const setTriggerFolderWrapperMulti = event => {
-	    const { options } = event.target;
-	    const value = [];
+	    const { options } = event.target
+	    const value = []
 	    for (let i = 0, l = options.length; i < l; i += 1) {
 	      if (options[i].selected) {
-	        value.push(options[i].value);
+	        value.push(options[i].value)
 	      }
 	    }
 
@@ -2783,7 +2729,7 @@ const AngularWorkflow = (props) => {
 		if (splitItems.includes(value)) {
 			for( var i = 0; i < splitItems.length; i++){ 
 			   	if (splitItems[i] === value) {
-			     	splitItems.splice(i, 1); 
+			     	splitItems.splice(i, 1) 
 			   	}
 			}
 
@@ -2793,7 +2739,7 @@ const AngularWorkflow = (props) => {
 
 		for( var i = 0; i < splitItems.length; i++){ 
 			if (splitItems[i] === "") {
-				splitItems.splice(i, 1); 
+				splitItems.splice(i, 1) 
 			}
 		}
 		
@@ -2824,7 +2770,7 @@ const AngularWorkflow = (props) => {
 	}
 
 	const AppConditionHandler = (props) => {
-  	const { tmpdata, type } = props;
+  	const { tmpdata, type } = props
 
 		if (tmpdata === undefined) {
 			return tmpdata
@@ -2933,7 +2879,7 @@ const AngularWorkflow = (props) => {
 		} else if (data.variant === "WORKFLOW_VARIABLE") {
 			varcolor = "#f85a3e"
 			if (workflow.workflow_variables === null || workflow.workflow_variables === undefined || workflow.workflow_variables.length === 0) {
-				setCurrentView("variables")
+				setCurrentView(2)
 				datafield = 
 				<div>
 					<div>
@@ -3192,8 +3138,8 @@ const AngularWorkflow = (props) => {
 
 	const EdgeSidebar = () => {
 		const ConditionHandler = (condition, index) => {
-			const [open, setOpen] = React.useState(false);
-			const [anchorEl, setAnchorEl] = React.useState(null);
+			const [open, setOpen] = React.useState(false)
+			const [anchorEl, setAnchorEl] = React.useState(null)
 
 			const deleteCondition = (conditionIndex) => {
 				console.log(selectedEdge)
@@ -3223,7 +3169,7 @@ const AngularWorkflow = (props) => {
 			const menuClick = (event) => {
 				console.log("MENU CLICK")
 				setOpen(!open)
-				setAnchorEl(event.currentTarget);
+				setAnchorEl(event.currentTarget)
 			}
 
 			return (
@@ -3363,7 +3309,7 @@ const AngularWorkflow = (props) => {
 			})
 			.catch(error => {
 				console.log(error.toString())
-			});
+			})
 		}
 
 		const getTriggerAuth = () => {
@@ -3384,7 +3330,7 @@ const AngularWorkflow = (props) => {
 			})
 			.catch(error => {
 				console.log(error.toString())
-			});
+			})
 		}
 
 		// Getting the triggers and the folders if they exist
@@ -3426,8 +3372,8 @@ const AngularWorkflow = (props) => {
 					})
 					.catch(error => {
 						console.log(error.toString())
-					});
-				}, 2500);
+					})
+				}, 2500)
 
 				console.log(data)
 				saveWorkflow(workflow)
@@ -3801,7 +3747,7 @@ const AngularWorkflow = (props) => {
 		})
 		.catch(error => {
 			alert.error(error.toString())
-		});
+		})
 	}
 
 	const startMailSub = (trigger, triggerindex) => {
@@ -3857,7 +3803,7 @@ const AngularWorkflow = (props) => {
 		})
 		.catch(error => {
 			alert.error(error.toString())
-		});
+		})
 	}
 
 	const newWebhook = (trigger) => {
@@ -3903,7 +3849,7 @@ const AngularWorkflow = (props) => {
     	})
 		.catch(error => {
     		console.log(error.toString())
-		});
+		})
 	}
 
 	const deleteWebhook = (trigger, triggerindex) => {
@@ -3942,7 +3888,7 @@ const AngularWorkflow = (props) => {
 		})
 		.catch(error => {
 			alert.error(error.toString())
-		});
+		})
 	}
 
 	const UserinputSidebar = () => {
@@ -4356,7 +4302,7 @@ const AngularWorkflow = (props) => {
 		}
 
 		if (Object.getOwnPropertyNames(selectedAction).length > 0 && Object.getOwnPropertyNames(selectedApp).length > 0) {
-			//console.time('ACTIONSTART');
+			//console.time('ACTIONSTART')
 			return(
 				<div style={rightsidebarStyle}>	
 					{appApiView}
@@ -4479,11 +4425,13 @@ const AngularWorkflow = (props) => {
 										<div style={{ marginTop: "auto", marginBottom: "auto", marginRight: 15, }}>
 											{timestamp}
 										</div>
-										<Tooltip color="primary" title={resultsLength+" actions ran"} placement="top">
-											<div style={{marginRight: 10, marginTop: "auto", marginBottom: "auto",}}>
-												{resultsLength}/{data.workflow.actions.length}
-											</div>
-										</Tooltip>
+										{data.workflow.actions !== null ? 
+											<Tooltip color="primary" title={resultsLength+" actions ran"} placement="top">
+												<div style={{marginRight: 10, marginTop: "auto", marginBottom: "auto",}}>
+													{resultsLength}/{data.workflow.actions.length}
+												</div>
+											</Tooltip>
+											: null}
 									</div>
 									<Tooltip title={"Inspect execution"} placement="top">
 										<KeyboardArrowRightIcon style={{marginTop: "auto", marginBottom: "auto"}}/>
@@ -4545,7 +4493,7 @@ const AngularWorkflow = (props) => {
 						executionData.results.map(data => {
 							var showResult = data.result.trim()
 							showResult.split(" None").join(" \"None\"")
-							//showResult = replaceAll(showResult, " None", " \"None\"");
+							//showResult = replaceAll(showResult, " None", " \"None\"")
 							var jsonvalid = true
 							try {
 								JSON.parse(showResult)
@@ -4569,7 +4517,7 @@ const AngularWorkflow = (props) => {
 									{jsonvalid ? <ReactJson 
 											src={JSON.parse(showResult)} 
 											theme="solarized" 
-											collapsed={false}
+											collapsed={true}
 											displayDataTypes={false}
 											name={"Results for "+data.action.label}
 										/>
@@ -4600,6 +4548,9 @@ const AngularWorkflow = (props) => {
 					boxSelectionEnabled={true}
 					autounselectify={false}
 					cy={(incy) => {
+						// FIXME: There's something specific loading when
+						// you do the first hover of a node. Why is this different?
+						console.log("CY: ", incy)
 						setCy(incy)
 					}}
 				/>
@@ -4608,7 +4559,6 @@ const AngularWorkflow = (props) => {
 			<RightSideBar />
 			<BottomCytoscapeBar />
 			<TopCytoscapeBar />
-			<NoActionsBar />
 		</div> 
 		: 
 		<div style={{color: "white"}}>
@@ -4872,4 +4822,4 @@ const AngularWorkflow = (props) => {
 	)
 }
 
-export default AngularWorkflow; 
+export default AngularWorkflow 

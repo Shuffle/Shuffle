@@ -106,9 +106,9 @@ func deployWorker(cli *dockerclient.Client, image string, identifier string, env
 
 	err = cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
 	if err != nil {
-		log.Printf("Failed to start container: %s", err)
+		log.Printf("Failed to start container in environment %s: %s", environment, err)
 	} else {
-		log.Printf("Container %s is created", cont.ID)
+		log.Printf("Container %s was created under environment %s", cont.ID, environment)
 	}
 	return nil
 }
@@ -401,7 +401,7 @@ func main() {
 			//log.Println(string(body))
 			//log.Println(resultResp)
 			if len(toBeRemoved.Data) == len(executionRequests.Data) {
-				log.Println("Should remove ALL!")
+				//log.Println("Should remove ALL!")
 			} else {
 				log.Printf("NOT IMPLEMENTED: Should remove %d workflows from backend because they're executed!", len(toBeRemoved.Data))
 			}
