@@ -7,7 +7,7 @@
 
 ## Try it
 * Self-hosted: Check out the [installation guide](https://github.com/frikky/shuffle/blob/master/install-guide.md). 
-* Cloud: Register at https://shuffler.io/register and get cooking (there are some differences!)
+* Cloud: Register at https://shuffler.io/register and get cooking (old, missing a lot of features)
 
 ## Related repositories
 * Apps: https://github.com/frikky/shuffle-apps
@@ -16,9 +16,7 @@
 * Documentation: https://github.com/frikky/shuffle-docs
 
 ## Documentation
-Documentation can be found on https://shuffler.io/docs/about or in your own instance. Currently lacking: 
-* API documentation 
-* Updates after migrating from SaaS to open source
+Documentation can be found on https://shuffler.io/docs.
 
 ## Features
 * Simple workflow automation editor 

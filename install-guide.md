@@ -25,6 +25,7 @@ docker-compose up -d
 1. After installation, go to http://localhost:3001/adminsetup (or your servername)
 
 2. Now set up your admin account (username & password). Shuffle doesn't have a default username and password.
+3. Check out https://shuffler.io/docs/configuration as it has a lot of useful information to get started
 
 ![Admin account setup](shuffle_adminaccount.png)
 
