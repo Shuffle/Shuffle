@@ -500,6 +500,10 @@ const Apps = (props) => {
 	}
 
 	const handleSearchChange = (search) => {
+		if (apps === undefined || apps === null || apps.length === 0) {
+			return
+		}
+
 		const searchfield = search.toLowerCase()
 		const newapps = apps.filter(data => data.name.toLowerCase().includes(searchfield) || data.description.toLowerCase().includes(searchfield))
 
