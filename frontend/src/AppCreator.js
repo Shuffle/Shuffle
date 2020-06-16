@@ -465,7 +465,7 @@ const AppCreator = (props) => {
 							break
 						}
 
-						// FIXME: Check if the name already exists
+						// FIXME: If name exists, 
 						// FIXME: Check if first part of parsedname is verb, otherwise use method
 						const parsedname = curname.split("_").join(" ").split("-").join(" ").split("{").join(" ").split("}").join(" ").trim()
 						if (parsedname.length === 0) {

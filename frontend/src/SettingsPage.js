@@ -209,6 +209,7 @@ const Settings = (props) => {
 						onClick={() => generateApikey()}
 					>Re-Generate APIKEY</Button>
 					<Divider style={{marginTop: "40px"}}/>
+					{/*
 					<h2>Settings</h2>
 					<div style={{flex: "1", display: "flex", flexDirection: "row"}}>
 						<TextField
@@ -369,6 +370,7 @@ const Settings = (props) => {
 					</Button>
 					<h3>{formMessage}</h3>
 					<Divider />
+					*/}
 					<h2>Password</h2>
 					<div style={{flex: "1", display: "flex", flexDirection: "row"}}>
 						<TextField
