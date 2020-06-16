@@ -155,27 +155,29 @@ type Environment struct {
 }
 
 type User struct {
-	Username          string        `datastore:"Username"`
-	Password          string        `datastore:"password,noindex"`
-	Session           string        `datastore:"session,noindex"`
-	Verified          bool          `datastore:"verified,noindex"`
-	PrivateApps       []WorkflowApp `datastore:"privateapps"`
-	Role              string        `datastore:"role"`
-	VerificationToken string        `datastore:"verification_token"`
-	ApiKey            string        `datastore:"apikey"`
-	ResetReference    string        `datastore:"reset_reference"`
+	Username          string        `datastore:"Username" json:"username"`
+	Password          string        `datastore:"password,noindex" password:"password,omitempty"`
+	Session           string        `datastore:"session,noindex" json:"session"`
+	Verified          bool          `datastore:"verified,noindex" json:"verified"`
+	PrivateApps       []WorkflowApp `datastore:"privateapps" json:"privateapps":`
+	Role              string        `datastore:"role" json:"role"`
+	VerificationToken string        `datastore:"verification_token" json:"verification_token"`
+	ApiKey            string        `datastore:"apikey" json:"apikey"`
+	ResetReference    string        `datastore:"reset_reference" json:"reset_reference"`
 	Executions        ExecutionInfo `datastore:"executions" json:"executions"`
 	Limits            UserLimits    `datastore:"limits" json:"limits"`
 	Authentication    []UserAuth    `datastore:"authentication,noindex" json:"authentication"`
-	ResetTimeout      int64         `datastore:"reset_timeout,noindex"`
+	ResetTimeout      int64         `datastore:"reset_timeout,noindex" json:"reset_timeout"`
 	Id                string        `datastore:"id" json:"id"`
 	Orgs              string        `datastore:"orgs" json:"orgs"`
 	CreationTime      int64         `datastore:"creation_time" json:"creation_time"`
+	Active            bool          `datastore:"active" json:"active"`
 }
 
 // timeout maybe? idk
 type session struct {
 	Username string `datastore:"Username,noindex"`
+	Id       string `datastore:"Id,noindex"`
 	Session  string `datastore:"session,noindex"`
 }
 
@@ -709,9 +711,9 @@ func handleApiAuthentication(resp http.ResponseWriter, request *http.Request) (U
 
 		// Get session first
 		// Should basically never happen
-		Userdata, err := getUser(ctx, session.Username)
+		Userdata, err := getUser(ctx, session.Id)
 		if err != nil {
-			log.Printf("Username %s doesn't exist: %s", session.Username, err)
+			log.Printf("Username %s doesn't exist (authcheck): %s", session.Username, err)
 			return User{}, err
 		}
 
@@ -879,8 +881,8 @@ func handleRegisterVerification(resp http.ResponseWriter, request *http.Request)
 	_, err := dbclient.GetAll(ctx, q, &users)
 	if err != nil {
 		log.Printf("Failed getting users for verification token: %s", err)
-		resp.WriteHeader(200)
-		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "%s"}`, defaultMessage)))
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, defaultMessage)))
 		return
 	}
 
@@ -1008,11 +1010,12 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	//log.Printf("User role: %s", user.Role)
-	if err == nil && user.Role != "admin" && count > 0 {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Can't register without being admin (2)"}`))
-		return
+	if count != 0 {
+		if user.Role != "admin" {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false, "reason": "Can't register without being admin (2)"}`))
+			return
+		}
 	}
 
 	// Gets a struct of Username, password
@@ -1042,10 +1045,18 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// FIXME - use it somehow
 	ctx := context.Background()
-	_, err = getUser(ctx, data.Username)
-	if err == nil {
+	q := datastore.NewQuery("Users").Filter("Username =", data.Username)
+	var users []User
+	_, err = dbclient.GetAll(ctx, q, &users)
+	if err != nil {
+		log.Printf("Failed getting user for registration: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting username"}`)))
+		return
+	}
+
+	if len(users) > 0 {
 		log.Printf("Username %s exists and can't register", data.Username)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
@@ -1064,14 +1075,17 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 	newUser.Username = data.Username
 	newUser.Password = string(hashedPassword)
 	newUser.Verified = false
-	newUser.Role = "user"
 	newUser.CreationTime = time.Now().Unix()
+	newUser.Active = true
 
 	// FIXME - Remove this later
-	newUser.Role = "admin"
+	if count == 0 {
+		newUser.Role = "admin"
+	} else {
+		newUser.Role = "user"
+	}
 
 	// set limits
-	// WorkflowExecutions > CloudExecutions simply because of onprem
 	newUser.Limits.DailyApiUsage = 100
 	newUser.Limits.DailyWorkflowExecutions = 1000
 	newUser.Limits.DailyCloudExecutions = 100
@@ -1124,35 +1138,14 @@ Registration URL :)
 		log.Printf("Couldn't send email: %v", err)
 	}
 
-	//sessionToken := uuid.NewV4()
-
-	//// Finally, we set the client cookie for "session_token" as the session token we just generated
-	//// we also set an expiry time of 120 seconds, the same as the cache
-	//http.SetCookie(resp, &http.Cookie{
-	//	Name:    "session_token",
-	//	Value:   sessionToken.String(),
-	//	Expires: time.Now().Add(1200 * time.Second),
-	//})
-
-	//log.Println(Userdata)
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": true}`))
 	log.Printf("%s Successfully registered.", data.Username)
 
-	//err = SetSession(*newUser, sessionToken.String())
-	//if err != nil {
-	//	log.Printf("Error adding session to database: %s", err)
-	//}
-
-	//err = SetApikey(*newUser)
-	//if err != nil {
-	//	log.Printf("Error adding apikey to database: %s", err)
-	//}
-
-	//err = SetSession(*newUser, sessionToken.String())
-	//if err != nil {
-	//	log.Printf("Error adding apikey to database: %s", err)
-	//}
+	err = increaseStatisticsField(ctx, "successful_register", data.Username, 1)
+	if err != nil {
+		log.Printf("Failed to increase total apps loaded stats: %s", err)
+	}
 }
 
 func handleCookie(request *http.Request) bool {
@@ -1212,9 +1205,9 @@ func handleLogout(resp http.ResponseWriter, request *http.Request) {
 
 	// Get session first
 	// Should basically never happen
-	_, err = getUser(ctx, session.Username)
+	_, err = getUser(ctx, session.Id)
 	if err != nil {
-		log.Printf("Username %s doesn't exist: %s", session.Username, err)
+		log.Printf("Username %s doesn't exist (logout): %s", session.Username, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
 		return
@@ -1306,9 +1299,9 @@ func handleApiGeneration(resp http.ResponseWriter, request *http.Request) {
 
 	// Get session first
 	// Should basically never happen
-	userInfo, err := getUser(ctx, session.Username)
+	userInfo, err := getUser(ctx, session.Id)
 	if err != nil {
-		log.Printf("Username %s doesn't exist: %s", session.Username, err)
+		log.Printf("Username %s doesn't exist (apigen): %s", session.Username, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": ""}`))
 		return
@@ -1366,9 +1359,9 @@ func handleSettings(resp http.ResponseWriter, request *http.Request) {
 
 	// Get session first
 	// Should basically never happen
-	UserInfo, err := getUser(ctx, session.Username)
+	UserInfo, err := getUser(ctx, session.Id)
 	if err != nil {
-		log.Printf("Username %s doesn't exist: %s", session.Username, err)
+		log.Printf("Username %s doesn't exist (settings): %s", session.Username, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": ""}`))
 		return
@@ -1409,22 +1402,75 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		//log.Printf("Session %#v doesn't exist: %s", session, err)
 		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": ""}`))
+		resp.Write([]byte(`{"success": false, "reason": "No session"}`))
 		return
 	}
 
 	// Get session first
 	// Should basically never happen
-	UserInfo, err := getUser(ctx, session.Username)
+	userInfo, err := getUser(ctx, session.Id)
 	if err != nil {
-		log.Printf("Username %s doesn't exist: %s", session.Username, err)
+		log.Printf("Username %s doesn't exist (info): %s", session.Username, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": ""}`))
 		return
 	}
 
+	// This is a long check to see if an inactive admin can access the portal
+	if !userInfo.Active {
+		if userInfo.Role == "admin" {
+			ctx := context.Background()
+			q := datastore.NewQuery("Users")
+			var users []User
+			_, err = dbclient.GetAll(ctx, q, &users)
+			if err != nil {
+				resp.WriteHeader(401)
+				resp.Write([]byte(`{"success": false, "reason": "Failed to get other users when verifying admin user"}`))
+				return
+			}
+
+			activeFound := false
+			adminFound := false
+			for _, user := range users {
+				if user.Id == userInfo.Id {
+					continue
+				}
+
+				if user.Role != "admin" {
+					continue
+				}
+
+				if user.Active {
+					activeFound = true
+				}
+
+				adminFound = true
+			}
+
+			// Must ALWAYS be an active admin
+			// Will return no access if another admin is active
+			if !adminFound {
+				log.Printf("NO OTHER ADMINS FOUND - CONTINUE!")
+			} else {
+				//
+				if activeFound {
+					log.Printf("OTHER ACTIVE ADMINS FOUND - CAN'T PASS")
+					resp.WriteHeader(401)
+					resp.Write([]byte(`{"success": false, "reason": "This user is locked"}`))
+					return
+				} else {
+					log.Printf("NO OTHER ADMINS FOUND - CONTINUE!")
+				}
+			}
+		} else {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false, "reason": "This user is locked"}`))
+			return
+		}
+	}
+
 	//log.Printf("%s  %s", session.Session, UserInfo.Session)
-	if session.Session != UserInfo.Session {
+	if session.Session != userInfo.Session {
 		log.Printf("Session %s is not the latest. %s", session.Username, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": ""}`))
@@ -1434,11 +1480,11 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	expiration := time.Now().Add(3600 * time.Second)
 	http.SetCookie(resp, &http.Cookie{
 		Name:    "session_token",
-		Value:   UserInfo.Session,
+		Value:   userInfo.Session,
 		Expires: expiration,
 	})
 
-	returnData := fmt.Sprintf(`{"success": true, "cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]}`, UserInfo.Session, expiration.Unix())
+	returnData := fmt.Sprintf(`{"success": true, "cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]}`, userInfo.Session, expiration.Unix())
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(returnData))
@@ -1489,7 +1535,7 @@ func handlePasswordResetMail(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	Userdata, err := getUser(ctx, t.Username)
 	if err != nil {
-		log.Printf("Username %s doesn't exist: %s", t.Username, err)
+		log.Printf("Username %s doesn't exist (pw reset mail): %s", t.Username, err)
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 		return
@@ -1589,8 +1635,8 @@ func handlePasswordReset(resp http.ResponseWriter, request *http.Request) {
 	_, err = dbclient.GetAll(ctx, q, &users)
 	if err != nil {
 		log.Printf("Failed getting users: %s", err)
-		resp.WriteHeader(200)
-		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "%s"}`, defaultMessage)))
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, defaultMessage)))
 		return
 	}
 
@@ -1697,9 +1743,9 @@ func handlePasswordChange(resp http.ResponseWriter, request *http.Request) {
 
 	// Get session first
 	// Should basically never happen
-	Userdata, err := getUser(ctx, session.Username)
+	Userdata, err := getUser(ctx, session.Id)
 	if err != nil {
-		log.Printf("Username %s doesn't exist: %s", session.Username, err)
+		log.Printf("Username %s doesn't exist (pw change): %s", session.Username, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
 		return
@@ -1942,12 +1988,10 @@ func handleGetUsers(resp http.ResponseWriter, request *http.Request) {
 }
 
 func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
-	log.Printf("HELLO?")
 	cors := handleCors(resp, request)
 	if cors {
 		return
 	}
-	log.Printf("HELLO2?")
 
 	count, err := getUserCount()
 	if err != nil {
@@ -1991,14 +2035,24 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	Userdata, err := getUser(ctx, data.Username)
+	q := datastore.NewQuery("Users").Filter("Username =", strings.ToLower(data.Username))
+	var users []User
+	_, err = dbclient.GetAll(ctx, q, &users)
 	if err != nil {
-		log.Printf("Username %s doesn't exist: %s", data.Username, err)
+		log.Printf("Failed getting user %s", data.Username)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
 		return
 	}
 
+	if len(users) != 1 {
+		log.Printf(`Found multiple users with the same username: %s: %d`, data.Username, len(users))
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Found multiple users with the same username: %s"}`, data.Username)))
+		return
+	}
+
+	Userdata := users[0]
 	err = bcrypt.CompareHashAndPassword([]byte(Userdata.Password), []byte(data.Password))
 	if err != nil {
 		log.Printf("Password for %s is incorrect: %s", data.Username, err)
@@ -2031,7 +2085,7 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 		loginData = fmt.Sprintf(`{"success": true, "cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]}`, Userdata.Session, expiration.Unix())
 		//log.Printf("SESSION LENGTH MORE THAN 0 IN LOGIN: %s", Userdata.Session)
 
-		err = SetSession(ctx, *Userdata, Userdata.Session)
+		err = SetSession(ctx, Userdata, Userdata.Session)
 		if err != nil {
 			log.Printf("Error adding session to database: %s", err)
 		}
@@ -2050,7 +2104,7 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 	})
 
 	// ADD TO DATABASE
-	err = SetSession(ctx, *Userdata, sessionToken.String())
+	err = SetSession(ctx, Userdata, sessionToken.String())
 	if err != nil {
 		log.Printf("Error adding session to database: %s", err)
 	}
@@ -2088,8 +2142,8 @@ func getSession(ctx context.Context, thissession string) (*session, error) {
 }
 
 // ListBooks returns a list of books, ordered by title.
-func getUser(ctx context.Context, Username string) (*User, error) {
-	key := datastore.NameKey("Users", strings.ToLower(Username), nil)
+func getUser(ctx context.Context, id string) (*User, error) {
+	key := datastore.NameKey("Users", id, nil)
 	curUser := &User{}
 	if err := dbclient.Get(ctx, key, curUser); err != nil {
 		return &User{}, err
@@ -2133,7 +2187,7 @@ func SetApikey(ctx context.Context, Userdata User) error {
 func SetSession(ctx context.Context, Userdata User, value string) error {
 	// Non indexed User data
 	Userdata.Session = value
-	key1 := datastore.NameKey("Users", strings.ToLower(Userdata.Username), nil)
+	key1 := datastore.NameKey("Users", Userdata.Id, nil)
 
 	// New struct, to not add body, author etc
 	if _, err := dbclient.Put(ctx, key1, &Userdata); err != nil {
@@ -2146,6 +2200,7 @@ func SetSession(ctx context.Context, Userdata User, value string) error {
 		sessiondata := new(session)
 		sessiondata.Username = Userdata.Username
 		sessiondata.Session = Userdata.Session
+		sessiondata.Id = Userdata.Id
 		key2 := datastore.NameKey("sessions", sessiondata.Session, nil)
 
 		if _, err := dbclient.Put(ctx, key2, sessiondata); err != nil {
@@ -2193,10 +2248,7 @@ func setEnvironment(ctx context.Context, data *Environment) error {
 // ListBooks returns a list of books, ordered by title.
 func setUser(ctx context.Context, data *User) error {
 	// clear session_token and API_token for user
-	k := datastore.NameKey("Users", strings.ToLower(data.Username), nil)
-
-	// New struct, to not add body, author etc
-
+	k := datastore.NameKey("Users", data.Id, nil)
 	if _, err := dbclient.Put(ctx, k, data); err != nil {
 		log.Println(err)
 		return err
@@ -5881,6 +5933,41 @@ func runInit(ctx context.Context) {
 		log.Printf("Failed increasing local stats: %s", err)
 	}
 
+	// Fix active users etc
+	q := datastore.NewQuery("Users").Filter("active =", true)
+	var users []User
+	_, err = dbclient.GetAll(ctx, q, &users)
+	if err != nil {
+		log.Printf("Error getting users apikey: %s", err)
+	} else {
+		if len(users) == 0 {
+			log.Printf("No active users found - setting ALL to active")
+			q := datastore.NewQuery("Users")
+			var users []User
+			_, err := dbclient.GetAll(ctx, q, &users)
+			if err == nil {
+				for _, user := range users {
+					user.Active = true
+					if len(user.Username) == 0 {
+						DeleteKey(ctx, "Users", strings.ToLower(user.Username))
+						continue
+					}
+
+					err = setUser(ctx, &user)
+					if err != nil {
+						log.Printf("Failed to reset user")
+					} else {
+						log.Printf("Remade user %s with ID", user.Id)
+						err = DeleteKey(ctx, "Users", strings.ToLower(user.Username))
+						if err != nil {
+							log.Printf("Failed to delete old user by username")
+						}
+					}
+				}
+			}
+		}
+	}
+
 	// Gets environments and inits if it doesn't exist
 	count, err := getEnvironmentCount()
 	if count == 0 && err == nil {
@@ -6022,18 +6109,29 @@ func init() {
 	r.HandleFunc("/functions/outlook/register", handleNewOutlookRegister).Methods("GET", "OPTIONS")
 	r.HandleFunc("/functions/outlook/getFolders", handleGetOutlookFolders).Methods("GET", "OPTIONS")
 
-	// General
+	// Make user related locations
+	r.HandleFunc("/api/v1/users/login", handleLogin).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/users/logout", handleLogout).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/users/register", handleRegister).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/users/checkusers", checkAdminLogin).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/users/getusers", handleGetUsers).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/users/getinfo", handleInfo).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/users/getsettings", handleSettings).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/users/generateapikey", handleApiGeneration).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/users/{user}", deleteUser).Methods("DELETE", "OPTIONS")
+
+	// General - duplicates and old.
 	r.HandleFunc("/api/v1/login", handleLogin).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/logout", handleLogout).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/register", handleRegister).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/checkusers", checkAdminLogin).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/getusers", handleGetUsers).Methods("GET", "OPTIONS")
-
-	r.HandleFunc("/api/v1/getenvironments", handleGetEnvironments).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/setenvironments", handleSetEnvironments).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/getinfo", handleInfo).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/getsettings", handleSettings).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/generateapikey", handleApiGeneration).Methods("GET", "OPTIONS")
+
+	r.HandleFunc("/api/v1/getenvironments", handleGetEnvironments).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/setenvironments", handleSetEnvironments).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/passwordchange", handlePasswordChange).Methods("POST", "OPTIONS")
 
 	r.HandleFunc("/api/v1/docs", getDocList).Methods("GET", "OPTIONS")
@@ -6042,8 +6140,6 @@ func init() {
 	// Queuebuilder and Workflow streams. First is to update a stream, second to get a stream
 	// Changed from workflows/streams to streams, as appengine was messing up
 	// This does not increase the API counter
-	r.HandleFunc("/api/v1/workflows/queue", handleGetWorkflowqueue).Methods("GET")
-	r.HandleFunc("/api/v1/workflows/queue/confirm", handleGetWorkflowqueueConfirm).Methods("POST")
 	r.HandleFunc("/api/v1/streams", handleWorkflowQueue).Methods("POST")
 	r.HandleFunc("/api/v1/streams/results", handleGetStreamResults).Methods("POST", "OPTIONS")
 
@@ -6068,6 +6164,8 @@ func init() {
 	/* Everything below here increases the counters*/
 	r.HandleFunc("/api/v1/workflows", getWorkflows).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows", setNewWorkflow).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/queue", handleGetWorkflowqueue).Methods("GET")
+	r.HandleFunc("/api/v1/workflows/queue/confirm", handleGetWorkflowqueueConfirm).Methods("POST")
 	r.HandleFunc("/api/v1/workflows/schedules", handleGetSchedules).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/download_remote", loadSpecificWorkflows).Methods("POST", "OPTIONS")
 	//r.HandleFunc("/api/v1/workflows/{key}/execute_fs", executeWorkflowFS)

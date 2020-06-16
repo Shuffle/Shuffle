@@ -63,6 +63,36 @@ const Admin = (props) => {
 		});
 	}
 
+	const deleteUser = (data) => {
+		// Just use this one?
+		const url = globalUrl+'/api/v1/users/'+data.id
+		fetch(url, {
+			method: 'DELETE',
+	  	credentials: "include",
+			headers: {
+				'Content-Type': 'application/json',
+			},
+		})
+		.then(response => {
+			if (response.status === 200) {
+				getUsers()
+			}
+
+			return response.json()
+		})
+    .then((responseJson) => {
+			if (!responseJson.success && responseJson.reason !== undefined) {
+				alert.error("Failed to deactivate user: "+responseJson.reason)
+			} else {
+				alert.success("Deleted user "+data.id)
+			}
+		})
+
+		.catch(error => {
+			console.log("Error in userdata: ", error)
+		});
+	}
+
 	const submitUser = (data) => {
 		// FIXME - add some check here ROFL
 		console.log("INPUT: ", data)
@@ -244,8 +274,8 @@ const Admin = (props) => {
 	}
 
 	const paperStyle = {
-		minWidth: "100%",
-		maxWidth: "100%",
+		maxWidth: 1250,
+		margin: "auto",
 		color: "white",
 		backgroundColor: surfaceColor,
 		marginBottom: 10, 
@@ -373,11 +403,67 @@ const Admin = (props) => {
 			</Button>
 			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
 			<List>
+				<ListItem>
+					<ListItemText
+						primary="Username"
+						style={{minWidth: 200, maxWidth: 200}}
+					/>
+					<ListItemText
+						primary="API key"
+						style={{minWidth: 350, maxWidth: 350, overflow: "hidden"}}
+					/>
+					<ListItemText
+						primary="Password"
+						style={{minWidth: 180, maxWidth: 180}}
+					/>
+					<ListItemText
+						primary="Role"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="Active"
+						style={{minWidth: 180, maxWidth: 180}}
+					/>
+					<ListItemText
+						primary="Actions"
+						style={{minWidth: 180, maxWidth: 180}}
+					/>
+				</ListItem>
 				{users === undefined ? null : users.map(data => {
-					console.log(data)
+					console.log("USER: ", data)
 					return (
 						<ListItem>
-							{data.Username}
+							<ListItemText
+								primary={data.username}
+								style={{minWidth: 200, maxWidth: 200}}
+							/>
+							<ListItemText
+								primary={data.apikey === undefined || data.apikey.length === 0 ? "" : data.apikey}
+								style={{maxWidth: 350, minWidth: 350,}}
+							/>
+							<ListItemText
+								primary="**************"
+								style={{minWidth: 180, maxWidth: 180}}
+							/>
+							<ListItemText
+								primary={data.role}
+								style={{minWidth: 150, maxWidth: 150}}
+							/>
+							<ListItemText
+								primary={data.active ? "True" : "False"}
+								style={{minWidth: 180, maxWidth: 180}}
+								onClick={() => console.log("Should set user to active")}
+							/>
+							<ListItemText>
+								<Button 
+									style={{}} 
+									variant="contained"
+									color="primary"
+									onClick={() => deleteUser(data)}
+								>
+									{data.active ? "Deactivate" : "Activate"}	
+								</Button>
+							</ListItemText>
 						</ListItem>
 					)
 				})}
@@ -472,7 +558,7 @@ const Admin = (props) => {
 	}
 
 	const data = 
-		<div style={{width: 1366, margin: "auto"}}>
+		<div style={{minWidth: 1366, margin: "auto"}}>
 			<Paper style={paperStyle}>
 				<Tabs
 					value={curTab}

@@ -2642,6 +2642,84 @@ func setWorkflow(ctx context.Context, workflow Workflow, id string) error {
 	return nil
 }
 
+func deleteUser(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	user, userErr := handleApiAuthentication(resp, request)
+	if userErr != nil {
+		log.Printf("Api authentication failed in edit workflow: %s", userErr)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Role != "admin" {
+		log.Printf("Wrong user (%s) when deleting - must be admin", user.Username)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Must be admin"}`))
+		return
+	}
+
+	location := strings.Split(request.URL.String(), "/")
+	var userId string
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		userId = location[4]
+	}
+
+	if userId == user.Id {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Can't deactivate yourself"}`))
+		return
+	}
+
+	ctx := context.Background()
+	q := datastore.NewQuery("Users").Filter("id =", userId)
+	var users []User
+	_, err := dbclient.GetAll(ctx, q, &users)
+	if err != nil {
+		log.Printf("Error getting users apikey: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Failed getting users for verification"}`))
+		return
+	}
+
+	if len(users) != 1 {
+		log.Printf("Found too many users!")
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false, "reason": "Backend error: too many users"}`))
+		return
+	}
+
+	// Invert. No user deletion.
+	if users[0].Active {
+		users[0].Active = false
+	} else {
+		users[0].Active = true
+	}
+
+	err = setUser(ctx, &users[0])
+	if err != nil {
+		log.Printf("Failed swapping active for user %s (%s)", users[0].Username, users[0].Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": true"}`)))
+		return
+	}
+
+	log.Printf("Successfully inverted %s", users[0].Username)
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(`{"success": true}`))
+}
+
 func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
