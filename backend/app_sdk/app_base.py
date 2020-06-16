@@ -489,11 +489,16 @@ class AppBase:
                         # FIXME - this is horrible, but works for now
                         #for i in range(calltimes):
                         if not multiexecution:
-                            print("Params: %s" % params)
-                            print("RUNNING NORMAL EXECUTION")
-                            result += await func(**params)
+                            print("APP_SDK DONE: Starting normal execution of function")
+                            newres = await func(**params)
+                            print("NEWRES: ", newres)
+                            if isinstance(newres, str):
+                                result += newres
+                            else:
+                                print("Can't handle type %s value from function" % (type(newres)))
+                                result += "Can't handle %s type from function" % type(newres)
                         else:
-                            print("MULTI EXECUTION: ", multi_parameters)
+                            print("APP_SDK DONE: Starting multi execution with", multi_parameters)
                             # 1. Use number of executions based on longest array
                             # 2. Find the right value from the parsed multi_params
 
