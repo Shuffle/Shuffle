@@ -70,7 +70,7 @@ var baseDockerName = "frikky/shuffle"
 var dbclient *datastore.Client
 
 type Userapi struct {
-	Username string `datastore:"Username"`
+	Username string `datastore:"username"`
 	ApiKey   string `datastore:"apikey"`
 }
 
@@ -183,7 +183,7 @@ type session struct {
 }
 
 type loginStruct struct {
-	Username string `json:"Username"`
+	Username string `json:"username"`
 	Password string `json:"password"`
 }
 
@@ -810,9 +810,9 @@ func parseLoginParameters(resp http.ResponseWriter, request *http.Request) (logi
 // Removed for localhost
 func checkPasswordStrength(password string) error {
 	// Check password strength here
-	//if len(password) < 10 {
-	//	return errors.New("Minimum password length is 10.")
-	//}
+	if len(password) < 10 {
+		return errors.New("Minimum password length is 10.")
+	}
 
 	//if len(password) > 128 {
 	//	return errors.New("Maximum password length is 128.")
@@ -1334,7 +1334,7 @@ func handleApiGeneration(resp http.ResponseWriter, request *http.Request) {
 
 	log.Printf("Updated apikey for user %s", userInfo.Username)
 	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true, "Username": "%s", "verified": %t, "apikey": "%s"}`, userInfo.Username, userInfo.Verified, userInfo.ApiKey)))
+	resp.Write([]byte(fmt.Sprintf(`{"success": true, "username": "%s", "verified": %t, "apikey": "%s"}`, userInfo.Username, userInfo.Verified, userInfo.ApiKey)))
 }
 
 func handleSettings(resp http.ResponseWriter, request *http.Request) {
@@ -1380,7 +1380,7 @@ func handleSettings(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true, "Username": "%s", "verified": %t, "apikey": "%s"}`, UserInfo.Username, UserInfo.Verified, UserInfo.ApiKey)))
+	resp.Write([]byte(fmt.Sprintf(`{"success": true, "username": "%s", "verified": %t, "apikey": "%s"}`, UserInfo.Username, UserInfo.Verified, UserInfo.ApiKey)))
 }
 
 func handleInfo(resp http.ResponseWriter, request *http.Request) {
@@ -1402,9 +1402,10 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 
 	sessionToken := c.Value
+	log.Printf("Found session %s", sessionToken)
 	session, err := getSession(ctx, sessionToken)
 	if err != nil {
-		//log.Printf("Session %#v doesn't exist: %s", session, err)
+		log.Printf("Session %#v doesn't exist: %s", session, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "No session"}`))
 		return
@@ -1501,9 +1502,10 @@ type passwordReset struct {
 }
 
 type passwordChange struct {
-	Password1 string `json:"newpassword"`
-	Password2 string `json:"newpassword2"`
-	Password3 string `json:"currentpassword"`
+	Username        string `json:"username"`
+	Newpassword     string `json:"newpassword"`
+	Newpassword2    string `json:"newpassword2"`
+	Currentpassword string `json:"currentpassword"`
 }
 
 func handlePasswordResetMail(resp http.ResponseWriter, request *http.Request) {
@@ -1524,7 +1526,7 @@ func handlePasswordResetMail(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	type passwordReset struct {
-		Username string `json:"Username"`
+		Username string `json:"username"`
 	}
 
 	var t passwordReset
@@ -1679,13 +1681,12 @@ func handlePasswordReset(resp http.ResponseWriter, request *http.Request) {
 }
 
 func handlePasswordChange(resp http.ResponseWriter, request *http.Request) {
-	log.Println("Handling password change")
-
 	cors := handleCors(resp, request)
 	if cors {
 		return
 	}
 
+	log.Println("Handling password change")
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		log.Println("Failed reading body")
@@ -1694,6 +1695,7 @@ func handlePasswordChange(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	// Get the current user - check if they're admin or the "username" user.
 	var t passwordChange
 	err = json.Unmarshal(body, &t)
 	if err != nil {
@@ -1703,21 +1705,41 @@ func handlePasswordChange(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if t.Password1 != t.Password2 {
+	user, err := handleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("Api authentication failed in set new workflowhandler: %s", err)
 		resp.WriteHeader(401)
-		err := "Passwords don't match"
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		resp.Write([]byte(`{"success": false}`))
 		return
 	}
 
-	if len(t.Password1) < 10 || len(t.Password2) < 10 {
+	curUserFound := false
+	if t.Username != user.Username && user.Role != "admin" {
 		resp.WriteHeader(401)
-		err := "Passwords don't match - 2"
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		resp.Write([]byte(`{"success": false, "reason": "Admin required to change others' passwords"}`))
 		return
+	} else if t.Username == user.Username {
+		curUserFound = true
 	}
 
-	err = checkPasswordStrength(t.Password3)
+	if user.Role != "admin" {
+		if t.Newpassword != t.Newpassword2 {
+			err := "Passwords don't match"
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+			return
+		}
+
+		if len(t.Newpassword) < 10 || len(t.Newpassword2) < 10 {
+			err := "Passwords too short - 2"
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+			return
+		}
+	}
+
+	// Current password
+	err = checkPasswordStrength(t.Newpassword)
 	if err != nil {
 		log.Printf("Bad password strength: %s", err)
 		resp.WriteHeader(401)
@@ -1725,56 +1747,52 @@ func handlePasswordChange(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// Check cookie
-	c, err := request.Cookie("session_token")
-	if err != nil {
-		log.Printf("User doesn't have sessiontoken on pw change: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "You're not logged in."}`)))
-		return
-	}
-
 	ctx := context.Background()
-	// Validate with User
-	sessionToken := c.Value
-	session, err := getSession(ctx, sessionToken)
-	if err != nil {
-		log.Printf("Session %s doesn't exist (password change): %s", session.Session, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "You're not logged in"}`))
-		return
+	if !curUserFound {
+		log.Printf("Have to find a different user")
+		q := datastore.NewQuery("Users").Filter("Username =", strings.ToLower(t.Username))
+		var users []User
+		_, err = dbclient.GetAll(ctx, q, &users)
+		if err != nil {
+			log.Printf("Failed getting user %s", t.Username)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
+			return
+		}
+
+		if len(users) != 1 {
+			log.Printf(`Found multiple users with the same username: %s: %d`, t.Username, len(users))
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Found multiple users with the same username: %s"}`, t.Username)))
+			return
+		}
+
+		user = users[0]
+	} else {
+		// Admins can re-generate others' passwords as well.
+		if user.Role != "admin" {
+			err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(t.Newpassword))
+			if err != nil {
+				log.Printf("Bad password for %s: %s", user.Username, err)
+				resp.WriteHeader(401)
+				resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
+				return
+			}
+		}
 	}
 
-	// Get session first
-	// Should basically never happen
-	Userdata, err := getUser(ctx, session.Id)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(t.Newpassword), 8)
 	if err != nil {
-		log.Printf("Username %s doesn't exist (pw change): %s", session.Username, err)
+		log.Printf("New password failure for %s: %s", user.Username, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
 		return
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(Userdata.Password), []byte(t.Password1))
+	user.Password = string(hashedPassword)
+	err = setUser(ctx, &user)
 	if err != nil {
-		log.Printf("Bad password for %s: %s", session.Username, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
-		return
-	}
-
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(t.Password3), 8)
-	if err != nil {
-		log.Printf("Wrong password for %s: %s", Userdata.Username, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
-		return
-	}
-
-	Userdata.Password = string(hashedPassword)
-	err = setUser(ctx, Userdata)
-	if err != nil {
-		log.Printf("Error adding User %s: %s", Userdata.Username, err)
+		log.Printf("Error fixing password for user %s: %s", user.Username, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
 		return
@@ -2057,6 +2075,7 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	Userdata := users[0]
+
 	err = bcrypt.CompareHashAndPassword([]byte(Userdata.Password), []byte(data.Password))
 	if err != nil {
 		log.Printf("Password for %s is incorrect: %s", data.Username, err)
@@ -2065,7 +2084,14 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("%s SUCCESSFULLY LOGGED IN", data.Username)
+	if !Userdata.Active {
+		log.Printf("%s is not active, but tried to login", data.Username, err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "This user is deactivated"}`))
+		return
+	}
+
+	log.Printf("%s SUCCESSFULLY LOGGED IN with session %s", data.Username, Userdata.Session)
 	//if !Userdata.Verified {
 	//	log.Printf("User %s is not verified", data.Username)
 	//	resp.WriteHeader(403)
@@ -2100,7 +2126,6 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	sessionToken := uuid.NewV4()
-
 	http.SetCookie(resp, &http.Cookie{
 		Name:    "session_token",
 		Value:   sessionToken.String(),

@@ -6,6 +6,7 @@ import Divider from '@material-ui/core/Divider';
 import {Link} from 'react-router-dom';
 
 import TextField from '@material-ui/core/TextField';
+import { useAlert } from "react-alert";
 
 
 //const tmpdata = {
@@ -23,6 +24,7 @@ import TextField from '@material-ui/core/TextField';
 // FIXME: Use isLoggedIn :)
 const Settings = (props) => {
   const { globalUrl, isLoaded, userdata, surfaceColor, inputColor } = props;
+	const alert = useAlert()
 
 	const [username, setUsername] = useState("");
 	const [firstname, setFirstname] = useState("");
@@ -65,7 +67,7 @@ const Settings = (props) => {
 	}
 	
 	const onPasswordChange = () => {
-		const data = {"currentpassword": currentPassword, "newpassword": newPassword, "newpassword2": newPassword2}
+		const data = {"username": userSettings.username, "currentpassword": currentPassword, "newpassword": newPassword, "newpassword2": newPassword2}
 		const url = globalUrl+'/api/v1/passwordchange';
 		fetch(url, {
 			mode: 'cors',
@@ -82,7 +84,10 @@ const Settings = (props) => {
 			response.json().then(responseJson => {
 				if (responseJson["success"] === false) {
 					setPasswordFormMessage(responseJson["reason"])
-				} 
+				} else {
+					alert.success("Changed password!")
+					setPasswordFormMessage("")
+				}
 			}),
 		)
 		.catch(error => {

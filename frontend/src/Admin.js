@@ -1,5 +1,6 @@
 import React, { useEffect} from 'react';
 
+import {Link} from 'react-router-dom';
 import Paper from '@material-ui/core/Paper';
 import List from '@material-ui/core/List';
 import Divider from '@material-ui/core/Divider';
@@ -32,6 +33,8 @@ const Admin = (props) => {
 	const [environments, setEnvironments] = React.useState([]);
 	const [schedules, setSchedules] = React.useState([])
 	const [selectedUser, setSelectedUser] = React.useState({})
+	const [newPassword, setNewPassword] = React.useState("");
+	const [selectedUserModalOpen, setSelectedUserModalOpen] = React.useState(false)
 
 	const alert = useAlert()
 
@@ -64,6 +67,34 @@ const Admin = (props) => {
 		});
 	}
 
+	const onPasswordChange = () => {
+		const data = {"username": selectedUser.username, "newpassword": newPassword}
+		const url = globalUrl+'/api/v1/passwordchange';
+		fetch(url, {
+			mode: 'cors',
+			method: 'POST',
+			body: JSON.stringify(data),
+			credentials: 'include',
+			crossDomain: true,
+			withCredentials: true,
+			headers: {
+				'Content-Type': 'application/json; charset=utf-8',
+			},
+		})
+		.then(response =>
+			response.json().then(responseJson => {
+				if (responseJson["success"] === false) {
+					alert.error("Failed setting new password")
+				} else {
+					alert.success("Changed password!")
+				}
+			}),
+		)
+		.catch(error => {
+			alert.error("Err: ", error.toString())
+		});
+	}
+
 	const deleteUser = (data) => {
 		// Just use this one?
 		const url = globalUrl+'/api/v1/users/'+data.id
@@ -85,7 +116,7 @@ const Admin = (props) => {
 			if (!responseJson.success && responseJson.reason !== undefined) {
 				alert.error("Failed to deactivate user: "+responseJson.reason)
 			} else {
-				alert.success("Deleted user "+data.id)
+				alert.success("Deactivated user "+data.id)
 			}
 		})
 
@@ -287,10 +318,41 @@ const Admin = (props) => {
 		modalUser[field] = value
 	}
 
+	const generateApikey = () => {
+		fetch(globalUrl+"/api/v1/generateapikey", {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+				credentials: "include",
+		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for WORKFLOW EXECUTION :O!")
+			} else {
+				getUsers()
+			}
+
+			return response.json()
+		})
+  	.then((responseJson) => {
+			console.log("RESP: ", responseJson)
+			if (!responseJson.success && responseJson.reason !== undefined) {
+				alert.error("Failed getting new: "+responseJson.reason)
+			} else {
+				alert.success("Got new API key")
+			}
+    })
+		.catch(error => {
+    		console.log(error)
+		});
+	}
+
 	const editUserModal = 
 		<Dialog modal 
-			open={modalOpen}
-			onClose={() => {setModalOpen(false)}}
+			open={selectedUserModalOpen}
+			onClose={() => {setSelectedUserModalOpen(false)}}
 			PaperProps={{
 				style: {
 					backgroundColor: surfaceColor,
@@ -300,7 +362,55 @@ const Admin = (props) => {
 				},
 			}}
 		>
-			<DialogTitle><span style={{color: "white"}}>Add user</span></DialogTitle>
+			<DialogTitle><span style={{color: "white"}}>Edit user</span></DialogTitle>
+			<DialogContent>
+				<div style={{display: "flex"}}>
+					<TextField
+						style={{backgroundColor: inputColor, flex: 3}}
+						InputProps={{
+							style:{
+								height: 50, 
+								color: "white",
+							},
+						}}
+						color="primary"
+						required
+						fullWidth={true}
+						placeholder="New password"
+						type="password"
+						id="standard-required"
+						autoComplete="password"
+						margin="normal"
+						variant="outlined"
+						onChange={e => setNewPassword(e.target.value)}
+					/>
+					<Button 
+						style={{maxHeight: 50, flex: 1}}
+						variant="outlined"
+						color="primary"
+						onClick={() => onPasswordChange()}
+					>
+						Submit 
+					</Button>
+				</div>
+				<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
+				<Button 
+					style={{}} 
+					variant="outlined"
+					color="primary"
+					onClick={() => deleteUser(selectedUser)}
+				>
+					{selectedUser.active ? "Deactivate" : "Activate"}	
+				</Button>
+				<Button 
+					style={{}} 
+					variant="outlined"
+					color="primary"
+					onClick={() => generateApikey(selectedUser)}
+				>
+					Get new API key
+				</Button>
+			</DialogContent>
 		</Dialog>
 
 	const modalView = 
@@ -447,7 +557,6 @@ const Admin = (props) => {
 					/>
 				</ListItem>
 				{users === undefined ? null : users.map(data => {
-					console.log("USER: ", data)
 					return (
 						<ListItem>
 							<ListItemText
@@ -475,17 +584,12 @@ const Admin = (props) => {
 									style={{}} 
 									variant="outlined"
 									color="primary"
-									onClick={() => deleteUser(data)}
+									onClick={() => {
+										setSelectedUserModalOpen(true)
+										setSelectedUser(data)
+									}}
 								>
-									{data.active ? "Deactivate" : "Activate"}	
-								</Button>
-								<Button 
-									style={{}} 
-									variant="outlined"
-									color="primary"
-									onClick={() => deleteUser(data)}
-								>
-									Edit
+									Edit user
 								</Button>
 							</ListItemText>
 						</ListItem>
