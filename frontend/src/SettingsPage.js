@@ -183,7 +183,7 @@ const Settings = (props) => {
 			<div style={{display: "flex", marginTop: "80px"}}>
 				<Paper style={boxStyle}>
 					<h2>APIKEY</h2>
-					<Link to="/docs/api#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is the API key used for?</Link>
+					<Link to="/docs/API#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is the API key used for?</Link>
 					<TextField
 						style={{backgroundColor: inputColor, flex: "1"}}
 						InputProps={{

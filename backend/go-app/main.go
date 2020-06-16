@@ -161,6 +161,7 @@ type User struct {
 	Verified          bool          `datastore:"verified,noindex" json:"verified"`
 	PrivateApps       []WorkflowApp `datastore:"privateapps" json:"privateapps":`
 	Role              string        `datastore:"role" json:"role"`
+	Roles             []string      `datastore:"roles" json:"roles"`
 	VerificationToken string        `datastore:"verification_token" json:"verification_token"`
 	ApiKey            string        `datastore:"apikey" json:"apikey"`
 	ResetReference    string        `datastore:"reset_reference" json:"reset_reference"`
@@ -169,7 +170,7 @@ type User struct {
 	Authentication    []UserAuth    `datastore:"authentication,noindex" json:"authentication"`
 	ResetTimeout      int64         `datastore:"reset_timeout,noindex" json:"reset_timeout"`
 	Id                string        `datastore:"id" json:"id"`
-	Orgs              string        `datastore:"orgs" json:"orgs"`
+	Orgs              []string      `datastore:"orgs" json:"orgs"`
 	CreationTime      int64         `datastore:"creation_time" json:"creation_time"`
 	Active            bool          `datastore:"active" json:"active"`
 }
@@ -1077,12 +1078,15 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 	newUser.Verified = false
 	newUser.CreationTime = time.Now().Unix()
 	newUser.Active = true
+	newUser.Orgs = []string{"default"}
 
 	// FIXME - Remove this later
 	if count == 0 {
 		newUser.Role = "admin"
+		newUser.Roles = []string{"admin"}
 	} else {
 		newUser.Role = "user"
+		newUser.Roles = []string{"user"}
 	}
 
 	// set limits
@@ -5951,6 +5955,14 @@ func runInit(ctx context.Context) {
 					if len(user.Username) == 0 {
 						DeleteKey(ctx, "Users", strings.ToLower(user.Username))
 						continue
+					}
+
+					if len(user.Role) > 0 {
+						user.Roles = append(user.Roles, user.Role)
+					}
+
+					if len(user.Orgs) == 0 {
+						user.Orgs = []string{"default"}
 					}
 
 					err = setUser(ctx, &user)

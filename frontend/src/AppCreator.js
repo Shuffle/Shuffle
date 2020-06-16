@@ -639,7 +639,7 @@ const AppCreator = (props) => {
 				}
 			}
 
-			if (item.body.length > 0) {
+			if (item.body !== undefined && item.body.length > 0) {
 				const required = false
 				newitem = {
 					"in": "body",
@@ -1525,7 +1525,7 @@ const AppCreator = (props) => {
 	//	<img src={file} id="logo" style={{width: "100%", height: "100%"}} />
 
 	const imageData = file.length > 0 ? file : fileBase64 
-	const imageInfo = <img src={imageData} alt="Click to upload an image" id="logo" style={{maxWidth: 174, maxHeight: 174,}} />
+	const imageInfo = <img src={imageData} alt="Click to upload an image (174x174)" id="logo" style={{maxWidth: 174, maxHeight: 174,}} />
 
 	// Random names for type & autoComplete. Didn't research :^)
 	const landingpageDataBrowser = 

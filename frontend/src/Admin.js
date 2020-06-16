@@ -31,6 +31,7 @@ const Admin = (props) => {
 	const [users, setUsers] = React.useState([]);
 	const [environments, setEnvironments] = React.useState([]);
 	const [schedules, setSchedules] = React.useState([])
+	const [selectedUser, setSelectedUser] = React.useState({})
 
 	const alert = useAlert()
 
@@ -286,6 +287,22 @@ const Admin = (props) => {
 		modalUser[field] = value
 	}
 
+	const editUserModal = 
+		<Dialog modal 
+			open={modalOpen}
+			onClose={() => {setModalOpen(false)}}
+			PaperProps={{
+				style: {
+					backgroundColor: surfaceColor,
+					color: "white",
+					minWidth: "800px",
+					minHeight: "320px",
+				},
+			}}
+		>
+			<DialogTitle><span style={{color: "white"}}>Add user</span></DialogTitle>
+		</Dialog>
+
 	const modalView = 
 		<Dialog modal 
 			open={modalOpen}
@@ -452,16 +469,23 @@ const Admin = (props) => {
 							<ListItemText
 								primary={data.active ? "True" : "False"}
 								style={{minWidth: 180, maxWidth: 180}}
-								onClick={() => console.log("Should set user to active")}
 							/>
-							<ListItemText>
+							<ListItemText style={{display: "flex"}}>
 								<Button 
 									style={{}} 
-									variant="contained"
+									variant="outlined"
 									color="primary"
 									onClick={() => deleteUser(data)}
 								>
 									{data.active ? "Deactivate" : "Activate"}	
+								</Button>
+								<Button 
+									style={{}} 
+									variant="outlined"
+									color="primary"
+									onClick={() => deleteUser(data)}
+								>
+									Edit
 								</Button>
 							</ListItemText>
 						</ListItem>
@@ -581,6 +605,7 @@ const Admin = (props) => {
 	return (
 		<div>
 			{modalView}
+			{editUserModal}
 			{data}
 		</div>
 	)
