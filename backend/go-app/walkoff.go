@@ -3966,7 +3966,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 					log.Printf("Failed to increase total apps loaded stats: %s", err)
 				}
 
-				log.Printf("Added %s:%s to the database", workflowapp.Name, workflowapp.AppVersion)
+				//log.Printf("Added %s:%s to the database", workflowapp.Name, workflowapp.AppVersion)
 
 				/// Only upload if successful and no errors
 				err = buildImageMemory(fs, tags, extra)

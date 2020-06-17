@@ -1402,7 +1402,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 
 	sessionToken := c.Value
-	log.Printf("Found session %s", sessionToken)
+	//log.Printf("Found session %s", sessionToken)
 	session, err := getSession(ctx, sessionToken)
 	if err != nil {
 		log.Printf("Session %#v doesn't exist: %s", session, err)
@@ -5933,7 +5933,7 @@ func handleAppHotload(location string) error {
 	fs, err := createFs(basepath, location)
 	if err != nil {
 		log.Printf("Failed memfs creation - probably bad path: %s", err)
-		return err
+		return errors.New(fmt.Sprintf("Failed to find directory %s", location))
 	} else {
 		log.Printf("Memfs creation from %s done", location)
 	}
@@ -5944,7 +5944,7 @@ func handleAppHotload(location string) error {
 		return err
 	}
 
-	log.Printf("Reading app folder: %#v", dir)
+	//log.Printf("Reading app folder: %#v", dir)
 	err = iterateAppGithubFolders(fs, dir, "", "")
 	if err != nil {
 		log.Printf("Err: %s", err)

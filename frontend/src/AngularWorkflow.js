@@ -2771,12 +2771,12 @@ const AngularWorkflow = (props) => {
 
 	const AppConditionHandler = (props) => {
   	const { tmpdata, type } = props
+		const [data, ] = useState(tmpdata)
+		const [multiline, setMultiline] = useState(false)
 
 		if (tmpdata === undefined) {
 			return tmpdata
 		}
-		const [data, ] = useState(tmpdata)
-		const [multiline, setMultiline] = useState(false)
 
 		if (data.variant === "") {
 			data.variant = "STATIC_VALUE"

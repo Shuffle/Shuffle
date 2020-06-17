@@ -442,7 +442,8 @@ class AppBase:
                         for parameter in action["parameters"]:
                             check, value = parse_params(action, fullexecution, parameter)
                             if check:
-                                raise Exception(check)
+                                raise "Value check error: %s" % Exception(check)
+
 
                             # Custom format for ${name[0,1,2,...]}$
                             submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"
@@ -483,6 +484,21 @@ class AppBase:
                                 # With this parameter ready, add it to... a greater list of parameters. Rofl
                                 multi_parameters[parameter["name"]] = resultarray
                             else:
+                                # Testing casting
+                                if value.lower() == "true":
+                                    value = True
+                                elif value.lower() == "false":
+                                    value = False
+                                else:
+                                    constructors = [int]
+                                    for c in constructors:
+                                        try:
+                                            value = c(value)
+                                            print("Successfully parsed %s to %s", value, c)
+                                        except ValueError:
+                                            print("Failed to parse %s to %s", value, c)
+                                            pass
+
                                 params[parameter["name"]] = value
                                 multi_parameters[parameter["name"]] = value 
                         
