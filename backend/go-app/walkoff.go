@@ -3499,6 +3499,8 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	log.Printf("Starting app hotloading")
+
 	// Just need to be logged in
 	// FIXME - should have some permissions?
 	user, err := handleApiAuthentication(resp, request)
@@ -3518,7 +3520,7 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 	location := os.Getenv("APP_HOTLOAD_FOLDER")
 	if len(location) == 0 {
 		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "APP_HOTLOAD_FOLDER not specified in .env"}`, err)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "APP_HOTLOAD_FOLDER not specified in .env"}`)))
 		return
 	}
 
@@ -3526,7 +3528,7 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 	err = handleAppHotload(location)
 	if err != nil {
 		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed loading apps: %s"}`, err)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed loading apps: %s"}`)))
 		return
 	}
 
