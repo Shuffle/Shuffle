@@ -518,7 +518,10 @@ const Workflows = (props) => {
 		var showResult = data.result.trim()
 		showResult = replaceAll(showResult, " None", " \"None\"");
 		try {
-			JSON.parse(showResult)
+			const tmp = String(JSON.parse(showResult))
+			if (!tmp.includes("{") && !tmp.includes("[")) {
+				jsonvalid = false
+			}
 		} catch (e) {
 			jsonvalid = false
 		}

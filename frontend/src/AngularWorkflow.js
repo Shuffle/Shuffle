@@ -4493,10 +4493,16 @@ const AngularWorkflow = (props) => {
 						executionData.results.map(data => {
 							var showResult = data.result.trim()
 							showResult.split(" None").join(" \"None\"")
-							//showResult = replaceAll(showResult, " None", " \"None\"")
+							console.log("RESULT: ", showResult)
+
+							// showResult = replaceAll(showResult, " None", " \"None\"")
+							// Super basic check.
 							var jsonvalid = true
 							try {
-								JSON.parse(showResult)
+								const tmp = String(JSON.parse(showResult))
+								if (!tmp.includes("{") && !tmp.includes("[")) {
+									jsonvalid = false
+								}
 							} catch (e) {
 								jsonvalid = false
 							}

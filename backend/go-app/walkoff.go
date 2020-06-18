@@ -89,6 +89,7 @@ type WorkflowApp struct {
 	Activated   bool   `json:"activated" yaml:"activated" required:false datastore:"activated"`
 	Tested      bool   `json:"tested" yaml:"tested" required:false datastore:"tested"`
 	Owner       string `json:"owner" datastore:"owner" yaml:"owner"`
+	Hash        string `json:"hash" datastore:"hash" yaml:"hash"` // api.yaml+dockerfile+src/app.py for apps
 	PrivateID   string `json:"private_id" yaml:"private_id" required:false datastore:"private_id"`
 	Description string `json:"description" datastore:"description,noindex" required:false yaml:"description"`
 	Environment string `json:"environment" datastore:"environment" required:true yaml:"environment"`
@@ -3853,22 +3854,9 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 			// Check the file
 			filename := file.Name()
 			if filename == "Dockerfile" {
-				// Quick Dockerfile check
-				//dockerfile := fmt.Sprintf("%sDockerfile", extra)
-				//log.Printf("Handling Dockerfile %s", dockerfile)
-				//dockerdata, err := ioutil.ReadFile(dockerfile)
-				//if err != nil {
-				//	log.Printf("Failed to read dockerfile")
-				//	continue
-				//}
-
-				//if len(dockerdata) == 0 {
-				//	log.Printf("Dockerfile is empty")
-				//	continue
-				//}
-
-				log.Printf("Handle Dockerfile in location %s", extra)
-
+				// Set up to make md5 and check if the app is new (api.yaml+src/app.py+Dockerfile)
+				// Check if Dockerfile, app.py or api.yaml has changed. Hash?
+				//log.Printf("Handle Dockerfile in location %s", extra)
 				// Try api.yaml and api.yml
 				fullPath := fmt.Sprintf("%s%s", extra, "api.yaml")
 				fileReader, err := fs.Open(fullPath)
@@ -3881,21 +3869,55 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 					}
 				}
 
-				readFile, err := ioutil.ReadAll(fileReader)
+				appfileData, err := ioutil.ReadAll(fileReader)
 				if err != nil {
 					log.Printf("Failed reading %s: %s", fullPath, err)
 					continue
 				}
 
-				if len(readFile) == 0 {
+				if len(appfileData) == 0 {
 					log.Printf("Failed reading %s - length is 0.", fullPath)
 					continue
 				}
 
-				var workflowapp WorkflowApp
-				err = gyaml.Unmarshal(readFile, &workflowapp)
+				// func md5sum(data []byte) string {
+				// Make hash
+				appPython := fmt.Sprintf("%s/src/app.py", extra)
+				appPythonReader, err := fs.Open(appPython)
 				if err != nil {
-					log.Printf("Failed unmarshaling %s: %s", fullPath, err)
+					log.Printf("Failed to read %s", appPython)
+					continue
+				}
+
+				appPythonData, err := ioutil.ReadAll(appPythonReader)
+				if err != nil {
+					log.Printf("Failed reading %s: %s", appPython, err)
+					continue
+				}
+
+				dockerFp := fmt.Sprintf("%s/Dockerfile", extra)
+				dockerfile, err := fs.Open(dockerFp)
+				if err != nil {
+					log.Printf("Failed to read %s", appPython)
+					continue
+				}
+
+				dockerfileData, err := ioutil.ReadAll(dockerfile)
+				if err != nil {
+					log.Printf("Failed to read dockerfile")
+					continue
+				}
+
+				combined := []byte{}
+				combined = append(combined, appfileData...)
+				combined = append(combined, appPythonData...)
+				combined = append(combined, dockerfileData...)
+				md5 := md5sum(combined)
+
+				var workflowapp WorkflowApp
+				err = gyaml.Unmarshal(appfileData, &workflowapp)
+				if err != nil {
+					log.Printf("Failed unmarshaling workflowapp %s: %s", fullPath, err)
 					continue
 				}
 
@@ -3915,13 +3937,25 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 				}
 
 				// Make an option to override existing apps?
+				//Hash string `json:"hash" datastore:"hash" yaml:"hash"` // api.yaml+dockerfile+src/app.py for apps
 				removeApps := []string{}
+				skip := false
 				for _, app := range allapps {
 					if app.Name == workflowapp.Name && app.AppVersion == workflowapp.AppVersion {
-						//log.Printf("App upload for %s:%s already exists.", app.Name, app.AppVersion)
-						log.Printf("Overriding app %s:%s as it exists.", app.Name, app.AppVersion)
+						// FIXME: Check if there's a new APP_SDK as well.
+						// Skip this check if app_sdk is new.
+						if app.Hash == md5 && app.Hash != "" {
+							skip = true
+							break
+						}
+
+						//log.Printf("Overriding app %s:%s as it exists but has different hash.", app.Name, app.AppVersion)
 						removeApps = append(removeApps, app.ID)
 					}
+				}
+
+				if skip {
+					continue
 				}
 
 				err = checkWorkflowApp(workflowapp)
@@ -3939,21 +3973,17 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 					}
 				}
 
-				//if workflowapp.Environment == "" {
-				//	workflowapp.Environment = baseEnvironment
-				//}
-
 				workflowapp.ID = uuid.NewV4().String()
 				workflowapp.IsValid = true
 				workflowapp.Verified = true
 				workflowapp.Sharing = true
 				workflowapp.Downloaded = true
+				workflowapp.Hash = md5
 
 				err = setWorkflowAppDatastore(ctx, workflowapp, workflowapp.ID)
 				if err != nil {
 					log.Printf("Failed setting workflowapp: %s", err)
 					continue
-					//return err
 				}
 
 				err = increaseStatisticsField(ctx, "total_apps_created", workflowapp.ID, 1)
@@ -3975,6 +4005,8 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 				} else {
 					if len(tags) > 0 {
 						log.Printf("Successfully built image %s", tags[0])
+					} else {
+						log.Printf("Successfully built image docker img")
 					}
 				}
 			}

@@ -6130,7 +6130,8 @@ func init() {
 	var err error
 	ctx := context.Background()
 
-	log.Printf("Running INIT process")
+	log.Printf("Starting Shuffle backend - initializing database connection")
+	// option.WithoutAuthentication
 	dbclient, err = datastore.NewClient(ctx, gceProject)
 	if err != nil {
 		panic(fmt.Sprintf("DBclient error during init: %s", err))
