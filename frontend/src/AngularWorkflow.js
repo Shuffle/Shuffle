@@ -2510,7 +2510,7 @@ const AngularWorkflow = (props) => {
 			<div style={{display: "flex", minHeight: 40, marginBottom: 30}}>
 				<div style={{flex: 1}}>
 					<h3 style={{marginBottom: 5}}>{selectedAction.app_name}</h3>
-					<Link to="/docs/apps" style={{textDecoration: "none", color: "#f85a3e"}}>What are apps?</Link>
+					<a href="https://shuffler.io/docs/apps#actions" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>What are actions?</a>
 					{selectedAction.errors !== null && selectedAction.errors.length > 0 ? 
 						<div>
 							Errors: {selectedAction.errors.join("\n")}
@@ -2544,39 +2544,38 @@ const AngularWorkflow = (props) => {
 				placeholder={selectedAction.label}
 				onChange={selectedNameChange}
 			/>
-
-			<div style={{marginTop: "20px"}}>
-				Environment
-				<Select
-					value={selectedActionEnvironment === undefined || selectedActionEnvironment.Name === undefined ? "" : selectedActionEnvironment.Name}
-					PaperProps={{
-						style: {
-							backgroundColor: inputColor,
-						}
-					}}
-					SelectDisplayProps={{
-						style: {
-							marginLeft: 10,
-						}
-					}}
-					fullWidth
-					onChange={(e) => {
-						const env = environments.find(a => a.Name === e.target.value)
-						console.log("FOUND: ", e.target.value)
-						console.log("FOUND2: ", env)
-						setSelectedActionEnvironment(env) 
-						selectedAction.environment = env.Name
-						setSelectedAction(selectedAction)
-					}}
-					style={{backgroundColor: inputColor, color: "white", height: "50px"}}
-				>
-					{environments.map(data => (
-						<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data.Name}>
-							{data.Name}
-						</MenuItem>
-					))}
-				</Select>
-			</div>
+			{environments !== undefined && environments.length > 1 ?
+				<div style={{marginTop: "20px"}}>
+					Environment
+					<Select
+						value={selectedActionEnvironment === undefined || selectedActionEnvironment.Name === undefined ? "" : selectedActionEnvironment.Name}
+						PaperProps={{
+							style: {
+								backgroundColor: inputColor,
+							}
+						}}
+						SelectDisplayProps={{
+							style: {
+								marginLeft: 10,
+							}
+						}}
+						fullWidth
+						onChange={(e) => {
+							const env = environments.find(a => a.Name === e.target.value)
+							setSelectedActionEnvironment(env) 
+							selectedAction.environment = env.Name
+							setSelectedAction(selectedAction)
+						}}
+						style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+					>
+						{environments.map(data => (
+							<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data.Name}>
+								{data.Name}
+							</MenuItem>
+						))}
+					</Select>
+				</div>
+				: null}
 			{/*requiresAuthentication ? 
 				<div style={{marginTop: "20px"}}>
 					<Button fullWidth style={{margin: "auto", marginTop: "10px",}} color="primary" variant="contained" onClick={() => setAuthenticationModalOpen(true)}>
@@ -3246,7 +3245,7 @@ const AngularWorkflow = (props) => {
 				<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 					<div style={{flex: "1"}}>
 						<h3 style={{marginBottom: "5px"}} >Branch: Conditions - {selectedEdgeIndex}</h3>
-						<Link to="/docs/conditions" style={{textDecoration: "none", color: "#f85a3e"}}>What are conditions?</Link>
+						<a href="https://shuffler.io/docs/conditions" style={{textDecoration: "none", color: "#f85a3e"}}>What are conditions?</a>
 					</div>
 				</div>
 				<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -3476,7 +3475,7 @@ const AngularWorkflow = (props) => {
 				<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 					<div style={{flex: "1"}}>
 						<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}: {selectedTrigger.status}</h3>
-						<Link to="/docs/triggers#webhook" style={{textDecoration: "none", color: "#f85a3e"}}>What are webhooks?</Link>
+						<a href="https://shuffler.io/docs/triggers#webhook" style={{textDecoration: "none", color: "#f85a3e"}}>What are webhooks?</a>
 					</div>
 				</div>
 				<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -3562,7 +3561,7 @@ const AngularWorkflow = (props) => {
 					<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 						<div style={{flex: "1"}}>
 							<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}: {selectedTrigger.status}</h3>
-							<Link to="/docs/triggers#webhook" style={{textDecoration: "none", color: "#f85a3e"}}>What are webhooks?</Link>
+							<a href="https://shuffler.io/docs/triggers#webhook" style={{textDecoration: "none", color: "#f85a3e"}}>What are webhooks?</a>
 						</div>
 					</div>
 					<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -3912,7 +3911,7 @@ const AngularWorkflow = (props) => {
 					<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 						<div style={{flex: "1"}}>
 							<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}: {selectedTrigger.status}</h3>
-							<Link to="/docs/triggers#schedule" style={{textDecoration: "none", color: "#f85a3e"}}>What are schedules?</Link>
+							<a href="https://shuffler.io/docs/triggers#schedule" style={{textDecoration: "none", color: "#f85a3e"}}>What are schedules?</a>
 						</div>
 					</div>
 					<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -4041,7 +4040,7 @@ const AngularWorkflow = (props) => {
 					<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 						<div style={{flex: "1"}}>
 							<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}: {selectedTrigger.status}</h3>
-							<Link to="/docs/triggers#schedule" style={{textDecoration: "none", color: "#f85a3e"}}>What are schedules?</Link>
+							<a href="https://shuffler.io/docs/triggers#schedule" style={{textDecoration: "none", color: "#f85a3e"}}>What are schedules?</a>
 						</div>
 					</div>
 					<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -4785,7 +4784,7 @@ const AngularWorkflow = (props) => {
 		>
 			<DialogTitle><div style={{color: "white"}}>Authentication for {selectedApp.name}</div></DialogTitle>
 			<DialogContent>
-				<Link to="/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is this?</Link>
+				<a href="https://shuffler.io/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is this?</a>
 				<div />
 				{selectedApp.link.length > 0 ? <EndpointData /> : null}
 				<div style={{marginTop: 15, marginBottom: 15, }}/>

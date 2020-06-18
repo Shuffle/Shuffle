@@ -5,6 +5,7 @@ import time
 import json
 import logging
 import requests
+import urllib.parse
 
 class AppBase:
     """ The base class for Python-based apps in Shuffle, handles logging and callbacks configurations"""
@@ -536,6 +537,7 @@ class AppBase:
                             return False, "Failed condition: %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)
 
 
+                    #sourcevalue = sourcevalue.encode("utf-8")
                     sourcevalue = parse_wrapper_start(sourcevalue)
                     destinationvalue = condition["destination"]["value"]
 
@@ -546,6 +548,7 @@ class AppBase:
                         if check:
                             return False, "Failed condition: %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)
 
+                    #destinationvalue = destinationvalue.encode("utf-8")
                     destinationvalue = parse_wrapper_start(destinationvalue)
                     available_checks = [
                         "=",
@@ -692,7 +695,6 @@ class AppBase:
                                 # Parses things like int(value)
                                 self.logger.info("Parsing wrapper data")
                                 value = parse_wrapper_start(value)
-                                self.logger.info("Parsing done: ", value)
 
                                 params[parameter["name"]] = value
                                 multi_parameters[parameter["name"]] = value 

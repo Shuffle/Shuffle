@@ -614,7 +614,10 @@ const Workflows = (props) => {
 			showResult = replaceAll(showResult, " None", " \"None\"");
 
 			try {
-				JSON.parse(showResult)
+				const tmp = String(JSON.parse(showResult))
+				if (!tmp.includes("{") && !tmp.includes("[")) {
+					jsonvalid = false
+				}
 			} catch (e) {
 				jsonvalid = false
 			}
@@ -637,7 +640,10 @@ const Workflows = (props) => {
 			showResult = replaceAll(showResult, " None", " \"None\"");
 
 			try {
-				JSON.parse(showResult)
+				const tmp = JSON.parse(showResult)
+				if (!tmp.includes("{") && !tmp.includes("[")) {
+					jsonvalid = false
+				}
 			} catch (e) {
 				jsonvalid = false
 			}
@@ -657,6 +663,9 @@ const Workflows = (props) => {
 		<div>
 			ID: {selectedExecution.execution_id}
 		</div>
+		<div>
+			<b>Last node:</b> {selectedExecution.workflow.actions.find(data => data.id === selectedExecution.last_node).actions[0].label}
+		</div>
 		*/
 		if (Object.getOwnPropertyNames(selectedExecution).length > 0 && selectedExecution.workflow.actions !== null) {
 			return (
@@ -670,12 +679,11 @@ const Workflows = (props) => {
 					<div>
 						<b>Finished:</b> {endtime.toISOString()}
 					</div>
-					<div>
-						<b>Last node:</b> {selectedExecution.last_node}
-					</div>
+					{/*
 					<div>
 						<b>Last Result:</b> {lastresult}
 					</div>
+					*/}
 					<div style={{marginTop: 10}}>
 						{arg}
 					</div>
@@ -974,7 +982,7 @@ const Workflows = (props) => {
 				</div>
 				<div>
 					<p>
-						<b>Shuffle</b> is a flexible, easy to use, automation platform allowing users to integrate their services and devices freely. It's made to significantly reduce the amount of manual labor, and is focused on security applications. <Link to="/docs/about" style={{textDecoration: "none", color: "#f85a3e"}}>Click here to learn more.</Link>
+						<b>Shuffle</b> is a flexible, easy to use, automation platform allowing users to integrate their services and devices freely. It's made to significantly reduce the amount of manual labor, and is focused on security applications. <a href="/docs/about" style={{textDecoration: "none", color: "#f85a3e"}}>Click here to learn more.</a>
 					</p>
 				</div>
 				<div>

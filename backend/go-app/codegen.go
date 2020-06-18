@@ -339,7 +339,7 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 			bodyAddin = ", data=body"
 
 			// FIXME: Does JSON data work?
-			bodyFormatter = `body = " ".join(body.strip().split())`
+			bodyFormatter = `body = " ".join(body.strip().split()).encode("utf-8")`
 		}
 	}
 
@@ -499,7 +499,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 				Description: "The apikey to use",
 				Multiline:   false,
 				Required:    true,
-				Example:     "The API key to use. Space = skip",
+				Example:     "**********",
 				Schema: SchemaDefinition{
 					Type: "string",
 				},
@@ -525,7 +525,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 				Description: "The password to use",
 				Multiline:   false,
 				Required:    true,
-				Example:     "The password to use",
+				Example:     "***********",
 				Schema: SchemaDefinition{
 					Type: "string",
 				},

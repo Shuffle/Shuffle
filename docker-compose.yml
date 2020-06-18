@@ -31,8 +31,6 @@ services:
       - DATASTORE_EMULATOR_HOST=shuffle-database:8000
       - APP_DOWNLOAD_LOCATION=${APP_DOWNLOAD_LOCATION}
       - APP_HOTLOAD_FOLDER=/shuffle-apps
-      - https_proxy=http://server:443
-      - http_proxy=http://server:443
     restart: unless-stopped
     depends_on:
       - database
