@@ -1012,30 +1012,39 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 	// Initialized without functions = adding a hello world node.
 	if len(newActions) == 0 {
 		log.Printf("APPENDING NEW APP FOR NEW WORKFLOW")
-		nodeId := "40447f30-fa44-4a4f-a133-4ee710368737"
-		workflow.Start = nodeId
-		newActions = append(newActions, Action{
-			Label:       "Start node",
-			Name:        "hello_world",
-			AppName:     "Testing",
-			Environment: "Shuffle",
-			Parameters:  []WorkflowAppActionParameter{},
-			Position: struct {
-				X float64 "json:\"x\" datastore:\"x\""
-				Y float64 "json:\"y\" datastore:\"y\""
-			}{X: 449.5, Y: 446},
-			Priority:    0,
-			AppVersion:  "1.0.0",
-			AppID:       "c567fc10-9c15-403e-b72c-6550e9e76bc8",
-			Errors:      []string{},
-			ID:          nodeId,
-			IsValid:     true,
-			IsStartNode: true,
-			Sharing:     true,
-			PrivateID:   "",
-			SmallImage:  "",
-			LargeImage:  "data:image/png;base64,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",
-		})
+
+		workflowapps, err := getAllWorkflowApps(ctx)
+		if err == nil {
+			for _, item := range workflowapps {
+				if item.Name == "Testing" && item.AppVersion == "1.0.0" {
+					nodeId := "40447f30-fa44-4a4f-a133-4ee710368737"
+					workflow.Start = nodeId
+					newActions = append(newActions, Action{
+						Label:       "Start node",
+						Name:        "hello_world",
+						Environment: "Shuffle",
+						Parameters:  []WorkflowAppActionParameter{},
+						Position: struct {
+							X float64 "json:\"x\" datastore:\"x\""
+							Y float64 "json:\"y\" datastore:\"y\""
+						}{X: 449.5, Y: 446},
+						Priority:    0,
+						Errors:      []string{},
+						ID:          nodeId,
+						IsValid:     true,
+						IsStartNode: true,
+						Sharing:     true,
+						PrivateID:   "",
+						SmallImage:  "",
+						AppName:     item.Name,
+						AppVersion:  item.AppVersion,
+						AppID:       item.ID,
+						LargeImage:  item.LargeImage,
+					})
+					break
+				}
+			}
+		}
 	} else {
 		log.Printf("Has actions already?")
 	}
