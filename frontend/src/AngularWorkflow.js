@@ -912,10 +912,16 @@ const AngularWorkflow = (props) => {
 				return
 			}
 
+			// Remove bad startnode
+			const startnode_exists = false
 			for (var key in workflow.actions) {
 				const action = workflow.actions[key]
-				console.log("ACTION: ", action)
+				if (action.isStartNode && workflow.start !== action.id) {
+					action.isStartNode = false
+				}
 			}
+
+			setWorkflow(workflow)
 		}
 	}
 
