@@ -43,7 +43,7 @@ const Admin = (props) => {
 		console.log("INPUT: ", data)
 
 		// Just use this one?
-		const url = globalUrl+'/api/v1/workflows/'+data["workflow_id datastore:"]+"/schedule/"+data.id
+		const url = globalUrl+'/api/v1/workflows/'+data["workflow_id"]+"/schedule/"+data.id
 		console.log("URL: ", url)
 		fetch(url, {
 			method: 'DELETE',
@@ -54,6 +54,7 @@ const Admin = (props) => {
 		})
 		.then(response =>
 			response.json().then(responseJson => {
+				console.log("RESP: ", responseJson)
 				if (responseJson["success"] === false) {
 					alert.error("Failed stopping schedule")
 				} else {

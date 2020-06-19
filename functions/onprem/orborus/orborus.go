@@ -36,7 +36,8 @@ var orgId = os.Getenv("ORG_ID")
 var sleepTime = 3
 
 // Timeout if somethinc rashes
-var workerTimeout = 600
+//var workerTimeout = 600
+var workerTimeout = 300
 
 type ExecutionRequestWrapper struct {
 	Data []ExecutionRequest `json:"data"`
@@ -52,7 +53,7 @@ type ExecutionRequest struct {
 }
 
 // Deploys the internal worker whenever something happens
-func deployWorker(cli *dockerclient.Client, image string, identifier string, env []string) error {
+func deployWorker(cli *dockerclient.Client, image string, identifier string, env []string) {
 	// Binds is the actual "-v" volume.
 	hostConfig := &container.HostConfig{
 		LogConfig: container.LogConfig{
@@ -101,16 +102,40 @@ func deployWorker(cli *dockerclient.Client, image string, identifier string, env
 
 	if err != nil {
 		log.Println(err)
-		return err
+		return
 	}
 
 	err = cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
 	if err != nil {
 		log.Printf("Failed to start container in environment %s: %s", environment, err)
+		return
+
+		//stats, err := cli.ContainerInspect(context.Background(), containerName)
+		//if err != nil {
+		//	log.Printf("Failed checking worker %s", containerName)
+		//	return
+		//}
+
+		//containerStatus := stats.ContainerJSONBase.State.Status
+		//if containerStatus != "running" {
+		//	log.Printf("Status of %s is %s. Should be running. Will reset", containerName, containerStatus)
+		//	err = stopWorker(containerName)
+		//	if err != nil {
+		//		log.Printf("Failed stopping worker %s", execution.ExecutionId)
+		//		return
+		//	}
+
+		//	err = deployWorker(cli, workerImage, containerName, env)
+		//	if err != nil {
+		//		log.Printf("Failed executing worker %s in state %s", execution.ExecutionId, containerStatus)
+		//		return
+		//	}
+		//}
 	} else {
 		log.Printf("Container %s was created under environment %s", cont.ID, environment)
 	}
-	return nil
+
+	return
 }
 
 func stopWorker(containername string) error {
@@ -169,7 +194,7 @@ func initializeImages(dockercli *dockerclient.Client) {
 
 // Initial loop etc
 func main() {
-	zombiecheck()
+	go zombiecheck()
 	log.Println("Setting up execution environment")
 
 	//FIXME
@@ -236,7 +261,7 @@ func main() {
 			log.Printf("Failed making request: %s", err)
 			zombiecounter += 1
 			if zombiecounter*sleepTime > workerTimeout {
-				zombiecheck()
+				go zombiecheck()
 				zombiecounter = 0
 			}
 			time.Sleep(time.Duration(sleepTime) * time.Second)
@@ -257,7 +282,7 @@ func main() {
 			log.Printf("Failed reading body: %s", err)
 			zombiecounter += 1
 			if zombiecounter*sleepTime > workerTimeout {
-				zombiecheck()
+				go zombiecheck()
 				zombiecounter = 0
 			}
 			time.Sleep(time.Duration(sleepTime) * time.Second)
@@ -271,7 +296,7 @@ func main() {
 			sleepTime = 10
 			zombiecounter += 1
 			if zombiecounter*sleepTime > workerTimeout {
-				zombiecheck()
+				go zombiecheck()
 				zombiecounter = 0
 			}
 			time.Sleep(time.Duration(sleepTime) * time.Second)
@@ -286,7 +311,7 @@ func main() {
 		if len(executionRequests.Data) == 0 {
 			zombiecounter += 1
 			if zombiecounter*sleepTime > workerTimeout {
-				zombiecheck()
+				go zombiecheck()
 				zombiecounter = 0
 			}
 			time.Sleep(time.Duration(sleepTime) * time.Second)
@@ -322,34 +347,9 @@ func main() {
 				env = append(env, fmt.Sprintf("DOCKER_API_VERSION=%s", dockerApiVersion))
 			}
 
-			err = deployWorker(dockercli, workerImage, containerName, env)
-			if err != nil {
-				stats, err := dockercli.ContainerInspect(context.Background(), containerName)
-				if err != nil {
-					log.Printf("Failed checking worker %s", execution.ExecutionId)
-					continue
-				}
+			go deployWorker(dockercli, workerImage, containerName, env)
 
-				containerStatus := stats.ContainerJSONBase.State.Status
-				if containerStatus != "running" {
-					log.Printf("Status of %s is %s. Should be running. Will reset", containerName, containerStatus)
-					err = stopWorker(containerName)
-					if err != nil {
-						log.Printf("Failed stopping worker %s", execution.ExecutionId)
-						continue
-					}
-
-					err = deployWorker(dockercli, workerImage, containerName, env)
-					if err != nil {
-						log.Printf("Failed executing worker %s in state %s", execution.ExecutionId, containerStatus)
-					}
-				} else {
-					// Should basically never hit here rofl
-					log.Printf("ERROR: I HAVE NO IDEA WHAT WENT WRONG. CHECK %s", containerName)
-				}
-			}
-
-			log.Printf("%s is deployed and to being removed from queue.", execution.ExecutionId)
+			log.Printf("%s is deployed and to be removed from queue.", execution.ExecutionId)
 			zombiecounter += 1
 			toBeRemoved.Data = append(toBeRemoved.Data, execution)
 		}
@@ -427,34 +427,54 @@ func zombiecheck() error {
 		All: true,
 	})
 
+	containerNames := map[string]string{}
+
 	stopContainers := []string{}
 	removeContainers := []string{}
 	for _, container := range containers {
+
+		// Skip random containers. Only handle things related to Shuffle.
+		if !strings.Contains(container.Image, baseimagename) {
+			shuffleFound := false
+			for _, item := range container.Labels {
+				if item == "shuffle" {
+					shuffleFound = true
+					break
+				}
+			}
+
+			// Check image name
+			if !shuffleFound {
+				continue
+			}
+		}
+
 		for _, name := range container.Names {
 			// FIXME - add name_version_uid_uid regex check as well
-			if !strings.HasPrefix(name, "/worker") {
+			if strings.HasPrefix(name, "/shuffle") {
 				continue
 			}
 
 			if container.State != "running" {
 				removeContainers = append(removeContainers, container.ID)
+				containerNames[container.ID] = name
 			}
 
 			// stopcontainer & removecontainer
 			currenttime := time.Now().Unix()
+			//log.Printf("Time: %d - %d", currenttime-container.Created, int64(workerTimeout))
 			if container.State == "running" && currenttime-container.Created > int64(workerTimeout) {
 				stopContainers = append(stopContainers, container.ID)
+				containerNames[container.ID] = name
 			}
 		}
 	}
 
 	// FIXME - add killing of apps with same execution ID too
 	for _, containername := range stopContainers {
-		if err := dockercli.ContainerStop(ctx, containername, nil); err != nil {
-			log.Printf("Unable to stop container: %s", err)
-		} else {
-			log.Printf("Stopped container %s", containername)
-		}
+		log.Printf("Stopping and removing container %s", containerNames[containername])
+		go dockercli.ContainerStop(ctx, containername, nil)
+		removeContainers = append(removeContainers, containername)
 	}
 
 	removeOptions := types.ContainerRemoveOptions{
@@ -463,11 +483,7 @@ func zombiecheck() error {
 	}
 
 	for _, containername := range removeContainers {
-		if err := dockercli.ContainerRemove(ctx, containername, removeOptions); err != nil {
-			log.Printf("Unable to remove container: %s", err)
-		} else {
-			log.Printf("Removed container %s", containername)
-		}
+		go dockercli.ContainerRemove(ctx, containername, removeOptions)
 	}
 
 	return nil

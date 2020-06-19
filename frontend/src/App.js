@@ -90,13 +90,11 @@ const App = (message, props) => {
   	})
     .then(response => response.json())
     .then(responseJson => {
-			console.log(responseJson)
       if (responseJson.success === true) {
 				setUserData(responseJson)
 				setIsLoggedIn(true)
 
 				// Updating cookie every request
-				console.log("COOKIES: ",  cookies)
 				for (var key in responseJson["cookies"]) {
 					setCookie(responseJson["cookies"][key].key, responseJson["cookies"][key].value, {path: "/"})
 				}

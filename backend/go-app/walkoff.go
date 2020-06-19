@@ -138,8 +138,7 @@ type WorkflowAppAction struct {
 		ID          string `json:"id" datastore:"id"`
 		Name        string `json:"name" datastore:"name"`
 		Value       string `json:"value" datastore:"value"`
-	} `json:"execution_variables" datastore:"execution_variables"`
-
+	} `json:"execution_variable" datastore:"execution_variables"`
 	Returns struct {
 		Description string           `json:"description" datastore:"returns" yaml:"description,omitempty"`
 		ID          string           `json:"id" datastore:"id" yaml:"id,omitempty"`
@@ -149,41 +148,53 @@ type WorkflowAppAction struct {
 
 // FIXME: Generate a callback authentication ID?
 type WorkflowExecution struct {
-	Type              string         `json:"type" datastore:"type"`
-	Status            string         `json:"status" datastore:"status"`
-	Start             string         `json:"start" datastore:"start"`
-	ExecutionArgument string         `json:"execution_argument" datastore:"execution_argument"`
-	ExecutionId       string         `json:"execution_id" datastore:"execution_id"`
-	WorkflowId        string         `json:"workflow_id" datastore:"workflow_id"`
-	LastNode          string         `json:"last_node" datastore:"last_node"`
-	Authorization     string         `json:"authorization" datastore:"authorization"`
-	Result            string         `json:"result" datastore:"result,noindex"`
-	StartedAt         int64          `json:"started_at" datastore:"started_at"`
-	CompletedAt       int64          `json:"completed_at" datastore:"completed_at"`
-	ProjectId         string         `json:"project_id" datastore:"project_id"`
-	Locations         []string       `json:"locations" datastore:"locations"`
-	Workflow          Workflow       `json:"workflow" datastore:"workflow,noindex"`
-	Results           []ActionResult `json:"results" datastore:"results,noindex"`
+	Type               string         `json:"type" datastore:"type"`
+	Status             string         `json:"status" datastore:"status"`
+	Start              string         `json:"start" datastore:"start"`
+	ExecutionArgument  string         `json:"execution_argument" datastore:"execution_argument"`
+	ExecutionId        string         `json:"execution_id" datastore:"execution_id"`
+	WorkflowId         string         `json:"workflow_id" datastore:"workflow_id"`
+	LastNode           string         `json:"last_node" datastore:"last_node"`
+	Authorization      string         `json:"authorization" datastore:"authorization"`
+	Result             string         `json:"result" datastore:"result,noindex"`
+	StartedAt          int64          `json:"started_at" datastore:"started_at"`
+	CompletedAt        int64          `json:"completed_at" datastore:"completed_at"`
+	ProjectId          string         `json:"project_id" datastore:"project_id"`
+	Locations          []string       `json:"locations" datastore:"locations"`
+	Workflow           Workflow       `json:"workflow" datastore:"workflow,noindex"`
+	Results            []ActionResult `json:"results" datastore:"results,noindex"`
+	ExecutionVariables []struct {
+		Description string `json:"description" datastore:"description"`
+		ID          string `json:"id" datastore:"id"`
+		Name        string `json:"name" datastore:"name"`
+		Value       string `json:"value" datastore:"value"`
+	} `json:"execution_variables,omitempty" datastore:"execution_variables,omitempty"`
 }
 
 // Added environment for location to execute
 type Action struct {
-	AppName     string                       `json:"app_name" datastore:"app_name"`
-	AppVersion  string                       `json:"app_version" datastore:"app_version"`
-	AppID       string                       `json:"app_id" datastore:"app_id"`
-	Errors      []string                     `json:"errors" datastore:"errors"`
-	ID          string                       `json:"id" datastore:"id"`
-	IsValid     bool                         `json:"is_valid" datastore:"is_valid"`
-	IsStartNode bool                         `json:"isStartNode" datastore:"isStartNode"`
-	Sharing     bool                         `json:"sharing" datastore:"sharing"`
-	PrivateID   string                       `json:"private_id" datastore:"private_id"`
-	Label       string                       `json:"label" datastore:"label"`
-	SmallImage  string                       `json:"small_image" datastore:"small_image,noindex" required:false yaml:"small_image"`
-	LargeImage  string                       `json:"large_image" datastore:"large_image,noindex" yaml:"large_image" required:false`
-	Environment string                       `json:"environment" datastore:"environment"`
-	Name        string                       `json:"name" datastore:"name"`
-	Parameters  []WorkflowAppActionParameter `json:"parameters" datastore: "parameters,noindex"`
-	Position    struct {
+	AppName           string                       `json:"app_name" datastore:"app_name"`
+	AppVersion        string                       `json:"app_version" datastore:"app_version"`
+	AppID             string                       `json:"app_id" datastore:"app_id"`
+	Errors            []string                     `json:"errors" datastore:"errors"`
+	ID                string                       `json:"id" datastore:"id"`
+	IsValid           bool                         `json:"is_valid" datastore:"is_valid"`
+	IsStartNode       bool                         `json:"isStartNode" datastore:"isStartNode"`
+	Sharing           bool                         `json:"sharing" datastore:"sharing"`
+	PrivateID         string                       `json:"private_id" datastore:"private_id"`
+	Label             string                       `json:"label" datastore:"label"`
+	SmallImage        string                       `json:"small_image" datastore:"small_image,noindex" required:false yaml:"small_image"`
+	LargeImage        string                       `json:"large_image" datastore:"large_image,noindex" yaml:"large_image" required:false`
+	Environment       string                       `json:"environment" datastore:"environment"`
+	Name              string                       `json:"name" datastore:"name"`
+	Parameters        []WorkflowAppActionParameter `json:"parameters" datastore: "parameters,noindex"`
+	ExecutionVariable struct {
+		Description string `json:"description" datastore:"description"`
+		ID          string `json:"id" datastore:"id"`
+		Name        string `json:"name" datastore:"name"`
+		Value       string `json:"value" datastore:"value"`
+	} `json:"execution_variable,omitempty" datastore:"execution_variable,omitempty"`
+	Position struct {
 		X float64 `json:"x" datastore:"x"`
 		Y float64 `json:"y" datastore:"y"`
 	} `json:"position"`
@@ -265,7 +276,7 @@ type Workflow struct {
 		ID          string `json:"id" datastore:"id"`
 		Name        string `json:"name" datastore:"name"`
 		Value       string `json:"value" datastore:"value"`
-	} `json:"execution_variables" datastore:"execution_variables"`
+	} `json:"execution_variables,omitempty" datastore:"execution_variables,omitempty"`
 }
 
 type ActionResult struct {
@@ -796,13 +807,20 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		if found {
-			// FIXME - this is broken, but why
-			//if workflowExecution.Results[outerindex].Status == actionResult.Status {
-			//	log.Printf("Status of %s is already %s", actionResult.Action.ID, actionResult.Status)
-			//	resp.WriteHeader(401)
-			//	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Status of %s is already %s"}`, actionResult.Action.ID, actionResult.Status)))
-			//	return
-			//}
+			// If result exists and execution variable exists, update execution value
+			//log.Printf("Exec var backend: %s", workflowExecution.Results[outerindex].Action.ExecutionVariable.Name)
+			actionVarName := workflowExecution.Results[outerindex].Action.ExecutionVariable.Name
+			// Finds potential execution arguments
+			if len(actionVarName) > 0 {
+				log.Printf("EXECUTION VARIABLE LOCAL: %s", actionVarName)
+				for index, execvar := range workflowExecution.ExecutionVariables {
+					if execvar.Name == actionVarName {
+						// Sets the value for the variable
+						workflowExecution.ExecutionVariables[index].Value = actionResult.Result
+						break
+					}
+				}
+			}
 
 			log.Printf("Updating %s in %s from %s to %s", actionResult.Action.ID, workflowExecution.ExecutionId, workflowExecution.Results[outerindex].Status, actionResult.Status)
 			workflowExecution.Results[outerindex] = actionResult
@@ -1013,6 +1031,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 	if len(newActions) == 0 {
 		log.Printf("APPENDING NEW APP FOR NEW WORKFLOW")
 
+		// Adds the Testing app if it's a new workflow
 		workflowapps, err := getAllWorkflowApps(ctx)
 		if err == nil {
 			for _, item := range workflowapps {
@@ -1046,7 +1065,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 			}
 		}
 	} else {
-		log.Printf("Has actions already?")
+		log.Printf("Has %d actions already", len(newActions))
 	}
 
 	workflow.Actions = newActions
@@ -1411,6 +1430,8 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		reservedApps := []string{
 			"0ca8887e-b4af-4e3e-887c-87e9d3bc3d3e",
 		}
+
+		log.Printf("%s Action execution var: %s", action.Label, action.ExecutionVariable.Name)
 
 		builtin := false
 		for _, id := range reservedApps {
@@ -1935,6 +1956,8 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		// Status for the entire workflow.
 		workflowExecution.Status = "EXECUTING"
 	}
+
+	workflowExecution.ExecutionVariables = workflow.ExecutionVariables
 	// Local authorization for this single workflow used in workers.
 
 	// FIXME: Used for cloud
@@ -2095,7 +2118,6 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 }
 
 func stopSchedule(resp http.ResponseWriter, request *http.Request) {
-	log.Printf("Delete?")
 	cors := handleCors(resp, request)
 	if cors {
 		return
@@ -2262,20 +2284,19 @@ func stopScheduleGCP(resp http.ResponseWriter, request *http.Request) {
 
 func deleteSchedule(ctx context.Context, id string) error {
 	log.Printf("Should stop schedule %s!", id)
-	//newscheduler "github.com/carlescere/scheduler"
-	log.Printf("Schedules: %#v", scheduledJobs)
-	if value, exists := scheduledJobs[id]; exists {
-		log.Printf("STOP THIS ONE: %s", value)
-		// Looks like this does the trick? Hurr
-		value.Lock()
-		err := DeleteKey(ctx, "schedules", id)
-		if err != nil {
-			log.Printf("Failed to delete schedule: %s", err)
-			return err
-		}
+	err := DeleteKey(ctx, "schedules", id)
+	if err != nil {
+		log.Printf("Failed to delete schedule: %s", err)
+		return err
 	} else {
-		// FIXME - allow it to kind of stop anyway?
-		return errors.New("Can't find the schedule.")
+		if value, exists := scheduledJobs[id]; exists {
+			log.Printf("STOP THIS ONE: %s", value)
+			// Looks like this does the trick? Hurr
+			value.Lock()
+		} else {
+			// FIXME - allow it to kind of stop anyway?
+			return errors.New("Can't find the schedule.")
+		}
 	}
 
 	return nil
@@ -2717,7 +2738,7 @@ func deleteUser(resp http.ResponseWriter, request *http.Request) {
 	var users []User
 	_, err := dbclient.GetAll(ctx, q, &users)
 	if err != nil {
-		log.Printf("Error getting users apikey: %s", err)
+		log.Printf("Error getting users apikey (deleteuser): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "Failed getting users for verification"}`))
 		return

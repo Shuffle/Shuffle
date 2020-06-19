@@ -2148,7 +2148,7 @@ func getApikey(ctx context.Context, apikey string) (User, error) {
 	var users []User
 	_, err := dbclient.GetAll(ctx, q, &users)
 	if err != nil {
-		log.Printf("Error getting users apikey: %s", err)
+		log.Printf("Error getting users apikey (getapikey): %s", err)
 		return User{}, err
 	}
 
@@ -5969,7 +5969,7 @@ func runInit(ctx context.Context) {
 	var users []User
 	_, err = dbclient.GetAll(ctx, q, &users)
 	if err != nil {
-		log.Printf("Error getting users apikey: %s", err)
+		log.Printf("Error getting users apikey (runinit): %s", err)
 	} else {
 		if len(users) == 0 {
 			log.Printf("No active users found - setting ALL to active")
@@ -6030,6 +6030,7 @@ func runInit(ctx context.Context) {
 	} else {
 		log.Printf("Setting up %d schedule(s)", len(schedules))
 		for _, schedule := range schedules {
+			//log.Printf("Schedule: %#v", schedule)
 			job := func() {
 				request := &http.Request{
 					Method: "POST",

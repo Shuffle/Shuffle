@@ -327,13 +327,36 @@ class AppBase:
                     
                     print("BEFORE VARIABLES!")
                     if len(baseresult) == 0:
-                        print("Variables: %s" % execution_data["workflow"]["workflow_variables"])
-                        for variable in execution_data["workflow"]["workflow_variables"]:
-                            variablename = variable["name"].replace(" ", "_", -1).lower()
+                        try:
+                            print("WF Variables: %s" % execution_data["workflow"]["workflow_variables"])
+                            for variable in execution_data["workflow"]["workflow_variables"]:
+                                variablename = variable["name"].replace(" ", "_", -1).lower()
 
-                            if variablename.lower() == actionname_lower:
-                                baseresult = variable["value"]
-                                break
+                                if variablename.lower() == actionname_lower:
+                                    baseresult = variable["value"]
+                                    break
+                        except KeyError as e:
+                            print("KeyError wf variables: %s" % e)
+                            pass
+                        except TypeError as e:
+                            print("TypeError wf variables: %s" % e)
+                            pass
+
+                    print("BEFORE EXECUTION VAR")
+                    if len(baseresult) == 0:
+                        try:
+                            print("Execution Variables: %s" % execution_data["execution_variables"])
+                            for variable in execution_data["execution_variables"]:
+                                variablename = variable["name"].replace(" ", "_", -1).lower()
+                                if variablename.lower() == actionname_lower:
+                                    baseresult = variable["value"]
+                                    break
+                        except KeyError as e:
+                            print("KeyError exec variables: %s" % e)
+                            pass
+                        except TypeError as e:
+                            print("TypeError exec variables: %s" % e)
+                            pass
         
             except KeyError as error:
                 print(f"KeyError in JSON: {error}")
@@ -421,10 +444,33 @@ class AppBase:
 
 
             if parameter["variant"] == "WORKFLOW_VARIABLE":
-                for item in fullexecution["workflow"]["workflow_variables"]:
-                    if parameter["action_field"] == item["name"]:
-                        parameter["value"] = item["value"]
-                        break
+                print("Handling workflow variable")
+                found = False
+                try:
+                    for item in fullexecution["workflow"]["workflow_variables"]:
+                        if parameter["action_field"] == item["name"]:
+                            found = True
+                            parameter["value"] = item["value"]
+                            break
+                except KeyError as e:
+                    print("KeyError WF variable 1: %s" % e)
+                    pass
+                except TypeError as e:
+                    print("TypeError WF variables 1: %s" % e)
+                    pass
+
+                if not found:
+                    try:
+                        for item in fullexecution["execution_variables"]:
+                            if parameter["action_field"] == item["name"]:
+                                parameter["value"] = item["value"]
+                                break
+                    except KeyError as e:
+                        print("KeyError WF variable 2: %s" % e)
+                        pass
+                    except TypeError as e:
+                        print("TypeError WF variables 2: %s" % e)
+                        pass
 
             elif parameter["variant"] == "ACTION_RESULT":
                 # FIXME - calculate value based on action_field and $if prominent
