@@ -59,36 +59,51 @@ type Org struct {
 
 // FIXME: Generate a callback authentication ID?
 type WorkflowExecution struct {
-	Type              string         `json:"type"`
-	Status            string         `json:"status"`
-	ExecutionId       string         `json:"execution_id"`
-	ExecutionArgument string         `json:"execution_argument"`
-	WorkflowId        string         `json:"workflow_id"`
-	LastNode          string         `json:"last_node"`
-	Authorization     string         `json:"authorization"`
-	Result            string         `json:"result"`
-	StartedAt         int64          `json:"started_at"`
-	CompletedAt       int64          `json:"completed_at"`
-	ProjectId         string         `json:"project_id"`
-	Locations         []string       `json:"locations"`
-	Workflow          Workflow       `json:"workflow"`
-	Results           []ActionResult `json:"results"`
+	Type               string         `json:"type"`
+	Status             string         `json:"status"`
+	ExecutionId        string         `json:"execution_id"`
+	ExecutionArgument  string         `json:"execution_argument"`
+	WorkflowId         string         `json:"workflow_id"`
+	LastNode           string         `json:"last_node"`
+	Authorization      string         `json:"authorization"`
+	Result             string         `json:"result"`
+	StartedAt          int64          `json:"started_at"`
+	CompletedAt        int64          `json:"completed_at"`
+	ProjectId          string         `json:"project_id"`
+	Locations          []string       `json:"locations"`
+	Workflow           Workflow       `json:"workflow"`
+	Results            []ActionResult `json:"results"`
+	ExecutionVariables []struct {
+		Description string `json:"description" datastore:"description"`
+		ID          string `json:"id" datastore:"id"`
+		Name        string `json:"name" datastore:"name"`
+		Value       string `json:"value" datastore:"value"`
+	} `json:"execution_variables,omitempty" datastore:"execution_variables,omitempty"`
 }
 
-// Added environment for location to execute
 type Action struct {
-	AppName     string                       `json:"app_name" datastore:"app_name"`
-	AppVersion  string                       `json:"app_version" datastore:"app_version"`
-	AppID       string                       `json:"app_id" datastore:"app_id"`
-	Errors      []string                     `json:"errors" datastore:"errors"`
-	ID          string                       `json:"id" datastore:"id"`
-	IsValid     bool                         `json:"is_valid" datastore:"is_valid"`
-	IsStartNode bool                         `json:"isStartNode" datastore:"isStartNode"`
-	Label       string                       `json:"label" datastore:"label"`
-	Environment string                       `json:"environment" datastore:"environment"`
-	Name        string                       `json:"name" datastore:"name"`
-	Parameters  []WorkflowAppActionParameter `json:"parameters" datastore: "parameters"`
-	Position    struct {
+	AppName           string                       `json:"app_name" datastore:"app_name"`
+	AppVersion        string                       `json:"app_version" datastore:"app_version"`
+	AppID             string                       `json:"app_id" datastore:"app_id"`
+	Errors            []string                     `json:"errors" datastore:"errors"`
+	ID                string                       `json:"id" datastore:"id"`
+	IsValid           bool                         `json:"is_valid" datastore:"is_valid"`
+	IsStartNode       bool                         `json:"isStartNode" datastore:"isStartNode"`
+	Sharing           bool                         `json:"sharing" datastore:"sharing"`
+	PrivateID         string                       `json:"private_id" datastore:"private_id"`
+	Label             string                       `json:"label" datastore:"label"`
+	SmallImage        string                       `json:"small_image" datastore:"small_image,noindex" required:false yaml:"small_image"`
+	LargeImage        string                       `json:"large_image" datastore:"large_image,noindex" yaml:"large_image" required:false`
+	Environment       string                       `json:"environment" datastore:"environment"`
+	Name              string                       `json:"name" datastore:"name"`
+	Parameters        []WorkflowAppActionParameter `json:"parameters" datastore: "parameters,noindex"`
+	ExecutionVariable struct {
+		Description string `json:"description" datastore:"description"`
+		ID          string `json:"id" datastore:"id"`
+		Name        string `json:"name" datastore:"name"`
+		Value       string `json:"value" datastore:"value"`
+	} `json:"execution_variable,omitempty" datastore:"execution_variable,omitempty"`
+	Position struct {
 		X float64 `json:"x" datastore:"x"`
 		Y float64 `json:"y" datastore:"y"`
 	} `json:"position"`
@@ -132,10 +147,10 @@ type Trigger struct {
 }
 
 type Workflow struct {
-	Actions           []Action   `json:"actions" datastore:"actions"`
-	Branches          []Branch   `json:"branches" datastore:"branches"`
-	Triggers          []Trigger  `json:"triggers" datastore:"triggers"`
-	Schedules         []Schedule `json:"schedules" datastore:"schedules"`
+	Actions           []Action   `json:"actions" datastore:"actions,noindex"`
+	Branches          []Branch   `json:"branches" datastore:"branches,noindex"`
+	Triggers          []Trigger  `json:"triggers" datastore:"triggers,noindex"`
+	Schedules         []Schedule `json:"schedules" datastore:"schedules,noindex"`
 	Errors            []string   `json:"errors,omitempty" datastore:"errors"`
 	Tags              []string   `json:"tags,omitempty" datastore:"tags"`
 	ID                string     `json:"id" datastore:"id"`
@@ -153,6 +168,12 @@ type Workflow struct {
 		Name        string `json:"name" datastore:"name"`
 		Value       string `json:"value" datastore:"value"`
 	} `json:"workflow_variables" datastore:"workflow_variables"`
+	ExecutionVariables []struct {
+		Description string `json:"description" datastore:"description"`
+		ID          string `json:"id" datastore:"id"`
+		Name        string `json:"name" datastore:"name"`
+		Value       string `json:"value" datastore:"value"`
+	} `json:"execution_variables,omitempty" datastore:"execution_variables,omitempty"`
 }
 
 type ActionResult struct {
@@ -196,20 +217,39 @@ type WorkflowAppActionParameter struct {
 	} `json:"schema"`
 }
 
+type AuthenticationStore struct {
+	Key   string `json:"key" datastore:"key"`
+	Value string `json:"value" datastore:"value"`
+}
+
 type WorkflowAppAction struct {
-	Description string                       `json:"description" datastore:"description"`
-	ID          string                       `json:"id" datastore:"id"`
-	Name        string                       `json:"name" datastore:"name"`
-	NodeType    string                       `json:"node_type" datastore:"node_type"`
-	Environment string                       `json:"environment" datastore:"environment"`
-	Parameters  []WorkflowAppActionParameter `json:"parameters" datastore: "parameters"`
-	Returns     struct {
-		Description string `json:"description" datastore:"returns"`
+	Description       string                       `json:"description" datastore:"description"`
+	ID                string                       `json:"id" datastore:"id" yaml:"id,omitempty"`
+	Name              string                       `json:"name" datastore:"name"`
+	Label             string                       `json:"label" datastore:"label"`
+	NodeType          string                       `json:"node_type" datastore:"node_type"`
+	Environment       string                       `json:"environment" datastore:"environment"`
+	Sharing           bool                         `json:"sharing" datastore:"sharing"`
+	PrivateID         string                       `json:"private_id" datastore:"private_id"`
+	AppID             string                       `json:"app_id" datastore:"app_id"`
+	Authentication    []AuthenticationStore        `json:"authentication" datastore:"authentication" yaml:"authentication,omitempty"`
+	Tested            bool                         `json:"tested" datastore:"tested" yaml:"tested"`
+	Parameters        []WorkflowAppActionParameter `json:"parameters" datastore: "parameters"`
+	ExecutionVariable struct {
+		Description string `json:"description" datastore:"description"`
 		ID          string `json:"id" datastore:"id"`
-		Schema      struct {
-			Type string `json:"type" datastore:"type"`
-		} `json:"schema" datastore:"schema"`
+		Name        string `json:"name" datastore:"name"`
+		Value       string `json:"value" datastore:"value"`
+	} `json:"execution_variable" datastore:"execution_variables"`
+	Returns struct {
+		Description string           `json:"description" datastore:"returns" yaml:"description,omitempty"`
+		ID          string           `json:"id" datastore:"id" yaml:"id,omitempty"`
+		Schema      SchemaDefinition `json:"schema" datastore:"schema" yaml:"schema"`
 	} `json:"returns" datastore:"returns"`
+}
+
+type SchemaDefinition struct {
+	Type string `json:"type" datastore:"type"`
 }
 
 // removes every container except itself (worker)
@@ -245,9 +285,6 @@ func shutdown(executionId, workflowId string) {
 
 	}
 
-	// FIXME: Add an API call to the backend
-	// fmt.Sprintf("AUTHORIZATION=%s", workflowExecution.Authorization),
-
 	fullUrl := fmt.Sprintf("%s/api/v1/workflows/%s/executions/%s/abort", baseUrl, workflowId, executionId)
 	req, err := http.NewRequest(
 		"GET",
@@ -257,6 +294,12 @@ func shutdown(executionId, workflowId string) {
 
 	if err != nil {
 		log.Println("Failed building request: %s", err)
+	}
+
+	// FIXME: Add an API call to the backend
+	authorization := os.Getenv("AUTHORIZATION")
+	if len(authorization) > 0 {
+		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", authorization))
 	}
 
 	req.Header.Add("Content-Type", "application/json")
@@ -618,7 +661,7 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 			if err != nil {
 				log.Printf("Failed deploying %s from image %s: %s", identifier, image, err)
 				log.Printf("Should send status and exit the entire thing?")
-				//shutdown(workflowExecution.ExecutionId)
+				shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
 			}
 
 			visited = append(visited, action.ID)
