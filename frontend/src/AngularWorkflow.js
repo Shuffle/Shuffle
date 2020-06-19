@@ -1455,7 +1455,7 @@ const AngularWorkflow = (props) => {
 		return (
 			<div style={appViewStyle}>
 				<div style={variableScrollStyle}>
-						<a href="https://shuffler.io/docs/workflows#variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>What are WORKFLOW variables?</a>
+						What are <a href="https://shuffler.io/docs/workflows#variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>WORKFLOW variables?</a>
 					{workflow.workflow_variables === null ? 
 					null : workflow.workflow_variables.map(variable=> {
 						return (
@@ -1519,8 +1519,8 @@ const AngularWorkflow = (props) => {
 						<Button fullWidth style={{margin: "auto", marginTop: "10px",}} color="primary" variant="outlined" onClick={() => setVariablesModalOpen(true)}>New workflow variable</Button> 				
 					</div>
 					<Divider style={{marginBottom: 20, marginTop: 20, height: 1, width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
-						<a href="https://shuffler.io/docs/workflows#execution_variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>What are EXECUTION variables?</a>
-					{workflow.execution_variables === null ? 
+						What are <a href="https://shuffler.io/docs/workflows#execution_variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>EXECUTION variables?</a>
+					{workflow.execution_variables === null || workflow.execution_variables === undefined ? 
 					null : workflow.execution_variables.map(variable=> {
 						return (
 							<div>
@@ -2142,7 +2142,14 @@ const AngularWorkflow = (props) => {
 	// appname & version 
 	// description
 	// ACTION select
+	//
 	const selectedNameChange = (event) => {
+		event.target.value = event.target.value.replace("(", "")
+		event.target.value = event.target.value.replace(")", "")
+		event.target.value = event.target.value.replace("$", "")
+		event.target.value = event.target.value.replace("#", "")
+		event.target.value = event.target.value.replace(".", "")
+		event.target.value = event.target.value.replace(",", "")
 		selectedAction.label = event.target.value
 		setSelectedAction(selectedAction)
 	}

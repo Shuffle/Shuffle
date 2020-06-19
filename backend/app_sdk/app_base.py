@@ -415,7 +415,7 @@ class AppBase:
         def parse_params(action, fullexecution, parameter):
             # Skip if it starts with $?
             jsonparsevalue = "$."
-            match = ".*([$]{1}([a-zA-Z0-9()# _-]+\.?){1,})"
+            match = ".*([$]{1}([a-zA-Z0-9# _-]+\.?){1,})"
 
             # Regex to find all the things
             if parameter["variant"] == "STATIC_VALUE":
@@ -424,6 +424,7 @@ class AppBase:
                 #self.logger.debug(f"\n\nHandle static data with JSON: {data}\n\n")
                 #self.logger.info("STATIC PARSED: %s" % actualitem)
                 if len(actualitem) > 0:
+                    print("ACTUAL: %s", actualitem)
                     for replace in actualitem:
                         try:
                             to_be_replaced = replace[0]
