@@ -5957,12 +5957,14 @@ func handleAppHotload(location string) error {
 // Handles configuration items during Shuffle startup
 func runInit(ctx context.Context) {
 	// Setting stats for backend starts (failure count as well)
+	log.Printf("Starting INIT setup")
 	err := increaseStatisticsField(ctx, "backend_executions", "", 1)
 	if err != nil {
 		log.Printf("Failed increasing local stats: %s", err)
 	}
 
 	// Fix active users etc
+	log.Printf("Reformatting users")
 	q := datastore.NewQuery("Users").Filter("active =", true)
 	var users []User
 	_, err = dbclient.GetAll(ctx, q, &users)
@@ -6006,6 +6008,7 @@ func runInit(ctx context.Context) {
 	}
 
 	// Gets environments and inits if it doesn't exist
+	log.Printf("Setting up environments")
 	count, err := getEnvironmentCount()
 	if count == 0 && err == nil {
 		item := Environment{
@@ -6020,6 +6023,7 @@ func runInit(ctx context.Context) {
 	}
 
 	// Gets schedules and starts them
+	log.Printf("Relaunching schedules")
 	schedules, err := getAllSchedules(ctx)
 	if err != nil {
 		log.Printf("Failed getting schedules during service init: %s", err)
@@ -6049,6 +6053,7 @@ func runInit(ctx context.Context) {
 	}
 
 	// Getting apps to see if we should initialize a test
+	log.Printf("Getting remote workflow apps")
 	workflowapps, err := getAllWorkflowApps(ctx)
 	if err != nil {
 		log.Printf("Failed getting apps: %s", err)
@@ -6136,6 +6141,7 @@ func init() {
 	if err != nil {
 		panic(fmt.Sprintf("DBclient error during init: %s", err))
 	}
+	log.Printf("Finished Shuffle database init")
 
 	go runInit(ctx)
 

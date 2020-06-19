@@ -434,9 +434,7 @@ class AppBase:
                 tmpvalue = ""
                 self.logger.info("ACTION FIELD: %s" % parameter["action_field"])
 
-                #"$%s%s" % 
                 fullname = "$"
-
                 if parameter["action_field"] == "Execution Argument":
                     tmpvalue = fullexecution["execution_argument"]
                     fullname += "exec"
@@ -445,8 +443,8 @@ class AppBase:
 
                 if parameter["value"].startswith(jsonparsevalue):
                     fullname += parameter["value"][2:]
-                else:
-                    fullname = "$%s" % parameter["action_field"]
+                #else:
+                #    fullname = "$%s" % parameter["action_field"]
 
                 self.logger.info("Fullname: %s" % fullname)
                 actualitem = re.findall(match, fullname, re.MULTILINE)
