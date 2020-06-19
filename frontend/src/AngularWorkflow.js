@@ -20,6 +20,7 @@ import Divider from '@material-ui/core/Divider';
 import Dialog from '@material-ui/core/Dialog';
 import DialogActions from '@material-ui/core/DialogActions';
 import DialogTitle from '@material-ui/core/DialogTitle';
+import InputLabel from '@material-ui/core/InputLabel';
 import DialogContent from '@material-ui/core/DialogContent';
 import FormControl from '@material-ui/core/FormControl';
 import IconButton from '@material-ui/core/IconButton';
@@ -906,6 +907,15 @@ const AngularWorkflow = (props) => {
 			//setStartNode(node.data('id'))
 			workflow.start = node.data('id')
 			setWorkflow(workflow)
+		} else {
+			if (workflow.actions === null) {
+				return
+			}
+
+			for (var key in workflow.actions) {
+				const action = workflow.actions[key]
+				console.log("ACTION: ", action)
+			}
 		}
 	}
 
@@ -2636,9 +2646,9 @@ const AngularWorkflow = (props) => {
 				: null}
 			{workflow.execution_variables !== undefined && workflow.execution_variables !== null && workflow.execution_variables.length > 0 ?
 				<div style={{marginTop: "20px"}}>
-					Execution variables	
+					Set execution variable (optional) 
 					<Select
-						value={selectedAction.execution_variable !== undefined ? selectedAction.execution_variable.name : {"name": "Select a variable"}}
+						value={selectedAction.execution_variable !== undefined ? selectedAction.execution_variable.name : "No selection"}
 						PaperProps={{
 							style: {
 								backgroundColor: inputColor,
@@ -2651,22 +2661,27 @@ const AngularWorkflow = (props) => {
 						}}
 						fullWidth
 						onChange={(e) => {
-							console.log("Variable", e.target.value)
-							//selectedAction.
-							const value = workflow.execution_variables.find(a => a.name === e.target.value.name)
-							console.log("FOUND: ", value)
-							selectedAction.execution_variable = value
+							if (e.target.value === "No selection") {
+								selectedAction.execution_variable = {"name": "No selection"}
+							} else {
+								const value = workflow.execution_variables.find(a => a.name === e.target.value)
+								console.log("FOUND: ", value)
+								selectedAction.execution_variable = value
+							}
 							setSelectedAction(selectedAction)
-							//setSelectedActionEnvironment(env) 
-							//selectedAction.environment = env.Name
+							setUpdate("actionname "+e.target.value)
 						}}
 						style={{backgroundColor: inputColor, color: "white", height: "50px"}}
 					>
-						{workflow.execution_variables.map(data => (
-							<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
-								{data.name}
+							<MenuItem style={{backgroundColor: inputColor, color: "white"}} value="No selection">
+								<em>No selection</em>
 							</MenuItem>
-						))}
+							<Divider />
+							{workflow.execution_variables.map(data => (
+								<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data.name}>
+									{data.name}
+								</MenuItem>
+							))}
 					</Select>
 				</div>
 				: null}
