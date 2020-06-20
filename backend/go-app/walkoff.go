@@ -250,21 +250,24 @@ type Schedule struct {
 }
 
 type Workflow struct {
-	Actions           []Action   `json:"actions" datastore:"actions,noindex"`
-	Branches          []Branch   `json:"branches" datastore:"branches,noindex"`
-	Triggers          []Trigger  `json:"triggers" datastore:"triggers,noindex"`
-	Schedules         []Schedule `json:"schedules" datastore:"schedules,noindex"`
-	Errors            []string   `json:"errors,omitempty" datastore:"errors"`
-	Tags              []string   `json:"tags,omitempty" datastore:"tags"`
-	ID                string     `json:"id" datastore:"id"`
-	IsValid           bool       `json:"is_valid" datastore:"is_valid"`
-	Name              string     `json:"name" datastore:"name"`
-	Description       string     `json:"description" datastore:"description"`
-	Start             string     `json:"start" datastore:"start"`
-	Owner             string     `json:"owner" datastore:"owner"`
-	Sharing           string     `json:"sharing" datastore:"sharing"`
-	Org               []Org      `json:"org,omitempty" datastore:"org"`
-	ExecutingOrg      Org        `json:"execution_org,omitempty" datastore:"execution_org"`
+	Actions       []Action   `json:"actions" datastore:"actions,noindex"`
+	Branches      []Branch   `json:"branches" datastore:"branches,noindex"`
+	Triggers      []Trigger  `json:"triggers" datastore:"triggers,noindex"`
+	Schedules     []Schedule `json:"schedules" datastore:"schedules,noindex"`
+	Configuration struct {
+		ExitOnError bool `json:"exit_on_error" datastore:"exit_on_error"`
+	} `json:"configuration,omitempty" datastore:"configuration"`
+	Errors            []string `json:"errors,omitempty" datastore:"errors"`
+	Tags              []string `json:"tags,omitempty" datastore:"tags"`
+	ID                string   `json:"id" datastore:"id"`
+	IsValid           bool     `json:"is_valid" datastore:"is_valid"`
+	Name              string   `json:"name" datastore:"name"`
+	Description       string   `json:"description" datastore:"description"`
+	Start             string   `json:"start" datastore:"start"`
+	Owner             string   `json:"owner" datastore:"owner"`
+	Sharing           string   `json:"sharing" datastore:"sharing"`
+	Org               []Org    `json:"org,omitempty" datastore:"org"`
+	ExecutingOrg      Org      `json:"execution_org,omitempty" datastore:"execution_org"`
 	WorkflowVariables []struct {
 		Description string `json:"description" datastore:"description"`
 		ID          string `json:"id" datastore:"id"`
@@ -276,7 +279,7 @@ type Workflow struct {
 		ID          string `json:"id" datastore:"id"`
 		Name        string `json:"name" datastore:"name"`
 		Value       string `json:"value" datastore:"value"`
-	} `json:"execution_variables,omitempty" datastore:"execution_variables,omitempty"`
+	} `json:"execution_variables,omitempty" datastore:"execution_variables"`
 }
 
 type ActionResult struct {
@@ -675,6 +678,24 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 
 }
 
+// Finds the child nodes of a node in execution and returns them
+// Used if e.g. a node in a branch is exited, and all children have to be stopped
+func findChildNodes(workflowExecution WorkflowExecution, nodeId string) []string {
+	log.Printf("\nNODE TO FIX: %s\n\n", nodeId)
+	allChildren := []string{nodeId}
+
+	// 1. Find children of this specific node
+	// 2. Find the children of those nodes etc.
+	for _, branch := range workflowExecution.Workflow.Branches {
+		if branch.SourceID == nodeId {
+			log.Printf("Children: %s", branch.DestinationID)
+			allChildren = append(allChildren, branch.DestinationID)
+		}
+	}
+
+	return allChildren
+}
+
 func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -732,20 +753,65 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - remove comment
 	if workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
 
-		log.Printf("Workflowexecution is already aborted. No further action can be taken")
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflowexecution is aborted because of %s with result %s and status %s"}`, workflowExecution.LastNode, workflowExecution.Result, workflowExecution.Status)))
-		return
+		if workflowExecution.Workflow.Configuration.ExitOnError {
+			log.Printf("Workflowexecution already has status %s. No further action can be taken", workflowExecution.Status)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflowexecution is aborted because of %s with result %s and status %s"}`, workflowExecution.LastNode, workflowExecution.Result, workflowExecution.Status)))
+			return
+		} else {
+			log.Printf("Continuing even though it's aborted.")
+		}
 	}
 
 	if actionResult.Status == "ABORTED" || actionResult.Status == "FAILURE" {
 		log.Printf("Actionresult is %s. Should set workflowExecution and exit all running functions", actionResult.Status)
-		workflowExecution.Status = actionResult.Status
-		workflowExecution.LastNode = actionResult.Action.ID
+
+		newResults := []ActionResult{}
+		childNodes := []string{}
+		if workflowExecution.Workflow.Configuration.ExitOnError {
+			workflowExecution.Status = actionResult.Status
+			workflowExecution.LastNode = actionResult.Action.ID
+			// Find underlying nodes and add them
+		} else {
+			// Finds childnodes to set them to SKIPPED
+			childNodes = findChildNodes(*workflowExecution, actionResult.Action.ID)
+			for _, nodeId := range childNodes {
+				if nodeId == actionResult.Action.ID {
+					continue
+				}
+
+				// 1. Find the action itself
+				// 2. Create an actionresult
+				curAction := Action{ID: ""}
+				for _, action := range workflowExecution.Workflow.Actions {
+					if action.ID == nodeId {
+						curAction = action
+						break
+					}
+				}
+
+				if len(curAction.ID) == 0 {
+					log.Printf("Couldn't find subnode %s", nodeId)
+					continue
+				}
+
+				newResult := ActionResult{
+					Action:        curAction,
+					ExecutionId:   actionResult.ExecutionId,
+					Authorization: actionResult.Authorization,
+					Result:        "Skipped because of previous node",
+					StartedAt:     0,
+					CompletedAt:   0,
+					Status:        "SKIPPED",
+				}
+
+				newResults = append(newResults, newResult)
+				increaseStatisticsField(ctx, "workflow_execution_actions_skipped", workflowExecution.Workflow.ID, 1)
+			}
+		}
 
 		// Cleans up aborted, and always gives a result
 		lastResult := ""
-		newResults := []ActionResult{}
 		// type ActionResult struct {
 		for _, result := range workflowExecution.Results {
 			if result.Status == "EXECUTING" {
@@ -774,21 +840,6 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 				log.Printf("Failed to increase failure execution stats: %s", err)
 			}
 		}
-	}
-
-	// This means it should continue I think :)
-	if actionResult.Status == "SKIPPED" {
-		// How the fuck do I do this tho
-		// Parse _all_ children of the skipped and add them to "finished"
-		//
-		log.Printf("Find out how to handle skipped items, as there might be more branches to continue anyway")
-		// FIXME - simulate that every subnode is skipped
-		// Check worker, as it contains this code
-		// Children of children of children...
-		// Recurse, woo
-		//for _, item := range children {
-
-		//}
 	}
 
 	// FIXME rebuild to be like this or something
@@ -840,18 +891,30 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	log.Printf("LENGTH: %d - %d", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
+
 	//log.Printf("Checking results %d vs %d", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extraInputs)
 	if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions)+extraInputs {
 		finished := true
 		lastResult := ""
+
+		// Doesn't have to be SUCCESS and FINISHED everywhere anymore.
+		skippedNodes := false
 		for _, result := range workflowExecution.Results {
-			if result.Status != "SUCCESS" && result.Status != "FINISHED" {
+			if result.Status == "EXECUTING" {
 				finished = false
 				break
 			}
 
+			if result.Status == "SKIPPED" {
+				skippedNodes = true
+			}
+
 			lastResult = result.Result
 		}
+
+		// FIXME: Handle skip nodes - change status?
+		_ = skippedNodes
 
 		if finished {
 			log.Printf("Execution of %s finished.", workflowExecution.ExecutionId)
@@ -1070,6 +1133,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	workflow.Actions = newActions
 	workflow.IsValid = true
+	workflow.Configuration.ExitOnError = true
 
 	workflowjson, err := json.Marshal(workflow)
 	if err != nil {
@@ -1431,7 +1495,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 			"0ca8887e-b4af-4e3e-887c-87e9d3bc3d3e",
 		}
 
-		log.Printf("%s Action execution var: %s", action.Label, action.ExecutionVariable.Name)
+		//log.Printf("%s Action execution var: %s", action.Label, action.ExecutionVariable.Name)
 
 		builtin := false
 		for _, id := range reservedApps {

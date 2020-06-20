@@ -328,7 +328,7 @@ class AppBase:
                     print("BEFORE VARIABLES!")
                     if len(baseresult) == 0:
                         try:
-                            print("WF Variables: %s" % execution_data["workflow"]["workflow_variables"])
+                            #print("WF Variables: %s" % execution_data["workflow"]["workflow_variables"])
                             for variable in execution_data["workflow"]["workflow_variables"]:
                                 variablename = variable["name"].replace(" ", "_", -1).lower()
 
@@ -345,7 +345,7 @@ class AppBase:
                     print("BEFORE EXECUTION VAR")
                     if len(baseresult) == 0:
                         try:
-                            print("Execution Variables: %s" % execution_data["execution_variables"])
+                            #print("Execution Variables: %s" % execution_data["execution_variables"])
                             for variable in execution_data["execution_variables"]:
                                 variablename = variable["name"].replace(" ", "_", -1).lower()
                                 if variablename.lower() == actionname_lower:
