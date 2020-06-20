@@ -325,6 +325,14 @@ const AngularWorkflow = (props) => {
 						incomingEdges.addClass('success-highlight')
 						currentnode.addClass('executing-highlight')
 						break
+					case "SKIPPED": 
+						currentnode.removeClass('not-executing-highlight')
+						currentnode.removeClass('success-highlight')
+						currentnode.removeClass('failure-highlight')
+						currentnode.removeClass('awaiting-data-highlight')
+						currentnode.removeClass('executing-highlight')
+						currentnode.addClass('skipped-highlight')
+						break
 					case "WAITING": 
 						currentnode.removeClass('not-executing-highlight')
 						currentnode.removeClass('success-highlight')

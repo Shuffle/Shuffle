@@ -502,9 +502,9 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 			nextActions = []string{startAction}
 		} else {
 			for _, item := range workflowExecution.Results {
+				// FIXME: Check whether the item should be visited or not
 				visited = append(visited, item.Action.ID)
 				nextActions = children[item.Action.ID]
-				// FIXME: check if nextActions items are finished?
 			}
 		}
 

@@ -681,7 +681,7 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 // Finds the child nodes of a node in execution and returns them
 // Used if e.g. a node in a branch is exited, and all children have to be stopped
 func findChildNodes(workflowExecution WorkflowExecution, nodeId string) []string {
-	log.Printf("\nNODE TO FIX: %s\n\n", nodeId)
+	//log.Printf("\nNODE TO FIX: %s\n\n", nodeId)
 	allChildren := []string{nodeId}
 
 	// 1. Find children of this specific node
@@ -690,6 +690,21 @@ func findChildNodes(workflowExecution WorkflowExecution, nodeId string) []string
 		if branch.SourceID == nodeId {
 			log.Printf("Children: %s", branch.DestinationID)
 			allChildren = append(allChildren, branch.DestinationID)
+
+			childNodes := findChildNodes(workflowExecution, branch.DestinationID)
+			for _, bottomChild := range childNodes {
+				found := false
+				for _, topChild := range allChildren {
+					if topChild == bottomChild {
+						found = true
+						break
+					}
+				}
+
+				if !found {
+					allChildren = append(allChildren, bottomChild)
+				}
+			}
 		}
 	}
 
@@ -884,6 +899,31 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		workflowExecution.Results = append(workflowExecution.Results, actionResult)
 	}
 
+	// FIXME: Have a check for skippednodes and their parents
+	for resultIndex, result := range workflowExecution.Results {
+		if result.Status != "SKIPPED" {
+			continue
+		}
+
+		// Checks if all parents are skipped or failed. Otherwise removes them from the results
+		for _, branch := range workflowExecution.Workflow.Branches {
+			if branch.DestinationID == result.Action.ID {
+				for _, subresult := range workflowExecution.Results {
+					if subresult.Action.ID == branch.SourceID {
+						if subresult.Status != "SKIPPED" && subresult.Status != "FAILURE" {
+							log.Printf("SUBRESULT PARENT STATUS: %s", subresult.Status)
+							log.Printf("Should remove resultIndex: %d", resultIndex)
+
+							workflowExecution.Results = append(workflowExecution.Results[:resultIndex], workflowExecution.Results[resultIndex+1:]...)
+
+							break
+						}
+					}
+				}
+			}
+		}
+	}
+
 	extraInputs := 0
 	for _, result := range workflowExecution.Results {
 		if result.Action.Name == "User Input" && result.Action.AppName == "User Input" {
@@ -893,7 +933,6 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 
 	log.Printf("LENGTH: %d - %d", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
 
-	//log.Printf("Checking results %d vs %d", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extraInputs)
 	if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions)+extraInputs {
 		finished := true
 		lastResult := ""
@@ -906,8 +945,29 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 				break
 			}
 
+			// FIXME: Check if ALL parents are skipped or if its just one. Otherwise execute it
 			if result.Status == "SKIPPED" {
 				skippedNodes = true
+
+				// Checks if all parents are skipped or failed. Otherwise removes them from the results
+				for _, branch := range workflowExecution.Workflow.Branches {
+					if branch.DestinationID == result.Action.ID {
+						for _, subresult := range workflowExecution.Results {
+							if subresult.Action.ID == branch.SourceID {
+								if subresult.Status != "SKIPPED" && subresult.Status != "FAILURE" {
+									//log.Printf("SUBRESULT PARENT STATUS: %s", subresult.Status)
+									//log.Printf("Should remove resultIndex: %d", resultIndex)
+									finished = false
+									break
+								}
+							}
+						}
+					}
+
+					if !finished {
+						break
+					}
+				}
 			}
 
 			lastResult = result.Result
