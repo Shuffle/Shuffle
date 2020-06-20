@@ -255,7 +255,8 @@ type Workflow struct {
 	Triggers      []Trigger  `json:"triggers" datastore:"triggers,noindex"`
 	Schedules     []Schedule `json:"schedules" datastore:"schedules,noindex"`
 	Configuration struct {
-		ExitOnError bool `json:"exit_on_error" datastore:"exit_on_error"`
+		ExitOnError  bool `json:"exit_on_error" datastore:"exit_on_error"`
+		StartFromTop bool `json:"start_from_top" datastore:"start_from_top"`
 	} `json:"configuration,omitempty" datastore:"configuration"`
 	Errors            []string `json:"errors,omitempty" datastore:"errors"`
 	Tags              []string `json:"tags,omitempty" datastore:"tags"`
@@ -414,7 +415,7 @@ func getWorkflowQueue(ctx context.Context, id string) (ExecutionRequestWrapper, 
 //}
 
 // Frequency = cronjob OR minutes between execution
-func createSchedule(ctx context.Context, scheduleId, workflowId, name, frequency string, body []byte) error {
+func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode, frequency string, body []byte) error {
 	var err error
 	testSplit := strings.Split(frequency, "*")
 	cronJob := ""
@@ -448,10 +449,14 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, frequency
 	// FIXME:
 	// This may run multiple places if multiple servers,
 	// but that's a future problem
+	log.Printf("BODY: %s", string(body))
+	parsedArgument := strings.Replace(string(body), "\"", "\\\"", -1)
+	bodyWrapper := fmt.Sprintf(`{"start": "%s", "execution_argument": "%s"}`, startNode, parsedArgument)
+	log.Printf("WRAPPER BODY: \n%s", bodyWrapper)
 	job := func() {
 		request := &http.Request{
 			Method: "POST",
-			Body:   ioutil.NopCloser(strings.NewReader(string(body))),
+			Body:   ioutil.NopCloser(strings.NewReader(bodyWrapper)),
 		}
 
 		_, _, err := handleExecution(workflowId, Workflow{}, request)
@@ -475,7 +480,9 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, frequency
 	schedule := ScheduleOld{
 		Id:                   scheduleId,
 		WorkflowId:           workflowId,
+		StartNode:            startNode,
 		Argument:             string(body),
+		WrappedArgument:      bodyWrapper,
 		Seconds:              newfrequency,
 		CreationTime:         timeNow,
 		LastModificationtime: timeNow,
@@ -708,7 +715,23 @@ func findChildNodes(workflowExecution WorkflowExecution, nodeId string) []string
 		}
 	}
 
-	return allChildren
+	// Remove potential duplicates
+	newNodes := []string{}
+	for _, tmpnode := range allChildren {
+		found := false
+		for _, newnode := range newNodes {
+			if newnode == tmpnode {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			newNodes = append(newNodes, tmpnode)
+		}
+	}
+
+	return newNodes
 }
 
 func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
@@ -789,22 +812,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 			// Find underlying nodes and add them
 		} else {
 			// Finds ALL childnodes to set them to SKIPPED
-			tmpNodes := findChildNodes(*workflowExecution, actionResult.Action.ID)
-			for _, tmpnode := range tmpNodes {
-				found := false
-				for _, newnode := range childNodes {
-					if newnode == tmpnode {
-						found = true
-						break
-
-					}
-				}
-
-				if !found {
-					childNodes = append(childNodes, tmpnode)
-				}
-
-			}
+			childNodes = findChildNodes(*workflowExecution, actionResult.Action.ID)
 			// Remove duplicates
 			log.Printf("CHILD NODES: %d", len(childNodes))
 			for _, nodeId := range childNodes {
@@ -1568,25 +1576,27 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
-	//} else if err != nil {
-	//	log.Printf("Error getting item: %v", err)
-	//} else {
-	//	// FIXME - verify if value is ok? Can unmarshal etc.
-	//	err = json.Unmarshal(item.Value, &workflowApps)
-	//	if err != nil {
-	//		log.Printf("Failed unmarshaling allworkflowapps from memcache: %s", err)
-	//		resp.WriteHeader(401)
-	//		resp.Write([]byte(`{"success": false}`))
-	//		return
-	//	}
-
-	//	if userErr == nil && len(user.PrivateApps) > 0 {
-	//		workflowApps = append(workflowApps, user.PrivateApps...)
-	//	}
-	//}
 
 	// Started getting the single apps, but if it's weird, this is faster
-	log.Println("Apps set done")
+	// 1. Check workflow.Start
+	// 2. Check if any node has "isStartnode"
+	if len(workflow.Actions) > 0 {
+		index := -1
+		for indexFound, action := range workflow.Actions {
+			//log.Println("Apps set done")
+			if workflow.Start == action.ID {
+				index = indexFound
+			}
+		}
+
+		if index >= 0 {
+			workflow.Actions[0].IsStartNode = true
+		} else {
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "You need to set a startnode."}`)))
+			return
+		}
+	}
 
 	// Check every app action and param to see whether they exist
 	newActions = []Action{}
@@ -1982,7 +1992,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		//log.Printf("Execution data: %#v", execution)
 		if len(execution.Start) == 36 {
 			log.Printf("SHOULD START ON NODE %s", execution.Start)
-			workflow.Start = execution.Start
+			workflowExecution.Start = execution.Start
 
 			found := false
 			for _, action := range workflow.Actions {
@@ -1995,6 +2005,10 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 				log.Printf("ACTION %s WAS NOT FOUND!", workflow.Start)
 				return WorkflowExecution{}, fmt.Sprintf("Startnode %s was not found in actions", workflow.Start), errors.New(fmt.Sprintf("Startnode %s was not found in actions", workflow.Start))
 			}
+		} else if len(execution.Start) > 0 {
+
+			log.Printf("START ACTION %s IS WRONG ID LENGTH %d!", len(execution.Start))
+			return WorkflowExecution{}, fmt.Sprintf("Startnode %s was not found in actions", execution.Start), errors.New(fmt.Sprintf("Startnode %s was not found in actions", execution.Start))
 		}
 
 		if len(execution.ExecutionId) == 36 {
@@ -2080,9 +2094,10 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 			makeNew = false
 		}
 
+		// Don't override workflow defaults
 		if startok {
 			log.Printf("Setting start to %s based on query!", start[0])
-			workflowExecution.Workflow.Start = start[0]
+			//workflowExecution.Workflow.Start = start[0]
 			workflowExecution.Start = start[0]
 		}
 
@@ -2134,9 +2149,18 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	//}
 
 	//log.Println(string(mappedData))
+
+	log.Printf("STARTNODE: %s", workflowExecution.Start)
+	if len(workflowExecution.Start) == 0 {
+		workflowExecution.Start = workflowExecution.Workflow.Start
+	}
+
+	childNodes := findChildNodes(workflowExecution, workflowExecution.Start)
+
 	topic := "workflows"
 	// FIXME - remove this?
 	newActions := []Action{}
+	defaultResults := []ActionResult{}
 	for _, action := range workflowExecution.Workflow.Actions {
 		action.LargeImage = ""
 		//log.Println(action.Environment)
@@ -2144,15 +2168,47 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		if action.Environment == "" {
 			return WorkflowExecution{}, fmt.Sprintf("Environment is not defined for %s", action.Name), errors.New("Environment not defined!")
 		}
-		newActions = append(newActions, action)
-	}
-	workflowExecution.Workflow.Actions = newActions
 
-	//log.Printf("%#v", workflowExecution.Workflow.Actions)
+		newActions = append(newActions, action)
+
+		// If the node is NOT found, it's supposed to be set to SKIPPED,
+		// as it's not a childnode of the startnode
+		// This is a configuration item for the workflow itself.
+		if !workflowExecution.Workflow.Configuration.StartFromTop {
+			found := false
+			for _, nodeId := range childNodes {
+				if nodeId == action.ID {
+					//log.Printf("Found %s", action.ID)
+					found = true
+				}
+			}
+
+			if !found {
+				if action.ID == workflowExecution.Start {
+					continue
+				}
+
+				log.Printf("Should set %s to SKIPPED as it's NOT a childnode of the startnode.", action.ID)
+				defaultResults = append(defaultResults, ActionResult{
+					Action:        action,
+					ExecutionId:   workflowExecution.ExecutionId,
+					Authorization: workflowExecution.Authorization,
+					Result:        "Skipped because it's not under the startnode",
+					StartedAt:     0,
+					CompletedAt:   0,
+					Status:        "SKIPPED",
+				})
+			}
+		}
+	}
 
 	// Verification for execution environments
+	workflowExecution.Results = defaultResults
+	workflowExecution.Workflow.Actions = newActions
 	onpremExecution := false
 	environments := []string{}
+
+	// Check if the actions are children of the startnode?
 	for _, action := range workflowExecution.Workflow.Actions {
 		if action.Environment != cloudname {
 			found := false
@@ -2454,7 +2510,7 @@ func deleteSchedule(ctx context.Context, id string) error {
 		return err
 	} else {
 		if value, exists := scheduledJobs[id]; exists {
-			log.Printf("STOP THIS ONE: %s", value)
+			log.Printf("STOPPING THIS SCHEDULE: %s", id)
 			// Looks like this does the trick? Hurr
 			value.Lock()
 		} else {
@@ -2567,6 +2623,20 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	// Finds the startnode for the specific schedule
+	startNode := ""
+	for _, branch := range workflow.Branches {
+		if branch.SourceID == schedule.Id {
+			startNode = branch.DestinationID
+		}
+	}
+
+	if startNode == "" {
+		startNode = workflow.Start
+	}
+
+	log.Printf("Startnode: %s", startNode)
+
 	if len(schedule.Id) != 36 {
 		log.Printf("ID length is not 36 for schedule: %s", err)
 		resp.WriteHeader(http.StatusInternalServerError)
@@ -2612,6 +2682,7 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 		schedule.Id,
 		workflow.ID,
 		schedule.Name,
+		startNode,
 		schedule.Frequency,
 		[]byte(parsedBody),
 	)

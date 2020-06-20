@@ -242,9 +242,11 @@ type AppInfo struct {
 // May 2020: Reused for onprem schedules - Id, Seconds, WorkflowId and argument
 type ScheduleOld struct {
 	Id                   string       `json:"id" datastore:"id"`
+	StartNode            string       `json:"start_node" datastore:"start_node"`
 	Seconds              int          `json:"seconds" datastore:"seconds"`
 	WorkflowId           string       `json:"workflow_id" datastore:"workflow_id", `
 	Argument             string       `json:"argument" datastore:"argument"`
+	WrappedArgument      string       `json:"wrapped_argument" datastore:"wrapped_argument"`
 	AppInfo              AppInfo      `json:"appinfo" datastore:"appinfo,noindex"`
 	Finished             bool         `json:"finished" finished:"id"`
 	BaseAppLocation      string       `json:"base_app_location" datastore:"baseapplocation,noindex"`
@@ -6034,7 +6036,7 @@ func runInit(ctx context.Context) {
 			job := func() {
 				request := &http.Request{
 					Method: "POST",
-					Body:   ioutil.NopCloser(strings.NewReader(schedule.Argument)),
+					Body:   ioutil.NopCloser(strings.NewReader(schedule.WrappedArgument)),
 				}
 
 				_, _, err := handleExecution(schedule.WorkflowId, Workflow{}, request)
@@ -6213,7 +6215,6 @@ func init() {
 	r.HandleFunc("/api/v1/workflows/queue/confirm", handleGetWorkflowqueueConfirm).Methods("POST")
 	r.HandleFunc("/api/v1/workflows/schedules", handleGetSchedules).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/download_remote", loadSpecificWorkflows).Methods("POST", "OPTIONS")
-	//r.HandleFunc("/api/v1/workflows/{key}/execute_fs", executeWorkflowFS)
 	r.HandleFunc("/api/v1/workflows/{key}/execute", executeWorkflow).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/schedule", scheduleWorkflow).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/schedule/{schedule}", stopSchedule).Methods("DELETE", "OPTIONS")

@@ -875,6 +875,9 @@ const Workflows = (props) => {
 					<Button style={{}} disabled={newWorkflowName.length === 0} onClick={() => {
 						if (editingWorkflow.id !== undefined) {
 							setNewWorkflow(newWorkflowName, newWorkflowDescription, editingWorkflow, false)
+							setNewWorkflowName("")
+							setNewWorkflowDescription("")
+							setEditingWorkflow({})
 						} else {
 							setNewWorkflow(newWorkflowName, newWorkflowDescription, {}, true)
 						}

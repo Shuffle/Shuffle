@@ -795,14 +795,14 @@ const AngularWorkflow = (props) => {
 			setSelectedAction({})
 			setSelectedTrigger({})
 		} else {
-			alert.info("Can't edit branches from triggers") 
+			//alert.info("Can't edit branches from triggers") 
 		}
 	}
 
 	const onNodeSelect = (event) => {
 		const data = event.target.data()
 		setLastSaved(false)
-		//console.log(data)
+		console.log(data)
 
 		if (data.type === "ACTION") {
 			// FIXME - unselect
@@ -968,7 +968,7 @@ const AngularWorkflow = (props) => {
 					alert.success("Changed startnode to "+ele.data()["label"])
 					ele.data("isStartNode", true)
 					workflow.start = ele.id()
-					return
+					return true
 				}
 			});
 		}
@@ -2555,33 +2555,40 @@ const AngularWorkflow = (props) => {
 		if (oldstartnode.length > 0) {
 			oldstartnode[0].data("isStartNode", false)
 			var oldnodecnt = workflow.actions.findIndex(a => a.id === workflow.start)
-			workflow.actions[oldnodecnt].isStartNode = false
+			if (workflow.actions[oldnodecnt] !== undefined) {
+				workflow.actions[oldnodecnt].isStartNode = false
+			}
 		}
 
 		var newstartnode = cy.getElementById(selectedAction.id)
 		if (newstartnode.length > 0) {
 			newstartnode[0].data("isStartNode", true)
 			var newnodecnt = workflow.actions.findIndex(a => a.id === selectedAction.id)
-			workflow.actions[newnodecnt].isStartNode = true
+			console.log("NEW NODE CNT: ", newnodecnt)
+			if (workflow.actions[newnodecnt] !== undefined) {
+				workflow.actions[newnodecnt].isStartNode = true
+				console.log(workflow.actions[newnodecnt])
+			}
 		}
 
 		// Find branches with triggers as source nodes
 		// Move these targets to be the new node
 		// Set arrows pointing to new startnode with errors
-		for (var key in workflow.branches) {
-			var item = workflow.branches[key]	
-			if (item.destination_id === oldstartnode[0].data()["id"]) {
-				var curbranch = cy.getElementById(item.id)
-				if (curbranch.length > 0) {
-					//console.log(curbranch[0].data())
-					//curbranch[0].data("target", selectedAction.id)
-					curbranch[0].data("hasErrors", true)
-					//workflow.branches[key].destination_id = selectedAction.id
-					//console.log(curbranch[0].data())
-				}
-			}
-		}
+		//for (var key in workflow.branches) {
+		//	var item = workflow.branches[key]	
+		//	if (item.destination_id === oldstartnode[0].data()["id"]) {
+		//		var curbranch = cy.getElementById(item.id)
+		//		if (curbranch.length > 0) {
+		//			//console.log(curbranch[0].data())
+		//			//curbranch[0].data("target", selectedAction.id)
+		//			//curbranch[0].data("hasErrors", true)
+		//			//workflow.branches[key].destination_id = selectedAction.id
+		//			//console.log(curbranch[0].data())
+		//		}
+		//	}
+		//}
 
+		setUpdate("start_node"+selectedAction.id)
 		workflow.start = selectedAction.id
 		setWorkflow(workflow)
 		//setStartNode(selectedAction.id)

@@ -57,22 +57,22 @@ type Org struct {
 	Id    string `json:"id"`
 }
 
-// FIXME: Generate a callback authentication ID?
 type WorkflowExecution struct {
-	Type               string         `json:"type"`
-	Status             string         `json:"status"`
-	ExecutionId        string         `json:"execution_id"`
-	ExecutionArgument  string         `json:"execution_argument"`
-	WorkflowId         string         `json:"workflow_id"`
-	LastNode           string         `json:"last_node"`
-	Authorization      string         `json:"authorization"`
-	Result             string         `json:"result"`
-	StartedAt          int64          `json:"started_at"`
-	CompletedAt        int64          `json:"completed_at"`
-	ProjectId          string         `json:"project_id"`
-	Locations          []string       `json:"locations"`
-	Workflow           Workflow       `json:"workflow"`
-	Results            []ActionResult `json:"results"`
+	Type               string         `json:"type" datastore:"type"`
+	Status             string         `json:"status" datastore:"status"`
+	Start              string         `json:"start" datastore:"start"`
+	ExecutionArgument  string         `json:"execution_argument" datastore:"execution_argument"`
+	ExecutionId        string         `json:"execution_id" datastore:"execution_id"`
+	WorkflowId         string         `json:"workflow_id" datastore:"workflow_id"`
+	LastNode           string         `json:"last_node" datastore:"last_node"`
+	Authorization      string         `json:"authorization" datastore:"authorization"`
+	Result             string         `json:"result" datastore:"result,noindex"`
+	StartedAt          int64          `json:"started_at" datastore:"started_at"`
+	CompletedAt        int64          `json:"completed_at" datastore:"completed_at"`
+	ProjectId          string         `json:"project_id" datastore:"project_id"`
+	Locations          []string       `json:"locations" datastore:"locations"`
+	Workflow           Workflow       `json:"workflow" datastore:"workflow,noindex"`
+	Results            []ActionResult `json:"results" datastore:"results,noindex"`
 	ExecutionVariables []struct {
 		Description string `json:"description" datastore:"description"`
 		ID          string `json:"id" datastore:"id"`
@@ -422,16 +422,39 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 	}
 
 	onpremApps := []string{}
-	startAction := workflowExecution.Workflow.Start
+	startAction := workflowExecution.Start
+	log.Printf("Startaction: %s", startAction)
 	toExecuteOnprem := []string{}
 	parents := map[string][]string{}
 	children := map[string][]string{}
 
-	// source = parent, dest = child
+	// source = parent node, dest = child node
 	// parent can have more children, child can have more parents
 	for _, branch := range workflowExecution.Workflow.Branches {
-		parents[branch.DestinationID] = append(parents[branch.DestinationID], branch.SourceID)
-		children[branch.SourceID] = append(children[branch.SourceID], branch.DestinationID)
+		// Check what the parent is first. If it's trigger - skip
+		sourceFound := false
+		destinationFound := false
+		for _, action := range workflowExecution.Workflow.Actions {
+			if action.ID == branch.SourceID {
+				sourceFound = true
+			}
+
+			if action.ID == branch.DestinationID {
+				destinationFound = true
+			}
+		}
+
+		if sourceFound {
+			parents[branch.DestinationID] = append(parents[branch.DestinationID], branch.SourceID)
+		} else {
+			log.Printf("ID %s was not found in actions! Skipping parent. (TRIGGER?)", branch.SourceID)
+		}
+
+		if destinationFound {
+			children[branch.SourceID] = append(children[branch.SourceID], branch.DestinationID)
+		} else {
+			log.Printf("ID %s was not found in actions! Skipping child. (TRIGGER?)", branch.SourceID)
+		}
 	}
 
 	log.Printf("Actions: %d", len(workflowExecution.Workflow.Actions))
@@ -483,12 +506,15 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 	// Process the parents etc. How?
 	visited := []string{}
 	executed := []string{}
-	nextActions := []string{}
+	nextActions := []string{startAction}
+	firstIteration := true
 	for {
 		queueNodes := []string{}
 
 		if len(workflowExecution.Results) == 0 {
 			nextActions = []string{startAction}
+		} else if firstIteration {
+			firstIteration = false
 		} else {
 			// This is to re-check the nodes that exist and whether they should continue
 			appendActions := []string{}
@@ -548,7 +574,7 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 		// care if it gets stuck in a loop.
 		// FIXME: Force killing a worker should result in a notification somewhere
 		if len(nextActions) == 0 {
-			log.Println("No next action. Finished?")
+			log.Printf("No next action. Finished? Result vs Actions: %d - %d", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
 			if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions) {
 				shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
 			}
@@ -569,7 +595,7 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 				}
 			}
 
-			log.Printf("SOMETHING IS MISSING!: %#v", notFound)
+			//log.Printf("SOMETHING IS MISSING!: %#v", notFound)
 			for _, item := range notFound {
 				if arrayContains(executed, item) {
 					log.Printf("%s has already executed but no result!", item)
@@ -615,6 +641,8 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 				}
 			}
 		}
+		//log.Printf("NEXT: %s", nextActions)
+		//log.Printf("queueNodes: %s", queueNodes)
 
 		// IF NOT VISITED && IN toExecuteOnPrem
 		// SKIP if it's not onprem
@@ -660,11 +688,12 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 			}
 
 			if continueOuter {
-				log.Printf("Parents of %s aren't finished: %s", nextAction, strings.Join(parents[nextAction], ", "))
-				for _, tmpaction := range parents[nextAction] {
-					action := getAction(workflowExecution, tmpaction)
-					//log.Printf("Parent: %s", action.Label)
-				}
+				//log.Printf("Parents of %s aren't finished: %s", nextAction, strings.Join(parents[nextAction], ", "))
+				//for _, tmpaction := range parents[nextAction] {
+				//	action := getAction(workflowExecution, tmpaction)
+				//	_ = action
+				//	//log.Printf("Parent: %s", action.Label)
+				//}
 				// Find the result of the nodes?
 				continue
 			}
@@ -747,7 +776,7 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 			if err != nil {
 				log.Printf("Failed deploying %s from image %s: %s", identifier, image, err)
 				log.Printf("Should send status and exit the entire thing?")
-				shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+				//shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
 			}
 
 			log.Printf("Adding visited (3): %s", action.Label)
@@ -757,7 +786,7 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 
 			// If children of action.ID are NOT in executed:
 			// Remove them from visited.
-			log.Printf("EXECUTED: %#v", executed)
+			//log.Printf("EXECUTED: %#v", executed)
 		}
 
 		//log.Println(nextAction)
