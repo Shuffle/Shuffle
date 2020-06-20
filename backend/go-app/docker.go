@@ -189,17 +189,17 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 		dockerFileTarReader,
 		buildOptions,
 	)
+	//log.Printf("IMAGERESPONSE: %#v", imageBuildResponse.Body)
 
-	log.Printf("IMAGERESPONSE: %#v", imageBuildResponse.Body)
-
-	if err != nil {
-		return err
+	defer imageBuildResponse.Body.Close()
+	_, newerr := io.Copy(os.Stdout, imageBuildResponse.Body)
+	if newerr != nil {
+		log.Printf("Failed reading Docker build STDOUT: %s", newerr)
 	}
 
-	// Read the STDOUT from the build process
-	defer imageBuildResponse.Body.Close()
-	_, err = io.Copy(os.Stdout, imageBuildResponse.Body)
 	if err != nil {
+		// Read the STDOUT from the build process
+
 		return err
 	}
 

@@ -5,6 +5,7 @@ import time
 import json
 import logging
 import requests
+import urllib.parse
 
 class AppBase:
     """ The base class for Python-based apps in Shuffle, handles logging and callbacks configurations"""
@@ -102,6 +103,208 @@ class AppBase:
 
         self.logger.info("AFTER FULLEXEC stream result")
 
+        # Gets the value at the paranthesis level you want
+        def parse_nested_param(string, level):
+            """
+            Generate strings contained in nested (), indexing i = level
+            """
+            if len(re.findall("\(", string)) == len(re.findall("\)", string)):
+                LeftRightIndex = [x for x in zip(
+                [Left.start()+1 for Left in re.finditer('\(', string)], 
+                reversed([Right.start() for Right in re.finditer('\)', string)]))]
+        
+            elif len(re.findall("\(", string)) > len(re.findall("\)", string)):
+                return parse_nested_param(string + ')', level)
+            elif len(re.findall("\(", string)) < len(re.findall("\)", string)):
+                return parse_nested_param('(' + string, level)
+        
+            else:
+                return 'Failed to parse params'
+        
+            try:
+                return [string[LeftRightIndex[level][0]:LeftRightIndex[level][1]]]
+            except IndexError:
+                return [string[LeftRightIndex[level+1][0]:LeftRightIndex[level+1][1]]]
+        
+        # Finds the deepest level paranthesis in a string
+        def maxDepth(S): 
+            current_max = 0
+            max = 0
+            n = len(S) 
+          
+            # Traverse the input string 
+            for i in range(n): 
+                if S[i] == '(': 
+                    current_max += 1
+          
+                    if current_max > max: 
+                        max = current_max 
+                elif S[i] == ')': 
+                    if current_max > 0: 
+                        current_max -= 1
+                    else: 
+                        return -1
+          
+            # finally check for unbalanced string 
+            if current_max != 0: 
+                return -1
+          
+            return max-1
+        
+        # Specific type parsing
+        def parse_type(data, thistype): 
+            if data == None:
+                return "Empty"
+        
+            if "int" in thistype or "number" in thistype:
+                try:
+                    return int(data)
+                except ValueError:
+                    print("ValueError while casting %s" % data)
+                    return data
+            if "lower" in thistype:
+                return data.lower()
+            if "upper" in thistype:
+                return data.upper()
+            if "trim" in thistype:
+                return data.strip()
+            if "strip" in thistype:
+                return data.strip()
+            if "split" in thistype:
+                return data.split()
+            if "len" in thistype or "length" in thistype:
+                return len(data)
+            if "parse" in thistype:
+                splitvalues = []
+                default_error = """Error. Expected syntax: parse(["hello","test1"],0:1)""" 
+                if "," in data:
+                    splitvalues = data.split(",")
+
+                    for item in range(len(splitvalues)):
+                        splitvalues[item] = splitvalues[item].strip()
+                else:
+                    return default_error 
+
+                lastsplit = []
+                if ":" in splitvalues[-1]:
+                    lastsplit = splitvalues[-1].split(":")
+                else:
+                    try:
+                        lastsplit = [int(splitvalues[-1])]
+                    except ValueError:
+                        return default_error
+
+                try:
+                    parsedlist = ",".join(splitvalues[0:-1])
+                    if len(lastsplit) > 1:
+                        tmp = json.loads(parsedlist)[int(lastsplit[0]):int(lastsplit[1])]
+                    else:
+                        tmp = json.loads(parsedlist)[lastsplit[0]]
+
+                    print(tmp)
+                    return tmp
+                except IndexError as e:
+                    return default_error
+        
+        # Parses the INNER value and recurses until everything is done
+        def parse_wrapper(data):
+            try:
+                if "(" not in data or ")" not in data:
+                    return data
+            except TypeError:
+                return data
+        
+            print("Running %s" % data)
+        
+            # Look for the INNER wrapper first, then move out
+            wrappers = ["int", "number", "lower", "upper", "trim", "strip", "split", "parse", "len", "length"]
+            found = False
+            for wrapper in wrappers:
+                if wrapper not in data.lower():
+                    continue
+        
+                found = True
+                break
+        
+            if not found:
+                return data
+        
+            # Do stuff here.
+            innervalue = parse_nested_param(data, maxDepth(data)-0)
+            outervalue = parse_nested_param(data, maxDepth(data)-1)
+            print("INNER: ", outervalue)
+            print("OUTER: ", outervalue)
+        
+            if outervalue != innervalue:
+                #print("Outer: ", outervalue, " inner: ", innervalue)
+                for key in range(len(innervalue)):
+                    # Replace OUTERVALUE[key] with INNERVALUE[key] in data.
+                    print("Replace %s with %s in %s" % (outervalue[key], innervalue[key], data))
+                    data = data.replace(outervalue[key], innervalue[key])
+            else:
+                for thistype in wrappers:
+                    if thistype.lower() not in data.lower():
+                        continue
+        
+                    parsed_value = parse_type(innervalue[0], thistype.lower())
+                    return parsed_value
+        
+            print("DATA: %s\n" % data)
+            return parse_wrapper(data)
+
+        def parse_wrapper_start(data):
+            newdata = []
+            newstring = ""
+            record = True
+            paranCnt = 0
+            for char in data:
+                if char == "(":
+                    paranCnt += 1
+        
+                    if not record:
+                        record = True 
+        
+                if record:
+                    newstring += char
+        
+                if paranCnt == 0 and char == " ":
+                    newdata.append(newstring)
+                    newstring = ""
+                    record = True
+        
+                if char == ")":
+                    paranCnt -= 1
+        
+                    if paranCnt == 0:
+                        record = False
+        
+            if len(newstring) > 0:
+                newdata.append(newstring)
+        
+            print(newdata)
+            parsedlist = []
+            non_string = False
+            for item in newdata:
+                ret = parse_wrapper(item)
+                if not isinstance(ret, str):
+                    non_string = True
+        
+                parsedlist.append(ret)
+        
+            if len(parsedlist) > 0 and not non_string:
+                return " ".join(parsedlist)
+            elif len(parsedlist) == 1 and non_string:
+                return parsedlist[0]
+            else:
+                print("Casting back to string because multi: ", parsedlist)
+                newlist = []
+                for item in parsedlist:
+                    try:
+                        newlist.append(str(item))
+                    except ValueError:
+                        newlist.append("parsing_error")
+                return " ".join(newlist)
+
         # Takes a workflow execution as argument
         # Returns a string if the result is single, or a list if it's a list
         def get_json_value(execution_data, input_data):
@@ -124,13 +327,36 @@ class AppBase:
                     
                     print("BEFORE VARIABLES!")
                     if len(baseresult) == 0:
-                        print("Variables: %s" % execution_data["workflow"]["workflow_variables"])
-                        for variable in execution_data["workflow"]["workflow_variables"]:
-                            variablename = variable["name"].replace(" ", "_", -1).lower()
+                        try:
+                            #print("WF Variables: %s" % execution_data["workflow"]["workflow_variables"])
+                            for variable in execution_data["workflow"]["workflow_variables"]:
+                                variablename = variable["name"].replace(" ", "_", -1).lower()
 
-                            if variablename.lower() == actionname_lower:
-                                baseresult = variable["value"]
-                                break
+                                if variablename.lower() == actionname_lower:
+                                    baseresult = variable["value"]
+                                    break
+                        except KeyError as e:
+                            print("KeyError wf variables: %s" % e)
+                            pass
+                        except TypeError as e:
+                            print("TypeError wf variables: %s" % e)
+                            pass
+
+                    print("BEFORE EXECUTION VAR")
+                    if len(baseresult) == 0:
+                        try:
+                            #print("Execution Variables: %s" % execution_data["execution_variables"])
+                            for variable in execution_data["execution_variables"]:
+                                variablename = variable["name"].replace(" ", "_", -1).lower()
+                                if variablename.lower() == actionname_lower:
+                                    baseresult = variable["value"]
+                                    break
+                        except KeyError as e:
+                            print("KeyError exec variables: %s" % e)
+                            pass
+                        except TypeError as e:
+                            print("TypeError exec variables: %s" % e)
+                            pass
         
             except KeyError as error:
                 print(f"KeyError in JSON: {error}")
@@ -185,9 +411,11 @@ class AppBase:
         
             return basejson
 
+
         def parse_params(action, fullexecution, parameter):
+            # Skip if it starts with $?
             jsonparsevalue = "$."
-            match = ".*([$]{1}([a-zA-Z0-9()# _-]+\.?){1,})"
+            match = ".*([$]{1}([a-zA-Z0-9# _-]+\.?){1,})"
 
             # Regex to find all the things
             if parameter["variant"] == "STATIC_VALUE":
@@ -196,6 +424,7 @@ class AppBase:
                 #self.logger.debug(f"\n\nHandle static data with JSON: {data}\n\n")
                 #self.logger.info("STATIC PARSED: %s" % actualitem)
                 if len(actualitem) > 0:
+                    print("ACTUAL: %s", actualitem)
                     for replace in actualitem:
                         try:
                             to_be_replaced = replace[0]
@@ -216,10 +445,33 @@ class AppBase:
 
 
             if parameter["variant"] == "WORKFLOW_VARIABLE":
-                for item in fullexecution["workflow"]["workflow_variables"]:
-                    if parameter["action_field"] == item["name"]:
-                        parameter["value"] = item["value"]
-                        break
+                print("Handling workflow variable")
+                found = False
+                try:
+                    for item in fullexecution["workflow"]["workflow_variables"]:
+                        if parameter["action_field"] == item["name"]:
+                            found = True
+                            parameter["value"] = item["value"]
+                            break
+                except KeyError as e:
+                    print("KeyError WF variable 1: %s" % e)
+                    pass
+                except TypeError as e:
+                    print("TypeError WF variables 1: %s" % e)
+                    pass
+
+                if not found:
+                    try:
+                        for item in fullexecution["execution_variables"]:
+                            if parameter["action_field"] == item["name"]:
+                                parameter["value"] = item["value"]
+                                break
+                    except KeyError as e:
+                        print("KeyError WF variable 2: %s" % e)
+                        pass
+                    except TypeError as e:
+                        print("TypeError WF variables 2: %s" % e)
+                        pass
 
             elif parameter["variant"] == "ACTION_RESULT":
                 # FIXME - calculate value based on action_field and $if prominent
@@ -229,9 +481,7 @@ class AppBase:
                 tmpvalue = ""
                 self.logger.info("ACTION FIELD: %s" % parameter["action_field"])
 
-                #"$%s%s" % 
                 fullname = "$"
-
                 if parameter["action_field"] == "Execution Argument":
                     tmpvalue = fullexecution["execution_argument"]
                     fullname += "exec"
@@ -240,8 +490,8 @@ class AppBase:
 
                 if parameter["value"].startswith(jsonparsevalue):
                     fullname += parameter["value"][2:]
-                else:
-                    fullname = "$%s" % parameter["action_field"]
+                #else:
+                #    fullname = "$%s" % parameter["action_field"]
 
                 self.logger.info("Fullname: %s" % fullname)
                 actualitem = re.findall(match, fullname, re.MULTILINE)
@@ -331,7 +581,9 @@ class AppBase:
                         if check:
                             return False, "Failed condition: %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)
 
-                    print(sourcevalue)
+
+                    #sourcevalue = sourcevalue.encode("utf-8")
+                    sourcevalue = parse_wrapper_start(sourcevalue)
                     destinationvalue = condition["destination"]["value"]
 
                     if condition["destination"]["variant"]== "" or condition["destination"]["variant"]== "STATIC_VALUE":
@@ -341,6 +593,8 @@ class AppBase:
                         if check:
                             return False, "Failed condition: %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)
 
+                    #destinationvalue = destinationvalue.encode("utf-8")
+                    destinationvalue = parse_wrapper_start(destinationvalue)
                     available_checks = [
                         "=",
                         "equals",
@@ -442,7 +696,7 @@ class AppBase:
                         for parameter in action["parameters"]:
                             check, value = parse_params(action, fullexecution, parameter)
                             if check:
-                                raise Exception(check)
+                                raise "Value check error: %s" % Exception(check)
 
                             # Custom format for ${name[0,1,2,...]}$
                             submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"
@@ -483,17 +737,29 @@ class AppBase:
                                 # With this parameter ready, add it to... a greater list of parameters. Rofl
                                 multi_parameters[parameter["name"]] = resultarray
                             else:
+                                # Parses things like int(value)
+                                self.logger.info("Parsing wrapper data")
+                                value = parse_wrapper_start(value)
+
                                 params[parameter["name"]] = value
                                 multi_parameters[parameter["name"]] = value 
                         
                         # FIXME - this is horrible, but works for now
                         #for i in range(calltimes):
                         if not multiexecution:
-                            print("Params: %s" % params)
-                            print("RUNNING NORMAL EXECUTION")
-                            result += await func(**params)
+                            print("APP_SDK DONE: Starting normal execution of function")
+                            newres = await func(**params)
+                            print("NEWRES: ", newres)
+                            if isinstance(newres, str):
+                                result += newres
+                            else:
+                                try:
+                                    result += str(result)
+                                except ValueError:
+                                    result += "Failed autocasting. Can't handle %s type from function. Must be string" % type(newres)
+                                    print("Can't handle type %s value from function" % (type(newres)))
                         else:
-                            print("MULTI EXECUTION: ", multi_parameters)
+                            print("APP_SDK DONE: Starting multi execution with", multi_parameters)
                             # 1. Use number of executions based on longest array
                             # 2. Find the right value from the parsed multi_params
 
@@ -558,7 +824,7 @@ class AppBase:
             print(f"Failed to execute: {e}")
             self.logger.exception(f"Failed to execute {e}-{action['id']}")
             action_result["status"] = "FAILURE" 
-            action_result["result"] = "Exception: %s" % e
+            action_result["result"] = "General exception: %s" % e
 
         action_result["completed_at"] = int(time.time())
 

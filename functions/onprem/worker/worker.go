@@ -57,38 +57,53 @@ type Org struct {
 	Id    string `json:"id"`
 }
 
-// FIXME: Generate a callback authentication ID?
 type WorkflowExecution struct {
-	Type              string         `json:"type"`
-	Status            string         `json:"status"`
-	ExecutionId       string         `json:"execution_id"`
-	ExecutionArgument string         `json:"execution_argument"`
-	WorkflowId        string         `json:"workflow_id"`
-	LastNode          string         `json:"last_node"`
-	Authorization     string         `json:"authorization"`
-	Result            string         `json:"result"`
-	StartedAt         int64          `json:"started_at"`
-	CompletedAt       int64          `json:"completed_at"`
-	ProjectId         string         `json:"project_id"`
-	Locations         []string       `json:"locations"`
-	Workflow          Workflow       `json:"workflow"`
-	Results           []ActionResult `json:"results"`
+	Type               string         `json:"type" datastore:"type"`
+	Status             string         `json:"status" datastore:"status"`
+	Start              string         `json:"start" datastore:"start"`
+	ExecutionArgument  string         `json:"execution_argument" datastore:"execution_argument"`
+	ExecutionId        string         `json:"execution_id" datastore:"execution_id"`
+	WorkflowId         string         `json:"workflow_id" datastore:"workflow_id"`
+	LastNode           string         `json:"last_node" datastore:"last_node"`
+	Authorization      string         `json:"authorization" datastore:"authorization"`
+	Result             string         `json:"result" datastore:"result,noindex"`
+	StartedAt          int64          `json:"started_at" datastore:"started_at"`
+	CompletedAt        int64          `json:"completed_at" datastore:"completed_at"`
+	ProjectId          string         `json:"project_id" datastore:"project_id"`
+	Locations          []string       `json:"locations" datastore:"locations"`
+	Workflow           Workflow       `json:"workflow" datastore:"workflow,noindex"`
+	Results            []ActionResult `json:"results" datastore:"results,noindex"`
+	ExecutionVariables []struct {
+		Description string `json:"description" datastore:"description"`
+		ID          string `json:"id" datastore:"id"`
+		Name        string `json:"name" datastore:"name"`
+		Value       string `json:"value" datastore:"value"`
+	} `json:"execution_variables,omitempty" datastore:"execution_variables,omitempty"`
 }
 
-// Added environment for location to execute
 type Action struct {
-	AppName     string                       `json:"app_name" datastore:"app_name"`
-	AppVersion  string                       `json:"app_version" datastore:"app_version"`
-	AppID       string                       `json:"app_id" datastore:"app_id"`
-	Errors      []string                     `json:"errors" datastore:"errors"`
-	ID          string                       `json:"id" datastore:"id"`
-	IsValid     bool                         `json:"is_valid" datastore:"is_valid"`
-	IsStartNode bool                         `json:"isStartNode" datastore:"isStartNode"`
-	Label       string                       `json:"label" datastore:"label"`
-	Environment string                       `json:"environment" datastore:"environment"`
-	Name        string                       `json:"name" datastore:"name"`
-	Parameters  []WorkflowAppActionParameter `json:"parameters" datastore: "parameters"`
-	Position    struct {
+	AppName           string                       `json:"app_name" datastore:"app_name"`
+	AppVersion        string                       `json:"app_version" datastore:"app_version"`
+	AppID             string                       `json:"app_id" datastore:"app_id"`
+	Errors            []string                     `json:"errors" datastore:"errors"`
+	ID                string                       `json:"id" datastore:"id"`
+	IsValid           bool                         `json:"is_valid" datastore:"is_valid"`
+	IsStartNode       bool                         `json:"isStartNode" datastore:"isStartNode"`
+	Sharing           bool                         `json:"sharing" datastore:"sharing"`
+	PrivateID         string                       `json:"private_id" datastore:"private_id"`
+	Label             string                       `json:"label" datastore:"label"`
+	SmallImage        string                       `json:"small_image" datastore:"small_image,noindex" required:false yaml:"small_image"`
+	LargeImage        string                       `json:"large_image" datastore:"large_image,noindex" yaml:"large_image" required:false`
+	Environment       string                       `json:"environment" datastore:"environment"`
+	Name              string                       `json:"name" datastore:"name"`
+	Parameters        []WorkflowAppActionParameter `json:"parameters" datastore: "parameters,noindex"`
+	ExecutionVariable struct {
+		Description string `json:"description" datastore:"description"`
+		ID          string `json:"id" datastore:"id"`
+		Name        string `json:"name" datastore:"name"`
+		Value       string `json:"value" datastore:"value"`
+	} `json:"execution_variable,omitempty" datastore:"execution_variable,omitempty"`
+	Position struct {
 		X float64 `json:"x" datastore:"x"`
 		Y float64 `json:"y" datastore:"y"`
 	} `json:"position"`
@@ -132,10 +147,10 @@ type Trigger struct {
 }
 
 type Workflow struct {
-	Actions           []Action   `json:"actions" datastore:"actions"`
-	Branches          []Branch   `json:"branches" datastore:"branches"`
-	Triggers          []Trigger  `json:"triggers" datastore:"triggers"`
-	Schedules         []Schedule `json:"schedules" datastore:"schedules"`
+	Actions           []Action   `json:"actions" datastore:"actions,noindex"`
+	Branches          []Branch   `json:"branches" datastore:"branches,noindex"`
+	Triggers          []Trigger  `json:"triggers" datastore:"triggers,noindex"`
+	Schedules         []Schedule `json:"schedules" datastore:"schedules,noindex"`
 	Errors            []string   `json:"errors,omitempty" datastore:"errors"`
 	Tags              []string   `json:"tags,omitempty" datastore:"tags"`
 	ID                string     `json:"id" datastore:"id"`
@@ -153,6 +168,12 @@ type Workflow struct {
 		Name        string `json:"name" datastore:"name"`
 		Value       string `json:"value" datastore:"value"`
 	} `json:"workflow_variables" datastore:"workflow_variables"`
+	ExecutionVariables []struct {
+		Description string `json:"description" datastore:"description"`
+		ID          string `json:"id" datastore:"id"`
+		Name        string `json:"name" datastore:"name"`
+		Value       string `json:"value" datastore:"value"`
+	} `json:"execution_variables,omitempty" datastore:"execution_variables,omitempty"`
 }
 
 type ActionResult struct {
@@ -196,20 +217,39 @@ type WorkflowAppActionParameter struct {
 	} `json:"schema"`
 }
 
+type AuthenticationStore struct {
+	Key   string `json:"key" datastore:"key"`
+	Value string `json:"value" datastore:"value"`
+}
+
 type WorkflowAppAction struct {
-	Description string                       `json:"description" datastore:"description"`
-	ID          string                       `json:"id" datastore:"id"`
-	Name        string                       `json:"name" datastore:"name"`
-	NodeType    string                       `json:"node_type" datastore:"node_type"`
-	Environment string                       `json:"environment" datastore:"environment"`
-	Parameters  []WorkflowAppActionParameter `json:"parameters" datastore: "parameters"`
-	Returns     struct {
-		Description string `json:"description" datastore:"returns"`
+	Description       string                       `json:"description" datastore:"description"`
+	ID                string                       `json:"id" datastore:"id" yaml:"id,omitempty"`
+	Name              string                       `json:"name" datastore:"name"`
+	Label             string                       `json:"label" datastore:"label"`
+	NodeType          string                       `json:"node_type" datastore:"node_type"`
+	Environment       string                       `json:"environment" datastore:"environment"`
+	Sharing           bool                         `json:"sharing" datastore:"sharing"`
+	PrivateID         string                       `json:"private_id" datastore:"private_id"`
+	AppID             string                       `json:"app_id" datastore:"app_id"`
+	Authentication    []AuthenticationStore        `json:"authentication" datastore:"authentication" yaml:"authentication,omitempty"`
+	Tested            bool                         `json:"tested" datastore:"tested" yaml:"tested"`
+	Parameters        []WorkflowAppActionParameter `json:"parameters" datastore: "parameters"`
+	ExecutionVariable struct {
+		Description string `json:"description" datastore:"description"`
 		ID          string `json:"id" datastore:"id"`
-		Schema      struct {
-			Type string `json:"type" datastore:"type"`
-		} `json:"schema" datastore:"schema"`
+		Name        string `json:"name" datastore:"name"`
+		Value       string `json:"value" datastore:"value"`
+	} `json:"execution_variable" datastore:"execution_variables"`
+	Returns struct {
+		Description string           `json:"description" datastore:"returns" yaml:"description,omitempty"`
+		ID          string           `json:"id" datastore:"id" yaml:"id,omitempty"`
+		Schema      SchemaDefinition `json:"schema" datastore:"schema" yaml:"schema"`
 	} `json:"returns" datastore:"returns"`
+}
+
+type SchemaDefinition struct {
+	Type string `json:"type" datastore:"type"`
 }
 
 // removes every container except itself (worker)
@@ -245,9 +285,6 @@ func shutdown(executionId, workflowId string) {
 
 	}
 
-	// FIXME: Add an API call to the backend
-	// fmt.Sprintf("AUTHORIZATION=%s", workflowExecution.Authorization),
-
 	fullUrl := fmt.Sprintf("%s/api/v1/workflows/%s/executions/%s/abort", baseUrl, workflowId, executionId)
 	req, err := http.NewRequest(
 		"GET",
@@ -257,6 +294,12 @@ func shutdown(executionId, workflowId string) {
 
 	if err != nil {
 		log.Println("Failed building request: %s", err)
+	}
+
+	// FIXME: Add an API call to the backend
+	authorization := os.Getenv("AUTHORIZATION")
+	if len(authorization) > 0 {
+		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", authorization))
 	}
 
 	req.Header.Add("Content-Type", "application/json")
@@ -295,7 +338,8 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 			},
 		}
 	} else {
-		log.Printf("Bad config: %s. Using default network", baseUrl)
+		// FIXME: Default config
+		//log.Printf("Bad config: %s. Using default network", baseUrl)
 	}
 
 	cont, err := cli.ContainerCreate(
@@ -378,16 +422,39 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 	}
 
 	onpremApps := []string{}
-	startAction := workflowExecution.Workflow.Start
+	startAction := workflowExecution.Start
+	log.Printf("Startaction: %s", startAction)
 	toExecuteOnprem := []string{}
 	parents := map[string][]string{}
 	children := map[string][]string{}
 
-	// source = parent, dest = child
+	// source = parent node, dest = child node
 	// parent can have more children, child can have more parents
 	for _, branch := range workflowExecution.Workflow.Branches {
-		parents[branch.DestinationID] = append(parents[branch.DestinationID], branch.SourceID)
-		children[branch.SourceID] = append(children[branch.SourceID], branch.DestinationID)
+		// Check what the parent is first. If it's trigger - skip
+		sourceFound := false
+		destinationFound := false
+		for _, action := range workflowExecution.Workflow.Actions {
+			if action.ID == branch.SourceID {
+				sourceFound = true
+			}
+
+			if action.ID == branch.DestinationID {
+				destinationFound = true
+			}
+		}
+
+		if sourceFound {
+			parents[branch.DestinationID] = append(parents[branch.DestinationID], branch.SourceID)
+		} else {
+			log.Printf("ID %s was not found in actions! Skipping parent. (TRIGGER?)", branch.SourceID)
+		}
+
+		if destinationFound {
+			children[branch.SourceID] = append(children[branch.SourceID], branch.DestinationID)
+		} else {
+			log.Printf("ID %s was not found in actions! Skipping child. (TRIGGER?)", branch.SourceID)
+		}
 	}
 
 	log.Printf("Actions: %d", len(workflowExecution.Workflow.Actions))
@@ -437,37 +504,133 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 	}
 
 	// Process the parents etc. How?
-	// while queue:
-	// while len(self.in_process) > 0 or len(self.parallel_in_process) > 0:
-	// check if its their own turn to continue
-	// visited = {self.start_action}
 	visited := []string{}
-	nextActions := []string{}
-	queueNodes := []string{}
-
+	executed := []string{}
+	nextActions := []string{startAction}
+	firstIteration := true
 	for {
-		//if len(queueNodes) > 0 {
-		//	log.Println(queueNodes)
-		//	nextActions = queueNodes
-		//} else {
-		//	nextActions := []string{}
-		//}
-		// FIXME - this might actually work, but probably not
-		//queueNodes = []string{}
+		queueNodes := []string{}
 
 		if len(workflowExecution.Results) == 0 {
 			nextActions = []string{startAction}
+		} else if firstIteration {
+			firstIteration = false
 		} else {
+			// This is to re-check the nodes that exist and whether they should continue
+			appendActions := []string{}
 			for _, item := range workflowExecution.Results {
-				visited = append(visited, item.Action.ID)
+
+				// FIXME: Check whether the item should be visited or not
+				// Do the same check as in walkoff.go - are the parents done?
+				// If skipped and both parents are skipped: keep as skipped, otherwise queue
+				if item.Status == "SKIPPED" {
+					isSkipped := true
+
+					for _, branch := range workflowExecution.Workflow.Branches {
+						// 1. Finds branches where the destination is our node
+						// 2. Finds results of those branches, and sees the status
+						// 3. If the status isn't skipped or failure, then it will still run this node
+						if branch.DestinationID == item.Action.ID {
+							for _, subresult := range workflowExecution.Results {
+								if subresult.Action.ID == branch.SourceID {
+									if subresult.Status != "SKIPPED" && subresult.Status != "FAILURE" {
+										log.Printf("\n\n\nSUBRESULT PARENT STATUS: %s\n\n\n", subresult.Status)
+										isSkipped = false
+
+										break
+									}
+								}
+							}
+						}
+					}
+
+					if isSkipped {
+						//log.Printf("Skipping %s as all parents are done", item.Action.Label)
+						if !arrayContains(visited, item.Action.ID) {
+							log.Printf("Adding visited (1): %s", item.Action.Label)
+							visited = append(visited, item.Action.ID)
+						}
+					} else {
+						log.Printf("Continuing %s as all parents are NOT done", item.Action.Label)
+						appendActions = append(appendActions, item.Action.ID)
+					}
+				} else {
+					if item.Status == "FINISHED" {
+						log.Printf("Adding visited (2): %s", item.Action.Label)
+						visited = append(visited, item.Action.ID)
+					}
+				}
+
 				nextActions = children[item.Action.ID]
-				// FIXME: check if nextActions items are finished?
+				if len(appendActions) > 0 {
+					log.Printf("APPENDED NODES: %#v", appendActions)
+					nextActions = append(nextActions, appendActions...)
+				}
 			}
 		}
 
+		// This is a backup in case something goes wrong in this complex hellhole.
+		// Max default execution time is 5 minutes for now anyway, which should take
+		// care if it gets stuck in a loop.
+		// FIXME: Force killing a worker should result in a notification somewhere
 		if len(nextActions) == 0 {
-			log.Println("No next action. Finished?")
-			//shutdown(workflowExecution.ExecutionId)
+			log.Printf("No next action. Finished? Result vs Actions: %d - %d", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
+			if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions) {
+				shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+			}
+
+			// Look for the NEXT missing action
+			notFound := []string{}
+			for _, action := range workflowExecution.Workflow.Actions {
+				found := false
+				for _, result := range workflowExecution.Results {
+					if action.ID == result.Action.ID {
+						found = true
+						break
+					}
+				}
+
+				if !found {
+					notFound = append(notFound, action.ID)
+				}
+			}
+
+			//log.Printf("SOMETHING IS MISSING!: %#v", notFound)
+			for _, item := range notFound {
+				if arrayContains(executed, item) {
+					log.Printf("%s has already executed but no result!", item)
+					continue
+				}
+
+				// Visited means it's been touched in any way.
+				outerIndex := -1
+				for index, visit := range visited {
+					if visit == item {
+						outerIndex = index
+						break
+					}
+				}
+
+				if outerIndex >= 0 {
+					log.Printf("Removing index %s from visited")
+					visited = append(visited[:outerIndex], visited[outerIndex+1:]...)
+				}
+
+				fixed := 0
+				for _, parent := range parents[item] {
+					parentResult := getResult(workflowExecution, parent)
+					if parentResult.Status == "FINISHED" || parentResult.Status == "SUCCESS" || parentResult.Status == "SKIPPED" || parentResult.Status == "FAILURE" {
+						fixed += 1
+					}
+				}
+
+				if fixed == len(parents[item]) {
+					nextActions = append(nextActions, item)
+				}
+
+				// If it's not executed and not in nextActions
+				// FIXME: Check if the item's parents are finished. If they're not, skip.
+			}
 		}
 
 		for _, node := range nextActions {
@@ -478,28 +641,17 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 				}
 			}
 		}
-
-		//log.Println(queueNodes)
+		//log.Printf("NEXT: %s", nextActions)
+		//log.Printf("queueNodes: %s", queueNodes)
 
 		// IF NOT VISITED && IN toExecuteOnPrem
 		// SKIP if it's not onprem
-		// FIXME: Find next node(s)
-		//for _, result := range workflowExecution.Results {
-		//	log.Println(result.Status)
-		//}
-
 		for _, nextAction := range nextActions {
 			action := getAction(workflowExecution, nextAction)
-			// FIXME - remove this. Should always need to be valid.
-			//if action.IsValid == false {
-			//	log.Printf("%#v", action)
-			//	log.Printf("Action %s (%s) isn't valid. Exiting, BUT SHOULD CALLBACK TO SET FAILURE.", action.ID, action.Name)
-			//	os.Exit(3)
-			//}
 
 			// check visited and onprem
 			if arrayContains(visited, nextAction) {
-				log.Printf("ALREADY VISITIED: %s", nextAction)
+				log.Printf("ALREADY VISITIED (%s): %s", action.Label, nextAction)
 				continue
 			}
 
@@ -523,7 +675,7 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 				fixed := 0
 				for _, parent := range parents[nextAction] {
 					parentResult := getResult(workflowExecution, parent)
-					if parentResult.Status == "FINISHED" || parentResult.Status == "SUCCESS" {
+					if parentResult.Status == "FINISHED" || parentResult.Status == "SUCCESS" || parentResult.Status == "SKIPPED" || parentResult.Status == "FAILURE" {
 						fixed += 1
 					}
 				}
@@ -536,7 +688,13 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 			}
 
 			if continueOuter {
-				log.Printf("Parents of %s aren't finished: %s", nextAction, strings.Join(parents[nextAction], ", "))
+				//log.Printf("Parents of %s aren't finished: %s", nextAction, strings.Join(parents[nextAction], ", "))
+				//for _, tmpaction := range parents[nextAction] {
+				//	action := getAction(workflowExecution, tmpaction)
+				//	_ = action
+				//	//log.Printf("Parent: %s", action.Label)
+				//}
+				// Find the result of the nodes?
 				continue
 			}
 
@@ -590,7 +748,7 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 			}
 
 			// marshal action and put it in there rofl
-			log.Printf("Time to execute %s with app %s:%s, function %s, env %s with %d parameters.", action.ID, action.AppName, action.AppVersion, action.Name, action.Environment, len(action.Parameters))
+			log.Printf("Time to execute %s (%s) with app %s:%s, function %s, env %s with %d parameters.", action.ID, action.Label, action.AppName, action.AppVersion, action.Name, action.Environment, len(action.Parameters))
 
 			actionData, err := json.Marshal(action)
 			if err != nil {
@@ -618,11 +776,17 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 			if err != nil {
 				log.Printf("Failed deploying %s from image %s: %s", identifier, image, err)
 				log.Printf("Should send status and exit the entire thing?")
-				//shutdown(workflowExecution.ExecutionId)
+				//shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
 			}
 
+			log.Printf("Adding visited (3): %s", action.Label)
+
 			visited = append(visited, action.ID)
-			//log.Printf("%#v", action)
+			executed = append(executed, action.ID)
+
+			// If children of action.ID are NOT in executed:
+			// Remove them from visited.
+			//log.Printf("EXECUTED: %#v", executed)
 		}
 
 		//log.Println(nextAction)
@@ -774,14 +938,64 @@ func getAction(workflowExecution WorkflowExecution, id string) Action {
 	return Action{}
 }
 
+func runTestExecution(client *http.Client, workflowId, apikey string) (string, string) {
+	fullUrl := fmt.Sprintf("%s/api/v1/workflows/%s/execute", baseUrl, workflowId)
+	req, err := http.NewRequest(
+		"GET",
+		fullUrl,
+		nil,
+	)
+
+	if err != nil {
+		log.Printf("Error building test request: %s", err)
+		return "", ""
+	}
+
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", apikey))
+	newresp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Error running test request: %s", err)
+		return "", ""
+	}
+
+	body, err := ioutil.ReadAll(newresp.Body)
+	if err != nil {
+		log.Printf("Failed reading body: %s", err)
+		return "", ""
+	}
+
+	log.Printf("Body: %s", string(body))
+	var workflowExecution WorkflowExecution
+	err = json.Unmarshal(body, &workflowExecution)
+	if err != nil {
+		log.Printf("Failed workflowExecution unmarshal: %s", err)
+		return "", ""
+	}
+
+	return workflowExecution.Authorization, workflowExecution.ExecutionId
+}
+
 // Initial loop etc
 func main() {
 	log.Printf("Setting up worker environment")
-
 	sleepTime := 5
 	client := &http.Client{}
-	authorization := os.Getenv("AUTHORIZATION")
-	executionId := os.Getenv("EXECUTIONID")
+
+	// WORKER_TESTING_WORKFLOW should be a workflow ID
+	authorization := ""
+	executionId := ""
+	testing := os.Getenv("WORKER_TESTING_WORKFLOW")
+	shuffle_apikey := os.Getenv("WORKER_TESTING_APIKEY")
+	if len(testing) > 0 && len(shuffle_apikey) > 0 {
+		// Execute a workflow and use that info
+		log.Printf("!! Running test environment for worker by executing workflow %s", testing)
+		authorization, executionId = runTestExecution(client, testing, shuffle_apikey)
+
+		//os.Exit(3)
+	} else {
+		authorization = os.Getenv("AUTHORIZATION")
+		executionId = os.Getenv("EXECUTIONID")
+	}
 
 	if len(authorization) == 0 {
 		log.Println("No AUTHORIZATION key set in env")

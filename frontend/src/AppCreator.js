@@ -297,7 +297,7 @@ const AppCreator = (props) => {
 	const checkQuery = () => {
 		var urlParams = new URLSearchParams(window.location.search)
 		if (!urlParams.has("id")) {
-  			setIsAppLoaded(true)
+  		setIsAppLoaded(true)
 			return	
 		}
 
@@ -362,7 +362,10 @@ const AppCreator = (props) => {
 		}
 
 		if (data.servers !== undefined && data.servers.length > 0) {
-			setBaseUrl(data.servers[0].url)
+			var firstUrl = data.servers[0].url
+			if (firstUrl.endsWith("/")) {
+				setBaseUrl(firstUrl.slice(0, firstUrl.length-1))
+			}
 		} 
 
 		// This is annoying (:
@@ -380,6 +383,7 @@ const AppCreator = (props) => {
 
 		// FIXME - headers?
 		var newActions = []
+		var wordlist = {}
 		for (let [path, pathvalue] of Object.entries(data.paths)) {
 			for (let [method, methodvalue] of Object.entries(pathvalue)) {
 				var newaction = {
@@ -426,6 +430,61 @@ const AppCreator = (props) => {
 					}
 				}
 
+				if (newaction.name === "" || newaction.name === undefined) {
+					// Find a unique part of the string
+					// FIXME: Looks for length between /, find the one where they differ
+					// Should find others with the same START to their path 
+					// Make a list of reserved names? Aka things that show up only once
+					if (Object.getOwnPropertyNames(wordlist).length === 0) {
+						for (let [newpath, pathvalue] of Object.entries(data.paths)) {
+							const newpathsplit = newpath.split("/")
+							for(var key in newpathsplit) {
+								const pathitem = newpathsplit[key].toLowerCase()
+								if (wordlist[pathitem] === undefined) {
+									wordlist[pathitem] = 1
+								} else {
+									wordlist[pathitem] += 1
+								}
+							}
+						}
+					} 
+
+					//console.log("WORDLIST: ", wordlist)
+
+					// Remove underscores and make it normal with upper case etc
+					const urlsplit = path.split("/")
+					if (urlsplit.length > 0) {
+						var curname = ""
+						for(var key in urlsplit) {
+							var subpath = urlsplit[key]	
+							if (wordlist[subpath] > 2 || subpath.length < 1) {
+								continue
+							}
+						
+							curname = subpath
+							break
+						}
+
+						// FIXME: If name exists, 
+						// FIXME: Check if first part of parsedname is verb, otherwise use method
+						const parsedname = curname.split("_").join(" ").split("-").join(" ").split("{").join(" ").split("}").join(" ").trim()
+						if (parsedname.length === 0) {
+							newaction.errors.push("Missing name")
+						} else {
+							const newname = method.charAt(0).toUpperCase() + method.slice(1) + " " + parsedname
+							const searchactions = newActions.find(data => data.name === newname) 
+							console.log("SEARCH: ", searchactions)
+							if (searchactions !== undefined) {
+								newaction.errors.push("Missing name")
+							} else {
+								newaction.name = newname
+							}
+						}
+
+					} else {
+						newaction.errors.push("Missing name")
+					}
+				}
 				newActions.push(newaction)
 			}
 		}
@@ -580,7 +639,7 @@ const AppCreator = (props) => {
 				}
 			}
 
-			if (item.body.length > 0) {
+			if (item.body !== undefined && item.body.length > 0) {
 				const required = false
 				newitem = {
 					"in": "body",
@@ -1013,7 +1072,7 @@ const AppCreator = (props) => {
 
 	const getActionErrors = () => {
 		var errormessage = []
-		if (currentAction.name.length === 0) {
+		if (currentAction.name === undefined || currentAction.name.length === 0) {
 			errormessage.push("Name can't be empty")
 		}
 
@@ -1466,7 +1525,7 @@ const AppCreator = (props) => {
 	//	<img src={file} id="logo" style={{width: "100%", height: "100%"}} />
 
 	const imageData = file.length > 0 ? file : fileBase64 
-	const imageInfo = <img src={imageData} alt="Click to upload an image" id="logo" style={{maxWidth: 174, maxHeight: 174,}} />
+	const imageInfo = <img src={imageData} alt="Click to upload an image (174x174)" id="logo" style={{maxWidth: 174, maxHeight: 174,}} />
 
 	// Random names for type & autoComplete. Didn't research :^)
 	const landingpageDataBrowser = 

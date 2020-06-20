@@ -1,4 +1,9 @@
 #!/bin/bash
-docker rmi frikky/shuffle:app_sdk
-docker build . -t frikky/shuffle:app_sdk --no-cache
-docker push frikky/shuffle:app_sdk
+NAME=app_sdk
+VERSION=0.2.0
+
+docker rmi frikky/shuffle:$NAME --force
+docker build . -t frikky/shuffle:$NAME -t frikky/$NAME:$VERSION
+
+docker push frikky/shuffle:$NAME
+docker push frikky/$NAME:$VERSION

@@ -114,6 +114,16 @@ const data = [{
 			},
 		},
 		{
+			selector: '.skipped-highlight',
+			css: {
+				'background-color': 'grey',
+				'border-color': 'grey',
+				'border-width': '8px',
+				'transition-property': 'background-color',
+				'transition-duration': '0.5s',
+			},
+		},
+		{
 			selector: '.success-highlight',
 			css: {
 				'background-color': '#41dcab',

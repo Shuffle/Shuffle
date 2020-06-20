@@ -39,8 +39,10 @@ import { positions, Provider } from "react-alert";
 
 // Production - backend proxy forwarding in nginx
 var globalUrl = window.location.origin
+
+// CORS used for testing purposes. Should only happen with specific port and http
 if (window.location.protocol == "http:" && window.location.port === "3000") {
-	globalUrl = "http://192.168.3.6:5001"
+	globalUrl = "http://localhost:5001"
 }
 
 const surfaceColor = "#27292D"
@@ -90,13 +92,11 @@ const App = (message, props) => {
   	})
     .then(response => response.json())
     .then(responseJson => {
-			console.log(responseJson)
       if (responseJson.success === true) {
 				setUserData(responseJson)
 				setIsLoggedIn(true)
 
 				// Updating cookie every request
-				console.log("COOKIES: ",  cookies)
 				for (var key in responseJson["cookies"]) {
 					setCookie(responseJson["cookies"][key].key, responseJson["cookies"][key].value, {path: "/"})
 				}

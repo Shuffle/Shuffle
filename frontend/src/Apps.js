@@ -457,7 +457,7 @@ const Apps = (props) => {
 				<Paper square style={uploadViewPaperStyle}>
 					<div style={{width: "100%", margin: 25}}>
 						<h2>App Creator</h2>
-						<a href="/docs/apps" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">How it works</a>
+						<a href="https://shuffler.io/docs/apps" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">How it works</a>
 						&nbsp;- <a href="https://github.com/frikky/security-openapis" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">Security API's</a>
 						&nbsp;- <a href="https://apis.guru/browse-apis/" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">OpenAPI directory</a>
 						<div/>
@@ -500,6 +500,10 @@ const Apps = (props) => {
 	}
 
 	const handleSearchChange = (search) => {
+		if (apps === undefined || apps === null || apps.length === 0) {
+			return
+		}
+
 		const searchfield = search.toLowerCase()
 		const newapps = apps.filter(data => data.name.toLowerCase().includes(searchfield) || data.description.toLowerCase().includes(searchfield))
 
@@ -901,6 +905,7 @@ const Apps = (props) => {
 		</Dialog>
 	: null
 
+	const circularLoader = validation ? <CircularProgress color="primary" /> : null
 	const appsModalLoad = loadAppsModalOpen ? 
 		<Dialog modal 
 			open={loadAppsModalOpen}
@@ -994,7 +999,6 @@ const Apps = (props) => {
 		: null
 
 	const errorText = openApiError.length > 0 ? <div>Error: {openApiError}</div> : null
-	const circularLoader = validation ? <CircularProgress color="primary" /> : null
 	const modalView = openApiModal ? 
 		<Dialog modal 
 			open={openApiModal}

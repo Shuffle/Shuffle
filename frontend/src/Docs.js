@@ -189,10 +189,10 @@ const Docs = (props) => {
 	}
 
 	function Heading(props) {
-		const element = React.createElement(`h${props.level}`, {style: {marginTop: 25}}, props.children)
+		const element = React.createElement(`h${props.level}`, {style: {marginTop: 40}}, props.children)
 		return (
 			<span>
-				{props.level !== 1 ? <Divider style={{width: "90%", marginTop: 25, backgroundColor: inputColor}} /> : null}
+				{props.level !== 1 ? <Divider style={{width: "90%", marginTop: 40, backgroundColor: inputColor}} /> : null}
 				{element}
 			</span>
 		)

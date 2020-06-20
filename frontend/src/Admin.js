@@ -1,5 +1,6 @@
 import React, { useEffect} from 'react';
 
+import {Link} from 'react-router-dom';
 import Paper from '@material-ui/core/Paper';
 import List from '@material-ui/core/List';
 import Divider from '@material-ui/core/Divider';
@@ -31,6 +32,9 @@ const Admin = (props) => {
 	const [users, setUsers] = React.useState([]);
 	const [environments, setEnvironments] = React.useState([]);
 	const [schedules, setSchedules] = React.useState([])
+	const [selectedUser, setSelectedUser] = React.useState({})
+	const [newPassword, setNewPassword] = React.useState("");
+	const [selectedUserModalOpen, setSelectedUserModalOpen] = React.useState(false)
 
 	const alert = useAlert()
 
@@ -39,7 +43,7 @@ const Admin = (props) => {
 		console.log("INPUT: ", data)
 
 		// Just use this one?
-		const url = globalUrl+'/api/v1/workflows/'+data["workflow_id datastore:"]+"/schedule/"+data.id
+		const url = globalUrl+'/api/v1/workflows/'+data["workflow_id"]+"/schedule/"+data.id
 		console.log("URL: ", url)
 		fetch(url, {
 			method: 'DELETE',
@@ -50,6 +54,7 @@ const Admin = (props) => {
 		})
 		.then(response =>
 			response.json().then(responseJson => {
+				console.log("RESP: ", responseJson)
 				if (responseJson["success"] === false) {
 					alert.error("Failed stopping schedule")
 				} else {
@@ -58,6 +63,64 @@ const Admin = (props) => {
 				}
 			}),
 		)
+		.catch(error => {
+			console.log("Error in userdata: ", error)
+		});
+	}
+
+	const onPasswordChange = () => {
+		const data = {"username": selectedUser.username, "newpassword": newPassword}
+		const url = globalUrl+'/api/v1/passwordchange';
+		fetch(url, {
+			mode: 'cors',
+			method: 'POST',
+			body: JSON.stringify(data),
+			credentials: 'include',
+			crossDomain: true,
+			withCredentials: true,
+			headers: {
+				'Content-Type': 'application/json; charset=utf-8',
+			},
+		})
+		.then(response =>
+			response.json().then(responseJson => {
+				if (responseJson["success"] === false) {
+					alert.error("Failed setting new password")
+				} else {
+					alert.success("Changed password!")
+				}
+			}),
+		)
+		.catch(error => {
+			alert.error("Err: ", error.toString())
+		});
+	}
+
+	const deleteUser = (data) => {
+		// Just use this one?
+		const url = globalUrl+'/api/v1/users/'+data.id
+		fetch(url, {
+			method: 'DELETE',
+	  	credentials: "include",
+			headers: {
+				'Content-Type': 'application/json',
+			},
+		})
+		.then(response => {
+			if (response.status === 200) {
+				getUsers()
+			}
+
+			return response.json()
+		})
+    .then((responseJson) => {
+			if (!responseJson.success && responseJson.reason !== undefined) {
+				alert.error("Failed to deactivate user: "+responseJson.reason)
+			} else {
+				alert.success("Deactivated user "+data.id)
+			}
+		})
+
 		.catch(error => {
 			console.log("Error in userdata: ", error)
 		});
@@ -244,8 +307,8 @@ const Admin = (props) => {
 	}
 
 	const paperStyle = {
-		minWidth: "100%",
-		maxWidth: "100%",
+		maxWidth: 1250,
+		margin: "auto",
 		color: "white",
 		backgroundColor: surfaceColor,
 		marginBottom: 10, 
@@ -255,6 +318,101 @@ const Admin = (props) => {
 	const changeModalData = (field, value) => {
 		modalUser[field] = value
 	}
+
+	const generateApikey = () => {
+		fetch(globalUrl+"/api/v1/generateapikey", {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+				credentials: "include",
+		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for WORKFLOW EXECUTION :O!")
+			} else {
+				getUsers()
+			}
+
+			return response.json()
+		})
+  	.then((responseJson) => {
+			console.log("RESP: ", responseJson)
+			if (!responseJson.success && responseJson.reason !== undefined) {
+				alert.error("Failed getting new: "+responseJson.reason)
+			} else {
+				alert.success("Got new API key")
+			}
+    })
+		.catch(error => {
+    		console.log(error)
+		});
+	}
+
+	const editUserModal = 
+		<Dialog modal 
+			open={selectedUserModalOpen}
+			onClose={() => {setSelectedUserModalOpen(false)}}
+			PaperProps={{
+				style: {
+					backgroundColor: surfaceColor,
+					color: "white",
+					minWidth: "800px",
+					minHeight: "320px",
+				},
+			}}
+		>
+			<DialogTitle><span style={{color: "white"}}>Edit user</span></DialogTitle>
+			<DialogContent>
+				<div style={{display: "flex"}}>
+					<TextField
+						style={{backgroundColor: inputColor, flex: 3}}
+						InputProps={{
+							style:{
+								height: 50, 
+								color: "white",
+							},
+						}}
+						color="primary"
+						required
+						fullWidth={true}
+						placeholder="New password"
+						type="password"
+						id="standard-required"
+						autoComplete="password"
+						margin="normal"
+						variant="outlined"
+						onChange={e => setNewPassword(e.target.value)}
+					/>
+					<Button 
+						style={{maxHeight: 50, flex: 1}}
+						variant="outlined"
+						color="primary"
+						onClick={() => onPasswordChange()}
+					>
+						Submit 
+					</Button>
+				</div>
+				<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
+				<Button 
+					style={{}} 
+					variant="outlined"
+					color="primary"
+					onClick={() => deleteUser(selectedUser)}
+				>
+					{selectedUser.active ? "Deactivate" : "Activate"}	
+				</Button>
+				<Button 
+					style={{}} 
+					variant="outlined"
+					color="primary"
+					onClick={() => generateApikey(selectedUser)}
+				>
+					Get new API key
+				</Button>
+			</DialogContent>
+		</Dialog>
 
 	const modalView = 
 		<Dialog modal 
@@ -373,11 +531,68 @@ const Admin = (props) => {
 			</Button>
 			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
 			<List>
+				<ListItem>
+					<ListItemText
+						primary="Username"
+						style={{minWidth: 200, maxWidth: 200}}
+					/>
+					<ListItemText
+						primary="API key"
+						style={{minWidth: 350, maxWidth: 350, overflow: "hidden"}}
+					/>
+					<ListItemText
+						primary="Password"
+						style={{minWidth: 180, maxWidth: 180}}
+					/>
+					<ListItemText
+						primary="Role"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="Active"
+						style={{minWidth: 180, maxWidth: 180}}
+					/>
+					<ListItemText
+						primary="Actions"
+						style={{minWidth: 180, maxWidth: 180}}
+					/>
+				</ListItem>
 				{users === undefined ? null : users.map(data => {
-					console.log(data)
 					return (
 						<ListItem>
-							{data.Username}
+							<ListItemText
+								primary={data.username}
+								style={{minWidth: 200, maxWidth: 200}}
+							/>
+							<ListItemText
+								primary={data.apikey === undefined || data.apikey.length === 0 ? "" : data.apikey}
+								style={{maxWidth: 350, minWidth: 350,}}
+							/>
+							<ListItemText
+								primary="**************"
+								style={{minWidth: 180, maxWidth: 180}}
+							/>
+							<ListItemText
+								primary={data.role}
+								style={{minWidth: 150, maxWidth: 150}}
+							/>
+							<ListItemText
+								primary={data.active ? "True" : "False"}
+								style={{minWidth: 180, maxWidth: 180}}
+							/>
+							<ListItemText style={{display: "flex"}}>
+								<Button 
+									style={{}} 
+									variant="outlined"
+									color="primary"
+									onClick={() => {
+										setSelectedUserModalOpen(true)
+										setSelectedUser(data)
+									}}
+								>
+									Edit user
+								</Button>
+							</ListItemText>
 						</ListItem>
 					)
 				})}
@@ -472,7 +687,7 @@ const Admin = (props) => {
 	}
 
 	const data = 
-		<div style={{width: 1366, margin: "auto"}}>
+		<div style={{minWidth: 1366, margin: "auto"}}>
 			<Paper style={paperStyle}>
 				<Tabs
 					value={curTab}
@@ -495,6 +710,7 @@ const Admin = (props) => {
 	return (
 		<div>
 			{modalView}
+			{editUserModal}
 			{data}
 		</div>
 	)

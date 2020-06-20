@@ -89,6 +89,7 @@ type WorkflowApp struct {
 	Activated   bool   `json:"activated" yaml:"activated" required:false datastore:"activated"`
 	Tested      bool   `json:"tested" yaml:"tested" required:false datastore:"tested"`
 	Owner       string `json:"owner" datastore:"owner" yaml:"owner"`
+	Hash        string `json:"hash" datastore:"hash" yaml:"hash"` // api.yaml+dockerfile+src/app.py for apps
 	PrivateID   string `json:"private_id" yaml:"private_id" required:false datastore:"private_id"`
 	Description string `json:"description" datastore:"description,noindex" required:false yaml:"description"`
 	Environment string `json:"environment" datastore:"environment" required:true yaml:"environment"`
@@ -120,19 +121,25 @@ type SchemaDefinition struct {
 }
 
 type WorkflowAppAction struct {
-	Description    string                       `json:"description" datastore:"description"`
-	ID             string                       `json:"id" datastore:"id" yaml:"id,omitempty"`
-	Name           string                       `json:"name" datastore:"name"`
-	Label          string                       `json:"label" datastore:"label"`
-	NodeType       string                       `json:"node_type" datastore:"node_type"`
-	Environment    string                       `json:"environment" datastore:"environment"`
-	Sharing        bool                         `json:"sharing" datastore:"sharing"`
-	PrivateID      string                       `json:"private_id" datastore:"private_id"`
-	AppID          string                       `json:"app_id" datastore:"app_id"`
-	Authentication []AuthenticationStore        `json:"authentication" datastore:"authentication" yaml:"authentication,omitempty"`
-	Tested         bool                         `json:"tested" datastore:"tested" yaml:"tested"`
-	Parameters     []WorkflowAppActionParameter `json:"parameters" datastore: "parameters"`
-	Returns        struct {
+	Description       string                       `json:"description" datastore:"description"`
+	ID                string                       `json:"id" datastore:"id" yaml:"id,omitempty"`
+	Name              string                       `json:"name" datastore:"name"`
+	Label             string                       `json:"label" datastore:"label"`
+	NodeType          string                       `json:"node_type" datastore:"node_type"`
+	Environment       string                       `json:"environment" datastore:"environment"`
+	Sharing           bool                         `json:"sharing" datastore:"sharing"`
+	PrivateID         string                       `json:"private_id" datastore:"private_id"`
+	AppID             string                       `json:"app_id" datastore:"app_id"`
+	Authentication    []AuthenticationStore        `json:"authentication" datastore:"authentication" yaml:"authentication,omitempty"`
+	Tested            bool                         `json:"tested" datastore:"tested" yaml:"tested"`
+	Parameters        []WorkflowAppActionParameter `json:"parameters" datastore: "parameters"`
+	ExecutionVariable struct {
+		Description string `json:"description" datastore:"description"`
+		ID          string `json:"id" datastore:"id"`
+		Name        string `json:"name" datastore:"name"`
+		Value       string `json:"value" datastore:"value"`
+	} `json:"execution_variable" datastore:"execution_variables"`
+	Returns struct {
 		Description string           `json:"description" datastore:"returns" yaml:"description,omitempty"`
 		ID          string           `json:"id" datastore:"id" yaml:"id,omitempty"`
 		Schema      SchemaDefinition `json:"schema" datastore:"schema" yaml:"schema"`
@@ -141,41 +148,53 @@ type WorkflowAppAction struct {
 
 // FIXME: Generate a callback authentication ID?
 type WorkflowExecution struct {
-	Type              string         `json:"type" datastore:"type"`
-	Status            string         `json:"status" datastore:"status"`
-	Start             string         `json:"start" datastore:"start"`
-	ExecutionArgument string         `json:"execution_argument" datastore:"execution_argument"`
-	ExecutionId       string         `json:"execution_id" datastore:"execution_id"`
-	WorkflowId        string         `json:"workflow_id" datastore:"workflow_id"`
-	LastNode          string         `json:"last_node" datastore:"last_node"`
-	Authorization     string         `json:"authorization" datastore:"authorization"`
-	Result            string         `json:"result" datastore:"result,noindex"`
-	StartedAt         int64          `json:"started_at" datastore:"started_at"`
-	CompletedAt       int64          `json:"completed_at" datastore:"completed_at"`
-	ProjectId         string         `json:"project_id" datastore:"project_id"`
-	Locations         []string       `json:"locations" datastore:"locations"`
-	Workflow          Workflow       `json:"workflow" datastore:"workflow,noindex"`
-	Results           []ActionResult `json:"results" datastore:"results,noindex"`
+	Type               string         `json:"type" datastore:"type"`
+	Status             string         `json:"status" datastore:"status"`
+	Start              string         `json:"start" datastore:"start"`
+	ExecutionArgument  string         `json:"execution_argument" datastore:"execution_argument"`
+	ExecutionId        string         `json:"execution_id" datastore:"execution_id"`
+	WorkflowId         string         `json:"workflow_id" datastore:"workflow_id"`
+	LastNode           string         `json:"last_node" datastore:"last_node"`
+	Authorization      string         `json:"authorization" datastore:"authorization"`
+	Result             string         `json:"result" datastore:"result,noindex"`
+	StartedAt          int64          `json:"started_at" datastore:"started_at"`
+	CompletedAt        int64          `json:"completed_at" datastore:"completed_at"`
+	ProjectId          string         `json:"project_id" datastore:"project_id"`
+	Locations          []string       `json:"locations" datastore:"locations"`
+	Workflow           Workflow       `json:"workflow" datastore:"workflow,noindex"`
+	Results            []ActionResult `json:"results" datastore:"results,noindex"`
+	ExecutionVariables []struct {
+		Description string `json:"description" datastore:"description"`
+		ID          string `json:"id" datastore:"id"`
+		Name        string `json:"name" datastore:"name"`
+		Value       string `json:"value" datastore:"value"`
+	} `json:"execution_variables,omitempty" datastore:"execution_variables,omitempty"`
 }
 
 // Added environment for location to execute
 type Action struct {
-	AppName     string                       `json:"app_name" datastore:"app_name"`
-	AppVersion  string                       `json:"app_version" datastore:"app_version"`
-	AppID       string                       `json:"app_id" datastore:"app_id"`
-	Errors      []string                     `json:"errors" datastore:"errors"`
-	ID          string                       `json:"id" datastore:"id"`
-	IsValid     bool                         `json:"is_valid" datastore:"is_valid"`
-	IsStartNode bool                         `json:"isStartNode" datastore:"isStartNode"`
-	Sharing     bool                         `json:"sharing" datastore:"sharing"`
-	PrivateID   string                       `json:"private_id" datastore:"private_id"`
-	Label       string                       `json:"label" datastore:"label"`
-	SmallImage  string                       `json:"small_image" datastore:"small_image,noindex" required:false yaml:"small_image"`
-	LargeImage  string                       `json:"large_image" datastore:"large_image,noindex" yaml:"large_image" required:false`
-	Environment string                       `json:"environment" datastore:"environment"`
-	Name        string                       `json:"name" datastore:"name"`
-	Parameters  []WorkflowAppActionParameter `json:"parameters" datastore: "parameters,noindex"`
-	Position    struct {
+	AppName           string                       `json:"app_name" datastore:"app_name"`
+	AppVersion        string                       `json:"app_version" datastore:"app_version"`
+	AppID             string                       `json:"app_id" datastore:"app_id"`
+	Errors            []string                     `json:"errors" datastore:"errors"`
+	ID                string                       `json:"id" datastore:"id"`
+	IsValid           bool                         `json:"is_valid" datastore:"is_valid"`
+	IsStartNode       bool                         `json:"isStartNode" datastore:"isStartNode"`
+	Sharing           bool                         `json:"sharing" datastore:"sharing"`
+	PrivateID         string                       `json:"private_id" datastore:"private_id"`
+	Label             string                       `json:"label" datastore:"label"`
+	SmallImage        string                       `json:"small_image" datastore:"small_image,noindex" required:false yaml:"small_image"`
+	LargeImage        string                       `json:"large_image" datastore:"large_image,noindex" yaml:"large_image" required:false`
+	Environment       string                       `json:"environment" datastore:"environment"`
+	Name              string                       `json:"name" datastore:"name"`
+	Parameters        []WorkflowAppActionParameter `json:"parameters" datastore: "parameters,noindex"`
+	ExecutionVariable struct {
+		Description string `json:"description" datastore:"description"`
+		ID          string `json:"id" datastore:"id"`
+		Name        string `json:"name" datastore:"name"`
+		Value       string `json:"value" datastore:"value"`
+	} `json:"execution_variable,omitempty" datastore:"execution_variable,omitempty"`
+	Position struct {
 		X float64 `json:"x" datastore:"x"`
 		Y float64 `json:"y" datastore:"y"`
 	} `json:"position"`
@@ -231,27 +250,37 @@ type Schedule struct {
 }
 
 type Workflow struct {
-	Actions           []Action   `json:"actions" datastore:"actions,noindex"`
-	Branches          []Branch   `json:"branches" datastore:"branches,noindex"`
-	Triggers          []Trigger  `json:"triggers" datastore:"triggers,noindex"`
-	Schedules         []Schedule `json:"schedules" datastore:"schedules,noindex"`
-	Errors            []string   `json:"errors,omitempty" datastore:"errors"`
-	Tags              []string   `json:"tags,omitempty" datastore:"tags"`
-	ID                string     `json:"id" datastore:"id"`
-	IsValid           bool       `json:"is_valid" datastore:"is_valid"`
-	Name              string     `json:"name" datastore:"name"`
-	Description       string     `json:"description" datastore:"description"`
-	Start             string     `json:"start" datastore:"start"`
-	Owner             string     `json:"owner" datastore:"owner"`
-	Sharing           string     `json:"sharing" datastore:"sharing"`
-	Org               []Org      `json:"org,omitempty" datastore:"org"`
-	ExecutingOrg      Org        `json:"execution_org,omitempty" datastore:"execution_org"`
+	Actions       []Action   `json:"actions" datastore:"actions,noindex"`
+	Branches      []Branch   `json:"branches" datastore:"branches,noindex"`
+	Triggers      []Trigger  `json:"triggers" datastore:"triggers,noindex"`
+	Schedules     []Schedule `json:"schedules" datastore:"schedules,noindex"`
+	Configuration struct {
+		ExitOnError  bool `json:"exit_on_error" datastore:"exit_on_error"`
+		StartFromTop bool `json:"start_from_top" datastore:"start_from_top"`
+	} `json:"configuration,omitempty" datastore:"configuration"`
+	Errors            []string `json:"errors,omitempty" datastore:"errors"`
+	Tags              []string `json:"tags,omitempty" datastore:"tags"`
+	ID                string   `json:"id" datastore:"id"`
+	IsValid           bool     `json:"is_valid" datastore:"is_valid"`
+	Name              string   `json:"name" datastore:"name"`
+	Description       string   `json:"description" datastore:"description"`
+	Start             string   `json:"start" datastore:"start"`
+	Owner             string   `json:"owner" datastore:"owner"`
+	Sharing           string   `json:"sharing" datastore:"sharing"`
+	Org               []Org    `json:"org,omitempty" datastore:"org"`
+	ExecutingOrg      Org      `json:"execution_org,omitempty" datastore:"execution_org"`
 	WorkflowVariables []struct {
 		Description string `json:"description" datastore:"description"`
 		ID          string `json:"id" datastore:"id"`
 		Name        string `json:"name" datastore:"name"`
 		Value       string `json:"value" datastore:"value"`
 	} `json:"workflow_variables" datastore:"workflow_variables"`
+	ExecutionVariables []struct {
+		Description string `json:"description" datastore:"description"`
+		ID          string `json:"id" datastore:"id"`
+		Name        string `json:"name" datastore:"name"`
+		Value       string `json:"value" datastore:"value"`
+	} `json:"execution_variables,omitempty" datastore:"execution_variables"`
 }
 
 type ActionResult struct {
@@ -386,7 +415,7 @@ func getWorkflowQueue(ctx context.Context, id string) (ExecutionRequestWrapper, 
 //}
 
 // Frequency = cronjob OR minutes between execution
-func createSchedule(ctx context.Context, scheduleId, workflowId, name, frequency string, body []byte) error {
+func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode, frequency string, body []byte) error {
 	var err error
 	testSplit := strings.Split(frequency, "*")
 	cronJob := ""
@@ -420,10 +449,14 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, frequency
 	// FIXME:
 	// This may run multiple places if multiple servers,
 	// but that's a future problem
+	log.Printf("BODY: %s", string(body))
+	parsedArgument := strings.Replace(string(body), "\"", "\\\"", -1)
+	bodyWrapper := fmt.Sprintf(`{"start": "%s", "execution_argument": "%s"}`, startNode, parsedArgument)
+	log.Printf("WRAPPER BODY: \n%s", bodyWrapper)
 	job := func() {
 		request := &http.Request{
 			Method: "POST",
-			Body:   ioutil.NopCloser(strings.NewReader(string(body))),
+			Body:   ioutil.NopCloser(strings.NewReader(bodyWrapper)),
 		}
 
 		_, _, err := handleExecution(workflowId, Workflow{}, request)
@@ -447,7 +480,9 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, frequency
 	schedule := ScheduleOld{
 		Id:                   scheduleId,
 		WorkflowId:           workflowId,
+		StartNode:            startNode,
 		Argument:             string(body),
+		WrappedArgument:      bodyWrapper,
 		Seconds:              newfrequency,
 		CreationTime:         timeNow,
 		LastModificationtime: timeNow,
@@ -650,6 +685,55 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 
 }
 
+// Finds the child nodes of a node in execution and returns them
+// Used if e.g. a node in a branch is exited, and all children have to be stopped
+func findChildNodes(workflowExecution WorkflowExecution, nodeId string) []string {
+	//log.Printf("\nNODE TO FIX: %s\n\n", nodeId)
+	allChildren := []string{nodeId}
+
+	// 1. Find children of this specific node
+	// 2. Find the children of those nodes etc.
+	for _, branch := range workflowExecution.Workflow.Branches {
+		if branch.SourceID == nodeId {
+			//log.Printf("Children: %s", branch.DestinationID)
+			allChildren = append(allChildren, branch.DestinationID)
+
+			childNodes := findChildNodes(workflowExecution, branch.DestinationID)
+			for _, bottomChild := range childNodes {
+				found := false
+				for _, topChild := range allChildren {
+					if topChild == bottomChild {
+						found = true
+						break
+					}
+				}
+
+				if !found {
+					allChildren = append(allChildren, bottomChild)
+				}
+			}
+		}
+	}
+
+	// Remove potential duplicates
+	newNodes := []string{}
+	for _, tmpnode := range allChildren {
+		found := false
+		for _, newnode := range newNodes {
+			if newnode == tmpnode {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			newNodes = append(newNodes, tmpnode)
+		}
+	}
+
+	return newNodes
+}
+
 func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -707,20 +791,90 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - remove comment
 	if workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
 
-		log.Printf("Workflowexecution is already aborted. No further action can be taken")
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflowexecution is aborted because of %s with result %s and status %s"}`, workflowExecution.LastNode, workflowExecution.Result, workflowExecution.Status)))
-		return
+		if workflowExecution.Workflow.Configuration.ExitOnError {
+			log.Printf("Workflowexecution already has status %s. No further action can be taken", workflowExecution.Status)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflowexecution is aborted because of %s with result %s and status %s"}`, workflowExecution.LastNode, workflowExecution.Result, workflowExecution.Status)))
+			return
+		} else {
+			log.Printf("Continuing even though it's aborted.")
+		}
 	}
 
 	if actionResult.Status == "ABORTED" || actionResult.Status == "FAILURE" {
 		log.Printf("Actionresult is %s. Should set workflowExecution and exit all running functions", actionResult.Status)
-		workflowExecution.Status = actionResult.Status
-		workflowExecution.LastNode = actionResult.Action.ID
+
+		newResults := []ActionResult{}
+		childNodes := []string{}
+		if workflowExecution.Workflow.Configuration.ExitOnError {
+			workflowExecution.Status = actionResult.Status
+			workflowExecution.LastNode = actionResult.Action.ID
+			// Find underlying nodes and add them
+		} else {
+			// Finds ALL childnodes to set them to SKIPPED
+			childNodes = findChildNodes(*workflowExecution, actionResult.Action.ID)
+			// Remove duplicates
+			log.Printf("CHILD NODES: %d", len(childNodes))
+			for _, nodeId := range childNodes {
+				if nodeId == actionResult.Action.ID {
+					continue
+				}
+
+				// 1. Find the action itself
+				// 2. Create an actionresult
+				curAction := Action{ID: ""}
+				for _, action := range workflowExecution.Workflow.Actions {
+					if action.ID == nodeId {
+						curAction = action
+						break
+					}
+				}
+
+				if len(curAction.ID) == 0 {
+					log.Printf("Couldn't find subnode %s", nodeId)
+					continue
+				}
+
+				// Check parents are done here. Only add it IF all parents are skipped
+				skipNodeAdd := false
+				for _, branch := range workflowExecution.Workflow.Branches {
+					if branch.DestinationID == nodeId {
+						// If the branch's source node is NOT in childNodes, it's not a skipped parent
+						sourceNodeFound := false
+						for _, item := range childNodes {
+							if item == branch.SourceID {
+								sourceNodeFound = true
+								break
+							}
+						}
+
+						if !sourceNodeFound {
+							log.Printf("Not setting node %s to SKIPPED", nodeId)
+							skipNodeAdd = true
+							break
+						}
+					}
+				}
+
+				if !skipNodeAdd {
+					newResult := ActionResult{
+						Action:        curAction,
+						ExecutionId:   actionResult.ExecutionId,
+						Authorization: actionResult.Authorization,
+						Result:        "Skipped because of previous node",
+						StartedAt:     0,
+						CompletedAt:   0,
+						Status:        "SKIPPED",
+					}
+
+					newResults = append(newResults, newResult)
+					increaseStatisticsField(ctx, "workflow_execution_actions_skipped", workflowExecution.Workflow.ID, 1)
+				}
+			}
+		}
 
 		// Cleans up aborted, and always gives a result
 		lastResult := ""
-		newResults := []ActionResult{}
 		// type ActionResult struct {
 		for _, result := range workflowExecution.Results {
 			if result.Status == "EXECUTING" {
@@ -751,21 +905,6 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	// This means it should continue I think :)
-	if actionResult.Status == "SKIPPED" {
-		// How the fuck do I do this tho
-		// Parse _all_ children of the skipped and add them to "finished"
-		//
-		log.Printf("Find out how to handle skipped items, as there might be more branches to continue anyway")
-		// FIXME - simulate that every subnode is skipped
-		// Check worker, as it contains this code
-		// Children of children of children...
-		// Recurse, woo
-		//for _, item := range children {
-
-		//}
-	}
-
 	// FIXME rebuild to be like this or something
 	// workflowExecution/ExecutionId/Nodes/NodeId
 	// Find the appropriate action
@@ -782,13 +921,20 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		if found {
-			// FIXME - this is broken, but why
-			//if workflowExecution.Results[outerindex].Status == actionResult.Status {
-			//	log.Printf("Status of %s is already %s", actionResult.Action.ID, actionResult.Status)
-			//	resp.WriteHeader(401)
-			//	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Status of %s is already %s"}`, actionResult.Action.ID, actionResult.Status)))
-			//	return
-			//}
+			// If result exists and execution variable exists, update execution value
+			//log.Printf("Exec var backend: %s", workflowExecution.Results[outerindex].Action.ExecutionVariable.Name)
+			actionVarName := workflowExecution.Results[outerindex].Action.ExecutionVariable.Name
+			// Finds potential execution arguments
+			if len(actionVarName) > 0 {
+				log.Printf("EXECUTION VARIABLE LOCAL: %s", actionVarName)
+				for index, execvar := range workflowExecution.ExecutionVariables {
+					if execvar.Name == actionVarName {
+						// Sets the value for the variable
+						workflowExecution.ExecutionVariables[index].Value = actionResult.Result
+						break
+					}
+				}
+			}
 
 			log.Printf("Updating %s in %s from %s to %s", actionResult.Action.ID, workflowExecution.ExecutionId, workflowExecution.Results[outerindex].Status, actionResult.Status)
 			workflowExecution.Results[outerindex] = actionResult
@@ -801,6 +947,31 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		workflowExecution.Results = append(workflowExecution.Results, actionResult)
 	}
 
+	// FIXME: Have a check for skippednodes and their parents
+	for resultIndex, result := range workflowExecution.Results {
+		if result.Status != "SKIPPED" {
+			continue
+		}
+
+		// Checks if all parents are skipped or failed. Otherwise removes them from the results
+		for _, branch := range workflowExecution.Workflow.Branches {
+			if branch.DestinationID == result.Action.ID {
+				for _, subresult := range workflowExecution.Results {
+					if subresult.Action.ID == branch.SourceID {
+						if subresult.Status != "SKIPPED" && subresult.Status != "FAILURE" {
+							log.Printf("SUBRESULT PARENT STATUS: %s", subresult.Status)
+							log.Printf("Should remove resultIndex: %d", resultIndex)
+
+							workflowExecution.Results = append(workflowExecution.Results[:resultIndex], workflowExecution.Results[resultIndex+1:]...)
+
+							break
+						}
+					}
+				}
+			}
+		}
+	}
+
 	extraInputs := 0
 	for _, result := range workflowExecution.Results {
 		if result.Action.Name == "User Input" && result.Action.AppName == "User Input" {
@@ -808,18 +979,50 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	//log.Printf("Checking results %d vs %d", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extraInputs)
+	//log.Printf("LENGTH: %d - %d", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
+
 	if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions)+extraInputs {
 		finished := true
 		lastResult := ""
+
+		// Doesn't have to be SUCCESS and FINISHED everywhere anymore.
+		skippedNodes := false
 		for _, result := range workflowExecution.Results {
-			if result.Status != "SUCCESS" && result.Status != "FINISHED" {
+			if result.Status == "EXECUTING" {
 				finished = false
 				break
 			}
 
+			// FIXME: Check if ALL parents are skipped or if its just one. Otherwise execute it
+			if result.Status == "SKIPPED" {
+				skippedNodes = true
+
+				// Checks if all parents are skipped or failed. Otherwise removes them from the results
+				for _, branch := range workflowExecution.Workflow.Branches {
+					if branch.DestinationID == result.Action.ID {
+						for _, subresult := range workflowExecution.Results {
+							if subresult.Action.ID == branch.SourceID {
+								if subresult.Status != "SKIPPED" && subresult.Status != "FAILURE" {
+									//log.Printf("SUBRESULT PARENT STATUS: %s", subresult.Status)
+									//log.Printf("Should remove resultIndex: %d", resultIndex)
+									finished = false
+									break
+								}
+							}
+						}
+					}
+
+					if !finished {
+						break
+					}
+				}
+			}
+
 			lastResult = result.Result
 		}
+
+		// FIXME: Handle skip nodes - change status?
+		_ = skippedNodes
 
 		if finished {
 			log.Printf("Execution of %s finished.", workflowExecution.ExecutionId)
@@ -998,36 +1201,47 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 	// Initialized without functions = adding a hello world node.
 	if len(newActions) == 0 {
 		log.Printf("APPENDING NEW APP FOR NEW WORKFLOW")
-		//nodeId := "40447f30-fa44-4a4f-a133-4ee710368737"
-		//workflow.Start = nodeId
-		//newActions = append(newActions, Action{
-		//	Label:       "Start node",
-		//	Name:        "hello_world",
-		//	AppName:     "testing",
-		//	Environment: "Shuffle",
-		//	Parameters:  []WorkflowAppActionParameter{},
-		//	Position: struct {
-		//		X float64 "json:\"x\" datastore:\"x\""
-		//		Y float64 "json:\"y\" datastore:\"y\""
-		//	}{X: 449.5, Y: 446},
-		//	Priority:    0,
-		//	AppVersion:  "1.0.0",
-		//	AppID:       "c567fc10-9c15-403e-b72c-6550e9e76bc8",
-		//	Errors:      []string{},
-		//	ID:          nodeId,
-		//	IsValid:     true,
-		//	IsStartNode: true,
-		//	Sharing:     true,
-		//	PrivateID:   "",
-		//	SmallImage:  "",
-		//	LargeImage:  "data:image/png;base64,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",
-		//})
+
+		// Adds the Testing app if it's a new workflow
+		workflowapps, err := getAllWorkflowApps(ctx)
+		if err == nil {
+			for _, item := range workflowapps {
+				if item.Name == "Testing" && item.AppVersion == "1.0.0" {
+					nodeId := "40447f30-fa44-4a4f-a133-4ee710368737"
+					workflow.Start = nodeId
+					newActions = append(newActions, Action{
+						Label:       "Start node",
+						Name:        "hello_world",
+						Environment: "Shuffle",
+						Parameters:  []WorkflowAppActionParameter{},
+						Position: struct {
+							X float64 "json:\"x\" datastore:\"x\""
+							Y float64 "json:\"y\" datastore:\"y\""
+						}{X: 449.5, Y: 446},
+						Priority:    0,
+						Errors:      []string{},
+						ID:          nodeId,
+						IsValid:     true,
+						IsStartNode: true,
+						Sharing:     true,
+						PrivateID:   "",
+						SmallImage:  "",
+						AppName:     item.Name,
+						AppVersion:  item.AppVersion,
+						AppID:       item.ID,
+						LargeImage:  item.LargeImage,
+					})
+					break
+				}
+			}
+		}
 	} else {
-		log.Printf("Has actions already?")
+		log.Printf("Has %d actions already", len(newActions))
 	}
 
 	workflow.Actions = newActions
 	workflow.IsValid = true
+	workflow.Configuration.ExitOnError = true
 
 	workflowjson, err := json.Marshal(workflow)
 	if err != nil {
@@ -1285,6 +1499,14 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		workflow.Errors = []string{}
 	}
 
+	if len(workflow.ExecutionVariables) > 0 {
+		log.Printf("Found %d execution variable(s)", len(workflow.ExecutionVariables))
+	}
+
+	if len(workflow.WorkflowVariables) > 0 {
+		log.Printf("Found %d workflow variable(s)", len(workflow.WorkflowVariables))
+	}
+
 	// FIXME - do actual checks ROFL
 	// FIXME - minor issues with e.g. hello world and self.console_logger
 	// Nodechecks
@@ -1354,25 +1576,27 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
-	//} else if err != nil {
-	//	log.Printf("Error getting item: %v", err)
-	//} else {
-	//	// FIXME - verify if value is ok? Can unmarshal etc.
-	//	err = json.Unmarshal(item.Value, &workflowApps)
-	//	if err != nil {
-	//		log.Printf("Failed unmarshaling allworkflowapps from memcache: %s", err)
-	//		resp.WriteHeader(401)
-	//		resp.Write([]byte(`{"success": false}`))
-	//		return
-	//	}
-
-	//	if userErr == nil && len(user.PrivateApps) > 0 {
-	//		workflowApps = append(workflowApps, user.PrivateApps...)
-	//	}
-	//}
 
 	// Started getting the single apps, but if it's weird, this is faster
-	log.Println("Apps set done")
+	// 1. Check workflow.Start
+	// 2. Check if any node has "isStartnode"
+	if len(workflow.Actions) > 0 {
+		index := -1
+		for indexFound, action := range workflow.Actions {
+			//log.Println("Apps set done")
+			if workflow.Start == action.ID {
+				index = indexFound
+			}
+		}
+
+		if index >= 0 {
+			workflow.Actions[0].IsStartNode = true
+		} else {
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "You need to set a startnode."}`)))
+			return
+		}
+	}
 
 	// Check every app action and param to see whether they exist
 	newActions = []Action{}
@@ -1380,6 +1604,8 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		reservedApps := []string{
 			"0ca8887e-b4af-4e3e-887c-87e9d3bc3d3e",
 		}
+
+		//log.Printf("%s Action execution var: %s", action.Label, action.ExecutionVariable.Name)
 
 		builtin := false
 		for _, id := range reservedApps {
@@ -1766,7 +1992,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		//log.Printf("Execution data: %#v", execution)
 		if len(execution.Start) == 36 {
 			log.Printf("SHOULD START ON NODE %s", execution.Start)
-			workflow.Start = execution.Start
+			workflowExecution.Start = execution.Start
 
 			found := false
 			for _, action := range workflow.Actions {
@@ -1779,6 +2005,10 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 				log.Printf("ACTION %s WAS NOT FOUND!", workflow.Start)
 				return WorkflowExecution{}, fmt.Sprintf("Startnode %s was not found in actions", workflow.Start), errors.New(fmt.Sprintf("Startnode %s was not found in actions", workflow.Start))
 			}
+		} else if len(execution.Start) > 0 {
+
+			log.Printf("START ACTION %s IS WRONG ID LENGTH %d!", len(execution.Start))
+			return WorkflowExecution{}, fmt.Sprintf("Startnode %s was not found in actions", execution.Start), errors.New(fmt.Sprintf("Startnode %s was not found in actions", execution.Start))
 		}
 
 		if len(execution.ExecutionId) == 36 {
@@ -1864,9 +2094,10 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 			makeNew = false
 		}
 
+		// Don't override workflow defaults
 		if startok {
 			log.Printf("Setting start to %s based on query!", start[0])
-			workflowExecution.Workflow.Start = start[0]
+			//workflowExecution.Workflow.Start = start[0]
 			workflowExecution.Start = start[0]
 		}
 
@@ -1904,6 +2135,8 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		// Status for the entire workflow.
 		workflowExecution.Status = "EXECUTING"
 	}
+
+	workflowExecution.ExecutionVariables = workflow.ExecutionVariables
 	// Local authorization for this single workflow used in workers.
 
 	// FIXME: Used for cloud
@@ -1916,9 +2149,18 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	//}
 
 	//log.Println(string(mappedData))
+
+	log.Printf("STARTNODE: %s", workflowExecution.Start)
+	if len(workflowExecution.Start) == 0 {
+		workflowExecution.Start = workflowExecution.Workflow.Start
+	}
+
+	childNodes := findChildNodes(workflowExecution, workflowExecution.Start)
+
 	topic := "workflows"
 	// FIXME - remove this?
 	newActions := []Action{}
+	defaultResults := []ActionResult{}
 	for _, action := range workflowExecution.Workflow.Actions {
 		action.LargeImage = ""
 		//log.Println(action.Environment)
@@ -1926,15 +2168,47 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		if action.Environment == "" {
 			return WorkflowExecution{}, fmt.Sprintf("Environment is not defined for %s", action.Name), errors.New("Environment not defined!")
 		}
-		newActions = append(newActions, action)
-	}
-	workflowExecution.Workflow.Actions = newActions
 
-	//log.Printf("%#v", workflowExecution.Workflow.Actions)
+		newActions = append(newActions, action)
+
+		// If the node is NOT found, it's supposed to be set to SKIPPED,
+		// as it's not a childnode of the startnode
+		// This is a configuration item for the workflow itself.
+		if !workflowExecution.Workflow.Configuration.StartFromTop {
+			found := false
+			for _, nodeId := range childNodes {
+				if nodeId == action.ID {
+					//log.Printf("Found %s", action.ID)
+					found = true
+				}
+			}
+
+			if !found {
+				if action.ID == workflowExecution.Start {
+					continue
+				}
+
+				log.Printf("Should set %s to SKIPPED as it's NOT a childnode of the startnode.", action.ID)
+				defaultResults = append(defaultResults, ActionResult{
+					Action:        action,
+					ExecutionId:   workflowExecution.ExecutionId,
+					Authorization: workflowExecution.Authorization,
+					Result:        "Skipped because it's not under the startnode",
+					StartedAt:     0,
+					CompletedAt:   0,
+					Status:        "SKIPPED",
+				})
+			}
+		}
+	}
 
 	// Verification for execution environments
+	workflowExecution.Results = defaultResults
+	workflowExecution.Workflow.Actions = newActions
 	onpremExecution := false
 	environments := []string{}
+
+	// Check if the actions are children of the startnode?
 	for _, action := range workflowExecution.Workflow.Actions {
 		if action.Environment != cloudname {
 			found := false
@@ -2064,7 +2338,6 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 }
 
 func stopSchedule(resp http.ResponseWriter, request *http.Request) {
-	log.Printf("Delete?")
 	cors := handleCors(resp, request)
 	if cors {
 		return
@@ -2231,20 +2504,19 @@ func stopScheduleGCP(resp http.ResponseWriter, request *http.Request) {
 
 func deleteSchedule(ctx context.Context, id string) error {
 	log.Printf("Should stop schedule %s!", id)
-	//newscheduler "github.com/carlescere/scheduler"
-	log.Printf("Schedules: %#v", scheduledJobs)
-	if value, exists := scheduledJobs[id]; exists {
-		log.Printf("STOP THIS ONE: %s", value)
-		// Looks like this does the trick? Hurr
-		value.Lock()
-		err := DeleteKey(ctx, "schedules", id)
-		if err != nil {
-			log.Printf("Failed to delete schedule: %s", err)
-			return err
-		}
+	err := DeleteKey(ctx, "schedules", id)
+	if err != nil {
+		log.Printf("Failed to delete schedule: %s", err)
+		return err
 	} else {
-		// FIXME - allow it to kind of stop anyway?
-		return errors.New("Can't find the schedule.")
+		if value, exists := scheduledJobs[id]; exists {
+			log.Printf("STOPPING THIS SCHEDULE: %s", id)
+			// Looks like this does the trick? Hurr
+			value.Lock()
+		} else {
+			// FIXME - allow it to kind of stop anyway?
+			return errors.New("Can't find the schedule.")
+		}
 	}
 
 	return nil
@@ -2351,6 +2623,20 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	// Finds the startnode for the specific schedule
+	startNode := ""
+	for _, branch := range workflow.Branches {
+		if branch.SourceID == schedule.Id {
+			startNode = branch.DestinationID
+		}
+	}
+
+	if startNode == "" {
+		startNode = workflow.Start
+	}
+
+	log.Printf("Startnode: %s", startNode)
+
 	if len(schedule.Id) != 36 {
 		log.Printf("ID length is not 36 for schedule: %s", err)
 		resp.WriteHeader(http.StatusInternalServerError)
@@ -2396,6 +2682,7 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 		schedule.Id,
 		workflow.ID,
 		schedule.Name,
+		startNode,
 		schedule.Frequency,
 		[]byte(parsedBody),
 	)
@@ -2642,6 +2929,84 @@ func setWorkflow(ctx context.Context, workflow Workflow, id string) error {
 	return nil
 }
 
+func deleteUser(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	user, userErr := handleApiAuthentication(resp, request)
+	if userErr != nil {
+		log.Printf("Api authentication failed in edit workflow: %s", userErr)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Role != "admin" {
+		log.Printf("Wrong user (%s) when deleting - must be admin", user.Username)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Must be admin"}`))
+		return
+	}
+
+	location := strings.Split(request.URL.String(), "/")
+	var userId string
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		userId = location[4]
+	}
+
+	if userId == user.Id {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Can't deactivate yourself"}`))
+		return
+	}
+
+	ctx := context.Background()
+	q := datastore.NewQuery("Users").Filter("id =", userId)
+	var users []User
+	_, err := dbclient.GetAll(ctx, q, &users)
+	if err != nil {
+		log.Printf("Error getting users apikey (deleteuser): %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Failed getting users for verification"}`))
+		return
+	}
+
+	if len(users) != 1 {
+		log.Printf("Found too many users!")
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false, "reason": "Backend error: too many users"}`))
+		return
+	}
+
+	// Invert. No user deletion.
+	if users[0].Active {
+		users[0].Active = false
+	} else {
+		users[0].Active = true
+	}
+
+	err = setUser(ctx, &users[0])
+	if err != nil {
+		log.Printf("Failed swapping active for user %s (%s)", users[0].Username, users[0].Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": true"}`)))
+		return
+	}
+
+	log.Printf("Successfully inverted %s", users[0].Username)
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(`{"success": true}`))
+}
+
 func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -2845,8 +3210,8 @@ func getWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	//log.Printf("%#v", parsedApi)
-	log.Printf("API LEN: %d, ID: %s", len(parsedApi.Body), fileId)
+	// log.Printf("%#v", parsedApi)
+	// log.Printf("API LEN: %d, ID: %s", len(parsedApi.Body), fileId)
 
 	//log.Printf("Parsed API: %#v", parsedApi)
 	if len(parsedApi.ID) > 0 {
@@ -3421,6 +3786,8 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	log.Printf("Starting app hotloading")
+
 	// Just need to be logged in
 	// FIXME - should have some permissions?
 	user, err := handleApiAuthentication(resp, request)
@@ -3440,7 +3807,7 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 	location := os.Getenv("APP_HOTLOAD_FOLDER")
 	if len(location) == 0 {
 		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "APP_HOTLOAD_FOLDER not specified in .env"}`, err)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "APP_HOTLOAD_FOLDER not specified in .env"}`)))
 		return
 	}
 
@@ -3448,7 +3815,7 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 	err = handleAppHotload(location)
 	if err != nil {
 		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed loading apps: %s"}`, err)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed loading apps: %s"}`)))
 		return
 	}
 
@@ -3773,22 +4140,9 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 			// Check the file
 			filename := file.Name()
 			if filename == "Dockerfile" {
-				// Quick Dockerfile check
-				//dockerfile := fmt.Sprintf("%sDockerfile", extra)
-				//log.Printf("Handling Dockerfile %s", dockerfile)
-				//dockerdata, err := ioutil.ReadFile(dockerfile)
-				//if err != nil {
-				//	log.Printf("Failed to read dockerfile")
-				//	continue
-				//}
-
-				//if len(dockerdata) == 0 {
-				//	log.Printf("Dockerfile is empty")
-				//	continue
-				//}
-
-				log.Printf("Handle Dockerfile in location %s", extra)
-
+				// Set up to make md5 and check if the app is new (api.yaml+src/app.py+Dockerfile)
+				// Check if Dockerfile, app.py or api.yaml has changed. Hash?
+				//log.Printf("Handle Dockerfile in location %s", extra)
 				// Try api.yaml and api.yml
 				fullPath := fmt.Sprintf("%s%s", extra, "api.yaml")
 				fileReader, err := fs.Open(fullPath)
@@ -3801,21 +4155,55 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 					}
 				}
 
-				readFile, err := ioutil.ReadAll(fileReader)
+				appfileData, err := ioutil.ReadAll(fileReader)
 				if err != nil {
 					log.Printf("Failed reading %s: %s", fullPath, err)
 					continue
 				}
 
-				if len(readFile) == 0 {
+				if len(appfileData) == 0 {
 					log.Printf("Failed reading %s - length is 0.", fullPath)
 					continue
 				}
 
-				var workflowapp WorkflowApp
-				err = gyaml.Unmarshal(readFile, &workflowapp)
+				// func md5sum(data []byte) string {
+				// Make hash
+				appPython := fmt.Sprintf("%s/src/app.py", extra)
+				appPythonReader, err := fs.Open(appPython)
 				if err != nil {
-					log.Printf("Failed unmarshaling %s: %s", fullPath, err)
+					log.Printf("Failed to read %s", appPython)
+					continue
+				}
+
+				appPythonData, err := ioutil.ReadAll(appPythonReader)
+				if err != nil {
+					log.Printf("Failed reading %s: %s", appPython, err)
+					continue
+				}
+
+				dockerFp := fmt.Sprintf("%s/Dockerfile", extra)
+				dockerfile, err := fs.Open(dockerFp)
+				if err != nil {
+					log.Printf("Failed to read %s", appPython)
+					continue
+				}
+
+				dockerfileData, err := ioutil.ReadAll(dockerfile)
+				if err != nil {
+					log.Printf("Failed to read dockerfile")
+					continue
+				}
+
+				combined := []byte{}
+				combined = append(combined, appfileData...)
+				combined = append(combined, appPythonData...)
+				combined = append(combined, dockerfileData...)
+				md5 := md5sum(combined)
+
+				var workflowapp WorkflowApp
+				err = gyaml.Unmarshal(appfileData, &workflowapp)
+				if err != nil {
+					log.Printf("Failed unmarshaling workflowapp %s: %s", fullPath, err)
 					continue
 				}
 
@@ -3835,13 +4223,25 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 				}
 
 				// Make an option to override existing apps?
+				//Hash string `json:"hash" datastore:"hash" yaml:"hash"` // api.yaml+dockerfile+src/app.py for apps
 				removeApps := []string{}
+				skip := false
 				for _, app := range allapps {
 					if app.Name == workflowapp.Name && app.AppVersion == workflowapp.AppVersion {
-						//log.Printf("App upload for %s:%s already exists.", app.Name, app.AppVersion)
-						log.Printf("Overriding app %s:%s as it exists.", app.Name, app.AppVersion)
+						// FIXME: Check if there's a new APP_SDK as well.
+						// Skip this check if app_sdk is new.
+						if app.Hash == md5 && app.Hash != "" {
+							skip = true
+							break
+						}
+
+						//log.Printf("Overriding app %s:%s as it exists but has different hash.", app.Name, app.AppVersion)
 						removeApps = append(removeApps, app.ID)
 					}
+				}
+
+				if skip {
+					continue
 				}
 
 				err = checkWorkflowApp(workflowapp)
@@ -3859,21 +4259,17 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 					}
 				}
 
-				//if workflowapp.Environment == "" {
-				//	workflowapp.Environment = baseEnvironment
-				//}
-
 				workflowapp.ID = uuid.NewV4().String()
 				workflowapp.IsValid = true
 				workflowapp.Verified = true
 				workflowapp.Sharing = true
 				workflowapp.Downloaded = true
+				workflowapp.Hash = md5
 
 				err = setWorkflowAppDatastore(ctx, workflowapp, workflowapp.ID)
 				if err != nil {
 					log.Printf("Failed setting workflowapp: %s", err)
 					continue
-					//return err
 				}
 
 				err = increaseStatisticsField(ctx, "total_apps_created", workflowapp.ID, 1)
@@ -3886,7 +4282,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 					log.Printf("Failed to increase total apps loaded stats: %s", err)
 				}
 
-				log.Printf("Added %s:%s to the database", workflowapp.Name, workflowapp.AppVersion)
+				//log.Printf("Added %s:%s to the database", workflowapp.Name, workflowapp.AppVersion)
 
 				/// Only upload if successful and no errors
 				err = buildImageMemory(fs, tags, extra)
@@ -3895,6 +4291,8 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 				} else {
 					if len(tags) > 0 {
 						log.Printf("Successfully built image %s", tags[0])
+					} else {
+						log.Printf("Successfully built image docker img")
 					}
 				}
 			}

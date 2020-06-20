@@ -339,14 +339,7 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 			bodyAddin = ", data=body"
 
 			// FIXME: Does JSON data work?
-			bodyFormatter = `
-        if (body.startswith("{") and body.endswith("}")) or (body.startswith("[") and body.endswith("]")):
-            try:
-                body = json.dumps(body)
-            except:
-                pass
-		`
-			break
+			bodyFormatter = `body = " ".join(body.strip().split()).encode("utf-8")`
 		}
 	}
 
@@ -375,13 +368,14 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 
 	// Extra param for url if it's changeable
 	// Extra param for authentication scheme(s)
+	// The last weird one is the body.. Tabs & spaces sucks.
 	data := fmt.Sprintf(`    async def %s(self%s%s%s%s%s%s):
         %s
         url=f"%s%s"
         %s
         %s
         %s
-				%s
+        %s
         return requests.%s(url, headers=headers%s%s%s).text
 		`,
 		functionname,
@@ -505,7 +499,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 				Description: "The apikey to use",
 				Multiline:   false,
 				Required:    true,
-				Example:     "The API key to use. Space = skip",
+				Example:     "**********",
 				Schema: SchemaDefinition{
 					Type: "string",
 				},
@@ -531,7 +525,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 				Description: "The password to use",
 				Multiline:   false,
 				Required:    true,
-				Example:     "The password to use",
+				Example:     "***********",
 				Schema: SchemaDefinition{
 					Type: "string",
 				},

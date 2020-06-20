@@ -6,6 +6,7 @@ import Divider from '@material-ui/core/Divider';
 import {Link} from 'react-router-dom';
 
 import TextField from '@material-ui/core/TextField';
+import { useAlert } from "react-alert";
 
 
 //const tmpdata = {
@@ -23,6 +24,7 @@ import TextField from '@material-ui/core/TextField';
 // FIXME: Use isLoggedIn :)
 const Settings = (props) => {
   const { globalUrl, isLoaded, userdata, surfaceColor, inputColor } = props;
+	const alert = useAlert()
 
 	const [username, setUsername] = useState("");
 	const [firstname, setFirstname] = useState("");
@@ -65,7 +67,7 @@ const Settings = (props) => {
 	}
 	
 	const onPasswordChange = () => {
-		const data = {"currentpassword": currentPassword, "newpassword": newPassword, "newpassword2": newPassword2}
+		const data = {"username": userSettings.username, "currentpassword": currentPassword, "newpassword": newPassword, "newpassword2": newPassword2}
 		const url = globalUrl+'/api/v1/passwordchange';
 		fetch(url, {
 			mode: 'cors',
@@ -82,7 +84,10 @@ const Settings = (props) => {
 			response.json().then(responseJson => {
 				if (responseJson["success"] === false) {
 					setPasswordFormMessage(responseJson["reason"])
-				} 
+				} else {
+					alert.success("Changed password!")
+					setPasswordFormMessage("")
+				}
 			}),
 		)
 		.catch(error => {
@@ -183,7 +188,7 @@ const Settings = (props) => {
 			<div style={{display: "flex", marginTop: "80px"}}>
 				<Paper style={boxStyle}>
 					<h2>APIKEY</h2>
-					<Link to="/docs/api#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is the API key used for?</Link>
+					<Link to="/docs/API#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is the API key used for?</Link>
 					<TextField
 						style={{backgroundColor: inputColor, flex: "1"}}
 						InputProps={{
@@ -209,6 +214,7 @@ const Settings = (props) => {
 						onClick={() => generateApikey()}
 					>Re-Generate APIKEY</Button>
 					<Divider style={{marginTop: "40px"}}/>
+					{/*
 					<h2>Settings</h2>
 					<div style={{flex: "1", display: "flex", flexDirection: "row"}}>
 						<TextField
@@ -369,6 +375,7 @@ const Settings = (props) => {
 					</Button>
 					<h3>{formMessage}</h3>
 					<Divider />
+					*/}
 					<h2>Password</h2>
 					<div style={{flex: "1", display: "flex", flexDirection: "row"}}>
 						<TextField
