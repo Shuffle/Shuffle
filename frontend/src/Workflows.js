@@ -926,7 +926,7 @@ const Workflows = (props) => {
 							</Button> 				
 						</Tooltip>
 						*/}
-					 	<Tooltip color="primary" title={"Download workflows"} placement="top">
+					 	<Tooltip color="primary" title={"Download / Import workflows"} placement="top">
 							<Button color="primary" style={{}} variant="text" onClick={() => setLoadWorkflowsModalOpen(true)}>
 								<CloudDownloadIcon />
 							</Button> 				

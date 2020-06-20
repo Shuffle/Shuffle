@@ -2697,7 +2697,7 @@ const AngularWorkflow = (props) => {
 								selectedAction.execution_variable = value
 							}
 							setSelectedAction(selectedAction)
-							setUpdate("actionname "+e.target.value)
+							setUpdate("actionname "+e.target.value+selectedAction.Label)
 						}}
 						style={{backgroundColor: inputColor, color: "white", height: "50px"}}
 					>
