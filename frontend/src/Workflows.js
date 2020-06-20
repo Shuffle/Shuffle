@@ -838,7 +838,7 @@ const Workflows = (props) => {
 			}}
 		>
 			<FormControl>
-			<DialogTitle><div style={{color: "white"}}>New workflow</div></DialogTitle>
+			<DialogTitle><div style={{color: "white"}}>{editingWorkflow.id !== undefined ? "Editing" : "New"} workflow</div></DialogTitle>
 				<DialogContent>
 					<TextField
 						onBlur={(event) => setNewWorkflowName(event.target.value)}
@@ -873,7 +873,12 @@ const Workflows = (props) => {
 						Cancel
 					</Button>
 					<Button style={{}} disabled={newWorkflowName.length === 0} onClick={() => {
-						setNewWorkflow(newWorkflowName, newWorkflowDescription, {}, true)
+						if (editingWorkflow.id !== undefined) {
+							setNewWorkflow(newWorkflowName, newWorkflowDescription, editingWorkflow, false)
+						} else {
+							setNewWorkflow(newWorkflowName, newWorkflowDescription, {}, true)
+						}
+
 						setModalOpen(false)
 					}} color="primary">
 	        	Submit	

@@ -338,7 +338,8 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 			},
 		}
 	} else {
-		log.Printf("Bad config: %s. Using default network", baseUrl)
+		// FIXME: Default config
+		//log.Printf("Bad config: %s. Using default network", baseUrl)
 	}
 
 	cont, err := cli.ContainerCreate(
@@ -480,37 +481,130 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 	}
 
 	// Process the parents etc. How?
-	// while queue:
-	// while len(self.in_process) > 0 or len(self.parallel_in_process) > 0:
-	// check if its their own turn to continue
-	// visited = {self.start_action}
 	visited := []string{}
+	executed := []string{}
 	nextActions := []string{}
-	queueNodes := []string{}
-
 	for {
-		//if len(queueNodes) > 0 {
-		//	log.Println(queueNodes)
-		//	nextActions = queueNodes
-		//} else {
-		//	nextActions := []string{}
-		//}
-		// FIXME - this might actually work, but probably not
-		//queueNodes = []string{}
+		queueNodes := []string{}
 
 		if len(workflowExecution.Results) == 0 {
 			nextActions = []string{startAction}
 		} else {
+			// This is to re-check the nodes that exist and whether they should continue
+			appendActions := []string{}
 			for _, item := range workflowExecution.Results {
+
 				// FIXME: Check whether the item should be visited or not
-				visited = append(visited, item.Action.ID)
+				// Do the same check as in walkoff.go - are the parents done?
+				// If skipped and both parents are skipped: keep as skipped, otherwise queue
+				if item.Status == "SKIPPED" {
+					isSkipped := true
+
+					for _, branch := range workflowExecution.Workflow.Branches {
+						// 1. Finds branches where the destination is our node
+						// 2. Finds results of those branches, and sees the status
+						// 3. If the status isn't skipped or failure, then it will still run this node
+						if branch.DestinationID == item.Action.ID {
+							for _, subresult := range workflowExecution.Results {
+								if subresult.Action.ID == branch.SourceID {
+									if subresult.Status != "SKIPPED" && subresult.Status != "FAILURE" {
+										log.Printf("\n\n\nSUBRESULT PARENT STATUS: %s\n\n\n", subresult.Status)
+										isSkipped = false
+
+										break
+									}
+								}
+							}
+						}
+					}
+
+					if isSkipped {
+						//log.Printf("Skipping %s as all parents are done", item.Action.Label)
+						if !arrayContains(visited, item.Action.ID) {
+							log.Printf("Adding visited (1): %s", item.Action.Label)
+							visited = append(visited, item.Action.ID)
+						}
+					} else {
+						log.Printf("Continuing %s as all parents are NOT done", item.Action.Label)
+						appendActions = append(appendActions, item.Action.ID)
+					}
+				} else {
+					if item.Status == "FINISHED" {
+						log.Printf("Adding visited (2): %s", item.Action.Label)
+						visited = append(visited, item.Action.ID)
+					}
+				}
+
 				nextActions = children[item.Action.ID]
+				if len(appendActions) > 0 {
+					log.Printf("APPENDED NODES: %#v", appendActions)
+					nextActions = append(nextActions, appendActions...)
+				}
 			}
 		}
 
+		// This is a backup in case something goes wrong in this complex hellhole.
+		// Max default execution time is 5 minutes for now anyway, which should take
+		// care if it gets stuck in a loop.
+		// FIXME: Force killing a worker should result in a notification somewhere
 		if len(nextActions) == 0 {
 			log.Println("No next action. Finished?")
-			//shutdown(workflowExecution.ExecutionId)
+			if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions) {
+				shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+			}
+
+			// Look for the NEXT missing action
+			notFound := []string{}
+			for _, action := range workflowExecution.Workflow.Actions {
+				found := false
+				for _, result := range workflowExecution.Results {
+					if action.ID == result.Action.ID {
+						found = true
+						break
+					}
+				}
+
+				if !found {
+					notFound = append(notFound, action.ID)
+				}
+			}
+
+			log.Printf("SOMETHING IS MISSING!: %#v", notFound)
+			for _, item := range notFound {
+				if arrayContains(executed, item) {
+					log.Printf("%s has already executed but no result!", item)
+					continue
+				}
+
+				// Visited means it's been touched in any way.
+				outerIndex := -1
+				for index, visit := range visited {
+					if visit == item {
+						outerIndex = index
+						break
+					}
+				}
+
+				if outerIndex >= 0 {
+					log.Printf("Removing index %s from visited")
+					visited = append(visited[:outerIndex], visited[outerIndex+1:]...)
+				}
+
+				fixed := 0
+				for _, parent := range parents[item] {
+					parentResult := getResult(workflowExecution, parent)
+					if parentResult.Status == "FINISHED" || parentResult.Status == "SUCCESS" || parentResult.Status == "SKIPPED" || parentResult.Status == "FAILURE" {
+						fixed += 1
+					}
+				}
+
+				if fixed == len(parents[item]) {
+					nextActions = append(nextActions, item)
+				}
+
+				// If it's not executed and not in nextActions
+				// FIXME: Check if the item's parents are finished. If they're not, skip.
+			}
 		}
 
 		for _, node := range nextActions {
@@ -522,27 +616,14 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 			}
 		}
 
-		//log.Println(queueNodes)
-
 		// IF NOT VISITED && IN toExecuteOnPrem
 		// SKIP if it's not onprem
-		// FIXME: Find next node(s)
-		//for _, result := range workflowExecution.Results {
-		//	log.Println(result.Status)
-		//}
-
 		for _, nextAction := range nextActions {
 			action := getAction(workflowExecution, nextAction)
-			// FIXME - remove this. Should always need to be valid.
-			//if action.IsValid == false {
-			//	log.Printf("%#v", action)
-			//	log.Printf("Action %s (%s) isn't valid. Exiting, BUT SHOULD CALLBACK TO SET FAILURE.", action.ID, action.Name)
-			//	os.Exit(3)
-			//}
 
 			// check visited and onprem
 			if arrayContains(visited, nextAction) {
-				log.Printf("ALREADY VISITIED: %s", nextAction)
+				log.Printf("ALREADY VISITIED (%s): %s", action.Label, nextAction)
 				continue
 			}
 
@@ -566,7 +647,7 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 				fixed := 0
 				for _, parent := range parents[nextAction] {
 					parentResult := getResult(workflowExecution, parent)
-					if parentResult.Status == "FINISHED" || parentResult.Status == "SUCCESS" {
+					if parentResult.Status == "FINISHED" || parentResult.Status == "SUCCESS" || parentResult.Status == "SKIPPED" || parentResult.Status == "FAILURE" {
 						fixed += 1
 					}
 				}
@@ -580,6 +661,11 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 
 			if continueOuter {
 				log.Printf("Parents of %s aren't finished: %s", nextAction, strings.Join(parents[nextAction], ", "))
+				for _, tmpaction := range parents[nextAction] {
+					action := getAction(workflowExecution, tmpaction)
+					//log.Printf("Parent: %s", action.Label)
+				}
+				// Find the result of the nodes?
 				continue
 			}
 
@@ -633,7 +719,7 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 			}
 
 			// marshal action and put it in there rofl
-			log.Printf("Time to execute %s with app %s:%s, function %s, env %s with %d parameters.", action.ID, action.AppName, action.AppVersion, action.Name, action.Environment, len(action.Parameters))
+			log.Printf("Time to execute %s (%s) with app %s:%s, function %s, env %s with %d parameters.", action.ID, action.Label, action.AppName, action.AppVersion, action.Name, action.Environment, len(action.Parameters))
 
 			actionData, err := json.Marshal(action)
 			if err != nil {
@@ -664,8 +750,14 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 				shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
 			}
 
+			log.Printf("Adding visited (3): %s", action.Label)
+
 			visited = append(visited, action.ID)
-			//log.Printf("%#v", action)
+			executed = append(executed, action.ID)
+
+			// If children of action.ID are NOT in executed:
+			// Remove them from visited.
+			log.Printf("EXECUTED: %#v", executed)
 		}
 
 		//log.Println(nextAction)
@@ -817,14 +909,64 @@ func getAction(workflowExecution WorkflowExecution, id string) Action {
 	return Action{}
 }
 
+func runTestExecution(client *http.Client, workflowId, apikey string) (string, string) {
+	fullUrl := fmt.Sprintf("%s/api/v1/workflows/%s/execute", baseUrl, workflowId)
+	req, err := http.NewRequest(
+		"GET",
+		fullUrl,
+		nil,
+	)
+
+	if err != nil {
+		log.Printf("Error building test request: %s", err)
+		return "", ""
+	}
+
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", apikey))
+	newresp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Error running test request: %s", err)
+		return "", ""
+	}
+
+	body, err := ioutil.ReadAll(newresp.Body)
+	if err != nil {
+		log.Printf("Failed reading body: %s", err)
+		return "", ""
+	}
+
+	log.Printf("Body: %s", string(body))
+	var workflowExecution WorkflowExecution
+	err = json.Unmarshal(body, &workflowExecution)
+	if err != nil {
+		log.Printf("Failed workflowExecution unmarshal: %s", err)
+		return "", ""
+	}
+
+	return workflowExecution.Authorization, workflowExecution.ExecutionId
+}
+
 // Initial loop etc
 func main() {
 	log.Printf("Setting up worker environment")
-
 	sleepTime := 5
 	client := &http.Client{}
-	authorization := os.Getenv("AUTHORIZATION")
-	executionId := os.Getenv("EXECUTIONID")
+
+	// WORKER_TESTING_WORKFLOW should be a workflow ID
+	authorization := ""
+	executionId := ""
+	testing := os.Getenv("WORKER_TESTING_WORKFLOW")
+	shuffle_apikey := os.Getenv("WORKER_TESTING_APIKEY")
+	if len(testing) > 0 && len(shuffle_apikey) > 0 {
+		// Execute a workflow and use that info
+		log.Printf("!! Running test environment for worker by executing workflow %s", testing)
+		authorization, executionId = runTestExecution(client, testing, shuffle_apikey)
+
+		//os.Exit(3)
+	} else {
+		authorization = os.Getenv("AUTHORIZATION")
+		executionId = os.Getenv("EXECUTIONID")
+	}
 
 	if len(authorization) == 0 {
 		log.Println("No AUTHORIZATION key set in env")

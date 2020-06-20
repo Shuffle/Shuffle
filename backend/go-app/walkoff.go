@@ -688,7 +688,7 @@ func findChildNodes(workflowExecution WorkflowExecution, nodeId string) []string
 	// 2. Find the children of those nodes etc.
 	for _, branch := range workflowExecution.Workflow.Branches {
 		if branch.SourceID == nodeId {
-			log.Printf("Children: %s", branch.DestinationID)
+			//log.Printf("Children: %s", branch.DestinationID)
 			allChildren = append(allChildren, branch.DestinationID)
 
 			childNodes := findChildNodes(workflowExecution, branch.DestinationID)
@@ -788,8 +788,25 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 			workflowExecution.LastNode = actionResult.Action.ID
 			// Find underlying nodes and add them
 		} else {
-			// Finds childnodes to set them to SKIPPED
-			childNodes = findChildNodes(*workflowExecution, actionResult.Action.ID)
+			// Finds ALL childnodes to set them to SKIPPED
+			tmpNodes := findChildNodes(*workflowExecution, actionResult.Action.ID)
+			for _, tmpnode := range tmpNodes {
+				found := false
+				for _, newnode := range childNodes {
+					if newnode == tmpnode {
+						found = true
+						break
+
+					}
+				}
+
+				if !found {
+					childNodes = append(childNodes, tmpnode)
+				}
+
+			}
+			// Remove duplicates
+			log.Printf("CHILD NODES: %d", len(childNodes))
 			for _, nodeId := range childNodes {
 				if nodeId == actionResult.Action.ID {
 					continue
@@ -810,18 +827,41 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 					continue
 				}
 
-				newResult := ActionResult{
-					Action:        curAction,
-					ExecutionId:   actionResult.ExecutionId,
-					Authorization: actionResult.Authorization,
-					Result:        "Skipped because of previous node",
-					StartedAt:     0,
-					CompletedAt:   0,
-					Status:        "SKIPPED",
+				// Check parents are done here. Only add it IF all parents are skipped
+				skipNodeAdd := false
+				for _, branch := range workflowExecution.Workflow.Branches {
+					if branch.DestinationID == nodeId {
+						// If the branch's source node is NOT in childNodes, it's not a skipped parent
+						sourceNodeFound := false
+						for _, item := range childNodes {
+							if item == branch.SourceID {
+								sourceNodeFound = true
+								break
+							}
+						}
+
+						if !sourceNodeFound {
+							log.Printf("Not setting node %s to SKIPPED", nodeId)
+							skipNodeAdd = true
+							break
+						}
+					}
 				}
 
-				newResults = append(newResults, newResult)
-				increaseStatisticsField(ctx, "workflow_execution_actions_skipped", workflowExecution.Workflow.ID, 1)
+				if !skipNodeAdd {
+					newResult := ActionResult{
+						Action:        curAction,
+						ExecutionId:   actionResult.ExecutionId,
+						Authorization: actionResult.Authorization,
+						Result:        "Skipped because of previous node",
+						StartedAt:     0,
+						CompletedAt:   0,
+						Status:        "SKIPPED",
+					}
+
+					newResults = append(newResults, newResult)
+					increaseStatisticsField(ctx, "workflow_execution_actions_skipped", workflowExecution.Workflow.ID, 1)
+				}
 			}
 		}
 
@@ -931,7 +971,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	log.Printf("LENGTH: %d - %d", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
+	//log.Printf("LENGTH: %d - %d", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
 
 	if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions)+extraInputs {
 		finished := true
