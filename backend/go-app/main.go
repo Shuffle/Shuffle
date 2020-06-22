@@ -838,6 +838,84 @@ func checkPasswordStrength(password string) error {
 	return nil
 }
 
+func deleteUser(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	user, userErr := handleApiAuthentication(resp, request)
+	if userErr != nil {
+		log.Printf("Api authentication failed in edit workflow: %s", userErr)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Role != "admin" {
+		log.Printf("Wrong user (%s) when deleting - must be admin", user.Username)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Must be admin"}`))
+		return
+	}
+
+	location := strings.Split(request.URL.String(), "/")
+	var userId string
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		userId = location[4]
+	}
+
+	if userId == user.Id {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Can't deactivate yourself"}`))
+		return
+	}
+
+	ctx := context.Background()
+	q := datastore.NewQuery("Users").Filter("id =", userId)
+	var users []User
+	_, err := dbclient.GetAll(ctx, q, &users)
+	if err != nil {
+		log.Printf("Error getting users apikey (deleteuser): %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Failed getting users for verification"}`))
+		return
+	}
+
+	if len(users) != 1 {
+		log.Printf("Found too many users!")
+		resp.WriteHeader(500)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Backend error: too many or too few users with id %s: %d"}`, userId, len(users))))
+		return
+	}
+
+	// Invert. No user deletion.
+	if users[0].Active {
+		users[0].Active = false
+	} else {
+		users[0].Active = true
+	}
+
+	err = setUser(ctx, &users[0])
+	if err != nil {
+		log.Printf("Failed swapping active for user %s (%s)", users[0].Username, users[0].Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": true"}`)))
+		return
+	}
+
+	log.Printf("Successfully inverted %s", users[0].Username)
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(`{"success": true}`))
+}
+
 // No more emails :)
 func checkUsername(Username string) error {
 	// Stupid first check of email loool
@@ -1308,8 +1386,9 @@ func handleUpdateUser(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	type newUserStruct struct {
-		Role   string `json:"role"`
-		UserId string `json:"user_id"`
+		Role     string `json:"role"`
+		Username string `json:"username"`
+		UserId   string `json:"user_id"`
 	}
 
 	ctx := context.Background()
@@ -1331,7 +1410,7 @@ func handleUpdateUser(resp http.ResponseWriter, request *http.Request) {
 
 	foundUser, err := getUser(ctx, t.UserId)
 	if err != nil {
-		log.Printf("Can't find user %s (apikey gen)", t.UserId, err)
+		log.Printf("Can't find user %s (update user): %s", t.UserId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false}`)))
 		return
@@ -1355,6 +1434,33 @@ func handleUpdateUser(resp http.ResponseWriter, request *http.Request) {
 		foundUser.Roles = []string{t.Role}
 	}
 
+	if len(t.Username) > 0 {
+		q := datastore.NewQuery("Users").Filter("username =", t.Username)
+		var users []User
+		_, err = dbclient.GetAll(ctx, q, &users)
+		if err != nil {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false, "reason": "Failed getting users when updating user"}`))
+			return
+		}
+
+		found := false
+		for _, item := range users {
+			if item.Username == t.Username {
+				found = true
+				break
+			}
+		}
+
+		if found {
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "User with username %s already exists"}`, t.Username)))
+			return
+		}
+
+		foundUser.Username = t.Username
+	}
+
 	err = setUser(ctx, foundUser)
 	if err != nil {
 		log.Printf("Error patching user %s: %s", foundUser.Username, err)
@@ -1368,6 +1474,7 @@ func handleUpdateUser(resp http.ResponseWriter, request *http.Request) {
 }
 
 func handleApiGeneration(resp http.ResponseWriter, request *http.Request) {
+	log.Printf("APIGEN!")
 	cors := handleCors(resp, request)
 	if cors {
 		return
@@ -1394,6 +1501,7 @@ func handleApiGeneration(resp http.ResponseWriter, request *http.Request) {
 		userInfo = newUserInfo
 		log.Printf("Updated apikey for user %s", userInfo.Username)
 	} else if request.Method == "POST" {
+		log.Printf("Handling post!")
 		body, err := ioutil.ReadAll(request.Body)
 		if err != nil {
 			log.Println("Failed reading body")
@@ -1424,7 +1532,7 @@ func handleApiGeneration(resp http.ResponseWriter, request *http.Request) {
 
 		foundUser, err := getUser(ctx, t.UserId)
 		if err != nil {
-			log.Printf("Can't find user %s (apikey gen)", t.UserId, err)
+			log.Printf("Can't find user %s (apikey gen): %s", t.UserId, err)
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false}`)))
 			return
@@ -1438,6 +1546,10 @@ func handleApiGeneration(resp http.ResponseWriter, request *http.Request) {
 			return
 		}
 		foundUser = &newUserInfo
+
+		resp.WriteHeader(200)
+		resp.Write([]byte(fmt.Sprintf(`{"success": true, "username": "%s", "verified": %t, "apikey": "%s"}`, foundUser.Username, foundUser.Verified, foundUser.ApiKey)))
+		return
 	}
 
 	resp.WriteHeader(200)
@@ -6232,6 +6344,7 @@ func init() {
 	r.HandleFunc("/functions/outlook/getFolders", handleGetOutlookFolders).Methods("GET", "OPTIONS")
 
 	// Make user related locations
+	r.HandleFunc("/api/v1/users/generateapikey", handleApiGeneration).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users/login", handleLogin).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users/logout", handleLogout).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users/register", handleRegister).Methods("POST", "OPTIONS")
@@ -6239,9 +6352,9 @@ func init() {
 	r.HandleFunc("/api/v1/users/getusers", handleGetUsers).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/getinfo", handleInfo).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/getsettings", handleSettings).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/users/generateapikey", handleApiGeneration).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/updateuser", handleUpdateUser).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/users/{user}", deleteUser).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/users", handleGetUsers).Methods("GET", "OPTIONS")
 
 	// General - duplicates and old.
 	r.HandleFunc("/api/v1/login", handleLogin).Methods("POST", "OPTIONS")

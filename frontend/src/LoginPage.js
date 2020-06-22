@@ -92,7 +92,7 @@ const LoginDialog = props => {
 		var data = {"username": username, "password": password}
 		var baseurl = globalUrl
 		if (register) {
-			var url = baseurl+'/api/v1/login';
+			var url = baseurl+'/api/v1/users/login';
 			fetch(url, {
 				mode: 'cors',
 					method: 'POST',
@@ -123,7 +123,7 @@ const LoginDialog = props => {
 				setLoginInfo("Error in userdata: " + error)
 			});
 		} else {
-			url = baseurl+'/api/v1/register';
+			url = baseurl+'/api/v1/users/register';
 			fetch(url, {
 				method: 'POST',
 				body: JSON.stringify(data),

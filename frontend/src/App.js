@@ -84,7 +84,7 @@ const App = (message, props) => {
 
   const checkLogin = () => {
     var baseurl = globalUrl
-    fetch(baseurl+"/api/v1/getinfo", {
+    fetch(baseurl+"/api/v1/users/getinfo", {
 	  credentials: "include",
   	  headers: {
   		'Content-Type': 'application/json',

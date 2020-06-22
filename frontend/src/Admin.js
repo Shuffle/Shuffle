@@ -72,7 +72,7 @@ const Admin = (props) => {
 
 	const onPasswordChange = () => {
 		const data = {"username": selectedUser.username, "newpassword": newPassword}
-		const url = globalUrl+'/api/v1/passwordchange';
+		const url = globalUrl+'/api/v1/users/passwordchange';
 		fetch(url, {
 			mode: 'cors',
 			method: 'POST',
@@ -135,7 +135,7 @@ const Admin = (props) => {
 		// Just use this one?
 		var data = {"username": data.Username, "password": data.Password}
 		var baseurl = globalUrl
-		const url = baseurl+'/api/v1/register';
+		const url = baseurl+'/api/v1/users/register';
 		fetch(url, {
 			method: 'POST',
 	  	credentials: "include",
@@ -296,6 +296,7 @@ const Admin = (props) => {
 			return response.json()
 		})
     .then((responseJson) => {
+			console.log(responseJson)
 			setUsers(responseJson)
 		})
 		.catch(error => {
