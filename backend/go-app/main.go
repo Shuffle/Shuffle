@@ -1285,6 +1285,88 @@ func generateApikey(ctx context.Context, userInfo User) (User, error) {
 	return userInfo, nil
 }
 
+func handleUpdateUser(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	userInfo, err := handleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("Api authentication failed in apigen: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		log.Println("Failed reading body")
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Missing field: user_id"}`)))
+		return
+	}
+
+	type newUserStruct struct {
+		Role   string `json:"role"`
+		UserId string `json:"user_id"`
+	}
+
+	ctx := context.Background()
+	var t newUserStruct
+	err = json.Unmarshal(body, &t)
+	if err != nil {
+		log.Printf("Failed unmarshaling userId: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed unmarshaling. Missing field: user_id"}`)))
+		return
+	}
+
+	if userInfo.Role != "admin" {
+		log.Printf("%s tried to update user %s", userInfo.Username, t.UserId)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "You need to be admin to change other users"}`)))
+		return
+	}
+
+	foundUser, err := getUser(ctx, t.UserId)
+	if err != nil {
+		log.Printf("Can't find user %s (apikey gen)", t.UserId, err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false}`)))
+		return
+	}
+
+	if t.Role != "admin" && t.Role != "user" {
+		log.Printf("%s tried and failed to update user %s", userInfo.Username, t.UserId)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can only change to role user and admin"}`)))
+		return
+	} else {
+		// Same user - can't edit yourself
+		if userInfo.Id == t.UserId {
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't update the role of your own user"}`)))
+			return
+		}
+
+		log.Printf("Updated user %s from %s to %s", foundUser.Username, foundUser.Role, t.Role)
+		foundUser.Role = t.Role
+		foundUser.Roles = []string{t.Role}
+	}
+
+	err = setUser(ctx, foundUser)
+	if err != nil {
+		log.Printf("Error patching user %s: %s", foundUser.Username, err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false}`)))
+		return
+	}
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+}
+
 func handleApiGeneration(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -1343,8 +1425,8 @@ func handleApiGeneration(resp http.ResponseWriter, request *http.Request) {
 		foundUser, err := getUser(ctx, t.UserId)
 		if err != nil {
 			log.Printf("Can't find user %s (apikey gen)", t.UserId, err)
-			resp.WriteHeader(200)
-			resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false}`)))
 			return
 		}
 
@@ -6158,6 +6240,7 @@ func init() {
 	r.HandleFunc("/api/v1/users/getinfo", handleInfo).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/getsettings", handleSettings).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/generateapikey", handleApiGeneration).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/users/updateuser", handleUpdateUser).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/users/{user}", deleteUser).Methods("DELETE", "OPTIONS")
 
 	// General - duplicates and old.
