@@ -845,6 +845,7 @@ const AngularWorkflow = (props) => {
 		setRightSideBarOpen(true)
 	}
 
+	// Checks for errors in edges when they're added 
 	const onEdgeAdded = (event) => {
 		setLastSaved(false)
 		const edge = event.target.data()
@@ -856,18 +857,13 @@ const AngularWorkflow = (props) => {
 		var found = false
 		for (var key in workflow.branches) {
 			if (workflow.branches[key].destination_id === edge.source && workflow.branches[key].source_id === edge.target) {
-				alert.error("A pointer in the opposite direction already exists")
+				alert.error("A branch in the opposite direction already exists")
 				event.target.remove()
 				found = true
 				break
 			} else if (workflow.branches[key].destination_id === edge.target && workflow.branches[key].source_id === edge.source) {
-				// Checks if NOT trigger
-				//workflow.triggers.find(data => data.id === workflow.branches[key].source_id).length === 0)
-				const triggercheck = workflow.triggers.find(data => data.id === workflow.branches[key].source_id)
-				if (workflow.triggers !== undefined && triggercheck !== undefined && triggercheck.length === 0) {
-					alert.error("That pointer already exists")
-					event.target.remove()
-				}
+				alert.error("That branch already exists")
+				event.target.remove()
 				found = true
 				break
 			} else if (edge.target === workflow.start) {
@@ -878,16 +874,29 @@ const AngularWorkflow = (props) => {
 					found = true
 					break
 				}
+			} else if (edge.source === workflow.branches[key].source_id) {
+				// FIXME: Verify multi-target for triggers
+				// 1. Check if destination exists 
+				// 2. Check if source is a trigger
+				// targetnode = workflow.triggers.findIndex(data => data.id === edge.source)
+				// console.log("Destination: ", edge.target)
+				// console.log("CHECK SOURCE IF ITS A TRIGGER: ", targetnode)
+				// if (targetnode !== -1) {
+				// 	alert.error("Triggers can only target one target (startnode)")
+				// 	event.target.remove()
+				// 	found = true
+				// 	break
+				// }
 			} else {
 				// Find the targetnode and check if its a trigger 
 				// FIXME - do this for both actions and other types?
-				//targetnode = workflow.triggers.findIndex(data => data.id === edge.target)
-				//if (targetnode !== -1) {
-				//	alert.error("Can't have triggers as target")
-				//	event.target.remove()
-				//	found = true
-				//	break
-				//}
+				targetnode = workflow.triggers.findIndex(data => data.id === edge.target)
+				if (targetnode !== -1) {
+					alert.error("Can't have triggers as target of branch")
+					event.target.remove()
+					found = true
+					break
+				} 
 			}
 		}
 
@@ -901,10 +910,10 @@ const AngularWorkflow = (props) => {
 
 		if (!found) {
 			newbranch["hasErrors"] = false
-		}
 
-		workflow.branches.push(newbranch)
-		setWorkflow(workflow)
+			workflow.branches.push(newbranch)
+			setWorkflow(workflow)
+		}
 	}
 
 	const onNodeAdded = (event) => {

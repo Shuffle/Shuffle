@@ -31,6 +31,9 @@ services:
       - DATASTORE_EMULATOR_HOST=shuffle-database:8000
       - APP_DOWNLOAD_LOCATION=${APP_DOWNLOAD_LOCATION}
       - APP_HOTLOAD_FOLDER=/shuffle-apps
+      - SHUFFLE_DEFAULT_USERNAME=${SHUFFLE_DEFAULT_USERNAME}
+      - SHUFFLE_DEFAULT_PASSWORD=${SHUFFLE_DEFAULT_PASSWORD}
+      - SHUFFLE_DEFAULT_APIKEY=${SHUFFLE_DEFAULT_APIKEY}
     restart: unless-stopped
     depends_on:
       - database

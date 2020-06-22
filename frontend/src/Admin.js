@@ -319,14 +319,17 @@ const Admin = (props) => {
 		modalUser[field] = value
 	}
 
-	const generateApikey = () => {
+	const generateApikey = (userId) => {
+		const data = {"user_id": userId}
+
 		fetch(globalUrl+"/api/v1/generateapikey", {
-			method: 'GET',
+			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
 				'Accept': 'application/json',
 			},
-				credentials: "include",
+			body: JSON.stringify(data),
+			credentials: "include",
 		})
 		.then((response) => {
 			if (response.status !== 200) {
@@ -407,7 +410,7 @@ const Admin = (props) => {
 					style={{}} 
 					variant="outlined"
 					color="primary"
-					onClick={() => generateApikey(selectedUser)}
+					onClick={() => generateApikey(selectedUser.id)}
 				>
 					Get new API key
 				</Button>
