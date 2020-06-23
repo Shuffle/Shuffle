@@ -455,13 +455,14 @@ func zombiecheck() error {
 				continue
 			}
 
-			if container.State != "running" {
+			// Need to check time here too because a container can be removed the same instant as its created
+			currenttime := time.Now().Unix()
+			if container.State != "running" && currenttime-container.Created > int64(workerTimeout) {
 				removeContainers = append(removeContainers, container.ID)
 				containerNames[container.ID] = name
 			}
 
 			// stopcontainer & removecontainer
-			currenttime := time.Now().Unix()
 			//log.Printf("Time: %d - %d", currenttime-container.Created, int64(workerTimeout))
 			if container.State == "running" && currenttime-container.Created > int64(workerTimeout) {
 				stopContainers = append(stopContainers, container.ID)

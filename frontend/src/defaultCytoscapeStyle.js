@@ -111,6 +111,8 @@ const data = [{
 			selector: 'node:selected',
 			css: {
 				'background-color': '#77b0d0',
+				'border-color': '#77b0d0',
+				'border-width': '20px',
 			},
 		},
 		{

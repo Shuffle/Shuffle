@@ -792,11 +792,12 @@ const AngularWorkflow = (props) => {
 			setSelectedEdgeIndex(workflow.branches.findIndex(data => data.id === event.target.data()["id"]))
 			setSelectedEdge(event.target.data())
 
-			setSelectedAction({})
-			setSelectedTrigger({})
 		} else {
 			//alert.info("Can't edit branches from triggers") 
 		}
+
+		setSelectedAction({})
+		setSelectedTrigger({})
 	}
 
 	const onNodeSelect = (event) => {
@@ -862,6 +863,7 @@ const AngularWorkflow = (props) => {
 				found = true
 				break
 			} else if (workflow.branches[key].destination_id === edge.target && workflow.branches[key].source_id === edge.source) {
+				console.log(edge)
 				alert.error("That branch already exists")
 				event.target.remove()
 				found = true
@@ -1048,7 +1050,7 @@ const AngularWorkflow = (props) => {
 					event.preventDefault()
 					cy.fit(null, 50)
 				}
-	            break;
+	      break;
 			case 65:
 				// As a poweruser myself, I found myself hitting this a few
 				// too many times to just edit text. Need a better bind
@@ -2485,13 +2487,13 @@ const AngularWorkflow = (props) => {
 									}}
 									style={{backgroundColor: inputColor, color: "white", height: "50px"}}
 									>
-									{workflow.workflow_variables !== null ? workflow.workflow_variables.map(data => (
+									{workflow.workflow_variables !== undefined && workflow.workflow_variables !== null ? workflow.workflow_variables.map(data => (
 										<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data.name}>
 											{data.name}
 										</MenuItem>
 									)) : null}
 									<Divider />
-									{workflow.execution_variables !== null ? workflow.execution_variables.map(data => (
+									{workflow.execution_variables !== undefined && workflow.execution_variables !== null ? workflow.execution_variables.map(data => (
 										<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data.name}>
 											{data.name}
 										</MenuItem>
@@ -2649,7 +2651,7 @@ const AngularWorkflow = (props) => {
 				placeholder={selectedAction.label}
 				onChange={selectedNameChange}
 			/>
-			{environments !== undefined && environments !== null && environments.length > 1 ?
+			{environments !== undefined && environments !== null && environments.length > 0 ?
 				<div style={{marginTop: "20px"}}>
 					Environment
 					<Select
@@ -3983,10 +3985,10 @@ const AngularWorkflow = (props) => {
 			if (responseJson.success) {
 				// Set the status
 				alert.success("Successfully started webhook")
-				workflow.triggers[selectedTriggerIndex].status = "running"
 				trigger.status = "running"
-				setWorkflow(workflow)
 				setSelectedTrigger(trigger)
+				workflow.triggers[selectedTriggerIndex].status = "running"
+				setWorkflow(workflow)
 				saveWorkflow(workflow)
 			} else {
 				alert.error("Failed starting webhook: "+responseJson.reason)

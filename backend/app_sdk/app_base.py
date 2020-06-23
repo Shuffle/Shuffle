@@ -384,14 +384,27 @@ class AppBase:
         
                     if value == "#":
                         # FIXME - not recursive - should go deeper if there are more #
-                        print("HANDLE RECURSIVE LOOP ")
+                        print("HANDLE RECURSIVE LOOP OF %s" % basejson)
                         returnlist = []
-                        for innervalue in basejson:
-                            #print("Value: %s" % value[parsersplit[cnt+1]])
-                            returnlist.append(innervalue[parsersplit[cnt+1]])
+                        try:
+                            for innervalue in basejson:
+                                print("Value: %s" % value[parsersplit[cnt+1]])
+                                returnlist.append(innervalue[parsersplit[cnt+1]])
+                        except IndexError as e:
+                            print("Indexerror inner: %s" % e)
+                            # Basically means its a normal list, not a crazy one :)
+                            # Custom format for ${name[0,1,2,...]}$
+                            indexvalue = "${NO_SPLITTER%s}$" % json.dumps(basejson)
+                            if len(returnlist) > 0:
+                                indexvalue = "${NO_SPLITTER%s}$" % json.dumps(returnlist)
+
+                            print("INDEXVAL: ", indexvalue)
+                            return indexvalue
         
                         # Example format: ${[]}$
-                        return "${%s%s}$" % (parsersplit[cnt+1], json.dumps(returnlist))
+                        parseditem = "${%s%s}$" % (parsersplit[cnt+1], json.dumps(returnlist))
+                        print("PARSED LOOP ITEM: %s" % parseditem)
+                        return parseditem
         
                     else:
                         if isinstance(basejson[value], str):
@@ -405,9 +418,8 @@ class AppBase:
                             basejson = basejson[value]
         
             except KeyError as e:
+                print("Lower keyerror: %s" % e)
                 return "KeyError: %s" % e
-            except IndexError as e:
-                return "IndexError: %s" % e
         
             return basejson
 
@@ -424,7 +436,7 @@ class AppBase:
                 #self.logger.debug(f"\n\nHandle static data with JSON: {data}\n\n")
                 #self.logger.info("STATIC PARSED: %s" % actualitem)
                 if len(actualitem) > 0:
-                    print("ACTUAL: %s", actualitem)
+                    print("ACTUAL: ", actualitem)
                     for replace in actualitem:
                         try:
                             to_be_replaced = replace[0]
@@ -488,8 +500,10 @@ class AppBase:
                 else:
                     fullname += parameter["action_field"]
 
+                self.logger.info("PRE Fullname: %s" % fullname)
+
                 if parameter["value"].startswith(jsonparsevalue):
-                    fullname += parameter["value"][2:]
+                    fullname += parameter["value"][1:]
                 #else:
                 #    fullname = "$%s" % parameter["action_field"]
 
@@ -699,8 +713,10 @@ class AppBase:
                                 raise "Value check error: %s" % Exception(check)
 
                             # Custom format for ${name[0,1,2,...]}$
+                            #submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"
                             submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"
                             actualitem = re.findall(submatch, value, re.MULTILINE)
+                            print("Multicheck: %s", actualitem)
                             if len(actualitem) > 0:
                                 multiexecution = True
                                 

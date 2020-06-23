@@ -812,8 +812,8 @@ func parseLoginParameters(resp http.ResponseWriter, request *http.Request) (logi
 // Removed for localhost
 func checkPasswordStrength(password string) error {
 	// Check password strength here
-	if len(password) < 10 {
-		return errors.New("Minimum password length is 10.")
+	if len(password) < 3 {
+		return errors.New("Minimum password length is 3.")
 	}
 
 	//if len(password) > 128 {
@@ -923,8 +923,8 @@ func checkUsername(Username string) error {
 	//	return errors.New("Invalid Username")
 	//}
 
-	if len(Username) < 4 {
-		return errors.New("Minimum Username length is 4")
+	if len(Username) < 3 {
+		return errors.New("Minimum Username length is 3")
 	}
 
 	return nil
@@ -1939,7 +1939,7 @@ func handlePasswordChange(resp http.ResponseWriter, request *http.Request) {
 		if len(users) != 1 {
 			log.Printf(`Found multiple users with the same username: %s: %d`, t.Username, len(users))
 			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Found multiple users with the same username: %s"}`, t.Username)))
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Found %d users with the same username: %s (%d)"}`, len(users), t.Username)))
 			return
 		}
 
@@ -2233,7 +2233,8 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	q := datastore.NewQuery("Users").Filter("Username =", strings.ToLower(data.Username))
+	log.Printf("Username: %s", data.Username)
+	q := datastore.NewQuery("Users").Filter("Username =", data.Username)
 	var users []User
 	_, err = dbclient.GetAll(ctx, q, &users)
 	if err != nil {
@@ -2246,7 +2247,7 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 	if len(users) != 1 {
 		log.Printf(`Found multiple users with the same username: %s: %d`, data.Username, len(users))
 		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Found multiple users with the same username: %s"}`, data.Username)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Found %d users with the same username: %s"}`, len(users), data.Username)))
 		return
 	}
 
@@ -3214,8 +3215,6 @@ func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 		},
 		Running: false,
 	}
-
-	log.Printf("Hello")
 
 	// FIXME: Add cloud function execution?
 	//b, err := json.Marshal(hook)
@@ -6140,7 +6139,6 @@ func runInit(ctx context.Context) {
 	}
 
 	// Fix active users etc
-	log.Printf("Checking users")
 	q := datastore.NewQuery("Users").Filter("active =", true)
 	var activeusers []User
 	_, err = dbclient.GetAll(ctx, q, &activeusers)
@@ -6181,18 +6179,23 @@ func runInit(ctx context.Context) {
 				}
 			}
 		} else if len(users) == 0 {
-			log.Printf("Trying to set up user based on environments DEFAULT_USERNAME & DEFAULT_PASSWORD")
+			log.Printf("Trying to set up user based on environments SHUFFLE_DEFAULT_USERNAME & SHUFFLE_DEFAULT_PASSWORD")
 			username := os.Getenv("SHUFFLE_DEFAULT_USERNAME")
 			password := os.Getenv("SHUFFLE_DEFAULT_PASSWORD")
 			if len(username) == 0 || len(password) == 0 {
-				log.Printf("DEFAULT_USERNAME and DEFAULT_PASSWORD not defined as environments. Running without default user.")
+				log.Printf("SHUFFLE_DEFAULT_USERNAME and SHUFFLE_DEFAULT_PASSWORD not defined as environments. Running without default user.")
 			} else {
 				apikey := os.Getenv("SHUFFLE_DEFAULT_APIKEY")
 				err = createNewUser(username, password, "admin", apikey)
 				if err != nil {
 					log.Printf("Failed to create default user %s: %s", username, err)
+				} else {
+					log.Printf("Successfully created user %s", username)
 				}
 			}
+		} else {
+			//log.Printf("Found %d users.", len(users))
+			//log.Printf(users[0].Username)
 		}
 	}
 
@@ -6306,7 +6309,7 @@ func runInit(ctx context.Context) {
 	}
 	_, err = git.Clone(storer, fs, cloneOptions)
 	if err != nil {
-		log.Printf("Failed loading repo %s into memory: %s", err)
+		log.Printf("Failed loading repo %s into memory: %s", apis, err)
 	} else {
 		log.Printf("Finished git clone. Looking for updates to the repo.")
 		dir, err := fs.ReadDir("")
@@ -6354,6 +6357,7 @@ func init() {
 	r.HandleFunc("/api/v1/users/getsettings", handleSettings).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/updateuser", handleUpdateUser).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/users/{user}", deleteUser).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/users/passwordchange", handlePasswordChange).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users", handleGetUsers).Methods("GET", "OPTIONS")
 
 	// General - duplicates and old.

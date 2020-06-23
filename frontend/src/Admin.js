@@ -94,7 +94,7 @@ const Admin = (props) => {
 			}),
 		)
 		.catch(error => {
-			alert.error("Err: ", error.toString())
+			alert.error("Err: "+error.toString())
 		});
 	}
 

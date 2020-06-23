@@ -1205,6 +1205,13 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 		// Adds the Testing app if it's a new workflow
 		workflowapps, err := getAllWorkflowApps(ctx)
 		if err == nil {
+			// FIXME: Add real env
+			//q := datastore.NewQuery("Environments").Limit(1)
+			//count, err := dbclient.Get(ctx, q)
+			//envName := "Shuffle"
+			//if err == nil {
+			//}
+
 			for _, item := range workflowapps {
 				if item.Name == "Testing" && item.AppVersion == "1.0.0" {
 					nodeId := "40447f30-fa44-4a4f-a133-4ee710368737"
@@ -1627,10 +1634,10 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 				}
 
 				// Has to NOT be generated
-				//if app.Name == action.AppName && app.AppVersion == action.AppVersion {
-				//	curapp = app
-				//	break
-				//}
+				if app.Name == action.AppName && app.AppVersion == action.AppVersion {
+					curapp = app
+					break
+				}
 			}
 
 			// Check to see if the whole app is valid
@@ -1985,6 +1992,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		}
 
 		// FIXME - this should have "execution_argument" from executeWorkflow frontend
+		log.Printf("EXEC: %#v", execution)
 		if len(execution.ExecutionArgument) > 0 {
 			workflowExecution.ExecutionArgument = execution.ExecutionArgument
 		}

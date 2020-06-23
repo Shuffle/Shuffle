@@ -14,7 +14,7 @@ services:
     depends_on:
       - backend
   backend:
-    #build: ./backend
+    build: ./backend
     image: frikky/shuffle:backend
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
@@ -27,10 +27,10 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock 
       - ${APP_HOTLOAD_LOCATION}:/shuffle-apps     
     environment: 
-      - ORG_ID=${ORG_ID}
       - DATASTORE_EMULATOR_HOST=shuffle-database:8000
-      - APP_DOWNLOAD_LOCATION=${APP_DOWNLOAD_LOCATION}
       - APP_HOTLOAD_FOLDER=/shuffle-apps
+      - ORG_ID=${ORG_ID}
+      - APP_DOWNLOAD_LOCATION=${APP_DOWNLOAD_LOCATION}
       - SHUFFLE_DEFAULT_USERNAME=${SHUFFLE_DEFAULT_USERNAME}
       - SHUFFLE_DEFAULT_PASSWORD=${SHUFFLE_DEFAULT_PASSWORD}
       - SHUFFLE_DEFAULT_APIKEY=${SHUFFLE_DEFAULT_APIKEY}
