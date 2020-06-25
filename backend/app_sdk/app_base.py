@@ -553,6 +553,14 @@ class AppBase:
             elif check.lower() == "contains":
                 if destinationvalue.lower() in sourcevalue.lower():
                     return True
+            elif check.lower() == "larger than":
+                if sourcevalue.isdigit() and destinationvalue.isdigit():
+                    if int(sourcevalue) > int(destinationvalue):
+                        return True
+            elif check.lower() == "smaller than":
+                if sourcevalue.isdigit() and destinationvalue.isdigit():
+                    if int(sourcevalue) < int(destinationvalue):
+                        return True
             else:
                 self.logger.info("Condition: can't handle %s yet. Setting to true" % check)
                     
@@ -588,24 +596,18 @@ class AppBase:
 
                     # Parse all values first here
                     sourcevalue = condition["source"]["value"]
-                    if condition["source"]["variant"] == "" or condition["source"]["variant"]== "STATIC_VALUE":
-                        condition["source"]["variant"]= "STATIC_VALUE"
-                    else:
-                        check, sourcevalue = parse_params(action, fullexecution, condition["source"])
-                        if check:
-                            return False, "Failed condition: %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)
+                    check, sourcevalue = parse_params(action, fullexecution, condition["source"])
+                    if check:
+                        return False, "Failed condition: %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)
 
 
                     #sourcevalue = sourcevalue.encode("utf-8")
                     sourcevalue = parse_wrapper_start(sourcevalue)
                     destinationvalue = condition["destination"]["value"]
 
-                    if condition["destination"]["variant"]== "" or condition["destination"]["variant"]== "STATIC_VALUE":
-                        condition["destination"]["variant"] = "STATIC_VALUE"
-                    else:
-                        check, destinationvalue = parse_params(action, fullexecution, condition["destination"])
-                        if check:
-                            return False, "Failed condition: %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)
+                    check, destinationvalue = parse_params(action, fullexecution, condition["destination"])
+                    if check:
+                        return False, "Failed condition: %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)
 
                     #destinationvalue = destinationvalue.encode("utf-8")
                     destinationvalue = parse_wrapper_start(destinationvalue)
@@ -648,7 +650,7 @@ class AppBase:
         if not branchcheck:
             self.logger.info("Failed one or more branch conditions.")
             action_result["result"] = tmpresult
-            action_result["status"] = "SKIPPED"
+            action_result["status"] = "FAILURE"
             try:
                 ret = requests.post("%s%s" % (self.url, stream_path), headers=headers, json=action_result)
                 self.logger.info("Result: %d" % ret.status_code)
@@ -657,6 +659,7 @@ class AppBase:
             except requests.exceptions.ConnectionError as e:
                 self.logger.exception(e)
 
+            print("\n\nRETURNING BECAUSE A BRANCH FAILED\n\n")
             return
 
         # Replace name cus there might be issues
