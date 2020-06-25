@@ -89,7 +89,6 @@ const Workflows = (props) => {
 			return response.json()
 		})
     	.then((responseJson) => {
-			console.log(responseJson)
 			setSelectedExecution({})
 			setWorkflowExecutions([])
 
@@ -807,7 +806,7 @@ const Workflows = (props) => {
 							const ret = setNewWorkflow(data.name, data.description, data, false)
 							.then((response) => {
 								if (response !== undefined) {
-									alert.success("Successfully created "+data.name)
+									alert.success("Successfully imported "+data.name)
 								}
 							})
 						}
@@ -1031,20 +1030,20 @@ const Workflows = (props) => {
 		})
 		.then((response) => {
 			if (response.status === 200) {
-				response.text().then(function (text) {
-					console.log("RETURN: ", text)
-					alert.success("Loaded existing apps!")
-				})
+				alert.success("Successfully loaded workflows from "+downloadUrl)
+				getAvailableWorkflows()
 			}
 
 			return response.json()
 		})
     .then((responseJson) => {
 				console.log("DATA: ", responseJson)
-				if (responseJson.reason !== undefined) {
-					alert.error("Failed loading: "+responseJson.reason)
-				} else {
-					alert.error("Failed loading")
+				if (!responseJson.success) {
+					if (responseJson.reason !== undefined) {
+						alert.error("Failed loading: "+responseJson.reason)
+					} else {
+						alert.error("Failed loading")
+					}
 				}
 		})
 		.catch(error => {

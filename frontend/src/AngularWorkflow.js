@@ -850,6 +850,7 @@ const AngularWorkflow = (props) => {
 	const onEdgeAdded = (event) => {
 		setLastSaved(false)
 		const edge = event.target.data()
+		console.log(workflow.branches)
 
 		// Check if: 
 		// dest == source && source == dest
@@ -863,7 +864,7 @@ const AngularWorkflow = (props) => {
 				found = true
 				break
 			} else if (workflow.branches[key].destination_id === edge.target && workflow.branches[key].source_id === edge.source) {
-				console.log(edge)
+				console.log(edge.source)
 				alert.error("That branch already exists")
 				event.target.remove()
 				found = true
@@ -1333,9 +1334,9 @@ const AngularWorkflow = (props) => {
 		})
 		.then((responseJson) => {
 			if (!responseJson.success) {
-				alert.error("Failed to delete schedule: " + responseJson.reason)
+				//alert.error("Failed to delete schedule: " + responseJson.reason)
 			} else {
-				alert.success("Successfully stopped schedule")
+				//alert.success("Successfully stopped schedule")
 				workflow.triggers[triggerindex].status = "stopped" 
 				trigger.status = "stopped" 
 				setSelectedTrigger(trigger)
@@ -1807,7 +1808,7 @@ const AngularWorkflow = (props) => {
 				}
 
 				if (data.is_valid === false) {
-					alert.error("Sorry, "+data.name+" is not ready yet")
+					alert.error(data.name+" is only available on https://shuffler.io")
 					return
 				}
 
@@ -1881,7 +1882,7 @@ const AngularWorkflow = (props) => {
 				}
 
 				if (data.name !== "User Input") {
-					workflow.branches.push(newbranch)
+					//workflow.branches.push(newbranch)
 					cy.add(edgeToBeAdded)
 				}
 
@@ -4022,7 +4023,7 @@ const AngularWorkflow = (props) => {
 		})
     	.then((responseJson) => {
 			if (responseJson.success) {
-				alert.success("Successfully stopped webhook")
+				//alert.success("Successfully stopped webhook")
 				// Set the status
 				workflow.triggers[triggerindex].status = "stopped"
 				trigger.status = "stopped"
