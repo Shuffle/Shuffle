@@ -383,21 +383,21 @@ const Workflows = (props) => {
 									}}
       					>
 
-								<MenuItem style={{backgroundColor: surfaceColor, color: "white"}} onClick={() => {
+								<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
 									setModalOpen(true)
 									setEditingWorkflow(data)
 									setNewWorkflowName(data.name)
 									setNewWorkflowDescription(data.description)
 								}} key={"change"}>{"Change name"}</MenuItem>
-								<MenuItem style={{backgroundColor: surfaceColor, color: "white"}} onClick={() => {
+								<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
 									copyWorkflow(data)		
 									setOpen(false)
 								}} key={"copy"}>{"Copy"}</MenuItem>
-								<MenuItem style={{backgroundColor: surfaceColor, color: "white"}} onClick={() => {
+								<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
 									exportWorkflow(data)		
 									setOpen(false)
 								}} key={"export"}>{"Export"}</MenuItem>
-      							<MenuItem style={{backgroundColor: surfaceColor, color: "white"}} onClick={() => {
+      							<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
 									deleteWorkflow(data.id)		
 									setOpen(false)
 								}} key={"delete"}>{"Delete"}</MenuItem>

@@ -219,7 +219,7 @@ const AngularWorkflow = (props) => {
 			<div style={{color: "white", position: "fixed", top: appBarSize+65, left: leftBarSize+20, zIndex: 5000, minHeight: 100, padding: 15, maxHeight: 100, maxWidth: 500, overflowX: "hidden",}}>
 				{workflowExecutions.slice(0,15).map(data => {
 					return (
-						<div>
+						<div key={data.id}>
 							{new Date(data.started_at*1000).toISOString()}
 							, {data.status}
 							{data.result.length > 0 ? ", "+data.result : ", "}
@@ -768,12 +768,12 @@ const AngularWorkflow = (props) => {
 		//console.log("APP: ", selectedApp)
 		setSelectedAction({})
 		setSelectedApp({})
-		//setSelectedTrigger({})
+		setSelectedTrigger({})
 		//setSelectedEdge({})
 
 		// setSelectedTriggerIndex(-1)	
 		//setSelectedActionEnvironment({})
-		//setSelectedEdge({})
+		setSelectedEdge({})
 		//setTriggerAuthentication({})	
 		//setSelectedTriggerIndex(-1)	
 		//setTriggerFolders([])	
@@ -850,7 +850,7 @@ const AngularWorkflow = (props) => {
 	const onEdgeAdded = (event) => {
 		setLastSaved(false)
 		const edge = event.target.data()
-		console.log(workflow.branches)
+		//console.log(workflow.branches)
 
 		// Check if: 
 		// dest == source && source == dest
@@ -1517,14 +1517,14 @@ const AngularWorkflow = (props) => {
 											  }}
       										>
 
-											<MenuItem style={{backgroundColor: surfaceColor, color: "white"}} onClick={() => {
+											<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
 												setOpen(false)
 												setNewVariableName(variable.name)
 												setNewVariableDescription(variable.description)
 												setNewVariableValue(variable.value)
 												setVariablesModalOpen(true)
 											}} key={"Edit"}>{"Edit"}</MenuItem>
-											<MenuItem style={{backgroundColor: surfaceColor, color: "white"}} onClick={() => {
+											<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
 												deleteVariable(variable.name)
 												setOpen(false)
 											}} key={"Delete"}>{"Delete"}</MenuItem>
@@ -1579,12 +1579,12 @@ const AngularWorkflow = (props) => {
 											  }}
       										>
 
-											<MenuItem style={{backgroundColor: surfaceColor, color: "white"}} onClick={() => {
+											<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
 												setOpen(false)
 												setNewVariableName(variable.name)
 												setExecutionVariablesModalOpen(true)
 											}} key={"Edit"}>{"Edit"}</MenuItem>
-											<MenuItem style={{backgroundColor: surfaceColor, color: "white"}} onClick={() => {
+											<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
 												deleteExecutionVariable(variable.name)
 												setOpen(false)
 											}} key={"Delete"}>{"Delete"}</MenuItem>
@@ -2183,6 +2183,7 @@ const AngularWorkflow = (props) => {
 		var allkeys = [action.id]
 		var handled = []
 		var results = []
+		console.log("BEFORE PARENTS!")
 
 		while(true) {
 			for (var key in allkeys) {
@@ -2410,12 +2411,7 @@ const AngularWorkflow = (props) => {
 
 							datafield = 
 							<div>
-								<Select
-								PaperProps={{
-				    			style: {
-				    			  backgroundColor: inputColor,
-				    			}
-				    		}}
+							<Select
 								SelectDisplayProps={{
 									style: {
 										marginLeft: 10,
@@ -2429,7 +2425,7 @@ const AngularWorkflow = (props) => {
 								style={{backgroundColor: surfaceColor, color: "white", height: "50px"}}
 								>
 								{parents.map(data => (
-									<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data.label}>
+									<MenuItem key={data.label} style={{backgroundColor: inputColor, color: "white"}} value={data.label}>
 										{data.label}
 									</MenuItem>
 								))}
@@ -2439,6 +2435,8 @@ const AngularWorkflow = (props) => {
 								InputProps={{
 									style:{
 										color: "white",
+										marginLeft: "5px",
+										maxWidth: "95%",
 										height: "50px", 
 										fontSize: "1em",
 									},
@@ -2470,11 +2468,6 @@ const AngularWorkflow = (props) => {
 								// FIXME - this is a shitty solution that needs re-renders all the time
 								datafield = 
 								<Select
-									PaperProps={{
-				    			  style: {
-				    			  	backgroundColor: inputColor,
-				    			  }
-				    			}}
 									SelectDisplayProps={{
 										style: {
 											marginLeft: 10,
@@ -2509,7 +2502,7 @@ const AngularWorkflow = (props) => {
 							itemColor = "#ffeb3b"
 						}
 						return (
-						<div>
+						<div key={data.name}>
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: "10px"}}/>
 								<div style={{flex: "10"}}> 
@@ -2657,11 +2650,6 @@ const AngularWorkflow = (props) => {
 					Environment
 					<Select
 						value={selectedActionEnvironment === undefined || selectedActionEnvironment.Name === undefined ? "" : selectedActionEnvironment.Name}
-						PaperProps={{
-							style: {
-								backgroundColor: inputColor,
-							}
-						}}
 						SelectDisplayProps={{
 							style: {
 								marginLeft: 10,
@@ -2689,11 +2677,6 @@ const AngularWorkflow = (props) => {
 					Set execution variable (optional) 
 					<Select
 						value={selectedAction.execution_variable !== undefined ? selectedAction.execution_variable.name : "No selection"}
-						PaperProps={{
-							style: {
-								backgroundColor: inputColor,
-							}
-						}}
 						SelectDisplayProps={{
 							style: {
 								marginLeft: 10,
@@ -2968,106 +2951,6 @@ const AngularWorkflow = (props) => {
 				}}
 			/>
 
-		console.log(data)
-
-		// Remap data based on variant
-		if (data.variant === "STATIC_VALUE") {
-			staticcolor = "#f85a3e"	
-		} else if (data.variant === "ACTION_RESULT") {
-			// Gets the parents of the current node
-			var parents = getParents(workflow.actions.find(a => a.id === selectedEdge["target"]))
-			actioncolor = "#f85a3e"
-			// set the datafield
-			//var datafieldvalue = "Error: No parents. Action not eligible"
-			//if (parents.length > 0) {
-			//	datafieldvalue = parents[0].label
-			//}
-
-			datafield = 
-			<div>
-				<Select
-					value={data.action_field}
-					fullWidth
-					onChange={(e) => {
-						changeActionVariable(e.target.value, data.value)
-					}}
-					style={{backgroundColor: inputColor, color: "white", height: "50px"}}
-					>
-					{parents.map(data => (
-						<MenuItem style={{backgroundColor: inputColor, color: "white"}}  value={data.label}>
-							{data.label}
-						</MenuItem>
-					))}
-					SelectDisplayProps={{
-						style: {
-							marginLeft: 10,
-						}
-					}}
-			</Select>
-			<TextField
-				style={{backgroundColor: inputColor}} 
-				InputProps={{
-					style:{
-						color: "white",
-						marginLeft: "5px",
-						maxWidth: "95%",
-						height: "50px", 
-						fontSize: "1em",
-					},
-				}}
-				fullWidth
-				color="primary"
-				defaultValue={data.value}
-				placeholder="Action variable ($.)" 
-				onBlur={(e) => {
-					changeActionVariable(data.action_field, e.target.value)
-				}}
-			/></div>
-
-		} else if (data.variant === "WORKFLOW_VARIABLE") {
-			varcolor = "#f85a3e"
-			if (workflow.workflow_variables === null || workflow.workflow_variables === undefined || workflow.workflow_variables.length === 0) {
-				setCurrentView(2)
-				datafield = 
-				<div>
-					<div>
-						Looks like you don't have any variables yet.  
-					</div>
-					<div style={{width: "100%", margin: "auto"}}>
-						<Button style={{margin: "auto", marginTop: "10px",}} color="primary" variant="outlined" onClick={() => setVariablesModalOpen(true)}>New workflow variable</Button> 				
-					</div>
-				</div>
-			} else {
-				// FIXME - this is a shitty solution that needs re-renders all the time
-				datafield = 
-				<Select
-					fullWidth
-					value={data.action_field}
-				  PaperProps={{
-				    style: {
-				      backgroundColor: inputColor,
-				    }
-				  }}
-					SelectDisplayProps={{
-						style: {
-							marginLeft: 10,
-						}
-					}}
-					onChange={(e) => {
-						changeActionVariable(e.target.value, data.value)
-					}}
-					style={{backgroundColor: surfaceColor, color: "white", height: "50px"}}
-					>
-					{workflow.workflow_variables.map(data => (
-						<MenuItem style={{backgroundColor: surfaceColor, color: "white"}} value={data.name}>
-							{data.name}
-						</MenuItem>
-					))}
-				</Select>
-			}
-
-		}
-
 		const changeActionVariable = (variable, value) => {
 			// set the name
 			data.value = value
@@ -3123,47 +3006,30 @@ const AngularWorkflow = (props) => {
 		}
 
 		return (
-		<div>
-			<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
-				<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
-				<div style={{flex: "10"}}> 
-					<b>{data.name} </b> 
-				</div>
-				<Tooltip color="primary" title="Static data" placement="top">
-					<div style={{cursor: "pointer", color: staticcolor}} onClick={(e) => {
-							e.preventDefault()
-							changeActionParameterVariant("STATIC_VALUE") 
-						}}>
-						<CreateIcon />
+			<div>
+				<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
+					<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
+					<div style={{flex: "10"}}> 
+						<b>{data.name} </b> 
 					</div>
-				</Tooltip>
-				&nbsp;|&nbsp;
-				<Tooltip color="primary" title="Data from previous action" placement="top">
-					<div style={{cursor: "pointer", color: actioncolor}} onClick={(e) => {
-						e.preventDefault()
-						changeActionParameterVariant("ACTION_RESULT") 
-					}}>
-						<AppsIcon />
-					</div>
-				</Tooltip>
-				&nbsp;|&nbsp;
-				<Tooltip color="primary" title="Use local variable" placement="top">
-					<div style={{cursor: "pointer", color: varcolor}} onClick={(e) => {
-						e.preventDefault()
-						changeActionParameterVariant("WORKFLOW_VARIABLE") 
-					}}>
-						<FavoriteBorderIcon />
-					</div>
-				</Tooltip>
-			</div>	
-			{datafield}
-		</div>
+					<Tooltip color="primary" title="Static data" placement="top">
+						<div style={{cursor: "pointer", color: staticcolor}} onClick={(e) => {
+								e.preventDefault()
+								changeActionParameterVariant("STATIC_VALUE") 
+							}}>
+							<CreateIcon />
+						</div>
+					</Tooltip>
+				</div>	
+				{datafield}
+			</div>
 		)
 	}
 
 
 	const menuItemStyle = {
 		color: "white",
+		backgroundColor: inputColor
 	}
 
 	const conditionsModal = 
@@ -3243,6 +3109,16 @@ const AngularWorkflow = (props) => {
 								setConditionValue(conditionValue)
 								setVariableAnchorEl(null)
 							}} key={"matches regex"}>matches regex</MenuItem>
+							<MenuItem style={menuItemStyle} onClick={(e) => {
+								conditionValue.value = "larger than"
+								setConditionValue(conditionValue)
+								setVariableAnchorEl(null)
+							}} key={"larger than"}>larger than</MenuItem>
+							<MenuItem style={menuItemStyle} onClick={(e) => {
+								conditionValue.value = "less than"
+								setConditionValue(conditionValue)
+								setVariableAnchorEl(null)
+							}} key={"less than"}>less than</MenuItem>
 						</Menu>
 
 					</div>
@@ -3303,8 +3179,8 @@ const AngularWorkflow = (props) => {
 			}
 
 			const paperVariableStyle = {
-				minHeight: "50px",
-				maxHeight: "50px",
+				minHeight: 75,
+				maxHeight: 75,
 				minWidth: "100%",
 				maxWidth: "100%",
 				marginTop: "5px",
@@ -3330,15 +3206,15 @@ const AngularWorkflow = (props) => {
 								setDestinationValue(condition.destination)
 								setConditionsModalOpen(true)
 							}}>
-							<div style={{flex: "1", textAlign: "center", marginTop: "15px", marginLeft: "10px", overflow: "hidden"}}>
+							<div style={{flex: 1, textAlign: "left", marginTop: "15px", marginLeft: "10px", overflow: "hidden"}}>
 								{condition.source.value} 
 							</div>
 							<Divider style={{height: "100%", width: "1px", marginLeft: "5px", marginRight: "5px", backgroundColor: "rgb(91, 96, 100)"}}/>
-							<div style={{flex: "1", textAlign: "center", marginTop: "15px", overflow: "hidden"}} onClick={() => {}}>
+							<div style={{flex: 1, textAlign: "center", marginTop: "15px", overflow: "hidden"}} onClick={() => {}}>
 								{condition.condition.value}
 							</div>
 							<Divider style={{height: "100%", width: "1px", marginLeft: "5px", marginRight: "5px", backgroundColor: "rgb(91, 96, 100)"}}/>
-							<div style={{flex: "1", textAlign: "center", marginTop: "15px", marginLeft: "10px", overflow: "hidden"}}>
+							<div style={{flex: 1, textAlign: "left", marginTop: "auto", marginBottom: "auto", marginLeft: "10px", overflow: "hidden"}}>
 								{condition.destination.value} 
 							</div>
 						</div>
@@ -3348,6 +3224,7 @@ const AngularWorkflow = (props) => {
 								aria-controls="long-menu"
 								aria-haspopup="true"
 								onClick={menuClick}
+								style={{color: "white",}}
 							  >
 								<MoreVertIcon />
 							</IconButton>
@@ -3366,7 +3243,7 @@ const AngularWorkflow = (props) => {
 								  setAnchorEl(null)
 							  }}
 							>
-							<MenuItem style={{backgroundColor: surfaceColor, color: "white"}} onClick={() => {
+							<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
 								setOpen(false)
 								deleteCondition(index)
 							}} key={"Delete"}>{"Delete"}</MenuItem>
@@ -3557,12 +3434,6 @@ const AngularWorkflow = (props) => {
 							rows="10"
 							value={selectedTrigger.parameters[0].value.split(splitter)}
 							style={{backgroundColor: inputColor, color: "white"}}
-							PaperProps={{
-				    		style: {
-									height: "200px",
-				    			backgroundColor: inputColor,
-				    		}
-				    	}}
 							SelectDisplayProps={{
 								style: {
 									marginLeft: 10,

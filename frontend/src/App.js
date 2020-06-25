@@ -59,7 +59,14 @@ const theme = createMuiTheme({
    },
    typography: { 
       useNextVariants: true
-   }
+   },
+	 overrides: {
+		 MuiMenu: {
+			list: {
+				backgroundColor: inputColor,
+			},
+		},
+	},
 });
 
 

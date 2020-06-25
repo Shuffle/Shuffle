@@ -173,7 +173,16 @@ class AppBase:
             if "split" in thistype:
                 return data.split()
             if "len" in thistype or "length" in thistype:
-                return len(data)
+                tmp = "" 
+                try:
+                    tmp = json.loads(data)
+                except: 
+                    pass
+
+                if isinstance(tmp, list):
+                    return str(len(tmp))
+
+                return str(len(data))
             if "parse" in thistype:
                 splitvalues = []
                 default_error = """Error. Expected syntax: parse(["hello","test1"],0:1)""" 
@@ -554,13 +563,21 @@ class AppBase:
                 if destinationvalue.lower() in sourcevalue.lower():
                     return True
             elif check.lower() == "larger than":
-                if sourcevalue.isdigit() and destinationvalue.isdigit():
-                    if int(sourcevalue) > int(destinationvalue):
-                        return True
+                try:
+                    if sourcevalue.isdigit() and destinationvalue.isdigit():
+                        if int(sourcevalue) > int(destinationvalue):
+                            return True
+                except AttributeError as e:
+                    self.logger.error("Condition larger than failed with values %s and %s: %s" % (sourcevalue, destinationvalue, e))
+                    return False
             elif check.lower() == "smaller than":
-                if sourcevalue.isdigit() and destinationvalue.isdigit():
-                    if int(sourcevalue) < int(destinationvalue):
-                        return True
+                try:
+                    if sourcevalue.isdigit() and destinationvalue.isdigit():
+                        if int(sourcevalue) < int(destinationvalue):
+                            return True
+                except AttributeError as e:
+                    self.logger.error("Condition smaller than failed with values %s and %s: %s" % (sourcevalue, destinationvalue, e))
+                    return False
             else:
                 self.logger.info("Condition: can't handle %s yet. Setting to true" % check)
                     
