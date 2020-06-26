@@ -1840,9 +1840,9 @@ const AngularWorkflow = (props) => {
 					position: newposition,
 				}
 
-				if (data.trigger_type === "WEBHOOK") {
-					newAppData.status = "running"
-				}
+				//if (data.trigger_type === "WEBHOOK") {
+				//	newAppData.status = "running"
+				//}
 
 				// Can all the data be in here? hmm
 				const nodeToBeAdded = {
@@ -1888,8 +1888,8 @@ const AngularWorkflow = (props) => {
 
 				setWorkflow(workflow)
 				if (data.trigger_type === "WEBHOOK") {
-					newWebhook(newAppData)
-					saveWorkflow(workflow)
+					//newWebhook(newAppData)
+					//saveWorkflow(workflow)
 				}
 			}
 		}
@@ -3837,13 +3837,24 @@ const AngularWorkflow = (props) => {
 			return
 		}
 
+		// Check the node it's connected to
+		var startNode = workflow.start
+		const branch = workflow.branches.find(branch => branch.source_id === trigger.id)
+		if (branch === undefined && (workflow.start === undefined || workflow.start === null || workflow.start.length === 0)) {
+			alert.error("No webhook node defined")	
+		}
+
 		alert.info("Starting webhook")
+		if (branch !== undefined) {
+			startNode = branch.destination_id
+		}
 
 		const data = {
 			"name": hookname, 
 			"type": "webhook", 
 			"id": trigger.id, 
 			"workflow": workflow.id,
+			"start": startNode,
 		}
 
 		fetch(globalUrl+"/api/v1/hooks/new", {

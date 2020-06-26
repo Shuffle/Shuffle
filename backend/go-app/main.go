@@ -362,6 +362,7 @@ type HookAction struct {
 
 type Hook struct {
 	Id        string       `json:"id" datastore:"id"`
+	Start     string       `json:"start" datastore:"start"`
 	Info      Info         `json:"info" datastore:"info"`
 	Actions   []HookAction `json:"actions" datastore:"actions"`
 	Type      string       `json:"type" datastore:"type"`
@@ -3064,7 +3065,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 
 	hookId = hookId[8:len(hookId)]
 
-	log.Printf("HookID: %s", hookId)
+	//log.Printf("HookID: %s", hookId)
 	hook, err := getHook(ctx, hookId)
 	if err != nil {
 		log.Printf("Failed getting hook: %s", err)
@@ -3095,6 +3096,24 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("Running for workflow: %s", item)
 		workflow := Workflow{
 			ID: "",
+		}
+
+		body, err := ioutil.ReadAll(request.Body)
+		if err != nil {
+			log.Printf("Body data error: %s", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		bodyWrapper := fmt.Sprintf(`{"start": "%s", "execution_argument": "%s"}`, hook.Start, string(body))
+		if len(hook.Start) == 0 {
+			bodyWrapper = string(body)
+		}
+
+		request := &http.Request{
+			Method: "POST",
+			Body:   ioutil.NopCloser(strings.NewReader(bodyWrapper)),
 		}
 
 		workflowExecution, executionResp, err := handleExecution(item, workflow, request)
@@ -3136,6 +3155,7 @@ func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 		Id          string `json:"id"`
 		Name        string `json:"name"`
 		Workflow    string `json:"workflow"`
+		Start       string `json:"start"`
 	}
 
 	body, err := ioutil.ReadAll(request.Body)
@@ -3146,7 +3166,7 @@ func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Println("Data: %s", string(body))
+	log.Printf("Data: %s", string(body))
 
 	ctx := context.Background()
 	var requestdata requestData
@@ -3196,6 +3216,7 @@ func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 
 	hook := Hook{
 		Id:        newId,
+		Start:     requestdata.Start,
 		Workflows: []string{requestdata.Workflow},
 		Info: Info{
 			Name:        requestdata.Name,
@@ -3216,31 +3237,6 @@ func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 		Running: false,
 	}
 
-	// FIXME: Add cloud function execution?
-	//b, err := json.Marshal(hook)
-	//if err != nil {
-	//	log.Printf("Failed marshalling: %s", err)
-	//	resp.WriteHeader(401)
-	//	resp.Write([]byte(`{"success": false}`))
-	//	return
-	//}
-
-	//environmentVariables := map[string]string{
-	//	"FUNCTION_APIKEY": user.ApiKey,
-	//	"CALLBACKURL":     "https://shuffler.io",
-	//	"HOOKID":          hook.Id,
-	//}
-
-	//applocation := fmt.Sprintf("gs://%s/triggers/webhook.zip", bucketName)
-	//hookname := fmt.Sprintf("webhook_%s", hook.Id)
-	//err = deployWebhookFunction(ctx, hookname, defaultLocation, applocation, environmentVariables)
-	//if err != nil {
-	//	log.Printf("Error deploying hook: %s", err)
-	//	resp.WriteHeader(401)
-	//	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Issue with starting hook. Please wait a second and try again"}`)))
-	//	return
-	//}
-
 	hook.Status = "running"
 	hook.Running = true
 	err = setHook(ctx, hook)
@@ -3256,7 +3252,7 @@ func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("Failed to increase total workflows: %s", err)
 	}
 
-	log.Println("Generating new hook")
+	log.Println("Set up a new hook")
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": true}`))
 }

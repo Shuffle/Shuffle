@@ -2015,7 +2015,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 			}
 		} else if len(execution.Start) > 0 {
 
-			log.Printf("START ACTION %s IS WRONG ID LENGTH %d!", len(execution.Start))
+			log.Printf("START ACTION %s IS WRONG ID LENGTH %d!", execution.Start, len(execution.Start))
 			return WorkflowExecution{}, fmt.Sprintf("Startnode %s was not found in actions", execution.Start), errors.New(fmt.Sprintf("Startnode %s was not found in actions", execution.Start))
 		}
 
@@ -2166,11 +2166,15 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	childNodes := findChildNodes(workflowExecution, workflowExecution.Start)
 
 	topic := "workflows"
+	startFound := false
 	// FIXME - remove this?
 	newActions := []Action{}
 	defaultResults := []ActionResult{}
 	for _, action := range workflowExecution.Workflow.Actions {
 		action.LargeImage = ""
+		if action.ID == workflowExecution.Start {
+			startFound = true
+		}
 		//log.Println(action.Environment)
 
 		if action.Environment == "" {
@@ -2208,6 +2212,11 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 				})
 			}
 		}
+	}
+
+	if !startFound {
+		log.Printf("Startnode %s doesn't exist!", workflowExecution.Start)
+		return WorkflowExecution{}, fmt.Sprintf("Workflow action %s doesn't exist in workflow", workflowExecution.Start), errors.New(fmt.Sprintf("Workflow start node %s doesn't exist. Exiting!", workflowExecution.Start))
 	}
 
 	// Verification for execution environments
