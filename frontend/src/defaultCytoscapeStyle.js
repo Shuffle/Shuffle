@@ -24,6 +24,7 @@ const data = [{
 				'curve-style': 'unbundled-bezier',
 				'label': 'data(label)',
 				'text-margin-y': '-15px',
+				"color": "white",
 				"line-fill": "linear-gradient",
 				"line-gradient-stop-colors": ["cyan", "yellow"],
 				"line-gradient-stop-positions": ["0.0", "100"],

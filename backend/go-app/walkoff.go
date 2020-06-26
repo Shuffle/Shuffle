@@ -61,6 +61,7 @@ var shuffleTestPath = "./shuffle-test-258209-5a2e8d7e508a.json"
 type ExecutionRequest struct {
 	ExecutionId       string   `json:"execution_id"`
 	ExecutionArgument string   `json:"execution_argument"`
+	ExecutionSource   string   `json:"execution_source"`
 	WorkflowId        string   `json:"workflow_id"`
 	Environments      []string `json:"environments"`
 	Authorization     string   `json:"authorization"`
@@ -153,6 +154,7 @@ type WorkflowExecution struct {
 	Start              string         `json:"start" datastore:"start"`
 	ExecutionArgument  string         `json:"execution_argument" datastore:"execution_argument"`
 	ExecutionId        string         `json:"execution_id" datastore:"execution_id"`
+	ExecutionSource    string         `json:"execution_source" datastore:"execution_source"`
 	WorkflowId         string         `json:"workflow_id" datastore:"workflow_id"`
 	LastNode           string         `json:"last_node" datastore:"last_node"`
 	Authorization      string         `json:"authorization" datastore:"authorization"`
@@ -449,9 +451,9 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 	// FIXME:
 	// This may run multiple places if multiple servers,
 	// but that's a future problem
-	log.Printf("BODY: %s", string(body))
+	//log.Printf("BODY: %s", string(body))
 	parsedArgument := strings.Replace(string(body), "\"", "\\\"", -1)
-	bodyWrapper := fmt.Sprintf(`{"start": "%s", "execution_argument": "%s"}`, startNode, parsedArgument)
+	bodyWrapper := fmt.Sprintf(`{"start": "%s", "execution_source": "schedule", "execution_argument": "%s"}`, startNode, parsedArgument)
 	log.Printf("WRAPPER BODY: \n%s", bodyWrapper)
 	job := func() {
 		request := &http.Request{
@@ -1983,7 +1985,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		var execution ExecutionRequest
 		err = json.Unmarshal(body, &execution)
 		if err != nil {
-			//log.Printf("Failed execution POST unmarshaling - still continue: %s", err)
+			log.Printf("Failed execution POST unmarshaling - continuing anyway: %s", err)
 			//return WorkflowExecution{}, "", err
 		}
 
@@ -1992,9 +1994,13 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		}
 
 		// FIXME - this should have "execution_argument" from executeWorkflow frontend
-		log.Printf("EXEC: %#v", execution)
+		//log.Printf("EXEC: %#v", execution)
 		if len(execution.ExecutionArgument) > 0 {
 			workflowExecution.ExecutionArgument = execution.ExecutionArgument
+		}
+
+		if len(execution.ExecutionSource) > 0 {
+			workflowExecution.ExecutionSource = execution.ExecutionSource
 		}
 
 		//log.Printf("Execution data: %#v", execution)
@@ -2142,6 +2148,13 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 
 		// Status for the entire workflow.
 		workflowExecution.Status = "EXECUTING"
+	}
+
+	if len(workflowExecution.ExecutionSource) == 0 {
+		log.Printf("No execution source specified. Setting to default")
+		workflowExecution.ExecutionSource = "default"
+	} else {
+		log.Printf("Execution source is %s for execution ID %s", workflowExecution.ExecutionSource, workflowExecution.ExecutionId)
 	}
 
 	workflowExecution.ExecutionVariables = workflow.ExecutionVariables

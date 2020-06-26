@@ -3074,26 +3074,28 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("HOOK FOUND: %#v", hook)
+	//log.Printf("HOOK FOUND: %#v", hook)
 	// Execute the workflow
 	//executeWorkflow(resp, request)
 
 	//resp.WriteHeader(200)
 	//resp.Write([]byte(`{"success": true}`))
 	if hook.Status == "stopped" {
+		log.Printf("Not running because hook status is stopped")
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "The webhook isn't running. Click start to start it"}`)))
 		return
 	}
 
 	if len(hook.Workflows) == 0 {
+		log.Printf("Not running because hook isn't connected to any workflows")
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "No workflows are defined"}`)))
 		return
 	}
 
 	for _, item := range hook.Workflows {
-		log.Printf("Running for workflow: %s", item)
+		log.Printf("Running for workflow %s with startnode %s", item, hook.Start)
 		workflow := Workflow{
 			ID: "",
 		}
@@ -3106,17 +3108,26 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 			return
 		}
 
-		bodyWrapper := fmt.Sprintf(`{"start": "%s", "execution_argument": "%s"}`, hook.Start, string(body))
-		if len(hook.Start) == 0 {
-			bodyWrapper = string(body)
+		parsedBody := string(body)
+		parsedBody = strings.Replace(parsedBody, "\"", "\\\"", -1)
+		if len(parsedBody) > 0 {
+			if string(parsedBody[0]) == `"` && string(parsedBody[len(parsedBody)-1]) == "\"" {
+				parsedBody = parsedBody[1 : len(parsedBody)-1]
+			}
 		}
 
-		request := &http.Request{
+		bodyWrapper := fmt.Sprintf(`{"start": "%s", "execution_source": "webhook", "execution_argument": "%s"}`, hook.Start, string(parsedBody))
+		if len(hook.Start) == 0 {
+			log.Printf("No start node for hook %s - running with workflow default.", hook.Id)
+			bodyWrapper = string(parsedBody)
+		}
+
+		newRequest := &http.Request{
 			Method: "POST",
 			Body:   ioutil.NopCloser(strings.NewReader(bodyWrapper)),
 		}
 
-		workflowExecution, executionResp, err := handleExecution(item, workflow, request)
+		workflowExecution, executionResp, err := handleExecution(item, workflow, newRequest)
 
 		if err == nil {
 			err = increaseStatisticsField(ctx, "total_webhooks_ran", workflowExecution.Workflow.ID, 1)
