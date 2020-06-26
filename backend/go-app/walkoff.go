@@ -1250,7 +1250,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	workflow.Actions = newActions
 	workflow.IsValid = true
-	workflow.Configuration.ExitOnError = true
+	workflow.Configuration.ExitOnError = false
 
 	workflowjson, err := json.Marshal(workflow)
 	if err != nil {
@@ -1573,6 +1573,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	// doesn't check sharing=true
 	// Have to do it like this to add the user's apps
 	log.Println("Apps set starting")
+	log.Printf("EXIT ON ERROR: %#v", workflow.Configuration.ExitOnError)
 	workflowApps := []WorkflowApp{}
 	//memcacheName = "all_apps"
 	//if item, err := memcache.Get(ctx, memcacheName); err == memcache.ErrCacheMiss {

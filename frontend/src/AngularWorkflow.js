@@ -50,6 +50,7 @@ import SaveIcon from '@material-ui/icons/Save';
 import KeyboardArrowLeftIcon from '@material-ui/icons/KeyboardArrowLeft';
 import KeyboardArrowRightIcon from '@material-ui/icons/KeyboardArrowRight';
 import ArrowBackIcon from '@material-ui/icons/ArrowBack';
+import SettingsIcon from '@material-ui/icons/Settings';
 
 import * as cytoscape from 'cytoscape';
 import * as edgehandles from 'cytoscape-edgehandles';
@@ -4202,7 +4203,7 @@ const AngularWorkflow = (props) => {
 		return null 
 	}
 
-	const cytoscapeViewWidths = 650
+	const cytoscapeViewWidths = 700
 	const bottomBarStyle = {
 		position: "fixed", 
 		right: 20, 
@@ -4260,8 +4261,67 @@ const AngularWorkflow = (props) => {
 		return null
 	}
 
+	const WorkflowMenu = () => {
+		const [newAnchor, setNewAnchor] = React.useState(null);
+		const [showShuffleMenu, setShowShuffleMenu] = React.useState(false)
+
+		{ /*const [showShuffleMenu, setShowShuffleMenu] = React.useState(true) */}
+		return (
+			<div style={{"display": "inline-block"}}>
+				<Menu
+					id="long-menu"
+					anchorEl={newAnchor}
+					open={showShuffleMenu}
+					onClose={() => {
+						setShowShuffleMenu(false)
+					}}
+				>
+					<div style={{margin: 15, color: "white", maxWidth: 250, minWidth: 250, }}>
+						<h4>This menu is used to control the workflow itself.</h4>
+						<Divider style={{backgroundColor: "white", marginTop: 10, marginBottom: 10,}}/>
+						<FormControlLabel
+							style={{marginBottom: 15, color: "white",}}
+							label=<div style={{color: "white"}}>Exit on Error</div>
+							control={
+								<Switch checked={workflow.configuration.exit_on_error} onChange={() => {
+									workflow.configuration.exit_on_error = !workflow.configuration.exit_on_error
+									setWorkflow(workflow)
+									setUpdate("exit_on_error_"+workflow.configuration.exit_on_error ? "true" : "false")
+									setShowShuffleMenu(false)
+								}} />
+							}
+						/>
+						<FormControlLabel
+							style={{marginBottom: 15, color: "white",}}
+							label=<div style={{color: "white"}}>Start from top</div>
+							control={
+								<Switch checked={workflow.configuration.start_from_top} onChange={() => {
+									workflow.configuration.start_from_top = !workflow.configuration.start_from_top
+									setWorkflow(workflow)
+									setUpdate("start_from_top_"+workflow.configuration.start_from_top ? "true" : "false")
+									setShowShuffleMenu(false)
+								}} />
+							}
+						/>
+					</div>
+				</Menu>
+				<Tooltip color="secondary" title="Show settings" placement="top-start">
+					<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={(event) => {
+						setShowShuffleMenu(!showShuffleMenu)
+						console.log("EVENT: ", event)
+						console.log("EVENT: ", event.currentTarget)
+						setNewAnchor(event.currentTarget)
+					}}>
+						<SettingsIcon />
+					</Button>
+				</Tooltip>
+			</div>
+		)
+	}
 
 	const BottomCytoscapeBar = () => {
+		const [anchorEl, setAnchorEl] = React.useState(null);
+
 		const boxSize = 100
 		const executionButton = executionRunning ? 
 			<Tooltip color="primary" title="Stop execution" placement="top">
@@ -4328,6 +4388,7 @@ const AngularWorkflow = (props) => {
 							<DirectionsRunIcon />
 						</Button>
 					</Tooltip>
+					<WorkflowMenu />	
 				</div>
 			</div>
 		)
@@ -4461,9 +4522,9 @@ const AngularWorkflow = (props) => {
 
 
 	const getExecutionSourceImage = (execution) => {
+		// This is the playbutton at 150x150
 		const defaultImage = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJYAAACOCAMAAADkWgEmAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAWlBMVEX4Wj69TDgmKCvkVTwlJyskJiokJikkJSkjJSn4Ykf+6+f5h3L////8xLr5alH/9fT7nYz4Wz/919H5cVn/+vr8qpv4XUL94d35e2X//v38t6v4YUbkVDy8SzcVIzHLAAAAAWJLR0QMgbNRYwAAAAlwSFlzAAARsAAAEbAByCf1VAAAAAd0SU1FB+QGGgsvBZ/GkmwAAAFKSURBVHja7dlrTgMxDEXhFgpTiukL2vLc/zbZQH5N7MmReu4KPmlGN4m9WgGzfhgtaOZxM1rQztNoQDvPowHtTKMB7WxHA2TJkiVLlixIZMmSRYgsWbIIkSVLFiGyZMkiRNZirBcma/eKZEW87ZGsOBxPRFbE+R3Jio/LlciKuH0iWfH1/UNkRSR3RRYruSvyWKldkcjK7IpUVl5X5LLSuiKbldQV6aycrihgZXRFCau/K2pY3V1RxersijJWX1cUsnq6opLV0RW1rNldUc2a2RXlrHldsQBrTlfcLwv5EZm/PLIgkHXKPHyQRzXzYoO8BjIvzcgnBvJBxny+Ih/7zNEIcpDEHLshh5TIkS5zAI5cFzCXK8hVFHNxh1xzQpfC0BV6XWTJkkWILFmyCJElSxYhsmTJIkSWLFmEyJIlixBZsmQB8stk/U3/Yb49pVcDMg4AAAAldEVYdGRhdGU6Y3JlYXRlADIwMjAtMDYtMjZUMTE6NDc6MDUrMDI6MDD8QCPmAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDIwLTA2LTI2VDExOjQ3OjA1KzAyOjAwjR2bWgAAAABJRU5ErkJggg=="
 		const size = 40
-		console.log("EXECUTION SOURCE: ", execution.execution_source)
 		if (execution.execution_source === undefined || execution.execution_source === null || execution.execution_source.length === 0) {
 			return <img alt="default" src={defaultImage} style={{width: size, height: size}} />
 		}
@@ -4560,7 +4621,7 @@ const AngularWorkflow = (props) => {
 					<h2>Executing Workflow</h2>	
 					<FormControlLabel
 						style={{color: "white", marginBottom: "0px", marginTop: "10px"}}
-						label=<div style={{color: "white"}}>Show skipped actions</div>
+						label=<div style={{color: "white"}}>Show failed / skipped actions</div>
 						control={
 							<Switch checked={showSkippedActions} onChange={() => {setShowSkippedActions(!showSkippedActions)}} />
 						}
@@ -4603,7 +4664,7 @@ const AngularWorkflow = (props) => {
 						<CircularProgress />
 						:
 						executionData.results.map(data => {
-							if (!showSkippedActions && data.status === "SKIPPED") {
+							if (!showSkippedActions && (data.status === "SKIPPED" || data.status === "FAILURE")) {
 								return null
 							}
 

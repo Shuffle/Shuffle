@@ -428,7 +428,7 @@ class AppBase:
         
             except KeyError as e:
                 print("Lower keyerror: %s" % e)
-                return "KeyError: %s" % e
+                return "KeyError: Couldn't find key: %s" % e
         
             return basejson
 
@@ -795,7 +795,7 @@ class AppBase:
                                     result += "Failed autocasting. Can't handle %s type from function. Must be string" % type(newres)
                                     print("Can't handle type %s value from function" % (type(newres)))
                         else:
-                            print("APP_SDK DONE: Starting multi execution with", multi_parameters)
+                            print("APP_SDK DONE: Starting MULTI execution with", multi_parameters)
                             # 1. Use number of executions based on longest array
                             # 2. Find the right value from the parsed multi_params
 
@@ -848,10 +848,11 @@ class AppBase:
                     self.logger.debug(f"Executed {action['label']}-{action['id']} with result: {result}")
                     self.logger.debug(f"Data: %s" % action_result)
                 except TypeError as e:
+                    print("TypeError issue: %s" % e)
                     action_result["status"] = "FAILURE" 
                     action_result["result"] = "TypeError: %s" % str(e)
             else:
-                print("Not callable?")
+                print("Function %s doesn't exist?" % action["name"])
                 self.logger.error(f"App {self.__class__.__name__}.{action['name']} is not callable")
                 action_result["status"] = "FAILURE" 
                 action_result["result"] = "Function %s is not callable." % actionname
