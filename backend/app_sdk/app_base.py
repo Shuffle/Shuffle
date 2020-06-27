@@ -340,7 +340,7 @@ class AppBase:
                             #print("WF Variables: %s" % execution_data["workflow"]["workflow_variables"])
                             for variable in execution_data["workflow"]["workflow_variables"]:
                                 variablename = variable["name"].replace(" ", "_", -1).lower()
-
+        
                                 if variablename.lower() == actionname_lower:
                                     baseresult = variable["value"]
                                     break
@@ -350,7 +350,7 @@ class AppBase:
                         except TypeError as e:
                             print("TypeError wf variables: %s" % e)
                             pass
-
+        
                     print("BEFORE EXECUTION VAR")
                     if len(baseresult) == 0:
                         try:
@@ -386,18 +386,20 @@ class AppBase:
             except json.decoder.JSONDecodeError as e:
                 return baseresult
         
+            # This whole thing should be recursive.
             try:
                 cnt = 0
                 for value in parsersplit[1:]:
                     cnt += 1
         
+                    print("VALUE: %s" % value)
                     if value == "#":
                         # FIXME - not recursive - should go deeper if there are more #
                         print("HANDLE RECURSIVE LOOP OF %s" % basejson)
                         returnlist = []
                         try:
                             for innervalue in basejson:
-                                print("Value: %s" % value[parsersplit[cnt+1]])
+                                print("Value: %s" % innervalue[parsersplit[cnt+1]])
                                 returnlist.append(innervalue[parsersplit[cnt+1]])
                         except IndexError as e:
                             print("Indexerror inner: %s" % e)
@@ -406,12 +408,11 @@ class AppBase:
                             indexvalue = "${NO_SPLITTER%s}$" % json.dumps(basejson)
                             if len(returnlist) > 0:
                                 indexvalue = "${NO_SPLITTER%s}$" % json.dumps(returnlist)
-
+        
                             print("INDEXVAL: ", indexvalue)
                             return indexvalue
                         except TypeError as e:
-                            print("Inner TypeError: %s" % e)
-                            return basejson
+                            print("TypeError inner: %s" % e)
         
                         # Example format: ${[]}$
                         parseditem = "${%s%s}$" % (parsersplit[cnt+1], json.dumps(returnlist))
@@ -419,6 +420,10 @@ class AppBase:
                         return parseditem
         
                     else:
+                        print("BEFORE NORMAL VALUE: ", basejson, value)
+                        if len(value) == 0:
+                            return basejson
+        
                         if isinstance(basejson[value], str):
                             print(f"LOADING STRING '%s' AS JSON" % basejson[value]) 
                             try:
@@ -432,8 +437,9 @@ class AppBase:
             except KeyError as e:
                 print("Lower keyerror: %s" % e)
                 return "KeyError: Couldn't find key: %s" % e
-        
-            return basejson
+
+    return basejson
+
 
 
         def parse_params(action, fullexecution, parameter):
@@ -442,7 +448,7 @@ class AppBase:
 
             # Matches with space in the first part, but not in subsequent parts.
             # JSON / yaml etc shouldn't have spaces in their fields anyway.
-            match = ".*?([$]{1}([a-zA-Z0-9 _-]+\.?){1}([a-zA-Z0-9_-]+\.?){0,})"
+            match = ".*?([$]{1}([a-zA-Z0-9 _-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,})"
 
             # Regex to find all the things
             if parameter["variant"] == "STATIC_VALUE":
