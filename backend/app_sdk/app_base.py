@@ -409,6 +409,9 @@ class AppBase:
 
                             print("INDEXVAL: ", indexvalue)
                             return indexvalue
+                        except TypeError as e:
+                            print("Inner TypeError: %s" % e)
+                            return basejson
         
                         # Example format: ${[]}$
                         parseditem = "${%s%s}$" % (parsersplit[cnt+1], json.dumps(returnlist))
@@ -436,7 +439,10 @@ class AppBase:
         def parse_params(action, fullexecution, parameter):
             # Skip if it starts with $?
             jsonparsevalue = "$."
-            match = ".*([$]{1}([a-zA-Z0-9# _-]+\.?){1,})"
+
+            # Matches with space in the first part, but not in subsequent parts.
+            # JSON / yaml etc shouldn't have spaces in their fields anyway.
+            match = ".*?([$]{1}([a-zA-Z0-9 _-]+\.?){1}([a-zA-Z0-9_-]+\.?){0,})"
 
             # Regex to find all the things
             if parameter["variant"] == "STATIC_VALUE":
