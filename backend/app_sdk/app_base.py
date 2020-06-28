@@ -438,10 +438,9 @@ class AppBase:
                 print("Lower keyerror: %s" % e)
                 return "KeyError: Couldn't find key: %s" % e
 
-    return basejson
+            return basejson
 
-
-
+        # Parses parameters sent to it and returns whether it did it successfully with the values found
         def parse_params(action, fullexecution, parameter):
             # Skip if it starts with $?
             jsonparsevalue = "$."
@@ -748,7 +747,7 @@ class AppBase:
                             #submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"
                             submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"
                             actualitem = re.findall(submatch, value, re.MULTILINE)
-                            print("Multicheck: %s", actualitem)
+                            print("Multicheck ", actualitem)
                             if len(actualitem) > 0:
                                 multiexecution = True
                                 
@@ -765,9 +764,12 @@ class AppBase:
                                     except IndexError:
                                         continue
 
-                                    itemlist = json.loads(actualitem)
-                                    if len(itemlist) > minlength:
-                                        minlength = len(itemlist)
+                                    try:
+                                        itemlist = json.loads(actualitem)
+                                        if len(itemlist) > minlength:
+                                            minlength = len(itemlist)
+                                    except json.decoder.JSONDecodeError as e:
+                                        print("JSON Error: %s in %s" % (e, actualitem))
 
                                     replacements[to_be_replaced] = actualitem
 
@@ -777,7 +779,13 @@ class AppBase:
                                 for i in range(0, minlength): 
                                     tmpitem = json.loads(json.dumps(parameter["value"]))
                                     for key, value in replacements.items():
-                                        replacement = json.loads(value)[i]
+                                        replacement = json.dumps(json.loads(value)[i])
+                                        if replacement.startswith("\"") and replacement.endswith("\""):
+                                            replacement = replacement[1:len(replacement)-1]
+                                        #except json.decoder.JSONDecodeError as e:
+
+                                        print("REPLACING %s with %s" % (key, replacement))
+                                        #replacement = parse_wrapper_start(replacement)
                                         tmpitem = tmpitem.replace(key, replacement, -1)
 
                                     resultarray.append(tmpitem)
@@ -786,7 +794,7 @@ class AppBase:
                                 multi_parameters[parameter["name"]] = resultarray
                             else:
                                 # Parses things like int(value)
-                                self.logger.info("Parsing wrapper data")
+                                self.logger.info("Parsing wrapper data for %s" % value)
                                 value = parse_wrapper_start(value)
 
                                 params[parameter["name"]] = value
@@ -806,6 +814,7 @@ class AppBase:
                                 except ValueError:
                                     result += "Failed autocasting. Can't handle %s type from function. Must be string" % type(newres)
                                     print("Can't handle type %s value from function" % (type(newres)))
+                            print("POST NEWRES: ", newres)
                         else:
                             print("APP_SDK DONE: Starting MULTI execution with", multi_parameters)
                             # 1. Use number of executions based on longest array
@@ -830,7 +839,8 @@ class AppBase:
 
                                 #print("Running with params %s" % baseparams) 
                                 ret = await func(**baseparams)
-                                print("Inner ret: %s" % ret)
+                                ret = ret.replace("\"", "\\\"", -1)
+                                print("Inner ret parsed: %s" % ret)
                                     
                                 try:
                                     results.append(json.loads(ret))
@@ -850,8 +860,7 @@ class AppBase:
                                 print("Normal result?")
                                 result = results
                                 
-                            print("RESULT: %s" % result)
-
+                    print("RESULT: %s" % result)
                     action_result["status"] = "SUCCESS" 
                     action_result["result"] = str(result)
                     if action_result["result"] == "":

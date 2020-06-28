@@ -35,6 +35,7 @@ import Switch from '@material-ui/core/Switch';
 import ReactJson from 'react-json-view'
 import { useBeforeunload } from 'react-beforeunload';
 
+import CachedIcon from '@material-ui/icons/Cached';
 import DirectionsRunIcon from '@material-ui/icons/DirectionsRun';
 import PolymerIcon from '@material-ui/icons/Polymer';
 import CreateIcon from '@material-ui/icons/Create';
@@ -4305,11 +4306,9 @@ const AngularWorkflow = (props) => {
 						/>
 					</div>
 				</Menu>
-				<Tooltip color="secondary" title="Show settings" placement="top-start">
+				<Tooltip color="secondary" title="Workflow settings" placement="top-start">
 					<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={(event) => {
 						setShowShuffleMenu(!showShuffleMenu)
-						console.log("EVENT: ", event)
-						console.log("EVENT: ", event.currentTarget)
 						setNewAnchor(event.currentTarget)
 					}}>
 						<SettingsIcon />
@@ -4365,7 +4364,7 @@ const AngularWorkflow = (props) => {
 						/>
 					</Tooltip>
 					<Tooltip color="primary" title="Save (ctrl+s)" placement="top">
-						<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={() => saveWorkflow()}>
+						<Button color="primary" style={{height: 50, marginLeft: 10, }} variant={lastSaved ? "outlined" : "contained"} onClick={() => saveWorkflow()}>
 							<SaveIcon /> 
 						</Button> 				
 					</Tooltip>
@@ -4562,6 +4561,7 @@ const AngularWorkflow = (props) => {
 					onClick={() => {
 						getWorkflowExecution(props.match.params.key)
 					}} color="primary">
+					<CachedIcon style={{marginRight: 10}}/>
 					Refresh	executions
 				</Button>
 				<Divider style={{backgroundColor: "white", marginTop: 10, marginBottom: 10,}}/>
@@ -4664,7 +4664,7 @@ const AngularWorkflow = (props) => {
 						<CircularProgress />
 						:
 						executionData.results.map(data => {
-							if (!showSkippedActions && (data.status === "SKIPPED" || data.status === "FAILURE")) {
+							if (executionData.results.length !== 1 && !showSkippedActions && (data.status === "SKIPPED" || data.status === "FAILURE")) {
 								return null
 							}
 
@@ -4685,9 +4685,10 @@ const AngularWorkflow = (props) => {
 
 							const curapp = apps.find(a => a.name === data.action.app_name && a.app_version === data.action.app_version)
 							const imgsize = 50
+							const statusColor = data.status === "FINISHED" || data.status === "SUCCESS" ? "green" : data.status === "ABORTED" || data.status === "FAILURE" ? "red" : "orange"
 							const actionimg = curapp === null ? 
 								null :
-								<img alt={data.action.app_name} src={curapp.large_image} style={{marginRight: 20, width: imgsize, height: imgsize}} />
+								<img alt={data.action.app_name} src={curapp.large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />
 
 							return (
 								<div style={{marginBottom: 40,}}>

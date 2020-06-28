@@ -1573,7 +1573,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	// doesn't check sharing=true
 	// Have to do it like this to add the user's apps
 	log.Println("Apps set starting")
-	log.Printf("EXIT ON ERROR: %#v", workflow.Configuration.ExitOnError)
+	//log.Printf("EXIT ON ERROR: %#v", workflow.Configuration.ExitOnError)
 	workflowApps := []WorkflowApp{}
 	//memcacheName = "all_apps"
 	//if item, err := memcache.Get(ctx, memcacheName); err == memcache.ErrCacheMiss {
