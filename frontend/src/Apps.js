@@ -448,6 +448,12 @@ const Apps = (props) => {
 							})}
 					</div>
 				: null}
+				{selectedAction.description !== undefined && selectedAction.description !== null ? 
+					<div>
+						<b>Action Description</b><div/>
+						{selectedAction.description}
+					</div>
+					: null}
 			</div>
 			: 
 			null

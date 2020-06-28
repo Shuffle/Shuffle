@@ -173,7 +173,16 @@ class AppBase:
             if "split" in thistype:
                 return data.split()
             if "len" in thistype or "length" in thistype:
-                return len(data)
+                tmp = "" 
+                try:
+                    tmp = json.loads(data)
+                except: 
+                    pass
+
+                if isinstance(tmp, list):
+                    return str(len(tmp))
+
+                return str(len(data))
             if "parse" in thistype:
                 splitvalues = []
                 default_error = """Error. Expected syntax: parse(["hello","test1"],0:1)""" 
@@ -331,7 +340,7 @@ class AppBase:
                             #print("WF Variables: %s" % execution_data["workflow"]["workflow_variables"])
                             for variable in execution_data["workflow"]["workflow_variables"]:
                                 variablename = variable["name"].replace(" ", "_", -1).lower()
-
+        
                                 if variablename.lower() == actionname_lower:
                                     baseresult = variable["value"]
                                     break
@@ -341,7 +350,7 @@ class AppBase:
                         except TypeError as e:
                             print("TypeError wf variables: %s" % e)
                             pass
-
+        
                     print("BEFORE EXECUTION VAR")
                     if len(baseresult) == 0:
                         try:
@@ -377,23 +386,44 @@ class AppBase:
             except json.decoder.JSONDecodeError as e:
                 return baseresult
         
+            # This whole thing should be recursive.
             try:
                 cnt = 0
                 for value in parsersplit[1:]:
                     cnt += 1
         
+                    print("VALUE: %s" % value)
                     if value == "#":
                         # FIXME - not recursive - should go deeper if there are more #
-                        print("HANDLE RECURSIVE LOOP ")
+                        print("HANDLE RECURSIVE LOOP OF %s" % basejson)
                         returnlist = []
-                        for innervalue in basejson:
-                            #print("Value: %s" % value[parsersplit[cnt+1]])
-                            returnlist.append(innervalue[parsersplit[cnt+1]])
+                        try:
+                            for innervalue in basejson:
+                                print("Value: %s" % innervalue[parsersplit[cnt+1]])
+                                returnlist.append(innervalue[parsersplit[cnt+1]])
+                        except IndexError as e:
+                            print("Indexerror inner: %s" % e)
+                            # Basically means its a normal list, not a crazy one :)
+                            # Custom format for ${name[0,1,2,...]}$
+                            indexvalue = "${NO_SPLITTER%s}$" % json.dumps(basejson)
+                            if len(returnlist) > 0:
+                                indexvalue = "${NO_SPLITTER%s}$" % json.dumps(returnlist)
+        
+                            print("INDEXVAL: ", indexvalue)
+                            return indexvalue
+                        except TypeError as e:
+                            print("TypeError inner: %s" % e)
         
                         # Example format: ${[]}$
-                        return "${%s%s}$" % (parsersplit[cnt+1], json.dumps(returnlist))
+                        parseditem = "${%s%s}$" % (parsersplit[cnt+1], json.dumps(returnlist))
+                        print("PARSED LOOP ITEM: %s" % parseditem)
+                        return parseditem
         
                     else:
+                        print("BEFORE NORMAL VALUE: ", basejson, value)
+                        if len(value) == 0:
+                            return basejson
+        
                         if isinstance(basejson[value], str):
                             print(f"LOADING STRING '%s' AS JSON" % basejson[value]) 
                             try:
@@ -405,17 +435,19 @@ class AppBase:
                             basejson = basejson[value]
         
             except KeyError as e:
-                return "KeyError: %s" % e
-            except IndexError as e:
-                return "IndexError: %s" % e
-        
+                print("Lower keyerror: %s" % e)
+                return "KeyError: Couldn't find key: %s" % e
+
             return basejson
 
-
+        # Parses parameters sent to it and returns whether it did it successfully with the values found
         def parse_params(action, fullexecution, parameter):
             # Skip if it starts with $?
             jsonparsevalue = "$."
-            match = ".*([$]{1}([a-zA-Z0-9# _-]+\.?){1,})"
+
+            # Matches with space in the first part, but not in subsequent parts.
+            # JSON / yaml etc shouldn't have spaces in their fields anyway.
+            match = ".*?([$]{1}([a-zA-Z0-9 _-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,})"
 
             # Regex to find all the things
             if parameter["variant"] == "STATIC_VALUE":
@@ -424,7 +456,7 @@ class AppBase:
                 #self.logger.debug(f"\n\nHandle static data with JSON: {data}\n\n")
                 #self.logger.info("STATIC PARSED: %s" % actualitem)
                 if len(actualitem) > 0:
-                    print("ACTUAL: %s", actualitem)
+                    print("ACTUAL: ", actualitem)
                     for replace in actualitem:
                         try:
                             to_be_replaced = replace[0]
@@ -488,8 +520,10 @@ class AppBase:
                 else:
                     fullname += parameter["action_field"]
 
+                self.logger.info("PRE Fullname: %s" % fullname)
+
                 if parameter["value"].startswith(jsonparsevalue):
-                    fullname += parameter["value"][2:]
+                    fullname += parameter["value"][1:]
                 #else:
                 #    fullname = "$%s" % parameter["action_field"]
 
@@ -539,6 +573,22 @@ class AppBase:
             elif check.lower() == "contains":
                 if destinationvalue.lower() in sourcevalue.lower():
                     return True
+            elif check.lower() == "larger than":
+                try:
+                    if sourcevalue.isdigit() and destinationvalue.isdigit():
+                        if int(sourcevalue) > int(destinationvalue):
+                            return True
+                except AttributeError as e:
+                    self.logger.error("Condition larger than failed with values %s and %s: %s" % (sourcevalue, destinationvalue, e))
+                    return False
+            elif check.lower() == "smaller than":
+                try:
+                    if sourcevalue.isdigit() and destinationvalue.isdigit():
+                        if int(sourcevalue) < int(destinationvalue):
+                            return True
+                except AttributeError as e:
+                    self.logger.error("Condition smaller than failed with values %s and %s: %s" % (sourcevalue, destinationvalue, e))
+                    return False
             else:
                 self.logger.info("Condition: can't handle %s yet. Setting to true" % check)
                     
@@ -574,24 +624,18 @@ class AppBase:
 
                     # Parse all values first here
                     sourcevalue = condition["source"]["value"]
-                    if condition["source"]["variant"] == "" or condition["source"]["variant"]== "STATIC_VALUE":
-                        condition["source"]["variant"]= "STATIC_VALUE"
-                    else:
-                        check, sourcevalue = parse_params(action, fullexecution, condition["source"])
-                        if check:
-                            return False, "Failed condition: %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)
+                    check, sourcevalue = parse_params(action, fullexecution, condition["source"])
+                    if check:
+                        return False, "Failed condition: %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)
 
 
                     #sourcevalue = sourcevalue.encode("utf-8")
                     sourcevalue = parse_wrapper_start(sourcevalue)
                     destinationvalue = condition["destination"]["value"]
 
-                    if condition["destination"]["variant"]== "" or condition["destination"]["variant"]== "STATIC_VALUE":
-                        condition["destination"]["variant"] = "STATIC_VALUE"
-                    else:
-                        check, destinationvalue = parse_params(action, fullexecution, condition["destination"])
-                        if check:
-                            return False, "Failed condition: %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)
+                    check, destinationvalue = parse_params(action, fullexecution, condition["destination"])
+                    if check:
+                        return False, "Failed condition: %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)
 
                     #destinationvalue = destinationvalue.encode("utf-8")
                     destinationvalue = parse_wrapper_start(destinationvalue)
@@ -634,7 +678,7 @@ class AppBase:
         if not branchcheck:
             self.logger.info("Failed one or more branch conditions.")
             action_result["result"] = tmpresult
-            action_result["status"] = "SKIPPED"
+            action_result["status"] = "FAILURE"
             try:
                 ret = requests.post("%s%s" % (self.url, stream_path), headers=headers, json=action_result)
                 self.logger.info("Result: %d" % ret.status_code)
@@ -643,6 +687,7 @@ class AppBase:
             except requests.exceptions.ConnectionError as e:
                 self.logger.exception(e)
 
+            print("\n\nRETURNING BECAUSE A BRANCH FAILED\n\n")
             return
 
         # Replace name cus there might be issues
@@ -699,8 +744,10 @@ class AppBase:
                                 raise "Value check error: %s" % Exception(check)
 
                             # Custom format for ${name[0,1,2,...]}$
+                            #submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"
                             submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"
                             actualitem = re.findall(submatch, value, re.MULTILINE)
+                            print("Multicheck ", actualitem)
                             if len(actualitem) > 0:
                                 multiexecution = True
                                 
@@ -717,9 +764,12 @@ class AppBase:
                                     except IndexError:
                                         continue
 
-                                    itemlist = json.loads(actualitem)
-                                    if len(itemlist) > minlength:
-                                        minlength = len(itemlist)
+                                    try:
+                                        itemlist = json.loads(actualitem)
+                                        if len(itemlist) > minlength:
+                                            minlength = len(itemlist)
+                                    except json.decoder.JSONDecodeError as e:
+                                        print("JSON Error: %s in %s" % (e, actualitem))
 
                                     replacements[to_be_replaced] = actualitem
 
@@ -729,7 +779,13 @@ class AppBase:
                                 for i in range(0, minlength): 
                                     tmpitem = json.loads(json.dumps(parameter["value"]))
                                     for key, value in replacements.items():
-                                        replacement = json.loads(value)[i]
+                                        replacement = json.dumps(json.loads(value)[i])
+                                        if replacement.startswith("\"") and replacement.endswith("\""):
+                                            replacement = replacement[1:len(replacement)-1]
+                                        #except json.decoder.JSONDecodeError as e:
+
+                                        print("REPLACING %s with %s" % (key, replacement))
+                                        #replacement = parse_wrapper_start(replacement)
                                         tmpitem = tmpitem.replace(key, replacement, -1)
 
                                     resultarray.append(tmpitem)
@@ -738,7 +794,7 @@ class AppBase:
                                 multi_parameters[parameter["name"]] = resultarray
                             else:
                                 # Parses things like int(value)
-                                self.logger.info("Parsing wrapper data")
+                                self.logger.info("Parsing wrapper data for %s" % value)
                                 value = parse_wrapper_start(value)
 
                                 params[parameter["name"]] = value
@@ -758,8 +814,9 @@ class AppBase:
                                 except ValueError:
                                     result += "Failed autocasting. Can't handle %s type from function. Must be string" % type(newres)
                                     print("Can't handle type %s value from function" % (type(newres)))
+                            print("POST NEWRES: ", newres)
                         else:
-                            print("APP_SDK DONE: Starting multi execution with", multi_parameters)
+                            print("APP_SDK DONE: Starting MULTI execution with", multi_parameters)
                             # 1. Use number of executions based on longest array
                             # 2. Find the right value from the parsed multi_params
 
@@ -782,7 +839,8 @@ class AppBase:
 
                                 #print("Running with params %s" % baseparams) 
                                 ret = await func(**baseparams)
-                                print("Inner ret: %s" % ret)
+                                ret = ret.replace("\"", "\\\"", -1)
+                                print("Inner ret parsed: %s" % ret)
                                     
                                 try:
                                     results.append(json.loads(ret))
@@ -802,8 +860,7 @@ class AppBase:
                                 print("Normal result?")
                                 result = results
                                 
-                            print("RESULT: %s" % result)
-
+                    print("RESULT: %s" % result)
                     action_result["status"] = "SUCCESS" 
                     action_result["result"] = str(result)
                     if action_result["result"] == "":
@@ -812,10 +869,11 @@ class AppBase:
                     self.logger.debug(f"Executed {action['label']}-{action['id']} with result: {result}")
                     self.logger.debug(f"Data: %s" % action_result)
                 except TypeError as e:
+                    print("TypeError issue: %s" % e)
                     action_result["status"] = "FAILURE" 
                     action_result["result"] = "TypeError: %s" % str(e)
             else:
-                print("Not callable?")
+                print("Function %s doesn't exist?" % action["name"])
                 self.logger.error(f"App {self.__class__.__name__}.{action['name']} is not callable")
                 action_result["status"] = "FAILURE" 
                 action_result["result"] = "Function %s is not callable." % actionname

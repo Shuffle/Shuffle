@@ -2,6 +2,8 @@ import React, { useEffect} from 'react';
 
 import {Link} from 'react-router-dom';
 import Paper from '@material-ui/core/Paper';
+import Select from '@material-ui/core/Select';
+import MenuItem from '@material-ui/core/MenuItem';
 import List from '@material-ui/core/List';
 import Divider from '@material-ui/core/Divider';
 import TextField from '@material-ui/core/TextField';
@@ -70,7 +72,7 @@ const Admin = (props) => {
 
 	const onPasswordChange = () => {
 		const data = {"username": selectedUser.username, "newpassword": newPassword}
-		const url = globalUrl+'/api/v1/passwordchange';
+		const url = globalUrl+'/api/v1/users/passwordchange';
 		fetch(url, {
 			mode: 'cors',
 			method: 'POST',
@@ -92,7 +94,7 @@ const Admin = (props) => {
 			}),
 		)
 		.catch(error => {
-			alert.error("Err: ", error.toString())
+			alert.error("Err: "+error.toString())
 		});
 	}
 
@@ -133,7 +135,7 @@ const Admin = (props) => {
 		// Just use this one?
 		var data = {"username": data.Username, "password": data.Password}
 		var baseurl = globalUrl
-		const url = baseurl+'/api/v1/register';
+		const url = baseurl+'/api/v1/users/register';
 		fetch(url, {
 			method: 'POST',
 	  	credentials: "include",
@@ -294,6 +296,7 @@ const Admin = (props) => {
 			return response.json()
 		})
     .then((responseJson) => {
+			console.log(responseJson)
 			setUsers(responseJson)
 		})
 		.catch(error => {
@@ -319,14 +322,54 @@ const Admin = (props) => {
 		modalUser[field] = value
 	}
 
-	const generateApikey = () => {
-		fetch(globalUrl+"/api/v1/generateapikey", {
-			method: 'GET',
+	const setUser = (userId, field, value) => {
+		const data = {"user_id": userId}
+		data[field] = value
+		console.log("DATA: ", data)
+
+		fetch(globalUrl+"/api/v1/users/updateuser", {
+			method: 'PUT',
 			headers: {
 				'Content-Type': 'application/json',
 				'Accept': 'application/json',
 			},
-				credentials: "include",
+			body: JSON.stringify(data),
+			credentials: "include",
+		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for WORKFLOW EXECUTION :O!")
+			} else {
+				getUsers()
+			}
+
+			return response.json()
+		})
+  	.then((responseJson) => {
+			if (!responseJson.success && responseJson.reason !== undefined) {
+				alert.error("Failed setting user: "+responseJson.reason)
+			} else {
+				alert.success("Set the user field "+field+" to "+value)
+			}
+    })
+		.catch(error => {
+    		console.log(error)
+		});
+	}
+
+
+
+	const generateApikey = (userId) => {
+		const data = {"user_id": userId}
+
+		fetch(globalUrl+"/api/v1/generateapikey", {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+			body: JSON.stringify(data),
+			credentials: "include",
 		})
 		.then((response) => {
 			if (response.status !== 200) {
@@ -407,7 +450,7 @@ const Admin = (props) => {
 					style={{}} 
 					variant="outlined"
 					color="primary"
-					onClick={() => generateApikey(selectedUser)}
+					onClick={() => generateApikey(selectedUser.id)}
 				>
 					Get new API key
 				</Button>
@@ -541,10 +584,6 @@ const Admin = (props) => {
 						style={{minWidth: 350, maxWidth: 350, overflow: "hidden"}}
 					/>
 					<ListItemText
-						primary="Password"
-						style={{minWidth: 180, maxWidth: 180}}
-					/>
-					<ListItemText
 						primary="Role"
 						style={{minWidth: 150, maxWidth: 150}}
 					/>
@@ -569,11 +608,32 @@ const Admin = (props) => {
 								style={{maxWidth: 350, minWidth: 350,}}
 							/>
 							<ListItemText
-								primary="**************"
-								style={{minWidth: 180, maxWidth: 180}}
-							/>
-							<ListItemText
-								primary={data.role}
+								primary=
+									<Select
+										PaperProps={{
+											style: {
+											}
+										}}
+										SelectDisplayProps={{
+											style: {
+												marginLeft: 10,
+											}
+										}}
+										value={data.role}
+										fullWidth
+										onChange={(e) => {
+											console.log("VALUE: ", e.target.value)
+											setUser(data.id, "role", e.target.value)
+										}}
+										style={{backgroundColor: surfaceColor, color: "white", height: "50px"}}
+										>
+										<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={"admin"}>
+											Admin
+										</MenuItem>
+										<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={"user"}>
+											User
+										</MenuItem>
+									</Select>
 								style={{minWidth: 150, maxWidth: 150}}
 							/>
 							<ListItemText

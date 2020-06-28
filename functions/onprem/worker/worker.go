@@ -423,6 +423,11 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 
 	onpremApps := []string{}
 	startAction := workflowExecution.Start
+	if len(startAction) == 0 {
+		log.Printf("Didn't find execution start action. Setting it to workflow start action.")
+		startAction = workflowExecution.Workflow.Start
+	}
+
 	log.Printf("Startaction: %s", startAction)
 	toExecuteOnprem := []string{}
 	parents := map[string][]string{}
@@ -660,7 +665,7 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 			// FIXME
 			// Execute, as we don't really care if env is not set? IDK
 			if action.Environment != environment { //&& action.Environment != "" {
-				log.Printf("Bad environment: %s", action.Environment)
+				log.Printf("Bad environment for node: %s. Want %s", action.Environment, environment)
 				continue
 			}
 
@@ -995,6 +1000,7 @@ func main() {
 	} else {
 		authorization = os.Getenv("AUTHORIZATION")
 		executionId = os.Getenv("EXECUTIONID")
+		log.Printf("Running normal execution with auth %s and ID %s", authorization, executionId)
 	}
 
 	if len(authorization) == 0 {

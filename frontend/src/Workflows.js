@@ -89,7 +89,6 @@ const Workflows = (props) => {
 			return response.json()
 		})
     	.then((responseJson) => {
-			console.log(responseJson)
 			setSelectedExecution({})
 			setWorkflowExecutions([])
 
@@ -384,21 +383,21 @@ const Workflows = (props) => {
 									}}
       					>
 
-								<MenuItem style={{backgroundColor: surfaceColor, color: "white"}} onClick={() => {
+								<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
 									setModalOpen(true)
 									setEditingWorkflow(data)
 									setNewWorkflowName(data.name)
 									setNewWorkflowDescription(data.description)
 								}} key={"change"}>{"Change name"}</MenuItem>
-								<MenuItem style={{backgroundColor: surfaceColor, color: "white"}} onClick={() => {
+								<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
 									copyWorkflow(data)		
 									setOpen(false)
 								}} key={"copy"}>{"Copy"}</MenuItem>
-								<MenuItem style={{backgroundColor: surfaceColor, color: "white"}} onClick={() => {
+								<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
 									exportWorkflow(data)		
 									setOpen(false)
 								}} key={"export"}>{"Export"}</MenuItem>
-      							<MenuItem style={{backgroundColor: surfaceColor, color: "white"}} onClick={() => {
+      							<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
 									deleteWorkflow(data.id)		
 									setOpen(false)
 								}} key={"delete"}>{"Delete"}</MenuItem>
@@ -807,7 +806,7 @@ const Workflows = (props) => {
 							const ret = setNewWorkflow(data.name, data.description, data, false)
 							.then((response) => {
 								if (response !== undefined) {
-									alert.success("Successfully created "+data.name)
+									alert.success("Successfully imported "+data.name)
 								}
 							})
 						}
@@ -1031,20 +1030,20 @@ const Workflows = (props) => {
 		})
 		.then((response) => {
 			if (response.status === 200) {
-				response.text().then(function (text) {
-					console.log("RETURN: ", text)
-					alert.success("Loaded existing apps!")
-				})
+				alert.success("Successfully loaded workflows from "+downloadUrl)
+				getAvailableWorkflows()
 			}
 
 			return response.json()
 		})
     .then((responseJson) => {
 				console.log("DATA: ", responseJson)
-				if (responseJson.reason !== undefined) {
-					alert.error("Failed loading: "+responseJson.reason)
-				} else {
-					alert.error("Failed loading")
+				if (!responseJson.success) {
+					if (responseJson.reason !== undefined) {
+						alert.error("Failed loading: "+responseJson.reason)
+					} else {
+						alert.error("Failed loading")
+					}
 				}
 		})
 		.catch(error => {

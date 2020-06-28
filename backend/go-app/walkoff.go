@@ -61,6 +61,7 @@ var shuffleTestPath = "./shuffle-test-258209-5a2e8d7e508a.json"
 type ExecutionRequest struct {
 	ExecutionId       string   `json:"execution_id"`
 	ExecutionArgument string   `json:"execution_argument"`
+	ExecutionSource   string   `json:"execution_source"`
 	WorkflowId        string   `json:"workflow_id"`
 	Environments      []string `json:"environments"`
 	Authorization     string   `json:"authorization"`
@@ -153,6 +154,7 @@ type WorkflowExecution struct {
 	Start              string         `json:"start" datastore:"start"`
 	ExecutionArgument  string         `json:"execution_argument" datastore:"execution_argument"`
 	ExecutionId        string         `json:"execution_id" datastore:"execution_id"`
+	ExecutionSource    string         `json:"execution_source" datastore:"execution_source"`
 	WorkflowId         string         `json:"workflow_id" datastore:"workflow_id"`
 	LastNode           string         `json:"last_node" datastore:"last_node"`
 	Authorization      string         `json:"authorization" datastore:"authorization"`
@@ -449,9 +451,9 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 	// FIXME:
 	// This may run multiple places if multiple servers,
 	// but that's a future problem
-	log.Printf("BODY: %s", string(body))
+	//log.Printf("BODY: %s", string(body))
 	parsedArgument := strings.Replace(string(body), "\"", "\\\"", -1)
-	bodyWrapper := fmt.Sprintf(`{"start": "%s", "execution_argument": "%s"}`, startNode, parsedArgument)
+	bodyWrapper := fmt.Sprintf(`{"start": "%s", "execution_source": "schedule", "execution_argument": "%s"}`, startNode, parsedArgument)
 	log.Printf("WRAPPER BODY: \n%s", bodyWrapper)
 	job := func() {
 		request := &http.Request{
@@ -1205,6 +1207,13 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 		// Adds the Testing app if it's a new workflow
 		workflowapps, err := getAllWorkflowApps(ctx)
 		if err == nil {
+			// FIXME: Add real env
+			//q := datastore.NewQuery("Environments").Limit(1)
+			//count, err := dbclient.Get(ctx, q)
+			//envName := "Shuffle"
+			//if err == nil {
+			//}
+
 			for _, item := range workflowapps {
 				if item.Name == "Testing" && item.AppVersion == "1.0.0" {
 					nodeId := "40447f30-fa44-4a4f-a133-4ee710368737"
@@ -1241,7 +1250,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	workflow.Actions = newActions
 	workflow.IsValid = true
-	workflow.Configuration.ExitOnError = true
+	workflow.Configuration.ExitOnError = false
 
 	workflowjson, err := json.Marshal(workflow)
 	if err != nil {
@@ -1564,6 +1573,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	// doesn't check sharing=true
 	// Have to do it like this to add the user's apps
 	log.Println("Apps set starting")
+	//log.Printf("EXIT ON ERROR: %#v", workflow.Configuration.ExitOnError)
 	workflowApps := []WorkflowApp{}
 	//memcacheName = "all_apps"
 	//if item, err := memcache.Get(ctx, memcacheName); err == memcache.ErrCacheMiss {
@@ -1627,10 +1637,10 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 				}
 
 				// Has to NOT be generated
-				//if app.Name == action.AppName && app.AppVersion == action.AppVersion {
-				//	curapp = app
-				//	break
-				//}
+				if app.Name == action.AppName && app.AppVersion == action.AppVersion {
+					curapp = app
+					break
+				}
 			}
 
 			// Check to see if the whole app is valid
@@ -1976,7 +1986,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		var execution ExecutionRequest
 		err = json.Unmarshal(body, &execution)
 		if err != nil {
-			//log.Printf("Failed execution POST unmarshaling - still continue: %s", err)
+			log.Printf("Failed execution POST unmarshaling - continuing anyway: %s", err)
 			//return WorkflowExecution{}, "", err
 		}
 
@@ -1985,8 +1995,13 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		}
 
 		// FIXME - this should have "execution_argument" from executeWorkflow frontend
+		//log.Printf("EXEC: %#v", execution)
 		if len(execution.ExecutionArgument) > 0 {
 			workflowExecution.ExecutionArgument = execution.ExecutionArgument
+		}
+
+		if len(execution.ExecutionSource) > 0 {
+			workflowExecution.ExecutionSource = execution.ExecutionSource
 		}
 
 		//log.Printf("Execution data: %#v", execution)
@@ -2007,7 +2022,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 			}
 		} else if len(execution.Start) > 0 {
 
-			log.Printf("START ACTION %s IS WRONG ID LENGTH %d!", len(execution.Start))
+			log.Printf("START ACTION %s IS WRONG ID LENGTH %d!", execution.Start, len(execution.Start))
 			return WorkflowExecution{}, fmt.Sprintf("Startnode %s was not found in actions", execution.Start), errors.New(fmt.Sprintf("Startnode %s was not found in actions", execution.Start))
 		}
 
@@ -2136,6 +2151,13 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		workflowExecution.Status = "EXECUTING"
 	}
 
+	if len(workflowExecution.ExecutionSource) == 0 {
+		log.Printf("No execution source specified. Setting to default")
+		workflowExecution.ExecutionSource = "default"
+	} else {
+		log.Printf("Execution source is %s for execution ID %s", workflowExecution.ExecutionSource, workflowExecution.ExecutionId)
+	}
+
 	workflowExecution.ExecutionVariables = workflow.ExecutionVariables
 	// Local authorization for this single workflow used in workers.
 
@@ -2158,11 +2180,15 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	childNodes := findChildNodes(workflowExecution, workflowExecution.Start)
 
 	topic := "workflows"
+	startFound := false
 	// FIXME - remove this?
 	newActions := []Action{}
 	defaultResults := []ActionResult{}
 	for _, action := range workflowExecution.Workflow.Actions {
 		action.LargeImage = ""
+		if action.ID == workflowExecution.Start {
+			startFound = true
+		}
 		//log.Println(action.Environment)
 
 		if action.Environment == "" {
@@ -2200,6 +2226,11 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 				})
 			}
 		}
+	}
+
+	if !startFound {
+		log.Printf("Startnode %s doesn't exist!", workflowExecution.Start)
+		return WorkflowExecution{}, fmt.Sprintf("Workflow action %s doesn't exist in workflow", workflowExecution.Start), errors.New(fmt.Sprintf("Workflow start node %s doesn't exist. Exiting!", workflowExecution.Start))
 	}
 
 	// Verification for execution environments
@@ -2927,84 +2958,6 @@ func setWorkflow(ctx context.Context, workflow Workflow, id string) error {
 	}
 
 	return nil
-}
-
-func deleteUser(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	user, userErr := handleApiAuthentication(resp, request)
-	if userErr != nil {
-		log.Printf("Api authentication failed in edit workflow: %s", userErr)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	if user.Role != "admin" {
-		log.Printf("Wrong user (%s) when deleting - must be admin", user.Username)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Must be admin"}`))
-		return
-	}
-
-	location := strings.Split(request.URL.String(), "/")
-	var userId string
-	if location[1] == "api" {
-		if len(location) <= 4 {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		userId = location[4]
-	}
-
-	if userId == user.Id {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Can't deactivate yourself"}`))
-		return
-	}
-
-	ctx := context.Background()
-	q := datastore.NewQuery("Users").Filter("id =", userId)
-	var users []User
-	_, err := dbclient.GetAll(ctx, q, &users)
-	if err != nil {
-		log.Printf("Error getting users apikey (deleteuser): %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Failed getting users for verification"}`))
-		return
-	}
-
-	if len(users) != 1 {
-		log.Printf("Found too many users!")
-		resp.WriteHeader(500)
-		resp.Write([]byte(`{"success": false, "reason": "Backend error: too many users"}`))
-		return
-	}
-
-	// Invert. No user deletion.
-	if users[0].Active {
-		users[0].Active = false
-	} else {
-		users[0].Active = true
-	}
-
-	err = setUser(ctx, &users[0])
-	if err != nil {
-		log.Printf("Failed swapping active for user %s (%s)", users[0].Username, users[0].Id)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": true"}`)))
-		return
-	}
-
-	log.Printf("Successfully inverted %s", users[0].Username)
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(`{"success": true}`))
 }
 
 func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {

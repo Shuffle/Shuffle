@@ -432,7 +432,6 @@ func zombiecheck() error {
 	stopContainers := []string{}
 	removeContainers := []string{}
 	for _, container := range containers {
-
 		// Skip random containers. Only handle things related to Shuffle.
 		if !strings.Contains(container.Image, baseimagename) {
 			shuffleFound := false
@@ -447,6 +446,8 @@ func zombiecheck() error {
 			if !shuffleFound {
 				continue
 			}
+			//} else {
+			//	log.Printf("NAME: %s", container.Image)
 		}
 
 		for _, name := range container.Names {
@@ -455,13 +456,16 @@ func zombiecheck() error {
 				continue
 			}
 
-			if container.State != "running" {
+			log.Printf("NAME: %s", name)
+
+			// Need to check time here too because a container can be removed the same instant as its created
+			currenttime := time.Now().Unix()
+			if container.State != "running" && currenttime-container.Created > int64(workerTimeout) {
 				removeContainers = append(removeContainers, container.ID)
 				containerNames[container.ID] = name
 			}
 
 			// stopcontainer & removecontainer
-			currenttime := time.Now().Unix()
 			//log.Printf("Time: %d - %d", currenttime-container.Created, int64(workerTimeout))
 			if container.State == "running" && currenttime-container.Created > int64(workerTimeout) {
 				stopContainers = append(stopContainers, container.ID)
