@@ -261,8 +261,16 @@ const Workflows = (props) => {
 	const exportWorkflow = (data) => {
 		console.log("export")
 		let dataStr = JSON.stringify(data)
+
 		let dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
 		let exportFileDefaultName = data.name+'.json';
+
+		data["owner"] = ""
+		for (var key in data.triggers) {
+			if (data.triggers[key].status == "running") {
+				data.triggers[key].status = "stopped"
+			}
+		}
 
 		let linkElement = document.createElement('a');
 		linkElement.setAttribute('href', dataUri);
@@ -727,9 +735,14 @@ const Workflows = (props) => {
 		var workflowdata = {}
 
 		if (editingWorkflow.id !== undefined) {
+			console.log("Building original workflow")
 			method = "PUT"
 			extraData = "/"+editingWorkflow.id
 			workflowdata = editingWorkflow
+
+			console.log("REMOVING OWNER")
+			workflowdata["owner"] = ""	
+			// FIXME: Loop triggers and turn them off?
 		}
 
 		workflowdata["name"] = name 

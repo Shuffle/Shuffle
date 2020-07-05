@@ -62,7 +62,7 @@ const Docs = (props) => {
 			if (parent !== null) {
 				var elements = parent.getElementsByTagName('h2')
 
-				const name = window.location.hash.slice(1, window.location.hash.lenth).toLowerCase().split("%20").join(" ").split("_").join(" ")
+				const name = window.location.hash.slice(1, window.location.hash.lenth).toLowerCase().split("%20").join(" ").split("_").join(" ").split("-").join(" ")
 
 				console.log(name)
 				var found = false
@@ -214,7 +214,7 @@ const Docs = (props) => {
 				<ul style={{listStyle: "none", paddingLeft: "0"}}>
 					{list.map(item => {
 						const path = "/docs/"+item
-						const newname = item.charAt(0).toUpperCase()+item.substring(1).split("_").join(" ")
+						const newname = item.charAt(0).toUpperCase()+item.substring(1).split("_").join(" ").split("-").join(" ")
 						return (
 							<li style={{marginTop: "10px"}}>
 								<Link style={hrefStyle} to={path} onClick={() => {fetchDocs(item)}}>
@@ -264,7 +264,7 @@ const Docs = (props) => {
 			>
 			{list.map(item => {
 				const path = "/docs/"+item
-				const newname = item.charAt(0).toUpperCase()+item.substring(1).split("_").join(" ")
+				const newname = item.charAt(0).toUpperCase()+item.substring(1).split("_").join(" ").split("-").join(" ")
 				return (
 					<MenuItem onClick={() => {window.location.pathname = path}}>{newname}</MenuItem>
 				)

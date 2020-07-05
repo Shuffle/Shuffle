@@ -1,5 +1,5 @@
 # Installation guide
-Installation of Shuffle is currently only available in docker. 
+Installation of Shuffle is currently only available in docker. Looking for how to update Shuffle? Check the [updating guide](https://shuffler.io/docs/configuration#updating_shuffle)
 
 There are four parts to the infrastructure:
 * Frontend - GUI, React

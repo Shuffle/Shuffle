@@ -1375,7 +1375,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(`{"success": true}`))
 }
 
-// FIXME - check whether all nodes has a branch, otherwise go back
+// Saves a workflow to an ID
 func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -1462,6 +1462,11 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	// Fixing wrong owners when importing
+	if workflow.Owner == "" {
+		workflow.Owner = user.Id
+	}
+
 	// FIXME - this shouldn't be necessary with proper API checks
 	newActions := []Action{}
 	allNodes := []string{}
@@ -1491,6 +1496,8 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	workflow.Actions = newActions
 
 	for _, trigger := range workflow.Triggers {
+		log.Printf("Trigger %s: %s", trigger.TriggerType, trigger.Status)
+
 		//log.Println("TRIGGERS")
 		allNodes = append(allNodes, trigger.ID)
 	}
