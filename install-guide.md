@@ -21,6 +21,9 @@ cd Shuffle
 docker-compose up -d
 ```
 
+### Configurations (proxies, default users etc.)
+https://shuffler.io/docs/configuration
+
 ### After installation 
 1. After installation, go to http://localhost:3001/adminsetup (or your servername)
 
