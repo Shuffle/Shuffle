@@ -52,6 +52,7 @@ https://shuffler.io/docs/configuration
 ![Admin account setup](https://github.com/frikky/Shuffle/blob/master/frontend/src/assets/img/shuffle_adminaccount.png)
 
 ### Useful info
+* Check out [getting started](https://shuffler.io/docs/getting_started)
 * The server is available on http://localhost:3001 (or your servername)
 * Further configurations can be done in docker-compose.yml and .env.
 * Default database location is /etc/shuffle
