@@ -341,6 +341,8 @@ func main() {
 				fmt.Sprintf("EXECUTIONID=%s", execution.ExecutionId),
 				fmt.Sprintf("ENVIRONMENT_NAME=%s", environment),
 				fmt.Sprintf("BASE_URL=%s", baseUrl),
+				fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")),
+				fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")),
 			}
 
 			if dockerApiVersion != "" {

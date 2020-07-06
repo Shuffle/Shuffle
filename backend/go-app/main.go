@@ -28,6 +28,7 @@ import (
 	"cloud.google.com/go/datastore"
 	"cloud.google.com/go/pubsub"
 	"cloud.google.com/go/storage"
+	"google.golang.org/api/option"
 	"google.golang.org/appengine/mail"
 
 	"github.com/getkin/kin-openapi/openapi2"
@@ -50,9 +51,14 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/yaml.v3"
 
+	// PROXY overrides
+	// "gopkg.in/src-d/go-git.v4/plumbing/transport/client"
+	// githttp "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
+
 	// Web
 	// "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"google.golang.org/grpc"
 	http2 "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 	// Old items (cloud)
 	// "google.golang.org/appengine"
@@ -2466,6 +2472,7 @@ func setUser(ctx context.Context, data *User) error {
 
 // Used for testing only. Shouldn't impact production.
 func handleCors(resp http.ResponseWriter, request *http.Request) bool {
+	//allowedOrigins := "*"
 	allowedOrigins := "http://localhost:3000"
 
 	resp.Header().Set("Vary", "Origin")
@@ -6144,6 +6151,45 @@ func runInit(ctx context.Context) {
 	if err != nil {
 		log.Printf("Failed increasing local stats: %s", err)
 	}
+	log.Printf("Finalized init statistics update")
+
+	httpProxy := os.Getenv("HTTP_PROXY")
+	if len(httpProxy) > 0 {
+		log.Printf("Running with HTTP proxy %s (env: HTTP_PROXY)", httpProxy)
+	}
+
+	/*
+			proxyUrl, err := url.Parse(httpProxy)
+			if err != nil {
+				log.Printf("Failed setting up proxy: %s", err)
+			} else {
+				// accept any certificate (might be useful for testing)
+				customClient := &http.Client{
+					Transport: &http.Transport{
+						TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+						Proxy:           http.ProxyURL(proxyUrl),
+					},
+
+					// 15 second timeout
+					Timeout: 15 * time.Second,
+
+					// don't follow redirect
+					CheckRedirect: func(req *http.Request, via []*http.Request) error {
+						return http.ErrUseLastResponse
+					},
+				}
+
+				// Override http(s) default protocol to use our custom client
+				client.InstallProtocol("http", githttp.NewClient(customClient))
+				client.InstallProtocol("https", githttp.NewClient(customClient))
+			}
+		}
+
+		httpsProxy := os.Getenv("SHUFFLE_HTTPS_PROXY")
+		if len(httpsProxy) > 0 {
+			log.Printf("Running with HTTPS proxy %s", httpsProxy)
+		}
+	*/
 
 	// Fix active users etc
 	q := datastore.NewQuery("Users").Filter("active =", true)
@@ -6337,7 +6383,8 @@ func init() {
 
 	log.Printf("Starting Shuffle backend - initializing database connection")
 	// option.WithoutAuthentication
-	dbclient, err = datastore.NewClient(ctx, gceProject)
+
+	dbclient, err = datastore.NewClient(ctx, gceProject, option.WithGRPCDialOption(grpc.WithNoProxy()))
 	if err != nil {
 		panic(fmt.Sprintf("DBclient error during init: %s", err))
 	}

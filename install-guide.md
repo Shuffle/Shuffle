@@ -1,5 +1,5 @@
 # Installation guide
-Installation of Shuffle is currently only available in docker. 
+Installation of Shuffle is currently only available in docker. Looking for how to update Shuffle? Check the [updating guide](https://shuffler.io/docs/configuration#updating_shuffle)
 
 There are four parts to the infrastructure:
 * Frontend - GUI, React
@@ -12,6 +12,8 @@ There are four parts to the infrastructure:
 ## Docker
 The Docker setup is done with docker-compose and is a single command to get set up.
 
+**PS: if you're setting up Shuffle on Windows, go to the next step (Windows Docker setup)**
+
 1. Make sure you have Docker and [docker-compose](https://docs.docker.com/compose/install/) installed.
 
 2. Run docker-compose.
@@ -21,15 +23,36 @@ cd Shuffle
 docker-compose up -d
 ```
 
+When you're done, skip to the "After installation" step below.
+
+## Windows Docker setup 
+This step is for setting up with Docker on windows from scratch.
+
+1. Make sure you have [Docker](https://docs.docker.com/docker-for-windows/install/) and [docker-compose](https://docs.docker.com/compose/install/) installed
+2. Go to https://github.com/frikky/shuffle/releases and download the latest .zip release (or install git)
+3. Unzip the folder and enter it
+4. Open the .env file and change the line with "OUTER_HOSTNAME" to contain your IP:
+```
+OUTER_HOSTNAME=YOUR.IP.HERE
+```
+5. Run docker-compose
+```
+docker-compose up -d
+```
+
+### Configurations (proxies, default users etc.)
+https://shuffler.io/docs/configuration
+
 ### After installation 
 1. After installation, go to http://localhost:3001/adminsetup (or your servername)
 
 2. Now set up your admin account (username & password). Shuffle doesn't have a default username and password.
 3. Check out https://shuffler.io/docs/configuration as it has a lot of useful information to get started
 
-![Admin account setup](shuffle_adminaccount.png)
+![Admin account setup](https://github.com/frikky/Shuffle/blob/master/frontend/src/assets/img/shuffle_adminaccount.png)
 
 ### Useful info
+* Check out [getting started](https://shuffler.io/docs/getting_started)
 * The server is available on http://localhost:3001 (or your servername)
 * Further configurations can be done in docker-compose.yml and .env.
 * Default database location is /etc/shuffle
