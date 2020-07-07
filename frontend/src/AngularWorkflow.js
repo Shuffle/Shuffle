@@ -35,6 +35,7 @@ import Switch from '@material-ui/core/Switch';
 import ReactJson from 'react-json-view'
 import { useBeforeunload } from 'react-beforeunload';
 
+import ArrowUpwardIcon from '@material-ui/icons/ArrowUpward';
 import CachedIcon from '@material-ui/icons/Cached';
 import DirectionsRunIcon from '@material-ui/icons/DirectionsRun';
 import PolymerIcon from '@material-ui/icons/Polymer';
@@ -326,6 +327,7 @@ const AngularWorkflow = (props) => {
 						currentnode.removeClass('not-executing-highlight')
 						currentnode.removeClass('success-highlight')
 						currentnode.removeClass('failure-highlight')
+						currentnode.removeClass('shuffle-hover-highlight')
 						currentnode.removeClass('awaiting-data-highlight')
 						incomingEdges.addClass('success-highlight')
 						currentnode.addClass('executing-highlight')
@@ -334,6 +336,7 @@ const AngularWorkflow = (props) => {
 						currentnode.removeClass('not-executing-highlight')
 						currentnode.removeClass('success-highlight')
 						currentnode.removeClass('failure-highlight')
+						currentnode.removeClass('shuffle-hover-highlight')
 						currentnode.removeClass('awaiting-data-highlight')
 						currentnode.removeClass('executing-highlight')
 						currentnode.addClass('skipped-highlight')
@@ -342,6 +345,7 @@ const AngularWorkflow = (props) => {
 						currentnode.removeClass('not-executing-highlight')
 						currentnode.removeClass('success-highlight')
 						currentnode.removeClass('failure-highlight')
+						currentnode.removeClass('shuffle-hover-highlight')
 						currentnode.removeClass('awaiting-data-highlight')
 						currentnode.addClass('executing-highlight')
 
@@ -363,6 +367,7 @@ const AngularWorkflow = (props) => {
 						currentnode.removeClass('not-executing-highlight')
 						currentnode.removeClass('executing-highlight')
 						currentnode.removeClass('failure-highlight')
+						currentnode.removeClass('shuffle-hover-highlight')
 						currentnode.removeClass('awaiting-data-highlight')
 						currentnode.addClass('success-highlight')
 
@@ -384,6 +389,7 @@ const AngularWorkflow = (props) => {
 								if (targetnode !== undefined && !targetnode.classes().includes("success-highlight") && !targetnode.classes().includes("failure-highlight")) {
 									targetnode.removeClass('not-executing-highlight')
 									targetnode.removeClass('success-highlight')
+									targetnode.removeClass('shuffle-hover-highlight')
 									targetnode.removeClass('failure-highlight')
 									targetnode.removeClass('awaiting-data-highlight')
 									targetnode.addClass('executing-highlight')
@@ -398,6 +404,7 @@ const AngularWorkflow = (props) => {
 						currentnode.removeClass('executing-highlight')
 						currentnode.removeClass('success-highlight')
 						currentnode.removeClass('awaiting-data-highlight')
+						currentnode.removeClass('shuffle-hover-highlight')
 						currentnode.addClass('failure-highlight')
 
 						if (!visited.includes(item.action.label)) {
@@ -411,6 +418,7 @@ const AngularWorkflow = (props) => {
 						currentnode.removeClass('executing-highlight')
 						currentnode.removeClass('success-highlight')
 						currentnode.removeClass('failure-highlight')
+						currentnode.removeClass('shuffle-hover-highlight')
 						currentnode.addClass('awaiting-data-highlight')
 						break
 					default:
@@ -1486,7 +1494,7 @@ const AngularWorkflow = (props) => {
 					{workflow.workflow_variables === null ? 
 					null : workflow.workflow_variables.map(variable=> {
 						return (
-							<div>
+							<div key={variable.name} >
 								<Paper square style={paperVariableStyle} onClick={() => {
 								}}>
 									<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: "2px", backgroundColor: "orange", marginRight: "5px"}} />
@@ -2197,7 +2205,6 @@ const AngularWorkflow = (props) => {
 		var allkeys = [action.id]
 		var handled = []
 		var results = []
-		console.log("BEFORE PARENTS!")
 
 		while(true) {
 			for (var key in allkeys) {
@@ -2247,6 +2254,7 @@ const AngularWorkflow = (props) => {
 		const [selectedActionParameters, setSelectedActionParameters] = React.useState([])
 		const [selectedVariableParameter, setSelectedVariableParameter] = React.useState()
 		const [showDropdown, setShowDropdown] = React.useState(false)
+		const [showDropdownNumber, setShowDropdownNumber] = React.useState(0)
 		const [actionlist, setActionlist] = React.useState([])
 
 		useEffect(() => {
@@ -2266,7 +2274,7 @@ const AngularWorkflow = (props) => {
 			} 
 
 			if (actionlist.length === 0) {
-				actionlist.push({"type": "Execution Argument", "name": "Execution Argument", "value": "$exec", "highlight": "exec", "autocomplete": "$exec"})
+				actionlist.push({"type": "Execution Argument", "name": "Execution Argument", "value": "$exec", "highlight": "exec", "autocomplete": "exec"})
 				if (workflow.workflow_variables !== null && workflow.workflow_variables !== undefined && workflow.workflow_variables.length > 0) {
 					for (var key in workflow.workflow_variables) {
 						const item = workflow.workflow_variables[key]
@@ -2298,11 +2306,10 @@ const AngularWorkflow = (props) => {
 		})
 
 		const changeActionParameter = (event, count) => {
-			console.log("EVENT: ", event.target.value)
 			if (event.target.value[event.target.value.length-1] === "$") {
-				console.log("LAST IS $ - SHOULD SHOW DROPDOWN")
 				if (!showDropdown) {
 					setShowDropdown(true)
+					setShowDropdownNumber(count)
 				}
 			} else {
 				if (showDropdown) {
@@ -2393,39 +2400,7 @@ const AngularWorkflow = (props) => {
 		// FIXME: Issue #40 - selectedActionParameters not reset
 		if (Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters.length > 0) {
 			return (
-				<div style={{marginTop: "30px"}}>
-
-					{showDropdown ?
-						<Select
-							SelectDisplayProps={{
-								style: {
-									marginLeft: 10,
-								}
-							}}
-							fullWidth
-							onChange={(e) => {
-								console.log("SELECTED: ", e.target.value)
-								const count = 0
-
-								console.log(selectedActionParameters)
-								selectedActionParameters[count].value += e.target.value.autocomplete
-								selectedAction.parameters[count].value = selectedActionParameters[count].value 
-								setSelectedAction(selectedAction)
-								setUpdate("action"+e.target.value.name)
-
-								setShowDropdown(false)
-							}}
-							style={{backgroundColor: surfaceColor, color: "white", height: "50px"}}
-							>
-							{actionlist.map(data => (
-								<MenuItem key={data.name} style={{backgroundColor: inputColor, color: "white"}} value={data}>
-									{data.name}
-								</MenuItem>
-							))}
-						</Select>
-					: null}
-
-
+				<div style={{marginTop: "30px"}}>	
 					<b>Arguments</b>
 					{selectedActionParameters.map((data, count) => {
 						if (data.variant === "") {
@@ -2473,14 +2448,14 @@ const AngularWorkflow = (props) => {
 								}}
 								onBlur={(event) => {
 									// Super basic check
-									if (event.target.value.startsWith("{")) {
-										console.log("VALIDATING JSON")
-										try {
-											JSON.parse(event.target.value)
-										} catch (e) {
-											alert.error("Failed to parse json: ", e)
-										}
-									}
+									//if (event.target.value.startsWith("{")) {
+									//	console.log("VALIDATING JSON")
+									//	try {
+									//		JSON.parse(event.target.value)
+									//	} catch (e) {
+									//		alert.error("Failed to parse json: ", e)
+									//	}
+									//}
 								}}
 							/>
 
@@ -2596,7 +2571,7 @@ const AngularWorkflow = (props) => {
 							itemColor = "#ffeb3b"
 						}
 						return (
-						<div key={data.name}>
+						<div key={data.name}>	
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: "10px"}}/>
 								<div style={{flex: "10"}}> 
@@ -2630,6 +2605,98 @@ const AngularWorkflow = (props) => {
 								</Tooltip>
 							</div>	
 							{datafield}
+							{showDropdown && showDropdownNumber === count && data.variant === "STATIC_VALUE" ?
+							  <FormControl fullWidth>
+									<InputLabel id="action-autocompleter" style={{marginLeft: 10, color: "white"}}><ArrowUpwardIcon />Autocomplete</InputLabel>
+									<Select
+									  labelId="action-autocompleter"
+										SelectDisplayProps={{
+											style: {
+												marginLeft: 10,
+											}
+										}}
+										fullWidth
+										onChange={(e) => {
+											console.log("CHANGE!")
+											selectedActionParameters[count].value += e.target.value.autocomplete
+											selectedAction.parameters[count].value = selectedActionParameters[count].value 
+											console.log("TARGET: ", selectedActionParameters)
+											setSelectedAction(selectedAction)
+											setUpdate("action"+e.target.value.name)
+
+											setShowDropdown(false)
+										}}
+										style={{border: `2px solid #f85a3e`, color: "white", height: "50px"}}
+										>
+										{actionlist.map(data => {
+											const icon = data.type === "action" ? <AppsIcon style={{marginRight: 10}} /> : data.type === "workflow_variable" || data.type === "execution_variable" ? <FavoriteBorderIcon style={{marginRight: 10}} /> : <ScheduleIcon style={{marginRight: 10}} /> 
+
+											const handleExecArgumentHover = (inside) => {
+												var exec_text_field = document.getElementById("execution_argument_input_field")
+												if (exec_text_field !== null) {
+													if (inside) {
+														exec_text_field.style.border = "2px solid #f85a3e"
+													} else {
+														exec_text_field.style.border = ""
+													}
+												}
+
+												// Also doing arguments
+												if (workflow.triggers !== undefined && workflow.triggers !== null && workflow.triggers.length > 0) {
+													for (var key in workflow.triggers) {
+														const item = workflow.triggers[key]
+
+														var node = cy.getElementById(item.id)
+														if (node.length > 0) {
+															if (inside) {
+																node.addClass('shuffle-hover-highlight')
+															} else {
+																node.removeClass('shuffle-hover-highlight')
+															}
+														}
+
+													}
+												}
+											}
+
+											const handleActionHover = (inside, actionId) => {
+												var node = cy.getElementById(actionId)
+												if (node.length > 0) {
+													if (inside) {
+														node.addClass('shuffle-hover-highlight')
+													} else {
+														node.removeClass('shuffle-hover-highlight')
+													}
+												}
+											}
+
+											return (
+												<MenuItem key={data.name} style={{backgroundColor: inputColor, color: "white"}} value={data} onMouseOver={() => {
+													if (data.type === "Execution Argument") {
+														handleExecArgumentHover(true)
+													} else if (data.type === "action") {
+														handleActionHover(true, data.id)
+													}
+												}} onMouseOut={() => {
+													if (data.type === "Execution Argument") {
+														handleExecArgumentHover(false)
+													} else if (data.type === "action") {
+														handleActionHover(false, data.id)
+													}
+												}}>
+													<Tooltip color="primary" title={`Value: ${data.value}`} placement="left">
+														<div style={{display: "flex"}}>
+															{icon} {data.name}
+														</div>
+													</Tooltip>
+												</MenuItem>
+											)
+										})}
+									</Select>
+      					</FormControl>
+							: null}
+
+
 						</div>
 					)})}
 				</div>
@@ -2783,7 +2850,6 @@ const AngularWorkflow = (props) => {
 								selectedAction.execution_variable = {"name": "No selection"}
 							} else {
 								const value = workflow.execution_variables.find(a => a.name === e.target.value)
-								console.log("FOUND: ", value)
 								selectedAction.execution_variable = value
 							}
 							setSelectedAction(selectedAction)
@@ -4431,6 +4497,7 @@ const AngularWorkflow = (props) => {
 				<div style={{marginLeft: "10px", left: boxSize, bottom: 0, position: "absolute"}}>
 					<Tooltip color="primary" title="An argument to be used for execution. This is a variable available to every node in your workflow." placement="top">
 						<TextField
+							id="execution_argument_input_field"
 							style={{backgroundColor: inputColor, }}
 							InputProps={{
 								style:{
