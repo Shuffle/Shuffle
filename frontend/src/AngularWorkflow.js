@@ -102,9 +102,9 @@ const AngularWorkflow = (props) => {
 
 	const [bodyWidth, bodyHeight] = useWindowSize();
 	const appBarSize = 74
-	const [cystyle, ] = useState(cytoscapestyle) 
+	const [cystyle, ] = useState(cytoscapestyle)
 	const [cy, setCy] = React.useState()
-		
+
 	const [appSearch, setAppSearch] = React.useState("")
 	const [currentView, setCurrentView] = React.useState(0)
 	const [triggerAuthentication, setTriggerAuthentication] = React.useState({})
@@ -145,13 +145,13 @@ const AngularWorkflow = (props) => {
 
 	const [visited, setVisited] = React.useState([]);
 	//const [workflow, setWorkflow] = React.useState(workflowdata);
-	
+
 	const [apps, setApps] = React.useState([]);
 	const [filteredApps, setFilteredApps] = React.useState([]);
 	const [firstrequest, setFirstrequest] = React.useState(true)
 	//const [apps, setApps] = React.useState(appdata);
 	//const [filteredApps, setFilteredApps] = React.useState();
-	
+
 	const [environments, setEnvironments] = React.useState([]);
 	const [established, setEstablished] = React.useState(false);
 
@@ -220,8 +220,8 @@ const AngularWorkflow = (props) => {
 		});
 	}
 
-	const debugView = workflowExecutions.length > 0 ? 
-		<Draggable> 
+	const debugView = workflowExecutions.length > 0 ?
+		<Draggable>
 			<div style={{color: "white", position: "fixed", top: appBarSize+65, left: leftBarSize+20, zIndex: 5000, minHeight: 100, padding: 15, maxHeight: 100, maxWidth: 500, overflowX: "hidden",}}>
 				{workflowExecutions.slice(0,15).map(data => {
 					return (
@@ -233,7 +233,7 @@ const AngularWorkflow = (props) => {
 							<Divider style={{backgroundColor: "white"}}/>
 						</div>
 					)
-					return 
+					return
 				})}
 			</div>
 		</Draggable>
@@ -298,7 +298,7 @@ const AngularWorkflow = (props) => {
 		// Update on every interval? idk
 
 		if (JSON.stringify(responseJson) !== JSON.stringify(executionData)) {
-			// FIXME: If another is selected, don't edit.. 
+			// FIXME: If another is selected, don't edit..
 			// Doesn't work because this is some async garbage
 			if (executionData.execution_id === undefined || responseJson.execution_id === executionData.execution_id) {
 				setExecutionData(responseJson)
@@ -323,7 +323,7 @@ const AngularWorkflow = (props) => {
 
 				//currentnode.removeClass('success-highlight failure-highlight executing-highlight')
 				switch (item.status) {
-					case "EXECUTING": 
+					case "EXECUTING":
 						currentnode.removeClass('not-executing-highlight')
 						currentnode.removeClass('success-highlight')
 						currentnode.removeClass('failure-highlight')
@@ -332,7 +332,7 @@ const AngularWorkflow = (props) => {
 						incomingEdges.addClass('success-highlight')
 						currentnode.addClass('executing-highlight')
 						break
-					case "SKIPPED": 
+					case "SKIPPED":
 						currentnode.removeClass('not-executing-highlight')
 						currentnode.removeClass('success-highlight')
 						currentnode.removeClass('failure-highlight')
@@ -341,7 +341,7 @@ const AngularWorkflow = (props) => {
 						currentnode.removeClass('executing-highlight')
 						currentnode.addClass('skipped-highlight')
 						break
-					case "WAITING": 
+					case "WAITING":
 						currentnode.removeClass('not-executing-highlight')
 						currentnode.removeClass('success-highlight')
 						currentnode.removeClass('failure-highlight')
@@ -363,7 +363,7 @@ const AngularWorkflow = (props) => {
 							outgoingEdges.addClass('success-highlight')
 						}
 						break
-					case "SUCCESS": 
+					case "SUCCESS":
 						currentnode.removeClass('not-executing-highlight')
 						currentnode.removeClass('executing-highlight')
 						currentnode.removeClass('failure-highlight')
@@ -399,7 +399,7 @@ const AngularWorkflow = (props) => {
 							// const outgoingEdges = currentnode.outgoers('edge')
 						}
 						break
-					case "FAILURE": 
+					case "FAILURE":
 						currentnode.removeClass('not-executing-highlight')
 						currentnode.removeClass('executing-highlight')
 						currentnode.removeClass('success-highlight')
@@ -413,7 +413,7 @@ const AngularWorkflow = (props) => {
 							setVisited(visited)
 						}
 						break
-					case "AWAITING_DATA": 
+					case "AWAITING_DATA":
 						currentnode.removeClass('not-executing-highlight')
 						currentnode.removeClass('executing-highlight')
 						currentnode.removeClass('success-highlight')
@@ -436,8 +436,8 @@ const AngularWorkflow = (props) => {
 			var curelements = cy.elements()
 			for (var i = 0; i < curelements.length; i++) {
 				if (curelements[i].classes().includes("executing-highlight")) {
-					curelements[i].removeClass("executing-highlight")	
-					curelements[i].addClass("failure-highlight")	
+					curelements[i].removeClass("executing-highlight")
+					curelements[i].addClass("failure-highlight")
 				} else {
 					//curelements[i].removeClass('not-executing-highlight')
 					//curelements[i].removeClass('executing-highlight')
@@ -455,12 +455,12 @@ const AngularWorkflow = (props) => {
 	const saveWorkflow = (curworkflow) => {
 		var success = false
 
-		// This might not be the right course of action, but seems logical, as items could be running already 
+		// This might not be the right course of action, but seems logical, as items could be running already
 		// Makes it possible to update with a version in current render
 		stop()
 		var useworkflow = workflow
 		if (curworkflow !== undefined) {
-			useworkflow = curworkflow 
+			useworkflow = curworkflow
 		} else {
 			alert.info("Saving workflow")
 		}
@@ -476,7 +476,7 @@ const AngularWorkflow = (props) => {
 
 			var type = cyelements[key].data()["type"]
 			if (type === undefined) {
-				if (cyelements[key].data().source === undefined || 
+				if (cyelements[key].data().source === undefined ||
 					cyelements[key].data().target === undefined) {
 					continue
 				}
@@ -494,8 +494,8 @@ const AngularWorkflow = (props) => {
 					// FIXME - check whether position is new to not fuck up params etc.
 					var curworkflowAction = useworkflow.actions.find(a => a.id === cyelements[key].data()["id"])
 					if (curworkflowAction === undefined)  {
-						curworkflowAction = cyelements[key].data() 
-					} 
+						curworkflowAction = cyelements[key].data()
+					}
 
 					curworkflowAction.position = cyelements[key].position()
 
@@ -509,8 +509,8 @@ const AngularWorkflow = (props) => {
 					//console.log("TRIGGER")
 					var curworkflowTrigger = useworkflow.triggers.find(a => a.id === cyelements[key].data()["id"])
 					if (curworkflowTrigger === undefined)  {
-						curworkflowTrigger = cyelements[key].data() 
-					} 
+						curworkflowTrigger = cyelements[key].data()
+					}
 
 					curworkflowTrigger.position = cyelements[key].position()
 					//console.log(curworkflowTrigger)
@@ -591,7 +591,7 @@ const AngularWorkflow = (props) => {
 			curelements[i].addClass("not-executing-highlight")
 		}
 
-		if (executionText.length > 0) { 
+		if (executionText.length > 0) {
 			alert.success("Starting execution with argument "+executionText)
 		} else {
 			alert.success("Starting execution")
@@ -624,7 +624,7 @@ const AngularWorkflow = (props) => {
 				for (var i = 0; i < curelements.length; i++) {
 					curelements[i].removeClass("not-executing-highlight")
 				}
-				return	
+				return
 			} else {
 				setExecutionRunning(true)
 				setExecutionRequestStarted(false)
@@ -661,12 +661,12 @@ const AngularWorkflow = (props) => {
 	//			newapps[previtem]["versions"].push(item.app_version)
 	//		}
 	//	}
-	//	
+	//
 	//	// FIXME - handle this, as we can't have more than one of each :)
 	//	//setVersionedApps(newapps)
 	//}
-	
-	// Builtin actions that should ran in Worker and not apps	
+
+	// Builtin actions that should ran in Worker and not apps
 	const getExtraApps = () => {
 		const data = [{
 			name: "Filter",
@@ -745,7 +745,7 @@ const AngularWorkflow = (props) => {
 			alert.error(error.toString())
 		});
 	}
-	
+
 	const getWorkflow = () => {
 		fetch(globalUrl+"/api/v1/workflows/"+props.match.params.key, {
     	  	method: 'GET',
@@ -784,12 +784,12 @@ const AngularWorkflow = (props) => {
 		setSelectedTrigger({})
 		//setSelectedEdge({})
 
-		// setSelectedTriggerIndex(-1)	
+		// setSelectedTriggerIndex(-1)
 		//setSelectedActionEnvironment({})
 		setSelectedEdge({})
-		//setTriggerAuthentication({})	
-		//setSelectedTriggerIndex(-1)	
-		//setTriggerFolders([])	
+		//setTriggerAuthentication({})
+		//setSelectedTriggerIndex(-1)
+		//setTriggerFolders([])
 
 		// Can be used for right side view
 		setRightSideBarOpen(false)
@@ -806,7 +806,7 @@ const AngularWorkflow = (props) => {
 			setSelectedEdge(event.target.data())
 
 		} else {
-			//alert.info("Can't edit branches from triggers") 
+			//alert.info("Can't edit branches from triggers")
 		}
 
 		setSelectedAction({})
@@ -825,7 +825,7 @@ const AngularWorkflow = (props) => {
 			//console.log(cy.elements('[_id!="${data._id}"]`))
 			// Does it choose the wrong action?
 			const curaction = workflow.actions.find(a => a.id === data.id)
-			if (!curaction || curaction === undefined) { 
+			if (!curaction || curaction === undefined) {
 				//console.log("Action not found error")
 				return
 			}
@@ -861,13 +861,13 @@ const AngularWorkflow = (props) => {
 		setRightSideBarOpen(true)
 	}
 
-	// Checks for errors in edges when they're added 
+	// Checks for errors in edges when they're added
 	const onEdgeAdded = (event) => {
 		setLastSaved(false)
 		const edge = event.target.data()
 		//console.log(workflow.branches)
 
-		// Check if: 
+		// Check if:
 		// dest == source && source == dest
 		// dest == dest && source == source
 		// backend: check all children? to stop recursion
@@ -894,7 +894,7 @@ const AngularWorkflow = (props) => {
 				}
 			} else if (edge.source === workflow.branches[key].source_id) {
 				// FIXME: Verify multi-target for triggers
-				// 1. Check if destination exists 
+				// 1. Check if destination exists
 				// 2. Check if source is a trigger
 				// targetnode = workflow.triggers.findIndex(data => data.id === edge.source)
 				// console.log("Destination: ", edge.target)
@@ -906,7 +906,7 @@ const AngularWorkflow = (props) => {
 				// 	break
 				// }
 			} else {
-				// Find the targetnode and check if its a trigger 
+				// Find the targetnode and check if its a trigger
 				// FIXME - do this for both actions and other types?
 				targetnode = workflow.triggers.findIndex(data => data.id === edge.target)
 				if (targetnode !== -1) {
@@ -914,11 +914,11 @@ const AngularWorkflow = (props) => {
 					event.target.remove()
 					found = true
 					break
-				} 
+				}
 			}
 		}
 
-		var newbranch = { 
+		var newbranch = {
 			"source_id": edge.source,
 			"destination_id": edge.target,
 			"id_": edge.id,
@@ -1020,7 +1020,7 @@ const AngularWorkflow = (props) => {
 				console.log("ESCAPE")
 	            break;
 			case 46:
-				removeNode()		
+				removeNode()
 				console.log("DELETE")
 	            break;
 			case 38:
@@ -1074,14 +1074,14 @@ const AngularWorkflow = (props) => {
 				//if (previouskey === 17) {
 				//	event.preventDefault()
 				//	if (executionRunning || executionRequestStarted) {
-				//		abortExecution()		
+				//		abortExecution()
 				//	} else {
-				//		executeWorkflow()		
+				//		executeWorkflow()
 				//	}
 				//	cy.fit(null, 50)
 				//}
 	            break;
-	        default: 
+	        default:
 				//console.log(event.keyCode)
 	            break;
 	    }
@@ -1126,7 +1126,7 @@ const AngularWorkflow = (props) => {
 			getEnvironments()
 			getWorkflowExecution(props.match.params.key)
 			return
-		} 
+		}
 
 		// App length necessary cus of cy initialization
 		if (elements.length === 0 && !graphSetup && Object.getOwnPropertyNames(workflow).length > 0) {
@@ -1172,8 +1172,8 @@ const AngularWorkflow = (props) => {
 			registerKeys()
 			//setStartNode(workflow.start)
 		} else if (established) {
-			//console.log("established - should fix colors of things")	
-			//console.log(cy.elements())	
+			//console.log("established - should fix colors of things")
+			//console.log(cy.elements())
 		}
 	})
 
@@ -1186,7 +1186,7 @@ const AngularWorkflow = (props) => {
 				"border-width": "1px",
 			}
 		}, {
-			duration: animationDuration,	
+			duration: animationDuration,
 		})
 	}
 
@@ -1197,7 +1197,7 @@ const AngularWorkflow = (props) => {
 				"border-opacity": ".7",
 			}
 		}, {
-			duration: animationDuration,	
+			duration: animationDuration,
 		})
 
 		previousnodecolor = event.target.style("border-color")
@@ -1239,7 +1239,7 @@ const AngularWorkflow = (props) => {
 		const triggers = workflow.triggers.map(trigger => {
 			const node = {}
 			node.position = trigger.position
-			node.data = trigger 
+			node.data = trigger
 
 			node.data._id = trigger["id"]
 			node.data.type = "TRIGGER"
@@ -1323,7 +1323,7 @@ const AngularWorkflow = (props) => {
 				stopMailSub(selectedTrigger, triggerindex)
 			}
 
-		} 
+		}
 
 		selectedNode.remove()
 		setSelectedTrigger({})
@@ -1352,8 +1352,8 @@ const AngularWorkflow = (props) => {
 				//alert.error("Failed to delete schedule: " + responseJson.reason)
 			} else {
 				//alert.success("Successfully stopped schedule")
-				workflow.triggers[triggerindex].status = "stopped" 
-				trigger.status = "stopped" 
+				workflow.triggers[triggerindex].status = "stopped"
+				trigger.status = "stopped"
 				setSelectedTrigger(trigger)
 				setWorkflow(workflow)
 				saveWorkflow(workflow)
@@ -1406,8 +1406,8 @@ const AngularWorkflow = (props) => {
 				alert.error("Failed to set schedule: " + responseJson.reason)
 			} else {
 				alert.success("Successfully created schedule")
-				workflow.triggers[triggerindex].status = "running" 
-				trigger.status = "running" 
+				workflow.triggers[triggerindex].status = "running"
+				trigger.status = "running"
 				setSelectedTrigger(trigger)
 				setWorkflow(workflow)
 				console.log("Should set the status to running and save")
@@ -1458,7 +1458,7 @@ const AngularWorkflow = (props) => {
 		cursor: "pointer",
 		display: "flex",
 	}
-	
+
 	const VariablesView = () => {
 		const [open, setOpen] = React.useState(false);
 		const [anchorEl, setAnchorEl] = React.useState(null);
@@ -1491,7 +1491,7 @@ const AngularWorkflow = (props) => {
 			<div style={appViewStyle}>
 				<div style={variableScrollStyle}>
 						What are <a href="https://shuffler.io/docs/workflows#workflow_variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>WORKFLOW variables?</a>
-					{workflow.workflow_variables === null ? 
+					{workflow.workflow_variables === null ?
 					null : workflow.workflow_variables.map(variable=> {
 						return (
 							<div key={variable.name} >
@@ -1504,7 +1504,7 @@ const AngularWorkflow = (props) => {
 										setNewVariableDescription(variable.description)
 										setNewVariableValue(variable.value)
 										setVariablesModalOpen(true)}}>
-											Name: {variable.name} 
+											Name: {variable.name}
 										</div>
 										<div style={{flex: "1", marginLeft: "0px"}}>
 											<IconButton
@@ -1554,11 +1554,11 @@ const AngularWorkflow = (props) => {
 						<Button fullWidth style={{margin: "auto", marginTop: "10px",}} color="primary" variant="outlined" onClick={() => {
 							setVariablesModalOpen(true)
 							setLastSaved(false)
-						}}>New workflow variable</Button> 				
+						}}>New workflow variable</Button>
 					</div>
 					<Divider style={{marginBottom: 20, marginTop: 20, height: 1, width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 						What are <a href="https://shuffler.io/docs/workflows#execution_variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>EXECUTION variables?</a>
-					{workflow.execution_variables === null || workflow.execution_variables === undefined ? 
+					{workflow.execution_variables === null || workflow.execution_variables === undefined ?
 					null : workflow.execution_variables.map(variable=> {
 						return (
 							<div>
@@ -1569,7 +1569,7 @@ const AngularWorkflow = (props) => {
 										<div style={{flex: "10", marginTop: "15px", marginLeft: "10px", overflow: "hidden"}} onClick={() => {
 										setNewVariableName(variable.name)
 										setExecutionVariablesModalOpen(true)}}>
-											Name: {variable.name} 
+											Name: {variable.name}
 										</div>
 										<div style={{flex: "1", marginLeft: "0px"}}>
 											<IconButton
@@ -1617,7 +1617,7 @@ const AngularWorkflow = (props) => {
 						<Button fullWidth style={{margin: "auto", marginTop: "10px",}} color="primary" variant="outlined" onClick={() => {
 							setExecutionVariablesModalOpen(true)
 							setLastSaved(false)
-						}}>New execution variable</Button> 				
+						}}>New execution variable</Button>
 					</div>
 				</div>
 			</div>
@@ -1628,7 +1628,7 @@ const AngularWorkflow = (props) => {
 	const handleSetTab = (event, newValue) => {
 		setCurrentView(newValue)
 	}
-	
+
 	const HandleLeftView = () => {
 		// Defaults to apps.
 		var thisview = <AppView />
@@ -1652,7 +1652,7 @@ const AngularWorkflow = (props) => {
 
 		return(
 			<div>
-				<div style={{minHeight: bodyHeight-appBarSize-50, maxHeight: bodyHeight-appBarSize-50}}>	
+				<div style={{minHeight: bodyHeight-appBarSize-50, maxHeight: bodyHeight-appBarSize-50}}>
 					{thisview}
 				</div>
 				<Divider style={{backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -1699,7 +1699,7 @@ const AngularWorkflow = (props) => {
 	}
 
 	var triggers = [{
-			"name": "Webhook",	
+			"name": "Webhook",
 			"type": "TRIGGER",
 			"status": "uninitialized",
 			"trigger_type": "WEBHOOK",
@@ -1710,9 +1710,9 @@ const AngularWorkflow = (props) => {
 			"environment": environments[0] === undefined ? {} : environments[0].Name,
 			"description": "Simple HTTP webhook",
 			"long_description": "Execute a workflow with an unauthicated POST request",
-		}, 
+		},
 		{
-			"name": "User Input",	
+			"name": "User Input",
 			"type": "TRIGGER",
 			"status": "running",
 			"large_image": "data:image/png;base64,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",
@@ -1723,9 +1723,9 @@ const AngularWorkflow = (props) => {
 			"label": "User input",
 			"environment": environments[0] === undefined ? {} : environments[0].Name,
 			"long_description": "Take user input to continue execution",
-		}, 
+		},
 		{
-			"name": "Schedule",	
+			"name": "Schedule",
 			"type": "TRIGGER",
 			"status": "uninitialized",
 			"description": "Schedule execution time",
@@ -1738,7 +1738,7 @@ const AngularWorkflow = (props) => {
 			"long_description": "Create a schedule based on cron",
 		},
 		{
-			"name": "Email",	
+			"name": "Email",
 			"type": "TRIGGER",
 			"status": "uninitialized",
 			"description": "Add your email provider",
@@ -1759,7 +1759,7 @@ const AngularWorkflow = (props) => {
 			flexDirection: "column",
 		}
 
-		// Predefined hurr	
+		// Predefined hurr
 
 		return (
 			<div style={triggersViewStyle}>
@@ -1767,12 +1767,12 @@ const AngularWorkflow = (props) => {
 					{triggers.map(trigger => {
 						var imageline = trigger.large_image.length === 0 ?
 							<img alt="" style={{width: "80px"}} />
-							: 
+							:
 							<img alt="" src={trigger.large_image} style={{width: 80, height: 80}} />
 
 						const color = trigger.is_valid ? "green" : "orange"
 						return(
-							<Draggable 
+							<Draggable
 								onDrag={(e) => {handleTriggerDrag(e, trigger)}}
 								onStop={(e) => {handleDragStop(e)}}
 								dragging={false}
@@ -1795,7 +1795,7 @@ const AngularWorkflow = (props) => {
 											<h3 style={{marginBottom: "0px", marginTop: "10px"}}>{trigger.name}</h3>
 										</Grid>
 										<Grid item style={{flex: "1"}}>
-											{trigger.description}	
+											{trigger.description}
 										</Grid>
 									</Grid>
 								</Grid>
@@ -1882,7 +1882,7 @@ const AngularWorkflow = (props) => {
 				}
 
 				const newEdgeUuid = uuid.v4()
-				const newbranch = { 
+				const newbranch = {
 					"source_id": newNodeId,
 					"destination_id": workflow.start,
 					"id_": newEdgeUuid,
@@ -1890,7 +1890,7 @@ const AngularWorkflow = (props) => {
 					"hasErrors": false,
 				}
 
-				const newcybranch = { 
+				const newcybranch = {
 					"source": newNodeId,
 					"target": workflow.start,
 					"_id": newEdgeUuid,
@@ -1944,7 +1944,7 @@ const AngularWorkflow = (props) => {
 				if (app.actions[0].parameters !== null && app.actions[0].parameters.length > 0) {
 					parameters = app.actions[0].parameters
 				}
-				
+
 				var newAppPopup = false
 				if (app.authentication !== undefined && app.authentication !== null && app.authentication.required === true) {
 					console.log("Should make modal popup for new app")
@@ -1953,10 +1953,10 @@ const AngularWorkflow = (props) => {
 
 				const newAppData = {
 					app_name: app.name,
-					app_version: app.app_version, 
+					app_version: app.app_version,
 					app_id: app.id,
 					sharing: app.sharing,
-					private_id: app.private_id,	
+					private_id: app.private_id,
 					environment: environments[0].Name,
 					errors: [],
 					id_: newNodeId,
@@ -1975,7 +1975,7 @@ const AngularWorkflow = (props) => {
 
 				// const image = "url("+app.large_image+")"
 
-				// FIXME - find the cytoscape offset position 
+				// FIXME - find the cytoscape offset position
 				// Can this be done with zoom calculations?
 				const nodeToBeAdded = {
 					group: "nodes",
@@ -2014,7 +2014,7 @@ const AngularWorkflow = (props) => {
 
 				if (workflow.actions.length === 1 && workflow.actions[0].id === workflow.start) {
 					const newEdgeUuid = uuid.v4()
-					const newcybranch = { 
+					const newcybranch = {
 						"source": workflow.start,
 						"target": newNodeId,
 						"_id": newEdgeUuid,
@@ -2035,7 +2035,7 @@ const AngularWorkflow = (props) => {
 
 				if (newAppPopup) {
 					//alert.error("SHOULD MAKE USER AUTHENTICATE THE APP OR SET hasError")
-					//alert.info("Remember: set the authentication for the user itself, not the app") 
+					//alert.info("Remember: set the authentication for the user itself, not the app")
 				}
 			}
 		}
@@ -2067,11 +2067,11 @@ const AngularWorkflow = (props) => {
 					<div style={appScrollStyle}>
 					{/*
 					<TextField
-						style={{backgroundColor: inputColor}} 
+						style={{backgroundColor: inputColor}}
 						InputProps={{
 							style:{
 								color: "white",
-								minHeight: "50px", 
+								minHeight: "50px",
 								marginLeft: "5px",
 								maxWidth: "95%",
 								fontSize: "1em",
@@ -2103,7 +2103,7 @@ const AngularWorkflow = (props) => {
 
 						const image = "url("+app.large_image+")"
 						return(
-							<Draggable 
+							<Draggable
 								onDrag={(e) => {handleAppDrag(e, app)}}
 								onStop={(e) => {handleDragStop(e, app)}}
 								key={app.id}
@@ -2128,7 +2128,7 @@ const AngularWorkflow = (props) => {
 											Short description...
 										</Grid>
 										<Grid item style={{flex: 1}}>
-											Version: {app.app_version}	
+											Version: {app.app_version}
 										</Grid>
 									</Grid>
 								</Grid>
@@ -2173,15 +2173,15 @@ const AngularWorkflow = (props) => {
 		//var env = environments.find(a => a.name === newaction.environment)
 		//if ((!env || env === undefined) && selectedAction.environment === undefined ) {
 		//	env = environments[0]
-		//} 
+		//}
 		//setSelectedActionEnvironment(env)
-		
+
 		setSelectedAction(selectedAction)
 		setSelectedActionName(e.target.value)
 	}
 
 	// APPSELECT at top
-	// appname & version 
+	// appname & version
 	// description
 	// ACTION select
 	//
@@ -2239,13 +2239,13 @@ const AngularWorkflow = (props) => {
 		}
 
 		// Remove self
-		results = results.filter(data => data.id !== action.id) 
-		results = results.filter(data => data.type !== "TRIGGER") 
+		results = results.filter(data => data.id !== action.id)
+		results = results.filter(data => data.type !== "TRIGGER")
 		results.push({"label": "Execution Argument", "type": "INTERNAL"})
 		return results
 	}
 
-	// BOLD name: type: required? 
+	// BOLD name: type: required?
 	// FORM
 	// Dropdown -> static, action, local env, global env
 	// VALUE (JSON)
@@ -2267,11 +2267,11 @@ const AngularWorkflow = (props) => {
 					setSelectedActionParameters(selectedAction.parameters)
 				}
 			}
-			
+
 			if ((selectedVariableParameter === null || selectedVariableParameter === undefined) && (workflow.workflow_variables !== null && workflow.workflow_variables.length > 0)) {
 				// FIXME - this is the bad thing
 				setSelectedVariableParameter(workflow.workflow_variables[0].name)
-			} 
+			}
 
 			if (actionlist.length === 0) {
 				actionlist.push({"type": "Execution Argument", "name": "Execution Argument", "value": "$exec", "highlight": "exec", "autocomplete": "exec"})
@@ -2333,7 +2333,7 @@ const AngularWorkflow = (props) => {
 			// setSelectedApp({})
 			// setSelectedEdge({})
 
-			selectedActionParameters[count].action_field = fieldvalue 
+			selectedActionParameters[count].action_field = fieldvalue
 			selectedAction.parameters = selectedActionParameters
 
 			setSelectedActionName(selectedActionName)
@@ -2356,7 +2356,7 @@ const AngularWorkflow = (props) => {
 
 			// FIXME - check if startnode
 
-			// Set value 
+			// Set value
 			setSelectedActionName(selectedActionName)
 			setSelectedApp(selectedApp)
 
@@ -2366,7 +2366,7 @@ const AngularWorkflow = (props) => {
 
 		const changeActionParameterVariant = (data, count) => {
 			selectedActionParameters[count].variant = data
-			selectedActionParameters[count].value = "" 
+			selectedActionParameters[count].value = ""
 
 			if (data === "ACTION_RESULT") {
 				var parents = getParents(selectedAction)
@@ -2380,7 +2380,7 @@ const AngularWorkflow = (props) => {
 					selectedActionParameters[count].action_field = workflow.workflow_variables[0].name
 				}
 			}
-			
+
 			selectedAction.parameters = selectedActionParameters
 
 			// This is a stupid workaround to make it refresh rofl
@@ -2391,7 +2391,7 @@ const AngularWorkflow = (props) => {
 			setSelectedEdge({})
 			// FIXME - check if startnode
 
-			// Set value 
+			// Set value
 			setSelectedActionName(selectedActionName)
 			setSelectedApp(selectedApp)
 			setSelectedAction(selectedAction)
@@ -2400,7 +2400,7 @@ const AngularWorkflow = (props) => {
 		// FIXME: Issue #40 - selectedActionParameters not reset
 		if (Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters.length > 0) {
 			return (
-				<div style={{marginTop: "30px"}}>	
+				<div style={{marginTop: "30px"}}>
 					<b>Arguments</b>
 					{selectedActionParameters.map((data, count) => {
 						if (data.variant === "") {
@@ -2424,45 +2424,57 @@ const AngularWorkflow = (props) => {
 							placeholder = data.example
 						}
 
-						var datafield = 
-							<TextField
-								style={{backgroundColor: inputColor}} 
-								InputProps={{
-									style:{
-										color: "white",
-										minHeight: "50px", 
-										marginLeft: "5px",
-										maxWidth: "95%",
-										fontSize: "1em",
-									},
-								}}
-								fullWidth
-								multiline={multiline}
-								rows="5"
-								color="primary"
-								defaultValue={data.value}
-								type={placeholder.includes("***") ? "password" : "text"}
-								placeholder={placeholder}
-								onChange={(event) => {
-									changeActionParameter(event, count)
-								}}
-								onBlur={(event) => {
-									// Super basic check
-									//if (event.target.value.startsWith("{")) {
-									//	console.log("VALIDATING JSON")
-									//	try {
-									//		JSON.parse(event.target.value)
-									//	} catch (e) {
-									//		alert.error("Failed to parse json: ", e)
-									//	}
-									//}
-								}}
-							/>
+						// form value filled from environment
+						let environmentValue = null;
+						if (data.src && selectedActionEnvironment.Values && selectedActionEnvironment.Values.length) {
+							let srcEnvironmentValueItem = selectedActionEnvironment.Values.find(environmentValueItem => environmentValueItem.name === data.src);
+							if (srcEnvironmentValueItem) {
+								environmentValue = <div>If entered value empty, value "{srcEnvironmentValueItem.value}" from environment will be used.</div>;
+							}
+						}
+
+						var datafield =
+							<React.Fragment>
+								<TextField
+									style={{backgroundColor: inputColor}}
+									InputProps={{
+										style:{
+											color: "white",
+											minHeight: "50px",
+											marginLeft: "5px",
+											maxWidth: "95%",
+											fontSize: "1em",
+										},
+									}}
+									fullWidth
+									multiline={multiline}
+									rows="5"
+									color="primary"
+									defaultValue={data.value}
+									type={placeholder.includes("***") ? "password" : "text"}
+									placeholder={placeholder}
+									onChange={(event) => {
+										changeActionParameter(event, count)
+									}}
+									onBlur={(event) => {
+										// Super basic check
+										//if (event.target.value.startsWith("{")) {
+										//	console.log("VALIDATING JSON")
+										//	try {
+										//		JSON.parse(event.target.value)
+										//	} catch (e) {
+										//		alert.error("Failed to parse json: ", e)
+										//	}
+										//}
+									}}
+								/>
+								{environmentValue}
+						</React.Fragment>
 
 
 						// Remap data based on variant
 						if (data.variant === "STATIC_VALUE") {
-							staticcolor = "#f85a3e"	
+							staticcolor = "#f85a3e"
 						} else if (data.variant === "ACTION_RESULT") {
 							// Gets the parents of the current node
 							var parents = getParents(selectedAction)
@@ -2472,9 +2484,9 @@ const AngularWorkflow = (props) => {
 							//if (parents.length > 0) {
 							//	datafieldvalue = parents[0].label
 							//}
-							const fixedActionText = selectedActionParameters[count].value 
+							const fixedActionText = selectedActionParameters[count].value
 
-							datafield = 
+							datafield =
 							<div>
 								<Select
 									SelectDisplayProps={{
@@ -2485,7 +2497,7 @@ const AngularWorkflow = (props) => {
 									value={selectedActionParameters[count].action_field}
 									fullWidth
 									onChange={(e) => {
-										changeActionParameterActionResult(e.target.value, count) 
+										changeActionParameterActionResult(e.target.value, count)
 									}}
 									style={{backgroundColor: surfaceColor, color: "white", height: "50px"}}
 									>
@@ -2496,13 +2508,13 @@ const AngularWorkflow = (props) => {
 									))}
 								</Select>
 								<TextField
-									style={{backgroundColor: inputColor}} 
+									style={{backgroundColor: inputColor}}
 									InputProps={{
 										style:{
 											color: "white",
 											marginLeft: "5px",
 											maxWidth: "95%",
-											height: "50px", 
+											height: "50px",
 											fontSize: "1em",
 										},
 									}}
@@ -2510,7 +2522,7 @@ const AngularWorkflow = (props) => {
 									color="primary"
 									defaultValue={data.value}
 									helperText={<div style={{marginLeft: "5px", color:"white", marginBottom: "2px",}}>Example: $.body will get "data" from {'{"body": "data"}'}</div>}
-									placeholder="Action variable ($.)" 
+									placeholder="Action variable ($.)"
 									onChange={(event) => {
 										changeActionParameter(event, count)
 									}}
@@ -2521,21 +2533,21 @@ const AngularWorkflow = (props) => {
 							varcolor = "#f85a3e"
 							if ((workflow.workflow_variables === null || workflow.workflow_variables === undefined || workflow.workflow_variables.length === 0) && (workflow.execution_variables === null || workflow.execution_variables === undefined || workflow.execution_variables.length === 0)) {
 								setCurrentView(2)
-								datafield = 
+								datafield =
 								<div>
 								<div>
-									Looks like you don't have any variables yet.  
+									Looks like you don't have any variables yet.
 								</div>
 								<div style={{width: "100%", margin: "auto"}}>
 									<Button style={{margin: "auto", marginTop: "10px"}} color="primary" variant="outlined" onClick={() => {
 										setVariablesModalOpen(true)
 										setLastSaved(false)
-									}}>New workflow variable</Button> 				
+									}}>New workflow variable</Button>
 								</div>
 								</div>
 							} else {
 								// FIXME - this is a shitty solution that needs re-renders all the time
-								datafield = 
+								datafield =
 								<Select
 									SelectDisplayProps={{
 										style: {
@@ -2546,7 +2558,7 @@ const AngularWorkflow = (props) => {
 									value={selectedAction.parameters[count].action_field}
 									onChange={(e) => {
 										console.log(e.target.value)
-										changeActionParameterVariable(e.target.value, count) 
+										changeActionParameterVariable(e.target.value, count)
 									}}
 									style={{backgroundColor: inputColor, color: "white", height: "50px"}}
 									>
@@ -2571,16 +2583,16 @@ const AngularWorkflow = (props) => {
 							itemColor = "#ffeb3b"
 						}
 						return (
-						<div key={data.name}>	
+						<div key={data.name}>
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: "10px"}}/>
-								<div style={{flex: "10"}}> 
-									<b>{data.name} </b> 
+								<div style={{flex: "10"}}>
+									<b>{data.name} </b>
 								</div>
 								<Tooltip color="primary" title="Static data" placement="top">
 									<div style={{cursor: "pointer", color: staticcolor}} onClick={(e) => {
 											e.preventDefault()
-											changeActionParameterVariant("STATIC_VALUE", count) 
+											changeActionParameterVariant("STATIC_VALUE", count)
 										}}>
 										<CreateIcon />
 									</div>
@@ -2589,7 +2601,7 @@ const AngularWorkflow = (props) => {
 								<Tooltip color="primary" title="Data from previous action" placement="top">
 									<div style={{cursor: "pointer", color: actioncolor}} onClick={(e) => {
 										e.preventDefault()
-										changeActionParameterVariant("ACTION_RESULT", count) 
+										changeActionParameterVariant("ACTION_RESULT", count)
 									}}>
 										<AppsIcon />
 									</div>
@@ -2598,12 +2610,12 @@ const AngularWorkflow = (props) => {
 								<Tooltip color="primary" title="Use local variable" placement="top">
 									<div style={{cursor: "pointer", color: varcolor}} onClick={(e) => {
 										e.preventDefault()
-										changeActionParameterVariant("WORKFLOW_VARIABLE", count) 
+										changeActionParameterVariant("WORKFLOW_VARIABLE", count)
 									}}>
 										<FavoriteBorderIcon />
 									</div>
 								</Tooltip>
-							</div>	
+							</div>
 							{datafield}
 							{showDropdown && showDropdownNumber === count && data.variant === "STATIC_VALUE" ?
 							  <FormControl fullWidth>
@@ -2619,7 +2631,7 @@ const AngularWorkflow = (props) => {
 										onChange={(e) => {
 											console.log("CHANGE!")
 											selectedActionParameters[count].value += e.target.value.autocomplete
-											selectedAction.parameters[count].value = selectedActionParameters[count].value 
+											selectedAction.parameters[count].value = selectedActionParameters[count].value
 											console.log("TARGET: ", selectedActionParameters)
 											setSelectedAction(selectedAction)
 											setUpdate("action"+e.target.value.name)
@@ -2629,7 +2641,7 @@ const AngularWorkflow = (props) => {
 										style={{border: `2px solid #f85a3e`, color: "white", height: "50px"}}
 										>
 										{actionlist.map(data => {
-											const icon = data.type === "action" ? <AppsIcon style={{marginRight: 10}} /> : data.type === "workflow_variable" || data.type === "execution_variable" ? <FavoriteBorderIcon style={{marginRight: 10}} /> : <ScheduleIcon style={{marginRight: 10}} /> 
+											const icon = data.type === "action" ? <AppsIcon style={{marginRight: 10}} /> : data.type === "workflow_variable" || data.type === "execution_variable" ? <FavoriteBorderIcon style={{marginRight: 10}} /> : <ScheduleIcon style={{marginRight: 10}} />
 
 											const handleExecArgumentHover = (inside) => {
 												var exec_text_field = document.getElementById("execution_argument_input_field")
@@ -2701,15 +2713,15 @@ const AngularWorkflow = (props) => {
 					)})}
 				</div>
 				)
-			} 
+			}
 		return null
 	}
 
 	//height: "100%",
 	const appApiViewStyle = {
-		display: "flex", 
-		flexDirection: "column", 
-		backgroundColor: "#1F2023", 
+		display: "flex",
+		flexDirection: "column",
+		backgroundColor: "#1F2023",
 		color: "white",
 		paddingRight: 10,
 		paddingLeft: 10,
@@ -2742,7 +2754,7 @@ const AngularWorkflow = (props) => {
 		// Move these targets to be the new node
 		// Set arrows pointing to new startnode with errors
 		//for (var key in workflow.branches) {
-		//	var item = workflow.branches[key]	
+		//	var item = workflow.branches[key]
 		//	if (item.destination_id === oldstartnode[0].data()["id"]) {
 		//		var curbranch = cy.getElementById(item.id)
 		//		if (curbranch.length > 0) {
@@ -2768,13 +2780,13 @@ const AngularWorkflow = (props) => {
 		})
 	}
 
-	const appApiView = Object.getOwnPropertyNames(selectedAction).length > 0 && Object.getOwnPropertyNames(selectedApp).length > 0 ? 
+	const appApiView = Object.getOwnPropertyNames(selectedAction).length > 0 && Object.getOwnPropertyNames(selectedApp).length > 0 ?
 		<div style={appApiViewStyle}>
 			<div style={{display: "flex", minHeight: 40, marginBottom: 30}}>
 				<div style={{flex: 1}}>
 					<h3 style={{marginBottom: 5}}>{selectedAction.app_name}</h3>
 					<a href="https://shuffler.io/docs/apps#actions" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>What are actions?</a>
-					{selectedAction.errors !== null && selectedAction.errors.length > 0 ? 
+					{selectedAction.errors !== null && selectedAction.errors.length > 0 ?
 						<div>
 							Errors: {selectedAction.errors.join("\n")}
 						</div>
@@ -2783,8 +2795,8 @@ const AngularWorkflow = (props) => {
 				</div>
 				<div style={{flex: "1"}}>
 					<Button disabled={selectedAction.id === workflow.start} style={{zIndex: 5000, marginTop: "15px",}} color="primary" variant="outlined" onClick={(e) => {
-						defineStartnode(e)	
-					}}>Set startnode</Button> 				
+						defineStartnode(e)
+					}}>Set startnode</Button>
 				</div>
 			</div>
 			<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -2792,13 +2804,13 @@ const AngularWorkflow = (props) => {
 				Name
 			</div>
 			<TextField
-				style={{backgroundColor: inputColor}} 
+				style={{backgroundColor: inputColor}}
 				InputProps={{
 					style:{
 						color: "white",
 						marginLeft: "5px",
 						maxWidth: "95%",
-						height: "50px", 
+						height: "50px",
 						fontSize: "1em",
 					},
 				}}
@@ -2820,7 +2832,7 @@ const AngularWorkflow = (props) => {
 						fullWidth
 						onChange={(e) => {
 							const env = environments.find(a => a.Name === e.target.value)
-							setSelectedActionEnvironment(env) 
+							setSelectedActionEnvironment(env)
 							selectedAction.environment = env.Name
 							setSelectedAction(selectedAction)
 						}}
@@ -2836,7 +2848,7 @@ const AngularWorkflow = (props) => {
 				: null}
 			{workflow.execution_variables !== undefined && workflow.execution_variables !== null && workflow.execution_variables.length > 0 ?
 				<div style={{marginTop: "20px"}}>
-					Set execution variable (optional) 
+					Set execution variable (optional)
 					<Select
 						value={selectedAction.execution_variable !== undefined ? selectedAction.execution_variable.name : "No selection"}
 						SelectDisplayProps={{
@@ -2869,7 +2881,7 @@ const AngularWorkflow = (props) => {
 					</Select>
 				</div>
 				: null}
-			{/*requiresAuthentication ? 
+			{/*requiresAuthentication ?
 				<div style={{marginTop: "20px"}}>
 					<Button fullWidth style={{margin: "auto", marginTop: "10px",}} color="primary" variant="contained" onClick={() => setAuthenticationModalOpen(true)}>
 						AUTHENTICATE
@@ -2921,19 +2933,19 @@ const AngularWorkflow = (props) => {
 
 				</div>
 			</div>
-		</div> 
-		: null 
+		</div>
+		: null
 
 
 	const headerSize = 68
 	const rightsidebarStyle = {
-		position: "fixed", 
-		right: 0, 
+		position: "fixed",
+		right: 0,
 		top: headerSize+1,
 		height: "100%",
 		bottom: 0,
-		minWidth: "350px", 
-		maxWidth: "350px", 
+		minWidth: "350px",
+		maxWidth: "350px",
 		borderLeft: "1px solid rgb(91, 96, 100)",
 		overflow: "scroll",
 		overflowX: "auto",
@@ -2950,9 +2962,9 @@ const AngularWorkflow = (props) => {
 	    }
 
 		if (selectedTrigger.parameters === null) {
-			selectedTrigger.parameters = [[]] 
+			selectedTrigger.parameters = [[]]
 			workflow.triggers[selectedTriggerIndex].parameters = [[]]
-		} 
+		}
 
 		// This is a dirty workaround for the static values in the go backend and datastore db
 		const fixedValue = value.join(splitter)
@@ -2966,16 +2978,16 @@ const AngularWorkflow = (props) => {
 		setSelectedApp({})
 		setSelectedEdge({})
 
-		// Set value 
+		// Set value
 		setSelectedTrigger(selectedTrigger)
 		setWorkflow(workflow)
 	};
 
 	//const setTriggerFolderWrapper = (event) => {
 	//	if (selectedTrigger.parameters === null) {
-	//		selectedTrigger.parameters = [] 
+	//		selectedTrigger.parameters = []
 	//		workflow.triggers[selectedTriggerIndex].parameters = []
-	//	} 
+	//	}
 
 	//	const folder = triggerFolders.find(a => a.displayName === event.target.value)
 	//	console.log(event.target.value)
@@ -2994,7 +3006,7 @@ const AngularWorkflow = (props) => {
 	//		setSelectedApp({})
 	//		setSelectedEdge({})
 
-	//		// Set value 
+	//		// Set value
 	//		setSelectedTrigger(selectedTrigger)
 
 	//	} else {
@@ -3005,7 +3017,7 @@ const AngularWorkflow = (props) => {
 	const setTriggerCronWrapper = (value) => {
 		if (selectedTrigger.parameters === null) {
 			selectedTrigger.parameters = []
-		} 
+		}
 
 		workflow.triggers[selectedTriggerIndex].parameters[0] = {"value": value, "name": "cron"}
 		setWorkflow(workflow)
@@ -3014,14 +3026,14 @@ const AngularWorkflow = (props) => {
 	const setTriggerOptionsWrapper = (value) => {
 		if (selectedTrigger.parameters === null) {
 			selectedTrigger.parameters = []
-		} 
+		}
 
 		const splitItems = workflow.triggers[selectedTriggerIndex].parameters[2].value.split(",")
 		console.log(splitItems)
 		if (splitItems.includes(value)) {
-			for( var i = 0; i < splitItems.length; i++){ 
+			for( var i = 0; i < splitItems.length; i++){
 			   	if (splitItems[i] === value) {
-			     	splitItems.splice(i, 1) 
+			     	splitItems.splice(i, 1)
 			   	}
 			}
 
@@ -3029,12 +3041,12 @@ const AngularWorkflow = (props) => {
 			splitItems.push(value)
 		}
 
-		for( var i = 0; i < splitItems.length; i++){ 
+		for( var i = 0; i < splitItems.length; i++){
 			if (splitItems[i] === "") {
-				splitItems.splice(i, 1) 
+				splitItems.splice(i, 1)
 			}
 		}
-		
+
 		workflow.triggers[selectedTriggerIndex].parameters[2].value = splitItems.join(",")
 
 		console.log(splitItems)
@@ -3045,7 +3057,7 @@ const AngularWorkflow = (props) => {
 	const setTriggerTextInformationWrapper = (value) => {
 		if (selectedTrigger.parameters === null) {
 			selectedTrigger.parameters = []
-		} 
+		}
 
 		workflow.triggers[selectedTriggerIndex].parameters[0] = {"value": value, "name": "alertinfo"}
 		setWorkflow(workflow)
@@ -3055,7 +3067,7 @@ const AngularWorkflow = (props) => {
 		if (selectedTrigger.parameters === null) {
 			selectedTrigger.parameters = []
 			workflow.triggers[selectedTriggerIndex].parameters[0] = {"value": value, "name": "cron"}
-		} 
+		}
 
 		workflow.triggers[selectedTriggerIndex].parameters[1] = {"value": value, "name": "execution_argument"}
 		setWorkflow(workflow)
@@ -3086,13 +3098,13 @@ const AngularWorkflow = (props) => {
 			placeholder = data.example
 		}
 
-		var datafield = 
+		var datafield =
 			<TextField
-				style={{backgroundColor: inputColor}} 
+				style={{backgroundColor: inputColor}}
 				InputProps={{
 					style:{
 						color: "white",
-						minHeight: "50px", 
+						minHeight: "50px",
 						marginLeft: "5px",
 						maxWidth: "95%",
 						fontSize: "1em",
@@ -3115,7 +3127,7 @@ const AngularWorkflow = (props) => {
 		const changeActionVariable = (variable, value) => {
 			// set the name
 			data.value = value
-			data.action_field = variable 
+			data.action_field = variable
 
 			//setConditionValue({})
 
@@ -3133,13 +3145,13 @@ const AngularWorkflow = (props) => {
 				return
 			}
 
-			data.variant = variant 
-			data.value = "" 
+			data.variant = variant
+			data.value = ""
 
 			if (variant === "ACTION_RESULT") {
 				console.log("SHOULD FIND PARENTS OF EDGE")
 
-				// Uses the target's parents, as the target should be executing the checks (I think) 
+				// Uses the target's parents, as the target should be executing the checks (I think)
 				var parents = getParents(workflow.actions.find(a => a.id === selectedEdge["target"]))
 				if (parents.length > 0) {
 					console.log(parents)
@@ -3170,18 +3182,18 @@ const AngularWorkflow = (props) => {
 			<div>
 				<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 					<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
-					<div style={{flex: "10"}}> 
-						<b>{data.name} </b> 
+					<div style={{flex: "10"}}>
+						<b>{data.name} </b>
 					</div>
 					<Tooltip color="primary" title="Static data" placement="top">
 						<div style={{cursor: "pointer", color: staticcolor}} onClick={(e) => {
 								e.preventDefault()
-								changeActionParameterVariant("STATIC_VALUE") 
+								changeActionParameterVariant("STATIC_VALUE")
 							}}>
 							<CreateIcon />
 						</div>
 					</Tooltip>
-				</div>	
+				</div>
 				{datafield}
 			</div>
 		)
@@ -3193,9 +3205,9 @@ const AngularWorkflow = (props) => {
 		backgroundColor: inputColor
 	}
 
-	const conditionsModal = 
-		<Dialog modal 
-			open={conditionsModalOpen} 
+	const conditionsModal =
+		<Dialog modal
+			open={conditionsModalOpen}
 			PaperProps={{
 				style: {
 					backgroundColor: surfaceColor,
@@ -3218,7 +3230,7 @@ const AngularWorkflow = (props) => {
 					</div>
 					<div style={{flex: "1", margin: "auto", marginBottom: "0px"}}>
 					    <Button color="primary" variant="outlined" style={{height: "50px",}} fullWidth aria-haspopup="true" onClick={(e) => {setVariableAnchorEl(e.currentTarget)}}>
-							{conditionValue.value}	
+							{conditionValue.value}
 						</Button>
 						<Menu
 						  id="simple-menu"
@@ -3288,7 +3300,7 @@ const AngularWorkflow = (props) => {
 					</div>
 				</DialogContent>
 				<DialogActions>
-	        	  	<Button 
+	        	  	<Button
 					style={{borderRadius: "0px"}}
 					onClick={() => {
 						setSelectedEdge({})
@@ -3298,7 +3310,7 @@ const AngularWorkflow = (props) => {
 							source: sourceValue,
 							destination: destinationValue,
 						}
-						
+
 						setConditionsModalOpen(false)
 						if (selectedEdge.conditions === undefined) {
 							selectedEdge.conditions = [data]
@@ -3315,7 +3327,7 @@ const AngularWorkflow = (props) => {
 						workflow.branches[selectedEdgeIndex] = selectedEdge
 						setWorkflow(workflow)
 					}} color="primary">
-	        	    	Submit	
+	        	    	Submit
 	        	  	</Button>
 				</DialogActions>
 			</FormControl>
@@ -3331,7 +3343,7 @@ const AngularWorkflow = (props) => {
 				if (selectedEdge.conditions.length === 1) {
 					selectedEdge.conditions = []
 				} else {
-					selectedEdge.conditions.splice(conditionIndex, 1) 
+					selectedEdge.conditions.splice(conditionIndex, 1)
 				}
 
 				setSelectedEdge(selectedEdge)
@@ -3368,7 +3380,7 @@ const AngularWorkflow = (props) => {
 								setConditionsModalOpen(true)
 							}}>
 							<div style={{flex: 1, textAlign: "left", marginTop: "15px", marginLeft: "10px", overflow: "hidden"}}>
-								{condition.source.value} 
+								{condition.source.value}
 							</div>
 							<Divider style={{height: "100%", width: "1px", marginLeft: "5px", marginRight: "5px", backgroundColor: "rgb(91, 96, 100)"}}/>
 							<div style={{flex: 1, textAlign: "center", marginTop: "15px", overflow: "hidden"}} onClick={() => {}}>
@@ -3376,7 +3388,7 @@ const AngularWorkflow = (props) => {
 							</div>
 							<Divider style={{height: "100%", width: "1px", marginLeft: "5px", marginRight: "5px", backgroundColor: "rgb(91, 96, 100)"}}/>
 							<div style={{flex: 1, textAlign: "left", marginTop: "auto", marginBottom: "auto", marginLeft: "10px", overflow: "hidden"}}>
-								{condition.destination.value} 
+								{condition.destination.value}
 							</div>
 						</div>
 						<div style={{flex: "1", marginLeft: "0px"}}>
@@ -3415,7 +3427,7 @@ const AngularWorkflow = (props) => {
 			)
 		}
 
-		var injectedData = 
+		var injectedData =
 			<div>
 			</div>
 
@@ -3437,17 +3449,17 @@ const AngularWorkflow = (props) => {
 				</div>
 				<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 				<div>
-					Conditions	
+					Conditions
 				</div>
-				{injectedData}	
-				
+				{injectedData}
+
 				<Button style={{margin: "auto", marginTop: "10px",}} color="primary" variant="outlined" onClick={() => {
 					setSourceValue({"name": "source", "value": "", "variant": "STATIC_VALUE", "action_field": "", "id": conditionId})
 					setConditionValue({"name": "condition", "value": "equals", "id": conditionId})
 					setDestinationValue({"name": "destination", "value": "", "variant": "STATIC_VALUE", "action_field": "", "id": conditionId})
 					setConditionsModalOpen(true)
-				}} fullWidth>New condition</Button> 				
-			</div> 
+				}} fullWidth>New condition</Button>
+			</div>
 		)
 	}
 
@@ -3469,7 +3481,7 @@ const AngularWorkflow = (props) => {
 			selectedTrigger.parameters = [{"value": "No folders selected yet", "name": "outlookfolder"}]
 			setWorkflow(workflow)
 			setSelectedTrigger(selectedTrigger)
-		} 
+		}
 
 		const setFolders = () => {
 			fetch(globalUrl+"/functions/outlook/getFolders?trigger_id="+selectedTrigger.id, {
@@ -3512,7 +3524,7 @@ const AngularWorkflow = (props) => {
 				return response.json()
 			})
 			.then((responseJson) => {
-				setTriggerAuthentication(responseJson)	
+				setTriggerAuthentication(responseJson)
 			})
 			.catch(error => {
 				console.log(error.toString())
@@ -3523,11 +3535,11 @@ const AngularWorkflow = (props) => {
 		// This is horrible hahah
 		if (localFirstrequest) {
 			getTriggerAuth()
-			setFolders()	
+			setFolders()
 			setLocalFirstrequest(false)
 		}
 
-		const outlookButton = 
+		const outlookButton =
 			<Button variant="contained" style={{flex: "1",}} onClick={() => {
 				// When window closes, it should get all the folders for the user from backend
 				const redirectUri = "http%3A%2F%2Fshuffler.io"
@@ -3551,7 +3563,7 @@ const AngularWorkflow = (props) => {
 						return response.json()
 					})
 					.then((responseJson) => {
-						setTriggerAuthentication(responseJson)	
+						setTriggerAuthentication(responseJson)
 						clearInterval(id)
 						newwin.close()
 						setFolders()
@@ -3577,15 +3589,15 @@ const AngularWorkflow = (props) => {
 				triggerInfo = <div>
 						<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 							<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
-							<div style={{flex: "10"}}> 
-								<b>Login: </b> 
+							<div style={{flex: "10"}}>
+								<b>Login: </b>
 							</div>
 						</div>
 						{outlookButton}
 
 						<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 							<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
-							<div style={{flex: "10"}}> 
+							<div style={{flex: "10"}}>
 								<b>Folders: </b>(hold CTRL to select multiple)
 							</div>
 						</div>
@@ -3613,8 +3625,8 @@ const AngularWorkflow = (props) => {
 								{folder.displayName}
 							</option>
 							if (folder.childFolderCount > 0) {
-								// Here to handle subfolders sometime later	
-								folderItem = 
+								// Here to handle subfolders sometime later
+								folderItem =
 								<option key={folder.displayName} value={folder.displayName} style={{marginLeft: "10px", fontSize: "1.2em"}}>
 									{folder.displayName}
 								</option>
@@ -3629,28 +3641,28 @@ const AngularWorkflow = (props) => {
 			}
 		}
 
-		
+
 		// Check
 		const argumentView = Object.getOwnPropertyNames(triggerAuthentication).length > 0 ?
 			<div>
 				{triggerInfo}
 			</div>
-			: 
+			:
 			<div>
 				<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 					<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
-					<div style={{flex: "10"}}> 
-						<b>Login to either: </b> 
+					<div style={{flex: "10"}}>
+						<b>Login to either: </b>
 					</div>
 				</div>
-				{outlookButton}	
+				{outlookButton}
 				<Button variant="contained" style={{marginLeft: "5px", flex: "1",}} onClick={() => {
 					alert.error("REMOVE THIS FIELD FOR GMAIL - make it oAuth something")
 				}} color="primary">
-					Gmail	
+					Gmail
 				</Button>
 			</div>
-		
+
 		return(
 			<div style={appApiViewStyle}>
 				<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
@@ -3664,13 +3676,13 @@ const AngularWorkflow = (props) => {
 					Name
 				</div>
 				<TextField
-					style={{backgroundColor: inputColor}} 
+					style={{backgroundColor: inputColor}}
 					InputProps={{
 						style:{
 							color: "white",
 							marginLeft: "5px",
 							maxWidth: "95%",
-							height: "50px", 
+							height: "50px",
 							fontSize: "1em",
 						},
 					}}
@@ -3683,13 +3695,13 @@ const AngularWorkflow = (props) => {
 				<div style={{marginTop: "20px"}}>
 					Environment:
 					<TextField
-						style={{backgroundColor: inputColor}} 
+						style={{backgroundColor: inputColor}}
 						InputProps={{
 							style:{
 								color: "white",
 								marginLeft: "5px",
 								maxWidth: "95%",
-								height: "50px", 
+								height: "50px",
 								fontSize: "1em",
 							},
 						}}
@@ -3709,17 +3721,17 @@ const AngularWorkflow = (props) => {
 							<Button style={{flex: "1",}} disabled={selectedTrigger.status === "running"} onClick={() => {
 								startMailSub(selectedTrigger, selectedTriggerIndex)
 							}} color="primary">
-								Start	
+								Start
 							</Button>
 							<Button style={{flex: "1",}} disabled={selectedTrigger.status !== "running" } onClick={() => {
 								stopMailSub(selectedTrigger, selectedTriggerIndex)
 							}} color="primary">
-								Stop	
+								Stop
 							</Button>
 						</div>
 					</div>
 				</div>
-			</div> 
+			</div>
 		)
 	}
 
@@ -3750,13 +3762,13 @@ const AngularWorkflow = (props) => {
 						Name
 					</div>
 					<TextField
-						style={{backgroundColor: inputColor}} 
+						style={{backgroundColor: inputColor}}
 						InputProps={{
 							style:{
 								color: "white",
 								marginLeft: "5px",
 								maxWidth: "95%",
-								height: "50px", 
+								height: "50px",
 								fontSize: "1em",
 							},
 						}}
@@ -3769,13 +3781,13 @@ const AngularWorkflow = (props) => {
 					<div style={{marginTop: "20px"}}>
 						Environment:
 						<TextField
-							style={{backgroundColor: inputColor}} 
+							style={{backgroundColor: inputColor}}
 							InputProps={{
 								style:{
 									color: "white",
 									marginLeft: "5px",
 									maxWidth: "95%",
-									height: "50px", 
+									height: "50px",
 									fontSize: "1em",
 								},
 							}}
@@ -3792,12 +3804,12 @@ const AngularWorkflow = (props) => {
 							<b>Arguments</b>
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
-								<div style={{flex: "10"}}> 
-									<b>Webhook URI: </b> 
+								<div style={{flex: "10"}}>
+									<b>Webhook URI: </b>
 								</div>
 							</div>
 							<TextField
-								style={{backgroundColor: inputColor}} 
+								style={{backgroundColor: inputColor}}
 								onClick={() => {
 									//alert.info("Saved URI to clipboard")
 									console.log("Copy to clipboooooard")
@@ -3805,7 +3817,7 @@ const AngularWorkflow = (props) => {
 								InputProps={{
 									style:{
 										color: "white",
-										height: "50px", 
+										height: "50px",
 										marginLeft: "5px",
 										maxWidth: "95%",
 										fontSize: "1em",
@@ -3822,12 +3834,12 @@ const AngularWorkflow = (props) => {
 							/>
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
-								<div style={{flex: "10"}}> 
-									<b>Execution argument: </b> 
+								<div style={{flex: "10"}}>
+									<b>Execution argument: </b>
 								</div>
 							</div>
 							<TextField
-								style={{backgroundColor: inputColor}} 
+								style={{backgroundColor: inputColor}}
 								InputProps={{
 									style:{
 										color: "white",
@@ -3853,23 +3865,23 @@ const AngularWorkflow = (props) => {
 								<Button style={{flex: "1",}} disabled={selectedTrigger.status === "running"} onClick={() => {
 									newWebhook(selectedTrigger)
 								}} color="primary">
-	    		    	    		Start	
+	    		    	    		Start
 	    		    	  		</Button>
 								<Button style={{flex: "1",}} disabled={selectedTrigger.status !== "running"} onClick={() => {
 									deleteWebhook(selectedTrigger, selectedTriggerIndex)
 								}} color="primary">
-	    		    	    		Stop	
+	    		    	    		Stop
 	    		    	  		</Button>
 							</div>
 						</div>
 					</div>
-				</div> 
+				</div>
 			)
 		}
 
-		return null 
+		return null
 	}
-	
+
 	//const getTriggerAuth = (trigger_id) => {
 	//	fetch(globalUrl+"/api/v1/triggers/"+trigger_id, {
 	//		method: "GET",
@@ -3891,7 +3903,7 @@ const AngularWorkflow = (props) => {
 	//}
 
 	const stopMailSub = (trigger, triggerindex) => {
-		// DELETE		
+		// DELETE
 		if (trigger.id === undefined) {
 			return
 		}
@@ -3935,8 +3947,8 @@ const AngularWorkflow = (props) => {
 
 		const splitItem = workflow.triggers[selectedTriggerIndex].parameters[0].value.split(splitter)
 		for (var key in splitItem) {
-			const item = splitItem[key] 
-			const curfolder = triggerFolders.find(a => a.displayName === item)	
+			const item = splitItem[key]
+			const curfolder = triggerFolders.find(a => a.displayName === item)
 			if (curfolder === undefined) {
 				alert.error("Something went wrong with outlook folder "+item)
 				return
@@ -3992,7 +4004,7 @@ const AngularWorkflow = (props) => {
 			alert.error("Missing name")
 			return
 		}
-		
+
 		if (trigger.id.length !== 36) {
 			alert.error("Missing id")
 			return
@@ -4002,7 +4014,7 @@ const AngularWorkflow = (props) => {
 		var startNode = workflow.start
 		const branch = workflow.branches.find(branch => branch.source_id === trigger.id)
 		if (branch === undefined && (workflow.start === undefined || workflow.start === null || workflow.start.length === 0)) {
-			alert.error("No webhook node defined")	
+			alert.error("No webhook node defined")
 		}
 
 		alert.info("Starting webhook")
@@ -4011,9 +4023,9 @@ const AngularWorkflow = (props) => {
 		}
 
 		const data = {
-			"name": hookname, 
-			"type": "webhook", 
-			"id": trigger.id, 
+			"name": hookname,
+			"type": "webhook",
+			"id": trigger.id,
 			"workflow": workflow.id,
 			"start": startNode,
 		}
@@ -4090,7 +4102,7 @@ const AngularWorkflow = (props) => {
 				workflow.triggers[selectedTriggerIndex].parameters = []
 				workflow.triggers[selectedTriggerIndex].parameters[0] = {"name": "alertinfo", "value": "hello this is an alert"}
 
-				// boolean, 
+				// boolean,
 				workflow.triggers[selectedTriggerIndex].parameters[1] = {"name": "options", "value": "boolean"}
 
 				// email,sms,app ...
@@ -4111,13 +4123,13 @@ const AngularWorkflow = (props) => {
 						Name
 					</div>
 					<TextField
-						style={{backgroundColor: inputColor}} 
+						style={{backgroundColor: inputColor}}
 						InputProps={{
 							style:{
 								color: "white",
 								marginLeft: "5px",
 								maxWidth: "95%",
-								height: "50px", 
+								height: "50px",
 								fontSize: "1em",
 							},
 						}}
@@ -4130,13 +4142,13 @@ const AngularWorkflow = (props) => {
 					<div style={{marginTop: "20px"}}>
 						Environment:
 						<TextField
-							style={{backgroundColor: inputColor}} 
+							style={{backgroundColor: inputColor}}
 							InputProps={{
 								style:{
 									color: "white",
 									marginLeft: "5px",
 									maxWidth: "95%",
-									height: "50px", 
+									height: "50px",
 									fontSize: "1em",
 								},
 							}}
@@ -4152,12 +4164,12 @@ const AngularWorkflow = (props) => {
 						<b>Arguments</b>
 						<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 							<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
-							<div style={{flex: "10"}}> 
-								<b>Information: </b> 
+							<div style={{flex: "10"}}>
+								<b>Information: </b>
 							</div>
 						</div>
 						<TextField
-							style={{backgroundColor: inputColor}} 
+							style={{backgroundColor: inputColor}}
 							InputProps={{
 								style:{
 									color: "white",
@@ -4179,31 +4191,31 @@ const AngularWorkflow = (props) => {
 						/>
 						<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 							<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
-							<div style={{flex: "10"}}> 
-								<b>Contact options: </b> 
+							<div style={{flex: "10"}}>
+								<b>Contact options: </b>
 							</div>
 						</div>
 						<FormGroup style={{paddingLeft: 10, backgroundColor: inputColor}} row>
 						  	<FormControlLabel
 						  	  control={
-						  	    <Checkbox 
-									checked={workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("email")} 
+						  	    <Checkbox
+									checked={workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("email")}
 									onChange={() => {
 										setTriggerOptionsWrapper("email")
-									}} 
+									}}
 									color="primary"
-									value="email" 
+									value="email"
 								/>
 						  	  }
 						  	  label={<div style={{color: "white"}}>Email</div>}
 						  	/>
 						  	<FormControlLabel
 						  	  control={
-						  	    <Checkbox 
-									checked={workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("sms")} 
+						  	    <Checkbox
+									checked={workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("sms")}
 									onChange={() => {
 										setTriggerOptionsWrapper("sms")
-									}} 
+									}}
 									color="primary"
 									value="sms" />
 						  	  }
@@ -4211,11 +4223,11 @@ const AngularWorkflow = (props) => {
 						  	/>
 						</FormGroup>
 					</div>
-				</div> 
+				</div>
 			)
 		}
 
-		return null 
+		return null
 	}
 
 	const ScheduleSidebar = () => {
@@ -4240,13 +4252,13 @@ const AngularWorkflow = (props) => {
 						Name
 					</div>
 					<TextField
-						style={{backgroundColor: inputColor}} 
+						style={{backgroundColor: inputColor}}
 						InputProps={{
 							style:{
 								color: "white",
 								marginLeft: "5px",
 								maxWidth: "95%",
-								height: "50px", 
+								height: "50px",
 								fontSize: "1em",
 							},
 						}}
@@ -4259,13 +4271,13 @@ const AngularWorkflow = (props) => {
 					<div style={{marginTop: "20px"}}>
 						Environment:
 						<TextField
-							style={{backgroundColor: inputColor}} 
+							style={{backgroundColor: inputColor}}
 							InputProps={{
 								style:{
 									color: "white",
 									marginLeft: "5px",
 									maxWidth: "95%",
-									height: "50px", 
+									height: "50px",
 									fontSize: "1em",
 								},
 							}}
@@ -4282,16 +4294,16 @@ const AngularWorkflow = (props) => {
 							<b>Arguments</b>
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
-								<div style={{flex: "10"}}> 
-									<b>Interval (seconds) </b> 
+								<div style={{flex: "10"}}>
+									<b>Interval (seconds) </b>
 								</div>
 							</div>
 							<TextField
-								style={{backgroundColor: inputColor}} 
+								style={{backgroundColor: inputColor}}
 								InputProps={{
 									style:{
 										color: "white",
-										height: "50px", 
+										height: "50px",
 										marginLeft: "5px",
 										maxWidth: "95%",
 										fontSize: "1em",
@@ -4308,12 +4320,12 @@ const AngularWorkflow = (props) => {
 							/>
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
-								<div style={{flex: "10"}}> 
-									<b>Execution argument: </b> 
+								<div style={{flex: "10"}}>
+									<b>Execution argument: </b>
 								</div>
 							</div>
 							<TextField
-								style={{backgroundColor: inputColor}} 
+								style={{backgroundColor: inputColor}}
 								InputProps={{
 									style:{
 										color: "white",
@@ -4339,42 +4351,42 @@ const AngularWorkflow = (props) => {
 								<Button style={{flex: "1",}} disabled={selectedTrigger.status === "running"} onClick={() => {
 									submitSchedule(selectedTrigger, selectedTriggerIndex)
 								}} color="primary">
-	    		    	    		Start	
+	    		    	    		Start
 	    		    	  		</Button>
 								<Button style={{flex: "1",}} disabled={selectedTrigger.status !== "running"} onClick={() => {
 									stopSchedule(selectedTrigger, selectedTriggerIndex)
 								}} color="primary">
-	    		    	    		Stop	
+	    		    	    		Stop
 	    		    	  		</Button>
 							</div>
 						</div>
 					</div>
-				</div> 
+				</div>
 			)
 		}
 
-		return null 
+		return null
 	}
 
 	const cytoscapeViewWidths = 700
 	const bottomBarStyle = {
-		position: "fixed", 
-		right: 20, 
+		position: "fixed",
+		right: 20,
 		left: leftBarSize,
-		bottom: 0, 
-		minWidth: cytoscapeViewWidths, 
+		bottom: 0,
+		minWidth: cytoscapeViewWidths,
 		maxWidth: cytoscapeViewWidths,
 		marginLeft: 20,
 		marginBottom: 20,
-		zIndex: 10, 
+		zIndex: 10,
 	}
 
 	const topBarStyle= {
-		position: "fixed", 
-		right: 0, 
+		position: "fixed",
+		right: 0,
 		left: leftBarSize,
-		top: appBarSize, 
-		minWidth: cytoscapeViewWidths, 
+		top: appBarSize,
+		minWidth: cytoscapeViewWidths,
 		maxWidth: cytoscapeViewWidths,
 		marginLeft: 20,
 		marginBottom: 20,
@@ -4382,7 +4394,7 @@ const AngularWorkflow = (props) => {
 
 	const TopCytoscapeBar = () => {
 		return (
-			<div style={topBarStyle}>	
+			<div style={topBarStyle}>
 				<div style={{margin: 10}}>
 					<Breadcrumbs aria-label="breadcrumb" separator="›" style={{color: "white",}}>
 						<Link to="/workflows" style={{textDecoration: "none", color: "inherit",}}>
@@ -4409,7 +4421,7 @@ const AngularWorkflow = (props) => {
 					</div>
 				</div>
 			)
-		} 
+		}
 
 		return null
 	}
@@ -4474,13 +4486,13 @@ const AngularWorkflow = (props) => {
 		const [anchorEl, setAnchorEl] = React.useState(null);
 
 		const boxSize = 100
-		const executionButton = executionRunning ? 
+		const executionButton = executionRunning ?
 			<Tooltip color="primary" title="Stop execution" placement="top">
 				<Button style={{height: boxSize, width: boxSize}} color="secondary" variant="contained" onClick={() => {
 					abortExecution()
 				}}>
 					<PauseIcon style={{ fontSize: 60}} />
-				</Button> 
+				</Button>
 			</Tooltip>
 			:
 			<Tooltip color="primary" title="Test execution" placement="top">
@@ -4488,12 +4500,12 @@ const AngularWorkflow = (props) => {
 					executeWorkflow()
 				}}>
 					<PlayArrowIcon style={{ fontSize: 60}} />
-				</Button> 				
+				</Button>
 			</Tooltip>
 
 		return(
-			<div style={bottomBarStyle}>	
-				{executionButton} 
+			<div style={bottomBarStyle}>
+				{executionButton}
 				<div style={{marginLeft: "10px", left: boxSize, bottom: 0, position: "absolute"}}>
 					<Tooltip color="primary" title="An argument to be used for execution. This is a variable available to every node in your workflow." placement="top">
 						<TextField
@@ -4518,19 +4530,19 @@ const AngularWorkflow = (props) => {
 					</Tooltip>
 					<Tooltip color="primary" title="Save (ctrl+s)" placement="top">
 						<Button color="primary" style={{height: 50, marginLeft: 10, }} variant={lastSaved ? "outlined" : "contained"} onClick={() => saveWorkflow()}>
-							<SaveIcon /> 
-						</Button> 				
+							<SaveIcon />
+						</Button>
 					</Tooltip>
 					<Tooltip color="secondary" title="Fit to screen (ctrl+f)" placement="top">
 						<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={() => cy.fit(null, 50)}>
-							<AspectRatioIcon />  
-						</Button> 				
+							<AspectRatioIcon />
+						</Button>
 					</Tooltip>
 					<Tooltip color="secondary" title="Remove selected item (del)" placement="top-start">
 						<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={() => {
-							removeNode()		
+							removeNode()
 						}}>
-							<DeleteIcon /> 
+							<DeleteIcon />
 						</Button>
 					</Tooltip>
 					<Tooltip color="secondary" title="Show executions" placement="top-start">
@@ -4540,7 +4552,7 @@ const AngularWorkflow = (props) => {
 							<DirectionsRunIcon />
 						</Button>
 					</Tooltip>
-					<WorkflowMenu />	
+					<WorkflowMenu />
 				</div>
 			</div>
 		)
@@ -4554,7 +4566,7 @@ const AngularWorkflow = (props) => {
 		if (Object.getOwnPropertyNames(selectedAction).length > 0 && Object.getOwnPropertyNames(selectedApp).length > 0) {
 			//console.time('ACTIONSTART')
 			return(
-				<div style={rightsidebarStyle}>	
+				<div style={rightsidebarStyle}>
 					{appApiView}
 				</div>
 			)
@@ -4562,25 +4574,25 @@ const AngularWorkflow = (props) => {
 			if (selectedTrigger.trigger_type === "SCHEDULE") {
 				//console.log("SCHEDULE")
 				return(
-					<div style={rightsidebarStyle}>	
+					<div style={rightsidebarStyle}>
 						<ScheduleSidebar />
 					</div>
 				)
 			} else if (selectedTrigger.trigger_type === "WEBHOOK") {
 				return(
-					<div style={rightsidebarStyle}>	
+					<div style={rightsidebarStyle}>
 						<WebhookSidebar />
 					</div>
 				)
 			} else if (selectedTrigger.trigger_type === "EMAIL") {
 				return(
-					<div style={rightsidebarStyle}>	
+					<div style={rightsidebarStyle}>
 						<EmailSidebar />
 					</div>
 				)
 			} else if (selectedTrigger.trigger_type === "USERINPUT") {
 				return(
-					<div style={rightsidebarStyle}>	
+					<div style={rightsidebarStyle}>
 						<UserinputSidebar />
 					</div>
 				)
@@ -4592,7 +4604,7 @@ const AngularWorkflow = (props) => {
 			}
 		} else if (Object.getOwnPropertyNames(selectedEdge).length > 0) {
 			return(
-				<div style={rightsidebarStyle}>	
+				<div style={rightsidebarStyle}>
 					<EdgeSidebar />
 				</div>
 			)
@@ -4607,13 +4619,13 @@ const AngularWorkflow = (props) => {
 	// Too much work to move everything over alone, so won't touch it for now
 	//<Button style={{borderRadius: "0px"}} color="primary" variant="contained" onClick={() => {
 	//	executeWorkflowWebsocket()
-	//}}>Execute websocket</Button> 				
+	//}}>Execute websocket</Button>
 	//
-	
-	const leftView = leftViewOpen ? <div style={{minWidth: leftBarSize, maxWidth: leftBarSize, borderRight: "1px solid rgb(91, 96, 100)"}}>	
+
+	const leftView = leftViewOpen ? <div style={{minWidth: leftBarSize, maxWidth: leftBarSize, borderRight: "1px solid rgb(91, 96, 100)"}}>
 		<HandleLeftView />
-	</div> : 
-		<div style={{minWidth: leftBarSize, maxWidth: leftBarSize, borderRight: "1px solid rgb(91, 96, 100)"}}>	
+	</div> :
+		<div style={{minWidth: leftBarSize, maxWidth: leftBarSize, borderRight: "1px solid rgb(91, 96, 100)"}}>
 			<div style={{cursor: "pointer", height: 20, marginTop: 10, marginLeft: 10}} onClick={() => {
 					setLeftViewOpen(true)
 					setLeftBarSize(350)
@@ -4634,7 +4646,7 @@ const AngularWorkflow = (props) => {
 		backgroundColor: surfaceColor,
 		cursor: "pointer",
 		display: "flex",
-		minHeight: 40, 
+		minHeight: 40,
 		maxHeight: 40,
 	}
 
@@ -4654,15 +4666,15 @@ const AngularWorkflow = (props) => {
 
 		if (jsonvalid) {
 			return (
-				<ReactJson 
-						src={JSON.parse(showResult)} 
-						theme="solarized" 
+				<ReactJson
+						src={JSON.parse(showResult)}
+						theme="solarized"
 						collapsed={true}
 						displayDataTypes={false}
 						name={"Execution argument"}
 					/>
 			)
-		} 
+		}
 
 		return (
 			<div>
@@ -4699,17 +4711,17 @@ const AngularWorkflow = (props) => {
 		)
 	}
 
-	const executionModal = 
+	const executionModal =
 		<Drawer  anchor={"right"} open={executionModalOpen} onClose={() => setExecutionModalOpen(false)} PaperProps={{style: {minWidth: 375, maxWidth: 375, backgroundColor: "#1F2023", color: "white", fontSize: 18}}}>
 			{executionModalView === 0 ?
 			<div style={{padding: 25, }}>
 				<Breadcrumbs aria-label="breadcrumb" separator="›" style={{color: "white", fontSize: 16}}>
 					<h2 style={{color: "rgba(255,255,255,0.5)"}}>
 						<DirectionsRunIcon  style={{marginRight: 10}} />
-						All Executions	
+						All Executions
 					</h2>
-				</Breadcrumbs>	
-				<Button 
+				</Breadcrumbs>
+				<Button
 					style={{borderRadius: "0px"}}
 					onClick={() => {
 						getWorkflowExecution(props.match.params.key)
@@ -4718,7 +4730,7 @@ const AngularWorkflow = (props) => {
 					Refresh	executions
 				</Button>
 				<Divider style={{backgroundColor: "white", marginTop: 10, marginBottom: 10,}}/>
-				{workflowExecutions.length > 0 ? 
+				{workflowExecutions.length > 0 ?
 					<div>
 						{workflowExecutions.map(data => {
 							const statusColor = data.status === "FINISHED" ? "green" : data.status === "ABORTED" ? "red" : "orange"
@@ -4740,7 +4752,7 @@ const AngularWorkflow = (props) => {
 										<div style={{ marginTop: "auto", marginBottom: "auto", marginRight: 15, fontSize: 13, }}>
 											{timestamp}
 										</div>
-										{data.workflow.actions !== null ? 
+										{data.workflow.actions !== null ?
 											<Tooltip color="primary" title={resultsLength+" actions ran"} placement="top">
 												<div style={{marginRight: 10, marginTop: "auto", marginBottom: "auto",}}>
 													{resultsLength}/{data.workflow.actions.length}
@@ -4753,10 +4765,10 @@ const AngularWorkflow = (props) => {
 									</Tooltip>
 								</Paper>
 							)
-							return 
+							return
 						})}
 					</div>
-					: 
+					:
 					<div>
 						There are no executions yet
 					</div>
@@ -4767,11 +4779,11 @@ const AngularWorkflow = (props) => {
 				<Breadcrumbs aria-label="breadcrumb" separator="›" style={{color: "white", fontSize: 16}}>
 					<h2 style={{color: "rgba(255,255,255,0.5)", cursor: "pointer"}} onClick={() => {setExecutionModalView(0)}}>
 						<ArrowBackIcon style={{marginRight: 7, }} />
-						See other Executions	
+						See other Executions
 					</h2>
 				</Breadcrumbs>
 				<Divider style={{backgroundColor: "white", marginTop: 10, marginBottom: 10,}}/>
-					<h2>Executing Workflow</h2>	
+					<h2>Executing Workflow</h2>
 					<FormControlLabel
 						style={{color: "white", marginBottom: "0px", marginTop: "10px"}}
 						label=<div style={{color: "white"}}>Show failed / skipped actions</div>
@@ -4781,25 +4793,25 @@ const AngularWorkflow = (props) => {
 					/>
 					{executionData.status !== undefined && executionData.status.length > 0 ?
 						<div>
-							<b>Status: </b>{executionData.status} 
+							<b>Status: </b>{executionData.status}
 						</div>
 						: null
 					}
 					{executionData.started_at !== undefined ?
 						<div>
-							<b>Started: </b>{new Date(executionData.started_at*1000).toISOString()} 
+							<b>Started: </b>{new Date(executionData.started_at*1000).toISOString()}
 						</div>
 						: null
 					}
 					{executionData.completed_at !== undefined ?
 						<div>
-							<b>Finished: </b>{new Date(executionData.completed_at*1000).toISOString()} 
+							<b>Finished: </b>{new Date(executionData.completed_at*1000).toISOString()}
 						</div>
 						: null
 					}
 					{executionData.execution_source !== undefined && executionData.execution_source.length > 0 ?
 						<div>
-							<b>Source: </b>{executionData.execution_source} 
+							<b>Source: </b>{executionData.execution_source}
 						</div>
 						: null
 					}
@@ -4839,7 +4851,7 @@ const AngularWorkflow = (props) => {
 							const curapp = apps.find(a => a.name === data.action.app_name && a.app_version === data.action.app_version)
 							const imgsize = 50
 							const statusColor = data.status === "FINISHED" || data.status === "SUCCESS" ? "green" : data.status === "ABORTED" || data.status === "FAILURE" ? "red" : "orange"
-							const actionimg = curapp === null ? 
+							const actionimg = curapp === null ?
 								null :
 								<img alt={data.action.app_name} src={curapp.large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />
 
@@ -4850,14 +4862,14 @@ const AngularWorkflow = (props) => {
 										<span style={{fontSize: 24, marginTop: "auto", marginBottom: "auto"}}><b>{data.action.label}</b></span>
 									</div>
 									<div style={{marginBottom: 5}}><b>Status </b> {data.status}</div>
-									{jsonvalid ? <ReactJson 
-											src={JSON.parse(showResult)} 
-											theme="solarized" 
+									{jsonvalid ? <ReactJson
+											src={JSON.parse(showResult)}
+											theme="solarized"
 											collapsed={true}
 											displayDataTypes={false}
 											name={"Results for "+data.action.label}
 										/>
-									: 
+									:
 									<div>
 										<b>Result</b>&nbsp;
 										{data.result}
@@ -4870,16 +4882,16 @@ const AngularWorkflow = (props) => {
 				</div>
 			}
 			</Drawer>
-	
+
 	const newView = isLoggedIn ?
 		<div style={{color: "white"}}>
 			<div style={{display: "flex", borderTop: "1px solid rgba(91, 96, 100, 1)"}}>
 				{leftView}
-				<CytoscapeComponent 
-					elements={elements} 
+				<CytoscapeComponent
+					elements={elements}
 					minZoom={0.35}
 					maxZoom={2.00}
-					style={{width: bodyWidth-leftBarSize-15, height: bodyHeight-appBarSize-1, backgroundColor: surfaceColor}} 
+					style={{width: bodyWidth-leftBarSize-15, height: bodyHeight-appBarSize-1, backgroundColor: surfaceColor}}
 					stylesheet={cystyle}
 					boxSelectionEnabled={true}
 					autounselectify={false}
@@ -4895,15 +4907,15 @@ const AngularWorkflow = (props) => {
 			<RightSideBar />
 			<BottomCytoscapeBar />
 			<TopCytoscapeBar />
-		</div> 
-		: 
+		</div>
+		:
 		<div style={{color: "white"}}>
-			TMP FOR NOT LOGGED IN 
+			TMP FOR NOT LOGGED IN
 		</div>
 
-	const executionVariableModal = executionVariablesModalOpen ? 
-		<Dialog modal 
-			open={executionVariablesModalOpen} 
+	const executionVariableModal = executionVariablesModalOpen ?
+		<Dialog modal
+			open={executionVariablesModalOpen}
 			onClose={() => {
 				setNewVariableName("")
 				setExecutionVariablesModalOpen(false)
@@ -4935,7 +4947,7 @@ const AngularWorkflow = (props) => {
 					  />
 				</DialogContent>
 				<DialogActions>
-	        <Button 
+	        <Button
 						style={{borderRadius: "0px"}}
 						onClick={() => {
 							setNewVariableName("")
@@ -4955,11 +4967,11 @@ const AngularWorkflow = (props) => {
 						if (found !== -1) {
 							if (newVariableName.length > 0) {
 								workflow.execution_variables[found].name = newVariableName
-							} 
+							}
 						} else {
 							workflow.execution_variables.push({
-								"name": newVariableName,		
-								"description": "An execution variable",		
+								"name": newVariableName,
+								"description": "An execution variable",
 								"value": "",
 								"id": uuid.v4(),
 							})
@@ -4969,10 +4981,10 @@ const AngularWorkflow = (props) => {
 					setNewVariableName("")
 					setWorkflow(workflow)
 				}} color="primary">
-						Submit	
+						Submit
 					</Button>
 				</DialogActions>
-				{workflowExecutions.length > 0 ? 
+				{workflowExecutions.length > 0 ?
 					<DialogContent>
 						<Divider style={{backgroundColor: "white", marginTop: 15, marginBottom: 15,}}/>
 						<b style={{marginBottom: 10}}>Values from last 3 executions</b>
@@ -4998,10 +5010,10 @@ const AngularWorkflow = (props) => {
 			</FormControl>
 		</Dialog>
 		: null
-	
-	const variablesModal = variablesModalOpen ? 
-		<Dialog modal 
-			open={variablesModalOpen} 
+
+	const variablesModal = variablesModalOpen ?
+		<Dialog modal
+			open={variablesModalOpen}
 			onClose={() => {
 				setNewVariableName("")
 				setNewVariableDescription("")
@@ -5061,7 +5073,7 @@ const AngularWorkflow = (props) => {
 					  />
 				</DialogContent>
 				<DialogActions>
-	        <Button 
+	        <Button
 					style={{borderRadius: "0px"}}
 					onClick={() => {
 						setNewVariableName("")
@@ -5082,7 +5094,7 @@ const AngularWorkflow = (props) => {
 						if (found !== -1) {
 							if (newVariableName.length > 0) {
 								workflow.workflow_variables[found].name = newVariableName
-							} 
+							}
 							if (newVariableDescription.length > 0) {
 								workflow.workflow_variables[found].description = newVariableDescription
 							}
@@ -5091,8 +5103,8 @@ const AngularWorkflow = (props) => {
 							}
 						} else {
 							workflow.workflow_variables.push({
-								"name": newVariableName,		
-								"description": newVariableDescription,		
+								"name": newVariableName,
+								"description": newVariableDescription,
 								"value": newVariableValue,
 								"id": uuid.v4(),
 							})
@@ -5104,7 +5116,7 @@ const AngularWorkflow = (props) => {
 						setNewVariableDescription("")
 						setNewVariableValue("")
 					}} color="primary">
-	        	    	Submit	
+	        	    	Submit
 	        	  	</Button>
 				</DialogActions>
 			</FormControl>
@@ -5119,7 +5131,7 @@ const AngularWorkflow = (props) => {
 			return null
 		}
 
-		if (selectedApp.authentication.parameters.length === undefined || 
+		if (selectedApp.authentication.parameters.length === undefined ||
 		selectedApp.authentication.parameters.length === 0) {
 			return null
 		}
@@ -5131,18 +5143,18 @@ const AngularWorkflow = (props) => {
 			return <div>
 				Insert your API token for {selectedApp.name}
 				<TextField
-					style={{backgroundColor: inputColor}} 
+					style={{backgroundColor: inputColor}}
 					InputProps={{
 						style:{
 							color: "white",
-							height: "50px", 
+							height: "50px",
 							fontSize: "1em",
 						},
 					}}
 					fullWidth
 					type="password"
 					color="primary"
-					placeholder="Bearer token" 
+					placeholder="Bearer token"
 					onChange={(event) => {
 						setTmpVar(event.target.value)
 					}}
@@ -5168,11 +5180,11 @@ const AngularWorkflow = (props) => {
 			<div>
 				The API endpoint to use (URL) - leave this if you're unsure
 				<TextField
-					style={{backgroundColor: inputColor}} 
+					style={{backgroundColor: inputColor}}
 					InputProps={{
 						style:{
 							color: "white",
-							height: "50px", 
+							height: "50px",
 							fontSize: "1em",
 						},
 					}}
@@ -5180,7 +5192,7 @@ const AngularWorkflow = (props) => {
 					type="text"
 					color="primary"
 					disabled={true}
-					placeholder="Bearer token" 
+					placeholder="Bearer token"
 					defaultValue={selectedApp.link}
 					onChange={(event) => {
 						setTmpVar(event.target.value)
@@ -5196,9 +5208,9 @@ const AngularWorkflow = (props) => {
 	}
 
 	// This whole part is redundant. Made it part of Arguments instead.
-	const authenticationModal = authenticationModalOpen ? 
-		<Dialog modal 
-			open={authenticationModalOpen} 
+	const authenticationModal = authenticationModalOpen ?
+		<Dialog modal
+			open={authenticationModalOpen}
 			onClose={() => {
 				setAuthenticationModalOpen(false)
 				setAppAuthentication({})
@@ -5220,7 +5232,7 @@ const AngularWorkflow = (props) => {
 				<AuthenticationData />
 			</DialogContent>
 			<DialogActions>
-			<Button 
+			<Button
 				style={{borderRadius: "0px"}}
 				onClick={() => {
 					setAuthenticationModalOpen(false)
@@ -5228,16 +5240,16 @@ const AngularWorkflow = (props) => {
 					Cancel
 				</Button>
 				<Button style={{borderRadius: "0px"}} onClick={() => {setAuthenticationModalOpen(false)}} color="primary">
-					Submit	
+					Submit
 				</Button>
 			</DialogActions>
 		</Dialog> : null
 
-	const loadedCheck = isLoaded && isLoggedIn && workflowDone ? 
+	const loadedCheck = isLoaded && isLoggedIn && workflowDone ?
 		<div>
 			{newView}
 			{variablesModal}
-			{executionVariableModal} 
+			{executionVariableModal}
 			{conditionsModal}
 			{authenticationModal}
 		</div>
@@ -5247,14 +5259,14 @@ const AngularWorkflow = (props) => {
 
 
 	return (
-		<div>	
+		<div>
 		  <Prompt
 				when={!lastSaved}
 				message={unloadText}
 			/>
 			{loadedCheck}
-		</div>	
+		</div>
 	)
 }
 
-export default AngularWorkflow 
+export default AngularWorkflow

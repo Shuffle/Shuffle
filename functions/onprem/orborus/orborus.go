@@ -29,6 +29,7 @@ var baseUrl = os.Getenv("BASE_URL")
 var baseimagename = "frikky/shuffle"
 
 var dockerApiVersion = os.Getenv("DOCKER_API_VERSION")
+var sysApiKey = os.Getenv("SYS_API_KEY")
 var environment = os.Getenv("ENVIRONMENT_NAME")
 var orgId = os.Getenv("ORG_ID")
 
@@ -366,6 +367,10 @@ func main() {
 
 			if dockerApiVersion != "" {
 				env = append(env, fmt.Sprintf("DOCKER_API_VERSION=%s", dockerApiVersion))
+			}
+
+			if sysApiKey != "" {
+				env = append(env, fmt.Sprintf("SYS_API_KEY=%s", sysApiKey))
 			}
 
 			go deployWorker(workerImage, containerName, env)

@@ -153,11 +153,17 @@ type UserAuthField struct {
 	Value string `json:"value" datastore:"value"`
 }
 
+type EnvironmentValues struct {
+	Name   string `json:"name" datastore:"name"`
+	Value  string `json:"value" datastore:"value"`
+}
+
 // Not environment, but execution environment
 type Environment struct {
 	Name       string `datastore:"name"`
 	Type       string `datastore:"type"`
 	Registered bool   `datastore:"registered"`
+	Values		 []EnvironmentValues `datastore:"values"`
 }
 
 type User struct {
@@ -4203,7 +4209,7 @@ Please contact us at shuffler.io or frikky@shuffler.io if there is an issue with
 
 		parsedBody = fmt.Sprintf(`
 Action required!
-			
+
 %s
 
 If this is TRUE click this: %s
@@ -6260,9 +6266,17 @@ func runInit(ctx context.Context) {
 	log.Printf("Setting up environments")
 	count, err := getEnvironmentCount()
 	if count == 0 && err == nil {
+		// form default environment's name
+		environmentName := os.Getenv("ENVIRONMENT_NAME")
+		if environmentName == "" {
+			environmentName = "Shuffle"
+		}
+		log.Printf("Default environment name: %s", environmentName)
+
 		item := Environment{
-			Name: "Shuffle",
+			Name: environmentName,
 			Type: "onprem",
+			Values: []EnvironmentValues{{Name: "TEST_ENV", Value: "test"}},
 		}
 
 		err = setEnvironment(ctx, &item)
@@ -6346,12 +6360,12 @@ func runInit(ctx context.Context) {
 
 		// FIXME: Get all the apps?
 		iterateAppGithubFolders(fs, dir, "", "")
+	}
 
-		// Hotloads locally
-		location := os.Getenv("APP_HOTLOAD_FOLDER")
-		if len(location) != 0 {
-			handleAppHotload(location)
-		}
+	// Hotloads locally
+	location := os.Getenv("APP_HOTLOAD_FOLDER")
+	if len(location) != 0 {
+		handleAppHotload(location)
 	}
 
 	log.Printf("Downloading OpenAPI data for search - EXTRA APPS")

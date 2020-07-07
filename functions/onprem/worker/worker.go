@@ -209,6 +209,7 @@ type WorkflowAppActionParameter struct {
 	ID          string `json:"id" datastore:"id"`
 	Name        string `json:"name" datastore:"name"`
 	Value       string `json:"value" datastore:"value"`
+	Src         string `json:"src" datastore:"src"`
 	ActionField string `json:"action_field" datastore:"action_field"`
 	Variant     string `json:"variant", datastore:"variant"`
 	Required    bool   `json:"required" datastore:"required"`
@@ -790,7 +791,7 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 			env := []string{
 				fmt.Sprintf("ACTION=%s", string(actionData)),
 				fmt.Sprintf("EXECUTIONID=%s", workflowExecution.ExecutionId),
-				fmt.Sprintf("FUNCTION_APIKEY=%s", "asdasd"),
+				fmt.Sprintf("FUNCTION_APIKEY=%s", os.Getenv("SYS_API_KEY")),
 				fmt.Sprintf("AUTHORIZATION=%s", workflowExecution.Authorization),
 				fmt.Sprintf("CALLBACK_URL=%s", baseUrl),
 			}

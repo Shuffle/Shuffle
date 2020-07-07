@@ -19,17 +19,18 @@ services:
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
     # Here for debugging:
-    ports: 
+    ports:
       - "${BACKEND_PORT}:5001"
     networks:
       - shuffle
-    volumes: 
-      - /var/run/docker.sock:/var/run/docker.sock 
-      - ${APP_HOTLOAD_LOCATION}:/shuffle-apps     
-    environment: 
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${APP_HOTLOAD_LOCATION}:/shuffle-apps
+    environment:
       - DATASTORE_EMULATOR_HOST=shuffle-database:8000
       - APP_HOTLOAD_FOLDER=/shuffle-apps
       - ORG_ID=${ORG_ID}
+      - ENVIRONMENT_NAME=${SHUFFLE_ENVIRONMENT_NAME}
       - APP_DOWNLOAD_LOCATION=${APP_DOWNLOAD_LOCATION}
       - SHUFFLE_DEFAULT_USERNAME=${SHUFFLE_DEFAULT_USERNAME}
       - SHUFFLE_DEFAULT_PASSWORD=${SHUFFLE_DEFAULT_PASSWORD}
@@ -46,8 +47,8 @@ services:
     hostname: shuffle-orborus
     networks:
       - shuffle
-    volumes: 
-      - /var/run/docker.sock:/var/run/docker.sock 
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - ORG_ID=${ORG_ID}
       - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
@@ -56,6 +57,7 @@ services:
       - HTTP_PROXY=${SHUFFLE_HTTP_PROXY}
       - HTTPS_PROXY=${SHUFFLE_HTTPS_PROXY}
       - SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
+      - SYS_API_KEY=${SHUFFLE_DEFAULT_APIKEY}
     restart: unless-stopped
   database:
     #build: ./backend/database

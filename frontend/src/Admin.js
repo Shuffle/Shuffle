@@ -13,6 +13,10 @@ import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
 import ListItemText from '@material-ui/core/ListItemText';
 import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
+import Grid from '@material-ui/core/Grid';
+import IconButton from '@material-ui/core/IconButton';
+import DeleteIcon from '@material-ui/icons/Delete';
+import AddCircleIcon from '@material-ui/icons/AddCircle';
 
 import { useAlert } from "react-alert";
 
@@ -25,7 +29,7 @@ import DialogContent from '@material-ui/core/DialogContent';
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
 const Admin = (props) => {
-  const { globalUrl, } = props;
+	const { globalUrl, } = props;
 	const [firstRequest, setFirstRequest] = React.useState(true);
 	const [modalUser, setModalUser] = React.useState({});
 	const [modalOpen, setModalOpen] = React.useState(false);
@@ -37,6 +41,7 @@ const Admin = (props) => {
 	const [selectedUser, setSelectedUser] = React.useState({})
 	const [newPassword, setNewPassword] = React.useState("");
 	const [selectedUserModalOpen, setSelectedUserModalOpen] = React.useState(false)
+	const [currentEditableEnvironment, setCurrentEditableEnvironment] = React.useState(null)
 
 	const alert = useAlert()
 
@@ -49,7 +54,7 @@ const Admin = (props) => {
 		console.log("URL: ", url)
 		fetch(url, {
 			method: 'DELETE',
-	  	credentials: "include",
+			credentials: "include",
 			headers: {
 				'Content-Type': 'application/json',
 			},
@@ -103,7 +108,7 @@ const Admin = (props) => {
 		const url = globalUrl+'/api/v1/users/'+data.id
 		fetch(url, {
 			method: 'DELETE',
-	  	credentials: "include",
+			credentials: "include",
 			headers: {
 				'Content-Type': 'application/json',
 			},
@@ -115,7 +120,7 @@ const Admin = (props) => {
 
 			return response.json()
 		})
-    .then((responseJson) => {
+		.then((responseJson) => {
 			if (!responseJson.success && responseJson.reason !== undefined) {
 				alert.error("Failed to deactivate user: "+responseJson.reason)
 			} else {
@@ -138,7 +143,7 @@ const Admin = (props) => {
 		const url = baseurl+'/api/v1/users/register';
 		fetch(url, {
 			method: 'POST',
-	  	credentials: "include",
+			credentials: "include",
 			body: JSON.stringify(data),
 			headers: {
 				'Content-Type': 'application/json',
@@ -171,61 +176,225 @@ const Admin = (props) => {
 			newEnv.push(environments[key])
 		}
 
-		// Just use this one?
-		const url = globalUrl+'/api/v1/setenvironments';
-		fetch(url, {
-			method: 'PUT',
-	  	credentials: "include",
-			body: JSON.stringify(newEnv),
-			headers: {
-				'Content-Type': 'application/json',
-			},
-		})
-		.then(response =>
-			response.json().then(responseJson => {
-				if (responseJson["success"] === false) {
-					alert.error(responseJson.reason)
-				} else {
-					setLoginInfo("")
-					setModalOpen(false)
-					getEnvironments()
-				}
-			}),
-		)
-		//.catch(error => {
-		//	console.log("Error in userdata: ", error)
-		//});
+		// send request to server
+		saveEnvironment(
+			newEnv,
+			reason => alert.error(reason)
+		);
 	}
+
+	// handle click on "Values" to edit values for environment
+	const valuesEnvironment = name => {
+		if (name === currentEditableEnvironment) {
+			setCurrentEditableEnvironment(null);
+		} else {
+			setCurrentEditableEnvironment(name);
+		}
+	};
+
+	// common method to edit values for current environment
+	const editCurrentEnvironment = modifyItem => {
+			setEnvironments(environments => {
+				// find index of current edited environment
+				const environmentIdx = environments.findIndex(environment => environment.Name === currentEditableEnvironment);
+				if (environmentIdx > -1) {
+					// form new array with replacing item with our edited
+					const clonedEnvironmentItem = { ...environments[environmentIdx] };
+					modifyItem(clonedEnvironmentItem);
+
+					// form environments with modified item
+					return [
+						...environments.slice(0, environmentIdx),
+						clonedEnvironmentItem,
+						...environments.slice(environmentIdx + 1)
+					];
+				} else {
+					return environments;
+				}
+			});
+	};
+
+	// handle adding of new environment value
+	const onAddEnvironmentValues = () => {
+		editCurrentEnvironment(newItem => {
+			newItem.Values.push({
+				name: '',
+				value: ''
+			});
+		});
+	};
+
+	// handle changing of name
+	const onChangeEnvironment = (changeIdx, rowName, newValue) => {
+		editCurrentEnvironment(newItem => {
+			newItem.Values = [
+				...newItem.Values.slice(0, changeIdx),
+				{
+					...newItem.Values[changeIdx],
+					[rowName]: newValue
+				},
+				...newItem.Values.slice(changeIdx + 1),
+			];
+		});
+	};
+
+	// handle deleting environment row
+	const onDeleteEnvironmentValue = deleteIdx => {
+		editCurrentEnvironment(newItem => {
+			newItem.Values = [
+				...newItem.Values.slice(0, deleteIdx),
+				...newItem.Values.slice(deleteIdx + 1),
+			];
+		});
+	};
+
+	// handle saving of environment values
+	const onSaveEnvironmentValues = () => {
+			// send request to server
+			saveEnvironment(
+				environments,
+				reason => alert.error(reason)
+			);
+	};
+
+	// view for environment values list
+	let environmentValuesView;
+	if (currentEditableEnvironment) {
+		const environment = environments.find(environment => environment.Name === currentEditableEnvironment);
+		environmentValuesView = (
+			<ListItem>
+				<Grid
+					container
+					direction="column"
+					spacing={1}
+					justify="flex-start"
+				>
+					{environment?.Values.map((environmentValue, idx) => (
+							<Grid item xs={8} key={idx}>
+								<Grid
+									container
+									direction="row"
+									spacing={1}
+								>
+									<Grid item xs={5}>
+										<TextField
+											color="primary"
+											style={{backgroundColor: inputColor}}
+											InputProps={{
+												style:{
+													color: "white"
+												},
+											}}
+											variant="outlined"
+											placeholder="SHUFFLE_ENV_ES_URL"
+											value={environmentValue.name}
+											onChange={e => onChangeEnvironment(idx, 'name', e.target.value)}
+											fullWidth
+										/>
+									</Grid>
+									<Grid item xs={5}>
+										<TextField
+											color="primary"
+											style={{backgroundColor: inputColor}}
+											InputProps={{
+												style:{
+													color: "white"
+												},
+											}}
+											variant="outlined"
+											placeholder=""
+											value={environmentValue.value}
+											onChange={e => onChangeEnvironment(idx, 'value', e.target.value)}
+											fullWidth
+										/>
+									</Grid>
+									<Grid item xs={2}>
+										<IconButton onClick={() => onDeleteEnvironmentValue(idx)}>
+											<DeleteIcon
+												size="small"
+												color="primary"
+											/>
+										</IconButton>
+									</Grid>
+								</Grid>
+							</Grid>
+						)
+					)}
+					<Grid item xs={8}>
+						<Grid item xs={10}>
+							<Button
+								variant="outlined"
+								color="primary"
+								onClick={() => onAddEnvironmentValues()}
+								fullWidth
+							>
+								Add New Value
+							</Button>
+						</Grid>
+						<Grid item xs={10}>
+							<Button
+								style={{marginTop: 5}}
+								variant="outlined"
+								color="primary"
+								onClick={() => onSaveEnvironmentValues()}
+								fullWidth
+							>
+								Save Environment Values
+							</Button>
+						</Grid>
+					</Grid>
+				</Grid>
+			</ListItem>
+		);
+	}
+
+	// send request to server to store environment
+	const saveEnvironment = (data, onError) => {
+			const url = globalUrl+'/api/v1/setenvironments';
+			fetch(url, {
+				method: 'PUT',
+				credentials: "include",
+			  body: JSON.stringify(data),
+				headers: {
+					'Content-Type': 'application/json',
+				},
+			})
+			.then(response =>
+				response.json().then(responseJson => {
+					if (responseJson["success"] === false) {
+						onError(responseJson.reason);
+					} else {
+						alert.success("Changes have been saved");
+						setLoginInfo("");
+						setModalOpen(false);
+						getEnvironments();
+					}
+				}),
+			)
+			.catch(e => {
+				console.log(e)
+				alert.error(e.toString())
+			});
+	};
 
 	const submitEnvironment = (data) => {
 		// FIXME - add some check here ROFL
-		environments.push({"name": data.environment, "type": "onprem"})
-
-		// Just use this one?
-		var baseurl = globalUrl
-		const url = baseurl+'/api/v1/setenvironments';
-		fetch(url, {
-			method: 'PUT',
-	  	credentials: "include",
-			body: JSON.stringify(environments),
-			headers: {
-				'Content-Type': 'application/json',
-			},
-		})
-		.then(response =>
-			response.json().then(responseJson => {
-				if (responseJson["success"] === false) {
-					setLoginInfo("Error in input: "+responseJson.reason)
-				} else {
-					setLoginInfo("")
-					setModalOpen(false)
-					getEnvironments()
+		environments.push({
+			"name": data.environment,
+			"type": "onprem",
+			"values": [
+				{
+					name: "TEST_ENV",
+					value: "test"
 				}
-			}),
-		)
-		.catch(error => {
-			console.log("Error in userdata: ", error)
-		});
+			]
+		})
+
+		// send request to server
+		saveEnvironment(
+			environments,
+			reason => setLoginInfo(`Error in input: ${reason}`)
+		);
 	}
 
 	const getSchedules = () => {
@@ -236,7 +405,7 @@ const Admin = (props) => {
 				'Accept': 'application/json',
 			},
 			credentials: "include",
-    })
+		})
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for apps :O!")
@@ -245,7 +414,7 @@ const Admin = (props) => {
 
 			return response.json()
 		})
-    .then((responseJson) => {
+		.then((responseJson) => {
 			setSchedules(responseJson)
 		})
 		.catch(error => {
@@ -261,7 +430,7 @@ const Admin = (props) => {
 				'Accept': 'application/json',
 			},
 			credentials: "include",
-    })
+		})
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for apps :O!")
@@ -270,7 +439,12 @@ const Admin = (props) => {
 
 			return response.json()
 		})
-    .then((responseJson) => {
+		.then((responseJson) => {
+			responseJson.map(environment => {
+				if (environment.Values === null) {
+					environment.Values = [];
+				}
+			});
 			setEnvironments(responseJson)
 		})
 		.catch(error => {
@@ -285,8 +459,8 @@ const Admin = (props) => {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json',
 				},
-	  			credentials: "include",
-    		})
+					credentials: "include",
+				})
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for apps :O!")
@@ -295,7 +469,7 @@ const Admin = (props) => {
 
 			return response.json()
 		})
-    .then((responseJson) => {
+		.then((responseJson) => {
 			console.log(responseJson)
 			setUsers(responseJson)
 		})
@@ -307,6 +481,7 @@ const Admin = (props) => {
 	if (firstRequest) {
 		setFirstRequest(false)
 		getUsers()
+				getEnvironments()
 	}
 
 	const paperStyle = {
@@ -314,7 +489,7 @@ const Admin = (props) => {
 		margin: "auto",
 		color: "white",
 		backgroundColor: surfaceColor,
-		marginBottom: 10, 
+		marginBottom: 10,
 		padding: 20,
 	}
 
@@ -345,15 +520,15 @@ const Admin = (props) => {
 
 			return response.json()
 		})
-  	.then((responseJson) => {
+		.then((responseJson) => {
 			if (!responseJson.success && responseJson.reason !== undefined) {
 				alert.error("Failed setting user: "+responseJson.reason)
 			} else {
 				alert.success("Set the user field "+field+" to "+value)
 			}
-    })
+		})
 		.catch(error => {
-    		console.log(error)
+				console.log(error)
 		});
 	}
 
@@ -380,21 +555,21 @@ const Admin = (props) => {
 
 			return response.json()
 		})
-  	.then((responseJson) => {
+		.then((responseJson) => {
 			console.log("RESP: ", responseJson)
 			if (!responseJson.success && responseJson.reason !== undefined) {
 				alert.error("Failed getting new: "+responseJson.reason)
 			} else {
 				alert.success("Got new API key")
 			}
-    })
+		})
 		.catch(error => {
-    		console.log(error)
+				console.log(error)
 		});
 	}
 
-	const editUserModal = 
-		<Dialog modal 
+	const editUserModal =
+		<Dialog modal
 			open={selectedUserModalOpen}
 			onClose={() => {setSelectedUserModalOpen(false)}}
 			PaperProps={{
@@ -413,7 +588,7 @@ const Admin = (props) => {
 						style={{backgroundColor: inputColor, flex: 3}}
 						InputProps={{
 							style:{
-								height: 50, 
+								height: 50,
 								color: "white",
 							},
 						}}
@@ -428,26 +603,26 @@ const Admin = (props) => {
 						variant="outlined"
 						onChange={e => setNewPassword(e.target.value)}
 					/>
-					<Button 
+					<Button
 						style={{maxHeight: 50, flex: 1}}
 						variant="outlined"
 						color="primary"
 						onClick={() => onPasswordChange()}
 					>
-						Submit 
+						Submit
 					</Button>
 				</div>
 				<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
-				<Button 
-					style={{}} 
+				<Button
+					style={{}}
 					variant="outlined"
 					color="primary"
 					onClick={() => deleteUser(selectedUser)}
 				>
-					{selectedUser.active ? "Deactivate" : "Activate"}	
+					{selectedUser.active ? "Deactivate" : "Activate"}
 				</Button>
-				<Button 
-					style={{}} 
+				<Button
+					style={{}}
 					variant="outlined"
 					color="primary"
 					onClick={() => generateApikey(selectedUser.id)}
@@ -457,8 +632,8 @@ const Admin = (props) => {
 			</DialogContent>
 		</Dialog>
 
-	const modalView = 
-		<Dialog modal 
+	const modalView =
+		<Dialog modal
 			open={modalOpen}
 			onClose={() => {setModalOpen(false)}}
 			PaperProps={{
@@ -472,7 +647,7 @@ const Admin = (props) => {
 		>
 			<DialogTitle><span style={{color: "white"}}>Add user</span></DialogTitle>
 			<DialogContent>
-				{curTab === 0 ? 
+				{curTab === 0 ?
 					<div>
 						Username
 						<TextField
@@ -481,7 +656,7 @@ const Admin = (props) => {
 							autoFocus
 							InputProps={{
 								style:{
-									height: "50px", 
+									height: "50px",
 									color: "white",
 									fontSize: "1em",
 								},
@@ -495,13 +670,13 @@ const Admin = (props) => {
 							variant="outlined"
 							onChange={(event) => changeModalData("Username", event.target.value)}
 						/>
-						Password	
+						Password
 						<TextField
 							color="primary"
 							style={{backgroundColor: inputColor}}
 							InputProps={{
 								style:{
-									height: "50px", 
+									height: "50px",
 									color: "white",
 									fontSize: "1em",
 								},
@@ -519,14 +694,14 @@ const Admin = (props) => {
 					</div>
 				: curTab === 1 ?
 				<div>
-					Environment Name	
+					Environment Name
 					<TextField
 						color="primary"
 						style={{backgroundColor: inputColor}}
 						autoFocus
 						InputProps={{
 							style:{
-								height: "50px", 
+								height: "50px",
 								color: "white",
 								fontSize: "1em",
 							},
@@ -554,23 +729,23 @@ const Admin = (props) => {
 						submitEnvironment(modalUser)
 					}
 				}} color="primary">
-					Submit	
+					Submit
 				</Button>
 			</DialogActions>
 		</Dialog>
 
 	const usersView = curTab === 0 ?
 		<div>
-			<h2>	
+			<h2>
 				User management
 			</h2>
-			<Button 
-				style={{}} 
+			<Button
+				style={{}}
 				variant="contained"
 				color="primary"
 				onClick={() => setModalOpen(true)}
-			> 
-				Add user	
+			>
+				Add user
 			</Button>
 			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
 			<List>
@@ -641,8 +816,8 @@ const Admin = (props) => {
 								style={{minWidth: 180, maxWidth: 180}}
 							/>
 							<ListItemText style={{display: "flex"}}>
-								<Button 
-									style={{}} 
+								<Button
+									style={{}}
 									variant="outlined"
 									color="primary"
 									onClick={() => {
@@ -662,8 +837,8 @@ const Admin = (props) => {
 
 	const schedulesView = curTab === 2 ?
 		<div>
-			<h2>	
-				Schedules	
+			<h2>
+				Schedules
 			</h2>
 			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
 			<List>
@@ -692,13 +867,13 @@ const Admin = (props) => {
 								style={{maxWidth: 400, overflow: "hidden"}}
 							/>
 							<ListItemText>
-								<Button 
-									style={{}} 
+								<Button
+									style={{}}
 									variant="contained"
 									color="primary"
 									onClick={() => deleteSchedule(schedule)}
 								>
-									Delete	
+									Delete
 								</Button>
 							</ListItemText>
 						</ListItem>
@@ -710,25 +885,29 @@ const Admin = (props) => {
 
 	const environmentView = curTab === 1 ?
 		<div>
-			<h2>	
-				Environments	
+			<h2>
+				Environments
 			</h2>
-			<Button 
-				style={{}} 
+			<Button
+				style={{}}
 				variant="contained"
 				color="primary"
 				onClick={() => setModalOpen(true)}
-			> 
-				Add environment 
+			>
+				Add environment
 			</Button>
 			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
 			<List>
-				{environments === undefined ? null : environments.map(environment => {
+				{environments === undefined ? null : environments.map((environment, idx) => {
 					return (
-						<ListItem>
-							<Button type="outlined" style={{borderRadius: "0px"}} onClick={() => deleteEnvironment(environment.Name)} color="primary">Delete</Button>
-							- {environment.Name}
-						</ListItem>
+						<React.Fragment key={idx}>
+							<ListItem>
+								<Button type="outlined" style={{borderRadius: "0px"}} onClick={() => valuesEnvironment(environment.Name)} color="primary">Values</Button>
+								<Button type="outlined" style={{borderRadius: "0px"}} onClick={() => deleteEnvironment(environment.Name)} color="primary">Delete</Button>
+								- {environment.Name}
+							</ListItem>
+							{environment.Name === currentEditableEnvironment ? environmentValuesView : null}
+						</React.Fragment>
 					)
 				})}
 			</List>
@@ -746,7 +925,7 @@ const Admin = (props) => {
 		setCurTab(newValue)
 	}
 
-	const data = 
+	const data =
 		<div style={{minWidth: 1366, margin: "auto"}}>
 			<Paper style={paperStyle}>
 				<Tabs
@@ -761,7 +940,7 @@ const Admin = (props) => {
 					<Tab label="Schedules"/>
 				</Tabs>
 				<div style={{marginBottom: 10}}/>
-				{usersView}	
+				{usersView}
 				{environmentView}
 				{schedulesView}
 			</Paper>
@@ -776,4 +955,4 @@ const Admin = (props) => {
 	)
 }
 
-export default Admin 
+export default Admin

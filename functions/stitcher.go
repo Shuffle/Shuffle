@@ -32,6 +32,7 @@ type WorkflowAppActionParameter struct {
 	Name        string `json:"name" datastore:"name"`
 	Example     string `json:"example" datastore:"example"`
 	Value       string `json:"value" datastore:"value"`
+	Src         string `json:"src" datastore:"src"`
 	Multiline   bool   `json:"multiline" datastore:"multiline"`
 	ActionField string `json:"action_field" datastore:"action_field"`
 	Variant     string `json:"variant", datastore:"variant"`
@@ -101,15 +102,15 @@ func getRunner(classname string) string {
 	return fmt.Sprintf(`
 # Run the actual thing after we've checked params
 def run(request):
-    action = request.get_json() 
+    action = request.get_json()
     print(action)
     print(type(action))
     authorization_key = action.get("authorization")
     current_execution_id = action.get("execution_id")
-	
+
     if action and "name" in action and "app_name" in action:
         asyncio.run(%s.run(action), debug=True)
-        return f'Attempting to execute function {action["name"]} in app {action["app_name"]}' 
+        return f'Attempting to execute function {action["name"]} in app {action["app_name"]}'
     else:
         return f'Invalid action'
 

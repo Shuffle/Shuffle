@@ -110,6 +110,7 @@ type WorkflowAppActionParameter struct {
 	Name        string           `json:"name" datastore:"name" yaml:"name"`
 	Example     string           `json:"example" datastore:"example" yaml:"example"`
 	Value       string           `json:"value" datastore:"value" yaml:"value,omitempty"`
+	Src         string           `json:"src" datastore:"src" yaml:"src"`
 	Multiline   bool             `json:"multiline" datastore:"multiline" yaml:"multiline"`
 	ActionField string           `json:"action_field" datastore:"action_field" yaml:"actionfield,omitempty"`
 	Variant     string           `json:"variant" datastore:"variant" yaml:"variant,omitempty"`
@@ -1687,7 +1688,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 					if actionParam.Name == param.Name {
 						found = true
 
-						if actionParam.Value == "" && actionParam.Variant == "STATIC_VALUE" && actionParam.Required == true {
+						if actionParam.Value == "" && actionParam.Variant == "STATIC_VALUE" && actionParam.Required == true && actionParam.Src == "" {
 							log.Printf("Appaction %s with required param '%s' is empty.", action.Name, param.Name)
 							resp.WriteHeader(401)
 							resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Appaction %s with required param '%s' is empty."}`, action.Name, param.Name)))
