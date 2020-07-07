@@ -6157,6 +6157,10 @@ func runInit(ctx context.Context) {
 	if len(httpProxy) > 0 {
 		log.Printf("Running with HTTP proxy %s (env: HTTP_PROXY)", httpProxy)
 	}
+	httpsProxy := os.Getenv("HTTPS_PROXY")
+	if len(httpsProxy) > 0 {
+		log.Printf("Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
+	}
 
 	/*
 			proxyUrl, err := url.Parse(httpProxy)

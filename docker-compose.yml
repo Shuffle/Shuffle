@@ -34,6 +34,8 @@ services:
       - SHUFFLE_DEFAULT_USERNAME=${SHUFFLE_DEFAULT_USERNAME}
       - SHUFFLE_DEFAULT_PASSWORD=${SHUFFLE_DEFAULT_PASSWORD}
       - SHUFFLE_DEFAULT_APIKEY=${SHUFFLE_DEFAULT_APIKEY}
+      - HTTP_PROXY=${SHUFFLE_HTTP_PROXY}
+      - HTTPS_PROXY=${SHUFFLE_HTTPS_PROXY}
     restart: unless-stopped
     depends_on:
       - database
@@ -51,6 +53,9 @@ services:
       - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
       - BASE_URL=http://${OUTER_HOSTNAME}:${BACKEND_PORT}
       - DOCKER_API_VERSION=1.40
+      - HTTP_PROXY=${SHUFFLE_HTTP_PROXY}
+      - HTTPS_PROXY=${SHUFFLE_HTTPS_PROXY}
+      - SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
     restart: unless-stopped
   database:
     #build: ./backend/database

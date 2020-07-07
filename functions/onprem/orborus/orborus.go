@@ -52,8 +52,19 @@ type ExecutionRequest struct {
 	Type              string `json:"type"`
 }
 
+var dockercli *dockerclient.Client
+
+func init() {
+	var err error
+
+	dockercli, err = dockerclient.NewEnvClient()
+	if err != nil {
+		panic(fmt.Sprintf("Unable to create docker client: %s", err))
+	}
+}
+
 // Deploys the internal worker whenever something happens
-func deployWorker(cli *dockerclient.Client, image string, identifier string, env []string) {
+func deployWorker(image string, identifier string, env []string) {
 	// Binds is the actual "-v" volume.
 	hostConfig := &container.HostConfig{
 		LogConfig: container.LogConfig{
@@ -82,7 +93,7 @@ func deployWorker(cli *dockerclient.Client, image string, identifier string, env
 			},
 		}
 	} else {
-		//log.Printf("Bad config: %s. Using default.", baseUrl)
+		// USE PROXY
 	}
 
 	//test := &network.EndpointSettings{
@@ -91,7 +102,7 @@ func deployWorker(cli *dockerclient.Client, image string, identifier string, env
 	//NetworkID
 	//if connect.EndpointConfig.NetworkID != "NetworkID" {
 
-	cont, err := cli.ContainerCreate(
+	cont, err := dockercli.ContainerCreate(
 		context.Background(),
 		config,
 		hostConfig,
@@ -105,7 +116,7 @@ func deployWorker(cli *dockerclient.Client, image string, identifier string, env
 		return
 	}
 
-	err = cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
+	err = dockercli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
 	if err != nil {
 		log.Printf("Failed to start container in environment %s: %s", environment, err)
 		return
@@ -141,17 +152,11 @@ func deployWorker(cli *dockerclient.Client, image string, identifier string, env
 func stopWorker(containername string) error {
 	ctx := context.Background()
 
-	cli, err := dockerclient.NewEnvClient()
-	if err != nil {
-		log.Println("Unable to create docker client")
-		return err
-	}
-
 	//	containers, err := cli.ContainerList(ctx, types.ContainerListOptions{
 	//		All: true,
 	//	})
 
-	if err := cli.ContainerStop(ctx, containername, nil); err != nil {
+	if err := dockercli.ContainerStop(ctx, containername, nil); err != nil {
 		log.Printf("Unable to stop container %s - running removal anyway, just in case: %s", containername, err)
 	}
 
@@ -160,14 +165,14 @@ func stopWorker(containername string) error {
 		Force:         true,
 	}
 
-	if err := cli.ContainerRemove(ctx, containername, removeOptions); err != nil {
+	if err := dockercli.ContainerRemove(ctx, containername, removeOptions); err != nil {
 		log.Printf("Unable to remove container: %s", err)
 	}
 
 	return nil
 }
 
-func initializeImages(dockercli *dockerclient.Client) {
+func initializeImages() {
 	ctx := context.Background()
 
 	// check whether theyre the same first
@@ -209,6 +214,8 @@ func main() {
 	}
 
 	log.Printf("Running towards %s with Org %s", baseUrl, orgId)
+	httpProxy := os.Getenv("HTTP_PROXY")
+	httpsProxy := os.Getenv("HTTPS_PROXY")
 
 	if environment == "" {
 		environment = "onprem"
@@ -217,14 +224,8 @@ func main() {
 
 	// FIXME - during init, BUILD and/or LOAD worker and app_sdk
 	// Build/load app_sdk so it can be loaded as 127.0.0.1:5000/walkoff_app_sdk
-	dockercli, err := dockerclient.NewEnvClient()
-	if err != nil {
-		fmt.Println("Unable to create docker client")
-		os.Exit(3)
-	}
-
 	log.Printf("--- Setting up Docker environment. Downloading worker and App SDK! ---")
-	initializeImages(dockercli)
+	initializeImages()
 
 	//workerName := "worker"
 	//workerVersion := "0.1.0"
@@ -234,7 +235,22 @@ func main() {
 	log.Printf("--- Finished configuring docker environment ---\n")
 
 	// FIXME - time limit
-	client := &http.Client{}
+	client := &http.Client{
+		Transport: &http.Transport{
+			Proxy: nil,
+		},
+	}
+
+	if (len(httpProxy) > 0 || len(httpsProxy) > 0) && baseUrl != "http://shuffle-backend:5001" {
+		client = &http.Client{}
+	} else {
+		if len(httpProxy) > 0 {
+			log.Printf("Running with HTTP proxy %s (env: HTTP_PROXY)", httpProxy)
+		}
+		if len(httpsProxy) > 0 {
+			log.Printf("Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
+		}
+	}
 
 	fullUrl := fmt.Sprintf("%s/api/v1/workflows/queue", baseUrl)
 	req, err := http.NewRequest(
@@ -341,15 +357,18 @@ func main() {
 				fmt.Sprintf("EXECUTIONID=%s", execution.ExecutionId),
 				fmt.Sprintf("ENVIRONMENT_NAME=%s", environment),
 				fmt.Sprintf("BASE_URL=%s", baseUrl),
-				fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")),
-				fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")),
+			}
+
+			if strings.ToLower(os.Getenv("SHUFFLE_PASS_WORKER_PROXY")) != "false" {
+				env = append(env, fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")))
+				env = append(env, fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")))
 			}
 
 			if dockerApiVersion != "" {
 				env = append(env, fmt.Sprintf("DOCKER_API_VERSION=%s", dockerApiVersion))
 			}
 
-			go deployWorker(dockercli, workerImage, containerName, env)
+			go deployWorker(workerImage, containerName, env)
 
 			log.Printf("%s is deployed and to be removed from queue.", execution.ExecutionId)
 			zombiecounter += 1
@@ -416,18 +435,17 @@ func main() {
 // FIXME - add this to remove exited workers
 // Should it check what happened to the execution? idk
 func zombiecheck() error {
-	log.Println("Running zombiecheck")
+	log.Println("Looking for old containers")
 	ctx := context.Background()
-
-	dockercli, err := dockerclient.NewEnvClient()
-	if err != nil {
-		log.Println("Unable to create docker client")
-		return err
-	}
 
 	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
 		All: true,
 	})
+
+	if err != nil {
+		log.Printf("Failed creating Containerlist: %s", err)
+		return err
+	}
 
 	containerNames := map[string]string{}
 

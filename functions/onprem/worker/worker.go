@@ -304,7 +304,25 @@ func shutdown(executionId, workflowId string) {
 
 	req.Header.Add("Content-Type", "application/json")
 	//req.Header.Add("Authorization", authorization)
-	client := &http.Client{}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			Proxy: nil,
+		},
+	}
+
+	httpProxy := os.Getenv("HTTP_PROXY")
+	httpsProxy := os.Getenv("HTTPS_PROXY")
+	if (len(httpProxy) > 0 || len(httpsProxy) > 0) && baseUrl != "http://shuffle-backend:5001" {
+		client = &http.Client{}
+	} else {
+		if len(httpProxy) > 0 {
+			log.Printf("Running with HTTP proxy %s (env: HTTP_PROXY)", httpProxy)
+		}
+		if len(httpsProxy) > 0 {
+			log.Printf("Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
+		}
+	}
 	_, err = client.Do(req)
 	if err != nil {
 		log.Printf("Failed abort request: %s", err)
@@ -984,7 +1002,25 @@ func runTestExecution(client *http.Client, workflowId, apikey string) (string, s
 func main() {
 	log.Printf("Setting up worker environment")
 	sleepTime := 5
-	client := &http.Client{}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			Proxy: nil,
+		},
+	}
+
+	httpProxy := os.Getenv("HTTP_PROXY")
+	httpsProxy := os.Getenv("HTTPS_PROXY")
+	if (len(httpProxy) > 0 || len(httpsProxy) > 0) && baseUrl != "http://shuffle-backend:5001" {
+		client = &http.Client{}
+	} else {
+		if len(httpProxy) > 0 {
+			log.Printf("Running with HTTP proxy %s (env: HTTP_PROXY)", httpProxy)
+		}
+		if len(httpsProxy) > 0 {
+			log.Printf("Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
+		}
+	}
 
 	// WORKER_TESTING_WORKFLOW should be a workflow ID
 	authorization := ""
