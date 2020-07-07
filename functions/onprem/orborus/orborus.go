@@ -14,6 +14,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -84,14 +85,33 @@ func deployWorker(image string, identifier string, env []string) {
 
 	// Set the network
 	networkConfig := &network.NetworkingConfig{}
-	if baseUrl == "http://shuffle-backend:5001" {
-		networkConfig = &network.NetworkingConfig{
-			EndpointsConfig: map[string]*network.EndpointSettings{
-				"shuffle_shuffle": {
-					NetworkID: "shuffle_shuffle",
-				},
-			},
+	// trying to auto-detect network name
+	networkName := ""
+	log.Printf("Non-default architecture detected. Trying to use network config from this node.")
+	hostname, err := os.Hostname()
+	if err == nil {
+		log.Printf("Current hostname: %s.", hostname)
+
+		// trying to find via Docker socket as GO library always returns "default" network even if it has custom network (checked via docker inspect)
+		cmd := fmt.Sprintf("curl --silent --unix-socket /var/run/docker.sock http://localhost/containers/%s/json | jq -rc '.NetworkSettings.Networks | keys[0]'", hostname)
+		out, err := exec.Command("bash","-c",cmd).Output()
+		if err == nil {
+			networkName = strings.TrimSpace(string(out))
+			if networkName != "" {
+				log.Printf("Found network name: %s.", networkName)
+
+				// form networking config based on found network name
+				networkConfig = &network.NetworkingConfig{
+					EndpointsConfig: map[string]*network.EndpointSettings{},
+				}
+				networkConfig.EndpointsConfig[networkName] = &network.EndpointSettings{
+					NetworkID: networkName,
+				}
+			}
 		}
+	}
+	if networkName == "" {
+		log.Printf("Bad config: %s. Using default.", baseUrl)
 	} else {
 		// USE PROXY
 	}
