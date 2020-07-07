@@ -492,7 +492,7 @@ func zombiecheck() error {
 
 		for _, name := range container.Names {
 			// FIXME - add name_version_uid_uid regex check as well
-			if strings.HasPrefix(name, "/shuffle") {
+			if strings.HasPrefix(name, "/shuffle") || strings.Contains(name, "shuffle-") {
 				continue
 			}
 
