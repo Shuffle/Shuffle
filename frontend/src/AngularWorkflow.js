@@ -1543,7 +1543,10 @@ const AngularWorkflow = (props) => {
 						)
 					})}
 					<div style={{flex: "1"}}>
-						<Button fullWidth style={{margin: "auto", marginTop: "10px",}} color="primary" variant="outlined" onClick={() => setVariablesModalOpen(true)}>New workflow variable</Button> 				
+						<Button fullWidth style={{margin: "auto", marginTop: "10px",}} color="primary" variant="outlined" onClick={() => {
+							setVariablesModalOpen(true)
+							setLastSaved(false)
+						}}>New workflow variable</Button> 				
 					</div>
 					<Divider style={{marginBottom: 20, marginTop: 20, height: 1, width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 						What are <a href="https://shuffler.io/docs/workflows#execution_variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>EXECUTION variables?</a>
@@ -1603,7 +1606,10 @@ const AngularWorkflow = (props) => {
 						)
 					})}
 					<div style={{flex: "1"}}>
-						<Button fullWidth style={{margin: "auto", marginTop: "10px",}} color="primary" variant="outlined" onClick={() => setExecutionVariablesModalOpen(true)}>New execution variable</Button> 				
+						<Button fullWidth style={{margin: "auto", marginTop: "10px",}} color="primary" variant="outlined" onClick={() => {
+							setExecutionVariablesModalOpen(true)
+							setLastSaved(false)
+						}}>New execution variable</Button> 				
 					</div>
 				</div>
 			</div>
@@ -2240,6 +2246,8 @@ const AngularWorkflow = (props) => {
 	const AppActionArguments = (props) => {
 		const [selectedActionParameters, setSelectedActionParameters] = React.useState([])
 		const [selectedVariableParameter, setSelectedVariableParameter] = React.useState()
+		const [showDropdown, setShowDropdown] = React.useState(false)
+		const [actionlist, setActionlist] = React.useState([])
 
 		useEffect(() => {
 			if (selectedActionParameters !== null && selectedActionParameters.length === 0) {
@@ -2257,9 +2265,51 @@ const AngularWorkflow = (props) => {
 				setSelectedVariableParameter(workflow.workflow_variables[0].name)
 			} 
 
+			if (actionlist.length === 0) {
+				actionlist.push({"type": "Execution Argument", "name": "Execution Argument", "value": "$exec", "highlight": "exec", "autocomplete": "$exec"})
+				if (workflow.workflow_variables !== null && workflow.workflow_variables !== undefined && workflow.workflow_variables.length > 0) {
+					for (var key in workflow.workflow_variables) {
+						const item = workflow.workflow_variables[key]
+						actionlist.push({"type": "workflow_variable", "name": item.name, "value": item.value, "id": item.id, "autocomplete": `${item.name.split(" ").join("_")}`})
+					}
+				}
+
+				// FIXME: Add values from previous executions if they exist
+				if (workflow.execution_variables !== null && workflow.execution_variables !== undefined && workflow.execution_variables.length > 0) {
+					for (var key in workflow.execution_variables) {
+						const item = workflow.execution_variables[key]
+						actionlist.push({"type": "execution_variable", "name": item.name, "value": item.value, "id": item.id, "autocomplete": `${item.name.split(" ").join("_")}`})
+					}
+				}
+
+				var parents = getParents(selectedAction)
+				if (parents.length > 1) {
+					for (var key in parents) {
+						const item = parents[key]
+						if (item.label === "Execution Argument") {
+							continue
+						}
+						actionlist.push({"type": "action", "id": item.id, "name": item.label, "autocomplete": `${item.label.split(" ").join("_")}`})
+					}
+				}
+
+				setActionlist(actionlist)
+			}
 		})
 
 		const changeActionParameter = (event, count) => {
+			console.log("EVENT: ", event.target.value)
+			if (event.target.value[event.target.value.length-1] === "$") {
+				console.log("LAST IS $ - SHOULD SHOW DROPDOWN")
+				if (!showDropdown) {
+					setShowDropdown(true)
+				}
+			} else {
+				if (showDropdown) {
+					setShowDropdown(false)
+				}
+			}
+
 			selectedActionParameters[count].value = event.target.value
 			selectedAction.parameters[count].value = event.target.value
 			setSelectedAction(selectedAction)
@@ -2344,6 +2394,38 @@ const AngularWorkflow = (props) => {
 		if (Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters.length > 0) {
 			return (
 				<div style={{marginTop: "30px"}}>
+
+					{showDropdown ?
+						<Select
+							SelectDisplayProps={{
+								style: {
+									marginLeft: 10,
+								}
+							}}
+							fullWidth
+							onChange={(e) => {
+								console.log("SELECTED: ", e.target.value)
+								const count = 0
+
+								console.log(selectedActionParameters)
+								selectedActionParameters[count].value += e.target.value.autocomplete
+								selectedAction.parameters[count].value = selectedActionParameters[count].value 
+								setSelectedAction(selectedAction)
+								setUpdate("action"+e.target.value.name)
+
+								setShowDropdown(false)
+							}}
+							style={{backgroundColor: surfaceColor, color: "white", height: "50px"}}
+							>
+							{actionlist.map(data => (
+								<MenuItem key={data.name} style={{backgroundColor: inputColor, color: "white"}} value={data}>
+									{data.name}
+								</MenuItem>
+							))}
+						</Select>
+					: null}
+
+
 					<b>Arguments</b>
 					{selectedActionParameters.map((data, count) => {
 						if (data.variant === "") {
@@ -2419,45 +2501,46 @@ const AngularWorkflow = (props) => {
 
 							datafield = 
 							<div>
-							<Select
-								SelectDisplayProps={{
-									style: {
-										marginLeft: 10,
-									}
-								}}
-								value={selectedActionParameters[count].action_field}
-								fullWidth
-								onChange={(e) => {
-									changeActionParameterActionResult(e.target.value, count) 
-								}}
-								style={{backgroundColor: surfaceColor, color: "white", height: "50px"}}
-								>
-								{parents.map(data => (
-									<MenuItem key={data.label} style={{backgroundColor: inputColor, color: "white"}} value={data.label}>
-										{data.label}
-									</MenuItem>
-								))}
-							</Select>
-							<TextField
-								style={{backgroundColor: inputColor}} 
-								InputProps={{
-									style:{
-										color: "white",
-										marginLeft: "5px",
-										maxWidth: "95%",
-										height: "50px", 
-										fontSize: "1em",
-									},
-								}}
-								fullWidth
-								color="primary"
-								defaultValue={data.value}
-								helperText={<div style={{marginLeft: "5px", color:"white", marginBottom: "2px",}}>Example: $.body will get "data" from {'{"body": "data"}'}</div>}
-								placeholder="Action variable ($.)" 
-								onChange={(event) => {
-									changeActionParameter(event, count)
-								}}
-							/></div>
+								<Select
+									SelectDisplayProps={{
+										style: {
+											marginLeft: 10,
+										}
+									}}
+									value={selectedActionParameters[count].action_field}
+									fullWidth
+									onChange={(e) => {
+										changeActionParameterActionResult(e.target.value, count) 
+									}}
+									style={{backgroundColor: surfaceColor, color: "white", height: "50px"}}
+									>
+									{parents.map(data => (
+										<MenuItem key={data.label} style={{backgroundColor: inputColor, color: "white"}} value={data.label}>
+											{data.label}
+										</MenuItem>
+									))}
+								</Select>
+								<TextField
+									style={{backgroundColor: inputColor}} 
+									InputProps={{
+										style:{
+											color: "white",
+											marginLeft: "5px",
+											maxWidth: "95%",
+											height: "50px", 
+											fontSize: "1em",
+										},
+									}}
+									fullWidth
+									color="primary"
+									defaultValue={data.value}
+									helperText={<div style={{marginLeft: "5px", color:"white", marginBottom: "2px",}}>Example: $.body will get "data" from {'{"body": "data"}'}</div>}
+									placeholder="Action variable ($.)" 
+									onChange={(event) => {
+										changeActionParameter(event, count)
+									}}
+								/>
+							</div>
 
 						} else if (data.variant === "WORKFLOW_VARIABLE") {
 							varcolor = "#f85a3e"
@@ -2469,7 +2552,10 @@ const AngularWorkflow = (props) => {
 									Looks like you don't have any variables yet.  
 								</div>
 								<div style={{width: "100%", margin: "auto"}}>
-									<Button style={{margin: "auto", marginTop: "10px"}} color="primary" variant="outlined" onClick={() => setVariablesModalOpen(true)}>New workflow variable</Button> 				
+									<Button style={{margin: "auto", marginTop: "10px"}} color="primary" variant="outlined" onClick={() => {
+										setVariablesModalOpen(true)
+										setLastSaved(false)
+									}}>New workflow variable</Button> 				
 								</div>
 								</div>
 							} else {
