@@ -172,8 +172,18 @@ const data = [{
 				'background-color': '#f4ad42',
 				'border-color': '#f4ad42',
 				'border-width': '5px',
-				'transition-property': 'background-color',
+				'transition-property': 'border-color',
 				'transition-duration': '0.5s',
+			},
+		},
+		{
+			selector: '.shuffle-hover-highlight',
+			css: {
+				'background-color': "#f85a3e",
+				'border-color': '#f85a3e',
+				'border-width': '5px',
+				'transition-property': 'border-width',
+				'transition-duration': '0.25s',
 			},
 		},
 		{
