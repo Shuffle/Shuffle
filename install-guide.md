@@ -1,14 +1,6 @@
 # Installation guide
 Installation of Shuffle is currently only available in docker. Looking for how to update Shuffle? Check the [updating guide](https://shuffler.io/docs/configuration#updating_shuffle)
 
-There are four parts to the infrastructure:
-* Frontend - GUI, React
-* Backend  - Go
-* Database - Google Datastore
-* Orborus  - Go, controls the workers to deploy. Can be used to connect to others' setup
-* Worker 	 - Controls each workflow execution
-* App_sdk  - Used
-
 ## Docker
 The Docker setup is done with docker-compose and is a single command to get set up.
 
