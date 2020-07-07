@@ -25,10 +25,10 @@ services:
       - shuffle
     volumes: 
       - /var/run/docker.sock:/var/run/docker.sock 
-      - ${SHUFFLE_APP_HOTLOAD_LOCATION}:/shuffle-apps     
+      - ${APP_HOTLOAD_LOCATION}:/shuffle-apps     
     environment: 
       - DATASTORE_EMULATOR_HOST=shuffle-database:8000
-      - SHUFFLE_APP_HOTLOAD_FOLDER=/shuffle-apps
+      - APP_HOTLOAD_FOLDER=/shuffle-apps
       - ORG_ID=${ORG_ID}
       - APP_DOWNLOAD_LOCATION=${APP_DOWNLOAD_LOCATION}
       - SHUFFLE_DEFAULT_USERNAME=${SHUFFLE_DEFAULT_USERNAME}
