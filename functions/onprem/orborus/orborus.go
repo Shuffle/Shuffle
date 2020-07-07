@@ -26,7 +26,8 @@ import (
 )
 
 var baseUrl = os.Getenv("BASE_URL")
-var baseimagename = "frikky/shuffle"
+var baseimagename = os.Getenv("BASE_IMAGE_NAME")
+var baseimageregistry = os.Getenv("BASE_IMAGE_REGISTRY")
 
 var dockerApiVersion = os.Getenv("DOCKER_API_VERSION")
 var environment = os.Getenv("ENVIRONMENT_NAME")
@@ -175,13 +176,15 @@ func stopWorker(containername string) error {
 func initializeImages() {
 	ctx := context.Background()
 
+	log.Printf("Base registry url is set to: %s/%s", baseimageregistry, baseimagename);
+
 	// check whether theyre the same first
 	//version := "0.1.0"
 	// fmt.Sprintf("docker.pkg.github.com/frikky/shuffle/orborus:%s", version),
 	// fmt.Sprintf("docker.pkg.github.com/frikky/shuffle/worker:%s", version),
 	images := []string{
-		fmt.Sprintf("docker.io/%s:app_sdk", baseimagename),
-		fmt.Sprintf("docker.io/%s:worker", baseimagename),
+		fmt.Sprintf("%s/%s:app_sdk", baseimageregistry, baseimagename),
+		fmt.Sprintf("%s/%s:worker", baseimageregistry, baseimagename),
 	}
 
 	pullOptions := types.ImagePullOptions{}
@@ -230,7 +233,7 @@ func main() {
 	//workerName := "worker"
 	//workerVersion := "0.1.0"
 	//workerImage := fmt.Sprintf("docker.pkg.github.com/frikky/shuffle/%s:%s", workerName, workerVersion)
-	workerImage := fmt.Sprintf("%s:worker", baseimagename)
+	workerImage := fmt.Sprintf("%s/%s:worker", baseimageregistry, baseimagename)
 
 	log.Printf("--- Finished configuring docker environment ---\n")
 

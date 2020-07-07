@@ -11,4 +11,6 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o orborus .
 from scratch
 COPY --from=builder /app/ /
 
+ENV BASE_IMAGE_REGISTRY=docker.io
+ENV BASE_IMAGE_NAME=frikky/shuffle
 CMD ["./orborus"]
