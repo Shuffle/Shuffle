@@ -8,8 +8,6 @@ services:
     ports:
       - "${FRONTEND_PORT}:80"
       - "${FRONTEND_PORT_HTTPS}:443"
-    networks:
-      - shuffle
     restart: unless-stopped
     depends_on:
       - backend
@@ -21,8 +19,6 @@ services:
     # Here for debugging:
     ports:
       - "${BACKEND_PORT}:5001"
-    networks:
-      - shuffle
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${APP_HOTLOAD_LOCATION}:/shuffle-apps
@@ -44,8 +40,6 @@ services:
     image: frikky/shuffle:orborus
     container_name: shuffle-orborus
     hostname: shuffle-orborus
-    networks:
-      - shuffle
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
@@ -64,11 +58,6 @@ services:
     hostname: shuffle-database
     ports:
       - "8000:8000"
-    networks:
-      - shuffle
     restart: unless-stopped
     volumes:
       - ${DB_LOCATION}:/etc/shuffle
-networks:
-  shuffle:
-    driver: bridge
