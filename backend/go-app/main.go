@@ -71,6 +71,7 @@ import (
 var gceProject = "shuffle"
 var bucketName = "shuffler.appspot.com"
 var baseAppPath = "/home/frikky/git/shaffuru/tmp/apps"
+var baseDockerRegistry = os.Getenv("BASE_IMAGE_REGISTRY")
 var baseDockerName = os.Getenv("BASE_IMAGE_NAME")
 
 var dbclient *datastore.Client
@@ -5977,8 +5978,8 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 
 	versionName := fmt.Sprintf("%s_%s", strings.ReplaceAll(api.Name, " ", "-"), api.AppVersion)
 	dockerTags := []string{
-		fmt.Sprintf("%s:%s", baseDockerName, identifier),
-		fmt.Sprintf("%s:%s", baseDockerName, versionName),
+		fmt.Sprintf("%s/%s:%s", baseDockerRegistry, baseDockerName, identifier),
+		fmt.Sprintf("%s/%s:%s", baseDockerRegistry, baseDockerName, versionName),
 	}
 
 	err = buildImage(dockerTags, dockerLocation)

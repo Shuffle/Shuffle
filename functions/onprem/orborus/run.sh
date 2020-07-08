@@ -5,4 +5,4 @@ docker run \
 	--env DOCKER_API_VERSION=1.42 \
 	--network "shuffle_shuffle" \
 	-v /var/run/docker.sock:/var/run/docker.sock \
-	frikky/shuffle:orborus
+	docker.io/frikky/shuffle:orborus

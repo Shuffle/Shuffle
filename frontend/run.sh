@@ -1,11 +1,11 @@
 #!/bin/sh
 docker stop shuffle-frontend
 docker rm shuffle-frontend
-docker rmi frikky/shuffle:frontend
+docker rmi docker.io/frikky/shuffle:frontend
 
 echo "Running build for website"
 #sudo npm run build
-docker build . -t frikky/shuffle:frontend
+docker build . -t docker.io/frikky/shuffle:frontend
 
 echo "Starting server"
 # Rerun build locally for it to update :)
@@ -14,4 +14,4 @@ echo "Starting server"
 #	-p 3002:443 \
 #	-v $(pwd)/build:/usr/share/nginx/html:ro \
 #	--rm \
-#	nginx	
+#	nginx

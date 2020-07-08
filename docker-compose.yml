@@ -1,8 +1,8 @@
 version: '3'
 services:
   frontend:
-    #build: ./frontend
-    image: frikky/shuffle:frontend
+    build: ./frontend
+    image: docker.io/frikky/shuffle:frontend
     container_name: shuffle-frontend
     hostname: shuffle-frontend
     ports:
@@ -14,8 +14,8 @@ services:
     depends_on:
       - backend
   backend:
-    #build: ./backend
-    image: frikky/shuffle:backend
+    build: ./backend
+    image: docker.io/frikky/shuffle:backend
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
     # Here for debugging:
@@ -37,12 +37,13 @@ services:
       - HTTP_PROXY=${SHUFFLE_HTTP_PROXY}
       - HTTPS_PROXY=${SHUFFLE_HTTPS_PROXY}
       - BASE_IMAGE_NAME=${BASE_IMAGE_NAME}
+      - BASE_IMAGE_REGISTRY=${BASE_IMAGE_REGISTRY}
     restart: unless-stopped
     depends_on:
       - database
   orborus:
-    #build: ./functions/onprem/orborus
-    image: frikky/shuffle:orborus
+    build: ./functions/onprem/orborus
+    image: docker.io/frikky/shuffle:orborus
     container_name: shuffle-orborus
     hostname: shuffle-orborus
     networks:
@@ -61,8 +62,8 @@ services:
       - BASE_IMAGE_REGISTRY=${BASE_IMAGE_REGISTRY}
     restart: unless-stopped
   database:
-    #build: ./backend/database
-    image: frikky/shuffle:database
+    build: ./backend/database
+    image: docker.io/frikky/shuffle:database
     container_name: shuffle-database
     hostname: shuffle-database
     ports:

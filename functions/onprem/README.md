@@ -2,13 +2,13 @@
 * Onprem means it's supposed to be ran on a server of the customer, and not in the cloud. These are tweaked to hit the API and look for new work throughout workflows. Everything is handled by the initial main.go, which launches the others.
 
 ## orborus.go - Handles NEW workflows - Same as WALKOFF UMPIRE
-* Executes and controls the docker environment used by workers. 
-* A worker is deployed for every execution. 
+* Executes and controls the docker environment used by workers.
+* A worker is deployed for every execution.
 * The apps are responsible for callbacks to the backend themselves.
 * After the worker is deployed / running, the execution ID is removed from the workflowqueue API.
 
-# worker/worker.go - one for each workflow requiring onprem stuff 
-* Handles a workflow from start to finish as long as the action ID. 
+# worker/worker.go - one for each workflow requiring onprem stuff
+* Handles a workflow from start to finish as long as the action ID.
 * Starting and stopping APPS in docker.
 
 # app_sdk
@@ -25,16 +25,16 @@ Login:
 docker login
 ```
 
-Update worker: 
+Update worker:
 ```
 cd worker
-docker build . -t frikky/shuffle:worker
-docker push frikky/shuffle:worker
+docker build . -t docker.io/frikky/shuffle:worker
+docker push docker.io/frikky/shuffle:worker
 ```
 
 Update app_sdk:
 ```
 cd app_sdk
-docker build . -t frikky/shuffle:app_sdk
-docker push frikky/shuffle:app_sdk
+docker build . -t docker.io/frikky/shuffle:app_sdk
+docker push docker.io/frikky/shuffle:app_sdk
 ```
