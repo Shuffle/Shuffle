@@ -400,6 +400,8 @@ func main() {
 				fmt.Sprintf("EXECUTIONID=%s", execution.ExecutionId),
 				fmt.Sprintf("ENVIRONMENT_NAME=%s", environment),
 				fmt.Sprintf("BASE_URL=%s", baseUrl),
+				fmt.Sprintf("BASE_IMAGE_NAME=%s", baseimagename),
+				fmt.Sprintf("BASE_IMAGE_REGISTRY=%s", baseimageregistry),
 			}
 
 			if strings.ToLower(os.Getenv("SHUFFLE_PASS_WORKER_PROXY")) != "false" {
