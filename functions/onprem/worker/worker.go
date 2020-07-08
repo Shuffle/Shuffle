@@ -22,7 +22,8 @@ import (
 
 var environment = os.Getenv("ENVIRONMENT_NAME")
 var baseUrl = os.Getenv("BASE_URL")
-var baseimagename = "frikky/shuffle"
+var baseimagename = os.Getenv("BASE_IMAGE_NAME")
+var baseimageregistry = os.Getenv("BASE_IMAGE_REGISTRY")
 var sleepTime = 2
 
 type Condition struct {
@@ -485,7 +486,7 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 		}
 
 		toExecuteOnprem = append(toExecuteOnprem, action.ID)
-		actionName := fmt.Sprintf("%s:%s_%s", baseimagename, action.AppName, action.AppVersion)
+		actionName := fmt.Sprintf("%s/%s:%s_%s", baseimageregistry, baseimagename, action.AppName, action.AppVersion)
 		found := false
 		for _, app := range onpremApps {
 			if actionName == app {
@@ -733,7 +734,7 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 			appname = strings.Replace(appname, ".", "-", -1)
 			appversion = strings.Replace(appversion, ".", "-", -1)
 
-			image := fmt.Sprintf("%s:%s_%s", baseimagename, action.AppName, action.AppVersion)
+			image := fmt.Sprintf("%s/%s:%s_%s", baseimageregistry, baseimagename, action.AppName, action.AppVersion)
 			if strings.Contains(image, " ") {
 				image = strings.ReplaceAll(image, " ", "-")
 			}

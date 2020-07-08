@@ -4,8 +4,8 @@
 #WORKDIR /app
 #COPY worker.go /app/worker.go
 #
-#RUN go get github.com/docker/docker/api/types 
-#RUN go get github.com/docker/docker/api/types/container 
+#RUN go get github.com/docker/docker/api/types
+#RUN go get github.com/docker/docker/api/types/container
 #RUN go get -u github.com/docker/docker/client
 #
 #RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o worker .
@@ -18,4 +18,6 @@ from scratch
 #COPY --from=builder /app/ /
 COPY worker.bin /worker.bin
 
+ENV BASE_IMAGE_REGISTRY=docker.io
+ENV BASE_IMAGE_NAME=frikky/shuffle
 CMD ["./worker.bin"]
