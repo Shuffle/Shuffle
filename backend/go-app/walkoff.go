@@ -3712,7 +3712,7 @@ func loadSpecificWorkflows(resp http.ResponseWriter, request *http.Request) {
 		_ = r
 
 		log.Printf("Starting workflow folder iteration")
-		iterateWorkflowGithubFolders(fs, dir, "", "")
+		iterateWorkflowGithubFolders(fs, dir, "", "", user.Id)
 
 	} else if strings.Contains(tmpBody.URL, "s3") {
 		//https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
@@ -4012,7 +4012,7 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 }
 
 // Onlyname is used to
-func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string) error {
+func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string, userId string) error {
 	var err error
 
 	for _, file := range dir {
@@ -4031,7 +4031,7 @@ func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra 
 			}
 
 			// Go routine? Hmm, this can be super quick I guess
-			err = iterateWorkflowGithubFolders(fs, dir, tmpExtra, "")
+			err = iterateWorkflowGithubFolders(fs, dir, tmpExtra, "", userId)
 			if err != nil {
 				continue
 			}
@@ -4056,6 +4056,11 @@ func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra 
 				err = json.Unmarshal(readFile, &workflow)
 				if err != nil {
 					continue
+				}
+
+				// rewrite owner to user who imports now
+				if userId != "" {
+					workflow.Owner = userId
 				}
 
 				ctx := context.Background()
