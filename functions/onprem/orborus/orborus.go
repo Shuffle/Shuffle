@@ -27,6 +27,7 @@ import (
 
 var baseUrl = os.Getenv("BASE_URL")
 var baseimagename = "frikky/shuffle"
+var shuffleNetwork = "" // Filled in init if found
 
 var dockerApiVersion = os.Getenv("DOCKER_API_VERSION")
 var environment = os.Getenv("ENVIRONMENT_NAME")
@@ -61,6 +62,44 @@ func init() {
 	if err != nil {
 		panic(fmt.Sprintf("Unable to create docker client: %s", err))
 	}
+
+	// BElow:
+	// Checking if orborus is running on docker within a specific network
+	ctx := context.Background()
+	networkName := ""
+	dockerNetworks, err := dockercli.NetworkList(ctx, types.NetworkListOptions{})
+	for _, item := range dockerNetworks {
+		if strings.Contains(strings.ToLower(item.Name), "shuffle") {
+			networkName = item.Name
+			break
+		}
+	}
+
+	if len(networkName) > 0 {
+		containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
+			All: true,
+		})
+		if err != nil {
+			log.Printf("Failed getting containers during init - running without network check: %s", err)
+		}
+		_ = networkName
+
+		// Skip random containers. Only handle things related to Shuffle.
+		for _, container := range containers {
+			for key, value := range container.NetworkSettings.Networks {
+				_ = value
+				if key == networkName {
+					for _, name := range container.Names {
+						if strings.Contains(strings.ToLower(name), "orborus") {
+							// BEING HERE MEANS THAT ORBORUS HAS BEEN FOUND IN THE SPECIFIED NETWORK
+							shuffleNetwork = networkName
+							break
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 // Deploys the internal worker whenever something happens
@@ -82,18 +121,19 @@ func deployWorker(image string, identifier string, env []string) {
 		Env:   env,
 	}
 
-	// Set the network
+	// Look for Shuffle network and set it
+
+	// FIXME: Move this out of here and have it be a global setting. During init?
 	networkConfig := &network.NetworkingConfig{}
-	if baseUrl == "http://shuffle-backend:5001" {
+	if len(shuffleNetwork) > 0 {
 		networkConfig = &network.NetworkingConfig{
 			EndpointsConfig: map[string]*network.EndpointSettings{
-				"shuffle_shuffle": {
-					NetworkID: "shuffle_shuffle",
+				shuffleNetwork: {
+					NetworkID: shuffleNetwork,
 				},
 			},
 		}
-	} else {
-		// USE PROXY
+		env = append(env, fmt.Sprintf("DOCKER_NETWORK", shuffleNetwork))
 	}
 
 	//test := &network.EndpointSettings{

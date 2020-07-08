@@ -347,17 +347,15 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	}
 
 	networkConfig := &network.NetworkingConfig{}
-	if baseUrl == "http://shuffle-backend:5001" {
+	shuffleNetwork := os.Getenv("DOCKER_NETWORK")
+	if len(shuffleNetwork) > 0 {
 		networkConfig = &network.NetworkingConfig{
 			EndpointsConfig: map[string]*network.EndpointSettings{
-				"shuffle_shuffle": {
-					NetworkID: "shuffle_shuffle",
+				shuffleNetwork: {
+					NetworkID: shuffleNetwork,
 				},
 			},
 		}
-	} else {
-		// FIXME: Default config
-		//log.Printf("Bad config: %s. Using default network", baseUrl)
 	}
 
 	cont, err := cli.ContainerCreate(
