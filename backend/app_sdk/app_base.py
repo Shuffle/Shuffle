@@ -852,12 +852,11 @@ class AppBase:
                                 result += newres
                             else:
                                 try:
-                                    result += str(result)
+                                    result += str(newres)
                                 except ValueError:
                                     result += "Failed autocasting. Can't handle %s type from function. Must be string" % type(newres)
                                     print("Can't handle type %s value from function" % (type(newres)))
-                            print("POST NEWRES: ", newres)
-                            result = newres
+                            print("POST NEWRES RESULT: ", result)
                         else:
                             print("APP_SDK DONE: Starting MULTI execution with", multi_parameters)
                             # 1. Use number of executions based on longest array
