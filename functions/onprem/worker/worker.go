@@ -348,33 +348,15 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	}
 
 	networkConfig := &network.NetworkingConfig{}
-	// trying to auto-detect network name
-	networkName := ""
-	log.Printf("Non-default architecture detected. Trying to use network config from this node.")
-	hostname, err := os.Hostname()
-	if err == nil {
-		log.Printf("Current hostname: %s.", hostname)
-
-		// trying to find via Docker socket as GO library always returns "default" network even if it has custom network (checked via docker inspect)
-		cmd := fmt.Sprintf("curl --silent --unix-socket /var/run/docker.sock http://localhost/containers/%s/json | jq -rc '.NetworkSettings.Networks | keys[0]'", hostname)
-		out, err := exec.Command("bash","-c",cmd).Output()
-		if err == nil {
-			networkName = strings.TrimSpace(string(out))
-			if networkName != "" {
-				log.Printf("Found network name: %s.", networkName)
-
-				// form networking config based on found network name
-				networkConfig = &network.NetworkingConfig{
-					EndpointsConfig: map[string]*network.EndpointSettings{},
-				}
-				networkConfig.EndpointsConfig[networkName] = &network.EndpointSettings{
-					NetworkID: networkName,
-				}
-			}
+	shuffleNetwork := os.Getenv("DOCKER_NETWORK")
+	if len(shuffleNetwork) > 0 {
+		networkConfig = &network.NetworkingConfig{
+			EndpointsConfig: map[string]*network.EndpointSettings{
+				shuffleNetwork: {
+					NetworkID: shuffleNetwork,
+				},
+			},
 		}
-	}
-	if networkName == "" {
-		log.Printf("Bad config: %s. Using default.", baseUrl)
 	}
 
 	cont, err := cli.ContainerCreate(

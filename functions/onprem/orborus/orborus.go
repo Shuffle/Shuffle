@@ -28,6 +28,7 @@ import (
 
 var baseUrl = os.Getenv("BASE_URL")
 var baseimagename = "frikky/shuffle"
+var shuffleNetwork = "" // Filled in init if found
 
 var dockerApiVersion = os.Getenv("DOCKER_API_VERSION")
 var environment = os.Getenv("ENVIRONMENT_NAME")
@@ -62,6 +63,44 @@ func init() {
 	if err != nil {
 		panic(fmt.Sprintf("Unable to create docker client: %s", err))
 	}
+
+	// BElow:
+	// Checking if orborus is running on docker within a specific network
+	ctx := context.Background()
+	networkName := ""
+	dockerNetworks, err := dockercli.NetworkList(ctx, types.NetworkListOptions{})
+	for _, item := range dockerNetworks {
+		if strings.Contains(strings.ToLower(item.Name), "shuffle") {
+			networkName = item.Name
+			break
+		}
+	}
+
+	if len(networkName) > 0 {
+		containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
+			All: true,
+		})
+		if err != nil {
+			log.Printf("Failed getting containers during init - running without network check: %s", err)
+		}
+		_ = networkName
+
+		// Skip random containers. Only handle things related to Shuffle.
+		for _, container := range containers {
+			for key, value := range container.NetworkSettings.Networks {
+				_ = value
+				if key == networkName {
+					for _, name := range container.Names {
+						if strings.Contains(strings.ToLower(name), "orborus") {
+							// BEING HERE MEANS THAT ORBORUS HAS BEEN FOUND IN THE SPECIFIED NETWORK
+							shuffleNetwork = networkName
+							break
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 // Deploys the internal worker whenever something happens
@@ -83,37 +122,19 @@ func deployWorker(image string, identifier string, env []string) {
 		Env:   env,
 	}
 
-	// Set the network
+	// Look for Shuffle network and set it
+
+	// FIXME: Move this out of here and have it be a global setting. During init?
 	networkConfig := &network.NetworkingConfig{}
-	// trying to auto-detect network name
-	networkName := ""
-	log.Printf("Non-default architecture detected. Trying to use network config from this node.")
-	hostname, err := os.Hostname()
-	if err == nil {
-		log.Printf("Current hostname: %s.", hostname)
-
-		// trying to find via Docker socket as GO library always returns "default" network even if it has custom network (checked via docker inspect)
-		cmd := fmt.Sprintf("curl --silent --unix-socket /var/run/docker.sock http://localhost/containers/%s/json | jq -rc '.NetworkSettings.Networks | keys[0]'", hostname)
-		out, err := exec.Command("bash","-c",cmd).Output()
-		if err == nil {
-			networkName = strings.TrimSpace(string(out))
-			if networkName != "" {
-				log.Printf("Found network name: %s.", networkName)
-
-				// form networking config based on found network name
-				networkConfig = &network.NetworkingConfig{
-					EndpointsConfig: map[string]*network.EndpointSettings{},
-				}
-				networkConfig.EndpointsConfig[networkName] = &network.EndpointSettings{
-					NetworkID: networkName,
-				}
-			}
+	if len(shuffleNetwork) > 0 {
+		networkConfig = &network.NetworkingConfig{
+			EndpointsConfig: map[string]*network.EndpointSettings{
+				shuffleNetwork: {
+					NetworkID: shuffleNetwork,
+				},
+			},
 		}
-	}
-	if networkName == "" {
-		log.Printf("Bad config: %s. Using default.", baseUrl)
-	} else {
-		// USE PROXY
+		env = append(env, fmt.Sprintf("DOCKER_NETWORK", shuffleNetwork))
 	}
 
 	//test := &network.EndpointSettings{

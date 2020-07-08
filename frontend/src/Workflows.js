@@ -180,15 +180,20 @@ const Workflows = (props) => {
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for WORKFLOW EXECUTION :O!")
-				alert.error("Failed loading executions for current workflow")
 			}
 
 			return response.json()
 		})
 		.then((responseJson) => {
-			setWorkflowExecutions(responseJson)
-			if (responseJson.length > 0) {
-				setSelectedExecution(responseJson[0])
+			if (responseJson.success === true) {
+				setWorkflowExecutions(responseJson)
+				if (responseJson.length > 0) {
+					setSelectedExecution(responseJson[0])
+				}
+			} else if (!responseJson.success && responseJson.reason !== undefined) {
+				alert.error("Failed loading executions: "+responseJson.reason)
+			} else {
+				alert.error("Failed loading executions for workflow")
 			}
 		})
 		.catch(error => {
