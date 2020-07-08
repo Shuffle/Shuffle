@@ -36,6 +36,7 @@ services:
       - SHUFFLE_DEFAULT_APIKEY=${SHUFFLE_DEFAULT_APIKEY}
       - HTTP_PROXY=${SHUFFLE_HTTP_PROXY}
       - HTTPS_PROXY=${SHUFFLE_HTTPS_PROXY}
+      - BASE_IMAGE_NAME=${BASE_IMAGE_NAME}
     restart: unless-stopped
     depends_on:
       - database

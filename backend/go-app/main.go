@@ -71,7 +71,7 @@ import (
 var gceProject = "shuffle"
 var bucketName = "shuffler.appspot.com"
 var baseAppPath = "/home/frikky/git/shaffuru/tmp/apps"
-var baseDockerName = "frikky/shuffle"
+var baseDockerName = os.Getenv("BASE_IMAGE_NAME")
 
 var dbclient *datastore.Client
 
@@ -4203,7 +4203,7 @@ Please contact us at shuffler.io or frikky@shuffler.io if there is an issue with
 
 		parsedBody = fmt.Sprintf(`
 Action required!
-			
+
 %s
 
 If this is TRUE click this: %s

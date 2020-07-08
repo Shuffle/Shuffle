@@ -31,6 +31,7 @@ COPY --from=builder /app_sdk/ /app_sdk
 COPY --from=builder /app_gen/ /app_gen
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
+ENV BASE_IMAGE_NAME=frikky/shuffle
 WORKDIR /app
 EXPOSE 5001
 CMD ["./webapp"]
