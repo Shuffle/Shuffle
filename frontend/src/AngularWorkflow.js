@@ -505,6 +505,12 @@ const AngularWorkflow = (props) => {
 						curworkflowAction.parameters = []
 					}
 
+					if (curworkflowAction.example === undefined || curworkflowAction.example === "" || curworkflowAction.example === null) {
+						if (cyelements[key].data().example !== undefined) {
+							curworkflowAction.example = cyelements[key].data().example 
+						}
+					}
+
 					newActions.push(curworkflowAction)
 				} else if (type === "TRIGGER") {
 					//console.log("TRIGGER")
@@ -1234,6 +1240,14 @@ const AngularWorkflow = (props) => {
 			node.data.type = "ACTION"
 			node.isStartNode = action["id"] === workflow.start
 
+			var example = ""
+			if (action.example !== undefined && action.example !== null && action.example.length > 0) {
+				example = action.example
+			}
+
+			console.log("EXAMPLE: ", example)
+			node.data.example = example
+
 			return node;
 		})
 
@@ -1941,16 +1955,16 @@ const AngularWorkflow = (props) => {
 				const actionType = "ACTION"
 				const actionLabel = getNextActionName(app.name)
 				var parameters = null
+				var example = ""
 
 				if (app.actions[0].parameters !== null && app.actions[0].parameters.length > 0) {
 					parameters = app.actions[0].parameters
 				}
+				if (app.actions[0].returns.example !== undefined && app.actions[0].returns.example !== null && app.actions[0].returns.example.length > 0) {
+					example = app.actions[0].returns.example
+				}
 				
 				var newAppPopup = false
-				if (app.authentication !== undefined && app.authentication !== null && app.authentication.required === true) {
-					console.log("Should make modal popup for new app")
-					newAppPopup = true
-				}
 
 				const newAppData = {
 					app_name: app.name,
@@ -1972,6 +1986,7 @@ const AngularWorkflow = (props) => {
 					large_image: app.large_image,
 					authentication: [],
 					execution_variable: undefined,
+					example: example,
 				}
 
 				// const image = "url("+app.large_image+")"
@@ -2170,6 +2185,10 @@ const AngularWorkflow = (props) => {
 		selectedAction.name = newaction.name
 		selectedAction.parameters = JSON.parse(JSON.stringify(newaction.parameters))
 
+		if (newaction.returns.example !== undefined && newaction.returns.example !== null && newaction.returns.example.length > 0) {
+			selectedAction.example = newaction.returns.example 
+		}
+
 		// FIXME - this is broken sometimes lol
 		//var env = environments.find(a => a.name === newaction.environment)
 		//if ((!env || env === undefined) && selectedAction.environment === undefined ) {
@@ -2276,11 +2295,12 @@ const AngularWorkflow = (props) => {
 			} 
 
 			if (actionlist.length === 0) {
-				actionlist.push({"type": "Execution Argument", "name": "Execution Argument", "value": "$exec", "highlight": "exec", "autocomplete": "exec"})
+				// FIXME: Have previous execution values in here
+				actionlist.push({"type": "Execution Argument", "name": "Execution Argument", "value": "$exec", "highlight": "exec", "autocomplete": "exec", "example": "hello"})
 				if (workflow.workflow_variables !== null && workflow.workflow_variables !== undefined && workflow.workflow_variables.length > 0) {
 					for (var key in workflow.workflow_variables) {
 						const item = workflow.workflow_variables[key]
-						actionlist.push({"type": "workflow_variable", "name": item.name, "value": item.value, "id": item.id, "autocomplete": `${item.name.split(" ").join("_")}`})
+						actionlist.push({"type": "workflow_variable", "name": item.name, "value": item.value, "id": item.id, "autocomplete": `${item.name.split(" ").join("_")}`, "example": item.value})
 					}
 				}
 
@@ -2288,7 +2308,7 @@ const AngularWorkflow = (props) => {
 				if (workflow.execution_variables !== null && workflow.execution_variables !== undefined && workflow.execution_variables.length > 0) {
 					for (var key in workflow.execution_variables) {
 						const item = workflow.execution_variables[key]
-						actionlist.push({"type": "execution_variable", "name": item.name, "value": item.value, "id": item.id, "autocomplete": `${item.name.split(" ").join("_")}`})
+						actionlist.push({"type": "execution_variable", "name": item.name, "value": item.value, "id": item.id, "autocomplete": `${item.name.split(" ").join("_")}`, "example": ""})
 					}
 				}
 
@@ -2299,7 +2319,10 @@ const AngularWorkflow = (props) => {
 						if (item.label === "Execution Argument") {
 							continue
 						}
-						actionlist.push({"type": "action", "id": item.id, "name": item.label, "autocomplete": `${item.label.split(" ").join("_")}`})
+
+						// 1. Take 
+						const actionvalue = {"type": "action", "id": item.id, "name": item.label, "autocomplete": `${item.label.split(" ").join("_")}`, "example": item.example === undefined ? "" : item.example}
+						actionlist.push(actionvalue)
 					}
 				}
 
@@ -2319,17 +2342,64 @@ const AngularWorkflow = (props) => {
 				}
 			}
 
-			if (event.target.value[event.target.value.length-1] === ".") {
+			// bad detection mechanism probably
+			if (event.target.value[event.target.value.length-1] === "." && actionlist.length > 0) {
+
 				console.log("GET THE LAST ARGUMENT FOR !")
 				//const [jsonList, getJsonList] = React.useState([])
 				const inputdata = {"data": "1.2.3.4", "dataType": "4.5.6.6"}
 				const returnJson = GetParsedPaths(inputdata, "")
 				console.log(jsonList)
-				setJsonList(returnJson)
 
-				if (!showDropdown) {
-					setShowDropdown(true)
-					setShowDropdownNumber(count)
+				// Search for the item backwards
+				// 1. Reverse search backwards from . -> $
+				// 2. Search the actionlist for the item  
+				// 3. Find the data for the specific item
+
+				var curstring = ""
+				var record = false
+				for (var key in selectedActionParameters[count].value) {
+					const item = selectedActionParameters[count].value[key]
+					if (record) {
+						curstring += item
+					}
+
+					if (item === "$") {
+						record = true
+						curstring = ""
+					}
+				}
+
+				if (curstring.length > 0) {
+					// Search back in the action list
+					curstring = curstring.split(" ").join("_").toLowerCase()
+					const actionItem = actionlist.find(data => data.autocomplete.split(" ").join("_").toLowerCase() === curstring)
+					if (actionItem !== undefined) {
+						console.log("Found item: ", actionItem)
+
+						var jsonvalid = true
+						try {
+							const tmp = String(JSON.parse(actionItem.example))
+							if (!tmp.includes("{") && !tmp.includes("[")) {
+								jsonvalid = false
+							}
+						} catch (e) {
+							jsonvalid = false
+						}
+
+						if (jsonvalid) {
+							setJsonList(GetParsedPaths(JSON.parse(actionItem.example), ""))
+
+							if (!showDropdown) {
+								setShowDropdown(true)
+								setShowDropdownNumber(count)
+							}
+						}
+					}
+				}
+			} else {
+				if (jsonList.length > 0) {
+					setJsonList([])
 				}
 			}
 

@@ -146,6 +146,7 @@ type WorkflowAppAction struct {
 		ID          string           `json:"id" datastore:"id" yaml:"id,omitempty"`
 		Schema      SchemaDefinition `json:"schema" datastore:"schema" yaml:"schema"`
 	} `json:"returns" datastore:"returns"`
+	Example string `json:"example" datastore:"example" yaml:"example"`
 }
 
 // FIXME: Generate a callback authentication ID?
@@ -174,7 +175,7 @@ type WorkflowExecution struct {
 	} `json:"execution_variables,omitempty" datastore:"execution_variables,omitempty"`
 }
 
-// Added environment for location to execute
+// This is for the nodes in a workflow, NOT the app action itself.
 type Action struct {
 	AppName           string                       `json:"app_name" datastore:"app_name"`
 	AppVersion        string                       `json:"app_version" datastore:"app_version"`
@@ -201,7 +202,8 @@ type Action struct {
 		X float64 `json:"x" datastore:"x"`
 		Y float64 `json:"y" datastore:"y"`
 	} `json:"position"`
-	Priority int `json:"priority" datastore:"priority"`
+	Priority int    `json:"priority" datastore:"priority"`
+	Example  string `json:"example" datastore:"example"`
 }
 
 // Added environment for location to execute
