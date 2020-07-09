@@ -63,42 +63,47 @@ func init() {
 		panic(fmt.Sprintf("Unable to create docker client: %s", err))
 	}
 
-	// BElow:
-	// Checking if orborus is running on docker within a specific network
+	// FIXME: Move this to global variables?
+	containerIdentifier := "orborus"
+	networkIdentifier := "shuffle"
+
 	ctx := context.Background()
-	networkName := ""
-	dockerNetworks, err := dockercli.NetworkList(ctx, types.NetworkListOptions{})
-	for _, item := range dockerNetworks {
-		if strings.Contains(strings.ToLower(item.Name), "shuffle") {
-			networkName = item.Name
-			break
-		}
+	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
+		All: true,
+	})
+	if err != nil {
+		log.Printf("Failed getting containers during init - running without network check: %s", err)
 	}
 
-	if len(networkName) > 0 {
-		containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
-			All: true,
-		})
-		if err != nil {
-			log.Printf("Failed getting containers during init - running without network check: %s", err)
+	// Skip random containers. Only handle things related to Shuffle.
+	for _, container := range containers {
+		found := false
+		//log.Printf("Running? %#v", container)
+		if container.State != "running" {
+			continue
 		}
-		_ = networkName
 
-		// Skip random containers. Only handle things related to Shuffle.
-		for _, container := range containers {
-			for key, value := range container.NetworkSettings.Networks {
-				_ = value
-				if key == networkName {
-					for _, name := range container.Names {
-						if strings.Contains(strings.ToLower(name), "orborus") {
-							// BEING HERE MEANS THAT ORBORUS HAS BEEN FOUND IN THE SPECIFIED NETWORK
-							shuffleNetwork = networkName
-							break
-						}
-					}
+		for _, name := range container.Names {
+			if !strings.Contains(strings.ToLower(name), containerIdentifier) {
+				found = true
+				continue
+			}
+		}
+
+		if found {
+			for key, _ := range container.NetworkSettings.Networks {
+				if strings.Contains(strings.ToLower(key), networkIdentifier) {
+					shuffleNetwork = key
+					break
 				}
 			}
 		}
+	}
+
+	if len(shuffleNetwork) > 0 {
+		log.Printf("Found shuffle network \"%s\" for container %s", shuffleNetwork, containerIdentifier)
+	} else {
+		log.Printf("Running Shuffle without a docker network")
 	}
 }
 
@@ -133,6 +138,7 @@ func deployWorker(image string, identifier string, env []string) {
 				},
 			},
 		}
+
 		env = append(env, fmt.Sprintf("DOCKER_NETWORK", shuffleNetwork))
 	}
 
