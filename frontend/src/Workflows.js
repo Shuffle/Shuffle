@@ -185,15 +185,15 @@ const Workflows = (props) => {
 			return response.json()
 		})
 		.then((responseJson) => {
-			if (responseJson.success === true) {
-				setWorkflowExecutions(responseJson)
+			if (responseJson.success === false) {
+				alert.error("Failed getting executions")
+			} else {
 				if (responseJson.length > 0) {
 					setSelectedExecution(responseJson[0])
+					setWorkflowExecutions(responseJson)
+				} else {
+					alert.info("Couldn't find executions for the workflow")
 				}
-			} else if (!responseJson.success && responseJson.reason !== undefined) {
-				alert.error("Failed loading executions: "+responseJson.reason)
-			} else {
-				alert.error("Failed loading executions for workflow")
 			}
 		})
 		.catch(error => {

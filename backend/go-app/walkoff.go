@@ -142,6 +142,7 @@ type WorkflowAppAction struct {
 	} `json:"execution_variable" datastore:"execution_variables"`
 	Returns struct {
 		Description string           `json:"description" datastore:"returns" yaml:"description,omitempty"`
+		Example     string           `json:"example" datastore:"example" yaml:"example"`
 		ID          string           `json:"id" datastore:"id" yaml:"id,omitempty"`
 		Schema      SchemaDefinition `json:"schema" datastore:"schema" yaml:"schema"`
 	} `json:"returns" datastore:"returns"`
@@ -4204,6 +4205,16 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 						removeApps = append(removeApps, app.ID)
 					}
 				}
+
+				/*
+					if workflowapp.Name == "thehive" {
+						for _, action := range workflowapp.Actions {
+							if len(action.Returns.Example) > 0 {
+								log.Printf("ACTION: %#v", action)
+							}
+						}
+					}
+				*/
 
 				if skip {
 					continue

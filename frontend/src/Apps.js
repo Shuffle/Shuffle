@@ -19,6 +19,7 @@ import Input from '@material-ui/core/Input';
 import YAML from 'yaml'
 import {Link} from 'react-router-dom';
 import Breadcrumbs from '@material-ui/core/Breadcrumbs';
+import ReactJson from 'react-json-view'
 
 import CachedIcon from '@material-ui/icons/Cached';
 import CloudDownloadIcon from '@material-ui/icons/CloudDownload';
@@ -38,6 +39,51 @@ import CircularProgress from '@material-ui/core/CircularProgress';
 
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
+
+// Parses JSON data into keys that can be used everywhere :)
+export const GetParsedPaths = (inputdata, basekey) => {
+	const splitkey = " => "
+	var parsedValues = []
+	for (const [key, value] of Object.entries(inputdata)) {
+
+		// Check if loop or JSON
+		const extra = basekey.length > 0 ? splitkey : ""
+		const basekeyname = `${basekey.slice(1,basekey.length).split(".").join(splitkey)}${extra}${key}`
+		if (typeof(value) === 'object') {
+			if (Array.isArray(value)) {
+				// Check if each item is object
+				parsedValues.push({"name": basekeyname, "autocomplete": `${basekey}.${key}`})
+				parsedValues.push({"name": `${basekeyname}${splitkey}list`, "autocomplete": `${basekey}.${key}.#`})
+
+				// Only check the first. This would be probably be dumb otherwise.
+				for (var subkey in value) {
+					if (typeof(value) === 'object') {
+						const returnValues = GetParsedPaths(value[subkey], `${basekey}.${key}.#`)
+						for (var subkey in returnValues) {
+							parsedValues.push(returnValues[subkey])
+						}
+					} 
+
+					// Don't need else as # (all items) is already defined before the loop 
+
+					break
+				}
+				//console.log(key+" is array")
+			} else {
+				parsedValues.push({"name": basekeyname, "autocomplete": `${basekey}.${key}`})
+				const returnValues = GetParsedPaths(value, `${basekey}.${key}`)
+				for (var subkey in returnValues) {
+					parsedValues.push(returnValues[subkey])
+				}
+			}
+		} else {
+			parsedValues.push({"name": basekeyname, "autocomplete": `${basekey}.${key}`})
+		}
+	}
+
+	return parsedValues
+}
+
 
 const Apps = (props) => {
   const { globalUrl, isLoggedIn, isLoaded } = props;
@@ -367,6 +413,61 @@ const Apps = (props) => {
 			: 
 			<img alt={selectedApp.title} src={selectedApp.large_image} style={{width: 100, height: 100, maxWidth: "100%"}} />
 
+		const GetAppExample = () => {
+			if (selectedAction.returns === undefined) {
+				return null
+			}
+
+			var showResult = selectedAction.returns.example
+			if (showResult === undefined || showResult === null || showResult.length === 0) {
+				return null
+			}
+
+			var jsonvalid = true
+			try {
+				const tmp = String(JSON.parse(showResult))
+				if (!tmp.includes("{") && !tmp.includes("[")) {
+					jsonvalid = false
+				}
+			} catch (e) {
+				jsonvalid = false
+			}
+
+
+			// FIXME: In here -> parse the values into a list or something
+			if (jsonvalid) {
+				const paths = GetParsedPaths(JSON.parse(showResult), "")
+				console.log("PATHS: ", paths)
+
+				return (
+					<div>
+						{paths.map(data => {
+							const circleSize = 10
+							return (
+								<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data} onClick={() => console.log(data.autocomplete)}>
+									{data.name}
+								</MenuItem>
+							)
+						})}
+						<ReactJson 
+							src={JSON.parse(showResult)} 
+							theme="solarized" 
+							collapsed={false}
+							displayDataTypes={true}
+							name={"Example return value"}
+						/>
+					</div>
+				)
+			} 
+
+			return (
+				<div>
+					<b>Example return</b><div/>
+					{selectedAction.returns.example}
+				</div>
+			)
+		}
+
 		//fetch(globalUrl+"/api/v1/get_openapi/"+urlParams.get("id"), {
 		var baseInfo = newAppname.length > 0 ?
 			<div>
@@ -454,6 +555,7 @@ const Apps = (props) => {
 						{selectedAction.description}
 					</div>
 					: null}
+				<GetAppExample />
 			</div>
 			: 
 			null

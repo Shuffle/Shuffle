@@ -67,6 +67,7 @@ import cxtmenu from 'cytoscape-cxtmenu';
 
 import { w3cwebsocket as W3CWebSocket } from "websocket";
 import { useAlert } from "react-alert";
+import { GetParsedPaths } from "./Apps";
 
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
@@ -2256,6 +2257,7 @@ const AngularWorkflow = (props) => {
 		const [showDropdown, setShowDropdown] = React.useState(false)
 		const [showDropdownNumber, setShowDropdownNumber] = React.useState(0)
 		const [actionlist, setActionlist] = React.useState([])
+		const [jsonList, setJsonList] = React.useState([])
 
 		useEffect(() => {
 			if (selectedActionParameters !== null && selectedActionParameters.length === 0) {
@@ -2314,6 +2316,20 @@ const AngularWorkflow = (props) => {
 			} else {
 				if (showDropdown) {
 					setShowDropdown(false)
+				}
+			}
+
+			if (event.target.value[event.target.value.length-1] === ".") {
+				console.log("GET THE LAST ARGUMENT FOR !")
+				//const [jsonList, getJsonList] = React.useState([])
+				const inputdata = {"data": "1.2.3.4", "dataType": "4.5.6.6"}
+				const returnJson = GetParsedPaths(inputdata, "")
+				console.log(jsonList)
+				setJsonList(returnJson)
+
+				if (!showDropdown) {
+					setShowDropdown(true)
+					setShowDropdownNumber(count)
 				}
 			}
 
@@ -2605,7 +2621,49 @@ const AngularWorkflow = (props) => {
 								</Tooltip>
 							</div>	
 							{datafield}
-							{showDropdown && showDropdownNumber === count && data.variant === "STATIC_VALUE" ?
+							{showDropdown && showDropdownNumber === count && data.variant === "STATIC_VALUE" && jsonList.length > 0 ?
+							  <FormControl fullWidth>
+									<InputLabel id="action-autocompleter" style={{marginLeft: 10, color: "white"}}><ArrowUpwardIcon />Autocomplete</InputLabel>
+									<Select
+									  labelId="action-autocompleter"
+										SelectDisplayProps={{
+											style: {
+												marginLeft: 10,
+											}
+										}}
+										fullWidth
+										onChange={(e) => {
+											//parsedValues.push({"name": basekeyname, "autocomplete": `${basekey}.${key}`})
+											console.log("CHANGE!")
+											if (selectedActionParameters[count].value[selectedActionParameters[count].value.length-1] === ".") {
+												e.target.value.autocomplete = e.target.value.autocomplete.slice(1, e.target.value.autocomplete.length)
+											}
+
+											selectedActionParameters[count].value += e.target.value.autocomplete
+											selectedAction.parameters[count].value = selectedActionParameters[count].value 
+											console.log("TARGET: ", selectedActionParameters)
+											setSelectedAction(selectedAction)
+											setUpdate("action"+e.target.value.name)
+
+											setShowDropdown(false)
+										}}
+										style={{border: `2px solid #f85a3e`, color: "white", height: "50px"}}
+									>
+										{jsonList.map(data => {
+											return (
+												<MenuItem key={data.name} style={{backgroundColor: inputColor, color: "white"}} value={data} onMouseOver={() => {}}>
+													<Tooltip color="primary" title={`Value: ${data.value}`} placement="left">
+														<div style={{display: "flex"}}>
+															{data.name}
+														</div>
+													</Tooltip>
+												</MenuItem>
+											)
+										})}
+									</Select>
+      					</FormControl>
+							: null}
+							{showDropdown && showDropdownNumber === count && data.variant === "STATIC_VALUE" && jsonList.length === 0 ?
 							  <FormControl fullWidth>
 									<InputLabel id="action-autocompleter" style={{marginLeft: 10, color: "white"}}><ArrowUpwardIcon />Autocomplete</InputLabel>
 									<Select
@@ -2920,6 +2978,9 @@ const AngularWorkflow = (props) => {
 						<AppActionArguments key={selectedAction.id} selectedAction={selectedAction} />
 
 				</div>
+				<div style={{}}>
+						
+				</div> 
 			</div>
 		</div> 
 		: null 
@@ -3288,7 +3349,7 @@ const AngularWorkflow = (props) => {
 					</div>
 				</DialogContent>
 				<DialogActions>
-	        	  	<Button 
+	      <Button 
 					style={{borderRadius: "0px"}}
 					onClick={() => {
 						setSelectedEdge({})
