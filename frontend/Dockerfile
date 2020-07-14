@@ -8,12 +8,17 @@ COPY package.json /usr/src/app/package.json
 
 RUN npm install --verbose
 
-COPY . /usr/src/app
+# copy only required files to not trigger rebuilding every time
+COPY ./certs /usr/src/app/certs/
+COPY ./public /usr/src/app/public/
+COPY ./src /usr/src/app/src/
+COPY ./*.sh /usr/src/app/
+COPY ./*.json /usr/src/app/
 
 RUN npm run-script build
 
 # Production environment
-from nginx:latest
+FROM nginx:latest
 
 RUN mkdir -p /usr/share/nginx/html/build
 RUN mkdir -p /usr/share/nginx/html/css
@@ -26,8 +31,16 @@ COPY --from=builder /usr/src/app/build /usr/share/nginx/html
 COPY --from=builder /usr/src/app/certs/fullchain.pem /etc/nginx/fullchain.cert.pem
 COPY --from=builder /usr/src/app/certs/privkey.pem /etc/nginx/privkey.pem
 
-# Prod
-COPY --from=builder /usr/src/app/nginx.conf /etc/nginx/nginx.conf
+# install CONFD
+ENV CONFD_VERSION 0.16.0
+RUN curl -sSL https://github.com/kelseyhightower/confd/releases/download/v${CONFD_VERSION}/confd-${CONFD_VERSION}-linux-amd64 -o /usr/local/bin/confd && \
+    chmod +x /usr/local/bin/confd
+COPY ./confd /etc/confd
+
+# rewrite command & entrypoint with ours
+COPY ./entrypoint.sh /
+ENTRYPOINT [ "/entrypoint.sh" ]
+CMD ["nginx", "-g", "daemon off;"]
 
 EXPOSE 80
 EXPOSE 443

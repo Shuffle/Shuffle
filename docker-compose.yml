@@ -10,6 +10,8 @@ services:
       - "${FRONTEND_PORT_HTTPS}:443"
     networks:
       - shuffle
+    environment:
+      - BACKEND_HOSTNAME=${BACKEND_HOSTNAME}
     restart: unless-stopped
     depends_on:
       - backend
