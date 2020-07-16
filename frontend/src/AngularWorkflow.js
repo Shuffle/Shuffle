@@ -37,6 +37,7 @@ import { useBeforeunload } from 'react-beforeunload';
 
 import ArrowUpwardIcon from '@material-ui/icons/ArrowUpward';
 import CachedIcon from '@material-ui/icons/Cached';
+import AddIcon from '@material-ui/icons/Add';
 import DirectionsRunIcon from '@material-ui/icons/DirectionsRun';
 import PolymerIcon from '@material-ui/icons/Polymer';
 import CreateIcon from '@material-ui/icons/Create';
@@ -117,7 +118,7 @@ const AngularWorkflow = (props) => {
 	const [executionText, setExecutionText] = React.useState("");
 	const [executionRequestStarted, setExecutionRequestStarted] = React.useState(false);
 
-	const [appAuthentication, setAppAuthentication] = React.useState({});
+	const [appAuthentication, setAppAuthentication] = React.useState([]);
 	const [variablesModalOpen, setVariablesModalOpen] = React.useState(false);
 	const [executionVariablesModalOpen, setExecutionVariablesModalOpen] = React.useState(false);
 	const [authenticationModalOpen, setAuthenticationModalOpen] = React.useState(false);
@@ -127,7 +128,7 @@ const AngularWorkflow = (props) => {
 	const [newVariableValue, setNewVariableValue] = React.useState("");
 	const [workflowDone, setWorkflowDone] = React.useState(false)
 	const [localFirstrequest, setLocalFirstrequest] = React.useState(true)
-	const [requiresAuthentication, setRequiresAuthentication] = React.useState(true)
+	const [requiresAuthentication, setRequiresAuthentication] = React.useState(false)
 	const [rightSideBarOpen, setRightSideBarOpen] = React.useState(false)
 	const [showSkippedActions, setShowSkippedActions] = React.useState(false)
 
@@ -192,6 +193,37 @@ const AngularWorkflow = (props) => {
 				fetchUpdates()
 	  	}
 	})
+
+	const setNewAppAuth = (appAuthData) => {
+		console.log("DAta: ", appAuthData)
+		fetch(globalUrl+"/api/v1/apps/authentication", {
+    	  method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json',
+				},
+				body: JSON.stringify(appAuthData),
+	  		credentials: "include",
+    	})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for setting app auth :O!")
+			}
+
+			return response.json()
+		})
+		.then((responseJson) => {
+			if (!responseJson.success) {
+				alert.error("Failed to set app auth: "+responseJson.reason)
+			} else {
+				setAuthenticationModalOpen(false) 
+				alert.success("Successfully saved workflow")
+			}
+		})
+		.catch(error => {
+			alert.error(error.toString())
+		})
+	}
 
 	const getWorkflowExecution = (id) => {
 		fetch(globalUrl+"/api/v1/workflows/"+id+"/executions", {
@@ -723,6 +755,35 @@ const AngularWorkflow = (props) => {
 		return data
 	}
 
+	const getAppAuthentication = () => {
+		fetch(globalUrl+"/api/v1/apps/authentication", {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+			credentials: "include",
+    })
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for apps :O!")
+				return
+			}
+
+			return response.json()
+		})
+    .then((responseJson) => {
+			if (responseJson.success) {
+				setAppAuthentication(responseJson.data)
+			} else {
+				alert.error("Failed getting authentications")
+			}
+		})
+		.catch(error => {
+			alert.error(error.toString())
+		});
+	}
+
 	const getApps = () => {
 		fetch(globalUrl+"/api/v1/workflows/apps", {
     	  	method: 'GET',
@@ -747,6 +808,7 @@ const AngularWorkflow = (props) => {
 			//tmpapps = tmpapps.concat(responseJson)
 			setApps(responseJson)
 			setFilteredApps(responseJson)
+			getAppAuthentication() 
     })
 		.catch(error => {
 			alert.error(error.toString())
@@ -831,9 +893,9 @@ const AngularWorkflow = (props) => {
 			// FIXME - unselect
 			//console.log(cy.elements('[_id!="${data._id}"]`))
 			// Does it choose the wrong action?
-			const curaction = workflow.actions.find(a => a.id === data.id)
+			var curaction = workflow.actions.find(a => a.id === data.id)
 			if (!curaction || curaction === undefined) { 
-				//console.log("Action not found error")
+				//alert.error("Action not found. Please remake it.")
 				return
 			}
 
@@ -848,11 +910,41 @@ const AngularWorkflow = (props) => {
 				env = environments[0]
 			}
 
-			setSelectedApp(curapp)
-			setSelectedAction(curaction)
 			setSelectedActionEnvironment(env)
 			setSelectedActionName(curaction.name)
 			setRequiresAuthentication(curapp.authentication.required)
+
+			// Setup auth here :)
+			const authenticationOptions = []
+			var findAuthId = ""
+			if (curaction.authentication_id !== null && curaction.authentication_id !== undefined && curaction.authentication_id.length > 0) {
+				findAuthId = curaction.authentication_id
+			}
+
+			for (var key in appAuthentication) {
+				var item = appAuthentication[key]
+
+				const newfields = {}
+				for (var filterkey in item.fields) {
+					newfields[item.fields[filterkey].key] = item.fields[filterkey].value
+				}
+
+				item.fields = newfields
+				if (item.app.name === curapp.name) {
+					authenticationOptions.push(item)
+					if (item.id === findAuthId) {
+						curaction.selectedAuthentication = item
+					}
+				}
+			}
+			
+			curaction.authentication = authenticationOptions
+			if (curaction.selectedAuthentication === null || curaction.selectedAuthentication === undefined || curaction.selectedAuthentication.length === "") {
+				curaction.selectedAuthentication = {}
+			}
+
+			setSelectedApp(curapp)
+			setSelectedAction(curaction)
 		} else if (data.type === "TRIGGER") {
 			//console.log("Should handle trigger "+data.triggertype)
 			//console.log(data)
@@ -1130,6 +1222,7 @@ const AngularWorkflow = (props) => {
 			setFirstrequest(false)
 			getWorkflow()
 			getApps()
+			getAppAuthentication()
 			getEnvironments()
 			getWorkflowExecution(props.match.params.key)
 			return
@@ -2280,10 +2373,6 @@ const AngularWorkflow = (props) => {
 
 		useEffect(() => {
 			if (selectedActionParameters !== null && selectedActionParameters.length === 0) {
-				if (requiresAuthentication) {
-					console.log("ADD AUTHENTICATION FIELDS")
-				}
-
 				if (selectedAction.parameters !== null && selectedAction.parameters.length > 0) {
 					setSelectedActionParameters(selectedAction.parameters)
 				}
@@ -2491,6 +2580,16 @@ const AngularWorkflow = (props) => {
 					{selectedActionParameters.map((data, count) => {
 						if (data.variant === "") {
 							data.variant = "STATIC_VALUE"
+						}
+
+						if (!selectedAction.auth_not_required && selectedAction.selectedAuthentication !== undefined && selectedAction.selectedAuthentication.fields !== undefined) {
+							if (selectedAction.selectedAuthentication.fields[data.name] !== undefined) {
+								// FIXME - this should be skipped in the frontend
+								selectedActionParameters[count].value = selectedAction.selectedAuthentication.fields[data.name]
+								selectedAction.parameters[count].value = selectedAction.selectedAuthentication.fields[data.name]
+								setSelectedAction(selectedAction)
+								return null	
+							}
 						}
 
 						var staticcolor = "inherit"
@@ -2935,7 +3034,65 @@ const AngularWorkflow = (props) => {
 				placeholder={selectedAction.label}
 				onChange={selectedNameChange}
 			/>
-			{environments !== undefined && environments !== null && environments.length > 0 ?
+			{selectedAction.authentication.length === 0 && requiresAuthentication  ?
+				<div style={{marginTop: 15}}>
+					Authentication (reusable):
+					<Tooltip color="primary" title={"Add authentication option"} placement="top">
+						<Button color="primary" style={{}} variant="text" onClick={() => {
+							setAuthenticationModalOpen(true)
+						}}>
+							<AddIcon />
+						</Button> 				
+					</Tooltip>
+				</div>
+			: null}
+			{selectedAction.authentication.length > 0 ? 
+				<div style={{marginTop: "20px"}}>
+					Authentication
+					<div style={{display: "flex"}}>
+						<Select
+							value={selectedAction.selectedAuthentication}
+							SelectDisplayProps={{
+								style: {
+									marginLeft: 10,
+								}
+							}}
+							fullWidth
+							onChange={(e) => {
+								console.log("CHOSE AN AUTHENTICATION OPTION: ", e.target.value)
+								selectedAction.selectedAuthentication = e.target.value
+								selectedAction.authentication_id = e.target.value.id
+								setSelectedAction(selectedAction)
+								setUpdate("update auth")
+							}}
+							style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+						>
+							{selectedAction.authentication.map(data => (
+								<MenuItem key={data.id} style={{backgroundColor: inputColor, color: "white"}} value={data}>
+									{data.label} - ({data.app.app_version})
+								</MenuItem>
+							))}
+						</Select>
+
+						{/*
+
+						<Button fullWidth style={{margin: "auto", marginTop: "10px",}} color="primary" variant="contained" onClick={() => setAuthenticationModalOpen(true)}>
+							AUTHENTICATE
+						</Button>
+						curaction.authentication = authenticationOptions
+							if (curaction.selectedAuthentication === null || curaction.selectedAuthentication === undefined || curaction.selectedAuthentication.length === "")
+						*/}
+					 	<Tooltip color="primary" title={"Add authentication option"} placement="top">
+							<Button color="primary" style={{}} variant="text" onClick={() => {
+								setAuthenticationModalOpen(true)
+							}}>
+								<AddIcon />
+							</Button> 				
+						</Tooltip>
+					</div>
+				</div>
+				: null}
+			{environments !== undefined && environments !== null && environments.length > 1 ?
 				<div style={{marginTop: "20px"}}>
 					Environment
 					<Select
@@ -2997,13 +3154,6 @@ const AngularWorkflow = (props) => {
 					</Select>
 				</div>
 				: null}
-			{/*requiresAuthentication ? 
-				<div style={{marginTop: "20px"}}>
-					<Button fullWidth style={{margin: "auto", marginTop: "10px",}} color="primary" variant="contained" onClick={() => setAuthenticationModalOpen(true)}>
-						AUTHENTICATE
-					</Button>
-				</div>
-			: null*/}
 			<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 			<div style={{flex: "6", marginTop: "20px"}}>
 				<div style={{marginBottom: 5}}>
@@ -3033,7 +3183,7 @@ const AngularWorkflow = (props) => {
 						newActionname = newActionname.replace("_", " ")
 						newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
 						return (
-						<MenuItem style={{maxWidth: 400, overflowX: "hidden", backgroundColor: inputColor, color: "white"}} value={data.name}>
+						<MenuItem key={data.name} style={{maxWidth: 400, overflowX: "hidden", backgroundColor: inputColor, color: "white"}} value={data.name}>
 							{newActionname}
 
 						</MenuItem>
@@ -5243,52 +5393,136 @@ const AngularWorkflow = (props) => {
 		: null
 
 
-	const AuthenticationData = () => {
-		console.log("AUTH: ", selectedApp.authentication)
-		const [tmpVar, setTmpVar] = React.useState("")
+	const AuthenticationData = (props) => {
+		const selectedApp = props.app
+
+		const [authenticationOption, setAuthenticationOptions] = React.useState({
+			app: JSON.parse(JSON.stringify(selectedApp)),
+			fields: {},
+			label: "",
+			usage: [{
+				workflow_id: workflow.id,
+			}],
+			id: uuid.v4(),
+			active: true,
+		})
+
 		if (selectedApp.authentication === undefined) {
 			return null
 		}
 
-		if (selectedApp.authentication.parameters.length === undefined || 
-		selectedApp.authentication.parameters.length === 0) {
+		if (selectedApp.authentication.parameters.length === undefined || selectedApp.authentication.parameters.length === 0) {
 			return null
 		}
 
-		// Yes, it should be possible to have more than one, but.. :)
-		// This data should be written to a KMS, then have the ID point back
-		const currentAuth = selectedApp.authentication.parameters[0]
-		if (currentAuth.scheme.toLowerCase() === "bearer") {
-			return <div>
-				Insert your API token for {selectedApp.name}
-				<TextField
-					style={{backgroundColor: inputColor}} 
-					InputProps={{
-						style:{
-							color: "white",
-							height: "50px", 
-							fontSize: "1em",
-						},
-					}}
-					fullWidth
-					type="password"
-					color="primary"
-					placeholder="Bearer token" 
-					onChange={(event) => {
-						setTmpVar(event.target.value)
-					}}
-					onBlur={() => {
-						selectedApp.authentication.parameters[0].value	= tmpVar
-						setSelectedApp(selectedApp)
-					}}
-				/>
-				</div>
+		authenticationOption.app.actions = []
+
+		for (var key in selectedApp.authentication.parameters) {
+			if (authenticationOption.fields[selectedApp.authentication.parameters[key].name] === undefined) {
+				authenticationOption.fields[selectedApp.authentication.parameters[key].name] = ""
+			}
+		}
+
+		const handleSubmitCheck = () => {
+			console.log(authenticationOption)
+			if (authenticationOption.label.length === 0) {
+				alert.info("Label can't be empty")
+			}
+
+			for (var key in selectedApp.authentication.parameters) {
+				if (authenticationOption.fields[selectedApp.authentication.parameters[key].name].length === 0) {
+					alert.info("Field "+selectedApp.authentication.parameters[key].name+" can't be empty")
+					return
+				} 
+			}
+
+			selectedAction.authentication_id = authenticationOption.id
+			selectedAction.selectedAuthentication = authenticationOption
+			selectedAction.authentication.push(authenticationOption)
+			setSelectedAction(selectedAction)
+
+			var newFields = []
+			for (const key in authenticationOption.fields) {
+				const value = authenticationOption.fields[key]
+				newFields.push({
+					key: key,
+					value: value,
+				})
+			}
+
+			authenticationOption.fields = newFields
+			setNewAppAuth(authenticationOption)
 		}
 
 		return (
 			<div>
-				NOT IMPLEMENTED <div/>
-				Unknown auth: {currentAuth.scheme}
+				<DialogContent>
+					<a href="https://shuffler.io/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is this?</a>
+					&nbsp;These are required fields for authenticating with TheHive	
+					<div style={{marginTop: 15}}/>
+					{selectedApp.link.length > 0 ? <EndpointData /> : null}
+					Label (to remember it)
+					<TextField
+							style={{backgroundColor: inputColor}} 
+							InputProps={{
+								style:{
+									color: "white",
+									marginLeft: "5px",
+									maxWidth: "95%",
+									height: "50px", 
+									fontSize: "1em",
+								},
+							}}
+							fullWidth
+							color="primary"
+							placeholder={"Auth july 2020"}
+							onChange={(event) => {
+								authenticationOption.label = event.target.value
+							}}
+						/>
+					<Divider style={{marginTop: 15, marginBottom: 15}}/>
+					<div style={{}}/>
+						{selectedApp.authentication.parameters.map((data, index) => { 
+						return (
+							<div key={index} style={{marginTop: 10}}>
+								{data.name}
+								<TextField
+										style={{backgroundColor: inputColor}} 
+										InputProps={{
+											style:{
+												color: "white",
+												marginLeft: "5px",
+												maxWidth: "95%",
+												height: "50px", 
+												fontSize: "1em",
+											},
+										}}
+										fullWidth
+										type={data.example !== undefined && data.example.includes("***") ? "password" : "text"}
+										color="primary"
+										placeholder={data.example} 
+										onChange={(event) => {
+											authenticationOption.fields[data.name] = event.target.value
+										}}
+									/>
+							</div>
+						)
+					})}
+				</DialogContent>
+				<DialogActions>
+				<Button 
+					style={{borderRadius: "0px"}}
+					onClick={() => {
+						setAuthenticationModalOpen(false)
+					}} color="primary">
+						Cancel
+					</Button>
+					<Button style={{borderRadius: "0px"}} onClick={() => {
+						handleSubmitCheck() 	
+					}} color="primary">
+						Submit	
+					</Button>
+				</DialogActions>	
 			</div>
 		)
 	}
@@ -5328,40 +5562,22 @@ const AngularWorkflow = (props) => {
 
 	// This whole part is redundant. Made it part of Arguments instead.
 	const authenticationModal = authenticationModalOpen ? 
-		<Dialog modal 
+		<Dialog 
 			open={authenticationModalOpen} 
 			onClose={() => {
-				setAuthenticationModalOpen(false)
-				setAppAuthentication({})
+				//setAuthenticationModalOpen(false)
 			}}
 			PaperProps={{
 				style: {
 					backgroundColor: surfaceColor,
 					color: "white",
-					minWidth: "800px",
+					minWidth: 600,
+					padding: 15, 
 				},
 			}}
 		>
 			<DialogTitle><div style={{color: "white"}}>Authentication for {selectedApp.name}</div></DialogTitle>
-			<DialogContent>
-				<a href="https://shuffler.io/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is this?</a>
-				<div />
-				{selectedApp.link.length > 0 ? <EndpointData /> : null}
-				<div style={{marginTop: 15, marginBottom: 15, }}/>
-				<AuthenticationData />
-			</DialogContent>
-			<DialogActions>
-			<Button 
-				style={{borderRadius: "0px"}}
-				onClick={() => {
-					setAuthenticationModalOpen(false)
-				}} color="primary">
-					Cancel
-				</Button>
-				<Button style={{borderRadius: "0px"}} onClick={() => {setAuthenticationModalOpen(false)}} color="primary">
-					Submit	
-				</Button>
-			</DialogActions>
+			<AuthenticationData app={selectedApp} />	
 		</Dialog> : null
 
 	const loadedCheck = isLoaded && isLoggedIn && workflowDone ? 

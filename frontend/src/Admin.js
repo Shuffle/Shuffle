@@ -33,10 +33,13 @@ const Admin = (props) => {
 	const [curTab, setCurTab] = React.useState(0);
 	const [users, setUsers] = React.useState([]);
 	const [environments, setEnvironments] = React.useState([]);
+	const [authentication, setAuthentication] = React.useState([]);
 	const [schedules, setSchedules] = React.useState([])
 	const [selectedUser, setSelectedUser] = React.useState({})
 	const [newPassword, setNewPassword] = React.useState("");
 	const [selectedUserModalOpen, setSelectedUserModalOpen] = React.useState(false)
+	const [selectedAuthentication, setSelectedAuthentcation] = React.useState({})
+	const [selectedAuthenticationModalOpen, setSelectedAuthenticationModalOpen] = React.useState(false)
 
 	const alert = useAlert()
 
@@ -253,6 +256,35 @@ const Admin = (props) => {
 		});
 	}
 
+	const getAppAuthentication = () => {
+		fetch(globalUrl+"/api/v1/apps/authentication", {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+			credentials: "include",
+    })
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for apps :O!")
+				return
+			}
+
+			return response.json()
+		})
+    .then((responseJson) => {
+			if (responseJson.success) {
+				setAuthentication(responseJson.data)
+			} else {
+				alert.error("Failed getting authentications")
+			}
+		})
+		.catch(error => {
+			alert.error(error.toString())
+		});
+	}
+
 	const getEnvironments = () => {
 		fetch(globalUrl+"/api/v1/getenvironments", {
 			method: 'GET',
@@ -392,6 +424,70 @@ const Admin = (props) => {
     		console.log(error)
 		});
 	}
+
+	const editAuthenticationModal = 
+		<Dialog modal 
+			open={selectedAuthenticationModalOpen}
+			onClose={() => {setSelectedAuthenticationModalOpen(false)}}
+			PaperProps={{
+				style: {
+					backgroundColor: surfaceColor,
+					color: "white",
+					minWidth: "800px",
+					minHeight: "320px",
+				},
+			}}
+		>
+			<DialogTitle><span style={{color: "white"}}>Edit authentication</span></DialogTitle>
+			<DialogContent>
+				<div style={{display: "flex"}}>
+					<TextField
+						style={{backgroundColor: inputColor, flex: 3}}
+						InputProps={{
+							style:{
+								height: 50, 
+								color: "white",
+							},
+						}}
+						color="primary"
+						required
+						fullWidth={true}
+						placeholder="New password"
+						type="password"
+						id="standard-required"
+						autoComplete="password"
+						margin="normal"
+						variant="outlined"
+						onChange={e => setNewPassword(e.target.value)}
+					/>
+					<Button 
+						style={{maxHeight: 50, flex: 1}}
+						variant="outlined"
+						color="primary"
+						onClick={() => onPasswordChange()}
+					>
+						Submit 
+					</Button>
+				</div>
+				<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
+				<Button 
+					style={{}} 
+					variant="outlined"
+					color="primary"
+					onClick={() => deleteUser(selectedUser)}
+				>
+					{selectedUser.active ? "Deactivate" : "Activate"}	
+				</Button>
+				<Button 
+					style={{}} 
+					variant="outlined"
+					color="primary"
+					onClick={() => generateApikey(selectedUser.id)}
+				>
+					Get new API key
+				</Button>
+			</DialogContent>
+		</Dialog>
 
 	const editUserModal = 
 		<Dialog modal 
@@ -660,7 +756,7 @@ const Admin = (props) => {
 		</div>
 		: null
 
-	const schedulesView = curTab === 2 ?
+	const schedulesView = curTab === 3 ?
 		<div>
 			<h2>	
 				Schedules	
@@ -708,7 +804,97 @@ const Admin = (props) => {
 		</div>
 		: null
 
-	const environmentView = curTab === 1 ?
+	const authenticationView = curTab === 1 ?
+		<div>
+			<h2>	
+				Authentication	
+			</h2>
+			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
+			<List>
+				<ListItem>
+					<ListItemText
+						primary="Icon"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="Label"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="App Name"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="Fields"
+						style={{minWidth: 320, maxWidth: 320, overflow: "hidden"}}
+					/>
+					<ListItemText
+						primary="Workflow usage"
+						style={{minWidth: 320, maxWidth: 320, overflow: "hidden"}}
+					/>
+					<ListItemText
+						primary="Actions (TBD)"
+					/>
+				</ListItem>
+				{authentication === undefined ? null : authentication.map(data => {
+					return (
+						<ListItem>
+							<ListItemText
+								primary=<img alt="" src={data.app.large_image} style={{maxWidth: 50,}} />
+								style={{minWidth: 150, maxWidth: 150}}
+							/>
+							<ListItemText
+								primary={data.label}
+								style={{minWidth: 150, maxWidth: 150}}
+							/>
+							<ListItemText
+								primary={data.app.name}
+								style={{minWidth: 150, maxWidth: 150}}
+							/>
+							<ListItemText
+								primary={data.fields.map(data => {
+									return data.key
+								}).join(", ")}
+								style={{minWidth: 320, maxWidth: 320, overflow: "hidden"}}
+							/>
+							<ListItemText
+								primary={data.usage.length}
+								style={{minWidth: 320, maxWidth: 320, overflow: "hidden"}}
+							/>
+							<ListItemText>
+								<Button 
+									style={{}} 
+									variant="contained"
+									color="primary"
+									disabled={true}
+									onClick={() => {
+										setSelectedAuthentcation(data)
+										setSelectedAuthenticationModalOpen(true)
+									}}
+								>
+									Edit 
+								</Button>
+								<Button 
+									style={{}} 
+									variant="contained"
+									color="primary"
+									disabled={true}
+									onClick={() => {
+										setSelectedAuthentcation(data)
+										setSelectedAuthenticationModalOpen(true)
+									}}
+								>
+									Delete	
+								</Button>
+							</ListItemText>
+						</ListItem>
+					)
+				})}
+			</List>
+		</div>
+		: null
+
+	const environmentView = curTab === 2 ?
 		<div>
 			<h2>	
 				Environments	
@@ -737,8 +923,10 @@ const Admin = (props) => {
 
 	const setConfig = (event, newValue) => {
 		if (newValue === 1) {
-			getEnvironments()
+			getAppAuthentication()
 		} else if (newValue === 2) {
+			getEnvironments()
+		} else if (newValue === 3) {
 			getSchedules()
 		}
 
@@ -757,10 +945,12 @@ const Admin = (props) => {
 					aria-label="disabled tabs example"
 				>
 					<Tab label="Users" />
+					<Tab label="App Authentication"/>
 					<Tab label="Environments"/>
 					<Tab label="Schedules"/>
 				</Tabs>
 				<div style={{marginBottom: 10}}/>
+				{authenticationView}
 				{usersView}	
 				{environmentView}
 				{schedulesView}
@@ -771,6 +961,7 @@ const Admin = (props) => {
 		<div>
 			{modalView}
 			{editUserModal}
+			{editAuthenticationModal}
 			{data}
 		</div>
 	)

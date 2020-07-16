@@ -77,6 +77,21 @@ type Org struct {
 	Id    string `json:"id"`
 }
 
+type AppAuthenticationStorage struct {
+	Active bool                  `json:"active" datastore:"active"`
+	Label  string                `json:"label" datastore:"label"`
+	Id     string                `json:"id" datastore:"id"`
+	App    WorkflowApp           `json:"app" datastore:"app"`
+	Fields []AuthenticationStore `json:"fields" datastore:"fields"`
+	Usage  []AuthenticationUsage `json:"usage" datastore:"usage"`
+}
+
+type AuthenticationUsage struct {
+	WorkflowId string   `json:"workflow_id" datastore:"workflow_id"`
+	Nodes      []string `json:"nodes" datastore:"nodes"`
+}
+
+// An app inside Shuffle
 type WorkflowApp struct {
 	Name        string `json:"name" yaml:"name" required:true datastore:"name"`
 	IsValid     bool   `json:"is_valid" yaml:"is_valid" required:true datastore:"is_valid"`
@@ -146,7 +161,9 @@ type WorkflowAppAction struct {
 		ID          string           `json:"id" datastore:"id" yaml:"id,omitempty"`
 		Schema      SchemaDefinition `json:"schema" datastore:"schema" yaml:"schema"`
 	} `json:"returns" datastore:"returns"`
-	Example string `json:"example" datastore:"example" yaml:"example"`
+	AuthenticationId string `json:"authentication_id" datastore:"authentication_id"`
+	Example          string `json:"example" datastore:"example" yaml:"example"`
+	AuthNotRequired  bool   `json:"auth_not_required" datastore:"auth_not_required" yaml:"auth_not_required"`
 }
 
 // FIXME: Generate a callback authentication ID?
@@ -202,8 +219,10 @@ type Action struct {
 		X float64 `json:"x" datastore:"x"`
 		Y float64 `json:"y" datastore:"y"`
 	} `json:"position"`
-	Priority int    `json:"priority" datastore:"priority"`
-	Example  string `json:"example" datastore:"example"`
+	Priority         int    `json:"priority" datastore:"priority"`
+	AuthenticationId string `json:"authentication_id" datastore:"authentication_id"`
+	Example          string `json:"example" datastore:"example"`
+	AuthNotRequired  bool   `json:"auth_not_required" datastore:"auth_not_required" yaml:"auth_not_required"`
 }
 
 // Added environment for location to execute
@@ -304,15 +323,16 @@ type Authentication struct {
 }
 
 type AuthenticationParams struct {
-	Description string `json:"description" datastore:"description" yaml:"description"`
-	ID          string `json:"id" datastore:"id" yaml:"id"`
-	Name        string `json:"name" datastore:"name" yaml:"name"`
-	Example     string `json:"example" datastore:"example" yaml:"example"`
-	Value       string `json:"value,omitempty" datastore:"value" yaml:"value"`
-	Multiline   bool   `json:"multiline" datastore:"multiline" yaml:"multiline"`
-	Required    bool   `json:"required" datastore:"required" yaml:"required"`
-	In          string `json:"in" datastore:"in" yaml:"in"`
-	Scheme      string `json:"scheme" datastore:"scheme" yaml:"scheme"`
+	Description string           `json:"description" datastore:"description" yaml:"description"`
+	ID          string           `json:"id" datastore:"id" yaml:"id"`
+	Name        string           `json:"name" datastore:"name" yaml:"name"`
+	Example     string           `json:"example" datastore:"example" yaml:"example"`
+	Value       string           `json:"value,omitempty" datastore:"value" yaml:"value"`
+	Multiline   bool             `json:"multiline" datastore:"multiline" yaml:"multiline"`
+	Required    bool             `json:"required" datastore:"required" yaml:"required"`
+	In          string           `json:"in" datastore:"in" yaml:"in"`
+	Schema      SchemaDefinition `json:"schema" datastore:"schema" yaml:"schema"`
+	Scheme      string           `json:"scheme" datastore:"scheme" yaml:"scheme"` // Deprecated
 }
 
 type AuthenticationStore struct {
@@ -1473,8 +1493,10 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - this shouldn't be necessary with proper API checks
 	newActions := []Action{}
 	allNodes := []string{}
-	//log.Println("Pre")
+
+	//log.Printf("Action: %#v", action.Authentication)
 	for _, action := range workflow.Actions {
+		log.Printf("Auth: %s", action.AuthenticationId)
 		allNodes = append(allNodes, action.ID)
 
 		if action.Environment == "" {
@@ -1684,6 +1706,9 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 			newParams := []WorkflowAppActionParameter{}
 			for _, param := range curappaction.Parameters {
 				found := false
+
+				// FIXME: Check if the name exists in authentication.parameters and doesn't use the auth required field
+				// If it does, the auth should be saved somehow.
 
 				// Handles check for parameter exists + value not empty in used fields
 				for _, actionParam := range action.Parameters {
@@ -2970,6 +2995,46 @@ func setWorkflow(ctx context.Context, workflow Workflow, id string) error {
 	return nil
 }
 
+func deleteAppAuthentication(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	user, userErr := handleApiAuthentication(resp, request)
+	if userErr != nil {
+		log.Printf("Api authentication failed in edit workflow: %s", userErr)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Role != "admin" {
+		log.Printf("Need to be admin to delete appauth")
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	location := strings.Split(request.URL.String(), "/")
+	log.Printf("%#v", location)
+	var fileId string
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		fileId = location[4]
+	}
+
+	log.Printf("ID: %s", fileId)
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(`{"success": true}`))
+}
+
 func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -3192,6 +3257,195 @@ func getWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 
 	resp.WriteHeader(200)
 	resp.Write(data)
+}
+
+func addAppAuthentication(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	// FIXME - need to be logged in?
+	_, userErr := handleApiAuthentication(resp, request)
+	if userErr != nil {
+		log.Printf("Api authentication failed in get all apps: %s", userErr)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		log.Printf("Error with body read: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	var appAuth AppAuthenticationStorage
+	err = json.Unmarshal(body, &appAuth)
+	if err != nil {
+		log.Printf("Failed unmarshaling (appauth): %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if len(appAuth.Id) == 0 {
+		appAuth.Id = uuid.NewV4().String()
+	}
+
+	ctx := context.Background()
+	if len(appAuth.Label) == 0 {
+		resp.WriteHeader(409)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Label can't be empty"}`)))
+		return
+	}
+
+	if len(appAuth.App.ID) != 36 {
+		log.Printf("Bad ID for app: %s", appAuth.App.ID)
+		resp.WriteHeader(409)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "App has to be defined"}`)))
+		return
+	}
+
+	app, err := getApp(ctx, appAuth.App.ID)
+	if err != nil {
+		log.Printf("Failed finding app %s while setting auth.", appAuth.App.ID)
+		resp.WriteHeader(409)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		return
+	}
+
+	// Check if the items are correct
+	for _, field := range appAuth.Fields {
+		found := false
+		for _, param := range app.Authentication.Parameters {
+			if field.Key == param.Name {
+				found = true
+			}
+		}
+
+		if !found {
+			log.Printf("Failed finding field %s in appauth fields", field.Key)
+			resp.WriteHeader(409)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "All auth fields required"}`)))
+			return
+		}
+	}
+
+	err = setWorkflowAppAuthDatastore(ctx, appAuth, appAuth.Id)
+	if err != nil {
+		log.Printf("Failed setting up app auth %s: %s", appAuth.Id, err)
+		resp.WriteHeader(409)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		return
+	}
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(`{"success": true}`))
+}
+
+func getAppAuthentication(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	_, userErr := handleApiAuthentication(resp, request)
+	if userErr != nil {
+		log.Printf("Api authentication failed in get all apps: %s", userErr)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// FIXME: Auth to get the right ones only
+	//if user.Role != "admin" {
+	//	log.Printf("User isn't admin")
+	//	resp.WriteHeader(401)
+	//	resp.Write([]byte(`{"success": false}`))
+	//	return
+	//}
+	ctx := context.Background()
+	allAuths, err := getAllWorkflowAppAuth(ctx)
+	if userErr != nil {
+		log.Printf("Api authentication failed in get all app auth: %s", userErr)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if len(allAuths) == 0 {
+		resp.WriteHeader(200)
+		resp.Write([]byte(`{"success": true, "data": []}`))
+		return
+	}
+
+	newbody, err := json.Marshal(allAuths)
+	if err != nil {
+		log.Printf("Failed unmarshalling all app auths: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed unpacking workflow app auth"}`)))
+		return
+	}
+
+	data := fmt.Sprintf(`{"success": true, "data": %s}`, string(newbody))
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(data))
+
+	/*
+		data := `{
+			"success": true,
+			"data": [
+				{
+					"app": {
+						"name": "thehive",
+						"description": "what",
+						"app_version": "1.0.0",
+						"id": "4f97da9d-1caf-41cc-aa13-67104d8d825c",
+						"large_image": "asd"
+					},
+					"fields": {
+						"apikey": "hello",
+						"url": "url"
+					},
+					"usage": [{
+						"workflow_id": "asd",
+						"nodes": [{
+							"node_id": ""
+						}]
+					}],
+					"label": "Original",
+					"id": "4f97da9d-1caf-41cc-aa13-67104d8d825d",
+					"active": true
+				},
+				{
+					"app": {
+						"name": "thehive",
+						"description": "what",
+						"app_version": "1.0.0",
+						"id": "4f97da9d-1caf-41cc-aa13-67104d8d825c",
+						"large_image": "asd"
+					},
+					"fields": {
+						"apikey": "hello",
+						"url": "url"
+					},
+					"usage": [{
+						"workflow_id": "asd",
+						"nodes": [{
+							"node_id": ""
+						}]
+					}],
+					"label": "Number 2",
+					"id": "4f97da9d-1caf-41cc-aa13-67104d8d825d",
+					"active": true
+				}
+			]
+		}`
+	*/
 }
 
 func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
@@ -4208,18 +4462,52 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 					}
 				}
 
-				/*
-					if workflowapp.Name == "thehive" {
-						for _, action := range workflowapp.Actions {
-							if len(action.Returns.Example) > 0 {
-								log.Printf("ACTION: %#v", action)
-							}
-						}
-					}
-				*/
-
 				if skip {
 					continue
+				}
+
+				// Fixes (appends) authentication parameters if they're required
+				if workflowapp.Authentication.Required {
+					log.Printf("Checking authentication fields and appending for %s!", workflowapp.Name)
+					// FIXME:
+					// Might require reflection into the python code to append the fields as well
+					for index, action := range workflowapp.Actions {
+						if action.AuthNotRequired {
+							log.Printf("Skipping auth setup: %s", action.Name)
+							continue
+						}
+
+						// 1. Check if authentication params exists at all
+						// 2. Check if they're present in the action
+						// 3. Add them IF they DONT exist
+						// 4. Fix python code with reflection (FIXME)
+						appendParams := []WorkflowAppActionParameter{}
+						for _, fieldname := range workflowapp.Authentication.Parameters {
+							found := false
+							for _, param := range action.Parameters {
+								if param.Name == fieldname.Name {
+									found = true
+									break
+								}
+							}
+
+							if !found {
+								appendParams = append(appendParams, WorkflowAppActionParameter{
+									Name:        fieldname.Name,
+									Description: fieldname.Description,
+									Example:     fieldname.Example,
+									Required:    fieldname.Required,
+									Schema:      fieldname.Schema,
+								})
+							}
+						}
+
+						if len(appendParams) > 0 {
+							log.Printf("Appending %d params to the START of %s", len(appendParams), action.Name)
+							workflowapp.Actions[index].Parameters = append(appendParams, workflowapp.Actions[index].Parameters...)
+						}
+
+					}
 				}
 
 				err = checkWorkflowApp(workflowapp)
@@ -4270,7 +4558,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 					if len(tags) > 0 {
 						log.Printf("Successfully built image %s", tags[0])
 					} else {
-						log.Printf("Successfully built image docker img")
+						log.Printf("Successfully built Docker image")
 					}
 				}
 			}
@@ -4471,6 +4759,30 @@ func getAllWorkflowApps(ctx context.Context) ([]WorkflowApp, error) {
 	}
 
 	return allworkflowapps, nil
+}
+
+func getAllWorkflowAppAuth(ctx context.Context) ([]AppAuthenticationStorage, error) {
+	var allworkflowapps []AppAuthenticationStorage
+	q := datastore.NewQuery("workflowappauth")
+
+	_, err := dbclient.GetAll(ctx, q, &allworkflowapps)
+	if err != nil {
+		return []AppAuthenticationStorage{}, err
+	}
+
+	return allworkflowapps, nil
+}
+
+func setWorkflowAppAuthDatastore(ctx context.Context, workflowappauth AppAuthenticationStorage, id string) error {
+	key := datastore.NameKey("workflowappauth", id, nil)
+
+	// New struct, to not add body, author etc
+	if _, err := dbclient.Put(ctx, key, &workflowappauth); err != nil {
+		log.Printf("Error adding workflow app: %s", err)
+		return err
+	}
+
+	return nil
 }
 
 // Hmm, so I guess this should use uuid :(

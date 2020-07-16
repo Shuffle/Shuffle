@@ -475,6 +475,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 			api.Authentication.Parameters[0].Description = securitySchemes["BearerAuth"].Value.Description
 			api.Authentication.Parameters[0].Name = securitySchemes["BearerAuth"].Value.Name
 			api.Authentication.Parameters[0].In = securitySchemes["BearerAuth"].Value.In
+			api.Authentication.Parameters[0].Schema.Type = securitySchemes["BearerAuth"].Value.Scheme
 			api.Authentication.Parameters[0].Scheme = securitySchemes["BearerAuth"].Value.Scheme
 			//log.Printf("HANDLE BEARER AUTH")
 			extraParameters = append(extraParameters, WorkflowAppActionParameter{
@@ -492,6 +493,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 			api.Authentication.Parameters[0].Description = securitySchemes["ApiKeyAuth"].Value.Description
 			api.Authentication.Parameters[0].Name = securitySchemes["ApiKeyAuth"].Value.Name
 			api.Authentication.Parameters[0].In = securitySchemes["ApiKeyAuth"].Value.In
+			api.Authentication.Parameters[0].Schema.Type = securitySchemes["ApiKeyAuth"].Value.Scheme
 			api.Authentication.Parameters[0].Scheme = securitySchemes["ApiKeyAuth"].Value.Scheme
 			//log.Printf("HANDLE APIKEY AUTH")
 			extraParameters = append(extraParameters, WorkflowAppActionParameter{
@@ -509,6 +511,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 			api.Authentication.Parameters[0].Description = securitySchemes["BasicAuth"].Value.Description
 			api.Authentication.Parameters[0].Name = securitySchemes["BasicAuth"].Value.Name
 			api.Authentication.Parameters[0].In = securitySchemes["BasicAuth"].Value.In
+			api.Authentication.Parameters[0].Schema.Type = securitySchemes["BasicAuth"].Value.Scheme
 			api.Authentication.Parameters[0].Scheme = securitySchemes["BasicAuth"].Value.Scheme
 			extraParameters = append(extraParameters, WorkflowAppActionParameter{
 				Name:        "username",

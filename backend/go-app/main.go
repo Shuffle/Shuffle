@@ -6452,6 +6452,10 @@ func init() {
 	r.HandleFunc("/api/v1/apps", setNewWorkflowApp).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/search", getSpecificApps).Methods("POST", "OPTIONS")
 
+	r.HandleFunc("/api/v1/apps/authentication", getAppAuthentication).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/authentication", addAppAuthentication).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/authentication/{appauthId}", deleteAppAuthentication).Methods("DELETE", "OPTIONS")
+
 	// Legacy app things
 	r.HandleFunc("/api/v1/workflows/apps/validate", validateAppInput).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/apps", getWorkflowApps).Methods("GET", "OPTIONS")

@@ -289,8 +289,8 @@ const Apps = (props) => {
 			<Paper square style={paperAppStyle} onClick={() => {
 				if (selectedApp.id !== data.id) {
 					setSelectedApp(data)
+					console.log(data)
 					if (data.actions !== undefined && data.actions !== null && data.actions.length > 0) {
-						console.log(data.actions[0])
 						setSelectedAction(data.actions[0])
 					} else {
 						setSelectedAction({})
