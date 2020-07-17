@@ -78,12 +78,14 @@ type Org struct {
 }
 
 type AppAuthenticationStorage struct {
-	Active bool                  `json:"active" datastore:"active"`
-	Label  string                `json:"label" datastore:"label"`
-	Id     string                `json:"id" datastore:"id"`
-	App    WorkflowApp           `json:"app" datastore:"app"`
-	Fields []AuthenticationStore `json:"fields" datastore:"fields"`
-	Usage  []AuthenticationUsage `json:"usage" datastore:"usage"`
+	Active        bool                  `json:"active" datastore:"active"`
+	Label         string                `json:"label" datastore:"label"`
+	Id            string                `json:"id" datastore:"id"`
+	App           WorkflowApp           `json:"app" datastore:"app"`
+	Fields        []AuthenticationStore `json:"fields" datastore:"fields"`
+	Usage         []AuthenticationUsage `json:"usage" datastore:"usage"`
+	WorkflowCount int64                 `json:"workflow_count" datastore:"workflow_count"`
+	NodeCount     int64                 `json:"node_count" datastore:"node_count"`
 }
 
 type AuthenticationUsage struct {
@@ -1398,6 +1400,61 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(`{"success": true}`))
 }
 
+// Adds app auth tracking
+func updateAppAuth(auth AppAuthenticationStorage, workflowId, nodeId string, add bool) error {
+	workflowFound := false
+	workflowIndex := 0
+	nodeFound := false
+	for index, workflow := range auth.Usage {
+		if workflow.WorkflowId == workflowId {
+			// Check if node exists
+			workflowFound = true
+			workflowIndex = index
+			log.Printf("Found workflow: %#v", workflow)
+			for _, actionId := range workflow.Nodes {
+				if actionId == nodeId {
+					nodeFound = true
+					break
+				}
+			}
+
+			break
+		}
+	}
+
+	// FIXME: Add a way to use !add to remove
+	updateAuth := false
+	if !workflowFound && add {
+		log.Printf("Adding workflow things to auth!")
+		usageItem := AuthenticationUsage{
+			WorkflowId: workflowId,
+			Nodes:      []string{nodeId},
+		}
+
+		auth.Usage = append(auth.Usage, usageItem)
+		auth.WorkflowCount += 1
+		auth.NodeCount += 1
+		updateAuth = true
+	} else if !nodeFound && add {
+		log.Printf("Adding node things to auth!")
+		auth.Usage[workflowIndex].Nodes = append(auth.Usage[workflowIndex].Nodes, nodeId)
+		auth.NodeCount += 1
+		updateAuth = true
+	}
+
+	if updateAuth {
+		log.Printf("Updating auth!")
+		ctx := context.Background()
+		err := setWorkflowAppAuthDatastore(ctx, auth, auth.Id)
+		if err != nil {
+			log.Printf("Failed setting up app auth %s: %s", auth.Id, err)
+			return err
+		}
+	}
+
+	return nil
+}
+
 // Saves a workflow to an ID
 func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
@@ -1496,7 +1553,6 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	//log.Printf("Action: %#v", action.Authentication)
 	for _, action := range workflow.Actions {
-		log.Printf("Auth: %s", action.AuthenticationId)
 		allNodes = append(allNodes, action.ID)
 
 		if action.Environment == "" {
@@ -1640,6 +1696,14 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	allAuths, err := getAllWorkflowAppAuth(ctx)
+	if userErr != nil {
+		log.Printf("Api authentication failed in get all apps: %s", userErr)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
 	// Check every app action and param to see whether they exist
 	newActions = []Action{}
 	for _, action := range workflow.Actions {
@@ -1654,6 +1718,31 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 			if id == action.AppID {
 				builtin = true
 				break
+			}
+		}
+
+		// FIXME: Check auth
+		if len(action.AuthenticationId) > 0 {
+			authFound := false
+
+			for _, auth := range allAuths {
+				if auth.Id == action.AuthenticationId {
+					authFound = true
+
+					// Fix stuff here
+					err := updateAppAuth(auth, workflow.ID, action.ID, true)
+					if err != nil {
+						log.Printf("Failed updating the app auth reference: %s (not critical)", err)
+					}
+					break
+				}
+			}
+
+			if !authFound {
+				log.Printf("App auth %s doesn't exist", action.AuthenticationId)
+				resp.WriteHeader(401)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "App auth %s doesn't exist"}`, action.AuthenticationId)))
+				return
 			}
 		}
 
@@ -3020,16 +3109,29 @@ func deleteAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 	log.Printf("%#v", location)
 	var fileId string
 	if location[1] == "api" {
-		if len(location) <= 4 {
+		if len(location) <= 5 {
 			resp.WriteHeader(401)
 			resp.Write([]byte(`{"success": false}`))
 			return
 		}
 
-		fileId = location[4]
+		fileId = location[5]
 	}
 
+	// FIXME: Set affected workflows to have errors
+	// 1. Get the auth
+	// 2. Loop the workflows (.Usage) and set them to have errors
+	// 3. Loop the nodes in workflows and do the same
+
 	log.Printf("ID: %s", fileId)
+	ctx := context.Background()
+	err := DeleteKey(ctx, "workflowappauth", fileId)
+	if err != nil {
+		log.Printf("Failed deleting workflowapp")
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed deleting workflow app"}`)))
+		return
+	}
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": true}`))

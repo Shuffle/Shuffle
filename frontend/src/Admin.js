@@ -38,10 +38,39 @@ const Admin = (props) => {
 	const [selectedUser, setSelectedUser] = React.useState({})
 	const [newPassword, setNewPassword] = React.useState("");
 	const [selectedUserModalOpen, setSelectedUserModalOpen] = React.useState(false)
-	const [selectedAuthentication, setSelectedAuthentcation] = React.useState({})
+	const [selectedAuthentication, setSelectedAuthentication] = React.useState({})
 	const [selectedAuthenticationModalOpen, setSelectedAuthenticationModalOpen] = React.useState(false)
 
 	const alert = useAlert()
+
+	const deleteAuthentication = (data) => {
+		alert.info("Deleting auth "+data.label)
+
+		// Just use this one?
+		const url = globalUrl+'/api/v1/apps/authentication/'+data.id
+		console.log("URL: ", url)
+		fetch(url, {
+			method: 'DELETE',
+	  	credentials: "include",
+			headers: {
+				'Content-Type': 'application/json',
+			},
+		})
+		.then(response =>
+			response.json().then(responseJson => {
+				console.log("RESP: ", responseJson)
+				if (responseJson["success"] === false) {
+					alert.error("Failed stopping schedule")
+				} else {
+					getAppAuthentication() 
+					alert.success("Successfully stopped schedule!")
+				}
+			}),
+		)
+		.catch(error => {
+			console.log("Error in userdata: ", error)
+		});
+	}
 
 	const deleteSchedule = (data) => {
 		// FIXME - add some check here ROFL
@@ -165,6 +194,7 @@ const Admin = (props) => {
 
 	const deleteEnvironment = (name) => {
 		// FIXME - add some check here ROFL
+		alert.info("Deleting environment "+name)
 		var newEnv = []
 		for (var key in environments) {
 			if (environments[key].Name == name) {
@@ -566,7 +596,9 @@ const Admin = (props) => {
 				},
 			}}
 		>
-			<DialogTitle><span style={{color: "white"}}>Add user</span></DialogTitle>
+			<DialogTitle><span style={{color: "white"}}>
+				{curTab === 0 ? "Add user" : "Add environment"}
+			</span></DialogTitle>
 			<DialogContent>
 				{curTab === 0 ? 
 					<div>
@@ -613,7 +645,7 @@ const Admin = (props) => {
 							onChange={(event) => changeModalData("Password", event.target.value)}
 						/>
 					</div>
-				: curTab === 1 ?
+				: curTab === 2 ?
 				<div>
 					Environment Name	
 					<TextField
@@ -646,7 +678,7 @@ const Admin = (props) => {
 				<Button variant="contained" style={{borderRadius: "0px"}} onClick={() => {
 					if (curTab === 0) {
 						submitUser(modalUser)
-					} else if (curTab === 1) {
+					} else if (curTab === 2) {
 						submitEnvironment(modalUser)
 					}
 				}} color="primary">
@@ -660,6 +692,7 @@ const Admin = (props) => {
 			<h2>	
 				User management
 			</h2>
+			<div/>
 			<Button 
 				style={{}} 
 				variant="contained"
@@ -807,7 +840,7 @@ const Admin = (props) => {
 	const authenticationView = curTab === 1 ?
 		<div>
 			<h2>	
-				Authentication	
+				App Authentication	
 			</h2>
 			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
 			<List>
@@ -825,15 +858,19 @@ const Admin = (props) => {
 						style={{minWidth: 150, maxWidth: 150}}
 					/>
 					<ListItemText
+						primary="Workflows"
+						style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
+					/>
+					<ListItemText
+						primary="Action amount"
+						style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
+					/>
+					<ListItemText
 						primary="Fields"
 						style={{minWidth: 320, maxWidth: 320, overflow: "hidden"}}
 					/>
 					<ListItemText
-						primary="Workflow usage"
-						style={{minWidth: 320, maxWidth: 320, overflow: "hidden"}}
-					/>
-					<ListItemText
-						primary="Actions (TBD)"
+						primary="Actions"
 					/>
 				</ListItem>
 				{authentication === undefined ? null : authentication.map(data => {
@@ -852,36 +889,26 @@ const Admin = (props) => {
 								style={{minWidth: 150, maxWidth: 150}}
 							/>
 							<ListItemText
+								primary={data.usage.length}
+								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
+							/>
+							<ListItemText
+								primary={data.node_count}
+								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
+							/>
+							<ListItemText
 								primary={data.fields.map(data => {
 									return data.key
 								}).join(", ")}
 								style={{minWidth: 320, maxWidth: 320, overflow: "hidden"}}
 							/>
-							<ListItemText
-								primary={data.usage.length}
-								style={{minWidth: 320, maxWidth: 320, overflow: "hidden"}}
-							/>
 							<ListItemText>
 								<Button 
 									style={{}} 
-									variant="contained"
+									variant="outlined"
 									color="primary"
-									disabled={true}
 									onClick={() => {
-										setSelectedAuthentcation(data)
-										setSelectedAuthenticationModalOpen(true)
-									}}
-								>
-									Edit 
-								</Button>
-								<Button 
-									style={{}} 
-									variant="contained"
-									color="primary"
-									disabled={true}
-									onClick={() => {
-										setSelectedAuthentcation(data)
-										setSelectedAuthenticationModalOpen(true)
+										deleteAuthentication(data)
 									}}
 								>
 									Delete	
@@ -909,15 +936,32 @@ const Admin = (props) => {
 			</Button>
 			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
 			<List>
+				<ListItem>
+					<ListItemText
+						primary="Name"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="Actions"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+				</ListItem>
 				{environments === undefined ? null : environments.map(environment => {
 					return (
 						<ListItem>
-							<Button type="outlined" style={{borderRadius: "0px"}} onClick={() => deleteEnvironment(environment.Name)} color="primary">Delete</Button>
-							- {environment.Name}
+							<ListItemText
+								primary={environment.Name}
+								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
+							/>
+							<ListItemText>
+								<Button type="outlined" style={{borderRadius: "0px"}} onClick={() => deleteEnvironment(environment.Name)} color="primary">Delete</Button>
+							</ListItemText>
 						</ListItem>
 					)
 				})}
 			</List>
+
+
 		</div>
 		: null
 
