@@ -52,8 +52,8 @@ export const GetParsedPaths = (inputdata, basekey) => {
 		if (typeof(value) === 'object') {
 			if (Array.isArray(value)) {
 				// Check if each item is object
-				parsedValues.push({"name": basekeyname, "autocomplete": `${basekey}.${key}`})
-				parsedValues.push({"name": `${basekeyname}${splitkey}list`, "autocomplete": `${basekey}.${key}.#`})
+				parsedValues.push({"type": "object", "name": basekeyname, "autocomplete": `${basekey}.${key}`})
+				parsedValues.push({"type": "list", "name": `${basekeyname}${splitkey}list`, "autocomplete": `${basekey}.${key}.#`})
 
 				// Only check the first. This would be probably be dumb otherwise.
 				for (var subkey in value) {
@@ -70,14 +70,14 @@ export const GetParsedPaths = (inputdata, basekey) => {
 				}
 				//console.log(key+" is array")
 			} else {
-				parsedValues.push({"name": basekeyname, "autocomplete": `${basekey}.${key}`})
+				parsedValues.push({"type": "object", "name": basekeyname, "autocomplete": `${basekey}.${key}`})
 				const returnValues = GetParsedPaths(value, `${basekey}.${key}`)
 				for (var subkey in returnValues) {
 					parsedValues.push(returnValues[subkey])
 				}
 			}
 		} else {
-			parsedValues.push({"name": basekeyname, "autocomplete": `${basekey}.${key}`})
+			parsedValues.push({"type": "value", "name": basekeyname, "autocomplete": `${basekey}.${key}`, "value": value,})
 		}
 	}
 

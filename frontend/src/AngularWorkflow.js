@@ -11,6 +11,7 @@ import Button from '@material-ui/core/Button';
 import Paper from '@material-ui/core/Paper';
 import Grid from '@material-ui/core/Grid';
 import Tabs from '@material-ui/core/Tabs';
+import InputAdornment from '@material-ui/core/InputAdornment';
 import Tab from '@material-ui/core/Tab';
 import ButtonBase from '@material-ui/core/ButtonBase';
 import Tooltip from '@material-ui/core/Tooltip';
@@ -40,6 +41,7 @@ import CachedIcon from '@material-ui/icons/Cached';
 import AddIcon from '@material-ui/icons/Add';
 import DirectionsRunIcon from '@material-ui/icons/DirectionsRun';
 import PolymerIcon from '@material-ui/icons/Polymer';
+import FormatListNumberedIcon from '@material-ui/icons/FormatListNumbered';
 import CreateIcon from '@material-ui/icons/Create';
 import PlayArrowIcon from '@material-ui/icons/PlayArrow';
 import AspectRatioIcon from '@material-ui/icons/AspectRatio';
@@ -49,12 +51,15 @@ import ScheduleIcon from '@material-ui/icons/Schedule';
 import FavoriteBorderIcon from '@material-ui/icons/FavoriteBorder';
 import PauseIcon from '@material-ui/icons/Pause';
 import DeleteIcon from '@material-ui/icons/Delete';
+import AddCircleOutlineIcon from '@material-ui/icons/AddCircleOutline';
 import SaveIcon from '@material-ui/icons/Save';
 import KeyboardArrowLeftIcon from '@material-ui/icons/KeyboardArrowLeft';
 import KeyboardArrowRightIcon from '@material-ui/icons/KeyboardArrowRight';
 import ArrowBackIcon from '@material-ui/icons/ArrowBack';
 import SettingsIcon from '@material-ui/icons/Settings';
 import LockOpenIcon from '@material-ui/icons/LockOpen';
+import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
+import VpnKeyIcon from '@material-ui/icons/VpnKey';
 
 import * as cytoscape from 'cytoscape';
 import * as edgehandles from 'cytoscape-edgehandles';
@@ -257,9 +262,9 @@ const AngularWorkflow = (props) => {
 	const debugView = workflowExecutions.length > 0 ? 
 		<Draggable> 
 			<div style={{color: "white", position: "fixed", top: appBarSize+65, left: leftBarSize+20, zIndex: 5000, minHeight: 100, padding: 15, maxHeight: 100, maxWidth: 500, overflowX: "hidden",}}>
-				{workflowExecutions.slice(0,15).map(data => {
+				{workflowExecutions.slice(0,15).map((data, index) => {
 					return (
-						<div key={data.id}>
+						<div key={index}>
 							{new Date(data.started_at*1000).toISOString()}
 							, {data.status}
 							{data.result.length > 0 ? ", "+data.result : ", "}
@@ -929,7 +934,6 @@ const AngularWorkflow = (props) => {
 
 					const newfields = {}
 					for (var filterkey in item.fields) {
-						console.log(item.fields)
 						newfields[item.fields[filterkey].key] = item.fields[filterkey].value
 					}
 
@@ -937,8 +941,6 @@ const AngularWorkflow = (props) => {
 					if (item.app.name === curapp.name) {
 						authenticationOptions.push(item)
 						if (item.id === findAuthId) {
-							console.log("ITEM: ", item)
-							// Missing fields here?
 							curaction.selectedAuthentication = item
 						}
 					}
@@ -2377,6 +2379,7 @@ const AngularWorkflow = (props) => {
 		const [showDropdownNumber, setShowDropdownNumber] = React.useState(0)
 		const [actionlist, setActionlist] = React.useState([])
 		const [jsonList, setJsonList] = React.useState([])
+		const [showAutocomplete, setShowAutocomplete] = React.useState(false)
 
 		useEffect(() => {
 			if (selectedActionParameters !== null && selectedActionParameters.length === 0) {
@@ -2429,6 +2432,7 @@ const AngularWorkflow = (props) => {
 		const changeActionParameter = (event, count) => {
 			if (event.target.value[event.target.value.length-1] === "$") {
 				if (!showDropdown) {
+					setShowAutocomplete(false)
 					setShowDropdown(true)
 					setShowDropdownNumber(count)
 				}
@@ -2487,6 +2491,7 @@ const AngularWorkflow = (props) => {
 							setJsonList(GetParsedPaths(JSON.parse(actionItem.example), ""))
 
 							if (!showDropdown) {
+								setShowAutocomplete(false)
 								setShowDropdown(true)
 								setShowDropdownNumber(count)
 							}
@@ -2626,6 +2631,17 @@ const AngularWorkflow = (props) => {
 										maxWidth: "95%",
 										fontSize: "1em",
 									},
+									endAdornment: (
+										<InputAdornment position="end">
+											<Tooltip color="primary" title="Autocomplete text" placement="top">
+												<AddCircleOutlineIcon style={{cursor: "pointer"}} onClick={() => {
+													setShowDropdownNumber(count)
+													setShowDropdown(true)
+													setShowAutocomplete(true)
+												}}/>
+											</Tooltip>
+										</InputAdornment>
+									)
 								}}
 								fullWidth
 								multiline={multiline}
@@ -2805,7 +2821,7 @@ const AngularWorkflow = (props) => {
 							</div>	
 							{datafield}
 							{showDropdown && showDropdownNumber === count && data.variant === "STATIC_VALUE" && jsonList.length > 0 ?
-							  <FormControl fullWidth>
+							  <FormControl fullWidth style={{marginTop: 0}}>
 									<InputLabel id="action-autocompleter" style={{marginLeft: 10, color: "white"}}><ArrowUpwardIcon />Autocomplete</InputLabel>
 									<Select
 									  labelId="action-autocompleter"
@@ -2814,10 +2830,20 @@ const AngularWorkflow = (props) => {
 												marginLeft: 10,
 											}
 										}}
+										onClose={() => {
+											setShowAutocomplete(false)
+
+											if (!selectedActionParameters[count].value[selectedActionParameters[count].value.length-1] === ".") {
+												setShowDropdown(false)
+											}
+
+											setUpdate(Math.random())
+										}}
+										onClick={() => setShowAutocomplete(true)}
 										fullWidth
+										open={showAutocomplete}
+										style={{border: `2px solid #f85a3e`, color: "white", height: "50px", marginTop: 2,}}
 										onChange={(e) => {
-											//parsedValues.push({"name": basekeyname, "autocomplete": `${basekey}.${key}`})
-											console.log("CHANGE!")
 											if (selectedActionParameters[count].value[selectedActionParameters[count].value.length-1] === ".") {
 												e.target.value.autocomplete = e.target.value.autocomplete.slice(1, e.target.value.autocomplete.length)
 											}
@@ -2830,14 +2856,18 @@ const AngularWorkflow = (props) => {
 
 											setShowDropdown(false)
 										}}
-										style={{border: `2px solid #f85a3e`, color: "white", height: "50px"}}
 									>
 										{jsonList.map(data => {
+											const iconStyle = {
+												marginRight: 15,
+											}
+
+											const icon = data.type === "value" ? <VpnKeyIcon style={iconStyle} /> : data.type === "list" ? <FormatListNumberedIcon style={iconStyle} /> : <ExpandMoreIcon style={iconStyle} /> 
 											return (
 												<MenuItem key={data.name} style={{backgroundColor: inputColor, color: "white"}} value={data} onMouseOver={() => {}}>
-													<Tooltip color="primary" title={`Value: ${data.value}`} placement="left">
+													<Tooltip color="primary" title={`Ex. value: ${data.value}`} placement="left">
 														<div style={{display: "flex"}}>
-															{data.name}
+															{icon} {data.name}
 														</div>
 													</Tooltip>
 												</MenuItem>
@@ -2856,10 +2886,23 @@ const AngularWorkflow = (props) => {
 												marginLeft: 10,
 											}
 										}}
+										onClose={() => {
+											setShowAutocomplete(false)
+
+											if (!selectedActionParameters[count].value[selectedActionParameters[count].value.length-1] === "$") {
+												setShowDropdown(false)
+											}
+
+											setUpdate(Math.random())
+										}}
+										onClick={() => setShowAutocomplete(true)}
+										open={showAutocomplete}
 										fullWidth
+										style={{border: `2px solid #f85a3e`, color: "white", height: 50, marginTop: 2,}}
 										onChange={(e) => {
 											console.log("CHANGE!")
-											selectedActionParameters[count].value += e.target.value.autocomplete
+											const toComplete = selectedActionParameters[count].value.trim().endsWith("$") ? e.target.value.autocomplete : "$"+e.target.value.autocomplete
+											selectedActionParameters[count].value += toComplete
 											selectedAction.parameters[count].value = selectedActionParameters[count].value 
 											console.log("TARGET: ", selectedActionParameters)
 											setSelectedAction(selectedAction)
@@ -2867,7 +2910,6 @@ const AngularWorkflow = (props) => {
 
 											setShowDropdown(false)
 										}}
-										style={{border: `2px solid #f85a3e`, color: "white", height: "50px"}}
 										>
 										{actionlist.map(data => {
 											const icon = data.type === "action" ? <AppsIcon style={{marginRight: 10}} /> : data.type === "workflow_variable" || data.type === "execution_variable" ? <FavoriteBorderIcon style={{marginRight: 10}} /> : <ScheduleIcon style={{marginRight: 10}} /> 
