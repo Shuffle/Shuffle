@@ -54,6 +54,7 @@ import KeyboardArrowLeftIcon from '@material-ui/icons/KeyboardArrowLeft';
 import KeyboardArrowRightIcon from '@material-ui/icons/KeyboardArrowRight';
 import ArrowBackIcon from '@material-ui/icons/ArrowBack';
 import SettingsIcon from '@material-ui/icons/Settings';
+import LockOpenIcon from '@material-ui/icons/LockOpen';
 
 import * as cytoscape from 'cytoscape';
 import * as edgehandles from 'cytoscape-edgehandles';
@@ -926,7 +927,9 @@ const AngularWorkflow = (props) => {
 
 				const newfields = {}
 				for (var filterkey in item.fields) {
-					newfields[item.fields[filterkey].key] = item.fields[filterkey].value
+					if (item.fields[filterkey] !== undefined) {
+						newfields[item.fields[filterkey].key] = item.fields[filterkey].value
+					}
 				}
 
 				item.fields = newfields
@@ -2585,9 +2588,10 @@ const AngularWorkflow = (props) => {
 						if (!selectedAction.auth_not_required && selectedAction.selectedAuthentication !== undefined && selectedAction.selectedAuthentication.fields !== undefined) {
 							if (selectedAction.selectedAuthentication.fields[data.name] !== undefined) {
 								// FIXME - this should be skipped in the frontend
-								selectedActionParameters[count].value = selectedAction.selectedAuthentication.fields[data.name]
-								selectedAction.parameters[count].value = selectedAction.selectedAuthentication.fields[data.name]
-								setSelectedAction(selectedAction)
+								//selectedActionParameters[count].value = selectedAction.selectedAuthentication.fields[data.name]
+								//selectedAction.parameters[count].value = selectedAction.selectedAuthentication.fields[data.name]
+								//setSelectedAction(selectedAction)
+
 								return null	
 							}
 						}
@@ -2757,8 +2761,16 @@ const AngularWorkflow = (props) => {
 						}
 						return (
 						<div key={data.name}>	
-							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
-								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: "10px"}}/>
+							<div style={{marginTop: 20, marginBottom: 7, display: "flex"}}>
+								{data.configuration === true ? 
+									<Tooltip color="primary" title={`Authenticate ${selectedApp.name}`} placement="top">
+										<LockOpenIcon style={{cursor: "pointer", width: 24, height: 24, marginRight: 10, }} onClick={() => {
+											setAuthenticationModalOpen(true)
+										}}/>
+									</Tooltip>
+								:
+									<div style={{width: 17, height: 17, borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: 10}}/>
+								}
 								<div style={{flex: "10"}}> 
 									<b>{data.name} </b> 
 								</div>
@@ -3036,7 +3048,7 @@ const AngularWorkflow = (props) => {
 			/>
 			{selectedAction.authentication.length === 0 && requiresAuthentication  ?
 				<div style={{marginTop: 15}}>
-					Authentication (reusable):
+					Authenticate {selectedApp.name}: 
 					<Tooltip color="primary" title={"Add authentication option"} placement="top">
 						<Button color="primary" style={{}} variant="text" onClick={() => {
 							setAuthenticationModalOpen(true)
@@ -5440,25 +5452,27 @@ const AngularWorkflow = (props) => {
 			selectedAction.selectedAuthentication = authenticationOption
 			selectedAction.authentication.push(authenticationOption)
 			setSelectedAction(selectedAction)
+			setUpdate(authenticationOption.id)
 
+			var newAuthOption = JSON.parse(JSON.stringify(authenticationOption))
 			var newFields = []
-			for (const key in authenticationOption.fields) {
-				const value = authenticationOption.fields[key]
+			for (const key in newAuthOption.fields) {
+				const value = newAuthOption.fields[key]
 				newFields.push({
 					key: key,
 					value: value,
 				})
 			}
 
-			authenticationOption.fields = newFields
-			setNewAppAuth(authenticationOption)
+			newAuthOption.fields = newFields
+			setNewAppAuth(newAuthOption)
 		}
 
 		return (
 			<div>
 				<DialogContent>
 					<a href="https://shuffler.io/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is this?</a>
-					&nbsp;These are required fields for authenticating with TheHive	
+					These are required fields for authenticating with {selectedApp.name} 
 					<div style={{marginTop: 15}}/>
 					{selectedApp.link.length > 0 ? <EndpointData /> : null}
 					Label (to remember it)

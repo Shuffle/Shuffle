@@ -21,6 +21,7 @@ import DialogTitle from '@material-ui/core/DialogTitle';
 import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
 
+import CachedIcon from '@material-ui/icons/Cached';
 
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
@@ -305,6 +306,7 @@ const Admin = (props) => {
 		})
     .then((responseJson) => {
 			if (responseJson.success) {
+				console.log(responseJson.data)
 				setAuthentication(responseJson.data)
 			} else {
 				alert.error("Failed getting authentications")
@@ -333,6 +335,7 @@ const Admin = (props) => {
 			return response.json()
 		})
     .then((responseJson) => {
+			console.log(responseJson)
 			setEnvironments(responseJson)
 		})
 		.catch(error => {
@@ -536,7 +539,7 @@ const Admin = (props) => {
 			<DialogContent>
 				<div style={{display: "flex"}}>
 					<TextField
-						style={{backgroundColor: inputColor, flex: 3}}
+						style={{marginTop: 0, backgroundColor: inputColor, flex: 3}}
 						InputProps={{
 							style:{
 								height: 50, 
@@ -689,9 +692,10 @@ const Admin = (props) => {
 
 	const usersView = curTab === 0 ?
 		<div>
-			<h2>	
-				User management
-			</h2>
+			<div style={{marginTop: 20, marginBottom: 20,}}>
+				<h2 style={{display: "inline",}}>User management</h2>
+				<span style={{marginLeft: 25}}>Add, edit, block or change passwords</span>
+			</div>
 			<div/>
 			<Button 
 				style={{}} 
@@ -791,9 +795,10 @@ const Admin = (props) => {
 
 	const schedulesView = curTab === 3 ?
 		<div>
-			<h2>	
-				Schedules	
-			</h2>
+			<div style={{marginTop: 20, marginBottom: 20,}}>
+				<h2 style={{display: "inline",}}>Schedules</h2>
+				<span style={{marginLeft: 25}}>Schedules used in Workflows. Makes locating and control easier.</span>
+			</div>
 			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
 			<List>
 				<ListItem>
@@ -839,9 +844,10 @@ const Admin = (props) => {
 
 	const authenticationView = curTab === 1 ?
 		<div>
-			<h2>	
-				App Authentication	
-			</h2>
+			<div style={{marginTop: 20, marginBottom: 20,}}>
+				<h2 style={{display: "inline",}}>App Authentication</h2>
+				<span style={{marginLeft: 25}}>Control the authentication options for individual apps. <b>Actions can be destructive!</b></span>
+			</div>
 			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
 			<List>
 				<ListItem>
@@ -851,7 +857,7 @@ const Admin = (props) => {
 					/>
 					<ListItemText
 						primary="Label"
-						style={{minWidth: 150, maxWidth: 150}}
+						style={{minWidth: 250, maxWidth: 250}}
 					/>
 					<ListItemText
 						primary="App Name"
@@ -867,7 +873,7 @@ const Admin = (props) => {
 					/>
 					<ListItemText
 						primary="Fields"
-						style={{minWidth: 320, maxWidth: 320, overflow: "hidden"}}
+						style={{minWidth: 200, maxWidth: 200, overflow: "hidden"}}
 					/>
 					<ListItemText
 						primary="Actions"
@@ -882,7 +888,7 @@ const Admin = (props) => {
 							/>
 							<ListItemText
 								primary={data.label}
-								style={{minWidth: 150, maxWidth: 150}}
+								style={{minWidth: 250, maxWidth: 250}}
 							/>
 							<ListItemText
 								primary={data.app.name}
@@ -900,7 +906,7 @@ const Admin = (props) => {
 								primary={data.fields.map(data => {
 									return data.key
 								}).join(", ")}
-								style={{minWidth: 320, maxWidth: 320, overflow: "hidden"}}
+								style={{minWidth: 200, maxWidth: 200, overflow: "hidden"}}
 							/>
 							<ListItemText>
 								<Button 
@@ -923,9 +929,10 @@ const Admin = (props) => {
 
 	const environmentView = curTab === 2 ?
 		<div>
-			<h2>	
-				Environments	
-			</h2>
+			<div style={{marginTop: 20, marginBottom: 20,}}>
+				<h2 style={{display: "inline",}}>Environments</h2>
+				<span style={{marginLeft: 25}}>Decides what Orborus environment to execute an action in a workflow in.</span>
+			</div>
 			<Button 
 				style={{}} 
 				variant="contained"
@@ -934,12 +941,24 @@ const Admin = (props) => {
 			> 
 				Add environment 
 			</Button>
+			<Button 
+				style={{marginLeft: 5, }} 
+				variant="contained"
+				color="primary"
+				onClick={() => getEnvironments()}
+			> 
+				<CachedIcon />
+			</Button>
 			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
 			<List>
 				<ListItem>
 					<ListItemText
 						primary="Name"
 						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="Orborus running (TBD)"
+						style={{minWidth: 200, maxWidth: 200}}
 					/>
 					<ListItemText
 						primary="Actions"
@@ -953,6 +972,10 @@ const Admin = (props) => {
 								primary={environment.Name}
 								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
 							/>
+							<ListItemText
+								primary={"TBD"}
+								style={{minWidth: 200, maxWidth: 200, overflow: "hidden"}}
+							/>
 							<ListItemText>
 								<Button type="outlined" style={{borderRadius: "0px"}} onClick={() => deleteEnvironment(environment.Name)} color="primary">Delete</Button>
 							</ListItemText>
@@ -960,10 +983,10 @@ const Admin = (props) => {
 					)
 				})}
 			</List>
-
-
 		</div>
 		: null
+
+		// primary={environment.Registered ? "true" : "false"}
 
 	const setConfig = (event, newValue) => {
 		if (newValue === 1) {

@@ -122,16 +122,17 @@ type WorkflowApp struct {
 }
 
 type WorkflowAppActionParameter struct {
-	Description string           `json:"description" datastore:"description" yaml:"description"`
-	ID          string           `json:"id" datastore:"id" yaml:"id,omitempty"`
-	Name        string           `json:"name" datastore:"name" yaml:"name"`
-	Example     string           `json:"example" datastore:"example" yaml:"example"`
-	Value       string           `json:"value" datastore:"value" yaml:"value,omitempty"`
-	Multiline   bool             `json:"multiline" datastore:"multiline" yaml:"multiline"`
-	ActionField string           `json:"action_field" datastore:"action_field" yaml:"actionfield,omitempty"`
-	Variant     string           `json:"variant" datastore:"variant" yaml:"variant,omitempty"`
-	Required    bool             `json:"required" datastore:"required" yaml:"required"`
-	Schema      SchemaDefinition `json:"schema" datastore:"schema" yaml:"schema"`
+	Description   string           `json:"description" datastore:"description" yaml:"description"`
+	ID            string           `json:"id" datastore:"id" yaml:"id,omitempty"`
+	Name          string           `json:"name" datastore:"name" yaml:"name"`
+	Example       string           `json:"example" datastore:"example" yaml:"example"`
+	Value         string           `json:"value" datastore:"value" yaml:"value,omitempty"`
+	Multiline     bool             `json:"multiline" datastore:"multiline" yaml:"multiline"`
+	ActionField   string           `json:"action_field" datastore:"action_field" yaml:"actionfield,omitempty"`
+	Variant       string           `json:"variant" datastore:"variant" yaml:"variant,omitempty"`
+	Required      bool             `json:"required" datastore:"required" yaml:"required"`
+	Configuration bool             `json:"configuration" datastore:"configuration" yaml:"configuration"`
+	Schema        SchemaDefinition `json:"schema" datastore:"schema" yaml:"schema"`
 }
 
 type SchemaDefinition struct {
@@ -621,6 +622,7 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 	resp.Write([]byte("OK"))
 }
 
+// FIXME: Authenticate this one (especially since we have a default: shuffle)
 func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -1410,7 +1412,6 @@ func updateAppAuth(auth AppAuthenticationStorage, workflowId, nodeId string, add
 			// Check if node exists
 			workflowFound = true
 			workflowIndex = index
-			log.Printf("Found workflow: %#v", workflow)
 			for _, actionId := range workflow.Nodes {
 				if actionId == nodeId {
 					nodeFound = true
@@ -1721,19 +1722,18 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 			}
 		}
 
-		// FIXME: Check auth
+		// Check auth
+		// 1. Find the auth in question
+		// 2. Update the node and workflow info in the auth
+		// 3. Get the values in the auth and add them to the action values
 		if len(action.AuthenticationId) > 0 {
 			authFound := false
-
 			for _, auth := range allAuths {
 				if auth.Id == action.AuthenticationId {
 					authFound = true
 
-					// Fix stuff here
-					err := updateAppAuth(auth, workflow.ID, action.ID, true)
-					if err != nil {
-						log.Printf("Failed updating the app auth reference: %s (not critical)", err)
-					}
+					// Updates the auth item itself IF necessary
+					go updateAppAuth(auth, workflow.ID, action.ID, true)
 					break
 				}
 			}
@@ -1796,9 +1796,6 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 			for _, param := range curappaction.Parameters {
 				found := false
 
-				// FIXME: Check if the name exists in authentication.parameters and doesn't use the auth required field
-				// If it does, the auth should be saved somehow.
-
 				// Handles check for parameter exists + value not empty in used fields
 				for _, actionParam := range action.Parameters {
 					if actionParam.Name == param.Name {
@@ -1817,6 +1814,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 						}
 
 						newParams = append(newParams, actionParam)
+						break
 					}
 				}
 
@@ -2308,6 +2306,8 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	// FIXME - remove this?
 	newActions := []Action{}
 	defaultResults := []ActionResult{}
+
+	allAuths := []AppAuthenticationStorage{}
 	for _, action := range workflowExecution.Workflow.Actions {
 		action.LargeImage = ""
 		if action.ID == workflowExecution.Start {
@@ -2317,6 +2317,47 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 
 		if action.Environment == "" {
 			return WorkflowExecution{}, fmt.Sprintf("Environment is not defined for %s", action.Name), errors.New("Environment not defined!")
+		}
+
+		// FIXME: Authentication parameters
+		if len(action.AuthenticationId) > 0 {
+			if len(allAuths) == 0 {
+				allAuths, err = getAllWorkflowAppAuth(ctx)
+				if err != nil {
+					log.Printf("Api authentication failed in get all app auth: %s", err)
+					return WorkflowExecution{}, fmt.Sprintf("Api authentication failed in get all app auth: %s", err), err
+				}
+			}
+
+			curAuth := AppAuthenticationStorage{Id: ""}
+			for _, auth := range allAuths {
+				if auth.Id == action.AuthenticationId {
+					curAuth = auth
+					break
+				}
+			}
+
+			if len(curAuth.Id) == 0 {
+				return WorkflowExecution{}, fmt.Sprintf("Auth ID %s doesn't exist", action.AuthenticationId), errors.New(fmt.Sprintf("Auth ID %s doesn't exist", action.AuthenticationId))
+			}
+
+			// Rebuild params with the right data. This is to prevent issues on the frontend
+			newParams := []WorkflowAppActionParameter{}
+			for _, param := range action.Parameters {
+
+				for _, authparam := range curAuth.Fields {
+					if param.Name == authparam.Key {
+						log.Printf("Name: %s - value: %s", param.Name, param.Value)
+						param.Value = authparam.Value
+						log.Printf("Name: %s - value: %s\n", param.Name, param.Value)
+						break
+					}
+				}
+
+				newParams = append(newParams, param)
+			}
+
+			action.Parameters = newParams
 		}
 
 		newActions = append(newActions, action)
@@ -3471,8 +3512,8 @@ func getAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 	//}
 	ctx := context.Background()
 	allAuths, err := getAllWorkflowAppAuth(ctx)
-	if userErr != nil {
-		log.Printf("Api authentication failed in get all app auth: %s", userErr)
+	if err != nil {
+		log.Printf("Api authentication failed in get all app auth: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -3482,6 +3523,17 @@ func getAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 		resp.WriteHeader(200)
 		resp.Write([]byte(`{"success": true, "data": []}`))
 		return
+	}
+
+	// Cleanup for frontend
+	newAuth := []AppAuthenticationStorage{}
+	for _, auth := range allAuths {
+		newAuthField := auth
+		for index, _ := range auth.Fields {
+			newAuthField.Fields[index].Value = ""
+		}
+
+		newAuth = append(newAuth, newAuthField)
 	}
 
 	newbody, err := json.Marshal(allAuths)
@@ -4586,20 +4638,24 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 						appendParams := []WorkflowAppActionParameter{}
 						for _, fieldname := range workflowapp.Authentication.Parameters {
 							found := false
-							for _, param := range action.Parameters {
+							for index, param := range action.Parameters {
 								if param.Name == fieldname.Name {
 									found = true
+
+									action.Parameters[index].Configuration = true
+									log.Printf("Set config to true for field %s!", param.Name)
 									break
 								}
 							}
 
 							if !found {
 								appendParams = append(appendParams, WorkflowAppActionParameter{
-									Name:        fieldname.Name,
-									Description: fieldname.Description,
-									Example:     fieldname.Example,
-									Required:    fieldname.Required,
-									Schema:      fieldname.Schema,
+									Name:          fieldname.Name,
+									Description:   fieldname.Description,
+									Example:       fieldname.Example,
+									Required:      fieldname.Required,
+									Configuration: true,
+									Schema:        fieldname.Schema,
 								})
 							}
 						}
