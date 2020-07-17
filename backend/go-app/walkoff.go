@@ -4644,7 +4644,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 									found = true
 
 									action.Parameters[index].Configuration = true
-									log.Printf("Set config to true for field %s!", param.Name)
+									//log.Printf("Set config to true for field %s!", param.Name)
 									break
 								}
 							}

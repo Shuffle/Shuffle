@@ -21,25 +21,36 @@ class AppBase:
         # authorization is for the specific workflow
         self.url = os.getenv("CALLBACK_URL", "https://shuffler.io")
         self.action = os.getenv("ACTION", "")
-        self.apikey = os.getenv("FUNCTION_APIKEY", "")
         self.authorization = os.getenv("AUTHORIZATION", "")
         self.current_execution_id = os.getenv("EXECUTIONID", "")
-
-        if len(self.action) == 0:
-            print("ACTION env not defined")
-            sys.exit(0)
-        if len(self.apikey) == 0:
-            print("FUNCTION_APIKEY env not defined")
-            sys.exit(0)
-        if len(self.authorization) == 0:
-            print("AUTHORIZATION env not defined")
-            sys.exit(0)
-        if len(self.current_execution_id) == 0:
-            print("EXECUTIONID env not defined")
-            sys.exit(0)
+        self.full_execution = os.getenv("FULL_EXECUTION", "") 
 
         if isinstance(self.action, str):
             self.action = json.loads(self.action)
+
+    def send_result(self, action_result, headers, stream_path):
+        if action_result["status"] == "EXECUTING":
+            action_result["status"] = "FAILURE"
+
+        # I wonder if this actually works 
+        self.logger.info("Before last stream result")
+        try:
+            ret = requests.post("%s%s" % (self.url, stream_path), headers=headers, json=action_result)
+            self.logger.info("Result: %d" % ret.status_code)
+            if ret.status_code != 200:
+                self.logger.info(ret.text)
+        except requests.exceptions.ConnectionError as e:
+            self.logger.exception(e)
+            return
+        except TypeError as e:
+            self.logger.exception(e)
+            action_result["status"] = "FAILURE"
+            action_result["result"] = "POST error: %s" % e
+            self.logger.info("Before typeerror stream result")
+            ret = requests.post("%s%s" % (self.url, stream_path), headers=headers, json=action_result)
+            self.logger.info("Result: %d" % ret.status_code)
+            if ret.status_code != 200:
+                self.logger.info(ret.text)
     
     async def execute_action(self, action):
         # FIXME - add request for the function STARTING here. Use "results stream" or something
@@ -58,9 +69,25 @@ class AppBase:
         }
         self.logger.info("ACTION RESULT: %s", action_result)
 
+        if len(self.action) == 0:
+            print("ACTION env not defined")
+            action_result["result"] = "Error in setup ENV: ACTION not defined"
+            self.send_result(action_result, headers, stream_path) 
+            return
+        if len(self.authorization) == 0:
+            print("AUTHORIZATION env not defined")
+            action_result["result"] = "Error in setup ENV: AUTHORIZATION not defined"
+            self.send_result(action_result, headers, stream_path) 
+            return
+        if len(self.current_execution_id) == 0:
+            print("EXECUTIONID env not defined")
+            action_result["result"] = "Error in setup ENV: EXECUTIONID not defined"
+            self.send_result(action_result, headers, stream_path) 
+            return
+
         headers = {
             "Content-Type": "application/json",     
-            "Authorization": "Bearer %s" % self.apikey
+            "Authorization": "Bearer %s" % self.authorization
         }
 
         # Add async logger
@@ -73,33 +100,53 @@ class AppBase:
                 self.logger.info(ret.text)
         except requests.exceptions.ConnectionError as e:
             print("Connectionerror: %s" %  e)
+
+            action_result["result"] = "Bad setup during startup: %d" % e 
+            self.send_result(action_result, headers, stream_path) 
             return
 
         # Verify whether there are any parameters with ACTION_RESULT required
         # If found, we get the full results list from backend
         fullexecution = {}
-        try:
-            tmpdata = {
-                "authorization": self.authorization,
-                "execution_id": self.current_execution_id
-            }
+        if len(self.full_execution) == 0:
+            print("NO EXECUTION - LOADING!")
+            try:
+                tmpdata = {
+                    "authorization": self.authorization,
+                    "execution_id": self.current_execution_id
+                }
 
-            self.logger.info("Before FULLEXEC stream result")
-            ret = requests.post(
-                "%s/api/v1/streams/results" % (self.url), 
-                headers=headers, 
-                json=tmpdata
-            )
+                self.logger.info("Before FULLEXEC stream result")
+                ret = requests.post(
+                    "%s/api/v1/streams/results" % (self.url), 
+                    headers=headers, 
+                    json=tmpdata
+                )
 
-            if ret.status_code == 200:
-                fullexecution = ret.json()
-            else:
-                self.logger.info("Error: Data: ", ret.json())
-                self.logger.info("Error with status code for results. Crashing because ACTION_RESULTS or WORKFLOW_VARIABLE can't be handled. Status: %d" % ret.status_code)
+                if ret.status_code == 200:
+                    fullexecution = ret.json()
+                else:
+                    self.logger.info("Error: Data: ", ret.json())
+                    self.logger.info("Error with status code for results. Crashing because ACTION_RESULTS or WORKFLOW_VARIABLE can't be handled. Status: %d" % ret.status_code)
+                    action_result["result"] = "Bad result from backend: %d" % ret.status_code
+                    self.send_result(action_result, headers, stream_path) 
+                    return
+            except requests.exceptions.ConnectionError as e:
+                self.logger.info("Connectionerror: %s" %  e)
+                action_result["result"] = "Connection error during startup: %s" % e
+                self.send_result(action_result, headers, stream_path) 
                 return
-        except requests.exceptions.ConnectionError as e:
-            self.logger.info("Connectionerror: %s" %  e)
-            return
+        else:
+            try:
+                fullexecution = json.loads(self.full_execution)
+            except json.decoder.JSONDecodeError as e:
+                print("Json decode execution error: %s" % e)  
+                action_result["result"] = "Json error during startup: %s" % e
+                self.send_result(action_result, headers, stream_path) 
+                return
+
+            print("")
+
 
         self.logger.info("AFTER FULLEXEC stream result")
 
@@ -886,27 +933,9 @@ class AppBase:
 
         action_result["completed_at"] = int(time.time())
 
-        # I wonder if this actually works 
-        self.logger.info("Before last stream result")
-        try:
-            ret = requests.post("%s%s" % (self.url, stream_path), headers=headers, json=action_result)
-            self.logger.info("Result: %d" % ret.status_code)
-            if ret.status_code != 200:
-                self.logger.info(ret.text)
-        except requests.exceptions.ConnectionError as e:
-            self.logger.exception(e)
-            return
-        except TypeError as e:
-            self.logger.exception(e)
-            action_result["status"] = "FAILURE"
-            action_result["result"] = "POST error: %s" % e
-            self.logger.info("Before typeerror stream result")
-            ret = requests.post("%s%s" % (self.url, stream_path), headers=headers, json=action_result)
-            self.logger.info("Result: %d" % ret.status_code)
-            if ret.status_code != 200:
-                self.logger.info(ret.text)
-
-            return
+        # Send the result :)
+        self.send_result(action_result, headers, stream_path)
+        return
 
 
         #STOPCOPY

@@ -954,9 +954,9 @@ const Workflows = (props) => {
 				<Divider style={{marginBottom: "10px", height: "1px", width: "100%", backgroundColor: dividerColor}}/>
 
 				<div style={scrollStyle}>
-					{workflows.map(data => {
+					{workflows.map((data, index) => {
 						return (
-							<WorkflowPaper data={data} />
+							<WorkflowPaper key={index} data={data} />
 						)
 					})}
 				</div>

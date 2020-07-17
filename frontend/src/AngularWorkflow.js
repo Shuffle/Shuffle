@@ -2633,7 +2633,7 @@ const AngularWorkflow = (props) => {
 									},
 									endAdornment: (
 										<InputAdornment position="end">
-											<Tooltip color="primary" title="Autocomplete text" placement="top">
+											<Tooltip title="Autocomplete text" placement="top">
 												<AddCircleOutlineIcon style={{cursor: "pointer"}} onClick={() => {
 													setShowDropdownNumber(count)
 													setShowDropdown(true)
@@ -2998,6 +2998,8 @@ const AngularWorkflow = (props) => {
 		paddingLeft: 10,
 		minHeight: "100%",
 		zIndex: 1000,
+		resize: "horizontal",
+		overflow: "auto",
 	}
 
 	const defineStartnode = () => {

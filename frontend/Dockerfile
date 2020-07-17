@@ -33,6 +33,7 @@ COPY --from=builder /usr/src/app/certs/privkey.pem /etc/nginx/privkey.pem
 
 # install CONFD
 ENV CONFD_VERSION 0.16.0
+RUN apt-get update && apt-get install -y curl && apt-get clean
 RUN curl -sSL https://github.com/kelseyhightower/confd/releases/download/v${CONFD_VERSION}/confd-${CONFD_VERSION}-linux-amd64 -o /usr/local/bin/confd && \
     chmod +x /usr/local/bin/confd
 COPY ./confd /etc/confd
