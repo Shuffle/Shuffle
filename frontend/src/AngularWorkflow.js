@@ -11,6 +11,7 @@ import Button from '@material-ui/core/Button';
 import Paper from '@material-ui/core/Paper';
 import Grid from '@material-ui/core/Grid';
 import Tabs from '@material-ui/core/Tabs';
+import InputAdornment from '@material-ui/core/InputAdornment';
 import Tab from '@material-ui/core/Tab';
 import ButtonBase from '@material-ui/core/ButtonBase';
 import Tooltip from '@material-ui/core/Tooltip';
@@ -35,9 +36,12 @@ import Switch from '@material-ui/core/Switch';
 import ReactJson from 'react-json-view'
 import { useBeforeunload } from 'react-beforeunload';
 
+import ArrowUpwardIcon from '@material-ui/icons/ArrowUpward';
 import CachedIcon from '@material-ui/icons/Cached';
+import AddIcon from '@material-ui/icons/Add';
 import DirectionsRunIcon from '@material-ui/icons/DirectionsRun';
 import PolymerIcon from '@material-ui/icons/Polymer';
+import FormatListNumberedIcon from '@material-ui/icons/FormatListNumbered';
 import CreateIcon from '@material-ui/icons/Create';
 import PlayArrowIcon from '@material-ui/icons/PlayArrow';
 import AspectRatioIcon from '@material-ui/icons/AspectRatio';
@@ -47,11 +51,15 @@ import ScheduleIcon from '@material-ui/icons/Schedule';
 import FavoriteBorderIcon from '@material-ui/icons/FavoriteBorder';
 import PauseIcon from '@material-ui/icons/Pause';
 import DeleteIcon from '@material-ui/icons/Delete';
+import AddCircleOutlineIcon from '@material-ui/icons/AddCircleOutline';
 import SaveIcon from '@material-ui/icons/Save';
 import KeyboardArrowLeftIcon from '@material-ui/icons/KeyboardArrowLeft';
 import KeyboardArrowRightIcon from '@material-ui/icons/KeyboardArrowRight';
 import ArrowBackIcon from '@material-ui/icons/ArrowBack';
 import SettingsIcon from '@material-ui/icons/Settings';
+import LockOpenIcon from '@material-ui/icons/LockOpen';
+import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
+import VpnKeyIcon from '@material-ui/icons/VpnKey';
 
 import * as cytoscape from 'cytoscape';
 import * as edgehandles from 'cytoscape-edgehandles';
@@ -66,6 +74,7 @@ import cxtmenu from 'cytoscape-cxtmenu';
 
 import { w3cwebsocket as W3CWebSocket } from "websocket";
 import { useAlert } from "react-alert";
+import { GetParsedPaths } from "./Apps";
 
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
@@ -115,7 +124,7 @@ const AngularWorkflow = (props) => {
 	const [executionText, setExecutionText] = React.useState("");
 	const [executionRequestStarted, setExecutionRequestStarted] = React.useState(false);
 
-	const [appAuthentication, setAppAuthentication] = React.useState({});
+	const [appAuthentication, setAppAuthentication] = React.useState([]);
 	const [variablesModalOpen, setVariablesModalOpen] = React.useState(false);
 	const [executionVariablesModalOpen, setExecutionVariablesModalOpen] = React.useState(false);
 	const [authenticationModalOpen, setAuthenticationModalOpen] = React.useState(false);
@@ -125,7 +134,7 @@ const AngularWorkflow = (props) => {
 	const [newVariableValue, setNewVariableValue] = React.useState("");
 	const [workflowDone, setWorkflowDone] = React.useState(false)
 	const [localFirstrequest, setLocalFirstrequest] = React.useState(true)
-	const [requiresAuthentication, setRequiresAuthentication] = React.useState(true)
+	const [requiresAuthentication, setRequiresAuthentication] = React.useState(false)
 	const [rightSideBarOpen, setRightSideBarOpen] = React.useState(false)
 	const [showSkippedActions, setShowSkippedActions] = React.useState(false)
 
@@ -191,6 +200,37 @@ const AngularWorkflow = (props) => {
 	  	}
 	})
 
+	const setNewAppAuth = (appAuthData) => {
+		console.log("DAta: ", appAuthData)
+		fetch(globalUrl+"/api/v1/apps/authentication", {
+    	  method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json',
+				},
+				body: JSON.stringify(appAuthData),
+	  		credentials: "include",
+    	})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for setting app auth :O!")
+			}
+
+			return response.json()
+		})
+		.then((responseJson) => {
+			if (!responseJson.success) {
+				alert.error("Failed to set app auth: "+responseJson.reason)
+			} else {
+				setAuthenticationModalOpen(false) 
+				alert.success("Successfully saved new app auth")
+			}
+		})
+		.catch(error => {
+			alert.error(error.toString())
+		})
+	}
+
 	const getWorkflowExecution = (id) => {
 		fetch(globalUrl+"/api/v1/workflows/"+id+"/executions", {
     	  method: 'GET',
@@ -222,9 +262,9 @@ const AngularWorkflow = (props) => {
 	const debugView = workflowExecutions.length > 0 ? 
 		<Draggable> 
 			<div style={{color: "white", position: "fixed", top: appBarSize+65, left: leftBarSize+20, zIndex: 5000, minHeight: 100, padding: 15, maxHeight: 100, maxWidth: 500, overflowX: "hidden",}}>
-				{workflowExecutions.slice(0,15).map(data => {
+				{workflowExecutions.slice(0,15).map((data, index) => {
 					return (
-						<div key={data.id}>
+						<div key={index}>
 							{new Date(data.started_at*1000).toISOString()}
 							, {data.status}
 							{data.result.length > 0 ? ", "+data.result : ", "}
@@ -326,6 +366,7 @@ const AngularWorkflow = (props) => {
 						currentnode.removeClass('not-executing-highlight')
 						currentnode.removeClass('success-highlight')
 						currentnode.removeClass('failure-highlight')
+						currentnode.removeClass('shuffle-hover-highlight')
 						currentnode.removeClass('awaiting-data-highlight')
 						incomingEdges.addClass('success-highlight')
 						currentnode.addClass('executing-highlight')
@@ -334,6 +375,7 @@ const AngularWorkflow = (props) => {
 						currentnode.removeClass('not-executing-highlight')
 						currentnode.removeClass('success-highlight')
 						currentnode.removeClass('failure-highlight')
+						currentnode.removeClass('shuffle-hover-highlight')
 						currentnode.removeClass('awaiting-data-highlight')
 						currentnode.removeClass('executing-highlight')
 						currentnode.addClass('skipped-highlight')
@@ -342,6 +384,7 @@ const AngularWorkflow = (props) => {
 						currentnode.removeClass('not-executing-highlight')
 						currentnode.removeClass('success-highlight')
 						currentnode.removeClass('failure-highlight')
+						currentnode.removeClass('shuffle-hover-highlight')
 						currentnode.removeClass('awaiting-data-highlight')
 						currentnode.addClass('executing-highlight')
 
@@ -363,6 +406,7 @@ const AngularWorkflow = (props) => {
 						currentnode.removeClass('not-executing-highlight')
 						currentnode.removeClass('executing-highlight')
 						currentnode.removeClass('failure-highlight')
+						currentnode.removeClass('shuffle-hover-highlight')
 						currentnode.removeClass('awaiting-data-highlight')
 						currentnode.addClass('success-highlight')
 
@@ -384,6 +428,7 @@ const AngularWorkflow = (props) => {
 								if (targetnode !== undefined && !targetnode.classes().includes("success-highlight") && !targetnode.classes().includes("failure-highlight")) {
 									targetnode.removeClass('not-executing-highlight')
 									targetnode.removeClass('success-highlight')
+									targetnode.removeClass('shuffle-hover-highlight')
 									targetnode.removeClass('failure-highlight')
 									targetnode.removeClass('awaiting-data-highlight')
 									targetnode.addClass('executing-highlight')
@@ -398,6 +443,7 @@ const AngularWorkflow = (props) => {
 						currentnode.removeClass('executing-highlight')
 						currentnode.removeClass('success-highlight')
 						currentnode.removeClass('awaiting-data-highlight')
+						currentnode.removeClass('shuffle-hover-highlight')
 						currentnode.addClass('failure-highlight')
 
 						if (!visited.includes(item.action.label)) {
@@ -411,6 +457,7 @@ const AngularWorkflow = (props) => {
 						currentnode.removeClass('executing-highlight')
 						currentnode.removeClass('success-highlight')
 						currentnode.removeClass('failure-highlight')
+						currentnode.removeClass('shuffle-hover-highlight')
 						currentnode.addClass('awaiting-data-highlight')
 						break
 					default:
@@ -494,6 +541,12 @@ const AngularWorkflow = (props) => {
 					// workaround to fix some edgecases
 					if (curworkflowAction.parameters === "" || curworkflowAction.parameters === null) {
 						curworkflowAction.parameters = []
+					}
+
+					if (curworkflowAction.example === undefined || curworkflowAction.example === "" || curworkflowAction.example === null) {
+						if (cyelements[key].data().example !== undefined) {
+							curworkflowAction.example = cyelements[key].data().example 
+						}
 					}
 
 					newActions.push(curworkflowAction)
@@ -708,6 +761,35 @@ const AngularWorkflow = (props) => {
 		return data
 	}
 
+	const getAppAuthentication = () => {
+		fetch(globalUrl+"/api/v1/apps/authentication", {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+			credentials: "include",
+    })
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for apps :O!")
+				return
+			}
+
+			return response.json()
+		})
+    .then((responseJson) => {
+			if (responseJson.success) {
+				setAppAuthentication(responseJson.data)
+			} else {
+				alert.error("Failed getting authentications")
+			}
+		})
+		.catch(error => {
+			alert.error(error.toString())
+		});
+	}
+
 	const getApps = () => {
 		fetch(globalUrl+"/api/v1/workflows/apps", {
     	  	method: 'GET',
@@ -732,6 +814,7 @@ const AngularWorkflow = (props) => {
 			//tmpapps = tmpapps.concat(responseJson)
 			setApps(responseJson)
 			setFilteredApps(responseJson)
+			getAppAuthentication() 
     })
 		.catch(error => {
 			alert.error(error.toString())
@@ -816,9 +899,9 @@ const AngularWorkflow = (props) => {
 			// FIXME - unselect
 			//console.log(cy.elements('[_id!="${data._id}"]`))
 			// Does it choose the wrong action?
-			const curaction = workflow.actions.find(a => a.id === data.id)
+			var curaction = workflow.actions.find(a => a.id === data.id)
 			if (!curaction || curaction === undefined) { 
-				//console.log("Action not found error")
+				//alert.error("Action not found. Please remake it.")
 				return
 			}
 
@@ -833,11 +916,44 @@ const AngularWorkflow = (props) => {
 				env = environments[0]
 			}
 
-			setSelectedApp(curapp)
-			setSelectedAction(curaction)
 			setSelectedActionEnvironment(env)
 			setSelectedActionName(curaction.name)
 			setRequiresAuthentication(curapp.authentication.required)
+
+			if (curapp.authentication.required) {
+				// Setup auth here :)
+				const authenticationOptions = []
+				var findAuthId = ""
+				if (curaction.authentication_id !== null && curaction.authentication_id !== undefined && curaction.authentication_id.length > 0) {
+					findAuthId = curaction.authentication_id
+				}
+
+				var tmpAuth = JSON.parse(JSON.stringify(appAuthentication))
+				for (var key in tmpAuth) {
+					var item = tmpAuth[key]
+
+					const newfields = {}
+					for (var filterkey in item.fields) {
+						newfields[item.fields[filterkey].key] = item.fields[filterkey].value
+					}
+
+					item.fields = newfields
+					if (item.app.name === curapp.name) {
+						authenticationOptions.push(item)
+						if (item.id === findAuthId) {
+							curaction.selectedAuthentication = item
+						}
+					}
+				}
+
+				curaction.authentication = authenticationOptions
+				if (curaction.selectedAuthentication === null || curaction.selectedAuthentication === undefined || curaction.selectedAuthentication.length === "") {
+					curaction.selectedAuthentication = {}
+				}
+			}
+
+			setSelectedApp(curapp)
+			setSelectedAction(curaction)
 		} else if (data.type === "TRIGGER") {
 			//console.log("Should handle trigger "+data.triggertype)
 			//console.log(data)
@@ -1115,6 +1231,7 @@ const AngularWorkflow = (props) => {
 			setFirstrequest(false)
 			getWorkflow()
 			getApps()
+			getAppAuthentication()
 			getEnvironments()
 			getWorkflowExecution(props.match.params.key)
 			return
@@ -1224,6 +1341,14 @@ const AngularWorkflow = (props) => {
 			node.data._id = action["id"]
 			node.data.type = "ACTION"
 			node.isStartNode = action["id"] === workflow.start
+
+			var example = ""
+			if (action.example !== undefined && action.example !== null && action.example.length > 0) {
+				example = action.example
+			}
+
+			console.log("EXAMPLE: ", example)
+			node.data.example = example
 
 			return node;
 		})
@@ -1486,7 +1611,7 @@ const AngularWorkflow = (props) => {
 					{workflow.workflow_variables === null ? 
 					null : workflow.workflow_variables.map(variable=> {
 						return (
-							<div>
+							<div key={variable.name} >
 								<Paper square style={paperVariableStyle} onClick={() => {
 								}}>
 									<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: "2px", backgroundColor: "orange", marginRight: "5px"}} />
@@ -1932,16 +2057,16 @@ const AngularWorkflow = (props) => {
 				const actionType = "ACTION"
 				const actionLabel = getNextActionName(app.name)
 				var parameters = null
+				var example = ""
 
 				if (app.actions[0].parameters !== null && app.actions[0].parameters.length > 0) {
 					parameters = app.actions[0].parameters
 				}
+				if (app.actions[0].returns.example !== undefined && app.actions[0].returns.example !== null && app.actions[0].returns.example.length > 0) {
+					example = app.actions[0].returns.example
+				}
 				
 				var newAppPopup = false
-				if (app.authentication !== undefined && app.authentication !== null && app.authentication.required === true) {
-					console.log("Should make modal popup for new app")
-					newAppPopup = true
-				}
 
 				const newAppData = {
 					app_name: app.name,
@@ -1963,6 +2088,7 @@ const AngularWorkflow = (props) => {
 					large_image: app.large_image,
 					authentication: [],
 					execution_variable: undefined,
+					example: example,
 				}
 
 				// const image = "url("+app.large_image+")"
@@ -2161,6 +2287,10 @@ const AngularWorkflow = (props) => {
 		selectedAction.name = newaction.name
 		selectedAction.parameters = JSON.parse(JSON.stringify(newaction.parameters))
 
+		if (newaction.returns.example !== undefined && newaction.returns.example !== null && newaction.returns.example.length > 0) {
+			selectedAction.example = newaction.returns.example 
+		}
+
 		// FIXME - this is broken sometimes lol
 		//var env = environments.find(a => a.name === newaction.environment)
 		//if ((!env || env === undefined) && selectedAction.environment === undefined ) {
@@ -2197,7 +2327,6 @@ const AngularWorkflow = (props) => {
 		var allkeys = [action.id]
 		var handled = []
 		var results = []
-		console.log("BEFORE PARENTS!")
 
 		while(true) {
 			for (var key in allkeys) {
@@ -2247,14 +2376,13 @@ const AngularWorkflow = (props) => {
 		const [selectedActionParameters, setSelectedActionParameters] = React.useState([])
 		const [selectedVariableParameter, setSelectedVariableParameter] = React.useState()
 		const [showDropdown, setShowDropdown] = React.useState(false)
+		const [showDropdownNumber, setShowDropdownNumber] = React.useState(0)
 		const [actionlist, setActionlist] = React.useState([])
+		const [jsonList, setJsonList] = React.useState([])
+		const [showAutocomplete, setShowAutocomplete] = React.useState(false)
 
 		useEffect(() => {
 			if (selectedActionParameters !== null && selectedActionParameters.length === 0) {
-				if (requiresAuthentication) {
-					console.log("ADD AUTHENTICATION FIELDS")
-				}
-
 				if (selectedAction.parameters !== null && selectedAction.parameters.length > 0) {
 					setSelectedActionParameters(selectedAction.parameters)
 				}
@@ -2266,11 +2394,12 @@ const AngularWorkflow = (props) => {
 			} 
 
 			if (actionlist.length === 0) {
-				actionlist.push({"type": "Execution Argument", "name": "Execution Argument", "value": "$exec", "highlight": "exec", "autocomplete": "$exec"})
+				// FIXME: Have previous execution values in here
+				actionlist.push({"type": "Execution Argument", "name": "Execution Argument", "value": "$exec", "highlight": "exec", "autocomplete": "exec", "example": "hello"})
 				if (workflow.workflow_variables !== null && workflow.workflow_variables !== undefined && workflow.workflow_variables.length > 0) {
 					for (var key in workflow.workflow_variables) {
 						const item = workflow.workflow_variables[key]
-						actionlist.push({"type": "workflow_variable", "name": item.name, "value": item.value, "id": item.id, "autocomplete": `${item.name.split(" ").join("_")}`})
+						actionlist.push({"type": "workflow_variable", "name": item.name, "value": item.value, "id": item.id, "autocomplete": `${item.name.split(" ").join("_")}`, "example": item.value})
 					}
 				}
 
@@ -2278,7 +2407,7 @@ const AngularWorkflow = (props) => {
 				if (workflow.execution_variables !== null && workflow.execution_variables !== undefined && workflow.execution_variables.length > 0) {
 					for (var key in workflow.execution_variables) {
 						const item = workflow.execution_variables[key]
-						actionlist.push({"type": "execution_variable", "name": item.name, "value": item.value, "id": item.id, "autocomplete": `${item.name.split(" ").join("_")}`})
+						actionlist.push({"type": "execution_variable", "name": item.name, "value": item.value, "id": item.id, "autocomplete": `${item.name.split(" ").join("_")}`, "example": ""})
 					}
 				}
 
@@ -2289,7 +2418,10 @@ const AngularWorkflow = (props) => {
 						if (item.label === "Execution Argument") {
 							continue
 						}
-						actionlist.push({"type": "action", "id": item.id, "name": item.label, "autocomplete": `${item.label.split(" ").join("_")}`})
+
+						// 1. Take 
+						const actionvalue = {"type": "action", "id": item.id, "name": item.label, "autocomplete": `${item.label.split(" ").join("_")}`, "example": item.example === undefined ? "" : item.example}
+						actionlist.push(actionvalue)
 					}
 				}
 
@@ -2298,15 +2430,77 @@ const AngularWorkflow = (props) => {
 		})
 
 		const changeActionParameter = (event, count) => {
-			console.log("EVENT: ", event.target.value)
 			if (event.target.value[event.target.value.length-1] === "$") {
-				console.log("LAST IS $ - SHOULD SHOW DROPDOWN")
 				if (!showDropdown) {
+					setShowAutocomplete(false)
 					setShowDropdown(true)
+					setShowDropdownNumber(count)
 				}
 			} else {
 				if (showDropdown) {
 					setShowDropdown(false)
+				}
+			}
+
+			// bad detection mechanism probably
+			if (event.target.value[event.target.value.length-1] === "." && actionlist.length > 0) {
+
+				console.log("GET THE LAST ARGUMENT FOR !")
+				//const [jsonList, getJsonList] = React.useState([])
+				const inputdata = {"data": "1.2.3.4", "dataType": "4.5.6.6"}
+				const returnJson = GetParsedPaths(inputdata, "")
+				console.log(jsonList)
+
+				// Search for the item backwards
+				// 1. Reverse search backwards from . -> $
+				// 2. Search the actionlist for the item  
+				// 3. Find the data for the specific item
+
+				var curstring = ""
+				var record = false
+				for (var key in selectedActionParameters[count].value) {
+					const item = selectedActionParameters[count].value[key]
+					if (record) {
+						curstring += item
+					}
+
+					if (item === "$") {
+						record = true
+						curstring = ""
+					}
+				}
+
+				if (curstring.length > 0) {
+					// Search back in the action list
+					curstring = curstring.split(" ").join("_").toLowerCase()
+					const actionItem = actionlist.find(data => data.autocomplete.split(" ").join("_").toLowerCase() === curstring)
+					if (actionItem !== undefined) {
+						console.log("Found item: ", actionItem)
+
+						var jsonvalid = true
+						try {
+							const tmp = String(JSON.parse(actionItem.example))
+							if (!tmp.includes("{") && !tmp.includes("[")) {
+								jsonvalid = false
+							}
+						} catch (e) {
+							jsonvalid = false
+						}
+
+						if (jsonvalid) {
+							setJsonList(GetParsedPaths(JSON.parse(actionItem.example), ""))
+
+							if (!showDropdown) {
+								setShowAutocomplete(false)
+								setShowDropdown(true)
+								setShowDropdownNumber(count)
+							}
+						}
+					}
+				}
+			} else {
+				if (jsonList.length > 0) {
+					setJsonList([])
 				}
 			}
 
@@ -2393,43 +2587,20 @@ const AngularWorkflow = (props) => {
 		// FIXME: Issue #40 - selectedActionParameters not reset
 		if (Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters.length > 0) {
 			return (
-				<div style={{marginTop: "30px"}}>
-
-					{showDropdown ?
-						<Select
-							SelectDisplayProps={{
-								style: {
-									marginLeft: 10,
-								}
-							}}
-							fullWidth
-							onChange={(e) => {
-								console.log("SELECTED: ", e.target.value)
-								const count = 0
-
-								console.log(selectedActionParameters)
-								selectedActionParameters[count].value += e.target.value.autocomplete
-								selectedAction.parameters[count].value = selectedActionParameters[count].value 
-								setSelectedAction(selectedAction)
-								setUpdate("action"+e.target.value.name)
-
-								setShowDropdown(false)
-							}}
-							style={{backgroundColor: surfaceColor, color: "white", height: "50px"}}
-							>
-							{actionlist.map(data => (
-								<MenuItem key={data.name} style={{backgroundColor: inputColor, color: "white"}} value={data}>
-									{data.name}
-								</MenuItem>
-							))}
-						</Select>
-					: null}
-
-
+				<div style={{marginTop: "30px"}}>	
 					<b>Arguments</b>
 					{selectedActionParameters.map((data, count) => {
 						if (data.variant === "") {
 							data.variant = "STATIC_VALUE"
+						}
+
+						if (!selectedAction.auth_not_required && selectedAction.selectedAuthentication !== undefined && selectedAction.selectedAuthentication.fields !== undefined && selectedAction.selectedAuthentication.fields[data.name] !== undefined) {
+							// This sets the placeholder in the frontend. (Replaced in backend)
+							selectedActionParameters[count].value = selectedAction.selectedAuthentication.fields[data.name]
+							selectedAction.parameters[count].value = selectedAction.selectedAuthentication.fields[data.name]
+							setSelectedAction(selectedAction)
+
+							return null	
 						}
 
 						var staticcolor = "inherit"
@@ -2460,6 +2631,17 @@ const AngularWorkflow = (props) => {
 										maxWidth: "95%",
 										fontSize: "1em",
 									},
+									endAdornment: (
+										<InputAdornment position="end">
+											<Tooltip title="Autocomplete text" placement="top">
+												<AddCircleOutlineIcon style={{cursor: "pointer"}} onClick={() => {
+													setShowDropdownNumber(count)
+													setShowDropdown(true)
+													setShowAutocomplete(true)
+												}}/>
+											</Tooltip>
+										</InputAdornment>
+									)
 								}}
 								fullWidth
 								multiline={multiline}
@@ -2473,14 +2655,14 @@ const AngularWorkflow = (props) => {
 								}}
 								onBlur={(event) => {
 									// Super basic check
-									if (event.target.value.startsWith("{")) {
-										console.log("VALIDATING JSON")
-										try {
-											JSON.parse(event.target.value)
-										} catch (e) {
-											alert.error("Failed to parse json: ", e)
-										}
-									}
+									//if (event.target.value.startsWith("{")) {
+									//	console.log("VALIDATING JSON")
+									//	try {
+									//		JSON.parse(event.target.value)
+									//	} catch (e) {
+									//		alert.error("Failed to parse json: ", e)
+									//	}
+									//}
 								}}
 							/>
 
@@ -2596,9 +2778,17 @@ const AngularWorkflow = (props) => {
 							itemColor = "#ffeb3b"
 						}
 						return (
-						<div key={data.name}>
-							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
-								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: "10px"}}/>
+						<div key={data.name}>	
+							<div style={{marginTop: 20, marginBottom: 7, display: "flex"}}>
+								{data.configuration === true ? 
+									<Tooltip color="primary" title={`Authenticate ${selectedApp.name}`} placement="top">
+										<LockOpenIcon style={{cursor: "pointer", width: 24, height: 24, marginRight: 10, }} onClick={() => {
+											setAuthenticationModalOpen(true)
+										}}/>
+									</Tooltip>
+								:
+									<div style={{width: 17, height: 17, borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: 10}}/>
+								}
 								<div style={{flex: "10"}}> 
 									<b>{data.name} </b> 
 								</div>
@@ -2630,6 +2820,166 @@ const AngularWorkflow = (props) => {
 								</Tooltip>
 							</div>	
 							{datafield}
+							{showDropdown && showDropdownNumber === count && data.variant === "STATIC_VALUE" && jsonList.length > 0 ?
+							  <FormControl fullWidth style={{marginTop: 0}}>
+									<InputLabel id="action-autocompleter" style={{marginLeft: 10, color: "white"}}><ArrowUpwardIcon />Autocomplete</InputLabel>
+									<Select
+									  labelId="action-autocompleter"
+										SelectDisplayProps={{
+											style: {
+												marginLeft: 10,
+											}
+										}}
+										onClose={() => {
+											setShowAutocomplete(false)
+
+											if (!selectedActionParameters[count].value[selectedActionParameters[count].value.length-1] === ".") {
+												setShowDropdown(false)
+											}
+
+											setUpdate(Math.random())
+										}}
+										onClick={() => setShowAutocomplete(true)}
+										fullWidth
+										open={showAutocomplete}
+										style={{border: `2px solid #f85a3e`, color: "white", height: "50px", marginTop: 2,}}
+										onChange={(e) => {
+											if (selectedActionParameters[count].value[selectedActionParameters[count].value.length-1] === ".") {
+												e.target.value.autocomplete = e.target.value.autocomplete.slice(1, e.target.value.autocomplete.length)
+											}
+
+											selectedActionParameters[count].value += e.target.value.autocomplete
+											selectedAction.parameters[count].value = selectedActionParameters[count].value 
+											console.log("TARGET: ", selectedActionParameters)
+											setSelectedAction(selectedAction)
+											setUpdate("action"+e.target.value.name)
+
+											setShowDropdown(false)
+										}}
+									>
+										{jsonList.map(data => {
+											const iconStyle = {
+												marginRight: 15,
+											}
+
+											const icon = data.type === "value" ? <VpnKeyIcon style={iconStyle} /> : data.type === "list" ? <FormatListNumberedIcon style={iconStyle} /> : <ExpandMoreIcon style={iconStyle} /> 
+											return (
+												<MenuItem key={data.name} style={{backgroundColor: inputColor, color: "white"}} value={data} onMouseOver={() => {}}>
+													<Tooltip color="primary" title={`Ex. value: ${data.value}`} placement="left">
+														<div style={{display: "flex"}}>
+															{icon} {data.name}
+														</div>
+													</Tooltip>
+												</MenuItem>
+											)
+										})}
+									</Select>
+      					</FormControl>
+							: null}
+							{showDropdown && showDropdownNumber === count && data.variant === "STATIC_VALUE" && jsonList.length === 0 ?
+							  <FormControl fullWidth>
+									<InputLabel id="action-autocompleter" style={{marginLeft: 10, color: "white"}}><ArrowUpwardIcon />Autocomplete</InputLabel>
+									<Select
+									  labelId="action-autocompleter"
+										SelectDisplayProps={{
+											style: {
+												marginLeft: 10,
+											}
+										}}
+										onClose={() => {
+											setShowAutocomplete(false)
+
+											if (!selectedActionParameters[count].value[selectedActionParameters[count].value.length-1] === "$") {
+												setShowDropdown(false)
+											}
+
+											setUpdate(Math.random())
+										}}
+										onClick={() => setShowAutocomplete(true)}
+										open={showAutocomplete}
+										fullWidth
+										style={{border: `2px solid #f85a3e`, color: "white", height: 50, marginTop: 2,}}
+										onChange={(e) => {
+											console.log("CHANGE!")
+											const toComplete = selectedActionParameters[count].value.trim().endsWith("$") ? e.target.value.autocomplete : "$"+e.target.value.autocomplete
+											selectedActionParameters[count].value += toComplete
+											selectedAction.parameters[count].value = selectedActionParameters[count].value 
+											console.log("TARGET: ", selectedActionParameters)
+											setSelectedAction(selectedAction)
+											setUpdate("action"+e.target.value.name)
+
+											setShowDropdown(false)
+										}}
+										>
+										{actionlist.map(data => {
+											const icon = data.type === "action" ? <AppsIcon style={{marginRight: 10}} /> : data.type === "workflow_variable" || data.type === "execution_variable" ? <FavoriteBorderIcon style={{marginRight: 10}} /> : <ScheduleIcon style={{marginRight: 10}} /> 
+
+											const handleExecArgumentHover = (inside) => {
+												var exec_text_field = document.getElementById("execution_argument_input_field")
+												if (exec_text_field !== null) {
+													if (inside) {
+														exec_text_field.style.border = "2px solid #f85a3e"
+													} else {
+														exec_text_field.style.border = ""
+													}
+												}
+
+												// Also doing arguments
+												if (workflow.triggers !== undefined && workflow.triggers !== null && workflow.triggers.length > 0) {
+													for (var key in workflow.triggers) {
+														const item = workflow.triggers[key]
+
+														var node = cy.getElementById(item.id)
+														if (node.length > 0) {
+															if (inside) {
+																node.addClass('shuffle-hover-highlight')
+															} else {
+																node.removeClass('shuffle-hover-highlight')
+															}
+														}
+
+													}
+												}
+											}
+
+											const handleActionHover = (inside, actionId) => {
+												var node = cy.getElementById(actionId)
+												if (node.length > 0) {
+													if (inside) {
+														node.addClass('shuffle-hover-highlight')
+													} else {
+														node.removeClass('shuffle-hover-highlight')
+													}
+												}
+											}
+
+											return (
+												<MenuItem key={data.name} style={{backgroundColor: inputColor, color: "white"}} value={data} onMouseOver={() => {
+													if (data.type === "Execution Argument") {
+														handleExecArgumentHover(true)
+													} else if (data.type === "action") {
+														handleActionHover(true, data.id)
+													}
+												}} onMouseOut={() => {
+													if (data.type === "Execution Argument") {
+														handleExecArgumentHover(false)
+													} else if (data.type === "action") {
+														handleActionHover(false, data.id)
+													}
+												}}>
+													<Tooltip color="primary" title={`Value: ${data.value}`} placement="left">
+														<div style={{display: "flex"}}>
+															{icon} {data.name}
+														</div>
+													</Tooltip>
+												</MenuItem>
+											)
+										})}
+									</Select>
+      					</FormControl>
+							: null}
+
+
 						</div>
 					)})}
 				</div>
@@ -2648,6 +2998,8 @@ const AngularWorkflow = (props) => {
 		paddingLeft: 10,
 		minHeight: "100%",
 		zIndex: 1000,
+		resize: "horizontal",
+		overflow: "auto",
 	}
 
 	const defineStartnode = () => {
@@ -2740,7 +3092,66 @@ const AngularWorkflow = (props) => {
 				placeholder={selectedAction.label}
 				onChange={selectedNameChange}
 			/>
-			{environments !== undefined && environments !== null && environments.length > 0 ?
+			{selectedAction.authentication.length === 0 && requiresAuthentication  ?
+				<div style={{marginTop: 15}}>
+					Authenticate {selectedApp.name}: 
+					<Tooltip color="primary" title={"Add authentication option"} placement="top">
+						<Button color="primary" style={{}} variant="text" onClick={() => {
+							setAuthenticationModalOpen(true)
+						}}>
+							<AddIcon />
+						</Button> 				
+					</Tooltip>
+				</div>
+			: null}
+			{selectedAction.authentication.length > 0 ? 
+				<div style={{marginTop: "20px"}}>
+					Authentication
+					<div style={{display: "flex"}}>
+						<Select
+							labelId="select-app-auth"
+							value={selectedAction.selectedAuthentication}
+							SelectDisplayProps={{
+								style: {
+									marginLeft: 10,
+								}
+							}}
+							fullWidth
+							onChange={(e) => {
+								console.log("CHOSE AN AUTHENTICATION OPTION: ", e.target.value)
+								selectedAction.selectedAuthentication = e.target.value
+								selectedAction.authentication_id = e.target.value.id
+								setSelectedAction(selectedAction)
+								setUpdate("update auth")
+							}}
+							style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+						>
+							{selectedAction.authentication.map(data => (
+								<MenuItem key={data.id} style={{backgroundColor: inputColor, color: "white"}} value={data}>
+									{data.label} - ({data.app.app_version})
+								</MenuItem>
+							))}
+						</Select>
+
+						{/*
+
+						<Button fullWidth style={{margin: "auto", marginTop: "10px",}} color="primary" variant="contained" onClick={() => setAuthenticationModalOpen(true)}>
+							AUTHENTICATE
+						</Button>
+						curaction.authentication = authenticationOptions
+							if (curaction.selectedAuthentication === null || curaction.selectedAuthentication === undefined || curaction.selectedAuthentication.length === "")
+						*/}
+					 	<Tooltip color="primary" title={"Add authentication option"} placement="top">
+							<Button color="primary" style={{}} variant="text" onClick={() => {
+								setAuthenticationModalOpen(true)
+							}}>
+								<AddIcon />
+							</Button> 				
+						</Tooltip>
+					</div>
+				</div>
+				: null}
+			{environments !== undefined && environments !== null && environments.length > 1 ?
 				<div style={{marginTop: "20px"}}>
 					Environment
 					<Select
@@ -2783,7 +3194,6 @@ const AngularWorkflow = (props) => {
 								selectedAction.execution_variable = {"name": "No selection"}
 							} else {
 								const value = workflow.execution_variables.find(a => a.name === e.target.value)
-								console.log("FOUND: ", value)
 								selectedAction.execution_variable = value
 							}
 							setSelectedAction(selectedAction)
@@ -2803,13 +3213,6 @@ const AngularWorkflow = (props) => {
 					</Select>
 				</div>
 				: null}
-			{/*requiresAuthentication ? 
-				<div style={{marginTop: "20px"}}>
-					<Button fullWidth style={{margin: "auto", marginTop: "10px",}} color="primary" variant="contained" onClick={() => setAuthenticationModalOpen(true)}>
-						AUTHENTICATE
-					</Button>
-				</div>
-			: null*/}
 			<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 			<div style={{flex: "6", marginTop: "20px"}}>
 				<div style={{marginBottom: 5}}>
@@ -2839,7 +3242,7 @@ const AngularWorkflow = (props) => {
 						newActionname = newActionname.replace("_", " ")
 						newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
 						return (
-						<MenuItem style={{maxWidth: 400, overflowX: "hidden", backgroundColor: inputColor, color: "white"}} value={data.name}>
+						<MenuItem key={data.name} style={{maxWidth: 400, overflowX: "hidden", backgroundColor: inputColor, color: "white"}} value={data.name}>
 							{newActionname}
 
 						</MenuItem>
@@ -2854,6 +3257,9 @@ const AngularWorkflow = (props) => {
 						<AppActionArguments key={selectedAction.id} selectedAction={selectedAction} />
 
 				</div>
+				<div style={{}}>
+						
+				</div> 
 			</div>
 		</div> 
 		: null 
@@ -3222,7 +3628,7 @@ const AngularWorkflow = (props) => {
 					</div>
 				</DialogContent>
 				<DialogActions>
-	        	  	<Button 
+	      <Button 
 					style={{borderRadius: "0px"}}
 					onClick={() => {
 						setSelectedEdge({})
@@ -4431,6 +4837,7 @@ const AngularWorkflow = (props) => {
 				<div style={{marginLeft: "10px", left: boxSize, bottom: 0, position: "absolute"}}>
 					<Tooltip color="primary" title="An argument to be used for execution. This is a variable available to every node in your workflow." placement="top">
 						<TextField
+							id="execution_argument_input_field"
 							style={{backgroundColor: inputColor, }}
 							InputProps={{
 								style:{
@@ -5045,52 +5452,140 @@ const AngularWorkflow = (props) => {
 		: null
 
 
-	const AuthenticationData = () => {
-		console.log("AUTH: ", selectedApp.authentication)
-		const [tmpVar, setTmpVar] = React.useState("")
+	const AuthenticationData = (props) => {
+		const selectedApp = props.app
+
+		const [authenticationOption, setAuthenticationOptions] = React.useState({
+			app: JSON.parse(JSON.stringify(selectedApp)),
+			fields: {},
+			label: "",
+			usage: [{
+				workflow_id: workflow.id,
+			}],
+			id: uuid.v4(),
+			active: true,
+		})
+
 		if (selectedApp.authentication === undefined) {
 			return null
 		}
 
-		if (selectedApp.authentication.parameters.length === undefined || 
-		selectedApp.authentication.parameters.length === 0) {
+		if (selectedApp.authentication.parameters.length === undefined || selectedApp.authentication.parameters.length === 0) {
 			return null
 		}
 
-		// Yes, it should be possible to have more than one, but.. :)
-		// This data should be written to a KMS, then have the ID point back
-		const currentAuth = selectedApp.authentication.parameters[0]
-		if (currentAuth.scheme.toLowerCase() === "bearer") {
-			return <div>
-				Insert your API token for {selectedApp.name}
-				<TextField
-					style={{backgroundColor: inputColor}} 
-					InputProps={{
-						style:{
-							color: "white",
-							height: "50px", 
-							fontSize: "1em",
-						},
-					}}
-					fullWidth
-					type="password"
-					color="primary"
-					placeholder="Bearer token" 
-					onChange={(event) => {
-						setTmpVar(event.target.value)
-					}}
-					onBlur={() => {
-						selectedApp.authentication.parameters[0].value	= tmpVar
-						setSelectedApp(selectedApp)
-					}}
-				/>
-				</div>
+		authenticationOption.app.actions = []
+
+		for (var key in selectedApp.authentication.parameters) {
+			if (authenticationOption.fields[selectedApp.authentication.parameters[key].name] === undefined) {
+				authenticationOption.fields[selectedApp.authentication.parameters[key].name] = ""
+			}
+		}
+
+		const handleSubmitCheck = () => {
+			console.log(authenticationOption)
+			if (authenticationOption.label.length === 0) {
+				alert.info("Label can't be empty")
+			}
+
+			for (var key in selectedApp.authentication.parameters) {
+				if (authenticationOption.fields[selectedApp.authentication.parameters[key].name].length === 0) {
+					alert.info("Field "+selectedApp.authentication.parameters[key].name+" can't be empty")
+					return
+				} 
+			}
+
+			selectedAction.authentication_id = authenticationOption.id
+			selectedAction.selectedAuthentication = authenticationOption
+			selectedAction.authentication.push(authenticationOption)
+			setSelectedAction(selectedAction)
+			setUpdate(authenticationOption.id)
+
+			var newAuthOption = JSON.parse(JSON.stringify(authenticationOption))
+			var newFields = []
+			for (const key in newAuthOption.fields) {
+				const value = newAuthOption.fields[key]
+				newFields.push({
+					key: key,
+					value: value,
+				})
+			}
+
+			console.log("FIELDS: ", newFields)
+			newAuthOption.fields = newFields
+			setNewAppAuth(newAuthOption)
 		}
 
 		return (
 			<div>
-				NOT IMPLEMENTED <div/>
-				Unknown auth: {currentAuth.scheme}
+				<DialogContent>
+					<a href="https://shuffler.io/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is this?</a>
+					- These are required fields for authenticating with {selectedApp.name} 
+					<div style={{marginTop: 15}}/>
+					{selectedApp.link.length > 0 ? <EndpointData /> : null}
+					<b>Label (to remember it)</b>
+					<TextField
+							style={{backgroundColor: inputColor}} 
+							InputProps={{
+								style:{
+									color: "white",
+									marginLeft: "5px",
+									maxWidth: "95%",
+									height: "50px", 
+									fontSize: "1em",
+								},
+							}}
+							fullWidth
+							color="primary"
+							placeholder={"Auth july 2020"}
+							onChange={(event) => {
+								authenticationOption.label = event.target.value
+							}}
+						/>
+					<Divider style={{marginTop: 15, marginBottom: 15, backgroundColor: "rgb(91, 96, 100)"}}/>
+					<div style={{}}/>
+						{selectedApp.authentication.parameters.map((data, index) => { 
+						return (
+							<div key={index} style={{marginTop: 10}}>
+								<LockOpenIcon style={{marginRight: 10}}/>
+								<b>{data.name}</b>
+								<TextField
+										style={{backgroundColor: inputColor}} 
+										InputProps={{
+											style:{
+												color: "white",
+												marginLeft: "5px",
+												maxWidth: "95%",
+												height: "50px", 
+												fontSize: "1em",
+											},
+										}}
+										fullWidth
+										type={data.example !== undefined && data.example.includes("***") ? "password" : "text"}
+										color="primary"
+										placeholder={data.example} 
+										onChange={(event) => {
+											authenticationOption.fields[data.name] = event.target.value
+										}}
+									/>
+							</div>
+						)
+					})}
+				</DialogContent>
+				<DialogActions>
+				<Button 
+					style={{borderRadius: "0px"}}
+					onClick={() => {
+						setAuthenticationModalOpen(false)
+					}} color="primary">
+						Cancel
+					</Button>
+					<Button style={{borderRadius: "0px"}} onClick={() => {
+						handleSubmitCheck() 	
+					}} color="primary">
+						Submit	
+					</Button>
+				</DialogActions>	
 			</div>
 		)
 	}
@@ -5130,40 +5625,22 @@ const AngularWorkflow = (props) => {
 
 	// This whole part is redundant. Made it part of Arguments instead.
 	const authenticationModal = authenticationModalOpen ? 
-		<Dialog modal 
+		<Dialog 
 			open={authenticationModalOpen} 
 			onClose={() => {
-				setAuthenticationModalOpen(false)
-				setAppAuthentication({})
+				//setAuthenticationModalOpen(false)
 			}}
 			PaperProps={{
 				style: {
 					backgroundColor: surfaceColor,
 					color: "white",
-					minWidth: "800px",
+					minWidth: 600,
+					padding: 15, 
 				},
 			}}
 		>
 			<DialogTitle><div style={{color: "white"}}>Authentication for {selectedApp.name}</div></DialogTitle>
-			<DialogContent>
-				<a href="https://shuffler.io/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is this?</a>
-				<div />
-				{selectedApp.link.length > 0 ? <EndpointData /> : null}
-				<div style={{marginTop: 15, marginBottom: 15, }}/>
-				<AuthenticationData />
-			</DialogContent>
-			<DialogActions>
-			<Button 
-				style={{borderRadius: "0px"}}
-				onClick={() => {
-					setAuthenticationModalOpen(false)
-				}} color="primary">
-					Cancel
-				</Button>
-				<Button style={{borderRadius: "0px"}} onClick={() => {setAuthenticationModalOpen(false)}} color="primary">
-					Submit	
-				</Button>
-			</DialogActions>
+			<AuthenticationData app={selectedApp} />	
 		</Dialog> : null
 
 	const loadedCheck = isLoaded && isLoggedIn && workflowDone ? 

@@ -180,15 +180,20 @@ const Workflows = (props) => {
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for WORKFLOW EXECUTION :O!")
-				alert.error("Failed loading executions for current workflow")
 			}
 
 			return response.json()
 		})
 		.then((responseJson) => {
-			setWorkflowExecutions(responseJson)
-			if (responseJson.length > 0) {
-				setSelectedExecution(responseJson[0])
+			if (responseJson.success === false) {
+				alert.error("Failed getting executions")
+			} else {
+				if (responseJson.length > 0) {
+					setSelectedExecution(responseJson[0])
+					setWorkflowExecutions(responseJson)
+				} else {
+					alert.info("Couldn't find executions for the workflow")
+				}
 			}
 		})
 		.catch(error => {
@@ -949,9 +954,9 @@ const Workflows = (props) => {
 				<Divider style={{marginBottom: "10px", height: "1px", width: "100%", backgroundColor: dividerColor}}/>
 
 				<div style={scrollStyle}>
-					{workflows.map(data => {
+					{workflows.map((data, index) => {
 						return (
-							<WorkflowPaper data={data} />
+							<WorkflowPaper key={index} data={data} />
 						)
 					})}
 				</div>

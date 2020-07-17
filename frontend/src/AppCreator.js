@@ -716,6 +716,11 @@ const AppCreator = (props) => {
 		}
 
 		if (authenticationOption === "API key") {
+			if (parameterName.length === 0) {
+				alert.error("A field name for the APIkey must be defined")
+				return
+			}
+
 			data.components.securitySchemes["ApiKeyAuth"] = {
 				"type": "apiKey",
 				"in": parameterLocation.toLowerCase(),
@@ -727,6 +732,7 @@ const AppCreator = (props) => {
 				"scheme": "bearer",
 				"bearerFormat": "UUID",
 			}
+
 		} else if (authenticationOption === "Basic auth") {
 			data.components.securitySchemes["BasicAuth"] = {
 				"type": "http",
