@@ -5954,7 +5954,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("Successfully uploaded ZIPFILE for %s", identifier)
+	log.Printf("Successfully stitched ZIPFILE for %s", identifier)
 
 	// 4. Upload as cloud function - this apikey is specifically for cloud functions rofl
 	//environmentVariables := map[string]string{

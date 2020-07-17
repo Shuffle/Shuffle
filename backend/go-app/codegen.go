@@ -398,8 +398,6 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 		verifyAddin,
 	)
 
-	//log.Println(data)
-	//log.Println(functionname)
 	return functionname, data
 }
 
@@ -459,76 +457,105 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 		//log.Printf("%#v", securitySchemes)
 
 		api.Authentication = Authentication{
-			Required: true,
-			Parameters: []AuthenticationParams{
-				AuthenticationParams{
-					Multiline: false,
-					Required:  true,
-				},
-			},
+			Required:   true,
+			Parameters: []AuthenticationParams{},
 		}
 
 		// Used for python code generation lol
 		// Not sure how this should work with oauth
 		if securitySchemes["BearerAuth"] != nil {
-			api.Authentication.Parameters[0].Value = "BearerAuth"
-			api.Authentication.Parameters[0].Description = securitySchemes["BearerAuth"].Value.Description
-			api.Authentication.Parameters[0].Name = securitySchemes["BearerAuth"].Value.Name
-			api.Authentication.Parameters[0].In = securitySchemes["BearerAuth"].Value.In
-			api.Authentication.Parameters[0].Schema.Type = securitySchemes["BearerAuth"].Value.Scheme
-			api.Authentication.Parameters[0].Scheme = securitySchemes["BearerAuth"].Value.Scheme
+			api.Authentication.Parameters = append(api.Authentication.Parameters, AuthenticationParams{
+				Name:        "apikey",
+				Value:       "",
+				Example:     "******",
+				Description: securitySchemes["BearerAuth"].Value.Description,
+				In:          securitySchemes["BearerAuth"].Value.In,
+				Scheme:      securitySchemes["BearerAuth"].Value.Scheme,
+				Schema: SchemaDefinition{
+					Type: securitySchemes["BearerAuth"].Value.Scheme,
+				},
+			})
+
 			//log.Printf("HANDLE BEARER AUTH")
 			extraParameters = append(extraParameters, WorkflowAppActionParameter{
-				Name:        "apikey",
-				Description: "The apikey to use",
-				Multiline:   false,
-				Required:    true,
-				Example:     "The API key to use. Space = skip",
+				Name:          "apikey",
+				Description:   "The apikey to use",
+				Multiline:     false,
+				Required:      true,
+				Example:       "The API key to use. Space = skip",
+				Configuration: true,
 				Schema: SchemaDefinition{
 					Type: "string",
 				},
 			})
 		} else if securitySchemes["ApiKeyAuth"] != nil {
-			api.Authentication.Parameters[0].Value = "ApiKeyAuth"
-			api.Authentication.Parameters[0].Description = securitySchemes["ApiKeyAuth"].Value.Description
-			api.Authentication.Parameters[0].Name = securitySchemes["ApiKeyAuth"].Value.Name
-			api.Authentication.Parameters[0].In = securitySchemes["ApiKeyAuth"].Value.In
-			api.Authentication.Parameters[0].Schema.Type = securitySchemes["ApiKeyAuth"].Value.Scheme
-			api.Authentication.Parameters[0].Scheme = securitySchemes["ApiKeyAuth"].Value.Scheme
+			api.Authentication.Parameters = append(api.Authentication.Parameters, AuthenticationParams{
+				Name:        "apikey",
+				Value:       "",
+				Example:     "******",
+				Description: securitySchemes["ApiKeyAuth"].Value.Description,
+				In:          securitySchemes["ApiKeyAuth"].Value.In,
+				Scheme:      securitySchemes["ApiKeyAuth"].Value.Scheme,
+				Schema: SchemaDefinition{
+					Type: securitySchemes["ApiKeyAuth"].Value.Scheme,
+				},
+			})
+
 			//log.Printf("HANDLE APIKEY AUTH")
 			extraParameters = append(extraParameters, WorkflowAppActionParameter{
-				Name:        "apikey",
-				Description: "The apikey to use",
-				Multiline:   false,
-				Required:    true,
-				Example:     "**********",
+				Name:          "apikey",
+				Description:   "The apikey to use",
+				Multiline:     false,
+				Required:      true,
+				Example:       "**********",
+				Configuration: true,
 				Schema: SchemaDefinition{
 					Type: "string",
 				},
 			})
 		} else if securitySchemes["BasicAuth"] != nil {
-			api.Authentication.Parameters[0].Value = "BasicAuth"
-			api.Authentication.Parameters[0].Description = securitySchemes["BasicAuth"].Value.Description
-			api.Authentication.Parameters[0].Name = securitySchemes["BasicAuth"].Value.Name
-			api.Authentication.Parameters[0].In = securitySchemes["BasicAuth"].Value.In
-			api.Authentication.Parameters[0].Schema.Type = securitySchemes["BasicAuth"].Value.Scheme
-			api.Authentication.Parameters[0].Scheme = securitySchemes["BasicAuth"].Value.Scheme
-			extraParameters = append(extraParameters, WorkflowAppActionParameter{
+			api.Authentication.Parameters = append(api.Authentication.Parameters, AuthenticationParams{
 				Name:        "username",
-				Description: "The username to use",
-				Multiline:   false,
-				Required:    true,
-				Example:     "The username to use",
+				Value:       "",
+				Example:     "username",
+				Description: securitySchemes["BasicAuth"].Value.Description,
+				In:          securitySchemes["BasicAuth"].Value.In,
+				Scheme:      securitySchemes["BasicAuth"].Value.Scheme,
+				Schema: SchemaDefinition{
+					Type: securitySchemes["BasicAuth"].Value.Scheme,
+				},
+			})
+
+			api.Authentication.Parameters = append(api.Authentication.Parameters, AuthenticationParams{
+				Name:        "password",
+				Value:       "",
+				Example:     "*****",
+				Description: securitySchemes["BasicAuth"].Value.Description,
+				In:          securitySchemes["BasicAuth"].Value.In,
+				Scheme:      securitySchemes["BasicAuth"].Value.Scheme,
+				Schema: SchemaDefinition{
+					Type: securitySchemes["BasicAuth"].Value.Scheme,
+				},
+			})
+
+			extraParameters = append(extraParameters, WorkflowAppActionParameter{
+				Name:          "username",
+				Description:   "The username to use",
+				Multiline:     false,
+				Required:      true,
+				Example:       "The username to use",
+				Configuration: true,
 				Schema: SchemaDefinition{
 					Type: "string",
 				},
 			})
 			extraParameters = append(extraParameters, WorkflowAppActionParameter{
-				Name:        "password",
-				Description: "The password to use",
-				Multiline:   false,
-				Required:    true,
-				Example:     "***********",
+				Name:          "password",
+				Description:   "The password to use",
+				Multiline:     false,
+				Required:      true,
+				Example:       "***********",
+				Configuration: true,
 				Schema: SchemaDefinition{
 					Type: "string",
 				},
@@ -538,11 +565,23 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 
 	// Adds a link parameter if it's not already defined
 	if len(api.Link) == 0 {
-		extraParameters = append(extraParameters, WorkflowAppActionParameter{
+		api.Authentication.Parameters = append(api.Authentication.Parameters, AuthenticationParams{
 			Name:        "url",
 			Description: "The URL of the app",
 			Multiline:   false,
 			Required:    true,
+			Example:     "https://shuffler.io",
+			Schema: SchemaDefinition{
+				Type: "string",
+			},
+		})
+
+		extraParameters = append(extraParameters, WorkflowAppActionParameter{
+			Name:          "url",
+			Description:   "The URL of the app",
+			Multiline:     false,
+			Required:      true,
+			Configuration: true,
 			Schema: SchemaDefinition{
 				Type: "string",
 			},

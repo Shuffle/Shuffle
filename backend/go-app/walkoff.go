@@ -3445,7 +3445,8 @@ func addAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if len(appAuth.App.ID) != 36 {
+	// Super basic check
+	if len(appAuth.App.ID) != 36 && len(appAuth.App.ID) != 32 {
 		log.Printf("Bad ID for app: %s", appAuth.App.ID)
 		resp.WriteHeader(409)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "App has to be defined"}`)))
@@ -3530,7 +3531,7 @@ func getAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 	for _, auth := range allAuths {
 		newAuthField := auth
 		for index, _ := range auth.Fields {
-			newAuthField.Fields[index].Value = ""
+			newAuthField.Fields[index].Value = "auth placeholder (replaced during execution)"
 		}
 
 		newAuth = append(newAuth, newAuthField)

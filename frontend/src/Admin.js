@@ -1016,11 +1016,13 @@ const Admin = (props) => {
 					<Tab label="Environments"/>
 					<Tab label="Schedules"/>
 				</Tabs>
-				<div style={{marginBottom: 10}}/>
-				{authenticationView}
-				{usersView}	
-				{environmentView}
-				{schedulesView}
+				<Divider style={{marginTop: 0, marginBottom: 10, backgroundColor: "rgb(91, 96, 100)"}} />
+				<div style={{padding: 15}}>
+					{authenticationView}
+					{usersView}	
+					{environmentView}
+					{schedulesView}
+				</div>
 			</Paper>
 		</div>
 

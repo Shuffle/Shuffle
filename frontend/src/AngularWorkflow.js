@@ -218,7 +218,7 @@ const AngularWorkflow = (props) => {
 				alert.error("Failed to set app auth: "+responseJson.reason)
 			} else {
 				setAuthenticationModalOpen(false) 
-				alert.success("Successfully saved workflow")
+				alert.success("Successfully saved new app auth")
 			}
 		})
 		.catch(error => {
@@ -915,35 +915,39 @@ const AngularWorkflow = (props) => {
 			setSelectedActionName(curaction.name)
 			setRequiresAuthentication(curapp.authentication.required)
 
-			// Setup auth here :)
-			const authenticationOptions = []
-			var findAuthId = ""
-			if (curaction.authentication_id !== null && curaction.authentication_id !== undefined && curaction.authentication_id.length > 0) {
-				findAuthId = curaction.authentication_id
-			}
+			if (curapp.authentication.required) {
+				// Setup auth here :)
+				const authenticationOptions = []
+				var findAuthId = ""
+				if (curaction.authentication_id !== null && curaction.authentication_id !== undefined && curaction.authentication_id.length > 0) {
+					findAuthId = curaction.authentication_id
+				}
 
-			for (var key in appAuthentication) {
-				var item = appAuthentication[key]
+				var tmpAuth = JSON.parse(JSON.stringify(appAuthentication))
+				for (var key in tmpAuth) {
+					var item = tmpAuth[key]
 
-				const newfields = {}
-				for (var filterkey in item.fields) {
-					if (item.fields[filterkey] !== undefined) {
+					const newfields = {}
+					for (var filterkey in item.fields) {
+						console.log(item.fields)
 						newfields[item.fields[filterkey].key] = item.fields[filterkey].value
 					}
-				}
 
-				item.fields = newfields
-				if (item.app.name === curapp.name) {
-					authenticationOptions.push(item)
-					if (item.id === findAuthId) {
-						curaction.selectedAuthentication = item
+					item.fields = newfields
+					if (item.app.name === curapp.name) {
+						authenticationOptions.push(item)
+						if (item.id === findAuthId) {
+							console.log("ITEM: ", item)
+							// Missing fields here?
+							curaction.selectedAuthentication = item
+						}
 					}
 				}
-			}
-			
-			curaction.authentication = authenticationOptions
-			if (curaction.selectedAuthentication === null || curaction.selectedAuthentication === undefined || curaction.selectedAuthentication.length === "") {
-				curaction.selectedAuthentication = {}
+
+				curaction.authentication = authenticationOptions
+				if (curaction.selectedAuthentication === null || curaction.selectedAuthentication === undefined || curaction.selectedAuthentication.length === "") {
+					curaction.selectedAuthentication = {}
+				}
 			}
 
 			setSelectedApp(curapp)
@@ -2585,15 +2589,13 @@ const AngularWorkflow = (props) => {
 							data.variant = "STATIC_VALUE"
 						}
 
-						if (!selectedAction.auth_not_required && selectedAction.selectedAuthentication !== undefined && selectedAction.selectedAuthentication.fields !== undefined) {
-							if (selectedAction.selectedAuthentication.fields[data.name] !== undefined) {
-								// FIXME - this should be skipped in the frontend
-								//selectedActionParameters[count].value = selectedAction.selectedAuthentication.fields[data.name]
-								//selectedAction.parameters[count].value = selectedAction.selectedAuthentication.fields[data.name]
-								//setSelectedAction(selectedAction)
+						if (!selectedAction.auth_not_required && selectedAction.selectedAuthentication !== undefined && selectedAction.selectedAuthentication.fields !== undefined && selectedAction.selectedAuthentication.fields[data.name] !== undefined) {
+							// This sets the placeholder in the frontend. (Replaced in backend)
+							selectedActionParameters[count].value = selectedAction.selectedAuthentication.fields[data.name]
+							selectedAction.parameters[count].value = selectedAction.selectedAuthentication.fields[data.name]
+							setSelectedAction(selectedAction)
 
-								return null	
-							}
+							return null	
 						}
 
 						var staticcolor = "inherit"
@@ -3063,6 +3065,7 @@ const AngularWorkflow = (props) => {
 					Authentication
 					<div style={{display: "flex"}}>
 						<Select
+							labelId="select-app-auth"
 							value={selectedAction.selectedAuthentication}
 							SelectDisplayProps={{
 								style: {
@@ -5464,6 +5467,7 @@ const AngularWorkflow = (props) => {
 				})
 			}
 
+			console.log("FIELDS: ", newFields)
 			newAuthOption.fields = newFields
 			setNewAppAuth(newAuthOption)
 		}
@@ -5472,10 +5476,10 @@ const AngularWorkflow = (props) => {
 			<div>
 				<DialogContent>
 					<a href="https://shuffler.io/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is this?</a>
-					These are required fields for authenticating with {selectedApp.name} 
+					- These are required fields for authenticating with {selectedApp.name} 
 					<div style={{marginTop: 15}}/>
 					{selectedApp.link.length > 0 ? <EndpointData /> : null}
-					Label (to remember it)
+					<b>Label (to remember it)</b>
 					<TextField
 							style={{backgroundColor: inputColor}} 
 							InputProps={{
@@ -5494,12 +5498,13 @@ const AngularWorkflow = (props) => {
 								authenticationOption.label = event.target.value
 							}}
 						/>
-					<Divider style={{marginTop: 15, marginBottom: 15}}/>
+					<Divider style={{marginTop: 15, marginBottom: 15, backgroundColor: "rgb(91, 96, 100)"}}/>
 					<div style={{}}/>
 						{selectedApp.authentication.parameters.map((data, index) => { 
 						return (
 							<div key={index} style={{marginTop: 10}}>
-								{data.name}
+								<LockOpenIcon style={{marginRight: 10}}/>
+								<b>{data.name}</b>
 								<TextField
 										style={{backgroundColor: inputColor}} 
 										InputProps={{
