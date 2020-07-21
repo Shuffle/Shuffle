@@ -662,7 +662,7 @@ func handleApiAuthentication(resp http.ResponseWriter, request *http.Request) (U
 		if len(Userdata.Username) > 0 {
 			return Userdata, nil
 		} else {
-			return Userdata, errors.New("User is invalid")
+			return Userdata, errors.New(fmt.Sprintf("User is invalid - no username found: %#v", Userdata))
 		}
 	}
 
@@ -1605,8 +1605,11 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// This is a long check to see if an inactive admin can access the site
+	parsedAdmin := "false"
 	if !userInfo.Active {
 		if userInfo.Role == "admin" {
+			parsedAdmin = "true"
+
 			ctx := context.Background()
 			q := datastore.NewQuery("Users")
 			var users []User
@@ -1672,7 +1675,14 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		Expires: expiration,
 	})
 
-	returnData := fmt.Sprintf(`{"success": true, "cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]}`, userInfo.Session, expiration.Unix())
+	returnData := fmt.Sprintf(`
+	{
+		"success": true, 
+		"admin": %s, 
+		"orgs": [{"name": "Shuffle", "id": "123", "role": "admin"}], 
+		"selected_org": {"name": "Shuffle", "id": "123", "role": "admin"}, 
+		"cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]
+	}`, parsedAdmin, userInfo.Session, expiration.Unix())
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(returnData))

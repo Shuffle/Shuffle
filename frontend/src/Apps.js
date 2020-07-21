@@ -286,7 +286,7 @@ const Apps = (props) => {
 		}
 
 		return (
-			<Paper square style={paperAppStyle} onClick={() => {
+			<Paper square key={data.id} style={paperAppStyle} onClick={() => {
 				if (selectedApp.id !== data.id) {
 					setSelectedApp(data)
 					console.log(data)
@@ -515,7 +515,7 @@ const Apps = (props) => {
 									newActionname = newActionname.replace("_", " ")
 									newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
 									return (
-										<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+										<MenuItem key={data.name} style={{backgroundColor: inputColor, color: "white"}} value={data}>
 											{newActionname}
 
 										</MenuItem>
@@ -540,7 +540,7 @@ const Apps = (props) => {
 
 								const circleSize = 10
 								return (
-									<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+									<MenuItem key={data.name} style={{backgroundColor: inputColor, color: "white"}} value={data}>
 										<div style={{width: circleSize, height: circleSize, borderRadius: circleSize / 2, backgroundColor: itemColor, marginRight: "10px"}}/>
 										{data.name}
 

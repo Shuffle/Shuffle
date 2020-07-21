@@ -950,6 +950,10 @@ const AngularWorkflow = (props) => {
 				if (curaction.selectedAuthentication === null || curaction.selectedAuthentication === undefined || curaction.selectedAuthentication.length === "") {
 					curaction.selectedAuthentication = {}
 				}
+			} else {
+				curaction.authentication = []
+				curaction.authentication_id = ""
+				curaction.selectedAuthentication = {}
 			}
 
 			setSelectedApp(curapp)
@@ -2998,7 +3002,7 @@ const AngularWorkflow = (props) => {
 		paddingLeft: 10,
 		minHeight: "100%",
 		zIndex: 1000,
-		resize: "horizontal",
+		resize: "vertical",
 		overflow: "auto",
 	}
 

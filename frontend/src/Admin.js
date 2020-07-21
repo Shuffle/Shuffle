@@ -2,6 +2,8 @@ import React, { useEffect} from 'react';
 
 import {Link} from 'react-router-dom';
 import Paper from '@material-ui/core/Paper';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
+import Switch from '@material-ui/core/Switch';
 import Select from '@material-ui/core/Select';
 import MenuItem from '@material-ui/core/MenuItem';
 import List from '@material-ui/core/List';
@@ -21,7 +23,13 @@ import DialogTitle from '@material-ui/core/DialogTitle';
 import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
 
+import AccessibilityNewIcon from '@material-ui/icons/AccessibilityNew';
 import CachedIcon from '@material-ui/icons/Cached';
+import LockIcon from '@material-ui/icons/Lock';
+import BusinessIcon from '@material-ui/icons/Business';
+import EcoIcon from '@material-ui/icons/Eco';
+import ScheduleIcon from '@material-ui/icons/Schedule';
+import CloudIcon from '@material-ui/icons/Cloud';
 
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
@@ -459,7 +467,7 @@ const Admin = (props) => {
 	}
 
 	const editAuthenticationModal = 
-		<Dialog modal 
+		<Dialog 
 			open={selectedAuthenticationModalOpen}
 			onClose={() => {setSelectedAuthenticationModalOpen(false)}}
 			PaperProps={{
@@ -523,7 +531,7 @@ const Admin = (props) => {
 		</Dialog>
 
 	const editUserModal = 
-		<Dialog modal 
+		<Dialog 
 			open={selectedUserModalOpen}
 			onClose={() => {setSelectedUserModalOpen(false)}}
 			PaperProps={{
@@ -587,7 +595,7 @@ const Admin = (props) => {
 		</Dialog>
 
 	const modalView = 
-		<Dialog modal 
+		<Dialog 
 			open={modalOpen}
 			onClose={() => {setModalOpen(false)}}
 			PaperProps={{
@@ -600,7 +608,7 @@ const Admin = (props) => {
 			}}
 		>
 			<DialogTitle><span style={{color: "white"}}>
-				{curTab === 0 ? "Add user" : "Add environment"}
+				{curTab === 0 ? "Add user" : curTab === 2 ? "Add environment" : "Add organization"}
 			</span></DialogTitle>
 			<DialogContent>
 				{curTab === 0 ? 
@@ -671,7 +679,30 @@ const Admin = (props) => {
 						onChange={(event) => changeModalData("environment", event.target.value)}
 					/>
 					</div>
-				: null }
+				: 
+					<div>
+						Org Name	
+						<TextField
+							color="primary"
+							style={{backgroundColor: inputColor}}
+							autoFocus
+							InputProps={{
+								style:{
+									height: "50px", 
+									color: "white",
+									fontSize: "1em",
+								},
+							}}
+							required
+							fullWidth={true}
+							placeholder="datacenter froglantern"
+							id="environment_name"
+							margin="normal"
+							variant="outlined"
+							onChange={(event) => changeModalData("organization", event.target.value)}
+						/>
+					</div>
+				}
 				{loginInfo}
 			</DialogContent>
 			<DialogActions>
@@ -731,7 +762,7 @@ const Admin = (props) => {
 				</ListItem>
 				{users === undefined ? null : users.map(data => {
 					return (
-						<ListItem>
+						<ListItem key={data.id}>
 							<ListItemText
 								primary={data.username}
 								style={{minWidth: 200, maxWidth: 200}}
@@ -743,10 +774,6 @@ const Admin = (props) => {
 							<ListItemText
 								primary=
 									<Select
-										PaperProps={{
-											style: {
-											}
-										}}
 										SelectDisplayProps={{
 											style: {
 												marginLeft: 10,
@@ -977,11 +1004,99 @@ const Admin = (props) => {
 								style={{minWidth: 200, maxWidth: 200, overflow: "hidden"}}
 							/>
 							<ListItemText>
-								<Button type="outlined" style={{borderRadius: "0px"}} onClick={() => deleteEnvironment(environment.Name)} color="primary">Delete</Button>
+								<Button variant="outlined" style={{borderRadius: "0px"}} onClick={() => deleteEnvironment(environment.Name)} color="primary">Delete</Button>
 							</ListItemText>
 						</ListItem>
 					)
 				})}
+			</List>
+		</div>
+		: null
+
+	const organizationsTab = curTab === 5 ?
+		<div>
+			<div style={{marginTop: 20, marginBottom: 20,}}>
+				<h2 style={{display: "inline",}}>Organizations</h2>
+				<span style={{marginLeft: 25}}>Global admin: control organizations</span>
+			</div>
+			<Button 
+				style={{}} 
+				variant="contained"
+				color="primary"
+				onClick={() => setModalOpen(true)}
+			> 
+				Add organization 
+			</Button>
+			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
+			<List>
+				<ListItem>
+					<ListItemText
+						primary="Name"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="Orborus running (TBD)"
+						style={{minWidth: 200, maxWidth: 200}}
+					/>
+					<ListItemText
+						primary="Actions"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+				</ListItem>
+				<ListItem>
+					<ListItemText
+						primary="Enabled"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="false"
+						style={{minWidth: 200, maxWidth: 200}}
+					/>
+					<ListItemText
+						primary=<Switch checked={false} onChange={() => {console.log("INVERT")}} />
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+				</ListItem>
+			</List>
+		</div>
+		: null
+
+	const hybridTab = curTab === 4 ?
+		<div>
+			<div style={{marginTop: 20, marginBottom: 20,}}>
+				<h2 style={{display: "inline",}}>Hybrid</h2>
+				<span style={{marginLeft: 25}}></span>
+			</div>
+			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
+			<List>
+				<ListItem>
+					<ListItemText
+						primary="Name"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="Orborus running (TBD)"
+						style={{minWidth: 200, maxWidth: 200}}
+					/>
+					<ListItemText
+						primary="Actions"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+				</ListItem>
+				<ListItem>
+					<ListItemText
+						primary="Enabled"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="false"
+						style={{minWidth: 200, maxWidth: 200}}
+					/>
+					<ListItemText
+						primary=<Switch checked={false} onChange={() => {console.log("INVERT")}} />
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+				</ListItem>
 			</List>
 		</div>
 		: null
@@ -1001,20 +1116,22 @@ const Admin = (props) => {
 		setCurTab(newValue)
 	}
 
+	const iconStyle = {marginRight: 10}
 	const data = 
 		<div style={{minWidth: 1366, margin: "auto"}}>
 			<Paper style={paperStyle}>
 				<Tabs
 					value={curTab}
 					indicatorColor="primary"
-					textColor="white"
 					onChange={setConfig}
 					aria-label="disabled tabs example"
 				>
-					<Tab label="Users" />
-					<Tab label="App Authentication"/>
-					<Tab label="Environments"/>
-					<Tab label="Schedules"/>
+					<Tab label=<span><AccessibilityNewIcon style={iconStyle} />Users</span> />
+					<Tab label=<span><LockIcon style={iconStyle} />App Authentication</span>/>
+					<Tab label=<span><EcoIcon style={iconStyle} />Environments</span>/>
+					<Tab label=<span><ScheduleIcon style={iconStyle} />Schedules</span> />
+					{window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><CloudIcon style={iconStyle} /> Hybrid</span>/> : null}
+					{window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><BusinessIcon style={iconStyle} /> Organizations</span>/> : null}
 				</Tabs>
 				<Divider style={{marginTop: 0, marginBottom: 10, backgroundColor: "rgb(91, 96, 100)"}} />
 				<div style={{padding: 15}}>
@@ -1022,6 +1139,8 @@ const Admin = (props) => {
 					{usersView}	
 					{environmentView}
 					{schedulesView}
+					{hybridTab}
+					{organizationsTab}
 				</div>
 			</Paper>
 		</div>

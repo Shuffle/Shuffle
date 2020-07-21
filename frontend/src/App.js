@@ -31,8 +31,8 @@ import LandingPageNew from "./LandingpageNew";
 import LoginPage from "./LoginPage";
 import SettingsPage from "./SettingsPage";
 
-import MuiThemeProvider from '@material-ui/core/styles/MuiThemeProvider';
-import { createMuiTheme } from '@material-ui/core/styles';
+//import MuiThemeProvider from '@material-ui/core/styles/MuiThemeProvider';
+import { createMuiTheme, ThemeProvider as MuiThemeProvider } from '@material-ui/core/styles';
 
 import AlertTemplate from "react-alert-template-basic";
 import { positions, Provider } from "react-alert";
@@ -100,6 +100,7 @@ const App = (message, props) => {
     .then(response => response.json())
     .then(responseJson => {
       if (responseJson.success === true) {
+				console.log(responseJson)
 				setUserData(responseJson)
 				setIsLoggedIn(true)
 
@@ -127,7 +128,7 @@ const App = (message, props) => {
   			<Route exact path="/home" render={props => <LandingPageNew isLoaded={isLoaded} {...props} /> } />
 		</div> : 
 		<div style={{backgroundColor: "#1F2023", color: "rgba(255, 255, 255, 0.65)", minHeight: "100vh"}}>
-			<Header removeCookie={removeCookie} isLoaded={isLoaded} globalUrl={globalUrl} setIsLoggedIn={setIsLoggedIn} isLoggedIn={isLoggedIn} surfaceColor={surfaceColor} inputColor={inputColor}{...props} />
+			<Header removeCookie={removeCookie} surfaceColor={surfaceColor} inputColor={inputColor} userdata={userdata} isLoaded={isLoaded} globalUrl={globalUrl} setIsLoggedIn={setIsLoggedIn} isLoggedIn={isLoggedIn} surfaceColor={surfaceColor} inputColor={inputColor}{...props} />
 			<Route exact path="/oauth2" render={props => <Oauth2 isLoaded={isLoaded} globalUrl={globalUrl} surfaceColor={surfaceColor} inputColor={inputColor}{...props} /> } />
 			<Route exact path="/contact" render={props => <Contact isLoaded={isLoaded} globalUrl={globalUrl} surfaceColor={surfaceColor} inputColor={inputColor} {...props} /> } />
 			<Route exact path="/login" render={props => <LoginPage isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} surfaceColor={surfaceColor} inputColor={inputColor} {...props} /> } />

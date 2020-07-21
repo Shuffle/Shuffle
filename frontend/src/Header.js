@@ -6,6 +6,8 @@ import {Link} from 'react-router-dom';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 
+import MenuItem from '@material-ui/core/MenuItem';
+import Select from '@material-ui/core/Select';
 import Button from '@material-ui/core/Button';
 import HomeIcon from '@material-ui/icons/Home';
 import PolymerIcon from '@material-ui/icons/Polymer';
@@ -17,7 +19,7 @@ const hoverColor = "#f85a3e"
 const hoverOutColor = "#e8eaf6"
 
 const Header = props => {
-  	const { globalUrl, isLoggedIn, removeCookie, homePage, isLoaded } = props;
+  const { surfaceColor, inputColor, globalUrl, isLoggedIn, removeCookie, homePage, isLoaded, userdata} = props;
 
 	const [HomeHoverColor, setHomeHoverColor] = useState(hoverOutColor);
 	const [SoarHoverColor, setSoarHoverColor] = useState(hoverOutColor);
@@ -100,7 +102,7 @@ const Header = props => {
 
 
 	// Handle top bar or something
-  	const loginTextBrowser = !isLoggedIn ? 
+  const loginTextBrowser = !isLoggedIn ? 
     	<div style={{display: "flex"}}>
 			<List style={{display: "flex", flexDirect: "row"}} component="nav">
 				<ListItem style={{textAlign: "center", marginLeft: "0px"}}>
@@ -192,6 +194,31 @@ const Header = props => {
 							</Button>
 						</Link>
 					</ListItem>
+					{userdata.orgs.length <= 1 ? null :
+						<ListItem>
+							<Select
+								SelectDisplayProps={{
+									style: {
+										marginLeft: 10,
+									}
+								}}
+								value={userdata.selected_org}
+								fullWidth
+								style={{backgroundColor: surfaceColor, color: "white", height: "50px"}}
+								onChange={(e) => {
+									console.log("SET ORG TO ", e.target.value)
+								}}
+								>
+								{userdata.orgs.map(data => {
+									return (
+										<MenuItem key={data.id} style={{backgroundColor: inputColor, color: "white"}} value={data}>
+											{data.name}
+										</MenuItem>
+									)
+								})}
+							</Select>
+						</ListItem>
+					}
 				</List>
 			</div>
 	    </div>
@@ -272,10 +299,10 @@ const Header = props => {
 	const loadedCheck = isLoaded ? 
 		<div>
 			<BrowserView>
-      			{loginTextBrowser}
+      	{loginTextBrowser}
 			</BrowserView>
 			<MobileView>
-      			{loginTextMobile}
+      	{loginTextMobile}
 			</MobileView>
 		</div>
 		:
@@ -288,6 +315,6 @@ const Header = props => {
 			{loadedCheck}
 	    </div>
   );
-};
+}
 
 export default Header;
