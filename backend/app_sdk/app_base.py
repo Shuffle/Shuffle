@@ -101,7 +101,7 @@ class AppBase:
         except requests.exceptions.ConnectionError as e:
             print("Connectionerror: %s" %  e)
 
-            action_result["result"] = "Bad setup during startup: %d" % e 
+            action_result["result"] = "Bad setup during startup: %s" % e 
             self.send_result(action_result, headers, stream_path) 
             return
 

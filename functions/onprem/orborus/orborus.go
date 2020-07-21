@@ -78,10 +78,11 @@ func init() {
 	// Skip random containers. Only handle things related to Shuffle.
 	for _, container := range containers {
 		found := false
-		//log.Printf("Running? %#v", container)
-		if container.State != "running" {
-			continue
-		}
+
+		// Bad states - it might just be created sometimes, leading to now netowkr
+		//if container.State == "restarting" || container.State == "paused" || container.State == "exited" || container.State == "dead" {
+		//	continue
+		//}
 
 		for _, name := range container.Names {
 			if !strings.Contains(strings.ToLower(name), containerIdentifier) {
@@ -120,17 +121,10 @@ func deployWorker(image string, identifier string, env []string) {
 		},
 	}
 
-	// ROFL: https://docker-py.readthedocs.io/en/1.4.0/volumes/
-	config := &container.Config{
-		Image: image,
-		Env:   env,
-	}
-
 	// Look for Shuffle network and set it
-
-	// FIXME: Move this out of here and have it be a global setting. During init?
 	networkConfig := &network.NetworkingConfig{}
 	if len(shuffleNetwork) > 0 {
+		log.Printf("Starting worker with network %s", shuffleNetwork)
 		networkConfig = &network.NetworkingConfig{
 			EndpointsConfig: map[string]*network.EndpointSettings{
 				shuffleNetwork: {
@@ -139,7 +133,15 @@ func deployWorker(image string, identifier string, env []string) {
 			},
 		}
 
-		env = append(env, fmt.Sprintf("DOCKER_NETWORK", shuffleNetwork))
+		env = append(env, fmt.Sprintf("DOCKER_NETWORK=%s", shuffleNetwork))
+	} else {
+		log.Printf("Starting worker WITHOUT any specified network: %s", shuffleNetwork)
+	}
+
+	// ROFL: https://docker-py.readthedocs.io/en/1.4.0/volumes/
+	config := &container.Config{
+		Image: image,
+		Env:   env,
 	}
 
 	//test := &network.EndpointSettings{

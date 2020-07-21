@@ -1107,6 +1107,13 @@ func main() {
 		}
 	}
 
+	shuffleNetwork := os.Getenv("DOCKER_NETWORK")
+	if len(shuffleNetwork) > 0 {
+		log.Printf("Running with Docker network %s", shuffleNetwork)
+	} else {
+		log.Printf("No docker network specified for Worker.")
+	}
+
 	// WORKER_TESTING_WORKFLOW should be a workflow ID
 	authorization := ""
 	executionId := ""
