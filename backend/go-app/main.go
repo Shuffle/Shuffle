@@ -6144,7 +6144,7 @@ func handleAppHotload(location string) error {
 	}
 
 	//log.Printf("Reading app folder: %#v", dir)
-	err = iterateAppGithubFolders(fs, dir, "", "")
+	err = iterateAppGithubFolders(fs, dir, "", "", false)
 	if err != nil {
 		log.Printf("Err: %s", err)
 		return err
@@ -6355,7 +6355,7 @@ func runInit(ctx context.Context) {
 		//iterateAppGithubFolders(fs, dir, "", "testing")
 
 		// FIXME: Get all the apps?
-		iterateAppGithubFolders(fs, dir, "", "")
+		iterateAppGithubFolders(fs, dir, "", "", false)
 
 		// Hotloads locally
 		location := os.Getenv("APP_HOTLOAD_FOLDER")

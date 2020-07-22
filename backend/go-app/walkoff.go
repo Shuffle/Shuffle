@@ -4265,7 +4265,7 @@ func loadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 			log.Printf("FAiled reading folder: %s", err)
 		}
 		_ = r
-		iterateAppGithubFolders(fs, dir, "", "")
+		iterateAppGithubFolders(fs, dir, "", "", true)
 
 	} else if strings.Contains(tmpBody.URL, "s3") {
 		//https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
@@ -4490,7 +4490,7 @@ func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra 
 }
 
 // Onlyname is used to
-func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string) error {
+func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string, forceUpdate bool) error {
 	var err error
 	for _, file := range dir {
 		if len(onlyname) > 0 && file.Name() != onlyname {
@@ -4508,7 +4508,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 			}
 
 			// Go routine? Hmm, this can be super quick I guess
-			err = iterateAppGithubFolders(fs, dir, tmpExtra, "")
+			err = iterateAppGithubFolders(fs, dir, tmpExtra, "", forceUpdate)
 			if err != nil {
 				log.Printf("Error reading folder: %s", err)
 				continue
@@ -4617,7 +4617,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 					}
 				}
 
-				if skip {
+				if skip && !forceUpdate {
 					continue
 				}
 
