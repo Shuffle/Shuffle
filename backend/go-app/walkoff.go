@@ -4221,9 +4221,10 @@ func loadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 
 	// Field1 & 2 can be a lot of things..
 	type tmpStruct struct {
-		URL    string `json:"url"`
-		Field1 string `json:"field_1"`
-		Field2 string `json:"field_2"`
+		URL         string `json:"url"`
+		Field1      string `json:"field_1"`
+		Field2      string `json:"field_2"`
+		ForceUpdate bool   `json:"force_update"`
 	}
 	//log.Printf("Body: %s", string(body))
 
@@ -4265,7 +4266,13 @@ func loadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 			log.Printf("FAiled reading folder: %s", err)
 		}
 		_ = r
-		iterateAppGithubFolders(fs, dir, "", "", true)
+
+		if tmpBody.ForceUpdate {
+			log.Printf("Running with force update!")
+		} else {
+			log.Printf("Updating apps with updates")
+		}
+		iterateAppGithubFolders(fs, dir, "", "", tmpBody.ForceUpdate)
 
 	} else if strings.Contains(tmpBody.URL, "s3") {
 		//https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
@@ -4492,6 +4499,11 @@ func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra 
 // Onlyname is used to
 func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string, forceUpdate bool) error {
 	var err error
+
+	allapps := []WorkflowApp{}
+
+	// It's here to prevent getting them in every iteration
+	ctx := context.Background()
 	for _, file := range dir {
 		if len(onlyname) > 0 && file.Name() != onlyname {
 			continue
@@ -4591,12 +4603,12 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 					fmt.Sprintf("%s:%s_%s", baseDockerName, newName, workflowapp.AppVersion),
 				}
 
-				ctx := context.Background()
-				allapps, err := getAllWorkflowApps(ctx)
-				if err != nil {
-					log.Printf("Failed getting apps to verify: %s", err)
-					continue
-					//return err
+				if len(allapps) == 0 {
+					allapps, err = getAllWorkflowApps(ctx)
+					if err != nil {
+						log.Printf("Failed getting apps to verify: %s", err)
+						continue
+					}
 				}
 
 				// Make an option to override existing apps?
@@ -4607,7 +4619,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 					if app.Name == workflowapp.Name && app.AppVersion == workflowapp.AppVersion {
 						// FIXME: Check if there's a new APP_SDK as well.
 						// Skip this check if app_sdk is new.
-						if app.Hash == md5 && app.Hash != "" {
+						if app.Hash == md5 && app.Hash != "" && !forceUpdate {
 							skip = true
 							break
 						}
@@ -4677,6 +4689,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 
 				if len(removeApps) > 0 {
 					for _, item := range removeApps {
+						log.Printf("Removing duplicate: %s", item)
 						err = DeleteKey(ctx, "workflowapp", item)
 						if err != nil {
 							log.Printf("Failed deleting %s", item)
