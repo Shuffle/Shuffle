@@ -94,6 +94,7 @@ type AuthenticationUsage struct {
 }
 
 // An app inside Shuffle
+// Source      string `json:"source" datastore:"soure" yaml:"source"` - downloadlocation
 type WorkflowApp struct {
 	Name        string `json:"name" yaml:"name" required:true datastore:"name"`
 	IsValid     bool   `json:"is_valid" yaml:"is_valid" required:true datastore:"is_valid"`

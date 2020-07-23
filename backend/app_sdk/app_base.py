@@ -710,7 +710,17 @@ class AppBase:
                         continue
 
                     #print(destinationvalue)
-                    if not run_validation(sourcevalue, condition["condition"]["value"], destinationvalue):
+                    # NEGATE 
+                    validation = run_validation(sourcevalue, condition["condition"]["value"], destinationvalue)
+
+                    # Configuration = negated because of WorkflowAppActionParam..
+                    try:
+                        if condition["condition"]["configuration"]:
+                            validation = not validation
+                    except KeyError:
+                        pass
+
+                    if not validation:
                         self.logger.info("Failed condition check for %s %s %s." % (sourcevalue, condition["condition"]["value"], destinationvalue))
                         return False, "Failed condition: %s %s %s" % (sourcevalue, condition["condition"]["value"], destinationvalue)
 
