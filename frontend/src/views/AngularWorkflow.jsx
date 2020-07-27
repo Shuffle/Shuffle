@@ -949,6 +949,10 @@ const AngularWorkflow = (props) => {
 				if (curaction.selectedAuthentication === null || curaction.selectedAuthentication === undefined || curaction.selectedAuthentication.length === "") {
 					curaction.selectedAuthentication = {}
 				}
+			} else {
+				curaction.authentication = []
+				curaction.authentication_id = ""
+				curaction.selectedAuthentication = {}
 			}
 
 			setSelectedApp(curapp)
@@ -2997,7 +3001,7 @@ const AngularWorkflow = (props) => {
 		paddingLeft: 10,
 		minHeight: "100%",
 		zIndex: 1000,
-		resize: "horizontal",
+		resize: "vertical",
 		overflow: "auto",
 	}
 
@@ -3512,14 +3516,6 @@ const AngularWorkflow = (props) => {
 					<div style={{flex: "10"}}> 
 						<b>{data.name} </b> 
 					</div>
-					<Tooltip color="primary" title="Static data" placement="top">
-						<div style={{cursor: "pointer", color: staticcolor}} onClick={(e) => {
-								e.preventDefault()
-								changeActionParameterVariant("STATIC_VALUE") 
-							}}>
-							<CreateIcon />
-						</div>
-					</Tooltip>
 				</div>	
 				{datafield}
 			</div>
@@ -3552,11 +3548,21 @@ const AngularWorkflow = (props) => {
 		<FormControl>
 			<DialogTitle><div style={{color:"white"}}>Condition</div></DialogTitle>
 				<DialogContent style={{display: "flex"}}>
+					<Tooltip color="primary" title={conditionValue.configuration ? "Negated" : "Default"} placement="top">
+						<Button color="primary" variant={conditionValue.configuration ? "contained" : "outlined"} style={{margin: "auto", height: 50, marginBottom: 0, marginRight: 5}} onClick={(e) => {
+							console.log("VALUE: ", conditionValue.configuration)
+							conditionValue.configuration = !conditionValue.configuration
+							setConditionValue(conditionValue)
+							setUpdate("condition "+conditionValue.configuration)
+						}}>
+							{conditionValue.configuration ? "!" : "="}
+						</Button>
+					</Tooltip>
 					<div style={{flex: "2"}}>
 						<AppConditionHandler tmpdata={sourceValue} setData={setSourceValue} type={"source"} />
 					</div>
-					<div style={{flex: "1", margin: "auto", marginBottom: "0px"}}>
-					    <Button color="primary" variant="outlined" style={{height: "50px",}} fullWidth aria-haspopup="true" onClick={(e) => {setVariableAnchorEl(e.currentTarget)}}>
+					<div style={{flex: "1", margin: "auto", marginBottom: 0, marginLeft: 5, marginRight: 5,}}>
+					  <Button color="primary" variant="outlined" style={{height: "50px",}} fullWidth aria-haspopup="true" onClick={(e) => {setVariableAnchorEl(e.currentTarget)}}>
 							{conditionValue.value}	
 						</Button>
 						<Menu
@@ -3620,8 +3626,7 @@ const AngularWorkflow = (props) => {
 								setVariableAnchorEl(null)
 							}} key={"less than"}>less than</MenuItem>
 						</Menu>
-
-					</div>
+					</div>	
 					<div style={{flex: "2"}}>
 						<AppConditionHandler tmpdata={destinationValue} setData={setDestinationValue} type={"destination"} />
 					</div>

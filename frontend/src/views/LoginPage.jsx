@@ -163,6 +163,7 @@ const LoginDialog = props => {
 
 	//	<DialogTitle>{formtitle}</DialogTitle>
 
+	console.log("THEME: ", theme.palette.surfaceColor)
 	const basedata =
 		<div style={bodyDivStyle}>
 			<Paper style={{

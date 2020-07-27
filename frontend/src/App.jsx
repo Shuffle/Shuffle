@@ -11,22 +11,18 @@ import Webhooks from "./views/Webhooks";
 import Workflows from "./views/Workflows";
 import EditWebhook from "./views/EditWebhook";
 import AngularWorkflow from "./views/AngularWorkflow";
-// import ForgotPassword from "./views/ForgotPassword";
-// import ForgotPasswordLink from "./components/ForgotPasswordLink";
 
 import Header from './components/Header';
 import Apps from './views/Apps';
 import AppCreator from './views/AppCreator';
 import Contact from './views/Contact';
 import Oauth2 from './views/Oauth2';
-// import About from "./views/About";
-// import Post from "./views/Post";
+
 import Dashboard from "./views/Dashboard";
 import AdminSetup from "./views/AdminSetup";
 import Admin from "./views/Admin";
 import Docs from "./views/Docs";
-// import RegisterLink from "./views/RegisterLink";
-// import LandingPage from "./views/Landingpage";
+
 import LandingPageNew from "./views/LandingpageNew";
 import LoginPage from "./views/LoginPage";
 import SettingsPage from "./views/SettingsPage";
@@ -165,4 +161,3 @@ const App = (message, props) => {
 };
 
 export default App;
-

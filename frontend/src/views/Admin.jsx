@@ -1,7 +1,9 @@
-import React, { useEffect } from 'react';
+import React, { useEffect} from 'react';
 
-import { Link } from 'react-router-dom';
+import {Link} from 'react-router-dom';
 import Paper from '@material-ui/core/Paper';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
+import Switch from '@material-ui/core/Switch';
 import Select from '@material-ui/core/Select';
 import MenuItem from '@material-ui/core/MenuItem';
 import List from '@material-ui/core/List';
@@ -26,7 +28,6 @@ const Admin = (props) => {
 	const { globalUrl } = props;
 
 	const theme = useTheme();
-
 	const [firstRequest, setFirstRequest] = React.useState(true);
 	const [modalUser, setModalUser] = React.useState({});
 	const [modalOpen, setModalOpen] = React.useState(false);
@@ -57,20 +58,20 @@ const Admin = (props) => {
 				'Content-Type': 'application/json',
 			},
 		})
-			.then(response =>
-				response.json().then(responseJson => {
-					console.log("RESP: ", responseJson)
-					if (responseJson["success"] === false) {
-						alert.error("Failed stopping schedule")
-					} else {
-						getAppAuthentication()
-						alert.success("Successfully stopped schedule!")
-					}
-				}),
-			)
-			.catch(error => {
-				console.log("Error in userdata: ", error)
-			});
+		.then(response =>
+			response.json().then(responseJson => {
+				console.log("RESP: ", responseJson)
+				if (responseJson["success"] === false) {
+					alert.error("Failed stopping schedule")
+				} else {
+					getAppAuthentication() 
+					alert.success("Successfully stopped schedule!")
+				}
+			}),
+		)
+		.catch(error => {
+			console.log("Error in userdata: ", error)
+		});
 	}
 
 	const deleteSchedule = (data) => {
@@ -106,6 +107,7 @@ const Admin = (props) => {
 	const onPasswordChange = () => {
 		const data = { "username": selectedUser.username, "newpassword": newPassword }
 		const url = globalUrl + '/api/v1/users/passwordchange';
+
 		fetch(url, {
 			mode: 'cors',
 			method: 'POST',
@@ -141,24 +143,24 @@ const Admin = (props) => {
 				'Content-Type': 'application/json',
 			},
 		})
-			.then(response => {
-				if (response.status === 200) {
-					getUsers()
-				}
+		.then(response => {
+			if (response.status === 200) {
+				getUsers()
+			}
 
-				return response.json()
-			})
-			.then((responseJson) => {
-				if (!responseJson.success && responseJson.reason !== undefined) {
-					alert.error("Failed to deactivate user: " + responseJson.reason)
-				} else {
-					alert.success("Deactivated user " + data.id)
-				}
-			})
+			return response.json()
+		})
+    .then((responseJson) => {
+			if (!responseJson.success && responseJson.reason !== undefined) {
+				alert.error("Failed to deactivate user: "+responseJson.reason)
+			} else {
+				alert.success("Deactivated user "+data.id)
+			}
+		})
 
-			.catch(error => {
-				console.log("Error in userdata: ", error)
-			});
+		.catch(error => {
+			console.log("Error in userdata: ", error)
+		});
 	}
 
 	const submitUser = (data) => {
@@ -790,250 +792,342 @@ const Admin = (props) => {
 					)
 				})}
 			</List>
-		</div >
+		</div>
 		: null
 
-const schedulesView = curTab === 3 ?
-	<div>
-		<div style={{ marginTop: 20, marginBottom: 20, }}>
-			<h2 style={{ display: "inline", }}>Schedules</h2>
-			<span style={{ marginLeft: 25 }}>Schedules used in Workflows. Makes locating and control easier.</span>
-		</div>
-		<Divider style={{ marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor }} />
-		<List>
-			<ListItem>
-				<ListItemText
-					primary="Interval (seconds)"
-					style={{ maxWidth: 200 }}
-				/>
-				<ListItemText
-					primary="Argument"
-					style={{ maxWidth: 400, overflow: "hidden" }}
-				/>
-				<ListItemText
-					primary="Actions"
-				/>
-			</ListItem>
-			{schedules === undefined || schedules === null ? null : schedules.map(schedule => {
-				return (
-					<ListItem>
-						<ListItemText
-							style={{ maxWidth: 200 }}
-							primary={schedule.seconds}
-						/>
-						<ListItemText
-							primary={schedule.argument}
-							style={{ maxWidth: 400, overflow: "hidden" }}
-						/>
-						<ListItemText>
-							<Button
-								style={{}}
-								variant="contained"
-								color="primary"
-								onClick={() => deleteSchedule(schedule)}
-							>
-								Delete
-								</Button>
-						</ListItemText>
-					</ListItem>
-				)
-			})}
-		</List>
-	</div>
-	: null
-
-const authenticationView = curTab === 1 ?
-	<div>
-		<div style={{ marginTop: 20, marginBottom: 20, }}>
-			<h2 style={{ display: "inline", }}>App Authentication</h2>
-			<span style={{ marginLeft: 25 }}>Control the authentication options for individual apps. <b>Actions can be destructive!</b></span>
-		</div>
-		<Divider style={{ marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor }} />
-		<List>
-			<ListItem>
-				<ListItemText
-					primary="Icon"
-					style={{ minWidth: 150, maxWidth: 150 }}
-				/>
-				<ListItemText
-					primary="Label"
-					style={{ minWidth: 250, maxWidth: 250 }}
-				/>
-				<ListItemText
-					primary="App Name"
-					style={{ minWidth: 150, maxWidth: 150 }}
-				/>
-				<ListItemText
-					primary="Workflows"
-					style={{ minWidth: 150, maxWidth: 150, overflow: "hidden" }}
-				/>
-				<ListItemText
-					primary="Action amount"
-					style={{ minWidth: 150, maxWidth: 150, overflow: "hidden" }}
-				/>
-				<ListItemText
-					primary="Fields"
-					style={{ minWidth: 200, maxWidth: 200, overflow: "hidden" }}
-				/>
-				<ListItemText
-					primary="Actions"
-				/>
-			</ListItem>
-			{authentication === undefined ? null : authentication.map(data => {
-				return (
-					<ListItem>
-						<ListItemText
-							primary={<img alt="" src={data.app.large_image} style={{ maxWidth: 50, }} />}
-								style={{ minWidth: 150, maxWidth: 150 }}
+	const schedulesView = curTab === 3 ?
+		<div>
+			<div style={{marginTop: 20, marginBottom: 20,}}>
+				<h2 style={{display: "inline",}}>Schedules</h2>
+				<span style={{marginLeft: 25}}>Schedules used in Workflows. Makes locating and control easier.</span>
+			</div>
+			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
+			<List>
+				<ListItem>
+					<ListItemText
+						primary="Interval (seconds)"
+						style={{maxWidth: 200}}
+					/>
+					<ListItemText
+						primary="Argument"
+						style={{maxWidth: 400, overflow: "hidden"}}
+					/>
+					<ListItemText
+						primary="Actions"
+					/>
+				</ListItem>
+				{schedules === undefined || schedules === null ? null : schedules.map(schedule => {
+					return (
+						<ListItem>
+							<ListItemText
+								style={{maxWidth: 200}}
+								primary={schedule.seconds}
 							/>
-						<ListItemText
-							primary={data.label}
-							style={{ minWidth: 250, maxWidth: 250 }}
-						/>
-						<ListItemText
-							primary={data.app.name}
-							style={{ minWidth: 150, maxWidth: 150 }}
-						/>
-						<ListItemText
-							primary={data.usage.length}
-							style={{ minWidth: 150, maxWidth: 150, overflow: "hidden" }}
-						/>
-						<ListItemText
-							primary={data.node_count}
-							style={{ minWidth: 150, maxWidth: 150, overflow: "hidden" }}
-						/>
-						<ListItemText
-							primary={data.fields.map(data => {
-								return data.key
-							}).join(", ")}
-							style={{ minWidth: 200, maxWidth: 200, overflow: "hidden" }}
-						/>
-						<ListItemText>
-							<Button
-								style={{}}
-								variant="outlined"
-								color="primary"
-								onClick={() => {
-									deleteAuthentication(data)
-								}}
-							>
-								Delete
+							<ListItemText
+								primary={schedule.argument}
+								style={{maxWidth: 400, overflow: "hidden"}}
+							/>
+							<ListItemText>
+								<Button 
+									style={{}} 
+									variant="contained"
+									color="primary"
+									onClick={() => deleteSchedule(schedule)}
+								>
+									Delete	
 								</Button>
-						</ListItemText>
-					</ListItem>
-				)
-			})}
-		</List>
-	</div>
-	: null
-
-const environmentView = curTab === 2 ?
-	<div>
-		<div style={{ marginTop: 20, marginBottom: 20, }}>
-			<h2 style={{ display: "inline", }}>Environments</h2>
-			<span style={{ marginLeft: 25 }}>Decides what Orborus environment to execute an action in a workflow in.</span>
+							</ListItemText>
+						</ListItem>
+					)
+				})}
+			</List>
 		</div>
-		<Button
-			style={{}}
-			variant="contained"
-			color="primary"
-			onClick={() => setModalOpen(true)}
-		>
-			Add environment
+		: null
+
+	const authenticationView = curTab === 1 ?
+		<div>
+			<div style={{marginTop: 20, marginBottom: 20,}}>
+				<h2 style={{display: "inline",}}>App Authentication</h2>
+				<span style={{marginLeft: 25}}>Control the authentication options for individual apps. <b>Actions can be destructive!</b></span>
+			</div>
+			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
+			<List>
+				<ListItem>
+					<ListItemText
+						primary="Icon"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="Label"
+						style={{minWidth: 250, maxWidth: 250}}
+					/>
+					<ListItemText
+						primary="App Name"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="Workflows"
+						style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
+					/>
+					<ListItemText
+						primary="Action amount"
+						style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
+					/>
+					<ListItemText
+						primary="Fields"
+						style={{minWidth: 200, maxWidth: 200, overflow: "hidden"}}
+					/>
+					<ListItemText
+						primary="Actions"
+					/>
+				</ListItem>
+				{authentication === undefined ? null : authentication.map(data => {
+					return (
+						<ListItem>
+							<ListItemText
+								primary=<img alt="" src={data.app.large_image} style={{maxWidth: 50,}} />
+								style={{minWidth: 150, maxWidth: 150}}
+							/>
+							<ListItemText
+								primary={data.label}
+								style={{minWidth: 250, maxWidth: 250}}
+							/>
+							<ListItemText
+								primary={data.app.name}
+								style={{minWidth: 150, maxWidth: 150}}
+							/>
+							<ListItemText
+								primary={data.usage.length}
+								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
+							/>
+							<ListItemText
+								primary={data.node_count}
+								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
+							/>
+							<ListItemText
+								primary={data.fields.map(data => {
+									return data.key
+								}).join(", ")}
+								style={{minWidth: 200, maxWidth: 200, overflow: "hidden"}}
+							/>
+							<ListItemText>
+								<Button 
+									style={{}} 
+									variant="outlined"
+									color="primary"
+									onClick={() => {
+										deleteAuthentication(data)
+									}}
+								>
+									Delete	
+								</Button>
+							</ListItemText>
+						</ListItem>
+					)
+				})}
+			</List>
+		</div>
+		: null
+
+	const environmentView = curTab === 2 ?
+		<div>
+			<div style={{marginTop: 20, marginBottom: 20,}}>
+				<h2 style={{display: "inline",}}>Environments</h2>
+				<span style={{marginLeft: 25}}>Decides what Orborus environment to execute an action in a workflow in.</span>
+			</div>
+			<Button 
+				style={{}} 
+				variant="contained"
+				color="primary"
+				onClick={() => setModalOpen(true)}
+			> 
+				Add environment 
 			</Button>
-		<Button
-			style={{ marginLeft: 5, }}
-			variant="contained"
-			color="primary"
-			onClick={() => getEnvironments()}
-		>
-			<CachedIcon />
-		</Button>
-		<Divider style={{ marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor }} />
-		<List>
-			<ListItem>
-				<ListItemText
-					primary="Name"
-					style={{ minWidth: 150, maxWidth: 150 }}
-				/>
-				<ListItemText
-					primary="Orborus running (TBD)"
-					style={{ minWidth: 200, maxWidth: 200 }}
-				/>
-				<ListItemText
-					primary="Actions"
-					style={{ minWidth: 150, maxWidth: 150 }}
-				/>
-			</ListItem>
-			{environments === undefined ? null : environments.map(environment => {
-				return (
-					<ListItem>
-						<ListItemText
-							primary={environment.Name}
-							style={{ minWidth: 150, maxWidth: 150, overflow: "hidden" }}
-						/>
-						<ListItemText
-							primary={"TBD"}
-							style={{ minWidth: 200, maxWidth: 200, overflow: "hidden" }}
-						/>
-						<ListItemText>
-							<Button type="outlined" style={{ borderRadius: "0px" }} onClick={() => deleteEnvironment(environment.Name)} color="primary">Delete</Button>
-						</ListItemText>
-					</ListItem>
-				)
-			})}
-		</List>
-	</div>
-	: null
+			<Button 
+				style={{marginLeft: 5, }} 
+				variant="contained"
+				color="primary"
+				onClick={() => getEnvironments()}
+			> 
+				<CachedIcon />
+			</Button>
+			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
+			<List>
+				<ListItem>
+					<ListItemText
+						primary="Name"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="Orborus running (TBD)"
+						style={{minWidth: 200, maxWidth: 200}}
+					/>
+					<ListItemText
+						primary="Actions"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+				</ListItem>
+				{environments === undefined ? null : environments.map(environment => {
+					return (
+						<ListItem>
+							<ListItemText
+								primary={environment.Name}
+								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
+							/>
+							<ListItemText
+								primary={"TBD"}
+								style={{minWidth: 200, maxWidth: 200, overflow: "hidden"}}
+							/>
+							<ListItemText>
+								<Button variant="outlined" style={{borderRadius: "0px"}} onClick={() => deleteEnvironment(environment.Name)} color="primary">Delete</Button>
+							</ListItemText>
+						</ListItem>
+					)
+				})}
+			</List>
+		</div>
+		: null
 
-// primary={environment.Registered ? "true" : "false"}
+	const organizationsTab = curTab === 5 ?
+		<div>
+			<div style={{marginTop: 20, marginBottom: 20,}}>
+				<h2 style={{display: "inline",}}>Organizations</h2>
+				<span style={{marginLeft: 25}}>Global admin: control organizations</span>
+			</div>
+			<Button 
+				style={{}} 
+				variant="contained"
+				color="primary"
+				onClick={() => setModalOpen(true)}
+			> 
+				Add organization 
+			</Button>
+			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
+			<List>
+				<ListItem>
+					<ListItemText
+						primary="Name"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="Orborus running (TBD)"
+						style={{minWidth: 200, maxWidth: 200}}
+					/>
+					<ListItemText
+						primary="Actions"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+				</ListItem>
+				<ListItem>
+					<ListItemText
+						primary="Enabled"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="false"
+						style={{minWidth: 200, maxWidth: 200}}
+					/>
+					<ListItemText
+						primary=<Switch checked={false} onChange={() => {console.log("INVERT")}} />
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+				</ListItem>
+			</List>
+		</div>
+		: null
 
-const setConfig = (event, newValue) => {
-	if (newValue === 1) {
-		getAppAuthentication()
-	} else if (newValue === 2) {
-		getEnvironments()
-	} else if (newValue === 3) {
-		getSchedules()
+	const hybridTab = curTab === 4 ?
+		<div>
+			<div style={{marginTop: 20, marginBottom: 20,}}>
+				<h2 style={{display: "inline",}}>Hybrid</h2>
+				<span style={{marginLeft: 25}}></span>
+			</div>
+			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
+			<List>
+				<ListItem>
+					<ListItemText
+						primary="Name"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="Orborus running (TBD)"
+						style={{minWidth: 200, maxWidth: 200}}
+					/>
+					<ListItemText
+						primary="Actions"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+				</ListItem>
+				<ListItem>
+					<ListItemText
+						primary="Enabled"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="false"
+						style={{minWidth: 200, maxWidth: 200}}
+					/>
+					<ListItemText
+						primary=<Switch checked={false} onChange={() => {console.log("INVERT")}} />
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+				</ListItem>
+			</List>
+		</div>
+		: null
+
+		// primary={environment.Registered ? "true" : "false"}
+
+	const setConfig = (event, newValue) => {
+		if (newValue === 1) {
+			getAppAuthentication()
+		} else if (newValue === 2) {
+			getEnvironments()
+		} else if (newValue === 3) {
+			getSchedules()
+		}
+
+		setModalUser({})
+		setCurTab(newValue)
 	}
 
-	setModalUser({})
-	setCurTab(newValue)
+	const iconStyle = {marginRight: 10}
+	const data = 
+		<div style={{minWidth: 1366, margin: "auto"}}>
+			<Paper style={paperStyle}>
+				<Tabs
+					value={curTab}
+					indicatorColor="primary"
+					onChange={setConfig}
+					aria-label="disabled tabs example"
+				>
+					<Tab label=<span><AccessibilityNewIcon style={iconStyle} />Users</span> />
+					<Tab label=<span><LockIcon style={iconStyle} />App Authentication</span>/>
+					<Tab label=<span><EcoIcon style={iconStyle} />Environments</span>/>
+					<Tab label=<span><ScheduleIcon style={iconStyle} />Schedules</span> />
+					{window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><CloudIcon style={iconStyle} /> Hybrid</span>/> : null}
+					{window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><BusinessIcon style={iconStyle} /> Organizations</span>/> : null}
+				</Tabs>
+				<Divider style={{marginTop: 0, marginBottom: 10, backgroundColor: "rgb(91, 96, 100)"}} />
+				<div style={{padding: 15}}>
+					{authenticationView}
+					{usersView}	
+					{environmentView}
+					{schedulesView}
+					{hybridTab}
+					{organizationsTab}
+				</div>
+			</Paper>
+		</div>
+
+	return (
+		<div>
+			{modalView}
+			{editUserModal}
+			{editAuthenticationModal}
+			{data}
+		</div>
+	)
 }
 
-const data =
-	<div style={{ minWidth: 1366, margin: "auto" }}>
-		<Paper style={paperStyle}>
-			<Tabs
-				value={curTab}
-				indicatorColor="primary"
-				textColor="white"
-				onChange={setConfig}
-				aria-label="disabled tabs example"
-			>
-				<Tab label="Users" />
-				<Tab label="App Authentication" />
-				<Tab label="Environments" />
-				<Tab label="Schedules" />
-			</Tabs>
-			<Divider style={{ marginTop: 0, marginBottom: 10, backgroundColor: "rgb(91, 96, 100)" }} />
-			<div style={{ padding: 15 }}>
-				{authenticationView}
-				{usersView}
-				{environmentView}
-				{schedulesView}
-			</div>
-		</Paper>
-	</div>
-
-return (
-	<div>
-		{modalView}
-		{editUserModal}
-		{editAuthenticationModal}
-		{data}
-	</div>
-)
-}
-
-export default Admin;
+export default Admin 

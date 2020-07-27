@@ -286,7 +286,7 @@ const Apps = (props) => {
 		}
 
 		return (
-			<Paper square style={paperAppStyle} onClick={() => {
+			<Paper square key={data.id} style={paperAppStyle} onClick={() => {
 				if (selectedApp.id !== data.id) {
 					setSelectedApp(data)
 					console.log(data)
@@ -515,7 +515,7 @@ const Apps = (props) => {
 									newActionname = newActionname.replace("_", " ")
 									newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
 									return (
-										<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+										<MenuItem key={data.name} style={{backgroundColor: inputColor, color: "white"}} value={data}>
 											{newActionname}
 
 										</MenuItem>
@@ -540,7 +540,7 @@ const Apps = (props) => {
 
 								const circleSize = 10
 								return (
-									<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+									<MenuItem key={data.name} style={{backgroundColor: inputColor, color: "white"}} value={data}>
 										<div style={{width: circleSize, height: circleSize, borderRadius: circleSize / 2, backgroundColor: itemColor, marginRight: "10px"}}/>
 										{data.name}
 
@@ -743,7 +743,7 @@ const Apps = (props) => {
 		null
 
 	// Load data e.g. from github
-	const getSpecificApps = (url) => {
+	const getSpecificApps = (url, forceUpdate) => {
 		setValidation(true)
 
 		setIsLoading(true)
@@ -760,6 +760,8 @@ const Apps = (props) => {
 		if (field2.length > 0) {
 			parsedData["field_2"] = field2
 		}
+
+		parsedData["force_update"] = forceUpdate
 
 		alert.success("Getting specific apps from your URL.")
 		var cors = "cors"
@@ -977,8 +979,8 @@ const Apps = (props) => {
 		window.location.href = "/apps/new?id="+appValidation
 	}
 
-	const handleGithubValidation = () => {
-		getSpecificApps(openApi)
+	const handleGithubValidation = (forceUpdate) => {
+		getSpecificApps(openApi, forceUpdate)
 		setLoadAppsModalOpen(false)
 	}
 
@@ -1034,7 +1036,7 @@ const Apps = (props) => {
 		>
 			<DialogTitle>
 				<div style={{color: "rgba(255,255,255,0.9)"}}>
-					Load from github repo
+					Load from github repo 
 				</div>
 			</DialogTitle>
 			<DialogContent style={{color: "rgba(255,255,255,0.65)"}}>
@@ -1098,7 +1100,12 @@ const Apps = (props) => {
 					Cancel
 				</Button>
 	      <Button style={{borderRadius: "0px"}} disabled={openApi.length === 0 || !openApi.includes("http")} onClick={() => {
-					handleGithubValidation() 
+					handleGithubValidation(true) 
+				}} color="primary">
+	      	Force update	
+	      </Button>
+	      <Button variant="outlined" style={{float: "left", borderRadius: "0px"}} disabled={openApi.length === 0 || !openApi.includes("http")} onClick={() => {
+					handleGithubValidation(false) 
 				}} color="primary">
 	        Submit	
 	      </Button>
