@@ -21,8 +21,13 @@ import { useAlert } from "react-alert";
 import { Dialog, DialogTitle, DialogActions, DialogContent } from '@material-ui/core';
 import { useTheme } from '@material-ui/core/styles';
 
-
 import CachedIcon from '@material-ui/icons/Cached';
+import AccessibilityNewIcon from '@material-ui/icons/AccessibilityNew';
+import LockIcon from '@material-ui/icons/Lock';
+import EcoIcon from '@material-ui/icons/Eco';
+import ScheduleIcon from '@material-ui/icons/Schedule';
+import CloudIcon from '@material-ui/icons/Cloud';
+import BusinessIcon from '@material-ui/icons/Business';
 
 const Admin = (props) => {
 	const { globalUrl } = props;
@@ -801,7 +806,7 @@ const Admin = (props) => {
 				<h2 style={{display: "inline",}}>Schedules</h2>
 				<span style={{marginLeft: 25}}>Schedules used in Workflows. Makes locating and control easier.</span>
 			</div>
-			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
+			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor}}/>
 			<List>
 				<ListItem>
 					<ListItemText
@@ -850,7 +855,7 @@ const Admin = (props) => {
 				<h2 style={{display: "inline",}}>App Authentication</h2>
 				<span style={{marginLeft: 25}}>Control the authentication options for individual apps. <b>Actions can be destructive!</b></span>
 			</div>
-			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
+			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor}}/>
 			<List>
 				<ListItem>
 					<ListItemText
@@ -951,7 +956,7 @@ const Admin = (props) => {
 			> 
 				<CachedIcon />
 			</Button>
-			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
+			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor}}/>
 			<List>
 				<ListItem>
 					<ListItemText
@@ -1002,7 +1007,7 @@ const Admin = (props) => {
 			> 
 				Add organization 
 			</Button>
-			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
+			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor}}/>
 			<List>
 				<ListItem>
 					<ListItemText
@@ -1042,7 +1047,7 @@ const Admin = (props) => {
 				<h2 style={{display: "inline",}}>Hybrid</h2>
 				<span style={{marginLeft: 25}}></span>
 			</div>
-			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
+			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor}}/>
 			<List>
 				<ListItem>
 					<ListItemText
