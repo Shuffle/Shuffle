@@ -6,6 +6,7 @@ import {Link} from 'react-router-dom';
 import List from '@material-ui/core/List';
 import ListItem from '@material-ui/core/ListItem';
 
+
 import MenuItem from '@material-ui/core/MenuItem';
 import Select from '@material-ui/core/Select';
 import Button from '@material-ui/core/Button';
@@ -19,7 +20,8 @@ const hoverColor = "#f85a3e"
 const hoverOutColor = "#e8eaf6"
 
 const Header = props => {
-  const { surfaceColor, inputColor, globalUrl, isLoggedIn, removeCookie, homePage, isLoaded, userdata} = props;
+
+  const { globalUrl, isLoggedIn, removeCookie, homePage, isLoaded } = props;
 
 	const [HomeHoverColor, setHomeHoverColor] = useState(hoverOutColor);
 	const [SoarHoverColor, setSoarHoverColor] = useState(hoverOutColor);
@@ -219,6 +221,7 @@ const Header = props => {
 							</Select>
 						</ListItem>
 					}
+
 				</List>
 			</div>
 	    </div>
@@ -299,10 +302,10 @@ const Header = props => {
 	const loadedCheck = isLoaded ? 
 		<div>
 			<BrowserView>
-      	{loginTextBrowser}
+      			{loginTextBrowser}
 			</BrowserView>
 			<MobileView>
-      	{loginTextMobile}
+      			{loginTextMobile}
 			</MobileView>
 		</div>
 		:
@@ -314,7 +317,7 @@ const Header = props => {
     	<div>
 			{loadedCheck}
 	    </div>
-  );
+  )
 }
 
 export default Header;
