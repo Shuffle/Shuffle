@@ -7,23 +7,11 @@ import {Link} from 'react-router-dom';
 
 import TextField from '@material-ui/core/TextField';
 import { useAlert } from "react-alert";
+import { useTheme } from '@material-ui/core/styles';
 
-
-//const tmpdata = {
-//	"username": "frikky",
-//	"firstname": "fred",
-//	"lastname": "ode",
-//	"title": "topkek",
-//	"companyname": "company here",
-//	"email": "your email pls",
-//	"phone": "PHONE!!",
-//}
-
-// FIXME - add fetch for data fields
-// FIXME - remove tmpdata
-// FIXME: Use isLoggedIn :)
 const Settings = (props) => {
-  const { globalUrl, isLoaded, userdata, surfaceColor, inputColor } = props;
+  const { globalUrl, isLoaded, userdata, } = props;
+	const theme = useTheme();
 	const alert = useAlert()
 
 	const [username, setUsername] = useState("");
@@ -61,7 +49,7 @@ const Settings = (props) => {
 		paddingRight: "30px",
 		paddingBottom: "30px",
 		paddingTop: "30px",
-		backgroundColor: surfaceColor,
+		backgroundColor: theme.palette.surfaceColor,
 		display: "flex", 
 		flexDirection: "column"
 	}
@@ -190,7 +178,7 @@ const Settings = (props) => {
 					<h2>APIKEY</h2>
 					<Link to="/docs/API#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is the API key used for?</Link>
 					<TextField
-						style={{backgroundColor: inputColor, flex: "1"}}
+						style={{backgroundColor: theme.palette.inputColor, flex: "1"}}
 						InputProps={{
 							style:{
 								height: "50px", 
@@ -218,7 +206,7 @@ const Settings = (props) => {
 					<h2>Settings</h2>
 					<div style={{flex: "1", display: "flex", flexDirection: "row"}}>
 						<TextField
-							style={{backgroundColor: inputColor, flex: "1"}}
+							style={{backgroundColor: theme.palette.inputColor, flex: "1"}}
 							InputProps={{
 								style:{
 									height: "50px", 
@@ -240,7 +228,7 @@ const Settings = (props) => {
 					</div>
 					<div style={{flex: "1", display: "flex", flexDirection: "row"}}>
 						<TextField
-							style={{backgroundColor: inputColor, flex: "1", marginRight: "15px"}}
+							style={{backgroundColor: theme.palette.inputColor, flex: "1", marginRight: "15px"}}
 							InputProps={{
 								style:{
 									height: "50px", 
@@ -260,7 +248,7 @@ const Settings = (props) => {
       	 					onChange={e => setFirstname(e.target.value)}
 						/>
 						<TextField
-							style={{backgroundColor: inputColor, flex: "1", marginLeft: "15px"}}
+							style={{backgroundColor: theme.palette.inputColor, flex: "1", marginLeft: "15px"}}
 							InputProps={{
 								style:{
 									height: "50px", 
@@ -282,7 +270,7 @@ const Settings = (props) => {
 					</div>
 					<div style={{flex: "1", display: "flex", flexDirection: "row"}}>
 						<TextField
-							style={{backgroundColor: inputColor, flex: "1", marginRight: "15px",}}
+							style={{backgroundColor: theme.palette.inputColor, flex: "1", marginRight: "15px",}}
 							InputProps={{
 								style:{
 									height: "50px", 
@@ -302,7 +290,7 @@ const Settings = (props) => {
       	 					onChange={e => setTitle(e.target.value)}
 						/>
 						<TextField
-							style={{backgroundColor: inputColor, flex: "1", marginLeft: "15px"}}
+							style={{backgroundColor: theme.palette.inputColor, flex: "1", marginLeft: "15px"}}
 							InputProps={{
 								style:{
 									height: "50px", 
@@ -324,7 +312,7 @@ const Settings = (props) => {
 					</div>
 					<div style={{flex: "1", display: "flex", flexDirection: "row"}}>
 						<TextField
-							style={{backgroundColor: inputColor, flex: "1", marginRight: "15px",}}
+							style={{backgroundColor: theme.palette.inputColor, flex: "1", marginRight: "15px",}}
 							InputProps={{
 								style:{
 									height: "50px", 
@@ -344,7 +332,7 @@ const Settings = (props) => {
       	 					onChange={e => setEmail(e.target.value)}
 						/>
 						<TextField
-							style={{backgroundColor: inputColor, flex: "1", marginLeft: "15px",}}
+							style={{backgroundColor: theme.palette.inputColor, flex: "1", marginLeft: "15px",}}
 							InputProps={{
 								style:{
 									height: "50px", 
@@ -379,7 +367,7 @@ const Settings = (props) => {
 					<h2>Password</h2>
 					<div style={{flex: "1", display: "flex", flexDirection: "row"}}>
 						<TextField
-							style={{backgroundColor: inputColor, flex: "1"}}
+							style={{backgroundColor: theme.palette.inputColor, flex: "1"}}
 							InputProps={{
 								style:{
 									height: "50px", 
@@ -400,7 +388,7 @@ const Settings = (props) => {
 					</div>
 					<div style={{flex: "1", display: "flex", flexDirection: "row"}}>
 						<TextField
-							style={{backgroundColor: inputColor, flex: "1", marginRight: "15px",}}
+							style={{backgroundColor: theme.palette.inputColor, flex: "1", marginRight: "15px",}}
 							InputProps={{
 								style:{
 									height: "50px", 
@@ -419,7 +407,7 @@ const Settings = (props) => {
       	 					onChange={e => setNewPassword(e.target.value)}
 						/>
 						<TextField
-							style={{backgroundColor: inputColor, flex: "1", marginLeft: "15px",}}
+							style={{backgroundColor: theme.palette.inputColor, flex: "1", marginLeft: "15px",}}
 							InputProps={{
 								style:{
 									height: "50px", 

@@ -654,7 +654,7 @@ const Apps = (props) => {
 						{isLoading ? <CircularProgress style={{marginTop: 13, marginRight: 15}} /> : null}
 				    <FormControlLabel
 							style={{color: "white", marginBottom: "0px", marginTop: "10px"}}
-							label=<div style={{color: "white"}}>Search OpenAPI</div>
+							label={<div style={{color: "white"}}>Search OpenAPI</div>}
 							control={<Switch checked={searchBackend} onChange={() => {
 								handleSearchChange("")
 								setSearchBackend(!searchBackend)}

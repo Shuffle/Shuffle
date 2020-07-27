@@ -35,7 +35,7 @@ import {
   chartExample2,
   chartExample3,
   chartExample4
-} from "./charts.js";
+} from "../charts.js";
 
 // This is the start of a dashboard that can be used. 
 // What data do we fill in here? Idk

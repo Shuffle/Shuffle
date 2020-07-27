@@ -15,8 +15,8 @@ import DialogTitle from '@material-ui/core/DialogTitle';
 import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
 
-import WebhookImage from './assets/img/webhook.png';
-import KafkaImage from './assets/img/kafka.png';
+import WebhookImage from '../assets/img/webhook.png';
+import KafkaImage from '../assets/img/kafka.png';
 
 const Webhooks = (props) => {
   	const { globalUrl, isLoaded } = props;
