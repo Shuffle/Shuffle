@@ -288,7 +288,7 @@ class AppBase:
             # Do stuff here.
             innervalue = parse_nested_param(data, maxDepth(data)-0)
             outervalue = parse_nested_param(data, maxDepth(data)-1)
-            print("INNER: ", outervalue)
+            print("INNER: ", innervalue)
             print("OUTER: ", outervalue)
         
             if outervalue != innervalue:
