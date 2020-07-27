@@ -101,7 +101,7 @@ class AppBase:
         except requests.exceptions.ConnectionError as e:
             print("Connectionerror: %s" %  e)
 
-            action_result["result"] = "Bad setup during startup: %d" % e 
+            action_result["result"] = "Bad setup during startup: %s" % e 
             self.send_result(action_result, headers, stream_path) 
             return
 
@@ -288,7 +288,7 @@ class AppBase:
             # Do stuff here.
             innervalue = parse_nested_param(data, maxDepth(data)-0)
             outervalue = parse_nested_param(data, maxDepth(data)-1)
-            print("INNER: ", outervalue)
+            print("INNER: ", innervalue)
             print("OUTER: ", outervalue)
         
             if outervalue != innervalue:
@@ -710,7 +710,17 @@ class AppBase:
                         continue
 
                     #print(destinationvalue)
-                    if not run_validation(sourcevalue, condition["condition"]["value"], destinationvalue):
+                    # NEGATE 
+                    validation = run_validation(sourcevalue, condition["condition"]["value"], destinationvalue)
+
+                    # Configuration = negated because of WorkflowAppActionParam..
+                    try:
+                        if condition["condition"]["configuration"]:
+                            validation = not validation
+                    except KeyError:
+                        pass
+
+                    if not validation:
                         self.logger.info("Failed condition check for %s %s %s." % (sourcevalue, condition["condition"]["value"], destinationvalue))
                         return False, "Failed condition: %s %s %s" % (sourcevalue, condition["condition"]["value"], destinationvalue)
 

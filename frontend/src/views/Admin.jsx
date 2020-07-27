@@ -2,6 +2,8 @@ import React, { useEffect} from 'react';
 
 import {Link} from 'react-router-dom';
 import Paper from '@material-ui/core/Paper';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
+import Switch from '@material-ui/core/Switch';
 import Select from '@material-ui/core/Select';
 import MenuItem from '@material-ui/core/MenuItem';
 import List from '@material-ui/core/List';
@@ -16,17 +18,21 @@ import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
 
 import { useAlert } from "react-alert";
 
-import Dialog from '@material-ui/core/Dialog';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
+import { Dialog, DialogTitle, DialogActions, DialogContent } from '@material-ui/core';
+import { useTheme } from '@material-ui/core/styles';
 
 import CachedIcon from '@material-ui/icons/Cached';
+import AccessibilityNewIcon from '@material-ui/icons/AccessibilityNew';
+import LockIcon from '@material-ui/icons/Lock';
+import EcoIcon from '@material-ui/icons/Eco';
+import ScheduleIcon from '@material-ui/icons/Schedule';
+import CloudIcon from '@material-ui/icons/Cloud';
+import BusinessIcon from '@material-ui/icons/Business';
 
-const surfaceColor = "#27292D"
-const inputColor = "#383B40"
 const Admin = (props) => {
-  const { globalUrl, } = props;
+	const { globalUrl } = props;
+
+	const theme = useTheme();
 	const [firstRequest, setFirstRequest] = React.useState(true);
 	const [modalUser, setModalUser] = React.useState({});
 	const [modalOpen, setModalOpen] = React.useState(false);
@@ -45,14 +51,14 @@ const Admin = (props) => {
 	const alert = useAlert()
 
 	const deleteAuthentication = (data) => {
-		alert.info("Deleting auth "+data.label)
+		alert.info("Deleting auth " + data.label)
 
 		// Just use this one?
-		const url = globalUrl+'/api/v1/apps/authentication/'+data.id
+		const url = globalUrl + '/api/v1/apps/authentication/' + data.id
 		console.log("URL: ", url)
 		fetch(url, {
 			method: 'DELETE',
-	  	credentials: "include",
+			credentials: "include",
 			headers: {
 				'Content-Type': 'application/json',
 			},
@@ -78,34 +84,35 @@ const Admin = (props) => {
 		console.log("INPUT: ", data)
 
 		// Just use this one?
-		const url = globalUrl+'/api/v1/workflows/'+data["workflow_id"]+"/schedule/"+data.id
+		const url = globalUrl + '/api/v1/workflows/' + data["workflow_id"] + "/schedule/" + data.id
 		console.log("URL: ", url)
 		fetch(url, {
 			method: 'DELETE',
-	  	credentials: "include",
+			credentials: "include",
 			headers: {
 				'Content-Type': 'application/json',
 			},
 		})
-		.then(response =>
-			response.json().then(responseJson => {
-				console.log("RESP: ", responseJson)
-				if (responseJson["success"] === false) {
-					alert.error("Failed stopping schedule")
-				} else {
-					getSchedules()
-					alert.success("Successfully stopped schedule!")
-				}
-			}),
-		)
-		.catch(error => {
-			console.log("Error in userdata: ", error)
-		});
+			.then(response =>
+				response.json().then(responseJson => {
+					console.log("RESP: ", responseJson)
+					if (responseJson["success"] === false) {
+						alert.error("Failed stopping schedule")
+					} else {
+						getSchedules()
+						alert.success("Successfully stopped schedule!")
+					}
+				}),
+			)
+			.catch(error => {
+				console.log("Error in userdata: ", error)
+			});
 	}
 
 	const onPasswordChange = () => {
-		const data = {"username": selectedUser.username, "newpassword": newPassword}
-		const url = globalUrl+'/api/v1/users/passwordchange';
+		const data = { "username": selectedUser.username, "newpassword": newPassword }
+		const url = globalUrl + '/api/v1/users/passwordchange';
+
 		fetch(url, {
 			mode: 'cors',
 			method: 'POST',
@@ -117,26 +124,26 @@ const Admin = (props) => {
 				'Content-Type': 'application/json; charset=utf-8',
 			},
 		})
-		.then(response =>
-			response.json().then(responseJson => {
-				if (responseJson["success"] === false) {
-					alert.error("Failed setting new password")
-				} else {
-					alert.success("Changed password!")
-				}
-			}),
-		)
-		.catch(error => {
-			alert.error("Err: "+error.toString())
-		});
+			.then(response =>
+				response.json().then(responseJson => {
+					if (responseJson["success"] === false) {
+						alert.error("Failed setting new password")
+					} else {
+						alert.success("Changed password!")
+					}
+				}),
+			)
+			.catch(error => {
+				alert.error("Err: " + error.toString())
+			});
 	}
 
 	const deleteUser = (data) => {
 		// Just use this one?
-		const url = globalUrl+'/api/v1/users/'+data.id
+		const url = globalUrl + '/api/v1/users/' + data.id
 		fetch(url, {
 			method: 'DELETE',
-	  	credentials: "include",
+			credentials: "include",
 			headers: {
 				'Content-Type': 'application/json',
 			},
@@ -166,36 +173,36 @@ const Admin = (props) => {
 		console.log("INPUT: ", data)
 
 		// Just use this one?
-		var data = {"username": data.Username, "password": data.Password}
+		var data = { "username": data.Username, "password": data.Password }
 		var baseurl = globalUrl
-		const url = baseurl+'/api/v1/users/register';
+		const url = baseurl + '/api/v1/users/register';
 		fetch(url, {
 			method: 'POST',
-	  	credentials: "include",
+			credentials: "include",
 			body: JSON.stringify(data),
 			headers: {
 				'Content-Type': 'application/json',
 			},
 		})
-		.then(response =>
-			response.json().then(responseJson => {
-				if (responseJson["success"] === false) {
-					setLoginInfo("Error in input: "+responseJson.reason)
-				} else {
-					setLoginInfo("")
-					setModalOpen(false)
-					getUsers()
-				}
-			}),
-		)
-		.catch(error => {
-			console.log("Error in userdata: ", error)
-		});
+			.then(response =>
+				response.json().then(responseJson => {
+					if (responseJson["success"] === false) {
+						setLoginInfo("Error in input: " + responseJson.reason)
+					} else {
+						setLoginInfo("")
+						setModalOpen(false)
+						getUsers()
+					}
+				}),
+			)
+			.catch(error => {
+				console.log("Error in userdata: ", error)
+			});
 	}
 
 	const deleteEnvironment = (name) => {
 		// FIXME - add some check here ROFL
-		alert.info("Deleting environment "+name)
+		alert.info("Deleting environment " + name)
 		var newEnv = []
 		for (var key in environments) {
 			if (environments[key].Name == name) {
@@ -206,26 +213,26 @@ const Admin = (props) => {
 		}
 
 		// Just use this one?
-		const url = globalUrl+'/api/v1/setenvironments';
+		const url = globalUrl + '/api/v1/setenvironments';
 		fetch(url, {
 			method: 'PUT',
-	  	credentials: "include",
+			credentials: "include",
 			body: JSON.stringify(newEnv),
 			headers: {
 				'Content-Type': 'application/json',
 			},
 		})
-		.then(response =>
-			response.json().then(responseJson => {
-				if (responseJson["success"] === false) {
-					alert.error(responseJson.reason)
-				} else {
-					setLoginInfo("")
-					setModalOpen(false)
-					getEnvironments()
-				}
-			}),
-		)
+			.then(response =>
+				response.json().then(responseJson => {
+					if (responseJson["success"] === false) {
+						alert.error(responseJson.reason)
+					} else {
+						setLoginInfo("")
+						setModalOpen(false)
+						getEnvironments()
+					}
+				}),
+			)
 		//.catch(error => {
 		//	console.log("Error in userdata: ", error)
 		//});
@@ -233,140 +240,140 @@ const Admin = (props) => {
 
 	const submitEnvironment = (data) => {
 		// FIXME - add some check here ROFL
-		environments.push({"name": data.environment, "type": "onprem"})
+		environments.push({ "name": data.environment, "type": "onprem" })
 
 		// Just use this one?
 		var baseurl = globalUrl
-		const url = baseurl+'/api/v1/setenvironments';
+		const url = baseurl + '/api/v1/setenvironments';
 		fetch(url, {
 			method: 'PUT',
-	  	credentials: "include",
+			credentials: "include",
 			body: JSON.stringify(environments),
 			headers: {
 				'Content-Type': 'application/json',
 			},
 		})
-		.then(response =>
-			response.json().then(responseJson => {
-				if (responseJson["success"] === false) {
-					setLoginInfo("Error in input: "+responseJson.reason)
-				} else {
-					setLoginInfo("")
-					setModalOpen(false)
-					getEnvironments()
-				}
-			}),
-		)
-		.catch(error => {
-			console.log("Error in userdata: ", error)
-		});
+			.then(response =>
+				response.json().then(responseJson => {
+					if (responseJson["success"] === false) {
+						setLoginInfo("Error in input: " + responseJson.reason)
+					} else {
+						setLoginInfo("")
+						setModalOpen(false)
+						getEnvironments()
+					}
+				}),
+			)
+			.catch(error => {
+				console.log("Error in userdata: ", error)
+			});
 	}
 
 	const getSchedules = () => {
-		fetch(globalUrl+"/api/v1/workflows/schedules", {
+		fetch(globalUrl + "/api/v1/workflows/schedules", {
 			method: 'GET',
 			headers: {
 				'Content-Type': 'application/json',
 				'Accept': 'application/json',
 			},
 			credentials: "include",
-    })
-		.then((response) => {
-			if (response.status !== 200) {
-				console.log("Status not 200 for apps :O!")
-				return
-			}
+		})
+			.then((response) => {
+				if (response.status !== 200) {
+					console.log("Status not 200 for apps :O!")
+					return
+				}
 
-			return response.json()
-		})
-    .then((responseJson) => {
-			setSchedules(responseJson)
-		})
-		.catch(error => {
-			alert.error(error.toString())
-		});
+				return response.json()
+			})
+			.then((responseJson) => {
+				setSchedules(responseJson)
+			})
+			.catch(error => {
+				alert.error(error.toString())
+			});
 	}
 
 	const getAppAuthentication = () => {
-		fetch(globalUrl+"/api/v1/apps/authentication", {
+		fetch(globalUrl + "/api/v1/apps/authentication", {
 			method: 'GET',
 			headers: {
 				'Content-Type': 'application/json',
 				'Accept': 'application/json',
 			},
 			credentials: "include",
-    })
-		.then((response) => {
-			if (response.status !== 200) {
-				console.log("Status not 200 for apps :O!")
-				return
-			}
+		})
+			.then((response) => {
+				if (response.status !== 200) {
+					console.log("Status not 200 for apps :O!")
+					return
+				}
 
-			return response.json()
-		})
-    .then((responseJson) => {
-			if (responseJson.success) {
-				console.log(responseJson.data)
-				setAuthentication(responseJson.data)
-			} else {
-				alert.error("Failed getting authentications")
-			}
-		})
-		.catch(error => {
-			alert.error(error.toString())
-		});
+				return response.json()
+			})
+			.then((responseJson) => {
+				if (responseJson.success) {
+					console.log(responseJson.data)
+					setAuthentication(responseJson.data)
+				} else {
+					alert.error("Failed getting authentications")
+				}
+			})
+			.catch(error => {
+				alert.error(error.toString())
+			});
 	}
 
 	const getEnvironments = () => {
-		fetch(globalUrl+"/api/v1/getenvironments", {
+		fetch(globalUrl + "/api/v1/getenvironments", {
 			method: 'GET',
 			headers: {
 				'Content-Type': 'application/json',
 				'Accept': 'application/json',
 			},
 			credentials: "include",
-    })
-		.then((response) => {
-			if (response.status !== 200) {
-				console.log("Status not 200 for apps :O!")
-				return
-			}
+		})
+			.then((response) => {
+				if (response.status !== 200) {
+					console.log("Status not 200 for apps :O!")
+					return
+				}
 
-			return response.json()
-		})
-    .then((responseJson) => {
-			console.log(responseJson)
-			setEnvironments(responseJson)
-		})
-		.catch(error => {
-			alert.error(error.toString())
-		});
+				return response.json()
+			})
+			.then((responseJson) => {
+				console.log(responseJson)
+				setEnvironments(responseJson)
+			})
+			.catch(error => {
+				alert.error(error.toString())
+			});
 	}
 
 	const getUsers = () => {
-		fetch(globalUrl+"/api/v1/getusers", {
-				method: 'GET',
-				headers: {
-					'Content-Type': 'application/json',
-					'Accept': 'application/json',
-				},
-	  			credentials: "include",
-    		})
-		.then((response) => {
-			if (response.status !== 200) {
-				console.log("Status not 200 for apps :O!")
-				return
-			}
+		fetch(globalUrl + "/api/v1/getusers", {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+			credentials: "include",
+		})
+			.then((response) => {
+				if (response.status !== 200) {
+					console.log("Status not 200 for apps :O!")
+					return
+				}
 
-			return response.json()
-		})
-    .then((responseJson) => {
-			console.log(responseJson)
-			setUsers(responseJson)
-		})
-		.catch(error => {
-			alert.error(error.toString())
-		});
+				return response.json()
+			})
+			.then((responseJson) => {
+				console.log(responseJson)
+				setUsers(responseJson)
+			})
+			.catch(error => {
+				alert.error(error.toString())
+			});
 	}
 
 	if (firstRequest) {
@@ -378,8 +385,8 @@ const Admin = (props) => {
 		maxWidth: 1250,
 		margin: "auto",
 		color: "white",
-		backgroundColor: surfaceColor,
-		marginBottom: 10, 
+		backgroundColor: theme.palette.surfaceColor,
+		marginBottom: 10,
 		padding: 20,
 	}
 
@@ -388,11 +395,11 @@ const Admin = (props) => {
 	}
 
 	const setUser = (userId, field, value) => {
-		const data = {"user_id": userId}
+		const data = { "user_id": userId }
 		data[field] = value
 		console.log("DATA: ", data)
 
-		fetch(globalUrl+"/api/v1/users/updateuser", {
+		fetch(globalUrl + "/api/v1/users/updateuser", {
 			method: 'PUT',
 			headers: {
 				'Content-Type': 'application/json',
@@ -401,33 +408,33 @@ const Admin = (props) => {
 			body: JSON.stringify(data),
 			credentials: "include",
 		})
-		.then((response) => {
-			if (response.status !== 200) {
-				console.log("Status not 200 for WORKFLOW EXECUTION :O!")
-			} else {
-				getUsers()
-			}
+			.then((response) => {
+				if (response.status !== 200) {
+					console.log("Status not 200 for WORKFLOW EXECUTION :O!")
+				} else {
+					getUsers()
+				}
 
-			return response.json()
-		})
-  	.then((responseJson) => {
-			if (!responseJson.success && responseJson.reason !== undefined) {
-				alert.error("Failed setting user: "+responseJson.reason)
-			} else {
-				alert.success("Set the user field "+field+" to "+value)
-			}
-    })
-		.catch(error => {
-    		console.log(error)
-		});
+				return response.json()
+			})
+			.then((responseJson) => {
+				if (!responseJson.success && responseJson.reason !== undefined) {
+					alert.error("Failed setting user: " + responseJson.reason)
+				} else {
+					alert.success("Set the user field " + field + " to " + value)
+				}
+			})
+			.catch(error => {
+				console.log(error)
+			});
 	}
 
 
 
 	const generateApikey = (userId) => {
-		const data = {"user_id": userId}
+		const data = { "user_id": userId }
 
-		fetch(globalUrl+"/api/v1/generateapikey", {
+		fetch(globalUrl + "/api/v1/generateapikey", {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -436,49 +443,49 @@ const Admin = (props) => {
 			body: JSON.stringify(data),
 			credentials: "include",
 		})
-		.then((response) => {
-			if (response.status !== 200) {
-				console.log("Status not 200 for WORKFLOW EXECUTION :O!")
-			} else {
-				getUsers()
-			}
+			.then((response) => {
+				if (response.status !== 200) {
+					console.log("Status not 200 for WORKFLOW EXECUTION :O!")
+				} else {
+					getUsers()
+				}
 
-			return response.json()
-		})
-  	.then((responseJson) => {
-			console.log("RESP: ", responseJson)
-			if (!responseJson.success && responseJson.reason !== undefined) {
-				alert.error("Failed getting new: "+responseJson.reason)
-			} else {
-				alert.success("Got new API key")
-			}
-    })
-		.catch(error => {
-    		console.log(error)
-		});
+				return response.json()
+			})
+			.then((responseJson) => {
+				console.log("RESP: ", responseJson)
+				if (!responseJson.success && responseJson.reason !== undefined) {
+					alert.error("Failed getting new: " + responseJson.reason)
+				} else {
+					alert.success("Got new API key")
+				}
+			})
+			.catch(error => {
+				console.log(error)
+			});
 	}
 
-	const editAuthenticationModal = 
-		<Dialog modal 
+	const editAuthenticationModal =
+		<Dialog modal
 			open={selectedAuthenticationModalOpen}
-			onClose={() => {setSelectedAuthenticationModalOpen(false)}}
+			onClose={() => { setSelectedAuthenticationModalOpen(false) }}
 			PaperProps={{
 				style: {
-					backgroundColor: surfaceColor,
+					backgroundColor: theme.palette.surfaceColor,
 					color: "white",
 					minWidth: "800px",
 					minHeight: "320px",
 				},
 			}}
 		>
-			<DialogTitle><span style={{color: "white"}}>Edit authentication</span></DialogTitle>
+			<DialogTitle><span style={{ color: "white" }}>Edit authentication</span></DialogTitle>
 			<DialogContent>
-				<div style={{display: "flex"}}>
+				<div style={{ display: "flex" }}>
 					<TextField
-						style={{backgroundColor: inputColor, flex: 3}}
+						style={{ backgroundColor: theme.palette.inputColor, flex: 3 }}
 						InputProps={{
-							style:{
-								height: 50, 
+							style: {
+								height: 50,
 								color: "white",
 							},
 						}}
@@ -493,26 +500,26 @@ const Admin = (props) => {
 						variant="outlined"
 						onChange={e => setNewPassword(e.target.value)}
 					/>
-					<Button 
-						style={{maxHeight: 50, flex: 1}}
+					<Button
+						style={{ maxHeight: 50, flex: 1 }}
 						variant="outlined"
 						color="primary"
 						onClick={() => onPasswordChange()}
 					>
-						Submit 
+						Submit
 					</Button>
 				</div>
-				<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
-				<Button 
-					style={{}} 
+				<Divider style={{ marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor }} />
+				<Button
+					style={{}}
 					variant="outlined"
 					color="primary"
 					onClick={() => deleteUser(selectedUser)}
 				>
-					{selectedUser.active ? "Deactivate" : "Activate"}	
+					{selectedUser.active ? "Deactivate" : "Activate"}
 				</Button>
-				<Button 
-					style={{}} 
+				<Button
+					style={{}}
 					variant="outlined"
 					color="primary"
 					onClick={() => generateApikey(selectedUser.id)}
@@ -522,27 +529,27 @@ const Admin = (props) => {
 			</DialogContent>
 		</Dialog>
 
-	const editUserModal = 
-		<Dialog modal 
+	const editUserModal =
+		<Dialog modal
 			open={selectedUserModalOpen}
-			onClose={() => {setSelectedUserModalOpen(false)}}
+			onClose={() => { setSelectedUserModalOpen(false) }}
 			PaperProps={{
 				style: {
-					backgroundColor: surfaceColor,
+					backgroundColor: theme.palette.surfaceColor,
 					color: "white",
 					minWidth: "800px",
 					minHeight: "320px",
 				},
 			}}
 		>
-			<DialogTitle><span style={{color: "white"}}>Edit user</span></DialogTitle>
+			<DialogTitle><span style={{ color: "white" }}>Edit user</span></DialogTitle>
 			<DialogContent>
-				<div style={{display: "flex"}}>
+				<div style={{ display: "flex" }}>
 					<TextField
-						style={{marginTop: 0, backgroundColor: inputColor, flex: 3}}
+						style={{ marginTop: 0, backgroundColor: theme.palette.inputColor, flex: 3 }}
 						InputProps={{
-							style:{
-								height: 50, 
+							style: {
+								height: 50,
 								color: "white",
 							},
 						}}
@@ -557,26 +564,26 @@ const Admin = (props) => {
 						variant="outlined"
 						onChange={e => setNewPassword(e.target.value)}
 					/>
-					<Button 
-						style={{maxHeight: 50, flex: 1}}
+					<Button
+						style={{ maxHeight: 50, flex: 1 }}
 						variant="outlined"
 						color="primary"
 						onClick={() => onPasswordChange()}
 					>
-						Submit 
+						Submit
 					</Button>
 				</div>
-				<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
-				<Button 
-					style={{}} 
+				<Divider style={{ marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor }} />
+				<Button
+					style={{}}
 					variant="outlined"
 					color="primary"
 					onClick={() => deleteUser(selectedUser)}
 				>
-					{selectedUser.active ? "Deactivate" : "Activate"}	
+					{selectedUser.active ? "Deactivate" : "Activate"}
 				</Button>
-				<Button 
-					style={{}} 
+				<Button
+					style={{}}
 					variant="outlined"
 					color="primary"
 					onClick={() => generateApikey(selectedUser.id)}
@@ -586,33 +593,33 @@ const Admin = (props) => {
 			</DialogContent>
 		</Dialog>
 
-	const modalView = 
-		<Dialog modal 
+	const modalView =
+		<Dialog modal
 			open={modalOpen}
-			onClose={() => {setModalOpen(false)}}
+			onClose={() => { setModalOpen(false) }}
 			PaperProps={{
 				style: {
-					backgroundColor: surfaceColor,
+					backgroundColor: theme.palette.surfaceColor,
 					color: "white",
 					minWidth: "800px",
 					minHeight: "320px",
 				},
 			}}
 		>
-			<DialogTitle><span style={{color: "white"}}>
+			<DialogTitle><span style={{ color: "white" }}>
 				{curTab === 0 ? "Add user" : "Add environment"}
 			</span></DialogTitle>
 			<DialogContent>
-				{curTab === 0 ? 
+				{curTab === 0 ?
 					<div>
 						Username
 						<TextField
 							color="primary"
-							style={{backgroundColor: inputColor}}
+							style={{ backgroundColor: theme.palette.inputColor }}
 							autoFocus
 							InputProps={{
-								style:{
-									height: "50px", 
+								style: {
+									height: "50px",
 									color: "white",
 									fontSize: "1em",
 								},
@@ -626,13 +633,13 @@ const Admin = (props) => {
 							variant="outlined"
 							onChange={(event) => changeModalData("Username", event.target.value)}
 						/>
-						Password	
+						Password
 						<TextField
 							color="primary"
-							style={{backgroundColor: inputColor}}
+							style={{ backgroundColor: theme.palette.inputColor }}
 							InputProps={{
-								style:{
-									height: "50px", 
+								style: {
+									height: "50px",
 									color: "white",
 									fontSize: "1em",
 								},
@@ -648,85 +655,85 @@ const Admin = (props) => {
 							onChange={(event) => changeModalData("Password", event.target.value)}
 						/>
 					</div>
-				: curTab === 2 ?
-				<div>
-					Environment Name	
+					: curTab === 2 ?
+						<div>
+							Environment Name
 					<TextField
-						color="primary"
-						style={{backgroundColor: inputColor}}
-						autoFocus
-						InputProps={{
-							style:{
-								height: "50px", 
-								color: "white",
-								fontSize: "1em",
-							},
-						}}
-						required
-						fullWidth={true}
-						placeholder="datacenter froglantern"
-						id="environment_name"
-						margin="normal"
-						variant="outlined"
-						onChange={(event) => changeModalData("environment", event.target.value)}
-					/>
-					</div>
-				: null }
+								color="primary"
+								style={{ backgroundColor: theme.palette.inputColor }}
+								autoFocus
+								InputProps={{
+									style: {
+										height: "50px",
+										color: "white",
+										fontSize: "1em",
+									},
+								}}
+								required
+								fullWidth={true}
+								placeholder="datacenter froglantern"
+								id="environment_name"
+								margin="normal"
+								variant="outlined"
+								onChange={(event) => changeModalData("environment", event.target.value)}
+							/>
+						</div>
+						: null}
 				{loginInfo}
 			</DialogContent>
 			<DialogActions>
-				<Button style={{borderRadius: "0px"}} onClick={() => setModalOpen(false)} color="primary">
+				<Button style={{ borderRadius: "0px" }} onClick={() => setModalOpen(false)} color="primary">
 					Cancel
 				</Button>
-				<Button variant="contained" style={{borderRadius: "0px"}} onClick={() => {
+				<Button variant="contained" style={{ borderRadius: "0px" }} onClick={() => {
 					if (curTab === 0) {
 						submitUser(modalUser)
 					} else if (curTab === 2) {
 						submitEnvironment(modalUser)
 					}
 				}} color="primary">
-					Submit	
+					Submit
 				</Button>
 			</DialogActions>
 		</Dialog>
 
 	const usersView = curTab === 0 ?
 		<div>
-			<div style={{marginTop: 20, marginBottom: 20,}}>
-				<h2 style={{display: "inline",}}>User management</h2>
-				<span style={{marginLeft: 25}}>Add, edit, block or change passwords</span>
+			<div style={{ marginTop: 20, marginBottom: 20, }}>
+				<h2 style={{ display: "inline", }}>User management</h2>
+				<span style={{ marginLeft: 25 }}>Add, edit, block or change passwords</span>
 			</div>
-			<div/>
-			<Button 
-				style={{}} 
+			<div />
+			<Button
+				style={{}}
 				variant="contained"
 				color="primary"
 				onClick={() => setModalOpen(true)}
-			> 
-				Add user	
+			>
+				Add user
 			</Button>
-			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
+			<Divider style={{ marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor }} />
 			<List>
 				<ListItem>
 					<ListItemText
 						primary="Username"
-						style={{minWidth: 200, maxWidth: 200}}
+						style={{ minWidth: 200, maxWidth: 200 }}
 					/>
 					<ListItemText
 						primary="API key"
-						style={{minWidth: 350, maxWidth: 350, overflow: "hidden"}}
+						style={{ minWidth: 350, maxWidth: 350, overflow: "hidden" }}
 					/>
 					<ListItemText
 						primary="Role"
-						style={{minWidth: 150, maxWidth: 150}}
+						style={{ minWidth: 150, maxWidth: 150 }}
 					/>
 					<ListItemText
 						primary="Active"
-						style={{minWidth: 180, maxWidth: 180}}
+						style={{ minWidth: 180, maxWidth: 180 }}
 					/>
 					<ListItemText
 						primary="Actions"
-						style={{minWidth: 180, maxWidth: 180}}
+						style={{ minWidth: 180, maxWidth: 180 }}
 					/>
 				</ListItem>
 				{users === undefined ? null : users.map(data => {
@@ -734,58 +741,58 @@ const Admin = (props) => {
 						<ListItem>
 							<ListItemText
 								primary={data.username}
-								style={{minWidth: 200, maxWidth: 200}}
+								style={{ minWidth: 200, maxWidth: 200 }}
 							/>
 							<ListItemText
 								primary={data.apikey === undefined || data.apikey.length === 0 ? "" : data.apikey}
-								style={{maxWidth: 350, minWidth: 350,}}
+								style={{ maxWidth: 350, minWidth: 350, }}
 							/>
 							<ListItemText
 								primary=
-									<Select
+									{<Select
 										PaperProps={{
-											style: {
-											}
-										}}
+								style: {
+								}
+							}}
 										SelectDisplayProps={{
-											style: {
-												marginLeft: 10,
-											}
-										}}
+								style: {
+									marginLeft: 10,
+								}
+							}}
 										value={data.role}
 										fullWidth
 										onChange={(e) => {
-											console.log("VALUE: ", e.target.value)
-											setUser(data.id, "role", e.target.value)
-										}}
-										style={{backgroundColor: surfaceColor, color: "white", height: "50px"}}
+								console.log("VALUE: ", e.target.value)
+								setUser(data.id, "role", e.target.value)
+							}}
+										style={{ backgroundColor: theme.palette.surfaceColor, color: "white", height: "50px" }}
 										>
-										<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={"admin"}>
-											Admin
+							<MenuItem style={{ backgroundColor: theme.palette.inputColor, color: "white" }} value={"admin"}>
+								Admin
 										</MenuItem>
-										<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={"user"}>
-											User
+							<MenuItem style={{ backgroundColor: theme.palette.inputColor, color: "white" }} value={"user"}>
+								User
 										</MenuItem>
-									</Select>
-								style={{minWidth: 150, maxWidth: 150}}
+									</Select>}
+								style = {{ minWidth: 150, maxWidth: 150}}
 							/>
 							<ListItemText
-								primary={data.active ? "True" : "False"}
-								style={{minWidth: 180, maxWidth: 180}}
-							/>
-							<ListItemText style={{display: "flex"}}>
-								<Button 
-									style={{}} 
-									variant="outlined"
-									color="primary"
-									onClick={() => {
-										setSelectedUserModalOpen(true)
-										setSelectedUser(data)
-									}}
-								>
-									Edit user
+					primary={data.active ? "True" : "False"}
+					style={{ minWidth: 180, maxWidth: 180 }}
+				/>
+				<ListItemText style={{ display: "flex" }}>
+					<Button
+						style={{}}
+						variant="outlined"
+						color="primary"
+						onClick={() => {
+							setSelectedUserModalOpen(true)
+							setSelectedUser(data)
+						}}
+					>
+						Edit user
 								</Button>
-							</ListItemText>
+				</ListItemText>
 						</ListItem>
 					)
 				})}
@@ -799,7 +806,7 @@ const Admin = (props) => {
 				<h2 style={{display: "inline",}}>Schedules</h2>
 				<span style={{marginLeft: 25}}>Schedules used in Workflows. Makes locating and control easier.</span>
 			</div>
-			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
+			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor}}/>
 			<List>
 				<ListItem>
 					<ListItemText
@@ -848,7 +855,7 @@ const Admin = (props) => {
 				<h2 style={{display: "inline",}}>App Authentication</h2>
 				<span style={{marginLeft: 25}}>Control the authentication options for individual apps. <b>Actions can be destructive!</b></span>
 			</div>
-			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
+			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor}}/>
 			<List>
 				<ListItem>
 					<ListItemText
@@ -949,7 +956,7 @@ const Admin = (props) => {
 			> 
 				<CachedIcon />
 			</Button>
-			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: inputColor}}/>
+			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor}}/>
 			<List>
 				<ListItem>
 					<ListItemText
@@ -977,11 +984,99 @@ const Admin = (props) => {
 								style={{minWidth: 200, maxWidth: 200, overflow: "hidden"}}
 							/>
 							<ListItemText>
-								<Button type="outlined" style={{borderRadius: "0px"}} onClick={() => deleteEnvironment(environment.Name)} color="primary">Delete</Button>
+								<Button variant="outlined" style={{borderRadius: "0px"}} onClick={() => deleteEnvironment(environment.Name)} color="primary">Delete</Button>
 							</ListItemText>
 						</ListItem>
 					)
 				})}
+			</List>
+		</div>
+		: null
+
+	const organizationsTab = curTab === 5 ?
+		<div>
+			<div style={{marginTop: 20, marginBottom: 20,}}>
+				<h2 style={{display: "inline",}}>Organizations</h2>
+				<span style={{marginLeft: 25}}>Global admin: control organizations</span>
+			</div>
+			<Button 
+				style={{}} 
+				variant="contained"
+				color="primary"
+				onClick={() => setModalOpen(true)}
+			> 
+				Add organization 
+			</Button>
+			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor}}/>
+			<List>
+				<ListItem>
+					<ListItemText
+						primary="Name"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="Orborus running (TBD)"
+						style={{minWidth: 200, maxWidth: 200}}
+					/>
+					<ListItemText
+						primary="Actions"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+				</ListItem>
+				<ListItem>
+					<ListItemText
+						primary="Enabled"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="false"
+						style={{minWidth: 200, maxWidth: 200}}
+					/>
+					<ListItemText
+						primary=<Switch checked={false} onChange={() => {console.log("INVERT")}} />
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+				</ListItem>
+			</List>
+		</div>
+		: null
+
+	const hybridTab = curTab === 4 ?
+		<div>
+			<div style={{marginTop: 20, marginBottom: 20,}}>
+				<h2 style={{display: "inline",}}>Hybrid</h2>
+				<span style={{marginLeft: 25}}></span>
+			</div>
+			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor}}/>
+			<List>
+				<ListItem>
+					<ListItemText
+						primary="Name"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="Orborus running (TBD)"
+						style={{minWidth: 200, maxWidth: 200}}
+					/>
+					<ListItemText
+						primary="Actions"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+				</ListItem>
+				<ListItem>
+					<ListItemText
+						primary="Enabled"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="false"
+						style={{minWidth: 200, maxWidth: 200}}
+					/>
+					<ListItemText
+						primary=<Switch checked={false} onChange={() => {console.log("INVERT")}} />
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+				</ListItem>
 			</List>
 		</div>
 		: null
@@ -1001,20 +1096,22 @@ const Admin = (props) => {
 		setCurTab(newValue)
 	}
 
+	const iconStyle = {marginRight: 10}
 	const data = 
 		<div style={{minWidth: 1366, margin: "auto"}}>
 			<Paper style={paperStyle}>
 				<Tabs
 					value={curTab}
 					indicatorColor="primary"
-					textColor="white"
 					onChange={setConfig}
 					aria-label="disabled tabs example"
 				>
-					<Tab label="Users" />
-					<Tab label="App Authentication"/>
-					<Tab label="Environments"/>
-					<Tab label="Schedules"/>
+					<Tab label=<span><AccessibilityNewIcon style={iconStyle} />Users</span> />
+					<Tab label=<span><LockIcon style={iconStyle} />App Authentication</span>/>
+					<Tab label=<span><EcoIcon style={iconStyle} />Environments</span>/>
+					<Tab label=<span><ScheduleIcon style={iconStyle} />Schedules</span> />
+					{window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><CloudIcon style={iconStyle} /> Hybrid</span>/> : null}
+					{window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><BusinessIcon style={iconStyle} /> Organizations</span>/> : null}
 				</Tabs>
 				<Divider style={{marginTop: 0, marginBottom: 10, backgroundColor: "rgb(91, 96, 100)"}} />
 				<div style={{padding: 15}}>
@@ -1022,6 +1119,8 @@ const Admin = (props) => {
 					{usersView}	
 					{environmentView}
 					{schedulesView}
+					{hybridTab}
+					{organizationsTab}
 				</div>
 			</Paper>
 		</div>

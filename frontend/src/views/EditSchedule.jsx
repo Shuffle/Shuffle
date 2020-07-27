@@ -34,9 +34,6 @@ import DeleteIcon from '@material-ui/icons/Delete';
 import Downshift from 'downshift';
 import deburr from 'lodash/deburr';
 
-//import appdata from './appdata';
-
-
 const EditSchedule = (props) => {
   	const { globalUrl } = props;
 

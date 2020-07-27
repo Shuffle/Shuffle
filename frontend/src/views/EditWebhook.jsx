@@ -6,8 +6,8 @@ import Divider from '@material-ui/core/Divider';
 import Select from '@material-ui/core/Select';
 import MenuItem from '@material-ui/core/MenuItem';
 
-import WebhookImage from './assets/img/webhook.png';
-import KafkaImage from './assets/img/kafka.png';
+import WebhookImage from '../assets/img/webhook.png';
+import KafkaImage from '../assets/img/kafka.png';
 
 import EditWorkflow from "./EditWorkflow";
 

@@ -563,7 +563,7 @@ const Workflows = (props) => {
 		}
 
 		return (
-			<Paper square style={resultPaperAppStyle} onClick={() => {}}>
+			<Paper key={data.id} square style={resultPaperAppStyle} onClick={() => {}}>
 				<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", marginRight: "5px", width: boxWidth, backgroundColor: boxColor}}>
 				</div>
 				<Grid container style={{margin: "10px 10px 10px 10px", flex: "1"}}>
@@ -988,7 +988,7 @@ const Workflows = (props) => {
 					<div style={{flex: "1"}}>
 				    	<FormControlLabel
 							style={{color: "white", marginBottom: "0px", marginTop: "10px"}}
-							label=<div style={{color: "white"}}>Collapse results</div>
+							label={<div style={{color: "white"}}>Collapse results</div>}
 							control={<Switch checked={collapseJson} onChange={() => {setCollapseJson(!collapseJson)}} />}
 						/>
 					</div>
