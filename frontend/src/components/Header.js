@@ -194,7 +194,7 @@ const Header = props => {
 							</Button>
 						</Link>
 					</ListItem>
-					{userdata.orgs.length <= 1 ? null :
+					{userdata === undefined || userdata.orgs.length <= 1 ? null :
 						<ListItem>
 							<Select
 								SelectDisplayProps={{

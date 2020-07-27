@@ -68,8 +68,7 @@ import CytoscapeComponent from 'react-cytoscapejs';
 import undoRedo from 'cytoscape-undo-redo';
 import Draggable from 'react-draggable';
 
-import environmentdata from './environmentdata';
-import cytoscapestyle from './defaultCytoscapeStyle';
+import cytoscapestyle from '../defaultCytoscapeStyle';
 import cxtmenu from 'cytoscape-cxtmenu';
 
 import { w3cwebsocket as W3CWebSocket } from "websocket";
@@ -4779,7 +4778,7 @@ const AngularWorkflow = (props) => {
 						<Divider style={{backgroundColor: "white", marginTop: 10, marginBottom: 10,}}/>
 						<FormControlLabel
 							style={{marginBottom: 15, color: "white",}}
-							label=<div style={{color: "white"}}>Exit on Error</div>
+							label={<div style={{color: "white"}}>Exit on Error</div>}
 							control={
 								<Switch checked={workflow.configuration.exit_on_error} onChange={() => {
 									workflow.configuration.exit_on_error = !workflow.configuration.exit_on_error
@@ -4791,7 +4790,7 @@ const AngularWorkflow = (props) => {
 						/>
 						<FormControlLabel
 							style={{marginBottom: 15, color: "white",}}
-							label=<div style={{color: "white"}}>Start from top</div>
+							label={<div style={{color: "white"}}>Start from top</div>}
 							control={
 								<Switch checked={workflow.configuration.start_from_top} onChange={() => {
 									workflow.configuration.start_from_top = !workflow.configuration.start_from_top
@@ -5119,7 +5118,7 @@ const AngularWorkflow = (props) => {
 					<h2>Executing Workflow</h2>	
 					<FormControlLabel
 						style={{color: "white", marginBottom: "0px", marginTop: "10px"}}
-						label=<div style={{color: "white"}}>Show failed / skipped actions</div>
+						label={<div style={{color: "white"}}>Show failed / skipped actions</div>}
 						control={
 							<Switch checked={showSkippedActions} onChange={() => {setShowSkippedActions(!showSkippedActions)}} />
 						}
