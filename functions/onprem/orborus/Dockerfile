@@ -9,6 +9,7 @@ COPY orborus.go /app/orborus.go
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o orborus .
 
 FROM alpine:3.12
+RUN apk add --no-cache bash
 COPY --from=builder /app/ /
 
 CMD ["./orborus"]

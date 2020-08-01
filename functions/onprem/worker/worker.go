@@ -11,12 +11,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	network "github.com/docker/docker/api/types/network"
 	dockerclient "github.com/docker/docker/client"
 )
 
@@ -412,9 +412,26 @@ func shutdown(executionId, workflowId string) {
 	os.Exit(3)
 }
 
+// form container id of current running container
+func getThisContainerId() string {
+	containerId := ""
+	cmd := fmt.Sprintf("head -1 /proc/self/cgroup | cut -d/ -f3")
+	out, err := exec.Command("bash","-c",cmd).Output()
+	if err == nil {
+		containerId = strings.TrimSpace(string(out))
+	}
+
+	return containerId
+}
+
 // Deploys the internal worker whenever something happens
 func deployApp(cli *dockerclient.Client, image string, identifier string, env []string) error {
+	// figure out current container id
+	containerId := getThisContainerId()
+
 	hostConfig := &container.HostConfig{
+		NetworkMode: container.NetworkMode(fmt.Sprintf("container:%s", containerId)),
+		IpcMode: container.IpcMode(fmt.Sprintf("container:%s", containerId)),
 		LogConfig: container.LogConfig{
 			Type:   "json-file",
 			Config: map[string]string{},
@@ -426,23 +443,11 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		Env:   env,
 	}
 
-	networkConfig := &network.NetworkingConfig{}
-	shuffleNetwork := os.Getenv("DOCKER_NETWORK")
-	if len(shuffleNetwork) > 0 {
-		networkConfig = &network.NetworkingConfig{
-			EndpointsConfig: map[string]*network.EndpointSettings{
-				shuffleNetwork: {
-					NetworkID: shuffleNetwork,
-				},
-			},
-		}
-	}
-
 	cont, err := cli.ContainerCreate(
 		context.Background(),
 		config,
 		hostConfig,
-		networkConfig,
+		nil,
 		nil,
 		identifier,
 	)
@@ -1105,13 +1110,6 @@ func main() {
 		if len(httpsProxy) > 0 {
 			log.Printf("Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
 		}
-	}
-
-	shuffleNetwork := os.Getenv("DOCKER_NETWORK")
-	if len(shuffleNetwork) > 0 {
-		log.Printf("Running with Docker network %s", shuffleNetwork)
-	} else {
-		log.Printf("No docker network specified for Worker.")
 	}
 
 	// WORKER_TESTING_WORKFLOW should be a workflow ID

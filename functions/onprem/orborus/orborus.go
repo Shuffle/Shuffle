@@ -14,12 +14,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	network "github.com/docker/docker/api/types/network"
 	dockerclient "github.com/docker/docker/client"
 	//network "github.com/docker/docker/api/types/network"
 	//natting "github.com/docker/go-connections/nat"
@@ -27,11 +27,11 @@ import (
 
 var baseUrl = os.Getenv("BASE_URL")
 var baseimagename = "frikky/shuffle"
-var shuffleNetwork = "" // Filled in init if found
 
 var dockerApiVersion = os.Getenv("DOCKER_API_VERSION")
 var environment = os.Getenv("ENVIRONMENT_NAME")
 var orgId = os.Getenv("ORG_ID")
+var runningMode = os.Getenv("RUNNING_MODE")
 
 // Starts jobs in bulk, so this could be increased
 var sleepTime = 3
@@ -62,56 +62,50 @@ func init() {
 	if err != nil {
 		panic(fmt.Sprintf("Unable to create docker client: %s", err))
 	}
+}
 
-	// FIXME: Move this to global variables?
-	containerIdentifier := "orborus"
-	networkIdentifier := "shuffle"
+// form id of current running container
+func getThisContainerId() string {
+	containerId := ""
+	fCol := ""
 
-	ctx := context.Background()
-	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
-		All: true,
-	})
-	if err != nil {
-		log.Printf("Failed getting containers during init - running without network check: %s", err)
+	// some adjusting based on current running mode
+	switch runningMode {
+		case "Kubernetes":
+			// cgroup will be like:
+			// 11:net_cls,net_prio:/kubepods/besteffort/podf132b44d-cfcf-43f7-9906-79f58e268333/851466f8b5ed5aa0f265b1c95c6d2bafbc51a38dd5c5a1621b6e586572150009
+			fCol = "5"
+
+		case "Docker":
+			// cgroup will be like:
+			// 12:perf_event:/docker/0f06810364f52a2cd6e80bfba27419cb8a29758a204cd676388f4913bb366f2b
+			fCol = "3"
+
+		default:
+			fCol = "3" // for backward-compatibility with production
+			log.Printf("[WARNING] Running not containerized, so I can't figure out current container id!")
 	}
 
-	// Skip random containers. Only handle things related to Shuffle.
-	for _, container := range containers {
-		found := false
-
-		// Bad states - it might just be created sometimes, leading to now netowkr
-		//if container.State == "restarting" || container.State == "paused" || container.State == "exited" || container.State == "dead" {
-		//	continue
-		//}
-
-		for _, name := range container.Names {
-			if !strings.Contains(strings.ToLower(name), containerIdentifier) {
-				found = true
-				continue
-			}
-		}
-
-		if found {
-			for key, _ := range container.NetworkSettings.Networks {
-				if strings.Contains(strings.ToLower(key), networkIdentifier) {
-					shuffleNetwork = key
-					break
-				}
-			}
+	if fCol != "" {
+		cmd := fmt.Sprintf("head -1 /proc/self/cgroup | cut -d/ -f%s", fCol)
+		out, err := exec.Command("bash","-c",cmd).Output()
+		if err == nil {
+			containerId = strings.TrimSpace(string(out))
 		}
 	}
 
-	if len(shuffleNetwork) > 0 {
-		log.Printf("Found shuffle network \"%s\" for container %s", shuffleNetwork, containerIdentifier)
-	} else {
-		log.Printf("Running Shuffle without a docker network")
-	}
+	return containerId
 }
 
 // Deploys the internal worker whenever something happens
 func deployWorker(image string, identifier string, env []string) {
+	// figure out current container id
+	containerId := getThisContainerId()
+
 	// Binds is the actual "-v" volume.
 	hostConfig := &container.HostConfig{
+		NetworkMode: container.NetworkMode(fmt.Sprintf("container:%s", containerId)),
+		IpcMode: container.IpcMode(fmt.Sprintf("container:%s", containerId)),
 		LogConfig: container.LogConfig{
 			Type:   "json-file",
 			Config: map[string]string{},
@@ -119,23 +113,6 @@ func deployWorker(image string, identifier string, env []string) {
 		Binds: []string{
 			"/var/run/docker.sock:/var/run/docker.sock:rw",
 		},
-	}
-
-	// Look for Shuffle network and set it
-	networkConfig := &network.NetworkingConfig{}
-	if len(shuffleNetwork) > 0 {
-		log.Printf("Starting worker with network %s", shuffleNetwork)
-		networkConfig = &network.NetworkingConfig{
-			EndpointsConfig: map[string]*network.EndpointSettings{
-				shuffleNetwork: {
-					NetworkID: shuffleNetwork,
-				},
-			},
-		}
-
-		env = append(env, fmt.Sprintf("DOCKER_NETWORK=%s", shuffleNetwork))
-	} else {
-		log.Printf("Starting worker WITHOUT any specified network: %s", shuffleNetwork)
 	}
 
 	// ROFL: https://docker-py.readthedocs.io/en/1.4.0/volumes/
@@ -154,7 +131,7 @@ func deployWorker(image string, identifier string, env []string) {
 		context.Background(),
 		config,
 		hostConfig,
-		networkConfig,
+		nil,
 		nil,
 		identifier,
 	)
