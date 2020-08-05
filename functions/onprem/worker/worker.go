@@ -415,7 +415,7 @@ func shutdown(executionId, workflowId string) {
 // form container id of current running container
 func getThisContainerId() string {
 	containerId := ""
-	cmd := fmt.Sprintf("head -1 /proc/self/cgroup | cut -d/ -f3")
+	cmd := fmt.Sprintf("cat /proc/self/cgroup | grep memory | tail -1 | cut -d/ -f3")
 	out, err := exec.Command("bash","-c",cmd).Output()
 	if err == nil {
 		containerId = strings.TrimSpace(string(out))

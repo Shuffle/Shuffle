@@ -87,7 +87,7 @@ func getThisContainerId() string {
 	}
 
 	if fCol != "" {
-		cmd := fmt.Sprintf("head -1 /proc/self/cgroup | cut -d/ -f%s", fCol)
+		cmd := fmt.Sprintf("cat /proc/self/cgroup | grep memory | tail -1 | cut -d/ -f%s", fCol)
 		out, err := exec.Command("bash","-c",cmd).Output()
 		if err == nil {
 			containerId = strings.TrimSpace(string(out))
