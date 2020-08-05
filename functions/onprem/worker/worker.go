@@ -426,16 +426,21 @@ func getThisContainerId() string {
 
 // Deploys the internal worker whenever something happens
 func deployApp(cli *dockerclient.Client, image string, identifier string, env []string) error {
-	// figure out current container id
-	containerId := getThisContainerId()
-
+	// form basic hostConfig
 	hostConfig := &container.HostConfig{
-		NetworkMode: container.NetworkMode(fmt.Sprintf("container:%s", containerId)),
-		IpcMode: container.IpcMode(fmt.Sprintf("container:%s", containerId)),
 		LogConfig: container.LogConfig{
 			Type:   "json-file",
 			Config: map[string]string{},
 		},
+	}
+
+	// form container id and use it as network source if it's not empty
+	containerId := getThisContainerId()
+	if containerId != "" {
+		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
+		hostConfig.IpcMode = container.IpcMode(fmt.Sprintf("container:%s", containerId))
+	} else {
+		log.Printf("[WARNING] Empty determined container id, continue without NetworkMode/IpcMode")
 	}
 
 	config := &container.Config{

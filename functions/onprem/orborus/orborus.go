@@ -99,13 +99,8 @@ func getThisContainerId() string {
 
 // Deploys the internal worker whenever something happens
 func deployWorker(image string, identifier string, env []string) {
-	// figure out current container id
-	containerId := getThisContainerId()
-
 	// Binds is the actual "-v" volume.
 	hostConfig := &container.HostConfig{
-		NetworkMode: container.NetworkMode(fmt.Sprintf("container:%s", containerId)),
-		IpcMode: container.IpcMode(fmt.Sprintf("container:%s", containerId)),
 		LogConfig: container.LogConfig{
 			Type:   "json-file",
 			Config: map[string]string{},
@@ -113,6 +108,15 @@ func deployWorker(image string, identifier string, env []string) {
 		Binds: []string{
 			"/var/run/docker.sock:/var/run/docker.sock:rw",
 		},
+	}
+
+	// form container id and use it as network source if it's not empty
+	containerId := getThisContainerId()
+	if containerId != "" {
+		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
+		hostConfig.IpcMode = container.IpcMode(fmt.Sprintf("container:%s", containerId))
+	} else {
+		log.Printf("[WARNING] Empty determined container id, continue without NetworkMode/IpcMode")
 	}
 
 	// ROFL: https://docker-py.readthedocs.io/en/1.4.0/volumes/
