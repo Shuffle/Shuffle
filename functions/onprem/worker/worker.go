@@ -436,10 +436,11 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 
 	// form container id and use it as network source if it's not empty
 	containerId := getThisContainerId()
+	log.Printf("Found self container id: %s", containerId)
 	if containerId != "" {
 		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
 	} else {
-		log.Printf("[WARNING] Empty determined container id, continue without NetworkMode")
+		log.Printf("[WARNING] Empty self container id, continue without NetworkMode")
 	}
 
 	config := &container.Config{
