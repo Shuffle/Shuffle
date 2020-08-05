@@ -438,9 +438,8 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	containerId := getThisContainerId()
 	if containerId != "" {
 		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
-		hostConfig.IpcMode = container.IpcMode(fmt.Sprintf("container:%s", containerId))
 	} else {
-		log.Printf("[WARNING] Empty determined container id, continue without NetworkMode/IpcMode")
+		log.Printf("[WARNING] Empty determined container id, continue without NetworkMode")
 	}
 
 	config := &container.Config{

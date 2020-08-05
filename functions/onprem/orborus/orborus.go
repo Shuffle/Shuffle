@@ -114,9 +114,8 @@ func deployWorker(image string, identifier string, env []string) {
 	containerId := getThisContainerId()
 	if containerId != "" {
 		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
-		hostConfig.IpcMode = container.IpcMode(fmt.Sprintf("container:%s", containerId))
 	} else {
-		log.Printf("[WARNING] Empty determined container id, continue without NetworkMode/IpcMode")
+		log.Printf("[WARNING] Empty determined container id, continue without NetworkMode")
 	}
 
 	// ROFL: https://docker-py.readthedocs.io/en/1.4.0/volumes/
