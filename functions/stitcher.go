@@ -101,15 +101,15 @@ func getRunner(classname string) string {
 	return fmt.Sprintf(`
 # Run the actual thing after we've checked params
 def run(request):
-    action = request.get_json() 
+    action = request.get_json()
     print(action)
     print(type(action))
     authorization_key = action.get("authorization")
     current_execution_id = action.get("execution_id")
-	
+
     if action and "name" in action and "app_name" in action:
         asyncio.run(%s.run(action), debug=True)
-        return f'Attempting to execute function {action["name"]} in app {action["app_name"]}' 
+        return f'Attempting to execute function {action["name"]} in app {action["app_name"]}'
     else:
         return f'Invalid action'
 
@@ -610,6 +610,7 @@ func buildImage(client *client.Client, tags []string, dockerBuildCtxDir string) 
 			PullParent: true,
 			Remove:     true,
 			Tags:       tags,
+			NetworkMode: "host",
 		},
 	)
 

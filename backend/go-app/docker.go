@@ -183,6 +183,7 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 		Remove:    true,
 		Tags:      tags,
 		BuildArgs: map[string]*string{},
+		NetworkMode: "host",
 	}
 
 	httpProxy := os.Getenv("HTTP_PROXY")
@@ -245,6 +246,7 @@ func buildImage(tags []string, dockerfileFolder string) error {
 		Remove:    true,
 		Tags:      tags,
 		BuildArgs: map[string]*string{},
+		NetworkMode: "host",
 	}
 
 	httpProxy := os.Getenv("HTTP_PROXY")
