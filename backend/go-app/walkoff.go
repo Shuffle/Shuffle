@@ -81,7 +81,7 @@ type AppAuthenticationStorage struct {
 	Active        bool                  `json:"active" datastore:"active"`
 	Label         string                `json:"label" datastore:"label"`
 	Id            string                `json:"id" datastore:"id"`
-	App           WorkflowApp           `json:"app" datastore:"app"`
+	App           WorkflowApp           `json:"app" datastore:"app,noindex"`
 	Fields        []AuthenticationStore `json:"fields" datastore:"fields"`
 	Usage         []AuthenticationUsage `json:"usage" datastore:"usage"`
 	WorkflowCount int64                 `json:"workflow_count" datastore:"workflow_count"`
@@ -118,12 +118,12 @@ type WorkflowApp struct {
 		Name string `json:"name" datastore:"name" yaml:"name"`
 		Url  string `json:"url" datastore:"url" yaml:"url"`
 	} `json:"contact_info" datastore:"contact_info" yaml:"contact_info" required:false`
-	Actions        []WorkflowAppAction `json:"actions" yaml:"actions" required:true datastore:"actions"`
+	Actions        []WorkflowAppAction `json:"actions" yaml:"actions" required:true datastore:"actions,noindex"`
 	Authentication Authentication      `json:"authentication" yaml:"authentication" required:false datastore:"authentication"`
 }
 
 type WorkflowAppActionParameter struct {
-	Description   string           `json:"description" datastore:"description" yaml:"description"`
+	Description   string           `json:"description" datastore:"description,noindex" yaml:"description"`
 	ID            string           `json:"id" datastore:"id" yaml:"id,omitempty"`
 	Name          string           `json:"name" datastore:"name" yaml:"name"`
 	Example       string           `json:"example" datastore:"example" yaml:"example"`
@@ -150,7 +150,7 @@ type WorkflowAppAction struct {
 	Sharing           bool                         `json:"sharing" datastore:"sharing"`
 	PrivateID         string                       `json:"private_id" datastore:"private_id"`
 	AppID             string                       `json:"app_id" datastore:"app_id"`
-	Authentication    []AuthenticationStore        `json:"authentication" datastore:"authentication" yaml:"authentication,omitempty"`
+	Authentication    []AuthenticationStore        `json:"authentication" datastore:"authentication,noindex" yaml:"authentication,omitempty"`
 	Tested            bool                         `json:"tested" datastore:"tested" yaml:"tested"`
 	Parameters        []WorkflowAppActionParameter `json:"parameters" datastore: "parameters"`
 	ExecutionVariable struct {
@@ -175,7 +175,7 @@ type WorkflowExecution struct {
 	Type               string         `json:"type" datastore:"type"`
 	Status             string         `json:"status" datastore:"status"`
 	Start              string         `json:"start" datastore:"start"`
-	ExecutionArgument  string         `json:"execution_argument" datastore:"execution_argument"`
+	ExecutionArgument  string         `json:"execution_argument" datastore:"execution_argument,noindex"`
 	ExecutionId        string         `json:"execution_id" datastore:"execution_id"`
 	ExecutionSource    string         `json:"execution_source" datastore:"execution_source"`
 	WorkflowId         string         `json:"workflow_id" datastore:"workflow_id"`
@@ -260,7 +260,7 @@ type Branch struct {
 	SourceID      string      `json:"source_id" datastore:"source_id"`
 	Label         string      `json:"label" datastore:"label"`
 	HasError      bool        `json:"has_errors" datastore: "has_errors"`
-	Conditions    []Condition `json:"conditions" datastore: "conditions"`
+	Conditions    []Condition `json:"conditions" datastore: "conditions,noindex"`
 }
 
 // Same format for a lot of stuff
@@ -273,7 +273,7 @@ type Condition struct {
 type Schedule struct {
 	Name              string `json:"name" datastore:"name"`
 	Frequency         string `json:"frequency" datastore:"frequency"`
-	ExecutionArgument string `json:"execution_argument" datastore:"execution_argument"`
+	ExecutionArgument string `json:"execution_argument" datastore:"execution_argument,noindex"`
 	Id                string `json:"id" datastore:"id"`
 }
 
@@ -312,7 +312,7 @@ type Workflow struct {
 }
 
 type ActionResult struct {
-	Action        Action `json:"action" datastore:"action"`
+	Action        Action `json:"action" datastore:"action,noindex"`
 	ExecutionId   string `json:"execution_id" datastore:"execution_id"`
 	Authorization string `json:"authorization" datastore:"authorization"`
 	Result        string `json:"result" datastore:"result,noindex"`

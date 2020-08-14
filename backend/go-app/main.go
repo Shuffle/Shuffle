@@ -370,7 +370,7 @@ type Hook struct {
 	Id        string       `json:"id" datastore:"id"`
 	Start     string       `json:"start" datastore:"start"`
 	Info      Info         `json:"info" datastore:"info"`
-	Actions   []HookAction `json:"actions" datastore:"actions"`
+	Actions   []HookAction `json:"actions" datastore:"actions,noindex"`
 	Type      string       `json:"type" datastore:"type"`
 	Owner     string       `json:"owner" datastore:"owner"`
 	Status    string       `json:"status" datastore:"status"`
