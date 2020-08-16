@@ -192,7 +192,7 @@ type WorkflowExecution struct {
 		Description string `json:"description" datastore:"description"`
 		ID          string `json:"id" datastore:"id"`
 		Name        string `json:"name" datastore:"name"`
-		Value       string `json:"value" datastore:"value"`
+		Value       string `json:"value" datastore:"value,noindex"`
 	} `json:"execution_variables,omitempty" datastore:"execution_variables,omitempty"`
 }
 
@@ -217,7 +217,7 @@ type Action struct {
 		Description string `json:"description" datastore:"description"`
 		ID          string `json:"id" datastore:"id"`
 		Name        string `json:"name" datastore:"name"`
-		Value       string `json:"value" datastore:"value"`
+		Value       string `json:"value" datastore:"value,noindex"`
 	} `json:"execution_variable,omitempty" datastore:"execution_variable,omitempty"`
 	Position struct {
 		X float64 `json:"x" datastore:"x"`
@@ -307,7 +307,7 @@ type Workflow struct {
 		Description string `json:"description" datastore:"description"`
 		ID          string `json:"id" datastore:"id"`
 		Name        string `json:"name" datastore:"name"`
-		Value       string `json:"value" datastore:"value"`
+		Value       string `json:"value" datastore:"value,noindex"`
 	} `json:"execution_variables,omitempty" datastore:"execution_variables"`
 }
 

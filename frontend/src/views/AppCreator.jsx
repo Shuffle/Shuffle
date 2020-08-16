@@ -279,9 +279,9 @@ const AppCreator = (props) => {
 			return response.json()
 		})
 		.then((responseJson) => {
-  		setIsAppLoaded(true)
 			if (!responseJson.success) {
 				alert.error("Failed to get the app")
+  			setIsAppLoaded(true)
 			} else {
 				const data = JSON.parse(responseJson.body)
 				parseIncomingOpenapiData(data)
@@ -365,6 +365,8 @@ const AppCreator = (props) => {
 			var firstUrl = data.servers[0].url
 			if (firstUrl.endsWith("/")) {
 				setBaseUrl(firstUrl.slice(0, firstUrl.length-1))
+			} else {
+				setBaseUrl(firstUrl)
 			}
 		} 
 
@@ -377,9 +379,6 @@ const AppCreator = (props) => {
 		if (securitySchemes === undefined) {
 			securitySchemes = data.components.securitySchemes
 		} 
-
-
-		console.log(data)
 
 		// FIXME - headers?
 		var newActions = []
@@ -397,7 +396,6 @@ const AppCreator = (props) => {
 					"body": "",
 					"errors": [],
 				}
-
 
 				for (var key in methodvalue.parameters) {
 					const parameter = methodvalue.parameters[key]
@@ -520,6 +518,7 @@ const AppCreator = (props) => {
 		}
 
 		setActions(newActions)
+  	setIsAppLoaded(true)
 	}
 
 	// Saving the app that's been configured.
@@ -1590,12 +1589,12 @@ const AppCreator = (props) => {
 								style={{flex: "1", marginTop: "5px", marginRight: "15px", backgroundColor: inputColor}}
 								fullWidth={true}
 								type="name"
-							  	id="outlined-with-placeholder"
+							  id="outlined-with-placeholder"
 								margin="normal"
 								variant="outlined"
 								placeholder="A description for the service"
 								value={description}
-      	 						onChange={e => setDescription(e.target.value)}
+      	 				onChange={e => setDescription(e.target.value)}
 								InputProps={{
 									classes: {
 										notchedOutline: classes.notchedOutline,
