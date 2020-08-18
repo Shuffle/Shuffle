@@ -129,7 +129,8 @@ const Admin = (props) => {
 					if (responseJson["success"] === false) {
 						alert.error("Failed setting new password")
 					} else {
-						alert.success("Changed password!")
+						alert.success("Successfully password!")
+						setSelectedUserModalOpen(false)
 					}
 				}),
 			)

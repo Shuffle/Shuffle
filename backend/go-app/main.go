@@ -6327,8 +6327,8 @@ func runInit(ctx context.Context) {
 			url = "https://github.com/frikky/shuffle-apps"
 		}
 
-		username := os.Getenv("APP_DOWNLOAD_AUTH_USERNAME")
-		password := os.Getenv("APP_DOWNLOAD_AUTH_PASSWORD")
+		username := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_USERNAME")
+		password := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_PASSWORD")
 		cloneOptions := &git.CloneOptions{
 			URL: url,
 		}
@@ -6388,6 +6388,30 @@ func runInit(ctx context.Context) {
 		log.Printf("Finished downloading extra API samples")
 	}
 
+	workflowLocation := os.Getenv("SHUFFLE_DOWNLOAD_WORKFLOW_LOCATION")
+	if len(workflowLocation) > 0 {
+		log.Printf("Downloading WORKFLOWS from %s if no workflows - EXTRA workflows", workflowLocation)
+		q := datastore.NewQuery("workflow")
+		var workflows []Workflow
+		_, err = dbclient.GetAll(ctx, q, &workflows)
+		if err != nil {
+			log.Printf("Error getting workflows: %s", err)
+		} else {
+			if len(workflows) == 0 {
+				username := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_USERNAME")
+				password := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_PASSWORD")
+				err = loadGithubWorkflows(workflowLocation, username, password, "")
+				if err != nil {
+					log.Printf("Failed to upload workflows from github: %s", err)
+				} else {
+					log.Printf("Finished downloading workflows from github!")
+				}
+			} else {
+				log.Printf("Skipping because there are %d workflows already", len(workflows))
+			}
+
+		}
+	}
 	log.Printf("Finished INIT")
 }
 
