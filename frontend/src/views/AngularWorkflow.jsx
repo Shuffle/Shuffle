@@ -183,7 +183,7 @@ const AngularWorkflow = (props) => {
 	const [update, setUpdate] = useState("");
 	const [workflowExecutions, setWorkflowExecutions] = React.useState([]);
 
-	const unloadText = 'Are you sure you want to leave?'
+	const unloadText = 'Are you sure you want to leave without saving (CTRL+S)?'
 	useBeforeunload(() => {
 		if (!lastSaved) {
 			return unloadText

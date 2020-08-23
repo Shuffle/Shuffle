@@ -689,7 +689,7 @@ const Workflows = (props) => {
 		*/
 		if (Object.getOwnPropertyNames(selectedExecution).length > 0 && selectedExecution.workflow.actions !== null) {
 			return (
-				<div>
+				<div style={{overflowX: "hidden"}}>
 					<div>
 						<b>Status:</b> {selectedExecution.status}
 					</div>
