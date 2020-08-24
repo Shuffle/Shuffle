@@ -245,6 +245,8 @@ func buildStructure(swagger *openapi3.Swagger, curHash string) (string, error) {
 // This function generates the python code that's being used.
 // This is really meta when you program it. Handling parameters is hard here.
 func makePythoncode(swagger *openapi3.Swagger, name, url, method string, parameters, optionalQueries, headers []string) (string, string) {
+	log.Printf("makePythoncode URL: %s", url)
+
 	method = strings.ToLower(method)
 	queryString := ""
 	queryData := ""
@@ -397,6 +399,8 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 		bodyAddin,
 		verifyAddin,
 	)
+
+	log.Printf(data)
 
 	//log.Printf("%s", data)
 	return functionname, data
@@ -594,9 +598,11 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 	pythonFunctions := []string{}
 	for actualPath, path := range swagger.Paths {
 		actualPath = strings.Replace(actualPath, " ", "_", -1)
-		actualPath = strings.Replace(actualPath, ".", "", -1)
-		actualPath = strings.Replace(actualPath, ".", "", -1)
+		//actualPath = strings.Replace(actualPath, ".", "", -1)
 		actualPath = strings.Replace(actualPath, "\\", "", -1)
+
+		// FIXME: Handle everything behind questionmark (?) with dots as well.
+		log.Printf("ActualPath: %s", actualPath)
 
 		// https://godoc.org/github.com/getkin/kin-openapi/openapi3#PathItem
 		if path.Get != nil {
