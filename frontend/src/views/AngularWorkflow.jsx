@@ -29,6 +29,7 @@ import Menu from '@material-ui/core/Menu';
 import Input from '@material-ui/core/Input';
 import FormGroup from '@material-ui/core/FormGroup';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
+import Typography from '@material-ui/core/Typography';
 import Checkbox from '@material-ui/core/Checkbox';
 import Breadcrumbs from '@material-ui/core/Breadcrumbs';
 import CircularProgress from '@material-ui/core/CircularProgress';
@@ -106,6 +107,7 @@ const AngularWorkflow = (props) => {
   const { globalUrl, isLoggedIn, isLoaded } = props;
 	const referenceUrl = globalUrl+"/api/v1/hooks/"
 	const alert = useAlert()
+	const borderRadius = 3
 
 	const [bodyWidth, bodyHeight] = useWindowSize();
 	const appBarSize = 74
@@ -1575,6 +1577,7 @@ const AngularWorkflow = (props) => {
 	}
 
 	const paperAppStyle = {
+		borderRadius: borderRadius,
 		minHeight: "100px",
 		maxHeight: "100px",
 		minWidth: "100%",
@@ -1587,6 +1590,7 @@ const AngularWorkflow = (props) => {
 	}
 
 	const paperVariableStyle = {
+		borderRadius: borderRadius,
 		minHeight: "50px",
 		maxHeight: "50px",
 		minWidth: "100%",
@@ -2207,6 +2211,7 @@ const AngularWorkflow = (props) => {
 					<div style={appScrollStyle}>
 					{/*
 					<TextField
+						style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
 						style={{backgroundColor: inputColor}} 
 						InputProps={{
 							style:{
@@ -2258,7 +2263,7 @@ const AngularWorkflow = (props) => {
 								</div>
 								<Grid container style={{margin: "10px 10px 10px 10px", flex: "10"}}>
 									<Grid item>
-										<div style={{height: 80, width: 80, backgroundImage: image, backgroundSize: "cover", backgroundRepeat: "no-repeat"}} />
+										<div style={{borderRadius: borderRadius, height: 80, width: 80, backgroundImage: image, backgroundSize: "cover", backgroundRepeat: "no-repeat"}} />
 									</Grid>
 									<Grid style={{display: "flex", flexDirection: "column", marginLeft: "20px"}}>
 										<Grid item style={{flex: 1}}>
@@ -2644,7 +2649,7 @@ const AngularWorkflow = (props) => {
 
 						var datafield = 
 							<TextField
-								style={{backgroundColor: inputColor}} 
+								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
 								InputProps={{
 									style:{
 										color: "white",
@@ -2725,7 +2730,7 @@ const AngularWorkflow = (props) => {
 									))}
 								</Select>
 								<TextField
-									style={{backgroundColor: inputColor}} 
+									style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
 									InputProps={{
 										style:{
 											color: "white",
@@ -2874,7 +2879,7 @@ const AngularWorkflow = (props) => {
 											selectedAction.parameters[count].value = selectedActionParameters[count].value 
 											console.log("TARGET: ", selectedActionParameters)
 											setSelectedAction(selectedAction)
-											setUpdate("action"+e.target.value.name)
+											setUpdate(Math.random())
 
 											setShowDropdown(false)
 										}}
@@ -2928,7 +2933,7 @@ const AngularWorkflow = (props) => {
 											selectedAction.parameters[count].value = selectedActionParameters[count].value 
 											console.log("TARGET: ", selectedActionParameters)
 											setSelectedAction(selectedAction)
-											setUpdate("action"+e.target.value.name)
+											setUpdate(Math.random())
 
 											setShowDropdown(false)
 										}}
@@ -3016,8 +3021,8 @@ const AngularWorkflow = (props) => {
 		flexDirection: "column", 
 		backgroundColor: "#1F2023", 
 		color: "white",
-		paddingRight: 10,
-		paddingLeft: 10,
+		paddingRight: 15,
+		paddingLeft: 15,
 		minHeight: "100%",
 		zIndex: 1000,
 		resize: "vertical",
@@ -3080,7 +3085,7 @@ const AngularWorkflow = (props) => {
 			<div style={{display: "flex", minHeight: 40, marginBottom: 30}}>
 				<div style={{flex: 1}}>
 					<h3 style={{marginBottom: 5}}>{selectedAction.app_name}</h3>
-					<a href="https://shuffler.io/docs/apps#actions" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>What are actions?</a>
+					<a href="https://shuffler.io/docs/workflows#nodes" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>What are actions?</a>
 					{selectedAction.errors !== null && selectedAction.errors.length > 0 ? 
 						<div>
 							Errors: {selectedAction.errors.join("\n")}
@@ -3095,17 +3100,17 @@ const AngularWorkflow = (props) => {
 				</div>
 			</div>
 			<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
-			<div>
+			<Typography>
 				Name
-			</div>
+			</Typography>
 			<TextField
-				style={{backgroundColor: inputColor}} 
+				style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
 				InputProps={{
 					style:{
 						color: "white",
+						minHeight: "50px", 
 						marginLeft: "5px",
 						maxWidth: "95%",
-						height: "50px", 
 						fontSize: "1em",
 					},
 				}}
@@ -3144,7 +3149,7 @@ const AngularWorkflow = (props) => {
 								selectedAction.selectedAuthentication = e.target.value
 								selectedAction.authentication_id = e.target.value.id
 								setSelectedAction(selectedAction)
-								setUpdate("update auth")
+								setUpdate(Math.random())
 							}}
 							style={{backgroundColor: inputColor, color: "white", height: "50px"}}
 						>
@@ -3175,12 +3180,15 @@ const AngularWorkflow = (props) => {
 				: null}
 			{environments !== undefined && environments !== null && environments.length > 1 ?
 				<div style={{marginTop: "20px"}}>
-					Environment
+					<Typography>
+						Environment
+					</Typography>
 					<Select
 						value={selectedActionEnvironment === undefined || selectedActionEnvironment.Name === undefined ? "" : selectedActionEnvironment.Name}
 						SelectDisplayProps={{
 							style: {
 								marginLeft: 10,
+
 							}
 						}}
 						fullWidth
@@ -3225,7 +3233,7 @@ const AngularWorkflow = (props) => {
 								selectedAction.execution_variable = value
 							}
 							setSelectedAction(selectedAction)
-							setUpdate("actionname "+e.target.value+selectedAction.Label)
+							setUpdate(Math.random())
 						}}
 						style={{backgroundColor: inputColor, color: "white", height: "50px"}}
 					>
@@ -3499,7 +3507,7 @@ const AngularWorkflow = (props) => {
 
 		var datafield = 
 			<TextField
-				style={{backgroundColor: inputColor}} 
+				style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
 				InputProps={{
 					style:{
 						color: "white",
@@ -3720,7 +3728,7 @@ const AngularWorkflow = (props) => {
 							console.log("VALUE: ", conditionValue.configuration)
 							conditionValue.configuration = !conditionValue.configuration
 							setConditionValue(conditionValue)
-							setUpdate("condition "+conditionValue.configuration)
+							setUpdate(Math.random())
 						}}>
 							{conditionValue.configuration ? "!" : "="}
 						</Button>
@@ -3847,7 +3855,7 @@ const AngularWorkflow = (props) => {
 
 				setSelectedEdge(selectedEdge)
 				setOpen(false)
-				setUpdate("delete "+conditionIndex)
+				setUpdate(Math.random())
 			}
 
 			const paperVariableStyle = {
@@ -4175,7 +4183,7 @@ const AngularWorkflow = (props) => {
 					Name
 				</div>
 				<TextField
-					style={{backgroundColor: inputColor}} 
+					style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
 					InputProps={{
 						style:{
 							color: "white",
@@ -4194,7 +4202,7 @@ const AngularWorkflow = (props) => {
 				<div style={{marginTop: "20px"}}>
 					Environment:
 					<TextField
-						style={{backgroundColor: inputColor}} 
+						style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
 						InputProps={{
 							style:{
 								color: "white",
@@ -4261,7 +4269,7 @@ const AngularWorkflow = (props) => {
 						Name
 					</div>
 					<TextField
-						style={{backgroundColor: inputColor}} 
+						style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
 						InputProps={{
 							style:{
 								color: "white",
@@ -4276,27 +4284,6 @@ const AngularWorkflow = (props) => {
 						placeholder={selectedTrigger.label}
 						onChange={selectedTriggerChange}
 					/>
-
-					<div style={{marginTop: "20px"}}>
-						Environment:
-						<TextField
-							style={{backgroundColor: inputColor}} 
-							InputProps={{
-								style:{
-									color: "white",
-									marginLeft: "5px",
-									maxWidth: "95%",
-									height: "50px", 
-									fontSize: "1em",
-								},
-							}}
-							required
-							disabled
-							fullWidth
-							color="primary"
-							value={selectedTrigger.environment}
-						/>
-					</div>
 					<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 					<div style={{flex: "6", marginTop: "20px"}}>
 						<div>
@@ -4308,7 +4295,7 @@ const AngularWorkflow = (props) => {
 								</div>
 							</div>
 							<TextField
-								style={{backgroundColor: inputColor}} 
+								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
 								onClick={() => {
 									//alert.info("Saved URI to clipboard")
 									console.log("Copy to clipboooooard")
@@ -4333,7 +4320,7 @@ const AngularWorkflow = (props) => {
 							/>
 							<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
-								<Button  variant="contained" style={{flex: "1",}} disabled={selectedTrigger.status === "running"} onClick={() => {
+								<Button variant="contained" style={{flex: "1",}} disabled={selectedTrigger.status === "running"} onClick={() => {
 									newWebhook(selectedTrigger)
 								}} color="primary">
 	    		    	    		Start	
@@ -4594,7 +4581,7 @@ const AngularWorkflow = (props) => {
 						Name
 					</div>
 					<TextField
-						style={{backgroundColor: inputColor}} 
+						style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
 						InputProps={{
 							style:{
 								color: "white",
@@ -4613,7 +4600,7 @@ const AngularWorkflow = (props) => {
 					<div style={{marginTop: "20px"}}>
 						Environment:
 						<TextField
-							style={{backgroundColor: inputColor}} 
+							style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
 							InputProps={{
 								style:{
 									color: "white",
@@ -4640,7 +4627,7 @@ const AngularWorkflow = (props) => {
 							</div>
 						</div>
 						<TextField
-							style={{backgroundColor: inputColor}} 
+							style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
 							InputProps={{
 								style:{
 									color: "white",
@@ -4723,7 +4710,7 @@ const AngularWorkflow = (props) => {
 						Name
 					</div>
 					<TextField
-						style={{backgroundColor: inputColor}} 
+						style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
 						InputProps={{
 							style:{
 								color: "white",
@@ -4742,7 +4729,7 @@ const AngularWorkflow = (props) => {
 					<div style={{marginTop: "20px"}}>
 						Environment:
 						<TextField
-							style={{backgroundColor: inputColor}} 
+							style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
 							InputProps={{
 								style:{
 									color: "white",
@@ -4770,7 +4757,7 @@ const AngularWorkflow = (props) => {
 								</div>
 							</div>
 							<TextField
-								style={{backgroundColor: inputColor}} 
+								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
 								InputProps={{
 									style:{
 										color: "white",
@@ -4796,7 +4783,7 @@ const AngularWorkflow = (props) => {
 								</div>
 							</div>
 							<TextField
-								style={{backgroundColor: inputColor}} 
+								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
 								InputProps={{
 									style:{
 										color: "white",
@@ -4981,7 +4968,7 @@ const AngularWorkflow = (props) => {
 					<Tooltip color="primary" title="An argument to be used for execution. This is a variable available to every node in your workflow." placement="top">
 						<TextField
 							id="execution_argument_input_field"
-							style={{backgroundColor: inputColor, }}
+							style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
 							InputProps={{
 								style:{
 									height: 50,
@@ -5662,13 +5649,13 @@ const AngularWorkflow = (props) => {
 		return (
 			<div>
 				<DialogContent>
-					<a href="https://shuffler.io/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is this?</a>
-					- These are required fields for authenticating with {selectedApp.name} 
+					<a href="https://shuffler.io/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is this?</a><div/>
+					These are required fields for authenticating with {selectedApp.name} 
 					<div style={{marginTop: 15}}/>
 					{selectedApp.link.length > 0 ? <EndpointData /> : null}
-					<b>Label (to remember it)</b>
+					<b>Name - what is this used for?</b>
 					<TextField
-							style={{backgroundColor: inputColor}} 
+							style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
 							InputProps={{
 								style:{
 									color: "white",
@@ -5693,7 +5680,7 @@ const AngularWorkflow = (props) => {
 								<LockOpenIcon style={{marginRight: 10}}/>
 								<b>{data.name}</b>
 								<TextField
-										style={{backgroundColor: inputColor}} 
+										style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
 										InputProps={{
 											style:{
 												color: "white",
@@ -5739,7 +5726,7 @@ const AngularWorkflow = (props) => {
 			<div>
 				The API endpoint to use (URL) - leave this if you're unsure
 				<TextField
-					style={{backgroundColor: inputColor}} 
+					style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
 					InputProps={{
 						style:{
 							color: "white",

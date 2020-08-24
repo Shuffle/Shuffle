@@ -601,8 +601,6 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 		actualPath = strings.Replace(actualPath, "\\", "", -1)
 
 		// FIXME: Handle everything behind questionmark (?) with dots as well.
-		log.Printf("ActualPath: %s", actualPath)
-
 		// https://godoc.org/github.com/getkin/kin-openapi/openapi3#PathItem
 		if path.Get != nil {
 			action, curCode := handleGet(swagger, api, extraParameters, path, actualPath)

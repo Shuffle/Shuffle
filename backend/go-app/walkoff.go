@@ -120,6 +120,8 @@ type WorkflowApp struct {
 	} `json:"contact_info" datastore:"contact_info" yaml:"contact_info" required:false`
 	Actions        []WorkflowAppAction `json:"actions" yaml:"actions" required:true datastore:"actions,noindex"`
 	Authentication Authentication      `json:"authentication" yaml:"authentication" required:false datastore:"authentication"`
+	Tags           []string            `json:"tags" yaml:"tags" required:false datastore:"activated"`
+	Category       []string            `json:"category" yaml:"category" required:false datastore:"category"`
 }
 
 type WorkflowAppActionParameter struct {
