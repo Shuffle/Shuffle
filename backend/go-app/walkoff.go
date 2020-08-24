@@ -131,6 +131,7 @@ type WorkflowAppActionParameter struct {
 	Example       string           `json:"example" datastore:"example" yaml:"example"`
 	Value         string           `json:"value" datastore:"value" yaml:"value,omitempty"`
 	Multiline     bool             `json:"multiline" datastore:"multiline" yaml:"multiline"`
+	Options       []string         `json:"options" datastore:"options" yaml:"options"`
 	ActionField   string           `json:"action_field" datastore:"action_field" yaml:"actionfield,omitempty"`
 	Variant       string           `json:"variant" datastore:"variant" yaml:"variant,omitempty"`
 	Required      bool             `json:"required" datastore:"required" yaml:"required"`

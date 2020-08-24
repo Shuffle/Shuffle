@@ -2401,7 +2401,7 @@ const AngularWorkflow = (props) => {
 	// {data.name}, {data.description}, {data.required}, {data.schema.type}
 	const AppActionArguments = (props) => {
 		const [selectedActionParameters, setSelectedActionParameters] = React.useState([])
-		const [selectedVariableParameter, setSelectedVariableParameter] = React.useState()
+		const [selectedVariableParameter, setSelectedVariableParameter] = React.useState("")
 		const [showDropdown, setShowDropdown] = React.useState(false)
 		const [showDropdownNumber, setShowDropdownNumber] = React.useState(0)
 		const [actionlist, setActionlist] = React.useState([])
@@ -2538,14 +2538,12 @@ const AngularWorkflow = (props) => {
 		}
 
 		const changeActionParameterVariable = (fieldvalue, count) => {
-			setSelectedVariableParameter(fieldvalue)
+			console.log("CALLED THIS ONE WITH VALUE!", fieldvalue)
+			if (selectedVariableParameter === fieldvalue) {
+				return
+			}
 
-			// this isn't updated anywhere in the workflow
-			// setSelectedActionName({})
-			// setSelectedAction({})
-			// setSelectedTrigger({})
-			// setSelectedApp({})
-			// setSelectedEdge({})
+			setSelectedVariableParameter(fieldvalue)
 
 			selectedActionParameters[count].action_field = fieldvalue 
 			selectedAction.parameters = selectedActionParameters
@@ -2693,9 +2691,37 @@ const AngularWorkflow = (props) => {
 								}}
 							/>
 
+						console.log("PARAM: ", selectedActionParameters[count])
+						if (selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0) {
+							console.log("FOUND OPTIONS!: ", selectedActionParameters[count])
+							if (selectedActionParameters[count].value === "" && selectedActionParameters[count].required) {
+								changeActionParameterVariable(selectedActionParameters[count].options[0], count) 
+							}
 
-						// Remap data based on variant
-						if (data.variant === "STATIC_VALUE") {
+							datafield =
+								<Select
+									SelectDisplayProps={{
+										style: {
+											marginLeft: 10,
+										}
+									}}
+									value={selectedActionParameters[count].value}
+									fullWidth
+									onChange={(e) => {
+										console.log("VAL: ", e.target.value)
+										changeActionParameterVariable(e.target.value, count) 
+										setUpdate(Math.random())
+									}}
+									style={{backgroundColor: surfaceColor, color: "white", height: "50px"}}
+									>
+									{selectedActionParameters[count].options.map(data => (
+										<MenuItem key={data} style={{backgroundColor: inputColor, color: "white"}} value={data}>
+											{data}
+										</MenuItem>
+									))}
+								</Select>
+
+						}  else if (data.variant === "STATIC_VALUE") {
 							staticcolor = "#f85a3e"	
 						} else if (data.variant === "ACTION_RESULT") {
 							// Gets the parents of the current node
