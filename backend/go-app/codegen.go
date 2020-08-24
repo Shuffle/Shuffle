@@ -245,8 +245,6 @@ func buildStructure(swagger *openapi3.Swagger, curHash string) (string, error) {
 // This function generates the python code that's being used.
 // This is really meta when you program it. Handling parameters is hard here.
 func makePythoncode(swagger *openapi3.Swagger, name, url, method string, parameters, optionalQueries, headers []string) (string, string) {
-	log.Printf("makePythoncode URL: %s", url)
-
 	method = strings.ToLower(method)
 	queryString := ""
 	queryData := ""
@@ -256,11 +254,14 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 	if len(optionalQueries) > 0 {
 		queryString += ", "
 		for _, query := range optionalQueries {
+			// Check if it's a part of the URL already
 			queryString += fmt.Sprintf("%s=\"\", ", query)
 			queryData += fmt.Sprintf(`
         if %s:
             url += f"&%s={%s}"`, query, query, query)
 		}
+	} else {
+		log.Printf("No optional queries?")
 	}
 
 	// api.Authentication.Parameters[0].Value = "BearerAuth"
@@ -942,6 +943,10 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 					continue
 				}
 
+				if strings.Contains(baseUrl, fmt.Sprintf("{%s}", param.Value.Name)) {
+					continue
+				}
+
 				if firstQuery {
 					baseUrl = fmt.Sprintf("%s?%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
 				} else {
@@ -1087,6 +1092,10 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 					continue
 				}
 
+				if strings.Contains(baseUrl, fmt.Sprintf("{%s}", param.Value.Name)) {
+					continue
+				}
+
 				if firstQuery {
 					baseUrl = fmt.Sprintf("%s?%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
 				} else {
@@ -1227,6 +1236,10 @@ func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 				parameters = append(parameters, param.Value.Name)
 
 				if strings.Contains(baseUrl, fmt.Sprintf("%s={%s}", param.Value.Name, param.Value.Name)) {
+					continue
+				}
+
+				if strings.Contains(baseUrl, fmt.Sprintf("{%s}", param.Value.Name)) {
 					continue
 				}
 
@@ -1374,6 +1387,10 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 					continue
 				}
 
+				if strings.Contains(baseUrl, fmt.Sprintf("{%s}", param.Value.Name)) {
+					continue
+				}
+
 				if firstQuery {
 					baseUrl = fmt.Sprintf("%s?%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
 				} else {
@@ -1514,6 +1531,10 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 				parameters = append(parameters, param.Value.Name)
 
 				if strings.Contains(baseUrl, fmt.Sprintf("%s={%s}", param.Value.Name, param.Value.Name)) {
+					continue
+				}
+
+				if strings.Contains(baseUrl, fmt.Sprintf("{%s}", param.Value.Name)) {
 					continue
 				}
 
@@ -1660,6 +1681,10 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 					continue
 				}
 
+				if strings.Contains(baseUrl, fmt.Sprintf("{%s}", param.Value.Name)) {
+					continue
+				}
+
 				if firstQuery {
 					baseUrl = fmt.Sprintf("%s?%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
 				} else {
@@ -1800,6 +1825,10 @@ func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 				parameters = append(parameters, param.Value.Name)
 
 				if strings.Contains(baseUrl, fmt.Sprintf("%s={%s}", param.Value.Name, param.Value.Name)) {
+					continue
+				}
+
+				if strings.Contains(baseUrl, fmt.Sprintf("{%s}", param.Value.Name)) {
 					continue
 				}
 

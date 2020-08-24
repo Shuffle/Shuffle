@@ -20,6 +20,7 @@ import Tooltip from '@material-ui/core/Tooltip';
 import CheckCircleIcon from '@material-ui/icons/CheckCircle';
 import Breadcrumbs from '@material-ui/core/Breadcrumbs';
 import AppsIcon from '@material-ui/icons/Apps';
+import CircularProgress from '@material-ui/core/CircularProgress';
 
 import ErrorOutline from '@material-ui/icons/ErrorOutline';
 import { useAlert } from "react-alert";
@@ -210,6 +211,7 @@ const AppCreator = (props) => {
 	const [, setBasedata] = React.useState({})
 	const [actions, setActions] = useState([])
 	const [errorCode, setErrorCode] = useState("")
+	const [appBuilding, setAppBuilding] = useState(false)
 
 	//const [actions, setActions] = useState([{
 	//	"name": "Get workflows",
@@ -524,6 +526,7 @@ const AppCreator = (props) => {
 	// Saving the app that's been configured.
 	const submitApp = () => {
 		alert.info("Uploading and building app " + name)
+		setAppBuilding(true)
 		setErrorCode("")
 
 		// Format the information 	
@@ -717,6 +720,7 @@ const AppCreator = (props) => {
 		if (authenticationOption === "API key") {
 			if (parameterName.length === 0) {
 				alert.error("A field name for the APIkey must be defined")
+				setAppBuilding(false)
 				return
 			}
 
@@ -756,6 +760,7 @@ const AppCreator = (props) => {
 			//	throw new Error("NOT 200 :O")
 			//}
 
+			setAppBuilding(false)
 			return response.json()
 		})
 		.then((responseJson) => {
@@ -1705,10 +1710,10 @@ const AppCreator = (props) => {
 						{testView}
 					*/}
 
-	        <Button color="primary" variant="contained" style={{borderRadius: "0px", marginTop: "30px", height: "50px",}} onClick={() => {
+	        <Button disabled={appBuilding} color="primary" variant="contained" style={{borderRadius: "0px", marginTop: "30px", height: "50px",}} onClick={() => {
 						submitApp()
 					}}>
-						Save
+						{appBuilding ? <CircularProgress /> : "Save"}
 					</Button>
 					{errorCode.length > 0 ? `Error: ${errorCode}` : null}
 				</Paper>
