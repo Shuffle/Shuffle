@@ -2844,7 +2844,7 @@ const AngularWorkflow = (props) => {
 							{datafield}
 							{showDropdown && showDropdownNumber === count && data.variant === "STATIC_VALUE" && jsonList.length > 0 ?
 							  <FormControl fullWidth style={{marginTop: 0}}>
-									<InputLabel id="action-autocompleter" style={{marginLeft: 10, color: "white"}}><ArrowUpwardIcon />Autocomplete</InputLabel>
+									<InputLabel id="action-autocompleter" style={{marginLeft: 10, color: "white"}}>Autocomplete</InputLabel>
 									<Select
 									  labelId="action-autocompleter"
 										SelectDisplayProps={{
@@ -2900,7 +2900,7 @@ const AngularWorkflow = (props) => {
 							: null}
 							{showDropdown && showDropdownNumber === count && data.variant === "STATIC_VALUE" && jsonList.length === 0 ?
 							  <FormControl fullWidth>
-									<InputLabel id="action-autocompleter" style={{marginLeft: 10, color: "white"}}><ArrowUpwardIcon />Autocomplete</InputLabel>
+									<InputLabel id="action-autocompleter" style={{marginLeft: 10, color: "white"}}>Autocomplete</InputLabel>
 									<Select
 									  labelId="action-autocompleter"
 										SelectDisplayProps={{
@@ -3198,7 +3198,7 @@ const AngularWorkflow = (props) => {
 							}
 							
 							return (
-								<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data.Name}>
+								<MenuItem key={data.Name} style={{backgroundColor: inputColor, color: "white"}} value={data.Name}>
 									{data.Name}
 								</MenuItem>
 							)
@@ -3433,6 +3433,8 @@ const AngularWorkflow = (props) => {
   	const { tmpdata, type } = props
 		const [data, ] = useState(tmpdata)
 		const [multiline, setMultiline] = useState(false)
+		const [showAutocomplete, setShowAutocomplete] = React.useState(false)
+		const [actionlist, setActionlist] = React.useState([])
 
 		if (tmpdata === undefined) {
 			return tmpdata
@@ -3440,6 +3442,47 @@ const AngularWorkflow = (props) => {
 
 		if (data.variant === "") {
 			data.variant = "STATIC_VALUE"
+		}
+
+
+		// Set actions based on NEXT node, since it should be able to involve those two
+		console.log("IN APPACTIONARG: ", selectedEdge)
+		if (actionlist.length === 0) {
+				// FIXME: Have previous execution values in here
+				actionlist.push({"type": "Execution Argument", "name": "Execution Argument", "value": "$exec", "highlight": "exec", "autocomplete": "exec", "example": "hello"})
+
+				if (workflow.workflow_variables !== null && workflow.workflow_variables !== undefined && workflow.workflow_variables.length > 0) {
+					for (var key in workflow.workflow_variables) {
+						const item = workflow.workflow_variables[key]
+						actionlist.push({"type": "workflow_variable", "name": item.name, "value": item.value, "id": item.id, "autocomplete": `${item.name.split(" ").join("_")}`, "example": item.value})
+					}
+				}
+
+				// FIXME: Add values from previous executions if they exist
+				if (workflow.execution_variables !== null && workflow.execution_variables !== undefined && workflow.execution_variables.length > 0) {
+					for (var key in workflow.execution_variables) {
+						const item = workflow.execution_variables[key]
+						actionlist.push({"type": "execution_variable", "name": item.name, "value": item.value, "id": item.id, "autocomplete": `${item.name.split(" ").join("_")}`, "example": ""})
+					}
+				}
+
+				const destAction = cy.getElementById(selectedEdge.target)
+				console.log(destAction.data())
+				var parents = getParents(destAction.data())
+				if (parents.length > 1) {
+					for (var key in parents) {
+						const item = parents[key]
+						if (item.label === "Execution Argument") {
+							continue
+						}
+
+						// 1. Take 
+						const actionvalue = {"type": "action", "id": item.id, "name": item.label, "autocomplete": `${item.label.split(" ").join("_")}`, "example": item.example === undefined ? "" : item.example}
+						actionlist.push(actionvalue)
+					}
+				}
+
+				setActionlist(actionlist)
 		}
 
 		var staticcolor = "inherit"
@@ -3543,6 +3586,105 @@ const AngularWorkflow = (props) => {
 					</div>
 				</div>	
 				{datafield}
+				{actionlist.length === 0 ? null : 
+					<FormControl fullWidth>
+						<InputLabel id="action-autocompleter" style={{marginLeft: 10, color: "white"}}>Autocomplete</InputLabel>
+						<Select
+							labelId="action-autocompleter"
+							SelectDisplayProps={{
+								style: {
+									marginLeft: 10,
+								}
+							}}
+							onClose={() => {
+								setShowAutocomplete(false)
+
+								//if (!selectedActionParameters[count].value[selectedActionParameters[count].value.length-1] === "$") {
+								//	setShowDropdown(false)
+								//}
+
+								setUpdate(Math.random())
+							}}
+							onClick={() => {
+								setShowAutocomplete(true)
+							}}
+							open={showAutocomplete}
+							fullWidth
+							style={{borderBottom: `1px solid #f85a3e`, color: "white", height: 50, marginTop: 2,}}
+							onChange={(e) => {
+								const autocomplete = e.target.value.autocomplete
+								const newValue = autocomplete.startsWith("$") ? data.value+autocomplete : `${data.value}$${autocomplete}`
+
+								changeActionVariable(data.action_field, newValue)
+							}}
+							>
+							{actionlist.map(data => {
+								const icon = data.type === "action" ? <AppsIcon style={{marginRight: 10}} /> : data.type === "workflow_variable" || data.type === "execution_variable" ? <FavoriteBorderIcon style={{marginRight: 10}} /> : <ScheduleIcon style={{marginRight: 10}} /> 
+
+								const handleExecArgumentHover = (inside) => {
+									var exec_text_field = document.getElementById("execution_argument_input_field")
+									if (exec_text_field !== null) {
+										if (inside) {
+											exec_text_field.style.border = "2px solid #f85a3e"
+										} else {
+											exec_text_field.style.border = ""
+										}
+									}
+
+									// Also doing arguments
+									if (workflow.triggers !== undefined && workflow.triggers !== null && workflow.triggers.length > 0) {
+										for (var key in workflow.triggers) {
+											const item = workflow.triggers[key]
+
+											var node = cy.getElementById(item.id)
+											if (node.length > 0) {
+												if (inside) {
+													node.addClass('shuffle-hover-highlight')
+												} else {
+													node.removeClass('shuffle-hover-highlight')
+												}
+											}
+
+										}
+									}
+								}
+
+								const handleActionHover = (inside, actionId) => {
+									var node = cy.getElementById(actionId)
+									if (node.length > 0) {
+										if (inside) {
+											node.addClass('shuffle-hover-highlight')
+										} else {
+											node.removeClass('shuffle-hover-highlight')
+										}
+									}
+								}
+
+								return (
+									<MenuItem key={data.name} style={{backgroundColor: inputColor, color: "white"}} value={data} onMouseOver={() => {
+										if (data.type === "Execution Argument") {
+											handleExecArgumentHover(true)
+										} else if (data.type === "action") {
+											handleActionHover(true, data.id)
+										}
+									}} onMouseOut={() => {
+										if (data.type === "Execution Argument") {
+											handleExecArgumentHover(false)
+										} else if (data.type === "action") {
+											handleActionHover(false, data.id)
+										}
+									}}>
+										<Tooltip color="primary" title={`Value: ${data.value}`} placement="left">
+											<div style={{display: "flex"}}>
+												{icon} {data.name}
+											</div>
+										</Tooltip>
+									</MenuItem>
+								)
+							})}
+						</Select>
+					</FormControl>
+				}
 			</div>
 		)
 	}
@@ -3560,7 +3702,7 @@ const AngularWorkflow = (props) => {
 				style: {
 					backgroundColor: surfaceColor,
 					color: "white",
-					minWidth: "800px",
+					minWidth: 800,
 				},
 			}}
 			onClose={() => {
@@ -3574,7 +3716,7 @@ const AngularWorkflow = (props) => {
 			<DialogTitle><div style={{color:"white"}}>Condition</div></DialogTitle>
 				<DialogContent style={{display: "flex"}}>
 					<Tooltip color="primary" title={conditionValue.configuration ? "Negated" : "Default"} placement="top">
-						<Button color="primary" variant={conditionValue.configuration ? "contained" : "outlined"} style={{margin: "auto", height: 50, marginBottom: 0, marginRight: 5}} onClick={(e) => {
+						<Button color="primary" variant={conditionValue.configuration ? "contained" : "outlined"} style={{margin: "auto", height: 50, marginBottom: "auto", marginTop: "auto", marginRight: 5}} onClick={(e) => {
 							console.log("VALUE: ", conditionValue.configuration)
 							conditionValue.configuration = !conditionValue.configuration
 							setConditionValue(conditionValue)
@@ -3587,7 +3729,7 @@ const AngularWorkflow = (props) => {
 						<AppConditionHandler tmpdata={sourceValue} setData={setSourceValue} type={"source"} />
 					</div>
 					<div style={{flex: "1", margin: "auto", marginBottom: 0, marginLeft: 5, marginRight: 5,}}>
-					  <Button color="primary" variant="outlined" style={{height: "50px",}} fullWidth aria-haspopup="true" onClick={(e) => {setVariableAnchorEl(e.currentTarget)}}>
+					  <Button color="primary" variant="outlined" style={{margin: "auto", height: 50, marginBottom: 50,}} fullWidth aria-haspopup="true" onClick={(e) => {setVariableAnchorEl(e.currentTarget)}}>
 							{conditionValue.value}	
 						</Button>
 						<Menu
