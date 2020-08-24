@@ -6012,7 +6012,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		log.Printf("Docker build error: %s", err)
 		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Error in Docker build"}`)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error in Docker build"}`)))
 		return
 	}
 

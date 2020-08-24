@@ -1569,7 +1569,22 @@ const AppCreator = (props) => {
 								margin="normal"
 								variant="outlined"
 								value={name}
-      	 				onChange={e => setName(e.target.value)}
+      	 				onChange={e => {
+									const invalid = ["#", ":", "."]
+									for (var key in invalid) {
+										if (e.target.value.includes(invalid[key])) {
+											alert.error("Can't use "+invalid[key]+" in name")
+											return
+										}
+									}
+
+									if (e.target.value.length > 100) {
+										alert.error("Choose a shorter name.")
+										return
+									}
+
+									setName(e.target.value)
+								}}
 								color="primary"
 								InputProps={{
 									style:{
