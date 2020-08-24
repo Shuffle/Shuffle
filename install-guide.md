@@ -19,7 +19,7 @@ When you're done, skip to the "After installation" step below.
 ## Windows Docker setup 
 This step is for setting up with Docker on windows from scratch.
 
-1. Make sure you have [Docker](https://docs.docker.com/docker-for-windows/install/) and [docker-compose](https://docs.docker.com/compose/install/) installed
+1. Make sure you have [Docker](https://docs.docker.com/docker-for-windows/install/) and [docker-compose](https://docs.docker.com/compose/install/) installed. WSL2 may be required.
 2. Go to https://github.com/frikky/shuffle/releases and download the latest .zip release (or install git)
 3. Unzip the folder and enter it
 4. Open the .env file and change the line with "OUTER_HOSTNAME" to contain your IP:
@@ -83,14 +83,16 @@ docker-compose up
 Related issue: #47
 
 ## Local development installation 
-Frontend - requires [npm](https://nodejs.org/en/download/)/[yarn](https://yarnpkg.com/lang/en/docs/install/#debian-stable)/your preferred manager. Runs independently from backend - edit frontend/src/App.yaml (line 44~) from window.location.origin to http://YOUR IP:5001
+**Frontend - ReactJS /w cytoscape**
+http://localhost:3000 - Requires [npm](https://nodejs.org/en/download/)/[yarn](https://yarnpkg.com/lang/en/docs/install/#debian-stable)/your preferred manager. Runs independently from backend. 
 ```bash
 cd frontend
 npm i
 npm start
 ```
 
-Backend - API calls - requires [>=go1.13](https://golang.org/dl/) 
+**Backend - Golang**
+http://localhost:5001 - REST API - requires [>=go1.13](https://golang.org/dl/) 
 ```bash
 export DATASTORE_EMULATOR_HOST=0.0.0.0:8000
 cd backend/go-app
@@ -98,16 +100,26 @@ go build
 go run *.go
 ```
 
-Database - Datastore:
+**Database - Datastore**
+Based on Google datastore
 ```
 docker run -p 8000:8000 google/cloud-sdk gcloud beta emulators datastore start --project=shuffle --host-port 0.0.0.0:8000 --no-store-on-disk
 ```
 
-Orborus - Execution of Workflows:
-PS: This requires some specific environment variables.
+**Orborus**
+Execution of Workflows:
+PS: This requires some specific environment variables 
 ```
 cd functions/onprem/orborus
 go run orborus.go
+```
+Environments:
+```
+export ORG_ID=Shuffle
+export ENVIRONMENT_NAME=Shuffle
+export BASE_URL=http://YOUR-IP:5001
+export DOCKER_API_VERSION=1.40
+export SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
 ```
 
 

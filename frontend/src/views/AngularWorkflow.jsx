@@ -2692,8 +2692,8 @@ const AngularWorkflow = (props) => {
 							/>
 
 						if (selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0) {
-							console.log("FOUND OPTIONS!: ", selectedActionParameters[count])
 							if (selectedActionParameters[count].value === "" && selectedActionParameters[count].required) {
+								// Rofl, dirty workaround :)
 								const e = {
 									target: {
 										value: selectedActionParameters[count].options[0],
@@ -2702,9 +2702,6 @@ const AngularWorkflow = (props) => {
 
 								changeActionParameter(e, count)
 							}
-							//	changeActionParameterVariable(selectedActionParameters[count].options[0], count) 
-							//	changeActionParameter(event, count)
-							//}
 
 							datafield =
 								<Select
