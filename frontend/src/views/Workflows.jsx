@@ -476,7 +476,7 @@ const Workflows = (props) => {
 			var results = data.results.length
 		}
 		return (
-			<Paper square style={paperAppStyle} onClick={() => {
+			<Paper key={data.id} square style={paperAppStyle} onClick={() => {
 				setSelectedExecution(data)
 			}}>
 				<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: boxWidth, backgroundColor: boxColor}} />
@@ -851,7 +851,7 @@ const Workflows = (props) => {
 	}
 
 	const modalView = modalOpen ? 
-		<Dialog modal 
+		<Dialog 
 			open={modalOpen} 
 			onClose={() => {setModalOpen(false)}}
 			PaperProps={{
@@ -1090,7 +1090,7 @@ const Workflows = (props) => {
 	}
 
 	const workflowDownloadModalOpen = loadWorkflowsModalOpen ? 
-		<Dialog modal 
+		<Dialog 
 			open={loadWorkflowsModalOpen}
 			onClose={() => {
 			}}

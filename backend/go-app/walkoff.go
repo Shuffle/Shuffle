@@ -1240,11 +1240,16 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 		workflowapps, err := getAllWorkflowApps(ctx)
 		if err == nil {
 			// FIXME: Add real env
-			//q := datastore.NewQuery("Environments").Limit(1)
-			//count, err := dbclient.Get(ctx, q)
-			//envName := "Shuffle"
-			//if err == nil {
-			//}
+			envName := "Shuffle"
+			environments, err := getEnvironments(ctx)
+			if err == nil {
+				for _, env := range environments {
+					if env.Default {
+						envName = env.Name
+						break
+					}
+				}
+			}
 
 			for _, item := range workflowapps {
 				if item.Name == "Testing" && item.AppVersion == "1.0.0" {
@@ -1253,7 +1258,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 					newActions = append(newActions, Action{
 						Label:       "Start node",
 						Name:        "hello_world",
-						Environment: "Shuffle",
+						Environment: envName,
 						Parameters:  []WorkflowAppActionParameter{},
 						Position: struct {
 							X float64 "json:\"x\" datastore:\"x\""
@@ -3102,6 +3107,18 @@ func getWorkflow(ctx context.Context, id string) (*Workflow, error) {
 	}
 
 	return workflow, nil
+}
+
+func getEnvironments(ctx context.Context) ([]Environment, error) {
+	var environments []Environment
+	q := datastore.NewQuery("Environments")
+
+	_, err := dbclient.GetAll(ctx, q, &environments)
+	if err != nil {
+		return []Environment{}, err
+	}
+
+	return environments, nil
 }
 
 func getAllWorkflows(ctx context.Context) ([]Workflow, error) {
