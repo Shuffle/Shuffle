@@ -158,6 +158,9 @@ type Environment struct {
 	Name       string `datastore:"name"`
 	Type       string `datastore:"type"`
 	Registered bool   `datastore:"registered"`
+	Default    bool   `datastore:"default" json:"default"`
+	Archived   bool   `datastore:"archived" json:"archived"`
+	Id         string `datastore:"id" json:"id"`
 }
 
 type User struct {
@@ -1053,14 +1056,27 @@ func handleSetEnvironments(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// Clear old data
-	for _, item := range environments {
-		err = DeleteKey(ctx, "Environments", item.Name)
-		if err != nil {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false, "reason": "Error cleaning up environment"}`))
-			return
+	// Clear old data? Removed for archiving purpose. No straight deletion
+	//for _, item := range environments {
+	//	err = DeleteKey(ctx, "Environments", item.Name)
+	//	if err != nil {
+	//		resp.WriteHeader(401)
+	//		resp.Write([]byte(`{"success": false, "reason": "Error cleaning up environment"}`))
+	//		return
+	//	}
+	//}
+
+	openEnvironments := 0
+	for _, item := range newEnvironments {
+		if !item.Archived {
+			openEnvironments += 1
 		}
+	}
+
+	if openEnvironments < 1 {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Can't archived all environments"}`))
+		return
 	}
 
 	for _, item := range newEnvironments {
@@ -1072,9 +1088,10 @@ func handleSetEnvironments(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	//DeleteKey(ctx, entity string, value string) error {
 	// FIXME - check which are in use
-	log.Printf("FIXME: Set new environments: %#v", newEnvironments)
-	log.Printf("DONT DELETE ONES THAT ARE IN USE")
+	//log.Printf("FIXME: Set new environments: %#v", newEnvironments)
+	//log.Printf("DONT DELETE ONES THAT ARE IN USE")
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": true}`))

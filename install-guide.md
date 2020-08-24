@@ -7,7 +7,6 @@ The Docker setup is done with docker-compose and is a single command to get set 
 **PS: if you're setting up Shuffle on Windows, go to the next step (Windows Docker setup)**
 
 1. Make sure you have Docker and [docker-compose](https://docs.docker.com/compose/install/) installed.
-
 2. Run docker-compose.
 ```
 git clone https://github.com/frikky/Shuffle
