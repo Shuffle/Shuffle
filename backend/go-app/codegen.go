@@ -261,7 +261,7 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
             url += f"&%s={%s}"`, query, query, query)
 		}
 	} else {
-		log.Printf("No optional queries?")
+		//log.Printf("No optional queries?")
 	}
 
 	// api.Authentication.Parameters[0].Value = "BearerAuth"
@@ -401,9 +401,7 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 		verifyAddin,
 	)
 
-	log.Printf(data)
-
-	//log.Printf("%s", data)
+	//log.Printf(data)
 	return functionname, data
 }
 

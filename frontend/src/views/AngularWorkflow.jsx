@@ -2001,9 +2001,9 @@ const AngularWorkflow = (props) => {
 					position: newposition,
 				}
 
-				//if (data.trigger_type === "WEBHOOK") {
-				//	newAppData.status = "running"
-				//}
+				if (data.trigger_type === "WEBHOOK") {
+					newAppData.status = "running"
+				}
 
 				// Can all the data be in here? hmm
 				const nodeToBeAdded = {
@@ -2049,8 +2049,8 @@ const AngularWorkflow = (props) => {
 
 				setWorkflow(workflow)
 				if (data.trigger_type === "WEBHOOK") {
-					//newWebhook(newAppData)
-					//saveWorkflow(workflow)
+					newWebhook(newAppData)
+					saveWorkflow(workflow)
 				}
 			}
 		}
@@ -4331,42 +4331,14 @@ const AngularWorkflow = (props) => {
 									setTriggerCronWrapper(e.target.value)
 								}}
 							/>
-							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
-								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
-								<div style={{flex: "10"}}> 
-									<b>Execution argument: </b> 
-								</div>
-							</div>
-							<TextField
-								style={{backgroundColor: inputColor}} 
-								InputProps={{
-									style:{
-										color: "white",
-										marginLeft: "5px",
-										maxWidth: "95%",
-										marginTop: "3px",
-										fontSize: "1em",
-									},
-								}}
-								fullWidth
-								disabled
-								rows="6"
-								multiline
-								color="primary"
-								defaultValue={workflow.triggers[selectedTriggerIndex].parameters[1].value}
-								placeholder='{"example": {"json": "is cool"}}'
-								onBlur={(e) => {
-									setTriggerBodyWrapper(e.target.value)
-								}}
-							/>
 							<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
-								<Button style={{flex: "1",}} disabled={selectedTrigger.status === "running"} onClick={() => {
+								<Button  variant="contained" style={{flex: "1",}} disabled={selectedTrigger.status === "running"} onClick={() => {
 									newWebhook(selectedTrigger)
 								}} color="primary">
 	    		    	    		Start	
 	    		    	  		</Button>
-								<Button style={{flex: "1",}} disabled={selectedTrigger.status !== "running"} onClick={() => {
+								<Button variant="contained" style={{flex: "1",}} disabled={selectedTrigger.status !== "running"} onClick={() => {
 									deleteWebhook(selectedTrigger, selectedTriggerIndex)
 								}} color="primary">
 	    		    	    		Stop	
