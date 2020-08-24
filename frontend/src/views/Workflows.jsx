@@ -16,6 +16,7 @@ import Switch from '@material-ui/core/Switch';
 
 import CircularProgress from '@material-ui/core/CircularProgress';
 import CachedIcon from '@material-ui/icons/Cached';
+import GetAppIcon from '@material-ui/icons/GetApp';
 import EditIcon from '@material-ui/icons/Edit';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
 import PlayArrowIcon from '@material-ui/icons/PlayArrow';
@@ -126,14 +127,15 @@ const Workflows = (props) => {
 		color: "#ffffff",
 		width: "100%",
 		display: "flex",
-		maxWidth: "1768px",
+		minWidth: 1366,
+		maxWidth: 1766,
 		margin: "auto",
 		maxHeight: "90vh",
 	}
 
 	const emptyWorkflowStyle = {
 		paddingTop: "200px", 
-		width: "1024px",
+		width: 1024,
 		margin: "auto",
 	}
 
@@ -263,6 +265,12 @@ const Workflows = (props) => {
 		return new Promise((resolve) => setTimeout(resolve, time));
 	}
 
+	const exportAllWorkflows = () => {
+		for (var key in workflows) {
+			exportWorkflow(workflows[key])
+		}
+	}
+
 	const exportWorkflow = (data) => {
 		console.log("export")
 		let dataStr = JSON.stringify(data)
@@ -364,9 +372,9 @@ const Workflows = (props) => {
 			}}>
 				<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: boxWidth, backgroundColor: boxColor}}>
 				</div>
-				<Grid container style={{margin: "10px 10px 10px 10px", flex: "1"}}>
+				<Grid container style={{margin: "10px 10px 10px 10px", flex: 1}}>
 					<Grid style={{display: "flex", flexDirection: "column", width: "100%"}}>
-						<Grid item style={{flex: "1", display: "flex"}}>
+						<Grid item style={{flex: 1, display: "flex"}}>
 							<div style={{flex: "10",}} onClick={() => {
 								if (selectedWorkflow.id !== data.id) {
 									setSelectedWorkflow(data)
@@ -418,7 +426,7 @@ const Workflows = (props) => {
       							</Menu>
 							</div>
 						</Grid>
-						<div style={{display: "flex", flex: "1"}} onClick={() => {
+						<div style={{display: "flex", flex: 1}} onClick={() => {
 							if (selectedWorkflow.id !== data.id) {
 								setSelectedWorkflow(data)
 								getWorkflowExecution(data.id)
@@ -468,13 +476,13 @@ const Workflows = (props) => {
 			var results = data.results.length
 		}
 		return (
-			<Paper square style={paperAppStyle} onClick={() => {
+			<Paper key={data.id} square style={paperAppStyle} onClick={() => {
 				setSelectedExecution(data)
 			}}>
 				<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: boxWidth, backgroundColor: boxColor}} />
-				<Grid container style={{margin: "10px 10px 10px 10px", flex: "1"}}>
+				<Grid container style={{margin: "10px 10px 10px 10px", flex: 1}}>
 					<Grid style={{display: "flex", flexDirection: "column", width: "100%"}}>
-						<Grid item style={{flex: "1", display: "flex"}}>
+						<Grid item style={{flex: 1, display: "flex"}}>
 							<div style={{flex: "5"}}>
 								<h3 style={{marginBottom: "0px", marginTop: "10px"}}><b>Status</b>: {data.status}</h3>
 								Actions: {results}/{actions}
@@ -681,7 +689,7 @@ const Workflows = (props) => {
 		*/
 		if (Object.getOwnPropertyNames(selectedExecution).length > 0 && selectedExecution.workflow.actions !== null) {
 			return (
-				<div>
+				<div style={{overflowX: "hidden"}}>
 					<div>
 						<b>Status:</b> {selectedExecution.status}
 					</div>
@@ -843,7 +851,7 @@ const Workflows = (props) => {
 	}
 
 	const modalView = modalOpen ? 
-		<Dialog modal 
+		<Dialog 
 			open={modalOpen} 
 			onClose={() => {setModalOpen(false)}}
 			PaperProps={{
@@ -910,9 +918,9 @@ const Workflows = (props) => {
 
 		
 		const viewSize = {
-			workflowView: 1,
-			executionsView: 1,
-			executionResults: 2,
+			workflowView: 4,
+			executionsView: 3,
+			executionResults: 4,
 		}
 
 		const workflowViewStyle = {
@@ -943,7 +951,14 @@ const Workflows = (props) => {
 							</Button> 				
 						</Tooltip>
 						*/}
-					 	<Tooltip color="primary" title={"Download / Import workflows"} placement="top">
+						<Tooltip color="primary" title={`Download ALL workflows (${workflows.length})`} placement="top">
+							<Button color="primary" style={{}} variant="text" onClick={() => {
+								exportAllWorkflows()
+							}}>
+								<GetAppIcon />
+							</Button> 				
+						</Tooltip>
+					 	<Tooltip color="primary" title={"Import workflows"} placement="top">
 							<Button color="primary" style={{}} variant="text" onClick={() => setLoadWorkflowsModalOpen(true)}>
 								<CloudDownloadIcon />
 							</Button> 				
@@ -982,10 +997,10 @@ const Workflows = (props) => {
 			</div>
 			<div style={{flex: viewSize.executionResults, marginLeft: "10px", marginRight: "10px", minWidth: "33%"}}>
 				<div style={{display: "flex"}}>
-					<div style={{flex: "3"}}>
+					<div style={{flex: "1"}}>
 						<h2>Execution Timeline</h2>
 					</div>
-					<div style={{flex: "1"}}>
+					<div style={{flex: 1}}>
 				    	<FormControlLabel
 							style={{color: "white", marginBottom: "0px", marginTop: "10px"}}
 							label={<div style={{color: "white"}}>Collapse results</div>}
@@ -1075,7 +1090,7 @@ const Workflows = (props) => {
 	}
 
 	const workflowDownloadModalOpen = loadWorkflowsModalOpen ? 
-		<Dialog modal 
+		<Dialog 
 			open={loadWorkflowsModalOpen}
 			onClose={() => {
 			}}

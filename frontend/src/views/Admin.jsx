@@ -47,6 +47,7 @@ const Admin = (props) => {
 	const [selectedUserModalOpen, setSelectedUserModalOpen] = React.useState(false)
 	const [selectedAuthentication, setSelectedAuthentication] = React.useState({})
 	const [selectedAuthenticationModalOpen, setSelectedAuthenticationModalOpen] = React.useState(false)
+	const [showArchived, setShowArchived] = React.useState(false)
 
 	const alert = useAlert()
 
@@ -129,7 +130,8 @@ const Admin = (props) => {
 					if (responseJson["success"] === false) {
 						alert.error("Failed setting new password")
 					} else {
-						alert.success("Changed password!")
+						alert.success("Successfully password!")
+						setSelectedUserModalOpen(false)
 					}
 				}),
 			)
@@ -169,7 +171,6 @@ const Admin = (props) => {
 	}
 
 	const submitUser = (data) => {
-		// FIXME - add some check here ROFL
 		console.log("INPUT: ", data)
 
 		// Just use this one?
@@ -200,13 +201,21 @@ const Admin = (props) => {
 			});
 	}
 
-	const deleteEnvironment = (name) => {
+	// Horrible frontend fix for environments
+	const setDefaultEnvironment = (name) => {
 		// FIXME - add some check here ROFL
-		alert.info("Deleting environment " + name)
+		alert.info("Setting default env to " + name)
 		var newEnv = []
 		for (var key in environments) {
 			if (environments[key].Name == name) {
-				continue
+				if (environments[key].archived) {
+					alert.error("Can't set archived to default")
+					return
+				}
+
+				environments[key].default = true
+			} else if (environments[key].default == true && environments[key].name !== name) {
+				environments[key].default = false 
 			}
 
 			newEnv.push(environments[key])
@@ -226,6 +235,7 @@ const Admin = (props) => {
 				response.json().then(responseJson => {
 					if (responseJson["success"] === false) {
 						alert.error(responseJson.reason)
+						getEnvironments()
 					} else {
 						setLoginInfo("")
 						setModalOpen(false)
@@ -233,14 +243,60 @@ const Admin = (props) => {
 					}
 				}),
 			)
-		//.catch(error => {
-		//	console.log("Error in userdata: ", error)
-		//});
+		.catch(error => {
+			console.log("Error in backend data: ", error)
+		})
+	}
+
+	const deleteEnvironment = (name) => {
+		// FIXME - add some check here ROFL
+		alert.info("Deleting environment " + name)
+		var newEnv = []
+		for (var key in environments) {
+			if (environments[key].Name == name) {
+				if (environments[key].default) {
+					alert.info("Can't delete the default environment")
+					return
+				}
+				environments[key].archived = true
+			}
+
+			newEnv.push(environments[key])
+		}
+
+		// Just use this one?
+		const url = globalUrl + '/api/v1/setenvironments';
+		fetch(url, {
+			method: 'PUT',
+			credentials: "include",
+			body: JSON.stringify(newEnv),
+			headers: {
+				'Content-Type': 'application/json',
+			},
+		})
+			.then(response =>
+				response.json().then(responseJson => {
+					if (responseJson["success"] === false) {
+						alert.error(responseJson.reason)
+						getEnvironments()
+					} else {
+						setLoginInfo("")
+						setModalOpen(false)
+						getEnvironments()
+					}
+				}),
+			)
+		.catch(error => {
+			console.log("Error when deleting: ", error)
+		})
 	}
 
 	const submitEnvironment = (data) => {
 		// FIXME - add some check here ROFL
-		environments.push({ "name": data.environment, "type": "onprem" })
+		environments.push({
+			"name": data.environment, 
+			"type": "onprem",
+		})
 
 		// Just use this one?
 		var baseurl = globalUrl
@@ -257,6 +313,7 @@ const Admin = (props) => {
 				response.json().then(responseJson => {
 					if (responseJson["success"] === false) {
 						setLoginInfo("Error in input: " + responseJson.reason)
+						getEnvironments()
 					} else {
 						setLoginInfo("")
 						setModalOpen(false)
@@ -342,7 +399,6 @@ const Admin = (props) => {
 				return response.json()
 			})
 			.then((responseJson) => {
-				console.log(responseJson)
 				setEnvironments(responseJson)
 			})
 			.catch(error => {
@@ -934,6 +990,7 @@ const Admin = (props) => {
 		</div>
 		: null
 
+	console.log("Environments: ", environments)
 	const environmentView = curTab === 2 ?
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
@@ -968,11 +1025,28 @@ const Admin = (props) => {
 						style={{minWidth: 200, maxWidth: 200}}
 					/>
 					<ListItemText
+						primary="Default"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
 						primary="Actions"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="Archived"
 						style={{minWidth: 150, maxWidth: 150}}
 					/>
 				</ListItem>
 				{environments === undefined ? null : environments.map(environment => {
+					if (!showArchived && environment.archived) {
+						return null	
+					}
+
+					if (environment.archived === undefined) {
+						getEnvironments()
+						return null
+					}
+
 					return (
 						<ListItem>
 							<ListItemText
@@ -983,9 +1057,25 @@ const Admin = (props) => {
 								primary={"TBD"}
 								style={{minWidth: 200, maxWidth: 200, overflow: "hidden"}}
 							/>
-							<ListItemText>
+							<ListItemText
+								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
+								primary={environment.default ? "true" : null}
+							>
+								{environment.default ? 
+									null
+									: 
+									<Button variant="outlined" style={{borderRadius: "0px"}} onClick={() => setDefaultEnvironment(environment.Name)} color="primary">Set default</Button>
+								}
+							</ListItemText>
+							<ListItemText
+								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
+							>
 								<Button variant="outlined" style={{borderRadius: "0px"}} onClick={() => deleteEnvironment(environment.Name)} color="primary">Delete</Button>
 							</ListItemText>
+							<ListItemText
+								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
+								primary={environment.archived.toString()}
+							/>
 						</ListItem>
 					)
 				})}

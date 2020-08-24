@@ -254,11 +254,14 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 	if len(optionalQueries) > 0 {
 		queryString += ", "
 		for _, query := range optionalQueries {
+			// Check if it's a part of the URL already
 			queryString += fmt.Sprintf("%s=\"\", ", query)
 			queryData += fmt.Sprintf(`
         if %s:
             url += f"&%s={%s}"`, query, query, query)
 		}
+	} else {
+		//log.Printf("No optional queries?")
 	}
 
 	// api.Authentication.Parameters[0].Value = "BearerAuth"
@@ -398,7 +401,7 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 		verifyAddin,
 	)
 
-	//log.Printf("%s", data)
+	//log.Printf(data)
 	return functionname, data
 }
 
@@ -594,10 +597,10 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 	pythonFunctions := []string{}
 	for actualPath, path := range swagger.Paths {
 		actualPath = strings.Replace(actualPath, " ", "_", -1)
-		actualPath = strings.Replace(actualPath, ".", "", -1)
-		actualPath = strings.Replace(actualPath, ".", "", -1)
+		//actualPath = strings.Replace(actualPath, ".", "", -1)
 		actualPath = strings.Replace(actualPath, "\\", "", -1)
 
+		// FIXME: Handle everything behind questionmark (?) with dots as well.
 		// https://godoc.org/github.com/getkin/kin-openapi/openapi3#PathItem
 		if path.Get != nil {
 			action, curCode := handleGet(swagger, api, extraParameters, path, actualPath)
@@ -936,7 +939,11 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 					continue
 				}
 
-				if firstQuery {
+				if strings.Contains(baseUrl, fmt.Sprintf("{%s}", param.Value.Name)) {
+					continue
+				}
+
+				if firstQuery && !strings.Contains(baseUrl, "?") {
 					baseUrl = fmt.Sprintf("%s?%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
 				} else {
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
@@ -1081,7 +1088,11 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 					continue
 				}
 
-				if firstQuery {
+				if strings.Contains(baseUrl, fmt.Sprintf("{%s}", param.Value.Name)) {
+					continue
+				}
+
+				if firstQuery && !strings.Contains(baseUrl, "?") {
 					baseUrl = fmt.Sprintf("%s?%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
 				} else {
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
@@ -1224,7 +1235,11 @@ func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 					continue
 				}
 
-				if firstQuery {
+				if strings.Contains(baseUrl, fmt.Sprintf("{%s}", param.Value.Name)) {
+					continue
+				}
+
+				if firstQuery && !strings.Contains(baseUrl, "?") {
 					baseUrl = fmt.Sprintf("%s?%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
 				} else {
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
@@ -1368,7 +1383,11 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 					continue
 				}
 
-				if firstQuery {
+				if strings.Contains(baseUrl, fmt.Sprintf("{%s}", param.Value.Name)) {
+					continue
+				}
+
+				if firstQuery && !strings.Contains(baseUrl, "?") {
 					baseUrl = fmt.Sprintf("%s?%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
 				} else {
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
@@ -1511,7 +1530,11 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 					continue
 				}
 
-				if firstQuery {
+				if strings.Contains(baseUrl, fmt.Sprintf("{%s}", param.Value.Name)) {
+					continue
+				}
+
+				if firstQuery && !strings.Contains(baseUrl, "?") {
 					baseUrl = fmt.Sprintf("%s?%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
 				} else {
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
@@ -1654,7 +1677,11 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 					continue
 				}
 
-				if firstQuery {
+				if strings.Contains(baseUrl, fmt.Sprintf("{%s}", param.Value.Name)) {
+					continue
+				}
+
+				if firstQuery && !strings.Contains(baseUrl, "?") {
 					baseUrl = fmt.Sprintf("%s?%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
 				} else {
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
@@ -1797,7 +1824,11 @@ func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 					continue
 				}
 
-				if firstQuery {
+				if strings.Contains(baseUrl, fmt.Sprintf("{%s}", param.Value.Name)) {
+					continue
+				}
+
+				if firstQuery && !strings.Contains(baseUrl, "?") {
 					baseUrl = fmt.Sprintf("%s?%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
 				} else {
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)

@@ -120,6 +120,8 @@ type WorkflowApp struct {
 	} `json:"contact_info" datastore:"contact_info" yaml:"contact_info" required:false`
 	Actions        []WorkflowAppAction `json:"actions" yaml:"actions" required:true datastore:"actions,noindex"`
 	Authentication Authentication      `json:"authentication" yaml:"authentication" required:false datastore:"authentication"`
+	Tags           []string            `json:"tags" yaml:"tags" required:false datastore:"activated"`
+	Category       []string            `json:"category" yaml:"category" required:false datastore:"category"`
 }
 
 type WorkflowAppActionParameter struct {
@@ -129,6 +131,7 @@ type WorkflowAppActionParameter struct {
 	Example       string           `json:"example" datastore:"example" yaml:"example"`
 	Value         string           `json:"value" datastore:"value" yaml:"value,omitempty"`
 	Multiline     bool             `json:"multiline" datastore:"multiline" yaml:"multiline"`
+	Options       []string         `json:"options" datastore:"options" yaml:"options"`
 	ActionField   string           `json:"action_field" datastore:"action_field" yaml:"actionfield,omitempty"`
 	Variant       string           `json:"variant" datastore:"variant" yaml:"variant,omitempty"`
 	Required      bool             `json:"required" datastore:"required" yaml:"required"`
@@ -192,7 +195,7 @@ type WorkflowExecution struct {
 		Description string `json:"description" datastore:"description"`
 		ID          string `json:"id" datastore:"id"`
 		Name        string `json:"name" datastore:"name"`
-		Value       string `json:"value" datastore:"value"`
+		Value       string `json:"value" datastore:"value,noindex"`
 	} `json:"execution_variables,omitempty" datastore:"execution_variables,omitempty"`
 }
 
@@ -217,7 +220,7 @@ type Action struct {
 		Description string `json:"description" datastore:"description"`
 		ID          string `json:"id" datastore:"id"`
 		Name        string `json:"name" datastore:"name"`
-		Value       string `json:"value" datastore:"value"`
+		Value       string `json:"value" datastore:"value,noindex"`
 	} `json:"execution_variable,omitempty" datastore:"execution_variable,omitempty"`
 	Position struct {
 		X float64 `json:"x" datastore:"x"`
@@ -307,7 +310,7 @@ type Workflow struct {
 		Description string `json:"description" datastore:"description"`
 		ID          string `json:"id" datastore:"id"`
 		Name        string `json:"name" datastore:"name"`
-		Value       string `json:"value" datastore:"value"`
+		Value       string `json:"value" datastore:"value,noindex"`
 	} `json:"execution_variables,omitempty" datastore:"execution_variables"`
 }
 
@@ -1121,6 +1124,10 @@ func getWorkflows(resp http.ResponseWriter, request *http.Request) {
 
 	// With user, do a search for workflows with user or user's org attached
 	q := datastore.NewQuery("workflow").Filter("owner =", user.Id)
+	if user.Role == "admin" {
+		q = datastore.NewQuery("workflow")
+	}
+
 	var workflows []Workflow
 	_, err = dbclient.GetAll(ctx, q, &workflows)
 	if err != nil {
@@ -1236,11 +1243,16 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 		workflowapps, err := getAllWorkflowApps(ctx)
 		if err == nil {
 			// FIXME: Add real env
-			//q := datastore.NewQuery("Environments").Limit(1)
-			//count, err := dbclient.Get(ctx, q)
-			//envName := "Shuffle"
-			//if err == nil {
-			//}
+			envName := "Shuffle"
+			environments, err := getEnvironments(ctx)
+			if err == nil {
+				for _, env := range environments {
+					if env.Default {
+						envName = env.Name
+						break
+					}
+				}
+			}
 
 			for _, item := range workflowapps {
 				if item.Name == "Testing" && item.AppVersion == "1.0.0" {
@@ -1249,7 +1261,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 					newActions = append(newActions, Action{
 						Label:       "Start node",
 						Name:        "hello_world",
-						Environment: "Shuffle",
+						Environment: envName,
 						Parameters:  []WorkflowAppActionParameter{},
 						Position: struct {
 							X float64 "json:\"x\" datastore:\"x\""
@@ -3100,6 +3112,18 @@ func getWorkflow(ctx context.Context, id string) (*Workflow, error) {
 	return workflow, nil
 }
 
+func getEnvironments(ctx context.Context) ([]Environment, error) {
+	var environments []Environment
+	q := datastore.NewQuery("Environments")
+
+	_, err := dbclient.GetAll(ctx, q, &environments)
+	if err != nil {
+		return []Environment{}, err
+	}
+
+	return environments, nil
+}
+
 func getAllWorkflows(ctx context.Context) ([]Workflow, error) {
 	var allworkflows []Workflow
 	q := datastore.NewQuery("workflow")
@@ -4045,6 +4069,62 @@ func deployWebhookFunction(ctx context.Context, name, localization, applocation 
 	return nil
 }
 
+func loadGithubWorkflows(url, username, password, userId string) error {
+	fs := memfs.New()
+
+	if strings.Contains(url, "github") || strings.Contains(url, "gitlab") || strings.Contains(url, "bitbucket") {
+		cloneOptions := &git.CloneOptions{
+			URL: url,
+		}
+
+		// FIXME: Better auth.
+		if len(username) > 0 && len(password) > 0 {
+			cloneOptions.Auth = &http2.BasicAuth{
+
+				Username: username,
+				Password: password,
+			}
+		}
+
+		storer := memory.NewStorage()
+		r, err := git.Clone(storer, fs, cloneOptions)
+		if err != nil {
+			log.Printf("Failed loading repo into memory: %s", err)
+			return err
+		}
+
+		dir, err := fs.ReadDir("/")
+		if err != nil {
+			log.Printf("FAiled reading folder: %s", err)
+		}
+		_ = r
+
+		log.Printf("Starting workflow folder iteration")
+		iterateWorkflowGithubFolders(fs, dir, "", "", userId)
+
+	} else if strings.Contains(url, "s3") {
+		//https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
+
+		//sess := session.Must(session.NewSession())
+		//downloader := s3manager.NewDownloader(sess)
+
+		//// Write the contents of S3 Object to the file
+		//storer := memory.NewStorage()
+		//n, err := downloader.Download(storer, &s3.GetObjectInput{
+		//	Bucket: aws.String(myBucket),
+		//	Key:    aws.String(myString),
+		//})
+		//if err != nil {
+		//	return fmt.Errorf("failed to download file, %v", err)
+		//}
+		//fmt.Printf("file downloaded, %d bytes\n", n)
+	} else {
+		return errors.New(fmt.Sprintf("URL %s is unsupported when downloading workflows", url))
+	}
+
+	return nil
+}
+
 func loadSpecificWorkflows(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -4064,7 +4144,7 @@ func loadSpecificWorkflows(resp http.ResponseWriter, request *http.Request) {
 	if user.Role != "admin" {
 		log.Printf("Wrong user (%s) when downloading from github", user.Username)
 		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
+		resp.Write([]byte(`{"success": false, "reason": "Downloading remotely requires admin"}`))
 		return
 	}
 
@@ -4093,59 +4173,11 @@ func loadSpecificWorkflows(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	fs := memfs.New()
-
-	if strings.Contains(tmpBody.URL, "github") || strings.Contains(tmpBody.URL, "gitlab") || strings.Contains(tmpBody.URL, "bitbucket") {
-		cloneOptions := &git.CloneOptions{
-			URL: tmpBody.URL,
-		}
-
-		// FIXME: Better auth.
-		if len(tmpBody.Field1) > 0 && len(tmpBody.Field2) > 0 {
-			cloneOptions.Auth = &http2.BasicAuth{
-
-				Username: tmpBody.Field1,
-				Password: tmpBody.Field2,
-			}
-		}
-
-		storer := memory.NewStorage()
-		r, err := git.Clone(storer, fs, cloneOptions)
-		if err != nil {
-			log.Printf("Failed loading repo into memory: %s", err)
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-			return
-		}
-
-		dir, err := fs.ReadDir("/")
-		if err != nil {
-			log.Printf("FAiled reading folder: %s", err)
-		}
-		_ = r
-
-		log.Printf("Starting workflow folder iteration")
-		iterateWorkflowGithubFolders(fs, dir, "", "", user.Id)
-
-	} else if strings.Contains(tmpBody.URL, "s3") {
-		//https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
-
-		//sess := session.Must(session.NewSession())
-		//downloader := s3manager.NewDownloader(sess)
-
-		//// Write the contents of S3 Object to the file
-		//storer := memory.NewStorage()
-		//n, err := downloader.Download(storer, &s3.GetObjectInput{
-		//	Bucket: aws.String(myBucket),
-		//	Key:    aws.String(myString),
-		//})
-		//if err != nil {
-		//	return fmt.Errorf("failed to download file, %v", err)
-		//}
-		//fmt.Printf("file downloaded, %d bytes\n", n)
-	} else {
+	err = loadGithubWorkflows(tmpBody.URL, tmpBody.Field1, tmpBody.Field2, user.Id)
+	if err != nil {
+		log.Printf("Failed to update workflows: %s", err)
 		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s is unsupported. Try e.g. github"}`, tmpBody.URL)))
+		resp.Write([]byte(`{"success": false}`))
 		return
 	}
 
@@ -4489,7 +4521,7 @@ func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra 
 					log.Printf("Failed setting (download) workflow: %s", err)
 					continue
 				}
-				log.Printf("Uploaded workflow %s!", filename)
+				log.Printf("Uploaded workflow %s for user %s!", filename, userId)
 			}
 		}
 	}

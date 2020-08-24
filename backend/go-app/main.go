@@ -158,6 +158,9 @@ type Environment struct {
 	Name       string `datastore:"name"`
 	Type       string `datastore:"type"`
 	Registered bool   `datastore:"registered"`
+	Default    bool   `datastore:"default" json:"default"`
+	Archived   bool   `datastore:"archived" json:"archived"`
+	Id         string `datastore:"id" json:"id"`
 }
 
 type User struct {
@@ -1053,14 +1056,27 @@ func handleSetEnvironments(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// Clear old data
-	for _, item := range environments {
-		err = DeleteKey(ctx, "Environments", item.Name)
-		if err != nil {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false, "reason": "Error cleaning up environment"}`))
-			return
+	// Clear old data? Removed for archiving purpose. No straight deletion
+	//for _, item := range environments {
+	//	err = DeleteKey(ctx, "Environments", item.Name)
+	//	if err != nil {
+	//		resp.WriteHeader(401)
+	//		resp.Write([]byte(`{"success": false, "reason": "Error cleaning up environment"}`))
+	//		return
+	//	}
+	//}
+
+	openEnvironments := 0
+	for _, item := range newEnvironments {
+		if !item.Archived {
+			openEnvironments += 1
 		}
+	}
+
+	if openEnvironments < 1 {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Can't archived all environments"}`))
+		return
 	}
 
 	for _, item := range newEnvironments {
@@ -1072,9 +1088,10 @@ func handleSetEnvironments(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	//DeleteKey(ctx, entity string, value string) error {
 	// FIXME - check which are in use
-	log.Printf("FIXME: Set new environments: %#v", newEnvironments)
-	log.Printf("DONT DELETE ONES THAT ARE IN USE")
+	//log.Printf("FIXME: Set new environments: %#v", newEnvironments)
+	//log.Printf("DONT DELETE ONES THAT ARE IN USE")
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": true}`))
@@ -5995,7 +6012,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		log.Printf("Docker build error: %s", err)
 		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Error in Docker build"}`)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error in Docker build"}`)))
 		return
 	}
 
@@ -6327,8 +6344,8 @@ func runInit(ctx context.Context) {
 			url = "https://github.com/frikky/shuffle-apps"
 		}
 
-		username := os.Getenv("APP_DOWNLOAD_AUTH_USERNAME")
-		password := os.Getenv("APP_DOWNLOAD_AUTH_PASSWORD")
+		username := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_USERNAME")
+		password := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_PASSWORD")
 		cloneOptions := &git.CloneOptions{
 			URL: url,
 		}
@@ -6388,6 +6405,30 @@ func runInit(ctx context.Context) {
 		log.Printf("Finished downloading extra API samples")
 	}
 
+	workflowLocation := os.Getenv("SHUFFLE_DOWNLOAD_WORKFLOW_LOCATION")
+	if len(workflowLocation) > 0 {
+		log.Printf("Downloading WORKFLOWS from %s if no workflows - EXTRA workflows", workflowLocation)
+		q := datastore.NewQuery("workflow")
+		var workflows []Workflow
+		_, err = dbclient.GetAll(ctx, q, &workflows)
+		if err != nil {
+			log.Printf("Error getting workflows: %s", err)
+		} else {
+			if len(workflows) == 0 {
+				username := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_USERNAME")
+				password := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_PASSWORD")
+				err = loadGithubWorkflows(workflowLocation, username, password, "")
+				if err != nil {
+					log.Printf("Failed to upload workflows from github: %s", err)
+				} else {
+					log.Printf("Finished downloading workflows from github!")
+				}
+			} else {
+				log.Printf("Skipping because there are %d workflows already", len(workflows))
+			}
+
+		}
+	}
 	log.Printf("Finished INIT")
 }
 

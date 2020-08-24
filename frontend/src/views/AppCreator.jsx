@@ -20,6 +20,7 @@ import Tooltip from '@material-ui/core/Tooltip';
 import CheckCircleIcon from '@material-ui/icons/CheckCircle';
 import Breadcrumbs from '@material-ui/core/Breadcrumbs';
 import AppsIcon from '@material-ui/icons/Apps';
+import CircularProgress from '@material-ui/core/CircularProgress';
 
 import ErrorOutline from '@material-ui/icons/ErrorOutline';
 import { useAlert } from "react-alert";
@@ -210,6 +211,7 @@ const AppCreator = (props) => {
 	const [, setBasedata] = React.useState({})
 	const [actions, setActions] = useState([])
 	const [errorCode, setErrorCode] = useState("")
+	const [appBuilding, setAppBuilding] = useState(false)
 
 	//const [actions, setActions] = useState([{
 	//	"name": "Get workflows",
@@ -279,9 +281,9 @@ const AppCreator = (props) => {
 			return response.json()
 		})
 		.then((responseJson) => {
-  		setIsAppLoaded(true)
 			if (!responseJson.success) {
 				alert.error("Failed to get the app")
+  			setIsAppLoaded(true)
 			} else {
 				const data = JSON.parse(responseJson.body)
 				parseIncomingOpenapiData(data)
@@ -365,6 +367,8 @@ const AppCreator = (props) => {
 			var firstUrl = data.servers[0].url
 			if (firstUrl.endsWith("/")) {
 				setBaseUrl(firstUrl.slice(0, firstUrl.length-1))
+			} else {
+				setBaseUrl(firstUrl)
 			}
 		} 
 
@@ -377,9 +381,6 @@ const AppCreator = (props) => {
 		if (securitySchemes === undefined) {
 			securitySchemes = data.components.securitySchemes
 		} 
-
-
-		console.log(data)
 
 		// FIXME - headers?
 		var newActions = []
@@ -397,7 +398,6 @@ const AppCreator = (props) => {
 					"body": "",
 					"errors": [],
 				}
-
 
 				for (var key in methodvalue.parameters) {
 					const parameter = methodvalue.parameters[key]
@@ -520,11 +520,13 @@ const AppCreator = (props) => {
 		}
 
 		setActions(newActions)
+  	setIsAppLoaded(true)
 	}
 
 	// Saving the app that's been configured.
 	const submitApp = () => {
 		alert.info("Uploading and building app " + name)
+		setAppBuilding(true)
 		setErrorCode("")
 
 		// Format the information 	
@@ -718,6 +720,7 @@ const AppCreator = (props) => {
 		if (authenticationOption === "API key") {
 			if (parameterName.length === 0) {
 				alert.error("A field name for the APIkey must be defined")
+				setAppBuilding(false)
 				return
 			}
 
@@ -757,6 +760,7 @@ const AppCreator = (props) => {
 			//	throw new Error("NOT 200 :O")
 			//}
 
+			setAppBuilding(false)
 			return response.json()
 		})
 		.then((responseJson) => {
@@ -1570,7 +1574,22 @@ const AppCreator = (props) => {
 								margin="normal"
 								variant="outlined"
 								value={name}
-      	 				onChange={e => setName(e.target.value)}
+      	 				onChange={e => {
+									const invalid = ["#", ":", "."]
+									for (var key in invalid) {
+										if (e.target.value.includes(invalid[key])) {
+											alert.error("Can't use "+invalid[key]+" in name")
+											return
+										}
+									}
+
+									if (e.target.value.length > 100) {
+										alert.error("Choose a shorter name.")
+										return
+									}
+
+									setName(e.target.value)
+								}}
 								color="primary"
 								InputProps={{
 									style:{
@@ -1590,12 +1609,12 @@ const AppCreator = (props) => {
 								style={{flex: "1", marginTop: "5px", marginRight: "15px", backgroundColor: inputColor}}
 								fullWidth={true}
 								type="name"
-							  	id="outlined-with-placeholder"
+							  id="outlined-with-placeholder"
 								margin="normal"
 								variant="outlined"
 								placeholder="A description for the service"
 								value={description}
-      	 						onChange={e => setDescription(e.target.value)}
+      	 				onChange={e => setDescription(e.target.value)}
 								InputProps={{
 									classes: {
 										notchedOutline: classes.notchedOutline,
@@ -1691,10 +1710,10 @@ const AppCreator = (props) => {
 						{testView}
 					*/}
 
-	        <Button color="primary" variant="contained" style={{borderRadius: "0px", marginTop: "30px", height: "50px",}} onClick={() => {
+	        <Button disabled={appBuilding} color="primary" variant="contained" style={{borderRadius: "0px", marginTop: "30px", height: "50px",}} onClick={() => {
 						submitApp()
 					}}>
-						Save
+						{appBuilding ? <CircularProgress /> : "Save"}
 					</Button>
 					{errorCode.length > 0 ? `Error: ${errorCode}` : null}
 				</Paper>
