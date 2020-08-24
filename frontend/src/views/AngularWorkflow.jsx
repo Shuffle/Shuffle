@@ -2538,10 +2538,10 @@ const AngularWorkflow = (props) => {
 		}
 
 		const changeActionParameterVariable = (fieldvalue, count) => {
-			console.log("CALLED THIS ONE WITH VALUE!", fieldvalue)
-			if (selectedVariableParameter === fieldvalue) {
-				return
-			}
+			//console.log("CALLED THIS ONE WITH VALUE!", fieldvalue)
+			//if (selectedVariableParameter === fieldvalue) {
+			//	return
+			//}
 
 			setSelectedVariableParameter(fieldvalue)
 
@@ -2691,12 +2691,20 @@ const AngularWorkflow = (props) => {
 								}}
 							/>
 
-						console.log("PARAM: ", selectedActionParameters[count])
 						if (selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0) {
 							console.log("FOUND OPTIONS!: ", selectedActionParameters[count])
 							if (selectedActionParameters[count].value === "" && selectedActionParameters[count].required) {
-								changeActionParameterVariable(selectedActionParameters[count].options[0], count) 
+								const e = {
+									target: {
+										value: selectedActionParameters[count].options[0],
+									}
+								}
+
+								changeActionParameter(e, count)
 							}
+							//	changeActionParameterVariable(selectedActionParameters[count].options[0], count) 
+							//	changeActionParameter(event, count)
+							//}
 
 							datafield =
 								<Select
@@ -2709,7 +2717,7 @@ const AngularWorkflow = (props) => {
 									fullWidth
 									onChange={(e) => {
 										console.log("VAL: ", e.target.value)
-										changeActionParameterVariable(e.target.value, count) 
+										changeActionParameter(e, count)
 										setUpdate(Math.random())
 									}}
 									style={{backgroundColor: surfaceColor, color: "white", height: "50px"}}
