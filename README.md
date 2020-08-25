@@ -1,19 +1,20 @@
 # Shuffle 
 [Shuffle](https://shuffler.io) is an automation platform to unify your security services (SOAR). It has thousands of premade integrations and is based on open frameworks like OpenAPI and Mitre Att&ck. The workflow editor is based on a no-code thought process to empower non-developers, and the app creator makes you able to inegrate any platform in minutes.
 
-Please consider [sponsoring](https://github.com/sponsors/frikky) the project if you want to see more rapid development.
-
-**It's in BETA** - [Get in touch](https://shuffler.io/contact), send a mail to [frikky@shuffler.io](mailto:frikky@shuffler.io) or poke me on twitter [@frikkylikeme](https://twitter.com/frikkylikeme)
+[![Discord](https://img.shields.io/discord/463752820026376202.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/B2CBzUm)
 
 ![Example Shuffle webhook integration](https://github.com/frikky/Shuffle/blob/master/frontend/src/assets/img/shuffle_webhook.png)
 
 ## Try it
-* Self-hosted: Check out the [installation guide](https://github.com/frikky/shuffle/blob/master/install-guide.md). 
+* Self-hosted: Check out the [installation guide](https://github.com/frikky/shuffle/blob/master/install-guide.md)
 * Cloud: Register at https://shuffler.io/register and get cooking (missing a lot of features)
 
-## Getting started 
-* Self-hosted: Check out the [installation guide](https://github.com/frikky/shuffle/blob/master/install-guide.md) and [getting started](https://shuffler.io/docs/getting_started)
-* Cloud: Register at https://shuffler.io/register and get cooking (there are some differences!)
+Please consider [sponsoring](https://github.com/sponsors/frikky) the project if you want to see more rapid development.
+
+## Support
+* [Discord](https://discord.gg/B2CBzUm)
+* [Email](mailto:frikky@shuffler.io)
+* [Open issue](https://github.com/frikky/Shuffle/issues/new)
 
 ## Blogposts
 * [1. Introducing Shuffle](https://medium.com/security-operation-capybara/introducing-shuffle-an-open-source-soar-platform-part-1-58a529de7d12)
@@ -35,14 +36,6 @@ Please consider [sponsoring](https://github.com/sponsors/frikky) the project if 
 * Premade apps for a number of security tools
 * App creator for [OpenAPI](https://github.com/frikky/OpenAPI-security-definitions)
 * Easy to learn Python library for custom apps
-
-## In the works
-* Premade workflows for security professionals
-* Dashboard - Statistics are implemented
-* App versioning
-
-## Support
-Open an issue on Github, or [join the gitter chat](https://gitter.im/Shuffle-SOAR/community). For other / private requests: [frikky@shuffler.io](mailto:frikky@shuffler.io)
 
 ## Website
 https://shuffler.io
@@ -70,3 +63,6 @@ Below is the folder structure with a short explanation
 │   │   ├── Worker		# Runs a workflow
 └ docker-compose.yml 	# Used for deployments
 ```
+
+**It's in BETA** - [Get in touch](https://shuffler.io/contact), send a mail to [frikky@shuffler.io](mailto:frikky@shuffler.io) or poke me on twitter [@frikkylikeme](https://twitter.com/frikkylikeme)
+
