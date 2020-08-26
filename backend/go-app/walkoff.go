@@ -1368,16 +1368,16 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	// Clean up triggers and executions
 	for _, item := range workflow.Triggers {
-		if item.TriggerType == "SCHEDULE" {
+		if item.TriggerType == "SCHEDULE" && item.Status != "uninitialized" {
 			err = deleteSchedule(ctx, item.ID)
 			if err != nil {
-				log.Printf("Failed to delete schedule: %s", err)
+				log.Printf("Failed to delete schedule: %s - is it started?", err)
 			}
 		} else if item.TriggerType == "WEBHOOK" {
-			err = removeWebhookFunction(ctx, item.ID)
-			if err != nil {
-				log.Printf("Failed to delete webhook: %s", err)
-			}
+			//err = removeWebhookFunction(ctx, item.ID)
+			//if err != nil {
+			//	log.Printf("Failed to delete webhook: %s", err)
+			//}
 		} else if item.TriggerType == "EMAIL" {
 			err = handleOutlookSubRemoval(ctx, workflow.ID, item.ID)
 			if err != nil {
@@ -1848,6 +1848,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	workflow.Actions = newActions
 	workflow.IsValid = true
+	log.Printf("Tags: %#v", workflow.Tags)
 
 	err = setWorkflow(ctx, workflow, fileId)
 	if err != nil {

@@ -12,6 +12,7 @@ import IconButton from '@material-ui/core/IconButton';
 import Menu from '@material-ui/core/Menu';
 import MenuItem from '@material-ui/core/MenuItem';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
+import Chip from '@material-ui/core/Chip';
 import Switch from '@material-ui/core/Switch';
 
 import CircularProgress from '@material-ui/core/CircularProgress';
@@ -28,6 +29,8 @@ import ReactJson from 'react-json-view'
 
 import {Link} from 'react-router-dom';
 import { useAlert } from "react-alert";
+import ChipInput from 'material-ui-chip-input'
+
 
 import Dialog from '@material-ui/core/Dialog';
 import DialogTitle from '@material-ui/core/DialogTitle';
@@ -54,6 +57,7 @@ const Workflows = (props) => {
 	const [firstrequest, setFirstrequest] = React.useState(true)
 	const [workflowDone, setWorkflowDone] = React.useState(false)
 	const [, setTrackingId] = React.useState("")
+	const [selectedWorkflowId, setSelectedWorkflowId] = React.useState("")
 
 	const [collapseJson, setCollapseJson] = React.useState(false)
 	const [field1, setField1] = React.useState("")
@@ -64,6 +68,9 @@ const Workflows = (props) => {
 	const [modalOpen, setModalOpen] = React.useState(false);
 	const [newWorkflowName, setNewWorkflowName] = React.useState("");
 	const [newWorkflowDescription, setNewWorkflowDescription] = React.useState("");
+	const [newWorkflowTags, setNewWorkflowTags] = React.useState([]);
+	const [update, setUpdate] = React.useState("test");
+	const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
 	const [editingWorkflow, setEditingWorkflow] = React.useState({})
 	const { start, stop } = useInterval({
 	  	duration: 5000,
@@ -71,7 +78,45 @@ const Workflows = (props) => {
 	  	callback: () => {
 				getWorkflowExecution(selectedWorkflow.id) 
 	  	}
-	});
+	})
+
+	const deleteModal = deleteModalOpen ? 
+		<Dialog modal 
+			open={deleteModalOpen}
+			onClose={() => {
+				setDeleteModalOpen(false)
+				setSelectedWorkflowId("")
+			}}
+			PaperProps={{
+				style: {
+					backgroundColor: surfaceColor,
+					color: "white",
+					minWidth: 500,
+				},
+			}}
+		>
+			<DialogTitle>
+				<div style={{textAlign: "center", color: "rgba(255,255,255,0.9)"}}>
+					Are you sure? <div/>Other workflows relying on this one may stop working
+				</div>
+			</DialogTitle>
+			<DialogContent style={{color: "rgba(255,255,255,0.65)", textAlign: "center"}}>
+				<Button style={{}} onClick={() => {
+					if (editingWorkflow.id.length > 0) {
+						deleteWorkflow(editingWorkflow.id)		
+						getAvailableWorkflows() 
+					}
+					setDeleteModalOpen(false)
+				}} color="primary">
+					Yes
+				</Button>
+				<Button variant="outlined" style={{}} onClick={() => {setDeleteModalOpen(false)}} color="primary">
+					No
+				</Button>
+			</DialogContent>
+			
+		</Dialog>
+	: null
 
 	const getAvailableWorkflows = () => {
 		fetch(globalUrl+"/api/v1/workflows", {
@@ -160,7 +205,6 @@ const Workflows = (props) => {
 
 	const paperAppStyle = {
 		minHeight: "100px",
-		maxHeight: "100px",
 		minWidth: "100%",
 		maxWidth: "100%",
 		marginTop: "5px",
@@ -409,7 +453,10 @@ const Workflows = (props) => {
 									setEditingWorkflow(data)
 									setNewWorkflowName(data.name)
 									setNewWorkflowDescription(data.description)
-								}} key={"change"}>{"Change name"}</MenuItem>
+									if (data.tags !== undefined && data.tags !== null) {
+										setNewWorkflowTags(JSON.parse(JSON.stringify(data.tags)))
+									}
+								}} key={"change"}>{"Change details"}</MenuItem>
 								<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
 									copyWorkflow(data)		
 									setOpen(false)
@@ -418,8 +465,9 @@ const Workflows = (props) => {
 									exportWorkflow(data)		
 									setOpen(false)
 								}} key={"export"}>{"Export"}</MenuItem>
-      							<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
-									deleteWorkflow(data.id)		
+      					<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
+									setDeleteModalOpen(true)
+									setSelectedWorkflowId(data.id)
 									setOpen(false)
 								}} key={"delete"}>{"Delete"}</MenuItem>
 
@@ -432,10 +480,10 @@ const Workflows = (props) => {
 								getWorkflowExecution(data.id)
 							}
 						}}>
-							<Grid item style={{flex: "1", justifyContent: "center"}}>
+							<Grid item style={{flex: "1", justifyContent: "center", overflow: "hidden"}}>
 								<Link to={"/workflows/"+data.id}>
 									<Tooltip color="primary" title="Edit workflow" placement="bottom">
-										<Button style={{}} color="primary" variant="text" style={{marginRight: 10}} onClick={() => {}}>
+										<Button style={{}} color="secondary" variant="text" style={{marginRight: 10}} onClick={() => {}}>
 											<EditIcon style={{marginRight: 10}}/> Edit
 										</Button> 				
 									</Tooltip>
@@ -445,6 +493,17 @@ const Workflows = (props) => {
 										<PlayArrowIcon />
 									</Button> 				
 								</Tooltip>
+								{data.tags !== undefined ?
+									data.tags.map(tag => {
+										return (
+											<Chip
+												style={{marginRight: 5, marginTop: 2, cursor: "pointer",}}
+												label={tag}
+												color="primary"
+											/>
+										)
+									})
+								: null}
 							</Grid>
 						</div>
 					</Grid>
@@ -475,8 +534,9 @@ const Workflows = (props) => {
 		if (data.results !== null) {
 			var results = data.results.length
 		}
+
 		return (
-			<Paper key={data.id} square style={paperAppStyle} onClick={() => {
+			<Paper key={data.name} square style={paperAppStyle} onClick={() => {
 				setSelectedExecution(data)
 			}}>
 				<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: boxWidth, backgroundColor: boxColor}} />
@@ -571,7 +631,7 @@ const Workflows = (props) => {
 		}
 
 		return (
-			<Paper key={data.id} square style={resultPaperAppStyle} onClick={() => {}}>
+			<Paper key={data.name} square style={resultPaperAppStyle} onClick={() => {}}>
 				<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", marginRight: "5px", width: boxWidth, backgroundColor: boxColor}}>
 				</div>
 				<Grid container style={{margin: "10px 10px 10px 10px", flex: "1"}}>
@@ -741,7 +801,7 @@ const Workflows = (props) => {
 	}
 
 	// Can create and set workflows
-	const setNewWorkflow = (name, description, editingWorkflow, redirect) => {
+	const setNewWorkflow = (name, description, tags, editingWorkflow, redirect) => {
 
 		var method = "POST"
 		var extraData = ""
@@ -760,6 +820,9 @@ const Workflows = (props) => {
 
 		workflowdata["name"] = name 
 		workflowdata["description"] = description 
+		if (tags !== undefined) {
+			workflowdata["tags"] = tags 
+		}
 		//console.log(workflowdata)
 		//return
 
@@ -822,14 +885,14 @@ const Workflows = (props) => {
 					}
 
 					// Initialize the workflow itself
-					const ret = setNewWorkflow(data.name, data.description, {}, false)
+					const ret = setNewWorkflow(data.name, data.description, data.tags, {}, false)
 					.then((response) => {
 						if (response !== undefined) {
 							// SET THE FULL THING
 							data.id = response.id
 
 							// Actually create it
-							const ret = setNewWorkflow(data.name, data.description, data, false)
+							const ret = setNewWorkflow(data.name, data.description, data.tags, data, false)
 							.then((response) => {
 								if (response !== undefined) {
 									alert.success("Successfully imported "+data.name)
@@ -850,6 +913,7 @@ const Workflows = (props) => {
 		setLoadWorkflowsModalOpen(false)
 	}
 
+	console.log("WOrkflowtags: ", newWorkflowTags)
 	const modalView = modalOpen ? 
 		<Dialog 
 			open={modalOpen} 
@@ -891,20 +955,50 @@ const Workflows = (props) => {
 						margin="dense"
 						fullWidth
 					  />
-
+					<ChipInput
+						style={{marginTop: 10}}
+						InputProps={{
+							style:{
+								color: "white",
+							},
+						}}
+						placeholder="Tags"
+						color="primary"
+						fullWidth
+						value={newWorkflowTags}
+						onAdd={(chip) => {
+							newWorkflowTags.push(chip)
+							console.log("Add: ", newWorkflowTags)
+							setNewWorkflowTags(newWorkflowTags)
+						}}
+						onDelete={(chip, index) => {
+							newWorkflowTags.splice(index, 1)
+							setNewWorkflowTags(newWorkflowTags)
+							console.log("Delete: ", chip, index)
+							setUpdate("delete "+chip)
+						}}
+					/>
 				</DialogContent>
 				<DialogActions>
-					<Button style={{}} onClick={() => setModalOpen(false)} color="primary">
+					<Button style={{}} onClick={() => {
+						setNewWorkflowName("")
+						setNewWorkflowDescription("")
+						setEditingWorkflow({})
+						setNewWorkflowTags([])
+						setModalOpen(false)
+					}} color="primary">
 						Cancel
 					</Button>
 					<Button style={{}} disabled={newWorkflowName.length === 0} onClick={() => {
+						console.log("Tags: ", newWorkflowTags)
 						if (editingWorkflow.id !== undefined) {
-							setNewWorkflow(newWorkflowName, newWorkflowDescription, editingWorkflow, false)
+							setNewWorkflow(newWorkflowName, newWorkflowDescription, newWorkflowTags, editingWorkflow, false)
 							setNewWorkflowName("")
 							setNewWorkflowDescription("")
 							setEditingWorkflow({})
+							setNewWorkflowTags([])
 						} else {
-							setNewWorkflow(newWorkflowName, newWorkflowDescription, {}, true)
+							setNewWorkflow(newWorkflowName, newWorkflowDescription, newWorkflowTags, {}, true)
 						}
 
 						setModalOpen(false)
@@ -1187,6 +1281,7 @@ const Workflows = (props) => {
 		<div>
 			{workflowView}
 			{modalView}
+			{deleteModal}
 			{workflowDownloadModalOpen}
 		</div>
 		:
