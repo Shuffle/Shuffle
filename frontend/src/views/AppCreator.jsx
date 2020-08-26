@@ -22,6 +22,9 @@ import Breadcrumbs from '@material-ui/core/Breadcrumbs';
 import AppsIcon from '@material-ui/icons/Apps';
 import CircularProgress from '@material-ui/core/CircularProgress';
 
+import Chip from '@material-ui/core/Chip';
+import ChipInput from 'material-ui-chip-input'
+
 import ErrorOutline from '@material-ui/icons/ErrorOutline';
 import { useAlert } from "react-alert";
 import words from "shellwords"
@@ -201,11 +204,14 @@ const AppCreator = (props) => {
 	const [actionsModalOpen, setActionsModalOpen] = useState(false);
 	const [authenticationRequired, setAuthenticationRequired] = useState(false);
 	const [authenticationOption, setAuthenticationOption] = useState(authenticationOptions[0]);
+	const [newWorkflowTags, setNewWorkflowTags] = React.useState([]);
+	const [newWorkflowCategories, setNewWorkflowCategories] = React.useState([]);
 	const [parameterName, setParameterName] = useState("");
 	const [parameterLocation, setParameterLocation] = useState(apikeySelection.length > 0 ? apikeySelection[0] : "");
 	const [urlPath, setUrlPath] = useState("");
 	//const [urlPathQueries, setUrlPathQueries] = useState([{"name": "test", "required": false}]);
 	const [urlPathQueries, setUrlPathQueries] = useState([]);
+	const [update, setUpdate] = useState("")
 	const [urlPathParameters, ] = useState([]);
 	const [firstrequest, setFirstrequest] = React.useState(true)
 	const [, setBasedata] = React.useState({})
@@ -355,13 +361,20 @@ const AppCreator = (props) => {
 		setDescription(data.info.description)
 		document.title = "Apps - "+data.info.title
 
-		if (data.info !== null && data.info !== undefined && data.info["x-logo"] !== undefined) {
-			setFileBase64(data.info["x-logo"])
+		if (data.info !== null && data.info !== undefined)  {
+			if (data.info["x-logo"] !== undefined) {
+				setFileBase64(data.info["x-logo"])
+			}
+
+			if (data.info.contact !== undefined) {
+				setContact(data.info.contact)
+			}
+
+			if (data.info["x-categories"] !== undefined  && data.info["x-categories"].length > 0) {
+				setNewWorkflowCategories(data.info["x-categories"])
+			}
 		}
 
-		if (data.info.contact != undefined) {
-			setContact(data.info.contact)
-		}
 
 		if (data.servers !== undefined && data.servers.length > 0) {
 			var firstUrl = data.servers[0].url
@@ -371,6 +384,16 @@ const AppCreator = (props) => {
 				setBaseUrl(firstUrl)
 			}
 		} 
+
+		if (data.tags !== undefined && data.tags.length > 0) {
+			for (var key in data.tags) {
+				newWorkflowTags.push(data.tags[key].name)
+			}
+
+			setNewWorkflowTags(newWorkflowTags)
+		}
+
+		console.log(data.info)
 
 		// This is annoying (:
 		var securitySchemes = data.components.securityDefinitions
@@ -553,7 +576,6 @@ const AppCreator = (props) => {
 					"securitySchemes": {},
 				},
 				"id": props.match.params.appid,
-  			"securityDefinitions": {},
 		}
 
 		if (contact === "") {
@@ -566,8 +588,20 @@ const AppCreator = (props) => {
 			data.info["contact"] = contact
 		}
 
-		//console.log("LOADED IMAGE: ", data.image)
+		if (newWorkflowTags.length > 0) {
+			var newtags = []
+			for (var key in newWorkflowTags) {
+				newtags.push({"name": newWorkflowTags[key]})
+			}
 
+			data["tags"] = newtags 
+		}
+
+		if (newWorkflowCategories.length > 0) {
+			data["info"]["x-categories"] = newWorkflowCategories
+		}
+
+		// Handles actions
 		for (var key in actions) {
 			const item = actions[key]
 			if (item.errors.length > 0) {
@@ -594,7 +628,7 @@ const AppCreator = (props) => {
 				"parameters": []
 			}
 
-			console.log("ACTION: ", item)
+			//console.log("ACTION: ", item)
 
 			if (item.queries.length > 0) {
 				for (var querykey in item.queries) {
@@ -1455,6 +1489,55 @@ const AppCreator = (props) => {
 			</FormControl>
 		</Dialog>
 
+	const tagView = 
+		<div style={{color: "white"}}>
+			<h2>Tags</h2>
+			<ChipInput
+				style={{marginTop: 10}}
+				InputProps={{
+					style:{
+						color: "white",
+					},
+				}}
+				placeholder="Tags"
+				color="primary"
+				fullWidth
+				value={newWorkflowTags}
+				onAdd={(chip) => {
+					newWorkflowTags.push(chip)
+					setNewWorkflowTags(newWorkflowTags)
+					setUpdate("added"+chip)
+				}}
+				onDelete={(chip, index) => {
+					newWorkflowTags.splice(index, 1)
+					setNewWorkflowTags(newWorkflowTags)
+					setUpdate("delete "+chip)
+				}}
+			/>
+			<ChipInput
+				style={{marginTop: 10}}
+				InputProps={{
+					style:{
+						color: "white",
+					},
+				}}
+				placeholder="Categories"
+				color="primary"
+				fullWidth
+				value={newWorkflowCategories}
+				onAdd={(chip) => {
+					newWorkflowCategories.push(chip)
+					setNewWorkflowCategories(newWorkflowCategories)
+					setUpdate("added "+chip)
+				}}
+				onDelete={(chip, index) => {
+					newWorkflowCategories.splice(index, 1)
+					setNewWorkflowCategories(newWorkflowCategories)
+					setUpdate("delete "+chip)
+				}}
+			/>
+		</div>
+
 	const actionView = 
 		<div style={{color: "white"}}>
 			<h2>Actions</h2>
@@ -1705,6 +1788,12 @@ const AppCreator = (props) => {
 					<div style={{marginTop: "25px"}}>
 						{actionView}
 					</div>
+
+					<Divider style={{marginBottom: "10px", marginTop: "30px", height: "1px", width: "100%", backgroundColor: "grey"}}/>
+					<div style={{marginTop: "25px"}}>
+						{tagView}
+					</div>
+					{/*
 					{/*
 					<Divider style={{marginBottom: "10px", marginTop: "30px", height: "1px", width: "100%", backgroundColor: "grey"}}/>
 						{testView}

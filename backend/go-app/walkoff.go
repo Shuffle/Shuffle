@@ -121,7 +121,7 @@ type WorkflowApp struct {
 	Actions        []WorkflowAppAction `json:"actions" yaml:"actions" required:true datastore:"actions,noindex"`
 	Authentication Authentication      `json:"authentication" yaml:"authentication" required:false datastore:"authentication"`
 	Tags           []string            `json:"tags" yaml:"tags" required:false datastore:"activated"`
-	Category       []string            `json:"category" yaml:"category" required:false datastore:"category"`
+	Categories     []string            `json:"categories" yaml:"categories" required:false datastore:"categories"`
 }
 
 type WorkflowAppActionParameter struct {
@@ -2308,10 +2308,10 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 
 	//log.Println(string(mappedData))
 
-	log.Printf("STARTNODE: %s", workflowExecution.Start)
 	if len(workflowExecution.Start) == 0 {
 		workflowExecution.Start = workflowExecution.Workflow.Start
 	}
+	log.Printf("STARTNODE: %s", workflowExecution.Start)
 
 	childNodes := findChildNodes(workflowExecution, workflowExecution.Start)
 
@@ -2535,6 +2535,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	log.Printf("STARTING EXEC OF %s!", fileId)
 	workflowExecution, executionResp, err := handleExecution(fileId, *workflow, request)
 
 	if err == nil {

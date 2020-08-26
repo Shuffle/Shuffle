@@ -20,6 +20,7 @@ import YAML from 'yaml'
 import {Link} from 'react-router-dom';
 import Breadcrumbs from '@material-ui/core/Breadcrumbs';
 import ReactJson from 'react-json-view'
+import Chip from '@material-ui/core/Chip';
 
 import CachedIcon from '@material-ui/icons/Cached';
 import CloudDownloadIcon from '@material-ui/icons/CloudDownload';
@@ -477,13 +478,26 @@ const Apps = (props) => {
 					</div>
 					<div style={{maxWidth: "75%", overflow: "hidden"}}>
 						<h2>{newAppname}</h2>
-						<p>{description}</p>
+						<p>{description}</p>	
 					</div>
 				</div>
 				{activateButton}
 				{downloadButton}
 				{editButton}
 				{deleteButton}
+				{selectedApp.tags !== undefined && selectedApp.tags !== null ?
+					<div style={{display: "inline-block", marginLeft: 15, float: "right",}}>
+						{selectedApp.tags.map(tag => {
+							return (
+								<Chip
+									style={{marginRight: 5, marginTop: 7, cursor: "pointer",}}
+									label={tag}
+									color="primary"
+								/>
+							)
+						})}
+					</div>
+				: null}
 				<Divider style={{marginBottom: "10px", marginTop: "10px", backgroundColor: dividerColor}}/>
 				{selectedApp.link.length > 0 ? <p><b>URL:</b> {selectedApp.link}</p> : null}
 				<p><b>ID:</b> {selectedApp.id}</p>
@@ -549,7 +563,7 @@ const Apps = (props) => {
 							})}
 					</div>
 				: null}
-				{selectedAction.description !== undefined && selectedAction.description !== null ? 
+				{selectedAction.description !== undefined && selectedAction.description !== null && selectedAction.description.length > 0 ? 
 					<div>
 						<b>Action Description</b><div/>
 						{selectedAction.description}
@@ -985,7 +999,7 @@ const Apps = (props) => {
 	}
 
 	const deleteModal = deleteModalOpen ? 
-		<Dialog modal 
+		<Dialog 
 			open={deleteModalOpen}
 			onClose={() => {
 				setDeleteModalOpen(false)
@@ -1017,7 +1031,7 @@ const Apps = (props) => {
 
 	const circularLoader = validation ? <CircularProgress color="primary" /> : null
 	const appsModalLoad = loadAppsModalOpen ? 
-		<Dialog modal 
+		<Dialog 
 			open={loadAppsModalOpen}
 			onClose={() => {
 				setOpenApi("")
@@ -1115,7 +1129,7 @@ const Apps = (props) => {
 
 	const errorText = openApiError.length > 0 ? <div>Error: {openApiError}</div> : null
 	const modalView = openApiModal ? 
-		<Dialog modal 
+		<Dialog 
 			open={openApiModal}
 			onClose={() => {setOpenApiModal(false)}}
 			PaperProps={{

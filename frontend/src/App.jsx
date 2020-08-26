@@ -22,6 +22,7 @@ import Dashboard from "./views/Dashboard";
 import AdminSetup from "./views/AdminSetup";
 import Admin from "./views/Admin";
 import Docs from "./views/Docs";
+import Introduction from "./views/Introduction";
 
 import LandingPageNew from "./views/LandingpageNew";
 import LoginPage from "./views/LoginPage";
@@ -95,6 +96,7 @@ const App = (message, props) => {
 			.then(response => response.json())
 			.then(responseJson => {
 				if (responseJson.success === true) {
+					//console.log(responseJson.success)
 					setUserData(responseJson)
 					setIsLoggedIn(true)
 
@@ -141,6 +143,8 @@ const App = (message, props) => {
 			<Route exact path="/workflows/:key" render={props => <AngularWorkflow globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} {...props} />} />
 			<Route exact path="/docs/:key" render={props => <Docs isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/docs" render={props => { window.location.pathname = "/docs/about" }} />
+			<Route exact path="/introduction" render={props => <Introduction isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
+			<Route exact path="/introduction/:key" render={props => <Introduction isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/" render={props => { window.location.pathname = "/login" }} />
 		</div>
 

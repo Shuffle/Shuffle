@@ -81,7 +81,7 @@ const Workflows = (props) => {
 	})
 
 	const deleteModal = deleteModalOpen ? 
-		<Dialog modal 
+		<Dialog
 			open={deleteModalOpen}
 			onClose={() => {
 				setDeleteModalOpen(false)
@@ -102,8 +102,9 @@ const Workflows = (props) => {
 			</DialogTitle>
 			<DialogContent style={{color: "rgba(255,255,255,0.65)", textAlign: "center"}}>
 				<Button style={{}} onClick={() => {
-					if (editingWorkflow.id.length > 0) {
-						deleteWorkflow(editingWorkflow.id)		
+					console.log("Editing: ", editingWorkflow)
+					if (selectedWorkflowId) {
+						deleteWorkflow(selectedWorkflowId)		
 						getAvailableWorkflows() 
 					}
 					setDeleteModalOpen(false)
@@ -968,13 +969,11 @@ const Workflows = (props) => {
 						value={newWorkflowTags}
 						onAdd={(chip) => {
 							newWorkflowTags.push(chip)
-							console.log("Add: ", newWorkflowTags)
 							setNewWorkflowTags(newWorkflowTags)
 						}}
 						onDelete={(chip, index) => {
 							newWorkflowTags.splice(index, 1)
 							setNewWorkflowTags(newWorkflowTags)
-							console.log("Delete: ", chip, index)
 							setUpdate("delete "+chip)
 						}}
 					/>

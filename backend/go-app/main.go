@@ -1696,6 +1696,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	{
 		"success": true, 
 		"admin": %s, 
+		"tutorials": [],
 		"orgs": [{"name": "Shuffle", "id": "123", "role": "admin"}], 
 		"selected_org": {"name": "Shuffle", "id": "123", "role": "admin"}, 
 		"cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]
@@ -3129,7 +3130,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	for _, item := range hook.Workflows {
-		log.Printf("Running for workflow %s with startnode %s", item, hook.Start)
+		log.Printf("Running webhook for workflow %s with startnode %s", item, hook.Start)
 		workflow := Workflow{
 			ID: "",
 		}
