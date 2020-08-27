@@ -18,6 +18,7 @@ import Switch from '@material-ui/core/Switch';
 import CircularProgress from '@material-ui/core/CircularProgress';
 import CachedIcon from '@material-ui/icons/Cached';
 import GetAppIcon from '@material-ui/icons/GetApp';
+import AppsIcon from '@material-ui/icons/Apps';
 import EditIcon from '@material-ui/icons/Edit';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
 import PlayArrowIcon from '@material-ui/icons/PlayArrow';
@@ -412,12 +413,35 @@ const Workflows = (props) => {
 			setAnchorEl(event.currentTarget);
 		}
 
+		const actions = data.actions !== null ? data.actions.length : 0
+		var schedules = 0
+		var webhooks = 0
+		var webhookImg = ""
+		var scheduleImg = "" 
+		if (data.triggers !== undefined && data.triggers !== null && data.triggers.length > 0) {
+			console.log("Triggers: ", data.triggers)
+			for (var key in data.triggers) {
+				if (data.triggers[key].app_name === "Webhook") {
+					webhooks += 1
+					webhookImg = data.triggers[key].large_image
+				} else if (data.triggers[key].app_name === "Schedule") {
+					schedules += 1
+					scheduleImg = data.triggers[key].large_image
+				}
+			}
+		}
+
+		const imgSize = 25
 		return (
 			<Paper square style={paperAppStyle} onClick={(e) => {
 			}}>
-				<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: boxWidth, backgroundColor: boxColor}}>
-				</div>
-				<Grid container style={{margin: "10px 10px 10px 10px", flex: 1}}>
+				<Grid container style={{margin: "10px 0px 10px 5px", maxWidth: 35,}}>
+					<AppsIcon style={{width: imgSize, height: imgSize}} />
+					{webhooks > 0 ? <img alt={data.title} style={{width: imgSize, height: imgSize, marginTop: 5}} src={webhookImg} /> : null}
+					{schedules > 0 ? <img alt={data.title} style={{width: imgSize, height: imgSize, marginTop: 5}} src={scheduleImg} /> : null}
+				</Grid>
+				<div style={{marginTop: 5, marginBottom: 5, width: boxWidth, backgroundColor: boxColor}} />
+				<Grid container style={{margin: "10px 10px 10px 10px", flex: 10}}>
 					<Grid style={{display: "flex", flexDirection: "column", width: "100%"}}>
 						<Grid item style={{flex: 1, display: "flex"}}>
 							<div style={{flex: "10",}} onClick={() => {
