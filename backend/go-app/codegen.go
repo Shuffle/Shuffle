@@ -459,7 +459,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 	// Jesus what a clusterfuck.
 	// Handles parsing of categories from OpenApi3 custom field
 	if val, ok := swagger.Info.ExtensionProps.Extensions["x-categories"]; ok {
-		log.Printf("Categories: %#v", val)
+		//log.Printf("Categories: %#v", val)
 		j, err := json.Marshal(&val)
 		if err == nil {
 			if j[0] == 0x22 && j[len(j)-1] == 0x22 {

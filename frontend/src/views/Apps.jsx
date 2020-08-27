@@ -112,6 +112,7 @@ const Apps = (props) => {
 	const [openApiError, setOpenApiError] = React.useState("")
 	const [field1, setField1] = React.useState("")
 	const [field2, setField2] = React.useState("")
+	const [sharingConfiguration, setSharingConfiguration] = React.useState("you")
 
 	const { start, stop } = useInterval({
 	  	duration: 5000,
@@ -133,6 +134,24 @@ const Apps = (props) => {
 			getApps()
 		}
 	})
+
+	function sortByKey(array, key) {
+    return array.sort(function(a, b) {
+        var x = a[key];
+        var y = b[key];
+
+        if (typeof x == "string")
+        {
+            x = (""+x).toLowerCase(); 
+        }
+        if (typeof y == "string")
+        {
+            y = (""+y).toLowerCase();
+        }
+
+        return ((x < y) ? 1 : ((x > y) ? -1 : 0));
+    });
+	}
 
 	const appViewStyle = {
 		color: "#ffffff",
@@ -169,6 +188,8 @@ const Apps = (props) => {
 			return response.json()
 		})
     .then((responseJson) => {
+			responseJson = sortByKey(responseJson, "large_image")
+
 			setApps(responseJson)
 			setFilteredApps(responseJson)
 			if (responseJson.length > 0) {
@@ -290,12 +311,18 @@ const Apps = (props) => {
 			<Paper square key={data.id} style={paperAppStyle} onClick={() => {
 				if (selectedApp.id !== data.id) {
 					setSelectedApp(data)
+
 					console.log(data)
 					if (data.actions !== undefined && data.actions !== null && data.actions.length > 0) {
 						setSelectedAction(data.actions[0])
 					} else {
 						setSelectedAction({})
 					}
+
+					console.log("Sharing: ", data.sharing_config)
+					if (data.sharing) {
+						setSharingConfiguration("everyone")
+					} 
 				}
 			}}>
 				<Grid container style={{margin: 10, flex: "10"}}>
@@ -314,9 +341,20 @@ const Apps = (props) => {
 									{description}	
 								</Grid>
 							</div>
-							<Grid item style={{flex: "1", justifyContent: "center"}}>
-								Sharing: {sharing}	
-								,&nbsp;Valid: {valid}	
+							<Grid item style={{flex: "1", justifyContent: "center", marginTop: 5}}>
+								{data.tags === null || data.tags === undefined ? null : data.tags.map((tag, index) => {
+									if (index >= 3) {
+										return null
+									}
+
+									return (
+										<Chip
+											style={{height: 25, marginRight: 5, cursor: "pointer",}}
+											label={tag}
+											color="primary"
+										/>
+									)
+								})}
 							</Grid>
 						</Grid>
 					</Grid>
@@ -324,7 +362,7 @@ const Apps = (props) => {
 
 				{data.activated && data.private_id !== undefined && data.private_id.length > 0 && data.generated ?
 				<Grid container style={{margin: "10px 10px 10px 10px", flex: "1"}} onClick={() => {downloadApp(data)}}>
-					<Tooltip title={"Download"} style={{marginTop: "28px", width: "100%"}} aria-label={data.name}>
+					<Tooltip title={"Download OpenAPI"} style={{marginTop: "28px", width: "100%"}} aria-label={data.name}>
 						<CloudDownload /> 
 					</Tooltip>
 				</Grid>
@@ -450,6 +488,7 @@ const Apps = (props) => {
 								</MenuItem>
 							)
 						})}
+						{/*
 						<ReactJson 
 							src={JSON.parse(showResult)} 
 							theme="solarized" 
@@ -457,19 +496,26 @@ const Apps = (props) => {
 							displayDataTypes={true}
 							name={"Example return value"}
 						/>
+						*/}
 					</div>
 				)
 			} 
 
 			return (
-				<div>
+				<div style={{marginTop: 10}}>
 					<b>Example return</b><div/>
 					{selectedAction.returns.example}
 				</div>
 			)
 		}
 
-		//fetch(globalUrl+"/api/v1/get_openapi/"+urlParams.get("id"), {
+		const userRoles = [
+			"you",
+			"everyone",
+		]
+
+		//fetch(globalUrl+"/api/v1/get_openapi/"+urlParams.get("id"), 
+		console.log("User: ", props.userdata)
 		var baseInfo = newAppname.length > 0 ?
 			<div>
 				<div style={{display: "flex"}}>
@@ -482,15 +528,23 @@ const Apps = (props) => {
 					</div>
 				</div>
 				{activateButton}
-				{downloadButton}
-				{editButton}
-				{deleteButton}
+				{props.userdata.role === "admin" || props.userdata.id === selectedApp.owner ? 
+					<div>
+						{downloadButton}
+						{editButton}
+						{deleteButton}
+					</div>
+				: null}
 				{selectedApp.tags !== undefined && selectedApp.tags !== null ?
 					<div style={{display: "inline-block", marginLeft: 15, float: "right",}}>
-						{selectedApp.tags.map(tag => {
+						{selectedApp.tags.map((tag, index) => {
+							if (index >= 3) {
+								return null
+							}
+
 							return (
 								<Chip
-									style={{marginRight: 5, marginTop: 7, cursor: "pointer",}}
+									style={{height: 25, marginRight: 5, marginTop: 7, cursor: "pointer",}}
 									label={tag}
 									color="primary"
 								/>
@@ -498,11 +552,41 @@ const Apps = (props) => {
 						})}
 					</div>
 				: null}
-				<Divider style={{marginBottom: "10px", marginTop: "10px", backgroundColor: dividerColor}}/>
-				{selectedApp.link.length > 0 ? <p><b>URL:</b> {selectedApp.link}</p> : null}
-				<p><b>ID:</b> {selectedApp.id}</p>
+				{props.userdata.id === selectedApp.owner ? 
+					<div style={{marginTop: 15}}>
+						{/*<p><b>ID:</b> {selectedApp.id}</p>*/}
+						<b style={{marginRight: 15}}>Sharing:</b> 
+						<Select
+							value={sharingConfiguration}
+							onChange={(event) => {
+								setSharingConfiguration(event.target.value)
+								alert.info("Changed sharing to "+event.target.value)
+
+								updateAppField(selectedApp.id, "sharing", !selectedApp.sharing)
+								//setSelectedAction(event.target.value)
+							}}
+							style={{width: 150, backgroundColor: inputColor, color: "white", height: 35, marginleft: 10,}}
+							SelectDisplayProps={{
+								style: {
+									marginLeft: 10,
+								}
+							}}
+						>
+							{userRoles.map(data => {
+								return (
+										<MenuItem key={data} style={{backgroundColor: inputColor, color: "white"}} value={data}>
+											{data}
+
+										</MenuItem>
+									)
+							})}
+						</Select>
+					</div>
+				: null}
+				{/*<p><b>Owner:</b> {selectedApp.owner}</p>*/}
 				{selectedApp.privateId !== undefined && selectedApp.privateId.length > 0 ? <p><b>PrivateID:</b> {selectedApp.privateId}</p> : null}
-			
+				<Divider style={{marginBottom: 10, marginTop: 10, backgroundColor: dividerColor}}/>
+				{selectedApp.link.length > 0 ? <p><b>URL:</b> {selectedApp.link}</p> : null}
 				<div style={{marginTop: 15, marginBottom: 15}}>
 					<b>Actions</b>
 					{selectedApp.actions !== null && selectedApp.actions.length > 0 ?
@@ -884,6 +968,36 @@ const Apps = (props) => {
 		});
 	}
 
+	const updateAppField = (app_id, fieldname, fieldvalue) => {
+		const data = {}
+		data[fieldname] = fieldvalue
+
+		fetch(globalUrl+"/api/v1/apps/"+app_id, {
+    	method: 'PATCH',
+			headers: {
+				'Accept': 'application/json',
+			},
+			body: JSON.stringify(data),
+	  	credentials: "include",
+		})
+		.then((response) => {
+			//setAppSearchLoading(false)
+			return response.json()
+		})
+    .then((responseJson) => {
+			//console.log(responseJson)
+			//alert.info(responseJson)
+			if (responseJson.success) {
+				alert.info("Success")
+			} else {
+				alert.error("Error updating app")
+			}
+    })
+		.catch(error => {
+			alert.error(error.toString())
+		});
+	}
+
 	const runAppSearch = (searchterm) => {
 		const data = {"search": searchterm}
 
@@ -1165,11 +1279,13 @@ const Apps = (props) => {
 						placeholder="OpenAPI URI"
 						fullWidth
 					  />
+						{/*
 					  <div style={{marginTop: "15px"}}/>
 					  Example: 
 					  <div />
 					  https://raw.githubusercontent.com/OAI/OpenAPI-Specification/master/examples/v2.0/json/uber.json
-					  <h4>or paste the yaml/JSON directly below</h4>
+						*/}
+					  <h4>Or paste the yaml/JSON directly below</h4>
 					<TextField
 						style={{backgroundColor: inputColor}}
 						variant="outlined"

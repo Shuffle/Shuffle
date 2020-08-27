@@ -14,6 +14,7 @@ import MenuItem from '@material-ui/core/MenuItem';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Chip from '@material-ui/core/Chip';
 import Switch from '@material-ui/core/Switch';
+import Typography from '@material-ui/core/Typography';
 
 import CircularProgress from '@material-ui/core/CircularProgress';
 import CachedIcon from '@material-ui/icons/Cached';
@@ -201,7 +202,7 @@ const Workflows = (props) => {
 		marginTop: "10px",
 		overflow: "scroll",
 		height: "90%",
-		overflowX: "auto",
+		overflowX: "hidden",
 		overflowY: "auto",
 	}
 
@@ -212,6 +213,8 @@ const Workflows = (props) => {
 		marginTop: "5px",
 		color: "white",
 		backgroundColor: surfaceColor,
+		borderRadius: 5, 
+		padding: 10,
 		cursor: "pointer",
 		display: "flex",
 	}
@@ -241,6 +244,8 @@ const Workflows = (props) => {
 					setWorkflowExecutions(responseJson)
 				} else {
 					alert.info("Couldn't find executions for the workflow")
+					setSelectedExecution({})
+					setWorkflowExecutions([])
 				}
 			}
 		})
@@ -393,6 +398,7 @@ const Workflows = (props) => {
 	}
 
 	// dropdown with copy etc I guess
+	console.log("Why reset?")
 	const WorkflowPaper = (props) => {
   	const { data } = props;
 		const [open, setOpen] = React.useState(false);
@@ -419,7 +425,6 @@ const Workflows = (props) => {
 		var webhookImg = ""
 		var scheduleImg = "" 
 		if (data.triggers !== undefined && data.triggers !== null && data.triggers.length > 0) {
-			console.log("Triggers: ", data.triggers)
 			for (var key in data.triggers) {
 				if (data.triggers[key].app_name === "Webhook") {
 					webhooks += 1
@@ -434,14 +439,9 @@ const Workflows = (props) => {
 		const imgSize = 25
 		return (
 			<Paper square style={paperAppStyle} onClick={(e) => {
-			}}>
-				<Grid container style={{margin: "10px 0px 10px 5px", maxWidth: 35,}}>
-					<AppsIcon style={{width: imgSize, height: imgSize}} />
-					{webhooks > 0 ? <img alt={data.title} style={{width: imgSize, height: imgSize, marginTop: 5}} src={webhookImg} /> : null}
-					{schedules > 0 ? <img alt={data.title} style={{width: imgSize, height: imgSize, marginTop: 5}} src={scheduleImg} /> : null}
-				</Grid>
-				<div style={{marginTop: 5, marginBottom: 5, width: boxWidth, backgroundColor: boxColor}} />
-				<Grid container style={{margin: "10px 10px 10px 10px", flex: 10}}>
+			}}>	
+				<div style={{width: boxWidth, backgroundColor: boxColor}} />
+				<Grid container style={{margin: "0px 10px 0px 10px", flex: 10}}>
 					<Grid style={{display: "flex", flexDirection: "column", width: "100%"}}>
 						<Grid item style={{flex: 1, display: "flex"}}>
 							<div style={{flex: "10",}} onClick={() => {
@@ -450,9 +450,11 @@ const Workflows = (props) => {
 									getWorkflowExecution(data.id)
 								}
 							}}>
-								<h3 style={{marginBottom: "0px", marginTop: "10px"}}>{data.name}</h3>
+								<Typography variant="h6" style={{marginTop: 10, marginBottom: 0, }}>
+									{data.name}
+								</Typography>
 							</div>
-							<div style={{flex: "1"}}>
+							<div style={{flex: 1, }}>
 								<IconButton
 									aria-label="more"
 									aria-controls="long-menu"
@@ -505,7 +507,7 @@ const Workflows = (props) => {
 								getWorkflowExecution(data.id)
 							}
 						}}>
-							<Grid item style={{flex: "1", justifyContent: "center", overflow: "hidden"}}>
+							<Grid item style={{flex: "1", justifyContent: "center", overflow: "hidden", float: "bottom",}}>
 								<Link to={"/workflows/"+data.id}>
 									<Tooltip color="primary" title="Edit workflow" placement="bottom">
 										<Button style={{}} color="secondary" variant="text" style={{marginRight: 10}} onClick={() => {}}>
@@ -514,9 +516,11 @@ const Workflows = (props) => {
 									</Tooltip>
 								</Link>
 								<Tooltip color="primary" title="Execute workflow" placement="bottom">
-									<Button style={{}} color="secondary" variant="text" onClick={() => executeWorkflow(data.id)}>
-										<PlayArrowIcon />
-									</Button> 				
+									<span>
+										<Button style={{}} disabled={!data.is_valid} color="secondary" variant="text" onClick={() => executeWorkflow(data.id)}>
+											<PlayArrowIcon />
+										</Button> 				
+									</span>
 								</Tooltip>
 								{data.tags !== undefined ?
 									data.tags.map(tag => {
@@ -532,6 +536,22 @@ const Workflows = (props) => {
 							</Grid>
 						</div>
 					</Grid>
+				</Grid>
+				<Grid container style={{maxWidth: 35, marginRight: 10,}}>
+					<Tooltip title={data.actions.length} placement="right">
+						<AppsIcon style={{width: imgSize, height: imgSize}} />
+					</Tooltip>
+
+					{webhooks > 0 ? 
+						<Tooltip title={webhooks} placement="right">
+							<img alt={data.title} style={{width: imgSize, height: imgSize, marginTop: 5}} src={webhookImg} /> 
+						</Tooltip>
+					: null}
+					{schedules > 0 ? 
+						<Tooltip title={webhooks} placement="right">
+							<img alt={data.title} style={{width: imgSize, height: imgSize, marginTop: 5}} src={scheduleImg} /> 
+						</Tooltip>
+					: null}
 				</Grid>
 			</Paper>
 		)
@@ -938,7 +958,6 @@ const Workflows = (props) => {
 		setLoadWorkflowsModalOpen(false)
 	}
 
-	console.log("WOrkflowtags: ", newWorkflowTags)
 	const modalView = modalOpen ? 
 		<Dialog 
 			open={modalOpen} 

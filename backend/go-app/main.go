@@ -141,7 +141,7 @@ type UserLimits struct {
 
 // Saves some data, not sure what to have here lol
 type UserAuth struct {
-	Description string          `json:"description" datastore:"description" yaml:"description"`
+	Description string          `json:"description" datastore:"description,noindex" yaml:"description"`
 	Name        string          `json:"name" datastore:"name" yaml:"name"`
 	Workflows   []string        `json:"workflows" datastore:"workflows"`
 	Username    string          `json:"username" datastore:"username"`
@@ -210,7 +210,7 @@ type Translator struct {
 	Src struct {
 		Name        string `json:"name" datastore:"name"`
 		Value       string `json:"value" datastore:"value"`
-		Description string `json:"description" datastore:"description"`
+		Description string `json:"description" datastore:"description,noindex"`
 		Required    string `json:"required" datastore:"required"`
 		Type        string `json:"type" datastore:"type"`
 		Schema      struct {
@@ -221,7 +221,7 @@ type Translator struct {
 		Name        string `json:"name" datastore:"name"`
 		Value       string `json:"value" datastore:"value"`
 		Type        string `json:"type" datastore:"type"`
-		Description string `json:"description" datastore:"description"`
+		Description string `json:"description" datastore:"description,noindex"`
 		Required    string `json:"required" datastore:"required"`
 		Schema      struct {
 			Type string `json:"type" datastore:"type"`
@@ -284,7 +284,7 @@ type ApiYaml struct {
 	Name        string `json:"name" yaml:"name" required:"true datastore:"name"`
 	Foldername  string `json:"foldername" yaml:"foldername" required:"true datastore:"foldername"`
 	Id          string `json:"id" yaml:"id",required:"true, datastore:"id"`
-	Description string `json:"description" datastore:"description" yaml:"description"`
+	Description string `json:"description" datastore:"description,noindex" yaml:"description"`
 	AppVersion  string `json:"app_version" yaml:"app_version",datastore:"app_version"`
 	ContactInfo struct {
 		Name string `json:"name" datastore:"name" yaml:"name"`
@@ -293,10 +293,10 @@ type ApiYaml struct {
 	Types []string `json:"types" datastore:"types" yaml:"types"`
 	Input []struct {
 		Name            string `json:"name" datastore:"name" yaml:"name"`
-		Description     string `json:"description" datastore:"description" yaml:"description"`
+		Description     string `json:"description" datastore:"description,noindex" yaml:"description"`
 		InputParameters []struct {
 			Name        string `json:"name" datastore:"name" yaml:"name"`
-			Description string `json:"description" datastore:"description" yaml:"description"`
+			Description string `json:"description" datastore:"description,noindex" yaml:"description"`
 			Required    string `json:"required" datastore:"required" yaml:"required"`
 			Schema      struct {
 				Type string `json:"type" datastore:"type" yaml:"type"`
@@ -304,7 +304,7 @@ type ApiYaml struct {
 		} `json:"inputparameters" datastore:"inputparameters" yaml:"inputparameters"`
 		OutputParameters []struct {
 			Name        string `json:"name" datastore:"name" yaml:"name"`
-			Description string `json:"description" datastore:"description" yaml:"description"`
+			Description string `json:"description" datastore:"description,noindex" yaml:"description"`
 			Required    string `json:"required" datastore:"required" yaml:"required"`
 			Schema      struct {
 				Type string `json:"type" datastore:"type" yaml:"type"`
@@ -312,7 +312,7 @@ type ApiYaml struct {
 		} `json:"outputparameters" datastore:"outputparameters" yaml:"outputparameters"`
 		Config []struct {
 			Name        string `json:"name" datastore:"name" yaml:"name"`
-			Description string `json:"description" datastore:"description" yaml:"description"`
+			Description string `json:"description" datastore:"description,noindex" yaml:"description"`
 			Required    string `json:"required" datastore:"required" yaml:"required"`
 			Schema      struct {
 				Type string `json:"type" datastore:"type" yaml:"type"`
@@ -321,10 +321,10 @@ type ApiYaml struct {
 	} `json:"input" datastore:"input" yaml:"input"`
 	Output []struct {
 		Name        string `json:"name" datastore:"name" yaml:"name"`
-		Description string `json:"description" datastore:"description" yaml:"description"`
+		Description string `json:"description" datastore:"description,noindex" yaml:"description"`
 		Config      []struct {
 			Name        string `json:"name" datastore:"name" yaml:"name"`
-			Description string `json:"description" datastore:"description" yaml:"description"`
+			Description string `json:"description" datastore:"description,noindex" yaml:"description"`
 			Required    string `json:"required" datastore:"required" yaml:"required"`
 			Schema      struct {
 				Type string `json:"type" datastore:"type" yaml:"type"`
@@ -332,7 +332,7 @@ type ApiYaml struct {
 		} `json:"config" datastore:"config" yaml:"config"`
 		InputParameters []struct {
 			Name        string `json:"name" datastore:"name" yaml:"name"`
-			Description string `json:"description" datastore:"description" yaml:"description"`
+			Description string `json:"description" datastore:"description,noindex" yaml:"description"`
 			Required    string `json:"required" datastore:"required" yaml:"required"`
 			Schema      struct {
 				Type string `json:"type" datastore:"type" yaml:"type"`
@@ -340,7 +340,7 @@ type ApiYaml struct {
 		} `json:"inputparameters" datastore:"inputparameters" yaml:"inputparameters"`
 		OutputParameters []struct {
 			Name        string `json:"name" datastore:"name" yaml:"name"`
-			Description string `json:"description" datastore:"description" yaml:"description"`
+			Description string `json:"description" datastore:"description,noindex" yaml:"description"`
 			Required    string `json:"required" datastore:"required" yaml:"required"`
 			Schema      struct {
 				Type string `json:"type" datastore:"type" yaml:"type"`
@@ -357,7 +357,7 @@ type Hooks struct {
 type Info struct {
 	Url         string `json:"url" datastore:"url"`
 	Name        string `json:"name" datastore:"name"`
-	Description string `json:"description" datastore:"description"`
+	Description string `json:"description" datastore:"description,noindex"`
 }
 
 // Actions to be done by webhooks etc
@@ -1697,10 +1697,11 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		"success": true, 
 		"admin": %s, 
 		"tutorials": [],
+		"id": "%s",
 		"orgs": [{"name": "Shuffle", "id": "123", "role": "admin"}], 
 		"selected_org": {"name": "Shuffle", "id": "123", "role": "admin"}, 
 		"cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]
-	}`, parsedAdmin, userInfo.Session, expiration.Unix())
+	}`, parsedAdmin, userInfo.Id, userInfo.Session, expiration.Unix())
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(returnData))
@@ -2505,7 +2506,7 @@ func handleCors(resp http.ResponseWriter, request *http.Request) bool {
 
 	resp.Header().Set("Vary", "Origin")
 	resp.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, X-Requested-With, remember-me")
-	resp.Header().Set("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE")
+	resp.Header().Set("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, PATCH")
 	resp.Header().Set("Access-Control-Allow-Credentials", "true")
 	resp.Header().Set("Access-Control-Allow-Origin", allowedOrigins)
 
@@ -6497,6 +6498,7 @@ func init() {
 	r.HandleFunc("/api/v1/apps/run_hotload", handleAppHotloadRequest).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/get_existing", loadSpecificApps).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/download_remote", loadSpecificApps).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/{appId}", updateWorkflowAppConfig).Methods("PATCH", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/validate", validateAppInput).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}", deleteWorkflowApp).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}/config", getWorkflowAppConfig).Methods("GET", "OPTIONS")

@@ -49,6 +49,71 @@ const Admin = (props) => {
 	const [selectedAuthenticationModalOpen, setSelectedAuthenticationModalOpen] = React.useState(false)
 	const [showArchived, setShowArchived] = React.useState(false)
 
+	const getApps = () => {
+		fetch(globalUrl+"/api/v1/workflows/apps", {
+    	  method: 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json',
+				},
+	  			credentials: "include",
+    		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for apps :O!")
+			}
+
+			return response.json()
+		})
+    .then((responseJson) => {
+			console.log("apps: ", responseJson)
+			//setApps(responseJson)
+			//setFilteredApps(responseJson)
+			//if (responseJson.length > 0) {
+			//	setSelectedApp(responseJson[0])
+			//	if (responseJson[0].actions !== null && responseJson[0].actions.length > 0) {
+			//		setSelectedAction(responseJson[0].actions[0])
+			//	} else {
+			//		setSelectedAction({})
+			//	}
+			//} 
+    })
+		.catch(error => {
+			alert.error(error.toString())
+		});
+	}
+
+	const categories = [
+		{
+			"name": "Ticketing", 
+			"apps": [
+				"TheHive",
+				"Service-Now",
+				"SecureWorks",
+			],
+			"categories": ["tickets", "ticket", "ticketing"]
+		},
+	]
+	/*
+		"SIEM",
+		"Active Directory",
+		"Firewalls", 
+		"Proxies web",
+		"SIEM", 
+		"SOAR",
+		"Mail",
+		"EDR",
+		"AV", 
+		"MDM/MAM",
+		"DNS",
+		"Ticketing platform",
+		"TIP",
+		"Communication", 
+		"DDOS protection",
+		"VMS",
+	]
+	*/
+
 	const alert = useAlert()
 
 	const deleteAuthentication = (data) => {
@@ -905,6 +970,82 @@ const Admin = (props) => {
 		</div>
 		: null
 
+	const appCategoryView = curTab === 6 ?
+		<div>
+			<div style={{marginTop: 20, marginBottom: 20,}}>
+				<h2 style={{display: "inline",}}>Categories</h2>
+				<span style={{marginLeft: 25}}>
+					Categories are the categories supported by Shuffle, which are mapped to apps and workflows	
+				</span>
+			</div>
+			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor}}/>
+			<List>
+				<ListItem>
+					<ListItemText
+						primary="Category"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="Apps"
+						style={{minWidth: 250, maxWidth: 250}}
+					/>
+					<ListItemText
+						primary="Workflows"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="Authentication"
+						style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
+					/>
+					<ListItemText
+						primary="Actions"
+						style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
+					/>
+				</ListItem>
+				{categories.map(data => {
+					if (data.apps.length === 0) {
+						return null
+					}
+
+					return (
+						<ListItem>
+							<ListItemText
+								primary={data.name}
+								style={{minWidth: 150, maxWidth: 150}}
+							/>
+							<ListItemText
+								primary={""}
+								style={{minWidth: 250, maxWidth: 250}}
+							/>
+							<ListItemText
+								primary={""}
+								style={{minWidth: 150, maxWidth: 150}}
+							/>
+							<ListItemText
+								primary={""}
+								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
+							/>
+							<ListItemText
+								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
+							>
+								<Button 
+									style={{}} 
+									variant="outlined"
+									color="primary"
+									onClick={() => {
+										console.log("Show apps with this category")
+									}}
+								>
+									Find app ({data.apps.length})
+								</Button>
+							</ListItemText>
+						</ListItem>
+					)
+				})}
+			</List>
+		</div>
+		: null
+
 	const authenticationView = curTab === 1 ?
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
@@ -1182,6 +1323,10 @@ const Admin = (props) => {
 			getSchedules()
 		}
 
+		if (newValue === 6) {
+			console.log("Should get apps for categories.")
+		}
+
 		setModalUser({})
 		setCurTab(newValue)
 	}
@@ -1202,10 +1347,12 @@ const Admin = (props) => {
 					<Tab label=<span><ScheduleIcon style={iconStyle} />Schedules</span> />
 					{window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><CloudIcon style={iconStyle} /> Hybrid</span>/> : null}
 					{window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><BusinessIcon style={iconStyle} /> Organizations</span>/> : null}
+					{window.location.protocol === "http:" && window.location.port === "3000" ? <Tab label=<span><LockIcon style={iconStyle} />Categories</span>/> : null}
 				</Tabs>
 				<Divider style={{marginTop: 0, marginBottom: 10, backgroundColor: "rgb(91, 96, 100)"}} />
 				<div style={{padding: 15}}>
 					{authenticationView}
+					{appCategoryView}
 					{usersView}	
 					{environmentView}
 					{schedulesView}

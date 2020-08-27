@@ -96,25 +96,26 @@ type AuthenticationUsage struct {
 // An app inside Shuffle
 // Source      string `json:"source" datastore:"soure" yaml:"source"` - downloadlocation
 type WorkflowApp struct {
-	Name        string `json:"name" yaml:"name" required:true datastore:"name"`
-	IsValid     bool   `json:"is_valid" yaml:"is_valid" required:true datastore:"is_valid"`
-	ID          string `json:"id" yaml:"id,omitempty" required:false datastore:"id"`
-	Link        string `json:"link" yaml:"link" required:false datastore:"link,noindex"`
-	AppVersion  string `json:"app_version" yaml:"app_version" required:true datastore:"app_version"`
-	Generated   bool   `json:"generated" yaml:"generated" required:false datastore:"generated"`
-	Downloaded  bool   `json:"downloaded" yaml:"downloaded" required:false datastore:"downloaded"`
-	Sharing     bool   `json:"sharing" yaml:"sharing" required:false datastore:"sharing"`
-	Verified    bool   `json:"verified" yaml:"verified" required:false datastore:"verified"`
-	Activated   bool   `json:"activated" yaml:"activated" required:false datastore:"activated"`
-	Tested      bool   `json:"tested" yaml:"tested" required:false datastore:"tested"`
-	Owner       string `json:"owner" datastore:"owner" yaml:"owner"`
-	Hash        string `json:"hash" datastore:"hash" yaml:"hash"` // api.yaml+dockerfile+src/app.py for apps
-	PrivateID   string `json:"private_id" yaml:"private_id" required:false datastore:"private_id"`
-	Description string `json:"description" datastore:"description,noindex" required:false yaml:"description"`
-	Environment string `json:"environment" datastore:"environment" required:true yaml:"environment"`
-	SmallImage  string `json:"small_image" datastore:"small_image,noindex" required:false yaml:"small_image"`
-	LargeImage  string `json:"large_image" datastore:"large_image,noindex" yaml:"large_image" required:false`
-	ContactInfo struct {
+	Name          string `json:"name" yaml:"name" required:true datastore:"name"`
+	IsValid       bool   `json:"is_valid" yaml:"is_valid" required:true datastore:"is_valid"`
+	ID            string `json:"id" yaml:"id,omitempty" required:false datastore:"id"`
+	Link          string `json:"link" yaml:"link" required:false datastore:"link,noindex"`
+	AppVersion    string `json:"app_version" yaml:"app_version" required:true datastore:"app_version"`
+	SharingConfig string `json:"sharing_config" yaml:"sharing_config" datastore:"sharing_config"`
+	Generated     bool   `json:"generated" yaml:"generated" required:false datastore:"generated"`
+	Downloaded    bool   `json:"downloaded" yaml:"downloaded" required:false datastore:"downloaded"`
+	Sharing       bool   `json:"sharing" yaml:"sharing" required:false datastore:"sharing"`
+	Verified      bool   `json:"verified" yaml:"verified" required:false datastore:"verified"`
+	Activated     bool   `json:"activated" yaml:"activated" required:false datastore:"activated"`
+	Tested        bool   `json:"tested" yaml:"tested" required:false datastore:"tested"`
+	Owner         string `json:"owner" datastore:"owner" yaml:"owner"`
+	Hash          string `json:"hash" datastore:"hash" yaml:"hash"` // api.yaml+dockerfile+src/app.py for apps
+	PrivateID     string `json:"private_id" yaml:"private_id" required:false datastore:"private_id"`
+	Description   string `json:"description" datastore:"description,noindex" required:false yaml:"description"`
+	Environment   string `json:"environment" datastore:"environment" required:true yaml:"environment"`
+	SmallImage    string `json:"small_image" datastore:"small_image,noindex" required:false yaml:"small_image"`
+	LargeImage    string `json:"large_image" datastore:"large_image,noindex" yaml:"large_image" required:false`
+	ContactInfo   struct {
 		Name string `json:"name" datastore:"name" yaml:"name"`
 		Url  string `json:"url" datastore:"url" yaml:"url"`
 	} `json:"contact_info" datastore:"contact_info" yaml:"contact_info" required:false`
@@ -144,7 +145,7 @@ type SchemaDefinition struct {
 }
 
 type WorkflowAppAction struct {
-	Description       string                       `json:"description" datastore:"description"`
+	Description       string                       `json:"description" datastore:"description,noindex"`
 	ID                string                       `json:"id" datastore:"id" yaml:"id,omitempty"`
 	Name              string                       `json:"name" datastore:"name"`
 	Label             string                       `json:"label" datastore:"label"`
@@ -157,7 +158,7 @@ type WorkflowAppAction struct {
 	Tested            bool                         `json:"tested" datastore:"tested" yaml:"tested"`
 	Parameters        []WorkflowAppActionParameter `json:"parameters" datastore: "parameters"`
 	ExecutionVariable struct {
-		Description string `json:"description" datastore:"description"`
+		Description string `json:"description" datastore:"description,noindex"`
 		ID          string `json:"id" datastore:"id"`
 		Name        string `json:"name" datastore:"name"`
 		Value       string `json:"value" datastore:"value"`
@@ -192,7 +193,7 @@ type WorkflowExecution struct {
 	Workflow           Workflow       `json:"workflow" datastore:"workflow,noindex"`
 	Results            []ActionResult `json:"results" datastore:"results,noindex"`
 	ExecutionVariables []struct {
-		Description string `json:"description" datastore:"description"`
+		Description string `json:"description" datastore:"description,noindex"`
 		ID          string `json:"id" datastore:"id"`
 		Name        string `json:"name" datastore:"name"`
 		Value       string `json:"value" datastore:"value,noindex"`
@@ -217,7 +218,7 @@ type Action struct {
 	Name              string                       `json:"name" datastore:"name"`
 	Parameters        []WorkflowAppActionParameter `json:"parameters" datastore: "parameters,noindex"`
 	ExecutionVariable struct {
-		Description string `json:"description" datastore:"description"`
+		Description string `json:"description" datastore:"description,noindex"`
 		ID          string `json:"id" datastore:"id"`
 		Name        string `json:"name" datastore:"name"`
 		Value       string `json:"value" datastore:"value,noindex"`
@@ -235,7 +236,7 @@ type Action struct {
 // Added environment for location to execute
 type Trigger struct {
 	AppName         string                       `json:"app_name" datastore:"app_name"`
-	Description     string                       `json:"description" datastore:"description"`
+	Description     string                       `json:"description" datastore:"description,noindex"`
 	LongDescription string                       `json:"long_description" datastore:"long_description"`
 	Status          string                       `json:"status" datastore:"status"`
 	AppVersion      string                       `json:"app_version" datastore:"app_version"`
@@ -294,20 +295,20 @@ type Workflow struct {
 	ID                string   `json:"id" datastore:"id"`
 	IsValid           bool     `json:"is_valid" datastore:"is_valid"`
 	Name              string   `json:"name" datastore:"name"`
-	Description       string   `json:"description" datastore:"description"`
+	Description       string   `json:"description" datastore:"description,noindex"`
 	Start             string   `json:"start" datastore:"start"`
 	Owner             string   `json:"owner" datastore:"owner"`
 	Sharing           string   `json:"sharing" datastore:"sharing"`
 	Org               []Org    `json:"org,omitempty" datastore:"org"`
 	ExecutingOrg      Org      `json:"execution_org,omitempty" datastore:"execution_org"`
 	WorkflowVariables []struct {
-		Description string `json:"description" datastore:"description"`
+		Description string `json:"description" datastore:"description,noindex"`
 		ID          string `json:"id" datastore:"id"`
 		Name        string `json:"name" datastore:"name"`
 		Value       string `json:"value" datastore:"value"`
 	} `json:"workflow_variables" datastore:"workflow_variables"`
 	ExecutionVariables []struct {
-		Description string `json:"description" datastore:"description"`
+		Description string `json:"description" datastore:"description,noindex"`
 		ID          string `json:"id" datastore:"id"`
 		Name        string `json:"name" datastore:"name"`
 		Value       string `json:"value" datastore:"value,noindex"`
@@ -330,7 +331,7 @@ type Authentication struct {
 }
 
 type AuthenticationParams struct {
-	Description string           `json:"description" datastore:"description" yaml:"description"`
+	Description string           `json:"description" datastore:"description,noindex" yaml:"description"`
 	ID          string           `json:"id" datastore:"id" yaml:"id"`
 	Name        string           `json:"name" datastore:"name" yaml:"name"`
 	Example     string           `json:"example" datastore:"example" yaml:"example"`
@@ -3408,9 +3409,6 @@ func getWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// log.Printf("%#v", parsedApi)
-	// log.Printf("API LEN: %d, ID: %s", len(parsedApi.Body), fileId)
-
 	//log.Printf("Parsed API: %#v", parsedApi)
 	if len(parsedApi.ID) > 0 {
 		parsedApi.Success = true
@@ -3629,6 +3627,90 @@ func getAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 		}`
 	*/
 }
+func updateWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	user, userErr := handleApiAuthentication(resp, request)
+	if userErr != nil {
+		log.Printf("Api authentication failed in get all apps: %s", userErr)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	location := strings.Split(request.URL.String(), "/")
+	var fileId string
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		fileId = location[4]
+	}
+
+	ctx := context.Background()
+	app, err := getApp(ctx, fileId)
+	if err != nil {
+		log.Printf("Error getting app: %s (update app)", app.Name)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Id != app.Owner && user.Role != "admin" {
+		log.Printf("Wrong user (%s) for app %s in update app", user.Username, app.Name)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		log.Printf("Error with body read in update app: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	type updatefields struct {
+		Sharing       bool   `json:"sharing"`
+		SharingConfig string `json:"sharing_config"`
+	}
+
+	var tmpfields updatefields
+	err = json.Unmarshal(body, &tmpfields)
+	if err != nil {
+		log.Printf("Error with unmarshal body in update app: %s\n%s", err, string(body))
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if tmpfields.Sharing != app.Sharing {
+		app.Sharing = tmpfields.Sharing
+	}
+
+	if tmpfields.SharingConfig != app.SharingConfig {
+		app.SharingConfig = tmpfields.SharingConfig
+	}
+
+	err = setWorkflowAppDatastore(ctx, *app, app.ID)
+	if err != nil {
+		log.Printf("Failed patching workflowapp: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	log.Printf("Changed workflow app %s", app.ID)
+	resp.WriteHeader(200)
+	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+}
 
 func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
@@ -3691,12 +3773,12 @@ func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 	newapps := []WorkflowApp{}
 	baseApps := []WorkflowApp{}
 
-	if len(user.PrivateApps) > 0 {
-		newapps = append(newapps, user.PrivateApps...)
-	}
-
 	for _, workflowapp := range workflowapps {
-		if !workflowapp.Sharing {
+		if !workflowapp.Activated && workflowapp.Generated {
+			continue
+		}
+
+		if workflowapp.Owner != user.Id && user.Role != "admin" && !workflowapp.Sharing {
 			continue
 		}
 
@@ -3715,6 +3797,25 @@ func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 		newapps = append(newapps, workflowapp)
 		baseApps = append(baseApps, workflowapp)
 	}
+
+	if len(user.PrivateApps) > 0 {
+		found := false
+		for _, item := range user.PrivateApps {
+			for _, app := range newapps {
+				if item.ID == app.ID {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				newapps = append(newapps, item)
+			}
+		}
+	}
+
+	log.Printf("User: %d", len(user.PrivateApps))
+	log.Printf("All: %d", len(workflowapps))
 
 	// Double unmarshal because of user apps
 	newbody, err := json.Marshal(newapps)
@@ -4381,14 +4482,14 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 
 				readFile, err := ioutil.ReadAll(fileReader)
 				if err != nil {
-					log.Printf("Filereader error yaml: %s", err)
+					log.Printf("Filereader error yaml for %s: %s", filename, err)
 					continue
 				}
 
 				// 1. This parses OpenAPI v2 to v3 etc, for use.
 				parsedOpenApi, err := handleSwaggerValidation(readFile)
 				if err != nil {
-					log.Printf("Validation error: %s", err)
+					log.Printf("Validation error for %s: %s", filename, err)
 					continue
 				}
 
