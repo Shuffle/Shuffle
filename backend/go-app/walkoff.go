@@ -23,14 +23,14 @@ import (
 	"google.golang.org/api/cloudfunctions/v1"
 	schedulerpb "google.golang.org/genproto/googleapis/cloud/scheduler/v1"
 
+	newscheduler "github.com/carlescere/scheduler"
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
-	http2 "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
-
-	newscheduler "github.com/carlescere/scheduler"
-	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/storage/memory"
+	http2 "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 	//"github.com/gorilla/websocket"
 	//"google.golang.org/appengine"
 	//"google.golang.org/appengine/memcache"
@@ -137,6 +137,7 @@ type WorkflowAppActionParameter struct {
 	Variant       string           `json:"variant" datastore:"variant" yaml:"variant,omitempty"`
 	Required      bool             `json:"required" datastore:"required" yaml:"required"`
 	Configuration bool             `json:"configuration" datastore:"configuration" yaml:"configuration"`
+	Tags          []string         `json:"tags" datastore:"tags" yaml:"tags"`
 	Schema        SchemaDefinition `json:"schema" datastore:"schema" yaml:"schema"`
 }
 
@@ -154,6 +155,7 @@ type WorkflowAppAction struct {
 	Sharing           bool                         `json:"sharing" datastore:"sharing"`
 	PrivateID         string                       `json:"private_id" datastore:"private_id"`
 	AppID             string                       `json:"app_id" datastore:"app_id"`
+	Tags              []string                     `json:"tags" datastore:"tags" yaml:"tags"`
 	Authentication    []AuthenticationStore        `json:"authentication" datastore:"authentication,noindex" yaml:"authentication,omitempty"`
 	Tested            bool                         `json:"tested" datastore:"tested" yaml:"tested"`
 	Parameters        []WorkflowAppActionParameter `json:"parameters" datastore: "parameters"`
@@ -250,6 +252,7 @@ type Trigger struct {
 	Environment     string                       `json:"environment" datastore:"environment"`
 	TriggerType     string                       `json:"trigger_type" datastore:"trigger_type"`
 	Name            string                       `json:"name" datastore:"name"`
+	Tags            []string                     `json:"tags" datastore:"tags" yaml:"tags"`
 	Parameters      []WorkflowAppActionParameter `json:"parameters" datastore: "parameters,noindex"`
 	Position        struct {
 		X float64 `json:"x" datastore:"x"`
@@ -4172,7 +4175,7 @@ func deployWebhookFunction(ctx context.Context, name, localization, applocation 
 	return nil
 }
 
-func loadGithubWorkflows(url, username, password, userId string) error {
+func loadGithubWorkflows(url, username, password, userId, branch string) error {
 	fs := memfs.New()
 
 	if strings.Contains(url, "github") || strings.Contains(url, "gitlab") || strings.Contains(url, "bitbucket") {
@@ -4187,6 +4190,10 @@ func loadGithubWorkflows(url, username, password, userId string) error {
 				Username: username,
 				Password: password,
 			}
+		}
+
+		if len(branch) > 0 {
+			cloneOptions.ReferenceName = plumbing.ReferenceName(branch)
 		}
 
 		storer := memory.NewStorage()
@@ -4264,6 +4271,7 @@ func loadSpecificWorkflows(resp http.ResponseWriter, request *http.Request) {
 		URL    string `json:"url"`
 		Field1 string `json:"field_1"`
 		Field2 string `json:"field_2"`
+		Field3 string `json:"field_3"`
 	}
 	//log.Printf("Body: %s", string(body))
 
@@ -4276,7 +4284,8 @@ func loadSpecificWorkflows(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	err = loadGithubWorkflows(tmpBody.URL, tmpBody.Field1, tmpBody.Field2, user.Id)
+	// Field3 = branch
+	err = loadGithubWorkflows(tmpBody.URL, tmpBody.Field1, tmpBody.Field2, user.Id, tmpBody.Field3)
 	if err != nil {
 		log.Printf("Failed to update workflows: %s", err)
 		resp.WriteHeader(401)
@@ -4312,10 +4321,10 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	location := os.Getenv("APP_HOTLOAD_FOLDER")
+	location := os.Getenv("SHUFFLE_APP_HOTLOAD_FOLDER")
 	if len(location) == 0 {
 		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "APP_HOTLOAD_FOLDER not specified in .env"}`)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "SHUFFLE_APP_HOTLOAD_FOLDER not specified in .env"}`)))
 		return
 	}
 

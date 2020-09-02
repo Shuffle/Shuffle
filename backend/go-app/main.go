@@ -41,6 +41,7 @@ import (
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/storage/memory"
 
 	// Random
@@ -6341,13 +6342,14 @@ func runInit(ctx context.Context) {
 		fs := memfs.New()
 		storer := memory.NewStorage()
 
-		url := os.Getenv("APP_DOWNLOAD_LOCATION")
+		url := os.Getenv("SHUFFLE_APP_DOWNLOAD_LOCATION")
 		if len(url) == 0 {
 			url = "https://github.com/frikky/shuffle-apps"
 		}
 
 		username := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_USERNAME")
 		password := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_PASSWORD")
+
 		cloneOptions := &git.CloneOptions{
 			URL: url,
 		}
@@ -6358,6 +6360,11 @@ func runInit(ctx context.Context) {
 				Password: password,
 			}
 		}
+		branch := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_BRANCH")
+		if len(branch) > 0 {
+			cloneOptions.ReferenceName = plumbing.ReferenceName(branch)
+		}
+
 		log.Printf("Getting apps from %s", url)
 
 		r, err := git.Clone(storer, fs, cloneOptions)
@@ -6377,7 +6384,7 @@ func runInit(ctx context.Context) {
 		iterateAppGithubFolders(fs, dir, "", "", false)
 
 		// Hotloads locally
-		location := os.Getenv("APP_HOTLOAD_FOLDER")
+		location := os.Getenv("SHUFFLE_APP_HOTLOAD_FOLDER")
 		if len(location) != 0 {
 			handleAppHotload(location)
 		}
@@ -6417,9 +6424,9 @@ func runInit(ctx context.Context) {
 			log.Printf("Error getting workflows: %s", err)
 		} else {
 			if len(workflows) == 0 {
-				username := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_USERNAME")
-				password := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_PASSWORD")
-				err = loadGithubWorkflows(workflowLocation, username, password, "")
+				username := os.Getenv("SHUFFLE_DOWNLOAD_WORKFLOW_USERNAME")
+				password := os.Getenv("SHUFFLE_DOWNLOAD_WORKFLOW_PASSWORD")
+				err = loadGithubWorkflows(workflowLocation, username, password, "", os.Getenv("SHUFFLE_DOWNLOAD_WORKFLOW_BRANCH"))
 				if err != nil {
 					log.Printf("Failed to upload workflows from github: %s", err)
 				} else {

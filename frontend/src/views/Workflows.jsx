@@ -523,10 +523,14 @@ const Workflows = (props) => {
 									</span>
 								</Tooltip>
 								{data.tags !== undefined ?
-									data.tags.map(tag => {
+									data.tags.map((tag, index) => {
+										if (index >= 3) {
+											return null
+										}
+
 										return (
 											<Chip
-												style={{marginRight: 5, marginTop: 2, cursor: "pointer",}}
+												style={{height: 25, marginRight: 5, marginTop: 2, cursor: "pointer",}}
 												label={tag}
 												color="primary"
 											/>
