@@ -14,31 +14,31 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	network "github.com/docker/docker/api/types/network"
 	dockerclient "github.com/docker/docker/client"
 	//network "github.com/docker/docker/api/types/network"
 	//natting "github.com/docker/go-connections/nat"
 )
 
-var baseUrl = os.Getenv("BASE_URL")
-var baseimagename = "frikky/shuffle"
-var shuffleNetwork = "" // Filled in init if found
-
-var dockerApiVersion = os.Getenv("DOCKER_API_VERSION")
-var environment = os.Getenv("ENVIRONMENT_NAME")
-var orgId = os.Getenv("ORG_ID")
-
 // Starts jobs in bulk, so this could be increased
 var sleepTime = 3
 
-// Timeout if somethinc rashes
-//var workerTimeout = 600
+// Timeout if something rashes
 var workerTimeout = 300
+var appSdkVersion = "0.6.0"
+var workerVersion = "0.6.0"
+var baseimagename = "docker.pkg.github.com/frikky/shuffle"
+
+var orgId = os.Getenv("ORG_ID")
+var baseUrl = os.Getenv("BASE_URL")
+var environment = os.Getenv("ENVIRONMENT_NAME")
+var dockerApiVersion = os.Getenv("DOCKER_API_VERSION")
+var runningMode = strings.ToLower(os.Getenv("RUNNING_MODE"))
 
 type ExecutionRequestWrapper struct {
 	Data []ExecutionRequest `json:"data"`
@@ -54,6 +54,7 @@ type ExecutionRequest struct {
 }
 
 var dockercli *dockerclient.Client
+var containerId string
 
 func init() {
 	var err error
@@ -63,48 +64,40 @@ func init() {
 		panic(fmt.Sprintf("Unable to create docker client: %s", err))
 	}
 
-	// FIXME: Move this to global variables?
-	containerIdentifier := "orborus"
-	networkIdentifier := "shuffle"
+	getThisContainerId()
+}
 
-	ctx := context.Background()
-	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
-		All: true,
-	})
-	if err != nil {
-		log.Printf("Failed getting containers during init - running without network check: %s", err)
+// form id of current running container
+func getThisContainerId() {
+	fCol := ""
+
+	// some adjusting based on current running mode
+	switch runningMode {
+	case "kubernetes":
+		// cgroup will be like:
+		// 11:net_cls,net_prio:/kubepods/besteffort/podf132b44d-cfcf-43f7-9906-79f58e268333/851466f8b5ed5aa0f265b1c95c6d2bafbc51a38dd5c5a1621b6e586572150009
+		fCol = "5"
+		log.Printf("[INFO] Running containerized in Kubernetes!")
+
+	case "docker":
+		// cgroup will be like:
+		// 12:perf_event:/docker/0f06810364f52a2cd6e80bfba27419cb8a29758a204cd676388f4913bb366f2b
+		fCol = "3"
+		log.Printf("[INFO] Running containerized in Docker!")
+
+	default:
+		fCol = "3" // for backward-compatibility with production
+		log.Printf("[WARNING] RUNNING_MODE not set, so I can't figure out the current container ID! Defaulting to Docker (not Kubernetes).")
 	}
 
-	// Skip random containers. Only handle things related to Shuffle.
-	for _, container := range containers {
-		found := false
-
-		// Bad states - it might just be created sometimes, leading to now netowkr
-		//if container.State == "restarting" || container.State == "paused" || container.State == "exited" || container.State == "dead" {
-		//	continue
-		//}
-
-		for _, name := range container.Names {
-			if !strings.Contains(strings.ToLower(name), containerIdentifier) {
-				found = true
-				continue
-			}
+	if fCol != "" {
+		cmd := fmt.Sprintf("cat /proc/self/cgroup | grep memory | tail -1 | cut -d/ -f%s", fCol)
+		out, err := exec.Command("bash", "-c", cmd).Output()
+		if err == nil {
+			containerId = strings.TrimSpace(string(out))
+		} else {
+			log.Printf("Failed getting container ID: %s", err)
 		}
-
-		if found {
-			for key, _ := range container.NetworkSettings.Networks {
-				if strings.Contains(strings.ToLower(key), networkIdentifier) {
-					shuffleNetwork = key
-					break
-				}
-			}
-		}
-	}
-
-	if len(shuffleNetwork) > 0 {
-		log.Printf("Found shuffle network \"%s\" for container %s", shuffleNetwork, containerIdentifier)
-	} else {
-		log.Printf("Running Shuffle without a docker network")
 	}
 }
 
@@ -121,40 +114,24 @@ func deployWorker(image string, identifier string, env []string) {
 		},
 	}
 
-	// Look for Shuffle network and set it
-	networkConfig := &network.NetworkingConfig{}
-	if len(shuffleNetwork) > 0 {
-		log.Printf("Starting worker with network %s", shuffleNetwork)
-		networkConfig = &network.NetworkingConfig{
-			EndpointsConfig: map[string]*network.EndpointSettings{
-				shuffleNetwork: {
-					NetworkID: shuffleNetwork,
-				},
-			},
-		}
-
-		env = append(env, fmt.Sprintf("DOCKER_NETWORK=%s", shuffleNetwork))
+	// form container id and use it as network source if it's not empty
+	if containerId != "" {
+		log.Printf("[INFO] Found container ID %s", containerId)
+		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
 	} else {
-		log.Printf("Starting worker WITHOUT any specified network: %s", shuffleNetwork)
+		log.Printf("[WARNING] Empty self container id, continue without NetworkMode")
 	}
 
-	// ROFL: https://docker-py.readthedocs.io/en/1.4.0/volumes/
 	config := &container.Config{
 		Image: image,
 		Env:   env,
 	}
 
-	//test := &network.EndpointSettings{
-	//	Gateway: "helo",
-	//}
-	//NetworkID
-	//if connect.EndpointConfig.NetworkID != "NetworkID" {
-
 	cont, err := dockercli.ContainerCreate(
 		context.Background(),
 		config,
 		hostConfig,
-		networkConfig,
+		nil,
 		nil,
 		identifier,
 	)
@@ -224,19 +201,18 @@ func initializeImages() {
 	ctx := context.Background()
 
 	// check whether theyre the same first
-	//version := "0.1.0"
-	// fmt.Sprintf("docker.pkg.github.com/frikky/shuffle/orborus:%s", version),
-	// fmt.Sprintf("docker.pkg.github.com/frikky/shuffle/worker:%s", version),
 	images := []string{
-		fmt.Sprintf("docker.io/%s:app_sdk", baseimagename),
-		fmt.Sprintf("docker.io/%s:worker", baseimagename),
+		// fmt.Sprintf("docker.io/%s:app_sdk", baseimagename),
+		// fmt.Sprintf("docker.io/%s:worker", baseimagename),
+		fmt.Sprintf("%s/worker:%s", baseimagename, workerVersion),
+		fmt.Sprintf("%s/app_sdk:%s", baseimagename, appSdkVersion),
 	}
 
 	pullOptions := types.ImagePullOptions{}
 	for _, image := range images {
 		reader, err := dockercli.ImagePull(ctx, image, pullOptions)
 		if err != nil {
-			log.Printf("Failed getting %s: %s", image, err)
+			log.Printf("Failed getting image %s: %s", image, err)
 			continue
 		}
 

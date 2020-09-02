@@ -1,7 +1,7 @@
 version: '3'
 services:
   frontend:
-    build: ./frontend
+    #build: ./frontend
     image: frikky/shuffle:frontend
     container_name: shuffle-frontend
     hostname: shuffle-frontend
@@ -16,19 +16,19 @@ services:
     depends_on:
       - backend
   backend:
-    build: ./backend
+    #build: ./backend
     image: frikky/shuffle:backend
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
     # Here for debugging:
-    ports: 
+    ports:
       - "${BACKEND_PORT}:5001"
     networks:
       - shuffle
     volumes: 
       - /var/run/docker.sock:/var/run/docker.sock 
       - ${SHUFFLE_APP_HOTLOAD_LOCATION}:/shuffle-apps     
-    environment: 
+    environment:
       - DATASTORE_EMULATOR_HOST=shuffle-database:8000
       - SHUFFLE_APP_HOTLOAD_FOLDER=/shuffle-apps
       - ORG_ID=${ORG_ID}
@@ -43,13 +43,13 @@ services:
       - database
   orborus:
     #build: ./functions/onprem/orborus
-    image: frikky/shuffle:orborus
+    image: docker.pkg.github.com/frikky/shuffle/orborus:0.6.0
     container_name: shuffle-orborus
     hostname: shuffle-orborus
     networks:
       - shuffle
-    volumes: 
-      - /var/run/docker.sock:/var/run/docker.sock 
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - ORG_ID=${ORG_ID}
       - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}

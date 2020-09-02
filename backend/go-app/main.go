@@ -666,7 +666,7 @@ func handleApiAuthentication(resp http.ResponseWriter, request *http.Request) (U
 		if len(Userdata.Username) > 0 {
 			return Userdata, nil
 		} else {
-			return Userdata, errors.New(fmt.Sprintf("User is invalid - no username found: %#v", Userdata))
+			return Userdata, errors.New(fmt.Sprintf("User is invalid - no username found"))
 		}
 	}
 

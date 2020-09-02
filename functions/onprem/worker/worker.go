@@ -11,12 +11,12 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	network "github.com/docker/docker/api/types/network"
 	dockerclient "github.com/docker/docker/client"
 )
 
@@ -24,6 +24,29 @@ var environment = os.Getenv("ENVIRONMENT_NAME")
 var baseUrl = os.Getenv("BASE_URL")
 var baseimagename = "frikky/shuffle"
 var sleepTime = 2
+
+var containerId string
+
+// form container id of current running container
+func getThisContainerId() string {
+	id := ""
+	cmd := fmt.Sprintf("cat /proc/self/cgroup | grep memory | tail -1 | cut -d/ -f3")
+	out, err := exec.Command("bash", "-c", cmd).Output()
+	if err == nil {
+		id = strings.TrimSpace(string(out))
+	}
+
+	return id
+}
+
+func init() {
+	containerId = getThisContainerId()
+	if len(containerId) == 0 {
+		log.Printf("[ERROR] No container ID found.")
+	} else {
+		log.Printf("Found container ID: %s", containerId)
+	}
+}
 
 type User struct {
 	Username          string        `datastore:"Username" json:"username"`
@@ -380,11 +403,11 @@ func shutdown(executionId, workflowId string) {
 	authorization := os.Getenv("AUTHORIZATION")
 	if len(authorization) > 0 {
 		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", authorization))
+	} else {
+		log.Printf("No authorization specified for abort")
 	}
 
 	req.Header.Add("Content-Type", "application/json")
-	//req.Header.Add("Authorization", authorization)
-
 	client := &http.Client{
 		Transport: &http.Transport{
 			Proxy: nil,
@@ -414,6 +437,7 @@ func shutdown(executionId, workflowId string) {
 
 // Deploys the internal worker whenever something happens
 func deployApp(cli *dockerclient.Client, image string, identifier string, env []string) error {
+	// form basic hostConfig
 	hostConfig := &container.HostConfig{
 		LogConfig: container.LogConfig{
 			Type:   "json-file",
@@ -421,28 +445,23 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		},
 	}
 
+	// form container id and use it as network source if it's not empty
+	if containerId != "" {
+		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
+	} else {
+		log.Printf("[WARNING] Empty self container id, continue without NetworkMode")
+	}
+
 	config := &container.Config{
 		Image: image,
 		Env:   env,
-	}
-
-	networkConfig := &network.NetworkingConfig{}
-	shuffleNetwork := os.Getenv("DOCKER_NETWORK")
-	if len(shuffleNetwork) > 0 {
-		networkConfig = &network.NetworkingConfig{
-			EndpointsConfig: map[string]*network.EndpointSettings{
-				shuffleNetwork: {
-					NetworkID: shuffleNetwork,
-				},
-			},
-		}
 	}
 
 	cont, err := cli.ContainerCreate(
 		context.Background(),
 		config,
 		hostConfig,
-		networkConfig,
+		nil,
 		nil,
 		identifier,
 	)
@@ -1105,13 +1124,6 @@ func main() {
 		if len(httpsProxy) > 0 {
 			log.Printf("Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
 		}
-	}
-
-	shuffleNetwork := os.Getenv("DOCKER_NETWORK")
-	if len(shuffleNetwork) > 0 {
-		log.Printf("Running with Docker network %s", shuffleNetwork)
-	} else {
-		log.Printf("No docker network specified for Worker.")
 	}
 
 	// WORKER_TESTING_WORKFLOW should be a workflow ID

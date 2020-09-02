@@ -11,10 +11,11 @@ import (
 	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	network "github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
-	natting "github.com/docker/go-connections/nat"
 	"github.com/go-git/go-billy/v5"
+
+	network "github.com/docker/docker/api/types/network"
+	natting "github.com/docker/go-connections/nat"
 
 	"io"
 	"io/ioutil"
@@ -180,9 +181,10 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 	// Dockerfile is inside the TAR itself. Not local context
 	// docker build --build-arg http_proxy=http://my.proxy.url
 	buildOptions := types.ImageBuildOptions{
-		Remove:    true,
-		Tags:      tags,
-		BuildArgs: map[string]*string{},
+		Remove:      true,
+		Tags:        tags,
+		BuildArgs:   map[string]*string{},
+		NetworkMode: "host",
 	}
 
 	httpProxy := os.Getenv("HTTP_PROXY")
@@ -242,9 +244,10 @@ func buildImage(tags []string, dockerfileFolder string) error {
 
 	dockerFileTarReader := bytes.NewReader(buf.Bytes())
 	buildOptions := types.ImageBuildOptions{
-		Remove:    true,
-		Tags:      tags,
-		BuildArgs: map[string]*string{},
+		Remove:      true,
+		Tags:        tags,
+		BuildArgs:   map[string]*string{},
+		NetworkMode: "host",
 	}
 
 	httpProxy := os.Getenv("HTTP_PROXY")
