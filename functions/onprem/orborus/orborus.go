@@ -32,7 +32,9 @@ var sleepTime = 3
 var workerTimeout = 300
 var appSdkVersion = "0.6.0"
 var workerVersion = "0.6.0"
-var baseimagename = "docker.pkg.github.com/frikky/shuffle"
+
+//var baseimagename = "docker.pkg.github.com/frikky/shuffle"
+var baseimagename = "gchr.io/frikky"
 
 var orgId = os.Getenv("ORG_ID")
 var baseUrl = os.Getenv("BASE_URL")
