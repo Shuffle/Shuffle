@@ -530,8 +530,10 @@ const Workflows = (props) => {
 
 										return (
 											<Chip
+												key={index}
 												style={{height: 25, marginRight: 5, marginTop: 2, cursor: "pointer",}}
 												label={tag}
+												variant="outlined"
 												color="primary"
 											/>
 										)
@@ -542,17 +544,17 @@ const Workflows = (props) => {
 					</Grid>
 				</Grid>
 				<Grid container style={{maxWidth: 35, marginRight: 10,}}>
-					<Tooltip title={data.actions.length} placement="right">
+					<Tooltip title={`Actions: ${data.actions.length}`} placement="right">
 						<AppsIcon style={{width: imgSize, height: imgSize}} />
 					</Tooltip>
 
 					{webhooks > 0 ? 
-						<Tooltip title={webhooks} placement="right">
+						<Tooltip title={`Webhooks: ${webhooks}`} placement="right">
 							<img alt={data.title} style={{width: imgSize, height: imgSize, marginTop: 5}} src={webhookImg} /> 
 						</Tooltip>
 					: null}
 					{schedules > 0 ? 
-						<Tooltip title={webhooks} placement="right">
+						<Tooltip title={`Schedules: ${schedules}`} placement="right">
 							<img alt={data.title} style={{width: imgSize, height: imgSize, marginTop: 5}} src={scheduleImg} /> 
 						</Tooltip>
 					: null}

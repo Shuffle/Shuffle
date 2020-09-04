@@ -3817,9 +3817,6 @@ func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	log.Printf("User: %d", len(user.PrivateApps))
-	log.Printf("All: %d", len(workflowapps))
-
 	// Double unmarshal because of user apps
 	newbody, err := json.Marshal(newapps)
 	//newbody, err := json.Marshal(workflowapps)

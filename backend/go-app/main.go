@@ -5458,7 +5458,7 @@ func echoOpenapiData(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		log.Printf("Api authentication failed in validate swagger: %s", err)
 		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
+		resp.Write([]byte(`{"success": false, "reason": "Failed authentication"}`))
 		return
 	}
 
@@ -5501,6 +5501,12 @@ func echoOpenapiData(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't get data from selected uri"`)))
+		return
+	}
+
+	if newresp.StatusCode >= 400 {
+		resp.WriteHeader(201)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, urlbody)))
 		return
 	}
 
@@ -5734,6 +5740,8 @@ func validateSwagger(resp http.ResponseWriter, request *http.Request) {
 			err = gyaml.Unmarshal(body, &swagger)
 			if err != nil {
 				log.Printf("Yaml error: %s", err)
+			} else {
+				log.Printf("Found valid yaml!")
 			}
 
 			resp.WriteHeader(422)

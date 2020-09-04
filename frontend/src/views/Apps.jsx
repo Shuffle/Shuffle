@@ -349,8 +349,10 @@ const Apps = (props) => {
 
 									return (
 										<Chip
+											key={index}
 											style={{height: 25, marginRight: 5, cursor: "pointer",}}
 											label={tag}
+											variant="outlined"
 											color="primary"
 										/>
 									)
@@ -515,7 +517,6 @@ const Apps = (props) => {
 		]
 
 		//fetch(globalUrl+"/api/v1/get_openapi/"+urlParams.get("id"), 
-		console.log("User: ", props.userdata)
 		var baseInfo = newAppname.length > 0 ?
 			<div>
 				<div style={{display: "flex"}}>
@@ -544,7 +545,9 @@ const Apps = (props) => {
 
 							return (
 								<Chip
+									key={index}
 									style={{height: 25, marginRight: 5, marginTop: 7, cursor: "pointer",}}
+									variant="outlined"
 									label={tag}
 									color="primary"
 								/>
@@ -1030,7 +1033,7 @@ const Apps = (props) => {
 		setValidation(true)
 
 		fetch(globalUrl+"/api/v1/get_openapi_uri", {
-    	  	method: 'POST',
+    	method: 'POST',
 			headers: {
 				'Accept': 'application/json',
 			},
@@ -1038,19 +1041,34 @@ const Apps = (props) => {
 	  		credentials: "include",
 		})
 		.then((response) => {
+			setValidation(false)
+			if (response.status !== 200) {
+				return response.json()	
+			} 
+
 			return response.text()
 		})
-    	.then((responseText) => {
-			validateOpenApi(responseText)
-			setValidation(false)
-    	})
+    .then((responseJson) => {
+			if (typeof(responseJson) !== "string" && !responseJson.success) {
+				console.log(responseJson.reason)
+				if (responseJson.reason !== undefined) {
+					setOpenApiError(responseJson.reason)
+				} else {
+					setOpenApiError("Undefined issue with OpenAPI validation")
+				}
+				return
+			}
+
+			validateOpenApi(responseJson)
+    })
 		.catch(error => {
 			alert.error(error.toString())
+			setOpenApiError(error.toString())
 		});
 	}
 
 	const escapeApiData = (apidata) => {
-		console.log(apidata)
+		//console.log(apidata)
 		try {
 			return JSON.stringify(JSON.parse(apidata))
 		} catch(error) {
@@ -1062,7 +1080,7 @@ const Apps = (props) => {
 			return JSON.stringify(YAML.parse(apidata))
 		} catch(error) {
 			console.log("YAML DECODE ERROR - TRY SOMETHING ELSE?: "+error)
-			setOpenApiError(error)
+			setOpenApiError(error.toString())
 		}
 
 		return ""
@@ -1076,6 +1094,7 @@ const Apps = (props) => {
 			return
 		}
 
+		setValidation(true)
 		fetch(globalUrl+"/api/v1/validate_openapi", {
     	  	method: 'POST',
 			headers: {
@@ -1085,10 +1104,10 @@ const Apps = (props) => {
 	  		credentials: "include",
 		})
 		.then((response) => {
+			setValidation(false)
 			return response.json()
 		})
-    	.then((responseJson) => {
-			setValidation(false)
+    .then((responseJson) => {
 			if (responseJson.success) {
 				setAppValidation(responseJson.id)
 			} else {
@@ -1099,7 +1118,9 @@ const Apps = (props) => {
 			}
     	})
 		.catch(error => {
+			setValidation(false)
 			alert.error(error.toString())
+			setOpenApiError(error.toString())
 		});
 	}
 
@@ -1245,7 +1266,9 @@ const Apps = (props) => {
 	const modalView = openApiModal ? 
 		<Dialog 
 			open={openApiModal}
-			onClose={() => {setOpenApiModal(false)}}
+			onClose={() => {
+				setOpenApiModal(false)
+			}}
 			PaperProps={{
 				style: {
 					backgroundColor: surfaceColor,
@@ -1269,13 +1292,16 @@ const Apps = (props) => {
 								height: "50px",
 								fontSize: "1em",
 							},
-							endAdornment: <Button style={{borderRadius: "0px", marginTop: "0px", height: "50px"}} variant="contained" disabled={openApi.length === 0} color="primary" onClick={() => {
+							endAdornment: <Button style={{borderRadius: "0px", marginTop: "0px", height: "50px"}} variant="contained" disabled={openApi.length === 0 || appValidation.length > 0} color="primary" 
+							onClick={() => {
 								setOpenApiError("")
 								validateRemote()
 							}}>Validate</Button>
 						}}
-						onChange={e => setOpenApi(e.target.value)}
-						helperText={<div style={{color:"white", marginBottom: "2px",}}>Must point to a version 2 or 3 specification.</div>}
+						onChange={e => {
+							setOpenApi(e.target.value)
+						}}
+						helperText={<span style={{color:"white", marginBottom: "2px",}}>Must point to a version 2 or 3 OpenAPI specification.</span>}
 						placeholder="OpenAPI URI"
 						fullWidth
 					  />
@@ -1285,7 +1311,7 @@ const Apps = (props) => {
 					  <div />
 					  https://raw.githubusercontent.com/OAI/OpenAPI-Specification/master/examples/v2.0/json/uber.json
 						*/}
-					  <h4>Or paste the yaml/JSON directly below</h4>
+					  Or paste the YAML or JSON specification 
 					<TextField
 						style={{backgroundColor: inputColor}}
 						variant="outlined"
@@ -1297,13 +1323,13 @@ const Apps = (props) => {
 								color: "white",
 								fontSize: "1em",
 							},
-							endAdornment: <Button style={{marginLeft: 10, borderRadius: "0px", marginTop: "0px"}} variant="contained" disabled={openApiData.length === 0} color="primary" onClick={() => {
+							endAdornment: <Button style={{marginLeft: 10, borderRadius: "0px", marginTop: "0px"}} variant="contained" disabled={openApiData.length === 0 || appValidation.length > 0} color="primary" onClick={() => {
 								setOpenApiError("")
 								validateOpenApi(openApiData)
-							}}>Validate data</Button>
+							}}>Validate OpenAPI</Button>
 						}}
 						onChange={e => setOpenApiData(e.target.value)}
-						helperText={<div style={{color:"white", marginBottom: "2px",}}>Must point to a version 2 or 3 specification.</div>}
+						helperText={<span style={{color:"white", marginBottom: "2px",}}>Must point to a version 2 or 3 specification.</span>}
 						placeholder="OpenAPI text"
 						fullWidth
 					  />
@@ -1311,13 +1337,19 @@ const Apps = (props) => {
 				</DialogContent>
 				<DialogActions>
 					{circularLoader}
-						<Button style={{borderRadius: "0px"}} onClick={() => setOpenApiModal(false)} color="primary">
-							Cancel
-						</Button>
-	      	<Button style={{borderRadius: "0px"}} disabled={appValidation.length === 0} onClick={() => {
+					<Button style={{borderRadius: "0px"}} onClick={() => {
+						setOpenApiModal(false)
+						setAppValidation("")
+						setOpenApiError("")
+						setOpenApi("")
+						setOpenApiData("")
+					}} color="primary">
+						Cancel
+					</Button>
+	      	<Button variant="contained" style={{borderRadius: "0px"}} disabled={appValidation.length === 0} onClick={() => {
 						redirectOpenApi()
 					}} color="primary">
-	        	Submit	
+	        	Continue	
 	        </Button>
 				</DialogActions>
 			</FormControl>
