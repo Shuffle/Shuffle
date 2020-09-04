@@ -639,7 +639,7 @@ const AngularWorkflow = (props) => {
 		}
 
 		if (executionText.length > 0) { 
-			alert.success("Starting execution with argument "+executionText)
+			alert.success("Starting execution with an execution argument")
 		} else {
 			alert.success("Starting execution")
 		}
@@ -5037,6 +5037,7 @@ const AngularWorkflow = (props) => {
 					<Tooltip color="secondary" title="Show executions" placement="top-start">
 						<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={() => {
 							setExecutionModalOpen(true)
+							getWorkflowExecution(props.match.params.key)
 						}}>
 							<DirectionsRunIcon />
 						</Button>
@@ -5167,8 +5168,10 @@ const AngularWorkflow = (props) => {
 
 		return (
 			<div>
-				<h3>Execution Argument: </h3>
-				{executionData.execution_argument}
+				<h3>Execution Argument</h3>
+				<div style={{maxHeight: 200, overflowY: "scroll",}}>
+					{executionData.execution_argument}
+				</div>
 			</div>
 		)
 	}
@@ -5272,14 +5275,7 @@ const AngularWorkflow = (props) => {
 					</h2>
 				</Breadcrumbs>
 				<Divider style={{backgroundColor: "white", marginTop: 10, marginBottom: 10,}}/>
-					<h2>Executing Workflow</h2>	
-					<FormControlLabel
-						style={{color: "white", marginBottom: "0px", marginTop: "10px"}}
-						label={<div style={{color: "white"}}>Show failed / skipped actions</div>}
-						control={
-							<Switch checked={showSkippedActions} onChange={() => {setShowSkippedActions(!showSkippedActions)}} />
-						}
-					/>
+					<h2>Executing Workflow</h2>		
 					{executionData.status !== undefined && executionData.status.length > 0 ?
 						<div>
 							<b>Status: </b>{executionData.status} 
@@ -5292,7 +5288,7 @@ const AngularWorkflow = (props) => {
 						</div>
 						: null
 					}
-					{executionData.completed_at !== undefined ?
+					{executionData.completed_at !== undefined && executionData.completed_at !== null && executionData.completed_at > 0 ?
 						<div>
 							<b>Finished: </b>{new Date(executionData.completed_at*1000).toISOString()} 
 						</div>
@@ -5308,7 +5304,19 @@ const AngularWorkflow = (props) => {
 						parsedExecutionArgument()
 					: null }
 					<Divider style={{backgroundColor: "white", marginTop: 30, marginBottom: 30,}}/>
+					{executionData.results !== undefined && executionData.results !== null && executionData.results.length > 1 && executionData.results.find(result => result.status === "SKIPPED" || result.status === "FAILURE") ?
+						<FormControlLabel
+							style={{color: "white", marginBottom: 10, }}
+							label={<div style={{color: "white"}}>Show failed / skipped actions</div>}
+							control={
+								<Switch checked={showSkippedActions} onChange={() => {setShowSkippedActions(!showSkippedActions)}} />
+							}
+						/>
+						: 
+						null
+					}
 					<div style={{display: "flex", marginTop: 10, marginBottom: 30,}}>
+
 						<b>Actions</b>
 						<div>
 							{executionData.status !== undefined && executionData.status !== "ABORTED" && executionData.status !== "FINISHED" && executionData.status !== "FAILURE" ? <CircularProgress style={{marginLeft: 20}}/> : null}

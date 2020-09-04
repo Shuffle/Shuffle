@@ -334,6 +334,7 @@ const AppCreator = (props) => {
 			}
 		})
 		.catch(error => {
+			console.log("Error: ", error.toString())
 			alert.error(error.toString())
 		});
 	}
@@ -405,11 +406,33 @@ const AppCreator = (props) => {
 			securitySchemes = data.components.securitySchemes
 		} 
 
+		const allowedfunctions = [
+			"GET",
+			"CONNECT",
+			"HEAD",
+			"DELETE",
+			"POST",
+			"PATCH",
+			"PUT",
+		]
+
 		// FIXME - headers?
 		var newActions = []
 		var wordlist = {}
 		for (let [path, pathvalue] of Object.entries(data.paths)) {
 			for (let [method, methodvalue] of Object.entries(pathvalue)) {
+				if (methodvalue === null) {
+					alert.info("Skipped method "+method)
+					continue
+				}
+
+				if (!allowedfunctions.includes(method.toUpperCase())) {
+					console.log(method, path)
+					continue
+				}
+
+				console.log("Method: ", method)
+				console.log("Methodval: ", methodvalue)
 				var newaction = {
 					"name": methodvalue.summary,
 					"description": methodvalue.description,
@@ -446,8 +469,11 @@ const AppCreator = (props) => {
 					// https://swagger.io/docs/specification/describing-parameters/
 					// Need to split the data.
 					} else if (parameter.in === "body") {
-						console.log("BODY: ", parameter)
-						newaction.body = parameter.example
+						// FIXME: Add tracking for components
+						// E.G: https://raw.githubusercontent.com/owentl/Shuffle/master/gosecure.yaml
+						if (parameter.example !== undefined) {
+							newaction.body = parameter.example
+						}
 					} else if (parameter.in === "header") {
 						newaction.headers += `${parameter.name}=${parameter.example}\n`	
 					}
@@ -1732,7 +1758,7 @@ const AppCreator = (props) => {
 						margin="normal"
 						variant="outlined"
 						value={baseUrl}
-						helperText={<div style={{color:"white", marginBottom: "2px",}}>Must start with http(s):// and CANT end with /. </div>}
+						helperText={<span style={{color:"white", marginBottom: "2px",}}>Must start with http(s):// and CANT end with /. </span>}
 						placeholder="https://api.example.com"
 						onChange={e => setBaseUrl(e.target.value)}
 						onBlur={(event) => {
