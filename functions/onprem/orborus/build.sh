@@ -1,5 +1,5 @@
 NAME=orborus
-VERSION=0.6.0
+VERSION=0.6.1
 
 echo "Running docker build with $NAME:$VERSION"
 #docker rmi frikky/shuffle:$NAME --force

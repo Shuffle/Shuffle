@@ -2,7 +2,7 @@ version: '3'
 services:
   frontend:
     #build: ./frontend
-    image: frikky/shuffle:frontend
+    image: ghcr.io/frikky/shuffle-frontend:0.7.0
     container_name: shuffle-frontend
     hostname: shuffle-frontend
     ports:
@@ -17,7 +17,7 @@ services:
       - backend
   backend:
     #build: ./backend
-    image: frikky/shuffle:backend
+    image: ghcr.io/frikky/shuffle-backend:0.7.0
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
     # Here for debugging:
@@ -43,7 +43,7 @@ services:
       - database
   orborus:
     #build: ./functions/onprem/orborus
-    image: ghcr.io/frikky/orborus:0.6.0
+    image: ghcr.io/frikky/orborus:0.6.1
     container_name: shuffle-orborus
     hostname: shuffle-orborus
     networks:
@@ -51,6 +51,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
+      - SHUFFLE_APP_SDK_VERSION=0.6.0
+      - SHUFFLE_WORKER_VERSION=0.6.0
       - ORG_ID=${ORG_ID}
       - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
       - BASE_URL=http://${OUTER_HOSTNAME}:${BACKEND_PORT}
@@ -61,7 +63,7 @@ services:
     restart: unless-stopped
   database:
     #build: ./backend/database
-    image: frikky/shuffle:database
+    image: ghcr.io/frikky/shuffle-database:1.0.0
     container_name: shuffle-database
     hostname: shuffle-database
     ports:

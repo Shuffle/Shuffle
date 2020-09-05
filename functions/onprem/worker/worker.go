@@ -44,7 +44,7 @@ func init() {
 	if len(containerId) == 0 {
 		log.Printf("[ERROR] No container ID found.")
 	} else {
-		log.Printf("Found container ID: %s", containerId)
+		log.Printf("[INFO] Found container ID: %s", containerId)
 	}
 }
 
@@ -359,7 +359,7 @@ type ExecutionRequestWrapper struct {
 func shutdown(executionId, workflowId string) {
 	dockercli, err := dockerclient.NewEnvClient()
 	if err != nil {
-		log.Printf("Unable to create docker client: %s", err)
+		log.Printf("[ERROR] Unable to create docker client: %s", err)
 		os.Exit(3)
 	}
 
@@ -396,7 +396,7 @@ func shutdown(executionId, workflowId string) {
 	)
 
 	if err != nil {
-		log.Println("Failed building request: %s", err)
+		log.Println("[INFO] Failed building request: %s", err)
 	}
 
 	// FIXME: Add an API call to the backend
@@ -404,7 +404,7 @@ func shutdown(executionId, workflowId string) {
 	if len(authorization) > 0 {
 		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", authorization))
 	} else {
-		log.Printf("No authorization specified for abort")
+		log.Printf("[ERROR] No authorization specified for abort")
 	}
 
 	req.Header.Add("Content-Type", "application/json")
@@ -420,18 +420,18 @@ func shutdown(executionId, workflowId string) {
 		client = &http.Client{}
 	} else {
 		if len(httpProxy) > 0 {
-			log.Printf("Running with HTTP proxy %s (env: HTTP_PROXY)", httpProxy)
+			log.Printf("[INFO] Running with HTTP proxy %s (env: HTTP_PROXY)", httpProxy)
 		}
 		if len(httpsProxy) > 0 {
-			log.Printf("Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
+			log.Printf("[INFO] Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
 		}
 	}
 	_, err = client.Do(req)
 	if err != nil {
-		log.Printf("Failed abort request: %s", err)
+		log.Printf("[INFO] Failed abort request: %s", err)
 	}
 
-	log.Printf("Finished shutdown.")
+	log.Printf("[INFO] Finished shutdown.")
 	os.Exit(3)
 }
 
@@ -467,13 +467,12 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	)
 
 	if err != nil {
-		log.Println(err)
+		log.Printf("Container error: %s", err)
 		return err
 	}
 
 	cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
-	fmt.Printf("\n")
-	log.Printf("Container %s is created", cont.ID)
+	log.Printf("[INFO] Container %s is created", cont.ID)
 	return nil
 }
 
@@ -482,7 +481,7 @@ func removeContainer(containername string) error {
 
 	cli, err := dockerclient.NewEnvClient()
 	if err != nil {
-		log.Printf("Unable to create docker client: %s", err)
+		log.Printf("[INFO] Unable to create docker client: %s", err)
 		return err
 	}
 
@@ -901,9 +900,11 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 
 			err = deployApp(dockercli, image, identifier, env)
 			if err != nil {
-				log.Printf("Failed deploying %s from image %s: %s", identifier, image, err)
-				log.Printf("Should send status and exit the entire thing?")
-				//shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+				log.Printf("[ERROR] Failed deploying %s from image %s: %s", identifier, image, err)
+				if strings.Contains(err.Error(), "No such image") {
+					log.Printf("[ERROR] Image doesn't exist. Shutting down")
+					shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+				}
 			}
 
 			log.Printf("Adding visited (3): %s", action.Label)
@@ -1091,7 +1092,7 @@ func runTestExecution(client *http.Client, workflowId, apikey string) (string, s
 		return "", ""
 	}
 
-	log.Printf("Body: %s", string(body))
+	log.Printf("[INFO] Body: %s", string(body))
 	var workflowExecution WorkflowExecution
 	err = json.Unmarshal(body, &workflowExecution)
 	if err != nil {
@@ -1104,7 +1105,7 @@ func runTestExecution(client *http.Client, workflowId, apikey string) (string, s
 
 // Initial loop etc
 func main() {
-	log.Printf("Setting up worker environment")
+	log.Printf("[INFO] Setting up worker environment")
 	sleepTime := 5
 
 	client := &http.Client{
@@ -1133,7 +1134,7 @@ func main() {
 	shuffle_apikey := os.Getenv("WORKER_TESTING_APIKEY")
 	if len(testing) > 0 && len(shuffle_apikey) > 0 {
 		// Execute a workflow and use that info
-		log.Printf("!! Running test environment for worker by executing workflow %s", testing)
+		log.Printf("[WARNING] Running test environment for worker by executing workflow %s", testing)
 		authorization, executionId = runTestExecution(client, testing, shuffle_apikey)
 
 		//os.Exit(3)
@@ -1144,12 +1145,12 @@ func main() {
 	}
 
 	if len(authorization) == 0 {
-		log.Println("No AUTHORIZATION key set in env")
+		log.Println("[INFO] No AUTHORIZATION key set in env")
 		shutdown(executionId, "")
 	}
 
 	if len(executionId) == 0 {
-		log.Println("No EXECUTIONID key set in env")
+		log.Println("[INFO] No EXECUTIONID key set in env")
 		shutdown(executionId, "")
 	}
 
@@ -1163,7 +1164,7 @@ func main() {
 	)
 
 	if err != nil {
-		log.Println("Failed making request builder")
+		log.Println("[ERROR] Failed making request builder for backend")
 		shutdown(executionId, "")
 	}
 
@@ -1172,20 +1173,20 @@ func main() {
 		// Removed request requirement from app_sdk
 		newresp, err := client.Do(req)
 		if err != nil {
-			log.Printf("Failed request: %s", err)
+			log.Printf("[ERROR] Failed request: %s", err)
 			time.Sleep(time.Duration(sleepTime) * time.Second)
 			continue
 		}
 
 		body, err := ioutil.ReadAll(newresp.Body)
 		if err != nil {
-			log.Printf("Failed reading body: %s", err)
+			log.Printf("[ERROR] Failed reading body: %s", err)
 			time.Sleep(time.Duration(sleepTime) * time.Second)
 			continue
 		}
 
 		if newresp.StatusCode != 200 {
-			log.Printf("Err: %s\nStatusCode: %d", string(body), newresp.StatusCode)
+			log.Printf("[ERROR] %s\nStatusCode: %d", string(body), newresp.StatusCode)
 			time.Sleep(time.Duration(sleepTime) * time.Second)
 			continue
 		}
@@ -1193,13 +1194,13 @@ func main() {
 		var workflowExecution WorkflowExecution
 		err = json.Unmarshal(body, &workflowExecution)
 		if err != nil {
-			log.Printf("Failed workflowExecution unmarshal: %s", err)
+			log.Printf("[ERROR] Failed workflowExecution unmarshal: %s", err)
 			time.Sleep(time.Duration(sleepTime) * time.Second)
 			continue
 		}
 
 		if workflowExecution.Status == "FINISHED" || workflowExecution.Status == "SUCCESS" {
-			log.Printf("Workflow %s is finished. Exiting worker.", workflowExecution.ExecutionId)
+			log.Printf("[INFO] Workflow %s is finished. Exiting worker.", workflowExecution.ExecutionId)
 			shutdown(executionId, workflowExecution.Workflow.ID)
 		}
 
@@ -1207,15 +1208,14 @@ func main() {
 			//log.Printf("Status: %s", workflowExecution.Status)
 			err = handleExecution(client, req, workflowExecution)
 			if err != nil {
-				log.Printf("Workflow %s is finished: %s", workflowExecution.ExecutionId, err)
+				log.Printf("[INFO] Workflow %s is finished: %s", workflowExecution.ExecutionId, err)
 				shutdown(executionId, workflowExecution.Workflow.ID)
 			}
 		} else {
-			log.Printf("Workflow %s has status %s. Exiting worker.", workflowExecution.ExecutionId, workflowExecution.Status)
+			log.Printf("[INFO] Workflow %s has status %s. Exiting worker.", workflowExecution.ExecutionId, workflowExecution.Status)
 			shutdown(executionId, workflowExecution.Workflow.ID)
 		}
 
-		//log.Println(string(body))
 		time.Sleep(time.Duration(sleepTime) * time.Second)
 	}
 }

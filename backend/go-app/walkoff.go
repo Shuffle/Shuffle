@@ -42,14 +42,10 @@ var localBase = "http://localhost:5001"
 var baseEnvironment = "onprem"
 
 var cloudname = "cloud"
-
 var defaultLocation = "europe-west2"
 var scheduledJobs = map[string]*newscheduler.Job{}
 
 // To test out firestore before potential merge
-var shuffleTestProject = "shuffle-test-258209"
-var shuffleTestPath = "./shuffle-test-258209-5a2e8d7e508a.json"
-
 //var upgrader = websocket.Upgrader{
 //	ReadBufferSize:  1024,
 //	WriteBufferSize: 1024,
@@ -2146,7 +2142,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 
 		//log.Printf("Execution data: %#v", execution)
 		if len(execution.Start) == 36 {
-			log.Printf("SHOULD START ON NODE %s", execution.Start)
+			log.Printf("[INFO] Should start execution on node %s", execution.Start)
 			workflowExecution.Start = execution.Start
 
 			found := false
@@ -2157,12 +2153,12 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 			}
 
 			if !found {
-				log.Printf("ACTION %s WAS NOT FOUND!", workflow.Start)
+				log.Printf("[ERROR] ACTION %s WAS NOT FOUND!", workflow.Start)
 				return WorkflowExecution{}, fmt.Sprintf("Startnode %s was not found in actions", workflow.Start), errors.New(fmt.Sprintf("Startnode %s was not found in actions", workflow.Start))
 			}
 		} else if len(execution.Start) > 0 {
 
-			log.Printf("START ACTION %s IS WRONG ID LENGTH %d!", execution.Start, len(execution.Start))
+			log.Printf("[ERROR] START ACTION %s IS WRONG ID LENGTH %d!", execution.Start, len(execution.Start))
 			return WorkflowExecution{}, fmt.Sprintf("Startnode %s was not found in actions", execution.Start), errors.New(fmt.Sprintf("Startnode %s was not found in actions", execution.Start))
 		}
 
@@ -2292,10 +2288,10 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	}
 
 	if len(workflowExecution.ExecutionSource) == 0 {
-		log.Printf("No execution source specified. Setting to default")
+		log.Printf("[INFO] No execution source (trigger) specified. Setting to default")
 		workflowExecution.ExecutionSource = "default"
 	} else {
-		log.Printf("Execution source is %s for execution ID %s", workflowExecution.ExecutionSource, workflowExecution.ExecutionId)
+		log.Printf("[INFO] Execution source is %s for execution ID %s", workflowExecution.ExecutionSource, workflowExecution.ExecutionId)
 	}
 
 	workflowExecution.ExecutionVariables = workflow.ExecutionVariables
@@ -2315,7 +2311,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	if len(workflowExecution.Start) == 0 {
 		workflowExecution.Start = workflowExecution.Workflow.Start
 	}
-	log.Printf("STARTNODE: %s", workflowExecution.Start)
+	log.Printf("[INFO] New startnode: %s", workflowExecution.Start)
 
 	childNodes := findChildNodes(workflowExecution, workflowExecution.Start)
 
@@ -2423,6 +2419,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	environments := []string{}
 
 	// Check if the actions are children of the startnode?
+	imageNames := []string{}
 	for _, action := range workflowExecution.Workflow.Actions {
 		if action.Environment != cloudname {
 			found := false
@@ -2433,12 +2430,23 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 				}
 			}
 
+			// Check if the app exists?
+			newName := action.AppName
+			newName = strings.ReplaceAll(newName, " ", "-")
+			imageNames = append(imageNames, fmt.Sprintf("%s:%s_%s", baseDockerName, newName, action.AppVersion))
+
 			if !found {
 				environments = append(environments, action.Environment)
 			}
 
 			onpremExecution = true
 		}
+	}
+
+	err = imageCheckBuilder(imageNames)
+	if err != nil {
+		log.Printf("[ERROR] Failed building the required images from %#v: %s", imageNames, err)
+		return WorkflowExecution{}, "Failed building missing Docker images", err
 	}
 
 	err = setWorkflowExecution(ctx, workflowExecution)
@@ -2452,7 +2460,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	if onpremExecution {
 		// FIXME - tmp name based on future companyname-companyId
 		for _, environment := range environments {
-			log.Printf("EXECUTION: %s should execute onprem with execution environment \"%s\"", workflowExecution.ExecutionId, environment)
+			log.Printf("[INFO] Execution: %s should execute onprem with execution environment \"%s\"", workflowExecution.ExecutionId, environment)
 
 			executionRequest := ExecutionRequest{
 				ExecutionId:   workflowExecution.ExecutionId,
@@ -2539,7 +2547,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("STARTING EXEC OF %s!", fileId)
+	log.Printf("[INFO] Starting execution of %s!", fileId)
 	workflowExecution, executionResp, err := handleExecution(fileId, *workflow, request)
 
 	if err == nil {
@@ -3050,26 +3058,6 @@ func getSpecificWorkflow(resp http.ResponseWriter, request *http.Request) {
 	resp.WriteHeader(200)
 	resp.Write(body)
 }
-
-//func setWorkflowExecutionFS(ctx context.Context, reference string, workflowExecution WorkflowExecution) error {
-//	if len(workflowExecution.ExecutionId) == 0 {
-//		log.Printf("Workflowexeciton executionId can't be empty.")
-//		return errors.New("ExecutionId can't be empty.")
-//	}
-//
-//	firestoreClient, err := firestore.NewClient(ctx, shuffleTestProject, option.WithCredentialsFile(shuffleTestPath))
-//	if err != nil {
-//		return err
-//	}
-//
-//	executionRef := firestoreClient.Doc(reference)
-//	_, err = executionRef.Set(ctx, workflowExecution)
-//	if err != nil {
-//		return err
-//	}
-//
-//	return nil
-//}
 
 func setWorkflowExecution(ctx context.Context, workflowExecution WorkflowExecution) error {
 	if len(workflowExecution.ExecutionId) == 0 {

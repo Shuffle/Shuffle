@@ -1031,7 +1031,7 @@ const AppCreator = (props) => {
 							/>
 
 						</div>
-						<div style={{color: "#f85a3e", cursor: "pointer"}} onClick={() => {deletePathQuery(index)}}>
+						<div style={{float: "right", color: "#f85a3e", cursor: "pointer"}} onClick={() => {deletePathQuery(index)}}>
 							Delete
 						</div>
 

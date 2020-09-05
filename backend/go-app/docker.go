@@ -642,6 +642,49 @@ func handleStartHookDocker(resp http.ResponseWriter, request *http.Request) {
 	return
 }
 
+// Checks if an image exists
+func imageCheckBuilder(images []string) error {
+	log.Printf("ImageNames: %#v", images)
+	ctx := context.Background()
+	client, err := client.NewEnvClient()
+	if err != nil {
+		log.Printf("Unable to create docker client: %s", err)
+		return err
+	}
+
+	allImages, err := client.ImageList(ctx, types.ImageListOptions{
+		All: true,
+	})
+
+	if err != nil {
+		log.Printf("[ERROR] Failed creating imagelist: %s", err)
+		return err
+	}
+
+	filteredImages := []types.ImageSummary{}
+	for _, image := range allImages {
+		found := false
+		for _, repoTag := range image.RepoTags {
+			if strings.Contains(repoTag, baseDockerName) {
+				found = true
+				break
+			}
+		}
+
+		if found {
+			filteredImages = append(filteredImages, image)
+		}
+	}
+
+	// FIXME: Continue fixing apps here
+	// https://github.com/frikky/Shuffle/issues/135
+	// 1. Find if app exists
+	// 2. Create app if it doesn't
+	//log.Printf("Apps: %#v", filteredImages)
+
+	return nil
+}
+
 func hookTest() {
 	var hook Hook
 	err := json.Unmarshal([]byte(webhook), &hook)
