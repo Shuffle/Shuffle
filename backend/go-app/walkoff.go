@@ -122,19 +122,20 @@ type WorkflowApp struct {
 }
 
 type WorkflowAppActionParameter struct {
-	Description   string           `json:"description" datastore:"description,noindex" yaml:"description"`
-	ID            string           `json:"id" datastore:"id" yaml:"id,omitempty"`
-	Name          string           `json:"name" datastore:"name" yaml:"name"`
-	Example       string           `json:"example" datastore:"example" yaml:"example"`
-	Value         string           `json:"value" datastore:"value" yaml:"value,omitempty"`
-	Multiline     bool             `json:"multiline" datastore:"multiline" yaml:"multiline"`
-	Options       []string         `json:"options" datastore:"options" yaml:"options"`
-	ActionField   string           `json:"action_field" datastore:"action_field" yaml:"actionfield,omitempty"`
-	Variant       string           `json:"variant" datastore:"variant" yaml:"variant,omitempty"`
-	Required      bool             `json:"required" datastore:"required" yaml:"required"`
-	Configuration bool             `json:"configuration" datastore:"configuration" yaml:"configuration"`
-	Tags          []string         `json:"tags" datastore:"tags" yaml:"tags"`
-	Schema        SchemaDefinition `json:"schema" datastore:"schema" yaml:"schema"`
+	Description    string           `json:"description" datastore:"description,noindex" yaml:"description"`
+	ID             string           `json:"id" datastore:"id" yaml:"id,omitempty"`
+	Name           string           `json:"name" datastore:"name" yaml:"name"`
+	Example        string           `json:"example" datastore:"example" yaml:"example"`
+	Value          string           `json:"value" datastore:"value" yaml:"value,omitempty"`
+	Multiline      bool             `json:"multiline" datastore:"multiline" yaml:"multiline"`
+	Options        []string         `json:"options" datastore:"options" yaml:"options"`
+	ActionField    string           `json:"action_field" datastore:"action_field" yaml:"actionfield,omitempty"`
+	Variant        string           `json:"variant" datastore:"variant" yaml:"variant,omitempty"`
+	Required       bool             `json:"required" datastore:"required" yaml:"required"`
+	Configuration  bool             `json:"configuration" datastore:"configuration" yaml:"configuration"`
+	Tags           []string         `json:"tags" datastore:"tags" yaml:"tags"`
+	Schema         SchemaDefinition `json:"schema" datastore:"schema" yaml:"schema"`
+	SkipMulticheck bool             `json:"skip_multicheck" datastore:"skip_multicheck" yaml:"skip_multicheck"`
 }
 
 type SchemaDefinition struct {
@@ -540,6 +541,7 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 		return
 	}
 
+	// FIXME: Add authentication?
 	id := request.Header.Get("Org-Id")
 	if len(id) == 0 {
 		log.Printf("No Org-Id header set - confirm")
@@ -626,7 +628,8 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 	resp.Write([]byte("OK"))
 }
 
-// FIXME: Authenticate this one (especially since we have a default: shuffle)
+// FIXME: Authenticate this one? Can org ID be auth enough?
+// (especially since we have a default: shuffle)
 func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -653,6 +656,8 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 
 	if len(executionRequests.Data) == 0 {
 		executionRequests.Data = []ExecutionRequest{}
+	} else {
+		log.Printf("[INFO] Executionrequests: %d", len(executionRequests.Data))
 	}
 
 	newjson, err := json.Marshal(executionRequests)
@@ -2479,12 +2484,13 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 			}
 
 			//log.Printf("Execution request: %#v", executionRequest)
-
 			err = setWorkflowQueue(ctx, executionRequestWrapper, environment)
 			if err != nil {
 				log.Printf("Failed adding to db: %s", err)
 			}
 		}
+	} else {
+		log.Printf("[ERROR] Cloud not implemented yet")
 	}
 
 	err = increaseStatisticsField(ctx, "workflow_executions", workflow.ID, 1)
@@ -3312,7 +3318,6 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("Deleting private app")
 		var privateApps []WorkflowApp
 		for _, item := range user.PrivateApps {
-			log.Println(item.ID, fileId)
 			if item.ID == fileId {
 				continue
 			}
@@ -4466,6 +4471,7 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 			if strings.Contains(filename, "yaml") || strings.Contains(filename, "yml") {
 				//log.Printf("File: %s", filename)
 				//log.Printf("Found file: %s", filename)
+				log.Printf("OpenAPI app: %s", filename)
 				tmpExtra := fmt.Sprintf("%s%s/", extra, file.Name())
 
 				fileReader, err := fs.Open(tmpExtra)

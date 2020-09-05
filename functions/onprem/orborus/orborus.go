@@ -263,7 +263,7 @@ func main() {
 	// FIXME - during init, BUILD and/or LOAD worker and app_sdk
 	// Build/load app_sdk so it can be loaded as 127.0.0.1:5000/walkoff_app_sdk
 	log.Printf("[INFO] Setting up Docker environment. Downloading worker and App SDK!")
-	initializeImages()
+	go initializeImages()
 
 	//workerName := "worker"
 	//workerVersion := "0.1.0"

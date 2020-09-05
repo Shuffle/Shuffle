@@ -804,7 +804,15 @@ class AppBase:
                             #submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"
                             submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"
                             actualitem = re.findall(submatch, value, re.MULTILINE)
-                            print("Multicheck ", actualitem)
+                            try:
+                                if action["skip_multicheck"]:
+                                    print("Skipping multicheck")
+                                    actualitem = []
+                            except KeyError:
+                                pass
+
+                            actionname = action["name"]
+                            #print("Multicheck ", actualitem)
                             if len(actualitem) > 0:
                                 multiexecution = True
                                 

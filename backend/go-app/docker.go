@@ -644,7 +644,9 @@ func handleStartHookDocker(resp http.ResponseWriter, request *http.Request) {
 
 // Checks if an image exists
 func imageCheckBuilder(images []string) error {
-	log.Printf("ImageNames: %#v", images)
+	log.Printf("[FIXME] ImageNames to check: %#v", images)
+	return nil
+
 	ctx := context.Background()
 	client, err := client.NewEnvClient()
 	if err != nil {

@@ -403,6 +403,7 @@ const Apps = (props) => {
 		const activateUrl = "/apps/new?id="+selectedApp.id
 
 		var downloadButton = selectedApp.activated && selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated ?
+			<Tooltip title={"Download OpenAPI"}>
 				<Button
 					onClick={() => {downloadApp(selectedApp)}}
 					variant="outlined"
@@ -412,31 +413,53 @@ const Apps = (props) => {
 				>
 					<CloudDownload /> 
 				</Button>
+			</Tooltip>
 			: null
 
 		var editButton = selectedApp.activated && selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated ?
 			<Link to={editUrl} style={{textDecoration: "none"}}>
-				<Button
-					variant="outlined"
-					component="label"
-					color="primary"
-					style={{marginTop: 10, marginRight: 10,}}
-				>
-					<EditIcon />
-				</Button></Link> : null
+				<Tooltip title={"Edit OpenAPI app"}>
+					<Button
+						variant="outlined"
+						component="label"
+						color="primary"
+						style={{marginTop: 10, marginRight: 10,}}
+					>
+						<EditIcon />
+					</Button>
+				</Tooltip>
+				</Link> : null
 
 		var activateButton = selectedApp.generated && !selectedApp.activated ?
-			<Link to={activateUrl} style={{textDecoration: "none"}}>
-				<Button
-					variant="contained"
-					component="label"
-					color="primary"
-					style={{marginTop: 10}}
-				>
-					Activate App	
-				</Button></Link> : null
+			<div>
+				<Link to={activateUrl} style={{textDecoration: "none"}}>
+					<Button
+						variant="contained"
+						component="label"
+						color="primary"
+						style={{marginTop: 10}}
+					>
+						Activate App	
+					</Button>
+				</Link> 
+				<Tooltip title={"Delete app"}>
+					<Button
+						variant="outlined"
+						component="label"
+						color="primary"
+						style={{marginLeft: 5, marginTop: 10}}
+						onClick={() => {
+							setDeleteModalOpen(true)
+						}}
+					>
+						<DeleteIcon />
+					</Button> 
+				</Tooltip>
+			</div>
+			: null
 
 		var deleteButton = ((selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated) || (selectedApp.downloaded != undefined && selectedApp.downloaded == true)) && activateButton === null ?
+			<Tooltip title={"Delete app"}>
 				<Button
 					variant="outlined"
 					component="label"
@@ -447,7 +470,9 @@ const Apps = (props) => {
 					}}
 				>
 					<DeleteIcon />
-				</Button> : null
+				</Button> 
+			</Tooltip>
+			: null
 
 		var imageline = selectedApp.large_image === undefined || selectedApp.large_image.length === 0 ?
 			<img alt={selectedApp.title} style={{width: 100, height: 100}} />
@@ -589,74 +614,76 @@ const Apps = (props) => {
 				{/*<p><b>Owner:</b> {selectedApp.owner}</p>*/}
 				{selectedApp.privateId !== undefined && selectedApp.privateId.length > 0 ? <p><b>PrivateID:</b> {selectedApp.privateId}</p> : null}
 				<Divider style={{marginBottom: 10, marginTop: 10, backgroundColor: dividerColor}}/>
-				{selectedApp.link.length > 0 ? <p><b>URL:</b> {selectedApp.link}</p> : null}
-				<div style={{marginTop: 15, marginBottom: 15}}>
-					<b>Actions</b>
-					{selectedApp.actions !== null && selectedApp.actions.length > 0 ?
-						<Select
-							fullWidth
-							value={selectedAction}
-							onChange={(event) => {
-								setSelectedAction(event.target.value)
-							}}
-							style={{backgroundColor: inputColor, color: "white", height: "50px"}}
-							SelectDisplayProps={{
-								style: {
-									marginLeft: 10,
-								}
-							}}
-						>
-							{selectedApp.actions.map(data => {
-									var newActionname = data.label !== undefined && data.label.length > 0 ? data.label : data.name
+				<div style={{padding: 20}}>
+					{selectedApp.link.length > 0 ? <p><b>URL:</b> {selectedApp.link}</p> : null}
+					<div style={{marginTop: 15, marginBottom: 15}}>
+						<b>Actions</b>
+						{selectedApp.actions !== null && selectedApp.actions.length > 0 ?
+							<Select
+								fullWidth
+								value={selectedAction}
+								onChange={(event) => {
+									setSelectedAction(event.target.value)
+								}}
+								style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+								SelectDisplayProps={{
+									style: {
+										marginLeft: 10,
+									}
+								}}
+							>
+								{selectedApp.actions.map(data => {
+										var newActionname = data.label !== undefined && data.label.length > 0 ? data.label : data.name
 
-									// ROFL FIXME - loop
-									newActionname = newActionname.replace("_", " ")
-									newActionname = newActionname.replace("_", " ")
-									newActionname = newActionname.replace("_", " ")
-									newActionname = newActionname.replace("_", " ")
-									newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
+										// ROFL FIXME - loop
+										newActionname = newActionname.replace("_", " ")
+										newActionname = newActionname.replace("_", " ")
+										newActionname = newActionname.replace("_", " ")
+										newActionname = newActionname.replace("_", " ")
+										newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
+										return (
+											<MenuItem key={data.name} style={{backgroundColor: inputColor, color: "white"}} value={data}>
+												{newActionname}
+
+											</MenuItem>
+										)
+									})}
+							</Select>
+							: 
+							<div style={{marginTop: 10}}>
+								There are no actions defined for this app.
+							</div>
+						}
+					</div>
+
+					{selectedAction.parameters !== undefined && selectedAction.parameters !== null ? 
+						<div style={{marginTop: 15, marginBottom: 15}}>
+							<b>Arguments</b>
+							{selectedAction.parameters.map(data => {
+									var itemColor = "#f85a3e"
+									if (!data.required) {
+										itemColor = "#ffeb3b"
+									}
+
+									const circleSize = 10
 									return (
 										<MenuItem key={data.name} style={{backgroundColor: inputColor, color: "white"}} value={data}>
-											{newActionname}
+											<div style={{width: circleSize, height: circleSize, borderRadius: circleSize / 2, backgroundColor: itemColor, marginRight: "10px"}}/>
+											{data.name}
 
 										</MenuItem>
 									)
 								})}
-						</Select>
-						: 
-						<div style={{marginTop: 10}}>
-							There are no actions defined for this app.
 						</div>
-					}
-				</div>
-
-				{selectedAction.parameters !== undefined && selectedAction.parameters !== null ? 
-					<div style={{marginTop: 15, marginBottom: 15}}>
-						<b>Arguments</b>
-						{selectedAction.parameters.map(data => {
-								var itemColor = "#f85a3e"
-								if (!data.required) {
-									itemColor = "#ffeb3b"
-								}
-
-								const circleSize = 10
-								return (
-									<MenuItem key={data.name} style={{backgroundColor: inputColor, color: "white"}} value={data}>
-										<div style={{width: circleSize, height: circleSize, borderRadius: circleSize / 2, backgroundColor: itemColor, marginRight: "10px"}}/>
-										{data.name}
-
-									</MenuItem>
-								)
-							})}
-					</div>
-				: null}
-				{selectedAction.description !== undefined && selectedAction.description !== null && selectedAction.description.length > 0 ? 
-					<div>
-						<b>Action Description</b><div/>
-						{selectedAction.description}
-					</div>
 					: null}
-				<GetAppExample />
+					{selectedAction.description !== undefined && selectedAction.description !== null && selectedAction.description.length > 0 ? 
+						<div>
+							<b>Action Description</b><div/>
+							{selectedAction.description}
+						</div>
+						: null}
+					<GetAppExample />
+				</div>
 			</div>
 			: 
 			null

@@ -398,7 +398,6 @@ const Workflows = (props) => {
 	}
 
 	// dropdown with copy etc I guess
-	console.log("Why reset?")
 	const WorkflowPaper = (props) => {
   	const { data } = props;
 		const [open, setOpen] = React.useState(false);

@@ -960,7 +960,7 @@ const AppCreator = (props) => {
 				margin="normal"
 				variant="outlined"
 				value={parameterName}
-				helperText={<div style={{color:"white", marginBottom: "2px",}}>Can't be empty. Can't contain any of the following characters: !#$%&'^+-._~|]+$</div>}
+				helperText={<span style={{color:"white", marginBottom: "2px",}}>Can't be empty. Can't contain any of the following characters: !#$%&'^+-._~|]+$</span>}
 				onChange={e => setParameterName(e.target.value)}	
 				InputProps={{
 					classes: {
