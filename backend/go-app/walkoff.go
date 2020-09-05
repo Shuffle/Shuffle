@@ -3340,16 +3340,15 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 			resp.Write([]byte(fmt.Sprintf(`{"success": true"}`)))
 			return
 		}
-	} else {
+	}
 
-		log.Printf("Deleting public app")
-		err = DeleteKey(ctx, "workflowapp", fileId)
-		if err != nil {
-			log.Printf("Failed deleting workflowapp")
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed deleting workflow app"}`)))
-			return
-		}
+	log.Printf("Deleting public app")
+	err = DeleteKey(ctx, "workflowapp", fileId)
+	if err != nil {
+		log.Printf("Failed deleting workflowapp")
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed deleting workflow app"}`)))
+		return
 	}
 
 	err = increaseStatisticsField(ctx, "total_apps_deleted", fileId, 1)
