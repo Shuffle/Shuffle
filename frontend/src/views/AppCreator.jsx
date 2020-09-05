@@ -334,6 +334,7 @@ const AppCreator = (props) => {
 			}
 		})
 		.catch(error => {
+			console.log("Error: ", error.toString())
 			alert.error(error.toString())
 		});
 	}
@@ -405,11 +406,33 @@ const AppCreator = (props) => {
 			securitySchemes = data.components.securitySchemes
 		} 
 
+		const allowedfunctions = [
+			"GET",
+			"CONNECT",
+			"HEAD",
+			"DELETE",
+			"POST",
+			"PATCH",
+			"PUT",
+		]
+
 		// FIXME - headers?
 		var newActions = []
 		var wordlist = {}
 		for (let [path, pathvalue] of Object.entries(data.paths)) {
 			for (let [method, methodvalue] of Object.entries(pathvalue)) {
+				if (methodvalue === null) {
+					alert.info("Skipped method "+method)
+					continue
+				}
+
+				if (!allowedfunctions.includes(method.toUpperCase())) {
+					console.log(method, path)
+					continue
+				}
+
+				console.log("Method: ", method)
+				console.log("Methodval: ", methodvalue)
 				var newaction = {
 					"name": methodvalue.summary,
 					"description": methodvalue.description,
@@ -446,8 +469,11 @@ const AppCreator = (props) => {
 					// https://swagger.io/docs/specification/describing-parameters/
 					// Need to split the data.
 					} else if (parameter.in === "body") {
-						console.log("BODY: ", parameter)
-						newaction.body = parameter.example
+						// FIXME: Add tracking for components
+						// E.G: https://raw.githubusercontent.com/owentl/Shuffle/master/gosecure.yaml
+						if (parameter.example !== undefined) {
+							newaction.body = parameter.example
+						}
 					} else if (parameter.in === "header") {
 						newaction.headers += `${parameter.name}=${parameter.example}\n`	
 					}
@@ -934,7 +960,7 @@ const AppCreator = (props) => {
 				margin="normal"
 				variant="outlined"
 				value={parameterName}
-				helperText={<div style={{color:"white", marginBottom: "2px",}}>Can't be empty. Can't contain any of the following characters: !#$%&'^+-._~|]+$</div>}
+				helperText={<span style={{color:"white", marginBottom: "2px",}}>Can't be empty. Can't contain any of the following characters: !#$%&'^+-._~|]+$</span>}
 				onChange={e => setParameterName(e.target.value)}	
 				InputProps={{
 					classes: {
@@ -1005,7 +1031,7 @@ const AppCreator = (props) => {
 							/>
 
 						</div>
-						<div style={{color: "#f85a3e", cursor: "pointer"}} onClick={() => {deletePathQuery(index)}}>
+						<div style={{float: "right", color: "#f85a3e", cursor: "pointer"}} onClick={() => {deletePathQuery(index)}}>
 							Delete
 						</div>
 
@@ -1264,7 +1290,7 @@ const AppCreator = (props) => {
 			<FormControl style={{backgroundColor: surfaceColor, color: "white",}}>
 				<DialogTitle><div style={{color: "white"}}>New action</div></DialogTitle>
 				<DialogContent>
-					<Link target="_blank" to="/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more about actions</Link>
+					<Link target="_blank" to="https://shuffler.io/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more about actions</Link>
 					<div style={{marginTop: "15px"}}/>
 					Name
 					<TextField
@@ -1542,7 +1568,7 @@ const AppCreator = (props) => {
 		<div style={{color: "white"}}>
 			<h2>Actions</h2>
 			Actions are the tasks performed by an app. Read more about actions and apps
-			<Link target="_blank" to="/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}> here</Link>.
+			<Link target="_blank" to="https://shuffler.io/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}> here</Link>.
 			<div>
 				{loopActions}
 				<Button color="primary" style={{marginTop: "20px", borderRadius: "0px"}} variant="outlined" onClick={() => {
@@ -1567,7 +1593,7 @@ const AppCreator = (props) => {
 		<div style={{color: "white"}}>
 			<h2>Test</h2>
 			Test an action to see whether it performs in an expected way. 
-			<Link target="_blank" to="/docs/apps#testing" style={{textDecoration: "none", color: "#f85a3e"}}>&nbsp;TBD: Click here to learn more about testing</Link>.
+			<Link target="_blank" to="https://shuffler.io/docs/apps#testing" style={{textDecoration: "none", color: "#f85a3e"}}>&nbsp;TBD: Click here to learn more about testing</Link>.
 			<div>
 				Test :)
 			</div>
@@ -1636,7 +1662,7 @@ const AppCreator = (props) => {
 				</Breadcrumbs>
 				<Paper style={boxStyle}>
 					<h2 style={{marginBottom: "10px", color: "white"}}>General information</h2>
-					<Link target="_blank" to="/docs/apps#create_openapi_app" style={{textDecoration: "none", color: "#f85a3e"}}>Click here to learn more about app creation</Link>
+					<Link target="_blank" to="https://shuffler.io/docs/apps#create_openapi_app" style={{textDecoration: "none", color: "#f85a3e"}}>Click here to learn more about app creation</Link>
 					<div style={{color: "white", flex: "1", display: "flex", flexDirection: "row"}}>
 					 	<Tooltip title="Click to edit the app's image" placement="bottom">
 							<div style={{flex: "1", margin: 10, border: "1px solid #f85a3e", cursor: "pointer", backgroundColor: inputColor, maxWidth: 174, maxHeight: 174}} onClick={() => {upload.click()}}>
@@ -1732,7 +1758,7 @@ const AppCreator = (props) => {
 						margin="normal"
 						variant="outlined"
 						value={baseUrl}
-						helperText={<div style={{color:"white", marginBottom: "2px",}}>Must start with http(s):// and CANT end with /. </div>}
+						helperText={<span style={{color:"white", marginBottom: "2px",}}>Must start with http(s):// and CANT end with /. </span>}
 						placeholder="https://api.example.com"
 						onChange={e => setBaseUrl(e.target.value)}
 						onBlur={(event) => {

@@ -14,10 +14,12 @@ import MenuItem from '@material-ui/core/MenuItem';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Chip from '@material-ui/core/Chip';
 import Switch from '@material-ui/core/Switch';
+import Typography from '@material-ui/core/Typography';
 
 import CircularProgress from '@material-ui/core/CircularProgress';
 import CachedIcon from '@material-ui/icons/Cached';
 import GetAppIcon from '@material-ui/icons/GetApp';
+import AppsIcon from '@material-ui/icons/Apps';
 import EditIcon from '@material-ui/icons/Edit';
 import MoreVertIcon from '@material-ui/icons/MoreVert';
 import PlayArrowIcon from '@material-ui/icons/PlayArrow';
@@ -200,7 +202,7 @@ const Workflows = (props) => {
 		marginTop: "10px",
 		overflow: "scroll",
 		height: "90%",
-		overflowX: "auto",
+		overflowX: "hidden",
 		overflowY: "auto",
 	}
 
@@ -211,6 +213,8 @@ const Workflows = (props) => {
 		marginTop: "5px",
 		color: "white",
 		backgroundColor: surfaceColor,
+		borderRadius: 5, 
+		padding: 10,
 		cursor: "pointer",
 		display: "flex",
 	}
@@ -240,6 +244,8 @@ const Workflows = (props) => {
 					setWorkflowExecutions(responseJson)
 				} else {
 					alert.info("Couldn't find executions for the workflow")
+					setSelectedExecution({})
+					setWorkflowExecutions([])
 				}
 			}
 		})
@@ -412,12 +418,29 @@ const Workflows = (props) => {
 			setAnchorEl(event.currentTarget);
 		}
 
+		const actions = data.actions !== null ? data.actions.length : 0
+		var schedules = 0
+		var webhooks = 0
+		var webhookImg = ""
+		var scheduleImg = "" 
+		if (data.triggers !== undefined && data.triggers !== null && data.triggers.length > 0) {
+			for (var key in data.triggers) {
+				if (data.triggers[key].app_name === "Webhook") {
+					webhooks += 1
+					webhookImg = data.triggers[key].large_image
+				} else if (data.triggers[key].app_name === "Schedule") {
+					schedules += 1
+					scheduleImg = data.triggers[key].large_image
+				}
+			}
+		}
+
+		const imgSize = 25
 		return (
 			<Paper square style={paperAppStyle} onClick={(e) => {
-			}}>
-				<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: boxWidth, backgroundColor: boxColor}}>
-				</div>
-				<Grid container style={{margin: "10px 10px 10px 10px", flex: 1}}>
+			}}>	
+				<div style={{width: boxWidth, backgroundColor: boxColor}} />
+				<Grid container style={{margin: "0px 10px 0px 10px", flex: 10}}>
 					<Grid style={{display: "flex", flexDirection: "column", width: "100%"}}>
 						<Grid item style={{flex: 1, display: "flex"}}>
 							<div style={{flex: "10",}} onClick={() => {
@@ -426,9 +449,11 @@ const Workflows = (props) => {
 									getWorkflowExecution(data.id)
 								}
 							}}>
-								<h3 style={{marginBottom: "0px", marginTop: "10px"}}>{data.name}</h3>
+								<Typography variant="h6" style={{marginTop: 10, marginBottom: 0, }}>
+									{data.name}
+								</Typography>
 							</div>
-							<div style={{flex: "1"}}>
+							<div style={{flex: 1, }}>
 								<IconButton
 									aria-label="more"
 									aria-controls="long-menu"
@@ -481,7 +506,7 @@ const Workflows = (props) => {
 								getWorkflowExecution(data.id)
 							}
 						}}>
-							<Grid item style={{flex: "1", justifyContent: "center", overflow: "hidden"}}>
+							<Grid item style={{flex: "1", justifyContent: "center", overflow: "hidden", float: "bottom",}}>
 								<Link to={"/workflows/"+data.id}>
 									<Tooltip color="primary" title="Edit workflow" placement="bottom">
 										<Button style={{}} color="secondary" variant="text" style={{marginRight: 10}} onClick={() => {}}>
@@ -490,16 +515,24 @@ const Workflows = (props) => {
 									</Tooltip>
 								</Link>
 								<Tooltip color="primary" title="Execute workflow" placement="bottom">
-									<Button style={{}} color="secondary" variant="text" onClick={() => executeWorkflow(data.id)}>
-										<PlayArrowIcon />
-									</Button> 				
+									<span>
+										<Button style={{}} disabled={!data.is_valid} color="secondary" variant="text" onClick={() => executeWorkflow(data.id)}>
+											<PlayArrowIcon />
+										</Button> 				
+									</span>
 								</Tooltip>
 								{data.tags !== undefined ?
-									data.tags.map(tag => {
+									data.tags.map((tag, index) => {
+										if (index >= 3) {
+											return null
+										}
+
 										return (
 											<Chip
-												style={{marginRight: 5, marginTop: 2, cursor: "pointer",}}
+												key={index}
+												style={{height: 25, marginRight: 5, marginTop: 2, cursor: "pointer",}}
 												label={tag}
+												variant="outlined"
 												color="primary"
 											/>
 										)
@@ -508,6 +541,22 @@ const Workflows = (props) => {
 							</Grid>
 						</div>
 					</Grid>
+				</Grid>
+				<Grid container style={{maxWidth: 35, marginRight: 10,}}>
+					<Tooltip title={`Actions: ${data.actions.length}`} placement="right">
+						<AppsIcon style={{width: imgSize, height: imgSize}} />
+					</Tooltip>
+
+					{webhooks > 0 ? 
+						<Tooltip title={`Webhooks: ${webhooks}`} placement="right">
+							<img alt={data.title} style={{width: imgSize, height: imgSize, marginTop: 5}} src={webhookImg} /> 
+						</Tooltip>
+					: null}
+					{schedules > 0 ? 
+						<Tooltip title={`Schedules: ${schedules}`} placement="right">
+							<img alt={data.title} style={{width: imgSize, height: imgSize, marginTop: 5}} src={scheduleImg} /> 
+						</Tooltip>
+					: null}
 				</Grid>
 			</Paper>
 		)
@@ -914,7 +963,6 @@ const Workflows = (props) => {
 		setLoadWorkflowsModalOpen(false)
 	}
 
-	console.log("WOrkflowtags: ", newWorkflowTags)
 	const modalView = modalOpen ? 
 		<Dialog 
 			open={modalOpen} 

@@ -112,6 +112,7 @@ const Apps = (props) => {
 	const [openApiError, setOpenApiError] = React.useState("")
 	const [field1, setField1] = React.useState("")
 	const [field2, setField2] = React.useState("")
+	const [sharingConfiguration, setSharingConfiguration] = React.useState("you")
 
 	const { start, stop } = useInterval({
 	  	duration: 5000,
@@ -133,6 +134,24 @@ const Apps = (props) => {
 			getApps()
 		}
 	})
+
+	function sortByKey(array, key) {
+    return array.sort(function(a, b) {
+        var x = a[key];
+        var y = b[key];
+
+        if (typeof x == "string")
+        {
+            x = (""+x).toLowerCase(); 
+        }
+        if (typeof y == "string")
+        {
+            y = (""+y).toLowerCase();
+        }
+
+        return ((x < y) ? 1 : ((x > y) ? -1 : 0));
+    });
+	}
 
 	const appViewStyle = {
 		color: "#ffffff",
@@ -169,6 +188,8 @@ const Apps = (props) => {
 			return response.json()
 		})
     .then((responseJson) => {
+			responseJson = sortByKey(responseJson, "large_image")
+
 			setApps(responseJson)
 			setFilteredApps(responseJson)
 			if (responseJson.length > 0) {
@@ -290,12 +311,18 @@ const Apps = (props) => {
 			<Paper square key={data.id} style={paperAppStyle} onClick={() => {
 				if (selectedApp.id !== data.id) {
 					setSelectedApp(data)
+
 					console.log(data)
 					if (data.actions !== undefined && data.actions !== null && data.actions.length > 0) {
 						setSelectedAction(data.actions[0])
 					} else {
 						setSelectedAction({})
 					}
+
+					console.log("Sharing: ", data.sharing_config)
+					if (data.sharing) {
+						setSharingConfiguration("everyone")
+					} 
 				}
 			}}>
 				<Grid container style={{margin: 10, flex: "10"}}>
@@ -314,9 +341,22 @@ const Apps = (props) => {
 									{description}	
 								</Grid>
 							</div>
-							<Grid item style={{flex: "1", justifyContent: "center"}}>
-								Sharing: {sharing}	
-								,&nbsp;Valid: {valid}	
+							<Grid item style={{flex: "1", justifyContent: "center", marginTop: 5}}>
+								{data.tags === null || data.tags === undefined ? null : data.tags.map((tag, index) => {
+									if (index >= 3) {
+										return null
+									}
+
+									return (
+										<Chip
+											key={index}
+											style={{height: 25, marginRight: 5, cursor: "pointer",}}
+											label={tag}
+											variant="outlined"
+											color="primary"
+										/>
+									)
+								})}
 							</Grid>
 						</Grid>
 					</Grid>
@@ -324,7 +364,7 @@ const Apps = (props) => {
 
 				{data.activated && data.private_id !== undefined && data.private_id.length > 0 && data.generated ?
 				<Grid container style={{margin: "10px 10px 10px 10px", flex: "1"}} onClick={() => {downloadApp(data)}}>
-					<Tooltip title={"Download"} style={{marginTop: "28px", width: "100%"}} aria-label={data.name}>
+					<Tooltip title={"Download OpenAPI"} style={{marginTop: "28px", width: "100%"}} aria-label={data.name}>
 						<CloudDownload /> 
 					</Tooltip>
 				</Grid>
@@ -363,6 +403,7 @@ const Apps = (props) => {
 		const activateUrl = "/apps/new?id="+selectedApp.id
 
 		var downloadButton = selectedApp.activated && selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated ?
+			<Tooltip title={"Download OpenAPI"}>
 				<Button
 					onClick={() => {downloadApp(selectedApp)}}
 					variant="outlined"
@@ -372,31 +413,53 @@ const Apps = (props) => {
 				>
 					<CloudDownload /> 
 				</Button>
+			</Tooltip>
 			: null
 
 		var editButton = selectedApp.activated && selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated ?
 			<Link to={editUrl} style={{textDecoration: "none"}}>
-				<Button
-					variant="outlined"
-					component="label"
-					color="primary"
-					style={{marginTop: 10, marginRight: 10,}}
-				>
-					<EditIcon />
-				</Button></Link> : null
+				<Tooltip title={"Edit OpenAPI app"}>
+					<Button
+						variant="outlined"
+						component="label"
+						color="primary"
+						style={{marginTop: 10, marginRight: 10,}}
+					>
+						<EditIcon />
+					</Button>
+				</Tooltip>
+				</Link> : null
 
 		var activateButton = selectedApp.generated && !selectedApp.activated ?
-			<Link to={activateUrl} style={{textDecoration: "none"}}>
-				<Button
-					variant="contained"
-					component="label"
-					color="primary"
-					style={{marginTop: 10}}
-				>
-					Activate App	
-				</Button></Link> : null
+			<div>
+				<Link to={activateUrl} style={{textDecoration: "none"}}>
+					<Button
+						variant="contained"
+						component="label"
+						color="primary"
+						style={{marginTop: 10}}
+					>
+						Activate App	
+					</Button>
+				</Link> 
+				<Tooltip title={"Delete app"}>
+					<Button
+						variant="outlined"
+						component="label"
+						color="primary"
+						style={{marginLeft: 5, marginTop: 10}}
+						onClick={() => {
+							setDeleteModalOpen(true)
+						}}
+					>
+						<DeleteIcon />
+					</Button> 
+				</Tooltip>
+			</div>
+			: null
 
 		var deleteButton = ((selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated) || (selectedApp.downloaded != undefined && selectedApp.downloaded == true)) && activateButton === null ?
+			<Tooltip title={"Delete app"}>
 				<Button
 					variant="outlined"
 					component="label"
@@ -407,7 +470,9 @@ const Apps = (props) => {
 					}}
 				>
 					<DeleteIcon />
-				</Button> : null
+				</Button> 
+			</Tooltip>
+			: null
 
 		var imageline = selectedApp.large_image === undefined || selectedApp.large_image.length === 0 ?
 			<img alt={selectedApp.title} style={{width: 100, height: 100}} />
@@ -450,6 +515,7 @@ const Apps = (props) => {
 								</MenuItem>
 							)
 						})}
+						{/*
 						<ReactJson 
 							src={JSON.parse(showResult)} 
 							theme="solarized" 
@@ -457,19 +523,25 @@ const Apps = (props) => {
 							displayDataTypes={true}
 							name={"Example return value"}
 						/>
+						*/}
 					</div>
 				)
 			} 
 
 			return (
-				<div>
+				<div style={{marginTop: 10}}>
 					<b>Example return</b><div/>
 					{selectedAction.returns.example}
 				</div>
 			)
 		}
 
-		//fetch(globalUrl+"/api/v1/get_openapi/"+urlParams.get("id"), {
+		const userRoles = [
+			"you",
+			"everyone",
+		]
+
+		//fetch(globalUrl+"/api/v1/get_openapi/"+urlParams.get("id"), 
 		var baseInfo = newAppname.length > 0 ?
 			<div>
 				<div style={{display: "flex"}}>
@@ -482,15 +554,25 @@ const Apps = (props) => {
 					</div>
 				</div>
 				{activateButton}
-				{downloadButton}
-				{editButton}
-				{deleteButton}
+				{props.userdata.role === "admin" || props.userdata.id === selectedApp.owner ? 
+					<div>
+						{downloadButton}
+						{editButton}
+						{deleteButton}
+					</div>
+				: null}
 				{selectedApp.tags !== undefined && selectedApp.tags !== null ?
 					<div style={{display: "inline-block", marginLeft: 15, float: "right",}}>
-						{selectedApp.tags.map(tag => {
+						{selectedApp.tags.map((tag, index) => {
+							if (index >= 3) {
+								return null
+							}
+
 							return (
 								<Chip
-									style={{marginRight: 5, marginTop: 7, cursor: "pointer",}}
+									key={index}
+									style={{height: 25, marginRight: 5, marginTop: 7, cursor: "pointer",}}
+									variant="outlined"
 									label={tag}
 									color="primary"
 								/>
@@ -498,78 +580,110 @@ const Apps = (props) => {
 						})}
 					</div>
 				: null}
-				<Divider style={{marginBottom: "10px", marginTop: "10px", backgroundColor: dividerColor}}/>
-				{selectedApp.link.length > 0 ? <p><b>URL:</b> {selectedApp.link}</p> : null}
-				<p><b>ID:</b> {selectedApp.id}</p>
-				{selectedApp.privateId !== undefined && selectedApp.privateId.length > 0 ? <p><b>PrivateID:</b> {selectedApp.privateId}</p> : null}
-			
-				<div style={{marginTop: 15, marginBottom: 15}}>
-					<b>Actions</b>
-					{selectedApp.actions !== null && selectedApp.actions.length > 0 ?
+				{props.userdata.id === selectedApp.owner ? 
+					<div style={{marginTop: 15}}>
+						{/*<p><b>ID:</b> {selectedApp.id}</p>*/}
+						<b style={{marginRight: 15}}>Sharing:</b> 
 						<Select
-							fullWidth
-							value={selectedAction}
+							value={sharingConfiguration}
 							onChange={(event) => {
-								setSelectedAction(event.target.value)
+								setSharingConfiguration(event.target.value)
+								alert.info("Changed sharing to "+event.target.value)
+
+								updateAppField(selectedApp.id, "sharing", !selectedApp.sharing)
+								//setSelectedAction(event.target.value)
 							}}
-							style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+							style={{width: 150, backgroundColor: inputColor, color: "white", height: 35, marginleft: 10,}}
 							SelectDisplayProps={{
 								style: {
 									marginLeft: 10,
 								}
 							}}
 						>
-							{selectedApp.actions.map(data => {
-									var newActionname = data.label !== undefined && data.label.length > 0 ? data.label : data.name
+							{userRoles.map(data => {
+								return (
+										<MenuItem key={data} style={{backgroundColor: inputColor, color: "white"}} value={data}>
+											{data}
 
-									// ROFL FIXME - loop
-									newActionname = newActionname.replace("_", " ")
-									newActionname = newActionname.replace("_", " ")
-									newActionname = newActionname.replace("_", " ")
-									newActionname = newActionname.replace("_", " ")
-									newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
+										</MenuItem>
+									)
+							})}
+						</Select>
+					</div>
+				: null}
+				{/*<p><b>Owner:</b> {selectedApp.owner}</p>*/}
+				{selectedApp.privateId !== undefined && selectedApp.privateId.length > 0 ? <p><b>PrivateID:</b> {selectedApp.privateId}</p> : null}
+				<Divider style={{marginBottom: 10, marginTop: 10, backgroundColor: dividerColor}}/>
+				<div style={{padding: 20}}>
+					{selectedApp.link.length > 0 ? <p><b>URL:</b> {selectedApp.link}</p> : null}
+					<div style={{marginTop: 15, marginBottom: 15}}>
+						<b>Actions</b>
+						{selectedApp.actions !== null && selectedApp.actions.length > 0 ?
+							<Select
+								fullWidth
+								value={selectedAction}
+								onChange={(event) => {
+									setSelectedAction(event.target.value)
+								}}
+								style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+								SelectDisplayProps={{
+									style: {
+										marginLeft: 10,
+									}
+								}}
+							>
+								{selectedApp.actions.map(data => {
+										var newActionname = data.label !== undefined && data.label.length > 0 ? data.label : data.name
+
+										// ROFL FIXME - loop
+										newActionname = newActionname.replace("_", " ")
+										newActionname = newActionname.replace("_", " ")
+										newActionname = newActionname.replace("_", " ")
+										newActionname = newActionname.replace("_", " ")
+										newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
+										return (
+											<MenuItem key={data.name} style={{backgroundColor: inputColor, color: "white"}} value={data}>
+												{newActionname}
+
+											</MenuItem>
+										)
+									})}
+							</Select>
+							: 
+							<div style={{marginTop: 10}}>
+								There are no actions defined for this app.
+							</div>
+						}
+					</div>
+
+					{selectedAction.parameters !== undefined && selectedAction.parameters !== null ? 
+						<div style={{marginTop: 15, marginBottom: 15}}>
+							<b>Arguments</b>
+							{selectedAction.parameters.map(data => {
+									var itemColor = "#f85a3e"
+									if (!data.required) {
+										itemColor = "#ffeb3b"
+									}
+
+									const circleSize = 10
 									return (
 										<MenuItem key={data.name} style={{backgroundColor: inputColor, color: "white"}} value={data}>
-											{newActionname}
+											<div style={{width: circleSize, height: circleSize, borderRadius: circleSize / 2, backgroundColor: itemColor, marginRight: "10px"}}/>
+											{data.name}
 
 										</MenuItem>
 									)
 								})}
-						</Select>
-						: 
-						<div style={{marginTop: 10}}>
-							There are no actions defined for this app.
 						</div>
-					}
-				</div>
-
-				{selectedAction.parameters !== undefined && selectedAction.parameters !== null ? 
-					<div style={{marginTop: 15, marginBottom: 15}}>
-						<b>Arguments</b>
-						{selectedAction.parameters.map(data => {
-								var itemColor = "#f85a3e"
-								if (!data.required) {
-									itemColor = "#ffeb3b"
-								}
-
-								const circleSize = 10
-								return (
-									<MenuItem key={data.name} style={{backgroundColor: inputColor, color: "white"}} value={data}>
-										<div style={{width: circleSize, height: circleSize, borderRadius: circleSize / 2, backgroundColor: itemColor, marginRight: "10px"}}/>
-										{data.name}
-
-									</MenuItem>
-								)
-							})}
-					</div>
-				: null}
-				{selectedAction.description !== undefined && selectedAction.description !== null && selectedAction.description.length > 0 ? 
-					<div>
-						<b>Action Description</b><div/>
-						{selectedAction.description}
-					</div>
 					: null}
-				<GetAppExample />
+					{selectedAction.description !== undefined && selectedAction.description !== null && selectedAction.description.length > 0 ? 
+						<div>
+							<b>Action Description</b><div/>
+							{selectedAction.description}
+						</div>
+						: null}
+					<GetAppExample />
+				</div>
 			</div>
 			: 
 			null
@@ -582,8 +696,9 @@ const Apps = (props) => {
 						<a href="https://shuffler.io/docs/apps" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">How it works</a>
 						&nbsp;- <a href="https://github.com/frikky/security-openapis" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">Security API's</a>
 						&nbsp;- <a href="https://apis.guru/browse-apis/" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">OpenAPI directory</a>
+						&nbsp;- <a href="https://editor.swagger.io/" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">OpenAPI Validator</a>
 						<div/>
-						Apps interact with eachother in workflows. They are created with the app creator, using OpenAPI specification or manually in python. Use the links above to find potential apps you're looking for using OpenAPI or make one from scratch. There's 1000+ available.
+						Apps interact with eachother in workflows. They are created with the app creator, using OpenAPI specification or manually in python. The links above are references to OpenAPI tools and other app repositories. There's ten thousands of them.
 						<div/>
 						<Divider style={{height: 1, backgroundColor: dividerColor, marginTop: 20, marginBottom: 20}} />
 						<div style={{}}>
@@ -884,6 +999,36 @@ const Apps = (props) => {
 		});
 	}
 
+	const updateAppField = (app_id, fieldname, fieldvalue) => {
+		const data = {}
+		data[fieldname] = fieldvalue
+
+		fetch(globalUrl+"/api/v1/apps/"+app_id, {
+    	method: 'PATCH',
+			headers: {
+				'Accept': 'application/json',
+			},
+			body: JSON.stringify(data),
+	  	credentials: "include",
+		})
+		.then((response) => {
+			//setAppSearchLoading(false)
+			return response.json()
+		})
+    .then((responseJson) => {
+			//console.log(responseJson)
+			//alert.info(responseJson)
+			if (responseJson.success) {
+				alert.info("Success")
+			} else {
+				alert.error("Error updating app")
+			}
+    })
+		.catch(error => {
+			alert.error(error.toString())
+		});
+	}
+
 	const runAppSearch = (searchterm) => {
 		const data = {"search": searchterm}
 
@@ -916,7 +1061,7 @@ const Apps = (props) => {
 		setValidation(true)
 
 		fetch(globalUrl+"/api/v1/get_openapi_uri", {
-    	  	method: 'POST',
+    	method: 'POST',
 			headers: {
 				'Accept': 'application/json',
 			},
@@ -924,19 +1069,34 @@ const Apps = (props) => {
 	  		credentials: "include",
 		})
 		.then((response) => {
+			setValidation(false)
+			if (response.status !== 200) {
+				return response.json()	
+			} 
+
 			return response.text()
 		})
-    	.then((responseText) => {
-			validateOpenApi(responseText)
-			setValidation(false)
-    	})
+    .then((responseJson) => {
+			if (typeof(responseJson) !== "string" && !responseJson.success) {
+				console.log(responseJson.reason)
+				if (responseJson.reason !== undefined) {
+					setOpenApiError(responseJson.reason)
+				} else {
+					setOpenApiError("Undefined issue with OpenAPI validation")
+				}
+				return
+			}
+
+			validateOpenApi(responseJson)
+    })
 		.catch(error => {
 			alert.error(error.toString())
+			setOpenApiError(error.toString())
 		});
 	}
 
 	const escapeApiData = (apidata) => {
-		console.log(apidata)
+		//console.log(apidata)
 		try {
 			return JSON.stringify(JSON.parse(apidata))
 		} catch(error) {
@@ -948,7 +1108,7 @@ const Apps = (props) => {
 			return JSON.stringify(YAML.parse(apidata))
 		} catch(error) {
 			console.log("YAML DECODE ERROR - TRY SOMETHING ELSE?: "+error)
-			setOpenApiError(error)
+			setOpenApiError(error.toString())
 		}
 
 		return ""
@@ -962,6 +1122,7 @@ const Apps = (props) => {
 			return
 		}
 
+		setValidation(true)
 		fetch(globalUrl+"/api/v1/validate_openapi", {
     	  	method: 'POST',
 			headers: {
@@ -971,10 +1132,10 @@ const Apps = (props) => {
 	  		credentials: "include",
 		})
 		.then((response) => {
+			setValidation(false)
 			return response.json()
 		})
-    	.then((responseJson) => {
-			setValidation(false)
+    .then((responseJson) => {
 			if (responseJson.success) {
 				setAppValidation(responseJson.id)
 			} else {
@@ -985,7 +1146,9 @@ const Apps = (props) => {
 			}
     	})
 		.catch(error => {
+			setValidation(false)
 			alert.error(error.toString())
+			setOpenApiError(error.toString())
 		});
 	}
 
@@ -1131,7 +1294,9 @@ const Apps = (props) => {
 	const modalView = openApiModal ? 
 		<Dialog 
 			open={openApiModal}
-			onClose={() => {setOpenApiModal(false)}}
+			onClose={() => {
+				setOpenApiModal(false)
+			}}
 			PaperProps={{
 				style: {
 					backgroundColor: surfaceColor,
@@ -1155,21 +1320,26 @@ const Apps = (props) => {
 								height: "50px",
 								fontSize: "1em",
 							},
-							endAdornment: <Button style={{borderRadius: "0px", marginTop: "0px", height: "50px"}} variant="contained" disabled={openApi.length === 0} color="primary" onClick={() => {
+							endAdornment: <Button style={{borderRadius: "0px", marginTop: "0px", height: "50px"}} variant="contained" disabled={openApi.length === 0 || appValidation.length > 0} color="primary" 
+							onClick={() => {
 								setOpenApiError("")
 								validateRemote()
 							}}>Validate</Button>
 						}}
-						onChange={e => setOpenApi(e.target.value)}
-						helperText={<div style={{color:"white", marginBottom: "2px",}}>Must point to a version 2 or 3 specification.</div>}
+						onChange={e => {
+							setOpenApi(e.target.value)
+						}}
+						helperText={<span style={{color:"white", marginBottom: "2px",}}>Must point to a version 2 or 3 OpenAPI specification.</span>}
 						placeholder="OpenAPI URI"
 						fullWidth
 					  />
+						{/*
 					  <div style={{marginTop: "15px"}}/>
 					  Example: 
 					  <div />
 					  https://raw.githubusercontent.com/OAI/OpenAPI-Specification/master/examples/v2.0/json/uber.json
-					  <h4>or paste the yaml/JSON directly below</h4>
+						*/}
+					  Or paste the YAML or JSON specification 
 					<TextField
 						style={{backgroundColor: inputColor}}
 						variant="outlined"
@@ -1181,13 +1351,13 @@ const Apps = (props) => {
 								color: "white",
 								fontSize: "1em",
 							},
-							endAdornment: <Button style={{marginLeft: 10, borderRadius: "0px", marginTop: "0px"}} variant="contained" disabled={openApiData.length === 0} color="primary" onClick={() => {
+							endAdornment: <Button style={{marginLeft: 10, borderRadius: "0px", marginTop: "0px"}} variant="contained" disabled={openApiData.length === 0 || appValidation.length > 0} color="primary" onClick={() => {
 								setOpenApiError("")
 								validateOpenApi(openApiData)
-							}}>Validate data</Button>
+							}}>Validate OpenAPI</Button>
 						}}
 						onChange={e => setOpenApiData(e.target.value)}
-						helperText={<div style={{color:"white", marginBottom: "2px",}}>Must point to a version 2 or 3 specification.</div>}
+						helperText={<span style={{color:"white", marginBottom: "2px",}}>Must point to a version 2 or 3 specification.</span>}
 						placeholder="OpenAPI text"
 						fullWidth
 					  />
@@ -1195,13 +1365,19 @@ const Apps = (props) => {
 				</DialogContent>
 				<DialogActions>
 					{circularLoader}
-						<Button style={{borderRadius: "0px"}} onClick={() => setOpenApiModal(false)} color="primary">
-							Cancel
-						</Button>
-	      	<Button style={{borderRadius: "0px"}} disabled={appValidation.length === 0} onClick={() => {
+					<Button style={{borderRadius: "0px"}} onClick={() => {
+						setOpenApiModal(false)
+						setAppValidation("")
+						setOpenApiError("")
+						setOpenApi("")
+						setOpenApiData("")
+					}} color="primary">
+						Cancel
+					</Button>
+	      	<Button variant="contained" style={{borderRadius: "0px"}} disabled={appValidation.length === 0} onClick={() => {
 						redirectOpenApi()
 					}} color="primary">
-	        	Submit	
+	        	Continue	
 	        </Button>
 				</DialogActions>
 			</FormControl>

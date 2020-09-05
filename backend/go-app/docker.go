@@ -11,10 +11,11 @@ import (
 	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	network "github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
-	natting "github.com/docker/go-connections/nat"
 	"github.com/go-git/go-billy/v5"
+
+	network "github.com/docker/docker/api/types/network"
+	natting "github.com/docker/go-connections/nat"
 
 	"io"
 	"io/ioutil"
@@ -180,9 +181,10 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 	// Dockerfile is inside the TAR itself. Not local context
 	// docker build --build-arg http_proxy=http://my.proxy.url
 	buildOptions := types.ImageBuildOptions{
-		Remove:    true,
-		Tags:      tags,
-		BuildArgs: map[string]*string{},
+		Remove:      true,
+		Tags:        tags,
+		BuildArgs:   map[string]*string{},
+		NetworkMode: "host",
 	}
 
 	httpProxy := os.Getenv("HTTP_PROXY")
@@ -242,9 +244,10 @@ func buildImage(tags []string, dockerfileFolder string) error {
 
 	dockerFileTarReader := bytes.NewReader(buf.Bytes())
 	buildOptions := types.ImageBuildOptions{
-		Remove:    true,
-		Tags:      tags,
-		BuildArgs: map[string]*string{},
+		Remove:      true,
+		Tags:        tags,
+		BuildArgs:   map[string]*string{},
+		NetworkMode: "host",
 	}
 
 	httpProxy := os.Getenv("HTTP_PROXY")
@@ -637,6 +640,51 @@ func handleStartHookDocker(resp http.ResponseWriter, request *http.Request) {
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": true, "message": "Started webhook"}`))
 	return
+}
+
+// Checks if an image exists
+func imageCheckBuilder(images []string) error {
+	log.Printf("[FIXME] ImageNames to check: %#v", images)
+	return nil
+
+	ctx := context.Background()
+	client, err := client.NewEnvClient()
+	if err != nil {
+		log.Printf("Unable to create docker client: %s", err)
+		return err
+	}
+
+	allImages, err := client.ImageList(ctx, types.ImageListOptions{
+		All: true,
+	})
+
+	if err != nil {
+		log.Printf("[ERROR] Failed creating imagelist: %s", err)
+		return err
+	}
+
+	filteredImages := []types.ImageSummary{}
+	for _, image := range allImages {
+		found := false
+		for _, repoTag := range image.RepoTags {
+			if strings.Contains(repoTag, baseDockerName) {
+				found = true
+				break
+			}
+		}
+
+		if found {
+			filteredImages = append(filteredImages, image)
+		}
+	}
+
+	// FIXME: Continue fixing apps here
+	// https://github.com/frikky/Shuffle/issues/135
+	// 1. Find if app exists
+	// 2. Create app if it doesn't
+	//log.Printf("Apps: %#v", filteredImages)
+
+	return nil
 }
 
 func hookTest() {

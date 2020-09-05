@@ -41,6 +41,7 @@ import (
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/storage/memory"
 
 	// Random
@@ -141,7 +142,7 @@ type UserLimits struct {
 
 // Saves some data, not sure what to have here lol
 type UserAuth struct {
-	Description string          `json:"description" datastore:"description" yaml:"description"`
+	Description string          `json:"description" datastore:"description,noindex" yaml:"description"`
 	Name        string          `json:"name" datastore:"name" yaml:"name"`
 	Workflows   []string        `json:"workflows" datastore:"workflows"`
 	Username    string          `json:"username" datastore:"username"`
@@ -210,7 +211,7 @@ type Translator struct {
 	Src struct {
 		Name        string `json:"name" datastore:"name"`
 		Value       string `json:"value" datastore:"value"`
-		Description string `json:"description" datastore:"description"`
+		Description string `json:"description" datastore:"description,noindex"`
 		Required    string `json:"required" datastore:"required"`
 		Type        string `json:"type" datastore:"type"`
 		Schema      struct {
@@ -221,7 +222,7 @@ type Translator struct {
 		Name        string `json:"name" datastore:"name"`
 		Value       string `json:"value" datastore:"value"`
 		Type        string `json:"type" datastore:"type"`
-		Description string `json:"description" datastore:"description"`
+		Description string `json:"description" datastore:"description,noindex"`
 		Required    string `json:"required" datastore:"required"`
 		Schema      struct {
 			Type string `json:"type" datastore:"type"`
@@ -284,7 +285,7 @@ type ApiYaml struct {
 	Name        string `json:"name" yaml:"name" required:"true datastore:"name"`
 	Foldername  string `json:"foldername" yaml:"foldername" required:"true datastore:"foldername"`
 	Id          string `json:"id" yaml:"id",required:"true, datastore:"id"`
-	Description string `json:"description" datastore:"description" yaml:"description"`
+	Description string `json:"description" datastore:"description,noindex" yaml:"description"`
 	AppVersion  string `json:"app_version" yaml:"app_version",datastore:"app_version"`
 	ContactInfo struct {
 		Name string `json:"name" datastore:"name" yaml:"name"`
@@ -293,10 +294,10 @@ type ApiYaml struct {
 	Types []string `json:"types" datastore:"types" yaml:"types"`
 	Input []struct {
 		Name            string `json:"name" datastore:"name" yaml:"name"`
-		Description     string `json:"description" datastore:"description" yaml:"description"`
+		Description     string `json:"description" datastore:"description,noindex" yaml:"description"`
 		InputParameters []struct {
 			Name        string `json:"name" datastore:"name" yaml:"name"`
-			Description string `json:"description" datastore:"description" yaml:"description"`
+			Description string `json:"description" datastore:"description,noindex" yaml:"description"`
 			Required    string `json:"required" datastore:"required" yaml:"required"`
 			Schema      struct {
 				Type string `json:"type" datastore:"type" yaml:"type"`
@@ -304,7 +305,7 @@ type ApiYaml struct {
 		} `json:"inputparameters" datastore:"inputparameters" yaml:"inputparameters"`
 		OutputParameters []struct {
 			Name        string `json:"name" datastore:"name" yaml:"name"`
-			Description string `json:"description" datastore:"description" yaml:"description"`
+			Description string `json:"description" datastore:"description,noindex" yaml:"description"`
 			Required    string `json:"required" datastore:"required" yaml:"required"`
 			Schema      struct {
 				Type string `json:"type" datastore:"type" yaml:"type"`
@@ -312,7 +313,7 @@ type ApiYaml struct {
 		} `json:"outputparameters" datastore:"outputparameters" yaml:"outputparameters"`
 		Config []struct {
 			Name        string `json:"name" datastore:"name" yaml:"name"`
-			Description string `json:"description" datastore:"description" yaml:"description"`
+			Description string `json:"description" datastore:"description,noindex" yaml:"description"`
 			Required    string `json:"required" datastore:"required" yaml:"required"`
 			Schema      struct {
 				Type string `json:"type" datastore:"type" yaml:"type"`
@@ -321,10 +322,10 @@ type ApiYaml struct {
 	} `json:"input" datastore:"input" yaml:"input"`
 	Output []struct {
 		Name        string `json:"name" datastore:"name" yaml:"name"`
-		Description string `json:"description" datastore:"description" yaml:"description"`
+		Description string `json:"description" datastore:"description,noindex" yaml:"description"`
 		Config      []struct {
 			Name        string `json:"name" datastore:"name" yaml:"name"`
-			Description string `json:"description" datastore:"description" yaml:"description"`
+			Description string `json:"description" datastore:"description,noindex" yaml:"description"`
 			Required    string `json:"required" datastore:"required" yaml:"required"`
 			Schema      struct {
 				Type string `json:"type" datastore:"type" yaml:"type"`
@@ -332,7 +333,7 @@ type ApiYaml struct {
 		} `json:"config" datastore:"config" yaml:"config"`
 		InputParameters []struct {
 			Name        string `json:"name" datastore:"name" yaml:"name"`
-			Description string `json:"description" datastore:"description" yaml:"description"`
+			Description string `json:"description" datastore:"description,noindex" yaml:"description"`
 			Required    string `json:"required" datastore:"required" yaml:"required"`
 			Schema      struct {
 				Type string `json:"type" datastore:"type" yaml:"type"`
@@ -340,7 +341,7 @@ type ApiYaml struct {
 		} `json:"inputparameters" datastore:"inputparameters" yaml:"inputparameters"`
 		OutputParameters []struct {
 			Name        string `json:"name" datastore:"name" yaml:"name"`
-			Description string `json:"description" datastore:"description" yaml:"description"`
+			Description string `json:"description" datastore:"description,noindex" yaml:"description"`
 			Required    string `json:"required" datastore:"required" yaml:"required"`
 			Schema      struct {
 				Type string `json:"type" datastore:"type" yaml:"type"`
@@ -357,7 +358,7 @@ type Hooks struct {
 type Info struct {
 	Url         string `json:"url" datastore:"url"`
 	Name        string `json:"name" datastore:"name"`
-	Description string `json:"description" datastore:"description"`
+	Description string `json:"description" datastore:"description,noindex"`
 }
 
 // Actions to be done by webhooks etc
@@ -665,7 +666,7 @@ func handleApiAuthentication(resp http.ResponseWriter, request *http.Request) (U
 		if len(Userdata.Username) > 0 {
 			return Userdata, nil
 		} else {
-			return Userdata, errors.New(fmt.Sprintf("User is invalid - no username found: %#v", Userdata))
+			return Userdata, errors.New(fmt.Sprintf("User is invalid - no username found"))
 		}
 	}
 
@@ -1697,10 +1698,11 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		"success": true, 
 		"admin": %s, 
 		"tutorials": [],
+		"id": "%s",
 		"orgs": [{"name": "Shuffle", "id": "123", "role": "admin"}], 
 		"selected_org": {"name": "Shuffle", "id": "123", "role": "admin"}, 
 		"cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]
-	}`, parsedAdmin, userInfo.Session, expiration.Unix())
+	}`, parsedAdmin, userInfo.Id, userInfo.Session, expiration.Unix())
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(returnData))
@@ -2505,7 +2507,7 @@ func handleCors(resp http.ResponseWriter, request *http.Request) bool {
 
 	resp.Header().Set("Vary", "Origin")
 	resp.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, X-Requested-With, remember-me")
-	resp.Header().Set("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE")
+	resp.Header().Set("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, PATCH")
 	resp.Header().Set("Access-Control-Allow-Credentials", "true")
 	resp.Header().Set("Access-Control-Allow-Origin", allowedOrigins)
 
@@ -5456,7 +5458,7 @@ func echoOpenapiData(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		log.Printf("Api authentication failed in validate swagger: %s", err)
 		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
+		resp.Write([]byte(`{"success": false, "reason": "Failed authentication"}`))
 		return
 	}
 
@@ -5499,6 +5501,12 @@ func echoOpenapiData(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't get data from selected uri"`)))
+		return
+	}
+
+	if newresp.StatusCode >= 400 {
+		resp.WriteHeader(201)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, urlbody)))
 		return
 	}
 
@@ -5732,6 +5740,8 @@ func validateSwagger(resp http.ResponseWriter, request *http.Request) {
 			err = gyaml.Unmarshal(body, &swagger)
 			if err != nil {
 				log.Printf("Yaml error: %s", err)
+			} else {
+				log.Printf("Found valid yaml!")
 			}
 
 			resp.WriteHeader(422)
@@ -6145,7 +6155,7 @@ func createFs(basepath, pathname string) (billy.Filesystem, error) {
 }
 
 // Hotloads new apps from a folder
-func handleAppHotload(location string) error {
+func handleAppHotload(location string, forceUpdate bool) error {
 	basepath := "base"
 	fs, err := createFs(basepath, location)
 	if err != nil {
@@ -6162,7 +6172,7 @@ func handleAppHotload(location string) error {
 	}
 
 	//log.Printf("Reading app folder: %#v", dir)
-	err = iterateAppGithubFolders(fs, dir, "", "", false)
+	err = iterateAppGithubFolders(fs, dir, "", "", forceUpdate)
 	if err != nil {
 		log.Printf("Err: %s", err)
 		return err
@@ -6340,13 +6350,14 @@ func runInit(ctx context.Context) {
 		fs := memfs.New()
 		storer := memory.NewStorage()
 
-		url := os.Getenv("APP_DOWNLOAD_LOCATION")
+		url := os.Getenv("SHUFFLE_APP_DOWNLOAD_LOCATION")
 		if len(url) == 0 {
 			url = "https://github.com/frikky/shuffle-apps"
 		}
 
 		username := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_USERNAME")
 		password := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_PASSWORD")
+
 		cloneOptions := &git.CloneOptions{
 			URL: url,
 		}
@@ -6357,6 +6368,11 @@ func runInit(ctx context.Context) {
 				Password: password,
 			}
 		}
+		branch := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_BRANCH")
+		if len(branch) > 0 {
+			cloneOptions.ReferenceName = plumbing.ReferenceName(branch)
+		}
+
 		log.Printf("Getting apps from %s", url)
 
 		r, err := git.Clone(storer, fs, cloneOptions)
@@ -6376,9 +6392,9 @@ func runInit(ctx context.Context) {
 		iterateAppGithubFolders(fs, dir, "", "", false)
 
 		// Hotloads locally
-		location := os.Getenv("APP_HOTLOAD_FOLDER")
+		location := os.Getenv("SHUFFLE_APP_HOTLOAD_FOLDER")
 		if len(location) != 0 {
-			handleAppHotload(location)
+			handleAppHotload(location, false)
 		}
 	}
 
@@ -6416,9 +6432,9 @@ func runInit(ctx context.Context) {
 			log.Printf("Error getting workflows: %s", err)
 		} else {
 			if len(workflows) == 0 {
-				username := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_USERNAME")
-				password := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_PASSWORD")
-				err = loadGithubWorkflows(workflowLocation, username, password, "")
+				username := os.Getenv("SHUFFLE_DOWNLOAD_WORKFLOW_USERNAME")
+				password := os.Getenv("SHUFFLE_DOWNLOAD_WORKFLOW_PASSWORD")
+				err = loadGithubWorkflows(workflowLocation, username, password, "", os.Getenv("SHUFFLE_DOWNLOAD_WORKFLOW_BRANCH"))
 				if err != nil {
 					log.Printf("Failed to upload workflows from github: %s", err)
 				} else {
@@ -6497,6 +6513,7 @@ func init() {
 	r.HandleFunc("/api/v1/apps/run_hotload", handleAppHotloadRequest).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/get_existing", loadSpecificApps).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/download_remote", loadSpecificApps).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/{appId}", updateWorkflowAppConfig).Methods("PATCH", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/validate", validateAppInput).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}", deleteWorkflowApp).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}/config", getWorkflowAppConfig).Methods("GET", "OPTIONS")

@@ -24,7 +24,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o webapp .
 FROM alpine:latest as certs
 RUN apk --update add ca-certificates
 
-from scratch
+FROM alpine:3.12
 
 COPY --from=builder /app/ /app
 COPY --from=builder /app_sdk/ /app_sdk

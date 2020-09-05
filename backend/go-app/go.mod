@@ -7,8 +7,9 @@ require (
 	cloud.google.com/go/datastore v1.1.0
 	cloud.google.com/go/pubsub v1.3.1
 	cloud.google.com/go/storage v1.7.0
+	github.com/Microsoft/go-winio v0.4.14 // indirect
 	github.com/basgys/goxml2json v1.1.0
-	github.com/carlescere/scheduler v0.0.0-20170109141437-ee74d2f83d82 // indirect
+	github.com/carlescere/scheduler v0.0.0-20170109141437-ee74d2f83d82
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v1.13.1
 	github.com/docker/go-connections v0.4.0
@@ -28,7 +29,8 @@ require (
 	google.golang.org/api v0.23.0
 	google.golang.org/appengine v1.6.6
 	google.golang.org/genproto v0.0.0-20200507105951-43844f6eee31
-	gopkg.in/src-d/go-git.v4 v4.13.1 // indirect
+	google.golang.org/grpc v1.29.1
+	gopkg.in/src-d/go-git.v4 v4.13.1
 	gopkg.in/yaml.v2 v2.2.8
 	gopkg.in/yaml.v3 v3.0.0-20200506231410-2ff61e1afc86
 )
