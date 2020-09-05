@@ -1,8 +1,8 @@
 version: '3'
 services:
   frontend:
-    #build: ./frontend
-    image: ghcr.io/frikky/shuffle-frontend:0.7.0
+    build: ./frontend
+    image: ghcr.io/frikky/shuffle-frontend:0.7.1
     container_name: shuffle-frontend
     hostname: shuffle-frontend
     ports:
@@ -16,8 +16,8 @@ services:
     depends_on:
       - backend
   backend:
-    #build: ./backend
-    image: ghcr.io/frikky/shuffle-backend:0.7.0
+    build: ./backend
+    image: ghcr.io/frikky/shuffle-backend:0.7.1
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
     # Here for debugging:
@@ -42,8 +42,8 @@ services:
     depends_on:
       - database
   orborus:
-    #build: ./functions/onprem/orborus
-    image: ghcr.io/frikky/orborus:0.6.1
+    build: ./functions/onprem/orborus
+    image: ghcr.io/frikky/orborus:0.6.2
     container_name: shuffle-orborus
     hostname: shuffle-orborus
     networks:

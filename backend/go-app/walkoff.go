@@ -4313,7 +4313,7 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	log.Printf("Hotloading from %s", location)
-	err = handleAppHotload(location)
+	err = handleAppHotload(location, true)
 	if err != nil {
 		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed loading apps: %s"}`)))

@@ -218,6 +218,7 @@ func initializeImages() {
 
 		fmt.Sprintf("%s/worker:%s", baseimagename, workerVersion),
 		fmt.Sprintf("%s/app_sdk:%s", baseimagename, appSdkVersion),
+		fmt.Sprintf("frikky/shuffle:app_sdk"),
 	}
 
 	pullOptions := types.ImagePullOptions{}

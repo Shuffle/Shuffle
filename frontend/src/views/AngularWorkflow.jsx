@@ -293,6 +293,7 @@ const AngularWorkflow = (props) => {
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for stream results :O!")
+				stop()
 			}
 
 			return response.json()
@@ -302,6 +303,7 @@ const AngularWorkflow = (props) => {
 		})
 		.catch(error => {
 			alert.error(error.toString())
+			stop()
 		});
 	}
 

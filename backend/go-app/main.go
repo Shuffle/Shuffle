@@ -6155,7 +6155,7 @@ func createFs(basepath, pathname string) (billy.Filesystem, error) {
 }
 
 // Hotloads new apps from a folder
-func handleAppHotload(location string) error {
+func handleAppHotload(location string, forceUpdate bool) error {
 	basepath := "base"
 	fs, err := createFs(basepath, location)
 	if err != nil {
@@ -6172,7 +6172,7 @@ func handleAppHotload(location string) error {
 	}
 
 	//log.Printf("Reading app folder: %#v", dir)
-	err = iterateAppGithubFolders(fs, dir, "", "", false)
+	err = iterateAppGithubFolders(fs, dir, "", "", forceUpdate)
 	if err != nil {
 		log.Printf("Err: %s", err)
 		return err
@@ -6394,7 +6394,7 @@ func runInit(ctx context.Context) {
 		// Hotloads locally
 		location := os.Getenv("SHUFFLE_APP_HOTLOAD_FOLDER")
 		if len(location) != 0 {
-			handleAppHotload(location)
+			handleAppHotload(location, false)
 		}
 	}
 
