@@ -34,7 +34,8 @@ var appSdkVersion = os.Getenv("SHUFFLE_APP_SDK_VERSION")
 var workerVersion = os.Getenv("SHUFFLE_WORKER_VERSION")
 
 //var baseimagename = "docker.pkg.github.com/frikky/shuffle"
-var baseimagename = "ghcr.io/frikky"
+//var baseimagename = "ghcr.io/frikky"
+var baseimagename = "frikky/shuffle"
 
 var orgId = os.Getenv("ORG_ID")
 var baseUrl = os.Getenv("BASE_URL")
@@ -213,12 +214,12 @@ func initializeImages() {
 
 	// check whether theyre the same first
 	images := []string{
-		// fmt.Sprintf("docker.io/%s:app_sdk", baseimagename),
-		// fmt.Sprintf("docker.io/%s:worker", baseimagename),
+		fmt.Sprintf("docker.io/%s:app_sdk", baseimagename),
+		fmt.Sprintf("docker.io/%s:worker", baseimagename),
 
-		fmt.Sprintf("%s/worker:%s", baseimagename, workerVersion),
-		fmt.Sprintf("%s/app_sdk:%s", baseimagename, appSdkVersion),
-		fmt.Sprintf("frikky/shuffle:app_sdk"),
+		//fmt.Sprintf("%s/worker:%s", baseimagename, workerVersion),
+		//fmt.Sprintf("%s/app_sdk:%s", baseimagename, appSdkVersion),
+		//fmt.Sprintf("frikky/shuffle:app_sdk"),
 	}
 
 	pullOptions := types.ImagePullOptions{}
@@ -268,7 +269,8 @@ func main() {
 	//workerName := "worker"
 	//workerVersion := "0.1.0"
 	//workerImage := fmt.Sprintf("docker.pkg.github.com/frikky/shuffle/%s:%s", workerName, workerVersion)
-	workerImage := fmt.Sprintf("%s/worker:%s", baseimagename, workerVersion)
+	//workerImage := fmt.Sprintf("%s/worker:%s", baseimagename, workerVersion)
+	workerImage := fmt.Sprintf("docker.io/%s:worker", baseimagename)
 
 	log.Printf("[INFO] Finished configuring docker environment")
 
