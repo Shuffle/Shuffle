@@ -157,6 +157,7 @@ const AngularWorkflow = (props) => {
 	
 	const [apps, setApps] = React.useState([]);
 	const [filteredApps, setFilteredApps] = React.useState([]);
+	const [prioritizedApps, setPrioritizedApps] = React.useState([]);
 	const [firstrequest, setFirstrequest] = React.useState(true)
 	//const [apps, setApps] = React.useState(appdata);
 	//const [filteredApps, setFilteredApps] = React.useState();
@@ -794,15 +795,20 @@ const AngularWorkflow = (props) => {
 		});
 	}
 
+	const internalIds = [
+		"80a1fdd2-95c2-49ab-81f6-e05689beb745", // Shuffle tools
+		"39c5f8fa-a088-4cdc-826f-19e2e61cb284", // Testing
+	]
+
 	const getApps = () => {
 		fetch(globalUrl+"/api/v1/workflows/apps", {
-    	  	method: 'GET',
-				headers: {
-					'Content-Type': 'application/json',
-					'Accept': 'application/json',
-				},
-	  			credentials: "include",
-    		})
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+			credentials: "include",
+    })
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for apps :O!")
@@ -819,6 +825,9 @@ const AngularWorkflow = (props) => {
 			setApps(responseJson)
 			setFilteredApps(responseJson)
 			getAppAuthentication() 
+
+
+			setPrioritizedApps(responseJson.filter(app => internalIds.includes(app.id)))
     })
 		.catch(error => {
 			alert.error(error.toString())
@@ -2206,6 +2215,54 @@ const AngularWorkflow = (props) => {
 		setFilteredApps(apps.filter(app => app.name.toLowerCase().includes(event.target.value.trim().toLowerCase())))
 	}
 
+	const ParsedAppPaper = (props) => {
+		const app = props.app
+
+		// FIXME - add label to apps, as this might be slow with A LOT of apps
+		var newAppname = app.name
+		newAppname = newAppname.replace("_", " ").charAt(0).toUpperCase()+newAppname.substring(1)
+		const maxlen = 24
+		if (newAppname.length > maxlen) {
+			newAppname = newAppname.slice(0, maxlen)+".."
+		}
+
+		const image = "url("+app.large_image+")"
+
+		return (
+			<Draggable 
+					onDrag={(e) => {handleAppDrag(e, app)}}
+					onStop={(e) => {handleDragStop(e, app)}}
+					key={app.id}
+					dragging={false}
+					position={{
+						x: 0,
+						y: 0,
+					}}
+				>
+				<Paper square style={paperAppStyle} >
+					<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: "2px", backgroundColor: "orange", marginRight: "5px"}}>
+					</div>
+					<Grid container style={{margin: "10px 10px 10px 10px", flex: "10"}}>
+						<Grid item>
+							<div style={{borderRadius: borderRadius, height: 80, width: 80, backgroundImage: image, backgroundSize: "cover", backgroundRepeat: "no-repeat"}} />
+						</Grid>
+						<Grid style={{display: "flex", flexDirection: "column", marginLeft: "20px"}}>
+							<Grid item style={{flex: 1}}>
+								<h4 style={{marginBottom: "0px", marginTop: "5px"}}>{newAppname}</h4>
+							</Grid>
+							<Grid item style={{flex: 1, width: "100%", }}>
+								Short description...
+							</Grid>
+							<Grid item style={{flex: 1}}>
+								Version: {app.app_version}	
+							</Grid>
+						</Grid>
+					</Grid>
+					</Paper>
+				</Draggable>
+			)
+	}
+
 	const AppView = () => {
 		return(
 			<div style={appViewStyle}>
@@ -2232,55 +2289,14 @@ const AngularWorkflow = (props) => {
 						}}
 					/>
 					*/}
-					{filteredApps.map(app=> {
-						// FIXME - add label to apps, as this might be slow with A LOT of apps
-						var newAppname = app.name
-						newAppname = newAppname.replace("_", " ").charAt(0).toUpperCase()+newAppname.substring(1)
-						const maxlen = 24
-						if (newAppname.length > maxlen) {
-							newAppname = newAppname.slice(0, maxlen)+".."
-						}
-
-						// Description fucks this up - fix overflow :)
-						//const maxdesclen = 5
-						//var desc = app.description
-						//if (newAppname.length > maxdesclen) {
-						//	desc = desc.slice(0, maxdesclen)+".."
-						//}
-
-						const image = "url("+app.large_image+")"
+					{prioritizedApps.map((app, index) => {	
 						return(
-							<Draggable 
-								onDrag={(e) => {handleAppDrag(e, app)}}
-								onStop={(e) => {handleDragStop(e, app)}}
-								key={app.id}
-								dragging={false}
-								position={{
-									x: 0,
-									y: 0,
-								}}
-							>
-							<Paper square style={paperAppStyle} >
-								<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: "2px", backgroundColor: "orange", marginRight: "5px"}}>
-								</div>
-								<Grid container style={{margin: "10px 10px 10px 10px", flex: "10"}}>
-									<Grid item>
-										<div style={{borderRadius: borderRadius, height: 80, width: 80, backgroundImage: image, backgroundSize: "cover", backgroundRepeat: "no-repeat"}} />
-									</Grid>
-									<Grid style={{display: "flex", flexDirection: "column", marginLeft: "20px"}}>
-										<Grid item style={{flex: 1}}>
-											<h4 style={{marginBottom: "0px", marginTop: "5px"}}>{newAppname}</h4>
-										</Grid>
-										<Grid item style={{flex: 1, width: "100%", }}>
-											Short description...
-										</Grid>
-										<Grid item style={{flex: 1}}>
-											Version: {app.app_version}	
-										</Grid>
-									</Grid>
-								</Grid>
-							</Paper>
-							</Draggable>
+							<ParsedAppPaper app={app} />	
+						)
+					})}
+					{filteredApps.filter(innerapp => !internalIds.includes(innerapp.id)).map((app, index) => {	
+						return(
+							<ParsedAppPaper app={app} />	
 						)
 					})}
 					</div>
@@ -3347,6 +3363,7 @@ const AngularWorkflow = (props) => {
 		overflow: "scroll",
 		overflowX: "auto",
 		overflowY: "auto",
+		zIndex: 1000,
 	}
 
 	const setTriggerFolderWrapperMulti = event => {
