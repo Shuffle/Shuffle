@@ -47,7 +47,6 @@ import (
 	// Random
 	xj "github.com/basgys/goxml2json"
 	newscheduler "github.com/carlescere/scheduler"
-	gyaml "github.com/ghodss/yaml"
 	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/yaml.v3"
@@ -5545,7 +5544,7 @@ func handleSwaggerValidation(body []byte) (ParsedOpenApi, error) {
 		//log.Printf("Json err: %s", err)
 		err = yaml.Unmarshal(body, &version)
 		if err != nil {
-			log.Printf("Yaml error: %s", err)
+			log.Printf("Yaml error (1): %s", err)
 		} else {
 			//log.Printf("Successfully parsed YAML!")
 		}
@@ -5583,9 +5582,9 @@ func handleSwaggerValidation(body []byte) (ParsedOpenApi, error) {
 		err = json.Unmarshal(body, &swagger)
 		if err != nil {
 			//log.Printf("Json error? %s", err)
-			err = gyaml.Unmarshal(body, &swagger)
+			err = yaml.Unmarshal(body, &swagger)
 			if err != nil {
-				log.Printf("Yaml error: %s", err)
+				log.Printf("Yaml error (2): %s", err)
 				return ParsedOpenApi{}, err
 			} else {
 				//log.Printf("Valid yaml!")
@@ -5677,7 +5676,7 @@ func validateSwagger(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("Json err: %s", err)
 		err = yaml.Unmarshal(body, &version)
 		if err != nil {
-			log.Printf("Yaml error: %s", err)
+			log.Printf("Yaml error (3): %s", err)
 			//resp.WriteHeader(422)
 			//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed reading openapi to json and yaml: %s"}`, err)))
 			//return
@@ -5736,17 +5735,18 @@ func validateSwagger(resp http.ResponseWriter, request *http.Request) {
 		//log.Println(string(body))
 		err = json.Unmarshal(body, &swagger)
 		if err != nil {
-			log.Printf("Json error? %s", err)
-			err = gyaml.Unmarshal(body, &swagger)
+			log.Printf("Json error for v2 - trying yaml: %s", err)
+			err = yaml.Unmarshal([]byte(body), &swagger)
 			if err != nil {
-				log.Printf("Yaml error: %s", err)
+				log.Printf("Yaml error (4): %s", err)
+
+				resp.WriteHeader(422)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed reading openapi2: %s"}`, err)))
+				return
 			} else {
 				log.Printf("Found valid yaml!")
 			}
 
-			resp.WriteHeader(422)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed reading openapi2: %s"}`, err)))
-			return
 		}
 
 		swaggerv3, err := openapi2conv.ToV3Swagger(&swagger)

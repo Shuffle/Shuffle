@@ -270,7 +270,7 @@ class AppBase:
             except TypeError:
                 return data
         
-            print("Running %s" % data)
+            #print("Running %s" % data)
         
             # Look for the INNER wrapper first, then move out
             wrappers = ["int", "number", "lower", "upper", "trim", "strip", "split", "parse", "len", "length"]
@@ -337,7 +337,7 @@ class AppBase:
             if len(newstring) > 0:
                 newdata.append(newstring)
         
-            print(newdata)
+            #print(newdata)
             parsedlist = []
             non_string = False
             for item in newdata:
@@ -352,7 +352,7 @@ class AppBase:
             elif len(parsedlist) == 1 and non_string:
                 return parsedlist[0]
             else:
-                print("Casting back to string because multi: ", parsedlist)
+                #print("Casting back to string because multi: ", parsedlist)
                 newlist = []
                 for item in parsedlist:
                     try:
@@ -870,7 +870,7 @@ class AppBase:
                         if not multiexecution:
                             print("APP_SDK DONE: Starting normal execution of function")
                             newres = await func(**params)
-                            print("NEWRES: ", newres)
+                            #print("NEWRES: ", newres)
                             if isinstance(newres, str):
                                 result += newres
                             else:

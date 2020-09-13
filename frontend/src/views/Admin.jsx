@@ -489,7 +489,6 @@ const Admin = (props) => {
 				return response.json()
 			})
 			.then((responseJson) => {
-				console.log(responseJson)
 				setUsers(responseJson)
 			})
 			.catch(error => {
@@ -857,9 +856,9 @@ const Admin = (props) => {
 						style={{ minWidth: 180, maxWidth: 180 }}
 					/>
 				</ListItem>
-				{users === undefined ? null : users.map(data => {
+				{users === undefined ? null : users.map((data, index) => {
 					return (
-						<ListItem>
+						<ListItem key={index}>
 							<ListItemText
 								primary={data.username}
 								style={{ minWidth: 200, maxWidth: 200 }}
@@ -870,19 +869,15 @@ const Admin = (props) => {
 							/>
 							<ListItemText
 								primary=
-									{<Select
-										PaperProps={{
-								style: {
-								}
-							}}
-										SelectDisplayProps={{
-								style: {
-									marginLeft: 10,
-								}
-							}}
-										value={data.role}
-										fullWidth
-										onChange={(e) => {
+								{<Select
+									SelectDisplayProps={{
+									style: {
+										marginLeft: 10,
+									}
+								}}
+								value={data.role}
+								fullWidth
+								onChange={(e) => {
 								console.log("VALUE: ", e.target.value)
 								setUser(data.id, "role", e.target.value)
 							}}
@@ -1131,7 +1126,6 @@ const Admin = (props) => {
 		</div>
 		: null
 
-	console.log("Environments: ", environments)
 	const environmentView = curTab === 2 ?
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
@@ -1147,13 +1141,14 @@ const Admin = (props) => {
 				Add environment 
 			</Button>
 			<Button 
-				style={{marginLeft: 5, }} 
+				style={{marginLeft: 5, marginRight: 15, }} 
 				variant="contained"
 				color="primary"
 				onClick={() => getEnvironments()}
 			> 
 				<CachedIcon />
 			</Button>
+			<Switch checked={showArchived} onChange={() => {setShowArchived(!showArchived)}} />	Show archived
 			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor}}/>
 			<List>
 				<ListItem>
@@ -1178,7 +1173,7 @@ const Admin = (props) => {
 						style={{minWidth: 150, maxWidth: 150}}
 					/>
 				</ListItem>
-				{environments === undefined ? null : environments.map(environment => {
+				{environments === undefined ? null : environments.map((environment, index)=> {
 					if (!showArchived && environment.archived) {
 						return null	
 					}
@@ -1189,7 +1184,7 @@ const Admin = (props) => {
 					}
 
 					return (
-						<ListItem>
+						<ListItem key={index}>
 							<ListItemText
 								primary={environment.Name}
 								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}

@@ -895,7 +895,17 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 				fmt.Sprintf("EXECUTIONID=%s", workflowExecution.ExecutionId),
 				fmt.Sprintf("AUTHORIZATION=%s", workflowExecution.Authorization),
 				fmt.Sprintf("CALLBACK_URL=%s", baseUrl),
-				fmt.Sprintf("FULL_EXECUTION=%s", string(executionData)),
+			}
+
+			// Fixes issue:
+			// standard_init_linux.go:185: exec user process caused "argument list too long"
+			// https://devblogs.microsoft.com/oldnewthing/20100203-00/?p=15083
+			maxSize := 32700 - len(string(actionData)) - 2000
+			if len(executionData) < maxSize {
+				log.Printf("ADDING FULL_EXECUTION because size is larger than %d", maxSize)
+				env = append(env, fmt.Sprintf("FULL_EXECUTION=%s", string(executionData)))
+			} else {
+				log.Printf("Skipping FULL_EXECUTION because size is larger than %d", maxSize)
 			}
 
 			err = deployApp(dockercli, image, identifier, env)
