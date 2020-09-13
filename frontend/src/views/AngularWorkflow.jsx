@@ -118,6 +118,7 @@ const AngularWorkflow = (props) => {
 	const [currentView, setCurrentView] = React.useState(0)
 	const [triggerAuthentication, setTriggerAuthentication] = React.useState({})
 	const [triggerFolders, setTriggerFolders] = React.useState([])
+	const [showEnvironment, setShowEnvironment] = React.useState(false)
 
 	const [workflow, setWorkflow] = React.useState({});
 	const [leftViewOpen, setLeftViewOpen] = React.useState(true);
@@ -157,6 +158,7 @@ const AngularWorkflow = (props) => {
 	
 	const [apps, setApps] = React.useState([]);
 	const [filteredApps, setFilteredApps] = React.useState([]);
+	const [prioritizedApps, setPrioritizedApps] = React.useState([]);
 	const [firstrequest, setFirstrequest] = React.useState(true)
 	//const [apps, setApps] = React.useState(appdata);
 	//const [filteredApps, setFilteredApps] = React.useState();
@@ -765,6 +767,13 @@ const AngularWorkflow = (props) => {
 		return data
 	}
 
+	// This can be used to only show prioritzed ones later
+	// Right now, it can prioritize authenticated ones
+	const internalIds = [
+		"Shuffle Tools",
+		"Testing",
+		"Http",
+	]
 	const getAppAuthentication = () => {
 		fetch(globalUrl+"/api/v1/apps/authentication", {
 			method: 'GET',
@@ -794,15 +803,16 @@ const AngularWorkflow = (props) => {
 		});
 	}
 
+
 	const getApps = () => {
 		fetch(globalUrl+"/api/v1/workflows/apps", {
-    	  	method: 'GET',
-				headers: {
-					'Content-Type': 'application/json',
-					'Accept': 'application/json',
-				},
-	  			credentials: "include",
-    		})
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+			credentials: "include",
+    })
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for apps :O!")
@@ -817,8 +827,10 @@ const AngularWorkflow = (props) => {
 			//tmpapps = tmpapps.concat(getExtraApps())
 			//tmpapps = tmpapps.concat(responseJson)
 			setApps(responseJson)
-			setFilteredApps(responseJson)
 			getAppAuthentication() 
+
+			setFilteredApps(responseJson.filter(app => !internalIds.includes(app.name)))
+			setPrioritizedApps(responseJson.filter(app => internalIds.includes(app.name)))
     })
 		.catch(error => {
 			alert.error(error.toString())
@@ -922,7 +934,9 @@ const AngularWorkflow = (props) => {
 
 			setSelectedActionEnvironment(env)
 			setSelectedActionName(curaction.name)
-			setRequiresAuthentication(curapp.authentication.required)
+
+			setRequiresAuthentication(curapp.authentication.required && curapp.authentication.parameters !== undefined && curapp.authentication.parameters !== null)
+
 
 			if (curapp.authentication.required) {
 				// Setup auth here :)
@@ -1228,12 +1242,20 @@ const AngularWorkflow = (props) => {
 		})
     .then((responseJson) => {
 			var found = false
+			var showEnvCnt = 0 
 			for (var key in responseJson) {
 				if (responseJson[key].default) {
 					setDefaultEnvironmentIndex(key)
 					found = true
-					break
 				}
+
+				if (responseJson[key].archived === false) {
+					showEnvCnt += 1
+				}
+			}
+
+			if (showEnvCnt > 1) {
+				setShowEnvironment(true)
 			}
 
 			if (!found) {
@@ -1804,13 +1826,12 @@ const AngularWorkflow = (props) => {
 				<Tabs
 					value={currentView}
 					indicatorColor="primary"
-					textColor="white"
 					onChange={handleSetTab}
 					aria-label="Left sidebar tab"
 				>
 					<Tab label={
 						<Grid container direction="row" alignItems="center">
-								<Grid item>
+							<Grid item>
 								<AppsIcon style={iconStyle} />
 							</Grid>
 							<Grid item>
@@ -2206,6 +2227,54 @@ const AngularWorkflow = (props) => {
 		setFilteredApps(apps.filter(app => app.name.toLowerCase().includes(event.target.value.trim().toLowerCase())))
 	}
 
+	const ParsedAppPaper = (props) => {
+		const app = props.app
+
+		// FIXME - add label to apps, as this might be slow with A LOT of apps
+		var newAppname = app.name
+		newAppname = newAppname.replace("_", " ").charAt(0).toUpperCase()+newAppname.substring(1)
+		const maxlen = 24
+		if (newAppname.length > maxlen) {
+			newAppname = newAppname.slice(0, maxlen)+".."
+		}
+
+		const image = "url("+app.large_image+")"
+
+		return (
+			<Draggable 
+					onDrag={(e) => {handleAppDrag(e, app)}}
+					onStop={(e) => {handleDragStop(e, app)}}
+					key={app.id}
+					dragging={false}
+					position={{
+						x: 0,
+						y: 0,
+					}}
+				>
+				<Paper square style={paperAppStyle} >
+					<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: "2px", backgroundColor: "orange", marginRight: "5px"}}>
+					</div>
+					<Grid container style={{margin: "10px 10px 10px 10px", flex: "10"}}>
+						<Grid item>
+							<div style={{borderRadius: borderRadius, height: 80, width: 80, backgroundImage: image, backgroundSize: "cover", backgroundRepeat: "no-repeat"}} />
+						</Grid>
+						<Grid style={{display: "flex", flexDirection: "column", marginLeft: "20px", minWidth: 185, maxWidth: 185, overflow: "hidden", maxHeight: 80, }}>
+							<Grid item style={{flex: 1}}>
+								<h4 style={{marginBottom: 0, marginTop: 5}}>{newAppname}</h4>
+							</Grid>
+							<Grid item style={{flex: 1}}>
+								Version: {app.app_version}	
+							</Grid>
+							<Grid item style={{flex: 1, width: "100%", maxHeight: 27, overflow: "hidden",}}>
+								{app.description}
+							</Grid>
+						</Grid>
+					</Grid>
+					</Paper>
+				</Draggable>
+			)
+	}
+
 	const AppView = () => {
 		return(
 			<div style={appViewStyle}>
@@ -2232,55 +2301,14 @@ const AngularWorkflow = (props) => {
 						}}
 					/>
 					*/}
-					{filteredApps.map(app=> {
-						// FIXME - add label to apps, as this might be slow with A LOT of apps
-						var newAppname = app.name
-						newAppname = newAppname.replace("_", " ").charAt(0).toUpperCase()+newAppname.substring(1)
-						const maxlen = 24
-						if (newAppname.length > maxlen) {
-							newAppname = newAppname.slice(0, maxlen)+".."
-						}
-
-						// Description fucks this up - fix overflow :)
-						//const maxdesclen = 5
-						//var desc = app.description
-						//if (newAppname.length > maxdesclen) {
-						//	desc = desc.slice(0, maxdesclen)+".."
-						//}
-
-						const image = "url("+app.large_image+")"
+					{prioritizedApps.map((app, index) => {	
 						return(
-							<Draggable 
-								onDrag={(e) => {handleAppDrag(e, app)}}
-								onStop={(e) => {handleDragStop(e, app)}}
-								key={app.id}
-								dragging={false}
-								position={{
-									x: 0,
-									y: 0,
-								}}
-							>
-							<Paper square style={paperAppStyle} >
-								<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: "2px", backgroundColor: "orange", marginRight: "5px"}}>
-								</div>
-								<Grid container style={{margin: "10px 10px 10px 10px", flex: "10"}}>
-									<Grid item>
-										<div style={{borderRadius: borderRadius, height: 80, width: 80, backgroundImage: image, backgroundSize: "cover", backgroundRepeat: "no-repeat"}} />
-									</Grid>
-									<Grid style={{display: "flex", flexDirection: "column", marginLeft: "20px"}}>
-										<Grid item style={{flex: 1}}>
-											<h4 style={{marginBottom: "0px", marginTop: "5px"}}>{newAppname}</h4>
-										</Grid>
-										<Grid item style={{flex: 1, width: "100%", }}>
-											Short description...
-										</Grid>
-										<Grid item style={{flex: 1}}>
-											Version: {app.app_version}	
-										</Grid>
-									</Grid>
-								</Grid>
-							</Paper>
-							</Draggable>
+							<ParsedAppPaper key={index} app={app} />	
+						)
+					})}
+					{filteredApps.filter(innerapp => !internalIds.includes(innerapp.id)).map((app, index) => {	
+						return(
+							<ParsedAppPaper key={index} app={app} />	
 						)
 					})}
 					</div>
@@ -2621,6 +2649,9 @@ const AngularWorkflow = (props) => {
 							data.variant = "STATIC_VALUE"
 						}
 
+
+						// selectedAction.selectedAuthentication = e.target.value
+						// selectedAction.authentication_id = e.target.value.id
 						if (!selectedAction.auth_not_required && selectedAction.selectedAuthentication !== undefined && selectedAction.selectedAuthentication.fields !== undefined && selectedAction.selectedAuthentication.fields[data.name] !== undefined) {
 							// This sets the placeholder in the frontend. (Replaced in backend)
 							selectedActionParameters[count].value = selectedAction.selectedAuthentication.fields[data.name]
@@ -3211,7 +3242,7 @@ const AngularWorkflow = (props) => {
 					</div>
 				</div>
 				: null}
-			{environments !== undefined && environments !== null && environments.length > 1 ?
+			{showEnvironment ? 
 				<div style={{marginTop: "20px"}}>
 					<Typography>
 						Environment
@@ -3347,6 +3378,7 @@ const AngularWorkflow = (props) => {
 		overflow: "scroll",
 		overflowX: "auto",
 		overflowY: "auto",
+		zIndex: 1000,
 	}
 
 	const setTriggerFolderWrapperMulti = event => {
@@ -5641,7 +5673,7 @@ const AngularWorkflow = (props) => {
 			return null
 		}
 
-		if (selectedApp.authentication.parameters.length === undefined || selectedApp.authentication.parameters.length === 0) {
+		if (selectedApp.authentication.parameters === null || selectedApp.authentication.parameters === undefined || selectedApp.authentication.parameters.length === 0) {
 			return null
 		}
 

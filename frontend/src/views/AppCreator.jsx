@@ -214,7 +214,7 @@ const AppCreator = (props) => {
 	const [update, setUpdate] = useState("")
 	const [urlPathParameters, ] = useState([]);
 	const [firstrequest, setFirstrequest] = React.useState(true)
-	const [, setBasedata] = React.useState({})
+	const [basedata, setBasedata] = React.useState({})
 	const [actions, setActions] = useState([])
 	const [errorCode, setErrorCode] = useState("")
 	const [appBuilding, setAppBuilding] = useState(false)
@@ -394,8 +394,6 @@ const AppCreator = (props) => {
 			setNewWorkflowTags(newWorkflowTags)
 		}
 
-		console.log(data.info)
-
 		// This is annoying (:
 		var securitySchemes = data.components.securityDefinitions
 		if (securitySchemes === undefined) {
@@ -431,8 +429,6 @@ const AppCreator = (props) => {
 					continue
 				}
 
-				console.log("Method: ", method)
-				console.log("Methodval: ", methodvalue)
 				var newaction = {
 					"name": methodvalue.summary,
 					"description": methodvalue.description,
@@ -604,7 +600,10 @@ const AppCreator = (props) => {
 				"id": props.match.params.appid,
 		}
 
-		if (contact === "") {
+
+		if (basedata.info.contact !== undefined) {
+			data.info["contact"] = basedata.info.contact
+		} else if (contact === "") {
 			  data.info["contact"] =  {
 				"name": "@frikkylikeme",
 				"url": "https://twitter.com/frikkylikeme",  
@@ -629,7 +628,7 @@ const AppCreator = (props) => {
 
 		// Handles actions
 		for (var key in actions) {
-			const item = actions[key]
+			var item = actions[key]
 			if (item.errors.length > 0) {
 				alert.error("Saving with error in action "+item.name)
 			}
@@ -640,6 +639,12 @@ const AppCreator = (props) => {
 
 			if (data.paths[item.url] === null || data.paths[item.url] === undefined) {
 				data.paths[item.url] = {}
+			}
+
+			const regex = /[A-Za-z0-9 _]/g;
+			const found = item.name.match(regex);
+			if (found !== null) {
+				item.name = found.join("")
 			}
 
 			data.paths[item.url][item.method.toLowerCase()] = {
@@ -803,8 +808,6 @@ const AppCreator = (props) => {
 			}
 		}
 
-		console.log("ACTIONS: ", data.paths)
-
 		fetch(globalUrl+"/api/v1/verify_openapi", {
     	  method: 'POST',
 				headers: {
@@ -927,6 +930,16 @@ const AppCreator = (props) => {
 		setUrlPathQueries(urlPathQueries)
 	}
 
+	const duplicateAction = (index) => {
+		var newAction = JSON.parse(JSON.stringify(actions[index]))
+		newAction.name = newAction.name+"_copy"
+		newAction.errors.push("Can't have the same name")
+
+		actions.push(newAction)
+		setActions(actions)
+		setUpdate(Math.random())
+	}
+
 	const deleteAction = (index) => {
 		actions.splice(index, 1)
 		setCurrentAction({
@@ -942,6 +955,7 @@ const AppCreator = (props) => {
 		})
 
 		setActions(actions)
+		setUpdate(Math.random())
 	}
 
 	//console.log("Option: ", authenticationOption)
@@ -1018,7 +1032,7 @@ const AppCreator = (props) => {
 								fullWidth={true}
 								defaultValue={data.name}
 								placeholder={'Query name'}
-								helperText={<div style={{color:"white", marginBottom: "2px",}}>Click required switch</div>}
+								helperText={<span style={{color:"white", marginBottom: "2px",}}>Click required switch</span>}
 								onBlur={(e) => {
 									urlPathQueries[index].name = e.target.value
 									setUrlPathQueries(urlPathQueries)
@@ -1059,12 +1073,12 @@ const AppCreator = (props) => {
 				}
 
 
-				const url = baseUrl+data.url
+				const url = data.url
 				return (
 					<Paper style={actionListStyle}>
 						{error} 
 					 	<Tooltip title="Edit action" placement="bottom">
-							<div style={{marginLeft: "5px", width: "100%", cursor: "pointer", maxWidth: 675}} onClick={() => {
+							<div style={{marginLeft: "5px", width: "100%", cursor: "pointer", maxWidth: 725, overflowX: "hidden",}} onClick={() => {
 								setCurrentAction(data)
 								setCurrentActionMethod(data.method)
 								setUrlPathQueries(data.queries)
@@ -1081,7 +1095,14 @@ const AppCreator = (props) => {
 							</div>
 						</Tooltip>
 						*/}
-					 	<Tooltip title="Delete action" placement="bottom">
+						<Tooltip title="Duplicate action" placement="bottom" style={{minWidth: 60}} >
+							<div style={{color: "#f85a3e", cursor: "pointer", marginRight: 15, }} onClick={() => {
+								duplicateAction(index)
+							}}>
+								Duplicate	
+							</div>
+						</Tooltip>
+					 	<Tooltip title="Delete action" placement="bottom" style={{minWidth: 60}} >
 							<div style={{color: "#f85a3e", cursor: "pointer"}} onClick={() => {deleteAction(index)}}>
 								Delete
 							</div>
@@ -1094,7 +1115,7 @@ const AppCreator = (props) => {
 	const setActionField = (field, value) => {
 		currentAction[field] = value
 		setCurrentAction(currentAction)	
-		console.log("ACTION: ", currentAction)
+		//setUrlPathQueries(currentAction.queries)
 	}
 
 	const bodyInfo = actionBodyRequest.includes(currentActionMethod) ?
@@ -1253,7 +1274,7 @@ const AppCreator = (props) => {
 		}
 
 		// FIXME: Frontend isn't updating..
-		if (JSON.stringify(tmpQueries) !== JSON.stringify(urlPathQueries)) {
+		if (tmpQueries.length > 0 && JSON.stringify(tmpQueries) !== JSON.stringify(urlPathQueries)) {
 			setUrlPathQueries(tmpQueries)
 		}
 
@@ -1388,7 +1409,7 @@ const AppCreator = (props) => {
 							setUrlPath(e.target.value)
 							console.log(e.target.value)
 						}}
-						helperText={<div style={{color:"white", marginBottom: "2px",}}>The path to use. Must start with /. Use {"{variablename}"} to have path variables</div>}
+						helperText={<span style={{color:"white", marginBottom: "2px",}}>The path to use. Must start with /. Use {"{variablename}"} to have path variables</span>}
 						InputProps={{
 							classes: {
 								notchedOutline: classes.notchedOutline,
@@ -1485,7 +1506,7 @@ const AppCreator = (props) => {
 						multiline
 						rows="5"
 						onChange={e => setActionField("headers", e.target.value)}
-						helperText={<div style={{color:"white", marginBottom: "2px",}}>Headers that are part of the request</div>}
+						helperText={<span style={{color:"white", marginBottom: "2px",}}>Headers that are part of the request</span>}
 						InputProps={{
 							classes: {
 								notchedOutline: classes.notchedOutline,
@@ -1503,6 +1524,7 @@ const AppCreator = (props) => {
 					Cancel	
 				</Button>
 	      <Button color="primary" variant="outlined" style={{borderRadius: "0px"}} onClick={() => {
+						console.log(urlPathQueries)
 						const errors = getActionErrors()		
 						addActionToView(errors)
 						setActionsModalOpen(false)
@@ -1617,7 +1639,7 @@ const AppCreator = (props) => {
 		img.onload = function() {
 			// img, x, y, width, height
 			//ctx.drawImage(img, 174, 174)
-			console.log("IMG natural: ", img.naturalWidth, img.naturalHeight)
+			//console.log("IMG natural: ", img.naturalWidth, img.naturalHeight)
 			//ctx.drawImage(img, 0, 0, 174, 174)
 			ctx.drawImage(img, 
 				0, 0, img.width, img.height, 
@@ -1626,7 +1648,7 @@ const AppCreator = (props) => {
 
 			const canvasUrl = canvas.toDataURL()
 			if (canvasUrl !== fileBase64) {
-				console.log("SET URL TO: ", canvasUrl)
+				//console.log("SET URL TO: ", canvasUrl)
 				setFileBase64(canvasUrl)
 			}
 		}

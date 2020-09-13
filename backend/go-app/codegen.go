@@ -253,9 +253,13 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 	parameterData := ""
 	if len(optionalQueries) > 0 {
 		queryString += ", "
-		for _, query := range optionalQueries {
+		for index, query := range optionalQueries {
 			// Check if it's a part of the URL already
-			queryString += fmt.Sprintf("%s=\"\", ", query)
+			queryString += fmt.Sprintf("%s=\"\"", query)
+			if index != len(optionalQueries)-1 {
+				queryString += ", "
+			}
+
 			queryData += fmt.Sprintf(`
         if %s:
             url += f"&%s={%s}"`, query, query, query)
@@ -274,8 +278,8 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 			authenticationParameter = ", apikey"
 			authenticationSetup = "if apikey != \" \": headers[\"Authorization\"] = f\"Bearer {apikey}\""
 		} else if swagger.Components.SecuritySchemes["BasicAuth"] != nil {
-			authenticationParameter = ", username, password"
-			authenticationAddin = ", auth=(username, password)"
+			authenticationParameter = ", username_basic, password_basic"
+			authenticationAddin = ", auth=(username_basic, password_basic)"
 		} else if swagger.Components.SecuritySchemes["ApiKeyAuth"] != nil {
 			authenticationParameter = ", apikey"
 			if swagger.Components.SecuritySchemes["ApiKeyAuth"].Value.In == "header" {
@@ -400,6 +404,11 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 		bodyAddin,
 		verifyAddin,
 	)
+
+	if strings.Contains(functionname, "get_returns_the_vuln") {
+		log.Println(data)
+		log.Printf("Queries: %s", queryString)
+	}
 
 	//log.Printf(data)
 	return functionname, data
@@ -553,7 +562,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 			})
 		} else if securitySchemes["BasicAuth"] != nil {
 			api.Authentication.Parameters = append(api.Authentication.Parameters, AuthenticationParams{
-				Name:        "username",
+				Name:        "username_auth",
 				Value:       "",
 				Example:     "username",
 				Description: securitySchemes["BasicAuth"].Value.Description,
@@ -565,7 +574,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 			})
 
 			api.Authentication.Parameters = append(api.Authentication.Parameters, AuthenticationParams{
-				Name:        "password",
+				Name:        "password_auth",
 				Value:       "",
 				Example:     "*****",
 				Description: securitySchemes["BasicAuth"].Value.Description,
@@ -577,7 +586,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 			})
 
 			extraParameters = append(extraParameters, WorkflowAppActionParameter{
-				Name:          "username",
+				Name:          "username_basic",
 				Description:   "The username to use",
 				Multiline:     false,
 				Required:      true,
@@ -588,7 +597,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 				},
 			})
 			extraParameters = append(extraParameters, WorkflowAppActionParameter{
-				Name:          "password",
+				Name:          "password_basic",
 				Description:   "The password to use",
 				Multiline:     false,
 				Required:      true,
@@ -846,19 +855,100 @@ func deployAppToDatastore(ctx context.Context, workflowapp WorkflowApp) error {
 	return nil
 }
 
+// FIXME:
+// https://docs.python.org/3.2/reference/lexical_analysis.html#identifiers
+// This is used to build the python functions.
 func fixFunctionName(functionName, actualPath string) string {
 	if len(functionName) == 0 {
 		functionName = actualPath
 	}
+
+	// REGEX THIS SHIT
+	// ROFL
+
 	//log.Printf("Fixing function name for %s", functionName)
-	functionName = strings.Replace(functionName, " ", "_", -1)
 	functionName = strings.Replace(functionName, ".", "", -1)
+	functionName = strings.Replace(functionName, ",", "", -1)
 	functionName = strings.Replace(functionName, ".", "", -1)
+	functionName = strings.Replace(functionName, "&", "", -1)
 	functionName = strings.Replace(functionName, "/", "", -1)
 	functionName = strings.Replace(functionName, "\\", "", -1)
+
+	functionName = strings.Replace(functionName, "!", "", -1)
+	functionName = strings.Replace(functionName, "?", "", -1)
+	functionName = strings.Replace(functionName, "@", "", -1)
+	functionName = strings.Replace(functionName, "#", "", -1)
+	functionName = strings.Replace(functionName, "$", "", -1)
+	functionName = strings.Replace(functionName, "&", "", -1)
+	functionName = strings.Replace(functionName, "*", "", -1)
+	functionName = strings.Replace(functionName, "(", "", -1)
+	functionName = strings.Replace(functionName, ")", "", -1)
+	functionName = strings.Replace(functionName, "[", "", -1)
+	functionName = strings.Replace(functionName, "]", "", -1)
+	functionName = strings.Replace(functionName, "{", "", -1)
+	functionName = strings.Replace(functionName, "}", "", -1)
+	functionName = strings.Replace(functionName, `"`, "", -1)
+	functionName = strings.Replace(functionName, `'`, "", -1)
+	functionName = strings.Replace(functionName, `|`, "", -1)
+	functionName = strings.Replace(functionName, `~`, "", -1)
+
+	functionName = strings.Replace(functionName, " ", "_", -1)
+	functionName = strings.Replace(functionName, "-", "_", -1)
+
 	functionName = strings.ToLower(functionName)
 
 	return functionName
+}
+
+// Returns a valid param name
+func validateParameterName(name string) string {
+	invalid := []string{"False",
+		"await",
+		"else",
+		"import",
+		"pass",
+		"None",
+		"break",
+		"except",
+		"in",
+		"raise",
+		"True",
+		"class",
+		"finally",
+		"is",
+		"return",
+		"and",
+		"continue",
+		"for",
+		"lambda",
+		"try",
+		"as",
+		"def",
+		"from",
+		"nonlocal",
+		"while",
+		"assert",
+		"del",
+		"global",
+		"not",
+		"with",
+		"async",
+		"elif",
+		"if",
+		"or",
+		"yield",
+	}
+
+	newname := name
+	for _, item := range invalid {
+		if item == name {
+			//log.Printf("%s is NOT a valid parameter name!", item)
+			newname = fmt.Sprintf("%s_shuffle", item)
+			break
+		}
+	}
+
+	return newname
 }
 
 func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []WorkflowAppActionParameter, path *openapi3.PathItem, actualPath string) (WorkflowAppAction, string) {
@@ -926,6 +1016,7 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 			parsedName = strings.ReplaceAll(parsedName, ",", "_")
 			parsedName = strings.ReplaceAll(parsedName, ".", "_")
 			parsedName = strings.ReplaceAll(parsedName, "|", "_")
+			parsedName = validateParameterName(parsedName)
 			param.Value.Name = parsedName
 			path.Connect.Parameters[counter].Value.Name = parsedName
 
@@ -1074,6 +1165,7 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 			parsedName = strings.ReplaceAll(parsedName, ",", "_")
 			parsedName = strings.ReplaceAll(parsedName, ".", "_")
 			parsedName = strings.ReplaceAll(parsedName, "|", "_")
+			parsedName = validateParameterName(parsedName)
 			param.Value.Name = parsedName
 			path.Get.Parameters[counter].Value.Name = parsedName
 
@@ -1222,6 +1314,7 @@ func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 			parsedName = strings.ReplaceAll(parsedName, ",", "_")
 			parsedName = strings.ReplaceAll(parsedName, ".", "_")
 			parsedName = strings.ReplaceAll(parsedName, "|", "_")
+			parsedName = validateParameterName(parsedName)
 			param.Value.Name = parsedName
 			path.Head.Parameters[counter].Value.Name = parsedName
 
@@ -1370,6 +1463,7 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 			parsedName = strings.ReplaceAll(parsedName, ",", "_")
 			parsedName = strings.ReplaceAll(parsedName, ".", "_")
 			parsedName = strings.ReplaceAll(parsedName, "|", "_")
+			parsedName = validateParameterName(parsedName)
 			param.Value.Name = parsedName
 			path.Delete.Parameters[counter].Value.Name = parsedName
 
@@ -1517,6 +1611,7 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 			parsedName = strings.ReplaceAll(parsedName, ",", "_")
 			parsedName = strings.ReplaceAll(parsedName, ".", "_")
 			parsedName = strings.ReplaceAll(parsedName, "|", "_")
+			parsedName = validateParameterName(parsedName)
 			param.Value.Name = parsedName
 			path.Post.Parameters[counter].Value.Name = parsedName
 
@@ -1664,6 +1759,7 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 			parsedName = strings.ReplaceAll(parsedName, ",", "_")
 			parsedName = strings.ReplaceAll(parsedName, ".", "_")
 			parsedName = strings.ReplaceAll(parsedName, "|", "_")
+			parsedName = validateParameterName(parsedName)
 			param.Value.Name = parsedName
 			path.Patch.Parameters[counter].Value.Name = parsedName
 
@@ -1811,6 +1907,7 @@ func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 			parsedName = strings.ReplaceAll(parsedName, ",", "_")
 			parsedName = strings.ReplaceAll(parsedName, ".", "_")
 			parsedName = strings.ReplaceAll(parsedName, "|", "_")
+			parsedName = validateParameterName(parsedName)
 			param.Value.Name = parsedName
 			path.Put.Parameters[counter].Value.Name = parsedName
 
