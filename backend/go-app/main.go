@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+
 	//"regexp"
 	"strconv"
 	"strings"
@@ -34,6 +35,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi2"
 	"github.com/getkin/kin-openapi/openapi2conv"
 	"github.com/getkin/kin-openapi/openapi3"
+	uuid "github.com/satori/go.uuid"
 
 	"github.com/google/go-github/v28/github"
 	"golang.org/x/oauth2"
@@ -47,7 +49,6 @@ import (
 	// Random
 	xj "github.com/basgys/goxml2json"
 	newscheduler "github.com/carlescere/scheduler"
-	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/yaml.v3"
 
