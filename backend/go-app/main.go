@@ -6449,7 +6449,7 @@ func runInit(ctx context.Context) {
 	log.Printf("Finished INIT")
 }
 
-func init() {
+func initHandlers() {
 	var err error
 	ctx := context.Background()
 
@@ -6575,7 +6575,7 @@ func init() {
 
 // Had to move away from mux, which means Method is fucked up right now.
 func main() {
-	//init()
+	initHandlers()
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "MISSING"
