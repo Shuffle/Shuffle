@@ -361,11 +361,99 @@ class AppBase:
                         newlist.append("parsing_error")
                 return " ".join(newlist)
 
+        def recurse_json(basejson, parsersplit):
+            match = "#(\d+):?-?([0-9a-z]+)?#?"
+            print("Split: %s\n%s" % (parsersplit, basejson))
+            try:
+                outercnt = 0
+                for value in parsersplit:
+                    print("VALUE: %s\n" % value)
+                    actualitem = re.findall(match, value, re.MULTILINE)
+                    if value == "#":
+                        newvalue = []
+                        for innervalue in basejson:
+                            # 1. Check the next item (message)
+                            # 2. Call this function again
+        
+                            try:
+                                ret = recurse_json(innervalue, parsersplit[outercnt+1:])
+                            except IndexError:
+                                print("INDEXERROR: ", parsersplit[outercnt])
+                                #ret = innervalue
+                                ret = recurse_json(innervalue, parsersplit[outercnt:])
+                                
+                            print(ret)
+                            #exit()
+                            newvalue.append(ret)
+        
+                        return newvalue
+                    elif len(actualitem) > 0:
+                        # FIXME: This is absolutely not perfect. 
+                        print("IN HERE: ", actualitem)
+
+                        newvalue = []
+                        firstitem = actualitem[0][0]
+                        seconditem = actualitem[0][1]
+                        if seconditem == "":
+                            print("In first")
+                            basejson = basejson[int(firstitem)]
+                        else:
+                            if seconditem == "max": 
+                                seconditem = len(basejson)
+                            if seconditem == "min": 
+                                seconditem = 0
+
+                            newvalue = []
+                            for i in range(int(firstitem), int(seconditem)):
+                                # 1. Check the next item (message)
+                                # 2. Call this function again
+                                print("Base: %s" % basejson[i])
+
+                                try:
+                                    ret = recurse_loop(basejson[i], parsersplit[outercnt+1:])
+                                except IndexError:
+                                    print("INDEXERROR: ", parsersplit[outercnt])
+                                    #ret = innervalue
+                                    ret = recurse_loop(innervalue, parsersplit[outercnt:])
+                                    
+                                print(ret)
+                                #exit()
+                                newvalue.append(ret)
+
+                            return newvalue
+
+                    # FIXME: Add specific loop for other indexes
+                    else:
+                        #print("BEFORE NORMAL VALUE: ", basejson, value)
+                        if len(value) == 0:
+                            return basejson
+        
+                        if isinstance(basejson[value], str):
+                            print(f"LOADING STRING '%s' AS JSON" % basejson[value]) 
+                            try:
+                                basejson = json.loads(basejson[value])
+                            except json.decoder.JSONDecodeError as e:
+                                print("RETURNING BECAUSE '%s' IS A NORMAL STRING" % basejson[value])
+                                return basejson[value]
+                        else:
+                            basejson = basejson[value]
+        
+                    outercnt += 1
+        
+            except KeyError as e:
+                print("Lower keyerror: %s" % e)
+                #return basejson
+                #return "KeyError: Couldn't find key: %s" % e
+
+            return basejson
+
         # Takes a workflow execution as argument
         # Returns a string if the result is single, or a list if it's a list
         def get_json_value(execution_data, input_data):
             parsersplit = input_data.split(".")
             actionname = parsersplit[0][1:].replace(" ", "_", -1)
+            #Actionname: Start_node
+
             print(f"Actionname: {actionname}")
         
             # 1. Find the action
@@ -433,59 +521,7 @@ class AppBase:
             except json.decoder.JSONDecodeError as e:
                 return baseresult
         
-            # This whole thing should be recursive.
-            try:
-                cnt = 0
-                for value in parsersplit[1:]:
-                    cnt += 1
-        
-                    print("VALUE: %s" % value)
-                    if value == "#":
-                        # FIXME - not recursive - should go deeper if there are more #
-                        print("HANDLE RECURSIVE LOOP OF %s" % basejson)
-                        returnlist = []
-                        try:
-                            for innervalue in basejson:
-                                print("Value: %s" % innervalue[parsersplit[cnt+1]])
-                                returnlist.append(innervalue[parsersplit[cnt+1]])
-                        except IndexError as e:
-                            print("Indexerror inner: %s" % e)
-                            # Basically means its a normal list, not a crazy one :)
-                            # Custom format for ${name[0,1,2,...]}$
-                            indexvalue = "${NO_SPLITTER%s}$" % json.dumps(basejson)
-                            if len(returnlist) > 0:
-                                indexvalue = "${NO_SPLITTER%s}$" % json.dumps(returnlist)
-        
-                            print("INDEXVAL: ", indexvalue)
-                            return indexvalue
-                        except TypeError as e:
-                            print("TypeError inner: %s" % e)
-        
-                        # Example format: ${[]}$
-                        parseditem = "${%s%s}$" % (parsersplit[cnt+1], json.dumps(returnlist))
-                        print("PARSED LOOP ITEM: %s" % parseditem)
-                        return parseditem
-        
-                    else:
-                        print("BEFORE NORMAL VALUE: ", basejson, value)
-                        if len(value) == 0:
-                            return basejson
-        
-                        if isinstance(basejson[value], str):
-                            print(f"LOADING STRING '%s' AS JSON" % basejson[value]) 
-                            try:
-                                basejson = json.loads(basejson[value])
-                            except json.decoder.JSONDecodeError as e:
-                                print("RETURNING BECAUSE '%s' IS A NORMAL STRING" % basejson[value])
-                                return basejson[value]
-                        else:
-                            basejson = basejson[value]
-        
-            except KeyError as e:
-                print("Lower keyerror: %s" % e)
-                return "KeyError: Couldn't find key: %s" % e
-
-            return basejson
+            return recurse_json(basejson, parsersplit[1:])
 
         # Parses parameters sent to it and returns whether it did it successfully with the values found
         def parse_params(action, fullexecution, parameter):
@@ -510,6 +546,7 @@ class AppBase:
                         except IndexError:
                             continue
 
+                        # Handles for loops etc. 
                         value = get_json_value(fullexecution, to_be_replaced)
                         if isinstance(value, str):
                             parameter["value"] = parameter["value"].replace(to_be_replaced, value)
@@ -849,7 +886,7 @@ class AppBase:
                                             replacement = replacement[1:len(replacement)-1]
                                         #except json.decoder.JSONDecodeError as e:
 
-                                        print("REPLACING %s with %s" % (key, replacement))
+                                        #print("REPLACING %s with %s" % (key, replacement))
                                         #replacement = parse_wrapper_start(replacement)
                                         tmpitem = tmpitem.replace(key, replacement, -1)
 
@@ -911,6 +948,7 @@ class AppBase:
                                     results.append(json.loads(ret))
                                     json_object = True
                                 except json.decoder.JSONDecodeError as e:
+                                    #print("Json: %s" % e)
                                     results.append(ret)
 
                             # Dump the result as a string of a list
@@ -920,7 +958,25 @@ class AppBase:
                                 if json_object:
                                     result = json.dumps(results)
                                 else:
-                                    result = "[\""+"\", \"".join(results)+"\"]"
+                                    result = "["
+                                    for item in results:
+                                        try:
+                                            json.loads(item)
+                                            result += item
+                                        except json.decoder.JSONDecodeError as e:
+                                            # Common nested issue which puts " around everything
+                                            try:
+                                                tmpitem = item.replace("\\\"", "\"", -1)
+                                                json.loads(tmpitem)
+                                                result += tmpitem
+
+                                            except:
+                                                result += "\"%s\"" % item
+
+                                        result += ", "
+
+                                    result = result[:-2]
+                                    result += "]"
                             else:
                                 print("Normal result?")
                                 result = results
@@ -932,7 +988,7 @@ class AppBase:
                         action_result["result"] = result
 
                     self.logger.debug(f"Executed {action['label']}-{action['id']} with result: {result}")
-                    self.logger.debug(f"Data: %s" % action_result)
+                    #self.logger.debug(f"Data: %s" % action_result)
                 except TypeError as e:
                     print("TypeError issue: %s" % e)
                     action_result["status"] = "FAILURE" 

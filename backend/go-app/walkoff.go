@@ -2042,16 +2042,14 @@ func cleanupExecutions(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	//if user.Role != "admin" {
-	//	resp.WriteHeader(401)
-	//	resp.Write([]byte(`{"success": false, "message": "Insufficient permissions"}`))
-	//	return
-	//}
-
-	log.Printf("CLEANUP!")
-	log.Printf("%#v", user)
+	if user.Role != "admin" {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "message": "Insufficient permissions"}`))
+		return
+	}
 
 	ctx := context.Background()
+
 	// Removes three months from today
 	timestamp := int64(time.Now().AddDate(0, -2, 0).Unix())
 	log.Println(timestamp)
@@ -2064,8 +2062,6 @@ func cleanupExecutions(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting all workflowexecutions"}`)))
 		return
 	}
-
-	log.Println(len(workflowExecutions))
 
 	resp.WriteHeader(200)
 	resp.Write([]byte("OK"))
