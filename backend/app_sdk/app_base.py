@@ -460,7 +460,7 @@ class AppBase:
             baseresult = ""
             actionname_lower = actionname.lower()
             try: 
-                if actionname_lower == "exec" || actionname_lower == "webhook" || actionname_lower == "schedule" || actionname_lower == "userinput" || actionname_lower == "email_trigger" || actionname_lower == "trigger": 
+                if actionname_lower == "exec" or actionname_lower == "webhook" or actionname_lower == "schedule" or actionname_lower == "userinput" or actionname_lower == "email_trigger" or actionname_lower == "trigger": 
                     baseresult = execution_data["execution_argument"]
                 else:
                     for result in execution_data["results"]:

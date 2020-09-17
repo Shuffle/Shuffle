@@ -1916,6 +1916,7 @@ func abortExecution(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	// FIXME: Check the execution if this fails.
 	user, err := handleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in abort workflow: %s", err)

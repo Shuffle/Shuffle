@@ -542,22 +542,24 @@ const Workflows = (props) => {
 						</div>
 					</Grid>
 				</Grid>
-				<Grid container style={{maxWidth: 35, marginRight: 10,}}>
-					<Tooltip title={`Actions: ${data.actions.length}`} placement="right">
-						<AppsIcon style={{width: imgSize, height: imgSize}} />
-					</Tooltip>
+				{data.actions !== undefined && data.actions !== null ? 
+					<Grid container style={{maxWidth: 35, marginRight: 10,}}>
+						<Tooltip title={`Actions: ${data.actions.length}`} placement="right">
+							<AppsIcon style={{width: imgSize, height: imgSize}} />
+						</Tooltip>
 
-					{webhooks > 0 ? 
-						<Tooltip title={`Webhooks: ${webhooks}`} placement="right">
-							<img alt={data.title} style={{width: imgSize, height: imgSize, marginTop: 5}} src={webhookImg} /> 
-						</Tooltip>
-					: null}
-					{schedules > 0 ? 
-						<Tooltip title={`Schedules: ${schedules}`} placement="right">
-							<img alt={data.title} style={{width: imgSize, height: imgSize, marginTop: 5}} src={scheduleImg} /> 
-						</Tooltip>
-					: null}
-				</Grid>
+						{webhooks > 0 ? 
+							<Tooltip title={`Webhooks: ${webhooks}`} placement="right">
+								<img alt={data.title} style={{width: imgSize, height: imgSize, marginTop: 5}} src={webhookImg} /> 
+							</Tooltip>
+						: null}
+						{schedules > 0 ? 
+							<Tooltip title={`Schedules: ${schedules}`} placement="right">
+								<img alt={data.title} style={{width: imgSize, height: imgSize, marginTop: 5}} src={scheduleImg} /> 
+							</Tooltip>
+						: null}
+					</Grid>
+				: null}
 			</Paper>
 		)
 	}
