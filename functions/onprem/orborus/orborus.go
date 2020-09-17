@@ -35,7 +35,10 @@ var workerVersion = os.Getenv("SHUFFLE_WORKER_VERSION")
 
 //var baseimagename = "docker.pkg.github.com/frikky/shuffle"
 //var baseimagename = "ghcr.io/frikky"
-var baseimagename = "frikky/shuffle"
+// var baseimagename = "frikky/shuffle"
+var baseimagename = os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
+var baseimageregistry = os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")
+var baseimagetagsuffix = os.Getenv("SHUFFLE_BASE_IMAGE_TAG_SUFFIX")
 
 var orgId = os.Getenv("ORG_ID")
 var baseUrl = os.Getenv("BASE_URL")
@@ -214,8 +217,10 @@ func initializeImages() {
 
 	// check whether theyre the same first
 	images := []string{
-		fmt.Sprintf("docker.io/%s:app_sdk", baseimagename),
-		fmt.Sprintf("docker.io/%s:worker", baseimagename),
+		fmt.Sprintf("%s/%s:app_sdk%s", baseimageregistry, baseimagename, baseimagetagsuffix),
+		fmt.Sprintf("%s/%s:worker%s", baseimageregistry, baseimagename, baseimagetagsuffix),
+		// fmt.Sprintf("docker.io/%s:app_sdk", baseimagename),
+		// fmt.Sprintf("docker.io/%s:worker", baseimagename),
 
 		//fmt.Sprintf("%s/worker:%s", baseimagename, workerVersion),
 		//fmt.Sprintf("%s/app_sdk:%s", baseimagename, appSdkVersion),
@@ -270,7 +275,8 @@ func main() {
 	//workerVersion := "0.1.0"
 	//workerImage := fmt.Sprintf("docker.pkg.github.com/frikky/shuffle/%s:%s", workerName, workerVersion)
 	//workerImage := fmt.Sprintf("%s/worker:%s", baseimagename, workerVersion)
-	workerImage := fmt.Sprintf("docker.io/%s:worker", baseimagename)
+	// workerImage := fmt.Sprintf("docker.io/%s:worker", baseimagename)
+	workerImage := fmt.Sprintf("%s/%s:worker%s", baseimageregistry, baseimagename, baseimagetagsuffix)
 
 	log.Printf("[INFO] Finished configuring docker environment")
 
