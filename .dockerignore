@@ -1,0 +1,15 @@
+**/.git*
+**/.gitlab-ci.yml
+**/.env
+**/.dockerignore
+**/Dockerfile*
+**/node_modules
+buildSrc/libs
+.gradle/
+build/
+**build/
+.idea/
+!.idea/codeStyles/codeStyleConfig.xml
+.DS_Store
+*.log
+out/
