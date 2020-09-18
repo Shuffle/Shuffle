@@ -5025,8 +5025,8 @@ func getWorkflowExecutions(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if len(workflowExecutions) == 0 {
-		resp.Write([]byte("[]"))
 		resp.WriteHeader(200)
+		resp.Write([]byte("[]"))
 		return
 	}
 
