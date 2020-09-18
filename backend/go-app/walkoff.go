@@ -66,11 +66,14 @@ type ExecutionRequest struct {
 	Type              string   `json:"type"`
 }
 
+// Role is just used for feedback for a user
 type Org struct {
-	Name  string `json:"name"`
-	Org   string `json:"org"`
-	Users []User `json:"users"`
-	Id    string `json:"id"`
+	Name      string `json:"name"`
+	Org       string `json:"org"`
+	Users     []User `json:"users"`
+	Id        string `json:"id"`
+	Role      string `json:"role"`
+	CloudSync bool   `json:"cloud_sync"`
 }
 
 type AppAuthenticationStorage struct {

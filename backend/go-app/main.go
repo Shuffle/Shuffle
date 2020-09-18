@@ -1692,16 +1692,25 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		Expires: expiration,
 	})
 
+	// Migrate this to real Org
+	// Need to create org endpoints (create, delete etc)
+	currentOrg := `{
+		"name": "Shuffle", 
+		"id": "123", 
+		"role": "admin", 
+		"cloud_sync": false 
+	}`
+
 	returnData := fmt.Sprintf(`
 	{
 		"success": true, 
 		"admin": %s, 
 		"tutorials": [],
 		"id": "%s",
-		"orgs": [{"name": "Shuffle", "id": "123", "role": "admin"}], 
-		"selected_org": {"name": "Shuffle", "id": "123", "role": "admin"}, 
+		"orgs": [%s], 
+		"selected_org": %s,
 		"cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]
-	}`, parsedAdmin, userInfo.Id, userInfo.Session, expiration.Unix())
+	}`, parsedAdmin, userInfo.Id, currentOrg, currentOrg, userInfo.Session, expiration.Unix())
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(returnData))
@@ -6449,6 +6458,55 @@ func runInit(ctx context.Context) {
 	log.Printf("Finished INIT")
 }
 
+func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	user, err := handleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("Api authentication failed in verify swagger: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Role != "admin" {
+		log.Printf("Not admin.")
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Not admin"}`))
+		return
+	}
+
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Failed reading body"}`))
+		return
+	}
+
+	type ReturnData struct {
+		Apikey       string `datastore:"apikey"`
+		Organization Org    `datastore:"organization"`
+	}
+
+	var tmpData ReturnData
+	err = json.Unmarshal(body, &tmpData)
+	if err != nil {
+		log.Printf("Failed unmarshalling test: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	log.Printf("Apidata: %s", tmpData.Apikey)
+	// FIXME: https://docs.google.com/drawings/d/1JJebpPeEVEbmH_qsAC6zf9Noygp7PytvesrkhE19QrY/edit
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+}
+
 func init() {
 	var err error
 	ctx := context.Background()
@@ -6501,8 +6559,13 @@ func init() {
 	// Queuebuilder and Workflow streams. First is to update a stream, second to get a stream
 	// Changed from workflows/streams to streams, as appengine was messing up
 	// This does not increase the API counter
+	// Used by frontend
 	r.HandleFunc("/api/v1/streams", handleWorkflowQueue).Methods("POST")
 	r.HandleFunc("/api/v1/streams/results", handleGetStreamResults).Methods("POST", "OPTIONS")
+
+	// Used by orborus
+	r.HandleFunc("/api/v1/workflows/queue", handleGetWorkflowqueue).Methods("GET")
+	r.HandleFunc("/api/v1/workflows/queue/confirm", handleGetWorkflowqueueConfirm).Methods("POST")
 
 	// App specific
 	r.HandleFunc("/api/v1/apps/run_hotload", handleAppHotloadRequest).Methods("GET", "OPTIONS")
@@ -6530,8 +6593,6 @@ func init() {
 	/* Everything below here increases the counters*/
 	r.HandleFunc("/api/v1/workflows", getWorkflows).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows", setNewWorkflow).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/queue", handleGetWorkflowqueue).Methods("GET")
-	r.HandleFunc("/api/v1/workflows/queue/confirm", handleGetWorkflowqueueConfirm).Methods("POST")
 	r.HandleFunc("/api/v1/workflows/schedules", handleGetSchedules).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/download_remote", loadSpecificWorkflows).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/execute", executeWorkflow).Methods("GET", "POST", "OPTIONS")
@@ -6552,7 +6613,7 @@ func init() {
 	r.HandleFunc("/api/v1/hooks/{key}/delete", handleDeleteHook).Methods("DELETE", "OPTIONS")
 
 	// Trigger hmm
-	r.HandleFunc("/api/v1/triggers/{key}", handleGetSpecificTrigger).Methods("GET", "OPTIONS")
+	//r.HandleFunc("/api/v1/triggers/{key}", handleGetSpecificTrigger).Methods("GET", "OPTIONS")
 
 	r.HandleFunc("/api/v1/stats/{key}", handleGetSpecificStats).Methods("GET", "OPTIONS")
 
@@ -6563,7 +6624,8 @@ func init() {
 	r.HandleFunc("/api/v1/validate_openapi", validateSwagger).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/get_openapi/{key}", getOpenapi).Methods("GET", "OPTIONS")
 
-	r.HandleFunc("/api/v1/execution_cleanup", cleanupExecutions).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/cloud/setup", handleCloudSetup).Methods("POST", "OPTIONS")
+	//r.HandleFunc("/api/v1/execution_cleanup", cleanupExecutions).Methods("GET", "OPTIONS")
 
 	http.Handle("/", r)
 }
