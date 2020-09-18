@@ -1411,6 +1411,12 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("Failed to increase total workflows: %s", err)
 	}
 
+	// recalculate authenticators stats
+	err = recalculateAppAuthentications()
+	if err != nil {
+		log.Printf("Authentications recalculation failed: %s", err)
+	}
+
 	//memcacheName := fmt.Sprintf("%s_%s", user.Username, fileId)
 	//memcache.Delete(ctx, memcacheName)
 	//memcacheName = fmt.Sprintf("%s_workflows", user.Username)
@@ -4282,8 +4288,76 @@ func loadSpecificWorkflows(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	// recalculate authenticators stats
+	err = recalculateAppAuthentications()
+	if err != nil {
+		log.Printf("Authentications recalculation failed: %s", err)
+	}
+
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+}
+
+func recalculateAppAuthentications() error {
+	// create context
+	ctx := context.Background()
+
+	// form workflows list
+	workflows, err := getAllWorkflows(ctx)
+	if err != nil {
+		log.Printf("Error: Failed getting workflows: %s", err)
+		return err
+	}
+
+	// form authenticators list
+	auths, err := getAllWorkflowAppAuth(ctx)
+	if err != nil {
+		log.Printf("Error: Failed getting auths: %s", err)
+		return err
+	}
+
+	// iterate through auths
+	for _, auth := range auths {
+		// reset calculated values
+		auth.WorkflowCount = 0
+		auth.NodeCount = 0
+		auth.Usage = []AuthenticationUsage{}
+
+		// iterate through workflows to find which uses this auth
+		for _, workflow := range workflows {
+			hasCurrentAuth := false
+			usageItem := AuthenticationUsage{
+				WorkflowId: workflow.ID,
+				Nodes:      []string{},
+			}
+
+			// iterate through actions
+			for _, action := range workflow.Actions {
+				if action.AuthenticationId == auth.Id {
+					// this workflow should be added to "usage" field
+					hasCurrentAuth = true
+
+					// add this action to list
+					usageItem.Nodes = append(usageItem.Nodes, action.ID)
+				}
+			}
+
+			// update current auth with found workflow
+			if hasCurrentAuth {
+				auth.WorkflowCount += 1
+				auth.NodeCount += int64(len(usageItem.Nodes))
+				auth.Usage = append(auth.Usage, usageItem)
+			}
+		}
+
+		// update record in database
+		err := setWorkflowAppAuthDatastore(ctx, auth, auth.Id)
+		if err != nil {
+			log.Printf("Failed setting up app auth %s: %s", auth.Id, err)
+		}
+	}
+
+	return nil
 }
 
 func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
