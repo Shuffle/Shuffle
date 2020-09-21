@@ -1865,7 +1865,6 @@ const AngularWorkflow = (props) => {
 	}
 
 	const syncEnabled = props.userdata !== undefined && props.userdata.selected_org !== null && props.userdata.selected_org !== undefined ? props.userdata.selected_org.cloud_sync === true : false 
-	console.log("SYNC: ", syncEnabled)
 	const triggers = [{
 			"name": "Webhook",	
 			"type": "TRIGGER",

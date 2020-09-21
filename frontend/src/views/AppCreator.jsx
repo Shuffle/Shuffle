@@ -376,16 +376,6 @@ const AppCreator = (props) => {
 			}
 		}
 
-
-		if (data.servers !== undefined && data.servers.length > 0) {
-			var firstUrl = data.servers[0].url
-			if (firstUrl.endsWith("/")) {
-				setBaseUrl(firstUrl.slice(0, firstUrl.length-1))
-			} else {
-				setBaseUrl(firstUrl)
-			}
-		} 
-
 		if (data.tags !== undefined && data.tags.length > 0) {
 			for (var key in data.tags) {
 				newWorkflowTags.push(data.tags[key].name)
@@ -425,7 +415,6 @@ const AppCreator = (props) => {
 				}
 
 				if (!allowedfunctions.includes(method.toUpperCase())) {
-					console.log(method, path)
 					continue
 				}
 
@@ -532,6 +521,30 @@ const AppCreator = (props) => {
 				}
 				newActions.push(newaction)
 			}
+
+			if (data.servers !== undefined && data.servers.length > 0) {
+				var firstUrl = data.servers[0].url
+				if (firstUrl.includes("{") && firstUrl.includes("}") && data.servers[0].variables !== undefined) {
+					const regex = /{\w+}/g
+					const found = firstUrl.match(regex)
+					if (found !== null) {
+						for (var key in found) {
+							const item = found[key].slice(1, found[key].length-1)
+							const foundVar = data.servers[0].variables[item]
+							if (foundVar["default"] !== undefined) {
+								firstUrl = firstUrl.replace(found[key], foundVar["default"])
+							}
+						}
+
+					} 
+				}
+
+				if (firstUrl.endsWith("/")) {
+					setBaseUrl(firstUrl.slice(0, firstUrl.length-1))
+				} else {
+					setBaseUrl(firstUrl)
+				}
+			} 
 		}
 
 

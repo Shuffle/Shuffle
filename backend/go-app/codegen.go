@@ -313,7 +313,7 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 	//verifyParam := ""
 	//verifyWrapper := ""
 	//verifyAddin := ""
-	verifyParam := ", verify=False"
+	verifyParam := ", ssl_verify=False"
 	verifyWrapper := `if type(ssl_verify) == str: ssl_verify = False if ssl_verify.lower() == "false" or ssl_verify == "0" else True`
 	verifyAddin := ", verify=ssl_verify"
 
