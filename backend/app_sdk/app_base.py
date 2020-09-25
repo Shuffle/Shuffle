@@ -67,7 +67,7 @@ class AppBase:
             "started_at": int(time.time()),
             "status": "EXECUTING"
         }
-        self.logger.info("ACTION RESULT: %s", action_result)
+        self.logger.info("ACTION RESULT (start): %s", action_result)
 
         if len(self.action) == 0:
             print("ACTION env not defined")
@@ -361,11 +361,14 @@ class AppBase:
                         newlist.append("parsing_error")
                 return " ".join(newlist)
 
+        # Parses JSON loops and such down to the item you're looking for
         def recurse_json(basejson, parsersplit):
             match = "#(\d+):?-?([0-9a-z]+)?#?"
             print("Split: %s\n%s" % (parsersplit, basejson))
             try:
                 outercnt = 0
+
+                # Loops over split values
                 for value in parsersplit:
                     print("VALUE: %s\n" % value)
                     actualitem = re.findall(match, value, re.MULTILINE)
@@ -376,17 +379,16 @@ class AppBase:
                             # 2. Call this function again
         
                             try:
-                                ret = recurse_json(innervalue, parsersplit[outercnt+1:])
+                                ret, is_loop = recurse_json(innervalue, parsersplit[outercnt+1:])
                             except IndexError:
-                                print("INDEXERROR: ", parsersplit[outercnt])
-                                #ret = innervalue
-                                ret = recurse_json(innervalue, parsersplit[outercnt:])
+                                # Only in here if it's the last loop without anything in it?
+                                ret, is_loop = recurse_json(innervalue, parsersplit[outercnt:])
                                 
-                            print(ret)
-                            #exit()
                             newvalue.append(ret)
-        
-                        return newvalue
+                        
+                        # Magical way of returning which makes app sdk identify 
+                        # it as multi execution
+                        return newvalue, True
                     elif len(actualitem) > 0:
                         # FIXME: This is absolutely not perfect. 
                         print("IN HERE: ", actualitem)
@@ -410,23 +412,23 @@ class AppBase:
                                 print("Base: %s" % basejson[i])
 
                                 try:
-                                    ret = recurse_loop(basejson[i], parsersplit[outercnt+1:])
+                                    ret, is_loop  = recurse_json(basejson[i], parsersplit[outercnt+1:])
                                 except IndexError:
                                     print("INDEXERROR: ", parsersplit[outercnt])
                                     #ret = innervalue
-                                    ret = recurse_loop(innervalue, parsersplit[outercnt:])
+                                    ret, is_loop  = recurse_json(innervalue, parsersplit[outercnt:])
                                     
                                 print(ret)
                                 #exit()
                                 newvalue.append(ret)
 
-                            return newvalue
+                        return newvalue, True
 
                     # FIXME: Add specific loop for other indexes
                     else:
                         #print("BEFORE NORMAL VALUE: ", basejson, value)
                         if len(value) == 0:
-                            return basejson
+                            return basejson, False
         
                         if isinstance(basejson[value], str):
                             print(f"LOADING STRING '%s' AS JSON" % basejson[value]) 
@@ -434,7 +436,7 @@ class AppBase:
                                 basejson = json.loads(basejson[value])
                             except json.decoder.JSONDecodeError as e:
                                 print("RETURNING BECAUSE '%s' IS A NORMAL STRING" % basejson[value])
-                                return basejson[value]
+                                return basejson[value], False
                         else:
                             basejson = basejson[value]
         
@@ -445,7 +447,7 @@ class AppBase:
                 #return basejson
                 #return "KeyError: Couldn't find key: %s" % e
 
-            return basejson
+            return basejson, False
 
         # Takes a workflow execution as argument
         # Returns a string if the result is single, or a list if it's a list
@@ -509,24 +511,37 @@ class AppBase:
         
             # 2. Find the JSON data
             if len(baseresult) == 0:
-                return ""
+                return "", False
         
             if len(parsersplit) == 1:
-                return baseresult
+                return baseresult, False
         
             baseresult = baseresult.replace("\'", "\"")
             basejson = {}
             try:
                 basejson = json.loads(baseresult)
             except json.decoder.JSONDecodeError as e:
-                return baseresult
+                return baseresult, False
         
-            return recurse_json(basejson, parsersplit[1:])
+            data, is_loop = recurse_json(basejson, parsersplit[1:])
+            parseditem = data
+            if is_loop:
+                print("DATA IS A LOOP - SHOULD WRAP")
+                if parsersplit[-1] == "#":
+                    print("SET DATA WRAPPER TO NORMAL!")
+                    parseditem = "${SHUFFLE_NO_SPLITTER%s}$" % json.dumps(data)
+                else:
+                    # Return value: ${id[12345, 45678]}$
+                    print("SET DATA WRAPPER TO %s!" % parsersplit[-1])
+                    parseditem = "${%s%s}$" % (parsersplit[-1], json.dumps(data))
+
+            return parseditem, is_loop
 
         # Parses parameters sent to it and returns whether it did it successfully with the values found
         def parse_params(action, fullexecution, parameter):
             # Skip if it starts with $?
             jsonparsevalue = "$."
+            is_loop = False
 
             # Matches with space in the first part, but not in subsequent parts.
             # JSON / yaml etc shouldn't have spaces in their fields anyway.
@@ -547,7 +562,8 @@ class AppBase:
                             continue
 
                         # Handles for loops etc. 
-                        value = get_json_value(fullexecution, to_be_replaced)
+                        value, is_loop = get_json_value(fullexecution, to_be_replaced) 
+
                         if isinstance(value, str):
                             parameter["value"] = parameter["value"].replace(to_be_replaced, value)
                         elif isinstance(value, dict):
@@ -625,7 +641,8 @@ class AppBase:
                         # This will never be a loop aka multi argument
                         parameter["value"] = to_be_replaced 
 
-                        value = get_json_value(fullexecution, to_be_replaced)
+                        value, is_loop = get_json_value(fullexecution, to_be_replaced)
+                        print("Loop: %s" % is_loop)
                         if isinstance(value, str):
                             parameter["value"] = parameter["value"].replace(to_be_replaced, value)
                         elif isinstance(value, dict):
@@ -637,7 +654,7 @@ class AppBase:
                             except json.decoder.JSONDecodeError as e:
                                 parameter["value"] = parameter["value"].replace(to_be_replaced, value)
 
-            return "", parameter["value"]
+            return "", parameter["value"], is_loop
 
         def run_validation(sourcevalue, check, destinationvalue):
             self.logger.info("Checking %s %s %s" % (sourcevalue, check, destinationvalue))
@@ -690,8 +707,6 @@ class AppBase:
             for branch in fullexecution["workflow"]["branches"]:
                 if branch["destination_id"] != action["id"]:
                     continue
-            
-                self.logger.info("Relevant branch: %s" % branch)
 
                 # Remove anything without a condition
                 try:
@@ -708,7 +723,7 @@ class AppBase:
 
                     # Parse all values first here
                     sourcevalue = condition["source"]["value"]
-                    check, sourcevalue = parse_params(action, fullexecution, condition["source"])
+                    check, sourcevalue, is_loop = parse_params(action, fullexecution, condition["source"])
                     if check:
                         return False, "Failed condition: %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)
 
@@ -717,7 +732,7 @@ class AppBase:
                     sourcevalue = parse_wrapper_start(sourcevalue)
                     destinationvalue = condition["destination"]["value"]
 
-                    check, destinationvalue = parse_params(action, fullexecution, condition["destination"])
+                    check, destinationvalue, is_loop = parse_params(action, fullexecution, condition["destination"])
                     if check:
                         return False, "Failed condition: %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)
 
@@ -833,7 +848,8 @@ class AppBase:
                         multi_parameters = json.loads(json.dumps(params))
                         multiexecution = False
                         for parameter in action["parameters"]:
-                            check, value = parse_params(action, fullexecution, parameter)
+                            check, value, is_loop = parse_params(action, fullexecution, parameter)
+
                             if check:
                                 raise "Value check error: %s" % Exception(check)
 
@@ -848,52 +864,81 @@ class AppBase:
                             except KeyError:
                                 pass
 
+                            print("Return value: %s" % value)
                             actionname = action["name"]
                             #print("Multicheck ", actualitem)
+                            print("Actual item: %s" % actualitem)
+                            print("ITEM: %d" % len(actualitem))
                             if len(actualitem) > 0:
                                 multiexecution = True
-                                
-                                # This is here to handle for loops within variables.. kindof
-                                # 1. Find the length of the longest array
-                                # 2. Build an array with the base values based on parameter["value"] 
-                                # 3. Get the n'th value of the generated list from values
-                                # 4. Execute all n answers 
-                                replacements = {}
-                                for replace in actualitem:
-                                    try:
-                                        to_be_replaced = replace[0]
-                                        actualitem = replace[2]
-                                    except IndexError:
-                                        continue
 
+                                # Loop WITHOUT JSON variables go here. 
+                                # Loop WITH variables go in else.
+                                if len(actualitem[0]) > 2 and actualitem[0][1] == "SHUFFLE_NO_SPLITTER":
+                                    print("Pre replacement: %s" % actualitem[0][2])
+                                    replacement = actualitem[0][2]
+                                    if replacement.startswith("\"") and replacement.endswith("\""):
+                                        replacement = replacement[1:len(replacement)-1]
+
+                                    replacement = replacement.replace("\'", "\"", -1)
+                                    print("POST replacement: %s" % replacement)
+
+                                    json_replacement = replacement
                                     try:
-                                        itemlist = json.loads(actualitem)
-                                        if len(itemlist) > minlength:
-                                            minlength = len(itemlist)
+                                        json_replacement = json.loads(replacement)
                                     except json.decoder.JSONDecodeError as e:
-                                        print("JSON Error: %s in %s" % (e, actualitem))
+                                        print("JSON error singular: %s" % e)
 
-                                    replacements[to_be_replaced] = actualitem
+                                    if len(json_replacement) > minlength:
+                                        minlength = len(json_replacement)
 
-                                # This is a result array for JUST this value.. 
-                                # What if there are more?
-                                resultarray = []
-                                for i in range(0, minlength): 
-                                    tmpitem = json.loads(json.dumps(parameter["value"]))
-                                    for key, value in replacements.items():
-                                        replacement = json.dumps(json.loads(value)[i])
-                                        if replacement.startswith("\"") and replacement.endswith("\""):
-                                            replacement = replacement[1:len(replacement)-1]
-                                        #except json.decoder.JSONDecodeError as e:
+                                    #value = parse_wrapper_start(json_replacement)
+                                    params[parameter["name"]] = json_replacement
+                                    multi_parameters[parameter["name"]] = json_replacement
+                                    print("MULTI finished: %s" % replacement)
+                                else:
+                                
+                                    # This is here to handle for loops within variables.. kindof
+                                    # 1. Find the length of the longest array
+                                    # 2. Build an array with the base values based on parameter["value"] 
+                                    # 3. Get the n'th value of the generated list from values
+                                    # 4. Execute all n answers 
+                                    replacements = {}
+                                    for replace in actualitem:
+                                        try:
+                                            to_be_replaced = replace[0]
+                                            actualitem = replace[2]
+                                        except IndexError:
+                                            continue
 
-                                        #print("REPLACING %s with %s" % (key, replacement))
-                                        #replacement = parse_wrapper_start(replacement)
-                                        tmpitem = tmpitem.replace(key, replacement, -1)
+                                        try:
+                                            itemlist = json.loads(actualitem)
+                                            if len(itemlist) > minlength:
+                                                minlength = len(itemlist)
+                                        except json.decoder.JSONDecodeError as e:
+                                            print("JSON Error: %s in %s" % (e, actualitem))
 
-                                    resultarray.append(tmpitem)
+                                        replacements[to_be_replaced] = actualitem
 
-                                # With this parameter ready, add it to... a greater list of parameters. Rofl
-                                multi_parameters[parameter["name"]] = resultarray
+                                    # This is a result array for JUST this value.. 
+                                    # What if there are more?
+                                    resultarray = []
+                                    for i in range(0, minlength): 
+                                        tmpitem = json.loads(json.dumps(parameter["value"]))
+                                        for key, value in replacements.items():
+                                            replacement = json.dumps(json.loads(value)[i])
+                                            if replacement.startswith("\"") and replacement.endswith("\""):
+                                                replacement = replacement[1:len(replacement)-1]
+                                            #except json.decoder.JSONDecodeError as e:
+
+                                            #print("REPLACING %s with %s" % (key, replacement))
+                                            #replacement = parse_wrapper_start(replacement)
+                                            tmpitem = tmpitem.replace(key, replacement, -1)
+
+                                        resultarray.append(tmpitem)
+
+                                    # With this parameter ready, add it to... a greater list of parameters. Rofl
+                                    multi_parameters[parameter["name"]] = resultarray
                             else:
                                 # Parses things like int(value)
                                 self.logger.info("Parsing wrapper data for %s" % value)
@@ -905,7 +950,7 @@ class AppBase:
                         # FIXME - this is horrible, but works for now
                         #for i in range(calltimes):
                         if not multiexecution:
-                            print("APP_SDK DONE: Starting normal execution of function")
+                            print("APP_SDK DONE: Starting NORMAL execution of function")
                             newres = await func(**params)
                             #print("NEWRES: ", newres)
                             if isinstance(newres, str):
@@ -927,6 +972,7 @@ class AppBase:
                             for i in range(0, minlength):
                                 # To be able to use the results as a list:
                                 baseparams = json.loads(json.dumps(multi_parameters))
+                                # {'call': ['GoogleSafebrowsing_2_0', 'VirusTotal_GetReport_3_0']}
                                 
                                 try:
                                     for key, value in baseparams.items():
@@ -941,15 +987,20 @@ class AppBase:
 
                                 #print("Running with params %s" % baseparams) 
                                 ret = await func(**baseparams)
-                                ret = ret.replace("\"", "\\\"", -1)
-                                print("Inner ret parsed: %s" % ret)
-                                    
-                                try:
-                                    results.append(json.loads(ret))
-                                    json_object = True
-                                except json.decoder.JSONDecodeError as e:
-                                    #print("Json: %s" % e)
+                                if isinstance(ret, dict) or isinstance(ret, list):
                                     results.append(ret)
+                                    json_object = True
+                                else:
+                                    ret = ret.replace("\"", "\\\"", -1)
+
+                                    try:
+                                        results.append(json.loads(ret))
+                                        json_object = True
+                                    except json.decoder.JSONDecodeError as e:
+                                        #print("Json: %s" % e)
+                                        results.append(ret)
+
+                                print("Inner ret parsed: %s" % ret)
 
                             # Dump the result as a string of a list
                             print("RESULTS: %s" % results)
