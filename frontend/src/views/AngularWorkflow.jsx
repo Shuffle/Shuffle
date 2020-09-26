@@ -36,6 +36,7 @@ import CircularProgress from '@material-ui/core/CircularProgress';
 import Switch from '@material-ui/core/Switch';
 import ReactJson from 'react-json-view'
 import { useBeforeunload } from 'react-beforeunload';
+import NestedMenuItem from "material-ui-nested-menu-item";
 
 import ArrowUpwardIcon from '@material-ui/icons/ArrowUpward';
 import CachedIcon from '@material-ui/icons/Cached';
@@ -1395,7 +1396,6 @@ const AngularWorkflow = (props) => {
 				example = action.example
 			}
 
-			console.log("EXAMPLE: ", example)
 			node.data.example = example
 
 			return node;
@@ -2438,6 +2438,7 @@ const AngularWorkflow = (props) => {
 		const [actionlist, setActionlist] = React.useState([])
 		const [jsonList, setJsonList] = React.useState([])
 		const [showAutocomplete, setShowAutocomplete] = React.useState(false)
+		const [menuPosition, setMenuPosition] = useState(null)
 
 		useEffect(() => {
 			if (selectedActionParameters !== null && selectedActionParameters.length === 0) {
@@ -2469,6 +2470,7 @@ const AngularWorkflow = (props) => {
 					}
 				}
 
+				// Loops parent nodes' old results to fix autocomplete
 				var parents = getParents(selectedAction)
 				if (parents.length > 1) {
 					for (var key in parents) {
@@ -2477,8 +2479,39 @@ const AngularWorkflow = (props) => {
 							continue
 						}
 
+						var exampledata = item.example === undefined ? "" : item.example
+						// Find previous execution and their variables
+						if (exampledata === "" && workflowExecutions.length > 0) {
+							// Look for the ID
+							const found = false
+							for (var key in workflowExecutions) {
+								const foundResult = workflowExecutions[key].results.find(result => result.action.id === item.id)
+								if (foundResult === undefined) {
+									continue
+								}
+
+								var jsonvalid = true
+								try {
+									const tmp = String(JSON.parse(foundResult.result))
+									if (!tmp.includes("{") && !tmp.includes("[")) {
+										jsonvalid = false
+									}
+								} catch (e) {
+									jsonvalid = false
+								}
+
+								// Finds the FIRST json only
+								if (jsonvalid) {
+									exampledata = JSON.parse(foundResult.result)
+									break
+								} else {
+									console.log("Invalid JSON: ", foundResult.result)
+								}
+							}
+						}
+
 						// 1. Take 
-						const actionvalue = {"type": "action", "id": item.id, "name": item.label, "autocomplete": `${item.label.split(" ").join("_")}`, "example": item.example === undefined ? "" : item.example}
+						const actionvalue = {"type": "action", "id": item.id, "name": item.label, "autocomplete": `${item.label.split(" ").join("_")}`, "example": exampledata}
 						actionlist.push(actionvalue)
 					}
 				}
@@ -2502,12 +2535,18 @@ const AngularWorkflow = (props) => {
 
 			// bad detection mechanism probably
 			if (event.target.value[event.target.value.length-1] === "." && actionlist.length > 0) {
-
-				console.log("GET THE LAST ARGUMENT FOR !")
-				//const [jsonList, getJsonList] = React.useState([])
+				console.log("GET THE LAST ARGUMENT FOR NODE!")
+				// THIS IS AN EXAMPLE OF SHOWING IT 
+				/*
 				const inputdata = {"data": "1.2.3.4", "dataType": "4.5.6.6"}
-				const returnJson = GetParsedPaths(inputdata, "")
+				setJsonList(GetParsedPaths(inputdata, ""))
+				if (!showDropdown) {
+					setShowAutocomplete(false)
+					setShowDropdown(true)
+					setShowDropdownNumber(count)
+				}
 				console.log(jsonList)
+				*/
 
 				// Search for the item backwards
 				// 1. Reverse search backwards from . -> $
@@ -2693,7 +2732,11 @@ const AngularWorkflow = (props) => {
 									endAdornment: (
 										<InputAdornment position="end">
 											<Tooltip title="Autocomplete text" placement="top">
-												<AddCircleOutlineIcon style={{cursor: "pointer"}} onClick={() => {
+												<AddCircleOutlineIcon style={{cursor: "pointer"}} onClick={(event) => {
+													setMenuPosition({
+														top: event.pageY,
+														left: event.pageX,
+													})
 													setShowDropdownNumber(count)
 													setShowDropdown(true)
 													setShowAutocomplete(true)
@@ -2862,7 +2905,180 @@ const AngularWorkflow = (props) => {
 									)) : null}
 								</Select>
 							}
+						}
 
+						// Shows nested list of nodes > their JSON lists
+						const ActionlistWrapper = (props) => {
+
+							const handleMenuClose = () => {
+								setShowAutocomplete(false)
+
+								if (!selectedActionParameters[count].value[selectedActionParameters[count].value.length-1] === "$") {
+									setShowDropdown(false)
+								}
+
+								setUpdate(Math.random())
+								setMenuPosition(null)
+							}
+
+							const handleItemClick = (values) => {
+								if (values === undefined || values === null || values.length === 0) {
+									return
+								}
+
+								var toComplete = selectedActionParameters[count].value.trim().endsWith("$") ? values[0].autocomplete : "$"+values[0].autocomplete
+								for (var key in values) {
+									if (key == 0 || values[key].autocomplete.length === 0) {
+										continue
+									}
+
+									toComplete += values[key].autocomplete
+								}
+
+								selectedActionParameters[count].value += toComplete
+								selectedAction.parameters[count].value = selectedActionParameters[count].value 
+								console.log("TARGET: ", selectedActionParameters)
+								setSelectedAction(selectedAction)
+								setUpdate(Math.random())
+
+								setShowDropdown(false)
+								setMenuPosition(null)
+							}
+
+							const iconStyle = {
+								marginRight: 15,
+							}
+
+							return (
+							  <div >
+									<Menu
+										anchorReference="anchorPosition"
+										anchorPosition={menuPosition}
+										onClose={() => {
+											handleMenuClose()
+										}}
+										open={!!menuPosition}
+										style={{
+											border: `2px solid #f85a3e`, 
+											color: "white", 
+											marginTop: 2,
+										}}
+									>
+									{actionlist.map(innerdata => {
+										const icon = innerdata.type === "action" ? <AppsIcon style={{marginRight: 10}} /> : innerdata.type === "workflow_variable" || innerdata.type === "execution_variable" ? <FavoriteBorderIcon style={{marginRight: 10}} /> : <ScheduleIcon style={{marginRight: 10}} /> 
+
+										const handleExecArgumentHover = (inside) => {
+											var exec_text_field = document.getElementById("execution_argument_input_field")
+											if (exec_text_field !== null) {
+												if (inside) {
+													exec_text_field.style.border = "2px solid #f85a3e"
+												} else {
+													exec_text_field.style.border = ""
+												}
+											}
+
+											// Also doing arguments
+											if (workflow.triggers !== undefined && workflow.triggers !== null && workflow.triggers.length > 0) {
+												for (var key in workflow.triggers) {
+													const item = workflow.triggers[key]
+
+													var node = cy.getElementById(item.id)
+													if (node.length > 0) {
+														if (inside) {
+															node.addClass('shuffle-hover-highlight')
+														} else {
+															node.removeClass('shuffle-hover-highlight')
+														}
+													}
+
+												}
+											}
+										}
+
+										const handleActionHover = (inside, actionId) => {
+											var node = cy.getElementById(actionId)
+											if (node.length > 0) {
+												if (inside) {
+													node.addClass('shuffle-hover-highlight')
+												} else {
+													node.removeClass('shuffle-hover-highlight')
+												}
+											}
+										}
+
+										const handleMouseover = () => {
+											if (innerdata.type === "Execution Argument") {
+													handleExecArgumentHover(true)
+												} else if (innerdata.type === "action") {
+													handleActionHover(true, innerdata.id)
+												}
+											} 
+											
+										const handleMouseOut = () => {
+											if (innerdata.type === "Execution Argument") {
+												handleExecArgumentHover(false)
+											} else if (innerdata.type === "action") {
+												handleActionHover(false, innerdata.id)
+											}
+										}
+
+										var parsedPaths = [] 
+										if (typeof(innerdata.example) === "object") {
+											parsedPaths = GetParsedPaths(innerdata.example, "")
+										}
+
+										return (
+											parsedPaths.length > 0 ?
+												<NestedMenuItem
+													key={innerdata.name}
+													label={
+														<div style={{display: "flex"}}>
+															{icon} {innerdata.name}
+														</div>
+													}
+													parentMenuOpen={!!menuPosition}
+													style={{backgroundColor: inputColor, color: "white"}}
+													onClick={() => {
+														handleItemClick([innerdata])
+													}}
+												>
+													{parsedPaths.map((pathdata, index) => {
+														// FIXME: Should be recursive in here
+														const icon = pathdata.type === "value" ? <VpnKeyIcon style={iconStyle} /> : pathdata.type === "list" ? <FormatListNumberedIcon style={iconStyle} /> : <ExpandMoreIcon style={iconStyle} /> 
+														return (
+															<MenuItem key={pathdata.name} style={{backgroundColor: inputColor, color: "white"}} value={pathdata} onMouseOver={() => {}}
+																onClick={() => {
+																	handleItemClick([innerdata, pathdata])
+																}}
+															>
+																<Tooltip color="primary" title={`Ex. value: ${pathdata.value}`} placement="left">
+																	<div style={{display: "flex"}}>
+																		{icon} {pathdata.name}
+																	</div>
+																</Tooltip>
+															</MenuItem>
+														)
+
+													})}
+												</NestedMenuItem>
+											: 
+												<MenuItem key={innerdata.name} style={{backgroundColor: inputColor, color: "white"}} value={innerdata} onMouseOver={() => handleMouseover()} onMouseOut={() => {handleMouseOut()}} 
+													onClick={() => {
+														handleItemClick([innerdata])
+													}}
+												>
+													<Tooltip color="primary" title={`Value: ${innerdata.value}`} placement="left">
+														<div style={{display: "flex"}}>
+															{icon} {innerdata.name}
+														</div>
+													</Tooltip>
+												</MenuItem>
+											
+										)
+									})}	
+								</Menu>
+      				</div>
+							)
 						}
 
 						var itemColor = "#f85a3e"
@@ -2942,7 +3158,6 @@ const AngularWorkflow = (props) => {
 
 											selectedActionParameters[count].value += e.target.value.autocomplete
 											selectedAction.parameters[count].value = selectedActionParameters[count].value 
-											console.log("TARGET: ", selectedActionParameters)
 											setSelectedAction(selectedAction)
 											setUpdate(Math.random())
 
@@ -2969,106 +3184,7 @@ const AngularWorkflow = (props) => {
       					</FormControl>
 							: null}
 							{showDropdown && showDropdownNumber === count && data.variant === "STATIC_VALUE" && jsonList.length === 0 ?
-							  <FormControl fullWidth>
-									<InputLabel id="action-autocompleter" style={{marginLeft: 10, color: "white"}}>Autocomplete</InputLabel>
-									<Select
-									  labelId="action-autocompleter"
-										SelectDisplayProps={{
-											style: {
-												marginLeft: 10,
-											}
-										}}
-										onClose={() => {
-											setShowAutocomplete(false)
-
-											if (!selectedActionParameters[count].value[selectedActionParameters[count].value.length-1] === "$") {
-												setShowDropdown(false)
-											}
-
-											setUpdate(Math.random())
-										}}
-										onClick={() => setShowAutocomplete(true)}
-										open={showAutocomplete}
-										fullWidth
-										style={{border: `2px solid #f85a3e`, color: "white", height: 50, marginTop: 2,}}
-										onChange={(e) => {
-											console.log("CHANGE!")
-											const toComplete = selectedActionParameters[count].value.trim().endsWith("$") ? e.target.value.autocomplete : "$"+e.target.value.autocomplete
-											selectedActionParameters[count].value += toComplete
-											selectedAction.parameters[count].value = selectedActionParameters[count].value 
-											console.log("TARGET: ", selectedActionParameters)
-											setSelectedAction(selectedAction)
-											setUpdate(Math.random())
-
-											setShowDropdown(false)
-										}}
-										>
-										{actionlist.map(data => {
-											const icon = data.type === "action" ? <AppsIcon style={{marginRight: 10}} /> : data.type === "workflow_variable" || data.type === "execution_variable" ? <FavoriteBorderIcon style={{marginRight: 10}} /> : <ScheduleIcon style={{marginRight: 10}} /> 
-
-											const handleExecArgumentHover = (inside) => {
-												var exec_text_field = document.getElementById("execution_argument_input_field")
-												if (exec_text_field !== null) {
-													if (inside) {
-														exec_text_field.style.border = "2px solid #f85a3e"
-													} else {
-														exec_text_field.style.border = ""
-													}
-												}
-
-												// Also doing arguments
-												if (workflow.triggers !== undefined && workflow.triggers !== null && workflow.triggers.length > 0) {
-													for (var key in workflow.triggers) {
-														const item = workflow.triggers[key]
-
-														var node = cy.getElementById(item.id)
-														if (node.length > 0) {
-															if (inside) {
-																node.addClass('shuffle-hover-highlight')
-															} else {
-																node.removeClass('shuffle-hover-highlight')
-															}
-														}
-
-													}
-												}
-											}
-
-											const handleActionHover = (inside, actionId) => {
-												var node = cy.getElementById(actionId)
-												if (node.length > 0) {
-													if (inside) {
-														node.addClass('shuffle-hover-highlight')
-													} else {
-														node.removeClass('shuffle-hover-highlight')
-													}
-												}
-											}
-
-											return (
-												<MenuItem key={data.name} style={{backgroundColor: inputColor, color: "white"}} value={data} onMouseOver={() => {
-													if (data.type === "Execution Argument") {
-														handleExecArgumentHover(true)
-													} else if (data.type === "action") {
-														handleActionHover(true, data.id)
-													}
-												}} onMouseOut={() => {
-													if (data.type === "Execution Argument") {
-														handleExecArgumentHover(false)
-													} else if (data.type === "action") {
-														handleActionHover(false, data.id)
-													}
-												}}>
-													<Tooltip color="primary" title={`Value: ${data.value}`} placement="left">
-														<div style={{display: "flex"}}>
-															{icon} {data.name}
-														</div>
-													</Tooltip>
-												</MenuItem>
-											)
-										})}
-									</Select>
-      					</FormControl>
+									<ActionlistWrapper actionlist={actionlist} />
 							: null}
 
 

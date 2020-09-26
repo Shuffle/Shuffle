@@ -45,6 +45,10 @@ const inputColor = "#383B40"
 export const GetParsedPaths = (inputdata, basekey) => {
 	const splitkey = " => "
 	var parsedValues = []
+	if (typeof(inputdata) !== "object") {
+		return parsedValues
+	}
+
 	for (const [key, value] of Object.entries(inputdata)) {
 
 		// Check if loop or JSON
