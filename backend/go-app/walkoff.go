@@ -1843,7 +1843,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 				if !found && param.Required {
 					log.Printf("Appaction %s with required param %s doesn't exist.", action.Name, param.Name)
 					resp.WriteHeader(401)
-					resp.Write([]byte(`{"success": false}`))
+					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Appaction %s with required param '%s' is empty."}`, action.Name, param.Name)))
 					return
 				}
 

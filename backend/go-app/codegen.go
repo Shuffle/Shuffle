@@ -553,7 +553,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 			})
 		} else if securitySchemes["BasicAuth"] != nil {
 			api.Authentication.Parameters = append(api.Authentication.Parameters, AuthenticationParams{
-				Name:        "username_auth",
+				Name:        "username_basic",
 				Value:       "",
 				Example:     "username",
 				Description: securitySchemes["BasicAuth"].Value.Description,
@@ -565,7 +565,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 			})
 
 			api.Authentication.Parameters = append(api.Authentication.Parameters, AuthenticationParams{
-				Name:        "password_auth",
+				Name:        "password_basic",
 				Value:       "",
 				Example:     "*****",
 				Description: securitySchemes["BasicAuth"].Value.Description,

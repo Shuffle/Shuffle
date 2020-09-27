@@ -5476,7 +5476,7 @@ const AngularWorkflow = (props) => {
 					{executionData.results === undefined || executionData.results === null || executionData.results.length === 0 && executionData.status === "EXECUTING" ?
 						<CircularProgress />
 						:
-						executionData.results.map(data => {
+						executionData.results.map((data, index) => {
 							if (executionData.results.length !== 1 && !showSkippedActions && (data.status === "SKIPPED" || data.status === "FAILURE")) {
 								return null
 							}
@@ -5504,7 +5504,7 @@ const AngularWorkflow = (props) => {
 								<img alt={data.action.app_name} src={curapp.large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />
 
 							return (
-								<div style={{marginBottom: 40,}}>
+								<div key={index} style={{marginBottom: 40,}}>
 									<div style={{display: "flex", marginBottom: 15,}}>
 										{actionimg}
 										<span style={{fontSize: 24, marginTop: "auto", marginBottom: "auto"}}><b>{data.action.label}</b></span>
@@ -5806,6 +5806,7 @@ const AngularWorkflow = (props) => {
 			console.log(authenticationOption)
 			if (authenticationOption.label.length === 0) {
 				alert.info("Label can't be empty")
+				return
 			}
 
 			for (var key in selectedApp.authentication.parameters) {
@@ -5819,7 +5820,6 @@ const AngularWorkflow = (props) => {
 			selectedAction.selectedAuthentication = authenticationOption
 			selectedAction.authentication.push(authenticationOption)
 			setSelectedAction(selectedAction)
-			setUpdate(authenticationOption.id)
 
 			var newAuthOption = JSON.parse(JSON.stringify(authenticationOption))
 			var newFields = []
@@ -5834,6 +5834,7 @@ const AngularWorkflow = (props) => {
 			console.log("FIELDS: ", newFields)
 			newAuthOption.fields = newFields
 			setNewAppAuth(newAuthOption)
+			setUpdate(authenticationOption.id)
 		}
 
 		return (
@@ -5842,7 +5843,6 @@ const AngularWorkflow = (props) => {
 					<a href="https://shuffler.io/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is this?</a><div/>
 					These are required fields for authenticating with {selectedApp.name} 
 					<div style={{marginTop: 15}}/>
-					{selectedApp.link.length > 0 ? <EndpointData /> : null}
 					<b>Name - what is this used for?</b>
 					<TextField
 							style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
@@ -5862,6 +5862,7 @@ const AngularWorkflow = (props) => {
 								authenticationOption.label = event.target.value
 							}}
 						/>
+					{selectedApp.link.length > 0 ? <div style={{marginTop: 15}}><EndpointData /></div> : null}
 					<Divider style={{marginTop: 15, marginBottom: 15, backgroundColor: "rgb(91, 96, 100)"}}/>
 					<div style={{}}/>
 						{selectedApp.authentication.parameters.map((data, index) => { 
@@ -5912,9 +5913,10 @@ const AngularWorkflow = (props) => {
 
 	const EndpointData = () => {
 		const [tmpVar, setTmpVar] = React.useState("")
+
 		return (
 			<div>
-				The API endpoint to use (URL) - leave this if you're unsure
+				The API endpoint to use (URL) - predefined in the app
 				<TextField
 					style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
 					InputProps={{

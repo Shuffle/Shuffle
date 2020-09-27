@@ -577,6 +577,8 @@ const AppCreator = (props) => {
 			}
 		}
 
+		console.log("SCHEMES: ", securitySchemes)
+
 		setActions(newActions)
   	setIsAppLoaded(true)
 	}
