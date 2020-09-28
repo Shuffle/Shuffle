@@ -150,7 +150,7 @@ type UserAuth struct {
 
 type UserAuthField struct {
 	Key   string `json:"key" datastore:"key"`
-	Value string `json:"value" datastore:"value"`
+	Value string `json:"value" datastore:"value,noindex"`
 }
 
 // Not environment, but execution environment
@@ -209,7 +209,7 @@ type Contact struct {
 type Translator struct {
 	Src struct {
 		Name        string `json:"name" datastore:"name"`
-		Value       string `json:"value" datastore:"value"`
+		Value       string `json:"value" datastore:"value,noindex"`
 		Description string `json:"description" datastore:"description,noindex"`
 		Required    string `json:"required" datastore:"required"`
 		Type        string `json:"type" datastore:"type"`
@@ -219,7 +219,7 @@ type Translator struct {
 	} `json:"src" datastore:"src"`
 	Dst struct {
 		Name        string `json:"name" datastore:"name"`
-		Value       string `json:"value" datastore:"value"`
+		Value       string `json:"value" datastore:"value,noindex"`
 		Type        string `json:"type" datastore:"type"`
 		Description string `json:"description" datastore:"description,noindex"`
 		Required    string `json:"required" datastore:"required"`
@@ -231,7 +231,7 @@ type Translator struct {
 
 type Appconfig struct {
 	Key   string `json:"key" datastore:"key"`
-	Value string `json:"value" datastore:"value"`
+	Value string `json:"value" datastore:"value,noindex"`
 }
 
 type ScheduleApp struct {

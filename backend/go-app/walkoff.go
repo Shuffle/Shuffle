@@ -129,7 +129,7 @@ type WorkflowAppActionParameter struct {
 	ID             string           `json:"id" datastore:"id" yaml:"id,omitempty"`
 	Name           string           `json:"name" datastore:"name" yaml:"name"`
 	Example        string           `json:"example" datastore:"example" yaml:"example"`
-	Value          string           `json:"value" datastore:"value" yaml:"value,omitempty"`
+	Value          string           `json:"value" datastore:"value,noindex" yaml:"value,omitempty"`
 	Multiline      bool             `json:"multiline" datastore:"multiline" yaml:"multiline"`
 	Options        []string         `json:"options" datastore:"options" yaml:"options"`
 	ActionField    string           `json:"action_field" datastore:"action_field" yaml:"actionfield,omitempty"`
@@ -163,7 +163,7 @@ type WorkflowAppAction struct {
 		Description string `json:"description" datastore:"description,noindex"`
 		ID          string `json:"id" datastore:"id"`
 		Name        string `json:"name" datastore:"name"`
-		Value       string `json:"value" datastore:"value"`
+		Value       string `json:"value" datastore:"value,noindex"`
 	} `json:"execution_variable" datastore:"execution_variables"`
 	Returns struct {
 		Description string           `json:"description" datastore:"returns" yaml:"description,omitempty"`
@@ -308,7 +308,7 @@ type Workflow struct {
 		Description string `json:"description" datastore:"description,noindex"`
 		ID          string `json:"id" datastore:"id"`
 		Name        string `json:"name" datastore:"name"`
-		Value       string `json:"value" datastore:"value"`
+		Value       string `json:"value" datastore:"value,noindex"`
 	} `json:"workflow_variables" datastore:"workflow_variables"`
 	ExecutionVariables []struct {
 		Description string `json:"description" datastore:"description,noindex"`
@@ -338,7 +338,7 @@ type AuthenticationParams struct {
 	ID          string           `json:"id" datastore:"id" yaml:"id"`
 	Name        string           `json:"name" datastore:"name" yaml:"name"`
 	Example     string           `json:"example" datastore:"example" yaml:"example"`
-	Value       string           `json:"value,omitempty" datastore:"value" yaml:"value"`
+	Value       string           `json:"value,omitempty" datastore:"value,noindex" yaml:"value"`
 	Multiline   bool             `json:"multiline" datastore:"multiline" yaml:"multiline"`
 	Required    bool             `json:"required" datastore:"required" yaml:"required"`
 	In          string           `json:"in" datastore:"in" yaml:"in"`
@@ -348,7 +348,7 @@ type AuthenticationParams struct {
 
 type AuthenticationStore struct {
 	Key   string `json:"key" datastore:"key"`
-	Value string `json:"value" datastore:"value"`
+	Value string `json:"value" datastore:"value,noindex"`
 }
 
 type ExecutionRequestWrapper struct {
