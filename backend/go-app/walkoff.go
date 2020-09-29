@@ -1598,6 +1598,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	workflow.Actions = newActions
 
+	newTriggers := []Trigger{}
 	for _, trigger := range workflow.Triggers {
 		log.Printf("Trigger %s: %s", trigger.TriggerType, trigger.Status)
 
@@ -1610,11 +1611,22 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 			} else if schedule.Id == "" {
 				trigger.Status = "stopped"
 			}
+		} else if trigger.TriggerType == "WEBHOOK" && trigger.Status != "uninitialized" {
+			hook, err := getHook(ctx, trigger.ID)
+			if err != nil {
+				log.Printf("Failed getting webhook")
+				trigger.Status = "stopped"
+			} else if hook.Id == "" {
+				trigger.Status = "stopped"
+			}
 		}
 
 		//log.Println("TRIGGERS")
 		allNodes = append(allNodes, trigger.ID)
+		newTriggers = append(newTriggers, trigger)
 	}
+
+	workflow.Triggers = newTriggers
 
 	for _, variable := range workflow.WorkflowVariables {
 		if len(variable.Value) == 0 {
