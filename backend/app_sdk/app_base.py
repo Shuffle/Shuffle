@@ -1054,7 +1054,7 @@ class AppBase:
             print(f"Failed to execute: {e}")
             self.logger.exception(f"Failed to execute {e}-{action['id']}")
             action_result["status"] = "FAILURE" 
-            action_result["result"] = "General exception: %s" % e
+            action_result["result"] = f"General exception: {e}" 
 
         action_result["completed_at"] = int(time.time())
 

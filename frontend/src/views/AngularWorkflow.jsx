@@ -576,6 +576,9 @@ const AngularWorkflow = (props) => {
 		useworkflow.triggers = newTriggers
 		useworkflow.branches = newBranches
 
+		// Errors are backend defined
+		useworkflow.errors = []
+
 		setLastSaved(true)
 		fetch(globalUrl+"/api/v1/workflows/"+props.match.params.key, {
     	  method: 'PUT',
@@ -599,6 +602,15 @@ const AngularWorkflow = (props) => {
 				alert.error("Failed to save: "+responseJson.reason)
 			} else {
 				success = true
+				if (responseJson.errors !== undefined) {
+					console.log(responseJson)
+					workflow.errors = responseJson.errors
+					if (responseJson.errors.length === 0) {
+						workflow.isValid = true
+					}
+
+					setWorkflow(workflow)
+				}
 				alert.success("Successfully saved workflow")
 			}
 		})
@@ -925,7 +937,46 @@ const AngularWorkflow = (props) => {
 			const curapp = apps.find(a => a.name === curaction.app_name && a.app_version === curaction.app_version)
 			if (!curapp || curapp === undefined) {
 				alert.error("App "+curaction.app_name+" not found. Did someone delete it?")
-				return
+				//return
+			} else {
+				setRequiresAuthentication(curapp.authentication.required && curapp.authentication.parameters !== undefined && curapp.authentication.parameters !== null)
+				if (curapp.authentication.required) {
+					// Setup auth here :)
+					const authenticationOptions = []
+					var findAuthId = ""
+					if (curaction.authentication_id !== null && curaction.authentication_id !== undefined && curaction.authentication_id.length > 0) {
+						findAuthId = curaction.authentication_id
+					}
+
+					var tmpAuth = JSON.parse(JSON.stringify(appAuthentication))
+					for (var key in tmpAuth) {
+						var item = tmpAuth[key]
+
+						const newfields = {}
+						for (var filterkey in item.fields) {
+							newfields[item.fields[filterkey].key] = item.fields[filterkey].value
+						}
+
+						item.fields = newfields
+						if (item.app.name === curapp.name) {
+							authenticationOptions.push(item)
+							if (item.id === findAuthId) {
+								curaction.selectedAuthentication = item
+							}
+						}
+					}
+
+					curaction.authentication = authenticationOptions
+					if (curaction.selectedAuthentication === null || curaction.selectedAuthentication === undefined || curaction.selectedAuthentication.length === "") {
+						curaction.selectedAuthentication = {}
+					}
+				} else {
+					curaction.authentication = []
+					curaction.authentication_id = ""
+					curaction.selectedAuthentication = {}
+				}
+
+				setSelectedApp(curapp)
 			}
 
 			var env = environments.find(a => a.Name === curaction.environment)
@@ -934,48 +985,8 @@ const AngularWorkflow = (props) => {
 			}
 
 			setSelectedActionEnvironment(env)
-			setSelectedActionName(curaction.name)
+			setSelectedActionName(curaction.name)	
 
-			setRequiresAuthentication(curapp.authentication.required && curapp.authentication.parameters !== undefined && curapp.authentication.parameters !== null)
-
-
-			if (curapp.authentication.required) {
-				// Setup auth here :)
-				const authenticationOptions = []
-				var findAuthId = ""
-				if (curaction.authentication_id !== null && curaction.authentication_id !== undefined && curaction.authentication_id.length > 0) {
-					findAuthId = curaction.authentication_id
-				}
-
-				var tmpAuth = JSON.parse(JSON.stringify(appAuthentication))
-				for (var key in tmpAuth) {
-					var item = tmpAuth[key]
-
-					const newfields = {}
-					for (var filterkey in item.fields) {
-						newfields[item.fields[filterkey].key] = item.fields[filterkey].value
-					}
-
-					item.fields = newfields
-					if (item.app.name === curapp.name) {
-						authenticationOptions.push(item)
-						if (item.id === findAuthId) {
-							curaction.selectedAuthentication = item
-						}
-					}
-				}
-
-				curaction.authentication = authenticationOptions
-				if (curaction.selectedAuthentication === null || curaction.selectedAuthentication === undefined || curaction.selectedAuthentication.length === "") {
-					curaction.selectedAuthentication = {}
-				}
-			} else {
-				curaction.authentication = []
-				curaction.authentication_id = ""
-				curaction.selectedAuthentication = {}
-			}
-
-			setSelectedApp(curapp)
 			setSelectedAction(curaction)
 		} else if (data.type === "TRIGGER") {
 			//console.log("Should handle trigger "+data.triggertype)
@@ -1513,10 +1524,17 @@ const AngularWorkflow = (props) => {
 			return response.json()
 		})
 		.then((responseJson) => {
+			// No matter what, it's being stopped.
 			if (!responseJson.success) {
-				//alert.error("Failed to delete schedule: " + responseJson.reason)
+				alert.error("Failed to stop schedule: " + responseJson.reason)
+
+				workflow.triggers[triggerindex].status = "stopped" 
+				trigger.status = "stopped" 
+				setSelectedTrigger(trigger)
+				setWorkflow(workflow)
+				saveWorkflow(workflow)
 			} else {
-				//alert.success("Successfully stopped schedule")
+				alert.success("Successfully stopped schedule")
 				workflow.triggers[triggerindex].status = "stopped" 
 				trigger.status = "stopped" 
 				setSelectedTrigger(trigger)
@@ -3255,13 +3273,17 @@ const AngularWorkflow = (props) => {
 	}
 
 	function sortByKey(array, key) {
+		if (array === undefined) {
+			return []
+		}
+
 	  return array.sort(function(a, b) {
 			var x = a[key]; var y = b[key]
 			return ((x < y) ? -1 : ((x > y) ? 1 : 0))
 		})
 	}
 
-	const appApiView = Object.getOwnPropertyNames(selectedAction).length > 0 && Object.getOwnPropertyNames(selectedApp).length > 0 ? 
+	const appApiView = Object.getOwnPropertyNames(selectedAction).length > 0 ? 
 		<div style={appApiViewStyle}>
 			<div style={{display: "flex", minHeight: 40, marginBottom: 30}}>
 				<div style={{flex: 1}}>
@@ -3300,7 +3322,7 @@ const AngularWorkflow = (props) => {
 				placeholder={selectedAction.label}
 				onChange={selectedNameChange}
 			/>
-			{selectedAction.authentication.length === 0 && requiresAuthentication  ?
+			{selectedApp.name !== undefined && selectedAction.authentication !== undefined && selectedAction.authentication.length === 0 && requiresAuthentication  ?
 				<div style={{marginTop: 15}}>
 					Authenticate {selectedApp.name}: 
 					<Tooltip color="primary" title={"Add authentication option"} placement="top">
@@ -3312,7 +3334,7 @@ const AngularWorkflow = (props) => {
 					</Tooltip>
 				</div>
 			: null}
-			{selectedAction.authentication.length > 0 ? 
+			{selectedAction.authentication !== undefined && selectedAction.authentication.length > 0 ? 
 				<div style={{marginTop: "20px"}}>
 					Authentication
 					<div style={{display: "flex"}}>
@@ -5136,7 +5158,7 @@ const AngularWorkflow = (props) => {
 			</Tooltip>
 			:
 			<Tooltip color="primary" title="Test execution" placement="top">
-				<Button disabled={executionRequestStarted} style={{height: boxSize, width: boxSize}} color="primary" variant="contained" onClick={() => {
+				<Button disabled={executionRequestStarted || !workflow.isValid} style={{height: boxSize, width: boxSize}} color="primary" variant="contained" onClick={() => {
 					executeWorkflow()
 				}}>
 					<PlayArrowIcon style={{ fontSize: 60}} />
@@ -5204,7 +5226,7 @@ const AngularWorkflow = (props) => {
 			return null
 		}
 
-		if (Object.getOwnPropertyNames(selectedAction).length > 0 && Object.getOwnPropertyNames(selectedApp).length > 0) {
+		if (Object.getOwnPropertyNames(selectedAction).length > 0) {
 			//console.time('ACTIONSTART')
 			return(
 				<div style={rightsidebarStyle}>	

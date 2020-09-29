@@ -2955,6 +2955,7 @@ func getSpecificWebhook(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
+	// FIXME: Schedule = trigger?
 	schedule, err := getSchedule(ctx, workflowId)
 	if err != nil {
 		log.Printf("Failed setting schedule: %s", err)

@@ -1601,8 +1601,28 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	for _, trigger := range workflow.Triggers {
 		log.Printf("Trigger %s: %s", trigger.TriggerType, trigger.Status)
 
+		// Check if it's actually running
+		// FIXME: Do this for other triggers too
+		if trigger.TriggerType == "SCHEDULE" && trigger.Status != "uninitialized" {
+			schedule, err := getSchedule(ctx, trigger.ID)
+			if err != nil {
+				trigger.Status = "stopped"
+			} else if schedule.Id == "" {
+				trigger.Status = "stopped"
+			}
+		}
+
 		//log.Println("TRIGGERS")
 		allNodes = append(allNodes, trigger.ID)
+	}
+
+	for _, variable := range workflow.WorkflowVariables {
+		if len(variable.Value) == 0 {
+			log.Printf("Can't have an empty variable: %s", variable.Name)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Variable %s can't be empty"}`, variable.Name)))
+			return
+		}
 	}
 
 	if len(workflow.Actions) == 0 {
@@ -1787,70 +1807,77 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 			// Check to see if the whole app is valid
 			if curapp.Name != action.AppName {
-				log.Printf("App %s doesn't exist.", action.AppName)
-				resp.WriteHeader(401)
-				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "App %s doesn't exist"}`, action.AppName)))
-				return
-			}
+				workflow.Errors = append(workflow.Errors, fmt.Sprintf("App %s doesn't exist", action.AppName))
+				action.Errors = append(action.Errors, "This app doesn't exist.")
+				action.IsValid = false
+				workflow.IsValid = false
 
-			// Check tosee if the appaction is valid
-			curappaction := WorkflowAppAction{}
-			for _, curAction := range curapp.Actions {
-				if action.Name == curAction.Name {
-					curappaction = curAction
-					break
-				}
-			}
-
-			// Check to see if the action is valid
-			if curappaction.Name != action.Name {
-				log.Printf("Appaction %s doesn't exist.", action.Name)
-				resp.WriteHeader(401)
-				resp.Write([]byte(`{"success": false}`))
-				return
-			}
-
-			// FIXME - check all parameters to see if they're valid
-			// Includes checking required fields
-
-			newParams := []WorkflowAppActionParameter{}
-			for _, param := range curappaction.Parameters {
-				found := false
-
-				// Handles check for parameter exists + value not empty in used fields
-				for _, actionParam := range action.Parameters {
-					if actionParam.Name == param.Name {
-						found = true
-
-						if actionParam.Value == "" && actionParam.Variant == "STATIC_VALUE" && actionParam.Required == true {
-							log.Printf("Appaction %s with required param '%s' is empty.", action.Name, param.Name)
-							resp.WriteHeader(401)
-							resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Appaction %s with required param '%s' is empty."}`, action.Name, param.Name)))
-							return
-
-						}
-
-						if actionParam.Variant == "" {
-							actionParam.Variant = "STATIC_VALUE"
-						}
-
-						newParams = append(newParams, actionParam)
+				// Append with errors
+				newActions = append(newActions, action)
+				log.Printf("App %s doesn't exist. Adding as error.", action.AppName)
+				//resp.WriteHeader(401)
+				//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "App %s doesn't exist"}`, action.AppName)))
+				//return
+			} else {
+				// Check tosee if the appaction is valid
+				curappaction := WorkflowAppAction{}
+				for _, curAction := range curapp.Actions {
+					if action.Name == curAction.Name {
+						curappaction = curAction
 						break
 					}
 				}
 
-				// Handles check for required params
-				if !found && param.Required {
-					log.Printf("Appaction %s with required param %s doesn't exist.", action.Name, param.Name)
+				// Check to see if the action is valid
+				if curappaction.Name != action.Name {
+					log.Printf("Appaction %s doesn't exist.", action.Name)
 					resp.WriteHeader(401)
-					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Appaction %s with required param '%s' is empty."}`, action.Name, param.Name)))
+					resp.Write([]byte(`{"success": false}`))
 					return
 				}
 
-			}
+				// FIXME - check all parameters to see if they're valid
+				// Includes checking required fields
 
-			action.Parameters = newParams
-			newActions = append(newActions, action)
+				newParams := []WorkflowAppActionParameter{}
+				for _, param := range curappaction.Parameters {
+					found := false
+
+					// Handles check for parameter exists + value not empty in used fields
+					for _, actionParam := range action.Parameters {
+						if actionParam.Name == param.Name {
+							found = true
+
+							if actionParam.Value == "" && actionParam.Variant == "STATIC_VALUE" && actionParam.Required == true {
+								log.Printf("Appaction %s with required param '%s' is empty.", action.Name, param.Name)
+								resp.WriteHeader(401)
+								resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Appaction %s with required param '%s' is empty."}`, action.Name, param.Name)))
+								return
+
+							}
+
+							if actionParam.Variant == "" {
+								actionParam.Variant = "STATIC_VALUE"
+							}
+
+							newParams = append(newParams, actionParam)
+							break
+						}
+					}
+
+					// Handles check for required params
+					if !found && param.Required {
+						log.Printf("Appaction %s with required param %s doesn't exist.", action.Name, param.Name)
+						resp.WriteHeader(401)
+						resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Appaction %s with required param '%s' is empty."}`, action.Name, param.Name)))
+						return
+					}
+
+				}
+
+				action.Parameters = newParams
+				newActions = append(newActions, action)
+			}
 		}
 	}
 
@@ -1873,9 +1900,25 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("Failed to change total actions data: %s", err)
 	}
 
+	type returnData struct {
+		Success bool     `json:"success"`
+		Errors  []string `json:"errors"`
+	}
+
+	returndata := returnData{
+		Success: true,
+		Errors:  workflow.Errors,
+	}
+
 	log.Printf("Saved new version of workflow %s (%s)", workflow.Name, fileId)
 	resp.WriteHeader(200)
-	resp.Write([]byte(`{"success": true}`))
+	newBody, err := json.Marshal(returndata)
+	if err != nil {
+		resp.Write([]byte(`{"success": true}`))
+		return
+	}
+
+	resp.Write(newBody)
 }
 
 func getWorkflowLocal(fileId string, request *http.Request) ([]byte, error) {
@@ -2627,6 +2670,8 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 
 	err = deleteSchedule(ctx, scheduleId)
 	if err != nil {
+		log.Printf("Failed deleting schedule: %s", err)
+
 		if strings.Contains(err.Error(), "Job not found") {
 			resp.WriteHeader(200)
 			resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))

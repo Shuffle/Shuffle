@@ -588,7 +588,7 @@ const Workflows = (props) => {
 		}
 
 		return (
-			<Paper key={data.name} square style={paperAppStyle} onClick={() => {
+			<Paper key={data.execution_id} square style={paperAppStyle} onClick={() => {
 				setSelectedExecution(data)
 			}}>
 				<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: boxWidth, backgroundColor: boxColor}} />
@@ -683,7 +683,7 @@ const Workflows = (props) => {
 		}
 
 		return (
-			<Paper key={data.name} square style={resultPaperAppStyle} onClick={() => {}}>
+			<Paper key={data.execution_id} square style={resultPaperAppStyle} onClick={() => {}}>
 				<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", marginRight: "5px", width: boxWidth, backgroundColor: boxColor}}>
 				</div>
 				<Grid container style={{margin: "10px 10px 10px 10px", flex: "1"}}>
@@ -716,9 +716,11 @@ const Workflows = (props) => {
 
 	const resultsHandler = Object.getOwnPropertyNames(selectedExecution).length > 0 && selectedExecution.results !== null ? 
 		<div>
-			{selectedExecution.results.sort((a, b) => a.started_at - b.started_at).map(data => {
+			{selectedExecution.results.sort((a, b) => a.started_at - b.started_at).map((data, index) => {
 				return (
-					resultsPaper(data)
+					<div key={index}>
+						{resultsPaper(data)}
+					</div>
 				)
 			})}
 		</div>
@@ -913,6 +915,7 @@ const Workflows = (props) => {
 
 
 	const importFiles = (event) => {
+		console.log("Importing!")
 		const file = event.target.value
 		if (event.target.files.length > 0) {
 			for (var key in event.target.files) {
