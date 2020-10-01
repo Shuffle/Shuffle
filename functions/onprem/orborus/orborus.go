@@ -212,7 +212,7 @@ func initializeImages() {
 		log.Printf("[WARNING] SHUFFLE_WORKER_VERSION not defined. Defaulting to %s", workerVersion)
 	}
 
-	// check whether theyre the same first
+	// check whether they are the same first
 	images := []string{
 		fmt.Sprintf("docker.io/%s:app_sdk", baseimagename),
 		fmt.Sprintf("docker.io/%s:worker", baseimagename),

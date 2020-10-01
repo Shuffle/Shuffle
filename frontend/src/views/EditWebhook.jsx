@@ -336,7 +336,7 @@ const EditWebhook = (props) => {
 		</div>
 		: null
 	
-	// FIXME - needs refresh everytime you add a new workflow
+	// FIXME - needs refresh every time you add a new workflow
 	const workflowdata = Object.getOwnPropertyNames(webhookData).length > 0 && selectedWorkflows.length > 0 ?
 		<EditWorkflow globalUrl={globalUrl} inputworkflows={selectedWorkflows} inputname={webhookData.info.name} inputtype={webhookData.type} /> : null	
 

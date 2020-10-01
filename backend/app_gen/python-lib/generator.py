@@ -246,7 +246,7 @@ def loop_modules(modules, data):
                     param["position"] = cnt
 
                     if not found:
-                        # FIXME - waht here?
+                        # FIXME - what here?
                         pass
                         #print("HANDLE NOT FOUND")
                         #print(param)

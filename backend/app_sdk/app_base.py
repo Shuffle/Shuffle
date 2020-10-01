@@ -150,7 +150,7 @@ class AppBase:
 
         self.logger.info("AFTER FULLEXEC stream result")
 
-        # Gets the value at the paranthesis level you want
+        # Gets the value at the parenthesis level you want
         def parse_nested_param(string, level):
             """
             Generate strings contained in nested (), indexing i = level
@@ -173,7 +173,7 @@ class AppBase:
             except IndexError:
                 return [string[LeftRightIndex[level+1][0]:LeftRightIndex[level+1][1]]]
         
-        # Finds the deepest level paranthesis in a string
+        # Finds the deepest level parenthesis in a string
         def maxDepth(S): 
             current_max = 0
             max = 0
