@@ -216,7 +216,7 @@ func generateYaml(swagger *openapi3.Swagger) (WorkflowApp, []string, error) {
 	api.Name = swagger.Info.Title
 	api.Description = swagger.Info.Description
 	api.IsValid = true
-	api.Link = swagger.Servers[0].URL // host doesnt exist lol
+	api.Link = swagger.Servers[0].URL // host does not exist lol
 	api.AppVersion = "1.0.0"
 	api.Environment = "cloud"
 	api.ID = ""
