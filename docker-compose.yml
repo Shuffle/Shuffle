@@ -60,6 +60,7 @@ services:
       - HTTP_PROXY=${SHUFFLE_HTTP_PROXY}
       - HTTPS_PROXY=${SHUFFLE_HTTPS_PROXY}
       - SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
+      - SHUFFLE_ORBORUS_EXECUTION_TIMEOUT=600
     restart: unless-stopped
   database:
     #build: ./backend/database

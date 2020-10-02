@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -29,7 +30,7 @@ import (
 var sleepTime = 3
 
 // Timeout if something rashes
-var workerTimeout = 300
+var workerTimeoutEnv = os.Getenv("SHUFFLE_ORBORUS_EXECUTION_TIMEOUT")
 var appSdkVersion = os.Getenv("SHUFFLE_APP_SDK_VERSION")
 var workerVersion = os.Getenv("SHUFFLE_WORKER_VERSION")
 
@@ -90,7 +91,7 @@ func getThisContainerId() {
 
 	default:
 		fCol = "3" // for backward-compatibility with production
-		log.Printf("[WARNING] RUNNING_MODE not set, so I can't figure out the current container ID! Defaulting to Docker (not Kubernetes).")
+		log.Printf("[WARNING] RUNNING_MODE not set - defaulting to Docker (NOT Kubernetes).")
 	}
 
 	if fCol != "" {
@@ -238,7 +239,6 @@ func initializeImages() {
 
 // Initial loop etc
 func main() {
-	go zombiecheck()
 	log.Println("[INFO] Setting up execution environment")
 
 	//FIXME
@@ -251,6 +251,20 @@ func main() {
 		log.Printf("[ERROR] Org not defined. Set variable ORG_ID based on your org")
 		os.Exit(3)
 	}
+
+	workerTimeout := 600
+	if workerTimeoutEnv != "" {
+		tmpInt, err := strconv.Atoi(workerTimeoutEnv)
+		if err == nil {
+			workerTimeout = tmpInt
+		} else {
+			log.Printf("[WARNING] Env SHUFFLE_ORBORUS_EXECUTION_TIMEOUT must be a number, not %s", workerTimeoutEnv)
+		}
+
+		log.Printf("[INFO] Cleanup process running every %d seconds", workerTimeout)
+	}
+
+	go zombiecheck(workerTimeout)
 
 	log.Printf("[INFO] Running towards %s with Org %s", baseUrl, orgId)
 	httpProxy := os.Getenv("HTTP_PROXY")
@@ -317,7 +331,7 @@ func main() {
 			log.Printf("[WARNING] Failed making request: %s", err)
 			zombiecounter += 1
 			if zombiecounter*sleepTime > workerTimeout {
-				go zombiecheck()
+				go zombiecheck(workerTimeout)
 				zombiecounter = 0
 			}
 			time.Sleep(time.Duration(sleepTime) * time.Second)
@@ -338,7 +352,7 @@ func main() {
 			log.Printf("[ERROR] Failed reading body: %s", err)
 			zombiecounter += 1
 			if zombiecounter*sleepTime > workerTimeout {
-				go zombiecheck()
+				go zombiecheck(workerTimeout)
 				zombiecounter = 0
 			}
 			time.Sleep(time.Duration(sleepTime) * time.Second)
@@ -352,7 +366,7 @@ func main() {
 			sleepTime = 10
 			zombiecounter += 1
 			if zombiecounter*sleepTime > workerTimeout {
-				go zombiecheck()
+				go zombiecheck(workerTimeout)
 				zombiecounter = 0
 			}
 			time.Sleep(time.Duration(sleepTime) * time.Second)
@@ -367,7 +381,7 @@ func main() {
 		if len(executionRequests.Data) == 0 {
 			zombiecounter += 1
 			if zombiecounter*sleepTime > workerTimeout {
-				go zombiecheck()
+				go zombiecheck(workerTimeout)
 				zombiecounter = 0
 			}
 			time.Sleep(time.Duration(sleepTime) * time.Second)
@@ -474,7 +488,7 @@ func main() {
 
 // FIXME - add this to remove exited workers
 // Should it check what happened to the execution? idk
-func zombiecheck() error {
+func zombiecheck(workerTimeout int) error {
 	log.Println("[INFO] Looking for old containers")
 	ctx := context.Background()
 
