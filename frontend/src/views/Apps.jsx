@@ -67,7 +67,7 @@ export const GetParsedPaths = (inputdata, basekey) => {
 			return parsedValues
 		}
 
-		console.log("KEY: ", key, "VALUE: ", value, "BASEKEY: ", basekeyname)
+		//console.log("KEY: ", key, "VALUE: ", value, "BASEKEY: ", basekeyname)
 		if (typeof(value) === 'object') {
 			if (Array.isArray(value)) {
 				// Check if each item is object

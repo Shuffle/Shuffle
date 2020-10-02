@@ -3069,7 +3069,7 @@ const AngularWorkflow = (props) => {
 														</div>
 													}
 													parentMenuOpen={!!menuPosition}
-													style={{backgroundColor: inputColor, color: "white"}}
+													style={{backgroundColor: inputColor, color: "white", minWidth: 250,}}
 													onClick={() => {
 														handleItemClick([innerdata])
 													}}
@@ -3078,7 +3078,7 @@ const AngularWorkflow = (props) => {
 														// FIXME: Should be recursive in here
 														const icon = pathdata.type === "value" ? <VpnKeyIcon style={iconStyle} /> : pathdata.type === "list" ? <FormatListNumberedIcon style={iconStyle} /> : <ExpandMoreIcon style={iconStyle} /> 
 														return (
-															<MenuItem key={pathdata.name} style={{backgroundColor: inputColor, color: "white"}} value={pathdata} onMouseOver={() => {}}
+															<MenuItem key={pathdata.name} style={{backgroundColor: inputColor, color: "white", minWidth: 250,}} value={pathdata} onMouseOver={() => {}}
 																onClick={() => {
 																	handleItemClick([innerdata, pathdata])
 																}}

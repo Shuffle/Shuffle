@@ -393,12 +393,19 @@ class AppBase:
                         # FIXME: This is absolutely not perfect. 
                         print("In recursion v2: ", actualitem)
 
+                        is_loop = True
                         newvalue = []
                         firstitem = actualitem[0][0]
                         seconditem = actualitem[0][1]
+
+                        # Means it's a single item -> continue
                         if seconditem == "":
-                            print("In first")
-                            newvalue = basejson[int(firstitem)]
+                            print("In first - handling %s", seconditem)
+                            tmpitem = basejson[int(firstitem)]
+                            try:
+                                newvalue, is_loop = recurse_json(tmpitem, parsersplit[outercnt+1:])
+                            except IndexError:
+                                newvalue, is_loop = (tmpitem, parsersplit[outercnt+1:])
                         else:
                             if seconditem == "max": 
                                 seconditem = len(basejson)
@@ -422,7 +429,7 @@ class AppBase:
                                 #exit()
                                 newvalue.append(ret)
 
-                        return newvalue, True
+                        return newvalue, is_loop 
 
                     # FIXME: Add specific loop for other indexes
                     else:
