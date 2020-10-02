@@ -391,14 +391,14 @@ class AppBase:
                         return newvalue, True
                     elif len(actualitem) > 0:
                         # FIXME: This is absolutely not perfect. 
-                        print("IN HERE: ", actualitem)
+                        print("In recursion v2: ", actualitem)
 
                         newvalue = []
                         firstitem = actualitem[0][0]
                         seconditem = actualitem[0][1]
                         if seconditem == "":
                             print("In first")
-                            basejson = basejson[int(firstitem)]
+                            newvalue = basejson[int(firstitem)]
                         else:
                             if seconditem == "max": 
                                 seconditem = len(basejson)
@@ -868,7 +868,7 @@ class AppBase:
                             actionname = action["name"]
                             #print("Multicheck ", actualitem)
                             print("Actual item: %s" % actualitem)
-                            print("ITEM: %d" % len(actualitem))
+                            print("LENGTH: %d" % len(actualitem))
                             if len(actualitem) > 0:
                                 multiexecution = True
 
@@ -985,7 +985,7 @@ class AppBase:
                                     print("KeyError: %s" % e)
                                     baseparams[key] = "KeyError: %s" % e
 
-                                #print("Running with params %s" % baseparams) 
+                                print("Running with params %s" % baseparams) 
                                 ret = await func(**baseparams)
                                 if isinstance(ret, dict) or isinstance(ret, list):
                                     results.append(ret)

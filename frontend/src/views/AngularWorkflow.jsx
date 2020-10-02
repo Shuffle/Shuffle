@@ -2513,6 +2513,10 @@ const AngularWorkflow = (props) => {
 							// Look for the ID
 							const found = false
 							for (var key in workflowExecutions) {
+								if (workflowExecutions[key].results === undefined || workflowExecutions[key].results === null) {
+									continue
+								}
+
 								const foundResult = workflowExecutions[key].results.find(result => result.action.id === item.id)
 								if (foundResult === undefined) {
 									continue
@@ -3939,7 +3943,6 @@ const AngularWorkflow = (props) => {
 				<DialogContent style={{display: "flex"}}>
 					<Tooltip color="primary" title={conditionValue.configuration ? "Negated" : "Default"} placement="top">
 						<Button color="primary" variant={conditionValue.configuration ? "contained" : "outlined"} style={{margin: "auto", height: 50, marginBottom: "auto", marginTop: "auto", marginRight: 5}} onClick={(e) => {
-							console.log("VALUE: ", conditionValue.configuration)
 							conditionValue.configuration = !conditionValue.configuration
 							setConditionValue(conditionValue)
 							setUpdate(Math.random())

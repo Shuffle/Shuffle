@@ -43,21 +43,34 @@ const inputColor = "#383B40"
 
 // Parses JSON data into keys that can be used everywhere :)
 export const GetParsedPaths = (inputdata, basekey) => {
-	const splitkey = " => "
+	const splitkey = " > "
 	var parsedValues = []
 	if (typeof(inputdata) !== "object") {
 		return parsedValues
 	}
 
 	for (const [key, value] of Object.entries(inputdata)) {
-
 		// Check if loop or JSON
 		const extra = basekey.length > 0 ? splitkey : ""
-		const basekeyname = `${basekey.slice(1,basekey.length).split(".").join(splitkey)}${extra}${key}`
+		const basekeyname = `${basekey.slice(1, basekey.length).split(".").join(splitkey)}${extra}${key}`
+
+		// Handle direct loop!
+		if (!isNaN(key) && basekey === "") {
+			console.log("Handling direct loop.")
+			parsedValues.push({"type": "object", "name": "Node", "autocomplete": `${basekey}`})
+			parsedValues.push({"type": "list", "name": `${splitkey}list`, "autocomplete": `${basekey}.#`})
+			const returnValues = GetParsedPaths(value, `${basekey}.#`)
+			for (var subkey in returnValues) {
+				parsedValues.push(returnValues[subkey])
+			}
+
+			return parsedValues
+		}
+
+		console.log("KEY: ", key, "VALUE: ", value, "BASEKEY: ", basekeyname)
 		if (typeof(value) === 'object') {
 			if (Array.isArray(value)) {
 				// Check if each item is object
-				console.log("VALUE: ", value)
 				parsedValues.push({"type": "object", "name": basekeyname, "autocomplete": `${basekey}.${key}`})
 				parsedValues.push({"type": "list", "name": `${basekeyname}${splitkey}list`, "autocomplete": `${basekey}.${key}.#`})
 
