@@ -57,6 +57,7 @@ export const GetParsedPaths = (inputdata, basekey) => {
 		if (typeof(value) === 'object') {
 			if (Array.isArray(value)) {
 				// Check if each item is object
+				console.log("VALUE: ", value)
 				parsedValues.push({"type": "object", "name": basekeyname, "autocomplete": `${basekey}.${key}`})
 				parsedValues.push({"type": "list", "name": `${basekeyname}${splitkey}list`, "autocomplete": `${basekey}.${key}.#`})
 

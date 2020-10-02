@@ -477,7 +477,6 @@ const AngularWorkflow = (props) => {
 		if (responseJson.status === "ABORTED" || responseJson.status === "STOPPED" || responseJson.status === "FAILURE") {
 			stop()
 
-
 			setExecutionRunning(false)
 			var curelements = cy.elements()
 			for (var i = 0; i < curelements.length; i++) {
@@ -492,9 +491,12 @@ const AngularWorkflow = (props) => {
 					//curelements[i].removeClass('failure-highlight')
 				}
 			}
+
+			getWorkflowExecution(props.match.params.key)
 		} else if (responseJson.status === "FINISHED") {
 			setExecutionRunning(false)
 			stop()
+			getWorkflowExecution(props.match.params.key)
 		}
 	}
 
@@ -868,6 +870,14 @@ const AngularWorkflow = (props) => {
 			return response.json()
 		})
     .then((responseJson) => {
+			// Not sure why this is necessary.
+			if (responseJson.isValid === undefined) {
+				responseJson.isValid = true
+			}
+			if (responseJson.errors === undefined) {
+				responseJson.errors = []
+			}
+
 			setWorkflow(responseJson)
 			setWorkflowDone(true)
     })

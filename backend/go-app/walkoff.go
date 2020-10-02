@@ -3117,6 +3117,7 @@ func getSpecificWorkflow(resp http.ResponseWriter, request *http.Request) {
 	//} else {
 	//	//log.Printf("Set cache for %s", item.Key)
 	//}
+	log.Println(workflow.IsValid)
 
 	resp.WriteHeader(200)
 	resp.Write(body)
