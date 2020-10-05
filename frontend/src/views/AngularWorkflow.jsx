@@ -558,6 +558,10 @@ const AngularWorkflow = (props) => {
 						}
 					}
 
+					// Override just in this place
+					curworkflowAction.errors = []
+					curworkflowAction.isValid = true
+
 					newActions.push(curworkflowAction)
 				} else if (type === "TRIGGER") {
 					//console.log("TRIGGER")
@@ -2258,6 +2262,7 @@ const AngularWorkflow = (props) => {
 
 	const ParsedAppPaper = (props) => {
 		const app = props.app
+		const [hover, setHover] = React.useState(false)
 
 		// FIXME - add label to apps, as this might be slow with A LOT of apps
 		var newAppname = app.name
@@ -2268,6 +2273,10 @@ const AngularWorkflow = (props) => {
 		}
 
 		const image = "url("+app.large_image+")"
+		const newAppStyle = JSON.parse(JSON.stringify(paperAppStyle))
+		const pixelSize = !hover ? "2px" : "4px"
+		newAppStyle.borderLeft = app.is_valid ? `${pixelSize} solid green` : `${pixelSize} solid orange`
+	
 
 		return (
 			<Draggable 
@@ -2280,10 +2289,8 @@ const AngularWorkflow = (props) => {
 						y: 0,
 					}}
 				>
-				<Paper square style={paperAppStyle} >
-					<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: "2px", backgroundColor: "orange", marginRight: "5px"}}>
-					</div>
-					<Grid container style={{margin: "10px 10px 10px 10px", flex: "10"}}>
+				<Paper square style={newAppStyle} onMouseOver={() => {setHover(true)}} onMouseOut={() => {setHover(false)}}>
+					<Grid container style={{margin: "10px 10px 10px 15px", flex: "10"}}>
 						<Grid item>
 							<div style={{borderRadius: borderRadius, height: 80, width: 80, backgroundImage: image, backgroundSize: "cover", backgroundRepeat: "no-repeat"}} />
 						</Grid>
@@ -5838,7 +5845,7 @@ const AngularWorkflow = (props) => {
 		}
 
 		const handleSubmitCheck = () => {
-			console.log(authenticationOption)
+			console.log("NEW AUTH: ", authenticationOption)
 			if (authenticationOption.label.length === 0) {
 				alert.info("Label can't be empty")
 				return
@@ -5869,6 +5876,8 @@ const AngularWorkflow = (props) => {
 			console.log("FIELDS: ", newFields)
 			newAuthOption.fields = newFields
 			setNewAppAuth(newAuthOption)
+			appAuthentication.push(newAuthOption)
+			setAppAuthentication(appAuthentication)
 			setUpdate(authenticationOption.id)
 		}
 

@@ -1585,7 +1585,8 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		// FIXME: Have a good way of tracking errors. ID's or similar.
-		if !action.IsValid {
+		if !action.IsValid && len(action.Errors) > 0 {
+			log.Printf("Node %s is invalid and needs to be remade. Errors: %s", action.Label, strings.Join(action.Errors, "\n"))
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Node %s is invalid and needs to be remade."}`, action.Label)))
 			return
@@ -1792,10 +1793,16 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 			}
 
 			if !authFound {
-				log.Printf("App auth %s doesn't exist", action.AuthenticationId)
-				resp.WriteHeader(401)
-				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "App auth %s doesn't exist"}`, action.AuthenticationId)))
-				return
+				log.Printf("App auth %s doesn't exist. Setting error", action.AuthenticationId)
+				workflow.Errors = append(workflow.Errors, fmt.Sprintf("App authentication for %s doesn't exist!", action.AppName))
+				workflow.IsValid = false
+
+				action.Errors = append(action.Errors, "App authentication doesn't exist")
+				action.IsValid = false
+				action.AuthenticationId = ""
+				//resp.WriteHeader(401)
+				//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "App auth %s doesn't exist"}`, action.AuthenticationId)))
+				//return
 			}
 		}
 
@@ -2421,9 +2428,9 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 
 				for _, authparam := range curAuth.Fields {
 					if param.Name == authparam.Key {
-						log.Printf("Name: %s - value: %s", param.Name, param.Value)
 						param.Value = authparam.Value
-						log.Printf("Name: %s - value: %s\n", param.Name, param.Value)
+						//log.Printf("Name: %s - value: %s", param.Name, param.Value)
+						//log.Printf("Name: %s - value: %s\n", param.Name, param.Value)
 						break
 					}
 				}
