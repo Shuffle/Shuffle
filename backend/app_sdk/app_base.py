@@ -854,6 +854,7 @@ class AppBase:
                         minlength = 0
                         multi_parameters = json.loads(json.dumps(params))
                         multiexecution = False
+                        multi_execution_lists = []
                         for parameter in action["parameters"]:
                             check, value, is_loop = parse_params(action, fullexecution, parameter)
 
@@ -883,6 +884,8 @@ class AppBase:
                                 # Loop WITH variables go in else.
                                 if len(actualitem[0]) > 2 and actualitem[0][1] == "SHUFFLE_NO_SPLITTER":
                                     print("Pre replacement: %s" % actualitem[0][2])
+                                    tmpitem = value
+
                                     replacement = actualitem[0][2]
                                     if replacement.startswith("\"") and replacement.endswith("\""):
                                         replacement = replacement[1:len(replacement)-1]
@@ -899,9 +902,10 @@ class AppBase:
                                     if len(json_replacement) > minlength:
                                         minlength = len(json_replacement)
 
-                                    #value = parse_wrapper_start(json_replacement)
-                                    params[parameter["name"]] = json_replacement
-                                    multi_parameters[parameter["name"]] = json_replacement
+                                    tmpitem = tmpitem.replace(actualitem[0][0], replacement, 1)
+                                    multi_execution_lists.append(tmpitem)
+                                    params[parameter["name"]] = tmpitem
+                                    multi_parameters[parameter["name"]] = tmpitem
                                     print("MULTI finished: %s" % replacement)
                                 else:
                                 
@@ -953,6 +957,28 @@ class AppBase:
 
                                 params[parameter["name"]] = value
                                 multi_parameters[parameter["name"]] = value 
+
+                        # Fix lists here
+                        print("CHECKING multi execution list!")
+                        if len(multi_execution_lists) > 0:
+                            print("Multi execution list has more data: %d" % len(multi_execution_lists))
+                            filteredlist = []
+                            for listitem in multi_execution_lists:
+                                if listitem in filteredlist:
+                                    continue
+
+                                filteredlist.append(listitem)
+
+                            #print("New list length: %d" % len(filteredlist))
+                            if len(filteredlist) > 1:
+                                print("Calculating new multi-loop length")
+                                tmplength = 1
+                                for innerlist in filteredlist:
+                                    tmplength = len(innerlist)*tmplength
+
+                                minlength = tmplength
+
+                                #print("New multi execution length: %d" % tmplength)
                         
                         # FIXME - this is horrible, but works for now
                         #for i in range(calltimes):
@@ -970,21 +996,67 @@ class AppBase:
                                     print("Can't handle type %s value from function" % (type(newres)))
                             print("POST NEWRES RESULT: ", result)
                         else:
-                            print("APP_SDK DONE: Starting MULTI execution with", multi_parameters)
-                            # 1. Use number of executions based on longest array
+                            print("APP_SDK DONE: Starting MULTI execution with values %s of length %d" % (multi_parameters, minlength))
+                            # 1. Use number of executions based on the arrays being similar
                             # 2. Find the right value from the parsed multi_params
-
                             results = []
                             json_object = False
                             for i in range(0, minlength):
                                 # To be able to use the results as a list:
                                 baseparams = json.loads(json.dumps(multi_parameters))
                                 # {'call': ['GoogleSafebrowsing_2_0', 'VirusTotal_GetReport_3_0']}
-                                
+                                # 1. Check if list length is same as minlength
+                                # 2. If NOT same length, duplicate based on length of array
+                                # arraylength = 3 ["1", "2", "3"]
+                                # arraylength = 4 ["1", "2", "3", "4"]
+                                # minlength = 12 - 12/3 = 4 per item = ["1", "1", "1", "1", "2", "2", ...]
+
                                 try:
+                                    firstlist = True
                                     for key, value in baseparams.items():
+
                                         if isinstance(value, list):
-                                            baseparams[key] = value[i]
+                                            try:
+                                                newvalue = value[i]
+                                            except IndexError:
+                                                pass
+
+                                            if len(value) != minlength and len(value) > 0:
+                                                newarray = []
+                                                print("VALUE: ", value)
+                                                additiontime = minlength/len(value)
+                                                #print("Bad length for value: %d - should be %d. Additiontime: %d" % (len(value), minlength, additiontime))
+                                                if firstlist:
+                                                    print("Running normal list (FIRST)")
+                                                    for subvalue in value:
+                                                        for number in range(int(additiontime)):
+                                                            newarray.append(subvalue)
+                                                else:
+                                                    #print("Running secondary lists")
+                                                    ## 1. Set up length of array
+                                                    ## 2. Put values spread out
+                                                    # FIXME: This works well, except if lists are same length
+                                                    newarray = [""] * minlength
+
+                                                    cnt = 0
+                                                    for number in range(int(additiontime)):
+                                                        for subvaluerange in range(len(value)):
+                                                            # newlocation = number+(additiontime*subvaluerange)
+                                                            # print("%d+(%d*%d) = %d. VAL: %s" % (number, additiontime, subvaluerange, newlocation, value[subvaluerange]))
+                                                            # Reverse if same length?
+                                                            if int(minlength/len(value)) == len(value):
+                                                                tmp = int(len(value)-subvaluerange-1)
+                                                                print("NEW: %d" % tmp)
+                                                                newarray[cnt] = value[tmp] 
+                                                            else:
+                                                                newarray[cnt] = value[subvaluerange] 
+                                                            cnt += 1
+
+                                                print("Newarray =", newarray)
+                                                newvalue = newarray[i]
+                                                firstlist = False
+
+                                            baseparams[key] = newvalue
                                 except IndexError as e:
                                     print("IndexError: %s" % e)
                                     baseparams[key] = "IndexError: %s" % e

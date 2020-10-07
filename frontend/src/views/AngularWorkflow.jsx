@@ -2531,6 +2531,7 @@ const AngularWorkflow = (props) => {
 
 								var jsonvalid = true
 								try {
+									console.log(foundResult.result)
 									const tmp = String(JSON.parse(foundResult.result))
 									if (!tmp.includes("{") && !tmp.includes("[")) {
 										jsonvalid = false

@@ -1982,7 +1982,7 @@ func handlePasswordChange(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		if len(users) != 1 {
-			log.Printf(`Found multiple users with the same username: %s: %d`, t.Username, len(users))
+			log.Printf(`Found multiple or no users with the same username: %s: %d`, t.Username, len(users))
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Found %d users with the same username: %s (%d)"}`, len(users), t.Username)))
 			return
@@ -2290,7 +2290,7 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if len(users) != 1 {
-		log.Printf(`Found multiple users with the same username: %s: %d`, data.Username, len(users))
+		log.Printf(`Found multiple or no users with the same username: %s: %d`, data.Username, len(users))
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Found %d users with the same username: %s"}`, len(users), data.Username)))
 		return
