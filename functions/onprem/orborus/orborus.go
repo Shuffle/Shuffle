@@ -215,6 +215,13 @@ func initializeImages() {
 		log.Printf("[WARNING] SHUFFLE_WORKER_VERSION not defined. Defaulting to %s", workerVersion)
 	}
 
+	if baseimageregistry == "" {
+		baseimageregistry = "docker.io"
+	}
+	if baseimagename == "" {
+		baseimagename = "frikky/shuffle"
+	}
+
 	// check whether they are the same first
 	images := []string{
 		fmt.Sprintf("%s/%s:app_sdk%s", baseimageregistry, baseimagename, baseimagetagsuffix),
