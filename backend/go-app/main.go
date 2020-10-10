@@ -1757,7 +1757,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		"tutorials": [],
 		"id": "%s",
 		"orgs": [%s], 
-		"selected_org": %s,
+		"active_org": %s,
 		"cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]
 	}`, parsedAdmin, userInfo.Id, currentOrg, currentOrg, userInfo.Session, expiration.Unix())
 
@@ -6680,6 +6680,7 @@ func runInit(ctx context.Context) {
 	log.Printf("Finished INIT")
 }
 
+// INFO: https://docs.google.com/drawings/d/1JJebpPeEVEbmH_qsAC6zf9Noygp7PytvesrkhE19QrY/edit
 func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -6722,22 +6723,84 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	ctx := context.Background()
+	org, err := getOrg(ctx, tmpData.Organization.Id)
+	if err != nil {
+		log.Printf("Organization doesn't exist: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// FIXME: Check if user is admin of this org
+	userFound := false
+	admin := false
+	for _, inneruser := range org.Users {
+		if inneruser.Id == user.Id {
+			userFound = true
+			log.Printf("Role: %s", inneruser.Role)
+			if inneruser.Role == "admin" {
+				admin = true
+			}
+
+			break
+		}
+	}
+
+	if !userFound {
+		log.Printf("User %s doesn't exist in organization %s", user.Id, org.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// FIXME: Enable admin check in org for sync setup and conf.
+	_ = admin
+	//if !admin {
+	//	log.Printf("User %s isn't admin hence can't set up sync for org %s", user.Id, org.Id)
+	//	resp.WriteHeader(401)
+	//	resp.Write([]byte(`{"success": false}`))
+	//	return
+	//}
+
 	log.Printf("Apidata: %s", tmpData.Apikey)
-	// FIXME: https://docs.google.com/drawings/d/1JJebpPeEVEbmH_qsAC6zf9Noygp7PytvesrkhE19QrY/edit
 
 	client := &http.Client{}
 	syncPath := "http://192.168.3.6:5002/api/v1/cloud/sync"
+
+	type requestStruct struct {
+		ApiKey string `json:"api_key"`
+	}
+
+	requestData := requestStruct{
+		ApiKey: tmpData.Apikey,
+	}
+
+	b, err := json.Marshal(requestData)
+	if err != nil {
+		log.Printf("Failed marshaling api key data: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed cloud sync."`, err)))
+		return
+	}
+
 	req, err := http.NewRequest(
 		"POST",
 		syncPath,
-		nil,
+		bytes.NewBuffer(b),
 	)
 
 	newresp, err := client.Do(req)
 	if err != nil {
-		resp.WriteHeader(401)
+		resp.WriteHeader(400)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed cloud sync: %s"`, err)))
 		//setBadMemcache(ctx, docPath)
+		return
+	}
+
+	if newresp.StatusCode != 200 {
+		resp.WriteHeader(400)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Response code %d during sync. Expecting 200."`, newresp.StatusCode)))
 		return
 	}
 

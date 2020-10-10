@@ -1347,7 +1347,6 @@ const Admin = (props) => {
 		</div>
 		: null
 
-	console.log("Userdata: ", props.userdata)
 	const organizationsTab = curTab === 5 ?
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
@@ -1389,49 +1388,10 @@ const Admin = (props) => {
 						style={{minWidth: 150, maxWidth: 150}}
 					/>
 				</ListItem>
-				{props.userdata !== undefined && props.userdata.orgs !== null && props.userdata.orgs !== undefined && props.userdata.orgs.length > 0 ? 
-					<span>
-						{props.userdata.orgs.map((data, index) => {
-							const isSelected = props.userdata.selected_org === undefined ? "False" : props.userdata.selected_org.id === data.id ? "True" : "False"
-
-							return (
-								<ListItem key={index}>
-									<ListItemText
-										primary={data.name}
-										style={{minWidth: 150, maxWidth: 150}}
-									/>
-									<ListItemText
-										primary={data.id}
-										style={{minWidth: 200, maxWidth: 200}}
-									/>
-									<ListItemText
-										primary={data.role}
-										style={{minWidth: 150, maxWidth: 150}}
-									/>
-									<ListItemText
-										primary={isSelected}
-										style={{minWidth: 150, maxWidth: 150}}
-									/>
-									<ListItemText
-										primary=<Switch checked={data.cloud_sync} onChange={() => {
-											setCloudSyncModalOpen(true)
-											setSelectedOrganization(data)
-											console.log("INVERT CLOUD SYNC")
-										}} />
-										style={{minWidth: 150, maxWidth: 150}}
-									/>
-								</ListItem>
-							)
-						
-					})}
-				</span>
-				: 
-				null
-				}
 				{organizations !== undefined && organizations !== null && organizations.length > 0 ? 
 					<span>
 						{organizations.map((data, index) => {
-							const isSelected = props.userdata.selected_org === undefined ? "False" : props.userdata.selected_org.id === data.id ? "True" : "False"
+							const isSelected = props.userdata.active_org.id === undefined ? "False" : props.userdata.active_org.id === data.id ? "True" : "False"
 
 							return (
 								<ListItem key={index}>

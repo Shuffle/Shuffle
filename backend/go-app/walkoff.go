@@ -356,6 +356,14 @@ type ExecutionRequestWrapper struct {
 	Data []ExecutionRequest `json:"data"`
 }
 
+type AppExecutionExample struct {
+	AppName    string   `json:"app_name"`
+	AppVersion string   `json:"app_version"`
+	AppAction  string   `json:"app_action"`
+	AppId      string   `json:"app_id"`
+	Examples   []string `json:"examples"`
+}
+
 // This might be... a bit off, but that's fine :)
 // This might also be stupid, as we want timelines and such
 // Anyway, these are super basic stupid stats.
@@ -1081,6 +1089,8 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 			if err != nil {
 				log.Printf("Failed to increase success execution stats: %s", err)
 			}
+
+			// type AppExecutionExample struct {
 		}
 	}
 
