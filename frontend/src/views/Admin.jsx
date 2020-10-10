@@ -45,6 +45,7 @@ const Admin = (props) => {
 	const [loginInfo, setLoginInfo] = React.useState("");
 	const [curTab, setCurTab] = React.useState(0);
 	const [users, setUsers] = React.useState([]);
+	const [organizations, setOrganizations] = React.useState([]);
 	const [environments, setEnvironments] = React.useState([]);
 	const [authentication, setAuthentication] = React.useState([]);
 	const [schedules, setSchedules] = React.useState([])
@@ -512,6 +513,31 @@ const Admin = (props) => {
 			});
 	}
 
+	const getOrgs = () => {
+		fetch(globalUrl + "/api/v1/getorgs", {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+			credentials: "include",
+		})
+			.then((response) => {
+				if (response.status !== 200) {
+					console.log("Status not 200 for apps :O!")
+					return
+				}
+
+				return response.json()
+			})
+			.then((responseJson) => {
+				setOrganizations(responseJson)
+			})
+			.catch(error => {
+				alert.error(error.toString())
+			});
+	}
+
 	const getUsers = () => {
 		fetch(globalUrl + "/api/v1/getusers", {
 			method: 'GET',
@@ -523,7 +549,7 @@ const Admin = (props) => {
 		})
 			.then((response) => {
 				if (response.status !== 200) {
-					console.log("Status not 200 for apps :O!")
+					window.location.pathname = "/workflows"
 					return
 				}
 
@@ -771,7 +797,7 @@ const Admin = (props) => {
 				Enable cloud features
 			</span></DialogTitle>
 			<DialogContent>
-				What does <a href="https://shuffler.io/docs/workflows#workflow_variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>cloud sync</a> do?
+				What does <a href="https://shuffler.io/docs/hybrid#cloud_sync" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>cloud sync</a> do?
 				<div style={{marginTop: 5}}/>
 				Cloud Apikey
 				<div style={{display: "flex", marginBottom: 20, }}>
@@ -1402,6 +1428,42 @@ const Admin = (props) => {
 				: 
 				null
 				}
+				{organizations !== undefined && organizations !== null && organizations.length > 0 ? 
+					<span>
+						{organizations.map((data, index) => {
+							const isSelected = props.userdata.selected_org === undefined ? "False" : props.userdata.selected_org.id === data.id ? "True" : "False"
+
+							return (
+								<ListItem key={index}>
+									<ListItemText
+										primary={data.name}
+										style={{minWidth: 150, maxWidth: 150}}
+									/>
+									<ListItemText
+										primary={data.id}
+										style={{minWidth: 200, maxWidth: 200}}
+									/>
+									<ListItemText
+										primary={data.role}
+										style={{minWidth: 150, maxWidth: 150}}
+									/>
+									<ListItemText
+										primary={isSelected}
+										style={{minWidth: 150, maxWidth: 150}}
+									/>
+									<ListItemText
+										primary=<Switch checked={data.cloud_sync} onChange={() => {
+											setCloudSyncModalOpen(true)
+											setSelectedOrganization(data)
+											console.log("INVERT CLOUD SYNC")
+										}} />
+										style={{minWidth: 150, maxWidth: 150}}
+									/>
+								</ListItem>
+							)
+						})}
+					</span>
+				: null}
 			</List>
 		</div>
 		: null
@@ -1455,6 +1517,8 @@ const Admin = (props) => {
 			getEnvironments()
 		} else if (newValue === 3) {
 			getSchedules()
+		} else if (newValue === 5) {
+			getOrgs() 
 		}
 
 		if (newValue === 6) {

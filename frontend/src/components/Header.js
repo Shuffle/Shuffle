@@ -101,7 +101,6 @@ const Header = props => {
 	// Should be based on some path
 	const logoCheck = !homePage ?  null : null
 
-
 	// Handle top bar or something
   const loginTextBrowser = !isLoggedIn ? 
     	<div style={{display: "flex"}}>
@@ -184,17 +183,19 @@ const Header = props => {
 								color="primary"> Settings</Button>
 						</Link>
         	</ListItem>
-      		<ListItem>
-						<Link to="/admin" style={hrefStyle}>
-							<Button 
-								style={{}} 
-								variant="contained"
-								color="primary"
-							> 
-								Admin	
-							</Button>
-						</Link>
-					</ListItem>
+					{userdata === undefined || userdata.admin === undefined || userdata.admin === null || !userdata.admin ? null : 
+						<ListItem>
+							<Link to="/admin" style={hrefStyle}>
+								<Button 
+									style={{}} 
+									variant="contained"
+									color="primary"
+								> 
+									Admin	
+								</Button>
+							</Link>
+						</ListItem>
+					}
 					{userdata === undefined || userdata.orgs === undefined || userdata.orgs === null || userdata.orgs.length <= 1 ? null :
 						<ListItem>
 							<Select
