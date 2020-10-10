@@ -65,6 +65,7 @@ const Workflows = (props) => {
 	const [field1, setField1] = React.useState("")
 	const [field2, setField2] = React.useState("")
 	const [downloadUrl, setDownloadUrl] = React.useState("https://github.com/frikky/shuffle-workflows")
+	const [downloadBranch, setDownloadBranch] = React.useState("master")
 	const [loadWorkflowsModalOpen, setLoadWorkflowsModalOpen] = React.useState(false)
 
 	const [modalOpen, setModalOpen] = React.useState(false);
@@ -1181,6 +1182,7 @@ const Workflows = (props) => {
 
 		const parsedData = {
 			"url": url,
+			"field_3": downloadBranch || 'master'
 		}
 
 		if (field1.length > 0) {
@@ -1274,6 +1276,26 @@ const Workflows = (props) => {
 					placeholder="https://github.com/frikky/shuffle-apps"
 					fullWidth
 					/>
+
+					<span style={{marginTop: 10}}>Branch (default value is "master"):</span>
+					<div style={{display: "flex"}}>
+						<TextField
+							style={{backgroundColor: inputColor}}
+							variant="outlined"
+							margin="normal"
+							value={downloadBranch}
+							InputProps={{
+								style:{
+									color: "white",
+									height: "50px",
+									fontSize: "1em",
+								},
+							}}
+							onChange={e => setDownloadBranch(e.target.value)}
+							placeholder="master"
+							fullWidth
+							/>
+					</div>
 
 				<span style={{marginTop: 10}}>Authentication (optional - private repos etc):</span>
 				<div style={{display: "flex"}}>
