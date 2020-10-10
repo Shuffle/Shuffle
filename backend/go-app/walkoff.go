@@ -357,11 +357,13 @@ type ExecutionRequestWrapper struct {
 }
 
 type AppExecutionExample struct {
-	AppName    string   `json:"app_name"`
-	AppVersion string   `json:"app_version"`
-	AppAction  string   `json:"app_action"`
-	AppId      string   `json:"app_id"`
-	Examples   []string `json:"examples"`
+	AppName         string   `json:"app_name"`
+	AppVersion      string   `json:"app_version"`
+	AppAction       string   `json:"app_action"`
+	AppId           string   `json:"app_id"`
+	ExampleId       string   `json:"example_id"`
+	SuccessExamples []string `json:"success_examples"`
+	FailureExamples []string `json:"failure_examples"`
 }
 
 // This might be... a bit off, but that's fine :)
@@ -1090,7 +1092,9 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 				log.Printf("Failed to increase success execution stats: %s", err)
 			}
 
-			// type AppExecutionExample struct {
+			// Handles extra statistics stuff when it's done
+			// Does autocomplete magic with JSON
+			go handleExecutionStatistics(*workflowExecution)
 		}
 	}
 
@@ -1136,6 +1140,90 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+}
+
+func JSONCheck(str string) bool {
+	var jsonStr interface{}
+	return json.Unmarshal([]byte(str), &jsonStr) == nil
+}
+
+func handleExecutionStatistics(execution WorkflowExecution) {
+	// FIXME: CLEAN UP THE JSON THAT'S SAVED!
+
+	appResults := []AppExecutionExample{}
+	for _, result := range execution.Results {
+		resultCheck := JSONCheck(result.Result)
+		if !resultCheck {
+			log.Printf("Result is NOT JSON!")
+			continue
+		} else {
+			log.Printf("Result IS JSON!")
+
+		}
+
+		appFound := false
+		executionIndex := 0
+		for index, appExample := range appResults {
+			if appExample.AppId == result.Action.ID {
+				appFound = true
+				executionIndex = index
+				break
+			}
+		}
+
+		if appFound {
+			// Append to SuccessExamples or FailureExamples
+			if result.Status == "ABORTED" || result.Status == "FAILURE" {
+				appResults[executionIndex].FailureExamples = append(appResults[executionIndex].FailureExamples, result.Result)
+			} else if result.Status == "FINISHED" || result.Status == "SUCCESS" {
+				appResults[executionIndex].SuccessExamples = append(appResults[executionIndex].SuccessExamples, result.Result)
+			} else {
+				log.Printf("[ERROR] Can't handle status %s", result.Status)
+			}
+
+			// appResults = append(appResults, executionExample)
+
+		} else {
+			// CREATE SuccessExamples or FailureExamples
+			executionExample := AppExecutionExample{
+				AppName:    result.Action.AppName,
+				AppVersion: result.Action.AppVersion,
+				AppAction:  result.Action.Name,
+				AppId:      result.Action.AppID,
+				ExampleId:  fmt.Sprintf("%s_%s", execution.ExecutionId, result.Action.AppID),
+			}
+
+			if result.Status == "ABORTED" || result.Status == "FAILURE" {
+				executionExample.FailureExamples = append(executionExample.FailureExamples, result.Result)
+			} else if result.Status == "FINISHED" || result.Status == "SUCCESS" {
+				executionExample.SuccessExamples = append(executionExample.SuccessExamples, result.Result)
+			} else {
+				log.Printf("[ERROR] Can't handle status %s", result.Status)
+			}
+
+			appResults = append(appResults, executionExample)
+		}
+	}
+
+	// ExampleId string `json:"example_id"`
+	// func setExampleresult(ctx context.Context, result exampleResult) error {
+	// log.Printf("Execution length: %d", len(appResults))
+	if len(appResults) > 0 {
+		ctx := context.Background()
+		successful := 0
+		for _, exampleresult := range appResults {
+			err := setExampleresult(ctx, exampleresult)
+			if err != nil {
+				log.Printf("Failed setting examplresult %s: %s", exampleresult.ExampleId, err)
+			} else {
+				successful += 1
+			}
+		}
+
+		log.Printf("Added %d exampleresults to backend", successful)
+	} else {
+		log.Printf("No examplresults necessary to be added for execution %s", execution.ExecutionId)
+	}
 }
 
 func getWorkflows(resp http.ResponseWriter, request *http.Request) {
@@ -3234,6 +3322,18 @@ func getAllWorkflows(ctx context.Context) ([]Workflow, error) {
 	}
 
 	return allworkflows, nil
+}
+
+func setExampleresult(ctx context.Context, result AppExecutionExample) error {
+	key := datastore.NameKey("example_result", result.ExampleId, nil)
+
+	// New struct, to not add body, author etc
+	if _, err := dbclient.Put(ctx, key, &result); err != nil {
+		log.Printf("Error adding workflow: %s", err)
+		return err
+	}
+
+	return nil
 }
 
 // Hmm, so I guess this should use uuid :(
