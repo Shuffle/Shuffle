@@ -42,7 +42,6 @@ import (
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/storage/memory"
 
 	// Random
@@ -6369,6 +6368,10 @@ func runInit(ctx context.Context) {
 				Password: password,
 			}
 		}
+		branch := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_BRANCH")
+		if len(branch) > 0 {
+			cloneOptions.ReferenceName = plumbing.ReferenceName(branch)
+		}
 
 		log.Printf("Getting apps from %s", url)
 
@@ -6376,28 +6379,6 @@ func runInit(ctx context.Context) {
 
 		if err != nil {
 			log.Printf("Failed loading repo into memory: %s", err)
-		}
-
-		branch := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_BRANCH")
-		if len(branch) > 0 {
-			log.Printf("Checkout to branch: %s", branch)
-			
-			w, _ := r.Worktree()
-			
-			err := r.Fetch(&git.FetchOptions{
-				RefSpecs: []config.RefSpec{"refs/*:refs/*", "HEAD:refs/heads/HEAD"},
-			})
-			if err != nil {
-				log.Printf("Failed fetch for git repo: %s", err)
-			}
-			
-			err = w.Checkout(&git.CheckoutOptions{
-				Branch: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branch)),
-				Force: true,
-			})
-			if err != nil {
-				log.Printf("Failed checkout for git repo: %s", err)
-			}
 		}
 
 		dir, err := fs.ReadDir("")
