@@ -2524,14 +2524,17 @@ const AngularWorkflow = (props) => {
 									continue
 								}
 
-								const foundResult = workflowExecutions[key].results.find(result => result.action.id === item.id)
+								var foundResult = workflowExecutions[key].results.find(result => result.action.id === item.id)
 								if (foundResult === undefined) {
 									continue
 								}
 
+								foundResult.result = foundResult.result.trim()
+								foundResult.result = foundResult.result.split(" None").join(" \"None\"")
+								foundResult.result = foundResult.result.split("\'").join("\"")
+
 								var jsonvalid = true
 								try {
-									console.log(foundResult.result)
 									const tmp = String(JSON.parse(foundResult.result))
 									if (!tmp.includes("{") && !tmp.includes("[")) {
 										jsonvalid = false
@@ -2544,9 +2547,10 @@ const AngularWorkflow = (props) => {
 								if (jsonvalid) {
 									exampledata = JSON.parse(foundResult.result)
 									break
-								} else {
-									console.log("Invalid JSON: ", foundResult.result)
-								}
+								} 
+								//else {
+								//	console.log("Invalid JSON: ", foundResult.result)
+								//}
 							}
 						}
 
@@ -2610,9 +2614,13 @@ const AngularWorkflow = (props) => {
 				if (curstring.length > 0) {
 					// Search back in the action list
 					curstring = curstring.split(" ").join("_").toLowerCase()
-					const actionItem = actionlist.find(data => data.autocomplete.split(" ").join("_").toLowerCase() === curstring)
+					var actionItem = actionlist.find(data => data.autocomplete.split(" ").join("_").toLowerCase() === curstring)
 					if (actionItem !== undefined) {
 						console.log("Found item: ", actionItem)
+
+						//actionItem.example = actionItem.example.trim()
+						//actionItem.example = actionItem.example.split(" None").join(" \"None\"")
+						//actionItem.example  = actionItem.example.split("\'").join("\"")
 
 						var jsonvalid = true
 						try {
@@ -2977,7 +2985,6 @@ const AngularWorkflow = (props) => {
 
 								selectedActionParameters[count].value += toComplete
 								selectedAction.parameters[count].value = selectedActionParameters[count].value 
-								console.log("TARGET: ", selectedActionParameters)
 								setSelectedAction(selectedAction)
 								setUpdate(Math.random())
 
@@ -5336,7 +5343,8 @@ const AngularWorkflow = (props) => {
 
 	const parsedExecutionArgument = () => {
 		var showResult = executionData.execution_argument.trim()
-		showResult.split(" None").join(" \"None\"")
+		showResult = showResult.split(" None").join(" \"None\"")
+		showResult = showResult.split("\'").join("\"")
 
 		var jsonvalid = true
 		try {
@@ -5524,11 +5532,15 @@ const AngularWorkflow = (props) => {
 								return null
 							}
 
-							var showResult = data.result.trim()
-							showResult.split(" None").join(" \"None\"")
 
 							// showResult = replaceAll(showResult, " None", " \"None\"")
 							// Super basic check.
+							//
+							// FIXME: The latter replace doens't really work if ' is used in a string
+							var showResult = data.result.trim()
+							showResult = showResult.split(" None").join(" \"None\"")
+							showResult = showResult.split("\'").join("\"")
+
 							var jsonvalid = true
 							try {
 								const tmp = String(JSON.parse(showResult))

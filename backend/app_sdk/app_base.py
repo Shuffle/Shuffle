@@ -876,7 +876,6 @@ class AppBase:
                             actionname = action["name"]
                             #print("Multicheck ", actualitem)
                             print("Actual item: %s" % actualitem)
-                            print("LENGTH: %d" % len(actualitem))
                             if len(actualitem) > 0:
                                 multiexecution = True
 
@@ -903,9 +902,12 @@ class AppBase:
                                         minlength = len(json_replacement)
 
                                     tmpitem = tmpitem.replace(actualitem[0][0], replacement, 1)
-                                    multi_execution_lists.append(tmpitem)
                                     params[parameter["name"]] = tmpitem
-                                    multi_parameters[parameter["name"]] = tmpitem
+                                    multi_execution_lists.append(json_replacement)
+                                    multi_parameters[parameter["name"]] = json_replacement 
+
+                                    #print("LENGTH OF ARR: %d" % len(resultarray))
+                                    #print("RESULTARRAY: %s" % resultarray)
                                     print("MULTI finished: %s" % replacement)
                                 else:
                                 
@@ -949,6 +951,11 @@ class AppBase:
                                         resultarray.append(tmpitem)
 
                                     # With this parameter ready, add it to... a greater list of parameters. Rofl
+                                    print("LENGTH OF ARR: %d" % len(resultarray))
+                                    print("RESULTARRAY: %s" % resultarray)
+                                    if resultarray not in multi_execution_lists:
+                                        multi_execution_lists.append(resultarray)
+
                                     multi_parameters[parameter["name"]] = resultarray
                             else:
                                 # Parses things like int(value)
@@ -961,7 +968,7 @@ class AppBase:
                         # Fix lists here
                         print("CHECKING multi execution list!")
                         if len(multi_execution_lists) > 0:
-                            print("Multi execution list has more data: %d" % len(multi_execution_lists))
+                            print("\n Multi execution list has more data: %d" % len(multi_execution_lists))
                             filteredlist = []
                             for listitem in multi_execution_lists:
                                 if listitem in filteredlist:
@@ -971,14 +978,15 @@ class AppBase:
 
                             #print("New list length: %d" % len(filteredlist))
                             if len(filteredlist) > 1:
-                                print("Calculating new multi-loop length")
+                                print("Calculating new multi-loop length with %d lists" % len(filteredlist))
                                 tmplength = 1
                                 for innerlist in filteredlist:
+                                    print("List length: %d. %d*%d" % (len(innerlist), len(innerlist), tmplength))
                                     tmplength = len(innerlist)*tmplength
 
                                 minlength = tmplength
 
-                                #print("New multi execution length: %d" % tmplength)
+                                print("New multi execution length: %d\n" % tmplength)
                         
                         # FIXME - this is horrible, but works for now
                         #for i in range(calltimes):
@@ -1025,7 +1033,7 @@ class AppBase:
                                                 newarray = []
                                                 print("VALUE: ", value)
                                                 additiontime = minlength/len(value)
-                                                #print("Bad length for value: %d - should be %d. Additiontime: %d" % (len(value), minlength, additiontime))
+                                                print("Bad length for value: %d - should be %d. Additiontime: %d" % (len(value), minlength, additiontime))
                                                 if firstlist:
                                                     print("Running normal list (FIRST)")
                                                     for subvalue in value:
@@ -1052,7 +1060,7 @@ class AppBase:
                                                                 newarray[cnt] = value[subvaluerange] 
                                                             cnt += 1
 
-                                                print("Newarray =", newarray)
+                                                #print("Newarray =", newarray)
                                                 newvalue = newarray[i]
                                                 firstlist = False
 
@@ -1079,10 +1087,10 @@ class AppBase:
                                         #print("Json: %s" % e)
                                         results.append(ret)
 
-                                print("Inner ret parsed: %s" % ret)
+                                #print("Inner ret parsed: %s" % ret)
 
                             # Dump the result as a string of a list
-                            print("RESULTS: %s" % results)
+                            #print("RESULTS: %s" % results)
                             if isinstance(results, list):
                                 print("JSON OBJECT? ", json_object)
                                 if json_object:
