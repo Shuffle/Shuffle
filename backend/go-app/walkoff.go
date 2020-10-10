@@ -1090,8 +1090,33 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	//	log.Printf("Name: %s, Env: %s", action.Name, action.Environment)
 	//}
 
+	tmpJson, err := json.Marshal(workflowExecution)
+	if err == nil {
+		if len(tmpJson) >= 1048487 {
+			log.Printf("[ERROR] Result length is too long! Need to reduce result size")
+
+			// Result        string `json:"result" datastore:"result,noindex"`
+			// Arbitrary reduction size
+			maxSize := 500000
+			newResults := []ActionResult{}
+			for _, item := range workflowExecution.Results {
+				if len(item.Result) > maxSize {
+					item.Result = "[ERROR] Result too large to handle (https://github.com/frikky/shuffle/issues/171)"
+				}
+
+				newResults = append(newResults, item)
+			}
+
+			workflowExecution.Results = newResults
+		}
+	}
+
 	err = setWorkflowExecution(ctx, *workflowExecution)
 	if err != nil {
+		//workflowExecution.Result = "Error setting workflow: result too large"
+		//workflowExecution.Status = "FINISHED"
+		//workflowExecution.CompletedAt = int64(time.Now().Unix())
+
 		log.Printf("Error saving workflow execution actionresult setting: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed setting workflowexecution actionresult: %s"}`, err)))
