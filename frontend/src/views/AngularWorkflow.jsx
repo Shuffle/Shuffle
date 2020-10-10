@@ -5562,7 +5562,10 @@ const AngularWorkflow = (props) => {
 								<div key={index} style={{marginBottom: 40,}}>
 									<div style={{display: "flex", marginBottom: 15,}}>
 										{actionimg}
-										<span style={{fontSize: 24, marginTop: "auto", marginBottom: "auto"}}><b>{data.action.label}</b></span>
+										<div>
+											<div style={{fontSize: 24, marginTop: "auto", marginBottom: "auto"}}><b>{data.action.label}</b></div>
+											<div style={{fontSize: 14}}>{data.action.name}</div>
+										</div>
 									</div>
 									<div style={{marginBottom: 5}}><b>Status </b> {data.status}</div>
 									{jsonvalid ? <ReactJson 
