@@ -418,8 +418,13 @@ const AppCreator = (props) => {
 					continue
 				}
 
+				var tmpname = methodvalue.summary
+				if (methodvalue.operationId !== undefined && methodvalue.operationId !== null && methodvalue.operationId.length > 0) {
+					tmpname = methodvalue.operationId
+				}
+
 				var newaction = {
-					"name": methodvalue.summary,
+					"name": tmpname,
 					"description": methodvalue.description,
 					"url": path,
 					"method": method.toUpperCase(),
@@ -668,6 +673,7 @@ const AppCreator = (props) => {
 					}
 				},
 				"summary": item.name,
+				"operationId": item.name.split(" ").join("_"),
 				"description": item.description,
 				"parameters": []
 			}
