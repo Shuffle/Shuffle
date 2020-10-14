@@ -396,10 +396,11 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 		bodyAddin,
 		verifyAddin,
 	)
-	//if strings.Contains(functionname, "get_returns_the_vuln") {
-	//	log.Println(data)
-	//	log.Printf("Queries: %s", queryString)
-	//}
+
+	if strings.Contains(functionname, "api_dumps_delete") {
+		log.Println(data)
+		log.Printf("Queries: %s", queryString)
+	}
 
 	//log.Printf(data)
 	return functionname, data
