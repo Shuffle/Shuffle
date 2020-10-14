@@ -1159,7 +1159,7 @@ const Admin = (props) => {
 										console.log("Show apps with this category")
 									}}
 								>
-									Find app ({data.apps.length})
+									Find app ({data.apps === null ? 0 : data.apps.length})
 								</Button>
 							</ListItemText>
 						</ListItem>
@@ -1222,7 +1222,7 @@ const Admin = (props) => {
 								style={{minWidth: 150, maxWidth: 150}}
 							/>
 							<ListItemText
-								primary={data.usage.length}
+								primary={data.usage === null ? 0 : data.usage.length}
 								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
 							/>
 							<ListItemText
