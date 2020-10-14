@@ -2118,17 +2118,7 @@ func abortExecution(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// FIXME: Check the execution if this fails.
-	user, err := handleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("Api authentication failed in abort workflow: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
 	location := strings.Split(request.URL.String(), "/")
-
 	var fileId string
 	if location[1] == "api" {
 		if len(location) <= 4 {
@@ -2162,12 +2152,34 @@ func abortExecution(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// FIXME - have a check for org etc too..
-	if user.Id != workflowExecution.Workflow.Owner && user.Role != "admin" {
-		log.Printf("Wrong user (%s) for workflowexecution workflow %s", user.Username, workflowExecution.Workflow.ID)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
+	apikey := request.Header.Get("Authorization")
+	parsedKey := ""
+	if strings.HasPrefix(apikey, "Bearer ") {
+		apikeyCheck := strings.Split(apikey, " ")
+		if len(apikeyCheck) == 2 {
+			parsedKey = apikeyCheck[1]
+		}
+	}
+
+	if workflowExecution.Authorization != parsedKey {
+		// FIXME: Check the execution if this fails.
+		user, err := handleApiAuthentication(resp, request)
+		if err != nil {
+			log.Printf("Api authentication failed in abort workflow: %s", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		// FIXME - have a check for org etc too..
+		if user.Id != workflowExecution.Workflow.Owner && user.Role != "admin" {
+			log.Printf("Wrong user (%s) for workflowexecution workflow %s", user.Username, workflowExecution.Workflow.ID)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+	} else {
+		log.Printf("API key %s is correct to abort %s", parsedKey, executionId)
 	}
 
 	if workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" || workflowExecution.Status == "FINISHED" {
@@ -4685,7 +4697,22 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 		case mode.IsRegular():
 			// Check the file
 			filename := file.Name()
+			filteredNames := []string{"FUNDING.yml"}
 			if strings.Contains(filename, "yaml") || strings.Contains(filename, "yml") {
+
+				contOuter := false
+				for _, name := range filteredNames {
+					if filename == name {
+						contOuter = true
+						break
+					}
+				}
+
+				if contOuter {
+					log.Printf("Skipping %s", filename)
+					continue
+				}
+
 				//log.Printf("File: %s", filename)
 				//log.Printf("Found file: %s", filename)
 				log.Printf("OpenAPI app: %s", filename)
