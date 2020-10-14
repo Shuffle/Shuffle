@@ -119,6 +119,7 @@ const Apps = (props) => {
 	const [appSearchLoading, setAppSearchLoading] = React.useState(false)
 	const [selectedAction, setSelectedAction] = React.useState({})
 	const [searchBackend, setSearchBackend] = React.useState(false)
+	const [searchableApps, setSearchableApps] = React.useState([])
 
 	const [openApi, setOpenApi] = React.useState("")
 	const [openApiData, setOpenApiData] = React.useState("")
@@ -130,6 +131,7 @@ const Apps = (props) => {
 	const [openApiError, setOpenApiError] = React.useState("")
 	const [field1, setField1] = React.useState("")
 	const [field2, setField2] = React.useState("")
+	const [cursearch, setCursearch] = React.useState("")
 	const [sharingConfiguration, setSharingConfiguration] = React.useState("you")
 
 	const { start, stop } = useInterval({
@@ -220,6 +222,8 @@ const Apps = (props) => {
 					setSelectedAction({})
 				}
 			} 
+			
+			runAppSearch("")
     })
 		.catch(error => {
 			alert.error(error.toString())
@@ -773,15 +777,17 @@ const Apps = (props) => {
 		}
 
 		const searchfield = search.toLowerCase()
-		const newapps = apps.filter(data => data.name.toLowerCase().includes(searchfield) || data.description.toLowerCase().includes(searchfield))
+		var newapps = apps.filter(data => data.name.toLowerCase().includes(searchfield) || data.description.toLowerCase().includes(searchfield))
+		var tmpapps = searchableApps.filter(data => data.name.toLowerCase().includes(searchfield) || data.description.toLowerCase().includes(searchfield))
+		newapps.push(...tmpapps) 
 
-		if ((newapps.length === 0 || searchBackend) && !appSearchLoading) {
+		setFilteredApps(newapps)
+		//if ((newapps.length === 0 || searchBackend) && !appSearchLoading) {
 
-			setAppSearchLoading(true)
-			runAppSearch(searchfield)
-		} else {
-			setFilteredApps(newapps)
-		}
+		//	//setAppSearchLoading(true)
+		//	//runAppSearch(searchfield)
+		//} else {
+		//}
 	}
 
 	const appView = isLoggedIn ? 
@@ -809,17 +815,8 @@ const Apps = (props) => {
 				<div style={{flex: 1, marginLeft: 10, marginRight: 10}}>
 					<div style={{display: "flex"}}>
 						<div style={{flex: 1}}>
-							<h2>All apps</h2> 
+							<h2>Your apps ({apps.length+searchableApps.length})</h2> 
 						</div>
-						{isLoading ? <CircularProgress style={{marginTop: 13, marginRight: 15}} /> : null}
-				    <FormControlLabel
-							style={{color: "white", marginBottom: "0px", marginTop: "10px"}}
-							label={<div style={{color: "white"}}>Search OpenAPI</div>}
-							control={<Switch checked={searchBackend} onChange={() => {
-								handleSearchChange("")
-								setSearchBackend(!searchBackend)}
-							} />}
-						/>
 						<Tooltip title={"Reload apps locally"} style={{marginTop: "28px", width: "100%"}} aria-label={"Upload"}>
 							<Button
 								variant="outlined"
@@ -864,6 +861,7 @@ const Apps = (props) => {
 						placeholder={"Search apps"}
 						onChange={(event) => {
 							handleSearchChange(event.target.value)
+							setCursearch(event.target.value)
 						}}
 					/>
 					<div style={{marginTop: 15}}>
@@ -875,11 +873,18 @@ const Apps = (props) => {
 											appPaper(app)
 										)
 									})}
+									{cursearch.length > 0 ? null : 
+										searchableApps.map(app => {
+											return (
+												appPaper(app)
+											)
+										})
+									}
 								</div>
 							: 
 							<Paper square style={uploadViewPaperStyle}>
-								<h4>
-									Try a broader search term, e.g. "http", "alert", "ticket" etc. 
+								<h4 style={{margin: 10, }}>
+									Try a broader search term, e.g. http, alert, ticket etc. 
 								</h4>
 								<div/>
 
@@ -890,7 +895,7 @@ const Apps = (props) => {
 							</Paper>
 						: 
 						<Paper square style={uploadViewPaperStyle}>
-							<h4>
+							<h4 style={{margin: 10}}>
 								No apps have been created, uploaded or downloaded yet. Click "Load existing apps" above to get the baseline. This may take a while as its building docker images.
 							</h4>
 						</Paper>
@@ -1077,10 +1082,10 @@ const Apps = (props) => {
 			return response.json()
 		})
     .then((responseJson) => {
-			//console.log(responseJson)
 			if (responseJson.success) {
 				if (responseJson.reason !== undefined && responseJson.reason.length > 0) {
-					setFilteredApps(responseJson.reason)
+					setSearchableApps(responseJson.reason)
+					//setFilteredApps(responseJson.reason)
 				}
 			}
     })
