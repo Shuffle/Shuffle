@@ -5538,14 +5538,17 @@ const AngularWorkflow = (props) => {
 							// FIXME: The latter replace doens't really work if ' is used in a string
 							var showResult = data.result.trim()
 							showResult = showResult.split(" None").join(" \"None\"")
+							showResult = showResult.split(" False").join(" false")
+							showResult = showResult.split(" True").join(" true")
 							showResult = showResult.split("\'").join("\"")
 
 							var jsonvalid = true
 							try {
 								const tmp = String(JSON.parse(showResult))
-								if (!tmp.includes("{") && !tmp.includes("[")) {
-									jsonvalid = false
-								}
+								//if (!tmp.includes("{") && !tmp.includes("[")) {
+								//	console.log("IN HERE")
+								//	jsonvalid = false
+								//}
 							} catch (e) {
 								jsonvalid = false
 							}
