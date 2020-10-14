@@ -36,6 +36,7 @@ import CircularProgress from '@material-ui/core/CircularProgress';
 import Switch from '@material-ui/core/Switch';
 import ReactJson from 'react-json-view'
 import { useBeforeunload } from 'react-beforeunload';
+import NestedMenuItem from "material-ui-nested-menu-item";
 
 import ArrowUpwardIcon from '@material-ui/icons/ArrowUpward';
 import CachedIcon from '@material-ui/icons/Cached';
@@ -476,7 +477,6 @@ const AngularWorkflow = (props) => {
 		if (responseJson.status === "ABORTED" || responseJson.status === "STOPPED" || responseJson.status === "FAILURE") {
 			stop()
 
-
 			setExecutionRunning(false)
 			var curelements = cy.elements()
 			for (var i = 0; i < curelements.length; i++) {
@@ -491,9 +491,12 @@ const AngularWorkflow = (props) => {
 					//curelements[i].removeClass('failure-highlight')
 				}
 			}
+
+			getWorkflowExecution(props.match.params.key)
 		} else if (responseJson.status === "FINISHED") {
 			setExecutionRunning(false)
 			stop()
+			getWorkflowExecution(props.match.params.key)
 		}
 	}
 
@@ -555,6 +558,10 @@ const AngularWorkflow = (props) => {
 						}
 					}
 
+					// Override just in this place
+					curworkflowAction.errors = []
+					curworkflowAction.isValid = true
+
 					newActions.push(curworkflowAction)
 				} else if (type === "TRIGGER") {
 					//console.log("TRIGGER")
@@ -574,6 +581,9 @@ const AngularWorkflow = (props) => {
 		useworkflow.actions = newActions
 		useworkflow.triggers = newTriggers
 		useworkflow.branches = newBranches
+
+		// Errors are backend defined
+		useworkflow.errors = []
 
 		setLastSaved(true)
 		fetch(globalUrl+"/api/v1/workflows/"+props.match.params.key, {
@@ -598,6 +608,15 @@ const AngularWorkflow = (props) => {
 				alert.error("Failed to save: "+responseJson.reason)
 			} else {
 				success = true
+				if (responseJson.errors !== undefined) {
+					console.log(responseJson)
+					workflow.errors = responseJson.errors
+					if (responseJson.errors.length === 0) {
+						workflow.isValid = true
+					}
+
+					setWorkflow(workflow)
+				}
 				alert.success("Successfully saved workflow")
 			}
 		})
@@ -855,6 +874,14 @@ const AngularWorkflow = (props) => {
 			return response.json()
 		})
     .then((responseJson) => {
+			// Not sure why this is necessary.
+			if (responseJson.isValid === undefined) {
+				responseJson.isValid = true
+			}
+			if (responseJson.errors === undefined) {
+				responseJson.errors = []
+			}
+
 			setWorkflow(responseJson)
 			setWorkflowDone(true)
     })
@@ -924,7 +951,46 @@ const AngularWorkflow = (props) => {
 			const curapp = apps.find(a => a.name === curaction.app_name && a.app_version === curaction.app_version)
 			if (!curapp || curapp === undefined) {
 				alert.error("App "+curaction.app_name+" not found. Did someone delete it?")
-				return
+				//return
+			} else {
+				setRequiresAuthentication(curapp.authentication.required && curapp.authentication.parameters !== undefined && curapp.authentication.parameters !== null)
+				if (curapp.authentication.required) {
+					// Setup auth here :)
+					const authenticationOptions = []
+					var findAuthId = ""
+					if (curaction.authentication_id !== null && curaction.authentication_id !== undefined && curaction.authentication_id.length > 0) {
+						findAuthId = curaction.authentication_id
+					}
+
+					var tmpAuth = JSON.parse(JSON.stringify(appAuthentication))
+					for (var key in tmpAuth) {
+						var item = tmpAuth[key]
+
+						const newfields = {}
+						for (var filterkey in item.fields) {
+							newfields[item.fields[filterkey].key] = item.fields[filterkey].value
+						}
+
+						item.fields = newfields
+						if (item.app.name === curapp.name) {
+							authenticationOptions.push(item)
+							if (item.id === findAuthId) {
+								curaction.selectedAuthentication = item
+							}
+						}
+					}
+
+					curaction.authentication = authenticationOptions
+					if (curaction.selectedAuthentication === null || curaction.selectedAuthentication === undefined || curaction.selectedAuthentication.length === "") {
+						curaction.selectedAuthentication = {}
+					}
+				} else {
+					curaction.authentication = []
+					curaction.authentication_id = ""
+					curaction.selectedAuthentication = {}
+				}
+
+				setSelectedApp(curapp)
 			}
 
 			var env = environments.find(a => a.Name === curaction.environment)
@@ -933,48 +999,8 @@ const AngularWorkflow = (props) => {
 			}
 
 			setSelectedActionEnvironment(env)
-			setSelectedActionName(curaction.name)
+			setSelectedActionName(curaction.name)	
 
-			setRequiresAuthentication(curapp.authentication.required && curapp.authentication.parameters !== undefined && curapp.authentication.parameters !== null)
-
-
-			if (curapp.authentication.required) {
-				// Setup auth here :)
-				const authenticationOptions = []
-				var findAuthId = ""
-				if (curaction.authentication_id !== null && curaction.authentication_id !== undefined && curaction.authentication_id.length > 0) {
-					findAuthId = curaction.authentication_id
-				}
-
-				var tmpAuth = JSON.parse(JSON.stringify(appAuthentication))
-				for (var key in tmpAuth) {
-					var item = tmpAuth[key]
-
-					const newfields = {}
-					for (var filterkey in item.fields) {
-						newfields[item.fields[filterkey].key] = item.fields[filterkey].value
-					}
-
-					item.fields = newfields
-					if (item.app.name === curapp.name) {
-						authenticationOptions.push(item)
-						if (item.id === findAuthId) {
-							curaction.selectedAuthentication = item
-						}
-					}
-				}
-
-				curaction.authentication = authenticationOptions
-				if (curaction.selectedAuthentication === null || curaction.selectedAuthentication === undefined || curaction.selectedAuthentication.length === "") {
-					curaction.selectedAuthentication = {}
-				}
-			} else {
-				curaction.authentication = []
-				curaction.authentication_id = ""
-				curaction.selectedAuthentication = {}
-			}
-
-			setSelectedApp(curapp)
 			setSelectedAction(curaction)
 		} else if (data.type === "TRIGGER") {
 			//console.log("Should handle trigger "+data.triggertype)
@@ -1395,7 +1421,6 @@ const AngularWorkflow = (props) => {
 				example = action.example
 			}
 
-			console.log("EXAMPLE: ", example)
 			node.data.example = example
 
 			return node;
@@ -1513,10 +1538,17 @@ const AngularWorkflow = (props) => {
 			return response.json()
 		})
 		.then((responseJson) => {
+			// No matter what, it's being stopped.
 			if (!responseJson.success) {
-				//alert.error("Failed to delete schedule: " + responseJson.reason)
+				alert.error("Failed to stop schedule: " + responseJson.reason)
+
+				workflow.triggers[triggerindex].status = "stopped" 
+				trigger.status = "stopped" 
+				setSelectedTrigger(trigger)
+				setWorkflow(workflow)
+				saveWorkflow(workflow)
 			} else {
-				//alert.success("Successfully stopped schedule")
+				alert.success("Successfully stopped schedule")
 				workflow.triggers[triggerindex].status = "stopped" 
 				trigger.status = "stopped" 
 				setSelectedTrigger(trigger)
@@ -1864,7 +1896,8 @@ const AngularWorkflow = (props) => {
 		)
 	}
 
-	var triggers = [{
+	const syncEnabled = props.userdata !== undefined && props.userdata.selected_org !== null && props.userdata.selected_org !== undefined ? props.userdata.selected_org.cloud_sync === true : false 
+	const triggers = [{
 			"name": "Webhook",	
 			"type": "TRIGGER",
 			"status": "uninitialized",
@@ -1885,7 +1918,7 @@ const AngularWorkflow = (props) => {
 			"description": "Wait for user input",
 			"trigger_type": "USERINPUT",
 			"errors": null,
-			"is_valid": false,
+			"is_valid": syncEnabled,
 			"label": "User input",
 			"environment": environments[defaultEnvironmentIndex] === undefined ? {} : environments[defaultEnvironmentIndex].Name,
 			"long_description": "Take user input to continue execution",
@@ -1910,7 +1943,7 @@ const AngularWorkflow = (props) => {
 			"description": "Add your email provider",
 			"trigger_type": "EMAIL",
 			"errors": null,
-			"is_valid": false,
+			"is_valid": syncEnabled,
 			"label": "Email",
 			"environment": environments[defaultEnvironmentIndex] === undefined ? {} : environments[defaultEnvironmentIndex].Name,
 			"large_image": 'data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4QAYRXhpZgAASUkqAAgAAAAAAAAAAAAAAP/hAytodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNiAoV2luZG93cykiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6Nzg4QTJBMjVEMDI1MTFFN0EwQUVDODc5QjYyQkFCMUQiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6Nzg4QTJBMjZEMDI1MTFFN0EwQUVDODc5QjYyQkFCMUQiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDo3ODhBMkEyM0QwMjUxMUU3QTBBRUM4NzlCNjJCQUIxRCIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDo3ODhBMkEyNEQwMjUxMUU3QTBBRUM4NzlCNjJCQUIxRCIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/Pv/bAEMAAwICAgICAwICAgMDAwMEBgQEBAQECAYGBQYJCAoKCQgJCQoM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',
@@ -1996,7 +2029,7 @@ const AngularWorkflow = (props) => {
 				}
 
 				if (data.is_valid === false) {
-					alert.error(data.name+" is only available on https://shuffler.io")
+					alert.error(data.name+" is only available on https://shuffler.io or with cloud sync enabled")
 					return
 				}
 
@@ -2229,6 +2262,7 @@ const AngularWorkflow = (props) => {
 
 	const ParsedAppPaper = (props) => {
 		const app = props.app
+		const [hover, setHover] = React.useState(false)
 
 		// FIXME - add label to apps, as this might be slow with A LOT of apps
 		var newAppname = app.name
@@ -2239,6 +2273,10 @@ const AngularWorkflow = (props) => {
 		}
 
 		const image = "url("+app.large_image+")"
+		const newAppStyle = JSON.parse(JSON.stringify(paperAppStyle))
+		const pixelSize = !hover ? "2px" : "4px"
+		newAppStyle.borderLeft = app.is_valid ? `${pixelSize} solid green` : `${pixelSize} solid orange`
+	
 
 		return (
 			<Draggable 
@@ -2251,10 +2289,8 @@ const AngularWorkflow = (props) => {
 						y: 0,
 					}}
 				>
-				<Paper square style={paperAppStyle} >
-					<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: "2px", backgroundColor: "orange", marginRight: "5px"}}>
-					</div>
-					<Grid container style={{margin: "10px 10px 10px 10px", flex: "10"}}>
+				<Paper square style={newAppStyle} onMouseOver={() => {setHover(true)}} onMouseOut={() => {setHover(false)}}>
+					<Grid container style={{margin: "10px 10px 10px 15px", flex: "10"}}>
 						<Grid item>
 							<div style={{borderRadius: borderRadius, height: 80, width: 80, backgroundImage: image, backgroundSize: "cover", backgroundRepeat: "no-repeat"}} />
 						</Grid>
@@ -2437,6 +2473,7 @@ const AngularWorkflow = (props) => {
 		const [actionlist, setActionlist] = React.useState([])
 		const [jsonList, setJsonList] = React.useState([])
 		const [showAutocomplete, setShowAutocomplete] = React.useState(false)
+		const [menuPosition, setMenuPosition] = useState(null)
 
 		useEffect(() => {
 			if (selectedActionParameters !== null && selectedActionParameters.length === 0) {
@@ -2468,6 +2505,7 @@ const AngularWorkflow = (props) => {
 					}
 				}
 
+				// Loops parent nodes' old results to fix autocomplete
 				var parents = getParents(selectedAction)
 				if (parents.length > 1) {
 					for (var key in parents) {
@@ -2476,8 +2514,50 @@ const AngularWorkflow = (props) => {
 							continue
 						}
 
+						var exampledata = item.example === undefined ? "" : item.example
+						// Find previous execution and their variables
+						if (exampledata === "" && workflowExecutions.length > 0) {
+							// Look for the ID
+							const found = false
+							for (var key in workflowExecutions) {
+								if (workflowExecutions[key].results === undefined || workflowExecutions[key].results === null) {
+									continue
+								}
+
+								var foundResult = workflowExecutions[key].results.find(result => result.action.id === item.id)
+								if (foundResult === undefined) {
+									continue
+								}
+
+								foundResult.result = foundResult.result.trim()
+								foundResult.result = foundResult.result.split(" None").join(" \"None\"")
+								foundResult.result = foundResult.result.split(" False").join(" false")
+								foundResult.result = foundResult.result.split(" True").join(" true")
+								foundResult.result = foundResult.result.split("\'").join("\"")
+
+								var jsonvalid = true
+								try {
+									const tmp = String(JSON.parse(foundResult.result))
+									//if (!tmp.includes("{") && !tmp.includes("[")) {
+									//	jsonvalid = false
+									//}
+								} catch (e) {
+									jsonvalid = false
+								}
+
+								// Finds the FIRST json only
+								if (jsonvalid) {
+									exampledata = JSON.parse(foundResult.result)
+									break
+								} 
+								//else {
+								//	console.log("Invalid JSON: ", foundResult.result)
+								//}
+							}
+						}
+
 						// 1. Take 
-						const actionvalue = {"type": "action", "id": item.id, "name": item.label, "autocomplete": `${item.label.split(" ").join("_")}`, "example": item.example === undefined ? "" : item.example}
+						const actionvalue = {"type": "action", "id": item.id, "name": item.label, "autocomplete": `${item.label.split(" ").join("_")}`, "example": exampledata}
 						actionlist.push(actionvalue)
 					}
 				}
@@ -2501,12 +2581,18 @@ const AngularWorkflow = (props) => {
 
 			// bad detection mechanism probably
 			if (event.target.value[event.target.value.length-1] === "." && actionlist.length > 0) {
-
-				console.log("GET THE LAST ARGUMENT FOR !")
-				//const [jsonList, getJsonList] = React.useState([])
+				console.log("GET THE LAST ARGUMENT FOR NODE!")
+				// THIS IS AN EXAMPLE OF SHOWING IT 
+				/*
 				const inputdata = {"data": "1.2.3.4", "dataType": "4.5.6.6"}
-				const returnJson = GetParsedPaths(inputdata, "")
+				setJsonList(GetParsedPaths(inputdata, ""))
+				if (!showDropdown) {
+					setShowAutocomplete(false)
+					setShowDropdown(true)
+					setShowDropdownNumber(count)
+				}
 				console.log(jsonList)
+				*/
 
 				// Search for the item backwards
 				// 1. Reverse search backwards from . -> $
@@ -2527,19 +2613,23 @@ const AngularWorkflow = (props) => {
 					}
 				}
 
-				if (curstring.length > 0) {
+				if (curstring.length > 0 && actionlist !== null) {
 					// Search back in the action list
 					curstring = curstring.split(" ").join("_").toLowerCase()
-					const actionItem = actionlist.find(data => data.autocomplete.split(" ").join("_").toLowerCase() === curstring)
+					var actionItem = actionlist.find(data => data.autocomplete.split(" ").join("_").toLowerCase() === curstring)
 					if (actionItem !== undefined) {
 						console.log("Found item: ", actionItem)
+
+						//actionItem.example = actionItem.example.trim()
+						//actionItem.example = actionItem.example.split(" None").join(" \"None\"")
+						//actionItem.example  = actionItem.example.split("\'").join("\"")
 
 						var jsonvalid = true
 						try {
 							const tmp = String(JSON.parse(actionItem.example))
-							if (!tmp.includes("{") && !tmp.includes("[")) {
-								jsonvalid = false
-							}
+							//if (!tmp.includes("{") && !tmp.includes("[")) {
+							//	jsonvalid = false
+							//}
 						} catch (e) {
 							jsonvalid = false
 						}
@@ -2692,7 +2782,11 @@ const AngularWorkflow = (props) => {
 									endAdornment: (
 										<InputAdornment position="end">
 											<Tooltip title="Autocomplete text" placement="top">
-												<AddCircleOutlineIcon style={{cursor: "pointer"}} onClick={() => {
+												<AddCircleOutlineIcon style={{cursor: "pointer"}} onClick={(event) => {
+													setMenuPosition({
+														top: event.pageY,
+														left: event.pageX,
+													})
 													setShowDropdownNumber(count)
 													setShowDropdown(true)
 													setShowAutocomplete(true)
@@ -2861,7 +2955,179 @@ const AngularWorkflow = (props) => {
 									)) : null}
 								</Select>
 							}
+						}
 
+						// Shows nested list of nodes > their JSON lists
+						const ActionlistWrapper = (props) => {
+
+							const handleMenuClose = () => {
+								setShowAutocomplete(false)
+
+								if (!selectedActionParameters[count].value[selectedActionParameters[count].value.length-1] === "$") {
+									setShowDropdown(false)
+								}
+
+								setUpdate(Math.random())
+								setMenuPosition(null)
+							}
+
+							const handleItemClick = (values) => {
+								if (values === undefined || values === null || values.length === 0) {
+									return
+								}
+
+								var toComplete = selectedActionParameters[count].value.trim().endsWith("$") ? values[0].autocomplete : "$"+values[0].autocomplete
+								for (var key in values) {
+									if (key == 0 || values[key].autocomplete.length === 0) {
+										continue
+									}
+
+									toComplete += values[key].autocomplete
+								}
+
+								selectedActionParameters[count].value += toComplete
+								selectedAction.parameters[count].value = selectedActionParameters[count].value 
+								setSelectedAction(selectedAction)
+								setUpdate(Math.random())
+
+								setShowDropdown(false)
+								setMenuPosition(null)
+							}
+
+							const iconStyle = {
+								marginRight: 15,
+							}
+
+							return (
+							  <div >
+									<Menu
+										anchorReference="anchorPosition"
+										anchorPosition={menuPosition}
+										onClose={() => {
+											handleMenuClose()
+										}}
+										open={!!menuPosition}
+										style={{
+											border: `2px solid #f85a3e`, 
+											color: "white", 
+											marginTop: 2,
+										}}
+									>
+									{actionlist.map(innerdata => {
+										const icon = innerdata.type === "action" ? <AppsIcon style={{marginRight: 10}} /> : innerdata.type === "workflow_variable" || innerdata.type === "execution_variable" ? <FavoriteBorderIcon style={{marginRight: 10}} /> : <ScheduleIcon style={{marginRight: 10}} /> 
+
+										const handleExecArgumentHover = (inside) => {
+											var exec_text_field = document.getElementById("execution_argument_input_field")
+											if (exec_text_field !== null) {
+												if (inside) {
+													exec_text_field.style.border = "2px solid #f85a3e"
+												} else {
+													exec_text_field.style.border = ""
+												}
+											}
+
+											// Also doing arguments
+											if (workflow.triggers !== undefined && workflow.triggers !== null && workflow.triggers.length > 0) {
+												for (var key in workflow.triggers) {
+													const item = workflow.triggers[key]
+
+													var node = cy.getElementById(item.id)
+													if (node.length > 0) {
+														if (inside) {
+															node.addClass('shuffle-hover-highlight')
+														} else {
+															node.removeClass('shuffle-hover-highlight')
+														}
+													}
+
+												}
+											}
+										}
+
+										const handleActionHover = (inside, actionId) => {
+											var node = cy.getElementById(actionId)
+											if (node.length > 0) {
+												if (inside) {
+													node.addClass('shuffle-hover-highlight')
+												} else {
+													node.removeClass('shuffle-hover-highlight')
+												}
+											}
+										}
+
+										const handleMouseover = () => {
+											if (innerdata.type === "Execution Argument") {
+													handleExecArgumentHover(true)
+												} else if (innerdata.type === "action") {
+													handleActionHover(true, innerdata.id)
+												}
+											} 
+											
+										const handleMouseOut = () => {
+											if (innerdata.type === "Execution Argument") {
+												handleExecArgumentHover(false)
+											} else if (innerdata.type === "action") {
+												handleActionHover(false, innerdata.id)
+											}
+										}
+
+										var parsedPaths = [] 
+										if (typeof(innerdata.example) === "object") {
+											parsedPaths = GetParsedPaths(innerdata.example, "")
+										}
+
+										return (
+											parsedPaths.length > 0 ?
+												<NestedMenuItem
+													key={innerdata.name}
+													label={
+														<div style={{display: "flex"}}>
+															{icon} {innerdata.name}
+														</div>
+													}
+													parentMenuOpen={!!menuPosition}
+													style={{backgroundColor: inputColor, color: "white", minWidth: 250,}}
+													onClick={() => {
+														handleItemClick([innerdata])
+													}}
+												>
+													{parsedPaths.map((pathdata, index) => {
+														// FIXME: Should be recursive in here
+														const icon = pathdata.type === "value" ? <VpnKeyIcon style={iconStyle} /> : pathdata.type === "list" ? <FormatListNumberedIcon style={iconStyle} /> : <ExpandMoreIcon style={iconStyle} /> 
+														return (
+															<MenuItem key={pathdata.name} style={{backgroundColor: inputColor, color: "white", minWidth: 250,}} value={pathdata} onMouseOver={() => {}}
+																onClick={() => {
+																	handleItemClick([innerdata, pathdata])
+																}}
+															>
+																<Tooltip color="primary" title={`Ex. value: ${pathdata.value}`} placement="left">
+																	<div style={{display: "flex"}}>
+																		{icon} {pathdata.name}
+																	</div>
+																</Tooltip>
+															</MenuItem>
+														)
+
+													})}
+												</NestedMenuItem>
+											: 
+												<MenuItem key={innerdata.name} style={{backgroundColor: inputColor, color: "white"}} value={innerdata} onMouseOver={() => handleMouseover()} onMouseOut={() => {handleMouseOut()}} 
+													onClick={() => {
+														handleItemClick([innerdata])
+													}}
+												>
+													<Tooltip color="primary" title={`Value: ${innerdata.value}`} placement="left">
+														<div style={{display: "flex"}}>
+															{icon} {innerdata.name}
+														</div>
+													</Tooltip>
+												</MenuItem>
+											
+										)
+									})}	
+								</Menu>
+      				</div>
+							)
 						}
 
 						var itemColor = "#f85a3e"
@@ -2941,7 +3207,6 @@ const AngularWorkflow = (props) => {
 
 											selectedActionParameters[count].value += e.target.value.autocomplete
 											selectedAction.parameters[count].value = selectedActionParameters[count].value 
-											console.log("TARGET: ", selectedActionParameters)
 											setSelectedAction(selectedAction)
 											setUpdate(Math.random())
 
@@ -2968,106 +3233,7 @@ const AngularWorkflow = (props) => {
       					</FormControl>
 							: null}
 							{showDropdown && showDropdownNumber === count && data.variant === "STATIC_VALUE" && jsonList.length === 0 ?
-							  <FormControl fullWidth>
-									<InputLabel id="action-autocompleter" style={{marginLeft: 10, color: "white"}}>Autocomplete</InputLabel>
-									<Select
-									  labelId="action-autocompleter"
-										SelectDisplayProps={{
-											style: {
-												marginLeft: 10,
-											}
-										}}
-										onClose={() => {
-											setShowAutocomplete(false)
-
-											if (!selectedActionParameters[count].value[selectedActionParameters[count].value.length-1] === "$") {
-												setShowDropdown(false)
-											}
-
-											setUpdate(Math.random())
-										}}
-										onClick={() => setShowAutocomplete(true)}
-										open={showAutocomplete}
-										fullWidth
-										style={{border: `2px solid #f85a3e`, color: "white", height: 50, marginTop: 2,}}
-										onChange={(e) => {
-											console.log("CHANGE!")
-											const toComplete = selectedActionParameters[count].value.trim().endsWith("$") ? e.target.value.autocomplete : "$"+e.target.value.autocomplete
-											selectedActionParameters[count].value += toComplete
-											selectedAction.parameters[count].value = selectedActionParameters[count].value 
-											console.log("TARGET: ", selectedActionParameters)
-											setSelectedAction(selectedAction)
-											setUpdate(Math.random())
-
-											setShowDropdown(false)
-										}}
-										>
-										{actionlist.map(data => {
-											const icon = data.type === "action" ? <AppsIcon style={{marginRight: 10}} /> : data.type === "workflow_variable" || data.type === "execution_variable" ? <FavoriteBorderIcon style={{marginRight: 10}} /> : <ScheduleIcon style={{marginRight: 10}} /> 
-
-											const handleExecArgumentHover = (inside) => {
-												var exec_text_field = document.getElementById("execution_argument_input_field")
-												if (exec_text_field !== null) {
-													if (inside) {
-														exec_text_field.style.border = "2px solid #f85a3e"
-													} else {
-														exec_text_field.style.border = ""
-													}
-												}
-
-												// Also doing arguments
-												if (workflow.triggers !== undefined && workflow.triggers !== null && workflow.triggers.length > 0) {
-													for (var key in workflow.triggers) {
-														const item = workflow.triggers[key]
-
-														var node = cy.getElementById(item.id)
-														if (node.length > 0) {
-															if (inside) {
-																node.addClass('shuffle-hover-highlight')
-															} else {
-																node.removeClass('shuffle-hover-highlight')
-															}
-														}
-
-													}
-												}
-											}
-
-											const handleActionHover = (inside, actionId) => {
-												var node = cy.getElementById(actionId)
-												if (node.length > 0) {
-													if (inside) {
-														node.addClass('shuffle-hover-highlight')
-													} else {
-														node.removeClass('shuffle-hover-highlight')
-													}
-												}
-											}
-
-											return (
-												<MenuItem key={data.name} style={{backgroundColor: inputColor, color: "white"}} value={data} onMouseOver={() => {
-													if (data.type === "Execution Argument") {
-														handleExecArgumentHover(true)
-													} else if (data.type === "action") {
-														handleActionHover(true, data.id)
-													}
-												}} onMouseOut={() => {
-													if (data.type === "Execution Argument") {
-														handleExecArgumentHover(false)
-													} else if (data.type === "action") {
-														handleActionHover(false, data.id)
-													}
-												}}>
-													<Tooltip color="primary" title={`Value: ${data.value}`} placement="left">
-														<div style={{display: "flex"}}>
-															{icon} {data.name}
-														</div>
-													</Tooltip>
-												</MenuItem>
-											)
-										})}
-									</Select>
-      					</FormControl>
+									<ActionlistWrapper actionlist={actionlist} />
 							: null}
 
 
@@ -3138,13 +3304,17 @@ const AngularWorkflow = (props) => {
 	}
 
 	function sortByKey(array, key) {
+		if (array === undefined) {
+			return []
+		}
+
 	  return array.sort(function(a, b) {
 			var x = a[key]; var y = b[key]
 			return ((x < y) ? -1 : ((x > y) ? 1 : 0))
 		})
 	}
 
-	const appApiView = Object.getOwnPropertyNames(selectedAction).length > 0 && Object.getOwnPropertyNames(selectedApp).length > 0 ? 
+	const appApiView = Object.getOwnPropertyNames(selectedAction).length > 0 ? 
 		<div style={appApiViewStyle}>
 			<div style={{display: "flex", minHeight: 40, marginBottom: 30}}>
 				<div style={{flex: 1}}>
@@ -3183,7 +3353,7 @@ const AngularWorkflow = (props) => {
 				placeholder={selectedAction.label}
 				onChange={selectedNameChange}
 			/>
-			{selectedAction.authentication.length === 0 && requiresAuthentication  ?
+			{selectedApp.name !== undefined && selectedAction.authentication !== undefined && selectedAction.authentication.length === 0 && requiresAuthentication  ?
 				<div style={{marginTop: 15}}>
 					Authenticate {selectedApp.name}: 
 					<Tooltip color="primary" title={"Add authentication option"} placement="top">
@@ -3195,7 +3365,7 @@ const AngularWorkflow = (props) => {
 					</Tooltip>
 				</div>
 			: null}
-			{selectedAction.authentication.length > 0 ? 
+			{selectedAction.authentication !== undefined && selectedAction.authentication.length > 0 ? 
 				<div style={{marginTop: "20px"}}>
 					Authentication
 					<div style={{display: "flex"}}>
@@ -3626,7 +3796,6 @@ const AngularWorkflow = (props) => {
 				// Uses the target's parents, as the target should be executing the checks (I think) 
 				var parents = getParents(workflow.actions.find(a => a.id === selectedEdge["target"]))
 				if (parents.length > 0) {
-					console.log(parents)
 					data.action_field = parents[0].label
 				} else {
 					data.action_field = ""
@@ -3790,7 +3959,6 @@ const AngularWorkflow = (props) => {
 				<DialogContent style={{display: "flex"}}>
 					<Tooltip color="primary" title={conditionValue.configuration ? "Negated" : "Default"} placement="top">
 						<Button color="primary" variant={conditionValue.configuration ? "contained" : "outlined"} style={{margin: "auto", height: 50, marginBottom: "auto", marginTop: "auto", marginRight: 5}} onClick={(e) => {
-							console.log("VALUE: ", conditionValue.configuration)
 							conditionValue.configuration = !conditionValue.configuration
 							setConditionValue(conditionValue)
 							setUpdate(Math.random())
@@ -4240,7 +4408,7 @@ const AngularWorkflow = (props) => {
 				<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 					<div style={{flex: "1"}}>
 						<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}: {selectedTrigger.status}</h3>
-						<a href="https://shuffler.io/docs/triggers#webhook" style={{textDecoration: "none", color: "#f85a3e"}}>What are webhooks?</a>
+						<a href="https://shuffler.io/docs/triggers#email" style={{textDecoration: "none", color: "#f85a3e"}}>What are email triggers?</a>
 					</div>
 				</div>
 				<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -4638,7 +4806,7 @@ const AngularWorkflow = (props) => {
 					<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 						<div style={{flex: "1"}}>
 							<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}: {selectedTrigger.status}</h3>
-							<a href="https://shuffler.io/docs/triggers#schedule" style={{textDecoration: "none", color: "#f85a3e"}}>What are schedules?</a>
+							<a href="https://shuffler.io/docs/triggers#user_input" style={{textDecoration: "none", color: "#f85a3e"}}>What are user inputs?</a>
 						</div>
 					</div>
 					<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -5019,7 +5187,7 @@ const AngularWorkflow = (props) => {
 			</Tooltip>
 			:
 			<Tooltip color="primary" title="Test execution" placement="top">
-				<Button disabled={executionRequestStarted} style={{height: boxSize, width: boxSize}} color="primary" variant="contained" onClick={() => {
+				<Button disabled={executionRequestStarted || !workflow.isValid} style={{height: boxSize, width: boxSize}} color="primary" variant="contained" onClick={() => {
 					executeWorkflow()
 				}}>
 					<PlayArrowIcon style={{ fontSize: 60}} />
@@ -5087,7 +5255,7 @@ const AngularWorkflow = (props) => {
 			return null
 		}
 
-		if (Object.getOwnPropertyNames(selectedAction).length > 0 && Object.getOwnPropertyNames(selectedApp).length > 0) {
+		if (Object.getOwnPropertyNames(selectedAction).length > 0) {
 			//console.time('ACTIONSTART')
 			return(
 				<div style={rightsidebarStyle}>	
@@ -5176,14 +5344,17 @@ const AngularWorkflow = (props) => {
 
 	const parsedExecutionArgument = () => {
 		var showResult = executionData.execution_argument.trim()
-		showResult.split(" None").join(" \"None\"")
+		showResult = showResult.split(" None").join(" \"None\"")
+		showResult = showResult.split("\'").join("\"")
+		showResult = showResult.split(" False").join(" false")
+		showResult = showResult.split(" True").join(" true")
 
 		var jsonvalid = true
 		try {
 			const tmp = String(JSON.parse(showResult))
-			if (!tmp.includes("{") && !tmp.includes("[")) {
-				jsonvalid = false
-			}
+			//if (!tmp.includes("{") && !tmp.includes("[")) {
+			//	jsonvalid = false
+			//}
 		} catch (e) {
 			jsonvalid = false
 		}
@@ -5359,22 +5530,29 @@ const AngularWorkflow = (props) => {
 					{executionData.results === undefined || executionData.results === null || executionData.results.length === 0 && executionData.status === "EXECUTING" ?
 						<CircularProgress />
 						:
-						executionData.results.map(data => {
+						executionData.results.map((data, index) => {
 							if (executionData.results.length !== 1 && !showSkippedActions && (data.status === "SKIPPED" || data.status === "FAILURE")) {
 								return null
 							}
 
-							var showResult = data.result.trim()
-							showResult.split(" None").join(" \"None\"")
 
 							// showResult = replaceAll(showResult, " None", " \"None\"")
 							// Super basic check.
+							//
+							// FIXME: The latter replace doens't really work if ' is used in a string
+							var showResult = data.result.trim()
+							showResult = showResult.split(" None").join(" \"None\"")
+							showResult = showResult.split(" False").join(" false")
+							showResult = showResult.split(" True").join(" true")
+							showResult = showResult.split("\'").join("\"")
+
 							var jsonvalid = true
 							try {
 								const tmp = String(JSON.parse(showResult))
-								if (!tmp.includes("{") && !tmp.includes("[")) {
-									jsonvalid = false
-								}
+								//if (!tmp.includes("{") && !tmp.includes("[")) {
+								//	console.log("IN HERE")
+								//	jsonvalid = false
+								//}
 							} catch (e) {
 								jsonvalid = false
 							}
@@ -5387,10 +5565,13 @@ const AngularWorkflow = (props) => {
 								<img alt={data.action.app_name} src={curapp.large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />
 
 							return (
-								<div style={{marginBottom: 40,}}>
+								<div key={index} style={{marginBottom: 40,}}>
 									<div style={{display: "flex", marginBottom: 15,}}>
 										{actionimg}
-										<span style={{fontSize: 24, marginTop: "auto", marginBottom: "auto"}}><b>{data.action.label}</b></span>
+										<div>
+											<div style={{fontSize: 24, marginTop: "auto", marginBottom: "auto"}}><b>{data.action.label}</b></div>
+											<div style={{fontSize: 14}}>{data.action.name}</div>
+										</div>
 									</div>
 									<div style={{marginBottom: 5}}><b>Status </b> {data.status}</div>
 									{jsonvalid ? <ReactJson 
@@ -5686,9 +5867,10 @@ const AngularWorkflow = (props) => {
 		}
 
 		const handleSubmitCheck = () => {
-			console.log(authenticationOption)
+			console.log("NEW AUTH: ", authenticationOption)
 			if (authenticationOption.label.length === 0) {
 				alert.info("Label can't be empty")
+				return
 			}
 
 			for (var key in selectedApp.authentication.parameters) {
@@ -5702,7 +5884,6 @@ const AngularWorkflow = (props) => {
 			selectedAction.selectedAuthentication = authenticationOption
 			selectedAction.authentication.push(authenticationOption)
 			setSelectedAction(selectedAction)
-			setUpdate(authenticationOption.id)
 
 			var newAuthOption = JSON.parse(JSON.stringify(authenticationOption))
 			var newFields = []
@@ -5717,6 +5898,9 @@ const AngularWorkflow = (props) => {
 			console.log("FIELDS: ", newFields)
 			newAuthOption.fields = newFields
 			setNewAppAuth(newAuthOption)
+			appAuthentication.push(newAuthOption)
+			setAppAuthentication(appAuthentication)
+			setUpdate(authenticationOption.id)
 		}
 
 		return (
@@ -5725,7 +5909,6 @@ const AngularWorkflow = (props) => {
 					<a href="https://shuffler.io/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is this?</a><div/>
 					These are required fields for authenticating with {selectedApp.name} 
 					<div style={{marginTop: 15}}/>
-					{selectedApp.link.length > 0 ? <EndpointData /> : null}
 					<b>Name - what is this used for?</b>
 					<TextField
 							style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
@@ -5745,6 +5928,7 @@ const AngularWorkflow = (props) => {
 								authenticationOption.label = event.target.value
 							}}
 						/>
+					{selectedApp.link.length > 0 ? <div style={{marginTop: 15}}><EndpointData /></div> : null}
 					<Divider style={{marginTop: 15, marginBottom: 15, backgroundColor: "rgb(91, 96, 100)"}}/>
 					<div style={{}}/>
 						{selectedApp.authentication.parameters.map((data, index) => { 
@@ -5795,9 +5979,10 @@ const AngularWorkflow = (props) => {
 
 	const EndpointData = () => {
 		const [tmpVar, setTmpVar] = React.useState("")
+
 		return (
 			<div>
-				The API endpoint to use (URL) - leave this if you're unsure
+				The API endpoint to use (URL) - predefined in the app
 				<TextField
 					style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
 					InputProps={{

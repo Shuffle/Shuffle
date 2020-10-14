@@ -123,8 +123,7 @@ const Settings = (props) => {
 
 			return response.json()
 		})
-    	.then((responseJson) => {
-			console.log(responseJson)
+    .then((responseJson) => {
 			setUserSettings(responseJson)
     	})
 		.catch(error => {

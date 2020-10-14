@@ -43,13 +43,31 @@ const inputColor = "#383B40"
 
 // Parses JSON data into keys that can be used everywhere :)
 export const GetParsedPaths = (inputdata, basekey) => {
-	const splitkey = " => "
+	const splitkey = " > "
 	var parsedValues = []
-	for (const [key, value] of Object.entries(inputdata)) {
+	if (typeof(inputdata) !== "object") {
+		return parsedValues
+	}
 
+	for (const [key, value] of Object.entries(inputdata)) {
 		// Check if loop or JSON
 		const extra = basekey.length > 0 ? splitkey : ""
-		const basekeyname = `${basekey.slice(1,basekey.length).split(".").join(splitkey)}${extra}${key}`
+		const basekeyname = `${basekey.slice(1, basekey.length).split(".").join(splitkey)}${extra}${key}`
+
+		// Handle direct loop!
+		if (!isNaN(key) && basekey === "") {
+			console.log("Handling direct loop.")
+			parsedValues.push({"type": "object", "name": "Node", "autocomplete": `${basekey}`})
+			parsedValues.push({"type": "list", "name": `${splitkey}list`, "autocomplete": `${basekey}.#`})
+			const returnValues = GetParsedPaths(value, `${basekey}.#`)
+			for (var subkey in returnValues) {
+				parsedValues.push(returnValues[subkey])
+			}
+
+			return parsedValues
+		}
+
+		//console.log("KEY: ", key, "VALUE: ", value, "BASEKEY: ", basekeyname)
 		if (typeof(value) === 'object') {
 			if (Array.isArray(value)) {
 				// Check if each item is object
@@ -101,6 +119,7 @@ const Apps = (props) => {
 	const [appSearchLoading, setAppSearchLoading] = React.useState(false)
 	const [selectedAction, setSelectedAction] = React.useState({})
 	const [searchBackend, setSearchBackend] = React.useState(false)
+	const [searchableApps, setSearchableApps] = React.useState([])
 
 	const [openApi, setOpenApi] = React.useState("")
 	const [openApiData, setOpenApiData] = React.useState("")
@@ -112,6 +131,7 @@ const Apps = (props) => {
 	const [openApiError, setOpenApiError] = React.useState("")
 	const [field1, setField1] = React.useState("")
 	const [field2, setField2] = React.useState("")
+	const [cursearch, setCursearch] = React.useState("")
 	const [sharingConfiguration, setSharingConfiguration] = React.useState("you")
 
 	const { start, stop } = useInterval({
@@ -165,6 +185,8 @@ const Apps = (props) => {
 		maxHeight: 130,
 		minWidth: "100%",
 		maxWidth: "100%",
+		marginBottom: 5, 
+		borderRadius: 5, 
 		color: "white",
 		backgroundColor: surfaceColor,
 		cursor: "pointer",
@@ -200,6 +222,8 @@ const Apps = (props) => {
 					setSelectedAction({})
 				}
 			} 
+			
+			runAppSearch("")
     })
 		.catch(error => {
 			alert.error(error.toString())
@@ -277,6 +301,10 @@ const Apps = (props) => {
 			boxColor = "green"
 		}
 
+		if (!data.activated && data.generated) {
+			boxColor = "orange"
+		}
+
 		var imageline = data.large_image.length === 0 ?
 			<img alt={data.title} style={{width: 100, height: 100}} />
 			: 
@@ -307,6 +335,7 @@ const Apps = (props) => {
 			description = data.description.slice(0, maxDescLen)+"..."
 		}
 
+		const version = data.app_version
 		return (
 			<Paper square key={data.id} style={paperAppStyle} onClick={() => {
 				if (selectedApp.id !== data.id) {
@@ -319,7 +348,6 @@ const Apps = (props) => {
 						setSelectedAction({})
 					}
 
-					console.log("Sharing: ", data.sharing_config)
 					if (data.sharing) {
 						setSharingConfiguration("everyone")
 					} 
@@ -375,9 +403,10 @@ const Apps = (props) => {
 
 	const dividerColor = "rgb(225, 228, 232)"
 	const uploadViewPaperStyle = {
-		minWidth: "100%",
+		minWidth: 662.5,
 		maxWidth: 662.5,
 		color: "white",
+		borderRadius: 5, 
 		backgroundColor: surfaceColor,
 		display: "flex",
 		marginBottom: 10, 
@@ -430,7 +459,7 @@ const Apps = (props) => {
 				</Tooltip>
 				</Link> : null
 
-		var activateButton = selectedApp.generated && !selectedApp.activated ?
+		const activateButton = selectedApp.generated && !selectedApp.activated ?
 			<div>
 				<Link to={activateUrl} style={{textDecoration: "none"}}>
 					<Button
@@ -458,7 +487,12 @@ const Apps = (props) => {
 			</div>
 			: null
 
-		var deleteButton = ((selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated) || (selectedApp.downloaded != undefined && selectedApp.downloaded == true)) && activateButton === null ?
+		const deleteButton = (
+				(selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated)
+				|| (selectedApp.downloaded !== undefined && selectedApp.downloaded == true) 
+				|| (!selectedApp.generated)
+			) 
+			&& activateButton === null ?
 			<Tooltip title={"Delete app"}>
 				<Button
 					variant="outlined"
@@ -507,10 +541,10 @@ const Apps = (props) => {
 
 				return (
 					<div>
-						{paths.map(data => {
+						{paths.map((data, index) => {
 							const circleSize = 10
 							return (
-								<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data} onClick={() => console.log(data.autocomplete)}>
+								<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data} onClick={() => console.log(data.autocomplete)}>
 									{data.name}
 								</MenuItem>
 							)
@@ -549,12 +583,13 @@ const Apps = (props) => {
 						{imageline}
 					</div>
 					<div style={{maxWidth: "75%", overflow: "hidden"}}>
-						<h2>{newAppname}</h2>
-						<p>{description}</p>	
+						<h2 style={{marginTop: 20, marginBottom: 0, }}>{newAppname}</h2>
+						<p style={{marginTop: 5, marginBottom: 0,}}>Version {selectedApp.app_version}</p>	
+						<p style={{marginTop: 5, marginBottom: 0}}>{description}</p>	
 					</div>
 				</div>
 				{activateButton}
-				{props.userdata.role === "admin" || props.userdata.id === selectedApp.owner ? 
+				{(props.userdata.role === "admin" || props.userdata.id === selectedApp.owner) || !selectedApp.generated ? 
 					<div>
 						{downloadButton}
 						{editButton}
@@ -742,15 +777,17 @@ const Apps = (props) => {
 		}
 
 		const searchfield = search.toLowerCase()
-		const newapps = apps.filter(data => data.name.toLowerCase().includes(searchfield) || data.description.toLowerCase().includes(searchfield))
+		var newapps = apps.filter(data => data.name.toLowerCase().includes(searchfield) || data.description.toLowerCase().includes(searchfield))
+		var tmpapps = searchableApps.filter(data => data.name.toLowerCase().includes(searchfield) || data.description.toLowerCase().includes(searchfield))
+		newapps.push(...tmpapps) 
 
-		if ((newapps.length === 0 || searchBackend) && !appSearchLoading) {
+		setFilteredApps(newapps)
+		//if ((newapps.length === 0 || searchBackend) && !appSearchLoading) {
 
-			setAppSearchLoading(true)
-			runAppSearch(searchfield)
-		} else {
-			setFilteredApps(newapps)
-		}
+		//	//setAppSearchLoading(true)
+		//	//runAppSearch(searchfield)
+		//} else {
+		//}
 	}
 
 	const appView = isLoggedIn ? 
@@ -778,17 +815,8 @@ const Apps = (props) => {
 				<div style={{flex: 1, marginLeft: 10, marginRight: 10}}>
 					<div style={{display: "flex"}}>
 						<div style={{flex: 1}}>
-							<h2>All apps</h2> 
+							<h2>Your apps ({apps.length+searchableApps.length})</h2> 
 						</div>
-						{isLoading ? <CircularProgress style={{marginTop: 13, marginRight: 15}} /> : null}
-				    <FormControlLabel
-							style={{color: "white", marginBottom: "0px", marginTop: "10px"}}
-							label={<div style={{color: "white"}}>Search OpenAPI</div>}
-							control={<Switch checked={searchBackend} onChange={() => {
-								handleSearchChange("")
-								setSearchBackend(!searchBackend)}
-							} />}
-						/>
 						<Tooltip title={"Reload apps locally"} style={{marginTop: "28px", width: "100%"}} aria-label={"Upload"}>
 							<Button
 								variant="outlined"
@@ -833,6 +861,7 @@ const Apps = (props) => {
 						placeholder={"Search apps"}
 						onChange={(event) => {
 							handleSearchChange(event.target.value)
+							setCursearch(event.target.value)
 						}}
 					/>
 					<div style={{marginTop: 15}}>
@@ -844,11 +873,18 @@ const Apps = (props) => {
 											appPaper(app)
 										)
 									})}
+									{cursearch.length > 0 ? null : 
+										searchableApps.map(app => {
+											return (
+												appPaper(app)
+											)
+										})
+									}
 								</div>
 							: 
 							<Paper square style={uploadViewPaperStyle}>
-								<h4>
-									Try a broader search term, e.g. "http", "alert", "ticket" etc. 
+								<h4 style={{margin: 10, }}>
+									Try a broader search term, e.g. http, alert, ticket etc. 
 								</h4>
 								<div/>
 
@@ -859,7 +895,7 @@ const Apps = (props) => {
 							</Paper>
 						: 
 						<Paper square style={uploadViewPaperStyle}>
-							<h4>
+							<h4 style={{margin: 10}}>
 								No apps have been created, uploaded or downloaded yet. Click "Load existing apps" above to get the baseline. This may take a while as its building docker images.
 							</h4>
 						</Paper>
@@ -939,6 +975,7 @@ const Apps = (props) => {
 			setIsLoading(false)
 			if (response.status === 200) {
 				alert.success("Hotloaded apps!")
+				getApps()
 			}
 
 			return response.json()
@@ -1045,10 +1082,10 @@ const Apps = (props) => {
 			return response.json()
 		})
     .then((responseJson) => {
-			//console.log(responseJson)
 			if (responseJson.success) {
 				if (responseJson.reason !== undefined && responseJson.reason.length > 0) {
-					setFilteredApps(responseJson.reason)
+					setSearchableApps(responseJson.reason)
+					//setFilteredApps(responseJson.reason)
 				}
 			}
     })

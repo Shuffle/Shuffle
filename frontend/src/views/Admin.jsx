@@ -36,9 +36,16 @@ const Admin = (props) => {
 	const [firstRequest, setFirstRequest] = React.useState(true);
 	const [modalUser, setModalUser] = React.useState({});
 	const [modalOpen, setModalOpen] = React.useState(false);
+
+	const [cloudSyncModalOpen, setCloudSyncModalOpen] = React.useState(false);
+	const [cloudSyncApikey, setCloudSyncApikey] = React.useState("");
+	const [loading, setLoading] = React.useState(false);
+
+	const [selectedOrganization, setSelectedOrganization] = React.useState({});
 	const [loginInfo, setLoginInfo] = React.useState("");
 	const [curTab, setCurTab] = React.useState(0);
 	const [users, setUsers] = React.useState([]);
+	const [organizations, setOrganizations] = React.useState([]);
 	const [environments, setEnvironments] = React.useState([]);
 	const [authentication, setAuthentication] = React.useState([]);
 	const [schedules, setSchedules] = React.useState([])
@@ -172,6 +179,41 @@ const Admin = (props) => {
 			)
 			.catch(error => {
 				console.log("Error in userdata: ", error)
+			});
+	}
+
+	const enableCloudSync = (apikey, organization) => {
+		const data = { 
+			apikey: apikey,
+			organization: organization,
+		}
+
+		const url = globalUrl + '/api/v1/cloud/setup';
+		fetch(url, {
+			mode: 'cors',
+			method: 'POST',
+			body: JSON.stringify(data),
+			credentials: 'include',
+			crossDomain: true,
+			withCredentials: true,
+			headers: {
+				'Content-Type': 'application/json; charset=utf-8',
+			},
+		})
+			.then(response =>
+				response.json().then(responseJson => {
+					setLoading(false)
+					console.log(responseJson)
+					if (responseJson["success"] === false) {
+						alert.error("Failed setting up cloud sync")
+					} else {
+						alert.success("Set up cloud sync!")
+					}
+				}),
+			)
+			.catch(error => {
+				setLoading(false)
+				alert.error("Err: " + error.toString())
 			});
 	}
 
@@ -471,6 +513,31 @@ const Admin = (props) => {
 			});
 	}
 
+	const getOrgs = () => {
+		fetch(globalUrl + "/api/v1/getorgs", {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+			credentials: "include",
+		})
+			.then((response) => {
+				if (response.status !== 200) {
+					console.log("Status not 200 for apps :O!")
+					return
+				}
+
+				return response.json()
+			})
+			.then((responseJson) => {
+				setOrganizations(responseJson)
+			})
+			.catch(error => {
+				alert.error(error.toString())
+			});
+	}
+
 	const getUsers = () => {
 		fetch(globalUrl + "/api/v1/getusers", {
 			method: 'GET',
@@ -482,7 +549,7 @@ const Admin = (props) => {
 		})
 			.then((response) => {
 				if (response.status !== 200) {
-					console.log("Status not 200 for apps :O!")
+					window.location.pathname = "/workflows"
 					return
 				}
 
@@ -713,8 +780,69 @@ const Admin = (props) => {
 			</DialogContent>
 		</Dialog>
 
+	const cloudSyncModal =
+		<Dialog 
+			open={cloudSyncModalOpen}
+			onClose={() => { setCloudSyncModalOpen(false) }}
+			PaperProps={{
+				style: {
+					backgroundColor: theme.palette.surfaceColor,
+					color: "white",
+					minWidth: "800px",
+					minHeight: "320px",
+				},
+			}}
+		>
+			<DialogTitle><span style={{ color: "white" }}>
+				Enable cloud features
+			</span></DialogTitle>
+			<DialogContent>
+				What does <a href="https://shuffler.io/docs/hybrid#cloud_sync" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>cloud sync</a> do?
+				<div style={{marginTop: 5}}/>
+				Cloud Apikey
+				<div style={{display: "flex", marginBottom: 20, }}>
+					<TextField
+						color="primary"
+						style={{backgroundColor: theme.palette.inputColor, marginRight: 10, }}
+						InputProps={{
+							style: {
+								height: "50px",
+								color: "white",
+								fontSize: "1em",
+							},
+						}}
+						required
+						fullWidth={true}
+						autoComplete="cloud apikey"
+						id="apikey_field"
+						margin="normal"
+						placeholder="Cloud Apikey"
+						variant="outlined"
+						onChange={(event) => {
+							setCloudSyncApikey(event.target.value)
+						}}
+					/>
+					<Button disabled={cloudSyncApikey.length === 0 || loading} variant="contained" style={{ marginLeft: 15, height: 60, margin: "auto", borderRadius: "0px" }} onClick={() => {
+						setLoading(true)
+						enableCloudSync(
+							cloudSyncApikey,
+							selectedOrganization,
+						)
+					}} color="primary">
+						Test sync	
+					</Button>
+				</div>
+
+				* New triggers (userinput, hotmail realtime)<div/>
+				* Execute in the cloud rather than onprem<div/>
+				* Apps can be built in the cloud<div/>
+				*	Easily share apps and workflows<div/>
+				*	Access to powerful cloud search
+			</DialogContent>
+		</Dialog>
+
 	const modalView =
-		<Dialog modal
+		<Dialog 
 			open={modalOpen}
 			onClose={() => { setModalOpen(false) }}
 			PaperProps={{
@@ -1229,7 +1357,10 @@ const Admin = (props) => {
 				style={{}} 
 				variant="contained"
 				color="primary"
-				onClick={() => setModalOpen(true)}
+				disabled
+				onClick={() => {
+					setModalOpen(true)
+				}}
 			> 
 				Add organization 
 			</Button>
@@ -1241,28 +1372,58 @@ const Admin = (props) => {
 						style={{minWidth: 150, maxWidth: 150}}
 					/>
 					<ListItemText
-						primary="Orborus running (TBD)"
+						primary="id"
 						style={{minWidth: 200, maxWidth: 200}}
 					/>
 					<ListItemText
-						primary="Actions"
+						primary="Your role"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="Selected"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="Cloud Sync"
 						style={{minWidth: 150, maxWidth: 150}}
 					/>
 				</ListItem>
-				<ListItem>
-					<ListItemText
-						primary="Enabled"
-						style={{minWidth: 150, maxWidth: 150}}
-					/>
-					<ListItemText
-						primary="false"
-						style={{minWidth: 200, maxWidth: 200}}
-					/>
-					<ListItemText
-						primary=<Switch checked={false} onChange={() => {console.log("INVERT")}} />
-						style={{minWidth: 150, maxWidth: 150}}
-					/>
-				</ListItem>
+				{organizations !== undefined && organizations !== null && organizations.length > 0 ? 
+					<span>
+						{organizations.map((data, index) => {
+							const isSelected = props.userdata.active_org.id === undefined ? "False" : props.userdata.active_org.id === data.id ? "True" : "False"
+
+							return (
+								<ListItem key={index}>
+									<ListItemText
+										primary={data.name}
+										style={{minWidth: 150, maxWidth: 150}}
+									/>
+									<ListItemText
+										primary={data.id}
+										style={{minWidth: 200, maxWidth: 200}}
+									/>
+									<ListItemText
+										primary={data.role}
+										style={{minWidth: 150, maxWidth: 150}}
+									/>
+									<ListItemText
+										primary={isSelected}
+										style={{minWidth: 150, maxWidth: 150}}
+									/>
+									<ListItemText
+										primary=<Switch checked={data.cloud_sync} onChange={() => {
+											setCloudSyncModalOpen(true)
+											setSelectedOrganization(data)
+											console.log("INVERT CLOUD SYNC")
+										}} />
+										style={{minWidth: 150, maxWidth: 150}}
+									/>
+								</ListItem>
+							)
+						})}
+					</span>
+				: null}
 			</List>
 		</div>
 		: null
@@ -1316,6 +1477,8 @@ const Admin = (props) => {
 			getEnvironments()
 		} else if (newValue === 3) {
 			getSchedules()
+		} else if (newValue === 5) {
+			getOrgs() 
 		}
 
 		if (newValue === 6) {
@@ -1360,6 +1523,7 @@ const Admin = (props) => {
 	return (
 		<div>
 			{modalView}
+			{cloudSyncModal}
 			{editUserModal}
 			{editAuthenticationModal}
 			{data}

@@ -128,7 +128,7 @@ const App = (message, props) => {
 			<Route exact path="/oauth2" render={props => <Oauth2 isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/contact" render={props => <Contact isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/login" render={props => <LoginPage isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
-			<Route exact path="/admin" render={props => <Admin isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
+			<Route exact path="/admin" render={props => <Admin userdata={userdata} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
 			<Route exact path="/admin/:key" render={props => <Admin isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
 			<Route exact path="/settings" render={props => <SettingsPage isLoaded={isLoaded} userdata={userdata} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/AdminSetup" render={props => <AdminSetup isLoaded={isLoaded} userdata={userdata} globalUrl={globalUrl} {...props} />} />
@@ -141,12 +141,12 @@ const App = (message, props) => {
 			<Route exact path="/apps/edit/:appid" render={props => <AppCreator isLoaded={isLoaded} isLoggedIn={isLoggedIn} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/schedules/:key" render={props => <EditSchedule globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/workflows" render={props => <Workflows isLoaded={isLoaded} isLoggedIn={isLoggedIn} globalUrl={globalUrl} cookies={cookies} {...props} />} />
-			<Route exact path="/workflows/:key" render={props => <AngularWorkflow globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} {...props} />} />
+			<Route exact path="/workflows/:key" render={props => <AngularWorkflow userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} {...props} />} />
 			<Route exact path="/docs/:key" render={props => <Docs isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/docs" render={props => { window.location.pathname = "/docs/about" }} />
 			<Route exact path="/introduction" render={props => <Introduction isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/introduction/:key" render={props => <Introduction isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
-			<Route exact path="/" render={props => { window.location.pathname = "/login" }} />
+			<Route exact path="/" render={props => <LoginPage isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
 		</div>
 
 	// <div style={{backgroundColor: "rgba(21, 32, 43, 1)", color: "#fffff", minHeight: "100vh"}}>

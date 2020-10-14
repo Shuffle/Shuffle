@@ -310,20 +310,12 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 
 	// Specific check for SSL verification
 	// This is critical for onprem stuff.
-	verifyParam := ""
-	verifyWrapper := ""
-	verifyAddin := ""
-	if len(swagger.Servers) == 0 {
-		verifyParam = ", verify=True"
-		verifyWrapper = `if type(ssl_verify) == str: ssl_verify = False if ssl_verify.lower() == "false" or ssl_verify == "0" else True`
-		verifyAddin = ", verify=ssl_verify"
-	} else {
-		if swagger.Servers[0].URL == "" {
-			verifyParam = ", ssl_verify=True"
-			verifyWrapper = `if type(ssl_verify) == str: ssl_verify = False if ssl_verify.lower() == "false" or ssl_verify == "0" else True`
-			verifyAddin = ", verify=ssl_verify"
-		}
-	}
+	//verifyParam := ""
+	//verifyWrapper := ""
+	//verifyAddin := ""
+	verifyParam := ", ssl_verify=False"
+	verifyWrapper := `if type(ssl_verify) == str: ssl_verify = False if ssl_verify.lower() == "false" or ssl_verify == "0" else True`
+	verifyAddin := ", verify=ssl_verify"
 
 	if len(parameters) > 0 {
 		parameterData = fmt.Sprintf(", %s", strings.Join(parameters, ", "))
@@ -404,11 +396,10 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 		bodyAddin,
 		verifyAddin,
 	)
-
-	if strings.Contains(functionname, "get_returns_the_vuln") {
-		log.Println(data)
-		log.Printf("Queries: %s", queryString)
-	}
+	//if strings.Contains(functionname, "get_returns_the_vuln") {
+	//	log.Println(data)
+	//	log.Printf("Queries: %s", queryString)
+	//}
 
 	//log.Printf(data)
 	return functionname, data
@@ -562,7 +553,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 			})
 		} else if securitySchemes["BasicAuth"] != nil {
 			api.Authentication.Parameters = append(api.Authentication.Parameters, AuthenticationParams{
-				Name:        "username_auth",
+				Name:        "username_basic",
 				Value:       "",
 				Example:     "username",
 				Description: securitySchemes["BasicAuth"].Value.Description,
@@ -574,7 +565,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 			})
 
 			api.Authentication.Parameters = append(api.Authentication.Parameters, AuthenticationParams{
-				Name:        "password_auth",
+				Name:        "password_basic",
 				Value:       "",
 				Example:     "*****",
 				Description: securitySchemes["BasicAuth"].Value.Description,
@@ -975,31 +966,16 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 	optionalQueries := []string{}
 	parameters := []string{}
 	optionalParameters := []WorkflowAppActionParameter{}
-	if len(swagger.Servers) == 0 {
-		optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
-			Name:        "ssl_verify",
-			Description: "Check if you want to verify request",
-			Multiline:   false,
-			Required:    false,
-			Example:     "True",
-			Schema: SchemaDefinition{
-				Type: "string",
-			},
-		})
-	} else {
-		if swagger.Servers[0].URL == "" {
-			optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
-				Name:        "ssl_verify",
-				Description: "Check if you want to verify request",
-				Multiline:   false,
-				Required:    false,
-				Example:     "True",
-				Schema: SchemaDefinition{
-					Type: "string",
-				},
-			})
-		}
-	}
+	optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
+		Name:        "ssl_verify",
+		Description: "Check if you want to verify request",
+		Multiline:   false,
+		Required:    false,
+		Example:     "True",
+		Schema: SchemaDefinition{
+			Type: "string",
+		},
+	})
 
 	headersFound := []string{}
 	if len(path.Connect.Parameters) > 0 {
@@ -1124,31 +1100,16 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 	// FIXME - remove this when authentication is properly introduced
 	parameters := []string{}
 	optionalParameters := []WorkflowAppActionParameter{}
-	if len(swagger.Servers) == 0 {
-		optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
-			Name:        "ssl_verify",
-			Description: "Check if you want to verify the SSL certificate request",
-			Multiline:   false,
-			Required:    false,
-			Example:     "False - default=True",
-			Schema: SchemaDefinition{
-				Type: "string",
-			},
-		})
-	} else {
-		if swagger.Servers[0].URL == "" {
-			optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
-				Name:        "ssl_verify",
-				Description: "Check if you want to verify request",
-				Multiline:   false,
-				Required:    false,
-				Example:     "True",
-				Schema: SchemaDefinition{
-					Type: "string",
-				},
-			})
-		}
-	}
+	optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
+		Name:        "ssl_verify",
+		Description: "Check if you want to verify the SSL certificate request",
+		Multiline:   false,
+		Required:    false,
+		Example:     "False - default=True",
+		Schema: SchemaDefinition{
+			Type: "string",
+		},
+	})
 
 	headersFound := []string{}
 	if len(path.Get.Parameters) > 0 {
@@ -1273,31 +1234,16 @@ func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 	optionalQueries := []string{}
 	parameters := []string{}
 	optionalParameters := []WorkflowAppActionParameter{}
-	if len(swagger.Servers) == 0 {
-		optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
-			Name:        "ssl_verify",
-			Description: "Check if you want to verify request",
-			Multiline:   false,
-			Required:    false,
-			Example:     "True",
-			Schema: SchemaDefinition{
-				Type: "string",
-			},
-		})
-	} else {
-		if swagger.Servers[0].URL == "" {
-			optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
-				Name:        "ssl_verify",
-				Description: "Check if you want to verify request",
-				Multiline:   false,
-				Required:    false,
-				Example:     "True",
-				Schema: SchemaDefinition{
-					Type: "string",
-				},
-			})
-		}
-	}
+	optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
+		Name:        "ssl_verify",
+		Description: "Check if you want to verify request",
+		Multiline:   false,
+		Required:    false,
+		Example:     "True",
+		Schema: SchemaDefinition{
+			Type: "string",
+		},
+	})
 
 	headersFound := []string{}
 	if len(path.Head.Parameters) > 0 {
@@ -1422,31 +1368,16 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 	optionalQueries := []string{}
 	parameters := []string{}
 	optionalParameters := []WorkflowAppActionParameter{}
-	if len(swagger.Servers) == 0 {
-		optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
-			Name:        "ssl_verify",
-			Description: "Check if you want to verify request",
-			Multiline:   false,
-			Required:    false,
-			Example:     "True",
-			Schema: SchemaDefinition{
-				Type: "string",
-			},
-		})
-	} else {
-		if swagger.Servers[0].URL == "" {
-			optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
-				Name:        "ssl_verify",
-				Description: "Check if you want to verify request",
-				Multiline:   false,
-				Required:    false,
-				Example:     "True",
-				Schema: SchemaDefinition{
-					Type: "string",
-				},
-			})
-		}
-	}
+	optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
+		Name:        "ssl_verify",
+		Description: "Check if you want to verify request",
+		Multiline:   false,
+		Required:    false,
+		Example:     "True",
+		Schema: SchemaDefinition{
+			Type: "string",
+		},
+	})
 
 	headersFound := []string{}
 	if len(path.Delete.Parameters) > 0 {
@@ -1570,31 +1501,16 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 	optionalQueries := []string{}
 	parameters := []string{}
 	optionalParameters := []WorkflowAppActionParameter{}
-	if len(swagger.Servers) == 0 {
-		optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
-			Name:        "ssl_verify",
-			Description: "Check if you want to verify request",
-			Multiline:   false,
-			Required:    false,
-			Example:     "True",
-			Schema: SchemaDefinition{
-				Type: "string",
-			},
-		})
-	} else {
-		if swagger.Servers[0].URL == "" {
-			optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
-				Name:        "ssl_verify",
-				Description: "Check if you want to verify request",
-				Multiline:   false,
-				Required:    false,
-				Example:     "True",
-				Schema: SchemaDefinition{
-					Type: "string",
-				},
-			})
-		}
-	}
+	optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
+		Name:        "ssl_verify",
+		Description: "Check if you want to verify request",
+		Multiline:   false,
+		Required:    false,
+		Example:     "True",
+		Schema: SchemaDefinition{
+			Type: "string",
+		},
+	})
 
 	headersFound := []string{}
 	if len(path.Post.Parameters) > 0 {
@@ -1718,31 +1634,16 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 	optionalQueries := []string{}
 	parameters := []string{}
 	optionalParameters := []WorkflowAppActionParameter{}
-	if len(swagger.Servers) == 0 {
-		optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
-			Name:        "ssl_verify",
-			Description: "Check if you want to verify request",
-			Multiline:   false,
-			Required:    false,
-			Example:     "True",
-			Schema: SchemaDefinition{
-				Type: "string",
-			},
-		})
-	} else {
-		if swagger.Servers[0].URL == "" {
-			optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
-				Name:        "ssl_verify",
-				Description: "Check if you want to verify request",
-				Multiline:   false,
-				Required:    false,
-				Example:     "True",
-				Schema: SchemaDefinition{
-					Type: "string",
-				},
-			})
-		}
-	}
+	optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
+		Name:        "ssl_verify",
+		Description: "Check if you want to verify request",
+		Multiline:   false,
+		Required:    false,
+		Example:     "True",
+		Schema: SchemaDefinition{
+			Type: "string",
+		},
+	})
 
 	headersFound := []string{}
 	if len(path.Patch.Parameters) > 0 {
@@ -1866,31 +1767,16 @@ func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 	optionalQueries := []string{}
 	parameters := []string{}
 	optionalParameters := []WorkflowAppActionParameter{}
-	if len(swagger.Servers) == 0 {
-		optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
-			Name:        "ssl_verify",
-			Description: "Check if you want to verify request",
-			Multiline:   false,
-			Required:    false,
-			Example:     "True",
-			Schema: SchemaDefinition{
-				Type: "string",
-			},
-		})
-	} else {
-		if swagger.Servers[0].URL == "" {
-			optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
-				Name:        "ssl_verify",
-				Description: "Check if you want to verify request",
-				Multiline:   false,
-				Required:    false,
-				Example:     "True",
-				Schema: SchemaDefinition{
-					Type: "string",
-				},
-			})
-		}
-	}
+	optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
+		Name:        "ssl_verify",
+		Description: "Check if you want to verify request",
+		Multiline:   false,
+		Required:    false,
+		Example:     "True",
+		Schema: SchemaDefinition{
+			Type: "string",
+		},
+	})
 
 	headersFound := []string{}
 	if len(path.Put.Parameters) > 0 {

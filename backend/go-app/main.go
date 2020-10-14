@@ -150,7 +150,7 @@ type UserAuth struct {
 
 type UserAuthField struct {
 	Key   string `json:"key" datastore:"key"`
-	Value string `json:"value" datastore:"value"`
+	Value string `json:"value" datastore:"value,noindex"`
 }
 
 // Not environment, but execution environment
@@ -181,6 +181,7 @@ type User struct {
 	Id                string        `datastore:"id" json:"id"`
 	Orgs              []string      `datastore:"orgs" json:"orgs"`
 	CreationTime      int64         `datastore:"creation_time" json:"creation_time"`
+	ActiveOrg         Org           `json:"active_org" datastore:"active_org"`
 	Active            bool          `datastore:"active" json:"active"`
 }
 
@@ -209,7 +210,7 @@ type Contact struct {
 type Translator struct {
 	Src struct {
 		Name        string `json:"name" datastore:"name"`
-		Value       string `json:"value" datastore:"value"`
+		Value       string `json:"value" datastore:"value,noindex"`
 		Description string `json:"description" datastore:"description,noindex"`
 		Required    string `json:"required" datastore:"required"`
 		Type        string `json:"type" datastore:"type"`
@@ -219,7 +220,7 @@ type Translator struct {
 	} `json:"src" datastore:"src"`
 	Dst struct {
 		Name        string `json:"name" datastore:"name"`
-		Value       string `json:"value" datastore:"value"`
+		Value       string `json:"value" datastore:"value,noindex"`
 		Type        string `json:"type" datastore:"type"`
 		Description string `json:"description" datastore:"description,noindex"`
 		Required    string `json:"required" datastore:"required"`
@@ -231,7 +232,7 @@ type Translator struct {
 
 type Appconfig struct {
 	Key   string `json:"key" datastore:"key"`
-	Value string `json:"value" datastore:"value"`
+	Value string `json:"value" datastore:"value,noindex"`
 }
 
 type ScheduleApp struct {
@@ -1013,13 +1014,13 @@ func handleSetEnvironments(resp http.ResponseWriter, request *http.Request) {
 	user, err := handleApiAuthentication(resp, request)
 	if err != nil {
 		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Can't register without being admin"}`))
+		resp.Write([]byte(`{"success": false, "reason": "Can't handle set env auth"}`))
 		return
 	}
 
 	if user.Role != "admin" {
 		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Can't register without being admin"}`))
+		resp.Write([]byte(`{"success": false, "reason": "Can't set environment without being admin"}`))
 		return
 	}
 
@@ -1097,7 +1098,7 @@ func handleSetEnvironments(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(`{"success": true}`))
 }
 
-func createNewUser(username, password, role, apikey string) error {
+func createNewUser(username, password, role, apikey string, org Org) error {
 	// Returns false if there is an issue
 	// Use this for register
 	err := checkPasswordStrength(password)
@@ -1137,7 +1138,7 @@ func createNewUser(username, password, role, apikey string) error {
 	newUser.Verified = false
 	newUser.CreationTime = time.Now().Unix()
 	newUser.Active = true
-	newUser.Orgs = []string{"default"}
+	newUser.Orgs = []string{org.Id}
 
 	// FIXME - Remove this later
 	if role == "admin" {
@@ -1147,6 +1148,8 @@ func createNewUser(username, password, role, apikey string) error {
 		newUser.Role = "user"
 		newUser.Roles = []string{"user"}
 	}
+
+	newUser.ActiveOrg = org
 
 	if len(apikey) > 0 {
 		newUser.ApiKey = apikey
@@ -1182,25 +1185,25 @@ func createNewUser(username, password, role, apikey string) error {
 		log.Printf("Error adding User %s: %s", username, err)
 		return err
 	}
-	url := fmt.Sprintf("https://shuffler.io/register/%s", verifyToken.String())
-	const verifyMessage = `
-Registration URL :)
-
-%s
-	`
-	addr := newUser.Username
-
-	msg := &mail.Message{
-		Sender:  "Shuffle <frikky@shuffler.io>",
-		To:      []string{addr},
-		Subject: "Verify your username - Shuffle",
-		Body:    fmt.Sprintf(verifyMessage, url),
-	}
-
-	log.Println(msg.Body)
-	if err := mail.Send(ctx, msg); err != nil {
-		log.Printf("Couldn't send email: %v", err)
-	}
+	//	url := fmt.Sprintf("https://shuffler.io/register/%s", verifyToken.String())
+	//	const verifyMessage = `
+	//Registration URL :)
+	//
+	//%s
+	//	`
+	//	addr := newUser.Username
+	//
+	//	msg := &mail.Message{
+	//		Sender:  "Shuffle <frikky@shuffler.io>",
+	//		To:      []string{addr},
+	//		Subject: "Verify your username - Shuffle",
+	//		Body:    fmt.Sprintf(verifyMessage, url),
+	//	}
+	//
+	//	log.Println(msg.Body)
+	//	if err := mail.Send(ctx, msg); err != nil {
+	//		log.Printf("Couldn't send email: %v", err)
+	//	}
 
 	err = increaseStatisticsField(ctx, "successful_register", username, 1)
 	if err != nil {
@@ -1249,7 +1252,8 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 	if count == 0 {
 		role = "admin"
 	}
-	err = createNewUser(data.Username, data.Password, role, "")
+
+	err = createNewUser(data.Username, data.Password, role, "", user.ActiveOrg)
 	if err != nil {
 		log.Printf("Failed registering user: %s", err)
 		resp.WriteHeader(401)
@@ -1623,6 +1627,10 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 
 	// This is a long check to see if an inactive admin can access the site
 	parsedAdmin := "false"
+	if userInfo.Role == "admin" {
+		parsedAdmin = "true"
+	}
+
 	if !userInfo.Active {
 		if userInfo.Role == "admin" {
 			parsedAdmin = "true"
@@ -1692,16 +1700,66 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		Expires: expiration,
 	})
 
+	// Updating user info if there's something wrong
+	if (len(userInfo.ActiveOrg.Name) == 0 || len(userInfo.ActiveOrg.Id) == 0) && len(userInfo.Orgs) > 0 {
+		_, err := getOrg(ctx, userInfo.Orgs[0])
+		if err != nil {
+			var orgs []Org
+			q := datastore.NewQuery("Organizations")
+			_, err = dbclient.GetAll(ctx, q, &orgs)
+			if err == nil {
+				newStringOrgs := []string{}
+				newOrgs := []Org{}
+				for _, org := range orgs {
+					if strings.ToLower(org.Name) == strings.ToLower(userInfo.Orgs[0]) {
+						newOrgs = append(newOrgs, org)
+						newStringOrgs = append(newStringOrgs, org.Id)
+					}
+				}
+
+				if len(newOrgs) > 0 {
+					userInfo.ActiveOrg = newOrgs[0]
+					userInfo.Orgs = newStringOrgs
+
+					err = setUser(ctx, &userInfo)
+					if err != nil {
+						log.Printf("Error patching User for activeOrg: %s", err)
+					} else {
+						log.Printf("Updated the users' org")
+					}
+				}
+			} else {
+				log.Printf("Failed getting orgs for user. Major issue.: %s", err)
+			}
+
+		} else {
+			// 1. Check if the org exists by ID
+			// 2. if it does, overwrite user
+			userInfo.ActiveOrg = Org{
+				Id: userInfo.Orgs[0],
+			}
+			err = setUser(ctx, &userInfo)
+			if err != nil {
+				log.Printf("Error patching User for activeOrg: %s", err)
+			}
+		}
+	}
+
+	currentOrg, err := json.Marshal(userInfo.ActiveOrg)
+	if err != nil {
+		currentOrg = []byte("{}")
+	}
+
 	returnData := fmt.Sprintf(`
 	{
 		"success": true, 
 		"admin": %s, 
 		"tutorials": [],
 		"id": "%s",
-		"orgs": [{"name": "Shuffle", "id": "123", "role": "admin"}], 
-		"selected_org": {"name": "Shuffle", "id": "123", "role": "admin"}, 
+		"orgs": [%s], 
+		"active_org": %s,
 		"cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]
-	}`, parsedAdmin, userInfo.Id, userInfo.Session, expiration.Unix())
+	}`, parsedAdmin, userInfo.Id, currentOrg, currentOrg, userInfo.Session, expiration.Unix())
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(returnData))
@@ -1973,7 +2031,7 @@ func handlePasswordChange(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		if len(users) != 1 {
-			log.Printf(`Found multiple users with the same username: %s: %d`, t.Username, len(users))
+			log.Printf(`Found multiple or no users with the same username: %s: %d`, t.Username, len(users))
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Found %d users with the same username: %s (%d)"}`, len(users), t.Username)))
 			return
@@ -2166,6 +2224,61 @@ func handleGetEnvironments(resp http.ResponseWriter, request *http.Request) {
 	resp.Write(newjson)
 }
 
+func handleGetOrgs(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	user, err := handleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("Api authentication failed in set new workflowhandler: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Role != "admin" {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Not admin"}`))
+		return
+	}
+
+	ctx := context.Background()
+	var orgs []Org
+	q := datastore.NewQuery("Organizations")
+	_, err = dbclient.GetAll(ctx, q, &orgs)
+	if err != nil {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Can't get users"}`))
+		return
+	}
+
+	//newUsers := []User{}
+	//for _, item := range users {
+	//	if len(item.Username) == 0 {
+	//		continue
+	//	}
+
+	//	item.Password = ""
+	//	item.Session = ""
+	//	item.VerificationToken = ""
+
+	//	newUsers = append(newUsers, item)
+	//}
+
+	newjson, err := json.Marshal(orgs)
+	if err != nil {
+		log.Printf("Failed unmarshal: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed unpacking"}`)))
+		return
+	}
+
+	resp.WriteHeader(200)
+	resp.Write(newjson)
+}
+
 func handleGetUsers(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -2281,7 +2394,7 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if len(users) != 1 {
-		log.Printf(`Found multiple users with the same username: %s: %d`, data.Username, len(users))
+		log.Printf(`Found multiple or no users with the same username: %s: %d`, data.Username, len(users))
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Found %d users with the same username: %s"}`, len(users), data.Username)))
 		return
@@ -2381,6 +2494,28 @@ func getSession(ctx context.Context, thissession string) (*session, error) {
 	}
 
 	return curUser, nil
+}
+
+// ListBooks returns a list of books, ordered by title.
+func getOrg(ctx context.Context, id string) (*Org, error) {
+	key := datastore.NameKey("Organizations", id, nil)
+	curOrg := &Org{}
+	if err := dbclient.Get(ctx, key, curOrg); err != nil {
+		return &Org{}, err
+	}
+
+	return curOrg, nil
+}
+
+func setOrg(ctx context.Context, data Org, id string) error {
+	// clear session_token and API_token for user
+	k := datastore.NameKey("Organizations", id, nil)
+	if _, err := dbclient.Put(ctx, k, &data); err != nil {
+		log.Println(err)
+		return err
+	}
+
+	return nil
 }
 
 // ListBooks returns a list of books, ordered by title.
@@ -2946,6 +3081,7 @@ func getSpecificWebhook(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
+	// FIXME: Schedule = trigger?
 	schedule, err := getSchedule(ctx, workflowId)
 	if err != nil {
 		log.Printf("Failed setting schedule: %s", err)
@@ -4781,8 +4917,8 @@ func setTriggerAuth(ctx context.Context, trigger TriggerAuth) error {
 func getOutlookClient(ctx context.Context, code string, accessToken OauthToken, redirectUri string) (*http.Client, *oauth2.Token, error) {
 
 	conf := &oauth2.Config{
-		ClientID:     "70e37005-c954-4290-b573-d4b94e484336",
-		ClientSecret: ".eNw/A[kQFB5zL.agvRputdEJENeJ392",
+		ClientID:     "",
+		ClientSecret: "",
 		Scopes: []string{
 			"Mail.Read",
 			"User.Read",
@@ -6233,6 +6369,91 @@ func runInit(ctx context.Context) {
 		}
 	*/
 
+	setUsers := false
+	orgQuery := datastore.NewQuery("Organizations")
+	var activeOrgs []Org
+	_, err = dbclient.GetAll(ctx, orgQuery, &activeOrgs)
+	if err != nil {
+		log.Printf("Error getting organizations!")
+	} else {
+		// Add all users to it
+		if len(activeOrgs) == 1 {
+			setUsers = true
+		}
+
+		log.Printf("Organizations exist!")
+		if len(activeOrgs) == 0 {
+			log.Printf(`No orgs. Setting org "default"`)
+			orgSetupName := "default"
+			orgId := uuid.NewV4().String()
+			newOrg := Org{
+				Name:      orgSetupName,
+				Id:        orgId,
+				Org:       orgSetupName,
+				Users:     []User{},
+				Roles:     []string{"admin", "user"},
+				CloudSync: false,
+			}
+
+			err = setOrg(ctx, newOrg, orgId)
+			if err != nil {
+				log.Printf("Failed setting organization: %s", err)
+			} else {
+				log.Printf("Successfully created the default org!")
+				setUsers = true
+			}
+		} else {
+			log.Printf("There are %d org(s).", len(activeOrgs))
+		}
+	}
+
+	// Adding the users to the base organization since only one exists (default)
+	if setUsers && len(activeOrgs) > 0 {
+		activeOrg := activeOrgs[0]
+
+		q := datastore.NewQuery("Users")
+		var users []User
+		_, err = dbclient.GetAll(ctx, q, &users)
+		if err == nil {
+			setOrgBool := false
+			for _, user := range users {
+				newUser := User{
+					Username: user.Username,
+					Id:       user.Id,
+					ActiveOrg: Org{
+						Id: activeOrg.Id,
+					},
+					Orgs: []string{activeOrg.Id},
+					Role: user.Role,
+				}
+
+				found := false
+				for _, orgUser := range activeOrg.Users {
+					if user.Id == orgUser.Id {
+						found = true
+					}
+				}
+
+				if !found && len(user.Username) > 0 {
+					log.Printf("Adding user %s to org %s", user.Username, activeOrg.Name)
+					activeOrg.Users = append(activeOrg.Users, newUser)
+					setOrgBool = true
+				}
+			}
+
+			if setOrgBool {
+				err = setOrg(ctx, activeOrg, activeOrg.Id)
+				if err != nil {
+					log.Printf("Failed setting org %s: %s!", activeOrg.Name, err)
+				} else {
+					log.Printf("UPDATED org %s!", activeOrg.Name)
+				}
+			}
+		}
+
+		log.Printf("Should add %d users to organization default", len(users))
+	}
+
 	// Fix active users etc
 	q := datastore.NewQuery("Users").Filter("active =", true)
 	var activeusers []User
@@ -6243,6 +6464,7 @@ func runInit(ctx context.Context) {
 		q := datastore.NewQuery("Users")
 		var users []User
 		_, err := dbclient.GetAll(ctx, q, &users)
+
 		if len(activeusers) == 0 && len(users) > 0 {
 			log.Printf("No active users found - setting ALL to active")
 			if err == nil {
@@ -6258,7 +6480,12 @@ func runInit(ctx context.Context) {
 					}
 
 					if len(user.Orgs) == 0 {
-						user.Orgs = []string{"default"}
+						defaultName := "default"
+						user.Orgs = []string{defaultName}
+						user.ActiveOrg = Org{
+							Name: defaultName,
+							Role: "user",
+						}
 					}
 
 					err = setUser(ctx, &user)
@@ -6281,7 +6508,11 @@ func runInit(ctx context.Context) {
 				log.Printf("SHUFFLE_DEFAULT_USERNAME and SHUFFLE_DEFAULT_PASSWORD not defined as environments. Running without default user.")
 			} else {
 				apikey := os.Getenv("SHUFFLE_DEFAULT_APIKEY")
-				err = createNewUser(username, password, "admin", apikey)
+
+				tmpOrg := Org{
+					Name: "default",
+				}
+				err = createNewUser(username, password, "admin", apikey, tmpOrg)
 				if err != nil {
 					log.Printf("Failed to create default user %s: %s", username, err)
 				} else {
@@ -6449,6 +6680,164 @@ func runInit(ctx context.Context) {
 	log.Printf("Finished INIT")
 }
 
+// INFO: https://docs.google.com/drawings/d/1JJebpPeEVEbmH_qsAC6zf9Noygp7PytvesrkhE19QrY/edit
+func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	user, err := handleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("Api authentication failed in verify swagger: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Role != "admin" {
+		log.Printf("Not admin.")
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Not admin"}`))
+		return
+	}
+
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Failed reading body"}`))
+		return
+	}
+
+	type ReturnData struct {
+		Apikey       string `datastore:"apikey"`
+		Organization Org    `datastore:"organization"`
+	}
+
+	var tmpData ReturnData
+	err = json.Unmarshal(body, &tmpData)
+	if err != nil {
+		log.Printf("Failed unmarshalling test: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	ctx := context.Background()
+	org, err := getOrg(ctx, tmpData.Organization.Id)
+	if err != nil {
+		log.Printf("Organization doesn't exist: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// FIXME: Check if user is admin of this org
+	userFound := false
+	admin := false
+	for _, inneruser := range org.Users {
+		if inneruser.Id == user.Id {
+			userFound = true
+			log.Printf("Role: %s", inneruser.Role)
+			if inneruser.Role == "admin" {
+				admin = true
+			}
+
+			break
+		}
+	}
+
+	if !userFound {
+		log.Printf("User %s doesn't exist in organization %s", user.Id, org.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// FIXME: Enable admin check in org for sync setup and conf.
+	_ = admin
+	//if !admin {
+	//	log.Printf("User %s isn't admin hence can't set up sync for org %s", user.Id, org.Id)
+	//	resp.WriteHeader(401)
+	//	resp.Write([]byte(`{"success": false}`))
+	//	return
+	//}
+
+	log.Printf("Apidata: %s", tmpData.Apikey)
+
+	client := &http.Client{}
+	syncPath := "http://192.168.3.6:5002/api/v1/cloud/sync"
+
+	type requestStruct struct {
+		ApiKey string `json:"api_key"`
+	}
+
+	requestData := requestStruct{
+		ApiKey: tmpData.Apikey,
+	}
+
+	b, err := json.Marshal(requestData)
+	if err != nil {
+		log.Printf("Failed marshaling api key data: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed cloud sync."`, err)))
+		return
+	}
+
+	req, err := http.NewRequest(
+		"POST",
+		syncPath,
+		bytes.NewBuffer(b),
+	)
+
+	newresp, err := client.Do(req)
+	if err != nil {
+		resp.WriteHeader(400)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed cloud sync: %s"`, err)))
+		//setBadMemcache(ctx, docPath)
+		return
+	}
+
+	if newresp.StatusCode != 200 {
+		resp.WriteHeader(400)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Response code %d during sync. Expecting 200."`, newresp.StatusCode)))
+		return
+	}
+
+	respBody, err := ioutil.ReadAll(newresp.Body)
+	if err != nil {
+		resp.WriteHeader(500)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't parse sync data"`)))
+		return
+	}
+
+	type responseStruct struct {
+		Success bool   `json:"success"`
+		Reason  string `json:"reason"`
+	}
+	log.Printf("Respbody: %s", string(respBody))
+
+	responseData := responseStruct{}
+	err = json.Unmarshal(respBody, &responseData)
+	if err != nil {
+		resp.WriteHeader(500)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed handling cloud data"`)))
+		return
+	}
+
+	if responseData.Success {
+		resp.WriteHeader(200)
+		if len(responseData.Reason) > 0 {
+			resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "%s"}`, responseData.Reason)))
+		} else {
+			resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+		}
+	} else {
+		resp.WriteHeader(400)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, responseData.Reason)))
+	}
+}
+
 func initHandlers() {
 	var err error
 	ctx := context.Background()
@@ -6466,11 +6855,6 @@ func initHandlers() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/api/v1/_ah/health", healthCheckHandler)
-
-	// Sends an email if the right things are specified
-	r.HandleFunc("/functions/sendmail", handleSendalert).Methods("POST", "OPTIONS")
-	r.HandleFunc("/functions/outlook/register", handleNewOutlookRegister).Methods("GET", "OPTIONS")
-	r.HandleFunc("/functions/outlook/getFolders", handleGetOutlookFolders).Methods("GET", "OPTIONS")
 
 	// Make user related locations
 	r.HandleFunc("/api/v1/users/generateapikey", handleApiGeneration).Methods("GET", "POST", "OPTIONS")
@@ -6506,8 +6890,13 @@ func initHandlers() {
 	// Queuebuilder and Workflow streams. First is to update a stream, second to get a stream
 	// Changed from workflows/streams to streams, as appengine was messing up
 	// This does not increase the API counter
+	// Used by frontend
 	r.HandleFunc("/api/v1/streams", handleWorkflowQueue).Methods("POST")
 	r.HandleFunc("/api/v1/streams/results", handleGetStreamResults).Methods("POST", "OPTIONS")
+
+	// Used by orborus
+	r.HandleFunc("/api/v1/workflows/queue", handleGetWorkflowqueue).Methods("GET")
+	r.HandleFunc("/api/v1/workflows/queue/confirm", handleGetWorkflowqueueConfirm).Methods("POST")
 
 	// App specific
 	r.HandleFunc("/api/v1/apps/run_hotload", handleAppHotloadRequest).Methods("GET", "OPTIONS")
@@ -6535,8 +6924,6 @@ func initHandlers() {
 	/* Everything below here increases the counters*/
 	r.HandleFunc("/api/v1/workflows", getWorkflows).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows", setNewWorkflow).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/queue", handleGetWorkflowqueue).Methods("GET")
-	r.HandleFunc("/api/v1/workflows/queue/confirm", handleGetWorkflowqueueConfirm).Methods("POST")
 	r.HandleFunc("/api/v1/workflows/schedules", handleGetSchedules).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/download_remote", loadSpecificWorkflows).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/execute", executeWorkflow).Methods("GET", "POST", "OPTIONS")
@@ -6557,7 +6944,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/hooks/{key}/delete", handleDeleteHook).Methods("DELETE", "OPTIONS")
 
 	// Trigger hmm
-	r.HandleFunc("/api/v1/triggers/{key}", handleGetSpecificTrigger).Methods("GET", "OPTIONS")
+	//r.HandleFunc("/api/v1/triggers/{key}", handleGetSpecificTrigger).Methods("GET", "OPTIONS")
 
 	r.HandleFunc("/api/v1/stats/{key}", handleGetSpecificStats).Methods("GET", "OPTIONS")
 
@@ -6568,7 +6955,9 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/validate_openapi", validateSwagger).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/get_openapi/{key}", getOpenapi).Methods("GET", "OPTIONS")
 
-	r.HandleFunc("/api/v1/execution_cleanup", cleanupExecutions).Methods("GET", "OPTIONS")
+	// NEW for 0.8.0
+	r.HandleFunc("/api/v1/cloud/setup", handleCloudSetup).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/getorgs", handleGetOrgs).Methods("GET", "OPTIONS")
 
 	http.Handle("/", r)
 }
