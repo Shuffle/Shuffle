@@ -183,6 +183,8 @@ const Apps = (props) => {
 		maxHeight: 130,
 		minWidth: "100%",
 		maxWidth: "100%",
+		marginBottom: 5, 
+		borderRadius: 5, 
 		color: "white",
 		backgroundColor: surfaceColor,
 		cursor: "pointer",
@@ -295,6 +297,10 @@ const Apps = (props) => {
 			boxColor = "green"
 		}
 
+		if (!data.activated && data.generated) {
+			boxColor = "orange"
+		}
+
 		var imageline = data.large_image.length === 0 ?
 			<img alt={data.title} style={{width: 100, height: 100}} />
 			: 
@@ -325,6 +331,7 @@ const Apps = (props) => {
 			description = data.description.slice(0, maxDescLen)+"..."
 		}
 
+		const version = data.app_version
 		return (
 			<Paper square key={data.id} style={paperAppStyle} onClick={() => {
 				if (selectedApp.id !== data.id) {
@@ -337,7 +344,6 @@ const Apps = (props) => {
 						setSelectedAction({})
 					}
 
-					console.log("Sharing: ", data.sharing_config)
 					if (data.sharing) {
 						setSharingConfiguration("everyone")
 					} 
@@ -393,9 +399,10 @@ const Apps = (props) => {
 
 	const dividerColor = "rgb(225, 228, 232)"
 	const uploadViewPaperStyle = {
-		minWidth: "100%",
+		minWidth: 662.5,
 		maxWidth: 662.5,
 		color: "white",
+		borderRadius: 5, 
 		backgroundColor: surfaceColor,
 		display: "flex",
 		marginBottom: 10, 
@@ -448,7 +455,7 @@ const Apps = (props) => {
 				</Tooltip>
 				</Link> : null
 
-		var activateButton = selectedApp.generated && !selectedApp.activated ?
+		const activateButton = selectedApp.generated && !selectedApp.activated ?
 			<div>
 				<Link to={activateUrl} style={{textDecoration: "none"}}>
 					<Button
@@ -476,7 +483,12 @@ const Apps = (props) => {
 			</div>
 			: null
 
-		var deleteButton = ((selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated) || (selectedApp.downloaded != undefined && selectedApp.downloaded == true)) && activateButton === null ?
+		const deleteButton = (
+				(selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated)
+				|| (selectedApp.downloaded !== undefined && selectedApp.downloaded == true) 
+				|| (!selectedApp.generated)
+			) 
+			&& activateButton === null ?
 			<Tooltip title={"Delete app"}>
 				<Button
 					variant="outlined"
@@ -525,10 +537,10 @@ const Apps = (props) => {
 
 				return (
 					<div>
-						{paths.map(data => {
+						{paths.map((data, index) => {
 							const circleSize = 10
 							return (
-								<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data} onClick={() => console.log(data.autocomplete)}>
+								<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data} onClick={() => console.log(data.autocomplete)}>
 									{data.name}
 								</MenuItem>
 							)
@@ -567,12 +579,13 @@ const Apps = (props) => {
 						{imageline}
 					</div>
 					<div style={{maxWidth: "75%", overflow: "hidden"}}>
-						<h2>{newAppname}</h2>
-						<p>{description}</p>	
+						<h2 style={{marginTop: 20, marginBottom: 0, }}>{newAppname}</h2>
+						<p style={{marginTop: 5, marginBottom: 0,}}>Version {selectedApp.app_version}</p>	
+						<p style={{marginTop: 5, marginBottom: 0}}>{description}</p>	
 					</div>
 				</div>
 				{activateButton}
-				{props.userdata.role === "admin" || props.userdata.id === selectedApp.owner ? 
+				{(props.userdata.role === "admin" || props.userdata.id === selectedApp.owner) || !selectedApp.generated ? 
 					<div>
 						{downloadButton}
 						{editButton}
@@ -957,6 +970,7 @@ const Apps = (props) => {
 			setIsLoading(false)
 			if (response.status === 200) {
 				alert.success("Hotloaded apps!")
+				getApps()
 			}
 
 			return response.json()

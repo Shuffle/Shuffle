@@ -2611,7 +2611,7 @@ const AngularWorkflow = (props) => {
 					}
 				}
 
-				if (curstring.length > 0) {
+				if (curstring.length > 0 && actionlist !== null) {
 					// Search back in the action list
 					curstring = curstring.split(" ").join("_").toLowerCase()
 					var actionItem = actionlist.find(data => data.autocomplete.split(" ").join("_").toLowerCase() === curstring)
@@ -3794,7 +3794,6 @@ const AngularWorkflow = (props) => {
 				// Uses the target's parents, as the target should be executing the checks (I think) 
 				var parents = getParents(workflow.actions.find(a => a.id === selectedEdge["target"]))
 				if (parents.length > 0) {
-					console.log(parents)
 					data.action_field = parents[0].label
 				} else {
 					data.action_field = ""

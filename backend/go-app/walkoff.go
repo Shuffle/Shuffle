@@ -66,15 +66,28 @@ type ExecutionRequest struct {
 	Type              string   `json:"type"`
 }
 
+type SyncFeatures struct {
+	Apps           SyncData `json:"apps" datastore:"apps"`
+	Workflows      SyncData `json:"apps" datastore:"apps"`
+	Schedules      SyncData `json:"apps" datastore:"apps"`
+	Autocomplete   SyncData `json:"apps" datastore:"apps"`
+	Authentication SyncData `json:"apps" datastore:"apps"`
+}
+
+type SyncData struct {
+	Active bool `json:"active" datastore:"active"`
+}
+
 // Role is just used for feedback for a user
 type Org struct {
-	Name      string   `json:"name" datastore:"name"`
-	Id        string   `json:"id" datastore:"id"`
-	Org       string   `json:"org" datastore:"org"`
-	Users     []User   `json:"users" datastore:"users"`
-	Role      string   `json:"role" datastore:"role"`
-	Roles     []string `json:"roles" datastore:"roles"`
-	CloudSync bool     `json:"cloud_sync" datastore:"CloudSync"`
+	Name         string       `json:"name" datastore:"name"`
+	Id           string       `json:"id" datastore:"id"`
+	Org          string       `json:"org" datastore:"org"`
+	Users        []User       `json:"users" datastore:"users"`
+	Role         string       `json:"role" datastore:"role"`
+	Roles        []string     `json:"roles" datastore:"roles"`
+	CloudSync    bool         `json:"cloud_sync" datastore:"CloudSync"`
+	SyncFeatures SyncFeatures `json:"sync_features" datastore:"sync_features"`
 }
 
 type AppAuthenticationStorage struct {
@@ -1148,8 +1161,8 @@ func JSONCheck(str string) bool {
 }
 
 func handleExecutionStatistics(execution WorkflowExecution) {
-	// FIXME: CLEAN UP THE JSON THAT'S SAVED!
-
+	// FIXME: CLEAN UP THE JSON THAT'S SAVED.
+	// https://github.com/frikky/Shuffle/issues/172
 	appResults := []AppExecutionExample{}
 	for _, result := range execution.Results {
 		resultCheck := JSONCheck(result.Result)
@@ -3403,6 +3416,7 @@ func deleteAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(`{"success": true}`))
 }
 
+// FIXME: Not suitable for cloud right now :O
 func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -3443,7 +3457,7 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - check whether it's in use and maybe restrict again for later?
 	// FIXME - actually delete other than private apps too..
 	private := false
-	if app.Downloaded {
+	if app.Downloaded && user.Role == "admin" {
 		log.Printf("Deleting downloaded app (authenticated users can do this)")
 	} else if user.Id != app.Owner && user.Role != "admin" {
 		log.Printf("Wrong user (%s) for app %s (delete)", user.Username, app.Name)
@@ -3463,6 +3477,8 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	// Finds workflows using the app to set errors
+	// FIXME: this will be WAY too big for cloud :O
 	for _, workflow := range workflows {
 		found := false
 
@@ -3483,7 +3499,8 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 			workflow.Actions = newActions
 
 			for _, trigger := range workflow.Triggers {
-				log.Printf("TRIGGER: %#v", trigger)
+				_ = trigger
+				//log.Printf("TRIGGER: %#v", trigger)
 				//err = deleteSchedule(ctx, scheduleId)
 				//if err != nil {
 				//	if strings.Contains(err.Error(), "Job not found") {

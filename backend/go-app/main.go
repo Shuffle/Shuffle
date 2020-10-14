@@ -6811,10 +6811,31 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	type responseStruct struct {
+		Success bool   `json:"success"`
+		Reason  string `json:"reason"`
+	}
 	log.Printf("Respbody: %s", string(respBody))
 
-	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+	responseData := responseStruct{}
+	err = json.Unmarshal(respBody, &responseData)
+	if err != nil {
+		resp.WriteHeader(500)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed handling cloud data"`)))
+		return
+	}
+
+	if responseData.Success {
+		resp.WriteHeader(200)
+		if len(responseData.Reason) > 0 {
+			resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "%s"}`, responseData.Reason)))
+		} else {
+			resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+		}
+	} else {
+		resp.WriteHeader(400)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, responseData.Reason)))
+	}
 }
 
 func init() {

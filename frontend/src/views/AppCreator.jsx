@@ -1079,18 +1079,28 @@ const AppCreator = (props) => {
 		:
 		<div>
 			{actions.map((data, index) => {
-				var error = <Tooltip color="secondary" title={data.errors.join("\n")} placement="bottom">
+				var error = data.errors.length > 0 ? 
+					<Tooltip color="primary" title={data.errors.join("\n")} placement="bottom">
+						<ErrorOutline />
+					</Tooltip>
+					:
+					<Tooltip color="secondary" title={data.errors.join("\n")} placement="bottom">
 						<CheckCircleIcon />
 					</Tooltip>
+				
 
-				// "ERROR: "+data.errors.join("\n")
-				if (data.errors.length > 0) {
-					error = 
-					 	<Tooltip color="primary" title={data.errors.join("\n")} placement="bottom">
-							<ErrorOutline />
-						</Tooltip>
+				var bgColor = "#61afee"
+				if (data.method === "POST") {
+					bgColor = "#49cc90"
+				} else if (data.method === "PUT") {
+					bgColor = "#fca130"
+				} else if (data.method === "PATCH") {
+					bgColor = "#50e3c2"
+				} else if (data.method === "DELETE") {
+					bgColor = "#f93e3e"
+				} else if (data.method === "HEAD") {
+					bgColor = "#9012fe"
 				}
-
 
 				const url = data.url
 				return (
@@ -1104,7 +1114,16 @@ const AppCreator = (props) => {
 								setUrlPath(data.url)
 								setActionsModalOpen(true)
 							}}>
-							{data.method} - {url} - {data.name}
+							<div style={{display: "flex"}}>
+								<Chip
+									style={{backgroundColor: bgColor, color: "white", borderRadius: 5, minWidth: 80, marginRight: 10, marginTop: 2, cursor: "pointer", fontSize: 14,}}
+									label={data.method}
+									variant="contained"
+								/>
+								<span style={{fontSize: 16, marginTop: "auto", marginBottom: "auto",}}>
+									{url} - {data.name}
+								</span>
+							</div>
 							</div>
 						</Tooltip>
 						{/*
