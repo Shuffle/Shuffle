@@ -370,13 +370,13 @@ type ExecutionRequestWrapper struct {
 }
 
 type AppExecutionExample struct {
-	AppName         string   `json:"app_name"`
-	AppVersion      string   `json:"app_version"`
-	AppAction       string   `json:"app_action"`
-	AppId           string   `json:"app_id"`
-	ExampleId       string   `json:"example_id"`
-	SuccessExamples []string `json:"success_examples"`
-	FailureExamples []string `json:"failure_examples"`
+	AppName         string   `json:"app_name" datastore:"app_name"`
+	AppVersion      string   `json:"app_version" datastore:"app_version"`
+	AppAction       string   `json:"app_action" datastore:"app_action"`
+	AppId           string   `json:"app_id" datastore:"app_id"`
+	ExampleId       string   `json:"example_id" datastore:"example_id"`
+	SuccessExamples []string `json:"success_examples" datastore:"success_examples,noindex"`
+	FailureExamples []string `json:"failure_examples" datastore:"failure_examples,noindex"`
 }
 
 // This might be... a bit off, but that's fine :)
