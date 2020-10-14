@@ -425,7 +425,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 	//uuid.NewV4().String()
 
 	api.IsValid = true
-	api.Link = swagger.Servers[0].URL // host doesnt exist lol
+	api.Link = swagger.Servers[0].URL // host does not exist lol
 	if strings.HasSuffix(api.Link, "/") {
 		api.Link = api.Link[:len(api.Link)-1]
 	}
