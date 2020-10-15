@@ -875,12 +875,14 @@ class AppBase:
                             print("Return value: %s" % value)
                             actionname = action["name"]
                             #print("Multicheck ", actualitem)
-                            print("Actual item: %s" % actualitem)
+                            print("ITEM LENGTH: %d, Actual item: %s" % (len(actualitem), actualitem))
                             if len(actualitem) > 0:
                                 multiexecution = True
 
                                 # Loop WITHOUT JSON variables go here. 
                                 # Loop WITH variables go in else.
+                                print("Before first part in multiexec!")
+                                handled = False
                                 if len(actualitem[0]) > 2 and actualitem[0][1] == "SHUFFLE_NO_SPLITTER":
                                     print("Pre replacement: %s" % actualitem[0][2])
                                     tmpitem = value
@@ -910,13 +912,13 @@ class AppBase:
                                     #print("RESULTARRAY: %s" % resultarray)
                                     print("MULTI finished: %s" % replacement)
                                 else:
-                                
                                     # This is here to handle for loops within variables.. kindof
                                     # 1. Find the length of the longest array
                                     # 2. Build an array with the base values based on parameter["value"] 
                                     # 3. Get the n'th value of the generated list from values
                                     # 4. Execute all n answers 
                                     replacements = {}
+                                    curminlength = 0
                                     for replace in actualitem:
                                         try:
                                             to_be_replaced = replace[0]
@@ -928,6 +930,9 @@ class AppBase:
                                             itemlist = json.loads(actualitem)
                                             if len(itemlist) > minlength:
                                                 minlength = len(itemlist)
+
+                                            if len(itemlist) > curminlength:
+                                                curminlength = len(itemlist)
                                         except json.decoder.JSONDecodeError as e:
                                             print("JSON Error: %s in %s" % (e, actualitem))
 
@@ -935,8 +940,9 @@ class AppBase:
 
                                     # This is a result array for JUST this value.. 
                                     # What if there are more?
+                                    print("LENGTH: %d. In second part of else: %s" % (len(itemlist), replacements))
                                     resultarray = []
-                                    for i in range(0, minlength): 
+                                    for i in range(0, curminlength): 
                                         tmpitem = json.loads(json.dumps(parameter["value"]))
                                         for key, value in replacements.items():
                                             replacement = json.dumps(json.loads(value)[i])
@@ -959,7 +965,7 @@ class AppBase:
                                     multi_parameters[parameter["name"]] = resultarray
                             else:
                                 # Parses things like int(value)
-                                self.logger.info("Parsing wrapper data for %s" % value)
+                                print("Normal parsing (not looping) with data %s" % value)
                                 value = parse_wrapper_start(value)
 
                                 params[parameter["name"]] = value

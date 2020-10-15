@@ -28,7 +28,6 @@ import (
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/storage/memory"
 	http2 "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
@@ -1552,12 +1551,6 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("Failed to increase total workflows: %s", err)
 	}
 
-	// recalculate authenticators stats
-	err = recalculateAppAuthentications()
-	if err != nil {
-		log.Printf("Authentications recalculation failed: %s", err)
-	}
-
 	//memcacheName := fmt.Sprintf("%s_%s", user.Username, fileId)
 	//memcache.Delete(ctx, memcacheName)
 	//memcacheName = fmt.Sprintf("%s_workflows", user.Username)
@@ -1720,6 +1713,11 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	//log.Printf("Action: %#v", action.Authentication)
 	for _, action := range workflow.Actions {
 		allNodes = append(allNodes, action.ID)
+
+		if len(action.Errors) > 0 {
+			action.IsValid = true
+			action.Errors = []string{}
+		}
 
 		if action.Environment == "" {
 			resp.WriteHeader(401)
@@ -4403,7 +4401,6 @@ func deployWebhookFunction(ctx context.Context, name, localization, applocation 
 func loadGithubWorkflows(url, username, password, userId, branch string) error {
 	fs := memfs.New()
 
-	// FIXME: add more git options lol
 	if strings.Contains(url, "github") || strings.Contains(url, "gitlab") || strings.Contains(url, "bitbucket") {
 		cloneOptions := &git.CloneOptions{
 			URL: url,
@@ -4412,9 +4409,14 @@ func loadGithubWorkflows(url, username, password, userId, branch string) error {
 		// FIXME: Better auth.
 		if len(username) > 0 && len(password) > 0 {
 			cloneOptions.Auth = &http2.BasicAuth{
+
 				Username: username,
 				Password: password,
 			}
+		}
+
+		if len(branch) > 0 {
+			cloneOptions.ReferenceName = plumbing.ReferenceName(branch)
 		}
 
 		storer := memory.NewStorage()
@@ -4424,31 +4426,9 @@ func loadGithubWorkflows(url, username, password, userId, branch string) error {
 			return err
 		}
 
-		if len(branch) > 0 {
-			log.Printf("Checkout to branch: %s", branch)
-
-			w, _ := r.Worktree()
-
-			err := r.Fetch(&git.FetchOptions{
-				RefSpecs: []config.RefSpec{"refs/*:refs/*", "HEAD:refs/heads/HEAD"},
-			})
-			if err != nil {
-				log.Printf("Failed fetch for git repo: %s", err)
-			}
-
-			err = w.Checkout(&git.CheckoutOptions{
-				Branch: plumbing.ReferenceName(fmt.Sprintf("refs/heads/%s", branch)),
-				Force:  true,
-			})
-			if err != nil {
-				log.Printf("Failed checkout for git repo: %s", err)
-				return errors.New(fmt.Sprintf("Failed checking out to branch %s - does it exist?", branch))
-			}
-		}
-
 		dir, err := fs.ReadDir("/")
 		if err != nil {
-			log.Printf("Failed reading folder: %s", err)
+			log.Printf("FAiled reading folder: %s", err)
 		}
 		_ = r
 
@@ -4523,7 +4503,7 @@ func loadSpecificWorkflows(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		log.Printf("Error with unmarshal tmpBody: %s", err)
 		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "json decode error"}`))
+		resp.Write([]byte(`{"success": false}`))
 		return
 	}
 
@@ -4532,80 +4512,12 @@ func loadSpecificWorkflows(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		log.Printf("Failed to update workflows: %s", err)
 		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		resp.Write([]byte(`{"success": false}`))
 		return
-	}
-
-	// recalculate authenticators stats
-	err = recalculateAppAuthentications()
-	if err != nil {
-		log.Printf("Authentications recalculation failed: %s", err)
 	}
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
-}
-
-func recalculateAppAuthentications() error {
-	// create context
-	ctx := context.Background()
-
-	// form workflows list
-	workflows, err := getAllWorkflows(ctx)
-	if err != nil {
-		log.Printf("Error: Failed getting workflows: %s", err)
-		return err
-	}
-
-	// form authenticators list
-	auths, err := getAllWorkflowAppAuth(ctx)
-	if err != nil {
-		log.Printf("Error: Failed getting auths: %s", err)
-		return err
-	}
-
-	// iterate through auths
-	for _, auth := range auths {
-		// reset calculated values
-		auth.WorkflowCount = 0
-		auth.NodeCount = 0
-		auth.Usage = []AuthenticationUsage{}
-
-		// iterate through workflows to find which uses this auth
-		for _, workflow := range workflows {
-			hasCurrentAuth := false
-			usageItem := AuthenticationUsage{
-				WorkflowId: workflow.ID,
-				Nodes:      []string{},
-			}
-
-			// iterate through actions
-			for _, action := range workflow.Actions {
-				if action.AuthenticationId == auth.Id {
-					// this workflow should be added to "usage" field
-					hasCurrentAuth = true
-
-					// add this action to list
-					usageItem.Nodes = append(usageItem.Nodes, action.ID)
-				}
-			}
-
-			// update current auth with found workflow
-			if hasCurrentAuth {
-				auth.WorkflowCount += 1
-				auth.NodeCount += int64(len(usageItem.Nodes))
-				auth.Usage = append(auth.Usage, usageItem)
-			}
-		}
-
-		// update record in database
-		err := setWorkflowAppAuthDatastore(ctx, auth, auth.Id)
-		if err != nil {
-			log.Printf("Failed setting up app auth %s: %s", auth.Id, err)
-		}
-	}
-
-	return nil
 }
 
 func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
