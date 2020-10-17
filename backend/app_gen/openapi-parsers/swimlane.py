@@ -1,6 +1,7 @@
 import requests
 import yaml 
 import json
+import os
 
 # USAGE:
 # 1. Find the item here:
@@ -77,8 +78,8 @@ def parse_data(data):
         except KeyError as e:
             pass
 
-        if not authset:
-            print("AUTH NOT SET: %s" % inputparams)
+        #if not authset:
+        #    print("AUTH NOT SET: %s" % inputparams)
 
     except KeyError as e:
         print("KeyError asset: %s" % e)
@@ -135,10 +136,16 @@ def parse_data(data):
                 description = value["description"]
             except KeyError:
                 pass
+
+            required = False
+            try:
+                required = value["required"]
+            except KeyError:
+                pass
                 
             openapi["paths"]["tmp%d" % cnt][method]["parameters"].append({
                 "name": value["name"],
-                "required": value["required"],
+                "required": required,
                 "example": example, 
                 "description": description,
                 "schema": {"type": schema},
@@ -181,25 +188,44 @@ def parse_data(data):
 
     return filename, openapi
 
-def dump_data(filename, openapi):
-    generatedfile = "generated/%s" % filename
+def dump_data(filename, openapi, category):
+    generatedfile = "generated/%s/%s" % (category, filename) 
+    try:
+        with open(generatedfile, "w+") as tmp:
+            tmp.write(yaml.dump(openapi))
+    except FileNotFoundError:
+        os.mkdir("generated/%s" % category)
+
     with open(generatedfile, "w+") as tmp:
         tmp.write(yaml.dump(openapi))
 
     print("Generated %s" % generatedfile)
 
 if __name__ == "__main__":
-    #url = "https://apphub.swimlane.com/api/v1/bundles/cjuspytpz00rh0hpjo5chqg10"
-    #url = "https://apphub.swimlane.com/api/v1/bundles/cjyoy62ch04920lr26id5sr0e"
-    #url = "https://apphub.swimlane.com/api/v1/bundles/cjqrdc2yr02rs0fli6jrosiqb"
-    #url = "https://apphub.swimlane.com/api/v1/bundles/cjqrdat0u01ux0flipb68a0a0"
-    #url = "https://apphub.swimlane.com/api/v1/bundles/cjqrdhbwp07nf0fli23lyb52h"
+    number = 1
+    #https://apphub.swimlane.com/
+    categories = [
+        "Endpoint Security & Management",
+        "SIEM & Log Management",
+        "Ticket Management",
+    ]
 
-    url = "https://apphub.swimlane.io/api/swimbundles/swimlane/sw_alienvault_threatcrowd"
-    url = "https://apphub.swimlane.com/api/swimbundles/swimlane/sw_anomali_threatstream" 
+    search_category = categories[2]
+    total = 0
+    while(True):
+        url = "https://apphub.swimlane.io/api/search/swimbundles?page=%d" % number
+        
+        json = {"fields": {"family": search_category}}
+        ret = requests.post(
+            url,
+            json=json,
+        )
 
-    with open("swimlane_urls.json", "r") as tmp:
-        parsed = json.loads(tmp.read())
+        if ret.status_code != 201:
+            print("RET NOT 201: %d" % ret.status_code)
+            break
+
+        parsed = ret.json()
         try:
             category = parsed["data"][0]["swimbundleMeta"]["family"][0]
         except KeyError:
@@ -207,9 +233,15 @@ if __name__ == "__main__":
         except IndexError:
             category = ""
 
-        print("CATEGORY: %s" % category)
+        if category == "":
+            break
 
         for data in parsed["data"]:
             filename, openapi = parse_data(data)
             openapi["tags"] = [category]
-            dump_data(filename, openapi)
+            dump_data(filename, openapi, category)
+            total += 1
+
+        number += 1
+
+    print("Created %d openapi specs from Swimlane with category %s" % (total, search_category))
