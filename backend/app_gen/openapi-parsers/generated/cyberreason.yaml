@@ -384,14 +384,17 @@ components:
         whiteListClassification:
           type: string
       type: object
-  securitySchemes: {}
+  securitySchemes:
+    BasicAuth:
+      scheme: basic
+      type: http
 info:
   contact:
     email: frikky@shuffler.io
     name: '@frikkylikeme'
     url: https://twitter.com/frikkylikeme
-  description: Automated generation of Cyberreason
-  title: Cyberreason
+  description: Automated generation of Cyberreason Cyberreason
+  title: Cyberreason Cyberreason
   version: 1.0.0
 openapi: 3.0.2
 paths:
@@ -399,15 +402,17 @@ paths:
     post:
       description: CyberReason Block or Unblock an Item
       parameters:
-      - description: Either 'blacklist' or 'whitelist'
+      - description: IP, Domain, or Hash CSV values to blacklist or whitelist
+        example: ''
         in: query
-        name: Action
+        name: Values
         required: true
         schema:
           type: string
-      - description: IP, Domain, or Hash CSV values to blacklist or whitelist
+      - description: Either 'blacklist' or 'whitelist'
+        example: ''
         in: query
-        name: Values
+        name: Action
         required: true
         schema:
           type: string
@@ -436,24 +441,28 @@ paths:
       description: CyberReason isolate a host by port
       parameters:
       - description: IP to block
+        example: ''
         in: query
         name: IP
         required: true
         schema:
           type: string
-      - description: Direction to block traffic, one of 'ALL', 'INCOMING', 'OUTGOING'
-        in: query
-        name: Direction to block
-        required: true
-        schema:
-          type: string
       - description: Port to block
+        example: ''
         in: query
         name: Port
         required: true
         schema:
           type: string
+      - description: Direction to block traffic, one of 'ALL', 'INCOMING', 'OUTGOING'
+        example: ''
+        in: query
+        name: Direction to block
+        required: true
+        schema:
+          type: string
       - description: If true will isolate, false will remove from isolation
+        example: ''
         in: query
         name: Block
         required: true
@@ -471,22 +480,25 @@ paths:
     post:
       description: Check CyberReason for a domain
       parameters:
+      - description: Domain to search for
+        example: ''
+        in: query
+        name: Domain
+        required: true
+        schema:
+          type: string
       - description: Limit of results to return
+        example: ''
         in: body
         name: Limit
         required: false
         schema:
           type: string
       - description: Timeout
+        example: '12000'
         in: body
         name: Timeout (ms)
         required: false
-        schema:
-          type: string
-      - description: Domain to search for
-        in: query
-        name: Domain
-        required: true
         schema:
           type: string
       responses:
@@ -501,22 +513,25 @@ paths:
     post:
       description: Check CyberReason for a hash
       parameters:
+      - description: Hash to search for
+        example: ''
+        in: query
+        name: Hash
+        required: true
+        schema:
+          type: string
       - description: Limit of results to return
+        example: ''
         in: body
         name: Limit
         required: false
         schema:
           type: string
       - description: Timeout
+        example: '12000'
         in: body
         name: Timeout (ms)
         required: false
-        schema:
-          type: string
-      - description: Hash to search for
-        in: query
-        name: Hash
-        required: true
         schema:
           type: string
       responses:
@@ -531,22 +546,25 @@ paths:
     post:
       description: Check CyberReason for a IP
       parameters:
+      - description: IP to search for
+        example: ''
+        in: query
+        name: IP
+        required: true
+        schema:
+          type: string
       - description: Limit of results to return
+        example: ''
         in: body
         name: Limit
         required: false
         schema:
           type: string
       - description: Timeout
+        example: '12000'
         in: body
         name: Timeout (ms)
         required: false
-        schema:
-          type: string
-      - description: IP to search for
-        in: query
-        name: IP
-        required: true
         schema:
           type: string
       responses:
@@ -557,3 +575,5 @@ paths:
                 $ref: '#/components/schemas/tmp5'
           description: Successful request
       summary: CyberReason Query for IP
+tags:
+- Endpoint Security & Management
