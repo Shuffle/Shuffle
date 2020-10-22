@@ -38,3 +38,11 @@ cd app_sdk
 docker build . -t frikky/shuffle:app_sdk
 docker push frikky/shuffle:app_sdk
 ```
+
+
+Update app_sdk_kali:
+```
+cd app_sdk_kali
+docker build . -t frikky/shuffle:app_sdk_kali
+docker push frikky/shuffle:app_sdk_kali
+```
