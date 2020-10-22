@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 
 import { useInterval } from 'react-powerhooks';
 
@@ -37,6 +37,7 @@ import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
 import CircularProgress from '@material-ui/core/CircularProgress';
 
+import Dropzone from '../components/Dropzone';
 
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
@@ -134,7 +135,8 @@ const Apps = (props) => {
 	const [cursearch, setCursearch] = React.useState("")
 	const [sharingConfiguration, setSharingConfiguration] = React.useState("you")
 
-	const upload = useRef(null);
+	const [isDropzone, setIsDropzone] = React.useState(false);
+	const upload = React.useRef(null);
 
 	const { start, stop } = useInterval({
 	  	duration: 5000,
@@ -179,7 +181,6 @@ const Apps = (props) => {
 		color: "#ffffff",
 		width: "100%",
 		display: "flex",
-		margin: 20, 
 	}
 
 	const paperAppStyle = {
@@ -792,8 +793,37 @@ const Apps = (props) => {
 		//}
 	}
 
+	const uploadFile = (e) => {
+		const isDropzone = e.dataTransfer?.files.length > 0;
+		const files = isDropzone ? e.dataTransfer.files : e.target.files;
+		
+    const reader = new FileReader();
+
+    reader.addEventListener('load', (e) => {
+      const content = e.target.result;
+			setOpenApiData(content);
+			setIsDropzone(isDropzone);
+    });
+
+		reader.readAsText(files[0]);
+  };
+
+  useEffect(() => {
+    if (openApiData.length > 0) {
+      setOpenApiError('');
+      validateOpenApi(openApiData);
+		}
+	}, [openApiData]);
+	
+	useEffect(() => {
+		if (appValidation && isDropzone) {
+			redirectOpenApi();
+			setIsDropzone(false);
+		}
+  }, [appValidation, isDropzone]);
+
 	const appView = isLoggedIn ? 
-		<div style={{maxWidth: window.innerWidth > 1366 ? 1366 : 1200, margin: "auto",}}>
+		<Dropzone style={{maxWidth: window.innerWidth > 1366 ? 1366 : 1200, margin: "auto", padding: 20 }} onDrop={uploadFile}>
 			<div style={appViewStyle}>	
 				<div style={{flex: 1}}>
 					<Breadcrumbs aria-label="breadcrumb" separator="›" style={{color: "white",}}>
@@ -905,7 +935,7 @@ const Apps = (props) => {
 					</div>
 				</div>
 			</div>
-		</div>
+		</Dropzone>
 		: 
 		null
 
@@ -1176,7 +1206,7 @@ const Apps = (props) => {
 		})
     .then((responseJson) => {
 			if (responseJson.success) {
-				setAppValidation(responseJson.id)
+				setAppValidation(responseJson.id);
 			} else {
 				if (responseJson.reason !== undefined) {
 					setOpenApiError(responseJson.reason)
@@ -1199,25 +1229,6 @@ const Apps = (props) => {
 		getSpecificApps(openApi, forceUpdate)
 		setLoadAppsModalOpen(false)
 	}
-
-	const uploadFile = (e) => {
-    const file = e.target.files[0];
-    const reader = new FileReader();
-
-    reader.addEventListener('load', (e) => {
-      const content = e.target.result;
-      setOpenApiData(content);
-    });
-
-    reader.readAsText(file);
-  };
-
-  useEffect(() => {
-		if(openApiData.length > 0) {
-    	setOpenApiError('');
-			validateOpenApi(openApiData);
-		}
-  }, [openApiData]);
 
 	const deleteModal = deleteModalOpen ? 
 		<Dialog 
