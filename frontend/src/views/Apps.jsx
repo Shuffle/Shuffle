@@ -1,4 +1,4 @@
-import React, { useEffect} from 'react';
+import React, { useEffect, useRef } from 'react';
 
 import { useInterval } from 'react-powerhooks';
 
@@ -133,6 +133,8 @@ const Apps = (props) => {
 	const [field2, setField2] = React.useState("")
 	const [cursearch, setCursearch] = React.useState("")
 	const [sharingConfiguration, setSharingConfiguration] = React.useState("you")
+
+	const upload = useRef(null);
 
 	const { start, stop } = useInterval({
 	  	duration: 5000,
@@ -1198,6 +1200,25 @@ const Apps = (props) => {
 		setLoadAppsModalOpen(false)
 	}
 
+	const uploadFile = (e) => {
+    const file = e.target.files[0];
+    const reader = new FileReader();
+
+    reader.addEventListener('load', (e) => {
+      const content = e.target.result;
+      setOpenApiData(content);
+    });
+
+    reader.readAsText(file);
+  };
+
+  useEffect(() => {
+		if(openApiData.length > 0) {
+    	setOpenApiError('');
+			validateOpenApi(openApiData);
+		}
+  }, [openApiData]);
+
 	const deleteModal = deleteModalOpen ? 
 		<Dialog 
 			open={deleteModalOpen}
@@ -1376,28 +1397,22 @@ const Apps = (props) => {
 					  <div />
 					  https://raw.githubusercontent.com/OAI/OpenAPI-Specification/master/examples/v2.0/json/uber.json
 						*/}
-					  Or paste the YAML or JSON specification 
-					<TextField
-						style={{backgroundColor: inputColor}}
-						variant="outlined"
-						multiline
-						rows={6}
-						margin="normal"
-						InputProps={{
-							style:{
-								color: "white",
-								fontSize: "1em",
-							},
-							endAdornment: <Button style={{marginLeft: 10, borderRadius: "0px", marginTop: "0px"}} variant="contained" disabled={openApiData.length === 0 || appValidation.length > 0} color="primary" onClick={() => {
-								setOpenApiError("")
-								validateOpenApi(openApiData)
-							}}>Validate OpenAPI</Button>
-						}}
-						onChange={e => setOpenApiData(e.target.value)}
-						helperText={<span style={{color:"white", marginBottom: "2px",}}>Must point to a version 2 or 3 specification.</span>}
-						placeholder="OpenAPI text"
-						fullWidth
-					  />
+					  <p>Or upload a YAML or JSON specification</p>
+          <input
+            hidden
+            type="file"
+            ref={upload}
+            accept="application/JSON, text/yaml, text/x-yaml, application/x-yaml, application/vnd.yaml"
+            multiple={false}
+            onChange={uploadFile}
+          />
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => upload.current.click()}
+          >
+            Upload
+          </Button>
 					  {errorText}
 				</DialogContent>
 				<DialogActions>
