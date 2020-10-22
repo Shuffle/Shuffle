@@ -415,7 +415,13 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 	}
 
 	if len(swagger.Servers) == 0 {
-		return swagger, WorkflowApp{}, []string{}, errors.New("Swagger.Servers can't be empty. Add 'servers':[{'url':'hostname.com'}'")
+		//return swagger, WorkflowApp{}, []string{}, errors.New("Swagger.Servers can't be empty. Add 'servers':[{'url':'hostname.com'}'")
+		//return swagger, WorkflowApp{}, []string{}, errors.New("Swagger.Servers can't be empty. Add 'servers':[{'url':'hostname.com'}'")
+		swagger.Servers = openapi3.Servers{
+			&openapi3.Server{
+				URL: "https://hostname.com",
+			},
+		}
 	}
 
 	api.Name = swagger.Info.Title
@@ -1735,7 +1741,7 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 		action.Parameters = append(action.Parameters, optionalParam)
 	}
 
-	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "delete", parameters, optionalQueries, headersFound)
+	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "patch", parameters, optionalQueries, headersFound)
 
 	if len(functionname) > 0 {
 		action.Name = functionname
@@ -1869,7 +1875,7 @@ func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 		action.Parameters = append(action.Parameters, optionalParam)
 	}
 
-	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "delete", parameters, optionalQueries, headersFound)
+	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "put", parameters, optionalQueries, headersFound)
 
 	if len(functionname) > 0 {
 		action.Name = functionname
