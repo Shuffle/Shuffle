@@ -2,9 +2,9 @@ FROM peterclemenko/blackarch as base
 
 FROM base as builder
 
-RUN apt-get update
-RUN apt-get dist-upgrade -y
-RUN apt install base-devel libffi musl openssl python python-pip -y
+RUN /bin/pacman -Syu --noconfirm
+
+RUN	/bin/pacman -Sy --noconfirm base-devel libffi musl openssl python python-pip -y
 
 RUN mkdir /install
 WORKDIR /install
