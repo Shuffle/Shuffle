@@ -803,7 +803,8 @@ const Apps = (props) => {
       const content = e.target.result;
 			setOpenApiData(content);
 			setIsDropzone(isDropzone);
-    });
+			setOpenApiModal(true)
+    })
 
 		reader.readAsText(files[0]);
   };
@@ -1359,7 +1360,7 @@ const Apps = (props) => {
 		</Dialog>
 		: null
 
-	const errorText = openApiError.length > 0 ? <div>Error: {openApiError}</div> : null
+	const errorText = openApiError.length > 0 ? <div style={{marginTop: 10}}>Error: {openApiError}</div> : null
 	const modalView = openApiModal ? 
 		<Dialog 
 			open={openApiModal}
