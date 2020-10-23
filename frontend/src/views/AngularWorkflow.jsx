@@ -2538,9 +2538,9 @@ const AngularWorkflow = (props) => {
 								var jsonvalid = true
 								try {
 									const tmp = String(JSON.parse(foundResult.result))
-									//if (!tmp.includes("{") && !tmp.includes("[")) {
-									//	jsonvalid = false
-									//}
+									if (!foundResult.result.includes("{") && !foundResult.result.includes("[")) {
+										jsonvalid = false
+									}
 								} catch (e) {
 									jsonvalid = false
 								}
@@ -2627,9 +2627,9 @@ const AngularWorkflow = (props) => {
 						var jsonvalid = true
 						try {
 							const tmp = String(JSON.parse(actionItem.example))
-							//if (!tmp.includes("{") && !tmp.includes("[")) {
-							//	jsonvalid = false
-							//}
+							if (!actionItem.example.includes("{") && !actionItem.example.includes("[")) {
+								jsonvalid = false
+							}
 						} catch (e) {
 							jsonvalid = false
 						}
@@ -5352,9 +5352,9 @@ const AngularWorkflow = (props) => {
 		var jsonvalid = true
 		try {
 			const tmp = String(JSON.parse(showResult))
-			//if (!tmp.includes("{") && !tmp.includes("[")) {
-			//	jsonvalid = false
-			//}
+			if (!showResult.includes("{") && !showResult.includes("[")) {
+				jsonvalid = false
+			}
 		} catch (e) {
 			jsonvalid = false
 		}
@@ -5549,11 +5549,12 @@ const AngularWorkflow = (props) => {
 							var jsonvalid = true
 							try {
 								const tmp = String(JSON.parse(showResult))
-								//if (!tmp.includes("{") && !tmp.includes("[")) {
-								//	console.log("IN HERE")
-								//	jsonvalid = false
-								//}
+								if (!showResult.includes("{") && !showResult.includes("[")) {
+									console.log("IN HERE: ", tmp)
+									jsonvalid = false
+								}
 							} catch (e) {
+								console.log("Error: ", e)
 								jsonvalid = false
 							}
 

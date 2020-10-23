@@ -6575,7 +6575,7 @@ func runInit(ctx context.Context) {
 	log.Printf("Getting remote workflow apps")
 	workflowapps, err := getAllWorkflowApps(ctx)
 	if err != nil {
-		log.Printf("Failed getting apps: %s", err)
+		log.Printf("Failed getting apps (runInit): %s", err)
 	} else if err == nil && len(workflowapps) == 0 {
 		log.Printf("Downloading default workflow apps")
 		fs := memfs.New()

@@ -3991,7 +3991,7 @@ func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 
 	workflowapps, err := getAllWorkflowApps(ctx)
 	if err != nil {
-		log.Printf("Failed getting apps: %s", err)
+		log.Printf("Failed getting apps (getworkflowapps): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -4554,8 +4554,9 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 	log.Printf("Hotloading from %s", location)
 	err = handleAppHotload(location, true)
 	if err != nil {
+		log.Printf("Failed app hotload: %s", err)
 		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed loading apps: %s"}`)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed loading apps: %s"}`, err)))
 		return
 	}
 
@@ -4720,7 +4721,7 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 
 				//log.Printf("File: %s", filename)
 				//log.Printf("Found file: %s", filename)
-				log.Printf("OpenAPI app: %s", filename)
+				//log.Printf("OpenAPI app: %s", filename)
 				tmpExtra := fmt.Sprintf("%s%s/", extra, file.Name())
 
 				fileReader, err := fs.Open(tmpExtra)
@@ -5307,7 +5308,7 @@ func getAllSchedules(ctx context.Context) ([]ScheduleOld, error) {
 
 func getAllWorkflowApps(ctx context.Context) ([]WorkflowApp, error) {
 	var allworkflowapps []WorkflowApp
-	q := datastore.NewQuery("workflowapp")
+	q := datastore.NewQuery("workflowapp").Limit(50)
 
 	_, err := dbclient.GetAll(ctx, q, &allworkflowapps)
 	if err != nil {

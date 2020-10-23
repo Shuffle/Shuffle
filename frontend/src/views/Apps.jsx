@@ -733,7 +733,7 @@ const Apps = (props) => {
 						&nbsp;- <a href="https://apis.guru/browse-apis/" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">OpenAPI directory</a>
 						&nbsp;- <a href="https://editor.swagger.io/" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">OpenAPI Validator</a>
 						<div/>
-						Apps interact with eachother in workflows. They are created with the app creator, using OpenAPI specification or manually in python. The links above are references to OpenAPI tools and other app repositories. There's ten thousands of them.
+						Apps interact with eachother in workflows. They are created with the app creator, using OpenAPI specification or manually in python. The links above are references to OpenAPI tools and other app repositories. There's thousands of them.
 						<div/>
 						<Divider style={{height: 1, backgroundColor: dividerColor, marginTop: 20, marginBottom: 20}} />
 						<div style={{}}>

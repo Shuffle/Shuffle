@@ -2,6 +2,16 @@ import requests
 import yaml 
 import json
 import os
+import io
+import base64
+from PIL import Image
+#import tkinter
+#import _tkinter
+#tkinter._test()
+
+
+#sudo apt-get install python-imaging-tk
+#sudo apt-get install python3-tk
 
 # USAGE:
 # 1. Find the item here:
@@ -194,54 +204,108 @@ def dump_data(filename, openapi, category):
         with open(generatedfile, "w+") as tmp:
             tmp.write(yaml.dump(openapi))
     except FileNotFoundError:
-        os.mkdir("generated/%s" % category)
+        try:
+            os.mkdir("generated/%s" % category)
+            with open(generatedfile, "w+") as tmp:
+                tmp.write(yaml.dump(openapi))
 
-    with open(generatedfile, "w+") as tmp:
-        tmp.write(yaml.dump(openapi))
-
-    print("Generated %s" % generatedfile)
+        except FileExistsError:
+            pass
 
 if __name__ == "__main__":
-    number = 1
     #https://apphub.swimlane.com/
     categories = [
+        "Investigation",
         "Endpoint Security & Management",
+        "Network Security & Management",
+        "Communication",
         "SIEM & Log Management",
+        "Governance & Risk Management",
+        "Vulnerability & Patch Management",
         "Ticket Management",
+        "DevOps & Application Security",
+        "Identity & Access Management",
+        "Infrastructure",
+        "Miscellaneous",
     ]
 
     search_category = categories[2]
     total = 0
-    while(True):
-        url = "https://apphub.swimlane.io/api/search/swimbundles?page=%d" % number
-        
-        json = {"fields": {"family": search_category}}
-        ret = requests.post(
-            url,
-            json=json,
-        )
+    for search_category in categories:
+        number = 1
+        innertotal = 0
 
-        if ret.status_code != 201:
-            print("RET NOT 201: %d" % ret.status_code)
-            break
+        while(True):
+            url = "https://apphub.swimlane.io/api/search/swimbundles?page=%d" % number
+            
+            json = {"fields": {"family": search_category}}
+            ret = requests.post(
+                url,
+                json=json,
+            )
 
-        parsed = ret.json()
-        try:
-            category = parsed["data"][0]["swimbundleMeta"]["family"][0]
-        except KeyError:
-            category = ""
-        except IndexError:
-            category = ""
+            if ret.status_code != 201:
+                print("RET NOT 201: %d" % ret.status_code)
+                break
 
-        if category == "":
-            break
+            parsed = ret.json()
+            try:
+                category = parsed["data"][0]["swimbundleMeta"]["family"][0]
+            except KeyError:
+                category = ""
+            except IndexError:
+                category = ""
 
-        for data in parsed["data"]:
-            filename, openapi = parse_data(data)
-            openapi["tags"] = [category]
-            dump_data(filename, openapi, category)
-            total += 1
+            if category == "":
+                break
 
-        number += 1
+            for data in parsed["data"]:
+                try:
+                    filename, openapi = parse_data(data)
+                except:
+                    try:
+                        print("Skipping %s %s because of an error" % (data["vendor"], data["product"]))
+                    except KeyError:
+                        pass
 
-    print("Created %d openapi specs from Swimlane with category %s" % (total, search_category))
+                    continue
+
+                openapi["tags"] = [
+                    {
+                        "name": category,
+                    }
+                ]
+
+                appid = data["swimbundleMeta"]["logo"]["id"]
+                logoUrl = "https://apphub.swimlane.io/api/logos/%s" % appid
+                logodata = requests.get(logoUrl)
+                if logodata.status_code == 200:
+                    logojson = logodata.json()
+                    try:
+                        logobase64 = logojson["data"]["base64"]
+                        #.split(",")[1]
+
+                        openapi["info"]["x-logo"] = logobase64
+                        #print(logobase64)
+                        #msg = base64.b64decode(logobase64)
+                        #with io.BytesIO(msg) as buf:
+                        #    with Image.open(buf) as tempImg:
+                        #        newWidth = 174 / tempImg.width  # change this to what ever width you need.
+                        #        newHeight = 174 / tempImg.height # change this to what ever height you need.
+                        #        newSize = (int(newWidth * tempImg.width), int(newHeight * tempImg.height))
+                        #        newImg1 = tempImg.resize(newSize)
+                        #        lbl1.IMG = ImageTk.PhotoImage(image=newImg1)
+                        #        lbl1.configure(image=lbl1.IMG)
+                    except KeyError:
+                        print("Failed logo parsing for %s" % appid)
+                        pass
+                
+                dump_data(filename, openapi, category)
+                innertotal += 1
+                total += 1
+
+            number += 1
+
+        print("Created %d openapi specs from Swimlane with category %s" % (innertotal, search_category))
+
+    print("\nCreated %d TOTAL openapi specs from Swimlane" % (total))

@@ -694,15 +694,16 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 		// FIXME: Force killing a worker should result in a notification somewhere
 		if len(nextActions) == 0 {
 			log.Printf("No next action. Finished? Result vs Actions: %d - %d", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
-			//exit := true
-			//for _, item := range workflowExecution.Results {
-			//	if item == "EXECUTING" {
-			//		exit = false
-			//		break
-			//	}
-			//}
+			exit := true
+			for _, item := range workflowExecution.Results {
+				if item.Status == "EXECUTING" {
+					exit = false
+					break
+				}
+			}
 
 			if exit && len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions) {
+				log.Printf("Shutting down.")
 				shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
 			}
 
