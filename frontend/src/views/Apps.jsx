@@ -1,4 +1,4 @@
-import React, { useEffect} from 'react';
+import React, { useEffect } from 'react';
 
 import { useInterval } from 'react-powerhooks';
 
@@ -37,6 +37,7 @@ import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
 import CircularProgress from '@material-ui/core/CircularProgress';
 
+import Dropzone from '../components/Dropzone';
 
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
@@ -134,6 +135,9 @@ const Apps = (props) => {
 	const [cursearch, setCursearch] = React.useState("")
 	const [sharingConfiguration, setSharingConfiguration] = React.useState("you")
 
+	const [isDropzone, setIsDropzone] = React.useState(false);
+	const upload = React.useRef(null);
+
 	const { start, stop } = useInterval({
 	  	duration: 5000,
 	  	startImmediate: false,
@@ -177,7 +181,6 @@ const Apps = (props) => {
 		color: "#ffffff",
 		width: "100%",
 		display: "flex",
-		margin: 20, 
 	}
 
 	const paperAppStyle = {
@@ -790,8 +793,38 @@ const Apps = (props) => {
 		//}
 	}
 
+	const uploadFile = (e) => {
+		const isDropzone = e.dataTransfer?.files.length > 0;
+		const files = isDropzone ? e.dataTransfer.files : e.target.files;
+		
+    const reader = new FileReader();
+
+    reader.addEventListener('load', (e) => {
+      const content = e.target.result;
+			setOpenApiData(content);
+			setIsDropzone(isDropzone);
+			setOpenApiModal(true)
+    })
+
+		reader.readAsText(files[0]);
+  };
+
+  useEffect(() => {
+    if (openApiData.length > 0) {
+      setOpenApiError('');
+      validateOpenApi(openApiData);
+		}
+	}, [openApiData]);
+	
+	useEffect(() => {
+		if (appValidation && isDropzone) {
+			redirectOpenApi();
+			setIsDropzone(false);
+		}
+  }, [appValidation, isDropzone]);
+
 	const appView = isLoggedIn ? 
-		<div style={{maxWidth: window.innerWidth > 1366 ? 1366 : 1200, margin: "auto",}}>
+		<Dropzone style={{maxWidth: window.innerWidth > 1366 ? 1366 : 1200, margin: "auto", padding: 20 }} onDrop={uploadFile}>
 			<div style={appViewStyle}>	
 				<div style={{flex: 1}}>
 					<Breadcrumbs aria-label="breadcrumb" separator="›" style={{color: "white",}}>
@@ -903,7 +936,7 @@ const Apps = (props) => {
 					</div>
 				</div>
 			</div>
-		</div>
+		</Dropzone>
 		: 
 		null
 
@@ -1174,7 +1207,7 @@ const Apps = (props) => {
 		})
     .then((responseJson) => {
 			if (responseJson.success) {
-				setAppValidation(responseJson.id)
+				setAppValidation(responseJson.id);
 			} else {
 				if (responseJson.reason !== undefined) {
 					setOpenApiError(responseJson.reason)
@@ -1327,7 +1360,7 @@ const Apps = (props) => {
 		</Dialog>
 		: null
 
-	const errorText = openApiError.length > 0 ? <div>Error: {openApiError}</div> : null
+	const errorText = openApiError.length > 0 ? <div style={{marginTop: 10}}>Error: {openApiError}</div> : null
 	const modalView = openApiModal ? 
 		<Dialog 
 			open={openApiModal}
@@ -1376,28 +1409,22 @@ const Apps = (props) => {
 					  <div />
 					  https://raw.githubusercontent.com/OAI/OpenAPI-Specification/master/examples/v2.0/json/uber.json
 						*/}
-					  Or paste the YAML or JSON specification 
-					<TextField
-						style={{backgroundColor: inputColor}}
-						variant="outlined"
-						multiline
-						rows={6}
-						margin="normal"
-						InputProps={{
-							style:{
-								color: "white",
-								fontSize: "1em",
-							},
-							endAdornment: <Button style={{marginLeft: 10, borderRadius: "0px", marginTop: "0px"}} variant="contained" disabled={openApiData.length === 0 || appValidation.length > 0} color="primary" onClick={() => {
-								setOpenApiError("")
-								validateOpenApi(openApiData)
-							}}>Validate OpenAPI</Button>
-						}}
-						onChange={e => setOpenApiData(e.target.value)}
-						helperText={<span style={{color:"white", marginBottom: "2px",}}>Must point to a version 2 or 3 specification.</span>}
-						placeholder="OpenAPI text"
-						fullWidth
-					  />
+					  <p>Or upload a YAML or JSON specification</p>
+          <input
+            hidden
+            type="file"
+            ref={upload}
+            accept="application/JSON, text/yaml, text/x-yaml, application/x-yaml, application/vnd.yaml"
+            multiple={false}
+            onChange={uploadFile}
+          />
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => upload.current.click()}
+          >
+            Upload
+          </Button>
 					  {errorText}
 				</DialogContent>
 				<DialogActions>
