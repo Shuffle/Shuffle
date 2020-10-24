@@ -740,6 +740,11 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	if request.Body == nil {
+		resp.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		log.Println("Failed reading body for stream result queue")
@@ -838,6 +843,11 @@ func findChildNodes(workflowExecution WorkflowExecution, nodeId string) []string
 func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
+		return
+	}
+
+	if request.Body == nil {
+		resp.WriteHeader(http.StatusBadRequest)
 		return
 	}
 

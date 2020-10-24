@@ -744,6 +744,9 @@ func redirect(w http.ResponseWriter, req *http.Request) {
 }
 
 func parseLoginParameters(resp http.ResponseWriter, request *http.Request) (loginStruct, error) {
+	if request.Body == nil {
+		return loginStruct{}, fmt.Errorf("failed to parse loing params, body is empty")
+	}
 
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
@@ -1935,6 +1938,11 @@ func handlePasswordReset(resp http.ResponseWriter, request *http.Request) {
 func handlePasswordChange(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
+		return
+	}
+
+	if request.Body == nil {
+		resp.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
