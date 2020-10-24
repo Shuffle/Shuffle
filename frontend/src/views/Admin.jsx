@@ -3,24 +3,36 @@ import React, { useEffect} from 'react';
 import {Link} from 'react-router-dom';
 import Paper from '@material-ui/core/Paper';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
+import Typography from '@material-ui/core/Typography';
 import Switch from '@material-ui/core/Switch';
 import Select from '@material-ui/core/Select';
 import MenuItem from '@material-ui/core/MenuItem';
-import List from '@material-ui/core/List';
 import Divider from '@material-ui/core/Divider';
 import TextField from '@material-ui/core/TextField';
-import ListItem from '@material-ui/core/ListItem';
 import Button from '@material-ui/core/Button';
 import Tabs from '@material-ui/core/Tabs';
 import Tab from '@material-ui/core/Tab';
+import Grid from '@material-ui/core/Grid';
+import List from '@material-ui/core/List';
+import ListItem from '@material-ui/core/ListItem';
 import ListItemText from '@material-ui/core/ListItemText';
+import ListItemAvatar from '@material-ui/core/ListItemAvatar';
 import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
+import IconButton from '@material-ui/core/IconButton';
+import Avatar from '@material-ui/core/Avatar';
+
 
 import { useAlert } from "react-alert";
 
 import { Dialog, DialogTitle, DialogActions, DialogContent } from '@material-ui/core';
 import { useTheme } from '@material-ui/core/styles';
 
+import PolymerIcon from '@material-ui/icons/Polymer';
+import CheckCircleIcon from '@material-ui/icons/CheckCircle';
+import CloseIcon from '@material-ui/icons/Close';
+import AppsIcon from '@material-ui/icons/Apps';
+import ImageIcon from '@material-ui/icons/Image';
+import DeleteIcon from '@material-ui/icons/Delete';
 import CachedIcon from '@material-ui/icons/Cached';
 import AccessibilityNewIcon from '@material-ui/icons/AccessibilityNew';
 import LockIcon from '@material-ui/icons/Lock';
@@ -46,6 +58,8 @@ const Admin = (props) => {
 	const [curTab, setCurTab] = React.useState(0);
 	const [users, setUsers] = React.useState([]);
 	const [organizations, setOrganizations] = React.useState([]);
+	const [orgSyncResponse, setOrgSyncResponse] = React.useState("");
+
 	const [environments, setEnvironments] = React.useState([]);
 	const [authentication, setAuthentication] = React.useState([]);
 	const [schedules, setSchedules] = React.useState([])
@@ -183,6 +197,8 @@ const Admin = (props) => {
 	}
 
 	const enableCloudSync = (apikey, organization) => {
+		setOrgSyncResponse("")
+
 		const data = { 
 			apikey: apikey,
 			organization: organization,
@@ -200,21 +216,32 @@ const Admin = (props) => {
 				'Content-Type': 'application/json; charset=utf-8',
 			},
 		})
-			.then(response =>
-				response.json().then(responseJson => {
-					setLoading(false)
-					console.log(responseJson)
-					if (responseJson["success"] === false) {
-						alert.error("Failed setting up cloud sync")
-					} else {
-						alert.success("Set up cloud sync!")
-					}
-				}),
-			)
-			.catch(error => {
-				setLoading(false)
-				alert.error("Err: " + error.toString())
-			});
+		.then(response => {
+			setLoading(false)
+			if (response.status === 200) {
+				console.log("Cloud sync success?")
+			} else {
+				console.log("Cloud sync fail?")
+			}
+
+			return response.json()
+		})
+    .then((responseJson) => {
+			if (!responseJson.success && responseJson.reason !== undefined) {
+				setOrgSyncResponse(responseJson.reason)
+				alert.error("Failed to sync: "+responseJson.reason)
+			} else if (!responseJson.success) {
+				alert.error("Failed to sync.")
+			} else {
+				alert.success("Sync set up!")
+				getOrgs() 
+				//setCloudSyncModalOpen(false)
+			}
+		})
+		.catch(error => {
+			setLoading(false)
+			alert.error("Err: " + error.toString())
+		})
 	}
 
 	const onPasswordChange = () => {
@@ -780,6 +807,49 @@ const Admin = (props) => {
 			</DialogContent>
 		</Dialog>
 
+	const GridItem = (props) => {
+		const primary = props.data.primary
+		const secondary = props.data.secondary
+		const primaryIcon = props.data.icon
+		const secondaryIcon = props.data.active ? 
+			<CheckCircleIcon style={{color: "green"}} /> 
+			: 
+			<CloseIcon style={{color: "red"}} />
+
+		return (
+			<Grid item xs={6}>
+				<ListItem>
+					<ListItemAvatar>
+						<Avatar>
+							{primaryIcon}
+						</Avatar>
+					</ListItemAvatar>
+					<ListItemText 
+						primary={primary} 
+						secondary={secondary} 
+					/>
+					{secondaryIcon}		
+				</ListItem>
+			</Grid>
+		)
+	}
+
+	const itemColor = "black"
+	var syncList = [
+		{
+			"primary": "Workflows",
+			"secondary": "",
+			"active": false,
+			"icon": <PolymerIcon style={{color: itemColor}}/>,
+		},
+		{
+			"primary": "Apps",
+			"secondary": "",
+			"active": false,
+			"icon": <AppsIcon style={{color: itemColor}}/>,
+		},	
+	]
+
 	const cloudSyncModal =
 		<Dialog 
 			open={cloudSyncModalOpen}
@@ -798,8 +868,6 @@ const Admin = (props) => {
 			</span></DialogTitle>
 			<DialogContent>
 				What does <a href="https://shuffler.io/docs/hybrid#cloud_sync" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>cloud sync</a> do?
-				<div style={{marginTop: 5}}/>
-				Cloud Apikey
 				<div style={{display: "flex", marginBottom: 20, }}>
 					<TextField
 						color="primary"
@@ -832,7 +900,20 @@ const Admin = (props) => {
 						Test sync	
 					</Button>
 				</div>
+				{orgSyncResponse.length > 0 ? 
+					<Typography style={{marginTop: 5, marginBottom: 10}}>
+						Error: {orgSyncResponse}
+					</Typography>
+					: null
+				}
 
+			<Grid container style={{width: "100%", marginBottom: 15, }}>
+				{syncList.map((data, index) => {
+					return (
+						<GridItem data={data} />
+					)
+				})}
+			</Grid>
 				* New triggers (userinput, hotmail realtime)<div/>
 				* Execute in the cloud rather than onprem<div/>
 				* Apps can be built in the cloud<div/>
@@ -1301,7 +1382,7 @@ const Admin = (props) => {
 						style={{minWidth: 150, maxWidth: 150}}
 					/>
 				</ListItem>
-				{environments === undefined ? null : environments.map((environment, index)=> {
+				{environments === undefined || environments === null ? null : environments.map((environment, index)=> {
 					if (!showArchived && environment.archived) {
 						return null	
 					}

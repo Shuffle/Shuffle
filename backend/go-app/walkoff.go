@@ -68,14 +68,19 @@ type ExecutionRequest struct {
 
 type SyncFeatures struct {
 	Apps           SyncData `json:"apps" datastore:"apps"`
-	Workflows      SyncData `json:"apps" datastore:"apps"`
-	Schedules      SyncData `json:"apps" datastore:"apps"`
-	Autocomplete   SyncData `json:"apps" datastore:"apps"`
-	Authentication SyncData `json:"apps" datastore:"apps"`
+	Workflows      SyncData `json:"workflows" datastore:"workflows"`
+	Schedules      SyncData `json:"schedules" datastore:"schedules"`
+	Autocomplete   SyncData `json:"autocomplete" datastore:"autocomplete"`
+	Authentication SyncData `json:"authentication" datastore:"authentication"`
 }
 
 type SyncData struct {
 	Active bool `json:"active" datastore:"active"`
+}
+
+type SyncConfig struct {
+	Interval int64  `json:"interval" datastore:"interval"`
+	Apikey   string `json:"api_key" datastore:"api_key"`
 }
 
 // Role is just used for feedback for a user
@@ -87,6 +92,7 @@ type Org struct {
 	Role         string       `json:"role" datastore:"role"`
 	Roles        []string     `json:"roles" datastore:"roles"`
 	CloudSync    bool         `json:"cloud_sync" datastore:"CloudSync"`
+	SyncConfig   SyncConfig   `json:"sync_config" datastore:"sync_config"`
 	SyncFeatures SyncFeatures `json:"sync_features" datastore:"sync_features"`
 }
 
