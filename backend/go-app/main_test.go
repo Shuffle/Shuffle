@@ -5,6 +5,8 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
+	"runtime"
 	"testing"
 
 	"cloud.google.com/go/datastore"
@@ -162,6 +164,140 @@ func TestAuthenticationNotRequired(t *testing.T) {
 		if status := rr.Code; status != http.StatusOK {
 			t.Errorf("handler returned wrong status code: got %v want %v",
 				status, http.StatusOK)
+		}
+	}
+}
+
+// TestCors tests that all endpoints returns the same CORS headers when hit
+// with an OPTIONS type request.
+// It feels very fragile to test headers like this, especially for the
+// "Access-Control-Allow-Origin", but this test should be helpful while
+// refactoring the CORS logic into a middleware, and that's the reason this
+// test exists right now. It might change after the refactor because our
+// requirements might change after the refactor.
+func TestCors(t *testing.T) {
+	handlers := []endpoint{
+		{handler: handleSendalert, path: "/functions/sendmail"},
+		{handler: getDocList, path: "/api/v1/docs"},
+		{handler: getDocs, path: "/api/v1/docs/123"},
+		{handler: handleNewOutlookRegister, path: "/functions/outlook/register"},
+		{handler: handleGetOutlookFolders, path: "/functions/outlook/getFolders"},
+		{handler: handleApiGeneration, path: "/api/v1/users/generateapikey"},
+		// handleLogin generates nil pointer exception
+		// {handler: handleLogin, path: "/api/v1/users/login"}, // prob not this one
+		{handler: handleLogout, path: "/api/v1/users/logout"},
+		// handleRegister generates nil pointer exception
+		// {handler: handleRegister, path: "/api/v1/users/register"},
+		// checkAdminLogin generates nil pointer exception
+		// {handler: checkAdminLogin, path: "/api/v1/users/checkusers"},
+		{handler: handleGetUsers, path: "/api/v1/users/getusers"},
+		{handler: handleInfo, path: "/api/v1/users/getinfo"},
+		{handler: handleSettings, path: "/api/v1/users/getsettings"},
+		{handler: handleUpdateUser, path: "/api/v1/users/updateuser"},
+		{handler: deleteUser, path: "/api/v1/users/123"},
+		// handlePasswordChange generates nil pointer exception
+		// {handler: handlePasswordChange, path: "/api/v1/users/passwordchange"},
+		{handler: handleGetUsers, path: "/api/v1/users"},
+		{handler: handleGetEnvironments, path: "/api/v1/getenvironments"},
+		{handler: handleSetEnvironments, path: "/api/v1/setenvironments"},
+
+		// handleWorkflowQueue generates nil pointer exception
+		// {handler: handleWorkflowQueue, path: "/api/v1/streams"},
+		// handleGetStreamResults generates nil pointer exception
+		// {handler: handleGetStreamResults, path: "/api/v1/streams/results"},
+
+		{handler: handleAppHotloadRequest, path: "/api/v1/apps/run_hotload"},
+		{handler: loadSpecificApps, path: "/api/v1/apps/get_existing"},
+		{handler: updateWorkflowAppConfig, path: "/api/v1/apps/123"},
+		{handler: validateAppInput, path: "/api/v1/apps/validate"},
+		{handler: deleteWorkflowApp, path: "/api/v1/apps/123"},
+		{handler: getWorkflowAppConfig, path: "/api/v1/apps/123/config"},
+		{handler: getWorkflowApps, path: "/api/v1/apps"},
+		{handler: setNewWorkflowApp, path: "/api/v1/apps"},
+		{handler: getSpecificApps, path: "/api/v1/apps/search"},
+
+		{handler: getAppAuthentication, path: "/api/v1/apps/authentication"},
+		{handler: addAppAuthentication, path: "/api/v1/apps/authentication"},
+		{handler: deleteAppAuthentication, path: "/api/v1/apps/authentication/123"},
+
+		{handler: validateAppInput, path: "/api/v1/workflows/apps/validate"},
+		{handler: getWorkflowApps, path: "/api/v1/workflows/apps"},
+		{handler: setNewWorkflowApp, path: "/api/v1/workflows/apps"},
+
+		{handler: getWorkflows, path: "/api/v1/workflows"},
+		{handler: setNewWorkflow, path: "/api/v1/workflows"},
+		{handler: handleGetWorkflowqueue, path: "/api/v1/workflows/queue"},
+		{handler: handleGetWorkflowqueueConfirm, path: "/api/v1/workflows/queue/confirm"},
+		{handler: handleGetSchedules, path: "/api/v1/workflows/schedules"},
+		{handler: loadSpecificWorkflows, path: "/api/v1/workflows/download_remote"},
+		{handler: executeWorkflow, path: "/api/v1/workflows/123/execute"},
+		{handler: scheduleWorkflow, path: "/api/v1/workflows/123/schedule"},
+		{handler: stopSchedule, path: "/api/v1/workflows/123/schedule/abc"},
+		// createOutlookSub generates nil pointer exception
+		// {handler: createOutlookSub, path: "/api/v1/workflows/123/outlook"},
+		// handleDeleteOutlookSub generates nil pointer exception
+		// {handler: handleDeleteOutlookSub, path: "/api/v1/workflows/123/outlook/abc"},
+		{handler: getWorkflowExecutions, path: "/api/v1/workflows/123/executions"},
+		{handler: abortExecution, path: "/api/v1/workflows/123/executions/abc/abort"},
+		{handler: getSpecificWorkflow, path: "/api/v1/workflows/123"},
+		{handler: saveWorkflow, path: "/api/v1/workflows/123"},
+		{handler: deleteWorkflow, path: "/api/v1/workflows/123"},
+
+		{handler: handleNewHook, path: "/api/v1/hooks/new"},
+		{handler: handleWebhookCallback, path: "/api/v1/hooks/123"},
+		{handler: handleDeleteHook, path: "/api/v1/hooks/123/delete"},
+
+		{handler: handleGetSpecificTrigger, path: "/api/v1/triggers/123"},
+		{handler: handleGetSpecificStats, path: "/api/v1/stats/123"},
+
+		{handler: verifySwagger, path: "/api/v1/verify_swagger"},
+		{handler: verifySwagger, path: "/api/v1/verify_openapi"},
+		{handler: echoOpenapiData, path: "/api/v1/get_openapi_uri"},
+		{handler: echoOpenapiData, path: "/api/v1/validate_openapi"},
+		{handler: validateSwagger, path: "/api/v1/validate_openapi"},
+		{handler: getOpenapi, path: "/api/v1/get_openapi"},
+
+		{handler: cleanupExecutions, path: "/api/v1/execution_cleanup"},
+	}
+	for _, e := range handlers {
+		req, err := http.NewRequest("OPTIONS", e.path, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rr := httptest.NewRecorder()
+		handler := http.HandlerFunc(e.handler)
+
+		handler.ServeHTTP(rr, req)
+
+		funcName := runtime.FuncForPC(reflect.ValueOf(e.handler).Pointer()).Name()
+
+		if status := rr.Code; status != http.StatusOK {
+			t.Errorf("%s handler returned wrong status code: got %v want %v",
+				funcName, status, http.StatusOK)
+			continue
+		}
+
+		want := map[string]string{
+			"Vary":                             "Origin",
+			"Access-Control-Allow-Headers":     "Content-Type, Accept, X-Requested-With, remember-me",
+			"Access-Control-Allow-Methods":     "POST, GET, PUT, DELETE, PATCH",
+			"Access-Control-Allow-Credentials": "true",
+			"Access-Control-Allow-Origin":      "http://localhost:3000",
+		}
+
+		// Remember to use canonical header name if accessing the headers array
+		// directly:
+		//   v := r.Header[textproto.CanonicalMIMEHeaderKey("foo")]
+		// When using Header().Get(h), h will automatically be converted to canonical format.
+
+		for key, value := range want {
+			got := rr.Header().Get(key)
+			if got != value {
+				t.Errorf("%s handler returned wrong value for '%s' header: got '%v' want '%v'",
+					funcName, key, got, value)
+				continue
+			}
 		}
 	}
 }
