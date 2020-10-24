@@ -31,10 +31,12 @@ import (
 	"cloud.google.com/go/storage"
 	"google.golang.org/api/option"
 	"google.golang.org/appengine/mail"
+	"google.golang.org/grpc"
 
 	"github.com/getkin/kin-openapi/openapi2"
 	"github.com/getkin/kin-openapi/openapi2conv"
 	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/rs/cors"
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/google/go-github/v28/github"
@@ -57,9 +59,8 @@ import (
 	// githttp "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 
 	// Web
-	// "github.com/gorilla/handlers"
+
 	"github.com/gorilla/mux"
-	"google.golang.org/grpc"
 	http2 "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 	// Old items (cloud)
 	// "google.golang.org/appengine"
@@ -3374,6 +3375,11 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	// 2. Load the configuration
 	// 3. Execute the workflow
 
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
 	path := strings.Split(request.URL.String(), "/")
 	if len(path) < 4 {
 		resp.WriteHeader(403)
@@ -4535,6 +4541,11 @@ func findAvailablePorts(startRange int64, endRange int64) string {
 }
 
 func handleSendalert(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
 	user, err := handleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in getworkflows: %s", err)
@@ -4963,6 +4974,11 @@ func getOutlookProfile(client *http.Client) (OutlookProfile, error) {
 }
 
 func handleNewOutlookRegister(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
 	code := request.URL.Query().Get("code")
 	if len(code) == 0 {
 		log.Println("No code")
@@ -8109,62 +8125,50 @@ func handleGetFileContent(resp http.ResponseWriter, request *http.Request) {
 	//resp.Write([]byte("OK"))
 }
 
-func initHandlers() {
-	var err error
-	ctx := context.Background()
-
-	log.Printf("Starting Shuffle backend - initializing database connection")
+func initHandlers(ctx context.Context) http.Handler {
 	// option.WithoutAuthentication
-
-	dbclient, err = datastore.NewClient(ctx, gceProject, option.WithGRPCDialOption(grpc.WithNoProxy()))
-	if err != nil {
-		panic(fmt.Sprintf("DBclient error during init: %s", err))
-	}
-	log.Printf("Finished Shuffle database init")
-
-	go runInit(ctx)
 
 	r := mux.NewRouter()
 	r.HandleFunc("/api/v1/_ah/health", healthCheckHandler)
 
 	// Make user related locations
 	// Fix user changes with org
-	r.HandleFunc("/api/v1/users/generateapikey", handleApiGeneration).Methods("GET", "POST", "OPTIONS")
-	r.HandleFunc("/api/v1/users/login", handleLogin).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/users/logout", handleLogout).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/users/register", handleRegister).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/users/checkusers", checkAdminLogin).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/users/getinfo", handleInfo).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/users/getsettings", handleSettings).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/users/getusers", handleGetUsers).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/users/updateuser", handleUpdateUser).Methods("PUT", "OPTIONS")
-	r.HandleFunc("/api/v1/users/{user}", deleteUser).Methods("DELETE", "OPTIONS")
-	r.HandleFunc("/api/v1/users/passwordchange", handlePasswordChange).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/users", handleGetUsers).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/users/generateapikey", handleApiGeneration).Methods("GET", "POST")
+	r.HandleFunc("/api/v1/users/login", handleLogin).Methods("POST")
+	r.HandleFunc("/api/v1/users/logout", handleLogout).Methods("POST")
+	r.HandleFunc("/api/v1/users/register", handleRegister).Methods("POST")
+	r.HandleFunc("/api/v1/users/checkusers", checkAdminLogin).Methods("GET")
+	r.HandleFunc("/api/v1/users/getinfo", handleInfo).Methods("GET")
+	r.HandleFunc("/api/v1/users/getsettings", handleSettings).Methods("GET")
+	r.HandleFunc("/api/v1/users/getusers", handleGetUsers).Methods("GET")
+	r.HandleFunc("/api/v1/users/updateuser", handleUpdateUser).Methods("PUT")
+	r.HandleFunc("/api/v1/users/{user}", deleteUser).Methods("DELETE")
+	r.HandleFunc("/api/v1/users/passwordchange", handlePasswordChange).Methods("POST")
+	r.HandleFunc("/api/v1/users", handleGetUsers).Methods("GET")
 
 	// General - duplicates and old.
-	r.HandleFunc("/api/v1/login", handleLogin).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/logout", handleLogout).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/register", handleRegister).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/checkusers", checkAdminLogin).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/getusers", handleGetUsers).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/getinfo", handleInfo).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/getsettings", handleSettings).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/generateapikey", handleApiGeneration).Methods("GET", "POST", "OPTIONS")
-	r.HandleFunc("/api/v1/passwordchange", handlePasswordChange).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/login", handleLogin).Methods("POST")
+	r.HandleFunc("/api/v1/logout", handleLogout).Methods("POST")
+	r.HandleFunc("/api/v1/register", handleRegister).Methods("POST")
+	r.HandleFunc("/api/v1/checkusers", checkAdminLogin).Methods("GET")
+	r.HandleFunc("/api/v1/getusers", handleGetUsers).Methods("GET")
+	r.HandleFunc("/api/v1/getinfo", handleInfo).Methods("GET")
+	r.HandleFunc("/api/v1/getsettings", handleSettings).Methods("GET")
+	r.HandleFunc("/api/v1/generateapikey", handleApiGeneration).Methods("GET", "POST")
+	r.HandleFunc("/api/v1/passwordchange", handlePasswordChange).Methods("POST")
 
-	r.HandleFunc("/api/v1/getenvironments", handleGetEnvironments).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/setenvironments", handleSetEnvironments).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/v1/getenvironments", handleGetEnvironments).Methods("GET")
+	r.HandleFunc("/api/v1/setenvironments", handleSetEnvironments).Methods("PUT")
 
-	r.HandleFunc("/api/v1/docs", getDocList).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/docs/{key}", getDocs).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/docs", getDocList).Methods("GET")
+	r.HandleFunc("/api/v1/docs/{key}", getDocs).Methods("GET")
 
 	// Queuebuilder and Workflow streams. First is to update a stream, second to get a stream
 	// Changed from workflows/streams to streams, as appengine was messing up
 	// This does not increase the API counter
 	// Used by frontend
 	r.HandleFunc("/api/v1/streams", handleWorkflowQueue).Methods("POST")
-	r.HandleFunc("/api/v1/streams/results", handleGetStreamResults).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/streams/results", handleGetStreamResults).Methods("POST")
 
 	// Used by orborus
 	r.HandleFunc("/api/v1/workflows/queue", handleGetWorkflowqueue).Methods("GET")
@@ -8172,87 +8176,120 @@ func initHandlers() {
 
 	// App specific
 	// From here down isnt checked for org specific
-	r.HandleFunc("/api/v1/apps/run_hotload", handleAppHotloadRequest).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/apps/get_existing", loadSpecificApps).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/apps/download_remote", loadSpecificApps).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/apps/{appId}", updateWorkflowAppConfig).Methods("PATCH", "OPTIONS")
-	r.HandleFunc("/api/v1/apps/validate", validateAppInput).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/apps/{appId}", deleteWorkflowApp).Methods("DELETE", "OPTIONS")
-	r.HandleFunc("/api/v1/apps/{appId}/config", getWorkflowAppConfig).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/apps", getWorkflowApps).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/apps", setNewWorkflowApp).Methods("PUT", "OPTIONS")
-	r.HandleFunc("/api/v1/apps/search", getSpecificApps).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/run_hotload", handleAppHotloadRequest).Methods("GET")
+	r.HandleFunc("/api/v1/apps/get_existing", loadSpecificApps).Methods("POST")
+	r.HandleFunc("/api/v1/apps/download_remote", loadSpecificApps).Methods("POST")
+	r.HandleFunc("/api/v1/apps/{appId}", updateWorkflowAppConfig).Methods("PATCH")
+	r.HandleFunc("/api/v1/apps/validate", validateAppInput).Methods("POST")
+	r.HandleFunc("/api/v1/apps/{appId}", deleteWorkflowApp).Methods("DELETE")
+	r.HandleFunc("/api/v1/apps/{appId}/config", getWorkflowAppConfig).Methods("GET")
+	r.HandleFunc("/api/v1/apps", getWorkflowApps).Methods("GET")
+	r.HandleFunc("/api/v1/apps", setNewWorkflowApp).Methods("PUT")
+	r.HandleFunc("/api/v1/apps/search", getSpecificApps).Methods("POST")
 
-	r.HandleFunc("/api/v1/apps/authentication", getAppAuthentication).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/apps/authentication", addAppAuthentication).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/authentication", getAppAuthentication).Methods("GET")
+	r.HandleFunc("/api/v1/apps/authentication", addAppAuthentication).Methods("PUT")
 
-	r.HandleFunc("/api/v1/apps/authentication/{appauthId}", deleteAppAuthentication).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/authentication/{appauthId}", deleteAppAuthentication).Methods("DELETE")
 
 	// Legacy app things
-	r.HandleFunc("/api/v1/workflows/apps/validate", validateAppInput).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/apps", getWorkflowApps).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/apps", setNewWorkflowApp).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/apps/validate", validateAppInput).Methods("POST")
+	r.HandleFunc("/api/v1/workflows/apps", getWorkflowApps).Methods("GET")
+	r.HandleFunc("/api/v1/workflows/apps", setNewWorkflowApp).Methods("PUT")
 
 	// Workflows
 	// FIXME - implement the queue counter lol
 	/* Everything below here increases the counters*/
-	r.HandleFunc("/api/v1/workflows", getWorkflows).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows", setNewWorkflow).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/schedules", handleGetSchedules).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/{key}/schedule", scheduleWorkflow).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/download_remote", loadSpecificWorkflows).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/{key}/execute", executeWorkflow).Methods("GET", "POST", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/{key}/schedule/{schedule}", stopSchedule).Methods("DELETE", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/{key}/outlook", createOutlookSub).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/{key}/outlook/{triggerId}", handleDeleteOutlookSub).Methods("DELETE", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/{key}/executions", getWorkflowExecutions).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/{key}/executions/{key}/abort", abortExecution).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/{key}", getSpecificWorkflow).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/{key}", saveWorkflow).Methods("PUT", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/{key}", deleteWorkflow).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows", getWorkflows).Methods("GET")
+	r.HandleFunc("/api/v1/workflows", setNewWorkflow).Methods("POST")
+	r.HandleFunc("/api/v1/workflows/schedules", handleGetSchedules).Methods("GET")
+	r.HandleFunc("/api/v1/workflows/{key}/schedule", scheduleWorkflow).Methods("POST")
+	r.HandleFunc("/api/v1/workflows/download_remote", loadSpecificWorkflows).Methods("POST")
+	r.HandleFunc("/api/v1/workflows/{key}/execute", executeWorkflow).Methods("GET", "POST")
+	r.HandleFunc("/api/v1/workflows/{key}/schedule/{schedule}", stopSchedule).Methods("DELETE")
+	r.HandleFunc("/api/v1/workflows/{key}/outlook", createOutlookSub).Methods("POST")
+	r.HandleFunc("/api/v1/workflows/{key}/outlook/{triggerId}", handleDeleteOutlookSub).Methods("DELETE")
+	r.HandleFunc("/api/v1/workflows/{key}/executions", getWorkflowExecutions).Methods("GET")
+	r.HandleFunc("/api/v1/workflows/{key}/executions/{key}/abort", abortExecution).Methods("GET")
+	r.HandleFunc("/api/v1/workflows/{key}", getSpecificWorkflow).Methods("GET")
+	r.HandleFunc("/api/v1/workflows/{key}", saveWorkflow).Methods("PUT")
+	r.HandleFunc("/api/v1/workflows/{key}", deleteWorkflow).Methods("DELETE")
 
 	// Triggers
-	r.HandleFunc("/api/v1/hooks/new", handleNewHook).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/hooks/{key}", handleWebhookCallback).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/hooks/{key}/delete", handleDeleteHook).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/hooks/new", handleNewHook).Methods("POST")
+	r.HandleFunc("/api/v1/hooks/{key}", handleWebhookCallback).Methods("POST")
+	r.HandleFunc("/api/v1/hooks/{key}/delete", handleDeleteHook).Methods("DELETE")
 
 	// Trigger hmm
-	//r.HandleFunc("/api/v1/triggers/{key}", handleGetSpecificTrigger).Methods("GET", "OPTIONS")
+	//r.HandleFunc("/api/v1/triggers/{key}", handleGetSpecificTrigger).Methods("GET")
 
-	r.HandleFunc("/api/v1/stats/{key}", handleGetSpecificStats).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/stats/{key}", handleGetSpecificStats).Methods("GET")
 
 	// OpenAPI configuration
-	r.HandleFunc("/api/v1/verify_swagger", verifySwagger).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/verify_openapi", verifySwagger).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/get_openapi_uri", echoOpenapiData).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/validate_openapi", validateSwagger).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/get_openapi/{key}", getOpenapi).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/verify_swagger", verifySwagger).Methods("POST")
+	r.HandleFunc("/api/v1/verify_openapi", verifySwagger).Methods("POST")
+	r.HandleFunc("/api/v1/get_openapi_uri", echoOpenapiData).Methods("POST")
+	r.HandleFunc("/api/v1/validate_openapi", validateSwagger).Methods("POST")
+	r.HandleFunc("/api/v1/get_openapi/{key}", getOpenapi).Methods("GET")
 
 	// NEW for 0.8.0
-	r.HandleFunc("/api/v1/cloud/setup", handleCloudSetup).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/cloud/setup", handleCloudSetup).Methods("POST")
 
 	// Orgs
-	r.HandleFunc("/api/v1/orgs", handleGetOrgs).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/orgs/{orgId}", handleGetOrg).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/orgs/{orgId}", handleEditOrg).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs", handleGetOrgs).Methods("GET")
+	r.HandleFunc("/api/v1/orgs/{orgId}", handleGetOrg).Methods("GET")
+	r.HandleFunc("/api/v1/orgs/{orgId}", handleEditOrg).Methods("POST")
 	//r.HandleFunc("/api/v1/orgs/{orgId}", handleEditOrg).Methods("POST", "OPTIONS")
 
 	// Important for email, IDS etc. Create this by:
 	// PS: For cloud, this has to use cloud storage.
 	// https://developer.box.com/reference/get-files-id-content/
 	// 1. Creating the "get file" option. Make it possible to run this in the frontend.
-	r.HandleFunc("/api/v1/files/{fileId}/content", handleGetFileContent).Methods("GET", "OPTIONS")
-	//r.HandleFunc("/api/v1/files/create", handleGetFile).Methods("POST", "OPTIONS")
-	//r.HandleFunc("/api/v1/files/upload", handleGetFile).Methods("POST", "OPTIONS")
-	//r.HandleFunc("/api/v1/files/{fileId}", handleGetFile).Methods("GET", "OPTIONS")
-	//r.HandleFunc("/api/v1/files/{fileId}", handleGetFile).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/files/{fileId}/content", handleGetFileContent).Methods("GET")
+	//r.HandleFunc("/api/v1/files/create", handleGetFile).Methods("POST")
+	//r.HandleFunc("/api/v1/files/upload", handleGetFile).Methods("POST")
+	//r.HandleFunc("/api/v1/files/{fileId}", handleGetFile).Methods("GET")
+	//r.HandleFunc("/api/v1/files/{fileId}", handleGetFile).Methods("DELETE")
 
-	http.Handle("/", r)
+	// // Where ORIGIN_ALLOWED is like `scheme://dns[:port]`, or `*` (insecure)
+	// headersOk := handlers.AllowedHeaders([]string{"Content-Type", "Accept", "X-Requested-With", "remember-me"})
+	// originsOk := handlers.AllowedOrigins([]string{"http://localhost:3000", "http://localhost:3001"})
+	// methodsOk := handlers.AllowedMethods([]string{"POST", "GET", "PUT", "DELETE", "PATCH"})
+	// credentialsOk := handlers.AllowCredentials()
+	// // Please also consider to add Accept, Accept-Language and Content-Type to the AllowedHeaders as good practice.
+
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowCredentials: true,
+		AllowedMethods:   []string{"POST", "GET", "PUT", "DELETE", "PATCH", "OPTIONS"},
+		AllowedHeaders:   []string{"Content-Type", "Accept", "X-Requested-With", "Remember-Me"},
+		// Enable Debugging for testing, consider disabling in production
+		Debug: false,
+	})
+
+	// Insert the middleware
+	// handler = c.Handler(handler)
+
+	return c.Handler(r)
+	// return handlers.CORS(originsOk, headersOk, methodsOk, credentialsOk)(r)
+	// http.Handle("/", r)
 }
 
 // Had to move away from mux, which means Method is fucked up right now.
 func main() {
-	initHandlers()
+	var err error
+	ctx := context.Background()
+
+	log.Printf("Starting Shuffle backend - initializing database connection")
+	dbclient, err = datastore.NewClient(ctx, gceProject, option.WithGRPCDialOption(grpc.WithNoProxy()))
+	if err != nil {
+		panic(fmt.Sprintf("DBclient error during init: %s", err))
+	}
+	log.Printf("Finished Shuffle database init")
+
+	http.Handle("/", initHandlers(ctx))
+	go runInit(ctx)
+
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "MISSING"

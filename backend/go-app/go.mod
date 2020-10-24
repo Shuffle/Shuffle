@@ -23,6 +23,7 @@ require (
 	github.com/gorilla/mux v1.7.4
 	github.com/h2non/filetype v1.0.12
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
+	github.com/rs/cors v1.7.0
 	github.com/satori/go.uuid v1.2.0
 	golang.org/x/crypto v0.0.0-20200429183012-4b2356b1ed79
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d

@@ -259,16 +259,28 @@ func TestCors(t *testing.T) {
 
 		{handler: cleanupExecutions, path: "/api/v1/execution_cleanup"},
 	}
+
+	r := initHandlers(context.TODO())
+
+outerLoop:
 	for _, e := range handlers {
 		req, err := http.NewRequest("OPTIONS", e.path, nil)
+		req.Header.Add("Origin", "http://localhost:3000")
+		req.Header.Add("Access-Control-Request-Method", "POST")
+		req.Header.Add("Access-Control-Request-Headers", "Content-Type, Accept, X-Requested-With, remember-me")
+
+		// OPTIONS /resource/foo
+		// Access-Control-Request-Method: DELETE
+		// Access-Control-Request-Headers: origin, x-requested-with
+		// Origin: https://foo.bar.org
+
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		rr := httptest.NewRecorder()
-		handler := http.HandlerFunc(e.handler)
 
-		handler.ServeHTTP(rr, req)
+		r.ServeHTTP(rr, req)
 
 		funcName := runtime.FuncForPC(reflect.ValueOf(e.handler).Pointer()).Name()
 
@@ -280,8 +292,8 @@ func TestCors(t *testing.T) {
 
 		want := map[string]string{
 			"Vary":                             "Origin",
-			"Access-Control-Allow-Headers":     "Content-Type, Accept, X-Requested-With, remember-me",
-			"Access-Control-Allow-Methods":     "POST, GET, PUT, DELETE, PATCH",
+			"Access-Control-Allow-Headers":     "Content-Type, Accept, X-Requested-With, Remember-Me",
+			"Access-Control-Allow-Methods":     "POST",
 			"Access-Control-Allow-Credentials": "true",
 			"Access-Control-Allow-Origin":      "http://localhost:3000",
 		}
@@ -296,8 +308,9 @@ func TestCors(t *testing.T) {
 			if got != value {
 				t.Errorf("%s handler returned wrong value for '%s' header: got '%v' want '%v'",
 					funcName, key, got, value)
-				continue
+				continue outerLoop
 			}
 		}
+
 	}
 }
