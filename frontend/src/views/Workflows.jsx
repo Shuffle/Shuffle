@@ -337,6 +337,9 @@ const Workflows = (props) => {
 			}
 		}
 
+		data.execution_org = {"id": ""}
+		console.log(data)
+
 		let linkElement = document.createElement('a');
 		linkElement.setAttribute('href', dataUri);
 		linkElement.setAttribute('download', exportFileDefaultName);

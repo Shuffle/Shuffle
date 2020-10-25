@@ -5554,7 +5554,7 @@ const AngularWorkflow = (props) => {
 									jsonvalid = false
 								}
 							} catch (e) {
-								console.log("Error: ", e)
+								//console.log("Error: ", e)
 								jsonvalid = false
 							}
 

@@ -196,12 +196,13 @@ const Admin = (props) => {
 			});
 	}
 
-	const enableCloudSync = (apikey, organization) => {
+	const enableCloudSync = (apikey, organization, disableSync) => {
 		setOrgSyncResponse("")
 
 		const data = { 
 			apikey: apikey,
 			organization: organization,
+			disable: disableSync,
 		}
 
 		const url = globalUrl + '/api/v1/cloud/setup';
@@ -229,13 +230,20 @@ const Admin = (props) => {
     .then((responseJson) => {
 			if (!responseJson.success && responseJson.reason !== undefined) {
 				setOrgSyncResponse(responseJson.reason)
-				alert.error("Failed to sync: "+responseJson.reason)
+				alert.error("Failed to handle sync: "+responseJson.reason)
 			} else if (!responseJson.success) {
-				alert.error("Failed to sync.")
+				alert.error("Failed to handle sync.")
 			} else {
-				alert.success("Sync set up!")
 				getOrgs() 
-				//setCloudSyncModalOpen(false)
+				if (disableSync) {
+					alert.success("Successfully disabled sync!")
+				} else {
+					alert.success("Sync successfully set up!")
+				}
+
+				selectedOrganization.cloud_sync = !selectedOrganization.cloud_sync
+				setSelectedOrganization(selectedOrganization)
+				setCloudSyncApikey("")
 			}
 		})
 		.catch(error => {
@@ -389,9 +397,15 @@ const Admin = (props) => {
 		for (var key in environments) {
 			if (environments[key].Name == name) {
 				if (environments[key].default) {
-					alert.info("Can't delete the default environment")
+					alert.error("Can't delete the default environment")
 					return
 				}
+
+				if (environments[key].type === "cloud") {
+					alert.error("Can't delete the cloud environments")
+					return
+				}
+
 				environments[key].archived = true
 			}
 
@@ -881,6 +895,7 @@ const Admin = (props) => {
 						}}
 						required
 						fullWidth={true}
+						disabled={selectedOrganization.cloud_sync}
 						autoComplete="cloud apikey"
 						id="apikey_field"
 						margin="normal"
@@ -890,14 +905,19 @@ const Admin = (props) => {
 							setCloudSyncApikey(event.target.value)
 						}}
 					/>
-					<Button disabled={cloudSyncApikey.length === 0 || loading} variant="contained" style={{ marginLeft: 15, height: 60, margin: "auto", borderRadius: "0px" }} onClick={() => {
+					<Button disabled={(!selectedOrganization.cloud_sync && cloudSyncApikey.length === 0) || loading} variant="contained" style={{ marginLeft: 15, height: 60, margin: "auto", borderRadius: "0px" }} onClick={() => {
 						setLoading(true)
 						enableCloudSync(
 							cloudSyncApikey,
 							selectedOrganization,
+							selectedOrganization.cloud_sync,
 						)
 					}} color="primary">
-						Test sync	
+						{selectedOrganization.cloud_sync ? 
+							"Stop sync"
+							:
+							"Start sync"
+						}
 					</Button>
 				</div>
 				{orgSyncResponse.length > 0 ? 
@@ -910,7 +930,7 @@ const Admin = (props) => {
 			<Grid container style={{width: "100%", marginBottom: 15, }}>
 				{syncList.map((data, index) => {
 					return (
-						<GridItem data={data} />
+						<GridItem key={index} data={data} />
 					)
 				})}
 			</Grid>
@@ -1370,6 +1390,10 @@ const Admin = (props) => {
 						style={{minWidth: 200, maxWidth: 200}}
 					/>
 					<ListItemText
+						primary="Type"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
 						primary="Default"
 						style={{minWidth: 150, maxWidth: 150}}
 					/>
@@ -1401,6 +1425,10 @@ const Admin = (props) => {
 							<ListItemText
 								primary={"TBD"}
 								style={{minWidth: 200, maxWidth: 200, overflow: "hidden"}}
+							/>
+							<ListItemText
+								primary={environment.Type}
+								style={{minWidth: 150, maxWidth: 150}}
 							/>
 							<ListItemText
 								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}

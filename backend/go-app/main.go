@@ -72,6 +72,7 @@ var gceProject = "shuffle"
 var bucketName = "shuffler.appspot.com"
 var baseAppPath = "/home/frikky/git/shaffuru/tmp/apps"
 var baseDockerName = "frikky/shuffle"
+var syncUrl = "http://192.168.3.6:5002"
 
 var dbclient *datastore.Client
 
@@ -137,6 +138,14 @@ type UserLimits struct {
 	DailyMailUsage          int64 `json:"daily_mail_usage" datastore:"daily_mail_usage"`
 	MaxTriggers             int64 `json:"max_triggers" datastore:"max_triggers"`
 	MaxWorkflows            int64 `json:"max_workflows" datastore:"max_workflows"`
+}
+
+type retStruct struct {
+	Success         bool         `json:"success"`
+	SyncFeatures    SyncFeatures `json:"sync_features"`
+	SessionKey      string       `json:"session_key"`
+	IntervalSeconds int64        `json:"interval_seconds"`
+	Reason          string       `json:"reason"`
 }
 
 // Saves some data, not sure what to have here lol
@@ -1082,6 +1091,10 @@ func handleSetEnvironments(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	for _, item := range newEnvironments {
+		if item.OrgId == "" {
+			item.OrgId = user.ActiveOrg.Id
+		}
+
 		err = setEnvironment(ctx, &item)
 		if err != nil {
 			resp.WriteHeader(401)
@@ -3327,8 +3340,8 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 			Body:   ioutil.NopCloser(strings.NewReader(bodyWrapper)),
 		}
 
+		// OrgId: activeOrgs[0].Id,
 		workflowExecution, executionResp, err := handleExecution(item, workflow, newRequest)
-
 		if err == nil {
 			err = increaseStatisticsField(ctx, "total_webhooks_ran", workflowExecution.Workflow.ID, 1)
 			if err != nil {
@@ -6559,11 +6572,13 @@ func runInit(ctx context.Context) {
 			log.Printf("Found %d users.", len(users))
 			if len(activeOrgs) == 1 && len(users) > 0 {
 				for _, user := range users {
-					if user.ActiveOrg.Id == "" {
+					if user.ActiveOrg.Id == "" && len(user.Username) > 0 {
 						user.ActiveOrg = activeOrgs[0]
 						err = setUser(ctx, &user)
 						if err != nil {
-							log.Printf("Failed updating user %s", user.Username)
+							log.Printf("Failed updating user %s with org", user.Username)
+						} else {
+							log.Printf("Updated user %s to have org", user.Username)
 						}
 					}
 				}
@@ -6602,6 +6617,35 @@ func runInit(ctx context.Context) {
 				if err != nil {
 					log.Printf("Failed adding environment to org %s", activeOrgs[0].Id)
 				}
+			}
+		}
+	}
+
+	// Fixing workflows to have real activeorg IDs
+	if len(activeOrgs) == 1 {
+		q := datastore.NewQuery("workflow")
+		var workflows []Workflow
+		_, err = dbclient.GetAll(ctx, q, &workflows)
+		if err != nil {
+			log.Printf("Error getting workflows in runinit: %s", err)
+		} else {
+			updated := 0
+			for _, workflow := range workflows {
+				if workflow.ExecutingOrg.Id == "" {
+					workflow.ExecutingOrg = activeOrgs[0]
+
+					err = setWorkflow(ctx, workflow, workflow.ID)
+					if err != nil {
+						log.Printf("Failed setting workflow in init: %s", err)
+					} else {
+						log.Printf("Fixed workflow %s to have the right org.", workflow.ID)
+						updated += 1
+					}
+				}
+			}
+
+			if updated > 0 {
+				log.Printf("Set workflow orgs for %d workflows", updated)
 			}
 		}
 	}
@@ -6746,7 +6790,136 @@ func runInit(ctx context.Context) {
 	log.Printf("Finished INIT")
 }
 
+func handleVerifyCloudsync(orgId string) (SyncFeatures, error) {
+	ctx := context.Background()
+	org, err := getOrg(ctx, orgId)
+	if err != nil {
+		return SyncFeatures{}, err
+	}
+
+	//r.HandleFunc("/api/v1/getorgs", handleGetOrgs).Methods("GET", "OPTIONS")
+
+	syncURL := fmt.Sprintf("%s/api/v1/cloud/sync/get_access", syncUrl)
+	client := &http.Client{}
+	req, err := http.NewRequest(
+		"GET",
+		syncURL,
+		nil,
+	)
+
+	req.Header.Add("Authorization", fmt.Sprintf(`Bearer %s`, org.SyncConfig.Apikey))
+	newresp, err := client.Do(req)
+	if err != nil {
+		return SyncFeatures{}, err
+	}
+
+	respBody, err := ioutil.ReadAll(newresp.Body)
+	if err != nil {
+		return SyncFeatures{}, err
+	}
+
+	responseData := retStruct{}
+	err = json.Unmarshal(respBody, &responseData)
+	if err != nil {
+		return SyncFeatures{}, err
+	}
+
+	if newresp.StatusCode != 200 {
+		return SyncFeatures{}, errors.New(fmt.Sprintf("Got status code %d when getting org remotely. Expected 200. Contact support.", newresp.StatusCode))
+	}
+
+	if !responseData.Success {
+		return SyncFeatures{}, errors.New(responseData.Reason)
+	}
+
+	return responseData.SyncFeatures, nil
+}
+
+// Actually stops syncing with cloud for an org.
+// Disables potential schedules, removes environments, breaks workflows etc.
+func handleStopCloudSync(syncUrl string, org Org) error {
+	if len(org.SyncConfig.Apikey) == 0 {
+		return errors.New(fmt.Sprintf("Couldn't find any sync key to disable org %s", org.Id))
+	}
+
+	log.Printf("Should run cloud sync disable for org %s with URL %s and sync key %s", org.Id, syncUrl, org.SyncConfig.Apikey)
+
+	client := &http.Client{}
+	req, err := http.NewRequest(
+		"DELETE",
+		syncUrl,
+		nil,
+	)
+
+	req.Header.Add("Authorization", fmt.Sprintf(`Bearer %s`, org.SyncConfig.Apikey))
+	newresp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	respBody, err := ioutil.ReadAll(newresp.Body)
+	if err != nil {
+		return err
+	}
+	log.Printf("Remote disable ret: %s", string(respBody))
+
+	responseData := retStruct{}
+	err = json.Unmarshal(respBody, &responseData)
+	if err != nil {
+		return err
+	}
+
+	if newresp.StatusCode != 200 {
+		return errors.New(fmt.Sprintf("Got status code %d when disabling org remotely. Expected 200. Contact support.", newresp.StatusCode))
+	}
+
+	if !responseData.Success {
+		//log.Printf("Success reason: %s", responseData.Reason)
+		return errors.New(responseData.Reason)
+	}
+
+	log.Printf("Everything is success. Should disable org sync for %s", org.Id)
+
+	ctx := context.Background()
+	org.CloudSync = false
+	org.SyncFeatures = SyncFeatures{}
+	org.SyncConfig = SyncConfig{}
+
+	err = setOrg(ctx, org, org.Id)
+	if err != nil {
+		newerror := fmt.Sprintf("ERROR: Failed updating even though there was success: %s", err)
+		log.Printf(newerror)
+		return errors.New(newerror)
+	}
+
+	var environments []Environment
+	q := datastore.NewQuery("Environments").Filter("org_id =", org.Id)
+	_, err = dbclient.GetAll(ctx, q, &environments)
+	if err != nil {
+		return err
+	}
+
+	// Don't disable, this will be deleted entirely
+	for _, environment := range environments {
+		if environment.Type == "cloud" {
+			environment.Name = "Cloud"
+			environment.Archived = true
+			err = setEnvironment(ctx, &environment)
+			if err == nil {
+				log.Printf("Updated cloud environment %s", environment.Name)
+			} else {
+				log.Printf("Failed to update cloud environment %s", environment.Name)
+			}
+		}
+	}
+
+	return nil
+}
+
 // INFO: https://docs.google.com/drawings/d/1JJebpPeEVEbmH_qsAC6zf9Noygp7PytvesrkhE19QrY/edit
+/*
+	This is here to both enable and disable cloud sync features for an organization
+*/
 func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -6778,6 +6951,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	type ReturnData struct {
 		Apikey       string `datastore:"apikey"`
 		Organization Org    `datastore:"organization"`
+		Disable      bool   `datastore:"disable"`
 	}
 
 	var tmpData ReturnData
@@ -6833,7 +7007,42 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 
 	// FIXME: Path
 	client := &http.Client{}
-	syncPath := "http://192.168.3.6:5002/api/v1/cloud/sync"
+	apiPath := "/api/v1/cloud/sync"
+	if tmpData.Disable {
+		if !org.CloudSync {
+			log.Printf("Org %s isn't syncing. Can't stop.", org.Id)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Skipped cloud sync setup. Already syncing."}`)))
+			return
+		}
+
+		log.Printf("Should disable sync for org %s", org.Id)
+		apiPath := "/api/v1/cloud/sync/stop"
+		syncUrl = fmt.Sprintf("%s%s", syncUrl, apiPath)
+
+		err = handleStopCloudSync(syncUrl, *org)
+		if err != nil {
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		} else {
+			resp.WriteHeader(200)
+			resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Successfully disabled cloud sync for org."}`)))
+		}
+
+		return
+	}
+
+	// Everything below here is to SET UP CLOUD SYNC.
+	// If you want to disable cloud sync, see previous section.
+	if org.CloudSync {
+		log.Printf("Org %s is already syncing. Skip", org.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Org is already syncing. Nothing to set up."}`)))
+		return
+	}
+
+	syncPath := fmt.Sprintf("%s%s", syncUrl, apiPath)
+
 	type requestStruct struct {
 		ApiKey string `json:"api_key"`
 	}
@@ -6871,14 +7080,6 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	type retStruct struct {
-		Success         bool         `json:"success"`
-		SyncFeatures    SyncFeatures `json:"sync_features"`
-		SessionKey      string       `json:"session_key"`
-		IntervalSeconds int64        `json:"interval_seconds"`
-		Reason          string       `json:"reason"`
-	}
-
 	log.Printf("Respbody: %s", string(respBody))
 	responseData := retStruct{}
 	err = json.Unmarshal(respBody, &responseData)
@@ -6910,6 +7111,59 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	org.SyncConfig = SyncConfig{
 		Apikey:   responseData.SessionKey,
 		Interval: responseData.IntervalSeconds,
+	}
+
+	// FIXME: Add this for every feature
+	if org.SyncFeatures.Workflows.Active {
+		log.Printf("Should activate cloud workflows for org %s!", org.Id)
+
+		// 1. Find environment
+		// 2. If cloud env found, enable it (un-archive)
+		// 3. If it doesn't create it
+		var environments []Environment
+		q := datastore.NewQuery("Environments").Filter("org_id =", org.Id)
+		_, err = dbclient.GetAll(ctx, q, &environments)
+		if err == nil {
+
+			// Don't disable, this will be deleted entirely
+			found := false
+			for _, environment := range environments {
+				if environment.Type == "cloud" {
+					environment.Name = "Cloud"
+					environment.Archived = false
+					err = setEnvironment(ctx, &environment)
+					if err == nil {
+						log.Printf("Re-added cloud environment %s", environment.Name)
+					} else {
+						log.Printf("Failed to re-enable cloud environment %s", environment.Name)
+					}
+
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				log.Printf("Env for cloud not found. Should add it!")
+				newEnv := Environment{
+					Name:       "Cloud",
+					Type:       "cloud",
+					Archived:   false,
+					Registered: true,
+					Default:    false,
+					OrgId:      org.Id,
+				}
+
+				err = setEnvironment(ctx, &newEnv)
+				if err != nil {
+					log.Printf("Failed setting up NEW org environment for org %s: %s", org.Id, err)
+				} else {
+					log.Printf("Successfully added new environment for org %s", org.Id)
+				}
+			}
+		} else {
+			log.Printf("Failed setting org environment, because none were found: %s", err)
+		}
 	}
 
 	err = setOrg(ctx, *org, org.Id)

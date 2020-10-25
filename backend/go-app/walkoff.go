@@ -204,6 +204,7 @@ type WorkflowExecution struct {
 	ExecutionArgument  string         `json:"execution_argument" datastore:"execution_argument,noindex"`
 	ExecutionId        string         `json:"execution_id" datastore:"execution_id"`
 	ExecutionSource    string         `json:"execution_source" datastore:"execution_source"`
+	ExecutionOrg       string         `json:"execution_org" datastore:"execution_org"`
 	WorkflowId         string         `json:"workflow_id" datastore:"workflow_id"`
 	LastNode           string         `json:"last_node" datastore:"last_node"`
 	Authorization      string         `json:"authorization" datastore:"authorization"`
@@ -481,7 +482,7 @@ func getWorkflowQueue(ctx context.Context, id string) (ExecutionRequestWrapper, 
 //}
 
 // Frequency = cronjob OR minutes between execution
-func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode, frequency string, body []byte) error {
+func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode, frequency, orgId string, body []byte) error {
 	var err error
 	testSplit := strings.Split(frequency, "*")
 	cronJob := ""
@@ -525,7 +526,7 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 			Body:   ioutil.NopCloser(strings.NewReader(bodyWrapper)),
 		}
 
-		_, _, err := handleExecution(workflowId, Workflow{}, request)
+		_, _, err := handleExecution(workflowId, Workflow{ExecutingOrg: Org{Id: orgId}}, request)
 		if err != nil {
 			log.Printf("Failed to execute %s: %s", workflowId, err)
 		}
@@ -1355,6 +1356,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 	workflow.ID = uuid.NewV4().String()
 	workflow.Owner = user.Id
 	workflow.Sharing = "private"
+	workflow.ExecutingOrg = user.ActiveOrg
 
 	ctx := context.Background()
 	log.Printf("Saved new workflow %s with name %s", workflow.ID, workflow.Name)
@@ -1395,7 +1397,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 		if err == nil {
 			// FIXME: Add real env
 			envName := "Shuffle"
-			environments, err := getEnvironments(ctx)
+			environments, err := getEnvironments(ctx, user.ActiveOrg.Id)
 			if err == nil {
 				for _, env := range environments {
 					if env.Default {
@@ -1679,8 +1681,6 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	//Actions           []Action   `json:"actions" datastore:"actions,noindex"`
-
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		log.Printf("Failed hook unmarshaling: %s", err)
@@ -1710,6 +1710,10 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	// Fixing wrong owners when importing
 	if workflow.Owner == "" {
 		workflow.Owner = user.Id
+	}
+
+	if len(workflow.ExecutingOrg.Id) == 0 {
+		workflow.ExecutingOrg = user.ActiveOrg
 	}
 
 	// FIXME - this shouldn't be necessary with proper API checks
@@ -2305,6 +2309,11 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		workflow = *tmpworkflow
 	}
 
+	if len(workflow.ExecutingOrg.Id) == 0 {
+		log.Printf("Stopped execution because there is no executing org for workflow %s", workflow.ID)
+		return WorkflowExecution{}, fmt.Sprintf("Workflow has no executing org defined"), errors.New("Workflow has no executing org defined")
+	}
+
 	if len(workflow.Actions) == 0 {
 		workflow.Actions = []Action{}
 	}
@@ -2397,6 +2406,8 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		}
 	} else {
 		// Check for parameters of start and ExecutionId
+		// This is mostly used for user input trigger
+
 		start, startok := request.URL.Query()["start"]
 		answer, answerok := request.URL.Query()["answer"]
 		referenceId, referenceok := request.URL.Query()["reference_execution"]
@@ -2642,31 +2653,83 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	// Verification for execution environments
 	workflowExecution.Results = defaultResults
 	workflowExecution.Workflow.Actions = newActions
-	onpremExecution := false
+	onpremExecution := true
 	environments := []string{}
+
+	if len(workflowExecution.ExecutionOrg) == 0 && len(workflow.ExecutingOrg.Id) > 0 {
+		workflowExecution.ExecutionOrg = workflow.ExecutingOrg.Id
+	}
+
+	var allEnvs []Environment
+	if len(workflowExecution.ExecutionOrg) > 0 {
+		log.Printf("Executing ORG: %s", workflowExecution.ExecutionOrg)
+
+		allEnvironments, err := getEnvironments(ctx, workflowExecution.ExecutionOrg)
+		if err != nil {
+			log.Printf("Failed finding environments: %s", err)
+			return WorkflowExecution{}, fmt.Sprintf("Workflow environments not found for this org"), errors.New(fmt.Sprintf("Workflow environments not found for this org"))
+		}
+
+		for _, curenv := range allEnvironments {
+			if curenv.Archived {
+				continue
+			}
+
+			allEnvs = append(allEnvs, curenv)
+		}
+	} else {
+		log.Printf("[ERROR] No org identified for execution of %s. Returning", workflowExecution.Workflow.ID)
+		return WorkflowExecution{}, "No org identified for execution", errors.New("No org identified for execution")
+	}
+
+	if len(allEnvs) == 0 {
+		log.Printf("[ERROR] No active environments found for org", workflowExecution.ExecutionOrg)
+		return WorkflowExecution{}, "No active environments found", errors.New(fmt.Sprintf("No active env found for org %s", workflowExecution.ExecutionOrg))
+	}
 
 	// Check if the actions are children of the startnode?
 	imageNames := []string{}
+	cloudExec := false
 	for _, action := range workflowExecution.Workflow.Actions {
-		if action.Environment != cloudname {
-			found := false
-			for _, env := range environments {
-				if env == action.Environment {
-					found = true
-					break
+		// Verify if the action environment exists and append
+		found := false
+		for _, env := range allEnvs {
+			if env.Name == action.Environment {
+				found = true
+
+				if env.Type == "cloud" {
+					cloudExec = true
+				} else if env.Type == "onprem" {
+					onpremExecution = true
+				} else {
+					log.Printf("[ERROR] No handler for environment type %s", env.Type)
+					return WorkflowExecution{}, "No active environments found", errors.New(fmt.Sprintf("No handler for environment type %s", env.Type))
 				}
+				break
 			}
+		}
 
-			// Check if the app exists?
-			newName := action.AppName
-			newName = strings.ReplaceAll(newName, " ", "-")
-			imageNames = append(imageNames, fmt.Sprintf("%s:%s_%s", baseDockerName, newName, action.AppVersion))
+		if !found {
+			log.Printf("[ERROR] Couldn't find environment %s. Maybe it's inactive?", action.Environment)
+			return WorkflowExecution{}, "Couldn't find the environment", errors.New(fmt.Sprintf("Couldn't find env %s in org %s", action.Environment, workflowExecution.ExecutionOrg))
+		}
 
-			if !found {
-				environments = append(environments, action.Environment)
+		found = false
+		for _, env := range environments {
+			if env == action.Environment {
+
+				found = true
+				break
 			}
+		}
 
-			onpremExecution = true
+		// Check if the app exists?
+		newName := action.AppName
+		newName = strings.ReplaceAll(newName, " ", "-")
+		imageNames = append(imageNames, fmt.Sprintf("%s:%s_%s", baseDockerName, newName, action.AppVersion))
+
+		if !found {
+			environments = append(environments, action.Environment)
 		}
 	}
 
@@ -2711,8 +2774,22 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 				log.Printf("Failed adding to db: %s", err)
 			}
 		}
-	} else {
-		log.Printf("[ERROR] Cloud not implemented yet")
+	}
+
+	// Verifies and runs cloud executions
+	if cloudExec {
+		featuresList, err := handleVerifyCloudsync(workflowExecution.ExecutionOrg)
+		if !featuresList.Workflows.Active || err != nil {
+			log.Printf("Error: %s", err)
+			log.Printf("[ERROR] Cloud not implemented yet. May need to work on app checking and such")
+			return WorkflowExecution{}, "Cloud not implemented yet", errors.New("Cloud not implemented yet")
+		}
+
+		if len(workflowExecution.Workflow.Actions) == 1 {
+			log.Printf("Should execute directly with cloud instead of worker because only one action")
+			cloudExecuteAction(workflowExecution.ExecutionId, workflowExecution.Workflow.Actions[0], workflowExecution.ExecutionOrg)
+			return WorkflowExecution{}, "Cloud not implemented yet", errors.New("Cloud not implemented yet")
+		}
 	}
 
 	err = increaseStatisticsField(ctx, "workflow_executions", workflow.ID, 1)
@@ -2721,6 +2798,69 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	}
 
 	return workflowExecution, "", nil
+}
+
+// This updates stuff locally from remote executions
+func cloudExecuteAction(workflowExecutionId string, action Action, orgId string) error {
+	log.Printf("Executing action: %#v in execution ID %s", action, workflowExecutionId)
+	ctx := context.Background()
+	org, err := getOrg(ctx, orgId)
+	if err != nil {
+		return err
+	}
+
+	type ExecutionStruct struct {
+		ID     string `json:"id"`
+		Action Action `json:"action"`
+	}
+	data := ExecutionStruct{
+		ID:     workflowExecutionId,
+		Action: action,
+	}
+
+	b, err := json.Marshal(data)
+	if err != nil {
+		log.Printf("Failed marshaling api key data: %s", err)
+		return err
+	}
+
+	syncURL := fmt.Sprintf("%s/api/v1/cloud/sync/execute_node", syncUrl)
+	client := &http.Client{}
+	req, err := http.NewRequest(
+		"POST",
+		syncURL,
+		bytes.NewBuffer(b),
+	)
+
+	req.Header.Add("Authorization", fmt.Sprintf(`Bearer %s`, org.SyncConfig.Apikey))
+	newresp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	respBody, err := ioutil.ReadAll(newresp.Body)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Finished request. Data: %s", string(respBody))
+	log.Printf("Status code: %d", newresp.StatusCode)
+
+	responseData := retStruct{}
+	err = json.Unmarshal(respBody, &responseData)
+	if err != nil {
+		return err
+	}
+
+	if newresp.StatusCode != 200 {
+		return errors.New(fmt.Sprintf("Got status code %d when executing remotely. Expected 200. Contact support.", newresp.StatusCode))
+	}
+
+	if !responseData.Success {
+		return errors.New(responseData.Reason)
+	}
+
+	return nil
 }
 
 func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
@@ -2776,6 +2916,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	log.Printf("[INFO] Starting execution of %s!", fileId)
+	workflow.ExecutingOrg = user.ActiveOrg
 	workflowExecution, executionResp, err := handleExecution(fileId, *workflow, request)
 
 	if err == nil {
@@ -3137,6 +3278,7 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 		schedule.Name,
 		startNode,
 		schedule.Frequency,
+		user.ActiveOrg.Id,
 		[]byte(parsedBody),
 	)
 
@@ -3336,9 +3478,9 @@ func getWorkflow(ctx context.Context, id string) (*Workflow, error) {
 	return workflow, nil
 }
 
-func getEnvironments(ctx context.Context) ([]Environment, error) {
+func getEnvironments(ctx context.Context, OrgId string) ([]Environment, error) {
 	var environments []Environment
-	q := datastore.NewQuery("Environments")
+	q := datastore.NewQuery("Environments").Filter("org_id =", OrgId)
 
 	_, err := dbclient.GetAll(ctx, q, &environments)
 	if err != nil {
