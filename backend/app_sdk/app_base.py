@@ -460,23 +460,44 @@ class AppBase:
         # Returns a string if the result is single, or a list if it's a list
         def get_json_value(execution_data, input_data):
             parsersplit = input_data.split(".")
-            actionname = parsersplit[0][1:].replace(" ", "_", -1)
+            actionname_lower = parsersplit[0][1:].lower()
+
             #Actionname: Start_node
 
             print(f"Actionname: {actionname}")
-        
+
             # 1. Find the action
             baseresult = ""
-            actionname_lower = actionname.lower()
+
+            appendresult = "" 
+            print("Parsersplit length: %d" % len(parsersplit))
+            if (actionname_lower.startswith("exec ") or actionname_lower.startswith("webhook ") or actionname_lower.startswith("schedule ") or actionname_lower.startswith("userinput ") or actionname_lower.startswith("email_trigger ") or actionname_lower.startswith("trigger ")) and len(parsersplit) == 1:
+                record = False
+                for char in actionname_lower:
+                    if char == " ":
+                        record = True
+
+                    if record:
+                        appendresult += char
+
+                actionname_lower = "exec"
+
+            actionname_lower = actionname_lower.replace(" ", "_", -1)
+
             try: 
                 if actionname_lower == "exec" or actionname_lower == "webhook" or actionname_lower == "schedule" or actionname_lower == "userinput" or actionname_lower == "email_trigger" or actionname_lower == "trigger": 
                     baseresult = execution_data["execution_argument"]
                 else:
-                    for result in execution_data["results"]:
-                        resultlabel = result["action"]["label"].replace(" ", "_", -1).lower()
-                        if resultlabel.lower() == actionname_lower:
-                            baseresult = result["result"]
-                            break
+                    #print("Within execution data check. Execution data: %s", execution_data["results"])
+                    if execution_data["results"] != None:
+                        for result in execution_data["results"]:
+                            resultlabel = result["action"]["label"].replace(" ", "_", -1).lower()
+                            if resultlabel.lower() == actionname_lower:
+                                baseresult = result["result"]
+                                break
+                    else:
+                        print("No results to get values from.")
+                        baseresult = "$" + parsersplit[0][1:] 
                     
                     print("BEFORE VARIABLES!")
                     if len(baseresult) == 0:
@@ -518,17 +539,17 @@ class AppBase:
         
             # 2. Find the JSON data
             if len(baseresult) == 0:
-                return "", False
+                return ""+appendresult, False
         
             if len(parsersplit) == 1:
-                return baseresult, False
+                return baseresult+appendresult, False
         
             baseresult = baseresult.replace("\'", "\"")
             basejson = {}
             try:
                 basejson = json.loads(baseresult)
             except json.decoder.JSONDecodeError as e:
-                return baseresult, False
+                return baseresult+appendresult, False
         
             data, is_loop = recurse_json(basejson, parsersplit[1:])
             parseditem = data
@@ -542,7 +563,7 @@ class AppBase:
                     print("SET DATA WRAPPER TO %s!" % parsersplit[-1])
                     parseditem = "${%s%s}$" % (parsersplit[-1], json.dumps(data))
 
-            return parseditem, is_loop
+            return parseditem+appendresult, is_loop
 
         # Parses parameters sent to it and returns whether it did it successfully with the values found
         def parse_params(action, fullexecution, parameter):
