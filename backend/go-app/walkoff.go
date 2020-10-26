@@ -1713,6 +1713,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if len(workflow.ExecutingOrg.Id) == 0 {
+		log.Printf("setting executing org")
 		workflow.ExecutingOrg = user.ActiveOrg
 	}
 
@@ -4549,6 +4550,7 @@ func deployWebhookFunction(ctx context.Context, name, localization, applocation 
 func loadGithubWorkflows(url, username, password, userId, branch string) error {
 	fs := memfs.New()
 
+	log.Printf("Starting load of %s with branch %s", url, branch)
 	if strings.Contains(url, "github") || strings.Contains(url, "gitlab") || strings.Contains(url, "bitbucket") {
 		cloneOptions := &git.CloneOptions{
 			URL: url,
@@ -4563,14 +4565,15 @@ func loadGithubWorkflows(url, username, password, userId, branch string) error {
 			}
 		}
 
-		if len(branch) > 0 {
+		// main is the new master
+		if len(branch) > 0 && branch != "main" && branch != "master" {
 			cloneOptions.ReferenceName = plumbing.ReferenceName(branch)
 		}
 
 		storer := memory.NewStorage()
 		r, err := git.Clone(storer, fs, cloneOptions)
 		if err != nil {
-			log.Printf("Failed loading repo into memory: %s", err)
+			log.Printf("Failed loading repo %s into memory (github workflows): %s", url, err)
 			return err
 		}
 
@@ -4772,7 +4775,7 @@ func loadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 		storer := memory.NewStorage()
 		r, err := git.Clone(storer, fs, cloneOptions)
 		if err != nil {
-			log.Printf("Failed loading repo into memory: %s", err)
+			log.Printf("Failed loading repo %s into memory (github workflows 2): %s", tmpBody.URL, err)
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 			return

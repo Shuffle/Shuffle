@@ -6710,7 +6710,7 @@ func runInit(ctx context.Context) {
 			}
 		}
 		branch := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_BRANCH")
-		if len(branch) > 0 {
+		if len(branch) > 0 && branch != "master" && branch != "main" {
 			cloneOptions.ReferenceName = plumbing.ReferenceName(branch)
 		}
 
@@ -6719,7 +6719,7 @@ func runInit(ctx context.Context) {
 		r, err := git.Clone(storer, fs, cloneOptions)
 
 		if err != nil {
-			log.Printf("Failed loading repo into memory: %s", err)
+			log.Printf("Failed loading repo into memory (init): %s", err)
 		}
 
 		dir, err := fs.ReadDir("")
