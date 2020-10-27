@@ -37,6 +37,9 @@ Please consider [sponsoring](https://github.com/sponsors/frikky) the project if 
 * App creator for [OpenAPI](https://github.com/frikky/OpenAPI-security-definitions)
 * Easy to learn Python library for custom apps
 
+## Architecture
+![Shuffle Architecture](https://github.com/frikky/Shuffle/blob/master/frontend/src/assets/img/shuffle_architecture.png)
+
 ## Website
 https://shuffler.io
 
@@ -46,7 +49,7 @@ All modular information related to Shuffle will be under MIT (anyone can use it 
 Apps & App SDK: MIT
 Shuffle backend: AGPLv3 
 
-### Project overview 
+### Repository overview 
 Below is the folder structure with a short explanation
 ```bash
 ├── README.md				# What you're reading right now
