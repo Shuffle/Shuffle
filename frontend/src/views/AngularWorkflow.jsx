@@ -2853,7 +2853,7 @@ const AngularWorkflow = (props) => {
 									))}
 								</Select>
 
-						}  else if (data.variant === "STATIC_VALUE") {
+						} else if (data.variant === "STATIC_VALUE") {
 							staticcolor = "#f85a3e"	
 						} else if (data.variant === "ACTION_RESULT") {
 							// Gets the parents of the current node
@@ -3137,6 +3137,8 @@ const AngularWorkflow = (props) => {
 						return (
 						<div key={data.name}>	
 							<div style={{marginTop: 20, marginBottom: 7, display: "flex"}}>
+
+
 								{data.configuration === true ? 
 									<Tooltip color="primary" title={`Authenticate ${selectedApp.name}`} placement="top">
 										<LockOpenIcon style={{cursor: "pointer", width: 24, height: 24, marginRight: 10, }} onClick={() => {
@@ -3149,32 +3151,37 @@ const AngularWorkflow = (props) => {
 								<div style={{flex: "10"}}> 
 									<b>{data.name} </b> 
 								</div>
-								<Tooltip color="primary" title="Static data" placement="top">
-									<div style={{cursor: "pointer", color: staticcolor}} onClick={(e) => {
+
+								{selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0  ? null : 
+								<div style={{display: "flex"}}>
+									<Tooltip color="primary" title="Static data" placement="top">
+										<div style={{cursor: "pointer", color: staticcolor}} onClick={(e) => {
+												e.preventDefault()
+												changeActionParameterVariant("STATIC_VALUE", count) 
+											}}>
+											<CreateIcon />
+										</div>
+									</Tooltip>
+									&nbsp;|&nbsp;
+									<Tooltip color="primary" title="Data from previous action" placement="top">
+										<div style={{cursor: "pointer", color: actioncolor}} onClick={(e) => {
 											e.preventDefault()
-											changeActionParameterVariant("STATIC_VALUE", count) 
+											changeActionParameterVariant("ACTION_RESULT", count) 
 										}}>
-										<CreateIcon />
-									</div>
-								</Tooltip>
-								&nbsp;|&nbsp;
-								<Tooltip color="primary" title="Data from previous action" placement="top">
-									<div style={{cursor: "pointer", color: actioncolor}} onClick={(e) => {
-										e.preventDefault()
-										changeActionParameterVariant("ACTION_RESULT", count) 
-									}}>
-										<AppsIcon />
-									</div>
-								</Tooltip>
-								&nbsp;|&nbsp;
-								<Tooltip color="primary" title="Use local variable" placement="top">
-									<div style={{cursor: "pointer", color: varcolor}} onClick={(e) => {
-										e.preventDefault()
-										changeActionParameterVariant("WORKFLOW_VARIABLE", count) 
-									}}>
-										<FavoriteBorderIcon />
-									</div>
-								</Tooltip>
+											<AppsIcon />
+										</div>
+									</Tooltip>
+									&nbsp;|&nbsp;
+									<Tooltip color="primary" title="Use local variable" placement="top">
+										<div style={{cursor: "pointer", color: varcolor}} onClick={(e) => {
+											e.preventDefault()
+											changeActionParameterVariant("WORKFLOW_VARIABLE", count) 
+										}}>
+											<FavoriteBorderIcon />
+										</div>
+									</Tooltip>
+								</div>	
+							}
 							</div>	
 							{datafield}
 							{showDropdown && showDropdownNumber === count && data.variant === "STATIC_VALUE" && jsonList.length > 0 ?
