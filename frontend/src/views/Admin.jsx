@@ -555,7 +555,7 @@ const Admin = (props) => {
 	}
 
 	const getOrgs = () => {
-		fetch(globalUrl + "/api/v1/getorgs", {
+		fetch(globalUrl + "/api/v1/orgs", {
 			method: 'GET',
 			headers: {
 				'Content-Type': 'application/json',

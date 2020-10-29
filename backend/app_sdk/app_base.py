@@ -400,7 +400,7 @@ class AppBase:
 
                         # Means it's a single item -> continue
                         if seconditem == "":
-                            print("In first - handling %s", seconditem)
+                            print("In first - handling %s" % seconditem)
                             tmpitem = basejson[int(firstitem)]
                             try:
                                 newvalue, is_loop = recurse_json(tmpitem, parsersplit[outercnt+1:])
@@ -884,7 +884,7 @@ class AppBase:
 
                             # Custom format for ${name[0,1,2,...]}$
                             #submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"
-                            submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"
+                            submatch = "([${]{2}#?([0-9a-zA-Z_-]+)#?(\[.*\])[}$]{2})"
                             actualitem = re.findall(submatch, value, re.MULTILINE)
                             try:
                                 if action["skip_multicheck"]:

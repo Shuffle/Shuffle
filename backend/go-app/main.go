@@ -1790,16 +1790,16 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		currentOrg = []byte("{}")
 	}
 
-	returnData := fmt.Sprintf(`
-	{
-		"success": true, 
-		"admin": %s, 
-		"tutorials": [],
-		"id": "%s",
-		"orgs": [%s], 
-		"active_org": %s,
-		"cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]
-	}`, parsedAdmin, userInfo.Id, currentOrg, currentOrg, userInfo.Session, expiration.Unix())
+	returnData := fmt.Sprintf(`{
+	"success": true, 
+	"username": "%s",
+	"admin": %s, 
+	"tutorials": [],
+	"id": "%s",
+	"orgs": [%s], 
+	"active_org": %s,
+	"cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]
+}`, userInfo.Username, parsedAdmin, userInfo.Id, currentOrg, currentOrg, userInfo.Session, expiration.Unix())
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(returnData))
@@ -2535,6 +2535,28 @@ func getSession(ctx context.Context, thissession string) (*session, error) {
 	}
 
 	return curUser, nil
+}
+
+// ListBooks returns a list of books, ordered by title.
+func getFile(ctx context.Context, id string) (*File, error) {
+	key := datastore.NameKey("Files", id, nil)
+	curFile := &File{}
+	if err := dbclient.Get(ctx, key, curFile); err != nil {
+		return &File{}, err
+	}
+
+	return curFile, nil
+}
+
+func setFile(ctx context.Context, file File) error {
+	// clear session_token and API_token for user
+	k := datastore.NameKey("Files", file.Id, nil)
+	if _, err := dbclient.Put(ctx, k, &file); err != nil {
+		log.Println(err)
+		return err
+	}
+
+	return nil
 }
 
 // ListBooks returns a list of books, ordered by title.
@@ -6648,6 +6670,38 @@ func runInit(ctx context.Context) {
 				log.Printf("Set workflow orgs for %d workflows", updated)
 			}
 		}
+
+		fileq := datastore.NewQuery("Files").Limit(1)
+		count, err := dbclient.Count(ctx, fileq)
+
+		if err == nil && count == 0 {
+			basepath := "."
+			filename := "testfile.txt"
+			fileId := uuid.NewV4().String()
+			log.Printf("Creating new file reference %s because none exist!", fileId)
+			workflowId := "2e9d6474-402c-4dcc-bb53-45f638ca18d3"
+			downloadPath := fmt.Sprintf("%s/%s/%s/%s", basepath, activeOrgs[0].Id, workflowId, fileId)
+
+			timeNow := time.Now().Unix()
+			newFile := File{
+				Id:           fileId,
+				CreatedAt:    timeNow,
+				UpdatedAt:    timeNow,
+				Description:  "Created by system for testing",
+				Status:       "active",
+				Filename:     filename,
+				OrgId:        activeOrgs[0].Id,
+				WorkflowId:   workflowId,
+				DownloadPath: downloadPath,
+			}
+
+			err = setFile(ctx, newFile)
+			if err != nil {
+				log.Printf("Failed setting file: %s", err)
+			} else {
+				log.Printf("Created file %s in init", newFile.DownloadPath)
+			}
+		}
 	}
 
 	// Gets schedules and starts them
@@ -7183,6 +7237,141 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	resp.Write(respBody)
 }
 
+type File struct {
+	Id        string `json:"id" datastore:"id"`
+	Type      string `json:"type" datastore:"type"`
+	CreatedAt int64  `json:"created_at" datastore:"created_at"`
+	UpdatedAt int64  `json:"updated_at" datastore:"updated_at"`
+	CreatedBy struct {
+		ID    int    `json:"id" datastore:"id"`
+		Type  string `json:"type" datastore:"type"`
+		Login string `json:"login" datastore:"login"`
+		Name  string `json:"name" datastore:"name"`
+	} `json:"created_by" datastore:"created_by"`
+	Description string `json:"description" datastore:"description"`
+	Etag        int    `json:"etag" datastore:"etag"`
+	ExpiresAt   string `json:"expires_at" datastore:"expires_at"`
+	Folder      struct {
+		ID         int    `json:"id" datastore:"id"`
+		Type       string `json:"type" datastore:"type"`
+		Etag       int    `json:"etag" datastore:"etag"`
+		Name       string `json:"name" datastore:"name"`
+		SequenceID int    `json:"sequence_id" datastore:"sequence_id"`
+	} `json:"folder" datastore:"folder"`
+	Status    string `json:"status" datastore:"status"`
+	Filename  string `json:"filename" datastore:"filename"`
+	UpdatedBy struct {
+		ID    int    `json:"id" datastore:"id"`
+		Type  string `json:"type" datastore:"type"`
+		Login string `json:"login" datastore:"login"`
+		Name  string `json:"name" datastore:"name"`
+	} `json:"updated_by" datastore:"updated_by"`
+	URL          string   `json:"url" datastore:"org"`
+	OrgId        string   `json:"org_id" datastore:"org_id"`
+	WorkflowId   string   `json:"workflow_id" datastore:"workflow_id"`
+	Workflows    []string `json:"workflows" datastore:"workflows"`
+	DownloadPath string   `json:"download_path" datastore:"download_path"`
+}
+
+func handleGetFileContent(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	var fileId string
+	location := strings.Split(request.URL.String(), "/")
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			log.Printf("Path too short: %d", len(location))
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		fileId = location[4]
+	}
+
+	//log.Printf("In file download")
+	user, err := handleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("Api authentication failed in file download: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// 1. Verify if the user has access to the file: org_id and workflow
+
+	log.Printf("Should get file %s", fileId)
+	ctx := context.Background()
+	file, err := getFile(ctx, fileId)
+	if err != nil {
+		log.Printf("File %s not found: %s", fileId, err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	found := false
+	if file.OrgId == user.ActiveOrg.Id {
+		found = true
+	} else {
+		for _, item := range user.Orgs {
+			if item == file.OrgId {
+				found = true
+				break
+			}
+		}
+	}
+
+	if !found {
+		log.Printf("User %s doesn't have access to %s", user.Username, fileId)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// Fixme: More auth: org and workflow!
+	downloadPath := file.DownloadPath
+	log.Printf("Downloadpath: %s", downloadPath)
+	Openfile, err := os.Open(downloadPath)
+	defer Openfile.Close() //Close after function return
+	if err != nil {
+		//File not found, send 404
+		http.Error(resp, "File not found.", 404)
+		return
+	}
+
+	//File is found, create and send the correct headers
+	//Get the Content-Type of the file
+	//Create a buffer to store the header of the file in
+	FileHeader := make([]byte, 512)
+	//Copy the headers into the FileHeader buffer
+	Openfile.Read(FileHeader)
+	//Get content type of file
+	FileContentType := http.DetectContentType(FileHeader)
+
+	//Get the file size
+	FileStat, _ := Openfile.Stat()                     //Get info from file
+	FileSize := strconv.FormatInt(FileStat.Size(), 10) //Get file size as a string
+
+	//Send the headers
+	resp.Header().Set("Content-Disposition", "attachment; filename="+fileId)
+	resp.Header().Set("Content-Type", FileContentType)
+	resp.Header().Set("Content-Length", FileSize)
+
+	//Send the file
+	//We read 512 bytes from the file already, so we reset the offset back to 0
+	Openfile.Seek(0, 0)
+	io.Copy(resp, Openfile) //'Copy' the file to the client
+	return
+
+	//log.Printf("Should download file %s", downloadPath)
+	//resp.WriteHeader(200)
+	//resp.Write([]byte("OK"))
+}
+
 func initHandlers() {
 	var err error
 	ctx := context.Background()
@@ -7302,7 +7491,17 @@ func initHandlers() {
 
 	// NEW for 0.8.0
 	r.HandleFunc("/api/v1/cloud/setup", handleCloudSetup).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/getorgs", handleGetOrgs).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs", handleGetOrgs).Methods("GET", "OPTIONS")
+
+	// Important for email, IDS etc. Create this by:
+	// PS: For cloud, this has to use cloud storage.
+	// https://developer.box.com/reference/get-files-id-content/
+	// 1. Creating the "get file" option. Make it possible to run this in the frontend.
+	r.HandleFunc("/api/v1/files/{fileId}/content", handleGetFileContent).Methods("GET", "OPTIONS")
+	//r.HandleFunc("/api/v1/files/create", handleGetFile).Methods("POST", "OPTIONS")
+	//r.HandleFunc("/api/v1/files/upload", handleGetFile).Methods("POST", "OPTIONS")
+	//r.HandleFunc("/api/v1/files/{fileId}", handleGetFile).Methods("GET", "OPTIONS")
+	//r.HandleFunc("/api/v1/files/{fileId}", handleGetFile).Methods("DELETE", "OPTIONS")
 
 	http.Handle("/", r)
 }

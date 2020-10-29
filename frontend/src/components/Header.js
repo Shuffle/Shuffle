@@ -35,7 +35,7 @@ const Header = props => {
 
 	// DEBUG HERE 
 	const handleClickLogout = () => {
-    	console.log("SHOULD LOG OUT")
+    console.log("SHOULD LOG OUT")
 		console.log(isLoggedIn)
 
 		// Don't really care about the logout
@@ -47,10 +47,9 @@ const Header = props => {
 				},
     	})
     	.then(() => {
-			// Log out anyway
-			console.log("Hey")
-			removeCookie("session_token", {path: "/"})
-			window.location.pathname = "/"
+				// Log out anyway
+				removeCookie("session_token", {path: "/"})
+				//window.location.pathname = "/"
     	})
 		.catch(error => {
     		console.log(error)
@@ -158,6 +157,16 @@ const Header = props => {
 									</div>
 							</Link>
        			</ListItem>
+						{/*
+       			<ListItem style={{textAlign: "center"}}>
+							<Link to="/pricing" style={hrefStyle}>
+									<div onMouseOver={handleDocsHover} onMouseOut={handleDocsHoverOut} style={{color: DocsHoverColor, cursor: "pointer", display: "flex"}}>
+										<DescriptionIcon style={{marginRight: "5px"}} />
+										<span style={{marginTop: 2}}>Pricing</span>
+									</div>
+							</Link>
+       			</ListItem>
+						*/}
 					{/*
        				<ListItem style={{textAlign: "center"}}>
 						<Link to="/configurations" style={hrefStyle}>
@@ -183,6 +192,19 @@ const Header = props => {
 								color="primary"> Settings</Button>
 						</Link>
         	</ListItem>
+					{/*
+      		<ListItem>
+						<Link to="/contact" style={hrefStyle}>
+							<Button 
+								style={{}} 
+								variant="contained"
+								color="primary"
+							> 
+								Contact	
+							</Button>
+						</Link>
+					</ListItem>
+					*/}
 					{userdata === undefined || userdata.admin === undefined || userdata.admin === null || !userdata.admin ? null : 
 						<ListItem>
 							<Link to="/admin" style={hrefStyle}>
@@ -299,8 +321,8 @@ const Header = props => {
 	    </div>
 
 	// <Divider style={{height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
-	const loadedCheck = isLoaded ? 
-		<div>
+	const loadedCheck = 
+		<div style={{minHeight: 68}}>
 			<BrowserView>
       			{loginTextBrowser}
 			</BrowserView>
@@ -308,10 +330,6 @@ const Header = props => {
       			{loginTextMobile}
 			</MobileView>
 		</div>
-		:
-		<div>
-		</div>
-
     // <div style={{backgroundImage: "linear-gradient(-90deg,#342f78 0,#29255e 50%,#1b1947 100%"}}>
   	return (
     	<div>
