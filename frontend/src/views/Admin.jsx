@@ -1136,9 +1136,9 @@ const Admin = (props) => {
 						}}
 					>
 						Edit user
-								</Button>
+					</Button>
 				</ListItemText>
-						</ListItem>
+				</ListItem>
 					)
 				})}
 			</List>

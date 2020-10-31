@@ -105,6 +105,7 @@ type AppAuthenticationStorage struct {
 	Usage         []AuthenticationUsage `json:"usage" datastore:"usage"`
 	WorkflowCount int64                 `json:"workflow_count" datastore:"workflow_count"`
 	NodeCount     int64                 `json:"node_count" datastore:"node_count"`
+	OrgId         string                `json:"org_id" datastore:"org_id"`
 }
 
 type AuthenticationUsage struct {
@@ -197,6 +198,7 @@ type WorkflowAppAction struct {
 }
 
 // FIXME: Generate a callback authentication ID?
+// FIXME: Add org check ..
 type WorkflowExecution struct {
 	Type               string         `json:"type" datastore:"type"`
 	Status             string         `json:"status" datastore:"status"`
@@ -221,6 +223,7 @@ type WorkflowExecution struct {
 		Name        string `json:"name" datastore:"name"`
 		Value       string `json:"value" datastore:"value,noindex"`
 	} `json:"execution_variables,omitempty" datastore:"execution_variables,omitempty"`
+	OrgId string `json:"org_id" datastore:"org_id"`
 }
 
 // This is for the nodes in a workflow, NOT the app action itself.
@@ -303,6 +306,7 @@ type Schedule struct {
 	Frequency         string `json:"frequency" datastore:"frequency"`
 	ExecutionArgument string `json:"execution_argument" datastore:"execution_argument,noindex"`
 	Id                string `json:"id" datastore:"id"`
+	OrgId             string `json:"org_id" datastore:"org_id"`
 }
 
 type Workflow struct {
@@ -1047,6 +1051,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	extraInputs := 0
 	for _, result := range workflowExecution.Results {
 		if result.Action.Name == "User Input" && result.Action.AppName == "User Input" {
+			log.Printf("Found User Input node - prepare cloud?")
 			extraInputs += 1
 		}
 	}
@@ -1904,7 +1909,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	allAuths, err := getAllWorkflowAppAuth(ctx)
+	allAuths, err := getAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
 	if userErr != nil {
 		log.Printf("Api authentication failed in get all apps: %s", userErr)
 		resp.WriteHeader(401)
@@ -2575,7 +2580,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		// FIXME: Authentication parameters
 		if len(action.AuthenticationId) > 0 {
 			if len(allAuths) == 0 {
-				allAuths, err = getAllWorkflowAppAuth(ctx)
+				allAuths, err = getAllWorkflowAppAuth(ctx, workflow.ExecutingOrg.Id)
 				if err != nil {
 					log.Printf("Api authentication failed in get all app auth: %s", err)
 					return WorkflowExecution{}, fmt.Sprintf("Api authentication failed in get all app auth: %s", err), err
@@ -2786,10 +2791,18 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 			return WorkflowExecution{}, "Cloud not implemented yet", errors.New("Cloud not implemented yet")
 		}
 
+		// What it needs to know:
+		// 1. Parameters
 		if len(workflowExecution.Workflow.Actions) == 1 {
 			log.Printf("Should execute directly with cloud instead of worker because only one action")
-			cloudExecuteAction(workflowExecution.ExecutionId, workflowExecution.Workflow.Actions[0], workflowExecution.ExecutionOrg)
-			return WorkflowExecution{}, "Cloud not implemented yet", errors.New("Cloud not implemented yet")
+
+			//cloudExecuteAction(workflowExecution.ExecutionId, workflowExecution.Workflow.Actions[0], workflowExecution.ExecutionOrg, workflowExecution.Workflow.ID)
+			cloudExecuteAction(workflowExecution)
+			return WorkflowExecution{}, "Cloud not implemented yet (1)", errors.New("Cloud not implemented yet")
+		} else {
+			// If it's here, it should be controlled by Worker.
+			// If worker, should this backend be a proxy? I think so.
+			return WorkflowExecution{}, "Cloud not implemented yet (2)", errors.New("Cloud not implemented yet")
 		}
 	}
 
@@ -2802,22 +2815,30 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 }
 
 // This updates stuff locally from remote executions
-func cloudExecuteAction(workflowExecutionId string, action Action, orgId string) error {
-	log.Printf("Executing action: %#v in execution ID %s", action, workflowExecutionId)
+func cloudExecuteAction(execution WorkflowExecution) error {
 	ctx := context.Background()
-	org, err := getOrg(ctx, orgId)
+	org, err := getOrg(ctx, execution.ExecutionOrg)
 	if err != nil {
 		return err
 	}
 
 	type ExecutionStruct struct {
-		ID     string `json:"id"`
-		Action Action `json:"action"`
+		ExecutionId       string         `json:"execution_id" datastore:"execution_id"`
+		Action            Action         `json:"action" datastore:"action"`
+		Authorization     string         `json:"authorization" datastore:"authorization"`
+		Results           []ActionResult `json:"results" datastore:"results,noindex"`
+		ExecutionArgument string         `json:"execution_argument" datastore:"execution_argument,noindex"`
+		WorkflowId        string         `json:"workflow_id" datastore:"workflow_id"`
+		ExecutionSource   string         `json:"execution_source" datastore:"execution_source"`
 	}
+
 	data := ExecutionStruct{
-		ID:     workflowExecutionId,
-		Action: action,
+		ExecutionId:   execution.ExecutionId,
+		WorkflowId:    execution.Workflow.ID,
+		Action:        execution.Workflow.Actions[0],
+		Authorization: execution.Authorization,
 	}
+	log.Printf("Executing action: %#v in execution ID %s", data.Action, data.ExecutionId)
 
 	b, err := json.Marshal(data)
 	if err != nil {
@@ -3899,7 +3920,7 @@ func getAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	_, userErr := handleApiAuthentication(resp, request)
+	user, userErr := handleApiAuthentication(resp, request)
 	if userErr != nil {
 		log.Printf("Api authentication failed in get all apps: %s", userErr)
 		resp.WriteHeader(401)
@@ -3915,7 +3936,7 @@ func getAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 	//	return
 	//}
 	ctx := context.Background()
-	allAuths, err := getAllWorkflowAppAuth(ctx)
+	allAuths, err := getAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
 	if err != nil {
 		log.Printf("Api authentication failed in get all app auth: %s", err)
 		resp.WriteHeader(401)
@@ -5469,9 +5490,9 @@ func getAllWorkflowApps(ctx context.Context) ([]WorkflowApp, error) {
 	return allworkflowapps, nil
 }
 
-func getAllWorkflowAppAuth(ctx context.Context) ([]AppAuthenticationStorage, error) {
+func getAllWorkflowAppAuth(ctx context.Context, OrgId string) ([]AppAuthenticationStorage, error) {
 	var allworkflowapps []AppAuthenticationStorage
-	q := datastore.NewQuery("workflowappauth")
+	q := datastore.NewQuery("workflowappauth").Filter("org_id = ", OrgId)
 
 	_, err := dbclient.GetAll(ctx, q, &allworkflowapps)
 	if err != nil {

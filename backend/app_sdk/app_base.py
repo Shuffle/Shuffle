@@ -308,7 +308,18 @@ class AppBase:
             print("DATA: %s\n" % data)
             return parse_wrapper(data)
 
+        # Looks for parantheses to grab special cases within a string, e.g:
+        # int(1) lower(HELLO) or length(what's the length)
+        # FIXME: 
+        # There is an issue in here where it returns data wrong. Example:
+        # Authorization=Bearer authkey
+        # =
+        # Authorization=Bearer  authkey
+        # ^ Double space.
         def parse_wrapper_start(data):
+            if "(" not in data or ")" not in data:
+                return data
+
             newdata = []
             newstring = ""
             record = True
@@ -337,7 +348,7 @@ class AppBase:
             if len(newstring) > 0:
                 newdata.append(newstring)
         
-            #print(newdata)
+            print("Newdata: ", newdata)
             parsedlist = []
             non_string = False
             for item in newdata:
@@ -348,17 +359,20 @@ class AppBase:
                 parsedlist.append(ret)
         
             if len(parsedlist) > 0 and not non_string:
+                print("Returning parsed list: ", parsedlist)
                 return " ".join(parsedlist)
             elif len(parsedlist) == 1 and non_string:
                 return parsedlist[0]
             else:
-                #print("Casting back to string because multi: ", parsedlist)
+                print("Casting back to string because multi: ", parsedlist)
                 newlist = []
                 for item in parsedlist:
                     try:
                         newlist.append(str(item))
                     except ValueError:
                         newlist.append("parsing_error")
+
+                # Does this create the issue?
                 return " ".join(newlist)
 
         # Parses JSON loops and such down to the item you're looking for
@@ -989,6 +1003,7 @@ class AppBase:
                                 print("Normal parsing (not looping) with data %s" % value)
                                 value = parse_wrapper_start(value)
 
+                                print("POST data value: %s" % value)
                                 params[parameter["name"]] = value
                                 multi_parameters[parameter["name"]] = value 
 
@@ -1019,8 +1034,9 @@ class AppBase:
                         #for i in range(calltimes):
                         if not multiexecution:
                             print("APP_SDK DONE: Starting NORMAL execution of function")
+                            print("Running with params %s" % params) 
                             newres = await func(**params)
-                            #print("NEWRES: ", newres)
+                            print("Return from execution: %s" % newres)
                             if isinstance(newres, str):
                                 result += newres
                             else:
@@ -1101,6 +1117,7 @@ class AppBase:
 
                                 print("Running with params %s" % baseparams) 
                                 ret = await func(**baseparams)
+                                print("Return from execution: %s" % ret)
                                 if isinstance(ret, dict) or isinstance(ret, list):
                                     results.append(ret)
                                     json_object = True

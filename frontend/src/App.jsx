@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Route } from 'react-router';
 import { BrowserRouter } from 'react-router-dom';
 import { CookiesProvider } from 'react-cookie';
-import { useCookies } from 'react-cookie';
+import { removeCookies, useCookies } from 'react-cookie';
 
 import EditSchedule from "./views/EditSchedule";
 import Schedules from "./views/Schedules";
@@ -93,23 +93,24 @@ const App = (message, props) => {
 				'Content-Type': 'application/json',
 			},
 		})
-			.then(response => response.json())
-			.then(responseJson => {
-				if (responseJson.success === true) {
-					//console.log(responseJson.success)
-					setUserData(responseJson)
-					setIsLoggedIn(true)
+		.then(response => response.json())
+		.then(responseJson => {
+			if (responseJson.success === true) {
+				//console.log(responseJson.success)
+				setUserData(responseJson)
+				setIsLoggedIn(true)
+				console.log("Cookies: ", cookies)
 
-					// Updating cookie every request
-					for (var key in responseJson["cookies"]) {
-						setCookie(responseJson["cookies"][key].key, responseJson["cookies"][key].value, { path: "/" })
-					}
+				// Updating cookie every request
+				for (var key in responseJson["cookies"]) {
+					setCookie(responseJson["cookies"][key].key, responseJson["cookies"][key].value, { path: "/" })
 				}
-				setIsLoaded(true)
-			})
-			.catch(error => {
-				setIsLoaded(true)
-			});
+			}
+			setIsLoaded(true)
+		})
+		.catch(error => {
+			setIsLoaded(true)
+		});
 	}
 
 	// Dumb for content load (per now), but good for making the site not suddenly reload parts (ajax thingies)
@@ -124,7 +125,7 @@ const App = (message, props) => {
 			<Route exact path="/home" render={props => <LandingPageNew isLoaded={isLoaded} {...props} />} />
 		</div> :
 		<div style={{ backgroundColor: "#1F2023", color: "rgba(255, 255, 255, 0.65)", minHeight: "100vh" }}>
-			<Header removeCookie={removeCookie} isLoaded={isLoaded} globalUrl={globalUrl} setIsLoggedIn={setIsLoggedIn} isLoggedIn={isLoggedIn} userdata={userdata} {...props} />
+			<Header cookies={cookies} removeCookie={removeCookie} isLoaded={isLoaded} globalUrl={globalUrl} setIsLoggedIn={setIsLoggedIn} isLoggedIn={isLoggedIn} userdata={userdata} {...props} />
 			<Route exact path="/oauth2" render={props => <Oauth2 isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/contact" render={props => <Contact isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/login" render={props => <LoginPage isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
@@ -140,7 +141,7 @@ const App = (message, props) => {
 			<Route exact path="/apps/new" render={props => <AppCreator isLoaded={isLoaded} isLoggedIn={isLoggedIn} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/apps/edit/:appid" render={props => <AppCreator isLoaded={isLoaded} isLoggedIn={isLoggedIn} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/schedules/:key" render={props => <EditSchedule globalUrl={globalUrl} {...props} />} />
-			<Route exact path="/workflows" render={props => <Workflows isLoaded={isLoaded} isLoggedIn={isLoggedIn} globalUrl={globalUrl} cookies={cookies} {...props} />} />
+			<Route exact path="/workflows" render={props => <Workflows cookies={cookies} removeCookie={removeCookie} isLoaded={isLoaded} isLoggedIn={isLoggedIn} globalUrl={globalUrl} cookies={cookies} {...props} />} />
 			<Route exact path="/workflows/:key" render={props => <AngularWorkflow userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} {...props} />} />
 			<Route exact path="/docs/:key" render={props => <Docs isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/docs" render={props => { window.location.pathname = "/docs/about" }} />

@@ -390,6 +390,7 @@ type Hook struct {
 	Status    string       `json:"status" datastore:"status"`
 	Workflows []string     `json:"workflows" datastore:"workflows"`
 	Running   bool         `json:"running" datastore:"running"`
+	OrgId     string       `json:"org_id" datastore:"org_id"`
 }
 
 func createFileFromFile(ctx context.Context, bucket *storage.BucketHandle, remotePath, localPath string) error {
@@ -689,47 +690,14 @@ func handleApiAuthentication(resp http.ResponseWriter, request *http.Request) (U
 			authorization = authorizationArr[0]
 		}
 		_ = authorization
-
-		//if item, err := memcache.Get(ctx, authorization); err == memcache.ErrCacheMiss {
-		//	// Doesn't exist :(
-		//	log.Printf("Couldn't find %s in cache!", authorization)
-		//	return User{}, err
-		//} else if err != nil {
-		//	log.Printf("Error getting item: %v", err)
-		//	return User{}, err
-		//} else {
-		//	log.Printf("%#v", item.Value)
-		//	var Userdata User
-
-		//	log.Printf("Deleting key %s", authorization)
-		//	memcache.Delete(ctx, authorization)
-		//	err = json.Unmarshal(item.Value, &Userdata)
-		//	if err == nil {
-		//		return Userdata, nil
-		//	}
-
-		//	return User{}, err
-		//}
 	}
 
 	c, err := request.Cookie("session_token")
 	if err == nil {
-		//if item, err := memcache.Get(ctx, c.Value); err == memcache.ErrCacheMiss {
-		//	// Not in cache
-		//} else if err != nil {
-		//	log.Printf("Error getting item: %v", err)
-		//} else {
-		//	var Userdata User
-		//	err = json.Unmarshal(item.Value, &Userdata)
-		//	if err == nil {
-		//		return Userdata, nil
-		//	}
-		//}
-
 		sessionToken := c.Value
 		session, err := getSession(ctx, sessionToken)
 		if err != nil {
-			log.Printf("Session %s doesn't exist (api auth): %s", sessionToken, err)
+			log.Printf("Session %s doesn't exist (session auth): %s", sessionToken, err)
 			return User{}, err
 		}
 
@@ -865,7 +833,7 @@ func deleteUser(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, userErr := handleApiAuthentication(resp, request)
+	userInfo, userErr := handleApiAuthentication(resp, request)
 	if userErr != nil {
 		log.Printf("Api authentication failed in edit workflow: %s", userErr)
 		resp.WriteHeader(401)
@@ -873,8 +841,8 @@ func deleteUser(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if user.Role != "admin" {
-		log.Printf("Wrong user (%s) when deleting - must be admin", user.Username)
+	if userInfo.Role != "admin" {
+		log.Printf("Wrong user (%s) when deleting - must be admin", userInfo.Username)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "Must be admin"}`))
 		return
@@ -892,46 +860,57 @@ func deleteUser(resp http.ResponseWriter, request *http.Request) {
 		userId = location[4]
 	}
 
-	if userId == user.Id {
+	if userId == userInfo.Id {
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "Can't deactivate yourself"}`))
 		return
 	}
 
 	ctx := context.Background()
-	q := datastore.NewQuery("Users").Filter("id =", userId)
-	var users []User
-	_, err := dbclient.GetAll(ctx, q, &users)
+	foundUser, err := getUser(ctx, userId)
 	if err != nil {
-		log.Printf("Error getting users apikey (deleteuser): %s", err)
+		log.Printf("Can't find user %s (delete user): %s", userId, err)
 		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Failed getting users for verification"}`))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false}`)))
 		return
 	}
 
-	if len(users) != 1 {
-		log.Printf("Found too many users!")
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Backend error: too many or too few users with id %s: %d"}`, userId, len(users))))
+	orgFound := false
+	if userInfo.ActiveOrg.Id == foundUser.ActiveOrg.Id {
+		orgFound = true
+	} else {
+		log.Printf("FoundUser: %#v", foundUser.Orgs)
+		for _, item := range foundUser.Orgs {
+			if item == userInfo.ActiveOrg.Id {
+				orgFound = true
+				break
+			}
+		}
+	}
+
+	if !orgFound {
+		log.Printf("User %s is admin, but can't delete users outside their own org.", userInfo.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't change users outside your org."}`)))
 		return
 	}
 
 	// Invert. No user deletion.
-	if users[0].Active {
-		users[0].Active = false
+	if foundUser.Active {
+		foundUser.Active = false
 	} else {
-		users[0].Active = true
+		foundUser.Active = true
 	}
 
-	err = setUser(ctx, &users[0])
+	err = setUser(ctx, foundUser)
 	if err != nil {
-		log.Printf("Failed swapping active for user %s (%s)", users[0].Username, users[0].Id)
+		log.Printf("Failed swapping active for user %s (%s)", foundUser, foundUser.Username, foundUser.Id)
 		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": true"}`)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false}`)))
 		return
 	}
 
-	log.Printf("Successfully inverted %s", users[0].Username)
+	log.Printf("Successfully inverted %s", foundUser.Username)
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": true}`))
@@ -1091,7 +1070,7 @@ func handleSetEnvironments(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	for _, item := range newEnvironments {
-		if item.OrgId == "" {
+		if item.OrgId != user.ActiveOrg.Id {
 			item.OrgId = user.ActiveOrg.Id
 		}
 
@@ -1327,51 +1306,53 @@ func handleLogout(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// Check cookie
-	c, err := request.Cookie("session_token")
+	userInfo, err := handleApiAuthentication(resp, request)
 	if err != nil {
-		resp.WriteHeader(200)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-		return
-	} else {
-		log.Printf("Session cookie is set!")
-	}
-
-	var Userdata User
-	ctx := context.Background()
-	//item, err := memcache.Get(ctx, c.Value)
-	sessionToken := ""
-	//// Memcache handling for logout
-	//if err == nil {
-	//	err = json.Unmarshal(item.Value, &Userdata)
-	//	if err != nil {
-	//		log.Printf("Failed unmarshaling: %s", err)
-	//		resp.WriteHeader(401)
-	//		resp.Write([]byte(fmt.Sprintf(`{"success": false}`)))
-	//		return
-	//	}
-
-	//	sessionToken = Userdata.Session
-	//} else {
-	//	// Validate with User
-	sessionToken = c.Value
-	session, err := getSession(ctx, sessionToken)
-	if err != nil {
-		log.Printf("Session %s doesn't exist (logout): %s", session.Session, err)
+		log.Printf("Api authentication failed in handleLogout: %s", err)
 		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": ""}`))
+		resp.Write([]byte(`{"success": false}`))
 		return
 	}
+
+	ctx := context.Background()
+	session, err := getSession(ctx, userInfo.Session)
+	if err != nil {
+		log.Printf("Session %#v doesn't exist: %s", session, err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "No session"}`))
+		return
+	}
+
+	// Check cookie
+	//c, err := request.Cookie("session_token")
+	//if err != nil {
+	//	resp.WriteHeader(200)
+	//	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+	//	return
+	//} else {
+	//	log.Printf("Session cookie is set to %s!", c.Value)
+	//}
+
+	//var Userdata User
+	//ctx := context.Background()
+	//sessionToken = c.Value
+	//session, err := getSession(ctx, sessionToken)
+	//if err != nil {
+	//	log.Printf("Session %s doesn't exist (logout): %s", sessionToken, err)
+	//	resp.WriteHeader(401)
+	//	resp.Write([]byte(`{"success": false, "reason": "Couldn't find your session"}`))
+	//	return
+	//}
 
 	// Get session first
 	// Should basically never happen
-	_, err = getUser(ctx, session.Id)
-	if err != nil {
-		log.Printf("Username %s doesn't exist (logout): %s", session.Username, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
-		return
-	}
+	//_, err = getUser(ctx, session.Id)
+	//if err != nil {
+	//	log.Printf("Username %s doesn't exist (logout): %s", session.Username, err)
+	//	resp.WriteHeader(401)
+	//	resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
+	//	return
+	//}
 
 	//	Userdata = *tmpdata
 	//}
@@ -1379,7 +1360,7 @@ func handleLogout(resp http.ResponseWriter, request *http.Request) {
 	// FIXME
 	// Session might delete someone elses here?
 	// No need to think about before possible scale..?
-	err = SetSession(ctx, Userdata, "")
+	err = SetSession(ctx, userInfo, "")
 	if err != nil {
 		log.Printf("Error removing session for: %s", err)
 		resp.WriteHeader(401)
@@ -1387,16 +1368,16 @@ func handleLogout(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	err = DeleteKey(ctx, "sessions", sessionToken)
+	err = DeleteKey(ctx, "sessions", userInfo.Session)
 	if err != nil {
-		log.Printf("Error deleting key %s for %s: %s", c.Value, Userdata.Username, err)
+		log.Printf("Error deleting key %s for %s: %s", userInfo.Session, userInfo.Username, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
 		return
 	}
 
-	Userdata.Session = ""
-	err = setUser(ctx, &Userdata)
+	userInfo.Session = ""
+	err = setUser(ctx, &userInfo)
 	if err != nil {
 		log.Printf("Failed updating user: %s", err)
 		resp.WriteHeader(401)
@@ -1405,10 +1386,10 @@ func handleLogout(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	//memcache.Delete(request.Context(), sessionToken)
+	//http.SetCookie(resp, c)
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": false, "reason": "Successfully logged out"}`))
-	http.SetCookie(resp, c)
 }
 
 func generateApikey(ctx context.Context, userInfo User) (User, error) {
@@ -1471,6 +1452,8 @@ func handleUpdateUser(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	// Should this role reflect the users' org access?
+	// When you change org -> change user role
 	if userInfo.Role != "admin" {
 		log.Printf("%s tried to update user %s", userInfo.Username, t.UserId)
 		resp.WriteHeader(401)
@@ -1483,6 +1466,21 @@ func handleUpdateUser(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("Can't find user %s (update user): %s", t.UserId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false}`)))
+		return
+	}
+
+	orgFound := false
+	for _, item := range foundUser.Orgs {
+		if item == userInfo.ActiveOrg.Id {
+			orgFound = true
+			break
+		}
+	}
+
+	if !orgFound {
+		log.Printf("User %s is admin, but can't edit users outside their own org.", userInfo.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't change users outside your org."}`)))
 		return
 	}
 
@@ -1657,13 +1655,13 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	session, err := getSession(ctx, userInfo.Session)
-	if err != nil {
-		log.Printf("Session %#v doesn't exist: %s", session, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "No session"}`))
-		return
-	}
+	//session, err := getSession(ctx, userInfo.Session)
+	//if err != nil {
+	//	log.Printf("Session %#v doesn't exist: %s", session, err)
+	//	resp.WriteHeader(401)
+	//	resp.Write([]byte(`{"success": false, "reason": "No session"}`))
+	//	return
+	//}
 
 	// This is a long check to see if an inactive admin can access the site
 	parsedAdmin := "false"
@@ -1726,12 +1724,12 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	//log.Printf("%s  %s", session.Session, UserInfo.Session)
-	if session.Session != userInfo.Session {
-		log.Printf("Session %s is not the same as %s for %s. %s", userInfo.Session, session.Session, userInfo.Username, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": ""}`))
-		return
-	}
+	//if session.Session != userInfo.Session {
+	//	log.Printf("Session %s is not the same as %s for %s. %s", userInfo.Session, session.Session, userInfo.Username, err)
+	//	resp.WriteHeader(401)
+	//	resp.Write([]byte(`{"success": false, "reason": ""}`))
+	//	return
+	//}
 
 	expiration := time.Now().Add(3600 * time.Second)
 	http.SetCookie(resp, &http.Cookie{
@@ -2015,7 +2013,7 @@ func handlePasswordChange(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, err := handleApiAuthentication(resp, request)
+	userInfo, err := handleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in set new workflowhandler: %s", err)
 		resp.WriteHeader(401)
@@ -2024,15 +2022,15 @@ func handlePasswordChange(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	curUserFound := false
-	if t.Username != user.Username && user.Role != "admin" {
+	if t.Username != userInfo.Username && userInfo.Role != "admin" {
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "Admin required to change others' passwords"}`))
 		return
-	} else if t.Username == user.Username {
+	} else if t.Username == userInfo.Username {
 		curUserFound = true
 	}
 
-	if user.Role != "admin" {
+	if userInfo.Role != "admin" {
 		if t.Newpassword != t.Newpassword2 {
 			err := "Passwords don't match"
 			resp.WriteHeader(401)
@@ -2046,6 +2044,8 @@ func handlePasswordChange(resp http.ResponseWriter, request *http.Request) {
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 			return
 		}
+	} else {
+		// Check ORG HERE?
 	}
 
 	// Current password
@@ -2058,6 +2058,7 @@ func handlePasswordChange(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
+	foundUser := User{}
 	if !curUserFound {
 		log.Printf("Have to find a different user")
 		q := datastore.NewQuery("Users").Filter("Username =", strings.ToLower(t.Username))
@@ -2077,13 +2078,32 @@ func handlePasswordChange(resp http.ResponseWriter, request *http.Request) {
 			return
 		}
 
-		user = users[0]
+		foundUser = users[0]
+		orgFound := false
+		if userInfo.ActiveOrg.Id == foundUser.ActiveOrg.Id {
+			orgFound = true
+		} else {
+			log.Printf("FoundUser: %#v", foundUser.Orgs)
+			for _, item := range foundUser.Orgs {
+				if item == userInfo.ActiveOrg.Id {
+					orgFound = true
+					break
+				}
+			}
+		}
+
+		if !orgFound {
+			log.Printf("User %s is admin, but can't change user's passowrd outside their own org.", userInfo.Id)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't change users outside your org."}`)))
+			return
+		}
 	} else {
 		// Admins can re-generate others' passwords as well.
-		if user.Role != "admin" {
-			err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(t.Newpassword))
+		if userInfo.Role != "admin" {
+			err = bcrypt.CompareHashAndPassword([]byte(userInfo.Password), []byte(t.Newpassword))
 			if err != nil {
-				log.Printf("Bad password for %s: %s", user.Username, err)
+				log.Printf("Bad password for %s: %s", userInfo.Username, err)
 				resp.WriteHeader(401)
 				resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
 				return
@@ -2091,18 +2111,25 @@ func handlePasswordChange(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	if len(foundUser.Id) == 0 {
+		log.Printf("Something went wrong in password reset", err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(t.Newpassword), 8)
 	if err != nil {
-		log.Printf("New password failure for %s: %s", user.Username, err)
+		log.Printf("New password failure for %s: %s", userInfo.Username, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
 		return
 	}
 
-	user.Password = string(hashedPassword)
-	err = setUser(ctx, &user)
+	userInfo.Password = string(hashedPassword)
+	err = setUser(ctx, &foundUser)
 	if err != nil {
-		log.Printf("Error fixing password for user %s: %s", user.Username, err)
+		log.Printf("Error fixing password for user %s: %s", userInfo.Username, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
 		return
@@ -2341,17 +2368,15 @@ func handleGetUsers(resp http.ResponseWriter, request *http.Request) {
 
 	// FIXME: Check by org.
 	ctx := context.Background()
-	var users []User
-	q := datastore.NewQuery("Users")
-	_, err = dbclient.GetAll(ctx, q, &users)
+	org, err := getOrg(ctx, user.ActiveOrg.Id)
 	if err != nil {
 		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Can't get users"}`))
+		resp.Write([]byte(`{"success": false, "reason": "Failed getting org users"}`))
 		return
 	}
 
 	newUsers := []User{}
-	for _, item := range users {
+	for _, item := range org.Users {
 		if len(item.Username) == 0 {
 			continue
 		}
@@ -2458,19 +2483,10 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("%s SUCCESSFULLY LOGGED IN with session %s", data.Username, Userdata.Session)
-	//if !Userdata.Verified {
-	//	log.Printf("User %s is not verified", data.Username)
-	//	resp.WriteHeader(403)
-	//	resp.Write([]byte(`{"success": false, "reason": "Successful login, but your email address isn't verified. Check your mailbox."}`))
-	//	return
-	//}
-
-	loginData := `{"success": true}`
-
 	// FIXME - have timeout here
+	loginData := `{"success": true}`
 	if len(Userdata.Session) != 0 {
-		//log.Println("Nonexisting session")
+		log.Println("User session exists - resetting")
 		expiration := time.Now().Add(3600 * time.Second)
 
 		http.SetCookie(resp, &http.Cookie{
@@ -2490,20 +2506,36 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 		resp.WriteHeader(200)
 		resp.Write([]byte(loginData))
 		return
+	} else {
+		log.Printf("User session is empty - create one!")
+
+		sessionToken := uuid.NewV4().String()
+		expiration := time.Now().Add(3600 * time.Second)
+		http.SetCookie(resp, &http.Cookie{
+			Name:    "session_token",
+			Value:   sessionToken,
+			Expires: expiration,
+		})
+
+		// ADD TO DATABASE
+		err = SetSession(ctx, Userdata, sessionToken)
+		if err != nil {
+			log.Printf("Error adding session to database: %s", err)
+		}
+
+		Userdata.Session = sessionToken
+		err = setUser(ctx, &Userdata)
+		if err != nil {
+			log.Printf("Failed updating user when setting session: %s", err)
+			resp.WriteHeader(500)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		loginData = fmt.Sprintf(`{"success": true, "cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]}`, sessionToken, expiration.Unix())
 	}
 
-	sessionToken := uuid.NewV4()
-	http.SetCookie(resp, &http.Cookie{
-		Name:    "session_token",
-		Value:   sessionToken.String(),
-		Expires: time.Now().Add(3600 * time.Second),
-	})
-
-	// ADD TO DATABASE
-	err = SetSession(ctx, Userdata, sessionToken.String())
-	if err != nil {
-		log.Printf("Error adding session to database: %s", err)
-	}
+	log.Printf("%s SUCCESSFULLY LOGGED IN with session %s", data.Username, Userdata.Session)
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(loginData))
@@ -2685,8 +2717,61 @@ func setEnvironment(ctx context.Context, data *Environment) error {
 	return nil
 }
 
+func fixUserOrg(ctx context.Context, user *User) *User {
+	found := false
+	for _, id := range user.Orgs {
+		if user.ActiveOrg.Id == id {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		user.Orgs = append(user.Orgs, user.ActiveOrg.Id)
+	}
+
+	log.Printf("Updating %d orgs for user %s", len(user.Orgs), user.Id)
+	// Might be vulnerable to timing attacks.
+	for _, orgId := range user.Orgs {
+		if len(orgId) == 0 {
+			continue
+		}
+
+		org, err := getOrg(ctx, orgId)
+		if err != nil {
+			log.Printf("Error getting org %s", orgId)
+			continue
+		}
+
+		orgIndex := 0
+		userFound := false
+		for index, orgUser := range org.Users {
+			if orgUser.Id == user.Id {
+				orgIndex = index
+				userFound = true
+				break
+			}
+		}
+
+		if userFound {
+			org.Users[orgIndex] = *user
+		} else {
+			org.Users = append(org.Users, *user)
+		}
+
+		err = setOrg(ctx, *org, orgId)
+		if err != nil {
+			log.Printf("Failed setting org %s", orgId)
+		}
+	}
+
+	return user
+}
+
 // ListBooks returns a list of books, ordered by title.
 func setUser(ctx context.Context, data *User) error {
+	data = fixUserOrg(ctx, data)
+
 	// clear session_token and API_token for user
 	k := datastore.NameKey("Users", data.Id, nil)
 	if _, err := dbclient.Put(ctx, k, data); err != nil {
@@ -3481,6 +3566,7 @@ func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 			},
 		},
 		Running: false,
+		OrgId:   user.ActiveOrg.Id,
 	}
 
 	hook.Status = "running"
@@ -7027,6 +7113,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// FIXME: Check if user is admin of this org
+	log.Printf("Checking org %s", org.Name)
 	userFound := false
 	admin := false
 	for _, inneruser := range org.Users {
@@ -7061,7 +7148,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 
 	// FIXME: Path
 	client := &http.Client{}
-	apiPath := "/api/v1/cloud/sync"
+	apiPath := "/api/v1/cloud/sync/setup"
 	if tmpData.Disable {
 		if !org.CloudSync {
 			log.Printf("Org %s isn't syncing. Can't stop.", org.Id)
@@ -7072,9 +7159,9 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 
 		log.Printf("Should disable sync for org %s", org.Id)
 		apiPath := "/api/v1/cloud/sync/stop"
-		syncUrl = fmt.Sprintf("%s%s", syncUrl, apiPath)
+		syncPath := fmt.Sprintf("%s%s", syncUrl, apiPath)
 
-		err = handleStopCloudSync(syncUrl, *org)
+		err = handleStopCloudSync(syncPath, *org)
 		if err != nil {
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
@@ -7396,9 +7483,9 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/users/logout", handleLogout).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users/register", handleRegister).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users/checkusers", checkAdminLogin).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/users/getusers", handleGetUsers).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/getinfo", handleInfo).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/getsettings", handleSettings).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/users/getusers", handleGetUsers).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/updateuser", handleUpdateUser).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/users/{user}", deleteUser).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/users/passwordchange", handlePasswordChange).Methods("POST", "OPTIONS")
@@ -7413,10 +7500,10 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/getinfo", handleInfo).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/getsettings", handleSettings).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/generateapikey", handleApiGeneration).Methods("GET", "POST", "OPTIONS")
+	r.HandleFunc("/api/v1/passwordchange", handlePasswordChange).Methods("POST", "OPTIONS")
 
 	r.HandleFunc("/api/v1/getenvironments", handleGetEnvironments).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/setenvironments", handleSetEnvironments).Methods("PUT", "OPTIONS")
-	r.HandleFunc("/api/v1/passwordchange", handlePasswordChange).Methods("POST", "OPTIONS")
 
 	r.HandleFunc("/api/v1/docs", getDocList).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/docs/{key}", getDocs).Methods("GET", "OPTIONS")
@@ -7433,6 +7520,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/workflows/queue/confirm", handleGetWorkflowqueueConfirm).Methods("POST")
 
 	// App specific
+	// From here down isnt checked for org specific
 	r.HandleFunc("/api/v1/apps/run_hotload", handleAppHotloadRequest).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/get_existing", loadSpecificApps).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/download_remote", loadSpecificApps).Methods("POST", "OPTIONS")
@@ -7472,7 +7560,6 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/workflows/{key}", deleteWorkflow).Methods("DELETE", "OPTIONS")
 
 	// Triggers
-	// Webhook redirect to the correct cloud function
 	r.HandleFunc("/api/v1/hooks/new", handleNewHook).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/hooks/{key}", handleWebhookCallback).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/hooks/{key}/delete", handleDeleteHook).Methods("DELETE", "OPTIONS")
