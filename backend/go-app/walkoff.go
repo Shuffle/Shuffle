@@ -558,6 +558,7 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 		CreationTime:         timeNow,
 		LastModificationtime: timeNow,
 		LastRuntime:          timeNow,
+		Org:                  orgId,
 	}
 
 	err = setSchedule(ctx, schedule)
