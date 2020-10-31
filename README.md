@@ -1,5 +1,5 @@
 # Shuffle 
-[Shuffle](https://shuffler.io) is an automation platform to unify your security services (SOAR). It has thousands of premade integrations and is based on open frameworks like OpenAPI and Mitre Att&ck. The workflow editor is based on a no-code thought process to empower non-developers, and the app creator makes you able to inegrate any platform in minutes.
+[Shuffle](https://shuffler.io) is an automation platform to unify your security services (SOAR). It has thousands of premade integrations and is based on open frameworks like OpenAPI and Mitre Att&ck. The workflow editor is based on a no-code thought process to empower non-developers, and the app creator makes you able to integrate any platform in minutes.
 
 [![Discord](https://img.shields.io/discord/463752820026376202.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/B2CBzUm)
 
