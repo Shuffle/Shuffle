@@ -14,6 +14,10 @@ ADD ./go-app/go.mod /app
 # Required files for code generation
 ADD ./app_sdk/app_base.py /app_sdk
 ADD ./app_sdk/static_baseline.py /app_sdk
+ADD ./app_sdk_kali/app_base.py /app_sdk_kali
+ADD ./app_sdk_kali/static_baseline.py /app_sdk_kali
+ADD ./app_sdk_blackarch/app_base.py /app_sdk_blackarch
+ADD ./app_sdk_blackarch/static_baseline.py /app_sdk_blackarch
 ADD ./app_gen /app_gen
 
 RUN go get -v
@@ -28,6 +32,8 @@ FROM alpine:3.12
 
 COPY --from=builder /app/ /app
 COPY --from=builder /app_sdk/ /app_sdk
+COPY --from=builder /app_sdk_kali/ /app_sdk_kali
+COPY --from=builder /app_sdk_blackarch/ /app_sdk_blackarch
 COPY --from=builder /app_gen/ /app_gen
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
