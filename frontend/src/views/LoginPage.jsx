@@ -160,10 +160,6 @@ const LoginDialog = props => {
 
 	//var loginChange = register ? (<div><p onClick={setLoginCheck(false)}>Want to register? Click here.</p></div>) : (<div><p onClick={setLoginCheck(true)}>Go back to login? Click here.</p></div>);
 	var formtitle = register ? <div>Login</div> : <div>Register</div>
-
-	//	<DialogTitle>{formtitle}</DialogTitle>
-
-	console.log("THEME: ", theme.palette.surfaceColor)
 	const basedata =
 		<div style={bodyDivStyle}>
 			<Paper style={{

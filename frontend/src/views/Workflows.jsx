@@ -33,7 +33,6 @@ import {Link} from 'react-router-dom';
 import { useAlert } from "react-alert";
 import ChipInput from 'material-ui-chip-input'
 
-
 import Dialog from '@material-ui/core/Dialog';
 import DialogTitle from '@material-ui/core/DialogTitle';
 import DialogActions from '@material-ui/core/DialogActions';
@@ -44,7 +43,7 @@ const inputColor = "#383B40"
 const surfaceColor = "#27292D"
 
 const Workflows = (props) => {
-  const { globalUrl, isLoggedIn, isLoaded, } = props;
+  const { globalUrl, isLoggedIn, isLoaded, removeCookie, cookies} = props;
 	document.title = "Shuffle - Workflows"
 
 	const alert = useAlert()
@@ -82,6 +81,31 @@ const Workflows = (props) => {
 				getWorkflowExecution(selectedWorkflow.id) 
 	  	}
 	})
+
+	// DEBUG HERE 
+	const handleClickLogout = () => {
+		//console.log("Cookies: ", cookies)
+    //console.log("SHOULD LOG OUT")
+		//console.log(isLoggedIn)
+
+		// Don't really care about the logout
+		//fetch(globalUrl+"/api/v1/logout", {
+		//	credentials: "include",
+		//	method: 'POST',
+		//	headers: {
+		//		'Content-Type': 'application/json',
+		//	},
+		//})
+		//.then(() => {
+		//	// Log out anyway
+		//	removeCookie("session_token", {path: "/"})
+		//	//window.location = "/login"
+		//})
+		//.catch(error => {
+		//	console.log(error)
+		//	removeCookie("session_token", {path: "/"})
+		//});
+  }
 
 	const deleteModal = deleteModalOpen ? 
 		<Dialog
@@ -124,13 +148,13 @@ const Workflows = (props) => {
 
 	const getAvailableWorkflows = () => {
 		fetch(globalUrl+"/api/v1/workflows", {
-    	  	method: 'GET',
+    	  method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json',
 				},
-	  			credentials: "include",
-    		})
+	  		credentials: "include",
+    })
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for workflows :O!")
@@ -149,7 +173,7 @@ const Workflows = (props) => {
 				if (isLoggedIn) {
 					alert.error("An error occurred while loading workflows")
 				} else {
-					window.location = "/login"
+					handleClickLogout() 
 				}
 
 				return
@@ -336,6 +360,9 @@ const Workflows = (props) => {
 				data.triggers[key].status = "stopped"
 			}
 		}
+
+		data.execution_org = {"id": ""}
+		console.log(data)
 
 		let linkElement = document.createElement('a');
 		linkElement.setAttribute('href', dataUri);
@@ -580,6 +607,10 @@ const Workflows = (props) => {
 
 		var t = new Date(data.started_at*1000)
 		if (data.workflow.actions === null || data.workflow.actions === undefined ) {
+			return null
+		}
+
+		if (data.workflow.actions === null || data.workflow.actions === undefined) {
 			return null
 		}
 

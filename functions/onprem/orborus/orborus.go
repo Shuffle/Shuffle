@@ -126,7 +126,7 @@ func deployWorker(image string, identifier string, env []string) {
 		log.Printf("[INFO] Found container ID %s", containerId)
 		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
 	} else {
-		log.Printf("[INFO] Empty self container id, continue without NetworkMode")
+		//log.Printf("[INFO] Empty self container id, continue without NetworkMode")
 	}
 
 	config := &container.Config{
@@ -144,7 +144,7 @@ func deployWorker(image string, identifier string, env []string) {
 	)
 
 	if err != nil {
-		log.Println(err)
+		log.Printf("[ERROR] Container create error: %s", err)
 		return
 	}
 
@@ -218,9 +218,11 @@ func initializeImages() {
 
 	if baseimageregistry == "" {
 		baseimageregistry = "docker.io"
+		log.Printf("Setting baseimageregistry")
 	}
 	if baseimagename == "" {
 		baseimagename = "frikky/shuffle"
+		log.Printf("Setting baseimagename")
 	}
 
 	// check whether they are the same first
@@ -290,13 +292,15 @@ func main() {
 	// FIXME - during init, BUILD and/or LOAD worker and app_sdk
 	// Build/load app_sdk so it can be loaded as 127.0.0.1:5000/walkoff_app_sdk
 	log.Printf("[INFO] Setting up Docker environment. Downloading worker and App SDK!")
-	go initializeImages()
+
+	initializeImages()
 
 	//workerName := "worker"
 	//workerVersion := "0.1.0"
 	//workerImage := fmt.Sprintf("docker.pkg.github.com/frikky/shuffle/%s:%s", workerName, workerVersion)
 	//workerImage := fmt.Sprintf("%s/worker:%s", baseimagename, workerVersion)
 	// workerImage := fmt.Sprintf("docker.io/%s:worker", baseimagename)
+	// fmt.Sprintf("%s/%s:app_sdk%s", baseimageregistry, baseimagename, baseimagetagsuffix),
 	workerImage := fmt.Sprintf("%s/%s:worker%s", baseimageregistry, baseimagename, baseimagetagsuffix)
 
 	log.Printf("[INFO] Finished configuring docker environment")
@@ -387,7 +391,7 @@ func main() {
 		}
 
 		if hasStarted && len(executionRequests.Data) > 0 {
-			log.Printf("[INFO] Body: %s", string(body))
+			//log.Printf("[INFO] Body: %s", string(body))
 			// Type string `json:"type"`
 		}
 

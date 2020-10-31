@@ -109,13 +109,13 @@ const Settings = (props) => {
 
 	const getSettings = () => {
 		fetch(globalUrl+"/api/v1/getsettings", {
-    	  	method: 'GET',
-				headers: {
-					'Content-Type': 'application/json',
-					'Accept': 'application/json',
-				},
-	  			credentials: "include",
-    		})
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+				credentials: "include",
+			})
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for WORKFLOW EXECUTION :O!")
@@ -137,24 +137,24 @@ const Settings = (props) => {
 			if (userInfo.username.length > 0) {
 				setUsername(userInfo.username)
 			}
-			if (userInfo.firstname.length > 0) {
-				setFirstname(userInfo.firstname)
-			}
-			if (userInfo.lastname.length > 0) {
-				setLastname(userInfo.lastname)
-			}
-			if (userInfo.title.length > 0) {
-				setTitle(userInfo.title)
-			}
-			if (userInfo.companyname.length > 0) {
-				setCompanyname(userInfo.companyname)
-			}
-			if (userInfo.phone.length > 0) {
-				setPhone(userInfo.phone)
-			}
-			if (userInfo.email.length > 0) {
-				setEmail(userInfo.email)
-			}
+			//if (userInfo.firstname.length > 0) {
+			//	setFirstname(userInfo.firstname)
+			//}
+			//if (userInfo.lastname.length > 0) {
+			//	setLastname(userInfo.lastname)
+			//}
+			//if (userInfo.title.length > 0) {
+			//	setTitle(userInfo.title)
+			//}
+			//if (userInfo.companyname.length > 0) {
+			//	setCompanyname(userInfo.companyname)
+			//}
+			//if (userInfo.phone.length > 0) {
+			//	setPhone(userInfo.phone)
+			//}
+			//if (userInfo.email.length > 0) {
+			//	setEmail(userInfo.email)
+			//}
 		}
 	}
 
@@ -175,7 +175,7 @@ const Settings = (props) => {
 			<div style={{display: "flex", marginTop: "80px"}}>
 				<Paper style={boxStyle}>
 					<h2>APIKEY</h2>
-					<Link to="/docs/API#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is the API key used for?</Link>
+					<a target="_blank" href="/docs/API#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is the API key used for?</a>
 					<TextField
 						style={{backgroundColor: theme.palette.inputColor, flex: "1"}}
 						InputProps={{

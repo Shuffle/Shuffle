@@ -72,6 +72,7 @@ var gceProject = "shuffle"
 var bucketName = "shuffler.appspot.com"
 var baseAppPath = "/home/frikky/git/shaffuru/tmp/apps"
 var baseDockerName = "frikky/shuffle"
+var syncUrl = "http://192.168.3.6:5002"
 
 var dbclient *datastore.Client
 
@@ -139,6 +140,14 @@ type UserLimits struct {
 	MaxWorkflows            int64 `json:"max_workflows" datastore:"max_workflows"`
 }
 
+type retStruct struct {
+	Success         bool         `json:"success"`
+	SyncFeatures    SyncFeatures `json:"sync_features"`
+	SessionKey      string       `json:"session_key"`
+	IntervalSeconds int64        `json:"interval_seconds"`
+	Reason          string       `json:"reason"`
+}
+
 // Saves some data, not sure what to have here lol
 type UserAuth struct {
 	Description string          `json:"description" datastore:"description,noindex" yaml:"description"`
@@ -161,6 +170,7 @@ type Environment struct {
 	Default    bool   `datastore:"default" json:"default"`
 	Archived   bool   `datastore:"archived" json:"archived"`
 	Id         string `datastore:"id" json:"id"`
+	OrgId      string `datastore:"org_id" json:"org_id"`
 }
 
 type User struct {
@@ -380,6 +390,7 @@ type Hook struct {
 	Status    string       `json:"status" datastore:"status"`
 	Workflows []string     `json:"workflows" datastore:"workflows"`
 	Running   bool         `json:"running" datastore:"running"`
+	OrgId     string       `json:"org_id" datastore:"org_id"`
 }
 
 func createFileFromFile(ctx context.Context, bucket *storage.BucketHandle, remotePath, localPath string) error {
@@ -679,47 +690,14 @@ func handleApiAuthentication(resp http.ResponseWriter, request *http.Request) (U
 			authorization = authorizationArr[0]
 		}
 		_ = authorization
-
-		//if item, err := memcache.Get(ctx, authorization); err == memcache.ErrCacheMiss {
-		//	// Doesn't exist :(
-		//	log.Printf("Couldn't find %s in cache!", authorization)
-		//	return User{}, err
-		//} else if err != nil {
-		//	log.Printf("Error getting item: %v", err)
-		//	return User{}, err
-		//} else {
-		//	log.Printf("%#v", item.Value)
-		//	var Userdata User
-
-		//	log.Printf("Deleting key %s", authorization)
-		//	memcache.Delete(ctx, authorization)
-		//	err = json.Unmarshal(item.Value, &Userdata)
-		//	if err == nil {
-		//		return Userdata, nil
-		//	}
-
-		//	return User{}, err
-		//}
 	}
 
 	c, err := request.Cookie("session_token")
 	if err == nil {
-		//if item, err := memcache.Get(ctx, c.Value); err == memcache.ErrCacheMiss {
-		//	// Not in cache
-		//} else if err != nil {
-		//	log.Printf("Error getting item: %v", err)
-		//} else {
-		//	var Userdata User
-		//	err = json.Unmarshal(item.Value, &Userdata)
-		//	if err == nil {
-		//		return Userdata, nil
-		//	}
-		//}
-
 		sessionToken := c.Value
 		session, err := getSession(ctx, sessionToken)
 		if err != nil {
-			log.Printf("Session %s doesn't exist (api auth): %s", sessionToken, err)
+			log.Printf("Session %s doesn't exist (session auth): %s", sessionToken, err)
 			return User{}, err
 		}
 
@@ -855,7 +833,7 @@ func deleteUser(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, userErr := handleApiAuthentication(resp, request)
+	userInfo, userErr := handleApiAuthentication(resp, request)
 	if userErr != nil {
 		log.Printf("Api authentication failed in edit workflow: %s", userErr)
 		resp.WriteHeader(401)
@@ -863,8 +841,8 @@ func deleteUser(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if user.Role != "admin" {
-		log.Printf("Wrong user (%s) when deleting - must be admin", user.Username)
+	if userInfo.Role != "admin" {
+		log.Printf("Wrong user (%s) when deleting - must be admin", userInfo.Username)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "Must be admin"}`))
 		return
@@ -882,46 +860,57 @@ func deleteUser(resp http.ResponseWriter, request *http.Request) {
 		userId = location[4]
 	}
 
-	if userId == user.Id {
+	if userId == userInfo.Id {
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "Can't deactivate yourself"}`))
 		return
 	}
 
 	ctx := context.Background()
-	q := datastore.NewQuery("Users").Filter("id =", userId)
-	var users []User
-	_, err := dbclient.GetAll(ctx, q, &users)
+	foundUser, err := getUser(ctx, userId)
 	if err != nil {
-		log.Printf("Error getting users apikey (deleteuser): %s", err)
+		log.Printf("Can't find user %s (delete user): %s", userId, err)
 		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Failed getting users for verification"}`))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false}`)))
 		return
 	}
 
-	if len(users) != 1 {
-		log.Printf("Found too many users!")
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Backend error: too many or too few users with id %s: %d"}`, userId, len(users))))
+	orgFound := false
+	if userInfo.ActiveOrg.Id == foundUser.ActiveOrg.Id {
+		orgFound = true
+	} else {
+		log.Printf("FoundUser: %#v", foundUser.Orgs)
+		for _, item := range foundUser.Orgs {
+			if item == userInfo.ActiveOrg.Id {
+				orgFound = true
+				break
+			}
+		}
+	}
+
+	if !orgFound {
+		log.Printf("User %s is admin, but can't delete users outside their own org.", userInfo.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't change users outside your org."}`)))
 		return
 	}
 
 	// Invert. No user deletion.
-	if users[0].Active {
-		users[0].Active = false
+	if foundUser.Active {
+		foundUser.Active = false
 	} else {
-		users[0].Active = true
+		foundUser.Active = true
 	}
 
-	err = setUser(ctx, &users[0])
+	err = setUser(ctx, foundUser)
 	if err != nil {
-		log.Printf("Failed swapping active for user %s (%s)", users[0].Username, users[0].Id)
+		log.Printf("Failed swapping active for user %s (%s)", foundUser, foundUser.Username, foundUser.Id)
 		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": true"}`)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false}`)))
 		return
 	}
 
-	log.Printf("Successfully inverted %s", users[0].Username)
+	log.Printf("Successfully inverted %s", foundUser.Username)
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": true}`))
@@ -1026,7 +1015,7 @@ func handleSetEnvironments(resp http.ResponseWriter, request *http.Request) {
 
 	ctx := context.Background()
 	var environments []Environment
-	q := datastore.NewQuery("Environments")
+	q := datastore.NewQuery("Environments").Filter("org_id =", user.ActiveOrg.Id)
 	_, err = dbclient.GetAll(ctx, q, &environments)
 	if err != nil {
 		resp.WriteHeader(401)
@@ -1081,6 +1070,10 @@ func handleSetEnvironments(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	for _, item := range newEnvironments {
+		if item.OrgId != user.ActiveOrg.Id {
+			item.OrgId = user.ActiveOrg.Id
+		}
+
 		err = setEnvironment(ctx, &item)
 		if err != nil {
 			resp.WriteHeader(401)
@@ -1185,6 +1178,19 @@ func createNewUser(username, password, role, apikey string, org Org) error {
 		log.Printf("Error adding User %s: %s", username, err)
 		return err
 	}
+
+	neworg, err := getOrg(ctx, org.Id)
+	if err == nil {
+		log.Printf("Updating org %s with user %s", org.Name, newUser.Username)
+		neworg.Users = append(org.Users, *newUser)
+		err = setOrg(ctx, *neworg, neworg.Id)
+		if err != nil {
+			log.Printf("Failed updating org with user %s", newUser.Username)
+		} else {
+			log.Printf("Successfully updated org with user %s!", newUser.Username)
+		}
+	}
+
 	//	url := fmt.Sprintf("https://shuffler.io/register/%s", verifyToken.String())
 	//	const verifyMessage = `
 	//Registration URL :)
@@ -1253,7 +1259,22 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 		role = "admin"
 	}
 
-	err = createNewUser(data.Username, data.Password, role, "", user.ActiveOrg)
+	ctx := context.Background()
+	currentOrg := user.ActiveOrg
+	if user.ActiveOrg.Id == "" {
+		log.Printf("There's no active org for the user. Checking if there's a single one to assing it to.")
+
+		var orgs []Org
+		q := datastore.NewQuery("Organizations")
+		_, err = dbclient.GetAll(ctx, q, &orgs)
+		if err == nil && len(orgs) == 1 {
+			log.Printf("No org exists in auth. Setting to default (first one)")
+			currentOrg = orgs[0]
+		}
+
+	}
+
+	err = createNewUser(data.Username, data.Password, role, "", currentOrg)
 	if err != nil {
 		log.Printf("Failed registering user: %s", err)
 		resp.WriteHeader(401)
@@ -1285,51 +1306,53 @@ func handleLogout(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// Check cookie
-	c, err := request.Cookie("session_token")
+	userInfo, err := handleApiAuthentication(resp, request)
 	if err != nil {
-		resp.WriteHeader(200)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-		return
-	} else {
-		log.Printf("Session cookie is set!")
-	}
-
-	var Userdata User
-	ctx := context.Background()
-	//item, err := memcache.Get(ctx, c.Value)
-	sessionToken := ""
-	//// Memcache handling for logout
-	//if err == nil {
-	//	err = json.Unmarshal(item.Value, &Userdata)
-	//	if err != nil {
-	//		log.Printf("Failed unmarshaling: %s", err)
-	//		resp.WriteHeader(401)
-	//		resp.Write([]byte(fmt.Sprintf(`{"success": false}`)))
-	//		return
-	//	}
-
-	//	sessionToken = Userdata.Session
-	//} else {
-	//	// Validate with User
-	sessionToken = c.Value
-	session, err := getSession(ctx, sessionToken)
-	if err != nil {
-		log.Printf("Session %s doesn't exist (logout): %s", session.Session, err)
+		log.Printf("Api authentication failed in handleLogout: %s", err)
 		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": ""}`))
+		resp.Write([]byte(`{"success": false}`))
 		return
 	}
+
+	ctx := context.Background()
+	session, err := getSession(ctx, userInfo.Session)
+	if err != nil {
+		log.Printf("Session %#v doesn't exist: %s", session, err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "No session"}`))
+		return
+	}
+
+	// Check cookie
+	//c, err := request.Cookie("session_token")
+	//if err != nil {
+	//	resp.WriteHeader(200)
+	//	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+	//	return
+	//} else {
+	//	log.Printf("Session cookie is set to %s!", c.Value)
+	//}
+
+	//var Userdata User
+	//ctx := context.Background()
+	//sessionToken = c.Value
+	//session, err := getSession(ctx, sessionToken)
+	//if err != nil {
+	//	log.Printf("Session %s doesn't exist (logout): %s", sessionToken, err)
+	//	resp.WriteHeader(401)
+	//	resp.Write([]byte(`{"success": false, "reason": "Couldn't find your session"}`))
+	//	return
+	//}
 
 	// Get session first
 	// Should basically never happen
-	_, err = getUser(ctx, session.Id)
-	if err != nil {
-		log.Printf("Username %s doesn't exist (logout): %s", session.Username, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
-		return
-	}
+	//_, err = getUser(ctx, session.Id)
+	//if err != nil {
+	//	log.Printf("Username %s doesn't exist (logout): %s", session.Username, err)
+	//	resp.WriteHeader(401)
+	//	resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
+	//	return
+	//}
 
 	//	Userdata = *tmpdata
 	//}
@@ -1337,7 +1360,7 @@ func handleLogout(resp http.ResponseWriter, request *http.Request) {
 	// FIXME
 	// Session might delete someone elses here?
 	// No need to think about before possible scale..?
-	err = SetSession(ctx, Userdata, "")
+	err = SetSession(ctx, userInfo, "")
 	if err != nil {
 		log.Printf("Error removing session for: %s", err)
 		resp.WriteHeader(401)
@@ -1345,16 +1368,16 @@ func handleLogout(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	err = DeleteKey(ctx, "sessions", sessionToken)
+	err = DeleteKey(ctx, "sessions", userInfo.Session)
 	if err != nil {
-		log.Printf("Error deleting key %s for %s: %s", c.Value, Userdata.Username, err)
+		log.Printf("Error deleting key %s for %s: %s", userInfo.Session, userInfo.Username, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
 		return
 	}
 
-	Userdata.Session = ""
-	err = setUser(ctx, &Userdata)
+	userInfo.Session = ""
+	err = setUser(ctx, &userInfo)
 	if err != nil {
 		log.Printf("Failed updating user: %s", err)
 		resp.WriteHeader(401)
@@ -1363,10 +1386,10 @@ func handleLogout(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	//memcache.Delete(request.Context(), sessionToken)
+	//http.SetCookie(resp, c)
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": false, "reason": "Successfully logged out"}`))
-	http.SetCookie(resp, c)
 }
 
 func generateApikey(ctx context.Context, userInfo User) (User, error) {
@@ -1429,6 +1452,8 @@ func handleUpdateUser(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	// Should this role reflect the users' org access?
+	// When you change org -> change user role
 	if userInfo.Role != "admin" {
 		log.Printf("%s tried to update user %s", userInfo.Username, t.UserId)
 		resp.WriteHeader(401)
@@ -1441,6 +1466,21 @@ func handleUpdateUser(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("Can't find user %s (update user): %s", t.UserId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false}`)))
+		return
+	}
+
+	orgFound := false
+	for _, item := range foundUser.Orgs {
+		if item == userInfo.ActiveOrg.Id {
+			orgFound = true
+			break
+		}
+	}
+
+	if !orgFound {
+		log.Printf("User %s is admin, but can't edit users outside their own org.", userInfo.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't change users outside your org."}`)))
 		return
 	}
 
@@ -1502,7 +1542,6 @@ func handleUpdateUser(resp http.ResponseWriter, request *http.Request) {
 }
 
 func handleApiGeneration(resp http.ResponseWriter, request *http.Request) {
-	log.Printf("APIGEN!")
 	cors := handleCors(resp, request)
 	if cors {
 		return
@@ -1515,7 +1554,6 @@ func handleApiGeneration(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
-	log.Printf("APIKEY")
 
 	ctx := context.Background()
 	if request.Method == "GET" {
@@ -1617,13 +1655,13 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	session, err := getSession(ctx, userInfo.Session)
-	if err != nil {
-		log.Printf("Session %#v doesn't exist: %s", session, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "No session"}`))
-		return
-	}
+	//session, err := getSession(ctx, userInfo.Session)
+	//if err != nil {
+	//	log.Printf("Session %#v doesn't exist: %s", session, err)
+	//	resp.WriteHeader(401)
+	//	resp.Write([]byte(`{"success": false, "reason": "No session"}`))
+	//	return
+	//}
 
 	// This is a long check to see if an inactive admin can access the site
 	parsedAdmin := "false"
@@ -1686,12 +1724,12 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	//log.Printf("%s  %s", session.Session, UserInfo.Session)
-	if session.Session != userInfo.Session {
-		log.Printf("Session %s is not the same as %s for %s. %s", userInfo.Session, session.Session, userInfo.Username, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": ""}`))
-		return
-	}
+	//if session.Session != userInfo.Session {
+	//	log.Printf("Session %s is not the same as %s for %s. %s", userInfo.Session, session.Session, userInfo.Username, err)
+	//	resp.WriteHeader(401)
+	//	resp.Write([]byte(`{"success": false, "reason": ""}`))
+	//	return
+	//}
 
 	expiration := time.Now().Add(3600 * time.Second)
 	http.SetCookie(resp, &http.Cookie{
@@ -1750,16 +1788,16 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		currentOrg = []byte("{}")
 	}
 
-	returnData := fmt.Sprintf(`
-	{
-		"success": true, 
-		"admin": %s, 
-		"tutorials": [],
-		"id": "%s",
-		"orgs": [%s], 
-		"active_org": %s,
-		"cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]
-	}`, parsedAdmin, userInfo.Id, currentOrg, currentOrg, userInfo.Session, expiration.Unix())
+	returnData := fmt.Sprintf(`{
+	"success": true, 
+	"username": "%s",
+	"admin": %s, 
+	"tutorials": [],
+	"id": "%s",
+	"orgs": [%s], 
+	"active_org": %s,
+	"cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]
+}`, userInfo.Username, parsedAdmin, userInfo.Id, currentOrg, currentOrg, userInfo.Session, expiration.Unix())
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(returnData))
@@ -1975,7 +2013,7 @@ func handlePasswordChange(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, err := handleApiAuthentication(resp, request)
+	userInfo, err := handleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in set new workflowhandler: %s", err)
 		resp.WriteHeader(401)
@@ -1984,15 +2022,15 @@ func handlePasswordChange(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	curUserFound := false
-	if t.Username != user.Username && user.Role != "admin" {
+	if t.Username != userInfo.Username && userInfo.Role != "admin" {
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "Admin required to change others' passwords"}`))
 		return
-	} else if t.Username == user.Username {
+	} else if t.Username == userInfo.Username {
 		curUserFound = true
 	}
 
-	if user.Role != "admin" {
+	if userInfo.Role != "admin" {
 		if t.Newpassword != t.Newpassword2 {
 			err := "Passwords don't match"
 			resp.WriteHeader(401)
@@ -2006,6 +2044,8 @@ func handlePasswordChange(resp http.ResponseWriter, request *http.Request) {
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 			return
 		}
+	} else {
+		// Check ORG HERE?
 	}
 
 	// Current password
@@ -2018,6 +2058,7 @@ func handlePasswordChange(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
+	foundUser := User{}
 	if !curUserFound {
 		log.Printf("Have to find a different user")
 		q := datastore.NewQuery("Users").Filter("Username =", strings.ToLower(t.Username))
@@ -2037,13 +2078,32 @@ func handlePasswordChange(resp http.ResponseWriter, request *http.Request) {
 			return
 		}
 
-		user = users[0]
+		foundUser = users[0]
+		orgFound := false
+		if userInfo.ActiveOrg.Id == foundUser.ActiveOrg.Id {
+			orgFound = true
+		} else {
+			log.Printf("FoundUser: %#v", foundUser.Orgs)
+			for _, item := range foundUser.Orgs {
+				if item == userInfo.ActiveOrg.Id {
+					orgFound = true
+					break
+				}
+			}
+		}
+
+		if !orgFound {
+			log.Printf("User %s is admin, but can't change user's passowrd outside their own org.", userInfo.Id)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't change users outside your org."}`)))
+			return
+		}
 	} else {
 		// Admins can re-generate others' passwords as well.
-		if user.Role != "admin" {
-			err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(t.Newpassword))
+		if userInfo.Role != "admin" {
+			err = bcrypt.CompareHashAndPassword([]byte(userInfo.Password), []byte(t.Newpassword))
 			if err != nil {
-				log.Printf("Bad password for %s: %s", user.Username, err)
+				log.Printf("Bad password for %s: %s", userInfo.Username, err)
 				resp.WriteHeader(401)
 				resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
 				return
@@ -2051,18 +2111,25 @@ func handlePasswordChange(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	if len(foundUser.Id) == 0 {
+		log.Printf("Something went wrong in password reset", err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(t.Newpassword), 8)
 	if err != nil {
-		log.Printf("New password failure for %s: %s", user.Username, err)
+		log.Printf("New password failure for %s: %s", userInfo.Username, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
 		return
 	}
 
-	user.Password = string(hashedPassword)
-	err = setUser(ctx, &user)
+	userInfo.Password = string(hashedPassword)
+	err = setUser(ctx, &foundUser)
 	if err != nil {
-		log.Printf("Error fixing password for user %s: %s", user.Username, err)
+		log.Printf("Error fixing password for user %s: %s", userInfo.Username, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
 		return
@@ -2192,7 +2259,7 @@ func handleGetEnvironments(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	_, err := handleApiAuthentication(resp, request)
+	user, err := handleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in set new workflowhandler: %s", err)
 		resp.WriteHeader(401)
@@ -2202,7 +2269,7 @@ func handleGetEnvironments(resp http.ResponseWriter, request *http.Request) {
 
 	ctx := context.Background()
 	var environments []Environment
-	q := datastore.NewQuery("Environments")
+	q := datastore.NewQuery("Environments").Filter("org_id =", user.ActiveOrg.Id)
 	_, err = dbclient.GetAll(ctx, q, &environments)
 	if err != nil {
 		resp.WriteHeader(401)
@@ -2299,18 +2366,17 @@ func handleGetUsers(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	// FIXME: Check by org.
 	ctx := context.Background()
-	var users []User
-	q := datastore.NewQuery("Users")
-	_, err = dbclient.GetAll(ctx, q, &users)
+	org, err := getOrg(ctx, user.ActiveOrg.Id)
 	if err != nil {
 		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Can't get users"}`))
+		resp.Write([]byte(`{"success": false, "reason": "Failed getting org users"}`))
 		return
 	}
 
 	newUsers := []User{}
-	for _, item := range users {
+	for _, item := range org.Users {
 		if len(item.Username) == 0 {
 			continue
 		}
@@ -2417,19 +2483,10 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("%s SUCCESSFULLY LOGGED IN with session %s", data.Username, Userdata.Session)
-	//if !Userdata.Verified {
-	//	log.Printf("User %s is not verified", data.Username)
-	//	resp.WriteHeader(403)
-	//	resp.Write([]byte(`{"success": false, "reason": "Successful login, but your email address isn't verified. Check your mailbox."}`))
-	//	return
-	//}
-
-	loginData := `{"success": true}`
-
 	// FIXME - have timeout here
+	loginData := `{"success": true}`
 	if len(Userdata.Session) != 0 {
-		//log.Println("Nonexisting session")
+		log.Println("User session exists - resetting")
 		expiration := time.Now().Add(3600 * time.Second)
 
 		http.SetCookie(resp, &http.Cookie{
@@ -2449,20 +2506,36 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 		resp.WriteHeader(200)
 		resp.Write([]byte(loginData))
 		return
+	} else {
+		log.Printf("User session is empty - create one!")
+
+		sessionToken := uuid.NewV4().String()
+		expiration := time.Now().Add(3600 * time.Second)
+		http.SetCookie(resp, &http.Cookie{
+			Name:    "session_token",
+			Value:   sessionToken,
+			Expires: expiration,
+		})
+
+		// ADD TO DATABASE
+		err = SetSession(ctx, Userdata, sessionToken)
+		if err != nil {
+			log.Printf("Error adding session to database: %s", err)
+		}
+
+		Userdata.Session = sessionToken
+		err = setUser(ctx, &Userdata)
+		if err != nil {
+			log.Printf("Failed updating user when setting session: %s", err)
+			resp.WriteHeader(500)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		loginData = fmt.Sprintf(`{"success": true, "cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]}`, sessionToken, expiration.Unix())
 	}
 
-	sessionToken := uuid.NewV4()
-	http.SetCookie(resp, &http.Cookie{
-		Name:    "session_token",
-		Value:   sessionToken.String(),
-		Expires: time.Now().Add(3600 * time.Second),
-	})
-
-	// ADD TO DATABASE
-	err = SetSession(ctx, Userdata, sessionToken.String())
-	if err != nil {
-		log.Printf("Error adding session to database: %s", err)
-	}
+	log.Printf("%s SUCCESSFULLY LOGGED IN with session %s", data.Username, Userdata.Session)
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(loginData))
@@ -2494,6 +2567,28 @@ func getSession(ctx context.Context, thissession string) (*session, error) {
 	}
 
 	return curUser, nil
+}
+
+// ListBooks returns a list of books, ordered by title.
+func getFile(ctx context.Context, id string) (*File, error) {
+	key := datastore.NameKey("Files", id, nil)
+	curFile := &File{}
+	if err := dbclient.Get(ctx, key, curFile); err != nil {
+		return &File{}, err
+	}
+
+	return curFile, nil
+}
+
+func setFile(ctx context.Context, file File) error {
+	// clear session_token and API_token for user
+	k := datastore.NameKey("Files", file.Id, nil)
+	if _, err := dbclient.Put(ctx, k, &file); err != nil {
+		log.Println(err)
+		return err
+	}
+
+	return nil
 }
 
 // ListBooks returns a list of books, ordered by title.
@@ -2622,8 +2717,61 @@ func setEnvironment(ctx context.Context, data *Environment) error {
 	return nil
 }
 
+func fixUserOrg(ctx context.Context, user *User) *User {
+	found := false
+	for _, id := range user.Orgs {
+		if user.ActiveOrg.Id == id {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		user.Orgs = append(user.Orgs, user.ActiveOrg.Id)
+	}
+
+	log.Printf("Updating %d orgs for user %s", len(user.Orgs), user.Id)
+	// Might be vulnerable to timing attacks.
+	for _, orgId := range user.Orgs {
+		if len(orgId) == 0 {
+			continue
+		}
+
+		org, err := getOrg(ctx, orgId)
+		if err != nil {
+			log.Printf("Error getting org %s", orgId)
+			continue
+		}
+
+		orgIndex := 0
+		userFound := false
+		for index, orgUser := range org.Users {
+			if orgUser.Id == user.Id {
+				orgIndex = index
+				userFound = true
+				break
+			}
+		}
+
+		if userFound {
+			org.Users[orgIndex] = *user
+		} else {
+			org.Users = append(org.Users, *user)
+		}
+
+		err = setOrg(ctx, *org, orgId)
+		if err != nil {
+			log.Printf("Failed setting org %s", orgId)
+		}
+	}
+
+	return user
+}
+
 // ListBooks returns a list of books, ordered by title.
 func setUser(ctx context.Context, data *User) error {
+	data = fixUserOrg(ctx, data)
+
 	// clear session_token and API_token for user
 	k := datastore.NameKey("Users", data.Id, nil)
 	if _, err := dbclient.Put(ctx, k, data); err != nil {
@@ -3299,8 +3447,8 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 			Body:   ioutil.NopCloser(strings.NewReader(bodyWrapper)),
 		}
 
+		// OrgId: activeOrgs[0].Id,
 		workflowExecution, executionResp, err := handleExecution(item, workflow, newRequest)
-
 		if err == nil {
 			err = increaseStatisticsField(ctx, "total_webhooks_ran", workflowExecution.Workflow.ID, 1)
 			if err != nil {
@@ -3418,6 +3566,7 @@ func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 			},
 		},
 		Running: false,
+		OrgId:   user.ActiveOrg.Id,
 	}
 
 	hook.Status = "running"
@@ -6454,6 +6603,14 @@ func runInit(ctx context.Context) {
 		log.Printf("Should add %d users to organization default", len(users))
 	}
 
+	if len(activeOrgs) == 0 {
+		orgQuery := datastore.NewQuery("Organizations")
+		_, err = dbclient.GetAll(ctx, orgQuery, &activeOrgs)
+		if err != nil {
+			log.Printf("Failed getting orgs the second time around")
+		}
+	}
+
 	// Fix active users etc
 	q := datastore.NewQuery("Users").Filter("active =", true)
 	var activeusers []User
@@ -6520,23 +6677,116 @@ func runInit(ctx context.Context) {
 				}
 			}
 		} else {
-			//log.Printf("Found %d users.", len(users))
+			log.Printf("Found %d users.", len(users))
+			if len(activeOrgs) == 1 && len(users) > 0 {
+				for _, user := range users {
+					if user.ActiveOrg.Id == "" && len(user.Username) > 0 {
+						user.ActiveOrg = activeOrgs[0]
+						err = setUser(ctx, &user)
+						if err != nil {
+							log.Printf("Failed updating user %s with org", user.Username)
+						} else {
+							log.Printf("Updated user %s to have org", user.Username)
+						}
+					}
+				}
+			}
 			//log.Printf(users[0].Username)
 		}
 	}
 
 	// Gets environments and inits if it doesn't exist
-	log.Printf("Setting up environments")
 	count, err := getEnvironmentCount()
-	if count == 0 && err == nil {
+	if count == 0 && err == nil && len(activeOrgs) == 1 {
+		log.Printf("Setting up environment with org %s", activeOrgs[0].Id)
 		item := Environment{
-			Name: "Shuffle",
-			Type: "onprem",
+			Name:  "Shuffle",
+			Type:  "onprem",
+			OrgId: activeOrgs[0].Id,
 		}
 
 		err = setEnvironment(ctx, &item)
 		if err != nil {
 			log.Printf("Failed setting up new environment")
+		}
+	} else if len(activeOrgs) == 1 {
+		log.Printf("Setting up all environments with org %s", activeOrgs[0].Id)
+		var environments []Environment
+		q := datastore.NewQuery("Environments")
+		_, err = dbclient.GetAll(ctx, q, &environments)
+		if err == nil {
+			for _, item := range environments {
+				if item.OrgId == activeOrgs[0].Id {
+					continue
+				}
+
+				item.OrgId = activeOrgs[0].Id
+				err = setEnvironment(ctx, &item)
+				if err != nil {
+					log.Printf("Failed adding environment to org %s", activeOrgs[0].Id)
+				}
+			}
+		}
+	}
+
+	// Fixing workflows to have real activeorg IDs
+	if len(activeOrgs) == 1 {
+		q := datastore.NewQuery("workflow")
+		var workflows []Workflow
+		_, err = dbclient.GetAll(ctx, q, &workflows)
+		if err != nil {
+			log.Printf("Error getting workflows in runinit: %s", err)
+		} else {
+			updated := 0
+			for _, workflow := range workflows {
+				if workflow.ExecutingOrg.Id == "" {
+					workflow.ExecutingOrg = activeOrgs[0]
+
+					err = setWorkflow(ctx, workflow, workflow.ID)
+					if err != nil {
+						log.Printf("Failed setting workflow in init: %s", err)
+					} else {
+						log.Printf("Fixed workflow %s to have the right org.", workflow.ID)
+						updated += 1
+					}
+				}
+			}
+
+			if updated > 0 {
+				log.Printf("Set workflow orgs for %d workflows", updated)
+			}
+		}
+
+		fileq := datastore.NewQuery("Files").Limit(1)
+		count, err := dbclient.Count(ctx, fileq)
+
+		if err == nil && count == 0 {
+			basepath := "."
+			filename := "testfile.txt"
+			fileId := uuid.NewV4().String()
+			log.Printf("Creating new file reference %s because none exist!", fileId)
+			workflowId := "2e9d6474-402c-4dcc-bb53-45f638ca18d3"
+			downloadPath := fmt.Sprintf("%s/%s/%s/%s", basepath, activeOrgs[0].Id, workflowId, fileId)
+
+			timeNow := time.Now().Unix()
+			newFile := File{
+				Id:           fileId,
+				CreatedAt:    timeNow,
+				UpdatedAt:    timeNow,
+				Description:  "Created by system for testing",
+				Status:       "active",
+				Filename:     filename,
+				OrgId:        activeOrgs[0].Id,
+				WorkflowId:   workflowId,
+				DownloadPath: downloadPath,
+			}
+
+			err = setFile(ctx, newFile)
+			if err != nil {
+				log.Printf("Failed setting file: %s", err)
+			} else {
+				log.Printf("Created file %s in init", newFile.DownloadPath)
+			}
 		}
 	}
 
@@ -6575,7 +6825,7 @@ func runInit(ctx context.Context) {
 	log.Printf("Getting remote workflow apps")
 	workflowapps, err := getAllWorkflowApps(ctx)
 	if err != nil {
-		log.Printf("Failed getting apps: %s", err)
+		log.Printf("Failed getting apps (runInit): %s", err)
 	} else if err == nil && len(workflowapps) == 0 {
 		log.Printf("Downloading default workflow apps")
 		fs := memfs.New()
@@ -6600,7 +6850,7 @@ func runInit(ctx context.Context) {
 			}
 		}
 		branch := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_BRANCH")
-		if len(branch) > 0 {
+		if len(branch) > 0 && branch != "master" && branch != "main" {
 			cloneOptions.ReferenceName = plumbing.ReferenceName(branch)
 		}
 
@@ -6609,7 +6859,7 @@ func runInit(ctx context.Context) {
 		r, err := git.Clone(storer, fs, cloneOptions)
 
 		if err != nil {
-			log.Printf("Failed loading repo into memory: %s", err)
+			log.Printf("Failed loading repo into memory (init): %s", err)
 		}
 
 		dir, err := fs.ReadDir("")
@@ -6680,7 +6930,136 @@ func runInit(ctx context.Context) {
 	log.Printf("Finished INIT")
 }
 
+func handleVerifyCloudsync(orgId string) (SyncFeatures, error) {
+	ctx := context.Background()
+	org, err := getOrg(ctx, orgId)
+	if err != nil {
+		return SyncFeatures{}, err
+	}
+
+	//r.HandleFunc("/api/v1/getorgs", handleGetOrgs).Methods("GET", "OPTIONS")
+
+	syncURL := fmt.Sprintf("%s/api/v1/cloud/sync/get_access", syncUrl)
+	client := &http.Client{}
+	req, err := http.NewRequest(
+		"GET",
+		syncURL,
+		nil,
+	)
+
+	req.Header.Add("Authorization", fmt.Sprintf(`Bearer %s`, org.SyncConfig.Apikey))
+	newresp, err := client.Do(req)
+	if err != nil {
+		return SyncFeatures{}, err
+	}
+
+	respBody, err := ioutil.ReadAll(newresp.Body)
+	if err != nil {
+		return SyncFeatures{}, err
+	}
+
+	responseData := retStruct{}
+	err = json.Unmarshal(respBody, &responseData)
+	if err != nil {
+		return SyncFeatures{}, err
+	}
+
+	if newresp.StatusCode != 200 {
+		return SyncFeatures{}, errors.New(fmt.Sprintf("Got status code %d when getting org remotely. Expected 200. Contact support.", newresp.StatusCode))
+	}
+
+	if !responseData.Success {
+		return SyncFeatures{}, errors.New(responseData.Reason)
+	}
+
+	return responseData.SyncFeatures, nil
+}
+
+// Actually stops syncing with cloud for an org.
+// Disables potential schedules, removes environments, breaks workflows etc.
+func handleStopCloudSync(syncUrl string, org Org) error {
+	if len(org.SyncConfig.Apikey) == 0 {
+		return errors.New(fmt.Sprintf("Couldn't find any sync key to disable org %s", org.Id))
+	}
+
+	log.Printf("Should run cloud sync disable for org %s with URL %s and sync key %s", org.Id, syncUrl, org.SyncConfig.Apikey)
+
+	client := &http.Client{}
+	req, err := http.NewRequest(
+		"DELETE",
+		syncUrl,
+		nil,
+	)
+
+	req.Header.Add("Authorization", fmt.Sprintf(`Bearer %s`, org.SyncConfig.Apikey))
+	newresp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	respBody, err := ioutil.ReadAll(newresp.Body)
+	if err != nil {
+		return err
+	}
+	log.Printf("Remote disable ret: %s", string(respBody))
+
+	responseData := retStruct{}
+	err = json.Unmarshal(respBody, &responseData)
+	if err != nil {
+		return err
+	}
+
+	if newresp.StatusCode != 200 {
+		return errors.New(fmt.Sprintf("Got status code %d when disabling org remotely. Expected 200. Contact support.", newresp.StatusCode))
+	}
+
+	if !responseData.Success {
+		//log.Printf("Success reason: %s", responseData.Reason)
+		return errors.New(responseData.Reason)
+	}
+
+	log.Printf("Everything is success. Should disable org sync for %s", org.Id)
+
+	ctx := context.Background()
+	org.CloudSync = false
+	org.SyncFeatures = SyncFeatures{}
+	org.SyncConfig = SyncConfig{}
+
+	err = setOrg(ctx, org, org.Id)
+	if err != nil {
+		newerror := fmt.Sprintf("ERROR: Failed updating even though there was success: %s", err)
+		log.Printf(newerror)
+		return errors.New(newerror)
+	}
+
+	var environments []Environment
+	q := datastore.NewQuery("Environments").Filter("org_id =", org.Id)
+	_, err = dbclient.GetAll(ctx, q, &environments)
+	if err != nil {
+		return err
+	}
+
+	// Don't disable, this will be deleted entirely
+	for _, environment := range environments {
+		if environment.Type == "cloud" {
+			environment.Name = "Cloud"
+			environment.Archived = true
+			err = setEnvironment(ctx, &environment)
+			if err == nil {
+				log.Printf("Updated cloud environment %s", environment.Name)
+			} else {
+				log.Printf("Failed to update cloud environment %s", environment.Name)
+			}
+		}
+	}
+
+	return nil
+}
+
 // INFO: https://docs.google.com/drawings/d/1JJebpPeEVEbmH_qsAC6zf9Noygp7PytvesrkhE19QrY/edit
+/*
+	This is here to both enable and disable cloud sync features for an organization
+*/
 func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -6712,6 +7091,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	type ReturnData struct {
 		Apikey       string `datastore:"apikey"`
 		Organization Org    `datastore:"organization"`
+		Disable      bool   `datastore:"disable"`
 	}
 
 	var tmpData ReturnData
@@ -6733,6 +7113,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// FIXME: Check if user is admin of this org
+	log.Printf("Checking org %s", org.Name)
 	userFound := false
 	admin := false
 	for _, inneruser := range org.Users {
@@ -6765,8 +7146,43 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 
 	log.Printf("Apidata: %s", tmpData.Apikey)
 
+	// FIXME: Path
 	client := &http.Client{}
-	syncPath := "http://192.168.3.6:5002/api/v1/cloud/sync"
+	apiPath := "/api/v1/cloud/sync/setup"
+	if tmpData.Disable {
+		if !org.CloudSync {
+			log.Printf("Org %s isn't syncing. Can't stop.", org.Id)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Skipped cloud sync setup. Already syncing."}`)))
+			return
+		}
+
+		log.Printf("Should disable sync for org %s", org.Id)
+		apiPath := "/api/v1/cloud/sync/stop"
+		syncPath := fmt.Sprintf("%s%s", syncUrl, apiPath)
+
+		err = handleStopCloudSync(syncPath, *org)
+		if err != nil {
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		} else {
+			resp.WriteHeader(200)
+			resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Successfully disabled cloud sync for org."}`)))
+		}
+
+		return
+	}
+
+	// Everything below here is to SET UP CLOUD SYNC.
+	// If you want to disable cloud sync, see previous section.
+	if org.CloudSync {
+		log.Printf("Org %s is already syncing. Skip", org.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Org is already syncing. Nothing to set up."}`)))
+		return
+	}
+
+	syncPath := fmt.Sprintf("%s%s", syncUrl, apiPath)
 
 	type requestStruct struct {
 		ApiKey string `json:"api_key"`
@@ -6780,7 +7196,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		log.Printf("Failed marshaling api key data: %s", err)
 		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed cloud sync."`, err)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed cloud sync."}`, err)))
 		return
 	}
 
@@ -6793,49 +7209,254 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	newresp, err := client.Do(req)
 	if err != nil {
 		resp.WriteHeader(400)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed cloud sync: %s"`, err)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed cloud sync: %s. Contact support."}`, err)))
 		//setBadMemcache(ctx, docPath)
-		return
-	}
-
-	if newresp.StatusCode != 200 {
-		resp.WriteHeader(400)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Response code %d during sync. Expecting 200."`, newresp.StatusCode)))
 		return
 	}
 
 	respBody, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
 		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't parse sync data"`)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't parse sync data. Contact support."}`)))
 		return
 	}
 
-	type responseStruct struct {
-		Success bool   `json:"success"`
-		Reason  string `json:"reason"`
-	}
 	log.Printf("Respbody: %s", string(respBody))
-
-	responseData := responseStruct{}
+	responseData := retStruct{}
 	err = json.Unmarshal(respBody, &responseData)
 	if err != nil {
 		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed handling cloud data"`)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed handling cloud data"}`)))
 		return
 	}
 
-	if responseData.Success {
-		resp.WriteHeader(200)
-		if len(responseData.Reason) > 0 {
-			resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "%s"}`, responseData.Reason)))
-		} else {
-			resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
-		}
-	} else {
+	if newresp.StatusCode != 200 {
+		resp.WriteHeader(401)
+		resp.Write(respBody)
+		return
+	}
+
+	if !responseData.Success {
 		resp.WriteHeader(400)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, responseData.Reason)))
+		return
 	}
+
+	// FIXME:
+	// 1. Set cloudsync for org to be active
+	// 2. Add iterative sync schedule for interval seconds
+	// 3. Add another environment for the org's users
+	org.CloudSync = true
+	org.SyncFeatures = responseData.SyncFeatures
+
+	org.SyncConfig = SyncConfig{
+		Apikey:   responseData.SessionKey,
+		Interval: responseData.IntervalSeconds,
+	}
+
+	// FIXME: Add this for every feature
+	if org.SyncFeatures.Workflows.Active {
+		log.Printf("Should activate cloud workflows for org %s!", org.Id)
+
+		// 1. Find environment
+		// 2. If cloud env found, enable it (un-archive)
+		// 3. If it doesn't create it
+		var environments []Environment
+		q := datastore.NewQuery("Environments").Filter("org_id =", org.Id)
+		_, err = dbclient.GetAll(ctx, q, &environments)
+		if err == nil {
+
+			// Don't disable, this will be deleted entirely
+			found := false
+			for _, environment := range environments {
+				if environment.Type == "cloud" {
+					environment.Name = "Cloud"
+					environment.Archived = false
+					err = setEnvironment(ctx, &environment)
+					if err == nil {
+						log.Printf("Re-added cloud environment %s", environment.Name)
+					} else {
+						log.Printf("Failed to re-enable cloud environment %s", environment.Name)
+					}
+
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				log.Printf("Env for cloud not found. Should add it!")
+				newEnv := Environment{
+					Name:       "Cloud",
+					Type:       "cloud",
+					Archived:   false,
+					Registered: true,
+					Default:    false,
+					OrgId:      org.Id,
+				}
+
+				err = setEnvironment(ctx, &newEnv)
+				if err != nil {
+					log.Printf("Failed setting up NEW org environment for org %s: %s", org.Id, err)
+				} else {
+					log.Printf("Successfully added new environment for org %s", org.Id)
+				}
+			}
+		} else {
+			log.Printf("Failed setting org environment, because none were found: %s", err)
+		}
+	}
+
+	err = setOrg(ctx, *org, org.Id)
+	if err != nil {
+		log.Printf("ERROR: Failed updating org even though there was success: %s", err)
+		resp.WriteHeader(400)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed setting up org after sync success. Contact support."}`)))
+		return
+	}
+
+	if responseData.IntervalSeconds > 0 {
+		// FIXME:
+		log.Printf("Should set up interval for %d with session key %s for org %s", responseData.IntervalSeconds, responseData.SessionKey, org.Name)
+	}
+
+	resp.WriteHeader(200)
+	resp.Write(respBody)
+}
+
+type File struct {
+	Id        string `json:"id" datastore:"id"`
+	Type      string `json:"type" datastore:"type"`
+	CreatedAt int64  `json:"created_at" datastore:"created_at"`
+	UpdatedAt int64  `json:"updated_at" datastore:"updated_at"`
+	CreatedBy struct {
+		ID    int    `json:"id" datastore:"id"`
+		Type  string `json:"type" datastore:"type"`
+		Login string `json:"login" datastore:"login"`
+		Name  string `json:"name" datastore:"name"`
+	} `json:"created_by" datastore:"created_by"`
+	Description string `json:"description" datastore:"description"`
+	Etag        int    `json:"etag" datastore:"etag"`
+	ExpiresAt   string `json:"expires_at" datastore:"expires_at"`
+	Folder      struct {
+		ID         int    `json:"id" datastore:"id"`
+		Type       string `json:"type" datastore:"type"`
+		Etag       int    `json:"etag" datastore:"etag"`
+		Name       string `json:"name" datastore:"name"`
+		SequenceID int    `json:"sequence_id" datastore:"sequence_id"`
+	} `json:"folder" datastore:"folder"`
+	Status    string `json:"status" datastore:"status"`
+	Filename  string `json:"filename" datastore:"filename"`
+	UpdatedBy struct {
+		ID    int    `json:"id" datastore:"id"`
+		Type  string `json:"type" datastore:"type"`
+		Login string `json:"login" datastore:"login"`
+		Name  string `json:"name" datastore:"name"`
+	} `json:"updated_by" datastore:"updated_by"`
+	URL          string   `json:"url" datastore:"org"`
+	OrgId        string   `json:"org_id" datastore:"org_id"`
+	WorkflowId   string   `json:"workflow_id" datastore:"workflow_id"`
+	Workflows    []string `json:"workflows" datastore:"workflows"`
+	DownloadPath string   `json:"download_path" datastore:"download_path"`
+}
+
+func handleGetFileContent(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	var fileId string
+	location := strings.Split(request.URL.String(), "/")
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			log.Printf("Path too short: %d", len(location))
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		fileId = location[4]
+	}
+
+	//log.Printf("In file download")
+	user, err := handleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("Api authentication failed in file download: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// 1. Verify if the user has access to the file: org_id and workflow
+
+	log.Printf("Should get file %s", fileId)
+	ctx := context.Background()
+	file, err := getFile(ctx, fileId)
+	if err != nil {
+		log.Printf("File %s not found: %s", fileId, err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	found := false
+	if file.OrgId == user.ActiveOrg.Id {
+		found = true
+	} else {
+		for _, item := range user.Orgs {
+			if item == file.OrgId {
+				found = true
+				break
+			}
+		}
+	}
+
+	if !found {
+		log.Printf("User %s doesn't have access to %s", user.Username, fileId)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// Fixme: More auth: org and workflow!
+	downloadPath := file.DownloadPath
+	log.Printf("Downloadpath: %s", downloadPath)
+	Openfile, err := os.Open(downloadPath)
+	defer Openfile.Close() //Close after function return
+	if err != nil {
+		//File not found, send 404
+		http.Error(resp, "File not found.", 404)
+		return
+	}
+
+	//File is found, create and send the correct headers
+	//Get the Content-Type of the file
+	//Create a buffer to store the header of the file in
+	FileHeader := make([]byte, 512)
+	//Copy the headers into the FileHeader buffer
+	Openfile.Read(FileHeader)
+	//Get content type of file
+	FileContentType := http.DetectContentType(FileHeader)
+
+	//Get the file size
+	FileStat, _ := Openfile.Stat()                     //Get info from file
+	FileSize := strconv.FormatInt(FileStat.Size(), 10) //Get file size as a string
+
+	//Send the headers
+	resp.Header().Set("Content-Disposition", "attachment; filename="+fileId)
+	resp.Header().Set("Content-Type", FileContentType)
+	resp.Header().Set("Content-Length", FileSize)
+
+	//Send the file
+	//We read 512 bytes from the file already, so we reset the offset back to 0
+	Openfile.Seek(0, 0)
+	io.Copy(resp, Openfile) //'Copy' the file to the client
+	return
+
+	//log.Printf("Should download file %s", downloadPath)
+	//resp.WriteHeader(200)
+	//resp.Write([]byte("OK"))
 }
 
 func initHandlers() {
@@ -6862,9 +7483,9 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/users/logout", handleLogout).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users/register", handleRegister).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users/checkusers", checkAdminLogin).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/users/getusers", handleGetUsers).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/getinfo", handleInfo).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/getsettings", handleSettings).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/users/getusers", handleGetUsers).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/updateuser", handleUpdateUser).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/users/{user}", deleteUser).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/users/passwordchange", handlePasswordChange).Methods("POST", "OPTIONS")
@@ -6879,10 +7500,10 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/getinfo", handleInfo).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/getsettings", handleSettings).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/generateapikey", handleApiGeneration).Methods("GET", "POST", "OPTIONS")
+	r.HandleFunc("/api/v1/passwordchange", handlePasswordChange).Methods("POST", "OPTIONS")
 
 	r.HandleFunc("/api/v1/getenvironments", handleGetEnvironments).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/setenvironments", handleSetEnvironments).Methods("PUT", "OPTIONS")
-	r.HandleFunc("/api/v1/passwordchange", handlePasswordChange).Methods("POST", "OPTIONS")
 
 	r.HandleFunc("/api/v1/docs", getDocList).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/docs/{key}", getDocs).Methods("GET", "OPTIONS")
@@ -6899,6 +7520,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/workflows/queue/confirm", handleGetWorkflowqueueConfirm).Methods("POST")
 
 	// App specific
+	// From here down isnt checked for org specific
 	r.HandleFunc("/api/v1/apps/run_hotload", handleAppHotloadRequest).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/get_existing", loadSpecificApps).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/download_remote", loadSpecificApps).Methods("POST", "OPTIONS")
@@ -6938,7 +7560,6 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/workflows/{key}", deleteWorkflow).Methods("DELETE", "OPTIONS")
 
 	// Triggers
-	// Webhook redirect to the correct cloud function
 	r.HandleFunc("/api/v1/hooks/new", handleNewHook).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/hooks/{key}", handleWebhookCallback).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/hooks/{key}/delete", handleDeleteHook).Methods("DELETE", "OPTIONS")
@@ -6957,7 +7578,17 @@ func initHandlers() {
 
 	// NEW for 0.8.0
 	r.HandleFunc("/api/v1/cloud/setup", handleCloudSetup).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/getorgs", handleGetOrgs).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs", handleGetOrgs).Methods("GET", "OPTIONS")
+
+	// Important for email, IDS etc. Create this by:
+	// PS: For cloud, this has to use cloud storage.
+	// https://developer.box.com/reference/get-files-id-content/
+	// 1. Creating the "get file" option. Make it possible to run this in the frontend.
+	r.HandleFunc("/api/v1/files/{fileId}/content", handleGetFileContent).Methods("GET", "OPTIONS")
+	//r.HandleFunc("/api/v1/files/create", handleGetFile).Methods("POST", "OPTIONS")
+	//r.HandleFunc("/api/v1/files/upload", handleGetFile).Methods("POST", "OPTIONS")
+	//r.HandleFunc("/api/v1/files/{fileId}", handleGetFile).Methods("GET", "OPTIONS")
+	//r.HandleFunc("/api/v1/files/{fileId}", handleGetFile).Methods("DELETE", "OPTIONS")
 
 	http.Handle("/", r)
 }

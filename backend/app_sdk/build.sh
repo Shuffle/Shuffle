@@ -1,6 +1,6 @@
 #!/bin/bash
 NAME=app_sdk
-VERSION=0.7.3
+VERSION=0.7.6
 
 docker rmi docker.pkg.github.com/frikky/shuffle/$NAME:$VERSION --force
 docker build . -t frikky/shuffle:$NAME -t frikky/$NAME:$VERSION -t docker.pkg.github.com/frikky/shuffle/$NAME:$VERSION -t ghcr.io/frikky/$NAME:$VERSION

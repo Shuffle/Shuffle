@@ -19,7 +19,7 @@ const hoverColor = "#f85a3e"
 const hoverOutColor = "#e8eaf6"
 
 const Header = props => {
-  const { globalUrl, isLoggedIn, removeCookie, homePage, isLoaded, userdata } = props;
+  const { globalUrl, isLoggedIn, removeCookie, homePage, isLoaded, userdata, cookies } = props;
 	const theme = useTheme();
 
 	const [HomeHoverColor, setHomeHoverColor] = useState(hoverOutColor);
@@ -35,27 +35,31 @@ const Header = props => {
 
 	// DEBUG HERE 
 	const handleClickLogout = () => {
-    	console.log("SHOULD LOG OUT")
-		console.log(isLoggedIn)
-
+    console.log("COOKIES: ", cookies, "Remover: ", removeCookie)
 		// Don't really care about the logout
-    	fetch(globalUrl+"/api/v1/logout", {
+    fetch(globalUrl+"/api/v1/logout", {
 			credentials: "include",
-    	  	method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-    	})
-    	.then(() => {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+		})
+		.then(() => {
 			// Log out anyway
-			console.log("Hey")
+			//cookies.remove("session_token")
+			//window.location.pathname = "/"
+			console.log("Should've logged out")
 			removeCookie("session_token", {path: "/"})
-			window.location.pathname = "/"
-    	})
+			removeCookie("session_token", {path: "/workflows"})
+			window.location.reload()
+		})
 		.catch(error => {
-    		console.log(error)
-		});
-  	}
+    	console.log("Error in logout: ", error)
+			removeCookie("session_token", {path: "/"})
+			window.location.reload()
+			//removeCookie("session_token", {path: "/"})
+		})
+  }
 
 	// Rofl this is weird
 	const handleDocsHover = () => {
@@ -158,6 +162,16 @@ const Header = props => {
 									</div>
 							</Link>
        			</ListItem>
+						{/*
+       			<ListItem style={{textAlign: "center"}}>
+							<Link to="/pricing" style={hrefStyle}>
+									<div onMouseOver={handleDocsHover} onMouseOut={handleDocsHoverOut} style={{color: DocsHoverColor, cursor: "pointer", display: "flex"}}>
+										<DescriptionIcon style={{marginRight: "5px"}} />
+										<span style={{marginTop: 2}}>Pricing</span>
+									</div>
+							</Link>
+       			</ListItem>
+						*/}
 					{/*
        				<ListItem style={{textAlign: "center"}}>
 						<Link to="/configurations" style={hrefStyle}>
@@ -183,6 +197,19 @@ const Header = props => {
 								color="primary"> Settings</Button>
 						</Link>
         	</ListItem>
+					{/*
+      		<ListItem>
+						<Link to="/contact" style={hrefStyle}>
+							<Button 
+								style={{}} 
+								variant="contained"
+								color="primary"
+							> 
+								Contact	
+							</Button>
+						</Link>
+					</ListItem>
+					*/}
 					{userdata === undefined || userdata.admin === undefined || userdata.admin === null || !userdata.admin ? null : 
 						<ListItem>
 							<Link to="/admin" style={hrefStyle}>
@@ -299,8 +326,8 @@ const Header = props => {
 	    </div>
 
 	// <Divider style={{height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
-	const loadedCheck = isLoaded ? 
-		<div>
+	const loadedCheck = 
+		<div style={{minHeight: 68}}>
 			<BrowserView>
       			{loginTextBrowser}
 			</BrowserView>
@@ -308,10 +335,6 @@ const Header = props => {
       			{loginTextMobile}
 			</MobileView>
 		</div>
-		:
-		<div>
-		</div>
-
     // <div style={{backgroundImage: "linear-gradient(-90deg,#342f78 0,#29255e 50%,#1b1947 100%"}}>
   	return (
     	<div>

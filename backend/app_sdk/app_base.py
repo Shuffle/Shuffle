@@ -308,7 +308,18 @@ class AppBase:
             print("DATA: %s\n" % data)
             return parse_wrapper(data)
 
+        # Looks for parantheses to grab special cases within a string, e.g:
+        # int(1) lower(HELLO) or length(what's the length)
+        # FIXME: 
+        # There is an issue in here where it returns data wrong. Example:
+        # Authorization=Bearer authkey
+        # =
+        # Authorization=Bearer  authkey
+        # ^ Double space.
         def parse_wrapper_start(data):
+            if "(" not in data or ")" not in data:
+                return data
+
             newdata = []
             newstring = ""
             record = True
@@ -337,7 +348,7 @@ class AppBase:
             if len(newstring) > 0:
                 newdata.append(newstring)
         
-            #print(newdata)
+            print("Newdata: ", newdata)
             parsedlist = []
             non_string = False
             for item in newdata:
@@ -348,17 +359,20 @@ class AppBase:
                 parsedlist.append(ret)
         
             if len(parsedlist) > 0 and not non_string:
+                print("Returning parsed list: ", parsedlist)
                 return " ".join(parsedlist)
             elif len(parsedlist) == 1 and non_string:
                 return parsedlist[0]
             else:
-                #print("Casting back to string because multi: ", parsedlist)
+                print("Casting back to string because multi: ", parsedlist)
                 newlist = []
                 for item in parsedlist:
                     try:
                         newlist.append(str(item))
                     except ValueError:
                         newlist.append("parsing_error")
+
+                # Does this create the issue?
                 return " ".join(newlist)
 
         # Parses JSON loops and such down to the item you're looking for
@@ -400,7 +414,7 @@ class AppBase:
 
                         # Means it's a single item -> continue
                         if seconditem == "":
-                            print("In first - handling %s", seconditem)
+                            print("In first - handling %s" % seconditem)
                             tmpitem = basejson[int(firstitem)]
                             try:
                                 newvalue, is_loop = recurse_json(tmpitem, parsersplit[outercnt+1:])
@@ -460,23 +474,44 @@ class AppBase:
         # Returns a string if the result is single, or a list if it's a list
         def get_json_value(execution_data, input_data):
             parsersplit = input_data.split(".")
-            actionname = parsersplit[0][1:].replace(" ", "_", -1)
+            actionname_lower = parsersplit[0][1:].lower()
+
             #Actionname: Start_node
 
             print(f"Actionname: {actionname}")
-        
+
             # 1. Find the action
             baseresult = ""
-            actionname_lower = actionname.lower()
+
+            appendresult = "" 
+            print("Parsersplit length: %d" % len(parsersplit))
+            if (actionname_lower.startswith("exec ") or actionname_lower.startswith("webhook ") or actionname_lower.startswith("schedule ") or actionname_lower.startswith("userinput ") or actionname_lower.startswith("email_trigger ") or actionname_lower.startswith("trigger ")) and len(parsersplit) == 1:
+                record = False
+                for char in actionname_lower:
+                    if char == " ":
+                        record = True
+
+                    if record:
+                        appendresult += char
+
+                actionname_lower = "exec"
+
+            actionname_lower = actionname_lower.replace(" ", "_", -1)
+
             try: 
                 if actionname_lower == "exec" or actionname_lower == "webhook" or actionname_lower == "schedule" or actionname_lower == "userinput" or actionname_lower == "email_trigger" or actionname_lower == "trigger": 
                     baseresult = execution_data["execution_argument"]
                 else:
-                    for result in execution_data["results"]:
-                        resultlabel = result["action"]["label"].replace(" ", "_", -1).lower()
-                        if resultlabel.lower() == actionname_lower:
-                            baseresult = result["result"]
-                            break
+                    #print("Within execution data check. Execution data: %s", execution_data["results"])
+                    if execution_data["results"] != None:
+                        for result in execution_data["results"]:
+                            resultlabel = result["action"]["label"].replace(" ", "_", -1).lower()
+                            if resultlabel.lower() == actionname_lower:
+                                baseresult = result["result"]
+                                break
+                    else:
+                        print("No results to get values from.")
+                        baseresult = "$" + parsersplit[0][1:] 
                     
                     print("BEFORE VARIABLES!")
                     if len(baseresult) == 0:
@@ -518,17 +553,17 @@ class AppBase:
         
             # 2. Find the JSON data
             if len(baseresult) == 0:
-                return "", False
+                return ""+appendresult, False
         
             if len(parsersplit) == 1:
-                return baseresult, False
+                return baseresult+appendresult, False
         
             baseresult = baseresult.replace("\'", "\"")
             basejson = {}
             try:
                 basejson = json.loads(baseresult)
             except json.decoder.JSONDecodeError as e:
-                return baseresult, False
+                return baseresult+appendresult, False
         
             data, is_loop = recurse_json(basejson, parsersplit[1:])
             parseditem = data
@@ -542,7 +577,7 @@ class AppBase:
                     print("SET DATA WRAPPER TO %s!" % parsersplit[-1])
                     parseditem = "${%s%s}$" % (parsersplit[-1], json.dumps(data))
 
-            return parseditem, is_loop
+            return parseditem+appendresult, is_loop
 
         # Parses parameters sent to it and returns whether it did it successfully with the values found
         def parse_params(action, fullexecution, parameter):
@@ -863,7 +898,7 @@ class AppBase:
 
                             # Custom format for ${name[0,1,2,...]}$
                             #submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"
-                            submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"
+                            submatch = "([${]{2}#?([0-9a-zA-Z_-]+)#?(\[.*\])[}$]{2})"
                             actualitem = re.findall(submatch, value, re.MULTILINE)
                             try:
                                 if action["skip_multicheck"]:
@@ -875,12 +910,14 @@ class AppBase:
                             print("Return value: %s" % value)
                             actionname = action["name"]
                             #print("Multicheck ", actualitem)
-                            print("Actual item: %s" % actualitem)
+                            print("ITEM LENGTH: %d, Actual item: %s" % (len(actualitem), actualitem))
                             if len(actualitem) > 0:
                                 multiexecution = True
 
                                 # Loop WITHOUT JSON variables go here. 
                                 # Loop WITH variables go in else.
+                                print("Before first part in multiexec!")
+                                handled = False
                                 if len(actualitem[0]) > 2 and actualitem[0][1] == "SHUFFLE_NO_SPLITTER":
                                     print("Pre replacement: %s" % actualitem[0][2])
                                     tmpitem = value
@@ -910,13 +947,13 @@ class AppBase:
                                     #print("RESULTARRAY: %s" % resultarray)
                                     print("MULTI finished: %s" % replacement)
                                 else:
-                                
                                     # This is here to handle for loops within variables.. kindof
                                     # 1. Find the length of the longest array
                                     # 2. Build an array with the base values based on parameter["value"] 
                                     # 3. Get the n'th value of the generated list from values
                                     # 4. Execute all n answers 
                                     replacements = {}
+                                    curminlength = 0
                                     for replace in actualitem:
                                         try:
                                             to_be_replaced = replace[0]
@@ -928,6 +965,9 @@ class AppBase:
                                             itemlist = json.loads(actualitem)
                                             if len(itemlist) > minlength:
                                                 minlength = len(itemlist)
+
+                                            if len(itemlist) > curminlength:
+                                                curminlength = len(itemlist)
                                         except json.decoder.JSONDecodeError as e:
                                             print("JSON Error: %s in %s" % (e, actualitem))
 
@@ -935,8 +975,9 @@ class AppBase:
 
                                     # This is a result array for JUST this value.. 
                                     # What if there are more?
+                                    print("LENGTH: %d. In second part of else: %s" % (len(itemlist), replacements))
                                     resultarray = []
-                                    for i in range(0, minlength): 
+                                    for i in range(0, curminlength): 
                                         tmpitem = json.loads(json.dumps(parameter["value"]))
                                         for key, value in replacements.items():
                                             replacement = json.dumps(json.loads(value)[i])
@@ -959,9 +1000,10 @@ class AppBase:
                                     multi_parameters[parameter["name"]] = resultarray
                             else:
                                 # Parses things like int(value)
-                                self.logger.info("Parsing wrapper data for %s" % value)
+                                print("Normal parsing (not looping) with data %s" % value)
                                 value = parse_wrapper_start(value)
 
+                                print("POST data value: %s" % value)
                                 params[parameter["name"]] = value
                                 multi_parameters[parameter["name"]] = value 
 
@@ -992,8 +1034,9 @@ class AppBase:
                         #for i in range(calltimes):
                         if not multiexecution:
                             print("APP_SDK DONE: Starting NORMAL execution of function")
+                            print("Running with params %s" % params) 
                             newres = await func(**params)
-                            #print("NEWRES: ", newres)
+                            print("Return from execution: %s" % newres)
                             if isinstance(newres, str):
                                 result += newres
                             else:
@@ -1074,6 +1117,7 @@ class AppBase:
 
                                 print("Running with params %s" % baseparams) 
                                 ret = await func(**baseparams)
+                                print("Return from execution: %s" % ret)
                                 if isinstance(ret, dict) or isinstance(ret, list):
                                     results.append(ret)
                                     json_object = True

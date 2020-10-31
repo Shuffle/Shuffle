@@ -16,7 +16,7 @@ services:
     depends_on:
       - backend
   backend:
-    #build: ./backend
+    build: ./backend
     image: frikky/shuffle:backend
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
