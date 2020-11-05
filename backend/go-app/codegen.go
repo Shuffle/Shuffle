@@ -397,7 +397,7 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 		verifyAddin,
 	)
 
-	if strings.Contains(functionname, "api_dumps_delete") {
+	if strings.Contains(functionname, "search") {
 		log.Println(data)
 		log.Printf("Queries: %s", queryString)
 	}
@@ -1031,6 +1031,12 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 				}
 			}
 
+			if param.Value.Required {
+				action.Parameters = append(action.Parameters, curParam)
+			} else {
+				optionalParameters = append(optionalParameters, curParam)
+			}
+
 			if param.Value.In == "path" {
 				parameters = append(parameters, curParam.Name)
 				//baseUrl = fmt.Sprintf("%s%s", baseUrl)
@@ -1057,12 +1063,6 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
 				}
 				firstQuery = false
-			}
-
-			if param.Value.Required {
-				action.Parameters = append(action.Parameters, curParam)
-			} else {
-				optionalParameters = append(optionalParameters, curParam)
 			}
 
 		}
@@ -1165,6 +1165,12 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 				}
 			}
 
+			if param.Value.Required {
+				action.Parameters = append(action.Parameters, curParam)
+			} else {
+				optionalParameters = append(optionalParameters, curParam)
+			}
+
 			if param.Value.In == "path" {
 				parameters = append(parameters, curParam.Name)
 				//baseUrl = fmt.Sprintf("%s%s", baseUrl)
@@ -1192,11 +1198,6 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
 				}
 				firstQuery = false
-			}
-			if param.Value.Required {
-				action.Parameters = append(action.Parameters, curParam)
-			} else {
-				optionalParameters = append(optionalParameters, curParam)
 			}
 
 		}
@@ -1299,6 +1300,12 @@ func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 				}
 			}
 
+			if param.Value.Required {
+				action.Parameters = append(action.Parameters, curParam)
+			} else {
+				optionalParameters = append(optionalParameters, curParam)
+			}
+
 			if param.Value.In == "path" {
 				parameters = append(parameters, curParam.Name)
 				//baseUrl = fmt.Sprintf("%s%s", baseUrl)
@@ -1326,13 +1333,6 @@ func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 				}
 				firstQuery = false
 			}
-
-			if param.Value.Required {
-				action.Parameters = append(action.Parameters, curParam)
-			} else {
-				optionalParameters = append(optionalParameters, curParam)
-			}
-
 		}
 	}
 
@@ -1433,6 +1433,12 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 				}
 			}
 
+			if param.Value.Required {
+				action.Parameters = append(action.Parameters, curParam)
+			} else {
+				optionalParameters = append(optionalParameters, curParam)
+			}
+
 			if param.Value.In == "path" {
 				parameters = append(parameters, curParam.Name)
 				//baseUrl = fmt.Sprintf("%s%s", baseUrl)
@@ -1459,12 +1465,6 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
 				}
 				firstQuery = false
-			}
-
-			if param.Value.Required {
-				action.Parameters = append(action.Parameters, curParam)
-			} else {
-				optionalParameters = append(optionalParameters, curParam)
 			}
 
 		}
@@ -1566,6 +1566,12 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 				}
 			}
 
+			if param.Value.Required {
+				action.Parameters = append(action.Parameters, curParam)
+			} else {
+				optionalParameters = append(optionalParameters, curParam)
+			}
+
 			if param.Value.In == "path" {
 				parameters = append(parameters, curParam.Name)
 				//baseUrl = fmt.Sprintf("%s%s", baseUrl)
@@ -1592,12 +1598,6 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
 				}
 				firstQuery = false
-			}
-
-			if param.Value.Required {
-				action.Parameters = append(action.Parameters, curParam)
-			} else {
-				optionalParameters = append(optionalParameters, curParam)
 			}
 		}
 	}
@@ -1699,6 +1699,12 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 				}
 			}
 
+			if param.Value.Required {
+				action.Parameters = append(action.Parameters, curParam)
+			} else {
+				optionalParameters = append(optionalParameters, curParam)
+			}
+
 			if param.Value.In == "path" {
 				parameters = append(parameters, curParam.Name)
 				//baseUrl = fmt.Sprintf("%s%s", baseUrl)
@@ -1725,12 +1731,6 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
 				}
 				firstQuery = false
-			}
-
-			if param.Value.Required {
-				action.Parameters = append(action.Parameters, curParam)
-			} else {
-				optionalParameters = append(optionalParameters, curParam)
 			}
 		}
 	}
@@ -1832,6 +1832,12 @@ func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 				}
 			}
 
+			if param.Value.Required {
+				action.Parameters = append(action.Parameters, curParam)
+			} else {
+				optionalParameters = append(optionalParameters, curParam)
+			}
+
 			if param.Value.In == "path" {
 				parameters = append(parameters, param.Value.Name)
 				//baseUrl = fmt.Sprintf("%s%s", baseUrl)
@@ -1858,12 +1864,6 @@ func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 					baseUrl = fmt.Sprintf("%s&%s={%s}", baseUrl, param.Value.Name, param.Value.Name)
 				}
 				firstQuery = false
-			}
-
-			if param.Value.Required {
-				action.Parameters = append(action.Parameters, curParam)
-			} else {
-				optionalParameters = append(optionalParameters, curParam)
 			}
 
 		}
