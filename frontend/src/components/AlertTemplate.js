@@ -1,11 +1,12 @@
 import React from 'react'
-import InfoIcon from './icons/InfoIcon'
-import SuccessIcon from './icons/SuccessIcon'
-import ErrorIcon from './icons/ErrorIcon'
-import CloseIcon from './icons/CloseIcon'
+import InfoIcon from '@material-ui/icons/Info';
+import CheckIcon from '@material-ui/icons/Check';
+import ErrorOutlineIcon from '@material-ui/icons/ErrorOutline';
+import CloseIcon from '@material-ui/icons/Close';
+import Typography from '@material-ui/core/Typography';
 
 const alertStyle = {
-  backgroundColor: '#151515',
+  backgroundColor: 'rgba(0,0,0,0.9)',
   color: 'white',
   padding: 15,
   textTransform: 'uppercase',
@@ -14,10 +15,9 @@ const alertStyle = {
   justifyContent: 'space-between',
   alignItems: 'center',
   boxShadow: '0px 2px 2px 2px rgba(0, 0, 0, 0.03)',
-  fontFamily: 'Arial',
   width: 400,
   boxSizing: 'border-box',
-	zIndex: 10001,
+	zIndex: 100001,
 }
 
 const buttonStyle = {
@@ -31,10 +31,10 @@ const buttonStyle = {
 const AlertTemplate = ({ message, options, style, close }) => {
   return (
     <div style={{ ...alertStyle, ...style }}>
-      {options.type === 'info' && <InfoIcon />}
-      {options.type === 'success' && <SuccessIcon />}
-      {options.type === 'error' && <ErrorIcon />}
-      <span style={{ flex: 2 }}>{message}</span>
+      {options.type === 'info' && <InfoIcon style={{color: "white"}} />}
+      {options.type === 'success' && <CheckIcon style={{color: "green", }}/>}
+      {options.type === 'error' && <ErrorOutlineIcon style={{color: "red"}} />}
+      <Typography style={{marginLeft: 15, flex: 2 }}>{message}</Typography>
       <button onClick={close} style={buttonStyle}>
         <CloseIcon />
       </button>
