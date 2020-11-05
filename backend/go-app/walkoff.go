@@ -44,6 +44,7 @@ var baseEnvironment = "onprem"
 var cloudname = "cloud"
 var defaultLocation = "europe-west2"
 var scheduledJobs = map[string]*newscheduler.Job{}
+var scheduledOrgs = map[string]*newscheduler.Job{}
 
 // To test out firestore before potential merge
 //var upgrader = websocket.Upgrader{
@@ -329,6 +330,7 @@ type Workflow struct {
 	Sharing           string   `json:"sharing" datastore:"sharing"`
 	Org               []Org    `json:"org,omitempty" datastore:"org"`
 	ExecutingOrg      Org      `json:"execution_org,omitempty" datastore:"execution_org"`
+	OrgId             string   `json:"org_id,omitempty" datastore:"org_id"`
 	WorkflowVariables []struct {
 		Description string `json:"description" datastore:"description,noindex"`
 		ID          string `json:"id" datastore:"id"`
@@ -1283,7 +1285,7 @@ func getWorkflows(resp http.ResponseWriter, request *http.Request) {
 	// With user, do a search for workflows with user or user's org attached
 	q := datastore.NewQuery("workflow").Filter("owner =", user.Id)
 	if user.Role == "admin" {
-		q = datastore.NewQuery("workflow")
+		q = datastore.NewQuery("workflow").Filter("org_id =", user.ActiveOrg.Id)
 	}
 
 	var workflows []Workflow
@@ -1363,6 +1365,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 	workflow.Owner = user.Id
 	workflow.Sharing = "private"
 	workflow.ExecutingOrg = user.ActiveOrg
+	workflow.OrgId = user.ActiveOrg.Id
 
 	ctx := context.Background()
 	log.Printf("Saved new workflow %s with name %s", workflow.ID, workflow.Name)
@@ -3501,9 +3504,9 @@ func getWorkflow(ctx context.Context, id string) (*Workflow, error) {
 	return workflow, nil
 }
 
-func getEnvironments(ctx context.Context, OrgId string) ([]Environment, error) {
+func getEnvironments(ctx context.Context, orgId string) ([]Environment, error) {
 	var environments []Environment
-	q := datastore.NewQuery("Environments").Filter("org_id =", OrgId)
+	q := datastore.NewQuery("Environments").Filter("org_id =", orgId)
 
 	_, err := dbclient.GetAll(ctx, q, &environments)
 	if err != nil {
@@ -3513,9 +3516,9 @@ func getEnvironments(ctx context.Context, OrgId string) ([]Environment, error) {
 	return environments, nil
 }
 
-func getAllWorkflows(ctx context.Context) ([]Workflow, error) {
+func getAllWorkflows(ctx context.Context, orgId string) ([]Workflow, error) {
 	var allworkflows []Workflow
-	q := datastore.NewQuery("workflow")
+	q := datastore.NewQuery("workflow").Filter("org_id = ", orgId)
 
 	_, err := dbclient.GetAll(ctx, q, &allworkflows)
 	if err != nil {
@@ -3656,7 +3659,7 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 		private = true
 	}
 
-	q := datastore.NewQuery("workflow")
+	q := datastore.NewQuery("workflow").Filter("org_id = ", user.ActiveOrg.Id)
 	var workflows []Workflow
 	_, err = dbclient.GetAll(ctx, q, &workflows)
 	if err != nil {
@@ -3833,8 +3836,7 @@ func addAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// FIXME - need to be logged in?
-	_, userErr := handleApiAuthentication(resp, request)
+	user, userErr := handleApiAuthentication(resp, request)
 	if userErr != nil {
 		log.Printf("Api authentication failed in get all apps: %s", userErr)
 		resp.WriteHeader(401)
@@ -3903,6 +3905,7 @@ func addAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	appAuth.OrgId = user.ActiveOrg.Id
 	err = setWorkflowAppAuthDatastore(ctx, appAuth, appAuth.Id)
 	if err != nil {
 		log.Printf("Failed setting up app auth %s: %s", appAuth.Id, err)
@@ -5467,9 +5470,13 @@ func getWorkflowExecutions(resp http.ResponseWriter, request *http.Request) {
 	resp.Write(newjson)
 }
 
-func getAllSchedules(ctx context.Context) ([]ScheduleOld, error) {
+func getAllSchedules(ctx context.Context, orgId string) ([]ScheduleOld, error) {
 	var schedules []ScheduleOld
-	q := datastore.NewQuery("schedules")
+
+	q := datastore.NewQuery("schedules").Filter("org = ", orgId)
+	if orgId == "ALL" {
+		q = datastore.NewQuery("schedules")
+	}
 
 	_, err := dbclient.GetAll(ctx, q, &schedules)
 	if err != nil {

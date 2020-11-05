@@ -1306,11 +1306,18 @@ func handleLogout(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	http.SetCookie(resp, &http.Cookie{
+		Name:    "session_token",
+		Value:   "",
+		Path:    "/",
+		Expires: time.Unix(0, 0),
+	})
+
 	userInfo, err := handleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in handleLogout: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
+		resp.WriteHeader(200)
+		resp.Write([]byte(`{"success": true, "reason": "Not logged in"}`))
 		return
 	}
 
@@ -1386,7 +1393,6 @@ func handleLogout(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	//memcache.Delete(request.Context(), sessionToken)
-	//http.SetCookie(resp, c)
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": false, "reason": "Successfully logged out"}`))
@@ -2231,7 +2237,7 @@ func handleGetSchedules(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	schedules, err := getAllSchedules(ctx)
+	schedules, err := getAllSchedules(ctx, user.ActiveOrg.Id)
 	if err != nil {
 		log.Printf("Failed getting schedules: %s", err)
 		resp.WriteHeader(401)
@@ -6466,6 +6472,133 @@ func handleAppHotload(location string, forceUpdate bool) error {
 	return nil
 }
 
+// Primary = usually an outer ID, e.g. workflow ID
+// Secondary = something to specify what inside workflow to execute
+// Third = Some data to add to it
+type CloudSyncJob struct {
+	Type          string `json:"type" datastore:"type"`
+	Action        string `json:"action" datastore:"action"`
+	OrgId         string `json:"org_id" datastore:"org_id"`
+	PrimaryItemId string `json:"primary_item_id" datastore:"primary_item_id"`
+	SecondaryItem string `json:"secondary_item" datastore:"secondary_item"`
+	ThirdItem     string `json:"third_item" datastore:"third_item"`
+	FourthItem    string `json:"fourth_item" datastore:"fourth_item"`
+	Created       string `json:"created" datastore:"created"`
+}
+
+func handleCloudJob(job CloudSyncJob) error {
+	log.Printf("Handle job with type %s and action %s", job.Type, job.Action)
+	if job.Type == "webhook" {
+		if job.Action == "execute" {
+			log.Printf("Should handle webhook for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
+		}
+
+	} else if job.Type == "user_input" {
+		log.Printf("Should handle user_input for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
+	} else if job.Type == "schedule" {
+		log.Printf("Should handle schedule for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
+	} else if job.Type == "email" {
+		log.Printf("Should handle email for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
+	} else {
+		log.Printf("No handler for type %s", job.Type)
+	}
+
+	return nil
+}
+
+// Handles jobs from remote (cloud)
+func remoteOrgJobController(org Org, body []byte) error {
+	type retStruct struct {
+		Success bool           `json:"success"`
+		Reason  string         `json:"reason"`
+		Jobs    []CloudSyncJob `json:"jobs"`
+	}
+
+	log.Printf("Remote JOB ret: %s", string(body))
+	responseData := retStruct{}
+	err := json.Unmarshal(body, &responseData)
+	if err != nil {
+		return err
+	}
+
+	ctx := context.Background()
+	if !responseData.Success {
+		log.Printf("Should stop org job controller")
+
+		if strings.Contains(responseData.Reason, "Bad apikey") {
+			log.Printf("Bad apikey. Stopping sync for org!")
+
+			if value, exists := scheduledOrgs[org.Id]; exists {
+				// Looks like this does the trick? Hurr
+				log.Printf("STOPPING ORG SCHEDULE for: %s", org.Id)
+
+				value.Lock()
+				org, err := getOrg(ctx, org.Id)
+				if err != nil {
+					log.Printf("Failed finding org %s: %s", org.Id, err)
+					return err
+				}
+
+				org.SyncConfig.Interval = 0
+				org.SyncConfig.Apikey = ""
+				org.CloudSync = false
+				err = setOrg(ctx, *org, org.Id)
+				if err != nil {
+					log.Printf("Failed setting organization when stopping sync: %s", err)
+				} else {
+					log.Printf("Successfully updated the org to not sync")
+				}
+
+				return errors.New("Stopped schedule for org because of bad apikey.")
+			} else {
+				return errors.New(fmt.Sprintf("Failed finding the schedule for org %s", org.Id))
+			}
+		}
+
+		return errors.New("[ERROR] Remote job handler issues.")
+	}
+
+	log.Printf("Got job with reason %s and %d jobs", responseData.Reason, len(responseData.Jobs))
+	for _, job := range responseData.Jobs {
+		err = handleCloudJob(job)
+		if err != nil {
+			log.Printf("[ERROR] Failed job from cloud: %s", err)
+		}
+	}
+
+	return nil
+}
+
+func remoteOrgJobHandler(org Org, interval int) error {
+	client := &http.Client{}
+	syncUrl := fmt.Sprintf("%s/api/v1/cloud/sync", syncUrl)
+	req, err := http.NewRequest(
+		"GET",
+		syncUrl,
+		nil,
+	)
+
+	req.Header.Add("Authorization", fmt.Sprintf(`Bearer %s`, org.SyncConfig.Apikey))
+	newresp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Failed request in org sync: %s", err)
+		return err
+	}
+
+	respBody, err := ioutil.ReadAll(newresp.Body)
+	if err != nil {
+		log.Printf("Failed body read in job sync: %s", err)
+		return err
+	}
+
+	err = remoteOrgJobController(org, respBody)
+	if err != nil {
+		log.Printf("Failed job controller run: %s", err)
+		return err
+	}
+	return nil
+}
+
 // Handles configuration items during Shuffle startup
 func runInit(ctx context.Context) {
 	// Setting stats for backend starts (failure count as well)
@@ -6739,7 +6872,8 @@ func runInit(ctx context.Context) {
 		} else {
 			updated := 0
 			for _, workflow := range workflows {
-				if workflow.ExecutingOrg.Id == "" {
+				if workflow.ExecutingOrg.Id == "" || len(workflow.OrgId) == 0 {
+					workflow.OrgId = activeOrgs[0].Id
 					workflow.ExecutingOrg = activeOrgs[0]
 
 					err = setWorkflow(ctx, workflow, workflow.ID)
@@ -6757,42 +6891,115 @@ func runInit(ctx context.Context) {
 			}
 		}
 
-		fileq := datastore.NewQuery("Files").Limit(1)
-		count, err := dbclient.Count(ctx, fileq)
+		/*
+			fileq := datastore.NewQuery("Files").Limit(1)
+			count, err := dbclient.Count(ctx, fileq)
 
-		if err == nil && count == 0 {
-			basepath := "."
-			filename := "testfile.txt"
-			fileId := uuid.NewV4().String()
-			log.Printf("Creating new file reference %s because none exist!", fileId)
-			workflowId := "2e9d6474-402c-4dcc-bb53-45f638ca18d3"
-			downloadPath := fmt.Sprintf("%s/%s/%s/%s", basepath, activeOrgs[0].Id, workflowId, fileId)
+			if err == nil && count == 0 {
+				basepath := "."
+				filename := "testfile.txt"
+				fileId := uuid.NewV4().String()
+				log.Printf("Creating new file reference %s because none exist!", fileId)
+				workflowId := "2e9d6474-402c-4dcc-bb53-45f638ca18d3"
+				downloadPath := fmt.Sprintf("%s/%s/%s/%s", basepath, activeOrgs[0].Id, workflowId, fileId)
 
-			timeNow := time.Now().Unix()
-			newFile := File{
-				Id:           fileId,
-				CreatedAt:    timeNow,
-				UpdatedAt:    timeNow,
-				Description:  "Created by system for testing",
-				Status:       "active",
-				Filename:     filename,
-				OrgId:        activeOrgs[0].Id,
-				WorkflowId:   workflowId,
-				DownloadPath: downloadPath,
+				timeNow := time.Now().Unix()
+				newFile := File{
+					Id:           fileId,
+					CreatedAt:    timeNow,
+					UpdatedAt:    timeNow,
+					Description:  "Created by system for testing",
+					Status:       "active",
+					Filename:     filename,
+					OrgId:        activeOrgs[0].Id,
+					WorkflowId:   workflowId,
+					DownloadPath: downloadPath,
+				}
+
+				err = setFile(ctx, newFile)
+				if err != nil {
+					log.Printf("Failed setting file: %s", err)
+				} else {
+					log.Printf("Created file %s in init", newFile.DownloadPath)
+				}
 			}
+		*/
 
-			err = setFile(ctx, newFile)
+		var allworkflowapps []AppAuthenticationStorage
+		q = datastore.NewQuery("workflowappauth")
+		_, err = dbclient.GetAll(ctx, q, &allworkflowapps)
+		if err == nil {
+			log.Printf("Setting up all app auths with org %s", activeOrgs[0].Id)
+			for _, item := range allworkflowapps {
+				if item.OrgId != "" {
+					continue
+				}
+
+				//log.Printf("Should update auth for %#v!", item)
+				item.OrgId = activeOrgs[0].Id
+				err = setWorkflowAppAuthDatastore(ctx, item, item.Id)
+				if err != nil {
+					log.Printf("Failed adding AUTH to org %s", activeOrgs[0].Id)
+				}
+			}
+		}
+
+		var schedules []ScheduleOld
+		q = datastore.NewQuery("schedules")
+		_, err := dbclient.GetAll(ctx, q, &schedules)
+		if err == nil {
+			log.Printf("Setting up all schedules with org %s", activeOrgs[0].Id)
+			for _, item := range schedules {
+				if item.Org != "" {
+					continue
+				}
+
+				item.Org = activeOrgs[0].Id
+				err = setSchedule(ctx, item)
+				if err != nil {
+					log.Printf("Failed adding schedule to org %s", activeOrgs[0].Id)
+				}
+			}
+		}
+	}
+
+	log.Printf("Starting cloud schedules for orgs!")
+	type requestStruct struct {
+		ApiKey string `json:"api_key"`
+	}
+	for _, org := range activeOrgs {
+		if !org.CloudSync {
+			log.Printf("Skipping org %s because sync isn't set (1).", org.Id)
+			continue
+		}
+
+		//interval := int(org.SyncConfig.Interval)
+		interval := 5
+		if interval == 0 {
+			log.Printf("Skipping org %s because sync isn't set (0).", org.Id)
+			continue
+		}
+
+		log.Printf("Should start schedule for org %s", org.Name)
+		job := func() {
+			err := remoteOrgJobHandler(org, interval)
 			if err != nil {
-				log.Printf("Failed setting file: %s", err)
-			} else {
-				log.Printf("Created file %s in init", newFile.DownloadPath)
+				log.Printf("Failed request with remote org setup: err")
 			}
+		}
+
+		jobret, err := newscheduler.Every(int(interval)).Seconds().NotImmediately().Run(job)
+		if err != nil {
+			log.Printf("[CRITICAL] Failed to schedule org: %s", err)
+		} else {
+			log.Printf("Started sync on interval %d for org %s", interval, org.Name)
+			scheduledOrgs[org.Id] = jobret
 		}
 	}
 
 	// Gets schedules and starts them
 	log.Printf("Relaunching schedules")
-	schedules, err := getAllSchedules(ctx)
+	schedules, err := getAllSchedules(ctx, "ALL")
 	if err != nil {
 		log.Printf("Failed getting schedules during service init: %s", err)
 	} else {
@@ -6927,6 +7134,7 @@ func runInit(ctx context.Context) {
 
 		}
 	}
+
 	log.Printf("Finished INIT")
 }
 
@@ -7053,6 +7261,13 @@ func handleStopCloudSync(syncUrl string, org Org) error {
 		}
 	}
 
+	if value, exists := scheduledOrgs[org.Id]; exists {
+		// Looks like this does the trick? Hurr
+		log.Printf("STOPPING ORG SCHEDULE for: %s", org.Id)
+
+		value.Lock()
+	}
+
 	return nil
 }
 
@@ -7068,7 +7283,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 
 	user, err := handleApiAuthentication(resp, request)
 	if err != nil {
-		log.Printf("Api authentication failed in verify swagger: %s", err)
+		log.Printf("Api authentication failed in cloud setup: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -7254,6 +7469,23 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 		Interval: responseData.IntervalSeconds,
 	}
 
+	interval := int(responseData.IntervalSeconds)
+	log.Printf("Starting cloud sync on interval %d", interval)
+	job := func() {
+		err := remoteOrgJobHandler(*org, interval)
+		if err != nil {
+			log.Printf("Failed request with remote org setup: err")
+		}
+	}
+
+	jobret, err := newscheduler.Every(int(interval)).Seconds().NotImmediately().Run(job)
+	if err != nil {
+		log.Printf("[CRITICAL] Failed to schedule org: %s", err)
+	} else {
+		log.Printf("Started sync on interval %d for org %s", interval, org.Name)
+		scheduledOrgs[org.Id] = jobret
+	}
+
 	// FIXME: Add this for every feature
 	if org.SyncFeatures.Workflows.Active {
 		log.Printf("Should activate cloud workflows for org %s!", org.Id)
@@ -7325,34 +7557,14 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 }
 
 type File struct {
-	Id        string `json:"id" datastore:"id"`
-	Type      string `json:"type" datastore:"type"`
-	CreatedAt int64  `json:"created_at" datastore:"created_at"`
-	UpdatedAt int64  `json:"updated_at" datastore:"updated_at"`
-	CreatedBy struct {
-		ID    int    `json:"id" datastore:"id"`
-		Type  string `json:"type" datastore:"type"`
-		Login string `json:"login" datastore:"login"`
-		Name  string `json:"name" datastore:"name"`
-	} `json:"created_by" datastore:"created_by"`
-	Description string `json:"description" datastore:"description"`
-	Etag        int    `json:"etag" datastore:"etag"`
-	ExpiresAt   string `json:"expires_at" datastore:"expires_at"`
-	Folder      struct {
-		ID         int    `json:"id" datastore:"id"`
-		Type       string `json:"type" datastore:"type"`
-		Etag       int    `json:"etag" datastore:"etag"`
-		Name       string `json:"name" datastore:"name"`
-		SequenceID int    `json:"sequence_id" datastore:"sequence_id"`
-	} `json:"folder" datastore:"folder"`
-	Status    string `json:"status" datastore:"status"`
-	Filename  string `json:"filename" datastore:"filename"`
-	UpdatedBy struct {
-		ID    int    `json:"id" datastore:"id"`
-		Type  string `json:"type" datastore:"type"`
-		Login string `json:"login" datastore:"login"`
-		Name  string `json:"name" datastore:"name"`
-	} `json:"updated_by" datastore:"updated_by"`
+	Id           string   `json:"id" datastore:"id"`
+	Type         string   `json:"type" datastore:"type"`
+	CreatedAt    int64    `json:"created_at" datastore:"created_at"`
+	UpdatedAt    int64    `json:"updated_at" datastore:"updated_at"`
+	Description  string   `json:"description" datastore:"description"`
+	ExpiresAt    string   `json:"expires_at" datastore:"expires_at"`
+	Status       string   `json:"status" datastore:"status"`
+	Filename     string   `json:"filename" datastore:"filename"`
 	URL          string   `json:"url" datastore:"org"`
 	OrgId        string   `json:"org_id" datastore:"org_id"`
 	WorkflowId   string   `json:"workflow_id" datastore:"workflow_id"`
@@ -7478,6 +7690,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/_ah/health", healthCheckHandler)
 
 	// Make user related locations
+	// Fix user changes with org
 	r.HandleFunc("/api/v1/users/generateapikey", handleApiGeneration).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users/login", handleLogin).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users/logout", handleLogout).Methods("POST", "OPTIONS")
@@ -7534,6 +7747,7 @@ func initHandlers() {
 
 	r.HandleFunc("/api/v1/apps/authentication", getAppAuthentication).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/authentication", addAppAuthentication).Methods("PUT", "OPTIONS")
+
 	r.HandleFunc("/api/v1/apps/authentication/{appauthId}", deleteAppAuthentication).Methods("DELETE", "OPTIONS")
 
 	// Legacy app things
@@ -7547,9 +7761,9 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/workflows", getWorkflows).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows", setNewWorkflow).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/schedules", handleGetSchedules).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/schedule", scheduleWorkflow).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/download_remote", loadSpecificWorkflows).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/execute", executeWorkflow).Methods("GET", "POST", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/{key}/schedule", scheduleWorkflow).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/schedule/{schedule}", stopSchedule).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/outlook", createOutlookSub).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/outlook/{triggerId}", handleDeleteOutlookSub).Methods("DELETE", "OPTIONS")

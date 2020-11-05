@@ -157,7 +157,7 @@ const Admin = (props) => {
 					alert.error("Failed stopping schedule")
 				} else {
 					getAppAuthentication() 
-					alert.success("Successfully stopped schedule!")
+					alert.success("Successfully deleted authentication!")
 				}
 			}),
 		)
@@ -1184,7 +1184,7 @@ const Admin = (props) => {
 									color="primary"
 									onClick={() => deleteSchedule(schedule)}
 								>
-									Delete	
+									Stop schedule	
 								</Button>
 							</ListItemText>
 						</ListItem>
@@ -1443,7 +1443,7 @@ const Admin = (props) => {
 							<ListItemText
 								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
 							>
-								<Button variant="outlined" style={{borderRadius: "0px"}} onClick={() => deleteEnvironment(environment.Name)} color="primary">Delete</Button>
+								<Button disabled={environment.archived} variant="outlined" style={{borderRadius: "0px"}} onClick={() => deleteEnvironment(environment.Name)} color="primary">Archive</Button>
 							</ListItemText>
 							<ListItemText
 								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
