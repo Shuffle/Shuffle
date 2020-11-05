@@ -30,7 +30,7 @@ import SettingsPage from "./views/SettingsPage";
 
 import { createMuiTheme, MuiThemeProvider } from '@material-ui/core/styles';
 
-import AlertTemplate from "react-alert-template-basic";
+import AlertTemplate from "./components/AlertTemplate";
 import { positions, Provider } from "react-alert";
 
 // Production - backend proxy forwarding in nginx
@@ -118,7 +118,7 @@ const App = (message, props) => {
 
 	const options = {
 		timeout: 5000,
-		position: positions.BOTTOM_CENTER
+		position: positions.BOTTOM_RIGHT
 	};
 
 	const includedData = window.location.pathname === "/home" || window.location.pathname === "/features" ?

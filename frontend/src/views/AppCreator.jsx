@@ -884,6 +884,7 @@ const AppCreator = (props) => {
 			}
 		})
 		.catch(error => {
+			setAppBuilding(false)
 			setErrorCode(error.toString())
 			alert.error(error.toString())
 		});

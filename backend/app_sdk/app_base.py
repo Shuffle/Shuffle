@@ -478,7 +478,7 @@ class AppBase:
 
             #Actionname: Start_node
 
-            print(f"Actionname: {actionname}")
+            print(f"Actionname: {actionname_lower}")
 
             # 1. Find the action
             baseresult = ""
@@ -556,14 +556,14 @@ class AppBase:
                 return ""+appendresult, False
         
             if len(parsersplit) == 1:
-                return baseresult+appendresult, False
+                return str(baseresult)+str(appendresult), False
         
             baseresult = baseresult.replace("\'", "\"")
             basejson = {}
             try:
                 basejson = json.loads(baseresult)
             except json.decoder.JSONDecodeError as e:
-                return baseresult+appendresult, False
+                return str(baseresult)+str(appendresult), False
         
             data, is_loop = recurse_json(basejson, parsersplit[1:])
             parseditem = data
@@ -577,7 +577,7 @@ class AppBase:
                     print("SET DATA WRAPPER TO %s!" % parsersplit[-1])
                     parseditem = "${%s%s}$" % (parsersplit[-1], json.dumps(data))
 
-            return parseditem+appendresult, is_loop
+            return str(parseditem)+str(appendresult), is_loop
 
         # Parses parameters sent to it and returns whether it did it successfully with the values found
         def parse_params(action, fullexecution, parameter):

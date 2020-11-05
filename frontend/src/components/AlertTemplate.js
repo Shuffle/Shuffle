@@ -7,7 +7,7 @@ import CloseIcon from './icons/CloseIcon'
 const alertStyle = {
   backgroundColor: '#151515',
   color: 'white',
-  padding: '10px',
+  padding: 15,
   textTransform: 'uppercase',
   borderRadius: '3px',
   display: 'flex',
@@ -15,8 +15,9 @@ const alertStyle = {
   alignItems: 'center',
   boxShadow: '0px 2px 2px 2px rgba(0, 0, 0, 0.03)',
   fontFamily: 'Arial',
-  width: '300px',
-  boxSizing: 'border-box'
+  width: 400,
+  boxSizing: 'border-box',
+	zIndex: 10001,
 }
 
 const buttonStyle = {

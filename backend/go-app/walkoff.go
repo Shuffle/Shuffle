@@ -73,6 +73,10 @@ type SyncFeatures struct {
 	Schedules      SyncData `json:"schedules" datastore:"schedules"`
 	Autocomplete   SyncData `json:"autocomplete" datastore:"autocomplete"`
 	Authentication SyncData `json:"authentication" datastore:"authentication"`
+	Webhook        SyncData `json:"webhook" datastore:"webhook"`
+	Schedule       SyncData `json:"schedule" datastore:"schedule"`
+	UserInput      SyncData `json:"user_input" datastore:"user_input"`
+	EmailTrigger   SyncData `json:"email_trigger" datastore:"email_trigger"`
 }
 
 type SyncData struct {
@@ -2657,7 +2661,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 
 	if !startFound {
 		log.Printf("Startnode %s doesn't exist!", workflowExecution.Start)
-		return WorkflowExecution{}, fmt.Sprintf("Workflow action %s doesn't exist in workflow", workflowExecution.Start), errors.New(fmt.Sprintf("Workflow start node %s doesn't exist. Exiting!", workflowExecution.Start))
+		return WorkflowExecution{}, fmt.Sprintf("Workflow action %s doesn't exist in workflow", workflowExecution.Start), errors.New(fmt.Sprintf(`Workflow start node "%s" doesn't exist. Exiting!`, workflowExecution.Start))
 	}
 
 	// Verification for execution environments
@@ -4985,7 +4989,7 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 	}
 
 	if appCounter > 0 {
-		log.Printf("Preloaded %d OpenApi apps in %s!", appCounter, extra)
+		log.Printf("Preloaded %d OpenApi apps in folder %s!", appCounter, extra)
 	}
 
 	return nil
@@ -5662,7 +5666,7 @@ func handleDeleteHook(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if user.Id != hook.Owner && user.Role != "admin" {
+	if user.Id != hook.Owner && user.Role != "admin" && user.ActiveOrg.Id != hook.OrgId {
 		log.Printf("Wrong user (%s) for workflow %s", user.Username, hook.Id)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
@@ -5683,6 +5687,36 @@ func handleDeleteHook(resp http.ResponseWriter, request *http.Request) {
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
+	}
+
+	log.Printf("Hook: %#v", hook)
+	if hook.Environment == "cloud" {
+		log.Printf("[INFO] Should STOP cloud webhook https://shuffler.io/api/v1/hooks/webhook_%s", hook.Id)
+		org, err := getOrg(ctx, user.ActiveOrg.Id)
+		if err != nil {
+			log.Printf("Failed finding org %s: %s", org.Id, err)
+			return
+		}
+
+		action := CloudSyncJob{
+			Type:          "webhook",
+			Action:        "stop",
+			OrgId:         org.Id,
+			PrimaryItemId: hook.Id,
+		}
+
+		if len(hook.Workflows) > 0 {
+			action.SecondaryItem = hook.Workflows[0]
+		}
+
+		err = executeCloudAction(action, org.SyncConfig.Apikey)
+		if err != nil {
+			log.Printf("Failed cloud action STOP execution", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+			return
+		}
+		// https://shuffler.io/v1/hooks/webhook_80184973-3e82-4852-842e-0290f7f34d7c
 	}
 
 	// This is here to force stop and remove the old webhook

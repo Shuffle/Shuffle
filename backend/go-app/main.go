@@ -381,16 +381,17 @@ type HookAction struct {
 }
 
 type Hook struct {
-	Id        string       `json:"id" datastore:"id"`
-	Start     string       `json:"start" datastore:"start"`
-	Info      Info         `json:"info" datastore:"info"`
-	Actions   []HookAction `json:"actions" datastore:"actions,noindex"`
-	Type      string       `json:"type" datastore:"type"`
-	Owner     string       `json:"owner" datastore:"owner"`
-	Status    string       `json:"status" datastore:"status"`
-	Workflows []string     `json:"workflows" datastore:"workflows"`
-	Running   bool         `json:"running" datastore:"running"`
-	OrgId     string       `json:"org_id" datastore:"org_id"`
+	Id          string       `json:"id" datastore:"id"`
+	Start       string       `json:"start" datastore:"start"`
+	Info        Info         `json:"info" datastore:"info"`
+	Actions     []HookAction `json:"actions" datastore:"actions,noindex"`
+	Type        string       `json:"type" datastore:"type"`
+	Owner       string       `json:"owner" datastore:"owner"`
+	Status      string       `json:"status" datastore:"status"`
+	Workflows   []string     `json:"workflows" datastore:"workflows"`
+	Running     bool         `json:"running" datastore:"running"`
+	OrgId       string       `json:"org_id" datastore:"org_id"`
+	Environment string       `json:"environment" datastore:"environment"`
 }
 
 func createFileFromFile(ctx context.Context, bucket *storage.BucketHandle, remotePath, localPath string) error {
@@ -3420,6 +3421,10 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	if hook.Environment == "cloud" {
+		log.Printf("This should trigger in the cloud. Duplicate action allowed onprem.")
+	}
+
 	for _, item := range hook.Workflows {
 		log.Printf("Running webhook for workflow %s with startnode %s", item, hook.Start)
 		workflow := Workflow{
@@ -3471,6 +3476,51 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	}
 }
 
+func executeCloudAction(action CloudSyncJob, apikey string) error {
+	data, err := json.Marshal(action)
+	if err != nil {
+		log.Printf("Failed cloud webhook action marshalling", err)
+		return err
+	}
+
+	client := &http.Client{}
+	syncUrl := fmt.Sprintf("%s/api/v1/cloud/sync/handle_action", syncUrl)
+	req, err := http.NewRequest(
+		"POST",
+		syncUrl,
+		bytes.NewBuffer(data),
+	)
+
+	req.Header.Add("Authorization", fmt.Sprintf(`Bearer %s`, apikey))
+	newresp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	respBody, err := ioutil.ReadAll(newresp.Body)
+	if err != nil {
+		return err
+	}
+
+	type Result struct {
+		Success bool   `json:"success"`
+		Reason  string `json:"reason"`
+	}
+
+	log.Printf("Data: %s", string(respBody))
+	responseData := Result{}
+	err = json.Unmarshal(respBody, &responseData)
+	if err != nil {
+		return err
+	}
+
+	if !responseData.Success {
+		return errors.New(fmt.Sprintf("Error from Shuffler: %s", responseData.Reason))
+	}
+
+	return nil
+}
+
 // Starts a new webhook
 func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
@@ -3493,6 +3543,7 @@ func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 		Name        string `json:"name"`
 		Workflow    string `json:"workflow"`
 		Start       string `json:"start"`
+		Environment string `json:"environment"`
 	}
 
 	body, err := ioutil.ReadAll(request.Body)
@@ -3551,6 +3602,37 @@ func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	// Let remote endpoint handle access checks (shuffler.io)
+	currentUrl := fmt.Sprintf("https://shuffler.io/api/v1/hooks/webhook_%s", newId)
+	if requestdata.Environment == "cloud" {
+		log.Printf("[INFO] Should START a cloud webhook for url %s", currentUrl)
+		// https://shuffler.io/v1/hooks/webhook_80184973-3e82-4852-842e-0290f7f34d7c
+		org, err := getOrg(ctx, user.ActiveOrg.Id)
+		if err != nil {
+			log.Printf("Failed finding org %s: %s", org.Id, err)
+			return
+		}
+
+		action := CloudSyncJob{
+			Type:          "webhook",
+			Action:        "start",
+			OrgId:         org.Id,
+			PrimaryItemId: newId,
+			SecondaryItem: requestdata.Start,
+			ThirdItem:     requestdata.Workflow,
+		}
+
+		err = executeCloudAction(action, org.SyncConfig.Apikey)
+		if err != nil {
+			log.Printf("Failed cloud action START execution", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+			return
+		} else {
+			log.Printf("Successfully set up cloud action schedule")
+		}
+	}
+
 	hook := Hook{
 		Id:        newId,
 		Start:     requestdata.Start,
@@ -3558,7 +3640,7 @@ func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 		Info: Info{
 			Name:        requestdata.Name,
 			Description: requestdata.Description,
-			Url:         fmt.Sprintf("https://shuffler.io/functions/webhooks/webhook_%s", newId),
+			Url:         fmt.Sprintf("https://shuffler.io/api/v1/hooks/webhook_%s", newId),
 		},
 		Type:   "webhook",
 		Owner:  user.Username,
@@ -3571,8 +3653,9 @@ func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 				Field: "",
 			},
 		},
-		Running: false,
-		OrgId:   user.ActiveOrg.Id,
+		Running:     false,
+		OrgId:       user.ActiveOrg.Id,
+		Environment: requestdata.Environment,
 	}
 
 	hook.Status = "running"
@@ -3587,10 +3670,10 @@ func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 
 	err = increaseStatisticsField(ctx, "total_workflow_triggers", requestdata.Workflow, 1)
 	if err != nil {
-		log.Printf("Failed to increase total workflows: %s", err)
+		log.Printf("[INFO] Failed to increase total workflows: %s", err)
 	}
 
-	log.Println("Set up a new hook")
+	log.Printf("Set up a new hook with ID %s and environment %s", newId, hook.Environment)
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": true}`))
 }
@@ -6476,6 +6559,7 @@ func handleAppHotload(location string, forceUpdate bool) error {
 // Secondary = something to specify what inside workflow to execute
 // Third = Some data to add to it
 type CloudSyncJob struct {
+	Id            string `json:"id" datastore:"id"`
 	Type          string `json:"type" datastore:"type"`
 	Action        string `json:"action" datastore:"action"`
 	OrgId         string `json:"org_id" datastore:"org_id"`
@@ -6534,12 +6618,12 @@ func handleCloudJob(job CloudSyncJob) error {
 	log.Printf("Handle job with type %s and action %s", job.Type, job.Action)
 	if job.Type == "webhook" {
 		if job.Action == "execute" {
-			log.Printf("Should handle webhook for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
+			log.Printf("Should handle webhook for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem)
 			err := handleCloudExecutionOnprem(job.PrimaryItemId, job.SecondaryItem, "webhook", job.ThirdItem)
 			if err != nil {
 				log.Printf("Failed executing workflow from cloud hook: %s", err)
 			} else {
-				log.Printf("Successfully executed workflow from cloud hook: %s", err)
+				log.Printf("Successfully executed workflow from cloud hook!")
 			}
 		}
 
@@ -6589,7 +6673,6 @@ func remoteOrgJobController(org Org, body []byte) error {
 		Jobs    []CloudSyncJob `json:"jobs"`
 	}
 
-	log.Printf("Remote JOB ret: %s", string(body))
 	responseData := retStruct{}
 	err := json.Unmarshal(body, &responseData)
 	if err != nil {
@@ -6633,7 +6716,11 @@ func remoteOrgJobController(org Org, body []byte) error {
 		return errors.New("[ERROR] Remote job handler issues.")
 	}
 
-	log.Printf("Got job with reason %s and %d jobs", responseData.Reason, len(responseData.Jobs))
+	if len(responseData.Jobs) > 0 {
+		log.Printf("Remote JOB ret: %s", string(body))
+		log.Printf("Got job with reason %s and %d job(s)", responseData.Reason, len(responseData.Jobs))
+	}
+
 	for _, job := range responseData.Jobs {
 		err = handleCloudJob(job)
 		if err != nil {
@@ -6665,6 +6752,8 @@ func remoteOrgJobHandler(org Org, interval int) error {
 		log.Printf("Failed body read in job sync: %s", err)
 		return err
 	}
+
+	log.Printf("Data: %s", respBody)
 
 	err = remoteOrgJobController(org, respBody)
 	if err != nil {
@@ -7059,7 +7148,7 @@ func runInit(ctx context.Context) {
 		job := func() {
 			err := remoteOrgJobHandler(org, interval)
 			if err != nil {
-				log.Printf("Failed request with remote org setup: %s", err)
+				log.Printf("Failed request with remote org setup (2): %s", err)
 			}
 		}
 
@@ -7550,7 +7639,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	job := func() {
 		err := remoteOrgJobHandler(*org, interval)
 		if err != nil {
-			log.Printf("Failed request with remote org setup: err")
+			log.Printf("Failed request with remote org setup (1): %s", err)
 		}
 	}
 
