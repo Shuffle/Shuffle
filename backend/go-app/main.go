@@ -2118,7 +2118,7 @@ func handlePasswordChange(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if len(foundUser.Id) == 0 {
-		log.Printf("Something went wrong in password reset", err)
+		log.Printf("Something went wrong in password reset: couldn't find user.")
 		resp.WriteHeader(500)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -6486,21 +6486,96 @@ type CloudSyncJob struct {
 	Created       string `json:"created" datastore:"created"`
 }
 
+func handleCloudExecutionOnprem(workflowId, startNode, executionSource, executionArgument string) error {
+	ctx := context.Background()
+	// 1. Get the workflow
+	// 2. Execute it with the data
+	workflow, err := getWorkflow(ctx, workflowId)
+	if err != nil {
+		return err
+	}
+	// FIXME: Handle auth
+	_ = workflow
+
+	type execStruct struct {
+		ExecutionSource   string `json:"execution_source"`
+		ExecutionArgument string `json:"execution_argument"`
+		Start             string `json:"start,omitempty"`
+	}
+
+	parsedArgument := strings.Replace(string(executionArgument), "\"", "\\\"", -1)
+	newExec := execStruct{
+		ExecutionSource:   executionSource,
+		ExecutionArgument: parsedArgument,
+	}
+
+	//bodyWrapper := fmt.Sprintf(`{"execution_source": "%s", "execution_argument": "%s"}`, executionSource, parsedArgument)
+	if len(startNode) > 0 {
+		newExec.Start = startNode
+	}
+
+	b, err := json.Marshal(newExec)
+	if err != nil {
+		log.Printf("Failed marshal")
+		return err
+	}
+
+	log.Println(string(b))
+	newRequest := &http.Request{
+		Method: "POST",
+		Body:   ioutil.NopCloser(bytes.NewReader(b)),
+	}
+
+	_, _, err = handleExecution(workflowId, Workflow{}, newRequest)
+	return err
+}
+
 func handleCloudJob(job CloudSyncJob) error {
 	log.Printf("Handle job with type %s and action %s", job.Type, job.Action)
 	if job.Type == "webhook" {
 		if job.Action == "execute" {
 			log.Printf("Should handle webhook for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
+			err := handleCloudExecutionOnprem(job.PrimaryItemId, job.SecondaryItem, "webhook", job.ThirdItem)
+			if err != nil {
+				log.Printf("Failed executing workflow from cloud hook: %s", err)
+			} else {
+				log.Printf("Successfully executed workflow from cloud hook: %s", err)
+			}
+		}
+
+	} else if job.Type == "schedule" {
+		if job.Action == "execute" {
+			log.Printf("Should handle schedule for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
+			err := handleCloudExecutionOnprem(job.PrimaryItemId, job.SecondaryItem, "schedule", job.ThirdItem)
+			if err != nil {
+				log.Printf("Failed executing workflow from cloud schedule: %s", err)
+			} else {
+				log.Printf("Successfully executed workflow from cloud schedule")
+			}
+		}
+	} else if job.Type == "email_trigger" {
+		if job.Action == "execute" {
+			log.Printf("Should handle email for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
+			err := handleCloudExecutionOnprem(job.PrimaryItemId, job.SecondaryItem, "email_trigger", job.ThirdItem)
+			if err != nil {
+				log.Printf("Failed executing workflow from email trigger: %s", err)
+			} else {
+				log.Printf("Successfully executed workflow from cloud email trigger")
+			}
 		}
 
 	} else if job.Type == "user_input" {
-		log.Printf("Should handle user_input for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
-	} else if job.Type == "schedule" {
-		log.Printf("Should handle schedule for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
-	} else if job.Type == "email" {
-		log.Printf("Should handle email for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
+		if job.Action == "execute" {
+			log.Printf("Should handle user_input for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
+			err := handleCloudExecutionOnprem(job.PrimaryItemId, job.SecondaryItem, "user_input", job.ThirdItem)
+			if err != nil {
+				log.Printf("Failed executing workflow from cloud user_input: %s", err)
+			} else {
+				log.Printf("Successfully executed workflow from cloud user_input")
+			}
+		}
 	} else {
-		log.Printf("No handler for type %s", job.Type)
+		log.Printf("No handler for type %s and action %s", job.Type, job.Action)
 	}
 
 	return nil
@@ -6984,7 +7059,7 @@ func runInit(ctx context.Context) {
 		job := func() {
 			err := remoteOrgJobHandler(org, interval)
 			if err != nil {
-				log.Printf("Failed request with remote org setup: err")
+				log.Printf("Failed request with remote org setup: %s", err)
 			}
 		}
 
@@ -7261,6 +7336,7 @@ func handleStopCloudSync(syncUrl string, org Org) error {
 		}
 	}
 
+	// FIXME: This doesn't work?
 	if value, exists := scheduledOrgs[org.Id]; exists {
 		// Looks like this does the trick? Hurr
 		log.Printf("STOPPING ORG SCHEDULE for: %s", org.Id)
