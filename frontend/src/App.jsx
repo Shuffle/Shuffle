@@ -118,7 +118,7 @@ const App = (message, props) => {
 
 	const options = {
 		timeout: 5000,
-		position: positions.TOP_CENTER,
+		position: positions.BOTTOM_LEFT,
 	};
 
 	const includedData = window.location.pathname === "/home" || window.location.pathname === "/features" ?

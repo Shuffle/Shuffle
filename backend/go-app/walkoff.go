@@ -68,19 +68,22 @@ type ExecutionRequest struct {
 }
 
 type SyncFeatures struct {
+	Webhook        SyncData `json:"webhook" datastore:"webhook"`
+	Schedule       SyncData `json:"schedule" datastore:"schedule"`
+	UserInput      SyncData `json:"user_input" datastore:"user_input"`
+	EmailTrigger   SyncData `json:"email_trigger" datastore:"email_trigger"`
 	Apps           SyncData `json:"apps" datastore:"apps"`
 	Workflows      SyncData `json:"workflows" datastore:"workflows"`
 	Schedules      SyncData `json:"schedules" datastore:"schedules"`
 	Autocomplete   SyncData `json:"autocomplete" datastore:"autocomplete"`
 	Authentication SyncData `json:"authentication" datastore:"authentication"`
-	Webhook        SyncData `json:"webhook" datastore:"webhook"`
-	Schedule       SyncData `json:"schedule" datastore:"schedule"`
-	UserInput      SyncData `json:"user_input" datastore:"user_input"`
-	EmailTrigger   SyncData `json:"email_trigger" datastore:"email_trigger"`
 }
 
 type SyncData struct {
-	Active bool `json:"active" datastore:"active"`
+	Active      bool   `json:"active" datastore:"active"`
+	Name        string `json:"name" datastore:"name"`
+	Description string `json:"description" datastore:"description"`
+	Limit       int64  `json:"limit" datastore:"limit"`
 }
 
 type SyncConfig struct {
@@ -91,6 +94,8 @@ type SyncConfig struct {
 // Role is just used for feedback for a user
 type Org struct {
 	Name         string       `json:"name" datastore:"name"`
+	Description  string       `json:"description" datastore:"description"`
+	Image        string       `json:"image" datastore:"image"`
 	Id           string       `json:"id" datastore:"id"`
 	Org          string       `json:"org" datastore:"org"`
 	Users        []User       `json:"users" datastore:"users"`

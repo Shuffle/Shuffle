@@ -2298,6 +2298,70 @@ func handleGetEnvironments(resp http.ResponseWriter, request *http.Request) {
 	resp.Write(newjson)
 }
 
+func handleGetOrg(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	var fileId string
+	location := strings.Split(request.URL.String(), "/")
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			log.Printf("Path too short: %d", len(location))
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		fileId = location[4]
+	}
+
+	user, err := handleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("Api authentication failed in set new workflowhandler: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	ctx := context.Background()
+	org, err := getOrg(ctx, fileId)
+	if err != nil {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Failed getting org users"}`))
+		return
+	}
+
+	//FIXME : cleanup org before marshal
+	userFound := false
+	for _, foundUser := range org.Users {
+		if foundUser.Id == user.Id {
+			userFound = true
+			break
+		}
+	}
+
+	if !userFound {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Use doesn't have access to org"}`))
+		return
+	}
+
+	org.Users = []User{}
+	org.SyncConfig.Apikey = ""
+	newjson, err := json.Marshal(org)
+	if err != nil {
+		log.Printf("Failed unmarshal of org: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed unpacking"}`)))
+		return
+	}
+
+	resp.WriteHeader(200)
+	resp.Write(newjson)
+}
+
 func handleGetOrgs(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -2312,7 +2376,7 @@ func handleGetOrgs(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if user.Role != "admin" {
+	if user.Role != "global_admin" {
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "Not admin"}`))
 		return
@@ -3507,7 +3571,7 @@ func executeCloudAction(action CloudSyncJob, apikey string) error {
 		Reason  string `json:"reason"`
 	}
 
-	log.Printf("Data: %s", string(respBody))
+	//log.Printf("Data: %s", string(respBody))
 	responseData := Result{}
 	err = json.Unmarshal(respBody, &responseData)
 	if err != nil {
@@ -3554,7 +3618,7 @@ func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("Data: %s", string(body))
+	//log.Printf("Data: %s", string(body))
 
 	ctx := context.Background()
 	var requestdata requestData
@@ -6743,7 +6807,7 @@ func remoteOrgJobHandler(org Org, interval int) error {
 	req.Header.Add("Authorization", fmt.Sprintf(`Bearer %s`, org.SyncConfig.Apikey))
 	newresp, err := client.Do(req)
 	if err != nil {
-		log.Printf("Failed request in org sync: %s", err)
+		//log.Printf("Failed request in org sync: %s", err)
 		return err
 	}
 
@@ -6753,7 +6817,7 @@ func remoteOrgJobHandler(org Org, interval int) error {
 		return err
 	}
 
-	log.Printf("Data: %s", respBody)
+	//log.Printf("Data: %s", respBody)
 
 	err = remoteOrgJobController(org, respBody)
 	if err != nil {
@@ -7958,6 +8022,8 @@ func initHandlers() {
 	// NEW for 0.8.0
 	r.HandleFunc("/api/v1/cloud/setup", handleCloudSetup).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs", handleGetOrgs).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}", handleGetOrg).Methods("GET", "OPTIONS")
+	//r.HandleFunc("/api/v1/orgs/{orgId}", handleEditOrg).Methods("POST", "OPTIONS")
 
 	// Important for email, IDS etc. Create this by:
 	// PS: For cloud, this has to use cloud storage.

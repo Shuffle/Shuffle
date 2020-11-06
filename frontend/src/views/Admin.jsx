@@ -1,7 +1,10 @@
 import React, { useEffect} from 'react';
 
+import { makeStyles } from '@material-ui/styles';
 import {Link} from 'react-router-dom';
 import Paper from '@material-ui/core/Paper';
+import Card from '@material-ui/core/Card';
+import Tooltip from '@material-ui/core/Tooltip';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Typography from '@material-ui/core/Typography';
 import Switch from '@material-ui/core/Switch';
@@ -20,6 +23,7 @@ import ListItemAvatar from '@material-ui/core/ListItemAvatar';
 import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
 import IconButton from '@material-ui/core/IconButton';
 import Avatar from '@material-ui/core/Avatar';
+import Zoom from '@material-ui/core/Zoom';
 
 
 import { useAlert } from "react-alert";
@@ -41,19 +45,30 @@ import ScheduleIcon from '@material-ui/icons/Schedule';
 import CloudIcon from '@material-ui/icons/Cloud';
 import BusinessIcon from '@material-ui/icons/Business';
 
-const Admin = (props) => {
-	const { globalUrl } = props;
+const useStyles = makeStyles({
+	notchedOutline: {
+		borderColor: "#f85a3e !important"
+	},
+})
 
+const Admin = (props) => {
+	const { globalUrl, userdata } = props;
+
+	var upload = ""
 	const theme = useTheme();
+	const classes = useStyles();
 	const [firstRequest, setFirstRequest] = React.useState(true);
 	const [modalUser, setModalUser] = React.useState({});
 	const [modalOpen, setModalOpen] = React.useState(false);
+	const [file, setFile] = React.useState("");
+	const [fileBase64, setFileBase64] = React.useState("");
 
 	const [cloudSyncModalOpen, setCloudSyncModalOpen] = React.useState(false);
 	const [cloudSyncApikey, setCloudSyncApikey] = React.useState("");
 	const [loading, setLoading] = React.useState(false);
 
 	const [selectedOrganization, setSelectedOrganization] = React.useState({});
+	const [organizationFeatures, setOrganizationFeatures] = React.useState({});
 	const [loginInfo, setLoginInfo] = React.useState("");
 	const [curTab, setCurTab] = React.useState(0);
 	const [users, setUsers] = React.useState([]);
@@ -244,6 +259,8 @@ const Admin = (props) => {
 				selectedOrganization.cloud_sync = !selectedOrganization.cloud_sync
 				setSelectedOrganization(selectedOrganization)
 				setCloudSyncApikey("")
+
+				handleGetOrg(userdata.active_org.id) 
 			}
 		})
 		.catch(error => {
@@ -309,6 +326,50 @@ const Admin = (props) => {
 
 		.catch(error => {
 			console.log("Error in userdata: ", error)
+		});
+	}
+
+	const handleGetOrg = (orgId) => {
+		// Just use this one?
+		var baseurl = globalUrl
+		const url = baseurl + '/api/v1/orgs/'+orgId
+		fetch(url, {
+			method: 'GET',
+			credentials: "include",
+			headers: {
+				'Content-Type': 'application/json',
+			},
+		})
+		.then(response =>
+			response.json().then(responseJson => {
+				if (responseJson["success"] === false) {
+					alert.error("Failed getting org: ", responseJson.readon)
+				} else {
+					setSelectedOrganization(responseJson)
+					var lists = {
+						"active": {
+							"triggers": [],
+							"features": [],
+							"sync": [],
+						},
+						"inactive": {
+							"triggers": [],
+							"features": [],
+							"sync": [],
+						},
+					}
+
+					Object.keys(responseJson.sync_features).map(function(key, index) {
+						console.log(responseJson.sync_features[key])
+					})
+
+					setOrganizationFeatures(lists)
+				}
+			}),
+		)
+		.catch(error => {
+			console.log("Error getting org: ", error)
+			alert.error("Error getting current organization")
 		});
 	}
 
@@ -609,6 +670,11 @@ const Admin = (props) => {
 		getUsers()
 	}
 
+	if (selectedOrganization.id === undefined && userdata !== undefined && userdata.active_org !== undefined) {
+		//setSelectedOrganization(userdata.active_org)
+		handleGetOrg(userdata.active_org.id)
+	}
+
 	const paperStyle = {
 		maxWidth: 1250,
 		margin: "auto",
@@ -831,19 +897,21 @@ const Admin = (props) => {
 			<CloseIcon style={{color: "red"}} />
 
 		return (
-			<Grid item xs={6}>
-				<ListItem>
-					<ListItemAvatar>
-						<Avatar>
-							{primaryIcon}
-						</Avatar>
-					</ListItemAvatar>
-					<ListItemText 
-						primary={primary} 
-						secondary={secondary} 
-					/>
-					{secondaryIcon}		
-				</ListItem>
+			<Grid item xs={4}>
+				<Card style={{margin: 4, backgroundColor: theme.palette.inputColor, color: "white",}}>
+					<ListItem>
+						<ListItemAvatar>
+							<Avatar>
+								{primaryIcon}
+							</Avatar>
+						</ListItemAvatar>
+						<ListItemText 
+							primary={primary} 
+							secondary={secondary} 
+						/>
+						{secondaryIcon}		
+					</ListItem>
+				</Card>
 			</Grid>
 		)
 	}
@@ -853,14 +921,20 @@ const Admin = (props) => {
 		{
 			"primary": "Workflows",
 			"secondary": "",
-			"active": false,
+			"active": true,
 			"icon": <PolymerIcon style={{color: itemColor}}/>,
 		},
 		{
 			"primary": "Apps",
 			"secondary": "",
-			"active": false,
+			"active": true,
 			"icon": <AppsIcon style={{color: itemColor}}/>,
+		},	
+		{
+			"primary": "Organization",
+			"secondary": "",
+			"active": true,
+			"icon": <BusinessIcon style={{color: itemColor}}/>,
 		},	
 	]
 
@@ -905,7 +979,7 @@ const Admin = (props) => {
 							setCloudSyncApikey(event.target.value)
 						}}
 					/>
-					<Button disabled={(!selectedOrganization.cloud_sync && cloudSyncApikey.length === 0) || loading} variant="contained" style={{ marginLeft: 15, height: 60, margin: "auto", borderRadius: "0px" }} onClick={() => {
+					<Button disabled={(!selectedOrganization.cloud_sync && cloudSyncApikey.length === 0) || loading} variant="contained" style={{ marginLeft: 15, height: 50, borderRadius: "0px" }} onClick={() => {
 						setLoading(true)
 						enableCloudSync(
 							cloudSyncApikey,
@@ -934,6 +1008,7 @@ const Admin = (props) => {
 					)
 				})}
 			</Grid>
+
 				* New triggers (userinput, hotmail realtime)<div/>
 				* Execute in the cloud rather than onprem<div/>
 				* Apps can be built in the cloud<div/>
@@ -941,6 +1016,206 @@ const Admin = (props) => {
 				*	Access to powerful cloud search
 			</DialogContent>
 		</Dialog>
+
+	var image = ""
+	const editHeaderImage = (event) => {
+		const file = event.target.value
+		const actualFile = event.target.files[0]
+		const fileObject = URL.createObjectURL(actualFile)
+		setFile(fileObject)
+	}
+
+	if (file !== "") {
+		const img = document.getElementById('logo')
+		var canvas = document.createElement('canvas')
+		canvas.width = 174
+		canvas.height = 174
+		var ctx = canvas.getContext('2d')
+
+		img.onload = function() {
+			// img, x, y, width, height
+			//ctx.drawImage(img, 174, 174)
+			//console.log("IMG natural: ", img.naturalWidth, img.naturalHeight)
+			//ctx.drawImage(img, 0, 0, 174, 174)
+			ctx.drawImage(img, 
+				0, 0, img.width, img.height, 
+				0, 0, canvas.width, canvas.height
+			)
+
+			const canvasUrl = canvas.toDataURL()
+			if (canvasUrl !== fileBase64) {
+				//console.log("SET URL TO: ", canvasUrl)
+				setFileBase64(canvasUrl)
+			}
+		}
+	}
+
+
+	const imageData = file.length > 0 ? file : fileBase64 
+	const imageInfo = <img src={imageData} alt="Click to upload an image (174x174)" id="logo" style={{maxWidth: 174, maxHeight: 174, minWidth: 174, minHeight: 174, objectFit: "contain",}} />
+	const organizationView = curTab === 0 ?
+		<div>
+			<Typography variant="h6" style={{marginBottom: "10px", color: "white"}}>Organization overview</Typography>
+				<a target="_blank" href="https://shuffler.io/docs/admin#organization" style={{textDecoration: "none", color: "#f85a3e"}}>Click here to learn more about organization editing</a>
+				{selectedOrganization.id === undefined ? 
+					null : 
+					<div>
+						<div style={{color: "white", flex: "1", display: "flex", flexDirection: "row"}}>
+						 	<Tooltip title="Click to edit the app's image" placement="bottom">
+								<div style={{flex: "1", margin: 10, border: "1px solid #f85a3e", cursor: "pointer", backgroundColor: theme.palette.inputColor, maxWidth: 174, maxHeight: 174}} onClick={() => {upload.click()}}>
+									<input hidden type="file" ref={(ref) => upload = ref} onChange={editHeaderImage} />
+									{imageInfo}
+								</div>
+							</Tooltip>
+							<div style={{flex: "3", color: "white",}}>
+								<div style={{marginTop: 8}}/>
+								Name	
+								<TextField
+									required
+									style={{flex: "1", marginTop: "5px", marginRight: "15px", backgroundColor: theme.palette.inputColor}}
+									fullWidth={true}
+									placeholder="Name"
+									type="name"
+								  id="standard-required"
+									margin="normal"
+									variant="outlined"
+									defaultValue={selectedOrganization.name}
+      	 					onChange={e => {
+										const invalid = ["#", ":", "."]
+										for (var key in invalid) {
+											if (e.target.value.includes(invalid[key])) {
+												alert.error("Can't use "+invalid[key]+" in name")
+												return
+											}
+										}
+
+										if (e.target.value.length > 100) {
+											alert.error("Choose a shorter name.")
+											return
+										}
+
+										selectedOrganization.name = e.target.value
+										setSelectedOrganization(selectedOrganization)
+									}}
+									color="primary"
+									InputProps={{
+										style:{
+											color: "white",
+											height: "50px", 
+											fontSize: "1em",
+										},
+										classes: {
+											notchedOutline: classes.notchedOutline,
+										},
+									}}
+								/>
+								<div style={{marginTop: "10px"}}/>
+								Description
+								<TextField
+									required
+									style={{flex: "1", marginTop: "5px", marginRight: "15px", backgroundColor: theme.palette.inputColor}}
+									fullWidth={true}
+									type="name"
+								  id="outlined-with-placeholder"
+									margin="normal"
+									variant="outlined"
+									placeholder="A description for the service"
+									defaultValue={selectedOrganization.description}
+      	 					onChange={e => {
+										selectedOrganization.description = e.target.value
+										setSelectedOrganization(selectedOrganization)
+									}}
+									InputProps={{
+										classes: {
+											notchedOutline: classes.notchedOutline,
+										},
+										style:{
+											color: "white",
+										},
+									}}
+								/>
+							</div>
+						</div>
+					<Divider style={{ marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor }} />
+					<Typography variant="h6" style={{marginBottom: "10px", color: "white"}}>Cloud syncronization</Typography>
+						What does <a href="https://shuffler.io/docs/hybrid#cloud_sync" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>cloud sync</a> do? Cloud syncronization is a way of getting more out of Shuffle. Shuffle will <b>ALWAYS</b> make every option open source, but features relying on other users can't be done without a collaborative approach.
+						<div style={{display: "flex", marginBottom: 20, }}>
+							<TextField
+								color="primary"
+								style={{backgroundColor: theme.palette.inputColor, marginRight: 10, }}
+								InputProps={{
+									style: {
+										height: "50px",
+										color: "white",
+										fontSize: "1em",
+									},
+								}}
+								required
+								fullWidth={true}
+								disabled={selectedOrganization.cloud_sync}
+								autoComplete="cloud apikey"
+								id="apikey_field"
+								margin="normal"
+								placeholder="Cloud Apikey"
+								variant="outlined"
+								onChange={(event) => {
+									setCloudSyncApikey(event.target.value)
+								}}
+							/>
+							<Button disabled={(!selectedOrganization.cloud_sync && cloudSyncApikey.length === 0) || loading} variant="contained" style={{marginTop: 15, height: 50, width: 150,}} onClick={() => {
+								setLoading(true)
+								enableCloudSync(
+									cloudSyncApikey,
+									selectedOrganization,
+									selectedOrganization.cloud_sync,
+								)
+							}} color="primary">
+								{selectedOrganization.cloud_sync ? 
+									"Stop sync"
+									:
+									"Start sync"
+								}
+							</Button>
+						</div>
+						{orgSyncResponse.length > 0 ? 
+							<Typography style={{marginTop: 5, marginBottom: 10}}>
+								Error from Shuffle: {orgSyncResponse}
+							</Typography>
+							: null
+						}
+					{/*
+					<Grid container style={{width: "100%", marginBottom: 15, }}>
+						{syncList.map((data, index) => {
+							return (
+								<GridItem key={index} data={data} />
+							)
+						})}
+					</Grid>
+					*/}
+					<Typography style={{marginTop: 40}}>Cloud sync features</Typography>
+					<Grid container style={{width: "100%", marginBottom: 15, }}>
+						{Object.keys(selectedOrganization.sync_features).map(function(key, index) {
+
+							//<GridItem key={index} data={data} />
+							const item = selectedOrganization.sync_features[key]
+							const griditem = {
+								"primary": key,
+								"secondary": "",
+								"active": item.active,
+								"icon": <PolymerIcon style={{color: itemColor}}/>,
+							}
+
+							return (
+								<Zoom key={index} >
+									<GridItem data={griditem} />
+								</Zoom>
+							)
+						})}
+					</Grid>
+				</div>
+				}
+			</div>
+		: null
 
 	const modalView =
 		<Dialog 
@@ -956,10 +1231,10 @@ const Admin = (props) => {
 			}}
 		>
 			<DialogTitle><span style={{ color: "white" }}>
-				{curTab === 0 ? "Add user" : "Add environment"}
+				{curTab === 1 ? "Add user" : "Add environment"}
 			</span></DialogTitle>
 			<DialogContent>
-				{curTab === 0 ?
+				{curTab === 1 ?
 					<div>
 						Username
 						<TextField
@@ -1004,7 +1279,7 @@ const Admin = (props) => {
 							onChange={(event) => changeModalData("Password", event.target.value)}
 						/>
 					</div>
-					: curTab === 2 ?
+					: curTab === 3 ?
 						<div>
 							Environment Name
 					<TextField
@@ -1035,9 +1310,9 @@ const Admin = (props) => {
 					Cancel
 				</Button>
 				<Button variant="contained" style={{ borderRadius: "0px" }} onClick={() => {
-					if (curTab === 0) {
+					if (curTab === 1) {
 						submitUser(modalUser)
-					} else if (curTab === 2) {
+					} else if (curTab === 3) {
 						submitEnvironment(modalUser)
 					}
 				}} color="primary">
@@ -1046,7 +1321,7 @@ const Admin = (props) => {
 			</DialogActions>
 		</Dialog>
 
-	const usersView = curTab === 0 ?
+	const usersView = curTab === 1 ?
 		<div>
 			<div style={{ marginTop: 20, marginBottom: 20, }}>
 				<h2 style={{ display: "inline", }}>User management</h2>
@@ -1145,7 +1420,7 @@ const Admin = (props) => {
 		</div>
 		: null
 
-	const schedulesView = curTab === 3 ?
+	const schedulesView = curTab === 4 ?
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
 				<h2 style={{display: "inline",}}>Schedules</h2>
@@ -1194,7 +1469,7 @@ const Admin = (props) => {
 		</div>
 		: null
 
-	const appCategoryView = curTab === 6 ?
+	const appCategoryView = curTab === 7 ?
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
 				<h2 style={{display: "inline",}}>Categories</h2>
@@ -1270,7 +1545,7 @@ const Admin = (props) => {
 		</div>
 		: null
 
-	const authenticationView = curTab === 1 ?
+	const authenticationView = curTab === 2 ?
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
 				<h2 style={{display: "inline",}}>App Authentication</h2>
@@ -1355,7 +1630,7 @@ const Admin = (props) => {
 		</div>
 		: null
 
-	const environmentView = curTab === 2 ?
+	const environmentView = curTab === 3 ?
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
 				<h2 style={{display: "inline",}}>Environments</h2>
@@ -1456,7 +1731,7 @@ const Admin = (props) => {
 		</div>
 		: null
 
-	const organizationsTab = curTab === 5 ?
+	const organizationsTab = curTab === 6 ?
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
 				<h2 style={{display: "inline",}}>Organizations</h2>
@@ -1537,7 +1812,7 @@ const Admin = (props) => {
 		</div>
 		: null
 
-	const hybridTab = curTab === 4 ?
+	const hybridTab = curTab === 5 ?
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
 				<h2 style={{display: "inline",}}>Hybrid</h2>
@@ -1580,13 +1855,13 @@ const Admin = (props) => {
 		// primary={environment.Registered ? "true" : "false"}
 
 	const setConfig = (event, newValue) => {
-		if (newValue === 1) {
+		if (newValue === 2) {
 			getAppAuthentication()
-		} else if (newValue === 2) {
-			getEnvironments()
 		} else if (newValue === 3) {
+			getEnvironments()
+		} else if (newValue === 4) {
 			getSchedules()
-		} else if (newValue === 5) {
+		} else if (newValue === 6) {
 			getOrgs() 
 		}
 
@@ -1608,6 +1883,7 @@ const Admin = (props) => {
 					onChange={setConfig}
 					aria-label="disabled tabs example"
 				>
+					<Tab label=<span><BusinessIcon style={iconStyle} /> Organization</span>/>
 					<Tab label=<span><AccessibilityNewIcon style={iconStyle} />Users</span> />
 					<Tab label=<span><LockIcon style={iconStyle} />App Authentication</span>/>
 					<Tab label=<span><EcoIcon style={iconStyle} />Environments</span>/>
@@ -1618,6 +1894,7 @@ const Admin = (props) => {
 				</Tabs>
 				<Divider style={{marginTop: 0, marginBottom: 10, backgroundColor: "rgb(91, 96, 100)"}} />
 				<div style={{padding: 15}}>
+					{organizationView}
 					{authenticationView}
 					{appCategoryView}
 					{usersView}	
