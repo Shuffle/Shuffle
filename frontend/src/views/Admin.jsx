@@ -30,6 +30,7 @@ import { useAlert } from "react-alert";
 
 import { Dialog, DialogTitle, DialogActions, DialogContent } from '@material-ui/core';
 import { useTheme } from '@material-ui/core/styles';
+import HandlePayment from './HandlePayment'
 
 import PolymerIcon from '@material-ui/icons/Polymer';
 import CheckCircleIcon from '@material-ui/icons/CheckCircle';
@@ -253,7 +254,7 @@ const Admin = (props) => {
 				if (disableSync) {
 					alert.success("Successfully disabled sync!")
 				} else {
-					alert.success("Sync successfully set up!")
+					alert.success("Cloud Syncronization successfully set up!")
 				}
 
 				selectedOrganization.cloud_sync = !selectedOrganization.cloud_sync
@@ -267,6 +268,51 @@ const Admin = (props) => {
 			setLoading(false)
 			alert.error("Err: " + error.toString())
 		})
+	}
+
+	const orgSaveButton = 
+		<Button
+			style={{ width: 150, height: 55, flex: 1 }}
+			variant="contained"
+			color="primary"
+			onClick={() => handleEditOrg(selectedOrganization.name, selectedOrganization.description, selectedOrganization.id, selectedOrganization.image)}
+		>
+			Save Changes	
+		</Button>
+	
+	const handleEditOrg = (name, description, orgId, image) => {
+		const data = { 
+			"name": name, 
+			"description": description,
+			"org_id": orgId,
+			"image": image,
+		}
+
+		const url = globalUrl + `/api/v1/orgs/${selectedOrganization.id}`;
+		fetch(url, {
+			mode: 'cors',
+			method: 'POST',
+			body: JSON.stringify(data),
+			credentials: 'include',
+			crossDomain: true,
+			withCredentials: true,
+			headers: {
+				'Content-Type': 'application/json; charset=utf-8',
+			},
+		})
+			.then(response =>
+				response.json().then(responseJson => {
+					if (responseJson["success"] === false) {
+						alert.error("Failed updating org")
+					} else {
+						alert.success("Successfully edited org!")
+						setSelectedUserModalOpen(false)
+					}
+				}),
+			)
+			.catch(error => {
+				alert.error("Err: " + error.toString())
+			});
 	}
 
 	const onPasswordChange = () => {
@@ -360,9 +406,13 @@ const Admin = (props) => {
 					}
 
 					Object.keys(responseJson.sync_features).map(function(key, index) {
-						console.log(responseJson.sync_features[key])
+						//console.log(responseJson.sync_features[key])
 					})
 
+
+					if (responseJson.image !== undefined && responseJson.image !== null && responseJson.image.length > 0) {
+						setFileBase64(responseJson.image)
+					}
 					setOrganizationFeatures(lists)
 				}
 			}),
@@ -668,6 +718,22 @@ const Admin = (props) => {
 	if (firstRequest) {
 		setFirstRequest(false)
 		getUsers()
+
+		const views = {
+			"organization": 0,
+			"users": 1,
+			"app_auth": 2,
+			"environments": 3,
+			"schedules": 4,
+			"categories": 5,
+		}
+
+		if (props.match.params.key !== undefined) {
+			const tmpitem = views[props.match.params.key]
+			if (tmpitem !== undefined) {
+				setCurTab(tmpitem)
+			}
+		}
 	}
 
 	if (selectedOrganization.id === undefined && userdata !== undefined && userdata.active_org !== undefined) {
@@ -1044,25 +1110,33 @@ const Admin = (props) => {
 
 			const canvasUrl = canvas.toDataURL()
 			if (canvasUrl !== fileBase64) {
-				//console.log("SET URL TO: ", canvasUrl)
 				setFileBase64(canvasUrl)
+				selectedOrganization.image = canvasUrl
+				setSelectedOrganization(selectedOrganization)
 			}
 		}
 	}
 
-
 	const imageData = file.length > 0 ? file : fileBase64 
+	if (imageData !== undefined && imageData.length === 0) {
+		//imageData 
+	}
+
 	const imageInfo = <img src={imageData} alt="Click to upload an image (174x174)" id="logo" style={{maxWidth: 174, maxHeight: 174, minWidth: 174, minHeight: 174, objectFit: "contain",}} />
 	const organizationView = curTab === 0 ?
 		<div>
-			<Typography variant="h6" style={{marginBottom: "10px", color: "white"}}>Organization overview</Typography>
-				<a target="_blank" href="https://shuffler.io/docs/admin#organization" style={{textDecoration: "none", color: "#f85a3e"}}>Click here to learn more about organization editing</a>
+			<div style={{ marginTop: 20, marginBottom: 20, }}>
+				<h2 style={{ display: "inline", }}>Organization overview</h2>
+				<span style={{ marginLeft: 25 }}>
+					On this page you can configure individual parts of your organization.<a target="_blank" href="https://shuffler.io/docs/admin#organization" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more</a>.
+				</span>
+			</div>
 				{selectedOrganization.id === undefined ? 
 					null : 
 					<div>
 						<div style={{color: "white", flex: "1", display: "flex", flexDirection: "row"}}>
 						 	<Tooltip title="Click to edit the app's image" placement="bottom">
-								<div style={{flex: "1", margin: 10, border: "1px solid #f85a3e", cursor: "pointer", backgroundColor: theme.palette.inputColor, maxWidth: 174, maxHeight: 174}} onClick={() => {upload.click()}}>
+								<div style={{flex: "1", margin: "10px 25px 10px 0px", border: imageData !== undefined && imageData.length > 0 ? null : "1px solid #f85a3e", cursor: "pointer", backgroundColor: imageData !== undefined && imageData.length > 0 ? null : theme.palette.inputColor, maxWidth: 174, maxHeight: 174}} onClick={() => {upload.click()}}>
 									<input hidden type="file" ref={(ref) => upload = ref} onChange={editHeaderImage} />
 									{imageInfo}
 								</div>
@@ -1111,32 +1185,38 @@ const Admin = (props) => {
 								/>
 								<div style={{marginTop: "10px"}}/>
 								Description
-								<TextField
-									required
-									style={{flex: "1", marginTop: "5px", marginRight: "15px", backgroundColor: theme.palette.inputColor}}
-									fullWidth={true}
-									type="name"
-								  id="outlined-with-placeholder"
-									margin="normal"
-									variant="outlined"
-									placeholder="A description for the service"
-									defaultValue={selectedOrganization.description}
-      	 					onChange={e => {
-										selectedOrganization.description = e.target.value
-										setSelectedOrganization(selectedOrganization)
-									}}
-									InputProps={{
-										classes: {
-											notchedOutline: classes.notchedOutline,
-										},
-										style:{
-											color: "white",
-										},
-									}}
-								/>
+								<div style={{display: "flex"}}>
+									<TextField
+										required
+										style={{flex: "1", marginTop: "5px", marginRight: "15px", backgroundColor: theme.palette.inputColor}}
+										fullWidth={true}
+										type="name"
+										id="outlined-with-placeholder"
+										margin="normal"
+										variant="outlined"
+										placeholder="A description for the service"
+										defaultValue={selectedOrganization.description}
+										onChange={e => {
+											selectedOrganization.description = e.target.value
+											setSelectedOrganization(selectedOrganization)
+										}}
+										InputProps={{
+											classes: {
+												notchedOutline: classes.notchedOutline,
+											},
+											style:{
+												color: "white",
+											},
+										}}
+									/>
+									<div style={{margin: "auto", textalign: "center",}}>
+										{orgSaveButton}
+									</div>
+								</div>
 							</div>
 						</div>
 					<Divider style={{ marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor }} />
+					<HandlePayment />
 					<Typography variant="h6" style={{marginBottom: "10px", color: "white"}}>Cloud syncronization</Typography>
 						What does <a href="https://shuffler.io/docs/hybrid#cloud_sync" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>cloud sync</a> do? Cloud syncronization is a way of getting more out of Shuffle. Shuffle will <b>ALWAYS</b> make every option open source, but features relying on other users can't be done without a collaborative approach.
 						<div style={{display: "flex", marginBottom: 20, }}>
@@ -1582,9 +1662,9 @@ const Admin = (props) => {
 						primary="Actions"
 					/>
 				</ListItem>
-				{authentication === undefined ? null : authentication.map(data => {
+				{authentication === undefined ? null : authentication.map((data, index) => {
 					return (
-						<ListItem>
+						<ListItem key={index}>
 							<ListItemText
 								primary=<img alt="" src={data.app.large_image} style={{maxWidth: 50,}} />
 								style={{minWidth: 150, maxWidth: 150}}
@@ -1868,6 +1948,24 @@ const Admin = (props) => {
 		if (newValue === 6) {
 			console.log("Should get apps for categories.")
 		}
+
+		const views = {
+			0: "organization",
+			1: "users",
+			2: "app_auth",
+			3: "environments",
+			4: "schedules",
+			5: "categories",
+		}
+
+		//var theURL = window.location.pathname
+		//FIXME: Add url edits
+		//var theURL = window.location
+		//theURL.replace(`/${views[curTab]}`, `/${views[newValue]}`)
+		//window.history.pushState({"html":response.html,"pageTitle":response.pageTitle},"", urlPath);
+
+		//console.log(newpath)
+		//window.location.pathame = newpath
 
 		setModalUser({})
 		setCurTab(newValue)

@@ -72,7 +72,9 @@ var gceProject = "shuffle"
 var bucketName = "shuffler.appspot.com"
 var baseAppPath = "/home/frikky/git/shaffuru/tmp/apps"
 var baseDockerName = "frikky/shuffle"
-var syncUrl = "http://192.168.3.6:5002"
+
+//var syncUrl = "http://192.168.102.54:5002"
+var syncUrl = "http://localhost:5002"
 
 var dbclient *datastore.Client
 
@@ -2825,6 +2827,11 @@ func fixUserOrg(ctx context.Context, user *User) *User {
 		}
 
 		if userFound {
+			user.PrivateApps = []WorkflowApp{}
+			user.Executions = ExecutionInfo{}
+			user.Limits = UserLimits{}
+			user.Authentication = []UserAuth{}
+
 			org.Users[orgIndex] = *user
 		} else {
 			org.Users = append(org.Users, *user)
@@ -7500,6 +7507,123 @@ func handleStopCloudSync(syncUrl string, org Org) error {
 	return nil
 }
 
+func handleEditOrg(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	user, err := handleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("Api authentication failed in cloud setup: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Role != "admin" {
+		log.Printf("Not admin.")
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Not admin"}`))
+		return
+	}
+
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Failed reading body"}`))
+		return
+	}
+
+	type ReturnData struct {
+		Image       string `json:"image" datastore:"image"`
+		Name        string `json:"name" datastore:"name"`
+		Description string `json:"description" datastore:"description"`
+		OrgId       string `json:"org_id" datastore:"org_id"`
+	}
+
+	var tmpData ReturnData
+	err = json.Unmarshal(body, &tmpData)
+	if err != nil {
+		log.Printf("Failed unmarshalling test: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	var fileId string
+	location := strings.Split(request.URL.String(), "/")
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			log.Printf("Path too short: %d", len(location))
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		fileId = location[4]
+	}
+
+	if tmpData.OrgId != user.ActiveOrg.Id || fileId != user.ActiveOrg.Id {
+		log.Printf("User can't edit the org")
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "No permission to edit this org"}`))
+		return
+	}
+
+	ctx := context.Background()
+	org, err := getOrg(ctx, tmpData.OrgId)
+	if err != nil {
+		log.Printf("Organization doesn't exist: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	admin := false
+	userFound := false
+	for _, inneruser := range org.Users {
+		if inneruser.Id == user.Id {
+			userFound = true
+			if inneruser.Role == "admin" {
+				admin = true
+			}
+
+			break
+		}
+	}
+
+	if !userFound {
+		log.Printf("User %s doesn't exist in organization for edit %s", user.Id, org.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if !admin {
+		log.Printf("User %s doesn't have edit rights to %s", user.Id, org.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	org.Image = tmpData.Image
+	org.Name = tmpData.Name
+	org.Description = tmpData.Description
+	//log.Printf("Org: %#v", org)
+	err = setOrg(ctx, *org, org.Id)
+	if err != nil {
+		log.Printf("User %s doesn't have edit rights to %s", user.Id, org.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Successfully updated org"}`)))
+
+}
+
 // INFO: https://docs.google.com/drawings/d/1JJebpPeEVEbmH_qsAC6zf9Noygp7PytvesrkhE19QrY/edit
 /*
 	This is here to both enable and disable cloud sync features for an organization
@@ -8023,6 +8147,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/cloud/setup", handleCloudSetup).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs", handleGetOrgs).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}", handleGetOrg).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}", handleEditOrg).Methods("POST", "OPTIONS")
 	//r.HandleFunc("/api/v1/orgs/{orgId}", handleEditOrg).Methods("POST", "OPTIONS")
 
 	// Important for email, IDS etc. Create this by:

@@ -81,6 +81,7 @@ type SyncFeatures struct {
 
 type SyncData struct {
 	Active      bool   `json:"active" datastore:"active"`
+	Type        string `json:"type" datastore:"type"`
 	Name        string `json:"name" datastore:"name"`
 	Description string `json:"description" datastore:"description"`
 	Limit       int64  `json:"limit" datastore:"limit"`
@@ -95,7 +96,7 @@ type SyncConfig struct {
 type Org struct {
 	Name         string       `json:"name" datastore:"name"`
 	Description  string       `json:"description" datastore:"description"`
-	Image        string       `json:"image" datastore:"image"`
+	Image        string       `json:"image" datastore:"image,noindex"`
 	Id           string       `json:"id" datastore:"id"`
 	Org          string       `json:"org" datastore:"org"`
 	Users        []User       `json:"users" datastore:"users"`
