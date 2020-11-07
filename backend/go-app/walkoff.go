@@ -318,6 +318,7 @@ type Schedule struct {
 	ExecutionArgument string `json:"execution_argument" datastore:"execution_argument,noindex"`
 	Id                string `json:"id" datastore:"id"`
 	OrgId             string `json:"org_id" datastore:"org_id"`
+	Environment       string `json:"environment" datastore:"environment"`
 }
 
 type Workflow struct {
@@ -3302,6 +3303,45 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 	if len(parsedBody) > 0 {
 		if string(parsedBody[0]) == `"` && string(parsedBody[len(parsedBody)-1]) == "\"" {
 			parsedBody = parsedBody[1 : len(parsedBody)-1]
+		}
+	}
+
+	if schedule.Environment == "cloud" {
+		log.Printf("[INFO] Should START a cloud schedule for workflow %s with schedule ID %s", workflow.ID, schedule.Id)
+		// https://shuffler.io/v1/hooks/webhook_80184973-3e82-4852-842e-0290f7f34d7c
+		org, err := getOrg(ctx, user.ActiveOrg.Id)
+		if err != nil {
+			log.Printf("Failed finding org %s: %s", org.Id, err)
+			return
+		}
+
+		// 1 = scheduleId
+		// 2 = schedule (cron, frequency)
+		// 3 = workflowId
+		// 4 = execution argument
+		action := CloudSyncJob{
+			Type:          "schedule",
+			Action:        "start",
+			OrgId:         org.Id,
+			PrimaryItemId: schedule.Id,
+			SecondaryItem: schedule.Frequency,
+			ThirdItem:     workflow.ID,
+			FourthItem:    schedule.ExecutionArgument,
+		}
+
+		log.Printf("Action: %#v", action)
+
+		err = executeCloudAction(action, org.SyncConfig.Apikey)
+		if err != nil {
+			log.Printf("Failed cloud action START schedule", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+			return
+		} else {
+			log.Printf("Successfully set up cloud action schedule")
+			resp.WriteHeader(200)
+			resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Done"}`)))
+			return
 		}
 	}
 

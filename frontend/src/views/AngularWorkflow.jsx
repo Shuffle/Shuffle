@@ -1582,6 +1582,7 @@ const AngularWorkflow = (props) => {
 			"name": trigger.name,
 			"frequency": workflow.triggers[triggerindex].parameters[0].value,
 			"execution_argument": workflow.triggers[triggerindex].parameters[1].value,
+			"environment": workflow.triggers[triggerindex].environment,
 			"id": trigger.id,
 		}
 
@@ -1920,9 +1921,9 @@ const AngularWorkflow = (props) => {
 			"description": "Wait for user input",
 			"trigger_type": "USERINPUT",
 			"errors": null,
-			"is_valid": cloudSyncEnabled,
+			"is_valid": true,
 			"label": "User input",
-			"environment": environments[defaultEnvironmentIndex] === undefined ? {} : environments[defaultEnvironmentIndex].Name,
+			"environment": "onprem",
 			"long_description": "Take user input to continue execution",
 		}, 
 		{
@@ -1933,9 +1934,9 @@ const AngularWorkflow = (props) => {
 			"trigger_type": "SCHEDULE",
 			"errors": null,
 			"large_image": "data:image/png;base64,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",
-			"is_valid": true,
 			"label": "Schedule",
-			"environment": environments[defaultEnvironmentIndex] === undefined ? {} : environments[defaultEnvironmentIndex].Name,
+			"is_valid": true,
+			"environment": "onprem",
 			"long_description": "Create a schedule based on cron",
 		},
 		{
@@ -5020,27 +5021,59 @@ const AngularWorkflow = (props) => {
 						placeholder={selectedTrigger.label}
 						onChange={selectedTriggerChange}
 					/>
+					{showEnvironment ? 
+						<div style={{marginTop: "20px"}}>
+							<Typography>
+								Environment
+							</Typography>
+							<Select
+								value={selectedTrigger.environment}
+								disabled={selectedTrigger.status === "running"}
+								SelectDisplayProps={{
+									style: {
+										marginLeft: 10,
 
-					<div style={{marginTop: "20px"}}>
-						Environment:
-						<TextField
-							style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
-							InputProps={{
-								style:{
-									color: "white",
-									marginLeft: "5px",
-									maxWidth: "95%",
-									height: "50px", 
-									fontSize: "1em",
-								},
-							}}
-							required
-							disabled
-							fullWidth
-							color="primary"
-							value={selectedTrigger.environment}
-						/>
-					</div>
+									}
+								}}
+								fullWidth
+								onChange={(e) => {
+									selectedTrigger.environment = e.target.value
+									setSelectedTrigger(selectedTrigger)
+									if (e.target.value === "cloud") {
+										console.log("Set cloud config")
+										workflow.triggers[selectedTriggerIndex].parameters[0].value = "*/2 * * * *" 
+
+										//var tmpvalue = workflow.triggers[selectedTriggerIndex].parameters[0].value.split("/")
+										//const urlpath = tmpvalue.slice(3, tmpvalue.length)
+										//const newurl = "https://shuffler.io/"+urlpath.join("/")
+										//workflow.triggers[selectedTriggerIndex].parameters[0].value = newurl
+									} else {
+										console.log("Set cloud config")
+										//var tmpvalue = workflow.triggers[selectedTriggerIndex].parameters[0].value.split("/")
+										//const urlpath = tmpvalue.slice(3, tmpvalue.length)
+										//const newurl = window.location.origin+"/"+urlpath.join("/")
+										workflow.triggers[selectedTriggerIndex].parameters[0].value = "120" 
+									}
+
+									setWorkflow(workflow)
+									setUpdate(Math.random())
+								}}
+								style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+							>
+								{triggerEnvironments.map(data => {
+									if (data.archived) {
+										return null
+									}
+									
+									return (
+										<MenuItem key={data} style={{backgroundColor: inputColor, color: "white"}} value={data}>
+											{data}
+										</MenuItem>
+									)
+								})}
+							</Select>
+						</div>
+						: null}
 					<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 					<div style={{flex: "6", marginTop: "20px"}}>
 						<div>

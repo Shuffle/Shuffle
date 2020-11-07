@@ -117,7 +117,7 @@ const App = (message, props) => {
 	// Dumb for content load (per now), but good for making the site not suddenly reload parts (ajax thingies)
 
 	const options = {
-		timeout: 5000,
+		timeout: 9000,
 		position: positions.BOTTOM_LEFT,
 	};
 

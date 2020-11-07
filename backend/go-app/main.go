@@ -279,6 +279,7 @@ type ScheduleOld struct {
 	CreationTime         int64        `json:"creationtime" datastore:"creationtime,noindex"`
 	LastModificationtime int64        `json:"lastmodificationtime" datastore:"lastmodificationtime,noindex"`
 	LastRuntime          int64        `json:"lastruntime" datastore:"lastruntime,noindex"`
+	Frequency            string       `json:"frequency" datastore:"frequency,noindex"`
 }
 
 // Returned from /GET /schedules
@@ -3695,7 +3696,7 @@ func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 
 		err = executeCloudAction(action, org.SyncConfig.Apikey)
 		if err != nil {
-			log.Printf("Failed cloud action START execution", err)
+			log.Printf("Failed cloud action START execution: %s", err)
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 			return
