@@ -3586,7 +3586,7 @@ func executeCloudAction(action CloudSyncJob, apikey string) error {
 	}
 
 	if !responseData.Success {
-		return errors.New(fmt.Sprintf("Error from Shuffler: %s", responseData.Reason))
+		return errors.New(fmt.Sprintf("Cloud error from Shuffler: %s", responseData.Reason))
 	}
 
 	return nil
