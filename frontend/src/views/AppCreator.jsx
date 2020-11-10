@@ -1569,7 +1569,7 @@ const AppCreator = (props) => {
 						required
 						style={{flex: "1", marginRight: "15px", marginTop: "5px", backgroundColor: inputColor}}
 						fullWidth={true}
-						placeholder={"Accept application/json\r\nContent-Type application/json"}
+						placeholder={"Accept: application/json\r\nContent-Type: application/json"}
 						margin="normal"
 						variant="outlined"
 						id="standard-required"
@@ -1577,7 +1577,7 @@ const AppCreator = (props) => {
 						multiline
 						rows="5"
 						onChange={e => setActionField("headers", e.target.value)}
-						helperText={<span style={{color:"white", marginBottom: "2px",}}>Headers that are part of the request</span>}
+						helperText={<span style={{color:"white", marginBottom: "2px",}}>Headers that are part of the request. Default: EMPTY</span>}
 						InputProps={{
 							classes: {
 								notchedOutline: classes.notchedOutline,
