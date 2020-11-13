@@ -796,6 +796,7 @@ const AngularWorkflow = (props) => {
 		"Testing",
 		"Http",
 	]
+
 	const getAppAuthentication = () => {
 		fetch(globalUrl+"/api/v1/apps/authentication", {
 			method: 'GET',
@@ -4860,6 +4861,9 @@ const AngularWorkflow = (props) => {
 
 				// email,sms,app ...
 				workflow.triggers[selectedTriggerIndex].parameters[2] = {"name": "type", "value": "email"}
+
+				workflow.triggers[selectedTriggerIndex].parameters[3] = {"name": "email", "value": "test@test.com"}
+				workflow.triggers[selectedTriggerIndex].parameters[4] = {"name": "sms", "value": "0000000"}
 				setWorkflow(workflow)
 			}
 
@@ -4868,7 +4872,7 @@ const AngularWorkflow = (props) => {
 					<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 						<div style={{flex: "1"}}>
 							<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}: {selectedTrigger.status}</h3>
-							<a href="https://shuffler.io/docs/triggers#user_input" style={{textDecoration: "none", color: "#f85a3e"}}>What are user inputs?</a>
+							<a href="https://shuffler.io/docs/triggers#user_input" style={{textDecoration: "none", color: "#f85a3e"}}>What is the user input trigger?</a>
 						</div>
 					</div>
 					<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -4949,33 +4953,79 @@ const AngularWorkflow = (props) => {
 							</div>
 						</div>
 						<FormGroup style={{paddingLeft: 10, backgroundColor: inputColor}} row>
-						  	<FormControlLabel
-						  	  control={
-										<Checkbox 
-											checked={workflow.triggers[selectedTriggerIndex].parameters[2] !== undefined && workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("email")} 
-											onChange={() => {
-												setTriggerOptionsWrapper("email")
-											}} 
-											color="primary"
-											value="email" 
-										/>
-						  		}
-						  	  label={<div style={{color: "white"}}>Email</div>}
-						  	/>
-						  	<FormControlLabel
-						  	  control={
-										<Checkbox 
-											checked={workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("sms")} 
-											onChange={() => {
-												setTriggerOptionsWrapper("sms")
-											}} 
-											color="primary"
-											value="sms" 
-										/>
-									}
-									label={<div style={{color: "white"}}>SMS</div>}
-						  	/>
+							<FormControlLabel
+								control={
+									<Checkbox 
+										checked={workflow.triggers[selectedTriggerIndex].parameters[2] !== undefined && workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("email")} 
+										onChange={() => {
+											setTriggerOptionsWrapper("email")
+										}} 
+										color="primary"
+										value="email" 
+									/>
+								}
+								label={<div style={{color: "white"}}>Email</div>}
+							/>
+							<FormControlLabel
+								control={
+									<Checkbox 
+										checked={workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("sms")} 
+										onChange={() => {
+											setTriggerOptionsWrapper("sms")
+										}} 
+										color="primary"
+										value="sms" 
+									/>
+								}
+								label={<div style={{color: "white"}}>SMS</div>}
+							/>
 						</FormGroup>
+						{workflow.triggers[selectedTriggerIndex].parameters[2] !== undefined && workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("email") ?
+							<TextField
+								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+								InputProps={{
+									style:{
+										color: "white",
+										marginLeft: "5px",
+										maxWidth: "95%",
+										height: "50px", 
+										fontSize: "1em",
+									},
+								}}
+								fullWidth
+								color="primary"
+								placeholder={"mail1@company.com,mail2@company.com"}
+								onChange={(event) => {
+									workflow.triggers[selectedTriggerIndex].parameters[3].value = event.target.value
+									setWorkflow(workflow)
+									setUpdate(Math.random())
+								}}
+							/>
+							: null
+						}
+						{workflow.triggers[selectedTriggerIndex].parameters[2] !== undefined && workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("sms") ?
+							<TextField
+								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+								InputProps={{
+									style:{
+										color: "white",
+										marginLeft: "5px",
+										maxWidth: "95%",
+										height: "50px", 
+										fontSize: "1em",
+									},
+								}}
+								fullWidth
+								color="primary"
+								placeholder={"+474823212,+460203042"}
+								onChange={(event) => {
+									workflow.triggers[selectedTriggerIndex].parameters[4].value = event.target.value
+									setWorkflow(workflow)
+									setUpdate(Math.random())
+								}}
+							/>
+							: null
+						}
 					</div>
 				</div> 
 			)
@@ -5996,7 +6046,9 @@ const AngularWorkflow = (props) => {
 			setNewAppAuth(newAuthOption)
 			appAuthentication.push(newAuthOption)
 			setAppAuthentication(appAuthentication)
+			getAppAuthentication() 
 			setUpdate(authenticationOption.id)
+
 		}
 
 		return (

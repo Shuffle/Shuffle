@@ -85,6 +85,8 @@ type SyncData struct {
 	Name        string `json:"name" datastore:"name"`
 	Description string `json:"description" datastore:"description"`
 	Limit       int64  `json:"limit" datastore:"limit"`
+	StartDate   int64  `json:"start_date" datastore:"start_date"`
+	EndDate     int64  `json:"end_date" datastore:"end_date"`
 }
 
 type SyncConfig struct {
@@ -354,6 +356,7 @@ type Workflow struct {
 		Name        string `json:"name" datastore:"name"`
 		Value       string `json:"value" datastore:"value,noindex"`
 	} `json:"execution_variables,omitempty" datastore:"execution_variables"`
+	ExecutionEnvironment string `json:"execution_environment" datastore:"execution_environment"`
 }
 
 type ActionResult struct {
@@ -572,6 +575,7 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 		LastModificationtime: timeNow,
 		LastRuntime:          timeNow,
 		Org:                  orgId,
+		Environment:          "onprem",
 	}
 
 	err = setSchedule(ctx, schedule)
@@ -1461,7 +1465,27 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("Has %d actions already", len(newActions))
 	}
 
+	for _, item := range workflow.Actions {
+		item.ID = uuid.NewV4().String()
+		newActions = append(newActions, item)
+	}
+
+	newTriggers := []Trigger{}
+	for _, item := range workflow.Triggers {
+		item.Status = "uninitialized"
+		item.ID = uuid.NewV4().String()
+		newTriggers = append(newTriggers, item)
+	}
+
+	newSchedules := []Schedule{}
+	for _, item := range workflow.Schedules {
+		item.Id = uuid.NewV4().String()
+		newSchedules = append(newSchedules, item)
+	}
+
 	workflow.Actions = newActions
+	workflow.Triggers = newTriggers
+	workflow.Schedules = newSchedules
 	workflow.IsValid = true
 	workflow.Configuration.ExitOnError = false
 
@@ -3025,10 +3049,61 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	schedule, err := getSchedule(ctx, scheduleId)
+	if err != nil {
+		log.Printf("Failed finding schedule %s", scheduleId)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	log.Printf("Schedule: %#v", schedule)
+
+	if schedule.Environment == "cloud" {
+		log.Printf("[INFO] Should STOP a cloud schedule for workflow %s with schedule ID %s", fileId, scheduleId)
+		// https://shuffler.io/v1/hooks/webhook_80184973-3e82-4852-842e-0290f7f34d7c
+		org, err := getOrg(ctx, user.ActiveOrg.Id)
+		if err != nil {
+			log.Printf("Failed finding org %s: %s", org.Id, err)
+			return
+		}
+
+		// 1. Send request to cloud
+		// 2. Remove schedule if success
+		action := CloudSyncJob{
+			Type:          "schedule",
+			Action:        "stop",
+			OrgId:         org.Id,
+			PrimaryItemId: scheduleId,
+			SecondaryItem: schedule.Frequency,
+			ThirdItem:     workflow.ID,
+		}
+
+		err = executeCloudAction(action, org.SyncConfig.Apikey)
+		if err != nil {
+			log.Printf("Failed cloud action STOP schedule", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+			return
+		} else {
+			log.Printf("Successfully ran cloud action STOP schedule")
+			err = DeleteKey(ctx, "schedules", scheduleId)
+			if err != nil {
+				log.Printf("Failed deleting cloud schedule onprem..")
+				resp.WriteHeader(401)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed deleting cloud schedule"}`)))
+				return
+			}
+
+			resp.WriteHeader(200)
+			resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+			return
+		}
+	}
+
 	err = deleteSchedule(ctx, scheduleId)
 	if err != nil {
 		log.Printf("Failed deleting schedule: %s", err)
-
 		if strings.Contains(err.Error(), "Job not found") {
 			resp.WriteHeader(200)
 			resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
@@ -3329,8 +3404,30 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 			FourthItem:    schedule.ExecutionArgument,
 		}
 
-		log.Printf("Action: %#v", action)
+		timeNow := int64(time.Now().Unix())
+		newSchedule := ScheduleOld{
+			Id:                   schedule.Id,
+			WorkflowId:           workflow.ID,
+			StartNode:            startNode,
+			Argument:             string(schedule.ExecutionArgument),
+			WrappedArgument:      parsedBody,
+			CreationTime:         timeNow,
+			LastModificationtime: timeNow,
+			LastRuntime:          timeNow,
+			Org:                  org.Id,
+			Frequency:            schedule.Frequency,
+			Environment:          "cloud",
+		}
 
+		err = setSchedule(ctx, newSchedule)
+		if err != nil {
+			log.Printf("Failed setting cloud schedule: returning", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+			return
+		}
+
+		log.Printf("Action: %#v", action)
 		err = executeCloudAction(action, org.SyncConfig.Apikey)
 		if err != nil {
 			log.Printf("Failed cloud action START schedule", err)

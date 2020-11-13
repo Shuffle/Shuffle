@@ -280,6 +280,7 @@ type ScheduleOld struct {
 	LastModificationtime int64        `json:"lastmodificationtime" datastore:"lastmodificationtime,noindex"`
 	LastRuntime          int64        `json:"lastruntime" datastore:"lastruntime,noindex"`
 	Frequency            string       `json:"frequency" datastore:"frequency,noindex"`
+	Environment          string       `json:"environment" datastore:"environment"`
 }
 
 // Returned from /GET /schedules
@@ -1184,6 +1185,7 @@ func createNewUser(username, password, role, apikey string, org Org) error {
 	}
 
 	neworg, err := getOrg(ctx, org.Id)
+	log.Printf("Users: %d", len(org.Users))
 	if err == nil {
 		log.Printf("Updating org %s with user %s", org.Name, newUser.Username)
 		neworg.Users = append(org.Users, *newUser)
@@ -2817,6 +2819,8 @@ func fixUserOrg(ctx context.Context, user *User) *User {
 			continue
 		}
 
+		log.Printf("Org users: %d", len(org.Users))
+
 		orgIndex := 0
 		userFound := false
 		for index, orgUser := range org.Users {
@@ -2838,6 +2842,7 @@ func fixUserOrg(ctx context.Context, user *User) *User {
 			org.Users = append(org.Users, *user)
 		}
 
+		log.Printf("Users 2: %d", len(org.Users))
 		err = setOrg(ctx, *org, orgId)
 		if err != nil {
 			log.Printf("Failed setting org %s", orgId)
@@ -7190,6 +7195,12 @@ func runInit(ctx context.Context) {
 					continue
 				}
 
+				log.Printf("ENV: %s", item.Environment)
+				if item.Environment == "cloud" {
+					log.Printf("Skipping cloud schedule")
+					continue
+				}
+
 				item.Org = activeOrgs[0].Id
 				err = setSchedule(ctx, item)
 				if err != nil {
@@ -7241,6 +7252,11 @@ func runInit(ctx context.Context) {
 	} else {
 		log.Printf("Setting up %d schedule(s)", len(schedules))
 		for _, schedule := range schedules {
+			if schedule.Environment == "cloud" {
+				log.Printf("Skipping cloud schedule")
+				continue
+			}
+
 			//log.Printf("Schedule: %#v", schedule)
 			job := func() {
 				request := &http.Request{
@@ -8146,6 +8162,8 @@ func initHandlers() {
 
 	// NEW for 0.8.0
 	r.HandleFunc("/api/v1/cloud/setup", handleCloudSetup).Methods("POST", "OPTIONS")
+
+	// Orgs
 	r.HandleFunc("/api/v1/orgs", handleGetOrgs).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}", handleGetOrg).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}", handleEditOrg).Methods("POST", "OPTIONS")
