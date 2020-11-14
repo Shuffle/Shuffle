@@ -1924,7 +1924,7 @@ const AngularWorkflow = (props) => {
 			"errors": null,
 			"is_valid": true,
 			"label": "User input",
-			"environment": "onprem",
+			"environment": "cloud",
 			"long_description": "Take user input to continue execution",
 		}, 
 		{
@@ -4995,7 +4995,8 @@ const AngularWorkflow = (props) => {
 								fullWidth
 								color="primary"
 								placeholder={"mail1@company.com,mail2@company.com"}
-								onChange={(event) => {
+								defaultValue={workflow.triggers[selectedTriggerIndex].parameters[3].value}
+								onBlur={(event) => {
 									workflow.triggers[selectedTriggerIndex].parameters[3].value = event.target.value
 									setWorkflow(workflow)
 									setUpdate(Math.random())
@@ -5018,7 +5019,8 @@ const AngularWorkflow = (props) => {
 								fullWidth
 								color="primary"
 								placeholder={"+474823212,+460203042"}
-								onChange={(event) => {
+								defaultValue={workflow.triggers[selectedTriggerIndex].parameters[4].value}
+								onBlur={(event) => {
 									workflow.triggers[selectedTriggerIndex].parameters[4].value = event.target.value
 									setWorkflow(workflow)
 									setUpdate(Math.random())

@@ -1817,6 +1817,108 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 			} else if hook.Id == "" {
 				trigger.Status = "stopped"
 			}
+		} else if trigger.TriggerType == "USERINPUT" {
+			// E.g. check email
+			sms := ""
+			email := ""
+			triggerType := ""
+			triggerInformation := ""
+			for _, item := range trigger.Parameters {
+				if item.Name == "alertinfo" {
+					triggerInformation = item.Value
+				} else if item.Name == "type" {
+					triggerType = item.Value
+				} else if item.Name == "email" {
+					email = item.Value
+				} else if item.Name == "sms" {
+					sms = item.Value
+				}
+			}
+
+			// FIXME: This is not the right time to send them, BUT it's well served for testing. Save -> send email / sms
+			if strings.Contains(triggerType, "email") {
+				if email == "test@test.com" {
+					log.Printf("Email isn't specified during save.")
+					resp.WriteHeader(401)
+					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Email field in user input can't be empty"}`)))
+					return
+				}
+
+				// triggerid, start node, workflowid, argument
+				/*
+					startNode := ""
+					referenceExecutionId := ""
+					action := CloudSyncJob{
+						Type:          "user_input",
+						Action:        "send_email",
+						OrgId:         user.ActiveOrg.Id,
+						PrimaryItemId: workflow.ID,
+						SecondaryItem: startNode,
+						ThirdItem:     triggerInformation,
+						FourthItem:    email,
+						FifthItem:     referenceExecutionId,
+					}
+
+					org, err := getOrg(ctx, user.ActiveOrg.Id)
+					if err != nil {
+						log.Printf("Failed email send to cloud", err)
+						resp.WriteHeader(401)
+						resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+						return
+					}
+
+					err = executeCloudAction(action, org.SyncConfig.Apikey)
+					if err != nil {
+						log.Printf("Failed email send to cloud", err)
+						resp.WriteHeader(401)
+						resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+						return
+					}
+				*/
+
+				log.Printf("Should send email to %s during execution.", email)
+			}
+			if strings.Contains(triggerType, "sms") {
+				if sms == "0000000" {
+					log.Printf("Email isn't specified during save.")
+					resp.WriteHeader(401)
+					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "SMS field in user input can't be empty"}`)))
+					return
+				}
+
+				/*
+					startNode := ""
+					referenceExecutionId := ""
+					action := CloudSyncJob{
+						Type:          "user_input",
+						Action:        "send_sms",
+						OrgId:         user.ActiveOrg.Id,
+						PrimaryItemId: workflow.ID,
+						SecondaryItem: startNode,
+						ThirdItem:     triggerInformation,
+						FourthItem:    sms,
+						FifthItem:     referenceExecutionId,
+					}
+
+					org, err := getOrg(ctx, user.ActiveOrg.Id)
+					if err != nil {
+						log.Printf("Failed email send to cloud", err)
+						resp.WriteHeader(401)
+						resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+						return
+					}
+
+					err = executeCloudAction(action, org.SyncConfig.Apikey)
+					if err != nil {
+						log.Printf("Failed email send to cloud", err)
+						resp.WriteHeader(401)
+						resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+						return
+					}
+				*/
+
+				log.Printf("Should send SMS to %s during execution.", sms)
+			}
 		}
 
 		//log.Println("TRIGGERS")

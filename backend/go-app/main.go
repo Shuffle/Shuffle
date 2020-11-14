@@ -6644,6 +6644,7 @@ type CloudSyncJob struct {
 	SecondaryItem string `json:"secondary_item" datastore:"secondary_item"`
 	ThirdItem     string `json:"third_item" datastore:"third_item"`
 	FourthItem    string `json:"fourth_item" datastore:"fourth_item"`
+	FifthItem     string `json:"fifth_item" datastore:"fifth_item"`
 	Created       string `json:"created" datastore:"created"`
 }
 
@@ -7231,7 +7232,7 @@ func runInit(ctx context.Context) {
 		job := func() {
 			err := remoteOrgJobHandler(org, interval)
 			if err != nil {
-				log.Printf("Failed request with remote org setup (2): %s", err)
+				log.Printf("[ERROR] Failed request with remote org setup (2): %s", err)
 			}
 		}
 
@@ -7844,7 +7845,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	job := func() {
 		err := remoteOrgJobHandler(*org, interval)
 		if err != nil {
-			log.Printf("Failed request with remote org setup (1): %s", err)
+			log.Printf("[ERROR] Failed request with remote org setup (1): %s", err)
 		}
 	}
 
