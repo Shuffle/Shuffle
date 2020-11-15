@@ -68,15 +68,19 @@ type ExecutionRequest struct {
 }
 
 type SyncFeatures struct {
-	Webhook        SyncData `json:"webhook" datastore:"webhook"`
-	Schedule       SyncData `json:"schedule" datastore:"schedule"`
-	UserInput      SyncData `json:"user_input" datastore:"user_input"`
-	EmailTrigger   SyncData `json:"email_trigger" datastore:"email_trigger"`
-	Apps           SyncData `json:"apps" datastore:"apps"`
-	Workflows      SyncData `json:"workflows" datastore:"workflows"`
-	Schedules      SyncData `json:"schedules" datastore:"schedules"`
-	Autocomplete   SyncData `json:"autocomplete" datastore:"autocomplete"`
-	Authentication SyncData `json:"authentication" datastore:"authentication"`
+	Webhook            SyncData `json:"webhook" datastore:"webhook"`
+	Schedules          SyncData `json:"schedules" datastore:"schedules"`
+	UserInput          SyncData `json:"user_input" datastore:"user_input"`
+	SendMail           SyncData `json:"send_mail" datastore:"send_mail"`
+	SendSms            SyncData `json:"send_sms" datastore:"send_sms"`
+	EmailTrigger       SyncData `json:"email_trigger" datastore:"email_trigger"`
+	AppExecutions      SyncData `json:"app_executions" datastore:"app_executions"`
+	WorkflowExecutions SyncData `json:"workflow_executions" datastore:"workflow_executions"`
+	Apps               SyncData `json:"apps" datastore:"apps"`
+	Workflows          SyncData `json:"workflows" datastore:"workflows"`
+	Autocomplete       SyncData `json:"autocomplete" datastore:"autocomplete"`
+	Authentication     SyncData `json:"authentication" datastore:"authentication"`
+	Schedule           SyncData `json:"schedule" datastore:"schedule"`
 }
 
 type SyncData struct {
@@ -1836,6 +1840,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 			}
 
 			// FIXME: This is not the right time to send them, BUT it's well served for testing. Save -> send email / sms
+			_ = triggerInformation
 			if strings.Contains(triggerType, "email") {
 				if email == "test@test.com" {
 					log.Printf("Email isn't specified during save.")

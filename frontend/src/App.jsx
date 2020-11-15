@@ -100,7 +100,7 @@ const App = (message, props) => {
 				//console.log(responseJson.success)
 				setUserData(responseJson)
 				setIsLoggedIn(true)
-				console.log("Cookies: ", cookies)
+				//console.log("Cookies: ", cookies)
 
 				// Updating cookie every request
 				for (var key in responseJson["cookies"]) {

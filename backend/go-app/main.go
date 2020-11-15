@@ -74,7 +74,8 @@ var baseAppPath = "/home/frikky/git/shaffuru/tmp/apps"
 var baseDockerName = "frikky/shuffle"
 
 //var syncUrl = "http://192.168.102.54:5002"
-var syncUrl = "http://localhost:5002"
+//var syncUrl = "http://localhost:5002"
+var syncUrl = "https://shuffler.io"
 
 var dbclient *datastore.Client
 
