@@ -478,7 +478,7 @@ const AngularWorkflow = (props) => {
 			}
 		}
 
-		if (responseJson.status === "ABORTED" || responseJson.status === "STOPPED" || responseJson.status === "FAILURE") {
+		if (responseJson.status === "ABORTED" || responseJson.status === "STOPPED" || responseJson.status === "FAILURE" || responseJson.status == "WAITING") {
 			stop()
 
 			setExecutionRunning(false)
@@ -5195,12 +5195,12 @@ const AngularWorkflow = (props) => {
 							/>
 							<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
-								<Button style={{flex: "1",}} disabled={selectedTrigger.status === "running"} onClick={() => {
+								<Button style={{flex: "1",}} variant="contained" disabled={selectedTrigger.status === "running"} onClick={() => {
 									submitSchedule(selectedTrigger, selectedTriggerIndex)
 								}} color="primary">
 	    		    	    		Start	
 	    		    	  		</Button>
-								<Button style={{flex: "1",}} disabled={selectedTrigger.status !== "running"} onClick={() => {
+								<Button style={{flex: "1",}} variant="contained" disabled={selectedTrigger.status !== "running"} onClick={() => {
 									stopSchedule(selectedTrigger, selectedTriggerIndex)
 								}} color="primary">
 	    		    	    		Stop	
@@ -5680,7 +5680,7 @@ const AngularWorkflow = (props) => {
 
 						<b>Actions</b>
 						<div>
-							{executionData.status !== undefined && executionData.status !== "ABORTED" && executionData.status !== "FINISHED" && executionData.status !== "FAILURE" ? <CircularProgress style={{marginLeft: 20}}/> : null}
+							{executionData.status !== undefined && executionData.status !== "ABORTED" && executionData.status !== "FINISHED" && executionData.status !== "FAILURE" && executionData.status !== "WAITING" ? <CircularProgress style={{marginLeft: 20}}/> : null}
 						</div>
 					</div>
 					{executionData.results === undefined || executionData.results === null || executionData.results.length === 0 && executionData.status === "EXECUTING" ?
@@ -5719,7 +5719,7 @@ const AngularWorkflow = (props) => {
 							const statusColor = data.status === "FINISHED" || data.status === "SUCCESS" ? "green" : data.status === "ABORTED" || data.status === "FAILURE" ? "red" : "orange"
 							const actionimg = curapp === null ? 
 								null :
-								<img alt={data.action.app_name} src={curapp.large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />
+								<img alt={data.action.app_name} src={curapp === undefined ? "" : curapp.large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />
 
 							return (
 								<div key={index} style={{marginBottom: 40,}}>

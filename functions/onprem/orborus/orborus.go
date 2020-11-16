@@ -145,7 +145,21 @@ func deployWorker(image string, identifier string, env []string) {
 
 	if err != nil {
 		log.Printf("[ERROR] Container create error: %s", err)
-		return
+
+		identifier := fmt.Sprintf("%s-new", identifier)
+		cont, err = dockercli.ContainerCreate(
+			context.Background(),
+			config,
+			hostConfig,
+			nil,
+			nil,
+			identifier,
+		)
+
+		if err != nil {
+			log.Printf("[ERROR] Container create error(2): %s", err)
+			return
+		}
 	}
 
 	err = dockercli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})

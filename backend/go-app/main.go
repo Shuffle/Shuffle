@@ -74,8 +74,9 @@ var baseAppPath = "/home/frikky/git/shaffuru/tmp/apps"
 var baseDockerName = "frikky/shuffle"
 
 //var syncUrl = "http://192.168.102.54:5002"
-//var syncUrl = "http://localhost:5002"
 var syncUrl = "https://shuffler.io"
+
+//var syncUrl = "http://localhost:5002"
 
 var dbclient *datastore.Client
 
@@ -3682,9 +3683,10 @@ func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 
 	// Let remote endpoint handle access checks (shuffler.io)
 	currentUrl := fmt.Sprintf("https://shuffler.io/api/v1/hooks/webhook_%s", newId)
+	startNode := requestdata.Start
 	if requestdata.Environment == "cloud" {
-		log.Printf("[INFO] Should START a cloud webhook for url %s", currentUrl)
 		// https://shuffler.io/v1/hooks/webhook_80184973-3e82-4852-842e-0290f7f34d7c
+		log.Printf("[INFO] Should START a cloud webhook for url %s for startnode %s", currentUrl, startNode)
 		org, err := getOrg(ctx, user.ActiveOrg.Id)
 		if err != nil {
 			log.Printf("Failed finding org %s: %s", org.Id, err)
@@ -3696,7 +3698,7 @@ func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 			Action:        "start",
 			OrgId:         org.Id,
 			PrimaryItemId: newId,
-			SecondaryItem: requestdata.Start,
+			SecondaryItem: startNode,
 			ThirdItem:     requestdata.Workflow,
 		}
 
@@ -3713,7 +3715,7 @@ func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 
 	hook := Hook{
 		Id:        newId,
-		Start:     requestdata.Start,
+		Start:     startNode,
 		Workflows: []string{requestdata.Workflow},
 		Info: Info{
 			Name:        requestdata.Name,
@@ -4709,7 +4711,7 @@ Please contact us at shuffler.io or frikky@shuffler.io if there is an issue with
 	}
 
 	resp.WriteHeader(200)
-	resp.Write([]byte("OK"))
+	resp.Write([]byte(`{"success": true}`))
 }
 
 func setBadMemcache(ctx context.Context, path string) {
@@ -5186,7 +5188,7 @@ func handleNewOutlookRegister(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	resp.WriteHeader(200)
-	resp.Write([]byte("OK"))
+	resp.Write([]byte(`{"success": true}`))
 }
 
 type OauthToken struct {
@@ -6657,22 +6659,34 @@ func handleCloudExecutionOnprem(workflowId, startNode, executionSource, executio
 	if err != nil {
 		return err
 	}
+
 	// FIXME: Handle auth
 	_ = workflow
 
-	type execStruct struct {
-		ExecutionSource   string `json:"execution_source"`
-		ExecutionArgument string `json:"execution_argument"`
-		Start             string `json:"start,omitempty"`
-	}
-
-	parsedArgument := strings.Replace(string(executionArgument), "\"", "\\\"", -1)
-	newExec := execStruct{
+	parsedArgument := executionArgument
+	newExec := ExecutionRequest{
 		ExecutionSource:   executionSource,
 		ExecutionArgument: parsedArgument,
 	}
 
-	//bodyWrapper := fmt.Sprintf(`{"execution_source": "%s", "execution_argument": "%s"}`, executionSource, parsedArgument)
+	var execution ExecutionRequest
+	err = json.Unmarshal([]byte(parsedArgument), &execution)
+	if err == nil {
+		log.Printf("FOUND EXEC %#v", execution)
+		if len(execution.ExecutionArgument) > 0 {
+			parsedArgument := strings.Replace(string(execution.ExecutionArgument), "\\\"", "\"", -1)
+			log.Printf("New exec argument: %s", execution.ExecutionArgument)
+
+			if strings.HasPrefix(parsedArgument, "{") && strings.HasSuffix(parsedArgument, "}") {
+				log.Printf("\nData is most likely JSON from %s\n", newExec.ExecutionSource)
+			}
+
+			newExec.ExecutionArgument = parsedArgument
+		}
+	} else {
+		log.Printf("Unmarshal issue: %s", err)
+	}
+
 	if len(startNode) > 0 {
 		newExec.Start = startNode
 	}
@@ -6694,10 +6708,12 @@ func handleCloudExecutionOnprem(workflowId, startNode, executionSource, executio
 }
 
 func handleCloudJob(job CloudSyncJob) error {
+	// May need authentication in all of these..?
+
 	log.Printf("Handle job with type %s and action %s", job.Type, job.Action)
 	if job.Type == "webhook" {
 		if job.Action == "execute" {
-			log.Printf("Should handle webhook for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem)
+			log.Printf("Should handle webhook for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
 			err := handleCloudExecutionOnprem(job.PrimaryItemId, job.SecondaryItem, "webhook", job.ThirdItem)
 			if err != nil {
 				log.Printf("Failed executing workflow from cloud hook: %s", err)
@@ -6728,14 +6744,79 @@ func handleCloudJob(job CloudSyncJob) error {
 		}
 
 	} else if job.Type == "user_input" {
-		if job.Action == "execute" {
-			log.Printf("Should handle user_input for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
-			err := handleCloudExecutionOnprem(job.PrimaryItemId, job.SecondaryItem, "user_input", job.ThirdItem)
+		if job.Action == "continue" {
+			log.Printf("Should handle user_input CONTINUE for workflow %s with start node %s and execution ID %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
+			// FIXME: Handle authorization
+			ctx := context.Background()
+			workflowExecution, err := getWorkflowExecution(ctx, job.ThirdItem)
 			if err != nil {
-				log.Printf("Failed executing workflow from cloud user_input: %s", err)
+				return err
+			}
+
+			if job.PrimaryItemId != workflowExecution.Workflow.ID {
+				return errors.New("Bad workflow ID when stopping execution.")
+			}
+
+			workflowExecution.Status = "EXECUTING"
+			err = setWorkflowExecution(ctx, *workflowExecution)
+			if err != nil {
+				return err
+			}
+
+			fullUrl := fmt.Sprintf("https://shuffler.io/api/v1/workflows/%s/execute?authorization=%s&start=%s&reference_execution=%s&answer=true", job.PrimaryItemId, job.FourthItem, job.SecondaryItem, job.ThirdItem)
+			newRequest, err := http.NewRequest(
+				"GET",
+				fullUrl,
+				nil,
+			)
+			if err != nil {
+				log.Printf("Failed continuing workflow in request builder: %s", err)
+				return err
+			}
+
+			_, _, err = handleExecution(job.PrimaryItemId, Workflow{}, newRequest)
+			if err != nil {
+				log.Printf("Failed continuing workflow from cloud user_input: %s", err)
+				return err
 			} else {
 				log.Printf("Successfully executed workflow from cloud user_input")
 			}
+		} else if job.Action == "stop" {
+			log.Printf("Should handle user_input STOP for workflow %s with start node %s and execution ID %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
+			ctx := context.Background()
+			workflowExecution, err := getWorkflowExecution(ctx, job.ThirdItem)
+			if err != nil {
+				return err
+			}
+
+			if job.PrimaryItemId != workflowExecution.Workflow.ID {
+				return errors.New("Bad workflow ID when stopping execution.")
+			}
+
+			/*
+				if job.FourthItem != workflowExecution.Authorization {
+					return errors.New("Bad authorization when stopping execution.")
+				}
+			*/
+
+			newResults := []ActionResult{}
+			for _, result := range workflowExecution.Results {
+				if result.Action.AppName == "User Input" && result.Result == "Waiting for user feedback based on configuration" {
+					result.Status = "ABORTED"
+					result.Result = "Aborted manually by user."
+				}
+
+				newResults = append(newResults, result)
+			}
+
+			workflowExecution.Results = newResults
+			workflowExecution.Status = "ABORTED"
+			err = setWorkflowExecution(ctx, *workflowExecution)
+			if err != nil {
+				return err
+			}
+
+			log.Printf("Successfully updated user input to aborted.")
 		}
 	} else {
 		log.Printf("No handler for type %s and action %s", job.Type, job.Action)
@@ -6763,7 +6844,7 @@ func remoteOrgJobController(org Org, body []byte) error {
 		log.Printf("Should stop org job controller")
 
 		if strings.Contains(responseData.Reason, "Bad apikey") {
-			log.Printf("Bad apikey. Stopping sync for org!")
+			log.Printf("Bad apikey. Stopping sync for org?: %s", responseData.Reason)
 
 			if value, exists := scheduledOrgs[org.Id]; exists {
 				// Looks like this does the trick? Hurr
@@ -6786,7 +6867,7 @@ func remoteOrgJobController(org Org, body []byte) error {
 					log.Printf("Successfully updated the org to not sync")
 				}
 
-				return errors.New("Stopped schedule for org because of bad apikey.")
+				return errors.New("Stopped schedule for org locally because of bad apikey.")
 			} else {
 				return errors.New(fmt.Sprintf("Failed finding the schedule for org %s", org.Id))
 			}
@@ -7223,7 +7304,7 @@ func runInit(ctx context.Context) {
 		}
 
 		//interval := int(org.SyncConfig.Interval)
-		interval := 5
+		interval := 15
 		if interval == 0 {
 			log.Printf("Skipping org %s because sync isn't set (0).", org.Id)
 			continue
@@ -7731,7 +7812,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	//	return
 	//}
 
-	log.Printf("Apidata: %s", tmpData.Apikey)
+	//log.Printf("Apidata: %s", tmpData.Apikey)
 
 	// FIXME: Path
 	client := &http.Client{}
@@ -7808,7 +7889,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("Respbody: %s", string(respBody))
+	//log.Printf("Respbody: %s", string(respBody))
 	responseData := retStruct{}
 	err = json.Unmarshal(respBody, &responseData)
 	if err != nil {
