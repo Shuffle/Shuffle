@@ -919,6 +919,16 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		err := handleUserInput(trigger, orgId, workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
 		if err != nil {
 			log.Printf("Failed userinput handler: %s", err)
+			actionResult.Result = fmt.Sprintf("Cloud error: %s", err)
+			workflowExecution.Results = append(workflowExecution.Results, actionResult)
+			workflowExecution.Status = "ABORTED"
+			err = setWorkflowExecution(ctx, *workflowExecution)
+			if err != nil {
+				log.Printf("Failed ")
+			} else {
+				log.Printf("Successfully set the execution to waiting.")
+			}
+
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error: %s"}`, err)))
 		} else {
@@ -1311,7 +1321,7 @@ func handleExecutionStatistics(execution WorkflowExecution) {
 
 		log.Printf("Added %d exampleresults to backend", successful)
 	} else {
-		log.Printf("No examplresults necessary to be added for execution %s", execution.ExecutionId)
+		log.Printf("No example results necessary to be added for execution %s", execution.ExecutionId)
 	}
 }
 
@@ -2756,7 +2766,17 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		// If the node is NOT found, it's supposed to be set to SKIPPED,
 		// as it's not a childnode of the startnode
 		// This is a configuration item for the workflow itself.
-		if !workflowExecution.Workflow.Configuration.StartFromTop {
+		if len(workflowExecution.Results) > 0 {
+			defaultResults = []ActionResult{}
+			for _, result := range workflowExecution.Results {
+				if result.Status == "WAITING" {
+					result.Status = "FINISHED"
+					result.Result = "Continuing"
+				}
+
+				defaultResults = append(defaultResults, result)
+			}
+		} else if len(workflowExecution.Results) == 0 && !workflowExecution.Workflow.Configuration.StartFromTop {
 			found := false
 			for _, nodeId := range childNodes {
 				if nodeId == action.ID {
@@ -6167,13 +6187,13 @@ func handleUserInput(trigger Trigger, organizationId string, workflowId string, 
 
 		org, err := getOrg(ctx, organizationId)
 		if err != nil {
-			log.Printf("Failed email send to cloud: %s", err)
+			log.Printf("Failed email send to cloud (1): %s", err)
 			return err
 		}
 
 		err = executeCloudAction(action, org.SyncConfig.Apikey)
 		if err != nil {
-			log.Printf("Failed email send to cloud", err)
+			log.Printf("Failed email send to cloud (2): %s", err)
 			return err
 		}
 
@@ -6193,13 +6213,13 @@ func handleUserInput(trigger Trigger, organizationId string, workflowId string, 
 
 		org, err := getOrg(ctx, organizationId)
 		if err != nil {
-			log.Printf("Failed email send to cloud", err)
+			log.Printf("Failed sms send to cloud (3): %s", err)
 			return err
 		}
 
 		err = executeCloudAction(action, org.SyncConfig.Apikey)
 		if err != nil {
-			log.Printf("Failed email send to cloud", err)
+			log.Printf("Failed sms send to cloud (4): %s", err)
 			return err
 		}
 

@@ -1,4 +1,4 @@
-NAME=worker
+NAME=shuffle-worker
 VERSION=0.8.0
 
 echo "Running docker build with $NAME:$VERSION"
@@ -9,4 +9,4 @@ docker build . -t frikky/shuffle:$NAME -t docker.pkg.github.com/frikky/shuffle/$
 #docker push frikky/$NAME:$VERSION 
 docker push frikky/shuffle:$NAME
 #docker push docker.pkg.github.com/frikky/shuffle/$NAME:$VERSION
-#docker push ghcr.io/frikky/$NAME:$VERSION
+docker push ghcr.io/frikky/$NAME:$VERSION

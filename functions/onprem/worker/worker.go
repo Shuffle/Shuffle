@@ -792,11 +792,20 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 		// SKIP if it's not onprem
 		for _, nextAction := range nextActions {
 			action := getAction(workflowExecution, nextAction, environment)
+			// check visited and onprem
+			if arrayContains(visited, nextAction) {
+				log.Printf("ALREADY VISITIED (%s): %s", action.Label, nextAction)
+				continue
+			}
+
 			if action.AppName == "User Input" {
 				log.Printf("USER INPUT!")
 
 				if action.ID == workflowExecution.Start {
 					log.Printf("Skipping because it's the startnode")
+					visited = append(visited, action.ID)
+					executed = append(executed, action.ID)
+					continue
 				} else {
 					log.Printf("Should stop after this iteration because it's user-input based. %#v", action)
 					trigger := Trigger{}
@@ -825,12 +834,6 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 
 					break
 				}
-			}
-
-			// check visited and onprem
-			if arrayContains(visited, nextAction) {
-				log.Printf("ALREADY VISITIED (%s): %s", action.Label, nextAction)
-				continue
 			}
 
 			// Not really sure how this edgecase happens.
@@ -866,7 +869,7 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 			}
 
 			if continueOuter {
-				//log.Printf("Parents of %s aren't finished: %s", nextAction, strings.Join(parents[nextAction], ", "))
+				log.Printf("Parents of %s aren't finished: %s", nextAction, strings.Join(parents[nextAction], ", "))
 				//for _, tmpaction := range parents[nextAction] {
 				//	action := getAction(workflowExecution, tmpaction)
 				//	_ = action
@@ -1029,7 +1032,7 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 			shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
 		}
 
-		if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions) {
+		if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions)+extra {
 			shutdownCheck := true
 			ctx := context.Background()
 			for _, result := range workflowExecution.Results {

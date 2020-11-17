@@ -1074,10 +1074,13 @@ const AngularWorkflow = (props) => {
 				// FIXME - do this for both actions and other types?
 				targetnode = workflow.triggers.findIndex(data => data.id === edge.target)
 				if (targetnode !== -1) {
-					alert.error("Can't have triggers as target of branch")
-					event.target.remove()
-					found = true
-					break
+					if (workflow.triggers[targetnode].app_name !== "User Input") {
+
+						alert.error("Can't have triggers as target of branch")
+						event.target.remove()
+						found = true
+						break
+					}
 				} 
 			}
 		}
