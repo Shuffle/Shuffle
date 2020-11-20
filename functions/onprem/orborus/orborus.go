@@ -22,6 +22,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	dockerclient "github.com/docker/docker/client"
+	"github.com/satori/go.uuid"
 	//network "github.com/docker/docker/api/types/network"
 	//natting "github.com/docker/go-connections/nat"
 )
@@ -134,18 +135,36 @@ func deployWorker(image string, identifier string, env []string) {
 		Env:   env,
 	}
 
+	log.Printf("Identifier: %s", identifier)
 	cont, err := dockercli.ContainerCreate(
 		context.Background(),
 		config,
 		hostConfig,
 		nil,
-		nil,
 		identifier,
 	)
 
 	if err != nil {
-		log.Printf("[ERROR] Container create error: %s", err)
-		return
+		if strings.Contains(fmt.Sprintf("%s", err), "Conflict. The container name ") {
+			uuid := uuid.NewV4()
+			identifier = fmt.Sprintf("%s-%s", identifier, uuid)
+			log.Printf("2 - Identifier: %s", identifier)
+			cont, err = dockercli.ContainerCreate(
+				context.Background(),
+				config,
+				hostConfig,
+				nil,
+				identifier,
+			)
+
+			if err != nil {
+				log.Printf("[ERROR] Container create error(2): %s", err)
+				return
+			}
+		} else {
+			log.Printf("[ERROR] Container create error: %s", err)
+			return
+		}
 	}
 
 	err = dockercli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
@@ -208,27 +227,32 @@ func initializeImages() {
 	ctx := context.Background()
 
 	if appSdkVersion == "" {
-		appSdkVersion = "0.6.0"
+		appSdkVersion = "0.8.0"
 		log.Printf("[WARNING] SHUFFLE_APP_SDK_VERSION not defined. Defaulting to %s", appSdkVersion)
 	}
 	if workerVersion == "" {
-		workerVersion = "0.6.0"
+		workerVersion = "0.8.0"
 		log.Printf("[WARNING] SHUFFLE_WORKER_VERSION not defined. Defaulting to %s", workerVersion)
 	}
 
 	if baseimageregistry == "" {
 		baseimageregistry = "docker.io"
+		baseimageregistry = "ghcr.io"
 		log.Printf("Setting baseimageregistry")
 	}
 	if baseimagename == "" {
 		baseimagename = "frikky/shuffle"
+		baseimagename = "frikky"
 		log.Printf("Setting baseimagename")
 	}
 
 	// check whether they are the same first
 	images := []string{
-		fmt.Sprintf("%s/%s:app_sdk%s", baseimageregistry, baseimagename, baseimagetagsuffix),
-		fmt.Sprintf("%s/%s:worker%s", baseimageregistry, baseimagename, baseimagetagsuffix),
+		//fmt.Sprintf("%s/%s:app_sdk%s", baseimageregistry, baseimagename, baseimagetagsuffix),
+		//fmt.Sprintf("%s/%s:worker%s", baseimageregistry, baseimagename, baseimagetagsuffix),
+
+		fmt.Sprintf("%s/%s/shuffle-app_sdk:%s", baseimageregistry, baseimagename, appSdkVersion),
+		fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion),
 		// fmt.Sprintf("docker.io/%s:app_sdk", baseimagename),
 		// fmt.Sprintf("docker.io/%s:worker", baseimagename),
 
@@ -301,7 +325,8 @@ func main() {
 	//workerImage := fmt.Sprintf("%s/worker:%s", baseimagename, workerVersion)
 	// workerImage := fmt.Sprintf("docker.io/%s:worker", baseimagename)
 	// fmt.Sprintf("%s/%s:app_sdk%s", baseimageregistry, baseimagename, baseimagetagsuffix),
-	workerImage := fmt.Sprintf("%s/%s:worker%s", baseimageregistry, baseimagename, baseimagetagsuffix)
+	//workerImage := fmt.Sprintf("%s/%s:worker%s", baseimageregistry, baseimagename, baseimagetagsuffix)
+	workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
 
 	log.Printf("[INFO] Finished configuring docker environment")
 

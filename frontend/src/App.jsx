@@ -30,7 +30,7 @@ import SettingsPage from "./views/SettingsPage";
 
 import { createMuiTheme, MuiThemeProvider } from '@material-ui/core/styles';
 
-import AlertTemplate from "react-alert-template-basic";
+import AlertTemplate from "./components/AlertTemplate";
 import { positions, Provider } from "react-alert";
 
 // Production - backend proxy forwarding in nginx
@@ -39,6 +39,7 @@ var globalUrl = window.location.origin
 // CORS used for testing purposes. Should only happen with specific port and http
 if (window.location.protocol == "http:" && window.location.port === "3000") {
 	globalUrl = "http://localhost:5001"
+	//globalUrl = "http://localhost:5002"
 }
 
 const theme = createMuiTheme({
@@ -99,7 +100,7 @@ const App = (message, props) => {
 				//console.log(responseJson.success)
 				setUserData(responseJson)
 				setIsLoggedIn(true)
-				console.log("Cookies: ", cookies)
+				//console.log("Cookies: ", cookies)
 
 				// Updating cookie every request
 				for (var key in responseJson["cookies"]) {
@@ -116,8 +117,8 @@ const App = (message, props) => {
 	// Dumb for content load (per now), but good for making the site not suddenly reload parts (ajax thingies)
 
 	const options = {
-		timeout: 5000,
-		position: positions.BOTTOM_CENTER
+		timeout: 9000,
+		position: positions.BOTTOM_LEFT,
 	};
 
 	const includedData = window.location.pathname === "/home" || window.location.pathname === "/features" ?

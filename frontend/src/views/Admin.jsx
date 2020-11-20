@@ -1,7 +1,10 @@
 import React, { useEffect} from 'react';
 
+import { makeStyles } from '@material-ui/styles';
 import {Link} from 'react-router-dom';
 import Paper from '@material-ui/core/Paper';
+import Card from '@material-ui/core/Card';
+import Tooltip from '@material-ui/core/Tooltip';
 import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Typography from '@material-ui/core/Typography';
 import Switch from '@material-ui/core/Switch';
@@ -20,12 +23,13 @@ import ListItemAvatar from '@material-ui/core/ListItemAvatar';
 import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
 import IconButton from '@material-ui/core/IconButton';
 import Avatar from '@material-ui/core/Avatar';
-
-
+import Zoom from '@material-ui/core/Zoom';
 import { useAlert } from "react-alert";
 
 import { Dialog, DialogTitle, DialogActions, DialogContent } from '@material-ui/core';
 import { useTheme } from '@material-ui/core/styles';
+import HandlePayment from './HandlePayment'
+import OrgHeader from '../components/OrgHeader'
 
 import PolymerIcon from '@material-ui/icons/Polymer';
 import CheckCircleIcon from '@material-ui/icons/CheckCircle';
@@ -41,10 +45,19 @@ import ScheduleIcon from '@material-ui/icons/Schedule';
 import CloudIcon from '@material-ui/icons/Cloud';
 import BusinessIcon from '@material-ui/icons/Business';
 
-const Admin = (props) => {
-	const { globalUrl } = props;
 
+const useStyles = makeStyles({
+	notchedOutline: {
+		borderColor: "#f85a3e !important"
+	},
+})
+
+const Admin = (props) => {
+	const { globalUrl, userdata } = props;
+
+	var upload = ""
 	const theme = useTheme();
+	const classes = useStyles();
 	const [firstRequest, setFirstRequest] = React.useState(true);
 	const [modalUser, setModalUser] = React.useState({});
 	const [modalOpen, setModalOpen] = React.useState(false);
@@ -54,11 +67,13 @@ const Admin = (props) => {
 	const [loading, setLoading] = React.useState(false);
 
 	const [selectedOrganization, setSelectedOrganization] = React.useState({});
+	const [organizationFeatures, setOrganizationFeatures] = React.useState({});
 	const [loginInfo, setLoginInfo] = React.useState("");
 	const [curTab, setCurTab] = React.useState(0);
 	const [users, setUsers] = React.useState([]);
 	const [organizations, setOrganizations] = React.useState([]);
 	const [orgSyncResponse, setOrgSyncResponse] = React.useState("");
+	const [userSettings, setUserSettings] = React.useState({});
 
 	const [environments, setEnvironments] = React.useState([]);
 	const [authentication, setAuthentication] = React.useState([]);
@@ -70,6 +85,7 @@ const Admin = (props) => {
 	const [selectedAuthenticationModalOpen, setSelectedAuthenticationModalOpen] = React.useState(false)
 	const [showArchived, setShowArchived] = React.useState(false)
 
+	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" 
 	const getApps = () => {
 		fetch(globalUrl+"/api/v1/workflows/apps", {
     	  method: 'GET',
@@ -157,7 +173,7 @@ const Admin = (props) => {
 					alert.error("Failed stopping schedule")
 				} else {
 					getAppAuthentication() 
-					alert.success("Successfully stopped schedule!")
+					alert.success("Successfully deleted authentication!")
 				}
 			}),
 		)
@@ -237,13 +253,17 @@ const Admin = (props) => {
 				getOrgs() 
 				if (disableSync) {
 					alert.success("Successfully disabled sync!")
+					setOrgSyncResponse("Successfully disabled syncronization")
 				} else {
-					alert.success("Sync successfully set up!")
+					alert.success("Cloud Syncronization successfully set up!")
+					setOrgSyncResponse("Successfully started syncronization. Cloud features you now have access to can be seen below.")
 				}
 
 				selectedOrganization.cloud_sync = !selectedOrganization.cloud_sync
 				setSelectedOrganization(selectedOrganization)
 				setCloudSyncApikey("")
+
+				handleGetOrg(userdata.active_org.id) 
 			}
 		})
 		.catch(error => {
@@ -251,6 +271,10 @@ const Admin = (props) => {
 			alert.error("Err: " + error.toString())
 		})
 	}
+
+	
+	
+	
 
 	const onPasswordChange = () => {
 		const data = { "username": selectedUser.username, "newpassword": newPassword }
@@ -309,6 +333,58 @@ const Admin = (props) => {
 
 		.catch(error => {
 			console.log("Error in userdata: ", error)
+		});
+	}
+
+	const handleGetOrg = (orgId) => {
+		// Just use this one?
+		var baseurl = globalUrl
+		const url = baseurl + '/api/v1/orgs/'+orgId
+		fetch(url, {
+			method: 'GET',
+			credentials: "include",
+			headers: {
+				'Content-Type': 'application/json',
+			},
+		})
+		.then(response => {
+			if (response.status === 401) {
+			}
+
+			return response.json()
+		})
+		.then(responseJson => {
+			if (responseJson["success"] === false) {
+				alert.error("Failed getting org: ", responseJson.readon)
+			} else {
+				setSelectedOrganization(responseJson)
+				var lists = {
+					"active": {
+						"triggers": [],
+						"features": [],
+						"sync": [],
+					},
+					"inactive": {
+						"triggers": [],
+						"features": [],
+						"sync": [],
+					},
+				}
+
+
+				// FIXME: Set up features
+				Object.keys(responseJson.sync_features).map(function(key, index) {
+					//console.log(responseJson.sync_features[key])
+				})
+
+				//setOrgName(responseJson.name)
+				//setOrgDescription(responseJson.description)
+				setOrganizationFeatures(lists)
+			}
+		})
+		.catch(error => {
+			console.log("Error getting org: ", error)
+			alert.error("Error getting current organization")
 		});
 	}
 
@@ -492,6 +568,7 @@ const Admin = (props) => {
 				return response.json()
 			})
 			.then((responseJson) => {
+				console.log(responseJson)
 				setSchedules(responseJson)
 			})
 			.catch(error => {
@@ -518,7 +595,7 @@ const Admin = (props) => {
 			})
 			.then((responseJson) => {
 				if (responseJson.success) {
-					console.log(responseJson.data)
+					//console.log(responseJson.data)
 					setAuthentication(responseJson.data)
 				} else {
 					alert.error("Failed getting authentications")
@@ -604,9 +681,59 @@ const Admin = (props) => {
 			});
 	}
 
+	const getSettings = () => {
+		fetch(globalUrl+"/api/v1/getsettings", {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+				credentials: "include",
+			})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 when getting settings :O!")
+			}
+
+			return response.json()
+		})
+    .then((responseJson) => {
+			setUserSettings(responseJson)
+    })
+		.catch(error => {
+    		console.log(error)
+		});
+	}
+
+
 	if (firstRequest) {
 		setFirstRequest(false)
-		getUsers()
+		if (!isCloud) {
+			getUsers()
+		} else {
+			getSettings()
+		}
+
+		const views = {
+			"organization": 0,
+			"users": 1,
+			"app_auth": 2,
+			"environments": 3,
+			"schedules": 4,
+			"categories": 5,
+		}
+
+		if (props.match.params.key !== undefined) {
+			const tmpitem = views[props.match.params.key]
+			if (tmpitem !== undefined) {
+				setCurTab(tmpitem)
+			}
+		}
+	}
+
+	if (selectedOrganization.id === undefined && userdata !== undefined && userdata.active_org !== undefined) {
+		//setSelectedOrganization(userdata.active_org)
+		handleGetOrg(userdata.active_org.id)
 	}
 
 	const paperStyle = {
@@ -822,6 +949,8 @@ const Admin = (props) => {
 		</Dialog>
 
 	const GridItem = (props) => {
+		const [expanded, setExpanded] = React.useState(false)
+
 		const primary = props.data.primary
 		const secondary = props.data.secondary
 		const primaryIcon = props.data.icon
@@ -831,19 +960,36 @@ const Admin = (props) => {
 			<CloseIcon style={{color: "red"}} />
 
 		return (
-			<Grid item xs={6}>
-				<ListItem>
-					<ListItemAvatar>
-						<Avatar>
-							{primaryIcon}
-						</Avatar>
-					</ListItemAvatar>
-					<ListItemText 
-						primary={primary} 
-						secondary={secondary} 
-					/>
-					{secondaryIcon}		
-				</ListItem>
+			<Grid item xs={4} style={{cursor: "pointer"}} onClick={() => {
+				setExpanded(!expanded)	
+			}}>
+				<Card style={{margin: 4, backgroundColor: theme.palette.inputColor, color: "white", minHeight: expanded ? 200 : "inherit", maxHeight: expanded ? 200 : "inherit",}}>
+					<ListItem>
+						<ListItemAvatar>
+							<Avatar>
+								{primaryIcon}
+							</Avatar>
+						</ListItemAvatar>
+						<ListItemText 
+							style={{textTransform: "capitalize"}}
+							primary={primary} 
+						/>
+						{secondaryIcon}		
+					</ListItem>
+					{expanded ?
+						<div style={{padding: 15}}>
+							<Typography>
+								Usage: {props.data.limit === 0 ? "Infinite" : <span>{props.data.usage} / {props.data.limit}</span>}
+							</Typography>
+							<Typography>
+								Data sharing: {props.data.data_collection} 
+							</Typography>
+							<Typography>
+								Description: {secondary}
+							</Typography>
+						</div>
+					: null}
+				</Card>
 			</Grid>
 		)
 	}
@@ -853,14 +999,20 @@ const Admin = (props) => {
 		{
 			"primary": "Workflows",
 			"secondary": "",
-			"active": false,
+			"active": true,
 			"icon": <PolymerIcon style={{color: itemColor}}/>,
 		},
 		{
 			"primary": "Apps",
 			"secondary": "",
-			"active": false,
+			"active": true,
 			"icon": <AppsIcon style={{color: itemColor}}/>,
+		},	
+		{
+			"primary": "Organization",
+			"secondary": "",
+			"active": true,
+			"icon": <BusinessIcon style={{color: itemColor}}/>,
 		},	
 	]
 
@@ -881,7 +1033,7 @@ const Admin = (props) => {
 				Enable cloud features
 			</span></DialogTitle>
 			<DialogContent>
-				What does <a href="https://shuffler.io/docs/hybrid#cloud_sync" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>cloud sync</a> do?
+				What does <a href="https://shuffler.io/docs/organizations#cloud_sync" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>cloud sync</a> do?
 				<div style={{display: "flex", marginBottom: 20, }}>
 					<TextField
 						color="primary"
@@ -905,7 +1057,7 @@ const Admin = (props) => {
 							setCloudSyncApikey(event.target.value)
 						}}
 					/>
-					<Button disabled={(!selectedOrganization.cloud_sync && cloudSyncApikey.length === 0) || loading} variant="contained" style={{ marginLeft: 15, height: 60, margin: "auto", borderRadius: "0px" }} onClick={() => {
+					<Button disabled={(!selectedOrganization.cloud_sync && cloudSyncApikey.length === 0) || loading} variant="contained" style={{ marginLeft: 15, height: 50, borderRadius: "0px" }} onClick={() => {
 						setLoading(true)
 						enableCloudSync(
 							cloudSyncApikey,
@@ -934,13 +1086,236 @@ const Admin = (props) => {
 					)
 				})}
 			</Grid>
+
 				* New triggers (userinput, hotmail realtime)<div/>
 				* Execute in the cloud rather than onprem<div/>
 				* Apps can be built in the cloud<div/>
 				*	Easily share apps and workflows<div/>
 				*	Access to powerful cloud search
 			</DialogContent>
-		</Dialog>
+		</Dialog>	
+
+	const cancelSubscriptions = (subscription_id) => {
+		console.log(selectedOrganization)
+		const data = {
+			"subscription_id": subscription_id,
+			"action": "cancel",
+			"org_id": selectedOrganization.id,
+		}
+
+
+		const url = globalUrl + `/api/v1/orgs/${selectedOrganization.id}`;
+		fetch(url, {
+			mode: 'cors',
+			method: 'POST',
+			body: JSON.stringify(data),
+			credentials: 'include',
+			crossDomain: true,
+			withCredentials: true,
+			headers: {
+				'Content-Type': 'application/json; charset=utf-8',
+			},
+		})
+		.then(function(response) {
+			if (response.status !== 200) {
+				console.log("Error in response")
+			}
+
+			handleGetOrg(selectedOrganization.id) 
+			return response.json();
+		}).then(function(responseJson) {	
+			if (responseJson.success !== undefined && responseJson.success) {
+				alert.success("Successfully stopped subscription!")
+
+
+			} else {
+				alert.error("Failed stopping subscription. Please contact us.")
+			}
+		})
+		.catch(function(error) {
+			console.log("Error: ", error)
+			alert.error("Failed stopping subscription. Please contact us.")
+		})
+	}
+
+	const organizationView = curTab === 0 && selectedOrganization.id !== undefined ?
+		<div>
+			<div style={{ marginTop: 20, marginBottom: 20, }}>
+				<h2 style={{ display: "inline", }}>Organization overview</h2>
+				<span style={{ marginLeft: 25 }}>
+					On this page you can configure individual parts of your organization. <a target="_blank" href="https://shuffler.io/docs/organizations#organization" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more</a>
+				</span>
+			</div>
+				{selectedOrganization.id === undefined ? 
+					<div style={{height: 250}}/>
+					: 
+					<div>
+						{selectedOrganization.name.length > 0 ?
+							<OrgHeader setSelectedOrganization={setSelectedOrganization} globalUrl={globalUrl} selectedOrganization={selectedOrganization}/>
+						: null}
+					<Divider style={{ marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor }} />
+						<Typography variant="h6" style={{marginBottom: "10px", color: "white"}}>Cloud syncronization</Typography>
+							What does <a href="https://shuffler.io/docs/organizations#cloud_sync" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>cloud sync</a> do? Cloud syncronization is a way of getting more out of Shuffle. Shuffle will <b>ALWAYS</b> make every option open source, but features relying on other users can't be done without a collaborative approach.
+
+					{isCloud ? 
+						<div style={{marginTop: 15, display: "flex"}}>
+							<div style={{flex: 1}}>
+								<Typography style={{}}>
+									Currently syncronizing: {selectedOrganization.cloud_sync_active === true ? "True" : "False"}
+								</Typography>
+								{selectedOrganization.cloud_sync_active ? 
+									<Typography style={{}}>
+										Syncronization interval: {selectedOrganization.sync_config.interval === 0 ? "60" : selectedOrganization.sync_config.interval}
+									</Typography>
+									: 
+									null
+								}
+								<Typography style={{whiteSpace: "nowrap", marginTop: 25, marginRight: 10}}>
+									Your Apikey 
+								</Typography>
+								<TextField
+									color="primary"
+									style={{backgroundColor: theme.palette.inputColor, }}
+									InputProps={{
+										style: {
+											height: "50px",
+											color: "white",
+											fontSize: "1em",
+										},
+									}}
+									required
+									fullWidth={true}
+									disabled={true}
+									autoComplete="cloud apikey"
+									id="apikey_field"
+									margin="normal"
+									placeholder="Cloud Apikey"
+									variant="outlined"
+									defaultValue={userSettings.apikey}
+								/>
+							</div>
+						</div>
+					:
+					<div>
+							<div style={{display: "flex", marginBottom: 20, }}>
+								<TextField
+									color="primary"
+									style={{backgroundColor: theme.palette.inputColor, marginRight: 10, }}
+									InputProps={{
+										style: {
+											height: "50px",
+											color: "white",
+											fontSize: "1em",
+										},
+									}}
+									required
+									fullWidth={true}
+									disabled={selectedOrganization.cloud_sync}
+									autoComplete="cloud apikey"
+									id="apikey_field"
+									margin="normal"
+									placeholder="Cloud Apikey"
+									variant="outlined"
+									onChange={(event) => {
+										setCloudSyncApikey(event.target.value)
+									}}
+								/>
+								<Button disabled={(!selectedOrganization.cloud_sync && cloudSyncApikey.length === 0) || loading} variant="contained" style={{marginTop: 15, height: 50, width: 150,}} onClick={() => {
+									setLoading(true)
+									enableCloudSync(
+										cloudSyncApikey,
+										selectedOrganization,
+										selectedOrganization.cloud_sync,
+									)
+								}} color="primary">
+									{selectedOrganization.cloud_sync ? 
+										"Stop sync"
+										:
+										"Start sync"
+									}
+								</Button>
+							</div>
+							{orgSyncResponse.length > 0 ? 
+								<Typography style={{marginTop: 5, marginBottom: 10}}>
+									Message from Shuffle: <b>{orgSyncResponse}</b>
+								</Typography>
+								: null
+							}
+						</div>
+					}
+					<Typography style={{marginTop: 40, marginLeft: 10, marginBottom: 5,}}>Cloud sync features</Typography>
+					<Grid container style={{width: "100%", marginBottom: 15, }}>
+						{Object.keys(selectedOrganization.sync_features).map(function(key, index) {
+							if (key === "schedule") {
+								return null
+							}
+
+							const item = selectedOrganization.sync_features[key]
+							const newkey = key.replace("_", " ")
+							const griditem = {
+								"primary": newkey,
+								"secondary": item.description === undefined || item.description === null || item.description.length === 0 ? "Not defined yet" : item.description,
+								"limit": item.limit,
+								"usage": 0, 
+								"data_collection": "None",
+								"active": item.active,
+								"icon": <PolymerIcon style={{color: itemColor}}/>,
+							}
+
+							return (
+								<Zoom key={index} >
+									<GridItem data={griditem} />
+								</Zoom>
+							)
+						})}
+					</Grid>
+					<Divider style={{ marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor }} />
+					{isCloud && selectedOrganization.subscriptions !== null && selectedOrganization.subscriptions.length > 0 ? 
+						<div style={{marginTop: 30, marginBottom: 20}}>
+							<Typography style={{marginTop: 40, marginLeft: 10, marginBottom: 5,}}>
+								Your subscription{selectedOrganization.subscriptions.length > 1 ? "s" : ""}
+							</Typography>
+							<Grid container spacing={3} style={{marginTop: 15}}>
+								{selectedOrganization.subscriptions.reverse().map((sub, index) => {
+									return (
+										<Grid item key={index} xs={4}>
+											<Card elevation={6} style={{backgroundColor: theme.palette.inputColor, color: "white", padding: 25, textAlign: "left",}}>
+													<b>Type</b>: {sub.level}<div/>
+													<b>Recurrence</b>: {sub.recurrence}<div/>
+													{sub.active ? 
+														<div>
+															<b>Started</b>: {new Date(sub.startdate*1000).toISOString()}<div/>
+															<Button variant="outlined" color="primary" style={{marginTop: 15}} onClick={() => {
+																cancelSubscriptions(sub.reference) 
+															}}>
+																Cancel subscription
+															</Button>
+														</div>
+														: 
+														<div>
+															<b>Cancelled</b>: {new Date(sub.cancellationdate*1000).toISOString()}<div/>
+															<Typography color="textSecondary">
+																<b>Status</b>: Deactivated
+															</Typography>
+														</div>
+													}
+											</Card>
+										</Grid>
+									)
+							})}
+						</Grid>
+							<Divider style={{ marginTop: 20, backgroundColor: theme.palette.inputColor }} />
+						</div>
+						: null
+					}
+				</div>
+				}
+
+					<div style={{backgroundColor: "#1f2023", paddingTop: 25,}}>
+						<HandlePayment stripeKey={props.stripeKey} userdata={userdata} globalUrl={globalUrl} {...props} />
+					</div>
+			</div>
+		: null
 
 	const modalView =
 		<Dialog 
@@ -956,10 +1331,10 @@ const Admin = (props) => {
 			}}
 		>
 			<DialogTitle><span style={{ color: "white" }}>
-				{curTab === 0 ? "Add user" : "Add environment"}
+				{curTab === 1 ? "Add user" : "Add environment"}
 			</span></DialogTitle>
 			<DialogContent>
-				{curTab === 0 ?
+				{curTab === 1 ?
 					<div>
 						Username
 						<TextField
@@ -1004,7 +1379,7 @@ const Admin = (props) => {
 							onChange={(event) => changeModalData("Password", event.target.value)}
 						/>
 					</div>
-					: curTab === 2 ?
+					: curTab === 3 ?
 						<div>
 							Environment Name
 					<TextField
@@ -1035,9 +1410,9 @@ const Admin = (props) => {
 					Cancel
 				</Button>
 				<Button variant="contained" style={{ borderRadius: "0px" }} onClick={() => {
-					if (curTab === 0) {
+					if (curTab === 1) {
 						submitUser(modalUser)
-					} else if (curTab === 2) {
+					} else if (curTab === 3) {
 						submitEnvironment(modalUser)
 					}
 				}} color="primary">
@@ -1046,11 +1421,11 @@ const Admin = (props) => {
 			</DialogActions>
 		</Dialog>
 
-	const usersView = curTab === 0 ?
+	const usersView = curTab === 1 ?
 		<div>
 			<div style={{ marginTop: 20, marginBottom: 20, }}>
 				<h2 style={{ display: "inline", }}>User management</h2>
-				<span style={{ marginLeft: 25 }}>Add, edit, block or change passwords</span>
+				<span style={{ marginLeft: 25 }}>Add, edit, block or change passwords. <a target="_blank" href="https://shuffler.io/docs/organizations#user_management" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more</a></span>
 			</div>
 			<div />
 			<Button
@@ -1068,10 +1443,12 @@ const Admin = (props) => {
 						primary="Username"
 						style={{ minWidth: 200, maxWidth: 200 }}
 					/>
+					
 					<ListItemText
 						primary="API key"
 						style={{ minWidth: 350, maxWidth: 350, overflow: "hidden" }}
 					/>
+					
 					<ListItemText
 						primary="Role"
 						style={{ minWidth: 150, maxWidth: 150 }}
@@ -1092,10 +1469,12 @@ const Admin = (props) => {
 								primary={data.username}
 								style={{ minWidth: 200, maxWidth: 200 }}
 							/>
+							
 							<ListItemText
 								primary={data.apikey === undefined || data.apikey.length === 0 ? "" : data.apikey}
 								style={{ maxWidth: 350, minWidth: 350, }}
 							/>
+							
 							<ListItemText
 								primary=
 								{<Select
@@ -1137,7 +1516,15 @@ const Admin = (props) => {
 					>
 						Edit user
 					</Button>
-				</ListItemText>
+					<Button
+						style={{}}
+						variant="outlined"
+						color="primary"
+						onClick={() => generateApikey(data.id)}
+					>
+						Get new API key
+					</Button>
+					</ListItemText>
 				</ListItem>
 					)
 				})}
@@ -1145,37 +1532,53 @@ const Admin = (props) => {
 		</div>
 		: null
 
-	const schedulesView = curTab === 3 ?
+	const schedulesView = curTab === 4 ?
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
 				<h2 style={{display: "inline",}}>Schedules</h2>
-				<span style={{marginLeft: 25}}>Schedules used in Workflows. Makes locating and control easier.</span>
+				<span style={{marginLeft: 25}}>Schedules used in Workflows. Makes locating and control easier. <a target="_blank" href="https://shuffler.io/docs/organizations#schedules" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more</a></span>
 			</div>
 			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor}}/>
 			<List>
 				<ListItem>
 					<ListItemText
-						primary="Interval (seconds)"
-						style={{maxWidth: 200}}
+						primary="Interval"
+						style={{maxWidth: 200, minWidth: 200}}
+					/>
+					<ListItemText
+						primary="Environment"
+						style={{maxWidth: 150, minWidth: 150}}
+					/>
+					<ListItemText
+						primary="Workflow"
+						style={{maxWidth: 315, minWidth: 315}}
 					/>
 					<ListItemText
 						primary="Argument"
-						style={{maxWidth: 400, overflow: "hidden"}}
+						style={{minWidth: 300, maxWidth: 300, overflow: "hidden"}}
 					/>
 					<ListItemText
 						primary="Actions"
 					/>
 				</ListItem>
-				{schedules === undefined || schedules === null ? null : schedules.map(schedule => {
+				{schedules === undefined || schedules === null ? null : schedules.map((schedule, index) => {
 					return (
-						<ListItem>
+						<ListItem key={index}>
 							<ListItemText
-								style={{maxWidth: 200}}
-								primary={schedule.seconds}
+								style={{maxWidth: 200, minWidth: 200}}
+								primary={schedule.environment === "cloud" ? schedule.frequency : <span>{schedule.seconds} seconds</span>}
+							/>
+							<ListItemText
+								style={{maxWidth: 150, minWidth: 150}}
+								primary={schedule.environment}
+							/>
+							<ListItemText
+								style={{maxWidth: 315, minWidth: 315}}
+								primary={<a style={{textDecoration: "none", color: "#f85a3e"}} href={`/workflows/${schedule.workflow_id}`} target="_blank">{schedule.workflow_id}</a>}
 							/>
 							<ListItemText
 								primary={schedule.argument}
-								style={{maxWidth: 400, overflow: "hidden"}}
+								style={{minWidth: 300, maxWidth: 300, overflow: "hidden"}}
 							/>
 							<ListItemText>
 								<Button 
@@ -1184,7 +1587,7 @@ const Admin = (props) => {
 									color="primary"
 									onClick={() => deleteSchedule(schedule)}
 								>
-									Delete	
+									Stop schedule	
 								</Button>
 							</ListItemText>
 						</ListItem>
@@ -1194,7 +1597,7 @@ const Admin = (props) => {
 		</div>
 		: null
 
-	const appCategoryView = curTab === 6 ?
+	const appCategoryView = curTab === 7 ?
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
 				<h2 style={{display: "inline",}}>Categories</h2>
@@ -1270,11 +1673,12 @@ const Admin = (props) => {
 		</div>
 		: null
 
-	const authenticationView = curTab === 1 ?
+	const authenticationView = curTab === 2 ?
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
 				<h2 style={{display: "inline",}}>App Authentication</h2>
 				<span style={{marginLeft: 25}}>Control the authentication options for individual apps. <b>Actions can be destructive!</b></span>
+				 .&nbsp;<a target="_blank" href="https://shuffler.io/docs/organizations#app_authentication" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more</a>
 			</div>
 			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor}}/>
 			<List>
@@ -1307,9 +1711,9 @@ const Admin = (props) => {
 						primary="Actions"
 					/>
 				</ListItem>
-				{authentication === undefined ? null : authentication.map(data => {
+				{authentication === undefined ? null : authentication.map((data, index) => {
 					return (
-						<ListItem>
+						<ListItem key={index}>
 							<ListItemText
 								primary=<img alt="" src={data.app.large_image} style={{maxWidth: 50,}} />
 								style={{minWidth: 150, maxWidth: 150}}
@@ -1355,11 +1759,11 @@ const Admin = (props) => {
 		</div>
 		: null
 
-	const environmentView = curTab === 2 ?
+	const environmentView = curTab === 3 ?
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
 				<h2 style={{display: "inline",}}>Environments</h2>
-				<span style={{marginLeft: 25}}>Decides what Orborus environment to execute an action in a workflow in.</span>
+				<span style={{marginLeft: 25}}>Decides what Orborus environment to execute an action in a workflow in.<a target="_blank" href="https://shuffler.io/docs/organizations#environments" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more</a></span>
 			</div>
 			<Button 
 				style={{}} 
@@ -1423,7 +1827,7 @@ const Admin = (props) => {
 								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
 							/>
 							<ListItemText
-								primary={"TBD"}
+								primary={environment.Type === "cloud" ? "N/A" : "TBD"}
 								style={{minWidth: 200, maxWidth: 200, overflow: "hidden"}}
 							/>
 							<ListItemText
@@ -1443,7 +1847,7 @@ const Admin = (props) => {
 							<ListItemText
 								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
 							>
-								<Button variant="outlined" style={{borderRadius: "0px"}} onClick={() => deleteEnvironment(environment.Name)} color="primary">Delete</Button>
+								<Button disabled={environment.archived} variant="outlined" style={{borderRadius: "0px"}} onClick={() => deleteEnvironment(environment.Name)} color="primary">Archive</Button>
 							</ListItemText>
 							<ListItemText
 								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
@@ -1456,7 +1860,7 @@ const Admin = (props) => {
 		</div>
 		: null
 
-	const organizationsTab = curTab === 5 ?
+	const organizationsTab = curTab === 6 ?
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
 				<h2 style={{display: "inline",}}>Organizations</h2>
@@ -1537,7 +1941,7 @@ const Admin = (props) => {
 		</div>
 		: null
 
-	const hybridTab = curTab === 4 ?
+	const hybridTab = curTab === 5 ?
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
 				<h2 style={{display: "inline",}}>Hybrid</h2>
@@ -1581,18 +1985,38 @@ const Admin = (props) => {
 
 	const setConfig = (event, newValue) => {
 		if (newValue === 1) {
-			getAppAuthentication()
+			getUsers()
 		} else if (newValue === 2) {
-			getEnvironments()
+			getAppAuthentication()
 		} else if (newValue === 3) {
+			getEnvironments()
+		} else if (newValue === 4) {
 			getSchedules()
-		} else if (newValue === 5) {
+		} else if (newValue === 6) {
 			getOrgs() 
 		}
 
 		if (newValue === 6) {
 			console.log("Should get apps for categories.")
 		}
+
+		const views = {
+			0: "organization",
+			1: "users",
+			2: "app_auth",
+			3: "environments",
+			4: "schedules",
+			5: "categories",
+		}
+
+		//var theURL = window.location.pathname
+		//FIXME: Add url edits
+		//var theURL = window.location
+		//theURL.replace(`/${views[curTab]}`, `/${views[newValue]}`)
+		//window.history.pushState({"html":response.html,"pageTitle":response.pageTitle},"", urlPath);
+
+		//console.log(newpath)
+		//window.location.pathame = newpath
 
 		setModalUser({})
 		setCurTab(newValue)
@@ -1608,16 +2032,18 @@ const Admin = (props) => {
 					onChange={setConfig}
 					aria-label="disabled tabs example"
 				>
-					<Tab label=<span><AccessibilityNewIcon style={iconStyle} />Users</span> />
-					<Tab label=<span><LockIcon style={iconStyle} />App Authentication</span>/>
-					<Tab label=<span><EcoIcon style={iconStyle} />Environments</span>/>
-					<Tab label=<span><ScheduleIcon style={iconStyle} />Schedules</span> />
+					<Tab label=<span><BusinessIcon style={iconStyle} /> Organization</span>/>
+					{isCloud ? null : <Tab label=<span><AccessibilityNewIcon style={iconStyle} />Users</span> />}
+					{isCloud ? null : <Tab label=<span><LockIcon style={iconStyle} />App Authentication</span>/>}
+					{isCloud ? null : <Tab label=<span><EcoIcon style={iconStyle} />Environments</span>/>}
+					{isCloud ? null : <Tab label=<span><ScheduleIcon style={iconStyle} />Schedules</span> />}
 					{window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><CloudIcon style={iconStyle} /> Hybrid</span>/> : null}
 					{window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><BusinessIcon style={iconStyle} /> Organizations</span>/> : null}
 					{window.location.protocol === "http:" && window.location.port === "3000" ? <Tab label=<span><LockIcon style={iconStyle} />Categories</span>/> : null}
 				</Tabs>
 				<Divider style={{marginTop: 0, marginBottom: 10, backgroundColor: "rgb(91, 96, 100)"}} />
 				<div style={{padding: 15}}>
+					{organizationView}
 					{authenticationView}
 					{appCategoryView}
 					{usersView}	

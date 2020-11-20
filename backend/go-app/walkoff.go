@@ -44,6 +44,7 @@ var baseEnvironment = "onprem"
 var cloudname = "cloud"
 var defaultLocation = "europe-west2"
 var scheduledJobs = map[string]*newscheduler.Job{}
+var scheduledOrgs = map[string]*newscheduler.Job{}
 
 // To test out firestore before potential merge
 //var upgrader = websocket.Upgrader{
@@ -55,27 +56,44 @@ var scheduledJobs = map[string]*newscheduler.Job{}
 //}
 
 type ExecutionRequest struct {
-	ExecutionId       string   `json:"execution_id"`
-	ExecutionArgument string   `json:"execution_argument"`
-	ExecutionSource   string   `json:"execution_source"`
-	WorkflowId        string   `json:"workflow_id"`
-	Environments      []string `json:"environments"`
-	Authorization     string   `json:"authorization"`
-	Status            string   `json:"status"`
-	Start             string   `json:"start"`
-	Type              string   `json:"type"`
+	ExecutionId       string   `json:"execution_id,omitempty"`
+	ExecutionArgument string   `json:"execution_argument,omitempty"`
+	ExecutionSource   string   `json:"execution_source,omitempty"`
+	WorkflowId        string   `json:"workflow_id,omitempty"`
+	Environments      []string `json:"environments,omitempty"`
+	Authorization     string   `json:"authorization,omitempty"`
+	Status            string   `json:"status,omitempty"`
+	Start             string   `json:"start,omitempty"`
+	Type              string   `json:"type,omitempty"`
 }
 
 type SyncFeatures struct {
-	Apps           SyncData `json:"apps" datastore:"apps"`
-	Workflows      SyncData `json:"workflows" datastore:"workflows"`
-	Schedules      SyncData `json:"schedules" datastore:"schedules"`
-	Autocomplete   SyncData `json:"autocomplete" datastore:"autocomplete"`
-	Authentication SyncData `json:"authentication" datastore:"authentication"`
+	Webhook            SyncData `json:"webhook" datastore:"webhook"`
+	Schedules          SyncData `json:"schedules" datastore:"schedules"`
+	UserInput          SyncData `json:"user_input" datastore:"user_input"`
+	SendMail           SyncData `json:"send_mail" datastore:"send_mail"`
+	SendSms            SyncData `json:"send_sms" datastore:"send_sms"`
+	Updates            SyncData `json:"updates" datastore:"updates"`
+	Notifications      SyncData `json:"notifications" datastore:"notifications"`
+	EmailTrigger       SyncData `json:"email_trigger" datastore:"email_trigger"`
+	AppExecutions      SyncData `json:"app_executions" datastore:"app_executions"`
+	WorkflowExecutions SyncData `json:"workflow_executions" datastore:"workflow_executions"`
+	Apps               SyncData `json:"apps" datastore:"apps"`
+	Workflows          SyncData `json:"workflows" datastore:"workflows"`
+	Autocomplete       SyncData `json:"autocomplete" datastore:"autocomplete"`
+	Authentication     SyncData `json:"authentication" datastore:"authentication"`
+	Schedule           SyncData `json:"schedule" datastore:"schedule"`
 }
 
 type SyncData struct {
-	Active bool `json:"active" datastore:"active"`
+	Active         bool   `json:"active" datastore:"active"`
+	Type           string `json:"type" datastore:"type"`
+	Name           string `json:"name" datastore:"name"`
+	Description    string `json:"description" datastore:"description"`
+	Limit          int64  `json:"limit" datastore:"limit"`
+	StartDate      int64  `json:"start_date" datastore:"start_date"`
+	EndDate        int64  `json:"end_date" datastore:"end_date"`
+	DataCollection int64  `json:"data_collection" datastore:"data_collection"`
 }
 
 type SyncConfig struct {
@@ -86,6 +104,8 @@ type SyncConfig struct {
 // Role is just used for feedback for a user
 type Org struct {
 	Name         string       `json:"name" datastore:"name"`
+	Description  string       `json:"description" datastore:"description"`
+	Image        string       `json:"image" datastore:"image,noindex"`
 	Id           string       `json:"id" datastore:"id"`
 	Org          string       `json:"org" datastore:"org"`
 	Users        []User       `json:"users" datastore:"users"`
@@ -307,6 +327,7 @@ type Schedule struct {
 	ExecutionArgument string `json:"execution_argument" datastore:"execution_argument,noindex"`
 	Id                string `json:"id" datastore:"id"`
 	OrgId             string `json:"org_id" datastore:"org_id"`
+	Environment       string `json:"environment" datastore:"environment"`
 }
 
 type Workflow struct {
@@ -329,6 +350,7 @@ type Workflow struct {
 	Sharing           string   `json:"sharing" datastore:"sharing"`
 	Org               []Org    `json:"org,omitempty" datastore:"org"`
 	ExecutingOrg      Org      `json:"execution_org,omitempty" datastore:"execution_org"`
+	OrgId             string   `json:"org_id,omitempty" datastore:"org_id"`
 	WorkflowVariables []struct {
 		Description string `json:"description" datastore:"description,noindex"`
 		ID          string `json:"id" datastore:"id"`
@@ -341,6 +363,7 @@ type Workflow struct {
 		Name        string `json:"name" datastore:"name"`
 		Value       string `json:"value" datastore:"value,noindex"`
 	} `json:"execution_variables,omitempty" datastore:"execution_variables"`
+	ExecutionEnvironment string `json:"execution_environment" datastore:"execution_environment"`
 }
 
 type ActionResult struct {
@@ -559,6 +582,7 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 		LastModificationtime: timeNow,
 		LastRuntime:          timeNow,
 		Org:                  orgId,
+		Environment:          "onprem",
 	}
 
 	err = setSchedule(ctx, schedule)
@@ -664,7 +688,7 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 	//}
 
 	resp.WriteHeader(200)
-	resp.Write([]byte("OK"))
+	resp.Write([]byte(`{"success": true}`))
 }
 
 // FIXME: Authenticate this one? Can org ID be auth enough?
@@ -878,6 +902,58 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	if actionResult.Status == "WAITING" && actionResult.Action.AppName == "User Input" {
+		log.Printf("SHOULD WAIT A BIT AND RUN CLOUD STUFF WITH USER INPUT! WAITING!")
+
+		var trigger Trigger
+		err = json.Unmarshal([]byte(actionResult.Result), &trigger)
+		if err != nil {
+			log.Printf("Failed unmarshaling actionresult for user input: %s", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		orgId := workflowExecution.ExecutionOrg
+		if len(workflowExecution.OrgId) == 0 && len(workflowExecution.Workflow.OrgId) > 0 {
+			orgId = workflowExecution.Workflow.OrgId
+		}
+
+		err := handleUserInput(trigger, orgId, workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
+		if err != nil {
+			log.Printf("Failed userinput handler: %s", err)
+			actionResult.Result = fmt.Sprintf("Cloud error: %s", err)
+			workflowExecution.Results = append(workflowExecution.Results, actionResult)
+			workflowExecution.Status = "ABORTED"
+			err = setWorkflowExecution(ctx, *workflowExecution)
+			if err != nil {
+				log.Printf("Failed ")
+			} else {
+				log.Printf("Successfully set the execution to waiting.")
+			}
+
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error: %s"}`, err)))
+		} else {
+			log.Printf("Successful userinput handler")
+			resp.WriteHeader(200)
+			resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "CLOUD IS DONE"}`)))
+
+			actionResult.Result = "Waiting for user feedback based on configuration"
+
+			workflowExecution.Results = append(workflowExecution.Results, actionResult)
+			workflowExecution.Status = actionResult.Status
+			err = setWorkflowExecution(ctx, *workflowExecution)
+			if err != nil {
+				log.Printf("Failed ")
+			} else {
+				log.Printf("Successfully set the execution to waiting.")
+			}
+		}
+
+		return
+	}
+
 	if actionResult.Status == "ABORTED" || actionResult.Status == "FAILURE" {
 		log.Printf("Actionresult is %s. Should set workflowExecution and exit all running functions", actionResult.Status)
 
@@ -956,7 +1032,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		for _, result := range workflowExecution.Results {
 			if result.Status == "EXECUTING" {
 				result.Status = actionResult.Status
-				result.Result = "Aborted because of an unknown error"
+				result.Result = "Aborted because of error in another node"
 			}
 
 			if len(result.Result) > 0 {
@@ -1120,7 +1196,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 
 			// Handles extra statistics stuff when it's done
 			// Does autocomplete magic with JSON
-			go handleExecutionStatistics(*workflowExecution)
+			handleExecutionStatistics(*workflowExecution)
 		}
 	}
 
@@ -1180,10 +1256,10 @@ func handleExecutionStatistics(execution WorkflowExecution) {
 	for _, result := range execution.Results {
 		resultCheck := JSONCheck(result.Result)
 		if !resultCheck {
-			log.Printf("Result is NOT JSON!")
+			//log.Printf("Result is NOT JSON!")
 			continue
 		} else {
-			log.Printf("Result IS JSON!")
+			//log.Printf("Result IS JSON!")
 
 		}
 
@@ -1248,7 +1324,7 @@ func handleExecutionStatistics(execution WorkflowExecution) {
 
 		log.Printf("Added %d exampleresults to backend", successful)
 	} else {
-		log.Printf("No examplresults necessary to be added for execution %s", execution.ExecutionId)
+		log.Printf("No example results necessary to be added for execution %s", execution.ExecutionId)
 	}
 }
 
@@ -1283,7 +1359,7 @@ func getWorkflows(resp http.ResponseWriter, request *http.Request) {
 	// With user, do a search for workflows with user or user's org attached
 	q := datastore.NewQuery("workflow").Filter("owner =", user.Id)
 	if user.Role == "admin" {
-		q = datastore.NewQuery("workflow")
+		q = datastore.NewQuery("workflow").Filter("org_id =", user.ActiveOrg.Id)
 	}
 
 	var workflows []Workflow
@@ -1363,6 +1439,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 	workflow.Owner = user.Id
 	workflow.Sharing = "private"
 	workflow.ExecutingOrg = user.ActiveOrg
+	workflow.OrgId = user.ActiveOrg.Id
 
 	ctx := context.Background()
 	log.Printf("Saved new workflow %s with name %s", workflow.ID, workflow.Name)
@@ -1447,7 +1524,27 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("Has %d actions already", len(newActions))
 	}
 
+	for _, item := range workflow.Actions {
+		item.ID = uuid.NewV4().String()
+		newActions = append(newActions, item)
+	}
+
+	newTriggers := []Trigger{}
+	for _, item := range workflow.Triggers {
+		item.Status = "uninitialized"
+		item.ID = uuid.NewV4().String()
+		newTriggers = append(newTriggers, item)
+	}
+
+	newSchedules := []Schedule{}
+	for _, item := range workflow.Schedules {
+		item.Id = uuid.NewV4().String()
+		newSchedules = append(newSchedules, item)
+	}
+
 	workflow.Actions = newActions
+	workflow.Triggers = newTriggers
+	workflow.Schedules = newSchedules
 	workflow.IsValid = true
 	workflow.Configuration.ExitOnError = false
 
@@ -1778,6 +1875,53 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 				trigger.Status = "stopped"
 			} else if hook.Id == "" {
 				trigger.Status = "stopped"
+			}
+		} else if trigger.TriggerType == "USERINPUT" {
+			// E.g. check email
+			sms := ""
+			email := ""
+			triggerType := ""
+			triggerInformation := ""
+			for _, item := range trigger.Parameters {
+				if item.Name == "alertinfo" {
+					triggerInformation = item.Value
+				} else if item.Name == "type" {
+					triggerType = item.Value
+				} else if item.Name == "email" {
+					email = item.Value
+				} else if item.Name == "sms" {
+					sms = item.Value
+				}
+			}
+
+			if len(triggerType) == 0 {
+				log.Printf("No type specified for user input node")
+				resp.WriteHeader(401)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "No contact option specified in user input"}`)))
+				return
+			}
+
+			// FIXME: This is not the right time to send them, BUT it's well served for testing. Save -> send email / sms
+			_ = triggerInformation
+			if strings.Contains(triggerType, "email") {
+				if email == "test@test.com" {
+					log.Printf("Email isn't specified during save.")
+					resp.WriteHeader(401)
+					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Email field in user input can't be empty"}`)))
+					return
+				}
+
+				log.Printf("Should send email to %s during execution.", email)
+			}
+			if strings.Contains(triggerType, "sms") {
+				if sms == "0000000" {
+					log.Printf("Email isn't specified during save.")
+					resp.WriteHeader(401)
+					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "SMS field in user input can't be empty"}`)))
+					return
+				}
+
+				log.Printf("Should send SMS to %s during execution.", sms)
 			}
 		}
 
@@ -2201,7 +2345,7 @@ func abortExecution(resp http.ResponseWriter, request *http.Request) {
 			return
 		}
 	} else {
-		log.Printf("API key %s is correct to abort %s", parsedKey, executionId)
+		log.Printf("API key to abort/finish execution %s is correct.", executionId)
 	}
 
 	if workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" || workflowExecution.Status == "FINISHED" {
@@ -2222,7 +2366,7 @@ func abortExecution(resp http.ResponseWriter, request *http.Request) {
 	for _, result := range workflowExecution.Results {
 		if result.Status == "EXECUTING" {
 			result.Status = "ABORTED"
-			result.Result = "Aborted because of an unknown error"
+			result.Result = "Aborted because of error in another node"
 		}
 
 		if len(result.Result) > 0 {
@@ -2301,7 +2445,7 @@ func cleanupExecutions(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	resp.WriteHeader(200)
-	resp.Write([]byte("OK"))
+	resp.Write([]byte(`{"success": true}`))
 }
 
 func handleExecution(id string, workflow Workflow, request *http.Request) (WorkflowExecution, string, error) {
@@ -2362,6 +2506,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		}
 
 		// This one doesn't really matter.
+		log.Printf("Running POST execution with data %s", body)
 		var execution ExecutionRequest
 		err = json.Unmarshal(body, &execution)
 		if err != nil {
@@ -2624,7 +2769,17 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		// If the node is NOT found, it's supposed to be set to SKIPPED,
 		// as it's not a childnode of the startnode
 		// This is a configuration item for the workflow itself.
-		if !workflowExecution.Workflow.Configuration.StartFromTop {
+		if len(workflowExecution.Results) > 0 {
+			defaultResults = []ActionResult{}
+			for _, result := range workflowExecution.Results {
+				if result.Status == "WAITING" {
+					result.Status = "FINISHED"
+					result.Result = "Continuing"
+				}
+
+				defaultResults = append(defaultResults, result)
+			}
+		} else if len(workflowExecution.Results) == 0 && !workflowExecution.Workflow.Configuration.StartFromTop {
 			found := false
 			for _, nodeId := range childNodes {
 				if nodeId == action.ID {
@@ -2652,9 +2807,19 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		}
 	}
 
+	for _, trigger := range workflowExecution.Workflow.Triggers {
+		log.Printf("ID: %s vs %s", trigger.ID, workflowExecution.Start)
+		if trigger.ID == workflowExecution.Start {
+			if trigger.AppName == "User Input" {
+				startFound = true
+				break
+			}
+		}
+	}
+
 	if !startFound {
 		log.Printf("Startnode %s doesn't exist!", workflowExecution.Start)
-		return WorkflowExecution{}, fmt.Sprintf("Workflow action %s doesn't exist in workflow", workflowExecution.Start), errors.New(fmt.Sprintf("Workflow start node %s doesn't exist. Exiting!", workflowExecution.Start))
+		return WorkflowExecution{}, fmt.Sprintf("Workflow action %s doesn't exist in workflow", workflowExecution.Start), errors.New(fmt.Sprintf(`Workflow start node "%s" doesn't exist. Exiting!`, workflowExecution.Start))
 	}
 
 	// Verification for execution environments
@@ -3011,10 +3176,61 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	schedule, err := getSchedule(ctx, scheduleId)
+	if err != nil {
+		log.Printf("Failed finding schedule %s", scheduleId)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	log.Printf("Schedule: %#v", schedule)
+
+	if schedule.Environment == "cloud" {
+		log.Printf("[INFO] Should STOP a cloud schedule for workflow %s with schedule ID %s", fileId, scheduleId)
+		// https://shuffler.io/v1/hooks/webhook_80184973-3e82-4852-842e-0290f7f34d7c
+		org, err := getOrg(ctx, user.ActiveOrg.Id)
+		if err != nil {
+			log.Printf("Failed finding org %s: %s", org.Id, err)
+			return
+		}
+
+		// 1. Send request to cloud
+		// 2. Remove schedule if success
+		action := CloudSyncJob{
+			Type:          "schedule",
+			Action:        "stop",
+			OrgId:         org.Id,
+			PrimaryItemId: scheduleId,
+			SecondaryItem: schedule.Frequency,
+			ThirdItem:     workflow.ID,
+		}
+
+		err = executeCloudAction(action, org.SyncConfig.Apikey)
+		if err != nil {
+			log.Printf("Failed cloud action STOP schedule", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+			return
+		} else {
+			log.Printf("Successfully ran cloud action STOP schedule")
+			err = DeleteKey(ctx, "schedules", scheduleId)
+			if err != nil {
+				log.Printf("Failed deleting cloud schedule onprem..")
+				resp.WriteHeader(401)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed deleting cloud schedule"}`)))
+				return
+			}
+
+			resp.WriteHeader(200)
+			resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+			return
+		}
+	}
+
 	err = deleteSchedule(ctx, scheduleId)
 	if err != nil {
 		log.Printf("Failed deleting schedule: %s", err)
-
 		if strings.Contains(err.Error(), "Job not found") {
 			resp.WriteHeader(200)
 			resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
@@ -3292,6 +3508,68 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	if schedule.Environment == "cloud" {
+		log.Printf("[INFO] Should START a cloud schedule for workflow %s with schedule ID %s", workflow.ID, schedule.Id)
+		// https://shuffler.io/v1/hooks/webhook_80184973-3e82-4852-842e-0290f7f34d7c
+		org, err := getOrg(ctx, user.ActiveOrg.Id)
+		if err != nil {
+			log.Printf("Failed finding org %s: %s", org.Id, err)
+			return
+		}
+
+		// 1 = scheduleId
+		// 2 = schedule (cron, frequency)
+		// 3 = workflowId
+		// 4 = execution argument
+		action := CloudSyncJob{
+			Type:          "schedule",
+			Action:        "start",
+			OrgId:         org.Id,
+			PrimaryItemId: schedule.Id,
+			SecondaryItem: schedule.Frequency,
+			ThirdItem:     workflow.ID,
+			FourthItem:    schedule.ExecutionArgument,
+			FifthItem:     startNode,
+		}
+
+		timeNow := int64(time.Now().Unix())
+		newSchedule := ScheduleOld{
+			Id:                   schedule.Id,
+			WorkflowId:           workflow.ID,
+			StartNode:            startNode,
+			Argument:             string(schedule.ExecutionArgument),
+			WrappedArgument:      parsedBody,
+			CreationTime:         timeNow,
+			LastModificationtime: timeNow,
+			LastRuntime:          timeNow,
+			Org:                  org.Id,
+			Frequency:            schedule.Frequency,
+			Environment:          "cloud",
+		}
+
+		err = setSchedule(ctx, newSchedule)
+		if err != nil {
+			log.Printf("Failed setting cloud schedule: returning", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+			return
+		}
+
+		log.Printf("Action: %#v", action)
+		err = executeCloudAction(action, org.SyncConfig.Apikey)
+		if err != nil {
+			log.Printf("Failed cloud action START schedule", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+			return
+		} else {
+			log.Printf("Successfully set up cloud action schedule")
+			resp.WriteHeader(200)
+			resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Done"}`)))
+			return
+		}
+	}
+
 	log.Printf("Schedulearg: %s", parsedBody)
 
 	err = createSchedule(
@@ -3501,9 +3779,9 @@ func getWorkflow(ctx context.Context, id string) (*Workflow, error) {
 	return workflow, nil
 }
 
-func getEnvironments(ctx context.Context, OrgId string) ([]Environment, error) {
+func getEnvironments(ctx context.Context, orgId string) ([]Environment, error) {
 	var environments []Environment
-	q := datastore.NewQuery("Environments").Filter("org_id =", OrgId)
+	q := datastore.NewQuery("Environments").Filter("org_id =", orgId)
 
 	_, err := dbclient.GetAll(ctx, q, &environments)
 	if err != nil {
@@ -3513,9 +3791,9 @@ func getEnvironments(ctx context.Context, OrgId string) ([]Environment, error) {
 	return environments, nil
 }
 
-func getAllWorkflows(ctx context.Context) ([]Workflow, error) {
+func getAllWorkflows(ctx context.Context, orgId string) ([]Workflow, error) {
 	var allworkflows []Workflow
-	q := datastore.NewQuery("workflow")
+	q := datastore.NewQuery("workflow").Filter("org_id = ", orgId)
 
 	_, err := dbclient.GetAll(ctx, q, &allworkflows)
 	if err != nil {
@@ -3656,7 +3934,7 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 		private = true
 	}
 
-	q := datastore.NewQuery("workflow")
+	q := datastore.NewQuery("workflow").Filter("org_id = ", user.ActiveOrg.Id)
 	var workflows []Workflow
 	_, err = dbclient.GetAll(ctx, q, &workflows)
 	if err != nil {
@@ -3833,8 +4111,7 @@ func addAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// FIXME - need to be logged in?
-	_, userErr := handleApiAuthentication(resp, request)
+	user, userErr := handleApiAuthentication(resp, request)
 	if userErr != nil {
 		log.Printf("Api authentication failed in get all apps: %s", userErr)
 		resp.WriteHeader(401)
@@ -3903,6 +4180,7 @@ func addAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	appAuth.OrgId = user.ActiveOrg.Id
 	err = setWorkflowAppAuthDatastore(ctx, appAuth, appAuth.Id)
 	if err != nil {
 		log.Printf("Failed setting up app auth %s: %s", appAuth.Id, err)
@@ -4982,7 +5260,7 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 	}
 
 	if appCounter > 0 {
-		log.Printf("Preloaded %d OpenApi apps in %s!", appCounter, extra)
+		log.Printf("Preloaded %d OpenApi apps in folder %s!", appCounter, extra)
 	}
 
 	return nil
@@ -5467,9 +5745,13 @@ func getWorkflowExecutions(resp http.ResponseWriter, request *http.Request) {
 	resp.Write(newjson)
 }
 
-func getAllSchedules(ctx context.Context) ([]ScheduleOld, error) {
+func getAllSchedules(ctx context.Context, orgId string) ([]ScheduleOld, error) {
 	var schedules []ScheduleOld
-	q := datastore.NewQuery("schedules")
+
+	q := datastore.NewQuery("schedules").Filter("org = ", orgId)
+	if orgId == "ALL" {
+		q = datastore.NewQuery("schedules")
+	}
 
 	_, err := dbclient.GetAll(ctx, q, &schedules)
 	if err != nil {
@@ -5655,7 +5937,7 @@ func handleDeleteHook(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if user.Id != hook.Owner && user.Role != "admin" {
+	if user.Id != hook.Owner && user.Role != "admin" && user.ActiveOrg.Id != hook.OrgId {
 		log.Printf("Wrong user (%s) for workflow %s", user.Username, hook.Id)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
@@ -5676,6 +5958,36 @@ func handleDeleteHook(resp http.ResponseWriter, request *http.Request) {
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
+	}
+
+	log.Printf("Hook: %#v", hook)
+	if hook.Environment == "cloud" {
+		log.Printf("[INFO] Should STOP cloud webhook https://shuffler.io/api/v1/hooks/webhook_%s", hook.Id)
+		org, err := getOrg(ctx, user.ActiveOrg.Id)
+		if err != nil {
+			log.Printf("Failed finding org %s: %s", org.Id, err)
+			return
+		}
+
+		action := CloudSyncJob{
+			Type:          "webhook",
+			Action:        "stop",
+			OrgId:         org.Id,
+			PrimaryItemId: hook.Id,
+		}
+
+		if len(hook.Workflows) > 0 {
+			action.SecondaryItem = hook.Workflows[0]
+		}
+
+		err = executeCloudAction(action, org.SyncConfig.Apikey)
+		if err != nil {
+			log.Printf("Failed cloud action STOP execution", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+			return
+		}
+		// https://shuffler.io/v1/hooks/webhook_80184973-3e82-4852-842e-0290f7f34d7c
 	}
 
 	// This is here to force stop and remove the old webhook
@@ -5835,5 +6147,87 @@ func removeOutlookTriggerFunction(ctx context.Context, triggerId string) error {
 	}
 
 	_ = resp
+	return nil
+}
+
+func handleUserInput(trigger Trigger, organizationId string, workflowId string, referenceExecution string) error {
+	// E.g. check email
+	sms := ""
+	email := ""
+	triggerType := ""
+	triggerInformation := ""
+	for _, item := range trigger.Parameters {
+		if item.Name == "alertinfo" {
+			triggerInformation = item.Value
+		} else if item.Name == "type" {
+			triggerType = item.Value
+		} else if item.Name == "email" {
+			email = item.Value
+		} else if item.Name == "sms" {
+			sms = item.Value
+		}
+	}
+
+	if len(triggerType) == 0 {
+		log.Printf("No type specified for user input node")
+		return errors.New("No type specified for user input node")
+	}
+
+	// FIXME: This is not the right time to send them, BUT it's well served for testing. Save -> send email / sms
+	ctx := context.Background()
+	startNode := trigger.ID
+	if strings.Contains(triggerType, "email") {
+		action := CloudSyncJob{
+			Type:          "user_input",
+			Action:        "send_email",
+			OrgId:         organizationId,
+			PrimaryItemId: workflowId,
+			SecondaryItem: startNode,
+			ThirdItem:     triggerInformation,
+			FourthItem:    email,
+			FifthItem:     referenceExecution,
+		}
+
+		org, err := getOrg(ctx, organizationId)
+		if err != nil {
+			log.Printf("Failed email send to cloud (1): %s", err)
+			return err
+		}
+
+		err = executeCloudAction(action, org.SyncConfig.Apikey)
+		if err != nil {
+			log.Printf("Failed email send to cloud (2): %s", err)
+			return err
+		}
+
+		log.Printf("Should send email to %s during execution.", email)
+	}
+	if strings.Contains(triggerType, "sms") {
+		action := CloudSyncJob{
+			Type:          "user_input",
+			Action:        "send_sms",
+			OrgId:         organizationId,
+			PrimaryItemId: workflowId,
+			SecondaryItem: startNode,
+			ThirdItem:     triggerInformation,
+			FourthItem:    sms,
+			FifthItem:     referenceExecution,
+		}
+
+		org, err := getOrg(ctx, organizationId)
+		if err != nil {
+			log.Printf("Failed sms send to cloud (3): %s", err)
+			return err
+		}
+
+		err = executeCloudAction(action, org.SyncConfig.Apikey)
+		if err != nil {
+			log.Printf("Failed sms send to cloud (4): %s", err)
+			return err
+		}
+
+		log.Printf("Should send SMS to %s during execution.", sms)
+	}
+
 	return nil
 }

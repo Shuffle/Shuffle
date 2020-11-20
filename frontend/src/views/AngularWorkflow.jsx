@@ -190,6 +190,9 @@ const AngularWorkflow = (props) => {
 	const [defaultEnvironmentIndex, setDefaultEnvironmentIndex] = React.useState(0)
 
 	const cloudSyncEnabled = props.userdata !== undefined && props.userdata.active_org !== null && props.userdata.active_org !== undefined ? props.userdata.active_org.cloud_sync === true : false 
+	//const triggerEnvironments = cloudSyncEnabled ? ["cloud", "onprem"] : environments
+	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io"
+	const triggerEnvironments = isCloud ? ["cloud"] : ["cloud", "onprem"] 
 
 	const unloadText = 'Are you sure you want to leave without saving (CTRL+S)?'
 	useBeforeunload(() => {
@@ -476,7 +479,7 @@ const AngularWorkflow = (props) => {
 			}
 		}
 
-		if (responseJson.status === "ABORTED" || responseJson.status === "STOPPED" || responseJson.status === "FAILURE") {
+		if (responseJson.status === "ABORTED" || responseJson.status === "STOPPED" || responseJson.status === "FAILURE" || responseJson.status == "WAITING") {
 			stop()
 
 			setExecutionRunning(false)
@@ -795,6 +798,7 @@ const AngularWorkflow = (props) => {
 		"Testing",
 		"Http",
 	]
+
 	const getAppAuthentication = () => {
 		fetch(globalUrl+"/api/v1/apps/authentication", {
 			method: 'GET',
@@ -995,12 +999,15 @@ const AngularWorkflow = (props) => {
 				setSelectedApp(curapp)
 			}
 
-			var env = environments.find(a => a.Name === curaction.environment)
-			if (!env || env === undefined) {
-				env = environments[defaultEnvironmentIndex]
+			if (environments !== undefined) {
+				var env = environments.find(a => a.Name === curaction.environment)
+				if (!env || env === undefined) {
+					env = environments[defaultEnvironmentIndex]
+				}
+
+				setSelectedActionEnvironment(env)
 			}
 
-			setSelectedActionEnvironment(env)
 			setSelectedActionName(curaction.name)	
 
 			setSelectedAction(curaction)
@@ -1068,10 +1075,13 @@ const AngularWorkflow = (props) => {
 				// FIXME - do this for both actions and other types?
 				targetnode = workflow.triggers.findIndex(data => data.id === edge.target)
 				if (targetnode !== -1) {
-					alert.error("Can't have triggers as target of branch")
-					event.target.remove()
-					found = true
-					break
+					if (workflow.triggers[targetnode].app_name !== "User Input") {
+
+						alert.error("Can't have triggers as target of branch")
+						event.target.remove()
+						found = true
+						break
+					}
 				} 
 			}
 		}
@@ -1263,6 +1273,11 @@ const AngularWorkflow = (props) => {
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for apps :O!")
+				if (isCloud) {
+					setEnvironments({"name": "Cloud", "type": "cloud"})
+				} else {
+					setEnvironments({"name": "Onprem", "type": "onprem"})
+				}
 				return
 			}
 
@@ -1581,6 +1596,7 @@ const AngularWorkflow = (props) => {
 			"name": trigger.name,
 			"frequency": workflow.triggers[triggerindex].parameters[0].value,
 			"execution_argument": workflow.triggers[triggerindex].parameters[1].value,
+			"environment": workflow.triggers[triggerindex].environment,
 			"id": trigger.id,
 		}
 
@@ -1907,7 +1923,7 @@ const AngularWorkflow = (props) => {
 			"large_image": 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAIAAAD/gAIDAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAABmJLR0QA/wD/AP+gvaeTAAAAB3RJTUUH4wYNAxEP4A5uKQAAGipJREFUeNrtXHt4lNWZf8853zf3SSZDEgIJJtxCEnLRLSkXhSKgTcEL6yLK1hZWWylVbO1q7SKsSu3TsvVZqF2g4haoT2m9PIU+gJVHtFa5NQRD5FICIUAumBAmc81cvss5Z/845MtkAskEDJRu3r8Y8n3nfc/vvOe9zyDOOQxScoRvtAA3Ew2C1Q8aBKsfNAhWP2gQrH7QIFj9oEGw+kGDYPWDBsHqBw2C1Q+SbrQAPSg+/ULoRkvTjf4uwOKMAeeAEMI4AaBuf7rRhG5kIs05Zxxh1AUQ5yymUkVFgLBFxhZzbw///wGLUyZ2zikLn2oIVJ3o+NtZ5Xyb5u/gmgYAyCTLLqdlRKajaFRqeZFtTA7C+BJk5MZo2Y0Ai3EOHGGshyIX393btnNv5FQjjSoIYyQRRDBgdOkxyriuc8aJzeIozMu4d2rG16YQm4UzhtANULHrDRZnDGHMGW/b9lHzxh3RxlZslrHFjDAG4JxziBcHAUIIAHHGWFRhqmYblZ3z7bmZc24HAM75dTZk1xUsThkiWPn84umVv/btrSF2K7aYOGPA+pYBYQQIs5hCo8qQGRNGP/9vpky3WPAfECyxseCntSef+6Xq8UupDk4Z9Jc7QohgzR+yDMsY9/OlzpIx1xOv6wSW2JJvb03tM78AxrHVzHWaiAJGAMA5F4p2KYzgnHMG3WVEEqGRGDbJhWt+kFpedN3wuh5gCTsVPHzyb9/9L845Nkmcsm5CEMw0yiIxzhg2ycgkAQemqFyniBBiMyOJXOYVRcNmuXjDMntBnmBx84PFOSCktvmOLHxR9fiJ1Ry/bYQxZ0wPhk3pLtek4tQJhda84cRpA8Y0bzBS3xz4tDZYXav5QlKKXTwcjxcNxyy3ZJVufkFKtQtG/whg1f77Lzy7K+U0Z/ztQwTTiIJN0rAFdw97+G5TRlrihjkAAuVzT8tbu1ve3s01SmzdsZaI5g1m/cudY158/Doo18CCJTbg2V158plfXLLocUjpoYhtdE7+T5bYx+WKaJNR2mW8GOMciERESBWuPXdq2brIuRbJYU3QTRqOFq37oWtSyUDjNZBHwQFhzCk9v3knkqV4Iy2QcpaMKfnf5fZxuZxSRhlgREwykSVMCCaEyLJkkhHGlFKuU3tBXvH/LncU5Okd0QRzzjk/v2kngAjKBpAGULPEOXv/8umJ7/+3lGLvUgeMuKKZhrpLNv6nKcPFKeUIYYxVVa2srKyurm5ra+Ocp6enl5WVTZo0yW63M8YQ40giyueeo4+u1HwhJEtG2IEwohFl/Gv/kTqhcECVa8CrDhd3HUhw/MCBUzbquYXxSFVVVb322mv19fWcc0IIAFBKt2/fnp2dvWjRorvuuosBA52ah6ePfPYbtc++KpnkrmNGiGm65739qRMKYSAt8ICBxTnCWPd3hGrqsNXEO2N0RLAeDKffNTHtjjLOmEBq+/bta9askSQpJSUFRKjVeafa29tXrlx57ty5b3/72wwYMDZkZrl76q3eTw5LDptwjpxxYjEFDp2gkRixWQbOLQ6UxooNh+sa1Yu++CvDOUeEDJ03AwAYYxjjysrKNWvW2Gw2i8VCKaWUMsYYY+LfJpPJ7Xa/8cYbW7duxRgzygAga96M7k6TI5OstHgi9ecN1jcTWOI6hOuamKp12V2EWEyz5g1LuTUfAIgkqaq6YcMGSZIwxoyxnssI4FJSUjZv3nz+/HkiSxwg5bYCS3YGUzUDMoQRjamR+maD9U0FFgAAKOfb4j8ijLiq2gvzsNlENR0A/vrXv545c8ZqtV4WqUuwcy5JUiAQePfddwGA6TpxWO1jb2GKGuf+EHDeye6m0ywEAKB6At19E+KM20ZmCwwA4NChQ8ncGsaY2WyuqakBAIwwAFhGZHLGoOsuckBIC3R08b6ZwAIEACyqAEJxJ80BITnNCSJPBmhpaSGEJIMXIcTr9YZCIRFkSSkO4Im4cI32uc7fJ1gCMdTjUvD4/I5Smnwk2R3TnvhybJYHdDcDBxYHAOKwivwu/r/VNp+xc5fL1Yu1iidKqdvtdjgcwBgA6MEIksilAjQAAAIO8pDUK+D4dw4WBwAwZ6bF6xFwQBIJ1zaI3QFAfn5+Msol4vuioiKEEKUMAMKnGvVAB4sqAIAIRhghgq25WWAsfTOBBQAA1lHZ8QER54xYzKEjdbHzF4kkAcC0adNSU1P7xIsxJsvytGnToNPYDX/kazmP3WcdORwY1/whzRfEZpM9PxcGMkMcqAheSOwoHNmtSMAByUT1Bi5s+yj3yflU1YYPH37fffdt3rw5IyND07TLLoUxjkQixcXFZWVlAIAJBoC020vTbi/llEbPtgQ/O+X75DAgZM0bBgBxd/MmAUtIbBuTYxuT03H8LLaZRbGYMyY5bK1v7U6/a5J93C3A2KJFi86ePfvxxx+73W6EEO8kYyURZ/l8Pr/f73K5OOcIIc4YcECECBZZ/zIjsU49AERefPHFAVpatFH1QNi3t4ZYLV1FAkJoROk4Vp9RMRmbTRjgjqlTFUU5fvx4OBxmjBFCJEmKx0uW5ZaWFoTQhAkTRJKEuspeHBgDQNehDD+AYCEEgJBleMbFXQeYonRFp5xjsxxrbus4cTZ9ZjkyyRjQpMmTJk2a5HA4CCHBYDAYDJrNXb17zrnZbD516tTkyZPdbrdQrk4uCGE80JWsAQdLtOYlp412RPz7jxK7pas/yDmxWiKnmwNVf3NNKpZTHUyn6RkZEyZMqKiomDlzJqX02LFjstwVNxFCOjo6gsHgV77ylXiwricNJFidymUvHOn96FPNF8Iy6YqBOCdWS6y5zbPrgGVYhn3sCM454xwB2Gy2iRMnyrJ84MABi8Ui7iPn3GKxnD59urCwMCcnh4kO/j8SWIAQZ4xYTObsjIvv7sMmU7euKufEYqJR5eJ7+yOnmx35t5jcKUh08TkvLS2tra09d+6c2Ww2Klyapn3++ecVFRX4RkwgDXyvDWPOmHvabTmL7lG9ASSR+L9yypAkSU57+wdVNQ8tC59sAIRwZ1S5cOFCWe6qiDLG7Hb70aNH33vvPQCgdMDd3/UGS+AFnOc+9VBGxRTN40+skXMOCBBBriml9nG5wAEwEuWtwsLCmTNnhkIhUWgWeFkslt///vfBYDDJDPwmA6sTMzT25e+4Z5TTmJI43kcZtphzn3jwEnaXHkcAsGDBApfLpeu6+CjcYlNT0zvvvCOwS2DSM0z7uwNLVIF7ExEhTimxmrMeuJPTbrYZEaIHw8Mevts2dgSnzIi/EUKU0pycnHvuuaejo8MwUowxh8Oxffv2pqYmQohRiTbsmiDOuZAqyUR9wMHinAuMMMaEkN7dEyKEa3rz5h0ovm6DEI0ptlHZ2YvuATFXFC8cxgDw4IMPZmdnK4piKJckScFg8Le//a1AhxAiwlRKaSwWi8ViQhOFVBhjQ85rBOvq0x3hvAkhuq7X1tZ++OGHxcXFM2fOFBF2IqyUIYJb3v4gWH1STnMa2SLCiCvaiMUPSE5bz2EYsf/U1NSHHnpo9erVZrNZGHVKqcPh+Oijj2bNmjV06NCqqqqzZ8+2trYGAgFFUcRVTU1NzcrKys/PLykpycvLEwbusrIlT1fTZBVGAWOsKMr777+/Y8eOc+fOeb3emTNnrlq16jICcQ4IKa3tRx75T70jiiQiDJPoS6fdXlr0Pz/svX+l6/rSpUtPnz4dX60XKqZpWjgcRgiJrodgLVRJ3EGbzTZ69OhZs2bNmjXL4XCI168Osn6DZSB18ODB1157ra6uzmw2WywW4dc3bNhg5LpdrzCGMD790uutf/hIdjl5nMvnjJX8eoWjaOSlSeTLkUB///79K1asEN3pS6IjZGi3IVjXxhASMlBKFUVRVTU7O3vBggWzZ88mhFydivXvBYECY2z9+vXPPfdcY2Ojy+Uym82Ct8fjOXnyJHSv/wqkAlV/a9uxV0qxG0hdsuvzZjqKRl6aXL6SiBhzzqdMmTJ58uR4S28cSbyNN8joPAKA1Wp1uVxer/fnP//5s88+29zcjDG+ijCtH2AJ4SKRyIoVK7Zs2eJwOERb1HBDlFLRgOl2whhzxhrXvgPxCQpCLKZYc4flPHYf9LDrl2UNAN/85jeFCvd3kwI4WZbdbndNTc3SpUurqqqEJx0QsARSsVhs+fLl+/btGzJkiGh/xj9gsVg+++wzADBiSGHIW9/5MFBdSzq77QIdqqgjFv+z5HJyyvrstosYNT8/v6KioqOjw1i/60jifJ+4gD0dNOdc13Wn0xmLxZ5//vmPP/64v3j17xquWrWqqqoqLS1N1/WEzXDOI5GI1+v1+/1CMuAcEay2+Zp/vZ3YrF1ICbs+pSzz3qnimWRYGzGqqKkaKAhQdF0PhUJ+vz8cDiuKEovFxEdVVRMgEyomy/JPfvKTQ4cOCfuV5PaTMvDCJG3ZsuVXv/qV2+1OQIoQEo1GAWDOnDmPPPJIenr6pWImZYjg+pc3try9W3aldLPrlJX8erlj/Khe7HpPopQSQt56661169aJthBCKBqNapqWlZVVXFxcVFSUk5PjcDgope3t7bW1tZWVlWfPnrVarbIsx4MiOiB2u/2Xv/zl8OHDk6z59A2WQOrUqVPf+973hJLHvyJqdaNGjXr66adLSkqEQgHnopETrD55bPFPsVmOL5NqvmD2wntGPvP1/k4Ziy0pivLEE080NzcDgKIo48ePv/fee6dMmeJ0Onu+oqrqn//8502bNnk8HgFivOShUKi8vHzVqlVJgtW3rGKVTZs2xWKxhNwVYxwIBO666661a9eWlJRQTeeMI4wRJqK60LD2HR7fuUGIKYr1lqycbyVl13tKIvr43/jGN/x+//Dhw1944YVXX331q1/9ak+kdF3XNE2W5YqKivXr1992220i9zYeoJQ6nc7Kyspdu3aJlfsWoHfNEmpVXV397LPP2my2BE0OBoMPP/zwkiVLOOeMUiJJwHnH8TO+/UeiDa1Ki6fj+JluI3oEa/6O/Je/k3nftGsZXldVdffu3VOnTk1JSaGUCn1vbW09d+5cOBx2OBy5ublZWVnQOYQjYteXXnpp37594hUDfVVVc3Jy1q9fbzKZ+tSvpNKdnTt3JgBPCAkEAnPnzl2yZAljDBgnktRx4lzDq28Gqk4wRUUYIUnCVnPcMCPWO6JpU0oy75uWvF2/LMmyPGfOHM650J36+vrNmzfX1NSIfgfG2OFwFBUVPfzww7feeit0th2XL1/+gx/8oK6uzkgDhAc/c+bM/v37p0+f3idYvUksIvW2trbDhw8b5V2hU+FwuLS0dOmTS4WRwhK5+O7eo4te8h84hq0mOS1FSnUQmxl6qO2wf60A0ZK5NtJ1Xdd1WZb37Nnz5JNP7tmzR6QQTqfTbrfrun7w4MGnn3769ddfN3Jsi8Xy/e9/32QyJUQ8CKEPP/wwGaa9gSUWPXLkiNfrja9YiqTs8ccfl2SJ6RQT4v3o01PPr0cESyl2YJxTyinrhghCTNflNKejIA/6b60SSKQ4Aqkf//jHACDmK1knIYQcDofD4di0adPatWtF2EUp7RmpCeWqra31er0iALpKsAQdO3as2wsYh8Ph8vLykpISRimRJc0XPLPqDWySESH8ijEeRwhxnTJNv/yfe6WEhzVNa2xsXLt27cqVKyVJkiSpZ2wpUov09PS33nrrk08+MZz47Nmz7Xa78bw4eK/XW1dXB32NWPZms0QW1tDQEN/yFI7jjjvuABGgE3Lhjx/Hmi/IQ1J76wlzQBLR/aHQkTpLdgZw0HTtpZdeunDhgqGz8ZoLcSMLRj3PCFxCodCFCxcikYhwgldyZAJok8n05ptvTps2Texi9OjRY8eOPXbsmOGvEEK6rp85c2bixIlXCZYR1Hi93viIgVJqs9ny8/MBQMQH/n2fYbOczHcGOQf/viMZX5sCCBBAQ0NDY2OjyMMNXC4rSYJUGGNZlsVESe8cRc3+9OnTtbW1BQUFlFJJkvLz82tqarpVaxFqaWnpU/4+vGEsFotGo0aiLyyl3W53uVwAgDGm4ZjS6kXdu+1XQh+bpGhDi1iIcS5JktVqFT4brnwFeiIoVCbJtE7U3c6ePVtQUCBOJTs7O1EwjEWWdk2hA6XUaBYYS4uzvfSRMZ5kbsUBEKLRGNN0LEuqoookySif94JyUuv3SqFQyPh3zwhWdCT7BKsPA08Iib+D4hCi0WhHR4f4KDltl8rEffo3BMA5sVmQLAFAIBgIh8M9HRBOmvrVkbbZbMa/e842iX31uUgfmmWxWGw2WyAQiIcvHA6fP38+JyeH6TqRZcf40aGj9cRm4dDbvUAIMVW3jc4RW2xtbY1EIglZAQBEo9FkWvPC5ffp7MWTsizn5nbNuXk8noS3OOd2ux3iCor9A0v4HbPZ7Ha7m5ubDdcrzNaRI0cmTpwoBhIzKiZf+MOfk/i2M0IYDZn5ZfHh5MmT8ZUWQ+hx48bFB8BXIoxxXV2dqMD08rDwUSNGjCgoKIDOQlt9fX38W8K/Z2RkwLWEDmJUatSoUdXV1cauGGMmk+ngwYOLFi2SZZkzlvJP49Lvnti2Y4+c7uJXCKOQLGntAff0L6XdUSbKMtXV1fGBrrAamZmZr7zyitVq7f2ERU6za9eun/70p737REJIJBKZO3euLMuiwhMMBk+cOGHMTxjcher1cUJ9PlFaWhpflhH6X19ff+DAAQBgjAPAyB9+016Qp3mDSJa6RecIxE9baN6AbXTOmBWPcgCEUV1d3fHjx+NrxMJnFRUVWa1WsfleYlShCxUVFXPnzvV4PKKv01OnJElqb2+/884777//fuP/9+3b19raGn9OIhgaM2YMXIuBFxKUlZVlZmYmXBlRC1RVlUiEMyanOYvW/tBVXqRe9NGoIhwfIMQp18NRzRtMu71s/Gv/Ycp0i2+hbNu2LRqNxhdMBARixBbiAtFeiHP+1FNPPfDAA+3t7bFYTJRMBWGMNU3zeDzTp09ftmyZWJ8QEovFtm7dmqDRqqrm5uaOHDkS+mqR9TZyJA7QarU2NzcfO3ZM3A7oHDg4f/68pmnl5eWMMQQgOW0Zs6eYh6Vr7UE9GGaKyhmT7NaU0rF5Tz2Uu/QhyWnTNU2S5YMHD77++uvxpt0olSxevFiSJKOL1QsZKnb77bePGDGiqanJ4/FEIhHRkWaMDRs27Fvf+tbixYvFRJy4uZs2bfrLX/5idA+h01/df//9ZWVlotrTC9Ok6lmnT59eunRpwkIY446OjieeeGLevHmMMc4YxgRhxClTWjxaewAINg8dYspwAQCjjDEqyXJTU9Mzzzzj9/vjj5cQ4vf7n3zyyfnz5wvL0jtSRtdPhKaiXFVbW1tfX9/R0WGz2UaOHFlYWGhcc1HS2r1796pVq4wjN0CXJGn9+vXJFJeTLSuvXr1627ZtLpcrvnIGAOFweMGCBY899pjwL1TTESGks1bFAZiuIwBECELoxIkTK1eu9Hg88dbKMO3r1693OBy9SywagoSQ999/v7m5+ZFHHjFKLglnKXA0ksrdu3e/8sorwrolHNK8efOWLl2aTNu1b7CE9F6v97vf/a7P54uvBwlRgsFgUVHRwoULy8vLeyqFeP3ixYtbt27dtm2bqAvHx1aijvjCCy/MmDGjd4kNULZs2bJx40Zd10ePHj1//vzp06dbLBYDSsFRHJ5o3/3mN795++23E+IykT87nc5169YZTZZrBctQrn379okGekLZRLhnSunYsWPLy8sLCgoyMzOtVquu636/v6Gh4bPPPqupqfH5fA6HI+FLmGLAfc6cOc8991zvSInNqKq6Zs2anTt3ulwukUsoipKXlzdt2rSJEyfm5eWJ2FLI3NLScuDAgR07djQ0NIgUJ0HsQCCwbNmyu+++O8lufrKzDmK53/3ud+vWrXO73QkJneAUi8UURcEYm81mSZIYY6qqappGCLFarT2rTuIrl+PHj+8zthJ/8vl8K1eurK6uNqyBuGLCqJvN5vT09IyMDNHF8Xq9LS0twWDQYrGIznkC6/b29vnz5yd5AfsHloHXhg0b3njjjbS0tJ5lOSF6fMXOqED1fFiSJL/fn5+fv2rVqoTR9ssiFYlEHn/88aampiFDhqiq2pMvY0zTNF3XjWkRWZbFmfVk3d7ePmvWrBUrViTjeQ3qx7SyiCQmTJhgNpsPHDggiko9k6wEX9MTJoGg1+udMGHCyy+/LPS0l7MVcJtMJrvdXl1dLZQoIaMULAghpk4yRmsSWAOAz+ebPXv2j370I/FM8mD1e+RIuPa9e/euXr3a4/E4nU5xqsmsI2AKh8MA8OCDDz722GOiUZzMLRD6dfz48Z/97GeNjY0pKSn9moQRrCORCAAsWrTo61//ekI9dkDAMvDyeDwbN2784IMPFEWx2Wwi9rvs3RQC6bouClhlZWWPPvpoaWmpuC/JiytgDYVCGzdu/NOf/iT678LrXbZUD3GWQdjT4uLiJUuWFBcX95f11YMFnTOSCKFTp0798Y9/rKysbG9vFwGeMcoCnbM+uq5zzlNSUkpLS++9994vf/nLQhmvQlzjrZMnT7755ptVVVWhUEiWZXHv4hcUcZamaaqqSpI0ZsyYBx54YMaMGcKKXafJP4PEYRpW4PDhw0ePHhXzkiKSEG4xLS1txIgR48eP/9KXvjRs2LCEF6+Rb1NT0549ew4dOtTY2BgMBjVNM7YjSZLNZhs6dGhxcfHUqVNLS0tFw+JaWF/rD/f0jJ5VVY1EIrquY4ytVqvVau3l4S+Kr8/na2lpuXjxomhKWywWt9udlZU1dOhQw9KL0P9amH4xv3IkRIFOO9pzY+I8v/CvJiWzskh6vpAT+uJ/Eqqngf9i178S0wQbb1RyvkAuN/S3lW82uvE/hX0T0SBY/aBBsPpBg2D1gwbB6gcNgtUPGgSrHzQIVj9oEKx+0CBY/aD/A/ORNiwv2PAfAAAAJXRFWHRkYXRlOmNyZWF0ZQAyMDE5LTA2LTEzVDAzOjE3OjE2LTA0OjAwj3mANAAAACV0RVh0ZGF0ZTptb2RpZnkAMjAxOS0wNi0xM1QwMzoxNzoxNS0wNDowMM/MIhUAAAAASUVORK5CYII=',
 			"is_valid": true,
 			"label": "Webhook",
-			"environment": environments[defaultEnvironmentIndex] === undefined ? {} : environments[defaultEnvironmentIndex].Name,
+			"environment": "cloud",
 			"description": "Simple HTTP webhook",
 			"long_description": "Execute a workflow with an unauthicated POST request",
 		}, 
@@ -1919,9 +1935,9 @@ const AngularWorkflow = (props) => {
 			"description": "Wait for user input",
 			"trigger_type": "USERINPUT",
 			"errors": null,
-			"is_valid": cloudSyncEnabled,
+			"is_valid": true,
 			"label": "User input",
-			"environment": environments[defaultEnvironmentIndex] === undefined ? {} : environments[defaultEnvironmentIndex].Name,
+			"environment": "cloud",
 			"long_description": "Take user input to continue execution",
 		}, 
 		{
@@ -1932,9 +1948,9 @@ const AngularWorkflow = (props) => {
 			"trigger_type": "SCHEDULE",
 			"errors": null,
 			"large_image": "data:image/png;base64,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",
-			"is_valid": true,
 			"label": "Schedule",
-			"environment": environments[defaultEnvironmentIndex] === undefined ? {} : environments[defaultEnvironmentIndex].Name,
+			"is_valid": true,
+			"environment": "cloud",
 			"long_description": "Create a schedule based on cron",
 		},
 		{
@@ -1944,9 +1960,9 @@ const AngularWorkflow = (props) => {
 			"description": "Add your email provider",
 			"trigger_type": "EMAIL",
 			"errors": null,
-			"is_valid": cloudSyncEnabled,
+			"is_valid": true ? false : cloudSyncEnabled,
 			"label": "Email",
-			"environment": environments[defaultEnvironmentIndex] === undefined ? {} : environments[defaultEnvironmentIndex].Name,
+			"environment": "cloud",
 			"large_image": 'data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4QAYRXhpZgAASUkqAAgAAAAAAAAAAAAAAP/hAytodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNiAoV2luZG93cykiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6Nzg4QTJBMjVEMDI1MTFFN0EwQUVDODc5QjYyQkFCMUQiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6Nzg4QTJBMjZEMDI1MTFFN0EwQUVDODc5QjYyQkFCMUQiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDo3ODhBMkEyM0QwMjUxMUU3QTBBRUM4NzlCNjJCQUIxRCIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDo3ODhBMkEyNEQwMjUxMUU3QTBBRUM4NzlCNjJCQUIxRCIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/Pv/bAEMAAwICAgICAwICAgMDAwMEBgQEBAQECAYGBQYJCAoKCQgJCQoM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',
 			"long_description": "Execute a workflow when you get an email",
 		}]
@@ -2031,7 +2047,7 @@ const AngularWorkflow = (props) => {
 				}
 
 				if (data.is_valid === false) {
-					alert.error(data.name+" is only available on https://shuffler.io or with cloud sync enabled")
+					alert.error(data.name+" is only available on https://shuffler.io so far")
 					return
 				}
 
@@ -2063,9 +2079,9 @@ const AngularWorkflow = (props) => {
 					position: newposition,
 				}
 
-				if (data.trigger_type === "WEBHOOK") {
-					newAppData.status = "running"
-				}
+				//if (data.trigger_type === "WEBHOOK") {
+				//	newAppData.status = "running"
+				//}
 
 				// Can all the data be in here? hmm
 				const nodeToBeAdded = {
@@ -2110,10 +2126,10 @@ const AngularWorkflow = (props) => {
 				}
 
 				setWorkflow(workflow)
-				if (data.trigger_type === "WEBHOOK") {
-					newWebhook(newAppData)
-					saveWorkflow(workflow)
-				}
+				//if (data.trigger_type === "WEBHOOK") {
+				//	newWebhook(newAppData)
+				//	saveWorkflow(workflow)
+				//}
 			}
 		}
 	}
@@ -4526,6 +4542,55 @@ const AngularWorkflow = (props) => {
 						placeholder={selectedTrigger.label}
 						onChange={selectedTriggerChange}
 					/>
+					{showEnvironment ? 
+						<div style={{marginTop: "20px"}}>
+							<Typography>
+								Environment
+							</Typography>
+							<Select
+								value={selectedTrigger.environment}
+								disabled={selectedTrigger.status === "running"}
+								SelectDisplayProps={{
+									style: {
+										marginLeft: 10,
+
+									}
+								}}
+								fullWidth
+								onChange={(e) => {
+									selectedTrigger.environment = e.target.value
+									setSelectedTrigger(selectedTrigger)
+									if (e.target.value === "cloud") {
+										var tmpvalue = workflow.triggers[selectedTriggerIndex].parameters[0].value.split("/")
+										const urlpath = tmpvalue.slice(3, tmpvalue.length)
+										const newurl = "https://shuffler.io/"+urlpath.join("/")
+										workflow.triggers[selectedTriggerIndex].parameters[0].value = newurl
+									} else {
+										var tmpvalue = workflow.triggers[selectedTriggerIndex].parameters[0].value.split("/")
+										const urlpath = tmpvalue.slice(3, tmpvalue.length)
+										const newurl = window.location.origin+"/"+urlpath.join("/")
+										workflow.triggers[selectedTriggerIndex].parameters[0].value = newurl
+									}
+
+									setWorkflow(workflow)
+									setUpdate(Math.random())
+								}}
+								style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+							>
+								{triggerEnvironments.map(data => {
+									if (data.archived) {
+										return null
+									}
+									
+									return (
+										<MenuItem key={data} style={{backgroundColor: inputColor, color: "white"}} value={data}>
+											{data}
+										</MenuItem>
+									)
+								})}
+							</Select>
+						</div>
+						: null}
 					<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 					<div style={{flex: "6", marginTop: "20px"}}>
 						<div>
@@ -4728,6 +4793,7 @@ const AngularWorkflow = (props) => {
 			"id": trigger.id, 
 			"workflow": workflow.id,
 			"start": startNode,
+			"environment": trigger.environment,
 		}
 
 		fetch(globalUrl+"/api/v1/hooks/new", {
@@ -4762,7 +4828,7 @@ const AngularWorkflow = (props) => {
 		alert.info("Stopping webhook")
 
 		fetch(globalUrl+"/api/v1/hooks/"+trigger.id+"/delete", {
-    	  	method: 'DELETE',
+    	  method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json',
@@ -4776,14 +4842,15 @@ const AngularWorkflow = (props) => {
 
 			return response.json()
 		})
-    	.then((responseJson) => {
+    .then((responseJson) => {
+			workflow.triggers[triggerindex].status = "stopped"
+			trigger.status = "stopped"
+			setWorkflow(workflow)
+			setSelectedTrigger(trigger)
+
 			if (responseJson.success) {
 				//alert.success("Successfully stopped webhook")
 				// Set the status
-				workflow.triggers[triggerindex].status = "stopped"
-				trigger.status = "stopped"
-				setWorkflow(workflow)
-				setSelectedTrigger(trigger)
 				saveWorkflow(workflow)
 			} else {
 				alert.error("Failed stopping webhook: "+responseJson.reason)
@@ -4807,6 +4874,9 @@ const AngularWorkflow = (props) => {
 
 				// email,sms,app ...
 				workflow.triggers[selectedTriggerIndex].parameters[2] = {"name": "type", "value": "email"}
+
+				workflow.triggers[selectedTriggerIndex].parameters[3] = {"name": "email", "value": "test@test.com"}
+				workflow.triggers[selectedTriggerIndex].parameters[4] = {"name": "sms", "value": "0000000"}
 				setWorkflow(workflow)
 			}
 
@@ -4815,7 +4885,7 @@ const AngularWorkflow = (props) => {
 					<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 						<div style={{flex: "1"}}>
 							<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}: {selectedTrigger.status}</h3>
-							<a href="https://shuffler.io/docs/triggers#user_input" style={{textDecoration: "none", color: "#f85a3e"}}>What are user inputs?</a>
+							<a href="https://shuffler.io/docs/triggers#user_input" style={{textDecoration: "none", color: "#f85a3e"}}>What is the user input trigger?</a>
 						</div>
 					</div>
 					<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -4896,33 +4966,81 @@ const AngularWorkflow = (props) => {
 							</div>
 						</div>
 						<FormGroup style={{paddingLeft: 10, backgroundColor: inputColor}} row>
-						  	<FormControlLabel
-						  	  control={
-										<Checkbox 
-											checked={workflow.triggers[selectedTriggerIndex].parameters[2] !== undefined && workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("email")} 
-											onChange={() => {
-												setTriggerOptionsWrapper("email")
-											}} 
-											color="primary"
-											value="email" 
-										/>
-						  		}
-						  	  label={<div style={{color: "white"}}>Email</div>}
-						  	/>
-						  	<FormControlLabel
-						  	  control={
-										<Checkbox 
-											checked={workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("sms")} 
-											onChange={() => {
-												setTriggerOptionsWrapper("sms")
-											}} 
-											color="primary"
-											value="sms" 
-										/>
-									}
-									label={<div style={{color: "white"}}>SMS</div>}
-						  	/>
+							<FormControlLabel
+								control={
+									<Checkbox 
+										checked={workflow.triggers[selectedTriggerIndex].parameters[2] !== undefined && workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("email")} 
+										onChange={() => {
+											setTriggerOptionsWrapper("email")
+										}} 
+										color="primary"
+										value="email" 
+									/>
+								}
+								label={<div style={{color: "white"}}>Email</div>}
+							/>
+							<FormControlLabel
+								control={
+									<Checkbox 
+										checked={workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("sms")} 
+										onChange={() => {
+											setTriggerOptionsWrapper("sms")
+										}} 
+										color="primary"
+										value="sms" 
+									/>
+								}
+								label={<div style={{color: "white"}}>SMS</div>}
+							/>
 						</FormGroup>
+						{workflow.triggers[selectedTriggerIndex].parameters[2] !== undefined && workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("email") ?
+							<TextField
+								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+								InputProps={{
+									style:{
+										color: "white",
+										marginLeft: "5px",
+										maxWidth: "95%",
+										height: "50px", 
+										fontSize: "1em",
+									},
+								}}
+								fullWidth
+								color="primary"
+								placeholder={"mail1@company.com,mail2@company.com"}
+								defaultValue={workflow.triggers[selectedTriggerIndex].parameters[3].value}
+								onBlur={(event) => {
+									workflow.triggers[selectedTriggerIndex].parameters[3].value = event.target.value
+									setWorkflow(workflow)
+									setUpdate(Math.random())
+								}}
+							/>
+							: null
+						}
+						{workflow.triggers[selectedTriggerIndex].parameters[2] !== undefined && workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("sms") ?
+							<TextField
+								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+								InputProps={{
+									style:{
+										color: "white",
+										marginLeft: "5px",
+										maxWidth: "95%",
+										height: "50px", 
+										fontSize: "1em",
+									},
+								}}
+								fullWidth
+								color="primary"
+								placeholder={"+474823212,+460203042"}
+								defaultValue={workflow.triggers[selectedTriggerIndex].parameters[4].value}
+								onBlur={(event) => {
+									workflow.triggers[selectedTriggerIndex].parameters[4].value = event.target.value
+									setWorkflow(workflow)
+									setUpdate(Math.random())
+								}}
+							/>
+							: null
+						}
 					</div>
 				</div> 
 			)
@@ -4935,7 +5053,7 @@ const AngularWorkflow = (props) => {
 		if (Object.getOwnPropertyNames(selectedTrigger).length > 0 && workflow.triggers[selectedTriggerIndex] !== undefined) {
 			if (workflow.triggers[selectedTriggerIndex].parameters === undefined || workflow.triggers[selectedTriggerIndex].parameters === null || workflow.triggers[selectedTriggerIndex].parameters.length === 0) {
 				workflow.triggers[selectedTriggerIndex].parameters = []
-				workflow.triggers[selectedTriggerIndex].parameters[0] = {"name": "cron", "value": "120"}
+				workflow.triggers[selectedTriggerIndex].parameters[0] = {"name": "cron", "value": "*/2 * * * *"}
 				workflow.triggers[selectedTriggerIndex].parameters[1] = {"name": "execution_argument", "value": '{"example": {"json": "is cool"}}'}
 				setWorkflow(workflow)
 			}
@@ -4968,27 +5086,59 @@ const AngularWorkflow = (props) => {
 						placeholder={selectedTrigger.label}
 						onChange={selectedTriggerChange}
 					/>
+					{showEnvironment ? 
+						<div style={{marginTop: "20px"}}>
+							<Typography>
+								Environment
+							</Typography>
+							<Select
+								value={selectedTrigger.environment}
+								disabled={selectedTrigger.status === "running"}
+								SelectDisplayProps={{
+									style: {
+										marginLeft: 10,
 
-					<div style={{marginTop: "20px"}}>
-						Environment:
-						<TextField
-							style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
-							InputProps={{
-								style:{
-									color: "white",
-									marginLeft: "5px",
-									maxWidth: "95%",
-									height: "50px", 
-									fontSize: "1em",
-								},
-							}}
-							required
-							disabled
-							fullWidth
-							color="primary"
-							value={selectedTrigger.environment}
-						/>
-					</div>
+									}
+								}}
+								fullWidth
+								onChange={(e) => {
+									selectedTrigger.environment = e.target.value
+									setSelectedTrigger(selectedTrigger)
+									if (e.target.value === "cloud") {
+										console.log("Set cloud config")
+										workflow.triggers[selectedTriggerIndex].parameters[0].value = "*/2 * * * *" 
+
+										//var tmpvalue = workflow.triggers[selectedTriggerIndex].parameters[0].value.split("/")
+										//const urlpath = tmpvalue.slice(3, tmpvalue.length)
+										//const newurl = "https://shuffler.io/"+urlpath.join("/")
+										//workflow.triggers[selectedTriggerIndex].parameters[0].value = newurl
+									} else {
+										console.log("Set cloud config")
+										//var tmpvalue = workflow.triggers[selectedTriggerIndex].parameters[0].value.split("/")
+										//const urlpath = tmpvalue.slice(3, tmpvalue.length)
+										//const newurl = window.location.origin+"/"+urlpath.join("/")
+										workflow.triggers[selectedTriggerIndex].parameters[0].value = "120" 
+									}
+
+									setWorkflow(workflow)
+									setUpdate(Math.random())
+								}}
+								style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+							>
+								{triggerEnvironments.map(data => {
+									if (data.archived) {
+										return null
+									}
+									
+									return (
+										<MenuItem key={data} style={{backgroundColor: inputColor, color: "white"}} value={data}>
+											{data}
+										</MenuItem>
+									)
+								})}
+							</Select>
+						</div>
+						: null}
 					<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 					<div style={{flex: "6", marginTop: "20px"}}>
 						<div>
@@ -5049,12 +5199,12 @@ const AngularWorkflow = (props) => {
 							/>
 							<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
-								<Button style={{flex: "1",}} disabled={selectedTrigger.status === "running"} onClick={() => {
+								<Button style={{flex: "1",}} variant="contained" disabled={selectedTrigger.status === "running"} onClick={() => {
 									submitSchedule(selectedTrigger, selectedTriggerIndex)
 								}} color="primary">
 	    		    	    		Start	
 	    		    	  		</Button>
-								<Button style={{flex: "1",}} disabled={selectedTrigger.status !== "running"} onClick={() => {
+								<Button style={{flex: "1",}} variant="contained" disabled={selectedTrigger.status !== "running"} onClick={() => {
 									stopSchedule(selectedTrigger, selectedTriggerIndex)
 								}} color="primary">
 	    		    	    		Stop	
@@ -5534,7 +5684,7 @@ const AngularWorkflow = (props) => {
 
 						<b>Actions</b>
 						<div>
-							{executionData.status !== undefined && executionData.status !== "ABORTED" && executionData.status !== "FINISHED" && executionData.status !== "FAILURE" ? <CircularProgress style={{marginLeft: 20}}/> : null}
+							{executionData.status !== undefined && executionData.status !== "ABORTED" && executionData.status !== "FINISHED" && executionData.status !== "FAILURE" && executionData.status !== "WAITING" ? <CircularProgress style={{marginLeft: 20}}/> : null}
 						</div>
 					</div>
 					{executionData.results === undefined || executionData.results === null || executionData.results.length === 0 && executionData.status === "EXECUTING" ?
@@ -5573,7 +5723,7 @@ const AngularWorkflow = (props) => {
 							const statusColor = data.status === "FINISHED" || data.status === "SUCCESS" ? "green" : data.status === "ABORTED" || data.status === "FAILURE" ? "red" : "orange"
 							const actionimg = curapp === null ? 
 								null :
-								<img alt={data.action.app_name} src={curapp.large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />
+								<img alt={data.action.app_name} src={curapp === undefined ? "" : curapp.large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />
 
 							return (
 								<div key={index} style={{marginBottom: 40,}}>
@@ -5911,7 +6061,9 @@ const AngularWorkflow = (props) => {
 			setNewAppAuth(newAuthOption)
 			appAuthentication.push(newAuthOption)
 			setAppAuthentication(appAuthentication)
+			getAppAuthentication() 
 			setUpdate(authenticationOption.id)
+
 		}
 
 		return (

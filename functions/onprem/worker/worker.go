@@ -236,10 +236,9 @@ type Action struct {
 	AuthNotRequired  bool   `json:"auth_not_required" datastore:"auth_not_required" yaml:"auth_not_required"`
 }
 
-// Added environment for location to execute
 type Trigger struct {
 	AppName         string                       `json:"app_name" datastore:"app_name"`
-	Description     string                       `json:"description" datastore:"description"`
+	Description     string                       `json:"description" datastore:"description,noindex"`
 	LongDescription string                       `json:"long_description" datastore:"long_description"`
 	Status          string                       `json:"status" datastore:"status"`
 	AppVersion      string                       `json:"app_version" datastore:"app_version"`
@@ -253,6 +252,7 @@ type Trigger struct {
 	Environment     string                       `json:"environment" datastore:"environment"`
 	TriggerType     string                       `json:"trigger_type" datastore:"trigger_type"`
 	Name            string                       `json:"name" datastore:"name"`
+	Tags            []string                     `json:"tags" datastore:"tags" yaml:"tags"`
 	Parameters      []WorkflowAppActionParameter `json:"parameters" datastore: "parameters,noindex"`
 	Position        struct {
 		X float64 `json:"x" datastore:"x"`
@@ -549,6 +549,7 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 
 	// source = parent node, dest = child node
 	// parent can have more children, child can have more parents
+	extra := 0
 	for _, branch := range workflowExecution.Workflow.Branches {
 		// Check what the parent is first. If it's trigger - skip
 		sourceFound := false
@@ -559,6 +560,21 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 			}
 
 			if action.ID == branch.DestinationID {
+				destinationFound = true
+			}
+		}
+
+		for _, trigger := range workflowExecution.Workflow.Triggers {
+			if trigger.AppName != "User Input" {
+				continue
+			}
+
+			if trigger.ID == branch.SourceID {
+				sourceFound = true
+				extra += 1
+			}
+
+			if trigger.ID == branch.DestinationID {
 				destinationFound = true
 			}
 		}
@@ -576,7 +592,7 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 		}
 	}
 
-	log.Printf("Actions: %d", len(workflowExecution.Workflow.Actions))
+	log.Printf("Actions: %d + Special Triggers: %d", len(workflowExecution.Workflow.Actions), extra)
 	for _, action := range workflowExecution.Workflow.Actions {
 		if action.Environment != environment {
 			continue
@@ -775,12 +791,49 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 		// IF NOT VISITED && IN toExecuteOnPrem
 		// SKIP if it's not onprem
 		for _, nextAction := range nextActions {
-			action := getAction(workflowExecution, nextAction)
-
+			action := getAction(workflowExecution, nextAction, environment)
 			// check visited and onprem
 			if arrayContains(visited, nextAction) {
 				log.Printf("ALREADY VISITIED (%s): %s", action.Label, nextAction)
 				continue
+			}
+
+			if action.AppName == "User Input" {
+				log.Printf("USER INPUT!")
+
+				if action.ID == workflowExecution.Start {
+					log.Printf("Skipping because it's the startnode")
+					visited = append(visited, action.ID)
+					executed = append(executed, action.ID)
+					continue
+				} else {
+					log.Printf("Should stop after this iteration because it's user-input based. %#v", action)
+					trigger := Trigger{}
+					for _, innertrigger := range workflowExecution.Workflow.Triggers {
+						if innertrigger.ID == action.ID {
+							trigger = innertrigger
+							break
+						}
+					}
+
+					trigger.LargeImage = ""
+					triggerData, err := json.Marshal(trigger)
+					if err != nil {
+						log.Printf("Failed unmarshalling action: %s", err)
+						triggerData = []byte("Failed unmarshalling. Cancel execution!")
+					}
+
+					err = runUserInput(client, action, workflowExecution.Workflow.ID, workflowExecution.ExecutionId, workflowExecution.Authorization, string(triggerData))
+					if err != nil {
+						log.Printf("Failed launching backend magic: %s", err)
+						os.Exit(3)
+					} else {
+						log.Printf("Launched user input node succesfully!")
+						os.Exit(3)
+					}
+
+					break
+				}
 			}
 
 			// Not really sure how this edgecase happens.
@@ -816,7 +869,7 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 			}
 
 			if continueOuter {
-				//log.Printf("Parents of %s aren't finished: %s", nextAction, strings.Join(parents[nextAction], ", "))
+				log.Printf("Parents of %s aren't finished: %s", nextAction, strings.Join(parents[nextAction], ", "))
 				//for _, tmpaction := range parents[nextAction] {
 				//	action := getAction(workflowExecution, tmpaction)
 				//	_ = action
@@ -911,7 +964,7 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 			// https://devblogs.microsoft.com/oldnewthing/20100203-00/?p=15083
 			maxSize := 32700 - len(string(actionData)) - 2000
 			if len(executionData) < maxSize {
-				log.Printf("ADDING FULL_EXECUTION because size is larger than %d", maxSize)
+				log.Printf("ADDING FULL_EXECUTION because size is smaller than %d", maxSize)
 				env = append(env, fmt.Sprintf("FULL_EXECUTION=%s", string(executionData)))
 			} else {
 				log.Printf("Skipping FULL_EXECUTION because size is larger than %d", maxSize)
@@ -973,13 +1026,13 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 			shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
 		}
 
-		log.Printf("Status: %s, Results: %d, actions: %d", workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
+		log.Printf("Status: %s, Results: %d, actions: %d", workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extra)
 		if workflowExecution.Status != "EXECUTING" {
 			log.Printf("Exiting as worker execution has status %s!", workflowExecution.Status)
 			shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
 		}
 
-		if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions) {
+		if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions)+extra {
 			shutdownCheck := true
 			ctx := context.Background()
 			for _, result := range workflowExecution.Results {
@@ -1075,14 +1128,71 @@ func getResult(workflowExecution WorkflowExecution, id string) ActionResult {
 	return ActionResult{}
 }
 
-func getAction(workflowExecution WorkflowExecution, id string) Action {
+func getAction(workflowExecution WorkflowExecution, id, environment string) Action {
 	for _, action := range workflowExecution.Workflow.Actions {
 		if action.ID == id {
 			return action
 		}
 	}
 
+	for _, trigger := range workflowExecution.Workflow.Triggers {
+		if trigger.ID == id {
+			return Action{
+				ID:          trigger.ID,
+				AppName:     trigger.AppName,
+				Name:        trigger.AppName,
+				Environment: environment,
+			}
+			log.Printf("FOUND TRIGGER: %#v!", trigger)
+		}
+	}
+
 	return Action{}
+}
+
+func runUserInput(client *http.Client, action Action, workflowId, workflowExecutionId, authorization string, configuration string) error {
+	timeNow := time.Now().Unix()
+	result := ActionResult{
+		Action:        action,
+		ExecutionId:   workflowExecutionId,
+		Authorization: authorization,
+		Result:        configuration,
+		StartedAt:     timeNow,
+		CompletedAt:   0,
+		Status:        "WAITING",
+	}
+
+	resultData, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+
+	fullUrl := fmt.Sprintf("%s/api/v1/streams", baseUrl)
+	req, err := http.NewRequest(
+		"POST",
+		fullUrl,
+		bytes.NewBuffer([]byte(resultData)),
+	)
+
+	if err != nil {
+		log.Printf("Error building test request: %s", err)
+		return err
+	}
+
+	newresp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Error running test request: %s", err)
+		return err
+	}
+
+	body, err := ioutil.ReadAll(newresp.Body)
+	if err != nil {
+		log.Printf("Failed reading body when waiting: %s", err)
+		return err
+	}
+
+	log.Printf("[INFO] Body: %s", string(body))
+	return nil
 }
 
 func runTestExecution(client *http.Client, workflowId, apikey string) (string, string) {
@@ -1173,7 +1283,6 @@ func main() {
 		shutdown(executionId, "")
 	}
 
-	// FIXME - tmp
 	data := fmt.Sprintf(`{"execution_id": "%s", "authorization": "%s"}`, executionId, authorization)
 	fullUrl := fmt.Sprintf("%s/api/v1/streams/results", baseUrl)
 	req, err := http.NewRequest(

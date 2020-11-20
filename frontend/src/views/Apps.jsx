@@ -137,6 +137,7 @@ const Apps = (props) => {
 
 	const [isDropzone, setIsDropzone] = React.useState(false);
 	const upload = React.useRef(null);
+	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" ? true : false
 
 	const { start, stop } = useInterval({
 	  	duration: 5000,
@@ -592,7 +593,7 @@ const Apps = (props) => {
 					</div>
 				</div>
 				{activateButton}
-				{(props.userdata.role === "admin" || props.userdata.id === selectedApp.owner) || !selectedApp.generated ? 
+				{(props.userdata !== undefined && (props.userdata.role === "admin" || props.userdata.id === selectedApp.owner) || !selectedApp.generated) ? 
 					<div>
 						{downloadButton}
 						{editButton}
@@ -618,7 +619,7 @@ const Apps = (props) => {
 						})}
 					</div>
 				: null}
-				{props.userdata.id === selectedApp.owner ? 
+				{props.userdata !== undefined && props.userdata.id === selectedApp.owner ? 
 					<div style={{marginTop: 15}}>
 						{/*<p><b>ID:</b> {selectedApp.id}</p>*/}
 						<b style={{marginRight: 15}}>Sharing:</b> 
@@ -794,7 +795,7 @@ const Apps = (props) => {
 	}
 
 	const uploadFile = (e) => {
-		const isDropzone = e.dataTransfer?.files.length > 0;
+		const isDropzone = e.dataTransfer === undefined ? false : e.dataTransfer.files.length > 0;
 		const files = isDropzone ? e.dataTransfer.files : e.target.files;
 		
     const reader = new FileReader();
@@ -846,37 +847,41 @@ const Apps = (props) => {
 				</div>
 				<Divider style={{marginBottom: 10, marginTop: 10, height: "100%", width: 1, backgroundColor: dividerColor}}/>
 				<div style={{flex: 1, marginLeft: 10, marginRight: 10}}>
-					<div style={{display: "flex"}}>
+					<div style={{display: "flex", minHeight: 84.81}}>
 						<div style={{flex: 1}}>
 							<h2>Your apps ({apps.length+searchableApps.length})</h2> 
 						</div>
-						<Tooltip title={"Reload apps locally"} style={{marginTop: "28px", width: "100%"}} aria-label={"Upload"}>
-							<Button
-								variant="outlined"
-								component="label"
-								color="primary"
-								style={{margin: 5, maxHeight: 50, marginTop: 10}}
-								onClick={() => {
-									hotloadApps()
-								}}
-							>
-								<CachedIcon />
-							</Button>
-						</Tooltip>
-						<Tooltip title={"Download from Github"} style={{marginTop: "28px", width: "100%"}} aria-label={"Upload"}>
-							<Button
-								variant="outlined"
-								component="label"
-								color="primary"
-								style={{margin: 5, maxHeight: 50, marginTop: 10}}
-								onClick={() => {
-									setOpenApi(baseRepository)
-									setLoadAppsModalOpen(true)
-								}}
-							>
-								<CloudDownloadIcon />
-							</Button>
-						</Tooltip>
+						{isCloud ? null : 
+						<span>
+							<Tooltip title={"Reload apps locally"} style={{marginTop: "28px", width: "100%"}} aria-label={"Upload"}>
+								<Button
+									variant="outlined"
+									component="label"
+									color="primary"
+									style={{margin: 5, maxHeight: 50, marginTop: 10}}
+									onClick={() => {
+										hotloadApps()
+									}}
+								>
+									<CachedIcon />
+								</Button>
+							</Tooltip>
+							<Tooltip title={"Download from Github"} style={{marginTop: "28px", width: "100%"}} aria-label={"Upload"}>
+								<Button
+									variant="outlined"
+									component="label"
+									color="primary"
+									style={{margin: 5, maxHeight: 50, marginTop: 10}}
+									onClick={() => {
+										setOpenApi(baseRepository)
+										setLoadAppsModalOpen(true)
+									}}
+								>
+									<CloudDownloadIcon />
+								</Button>
+							</Tooltip>
+						</span>
+					}
 					</div>
 					<TextField
 						style={{backgroundColor: inputColor}} 
