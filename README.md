@@ -1,5 +1,5 @@
 # Shuffle 
-[Shuffle](https://shuffler.io) is an automation platform to unify your security services (SOAR). It has thousands of premade integrations and is based on open frameworks like OpenAPI and Mitre Att&ck. The workflow editor is based on a no-code thought process to empower non-developers, and the app creator makes you able to inegrate any platform in minutes.
+[Shuffle](https://shuffler.io) is an automation platform to unify your security services (SOAR). It has thousands of premade integrations and is based on open frameworks like OpenAPI and Mitre Att&ck. The workflow editor is based on a no-code thought process to empower non-developers, and the app creator makes you able to integrate any platform in minutes.
 
 [![Discord](https://img.shields.io/discord/463752820026376202.svg?label=&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2)](https://discord.gg/B2CBzUm)
 
@@ -37,6 +37,9 @@ Please consider [sponsoring](https://github.com/sponsors/frikky) the project if 
 * App creator for [OpenAPI](https://github.com/frikky/OpenAPI-security-definitions)
 * Easy to learn Python library for custom apps
 
+## Architecture
+![Shuffle Architecture](https://github.com/frikky/Shuffle/blob/master/frontend/src/assets/img/shuffle_architecture.png)
+
 ## Website
 https://shuffler.io
 
@@ -46,7 +49,7 @@ All modular information related to Shuffle will be under MIT (anyone can use it 
 Apps & App SDK: MIT
 Shuffle backend: AGPLv3 
 
-### Project overview 
+### Repository overview 
 Below is the folder structure with a short explanation
 ```bash
 ├── README.md				# What you're reading right now
