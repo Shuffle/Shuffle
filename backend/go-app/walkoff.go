@@ -73,6 +73,8 @@ type SyncFeatures struct {
 	UserInput          SyncData `json:"user_input" datastore:"user_input"`
 	SendMail           SyncData `json:"send_mail" datastore:"send_mail"`
 	SendSms            SyncData `json:"send_sms" datastore:"send_sms"`
+	Updates            SyncData `json:"updates" datastore:"updates"`
+	Notifications      SyncData `json:"notifications" datastore:"notifications"`
 	EmailTrigger       SyncData `json:"email_trigger" datastore:"email_trigger"`
 	AppExecutions      SyncData `json:"app_executions" datastore:"app_executions"`
 	WorkflowExecutions SyncData `json:"workflow_executions" datastore:"workflow_executions"`
@@ -84,13 +86,14 @@ type SyncFeatures struct {
 }
 
 type SyncData struct {
-	Active      bool   `json:"active" datastore:"active"`
-	Type        string `json:"type" datastore:"type"`
-	Name        string `json:"name" datastore:"name"`
-	Description string `json:"description" datastore:"description"`
-	Limit       int64  `json:"limit" datastore:"limit"`
-	StartDate   int64  `json:"start_date" datastore:"start_date"`
-	EndDate     int64  `json:"end_date" datastore:"end_date"`
+	Active         bool   `json:"active" datastore:"active"`
+	Type           string `json:"type" datastore:"type"`
+	Name           string `json:"name" datastore:"name"`
+	Description    string `json:"description" datastore:"description"`
+	Limit          int64  `json:"limit" datastore:"limit"`
+	StartDate      int64  `json:"start_date" datastore:"start_date"`
+	EndDate        int64  `json:"end_date" datastore:"end_date"`
+	DataCollection int64  `json:"data_collection" datastore:"data_collection"`
 }
 
 type SyncConfig struct {
@@ -1193,7 +1196,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 
 			// Handles extra statistics stuff when it's done
 			// Does autocomplete magic with JSON
-			go handleExecutionStatistics(*workflowExecution)
+			handleExecutionStatistics(*workflowExecution)
 		}
 	}
 

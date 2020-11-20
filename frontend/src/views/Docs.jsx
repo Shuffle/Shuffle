@@ -22,8 +22,9 @@ const Body = {
 const dividerColor = "rgb(225, 228, 232)"
 
 const SideBar = {
-	maxWidth: "250px",
+	maxWidth: 250,
 	flex: "1",
+	position: "fixed",
 }
 
 const hrefStyle = {
@@ -165,6 +166,7 @@ const Docs = (props) => {
 		maxWidth: 750,
 		overflow: "hidden",
 		paddingBottom: 200, 
+		marginLeft: 250, 
 	}
 
 	function OuterLink(props) {
@@ -212,11 +214,11 @@ const Docs = (props) => {
 		<div style={Body}>
 			<div style={SideBar}>
 				<ul style={{listStyle: "none", paddingLeft: "0"}}>
-					{list.map(item => {
+					{list.map((item, index) => {
 						const path = "/docs/"+item
 						const newname = item.charAt(0).toUpperCase()+item.substring(1).split("_").join(" ").split("-").join(" ")
 						return (
-							<li style={{marginTop: "10px"}}>
+							<li key={index} style={{marginTop: "10px"}}>
 								<Link style={hrefStyle} to={path} onClick={() => {fetchDocs(item)}}>
 									<h2>{newname}</h2>
 								</Link>

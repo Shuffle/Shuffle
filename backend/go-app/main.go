@@ -867,12 +867,6 @@ func deleteUser(resp http.ResponseWriter, request *http.Request) {
 		userId = location[4]
 	}
 
-	if userId == userInfo.Id {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Can't deactivate yourself"}`))
-		return
-	}
-
 	ctx := context.Background()
 	foundUser, err := getUser(ctx, userId)
 	if err != nil {
@@ -904,6 +898,7 @@ func deleteUser(resp http.ResponseWriter, request *http.Request) {
 
 	// Invert. No user deletion.
 	if foundUser.Active {
+
 		foundUser.Active = false
 	} else {
 		foundUser.Active = true
@@ -1180,6 +1175,7 @@ func createNewUser(username, password, role, apikey string, org Org) error {
 	ID := uuid.NewV4()
 	newUser.Id = ID.String()
 	newUser.VerificationToken = verifyToken.String()
+
 	err = setUser(ctx, newUser)
 	if err != nil {
 		log.Printf("Error adding User %s: %s", username, err)
@@ -1187,10 +1183,8 @@ func createNewUser(username, password, role, apikey string, org Org) error {
 	}
 
 	neworg, err := getOrg(ctx, org.Id)
-	log.Printf("Users: %d", len(org.Users))
 	if err == nil {
-		log.Printf("Updating org %s with user %s", org.Name, newUser.Username)
-		neworg.Users = append(org.Users, *newUser)
+		neworg.Users = append(neworg.Users, *newUser)
 		err = setOrg(ctx, *neworg, neworg.Id)
 		if err != nil {
 			log.Printf("Failed updating org with user %s", newUser.Username)
@@ -1198,26 +1192,6 @@ func createNewUser(username, password, role, apikey string, org Org) error {
 			log.Printf("Successfully updated org with user %s!", newUser.Username)
 		}
 	}
-
-	//	url := fmt.Sprintf("https://shuffler.io/register/%s", verifyToken.String())
-	//	const verifyMessage = `
-	//Registration URL :)
-	//
-	//%s
-	//	`
-	//	addr := newUser.Username
-	//
-	//	msg := &mail.Message{
-	//		Sender:  "Shuffle <frikky@shuffler.io>",
-	//		To:      []string{addr},
-	//		Subject: "Verify your username - Shuffle",
-	//		Body:    fmt.Sprintf(verifyMessage, url),
-	//	}
-	//
-	//	log.Println(msg.Body)
-	//	if err := mail.Send(ctx, msg); err != nil {
-	//		log.Printf("Couldn't send email: %v", err)
-	//	}
 
 	err = increaseStatisticsField(ctx, "successful_register", username, 1)
 	if err != nil {
@@ -2462,6 +2436,7 @@ func handleGetUsers(resp http.ResponseWriter, request *http.Request) {
 		item.Password = ""
 		item.Session = ""
 		item.VerificationToken = ""
+		item.Orgs = []string{}
 
 		newUsers = append(newUsers, item)
 	}
@@ -2808,7 +2783,6 @@ func fixUserOrg(ctx context.Context, user *User) *User {
 		user.Orgs = append(user.Orgs, user.ActiveOrg.Id)
 	}
 
-	log.Printf("Updating %d orgs for user %s", len(user.Orgs), user.Id)
 	// Might be vulnerable to timing attacks.
 	for _, orgId := range user.Orgs {
 		if len(orgId) == 0 {
@@ -2820,8 +2794,6 @@ func fixUserOrg(ctx context.Context, user *User) *User {
 			log.Printf("Error getting org %s", orgId)
 			continue
 		}
-
-		log.Printf("Org users: %d", len(org.Users))
 
 		orgIndex := 0
 		userFound := false
@@ -2844,7 +2816,6 @@ func fixUserOrg(ctx context.Context, user *User) *User {
 			org.Users = append(org.Users, *user)
 		}
 
-		log.Printf("Users 2: %d", len(org.Users))
 		err = setOrg(ctx, *org, orgId)
 		if err != nil {
 			log.Printf("Failed setting org %s", orgId)
@@ -7719,6 +7690,7 @@ func handleEditOrg(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	log.Printf("SUCCESSFULLY UPDATED ORG")
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Successfully updated org"}`)))
 
