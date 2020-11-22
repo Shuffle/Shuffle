@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"runtime"
 	"testing"
+	"time"
 
 	"cloud.google.com/go/datastore"
 	"google.golang.org/api/option"
@@ -131,7 +132,8 @@ func TestAuthenticationRequired(t *testing.T) {
 		rr := httptest.NewRecorder()
 		handler := http.HandlerFunc(e.handler)
 
-		handler.ServeHTTP(rr, req)
+		timeoutHandler := http.TimeoutHandler(handler, 2*time.Second, `Request Timeout.`)
+		timeoutHandler.ServeHTTP(rr, req)
 
 		if status := rr.Code; status != http.StatusUnauthorized {
 			t.Errorf("handler returned wrong status code: got %v want %v",
@@ -159,7 +161,8 @@ func TestAuthenticationNotRequired(t *testing.T) {
 		rr := httptest.NewRecorder()
 		handler := http.HandlerFunc(e.handler)
 
-		handler.ServeHTTP(rr, req)
+		timeoutHandler := http.TimeoutHandler(handler, 2*time.Second, `Request Timeout.`)
+		timeoutHandler.ServeHTTP(rr, req)
 
 		if status := rr.Code; status != http.StatusOK {
 			t.Errorf("handler returned wrong status code: got %v want %v",
@@ -280,9 +283,8 @@ outerLoop:
 
 		rr := httptest.NewRecorder()
 
-		r.ServeHTTP(rr, req)
-
-		funcName := runtime.FuncForPC(reflect.ValueOf(e.handler).Pointer()).Name()
+		timeoutHandler := http.TimeoutHandler(r, 2*time.Second, `Request Timeout`)
+		timeoutHandler.ServeHTTP(rr, req)
 
 		if status := rr.Code; status != http.StatusOK {
 			t.Errorf("%s handler returned wrong status code: got %v want %v",
