@@ -135,9 +135,10 @@ func TestAuthenticationRequired(t *testing.T) {
 		timeoutHandler := http.TimeoutHandler(handler, 2*time.Second, `Request Timeout.`)
 		timeoutHandler.ServeHTTP(rr, req)
 
+		funcName := getFunctionNameFromFunction(e.handler)
 		if status := rr.Code; status != http.StatusUnauthorized {
-			t.Errorf("handler returned wrong status code: got %v want %v",
-				status, http.StatusUnauthorized)
+			t.Errorf("%s handler returned wrong status code: got %v want %v",
+				funcName, status, http.StatusUnauthorized)
 		}
 	}
 }
@@ -164,9 +165,10 @@ func TestAuthenticationNotRequired(t *testing.T) {
 		timeoutHandler := http.TimeoutHandler(handler, 2*time.Second, `Request Timeout.`)
 		timeoutHandler.ServeHTTP(rr, req)
 
+		funcName := getFunctionNameFromFunction(e.handler)
 		if status := rr.Code; status != http.StatusOK {
-			t.Errorf("handler returned wrong status code: got %v want %v",
-				status, http.StatusOK)
+			t.Errorf("%s handler returned wrong status code: got %v want %v",
+				funcName, status, http.StatusOK)
 		}
 	}
 }
@@ -286,6 +288,7 @@ outerLoop:
 		timeoutHandler := http.TimeoutHandler(r, 2*time.Second, `Request Timeout`)
 		timeoutHandler.ServeHTTP(rr, req)
 
+		funcName := getFunctionNameFromFunction(e.handler)
 		if status := rr.Code; status != http.StatusOK {
 			t.Errorf("%s handler returned wrong status code: got %v want %v",
 				funcName, status, http.StatusOK)
@@ -315,4 +318,8 @@ outerLoop:
 		}
 
 	}
+}
+
+func getFunctionNameFromFunction(f interface{}) string {
+	return runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name()
 }
