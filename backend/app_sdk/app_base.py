@@ -824,6 +824,26 @@ class AppBase:
     
             return True, ""
 
+        # Things to consider for files:
+        # - How can you download / stream a file? 
+        # - Can you decide if you want a stream or the files directly?
+        def get_files(full_execution, value):
+            print("FULL EXEC: %s" % full_execution)
+            org_id = full_execution["workflow"]["execution_org"]["id"]
+            print("SHOULD GET FILES BASED ON ORG %s, workflow %s and value(s) %s" % (org_id, full_execution["workflow"]["id"], value))
+            get_path = "/api/v1/files/%s/content?execution_id=%s" % (value, full_execution["execution_id"])
+
+            print("PATH: %s" % get_path)
+            headers = {
+                "Content-Type": "application/json",     
+                "Authorization": "Bearer %s" % self.authorization
+            }
+            ret = requests.get("%s%s" % (self.url, get_path), headers=headers)
+            print("RET CONTENT: %s" % ret.text)
+            print("RET CODE FILE: %d" % ret.status_code)
+
+	    # r.HandleFunc("/api/v1/files/{fileId}/content", handleGetFileContent).Methods("GET", "OPTIONS")
+
         # Checks whether conditions are met, otherwise set 
         branchcheck, tmpresult = check_branch_conditions(action, fullexecution)
         if not branchcheck:
@@ -848,7 +868,7 @@ class AppBase:
             actionname.replace(" ", "_", -1) 
         #if action.generated:
         #    actionname = actionname.lower()
-        
+
         # Runs the actual functions
         try:
             func = getattr(self, actionname, None)
@@ -891,8 +911,16 @@ class AppBase:
                         multiexecution = False
                         multi_execution_lists = []
                         for parameter in action["parameters"]:
-                            check, value, is_loop = parse_params(action, fullexecution, parameter)
+                            is_file = False
+                            try:
+                                if parameter["schema"]["type"] == "file":
+                                    print("SHOULD HANDLE FILE. Get based on value %s" % parameter["value"]) 
+                                    get_files(fullexecution, parameter["value"])
+                                    is_file = True
+                            except KeyError as e:
+                                print("SCHEMA ERROR: %s" % e)
 
+                            check, value, is_loop = parse_params(action, fullexecution, parameter)
                             if check:
                                 raise "Value check error: %s" % Exception(check)
 

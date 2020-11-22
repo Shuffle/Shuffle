@@ -620,9 +620,6 @@ func handleApiAuthentication(resp http.ResponseWriter, request *http.Request) (U
 			return User{}, errors.New("Invalid format for apikey")
 		}
 
-		// fml
-		//log.Println(apikeyCheck)
-
 		// This is annoying af and is done because of maxlength lol
 		newApikey := apikeyCheck[1]
 		if len(newApikey) > 249 {
@@ -630,56 +627,14 @@ func handleApiAuthentication(resp http.ResponseWriter, request *http.Request) (U
 		}
 
 		ctx := context.Background()
-		//if item, err := memcache.Get(ctx, newApikey); err == memcache.ErrCacheMiss {
-		//	// Not in cache
-		//} else if err != nil {
-		//	// Error with cache
-		//	log.Printf("Error getting item: %v", err)
-		//} else {
-		//	var Userdata User
-		//	err = json.Unmarshal(item.Value, &Userdata)
-
-		//	if err == nil {
-		//		if len(Userdata.Username) > 0 {
-		//			return Userdata, nil
-		//		} else {
-		//			return Userdata, errors.New("User is invalid")
-		//		}
-		//	}
-		//}
 
 		// Make specific check for just service user?
 		// Get the user based on APIkey here
-		//log.Println(apikeyCheck[1])
 		Userdata, err := getApikey(ctx, apikeyCheck[1])
 		if err != nil {
 			log.Printf("Apikey %s doesn't exist: %s", apikey, err)
 			return User{}, err
 		}
-
-		// Caching both bad and good apikeys :)
-		//b, err := json.Marshal(Userdata)
-		//if err != nil {
-		//	log.Printf("Failed marshalling: %s", err)
-		//	return User{}, err
-		//}
-
-		// Add to cache if it doesn't exist
-		//item := &memcache.Item{
-		//	Key:        newApikey,
-		//	Value:      b,
-		//	Expiration: time.Minute * 60,
-		//}
-
-		//if err := memcache.Add(ctx, item); err == memcache.ErrNotStored {
-		//	if err := memcache.Set(ctx, item); err != nil {
-		//		log.Printf("Error setting item: %v", err)
-		//	}
-		//} else if err != nil {
-		//	log.Printf("error adding item: %v", err)
-		//} else {
-		//	log.Printf("Set cache for %s", item.Key)
-		//}
 
 		if len(Userdata.Username) > 0 {
 			return Userdata, nil
@@ -3957,7 +3912,7 @@ func executeSchedule(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	log.Printf("EXECUTING %s!", workflowId)
+	log.Printf("[INFO] EXECUTING %s!", workflowId)
 	idConfig, err := getSchedule(ctx, workflowId)
 	if err != nil {
 		log.Printf("Error getting schedule: %s", err)
@@ -7186,39 +7141,37 @@ func runInit(ctx context.Context) {
 			}
 		}
 
-		/*
-			fileq := datastore.NewQuery("Files").Limit(1)
-			count, err := dbclient.Count(ctx, fileq)
+		fileq := datastore.NewQuery("Files").Limit(1)
+		count, err := dbclient.Count(ctx, fileq)
+		log.Printf("FILECOUNT: %d", count)
+		if err == nil && count < 10 {
+			basepath := "."
+			filename := "testfile.txt"
+			fileId := uuid.NewV4().String()
+			log.Printf("Creating new file reference %s because none exist!", fileId)
+			workflowId := "2cf1169d-b460-41de-8c36-28b2092866f8"
+			downloadPath := fmt.Sprintf("%s/%s/%s/%s", basepath, activeOrgs[0].Id, workflowId, fileId)
 
-			if err == nil && count == 0 {
-				basepath := "."
-				filename := "testfile.txt"
-				fileId := uuid.NewV4().String()
-				log.Printf("Creating new file reference %s because none exist!", fileId)
-				workflowId := "2e9d6474-402c-4dcc-bb53-45f638ca18d3"
-				downloadPath := fmt.Sprintf("%s/%s/%s/%s", basepath, activeOrgs[0].Id, workflowId, fileId)
-
-				timeNow := time.Now().Unix()
-				newFile := File{
-					Id:           fileId,
-					CreatedAt:    timeNow,
-					UpdatedAt:    timeNow,
-					Description:  "Created by system for testing",
-					Status:       "active",
-					Filename:     filename,
-					OrgId:        activeOrgs[0].Id,
-					WorkflowId:   workflowId,
-					DownloadPath: downloadPath,
-				}
-
-				err = setFile(ctx, newFile)
-				if err != nil {
-					log.Printf("Failed setting file: %s", err)
-				} else {
-					log.Printf("Created file %s in init", newFile.DownloadPath)
-				}
+			timeNow := time.Now().Unix()
+			newFile := File{
+				Id:           fileId,
+				CreatedAt:    timeNow,
+				UpdatedAt:    timeNow,
+				Description:  "Created by system for testing",
+				Status:       "active",
+				Filename:     filename,
+				OrgId:        activeOrgs[0].Id,
+				WorkflowId:   workflowId,
+				DownloadPath: downloadPath,
 			}
-		*/
+
+			err = setFile(ctx, newFile)
+			if err != nil {
+				log.Printf("Failed setting file: %s", err)
+			} else {
+				log.Printf("Created file %s in init", newFile.DownloadPath)
+			}
+		}
 
 		var allworkflowapps []AppAuthenticationStorage
 		q = datastore.NewQuery("workflowappauth")
@@ -7241,7 +7194,7 @@ func runInit(ctx context.Context) {
 
 		var schedules []ScheduleOld
 		q = datastore.NewQuery("schedules")
-		_, err := dbclient.GetAll(ctx, q, &schedules)
+		_, err = dbclient.GetAll(ctx, q, &schedules)
 		if err == nil {
 			log.Printf("Setting up all schedules with org %s", activeOrgs[0].Id)
 			for _, item := range schedules {
@@ -8016,13 +7969,59 @@ func handleGetFileContent(resp http.ResponseWriter, request *http.Request) {
 		fileId = location[4]
 	}
 
-	//log.Printf("In file download")
+	log.Printf("\n\nUser is trying to get file %s\n\n", fileId)
+
+	// 1. Check user directly
+	// 2. Check workflow execution authorization
+	setOrgId := false
 	user, err := handleApiAuthentication(resp, request)
 	if err != nil {
-		log.Printf("Api authentication failed in file download: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
+		// r.HandleFunc("/api/v1/files/{fileId}/content", handleGetFileContent).Methods("GET", "OPTIONS")
+		log.Printf("INITIAL Api authentication failed in file download: %s", err)
+		executionId, ok := request.URL.Query()["execution_id"]
+		if ok && len(executionId) > 0 {
+			ctx := context.Background()
+			workflowExecution, err := getWorkflowExecution(ctx, executionId[0])
+			if err != nil {
+				log.Printf("Couldn't find execution ID %s", executionId[0])
+				resp.WriteHeader(401)
+				resp.Write([]byte(`{"success": false}`))
+				return
+			}
+
+			apikey := request.Header.Get("Authorization")
+			if !strings.HasPrefix(apikey, "Bearer ") {
+				log.Printf("Apikey doesn't start with bearer (2)")
+				resp.WriteHeader(401)
+				resp.Write([]byte(`{"success": false}`))
+				return
+			}
+
+			apikeyCheck := strings.Split(apikey, " ")
+			if len(apikeyCheck) != 2 {
+				log.Printf("Invalid format for apikey (2)")
+				resp.WriteHeader(401)
+				resp.Write([]byte(`{"success": false}`))
+				return
+			}
+
+			// This is annoying af and is done because of maxlength lol
+			newApikey := apikeyCheck[1]
+			if newApikey != workflowExecution.Authorization {
+				log.Printf("Bad apikey for execution %s. %s vs %s", executionId[0], apikey, workflowExecution.Authorization)
+				resp.WriteHeader(401)
+				resp.Write([]byte(`{"success": false}`))
+				return
+			}
+
+			log.Printf("Authorization is correct for execution %s! %s vs %s", executionId, apikey, workflowExecution.Authorization)
+			setOrgId = true
+		} else {
+
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
 	}
 
 	// 1. Verify if the user has access to the file: org_id and workflow
@@ -8035,6 +8034,11 @@ func handleGetFileContent(resp http.ResponseWriter, request *http.Request) {
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
+	}
+
+	// This is a workaround for file grabs from an app
+	if setOrgId == true {
+		user.ActiveOrg.Id = file.OrgId
 	}
 
 	found := false

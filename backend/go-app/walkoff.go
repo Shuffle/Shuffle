@@ -1089,14 +1089,14 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 				}
 			}
 
-			log.Printf("Updating %s in %s from %s to %s", actionResult.Action.ID, workflowExecution.ExecutionId, workflowExecution.Results[outerindex].Status, actionResult.Status)
+			log.Printf("[INFO] Updating %s in %s from %s to %s", actionResult.Action.ID, workflowExecution.ExecutionId, workflowExecution.Results[outerindex].Status, actionResult.Status)
 			workflowExecution.Results[outerindex] = actionResult
 		} else {
-			log.Printf("Setting value of %s in %s to %s", actionResult.Action.ID, workflowExecution.ExecutionId, actionResult.Status)
+			log.Printf("[INFO] Setting value of %s in %s to %s", actionResult.Action.ID, workflowExecution.ExecutionId, actionResult.Status)
 			workflowExecution.Results = append(workflowExecution.Results, actionResult)
 		}
 	} else {
-		log.Printf("Setting value of %s in %s to %s", actionResult.Action.ID, workflowExecution.ExecutionId, actionResult.Status)
+		log.Printf("[INFO] Setting value of %s in %s to %s", actionResult.Action.ID, workflowExecution.ExecutionId, actionResult.Status)
 		workflowExecution.Results = append(workflowExecution.Results, actionResult)
 	}
 
@@ -1179,7 +1179,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		_ = skippedNodes
 
 		if finished {
-			log.Printf("Execution of %s finished.", workflowExecution.ExecutionId)
+			log.Printf("[INFO] Execution of %s finished.", workflowExecution.ExecutionId)
 			//log.Println("Might be finished based on length of results and everything being SUCCESS or FINISHED - VERIFY THIS. Setting status to finished.")
 
 			workflowExecution.Result = lastResult
@@ -1316,15 +1316,15 @@ func handleExecutionStatistics(execution WorkflowExecution) {
 		for _, exampleresult := range appResults {
 			err := setExampleresult(ctx, exampleresult)
 			if err != nil {
-				log.Printf("Failed setting examplresult %s: %s", exampleresult.ExampleId, err)
+				log.Printf("[ERROR] Failed setting examplresult %s: %s", exampleresult.ExampleId, err)
 			} else {
 				successful += 1
 			}
 		}
 
-		log.Printf("Added %d exampleresults to backend", successful)
+		log.Printf("[INFO] Added %d exampleresults to backend", successful)
 	} else {
-		log.Printf("No example results necessary to be added for execution %s", execution.ExecutionId)
+		log.Printf("[INFO] No example results necessary to be added for execution %s", execution.ExecutionId)
 	}
 }
 
@@ -1438,6 +1438,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 	workflow.ID = uuid.NewV4().String()
 	workflow.Owner = user.Id
 	workflow.Sharing = "private"
+	user.ActiveOrg.Users = []User{}
 	workflow.ExecutingOrg = user.ActiveOrg
 	workflow.OrgId = user.ActiveOrg.Id
 
@@ -1816,7 +1817,8 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if len(workflow.ExecutingOrg.Id) == 0 {
-		log.Printf("setting executing org")
+		log.Printf("Setting executing org for workflow")
+		user.ActiveOrg.Users = []User{}
 		workflow.ExecutingOrg = user.ActiveOrg
 	}
 
@@ -2339,17 +2341,17 @@ func abortExecution(resp http.ResponseWriter, request *http.Request) {
 
 		// FIXME - have a check for org etc too..
 		if user.Id != workflowExecution.Workflow.Owner && user.Role != "admin" {
-			log.Printf("Wrong user (%s) for workflowexecution workflow %s", user.Username, workflowExecution.Workflow.ID)
+			log.Printf("[INFO] Wrong user (%s) for workflowexecution workflow %s", user.Username, workflowExecution.Workflow.ID)
 			resp.WriteHeader(401)
 			resp.Write([]byte(`{"success": false}`))
 			return
 		}
 	} else {
-		log.Printf("API key to abort/finish execution %s is correct.", executionId)
+		log.Printf("[INFO] API key to abort/finish execution %s is correct.", executionId)
 	}
 
 	if workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" || workflowExecution.Status == "FINISHED" {
-		log.Printf("Stopped execution of %s with status %s", executionId, workflowExecution.Status)
+		log.Printf("[INFO] Stopped execution of %s with status %s", executionId, workflowExecution.Status)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Status for %s is %s, which can't be aborted."}`, executionId, workflowExecution.Status)))
 		return
@@ -2461,7 +2463,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	}
 
 	if len(workflow.ExecutingOrg.Id) == 0 {
-		log.Printf("Stopped execution because there is no executing org for workflow %s", workflow.ID)
+		log.Printf("[INFO] Stopped execution because there is no executing org for workflow %s", workflow.ID)
 		return WorkflowExecution{}, fmt.Sprintf("Workflow has no executing org defined"), errors.New("Workflow has no executing org defined")
 	}
 
@@ -2479,7 +2481,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	}
 
 	if !workflow.IsValid {
-		log.Printf("Stopped execution as workflow %s is not valid.", workflow.ID)
+		log.Printf("[ERROR] Stopped execution as workflow %s is not valid.", workflow.ID)
 		return WorkflowExecution{}, fmt.Sprintf(`workflow %s is invalid`, workflow.ID), errors.New("Failed getting workflow")
 	}
 
@@ -3104,6 +3106,8 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	log.Printf("[INFO] Starting execution of %s!", fileId)
+
+	user.ActiveOrg.Users = []User{}
 	workflow.ExecutingOrg = user.ActiveOrg
 	workflowExecution, executionResp, err := handleExecution(fileId, *workflow, request)
 

@@ -2836,7 +2836,16 @@ const AngularWorkflow = (props) => {
 								}}
 							/>
 
-						if (selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0) {
+						console.log(selectedActionParameters[count])
+						if (selectedActionParameters[count].schema !== undefined && selectedActionParameters[count].schema !== null && selectedActionParameters[count].schema.type === "file") {
+							const fileId = "6daabec1-892b-469c-b603-c902e47223a9"
+							datafield = `SHOW FILES FROM OTHER NODES? Filename: ${selectedActionParameters[count].value}`	
+							if (selectedActionParameters[count].value != fileId) {
+								changeActionParameter(fileId, count)
+								setUpdate(Math.random())
+
+							}
+						} else if (selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0) {
 							if (selectedActionParameters[count].value === "" && selectedActionParameters[count].required) {
 								// Rofl, dirty workaround :)
 								const e = {
