@@ -2836,7 +2836,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 
 	var allEnvs []Environment
 	if len(workflowExecution.ExecutionOrg) > 0 {
-		log.Printf("Executing ORG: %s", workflowExecution.ExecutionOrg)
+		log.Printf("[INFO] Executing ORG: %s", workflowExecution.ExecutionOrg)
 
 		allEnvironments, err := getEnvironments(ctx, workflowExecution.ExecutionOrg)
 		if err != nil {

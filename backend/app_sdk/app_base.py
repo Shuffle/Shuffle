@@ -828,7 +828,6 @@ class AppBase:
         # - How can you download / stream a file? 
         # - Can you decide if you want a stream or the files directly?
         def get_files(full_execution, value):
-            print("FULL EXEC: %s" % full_execution)
             org_id = full_execution["workflow"]["execution_org"]["id"]
             print("SHOULD GET FILES BASED ON ORG %s, workflow %s and value(s) %s" % (org_id, full_execution["workflow"]["id"], value))
             get_path = "/api/v1/files/%s/content?execution_id=%s" % (value, full_execution["execution_id"])
@@ -845,22 +844,72 @@ class AppBase:
             print("ERROR GETTING FILE: ")
             print("FILE RET CONTENT: %s" % ret.text)
             print("FILE RET CODE FILE: %d" % ret.status_code)
+            return "Error getting file(s). Status code %d" % ret.status_code
 
         # Sets files in the backend
-        def set_files(full_execution, files[]):
-            print("FULL EXEC: %s" % full_execution)
+        def set_files(full_execution, infiles):
+            workflow_id = full_execution["workflow"]["id"]
             org_id = full_execution["workflow"]["execution_org"]["id"]
-            print("SHOULD GET FILES BASED ON ORG %s, workflow %s and value(s) %s" % (org_id, full_execution["workflow"]["id"], value))
-            get_path = "/api/v1/files/%s/content?execution_id=%s" % (value, full_execution["execution_id"])
-
-            print("PATH: %s" % get_path)
             headers = {
                 "Content-Type": "application/json",     
                 "Authorization": "Bearer %s" % self.authorization
             }
-            ret = requests.get("%s%s" % (self.url, get_path), headers=headers)
-            print("RET CONTENT: %s" % ret.text)
-            print("RET CODE FILE: %d" % ret.status_code)
+
+            create_path = "/api/v1/files/create?execution_id=%s" % full_execution["execution_id"]
+            file_ids = []
+            for curfile in infiles:
+                filename = "unspecified"
+                data = {
+                    "filename": filename,
+                    "workflow_id": workflow_id,
+                    "org_id": org_id,
+                }
+
+                try:
+                    data["filename"] = curfile["filename"]
+                    filename = curfile["filename"]
+                except KeyError as e:
+                    print("KeyError in file setup: %s" % e)
+                    pass
+
+                ret = requests.post("%s%s" % (self.url, create_path), headers=headers, json=data)
+                print("Ret CREATE: %s" % ret.text)
+                cur_id = ""
+                if ret.status_code == 200:
+                    print("RET: %s" % ret.text)
+                    ret_json = ret.json()
+                    if not ret_json["success"]:
+                        print("Not success in file upload creation.")
+                        continue
+
+                    print("Should handle ID %s" % ret_json["id"])
+                    file_ids.append(ret_json["id"])
+                    cur_id = ret_json["id"]
+                else:
+                    print("Bad status code: %d" % ret.status_code)
+                    continue
+
+                if len(cur_id) == 0:
+                    print("No file ID specified from backend")
+                    continue
+
+                new_headers = {
+                    "Content-Type": "multipart/form-data; charset=utf-8; boundary=\"test boundary Shuffle\"",     
+                    "Authorization": "Bearer %s" % self.authorization,
+                }
+
+                upload_path = "/api/v1/files/%s/upload?execution_id=%s" % (cur_id, full_execution["execution_id"])
+                print("Create path: %s" % create_path)
+                #files={"shuffle_file": open(filename,'rb')}
+                files={"shuffle_file": (filename, curfile["data"])}
+                #open(filename,'rb')}
+
+                ret = requests.post("%s%s" % (self.url, upload_path), files=files, headers=new_headers)
+                print("Ret UPLOAD: %s" % ret.text)
+                print("Ret2 UPLOAD: %d" % ret.status_code)
+
+            print("IDS TO RETURN: %s" % file_ids)
+            return file_ids
 
         # Checks whether conditions are met, otherwise set 
         branchcheck, tmpresult = check_branch_conditions(action, fullexecution)
@@ -929,19 +978,6 @@ class AppBase:
                         multiexecution = False
                         multi_execution_lists = []
                         for parameter in action["parameters"]:
-
-                            # This code handles files.
-                            is_file = False
-                            try:
-                                if parameter["schema"]["type"] == "file":
-                                    print("SHOULD HANDLE FILE. Get based on value %s" % parameter["value"]) 
-                                    get_files(fullexecution, parameter["value"])
-                                    is_file = True
-                            except KeyError as e:
-                                print("SCHEMA ERROR: %s" % e)
-
-
-
                             check, value, is_loop = parse_params(action, fullexecution, parameter)
                             if check:
                                 raise "Value check error: %s" % Exception(check)
@@ -1057,6 +1093,18 @@ class AppBase:
                                 params[parameter["name"]] = value
                                 multi_parameters[parameter["name"]] = value 
 
+                                # This code handles files.
+                                try:
+                                    if parameter["schema"]["type"] == "file":
+                                        print("SHOULD HANDLE FILE. Get based on value %s" % parameter["value"]) 
+                                        file_value = get_files(fullexecution, value)
+                                        print("FILE VALUE: %s" % file_value)
+
+                                        params[parameter["name"]] = file_value 
+                                        multi_parameters[parameter["name"]] = file_value 
+                                except KeyError as e:
+                                    print("SCHEMA ERROR IN FILE HANDLING: %s" % e)
+
                         # Fix lists here
                         print("CHECKING multi execution list!")
                         if len(multi_execution_lists) > 0:
@@ -1080,14 +1128,37 @@ class AppBase:
 
                                 print("New multi execution length: %d\n" % tmplength)
                         
-                        # FIXME - this is horrible, but works for now
-                        #for i in range(calltimes):
                         if not multiexecution:
                             print("APP_SDK DONE: Starting NORMAL execution of function")
-                            print("Running with params %s" % params) 
+                            print("Running with params (0): %s" % params) 
                             newres = await func(**params)
-                            print("Return from execution: %s" % newres)
-                            if isinstance(newres, str):
+                            print("Returned from execution.")
+                            if isinstance(newres, tuple):
+                                print("Handling return as tuple")
+                                # Handles files.
+                                filedata = ""
+                                file_ids = []
+                                print("TUPLE: %s" % newres[1])
+                                if isinstance(newres[1], list):
+                                    print("HANDLING LIST FROM RET")
+                                    file_ids = set_files(fullexecution, newres[1])
+                                elif isinstance(newres[1], object):
+                                    print("Handling JSON from ret")
+                                    file_ids = set_files(fullexecution, [newres[1]])
+                                elif isinstance(newres[1], str):
+                                    print("Handling STRING from ret")
+                                    file_ids = set_files(fullexecution, [newres[1]])
+                                else:
+                                    print("NO FILES TO HANDLE")
+
+                                tmp_result = {
+                                    "result": newres[0], 
+                                    "file_ids": file_ids
+                                }
+                                
+                                result = json.dumps(tmp_result)
+                            elif isinstance(newres, str):
+                                print("Handling return as string")
                                 result += newres
                             else:
                                 try:
@@ -1165,7 +1236,7 @@ class AppBase:
                                     print("KeyError: %s" % e)
                                     baseparams[key] = "KeyError: %s" % e
 
-                                print("Running with params %s" % baseparams) 
+                                print("Running with params %s (1)" % baseparams) 
                                 ret = await func(**baseparams)
                                 print("Return from execution: %s" % ret)
                                 if isinstance(ret, dict) or isinstance(ret, list):
