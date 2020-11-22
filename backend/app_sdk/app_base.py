@@ -839,10 +839,28 @@ class AppBase:
                 "Authorization": "Bearer %s" % self.authorization
             }
             ret = requests.get("%s%s" % (self.url, get_path), headers=headers)
+            if ret.status_code == 200:
+                return ret.text
+
+            print("ERROR GETTING FILE: ")
+            print("FILE RET CONTENT: %s" % ret.text)
+            print("FILE RET CODE FILE: %d" % ret.status_code)
+
+        # Sets files in the backend
+        def set_files(full_execution, files[]):
+            print("FULL EXEC: %s" % full_execution)
+            org_id = full_execution["workflow"]["execution_org"]["id"]
+            print("SHOULD GET FILES BASED ON ORG %s, workflow %s and value(s) %s" % (org_id, full_execution["workflow"]["id"], value))
+            get_path = "/api/v1/files/%s/content?execution_id=%s" % (value, full_execution["execution_id"])
+
+            print("PATH: %s" % get_path)
+            headers = {
+                "Content-Type": "application/json",     
+                "Authorization": "Bearer %s" % self.authorization
+            }
+            ret = requests.get("%s%s" % (self.url, get_path), headers=headers)
             print("RET CONTENT: %s" % ret.text)
             print("RET CODE FILE: %d" % ret.status_code)
-
-	    # r.HandleFunc("/api/v1/files/{fileId}/content", handleGetFileContent).Methods("GET", "OPTIONS")
 
         # Checks whether conditions are met, otherwise set 
         branchcheck, tmpresult = check_branch_conditions(action, fullexecution)
@@ -911,6 +929,8 @@ class AppBase:
                         multiexecution = False
                         multi_execution_lists = []
                         for parameter in action["parameters"]:
+
+                            # This code handles files.
                             is_file = False
                             try:
                                 if parameter["schema"]["type"] == "file":
@@ -919,6 +939,8 @@ class AppBase:
                                     is_file = True
                             except KeyError as e:
                                 print("SCHEMA ERROR: %s" % e)
+
+
 
                             check, value, is_loop = parse_params(action, fullexecution, parameter)
                             if check:
