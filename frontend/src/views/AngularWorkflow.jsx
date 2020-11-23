@@ -899,6 +899,41 @@ const AngularWorkflow = (props) => {
 	const onUnselect = (event) => {
 		console.time("UNSELECT")
 
+		// Attempt at rewrite of name in other actions in following nodes.
+		// Should probably be done in the onBlur for the textfield instead
+		/*
+		if (event.target.data().type === "ACTION") {
+			const nodeaction = event.target.data()
+			const curaction = workflow.actions.find(a => a.id === nodeaction.id)
+			console.log("workflowaction: ", curaction)
+			console.log("nodeaction: ", nodeaction)
+			if (nodeaction.label !== curaction.label) {
+				console.log("BEACH!")
+
+				var params = []
+				const fixedName = "$"+curaction.label.toLowerCase().replace(" ", "_")
+				for (var actionkey in workflow.actions) {
+					if (workflow.actions[actionkey].id === curaction.id) {
+						continue
+					}
+
+					for (var paramkey in workflow.actions[actionkey].parameters) {
+						const param = workflow.actions[actionkey].parameters[paramkey]
+						if (param.value === null || param.value === undefined || !param.value.includes("$")) {
+							continue
+						}
+
+						const innername = param.value.toLowerCase().replace(" ", "_")
+						if (innername.includes(fixedName)) {
+							//workflow.actions[actionkey].parameters[paramkey].replace(
+							//console.log("FOUND!: ", innername)
+						}
+					}
+				}
+			}
+		}
+		*/
+
 		// FIXME - check if they have value before overriding like this for no reason.
 		// Would save a lot of time (400~ ms -> 30ms)
 		//console.log("ACTION: ", selectedAction)
@@ -1009,8 +1044,29 @@ const AngularWorkflow = (props) => {
 			}
 
 			setSelectedActionName(curaction.name)	
-
 			setSelectedAction(curaction)
+
+			/*
+			var params = []
+			const fixedName = "$"+curaction.label.toLowerCase().replace(" ", "_")
+			for (var actionkey in workflow.actions) {
+				if (workflow.actions[actionkey].id === curaction.id) {
+					continue
+				}
+
+				for (var paramkey in workflow.actions[actionkey].parameters) {
+					const param = workflow.actions[actionkey].parameters[paramkey]
+					if (param.value === null || param.value === undefined || !param.value.includes("$")) {
+						continue
+					}
+
+					const innername = param.value.toLowerCase().replace(" ", "_")
+					if (innername.includes(fixedName)) {
+						console.log("FOUND!: ", innername)
+					}
+				}
+			}
+			*/
 		} else if (data.type === "TRIGGER") {
 			//console.log("Should handle trigger "+data.triggertype)
 			//console.log(data)
@@ -2419,14 +2475,43 @@ const AngularWorkflow = (props) => {
 	// ACTION select
 	//
 	const selectedNameChange = (event) => {
+		console.log("OLDNAME: ", selectedActionName)
 		event.target.value = event.target.value.replace("(", "")
 		event.target.value = event.target.value.replace(")", "")
 		event.target.value = event.target.value.replace("$", "")
 		event.target.value = event.target.value.replace("#", "")
 		event.target.value = event.target.value.replace(".", "")
 		event.target.value = event.target.value.replace(",", "")
+		event.target.value = event.target.value.replace(" ", "_")
 		selectedAction.label = event.target.value
 		setSelectedAction(selectedAction)
+
+		/*
+		if (nodeaction.label !== curaction.label) {
+			console.log("BEACH!")
+
+			var params = []
+			const fixedName = "$"+curaction.label.toLowerCase().replace(" ", "_")
+			for (var actionkey in workflow.actions) {
+				if (workflow.actions[actionkey].id === curaction.id) {
+					continue
+				}
+
+				for (var paramkey in workflow.actions[actionkey].parameters) {
+					const param = workflow.actions[actionkey].parameters[paramkey]
+					if (param.value === null || param.value === undefined || !param.value.includes("$")) {
+						continue
+					}
+
+					const innername = param.value.toLowerCase().replace(" ", "_")
+					if (innername.includes(fixedName)) {
+						//workflow.actions[actionkey].parameters[paramkey].replace(
+						//console.log("FOUND!: ", innername)
+					}
+				}
+			}
+		}
+		*/
 	}
 
 	const selectedTriggerChange = (event) => {
@@ -2836,7 +2921,6 @@ const AngularWorkflow = (props) => {
 								}}
 							/>
 
-						console.log(selectedActionParameters[count])
 						if (selectedActionParameters[count].schema !== undefined && selectedActionParameters[count].schema !== null && selectedActionParameters[count].schema.type === "file") {
 							datafield = 
 								<TextField

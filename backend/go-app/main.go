@@ -8048,7 +8048,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/files/{fileId}", handleDeleteFile).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/files/create", handleCreateFile).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/files/{fileId}/upload", handleUploadFile).Methods("POST", "OPTIONS")
-	//r.HandleFunc("/api/v1/files/{fileId}", handleGetFile).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/files/{fileId}", handleGetFileMeta).Methods("GET", "OPTIONS")
 
 	http.Handle("/", r)
 }

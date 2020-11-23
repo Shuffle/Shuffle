@@ -92,6 +92,91 @@ func fileExists(filename string) bool {
 	return !info.IsDir()
 }
 
+func handleGetFileMeta(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	var fileId string
+	location := strings.Split(request.URL.String(), "/")
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			log.Printf("[INFO] Path too short: %d", len(location))
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		fileId = location[4]
+	}
+
+	if strings.Contains(fileId, "?") {
+		fileId = strings.Split(fileId, "?")[0]
+	}
+
+	log.Printf("\n\n[INFO] User is trying to delete file %s\n\n", fileId)
+
+	// 1. Check user directly
+	// 2. Check workflow execution authorization
+	user, err := handleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("[INFO] INITIAL Api authentication failed in file deletion: %s", err)
+
+		orgId, err := fileAuthentication(request)
+		if err != nil {
+			log.Printf("[ERROR] Bad file authentication in get: %s", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		user.ActiveOrg.Id = orgId
+		user.Username = "Execution File API"
+	}
+
+	// 1. Verify if the user has access to the file: org_id and workflow
+	log.Printf("[INFO] Should DELETE file %s if user has access", fileId)
+	ctx := context.Background()
+	file, err := getFile(ctx, fileId)
+	if err != nil {
+		log.Printf("[INFO] File %s not found: %s", fileId, err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	found := false
+	if file.OrgId == user.ActiveOrg.Id {
+		found = true
+	} else {
+		for _, item := range user.Orgs {
+			if item == file.OrgId {
+				found = true
+				break
+			}
+		}
+	}
+
+	if !found {
+		log.Printf("[INFO] User %s doesn't have access to %s", user.Username, fileId)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	newBody, err := json.Marshal(file)
+	if err != nil {
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false, "reason": "Failed to marshal filedata"}`))
+		return
+	}
+
+	log.Printf("[INFO] Successfully deleted file %s", fileId)
+	resp.WriteHeader(200)
+	resp.Write([]byte(newBody))
+}
+
 func handleDeleteFile(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {

@@ -830,21 +830,40 @@ class AppBase:
         def get_files(full_execution, value):
             org_id = full_execution["workflow"]["execution_org"]["id"]
             print("SHOULD GET FILES BASED ON ORG %s, workflow %s and value(s) %s" % (org_id, full_execution["workflow"]["id"], value))
-            get_path = "/api/v1/files/%s/content?execution_id=%s" % (value, full_execution["execution_id"])
 
-            print("PATH: %s" % get_path)
+            get_path = "/api/v1/files/%s?execution_id=%s" % (value, full_execution["execution_id"])
             headers = {
                 "Content-Type": "application/json",     
                 "Authorization": "Bearer %s" % self.authorization
             }
-            ret = requests.get("%s%s" % (self.url, get_path), headers=headers)
-            if ret.status_code == 200:
-                return ret.text
 
-            print("ERROR GETTING FILE: ")
-            print("FILE RET CONTENT: %s" % ret.text)
-            print("FILE RET CODE FILE: %d" % ret.status_code)
-            return "Error getting file(s). Status code %d" % ret.status_code
+            ret1 = requests.get("%s%s" % (self.url, get_path), headers=headers)
+            print("RET1: %s" % ret1.text)
+            if ret1.status_code != 200:
+                return {
+                    "filename": "",
+                    "data": "",
+                    "success": False,
+                }
+
+            content_path = "/api/v1/files/%s/content?execution_id=%s" % (value, full_execution["execution_id"])
+            ret2 = requests.get("%s%s" % (self.url, content_path), headers=headers)
+            print("Ret2: %s" % ret2.text)
+            if ret2.status_code == 200:
+                tmpdata = ret1.json()
+                returndata = {
+                    "success": True,
+                    "filename": tmpdata["filename"],
+                    "data": ret2.text,
+                }
+
+                return returndata
+
+            return {
+                "success": False,
+                "filename": "",
+                "data": "",
+            }
 
         # Sets files in the backend
         def set_files(full_execution, infiles):
@@ -1094,7 +1113,7 @@ class AppBase:
 
                                 # This code handles files.
                                 try:
-                                    if parameter["schema"]["type"] == "file":
+                                    if parameter["schema"]["type"] == "file" and len(value) > 0:
                                         print("SHOULD HANDLE FILE. Get based on value %s" % parameter["value"]) 
                                         file_value = get_files(fullexecution, value)
                                         print("FILE VALUE: %s" % file_value)
