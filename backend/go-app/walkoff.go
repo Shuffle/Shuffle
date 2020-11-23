@@ -1830,7 +1830,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	for _, action := range workflow.Actions {
 		allNodes = append(allNodes, action.ID)
 
-		if len(action.Errors) > 0 {
+		if len(action.Errors) > 0 || !action.IsValid {
 			action.IsValid = true
 			action.Errors = []string{}
 		}

@@ -2578,28 +2578,6 @@ func getSession(ctx context.Context, thissession string) (*session, error) {
 }
 
 // ListBooks returns a list of books, ordered by title.
-func getFile(ctx context.Context, id string) (*File, error) {
-	key := datastore.NameKey("Files", id, nil)
-	curFile := &File{}
-	if err := dbclient.Get(ctx, key, curFile); err != nil {
-		return &File{}, err
-	}
-
-	return curFile, nil
-}
-
-func setFile(ctx context.Context, file File) error {
-	// clear session_token and API_token for user
-	k := datastore.NameKey("Files", file.Id, nil)
-	if _, err := dbclient.Put(ctx, k, &file); err != nil {
-		log.Println(err)
-		return err
-	}
-
-	return nil
-}
-
-// ListBooks returns a list of books, ordered by title.
 func getOrg(ctx context.Context, id string) (*Org, error) {
 	key := datastore.NameKey("Organizations", id, nil)
 	curOrg := &Org{}
@@ -8067,10 +8045,10 @@ func initHandlers() {
 	// https://developer.box.com/reference/get-files-id-content/
 	// 1. Creating the "get file" option. Make it possible to run this in the frontend.
 	r.HandleFunc("/api/v1/files/{fileId}/content", handleGetFileContent).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/files/{fileId}", handleDeleteFile).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/files/create", handleCreateFile).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/files/{fileId}/upload", handleUploadFile).Methods("POST", "OPTIONS")
 	//r.HandleFunc("/api/v1/files/{fileId}", handleGetFile).Methods("GET", "OPTIONS")
-	//r.HandleFunc("/api/v1/files/{fileId}", handleGetFile).Methods("DELETE", "OPTIONS")
 
 	http.Handle("/", r)
 }

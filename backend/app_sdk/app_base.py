@@ -894,7 +894,6 @@ class AppBase:
                     continue
 
                 new_headers = {
-                    "Content-Type": "multipart/form-data; charset=utf-8; boundary=\"test boundary Shuffle\"",     
                     "Authorization": "Bearer %s" % self.authorization,
                 }
 
