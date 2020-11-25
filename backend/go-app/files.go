@@ -37,6 +37,7 @@ type File struct {
 	WorkflowId   string   `json:"workflow_id" datastore:"workflow_id"`
 	Workflows    []string `json:"workflows" datastore:"workflows"`
 	DownloadPath string   `json:"download_path" datastore:"download_path"`
+	Md5sum       string   `json:"md5_sum" datastore:"md5_sum"`
 }
 
 var basepath = os.Getenv("SHUFFLE_FILE_LOCATION")
@@ -66,11 +67,14 @@ func fileAuthentication(request *http.Request) (string, error) {
 		// This is annoying af and is done because of maxlength lol
 		newApikey := apikeyCheck[1]
 		if newApikey != workflowExecution.Authorization {
-			log.Printf("[ERROR] Bad apikey for execution %s. %s vs %s", executionId[0], apikey, workflowExecution.Authorization)
+			//log.Printf("[ERROR] Bad apikey for execution %s. %s vs %s", executionId[0], apikey, workflowExecution.Authorization)
+			log.Printf("[ERROR] Bad apikey for execution %s.", executionId[0])
+			//%s vs %s", executionId[0], apikey, workflowExecution.Authorization)
 			return "", errors.New("Bad authorization key")
 		}
 
-		log.Printf("[INFO] Authorization is correct for execution %s! %s vs %s. Setting Org", executionId, apikey, workflowExecution.Authorization)
+		log.Printf("[INFO] Authorization is correct for execution %s!", executionId[0])
+		//%s vs %s. Setting Org", executionId, apikey, workflowExecution.Authorization)
 		if len(workflowExecution.ExecutionOrg) > 0 {
 			return workflowExecution.ExecutionOrg, nil
 		} else if len(workflowExecution.Workflow.ExecutingOrg.Id) > 0 {
@@ -115,7 +119,14 @@ func handleGetFileMeta(resp http.ResponseWriter, request *http.Request) {
 		fileId = strings.Split(fileId, "?")[0]
 	}
 
-	log.Printf("\n\n[INFO] User is trying to delete file %s\n\n", fileId)
+	if len(fileId) != 36 {
+		log.Printf("Bad format for fileId %s", fileId)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Badly formatted fileId"}`))
+		return
+	}
+
+	log.Printf("\n\n[INFO] User is trying to GET File Meta for %s\n\n", fileId)
 
 	// 1. Check user directly
 	// 2. Check workflow execution authorization
@@ -136,7 +147,7 @@ func handleGetFileMeta(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// 1. Verify if the user has access to the file: org_id and workflow
-	log.Printf("[INFO] Should DELETE file %s if user has access", fileId)
+	log.Printf("[INFO] Should GET FILE META for %s if user has access", fileId)
 	ctx := context.Background()
 	file, err := getFile(ctx, fileId)
 	if err != nil {
@@ -172,7 +183,7 @@ func handleGetFileMeta(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("[INFO] Successfully deleted file %s", fileId)
+	log.Printf("[INFO] Successfully got file meta for %s", fileId)
 	resp.WriteHeader(200)
 	resp.Write([]byte(newBody))
 }
@@ -198,6 +209,13 @@ func handleDeleteFile(resp http.ResponseWriter, request *http.Request) {
 
 	if strings.Contains(fileId, "?") {
 		fileId = strings.Split(fileId, "?")[0]
+	}
+
+	if len(fileId) != 36 {
+		log.Printf("Bad format for fileId %s", fileId)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Badly formatted fileId"}`))
+		return
 	}
 
 	log.Printf("\n\n[INFO] User is trying to delete file %s\n\n", fileId)
@@ -318,7 +336,14 @@ func handleGetFileContent(resp http.ResponseWriter, request *http.Request) {
 		fileId = location[4]
 	}
 
-	log.Printf("\n\nUser is trying to get file %s\n\n", fileId)
+	if len(fileId) != 36 {
+		log.Printf("Bad format for fileId %s", fileId)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Badly formatted fileId"}`))
+		return
+	}
+
+	log.Printf("\n\nUser is trying to download file %s\n\n", fileId)
 
 	// 1. Check user directly
 	// 2. Check workflow execution authorization
@@ -346,11 +371,11 @@ func handleGetFileContent(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// 1. Verify if the user has access to the file: org_id and workflow
-	log.Printf("Should get file %s", fileId)
+	log.Printf("[INFO] Should get file %s", fileId)
 	ctx := context.Background()
 	file, err := getFile(ctx, fileId)
 	if err != nil {
-		log.Printf("File %s not found: %s", fileId, err)
+		log.Printf("[ERROR] File %s not found: %s", fileId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -376,7 +401,7 @@ func handleGetFileContent(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if file.Status != "active" {
-		log.Printf("File status isn't active. Can't continue.")
+		log.Printf("[ERROR] File status isn't active, but %s. Can't continue.", file.Status)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "The file isn't ready to be downloaded yet. Status required: active"}`))
 		return
@@ -384,7 +409,7 @@ func handleGetFileContent(resp http.ResponseWriter, request *http.Request) {
 
 	// Fixme: More auth: org and workflow!
 	downloadPath := file.DownloadPath
-	log.Printf("Downloadpath: %s", downloadPath)
+	log.Printf("[INFO] Downloadpath: %s", downloadPath)
 	Openfile, err := os.Open(downloadPath)
 	defer Openfile.Close() //Close after function return
 	if err != nil {
@@ -436,6 +461,13 @@ func handleUploadFile(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		fileId = location[4]
+	}
+
+	if len(fileId) != 36 {
+		log.Printf("Bad format for fileId %s", fileId)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Badly formatted fileId"}`))
+		return
 	}
 
 	// 1. Check user directly
@@ -494,7 +526,6 @@ func handleUploadFile(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	request.ParseMultipartForm(32 << 20)
-	//var buf bytes.Buffer
 	parsedFile, _, err := request.FormFile("shuffle_file")
 	if err != nil {
 		log.Printf("[ERROR] Couldn't upload file: %s", err)
@@ -513,16 +544,23 @@ func handleUploadFile(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	//io.Copy(&buf, parsedFile)
-	//contents := buf.String()
-	//buf.Reset()
+	// Can be used for validation files for change
+	/*
+		var buf bytes.Buffer
+		io.Copy(&buf, parsedFile)
+		contents := buf.Bytes()
+		md5 := md5sum(contents)
+		buf.Reset()
+	*/
+	md5 := ""
+
 	f, err := os.OpenFile(file.DownloadPath, os.O_WRONLY|os.O_CREATE, os.ModePerm)
 	if err != nil {
 		// Rolling back file
 		file.Status = "created"
 		setFile(ctx, *file)
 
-		log.Printf("Failed creating file: %s", err)
+		log.Printf("[ERROR] Failed uploading and creating file: %s", err)
 		resp.WriteHeader(500)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -532,7 +570,9 @@ func handleUploadFile(resp http.ResponseWriter, request *http.Request) {
 	io.Copy(f, parsedFile)
 
 	// FIXME: Set this one to 200 anyway? Can't download file then tho..
+	log.Printf("[INFO] MD5 for file %s is %s", file.Filename, md5)
 	file.Status = "active"
+	file.Md5sum = md5
 	err = setFile(ctx, *file)
 	if err != nil {
 		log.Printf("[ERROR] Failed setting file back to active")

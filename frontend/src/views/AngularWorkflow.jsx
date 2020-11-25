@@ -5354,7 +5354,7 @@ const AngularWorkflow = (props) => {
 		return null 
 	}
 
-	const cytoscapeViewWidths = 700
+	const cytoscapeViewWidths = 750
 	const bottomBarStyle = {
 		position: "fixed", 
 		right: 20, 
@@ -5410,6 +5410,62 @@ const AngularWorkflow = (props) => {
 		} 
 
 		return null
+	}
+
+	const FileMenu = () => {
+		const [newAnchor, setNewAnchor] = React.useState(null);
+		const [showShuffleMenu, setShowShuffleMenu] = React.useState(false)
+
+		{ /*const [showShuffleMenu, setShowShuffleMenu] = React.useState(true) */}
+		return (
+			<div style={{"display": "inline-block"}}>
+				<Menu
+					id="long-menu"
+					anchorEl={newAnchor}
+					open={showShuffleMenu}
+					onClose={() => {
+						setShowShuffleMenu(false)
+					}}
+				>
+					<div style={{margin: 15, color: "white", maxWidth: 250, minWidth: 250, }}>
+						<h4>This menu is used to control the workflow itself.</h4>
+						<Divider style={{backgroundColor: "white", marginTop: 10, marginBottom: 10,}}/>
+						<FormControlLabel
+							style={{marginBottom: 15, color: "white",}}
+							label={<div style={{color: "white"}}>Exit on Error</div>}
+							control={
+								<Switch checked={workflow.configuration.exit_on_error} onChange={() => {
+									workflow.configuration.exit_on_error = !workflow.configuration.exit_on_error
+									setWorkflow(workflow)
+									setUpdate("exit_on_error_"+workflow.configuration.exit_on_error ? "true" : "false")
+									setShowShuffleMenu(false)
+								}} />
+							}
+						/>
+						<FormControlLabel
+							style={{marginBottom: 15, color: "white",}}
+							label={<div style={{color: "white"}}>Start from top</div>}
+							control={
+								<Switch checked={workflow.configuration.start_from_top} onChange={() => {
+									workflow.configuration.start_from_top = !workflow.configuration.start_from_top
+									setWorkflow(workflow)
+									setUpdate("start_from_top_"+workflow.configuration.start_from_top ? "true" : "false")
+									setShowShuffleMenu(false)
+								}} />
+							}
+						/>
+					</div>
+				</Menu>
+				<Tooltip color="secondary" title="Workflow settings" placement="top-start">
+					<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={(event) => {
+						setShowShuffleMenu(!showShuffleMenu)
+						setNewAnchor(event.currentTarget)
+					}}>
+						<SettingsIcon />
+					</Button>
+				</Tooltip>
+			</div>
+		)
 	}
 
 	const WorkflowMenu = () => {
@@ -5539,6 +5595,7 @@ const AngularWorkflow = (props) => {
 							<DirectionsRunIcon />
 						</Button>
 					</Tooltip>
+					{/* <FileMenu />	*/}
 					<WorkflowMenu />	
 				</div>
 			</div>

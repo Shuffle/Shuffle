@@ -7119,37 +7119,39 @@ func runInit(ctx context.Context) {
 			}
 		}
 
-		fileq := datastore.NewQuery("Files").Limit(1)
-		count, err := dbclient.Count(ctx, fileq)
-		log.Printf("FILECOUNT: %d", count)
-		if err == nil && count < 10 {
-			basepath := "."
-			filename := "testfile.txt"
-			fileId := uuid.NewV4().String()
-			log.Printf("Creating new file reference %s because none exist!", fileId)
-			workflowId := "2cf1169d-b460-41de-8c36-28b2092866f8"
-			downloadPath := fmt.Sprintf("%s/%s/%s/%s", basepath, activeOrgs[0].Id, workflowId, fileId)
+		/*
+			fileq := datastore.NewQuery("Files").Limit(1)
+			count, err := dbclient.Count(ctx, fileq)
+			log.Printf("FILECOUNT: %d", count)
+			if err == nil && count < 10 {
+				basepath := "."
+				filename := "testfile.txt"
+				fileId := uuid.NewV4().String()
+				log.Printf("Creating new file reference %s because none exist!", fileId)
+				workflowId := "2cf1169d-b460-41de-8c36-28b2092866f8"
+				downloadPath := fmt.Sprintf("%s/%s/%s/%s", basepath, activeOrgs[0].Id, workflowId, fileId)
 
-			timeNow := time.Now().Unix()
-			newFile := File{
-				Id:           fileId,
-				CreatedAt:    timeNow,
-				UpdatedAt:    timeNow,
-				Description:  "Created by system for testing",
-				Status:       "active",
-				Filename:     filename,
-				OrgId:        activeOrgs[0].Id,
-				WorkflowId:   workflowId,
-				DownloadPath: downloadPath,
-			}
+				timeNow := time.Now().Unix()
+				newFile := File{
+					Id:           fileId,
+					CreatedAt:    timeNow,
+					UpdatedAt:    timeNow,
+					Description:  "Created by system for testing",
+					Status:       "active",
+					Filename:     filename,
+					OrgId:        activeOrgs[0].Id,
+					WorkflowId:   workflowId,
+					DownloadPath: downloadPath,
+				}
 
-			err = setFile(ctx, newFile)
-			if err != nil {
-				log.Printf("Failed setting file: %s", err)
-			} else {
-				log.Printf("Created file %s in init", newFile.DownloadPath)
+				err = setFile(ctx, newFile)
+				if err != nil {
+					log.Printf("Failed setting file: %s", err)
+				} else {
+					log.Printf("Created file %s in init", newFile.DownloadPath)
+				}
 			}
-		}
+		*/
 
 		var allworkflowapps []AppAuthenticationStorage
 		q = datastore.NewQuery("workflowappauth")
@@ -8045,10 +8047,10 @@ func initHandlers() {
 	// https://developer.box.com/reference/get-files-id-content/
 	// 1. Creating the "get file" option. Make it possible to run this in the frontend.
 	r.HandleFunc("/api/v1/files/{fileId}/content", handleGetFileContent).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/files/{fileId}", handleDeleteFile).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/files/create", handleCreateFile).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/files/{fileId}/upload", handleUploadFile).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/files/{fileId}", handleGetFileMeta).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/files/{fileId}", handleDeleteFile).Methods("DELETE", "OPTIONS")
 
 	http.Handle("/", r)
 }

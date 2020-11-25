@@ -148,6 +148,7 @@ class AppBase:
             print("")
 
 
+        self.full_execution = fullexecution
         self.logger.info("AFTER FULLEXEC stream result")
 
         # Gets the value at the parenthesis level you want
@@ -478,7 +479,7 @@ class AppBase:
 
             #Actionname: Start_node
 
-            print(f"Actionname: {actionname_lower}")
+            print(f"\nActionname: {actionname_lower}")
 
             # 1. Find the action
             baseresult = ""
@@ -549,21 +550,29 @@ class AppBase:
             except KeyError as error:
                 print(f"KeyError in JSON: {error}")
         
-            print(f"After first trycatch")
+            print(f"After first trycatch. Baseresult: ", baseresult)
         
             # 2. Find the JSON data
             if len(baseresult) == 0:
                 return ""+appendresult, False
         
+            print("After second return")
             if len(parsersplit) == 1:
                 return str(baseresult)+str(appendresult), False
         
             baseresult = baseresult.replace("\'", "\"")
+            baseresult = baseresult.replace(" True,", " true,")
+            baseresult = baseresult.replace(" False", " false,")
+
+            print("After third parser return - Formatted: ", baseresult)
             basejson = {}
             try:
                 basejson = json.loads(baseresult)
             except json.decoder.JSONDecodeError as e:
+                print("Parser issue with JSON: %s" % e)
                 return str(baseresult)+str(appendresult), False
+
+            print("After fourth parser return as JSON")
         
             data, is_loop = recurse_json(basejson, parsersplit[1:])
             parseditem = data
@@ -577,6 +586,7 @@ class AppBase:
                     print("SET DATA WRAPPER TO %s!" % parsersplit[-1])
                     parseditem = "${%s%s}$" % (parsersplit[-1], json.dumps(data))
 
+            print("Before last return")
             return str(parseditem)+str(appendresult), is_loop
 
         # Parses parameters sent to it and returns whether it did it successfully with the values found
@@ -854,8 +864,9 @@ class AppBase:
                 returndata = {
                     "success": True,
                     "filename": tmpdata["filename"],
-                    "data": ret2.text,
+                    "data": ret2.content,
                 }
+                # open('facebook.ico', 'wb').write(r.content)
 
                 return returndata
 
@@ -1093,7 +1104,21 @@ class AppBase:
                                             #replacement = parse_wrapper_start(replacement)
                                             tmpitem = tmpitem.replace(key, replacement, -1)
 
-                                        resultarray.append(tmpitem)
+
+                                        # This code handles files.
+                                        isfile = False
+                                        try:
+                                            if parameter["schema"]["type"] == "file" and len(value) > 0:
+                                                print("SHOULD HANDLE FILE IN MULTI. Get based on value %s" % parameter["value"]) 
+                                                file_value = get_files(fullexecution, tmpitem)
+                                                print("FILE VALUE FOR VAL %s: %s" % (tmpitem, file_value))
+                                                resultarray.append(file_value)
+
+                                        except KeyError as e:
+                                            print("SCHEMA ERROR IN FILE HANDLING: %s" % e)
+
+                                        if not isfile:
+                                            resultarray.append(tmpitem)
 
                                     # With this parameter ready, add it to... a greater list of parameters. Rofl
                                     print("LENGTH OF ARR: %d" % len(resultarray))
@@ -1114,9 +1139,9 @@ class AppBase:
                                 # This code handles files.
                                 try:
                                     if parameter["schema"]["type"] == "file" and len(value) > 0:
-                                        print("SHOULD HANDLE FILE. Get based on value %s" % parameter["value"]) 
+                                        print("\n SHOULD HANDLE FILE. Get based on value %s. <--- is this a valid ID?" % parameter["value"]) 
                                         file_value = get_files(fullexecution, value)
-                                        print("FILE VALUE: %s" % file_value)
+                                        print("FILE VALUE: %s \n" % file_value)
 
                                         params[parameter["name"]] = file_value 
                                         multi_parameters[parameter["name"]] = file_value 

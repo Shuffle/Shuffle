@@ -360,7 +360,7 @@ const Workflows = (props) => {
 				data.triggers[key].status = "stopped"
 			}
 		}
-
+		data["org"] = []
 		data.execution_org = {"id": ""}
 		console.log(data)
 
