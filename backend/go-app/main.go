@@ -2422,7 +2422,7 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if count == 0 {
-		log.Printf("No users - redirecting for management user")
+		log.Printf("[WARNING] No users - redirecting for management user")
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "stay"}`)))
 		return
@@ -2555,12 +2555,12 @@ func getApikey(ctx context.Context, apikey string) (User, error) {
 	var users []User
 	_, err := dbclient.GetAll(ctx, q, &users)
 	if err != nil {
-		log.Printf("Error getting users apikey (getapikey): %s", err)
+		log.Printf("[ERROR] Error getting users apikey (getapikey): %s", err)
 		return User{}, err
 	}
 
 	if len(users) == 0 {
-		log.Printf("No users found for apikey %s", apikey)
+		log.Printf("[WARNING] No users found for apikey %s", apikey)
 		return User{}, err
 	}
 

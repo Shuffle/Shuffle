@@ -51,6 +51,130 @@ class AppBase:
             self.logger.info("Result: %d" % ret.status_code)
             if ret.status_code != 200:
                 self.logger.info(ret.text)
+
+    # Things to consider for files:
+    # - How can you download / stream a file? 
+    # - Can you decide if you want a stream or the files directly?
+    def get_files(self, full_execution, value):
+        org_id = full_execution["workflow"]["execution_org"]["id"]
+        print("SHOULD GET FILES BASED ON ORG %s, workflow %s and value(s) %s" % (org_id, full_execution["workflow"]["id"], value))
+
+        get_path = "/api/v1/files/%s?execution_id=%s" % (value, full_execution["execution_id"])
+        headers = {
+            "Content-Type": "application/json",     
+            "Authorization": "Bearer %s" % self.authorization
+        }
+
+        ret1 = requests.get("%s%s" % (self.url, get_path), headers=headers)
+        print("RET1: %s" % ret1.text)
+        if ret1.status_code != 200:
+            return {
+                "filename": "",
+                "data": "",
+                "success": False,
+            }
+
+        content_path = "/api/v1/files/%s/content?execution_id=%s" % (value, full_execution["execution_id"])
+        ret2 = requests.get("%s%s" % (self.url, content_path), headers=headers)
+        print("Ret2: %s" % ret2.text)
+        if ret2.status_code == 200:
+            tmpdata = ret1.json()
+            returndata = {
+                "success": True,
+                "filename": tmpdata["filename"],
+                "data": ret2.content,
+            }
+            # open('facebook.ico', 'wb').write(r.content)
+
+            return returndata
+
+        return {
+            "success": False,
+            "filename": "",
+            "data": b"",
+        }
+
+    # Sets files in the backend
+    def set_files(self, full_execution, infiles):
+        workflow_id = full_execution["workflow"]["id"]
+        org_id = full_execution["workflow"]["execution_org"]["id"]
+        headers = {
+            "Content-Type": "application/json",     
+            "Authorization": "Bearer %s" % self.authorization
+        }
+
+        create_path = "/api/v1/files/create?execution_id=%s" % full_execution["execution_id"]
+        file_ids = []
+        for curfile in infiles:
+            filename = "unspecified"
+            data = {
+                "filename": filename,
+                "workflow_id": workflow_id,
+                "org_id": org_id,
+            }
+
+            try:
+                data["filename"] = curfile["filename"]
+                filename = curfile["filename"]
+            except KeyError as e:
+                print("KeyError in file setup: %s" % e)
+                pass
+
+            ret = requests.post("%s%s" % (self.url, create_path), headers=headers, json=data)
+            print("Ret CREATE: %s" % ret.text)
+            cur_id = ""
+            if ret.status_code == 200:
+                print("RET: %s" % ret.text)
+                ret_json = ret.json()
+                if not ret_json["success"]:
+                    print("Not success in file upload creation.")
+                    continue
+
+                print("Should handle ID %s" % ret_json["id"])
+                file_ids.append(ret_json["id"])
+                cur_id = ret_json["id"]
+            else:
+                print("Bad status code: %d" % ret.status_code)
+                continue
+
+            if len(cur_id) == 0:
+                print("No file ID specified from backend")
+                continue
+
+            new_headers = {
+                "Authorization": "Bearer %s" % self.authorization,
+            }
+
+            upload_path = "/api/v1/files/%s/upload?execution_id=%s" % (cur_id, full_execution["execution_id"])
+            print("Create path: %s" % create_path)
+
+            # FIXME: Typical failure here if data is returned badly formatted
+            files={"shuffle_file": (filename, curfile["data"])}
+            #open(filename,'rb')}
+
+            ret = requests.post("%s%s" % (self.url, upload_path), files=files, headers=new_headers)
+            print("Ret UPLOAD: %s" % ret.text)
+            print("Ret2 UPLOAD: %d" % ret.status_code)
+
+        print("IDS TO RETURN: %s" % file_ids)
+        return file_ids
+
+        # Checks whether conditions are met, otherwise set 
+        branchcheck, tmpresult = check_branch_conditions(action, fullexecution)
+        if not branchcheck:
+            self.logger.info("Failed one or more branch conditions.")
+            action_result["result"] = tmpresult
+            action_result["status"] = "FAILURE"
+            try:
+                ret = requests.post("%s%s" % (self.url, stream_path), headers=headers, json=action_result)
+                self.logger.info("Result: %d" % ret.status_code)
+                if ret.status_code != 200:
+                    self.logger.info(ret.text)
+            except requests.exceptions.ConnectionError as e:
+                self.logger.exception(e)
+
+            print("\n\nRETURNING BECAUSE A BRANCH FAILED\n\n")
+            return
     
     async def execute_action(self, action):
         # FIXME - add request for the function STARTING here. Use "results stream" or something
@@ -834,129 +958,6 @@ class AppBase:
     
             return True, ""
 
-        # Things to consider for files:
-        # - How can you download / stream a file? 
-        # - Can you decide if you want a stream or the files directly?
-        def get_files(full_execution, value):
-            org_id = full_execution["workflow"]["execution_org"]["id"]
-            print("SHOULD GET FILES BASED ON ORG %s, workflow %s and value(s) %s" % (org_id, full_execution["workflow"]["id"], value))
-
-            get_path = "/api/v1/files/%s?execution_id=%s" % (value, full_execution["execution_id"])
-            headers = {
-                "Content-Type": "application/json",     
-                "Authorization": "Bearer %s" % self.authorization
-            }
-
-            ret1 = requests.get("%s%s" % (self.url, get_path), headers=headers)
-            print("RET1: %s" % ret1.text)
-            if ret1.status_code != 200:
-                return {
-                    "filename": "",
-                    "data": "",
-                    "success": False,
-                }
-
-            content_path = "/api/v1/files/%s/content?execution_id=%s" % (value, full_execution["execution_id"])
-            ret2 = requests.get("%s%s" % (self.url, content_path), headers=headers)
-            print("Ret2: %s" % ret2.text)
-            if ret2.status_code == 200:
-                tmpdata = ret1.json()
-                returndata = {
-                    "success": True,
-                    "filename": tmpdata["filename"],
-                    "data": ret2.content,
-                }
-                # open('facebook.ico', 'wb').write(r.content)
-
-                return returndata
-
-            return {
-                "success": False,
-                "filename": "",
-                "data": "",
-            }
-
-        # Sets files in the backend
-        def set_files(full_execution, infiles):
-            workflow_id = full_execution["workflow"]["id"]
-            org_id = full_execution["workflow"]["execution_org"]["id"]
-            headers = {
-                "Content-Type": "application/json",     
-                "Authorization": "Bearer %s" % self.authorization
-            }
-
-            create_path = "/api/v1/files/create?execution_id=%s" % full_execution["execution_id"]
-            file_ids = []
-            for curfile in infiles:
-                filename = "unspecified"
-                data = {
-                    "filename": filename,
-                    "workflow_id": workflow_id,
-                    "org_id": org_id,
-                }
-
-                try:
-                    data["filename"] = curfile["filename"]
-                    filename = curfile["filename"]
-                except KeyError as e:
-                    print("KeyError in file setup: %s" % e)
-                    pass
-
-                ret = requests.post("%s%s" % (self.url, create_path), headers=headers, json=data)
-                print("Ret CREATE: %s" % ret.text)
-                cur_id = ""
-                if ret.status_code == 200:
-                    print("RET: %s" % ret.text)
-                    ret_json = ret.json()
-                    if not ret_json["success"]:
-                        print("Not success in file upload creation.")
-                        continue
-
-                    print("Should handle ID %s" % ret_json["id"])
-                    file_ids.append(ret_json["id"])
-                    cur_id = ret_json["id"]
-                else:
-                    print("Bad status code: %d" % ret.status_code)
-                    continue
-
-                if len(cur_id) == 0:
-                    print("No file ID specified from backend")
-                    continue
-
-                new_headers = {
-                    "Authorization": "Bearer %s" % self.authorization,
-                }
-
-                upload_path = "/api/v1/files/%s/upload?execution_id=%s" % (cur_id, full_execution["execution_id"])
-                print("Create path: %s" % create_path)
-                #files={"shuffle_file": open(filename,'rb')}
-                files={"shuffle_file": (filename, curfile["data"])}
-                #open(filename,'rb')}
-
-                ret = requests.post("%s%s" % (self.url, upload_path), files=files, headers=new_headers)
-                print("Ret UPLOAD: %s" % ret.text)
-                print("Ret2 UPLOAD: %d" % ret.status_code)
-
-            print("IDS TO RETURN: %s" % file_ids)
-            return file_ids
-
-        # Checks whether conditions are met, otherwise set 
-        branchcheck, tmpresult = check_branch_conditions(action, fullexecution)
-        if not branchcheck:
-            self.logger.info("Failed one or more branch conditions.")
-            action_result["result"] = tmpresult
-            action_result["status"] = "FAILURE"
-            try:
-                ret = requests.post("%s%s" % (self.url, stream_path), headers=headers, json=action_result)
-                self.logger.info("Result: %d" % ret.status_code)
-                if ret.status_code != 200:
-                    self.logger.info(ret.text)
-            except requests.exceptions.ConnectionError as e:
-                self.logger.exception(e)
-
-            print("\n\nRETURNING BECAUSE A BRANCH FAILED\n\n")
-            return
-
         # Replace name cus there might be issues
         # Not doing lower() as there might be user-made functions
         actionname = action["name"]
@@ -1110,7 +1111,7 @@ class AppBase:
                                         try:
                                             if parameter["schema"]["type"] == "file" and len(value) > 0:
                                                 print("SHOULD HANDLE FILE IN MULTI. Get based on value %s" % parameter["value"]) 
-                                                file_value = get_files(fullexecution, tmpitem)
+                                                file_value = self.get_files(fullexecution, tmpitem)
                                                 print("FILE VALUE FOR VAL %s: %s" % (tmpitem, file_value))
                                                 resultarray.append(file_value)
 
@@ -1140,7 +1141,7 @@ class AppBase:
                                 try:
                                     if parameter["schema"]["type"] == "file" and len(value) > 0:
                                         print("\n SHOULD HANDLE FILE. Get based on value %s. <--- is this a valid ID?" % parameter["value"]) 
-                                        file_value = get_files(fullexecution, value)
+                                        file_value = self.get_files(fullexecution, value)
                                         print("FILE VALUE: %s \n" % file_value)
 
                                         params[parameter["name"]] = file_value 
@@ -1184,13 +1185,13 @@ class AppBase:
                                 print("TUPLE: %s" % newres[1])
                                 if isinstance(newres[1], list):
                                     print("HANDLING LIST FROM RET")
-                                    file_ids = set_files(fullexecution, newres[1])
+                                    file_ids = self.set_files(fullexecution, newres[1])
                                 elif isinstance(newres[1], object):
                                     print("Handling JSON from ret")
-                                    file_ids = set_files(fullexecution, [newres[1]])
+                                    file_ids = self.set_files(fullexecution, [newres[1]])
                                 elif isinstance(newres[1], str):
                                     print("Handling STRING from ret")
-                                    file_ids = set_files(fullexecution, [newres[1]])
+                                    file_ids = self.set_files(fullexecution, [newres[1]])
                                 else:
                                     print("NO FILES TO HANDLE")
 
