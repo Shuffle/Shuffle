@@ -55,7 +55,8 @@ class AppBase:
     # Things to consider for files:
     # - How can you download / stream a file? 
     # - Can you decide if you want a stream or the files directly?
-    def get_files(self, full_execution, value):
+    def get_file(self, value):
+        full_execution = self.full_execution
         org_id = full_execution["workflow"]["execution_org"]["id"]
         print("SHOULD GET FILES BASED ON ORG %s, workflow %s and value(s) %s" % (org_id, full_execution["workflow"]["id"], value))
 
@@ -95,7 +96,8 @@ class AppBase:
         }
 
     # Sets files in the backend
-    def set_files(self, full_execution, infiles):
+    def set_files(self, infiles):
+        full_execution = self.full_execution
         workflow_id = full_execution["workflow"]["id"]
         org_id = full_execution["workflow"]["execution_org"]["id"]
         headers = {
@@ -158,23 +160,6 @@ class AppBase:
 
         print("IDS TO RETURN: %s" % file_ids)
         return file_ids
-
-        # Checks whether conditions are met, otherwise set 
-        branchcheck, tmpresult = check_branch_conditions(action, fullexecution)
-        if not branchcheck:
-            self.logger.info("Failed one or more branch conditions.")
-            action_result["result"] = tmpresult
-            action_result["status"] = "FAILURE"
-            try:
-                ret = requests.post("%s%s" % (self.url, stream_path), headers=headers, json=action_result)
-                self.logger.info("Result: %d" % ret.status_code)
-                if ret.status_code != 200:
-                    self.logger.info(ret.text)
-            except requests.exceptions.ConnectionError as e:
-                self.logger.exception(e)
-
-            print("\n\nRETURNING BECAUSE A BRANCH FAILED\n\n")
-            return
     
     async def execute_action(self, action):
         # FIXME - add request for the function STARTING here. Use "results stream" or something
@@ -958,6 +943,23 @@ class AppBase:
     
             return True, ""
 
+        # Checks whether conditions are met, otherwise set 
+        branchcheck, tmpresult = check_branch_conditions(action, fullexecution)
+        if not branchcheck:
+            self.logger.info("Failed one or more branch conditions.")
+            action_result["result"] = tmpresult
+            action_result["status"] = "FAILURE"
+            try:
+                ret = requests.post("%s%s" % (self.url, stream_path), headers=headers, json=action_result)
+                self.logger.info("Result: %d" % ret.status_code)
+                if ret.status_code != 200:
+                    self.logger.info(ret.text)
+            except requests.exceptions.ConnectionError as e:
+                self.logger.exception(e)
+
+            print("\n\nRETURNING BECAUSE A BRANCH FAILED\n\n")
+            return
+
         # Replace name cus there might be issues
         # Not doing lower() as there might be user-made functions
         actionname = action["name"]
@@ -1111,7 +1113,7 @@ class AppBase:
                                         try:
                                             if parameter["schema"]["type"] == "file" and len(value) > 0:
                                                 print("SHOULD HANDLE FILE IN MULTI. Get based on value %s" % parameter["value"]) 
-                                                file_value = self.get_files(fullexecution, tmpitem)
+                                                file_value = self.get_file(tmpitem)
                                                 print("FILE VALUE FOR VAL %s: %s" % (tmpitem, file_value))
                                                 resultarray.append(file_value)
 
@@ -1141,7 +1143,7 @@ class AppBase:
                                 try:
                                     if parameter["schema"]["type"] == "file" and len(value) > 0:
                                         print("\n SHOULD HANDLE FILE. Get based on value %s. <--- is this a valid ID?" % parameter["value"]) 
-                                        file_value = self.get_files(fullexecution, value)
+                                        file_value = self.get_file(value)
                                         print("FILE VALUE: %s \n" % file_value)
 
                                         params[parameter["name"]] = file_value 
@@ -1185,13 +1187,13 @@ class AppBase:
                                 print("TUPLE: %s" % newres[1])
                                 if isinstance(newres[1], list):
                                     print("HANDLING LIST FROM RET")
-                                    file_ids = self.set_files(fullexecution, newres[1])
+                                    file_ids = self.set_files(newres[1])
                                 elif isinstance(newres[1], object):
                                     print("Handling JSON from ret")
-                                    file_ids = self.set_files(fullexecution, [newres[1]])
+                                    file_ids = self.set_files([newres[1]])
                                 elif isinstance(newres[1], str):
                                     print("Handling STRING from ret")
-                                    file_ids = self.set_files(fullexecution, [newres[1]])
+                                    file_ids = self.set_files([newres[1]])
                                 else:
                                     print("NO FILES TO HANDLE")
 
