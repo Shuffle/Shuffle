@@ -954,6 +954,31 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	runWorkflowExecutionTransaction(0, workflowExecution.ExecutionId, actionResult, resp)
+}
+
+// Will make sure transactions are always ran for an execution. This is recursive if it fails. Allowed to fail up to 5 times
+func runWorkflowExecutionTransaction(attempts int64, workflowExecutionId string, actionResult ActionResult, resp http.ResponseWriter) {
+	ctx := context.Background()
+	// Should start a tx for the execution here
+	tx, err := dbclient.NewTransaction(ctx)
+	if err != nil {
+		log.Printf("client.NewTransaction: %v", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed creating transaction"}`)))
+		return
+	}
+
+	key := datastore.NameKey("workflowexecution", workflowExecutionId, nil)
+	workflowExecution := &WorkflowExecution{}
+	if err := tx.Get(key, workflowExecution); err != nil {
+		log.Printf("tx.Get bug: %v", err)
+		tx.Rollback()
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting the workflow key"}`)))
+		return
+	}
+
 	if actionResult.Status == "ABORTED" || actionResult.Status == "FAILURE" {
 		log.Printf("Actionresult is %s. Should set workflowExecution and exit all running functions", actionResult.Status)
 
@@ -1228,15 +1253,29 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	err = setWorkflowExecution(ctx, *workflowExecution)
-	if err != nil {
-		//workflowExecution.Result = "Error setting workflow: result too large"
-		//workflowExecution.Status = "FINISHED"
-		//workflowExecution.CompletedAt = int64(time.Now().Unix())
+	// Transactions: https://cloud.google.com/datastore/docs/concepts/transactions#datastore-datastore-transactional-update-go
+	// Prevents timing issues
+	//ExecutionId
+	if _, err := tx.Put(key, workflowExecution); err != nil {
+		tx.Rollback()
+		log.Printf("[ERROR] tx.Put bug: %v", err)
 
-		log.Printf("Error saving workflow execution actionresult setting: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed setting workflowexecution actionresult: %s"}`, err)))
+		return
+	}
+
+	if _, err = tx.Commit(); err != nil {
+		log.Printf("[ERROR] tx.Commit: %v", err)
+
+		if attempts >= 0 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		attempts += 1
+		runWorkflowExecutionTransaction(attempts, workflowExecutionId, actionResult, resp)
 		return
 	}
 

@@ -683,7 +683,7 @@ func handleCreateFile(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	if strings.Contains(curfile.Filename, "/") || strings.Contains(curfile.Filename, `"`) || strings.Contains(curfile.Filename, "..") {
+	if strings.Contains(curfile.Filename, "/") || strings.Contains(curfile.Filename, `"`) || strings.Contains(curfile.Filename, "..") || strings.Contains(curfile.Filename, "~") {
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "Invalid characters in filename"}`))
 		return
