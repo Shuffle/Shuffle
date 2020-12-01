@@ -56,8 +56,11 @@ class AppBase:
     # - How can you download / stream a file? 
     # - Can you decide if you want a stream or the files directly?
     def get_file(self, value):
+        print("INSIDE GET_FILE")
+
         full_execution = self.full_execution
         org_id = full_execution["workflow"]["execution_org"]["id"]
+
         print("SHOULD GET FILES BASED ON ORG %s, workflow %s and value(s) %s" % (org_id, full_execution["workflow"]["id"], value))
 
         get_path = "/api/v1/files/%s?execution_id=%s" % (value, full_execution["execution_id"])
@@ -317,7 +320,7 @@ class AppBase:
                 try:
                     return int(data)
                 except ValueError:
-                    print("ValueError while casting %s" % data)
+                    print("ValueError while casting %s to int" % data)
                     return data
             if "lower" in thistype:
                 return data.lower()
@@ -329,15 +332,19 @@ class AppBase:
                 return data.strip()
             if "split" in thistype:
                 return data.split()
-            if "len" in thistype or "length" in thistype:
+            if "len" in thistype or "length" in thistype or "lenght" in thistype:
                 tmp = "" 
                 try:
-                    tmp = json.loads(data)
+                    tmpdata = data.replace("\'", "\"")
+                    tmp = json.loads(tmpdata)
                 except: 
+                    print("Passing bug")
                     pass
 
                 if isinstance(tmp, list):
-                    return str(len(tmp))
+                    return len(tmp)
+                elif isinstance(tmp, object):
+                    return len(tmp)
 
                 return str(len(data))
             if "parse" in thistype:
@@ -383,7 +390,7 @@ class AppBase:
             #print("Running %s" % data)
         
             # Look for the INNER wrapper first, then move out
-            wrappers = ["int", "number", "lower", "upper", "trim", "strip", "split", "parse", "len", "length"]
+            wrappers = ["int", "number", "lower", "upper", "trim", "strip", "split", "parse", "len", "length", "lenght"]
             found = False
             for wrapper in wrappers:
                 if wrapper not in data.lower():
@@ -413,6 +420,7 @@ class AppBase:
                         continue
         
                     parsed_value = parse_type(innervalue[0], thistype.lower())
+                    print("Parsed value from %s: %s" % (thistype, parsed_value))
                     return parsed_value
         
             print("DATA: %s\n" % data)
@@ -1057,13 +1065,40 @@ class AppBase:
                                         minlength = len(json_replacement)
 
                                     tmpitem = tmpitem.replace(actualitem[0][0], replacement, 1)
-                                    params[parameter["name"]] = tmpitem
-                                    multi_execution_lists.append(json_replacement)
-                                    multi_parameters[parameter["name"]] = json_replacement 
 
-                                    #print("LENGTH OF ARR: %d" % len(resultarray))
-                                    #print("RESULTARRAY: %s" % resultarray)
-                                    print("MULTI finished: %s" % replacement)
+                                    # This code handles files.
+                                    print("(1) ------------ PARAM: %s" % parameter["schema"]["type"])
+                                    resultarray = []
+                                    isfile = False
+                                    try:
+                                        if parameter["schema"]["type"] == "file" and len(value) > 0:
+                                            print("(1) SHOULD HANDLE FILE IN MULTI. Get based on value %s" % tmpitem) 
+                                            # This is silly :)
+                                            for tmp_file_split in json.loads(tmpitem):
+                                                print("PRE GET FILE %s" % tmp_file_split)
+                                                file_value = self.get_file(tmp_file_split)
+                                                print("PRE AWAIT %s" % file_value)
+                                                await file_value
+                                                print("POST AWAIT %s" % file_value)
+                                                resultarray.append(file_value)
+                                                print("(1) FILE VALUE FOR VAL %s: %s" % (tmp_file_split, file_value))
+
+                                            isfile = True
+                                    except KeyError as e:
+                                        print("(1) SCHEMA ERROR IN FILE HANDLING: %s" % e)
+                                    except json.decoder.JSONDecodeError as e:
+                                        print("(1) JSON ERROR IN FILE HANDLING: %s" % e)
+
+                                    if not isfile:
+                                        params[parameter["name"]] = tmpitem
+                                        multi_parameters[parameter["name"]] = json_replacement 
+                                    else:
+                                        print("Resultarray: %s" % resultarray)
+                                        params[parameter["name"]] = resultarray 
+                                        multi_parameters[parameter["name"]] = resultarray 
+
+                                    multi_execution_lists.append(json_replacement)
+                                    print("MULTI finished: %s" % json_replacement)
                                 else:
                                     # This is here to handle for loops within variables.. kindof
                                     # 1. Find the length of the longest array
@@ -1109,14 +1144,15 @@ class AppBase:
 
 
                                         # This code handles files.
+                                        print("------------ PARAM: %s" % parameter["schema"]["type"])
                                         isfile = False
                                         try:
                                             if parameter["schema"]["type"] == "file" and len(value) > 0:
                                                 print("SHOULD HANDLE FILE IN MULTI. Get based on value %s" % parameter["value"]) 
-                                                file_value = self.get_file(tmpitem)
+                                                file_value = await self.get_file(tmpitem)
                                                 print("FILE VALUE FOR VAL %s: %s" % (tmpitem, file_value))
                                                 resultarray.append(file_value)
-
+                                                isfile = True
                                         except KeyError as e:
                                             print("SCHEMA ERROR IN FILE HANDLING: %s" % e)
 
@@ -1143,7 +1179,7 @@ class AppBase:
                                 try:
                                     if parameter["schema"]["type"] == "file" and len(value) > 0:
                                         print("\n SHOULD HANDLE FILE. Get based on value %s. <--- is this a valid ID?" % parameter["value"]) 
-                                        file_value = self.get_file(value)
+                                        file_value = await self.get_file(value)
                                         print("FILE VALUE: %s \n" % file_value)
 
                                         params[parameter["name"]] = file_value 
@@ -1282,7 +1318,8 @@ class AppBase:
                                     print("KeyError: %s" % e)
                                     baseparams[key] = "KeyError: %s" % e
 
-                                print("Running with params %s (1)" % baseparams) 
+
+                                print("Running with params (1): %s" % baseparams) 
                                 ret = await func(**baseparams)
                                 print("Return from execution: %s" % ret)
                                 if isinstance(ret, dict) or isinstance(ret, list):

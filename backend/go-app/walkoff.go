@@ -954,12 +954,11 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	runWorkflowExecutionTransaction(0, workflowExecution.ExecutionId, actionResult, resp)
+	runWorkflowExecutionTransaction(ctx, 0, workflowExecution.ExecutionId, actionResult, resp)
 }
 
 // Will make sure transactions are always ran for an execution. This is recursive if it fails. Allowed to fail up to 5 times
-func runWorkflowExecutionTransaction(attempts int64, workflowExecutionId string, actionResult ActionResult, resp http.ResponseWriter) {
-	ctx := context.Background()
+func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workflowExecutionId string, actionResult ActionResult, resp http.ResponseWriter) {
 	// Should start a tx for the execution here
 	tx, err := dbclient.NewTransaction(ctx)
 	if err != nil {
@@ -1266,16 +1265,21 @@ func runWorkflowExecutionTransaction(attempts int64, workflowExecutionId string,
 	}
 
 	if _, err = tx.Commit(); err != nil {
-		log.Printf("[ERROR] tx.Commit: %v", err)
+		if attempts >= 5 {
+			log.Printf("[ERROR] QUITTING: tx.Commit %d: %v", attempts, err)
+			tx.Rollback()
+			workflowExecution.Status = "ABORTED"
+			setWorkflowExecution(ctx, *workflowExecution)
 
-		if attempts >= 0 {
 			resp.WriteHeader(401)
 			resp.Write([]byte(`{"success": false}`))
 			return
 		}
 
+		log.Printf("[WARNING] tx.Commit %d: %v", attempts, err)
+
 		attempts += 1
-		runWorkflowExecutionTransaction(attempts, workflowExecutionId, actionResult, resp)
+		runWorkflowExecutionTransaction(ctx, attempts, workflowExecutionId, actionResult, resp)
 		return
 	}
 

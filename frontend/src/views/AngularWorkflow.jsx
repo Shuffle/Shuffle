@@ -5902,7 +5902,7 @@ const AngularWorkflow = (props) => {
 							try {
 								const tmp = String(JSON.parse(showResult))
 								if (!showResult.includes("{") && !showResult.includes("[")) {
-									console.log("IN HERE: ", tmp)
+									//console.log("IN HERE: ", tmp)
 									jsonvalid = false
 								}
 							} catch (e) {
