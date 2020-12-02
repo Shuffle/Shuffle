@@ -1,4 +1,5 @@
 import os
+import copy
 import sys
 import re
 import time 
@@ -1074,12 +1075,12 @@ class AppBase:
                                         if parameter["schema"]["type"] == "file" and len(value) > 0:
                                             print("(1) SHOULD HANDLE FILE IN MULTI. Get based on value %s" % tmpitem) 
                                             # This is silly :)
+                                            # Q: Is there something wrong with the download system?
+                                            # It seems to return "FILE CONTENT: %s" with the ID as %s
                                             for tmp_file_split in json.loads(tmpitem):
-                                                print("PRE GET FILE %s" % tmp_file_split)
+                                                print("(1) PRE GET FILE %s" % tmp_file_split)
                                                 file_value = self.get_file(tmp_file_split)
-                                                print("PRE AWAIT %s" % file_value)
-                                                await file_value
-                                                print("POST AWAIT %s" % file_value)
+                                                print("(1) POST AWAIT %s" % file_value)
                                                 resultarray.append(file_value)
                                                 print("(1) FILE VALUE FOR VAL %s: %s" % (tmp_file_split, file_value))
 
@@ -1144,17 +1145,25 @@ class AppBase:
 
 
                                         # This code handles files.
-                                        print("------------ PARAM: %s" % parameter["schema"]["type"])
+                                        print("(2) ------------ PARAM: %s" % parameter["schema"]["type"])
                                         isfile = False
                                         try:
                                             if parameter["schema"]["type"] == "file" and len(value) > 0:
-                                                print("SHOULD HANDLE FILE IN MULTI. Get based on value %s" % parameter["value"]) 
-                                                file_value = await self.get_file(tmpitem)
-                                                print("FILE VALUE FOR VAL %s: %s" % (tmpitem, file_value))
-                                                resultarray.append(file_value)
+                                                print("(2) SHOULD HANDLE FILE IN MULTI. Get based on value %s" % parameter["value"]) 
+
+                                                for tmp_file_split in json.loads(parameter["value"]):
+                                                    print("(2) PRE GET FILE %s" % tmp_file_split)
+                                                    file_value = self.get_file(tmp_file_split)
+                                                    print("(2) POST AWAIT %s" % file_value)
+                                                    resultarray.append(file_value)
+                                                    print("(2) FILE VALUE FOR VAL %s: %s" % (tmp_file_split, file_value))
+
+
                                                 isfile = True
                                         except KeyError as e:
-                                            print("SCHEMA ERROR IN FILE HANDLING: %s" % e)
+                                            print("(2) SCHEMA ERROR IN FILE HANDLING: %s" % e)
+                                        except json.decoder.JSONDecodeError as e:
+                                            print("(2) JSON ERROR IN FILE HANDLING: %s" % e)
 
                                         if not isfile:
                                             resultarray.append(tmpitem)
@@ -1179,7 +1188,7 @@ class AppBase:
                                 try:
                                     if parameter["schema"]["type"] == "file" and len(value) > 0:
                                         print("\n SHOULD HANDLE FILE. Get based on value %s. <--- is this a valid ID?" % parameter["value"]) 
-                                        file_value = await self.get_file(value)
+                                        file_value = self.get_file(value)
                                         print("FILE VALUE: %s \n" % file_value)
 
                                         params[parameter["name"]] = file_value 
@@ -1250,14 +1259,19 @@ class AppBase:
                                     print("Can't handle type %s value from function" % (type(newres)))
                             print("POST NEWRES RESULT: ", result)
                         else:
-                            print("APP_SDK DONE: Starting MULTI execution with values %s of length %d" % (multi_parameters, minlength))
+                            print("APP_SDK DONE: Starting MULTI execution (length: %d) with values %s" % (minlength, multi_parameters))
                             # 1. Use number of executions based on the arrays being similar
                             # 2. Find the right value from the parsed multi_params
                             results = []
                             json_object = False
                             for i in range(0, minlength):
                                 # To be able to use the results as a list:
-                                baseparams = json.loads(json.dumps(multi_parameters))
+                                print("1: %s" % multi_parameters)
+                                #baseparams = json.loads(json.dumps(multi_parameters))
+                                baseparams = copy.deepcopy(multi_parameters)
+
+                                print("2: %s: %s" % (type(baseparams), baseparams))
+
                                 # {'call': ['GoogleSafebrowsing_2_0', 'VirusTotal_GetReport_3_0']}
                                 # 1. Check if list length is same as minlength
                                 # 2. If NOT same length, duplicate based on length of array
@@ -1268,10 +1282,11 @@ class AppBase:
                                 try:
                                     firstlist = True
                                     for key, value in baseparams.items():
-
+                                        print("Itemtype: %s" % type(value))
                                         if isinstance(value, list):
                                             try:
                                                 newvalue = value[i]
+                                                print("NEWVALUE: %s" % newvalue)
                                             except IndexError:
                                                 pass
 
@@ -1311,6 +1326,8 @@ class AppBase:
                                                 firstlist = False
 
                                             baseparams[key] = newvalue
+
+                                    print("3")
                                 except IndexError as e:
                                     print("IndexError: %s" % e)
                                     baseparams[key] = "IndexError: %s" % e
@@ -1319,6 +1336,7 @@ class AppBase:
                                     baseparams[key] = "KeyError: %s" % e
 
 
+                                print("4")
                                 print("Running with params (1): %s" % baseparams) 
                                 ret = await func(**baseparams)
                                 print("Return from execution: %s" % ret)
