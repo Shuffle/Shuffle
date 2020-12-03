@@ -5,8 +5,9 @@ package main
 */
 
 import (
-	//"bytes"
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -28,6 +29,8 @@ type File struct {
 	Type         string   `json:"type" datastore:"type"`
 	CreatedAt    int64    `json:"created_at" datastore:"created_at"`
 	UpdatedAt    int64    `json:"updated_at" datastore:"updated_at"`
+	MetaAccessAt int64    `json:"meta_access_at" datastore:"meta_access_at"`
+	DownloadAt   int64    `json:"last_downloaded" datastore:"last_downloaded"`
 	Description  string   `json:"description" datastore:"description"`
 	ExpiresAt    string   `json:"expires_at" datastore:"expires_at"`
 	Status       string   `json:"status" datastore:"status"`
@@ -38,6 +41,7 @@ type File struct {
 	Workflows    []string `json:"workflows" datastore:"workflows"`
 	DownloadPath string   `json:"download_path" datastore:"download_path"`
 	Md5sum       string   `json:"md5_sum" datastore:"md5_sum"`
+	Sha256sum    string   `json:"sha256_sum" datastore:"sha256_sum"`
 }
 
 var basepath = os.Getenv("SHUFFLE_FILE_LOCATION")
@@ -545,14 +549,14 @@ func handleUploadFile(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// Can be used for validation files for change
-	/*
-		var buf bytes.Buffer
-		io.Copy(&buf, parsedFile)
-		contents := buf.Bytes()
-		md5 := md5sum(contents)
-		buf.Reset()
-	*/
-	md5 := ""
+	var buf bytes.Buffer
+	io.Copy(&buf, parsedFile)
+	contents := buf.Bytes()
+	md5 := md5sum(contents)
+	buf.Reset()
+
+	sha256Sum := sha256.Sum256(contents)
+	//parsedFile.Reset()
 
 	f, err := os.OpenFile(file.DownloadPath, os.O_WRONLY|os.O_CREATE, os.ModePerm)
 	if err != nil {
@@ -567,12 +571,15 @@ func handleUploadFile(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	defer f.Close()
+	parsedFile.Seek(0, io.SeekStart)
 	io.Copy(f, parsedFile)
 
 	// FIXME: Set this one to 200 anyway? Can't download file then tho..
-	log.Printf("[INFO] MD5 for file %s is %s", file.Filename, md5)
 	file.Status = "active"
 	file.Md5sum = md5
+	file.Sha256sum = fmt.Sprintf("%x", sha256Sum)
+	log.Printf("[INFO] MD5 for file %s (%s) is %s and SHA256 is %s", file.Filename, file.Id, file.Md5sum, file.Sha256sum)
+
 	err = setFile(ctx, *file)
 	if err != nil {
 		log.Printf("[ERROR] Failed setting file back to active")
