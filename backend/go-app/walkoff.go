@@ -2258,7 +2258,10 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	// FIXME: Is this too drastic? May lead to issues in the future.
 	// Should maybe make a copy for the old org.
 	if workflow.OrgId != user.ActiveOrg.Id {
+		log.Printf("[WARNING] Editing workflow to be owned by %s", user.ActiveOrg.Id)
 		workflow.OrgId = user.ActiveOrg.Id
+		workflow.ExecutingOrg = user.ActiveOrg
+		workflow.Org = append(workflow.Org, user.ActiveOrg)
 	}
 
 	err = setWorkflow(ctx, workflow, fileId)
