@@ -5765,7 +5765,7 @@ func getWorkflowExecutions(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// Query for the specifci workflowId
-	q := datastore.NewQuery("workflowexecution").Filter("workflow_id =", fileId).Order("-started_at").Limit(20)
+	q := datastore.NewQuery("workflowexecution").Filter("workflow_id =", fileId).Order("-started_at").Limit(30)
 	var workflowExecutions []WorkflowExecution
 	_, err = dbclient.GetAll(ctx, q, &workflowExecutions)
 	if err != nil {

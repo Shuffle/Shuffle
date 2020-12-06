@@ -6813,7 +6813,7 @@ func remoteOrgJobHandler(org Org, interval int) error {
 
 	respBody, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
-		log.Printf("Failed body read in job sync: %s", err)
+		log.Printf("[ERROR] Failed body read in job sync: %s", err)
 		return err
 	}
 
@@ -6821,7 +6821,7 @@ func remoteOrgJobHandler(org Org, interval int) error {
 
 	err = remoteOrgJobController(org, respBody)
 	if err != nil {
-		log.Printf("Failed job controller run: %s", err)
+		log.Printf("[ERROR] Failed job controller run for %s: %s", respBody, err)
 		return err
 	}
 	return nil

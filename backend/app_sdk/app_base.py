@@ -57,47 +57,68 @@ class AppBase:
     # - How can you download / stream a file? 
     # - Can you decide if you want a stream or the files directly?
     def get_file(self, value):
-        print("INSIDE GET_FILE")
-
         full_execution = self.full_execution
         org_id = full_execution["workflow"]["execution_org"]["id"]
 
         print("SHOULD GET FILES BASED ON ORG %s, workflow %s and value(s) %s" % (org_id, full_execution["workflow"]["id"], value))
 
-        get_path = "/api/v1/files/%s?execution_id=%s" % (value, full_execution["execution_id"])
-        headers = {
-            "Content-Type": "application/json",     
-            "Authorization": "Bearer %s" % self.authorization
-        }
+        if isinstance(value, list):
+            print("IS LIST!")
+            #if len(value) == 1:
+            #    value = value[0]
+        else:
+            value = [value]
 
-        ret1 = requests.get("%s%s" % (self.url, get_path), headers=headers)
-        print("RET1: %s" % ret1.text)
-        if ret1.status_code != 200:
+        returns = []
+        for item in value:
+            print("VALUE: %s" % item)
+            if len(item) != 36:
+                print("Bad length for value")
+                continue
+                #return {
+                #    "filename": "",
+                #    "data": "",
+                #    "success": False,
+                #}
+
+            get_path = "/api/v1/files/%s?execution_id=%s" % (item, full_execution["execution_id"])
+            headers = {
+                "Content-Type": "application/json",     
+                "Authorization": "Bearer %s" % self.authorization
+            }
+
+            ret1 = requests.get("%s%s" % (self.url, get_path), headers=headers)
+            print("RET1: %s" % ret1.text)
+            if ret1.status_code != 200:
+                returns.append({
+                    "filename": "",
+                    "data": "",
+                    "success": False,
+                })
+                continue
+
+            content_path = "/api/v1/files/%s/content?execution_id=%s" % (item, full_execution["execution_id"])
+            ret2 = requests.get("%s%s" % (self.url, content_path), headers=headers)
+            print("Ret2: %s" % ret2.text)
+            if ret2.status_code == 200:
+                tmpdata = ret1.json()
+                returndata = {
+                    "success": True,
+                    "filename": tmpdata["filename"],
+                    "data": ret2.content,
+                }
+                returns.append(returndata)
+
+        if len(returns) == 0:
             return {
-                "filename": "",
-                "data": "",
                 "success": False,
+                "filename": "",
+                "data": b"",
             }
-
-        content_path = "/api/v1/files/%s/content?execution_id=%s" % (value, full_execution["execution_id"])
-        ret2 = requests.get("%s%s" % (self.url, content_path), headers=headers)
-        print("Ret2: %s" % ret2.text)
-        if ret2.status_code == 200:
-            tmpdata = ret1.json()
-            returndata = {
-                "success": True,
-                "filename": tmpdata["filename"],
-                "data": ret2.content,
-            }
-            # open('facebook.ico', 'wb').write(r.content)
-
-            return returndata
-
-        return {
-            "success": False,
-            "filename": "",
-            "data": b"",
-        }
+        elif len(returns) == 1:
+            return returns[0]
+        else:
+            return returns
 
     # Sets files in the backend
     def set_files(self, infiles):
@@ -522,6 +543,7 @@ class AppBase:
                         # Magical way of returning which makes app sdk identify 
                         # it as multi execution
                         return newvalue, True
+
                     elif len(actualitem) > 0:
                         # FIXME: This is absolutely not perfect. 
                         print("In recursion v2: ", actualitem)
@@ -704,7 +726,7 @@ class AppBase:
                     print("SET DATA WRAPPER TO %s!" % parsersplit[-1])
                     parseditem = "${%s%s}$" % (parsersplit[-1], json.dumps(data))
 
-            print("Before last return")
+            print("Before last return with %s" % appendresult)
             return str(parseditem)+str(appendresult), is_loop
 
         # Parses parameters sent to it and returns whether it did it successfully with the values found
@@ -1205,15 +1227,22 @@ class AppBase:
                                 if listitem in filteredlist:
                                     continue
 
-                                filteredlist.append(listitem)
+                                # FIXME: Subsub required?. Recursion! 
+                                # Basically multiply what we have with the outer loop?
+                                # 
+                                if isinstance(listitem, list):
+                                    for subitem in listitem:
+                                        filteredlist.append(subitem)
+                                else:
+                                    filteredlist.append(listitem)
 
                             #print("New list length: %d" % len(filteredlist))
                             if len(filteredlist) > 1:
                                 print("Calculating new multi-loop length with %d lists" % len(filteredlist))
                                 tmplength = 1
                                 for innerlist in filteredlist:
-                                    print("List length: %d. %d*%d" % (len(innerlist), len(innerlist), tmplength))
                                     tmplength = len(innerlist)*tmplength
+                                    print("List length: %d. %d*%d" % (tmplength, len(innerlist), tmplength))
 
                                 minlength = tmplength
 
@@ -1257,6 +1286,7 @@ class AppBase:
                                 except ValueError:
                                     result += "Failed autocasting. Can't handle %s type from function. Must be string" % type(newres)
                                     print("Can't handle type %s value from function" % (type(newres)))
+
                             print("POST NEWRES RESULT: ", result)
                         else:
                             print("APP_SDK DONE: Starting MULTI execution (length: %d) with values %s" % (minlength, multi_parameters))
@@ -1286,7 +1316,6 @@ class AppBase:
                                         if isinstance(value, list):
                                             try:
                                                 newvalue = value[i]
-                                                print("NEWVALUE: %s" % newvalue)
                                             except IndexError:
                                                 pass
 

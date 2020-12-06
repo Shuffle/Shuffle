@@ -1,7 +1,7 @@
 package main
 
 /*
-	Handles files within Workflows.
+	Handles files within Workflows.of Shuffle
 */
 
 import (
