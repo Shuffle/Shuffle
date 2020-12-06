@@ -6530,7 +6530,7 @@ func handleAppHotload(location string, forceUpdate bool) error {
 	}
 
 	//log.Printf("Reading app folder: %#v", dir)
-	err = iterateAppGithubFolders(fs, dir, "", "", forceUpdate)
+	_, _, err = iterateAppGithubFolders(fs, dir, "", "", forceUpdate)
 	if err != nil {
 		log.Printf("Err: %s", err)
 		return err

@@ -191,7 +191,7 @@ const AngularWorkflow = (props) => {
 
 	const cloudSyncEnabled = props.userdata !== undefined && props.userdata.active_org !== null && props.userdata.active_org !== undefined ? props.userdata.active_org.cloud_sync === true : false 
 	//const triggerEnvironments = cloudSyncEnabled ? ["cloud", "onprem"] : environments
-	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io"
+	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" 
 	const triggerEnvironments = isCloud ? ["cloud"] : ["cloud", "onprem"] 
 
 	const unloadText = 'Are you sure you want to leave without saving (CTRL+S)?'
@@ -1334,6 +1334,7 @@ const AngularWorkflow = (props) => {
 				} else {
 					setEnvironments({"name": "Onprem", "type": "onprem"})
 				}
+
 				return
 			}
 
@@ -4677,7 +4678,6 @@ const AngularWorkflow = (props) => {
 						placeholder={selectedTrigger.label}
 						onChange={selectedTriggerChange}
 					/>
-					{showEnvironment ? 
 						<div style={{marginTop: "20px"}}>
 							<Typography>
 								Environment
@@ -4725,7 +4725,6 @@ const AngularWorkflow = (props) => {
 								})}
 							</Select>
 						</div>
-						: null}
 					<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 					<div style={{flex: "6", marginTop: "20px"}}>
 						<div>
@@ -5221,59 +5220,57 @@ const AngularWorkflow = (props) => {
 						placeholder={selectedTrigger.label}
 						onChange={selectedTriggerChange}
 					/>
-					{showEnvironment ? 
-						<div style={{marginTop: "20px"}}>
-							<Typography>
-								Environment
-							</Typography>
-							<Select
-								value={selectedTrigger.environment}
-								disabled={selectedTrigger.status === "running"}
-								SelectDisplayProps={{
-									style: {
-										marginLeft: 10,
+					<div style={{marginTop: "20px"}}>
+						<Typography>
+							Environment
+						</Typography>
+						<Select
+							value={selectedTrigger.environment}
+							disabled={selectedTrigger.status === "running"}
+							SelectDisplayProps={{
+								style: {
+									marginLeft: 10,
 
-									}
-								}}
-								fullWidth
-								onChange={(e) => {
-									selectedTrigger.environment = e.target.value
-									setSelectedTrigger(selectedTrigger)
-									if (e.target.value === "cloud") {
-										console.log("Set cloud config")
-										workflow.triggers[selectedTriggerIndex].parameters[0].value = "*/2 * * * *" 
+								}
+							}}
+							fullWidth
+							onChange={(e) => {
+								selectedTrigger.environment = e.target.value
+								setSelectedTrigger(selectedTrigger)
+								if (e.target.value === "cloud") {
+									console.log("Set cloud config")
+									workflow.triggers[selectedTriggerIndex].parameters[0].value = "*/2 * * * *" 
 
-										//var tmpvalue = workflow.triggers[selectedTriggerIndex].parameters[0].value.split("/")
-										//const urlpath = tmpvalue.slice(3, tmpvalue.length)
-										//const newurl = "https://shuffler.io/"+urlpath.join("/")
-										//workflow.triggers[selectedTriggerIndex].parameters[0].value = newurl
-									} else {
-										console.log("Set cloud config")
-										//var tmpvalue = workflow.triggers[selectedTriggerIndex].parameters[0].value.split("/")
-										//const urlpath = tmpvalue.slice(3, tmpvalue.length)
-										//const newurl = window.location.origin+"/"+urlpath.join("/")
-										workflow.triggers[selectedTriggerIndex].parameters[0].value = "120" 
-									}
+									//var tmpvalue = workflow.triggers[selectedTriggerIndex].parameters[0].value.split("/")
+									//const urlpath = tmpvalue.slice(3, tmpvalue.length)
+									//const newurl = "https://shuffler.io/"+urlpath.join("/")
+									//workflow.triggers[selectedTriggerIndex].parameters[0].value = newurl
+								} else {
+									console.log("Set cloud config")
+									//var tmpvalue = workflow.triggers[selectedTriggerIndex].parameters[0].value.split("/")
+									//const urlpath = tmpvalue.slice(3, tmpvalue.length)
+									//const newurl = window.location.origin+"/"+urlpath.join("/")
+									workflow.triggers[selectedTriggerIndex].parameters[0].value = "120" 
+								}
 
-									setWorkflow(workflow)
-									setUpdate(Math.random())
-								}}
-								style={{backgroundColor: inputColor, color: "white", height: "50px"}}
-							>
-								{triggerEnvironments.map(data => {
-									if (data.archived) {
-										return null
-									}
-									
-									return (
-										<MenuItem key={data} style={{backgroundColor: inputColor, color: "white"}} value={data}>
-											{data}
-										</MenuItem>
-									)
-								})}
-							</Select>
-						</div>
-						: null}
+								setWorkflow(workflow)
+								setUpdate(Math.random())
+							}}
+							style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+						>
+							{triggerEnvironments.map(data => {
+								if (data.archived) {
+									return null
+								}
+								
+								return (
+									<MenuItem key={data} style={{backgroundColor: inputColor, color: "white"}} value={data}>
+										{data}
+									</MenuItem>
+								)
+							})}
+						</Select>
+					</div>
 					<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 					<div style={{flex: "6", marginTop: "20px"}}>
 						<div>

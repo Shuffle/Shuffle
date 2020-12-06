@@ -15,6 +15,7 @@ import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Chip from '@material-ui/core/Chip';
 import Switch from '@material-ui/core/Switch';
 import Typography from '@material-ui/core/Typography';
+import Zoom from '@material-ui/core/Zoom';
 
 import CircularProgress from '@material-ui/core/CircularProgress';
 import CachedIcon from '@material-ui/icons/Cached';
@@ -365,6 +366,7 @@ const Workflows = (props) => {
 			}
 		}
 		data["org"] = []
+		data["org_id"] = ""
 		data.execution_org = {"id": ""}
 		console.log(data)
 
@@ -1028,8 +1030,19 @@ const Workflows = (props) => {
 				},
 			}}
 		>
+			<DialogTitle>
+				<div style={{color: "rgba(255,255,255,0.9)"}}>
+					{editingWorkflow.id !== undefined ? "Editing" : "New"} workflow
+					<div style={{float: "right"}}>
+						<Tooltip color="primary" title={"Import manually"} placement="top">
+							<Button color="primary" style={{}} variant="text" onClick={() => upload.click()}>
+								<PublishIcon />
+							</Button> 				
+						</Tooltip>
+					</div>
+				</div>
+			</DialogTitle>
 			<FormControl>
-			<DialogTitle><div style={{color: "white"}}>{editingWorkflow.id !== undefined ? "Editing" : "New"} workflow</div></DialogTitle>
 				<DialogContent>
 					<TextField
 						onBlur={(event) => setNewWorkflowName(event.target.value)}
@@ -1127,6 +1140,35 @@ const Workflows = (props) => {
 			workflowViewStyle.display = "none"
 		}
 
+		const workflowButtons = 
+			<span>
+				{workflows.length > 0 ?
+					<Tooltip color="primary" title={"Create new workflow"} placement="top">
+						<Button color="primary" style={{}} variant="text" onClick={() => setModalOpen(true)}><AddIcon /></Button> 				
+					</Tooltip>
+				: null}
+				<Tooltip color="primary" title={"Import workflows"} placement="top">
+					<Button color="primary" style={{}} variant="text" onClick={() => upload.click()}>
+						<PublishIcon />
+					</Button> 				
+				</Tooltip>
+				<input hidden type="file" multiple="multiple" ref={(ref) => upload = ref} onChange={importFiles} />
+				{workflows.length > 0 ? 
+					<Tooltip color="primary" title={`Download ALL workflows (${workflows.length})`} placement="top">
+						<Button color="primary" style={{}} variant="text" onClick={() => {
+							exportAllWorkflows()
+						}}>
+							<GetAppIcon />
+						</Button> 				
+					</Tooltip>
+				: null}
+				<Tooltip color="primary" title={"Download workflows"} placement="top">
+					<Button color="primary" style={{}} variant="text" onClick={() => setLoadWorkflowsModalOpen(true)}>
+						<CloudDownloadIcon />
+					</Button> 				
+				</Tooltip>
+			</span>
+
 		const WorkflowView = () => {
 			if (workflows.length === 0) {
 				return (
@@ -1143,15 +1185,21 @@ const Workflows = (props) => {
 							<div>
 								If you want to jump straight into it, click here to create your first workflow: 
 							</div>
-							<div>
+							<div style={{display: "flex"}}>
 								<Button color="primary" style={{marginTop: "20px",}} variant="outlined" onClick={() => setModalOpen(true)}>New workflow</Button> 				
+								<span style={{paddingTop: 20, display: "flex",}}>
+									<Typography style={{marginTop: 5, marginLeft: 30, marginRight: 15}}>
+										..OR
+									</Typography>
+									{workflowButtons}
+								</span>
 							</div>
 						</Paper>
 					</div>
 				)
 			}
 
-			return (
+		return (
 			<div style={viewStyle}>	
 				<div style={workflowViewStyle}>
 					<div style={{display: "flex"}}>
@@ -1159,29 +1207,7 @@ const Workflows = (props) => {
 							<h2>Workflows</h2> 
 						</div>
 						<div style={{marginTop: 20}}>
-						 	<Tooltip color="primary" title={"Create new workflow"} placement="top">
-								<Button color="primary" style={{}} variant="text" onClick={() => setModalOpen(true)}><AddIcon /></Button> 				
-							</Tooltip>
-							{/*
-						 	<Tooltip color="primary" title={"Import workflows"} placement="top">
-								<Button color="primary" style={{}} variant="text" onClick={() => upload.click()}>
-									<PublishIcon />
-								</Button> 				
-							</Tooltip>
-							*/}
-							<Tooltip color="primary" title={`Download ALL workflows (${workflows.length})`} placement="top">
-								<Button color="primary" style={{}} variant="text" onClick={() => {
-									exportAllWorkflows()
-								}}>
-									<GetAppIcon />
-								</Button> 				
-							</Tooltip>
-						 	<Tooltip color="primary" title={"Import workflows"} placement="top">
-								<Button color="primary" style={{}} variant="text" onClick={() => setLoadWorkflowsModalOpen(true)}>
-									<CloudDownloadIcon />
-								</Button> 				
-							</Tooltip>
-							<input hidden type="file" multiple="multiple" ref={(ref) => upload = ref} onChange={importFiles} />
+							{workflowButtons}
 						</div>
 					</div>
 					<Divider style={{marginBottom: "10px", height: "1px", width: "100%", backgroundColor: dividerColor}}/>
@@ -1189,7 +1215,7 @@ const Workflows = (props) => {
 					<div style={scrollStyle}>
 						{workflows.map((data, index) => {
 							return (
-								<WorkflowPaper key={index} data={data} />
+									<WorkflowPaper key={index} data={data} />
 							)
 						})}
 					</div>
