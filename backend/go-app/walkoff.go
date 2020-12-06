@@ -5391,6 +5391,7 @@ func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra 
 type buildLaterStruct struct {
 	Tags  []string
 	Extra string
+	Id    string
 }
 
 // Onlyname is used to
@@ -5635,11 +5636,14 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 
 				//log.Printf("Added %s:%s to the database", workflowapp.Name, workflowapp.AppVersion)
 
-				reservedFound := false
+				// ID  can be used to e.g. set a build status.
 				buildLater := buildLaterStruct{
 					Tags:  tags,
 					Extra: extra,
+					Id:    workflowapp.ID,
 				}
+
+				reservedFound := false
 				for _, appname := range reservedNames {
 					if strings.ToUpper(workflowapp.Name) == strings.ToUpper(appname) {
 						buildLaterList = append(buildLaterList, buildLater)
