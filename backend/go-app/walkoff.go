@@ -954,6 +954,30 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	runWorkflowExecutionTransaction(ctx, 0, workflowExecution.ExecutionId, actionResult, resp)
+}
+
+// Will make sure transactions are always ran for an execution. This is recursive if it fails. Allowed to fail up to 5 times
+func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workflowExecutionId string, actionResult ActionResult, resp http.ResponseWriter) {
+	// Should start a tx for the execution here
+	tx, err := dbclient.NewTransaction(ctx)
+	if err != nil {
+		log.Printf("client.NewTransaction: %v", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed creating transaction"}`)))
+		return
+	}
+
+	key := datastore.NameKey("workflowexecution", workflowExecutionId, nil)
+	workflowExecution := &WorkflowExecution{}
+	if err := tx.Get(key, workflowExecution); err != nil {
+		log.Printf("tx.Get bug: %v", err)
+		tx.Rollback()
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting the workflow key"}`)))
+		return
+	}
+
 	if actionResult.Status == "ABORTED" || actionResult.Status == "FAILURE" {
 		log.Printf("Actionresult is %s. Should set workflowExecution and exit all running functions", actionResult.Status)
 
@@ -1228,15 +1252,34 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	err = setWorkflowExecution(ctx, *workflowExecution)
-	if err != nil {
-		//workflowExecution.Result = "Error setting workflow: result too large"
-		//workflowExecution.Status = "FINISHED"
-		//workflowExecution.CompletedAt = int64(time.Now().Unix())
+	// Transactions: https://cloud.google.com/datastore/docs/concepts/transactions#datastore-datastore-transactional-update-go
+	// Prevents timing issues
+	//ExecutionId
+	if _, err := tx.Put(key, workflowExecution); err != nil {
+		tx.Rollback()
+		log.Printf("[ERROR] tx.Put bug: %v", err)
 
-		log.Printf("Error saving workflow execution actionresult setting: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed setting workflowexecution actionresult: %s"}`, err)))
+		return
+	}
+
+	if _, err = tx.Commit(); err != nil {
+		if attempts >= 5 {
+			log.Printf("[ERROR] QUITTING: tx.Commit %d: %v", attempts, err)
+			tx.Rollback()
+			workflowExecution.Status = "ABORTED"
+			setWorkflowExecution(ctx, *workflowExecution)
+
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		log.Printf("[WARNING] tx.Commit %d: %v", attempts, err)
+
+		attempts += 1
+		runWorkflowExecutionTransaction(ctx, attempts, workflowExecutionId, actionResult, resp)
 		return
 	}
 
@@ -1360,6 +1403,7 @@ func getWorkflows(resp http.ResponseWriter, request *http.Request) {
 	q := datastore.NewQuery("workflow").Filter("owner =", user.Id)
 	if user.Role == "admin" {
 		q = datastore.NewQuery("workflow").Filter("org_id =", user.ActiveOrg.Id)
+		log.Printf("[INFO] Getting workflows (ADMIN) for organization %s", user.ActiveOrg.Id)
 	}
 
 	var workflows []Workflow
@@ -1830,7 +1874,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	for _, action := range workflow.Actions {
 		allNodes = append(allNodes, action.ID)
 
-		if len(action.Errors) > 0 {
+		if len(action.Errors) > 0 || !action.IsValid {
 			action.IsValid = true
 			action.Errors = []string{}
 		}
@@ -2192,9 +2236,11 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 					// Handles check for required params
 					if !found && param.Required {
 						log.Printf("Appaction %s with required param %s doesn't exist.", action.Name, param.Name)
-						resp.WriteHeader(401)
-						resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Appaction %s with required param '%s' is empty."}`, action.Name, param.Name)))
-						return
+						action.Errors = append(action.Errors, "Parameter %s is required", param.Name)
+						//newActions = append(newActions, action)
+						//resp.WriteHeader(401)
+						//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Appaction %s with required param '%s' is empty."}`, action.Name, param.Name)))
+						//return
 					}
 
 				}
@@ -2208,6 +2254,15 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	workflow.Actions = newActions
 	workflow.IsValid = true
 	log.Printf("Tags: %#v", workflow.Tags)
+
+	// FIXME: Is this too drastic? May lead to issues in the future.
+	// Should maybe make a copy for the old org.
+	if workflow.OrgId != user.ActiveOrg.Id {
+		log.Printf("[WARNING] Editing workflow to be owned by %s", user.ActiveOrg.Id)
+		workflow.OrgId = user.ActiveOrg.Id
+		workflow.ExecutingOrg = user.ActiveOrg
+		workflow.Org = append(workflow.Org, user.ActiveOrg)
+	}
 
 	err = setWorkflow(ctx, workflow, fileId)
 	if err != nil {
@@ -2234,7 +2289,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		Errors:  workflow.Errors,
 	}
 
-	log.Printf("Saved new version of workflow %s (%s)", workflow.Name, fileId)
+	log.Printf("Saved new version of workflow %s (%s) for org %s", workflow.Name, fileId, workflow.OrgId)
 	resp.WriteHeader(200)
 	newBody, err := json.Marshal(returndata)
 	if err != nil {
@@ -2795,7 +2850,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 					continue
 				}
 
-				log.Printf("Should set %s to SKIPPED as it's NOT a childnode of the startnode.", action.ID)
+				log.Printf("[WARNING] Set %s to SKIPPED as it's NOT a childnode of the startnode.", action.ID)
 				defaultResults = append(defaultResults, ActionResult{
 					Action:        action,
 					ExecutionId:   workflowExecution.ExecutionId,
@@ -2836,7 +2891,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 
 	var allEnvs []Environment
 	if len(workflowExecution.ExecutionOrg) > 0 {
-		log.Printf("Executing ORG: %s", workflowExecution.ExecutionOrg)
+		log.Printf("[INFO] Executing ORG: %s", workflowExecution.ExecutionOrg)
 
 		allEnvironments, err := getEnvironments(ctx, workflowExecution.ExecutionOrg)
 		if err != nil {
@@ -5336,11 +5391,24 @@ func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra 
 	return err
 }
 
+type buildLaterStruct struct {
+	Tags  []string
+	Extra string
+	Id    string
+}
+
 // Onlyname is used to
-func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string, forceUpdate bool) error {
+func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string, forceUpdate bool) ([]buildLaterStruct, []buildLaterStruct, error) {
 	var err error
 
 	allapps := []WorkflowApp{}
+	reservedNames := []string{
+		"OWA",
+		"NLP",
+	}
+
+	buildLaterFirst := []buildLaterStruct{}
+	buildLaterList := []buildLaterStruct{}
 
 	// It's here to prevent getting them in every iteration
 	ctx := context.Background()
@@ -5360,11 +5428,20 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 			}
 
 			// Go routine? Hmm, this can be super quick I guess
-			err = iterateAppGithubFolders(fs, dir, tmpExtra, "", forceUpdate)
+			buildFirst, buildLast, err := iterateAppGithubFolders(fs, dir, tmpExtra, "", forceUpdate)
 			if err != nil {
 				log.Printf("Error reading folder: %s", err)
 				continue
 			}
+
+			for _, item := range buildFirst {
+				buildLaterFirst = append(buildLaterFirst, item)
+			}
+
+			for _, item := range buildLast {
+				buildLaterList = append(buildLaterList, item)
+			}
+
 		case mode.IsRegular():
 			// Check the file
 			filename := file.Name()
@@ -5562,22 +5639,69 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 
 				//log.Printf("Added %s:%s to the database", workflowapp.Name, workflowapp.AppVersion)
 
-				/// Only upload if successful and no errors
-				err = buildImageMemory(fs, tags, extra)
-				if err != nil {
-					log.Printf("Failed image build memory: %s", err)
-				} else {
-					if len(tags) > 0 {
-						log.Printf("Successfully built image %s", tags[0])
-					} else {
-						log.Printf("Successfully built Docker image")
+				// ID  can be used to e.g. set a build status.
+				buildLater := buildLaterStruct{
+					Tags:  tags,
+					Extra: extra,
+					Id:    workflowapp.ID,
+				}
+
+				reservedFound := false
+				for _, appname := range reservedNames {
+					if strings.ToUpper(workflowapp.Name) == strings.ToUpper(appname) {
+						buildLaterList = append(buildLaterList, buildLater)
+
+						reservedFound = true
+						break
 					}
+				}
+
+				/// Only upload if successful and no errors
+				if !reservedFound {
+					buildLaterFirst = append(buildLaterFirst, buildLater)
+				} else {
+					log.Printf("\n\n[WARNING] Skipping build of %s to later\n\n", workflowapp.Name)
 				}
 			}
 		}
 	}
 
-	return err
+	if len(buildLaterFirst) == 0 && len(buildLaterList) == 0 {
+		return buildLaterFirst, buildLaterList, err
+	}
+
+	//log.Printf("BUILDLATERFIRST: %d, BUILDLATERLIST: %d", len(buildLaterFirst), len(buildLaterList))
+	if len(extra) == 0 {
+		log.Printf("[INFO] Starting build of %d containers (FIRST)", len(buildLaterFirst))
+		for _, item := range buildLaterFirst {
+			err = buildImageMemory(fs, item.Tags, item.Extra)
+			if err != nil {
+				log.Printf("Failed image build memory: %s", err)
+			} else {
+				if len(item.Tags) > 0 {
+					log.Printf("Successfully built image %s", item.Tags[0])
+				} else {
+					log.Printf("Successfully built Docker image")
+				}
+			}
+		}
+
+		log.Printf("Starting build of %d skipped docker images", len(buildLaterList))
+		for _, item := range buildLaterList {
+			err = buildImageMemory(fs, item.Tags, item.Extra)
+			if err != nil {
+				log.Printf("Failed image build memory: %s", err)
+			} else {
+				if len(item.Tags) > 0 {
+					log.Printf("Successfully built image %s", item.Tags[0])
+				} else {
+					log.Printf("Successfully built Docker image")
+				}
+			}
+		}
+	}
+
+	return buildLaterFirst, buildLaterList, err
 }
 
 func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
@@ -5722,7 +5846,7 @@ func getWorkflowExecutions(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// Query for the specifci workflowId
-	q := datastore.NewQuery("workflowexecution").Filter("workflow_id =", fileId).Order("-started_at").Limit(20)
+	q := datastore.NewQuery("workflowexecution").Filter("workflow_id =", fileId).Order("-started_at").Limit(30)
 	var workflowExecutions []WorkflowExecution
 	_, err = dbclient.GetAll(ctx, q, &workflowExecutions)
 	if err != nil {

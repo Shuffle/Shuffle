@@ -15,6 +15,7 @@ import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Chip from '@material-ui/core/Chip';
 import Switch from '@material-ui/core/Switch';
 import Typography from '@material-ui/core/Typography';
+import Zoom from '@material-ui/core/Zoom';
 
 import CircularProgress from '@material-ui/core/CircularProgress';
 import CachedIcon from '@material-ui/icons/Cached';
@@ -74,6 +75,7 @@ const Workflows = (props) => {
 	const [update, setUpdate] = React.useState("test");
 	const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
 	const [editingWorkflow, setEditingWorkflow] = React.useState({})
+	const [executionLoading, setExecutionLoading] = React.useState(false)
 	const { start, stop } = useInterval({
 	  	duration: 5000,
 	  	startImmediate: false,
@@ -245,6 +247,7 @@ const Workflows = (props) => {
 	}
 
 	const getWorkflowExecution = (id) => {
+		setExecutionLoading(true)
 		fetch(globalUrl+"/api/v1/workflows/"+id+"/executions", {
     	  method: 'GET',
 				headers: {
@@ -254,6 +257,7 @@ const Workflows = (props) => {
 	  			credentials: "include",
     		})
 		.then((response) => {
+			setExecutionLoading(false)
 			if (response.status !== 200) {
 				console.log("Status not 200 for WORKFLOW EXECUTION :O!")
 			}
@@ -275,6 +279,7 @@ const Workflows = (props) => {
 			}
 		})
 		.catch(error => {
+			setExecutionLoading(false)
 			alert.error(error.toString())
 		});
 	}
@@ -360,7 +365,8 @@ const Workflows = (props) => {
 				data.triggers[key].status = "stopped"
 			}
 		}
-
+		data["org"] = []
+		data["org_id"] = ""
 		data.execution_org = {"id": ""}
 		console.log(data)
 
@@ -858,10 +864,17 @@ const Workflows = (props) => {
 				</div> 
 			)
 		}
+
 		return (
-			<h4>
-				There are no executiondetails yet. Click "execute" to run your first one.
-			</h4>
+			executionLoading ?
+				<div style={{marginTop: 25, textAlign: "center"}}>
+					<CircularProgress />
+				</div>
+				: 
+				<h4>
+					There are no executiondetails yet. Click "execute" to run your first one.
+				</h4>
+			
 		)
 	}
 
@@ -880,9 +893,14 @@ const Workflows = (props) => {
 			)
 		} 
 		return (
-			<h4>
-				There are no executions for this workflow yet
-			</h4>
+			executionLoading ?
+				<div style={{marginTop: 25, textAlign: "center"}}>
+					<CircularProgress />
+				</div>
+				:
+				<h4>
+					There are no executions for this workflow yet
+				</h4>
 		)
 	}
 
@@ -1012,8 +1030,19 @@ const Workflows = (props) => {
 				},
 			}}
 		>
+			<DialogTitle>
+				<div style={{color: "rgba(255,255,255,0.9)"}}>
+					{editingWorkflow.id !== undefined ? "Editing" : "New"} workflow
+					<div style={{float: "right"}}>
+						<Tooltip color="primary" title={"Import manually"} placement="top">
+							<Button color="primary" style={{}} variant="text" onClick={() => upload.click()}>
+								<PublishIcon />
+							</Button> 				
+						</Tooltip>
+					</div>
+				</div>
+			</DialogTitle>
 			<FormControl>
-			<DialogTitle><div style={{color: "white"}}>{editingWorkflow.id !== undefined ? "Editing" : "New"} workflow</div></DialogTitle>
 				<DialogContent>
 					<TextField
 						onBlur={(event) => setNewWorkflowName(event.target.value)}
@@ -1111,107 +1140,126 @@ const Workflows = (props) => {
 			workflowViewStyle.display = "none"
 		}
 
-		const workflowView = workflows.length > 0 ? 
-		<div style={viewStyle}>	
-			<div style={workflowViewStyle}>
-				<div style={{display: "flex"}}>
-					<div style={{flex: "4"}}>
-						<h2>Workflows</h2> 
-					</div>
-					<div style={{marginTop: 20}}>
-					 	<Tooltip color="primary" title={"Create new workflow"} placement="top">
-							<Button color="primary" style={{}} variant="text" onClick={() => setModalOpen(true)}><AddIcon /></Button> 				
-						</Tooltip>
-						{/*
-					 	<Tooltip color="primary" title={"Import workflows"} placement="top">
-							<Button color="primary" style={{}} variant="text" onClick={() => upload.click()}>
-								<PublishIcon />
-							</Button> 				
-						</Tooltip>
-						*/}
-						<Tooltip color="primary" title={`Download ALL workflows (${workflows.length})`} placement="top">
-							<Button color="primary" style={{}} variant="text" onClick={() => {
-								exportAllWorkflows()
-							}}>
-								<GetAppIcon />
-							</Button> 				
-						</Tooltip>
-					 	<Tooltip color="primary" title={"Import workflows"} placement="top">
-							<Button color="primary" style={{}} variant="text" onClick={() => setLoadWorkflowsModalOpen(true)}>
-								<CloudDownloadIcon />
-							</Button> 				
-						</Tooltip>
-						<input hidden type="file" multiple="multiple" ref={(ref) => upload = ref} onChange={importFiles} />
-					</div>
-				</div>
-				<Divider style={{marginBottom: "10px", height: "1px", width: "100%", backgroundColor: dividerColor}}/>
-
-				<div style={scrollStyle}>
-					{workflows.map((data, index) => {
-						return (
-							<WorkflowPaper key={index} data={data} />
-						)
-					})}
-				</div>
-			</div>
-			<div style={{flex: viewSize.executionsView, marginLeft: "10px", marginRight: "10px"}}>
-				<div style={{display: "flex"}}>
-					<div style={{flex: "10"}}>
-						<h2>Executions: {selectedWorkflow.name}</h2> 
-					</div>
-					<div style={{flex: "1"}}>
-						<Button color="primary" style={{marginTop: "20px"}} variant="text" onClick={() => {
-								alert.info("Refreshing executions"); 
-								getWorkflowExecution(selectedWorkflow.id)
-							}}>
-							<CachedIcon />
+		const workflowButtons = 
+			<span>
+				{workflows.length > 0 ?
+					<Tooltip color="primary" title={"Create new workflow"} placement="top">
+						<Button color="primary" style={{}} variant="text" onClick={() => setModalOpen(true)}><AddIcon /></Button> 				
+					</Tooltip>
+				: null}
+				<Tooltip color="primary" title={"Import workflows"} placement="top">
+					<Button color="primary" style={{}} variant="text" onClick={() => upload.click()}>
+						<PublishIcon />
+					</Button> 				
+				</Tooltip>
+				<input hidden type="file" multiple="multiple" ref={(ref) => upload = ref} onChange={importFiles} />
+				{workflows.length > 0 ? 
+					<Tooltip color="primary" title={`Download ALL workflows (${workflows.length})`} placement="top">
+						<Button color="primary" style={{}} variant="text" onClick={() => {
+							exportAllWorkflows()
+						}}>
+							<GetAppIcon />
 						</Button> 				
-					</div>
-				</div>
-				<Divider style={{marginBottom: "10px", height: "1px", width: "100%", backgroundColor: dividerColor}}/>
-				<div style={scrollStyle}>
-					<ExecutionsView />
-				</div>
-			</div>
-			<div style={{flex: viewSize.executionResults, marginLeft: "10px", marginRight: "10px", minWidth: "33%"}}>
-				<div style={{display: "flex"}}>
-					<div style={{flex: "1"}}>
-						<h2>Execution Timeline</h2>
-					</div>
-					<div style={{flex: 1}}>
-				    	<FormControlLabel
-							style={{color: "white", marginBottom: "0px", marginTop: "10px"}}
-							label={<div style={{color: "white"}}>Collapse results</div>}
-							control={<Switch checked={collapseJson} onChange={() => {setCollapseJson(!collapseJson)}} />}
-						/>
-					</div>
-				</div>
-				<Divider style={{marginBottom: "10px", height: "1px", width: "100%", backgroundColor: dividerColor}}/>
-				<div style={scrollStyle}>
-					<ExecutionDetails />
-				</div>
-			</div>
-		</div>
-		: 
-		<div style={emptyWorkflowStyle}>	
-			<Paper style={boxStyle}>
-				<div>
-					<h2>Welcome to Shuffle</h2>
-				</div>
-				<div>
-					<p>
-						<b>Shuffle</b> is a flexible, easy to use, automation platform allowing users to integrate their services and devices freely. It's made to significantly reduce the amount of manual labor, and is focused on security applications. <a href="/docs/about" style={{textDecoration: "none", color: "#f85a3e"}}>Click here to learn more.</a>
-					</p>
-				</div>
-				<div>
-					If you want to jump straight into it, click here to create your first workflow: 
-				</div>
-				<div>
-					<Button color="primary" style={{marginTop: "20px",}} variant="outlined" onClick={() => setModalOpen(true)}>New workflow</Button> 				
-				</div>
-			</Paper>
-		</div>
+					</Tooltip>
+				: null}
+				<Tooltip color="primary" title={"Download workflows"} placement="top">
+					<Button color="primary" style={{}} variant="text" onClick={() => setLoadWorkflowsModalOpen(true)}>
+						<CloudDownloadIcon />
+					</Button> 				
+				</Tooltip>
+			</span>
 
+		const WorkflowView = () => {
+			if (workflows.length === 0) {
+				return (
+					<div style={emptyWorkflowStyle}>	
+						<Paper style={boxStyle}>
+							<div>
+								<h2>Welcome to Shuffle</h2>
+							</div>
+							<div>
+								<p>
+									<b>Shuffle</b> is a flexible, easy to use, automation platform allowing users to integrate their services and devices freely. It's made to significantly reduce the amount of manual labor, and is focused on security applications. <a href="/docs/about" style={{textDecoration: "none", color: "#f85a3e"}}>Click here to learn more.</a>
+								</p>
+							</div>
+							<div>
+								If you want to jump straight into it, click here to create your first workflow: 
+							</div>
+							<div style={{display: "flex"}}>
+								<Button color="primary" style={{marginTop: "20px",}} variant="outlined" onClick={() => setModalOpen(true)}>New workflow</Button> 				
+								<span style={{paddingTop: 20, display: "flex",}}>
+									<Typography style={{marginTop: 5, marginLeft: 30, marginRight: 15}}>
+										..OR
+									</Typography>
+									{workflowButtons}
+								</span>
+							</div>
+						</Paper>
+					</div>
+				)
+			}
+
+		return (
+			<div style={viewStyle}>	
+				<div style={workflowViewStyle}>
+					<div style={{display: "flex"}}>
+						<div style={{flex: "4"}}>
+							<h2>Workflows</h2> 
+						</div>
+						<div style={{marginTop: 20}}>
+							{workflowButtons}
+						</div>
+					</div>
+					<Divider style={{marginBottom: "10px", height: "1px", width: "100%", backgroundColor: dividerColor}}/>
+
+					<div style={scrollStyle}>
+						{workflows.map((data, index) => {
+							return (
+									<WorkflowPaper key={index} data={data} />
+							)
+						})}
+					</div>
+				</div>
+				<div style={{flex: viewSize.executionsView, marginLeft: "10px", marginRight: "10px"}}>
+					<div style={{display: "flex"}}>
+						<div style={{flex: "10"}}>
+							<h2>Executions: {selectedWorkflow.name}</h2> 
+						</div>
+						<div style={{flex: "1"}}>
+							<Button color="primary" style={{marginTop: "20px"}} variant="text" onClick={() => {
+									alert.info("Refreshing executions"); 
+									getWorkflowExecution(selectedWorkflow.id)
+								}}>
+								<CachedIcon />
+							</Button> 				
+						</div>
+					</div>
+					<Divider style={{marginBottom: "10px", height: "1px", width: "100%", backgroundColor: dividerColor}}/>
+					<div style={scrollStyle}>
+						<ExecutionsView />
+					</div>
+				</div>
+				<div style={{flex: viewSize.executionResults, marginLeft: "10px", marginRight: "10px", minWidth: "33%"}}>
+					<div style={{display: "flex"}}>
+						<div style={{flex: "1"}}>
+							<h2>Execution Timeline</h2>
+						</div>
+						<div style={{flex: 1}}>
+					    	<FormControlLabel
+								style={{color: "white", marginBottom: "0px", marginTop: "10px"}}
+								label={<div style={{color: "white"}}>Collapse results</div>}
+								control={<Switch checked={collapseJson} onChange={() => {setCollapseJson(!collapseJson)}} />}
+							/>
+						</div>
+					</div>
+					<Divider style={{marginBottom: "10px", height: "1px", width: "100%", backgroundColor: dividerColor}}/>
+					<div style={scrollStyle}>
+						<ExecutionDetails />
+					</div>
+				</div>
+			</div>
+		)
+	}
 
 	const importWorkflowsFromUrl = (url) => {
 		console.log("IMPORT WORKFLOWS FROM ", downloadUrl)
@@ -1384,13 +1432,17 @@ const Workflows = (props) => {
 
 	const loadedCheck = isLoaded && isLoggedIn && workflowDone ? 
 		<div>
-			{workflowView}
+			<WorkflowView />
 			{modalView}
 			{deleteModal}
 			{workflowDownloadModalOpen}
 		</div>
 		:
-		<div>
+		<div style={{paddingTop: 250, width: 250, margin: "auto", textAlign: "center"}}>
+			<CircularProgress />
+			<Typography>
+				Loading Workflows
+			</Typography>
 		</div>
 
 

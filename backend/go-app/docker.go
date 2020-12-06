@@ -181,11 +181,11 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 	// Dockerfile is inside the TAR itself. Not local context
 	// docker build --build-arg http_proxy=http://my.proxy.url
 	buildOptions := types.ImageBuildOptions{
-		Remove:      true,
-		Tags:        tags,
-		BuildArgs:   map[string]*string{},
-		NetworkMode: "host",
+		Remove:    true,
+		Tags:      tags,
+		BuildArgs: map[string]*string{},
 	}
+	// NetworkMode: "host",
 
 	httpProxy := os.Getenv("HTTP_PROXY")
 	if len(httpProxy) > 0 {
@@ -244,11 +244,11 @@ func buildImage(tags []string, dockerfileFolder string) error {
 
 	dockerFileTarReader := bytes.NewReader(buf.Bytes())
 	buildOptions := types.ImageBuildOptions{
-		Remove:      true,
-		Tags:        tags,
-		BuildArgs:   map[string]*string{},
-		NetworkMode: "host",
+		Remove:    true,
+		Tags:      tags,
+		BuildArgs: map[string]*string{},
 	}
+	//NetworkMode: "host",
 
 	httpProxy := os.Getenv("HTTP_PROXY")
 	if len(httpProxy) > 0 {

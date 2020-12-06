@@ -1,4 +1,5 @@
 import os
+import copy
 import sys
 import re
 import time 
@@ -51,6 +52,139 @@ class AppBase:
             self.logger.info("Result: %d" % ret.status_code)
             if ret.status_code != 200:
                 self.logger.info(ret.text)
+
+    # Things to consider for files:
+    # - How can you download / stream a file? 
+    # - Can you decide if you want a stream or the files directly?
+    def get_file(self, value):
+        full_execution = self.full_execution
+        org_id = full_execution["workflow"]["execution_org"]["id"]
+
+        print("SHOULD GET FILES BASED ON ORG %s, workflow %s and value(s) %s" % (org_id, full_execution["workflow"]["id"], value))
+
+        if isinstance(value, list):
+            print("IS LIST!")
+            #if len(value) == 1:
+            #    value = value[0]
+        else:
+            value = [value]
+
+        returns = []
+        for item in value:
+            print("VALUE: %s" % item)
+            if len(item) != 36:
+                print("Bad length for value")
+                continue
+                #return {
+                #    "filename": "",
+                #    "data": "",
+                #    "success": False,
+                #}
+
+            get_path = "/api/v1/files/%s?execution_id=%s" % (item, full_execution["execution_id"])
+            headers = {
+                "Content-Type": "application/json",     
+                "Authorization": "Bearer %s" % self.authorization
+            }
+
+            ret1 = requests.get("%s%s" % (self.url, get_path), headers=headers)
+            print("RET1: %s" % ret1.text)
+            if ret1.status_code != 200:
+                returns.append({
+                    "filename": "",
+                    "data": "",
+                    "success": False,
+                })
+                continue
+
+            content_path = "/api/v1/files/%s/content?execution_id=%s" % (item, full_execution["execution_id"])
+            ret2 = requests.get("%s%s" % (self.url, content_path), headers=headers)
+            print("Ret2: %s" % ret2.text)
+            if ret2.status_code == 200:
+                tmpdata = ret1.json()
+                returndata = {
+                    "success": True,
+                    "filename": tmpdata["filename"],
+                    "data": ret2.content,
+                }
+                returns.append(returndata)
+
+        if len(returns) == 0:
+            return {
+                "success": False,
+                "filename": "",
+                "data": b"",
+            }
+        elif len(returns) == 1:
+            return returns[0]
+        else:
+            return returns
+
+    # Sets files in the backend
+    def set_files(self, infiles):
+        full_execution = self.full_execution
+        workflow_id = full_execution["workflow"]["id"]
+        org_id = full_execution["workflow"]["execution_org"]["id"]
+        headers = {
+            "Content-Type": "application/json",     
+            "Authorization": "Bearer %s" % self.authorization
+        }
+
+        create_path = "/api/v1/files/create?execution_id=%s" % full_execution["execution_id"]
+        file_ids = []
+        for curfile in infiles:
+            filename = "unspecified"
+            data = {
+                "filename": filename,
+                "workflow_id": workflow_id,
+                "org_id": org_id,
+            }
+
+            try:
+                data["filename"] = curfile["filename"]
+                filename = curfile["filename"]
+            except KeyError as e:
+                print("KeyError in file setup: %s" % e)
+                pass
+
+            ret = requests.post("%s%s" % (self.url, create_path), headers=headers, json=data)
+            print("Ret CREATE: %s" % ret.text)
+            cur_id = ""
+            if ret.status_code == 200:
+                print("RET: %s" % ret.text)
+                ret_json = ret.json()
+                if not ret_json["success"]:
+                    print("Not success in file upload creation.")
+                    continue
+
+                print("Should handle ID %s" % ret_json["id"])
+                file_ids.append(ret_json["id"])
+                cur_id = ret_json["id"]
+            else:
+                print("Bad status code: %d" % ret.status_code)
+                continue
+
+            if len(cur_id) == 0:
+                print("No file ID specified from backend")
+                continue
+
+            new_headers = {
+                "Authorization": "Bearer %s" % self.authorization,
+            }
+
+            upload_path = "/api/v1/files/%s/upload?execution_id=%s" % (cur_id, full_execution["execution_id"])
+            print("Create path: %s" % create_path)
+
+            # FIXME: Typical failure here if data is returned badly formatted
+            files={"shuffle_file": (filename, curfile["data"])}
+            #open(filename,'rb')}
+
+            ret = requests.post("%s%s" % (self.url, upload_path), files=files, headers=new_headers)
+            print("Ret UPLOAD: %s" % ret.text)
+            print("Ret2 UPLOAD: %d" % ret.status_code)
+
+        print("IDS TO RETURN: %s" % file_ids)
+        return file_ids
     
     async def execute_action(self, action):
         # FIXME - add request for the function STARTING here. Use "results stream" or something
@@ -148,6 +282,7 @@ class AppBase:
             print("")
 
 
+        self.full_execution = fullexecution
         self.logger.info("AFTER FULLEXEC stream result")
 
         # Gets the value at the parenthesis level you want
@@ -207,7 +342,7 @@ class AppBase:
                 try:
                     return int(data)
                 except ValueError:
-                    print("ValueError while casting %s" % data)
+                    print("ValueError while casting %s to int" % data)
                     return data
             if "lower" in thistype:
                 return data.lower()
@@ -219,15 +354,19 @@ class AppBase:
                 return data.strip()
             if "split" in thistype:
                 return data.split()
-            if "len" in thistype or "length" in thistype:
+            if "len" in thistype or "length" in thistype or "lenght" in thistype:
                 tmp = "" 
                 try:
-                    tmp = json.loads(data)
+                    tmpdata = data.replace("\'", "\"")
+                    tmp = json.loads(tmpdata)
                 except: 
+                    print("Passing bug")
                     pass
 
                 if isinstance(tmp, list):
-                    return str(len(tmp))
+                    return len(tmp)
+                elif isinstance(tmp, object):
+                    return len(tmp)
 
                 return str(len(data))
             if "parse" in thistype:
@@ -273,7 +412,7 @@ class AppBase:
             #print("Running %s" % data)
         
             # Look for the INNER wrapper first, then move out
-            wrappers = ["int", "number", "lower", "upper", "trim", "strip", "split", "parse", "len", "length"]
+            wrappers = ["int", "number", "lower", "upper", "trim", "strip", "split", "parse", "len", "length", "lenght"]
             found = False
             for wrapper in wrappers:
                 if wrapper not in data.lower():
@@ -303,6 +442,7 @@ class AppBase:
                         continue
         
                     parsed_value = parse_type(innervalue[0], thistype.lower())
+                    print("Parsed value from %s: %s" % (thistype, parsed_value))
                     return parsed_value
         
             print("DATA: %s\n" % data)
@@ -403,6 +543,7 @@ class AppBase:
                         # Magical way of returning which makes app sdk identify 
                         # it as multi execution
                         return newvalue, True
+
                     elif len(actualitem) > 0:
                         # FIXME: This is absolutely not perfect. 
                         print("In recursion v2: ", actualitem)
@@ -478,7 +619,7 @@ class AppBase:
 
             #Actionname: Start_node
 
-            print(f"Actionname: {actionname_lower}")
+            print(f"\nActionname: {actionname_lower}")
 
             # 1. Find the action
             baseresult = ""
@@ -549,21 +690,29 @@ class AppBase:
             except KeyError as error:
                 print(f"KeyError in JSON: {error}")
         
-            print(f"After first trycatch")
+            print(f"After first trycatch. Baseresult: ", baseresult)
         
             # 2. Find the JSON data
             if len(baseresult) == 0:
                 return ""+appendresult, False
         
+            print("After second return")
             if len(parsersplit) == 1:
                 return str(baseresult)+str(appendresult), False
         
             baseresult = baseresult.replace("\'", "\"")
+            baseresult = baseresult.replace(" True,", " true,")
+            baseresult = baseresult.replace(" False", " false,")
+
+            print("After third parser return - Formatted: ", baseresult)
             basejson = {}
             try:
                 basejson = json.loads(baseresult)
             except json.decoder.JSONDecodeError as e:
+                print("Parser issue with JSON: %s" % e)
                 return str(baseresult)+str(appendresult), False
+
+            print("After fourth parser return as JSON")
         
             data, is_loop = recurse_json(basejson, parsersplit[1:])
             parseditem = data
@@ -577,6 +726,7 @@ class AppBase:
                     print("SET DATA WRAPPER TO %s!" % parsersplit[-1])
                     parseditem = "${%s%s}$" % (parsersplit[-1], json.dumps(data))
 
+            print("Before last return with %s" % appendresult)
             return str(parseditem)+str(appendresult), is_loop
 
         # Parses parameters sent to it and returns whether it did it successfully with the values found
@@ -824,26 +974,6 @@ class AppBase:
     
             return True, ""
 
-        # Things to consider for files:
-        # - How can you download / stream a file? 
-        # - Can you decide if you want a stream or the files directly?
-        def get_files(full_execution, value):
-            print("FULL EXEC: %s" % full_execution)
-            org_id = full_execution["workflow"]["execution_org"]["id"]
-            print("SHOULD GET FILES BASED ON ORG %s, workflow %s and value(s) %s" % (org_id, full_execution["workflow"]["id"], value))
-            get_path = "/api/v1/files/%s/content?execution_id=%s" % (value, full_execution["execution_id"])
-
-            print("PATH: %s" % get_path)
-            headers = {
-                "Content-Type": "application/json",     
-                "Authorization": "Bearer %s" % self.authorization
-            }
-            ret = requests.get("%s%s" % (self.url, get_path), headers=headers)
-            print("RET CONTENT: %s" % ret.text)
-            print("RET CODE FILE: %d" % ret.status_code)
-
-	    # r.HandleFunc("/api/v1/files/{fileId}/content", handleGetFileContent).Methods("GET", "OPTIONS")
-
         # Checks whether conditions are met, otherwise set 
         branchcheck, tmpresult = check_branch_conditions(action, fullexecution)
         if not branchcheck:
@@ -911,15 +1041,6 @@ class AppBase:
                         multiexecution = False
                         multi_execution_lists = []
                         for parameter in action["parameters"]:
-                            is_file = False
-                            try:
-                                if parameter["schema"]["type"] == "file":
-                                    print("SHOULD HANDLE FILE. Get based on value %s" % parameter["value"]) 
-                                    get_files(fullexecution, parameter["value"])
-                                    is_file = True
-                            except KeyError as e:
-                                print("SCHEMA ERROR: %s" % e)
-
                             check, value, is_loop = parse_params(action, fullexecution, parameter)
                             if check:
                                 raise "Value check error: %s" % Exception(check)
@@ -967,13 +1088,40 @@ class AppBase:
                                         minlength = len(json_replacement)
 
                                     tmpitem = tmpitem.replace(actualitem[0][0], replacement, 1)
-                                    params[parameter["name"]] = tmpitem
-                                    multi_execution_lists.append(json_replacement)
-                                    multi_parameters[parameter["name"]] = json_replacement 
 
-                                    #print("LENGTH OF ARR: %d" % len(resultarray))
-                                    #print("RESULTARRAY: %s" % resultarray)
-                                    print("MULTI finished: %s" % replacement)
+                                    # This code handles files.
+                                    print("(1) ------------ PARAM: %s" % parameter["schema"]["type"])
+                                    resultarray = []
+                                    isfile = False
+                                    try:
+                                        if parameter["schema"]["type"] == "file" and len(value) > 0:
+                                            print("(1) SHOULD HANDLE FILE IN MULTI. Get based on value %s" % tmpitem) 
+                                            # This is silly :)
+                                            # Q: Is there something wrong with the download system?
+                                            # It seems to return "FILE CONTENT: %s" with the ID as %s
+                                            for tmp_file_split in json.loads(tmpitem):
+                                                print("(1) PRE GET FILE %s" % tmp_file_split)
+                                                file_value = self.get_file(tmp_file_split)
+                                                print("(1) POST AWAIT %s" % file_value)
+                                                resultarray.append(file_value)
+                                                print("(1) FILE VALUE FOR VAL %s: %s" % (tmp_file_split, file_value))
+
+                                            isfile = True
+                                    except KeyError as e:
+                                        print("(1) SCHEMA ERROR IN FILE HANDLING: %s" % e)
+                                    except json.decoder.JSONDecodeError as e:
+                                        print("(1) JSON ERROR IN FILE HANDLING: %s" % e)
+
+                                    if not isfile:
+                                        params[parameter["name"]] = tmpitem
+                                        multi_parameters[parameter["name"]] = json_replacement 
+                                    else:
+                                        print("Resultarray: %s" % resultarray)
+                                        params[parameter["name"]] = resultarray 
+                                        multi_parameters[parameter["name"]] = resultarray 
+
+                                    multi_execution_lists.append(json_replacement)
+                                    print("MULTI finished: %s" % json_replacement)
                                 else:
                                     # This is here to handle for loops within variables.. kindof
                                     # 1. Find the length of the longest array
@@ -1017,7 +1165,30 @@ class AppBase:
                                             #replacement = parse_wrapper_start(replacement)
                                             tmpitem = tmpitem.replace(key, replacement, -1)
 
-                                        resultarray.append(tmpitem)
+
+                                        # This code handles files.
+                                        print("(2) ------------ PARAM: %s" % parameter["schema"]["type"])
+                                        isfile = False
+                                        try:
+                                            if parameter["schema"]["type"] == "file" and len(value) > 0:
+                                                print("(2) SHOULD HANDLE FILE IN MULTI. Get based on value %s" % parameter["value"]) 
+
+                                                for tmp_file_split in json.loads(parameter["value"]):
+                                                    print("(2) PRE GET FILE %s" % tmp_file_split)
+                                                    file_value = self.get_file(tmp_file_split)
+                                                    print("(2) POST AWAIT %s" % file_value)
+                                                    resultarray.append(file_value)
+                                                    print("(2) FILE VALUE FOR VAL %s: %s" % (tmp_file_split, file_value))
+
+
+                                                isfile = True
+                                        except KeyError as e:
+                                            print("(2) SCHEMA ERROR IN FILE HANDLING: %s" % e)
+                                        except json.decoder.JSONDecodeError as e:
+                                            print("(2) JSON ERROR IN FILE HANDLING: %s" % e)
+
+                                        if not isfile:
+                                            resultarray.append(tmpitem)
 
                                     # With this parameter ready, add it to... a greater list of parameters. Rofl
                                     print("LENGTH OF ARR: %d" % len(resultarray))
@@ -1035,6 +1206,18 @@ class AppBase:
                                 params[parameter["name"]] = value
                                 multi_parameters[parameter["name"]] = value 
 
+                                # This code handles files.
+                                try:
+                                    if parameter["schema"]["type"] == "file" and len(value) > 0:
+                                        print("\n SHOULD HANDLE FILE. Get based on value %s. <--- is this a valid ID?" % parameter["value"]) 
+                                        file_value = self.get_file(value)
+                                        print("FILE VALUE: %s \n" % file_value)
+
+                                        params[parameter["name"]] = file_value 
+                                        multi_parameters[parameter["name"]] = file_value 
+                                except KeyError as e:
+                                    print("SCHEMA ERROR IN FILE HANDLING: %s" % e)
+
                         # Fix lists here
                         print("CHECKING multi execution list!")
                         if len(multi_execution_lists) > 0:
@@ -1044,28 +1227,58 @@ class AppBase:
                                 if listitem in filteredlist:
                                     continue
 
-                                filteredlist.append(listitem)
+                                # FIXME: Subsub required?. Recursion! 
+                                # Basically multiply what we have with the outer loop?
+                                # 
+                                if isinstance(listitem, list):
+                                    for subitem in listitem:
+                                        filteredlist.append(subitem)
+                                else:
+                                    filteredlist.append(listitem)
 
                             #print("New list length: %d" % len(filteredlist))
                             if len(filteredlist) > 1:
                                 print("Calculating new multi-loop length with %d lists" % len(filteredlist))
                                 tmplength = 1
                                 for innerlist in filteredlist:
-                                    print("List length: %d. %d*%d" % (len(innerlist), len(innerlist), tmplength))
                                     tmplength = len(innerlist)*tmplength
+                                    print("List length: %d. %d*%d" % (tmplength, len(innerlist), tmplength))
 
                                 minlength = tmplength
 
                                 print("New multi execution length: %d\n" % tmplength)
                         
-                        # FIXME - this is horrible, but works for now
-                        #for i in range(calltimes):
                         if not multiexecution:
                             print("APP_SDK DONE: Starting NORMAL execution of function")
-                            print("Running with params %s" % params) 
+                            print("Running with params (0): %s" % params) 
                             newres = await func(**params)
-                            print("Return from execution: %s" % newres)
-                            if isinstance(newres, str):
+                            print("Returned from execution.")
+                            if isinstance(newres, tuple):
+                                print("Handling return as tuple")
+                                # Handles files.
+                                filedata = ""
+                                file_ids = []
+                                print("TUPLE: %s" % newres[1])
+                                if isinstance(newres[1], list):
+                                    print("HANDLING LIST FROM RET")
+                                    file_ids = self.set_files(newres[1])
+                                elif isinstance(newres[1], object):
+                                    print("Handling JSON from ret")
+                                    file_ids = self.set_files([newres[1]])
+                                elif isinstance(newres[1], str):
+                                    print("Handling STRING from ret")
+                                    file_ids = self.set_files([newres[1]])
+                                else:
+                                    print("NO FILES TO HANDLE")
+
+                                tmp_result = {
+                                    "result": newres[0], 
+                                    "file_ids": file_ids
+                                }
+                                
+                                result = json.dumps(tmp_result)
+                            elif isinstance(newres, str):
+                                print("Handling return as string")
                                 result += newres
                             else:
                                 try:
@@ -1073,16 +1286,22 @@ class AppBase:
                                 except ValueError:
                                     result += "Failed autocasting. Can't handle %s type from function. Must be string" % type(newres)
                                     print("Can't handle type %s value from function" % (type(newres)))
+
                             print("POST NEWRES RESULT: ", result)
                         else:
-                            print("APP_SDK DONE: Starting MULTI execution with values %s of length %d" % (multi_parameters, minlength))
+                            print("APP_SDK DONE: Starting MULTI execution (length: %d) with values %s" % (minlength, multi_parameters))
                             # 1. Use number of executions based on the arrays being similar
                             # 2. Find the right value from the parsed multi_params
                             results = []
                             json_object = False
                             for i in range(0, minlength):
                                 # To be able to use the results as a list:
-                                baseparams = json.loads(json.dumps(multi_parameters))
+                                print("1: %s" % multi_parameters)
+                                #baseparams = json.loads(json.dumps(multi_parameters))
+                                baseparams = copy.deepcopy(multi_parameters)
+
+                                print("2: %s: %s" % (type(baseparams), baseparams))
+
                                 # {'call': ['GoogleSafebrowsing_2_0', 'VirusTotal_GetReport_3_0']}
                                 # 1. Check if list length is same as minlength
                                 # 2. If NOT same length, duplicate based on length of array
@@ -1093,7 +1312,7 @@ class AppBase:
                                 try:
                                     firstlist = True
                                     for key, value in baseparams.items():
-
+                                        print("Itemtype: %s" % type(value))
                                         if isinstance(value, list):
                                             try:
                                                 newvalue = value[i]
@@ -1136,6 +1355,8 @@ class AppBase:
                                                 firstlist = False
 
                                             baseparams[key] = newvalue
+
+                                    print("3")
                                 except IndexError as e:
                                     print("IndexError: %s" % e)
                                     baseparams[key] = "IndexError: %s" % e
@@ -1143,7 +1364,9 @@ class AppBase:
                                     print("KeyError: %s" % e)
                                     baseparams[key] = "KeyError: %s" % e
 
-                                print("Running with params %s" % baseparams) 
+
+                                print("4")
+                                print("Running with params (1): %s" % baseparams) 
                                 ret = await func(**baseparams)
                                 print("Return from execution: %s" % ret)
                                 if isinstance(ret, dict) or isinstance(ret, list):

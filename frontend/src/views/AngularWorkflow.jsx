@@ -191,7 +191,7 @@ const AngularWorkflow = (props) => {
 
 	const cloudSyncEnabled = props.userdata !== undefined && props.userdata.active_org !== null && props.userdata.active_org !== undefined ? props.userdata.active_org.cloud_sync === true : false 
 	//const triggerEnvironments = cloudSyncEnabled ? ["cloud", "onprem"] : environments
-	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io"
+	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" 
 	const triggerEnvironments = isCloud ? ["cloud"] : ["cloud", "onprem"] 
 
 	const unloadText = 'Are you sure you want to leave without saving (CTRL+S)?'
@@ -899,6 +899,41 @@ const AngularWorkflow = (props) => {
 	const onUnselect = (event) => {
 		console.time("UNSELECT")
 
+		// Attempt at rewrite of name in other actions in following nodes.
+		// Should probably be done in the onBlur for the textfield instead
+		/*
+		if (event.target.data().type === "ACTION") {
+			const nodeaction = event.target.data()
+			const curaction = workflow.actions.find(a => a.id === nodeaction.id)
+			console.log("workflowaction: ", curaction)
+			console.log("nodeaction: ", nodeaction)
+			if (nodeaction.label !== curaction.label) {
+				console.log("BEACH!")
+
+				var params = []
+				const fixedName = "$"+curaction.label.toLowerCase().replace(" ", "_")
+				for (var actionkey in workflow.actions) {
+					if (workflow.actions[actionkey].id === curaction.id) {
+						continue
+					}
+
+					for (var paramkey in workflow.actions[actionkey].parameters) {
+						const param = workflow.actions[actionkey].parameters[paramkey]
+						if (param.value === null || param.value === undefined || !param.value.includes("$")) {
+							continue
+						}
+
+						const innername = param.value.toLowerCase().replace(" ", "_")
+						if (innername.includes(fixedName)) {
+							//workflow.actions[actionkey].parameters[paramkey].replace(
+							//console.log("FOUND!: ", innername)
+						}
+					}
+				}
+			}
+		}
+		*/
+
 		// FIXME - check if they have value before overriding like this for no reason.
 		// Would save a lot of time (400~ ms -> 30ms)
 		//console.log("ACTION: ", selectedAction)
@@ -1009,8 +1044,29 @@ const AngularWorkflow = (props) => {
 			}
 
 			setSelectedActionName(curaction.name)	
-
 			setSelectedAction(curaction)
+
+			/*
+			var params = []
+			const fixedName = "$"+curaction.label.toLowerCase().replace(" ", "_")
+			for (var actionkey in workflow.actions) {
+				if (workflow.actions[actionkey].id === curaction.id) {
+					continue
+				}
+
+				for (var paramkey in workflow.actions[actionkey].parameters) {
+					const param = workflow.actions[actionkey].parameters[paramkey]
+					if (param.value === null || param.value === undefined || !param.value.includes("$")) {
+						continue
+					}
+
+					const innername = param.value.toLowerCase().replace(" ", "_")
+					if (innername.includes(fixedName)) {
+						console.log("FOUND!: ", innername)
+					}
+				}
+			}
+			*/
 		} else if (data.type === "TRIGGER") {
 			//console.log("Should handle trigger "+data.triggertype)
 			//console.log(data)
@@ -1278,6 +1334,7 @@ const AngularWorkflow = (props) => {
 				} else {
 					setEnvironments({"name": "Onprem", "type": "onprem"})
 				}
+
 				return
 			}
 
@@ -2419,14 +2476,43 @@ const AngularWorkflow = (props) => {
 	// ACTION select
 	//
 	const selectedNameChange = (event) => {
+		console.log("OLDNAME: ", selectedActionName)
 		event.target.value = event.target.value.replace("(", "")
 		event.target.value = event.target.value.replace(")", "")
 		event.target.value = event.target.value.replace("$", "")
 		event.target.value = event.target.value.replace("#", "")
 		event.target.value = event.target.value.replace(".", "")
 		event.target.value = event.target.value.replace(",", "")
+		event.target.value = event.target.value.replace(" ", "_")
 		selectedAction.label = event.target.value
 		setSelectedAction(selectedAction)
+
+		/*
+		if (nodeaction.label !== curaction.label) {
+			console.log("BEACH!")
+
+			var params = []
+			const fixedName = "$"+curaction.label.toLowerCase().replace(" ", "_")
+			for (var actionkey in workflow.actions) {
+				if (workflow.actions[actionkey].id === curaction.id) {
+					continue
+				}
+
+				for (var paramkey in workflow.actions[actionkey].parameters) {
+					const param = workflow.actions[actionkey].parameters[paramkey]
+					if (param.value === null || param.value === undefined || !param.value.includes("$")) {
+						continue
+					}
+
+					const innername = param.value.toLowerCase().replace(" ", "_")
+					if (innername.includes(fixedName)) {
+						//workflow.actions[actionkey].parameters[paramkey].replace(
+						//console.log("FOUND!: ", innername)
+					}
+				}
+			}
+		}
+		*/
 	}
 
 	const selectedTriggerChange = (event) => {
@@ -2836,15 +2922,56 @@ const AngularWorkflow = (props) => {
 								}}
 							/>
 
-						console.log(selectedActionParameters[count])
 						if (selectedActionParameters[count].schema !== undefined && selectedActionParameters[count].schema !== null && selectedActionParameters[count].schema.type === "file") {
-							const fileId = "6daabec1-892b-469c-b603-c902e47223a9"
-							datafield = `SHOW FILES FROM OTHER NODES? Filename: ${selectedActionParameters[count].value}`	
+							datafield = 
+								<TextField
+									style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+									InputProps={{
+										style:{
+											color: "white",
+											minHeight: "50px", 
+											marginLeft: "5px",
+											maxWidth: "95%",
+											fontSize: "1em",
+										},
+										endAdornment: (
+											<InputAdornment position="end">
+												<Tooltip title="Autocomplete text" placement="top">
+													<AddCircleOutlineIcon style={{cursor: "pointer"}} onClick={(event) => {
+														setMenuPosition({
+															top: event.pageY,
+															left: event.pageX,
+														})
+														setShowDropdownNumber(count)
+														setShowDropdown(true)
+														setShowAutocomplete(true)
+													}}/>
+												</Tooltip>
+											</InputAdornment>
+										)
+									}}
+									fullWidth
+									multiline={multiline}
+									rows="5"
+									color="primary"
+									defaultValue={data.value}
+									type={"text"}
+									placeholder={"The file ID to get"}
+									onChange={(event) => {
+										changeActionParameter(event, count)
+									}}
+									onBlur={(event) => {
+									}}
+								/>
+							//const fileId = "6daabec1-892b-469c-b603-c902e47223a9"
+							//datafield = `SHOW FILES FROM OTHER NODES? Filename: ${selectedActionParameters[count].value}`	
+							/*
 							if (selectedActionParameters[count].value != fileId) {
 								changeActionParameter(fileId, count)
 								setUpdate(Math.random())
 
 							}
+							*/
 						} else if (selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0) {
 							if (selectedActionParameters[count].value === "" && selectedActionParameters[count].required) {
 								// Rofl, dirty workaround :)
@@ -4551,7 +4678,6 @@ const AngularWorkflow = (props) => {
 						placeholder={selectedTrigger.label}
 						onChange={selectedTriggerChange}
 					/>
-					{showEnvironment ? 
 						<div style={{marginTop: "20px"}}>
 							<Typography>
 								Environment
@@ -4599,7 +4725,6 @@ const AngularWorkflow = (props) => {
 								})}
 							</Select>
 						</div>
-						: null}
 					<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 					<div style={{flex: "6", marginTop: "20px"}}>
 						<div>
@@ -5095,59 +5220,57 @@ const AngularWorkflow = (props) => {
 						placeholder={selectedTrigger.label}
 						onChange={selectedTriggerChange}
 					/>
-					{showEnvironment ? 
-						<div style={{marginTop: "20px"}}>
-							<Typography>
-								Environment
-							</Typography>
-							<Select
-								value={selectedTrigger.environment}
-								disabled={selectedTrigger.status === "running"}
-								SelectDisplayProps={{
-									style: {
-										marginLeft: 10,
+					<div style={{marginTop: "20px"}}>
+						<Typography>
+							Environment
+						</Typography>
+						<Select
+							value={selectedTrigger.environment}
+							disabled={selectedTrigger.status === "running"}
+							SelectDisplayProps={{
+								style: {
+									marginLeft: 10,
 
-									}
-								}}
-								fullWidth
-								onChange={(e) => {
-									selectedTrigger.environment = e.target.value
-									setSelectedTrigger(selectedTrigger)
-									if (e.target.value === "cloud") {
-										console.log("Set cloud config")
-										workflow.triggers[selectedTriggerIndex].parameters[0].value = "*/2 * * * *" 
+								}
+							}}
+							fullWidth
+							onChange={(e) => {
+								selectedTrigger.environment = e.target.value
+								setSelectedTrigger(selectedTrigger)
+								if (e.target.value === "cloud") {
+									console.log("Set cloud config")
+									workflow.triggers[selectedTriggerIndex].parameters[0].value = "*/2 * * * *" 
 
-										//var tmpvalue = workflow.triggers[selectedTriggerIndex].parameters[0].value.split("/")
-										//const urlpath = tmpvalue.slice(3, tmpvalue.length)
-										//const newurl = "https://shuffler.io/"+urlpath.join("/")
-										//workflow.triggers[selectedTriggerIndex].parameters[0].value = newurl
-									} else {
-										console.log("Set cloud config")
-										//var tmpvalue = workflow.triggers[selectedTriggerIndex].parameters[0].value.split("/")
-										//const urlpath = tmpvalue.slice(3, tmpvalue.length)
-										//const newurl = window.location.origin+"/"+urlpath.join("/")
-										workflow.triggers[selectedTriggerIndex].parameters[0].value = "120" 
-									}
+									//var tmpvalue = workflow.triggers[selectedTriggerIndex].parameters[0].value.split("/")
+									//const urlpath = tmpvalue.slice(3, tmpvalue.length)
+									//const newurl = "https://shuffler.io/"+urlpath.join("/")
+									//workflow.triggers[selectedTriggerIndex].parameters[0].value = newurl
+								} else {
+									console.log("Set cloud config")
+									//var tmpvalue = workflow.triggers[selectedTriggerIndex].parameters[0].value.split("/")
+									//const urlpath = tmpvalue.slice(3, tmpvalue.length)
+									//const newurl = window.location.origin+"/"+urlpath.join("/")
+									workflow.triggers[selectedTriggerIndex].parameters[0].value = "120" 
+								}
 
-									setWorkflow(workflow)
-									setUpdate(Math.random())
-								}}
-								style={{backgroundColor: inputColor, color: "white", height: "50px"}}
-							>
-								{triggerEnvironments.map(data => {
-									if (data.archived) {
-										return null
-									}
-									
-									return (
-										<MenuItem key={data} style={{backgroundColor: inputColor, color: "white"}} value={data}>
-											{data}
-										</MenuItem>
-									)
-								})}
-							</Select>
-						</div>
-						: null}
+								setWorkflow(workflow)
+								setUpdate(Math.random())
+							}}
+							style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+						>
+							{triggerEnvironments.map(data => {
+								if (data.archived) {
+									return null
+								}
+								
+								return (
+									<MenuItem key={data} style={{backgroundColor: inputColor, color: "white"}} value={data}>
+										{data}
+									</MenuItem>
+								)
+							})}
+						</Select>
+					</div>
 					<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 					<div style={{flex: "6", marginTop: "20px"}}>
 						<div>
@@ -5228,7 +5351,7 @@ const AngularWorkflow = (props) => {
 		return null 
 	}
 
-	const cytoscapeViewWidths = 700
+	const cytoscapeViewWidths = 750
 	const bottomBarStyle = {
 		position: "fixed", 
 		right: 20, 
@@ -5284,6 +5407,62 @@ const AngularWorkflow = (props) => {
 		} 
 
 		return null
+	}
+
+	const FileMenu = () => {
+		const [newAnchor, setNewAnchor] = React.useState(null);
+		const [showShuffleMenu, setShowShuffleMenu] = React.useState(false)
+
+		{ /*const [showShuffleMenu, setShowShuffleMenu] = React.useState(true) */}
+		return (
+			<div style={{"display": "inline-block"}}>
+				<Menu
+					id="long-menu"
+					anchorEl={newAnchor}
+					open={showShuffleMenu}
+					onClose={() => {
+						setShowShuffleMenu(false)
+					}}
+				>
+					<div style={{margin: 15, color: "white", maxWidth: 250, minWidth: 250, }}>
+						<h4>This menu is used to control the workflow itself.</h4>
+						<Divider style={{backgroundColor: "white", marginTop: 10, marginBottom: 10,}}/>
+						<FormControlLabel
+							style={{marginBottom: 15, color: "white",}}
+							label={<div style={{color: "white"}}>Exit on Error</div>}
+							control={
+								<Switch checked={workflow.configuration.exit_on_error} onChange={() => {
+									workflow.configuration.exit_on_error = !workflow.configuration.exit_on_error
+									setWorkflow(workflow)
+									setUpdate("exit_on_error_"+workflow.configuration.exit_on_error ? "true" : "false")
+									setShowShuffleMenu(false)
+								}} />
+							}
+						/>
+						<FormControlLabel
+							style={{marginBottom: 15, color: "white",}}
+							label={<div style={{color: "white"}}>Start from top</div>}
+							control={
+								<Switch checked={workflow.configuration.start_from_top} onChange={() => {
+									workflow.configuration.start_from_top = !workflow.configuration.start_from_top
+									setWorkflow(workflow)
+									setUpdate("start_from_top_"+workflow.configuration.start_from_top ? "true" : "false")
+									setShowShuffleMenu(false)
+								}} />
+							}
+						/>
+					</div>
+				</Menu>
+				<Tooltip color="secondary" title="Workflow settings" placement="top-start">
+					<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={(event) => {
+						setShowShuffleMenu(!showShuffleMenu)
+						setNewAnchor(event.currentTarget)
+					}}>
+						<SettingsIcon />
+					</Button>
+				</Tooltip>
+			</div>
+		)
 	}
 
 	const WorkflowMenu = () => {
@@ -5413,6 +5592,7 @@ const AngularWorkflow = (props) => {
 							<DirectionsRunIcon />
 						</Button>
 					</Tooltip>
+					{/* <FileMenu />	*/}
 					<WorkflowMenu />	
 				</div>
 			</div>
@@ -5719,7 +5899,7 @@ const AngularWorkflow = (props) => {
 							try {
 								const tmp = String(JSON.parse(showResult))
 								if (!showResult.includes("{") && !showResult.includes("[")) {
-									console.log("IN HERE: ", tmp)
+									//console.log("IN HERE: ", tmp)
 									jsonvalid = false
 								}
 							} catch (e) {

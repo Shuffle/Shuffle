@@ -116,7 +116,7 @@ const Apps = (props) => {
 	const [apps, setApps] = React.useState([])
 	const [filteredApps, setFilteredApps] = React.useState([])
 	const [validation, setValidation] = React.useState(false)
-	const [isLoading, setIsLoading] = React.useState(false)
+	const [isLoading, setIsLoading] = React.useState(true)
 	const [appSearchLoading, setAppSearchLoading] = React.useState(false)
 	const [selectedAction, setSelectedAction] = React.useState({})
 	const [searchBackend, setSearchBackend] = React.useState(false)
@@ -207,6 +207,7 @@ const Apps = (props) => {
 	  			credentials: "include",
     		})
 		.then((response) => {
+			setIsLoading(false)
 			if (response.status !== 200) {
 				console.log("Status not 200 for apps :O!")
 			}
@@ -231,6 +232,7 @@ const Apps = (props) => {
     })
 		.catch(error => {
 			alert.error(error.toString())
+			setIsLoading(false)
 		});
 	}
 
@@ -742,7 +744,7 @@ const Apps = (props) => {
 						<Divider style={{height: 1, backgroundColor: dividerColor, marginTop: 20, marginBottom: 20}} />
 						<div style={{}}>
 							<Button
-								variant="text"
+								variant="contained"
 								component="label"
 								color="primary"
 								style={{marginRight: 10, }}
@@ -932,11 +934,14 @@ const Apps = (props) => {
 								}
 							</Paper>
 						: 
-						<Paper square style={uploadViewPaperStyle}>
-							<h4 style={{margin: 10}}>
-								No apps have been created, uploaded or downloaded yet. Click "Load existing apps" above to get the baseline. This may take a while as its building docker images.
-							</h4>
-						</Paper>
+						isLoading ? 
+							<CircularProgress style={{width: 40, height: 40, margin: "auto"}}/>
+							:
+							<Paper square style={uploadViewPaperStyle}>
+								<h4 style={{margin: 10}}>
+									No apps have been created, uploaded or downloaded yet. Click "Load existing apps" above to get the baseline. This may take a while as its building docker images.
+								</h4>
+							</Paper>
 						}
 					</div>
 				</div>
