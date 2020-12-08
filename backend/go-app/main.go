@@ -7361,7 +7361,12 @@ func runInit(ctx context.Context) {
 			if len(workflows) == 0 {
 				username := os.Getenv("SHUFFLE_DOWNLOAD_WORKFLOW_USERNAME")
 				password := os.Getenv("SHUFFLE_DOWNLOAD_WORKFLOW_PASSWORD")
-				err = loadGithubWorkflows(workflowLocation, username, password, "", os.Getenv("SHUFFLE_DOWNLOAD_WORKFLOW_BRANCH"))
+				orgId := ""
+				if len(activeOrgs) > 0 {
+					orgId = activeOrgs[0].Id
+				}
+
+				err = loadGithubWorkflows(workflowLocation, username, password, "", os.Getenv("SHUFFLE_DOWNLOAD_WORKFLOW_BRANCH"), orgId)
 				if err != nil {
 					log.Printf("Failed to upload workflows from github: %s", err)
 				} else {

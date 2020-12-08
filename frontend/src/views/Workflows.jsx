@@ -1204,7 +1204,7 @@ const Workflows = (props) => {
 				<div style={workflowViewStyle}>
 					<div style={{display: "flex"}}>
 						<div style={{flex: "4"}}>
-							<h2>Workflows</h2> 
+							<h2>Workflows ({workflows.length})</h2> 
 						</div>
 						<div style={{marginTop: 20}}>
 							{workflowButtons}

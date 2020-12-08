@@ -4906,7 +4906,7 @@ func deployWebhookFunction(ctx context.Context, name, localization, applocation 
 	return nil
 }
 
-func loadGithubWorkflows(url, username, password, userId, branch string) error {
+func loadGithubWorkflows(url, username, password, userId, branch, orgId string) error {
 	fs := memfs.New()
 
 	log.Printf("Starting load of %s with branch %s", url, branch)
@@ -4943,7 +4943,7 @@ func loadGithubWorkflows(url, username, password, userId, branch string) error {
 		_ = r
 
 		log.Printf("Starting workflow folder iteration")
-		iterateWorkflowGithubFolders(fs, dir, "", "", userId)
+		iterateWorkflowGithubFolders(fs, dir, "", "", userId, orgId)
 
 	} else if strings.Contains(url, "s3") {
 		//https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
@@ -5018,7 +5018,7 @@ func loadSpecificWorkflows(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// Field3 = branch
-	err = loadGithubWorkflows(tmpBody.URL, tmpBody.Field1, tmpBody.Field2, user.Id, tmpBody.Field3)
+	err = loadGithubWorkflows(tmpBody.URL, tmpBody.Field1, tmpBody.Field2, user.Id, tmpBody.Field3, user.ActiveOrg.Id)
 	if err != nil {
 		log.Printf("Failed to update workflows: %s", err)
 		resp.WriteHeader(401)
@@ -5326,7 +5326,7 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 }
 
 // Onlyname is used to
-func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string, userId string) error {
+func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname, userId, orgId string) error {
 	var err error
 
 	for _, file := range dir {
@@ -5345,7 +5345,7 @@ func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra 
 			}
 
 			// Go routine? Hmm, this can be super quick I guess
-			err = iterateWorkflowGithubFolders(fs, dir, tmpExtra, "", userId)
+			err = iterateWorkflowGithubFolders(fs, dir, tmpExtra, "", userId, orgId)
 			if err != nil {
 				continue
 			}
@@ -5377,13 +5377,30 @@ func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra 
 					workflow.Owner = userId
 				}
 
+				workflow.ID = uuid.NewV4().String()
+				workflow.OrgId = orgId
+				workflow.ExecutingOrg = Org{
+					Id: orgId,
+				}
+
+				workflow.Org = append(workflow.Org, Org{
+					Id: orgId,
+				})
+
+				/*
+					q := datastore.NewQuery("workflow").Filter("owner =", user.Id)
+					if user.Role == "admin" {
+						q = datastore.NewQuery("workflow").Filter("org_id =", user.ActiveOrg.Id)
+				*/
+
 				ctx := context.Background()
 				err = setWorkflow(ctx, workflow, workflow.ID)
 				if err != nil {
 					log.Printf("Failed setting (download) workflow: %s", err)
 					continue
 				}
-				log.Printf("Uploaded workflow %s for user %s!", filename, userId)
+
+				log.Printf("Uploaded workflow %s for user %s and org %s!", filename, userId, orgId)
 			}
 		}
 	}
