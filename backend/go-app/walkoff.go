@@ -1421,10 +1421,21 @@ func getWorkflows(resp http.ResponseWriter, request *http.Request) {
 	var workflows []Workflow
 	_, err = dbclient.GetAll(ctx, q, &workflows)
 	if err != nil {
-		log.Printf("Failed getting workflows for user %s: %s", user.Username, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
+		if strings.Contains(fmt.Sprintf("%s", err), "ResourceExhausted") {
+			q = q.Limit(35)
+			_, err = dbclient.GetAll(ctx, q, &workflows)
+			if err != nil {
+				log.Printf("Failed getting workflows for user %s: %s", user.Username, err)
+				resp.WriteHeader(401)
+				resp.Write([]byte(`{"success": false}`))
+				return
+			}
+		} else {
+			log.Printf("Failed getting workflows for user %s: %s", user.Username, err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
 	}
 
 	if len(workflows) == 0 {
@@ -5401,6 +5412,8 @@ func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra 
 				workflow.Org = append(workflow.Org, Org{
 					Id: orgId,
 				})
+				workflow.IsValid = false
+				workflow.Errors = []string{"Imported, not locally saved. Save before using."}
 
 				/*
 					// Find existing similar ones

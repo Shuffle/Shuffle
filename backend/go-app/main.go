@@ -4455,7 +4455,7 @@ func handleGetallHooks(resp http.ResponseWriter, request *http.Request) {
 	var allhooks []Hook
 	_, err = dbclient.GetAll(ctx, q, &allhooks)
 	if err != nil {
-		log.Printf("Failed getting workflows for user %s: %s", user.Username, err)
+		log.Printf("Failed getting hooks for user %s: %s", user.Username, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
