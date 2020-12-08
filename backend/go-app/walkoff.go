@@ -5904,10 +5904,21 @@ func getWorkflowExecutions(resp http.ResponseWriter, request *http.Request) {
 	var workflowExecutions []WorkflowExecution
 	_, err = dbclient.GetAll(ctx, q, &workflowExecutions)
 	if err != nil {
-		log.Printf("Error getting workflowexec: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting all workflowexecutions for %s"}`, fileId)))
-		return
+		if strings.Contains(fmt.Sprintf("%s", err), "ResourceExhausted") {
+			q = datastore.NewQuery("workflowexecution").Filter("workflow_id =", fileId).Order("-started_at").Limit(15)
+			_, err = dbclient.GetAll(ctx, q, &workflowExecutions)
+			if err != nil {
+				log.Printf("Error getting workflowexec (2): %s", err)
+				resp.WriteHeader(401)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting all workflowexecutions for %s"}`, fileId)))
+				return
+			}
+		} else {
+			log.Printf("Error getting workflowexec: %s", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting all workflowexecutions for %s"}`, fileId)))
+			return
+		}
 	}
 
 	if len(workflowExecutions) == 0 {
