@@ -178,7 +178,6 @@ type WorkflowAppActionParameter struct {
 	Name           string           `json:"name" datastore:"name" yaml:"name"`
 	Example        string           `json:"example" datastore:"example" yaml:"example"`
 	Value          string           `json:"value" datastore:"value,noindex" yaml:"value,omitempty"`
-	ValueReplace   []ValueReplace   `json:"value_replace" datastore:"value_replace,noindex" yaml:"value_replace,omitempty"`
 	Multiline      bool             `json:"multiline" datastore:"multiline" yaml:"multiline"`
 	Options        []string         `json:"options" datastore:"options" yaml:"options"`
 	ActionField    string           `json:"action_field" datastore:"action_field" yaml:"actionfield,omitempty"`
@@ -188,11 +187,12 @@ type WorkflowAppActionParameter struct {
 	Tags           []string         `json:"tags" datastore:"tags" yaml:"tags"`
 	Schema         SchemaDefinition `json:"schema" datastore:"schema" yaml:"schema"`
 	SkipMulticheck bool             `json:"skip_multicheck" datastore:"skip_multicheck" yaml:"skip_multicheck"`
+	ValueReplace   []Valuereplace   `json:"value_replace" datastore:"value_replace,noindex" yaml:"value_replace,omitempty"`
 }
 
-type ValueReplace struct {
-	Key   string `json:"key" datastore:"key"`
-	Value string `json:"value" datastore:"value"`
+type Valuereplace struct {
+	Key   string `json:"key" datastore:"key" yaml:"key"`
+	Value string `json:"value" datastore:"value" yaml:"value"`
 }
 
 type SchemaDefinition struct {
@@ -1872,9 +1872,10 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	err = json.Unmarshal([]byte(body), &workflow)
 	//log.Printf(string(body))
 	if err != nil {
-		log.Printf("Failed workflow unmarshaling: %s", err)
+		log.Printf(string(body))
+		log.Printf("[ERROR] Failed workflow unmarshaling: %s", err)
 		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
 	}
 

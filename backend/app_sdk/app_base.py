@@ -1027,6 +1027,40 @@ class AppBase:
                             pass
                                 #action["authentication"] 
 
+                        # Fixes OpenAPI body parameters for later.
+                        newparams = []
+                        counter = -1
+                        bodyindex = -1
+                        for parameter in action["parameters"]:
+                            counter += 1
+
+                            if parameter["name"] == "body": 
+                                bodyindex = counter
+                                print("PARAM: %s" % parameter)
+                                try:
+                                    values = parameter["value_replace"]
+                                    added = 0
+                                    for val in values:
+                                        newparams.append({
+                                            "name": val["key"],
+                                            "value": val["value"],
+                                            "variant": "STATIC_VALUE",
+                                            "id": "body_replacement",
+                                        })
+
+                                        print("Added param %s for body" % val["key"])
+                                        added += 1
+
+                                    print("ADDED %d parameters for body" % added)
+                                except KeyError as e:
+                                    print("KeyError body OpenAPI: %s" % e)
+                                    pass
+
+                                break
+
+                        for parameter in newparams:
+                            action["parameters"].append(parameter)
+
                         # calltimes is used to handle forloops in the app itself.
                         # 2 kinds of loop - one in gui with one app each, and one like this,
                         # which is super fast, but has a bad overview (potentially good tho)
@@ -1202,6 +1236,23 @@ class AppBase:
                                 print("Normal parsing (not looping) with data %s" % value)
                                 value = parse_wrapper_start(value)
 
+                                if parameter["id"] = "body_replacement": 
+                                    print("Should run body replacement in index %d with %s" % (bodyindex, parameter))
+                                    try:
+                                        print("PREBODY: %s" % params["body"])
+                                        params["body"].replace(parameter["name"], parameter["value"])
+                                        print("POSTBODY: %s" % params["body"])
+                                    except KeyError as e:
+                                        print("KEYERROR: %s" % e)
+
+                                    #bodyindex = counter
+                                    continue
+
+                                #for parameter in action["parameters"]:
+                                #if parameter["name"] == "body": 
+                                #    print("PARAM: %s" % parameter)
+                                #if param.id == "body_replacement":
+
                                 print("POST data value: %s" % value)
                                 params[parameter["name"]] = value
                                 multi_parameters[parameter["name"]] = value 
@@ -1230,11 +1281,11 @@ class AppBase:
                                 # FIXME: Subsub required?. Recursion! 
                                 # Basically multiply what we have with the outer loop?
                                 # 
-                                if isinstance(listitem, list):
-                                    for subitem in listitem:
-                                        filteredlist.append(subitem)
-                                else:
-                                    filteredlist.append(listitem)
+                                #if isinstance(listitem, list):
+                                #    for subitem in listitem:
+                                #        filteredlist.append(subitem)
+                                #else:
+                                #    filteredlist.append(listitem)
 
                             #print("New list length: %d" % len(filteredlist))
                             if len(filteredlist) > 1:
@@ -1249,6 +1300,13 @@ class AppBase:
                                 print("New multi execution length: %d\n" % tmplength)
                         
                         if not multiexecution:
+                            #newparams.append({
+                            #    "name": val["key"],
+                            #    "value": val["value"],
+                            #    "variant": "STATIC_VALUE",
+                            #    "id": "body_replacement",
+                            #})
+
                             print("APP_SDK DONE: Starting NORMAL execution of function")
                             print("Running with params (0): %s" % params) 
                             newres = await func(**params)

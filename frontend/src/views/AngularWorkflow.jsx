@@ -566,7 +566,19 @@ const AngularWorkflow = (props) => {
 					// Override just in this place
 					curworkflowAction.errors = []
 					curworkflowAction.isValid = true
+					
+					// Cleans up OpenAPI items
+					var newparams = []
+					for (var key in curworkflowAction.parameters) {
+						const thisitem = curworkflowAction.parameters[key]
+						if (thisitem.name.startsWith("${") && thisitem.name.endsWith("}")) {
+							continue
+						}
 
+						newparams.push(thisitem)
+					}
+
+					curworkflowAction.parameters = newparams
 					newActions.push(curworkflowAction)
 				} else if (type === "TRIGGER") {
 					//console.log("TRIGGER")
@@ -1722,8 +1734,8 @@ const AngularWorkflow = (props) => {
 
 	const paperVariableStyle = {
 		borderRadius: borderRadius,
-		minHeight: "50px",
-		maxHeight: "50px",
+		minHeight: 50,
+		maxHeight: 50,
 		minWidth: "100%",
 		maxWidth: "100%",
 		marginTop: "5px",
@@ -2406,7 +2418,7 @@ const AngularWorkflow = (props) => {
 						InputProps={{
 							style:{
 								color: "white",
-								minHeight: "50px", 
+								minHeight: 50, 
 								marginLeft: "5px",
 								maxWidth: "95%",
 								fontSize: "1em",
@@ -2884,7 +2896,7 @@ const AngularWorkflow = (props) => {
 							const paramcheck = selectedAction.parameters.find(param => param.name === "body")
 							if (paramcheck !== undefined) {
 								if (paramcheck["value_replace"] !== undefined) {
-									console.log("IN THE VALUE REPLACE: ", paramcheck["value_replace"])
+									//console.log("IN THE VALUE REPLACE: ", paramcheck["value_replace"])
 									const subparamindex = paramcheck["value_replace"].findIndex(param => param.key === data.name)
 									if (subparamindex !== -1) {
 										data.value = paramcheck["value_replace"][subparamindex]["value"]
@@ -2906,7 +2918,7 @@ const AngularWorkflow = (props) => {
 								rows = "1"
 								disabled = true
 								openApiHelperText = "OpenAPI spec: fill the following fields."
-								console.log("SHOULD ADD TO selectedActionParameters!: ", found, selectedActionParameters)
+								//console.log("SHOULD ADD TO selectedActionParameters!: ", found, selectedActionParameters)
 								var changed = false
 								for (var specKey in found) {
 									const tmpitem = found[specKey]
@@ -2919,7 +2931,7 @@ const AngularWorkflow = (props) => {
 									}
 
 									if (skip) {
-										console.log("SKIPPING ", tmpitem)
+										//console.log("SKIPPING ", tmpitem)
 										continue 
 									}
 
@@ -2948,7 +2960,7 @@ const AngularWorkflow = (props) => {
 							}
 						}
 
-						console.log("Data: ", data)
+						//console.log("Data: ", data)
 						var datafield = 
 							<TextField
 								disabled={disabled}
@@ -2956,8 +2968,8 @@ const AngularWorkflow = (props) => {
 								InputProps={{
 									style:{
 										color: "white",
-										minHeight: "50px", 
-										marginLeft: "5px",
+										minHeight: 50, 
+										marginLeft: 5,
 										maxWidth: "95%",
 										fontSize: "1em",
 									},
@@ -3007,18 +3019,22 @@ const AngularWorkflow = (props) => {
 												}
 											}
 											//console.log("PARAM: ", paramcheck)
+											
+											selectedActionParameters[count]["value_replace"] = paramcheck
+											selectedAction.parameters[count]["value_replace"] = paramcheck
+											setSelectedAction(selectedAction)
 										}
 									} else {
 										changeActionParameter(event, count)
 									}
 								}}
 								helperText={selectedApp.generated && selectedApp.activated && data.name === "body" ? 
-									<span style={{color:"white", marginBottom: 5,}}>
+									<span style={{color:"white", marginBottom: 5, marginleft: 5,}}>
 										{openApiHelperText}
 									</span>
 									: 
 									data.name.startsWith("${") && data.name.endsWith("}") ?
-										<span style={{color:"white", marginBottom: 5,}}>
+										<span style={{color:"white", marginBottom: 5, marginLeft: 5}}>
 											OpenAPI helperfield	
 										</span>
 									:
@@ -3044,7 +3060,7 @@ const AngularWorkflow = (props) => {
 									InputProps={{
 										style:{
 											color: "white",
-											minHeight: "50px", 
+											minHeight: 50, 
 											marginLeft: "5px",
 											maxWidth: "95%",
 											fontSize: "1em",
@@ -3163,7 +3179,7 @@ const AngularWorkflow = (props) => {
 											color: "white",
 											marginLeft: "5px",
 											maxWidth: "95%",
-											height: "50px", 
+											height: 50, 
 											fontSize: "1em",
 										},
 									}}
@@ -3475,7 +3491,7 @@ const AngularWorkflow = (props) => {
 										onClick={() => setShowAutocomplete(true)}
 										fullWidth
 										open={showAutocomplete}
-										style={{border: `2px solid #f85a3e`, color: "white", height: "50px", marginTop: 2,}}
+										style={{border: `2px solid #f85a3e`, color: "white", height: 50, marginTop: 2,}}
 										onChange={(e) => {
 											if (selectedActionParameters[count].value[selectedActionParameters[count].value.length-1] === ".") {
 												e.target.value.autocomplete = e.target.value.autocomplete.slice(1, e.target.value.autocomplete.length)
@@ -3618,7 +3634,7 @@ const AngularWorkflow = (props) => {
 				InputProps={{
 					style:{
 						color: "white",
-						minHeight: "50px", 
+						minHeight: 50, 
 						marginLeft: "5px",
 						maxWidth: "95%",
 						fontSize: "1em",
@@ -4022,7 +4038,7 @@ const AngularWorkflow = (props) => {
 				InputProps={{
 					style:{
 						color: "white",
-						minHeight: "50px", 
+						minHeight: 50, 
 						marginLeft: "5px",
 						maxWidth: "95%",
 						fontSize: "1em",
@@ -4698,7 +4714,7 @@ const AngularWorkflow = (props) => {
 							color: "white",
 							marginLeft: "5px",
 							maxWidth: "95%",
-							height: "50px", 
+							height: 50, 
 							fontSize: "1em",
 						},
 					}}
@@ -4717,7 +4733,7 @@ const AngularWorkflow = (props) => {
 								color: "white",
 								marginLeft: "5px",
 								maxWidth: "95%",
-								height: "50px", 
+								height: 50, 
 								fontSize: "1em",
 							},
 						}}
@@ -4784,7 +4800,7 @@ const AngularWorkflow = (props) => {
 								color: "white",
 								marginLeft: "5px",
 								maxWidth: "95%",
-								height: "50px", 
+								height: 50, 
 								fontSize: "1em",
 							},
 						}}
@@ -4859,7 +4875,7 @@ const AngularWorkflow = (props) => {
 								InputProps={{
 									style:{
 										color: "white",
-										height: "50px", 
+										height: 50, 
 										marginLeft: "5px",
 										maxWidth: "95%",
 										fontSize: "1em",
@@ -5148,7 +5164,7 @@ const AngularWorkflow = (props) => {
 								color: "white",
 								marginLeft: "5px",
 								maxWidth: "95%",
-								height: "50px", 
+								height: 50, 
 								fontSize: "1em",
 							},
 						}}
@@ -5167,7 +5183,7 @@ const AngularWorkflow = (props) => {
 									color: "white",
 									marginLeft: "5px",
 									maxWidth: "95%",
-									height: "50px", 
+									height: 50, 
 									fontSize: "1em",
 								},
 							}}
@@ -5250,7 +5266,7 @@ const AngularWorkflow = (props) => {
 										color: "white",
 										marginLeft: "5px",
 										maxWidth: "95%",
-										height: "50px", 
+										height: 50, 
 										fontSize: "1em",
 									},
 								}}
@@ -5274,7 +5290,7 @@ const AngularWorkflow = (props) => {
 										color: "white",
 										marginLeft: "5px",
 										maxWidth: "95%",
-										height: "50px", 
+										height: 50, 
 										fontSize: "1em",
 									},
 								}}
@@ -5326,7 +5342,7 @@ const AngularWorkflow = (props) => {
 								color: "white",
 								marginLeft: "5px",
 								maxWidth: "95%",
-								height: "50px", 
+								height: 50, 
 								fontSize: "1em",
 							},
 						}}
@@ -5401,7 +5417,7 @@ const AngularWorkflow = (props) => {
 								InputProps={{
 									style:{
 										color: "white",
-										height: "50px", 
+										height: 50, 
 										marginLeft: "5px",
 										maxWidth: "95%",
 										fontSize: "1em",
@@ -6389,7 +6405,7 @@ const AngularWorkflow = (props) => {
 									color: "white",
 									marginLeft: "5px",
 									maxWidth: "95%",
-									height: "50px", 
+									height: 50, 
 									fontSize: "1em",
 								},
 							}}
@@ -6415,7 +6431,7 @@ const AngularWorkflow = (props) => {
 												color: "white",
 												marginLeft: "5px",
 												maxWidth: "95%",
-												height: "50px", 
+												height: 50, 
 												fontSize: "1em",
 											},
 										}}
@@ -6460,7 +6476,7 @@ const AngularWorkflow = (props) => {
 					InputProps={{
 						style:{
 							color: "white",
-							height: "50px", 
+							height: 50, 
 							fontSize: "1em",
 						},
 					}}

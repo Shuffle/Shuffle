@@ -48,6 +48,103 @@ func init() {
 	}
 }
 
+type Userapi struct {
+	Username string `datastore:"username"`
+	ApiKey   string `datastore:"apikey"`
+}
+
+type ExecutionInfo struct {
+	TotalApiUsage           int64 `json:"total_api_usage" datastore:"total_api_usage"`
+	TotalWorkflowExecutions int64 `json:"total_workflow_executions" datastore:"total_workflow_executions"`
+	TotalAppExecutions      int64 `json:"total_app_executions" datastore:"total_app_executions"`
+	TotalCloudExecutions    int64 `json:"total_cloud_executions" datastore:"total_cloud_executions"`
+	TotalOnpremExecutions   int64 `json:"total_onprem_executions" datastore:"total_onprem_executions"`
+	DailyApiUsage           int64 `json:"daily_api_usage" datastore:"daily_api_usage"`
+	DailyWorkflowExecutions int64 `json:"daily_workflow_executions" datastore:"daily_workflow_executions"`
+	DailyAppExecutions      int64 `json:"daily_app_executions" datastore:"daily_app_executions"`
+	DailyCloudExecutions    int64 `json:"daily_cloud_executions" datastore:"daily_cloud_executions"`
+	DailyOnpremExecutions   int64 `json:"daily_onprem_executions" datastore:"daily_onprem_executions"`
+}
+
+type StatisticsData struct {
+	Timestamp int64  `json:"timestamp" datastore:"timestamp"`
+	Id        string `json:"id" datastore:"id"`
+	Amount    int64  `json:"amount" datastore:"amount"`
+}
+
+type StatisticsItem struct {
+	Total     int64            `json:"total" datastore:"total"`
+	Fieldname string           `json:"field_name" datastore:"field_name"`
+	Data      []StatisticsData `json:"data" datastore:"data"`
+}
+
+// "Execution by status"
+// Execution history
+//type GlobalStatistics struct {
+//	BackendExecutions     int64            `json:"backend_executions" datastore:"backend_executions"`
+//	WorkflowCount         int64            `json:"workflow_count" datastore:"workflow_count"`
+//	ExecutionCount        int64            `json:"execution_count" datastore:"execution_count"`
+//	ExecutionSuccessCount int64            `json:"execution_success_count" datastore:"execution_success_count"`
+//	ExecutionAbortCount   int64            `json:"execution_abort_count" datastore:"execution_abort_count"`
+//	ExecutionFailureCount int64            `json:"execution_failure_count" datastore:"execution_failure_count"`
+//	ExecutionPendingCount int64            `json:"execution_pending_count" datastore:"execution_pending_count"`
+//	AppUsageCount         int64            `json:"app_usage_count" datastore:"app_usage_count"`
+//	TotalAppsCount        int64            `json:"total_apps_count" datastore:"total_apps_count"`
+//	SelfMadeAppCount      int64            `json:"self_made_app_count" datastore:"self_made_app_count"`
+//	WebhookUsageCount     int64            `json:"webhook_usage_count" datastore:"webhook_usage_count"`
+//	Baseline              map[string]int64 `json:"baseline" datastore:"baseline"`
+//}
+
+type ParsedOpenApi struct {
+	Body    string `datastore:"body,noindex" json:"body"`
+	ID      string `datastore:"id" json:"id"`
+	Success bool   `datastore:"success,omitempty" json:"success,omitempty"`
+}
+
+// Limits set for a user so that they can't do a shitload
+type UserLimits struct {
+	DailyApiUsage           int64 `json:"daily_api_usage" datastore:"daily_api_usage"`
+	DailyWorkflowExecutions int64 `json:"daily_workflow_executions" datastore:"daily_workflow_executions"`
+	DailyCloudExecutions    int64 `json:"daily_cloud_executions" datastore:"daily_cloud_executions"`
+	DailyTriggers           int64 `json:"daily_triggers" datastore:"daily_triggers"`
+	DailyMailUsage          int64 `json:"daily_mail_usage" datastore:"daily_mail_usage"`
+	MaxTriggers             int64 `json:"max_triggers" datastore:"max_triggers"`
+	MaxWorkflows            int64 `json:"max_workflows" datastore:"max_workflows"`
+}
+
+type retStruct struct {
+	Success         bool         `json:"success"`
+	SyncFeatures    SyncFeatures `json:"sync_features"`
+	SessionKey      string       `json:"session_key"`
+	IntervalSeconds int64        `json:"interval_seconds"`
+	Reason          string       `json:"reason"`
+}
+
+// Saves some data, not sure what to have here lol
+type UserAuth struct {
+	Description string          `json:"description" datastore:"description,noindex" yaml:"description"`
+	Name        string          `json:"name" datastore:"name" yaml:"name"`
+	Workflows   []string        `json:"workflows" datastore:"workflows"`
+	Username    string          `json:"username" datastore:"username"`
+	Fields      []UserAuthField `json:"fields" datastore:"fields"`
+}
+
+type UserAuthField struct {
+	Key   string `json:"key" datastore:"key"`
+	Value string `json:"value" datastore:"value,noindex"`
+}
+
+// Not environment, but execution environment
+type Environment struct {
+	Name       string `datastore:"name"`
+	Type       string `datastore:"type"`
+	Registered bool   `datastore:"registered"`
+	Default    bool   `datastore:"default" json:"default"`
+	Archived   bool   `datastore:"archived" json:"archived"`
+	Id         string `datastore:"id" json:"id"`
+	OrgId      string `datastore:"org_id" json:"org_id"`
+}
+
 type User struct {
 	Username          string        `datastore:"Username" json:"username"`
 	Password          string        `datastore:"password,noindex" password:"password,omitempty"`
@@ -59,41 +156,293 @@ type User struct {
 	VerificationToken string        `datastore:"verification_token" json:"verification_token"`
 	ApiKey            string        `datastore:"apikey" json:"apikey"`
 	ResetReference    string        `datastore:"reset_reference" json:"reset_reference"`
+	Executions        ExecutionInfo `datastore:"executions" json:"executions"`
+	Limits            UserLimits    `datastore:"limits" json:"limits"`
+	Authentication    []UserAuth    `datastore:"authentication,noindex" json:"authentication"`
 	ResetTimeout      int64         `datastore:"reset_timeout,noindex" json:"reset_timeout"`
 	Id                string        `datastore:"id" json:"id"`
 	Orgs              []string      `datastore:"orgs" json:"orgs"`
 	CreationTime      int64         `datastore:"creation_time" json:"creation_time"`
+	ActiveOrg         Org           `json:"active_org" datastore:"active_org"`
 	Active            bool          `datastore:"active" json:"active"`
 }
 
-type ExecutionRequest struct {
-	ExecutionId       string   `json:"execution_id"`
-	ExecutionArgument string   `json:"execution_argument"`
-	ExecutionSource   string   `json:"execution_source"`
-	WorkflowId        string   `json:"workflow_id"`
-	Environments      []string `json:"environments"`
-	Authorization     string   `json:"authorization"`
-	Status            string   `json:"status"`
-	Start             string   `json:"start"`
-	Type              string   `json:"type"`
+// timeout maybe? idk
+type session struct {
+	Username string `datastore:"Username,noindex"`
+	Id       string `datastore:"Id,noindex"`
+	Session  string `datastore:"session,noindex"`
 }
 
+type loginStruct struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type Contact struct {
+	Firstname   string `json:"firstname"`
+	Lastname    string `json:"lastname"`
+	Title       string `json:"title"`
+	Companyname string `json:"companyname"`
+	Phone       string `json:"phone"`
+	Email       string `json:"email"`
+	Message     string `json:"message"`
+}
+
+type Translator struct {
+	Src struct {
+		Name        string `json:"name" datastore:"name"`
+		Value       string `json:"value" datastore:"value,noindex"`
+		Description string `json:"description" datastore:"description,noindex"`
+		Required    string `json:"required" datastore:"required"`
+		Type        string `json:"type" datastore:"type"`
+		Schema      struct {
+			Type string `json:"type" datastore:"type"`
+		} `json:"schema" datastore:"schema"`
+	} `json:"src" datastore:"src"`
+	Dst struct {
+		Name        string `json:"name" datastore:"name"`
+		Value       string `json:"value" datastore:"value,noindex"`
+		Type        string `json:"type" datastore:"type"`
+		Description string `json:"description" datastore:"description,noindex"`
+		Required    string `json:"required" datastore:"required"`
+		Schema      struct {
+			Type string `json:"type" datastore:"type"`
+		} `json:"schema" datastore:"schema"`
+	} `json:"dst" datastore:"dst"`
+}
+
+type Appconfig struct {
+	Key   string `json:"key" datastore:"key"`
+	Value string `json:"value" datastore:"value,noindex"`
+}
+
+type ScheduleApp struct {
+	Foldername  string      `json:"foldername" datastore:"foldername,noindex"`
+	Name        string      `json:"name" datastore:"name,noindex"`
+	Id          string      `json:"id" datastore:"id,noindex"`
+	Description string      `json:"description" datastore:"description,noindex"`
+	Action      string      `json:"action" datastore:"action,noindex"`
+	Config      []Appconfig `json:"config,omitempty" datastore:"config,noindex"`
+}
+
+type AppInfo struct {
+	SourceApp      ScheduleApp `json:"sourceapp,omitempty" datastore:"sourceapp,noindex"`
+	DestinationApp ScheduleApp `json:"destinationapp,omitempty" datastore:"destinationapp,noindex"`
+}
+
+// May 2020: Reused for onprem schedules - Id, Seconds, WorkflowId and argument
+type ScheduleOld struct {
+	Id                   string       `json:"id" datastore:"id"`
+	StartNode            string       `json:"start_node" datastore:"start_node"`
+	Seconds              int          `json:"seconds" datastore:"seconds"`
+	WorkflowId           string       `json:"workflow_id" datastore:"workflow_id", `
+	Argument             string       `json:"argument" datastore:"argument"`
+	WrappedArgument      string       `json:"wrapped_argument" datastore:"wrapped_argument"`
+	AppInfo              AppInfo      `json:"appinfo" datastore:"appinfo,noindex"`
+	Finished             bool         `json:"finished" finished:"id"`
+	BaseAppLocation      string       `json:"base_app_location" datastore:"baseapplocation,noindex"`
+	Translator           []Translator `json:"translator,omitempty" datastore:"translator"`
+	Org                  string       `json:"org" datastore:"org"`
+	CreatedBy            string       `json:"createdby" datastore:"createdby"`
+	Availability         string       `json:"availability" datastore:"availability"`
+	CreationTime         int64        `json:"creationtime" datastore:"creationtime,noindex"`
+	LastModificationtime int64        `json:"lastmodificationtime" datastore:"lastmodificationtime,noindex"`
+	LastRuntime          int64        `json:"lastruntime" datastore:"lastruntime,noindex"`
+	Frequency            string       `json:"frequency" datastore:"frequency,noindex"`
+	Environment          string       `json:"environment" datastore:"environment"`
+}
+
+// Returned from /GET /schedules
+type Schedules struct {
+	Schedules []ScheduleOld `json:"schedules"`
+	Success   bool          `json:"success"`
+}
+
+type ScheduleApps struct {
+	Apps    []ApiYaml `json:"apps"`
+	Success bool      `json:"success"`
+}
+
+// The yaml that is uploaded
+type ApiYaml struct {
+	Name        string `json:"name" yaml:"name" required:"true datastore:"name"`
+	Foldername  string `json:"foldername" yaml:"foldername" required:"true datastore:"foldername"`
+	Id          string `json:"id" yaml:"id",required:"true, datastore:"id"`
+	Description string `json:"description" datastore:"description,noindex" yaml:"description"`
+	AppVersion  string `json:"app_version" yaml:"app_version",datastore:"app_version"`
+	ContactInfo struct {
+		Name string `json:"name" datastore:"name" yaml:"name"`
+		Url  string `json:"url" datastore:"url" yaml:"url"`
+	} `json:"contact_info" datastore:"contact_info" yaml:"contact_info"`
+	Types []string `json:"types" datastore:"types" yaml:"types"`
+	Input []struct {
+		Name            string `json:"name" datastore:"name" yaml:"name"`
+		Description     string `json:"description" datastore:"description,noindex" yaml:"description"`
+		InputParameters []struct {
+			Name        string `json:"name" datastore:"name" yaml:"name"`
+			Description string `json:"description" datastore:"description,noindex" yaml:"description"`
+			Required    string `json:"required" datastore:"required" yaml:"required"`
+			Schema      struct {
+				Type string `json:"type" datastore:"type" yaml:"type"`
+			} `json:"schema" datastore:"schema" yaml:"schema"`
+		} `json:"inputparameters" datastore:"inputparameters" yaml:"inputparameters"`
+		OutputParameters []struct {
+			Name        string `json:"name" datastore:"name" yaml:"name"`
+			Description string `json:"description" datastore:"description,noindex" yaml:"description"`
+			Required    string `json:"required" datastore:"required" yaml:"required"`
+			Schema      struct {
+				Type string `json:"type" datastore:"type" yaml:"type"`
+			} `json:"schema" datastore:"schema" yaml:"schema"`
+		} `json:"outputparameters" datastore:"outputparameters" yaml:"outputparameters"`
+		Config []struct {
+			Name        string `json:"name" datastore:"name" yaml:"name"`
+			Description string `json:"description" datastore:"description,noindex" yaml:"description"`
+			Required    string `json:"required" datastore:"required" yaml:"required"`
+			Schema      struct {
+				Type string `json:"type" datastore:"type" yaml:"type"`
+			} `json:"schema" datastore:"schema" yaml:"schema"`
+		} `json:"config" datastore:"config" yaml:"config"`
+	} `json:"input" datastore:"input" yaml:"input"`
+	Output []struct {
+		Name        string `json:"name" datastore:"name" yaml:"name"`
+		Description string `json:"description" datastore:"description,noindex" yaml:"description"`
+		Config      []struct {
+			Name        string `json:"name" datastore:"name" yaml:"name"`
+			Description string `json:"description" datastore:"description,noindex" yaml:"description"`
+			Required    string `json:"required" datastore:"required" yaml:"required"`
+			Schema      struct {
+				Type string `json:"type" datastore:"type" yaml:"type"`
+			} `json:"schema" datastore:"schema" yaml:"schema"`
+		} `json:"config" datastore:"config" yaml:"config"`
+		InputParameters []struct {
+			Name        string `json:"name" datastore:"name" yaml:"name"`
+			Description string `json:"description" datastore:"description,noindex" yaml:"description"`
+			Required    string `json:"required" datastore:"required" yaml:"required"`
+			Schema      struct {
+				Type string `json:"type" datastore:"type" yaml:"type"`
+			} `json:"schema" datastore:"schema" yaml:"schema"`
+		} `json:"inputparameters" datastore:"inputparameters" yaml:"inputparameters"`
+		OutputParameters []struct {
+			Name        string `json:"name" datastore:"name" yaml:"name"`
+			Description string `json:"description" datastore:"description,noindex" yaml:"description"`
+			Required    string `json:"required" datastore:"required" yaml:"required"`
+			Schema      struct {
+				Type string `json:"type" datastore:"type" yaml:"type"`
+			} `json:"schema" datastore:"schema" yaml:"schema"`
+		} `json:"outputparameters" datastore:"outputparameters" yaml:"outputparameters"`
+	} `json:"output" datastore:"output" yaml:"output"`
+}
+
+type Hooks struct {
+	Hooks   []Hook `json:"hooks"`
+	Success bool   `json:"-"`
+}
+
+type Info struct {
+	Url         string `json:"url" datastore:"url"`
+	Name        string `json:"name" datastore:"name"`
+	Description string `json:"description" datastore:"description,noindex"`
+}
+
+// Actions to be done by webhooks etc
+// Field is the actual field to use from json
+type HookAction struct {
+	Type  string `json:"type" datastore:"type"`
+	Name  string `json:"name" datastore:"name"`
+	Id    string `json:"id" datastore:"id"`
+	Field string `json:"field" datastore:"field"`
+}
+
+type Hook struct {
+	Id          string       `json:"id" datastore:"id"`
+	Start       string       `json:"start" datastore:"start"`
+	Info        Info         `json:"info" datastore:"info"`
+	Actions     []HookAction `json:"actions" datastore:"actions,noindex"`
+	Type        string       `json:"type" datastore:"type"`
+	Owner       string       `json:"owner" datastore:"owner"`
+	Status      string       `json:"status" datastore:"status"`
+	Workflows   []string     `json:"workflows" datastore:"workflows"`
+	Running     bool         `json:"running" datastore:"running"`
+	OrgId       string       `json:"org_id" datastore:"org_id"`
+	Environment string       `json:"environment" datastore:"environment"`
+}
+
+type ExecutionRequest struct {
+	ExecutionId       string   `json:"execution_id,omitempty"`
+	ExecutionArgument string   `json:"execution_argument,omitempty"`
+	ExecutionSource   string   `json:"execution_source,omitempty"`
+	WorkflowId        string   `json:"workflow_id,omitempty"`
+	Environments      []string `json:"environments,omitempty"`
+	Authorization     string   `json:"authorization,omitempty"`
+	Status            string   `json:"status,omitempty"`
+	Start             string   `json:"start,omitempty"`
+	Type              string   `json:"type,omitempty"`
+}
+
+type SyncFeatures struct {
+	Webhook            SyncData `json:"webhook" datastore:"webhook"`
+	Schedules          SyncData `json:"schedules" datastore:"schedules"`
+	UserInput          SyncData `json:"user_input" datastore:"user_input"`
+	SendMail           SyncData `json:"send_mail" datastore:"send_mail"`
+	SendSms            SyncData `json:"send_sms" datastore:"send_sms"`
+	Updates            SyncData `json:"updates" datastore:"updates"`
+	Notifications      SyncData `json:"notifications" datastore:"notifications"`
+	EmailTrigger       SyncData `json:"email_trigger" datastore:"email_trigger"`
+	AppExecutions      SyncData `json:"app_executions" datastore:"app_executions"`
+	WorkflowExecutions SyncData `json:"workflow_executions" datastore:"workflow_executions"`
+	Apps               SyncData `json:"apps" datastore:"apps"`
+	Workflows          SyncData `json:"workflows" datastore:"workflows"`
+	Autocomplete       SyncData `json:"autocomplete" datastore:"autocomplete"`
+	Authentication     SyncData `json:"authentication" datastore:"authentication"`
+	Schedule           SyncData `json:"schedule" datastore:"schedule"`
+}
+
+type SyncData struct {
+	Active         bool   `json:"active" datastore:"active"`
+	Type           string `json:"type" datastore:"type"`
+	Name           string `json:"name" datastore:"name"`
+	Description    string `json:"description" datastore:"description"`
+	Limit          int64  `json:"limit" datastore:"limit"`
+	StartDate      int64  `json:"start_date" datastore:"start_date"`
+	EndDate        int64  `json:"end_date" datastore:"end_date"`
+	DataCollection int64  `json:"data_collection" datastore:"data_collection"`
+}
+
+type SyncConfig struct {
+	Interval int64  `json:"interval" datastore:"interval"`
+	Apikey   string `json:"api_key" datastore:"api_key"`
+}
+
+// Role is just used for feedback for a user
 type Org struct {
-	Name  string `json:"name"`
-	Org   string `json:"org"`
-	Users []User `json:"users"`
-	Id    string `json:"id"`
+	Name         string       `json:"name" datastore:"name"`
+	Description  string       `json:"description" datastore:"description"`
+	Image        string       `json:"image" datastore:"image,noindex"`
+	Id           string       `json:"id" datastore:"id"`
+	Org          string       `json:"org" datastore:"org"`
+	Users        []User       `json:"users" datastore:"users"`
+	Role         string       `json:"role" datastore:"role"`
+	Roles        []string     `json:"roles" datastore:"roles"`
+	CloudSync    bool         `json:"cloud_sync" datastore:"CloudSync"`
+	SyncConfig   SyncConfig   `json:"sync_config" datastore:"sync_config"`
+	SyncFeatures SyncFeatures `json:"sync_features" datastore:"sync_features"`
+	Created      int64        `json:"created" datastore:"created"`
+	Edited       int64        `json:"edited" datastore:"edited"`
 }
 
 type AppAuthenticationStorage struct {
 	Active        bool                  `json:"active" datastore:"active"`
 	Label         string                `json:"label" datastore:"label"`
 	Id            string                `json:"id" datastore:"id"`
-	App           WorkflowApp           `json:"app" datastore:"app"`
+	App           WorkflowApp           `json:"app" datastore:"app,noindex"`
 	Fields        []AuthenticationStore `json:"fields" datastore:"fields"`
 	Usage         []AuthenticationUsage `json:"usage" datastore:"usage"`
 	WorkflowCount int64                 `json:"workflow_count" datastore:"workflow_count"`
 	NodeCount     int64                 `json:"node_count" datastore:"node_count"`
+	OrgId         string                `json:"org_id" datastore:"org_id"`
+	Created       int64                 `json:"created" datastore:"created"`
+	Edited        int64                 `json:"edited" datastore:"edited"`
 }
 
 type AuthenticationUsage struct {
@@ -102,45 +451,61 @@ type AuthenticationUsage struct {
 }
 
 // An app inside Shuffle
+// Source      string `json:"source" datastore:"soure" yaml:"source"` - downloadlocation
 type WorkflowApp struct {
-	Name        string `json:"name" yaml:"name" required:true datastore:"name"`
-	IsValid     bool   `json:"is_valid" yaml:"is_valid" required:true datastore:"is_valid"`
-	ID          string `json:"id" yaml:"id,omitempty" required:false datastore:"id"`
-	Link        string `json:"link" yaml:"link" required:false datastore:"link,noindex"`
-	AppVersion  string `json:"app_version" yaml:"app_version" required:true datastore:"app_version"`
-	Generated   bool   `json:"generated" yaml:"generated" required:false datastore:"generated"`
-	Downloaded  bool   `json:"downloaded" yaml:"downloaded" required:false datastore:"downloaded"`
-	Sharing     bool   `json:"sharing" yaml:"sharing" required:false datastore:"sharing"`
-	Verified    bool   `json:"verified" yaml:"verified" required:false datastore:"verified"`
-	Activated   bool   `json:"activated" yaml:"activated" required:false datastore:"activated"`
-	Tested      bool   `json:"tested" yaml:"tested" required:false datastore:"tested"`
-	Owner       string `json:"owner" datastore:"owner" yaml:"owner"`
-	Hash        string `json:"hash" datastore:"hash" yaml:"hash"` // api.yaml+dockerfile+src/app.py for apps
-	PrivateID   string `json:"private_id" yaml:"private_id" required:false datastore:"private_id"`
-	Description string `json:"description" datastore:"description,noindex" required:false yaml:"description"`
-	Environment string `json:"environment" datastore:"environment" required:true yaml:"environment"`
-	SmallImage  string `json:"small_image" datastore:"small_image,noindex" required:false yaml:"small_image"`
-	LargeImage  string `json:"large_image" datastore:"large_image,noindex" yaml:"large_image" required:false`
-	ContactInfo struct {
+	Name          string `json:"name" yaml:"name" required:true datastore:"name"`
+	IsValid       bool   `json:"is_valid" yaml:"is_valid" required:true datastore:"is_valid"`
+	ID            string `json:"id" yaml:"id,omitempty" required:false datastore:"id"`
+	Link          string `json:"link" yaml:"link" required:false datastore:"link,noindex"`
+	AppVersion    string `json:"app_version" yaml:"app_version" required:true datastore:"app_version"`
+	SharingConfig string `json:"sharing_config" yaml:"sharing_config" datastore:"sharing_config"`
+	Generated     bool   `json:"generated" yaml:"generated" required:false datastore:"generated"`
+	Downloaded    bool   `json:"downloaded" yaml:"downloaded" required:false datastore:"downloaded"`
+	Sharing       bool   `json:"sharing" yaml:"sharing" required:false datastore:"sharing"`
+	Verified      bool   `json:"verified" yaml:"verified" required:false datastore:"verified"`
+	Activated     bool   `json:"activated" yaml:"activated" required:false datastore:"activated"`
+	Tested        bool   `json:"tested" yaml:"tested" required:false datastore:"tested"`
+	Owner         string `json:"owner" datastore:"owner" yaml:"owner"`
+	Hash          string `json:"hash" datastore:"hash" yaml:"hash"` // api.yaml+dockerfile+src/app.py for apps
+	PrivateID     string `json:"private_id" yaml:"private_id" required:false datastore:"private_id"`
+	Description   string `json:"description" datastore:"description,noindex" required:false yaml:"description"`
+	Environment   string `json:"environment" datastore:"environment" required:true yaml:"environment"`
+	SmallImage    string `json:"small_image" datastore:"small_image,noindex" required:false yaml:"small_image"`
+	LargeImage    string `json:"large_image" datastore:"large_image,noindex" yaml:"large_image" required:false`
+	ContactInfo   struct {
 		Name string `json:"name" datastore:"name" yaml:"name"`
 		Url  string `json:"url" datastore:"url" yaml:"url"`
 	} `json:"contact_info" datastore:"contact_info" yaml:"contact_info" required:false`
-	Actions        []WorkflowAppAction `json:"actions" yaml:"actions" required:true datastore:"actions"`
+	Actions        []WorkflowAppAction `json:"actions" yaml:"actions" required:true datastore:"actions,noindex"`
 	Authentication Authentication      `json:"authentication" yaml:"authentication" required:false datastore:"authentication"`
+	Tags           []string            `json:"tags" yaml:"tags" required:false datastore:"activated"`
+	Categories     []string            `json:"categories" yaml:"categories" required:false datastore:"categories"`
+	Created        int64               `json:"created" datastore:"created"`
+	Edited         int64               `json:"edited" datastore:"edited"`
+	LastRuntime    int64               `json:"last_runtime" datastore:"last_runtime"`
 }
 
 type WorkflowAppActionParameter struct {
-	Description   string           `json:"description" datastore:"description" yaml:"description"`
-	ID            string           `json:"id" datastore:"id" yaml:"id,omitempty"`
-	Name          string           `json:"name" datastore:"name" yaml:"name"`
-	Example       string           `json:"example" datastore:"example" yaml:"example"`
-	Value         string           `json:"value" datastore:"value" yaml:"value,omitempty"`
-	Multiline     bool             `json:"multiline" datastore:"multiline" yaml:"multiline"`
-	ActionField   string           `json:"action_field" datastore:"action_field" yaml:"actionfield,omitempty"`
-	Variant       string           `json:"variant" datastore:"variant" yaml:"variant,omitempty"`
-	Required      bool             `json:"required" datastore:"required" yaml:"required"`
-	Configuration bool             `json:"configuration" datastore:"configuration" yaml:"configuration"`
-	Schema        SchemaDefinition `json:"schema" datastore:"schema" yaml:"schema"`
+	Description    string           `json:"description" datastore:"description,noindex" yaml:"description"`
+	ID             string           `json:"id" datastore:"id" yaml:"id,omitempty"`
+	Name           string           `json:"name" datastore:"name" yaml:"name"`
+	Example        string           `json:"example" datastore:"example" yaml:"example"`
+	Value          string           `json:"value" datastore:"value,noindex" yaml:"value,omitempty"`
+	Multiline      bool             `json:"multiline" datastore:"multiline" yaml:"multiline"`
+	Options        []string         `json:"options" datastore:"options" yaml:"options"`
+	ActionField    string           `json:"action_field" datastore:"action_field" yaml:"actionfield,omitempty"`
+	Variant        string           `json:"variant" datastore:"variant" yaml:"variant,omitempty"`
+	Required       bool             `json:"required" datastore:"required" yaml:"required"`
+	Configuration  bool             `json:"configuration" datastore:"configuration" yaml:"configuration"`
+	Tags           []string         `json:"tags" datastore:"tags" yaml:"tags"`
+	Schema         SchemaDefinition `json:"schema" datastore:"schema" yaml:"schema"`
+	SkipMulticheck bool             `json:"skip_multicheck" datastore:"skip_multicheck" yaml:"skip_multicheck"`
+	ValueReplace   []Valuereplace   `json:"value_replace" datastore:"value_replace,noindex" yaml:"value_replace,omitempty"`
+}
+
+type Valuereplace struct {
+	Key   string `json:"key" datastore:"key" yaml:"key"`
+	Value string `json:"value" datastore:"value" yaml:"value"`
 }
 
 type SchemaDefinition struct {
@@ -148,7 +513,7 @@ type SchemaDefinition struct {
 }
 
 type WorkflowAppAction struct {
-	Description       string                       `json:"description" datastore:"description"`
+	Description       string                       `json:"description" datastore:"description,noindex"`
 	ID                string                       `json:"id" datastore:"id" yaml:"id,omitempty"`
 	Name              string                       `json:"name" datastore:"name"`
 	Label             string                       `json:"label" datastore:"label"`
@@ -157,14 +522,15 @@ type WorkflowAppAction struct {
 	Sharing           bool                         `json:"sharing" datastore:"sharing"`
 	PrivateID         string                       `json:"private_id" datastore:"private_id"`
 	AppID             string                       `json:"app_id" datastore:"app_id"`
-	Authentication    []AuthenticationStore        `json:"authentication" datastore:"authentication" yaml:"authentication,omitempty"`
+	Tags              []string                     `json:"tags" datastore:"tags" yaml:"tags"`
+	Authentication    []AuthenticationStore        `json:"authentication" datastore:"authentication,noindex" yaml:"authentication,omitempty"`
 	Tested            bool                         `json:"tested" datastore:"tested" yaml:"tested"`
 	Parameters        []WorkflowAppActionParameter `json:"parameters" datastore: "parameters"`
 	ExecutionVariable struct {
-		Description string `json:"description" datastore:"description"`
+		Description string `json:"description" datastore:"description,noindex"`
 		ID          string `json:"id" datastore:"id"`
 		Name        string `json:"name" datastore:"name"`
-		Value       string `json:"value" datastore:"value"`
+		Value       string `json:"value" datastore:"value,noindex"`
 	} `json:"execution_variable" datastore:"execution_variables"`
 	Returns struct {
 		Description string           `json:"description" datastore:"returns" yaml:"description,omitempty"`
@@ -178,13 +544,15 @@ type WorkflowAppAction struct {
 }
 
 // FIXME: Generate a callback authentication ID?
+// FIXME: Add org check ..
 type WorkflowExecution struct {
 	Type               string         `json:"type" datastore:"type"`
 	Status             string         `json:"status" datastore:"status"`
 	Start              string         `json:"start" datastore:"start"`
-	ExecutionArgument  string         `json:"execution_argument" datastore:"execution_argument"`
+	ExecutionArgument  string         `json:"execution_argument" datastore:"execution_argument,noindex"`
 	ExecutionId        string         `json:"execution_id" datastore:"execution_id"`
 	ExecutionSource    string         `json:"execution_source" datastore:"execution_source"`
+	ExecutionOrg       string         `json:"execution_org" datastore:"execution_org"`
 	WorkflowId         string         `json:"workflow_id" datastore:"workflow_id"`
 	LastNode           string         `json:"last_node" datastore:"last_node"`
 	Authorization      string         `json:"authorization" datastore:"authorization"`
@@ -196,11 +564,12 @@ type WorkflowExecution struct {
 	Workflow           Workflow       `json:"workflow" datastore:"workflow,noindex"`
 	Results            []ActionResult `json:"results" datastore:"results,noindex"`
 	ExecutionVariables []struct {
-		Description string `json:"description" datastore:"description"`
+		Description string `json:"description" datastore:"description,noindex"`
 		ID          string `json:"id" datastore:"id"`
 		Name        string `json:"name" datastore:"name"`
-		Value       string `json:"value" datastore:"value"`
+		Value       string `json:"value" datastore:"value,noindex"`
 	} `json:"execution_variables,omitempty" datastore:"execution_variables,omitempty"`
+	OrgId string `json:"org_id" datastore:"org_id"`
 }
 
 // This is for the nodes in a workflow, NOT the app action itself.
@@ -221,10 +590,10 @@ type Action struct {
 	Name              string                       `json:"name" datastore:"name"`
 	Parameters        []WorkflowAppActionParameter `json:"parameters" datastore: "parameters,noindex"`
 	ExecutionVariable struct {
-		Description string `json:"description" datastore:"description"`
+		Description string `json:"description" datastore:"description,noindex"`
 		ID          string `json:"id" datastore:"id"`
 		Name        string `json:"name" datastore:"name"`
-		Value       string `json:"value" datastore:"value"`
+		Value       string `json:"value" datastore:"value,noindex"`
 	} `json:"execution_variable,omitempty" datastore:"execution_variable,omitempty"`
 	Position struct {
 		X float64 `json:"x" datastore:"x"`
@@ -236,6 +605,7 @@ type Action struct {
 	AuthNotRequired  bool   `json:"auth_not_required" datastore:"auth_not_required" yaml:"auth_not_required"`
 }
 
+// Added environment for location to execute
 type Trigger struct {
 	AppName         string                       `json:"app_name" datastore:"app_name"`
 	Description     string                       `json:"description" datastore:"description,noindex"`
@@ -267,7 +637,7 @@ type Branch struct {
 	SourceID      string      `json:"source_id" datastore:"source_id"`
 	Label         string      `json:"label" datastore:"label"`
 	HasError      bool        `json:"has_errors" datastore: "has_errors"`
-	Conditions    []Condition `json:"conditions" datastore: "conditions"`
+	Conditions    []Condition `json:"conditions" datastore: "conditions,noindex"`
 }
 
 // Same format for a lot of stuff
@@ -280,8 +650,10 @@ type Condition struct {
 type Schedule struct {
 	Name              string `json:"name" datastore:"name"`
 	Frequency         string `json:"frequency" datastore:"frequency"`
-	ExecutionArgument string `json:"execution_argument" datastore:"execution_argument"`
+	ExecutionArgument string `json:"execution_argument" datastore:"execution_argument,noindex"`
 	Id                string `json:"id" datastore:"id"`
+	OrgId             string `json:"org_id" datastore:"org_id"`
+	Environment       string `json:"environment" datastore:"environment"`
 }
 
 type Workflow struct {
@@ -293,33 +665,38 @@ type Workflow struct {
 		ExitOnError  bool `json:"exit_on_error" datastore:"exit_on_error"`
 		StartFromTop bool `json:"start_from_top" datastore:"start_from_top"`
 	} `json:"configuration,omitempty" datastore:"configuration"`
+	Created           int64    `json:"created" datastore:"created"`
+	Edited            int64    `json:"edited" datastore:"edited"`
+	LastRuntime       int64    `json:"last_runtime" datastore:"last_runtime"`
 	Errors            []string `json:"errors,omitempty" datastore:"errors"`
 	Tags              []string `json:"tags,omitempty" datastore:"tags"`
 	ID                string   `json:"id" datastore:"id"`
 	IsValid           bool     `json:"is_valid" datastore:"is_valid"`
 	Name              string   `json:"name" datastore:"name"`
-	Description       string   `json:"description" datastore:"description"`
+	Description       string   `json:"description" datastore:"description,noindex"`
 	Start             string   `json:"start" datastore:"start"`
 	Owner             string   `json:"owner" datastore:"owner"`
 	Sharing           string   `json:"sharing" datastore:"sharing"`
 	Org               []Org    `json:"org,omitempty" datastore:"org"`
 	ExecutingOrg      Org      `json:"execution_org,omitempty" datastore:"execution_org"`
+	OrgId             string   `json:"org_id,omitempty" datastore:"org_id"`
 	WorkflowVariables []struct {
-		Description string `json:"description" datastore:"description"`
+		Description string `json:"description" datastore:"description,noindex"`
 		ID          string `json:"id" datastore:"id"`
 		Name        string `json:"name" datastore:"name"`
-		Value       string `json:"value" datastore:"value"`
+		Value       string `json:"value" datastore:"value,noindex"`
 	} `json:"workflow_variables" datastore:"workflow_variables"`
 	ExecutionVariables []struct {
-		Description string `json:"description" datastore:"description"`
+		Description string `json:"description" datastore:"description,noindex"`
 		ID          string `json:"id" datastore:"id"`
 		Name        string `json:"name" datastore:"name"`
-		Value       string `json:"value" datastore:"value"`
+		Value       string `json:"value" datastore:"value,noindex"`
 	} `json:"execution_variables,omitempty" datastore:"execution_variables"`
+	ExecutionEnvironment string `json:"execution_environment" datastore:"execution_environment"`
 }
 
 type ActionResult struct {
-	Action        Action `json:"action" datastore:"action"`
+	Action        Action `json:"action" datastore:"action,noindex"`
 	ExecutionId   string `json:"execution_id" datastore:"execution_id"`
 	Authorization string `json:"authorization" datastore:"authorization"`
 	Result        string `json:"result" datastore:"result,noindex"`
@@ -334,11 +711,11 @@ type Authentication struct {
 }
 
 type AuthenticationParams struct {
-	Description string           `json:"description" datastore:"description" yaml:"description"`
+	Description string           `json:"description" datastore:"description,noindex" yaml:"description"`
 	ID          string           `json:"id" datastore:"id" yaml:"id"`
 	Name        string           `json:"name" datastore:"name" yaml:"name"`
 	Example     string           `json:"example" datastore:"example" yaml:"example"`
-	Value       string           `json:"value,omitempty" datastore:"value" yaml:"value"`
+	Value       string           `json:"value,omitempty" datastore:"value,noindex" yaml:"value"`
 	Multiline   bool             `json:"multiline" datastore:"multiline" yaml:"multiline"`
 	Required    bool             `json:"required" datastore:"required" yaml:"required"`
 	In          string           `json:"in" datastore:"in" yaml:"in"`
@@ -348,11 +725,21 @@ type AuthenticationParams struct {
 
 type AuthenticationStore struct {
 	Key   string `json:"key" datastore:"key"`
-	Value string `json:"value" datastore:"value"`
+	Value string `json:"value" datastore:"value,noindex"`
 }
 
 type ExecutionRequestWrapper struct {
 	Data []ExecutionRequest `json:"data"`
+}
+
+type AppExecutionExample struct {
+	AppName         string   `json:"app_name" datastore:"app_name"`
+	AppVersion      string   `json:"app_version" datastore:"app_version"`
+	AppAction       string   `json:"app_action" datastore:"app_action"`
+	AppId           string   `json:"app_id" datastore:"app_id"`
+	ExampleId       string   `json:"example_id" datastore:"example_id"`
+	SuccessExamples []string `json:"success_examples" datastore:"success_examples,noindex"`
+	FailureExamples []string `json:"failure_examples" datastore:"failure_examples,noindex"`
 }
 
 // removes every container except itself (worker)
