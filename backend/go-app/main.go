@@ -2588,11 +2588,18 @@ func getOrg(ctx context.Context, id string) (*Org, error) {
 	return curOrg, nil
 }
 
-func setOrg(ctx context.Context, data Org, id string) error {
+func setOrg(ctx context.Context, org Org, id string) error {
 	// clear session_token and API_token for user
+	timeNow := int64(time.Now().Unix())
+	if org.Created == 0 {
+		org.Created = timeNow
+	}
+
+	org.Edited = timeNow
+
 	k := datastore.NameKey("Organizations", id, nil)
-	if _, err := dbclient.Put(ctx, k, &data); err != nil {
-		log.Println(err)
+	if _, err := dbclient.Put(ctx, k, &org); err != nil {
+		log.Printf("Failed setting org: %s", err)
 		return err
 	}
 
@@ -7099,16 +7106,24 @@ func runInit(ctx context.Context) {
 			log.Printf("Error getting workflows in runinit: %s", err)
 		} else {
 			updated := 0
+			timeNow := time.Now().Unix()
 			for _, workflow := range workflows {
+				setLocal := false
 				if workflow.ExecutingOrg.Id == "" || len(workflow.OrgId) == 0 {
 					workflow.OrgId = activeOrgs[0].Id
 					workflow.ExecutingOrg = activeOrgs[0]
+					setLocal = true
+				} else if workflow.Edited == 0 {
+					workflow.Edited = timeNow
+					setLocal = true
+				}
 
+				if setLocal {
 					err = setWorkflow(ctx, workflow, workflow.ID)
 					if err != nil {
 						log.Printf("Failed setting workflow in init: %s", err)
 					} else {
-						log.Printf("Fixed workflow %s to have the right org.", workflow.ID)
+						log.Printf("Fixed workflow %s to have the right info.", workflow.ID)
 						updated += 1
 					}
 				}
@@ -7272,6 +7287,22 @@ func runInit(ctx context.Context) {
 	workflowapps, err := getAllWorkflowApps(ctx)
 	if err != nil {
 		log.Printf("Failed getting apps (runInit): %s", err)
+	} else if err == nil && len(workflowapps) > 0 {
+		//getAllWorkflowApps(ctx context.Context) ([]WorkflowApp, error) {
+		var allworkflowapps []WorkflowApp
+		q := datastore.NewQuery("workflowapp")
+		_, err := dbclient.GetAll(ctx, q, &allworkflowapps)
+		if err == nil {
+			for _, workflowapp := range allworkflowapps {
+				if workflowapp.Edited == 0 {
+					err = setWorkflowAppDatastore(ctx, workflowapp, workflowapp.ID)
+					if err == nil {
+						log.Printf("Updating time for workflowapp %s:%s", workflowapp.Name, workflowapp.AppVersion)
+					}
+				}
+			}
+		}
+
 	} else if err == nil && len(workflowapps) == 0 {
 		log.Printf("Downloading default workflow apps")
 		fs := memfs.New()

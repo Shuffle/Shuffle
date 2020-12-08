@@ -114,6 +114,8 @@ type Org struct {
 	CloudSync    bool         `json:"cloud_sync" datastore:"CloudSync"`
 	SyncConfig   SyncConfig   `json:"sync_config" datastore:"sync_config"`
 	SyncFeatures SyncFeatures `json:"sync_features" datastore:"sync_features"`
+	Created      int64        `json:"created" datastore:"created"`
+	Edited       int64        `json:"edited" datastore:"edited"`
 }
 
 type AppAuthenticationStorage struct {
@@ -126,6 +128,8 @@ type AppAuthenticationStorage struct {
 	WorkflowCount int64                 `json:"workflow_count" datastore:"workflow_count"`
 	NodeCount     int64                 `json:"node_count" datastore:"node_count"`
 	OrgId         string                `json:"org_id" datastore:"org_id"`
+	Created       int64                 `json:"created" datastore:"created"`
+	Edited        int64                 `json:"edited" datastore:"edited"`
 }
 
 type AuthenticationUsage struct {
@@ -163,6 +167,9 @@ type WorkflowApp struct {
 	Authentication Authentication      `json:"authentication" yaml:"authentication" required:false datastore:"authentication"`
 	Tags           []string            `json:"tags" yaml:"tags" required:false datastore:"activated"`
 	Categories     []string            `json:"categories" yaml:"categories" required:false datastore:"categories"`
+	Created        int64               `json:"created" datastore:"created"`
+	Edited         int64               `json:"edited" datastore:"edited"`
+	LastRuntime    int64               `json:"last_runtime" datastore:"last_runtime"`
 }
 
 type WorkflowAppActionParameter struct {
@@ -339,6 +346,9 @@ type Workflow struct {
 		ExitOnError  bool `json:"exit_on_error" datastore:"exit_on_error"`
 		StartFromTop bool `json:"start_from_top" datastore:"start_from_top"`
 	} `json:"configuration,omitempty" datastore:"configuration"`
+	Created           int64    `json:"created" datastore:"created"`
+	Edited            int64    `json:"edited" datastore:"edited"`
+	LastRuntime       int64    `json:"last_runtime" datastore:"last_runtime"`
 	Errors            []string `json:"errors,omitempty" datastore:"errors"`
 	Tags              []string `json:"tags,omitempty" datastore:"tags"`
 	ID                string   `json:"id" datastore:"id"`
@@ -1406,6 +1416,8 @@ func getWorkflows(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("[INFO] Getting workflows (ADMIN) for organization %s", user.ActiveOrg.Id)
 	}
 
+	q = q.Order("-edited")
+
 	var workflows []Workflow
 	_, err = dbclient.GetAll(ctx, q, &workflows)
 	if err != nil {
@@ -1587,11 +1599,13 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 		newSchedules = append(newSchedules, item)
 	}
 
+	timeNow := int64(time.Now().Unix())
 	workflow.Actions = newActions
 	workflow.Triggers = newTriggers
 	workflow.Schedules = newSchedules
 	workflow.IsValid = true
 	workflow.Configuration.ExitOnError = false
+	workflow.Created = timeNow
 
 	workflowjson, err := json.Marshal(workflow)
 	if err != nil {
@@ -2198,9 +2212,9 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 				// Check to see if the action is valid
 				if curappaction.Name != action.Name {
-					log.Printf("Appaction %s doesn't exist.", action.Name)
+					log.Printf("[ERROR] Action %s in app %s doesn't exist.", action.Name, curapp.Name)
 					resp.WriteHeader(401)
-					resp.Write([]byte(`{"success": false}`))
+					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Action %s in app %s doesn't exist"}`, action.Name, curapp.Name)))
 					return
 				}
 
@@ -3877,6 +3891,7 @@ func setExampleresult(ctx context.Context, result AppExecutionExample) error {
 // Hmm, so I guess this should use uuid :(
 // Consistency PLX
 func setWorkflow(ctx context.Context, workflow Workflow, id string) error {
+	workflow.Edited = int64(time.Now().Unix())
 	key := datastore.NameKey("workflow", id, nil)
 
 	// New struct, to not add body, author etc
@@ -5388,9 +5403,18 @@ func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra 
 				})
 
 				/*
-					q := datastore.NewQuery("workflow").Filter("owner =", user.Id)
-					if user.Role == "admin" {
-						q = datastore.NewQuery("workflow").Filter("org_id =", user.ActiveOrg.Id)
+					// Find existing similar ones
+					q = datastore.NewQuery("workflow").Filter("org_id =", user.ActiveOrg.Id).Filter("name", workflow.name)
+					var workflows []Workflow
+					_, err = dbclient.GetAll(ctx, q, &workflows)
+					if err == nil {
+						log.Printf("Failed getting workflows for user %s: %s", user.Username, err)
+						if len(workflows) == 0 {
+							resp.WriteHeader(200)
+							resp.Write([]byte("[]"))
+							return
+						}
+					}
 				*/
 
 				ctx := context.Background()
@@ -5908,7 +5932,7 @@ func getAllSchedules(ctx context.Context, orgId string) ([]ScheduleOld, error) {
 
 func getAllWorkflowApps(ctx context.Context) ([]WorkflowApp, error) {
 	var allworkflowapps []WorkflowApp
-	q := datastore.NewQuery("workflowapp").Limit(50)
+	q := datastore.NewQuery("workflowapp").Limit(50).Order("-edited")
 
 	_, err := dbclient.GetAll(ctx, q, &allworkflowapps)
 	if err != nil {
@@ -5931,6 +5955,13 @@ func getAllWorkflowAppAuth(ctx context.Context, OrgId string) ([]AppAuthenticati
 }
 
 func setWorkflowAppAuthDatastore(ctx context.Context, workflowappauth AppAuthenticationStorage, id string) error {
+	timeNow := int64(time.Now().Unix())
+	if workflowappauth.Created == 0 {
+		workflowappauth.Created = timeNow
+	}
+
+	workflowappauth.Edited = timeNow
+
 	key := datastore.NameKey("workflowappauth", id, nil)
 
 	// New struct, to not add body, author etc
@@ -5945,6 +5976,12 @@ func setWorkflowAppAuthDatastore(ctx context.Context, workflowappauth AppAuthent
 // Hmm, so I guess this should use uuid :(
 // Consistency PLX
 func setWorkflowAppDatastore(ctx context.Context, workflowapp WorkflowApp, id string) error {
+	timeNow := int64(time.Now().Unix())
+	if workflowapp.Created == 0 {
+		workflowapp.Created = timeNow
+	}
+
+	workflowapp.Edited = timeNow
 	key := datastore.NameKey("workflowapp", id, nil)
 
 	// New struct, to not add body, author etc
