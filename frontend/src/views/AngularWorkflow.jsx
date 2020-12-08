@@ -2225,6 +2225,14 @@ const AngularWorkflow = (props) => {
 				
 				var newAppPopup = false
 
+				/*
+				 FIXME: Add auth.
+						selectedAction.selectedAuthentication = e.target.value
+						selectedAction.authentication_id = e.target.value.id
+						setSelectedAction(selectedAction)
+						setUpdate(Math.random())
+				*/
+
 				const newAppData = {
 					app_name: app.name,
 					app_version: app.app_version, 
@@ -2872,6 +2880,19 @@ const AngularWorkflow = (props) => {
 							placeholder = data.example
 						}
 
+						if (data.name.startsWith("${") && data.name.endsWith("}")) {
+							const paramcheck = selectedAction.parameters.find(param => param.name === "body")
+							if (paramcheck !== undefined) {
+								if (paramcheck["value_replace"] !== undefined) {
+									console.log("IN THE VALUE REPLACE: ", paramcheck["value_replace"])
+									const subparamindex = paramcheck["value_replace"].findIndex(param => param.key === data.name)
+									if (subparamindex !== -1) {
+										data.value = paramcheck["value_replace"][subparamindex]["value"]
+									}
+								}
+							}
+						}
+
 						var disabled = false
 						var rows = "5"
 						var openApiHelperText = "This is an OpenAPI specific field"
@@ -2927,6 +2948,7 @@ const AngularWorkflow = (props) => {
 							}
 						}
 
+						console.log("Data: ", data)
 						var datafield = 
 							<TextField
 								disabled={disabled}
@@ -2963,13 +2985,43 @@ const AngularWorkflow = (props) => {
 								type={placeholder.includes("***") ? "password" : "text"}
 								placeholder={placeholder}
 								onChange={(event) => {
-									changeActionParameter(event, count)
+									if (data.name.startsWith("${") && data.name.endsWith("}")) {
+										// PARAM FIX - Gonna use the ID field, even though it's a hack
+										const paramcheck = selectedAction.parameters.find(param => param.name === "body")
+										if (paramcheck !== undefined) {
+											if (paramcheck["value_replace"] === undefined) {
+												paramcheck["value_replace"] = [{
+													"key": data.name,
+													"value": event.target.value,
+												}]
+
+											} else {
+												const subparamindex = paramcheck["value_replace"].findIndex(param => param.key === data.name)
+												if (subparamindex === -1) {
+													paramcheck["value_replace"].push({
+														"key": data.name,
+														"value": event.target.value,
+													})
+												} else {
+													paramcheck["value_replace"][subparamindex]["value"] = event.target.value
+												}
+											}
+											//console.log("PARAM: ", paramcheck)
+										}
+									} else {
+										changeActionParameter(event, count)
+									}
 								}}
 								helperText={selectedApp.generated && selectedApp.activated && data.name === "body" ? 
 									<span style={{color:"white", marginBottom: 5,}}>
 										{openApiHelperText}
 									</span>
 									: 
+									data.name.startsWith("${") && data.name.endsWith("}") ?
+										<span style={{color:"white", marginBottom: 5,}}>
+											OpenAPI helperfield	
+										</span>
+									:
 									null
 								}
 								onBlur={(event) => {

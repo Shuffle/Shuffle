@@ -7099,7 +7099,7 @@ func runInit(ctx context.Context) {
 
 	// Fixing workflows to have real activeorg IDs
 	if len(activeOrgs) == 1 {
-		q := datastore.NewQuery("workflow")
+		q := datastore.NewQuery("workflow").Limit(35)
 		var workflows []Workflow
 		_, err = dbclient.GetAll(ctx, q, &workflows)
 		if err != nil {
@@ -7383,7 +7383,7 @@ func runInit(ctx context.Context) {
 	workflowLocation := os.Getenv("SHUFFLE_DOWNLOAD_WORKFLOW_LOCATION")
 	if len(workflowLocation) > 0 {
 		log.Printf("Downloading WORKFLOWS from %s if no workflows - EXTRA workflows", workflowLocation)
-		q := datastore.NewQuery("workflow")
+		q := datastore.NewQuery("workflow").Limit(35)
 		var workflows []Workflow
 		_, err = dbclient.GetAll(ctx, q, &workflows)
 		if err != nil {
