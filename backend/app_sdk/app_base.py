@@ -1236,11 +1236,11 @@ class AppBase:
                                 print("Normal parsing (not looping) with data %s" % value)
                                 value = parse_wrapper_start(value)
 
-                                if parameter["id"] = "body_replacement": 
+                                if parameter["id"] == "body_replacement": 
                                     print("Should run body replacement in index %d with %s" % (bodyindex, parameter))
                                     try:
                                         print("PREBODY: %s" % params["body"])
-                                        params["body"].replace(parameter["name"], parameter["value"])
+                                        params["body"] = params["body"].replace(parameter["name"], parameter["value"], -1)
                                         print("POSTBODY: %s" % params["body"])
                                     except KeyError as e:
                                         print("KEYERROR: %s" % e)

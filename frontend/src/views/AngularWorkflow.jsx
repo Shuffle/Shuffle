@@ -978,6 +978,7 @@ const AngularWorkflow = (props) => {
 
 		} else {
 			//alert.info("Can't edit branches from triggers") 
+			console.log("IN HERE!")
 		}
 
 		setSelectedAction({})
@@ -2690,7 +2691,37 @@ const AngularWorkflow = (props) => {
 			}
 		})
 
-		const changeActionParameter = (event, count) => {
+		const changeActionParameter = (event, count, data) => {
+			if (data.name.startsWith("${") && data.name.endsWith("}")) {
+				// PARAM FIX - Gonna use the ID field, even though it's a hack
+				const paramcheck = selectedAction.parameters.find(param => param.name === "body")
+				if (paramcheck !== undefined) {
+					if (paramcheck["value_replace"] === undefined) {
+						paramcheck["value_replace"] = [{
+							"key": data.name,
+							"value": event.target.value,
+						}]
+
+					} else {
+						const subparamindex = paramcheck["value_replace"].findIndex(param => param.key === data.name)
+						if (subparamindex === -1) {
+							paramcheck["value_replace"].push({
+								"key": data.name,
+								"value": event.target.value,
+							})
+						} else {
+							paramcheck["value_replace"][subparamindex]["value"] = event.target.value
+						}
+					}
+					//console.log("PARAM: ", paramcheck)
+					
+					selectedActionParameters[count]["value_replace"] = paramcheck
+					selectedAction.parameters[count]["value_replace"] = paramcheck
+					setSelectedAction(selectedAction)
+					return
+				}
+			}
+
 			if (event.target.value[event.target.value.length-1] === "$") {
 				if (!showDropdown) {
 					setShowAutocomplete(false)
@@ -2737,6 +2768,7 @@ const AngularWorkflow = (props) => {
 					}
 				}
 
+				//console.log("CURSTRING: ", curstring)
 				if (curstring.length > 0 && actionlist !== null) {
 					// Search back in the action list
 					curstring = curstring.split(" ").join("_").toLowerCase()
@@ -2911,7 +2943,6 @@ const AngularWorkflow = (props) => {
 						if (selectedApp.generated && selectedApp.activated && data.name === "body") {
 							const regex = /\${(\w+)}/g
 							const found = placeholder.match(regex)
-							console.log("THERE MAY BE THINGS INSIDE THE BODY, NO: ", found)
 							if (found === null) {
 								//setExtraBodyFields([])
 							} else {
@@ -2957,6 +2988,8 @@ const AngularWorkflow = (props) => {
 								if (changed) {
 									setSelectedActionParameters(selectedActionParameters)
 								}
+
+								return <Divider key={Math.random()} /> 
 							}
 						}
 
@@ -2997,36 +3030,7 @@ const AngularWorkflow = (props) => {
 								type={placeholder.includes("***") ? "password" : "text"}
 								placeholder={placeholder}
 								onChange={(event) => {
-									if (data.name.startsWith("${") && data.name.endsWith("}")) {
-										// PARAM FIX - Gonna use the ID field, even though it's a hack
-										const paramcheck = selectedAction.parameters.find(param => param.name === "body")
-										if (paramcheck !== undefined) {
-											if (paramcheck["value_replace"] === undefined) {
-												paramcheck["value_replace"] = [{
-													"key": data.name,
-													"value": event.target.value,
-												}]
-
-											} else {
-												const subparamindex = paramcheck["value_replace"].findIndex(param => param.key === data.name)
-												if (subparamindex === -1) {
-													paramcheck["value_replace"].push({
-														"key": data.name,
-														"value": event.target.value,
-													})
-												} else {
-													paramcheck["value_replace"][subparamindex]["value"] = event.target.value
-												}
-											}
-											//console.log("PARAM: ", paramcheck)
-											
-											selectedActionParameters[count]["value_replace"] = paramcheck
-											selectedAction.parameters[count]["value_replace"] = paramcheck
-											setSelectedAction(selectedAction)
-										}
-									} else {
-										changeActionParameter(event, count)
-									}
+										changeActionParameter(event, count, data)
 								}}
 								helperText={selectedApp.generated && selectedApp.activated && data.name === "body" ? 
 									<span style={{color:"white", marginBottom: 5, marginleft: 5,}}>
@@ -3089,7 +3093,7 @@ const AngularWorkflow = (props) => {
 									type={"text"}
 									placeholder={"The file ID to get"}
 									onChange={(event) => {
-										changeActionParameter(event, count)
+										changeActionParameter(event, count, data)
 									}}
 									onBlur={(event) => {
 									}}
@@ -3098,7 +3102,7 @@ const AngularWorkflow = (props) => {
 							//datafield = `SHOW FILES FROM OTHER NODES? Filename: ${selectedActionParameters[count].value}`	
 							/*
 							if (selectedActionParameters[count].value != fileId) {
-								changeActionParameter(fileId, count)
+								changeActionParameter(fileId, count, data)
 								setUpdate(Math.random())
 
 							}
@@ -3112,7 +3116,7 @@ const AngularWorkflow = (props) => {
 									}
 								}
 
-								changeActionParameter(e, count)
+								changeActionParameter(e, count, data)
 							}
 
 							datafield =
@@ -3126,7 +3130,7 @@ const AngularWorkflow = (props) => {
 									fullWidth
 									onChange={(e) => {
 										console.log("VAL: ", e.target.value)
-										changeActionParameter(e, count)
+										changeActionParameter(e, count, data)
 										setUpdate(Math.random())
 									}}
 									style={{backgroundColor: surfaceColor, color: "white", height: "50px"}}
@@ -3189,7 +3193,7 @@ const AngularWorkflow = (props) => {
 									helperText={<div style={{marginLeft: "5px", color:"white", marginBottom: "2px",}}>Example: $.body will get "data" from {'{"body": "data"}'}</div>}
 									placeholder="Action variable ($.)" 
 									onChange={(event) => {
-										changeActionParameter(event, count)
+										changeActionParameter(event, count, data)
 									}}
 								/>
 							</div>
@@ -3270,6 +3274,40 @@ const AngularWorkflow = (props) => {
 									toComplete += values[key].autocomplete
 								}
 
+								// Handles the fields under OpenAPI body to be parsed.
+								if (data.name.startsWith("${") && data.name.endsWith("}")) {
+									// PARAM FIX - Gonna use the ID field, even though it's a hack
+									const paramcheck = selectedAction.parameters.find(param => param.name === "body")
+									if (paramcheck !== undefined) {
+										if (paramcheck["value_replace"] === undefined) {
+											paramcheck["value_replace"] = [{
+												"key": data.name,
+												"value": toComplete,
+											}]
+
+										} else {
+											const subparamindex = paramcheck["value_replace"].findIndex(param => param.key === data.name)
+											if (subparamindex === -1) {
+												paramcheck["value_replace"].push({
+													"key": data.name,
+													"value": toComplete,
+												})
+											} else {
+												paramcheck["value_replace"][subparamindex]["value"] += toComplete
+											}
+										}
+										
+										selectedActionParameters[count]["value_replace"] = paramcheck
+										selectedAction.parameters[count]["value_replace"] = paramcheck
+										setSelectedAction(selectedAction)
+										setUpdate(Math.random())
+
+										setShowDropdown(false)
+										setMenuPosition(null)
+										return
+									}
+								}
+
 								selectedActionParameters[count].value += toComplete
 								selectedAction.parameters[count].value = selectedActionParameters[count].value 
 								setSelectedAction(selectedAction)
@@ -3284,134 +3322,132 @@ const AngularWorkflow = (props) => {
 							}
 
 							return (
-							  <div >
-									<Menu
-										anchorReference="anchorPosition"
-										anchorPosition={menuPosition}
-										onClose={() => {
-											handleMenuClose()
-										}}
-										open={!!menuPosition}
-										style={{
-											border: `2px solid #f85a3e`, 
-											color: "white", 
-											marginTop: 2,
-										}}
-									>
-									{actionlist.map(innerdata => {
-										const icon = innerdata.type === "action" ? <AppsIcon style={{marginRight: 10}} /> : innerdata.type === "workflow_variable" || innerdata.type === "execution_variable" ? <FavoriteBorderIcon style={{marginRight: 10}} /> : <ScheduleIcon style={{marginRight: 10}} /> 
+								<Menu
+									anchorReference="anchorPosition"
+									anchorPosition={menuPosition}
+									onClose={() => {
+										handleMenuClose()
+									}}
+									open={!!menuPosition}
+									style={{
+										border: `2px solid #f85a3e`, 
+										color: "white", 
+										marginTop: 2,
+									}}
+								>
+								{actionlist.map(innerdata => {
+									const icon = innerdata.type === "action" ? <AppsIcon style={{marginRight: 10}} /> : innerdata.type === "workflow_variable" || innerdata.type === "execution_variable" ? <FavoriteBorderIcon style={{marginRight: 10}} /> : <ScheduleIcon style={{marginRight: 10}} /> 
 
-										const handleExecArgumentHover = (inside) => {
-											var exec_text_field = document.getElementById("execution_argument_input_field")
-											if (exec_text_field !== null) {
-												if (inside) {
-													exec_text_field.style.border = "2px solid #f85a3e"
-												} else {
-													exec_text_field.style.border = ""
-												}
+									const handleExecArgumentHover = (inside) => {
+										var exec_text_field = document.getElementById("execution_argument_input_field")
+										if (exec_text_field !== null) {
+											if (inside) {
+												exec_text_field.style.border = "2px solid #f85a3e"
+											} else {
+												exec_text_field.style.border = ""
 											}
+										}
 
-											// Also doing arguments
-											if (workflow.triggers !== undefined && workflow.triggers !== null && workflow.triggers.length > 0) {
-												for (var key in workflow.triggers) {
-													const item = workflow.triggers[key]
+										// Also doing arguments
+										if (workflow.triggers !== undefined && workflow.triggers !== null && workflow.triggers.length > 0) {
+											for (var key in workflow.triggers) {
+												const item = workflow.triggers[key]
 
-													var node = cy.getElementById(item.id)
-													if (node.length > 0) {
-														if (inside) {
-															node.addClass('shuffle-hover-highlight')
-														} else {
-															node.removeClass('shuffle-hover-highlight')
-														}
+												var node = cy.getElementById(item.id)
+												if (node.length > 0) {
+													if (inside) {
+														node.addClass('shuffle-hover-highlight')
+													} else {
+														node.removeClass('shuffle-hover-highlight')
 													}
-
 												}
+
 											}
 										}
+									}
 
-										const handleActionHover = (inside, actionId) => {
-											var node = cy.getElementById(actionId)
-											if (node.length > 0) {
-												if (inside) {
-													node.addClass('shuffle-hover-highlight')
-												} else {
-													node.removeClass('shuffle-hover-highlight')
-												}
+									const handleActionHover = (inside, actionId) => {
+										var node = cy.getElementById(actionId)
+										if (node.length > 0) {
+											if (inside) {
+												node.addClass('shuffle-hover-highlight')
+											} else {
+												node.removeClass('shuffle-hover-highlight')
 											}
 										}
+									}
 
-										const handleMouseover = () => {
-											if (innerdata.type === "Execution Argument") {
-													handleExecArgumentHover(true)
-												} else if (innerdata.type === "action") {
-													handleActionHover(true, innerdata.id)
-												}
-											} 
-											
-										const handleMouseOut = () => {
-											if (innerdata.type === "Execution Argument") {
-												handleExecArgumentHover(false)
+									const handleMouseover = () => {
+										if (innerdata.type === "Execution Argument") {
+												handleExecArgumentHover(true)
 											} else if (innerdata.type === "action") {
-												handleActionHover(false, innerdata.id)
+												handleActionHover(true, innerdata.id)
 											}
+										} 
+										
+									const handleMouseOut = () => {
+										if (innerdata.type === "Execution Argument") {
+											handleExecArgumentHover(false)
+										} else if (innerdata.type === "action") {
+											handleActionHover(false, innerdata.id)
 										}
+									}
 
-										var parsedPaths = [] 
-										if (typeof(innerdata.example) === "object") {
-											parsedPaths = GetParsedPaths(innerdata.example, "")
-										}
+									var parsedPaths = [] 
+									if (typeof(innerdata.example) === "object") {
+										parsedPaths = GetParsedPaths(innerdata.example, "")
+									}
 
-										return (
-											parsedPaths.length > 0 ?
-												<NestedMenuItem
-													key={innerdata.name}
-													label={
-														<div style={{display: "flex"}}>
-															{icon} {innerdata.name}
-														</div>
-													}
-													parentMenuOpen={!!menuPosition}
-													style={{backgroundColor: inputColor, color: "white", minWidth: 250,}}
-													onClick={() => {
-														handleItemClick([innerdata])
-													}}
-												>
-													{parsedPaths.map((pathdata, index) => {
-														// FIXME: Should be recursive in here
-														const icon = pathdata.type === "value" ? <VpnKeyIcon style={iconStyle} /> : pathdata.type === "list" ? <FormatListNumberedIcon style={iconStyle} /> : <ExpandMoreIcon style={iconStyle} /> 
-														return (
-															<MenuItem key={pathdata.name} style={{backgroundColor: inputColor, color: "white", minWidth: 250,}} value={pathdata} onMouseOver={() => {}}
-																onClick={() => {
-																	handleItemClick([innerdata, pathdata])
-																}}
-															>
-																<Tooltip color="primary" title={`Ex. value: ${pathdata.value}`} placement="left">
-																	<div style={{display: "flex"}}>
-																		{icon} {pathdata.name}
-																	</div>
-																</Tooltip>
-															</MenuItem>
-														)
+									return (
+										parsedPaths.length > 0 ?
+											<NestedMenuItem
+												key={innerdata.name}
+												label={
+													<div style={{display: "flex"}}>
+														{icon} {innerdata.name}
+													</div>
+												}
+												parentMenuOpen={!!menuPosition}
+												style={{backgroundColor: inputColor, color: "white", minWidth: 250,}}
+												onClick={() => {
+													handleItemClick([innerdata])
+												}}
+											>
+												{parsedPaths.map((pathdata, index) => {
+													// FIXME: Should be recursive in here
+													const icon = pathdata.type === "value" ? <VpnKeyIcon style={iconStyle} /> : pathdata.type === "list" ? <FormatListNumberedIcon style={iconStyle} /> : <ExpandMoreIcon style={iconStyle} /> 
+													return (
+														<MenuItem key={pathdata.name} style={{backgroundColor: inputColor, color: "white", minWidth: 250,}} value={pathdata} onMouseOver={() => {}}
+															onClick={() => {
+																handleItemClick([innerdata, pathdata])
+															}}
+														>
+															<Tooltip color="primary" title={`Ex. value: ${pathdata.value}`} placement="left">
+																<div style={{display: "flex"}}>
+																	{icon} {pathdata.name}
+																</div>
+															</Tooltip>
+														</MenuItem>
+													)
 
-													})}
-												</NestedMenuItem>
-											: 
-												<MenuItem key={innerdata.name} style={{backgroundColor: inputColor, color: "white"}} value={innerdata} onMouseOver={() => handleMouseover()} onMouseOut={() => {handleMouseOut()}} 
-													onClick={() => {
-														handleItemClick([innerdata])
-													}}
-												>
-													<Tooltip color="primary" title={`Value: ${innerdata.value}`} placement="left">
-														<div style={{display: "flex"}}>
-															{icon} {innerdata.name}
-														</div>
-													</Tooltip>
-												</MenuItem>
-											
-										)
-									})}	
-								</Menu>
-      				</div>
+												})}
+											</NestedMenuItem>
+										: 
+											<MenuItem key={innerdata.name} style={{backgroundColor: inputColor, color: "white"}} value={innerdata} onMouseOver={() => handleMouseover()} onMouseOut={() => {handleMouseOut()}} 
+												onClick={() => {
+													handleItemClick([innerdata])
+												}}
+											>
+												<Tooltip color="primary" title={`Value: ${innerdata.value}`} placement="left">
+													<div style={{display: "flex"}}>
+														{icon} {innerdata.name}
+													</div>
+												</Tooltip>
+											</MenuItem>
+										
+									)
+								})}	
+							</Menu>
 							)
 						}
 
@@ -3419,6 +3455,14 @@ const AngularWorkflow = (props) => {
 						if (!data.required) {
 							itemColor = "#ffeb3b"
 						}
+
+						var tmpitem = data.name.valueOf()
+						if (data.name.startsWith("${") && data.name.endsWith("}")) {
+							tmpitem = tmpitem.slice(2, data.name.length-1)
+						}
+						
+						tmpitem = tmpitem.charAt(0).toUpperCase()+tmpitem.substring(1)
+
 						return (
 						<div key={data.name}>	
 							<div style={{marginTop: 20, marginBottom: 7, display: "flex"}}>
@@ -3434,7 +3478,7 @@ const AngularWorkflow = (props) => {
 									<div style={{width: 17, height: 17, borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: 10}}/>
 								}
 								<div style={{flex: "10"}}> 
-									<b>{data.name.charAt(0).toUpperCase()+data.name.substring(1)} </b> 
+									<b>{tmpitem} </b> 
 								</div>
 
 								{selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0  ? null : 
