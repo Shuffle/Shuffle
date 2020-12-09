@@ -25,6 +25,7 @@
     "github-markdown-css": "^3.0.1",
     "import": "0.0.6",
     "interweave": "^11.2.0",
+    "is-core-module": "2.2.0",
     "material-icons": "^0.3.1",
     "material-icons-react": "^1.0.4",
     "material-ui-chip-input": "^2.0.0-beta.2",
