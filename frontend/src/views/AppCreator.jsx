@@ -26,6 +26,7 @@ import CircularProgress from '@material-ui/core/CircularProgress';
 import Chip from '@material-ui/core/Chip';
 import ChipInput from 'material-ui-chip-input'
 
+import YAML from 'yaml'
 import ErrorOutline from '@material-ui/icons/ErrorOutline';
 import { useAlert } from "react-alert";
 import words from "shellwords"
@@ -325,15 +326,37 @@ const AppCreator = (props) => {
 				throw new Error("NOT 200 :O")
 			}
 
+			//console.log("DATA: ", response.text())
 			return response.json()
 		})
 		.then((responseJson) => {
+			console.log("THE BODY IS HERE")
   		setIsAppLoaded(true)
 			if (!responseJson.success) {
 				alert.error("Failed to verify")
-			} else {
-				const data = JSON.parse(responseJson.body)
-				parseIncomingOpenapiData(data)
+			} else{
+				console.log("HMM 2")
+				var jsonvalid = false 
+				var tmpvalue = ""
+				try {
+					tmpvalue = JSON.parse(responseJson.body)
+					jsonvalid = true
+				} catch (e) {
+					console.log("Error JSON: ", e)
+				}
+
+				if (!jsonvalid) {
+					try {
+						tmpvalue = YAML.parse(responseJson.body, )
+						jsonvalid = true
+					} catch(e) {
+						console.log("Error YAML: ", e)
+					}
+				}
+
+				if (jsonvalid) {
+					parseIncomingOpenapiData(tmpvalue)
+				}
 			}
 		})
 		.catch(error => {
@@ -359,13 +382,15 @@ const AppCreator = (props) => {
 	// Sets the data up as it should be at later points
 	// This is the data FROM the database, not what's being saved
 	const parseIncomingOpenapiData = (data) => {
+		//console.log("DATA: ", data.info)
 		setBasedata(data)
 
-		setName(data.info.title)
-		setDescription(data.info.description)
-		document.title = "Apps - "+data.info.title
-
 		if (data.info !== null && data.info !== undefined)  {
+			console.log("DATA: ", data)
+			setName(data.info.title)
+			setDescription(data.info.description)
+			document.title = "Apps - "+data.info.title
+
 			if (data.info["x-logo"] !== undefined) {
 				setFileBase64(data.info["x-logo"])
 			}

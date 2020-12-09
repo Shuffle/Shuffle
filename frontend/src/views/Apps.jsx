@@ -1167,6 +1167,7 @@ const Apps = (props) => {
 				return
 			}
 
+			console.log("Validating response!")
 			validateOpenApi(responseJson)
     })
 		.catch(error => {
@@ -1185,10 +1186,12 @@ const Apps = (props) => {
 
 
 		try {
-			return JSON.stringify(YAML.parse(apidata))
+			const parsed = YAML.parse(YAML.stringify(apidata))
+			//const parsed = YAML.parse(apidata))
+			return YAML.stringify(parsed)
 		} catch(error) {
 			console.log("YAML DECODE ERROR - TRY SOMETHING ELSE?: "+error)
-			setOpenApiError(error.toString())
+			setOpenApiError("Local error: "+ error.toString())
 		}
 
 		return ""
@@ -1197,19 +1200,23 @@ const Apps = (props) => {
 	// Sends the data to backend, which should return a version 3 of the same API
 	// If 200 - continue, otherwise, there's some issue somewhere
 	const validateOpenApi = (openApidata) => {
-		const newApidata = escapeApiData(openApidata)
+		var newApidata = escapeApiData(openApidata)
 		if (newApidata === "") {
+			// Used to return here
+			newApidata = openApidata
 			return
 		}
 
+		//console.log(newApidata)
+
 		setValidation(true)
 		fetch(globalUrl+"/api/v1/validate_openapi", {
-    	  	method: 'POST',
+    	method: 'POST',
 			headers: {
 				'Accept': 'application/json',
 			},
-			body: newApidata,
-	  		credentials: "include",
+			body: openApidata,
+	  	credentials: "include",
 		})
 		.then((response) => {
 			setValidation(false)

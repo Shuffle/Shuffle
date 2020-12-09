@@ -972,6 +972,7 @@ const AngularWorkflow = (props) => {
 		setLastSaved(false)
 
 		/*
+		 // Used to not be able to edit trigger-based branches. 
 			const triggercheck = workflow.triggers.find(trigger => trigger.id === event.target.data()["source"])
 			if (triggercheck === undefined) {
 		*/

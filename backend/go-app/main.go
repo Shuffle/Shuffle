@@ -5846,7 +5846,7 @@ func echoOpenapiData(resp http.ResponseWriter, request *http.Request) {
 
 	req, err := http.NewRequest("GET", newbody, nil)
 	if err != nil {
-		log.Printf("Requestbuilder err: %s", err)
+		log.Printf("[ERROR] Requestbuilder err: %s", err)
 		resp.WriteHeader(500)
 		resp.Write([]byte(`{"success": false, "reason": "Failed building request"}`))
 		return
@@ -5855,14 +5855,16 @@ func echoOpenapiData(resp http.ResponseWriter, request *http.Request) {
 	httpClient := &http.Client{}
 	newresp, err := httpClient.Do(req)
 	if err != nil {
+		log.Printf("[ERROR] Grabbing error: %s", err)
 		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed making request for data"`)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed making remote request to get the data"}`)))
 		return
 	}
 	defer newresp.Body.Close()
 
 	urlbody, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
+		log.Printf("[ERROR] URLbody error: %s", err)
 		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't get data from selected uri"`)))
 		return
@@ -6035,6 +6037,8 @@ func validateSwagger(resp http.ResponseWriter, request *http.Request) {
 	// support map[string]interface and similar (openapi3.Swagger)
 	var version versionCheck
 
+	log.Printf("API length SET: %d", len(string(body)))
+
 	isJson := false
 	err = json.Unmarshal(body, &version)
 	if err != nil {
@@ -6042,11 +6046,11 @@ func validateSwagger(resp http.ResponseWriter, request *http.Request) {
 		err = yaml.Unmarshal(body, &version)
 		if err != nil {
 			log.Printf("Yaml error (3): %s", err)
-			//resp.WriteHeader(422)
-			//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed reading openapi to json and yaml: %s"}`, err)))
-			//return
+			resp.WriteHeader(422)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed reading openapi to json and yaml. Is version defined?: %s"}`, err)))
+			return
 		} else {
-			log.Printf("Successfully parsed YAML!")
+			log.Printf("Successfully parsed YAML (3)!")
 		}
 	} else {
 		isJson = true
@@ -6056,6 +6060,8 @@ func validateSwagger(resp http.ResponseWriter, request *http.Request) {
 	if len(version.SwaggerVersion) > 0 && len(version.Swagger) == 0 {
 		version.Swagger = version.SwaggerVersion
 	}
+	log.Printf("Version: %#v", version)
+	log.Printf("OpenAPI: %s", version.OpenAPI)
 
 	if strings.HasPrefix(version.Swagger, "3.") || strings.HasPrefix(version.OpenAPI, "3.") {
 		log.Println("Handling v3 API")
@@ -6077,9 +6083,16 @@ func validateSwagger(resp http.ResponseWriter, request *http.Request) {
 			log.Printf("FIXME: NEED TO TRANSFORM FROM YAML TO JSON for %s", idstring)
 		}
 
+		swaggerdata, err := json.Marshal(swagger)
+		if err != nil {
+			log.Printf("Failed unmarshaling v3 data: %s", err)
+			resp.WriteHeader(422)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed marshalling swaggerv3 data: %s"}`, err)))
+			return
+		}
 		parsed := ParsedOpenApi{
 			ID:   idstring,
-			Body: string(body),
+			Body: string(swaggerdata),
 		}
 
 		ctx := context.Background()
@@ -6090,6 +6103,8 @@ func validateSwagger(resp http.ResponseWriter, request *http.Request) {
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed reading openapi2: %s"}`, err)))
 			return
 		}
+
+		log.Printf("Successfully set OpenAPI with ID %s", idstring)
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "id": "%s"}`, idstring)))
 		return
@@ -6124,7 +6139,7 @@ func validateSwagger(resp http.ResponseWriter, request *http.Request) {
 
 		swaggerdata, err := json.Marshal(swaggerv3)
 		if err != nil {
-			log.Printf("Failed unmarshaling v3 data: %s", err)
+			log.Printf("Failed unmarshaling v3 from v2 data: %s", err)
 			resp.WriteHeader(422)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed marshalling swaggerv3 data: %s"}`, err)))
 			return
