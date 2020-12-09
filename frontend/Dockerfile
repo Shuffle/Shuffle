@@ -8,7 +8,7 @@ ENV PATH /usr/src/app/node_modules/.bin:$PATH
 
 COPY package.json /usr/src/app/package.json
 
-RUN npm install --verbose
+RUN npm install --verbose --legacy-peer-deps
 
 # copy only required files to not trigger rebuilding every time
 COPY ./certs /usr/src/app/certs/
