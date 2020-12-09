@@ -971,15 +971,19 @@ const AngularWorkflow = (props) => {
 		setRightSideBarOpen(true)
 		setLastSaved(false)
 
-		const triggercheck = workflow.triggers.find(trigger => trigger.id === event.target.data()["source"])
-		if (triggercheck === undefined) {
-			setSelectedEdgeIndex(workflow.branches.findIndex(data => data.id === event.target.data()["id"]))
-			setSelectedEdge(event.target.data())
+		/*
+			const triggercheck = workflow.triggers.find(trigger => trigger.id === event.target.data()["source"])
+			if (triggercheck === undefined) {
+		*/
+		setSelectedEdgeIndex(workflow.branches.findIndex(data => data.id === event.target.data()["id"]))
+		setSelectedEdge(event.target.data())
 
+		/*
 		} else {
 			//alert.info("Can't edit branches from triggers") 
-			console.log("IN HERE!")
+			console.log("IN HERE: !", triggercheck)
 		}
+		*/
 
 		setSelectedAction({})
 		setSelectedTrigger({})
