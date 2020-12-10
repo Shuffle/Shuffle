@@ -379,6 +379,42 @@ const AppCreator = (props) => {
 		//}
 	}
 
+
+	const handleGetRef = (parameter, data) => {
+		if (parameter["$ref"] === undefined) {
+			return parameter
+		}
+
+		const paramsplit = parameter["$ref"].split("/")
+		if (paramsplit[0] !== "#") {
+			console.log("Bad param: ", paramsplit)
+			return parameter
+		}
+
+		var newitem = data
+		for (var key in paramsplit) {
+			var tmpparam = paramsplit[key]
+			if (tmpparam === "#") {
+				continue
+			}
+
+			if (newitem[tmpparam] === undefined) {
+				return parameter
+			}
+
+			newitem = newitem[tmpparam]
+		}
+
+		console.log("PARAM: ", newitem)
+		return newitem 
+
+		//console.log("Should get ", parameter["$ref"])
+		//const subkeys = parameter["$ref"].split("/")
+		// setBasedata(data)
+
+		//	handleGetReference(parameter["$ref"])
+	}
+
 	// Sets the data up as it should be at later points
 	// This is the data FROM the database, not what's being saved
 	const parseIncomingOpenapiData = (data) => {
@@ -447,7 +483,7 @@ const AppCreator = (props) => {
 				}
 
 				var tmpname = methodvalue.summary
-				if (methodvalue.operationId !== undefined && methodvalue.operationId !== null && methodvalue.operationId.length > 0) {
+				if (methodvalue.operationId !== undefined && methodvalue.operationId !== null && methodvalue.operationId.length > 0 && (tmpname === undefined || tmpname.length === 0)) {
 					tmpname = methodvalue.operationId
 				}
 
@@ -480,7 +516,7 @@ const AppCreator = (props) => {
 				}
 
 				for (var key in methodvalue.parameters) {
-					const parameter = methodvalue.parameters[key]
+					const parameter = handleGetRef(methodvalue.parameters[key], data)
 					if (parameter.in === "query") {
 						var tmpaction = {
 							"description": parameter.description,
@@ -510,6 +546,8 @@ const AppCreator = (props) => {
 						}
 					} else if (parameter.in === "header") {
 						newaction.headers += `${parameter.name}=${parameter.example}\n`	
+					} else {
+						console.log("WARNING: don't know how to handle: ", parameter)
 					}
 				}
 
