@@ -4023,15 +4023,18 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(`{"success": false}`))
 		return
 	} else {
+		log.Printf("App to be deleted is private")
 		private = true
 	}
 
-	q := datastore.NewQuery("workflow").Filter("org_id = ", user.ActiveOrg.Id)
+	// FIXME: Make workflows track themself INSIDE apps, or with a reference
+	q := datastore.NewQuery("workflow").Filter("org_id = ", user.ActiveOrg.Id).Limit(30)
 	var workflows []Workflow
 	_, err = dbclient.GetAll(ctx, q, &workflows)
 	if err != nil {
+		log.Printf("Failed getting related workflows for the app: %s", err)
 		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "}`))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
 	}
 
@@ -5963,11 +5966,20 @@ func getAllSchedules(ctx context.Context, orgId string) ([]ScheduleOld, error) {
 
 func getAllWorkflowApps(ctx context.Context) ([]WorkflowApp, error) {
 	var allworkflowapps []WorkflowApp
-	q := datastore.NewQuery("workflowapp").Limit(50).Order("-edited")
+	q := datastore.NewQuery("workflowapp").Order("-edited").Limit(50)
+	//Activated     bool   `json:"activated" yaml:"activated" required:false datastore:"activated"`
 
 	_, err := dbclient.GetAll(ctx, q, &allworkflowapps)
 	if err != nil {
-		return []WorkflowApp{}, err
+		if strings.Contains(fmt.Sprintf("%s", err), "ResourceExhausted") {
+			q := datastore.NewQuery("workflowapp").Limit(30).Order("-edited")
+			_, err := dbclient.GetAll(ctx, q, &allworkflowapps)
+			if err != nil {
+				return []WorkflowApp{}, err
+			}
+		} else {
+			return []WorkflowApp{}, err
+		}
 	}
 
 	return allworkflowapps, nil

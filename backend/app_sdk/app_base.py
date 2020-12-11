@@ -1039,19 +1039,20 @@ class AppBase:
                                 print("PARAM: %s" % parameter)
                                 try:
                                     values = parameter["value_replace"]
-                                    added = 0
-                                    for val in values:
-                                        newparams.append({
-                                            "name": val["key"],
-                                            "value": val["value"],
-                                            "variant": "STATIC_VALUE",
-                                            "id": "body_replacement",
-                                        })
+                                    if values != None:
+                                        added = 0
+                                        for val in values:
+                                            newparams.append({
+                                                "name": val["key"],
+                                                "value": val["value"],
+                                                "variant": "STATIC_VALUE",
+                                                "id": "body_replacement",
+                                            })
 
-                                        print("Added param %s for body" % val["key"])
-                                        added += 1
+                                            print("Added param %s for body" % val["key"])
+                                            added += 1
 
-                                    print("ADDED %d parameters for body" % added)
+                                        print("ADDED %d parameters for body" % added)
                                 except KeyError as e:
                                     print("KeyError body OpenAPI: %s" % e)
                                     pass
@@ -1427,7 +1428,10 @@ class AppBase:
                                 print("Running with params (1): %s" % baseparams) 
                                 ret = await func(**baseparams)
                                 print("Return from execution: %s" % ret)
-                                if isinstance(ret, dict) or isinstance(ret, list):
+                                if ret == None:
+                                    results.append("")
+                                    json_object = False
+                                elif isinstance(ret, dict) or isinstance(ret, list):
                                     results.append(ret)
                                     json_object = True
                                 else:

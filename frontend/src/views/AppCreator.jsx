@@ -405,7 +405,6 @@ const AppCreator = (props) => {
 			newitem = newitem[tmpparam]
 		}
 
-		console.log("PARAM: ", newitem)
 		return newitem 
 
 		//console.log("Should get ", parameter["$ref"])
@@ -422,7 +421,6 @@ const AppCreator = (props) => {
 		setBasedata(data)
 
 		if (data.info !== null && data.info !== undefined)  {
-			console.log("DATA: ", data)
 			setName(data.info.title)
 			setDescription(data.info.description)
 			document.title = "Apps - "+data.info.title
@@ -498,6 +496,55 @@ const AppCreator = (props) => {
 					"body": "",
 					"errors": [],
 					"example_response": "",
+				}
+
+				if (methodvalue["requestBody"] !== undefined) {
+					//console.log("Handle requestbody: ", methodvalue["requestBody"])
+					if (methodvalue["requestBody"]["content"] !== undefined) {
+						if (methodvalue["requestBody"]["content"]["application/json"] !== undefined) {
+							if (methodvalue["requestBody"]["content"]["application/json"]["schema"] !== undefined) {
+								if (methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"] !== undefined) {
+									var tmpobject = {}
+									for (let [prop, propvalue] of Object.entries(methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"])) {
+										tmpobject[prop] = `\$\{${prop}\}`
+									}
+
+									for (var subkey in methodvalue["requestBody"]["content"]["application/json"]["schema"]["required"]) {
+										const tmpitem = methodvalue["requestBody"]["content"]["application/json"]["schema"]["required"][subkey]
+										tmpobject[tmpitem] = `\$\{${tmpitem}\}`
+									}
+
+									newaction["body"] = JSON.stringify(tmpobject, null, 2)
+								}
+							}
+						} else if (methodvalue["requestBody"]["content"]["application/xml"] !== undefined) {
+							console.log("METHOD XML: ", methodvalue)
+							if (methodvalue["requestBody"]["content"]["application/xml"]["schema"] !== undefined) {
+								if (methodvalue["requestBody"]["content"]["application/xml"]["schema"]["properties"] !== undefined) {
+									var tmpobject = {}
+									for (let [prop, propvalue] of Object.entries(methodvalue["requestBody"]["content"]["application/xml"]["schema"]["properties"])) {
+										tmpobject[prop] = `\$\{${prop}\}`
+									}
+
+									for (var subkey in methodvalue["requestBody"]["content"]["application/xml"]["schema"]["required"]) {
+										const tmpitem = methodvalue["requestBody"]["content"]["application/xml"]["schema"]["required"][subkey]
+										tmpobject[tmpitem] = `\$\{${tmpitem}\}`
+									}
+
+									//console.log("OBJ XML: ", tmpobject)
+									//newaction["body"] = XML.stringify(tmpobject, null, 2)
+								}
+							}
+						} else {
+							if (methodvalue["requestBody"]["content"]["example"] !== undefined) {
+								if (methodvalue["requestBody"]["content"]["example"]["example"] !== undefined) {
+									newaction["body"] = methodvalue["requestBody"]["content"]["example"]["example"] 
+									//JSON.stringify(tmpobject, null, 2)
+								}
+							}
+							console.log("NOT APPLICATION/JSON: ", methodvalue["requestBody"]["content"])
+						}
+					}
 				}
 
 				// HAHAHA wtf is this.
@@ -1317,7 +1364,6 @@ const AppCreator = (props) => {
 	const findBodyParams = (body) => {
 		const regex = /\${(\w+)}/g
 		const found = body.match(regex)
-		console.log("FOUND: ", found)
 		if (found === null) {
 			setExtraBodyFields([])
 		} else {
@@ -1521,7 +1567,7 @@ const AppCreator = (props) => {
 		const queries = values[1]
 
 		if (currentAction.paths !== paths && urlPath.length > 0) {
-			console.log("IN PATHS SETTER: !", paths)
+			//console.log("IN PATHS SETTER: !", paths)
 			setActionField("paths", paths)
 		} 
 

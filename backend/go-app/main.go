@@ -3415,6 +3415,12 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("This should trigger in the cloud. Duplicate action allowed onprem.")
 	}
 
+	type ExecutionStruct struct {
+		Start             string `json:"start"`
+		ExecutionSource   string `json:"execution_source"`
+		ExecutionArgument string `json:"execution_argument"`
+	}
+
 	for _, item := range hook.Workflows {
 		log.Printf("Running webhook for workflow %s with startnode %s", item, hook.Start)
 		workflow := Workflow{
@@ -3430,22 +3436,36 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		parsedBody := string(body)
-		parsedBody = strings.Replace(parsedBody, "\"", "\\\"", -1)
+		//parsedBody = strings.Replace(parsedBody, "\"", "\\\"", -1)
 		if len(parsedBody) > 0 {
 			if string(parsedBody[0]) == `"` && string(parsedBody[len(parsedBody)-1]) == "\"" {
 				parsedBody = parsedBody[1 : len(parsedBody)-1]
 			}
 		}
 
-		bodyWrapper := fmt.Sprintf(`{"start": "%s", "execution_source": "webhook", "execution_argument": "%s"}`, hook.Start, string(parsedBody))
-		if len(hook.Start) == 0 {
-			log.Printf("No start node for hook %s - running with workflow default.", hook.Id)
-			bodyWrapper = string(parsedBody)
+		newBody := ExecutionStruct{
+			Start:             hook.Start,
+			ExecutionSource:   "webhook",
+			ExecutionArgument: string(parsedBody),
 		}
+
+		b, err := json.Marshal(newBody)
+		if err != nil {
+			log.Printf("Failed newBody marshaling: %s", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		//bodyWrapper := fmt.Sprintf(`{"start": "%s", "execution_source": "webhook", "execution_argument": "%s"}`, hook.Start, string(parsedBody))
+		//if len(hook.Start) == 0 {
+		//	log.Printf("No start node for hook %s - running with workflow default.", hook.Id)
+		//	bodyWrapper = string(parsedBody)
+		//}
 
 		newRequest := &http.Request{
 			Method: "POST",
-			Body:   ioutil.NopCloser(strings.NewReader(bodyWrapper)),
+			Body:   ioutil.NopCloser(bytes.NewReader(b)),
 		}
 
 		// OrgId: activeOrgs[0].Id,

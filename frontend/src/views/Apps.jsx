@@ -907,7 +907,7 @@ const Apps = (props) => {
 					<div style={{marginTop: 15}}>
 						{apps.length > 0 ? 
 							filteredApps.length > 0 ? 
-								<div style={{height: "75vh", overflowY: "scroll"}}>
+								<div style={{height: "75vh", overflowY: "auto"}}>
 									{filteredApps.map(app => {
 										return (
 											appPaper(app)

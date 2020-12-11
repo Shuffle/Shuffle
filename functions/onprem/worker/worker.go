@@ -1383,20 +1383,20 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 		// FIXME - clean up stopped (remove) containers with this execution id
 		newresp, err := client.Do(req)
 		if err != nil {
-			log.Printf("Failed making request: %s", err)
+			log.Printf("[ERROR] Failed making request: %s", err)
 			time.Sleep(time.Duration(sleepTime) * time.Second)
 			continue
 		}
 
 		body, err := ioutil.ReadAll(newresp.Body)
 		if err != nil {
-			log.Printf("Failed reading body: %s", err)
+			log.Printf("[ERROR] Failed reading body: %s", err)
 			time.Sleep(time.Duration(sleepTime) * time.Second)
 			continue
 		}
 
 		if newresp.StatusCode != 200 {
-			log.Printf("Err: %s\nStatusCode: %d", string(body), newresp.StatusCode)
+			log.Printf("[ERROR] Bad statuscode: %s\nStatusCode: %d", string(body), newresp.StatusCode)
 			time.Sleep(time.Duration(sleepTime) * time.Second)
 			continue
 		}
