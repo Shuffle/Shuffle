@@ -402,7 +402,7 @@ const AngularWorkflow = (props) => {
 
 						if (!visited.includes(item.action.label)) {
 							if (executionRunning) {
-								alert.show("WAITING FOR "+item.action.label+" with result "+item.result)
+								//alert.show("WAITING FOR "+item.action.label+" with result "+item.result)
 								visited.push(item.action.label)
 								setVisited(visited)
 							}
@@ -424,7 +424,7 @@ const AngularWorkflow = (props) => {
 
 						if (!visited.includes(item.action.label)) {
 							if (executionRunning) {
-								alert.show("Success in node "+item.action.label)
+								//alert.show("Success in node "+item.action.label)
 								//+" with result "+item.result)
 								visited.push(item.action.label)
 								setVisited(visited)
@@ -459,7 +459,7 @@ const AngularWorkflow = (props) => {
 						currentnode.addClass('failure-highlight')
 
 						if (!visited.includes(item.action.label)) {
-							alert.error("Success for "+item.action.label+" with result "+item.result)
+							alert.error("Error for "+item.action.label+" with result "+item.result)
 							visited.push(item.action.label)
 							setVisited(visited)
 						}

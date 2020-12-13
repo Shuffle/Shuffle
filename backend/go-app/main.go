@@ -3435,18 +3435,18 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 			return
 		}
 
-		parsedBody := string(body)
+		//parsedBody := string(body)
 		//parsedBody = strings.Replace(parsedBody, "\"", "\\\"", -1)
-		if len(parsedBody) > 0 {
-			if string(parsedBody[0]) == `"` && string(parsedBody[len(parsedBody)-1]) == "\"" {
-				parsedBody = parsedBody[1 : len(parsedBody)-1]
-			}
-		}
+		//if len(parsedBody) > 0 {
+		//	if string(parsedBody[0]) == `"` && string(parsedBody[len(parsedBody)-1]) == "\"" {
+		//		parsedBody = parsedBody[1 : len(parsedBody)-1]
+		//	}
+		//}
 
 		newBody := ExecutionStruct{
 			Start:             hook.Start,
 			ExecutionSource:   "webhook",
-			ExecutionArgument: string(parsedBody),
+			ExecutionArgument: string(body),
 		}
 
 		b, err := json.Marshal(newBody)
@@ -7611,10 +7611,11 @@ func handleEditOrg(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	type ReturnData struct {
-		Image       string `json:"image" datastore:"image"`
-		Name        string `json:"name" datastore:"name"`
-		Description string `json:"description" datastore:"description"`
-		OrgId       string `json:"org_id" datastore:"org_id"`
+		Image       string   `json:"image" datastore:"image"`
+		Name        string   `json:"name" datastore:"name"`
+		Description string   `json:"description" datastore:"description"`
+		OrgId       string   `json:"org_id" datastore:"org_id"`
+		Defaults    Defaults `json:"defaults" datastore:"defaults"`
 	}
 
 	var tmpData ReturnData
@@ -7685,6 +7686,8 @@ func handleEditOrg(resp http.ResponseWriter, request *http.Request) {
 	org.Image = tmpData.Image
 	org.Name = tmpData.Name
 	org.Description = tmpData.Description
+	org.Defaults = tmpData.Defaults
+
 	//log.Printf("Org: %#v", org)
 	err = setOrg(ctx, *org, org.Id)
 	if err != nil {

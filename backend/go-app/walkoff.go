@@ -116,6 +116,14 @@ type Org struct {
 	SyncFeatures SyncFeatures `json:"sync_features" datastore:"sync_features"`
 	Created      int64        `json:"created" datastore:"created"`
 	Edited       int64        `json:"edited" datastore:"edited"`
+	Defaults     Defaults     `json:"defaults" datastore:"defaults"`
+}
+
+type Defaults struct {
+	AppDownloadRepo        string `json:"app_download_repo" datastore:"app_download_repo"`
+	AppDownloadBranch      string `json:"app_download_branch" datastore:"app_download_branch"`
+	WorkflowDownloadRepo   string `json:"workflow_download_repo" datastore:"workflow_download_repo"`
+	WorkflowDownloadBranch string `json:"workflow_download_branch" datastore:"workflow_download_branch"`
 }
 
 type AppAuthenticationStorage struct {
@@ -5134,9 +5142,12 @@ func loadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// Field1 & 2 can be a lot of things..
+	// Field1 & 2 can be a lot of things.
+	// Field1 = Username
+	// Field2 = Password
 	type tmpStruct struct {
 		URL         string `json:"url"`
+		Branch      string `json:"branch"`
 		Field1      string `json:"field_1"`
 		Field2      string `json:"field_2"`
 		ForceUpdate bool   `json:"force_update"`
@@ -5157,6 +5168,10 @@ func loadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 	if strings.Contains(tmpBody.URL, "github") || strings.Contains(tmpBody.URL, "gitlab") || strings.Contains(tmpBody.URL, "bitbucket") {
 		cloneOptions := &git.CloneOptions{
 			URL: tmpBody.URL,
+		}
+
+		if len(tmpBody.Branch) > 0 && tmpBody.Branch != "master" && tmpBody.Branch != "main" {
+			cloneOptions.ReferenceName = plumbing.ReferenceName(tmpBody.Branch)
 		}
 
 		// FIXME: Better auth.
