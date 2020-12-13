@@ -134,6 +134,7 @@ const Apps = (props) => {
 	const [field2, setField2] = React.useState("")
 	const [cursearch, setCursearch] = React.useState("")
 	const [sharingConfiguration, setSharingConfiguration] = React.useState("you")
+	const [downloadBranch, setDownloadBranch] = React.useState("master")
 
 	const [isDropzone, setIsDropzone] = React.useState(false);
 	const upload = React.useRef(null);
@@ -959,6 +960,7 @@ const Apps = (props) => {
 
 		const parsedData = {
 			"url": url,
+			"branch": downloadBranch || 'master'
 		}
 
 		if (field1.length > 0) {
@@ -988,18 +990,23 @@ const Apps = (props) => {
 			}
 			setIsLoading(false)
 			stop()
+			setValidation(false)
 
 			return response.json()
 		})
     .then((responseJson) => {
-				console.log("DATA: ", responseJson)
-				if (responseJson.reason !== undefined) {
-					alert.error("Failed loading: "+responseJson.reason)
-				}
+			console.log("DATA: ", responseJson)
+			if (responseJson.reason !== undefined) {
+				alert.error("Failed loading: "+responseJson.reason)
+			}
 		})
 		.catch(error => {
 			console.log("ERROR: ", error.toString())
 			alert.error(error.toString())
+
+			stop()
+			setIsLoading(false)
+			setValidation(false)
 		})
 	}
 
@@ -1321,6 +1328,25 @@ const Apps = (props) => {
 					placeholder="https://github.com/frikky/shuffle-apps"
 					fullWidth
 					/>
+				<span style={{marginTop: 10}}>Branch (default value is "master"):</span>
+					<div style={{display: "flex"}}>
+						<TextField
+							style={{backgroundColor: inputColor}}
+							variant="outlined"
+							margin="normal"
+							value={downloadBranch}
+							InputProps={{
+								style:{
+									color: "white",
+									height: "50px",
+									fontSize: "1em",
+								},
+							}}
+							onChange={e => setDownloadBranch(e.target.value)}
+							placeholder="master"
+							fullWidth
+							/>
+					</div>
 
 				<span style={{marginTop: 10}}>Authentication (optional - private repos etc):</span>
 				<div style={{display: "flex"}}>
