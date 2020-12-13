@@ -170,18 +170,12 @@ class AppBase:
 
             print("PARAMLIST: %s" % paramlist)
 
-                
             #newlist[subitem[0]]
-
             #if len(newlist) > 0:
             #    itemlength = len(newlist[0])
 
             # How do we get it back, ordered?
             #for item in cartesian:
-
-
-                
-
             #print("Listlengths: %s" % listlengths)
             #paramlist = [baseparams]
 
@@ -1563,15 +1557,27 @@ class AppBase:
                             print("APP_SDK DONE: Starting MULTI execution (length: %d) with values %s" % (minlength, multi_parameters))
                             # 1. Use number of executions based on the arrays being similar
                             # 2. Find the right value from the parsed multi_params
-                            results = []
-                            json_object = False
-                            for i in range(0, minlength):
-                                # To be able to use the results as a list:
-                                print("1: %s" % multi_parameters)
-                                #baseparams = json.loads(json.dumps(multi_parameters))
-                                baseparams = copy.deepcopy(multi_parameters)
 
-                                print("2: %s: %s" % (type(baseparams), baseparams))
+                            print("Running without outer loop")
+                            json_object = False
+                            results = await self.run_recursed_items(func, multi_parameters, {})
+                            if isinstance(results, dict) or isinstance(results, list):
+                                json_object = True
+
+                            #for i in range(0, minlength):
+                            #    # To be able to use the results as a list:
+                            #    print("1: %s" % multi_parameters)
+                            #    #baseparams = json.loads(json.dumps(multi_parameters))
+                            #    baseparams = copy.deepcopy(multi_parameters)
+
+                            #    print("2: %s: %s" % (type(baseparams), baseparams))
+
+                            #    print("4")
+                            #    print("Running with params (1): %s" % baseparams) 
+
+                            #    results = await self.run_recursed_items(func, baseparams, {})
+                            #    if isinstance(results, dict) or isinstance(results, list):
+                            #        json_object = True
 
                                 # {'call': ['GoogleSafebrowsing_2_0', 'VirusTotal_GetReport_3_0']}
                                 # 1. Check if list length is same as minlength
@@ -1580,68 +1586,66 @@ class AppBase:
                                 # arraylength = 4 ["1", "2", "3", "4"]
                                 # minlength = 12 - 12/3 = 4 per item = ["1", "1", "1", "1", "2", "2", ...]
 
-                                try:
-                                    firstlist = True
-                                    for key, value in baseparams.items():
-                                        print("Itemtype: %s" % type(value))
-                                        if isinstance(value, list):
-                                            try:
-                                                newvalue = value[i]
-                                            except IndexError:
-                                                pass
+                                #try:
+                                #    firstlist = True
+                                #    for key, value in baseparams.items():
+                                #        print("Itemtype: %s" % type(value))
+                                #        if isinstance(value, list):
+                                #            try:
+                                #                newvalue = value[i]
+                                #            except IndexError:
+                                #                pass
 
-                                            if len(value) != minlength and len(value) > 0:
-                                                newarray = []
-                                                print("VALUE: ", value)
-                                                additiontime = minlength/len(value)
-                                                print("Bad length for value: %d - should be %d. Additiontime: %d" % (len(value), minlength, additiontime))
-                                                if firstlist:
-                                                    print("Running normal list (FIRST)")
-                                                    for subvalue in value:
-                                                        for number in range(int(additiontime)):
-                                                            newarray.append(subvalue)
-                                                else:
-                                                    #print("Running secondary lists")
-                                                    ## 1. Set up length of array
-                                                    ## 2. Put values spread out
-                                                    # FIXME: This works well, except if lists are same length
-                                                    newarray = [""] * minlength
+                                #            if len(value) != minlength and len(value) > 0:
+                                #                newarray = []
+                                #                print("VALUE: ", value)
+                                #                additiontime = minlength/len(value)
+                                #                print("Bad length for value: %d - should be %d. Additiontime: %d" % (len(value), minlength, additiontime))
+                                #                if firstlist:
+                                #                    print("Running normal list (FIRST)")
+                                #                    for subvalue in value:
+                                #                        for number in range(int(additiontime)):
+                                #                            newarray.append(subvalue)
+                                #                else:
+                                #                    #print("Running secondary lists")
+                                #                    ## 1. Set up length of array
+                                #                    ## 2. Put values spread out
+                                #                    # FIXME: This works well, except if lists are same length
+                                #                    newarray = [""] * minlength
 
-                                                    cnt = 0
-                                                    for number in range(int(additiontime)):
-                                                        for subvaluerange in range(len(value)):
-                                                            # newlocation = number+(additiontime*subvaluerange)
-                                                            # print("%d+(%d*%d) = %d. VAL: %s" % (number, additiontime, subvaluerange, newlocation, value[subvaluerange]))
-                                                            # Reverse if same length?
-                                                            if int(minlength/len(value)) == len(value):
-                                                                tmp = int(len(value)-subvaluerange-1)
-                                                                print("NEW: %d" % tmp)
-                                                                newarray[cnt] = value[tmp] 
-                                                            else:
-                                                                newarray[cnt] = value[subvaluerange] 
-                                                            cnt += 1
+                                #                    cnt = 0
+                                #                    for number in range(int(additiontime)):
+                                #                        for subvaluerange in range(len(value)):
+                                #                            # newlocation = number+(additiontime*subvaluerange)
+                                #                            # print("%d+(%d*%d) = %d. VAL: %s" % (number, additiontime, subvaluerange, newlocation, value[subvaluerange]))
+                                #                            # Reverse if same length?
+                                #                            if int(minlength/len(value)) == len(value):
+                                #                                tmp = int(len(value)-subvaluerange-1)
+                                #                                print("NEW: %d" % tmp)
+                                #                                newarray[cnt] = value[tmp] 
+                                #                            else:
+                                #                                newarray[cnt] = value[subvaluerange] 
+                                #                            cnt += 1
 
-                                                #print("Newarray =", newarray)
-                                                newvalue = newarray[i]
-                                                firstlist = False
+                                #                #print("Newarray =", newarray)
+                                #                newvalue = newarray[i]
+                                #                firstlist = False
 
-                                            baseparams[key] = newvalue
+                                #            baseparams[key] = newvalue
 
-                                    print("3")
-                                except IndexError as e:
-                                    print("IndexError: %s" % e)
-                                    baseparams[key] = "IndexError: %s" % e
-                                except KeyError as e:
-                                    print("KeyError: %s" % e)
-                                    baseparams[key] = "KeyError: %s" % e
+                                #    print("3")
+                                #except IndexError as e:
+                                #    print("IndexError: %s" % e)
+                                #    baseparams[key] = "IndexError: %s" % e
+                                #except KeyError as e:
+                                #    print("KeyError: %s" % e)
+                                #    baseparams[key] = "KeyError: %s" % e
+                                #print("4")
+                                #print("Running with params (1): %s" % baseparams) 
 
-
-                                print("4")
-                                print("Running with params (1): %s" % baseparams) 
-
-                                results = await self.run_recursed_items(func, baseparams, {})
-                                if isinstance(results, dict) or isinstance(results, list):
-                                    json_object = True
+                                #results = await self.run_recursed_items(func, baseparams, {})
+                                #if isinstance(results, dict) or isinstance(results, list):
+                                #    json_object = True
 
                                 # Check the structure here. If "isloop", try to recurse?
                                 # ret, is_loop = recurse_json(innervalue, parsersplit[outercnt+1:])
