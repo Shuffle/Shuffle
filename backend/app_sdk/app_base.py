@@ -53,6 +53,212 @@ class AppBase:
             if ret.status_code != 200:
                 self.logger.info(ret.text)
 
+    async def cartesian_product(self, L):
+        if L:
+            return {(a, ) + b for a in L[0] for b in await self.cartesian_product(L[1:])}
+        else:
+            return {()}
+
+    # Returns a list of all the executions to be done in the inner loop
+    # FIXME: Doesn't take into account whether you actually WANT to loop or not
+    # Check if the last part of the value is #?
+    async def get_param_multipliers(self, baseparams):
+        # Example:
+        # {'call': ['hello', 'hello4'], 'call2': ['hello2', 'hello3'], 'call3': '1'}
+        # 
+        # Should become this because of pairs (all same-length arrays, PROBABLY indicates same source node's values.
+        # [
+        #   {'call': 'hello', 'call2': 'hello2', 'call3': '1'},
+        #   {'call': 'hello4', 'call2': 'hello3', 'call3': '1'}
+        # ] 
+        # 
+        # ----------------------------------------------------------------------
+        # Example2:
+        # {'call': ['hello'], 'call2': ['hello2', 'hello3'], 'call3': '1'}
+        # 
+        # Should become this because NOT pairs/triplets:
+        # [
+        #   {'call': 'hello', 'call2': 'hello2', 'call3': '1'},
+        #   {'call': 'hello', 'call2': 'hello3', 'call3': '1'}
+        # ] 
+        # 
+        # ----------------------------------------------------------------------
+        # Example3:
+        # {'call': ['hello', 'hello2'], 'call2': ['hello3', 'hello4', 'hello5'], 'call3': '1'}
+        # 
+        # Should become this because arrays are not same length, aka no pairs/triplets. This is the multiplier effect. 2x3 arrays = 6 iterations
+        # [
+        #   {'call': 'hello', 'call2': 'hello3', 'call3': '1'},
+        #   {'call': 'hello', 'call2': 'hello4', 'call3': '1'},
+        #   {'call': 'hello', 'call2': 'hello5', 'call3': '1'},
+        #   {'call': 'hello2', 'call2': 'hello3', 'call3': '1'},
+        #   {'call': 'hello2', 'call2': 'hello4', 'call3': '1'},
+        #   {'call': 'hello2', 'call2': 'hello5', 'call3': '1'}
+        # ] 
+        # To achieve this, we'll do this:
+        # 1. For the first array, take the total amount(y) (2x3=6) and divide it by the current array (x): 2. x/y = 3. This means do 3 of each value
+        # 2. For the second array, take the total amount(y) (2x3=6) and divide it by the current array (x): 3. x/y = 2. 
+        # 3. What does the 3rd array do? Same, but ehhh?
+
+        paramlist = []
+        listitems = []
+        listlengths = []
+        all_lists = []
+        all_list_keys = []
+        for key, value in baseparams.items():
+            if isinstance(value, list):
+                if len(value) <= 1:
+                    if len(value) == 1:
+                        baseparams[key] = value[0]
+
+                else:
+                    if len(value) not in listlengths:
+                        listlengths.append(len(value))
+
+                    listitems.append(
+                        {
+                            key: len(value)
+                        }
+                    )
+                    
+                all_list_keys.append(key)
+                all_lists.append(baseparams[key])
+            else:
+                print("%s is not a list: " % value)
+
+        print("Listlengths: %s" % listlengths)
+        if len(listlengths) <= 1:
+            print("NO MULTIPLIER NECESSARY. Length is %d" % len(listitems))
+            for item in listitems:
+                # This loops should always be length 1
+                for key, value in item.items():
+                    if isinstance(value, int):
+                        print("\nShould run key %s %d times from %s" % (key, value, baseparams[key]))
+                        if len(paramlist) == value:
+                            print("List ALREADY exists - just changing values")
+                            for subloop in range(value):
+                                baseitem = copy.deepcopy(baseparams)
+                                paramlist[subloop][key] = baseparams[key][subloop]
+                        else:
+                            print("List DOESNT exist - ADDING values")
+                            for subloop in range(value):
+                                baseitem = copy.deepcopy(baseparams)
+                                baseitem[key] = baseparams[key][subloop]
+                                paramlist.append(baseitem)
+                
+        else:
+            print("Multipliers to handle: %s" % listitems)
+            newlength = 1
+            for item in listitems:
+                for key, value in item.items():
+                    newlength = newlength * value
+
+            print("Newlength of array: %d. Lists: %s" % (newlength, all_lists))
+            # Get the cartesian product of the arrays
+            cartesian = await self.cartesian_product(all_lists)
+            newlist = []
+            for item in cartesian:
+                newlist.append(list(item))
+
+            newobject = {}
+            for subitem in range(len(newlist)):
+                baseitem = copy.deepcopy(baseparams)
+                for key in range(len(newlist[subitem])):
+                    baseitem[all_list_keys[key]] = newlist[subitem][key]
+
+                paramlist.append(baseitem)
+
+            print("PARAMLIST: %s" % paramlist)
+
+                
+            #newlist[subitem[0]]
+
+            #if len(newlist) > 0:
+            #    itemlength = len(newlist[0])
+
+            # How do we get it back, ordered?
+            #for item in cartesian:
+
+
+                
+
+            #print("Listlengths: %s" % listlengths)
+            #paramlist = [baseparams]
+
+        print("Return paramlist: %s" % paramlist)
+        return paramlist
+            
+
+    # Runs recursed versions with inner loops and such 
+    async def run_recursed_items(self, func, baseparams, loop_wrapper):
+        has_loop = False
+
+        newparams = {}
+        for key, value in baseparams.items():
+            if isinstance(value, list) and len(value) == 1 and isinstance(value[0], list):
+                try:
+                    loop_wrapper[key] += 1
+                except IndexError:
+                    loop_wrapper[key] = 1
+                except KeyError:
+                    loop_wrapper[key] = 1
+
+                print("Key %s is a list: %s" % (key, value))
+                newparams[key] = value[0]
+                has_loop = True 
+            else:
+                print("Key %s is NOT a list within a list: %s" % (key, value))
+                newparams[key] = value
+        
+        results = []
+        if has_loop:
+            print("Should run inner loop: %s" % newparams)
+            ret = await self.run_recursed_items(func, newparams, loop_wrapper)
+
+        else:
+            print("Should run with params (inner): %s" % newparams)
+
+            # 1. Find the loops that are required and create new multipliers
+            # If here: check for multipliers within this scope.
+            ret = []
+            param_multiplier = await self.get_param_multipliers(newparams)
+            print("Multiplier length: %d" % len(param_multiplier))
+            for subparams in param_multiplier:
+                ret.append(await func(**subparams))
+
+            print("Ret length: %d" % len(ret))
+
+            if len(ret) == 1:
+                ret = ret[0]
+
+        print("Return from execution: %s" % ret)
+        if ret == None:
+            results.append("")
+            json_object = False
+        elif isinstance(ret, dict):
+            results.append(ret)
+            json_object = True
+        elif isinstance(ret, list):
+            results.append(ret)
+            json_object = True
+        else:
+            ret = ret.replace("\"", "\\\"", -1)
+
+            try:
+                results.append(json.loads(ret))
+                json_object = True
+            except json.decoder.JSONDecodeError as e:
+                #print("Json: %s" % e)
+                results.append(ret)
+
+        if len(results) == 1: 
+            results = results[0]
+
+        print("\nLOOP: %s\nRESULTS: %s" % (loop_wrapper, results))
+        return results
+
+
+
     # Things to consider for files:
     # - How can you download / stream a file? 
     # - Can you decide if you want a stream or the files directly?
@@ -871,6 +1077,9 @@ class AppBase:
                     if sourcevalue.isdigit() and destinationvalue.isdigit():
                         if int(sourcevalue) > int(destinationvalue):
                             return True
+
+                    print("Not larger than.")
+                    return False 
                 except AttributeError as e:
                     self.logger.error("Condition larger than failed with values %s and %s: %s" % (sourcevalue, destinationvalue, e))
                     return False
@@ -879,6 +1088,9 @@ class AppBase:
                     if sourcevalue.isdigit() and destinationvalue.isdigit():
                         if int(sourcevalue) < int(destinationvalue):
                             return True
+                        
+                    print("Not small than.")
+                    return False
                 except AttributeError as e:
                     self.logger.error("Condition smaller than failed with values %s and %s: %s" % (sourcevalue, destinationvalue, e))
                     return False
@@ -1426,23 +1638,30 @@ class AppBase:
 
                                 print("4")
                                 print("Running with params (1): %s" % baseparams) 
-                                ret = await func(**baseparams)
-                                print("Return from execution: %s" % ret)
-                                if ret == None:
-                                    results.append("")
-                                    json_object = False
-                                elif isinstance(ret, dict) or isinstance(ret, list):
-                                    results.append(ret)
-                                    json_object = True
-                                else:
-                                    ret = ret.replace("\"", "\\\"", -1)
 
-                                    try:
-                                        results.append(json.loads(ret))
-                                        json_object = True
-                                    except json.decoder.JSONDecodeError as e:
-                                        #print("Json: %s" % e)
-                                        results.append(ret)
+                                results = await self.run_recursed_items(func, baseparams, {})
+                                if isinstance(results, dict) or isinstance(results, list):
+                                    json_object = True
+
+                                # Check the structure here. If "isloop", try to recurse?
+                                # ret, is_loop = recurse_json(innervalue, parsersplit[outercnt+1:])
+                                #ret = await func(**baseparams)
+                                #print("Return from execution: %s" % ret)
+                                #if ret == None:
+                                #    results.append("")
+                                #    json_object = False
+                                #elif isinstance(ret, dict) or isinstance(ret, list):
+                                #    results.append(ret)
+                                #    json_object = True
+                                #else:
+                                #    ret = ret.replace("\"", "\\\"", -1)
+
+                                #    try:
+                                #        results.append(json.loads(ret))
+                                #        json_object = True
+                                #    except json.decoder.JSONDecodeError as e:
+                                #        #print("Json: %s" % e)
+                                #        results.append(ret)
 
                                 #print("Inner ret parsed: %s" % ret)
 
@@ -1460,6 +1679,7 @@ class AppBase:
                                             result += item
                                         except json.decoder.JSONDecodeError as e:
                                             # Common nested issue which puts " around everything
+                                            print("Decodingerror: %s" % e)
                                             try:
                                                 tmpitem = item.replace("\\\"", "\"", -1)
                                                 json.loads(tmpitem)
@@ -1473,7 +1693,7 @@ class AppBase:
                                     result = result[:-2]
                                     result += "]"
                             else:
-                                print("Normal result?")
+                                print("Normal result - no list?")
                                 result = results
                                 
                     print("RESULT: %s" % result)
