@@ -5910,7 +5910,7 @@ func getWorkflowExecutions(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflow, err := getWorkflow(ctx, fileId)
 	if err != nil {
-		log.Printf("Failed getting the workflow locally (get executions): %s", err)
+		log.Printf("Failed getting the workflow %s locally (get executions): %s", fileId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -5987,7 +5987,7 @@ func getAllWorkflowApps(ctx context.Context) ([]WorkflowApp, error) {
 	_, err := dbclient.GetAll(ctx, q, &allworkflowapps)
 	if err != nil {
 		if strings.Contains(fmt.Sprintf("%s", err), "ResourceExhausted") {
-			q := datastore.NewQuery("workflowapp").Limit(30).Order("-edited")
+			q := datastore.NewQuery("workflowapp").Limit(40).Order("-edited")
 			_, err := dbclient.GetAll(ctx, q, &allworkflowapps)
 			if err != nil {
 				return []WorkflowApp{}, err

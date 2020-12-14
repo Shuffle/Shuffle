@@ -127,7 +127,10 @@ class AppBase:
                 print("%s is not a list: " % value)
 
         print("Listlengths: %s" % listlengths)
-        if len(listlengths) <= 1:
+        if len(listlengths) == 0:
+            print("NO multiplier. Running a single iteration.")
+            paramlist.append(baseparams)
+        elif len(listlengths) == 1:
             print("NO MULTIPLIER NECESSARY. Length is %d" % len(listitems))
             for item in listitems:
                 # This loops should always be length 1
@@ -189,6 +192,17 @@ class AppBase:
 
         newparams = {}
         for key, value in baseparams.items():
+            if isinstance(value, list) and len(value) > 0:
+                print("In list check")
+                try:
+                    value[0] = json.loads(value[0])
+                except json.decoder.JSONDecodeError as e:
+                    print("JSON casting error: %s" % e)
+                except TypeError as e:
+                    print("TypeError: %s" % e)
+
+                print("POST list check")
+
             if isinstance(value, list) and len(value) == 1 and isinstance(value[0], list):
                 try:
                     loop_wrapper[key] += 1
@@ -202,6 +216,7 @@ class AppBase:
                 has_loop = True 
             else:
                 print("Key %s is NOT a list within a list: %s" % (key, value))
+
                 newparams[key] = value
         
         results = []
@@ -216,6 +231,7 @@ class AppBase:
             # If here: check for multipliers within this scope.
             ret = []
             param_multiplier = await self.get_param_multipliers(newparams)
+
             print("Multiplier length: %d" % len(param_multiplier))
             for subparams in param_multiplier:
                 tmp = await func(**subparams)
@@ -248,7 +264,7 @@ class AppBase:
             results.append(ret)
             json_object = True
         elif isinstance(ret, list):
-            results.append(ret)
+            results = ret
             json_object = True
         else:
             ret = ret.replace("\"", "\\\"", -1)
@@ -1324,7 +1340,7 @@ class AppBase:
                                 print("Before first part in multiexec!")
                                 handled = False
                                 if len(actualitem[0]) > 2 and actualitem[0][1] == "SHUFFLE_NO_SPLITTER":
-                                    print("Pre replacement: %s" % actualitem[0][2])
+                                    print("(1) Pre replacement: %s" % actualitem[0][2])
                                     tmpitem = value
 
                                     replacement = actualitem[0][2]
@@ -1379,6 +1395,7 @@ class AppBase:
                                     multi_execution_lists.append(json_replacement)
                                     print("MULTI finished: %s" % json_replacement)
                                 else:
+                                    print("(2) Pre replacement: %s" % actualitem)
                                     # This is here to handle for loops within variables.. kindof
                                     # 1. Find the length of the longest array
                                     # 2. Build an array with the base values based on parameter["value"] 
