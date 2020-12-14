@@ -218,10 +218,25 @@ class AppBase:
             param_multiplier = await self.get_param_multipliers(newparams)
             print("Multiplier length: %d" % len(param_multiplier))
             for subparams in param_multiplier:
-                ret.append(await func(**subparams))
+                tmp = await func(**subparams)
+
+                print("Return from execution: %s" % ret)
+                if tmp == None:
+                    ret.append("")
+                elif isinstance(tmp, dict):
+                    ret.append(tmp)
+                elif isinstance(tmp, list):
+                    ret.append(tmp)
+                else:
+                    tmp = tmp.replace("\"", "\\\"", -1)
+
+                    try:
+                        ret.append(json.loads(tmp))
+                    except json.decoder.JSONDecodeError as e:
+                        #print("Json: %s" % e)
+                        ret.append(tmp)
 
             print("Ret length: %d" % len(ret))
-
             if len(ret) == 1:
                 ret = ret[0]
 
@@ -1477,6 +1492,7 @@ class AppBase:
                                     print("SCHEMA ERROR IN FILE HANDLING: %s" % e)
 
                         # Fix lists here
+                        # FIXME: This doesn't really do anything anymore
                         print("CHECKING multi execution list!")
                         if len(multi_execution_lists) > 0:
                             print("\n Multi execution list has more data: %d" % len(multi_execution_lists))
@@ -1558,7 +1574,7 @@ class AppBase:
                             # 1. Use number of executions based on the arrays being similar
                             # 2. Find the right value from the parsed multi_params
 
-                            print("Running without outer loop")
+                            print("Running WITHOUT outer loop")
                             json_object = False
                             results = await self.run_recursed_items(func, multi_parameters, {})
                             if isinstance(results, dict) or isinstance(results, list):

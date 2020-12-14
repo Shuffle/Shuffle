@@ -948,6 +948,12 @@ func validateParameterName(name string) string {
 		}
 	}
 
+	newname = strings.ReplaceAll(newname, " ", "_")
+	newname = strings.ReplaceAll(newname, ",", "_")
+	newname = strings.ReplaceAll(newname, ".", "_")
+	newname = strings.ReplaceAll(newname, "|", "_")
+	newname = strings.ReplaceAll(newname, "-", "_")
+
 	return newname
 }
 
@@ -1001,6 +1007,7 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 			parsedName = strings.ReplaceAll(parsedName, ",", "_")
 			parsedName = strings.ReplaceAll(parsedName, ".", "_")
 			parsedName = strings.ReplaceAll(parsedName, "|", "_")
+			parsedName = strings.ReplaceAll(parsedName, "-", "_")
 			parsedName = validateParameterName(parsedName)
 			param.Value.Name = parsedName
 			path.Connect.Parameters[counter].Value.Name = parsedName
