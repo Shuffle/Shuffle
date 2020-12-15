@@ -589,10 +589,10 @@ const Apps = (props) => {
 					<div style={{marginRight: 15, marginTop: 10}}>
 						{imageline}
 					</div>
-					<div style={{maxWidth: "75%", overflow: "hidden"}}>
+					<div style={{maxWidth: "85%", overflow: "hidden"}}>
 						<h2 style={{marginTop: 20, marginBottom: 0, }}>{newAppname}</h2>
 						<p style={{marginTop: 5, marginBottom: 0,}}>Version {selectedApp.app_version}</p>	
-						<p style={{marginTop: 5, marginBottom: 0}}>{description}</p>	
+						<p style={{marginTop: 5, marginBottom: 0, maxHeight: 150, overflowY: "auto", overflowX: "hidden",}}>{description}</p>	
 					</div>
 				</div>
 				{activateButton}

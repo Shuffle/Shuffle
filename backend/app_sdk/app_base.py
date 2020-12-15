@@ -105,21 +105,36 @@ class AppBase:
         listlengths = []
         all_lists = []
         all_list_keys = []
+
+        #check_value = "$Filter_list_testing.wrapper.#.tmp"
+        #self.action = action
+
+
         for key, value in baseparams.items():
+            check_value = ""
+            for param in self.action["parameters"]:
+                if param["name"] == key:
+                    check_value = param["value"]
+                    break
+
+            print("\nCHECK: %s" % check_value)
             if isinstance(value, list):
                 if len(value) <= 1:
                     if len(value) == 1:
                         baseparams[key] = value[0]
 
                 else:
-                    if len(value) not in listlengths:
-                        listlengths.append(len(value))
+                    if not check_value.endswith("#"):
+                        print("Adding WITHOUT looping list")
+                    else:
+                        if len(value) not in listlengths:
+                            listlengths.append(len(value))
 
-                    listitems.append(
-                        {
-                            key: len(value)
-                        }
-                    )
+                        listitems.append(
+                            {
+                                key: len(value)
+                            }
+                        )
                     
                 all_list_keys.append(key)
                 all_lists.append(baseparams[key])
@@ -132,6 +147,7 @@ class AppBase:
             paramlist.append(baseparams)
         elif len(listlengths) == 1:
             print("NO MULTIPLIER NECESSARY. Length is %d" % len(listitems))
+
             for item in listitems:
                 # This loops should always be length 1
                 for key, value in item.items():
@@ -244,7 +260,7 @@ class AppBase:
                 elif isinstance(tmp, list):
                     ret.append(tmp)
                 else:
-                    tmp = tmp.replace("\"", "\\\"", -1)
+                    #tmp = tmp.replace("\"", "\\\"", -1)
 
                     try:
                         ret.append(json.loads(tmp))
@@ -432,6 +448,8 @@ class AppBase:
             "started_at": int(time.time()),
             "status": "EXECUTING"
         }
+
+        self.action = action
         self.logger.info("ACTION RESULT (start): %s", action_result)
 
         if len(self.action) == 0:
