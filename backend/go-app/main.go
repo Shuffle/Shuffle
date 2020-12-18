@@ -1727,6 +1727,14 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	// FIXME: Remove this dependency by updating users' orgs when org itself is updated
+	org, err := getOrg(ctx, userInfo.ActiveOrg.Id)
+	if err == nil {
+		userInfo.ActiveOrg = *org
+		userInfo.ActiveOrg.Users = []User{}
+	}
+
+	log.Printf("Org: %#v", userInfo.ActiveOrg.Defaults)
 	currentOrg, err := json.Marshal(userInfo.ActiveOrg)
 	if err != nil {
 		currentOrg = []byte("{}")
@@ -2604,6 +2612,10 @@ func setOrg(ctx context.Context, org Org, id string) error {
 		return err
 	}
 
+	// FIXME: Make this update every user to have the correct org data.
+	//org = fixOrgUser(ctx, &org)
+	//_ = org
+
 	return nil
 }
 
@@ -2709,6 +2721,61 @@ func setEnvironment(ctx context.Context, data *Environment) error {
 	}
 
 	return nil
+}
+
+func fixOrgUser(ctx context.Context, org *Org) *Org {
+	//found := false
+	//for _, id := range user.Orgs {
+	//	if user.ActiveOrg.Id == id {
+	//		found = true
+	//		break
+	//	}
+	//}
+
+	//if !found {
+	//	user.Orgs = append(user.Orgs, user.ActiveOrg.Id)
+	//}
+
+	//// Might be vulnerable to timing attacks.
+	//for _, orgId := range user.Orgs {
+	//	if len(orgId) == 0 {
+	//		continue
+	//	}
+
+	//	org, err := getOrg(ctx, orgId)
+	//	if err != nil {
+	//		log.Printf("Error getting org %s", orgId)
+	//		continue
+	//	}
+
+	//	orgIndex := 0
+	//	userFound := false
+	//	for index, orgUser := range org.Users {
+	//		if orgUser.Id == user.Id {
+	//			orgIndex = index
+	//			userFound = true
+	//			break
+	//		}
+	//	}
+
+	//	if userFound {
+	//		user.PrivateApps = []WorkflowApp{}
+	//		user.Executions = ExecutionInfo{}
+	//		user.Limits = UserLimits{}
+	//		user.Authentication = []UserAuth{}
+
+	//		org.Users[orgIndex] = *user
+	//	} else {
+	//		org.Users = append(org.Users, *user)
+	//	}
+
+	//	err = setOrg(ctx, *org, orgId)
+	//	if err != nil {
+	//		log.Printf("Failed setting org %s", orgId)
+	//	}
+	//}
+
+	return org
 }
 
 func fixUserOrg(ctx context.Context, user *User) *User {

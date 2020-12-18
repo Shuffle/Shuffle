@@ -106,7 +106,7 @@ export const GetParsedPaths = (inputdata, basekey) => {
 
 
 const Apps = (props) => {
-  const { globalUrl, isLoggedIn, isLoaded } = props;
+  const { globalUrl, isLoggedIn, isLoaded, userdata } = props;
 
 	//const [workflows, setWorkflows] = React.useState([]);
 	const baseRepository = "https://github.com/frikky/shuffle-apps"
@@ -1316,7 +1316,7 @@ const Apps = (props) => {
 					style={{backgroundColor: inputColor}}
 					variant="outlined"
 					margin="normal"
-					defaultValue="https://github.com/frikky/shuffle-apps"
+					defaultValue={userdata.active_org.defaults.app_download_repo !== undefined && userdata.active_org.defaults.app_download_repo.length > 0 ? userdata.active_org.defaults.app_download_repo : "https://github.com/frikky/shuffle-apps"}
 					InputProps={{
 						style:{
 							color: "white",
@@ -1334,7 +1334,7 @@ const Apps = (props) => {
 							style={{backgroundColor: inputColor}}
 							variant="outlined"
 							margin="normal"
-							value={downloadBranch}
+							defaultValue={userdata.active_org.defaults.app_download_branch !== undefined && userdata.active_org.defaults.app_download_branch.length > 0 ? userdata.active_org.defaults.app_download_branch : downloadBranch}
 							InputProps={{
 								style:{
 									color: "white",

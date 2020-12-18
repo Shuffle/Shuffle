@@ -44,7 +44,7 @@ const inputColor = "#383B40"
 const surfaceColor = "#27292D"
 
 const Workflows = (props) => {
-  const { globalUrl, isLoggedIn, isLoaded, removeCookie, cookies} = props;
+  const { globalUrl, isLoggedIn, isLoaded, removeCookie, cookies, userdata} = props;
 	document.title = "Shuffle - Workflows"
 
 	const alert = useAlert()
@@ -1348,7 +1348,7 @@ const Workflows = (props) => {
 					style={{backgroundColor: inputColor}}
 					variant="outlined"
 					margin="normal"
-					value={downloadUrl}
+					defaultValue={userdata.active_org.defaults.workflow_download_repo !== undefined && userdata.active_org.defaults.workflow_download_repo.length > 0 ? userdata.active_org.defaults.workflow_download_repo : downloadUrl}
 					InputProps={{
 						style:{
 							color: "white",
@@ -1367,7 +1367,7 @@ const Workflows = (props) => {
 							style={{backgroundColor: inputColor}}
 							variant="outlined"
 							margin="normal"
-							value={downloadBranch}
+							defaultValue={userdata.active_org.defaults.workflow_download_branch !== undefined && userdata.active_org.defaults.workflow_download_branch.length > 0 ? userdata.active_org.defaults.workflow_download_branch : downloadBranch}
 							InputProps={{
 								style:{
 									color: "white",
