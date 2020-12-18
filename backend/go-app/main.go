@@ -1140,7 +1140,7 @@ func createNewUser(username, password, role, apikey string, org Org) error {
 
 	neworg, err := getOrg(ctx, org.Id)
 	if err == nil {
-		neworg.Users = append(neworg.Users, *newUser)
+		//neworg.Users = append(neworg.Users, *newUser)
 		err = setOrg(ctx, *neworg, neworg.Id)
 		if err != nil {
 			log.Printf("Failed updating org with user %s", newUser.Username)
@@ -1734,7 +1734,6 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		userInfo.ActiveOrg.Users = []User{}
 	}
 
-	log.Printf("Org: %#v", userInfo.ActiveOrg.Defaults)
 	currentOrg, err := json.Marshal(userInfo.ActiveOrg)
 	if err != nil {
 		currentOrg = []byte("{}")
@@ -2396,6 +2395,10 @@ func handleGetUsers(resp http.ResponseWriter, request *http.Request) {
 		if len(item.Username) == 0 {
 			continue
 		}
+
+		//for _, tmpUser := range newUsers {
+		//	if tmpUser.Name
+		//}
 
 		item.Password = ""
 		item.Session = ""
