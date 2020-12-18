@@ -108,6 +108,7 @@ type StatisticsItem struct {
 	Total     int64            `json:"total" datastore:"total"`
 	Fieldname string           `json:"field_name" datastore:"field_name"`
 	Data      []StatisticsData `json:"data" datastore:"data"`
+	OrgId     string           `json:"org_id" datastore:"org_id"`
 }
 
 // "Execution by status"
@@ -1148,7 +1149,7 @@ func createNewUser(username, password, role, apikey string, org Org) error {
 		}
 	}
 
-	err = increaseStatisticsField(ctx, "successful_register", username, 1)
+	err = increaseStatisticsField(ctx, "successful_register", username, 1, org.Id)
 	if err != nil {
 		log.Printf("Failed to increase total apps loaded stats: %s", err)
 	}
@@ -3471,7 +3472,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		// OrgId: activeOrgs[0].Id,
 		workflowExecution, executionResp, err := handleExecution(item, workflow, newRequest)
 		if err == nil {
-			err = increaseStatisticsField(ctx, "total_webhooks_ran", workflowExecution.Workflow.ID, 1)
+			err = increaseStatisticsField(ctx, "total_webhooks_ran", workflowExecution.Workflow.ID, 1, workflowExecution.ExecutionOrg)
 			if err != nil {
 				log.Printf("Failed to increase total apps loaded stats: %s", err)
 			}
@@ -3679,7 +3680,7 @@ func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	err = increaseStatisticsField(ctx, "total_workflow_triggers", requestdata.Workflow, 1)
+	err = increaseStatisticsField(ctx, "total_workflow_triggers", requestdata.Workflow, 1, user.ActiveOrg.Id)
 	if err != nil {
 		log.Printf("[INFO] Failed to increase total workflows: %s", err)
 	}
@@ -6481,12 +6482,12 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	// Backup every single one
 	setOpenApiDatastore(ctx, api.ID, parsed)
 
-	err = increaseStatisticsField(ctx, "total_apps_created", newmd5, 1)
+	err = increaseStatisticsField(ctx, "total_apps_created", newmd5, 1, user.ActiveOrg.Id)
 	if err != nil {
 		log.Printf("Failed to increase success execution stats: %s", err)
 	}
 
-	err = increaseStatisticsField(ctx, "openapi_apps_created", newmd5, 1)
+	err = increaseStatisticsField(ctx, "openapi_apps_created", newmd5, 1, user.ActiveOrg.Id)
 	if err != nil {
 		log.Printf("Failed to increase success execution stats: %s", err)
 	}
@@ -6873,7 +6874,7 @@ func remoteOrgJobHandler(org Org, interval int) error {
 func runInit(ctx context.Context) {
 	// Setting stats for backend starts (failure count as well)
 	log.Printf("Starting INIT setup")
-	err := increaseStatisticsField(ctx, "backend_executions", "", 1)
+	err := increaseStatisticsField(ctx, "backend_executions", "", 1, "")
 	if err != nil {
 		log.Printf("Failed increasing local stats: %s", err)
 	}
@@ -8125,6 +8126,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/files/{fileId}/upload", handleUploadFile).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/files/{fileId}", handleGetFileMeta).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/files/{fileId}", handleDeleteFile).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/files", handleGetFiles).Methods("GET", "OPTIONS")
 
 	http.Handle("/", r)
 }

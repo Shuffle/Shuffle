@@ -42,6 +42,7 @@ type File struct {
 	DownloadPath string   `json:"download_path" datastore:"download_path"`
 	Md5sum       string   `json:"md5_sum" datastore:"md5_sum"`
 	Sha256sum    string   `json:"sha256_sum" datastore:"sha256_sum"`
+	FileSize     int64    `json:"filesize" datastore:"filesize"`
 }
 
 var basepath = os.Getenv("SHUFFLE_FILE_LOCATION")
@@ -98,6 +99,51 @@ func fileExists(filename string) bool {
 		return false
 	}
 	return !info.IsDir()
+}
+
+func handleGetFiles(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	// 1. Check user directly
+	// 2. Check workflow execution authorization
+	user, err := handleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("[INFO] INITIAL Api authentication failed in file LIST: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Role != "admin" {
+		log.Printf("[AUTH] User isn't admin")
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Need to be admin"}`)))
+		return
+	}
+
+	ctx := context.Background()
+	files, err := getAllFiles(ctx, user.ActiveOrg.Id)
+	if err != nil {
+		log.Printf("[ERROR] Failed to get files: %s", err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error getting files."}`)))
+		return
+	}
+
+	log.Printf("Got %d files for org %s", len(files), user.ActiveOrg.Id)
+	newBody, err := json.Marshal(files)
+	if err != nil {
+		log.Printf("[ERROR] Failed marshaling files: %s", err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false, "reason": "Failed to marshal files"}`))
+		return
+	}
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(newBody))
 }
 
 func handleGetFileMeta(resp http.ResponseWriter, request *http.Request) {
@@ -417,8 +463,18 @@ func handleGetFileContent(resp http.ResponseWriter, request *http.Request) {
 	Openfile, err := os.Open(downloadPath)
 	defer Openfile.Close() //Close after function return
 	if err != nil {
+		file.Status = "deleted"
+		err = setFile(ctx, *file)
+		if err != nil {
+			log.Printf("Failed setting file to uploading")
+			resp.WriteHeader(500)
+			resp.Write([]byte(`{"success": false, "reason": "Failed setting file to uploading"}`))
+			return
+		}
+
 		//File not found, send 404
-		http.Error(resp, "File not found.", 404)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "File doesn't exist locally"}`))
 		return
 	}
 
@@ -552,6 +608,7 @@ func handleUploadFile(resp http.ResponseWriter, request *http.Request) {
 	var buf bytes.Buffer
 	io.Copy(&buf, parsedFile)
 	contents := buf.Bytes()
+	file.FileSize = int64(len(contents))
 	md5 := md5sum(contents)
 	buf.Reset()
 
@@ -754,6 +811,9 @@ func getFile(ctx context.Context, id string) (*File, error) {
 
 func setFile(ctx context.Context, file File) error {
 	// clear session_token and API_token for user
+	timeNow := time.Now().Unix()
+	file.UpdatedAt = timeNow
+
 	k := datastore.NameKey("Files", file.Id, nil)
 	if _, err := dbclient.Put(ctx, k, &file); err != nil {
 		log.Println(err)
@@ -761,4 +821,24 @@ func setFile(ctx context.Context, file File) error {
 	}
 
 	return nil
+}
+
+func getAllFiles(ctx context.Context, orgId string) ([]File, error) {
+	var files []File
+	q := datastore.NewQuery("Files").Filter("org_id =", orgId).Order("-updated_at").Limit(100)
+
+	_, err := dbclient.GetAll(ctx, q, &files)
+	if err != nil {
+		if strings.Contains(fmt.Sprintf("%s", err), "ResourceExhausted") {
+			q = q.Limit(50)
+			_, err := dbclient.GetAll(ctx, q, &files)
+			if err != nil {
+				return []File{}, err
+			}
+		} else {
+			return []File{}, err
+		}
+	}
+
+	return files, nil
 }

@@ -440,7 +440,7 @@ type AppExecutionExample struct {
 // This might be... a bit off, but that's fine :)
 // This might also be stupid, as we want timelines and such
 // Anyway, these are super basic stupid stats.
-func increaseStatisticsField(ctx context.Context, fieldname, id string, amount int64) error {
+func increaseStatisticsField(ctx context.Context, fieldname, id string, amount int64, orgId string) error {
 
 	// 1. Get current stats
 	// 2. Increase field(s)
@@ -461,6 +461,7 @@ func increaseStatisticsField(ctx context.Context, fieldname, id string, amount i
 		if strings.Contains(fmt.Sprintf("%s", err), "entity") {
 			statisticsItem = StatisticsItem{
 				Total:     amount,
+				OrgId:     orgId,
 				Fieldname: fieldname,
 				Data: []StatisticsData{
 					newData,
@@ -1069,7 +1070,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 					}
 
 					newResults = append(newResults, newResult)
-					increaseStatisticsField(ctx, "workflow_execution_actions_skipped", workflowExecution.Workflow.ID, 1)
+					increaseStatisticsField(ctx, "workflow_execution_actions_skipped", workflowExecution.Workflow.ID, 1, workflowExecution.ExecutionOrg)
 				}
 			}
 		}
@@ -1094,12 +1095,12 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		workflowExecution.Results = newResults
 
 		if workflowExecution.Status == "ABORTED" {
-			err = increaseStatisticsField(ctx, "workflow_executions_aborted", workflowExecution.Workflow.ID, 1)
+			err = increaseStatisticsField(ctx, "workflow_executions_aborted", workflowExecution.Workflow.ID, 1, workflowExecution.ExecutionOrg)
 			if err != nil {
 				log.Printf("Failed to increase aborted execution stats: %s", err)
 			}
 		} else if workflowExecution.Status == "FAILURE" {
-			err = increaseStatisticsField(ctx, "workflow_executions_failure", workflowExecution.Workflow.ID, 1)
+			err = increaseStatisticsField(ctx, "workflow_executions_failure", workflowExecution.Workflow.ID, 1, workflowExecution.ExecutionOrg)
 			if err != nil {
 				log.Printf("Failed to increase failure execution stats: %s", err)
 			}
@@ -1237,7 +1238,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 				workflowExecution.LastNode = actionResult.Action.ID
 			}
 
-			err = increaseStatisticsField(ctx, "workflow_executions_success", workflowExecution.Workflow.ID, 1)
+			err = increaseStatisticsField(ctx, "workflow_executions_success", workflowExecution.Workflow.ID, 1, workflowExecution.ExecutionOrg)
 			if err != nil {
 				log.Printf("Failed to increase success execution stats: %s", err)
 			}
@@ -1525,7 +1526,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	ctx := context.Background()
 	log.Printf("Saved new workflow %s with name %s", workflow.ID, workflow.Name)
-	err = increaseStatisticsField(ctx, "total_workflows", workflow.ID, 1)
+	err = increaseStatisticsField(ctx, "total_workflows", workflow.ID, 1, workflow.OrgId)
 	if err != nil {
 		log.Printf("Failed to increase total workflows stats: %s", err)
 	}
@@ -1725,7 +1726,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 			}
 		}
 
-		err = increaseStatisticsField(ctx, "total_workflow_triggers", workflow.ID, -1)
+		err = increaseStatisticsField(ctx, "total_workflow_triggers", workflow.ID, -1, workflow.OrgId)
 		if err != nil {
 			log.Printf("Failed to increase total workflows: %s", err)
 		}
@@ -1741,7 +1742,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	err = increaseStatisticsField(ctx, "total_workflows", fileId, -1)
+	err = increaseStatisticsField(ctx, "total_workflows", fileId, -1, workflow.OrgId)
 	if err != nil {
 		log.Printf("Failed to increase total workflows: %s", err)
 	}
@@ -2314,7 +2315,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	totalOldActions := len(tmpworkflow.Actions)
 	totalNewActions := len(workflow.Actions)
-	err = increaseStatisticsField(ctx, "total_workflow_actions", workflow.ID, int64(totalNewActions-totalOldActions))
+	err = increaseStatisticsField(ctx, "total_workflow_actions", workflow.ID, int64(totalNewActions-totalOldActions), workflow.OrgId)
 	if err != nil {
 		log.Printf("Failed to change total actions data: %s", err)
 	}
@@ -2486,7 +2487,7 @@ func abortExecution(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	err = increaseStatisticsField(ctx, "workflow_executions_aborted", workflowExecution.Workflow.ID, 1)
+	err = increaseStatisticsField(ctx, "workflow_executions_aborted", workflowExecution.Workflow.ID, 1, workflowExecution.ExecutionOrg)
 	if err != nil {
 		log.Printf("Failed to increase aborted execution stats: %s", err)
 	}
@@ -3069,7 +3070,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		}
 	}
 
-	err = increaseStatisticsField(ctx, "workflow_executions", workflow.ID, 1)
+	err = increaseStatisticsField(ctx, "workflow_executions", workflow.ID, 1, workflowExecution.ExecutionOrg)
 	if err != nil {
 		log.Printf("Failed to increase stats execution stats: %s", err)
 	}
@@ -4130,7 +4131,7 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	err = increaseStatisticsField(ctx, "total_apps_deleted", fileId, 1)
+	err = increaseStatisticsField(ctx, "total_apps_deleted", fileId, 1, user.ActiveOrg.Id)
 	if err != nil {
 		log.Printf("Failed to increase total apps loaded stats: %s", err)
 	}
@@ -5706,12 +5707,12 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 					continue
 				}
 
-				err = increaseStatisticsField(ctx, "total_apps_created", workflowapp.ID, 1)
+				err = increaseStatisticsField(ctx, "total_apps_created", workflowapp.ID, 1, "")
 				if err != nil {
 					log.Printf("Failed to increase total apps created stats: %s", err)
 				}
 
-				err = increaseStatisticsField(ctx, "total_apps_loaded", workflowapp.ID, 1)
+				err = increaseStatisticsField(ctx, "total_apps_loaded", workflowapp.ID, 1, "")
 				if err != nil {
 					log.Printf("Failed to increase total apps loaded stats: %s", err)
 				}
@@ -6185,7 +6186,7 @@ func handleDeleteHook(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if len(hook.Workflows) > 0 {
-		err = increaseStatisticsField(ctx, "total_workflow_triggers", hook.Workflows[0], -1)
+		err = increaseStatisticsField(ctx, "total_workflow_triggers", hook.Workflows[0], -1, user.ActiveOrg.Id)
 		if err != nil {
 			log.Printf("Failed to increase total workflows: %s", err)
 		}

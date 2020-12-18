@@ -31,6 +31,9 @@ import { useTheme } from '@material-ui/core/styles';
 import HandlePayment from './HandlePayment'
 import OrgHeader from '../components/OrgHeader'
 
+import OpenInNewIcon from '@material-ui/icons/OpenInNew';
+import CloudDownloadIcon from '@material-ui/icons/CloudDownload';
+import DescriptionIcon from '@material-ui/icons/Description';
 import PolymerIcon from '@material-ui/icons/Polymer';
 import CheckCircleIcon from '@material-ui/icons/CheckCircle';
 import CloseIcon from '@material-ui/icons/Close';
@@ -78,6 +81,7 @@ const Admin = (props) => {
 	const [environments, setEnvironments] = React.useState([]);
 	const [authentication, setAuthentication] = React.useState([]);
 	const [schedules, setSchedules] = React.useState([])
+	const [files, setFiles] = React.useState([])
 	const [selectedUser, setSelectedUser] = React.useState({})
 	const [newPassword, setNewPassword] = React.useState("");
 	const [selectedUserModalOpen, setSelectedUserModalOpen] = React.useState(false)
@@ -550,6 +554,78 @@ const Admin = (props) => {
 			});
 	}
 
+	const getFiles = () => {
+		fetch(globalUrl + "/api/v1/files", {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+			credentials: "include",
+		})
+			.then((response) => {
+				if (response.status !== 200) {
+					console.log("Status not 200 for apps :O!")
+					return
+				}
+
+				return response.json()
+			})
+			.then((responseJson) => {
+				console.log(responseJson)
+				setFiles(responseJson)
+			})
+			.catch(error => {
+				alert.error(error.toString())
+			});
+	}
+
+	const downloadFile = (file) => {
+		fetch(globalUrl + "/api/v1/files/"+file.id+"/content", {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+			credentials: "include",
+		})
+			.then((response) => {
+				if (response.status !== 200) {
+					console.log("Status not 200 for apps :O!")
+					return ""
+				}
+
+				return response.text()
+			})
+			.then((respdata) => {
+				if (respdata.length === 0) {
+					alert.error("Failed getting file")
+					return
+				}
+
+				var blob = new Blob( [ respdata ], {
+					type: 'application/octet-stream'
+				})
+
+				var url = URL.createObjectURL( blob )
+				var link = document.createElement( 'a' )
+				link.setAttribute( 'href', url )
+				link.setAttribute( 'download', `${file.filename}` )
+				var event = document.createEvent( 'MouseEvents' )
+				event.initMouseEvent( 'click', true, true, window, 1, 0, 0, 0, 0, false, false, false, false, 0, null)
+				link.dispatchEvent( event )
+
+				//return response.json()
+			})
+			.then((responseJson) => {
+				//console.log(responseJson)
+				//setSchedules(responseJson)
+			})
+			.catch(error => {
+				alert.error(error.toString())
+			});
+	}
+
 	const getSchedules = () => {
 		fetch(globalUrl + "/api/v1/workflows/schedules", {
 			method: 'GET',
@@ -705,6 +781,48 @@ const Admin = (props) => {
 		});
 	}
 
+	const setConfig = (event, newValue) => {
+		if (newValue === 1) {
+			getUsers()
+		} else if (newValue === 2) {
+			getAppAuthentication()
+		} else if (newValue === 3) {
+			getEnvironments()
+		} else if (newValue === 4) {
+			getSchedules()
+		} else if (newValue === 5) {
+			getFiles()
+		} else if (newValue === 6) {
+			getOrgs() 
+		}
+
+		if (newValue === 6) {
+			console.log("Should get apps for categories.")
+		}
+
+		const views = {
+			0: "organization",
+			1: "users",
+			2: "app_auth",
+			3: "environments",
+			4: "schedules",
+			5: "files",
+			6: "categories",
+		}
+
+		//var theURL = window.location.pathname
+		//FIXME: Add url edits
+		//var theURL = window.location
+		//theURL.replace(`/${views[curTab]}`, `/${views[newValue]}`)
+		//window.history.pushState({"html":response.html,"pageTitle":response.pageTitle},"", urlPath);
+
+		//console.log(newpath)
+		//window.location.pathame = newpath
+
+		setModalUser({})
+		setCurTab(newValue)
+	}
+
 
 	if (firstRequest) {
 		setFirstRequest(false)
@@ -720,13 +838,14 @@ const Admin = (props) => {
 			"app_auth": 2,
 			"environments": 3,
 			"schedules": 4,
-			"categories": 5,
+			"files": 5,
 		}
 
 		if (props.match.params.key !== undefined) {
 			const tmpitem = views[props.match.params.key]
 			if (tmpitem !== undefined) {
-				setCurTab(tmpitem)
+				//setCurTab(tmpitem)
+				setConfig("", tmpitem)
 			}
 		}
 	}
@@ -1532,6 +1651,113 @@ const Admin = (props) => {
 		</div>
 		: null
 
+	const filesView = curTab === 5 ?
+		<div>
+			<div style={{marginTop: 20, marginBottom: 20,}}>
+				<h2 style={{display: "inline",}}>Files</h2>
+				<span style={{marginLeft: 25}}>Files from Workflows. <a target="_blank" href="https://shuffler.io/docs/organizations#files" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more</a></span>
+			</div>
+			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor}}/>
+			<List>
+				<ListItem>
+					<ListItemText
+						primary="Created"
+						style={{maxWidth: 225, minWidth: 225}}
+					/>
+					<ListItemText
+						primary="Name"
+						style={{maxWidth: 150, minWidth: 150, overflow: "hidden",}}
+					/>
+					<ListItemText
+						primary="Workflow"
+						style={{maxWidth: 100, minWidth: 100, overflow: "hidden",}}
+					/>
+					<ListItemText
+						primary="Md5"
+						style={{minWidth: 300, maxWidth: 300, overflow: "hidden"}}
+					/>
+					<ListItemText
+						primary="Status"
+						style={{minWidth: 75, maxWidth: 75}}
+					/>
+					<ListItemText
+						primary="Filesize"
+						style={{minWidth: 125, maxWidth: 125}}
+					/>
+					<ListItemText
+						primary="Actions"
+					/>
+				</ListItem>
+				{files === undefined || files === null ? null : files.map((file, index) => {
+					var bgColor = "#27292d"
+					if (index % 2 === 0) {
+						bgColor = "#1f2023"
+					}
+
+					return (
+						<ListItem key={index} style={{backgroundColor: bgColor}} >
+							<ListItemText
+								style={{maxWidth: 225, minWidth: 225}}
+								primary={new Date(file.created_at*1000).toISOString()}
+							/>
+							<ListItemText
+								style={{maxWidth: 150, minWidth: 150}}
+								primary={file.filename}
+							/>
+							<ListItemText
+								primary=
+									<Tooltip title={"Go to workflow"} style={{}} aria-label={"Download"}>
+										<a style={{textDecoration: "none", color: "#f85a3e"}} href={`/workflows/${file.workflow_id}`} target="_blank">
+											<IconButton>
+												<OpenInNewIcon style={{color: "white"}} />
+											</IconButton>
+										</a>
+									</Tooltip>
+								style={{minWidth: 100, maxWidth: 100, overflow: "hidden"}}
+							/>
+							<ListItemText
+								primary={file.md5_sum}
+								style={{minWidth: 300, maxWidth: 300, overflow: "hidden"}}
+							/>
+							<ListItemText
+								primary={file.status}
+								style={{minWidth: 75, maxWidth: 75, overflow: "hidden"}}
+							/>
+							<ListItemText
+								primary={file.filesize}
+								style={{minWidth: 125, maxWidth: 125, overflow: "hidden"}}
+							/>
+							<ListItemText
+								primary=
+									<Tooltip title={"Download file"} style={{}} aria-label={"Download"}>
+										<IconButton onClick={() => {
+											downloadFile(file)
+										}}>
+											<CloudDownloadIcon style={{color: "white"}} />
+										</IconButton>
+									</Tooltip>
+								style={{minWidth: 75, maxWidth: 75, overflow: "hidden"}}
+							/>
+							{/*
+							<ListItemText>
+								<Button 
+									style={{}} 
+									variant="contained"
+									color="primary"
+									disabled
+									onClick={() => deleteSchedule(file)}
+								>
+									Stop schedule	
+								</Button>
+							</ListItemText>
+							*/}
+						</ListItem>
+					)
+				})}
+			</List>
+		</div>
+		: null
+
 	const schedulesView = curTab === 4 ?
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
@@ -1860,7 +2086,7 @@ const Admin = (props) => {
 		</div>
 		: null
 
-	const organizationsTab = curTab === 6 ?
+	const organizationsTab = curTab === 7 ?
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
 				<h2 style={{display: "inline",}}>Organizations</h2>
@@ -1941,7 +2167,7 @@ const Admin = (props) => {
 		</div>
 		: null
 
-	const hybridTab = curTab === 5 ?
+	const hybridTab = curTab === 6 ?
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
 				<h2 style={{display: "inline",}}>Hybrid</h2>
@@ -1983,48 +2209,11 @@ const Admin = (props) => {
 
 		// primary={environment.Registered ? "true" : "false"}
 
-	const setConfig = (event, newValue) => {
-		if (newValue === 1) {
-			getUsers()
-		} else if (newValue === 2) {
-			getAppAuthentication()
-		} else if (newValue === 3) {
-			getEnvironments()
-		} else if (newValue === 4) {
-			getSchedules()
-		} else if (newValue === 6) {
-			getOrgs() 
-		}
-
-		if (newValue === 6) {
-			console.log("Should get apps for categories.")
-		}
-
-		const views = {
-			0: "organization",
-			1: "users",
-			2: "app_auth",
-			3: "environments",
-			4: "schedules",
-			5: "categories",
-		}
-
-		//var theURL = window.location.pathname
-		//FIXME: Add url edits
-		//var theURL = window.location
-		//theURL.replace(`/${views[curTab]}`, `/${views[newValue]}`)
-		//window.history.pushState({"html":response.html,"pageTitle":response.pageTitle},"", urlPath);
-
-		//console.log(newpath)
-		//window.location.pathame = newpath
-
-		setModalUser({})
-		setCurTab(newValue)
-	}
+	
 
 	const iconStyle = {marginRight: 10}
 	const data = 
-		<div style={{minWidth: 1366, margin: "auto"}}>
+		<div style={{width: 1366, margin: "auto", overflowX: "hidden",}}>
 			<Paper style={paperStyle}>
 				<Tabs
 					value={curTab}
@@ -2037,6 +2226,7 @@ const Admin = (props) => {
 					{isCloud ? null : <Tab label=<span><LockIcon style={iconStyle} />App Authentication</span>/>}
 					{isCloud ? null : <Tab label=<span><EcoIcon style={iconStyle} />Environments</span>/>}
 					{isCloud ? null : <Tab label=<span><ScheduleIcon style={iconStyle} />Schedules</span> />}
+					{isCloud ? null : <Tab label=<span><DescriptionIcon style={iconStyle} />Files</span> />}
 					{window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><CloudIcon style={iconStyle} /> Hybrid</span>/> : null}
 					{window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><BusinessIcon style={iconStyle} /> Organizations</span>/> : null}
 					{window.location.protocol === "http:" && window.location.port === "3000" ? <Tab label=<span><LockIcon style={iconStyle} />Categories</span>/> : null}
@@ -2049,6 +2239,7 @@ const Admin = (props) => {
 					{usersView}	
 					{environmentView}
 					{schedulesView}
+					{filesView}
 					{hybridTab}
 					{organizationsTab}
 				</div>

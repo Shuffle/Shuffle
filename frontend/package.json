@@ -1,7 +1,7 @@
 {
   "name": "shuffler",
   "homepage": "https://shuffler.io",
-  "version": "0.6.0",
+  "version": "0.8.3",
   "private": true,
   "dependencies": {
     "@material-ui/core": "^4.5.2",
