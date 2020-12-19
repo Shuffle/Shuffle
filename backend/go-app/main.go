@@ -72,6 +72,7 @@ var gceProject = "shuffle"
 var bucketName = "shuffler.appspot.com"
 var baseAppPath = "/home/frikky/git/shaffuru/tmp/apps"
 var baseDockerName = "frikky/shuffle"
+var registryName = "registry.hub.docker.com"
 
 //var syncUrl = "http://192.168.102.54:5002"
 var syncUrl = "https://shuffler.io"
@@ -6484,7 +6485,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	dockerLocation := fmt.Sprintf("%s/Dockerfile", basePath)
 	log.Printf("Dockerfile: %s", dockerLocation)
 
-	versionName := fmt.Sprintf("%s_%s", strings.ReplaceAll(api.Name, " ", "-"), api.AppVersion)
+	versionName := fmt.Sprintf("%s_%s", strings.ToLower(strings.ReplaceAll(api.Name, " ", "-")), api.AppVersion)
 	dockerTags := []string{
 		fmt.Sprintf("%s:%s", baseDockerName, identifier),
 		fmt.Sprintf("%s:%s", baseDockerName, versionName),

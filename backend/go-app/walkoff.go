@@ -5599,7 +5599,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 				newName = strings.ReplaceAll(newName, " ", "-")
 
 				tags := []string{
-					fmt.Sprintf("%s:%s_%s", baseDockerName, newName, workflowapp.AppVersion),
+					fmt.Sprintf("%s:%s_%s", baseDockerName, strings.ToLower(newName), workflowapp.AppVersion),
 				}
 
 				if len(allapps) == 0 {
@@ -5673,7 +5673,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 						}
 
 						if len(appendParams) > 0 {
-							log.Printf("Appending %d params to the START of %s", len(appendParams), action.Name)
+							log.Printf("[AUTH] Appending %d params to the START of %s", len(appendParams), action.Name)
 							workflowapp.Actions[index].Parameters = append(appendParams, workflowapp.Actions[index].Parameters...)
 						}
 

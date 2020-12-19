@@ -23,6 +23,8 @@ import (
 var environment = os.Getenv("ENVIRONMENT_NAME")
 var baseUrl = os.Getenv("BASE_URL")
 var baseimagename = "frikky/shuffle"
+var registryName = "registry.hub.docker.com"
+var fallbackName = "shuffle-orborus"
 var sleepTime = 2
 
 var containerId string
@@ -34,6 +36,11 @@ func getThisContainerId() string {
 	out, err := exec.Command("bash", "-c", cmd).Output()
 	if err == nil {
 		id = strings.TrimSpace(string(out))
+
+		log.Printf("Checking if %s is in %s", ".scope", string(out))
+		if strings.Contains(string(out), ".scope") {
+			id = fallbackName
+		}
 	}
 
 	return id
@@ -42,7 +49,7 @@ func getThisContainerId() string {
 func init() {
 	containerId = getThisContainerId()
 	if len(containerId) == 0 {
-		log.Printf("[ERROR] No container ID found.")
+		log.Printf("[ERROR] No container ID found. Not running containerized?")
 	} else {
 		log.Printf("[INFO] Found container ID: %s", containerId)
 	}
@@ -854,11 +861,17 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	)
 
 	if err != nil {
-		log.Printf("Container error: %s", err)
+		log.Printf("Container CREATE error: %s", err)
 		return err
 	}
 
-	cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
+	err = cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
+	if err != nil {
+		log.Printf("[ERROR] Failed to start container in environment %s: %s", environment, err)
+		//shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+		return err
+	}
+
 	log.Printf("[INFO] Container %s is created", cont.ID)
 	return nil
 }
@@ -1357,12 +1370,33 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 				log.Printf("Skipping FULL_EXECUTION because size is larger than %d", maxSize)
 			}
 
+			// Try original -> Go to lowercase
 			err = deployApp(dockercli, image, identifier, env)
 			if err != nil {
-				log.Printf("[ERROR] Failed deploying %s from image %s: %s", identifier, image, err)
-				if strings.Contains(err.Error(), "No such image") {
-					log.Printf("[ERROR] Image doesn't exist. Shutting down")
-					shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+				// Trying to replace with lowercase to deploy again. This seems to work with Dockerhub well.
+				// FIXME: Should try to remotely download directly if this persists.
+				image = fmt.Sprintf("%s:%s_%s", baseimagename, strings.ToLower(action.AppName), action.AppVersion)
+				if strings.Contains(image, " ") {
+					image = strings.ReplaceAll(image, " ", "-")
+				}
+
+				err = deployApp(dockercli, image, identifier, env)
+				if err != nil {
+					image = fmt.Sprintf("%s/%s:%s_%s", registryName, baseimagename, strings.ToLower(action.AppName), action.AppVersion)
+					if strings.Contains(image, " ") {
+						image = strings.ReplaceAll(image, " ", "-")
+					}
+
+					err = deployApp(dockercli, image, identifier, env)
+					if err != nil {
+
+						log.Printf("[ERROR] Failed deploying image THRICE. Aborting if the image doesn't exist")
+						if strings.Contains(err.Error(), "No such image") {
+							//log.Printf("[WARNING] Failed deploying %s from image %s: %s", identifier, image, err)
+							log.Printf("[ERROR] Image doesn't exist. Shutting down")
+							shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+						}
+					}
 				}
 			}
 

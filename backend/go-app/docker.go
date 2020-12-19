@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -235,7 +236,7 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 		buildOptions,
 	)
 
-	log.Printf("Response: %#v", imageBuildResponse.Body)
+	//log.Printf("Response: %#v", imageBuildResponse.Body)
 	//log.Printf("IMAGERESPONSE: %#v", imageBuildResponse.Body)
 
 	defer imageBuildResponse.Body.Close()
@@ -251,9 +252,12 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 			// This fixes some issues with older versions of Docker which can't build
 			// on their own ( <17.05 )
 			pullOptions := types.ImagePullOptions{}
-			canonicalName := fmt.Sprintf("registry.hub.docker.com")
+			downloaded := false
 			for _, image := range tags {
-				newImage := fmt.Sprintf("%s/%s", canonicalName, image)
+				// Is this ok? Not sure. Tags shouldn't be controlled here prolly.
+				image = strings.ToLower(image)
+
+				newImage := fmt.Sprintf("%s/%s", registryName, image)
 				log.Printf("[INFO] Pulling image %s", newImage)
 				reader, err := client.ImagePull(ctx, newImage, pullOptions)
 				if err != nil {
@@ -261,9 +265,16 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 					continue
 				}
 
+				// Attempt to retag the image to not contain registry...
+
 				//newBuf := buildBuf
+				downloaded = true
 				io.Copy(os.Stdout, reader)
 				log.Printf("[INFO] Successfully downloaded and built %s", newImage)
+			}
+
+			if !downloaded {
+				return errors.New(fmt.Sprintf("Failed to build / download images %s", strings.Join(tags, ",")))
 			}
 			//baseDockerName
 		}
@@ -331,9 +342,15 @@ func buildImage(tags []string, dockerfileFolder string) error {
 
 	// Read the STDOUT from the build process
 	defer imageBuildResponse.Body.Close()
-	_, err = io.Copy(os.Stdout, imageBuildResponse.Body)
+	buildBuf := new(strings.Builder)
+	_, err = io.Copy(buildBuf, imageBuildResponse.Body)
 	if err != nil {
 		return err
+	} else {
+		if strings.Contains(buildBuf.String(), "errorDetail") {
+			log.Printf("[ERROR] Docker build:\n%s\nERROR ABOVE: Trying to pull tags from: %s", buildBuf.String(), strings.Join(tags, "\n"))
+			return errors.New(fmt.Sprintf("Failed building %s. Check backend logs for details. Most likely means you have an old version of Docker.", strings.Join(tags, ",")))
+		}
 	}
 
 	return nil
