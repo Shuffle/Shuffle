@@ -125,24 +125,28 @@ func getParsedTarMemory(fs billy.Filesystem, tw *tar.Writer, baseDir, extra stri
 				return err
 			}
 
-			log.Printf("FILENAME: %s", filename)
+			//log.Printf("FILENAME: %s", filename)
 			readFile, err := ioutil.ReadAll(fileReader)
 			if err != nil {
 				log.Printf("Not file: %s", err)
 				return err
 			}
 
-			// Fixes issues with older versions of Docker for file format
-			if filename == "Dockerfile" {
-				log.Printf("Should search and replace in readfile.")
+			// Fixes issues with older versions of Docker and reference formats
+			// Specific to Shuffle rn. Could expand.
+			// FIXME: Seems like the issue was with multi-stage builds
+			/*
+				if filename == "Dockerfile" {
+					log.Printf("Should search and replace in readfile.")
 
-				referenceCheck := "FROM frikky/shuffle:"
-				if strings.Contains(string(readFile), referenceCheck) {
-					log.Printf("SHOULD SEARCH & REPLACE!")
-					newReference := fmt.Sprintf("FROM registry.hub.docker.com/frikky/shuffle:")
-					readFile = []byte(strings.Replace(string(readFile), referenceCheck, newReference, -1))
+					referenceCheck := "FROM frikky/shuffle:"
+					if strings.Contains(string(readFile), referenceCheck) {
+						log.Printf("SHOULD SEARCH & REPLACE!")
+						newReference := fmt.Sprintf("FROM registry.hub.docker.com/frikky/shuffle:")
+						readFile = []byte(strings.Replace(string(readFile), referenceCheck, newReference, -1))
+					}
 				}
-			}
+			*/
 
 			//log.Printf("Filename: %s", filename)
 			// FIXME - might need the folder from EXTRA here
@@ -230,12 +234,39 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 		dockerFileTarReader,
 		buildOptions,
 	)
+
+	log.Printf("Response: %#v", imageBuildResponse.Body)
 	//log.Printf("IMAGERESPONSE: %#v", imageBuildResponse.Body)
 
 	defer imageBuildResponse.Body.Close()
-	_, newerr := io.Copy(os.Stdout, imageBuildResponse.Body)
+	buildBuf := new(strings.Builder)
+	_, newerr := io.Copy(buildBuf, imageBuildResponse.Body)
 	if newerr != nil {
 		log.Printf("Failed reading Docker build STDOUT: %s", newerr)
+	} else {
+		if strings.Contains(buildBuf.String(), "errorDetail") {
+			log.Printf("[ERROR] Docker build:\n%s\nERROR ABOVE: Trying to pull tags from: %s", buildBuf.String(), strings.Join(tags, "\n"))
+
+			// Handles pulling of the same image if applicable
+			// This fixes some issues with older versions of Docker which can't build
+			// on their own ( <17.05 )
+			pullOptions := types.ImagePullOptions{}
+			canonicalName := fmt.Sprintf("registry.hub.docker.com")
+			for _, image := range tags {
+				newImage := fmt.Sprintf("%s/%s", canonicalName, image)
+				log.Printf("[INFO] Pulling image %s", newImage)
+				reader, err := client.ImagePull(ctx, newImage, pullOptions)
+				if err != nil {
+					log.Printf("[ERROR] Failed getting image %s: %s", newImage, err)
+					continue
+				}
+
+				//newBuf := buildBuf
+				io.Copy(os.Stdout, reader)
+				log.Printf("[INFO] Successfully downloaded and built %s", newImage)
+			}
+			//baseDockerName
+		}
 	}
 
 	if err != nil {

@@ -130,7 +130,7 @@ const LoginDialog = props => {
 						if (responseJson["success"] === false) {
 							setLoginInfo(responseJson["reason"])
 						} else {
-							setLoginInfo("Successful register :)")
+							setLoginInfo("Successful register!")
 						}
 					}),
 				)

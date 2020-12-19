@@ -5541,7 +5541,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 					}
 				}
 
-				log.Printf("HANDLING DOCKER FILEREADER - SEARCH&REPLACE?")
+				//log.Printf("HANDLING DOCKER FILEREADER - SEARCH&REPLACE?")
 
 				appfileData, err := ioutil.ReadAll(fileReader)
 				if err != nil {
@@ -5688,10 +5688,10 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 
 				if len(removeApps) > 0 {
 					for _, item := range removeApps {
-						log.Printf("Removing duplicate: %s", item)
+						log.Printf("[WARNING] Removing duplicate: %s", item)
 						err = DeleteKey(ctx, "workflowapp", item)
 						if err != nil {
-							log.Printf("Failed deleting %s", item)
+							log.Printf("[ERROR] Failed deleting duplicate %s: %s", item, err)
 						}
 					}
 				}

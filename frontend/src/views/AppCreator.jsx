@@ -101,7 +101,12 @@ const parseCurl = (s) => {
 		return ""
 	}
 
-  var args = rewrite(words.split(s))
+	try {
+  	var args = rewrite(words.split(s))
+	} catch (e) {
+		return s
+	}
+	
   var out = { method: 'GET', header: {} }
   var state = ''
 
@@ -1731,64 +1736,65 @@ const AppCreator = (props) => {
 							var parsedurl = event.target.value
 							if (parsedurl.startsWith("curl")) {
 								const request = parseCurl(event.target.value)
-								console.log(request)
-								if (request.method.toUpperCase() !== currentAction.Method) {
-									setCurrentActionMethod(request.method.toUpperCase())
-									setActionField("method", request.method.toUpperCase())
-								}
+								if (request !== event.target.value) {
+									if (request.method.toUpperCase() !== currentAction.Method) {
+										setCurrentActionMethod(request.method.toUpperCase())
+										setActionField("method", request.method.toUpperCase())
+									}
 
-								if (request.header !== undefined && request.header !== null) {
-									var headers = []
-									for (let [key, value] of Object.entries(request.header)) {
-										if (parameterName !== undefined && key.toLowerCase() === parameterName.toLowerCase()) {
-											continue
+									if (request.header !== undefined && request.header !== null) {
+										var headers = []
+										for (let [key, value] of Object.entries(request.header)) {
+											if (parameterName !== undefined && key.toLowerCase() === parameterName.toLowerCase()) {
+												continue
+											}
+
+											if (key === "Authorization" && authenticationOption === "Bearer auth") {
+												continue
+											} 
+
+											headers += key+"="+value+"\n"
 										}
 
-										if (key === "Authorization" && authenticationOption === "Bearer auth") {
-											continue
-										} 
-
-										headers += key+"="+value+"\n"
+										setActionField("headers", headers)
 									}
 
-									setActionField("headers", headers)
-								}
+									if (request.body !== undefined && request.body !== null) {
+										setActionField("body", request.body)
+									}
 
-								if (request.body !== undefined && request.body !== null) {
-									setActionField("body", request.body)
-								}
-
-								// Parse URL
-								if (request.url !== undefined) {
-									parsedurl = request.url
-								}
+									// Parse URL
+									if (request.url !== undefined) {
+										parsedurl = request.url
+									}
 							}
 
-							if (parsedurl !== undefined) {
-								if (parsedurl.includes("<") && parsedurl.includes(">")) {
-									parsedurl = parsedurl.split("<").join("{")
-									parsedurl = parsedurl.split(">").join("}")
-								}
-
-								if (parsedurl.startsWith("http") || parsedurl.startsWith("ftp")) {
-									if (parsedurl !== undefined && parsedurl.includes(parameterName)) {
-										// Remove <> etc.
-										// 
-										
-										console.log("IT HAS THE PARAM NAME!")
-										const newurl = new URL(encodeURI(parsedurl))
-										newurl.searchParams.delete(parameterName)
-										parsedurl = decodeURI(newurl.href)
+							if	 (parsedurl !== undefined) {
+									if (parsedurl.includes("<") && parsedurl.includes(">")) {
+										parsedurl = parsedurl.split("<").join("{")
+										parsedurl = parsedurl.split(">").join("}")
 									}
 
-									// Remove the base URL itself
-									if (parsedurl !== undefined && baseUrl !== undefined && baseUrl.length > 0 && parsedurl.includes(baseUrl)) {
-										parsedurl = parsedurl.replace(baseUrl, "")
-									}
+									if (parsedurl.startsWith("http") || parsedurl.startsWith("ftp")) {
+										if (parsedurl !== undefined && parsedurl.includes(parameterName)) {
+											// Remove <> etc.
+											// 
+											
+											console.log("IT HAS THE PARAM NAME!")
+											const newurl = new URL(encodeURI(parsedurl))
+											newurl.searchParams.delete(parameterName)
+											parsedurl = decodeURI(newurl.href)
+										}
 
-									// Check URL query && headers 
-									setActionField("url", parsedurl)
-									setUrlPath(parsedurl)
+										// Remove the base URL itself
+										if (parsedurl !== undefined && baseUrl !== undefined && baseUrl.length > 0 && parsedurl.includes(baseUrl)) {
+											parsedurl = parsedurl.replace(baseUrl, "")
+										}
+
+										// Check URL query && headers 
+										setActionField("url", parsedurl)
+										setUrlPath(parsedurl)
+									}
 								}
 							}
 
