@@ -5541,6 +5541,8 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 					}
 				}
 
+				log.Printf("HANDLING DOCKER FILEREADER - SEARCH&REPLACE?")
+
 				appfileData, err := ioutil.ReadAll(fileReader)
 				if err != nil {
 					log.Printf("Failed reading %s: %s", fullPath, err)

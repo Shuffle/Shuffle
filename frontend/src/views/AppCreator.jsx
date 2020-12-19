@@ -1286,7 +1286,7 @@ const AppCreator = (props) => {
 					</Tooltip>
 					:
 					<Tooltip color="secondary" title={data.errors.join("\n")} placement="bottom">
-						<CheckCircleIcon />
+						<CheckCircleIcon style={{marginTop: 6}}/>
 					</Tooltip>
 				
 

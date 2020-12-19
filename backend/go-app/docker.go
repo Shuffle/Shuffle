@@ -125,10 +125,23 @@ func getParsedTarMemory(fs billy.Filesystem, tw *tar.Writer, baseDir, extra stri
 				return err
 			}
 
+			log.Printf("FILENAME: %s", filename)
 			readFile, err := ioutil.ReadAll(fileReader)
 			if err != nil {
 				log.Printf("Not file: %s", err)
 				return err
+			}
+
+			// Fixes issues with older versions of Docker for file format
+			if filename == "Dockerfile" {
+				log.Printf("Should search and replace in readfile.")
+
+				referenceCheck := "FROM frikky/shuffle:"
+				if strings.Contains(string(readFile), referenceCheck) {
+					log.Printf("SHOULD SEARCH & REPLACE!")
+					newReference := fmt.Sprintf("FROM registry.hub.docker.com/frikky/shuffle:")
+					readFile = []byte(strings.Replace(string(readFile), referenceCheck, newReference, -1))
+				}
 			}
 
 			//log.Printf("Filename: %s", filename)
@@ -155,6 +168,21 @@ func getParsedTarMemory(fs billy.Filesystem, tw *tar.Writer, baseDir, extra stri
 
 	return nil
 }
+
+/*
+// Fixes App SDK issues.. meh
+func fixTags(tags []string) []string {
+	checkTag := "frikky/shuffle"
+	newTags := []string{}
+	for _, tag := range tags {
+		if strings.HasPrefix(tag, checkTags) {
+			newTags.append(newTags, fmt.Sprintf("registry.hub.docker.com/%s", tag))
+		}
+
+		newTags.append(tag)
+	}
+}
+*/
 
 // Custom Docker image builder wrapper in memory
 func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder string) error {
