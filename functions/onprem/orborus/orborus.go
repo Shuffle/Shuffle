@@ -103,13 +103,25 @@ func getThisContainerId() {
 		out, err := exec.Command("bash", "-c", cmd).Output()
 		if err == nil {
 			containerId = strings.TrimSpace(string(out))
+
+			// cgroup error. Hardcoding this.
+			// https://github.com/moby/moby/issues/7015
+			log.Printf("Checking if %s is in %s", ".scope", string(out))
+			if strings.Contains(string(out), ".scope") {
+				containerId = "shuffle-orborus"
+				//docker-76c537e9a4b7c7233011f5d70e6b7f2d600b6413ac58a96519b8dca7a3f7117a.scope
+			}
 		} else {
+			containerId = "shuffle-orborus"
 			log.Printf("Failed getting container ID: %s", err)
 		}
 	}
+
+	log.Printf("Started with containerId %s", containerId)
 }
 
 // Deploys the internal worker whenever something happens
+// https://docs.docker.com/engine/api/sdk/examples/
 func deployWorker(image string, identifier string, env []string) {
 	// Binds is the actual "-v" volume.
 	hostConfig := &container.HostConfig{
@@ -135,11 +147,12 @@ func deployWorker(image string, identifier string, env []string) {
 		Env:   env,
 	}
 
-	log.Printf("Identifier: %s", identifier)
+	log.Printf("[INFO] Identifier: %s", identifier)
 	cont, err := dockercli.ContainerCreate(
 		context.Background(),
 		config,
 		hostConfig,
+		nil,
 		nil,
 		identifier,
 	)
@@ -154,6 +167,7 @@ func deployWorker(image string, identifier string, env []string) {
 				config,
 				hostConfig,
 				nil,
+				nil,
 				identifier,
 			)
 
@@ -167,7 +181,8 @@ func deployWorker(image string, identifier string, env []string) {
 		}
 	}
 
-	err = dockercli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
+	containerStartOptions := types.ContainerStartOptions{}
+	err = dockercli.ContainerStart(context.Background(), cont.ID, containerStartOptions)
 	if err != nil {
 		log.Printf("[ERROR] Failed to start container in environment %s: %s", environment, err)
 		return

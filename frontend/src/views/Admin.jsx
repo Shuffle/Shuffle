@@ -1582,8 +1582,13 @@ const Admin = (props) => {
 					/>
 				</ListItem>
 				{users === undefined ? null : users.map((data, index) => {
+					var bgColor = "#27292d"
+					if (index % 2 === 0) {
+						bgColor = "#1f2023"
+					}
+
 					return (
-						<ListItem key={index}>
+						<ListItem key={index} style={{backgroundColor: bgColor}}>
 							<ListItemText
 								primary={data.username}
 								style={{ minWidth: 200, maxWidth: 200 }}
@@ -1788,8 +1793,13 @@ const Admin = (props) => {
 					/>
 				</ListItem>
 				{schedules === undefined || schedules === null ? null : schedules.map((schedule, index) => {
+					var bgColor = "#27292d"
+					if (index % 2 === 0) {
+						bgColor = "#1f2023"
+					}
+
 					return (
-						<ListItem key={index}>
+						<ListItem key={index} style={{backgroundColor: bgColor}}>
 							<ListItemText
 								style={{maxWidth: 200, minWidth: 200}}
 								primary={schedule.environment === "cloud" ? schedule.frequency : <span>{schedule.seconds} seconds</span>}
@@ -1938,8 +1948,13 @@ const Admin = (props) => {
 					/>
 				</ListItem>
 				{authentication === undefined ? null : authentication.map((data, index) => {
+					var bgColor = "#27292d"
+					if (index % 2 === 0) {
+						bgColor = "#1f2023"
+					}
+
 					return (
-						<ListItem key={index}>
+						<ListItem key={index} style={{backgroundColor: bgColor}}>
 							<ListItemText
 								primary=<img alt="" src={data.app.large_image} style={{maxWidth: 50,}} />
 								style={{minWidth: 150, maxWidth: 150}}
@@ -2045,6 +2060,11 @@ const Admin = (props) => {
 						getEnvironments()
 						return null
 					}
+
+					//var bgColor = "#27292d"
+					//if (index % 2 === 0) {
+					//	bgColor = "#1f2023"
+					//}
 
 					return (
 						<ListItem key={index}>
