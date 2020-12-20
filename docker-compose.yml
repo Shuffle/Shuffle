@@ -9,6 +9,8 @@ services:
       - shuffle
     environment:
       - BACKEND_HOSTNAME=${BACKEND_HOSTNAME:-"backend"}
+      - HTTP_PROXY=${SHUFFLE_HTTP_PROXY}
+      - HTTPS_PROXY=${SHUFFLE_HTTPS_PROXY}
     restart: unless-stopped
     depends_on:
       - backend
