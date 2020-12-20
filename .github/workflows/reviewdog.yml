@@ -1,0 +1,28 @@
+name: shellcheck / hadolint - reviewdog
+# https://github.com/reviewdog/action-shellcheck
+on: [pull_request]
+jobs:
+  shellcheck:
+    #name: runner / shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: shellcheck
+        uses: reviewdog/action-shellcheck@v1
+        with:
+          github_token: ${{ secrets.github_token }}
+          reporter: github-pr-review # Change reporter.
+          path: "." # Optional.
+          pattern: "*.sh" # Optional.
+          exclude: "./.git/*" # Optional.
+  hadolint:
+    #name: runner / hadolint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+      - name: hadolint
+        uses: reviewdog/action-hadolint@v1
+        with:
+          github_token: ${{ secrets.github_token }}
+          reporter: github-pr-review # Default is github-pr-check
