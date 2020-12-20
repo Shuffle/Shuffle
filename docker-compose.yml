@@ -4,11 +4,7 @@ services:
     #build: ./frontend
     image: ${SHUFFLE_BASE_REPO:-"ghcr.io/frikky"}/shuffle-frontend:0.8.3
     container_name: shuffle-frontend
-    hostname: shuffle-frontend
-    # remove '#' if you want to have this ports directly published
-    #ports:
-      #- "${FRONTEND_PORT}:80"
-      #- "${FRONTEND_PORT_HTTPS}:443"
+    hostname: frontend
     networks:
       - shuffle
     environment:
@@ -20,10 +16,12 @@ services:
     #build: ./backend
     image: ${SHUFFLE_BASE_REPO:-"ghcr.io/frikky"}/shuffle-backend:0.8.3
     container_name: shuffle-backend
-    hostname: shuffle-backend
+    hostname: backend
     # Here for debugging:
     #ports:
       #- "${BACKEND_PORT}:5001"
+    expose:
+      - 5001
     networks:
       - shuffle
     volumes: 
@@ -46,9 +44,9 @@ services:
       - database
   database:
     #build: ./backend/database
-    image: ${SHUFFLE_BASE_REPO:-"ghcr.io/frikky"}/shuffle:database
+    image: frikky/shuffle:database
     container_name: shuffle-database
-    hostname: shuffle-database
+    # Here for debugging:
     #ports:
       #- "8000:8000"
     expose:
