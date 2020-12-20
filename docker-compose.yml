@@ -2,27 +2,28 @@ version: '3'
 services:
   frontend:
     #build: ./frontend
-    image: ghcr.io/frikky/shuffle-frontend:0.8.3
+    image: ${SHUFFLE_BASE_REPO:-"ghcr.io/frikky"}/shuffle-frontend:0.8.3
     container_name: shuffle-frontend
     hostname: shuffle-frontend
-    ports:
-      - "${FRONTEND_PORT}:80"
-      - "${FRONTEND_PORT_HTTPS}:443"
+    # remove '#' if you want to have this ports directly published
+    #ports:
+      #- "${FRONTEND_PORT}:80"
+      #- "${FRONTEND_PORT_HTTPS}:443"
     networks:
       - shuffle
     environment:
-      - BACKEND_HOSTNAME=${BACKEND_HOSTNAME}
+      - BACKEND_HOSTNAME=${BACKEND_HOSTNAME:-"backend"}
     restart: unless-stopped
     depends_on:
       - backend
   backend:
     #build: ./backend
-    image: ghcr.io/frikky/shuffle-backend:0.8.3
+    image: ${SHUFFLE_BASE_REPO:-"ghcr.io/frikky"}/shuffle-backend:0.8.3
     container_name: shuffle-backend
-    hostname: ${BACKEND_HOSTNAME}
+    hostname: shuffle-backend
     # Here for debugging:
-    ports:
-      - "${BACKEND_PORT}:5001"
+    #ports:
+      #- "${BACKEND_PORT}:5001"
     networks:
       - shuffle
     volumes: 
@@ -30,11 +31,11 @@ services:
       - ${SHUFFLE_APP_HOTLOAD_LOCATION}:/shuffle-apps     
       - ${SHUFFLE_FILE_LOCATION}:/shuffle-files
     environment:
-      - DATASTORE_EMULATOR_HOST=shuffle-database:8000
+      - DATASTORE_EMULATOR_HOST=database:8000
       - SHUFFLE_APP_HOTLOAD_FOLDER=/shuffle-apps
       - SHUFFLE_FILE_LOCATION=/shuffle-files
-      - ORG_ID=${ORG_ID}
-      - SHUFFLE_APP_DOWNLOAD_LOCATION=${SHUFFLE_APP_DOWNLOAD_LOCATION}
+      - ORG_ID=${ORG_ID:-"Shuffle"}
+      - SHUFFLE_APP_DOWNLOAD_LOCATION=${SHUFFLE_APP_DOWNLOAD_LOCATION:-"https://github.com/frikky/shuffle-apps"}
       - SHUFFLE_DEFAULT_USERNAME=${SHUFFLE_DEFAULT_USERNAME}
       - SHUFFLE_DEFAULT_PASSWORD=${SHUFFLE_DEFAULT_PASSWORD}
       - SHUFFLE_DEFAULT_APIKEY=${SHUFFLE_DEFAULT_APIKEY}
@@ -43,42 +44,44 @@ services:
     restart: unless-stopped
     depends_on:
       - database
-  orborus:
-    #build: ./functions/onprem/orborus
-    image: ghcr.io/frikky/shuffle-orborus:0.8.0
-    container_name: shuffle-orborus
-    hostname: shuffle-orborus
-    networks:
-      - shuffle
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    environment:
-      - SHUFFLE_APP_SDK_VERSION=0.8.0
-      - SHUFFLE_WORKER_VERSION=0.8.0
-      - ORG_ID=${ORG_ID}
-      - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
-      - BASE_URL=http://${OUTER_HOSTNAME}:${BACKEND_PORT}
-      - DOCKER_API_VERSION=1.40
-      - HTTP_PROXY=${SHUFFLE_HTTP_PROXY}
-      - HTTPS_PROXY=${SHUFFLE_HTTPS_PROXY}
-      - SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
-      - SHUFFLE_ORBORUS_EXECUTION_TIMEOUT=600
-      - SHUFFLE_BASE_IMAGE_NAME=${SHUFFLE_BASE_IMAGE_NAME}
-      - SHUFFLE_BASE_IMAGE_REGISTRY=${SHUFFLE_BASE_IMAGE_REGISTRY}
-      - SHUFFLE_BASE_IMAGE_TAG_SUFFIX=${SHUFFLE_BASE_IMAGE_TAG_SUFFIX}
-    restart: unless-stopped
   database:
     #build: ./backend/database
-    image: frikky/shuffle:database
+    image: ${SHUFFLE_BASE_REPO:-"ghcr.io/frikky"}/shuffle:database
     container_name: shuffle-database
     hostname: shuffle-database
-    ports:
-      - "8000:8000"
+    #ports:
+      #- "8000:8000"
+    expose:
+      - 8000
     networks:
       - shuffle
     restart: unless-stopped
     volumes:
       - ${DB_LOCATION}:/etc/shuffle
+  #orborus:
+    #build: ./functions/onprem/orborus
+    #image: ghcr.io/frikky/shuffle-orborus:0.8.0
+    #container_name: shuffle-orborus
+    #hostname: shuffle-orborus
+    #networks:
+      #- shuffle
+    #volumes:
+      #- /var/run/docker.sock:/var/run/docker.sock
+    #environment:
+      #- SHUFFLE_APP_SDK_VERSION=${SHUFFLE_APP_SDK_VERSION:-"0.8.0"}
+      #- SHUFFLE_WORKER_VERSION=${SHUFFLE_WORKER_VERSION:-"0.8.0"}
+      #- ORG_ID=${ORG_ID:-"Shuffle"}
+      #- ENVIRONMENT_NAME=${ENVIRONMENT_NAME:-"Shuffle"}
+      #- BASE_URL=http://${OUTER_HOSTNAME}:${BACKEND_PORT}
+      #- DOCKER_API_VERSION=${DOCKER_API_VERSION:-"1.40"}
+      #- HTTP_PROXY=${SHUFFLE_HTTP_PROXY}
+      #- HTTPS_PROXY=${SHUFFLE_HTTPS_PROXY}
+      #- SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
+      #- SHUFFLE_ORBORUS_EXECUTION_TIMEOUT=600
+      #- SHUFFLE_BASE_IMAGE_NAME=${SHUFFLE_BASE_IMAGE_NAME}
+      #- SHUFFLE_BASE_IMAGE_REGISTRY=${SHUFFLE_BASE_IMAGE_REGISTRY}
+      #- SHUFFLE_BASE_IMAGE_TAG_SUFFIX=${SHUFFLE_BASE_IMAGE_TAG_SUFFIX}
+    #restart: unless-stopped
 networks:
   shuffle:
     driver: bridge
