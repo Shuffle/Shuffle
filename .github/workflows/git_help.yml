@@ -1,0 +1,27 @@
+name: Git - Mark Issue with Help Wanted - actions-ecosystem
+
+on:
+  issues:
+    types:
+      - opened
+      - edited
+      - reopened
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions-ecosystem/action-regex-match@v2
+        id: regex-match
+        with:
+          text: ${{ github.event.issue.title }}
+          regex: "help|not work"
+          flags: 'gi'
+
+      - uses: actions-ecosystem/action-add-labels@v1
+        if: ${{ steps.regex-match.outputs.match != '' }}
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          labels: 'help wanted'
