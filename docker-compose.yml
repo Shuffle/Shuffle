@@ -2,7 +2,7 @@ version: '3'
 services:
   frontend:
     #build: ./frontend
-    image: ghcr.io/frikky/shuffle-frontend:0.8.4
+    image: ghcr.io/frikky/shuffle-frontend:0.8.42
     container_name: shuffle-frontend
     hostname: shuffle-frontend
     ports:
@@ -45,7 +45,7 @@ services:
       - database
   orborus:
     #build: ./functions/onprem/orborus
-    image: ghcr.io/frikky/shuffle-orborus:0.8.31
+    image: ghcr.io/frikky/shuffle-orborus:0.8.32
     container_name: shuffle-orborus
     hostname: shuffle-orborus
     networks:

@@ -192,7 +192,7 @@ const AngularWorkflow = (props) => {
 	const cloudSyncEnabled = props.userdata !== undefined && props.userdata.active_org !== null && props.userdata.active_org !== undefined ? props.userdata.active_org.cloud_sync === true : false 
 	//const triggerEnvironments = cloudSyncEnabled ? ["cloud", "onprem"] : environments
 	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" 
-	const triggerEnvironments = isCloud ? ["cloud"] : ["cloud", "onprem"] 
+	const triggerEnvironments = isCloud ? ["cloud"] : ["onprem", "cloud"] 
 
 	const unloadText = 'Are you sure you want to leave without saving (CTRL+S)?'
 	useBeforeunload(() => {
@@ -2663,7 +2663,6 @@ const AngularWorkflow = (props) => {
 								foundResult.result = foundResult.result.split(" None").join(" \"None\"")
 								foundResult.result = foundResult.result.split(" False").join(" false")
 								foundResult.result = foundResult.result.split(" True").join(" true")
-								foundResult.result = foundResult.result.split("\'").join("\"")
 
 								var jsonvalid = true
 								try {
@@ -2672,7 +2671,15 @@ const AngularWorkflow = (props) => {
 										jsonvalid = false
 									}
 								} catch (e) {
-									jsonvalid = false
+									try {
+										foundResult.result = foundResult.result.split("\'").join("\"")
+										const tmp = String(JSON.parse(foundResult.result))
+										if (!foundResult.result.includes("{") && !foundResult.result.includes("[")) {
+											jsonvalid = false
+										}
+									} catch (e) {
+										jsonvalid = false
+									}
 								}
 
 								// Finds the FIRST json only
@@ -5874,7 +5881,6 @@ const AngularWorkflow = (props) => {
 	const parsedExecutionArgument = () => {
 		var showResult = executionData.execution_argument.trim()
 		showResult = showResult.split(" None").join(" \"None\"")
-		showResult = showResult.split("\'").join("\"")
 		showResult = showResult.split(" False").join(" false")
 		showResult = showResult.split(" True").join(" true")
 
@@ -5885,7 +5891,16 @@ const AngularWorkflow = (props) => {
 				jsonvalid = false
 			}
 		} catch (e) {
-			jsonvalid = false
+			showResult = showResult.split("\'").join("\"")
+
+			try {
+				const tmp = String(JSON.parse(showResult))
+				if (!showResult.includes("{") && !showResult.includes("[")) {
+					jsonvalid = false
+				}
+			} catch (e) {
+				jsonvalid = false
+			}
 		}
 
 		if (jsonvalid) {
@@ -6070,21 +6085,28 @@ const AngularWorkflow = (props) => {
 							//
 							// FIXME: The latter replace doens't really work if ' is used in a string
 							var showResult = data.result.trim()
+							//console.log(showResult)
 							showResult = showResult.split(" None").join(" \"None\"")
 							showResult = showResult.split(" False").join(" false")
 							showResult = showResult.split(" True").join(" true")
-							showResult = showResult.split("\'").join("\"")
 
 							var jsonvalid = true
 							try {
 								const tmp = String(JSON.parse(showResult))
 								if (!showResult.includes("{") && !showResult.includes("[")) {
-									//console.log("IN HERE: ", tmp)
 									jsonvalid = false
 								}
 							} catch (e) {
-								//console.log("Error: ", e)
-								jsonvalid = false
+								showResult = showResult.split("\'").join("\"")
+
+								try {
+									const tmp = String(JSON.parse(showResult))
+									if (!showResult.includes("{") && !showResult.includes("[")) {
+										jsonvalid = false
+									}
+								} catch (e) {
+									jsonvalid = false
+								}
 							}
 
 							const curapp = apps.find(a => a.name === data.action.app_name && a.app_version === data.action.app_version)

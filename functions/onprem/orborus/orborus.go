@@ -562,6 +562,7 @@ func zombiecheck(workerTimeout int) error {
 
 	stopContainers := []string{}
 	removeContainers := []string{}
+	log.Printf("Workertimeout: %d", int64(workerTimeout))
 	for _, container := range containers {
 		// Skip random containers. Only handle things related to Shuffle.
 		if !strings.Contains(container.Image, baseimagename) {
@@ -587,10 +588,10 @@ func zombiecheck(workerTimeout int) error {
 				continue
 			}
 
-			log.Printf("[INFO] NAME: %s", name)
+			currenttime := time.Now().Unix()
+			log.Printf("[INFO] (%s) NAME: %s. TIME: %d", container.State, name, currenttime-container.Created)
 
 			// Need to check time here too because a container can be removed the same instant as its created
-			currenttime := time.Now().Unix()
 			if container.State != "running" && currenttime-container.Created > int64(workerTimeout) {
 				removeContainers = append(removeContainers, container.ID)
 				containerNames[container.ID] = name
@@ -606,6 +607,7 @@ func zombiecheck(workerTimeout int) error {
 	}
 
 	// FIXME - add killing of apps with same execution ID too
+	log.Printf("[INFO] Should STOP %d containers.", len(stopContainers))
 	for _, containername := range stopContainers {
 		log.Printf("[INFO] Stopping and removing container %s", containerNames[containername])
 		go dockercli.ContainerStop(ctx, containername, nil)
@@ -617,6 +619,7 @@ func zombiecheck(workerTimeout int) error {
 		Force:         true,
 	}
 
+	log.Printf("[INFO] Should REMOVE %d containers.", len(removeContainers))
 	for _, containername := range removeContainers {
 		go dockercli.ContainerRemove(ctx, containername, removeOptions)
 	}

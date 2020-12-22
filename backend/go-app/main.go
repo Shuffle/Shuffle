@@ -2483,7 +2483,7 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 	if len(users) != 1 {
 		log.Printf(`Found multiple or no users with the same username: %s: %d`, data.Username, len(users))
 		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Found %d users with the same username: %s"}`, len(users), data.Username)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error: %d users with username %s"}`, len(users), data.Username)))
 		return
 	}
 
@@ -4785,7 +4785,7 @@ func getDocList(resp http.ResponseWriter, request *http.Request) {
 
 	if len(item1) == 0 {
 		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "No docs available."`)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "No docs available."}`)))
 		return
 	}
 
@@ -4844,7 +4844,7 @@ func getDocs(resp http.ResponseWriter, request *http.Request) {
 	location := strings.Split(request.URL.String(), "/")
 	if len(location) != 5 {
 		resp.WriteHeader(404)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad path. Use e.g. /api/v1/docs/workflows.md"`)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad path. Use e.g. /api/v1/docs/workflows.md"}`)))
 		return
 	}
 
@@ -4868,7 +4868,7 @@ func getDocs(resp http.ResponseWriter, request *http.Request) {
 	)
 
 	if err != nil {
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad path. Use e.g. /api/v1/docs/workflows.md"`)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad path. Use e.g. /api/v1/docs/workflows.md"}`)))
 		resp.WriteHeader(404)
 		//setBadMemcache(ctx, docPath)
 		return
@@ -4877,7 +4877,7 @@ func getDocs(resp http.ResponseWriter, request *http.Request) {
 	newresp, err := client.Do(req)
 	if err != nil {
 		resp.WriteHeader(404)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad path. Use e.g. /api/v1/docs/workflows.md"`)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad path. Use e.g. /api/v1/docs/workflows.md"}`)))
 		//setBadMemcache(ctx, docPath)
 		return
 	}
@@ -4885,7 +4885,7 @@ func getDocs(resp http.ResponseWriter, request *http.Request) {
 	body, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
 		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't parse data"`)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't parse data"}`)))
 		//setBadMemcache(ctx, docPath)
 		return
 	}
@@ -5958,7 +5958,7 @@ func echoOpenapiData(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		log.Printf("[ERROR] URLbody error: %s", err)
 		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't get data from selected uri"`)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't get data from selected uri"}`)))
 		return
 	}
 

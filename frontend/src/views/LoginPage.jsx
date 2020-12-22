@@ -69,7 +69,7 @@ const LoginDialog = props => {
 				}),
 			)
 			.catch(error => {
-				setLoginInfo("Error in userdata: ", error)
+				setLoginInfo("Error logging in: ", error)
 			})
 	}
 
@@ -80,6 +80,7 @@ const LoginDialog = props => {
 
 	const onSubmit = (e) => {
 		e.preventDefault()
+		setLoginInfo("")
 		// FIXME - add some check here ROFL
 
 		// Just use this one?
@@ -114,7 +115,7 @@ const LoginDialog = props => {
 					}),
 				)
 				.catch(error => {
-					setLoginInfo("Error in userdata: " + error)
+					setLoginInfo("Error logging in: " + error)
 				});
 		} else {
 			url = baseurl + '/api/v1/users/register';

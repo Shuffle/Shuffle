@@ -470,6 +470,33 @@ const Admin = (props) => {
 		})
 	}
 
+	const flushQueue = (name) => {
+		// Just use this one?
+		const url = globalUrl + '/api/v1/flush_queue';
+		fetch(url, {
+			method: 'DELETE',
+			credentials: "include",
+			headers: {
+				'Content-Type': 'application/json',
+			},
+		})
+			.then(response =>
+				response.json().then(responseJson => {
+					if (responseJson["success"] === false) {
+						alert.error(responseJson.reason)
+						getEnvironments()
+					} else {
+						setLoginInfo("")
+						setModalOpen(false)
+						getEnvironments()
+					}
+				}),
+			)
+		.catch(error => {
+			console.log("Error when deleting: ", error)
+		})
+	}
+
 	const deleteEnvironment = (name) => {
 		// FIXME - add some check here ROFL
 		alert.info("Deleting environment " + name)
@@ -2094,6 +2121,7 @@ const Admin = (props) => {
 								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
 							>
 								<Button disabled={environment.archived} variant="outlined" style={{borderRadius: "0px"}} onClick={() => deleteEnvironment(environment.Name)} color="primary">Archive</Button>
+								{/*<Button disabled={environment.archived} variant="outlined" style={{borderRadius: "0px"}} onClick={() => flushQueue(environment.Name)} color="primary">Flush Queue</Button>*/}
 							</ListItemText>
 							<ListItemText
 								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}

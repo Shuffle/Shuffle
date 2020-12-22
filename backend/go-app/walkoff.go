@@ -4015,7 +4015,7 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	log.Printf("ID: %s", fileId)
 	app, err := getApp(ctx, fileId)
 	if err != nil {
-		log.Printf("Error getting app %s: %s", app.Name, err)
+		log.Printf("Error getting app (delete) %s: %s", fileId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -4169,7 +4169,7 @@ func getWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	app, err := getApp(ctx, fileId)
 	if err != nil {
-		log.Printf("Error getting app: %s", app.Name)
+		log.Printf("Error getting app (app config): %s", fileId)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -4438,7 +4438,7 @@ func updateWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	app, err := getApp(ctx, fileId)
 	if err != nil {
-		log.Printf("Error getting app: %s (update app)", app.Name)
+		log.Printf("Error getting app (update app): %s", fileId)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return

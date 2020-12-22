@@ -46,6 +46,10 @@ const inputColor = "#383B40"
 export const GetParsedPaths = (inputdata, basekey) => {
 	const splitkey = " > "
 	var parsedValues = []
+	if (inputdata === undefined || inputdata === null) {
+		return parsedValues
+	}
+
 	if (typeof(inputdata) !== "object") {
 		return parsedValues
 	}

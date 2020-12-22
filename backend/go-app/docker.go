@@ -230,6 +230,7 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 	}
 
 	// Build the actual image
+	log.Printf("Building %s. This may take up to a few minutes.", dockerfileFolder)
 	imageBuildResponse, err := client.ImageBuild(
 		ctx,
 		dockerFileTarReader,

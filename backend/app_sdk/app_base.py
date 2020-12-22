@@ -606,11 +606,14 @@ class AppBase:
             if "len" in thistype or "length" in thistype or "lenght" in thistype:
                 tmp = "" 
                 try:
-                    tmpdata = data.replace("\'", "\"")
                     tmp = json.loads(tmpdata)
                 except: 
-                    print("Passing bug")
-                    pass
+                    try:
+                        tmpdata = data.replace("\'", "\"")
+                        tmp = json.loads(tmpdata)
+                    except:
+                        print("[ERROR] Parsing bug for length in app sdk")
+                        pass
 
                 if isinstance(tmp, list):
                     return len(tmp)
@@ -649,14 +652,14 @@ class AppBase:
                     return tmp
                 except IndexError as e:
                     return default_error
-        
+
         # Parses the INNER value and recurses until everything is done
         def parse_wrapper(data):
             try:
                 if "(" not in data or ")" not in data:
-                    return data
+                    return (data, False)
             except TypeError:
-                return data
+                return (data, False)
         
             #print("Running %s" % data)
         
@@ -671,7 +674,7 @@ class AppBase:
                 break
         
             if not found:
-                return data
+                return (data, False)
         
             # Do stuff here.
             innervalue = parse_nested_param(data, maxDepth(data)-0)
@@ -692,10 +695,11 @@ class AppBase:
         
                     parsed_value = parse_type(innervalue[0], thistype.lower())
                     print("Parsed value from %s: %s" % (thistype, parsed_value))
-                    return parsed_value
+                    return (parsed_value, True)
         
             print("DATA: %s\n" % data)
-            return parse_wrapper(data)
+            return (parse_wrapper(data)[0], True)
+        
 
         # Looks for parantheses to grab special cases within a string, e.g:
         # int(1) lower(HELLO) or length(what's the length)
@@ -737,15 +741,20 @@ class AppBase:
             if len(newstring) > 0:
                 newdata.append(newstring)
         
-            print("Newdata: ", newdata)
             parsedlist = []
             non_string = False
+            parsed = False
             for item in newdata:
                 ret = parse_wrapper(item)
-                if not isinstance(ret, str):
+                if not isinstance(ret[0], str):
                     non_string = True
-        
-                parsedlist.append(ret)
+            
+                parsedlist.append(ret[0])
+                if ret[1]:
+                    parsed = True
+            
+            if not parsed:
+                return data
         
             if len(parsedlist) > 0 and not non_string:
                 print("Returning parsed list: ", parsedlist)
@@ -949,7 +958,6 @@ class AppBase:
             if len(parsersplit) == 1:
                 return str(baseresult)+str(appendresult), False
         
-            baseresult = baseresult.replace("\'", "\"")
             baseresult = baseresult.replace(" True,", " true,")
             baseresult = baseresult.replace(" False", " false,")
 
@@ -958,8 +966,12 @@ class AppBase:
             try:
                 basejson = json.loads(baseresult)
             except json.decoder.JSONDecodeError as e:
-                print("Parser issue with JSON: %s" % e)
-                return str(baseresult)+str(appendresult), False
+                try:
+                    baseresult = baseresult.replace("\'", "\"")
+                    basejson = json.loads(baseresult)
+                except json.decoder.JSONDecodeError as e:
+                    print("Parser issue with JSON: %s" % e)
+                    return str(baseresult)+str(appendresult), False
 
             print("After fourth parser return as JSON")
         
@@ -1365,14 +1377,17 @@ class AppBase:
                                     if replacement.startswith("\"") and replacement.endswith("\""):
                                         replacement = replacement[1:len(replacement)-1]
 
-                                    replacement = replacement.replace("\'", "\"", -1)
                                     print("POST replacement: %s" % replacement)
 
                                     json_replacement = replacement
                                     try:
                                         json_replacement = json.loads(replacement)
                                     except json.decoder.JSONDecodeError as e:
-                                        print("JSON error singular: %s" % e)
+                                        try:
+                                            replacement = replacement.replace("\'", "\"", -1)
+                                            json_replacement = json.loads(replacement)
+                                        except:
+                                            print("JSON error singular: %s" % e)
 
                                     if len(json_replacement) > minlength:
                                         minlength = len(json_replacement)
