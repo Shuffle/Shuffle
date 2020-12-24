@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	//"io"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -37,7 +37,7 @@ func getThisContainerId() string {
 	if err == nil {
 		id = strings.TrimSpace(string(out))
 
-		log.Printf("Checking if %s is in %s", ".scope", string(out))
+		//log.Printf("Checking if %s is in %s", ".scope", string(out))
 		if strings.Contains(string(out), ".scope") {
 			id = fallbackName
 		}
@@ -1370,7 +1370,12 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 				log.Printf("Skipping FULL_EXECUTION because size is larger than %d", maxSize)
 			}
 
-			// Try original -> Go to lowercase
+			// Uses a few ways of getting / checking if an app is available
+			// 1. Try original
+			// 2. Go to lowercase
+			// 3. Add remote repo location
+			// 4. Actually download last repo
+
 			err = deployApp(dockercli, image, identifier, env)
 			if err != nil {
 				// Trying to replace with lowercase to deploy again. This seems to work with Dockerhub well.
@@ -1389,12 +1394,36 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 
 					err = deployApp(dockercli, image, identifier, env)
 					if err != nil {
-
-						log.Printf("[ERROR] Failed deploying image THRICE. Aborting if the image doesn't exist")
-						if strings.Contains(err.Error(), "No such image") {
-							//log.Printf("[WARNING] Failed deploying %s from image %s: %s", identifier, image, err)
-							log.Printf("[ERROR] Image doesn't exist. Shutting down")
+						log.Printf("[WARNING] Failed deploying image THRICE. Attempting to download the latter as last resort.")
+						reader, err := dockercli.ImagePull(context.Background(), image, pullOptions)
+						if err != nil {
+							log.Printf("[ERROR] Failed getting %s. The couldn't be find locally, AND is missing.", image)
 							shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+						}
+
+						buildBuf := new(strings.Builder)
+						_, err = io.Copy(buildBuf, reader)
+						if err != nil {
+							log.Printf("[ERROR] Error in IO copy: %s", err)
+							shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+						} else {
+							if strings.Contains(buildBuf.String(), "errorDetail") {
+								log.Printf("[ERROR] Docker build:\n%s\nERROR ABOVE: Trying to pull tags from: %s", buildBuf.String(), image)
+								shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+							}
+
+							log.Printf("[INFO] Successfully downloaded %s", image)
+						}
+
+						err = deployApp(dockercli, image, identifier, env)
+						if err != nil {
+
+							log.Printf("[ERROR] Failed deploying image for the FOURTH time. Aborting if the image doesn't exist")
+							if strings.Contains(err.Error(), "No such image") {
+								//log.Printf("[WARNING] Failed deploying %s from image %s: %s", identifier, image, err)
+								log.Printf("[ERROR] Image doesn't exist. Shutting down")
+								shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+							}
 						}
 					}
 				}

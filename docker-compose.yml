@@ -2,7 +2,7 @@ version: '3'
 services:
   frontend:
     #build: ./frontend
-    image: ghcr.io/frikky/shuffle-frontend:0.8.42
+    image: ghcr.io/frikky/shuffle-frontend:0.8.43
     container_name: shuffle-frontend
     hostname: shuffle-frontend
     ports:

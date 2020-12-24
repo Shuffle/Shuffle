@@ -130,7 +130,7 @@ const OrgHeader = (props) => {
 	return (
 		<div>
 			<div style={{color: "white", flex: "1", display: "flex", flexDirection: "row"}}>
-				<Tooltip title="Click to edit the app's image - 174x174" placement="bottom">
+				<Tooltip title="Click to edit the organizations's image (174x174)" placement="bottom">
 					<div style={{flex: "1", margin: "10px 25px 10px 0px", border: imageData !== undefined && imageData.length > 0 ? null : "1px solid #f85a3e", cursor: "pointer", backgroundColor: imageData !== undefined && imageData.length > 0 ? null : theme.palette.inputColor, maxWidth: 174, maxHeight: 174}} onClick={() => {upload.click()}}>
 						<input hidden type="file" ref={(ref) => upload = ref} onChange={editHeaderImage} />
 						{imageInfo}

@@ -1127,6 +1127,22 @@ class AppBase:
             elif check.lower() == "contains":
                 if destinationvalue.lower() in sourcevalue.lower():
                     return True
+            elif check.lower() == "contains_any_of":
+                newvalue = [destinationvalue.lower()]
+                if "," in destinationvalue:
+                    newvalue = destinationvalue.split(",")
+                elif ", " in destinationvalue:
+                    newvalue = destinationvalue.split(", ")
+
+                for item in new_value:
+                    if not item:
+                        continue
+
+                    if item.trim() in sourcevalue:
+                        print("[INFO] Found %s in %s" % (item, sourcevalue))
+                        return True
+                    
+                return False 
             elif check.lower() == "larger than":
                 try:
                     if sourcevalue.isdigit() and destinationvalue.isdigit():

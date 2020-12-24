@@ -4367,6 +4367,11 @@ const AngularWorkflow = (props) => {
 								setVariableAnchorEl(null)
 							}} key={"contains"}>contains</MenuItem>
 							<MenuItem style={menuItemStyle} onClick={(e) => {
+								conditionValue.value = "contains_any_of"
+								setConditionValue(conditionValue)
+								setVariableAnchorEl(null)
+							}} key={"contains_any_of"}>contains</MenuItem>
+							<MenuItem style={menuItemStyle} onClick={(e) => {
 								conditionValue.value = "matches regex"
 								setConditionValue(conditionValue)
 								setVariableAnchorEl(null)

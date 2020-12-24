@@ -785,7 +785,7 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflowExecution, err := getWorkflowExecution(ctx, actionResult.ExecutionId)
 	if err != nil {
-		log.Printf("Failed getting execution (streamresult) %s: %s", actionResult.ExecutionId, err)
+		//log.Printf("Failed getting execution (streamresult) %s: %s", actionResult.ExecutionId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad authorization key or execution_id might not exist."}`)))
 		return
@@ -1004,7 +1004,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	}
 
 	if actionResult.Status == "ABORTED" || actionResult.Status == "FAILURE" {
-		log.Printf("Actionresult is %s. Should set workflowExecution and exit all running functions", actionResult.Status)
+		log.Printf("[WARNING] Actionresult is %s. Should set workflowExecution and exit all running functions", actionResult.Status)
 
 		newResults := []ActionResult{}
 		childNodes := []string{}
@@ -1016,7 +1016,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 			// Finds ALL childnodes to set them to SKIPPED
 			childNodes = findChildNodes(*workflowExecution, actionResult.Action.ID)
 			// Remove duplicates
-			log.Printf("CHILD NODES: %d", len(childNodes))
+			//log.Printf("CHILD NODES: %d", len(childNodes))
 			for _, nodeId := range childNodes {
 				if nodeId == actionResult.Action.ID {
 					continue
@@ -1290,7 +1290,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	}
 
 	if _, err = tx.Commit(); err != nil {
-		if attempts >= 5 {
+		if attempts >= 7 {
 			log.Printf("[ERROR] QUITTING: tx.Commit %d: %v", attempts, err)
 			tx.Rollback()
 			workflowExecution.Status = "ABORTED"
@@ -1301,7 +1301,9 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 			return
 		}
 
-		log.Printf("[WARNING] tx.Commit %d: %v", attempts, err)
+		if attempts > 3 {
+			log.Printf("[WARNING] tx.Commit %d: %v", attempts, err)
+		}
 
 		attempts += 1
 		runWorkflowExecutionTransaction(ctx, attempts, workflowExecutionId, actionResult, resp)
@@ -2604,7 +2606,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		}
 
 		// This one doesn't really matter.
-		log.Printf("Running POST execution with data %s", body)
+		log.Printf("Running POST execution with body of length %d", len(string(body)))
 		var execution ExecutionRequest
 		err = json.Unmarshal(body, &execution)
 		if err != nil {

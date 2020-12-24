@@ -106,7 +106,7 @@ func getThisContainerId() {
 
 			// cgroup error. Hardcoding this.
 			// https://github.com/moby/moby/issues/7015
-			log.Printf("Checking if %s is in %s", ".scope", string(out))
+			//log.Printf("Checking if %s is in %s", ".scope", string(out))
 			if strings.Contains(string(out), ".scope") {
 				containerId = "shuffle-orborus"
 				//docker-76c537e9a4b7c7233011f5d70e6b7f2d600b6413ac58a96519b8dca7a3f7117a.scope
