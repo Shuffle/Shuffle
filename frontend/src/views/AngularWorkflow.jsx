@@ -4370,7 +4370,7 @@ const AngularWorkflow = (props) => {
 								conditionValue.value = "contains_any_of"
 								setConditionValue(conditionValue)
 								setVariableAnchorEl(null)
-							}} key={"contains_any_of"}>contains</MenuItem>
+							}} key={"contains_any_of"}>contains any of</MenuItem>
 							<MenuItem style={menuItemStyle} onClick={(e) => {
 								conditionValue.value = "matches regex"
 								setConditionValue(conditionValue)
@@ -5979,7 +5979,7 @@ const AngularWorkflow = (props) => {
 				{workflowExecutions.length > 0 ? 
 					<div>
 						{workflowExecutions.map(data => {
-							const statusColor = data.status === "FINISHED" ? "green" : data.status === "ABORTED" ? "red" : "orange"
+							const statusColor = data.status === "FINISHED" ? "green" : data.status === "ABORTED" || data.status === "FAILED" ? "red" : "orange"
 							const timeElapsed = data.completed_at-data.started_at
 							const resultsLength = data.results !== undefined && data.results !== null ? data.results.length : 0
 

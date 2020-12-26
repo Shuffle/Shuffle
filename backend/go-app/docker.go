@@ -501,7 +501,7 @@ func handleStopHookDocker(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	hook, err := getHook(ctx, fileId)
 	if err != nil {
-		log.Printf("Failed getting hook: %s", err)
+		log.Printf("Failed getting hook %s (stop docker): %s", fileId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -633,7 +633,7 @@ func handleStartHookDocker(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	hook, err := getHook(ctx, fileId)
 	if err != nil {
-		log.Printf("Failed getting hook: %s", err)
+		log.Printf("Failed getting hook %s (start docker): %s", fileId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -781,7 +781,7 @@ func hookTest() {
 
 	returnHook, err := getHook(ctx, hook.Id)
 	if err != nil {
-		log.Printf("Failed getting hook: %s", err)
+		log.Printf("Failed getting hook %s (test): %s", hook.Id, err)
 	}
 
 	if len(returnHook.Id) > 0 {

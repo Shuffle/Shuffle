@@ -3096,7 +3096,7 @@ func handleSetHook(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	_, err = getHook(ctx, workflowId)
 	if err != nil {
-		log.Printf("Failed getting hook: %s", err)
+		log.Printf("Failed getting hook %s (set): %s", workflowId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "message": "Invalid ID"}`))
 		return
@@ -3457,7 +3457,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	//log.Printf("HookID: %s", hookId)
 	hook, err := getHook(ctx, hookId)
 	if err != nil {
-		log.Printf("Failed getting hook: %s", err)
+		log.Printf("Failed getting hook %s (callback): %s", hookId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -3470,7 +3470,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	//resp.WriteHeader(200)
 	//resp.Write([]byte(`{"success": true}`))
 	if hook.Status == "stopped" {
-		log.Printf("Not running because hook status is stopped")
+		log.Printf("Not running %s because hook status is stopped", hook.Id)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "The webhook isn't running. Click start to start it"}`)))
 		return
@@ -3493,18 +3493,32 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		ExecutionArgument string `json:"execution_argument"`
 	}
 
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		log.Printf("Body data error: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	newBody := ExecutionStruct{
+		Start:             hook.Start,
+		ExecutionSource:   "webhook",
+		ExecutionArgument: string(body),
+	}
+
+	b, err := json.Marshal(newBody)
+	if err != nil {
+		log.Printf("Failed newBody marshaling: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
 	for _, item := range hook.Workflows {
 		log.Printf("Running webhook for workflow %s with startnode %s", item, hook.Start)
 		workflow := Workflow{
 			ID: "",
-		}
-
-		body, err := ioutil.ReadAll(request.Body)
-		if err != nil {
-			log.Printf("Body data error: %s", err)
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
 		}
 
 		//parsedBody := string(body)
@@ -3514,20 +3528,6 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		//		parsedBody = parsedBody[1 : len(parsedBody)-1]
 		//	}
 		//}
-
-		newBody := ExecutionStruct{
-			Start:             hook.Start,
-			ExecutionSource:   "webhook",
-			ExecutionArgument: string(body),
-		}
-
-		b, err := json.Marshal(newBody)
-		if err != nil {
-			log.Printf("Failed newBody marshaling: %s", err)
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
 
 		//bodyWrapper := fmt.Sprintf(`{"start": "%s", "execution_source": "webhook", "execution_argument": "%s"}`, hook.Start, string(parsedBody))
 		//if len(hook.Start) == 0 {
@@ -3798,7 +3798,7 @@ func sendHookResult(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	hook, err := getHook(ctx, workflowId)
 	if err != nil {
-		log.Printf("Failed getting hook: %s", err)
+		log.Printf("Failed getting hook %s (send): %s", workflowId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -3865,7 +3865,7 @@ func handleGetHook(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	hook, err := getHook(ctx, workflowId)
 	if err != nil {
-		log.Printf("Failed getting hook: %s", err)
+		log.Printf("Failed getting hook %s (get hook): %s", workflowId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -7152,7 +7152,12 @@ func runInit(ctx context.Context) {
 				}
 			}
 		} else {
-			log.Printf("Found %d users.", len(users))
+			if len(users) == 1 {
+				log.Printf("Found 1 user - %s.", users[0].Username)
+			} else {
+				log.Printf("Found %d users.", len(users))
+			}
+
 			if len(activeOrgs) == 1 && len(users) > 0 {
 				for _, user := range users {
 					if user.ActiveOrg.Id == "" && len(user.Username) > 0 {

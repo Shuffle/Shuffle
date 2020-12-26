@@ -1281,8 +1281,11 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	// Prevents timing issues
 	//ExecutionId
 	if _, err := tx.Put(key, workflowExecution); err != nil {
-		tx.Rollback()
-		log.Printf("[ERROR] tx.Put bug: %v", err)
+		log.Printf("[ERROR] tx.Put error: %v", err)
+		err = tx.Rollback()
+		if err != nil {
+			log.Printf("[ERROR] Rollback error (3): %s", err)
+		}
 
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed setting workflowexecution actionresult: %s"}`, err)))
@@ -1290,9 +1293,14 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	}
 
 	if _, err = tx.Commit(); err != nil {
+		err = tx.Rollback()
+		if err != nil {
+			log.Printf("[ERROR] Rollback error expected ? (1): %s", err)
+		}
+
 		if attempts >= 7 {
 			log.Printf("[ERROR] QUITTING: tx.Commit %d: %v", attempts, err)
-			tx.Rollback()
+
 			workflowExecution.Status = "ABORTED"
 			setWorkflowExecution(ctx, *workflowExecution)
 
@@ -1308,6 +1316,11 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		attempts += 1
 		runWorkflowExecutionTransaction(ctx, attempts, workflowExecutionId, actionResult, resp)
 		return
+	} else {
+		//if grpc.Code(err) == codes.Aborted {
+		//	return nil, ErrConcurrentTransaction
+		//}
+		//t.id = nil // mark the transaction as expired
 	}
 
 	resp.WriteHeader(200)
@@ -6093,7 +6106,7 @@ func handleStopHook(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	hook, err := getHook(ctx, fileId)
 	if err != nil {
-		log.Printf("Failed getting hook: %s", err)
+		log.Printf("Failed getting hook %s (stop): %s", fileId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -6176,7 +6189,7 @@ func handleDeleteHook(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	hook, err := getHook(ctx, fileId)
 	if err != nil {
-		log.Printf("Failed getting hook: %s", err)
+		log.Printf("Failed getting hook %s (delete): %s", fileId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -6317,7 +6330,7 @@ func handleStartHook(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	hook, err := getHook(ctx, fileId)
 	if err != nil {
-		log.Printf("Failed getting hook: %s", err)
+		log.Printf("Failed getting hook %s (start): %s", fileId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
