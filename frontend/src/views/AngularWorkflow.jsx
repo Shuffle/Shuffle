@@ -5957,8 +5957,49 @@ const AngularWorkflow = (props) => {
 		)
 	}
 
+
+	const HandleJsonCopy = (base, copy, base_node_name) => {
+		console.log("COPY: ", copy)
+		var newitem = JSON.parse(base)
+		var to_be_copied = "$"+base_node_name
+		for (var key in copy.namespace) {
+			if (copy.namespace[key].includes("Results for")) {
+				continue
+			}
+
+			if (newitem !== undefined && newitem !== null) {
+				newitem = newitem[copy.namespace[key]]
+				if (!isNaN(copy.namespace[key])) {
+					to_be_copied += ".#"
+				} else {
+					to_be_copied += "."+copy.namespace[key]
+				}
+			}
+		}
+
+		if (newitem !== undefined && newitem !== null) {
+			newitem = newitem[copy.name]
+			if (!isNaN(copy.name)) {
+				to_be_copied += ".#"
+			} else {
+				to_be_copied += "."+copy.name
+			}
+		}
+
+		console.log(to_be_copied)
+  	//var copyText = document.getElementById("copy_element_shuffle");
+		//if (copyText !== null) {
+		//navigator.clipboard.writeText(to_be_copied)
+		//copyText.select();
+		//copyText.setSelectionRange(0, 99999); /* For mobile devices */
+
+		///* Copy the text inside the text field */
+		//document.execCommand("copy");
+		//}
+	}
+	
 	const executionModal = 
-		<Drawer  anchor={"right"} open={executionModalOpen} onClose={() => setExecutionModalOpen(false)} PaperProps={{style: {minWidth: 375, maxWidth: 375, backgroundColor: "#1F2023", color: "white", fontSize: 18}}}>
+		<Drawer anchor={"right"} open={executionModalOpen} onClose={() => setExecutionModalOpen(false)} style={{resize: "both", overflow: "auto",}} PaperProps={{style: {resize: "both", overflow: "auto", minWidth: 400, maxWidth: 400, backgroundColor: "#1F2023", color: "white", fontSize: 18}}}>
 			{executionModalView === 0 ?
 			<div style={{padding: 25, }}>
 				<Breadcrumbs aria-label="breadcrumb" separator="›" style={{color: "white", fontSize: 16}}>
@@ -6136,6 +6177,10 @@ const AngularWorkflow = (props) => {
 											theme="solarized" 
 											collapsed={true}
 											displayDataTypes={false}
+											onSelect={(select) => {
+												HandleJsonCopy(showResult, select, data.action.name)
+												console.log("SELECTED!: ", select)	
+											}}
 											name={"Results for "+data.action.label}
 										/>
 									: 

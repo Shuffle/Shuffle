@@ -202,7 +202,7 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 	tw := tar.NewWriter(buf)
 	defer tw.Close()
 
-	log.Printf("Setting up memory build structure for folder: %s", dockerfileFolder)
+	log.Printf("[INFO] Setting up memory build structure for folder: %s", dockerfileFolder)
 	err = getParsedTarMemory(fs, tw, dockerfileFolder, "")
 	if err != nil {
 		log.Printf("Tar issue: %s", err)
@@ -230,7 +230,7 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 	}
 
 	// Build the actual image
-	log.Printf("Building %s. This may take up to a few minutes.", dockerfileFolder)
+	log.Printf("[INFO] Building %s. This may take up to a few minutes.", dockerfileFolder)
 	imageBuildResponse, err := client.ImageBuild(
 		ctx,
 		dockerFileTarReader,
@@ -713,7 +713,7 @@ func handleStartHookDocker(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// FIXME - get some real data?
-	log.Printf("Successfully started %s-%s on port %s with filepath %s", image, fileId, port, filepath)
+	log.Printf("[INFO] Successfully started %s-%s on port %s with filepath %s", image, fileId, port, filepath)
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": true, "message": "Started webhook"}`))
 	return

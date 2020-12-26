@@ -5776,23 +5776,23 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 				log.Printf("Failed image build memory: %s", err)
 			} else {
 				if len(item.Tags) > 0 {
-					log.Printf("Successfully built image %s", item.Tags[0])
+					log.Printf("[INFO] Successfully built image %s", item.Tags[0])
 				} else {
-					log.Printf("Successfully built Docker image")
+					log.Printf("[INFO] Successfully built Docker image")
 				}
 			}
 		}
 
-		log.Printf("Starting build of %d skipped docker images", len(buildLaterList))
+		log.Printf("[INFO] Starting build of %d skipped docker images", len(buildLaterList))
 		for _, item := range buildLaterList {
 			err = buildImageMemory(fs, item.Tags, item.Extra)
 			if err != nil {
-				log.Printf("Failed image build memory: %s", err)
+				log.Printf("[INFO] Failed image build memory: %s", err)
 			} else {
 				if len(item.Tags) > 0 {
-					log.Printf("Successfully built image %s", item.Tags[0])
+					log.Printf("[INFO] Successfully built image %s", item.Tags[0])
 				} else {
-					log.Printf("Successfully built Docker image")
+					log.Printf("[INFO] Successfully built Docker image")
 				}
 			}
 		}
