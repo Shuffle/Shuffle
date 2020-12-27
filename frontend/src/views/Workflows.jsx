@@ -43,6 +43,37 @@ import CloudDownloadIcon from '@material-ui/icons/CloudDownload';
 const inputColor = "#383B40"
 const surfaceColor = "#27292D"
 
+export const validateJson = (showResult) => {
+	showResult = showResult.split(" None").join(" \"None\"")
+	showResult = showResult.split(" False").join(" false")
+	showResult = showResult.split(" True").join(" true")
+
+	var jsonvalid = true
+	try {
+		const tmp = String(JSON.parse(showResult))
+		if (!showResult.includes("{") && !showResult.includes("[")) {
+			jsonvalid = false
+		}
+	} catch (e) {
+		showResult = showResult.split("\'").join("\"")
+
+		try {
+			const tmp = String(JSON.parse(showResult))
+			if (!showResult.includes("{") && !showResult.includes("[")) {
+				jsonvalid = false
+			}
+		} catch (e) {
+			jsonvalid = false
+		}
+	}
+
+	console.log("VALID: ", jsonvalid)
+	return {
+		"valid": jsonvalid, 
+		"result": jsonvalid ? JSON.parse(showResult) : showResult,
+	}
+}
+
 const Workflows = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, removeCookie, cookies, userdata} = props;
 	document.title = "Shuffle - Workflows"
@@ -684,22 +715,12 @@ const Workflows = (props) => {
 		}
 
 		var t = new Date(data.started_at*1000)
-		var jsonvalid = true
 		var showResult = data.result.trim()
-		showResult = replaceAll(showResult, " None", " \"None\"");
-		try {
-			const tmp = String(JSON.parse(showResult))
-			if (!tmp.includes("{") && !tmp.includes("[")) {
-				jsonvalid = false
-			}
-		} catch (e) {
-			jsonvalid = false
-		}
+		const validate = validateJson(showResult)
 
-		//console.log("VALID: ", jsonvalid)
-		if (jsonvalid) {
+		if (validate.valid) {
 			showResult = <ReactJson 
-				src={JSON.parse(showResult)} 
+				src={validate.result} 
 				theme="solarized" 
 				collapsed={collapseJson}
 				displayDataTypes={false}
@@ -707,7 +728,7 @@ const Workflows = (props) => {
 			/>
 		} else {
 			// FIXME - have everything parsed as json, either just for frontend
-			// or in the backend
+			// or in the backend?
 			/*	
 			const newdata = {"result": data.result}
 			showResult = <ReactJson 
@@ -767,7 +788,7 @@ const Workflows = (props) => {
 			No results yet 
 		</div>
 
-	const resultsLength = Object.getOwnPropertyNames(selectedExecution).length > 0 && selectedExecution.results !== null ? selectedExecution.results.length : 0 
+	const resultsLength = Object.getOwnPropertyNames(selectedExecution).length > 0 && selectedExecution.results !== null ? selectedExecution.results.length : 0 	
 
 	const ExecutionDetails = () => {
 		var starttime = new Date(selectedExecution.started_at*1000)
@@ -780,23 +801,12 @@ const Workflows = (props) => {
 
 		var arg = null
 		if (selectedExecution.execution_argument !== undefined && selectedExecution.execution_argument.length > 0) {
-			var jsonvalid = true
-
 			var showResult = selectedExecution.execution_argument.trim()
-			showResult = replaceAll(showResult, " None", " \"None\"");
+			const validate = validateJson(showResult)
 
-			try {
-				const tmp = String(JSON.parse(showResult))
-				if (!tmp.includes("{") && !tmp.includes("[")) {
-					jsonvalid = false
-				}
-			} catch (e) {
-				jsonvalid = false
-			}
-
-			arg = jsonvalid ? 
+			arg = validate.valid ? 
 				<ReactJson 
-					src={JSON.parse(showResult)} 
+					src={validate.result} 
 					theme="solarized" 
 					collapsed={true}
 					displayDataTypes={false}
@@ -807,22 +817,13 @@ const Workflows = (props) => {
 
 		var lastresult = null
 		if (selectedExecution.result !== undefined && selectedExecution.result.length > 0) {
-			var jsonvalid = true
 			var showResult = selectedExecution.result.trim()
-			showResult = replaceAll(showResult, " None", " \"None\"");
+			const validate = validateJson(showResult)
+			console.log("VALID: ", validate)
 
-			try {
-				const tmp = JSON.parse(showResult)
-				if (!tmp.includes("{") && !tmp.includes("[")) {
-					jsonvalid = false
-				}
-			} catch (e) {
-				jsonvalid = false
-			}
-
-			lastresult = jsonvalid ? 
+			lastresult = validate.valid ? 
 				<ReactJson 
-					src={JSON.parse(showResult)} 
+					src={validate.result} 
 					theme="solarized" 
 					collapsed={true}
 					displayDataTypes={false}

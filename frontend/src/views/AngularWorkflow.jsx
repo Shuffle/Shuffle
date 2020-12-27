@@ -19,6 +19,7 @@ import Select from '@material-ui/core/Select';
 import MenuItem from '@material-ui/core/MenuItem';
 import Divider from '@material-ui/core/Divider';
 import Dialog from '@material-ui/core/Dialog';
+import Modal from '@material-ui/core/Modal';
 import DialogActions from '@material-ui/core/DialogActions';
 import DialogTitle from '@material-ui/core/DialogTitle';
 import InputLabel from '@material-ui/core/InputLabel';
@@ -37,8 +38,11 @@ import Switch from '@material-ui/core/Switch';
 import ReactJson from 'react-json-view'
 import { useBeforeunload } from 'react-beforeunload';
 import NestedMenuItem from "material-ui-nested-menu-item";
+import Fade from '@material-ui/core/Fade';
 
 import ArrowUpwardIcon from '@material-ui/icons/ArrowUpward';
+import CloseIcon from '@material-ui/icons/Close';
+import ArrowLeftIcon from '@material-ui/icons/ArrowLeft';
 import CachedIcon from '@material-ui/icons/Cached';
 import AddIcon from '@material-ui/icons/Add';
 import DirectionsRunIcon from '@material-ui/icons/DirectionsRun';
@@ -75,6 +79,7 @@ import cxtmenu from 'cytoscape-cxtmenu';
 
 import { w3cwebsocket as W3CWebSocket } from "websocket";
 import { useAlert } from "react-alert";
+import { validateJson } from "./Workflows";
 import { GetParsedPaths } from "./Apps";
 
 const surfaceColor = "#27292D"
@@ -112,6 +117,7 @@ const AngularWorkflow = (props) => {
 
 	const [bodyWidth, bodyHeight] = useWindowSize();
 	const appBarSize = 74
+	var to_be_copied = ""
 	const [cystyle, ] = useState(cytoscapestyle) 
 	const [cy, setCy] = React.useState()
 		
@@ -140,6 +146,9 @@ const AngularWorkflow = (props) => {
 	const [requiresAuthentication, setRequiresAuthentication] = React.useState(false)
 	const [rightSideBarOpen, setRightSideBarOpen] = React.useState(false)
 	const [showSkippedActions, setShowSkippedActions] = React.useState(false)
+
+	const [selectedResult, setSelectedResult] = React.useState({})
+	const [codeModalOpen, setCodeModalOpen] = React.useState(false);
 
 	const [variableAnchorEl, setVariableAnchorEl] = React.useState(null)
 
@@ -5957,11 +5966,10 @@ const AngularWorkflow = (props) => {
 		)
 	}
 
-
 	const HandleJsonCopy = (base, copy, base_node_name) => {
 		console.log("COPY: ", copy)
 		var newitem = JSON.parse(base)
-		var to_be_copied = "$"+base_node_name
+		to_be_copied = "$"+base_node_name
 		for (var key in copy.namespace) {
 			if (copy.namespace[key].includes("Results for")) {
 				continue
@@ -5986,16 +5994,18 @@ const AngularWorkflow = (props) => {
 			}
 		}
 
-		console.log(to_be_copied)
-  	//var copyText = document.getElementById("copy_element_shuffle");
-		//if (copyText !== null) {
-		//navigator.clipboard.writeText(to_be_copied)
-		//copyText.select();
-		//copyText.setSelectionRange(0, 99999); /* For mobile devices */
+		to_be_copied.replace(" ", "_")
+  	var copyText = document.getElementById("copy_element_shuffle");
+		if (copyText !== null) {
+			navigator.clipboard.writeText(to_be_copied)
+			copyText.select();
+			copyText.setSelectionRange(0, 99999); /* For mobile devices */
 
-		///* Copy the text inside the text field */
-		//document.execCommand("copy");
-		//}
+			/* Copy the text inside the text field */
+			document.execCommand("copy");
+		}
+
+		alert.success("Copied "+to_be_copied)
 	}
 	
 	const executionModal = 
@@ -6124,6 +6134,7 @@ const AngularWorkflow = (props) => {
 							if (executionData.results.length !== 1 && !showSkippedActions && (data.status === "SKIPPED" || data.status === "FAILURE")) {
 								return null
 							}
+							console.log(data)
 
 
 							// showResult = replaceAll(showResult, " None", " \"None\"")
@@ -6165,6 +6176,14 @@ const AngularWorkflow = (props) => {
 							return (
 								<div key={index} style={{marginBottom: 40,}}>
 									<div style={{display: "flex", marginBottom: 15,}}>
+										<IconButton style={{marginTop: "auto", marginBottom: "auto", height: 30, width: 30}} onClick={() => {
+											setSelectedResult(data)
+											setCodeModalOpen(true)
+										}}>
+											<Tooltip color="primary" title="Expand result window" placement="top">
+												<ArrowLeftIcon style={{color: "white"}}/>
+											</Tooltip>
+										</IconButton>
 										{actionimg}
 										<div>
 											<div style={{fontSize: 24, marginTop: "auto", marginBottom: "auto"}}><b>{data.action.label}</b></div>
@@ -6178,7 +6197,7 @@ const AngularWorkflow = (props) => {
 											collapsed={true}
 											displayDataTypes={false}
 											onSelect={(select) => {
-												HandleJsonCopy(showResult, select, data.action.name)
+												HandleJsonCopy(showResult, select, data.action.label)
 												console.log("SELECTED!: ", select)	
 											}}
 											name={"Results for "+data.action.label}
@@ -6620,6 +6639,89 @@ const AngularWorkflow = (props) => {
 		)
 	}
 
+	const CodePopoutModal = (props) => {
+		const {codeModalOpen, setCodeModalOpen, selectedResult} = props	
+		if (!codeModalOpen) {
+			return null 
+		}
+
+		const curapp = apps.find(a => a.name === selectedResult.action.app_name && a.app_version === selectedResult.action.app_version)
+		const imgsize = 50
+		const statusColor = selectedResult.status === "FINISHED" || selectedResult.status === "SUCCESS" ? "green" : selectedResult.status === "ABORTED" || selectedResult.status === "FAILURE" ? "red" : "orange"
+		const validate = validateJson(selectedResult.result.trim())
+
+		return (
+			<Draggable>
+				<Dialog 
+					open={codeModalOpen} 
+					transition={Fade}
+					hasBackdrop={false}
+					onClose={() => {
+						//setCodeModalOpen(false)
+					}}
+					PaperComponent=<Draggable />
+					BackdropProps={{
+						invisible: false,
+						open: false,
+						style: {
+							height: 0,
+							width: 0,
+							padding: 0,
+							margin: 0,
+							background: "none",
+							boxShadow: "none",
+							backgroundColor: "transparent",
+						}
+					}}
+					PaperProps={{
+						style: {
+							backgroundColor: surfaceColor,
+							color: "white",
+							minWidth: 750,
+							padding: 30, 
+							maxHeight: 700,
+							overflow: "auto",
+							//backgroundColor: "transparent",
+							boxShadow: "none",
+						},
+					}}
+				>
+					<IconButton style={{zIndex: 5000, position: "absolute", top: 34, right: 34,}} onClick={() => {
+						setCodeModalOpen(false)
+					}}>
+						<CloseIcon style={{color: "white"}}/>
+					</IconButton>
+					<div style={{marginBottom: 40,}}>
+						<div style={{display: "flex", marginBottom: 15,}}>
+							{curapp === null ? null : <img alt={selectedResult.app_name} src={curapp === undefined ? "" : curapp.large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />}
+							<div>
+								<div style={{fontSize: 24, marginTop: "auto", marginBottom: "auto"}}><b>{selectedResult.action.label}</b></div>
+								<div style={{fontSize: 14}}>{selectedResult.action.name}</div>
+							</div>
+						</div>
+						<div style={{marginBottom: 5}}><b>Status </b> {selectedResult.status}</div>
+						{validate.valid ? <ReactJson 
+								src={validate.result} 
+								theme="solarized" 
+								collapsed={false}
+								displayDataTypes={false}
+								onSelect={(select) => {
+									HandleJsonCopy(JSON.stringify(validate.result), select, selectedResult.action.label)
+								}}
+								name={"Results for "+selectedResult.action.label}
+							/>
+						: 
+						<div>
+							<b>Result</b>&nbsp;
+							{selectedResult.result}
+						</div>
+						}
+					</div>
+				</Dialog> 
+			</Draggable>
+		)
+	}
+
 	// This whole part is redundant. Made it part of Arguments instead.
 	const authenticationModal = authenticationModalOpen ? 
 		<Dialog 
@@ -6647,6 +6749,15 @@ const AngularWorkflow = (props) => {
 			{executionVariableModal} 
 			{conditionsModal}
 			{authenticationModal}
+			<CodePopoutModal selectedResult={selectedResult} codeModalOpen={codeModalOpen} setCodeModalOpen={setCodeModalOpen}/>
+			{/*
+			<TextField
+				id="copy_element_shuffle"
+				value={to_be_copied}
+				disabled={true}
+				style={{height: 0, width: 0, margin: 0, padding: 0,}}
+			/>
+			*/}
 		</div>
 		:
 		<div>
