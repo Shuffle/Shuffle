@@ -6005,7 +6005,7 @@ const AngularWorkflow = (props) => {
 			document.execCommand("copy");
 		}
 
-		alert.success("Copied "+to_be_copied)
+		//alert.success("Copied "+to_be_copied)
 	}
 	
 	const executionModal = 
@@ -6134,8 +6134,6 @@ const AngularWorkflow = (props) => {
 							if (executionData.results.length !== 1 && !showSkippedActions && (data.status === "SKIPPED" || data.status === "FAILURE")) {
 								return null
 							}
-							console.log(data)
-
 
 							// showResult = replaceAll(showResult, " None", " \"None\"")
 							// Super basic check.
@@ -6651,74 +6649,73 @@ const AngularWorkflow = (props) => {
 		const validate = validateJson(selectedResult.result.trim())
 
 		return (
-			<Draggable>
-				<Dialog 
-					open={codeModalOpen} 
-					transition={Fade}
-					hasBackdrop={false}
-					onClose={() => {
-						//setCodeModalOpen(false)
-					}}
-					PaperComponent=<Draggable />
-					BackdropProps={{
-						invisible: false,
-						open: false,
-						style: {
-							height: 0,
-							width: 0,
-							padding: 0,
-							margin: 0,
-							background: "none",
-							boxShadow: "none",
-							backgroundColor: "transparent",
-						}
-					}}
-					PaperProps={{
-						style: {
-							backgroundColor: surfaceColor,
-							color: "white",
-							minWidth: 750,
-							padding: 30, 
-							maxHeight: 700,
-							overflow: "auto",
-							//backgroundColor: "transparent",
-							boxShadow: "none",
-						},
-					}}
-				>
-					<IconButton style={{zIndex: 5000, position: "absolute", top: 34, right: 34,}} onClick={() => {
-						setCodeModalOpen(false)
-					}}>
-						<CloseIcon style={{color: "white"}}/>
-					</IconButton>
-					<div style={{marginBottom: 40,}}>
-						<div style={{display: "flex", marginBottom: 15,}}>
-							{curapp === null ? null : <img alt={selectedResult.app_name} src={curapp === undefined ? "" : curapp.large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />}
-							<div>
-								<div style={{fontSize: 24, marginTop: "auto", marginBottom: "auto"}}><b>{selectedResult.action.label}</b></div>
-								<div style={{fontSize: 14}}>{selectedResult.action.name}</div>
-							</div>
-						</div>
-						<div style={{marginBottom: 5}}><b>Status </b> {selectedResult.status}</div>
-						{validate.valid ? <ReactJson 
-								src={validate.result} 
-								theme="solarized" 
-								collapsed={false}
-								displayDataTypes={false}
-								onSelect={(select) => {
-									HandleJsonCopy(JSON.stringify(validate.result), select, selectedResult.action.label)
-								}}
-								name={"Results for "+selectedResult.action.label}
-							/>
-						: 
+			<Draggable
+				position={{
+					x: 0,
+					y: 0,
+				}}
+			>
+			<Dialog 
+				disableEnforceFocus={true}
+				style={{pointerEvents: "none"}}
+				hideBackdrop={true}
+				open={codeModalOpen} 
+				onClose={() => {
+					//setCodeModalOpen(false)
+				}}
+				BackdropProps={{
+					invisible: true,
+					style: {
+						backgroundColor: "transparent",
+						pointerEvents: "none",
+					}
+				}}
+				PaperProps={{
+					style: {
+						pointerEvents: "auto",
+						backgroundColor: inputColor,
+						color: "white",
+						minWidth: 750,
+						padding: 30, 
+						maxHeight: 700,
+						overflow: "auto",
+						//boxShadow: "none",
+					},
+				}}
+			>
+				<IconButton style={{zIndex: 5000, position: "absolute", top: 34, right: 34,}} onClick={() => {
+					setCodeModalOpen(false)
+				}}>
+					<CloseIcon style={{color: "white"}}/>
+				</IconButton>
+				<div style={{marginBottom: 40,}}>
+					<div style={{display: "flex", marginBottom: 15,}}>
+						{curapp === null ? null : <img alt={selectedResult.app_name} src={curapp === undefined ? "" : curapp.large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />}
 						<div>
-							<b>Result</b>&nbsp;
-							{selectedResult.result}
+							<div style={{fontSize: 24, marginTop: "auto", marginBottom: "auto"}}><b>{selectedResult.action.label}</b></div>
+							<div style={{fontSize: 14}}>{selectedResult.action.name}</div>
 						</div>
-						}
 					</div>
-				</Dialog> 
-			</Draggable>
+					<div style={{marginBottom: 5}}><b>Status </b> {selectedResult.status}</div>
+					{validate.valid ? <ReactJson 
+							src={validate.result} 
+							theme="solarized" 
+							collapsed={false}
+							displayDataTypes={false}
+							onSelect={(select) => {
+								HandleJsonCopy(JSON.stringify(validate.result), select, selectedResult.action.label)
+							}}
+							name={"Results for "+selectedResult.action.label}
+						/>
+					: 
+					<div>
+						<b>Result</b>&nbsp;
+						{selectedResult.result}
+					</div>
+					}
+				</div>
+			</Dialog> 
+			</Draggable> 
 		)
 	}
 

@@ -67,7 +67,6 @@ export const validateJson = (showResult) => {
 		}
 	}
 
-	console.log("VALID: ", jsonvalid)
 	return {
 		"valid": jsonvalid, 
 		"result": jsonvalid ? JSON.parse(showResult) : showResult,
