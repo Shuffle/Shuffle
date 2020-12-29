@@ -3681,7 +3681,7 @@ const AngularWorkflow = (props) => {
 			<div style={{display: "flex", minHeight: 40, marginBottom: 30}}>
 				<div style={{flex: 1}}>
 					<h3 style={{marginBottom: 5}}>{selectedAction.app_name}</h3>
-					<div style={{display: "flex", width: "100%",}}>
+					<div style={{display: "flex",}}>
 						<IconButton style={{marginTop: "auto", marginBottom: "auto", height: 30, paddingLeft: 0, paddingRight: 0}} onClick={() => {
 							console.log("FIND EXAMPLE RESULTS FOR ", selectedAction) 
 							if (workflowExecutions.length > 0) {
@@ -3707,7 +3707,7 @@ const AngularWorkflow = (props) => {
 								<ArrowLeftIcon style={{color: "white"}}/>
 							</Tooltip>
 						</IconButton>
-						<span style={{width: "100%"}}>
+						<span style={{}}>
 							<Typography style={{marginTop: 5, marginLeft: 10,}}><a href="https://shuffler.io/docs/workflows#nodes" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>What are actions?</a></Typography>
 							{selectedAction.errors !== null && selectedAction.errors.length > 0 ? 
 								<div>
@@ -6294,17 +6294,6 @@ const AngularWorkflow = (props) => {
 				style={{pointerEvents: "none"}}
 				hideBackdrop={true}
 				open={codeModalOpen} 
-				onClose={() => {
-					//setCodeModalOpen(false)
-					console.log("CLOSE?")
-				}}
-				BackdropProps={{
-					invisible: true,
-					style: {
-						backgroundColor: "transparent",
-						pointerEvents: "none",
-					}
-				}}
 				PaperProps={{
 					style: {
 						pointerEvents: "auto",
@@ -6313,7 +6302,8 @@ const AngularWorkflow = (props) => {
 						minWidth: 750,
 						padding: 30, 
 						maxHeight: 700,
-						overflow: "auto",
+						overflowY: "auto",
+						overflowX: "hidden",
 						//boxShadow: "none",
 					},
 				}}
@@ -6828,7 +6818,7 @@ const AngularWorkflow = (props) => {
 				id="copy_element_shuffle"
 				value={to_be_copied}
 				disabled={true}
-				style={{height: 0, width: 0, margin: 0, padding: 0,}}
+				style={{height: 0, width: 0, margin: 0, padding: 0, zIndex: -10, position: "fixed",}}
 			/>
 		</div>
 		:

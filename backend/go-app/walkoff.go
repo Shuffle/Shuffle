@@ -507,7 +507,7 @@ func setWorkflowQueue(ctx context.Context, executionRequests ExecutionRequestWra
 }
 
 func getWorkflowQueue(ctx context.Context, id string) (ExecutionRequestWrapper, error) {
-	key := datastore.NameKey("workflowqueue", id, nil)
+	key := datastore.NameKey("workflowqueue", id, nil).Limit(50)
 	workflows := ExecutionRequestWrapper{}
 	if err := dbclient.Get(ctx, key, &workflows); err != nil {
 		return ExecutionRequestWrapper{}, err

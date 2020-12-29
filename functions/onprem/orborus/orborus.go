@@ -29,9 +29,11 @@ import (
 
 // Starts jobs in bulk, so this could be increased
 var sleepTime = 3
+var maxConcurrency = 50
 
 // Timeout if something rashes
 var workerTimeoutEnv = os.Getenv("SHUFFLE_ORBORUS_EXECUTION_TIMEOUT")
+var concurrencyEnv = os.Getenv("SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY")
 var appSdkVersion = os.Getenv("SHUFFLE_APP_SDK_VERSION")
 var workerVersion = os.Getenv("SHUFFLE_WORKER_VERSION")
 
@@ -147,7 +149,7 @@ func deployWorker(image string, identifier string, env []string) {
 		Env:   env,
 	}
 
-	log.Printf("[INFO] Identifier: %s", identifier)
+	//log.Printf("[INFO] Identifier: %s", identifier)
 	cont, err := dockercli.ContainerCreate(
 		context.Background(),
 		config,
@@ -317,7 +319,18 @@ func main() {
 		log.Printf("[INFO] Cleanup process running every %d seconds", workerTimeout)
 	}
 
-	go zombiecheck(workerTimeout)
+	if concurrencyEnv != "" {
+		//var concurrencyEnv = os.Getenv("SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY")
+		tmpInt, err := strconv.Atoi(concurrencyEnv)
+		if err == nil {
+			maxConcurrency = tmpInt
+		} else {
+			log.Printf("[WARNING] Env SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY must be a number, not %s. Defaulted to %d", workerTimeoutEnv, maxConcurrency)
+		}
+	}
+
+	ctx := context.Background()
+	go zombiecheck(ctx, workerTimeout)
 
 	log.Printf("[INFO] Running towards %s with Org %s", baseUrl, orgId)
 	httpProxy := os.Getenv("HTTP_PROXY")
@@ -383,12 +396,13 @@ func main() {
 	for {
 		//log.Printf("Prerequest")
 		newresp, err := client.Do(req)
+		executionCount := getRunningWorkers(ctx, workerTimeout)
 		//log.Printf("Postrequest")
 		if err != nil {
 			log.Printf("[WARNING] Failed making request: %s", err)
 			zombiecounter += 1
 			if zombiecounter*sleepTime > workerTimeout {
-				go zombiecheck(workerTimeout)
+				go zombiecheck(ctx, workerTimeout)
 				zombiecounter = 0
 			}
 			time.Sleep(time.Duration(sleepTime) * time.Second)
@@ -409,7 +423,7 @@ func main() {
 			log.Printf("[ERROR] Failed reading body: %s", err)
 			zombiecounter += 1
 			if zombiecounter*sleepTime > workerTimeout {
-				go zombiecheck(workerTimeout)
+				go zombiecheck(ctx, workerTimeout)
 				zombiecounter = 0
 			}
 			time.Sleep(time.Duration(sleepTime) * time.Second)
@@ -423,7 +437,7 @@ func main() {
 			sleepTime = 10
 			zombiecounter += 1
 			if zombiecounter*sleepTime > workerTimeout {
-				go zombiecheck(workerTimeout)
+				go zombiecheck(ctx, workerTimeout)
 				zombiecounter = 0
 			}
 			time.Sleep(time.Duration(sleepTime) * time.Second)
@@ -438,11 +452,29 @@ func main() {
 		if len(executionRequests.Data) == 0 {
 			zombiecounter += 1
 			if zombiecounter*sleepTime > workerTimeout {
-				go zombiecheck(workerTimeout)
+				go zombiecheck(ctx, workerTimeout)
 				zombiecounter = 0
 			}
 			time.Sleep(time.Duration(sleepTime) * time.Second)
 			continue
+		}
+
+		// Anything below here verifies concurrency virification
+		if executionCount >= maxConcurrency {
+			if zombiecounter*sleepTime > workerTimeout {
+				go zombiecheck(ctx, workerTimeout)
+				zombiecounter = 0
+			}
+			time.Sleep(time.Duration(sleepTime) * time.Second)
+			continue
+		}
+
+		log.Printf("Got %d new requests. Executing: %d. Max: %d", len(executionRequests.Data), executionCount, maxConcurrency)
+
+		allowed := maxConcurrency - executionCount
+		if len(executionRequests.Data) > allowed {
+			log.Printf("[WARNING] Throttle - Cutting down requests from %d to %d", len(executionRequests.Data), allowed)
+			executionRequests.Data = executionRequests.Data[0:allowed]
 		}
 
 		// New, abortable version. Should check executionid and remove everything else
@@ -481,7 +513,7 @@ func main() {
 
 			go deployWorker(workerImage, containerName, env)
 
-			log.Printf("[INFO] %s is deployed and to be removed from queue.", execution.ExecutionId)
+			log.Printf("[INFO] %s was deployed and to be removed from queue.", execution.ExecutionId)
 			zombiecounter += 1
 			toBeRemoved.Data = append(toBeRemoved.Data, execution)
 		}
@@ -543,12 +575,59 @@ func main() {
 	}
 }
 
+// Is this ok to do with Docker? idk :)
+func getRunningWorkers(ctx context.Context, workerTimeout int) int {
+	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
+		All: true,
+	})
+
+	if err != nil {
+		log.Printf("Error getting containers: %s", err)
+		return 0
+	}
+
+	currenttime := time.Now().Unix()
+	counter := 0
+	for _, container := range containers {
+		// Skip random containers. Only handle things related to Shuffle.
+		if !strings.Contains(container.Image, baseimagename) {
+			shuffleFound := false
+			for _, item := range container.Labels {
+				if item == "shuffle" {
+					shuffleFound = true
+					break
+				}
+			}
+
+			// Check image name
+			if !shuffleFound {
+				continue
+			}
+			//} else {
+			//	log.Printf("NAME: %s", container.Image)
+		}
+
+		for _, name := range container.Names {
+			// FIXME - add name_version_uid_uid regex check as well
+			if !strings.HasPrefix(name, "/worker") {
+				continue
+			}
+
+			//log.Printf("Time: %d - %d", currenttime-container.Created, int64(workerTimeout))
+			if container.State == "running" && currenttime-container.Created < int64(workerTimeout) {
+				counter += 1
+				break
+			}
+		}
+	}
+
+	return counter
+}
+
 // FIXME - add this to remove exited workers
 // Should it check what happened to the execution? idk
-func zombiecheck(workerTimeout int) error {
+func zombiecheck(ctx context.Context, workerTimeout int) error {
 	log.Println("[INFO] Looking for old containers")
-	ctx := context.Background()
-
 	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
 		All: true,
 	})
