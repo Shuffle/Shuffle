@@ -155,6 +155,11 @@ const AngularWorkflow = (props) => {
 	const [sourceValue, setSourceValue] = React.useState({})
 	const [destinationValue, setDestinationValue] = React.useState({})
 	const [conditionValue, setConditionValue] = React.useState({})
+	const [dragging, setDragging] = React.useState(false)
+	const [dragPosition, setDragPosition] = React.useState({
+		x: 0,
+		y: 0,
+	})
 
 	// Trigger stuff
 	const [selectedTrigger, setSelectedTrigger] = React.useState({});
@@ -1267,13 +1272,13 @@ const AngularWorkflow = (props) => {
 		// CTRL = 17
 		//console.log(event.keyCode)
 	    switch( event.keyCode ) {
-	        case 27:
-				console.log("ESCAPE")
-	            break;
+	    case 27:
+					console.log("ESCAPE")
+	        break;
 			case 46:
 				removeNode()		
 				console.log("DELETE")
-	            break;
+	      break;
 			case 38:
 				console.log("UP")
 	            break;
@@ -1313,11 +1318,11 @@ const AngularWorkflow = (props) => {
 				}
 	            break;
 			case 70:
-				if (previouskey === 17) {
-					event.preventDefault()
-					cy.fit(null, 50)
-				}
-	      break;
+				//if (previouskey === 17) {
+				//	event.preventDefault()
+				//	cy.fit(null, 50)
+				//}
+	      //break;
 			case 65:
 				// As a poweruser myself, I found myself hitting this a few
 				// too many times to just edit text. Need a better bind
@@ -3676,13 +3681,42 @@ const AngularWorkflow = (props) => {
 			<div style={{display: "flex", minHeight: 40, marginBottom: 30}}>
 				<div style={{flex: 1}}>
 					<h3 style={{marginBottom: 5}}>{selectedAction.app_name}</h3>
-					<a href="https://shuffler.io/docs/workflows#nodes" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>What are actions?</a>
-					{selectedAction.errors !== null && selectedAction.errors.length > 0 ? 
-						<div>
-							Errors: {selectedAction.errors.join("\n")}
-						</div>
-						: null
-					}
+					<div style={{display: "flex", width: "100%",}}>
+						<IconButton style={{marginTop: "auto", marginBottom: "auto", height: 30, paddingLeft: 0, paddingRight: 0}} onClick={() => {
+							console.log("FIND EXAMPLE RESULTS FOR ", selectedAction) 
+							if (workflowExecutions.length > 0) {
+								// Look for the ID
+								const found = false
+								for (var key in workflowExecutions) {
+									if (workflowExecutions[key].results === undefined || workflowExecutions[key].results === null) {
+										continue
+									}
+
+									var foundResult = workflowExecutions[key].results.find(result => result.action.id === selectedAction.id)
+									if (foundResult === undefined || foundResult === null) {
+										continue
+									}
+
+									setSelectedResult(foundResult)
+									setCodeModalOpen(true)
+									break
+								}
+							}
+						}}>
+							<Tooltip color="primary" title="See last result" placement="top">
+								<ArrowLeftIcon style={{color: "white"}}/>
+							</Tooltip>
+						</IconButton>
+						<span style={{width: "100%"}}>
+							<Typography style={{marginTop: 5, marginLeft: 10,}}><a href="https://shuffler.io/docs/workflows#nodes" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>What are actions?</a></Typography>
+							{selectedAction.errors !== null && selectedAction.errors.length > 0 ? 
+								<div>
+									Errors: {selectedAction.errors.join("\n")}
+								</div>
+								: null
+							}
+						</span>
+					</div>
 				</div>
 				<div style={{flex: "1"}}>
 					<Button disabled={selectedAction.id === workflow.start} style={{zIndex: 5000, marginTop: "15px",}} color="primary" variant="outlined" onClick={(e) => {
@@ -5994,6 +6028,11 @@ const AngularWorkflow = (props) => {
 			}
 		}
 
+		//console.log(document.activeElement)
+		//if (document.activeElement.nodeName == 'TEXTAREA' || document.activeElement.nodeName == 'INPUT') {
+		//	console.log("HANDLE INPUT FIELD FOR COPY!")
+		//}
+
 		to_be_copied.replace(" ", "_")
   	var copyText = document.getElementById("copy_element_shuffle");
 		if (copyText !== null) {
@@ -6003,9 +6042,10 @@ const AngularWorkflow = (props) => {
 
 			/* Copy the text inside the text field */
 			document.execCommand("copy");
+			alert.success("Copied "+to_be_copied)
+			console.log("COPYING!")
 		}
 
-		//alert.success("Copied "+to_be_copied)
 	}
 	
 	const executionModal = 
@@ -6174,7 +6214,7 @@ const AngularWorkflow = (props) => {
 							return (
 								<div key={index} style={{marginBottom: 40,}}>
 									<div style={{display: "flex", marginBottom: 15,}}>
-										<IconButton style={{marginTop: "auto", marginBottom: "auto", height: 30, width: 30}} onClick={() => {
+										<IconButton style={{marginTop: "auto", marginBottom: "auto", height: 30, paddingLeft: 0, width: 30}} onClick={() => {
 											setSelectedResult(data)
 											setCodeModalOpen(true)
 										}}>
@@ -6213,6 +6253,123 @@ const AngularWorkflow = (props) => {
 				</div>
 			}
 			</Drawer>
+
+	const curapp = !codeModalOpen ? {} : apps.find(a => a.name === selectedResult.action.app_name && a.app_version === selectedResult.action.app_version)
+	const imgsize = 50
+	const statusColor = !codeModalOpen ? "red" : selectedResult.status === "FINISHED" || selectedResult.status === "SUCCESS" ? "green" : selectedResult.status === "ABORTED" || selectedResult.status === "FAILURE" ? "red" : "orange"
+	const validate = !codeModalOpen ? "" : validateJson(selectedResult.result.trim())
+
+	const codePopoutModal = !codeModalOpen ? null : 
+		<Draggable
+			onDrag={(e) => {
+				console.log("DRAGGING")
+				if (!dragging) {
+					setDragging(true)
+				}
+			}}
+			onStop={(e) => {
+				if (!dragging) {
+					console.log("Not dragging. Return!")
+					return
+				}
+
+				setDragging(false)
+
+				const newoffsetX = parseInt(dragPosition.x)-parseInt(e.layerX-e.offsetX)
+				const newoffsetY = parseInt(dragPosition.y)-parseInt(e.layerY-e.offsetY)
+				if ((newoffsetX <= 40 && newoffsetX >= -40) && (newoffsetY <= 40 && newoffsetY >= -40)) {
+					console.log("SKIP X & Y")
+					return
+				}
+
+				setDragPosition({
+					x: e.layerX-e.offsetX,
+					y: e.layerY-e.offsetY,
+				})
+			}}
+			position={dragPosition}
+		>
+			<Dialog 
+				disableEnforceFocus={true}
+				style={{pointerEvents: "none"}}
+				hideBackdrop={true}
+				open={codeModalOpen} 
+				onClose={() => {
+					//setCodeModalOpen(false)
+					console.log("CLOSE?")
+				}}
+				BackdropProps={{
+					invisible: true,
+					style: {
+						backgroundColor: "transparent",
+						pointerEvents: "none",
+					}
+				}}
+				PaperProps={{
+					style: {
+						pointerEvents: "auto",
+						backgroundColor: inputColor,
+						color: "white",
+						minWidth: 750,
+						padding: 30, 
+						maxHeight: 700,
+						overflow: "auto",
+						//boxShadow: "none",
+					},
+				}}
+			>
+				<IconButton style={{zIndex: 5000, position: "absolute", top: 34, right: 34,}} onClick={(e) => {
+					e.preventDefault()
+					//console.log("CLICKING EXIT")
+					setCodeModalOpen(false)
+				}}>
+					<CloseIcon style={{color: "white"}}/>
+				</IconButton>
+				<div style={{marginBottom: 40,}} onClick={(event) => {
+					//event.preventDefault()	
+				}}>
+					<div style={{display: "flex", marginBottom: 15,}}>
+						{curapp === null ? null : <img alt={selectedResult.app_name} src={curapp === undefined ? "" : curapp.large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />}
+						<div>
+							<div style={{fontSize: 24, marginTop: "auto", marginBottom: "auto"}}><b>{selectedResult.action.label}</b></div>
+							<div style={{fontSize: 14}}>{selectedResult.action.name}</div>
+						</div>
+					</div>
+					<div style={{marginBottom: 5}}><b>Status </b> {selectedResult.status}</div>
+					{validate.valid ? <ReactJson 
+							src={validate.result} 
+							theme="solarized" 
+							collapsed={false}
+							displayDataTypes={false}
+							onSelect={(select) => {
+								HandleJsonCopy(JSON.stringify(validate.result), select, selectedResult.action.label)
+							}}
+							name={"Results for "+selectedResult.action.label}
+						/>
+					: 
+					<div>
+						<b>Result</b>&nbsp;
+						<span onClick={() => {
+							console.log("IN HERE TO CLICK")
+							to_be_copied = selectedResult.result
+							var copyText = document.getElementById("copy_element_shuffle");
+							console.log("PRECOPY: ", to_be_copied)
+							if (copyText !== null) {
+								console.log("COPY: ", copyText)
+								navigator.clipboard.writeText(to_be_copied)
+								copyText.select();
+								copyText.setSelectionRange(0, 99999); /* For mobile devices */
+
+								/* Copy the text inside the text field */
+								document.execCommand("copy");
+								alert.success("Copied "+to_be_copied)
+							}
+						}}>{selectedResult.result}</span>
+					</div>
+					}
+				</div>
+			</Dialog> 
+		</Draggable> 
 	
 	const newView = isLoggedIn ?
 		<div style={{color: "white"}}>
@@ -6637,87 +6794,7 @@ const AngularWorkflow = (props) => {
 		)
 	}
 
-	const CodePopoutModal = (props) => {
-		const {codeModalOpen, setCodeModalOpen, selectedResult} = props	
-		if (!codeModalOpen) {
-			return null 
-		}
-
-		const curapp = apps.find(a => a.name === selectedResult.action.app_name && a.app_version === selectedResult.action.app_version)
-		const imgsize = 50
-		const statusColor = selectedResult.status === "FINISHED" || selectedResult.status === "SUCCESS" ? "green" : selectedResult.status === "ABORTED" || selectedResult.status === "FAILURE" ? "red" : "orange"
-		const validate = validateJson(selectedResult.result.trim())
-
-		return (
-			<Draggable
-				position={{
-					x: 0,
-					y: 0,
-				}}
-			>
-			<Dialog 
-				disableEnforceFocus={true}
-				style={{pointerEvents: "none"}}
-				hideBackdrop={true}
-				open={codeModalOpen} 
-				onClose={() => {
-					//setCodeModalOpen(false)
-				}}
-				BackdropProps={{
-					invisible: true,
-					style: {
-						backgroundColor: "transparent",
-						pointerEvents: "none",
-					}
-				}}
-				PaperProps={{
-					style: {
-						pointerEvents: "auto",
-						backgroundColor: inputColor,
-						color: "white",
-						minWidth: 750,
-						padding: 30, 
-						maxHeight: 700,
-						overflow: "auto",
-						//boxShadow: "none",
-					},
-				}}
-			>
-				<IconButton style={{zIndex: 5000, position: "absolute", top: 34, right: 34,}} onClick={() => {
-					setCodeModalOpen(false)
-				}}>
-					<CloseIcon style={{color: "white"}}/>
-				</IconButton>
-				<div style={{marginBottom: 40,}}>
-					<div style={{display: "flex", marginBottom: 15,}}>
-						{curapp === null ? null : <img alt={selectedResult.app_name} src={curapp === undefined ? "" : curapp.large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />}
-						<div>
-							<div style={{fontSize: 24, marginTop: "auto", marginBottom: "auto"}}><b>{selectedResult.action.label}</b></div>
-							<div style={{fontSize: 14}}>{selectedResult.action.name}</div>
-						</div>
-					</div>
-					<div style={{marginBottom: 5}}><b>Status </b> {selectedResult.status}</div>
-					{validate.valid ? <ReactJson 
-							src={validate.result} 
-							theme="solarized" 
-							collapsed={false}
-							displayDataTypes={false}
-							onSelect={(select) => {
-								HandleJsonCopy(JSON.stringify(validate.result), select, selectedResult.action.label)
-							}}
-							name={"Results for "+selectedResult.action.label}
-						/>
-					: 
-					<div>
-						<b>Result</b>&nbsp;
-						{selectedResult.result}
-					</div>
-					}
-				</div>
-			</Dialog> 
-			</Draggable> 
-		)
-	}
+	
 
 	// This whole part is redundant. Made it part of Arguments instead.
 	const authenticationModal = authenticationModalOpen ? 
@@ -6746,15 +6823,13 @@ const AngularWorkflow = (props) => {
 			{executionVariableModal} 
 			{conditionsModal}
 			{authenticationModal}
-			<CodePopoutModal selectedResult={selectedResult} codeModalOpen={codeModalOpen} setCodeModalOpen={setCodeModalOpen}/>
-			{/*
+			{codePopoutModal}
 			<TextField
 				id="copy_element_shuffle"
 				value={to_be_copied}
 				disabled={true}
 				style={{height: 0, width: 0, margin: 0, padding: 0,}}
 			/>
-			*/}
 		</div>
 		:
 		<div>

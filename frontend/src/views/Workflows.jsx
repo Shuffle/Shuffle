@@ -818,8 +818,6 @@ const Workflows = (props) => {
 		if (selectedExecution.result !== undefined && selectedExecution.result.length > 0) {
 			var showResult = selectedExecution.result.trim()
 			const validate = validateJson(showResult)
-			console.log("VALID: ", validate)
-
 			lastresult = validate.valid ? 
 				<ReactJson 
 					src={validate.result} 
