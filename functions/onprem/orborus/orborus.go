@@ -324,6 +324,7 @@ func main() {
 		tmpInt, err := strconv.Atoi(concurrencyEnv)
 		if err == nil {
 			maxConcurrency = tmpInt
+			log.Printf("[INFO] Max workflow execution concurrency set to %d", maxConcurrency)
 		} else {
 			log.Printf("[WARNING] Env SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY must be a number, not %s. Defaulted to %d", workerTimeoutEnv, maxConcurrency)
 		}
