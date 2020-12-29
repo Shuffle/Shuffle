@@ -457,11 +457,13 @@ class AppBase:
             action_result["result"] = "Error in setup ENV: ACTION not defined"
             self.send_result(action_result, headers, stream_path) 
             return
+
         if len(self.authorization) == 0:
             print("AUTHORIZATION env not defined")
             action_result["result"] = "Error in setup ENV: AUTHORIZATION not defined"
             self.send_result(action_result, headers, stream_path) 
             return
+
         if len(self.current_execution_id) == 0:
             print("EXECUTIONID env not defined")
             action_result["result"] = "Error in setup ENV: EXECUTIONID not defined"
@@ -476,17 +478,19 @@ class AppBase:
         # Add async logger
         # self.console_logger.handlers[0].stream.set_execution_id()
         #self.logger.info("Before initial stream result")
-        try:
-            ret = requests.post("%s%s" % (self.url, stream_path), headers=headers, json=action_result)
-            self.logger.info("Workflow: %d" % ret.status_code)
-            if ret.status_code != 200:
-                self.logger.info(ret.text)
-        except requests.exceptions.ConnectionError as e:
-            print("Connectionerror: %s" %  e)
 
-            action_result["result"] = "Bad setup during startup: %s" % e 
-            self.send_result(action_result, headers, stream_path) 
-            return
+        # FIXME: Shouldn't skip this, but it's good for minimzing API calls
+        #try:
+        #    ret = requests.post("%s%s" % (self.url, stream_path), headers=headers, json=action_result)
+        #    self.logger.info("Workflow: %d" % ret.status_code)
+        #    if ret.status_code != 200:
+        #        self.logger.info(ret.text)
+        #except requests.exceptions.ConnectionError as e:
+        #    print("Connectionerror: %s" %  e)
+
+        #    action_result["result"] = "Bad setup during startup: %s" % e 
+        #    self.send_result(action_result, headers, stream_path) 
+        #    return
 
         # Verify whether there are any parameters with ACTION_RESULT required
         # If found, we get the full results list from backend
