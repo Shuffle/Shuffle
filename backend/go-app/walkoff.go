@@ -36,6 +36,8 @@ import (
 	//"google.golang.org/appengine/memcache"
 	//"cloud.google.com/go/firestore"
 	// "google.golang.org/api/option"
+
+	"github.com/patrickmn/go-cache"
 )
 
 var localBase = "http://localhost:5001"
@@ -494,11 +496,12 @@ func increaseStatisticsField(ctx context.Context, fieldname, id string, amount i
 	return nil
 }
 
-func setWorkflowQueue(ctx context.Context, executionRequests ExecutionRequestWrapper, id string) error {
-	key := datastore.NameKey("workflowqueue", id, nil)
+func setWorkflowQueue(ctx context.Context, executionRequest ExecutionRequest, env string) error {
+	orgKey := fmt.Sprintf("workflowqueue-%s", env)
+	key := datastore.NameKey(orgKey, executionRequest.ExecutionId, nil)
 
 	// New struct, to not add body, author etc
-	if _, err := dbclient.Put(ctx, key, &executionRequests); err != nil {
+	if _, err := dbclient.Put(ctx, key, &executionRequest); err != nil {
 		log.Printf("Error adding workflow queue: %s", err)
 		return err
 	}
@@ -506,14 +509,37 @@ func setWorkflowQueue(ctx context.Context, executionRequests ExecutionRequestWra
 	return nil
 }
 
+//
+//func setWorkflowQueue(ctx context.Context, executionRequests ExecutionRequestWrapper, id string) error {
+//	key := datastore.NameKey("workflowqueue", id, nil)
+//
+//	// New struct, to not add body, author etc
+//	if _, err := dbclient.Put(ctx, key, &executionRequests); err != nil {
+//		log.Printf("Error adding workflow queue: %s", err)
+//		return err
+//	}
+//
+//	return nil
+//}
+
 func getWorkflowQueue(ctx context.Context, id string) (ExecutionRequestWrapper, error) {
-	key := datastore.NameKey("workflowqueue", id, nil).Limit(50)
-	workflows := ExecutionRequestWrapper{}
-	if err := dbclient.Get(ctx, key, &workflows); err != nil {
+	orgId := fmt.Sprintf("workflowqueue-%s", id)
+	q := datastore.NewQuery(orgId).Limit(10)
+	executions := []ExecutionRequest{}
+	_, err := dbclient.GetAll(ctx, q, &executions)
+	if err != nil {
 		return ExecutionRequestWrapper{}, err
 	}
 
-	return workflows, nil
+	return ExecutionRequestWrapper{Data: executions}, nil
+
+	//key := datastore.NameKey("workflowqueue", id, nil)
+	//executions := ExecutionRequestWrapper{}
+	//if err := dbclient.Get(ctx, key, &workflows); err != nil {
+	//	return ExecutionRequestWrapper{}, err
+	//}
+
+	//return workflows, nil
 }
 
 //func setWorkflowqueuetest(id string) {
@@ -649,9 +675,9 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 	}
 
 	if len(executionRequests.Data) == 0 {
-		log.Printf("No requests to fix. Why did this request occur?")
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Some error"}`)))
+		log.Printf("[INFO] No requests to handle from queue")
+		resp.WriteHeader(200)
+		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Nothing in queue"}`)))
 		return
 	}
 
@@ -675,41 +701,47 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 	}
 
 	if len(removeExecutionRequests.Data) == 0 {
-		log.Printf("No requests to fix remove")
+		log.Printf("No requests to fix remove from DB")
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Some removal error"}`)))
 		return
 	}
 
 	// remove items from DB
-	var newExecutionRequests ExecutionRequestWrapper
-	for _, execution := range executionRequests.Data {
-		found := false
-		for _, removeExecution := range removeExecutionRequests.Data {
-			if removeExecution.ExecutionId == execution.ExecutionId && removeExecution.WorkflowId == execution.WorkflowId {
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			newExecutionRequests.Data = append(newExecutionRequests.Data, execution)
-		}
+	parsedId := fmt.Sprintf("workflowqueue-%s", id)
+	ids := []string{}
+	for _, execution := range removeExecutionRequests.Data {
+		ids = append(ids, execution.ExecutionId)
 	}
+
+	err = DeleteKeys(ctx, parsedId, ids)
+	if err != nil {
+		log.Printf("[ERROR] Failed deleting %d execution keys for org %s", len(ids), id)
+	} else {
+		//log.Printf("[INFO] Deleted %d keys from org %s", len(ids), parsedId)
+	}
+
+	//var newExecutionRequests ExecutionRequestWrapper
+	//for _, execution := range executionRequests.Data {
+	//	found := false
+	//	for _, removeExecution := range removeExecutionRequests.Data {
+	//		if removeExecution.ExecutionId == execution.ExecutionId && removeExecution.WorkflowId == execution.WorkflowId {
+	//			found = true
+	//			break
+	//		}
+	//	}
+
+	//	if !found {
+	//		newExecutionRequests.Data = append(newExecutionRequests.Data, execution)
+	//	}
+	//}
 
 	// Push only the remaining to the DB (remove)
-	if len(executionRequests.Data) != len(newExecutionRequests.Data) {
-		err := setWorkflowQueue(ctx, newExecutionRequests, id)
-		if err != nil {
-			log.Printf("Fail: %s", err)
-		}
-	}
-
-	//newjson, err := json.Marshal(removeExecutionRequests)
-	//if err != nil {
-	//	resp.WriteHeader(401)
-	//	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed unpacking workflow execution"}`)))
-	//	return
+	//if len(executionRequests.Data) != len(newExecutionRequests.Data) {
+	//	err := setWorkflowQueue(ctx, newExecutionRequests, id)
+	//	if err != nil {
+	//		log.Printf("Fail: %s", err)
+	//	}
 	//}
 
 	resp.WriteHeader(200)
@@ -892,14 +924,14 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflowExecution, err := getWorkflowExecution(ctx, actionResult.ExecutionId)
 	if err != nil {
-		log.Printf("Failed getting execution (workflowqueue) %s: %s", actionResult.ExecutionId, err)
+		log.Printf("[ERROR] Failed getting execution (workflowqueue) %s: %s", actionResult.ExecutionId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting execution ID %s because it doesn't exist."}`, actionResult.ExecutionId)))
 		return
 	}
 
 	if workflowExecution.Authorization != actionResult.Authorization {
-		log.Printf("Bad authorization key when updating node (workflowQueue) %s. Want: %s, Have: %s", actionResult.ExecutionId, workflowExecution.Authorization, actionResult.Authorization)
+		log.Printf("[INFO] Bad authorization key when updating node (workflowQueue) %s. Want: %s, Have: %s", actionResult.ExecutionId, workflowExecution.Authorization, actionResult.Authorization)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad authorization key"}`)))
 		return
@@ -950,7 +982,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 			actionResult.Result = fmt.Sprintf("Cloud error: %s", err)
 			workflowExecution.Results = append(workflowExecution.Results, actionResult)
 			workflowExecution.Status = "ABORTED"
-			err = setWorkflowExecution(ctx, *workflowExecution)
+			err = setWorkflowExecution(ctx, *workflowExecution, true)
 			if err != nil {
 				log.Printf("Failed ")
 			} else {
@@ -968,7 +1000,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 
 			workflowExecution.Results = append(workflowExecution.Results, actionResult)
 			workflowExecution.Status = actionResult.Status
-			err = setWorkflowExecution(ctx, *workflowExecution)
+			err = setWorkflowExecution(ctx, *workflowExecution, true)
 			if err != nil {
 				log.Printf("Failed ")
 			} else {
@@ -985,26 +1017,34 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 // Will make sure transactions are always ran for an execution. This is recursive if it fails. Allowed to fail up to 5 times
 func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workflowExecutionId string, actionResult ActionResult, resp http.ResponseWriter) {
 	// Should start a tx for the execution here
-	tx, err := dbclient.NewTransaction(ctx)
+	workflowExecution, err := getWorkflowExecution(ctx, workflowExecutionId)
 	if err != nil {
-		log.Printf("client.NewTransaction: %v", err)
+		log.Printf("[ERROR] Failed getting execution cache: %s", err)
 		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed creating transaction"}`)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting execution"}`)))
 		return
 	}
+	resultLength := len(workflowExecution.Results)
+	//tx, err := dbclient.NewTransaction(ctx)
+	//if err != nil {
+	//	log.Printf("client.NewTransaction: %v", err)
+	//	resp.WriteHeader(401)
+	//	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed creating transaction"}`)))
+	//	return
+	//}
 
-	key := datastore.NameKey("workflowexecution", workflowExecutionId, nil)
-	workflowExecution := &WorkflowExecution{}
-	if err := tx.Get(key, workflowExecution); err != nil {
-		log.Printf("tx.Get bug: %v", err)
-		tx.Rollback()
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting the workflow key"}`)))
-		return
-	}
+	//key := datastore.NameKey("workflowexecution", workflowExecutionId, nil)
+	//workflowExecution := &WorkflowExecution{}
+	//if err := tx.Get(key, workflowExecution); err != nil {
+	//	log.Printf("[ERROR] tx.Get bug: %v", err)
+	//	tx.Rollback()
+	//	resp.WriteHeader(401)
+	//	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting the workflow key"}`)))
+	//	return
+	//}
 
 	if actionResult.Status == "ABORTED" || actionResult.Status == "FAILURE" {
-		log.Printf("[WARNING] Actionresult is %s. Should set workflowExecution and exit all running functions", actionResult.Status)
+		log.Printf("[WARNING] Actionresult is %s for node %s in %s. Should set workflowExecution and exit all running functions", actionResult.Status, actionResult.Action.ID, workflowExecution.ExecutionId)
 
 		newResults := []ActionResult{}
 		childNodes := []string{}
@@ -1277,51 +1317,78 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		}
 	}
 
-	// Transactions: https://cloud.google.com/datastore/docs/concepts/transactions#datastore-datastore-transactional-update-go
-	// Prevents timing issues
-	//ExecutionId
-	if _, err := tx.Put(key, workflowExecution); err != nil {
-		log.Printf("[ERROR] tx.Put error: %v", err)
-		err = tx.Rollback()
-		if err != nil {
-			log.Printf("[ERROR] Rollback error (3): %s", err)
-		}
+	// Validating that action results hasn't changed
+	// Handled using cachhing, so actually pretty fast
+	setExecution := true
+	cacheKey := fmt.Sprintf("workflowexecution-%s", workflowExecution.ExecutionId)
+	if value, found := requestCache.Get(cacheKey); found {
+		parsedValue := value.(*WorkflowExecution)
+		if len(parsedValue.Results) > 0 && len(parsedValue.Results) != resultLength {
+			setExecution = false
+			if attempts > 5 {
+				log.Printf("\n\nSkipping execution input - %d vs %d. Attempts: (%d)\n\n", len(parsedValue.Results), resultLength, attempts)
+			}
 
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed setting workflowexecution actionresult: %s"}`, err)))
-		return
-	}
-
-	if _, err = tx.Commit(); err != nil {
-		err = tx.Rollback()
-		if err != nil {
-			log.Printf("[ERROR] Rollback error expected ? (1): %s", err)
-		}
-
-		if attempts >= 7 {
-			log.Printf("[ERROR] QUITTING: tx.Commit %d: %v", attempts, err)
-
-			workflowExecution.Status = "ABORTED"
-			setWorkflowExecution(ctx, *workflowExecution)
-
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
+			attempts += 1
+			runWorkflowExecutionTransaction(ctx, attempts, workflowExecutionId, actionResult, resp)
 			return
 		}
-
-		if attempts > 3 {
-			log.Printf("[WARNING] tx.Commit %d: %v", attempts, err)
-		}
-
-		attempts += 1
-		runWorkflowExecutionTransaction(ctx, attempts, workflowExecutionId, actionResult, resp)
-		return
-	} else {
-		//if grpc.Code(err) == codes.Aborted {
-		//	return nil, ErrConcurrentTransaction
-		//}
-		//t.id = nil // mark the transaction as expired
 	}
+
+	if setExecution {
+		err = setWorkflowExecution(ctx, *workflowExecution, false)
+		if err != nil {
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed setting workflowexecution actionresult: %s"}`, err)))
+			return
+		}
+	}
+
+	//ExecutionId
+	// Transactions: https://cloud.google.com/datastore/docs/concepts/transactions#datastore-datastore-transactional-update-go
+	// Prevents timing issues
+	//if _, err := tx.Put(key, workflowExecution); err != nil {
+	//	log.Printf("[ERROR] tx.Put error: %v", err)
+	//	err = tx.Rollback()
+	//	if err != nil {
+	//		log.Printf("[ERROR] Rollback error (3): %s", err)
+	//	}
+
+	//	resp.WriteHeader(401)
+	//	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed setting workflowexecution actionresult: %s"}`, err)))
+	//	return
+	//}
+
+	//if _, err = tx.Commit(); err != nil {
+	//	err = tx.Rollback()
+	//	if err != nil {
+	//		log.Printf("[ERROR] Rollback error expected ? (1): %s", err)
+	//	}
+
+	//	if attempts >= 7 {
+	//		log.Printf("[ERROR] QUITTING: tx.Commit %d: %v", attempts, err)
+
+	//		workflowExecution.Status = "ABORTED"
+	//		setWorkflowExecution(ctx, *workflowExecution, true)
+
+	//		resp.WriteHeader(401)
+	//		resp.Write([]byte(`{"success": false}`))
+	//		return
+	//	}
+
+	//	if attempts > 3 {
+	//		log.Printf("[WARNING] tx.Commit %d: %v", attempts, err)
+	//	}
+
+	//	attempts += 1
+	//	runWorkflowExecutionTransaction(ctx, attempts, workflowExecutionId, actionResult, resp)
+	//	return
+	//} else {
+	//	//if grpc.Code(err) == codes.Aborted {
+	//	//	return nil, ErrConcurrentTransaction
+	//	//}
+	//	//t.id = nil // mark the transaction as expired
+	//}
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
@@ -1407,7 +1474,7 @@ func handleExecutionStatistics(execution WorkflowExecution) {
 
 		log.Printf("[INFO] Added %d exampleresults to backend", successful)
 	} else {
-		log.Printf("[INFO] No example results necessary to be added for execution %s", execution.ExecutionId)
+		//log.Printf("[INFO] No example results necessary to be added for execution %s", execution.ExecutionId)
 	}
 }
 
@@ -2458,7 +2525,7 @@ func abortExecution(resp http.ResponseWriter, request *http.Request) {
 			return
 		}
 	} else {
-		log.Printf("[INFO] API key to abort/finish execution %s is correct.", executionId)
+		//log.Printf("[INFO] API key to abort/finish execution %s is correct.", executionId)
 	}
 
 	if workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" || workflowExecution.Status == "FINISHED" {
@@ -2494,7 +2561,7 @@ func abortExecution(resp http.ResponseWriter, request *http.Request) {
 		workflowExecution.Result = lastResult
 	}
 
-	err = setWorkflowExecution(ctx, *workflowExecution)
+	err = setWorkflowExecution(ctx, *workflowExecution, true)
 	if err != nil {
 		log.Printf("Error saving workflow execution for updates when aborting %s: %s", topic, err)
 		resp.WriteHeader(401)
@@ -2614,12 +2681,12 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	if request.Method == "POST" {
 		body, err := ioutil.ReadAll(request.Body)
 		if err != nil {
-			log.Printf("Failed request POST read: %s", err)
+			log.Printf("[ERROR] Failed request POST read: %s", err)
 			return WorkflowExecution{}, "Failed getting body", err
 		}
 
 		// This one doesn't really matter.
-		log.Printf("Running POST execution with body of length %d", len(string(body)))
+		log.Printf("[INFO] Running POST execution with body of length %d", len(string(body)))
 		var execution ExecutionRequest
 		err = json.Unmarshal(body, &execution)
 		if err != nil {
@@ -2718,7 +2785,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 				}
 
 				oldExecution.Results = newResults
-				err = setWorkflowExecution(ctx, *oldExecution)
+				err = setWorkflowExecution(ctx, *oldExecution, true)
 				if err != nil {
 					log.Printf("Error saving workflow execution actionresult setting: %s", err)
 					return WorkflowExecution{}, fmt.Sprintf("Failed setting workflowexecution actionresult in execution: %s", err), err
@@ -2921,7 +2988,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	}
 
 	for _, trigger := range workflowExecution.Workflow.Triggers {
-		log.Printf("ID: %s vs %s", trigger.ID, workflowExecution.Start)
+		log.Printf("[INFO] ID: %s vs %s", trigger.ID, workflowExecution.Start)
 		if trigger.ID == workflowExecution.Start {
 			if trigger.AppName == "User Input" {
 				startFound = true
@@ -3024,7 +3091,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		return WorkflowExecution{}, "Failed building missing Docker images", err
 	}
 
-	err = setWorkflowExecution(ctx, workflowExecution)
+	err = setWorkflowExecution(ctx, workflowExecution, true)
 	if err != nil {
 		log.Printf("Error saving workflow execution for updates %s: %s", topic, err)
 		return WorkflowExecution{}, "Failed getting workflowexecution", err
@@ -3034,6 +3101,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	// FIXME - add specifics to executionRequest, e.g. specific environment (can run multi onprem)
 	if onpremExecution {
 		// FIXME - tmp name based on future companyname-companyId
+		// This leads to issues with overlaps. Should set limits and such instead
 		for _, environment := range environments {
 			log.Printf("[INFO] Execution: %s should execute onprem with execution environment \"%s\"", workflowExecution.ExecutionId, environment)
 
@@ -3044,19 +3112,19 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 				Environments:  environments,
 			}
 
-			executionRequestWrapper, err := getWorkflowQueue(ctx, environment)
-			if err != nil {
-				executionRequestWrapper = ExecutionRequestWrapper{
-					Data: []ExecutionRequest{executionRequest},
-				}
-			} else {
-				executionRequestWrapper.Data = append(executionRequestWrapper.Data, executionRequest)
-			}
+			//executionRequestWrapper, err := getWorkflowQueue(ctx, environment)
+			//if err != nil {
+			//	executionRequestWrapper = ExecutionRequestWrapper{
+			//		Data: []ExecutionRequest{executionRequest},
+			//	}
+			//} else {
+			//	executionRequestWrapper.Data = append(executionRequestWrapper.Data, executionRequest)
+			//}
 
 			//log.Printf("Execution request: %#v", executionRequest)
-			err = setWorkflowQueue(ctx, executionRequestWrapper, environment)
+			err = setWorkflowQueue(ctx, executionRequest, environment)
 			if err != nil {
-				log.Printf("Failed adding to db: %s", err)
+				log.Printf("[ERROR] Failed adding execution to db: %s", err)
 			}
 		}
 	}
@@ -3847,15 +3915,22 @@ func getSpecificWorkflow(resp http.ResponseWriter, request *http.Request) {
 	resp.Write(body)
 }
 
-func setWorkflowExecution(ctx context.Context, workflowExecution WorkflowExecution) error {
+func setWorkflowExecution(ctx context.Context, workflowExecution WorkflowExecution, dbSave bool) error {
 	if len(workflowExecution.ExecutionId) == 0 {
 		log.Printf("Workflowexeciton executionId can't be empty.")
 		return errors.New("ExecutionId can't be empty.")
 	}
 
-	key := datastore.NameKey("workflowexecution", workflowExecution.ExecutionId, nil)
+	cacheKey := fmt.Sprintf("workflowexecution-%s", workflowExecution.ExecutionId)
+	//requestCache.Delete(cacheKey)
+	requestCache.Set(cacheKey, &workflowExecution, cache.DefaultExpiration)
+	if !dbSave {
+		//log.Printf("[WARNING] SHOULD skip DB saving for execution")
+		return nil
+	}
 
 	// New struct, to not add body, author etc
+	key := datastore.NameKey("workflowexecution", workflowExecution.ExecutionId, nil)
 	if _, err := dbclient.Put(ctx, key, &workflowExecution); err != nil {
 		log.Printf("Error adding workflow_execution: %s", err)
 		return err
@@ -3865,8 +3940,25 @@ func setWorkflowExecution(ctx context.Context, workflowExecution WorkflowExecuti
 }
 
 func getWorkflowExecution(ctx context.Context, id string) (*WorkflowExecution, error) {
-	key := datastore.NameKey("workflowexecution", strings.ToLower(id), nil)
 	workflowExecution := &WorkflowExecution{}
+	cacheKey := fmt.Sprintf("workflowexecution-%s", id)
+	if value, found := requestCache.Get(cacheKey); found {
+		parsedValue := value.(*WorkflowExecution)
+		//log.Printf("Found execution for id %s with %d results", parsedValue.ExecutionId, len(parsedValue.Results))
+		return parsedValue, nil
+
+		//log.Printf("[INFO] FOUND key %s with value length %d", cacheKey, len(parsedValue))
+		//err := json.Unmarshal([]byte(parsedValue), &workflowExecution)
+		//if err == nil {
+		//	log.Printf("SHOULD RETURN CACHED EXECUTION of length %d", len(parsedValue))
+		//} else {
+		//	log.Printf("Failed unmarshalling cached value: %s", err)
+		//}
+	} else {
+		log.Printf("[ERROR] Couldn't find key %s", cacheKey)
+	}
+
+	key := datastore.NameKey("workflowexecution", strings.ToLower(id), nil)
 	if err := dbclient.Get(ctx, key, workflowExecution); err != nil {
 		return &WorkflowExecution{}, err
 	}

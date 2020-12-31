@@ -65,6 +65,7 @@ import (
 	// "google.golang.org/appengine/memcache"
 	// applog "google.golang.org/appengine/log"
 	//cloudrun "google.golang.org/api/run/v1"
+	"github.com/patrickmn/go-cache"
 )
 
 // This is used to handle onprem vs offprem databases etc
@@ -80,6 +81,7 @@ var syncUrl = "https://shuffler.io"
 //var syncUrl = "http://localhost:5002"
 
 var dbclient *datastore.Client
+var requestCache *cache.Cache
 
 type Userapi struct {
 	Username string `datastore:"username"`
@@ -2632,6 +2634,23 @@ func getUser(ctx context.Context, id string) (*User, error) {
 	}
 
 	return curUser, nil
+}
+
+// Index = Username
+func DeleteKeys(ctx context.Context, entity string, value []string) error {
+	// Non indexed User data
+	keys := []*datastore.Key{}
+	for _, item := range value {
+		keys = append(keys, datastore.NameKey(entity, item, nil))
+	}
+
+	err := dbclient.DeleteMulti(ctx, keys)
+	if err != nil {
+		log.Printf("Error deleting %s from %s: %s", value, entity, err)
+		return err
+	}
+
+	return nil
 }
 
 // Index = Username
@@ -6776,7 +6795,7 @@ func handleCloudJob(job CloudSyncJob) error {
 			}
 
 			workflowExecution.Status = "EXECUTING"
-			err = setWorkflowExecution(ctx, *workflowExecution)
+			err = setWorkflowExecution(ctx, *workflowExecution, true)
 			if err != nil {
 				return err
 			}
@@ -6829,7 +6848,7 @@ func handleCloudJob(job CloudSyncJob) error {
 
 			workflowExecution.Results = newResults
 			workflowExecution.Status = "ABORTED"
-			err = setWorkflowExecution(ctx, *workflowExecution)
+			err = setWorkflowExecution(ctx, *workflowExecution, true)
 			if err != nil {
 				return err
 			}
@@ -6959,6 +6978,8 @@ func runInit(ctx context.Context) {
 	if len(httpsProxy) > 0 {
 		log.Printf("Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
 	}
+
+	requestCache = cache.New(5*time.Minute, 10*time.Minute)
 
 	/*
 			proxyUrl, err := url.Parse(httpProxy)

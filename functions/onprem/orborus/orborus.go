@@ -115,7 +115,7 @@ func getThisContainerId() {
 			}
 		} else {
 			containerId = "shuffle-orborus"
-			log.Printf("Failed getting container ID: %s", err)
+			log.Printf("[WARNING] Failed getting container ID: %s", err)
 		}
 	}
 
@@ -470,7 +470,7 @@ func main() {
 			continue
 		}
 
-		log.Printf("Got %d new requests. Executing: %d. Max: %d", len(executionRequests.Data), executionCount, maxConcurrency)
+		//log.Printf("[INFO] Got %d new requests. Executing: %d. Max: %d", len(executionRequests.Data), executionCount, maxConcurrency)
 
 		allowed := maxConcurrency - executionCount
 		if len(executionRequests.Data) > allowed {

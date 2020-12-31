@@ -6034,8 +6034,9 @@ const AngularWorkflow = (props) => {
 		//}
 
 		to_be_copied.replace(" ", "_")
-  	var copyText = document.getElementById("copy_element_shuffle");
-		if (copyText !== null) {
+		const elementName = "copy_element_shuffle"
+  	var copyText = document.getElementById(elementName);
+		if (copyText !== null && copyText !== null) {
 			navigator.clipboard.writeText(to_be_copied)
 			copyText.select();
 			copyText.setSelectionRange(0, 99999); /* For mobile devices */
@@ -6044,6 +6045,8 @@ const AngularWorkflow = (props) => {
 			document.execCommand("copy");
 			alert.success("Copied "+to_be_copied)
 			console.log("COPYING!")
+		} else {
+			console.log("Couldn't find element ", elementName)
 		}
 
 	}
