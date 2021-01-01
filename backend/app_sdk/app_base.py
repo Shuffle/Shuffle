@@ -952,20 +952,20 @@ class AppBase:
             except KeyError as error:
                 print(f"KeyError in JSON: {error}")
         
-            print(f"After first trycatch. Baseresult: ", baseresult)
+            print(f"[INFO] After first trycatch. Baseresult: ", baseresult)
         
             # 2. Find the JSON data
             if len(baseresult) == 0:
                 return ""+appendresult, False
         
-            print("After second return")
+            print("[INFO] After second return")
             if len(parsersplit) == 1:
                 return str(baseresult)+str(appendresult), False
         
             baseresult = baseresult.replace(" True,", " true,")
             baseresult = baseresult.replace(" False", " false,")
 
-            print("After third parser return - Formatted: ", baseresult)
+            print("[INFP] After third parser return - Formatted: ", baseresult)
             basejson = {}
             try:
                 basejson = json.loads(baseresult)
@@ -977,7 +977,7 @@ class AppBase:
                     print("Parser issue with JSON: %s" % e)
                     return str(baseresult)+str(appendresult), False
 
-            print("After fourth parser return as JSON")
+            print("[INFO] After fourth parser return as JSON")
         
             data, is_loop = recurse_json(basejson, parsersplit[1:])
             parseditem = data
@@ -1138,11 +1138,11 @@ class AppBase:
                 elif ", " in destinationvalue:
                     newvalue = destinationvalue.split(", ")
 
-                for item in new_value:
+                for item in newvalue:
                     if not item:
                         continue
 
-                    if item.trim() in sourcevalue:
+                    if item.strip() in sourcevalue:
                         print("[INFO] Found %s in %s" % (item, sourcevalue))
                         return True
                     
@@ -1231,13 +1231,14 @@ class AppBase:
                         "startswith",
                         "endswith",
                         "contains",
+                        "contains_any_of",
                         "re",
                         "matches regex",
                     ]
 
                     # FIXME - what should I do here?
                     if not condition["condition"]["value"] in available_checks:
-                        self.logger.info("Skipping %s %s %s because %s is invalid." % (sourcevalue, condition["condition"]["value"], destinationvalue, condition["condition"]["value"]))
+                        self.logger.warning("Skipping %s %s %s because %s is invalid." % (sourcevalue, condition["condition"]["value"], destinationvalue, condition["condition"]["value"]))
                         continue
 
                     #print(destinationvalue)
