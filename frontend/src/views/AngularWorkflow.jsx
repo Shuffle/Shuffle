@@ -41,7 +41,11 @@ import NestedMenuItem from "material-ui-nested-menu-item";
 import Fade from '@material-ui/core/Fade';
 
 import ArrowUpwardIcon from '@material-ui/icons/ArrowUpward';
+import VisibilityIcon from '@material-ui/icons/Visibility';
+import DoneIcon from '@material-ui/icons/Done';
 import CloseIcon from '@material-ui/icons/Close';
+import ErrorIcon from '@material-ui/icons/Error';
+import FindReplaceIcon from '@material-ui/icons/FindReplace';
 import ArrowLeftIcon from '@material-ui/icons/ArrowLeft';
 import CachedIcon from '@material-ui/icons/Cached';
 import AddIcon from '@material-ui/icons/Add';
@@ -276,7 +280,7 @@ const AngularWorkflow = (props) => {
 				// FIXME: Sort this by time
 				setWorkflowExecutions(responseJson)
 			}
-			alert.info("Refrshed executions")
+			alert.info("Loaded executions")
 			//setWorkflowExecutions(responseJson)
 		})
 		.catch(error => {
@@ -4524,7 +4528,7 @@ const AngularWorkflow = (props) => {
 								{condition.condition.value}
 							</div>
 							<Divider style={{height: "100%", width: "1px", marginLeft: "5px", marginRight: "5px", backgroundColor: "rgb(91, 96, 100)"}}/>
-							<div style={{flex: 1, textAlign: "left", marginTop: "auto", marginBottom: "auto", marginLeft: "10px", overflow: "hidden"}}>
+							<div style={{flex: 1, textAlign: "left", marginTop: "auto", marginBottom: "auto", marginLeft: "10px", overflow: "hidden", maxWidth: 72, }}>
 								{condition.destination.value} 
 							</div>
 						</div>
@@ -4558,7 +4562,7 @@ const AngularWorkflow = (props) => {
 								deleteCondition(index)
 							}} key={"Delete"}>{"Delete"}</MenuItem>
 							<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
-								//duplicateCondition(index)
+								duplicateCondition(index)
 							}} key={"Duplicate"}>{"Duplicate"}</MenuItem>
 							</Menu>
 						</div>
@@ -6285,14 +6289,12 @@ const AngularWorkflow = (props) => {
 	const codePopoutModal = !codeModalOpen ? null : 
 		<Draggable
 			onDrag={(e) => {
-				console.log("DRAGGING")
 				if (!dragging) {
 					setDragging(true)
 				}
 			}}
 			onStop={(e) => {
 				if (!dragging) {
-					console.log("Not dragging. Return!")
 					return
 				}
 
@@ -6331,13 +6333,60 @@ const AngularWorkflow = (props) => {
 					},
 				}}
 			>
-				<IconButton style={{zIndex: 5000, position: "absolute", top: 34, right: 34,}} onClick={(e) => {
-					e.preventDefault()
-					//console.log("CLICKING EXIT")
-					setCodeModalOpen(false)
-				}}>
-					<CloseIcon style={{color: "white"}}/>
-				</IconButton>
+				<Tooltip title="Find successful execution" placement="top">
+					<IconButton style={{zIndex: 5000, position: "absolute", top: 34, right: 170,}} onClick={(e) => {
+						e.preventDefault()
+						for (var key in workflowExecutions) {
+							const execution = workflowExecutions[key]
+							//console.log(execution.results[0])
+							const result = execution.results.find(data => data.status === "SUCCESS" && data.action.id === selectedResult.action.id)
+							if (result !== undefined) {
+								setSelectedResult(result)
+								break
+							}
+						}
+					}}>
+						<DoneIcon style={{color: "white"}}/>
+					</IconButton>
+				</Tooltip>
+				<Tooltip title="Find failed execution" placement="top">
+					<IconButton style={{zIndex: 5000, position: "absolute", top: 34, right: 136,}} onClick={(e) => {
+						e.preventDefault()
+						for (var key in workflowExecutions) {
+							const execution = workflowExecutions[key]
+							//console.log(execution.results[0])
+							const result = execution.results.find(data => data.action.id === selectedResult.action.id && data.status !== "SUCCESS" && data.status !== "SKIPPED" && data.status !== "WAITING")
+							if (result !== undefined) {
+								setSelectedResult(result)
+								break
+							}
+						}
+					}}>
+						<ErrorIcon style={{color: "white"}}/>
+					</IconButton>
+				</Tooltip>
+				<Tooltip title="Explore execution" placement="top">
+					<IconButton style={{zIndex: 5000, position: "absolute", top: 34, right: 98,}} onClick={(e) => {
+						e.preventDefault()
+						const executionIndex = workflowExecutions.findIndex(data => data.execution_id === selectedResult.execution_id)
+						if (executionIndex !== -1) {
+							setExecutionModalOpen(true)
+							setExecutionModalView(1)
+							setExecutionData(workflowExecutions[executionIndex])
+						}
+					}}>
+						<VisibilityIcon style={{color: "white"}}/>
+					</IconButton>
+				</Tooltip>
+				<Tooltip title="Close window" placement="top">
+					<IconButton style={{zIndex: 5000, position: "absolute", top: 34, right: 34,}} onClick={(e) => {
+						e.preventDefault()
+						//console.log("CLICKING EXIT")
+						setCodeModalOpen(false)
+					}}>
+						<CloseIcon style={{color: "white"}}/>
+					</IconButton>
+				</Tooltip>
 				<div style={{marginBottom: 40,}} onClick={(event) => {
 					//event.preventDefault()	
 				}}>
@@ -6841,7 +6890,7 @@ const AngularWorkflow = (props) => {
 				id="copy_element_shuffle"
 				value={to_be_copied}
 				disabled={true}
-				style={{height: 0, width: 0, margin: 0, padding: 0, zIndex: -10, position: "fixed",}}
+				style={{height: 0, width: 0, margin: 0, padding: 0, zIndex: "auto", position: "fixed",}}
 			/>
 		</div>
 		:
