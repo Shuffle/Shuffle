@@ -4479,6 +4479,18 @@ const AngularWorkflow = (props) => {
 			const [open, setOpen] = React.useState(false)
 			const [anchorEl, setAnchorEl] = React.useState(null)
 
+			const duplicateCondition = (conditionIndex) => {
+				
+				var newEdge = JSON.parse(JSON.stringify(selectedEdge.conditions[conditionIndex]))
+				const newUuid = uuid.v4()
+				newEdge.condition.id = newUuid
+				newEdge.source.id = newUuid
+				newEdge.destination.id = newUuid
+				selectedEdge.conditions.push(newEdge)
+
+				setUpdate(Math.random())
+			}
+
 			const deleteCondition = (conditionIndex) => {
 				console.log(selectedEdge)
 				if (selectedEdge.conditions.length === 1) {
@@ -4511,7 +4523,7 @@ const AngularWorkflow = (props) => {
 			}
 
 			return (
-				<Paper square style={paperVariableStyle} onClick={() => {}}>
+				<Paper key={condition.condition.id} square style={paperVariableStyle} onClick={() => {}}>
 					<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: "2px", backgroundColor: "orange", marginRight: "5px"}} />
 					<div style={{display: "flex", width: "100%"}}>
 						<div style={{flex: "10", display: "flex"}} onClick={() => {
@@ -4520,11 +4532,11 @@ const AngularWorkflow = (props) => {
 								setDestinationValue(condition.destination)
 								setConditionsModalOpen(true)
 							}}>
-							<div style={{flex: 1, textAlign: "left", marginTop: "15px", marginLeft: "10px", overflow: "hidden"}}>
+							<div style={{flex: 1, textAlign: "left", marginTop: "15px", marginLeft: "10px", overflow: "hidden", maxWidth: 72, }}>
 								{condition.source.value} 
 							</div>
 							<Divider style={{height: "100%", width: "1px", marginLeft: "5px", marginRight: "5px", backgroundColor: "rgb(91, 96, 100)"}}/>
-							<div style={{flex: 1, textAlign: "center", marginTop: "15px", overflow: "hidden"}} onClick={() => {}}>
+							<div style={{flex: 1, textAlign: "center", marginTop: "15px", overflow: "hidden", maxWidth: 72,}} onClick={() => {}}>
 								{condition.condition.value}
 							</div>
 							<Divider style={{height: "100%", width: "1px", marginLeft: "5px", marginRight: "5px", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -4558,12 +4570,12 @@ const AngularWorkflow = (props) => {
 							  }}
 							>
 							<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
+								duplicateCondition(index)
+							}} key={"Duplicate"}>{"Duplicate"}</MenuItem>
+							<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
 								setOpen(false)
 								deleteCondition(index)
 							}} key={"Delete"}>{"Delete"}</MenuItem>
-							<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
-								duplicateCondition(index)
-							}} key={"Duplicate"}>{"Duplicate"}</MenuItem>
 							</Menu>
 						</div>
 					</div>
