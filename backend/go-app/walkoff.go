@@ -486,10 +486,11 @@ func increaseStatisticsField(ctx context.Context, fieldname, id string, amount i
 	statisticsItem.Data = append(statisticsItem.Data, newData)
 
 	// New struct, to not add body, author etc
-	if _, err := dbclient.Put(ctx, key, &statisticsItem); err != nil {
-		log.Printf("Error stats to %s: %s", fieldname, err)
-		return err
-	}
+	// FIXME - reintroduce
+	//if _, err := dbclient.Put(ctx, key, &statisticsItem); err != nil {
+	//	log.Printf("Error stats to %s: %s", fieldname, err)
+	//	return err
+	//}
 
 	//log.Printf("Stats: %#v", statisticsItem)
 
@@ -939,7 +940,6 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 
 	if workflowExecution.Status == "FINISHED" {
 		log.Printf("Workflowexecution is already FINISHED. No further action can be taken")
-
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflowexecution is already finished because of %s with status %s"}`, workflowExecution.LastNode, workflowExecution.Status)))
 		return
@@ -1025,6 +1025,8 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		return
 	}
 	resultLength := len(workflowExecution.Results)
+	dbSave := false
+	setExecution := true
 	//tx, err := dbclient.NewTransaction(ctx)
 	//if err != nil {
 	//	log.Printf("client.NewTransaction: %v", err)
@@ -1044,15 +1046,17 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	//}
 
 	if actionResult.Status == "ABORTED" || actionResult.Status == "FAILURE" {
-		log.Printf("[WARNING] Actionresult is %s for node %s in %s. Should set workflowExecution and exit all running functions", actionResult.Status, actionResult.Action.ID, workflowExecution.ExecutionId)
+		dbSave = true
 
 		newResults := []ActionResult{}
 		childNodes := []string{}
 		if workflowExecution.Workflow.Configuration.ExitOnError {
+			log.Printf("[WARNING] Actionresult is %s for node %s in %s. Should set workflowExecution and exit all running functions", actionResult.Status, actionResult.Action.ID, workflowExecution.ExecutionId)
 			workflowExecution.Status = actionResult.Status
 			workflowExecution.LastNode = actionResult.Action.ID
 			// Find underlying nodes and add them
 		} else {
+			log.Printf("[WARNING] Actionresult is %s for node %s in %s. Continuing anyway because of workflow configuration.", actionResult.Status, actionResult.Action.ID, workflowExecution.ExecutionId)
 			// Finds ALL childnodes to set them to SKIPPED
 			childNodes = findChildNodes(*workflowExecution, actionResult.Action.ID)
 			// Remove duplicates
@@ -1077,40 +1081,50 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 					continue
 				}
 
-				// Check parents are done here. Only add it IF all parents are skipped
-				skipNodeAdd := false
-				for _, branch := range workflowExecution.Workflow.Branches {
-					if branch.DestinationID == nodeId {
-						// If the branch's source node is NOT in childNodes, it's not a skipped parent
-						sourceNodeFound := false
-						for _, item := range childNodes {
-							if item == branch.SourceID {
-								sourceNodeFound = true
-								break
-							}
-						}
-
-						if !sourceNodeFound {
-							log.Printf("Not setting node %s to SKIPPED", nodeId)
-							skipNodeAdd = true
-							break
-						}
+				resultExists := false
+				for _, result := range workflowExecution.Results {
+					if result.Action.ID == curAction.ID {
+						resultExists = true
+						break
 					}
 				}
 
-				if !skipNodeAdd {
-					newResult := ActionResult{
-						Action:        curAction,
-						ExecutionId:   actionResult.ExecutionId,
-						Authorization: actionResult.Authorization,
-						Result:        "Skipped because of previous node",
-						StartedAt:     0,
-						CompletedAt:   0,
-						Status:        "SKIPPED",
+				if !resultExists {
+					// Check parents are done here. Only add it IF all parents are skipped
+					skipNodeAdd := false
+					for _, branch := range workflowExecution.Workflow.Branches {
+						if branch.DestinationID == nodeId {
+							// If the branch's source node is NOT in childNodes, it's not a skipped parent
+							sourceNodeFound := false
+							for _, item := range childNodes {
+								if item == branch.SourceID {
+									sourceNodeFound = true
+									break
+								}
+							}
+
+							if !sourceNodeFound {
+								log.Printf("Not setting node %s to SKIPPED", nodeId)
+								skipNodeAdd = true
+								break
+							}
+						}
 					}
 
-					newResults = append(newResults, newResult)
-					increaseStatisticsField(ctx, "workflow_execution_actions_skipped", workflowExecution.Workflow.ID, 1, workflowExecution.ExecutionOrg)
+					if !skipNodeAdd {
+						newResult := ActionResult{
+							Action:        curAction,
+							ExecutionId:   actionResult.ExecutionId,
+							Authorization: actionResult.Authorization,
+							Result:        "Skipped because of previous node",
+							StartedAt:     0,
+							CompletedAt:   0,
+							Status:        "SKIPPED",
+						}
+
+						newResults = append(newResults, newResult)
+						increaseStatisticsField(ctx, "workflow_execution_actions_skipped", workflowExecution.Workflow.ID, 1, workflowExecution.ExecutionOrg)
+					}
 				}
 			}
 		}
@@ -1119,9 +1133,13 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		lastResult := ""
 		// type ActionResult struct {
 		for _, result := range workflowExecution.Results {
+			if actionResult.Action.ID == result.Action.ID {
+				continue
+			}
+
 			if result.Status == "EXECUTING" {
 				result.Status = actionResult.Status
-				result.Result = "Aborted because of error in another node"
+				result.Result = "Aborted because of error in another node (2)"
 			}
 
 			if len(result.Result) > 0 {
@@ -1152,17 +1170,24 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	// Find the appropriate action
 	if len(workflowExecution.Results) > 0 {
 		// FIXME
+		skip := false
 		found := false
 		outerindex := 0
 		for index, item := range workflowExecution.Results {
 			if item.Action.ID == actionResult.Action.ID {
 				found = true
+				if item.Status == actionResult.Status {
+					skip = true
+				}
+
 				outerindex = index
 				break
 			}
 		}
 
-		if found {
+		if skip {
+			//log.Printf("Both are %s. Skipping this node", item.Status)
+		} else if found {
 			// If result exists and execution variable exists, update execution value
 			//log.Printf("Exec var backend: %s", workflowExecution.Results[outerindex].Action.ExecutionVariable.Name)
 			actionVarName := workflowExecution.Results[outerindex].Action.ExecutionVariable.Name
@@ -1178,14 +1203,14 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 				}
 			}
 
-			log.Printf("[INFO] Updating %s in %s from %s to %s", actionResult.Action.ID, workflowExecution.ExecutionId, workflowExecution.Results[outerindex].Status, actionResult.Status)
+			log.Printf("[INFO] Updating %s in workflow %s from %s to %s", actionResult.Action.ID, workflowExecution.ExecutionId, workflowExecution.Results[outerindex].Status, actionResult.Status)
 			workflowExecution.Results[outerindex] = actionResult
 		} else {
-			log.Printf("[INFO] Setting value of %s in %s to %s", actionResult.Action.ID, workflowExecution.ExecutionId, actionResult.Status)
+			log.Printf("[INFO] Setting value of %s in workflow %s to %s", actionResult.Action.ID, workflowExecution.ExecutionId, actionResult.Status)
 			workflowExecution.Results = append(workflowExecution.Results, actionResult)
 		}
 	} else {
-		log.Printf("[INFO] Setting value of %s in %s to %s", actionResult.Action.ID, workflowExecution.ExecutionId, actionResult.Status)
+		log.Printf("[INFO] Setting value of %s in workflow %s to %s", actionResult.Action.ID, workflowExecution.ExecutionId, actionResult.Status)
 		workflowExecution.Results = append(workflowExecution.Results, actionResult)
 	}
 
@@ -1268,6 +1293,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		_ = skippedNodes
 
 		if finished {
+			dbSave = true
 			log.Printf("[INFO] Execution of %s finished.", workflowExecution.ExecutionId)
 			//log.Println("Might be finished based on length of results and everything being SUCCESS or FINISHED - VERIFY THIS. Setting status to finished.")
 
@@ -1299,6 +1325,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	tmpJson, err := json.Marshal(workflowExecution)
 	if err == nil {
 		if len(tmpJson) >= 1048487 {
+			dbSave = true
 			log.Printf("[ERROR] Result length is too long! Need to reduce result size")
 
 			// Result        string `json:"result" datastore:"result,noindex"`
@@ -1319,24 +1346,25 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 
 	// Validating that action results hasn't changed
 	// Handled using cachhing, so actually pretty fast
-	setExecution := true
 	cacheKey := fmt.Sprintf("workflowexecution-%s", workflowExecution.ExecutionId)
 	if value, found := requestCache.Get(cacheKey); found {
 		parsedValue := value.(*WorkflowExecution)
 		if len(parsedValue.Results) > 0 && len(parsedValue.Results) != resultLength {
 			setExecution = false
 			if attempts > 5 {
-				log.Printf("\n\nSkipping execution input - %d vs %d. Attempts: (%d)\n\n", len(parsedValue.Results), resultLength, attempts)
+				//log.Printf("\n\nSkipping execution input - %d vs %d. Attempts: (%d)\n\n", len(parsedValue.Results), resultLength, attempts)
 			}
 
 			attempts += 1
-			runWorkflowExecutionTransaction(ctx, attempts, workflowExecutionId, actionResult, resp)
-			return
+			if len(workflowExecution.Results) <= len(workflowExecution.Workflow.Actions) {
+				runWorkflowExecutionTransaction(ctx, attempts, workflowExecutionId, actionResult, resp)
+				return
+			}
 		}
 	}
 
 	if setExecution {
-		err = setWorkflowExecution(ctx, *workflowExecution, false)
+		err = setWorkflowExecution(ctx, *workflowExecution, dbSave)
 		if err != nil {
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed setting workflowexecution actionresult: %s"}`, err)))
@@ -2546,7 +2574,7 @@ func abortExecution(resp http.ResponseWriter, request *http.Request) {
 	for _, result := range workflowExecution.Results {
 		if result.Status == "EXECUTING" {
 			result.Status = "ABORTED"
-			result.Result = "Aborted because of error in another node"
+			result.Result = "Aborted because of error in another node (1)"
 		}
 
 		if len(result.Result) > 0 {
@@ -3916,6 +3944,7 @@ func getSpecificWorkflow(resp http.ResponseWriter, request *http.Request) {
 }
 
 func setWorkflowExecution(ctx context.Context, workflowExecution WorkflowExecution, dbSave bool) error {
+	//log.Printf("\n\n\nRESULT: %s\n\n\n", workflowExecution.Status)
 	if len(workflowExecution.ExecutionId) == 0 {
 		log.Printf("Workflowexeciton executionId can't be empty.")
 		return errors.New("ExecutionId can't be empty.")
@@ -3924,7 +3953,7 @@ func setWorkflowExecution(ctx context.Context, workflowExecution WorkflowExecuti
 	cacheKey := fmt.Sprintf("workflowexecution-%s", workflowExecution.ExecutionId)
 	//requestCache.Delete(cacheKey)
 	requestCache.Set(cacheKey, &workflowExecution, cache.DefaultExpiration)
-	if !dbSave {
+	if !dbSave && workflowExecution.Status == "EXECUTING" && len(workflowExecution.Results) > 1 {
 		//log.Printf("[WARNING] SHOULD skip DB saving for execution")
 		return nil
 	}
@@ -3955,7 +3984,7 @@ func getWorkflowExecution(ctx context.Context, id string) (*WorkflowExecution, e
 		//	log.Printf("Failed unmarshalling cached value: %s", err)
 		//}
 	} else {
-		log.Printf("[ERROR] Couldn't find key %s", cacheKey)
+		//log.Printf("[ERROR] Couldn't find key %s", cacheKey)
 	}
 
 	key := datastore.NameKey("workflowexecution", strings.ToLower(id), nil)
@@ -4011,13 +4040,14 @@ func getAllWorkflows(ctx context.Context, orgId string) ([]Workflow, error) {
 }
 
 func setExampleresult(ctx context.Context, result AppExecutionExample) error {
-	key := datastore.NameKey("example_result", result.ExampleId, nil)
+	// FIXME: Reintroduce this for stats
+	//key := datastore.NameKey("example_result", result.ExampleId, nil)
 
-	// New struct, to not add body, author etc
-	if _, err := dbclient.Put(ctx, key, &result); err != nil {
-		log.Printf("Error adding workflow: %s", err)
-		return err
-	}
+	//// New struct, to not add body, author etc
+	//if _, err := dbclient.Put(ctx, key, &result); err != nil {
+	//	log.Printf("Error adding workflow: %s", err)
+	//	return err
+	//}
 
 	return nil
 }

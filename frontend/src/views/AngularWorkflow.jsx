@@ -276,6 +276,7 @@ const AngularWorkflow = (props) => {
 				// FIXME: Sort this by time
 				setWorkflowExecutions(responseJson)
 			}
+			alert.info("Refrshed executions")
 			//setWorkflowExecutions(responseJson)
 		})
 		.catch(error => {
@@ -3676,6 +3677,22 @@ const AngularWorkflow = (props) => {
 		})
 	}
 
+	const headerSize = 68
+	const rightsidebarStyle = {
+		position: "fixed", 
+		right: 0, 
+		top: headerSize+1,
+		height: "100%",
+		bottom: 0,
+		minWidth: 350, 
+		maxWidth: 350, 
+		borderLeft: "1px solid rgb(91, 96, 100)",
+		overflow: "scroll",
+		overflowX: "auto",
+		overflowY: "auto",
+		zIndex: 1000,
+	}
+
 	const appApiView = Object.getOwnPropertyNames(selectedAction).length > 0 ? 
 		<div style={appApiViewStyle}>
 			<div style={{display: "flex", minHeight: 40, marginBottom: 30}}>
@@ -3757,7 +3774,7 @@ const AngularWorkflow = (props) => {
 				</div>
 			: null}
 			{selectedAction.authentication !== undefined && selectedAction.authentication.length > 0 ? 
-				<div style={{marginTop: "20px"}}>
+				<div style={{marginTop: 20, overflow: "hidden",}}>
 					Authentication
 					<div style={{display: "flex"}}>
 						<Select
@@ -3776,7 +3793,7 @@ const AngularWorkflow = (props) => {
 								setSelectedAction(selectedAction)
 								setUpdate(Math.random())
 							}}
-							style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+							style={{backgroundColor: inputColor, color: "white", height: 50, maxWidth: rightsidebarStyle.maxWidth-80,}}	
 						>
 							{selectedAction.authentication.map(data => (
 								<MenuItem key={data.id} style={{backgroundColor: inputColor, color: "white"}} value={data}>
@@ -3794,11 +3811,11 @@ const AngularWorkflow = (props) => {
 							if (curaction.selectedAuthentication === null || curaction.selectedAuthentication === undefined || curaction.selectedAuthentication.length === "")
 						*/}
 					 	<Tooltip color="primary" title={"Add authentication option"} placement="top">
-							<Button color="primary" style={{}} variant="text" onClick={() => {
+							<IconButton color="primary" style={{}} onClick={() => {
 								setAuthenticationModalOpen(true)
 							}}>
 								<AddIcon />
-							</Button> 				
+							</IconButton> 				
 						</Tooltip>
 					</div>
 				</div>
@@ -3925,22 +3942,6 @@ const AngularWorkflow = (props) => {
 		</div> 
 		: null 
 
-
-	const headerSize = 68
-	const rightsidebarStyle = {
-		position: "fixed", 
-		right: 0, 
-		top: headerSize+1,
-		height: "100%",
-		bottom: 0,
-		minWidth: "350px", 
-		maxWidth: "350px", 
-		borderLeft: "1px solid rgb(91, 96, 100)",
-		overflow: "scroll",
-		overflowX: "auto",
-		overflowY: "auto",
-		zIndex: 1000,
-	}
 
 	const setTriggerFolderWrapperMulti = event => {
 	    const { options } = event.target
@@ -4556,6 +4557,9 @@ const AngularWorkflow = (props) => {
 								setOpen(false)
 								deleteCondition(index)
 							}} key={"Delete"}>{"Delete"}</MenuItem>
+							<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
+								//duplicateCondition(index)
+							}} key={"Duplicate"}>{"Duplicate"}</MenuItem>
 							</Menu>
 						</div>
 					</div>
@@ -6081,6 +6085,17 @@ const AngularWorkflow = (props) => {
 
 							return (
 								<Paper elevation={5} key={data.execution_id} square style={executionPaperStyle} onMouseOver={() => {}} onMouseOut={() => {}} onClick={() => {
+
+									if (data.result === undefined || data.result === null || data.result.length === 0) {
+										setExecutionRequest({
+											"execution_id": data.execution_id,
+											"authorization": data.authorization,
+										})
+										start()
+										setExecutionRunning(true)
+										setExecutionRequestStarted(false)
+										console.log(data)
+									}
 									setExecutionModalView(1)
 									setExecutionData(data)
 								}}>
@@ -6117,7 +6132,12 @@ const AngularWorkflow = (props) => {
 			:
 			<div style={{padding: 25, maxWidth: 365, overflowX: "hidden",}}>
 				<Breadcrumbs aria-label="breadcrumb" separator="›" style={{color: "white", fontSize: 16}}>
-					<h2 style={{color: "rgba(255,255,255,0.5)", cursor: "pointer"}} onClick={() => {setExecutionModalView(0)}}>
+					<h2 style={{color: "rgba(255,255,255,0.5)", cursor: "pointer"}} onClick={() => {
+						setExecutionRunning(false)
+						stop()
+						getWorkflowExecution(props.match.params.key)
+						setExecutionModalView(0)
+					}}>
 						<ArrowBackIcon style={{marginRight: 7, }} />
 						See other Executions	
 					</h2>

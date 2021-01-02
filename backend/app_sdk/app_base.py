@@ -29,6 +29,8 @@ class AppBase:
         if isinstance(self.action, str):
             self.action = json.loads(self.action)
 
+    # FIXME: Add more info like logs in here.
+    # Docker logs: https://forums.docker.com/t/docker-logs-inside-the-docker-container/68190/2
     def send_result(self, action_result, headers, stream_path):
         if action_result["status"] == "EXECUTING":
             action_result["status"] = "FAILURE"
@@ -187,7 +189,7 @@ class AppBase:
 
                 paramlist.append(baseitem)
 
-            print("PARAMLIST: %s" % paramlist)
+            #print("PARAMLIST: %s" % paramlist)
 
             #newlist[subitem[0]]
             #if len(newlist) > 0:
@@ -198,7 +200,7 @@ class AppBase:
             #print("Listlengths: %s" % listlengths)
             #paramlist = [baseparams]
 
-        print("Return paramlist: %s" % paramlist)
+        #print("[INFO] Return paramlist: %s" % paramlist)
         return paramlist
             
 
@@ -880,14 +882,13 @@ class AppBase:
             actionname_lower = parsersplit[0][1:].lower()
 
             #Actionname: Start_node
-
-            print(f"\nActionname: {actionname_lower}")
+            print(f"\n[INFO] Actionname: {actionname_lower}")
 
             # 1. Find the action
             baseresult = ""
 
             appendresult = "" 
-            print("Parsersplit length: %d" % len(parsersplit))
+            print("[INFO] Parsersplit length: %d" % len(parsersplit))
             if (actionname_lower.startswith("exec ") or actionname_lower.startswith("webhook ") or actionname_lower.startswith("schedule ") or actionname_lower.startswith("userinput ") or actionname_lower.startswith("email_trigger ") or actionname_lower.startswith("trigger ")) and len(parsersplit) == 1:
                 record = False
                 for char in actionname_lower:
@@ -1276,7 +1277,7 @@ class AppBase:
             except requests.exceptions.ConnectionError as e:
                 self.logger.exception(e)
 
-            print("\n\nRETURNING BECAUSE A BRANCH FAILED\n\n")
+            print("\n\nRETURNING BECAUSE A BRANCH FAILED: %s\n\n" % tmpresult)
             return
 
         # Replace name cus there might be issues
@@ -1324,7 +1325,7 @@ class AppBase:
 
                             if parameter["name"] == "body": 
                                 bodyindex = counter
-                                print("PARAM: %s" % parameter)
+                                #print("PARAM: %s" % parameter)
                                 try:
                                     values = parameter["value_replace"]
                                     if values != None:
@@ -1601,27 +1602,27 @@ class AppBase:
                             #    "id": "body_replacement",
                             #})
 
-                            print("APP_SDK DONE: Starting NORMAL execution of function")
-                            print("Running with params (0): %s" % params) 
+                            print("[INFO] APP_SDK DONE: Starting NORMAL execution of function")
+                            #print("[INFO] Running with params (0): %s" % params) 
                             newres = await func(**params)
-                            print("Returned from execution.")
+                            print("[INFO] Returned from execution.")
                             if isinstance(newres, tuple):
-                                print("Handling return as tuple")
+                                print("[INFO] Handling return as tuple")
                                 # Handles files.
                                 filedata = ""
                                 file_ids = []
                                 print("TUPLE: %s" % newres[1])
                                 if isinstance(newres[1], list):
-                                    print("HANDLING LIST FROM RET")
+                                    print("[INFO] HANDLING LIST FROM RET")
                                     file_ids = self.set_files(newres[1])
                                 elif isinstance(newres[1], object):
-                                    print("Handling JSON from ret")
+                                    print("[INFO] Handling JSON from ret")
                                     file_ids = self.set_files([newres[1]])
                                 elif isinstance(newres[1], str):
-                                    print("Handling STRING from ret")
+                                    print("[INFO] Handling STRING from ret")
                                     file_ids = self.set_files([newres[1]])
                                 else:
-                                    print("NO FILES TO HANDLE")
+                                    print("[INFO] NO FILES TO HANDLE")
 
                                 tmp_result = {
                                     "result": newres[0], 
@@ -1630,7 +1631,7 @@ class AppBase:
                                 
                                 result = json.dumps(tmp_result)
                             elif isinstance(newres, str):
-                                print("Handling return as string")
+                                print("[INFO] Handling return as string")
                                 result += newres
                             else:
                                 try:
@@ -1639,13 +1640,13 @@ class AppBase:
                                     result += "Failed autocasting. Can't handle %s type from function. Must be string" % type(newres)
                                     print("Can't handle type %s value from function" % (type(newres)))
 
-                            print("POST NEWRES RESULT: ", result)
+                            print("[INFO] POST NEWRES RESULT: ", result)
                         else:
-                            print("APP_SDK DONE: Starting MULTI execution (length: %d) with values %s" % (minlength, multi_parameters))
+                            print("[INFO] APP_SDK DONE: Starting MULTI execution (length: %d) with values %s" % (minlength, multi_parameters))
                             # 1. Use number of executions based on the arrays being similar
                             # 2. Find the right value from the parsed multi_params
 
-                            print("Running WITHOUT outer loop")
+                            print("[INFO] Running WITHOUT outer loop")
                             json_object = False
                             results = await self.run_recursed_items(func, multi_parameters, {})
                             if isinstance(results, dict) or isinstance(results, list):
