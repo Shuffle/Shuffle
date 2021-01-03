@@ -645,9 +645,10 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 	stopContainers := []string{}
 	removeContainers := []string{}
 	log.Printf("[INFO] Baseimage: %s, Workertimeout: %d", baseimagename, int64(workerTimeout))
+	baseString := `/bin/sh -c 'python app.py --log-level DEBUG'`
 	for _, container := range containers {
 		// Skip random containers. Only handle things related to Shuffle.
-		if !strings.Contains(container.Image, baseimagename) {
+		if !strings.Contains(container.Image, baseimagename) && container.Command != baseString && container.Command != "./worker" {
 			shuffleFound := false
 			for _, item := range container.Labels {
 				if item == "shuffle" {
@@ -670,7 +671,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 
 		for _, name := range container.Names {
 			// FIXME - add name_version_uid_uid regex check as well
-			if strings.HasPrefix(name, "/shuffle") {
+			if strings.HasPrefix(name, "/shuffle") && !strings.HasPrefix(name, "/shuffle-subflow") {
 				continue
 			}
 
@@ -679,7 +680,6 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 
 			// Need to check time here too because a container can be removed the same instant as its created
 			if container.State != "running" && currenttime-container.Created > int64(workerTimeout) {
-				log.Printf("Should remove above container because not running and old")
 				removeContainers = append(removeContainers, container.ID)
 				containerNames[container.ID] = name
 			}
@@ -687,7 +687,6 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 			// stopcontainer & removecontainer
 			//log.Printf("Time: %d - %d", currenttime-container.Created, int64(workerTimeout))
 			if container.State == "running" && currenttime-container.Created > int64(workerTimeout) {
-				log.Printf("Should remove above container because RUNNING and old")
 				stopContainers = append(stopContainers, container.ID)
 				containerNames[container.ID] = name
 			}
@@ -709,7 +708,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 
 	log.Printf("[INFO] Should REMOVE %d containers.", len(removeContainers))
 	for _, containername := range removeContainers {
-		dockercli.ContainerRemove(ctx, containername, removeOptions)
+		go dockercli.ContainerRemove(ctx, containername, removeOptions)
 	}
 
 	return nil
