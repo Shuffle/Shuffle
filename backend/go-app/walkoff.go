@@ -3007,7 +3007,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 					continue
 				}
 
-				log.Printf("[WARNING] Set %s to SKIPPED as it's NOT a childnode of the startnode.", action.ID)
+				//log.Printf("[WARNING] Set %s to SKIPPED as it's NOT a childnode of the startnode.", action.ID)
 				defaultResults = append(defaultResults, ActionResult{
 					Action:        action,
 					ExecutionId:   workflowExecution.ExecutionId,

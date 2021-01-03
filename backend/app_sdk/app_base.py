@@ -1444,7 +1444,8 @@ class AppBase:
 
                                     print("POST replacement: %s" % replacement)
 
-                                    json_replacement = replacement
+                                    #json_replacement = tmpitem.replace(actualitem[0][0], replacement, 1)
+                                    #print("AFTER POST replacement: %s" % json_replacement)
                                     try:
                                         json_replacement = json.loads(replacement)
                                     except json.decoder.JSONDecodeError as e:
@@ -1456,7 +1457,22 @@ class AppBase:
 
                                     if len(json_replacement) > minlength:
                                         minlength = len(json_replacement)
+                                    
+                                    # FIXME: Only do this IF they want to loop
+                                    new_replacement = []
+                                    for i in range(len(json_replacement)):
+                                        newvalue = tmpitem.replace(actualitem[0][0], json_replacement[i], 1)
+                                        try:
+                                            newvalue = json.loads(newvalue)
+                                        except json.decoder.JSONDecodeError as e:
+                                            print("DECODER ERROR: %s" % e)
+                                            pass
 
+                                        new_replacement.append(newvalue)
+
+                                    print("New replacement: %s" % new_replacement)
+
+                                    # New
                                     tmpitem = tmpitem.replace(actualitem[0][0], replacement, 1)
 
                                     # This code handles files.
@@ -1483,14 +1499,15 @@ class AppBase:
                                         print("(1) JSON ERROR IN FILE HANDLING: %s" % e)
 
                                     if not isfile:
+                                        print("Resultarray (NOT FILE): %s" % resultarray)
                                         params[parameter["name"]] = tmpitem
-                                        multi_parameters[parameter["name"]] = json_replacement 
+                                        multi_parameters[parameter["name"]] = new_replacement 
                                     else:
-                                        print("Resultarray: %s" % resultarray)
+                                        print("Resultarray (FILE): %s" % resultarray)
                                         params[parameter["name"]] = resultarray 
                                         multi_parameters[parameter["name"]] = resultarray 
 
-                                    multi_execution_lists.append(json_replacement)
+                                    multi_execution_lists.append(new_replacement)
                                     print("MULTI finished: %s" % json_replacement)
                                 else:
                                     print("(2) Pre replacement: %s" % actualitem)
