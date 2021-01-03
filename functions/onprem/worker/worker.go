@@ -926,6 +926,106 @@ func runFilter(workflowExecution WorkflowExecution, action Action) {
 
 }
 
+func handleSubworkflowExecution(client *http.Client, workflowExecution WorkflowExecution, action Trigger, baseAction Action) error {
+	apikey := ""
+	workflowId := ""
+	executionArgument := ""
+	for _, parameter := range action.Parameters {
+		log.Printf("Parameter name: %s", parameter.Name)
+		if parameter.Name == "user_apikey" {
+			apikey = parameter.Value
+		} else if parameter.Name == "workflow" {
+			workflowId = parameter.Value
+		} else if parameter.Name == "data" {
+			executionArgument = parameter.Value
+		}
+	}
+
+	//handleSubworkflowExecution(workflowExecution, action)
+	status := "SUCCESS"
+	baseResult := `{"success": true}`
+	if len(apikey) == 0 || len(workflowId) == 0 {
+		status = "FAILURE"
+		baseResult = `{"success": false}`
+	} else {
+		log.Printf("Should execute workflow %s with APIKEY %s and data %s", workflowId, apikey, executionArgument)
+		fullUrl := fmt.Sprintf("%s/api/workflows/%s/execute", baseUrl, workflowId)
+		req, err := http.NewRequest(
+			"POST",
+			fullUrl,
+			bytes.NewBuffer([]byte(executionArgument)),
+		)
+
+		if err != nil {
+			log.Printf("Error building test request: %s", err)
+			return err
+		}
+
+		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", apikey))
+		newresp, err := client.Do(req)
+		if err != nil {
+			log.Printf("Error running test request: %s", err)
+			return err
+		}
+
+		body, err := ioutil.ReadAll(newresp.Body)
+		if err != nil {
+			log.Printf("Failed reading body when waiting: %s", err)
+			return err
+		}
+
+		log.Printf("Execution Result: %s", body)
+	}
+
+	timeNow := time.Now().Unix()
+	result := ActionResult{
+		Action:        baseAction,
+		ExecutionId:   workflowExecution.ExecutionId,
+		Authorization: workflowExecution.Authorization,
+		Result:        baseResult,
+		StartedAt:     timeNow,
+		CompletedAt:   0,
+		Status:        status,
+	}
+
+	resultData, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+
+	fullUrl := fmt.Sprintf("%s/api/v1/streams", baseUrl)
+	req, err := http.NewRequest(
+		"POST",
+		fullUrl,
+		bytes.NewBuffer([]byte(resultData)),
+	)
+
+	if err != nil {
+		log.Printf("Error building test request: %s", err)
+		return err
+	}
+
+	newresp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Error running test request: %s", err)
+		return err
+	}
+
+	body, err := ioutil.ReadAll(newresp.Body)
+	if err != nil {
+		log.Printf("Failed reading body when waiting: %s", err)
+		return err
+	}
+
+	log.Printf("[INFO] Subworkflow Body: %s", string(body))
+
+	if status == "FAILURE" {
+		return errors.New("[ERROR] Failed to execute subworkflow")
+	} else {
+		return nil
+	}
+}
+
 func handleExecution(client *http.Client, req *http.Request, workflowExecution WorkflowExecution) error {
 	// if no onprem runs (shouldn't happen, but extra check), exit
 	// if there are some, load the images ASAP for the app
@@ -965,10 +1065,10 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 		}
 
 		for _, trigger := range workflowExecution.Workflow.Triggers {
-			if trigger.AppName != "User Input" {
+			log.Printf("Appname trigger: %s", trigger.AppName)
+			if !(trigger.AppName == "User Input" || trigger.AppName == "Shuffle Workflow") {
 				continue
 			}
-
 			if trigger.ID == branch.SourceID {
 				sourceFound = true
 				extra += 1
@@ -976,6 +1076,10 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 
 			if trigger.ID == branch.DestinationID {
 				destinationFound = true
+
+				if !sourceFound {
+					extra += 1
+				}
 			}
 		}
 
@@ -1198,7 +1302,45 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 				continue
 			}
 
-			if action.AppName == "User Input" {
+			if action.AppName == "Shuffle Workflow" {
+				log.Printf("SHUFFLE WORKFLOW: %#v", action)
+				action.Environment = environment
+				action.AppName = "shuffle-subflow"
+				action.Name = "run_subflow"
+				action.AppVersion = "1.0.0"
+
+				//appname := action.AppName
+				//appversion := action.AppVersion
+				//appname = strings.Replace(appname, ".", "-", -1)
+				//appversion = strings.Replace(appversion, ".", "-", -1)
+				//	shuffle-subflow_1.0.0
+
+				//visited = append(visited, action.ID)
+				//executed = append(executed, action.ID)
+
+				trigger := Trigger{}
+				for _, innertrigger := range workflowExecution.Workflow.Triggers {
+					if innertrigger.ID == action.ID {
+						trigger = innertrigger
+						break
+					}
+				}
+
+				action.Parameters = []WorkflowAppActionParameter{}
+				for _, parameter := range trigger.Parameters {
+					parameter.Variant = "STATIC_VALUE"
+					action.Parameters = append(action.Parameters, parameter)
+				}
+
+				//trigger.LargeImage = ""
+				//err = handleSubworkflowExecution(client, workflowExecution, trigger, action)
+				//if err != nil {
+				//	log.Printf("[ERROR] Failed to execute subworkflow: %s", err)
+				//} else {
+				//	log.Printf("[INFO] Executed subworkflow!")
+				//}
+				//continue
+			} else if action.AppName == "User Input" {
 				log.Printf("USER INPUT!")
 
 				if action.ID == workflowExecution.Start {
@@ -1466,19 +1608,19 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 
 		err = json.Unmarshal(body, &workflowExecution)
 		if err != nil {
-			log.Printf("Failed workflowExecution unmarshal: %s", err)
+			log.Printf("[ERROR] Failed workflowExecution unmarshal: %s", err)
 			time.Sleep(time.Duration(sleepTime) * time.Second)
 			continue
 		}
 
 		if workflowExecution.Status == "FINISHED" || workflowExecution.Status == "SUCCESS" {
-			log.Printf("Workflow %s is finished. Exiting worker.", workflowExecution.ExecutionId)
+			log.Printf("[INFO] Workflow %s is finished. Exiting worker.", workflowExecution.ExecutionId)
 			shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
 		}
 
-		log.Printf("Status: %s, Results: %d, actions: %d", workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extra)
+		log.Printf("[INFO] Status: %s, Results: %d, actions: %d", workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extra)
 		if workflowExecution.Status != "EXECUTING" {
-			log.Printf("Exiting as worker execution has status %s!", workflowExecution.Status)
+			log.Printf("[WARNING] Exiting as worker execution has status %s!", workflowExecution.Status)
 			shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
 		}
 
@@ -1592,6 +1734,7 @@ func getAction(workflowExecution WorkflowExecution, id, environment string) Acti
 				AppName:     trigger.AppName,
 				Name:        trigger.AppName,
 				Environment: environment,
+				Label:       trigger.Label,
 			}
 			log.Printf("FOUND TRIGGER: %#v!", trigger)
 		}
@@ -1641,7 +1784,7 @@ func runUserInput(client *http.Client, action Action, workflowId, workflowExecut
 		return err
 	}
 
-	log.Printf("[INFO] Body: %s", string(body))
+	log.Printf("[INFO] User Input Body: %s", string(body))
 	return nil
 }
 
@@ -1671,7 +1814,7 @@ func runTestExecution(client *http.Client, workflowId, apikey string) (string, s
 		return "", ""
 	}
 
-	log.Printf("[INFO] Body: %s", string(body))
+	log.Printf("[INFO] Test Body: %s", string(body))
 	var workflowExecution WorkflowExecution
 	err = json.Unmarshal(body, &workflowExecution)
 	if err != nil {
