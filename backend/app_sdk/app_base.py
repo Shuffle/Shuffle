@@ -25,6 +25,7 @@ class AppBase:
         self.authorization = os.getenv("AUTHORIZATION", "")
         self.current_execution_id = os.getenv("EXECUTIONID", "")
         self.full_execution = os.getenv("FULL_EXECUTION", "") 
+        self.result_wrapper_count = 0
 
         if isinstance(self.action, str):
             self.action = json.loads(self.action)
@@ -111,22 +112,52 @@ class AppBase:
         #check_value = "$Filter_list_testing.wrapper.#.tmp"
         #self.action = action
 
-
+        loopnames = []
         for key, value in baseparams.items():
             check_value = ""
             for param in self.action["parameters"]:
                 if param["name"] == key:
+                    #print("PARAM: %s" % param)
                     check_value = param["value"]
-                    break
+                    # self.result_wrapper_count = 0
+
+                octothorpe_count = param["value"].count(".#")
+                if octothorpe_count > self.result_wrapper_count:
+                    self.result_wrapper_count = octothorpe_count
+                    print("NEW OCTOTHORPE WRAPPER: %d" % octothorpe_count)
+
+            # This whole thing is hard.
+            # item = [{"data": "1.2.3.4", "dataType": "ip"}] 
+            # $item         = DONT loop items. 
+            # $item.#       = Loop items
+            # $item.#.data  = Loop items
+            # With a single item, this is fine.
+
+            # item = [{"list": [{"data": "1.2.3.4", "dataType": "ip"}]}] 
+            # $item                 = DONT loop items
+            # $item.#               = Loop items
+            # $item.#.list          = DONT loop items
+            # $item.#.list.#        = Loop items
+            # $item.#.list.#.data   = Loop items
+            # If the item itself is a list.. hmm
+            
+            # FIXME: Check the above, and fix so that nested looped items can be 
+            # Skipped if wanted
 
             print("\nCHECK: %s" % check_value)
+            should_merge = False
+            if "#" in check_value:
+                should_merge = True
+
             if isinstance(value, list):
                 if len(value) <= 1:
                     if len(value) == 1:
                         baseparams[key] = value[0]
 
+                    #if "#" in check_value:
+                    #    should_merge = True
                 else:
-                    if not check_value.endswith("#"):
+                    if not should_merge: 
                         print("Adding WITHOUT looping list")
                     else:
                         if len(value) not in listlengths:
@@ -239,36 +270,48 @@ class AppBase:
         
         results = []
         if has_loop:
-            print("Should run inner loop: %s" % newparams)
+            print("[WARNING] Should run inner loop: %s" % newparams)
             ret = await self.run_recursed_items(func, newparams, loop_wrapper)
-
         else:
-            print("Should run with params (inner): %s" % newparams)
-
+            print("[INFO] Should run multiplier check with params (inner): %s" % newparams)
             # 1. Find the loops that are required and create new multipliers
             # If here: check for multipliers within this scope.
             ret = []
             param_multiplier = await self.get_param_multipliers(newparams)
 
-            print("Multiplier length: %d" % len(param_multiplier))
+            print("[INFO] Multiplier length: %d" % len(param_multiplier))
             for subparams in param_multiplier:
-                tmp = await func(**subparams)
+                try:
+                    tmp = await func(**subparams)
+                except:
+                    tmp = "An error occured for value %s" % subparams
 
-                print("Return from execution: %s" % ret)
+                print("RET from execution: %s" % ret)
+                new_value = tmp
                 if tmp == None:
-                    ret.append("")
+                    new_value = ""
                 elif isinstance(tmp, dict):
-                    ret.append(tmp)
+                    new_value = json.dumps(tmp)
                 elif isinstance(tmp, list):
-                    ret.append(tmp)
-                else:
-                    #tmp = tmp.replace("\"", "\\\"", -1)
+                    new_value = json.dumps(tmp)
+                #else:
+                #tmp = tmp.replace("\"", "\\\"", -1)
 
-                    try:
-                        ret.append(json.loads(tmp))
-                    except json.decoder.JSONDecodeError as e:
+                try:
+                    new_value = json.loads(new_value)
+                except json.decoder.JSONDecodeError as e:
+                    pass
+                except TypeError as e:
+                    pass
+                except:
+                    pass
                         #print("Json: %s" % e)
-                        ret.append(tmp)
+                        #ret.append(tmp)
+                
+                #if self.result_wrapper_count > 0:
+                #    ret.append("["*(self.result_wrapper_count-1)+new_value+"]"*(self.result_wrapper_count-1))
+                #else:
+                ret.append(new_value)
 
             print("Ret length: %d" % len(ret))
             if len(ret) == 1:
@@ -292,6 +335,10 @@ class AppBase:
                 json_object = True
             except json.decoder.JSONDecodeError as e:
                 #print("Json: %s" % e)
+                results.append(ret)
+            except TypeError as e:
+                results.append(ret)
+            except:
                 results.append(ret)
 
         if len(results) == 1: 
@@ -424,7 +471,6 @@ class AppBase:
             upload_path = "/api/v1/files/%s/upload?execution_id=%s" % (cur_id, full_execution["execution_id"])
             print("Create path: %s" % create_path)
 
-            # FIXME: Typical failure here if data is returned badly formatted
             files={"shuffle_file": (filename, curfile["data"])}
             #open(filename,'rb')}
 
@@ -436,8 +482,6 @@ class AppBase:
         return file_ids
     
     async def execute_action(self, action):
-        # FIXME - add request for the function STARTING here. Use "results stream" or something
-        # PAUSED, AWAITING_DATA, PENDING, COMPLETED, ABORTED, EXECUTING, SUCCESS, FAILURE
 
         # !!! Let this line stay - its used for some horrible codegeneration / stitching !!! # 
         #STARTCOPY
@@ -451,7 +495,7 @@ class AppBase:
             "status": "EXECUTING"
         }
 
-        self.action = action
+        self.action = copy.deepcopy(action)
         self.logger.info("ACTION RESULT (start): %s", action_result)
 
         if len(self.action) == 0:
@@ -809,8 +853,7 @@ class AppBase:
                         return newvalue, True
 
                     elif len(actualitem) > 0:
-                        # FIXME: This is absolutely not perfect. 
-                        print("In recursion v2: ", actualitem)
+                        print("[INFO] In recursion v2: ", actualitem)
 
                         is_loop = True
                         newvalue = []
@@ -819,13 +862,14 @@ class AppBase:
 
                         # Means it's a single item -> continue
                         if seconditem == "":
-                            print("In first - handling %s" % seconditem)
+                            print("[INFO] In first - handling %s" % firstitem)
                             tmpitem = basejson[int(firstitem)]
                             try:
                                 newvalue, is_loop = recurse_json(tmpitem, parsersplit[outercnt+1:])
                             except IndexError:
                                 newvalue, is_loop = (tmpitem, parsersplit[outercnt+1:])
                         else:
+                            print("[INFO] In ELSE - handling %s and %s" % (firstitem, seconditem))
                             if seconditem == "max": 
                                 seconditem = len(basejson)
                             if seconditem == "min": 
@@ -850,7 +894,6 @@ class AppBase:
 
                         return newvalue, is_loop 
 
-                    # FIXME: Add specific loop for other indexes
                     else:
                         #print("BEFORE NORMAL VALUE: ", basejson, value)
                         if len(value) == 0:
@@ -1603,7 +1646,7 @@ class AppBase:
                             #})
 
                             print("[INFO] APP_SDK DONE: Starting NORMAL execution of function")
-                            #print("[INFO] Running with params (0): %s" % params) 
+                            print("[INFO] Running with params (0): %s" % params) 
                             newres = await func(**params)
                             print("[INFO] Returned from execution.")
                             if isinstance(newres, tuple):

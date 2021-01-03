@@ -1244,12 +1244,16 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		if result.Action.Name == "User Input" && result.Action.AppName == "User Input" {
 			log.Printf("Found User Input node - prepare cloud?")
 			extraInputs += 1
+		} else if result.Action.Name == "run_subflow" && result.Action.AppName == "shuffle-subflow" {
+			log.Printf("[INFO] Found Shuffle Workflow node")
+			extraInputs += 1
 		}
 	}
 
 	//log.Printf("LENGTH: %d - %d", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
 
 	if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions)+extraInputs {
+		log.Printf("\nIN HERE WITH RESULTS %d vs %d\n", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extraInputs)
 		finished := true
 		lastResult := ""
 
@@ -2065,6 +2069,8 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 			} else if schedule.Id == "" {
 				trigger.Status = "stopped"
 			}
+		} else if trigger.TriggerType == "SUBFLOW" {
+			//log.Printf("Found subflow: %#v", trigger.Parameters)
 		} else if trigger.TriggerType == "WEBHOOK" && trigger.Status != "uninitialized" {
 			hook, err := getHook(ctx, trigger.ID)
 			if err != nil {
@@ -2718,7 +2724,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		var execution ExecutionRequest
 		err = json.Unmarshal(body, &execution)
 		if err != nil {
-			log.Printf("Failed execution POST unmarshaling - continuing anyway: %s", err)
+			log.Printf("[WARNING] Failed execution POST unmarshaling - continuing anyway: %s", err)
 			//return WorkflowExecution{}, "", err
 		}
 
@@ -4689,15 +4695,28 @@ func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 	//log.Printf("Length: %d", len(workflowapps))
 
 	// FIXME - this is really garbage, but is here to protect again null values etc.
+
+	skipApps := []string{"Shuffle Subflow"}
 	newapps := []WorkflowApp{}
 	baseApps := []WorkflowApp{}
-
 	for _, workflowapp := range workflowapps {
 		if !workflowapp.Activated && workflowapp.Generated {
 			continue
 		}
 
 		if workflowapp.Owner != user.Id && user.Role != "admin" && !workflowapp.Sharing {
+			continue
+		}
+
+		continueOuter := false
+		for _, skip := range skipApps {
+			if workflowapp.Name == skip {
+				continueOuter = true
+				break
+			}
+		}
+
+		if continueOuter {
 			continue
 		}
 

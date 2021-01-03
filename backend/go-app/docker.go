@@ -788,3 +788,108 @@ func hookTest() {
 		log.Printf("Success! - %s", returnHook.Id)
 	}
 }
+
+//https://stackoverflow.com/questions/23935141/how-to-copy-docker-images-from-one-host-to-another-without-using-a-repository
+func getDockerImage(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	// Just here to verify that the user is logged in
+	_, err := handleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("Api authentication failed in validate swagger: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Failed reading body"}`))
+		return
+	}
+
+	type requestCheck struct {
+		Name string `datastore:"name" json:"name" yaml:"name"`
+	}
+
+	//body = []byte(`swagger: "2.0"`)
+	//body = []byte(`swagger: '1.0'`)
+	//newbody := string(body)
+	//newbody = strings.TrimSpace(newbody)
+	//body = []byte(newbody)
+	//log.Println(string(body))
+	//tmpbody, err := yaml.YAMLToJSON(body)
+	//log.Println(err)
+	//log.Println(string(tmpbody))
+
+	// This has to be done in a weird way because Datastore doesn't
+	// support map[string]interface and similar (openapi3.Swagger)
+	var version requestCheck
+
+	err = json.Unmarshal(body, &version)
+	if err != nil {
+		resp.WriteHeader(422)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed JSON marshalling: %s"}`, err)))
+		return
+	}
+
+	log.Printf("Image to load: %s", version.Name)
+	//cli, err := client.NewEnvClient()
+	//if err != nil {
+	//	log.Println("Unable to create docker client")
+	//	return err
+	//}
+
+	dockercli, err := client.NewEnvClient()
+	if err != nil {
+		log.Printf("Unable to create docker client: %s", err)
+		resp.WriteHeader(422)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed JSON marshalling: %s"}`, err)))
+		return
+	}
+
+	ctx := context.Background()
+	images, err := dockercli.ImageList(ctx, types.ImageListOptions{
+		All: true,
+	})
+
+	img := types.ImageSummary{}
+	tagFound := ""
+	for _, image := range images {
+		for _, tag := range image.RepoTags {
+			log.Printf("Image: %s", tag)
+
+			if strings.ToLower(tag) == strings.ToLower(version.Name) {
+				img = image
+				tagFound = tag
+				break
+			}
+		}
+	}
+
+	if len(img.ID) == 0 {
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "message": "Couldn't find image %s"}`, version.Name)))
+		return
+	}
+	_ = tagFound
+
+	/*
+		log.Printf("IMg: %#v", img)
+		pullOptions := types.ImagePullOptions{}
+		log.Printf("[INFO] Pulling image %s", image)
+		reader, err := dockercli.ImagePull(ctx, tag, pullOptions)
+		if err != nil {
+			log.Printf("[ERROR] Failed getting image %s: %s", image, err)
+		}
+
+		io.Copy(os.Stdout, r)
+	*/
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(fmt.Sprintf(`{"success": true, "message": "Downloading image %s"}`, version.Name)))
+}

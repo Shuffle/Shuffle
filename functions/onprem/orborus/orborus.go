@@ -244,11 +244,11 @@ func initializeImages() {
 	ctx := context.Background()
 
 	if appSdkVersion == "" {
-		appSdkVersion = "0.8.3"
+		appSdkVersion = "0.8.45"
 		log.Printf("[WARNING] SHUFFLE_APP_SDK_VERSION not defined. Defaulting to %s", appSdkVersion)
 	}
 	if workerVersion == "" {
-		workerVersion = "0.8.3"
+		workerVersion = "0.8.41"
 		log.Printf("[WARNING] SHUFFLE_WORKER_VERSION not defined. Defaulting to %s", workerVersion)
 	}
 
@@ -633,6 +633,8 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 		All: true,
 	})
 
+	log.Printf("Len: %d", len(containers))
+
 	if err != nil {
 		log.Printf("[ERROR] Failed creating Containerlist: %s", err)
 		return err
@@ -642,7 +644,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 
 	stopContainers := []string{}
 	removeContainers := []string{}
-	log.Printf("Workertimeout: %d", int64(workerTimeout))
+	log.Printf("[INFO] Baseimage: %s, Workertimeout: %d", baseimagename, int64(workerTimeout))
 	for _, container := range containers {
 		// Skip random containers. Only handle things related to Shuffle.
 		if !strings.Contains(container.Image, baseimagename) {
@@ -656,10 +658,14 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 
 			// Check image name
 			if !shuffleFound {
+				log.Printf("Skipping: %s, %s", container.Labels, container.Image)
 				continue
 			}
 			//} else {
 			//	log.Printf("NAME: %s", container.Image)
+		} else {
+			//log.Printf("Img: %s", container.Image)
+			//log.Printf("Names: %s", container.Names)
 		}
 
 		for _, name := range container.Names {
@@ -673,6 +679,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 
 			// Need to check time here too because a container can be removed the same instant as its created
 			if container.State != "running" && currenttime-container.Created > int64(workerTimeout) {
+				log.Printf("Should remove above container because not running and old")
 				removeContainers = append(removeContainers, container.ID)
 				containerNames[container.ID] = name
 			}
@@ -680,6 +687,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 			// stopcontainer & removecontainer
 			//log.Printf("Time: %d - %d", currenttime-container.Created, int64(workerTimeout))
 			if container.State == "running" && currenttime-container.Created > int64(workerTimeout) {
+				log.Printf("Should remove above container because RUNNING and old")
 				stopContainers = append(stopContainers, container.ID)
 				containerNames[container.ID] = name
 			}
@@ -701,7 +709,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 
 	log.Printf("[INFO] Should REMOVE %d containers.", len(removeContainers))
 	for _, containername := range removeContainers {
-		go dockercli.ContainerRemove(ctx, containername, removeOptions)
+		dockercli.ContainerRemove(ctx, containername, removeOptions)
 	}
 
 	return nil
