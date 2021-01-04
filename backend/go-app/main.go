@@ -7173,8 +7173,10 @@ func runInit(ctx context.Context) {
 				}
 			}
 		} else {
-			if len(users) == 1 {
-				log.Printf("Found 1 user - %s.", users[0].Username)
+			if len(users) < 5 && len(users) > 0 {
+				for _, user := range users {
+					log.Printf("Username: %s, role: %s", user.Username, user.Role)
+				}
 			} else {
 				log.Printf("Found %d users.", len(users))
 			}

@@ -1240,20 +1240,19 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	}
 
 	extraInputs := 0
-	for _, result := range workflowExecution.Results {
-		if result.Action.Name == "User Input" && result.Action.AppName == "User Input" {
-			log.Printf("Found User Input node - prepare cloud?")
+	for _, trigger := range workflowExecution.Workflow.Triggers {
+		if trigger.Name == "User Input" && trigger.AppName == "User Input" {
 			extraInputs += 1
-		} else if result.Action.Name == "run_subflow" && result.Action.AppName == "shuffle-subflow" {
-			log.Printf("[INFO] Found Shuffle Workflow node")
+		} else if trigger.Name == "Shuffle Workflow" && trigger.AppName == "Shuffle Workflow" {
 			extraInputs += 1
 		}
 	}
 
-	//log.Printf("LENGTH: %d - %d", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
+	//log.Printf("EXTRA: %d", extraInputs)
+	//log.Printf("LENGTH: %d - %d", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extraInputs)
 
 	if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions)+extraInputs {
-		log.Printf("\nIN HERE WITH RESULTS %d vs %d\n", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extraInputs)
+		//log.Printf("\nIN HERE WITH RESULTS %d vs %d\n", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extraInputs)
 		finished := true
 		lastResult := ""
 
@@ -1367,13 +1366,15 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		}
 	}
 
-	if setExecution {
+	if setExecution || workflowExecution.Status == "FINISHED" || workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
 		err = setWorkflowExecution(ctx, *workflowExecution, dbSave)
 		if err != nil {
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed setting workflowexecution actionresult: %s"}`, err)))
 			return
 		}
+	} else {
+		log.Printf("Skipping setexec with status %s", workflowExecution.Status)
 	}
 
 	//ExecutionId
@@ -2070,7 +2071,17 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 				trigger.Status = "stopped"
 			}
 		} else if trigger.TriggerType == "SUBFLOW" {
-			//log.Printf("Found subflow: %#v", trigger.Parameters)
+			for _, param := range trigger.Parameters {
+				if len(param.Value) == 0 && param.Name != "argument" {
+					workflow.IsValid = false
+					workflow.Errors = []string{"Trigger is missing a parameter: %s", param.Name}
+
+					log.Printf("No type specified for user input node")
+					resp.WriteHeader(401)
+					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Trigger %s is missing the parameter %s"}`, trigger.Label, param.Name)))
+					return
+				}
+			}
 		} else if trigger.TriggerType == "WEBHOOK" && trigger.Status != "uninitialized" {
 			hook, err := getHook(ctx, trigger.ID)
 			if err != nil {

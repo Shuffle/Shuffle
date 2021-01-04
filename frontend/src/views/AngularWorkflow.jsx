@@ -252,16 +252,12 @@ const AngularWorkflow = (props) => {
 				setWorkflows(responseJson)
 
 				const trigger = workflow.triggers[trigger_index]
-				console.log("Trigger: ",trigger) 
 				if (trigger.parameters.length >= 3) {
 					for (var key in trigger.parameters) {
 						const param = trigger.parameters[key]
-						console.log(param)
 						if (param.name === "workflow") {
 							const sub = responseJson.find(data => data.id === param.value)
-							console.log("SUBFLOW: ", sub)
-
-							if (subworkflow.id !== sub.id) { 
+							if (sub !== undefined && subworkflow.id !== sub.id) { 
 								setSubworkflow(sub)
 							}
 						}
@@ -321,7 +317,7 @@ const AngularWorkflow = (props) => {
 			setUserSettings(responseJson)
     })
 		.catch(error => {
-    		console.log(error)
+    	console.log(error)
 		});
 	}
 
@@ -2260,6 +2256,8 @@ const AngularWorkflow = (props) => {
 					return
 				}
 
+				const triggerLabel = getNextActionName(data.name)
+
 				newNodeId = uuid.v4()
 				const newposition = {
 					"x": e.pageX-cycontainer.offsetLeft,
@@ -2277,7 +2275,7 @@ const AngularWorkflow = (props) => {
 					id_: newNodeId,
 					_id_: newNodeId,
 					id: newNodeId,
-					label: data.label,
+					label: triggerLabel,
 					type: data.type,
 					is_valid: true,
 					trigger_type: data.trigger_type,
@@ -2329,7 +2327,7 @@ const AngularWorkflow = (props) => {
 					data: newcybranch,
 				}
 
-				if (data.name !== "User Input") {
+				if (data.name !== "User Input" && data.name !== "Shuffle Workflow") {
 					//workflow.branches.push(newbranch)
 					cy.add(edgeToBeAdded)
 				}
@@ -2591,8 +2589,9 @@ const AngularWorkflow = (props) => {
 	const getNextActionName = (appName) => {
 		var highest = ""
 		//label = name + _number
-		for (var key in workflow.actions) {
-			const item = workflow.actions[key]
+		const allitems = workflow.actions.concat(workflow.triggers)
+		for (var key in allitems) {
+			const item = allitems[key]
 			if (item.app_name === appName) {
 				var number = item.label.split("_")
 				if (isNaN(number[-1]) && parseInt(number[number.length-1]) > highest) {
@@ -5059,7 +5058,7 @@ const AngularWorkflow = (props) => {
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
 								<div style={{flex: "10"}}> 
-									<b>Select workflow to execute: </b> 
+									<b>Select a workflow to execute </b> 
 								</div>
 							</div>
 							{workflows === undefined || workflows === null || workflows.length === 0 ? null : 
@@ -5114,6 +5113,7 @@ const AngularWorkflow = (props) => {
 								multiline
 								fullWidth
 								color="primary"
+								placeholder="Some execution data"
 								defaultValue={workflow.triggers[selectedTriggerIndex].parameters[1].value}
 								onBlur={(e) => {
 									console.log("DATA: ", e.target.value)	
@@ -5491,8 +5491,6 @@ const AngularWorkflow = (props) => {
 
 	const UserinputSidebar = () => {
 		if (Object.getOwnPropertyNames(selectedTrigger).length > 0 && workflow.triggers[selectedTriggerIndex] !== undefined) {
-			console.log(workflow.triggers[selectedTriggerIndex])
-			console.log(selectedTrigger)
 			if (workflow.triggers[selectedTriggerIndex].parameters === undefined || workflow.triggers[selectedTriggerIndex].parameters === null || workflow.triggers[selectedTriggerIndex].parameters.length === 0) {
 				workflow.triggers[selectedTriggerIndex].parameters = []
 				workflow.triggers[selectedTriggerIndex].parameters[0] = {"name": "alertinfo", "value": "hello this is an alert"}
@@ -6337,12 +6335,20 @@ const AngularWorkflow = (props) => {
 				<Divider style={{backgroundColor: "white", marginTop: 10, marginBottom: 10,}}/>
 				{workflowExecutions.length > 0 ? 
 					<div>
-						{workflowExecutions.map(data => {
+						{workflowExecutions.map((data, index) => {
 							const statusColor = data.status === "FINISHED" ? "green" : data.status === "ABORTED" || data.status === "FAILED" ? "red" : "orange"
 							const timeElapsed = data.completed_at-data.started_at
 							const resultsLength = data.results !== undefined && data.results !== null ? data.results.length : 0
 
 							const timestamp = new Date(data.started_at*1000).toISOString().split('.')[0].split("T").join(" ")
+
+							var calculatedResult = data.workflow.actions.length
+							for (var key in data.workflow.triggers) {
+								const trigger = data.workflow.triggers[key]
+								if ((trigger.app_name === "User Input" && trigger.trigger_type === "USERINPUT") || (trigger.app_name === "Shuffle Workflow" && trigger.trigger_type === "SUBFLOW")) {
+									calculatedResult += 1
+								}
+							}
 
 							return (
 								<Paper elevation={5} key={data.execution_id} square style={executionPaperStyle} onMouseOver={() => {}} onMouseOut={() => {}} onClick={() => {
@@ -6355,7 +6361,6 @@ const AngularWorkflow = (props) => {
 										start()
 										setExecutionRunning(true)
 										setExecutionRequestStarted(false)
-										console.log(data)
 									}
 									setExecutionModalView(1)
 									setExecutionData(data)
@@ -6371,7 +6376,7 @@ const AngularWorkflow = (props) => {
 										{data.workflow.actions !== null ? 
 											<Tooltip color="primary" title={resultsLength+" actions ran"} placement="top">
 												<div style={{marginRight: 10, marginTop: "auto", marginBottom: "auto",}}>
-													{resultsLength}/{data.workflow.actions.length}
+													{resultsLength}/{calculatedResult}
 												</div>
 											</Tooltip>
 											: null}
@@ -6459,9 +6464,6 @@ const AngularWorkflow = (props) => {
 								return null
 							}
 
-							// showResult = replaceAll(showResult, " None", " \"None\"")
-							// Super basic check.
-							//
 							// FIXME: The latter replace doens't really work if ' is used in a string
 							var showResult = data.result.trim()
 							//console.log(showResult)
@@ -6491,9 +6493,20 @@ const AngularWorkflow = (props) => {
 							const curapp = apps.find(a => a.name === data.action.app_name && a.app_version === data.action.app_version)
 							const imgsize = 50
 							const statusColor = data.status === "FINISHED" || data.status === "SUCCESS" ? "green" : data.status === "ABORTED" || data.status === "FAILURE" ? "red" : "orange"
-							const actionimg = curapp === null ? 
+
+							var actionimg = curapp === null ? 
 								null :
 								<img alt={data.action.app_name} src={curapp === undefined ? "" : curapp.large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />
+
+							if (triggers.length > 2) {
+								if (data.action.app_name === "shuffle-subflow") {
+									actionimg = <img alt={"Shuffle Subflow"} src={triggers[1].large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />
+								}	
+
+								if (data.action.app_name === "User Input") {
+									actionimg = <img alt={"Shuffle Subflow"} src={triggers[2].large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />
+								}	
+							}
 
 							return (
 								<div key={index} style={{marginBottom: 40,}}>
@@ -7150,7 +7163,6 @@ const AngularWorkflow = (props) => {
 			<TextField
 				id="copy_element_shuffle"
 				value={to_be_copied}
-				disabled={true}
 				style={{display: "none", }}
 			/>
 		</div>

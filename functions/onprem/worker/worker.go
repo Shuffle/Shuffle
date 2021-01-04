@@ -1050,6 +1050,7 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 	// source = parent node, dest = child node
 	// parent can have more children, child can have more parents
 	extra := 0
+	triggersHandled := []string{}
 	for _, branch := range workflowExecution.Workflow.Branches {
 		// Check what the parent is first. If it's trigger - skip
 		sourceFound := false
@@ -1065,20 +1066,30 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 		}
 
 		for _, trigger := range workflowExecution.Workflow.Triggers {
-			log.Printf("Appname trigger: %s", trigger.AppName)
-			if !(trigger.AppName == "User Input" || trigger.AppName == "Shuffle Workflow") {
-				continue
-			}
-			if trigger.ID == branch.SourceID {
-				sourceFound = true
-				extra += 1
-			}
+			log.Printf("Appname trigger (0): %s", trigger.AppName)
+			if trigger.AppName == "User Input" || trigger.AppName == "Shuffle Workflow" {
+				log.Printf("%s is a special trigger. Checking where.", trigger.AppName)
 
-			if trigger.ID == branch.DestinationID {
-				destinationFound = true
+				found := false
+				for _, check := range triggersHandled {
+					if check == trigger.ID {
+						found = true
+						break
+					}
+				}
 
-				if !sourceFound {
+				if !found {
 					extra += 1
+				} else {
+					triggersHandled = append(triggersHandled, trigger.ID)
+				}
+
+				if trigger.ID == branch.SourceID {
+					log.Printf("Trigger %s is the source!", trigger.AppName)
+					sourceFound = true
+				} else if trigger.ID == branch.DestinationID {
+					log.Printf("Trigger %s is the destination!", trigger.AppName)
+					destinationFound = true
 				}
 			}
 		}

@@ -265,9 +265,7 @@ func initializeImages() {
 
 	// check whether they are the same first
 	images := []string{
-		//fmt.Sprintf("%s/%s:app_sdk%s", baseimageregistry, baseimagename, baseimagetagsuffix),
-		//fmt.Sprintf("%s/%s:worker%s", baseimageregistry, baseimagename, baseimagetagsuffix),
-
+		fmt.Sprintf("frikky/shuffle:app_sdk"),
 		fmt.Sprintf("%s/%s/shuffle-app_sdk:%s", baseimageregistry, baseimagename, appSdkVersion),
 		fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion),
 		// fmt.Sprintf("docker.io/%s:app_sdk", baseimagename),
@@ -628,12 +626,12 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 // FIXME - add this to remove exited workers
 // Should it check what happened to the execution? idk
 func zombiecheck(ctx context.Context, workerTimeout int) error {
-	log.Println("[INFO] Looking for old containers")
+	log.Println("[INFO] Looking for old containers (zombies)")
 	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
 		All: true,
 	})
 
-	log.Printf("Len: %d", len(containers))
+	//log.Printf("Len: %d", len(containers))
 
 	if err != nil {
 		log.Printf("[ERROR] Failed creating Containerlist: %s", err)
@@ -676,7 +674,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 			}
 
 			currenttime := time.Now().Unix()
-			log.Printf("[INFO] (%s) NAME: %s. TIME: %d", container.State, name, currenttime-container.Created)
+			//log.Printf("[INFO] (%s) NAME: %s. TIME: %d", container.State, name, currenttime-container.Created)
 
 			// Need to check time here too because a container can be removed the same instant as its created
 			if container.State != "running" && currenttime-container.Created > int64(workerTimeout) {

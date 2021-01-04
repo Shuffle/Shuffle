@@ -1461,7 +1461,12 @@ class AppBase:
                                     # FIXME: Only do this IF they want to loop
                                     new_replacement = []
                                     for i in range(len(json_replacement)):
-                                        newvalue = tmpitem.replace(actualitem[0][0], json_replacement[i], 1)
+                                        if isinstance(json_replacement[i], dict) or isinstance(json_replacement[i], dict):
+                                            tmp_replacer = json.dumps(json_replacement[i])
+                                            newvalue = tmpitem.replace(actualitem[0][0], tmp_replacer, 1)
+                                        else:
+                                            newvalue = tmpitem.replace(actualitem[0][0], json_replacement[i], 1)
+
                                         try:
                                             newvalue = json.loads(newvalue)
                                         except json.decoder.JSONDecodeError as e:
