@@ -1,7 +1,7 @@
 version: '3'
 services:
   frontend:
-    build: ./frontend
+    #build: ./frontend
     image: ghcr.io/frikky/shuffle-frontend:0.8.51
     container_name: shuffle-frontend
     hostname: shuffle-frontend
@@ -16,7 +16,7 @@ services:
     depends_on:
       - backend
   backend:
-    build: ./backend
+    #build: ./backend
     image: ghcr.io/frikky/shuffle-backend:0.8.51
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
