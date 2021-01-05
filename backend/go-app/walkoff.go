@@ -1722,6 +1722,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("Has %d actions already", len(newActions))
 	}
 
+	workflow.Actions = []Action{}
 	for _, item := range workflow.Actions {
 		item.ID = uuid.NewV4().String()
 		newActions = append(newActions, item)
