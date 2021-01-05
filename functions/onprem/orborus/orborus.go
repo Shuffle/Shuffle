@@ -138,7 +138,7 @@ func deployWorker(image string, identifier string, env []string) {
 
 	// form container id and use it as network source if it's not empty
 	if containerId != "" {
-		log.Printf("[INFO] Found container ID %s", containerId)
+		//log.Printf("[INFO] Found container ID %s", containerId)
 		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
 	} else {
 		//log.Printf("[INFO] Empty self container id, continue without NetworkMode")

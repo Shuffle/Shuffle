@@ -284,7 +284,14 @@ class AppBase:
                 try:
                     tmp = await func(**subparams)
                 except:
-                    tmp = "An error occured for value %s" % subparams
+                    e = ""
+                    try:
+                        e = sys.exc_info()[1]
+                    except:
+                        print("Exc check fail: %s" % e)
+                        pass
+
+                    tmp = "An error occured during execution: %s" % e 
 
                 print("RET from execution: %s" % ret)
                 new_value = tmp

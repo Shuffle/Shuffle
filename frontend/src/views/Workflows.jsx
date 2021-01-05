@@ -407,12 +407,15 @@ const Workflows = (props) => {
 	}
 
 	const copyWorkflow = (data) => {
+		data = JSON.parse(JSON.stringify(data))
 		alert.success("Copying workflow "+data.name)
+		console.log("data: ", data)
 		data.id = ""
 		data.name = data.name+"_copy"
+		//return
 
 		fetch(globalUrl+"/api/v1/workflows", {
-    	  	method: 'POST',
+    	  method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json',
@@ -427,9 +430,9 @@ const Workflows = (props) => {
 			}
 			return response.json()
 		})
-    	.then((responseJson) => {
+    .then((responseJson) => {
 			getAvailableWorkflows()
-    	})
+    })
 		.catch(error => {
 			alert.error(error.toString())
 		});
