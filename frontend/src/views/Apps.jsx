@@ -704,7 +704,7 @@ const Apps = (props) => {
 
 					{selectedAction.parameters !== undefined && selectedAction.parameters !== null ? 
 						<div style={{marginTop: 15, marginBottom: 15}}>
-							<b>Arguments</b>
+							<b>Parameters</b>
 							{selectedAction.parameters.map(data => {
 									var itemColor = "#f85a3e"
 									if (!data.required) {

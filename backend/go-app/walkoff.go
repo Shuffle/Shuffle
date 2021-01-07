@@ -1638,13 +1638,13 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 	user.ActiveOrg.Users = []User{}
 	workflow.ExecutingOrg = user.ActiveOrg
 	workflow.OrgId = user.ActiveOrg.Id
+	log.Printf("TRIGGERS: %d", len(workflow.Triggers))
 
 	ctx := context.Background()
-	log.Printf("Saved new workflow %s with name %s", workflow.ID, workflow.Name)
-	err = increaseStatisticsField(ctx, "total_workflows", workflow.ID, 1, workflow.OrgId)
-	if err != nil {
-		log.Printf("Failed to increase total workflows stats: %s", err)
-	}
+	//err = increaseStatisticsField(ctx, "total_workflows", workflow.ID, 1, workflow.OrgId)
+	//if err != nil {
+	//	log.Printf("Failed to increase total workflows stats: %s", err)
+	//}
 
 	if len(workflow.Actions) == 0 {
 		workflow.Actions = []Action{}
@@ -1724,14 +1724,56 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	workflow.Actions = []Action{}
 	for _, item := range workflow.Actions {
+		oldId := item.ID
+		sourceIndexes := []int{}
+		destinationIndexes := []int{}
+		for branchIndex, branch := range workflow.Branches {
+			if branch.SourceID == oldId {
+				sourceIndexes = append(sourceIndexes, branchIndex)
+			}
+
+			if branch.DestinationID == oldId {
+				destinationIndexes = append(destinationIndexes, branchIndex)
+			}
+		}
+
 		item.ID = uuid.NewV4().String()
+		for _, index := range sourceIndexes {
+			workflow.Branches[index].SourceID = item.ID
+		}
+
+		for _, index := range destinationIndexes {
+			workflow.Branches[index].DestinationID = item.ID
+		}
+
 		newActions = append(newActions, item)
 	}
 
 	newTriggers := []Trigger{}
 	for _, item := range workflow.Triggers {
-		item.Status = "uninitialized"
+		oldId := item.ID
+		sourceIndexes := []int{}
+		destinationIndexes := []int{}
+		for branchIndex, branch := range workflow.Branches {
+			if branch.SourceID == oldId {
+				sourceIndexes = append(sourceIndexes, branchIndex)
+			}
+
+			if branch.DestinationID == oldId {
+				destinationIndexes = append(destinationIndexes, branchIndex)
+			}
+		}
+
 		item.ID = uuid.NewV4().String()
+		for _, index := range sourceIndexes {
+			workflow.Branches[index].SourceID = item.ID
+		}
+
+		for _, index := range destinationIndexes {
+			workflow.Branches[index].DestinationID = item.ID
+		}
+
+		item.Status = "uninitialized"
 		newTriggers = append(newTriggers, item)
 	}
 
@@ -1765,6 +1807,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	log.Printf("Saved new workflow %s with name %s", workflow.ID, workflow.Name)
 	//memcacheName := fmt.Sprintf("%s_workflows", user.Username)
 	//memcache.Delete(ctx, memcacheName)
 

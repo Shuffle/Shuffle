@@ -251,14 +251,16 @@ const AngularWorkflow = (props) => {
 			if (responseJson !== undefined) {
 				setWorkflows(responseJson)
 
-				const trigger = workflow.triggers[trigger_index]
-				if (trigger.parameters.length >= 3) {
-					for (var key in trigger.parameters) {
-						const param = trigger.parameters[key]
-						if (param.name === "workflow") {
-							const sub = responseJson.find(data => data.id === param.value)
-							if (sub !== undefined && subworkflow.id !== sub.id) { 
-								setSubworkflow(sub)
+				if (trigger_index > -1) {
+					const trigger = workflow.triggers[trigger_index]
+					if (trigger.parameters.length >= 3) {
+						for (var key in trigger.parameters) {
+							const param = trigger.parameters[key]
+							if (param.name === "workflow") {
+								const sub = responseJson.find(data => data.id === param.value)
+								if (sub !== undefined && subworkflow.id !== sub.id) { 
+									setSubworkflow(sub)
+								}
 							}
 						}
 					}
@@ -1517,6 +1519,8 @@ const AngularWorkflow = (props) => {
 			getAppAuthentication()
 			getEnvironments()
 			getWorkflowExecution(props.match.params.key)
+			getAvailableWorkflows(-1) 
+			getSettings() 
 			return
 		} 
 
@@ -3034,7 +3038,7 @@ const AngularWorkflow = (props) => {
 		if (Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters.length > 0) {
 			return (
 				<div style={{marginTop: "30px"}}>	
-					<b>Arguments</b>
+					<b>Parameters</b>
 					{selectedActionParameters.map((data, count) => {
 						if (data.variant === "") {
 							data.variant = "STATIC_VALUE"
@@ -4519,11 +4523,6 @@ const AngularWorkflow = (props) => {
 								setVariableAnchorEl(null)
 							}} key={"ends with"}>ends with</MenuItem>
 							<MenuItem style={menuItemStyle} onClick={(e) => {
-								conditionValue.value = "endswith"
-								setConditionValue(conditionValue)
-								setVariableAnchorEl(null)
-							}} key={"ends with"}>ends with</MenuItem>
-							<MenuItem style={menuItemStyle} onClick={(e) => {
 								conditionValue.value = "contains"
 								setConditionValue(conditionValue)
 								setVariableAnchorEl(null)
@@ -5017,11 +5016,11 @@ const AngularWorkflow = (props) => {
 				workflow.triggers[selectedTriggerIndex].parameters[1] = {"name": "argument", "value": ""}
 				workflow.triggers[selectedTriggerIndex].parameters[2] = {"name": "user_apikey", "value": ""}
 
-				console.log(userSettings)
+				console.log("SETTINGS: ", userSettings)
 				if (userSettings !== undefined && userSettings !== null && userSettings.apikey !== null && userSettings.apikey !== undefined && userSettings.apikey.length > 0) {
 					workflow.triggers[selectedTriggerIndex].parameters[2] = {"name": "user_apikey", "value": userSettings.apikey}
 				}
-			}
+			} 
 
 			return(
 				<div style={appApiViewStyle}>
@@ -5054,7 +5053,7 @@ const AngularWorkflow = (props) => {
 					<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 					<div style={{flex: "6", marginTop: "20px"}}>
 						<div>
-							<b>Arguments</b>
+							<b>Parameters</b>
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
 								<div style={{flex: "10"}}> 
@@ -5118,6 +5117,32 @@ const AngularWorkflow = (props) => {
 								onBlur={(e) => {
 									console.log("DATA: ", e.target.value)	
 									workflow.triggers[selectedTriggerIndex].parameters[1].value = e.target.value
+									setWorkflow(workflow)
+								}}
+							/>
+							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
+								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
+								<div style={{flex: "10"}}> 
+									<b>API-key: </b> 
+								</div>
+							</div>
+							<TextField
+								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+								InputProps={{
+									style:{
+										color: "white",
+										marginLeft: "5px",
+										maxWidth: "95%",
+										fontSize: "1em",
+										height: 50,
+									},
+								}}
+								fullWidth
+								color="primary"
+								placeholder="Your apikey"
+								defaultValue={workflow.triggers[selectedTriggerIndex].parameters[2].value}
+								onBlur={(e) => {
+									workflow.triggers[selectedTriggerIndex].parameters[2].value = e.target.value
 									setWorkflow(workflow)
 								}}
 							/>
@@ -5222,18 +5247,25 @@ const AngularWorkflow = (props) => {
 					<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 					<div style={{flex: "6", marginTop: "20px"}}>
 						<div>
-							<b>Arguments</b>
+							<b>Parameters</b>
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
 								<div style={{flex: "10"}}> 
-									<b>Webhook URI: </b> 
+									<b>Webhook URI </b> 
 								</div>
 							</div>
 							<TextField
 								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+								id="webhook_uri_field"
 								onClick={() => {
-									//alert.info("Saved URI to clipboard")
-									console.log("Copy to clipboooooard")
+  								var copyText = document.getElementById("webhook_uri_field");
+									navigator.clipboard.writeText(copyText.value)
+									copyText.select();
+									copyText.setSelectionRange(0, 99999); /* For mobile devices */
+
+									/* Copy the text inside the text field */
+									document.execCommand("copy");
+									alert.success("Copied Webhook URL")
 								}}
 								InputProps={{
 									style:{
@@ -5557,7 +5589,7 @@ const AngularWorkflow = (props) => {
 					</div>
 					<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 					<div style={{flex: "6", marginTop: "20px"}}>
-						<b>Arguments</b>
+						<b>Parameters</b>
 						<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 							<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
 							<div style={{flex: "10"}}> 
@@ -5679,7 +5711,7 @@ const AngularWorkflow = (props) => {
 		if (Object.getOwnPropertyNames(selectedTrigger).length > 0 && workflow.triggers[selectedTriggerIndex] !== undefined) {
 			if (workflow.triggers[selectedTriggerIndex].parameters === undefined || workflow.triggers[selectedTriggerIndex].parameters === null || workflow.triggers[selectedTriggerIndex].parameters.length === 0) {
 				workflow.triggers[selectedTriggerIndex].parameters = []
-				workflow.triggers[selectedTriggerIndex].parameters[0] = {"name": "cron", "value": "*/2 * * * *"}
+				workflow.triggers[selectedTriggerIndex].parameters[0] = {"name": "cron", "value": "120"}
 				workflow.triggers[selectedTriggerIndex].parameters[1] = {"name": "execution_argument", "value": '{"example": {"json": "is cool"}}'}
 				setWorkflow(workflow)
 			}
@@ -5766,7 +5798,7 @@ const AngularWorkflow = (props) => {
 					<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 					<div style={{flex: "6", marginTop: "20px"}}>
 						<div>
-							<b>Arguments</b>
+							<b>Parameters</b>
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
 								<div style={{flex: "10"}}> 
