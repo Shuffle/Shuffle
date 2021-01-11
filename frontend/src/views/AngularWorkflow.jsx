@@ -573,7 +573,9 @@ const AngularWorkflow = (props) => {
 						currentnode.addClass('failure-highlight')
 
 						if (!visited.includes(item.action.label)) {
-							alert.error("Error for "+item.action.label+" with result "+item.result)
+							if (!item.action.result.includes("failed condition")) {
+								alert.error("Error for "+item.action.label+" with result "+item.result)
+							}
 							visited.push(item.action.label)
 							setVisited(visited)
 						}
@@ -6223,38 +6225,26 @@ const AngularWorkflow = (props) => {
 
 	const parsedExecutionArgument = () => {
 		var showResult = executionData.execution_argument.trim()
-		showResult = showResult.split(" None").join(" \"None\"")
-		showResult = showResult.split(" False").join(" false")
-		showResult = showResult.split(" True").join(" true")
+		const validate = validateJson(showResult)
 
-		var jsonvalid = true
-		try {
-			const tmp = String(JSON.parse(showResult))
-			if (!showResult.includes("{") && !showResult.includes("[")) {
-				jsonvalid = false
+
+		if (validate.valid) {
+			if (typeof(validate.result) === "string") {
+				validate.result = JSON.parse(validate.result)
 			}
-		} catch (e) {
-			showResult = showResult.split("\'").join("\"")
 
-			try {
-				const tmp = String(JSON.parse(showResult))
-				if (!showResult.includes("{") && !showResult.includes("[")) {
-					jsonvalid = false
-				}
-			} catch (e) {
-				jsonvalid = false
-			}
-		}
-
-		if (jsonvalid) {
 			return (
 				<ReactJson 
-						src={JSON.parse(showResult)} 
-						theme="solarized" 
-						collapsed={true}
-						displayDataTypes={false}
-						name={"Execution argument"}
-					/>
+					src={validate.result} 
+					theme="solarized" 
+					collapsed={true}
+					displayDataTypes={false}
+					onSelect={(select) => {
+						HandleJsonCopy(showResult, select, "exec")
+						console.log("SELECTED!: ", select)	
+					}}
+					name={"Execution Argument"}
+				/>
 			)
 		} 
 
@@ -6498,30 +6488,8 @@ const AngularWorkflow = (props) => {
 
 							// FIXME: The latter replace doens't really work if ' is used in a string
 							var showResult = data.result.trim()
-							//console.log(showResult)
-							showResult = showResult.split(" None").join(" \"None\"")
-							showResult = showResult.split(" False").join(" false")
-							showResult = showResult.split(" True").join(" true")
-
-							var jsonvalid = true
-							try {
-								const tmp = String(JSON.parse(showResult))
-								if (!showResult.includes("{") && !showResult.includes("[")) {
-									jsonvalid = false
-								}
-							} catch (e) {
-								showResult = showResult.split("\'").join("\"")
-
-								try {
-									const tmp = String(JSON.parse(showResult))
-									if (!showResult.includes("{") && !showResult.includes("[")) {
-										jsonvalid = false
-									}
-								} catch (e) {
-									jsonvalid = false
-								}
-							}
-
+							const validate = validateJson(showResult)
+							
 							const curapp = apps.find(a => a.name === data.action.app_name && a.app_version === data.action.app_version)
 							const imgsize = 50
 							const statusColor = data.status === "FINISHED" || data.status === "SUCCESS" ? "green" : data.status === "ABORTED" || data.status === "FAILURE" ? "red" : "orange"
@@ -6538,6 +6506,10 @@ const AngularWorkflow = (props) => {
 								if (data.action.app_name === "User Input") {
 									actionimg = <img alt={"Shuffle Subflow"} src={triggers[2].large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />
 								}	
+							}
+
+							if (validate.valid && typeof(validate.result) === "string") {
+								validate.result = JSON.parse(validate.result)
 							}
 
 							return (
@@ -6558,8 +6530,8 @@ const AngularWorkflow = (props) => {
 										</div>
 									</div>
 									<div style={{marginBottom: 5}}><b>Status </b> {data.status}</div>
-									{jsonvalid ? <ReactJson 
-											src={JSON.parse(showResult)} 
+									{validate.valid ? <span><ReactJson 
+											src={validate.result} 
 											theme="solarized" 
 											collapsed={true}
 											displayDataTypes={false}
@@ -6569,6 +6541,13 @@ const AngularWorkflow = (props) => {
 											}}
 											name={"Results for "+data.action.label}
 										/>
+										{data.action.app_name === "shuffle-subflow" ?
+											<span>
+												TBD: Load subexecution result for 
+											</span>
+											: null
+										}
+										</span>
 									: 
 									<div>
 										<b>Result</b>&nbsp;
@@ -6583,10 +6562,14 @@ const AngularWorkflow = (props) => {
 			}
 			</Drawer>
 
-	const curapp = !codeModalOpen ? {} : apps.find(a => a.name === selectedResult.action.app_name && a.app_version === selectedResult.action.app_version)
+	// This sucks :)
+	const curapp = !codeModalOpen ? {} : selectedResult.action.app_name === "shuffle-subflow" ? triggers[1] : selectedResult.action.app_name === "User Input" ? triggers[2] : apps.find(a => a.name === selectedResult.action.app_name && a.app_version === selectedResult.action.app_version)
 	const imgsize = 50
 	const statusColor = !codeModalOpen ? "red" : selectedResult.status === "FINISHED" || selectedResult.status === "SUCCESS" ? "green" : selectedResult.status === "ABORTED" || selectedResult.status === "FAILURE" ? "red" : "orange"
 	const validate = !codeModalOpen ? "" : validateJson(selectedResult.result.trim())
+	if (validate.valid && typeof(validate.result) === "string") {
+		validate.result = JSON.parse(validate.result)
+	}
 
 	const codePopoutModal = !codeModalOpen ? null : 
 		<Draggable
@@ -6696,6 +6679,7 @@ const AngularWorkflow = (props) => {
 				}}>
 					<div style={{display: "flex", marginBottom: 15,}}>
 						{curapp === null ? null : <img alt={selectedResult.app_name} src={curapp === undefined ? "" : curapp.large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />}
+
 						<div>
 							<div style={{fontSize: 24, marginTop: "auto", marginBottom: "auto"}}><b>{selectedResult.action.label}</b></div>
 							<div style={{fontSize: 14}}>{selectedResult.action.name}</div>

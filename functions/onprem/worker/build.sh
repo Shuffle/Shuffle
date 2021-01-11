@@ -9,4 +9,5 @@ docker build . -t frikky/shuffle:$NAME -t frikky/shuffle:$NAME_$VERSION -t docke
 #docker push frikky/$NAME:$VERSION 
 #docker push frikky/shuffle:$NAME_$VERSION
 #docker push docker.pkg.github.com/frikky/shuffle/$NAME:$VERSION
+docker tag frikky/shuffle:0.8.51 ghcr.io/frikky/shuffle-worker:0.8.5
 docker push ghcr.io/frikky/$NAME:$VERSION

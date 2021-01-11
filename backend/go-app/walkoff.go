@@ -1307,10 +1307,10 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 				workflowExecution.LastNode = actionResult.Action.ID
 			}
 
-			err = increaseStatisticsField(ctx, "workflow_executions_success", workflowExecution.Workflow.ID, 1, workflowExecution.ExecutionOrg)
-			if err != nil {
-				log.Printf("Failed to increase success execution stats: %s", err)
-			}
+			//err = increaseStatisticsField(ctx, "workflow_executions_success", workflowExecution.Workflow.ID, 1, workflowExecution.ExecutionOrg)
+			//if err != nil {
+			//	log.Printf("Failed to increase success execution stats: %s", err)
+			//}
 
 			// Handles extra statistics stuff when it's done
 			// Does autocomplete magic with JSON
@@ -2776,6 +2776,9 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 
 		// This one doesn't really matter.
 		log.Printf("[INFO] Running POST execution with body of length %d", len(string(body)))
+		if len(string(body)) < 50 {
+			log.Printf("Body: %s", string(body))
+		}
 		var execution ExecutionRequest
 		err = json.Unmarshal(body, &execution)
 		if err != nil {

@@ -472,7 +472,7 @@ func main() {
 
 		allowed := maxConcurrency - executionCount
 		if len(executionRequests.Data) > allowed {
-			log.Printf("[WARNING] Throttle - Cutting down requests from %d to %d", len(executionRequests.Data), allowed)
+			log.Printf("[WARNING] Throttle - Cutting down requests from %d to %d (MAX: %d, CUR: %d)", len(executionRequests.Data), allowed, maxConcurrency, executionCount)
 			executionRequests.Data = executionRequests.Data[0:allowed]
 		}
 
@@ -695,7 +695,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 	log.Printf("[INFO] Should STOP %d containers.", len(stopContainers))
 	for _, containername := range stopContainers {
 		log.Printf("[INFO] Stopping and removing container %s", containerNames[containername])
-		go dockercli.ContainerStop(ctx, containername, nil)
+		dockercli.ContainerStop(ctx, containername, nil)
 		removeContainers = append(removeContainers, containername)
 	}
 
@@ -706,7 +706,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 
 	log.Printf("[INFO] Should REMOVE %d containers.", len(removeContainers))
 	for _, containername := range removeContainers {
-		go dockercli.ContainerRemove(ctx, containername, removeOptions)
+		dockercli.ContainerRemove(ctx, containername, removeOptions)
 	}
 
 	return nil

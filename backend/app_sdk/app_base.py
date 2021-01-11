@@ -38,8 +38,10 @@ class AppBase:
 
         # I wonder if this actually works 
         self.logger.info("Before last stream result")
+        url = "%s%s" % (self.url, stream_path)
+        print("URL: %s" % url)
         try:
-            ret = requests.post("%s%s" % (self.url, stream_path), headers=headers, json=action_result)
+            ret = requests.post(url, headers=headers, json=action_result)
             self.logger.info("Result: %d" % ret.status_code)
             if ret.status_code != 200:
                 self.logger.info(ret.text)
