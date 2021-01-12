@@ -43,6 +43,8 @@ type File struct {
 	Md5sum       string   `json:"md5_sum" datastore:"md5_sum"`
 	Sha256sum    string   `json:"sha256_sum" datastore:"sha256_sum"`
 	FileSize     int64    `json:"filesize" datastore:"filesize"`
+	Duplicate    bool     `json:"duplicate" datastore:"duplicate"`
+	Subflows     []string `json:"subflows" datastore:"subflows"`
 }
 
 var basepath = os.Getenv("SHUFFLE_FILE_LOCATION")
@@ -393,7 +395,7 @@ func handleGetFileContent(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("\n\nUser is trying to download file %s\n\n", fileId)
+	log.Printf("\n\n[INFO] User is trying to download file %s\n\n", fileId)
 
 	// 1. Check user directly
 	// 2. Check workflow execution authorization
@@ -772,6 +774,30 @@ func handleCreateFile(resp http.ResponseWriter, request *http.Request) {
 	fileId := uuid.NewV4().String()
 	downloadPath := fmt.Sprintf("%s/%s", folderPath, fileId)
 
+	duplicateWorkflows := []string{}
+	for _, trigger := range workflow.Triggers {
+		if trigger.AppName == "Shuffle Workflow" && trigger.TriggerType == "SUBFLOW" {
+			for _, parameter := range trigger.Parameters {
+				if parameter.Name == "workflow" && len(parameter.Value) > 0 {
+
+					found := false
+					for _, workflow := range duplicateWorkflows {
+						if workflow == parameter.Value {
+							found = true
+							break
+						}
+					}
+
+					if !found {
+						duplicateWorkflows = append(duplicateWorkflows, parameter.Value)
+					}
+
+					break
+				}
+			}
+		}
+	}
+
 	timeNow := time.Now().Unix()
 	newFile := File{
 		Id:           fileId,
@@ -783,6 +809,7 @@ func handleCreateFile(resp http.ResponseWriter, request *http.Request) {
 		OrgId:        curfile.OrgId,
 		WorkflowId:   curfile.WorkflowId,
 		DownloadPath: downloadPath,
+		Subflows:     duplicateWorkflows,
 	}
 
 	err = setFile(ctx, newFile)
@@ -797,6 +824,7 @@ func handleCreateFile(resp http.ResponseWriter, request *http.Request) {
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true, "id": "%s"}`, fileId)))
+
 }
 
 func getFile(ctx context.Context, id string) (*File, error) {

@@ -246,6 +246,7 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 	if newerr != nil {
 		log.Printf("Failed reading Docker build STDOUT: %s", newerr)
 	} else {
+		log.Printf("STRING: %s", buildBuf.String())
 		if strings.Contains(buildBuf.String(), "errorDetail") {
 			log.Printf("[ERROR] Docker build:\n%s\nERROR ABOVE: Trying to pull tags from: %s", buildBuf.String(), strings.Join(tags, "\n"))
 

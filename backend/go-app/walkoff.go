@@ -893,6 +893,53 @@ func findChildNodes(workflowExecution WorkflowExecution, nodeId string) []string
 	return newNodes
 }
 
+// Checks if data is sent from Worker >0.8.51, which sends a full execution
+// instead of individial results
+func validateNewWorkerExecution(body []byte) error {
+	//type WorkflowExecution struct {
+	//}
+
+	ctx := context.Background()
+	var execution WorkflowExecution
+	err := json.Unmarshal(body, &execution)
+	if err != nil {
+		log.Printf("[WARNING] Failed execution unmarshaling: %s", err)
+		return err
+	}
+
+	baseExecution, err := getWorkflowExecution(ctx, execution.ExecutionId)
+	if err != nil {
+		log.Printf("[ERROR] Failed getting execution (workflowqueue) %s: %s", execution.ExecutionId, err)
+		return err
+	}
+
+	if baseExecution.Authorization != execution.Authorization {
+		return errors.New("Bad authorization when validating execution")
+	}
+
+	if len(baseExecution.Workflow.Actions) != len(execution.Workflow.Actions) {
+		return errors.New(fmt.Sprintf("Bad length of actions: %d", len(execution.Workflow.Actions)))
+	}
+
+	if len(baseExecution.Workflow.Triggers) != len(execution.Workflow.Triggers) {
+		return errors.New(fmt.Sprintf("Bad length of trigger: %d", len(execution.Workflow.Triggers)))
+	}
+
+	// FIXME: Add extra here
+	//executionLength := len(baseExecution.Workflow.Actions)
+	//if executionLength != len(execution.Results) {
+	//	return errors.New(fmt.Sprintf("Bad length of actions vs results: want: %d have: %d", executionLength, len(execution.Results)))
+	//}
+
+	//log.Printf("\n\nSHOULD SET BACKEND DATA FOR EXEC \n\n")
+	err = setWorkflowExecution(ctx, execution, true)
+	if err != nil {
+		log.Printf("Successfully set the execution to wait.")
+	}
+
+	return nil
+}
+
 func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -905,6 +952,17 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
+	}
+
+	//log.Printf("Actionresult unmarshal: %s", string(body))
+	err = validateNewWorkerExecution(body)
+	if err == nil {
+		log.Printf("[INFO] Set workflowexecution based on new worker")
+		resp.WriteHeader(200)
+		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Success"}`)))
+		return
+	} else {
+		log.Printf("[WARNING] Failed to handle new execution variant: %s", err)
 	}
 
 	var actionResult ActionResult
@@ -984,7 +1042,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 			workflowExecution.Status = "ABORTED"
 			err = setWorkflowExecution(ctx, *workflowExecution, true)
 			if err != nil {
-				log.Printf("Failed ")
+				log.Printf("Failed to set execution during wait")
 			} else {
 				log.Printf("Successfully set the execution to waiting.")
 			}
@@ -2985,7 +3043,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 
 	allAuths := []AppAuthenticationStorage{}
 	for _, action := range workflowExecution.Workflow.Actions {
-		action.LargeImage = ""
+		//action.LargeImage = ""
 		if action.ID == workflowExecution.Start {
 			startFound = true
 		}
@@ -3036,6 +3094,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 			action.Parameters = newParams
 		}
 
+		action.LargeImage = ""
 		newActions = append(newActions, action)
 
 		// If the node is NOT found, it's supposed to be set to SKIPPED,

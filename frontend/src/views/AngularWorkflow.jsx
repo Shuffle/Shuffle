@@ -615,9 +615,11 @@ const AngularWorkflow = (props) => {
 
 			getWorkflowExecution(props.match.params.key)
 		} else if (responseJson.status === "FINISHED") {
+			console.log("STOPPING BECAUSE ITS OVAH!")
 			setExecutionRunning(false)
 			stop()
 			getWorkflowExecution(props.match.params.key)
+			setUpdate(Math.random())
 		}
 	}
 

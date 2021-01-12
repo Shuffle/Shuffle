@@ -21,6 +21,7 @@ class AppBase:
         # apikey is for the user / org
         # authorization is for the specific workflow
         self.url = os.getenv("CALLBACK_URL", "https://shuffler.io")
+        self.base_url = os.getenv("BASE_URL", "https://shuffler.io")
         self.action = os.getenv("ACTION", "")
         self.authorization = os.getenv("AUTHORIZATION", "")
         self.current_execution_id = os.getenv("EXECUTIONID", "")
@@ -30,6 +31,9 @@ class AppBase:
         if isinstance(self.action, str):
             self.action = json.loads(self.action)
 
+        if len(self.base_url) == 0:
+            self.base_url = self.url
+
     # FIXME: Add more info like logs in here.
     # Docker logs: https://forums.docker.com/t/docker-logs-inside-the-docker-container/68190/2
     def send_result(self, action_result, headers, stream_path):
@@ -38,7 +42,7 @@ class AppBase:
 
         # I wonder if this actually works 
         self.logger.info("Before last stream result")
-        url = "%s%s" % (self.url, stream_path)
+        url = "%s%s" % (self.base_url, stream_path)
         print("URL: %s" % url)
         try:
             ret = requests.post(url, headers=headers, json=action_result)
@@ -53,7 +57,7 @@ class AppBase:
             action_result["status"] = "FAILURE"
             action_result["result"] = "POST error: %s" % e
             self.logger.info("Before typeerror stream result")
-            ret = requests.post("%s%s" % (self.url, stream_path), headers=headers, json=action_result)
+            ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result)
             self.logger.info("Result: %d" % ret.status_code)
             if ret.status_code != 200:
                 self.logger.info(ret.text)
@@ -536,7 +540,7 @@ class AppBase:
 
         # FIXME: Shouldn't skip this, but it's good for minimzing API calls
         #try:
-        #    ret = requests.post("%s%s" % (self.url, stream_path), headers=headers, json=action_result)
+        #    ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result)
         #    self.logger.info("Workflow: %d" % ret.status_code)
         #    if ret.status_code != 200:
         #        self.logger.info(ret.text)
@@ -560,7 +564,7 @@ class AppBase:
 
                 self.logger.info("Before FULLEXEC stream result")
                 ret = requests.post(
-                    "%s/api/v1/streams/results" % (self.url), 
+                    "%s/api/v1/streams/results" % (self.base_url), 
                     headers=headers, 
                     json=tmpdata
                 )
@@ -568,8 +572,12 @@ class AppBase:
                 if ret.status_code == 200:
                     fullexecution = ret.json()
                 else:
-                    self.logger.info("Error: Data: ", ret.json())
-                    self.logger.info("Error with status code for results. Crashing because ACTION_RESULTS or WORKFLOW_VARIABLE can't be handled. Status: %d" % ret.status_code)
+                    try:
+                        self.logger.info("Error: Data: ", ret.json())
+                        self.logger.info("Error with status code for results. Crashing because ACTION_RESULTS or WORKFLOW_VARIABLE can't be handled. Status: %d" % ret.status_code)
+                    except json.decoder.JSONDecodeError:
+                        pass
+
                     action_result["result"] = "Bad result from backend: %d" % ret.status_code
                     self.send_result(action_result, headers, stream_path) 
                     return
@@ -1322,7 +1330,7 @@ class AppBase:
             action_result["result"] = tmpresult
             action_result["status"] = "FAILURE"
             try:
-                ret = requests.post("%s%s" % (self.url, stream_path), headers=headers, json=action_result)
+                ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result)
                 self.logger.info("Result: %d" % ret.status_code)
                 if ret.status_code != 200:
                     self.logger.info(ret.text)

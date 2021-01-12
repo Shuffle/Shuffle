@@ -2130,7 +2130,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	//}
 
 	if actionResult.Status == "ABORTED" || actionResult.Status == "FAILURE" {
-		dbSave = true
+		//dbSave = true
 
 		newResults := []ActionResult{}
 		childNodes := []string{}
@@ -2576,6 +2576,9 @@ func setWorkflowExecution(ctx context.Context, workflowExecution WorkflowExecuti
 
 	handleExecutionResult(workflowExecution)
 	validateFinished(workflowExecution)
+	if dbSave {
+		shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+	}
 	return nil
 }
 
