@@ -49,6 +49,8 @@ var baseUrl = os.Getenv("BASE_URL")
 var environment = os.Getenv("ENVIRONMENT_NAME")
 var dockerApiVersion = os.Getenv("DOCKER_API_VERSION")
 var runningMode = strings.ToLower(os.Getenv("RUNNING_MODE"))
+var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
+var workerIds = []string{}
 
 type ExecutionRequestWrapper struct {
 	Data []ExecutionRequest `json:"data"`
@@ -144,6 +146,10 @@ func deployWorker(image string, identifier string, env []string) {
 		//log.Printf("[INFO] Empty self container id, continue without NetworkMode")
 	}
 
+	if cleanupEnv == "true" {
+		hostConfig.AutoRemove = true
+	}
+
 	config := &container.Config{
 		Image: image,
 		Env:   env,
@@ -212,6 +218,7 @@ func deployWorker(image string, identifier string, env []string) {
 		//}
 	} else {
 		log.Printf("[INFO] Container %s was created under environment %s", cont.ID, environment)
+		//workerIds = append(workerIds, cont.ID)
 	}
 
 	return
@@ -248,7 +255,7 @@ func initializeImages() {
 		log.Printf("[WARNING] SHUFFLE_APP_SDK_VERSION not defined. Defaulting to %s", appSdkVersion)
 	}
 	if workerVersion == "" {
-		workerVersion = "0.8.52"
+		workerVersion = "0.8.53"
 		log.Printf("[WARNING] SHUFFLE_WORKER_VERSION not defined. Defaulting to %s", workerVersion)
 	}
 
@@ -499,6 +506,7 @@ func main() {
 				fmt.Sprintf("EXECUTIONID=%s", execution.ExecutionId),
 				fmt.Sprintf("ENVIRONMENT_NAME=%s", environment),
 				fmt.Sprintf("BASE_URL=%s", baseUrl),
+				fmt.Sprintf("CLEANUP=%s", cleanupEnv),
 			}
 
 			if strings.ToLower(os.Getenv("SHUFFLE_PASS_WORKER_PROXY")) != "false" {
@@ -512,7 +520,7 @@ func main() {
 
 			go deployWorker(workerImage, containerName, env)
 
-			log.Printf("[INFO] %s was deployed and to be removed from queue.", execution.ExecutionId)
+			log.Printf("[INFO] ExecutionID %s was deployed and to be removed from queue.", execution.ExecutionId)
 			zombiecounter += 1
 			toBeRemoved.Data = append(toBeRemoved.Data, execution)
 		}

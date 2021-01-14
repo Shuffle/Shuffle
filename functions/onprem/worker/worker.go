@@ -28,6 +28,7 @@ import (
 var environment = os.Getenv("ENVIRONMENT_NAME")
 var baseUrl = os.Getenv("BASE_URL")
 var appCallbackUrl = os.Getenv("BASE_URL")
+var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
 var baseimagename = "frikky/shuffle"
 var registryName = "registry.hub.docker.com"
 var fallbackName = "shuffle-orborus"
@@ -43,6 +44,7 @@ var children map[string][]string
 var visited []string
 var executed []string
 var nextActions []string
+var containerIds []string
 var extra int
 var startAction string
 
@@ -68,9 +70,9 @@ func getThisContainerId() string {
 func init() {
 	containerId = getThisContainerId()
 	if len(containerId) == 0 {
-		log.Printf("[ERROR] No container ID found. Not running containerized?")
+		log.Printf("[WARNING] No container ID found. Not running containerized? This should only show during testing")
 	} else {
-		log.Printf("[INFO] Found container ID: %s", containerId)
+		log.Printf("[INFO] Found container ID for this worker: %s", containerId)
 	}
 }
 
@@ -770,35 +772,28 @@ type AppExecutionExample struct {
 
 // removes every container except itself (worker)
 func shutdown(executionId, workflowId string) {
-	dockercli, err := dockerclient.NewEnvClient()
-	if err != nil {
-		log.Printf("[ERROR] Unable to create docker client: %s", err)
-		os.Exit(3)
-	}
+	log.Printf("[INFO] Shutdown started")
 
-	containerOptions := types.ContainerListOptions{
-		All: true,
-	}
+	// Might not be necessary because of cleanupEnv hostconfig autoremoval
+	if cleanupEnv == "true" && len(containerIds) > 0 {
+		ctx := context.Background()
+		dockercli, err := dockerclient.NewEnvClient()
+		if err == nil {
+			log.Printf("[INFO] Cleaning up %d containers", len(containerIds))
+			removeOptions := types.ContainerRemoveOptions{
+				RemoveVolumes: true,
+				Force:         true,
+			}
 
-	containers, err := dockercli.ContainerList(context.Background(), containerOptions)
-	if err != nil {
-		panic(err)
-	}
-	_ = containers
-
-	for _, container := range containers {
-		for _, name := range container.Names {
-			if strings.Contains(name, executionId) {
-				// FIXME - reinstate - not here for debugging
-				//err = removeContainer(container.ID)
-				//if err != nil {
-				//	log.Printf("Failed removing %s before shutdown.", name)
-				//}
-
-				break
+			for _, containername := range containerIds {
+				log.Printf("[INFO] Stopping and removing container %s", containername)
+				dockercli.ContainerStop(ctx, containername, nil)
+				dockercli.ContainerRemove(ctx, containername, removeOptions)
+				//removeContainers = append(removeContainers, containername)
 			}
 		}
-
+	} else {
+		log.Printf("[INFO] NOT cleaning up containers. IDS: %d, CLEANUP env: %s", len(containerIds), cleanupEnv)
 	}
 
 	fullUrl := fmt.Sprintf("%s/api/v1/workflows/%s/executions/%s/abort", baseUrl, workflowId, executionId)
@@ -844,7 +839,9 @@ func shutdown(executionId, workflowId string) {
 		log.Printf("[INFO] Failed abort request: %s", err)
 	}
 
-	log.Printf("[INFO] Finished shutdown.")
+	log.Printf("[INFO] Finished shutdown (after 15 seconds).")
+	// Allows everything to finish in subprocesses
+	time.Sleep(time.Duration(15) * time.Second)
 	os.Exit(3)
 }
 
@@ -863,6 +860,10 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
 	} else {
 		log.Printf("[WARNING] Empty self container id, continue without NetworkMode")
+	}
+
+	if cleanupEnv == "true" {
+		hostConfig.AutoRemove = true
 	}
 
 	config := &container.Config{
@@ -892,6 +893,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	}
 
 	log.Printf("[INFO] Container %s is created for %s", cont.ID, identifier)
+	containerIds = append(containerIds, cont.ID)
 	return nil
 }
 
@@ -1537,71 +1539,16 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 
 	// FIXME - new request here
 	// FIXME - clean up stopped (remove) containers with this execution id
-	dockercli, err := dockerclient.NewEnvClient()
-	if err != nil {
-		log.Printf("Unable to create docker client: %s", err)
-		shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
-	}
 
 	if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions)+extra {
 		shutdownCheck := true
-		ctx := context.Background()
 		for _, result := range workflowExecution.Results {
 			if result.Status == "EXECUTING" {
 				// Cleaning up executing stuff
 				shutdownCheck = false
-				// Check status
-				containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
-					All: true,
-				})
-				if err != nil {
-					log.Printf("Failed listing containers: %s", err)
-					continue
-				}
-
-				stopContainers := []string{}
-				removeContainers := []string{}
-				for _, container := range containers {
-					for _, name := range container.Names {
-						if !strings.Contains(name, result.Action.ID) {
-							continue
-						}
-
-						if container.State != "running" {
-							removeContainers = append(removeContainers, container.ID)
-							stopContainers = append(stopContainers, container.ID)
-						}
-					}
-				}
-
-				// FIXME - add killing of apps with same execution ID too
-				// FIXME - stahp
-				//for _, containername := range stopContainers {
-				//	if err := dockercli.ContainerStop(ctx, containername, nil); err != nil {
-				//		log.Printf("Unable to stop container: %s", err)
-				//	} else {
-				//		log.Printf("Stopped container %s", containername)
-				//	}
-				//}
-
-				removeOptions := types.ContainerRemoveOptions{
-					RemoveVolumes: true,
-					Force:         true,
-				}
-
-				_ = removeOptions
-
-				// FIXME - this
-				//for _, containername := range removeContainers {
-				//	if err := dockercli.ContainerRemove(ctx, containername, removeOptions); err != nil {
-				//		log.Printf("Unable to remove container: %s", err)
-				//	} else {
-				//		log.Printf("Removed container %s", containername)
-				//	}
-				//}
-
+				// USED TO BE CONTAINER REMOVAL
 				//  FIXME - send POST request to kill the container
-				log.Printf("Should remove (POST request) stopped containers")
+				//log.Printf("Should remove (POST request) stopped containers")
 				//ret = requests.post("%s%s" % (self.url, stream_path), headers=headers, json=action_result)
 			}
 		}
@@ -2511,7 +2458,7 @@ func validateFinished(workflowExecution WorkflowExecution) {
 		if err != nil {
 			log.Printf("[ERROR] Failed reading body: %s", err)
 		} else {
-			log.Printf("NEWRESP: %s", string(body))
+			log.Printf("[INFO] NEWRESP (from backend): %s", string(body))
 		}
 	}
 }
@@ -2583,7 +2530,7 @@ func setWorkflowExecution(ctx context.Context, workflowExecution WorkflowExecuti
 }
 
 // GetLocalIP returns the non loopback local IP of the host
-func GetLocalIP() string {
+func getLocalIP() string {
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
 		return ""
@@ -2599,22 +2546,46 @@ func GetLocalIP() string {
 	return ""
 }
 
-func webserverSetup() {
-	hostname := GetLocalIP()
+func getAvailablePort() (net.Listener, error) {
+	listener, err := net.Listen("tcp", ":0")
+	if err != nil {
+		log.Printf("[WARNING] Failed to assign port by default. Defaulting to 5001")
+		//return ":5001"
+		return nil, err
+	}
 
-	log.Printf("\nStarting webserver on port 5001 with hostname: %s\n", hostname)
-	log.Printf("OLD HOSTNAME: %s", appCallbackUrl)
-	appCallbackUrl = fmt.Sprintf("http://%s:5001", hostname)
-	log.Printf("NEW HOSTNAME: %s", appCallbackUrl)
+	return listener, nil
+	//return fmt.Sprintf(":%d", port)
 }
 
-func runWebserver() {
+func webserverSetup(workflowExecution WorkflowExecution) net.Listener {
+	hostname := getLocalIP()
+
+	// FIXME: This MAY not work because of speed between first
+	// container being launched and port being assigned to webserver
+	listener, err := getAvailablePort()
+	if err != nil {
+		log.Printf("Failed to created listener: %s", err)
+		shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+
+	log.Printf("\n\nStarting webserver on port %d with hostname: %s\n\n", port, hostname)
+	log.Printf("OLD HOSTNAME: %s", appCallbackUrl)
+	appCallbackUrl = fmt.Sprintf("http://%s:%d", hostname, port)
+	log.Printf("NEW HOSTNAME: %s", appCallbackUrl)
+
+	return listener
+}
+
+func runWebserver(listener net.Listener) {
 	r := mux.NewRouter()
 	r.HandleFunc("/api/v1/streams", handleWorkflowQueue).Methods("POST")
 	r.HandleFunc("/api/v1/streams/results", handleGetStreamResults).Methods("POST", "OPTIONS")
 	http.Handle("/", r)
 
-	log.Fatal(http.ListenAndServe(":5001", nil))
+	//log.Fatal(http.ListenAndServe(port, nil))
+	log.Fatal(http.Serve(listener, nil))
 }
 
 // Initial loop etc
@@ -2735,8 +2706,8 @@ func main() {
 			}
 
 			log.Printf("Environments: %s. 1 = webserver, 0 or >1 = default", environments)
-			if len(environments) == 1 {
-				webserverSetup()
+			if len(environments) == 1 { //&& len(workflowExecution.Actions)+len(workflowExecution.Triggers) > 1 {
+				listener := webserverSetup(workflowExecution)
 				err := executionInit(workflowExecution)
 				if err != nil {
 					log.Printf("[INFO] Workflow setup failed: %s", workflowExecution.ExecutionId, err)
@@ -2748,7 +2719,7 @@ func main() {
 					handleExecutionResult(workflowExecution)
 				}()
 
-				runWebserver()
+				runWebserver(listener)
 				//log.Printf("Before wait")
 				//wg := sync.WaitGroup{}
 				//wg.Add(1)

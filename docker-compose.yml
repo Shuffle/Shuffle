@@ -1,8 +1,8 @@
 version: '3'
 services:
   frontend:
-    #build: ./frontend
-    image: ghcr.io/frikky/shuffle-frontend:0.8.51
+    build: ./frontend
+    image: ghcr.io/frikky/shuffle-frontend:0.8.52
     container_name: shuffle-frontend
     hostname: shuffle-frontend
     ports:
@@ -17,7 +17,7 @@ services:
       - backend
   backend:
     #build: ./backend
-    image: ghcr.io/frikky/shuffle-backend:0.8.51
+    image: ghcr.io/frikky/shuffle-backend:0.8.52
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
     # Here for debugging:
@@ -66,6 +66,7 @@ services:
       - SHUFFLE_BASE_IMAGE_NAME=${SHUFFLE_BASE_IMAGE_NAME}
       - SHUFFLE_BASE_IMAGE_REGISTRY=${SHUFFLE_BASE_IMAGE_REGISTRY}
       - SHUFFLE_BASE_IMAGE_TAG_SUFFIX=${SHUFFLE_BASE_IMAGE_TAG_SUFFIX}
+      - CLEANUP=${SHUFFLE_CONTAINER_AUTO_CLEANUP}
     restart: unless-stopped
   database:
     #build: ./backend/database

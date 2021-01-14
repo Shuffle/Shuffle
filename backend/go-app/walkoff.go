@@ -917,12 +917,13 @@ func validateNewWorkerExecution(body []byte) error {
 		return errors.New("Bad authorization when validating execution")
 	}
 
+	// used to validate if it's actually the right marshal
 	if len(baseExecution.Workflow.Actions) != len(execution.Workflow.Actions) {
-		return errors.New(fmt.Sprintf("Bad length of actions: %d", len(execution.Workflow.Actions)))
+		return errors.New(fmt.Sprintf("Bad length of actions (probably normal app): %d", len(execution.Workflow.Actions)))
 	}
 
 	if len(baseExecution.Workflow.Triggers) != len(execution.Workflow.Triggers) {
-		return errors.New(fmt.Sprintf("Bad length of trigger: %d", len(execution.Workflow.Triggers)))
+		return errors.New(fmt.Sprintf("Bad length of trigger: %d (probably normal app)", len(execution.Workflow.Triggers)))
 	}
 
 	// FIXME: Add extra here
@@ -933,8 +934,11 @@ func validateNewWorkerExecution(body []byte) error {
 
 	//log.Printf("\n\nSHOULD SET BACKEND DATA FOR EXEC \n\n")
 	err = setWorkflowExecution(ctx, execution, true)
-	if err != nil {
-		log.Printf("Successfully set the execution to wait.")
+	if err == nil {
+		log.Printf("[INFO] Set workflowexecution based on new worker (>0.8.53) for execution %s", baseExecution.ExecutionId)
+		//log.Printf("[INFO] Successfully set the execution to wait.")
+	} else {
+		log.Printf("[WARNING] Failed to set the execution to wait.")
 	}
 
 	return nil
@@ -957,12 +961,11 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	//log.Printf("Actionresult unmarshal: %s", string(body))
 	err = validateNewWorkerExecution(body)
 	if err == nil {
-		log.Printf("[INFO] Set workflowexecution based on new worker")
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Success"}`)))
 		return
 	} else {
-		log.Printf("[WARNING] Failed to handle new execution variant: %s", err)
+		//log.Printf("[WARNING] Failed to handle new execution variant: %s", err)
 	}
 
 	var actionResult ActionResult

@@ -4276,11 +4276,18 @@ const AngularWorkflow = (props) => {
 				color="primary"
 				defaultValue={data.value}
 				placeholder={placeholder}
+				helperText={data.value !== undefined && data.value !== null && data.value.includes(".#") ? 
+					<span style={{color:"white", marginBottom: 5, marginleft: 5,}}>
+						Use "Shuffle Tools" app with "Filter List" action to handle loops 
+					</span>
+					: null
+				}
 				onClick={() => {
 					console.log("CHANGE FIELD")
 				}}
 				onBlur={(e) => {
 					changeActionVariable(data.action_field, e.target.value)
+					setUpdate(Math.random())
 				}}
 			/>
 
@@ -4473,8 +4480,10 @@ const AngularWorkflow = (props) => {
 			}}
 		>
 		<FormControl>
-			<DialogTitle><div style={{color:"white"}}>Condition</div></DialogTitle>
-				<DialogContent style={{display: "flex"}}>
+			<DialogTitle><span style={{color:"white"}}>Condition</span>
+			</DialogTitle>
+				<DialogContent style={{}}>
+					<div style={{display: "flex"}}>
 					<Tooltip color="primary" title={conditionValue.configuration ? "Negated" : "Default"} placement="top">
 						<Button color="primary" variant={conditionValue.configuration ? "contained" : "outlined"} style={{margin: "auto", height: 50, marginBottom: "auto", marginTop: "auto", marginRight: 5}} onClick={(e) => {
 							conditionValue.configuration = !conditionValue.configuration
@@ -4556,38 +4565,43 @@ const AngularWorkflow = (props) => {
 					<div style={{flex: "2"}}>
 						<AppConditionHandler tmpdata={destinationValue} setData={setDestinationValue} type={"destination"} />
 					</div>
+
+					</div>
+					<span style={{marginTop: 15}}>
+						Conditions can't be used for loops [ .# ]. <a target="_blank" href="https://shuffler.io/docs/conditions" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more</a> 
+					</span>
 				</DialogContent>
 				<DialogActions>
-	      <Button 
-					style={{borderRadius: "0px"}}
-					onClick={() => {
-						setSelectedEdge({})
+					<Button 
+						style={{borderRadius: "0px"}}
+						onClick={() => {
+							setSelectedEdge({})
 
-						var data = {
-							condition: conditionValue,
-							source: sourceValue,
-							destination: destinationValue,
-						}
-						
-						setConditionsModalOpen(false)
-						if (selectedEdge.conditions === undefined) {
-							selectedEdge.conditions = [data]
-						} else {
-							const curedgeindex = selectedEdge.conditions.findIndex(data => data.source.id === sourceValue.id)
-							if (curedgeindex < 0) {
-								selectedEdge.conditions.push(data)
-							} else {
-								selectedEdge.conditions[curedgeindex] = data
+							var data = {
+								condition: conditionValue,
+								source: sourceValue,
+								destination: destinationValue,
 							}
-						}
+							
+							setConditionsModalOpen(false)
+							if (selectedEdge.conditions === undefined) {
+								selectedEdge.conditions = [data]
+							} else {
+								const curedgeindex = selectedEdge.conditions.findIndex(data => data.source.id === sourceValue.id)
+								if (curedgeindex < 0) {
+									selectedEdge.conditions.push(data)
+								} else {
+									selectedEdge.conditions[curedgeindex] = data
+								}
+							}
 
-						setSelectedEdge(selectedEdge)
-						workflow.branches[selectedEdgeIndex] = selectedEdge
-						setWorkflow(workflow)
-					}} color="primary">
-	        	    	Submit	
-	        	  	</Button>
-				</DialogActions>
+							setSelectedEdge(selectedEdge)
+							workflow.branches[selectedEdgeIndex] = selectedEdge
+							setWorkflow(workflow)
+						}} color="primary">
+							Submit	
+						</Button>
+					</DialogActions>
 			</FormControl>
 		</Dialog>
 
@@ -6422,15 +6436,20 @@ const AngularWorkflow = (props) => {
 			:
 			<div style={{padding: 25, maxWidth: 365, overflowX: "hidden",}}>
 				<Breadcrumbs aria-label="breadcrumb" separator="›" style={{color: "white", fontSize: 16}}>
-					<h2 style={{color: "rgba(255,255,255,0.5)", cursor: "pointer"}} onClick={() => {
-						setExecutionRunning(false)
-						stop()
-						getWorkflowExecution(props.match.params.key)
-						setExecutionModalView(0)
+					<span style={{color: "rgba(255,255,255,0.5)", display: "flex"}} onClick={() => {
+							setExecutionRunning(false)
+							stop()
+							getWorkflowExecution(props.match.params.key)
+							setExecutionModalView(0)
 					}}>
-						<ArrowBackIcon style={{marginRight: 7, }} />
-						See other Executions	
-					</h2>
+						<IconButton style={{paddingLeft: 0, marginTop: "auto", marginBottom: "auto", }} onClick={() => {}}>
+							<ArrowBackIcon style={{color: "rgba(255,255,255,0.5)",}} />
+						</IconButton>
+						<h2 style={{color: "rgba(255,255,255,0.5)", cursor: "pointer"}} onClick={() => {
+						}}>
+							See other Executions	
+						</h2>
+					</span>
 				</Breadcrumbs>
 				<Divider style={{backgroundColor: "white", marginTop: 10, marginBottom: 10,}}/>
 					<h2>Executing Workflow</h2>		
