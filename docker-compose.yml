@@ -54,7 +54,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - SHUFFLE_APP_SDK_VERSION=0.8.51
-      - SHUFFLE_WORKER_VERSION=0.8.5
+      - SHUFFLE_WORKER_VERSION=0.8.54
       - ORG_ID=${ORG_ID}
       - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
       - BASE_URL=http://${OUTER_HOSTNAME}:${BACKEND_PORT}

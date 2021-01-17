@@ -89,13 +89,13 @@ type SyncFeatures struct {
 
 type SyncData struct {
 	Active         bool   `json:"active" datastore:"active"`
-	Type           string `json:"type" datastore:"type"`
-	Name           string `json:"name" datastore:"name"`
-	Description    string `json:"description" datastore:"description"`
-	Limit          int64  `json:"limit" datastore:"limit"`
-	StartDate      int64  `json:"start_date" datastore:"start_date"`
-	EndDate        int64  `json:"end_date" datastore:"end_date"`
-	DataCollection int64  `json:"data_collection" datastore:"data_collection"`
+	Type           string `json:"type,omitempty" datastore:"type"`
+	Name           string `json:"name,omitempty" datastore:"name"`
+	Description    string `json:"description,omitempty" datastore:"description"`
+	Limit          int64  `json:"limit,omitempty" datastore:"limit"`
+	StartDate      int64  `json:"start_date,omitempty" datastore:"start_date"`
+	EndDate        int64  `json:"end_date,omitempty" datastore:"end_date"`
+	DataCollection int64  `json:"data_collection,omitempty" datastore:"data_collection"`
 }
 
 type SyncConfig struct {
@@ -271,35 +271,35 @@ type WorkflowExecution struct {
 
 // This is for the nodes in a workflow, NOT the app action itself.
 type Action struct {
-	AppName           string                       `json:"app_name" datastore:"app_name"`
-	AppVersion        string                       `json:"app_version" datastore:"app_version"`
-	AppID             string                       `json:"app_id" datastore:"app_id"`
+	AppName           string                       `json:"app_name,omitempty" datastore:"app_name"`
+	AppVersion        string                       `json:"app_version,omitempty" datastore:"app_version"`
+	AppID             string                       `json:"app_id,omitempty" datastore:"app_id"`
 	Errors            []string                     `json:"errors" datastore:"errors"`
-	ID                string                       `json:"id" datastore:"id"`
+	ID                string                       `json:"id,omitempty" datastore:"id"`
 	IsValid           bool                         `json:"is_valid" datastore:"is_valid"`
-	IsStartNode       bool                         `json:"isStartNode" datastore:"isStartNode"`
-	Sharing           bool                         `json:"sharing" datastore:"sharing"`
-	PrivateID         string                       `json:"private_id" datastore:"private_id"`
-	Label             string                       `json:"label" datastore:"label"`
-	SmallImage        string                       `json:"small_image" datastore:"small_image,noindex" required:false yaml:"small_image"`
-	LargeImage        string                       `json:"large_image" datastore:"large_image,noindex" yaml:"large_image" required:false`
-	Environment       string                       `json:"environment" datastore:"environment"`
-	Name              string                       `json:"name" datastore:"name"`
+	IsStartNode       bool                         `json:"isStartNode,omitempty" datastore:"isStartNode"`
+	Sharing           bool                         `json:"sharing,omitempty" datastore:"sharing"`
+	PrivateID         string                       `json:"private_id,omitempty" datastore:"private_id"`
+	Label             string                       `json:"label,omitempty" datastore:"label"`
+	SmallImage        string                       `json:"small_image,omitempty" datastore:"small_image,noindex" required:false yaml:"small_image"`
+	LargeImage        string                       `json:"large_image,omitempty" datastore:"large_image,noindex" yaml:"large_image" required:false`
+	Environment       string                       `json:"environment,omitempty" datastore:"environment"`
+	Name              string                       `json:"name,omitempty" datastore:"name"`
 	Parameters        []WorkflowAppActionParameter `json:"parameters" datastore: "parameters,noindex"`
 	ExecutionVariable struct {
-		Description string `json:"description" datastore:"description,noindex"`
-		ID          string `json:"id" datastore:"id"`
-		Name        string `json:"name" datastore:"name"`
-		Value       string `json:"value" datastore:"value,noindex"`
+		Description string `json:"description,omitempty" datastore:"description,noindex"`
+		ID          string `json:"id,omitempty" datastore:"id"`
+		Name        string `json:"name,omitempty" datastore:"name"`
+		Value       string `json:"value,omitempty" datastore:"value,noindex"`
 	} `json:"execution_variable,omitempty" datastore:"execution_variable,omitempty"`
 	Position struct {
-		X float64 `json:"x" datastore:"x"`
-		Y float64 `json:"y" datastore:"y"`
-	} `json:"position"`
-	Priority         int    `json:"priority" datastore:"priority"`
-	AuthenticationId string `json:"authentication_id" datastore:"authentication_id"`
-	Example          string `json:"example" datastore:"example"`
-	AuthNotRequired  bool   `json:"auth_not_required" datastore:"auth_not_required" yaml:"auth_not_required"`
+		X float64 `json:"x,omitempty" datastore:"x"`
+		Y float64 `json:"y,omitempty" datastore:"y"`
+	} `json:"position,omitempty"`
+	Priority         int    `json:"priority,omitempty" datastore:"priority"`
+	AuthenticationId string `json:"authentication_id,omitempty" datastore:"authentication_id"`
+	Example          string `json:"example,omitempty" datastore:"example"`
+	AuthNotRequired  bool   `json:"auth_not_required,omitempty" datastore:"auth_not_required" yaml:"auth_not_required"`
 }
 
 // Added environment for location to execute
@@ -907,6 +907,8 @@ func validateNewWorkerExecution(body []byte) error {
 		return err
 	}
 
+	log.Printf("LEN: %s", string(body))
+	log.Printf("LEN: %d", len(string(body)))
 	baseExecution, err := getWorkflowExecution(ctx, execution.ExecutionId)
 	if err != nil {
 		log.Printf("[ERROR] Failed getting execution (workflowqueue) %s: %s", execution.ExecutionId, err)
@@ -1173,8 +1175,15 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 					}
 
 					if !skipNodeAdd {
+						newAction := Action{
+							AppName:    curAction.AppName,
+							AppVersion: curAction.AppVersion,
+							Label:      curAction.Label,
+							Name:       curAction.Name,
+							ID:         curAction.ID,
+						}
 						newResult := ActionResult{
-							Action:        curAction,
+							Action:        newAction,
 							ExecutionId:   actionResult.ExecutionId,
 							Authorization: actionResult.Authorization,
 							Result:        "Skipped because of previous node",
@@ -1184,7 +1193,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 						}
 
 						newResults = append(newResults, newResult)
-						increaseStatisticsField(ctx, "workflow_execution_actions_skipped", workflowExecution.Workflow.ID, 1, workflowExecution.ExecutionOrg)
+						//increaseStatisticsField(ctx, "workflow_execution_actions_skipped", workflowExecution.Workflow.ID, 1, workflowExecution.ExecutionOrg)
 					}
 				}
 			}
@@ -1214,15 +1223,15 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		workflowExecution.Results = newResults
 
 		if workflowExecution.Status == "ABORTED" {
-			err = increaseStatisticsField(ctx, "workflow_executions_aborted", workflowExecution.Workflow.ID, 1, workflowExecution.ExecutionOrg)
-			if err != nil {
-				log.Printf("Failed to increase aborted execution stats: %s", err)
-			}
+			//err = increaseStatisticsField(ctx, "workflow_executions_aborted", workflowExecution.Workflow.ID, 1, workflowExecution.ExecutionOrg)
+			//if err != nil {
+			//	log.Printf("Failed to increase aborted execution stats: %s", err)
+			//}
 		} else if workflowExecution.Status == "FAILURE" {
-			err = increaseStatisticsField(ctx, "workflow_executions_failure", workflowExecution.Workflow.ID, 1, workflowExecution.ExecutionOrg)
-			if err != nil {
-				log.Printf("Failed to increase failure execution stats: %s", err)
-			}
+			//err = increaseStatisticsField(ctx, "workflow_executions_failure", workflowExecution.Workflow.ID, 1, workflowExecution.ExecutionOrg)
+			//if err != nil {
+			//	log.Printf("Failed to increase failure execution stats: %s", err)
+			//}
 		}
 	}
 
@@ -1760,8 +1769,8 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 						Environment: envName,
 						Parameters:  []WorkflowAppActionParameter{},
 						Position: struct {
-							X float64 "json:\"x\" datastore:\"x\""
-							Y float64 "json:\"y\" datastore:\"y\""
+							X float64 "json:\"x,omitempty\" datastore:\"x\""
+							Y float64 "json:\"y,omitempty\" datastore:\"y\""
 						}{X: 449.5, Y: 446},
 						Priority:    0,
 						Errors:      []string{},
@@ -2804,7 +2813,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 			action.LargeImage = ""
 			action.SmallImage = ""
 			newactions = append(newactions, action)
-			log.Printf("ACTION: %#v", action)
+			//log.Printf("ACTION: %#v", action)
 		}
 
 		workflow.Actions = newactions
@@ -2815,7 +2824,18 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	}
 	if len(workflow.Triggers) == 0 {
 		workflow.Triggers = []Trigger{}
+	} else {
+		newtriggers := []Trigger{}
+		for _, trigger := range workflow.Triggers {
+			trigger.LargeImage = ""
+			trigger.SmallImage = ""
+			newtriggers = append(newtriggers, trigger)
+			//log.Printf("ACTION: %#v", trigger)
+		}
+
+		workflow.Triggers = newtriggers
 	}
+
 	if len(workflow.Errors) == 0 {
 		workflow.Errors = []string{}
 	}
@@ -3140,8 +3160,17 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 				}
 
 				//log.Printf("[WARNING] Set %s to SKIPPED as it's NOT a childnode of the startnode.", action.ID)
+				curaction := Action{
+					AppName:    action.AppName,
+					AppVersion: action.AppVersion,
+					Label:      action.Label,
+					Name:       action.Name,
+					ID:         action.ID,
+				}
+				//action
+				//curaction.Parameters = []
 				defaultResults = append(defaultResults, ActionResult{
-					Action:        action,
+					Action:        curaction,
 					ExecutionId:   workflowExecution.ExecutionId,
 					Authorization: workflowExecution.Authorization,
 					Result:        "Skipped because it's not under the startnode",
@@ -3257,6 +3286,16 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		return WorkflowExecution{}, "Failed building missing Docker images", err
 	}
 
+	b, err := json.Marshal(workflowExecution)
+	if err == nil {
+		log.Printf("%s", string(b))
+		log.Printf("LEN: %d", len(string(b)))
+		//workflowExecution.ExecutionOrg.SyncFeatures = Org{}
+	}
+
+	workflowExecution.Workflow.ExecutingOrg = Org{}
+	workflowExecution.Workflow.Org = []Org{}
+	//Org               []Org    `json:"org,omitempty" datastore:"org"`
 	err = setWorkflowExecution(ctx, workflowExecution, true)
 	if err != nil {
 		log.Printf("Error saving workflow execution for updates %s: %s", topic, err)
@@ -3319,10 +3358,10 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		}
 	}
 
-	err = increaseStatisticsField(ctx, "workflow_executions", workflow.ID, 1, workflowExecution.ExecutionOrg)
-	if err != nil {
-		log.Printf("Failed to increase stats execution stats: %s", err)
-	}
+	//err = increaseStatisticsField(ctx, "workflow_executions", workflow.ID, 1, workflowExecution.ExecutionOrg)
+	//if err != nil {
+	//	log.Printf("Failed to increase stats execution stats: %s", err)
+	//}
 
 	return workflowExecution, "", nil
 }
@@ -6476,10 +6515,10 @@ func handleDeleteHook(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if len(hook.Workflows) > 0 {
-		err = increaseStatisticsField(ctx, "total_workflow_triggers", hook.Workflows[0], -1, user.ActiveOrg.Id)
-		if err != nil {
-			log.Printf("Failed to increase total workflows: %s", err)
-		}
+		//err = increaseStatisticsField(ctx, "total_workflow_triggers", hook.Workflows[0], -1, user.ActiveOrg.Id)
+		//if err != nil {
+		//	log.Printf("Failed to increase total workflows: %s", err)
+		//}
 	}
 
 	hook.Status = "stopped"

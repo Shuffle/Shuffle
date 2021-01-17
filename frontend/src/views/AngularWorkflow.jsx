@@ -1355,12 +1355,13 @@ const AngularWorkflow = (props) => {
 		if (workflow.start === data.id && workflow.actions.length > 1) {
 			// FIXME - should check branches connected to startnode, as picking random
 			// might just be confusing
-			cy.nodes().forEach(function( ele ) {
+			cy.nodes().some(function( ele ) {
 				if (ele.id() !== workflow.start && ele.data()["label"] !== undefined) {
 					alert.success("Changed startnode to "+ele.data()["label"])
 					ele.data("isStartNode", true)
 					workflow.start = ele.id()
-					return true
+					//throw BreakException
+					return false 
 				}
 			});
 		}

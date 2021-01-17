@@ -428,13 +428,13 @@ type SyncFeatures struct {
 
 type SyncData struct {
 	Active         bool   `json:"active" datastore:"active"`
-	Type           string `json:"type" datastore:"type"`
-	Name           string `json:"name" datastore:"name"`
-	Description    string `json:"description" datastore:"description"`
-	Limit          int64  `json:"limit" datastore:"limit"`
-	StartDate      int64  `json:"start_date" datastore:"start_date"`
-	EndDate        int64  `json:"end_date" datastore:"end_date"`
-	DataCollection int64  `json:"data_collection" datastore:"data_collection"`
+	Type           string `json:"type,omitempty" datastore:"type"`
+	Name           string `json:"name,omitempty" datastore:"name"`
+	Description    string `json:"description,omitempty" datastore:"description"`
+	Limit          int64  `json:"limit,omitempty" datastore:"limit"`
+	StartDate      int64  `json:"start_date,omitempty" datastore:"start_date"`
+	EndDate        int64  `json:"end_date,omitempty" datastore:"end_date"`
+	DataCollection int64  `json:"data_collection,omitempty" datastore:"data_collection"`
 }
 
 type SyncConfig struct {
@@ -599,38 +599,36 @@ type WorkflowExecution struct {
 	} `json:"execution_variables,omitempty" datastore:"execution_variables,omitempty"`
 	OrgId string `json:"org_id" datastore:"org_id"`
 }
-
-// This is for the nodes in a workflow, NOT the app action itself.
 type Action struct {
-	AppName           string                       `json:"app_name" datastore:"app_name"`
-	AppVersion        string                       `json:"app_version" datastore:"app_version"`
-	AppID             string                       `json:"app_id" datastore:"app_id"`
-	Errors            []string                     `json:"errors" datastore:"errors"`
-	ID                string                       `json:"id" datastore:"id"`
-	IsValid           bool                         `json:"is_valid" datastore:"is_valid"`
-	IsStartNode       bool                         `json:"isStartNode" datastore:"isStartNode"`
-	Sharing           bool                         `json:"sharing" datastore:"sharing"`
-	PrivateID         string                       `json:"private_id" datastore:"private_id"`
-	Label             string                       `json:"label" datastore:"label"`
-	SmallImage        string                       `json:"small_image" datastore:"small_image,noindex" required:false yaml:"small_image"`
-	LargeImage        string                       `json:"large_image" datastore:"large_image,noindex" yaml:"large_image" required:false`
-	Environment       string                       `json:"environment" datastore:"environment"`
-	Name              string                       `json:"name" datastore:"name"`
+	AppName           string                       `json:"app_name,omitempty" datastore:"app_name"`
+	AppVersion        string                       `json:"app_version,omitempty" datastore:"app_version"`
+	AppID             string                       `json:"app_id,omitempty" datastore:"app_id"`
+	Errors            []string                     `json:"errors,omitempty" datastore:"errors"`
+	ID                string                       `json:"id,omitempty" datastore:"id"`
+	IsValid           bool                         `json:"is_valid,omitempty" datastore:"is_valid"`
+	IsStartNode       bool                         `json:"isStartNode,omitempty" datastore:"isStartNode"`
+	Sharing           bool                         `json:"sharing,omitempty" datastore:"sharing"`
+	PrivateID         string                       `json:"private_id,omitempty" datastore:"private_id"`
+	Label             string                       `json:"label,omitempty" datastore:"label"`
+	SmallImage        string                       `json:"small_image,omitempty" datastore:"small_image,noindex" required:false yaml:"small_image"`
+	LargeImage        string                       `json:"large_image,omitempty" datastore:"large_image,noindex" yaml:"large_image" required:false`
+	Environment       string                       `json:"environment,omitempty" datastore:"environment"`
+	Name              string                       `json:"name,omitempty" datastore:"name"`
 	Parameters        []WorkflowAppActionParameter `json:"parameters" datastore: "parameters,noindex"`
 	ExecutionVariable struct {
-		Description string `json:"description" datastore:"description,noindex"`
-		ID          string `json:"id" datastore:"id"`
-		Name        string `json:"name" datastore:"name"`
-		Value       string `json:"value" datastore:"value,noindex"`
+		Description string `json:"description,omitempty" datastore:"description,noindex"`
+		ID          string `json:"id,omitempty" datastore:"id"`
+		Name        string `json:"name,omitempty" datastore:"name"`
+		Value       string `json:"value,omitempty" datastore:"value,noindex"`
 	} `json:"execution_variable,omitempty" datastore:"execution_variable,omitempty"`
 	Position struct {
-		X float64 `json:"x" datastore:"x"`
-		Y float64 `json:"y" datastore:"y"`
-	} `json:"position"`
-	Priority         int    `json:"priority" datastore:"priority"`
-	AuthenticationId string `json:"authentication_id" datastore:"authentication_id"`
-	Example          string `json:"example" datastore:"example"`
-	AuthNotRequired  bool   `json:"auth_not_required" datastore:"auth_not_required" yaml:"auth_not_required"`
+		X float64 `json:"x,omitempty" datastore:"x"`
+		Y float64 `json:"y,omitempty" datastore:"y"`
+	} `json:"position,omitempty"`
+	Priority         int    `json:"priority,omitempty" datastore:"priority"`
+	AuthenticationId string `json:"authentication_id,omitempty" datastore:"authentication_id"`
+	Example          string `json:"example,omitempty" datastore:"example"`
+	AuthNotRequired  bool   `json:"auth_not_required,omitempty" datastore:"auth_not_required" yaml:"auth_not_required"`
 }
 
 // Added environment for location to execute
@@ -1001,6 +999,13 @@ func handleSubworkflowExecution(client *http.Client, workflowExecution WorkflowE
 	}
 
 	timeNow := time.Now().Unix()
+	//curaction := Action{
+	//	AppName:    baseAction.AppName,
+	//	AppVersion: baseAction.AppVersion,
+	//	Label:      baseAction.Label,
+	//	Name:       baseAction.Name,
+	//	ID:         baseAction.ID,
+	//}
 	result := ActionResult{
 		Action:        baseAction,
 		ExecutionId:   workflowExecution.ExecutionId,
@@ -1576,6 +1581,7 @@ func executionInit(workflowExecution WorkflowExecution) error {
 		log.Printf("Didn't find execution start action. Setting it to workflow start action.")
 		startAction = workflowExecution.Workflow.Start
 	}
+
 	nextActions = append(nextActions, startAction)
 
 	for _, branch := range workflowExecution.Workflow.Branches {
@@ -2077,6 +2083,14 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	//	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting the workflow key"}`)))
 	//	return
 	//}
+	actionResult.Action = Action{
+		AppName:    actionResult.Action.AppName,
+		AppVersion: actionResult.Action.AppVersion,
+		Label:      actionResult.Action.Label,
+		Name:       actionResult.Action.Name,
+		ID:         actionResult.Action.ID,
+		Parameters: actionResult.Action.Parameters,
+	}
 
 	if actionResult.Status == "ABORTED" || actionResult.Status == "FAILURE" {
 		//dbSave = true
@@ -2689,6 +2703,7 @@ func main() {
 
 		if firstRequest {
 			firstRequest = false
+			workflowExecution.StartedAt = int64(time.Now().Unix())
 
 			cacheKey := fmt.Sprintf("workflowexecution-%s", workflowExecution.ExecutionId)
 			requestCache = cache.New(5*time.Minute, 10*time.Minute)
