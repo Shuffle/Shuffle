@@ -7536,16 +7536,16 @@ func runInit(ctx context.Context) {
 				if err != nil {
 					log.Printf("Failed to upload workflows from github: %s", err)
 				} else {
-					log.Printf("Finished downloading workflows from github!")
+					log.Printf("[INFO] Finished downloading workflows from github!")
 				}
 			} else {
-				log.Printf("Skipping because there are %d workflows already", len(workflows))
+				log.Printf("[INFO] Skipping because there are %d workflows already", len(workflows))
 			}
 
 		}
 	}
 
-	log.Printf("Finished INIT")
+	log.Printf("[INFO] Finished INIT")
 }
 
 func handleVerifyCloudsync(orgId string) (SyncFeatures, error) {

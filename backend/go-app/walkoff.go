@@ -140,6 +140,7 @@ type AppAuthenticationStorage struct {
 	OrgId         string                `json:"org_id" datastore:"org_id"`
 	Created       int64                 `json:"created" datastore:"created"`
 	Edited        int64                 `json:"edited" datastore:"edited"`
+	Defined       bool                  `json:"defined" datastore:"defined"`
 }
 
 type AuthenticationUsage struct {
@@ -2220,6 +2221,10 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 							continue
 						}
 
+						if !auth.Defined {
+							continue
+						}
+
 						if auth.App.Name == action.AppName {
 							//log.Printf("FOUND AUTH FOR APP %s: %s", auth.App.Name, auth.Id)
 							action.AuthenticationId = auth.Id
@@ -2228,6 +2233,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 						}
 					}
 
+					// FIXME: Only o this IF there isn't another one for the app already
 					if !authSet {
 						//log.Printf("Validate if the app NEEDS auth or not")
 						outerapp := WorkflowApp{}
@@ -2239,9 +2245,45 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 						}
 
 						if len(outerapp.ID) > 0 && outerapp.Authentication.Required {
-							// FIXME: Add app auth
+							found := false
+							for _, auth := range allAuths {
+								if auth.App.ID == outerapp.ID {
+									found = true
+									break
+								}
+							}
 
-							//log.Printf("FOUND APP TO VALIDATE: %#v", outerapp)
+							// FIXME: Add app auth
+							if !found {
+								timeNow := int64(time.Now().Unix())
+								authFields := []AuthenticationStore{}
+								for _, param := range outerapp.Authentication.Parameters {
+									authFields = append(authFields, AuthenticationStore{
+										Key:   param.Name,
+										Value: "",
+									})
+								}
+
+								appAuth := AppAuthenticationStorage{
+									Active:        true,
+									Label:         fmt.Sprintf("default_%s", outerapp.Name),
+									Id:            uuid.NewV4().String(),
+									App:           outerapp,
+									Fields:        authFields,
+									Usage:         []AuthenticationUsage{},
+									WorkflowCount: 0,
+									NodeCount:     0,
+									OrgId:         user.ActiveOrg.Id,
+									Created:       timeNow,
+									Edited:        timeNow,
+								}
+
+								err = setWorkflowAppAuthDatastore(ctx, appAuth, appAuth.Id)
+								if err != nil {
+									log.Printf("Failed setting appauth for with name %s", appAuth.Label)
+								}
+							}
+
 							action.Errors = append(action.Errors, "Requires authentication")
 							action.IsValid = false
 							workflow.IsValid = false
@@ -2259,7 +2301,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 			newActions = actionFixing
 		}
 
-		workflow.PreviouslySaved = true
+		//workflow.PreviouslySaved = true
 	}
 	//PreviouslySaved      bool   `json:"first_save" datastore:"first_save"`
 
@@ -4616,7 +4658,6 @@ func getWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 	resp.Write(data)
 }
 
-//r.HandleFunc("/api/v1/apps/authentication/{appauthId}/config", setAuthenticationConfig).Methods("POST", "OPTIONS")
 func setAuthenticationConfig(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -4649,7 +4690,6 @@ func setAuthenticationConfig(resp http.ResponseWriter, request *http.Request) {
 
 		fileId = location[5]
 	}
-	log.Printf("FILE: %s", fileId)
 
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
@@ -4679,7 +4719,6 @@ func setAuthenticationConfig(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("body: %s", string(body))
 	ctx := context.Background()
 	auth, err := getWorkflowAppAuthDatastore(ctx, fileId)
 	if err != nil {
@@ -4868,6 +4907,7 @@ func addAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 
 	//appAuth.LargeImage = ""
 	appAuth.OrgId = user.ActiveOrg.Id
+	appAuth.Defined = true
 	err = setWorkflowAppAuthDatastore(ctx, appAuth, appAuth.Id)
 	if err != nil {
 		log.Printf("Failed setting up app auth %s: %s", appAuth.Id, err)
