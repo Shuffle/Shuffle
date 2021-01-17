@@ -2239,6 +2239,8 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 						}
 
 						if len(outerapp.ID) > 0 && outerapp.Authentication.Required {
+							// FIXME: Add app auth
+
 							//log.Printf("FOUND APP TO VALIDATE: %#v", outerapp)
 							action.Errors = append(action.Errors, "Requires authentication")
 							action.IsValid = false
@@ -2257,7 +2259,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 			newActions = actionFixing
 		}
 
-		//workflow.PreviouslySaved = true
+		workflow.PreviouslySaved = true
 	}
 	//PreviouslySaved      bool   `json:"first_save" datastore:"first_save"`
 
