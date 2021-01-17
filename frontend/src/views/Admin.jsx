@@ -31,6 +31,8 @@ import { useTheme } from '@material-ui/core/styles';
 import HandlePayment from './HandlePayment'
 import OrgHeader from '../components/OrgHeader'
 
+import EditIcon from '@material-ui/icons/Edit';
+import SelectAllIcon from '@material-ui/icons/SelectAll';
 import OpenInNewIcon from '@material-ui/icons/OpenInNew';
 import CloudDownloadIcon from '@material-ui/icons/CloudDownload';
 import DescriptionIcon from '@material-ui/icons/Description';
@@ -87,6 +89,7 @@ const Admin = (props) => {
 	const [selectedUserModalOpen, setSelectedUserModalOpen] = React.useState(false)
 	const [selectedAuthentication, setSelectedAuthentication] = React.useState({})
 	const [selectedAuthenticationModalOpen, setSelectedAuthenticationModalOpen] = React.useState(false)
+	const [authenticationFields, setAuthenticationFields] = React.useState([])
 	const [showArchived, setShowArchived] = React.useState(false)
 
 	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" 
@@ -276,9 +279,69 @@ const Admin = (props) => {
 		})
 	}
 
-	
-	
-	
+	const saveAuthentication = (authentication) => {
+		const data = authentication
+		const url = globalUrl + '/api/v1/apps/authentication';
+
+		fetch(url, {
+			mode: 'cors',
+			method: 'PUT',
+			body: JSON.stringify(data),
+			credentials: 'include',
+			crossDomain: true,
+			withCredentials: true,
+			headers: {
+				'Content-Type': 'application/json; charset=utf-8',
+			},
+		})
+		.then(response =>
+			response.json().then(responseJson => {
+				if (responseJson["success"] === false) {
+					alert.error("Failed changing authentication")
+				} else {
+					//alert.success("Successfully password!")
+					setSelectedUserModalOpen(false)
+				}
+			}),
+		)
+		.catch(error => {
+			alert.error("Err: " + error.toString())
+		});
+	}
+
+	const editAuthenticationConfig = (id) => {
+		const data = { 
+			"id": id, 
+			"action": "assign_everywhere",
+		}
+		const url = globalUrl + '/api/v1/apps/authentication/'+id+"/config";
+
+		fetch(url, {
+			mode: 'cors',
+			method: 'POST',
+			body: JSON.stringify(data),
+			credentials: 'include',
+			crossDomain: true,
+			withCredentials: true,
+			headers: {
+				'Content-Type': 'application/json; charset=utf-8',
+			},
+		})
+			.then(response =>
+				response.json().then(responseJson => {
+					if (responseJson["success"] === false) {
+						alert.error("Failed overwriting appauth in workflows")
+					} else {
+						alert.success("Successfully updated auth everywhere!")
+						setSelectedUserModalOpen(false)
+						getAppAuthentication() 
+					}
+				}),
+			)
+			.catch(error => {
+				alert.error("Err: " + error.toString())
+			});
+	}
 
 	const onPasswordChange = () => {
 		const data = { "username": selectedUser.username, "newpassword": newPassword }
@@ -300,7 +363,7 @@ const Admin = (props) => {
 					if (responseJson["success"] === false) {
 						alert.error("Failed setting new password")
 					} else {
-						alert.success("Successfully password!")
+						alert.success("Successfully updated password!")
 						setSelectedUserModalOpen(false)
 					}
 				}),
@@ -599,7 +662,7 @@ const Admin = (props) => {
 				return response.json()
 			})
 			.then((responseJson) => {
-				console.log(responseJson)
+				//console.log(responseJson)
 				setFiles(responseJson)
 			})
 			.catch(error => {
@@ -966,8 +1029,8 @@ const Admin = (props) => {
 			});
 	}
 
-	const editAuthenticationModal =
-		<Dialog modal
+	const editAuthenticationModal = selectedAuthenticationModalOpen ? 
+		<Dialog 
 			open={selectedAuthenticationModalOpen}
 			onClose={() => { setSelectedAuthenticationModalOpen(false) }}
 			PaperProps={{
@@ -979,56 +1042,71 @@ const Admin = (props) => {
 				},
 			}}
 		>
-			<DialogTitle><span style={{ color: "white" }}>Edit authentication</span></DialogTitle>
+			<DialogTitle><span style={{ color: "white" }}>Edit authentication for {selectedAuthentication.app.name} ({selectedAuthentication.label})</span></DialogTitle>
 			<DialogContent>
-				<div style={{ display: "flex" }}>
-					<TextField
-						style={{ backgroundColor: theme.palette.inputColor, flex: 3 }}
-						InputProps={{
-							style: {
-								height: 50,
-								color: "white",
-							},
-						}}
-						color="primary"
-						required
-						fullWidth={true}
-						placeholder="New password"
-						type="password"
-						id="standard-required"
-						autoComplete="password"
-						margin="normal"
-						variant="outlined"
-						onChange={e => setNewPassword(e.target.value)}
-					/>
-					<Button
-						style={{ maxHeight: 50, flex: 1 }}
-						variant="outlined"
-						color="primary"
-						onClick={() => onPasswordChange()}
-					>
-						Submit
-					</Button>
-				</div>
-				<Divider style={{ marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor }} />
-				<Button
-					style={{}}
-					variant="outlined"
-					color="primary"
-					onClick={() => deleteUser(selectedUser)}
-				>
-					{selectedUser.active ? "Deactivate" : "Activate"}
-				</Button>
-				<Button
-					style={{}}
-					variant="outlined"
-					color="primary"
-					onClick={() => generateApikey(selectedUser.id)}
-				>
-					Get new API key
-				</Button>
+				{selectedAuthentication.fields.map((data, index) => {
+					return (
+						<div key={index}>
+							<Typography style={{marginBottom: 0, marginTop: 10}}>{data.key}</Typography>
+							<TextField
+								style={{ backgroundColor: theme.palette.inputColor, marginTop: 0, }}
+								InputProps={{
+									style: {
+										height: 50,
+										color: "white",
+									},
+								}}
+								color="primary"
+								required
+								fullWidth={true}
+								placeholder={data.key}
+								type="text"
+								id={`authentication-${index}`}
+								margin="normal"
+								variant="outlined"
+								onChange={e => {
+									authenticationFields[index].value = e.target.value
+									setAuthenticationFields(authenticationFields)
+								}}
+							/>
+						</div>
+					)
+				})}
 			</DialogContent>
+			<DialogActions>
+				<Button style={{ borderRadius: "0px" }} onClick={() => setSelectedAuthenticationModalOpen(false)} color="primary">
+					Cancel
+				</Button>
+				<Button variant="contained" style={{ borderRadius: "0px" }} onClick={() => {
+					var error = false
+					for (var key in authenticationFields) {
+						const item = authenticationFields[key]
+						if (item.value.length === 0) {
+							console.log("ITEM: ", item)
+							//var currentnode = cy.getElementById(data.id)
+							var textfield = document.getElementById(`authentication-${key}`)
+							if (textfield !== null && textfield !== undefined) {
+								console.log("HANDLE ERROR FOR KEY ", key)
+							}
+							error = true
+						}
+					}
+
+					if (error) {
+						alert.error("All fields must have a new value")
+					} else {
+						alert.success("Saving new version of this authentication")
+						selectedAuthentication.fields = authenticationFields
+						saveAuthentication(selectedAuthentication)
+						setSelectedAuthentication({})
+						setSelectedAuthenticationModalOpen(false)
+					}
+				}} color="primary">
+					Submit
+				</Button>
+			</DialogActions>
 		</Dialog>
+	 : null
 
 	const editUserModal =
 		<Dialog modal
@@ -1043,7 +1121,7 @@ const Admin = (props) => {
 				},
 			}}
 		>
-			<DialogTitle><span style={{ color: "white" }}>Edit user</span></DialogTitle>
+			<DialogTitle><span style={{ color: "white" }}><EditIcon /></span></DialogTitle>
 			<DialogContent>
 				<div style={{ display: "flex" }}>
 					<TextField
@@ -1936,6 +2014,20 @@ const Admin = (props) => {
 		</div>
 		: null
 
+	const updateAppAuthentication = (field) => {
+		setSelectedAuthenticationModalOpen(true)
+		setSelectedAuthentication(field)
+		//{selectedAuthentication.fields.map((data, index) => {
+		var newfields = []
+		for (var key in field.fields) {
+			newfields.push({
+				"key": field.fields[key].key,
+				"value": "",
+			})
+		}
+		setAuthenticationFields(newfields)
+	}
+
 	const authenticationView = curTab === 2 ?
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
@@ -1952,7 +2044,7 @@ const Admin = (props) => {
 					/>
 					<ListItemText
 						primary="Label"
-						style={{minWidth: 250, maxWidth: 250}}
+						style={{minWidth: 275, maxWidth: 275}}
 					/>
 					<ListItemText
 						primary="App Name"
@@ -1960,11 +2052,11 @@ const Admin = (props) => {
 					/>
 					<ListItemText
 						primary="Workflows"
-						style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
+						style={{minWidth: 110, maxWidth: 110, overflow: "hidden"}}
 					/>
 					<ListItemText
-						primary="Action amount"
-						style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
+						primary="Actions"
+						style={{minWidth: 110, maxWidth: 110, overflow: "hidden"}}
 					/>
 					<ListItemText
 						primary="Fields"
@@ -1988,7 +2080,7 @@ const Admin = (props) => {
 							/>
 							<ListItemText
 								primary={data.label}
-								style={{minWidth: 250, maxWidth: 250}}
+								style={{minWidth: 275, maxWidth: 275}}
 							/>
 							<ListItemText
 								primary={data.app.name}
@@ -1996,11 +2088,11 @@ const Admin = (props) => {
 							/>
 							<ListItemText
 								primary={data.usage === null ? 0 : data.usage.length}
-								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
+								style={{minWidth: 110, maxWidth: 110, overflow: "hidden"}}
 							/>
 							<ListItemText
 								primary={data.node_count}
-								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
+								style={{minWidth: 110, maxWidth: 110, overflow: "hidden"}}
 							/>
 							<ListItemText
 								primary={data.fields.map(data => {
@@ -2009,16 +2101,28 @@ const Admin = (props) => {
 								style={{minWidth: 200, maxWidth: 200, overflow: "hidden"}}
 							/>
 							<ListItemText>
-								<Button 
-									style={{}} 
-									variant="outlined"
-									color="primary"
+								<IconButton
+									onClick={() => {
+										updateAppAuthentication(data)
+									}}
+								>
+									<EditIcon color="primary"/>
+								</IconButton>
+								<IconButton 
+									style={{marginRight: 10}}
+									onClick={() => {
+										editAuthenticationConfig(data.id)
+									}}
+								>
+									<SelectAllIcon color="primary"/>
+								</IconButton>
+								<IconButton 
 									onClick={() => {
 										deleteAuthentication(data)
 									}}
 								>
-									Delete	
-								</Button>
+									<DeleteIcon color="primary"/> 
+								</IconButton>
 							</ListItemText>
 						</ListItem>
 					)

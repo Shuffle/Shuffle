@@ -11,6 +11,7 @@ import { useAlert } from "react-alert";
 import IconButton from '@material-ui/core/IconButton';
 import ExpandLessIcon from '@material-ui/icons/ExpandLess';
 import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
+import SaveIcon from '@material-ui/icons/Save';
 
 const useStyles = makeStyles({
 	notchedOutline: {
@@ -121,7 +122,7 @@ const OrgHeader = (props) => {
 				"workflow_download_branch": workflowDownloadBranch,
 			})}
 		>
-			Save Changes	
+			<SaveIcon />
 		</Button>
 
 	var imageData = file.length > 0 ? file : fileBase64 

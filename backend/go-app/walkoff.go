@@ -4614,6 +4614,149 @@ func getWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 	resp.Write(data)
 }
 
+//r.HandleFunc("/api/v1/apps/authentication/{appauthId}/config", setAuthenticationConfig).Methods("POST", "OPTIONS")
+func setAuthenticationConfig(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	user, userErr := handleApiAuthentication(resp, request)
+	if userErr != nil {
+		log.Printf("Api authentication failed in get all apps: %s", userErr)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Role != "admin" {
+		log.Printf("[WARNING] User isn't admin during auth edit config")
+		resp.WriteHeader(409)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Must be admin to perform this action"}`)))
+		return
+	}
+
+	var fileId string
+	location := strings.Split(request.URL.String(), "/")
+	if location[1] == "api" {
+		if len(location) <= 5 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		fileId = location[5]
+	}
+	log.Printf("FILE: %s", fileId)
+
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		log.Printf("Error with body read: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	type configAuth struct {
+		Id     string `json:"id"`
+		Action string `json:"action"`
+	}
+
+	var config configAuth
+	err = json.Unmarshal(body, &config)
+	if err != nil {
+		log.Printf("Failed unmarshaling (appauth): %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if config.Id != fileId {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Bad ID match"}`))
+		return
+	}
+
+	log.Printf("body: %s", string(body))
+	ctx := context.Background()
+	auth, err := getWorkflowAppAuthDatastore(ctx, fileId)
+	if err != nil {
+		log.Printf("Authget error: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": ":("}`))
+		return
+	}
+
+	if auth.OrgId != user.ActiveOrg.Id {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "User can't edit this org"}`))
+		return
+	}
+
+	if config.Action == "assign_everywhere" {
+		q := datastore.NewQuery("workflow").Filter("org_id =", user.ActiveOrg.Id)
+		q = q.Order("-edited").Limit(35)
+
+		var workflows []Workflow
+		_, err = dbclient.GetAll(ctx, q, &workflows)
+		if err != nil {
+			log.Printf("Getall error in auth update: %s", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false, "reason": "Failed getting workflows to update"}`))
+			return
+		}
+
+		// FIXME: Add function to remove auth from other auth's
+		actionCnt := 0
+		workflowCnt := 0
+		for _, workflow := range workflows {
+			newActions := []Action{}
+			edited := false
+			for _, action := range workflow.Actions {
+				if action.AppName == auth.App.Name {
+					//log.Printf("FOUND ACTION TO UPDATE: %#v", action)
+					edited = true
+					actionCnt += 1
+				}
+
+				newActions = append(newActions, action)
+			}
+
+			workflow.Actions = newActions
+			if edited {
+				err = setWorkflow(ctx, workflow, workflow.ID)
+				if err != nil {
+					log.Printf("Failed setting (authupdate) workflow: %s", err)
+					continue
+				}
+
+				workflowCnt += 1
+			}
+		}
+
+		if actionCnt > 0 && workflowCnt > 0 {
+			auth.WorkflowCount = int64(workflowCnt)
+			auth.NodeCount = int64(actionCnt)
+
+			err = setWorkflowAppAuthDatastore(ctx, *auth, auth.Id)
+			if err != nil {
+				log.Printf("Failed setting appauth: %s", err)
+				resp.WriteHeader(401)
+				resp.Write([]byte(`{"success": false, "reason": "Failed setting app auth for all workflows"}`))
+				return
+			} else {
+				// FIXME: Remove ALL workflows from other auths using the same
+			}
+		}
+	}
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(`{"success": true}`))
+	//var config configAuth
+
+	//log.Printf("Should set %s
+}
+
 func addAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -4645,11 +4788,43 @@ func addAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	ctx := context.Background()
 	if len(appAuth.Id) == 0 {
 		appAuth.Id = uuid.NewV4().String()
+	} else {
+		auth, err := getWorkflowAppAuthDatastore(ctx, appAuth.Id)
+		if err == nil {
+			// OrgId         string                `json:"org_id" datastore:"org_id"`
+			if auth.OrgId != user.ActiveOrg.Id {
+				log.Printf("[WARNING] User isn't a part of the right org during auth edit")
+				resp.WriteHeader(409)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": ":("}`)))
+				return
+			}
+
+			if user.Role != "admin" {
+				log.Printf("[WARNING] User isn't admin during auth edit")
+				resp.WriteHeader(409)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": ":("}`)))
+				return
+			}
+
+			if !auth.Active {
+				log.Printf("[WARNING] Auth isn't active for edit")
+				resp.WriteHeader(409)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't update an inactive auth"}`)))
+				return
+			}
+
+			if auth.App.Name != appAuth.App.Name {
+				log.Printf("[WARNING] User tried to modify auth")
+				resp.WriteHeader(409)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad app configuration: need to specify correct name"}`)))
+				return
+			}
+		}
 	}
 
-	ctx := context.Background()
 	if len(appAuth.Label) == 0 {
 		resp.WriteHeader(409)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Label can't be empty"}`)))
@@ -6432,6 +6607,18 @@ func getAllWorkflowAppAuth(ctx context.Context, OrgId string) ([]AppAuthenticati
 	}
 
 	return allworkflowapps, nil
+}
+
+func getWorkflowAppAuthDatastore(ctx context.Context, id string) (*AppAuthenticationStorage, error) {
+
+	key := datastore.NameKey("workflowappauth", id, nil)
+	appAuth := &AppAuthenticationStorage{}
+	// New struct, to not add body, author etc
+	if err := dbclient.Get(ctx, key, appAuth); err != nil {
+		return &AppAuthenticationStorage{}, err
+	}
+
+	return appAuth, nil
 }
 
 func setWorkflowAppAuthDatastore(ctx context.Context, workflowappauth AppAuthenticationStorage, id string) error {

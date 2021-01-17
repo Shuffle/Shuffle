@@ -8164,6 +8164,7 @@ func initHandlers() {
 
 	r.HandleFunc("/api/v1/apps/authentication", getAppAuthentication).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/authentication", addAppAuthentication).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/authentication/{appauthId}/config", setAuthenticationConfig).Methods("POST", "OPTIONS")
 
 	r.HandleFunc("/api/v1/apps/authentication/{appauthId}", deleteAppAuthentication).Methods("DELETE", "OPTIONS")
 
