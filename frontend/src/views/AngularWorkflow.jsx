@@ -4479,10 +4479,14 @@ const AngularWorkflow = (props) => {
 				setDestinationValue({})
 			}}
 		>
+		<span style={{position: "absolute", bottom: 10, left: 10, color: "rgba(255,255,255,0.6)",}}>
+			Conditions can't be used for loops [ .# ] <a target="_blank" href="https://shuffler.io/docs/workflows#conditions" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more</a> 
+		</span>
 		<FormControl>
 			<DialogTitle><span style={{color:"white"}}>Condition</span>
 			</DialogTitle>
 				<DialogContent style={{}}>
+
 					<div style={{display: "flex"}}>
 					<Tooltip color="primary" title={conditionValue.configuration ? "Negated" : "Default"} placement="top">
 						<Button color="primary" variant={conditionValue.configuration ? "contained" : "outlined"} style={{margin: "auto", height: 50, marginBottom: "auto", marginTop: "auto", marginRight: 5}} onClick={(e) => {
@@ -4567,9 +4571,6 @@ const AngularWorkflow = (props) => {
 					</div>
 
 					</div>
-					<span style={{marginTop: 15}}>
-						Conditions can't be used for loops [ .# ]. <a target="_blank" href="https://shuffler.io/docs/conditions" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more</a> 
-					</span>
 				</DialogContent>
 				<DialogActions>
 					<Button 
@@ -6246,7 +6247,12 @@ const AngularWorkflow = (props) => {
 
 		if (validate.valid) {
 			if (typeof(validate.result) === "string") {
-				validate.result = JSON.parse(validate.result)
+				try {
+					validate.result = JSON.parse(validate.result)
+				} catch(e) {
+					console.log("Error: ", e)
+					validate.valid = false
+				}
 			}
 
 			return (
@@ -6514,10 +6520,19 @@ const AngularWorkflow = (props) => {
 							const curapp = apps.find(a => a.name === data.action.app_name && a.app_version === data.action.app_version)
 							const imgsize = 50
 							const statusColor = data.status === "FINISHED" || data.status === "SUCCESS" ? "green" : data.status === "ABORTED" || data.status === "FAILURE" ? "red" : "orange"
+			
+							var imgSrc = curapp === undefined ? "" : curapp.large_image
+							if (imgSrc.length === 0) {
+								// Look for the node in the workflow
+								const action = workflow.actions.find(action => action.id === data.action.id)
+								if (action !== undefined && action !== null) {
+									imgSrc = action.large_image
+								}
+							}
 
 							var actionimg = curapp === null ? 
 								null :
-								<img alt={data.action.app_name} src={curapp === undefined ? "" : curapp.large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />
+								<img alt={data.action.app_name} src={imgSrc} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />
 
 							if (triggers.length > 2) {
 								if (data.action.app_name === "shuffle-subflow") {
@@ -7047,8 +7062,8 @@ const AngularWorkflow = (props) => {
 			console.log("FIELDS: ", newFields)
 			newAuthOption.fields = newFields
 			setNewAppAuth(newAuthOption)
-			appAuthentication.push(newAuthOption)
-			setAppAuthentication(appAuthentication)
+			//appAuthentication.push(newAuthOption)
+			//setAppAuthentication(appAuthentication)
 			getAppAuthentication() 
 			setUpdate(authenticationOption.id)
 

@@ -839,9 +839,10 @@ func shutdown(executionId, workflowId string) {
 		log.Printf("[INFO] Failed abort request: %s", err)
 	}
 
-	log.Printf("[INFO] Finished shutdown (after 15 seconds).")
+	sleepDuration := 0
+	log.Printf("[INFO] Finished shutdown (after %d seconds).", sleepDuration)
 	// Allows everything to finish in subprocesses
-	time.Sleep(time.Duration(15) * time.Second)
+	time.Sleep(time.Duration(sleepDuration) * time.Second)
 	os.Exit(3)
 }
 
@@ -862,9 +863,10 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		log.Printf("[WARNING] Empty self container id, continue without NetworkMode")
 	}
 
-	if cleanupEnv == "true" {
-		hostConfig.AutoRemove = true
-	}
+	// Removing because log extraction should happen first
+	//if cleanupEnv == "true" {
+	//	hostConfig.AutoRemove = true
+	//}
 
 	config := &container.Config{
 		Image: image,
@@ -892,7 +894,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		return err
 	}
 
-	log.Printf("[INFO] Container %s is created for %s", cont.ID, identifier)
+	log.Printf("[INFO] Container %s was created for %s", cont.ID, identifier)
 	containerIds = append(containerIds, cont.ID)
 	return nil
 }

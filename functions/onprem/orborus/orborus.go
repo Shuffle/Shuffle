@@ -25,6 +25,8 @@ import (
 	"github.com/satori/go.uuid"
 	//network "github.com/docker/docker/api/types/network"
 	//natting "github.com/docker/go-connections/nat"
+	"github.com/mackerelio/go-osstat/cpu"
+	"github.com/mackerelio/go-osstat/memory"
 )
 
 // Starts jobs in bulk, so this could be increased
@@ -297,6 +299,41 @@ func initializeImages() {
 	}
 }
 
+// Will be used for checking if there's enough to deploy based on a threshold
+// E.g. having maximum CPU and maxmimum RAM
+// Does this work containerized?
+func getStats() {
+	fmt.Printf("\n")
+
+	memory, err := memory.Get()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		return
+	}
+
+	fmt.Printf("[INFO] memory total: %d bytes\n", memory.Total)
+	fmt.Printf("[INFO] memory used: %d bytes\n", memory.Used)
+
+	before, err := cpu.Get()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		return
+	}
+	time.Sleep(time.Duration(500) * time.Millisecond)
+	after, err := cpu.Get()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		return
+	}
+	total := float64(after.Total - before.Total)
+
+	fmt.Printf("[INFO] cpu used  : %f%%\n", float64(after.User-before.User)/total*100)
+	fmt.Printf("[INFO] cpu system: %f%%\n", float64(after.System-before.System)/total*100)
+	fmt.Printf("[INFO] cpu idle  : %f%%\n", float64(after.Idle-before.Idle)/total*100)
+
+	fmt.Printf("\n")
+}
+
 // Initial loop etc
 func main() {
 	log.Println("[INFO] Setting up execution environment")
@@ -370,6 +407,8 @@ func main() {
 			Proxy: nil,
 		},
 	}
+
+	getStats()
 
 	if (len(httpProxy) > 0 || len(httpsProxy) > 0) && baseUrl != "http://shuffle-backend:5001" {
 		client = &http.Client{}

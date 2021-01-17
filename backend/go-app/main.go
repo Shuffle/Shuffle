@@ -3535,7 +3535,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	for _, item := range hook.Workflows {
-		log.Printf("Running webhook for workflow %s with startnode %s", item, hook.Start)
+		//log.Printf("Running webhook for workflow %s with startnode %s", item, hook.Start)
 		workflow := Workflow{
 			ID: "",
 		}

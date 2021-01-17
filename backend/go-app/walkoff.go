@@ -1727,6 +1727,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 			action.IsValid = true
 		}
 
+		action.LargeImage = ""
 		newActions = append(newActions, action)
 	}
 
@@ -2797,7 +2798,18 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 
 	if len(workflow.Actions) == 0 {
 		workflow.Actions = []Action{}
+	} else {
+		newactions := []Action{}
+		for _, action := range workflow.Actions {
+			action.LargeImage = ""
+			action.SmallImage = ""
+			newactions = append(newactions, action)
+			log.Printf("ACTION: %#v", action)
+		}
+
+		workflow.Actions = newactions
 	}
+
 	if len(workflow.Branches) == 0 {
 		workflow.Branches = []Branch{}
 	}
