@@ -271,11 +271,11 @@ type WorkflowExecution struct {
 
 // This is for the nodes in a workflow, NOT the app action itself.
 type Action struct {
-	AppName           string                       `json:"app_name,omitempty" datastore:"app_name"`
-	AppVersion        string                       `json:"app_version,omitempty" datastore:"app_version"`
-	AppID             string                       `json:"app_id,omitempty" datastore:"app_id"`
+	AppName           string                       `json:"app_name" datastore:"app_name"`
+	AppVersion        string                       `json:"app_version" datastore:"app_version"`
+	AppID             string                       `json:"app_id" datastore:"app_id"`
 	Errors            []string                     `json:"errors" datastore:"errors"`
-	ID                string                       `json:"id,omitempty" datastore:"id"`
+	ID                string                       `json:"id" datastore:"id"`
 	IsValid           bool                         `json:"is_valid" datastore:"is_valid"`
 	IsStartNode       bool                         `json:"isStartNode,omitempty" datastore:"isStartNode"`
 	Sharing           bool                         `json:"sharing,omitempty" datastore:"sharing"`
@@ -284,7 +284,7 @@ type Action struct {
 	SmallImage        string                       `json:"small_image,omitempty" datastore:"small_image,noindex" required:false yaml:"small_image"`
 	LargeImage        string                       `json:"large_image,omitempty" datastore:"large_image,noindex" yaml:"large_image" required:false`
 	Environment       string                       `json:"environment,omitempty" datastore:"environment"`
-	Name              string                       `json:"name,omitempty" datastore:"name"`
+	Name              string                       `json:"name" datastore:"name"`
 	Parameters        []WorkflowAppActionParameter `json:"parameters" datastore: "parameters,noindex"`
 	ExecutionVariable struct {
 		Description string `json:"description,omitempty" datastore:"description,noindex"`
@@ -297,7 +297,7 @@ type Action struct {
 		Y float64 `json:"y,omitempty" datastore:"y"`
 	} `json:"position,omitempty"`
 	Priority         int    `json:"priority,omitempty" datastore:"priority"`
-	AuthenticationId string `json:"authentication_id,omitempty" datastore:"authentication_id"`
+	AuthenticationId string `json:"authentication_id" datastore:"authentication_id"`
 	Example          string `json:"example,omitempty" datastore:"example"`
 	AuthNotRequired  bool   `json:"auth_not_required,omitempty" datastore:"auth_not_required" yaml:"auth_not_required"`
 }
@@ -390,6 +390,7 @@ type Workflow struct {
 		Value       string `json:"value" datastore:"value,noindex"`
 	} `json:"execution_variables,omitempty" datastore:"execution_variables"`
 	ExecutionEnvironment string `json:"execution_environment" datastore:"execution_environment"`
+	PreviouslySaved      bool   `json:"first_save" datastore:"first_save"`
 }
 
 type ActionResult struct {
@@ -1790,7 +1791,17 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 			}
 		}
 	} else {
-		log.Printf("Has %d actions already", len(newActions))
+		log.Printf("[INFO] Has %d actions already", len(newActions))
+		// FIXME: Check if they require authentication and if they exist locally
+		//log.Printf("\n\nSHOULD VALIDATE AUTHENTICATION")
+		//AuthenticationId string `json:"authentication_id,omitempty" datastore:"authentication_id"`
+		//allAuths, err := getAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
+		//if err == nil {
+		//	log.Printf("AUTH: %#v", allAuths)
+		//	for _, action := range newActions {
+		//		log.Printf("ACTION: %#v", action)
+		//	}
+		//}
 	}
 
 	workflow.Actions = []Action{}
@@ -2169,6 +2180,86 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 		newActions = append(newActions, action)
 	}
+
+	if !workflow.PreviouslySaved {
+		log.Printf("[WORKFLOW INIT] NOT PREVIOUSLY SAVED - SET ACTION AUTH!")
+		//AuthenticationId string `json:"authentication_id,omitempty" datastore:"authentication_id"`
+
+		workflowapps, apperr := getAllWorkflowApps(ctx)
+		allAuths, err := getAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
+		if err == nil && len(allAuths) > 0 && len(workflowapps) > 0 && apperr == nil {
+			actionFixing := []Action{}
+			for _, action := range newActions {
+				setAuthentication := false
+				if len(action.AuthenticationId) > 0 {
+					//found := false
+					authenticationFound := false
+					for _, auth := range allAuths {
+						if auth.Id == action.AuthenticationId {
+							authenticationFound = true
+							break
+						}
+					}
+
+					if !authenticationFound {
+						setAuthentication = true
+					}
+				} else {
+					// FIXME: 1. Validate if the app needs auth
+					// 1. Validate if auth for the app exists
+					// var appAuth AppAuthenticationStorage
+					setAuthentication = true
+
+					//App           WorkflowApp           `json:"app" datastore:"app,noindex"`
+				}
+
+				if setAuthentication {
+					authSet := false
+					for _, auth := range allAuths {
+						if !auth.Active {
+							continue
+						}
+
+						if auth.App.Name == action.AppName {
+							//log.Printf("FOUND AUTH FOR APP %s: %s", auth.App.Name, auth.Id)
+							action.AuthenticationId = auth.Id
+							authSet = true
+							break
+						}
+					}
+
+					if !authSet {
+						//log.Printf("Validate if the app NEEDS auth or not")
+						outerapp := WorkflowApp{}
+						for _, app := range workflowapps {
+							if app.Name == action.AppName {
+								outerapp = app
+								break
+							}
+						}
+
+						if len(outerapp.ID) > 0 && outerapp.Authentication.Required {
+							//log.Printf("FOUND APP TO VALIDATE: %#v", outerapp)
+							action.Errors = append(action.Errors, "Requires authentication")
+							action.IsValid = false
+							workflow.IsValid = false
+						}
+
+						//outerapp.Authentication.Required
+						// Authentication Authentication      `json:"authentication" yaml:"authentication" required:false datastore:"authentication"`
+						//workflowapps, apperr := getAllWorkflowApps(ctx)
+					}
+				}
+
+				actionFixing = append(actionFixing, action)
+			}
+
+			newActions = actionFixing
+		}
+
+		//workflow.PreviouslySaved = true
+	}
+	//PreviouslySaved      bool   `json:"first_save" datastore:"first_save"`
 
 	workflow.Actions = newActions
 
@@ -4598,6 +4689,7 @@ func addAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	//appAuth.LargeImage = ""
 	appAuth.OrgId = user.ActiveOrg.Id
 	err = setWorkflowAppAuthDatastore(ctx, appAuth, appAuth.Id)
 	if err != nil {

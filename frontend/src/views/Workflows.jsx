@@ -304,7 +304,7 @@ const Workflows = (props) => {
 					setSelectedExecution(responseJson[0])
 					setWorkflowExecutions(responseJson)
 				} else {
-					alert.info("Couldn't find executions for the workflow")
+					//alert.info("Couldn't find executions for the workflow")
 					setSelectedExecution({})
 					setWorkflowExecutions([])
 				}
@@ -397,6 +397,11 @@ const Workflows = (props) => {
 				data.triggers[key].status = "stopped"
 			}
 		}
+
+		for (var key in data.actions) {
+			data.actions[key].authentication_id = ""
+		}
+
 		data["org"] = []
 		data["org_id"] = ""
 		data.execution_org = {"id": ""}
