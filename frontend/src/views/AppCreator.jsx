@@ -226,6 +226,7 @@ const AppCreator = (props) => {
 	const [errorCode, setErrorCode] = useState("")
 	const [appBuilding, setAppBuilding] = useState(false)
 	const [extraBodyFields, setExtraBodyFields] = useState([])
+	const [fileUploadEnabled, setFileUploadEnabled] = useState(false)
 
 	//const [actions, setActions] = useState([{
 	//	"name": "Get workflows",
@@ -254,6 +255,7 @@ const AppCreator = (props) => {
   	const [currentActionMethod, setCurrentActionMethod] = useState(actionNonBodyRequest[0])
   	const [currentAction, setCurrentAction] = useState({
 			"name": "",
+			"file_field": "",
 			"description": "",
 			"url": "",
 			"headers": "",
@@ -494,6 +496,7 @@ const AppCreator = (props) => {
 					"name": tmpname,
 					"description": methodvalue.description,
 					"url": path,
+					"file_field": "",
 					"method": method.toUpperCase(),
 					"headers": "",
 					"queries": [],
@@ -959,6 +962,11 @@ const AppCreator = (props) => {
 				data.paths[item.url][item.method.toLowerCase()].parameters.push(newitem)
 			}
 
+			// https://swagger.io/docs/specification/describing-request-body/file-upload/
+			if (item.file_field !== undefined && item.file_field !== null && item.file_field.length > 0) {
+				console.log("HANDLE FILEFIELD SAVE: ", item.file_field)
+			}
+
 			if (item.headers.length > 0) {
 				const required = false
 
@@ -1171,6 +1179,7 @@ const AppCreator = (props) => {
 			"name": "",
 			"description": "",
 			"url": "",
+			"file_field": "",
 			"headers": "",
 			"paths": [],
 			"queries": [],
@@ -1609,6 +1618,7 @@ const AppCreator = (props) => {
 					"name": "",
 					"description": "",
 					"url": "",
+					"file_field": "",
 					"headers": "",
 					"paths": [],
 					"queries": [],
@@ -1619,6 +1629,7 @@ const AppCreator = (props) => {
 				setCurrentActionMethod(apikeySelection[0])
 				setUrlPathQueries([])
 				setActionsModalOpen(false)
+				setFileUploadEnabled(false)
 			}}
 		>
 			<FormControl style={{backgroundColor: surfaceColor, color: "white",}}>
@@ -1806,6 +1817,36 @@ const AppCreator = (props) => {
 					<Button color="primary" style={{marginTop: "5px", marginBottom: "10px", borderRadius: "0px"}} variant="outlined" onClick={() => {
 						addPathQuery()
 					}}>New query</Button> 				
+					{currentActionMethod === "POST" ?
+						<Button color="primary" variant={fileUploadEnabled ? "contained" : "outlined"} style={{marginLeft: 10, marginTop: "5px", marginBottom: "10px", borderRadius: "0px"}} onClick={() => {
+							setFileUploadEnabled(!fileUploadEnabled)
+							if (fileUploadEnabled && currentAction["file_field"].length > 0) {
+								setActionField("file_field", "")
+							}
+							setUpdate(Math.random())
+						}}>Enable Fileupload</Button> 				
+					: null}
+					{fileUploadEnabled ? 
+						<TextField
+							required
+							style={{backgroundColor: inputColor, display: "inline-block",}}
+							placeholder={"file"}
+							margin="normal"
+							variant="outlined"
+							id="standard-required"
+							defaultValue={currentAction["file_field"]}
+							onChange={e => setActionField("file_field", e.target.value)}
+							helperText={<span style={{color:"white", marginBottom: "2px",}}>The File field to interact with</span>}
+							InputProps={{
+								classes: {
+									notchedOutline: classes.notchedOutline,
+								},
+								style:{
+									color: "white",
+								},
+							}}
+						/>
+						: null}
 					<div/>
 					<b>Headers</b>: static for the action
 					<TextField
@@ -1848,6 +1889,7 @@ const AppCreator = (props) => {
 						setActionsModalOpen(false)
 						setUrlPathQueries([]) 
 						setUrlPath("")
+						setFileUploadEnabled(false)
 					}}>
 						Submit	
 					</Button>
@@ -1916,6 +1958,7 @@ const AppCreator = (props) => {
 						"name": "",
 						"description": "",
 						"url": "",
+						"file_field": "",
 						"headers": "",
 						"queries": [],
 						"paths": [],

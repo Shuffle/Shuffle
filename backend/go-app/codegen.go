@@ -365,6 +365,16 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 		preparedHeaders += "}"
 	}
 
+	fileBalance := ""
+	fileAdder := ``
+	fileGrabber := ``
+	if method == "post" && strings.Contains(functionname, "filescan") {
+		fileGrabber = `filedata = self.get_file("63264006-5958-451a-bff1-1975495fb4d8")`
+		//fileGrabber += "\n        print(filedata)"
+		fileAdder = `files = {"file": (filedata["filename"], filedata["data"])}`
+		fileBalance = ", files=files"
+	}
+
 	// Extra param for url if it's changeable
 	// Extra param for authentication scheme(s)
 	// The last weird one is the body.. Tabs & spaces sucks.
@@ -375,7 +385,9 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
         %s
         %s
         %s
-        return requests.%s(url, headers=headers%s%s%s).text
+        %s
+        %s
+        return requests.%s(url, headers=headers%s%s%s%s).text
 		`,
 		functionname,
 		authenticationParameter,
@@ -391,17 +403,20 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 		authenticationSetup,
 		queryData,
 		bodyFormatter,
+		fileGrabber,
+		fileAdder,
 		method,
 		authenticationAddin,
 		bodyAddin,
 		verifyAddin,
+		fileBalance,
 	)
 
 	//log.Printf("FUNCTION: %s", data)
-	//if strings.Contains(functionname, "search") {
-	//	log.Println(data)
-	//	log.Printf("Queries: %s", queryString)
-	//}
+	if strings.Contains(functionname, "filescan") {
+		log.Println(data)
+		log.Printf("Queries: %s", queryString)
+	}
 
 	//log.Printf(data)
 	return functionname, data

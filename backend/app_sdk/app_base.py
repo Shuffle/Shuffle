@@ -397,7 +397,7 @@ class AppBase:
             }
 
             ret1 = requests.get("%s%s" % (self.url, get_path), headers=headers)
-            print("RET1: %s" % ret1.text)
+            print("RET1 (file get): %s" % ret1.text)
             if ret1.status_code != 200:
                 returns.append({
                     "filename": "",
@@ -408,7 +408,7 @@ class AppBase:
 
             content_path = "/api/v1/files/%s/content?execution_id=%s" % (item, full_execution["execution_id"])
             ret2 = requests.get("%s%s" % (self.url, content_path), headers=headers)
-            print("Ret2: %s" % ret2.text)
+            print("RET2 (file get): %s" % ret2.text)
             if ret2.status_code == 200:
                 tmpdata = ret1.json()
                 returndata = {
@@ -417,6 +417,8 @@ class AppBase:
                     "data": ret2.content,
                 }
                 returns.append(returndata)
+
+            print("RET3 (file get done)")
 
         if len(returns) == 0:
             return {
@@ -1687,7 +1689,7 @@ class AppBase:
                             print("[INFO] APP_SDK DONE: Starting NORMAL execution of function")
                             print("[INFO] Running with params (0): %s" % params) 
                             newres = await func(**params)
-                            print("[INFO] Returned from execution.")
+                            print("[INFO] Returned from execution:", newres)
                             if isinstance(newres, tuple):
                                 print("[INFO] Handling return as tuple")
                                 # Handles files.

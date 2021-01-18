@@ -807,12 +807,16 @@ const Apps = (props) => {
 		
     const reader = new FileReader();
 
-    reader.addEventListener('load', (e) => {
-      const content = e.target.result;
-			setOpenApiData(content);
-			setIsDropzone(isDropzone);
-			setOpenApiModal(true)
-    })
+		try {
+			reader.addEventListener('load', (e) => {
+				const content = e.target.result;
+				setOpenApiData(content);
+				setIsDropzone(isDropzone);
+				setOpenApiModal(true)
+			})
+		} catch (e) {
+			console.log("Error in dropzone: ", e)
+		}
 
 		reader.readAsText(files[0]);
   };
