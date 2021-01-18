@@ -909,8 +909,8 @@ func validateNewWorkerExecution(body []byte) error {
 		return err
 	}
 
-	log.Printf("LEN: %s", string(body))
-	log.Printf("LEN: %d", len(string(body)))
+	//log.Printf("LEN: %s", string(body))
+	//log.Printf("LEN: %d", len(string(body)))
 	baseExecution, err := getWorkflowExecution(ctx, execution.ExecutionId)
 	if err != nil {
 		log.Printf("[ERROR] Failed getting execution (workflowqueue) %s: %s", execution.ExecutionId, err)
@@ -1710,7 +1710,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 	user.ActiveOrg.Users = []User{}
 	workflow.ExecutingOrg = user.ActiveOrg
 	workflow.OrgId = user.ActiveOrg.Id
-	log.Printf("TRIGGERS: %d", len(workflow.Triggers))
+	//log.Printf("TRIGGERS: %d", len(workflow.Triggers))
 
 	ctx := context.Background()
 	//err = increaseStatisticsField(ctx, "total_workflows", workflow.ID, 1, workflow.OrgId)
@@ -1744,7 +1744,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	// Initialized without functions = adding a hello world node.
 	if len(newActions) == 0 {
-		log.Printf("APPENDING NEW APP FOR NEW WORKFLOW")
+		//log.Printf("APPENDING NEW APP FOR NEW WORKFLOW")
 
 		// Adds the Testing app if it's a new workflow
 		workflowapps, err := getAllWorkflowApps(ctx)
@@ -2188,8 +2188,10 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 		workflowapps, apperr := getAllWorkflowApps(ctx)
 		allAuths, err := getAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
-		if err == nil && len(allAuths) > 0 && len(workflowapps) > 0 && apperr == nil {
+		if err == nil && len(workflowapps) > 0 && apperr == nil {
+			log.Printf("Setting actions")
 			actionFixing := []Action{}
+			appsAdded := []string{}
 			for _, action := range newActions {
 				setAuthentication := false
 				if len(action.AuthenticationId) > 0 {
@@ -2253,6 +2255,12 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 								}
 							}
 
+							for _, added := range appsAdded {
+								if outerapp.ID == added {
+									found = true
+								}
+							}
+
 							// FIXME: Add app auth
 							if !found {
 								timeNow := int64(time.Now().Unix())
@@ -2281,6 +2289,8 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 								err = setWorkflowAppAuthDatastore(ctx, appAuth, appAuth.Id)
 								if err != nil {
 									log.Printf("Failed setting appauth for with name %s", appAuth.Label)
+								} else {
+									appsAdded = append(appsAdded, outerapp.ID)
 								}
 							}
 
@@ -2299,14 +2309,16 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 			}
 
 			newActions = actionFixing
+		} else {
+			log.Printf("Err: %s - %s", err, apperr)
+			//workflowapps, apperr := getAllWorkflowApps(ctx)
+			//allAuths, err := getAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
 		}
 
-		//workflow.PreviouslySaved = true
+		workflow.PreviouslySaved = true
 	}
-	//PreviouslySaved      bool   `json:"first_save" datastore:"first_save"`
 
 	workflow.Actions = newActions
-
 	newTriggers := []Trigger{}
 	for _, trigger := range workflow.Triggers {
 		log.Printf("Trigger %s: %s", trigger.TriggerType, trigger.Status)
@@ -3421,15 +3433,19 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		return WorkflowExecution{}, "Failed building missing Docker images", err
 	}
 
-	b, err := json.Marshal(workflowExecution)
-	if err == nil {
-		log.Printf("%s", string(b))
-		log.Printf("LEN: %d", len(string(b)))
-		//workflowExecution.ExecutionOrg.SyncFeatures = Org{}
-	}
+	//b, err := json.Marshal(workflowExecution)
+	//if err == nil {
+	//	log.Printf("%s", string(b))
+	//	log.Printf("LEN: %d", len(string(b)))
+	//	//workflowExecution.ExecutionOrg.SyncFeatures = Org{}
+	//}
 
-	workflowExecution.Workflow.ExecutingOrg = Org{}
-	workflowExecution.Workflow.Org = []Org{}
+	workflowExecution.Workflow.ExecutingOrg = Org{
+		Id: workflowExecution.Workflow.ExecutingOrg.Id,
+	}
+	workflowExecution.Workflow.Org = []Org{
+		workflowExecution.Workflow.ExecutingOrg,
+	}
 	//Org               []Org    `json:"org,omitempty" datastore:"org"`
 	err = setWorkflowExecution(ctx, workflowExecution, true)
 	if err != nil {
@@ -4735,6 +4751,7 @@ func setAuthenticationConfig(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if config.Action == "assign_everywhere" {
+		log.Printf("Should set authentication config")
 		q := datastore.NewQuery("workflow").Filter("org_id =", user.ActiveOrg.Id)
 		q = q.Order("-edited").Limit(35)
 
@@ -4750,14 +4767,21 @@ func setAuthenticationConfig(resp http.ResponseWriter, request *http.Request) {
 		// FIXME: Add function to remove auth from other auth's
 		actionCnt := 0
 		workflowCnt := 0
+		authenticationUsage := []AuthenticationUsage{}
 		for _, workflow := range workflows {
 			newActions := []Action{}
 			edited := false
+			usage := AuthenticationUsage{
+				WorkflowId: workflow.ID,
+				Nodes:      []string{},
+			}
+
 			for _, action := range workflow.Actions {
 				if action.AppName == auth.App.Name {
 					//log.Printf("FOUND ACTION TO UPDATE: %#v", action)
 					edited = true
 					actionCnt += 1
+					usage.Nodes = append(usage.Nodes, action.ID)
 				}
 
 				newActions = append(newActions, action)
@@ -4765,6 +4789,8 @@ func setAuthenticationConfig(resp http.ResponseWriter, request *http.Request) {
 
 			workflow.Actions = newActions
 			if edited {
+				//auth.Usage = usage
+				authenticationUsage = append(authenticationUsage, usage)
 				err = setWorkflow(ctx, workflow, workflow.ID)
 				if err != nil {
 					log.Printf("Failed setting (authupdate) workflow: %s", err)
@@ -4775,9 +4801,12 @@ func setAuthenticationConfig(resp http.ResponseWriter, request *http.Request) {
 			}
 		}
 
+		//Usage         []AuthenticationUsage `json:"usage" datastore:"usage"`
+		log.Printf("Found %d workflows, %d actions", workflowCnt, actionCnt)
 		if actionCnt > 0 && workflowCnt > 0 {
 			auth.WorkflowCount = int64(workflowCnt)
 			auth.NodeCount = int64(actionCnt)
+			auth.Usage = authenticationUsage
 
 			err = setWorkflowAppAuthDatastore(ctx, *auth, auth.Id)
 			if err != nil {

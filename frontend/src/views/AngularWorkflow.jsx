@@ -948,7 +948,16 @@ const AngularWorkflow = (props) => {
 		})
     .then((responseJson) => {
 			if (responseJson.success) {
-				setAppAuthentication(responseJson.data)
+				var newauth = []
+				for (var key in responseJson.data) {
+					if (responseJson.data[key].defined === false) {
+						continue
+					}
+
+					newauth.push(responseJson.data[key])
+				}
+
+				setAppAuthentication(newauth)
 			} else {
 				alert.error("Failed getting authentications")
 			}

@@ -701,7 +701,8 @@ func handleCreateFile(resp http.ResponseWriter, request *http.Request) {
 
 	// Loads of validation below
 	if len(curfile.Filename) == 0 || len(curfile.OrgId) == 0 || len(curfile.WorkflowId) == 0 {
-		log.Printf("[ERROR] Missing field during upload.")
+		log.Printf("[ERROR] Missing field during fileupload. Required: filename, org_id, workflow_id")
+		log.Printf("INPUT: %s", string(body))
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Missing field. Required: filename, org_id, workflow_id"}`)))
 		return

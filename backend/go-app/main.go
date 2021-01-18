@@ -614,13 +614,13 @@ func handleApiAuthentication(resp http.ResponseWriter, request *http.Request) (U
 	apikey := request.Header.Get("Authorization")
 	if len(apikey) > 0 {
 		if !strings.HasPrefix(apikey, "Bearer ") {
-			log.Printf("Apikey doesn't start with bearer")
+			log.Printf("[WARNING] Apikey doesn't start with bearer")
 			return User{}, errors.New("No bearer token for authorization header")
 		}
 
 		apikeyCheck := strings.Split(apikey, " ")
 		if len(apikeyCheck) != 2 {
-			log.Printf("Invalid format for apikey.")
+			log.Printf("[WARNING] Invalid format for apikey.")
 			return User{}, errors.New("Invalid format for apikey")
 		}
 
@@ -643,7 +643,7 @@ func handleApiAuthentication(resp http.ResponseWriter, request *http.Request) (U
 		if len(Userdata.Username) > 0 {
 			return Userdata, nil
 		} else {
-			return Userdata, errors.New(fmt.Sprintf("User is invalid - no username found"))
+			return Userdata, errors.New(fmt.Sprintf("[WARNING] User is invalid - no username found"))
 		}
 	}
 

@@ -301,6 +301,7 @@ const Admin = (props) => {
 				} else {
 					//alert.success("Successfully password!")
 					setSelectedUserModalOpen(false)
+					getAppAuthentication() 
 				}
 			}),
 		)
@@ -762,6 +763,7 @@ const Admin = (props) => {
 			.then((responseJson) => {
 				if (responseJson.success) {
 					//console.log(responseJson.data)
+					console.log(responseJson)
 					setAuthentication(responseJson.data)
 				} else {
 					alert.error("Failed getting authentications")
@@ -2033,7 +2035,7 @@ const Admin = (props) => {
 			<div style={{marginTop: 20, marginBottom: 20,}}>
 				<h2 style={{display: "inline",}}>App Authentication</h2>
 				<span style={{marginLeft: 25}}>Control the authentication options for individual apps. <b>Actions can be destructive!</b></span>
-				 .&nbsp;<a target="_blank" href="https://shuffler.io/docs/organizations#app_authentication" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more</a>
+				 &nbsp;<a target="_blank" href="https://shuffler.io/docs/organizations#app_authentication" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more</a>
 			</div>
 			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor}}/>
 			<List>
@@ -2087,7 +2089,7 @@ const Admin = (props) => {
 								style={{minWidth: 150, maxWidth: 150}}
 							/>
 							<ListItemText
-								primary={data.usage === null ? 0 : data.usage.length}
+								primary={data.workflow_count === null ? 0 : data.workflow_count}
 								style={{minWidth: 110, maxWidth: 110, overflow: "hidden"}}
 							/>
 							<ListItemText
@@ -2108,14 +2110,29 @@ const Admin = (props) => {
 								>
 									<EditIcon color="primary"/>
 								</IconButton>
-								<IconButton 
-									style={{marginRight: 10}}
-									onClick={() => {
-										editAuthenticationConfig(data.id)
-									}}
-								>
-									<SelectAllIcon color="primary"/>
-								</IconButton>
+								{data.defined ? 
+									<Tooltip color="primary" title="Set in EVERY workflow" placement="top">
+										<IconButton 
+											style={{marginRight: 10}}
+											disabled={data.defined === false}
+											onClick={() => {
+												editAuthenticationConfig(data.id)
+											}}
+										>
+											<SelectAllIcon color={data.defined ? "primary" : "secondary"} />
+										</IconButton>
+									</Tooltip>
+								: 
+									<Tooltip color="primary" title="Must edit before you can set in all workflows" placement="top">
+										<IconButton 
+											style={{marginRight: 10}}
+											onClick={() => {
+											}}
+										>
+											<SelectAllIcon color={data.defined ? "primary" : "secondary"} />
+										</IconButton>
+									</Tooltip>
+								}
 								<IconButton 
 									onClick={() => {
 										deleteAuthentication(data)
