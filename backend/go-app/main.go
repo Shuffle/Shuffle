@@ -6669,6 +6669,9 @@ func handleAppHotload(location string, forceUpdate bool) error {
 		return err
 	}
 
+	cacheKey := fmt.Sprintf("workflowapps-sorted")
+	requestCache.Delete(cacheKey)
+
 	return nil
 }
 
