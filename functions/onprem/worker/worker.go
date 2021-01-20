@@ -852,6 +852,10 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 			Type:   "json-file",
 			Config: map[string]string{},
 		},
+		Resources: container.Resources{
+			CPUShares: 256,
+			CPUPeriod: 10000,
+		},
 	}
 
 	// form container id and use it as network source if it's not empty

@@ -479,11 +479,12 @@ const AppCreator = (props) => {
 		for (let [path, pathvalue] of Object.entries(data.paths)) {
 			for (let [method, methodvalue] of Object.entries(pathvalue)) {
 				if (methodvalue === null) {
-					alert.info("Skipped method "+method)
+					alert.info("Skipped method (null)"+method)
 					continue
 				}
 
 				if (!allowedfunctions.includes(method.toUpperCase())) {
+					alert.info("Skipped method (not allowed) "+method)
 					continue
 				}
 
@@ -556,7 +557,7 @@ const AppCreator = (props) => {
 				}
 
 				// HAHAHA wtf is this.
-				if (methodvalue.responses !== undefined) {
+				if (methodvalue.responses !== undefined && methodvalue.responses !== null) {
 					if (methodvalue.responses.default !== undefined) {
 						if (methodvalue.responses.default.content !== undefined) {
 							if (methodvalue.responses.default.content["text/plain"] !== undefined) {
@@ -1818,7 +1819,7 @@ const AppCreator = (props) => {
 						addPathQuery()
 					}}>New query</Button> 				
 					{currentActionMethod === "POST" ?
-						<Button color="primary" variant={fileUploadEnabled ? "contained" : "outlined"} style={{marginLeft: 10, marginTop: "5px", marginBottom: "10px", borderRadius: "0px"}} onClick={() => {
+						<Button disabled color="primary" variant={fileUploadEnabled ? "contained" : "outlined"} style={{marginLeft: 10, marginTop: "5px", marginBottom: "10px", borderRadius: "0px"}} onClick={() => {
 							setFileUploadEnabled(!fileUploadEnabled)
 							if (fileUploadEnabled && currentAction["file_field"].length > 0) {
 								setActionField("file_field", "")

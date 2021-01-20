@@ -190,7 +190,7 @@ func fixTags(tags []string) []string {
 */
 
 // Custom Docker image builder wrapper in memory
-func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder string) error {
+func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder string, downloadIfFail bool) error {
 	ctx := context.Background()
 	client, err := client.NewEnvClient()
 	if err != nil {

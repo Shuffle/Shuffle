@@ -21,6 +21,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	//"github.com/docker/docker/api/types/filters"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/satori/go.uuid"
 	//network "github.com/docker/docker/api/types/network"
@@ -311,15 +312,12 @@ func getStats() {
 		return
 	}
 
-	fmt.Printf("[INFO] memory total: %d bytes\n", memory.Total)
-	fmt.Printf("[INFO] memory used: %d bytes\n", memory.Used)
-
 	before, err := cpu.Get()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		return
 	}
-	time.Sleep(time.Duration(500) * time.Millisecond)
+	time.Sleep(time.Duration(250) * time.Millisecond)
 	after, err := cpu.Get()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
@@ -327,6 +325,8 @@ func getStats() {
 	}
 	total := float64(after.Total - before.Total)
 
+	fmt.Printf("[INFO] memory total: %d bytes\n", memory.Total)
+	fmt.Printf("[INFO] memory used: %d bytes\n", memory.Used)
 	fmt.Printf("[INFO] cpu used  : %f%%\n", float64(after.User-before.User)/total*100)
 	fmt.Printf("[INFO] cpu system: %f%%\n", float64(after.System-before.System)/total*100)
 	fmt.Printf("[INFO] cpu idle  : %f%%\n", float64(after.Idle-before.Idle)/total*100)
@@ -408,7 +408,7 @@ func main() {
 		},
 	}
 
-	getStats()
+	//getStats()
 
 	if (len(httpProxy) > 0 || len(httpsProxy) > 0) && baseUrl != "http://shuffle-backend:5001" {
 		client = &http.Client{}
@@ -440,6 +440,7 @@ func main() {
 	hasStarted := false
 	for {
 		//log.Printf("Prerequest")
+		//go getStats()
 		newresp, err := client.Do(req)
 		executionCount := getRunningWorkers(ctx, workerTimeout)
 		//log.Printf("Postrequest")
@@ -626,10 +627,13 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
 		All: true,
 	})
+	//Filters: filters.Args{
+	//	map[string][]string{"ancestor": {"<imagename>:<version>"}},
+	//},
 
 	if err != nil {
-		log.Printf("Error getting containers: %s", err)
-		return 0
+		log.Printf("[ERROR] Error getting containers: %s", err)
+		return maxConcurrency
 	}
 
 	currenttime := time.Now().Unix()

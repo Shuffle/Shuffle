@@ -909,8 +909,6 @@ func validateNewWorkerExecution(body []byte) error {
 		return err
 	}
 
-	//log.Printf("LEN: %s", string(body))
-	//log.Printf("LEN: %d", len(string(body)))
 	baseExecution, err := getWorkflowExecution(ctx, execution.ExecutionId)
 	if err != nil {
 		log.Printf("[ERROR] Failed getting execution (workflowqueue) %s: %s", execution.ExecutionId, err)
@@ -6421,7 +6419,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 	if len(extra) == 0 {
 		log.Printf("[INFO] Starting build of %d containers (FIRST)", len(buildLaterFirst))
 		for _, item := range buildLaterFirst {
-			err = buildImageMemory(fs, item.Tags, item.Extra)
+			err = buildImageMemory(fs, item.Tags, item.Extra, true)
 			if err != nil {
 				log.Printf("Failed image build memory: %s", err)
 			} else {
@@ -6435,7 +6433,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 
 		log.Printf("[INFO] Starting build of %d skipped docker images", len(buildLaterList))
 		for _, item := range buildLaterList {
-			err = buildImageMemory(fs, item.Tags, item.Extra)
+			err = buildImageMemory(fs, item.Tags, item.Extra, true)
 			if err != nil {
 				log.Printf("[INFO] Failed image build memory: %s", err)
 			} else {
@@ -6647,15 +6645,19 @@ func getAllSchedules(ctx context.Context, orgId string) ([]ScheduleOld, error) {
 	return schedules, nil
 }
 
+//FIXME: Add cursor
 func getAllWorkflowApps(ctx context.Context) ([]WorkflowApp, error) {
 	var allworkflowapps []WorkflowApp
-	q := datastore.NewQuery("workflowapp").Order("-edited").Limit(50)
+	q := datastore.NewQuery("workflowapp").Order("-edited").Limit(40)
+	//Activated     bool   `json:"activated" yaml:"activated" required:false datastore:"activated"`
 	//Activated     bool   `json:"activated" yaml:"activated" required:false datastore:"activated"`
 
 	_, err := dbclient.GetAll(ctx, q, &allworkflowapps)
 	if err != nil {
 		if strings.Contains(fmt.Sprintf("%s", err), "ResourceExhausted") {
-			q := datastore.NewQuery("workflowapp").Limit(40).Order("-edited")
+			//datastore.NewQuery("workflowapp").Limit(30).Order("-edited")
+			q = datastore.NewQuery("workflowapp").Order("-edited").Limit(27)
+			//q := q.Limit(25)
 			_, err := dbclient.GetAll(ctx, q, &allworkflowapps)
 			if err != nil {
 				return []WorkflowApp{}, err

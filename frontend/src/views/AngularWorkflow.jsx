@@ -153,6 +153,7 @@ const AngularWorkflow = (props) => {
 	const [requiresAuthentication, setRequiresAuthentication] = React.useState(false)
 	const [rightSideBarOpen, setRightSideBarOpen] = React.useState(false)
 	const [showSkippedActions, setShowSkippedActions] = React.useState(false)
+	const [lastExecution, setLastExecution] = React.useState("")
 
 	const [selectedResult, setSelectedResult] = React.useState({})
 	const [codeModalOpen, setCodeModalOpen] = React.useState(false);
@@ -6380,13 +6381,14 @@ const AngularWorkflow = (props) => {
 				</Breadcrumbs>	
 				<Button 
 					style={{borderRadius: "0px"}}
+					variant="outlined"
 					onClick={() => {
 						getWorkflowExecution(props.match.params.key)
 					}} color="primary">
 					<CachedIcon style={{marginRight: 10}}/>
 					Refresh	executions
 				</Button>
-				<Divider style={{backgroundColor: "white", marginTop: 10, marginBottom: 10,}}/>
+				<Divider style={{backgroundColor: "rgba(255,255,255,0.5)", marginTop: 10, marginBottom: 10,}}/>
 				{workflowExecutions.length > 0 ? 
 					<div>
 						{workflowExecutions.map((data, index) => {
@@ -6405,6 +6407,7 @@ const AngularWorkflow = (props) => {
 							}
 
 							return (
+								<Tooltip title={data.result} placement="left-start">
 								<Paper elevation={5} key={data.execution_id} square style={executionPaperStyle} onMouseOver={() => {}} onMouseOut={() => {}} onClick={() => {
 
 									if (data.result === undefined || data.result === null || data.result.length === 0) {
@@ -6420,7 +6423,7 @@ const AngularWorkflow = (props) => {
 									setExecutionData(data)
 								}}>
 									<div style={{display: "flex", flex: 1}}>
-										<div style={{marginLeft: 5, width: 2, backgroundColor: statusColor, marginRight: 5}} />
+										<div style={{marginLeft: 0, width: lastExecution === data.execution_id ? 4 : 2, backgroundColor: statusColor, marginRight: 5}} />
 										<div style={{height: "100%", width: 40, borderColor: "white", marginRight: 15}}>
 											{getExecutionSourceImage(data)}
 										</div>
@@ -6436,9 +6439,14 @@ const AngularWorkflow = (props) => {
 											: null}
 									</div>
 									<Tooltip title={"Inspect execution"} placement="top">
-										<KeyboardArrowRightIcon style={{marginTop: "auto", marginBottom: "auto"}}/>
+										{lastExecution === data.execution_id ?
+											<KeyboardArrowRightIcon style={{color: "#f85a3e", marginTop: "auto", marginBottom: "auto"}}/>
+											:
+											<KeyboardArrowRightIcon style={{marginTop: "auto", marginBottom: "auto"}}/>
+										}
 									</Tooltip>
 								</Paper>
+								</Tooltip>
 							)
 							return 
 						})}
@@ -6457,6 +6465,7 @@ const AngularWorkflow = (props) => {
 							stop()
 							getWorkflowExecution(props.match.params.key)
 							setExecutionModalView(0)
+							setLastExecution(executionData.execution_id)
 					}}>
 						<IconButton style={{paddingLeft: 0, marginTop: "auto", marginBottom: "auto", }} onClick={() => {}}>
 							<ArrowBackIcon style={{color: "rgba(255,255,255,0.5)",}} />
@@ -6616,6 +6625,21 @@ const AngularWorkflow = (props) => {
 	if (validate.valid && typeof(validate.result) === "string") {
 		validate.result = JSON.parse(validate.result)
 	}
+
+	//if (codeModalOpen && selectedResult.result.includes("file_id")) {
+	//	console.log("SHOW RESULT WITH FILES: ", selectedResult.result)
+	//	//const regex = "\b[0-9a-f]{8}\b-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-\b[0-9a-f]{12}\b"
+	//	//const regex = /^[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}/i
+	//	const regex = /^[A-F\d]{8}-[A-F\d]{4}-4[A-F\d]{3}-[89AB][A-F\d]{3}-[A-F\d]{12}$/i
+	//	//const found = selectedResult.result.match(regex)
+	//	const found = "hello how are you cf80fa70-65cf-4963-b474-b459a6dead81 what".match(regex)
+	//	const regex = /\${(\w{8}-\w{4}-\w{3}-\w{3}-\w)}/g
+	//	const found = placeholder.match(regex)
+
+	//	console.log("FOUND: ", found)
+
+	//	//cf80fa70-65cf-4963-b474-b459a6dead81
+	//}
 
 	const codePopoutModal = !codeModalOpen ? null : 
 		<Draggable

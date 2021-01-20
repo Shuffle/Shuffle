@@ -601,7 +601,7 @@ class AppBase:
 
 
         self.full_execution = fullexecution
-        self.logger.info("AFTER FULLEXEC stream result")
+        self.logger.info("AFTER FULLEXEC stream result (init)")
 
         # Gets the value at the parenthesis level you want
         def parse_nested_param(string, level):

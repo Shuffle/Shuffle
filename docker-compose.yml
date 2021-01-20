@@ -16,7 +16,7 @@ services:
     depends_on:
       - backend
   backend:
-    #build: ./backend
+    build: ./backend
     image: ghcr.io/frikky/shuffle-backend:0.8.54
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
