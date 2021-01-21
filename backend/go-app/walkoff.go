@@ -38,7 +38,7 @@ import (
 	// "google.golang.org/api/option"
 
 	"github.com/patrickmn/go-cache"
-	//"google.golang.org/api/iterator"
+	"google.golang.org/api/iterator"
 )
 
 var localBase = "http://localhost:5001"
@@ -1746,7 +1746,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 		//log.Printf("APPENDING NEW APP FOR NEW WORKFLOW")
 
 		// Adds the Testing app if it's a new workflow
-		workflowapps, err := getAllWorkflowApps(ctx)
+		workflowapps, err := getAllWorkflowApps(ctx, 100)
 		if err == nil {
 			// FIXME: Add real env
 			envName := "Shuffle"
@@ -2185,7 +2185,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("[WORKFLOW INIT] NOT PREVIOUSLY SAVED - SET ACTION AUTH!")
 		//AuthenticationId string `json:"authentication_id,omitempty" datastore:"authentication_id"`
 
-		workflowapps, apperr := getAllWorkflowApps(ctx)
+		workflowapps, apperr := getAllWorkflowApps(ctx, 100)
 		allAuths, err := getAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
 		if err == nil && len(workflowapps) > 0 && apperr == nil {
 			log.Printf("Setting actions")
@@ -2310,7 +2310,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 			newActions = actionFixing
 		} else {
 			log.Printf("Err: %s - %s", err, apperr)
-			//workflowapps, apperr := getAllWorkflowApps(ctx)
+			//workflowapps, apperr := getAllWorkflowApps(ctx, 100)
 			//allAuths, err := getAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
 		}
 
@@ -2500,7 +2500,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	//if item, err := memcache.Get(ctx, memcacheName); err == memcache.ErrCacheMiss {
 	//	// Not in cache
 	//	log.Printf("Apps not in cache.")
-	workflowApps, err = getAllWorkflowApps(ctx)
+	workflowApps, err = getAllWorkflowApps(ctx, 100)
 	if err != nil {
 		log.Printf("Failed getting all workflow apps from database: %s", err)
 		resp.WriteHeader(401)
@@ -5198,7 +5198,7 @@ func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 	//	return
 	//}
 
-	workflowapps, err := getAllWorkflowApps(ctx)
+	workflowapps, err := getAllWorkflowApps(ctx, 100)
 	if err != nil {
 		log.Printf("Failed getting apps (getworkflowapps): %s", err)
 		resp.WriteHeader(401)
@@ -5388,7 +5388,7 @@ func getSpecificApps(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - continue the search here with github repos etc.
 	// Caching might be smart :D
 	ctx := context.Background()
-	workflowapps, err := getAllWorkflowApps(ctx)
+	workflowapps, err := getAllWorkflowApps(ctx, 100)
 	if err != nil {
 		log.Printf("Error: Failed getting workflowapps: %s", err)
 		resp.WriteHeader(401)
@@ -5903,7 +5903,7 @@ func loadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string) error {
 
 	ctx := context.Background()
-	workflowapps, err := getAllWorkflowApps(ctx)
+	workflowapps, err := getAllWorkflowApps(ctx, 100)
 	appCounter := 0
 	if err != nil {
 		log.Printf("Failed to get existing generated apps")
@@ -6275,7 +6275,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 				}
 
 				if len(allapps) == 0 {
-					allapps, err = getAllWorkflowApps(ctx)
+					allapps, err = getAllWorkflowApps(ctx, 100)
 					if err != nil {
 						log.Printf("Failed getting apps to verify: %s", err)
 						continue
@@ -6492,7 +6492,7 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	allapps, err := getAllWorkflowApps(ctx)
+	allapps, err := getAllWorkflowApps(ctx, 100)
 	if err != nil {
 		log.Printf("Failed getting apps to verify: %s", err)
 		resp.WriteHeader(401)
@@ -6657,86 +6657,99 @@ func getAllSchedules(ctx context.Context, orgId string) ([]ScheduleOld, error) {
 }
 
 //FIXME: Add cursor
-func getAllWorkflowApps(ctx context.Context) ([]WorkflowApp, error) {
+func getAllWorkflowApps(ctx context.Context, maxLen int) ([]WorkflowApp, error) {
 	var apps []WorkflowApp
-	//query := datastore.NewQuery("workflowapp").Order("-edited").Limit(20)
-	query := datastore.NewQuery("workflowapp").Order("-edited").Limit(40)
+	query := datastore.NewQuery("workflowapp").Order("-edited").Limit(20)
+	//query := datastore.NewQuery("workflowapp").Order("-edited").Limit(40)
 
-	//cacheKey := fmt.Sprintf("workflowapps-sorted")
-	//if value, found := requestCache.Get(cacheKey); found {
-	//	parsedValue := value.([]WorkflowApp)
-	//	log.Printf("[INFO] Returning %d apps", len(parsedValue))
-	//	return parsedValue, nil
-	//}
+	cacheKey := fmt.Sprintf("workflowapps-sorted")
+	if value, found := requestCache.Get(cacheKey); found {
+		parsedValue := value.(*[]WorkflowApp)
+		log.Printf("[INFO] Returning %d apps from cache", len(*parsedValue))
+		return *parsedValue, nil
+	}
 
-	//maxLen := 100
-	//cursorStr := ""
-	//var app WorkflowApp
-	//for {
-	//	it := dbclient.Run(ctx, query)
-	//	_, err := it.Next(&app)
-	//	for err == nil {
-	//		found := false
-	//		for _, innerapp := range apps {
-	//			if innerapp.Name == app.Name {
-	//				found = true
-	//				break
+	cursorStr := ""
 
-	//			}
-	//		}
-
-	//		if found == false {
-	//			apps = append(apps, app)
-	//		}
-	//		_, err = it.Next(&app)
-	//	}
-
-	//	if err != iterator.Done {
-	//		log.Fatalf("Failed fetching results: %v", err)
-	//	}
-
-	//	// Get the cursor for the next page of results.
-	//	nextCursor, err := it.Cursor()
-	//	if err != nil {
-	//		log.Printf("Cursorerror: %s", err)
-	//		break
-	//	} else {
-	//		//log.Printf("NEXTCURSOR: %s", nextCursor)
-	//		nextStr := fmt.Sprintf("%s", nextCursor)
-	//		if cursorStr == nextStr {
-	//			break
-	//		}
-
-	//		cursorStr = nextStr
-	//		query = query.Start(nextCursor)
-	//		//cursorStr = nextCursor
-	//		//break
-	//	}
-
-	//	if len(apps) > maxLen {
-	//		break
-	//	}
-	//}
-
-	//if len(apps) > 20 {
-	//	requestCache.Set(cacheKey, apps, cache.DefaultExpiration)
-	//}
-
-	var allworkflowapps []WorkflowApp
-	_, err := dbclient.GetAll(ctx, query, &allworkflowapps)
-	if err != nil {
-		if strings.Contains(fmt.Sprintf("%s", err), "ResourceExhausted") {
-			//datastore.NewQuery("workflowapp").Limit(30).Order("-edited")
-			query = datastore.NewQuery("workflowapp").Order("-edited").Limit(25)
-			//q := q.Limit(25)
-			_, err := dbclient.GetAll(ctx, query, &allworkflowapps)
+	// NOT BEING UPDATED
+	// FIXME: Update the app with the correct actions. HOW DOES THIS WORK??
+	// Seems like only actions are wrong. Could get the app individually.
+	// Guessing it's a memory issue.
+	//Actions        []WorkflowAppAction `json:"actions" yaml:"actions" required:true datastore:"actions,noindex"`
+	//errors.New(nil)
+	var err error
+	for {
+		it := dbclient.Run(ctx, query)
+		//_, err = it.Next(&app)
+		for {
+			var app WorkflowApp
+			_, err := it.Next(&app)
 			if err != nil {
-				return []WorkflowApp{}, err
+				break
 			}
+
+			found := false
+			//log.Printf("ACTIONS: %d - %s", len(app.Actions), app.Name)
+			for _, innerapp := range apps {
+				if innerapp.Name == app.Name {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				apps = append(apps, app)
+			}
+		}
+
+		if err != iterator.Done {
+			//log.Printf("[INFO] Failed fetching results: %v", err)
+			//break
+		}
+
+		// Get the cursor for the next page of results.
+		nextCursor, err := it.Cursor()
+		if err != nil {
+			log.Printf("Cursorerror: %s", err)
+			break
 		} else {
-			return []WorkflowApp{}, err
+			//log.Printf("NEXTCURSOR: %s", nextCursor)
+			nextStr := fmt.Sprintf("%s", nextCursor)
+			if cursorStr == nextStr {
+				break
+			}
+
+			cursorStr = nextStr
+			query = query.Start(nextCursor)
+			//cursorStr = nextCursor
+			//break
+		}
+
+		if len(apps) > maxLen {
+			break
 		}
 	}
+
+	if len(apps) > 20 {
+		log.Printf("[INFO] Setting %d apps in cache", len(apps))
+		requestCache.Set(cacheKey, &apps, cache.DefaultExpiration)
+	}
+
+	//var allworkflowapps []WorkflowApp
+	//_, err := dbclient.GetAll(ctx, query, &allworkflowapps)
+	//if err != nil {
+	//	if strings.Contains(fmt.Sprintf("%s", err), "ResourceExhausted") {
+	//		//datastore.NewQuery("workflowapp").Limit(30).Order("-edited")
+	//		query = datastore.NewQuery("workflowapp").Order("-edited").Limit(25)
+	//		//q := q.Limit(25)
+	//		_, err := dbclient.GetAll(ctx, query, &allworkflowapps)
+	//		if err != nil {
+	//			return []WorkflowApp{}, err
+	//		}
+	//	} else {
+	//		return []WorkflowApp{}, err
+	//	}
+	//}
 
 	return apps, nil
 }

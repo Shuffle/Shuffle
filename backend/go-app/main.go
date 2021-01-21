@@ -6396,7 +6396,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 
 	// FIXME: CHECK IF SAME NAME AS NORMAL APP
 	// Can't overwrite existing normal app
-	workflowApps, err := getAllWorkflowApps(ctx)
+	workflowApps, err := getAllWorkflowApps(ctx, 100)
 	if err != nil {
 		log.Printf("Failed getting all workflow apps from database to verify: %s", err)
 		resp.WriteHeader(401)
@@ -7422,7 +7422,7 @@ func runInit(ctx context.Context) {
 
 	// Getting apps to see if we should initialize a test
 	log.Printf("Getting remote workflow apps")
-	workflowapps, err := getAllWorkflowApps(ctx)
+	workflowapps, err := getAllWorkflowApps(ctx, 100)
 	if err != nil {
 		log.Printf("Failed getting apps (runInit): %s", err)
 	} else if err == nil && len(workflowapps) > 0 {
