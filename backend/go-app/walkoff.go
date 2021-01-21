@@ -2430,11 +2430,11 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if len(workflow.ExecutionVariables) > 0 {
-		log.Printf("Found %d execution variable(s)", len(workflow.ExecutionVariables))
+		log.Printf("[INFO] Found %d execution variable(s)", len(workflow.ExecutionVariables))
 	}
 
 	if len(workflow.WorkflowVariables) > 0 {
-		log.Printf("Found %d workflow variable(s)", len(workflow.WorkflowVariables))
+		log.Printf("[INFO] Found %d workflow variable(s)", len(workflow.WorkflowVariables))
 	}
 
 	// FIXME - do actual checks ROFL
@@ -4785,7 +4785,8 @@ func setAuthenticationConfig(resp http.ResponseWriter, request *http.Request) {
 
 			for _, action := range workflow.Actions {
 				if action.AppName == auth.App.Name {
-					//log.Printf("FOUND ACTION TO UPDATE: %#v", action)
+					action.AuthenticationId = auth.Id
+
 					edited = true
 					actionCnt += 1
 					usage.Nodes = append(usage.Nodes, action.ID)
@@ -4809,11 +4810,12 @@ func setAuthenticationConfig(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		//Usage         []AuthenticationUsage `json:"usage" datastore:"usage"`
-		log.Printf("Found %d workflows, %d actions", workflowCnt, actionCnt)
+		log.Printf("[INFO] Found %d workflows, %d actions", workflowCnt, actionCnt)
 		if actionCnt > 0 && workflowCnt > 0 {
 			auth.WorkflowCount = int64(workflowCnt)
 			auth.NodeCount = int64(actionCnt)
 			auth.Usage = authenticationUsage
+			auth.Defined = true
 
 			err = setWorkflowAppAuthDatastore(ctx, *auth, auth.Id)
 			if err != nil {

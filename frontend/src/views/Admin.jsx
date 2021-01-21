@@ -2042,15 +2042,19 @@ const Admin = (props) => {
 				<ListItem>
 					<ListItemText
 						primary="Icon"
-						style={{minWidth: 150, maxWidth: 150}}
+						style={{minWidth: 75, maxWidth: 75}}
 					/>
 					<ListItemText
 						primary="Label"
-						style={{minWidth: 275, maxWidth: 275}}
+						style={{minWidth: 225, maxWidth: 225}}
 					/>
 					<ListItemText
 						primary="App Name"
 						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="Ready"
+						style={{minWidth: 100, maxWidth: 100}}
 					/>
 					<ListItemText
 						primary="Workflows"
@@ -2078,15 +2082,19 @@ const Admin = (props) => {
 						<ListItem key={index} style={{backgroundColor: bgColor}}>
 							<ListItemText
 								primary=<img alt="" src={data.app.large_image} style={{maxWidth: 50,}} />
-								style={{minWidth: 150, maxWidth: 150}}
+								style={{minWidth: 75, maxWidth: 75}}
 							/>
 							<ListItemText
 								primary={data.label}
-								style={{minWidth: 275, maxWidth: 275}}
+								style={{minWidth: 225, maxWidth: 225}}
 							/>
 							<ListItemText
 								primary={data.app.name}
 								style={{minWidth: 150, maxWidth: 150}}
+							/>
+							<ListItemText
+								primary={data.defined === false ? "No" : "Yes"}
+								style={{minWidth: 100, maxWidth: 100}}
 							/>
 							<ListItemText
 								primary={data.workflow_count === null ? 0 : data.workflow_count}
