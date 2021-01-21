@@ -6407,7 +6407,7 @@ const AngularWorkflow = (props) => {
 							}
 
 							return (
-								<Tooltip title={data.result} placement="left-start">
+								<Tooltip key={data.execution_id} title={data.result} placement="left-start">
 								<Paper elevation={5} key={data.execution_id} square style={executionPaperStyle} onMouseOver={() => {}} onMouseOut={() => {}} onClick={() => {
 
 									if (data.result === undefined || data.result === null || data.result.length === 0) {

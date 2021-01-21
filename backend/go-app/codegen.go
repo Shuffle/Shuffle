@@ -370,11 +370,14 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 	fileGrabber := ``
 	fileParameter := ``
 	if method == "post" && len(fileField) > 0 {
-		fileGrabber = `filedata = self.get_file(file_id)`
-		//fileGrabber += "\n        print(filedata)"
-		fileAdder = fmt.Sprintf(`files = {"%s": (filedata["filename"], filedata["data"])}`, fileField)
-		fileBalance = ", files=files"
 		fileParameter = ", file_id"
+		fileGrabber = `filedata = self.get_file(file_id)`
+
+		// This indentation is confusing (but correct) ROFL
+		fileAdder = fmt.Sprintf(`if not filedata["success"]:
+            return file_id+" is not a valid File ID"
+        files = {"%s": (filedata["filename"], filedata["data"])}`, fileField)
+		fileBalance = ", files=files"
 	}
 
 	// Extra param for url if it's changeable

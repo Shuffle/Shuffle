@@ -3278,6 +3278,10 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		}
 
 		action.LargeImage = ""
+		if len(action.Label) == 0 {
+			action.Label = action.ID
+		}
+		log.Printf("LABEL: %s", action.Label)
 		newActions = append(newActions, action)
 
 		// If the node is NOT found, it's supposed to be set to SKIPPED,

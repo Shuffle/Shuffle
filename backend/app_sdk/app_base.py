@@ -382,7 +382,7 @@ class AppBase:
         for item in value:
             print("VALUE: %s" % item)
             if len(item) != 36:
-                print("Bad length for value")
+                print("Bad length for file value %s" % item)
                 continue
                 #return {
                 #    "filename": "",
