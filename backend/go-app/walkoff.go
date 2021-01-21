@@ -2718,6 +2718,8 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		Errors:  workflow.Errors,
 	}
 
+	cacheKey := fmt.Sprintf("workflowapps-sorted")
+	requestCache.Delete(cacheKey)
 	log.Printf("Saved new version of workflow %s (%s) for org %s", workflow.Name, fileId, workflow.OrgId)
 	resp.WriteHeader(200)
 	newBody, err := json.Marshal(returndata)

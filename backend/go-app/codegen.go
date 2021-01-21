@@ -244,7 +244,7 @@ func buildStructure(swagger *openapi3.Swagger, curHash string) (string, error) {
 
 // This function generates the python code that's being used.
 // This is really meta when you program it. Handling parameters is hard here.
-func makePythoncode(swagger *openapi3.Swagger, name, url, method string, parameters, optionalQueries, headers []string) (string, string) {
+func makePythoncode(swagger *openapi3.Swagger, name, url, method string, parameters, optionalQueries, headers []string, fileField string) (string, string) {
 	method = strings.ToLower(method)
 	queryString := ""
 	queryData := ""
@@ -368,17 +368,19 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 	fileBalance := ""
 	fileAdder := ``
 	fileGrabber := ``
-	if method == "post" && strings.Contains(functionname, "filescan") {
-		fileGrabber = `filedata = self.get_file("63264006-5958-451a-bff1-1975495fb4d8")`
+	fileParameter := ``
+	if method == "post" && len(fileField) > 0 {
+		fileGrabber = `filedata = self.get_file(file_id)`
 		//fileGrabber += "\n        print(filedata)"
-		fileAdder = `files = {"file": (filedata["filename"], filedata["data"])}`
+		fileAdder = fmt.Sprintf(`files = {"%s": (filedata["filename"], filedata["data"])}`, fileField)
 		fileBalance = ", files=files"
+		fileParameter = ", file_id"
 	}
 
 	// Extra param for url if it's changeable
 	// Extra param for authentication scheme(s)
 	// The last weird one is the body.. Tabs & spaces sucks.
-	data := fmt.Sprintf(`    async def %s(self%s%s%s%s%s%s):
+	data := fmt.Sprintf(`    async def %s(self%s%s%s%s%s%s%s):
         %s
         url=f"%s%s"
         %s
@@ -392,6 +394,7 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 		functionname,
 		authenticationParameter,
 		urlParameter,
+		fileParameter,
 		parameterData,
 		queryString,
 		bodyParameter,
@@ -412,7 +415,7 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 		fileBalance,
 	)
 
-	if strings.Contains(functionname, "get_list_rulesssss") {
+	if strings.Contains(functionname, "filescan") {
 		//log.Printf("FUNCTION: %s", data)
 		log.Println(data)
 		log.Printf("Queries: %s", queryString)
@@ -1097,7 +1100,7 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 		action.Parameters = append(action.Parameters, optionalParam)
 	}
 
-	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "connect", parameters, optionalQueries, headersFound)
+	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "connect", parameters, optionalQueries, headersFound, "")
 
 	if len(functionname) > 0 {
 		action.Name = functionname
@@ -1232,7 +1235,7 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 		action.Parameters = append(action.Parameters, optionalParam)
 	}
 
-	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "get", parameters, optionalQueries, headersFound)
+	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "get", parameters, optionalQueries, headersFound, "")
 
 	if len(functionname) > 0 {
 		action.Name = functionname
@@ -1365,7 +1368,7 @@ func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 		action.Parameters = append(action.Parameters, optionalParam)
 	}
 
-	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "head", parameters, optionalQueries, headersFound)
+	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "head", parameters, optionalQueries, headersFound, "")
 
 	if len(functionname) > 0 {
 		action.Name = functionname
@@ -1499,7 +1502,7 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 		action.Parameters = append(action.Parameters, optionalParam)
 	}
 
-	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "delete", parameters, optionalQueries, headersFound)
+	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "delete", parameters, optionalQueries, headersFound, "")
 
 	if len(functionname) > 0 {
 		action.Name = functionname
@@ -1541,6 +1544,40 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 			Type: "string",
 		},
 	})
+
+	fileField := ""
+	if path.Post.RequestBody != nil {
+		//log.Printf("DATA: %#v",
+		value := path.Post.RequestBody.Value
+		//log.Printf("VAL: %#v", value.Content)
+		if val, ok := value.Content["multipart/form-data"]; ok {
+			if val.Schema.Value != nil {
+				if innerval, ok := val.Schema.Value.Properties["fieldname"]; ok {
+					if extensionvalue, ok := innerval.Value.ExtensionProps.Extensions["value"]; ok {
+						fieldname := extensionvalue.(json.RawMessage)
+						newName := string(fmt.Sprintf("%s", string(fieldname)))
+						if newName[0] == 0x22 && newName[len(newName)-1] == 0x22 {
+							parsedName := newName[1 : len(newName)-1]
+							log.Printf("Parse name: %s", parsedName)
+							fileField = parsedName
+
+							curParam := WorkflowAppActionParameter{
+								Name:        "file_id",
+								Description: "Files to be uploaded",
+								Multiline:   false,
+								Required:    true,
+								Schema: SchemaDefinition{
+									Type: "string",
+								},
+							}
+
+							action.Parameters = append(action.Parameters, curParam)
+						}
+					}
+				}
+			}
+		}
+	}
 
 	headersFound := []string{}
 	if len(path.Post.Parameters) > 0 {
@@ -1631,11 +1668,16 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 		action.Parameters = append(action.Parameters, optionalParam)
 	}
 
-	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "post", parameters, optionalQueries, headersFound)
+	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "post", parameters, optionalQueries, headersFound, fileField)
 
 	if len(functionname) > 0 {
 		action.Name = functionname
 	}
+
+	//log.Printf("PARAMS: %d", len(action.Parameters))
+	//for _, param := range action.Parameters {
+	//	log.Printf("%#v", param)
+	//}
 
 	return action, curCode
 }
@@ -1764,7 +1806,7 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 		action.Parameters = append(action.Parameters, optionalParam)
 	}
 
-	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "patch", parameters, optionalQueries, headersFound)
+	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "patch", parameters, optionalQueries, headersFound, "")
 
 	if len(functionname) > 0 {
 		action.Name = functionname
@@ -1898,7 +1940,7 @@ func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 		action.Parameters = append(action.Parameters, optionalParam)
 	}
 
-	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "put", parameters, optionalQueries, headersFound)
+	functionname, curCode := makePythoncode(swagger, functionName, baseUrl, "put", parameters, optionalQueries, headersFound, "")
 
 	if len(functionname) > 0 {
 		action.Name = functionname

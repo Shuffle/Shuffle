@@ -19,6 +19,7 @@ import DialogActions from '@material-ui/core/DialogActions';
 import TextField from '@material-ui/core/TextField';
 import Tooltip from '@material-ui/core/Tooltip';
 import CheckCircleIcon from '@material-ui/icons/CheckCircle';
+import AttachFileIcon from '@material-ui/icons/AttachFile';
 import Breadcrumbs from '@material-ui/core/Breadcrumbs';
 import AppsIcon from '@material-ui/icons/Apps';
 import CircularProgress from '@material-ui/core/CircularProgress';
@@ -551,7 +552,19 @@ const AppCreator = (props) => {
 									//JSON.stringify(tmpobject, null, 2)
 								}
 							}
-							console.log("NOT APPLICATION/JSON: ", methodvalue["requestBody"]["content"])
+
+							console.log(methodvalue["requestBody"]["content"])
+							if (methodvalue["requestBody"]["content"]["multipart/form-data"] !== undefined) {
+								if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"] !== undefined) {
+									if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["type"] === "object") {
+										const fieldname = methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["properties"]["fieldname"]
+										if (fieldname !== undefined) {
+											console.log("FIELDNAME: ", fieldname)
+											newaction.file_field = fieldname["value"]
+										}
+									}
+								}
+							}
 						}
 					}
 				}
@@ -820,7 +833,12 @@ const AppCreator = (props) => {
 				"summary": item.name,
 				"operationId": item.name.split(" ").join("_"),
 				"description": item.description,
-				"parameters": []
+				"parameters": [],
+				"requestBody": {
+					"content": {
+
+					}
+				},
 			}
 
 			//console.log("ACTION: ", item)
@@ -966,6 +984,20 @@ const AppCreator = (props) => {
 			// https://swagger.io/docs/specification/describing-request-body/file-upload/
 			if (item.file_field !== undefined && item.file_field !== null && item.file_field.length > 0) {
 				console.log("HANDLE FILEFIELD SAVE: ", item.file_field)
+				data.paths[item.url][item.method.toLowerCase()]["requestBody"]["content"]["multipart/form-data"] = {
+
+					"schema": {
+						"type": "object",
+						"properties": {
+							"fieldname": {
+								"type": "string",
+								"value": item.file_field,
+							},
+						},
+					},
+				}
+
+				console.log(data.paths[item.url][item.method.toLowerCase()]["requestBody"]["content"]["multipart/form-data"])
 			}
 
 			if (item.headers.length > 0) {
@@ -1319,6 +1351,7 @@ const AppCreator = (props) => {
 				}
 
 				const url = data.url
+				const hasFile = data["file_field"] !== undefined && data["file_field"] !== null && data["file_field"].length > 0
 				return (
 					<Paper style={actionListStyle}>
 						{error} 
@@ -1333,6 +1366,10 @@ const AppCreator = (props) => {
 								if (data["body"] !== undefined && data["body"] !== null && data["body"].length > 0) {
 									findBodyParams(data["body"])
 								}
+
+								if (hasFile) {
+									setFileUploadEnabled(true)
+								}
 							}}>
 							<div style={{display: "flex"}}>
 								<Chip
@@ -1340,7 +1377,8 @@ const AppCreator = (props) => {
 									label={data.method}
 								/>
 								<span style={{fontSize: 16, marginTop: "auto", marginBottom: "auto",}}>
-									{url} - {data.name}
+								{hasFile ? <AttachFileIcon style={{height: 20, width: 20}} /> : null} {url} - {data.name}
+						
 								</span>
 							</div>
 							</div>
@@ -1819,7 +1857,7 @@ const AppCreator = (props) => {
 						addPathQuery()
 					}}>New query</Button> 				
 					{currentActionMethod === "POST" ?
-						<Button disabled color="primary" variant={fileUploadEnabled ? "contained" : "outlined"} style={{marginLeft: 10, marginTop: "5px", marginBottom: "10px", borderRadius: "0px"}} onClick={() => {
+						<Button color="primary" variant={fileUploadEnabled ? "contained" : "outlined"} style={{marginLeft: 10, marginTop: "5px", marginBottom: "10px", borderRadius: "0px"}} onClick={() => {
 							setFileUploadEnabled(!fileUploadEnabled)
 							if (fileUploadEnabled && currentAction["file_field"].length > 0) {
 								setActionField("file_field", "")

@@ -2611,7 +2611,7 @@ const AngularWorkflow = (props) => {
 		const allitems = workflow.actions.concat(workflow.triggers)
 		for (var key in allitems) {
 			const item = allitems[key]
-			if (item.app_name === appName) {
+			if (item.app_name === appName && item.label !== undefined && item.label !== null) {
 				var number = item.label.split("_")
 				if (isNaN(number[-1]) && parseInt(number[number.length-1]) > highest) {
 					highest = number[number.length-1]
@@ -7107,6 +7107,9 @@ const AngularWorkflow = (props) => {
 			*/
 
 		}
+
+		//if (authenticationOption.label === null
+		//					defaultValue={}
 
 		return (
 			<div>
