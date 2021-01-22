@@ -1396,7 +1396,7 @@ const AngularWorkflow = (props) => {
 					console.log("ESCAPE")
 	        break;
 			case 46:
-				removeNode()		
+				//removeNode()		
 				console.log("DELETE")
 	      break;
 			case 38:
