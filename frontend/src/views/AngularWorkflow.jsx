@@ -1536,6 +1536,12 @@ const AngularWorkflow = (props) => {
 			getWorkflowExecution(props.match.params.key)
 			getAvailableWorkflows(-1) 
 			getSettings() 
+
+			const cursearch = typeof window === 'undefined' || window.location === undefined ? "" : window.location.search
+			const tmpView = new URLSearchParams(cursearch).get("view")
+			if (tmpView !== undefined && tmpView !== null && tmpView === "executions") {
+				setExecutionModalOpen(true)
+			}
 			return
 		} 
 

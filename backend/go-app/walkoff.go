@@ -4940,7 +4940,6 @@ func addAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 
 		if foundIndex >= 0 {
 			log.Printf("[INFO] Found app %s by looping auth", appAuth.App.ID)
-			app = &workflowapps[foundIndex]
 		} else {
 			log.Printf("[ERROR] Failed finding app %s which has auth after looping", appAuth.App.ID)
 			resp.WriteHeader(409)

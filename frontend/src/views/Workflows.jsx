@@ -907,7 +907,7 @@ const Workflows = (props) => {
 				</div>
 				:
 				<h4>
-					There are no executions for this workflow yet
+					Executions have been moved to the Workflow itself. <Link to={`/workflows/${selectedWorkflow.id}?view=executions`} style={{textDecoration: "none", color: "#f85a3e"}}>Click here to see them</Link>
 				</h4>
 		)
 	}
@@ -1247,7 +1247,8 @@ const Workflows = (props) => {
 						<ExecutionsView />
 					</div>
 				</div>
-				<div style={{flex: viewSize.executionResults, marginLeft: "10px", marginRight: "10px", minWidth: "33%"}}>
+				{/*
+				<div style={{flex: viewSize.executionResults, marginLeft: "10px", marginRight: "10px", minWidth: "40%"}}>
 					<div style={{display: "flex"}}>
 						<div style={{flex: "1"}}>
 							<h2>Execution Timeline</h2>
@@ -1265,6 +1266,7 @@ const Workflows = (props) => {
 						<ExecutionDetails />
 					</div>
 				</div>
+				*/}
 			</div>
 		)
 	}
