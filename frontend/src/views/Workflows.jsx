@@ -44,7 +44,7 @@ const inputColor = "#383B40"
 const surfaceColor = "#27292D"
 
 export const validateJson = (showResult) => {
-	showResult = showResult.split(" None").join(" \"None\"")
+	//showResult = showResult.split(" None").join(" \"None\"")
 	showResult = showResult.split(" False").join(" false")
 	showResult = showResult.split(" True").join(" true")
 
@@ -112,7 +112,7 @@ const Workflows = (props) => {
 	  	duration: 5000,
 	  	startImmediate: false,
 	  	callback: () => {
-				getWorkflowExecution(selectedWorkflow.id) 
+				//getWorkflowExecution(selectedWorkflow.id) 
 	  	}
 	})
 
@@ -215,7 +215,7 @@ const Workflows = (props) => {
 
 			if (responseJson.length > 0){
 				setSelectedWorkflow(responseJson[0])
-				getWorkflowExecution(responseJson[0].id)
+				//getWorkflowExecution(responseJson[0].id)
 			}
     	})
 		.catch(error => {
@@ -330,7 +330,7 @@ const Workflows = (props) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for WORKFLOW EXECUTION :O!")
 			}
-			getWorkflowExecution(workflowid) 
+			//getWorkflowExecution(workflowid) 
 
 			return response.json()
 		})
@@ -520,7 +520,7 @@ const Workflows = (props) => {
 							<div style={{flex: "10",}} onClick={() => {
 								if (selectedWorkflow.id !== data.id) {
 									setSelectedWorkflow(data)
-									getWorkflowExecution(data.id)
+									//getWorkflowExecution(data.id)
 								}
 							}}>
 								<Typography variant="h6" style={{marginTop: 10, marginBottom: 0, }}>
@@ -577,7 +577,7 @@ const Workflows = (props) => {
 						<div style={{display: "flex", flex: 1}} onClick={() => {
 							if (selectedWorkflow.id !== data.id) {
 								setSelectedWorkflow(data)
-								getWorkflowExecution(data.id)
+								//getWorkflowExecution(data.id)
 							}
 						}}>
 							<Grid item style={{flex: "1", justifyContent: "center", overflow: "hidden", float: "bottom",}}>
@@ -1236,7 +1236,7 @@ const Workflows = (props) => {
 						<div style={{flex: "1"}}>
 							<Button color="primary" style={{marginTop: "20px"}} variant="text" onClick={() => {
 									alert.info("Refreshing executions"); 
-									getWorkflowExecution(selectedWorkflow.id)
+									//getWorkflowExecution(selectedWorkflow.id)
 								}}>
 								<CachedIcon />
 							</Button> 				

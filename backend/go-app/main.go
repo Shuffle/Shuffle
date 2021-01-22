@@ -6582,6 +6582,9 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("Failed to increase success execution stats: %s", err)
 	}
 
+	cacheKey := fmt.Sprintf("workflowapps-sorted")
+	requestCache.Delete(cacheKey)
+
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true, "id": "%s"}`, api.ID)))
 }

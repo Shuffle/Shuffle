@@ -341,7 +341,7 @@ const Apps = (props) => {
 		}
 
 		var description = data.description
-		const maxDescLen = 58
+		const maxDescLen = 56
 		if (description.length > maxDescLen) {
 			description = data.description.slice(0, maxDescLen)+"..."
 		}

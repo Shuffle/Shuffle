@@ -4332,6 +4332,7 @@ func getApp(ctx context.Context, id string) (*WorkflowApp, error) {
 	workflowApp := &WorkflowApp{}
 	if err := dbclient.Get(ctx, key, workflowApp); err != nil {
 		return &WorkflowApp{}, err
+
 	}
 
 	return workflowApp, nil
@@ -4918,12 +4919,34 @@ func addAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	// FIXME: Doens't validate Org
 	app, err := getApp(ctx, appAuth.App.ID)
 	if err != nil {
-		log.Printf("Failed finding app %s while setting auth.", appAuth.App.ID)
-		resp.WriteHeader(409)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-		return
+		log.Printf("[WARNING] Failed finding app %s while setting auth. Finding it by looping apps.", appAuth.App.ID)
+		workflowapps, err := getAllWorkflowApps(ctx, 100)
+		if err != nil {
+			resp.WriteHeader(409)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+			return
+		}
+
+		foundIndex := -1
+		for i, workflowapp := range workflowapps {
+			if workflowapp.Name == appAuth.App.Name {
+				foundIndex = i
+				break
+			}
+		}
+
+		if foundIndex >= 0 {
+			log.Printf("[INFO] Found app %s by looping auth", appAuth.App.ID)
+			app = &workflowapps[foundIndex]
+		} else {
+			log.Printf("[ERROR] Failed finding app %s which has auth after looping", appAuth.App.ID)
+			resp.WriteHeader(409)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+			return
+		}
 	}
 
 	// Check if the items are correct

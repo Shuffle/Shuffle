@@ -2860,7 +2860,7 @@ const AngularWorkflow = (props) => {
 				// PARAM FIX - Gonna use the ID field, even though it's a hack
 				const paramcheck = selectedAction.parameters.find(param => param.name === "body")
 				if (paramcheck !== undefined) {
-					if (paramcheck["value_replace"] === undefined) {
+					if (paramcheck["value_replace"] === undefined || paramcheck["value_replace"] === null) {
 						paramcheck["value_replace"] = [{
 							"key": data.name,
 							"value": event.target.value,
@@ -3079,7 +3079,7 @@ const AngularWorkflow = (props) => {
 							multiline = true
 						}
 
-						if (data.value !== undefined && data.value.startsWith("{") && data.value.endsWith("}")) {
+						if (data.value !== undefined && data.value !== null && data.value.startsWith("{") && data.value.endsWith("}")) {
 							multiline = true
 						}
 
@@ -3090,8 +3090,8 @@ const AngularWorkflow = (props) => {
 
 						if (data.name.startsWith("${") && data.name.endsWith("}")) {
 							const paramcheck = selectedAction.parameters.find(param => param.name === "body")
-							if (paramcheck !== undefined) {
-								if (paramcheck["value_replace"] !== undefined) {
+							if (paramcheck !== undefined && paramcheck !== null) {
+								if (paramcheck["value_replace"] !== undefined && paramcheck["value_replace"] !== null) {
 									//console.log("IN THE VALUE REPLACE: ", paramcheck["value_replace"])
 									const subparamindex = paramcheck["value_replace"].findIndex(param => param.key === data.name)
 									if (subparamindex !== -1) {
@@ -6604,7 +6604,7 @@ const AngularWorkflow = (props) => {
 										}
 										</span>
 									: 
-									<div>
+									<div style={{maxHeight: 250, overflowX: "hidden", overflowY: "scroll",}}>
 										<b>Result</b>&nbsp;
 										{data.result}
 									</div>
@@ -7108,8 +7108,9 @@ const AngularWorkflow = (props) => {
 
 		}
 
-		//if (authenticationOption.label === null
-		//					defaultValue={}
+		if (authenticationOption.label === null || authenticationOption.label === undefined) {
+			authenticationOption.label = selectedApp.name+" authentication"
+		}
 
 		return (
 			<div>

@@ -441,6 +441,9 @@ class AppBase:
             "Authorization": "Bearer %s" % self.authorization
         }
 
+        if not isinstance(infiles, list):
+            infiles = [infiles]
+
         create_path = "/api/v1/files/create?execution_id=%s" % full_execution["execution_id"]
         file_ids = []
         for curfile in infiles:
