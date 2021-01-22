@@ -234,8 +234,8 @@ const Workflows = (props) => {
 		color: "#ffffff",
 		width: "100%",
 		display: "flex",
-		minWidth: 1366,
-		maxWidth: 1766,
+		minWidth: 1024,
+		maxWidth: 1024,
 		margin: "auto",
 		maxHeight: "90vh",
 	}
@@ -393,14 +393,23 @@ const Workflows = (props) => {
 
 		data["owner"] = ""
 		for (var key in data.triggers) {
-			if (data.triggers[key].status == "running") {
-				data.triggers[key].status = "stopped"
+			const trigger = data.triggers[key]
+			if (trigger.app_name === "Shuffle Workflow") {
+				if (trigger.parameters.length > 2) {
+					trigger.parameters[2].value = ""
+				}
+			} 
+			
+			if (trigger.status == "running") {
+				trigger.status = "stopped"
 			}
 		}
 
 		for (var key in data.actions) {
 			data.actions[key].authentication_id = ""
 		}
+
+		//return
 
 		data["org"] = []
 		data["org_id"] = ""
@@ -907,7 +916,7 @@ const Workflows = (props) => {
 				</div>
 				:
 				<h4>
-					Executions have been moved to the Workflow itself. <Link to={`/workflows/${selectedWorkflow.id}?view=executions`} style={{textDecoration: "none", color: "#f85a3e"}}>Click here to see them</Link>
+					Executions have been moved to the Workflow itself. <div/><Link to={`/workflows/${selectedWorkflow.id}?view=executions`} style={{textDecoration: "none", color: "#f85a3e"}}>Click here to see them</Link>
 				</h4>
 		)
 	}
@@ -1230,10 +1239,11 @@ const Workflows = (props) => {
 				</div>
 				<div style={{flex: viewSize.executionsView, marginLeft: "10px", marginRight: "10px"}}>
 					<div style={{display: "flex"}}>
-						<div style={{flex: "10"}}>
+						<div style={{flex: 10}}>
 							<h2>Executions: {selectedWorkflow.name}</h2> 
 						</div>
-						<div style={{flex: "1"}}>
+						{/*
+						<div style={{flex: 1}}>
 							<Button color="primary" style={{marginTop: "20px"}} variant="text" onClick={() => {
 									alert.info("Refreshing executions"); 
 									//getWorkflowExecution(selectedWorkflow.id)
@@ -1241,6 +1251,7 @@ const Workflows = (props) => {
 								<CachedIcon />
 							</Button> 				
 						</div>
+						*/}
 					</div>
 					<Divider style={{marginBottom: "10px", height: "1px", width: "100%", backgroundColor: dividerColor}}/>
 					<div style={scrollStyle}>

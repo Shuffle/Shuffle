@@ -2332,15 +2332,40 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 				trigger.Status = "stopped"
 			}
 		} else if trigger.TriggerType == "SUBFLOW" {
-			for _, param := range trigger.Parameters {
+			for index, param := range trigger.Parameters {
 				if len(param.Value) == 0 && param.Name != "argument" {
-					workflow.IsValid = false
-					workflow.Errors = []string{"Trigger is missing a parameter: %s", param.Name}
+					log.Printf("Param: %#v", param)
+					if param.Name == "user_apikey" {
+						apikey := ""
+						if len(user.ApiKey) > 0 {
+							apikey = user.ApiKey
+						} else {
+							user, err = generateApikey(ctx, user)
+							if err != nil {
+								workflow.IsValid = false
+								workflow.Errors = []string{"Trigger is missing a parameter: %s", param.Name}
 
-					log.Printf("No type specified for user input node")
-					resp.WriteHeader(401)
-					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Trigger %s is missing the parameter %s"}`, trigger.Label, param.Name)))
-					return
+								log.Printf("No type specified for user input node")
+								resp.WriteHeader(401)
+								resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Trigger %s is missing the parameter %s"}`, trigger.Label, param.Name)))
+								return
+							}
+
+							apikey = user.ApiKey
+						}
+
+						log.Printf("[INFO] Set apikey in subflow trigger for user during save")
+						trigger.Parameters[index].Value = apikey
+					} else {
+
+						workflow.IsValid = false
+						workflow.Errors = []string{"Trigger is missing a parameter: %s", param.Name}
+
+						log.Printf("No type specified for user input node")
+						resp.WriteHeader(401)
+						resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Trigger %s is missing the parameter %s"}`, trigger.Label, param.Name)))
+						return
+					}
 				}
 			}
 		} else if trigger.TriggerType == "WEBHOOK" && trigger.Status != "uninitialized" {
