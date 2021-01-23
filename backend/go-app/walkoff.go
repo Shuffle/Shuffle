@@ -3306,7 +3306,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		if len(action.Label) == 0 {
 			action.Label = action.ID
 		}
-		log.Printf("LABEL: %s", action.Label)
+		//log.Printf("LABEL: %s", action.Label)
 		newActions = append(newActions, action)
 
 		// If the node is NOT found, it's supposed to be set to SKIPPED,
@@ -3360,7 +3360,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	}
 
 	for _, trigger := range workflowExecution.Workflow.Triggers {
-		log.Printf("[INFO] ID: %s vs %s", trigger.ID, workflowExecution.Start)
+		//log.Printf("[INFO] ID: %s vs %s", trigger.ID, workflowExecution.Start)
 		if trigger.ID == workflowExecution.Start {
 			if trigger.AppName == "User Input" {
 				startFound = true

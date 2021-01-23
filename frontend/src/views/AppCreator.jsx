@@ -1784,7 +1784,20 @@ const AppCreator = (props) => {
 						}}
 						onBlur={event => {
 							var parsedurl = event.target.value
-							if (parsedurl.startsWith("curl")) {
+							if (parsedurl.startsWith("PUT ") || parsedurl.startsWith("GET ") ||parsedurl.startsWith("POST ") || parsedurl.startsWith("DELETE ") ||parsedurl.startsWith("PATCH ") || parsedurl.startsWith("CONNECT ")) {
+								const tmp = parsedurl.split(" ")
+
+								if (tmp.length > 1) {
+									parsedurl = tmp[1]
+									setActionField("url", parsedurl)
+									setUrlPath(parsedurl)
+
+									setCurrentActionMethod(tmp[0].toUpperCase())
+									setActionField("method", tmp[0].toUpperCase())
+								}
+
+								setUpdate(Math.random())
+							} else if (parsedurl.startsWith("curl")) {
 								const request = parseCurl(event.target.value)
 								if (request !== event.target.value) {
 									if (request.method.toUpperCase() !== currentAction.Method) {
@@ -1819,7 +1832,8 @@ const AppCreator = (props) => {
 									}
 							}
 
-							if	 (parsedurl !== undefined) {
+							console.log("PARSED: ", parsedurl)
+							if (parsedurl !== undefined) {
 									if (parsedurl.includes("<") && parsedurl.includes(">")) {
 										parsedurl = parsedurl.split("<").join("{")
 										parsedurl = parsedurl.split(">").join("}")
@@ -1920,9 +1934,9 @@ const AppCreator = (props) => {
 					Cancel	
 				</Button>
 	      <Button color="primary" variant="outlined" style={{borderRadius: "0px"}} onClick={() => {
-						console.log(urlPathQueries)
-						console.log(urlPath)
-						console.log(currentAction)
+						//console.log(urlPathQueries)
+						//console.log(urlPath)
+						//console.log(currentAction)
 						const errors = getActionErrors()		
 						addActionToView(errors)
 						setActionsModalOpen(false)

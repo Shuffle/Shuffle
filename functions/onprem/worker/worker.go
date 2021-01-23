@@ -774,22 +774,24 @@ func shutdown(executionId, workflowId string) {
 
 	// Might not be necessary because of cleanupEnv hostconfig autoremoval
 	if cleanupEnv == "true" && len(containerIds) > 0 {
-		ctx := context.Background()
-		dockercli, err := dockerclient.NewEnvClient()
-		if err == nil {
-			log.Printf("[INFO] Cleaning up %d containers", len(containerIds))
-			removeOptions := types.ContainerRemoveOptions{
-				RemoveVolumes: true,
-				Force:         true,
-			}
+		/*
+			ctx := context.Background()
+			dockercli, err := dockerclient.NewEnvClient()
+			if err == nil {
+				log.Printf("[INFO] Cleaning up %d containers", len(containerIds))
+				removeOptions := types.ContainerRemoveOptions{
+					RemoveVolumes: true,
+					Force:         true,
+				}
 
-			for _, containername := range containerIds {
-				log.Printf("[INFO] Stopping and removing container %s", containername)
-				dockercli.ContainerStop(ctx, containername, nil)
-				dockercli.ContainerRemove(ctx, containername, removeOptions)
-				//removeContainers = append(removeContainers, containername)
+				for _, containername := range containerIds {
+					log.Printf("[INFO] Should stop and and remove container %s (deprecated)", containername)
+					//dockercli.ContainerStop(ctx, containername, nil)
+					//dockercli.ContainerRemove(ctx, containername, removeOptions)
+					//removeContainers = append(removeContainers, containername)
+				}
 			}
-		}
+		*/
 	} else {
 		log.Printf("[INFO] NOT cleaning up containers. IDS: %d, CLEANUP env: %s", len(containerIds), cleanupEnv)
 	}
@@ -866,9 +868,9 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	}
 
 	// Removing because log extraction should happen first
-	//if cleanupEnv == "true" {
-	//	hostConfig.AutoRemove = true
-	//}
+	if cleanupEnv == "true" {
+		hostConfig.AutoRemove = true
+	}
 
 	config := &container.Config{
 		Image: image,
@@ -885,7 +887,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	)
 
 	if err != nil {
-		log.Printf("Container CREATE error: %s", err)
+		log.Printf("[WARNING] Container CREATE error: %s", err)
 		return err
 	}
 
@@ -1481,54 +1483,99 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 		// 3. Add remote repo location
 		// 4. Actually download last repo
 
-		err = deployApp(dockercli, image, identifier, env)
-		if err != nil {
-			// Trying to replace with lowercase to deploy again. This seems to work with Dockerhub well.
-			// FIXME: Should try to remotely download directly if this persists.
-			image = fmt.Sprintf("%s:%s_%s", baseimagename, strings.ToLower(action.AppName), action.AppVersion)
-			if strings.Contains(image, " ") {
-				image = strings.ReplaceAll(image, " ", "-")
-			}
+		images := []string{
+			fmt.Sprintf("%s/%s:%s_%s", registryName, baseimagename, strings.ToLower(action.AppName), action.AppVersion),
+			image,
+			fmt.Sprintf("%s:%s_%s", baseimagename, strings.ToLower(action.AppName), action.AppVersion),
+		}
 
-			pullOptions := types.ImagePullOptions{}
+		// If cleanup is set, it should run for efficiency
+		pullOptions := types.ImagePullOptions{}
+		if cleanupEnv == "true" {
+			err = deployApp(dockercli, images[0], identifier, env)
+			if err != nil {
+				log.Printf("[WARNING] Failed CLEANUP execution. Downloading image remotely.")
+				reader, err := dockercli.ImagePull(context.Background(), image, pullOptions)
+				if err != nil {
+					log.Printf("[ERROR] Failed getting %s. The couldn't be find locally, AND is missing.", image)
+					shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+				}
+
+				buildBuf := new(strings.Builder)
+				_, err = io.Copy(buildBuf, reader)
+				if err != nil {
+					log.Printf("[ERROR] Error in IO copy: %s", err)
+					shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+				} else {
+					if strings.Contains(buildBuf.String(), "errorDetail") {
+						log.Printf("[ERROR] Docker build:\n%s\nERROR ABOVE: Trying to pull tags from: %s", buildBuf.String(), image)
+						shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+					}
+
+					log.Printf("[INFO] Successfully downloaded %s", image)
+				}
+
+				err = deployApp(dockercli, image, identifier, env)
+				if err != nil {
+
+					log.Printf("[ERROR] Failed deploying image for the FOURTH time. Aborting if the image doesn't exist")
+					if strings.Contains(err.Error(), "No such image") {
+						//log.Printf("[WARNING] Failed deploying %s from image %s: %s", identifier, image, err)
+						log.Printf("[ERROR] Image doesn't exist. Shutting down")
+						shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+					}
+				}
+			}
+		} else {
+
 			err = deployApp(dockercli, image, identifier, env)
 			if err != nil {
-				image = fmt.Sprintf("%s/%s:%s_%s", registryName, baseimagename, strings.ToLower(action.AppName), action.AppVersion)
+				// Trying to replace with lowercase to deploy again. This seems to work with Dockerhub well.
+				// FIXME: Should try to remotely download directly if this persists.
+				image = fmt.Sprintf("%s:%s_%s", baseimagename, strings.ToLower(action.AppName), action.AppVersion)
 				if strings.Contains(image, " ") {
 					image = strings.ReplaceAll(image, " ", "-")
 				}
 
 				err = deployApp(dockercli, image, identifier, env)
 				if err != nil {
-					log.Printf("[WARNING] Failed deploying image THRICE. Attempting to download the latter as last resort.")
-					reader, err := dockercli.ImagePull(context.Background(), image, pullOptions)
-					if err != nil {
-						log.Printf("[ERROR] Failed getting %s. The couldn't be find locally, AND is missing.", image)
-						shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
-					}
-
-					buildBuf := new(strings.Builder)
-					_, err = io.Copy(buildBuf, reader)
-					if err != nil {
-						log.Printf("[ERROR] Error in IO copy: %s", err)
-						shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
-					} else {
-						if strings.Contains(buildBuf.String(), "errorDetail") {
-							log.Printf("[ERROR] Docker build:\n%s\nERROR ABOVE: Trying to pull tags from: %s", buildBuf.String(), image)
-							shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
-						}
-
-						log.Printf("[INFO] Successfully downloaded %s", image)
+					image = fmt.Sprintf("%s/%s:%s_%s", registryName, baseimagename, strings.ToLower(action.AppName), action.AppVersion)
+					if strings.Contains(image, " ") {
+						image = strings.ReplaceAll(image, " ", "-")
 					}
 
 					err = deployApp(dockercli, image, identifier, env)
 					if err != nil {
-
-						log.Printf("[ERROR] Failed deploying image for the FOURTH time. Aborting if the image doesn't exist")
-						if strings.Contains(err.Error(), "No such image") {
-							//log.Printf("[WARNING] Failed deploying %s from image %s: %s", identifier, image, err)
-							log.Printf("[ERROR] Image doesn't exist. Shutting down")
+						log.Printf("[WARNING] Failed deploying image THRICE. Attempting to download the latter as last resort.")
+						reader, err := dockercli.ImagePull(context.Background(), image, pullOptions)
+						if err != nil {
+							log.Printf("[ERROR] Failed getting %s. The couldn't be find locally, AND is missing.", image)
 							shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+						}
+
+						buildBuf := new(strings.Builder)
+						_, err = io.Copy(buildBuf, reader)
+						if err != nil {
+							log.Printf("[ERROR] Error in IO copy: %s", err)
+							shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+						} else {
+							if strings.Contains(buildBuf.String(), "errorDetail") {
+								log.Printf("[ERROR] Docker build:\n%s\nERROR ABOVE: Trying to pull tags from: %s", buildBuf.String(), image)
+								shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+							}
+
+							log.Printf("[INFO] Successfully downloaded %s", image)
+						}
+
+						err = deployApp(dockercli, image, identifier, env)
+						if err != nil {
+
+							log.Printf("[ERROR] Failed deploying image for the FOURTH time. Aborting if the image doesn't exist")
+							if strings.Contains(err.Error(), "No such image") {
+								//log.Printf("[WARNING] Failed deploying %s from image %s: %s", identifier, image, err)
+								log.Printf("[ERROR] Image doesn't exist. Shutting down")
+								shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+							}
 						}
 					}
 				}
