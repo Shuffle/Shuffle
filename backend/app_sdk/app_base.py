@@ -1214,13 +1214,23 @@ class AppBase:
                     
                 return False 
             elif check.lower() == "larger than":
-                if str(sourcevalue).isdigit() and str(destinationvalue).isdigit():
-                    if int(sourcevalue) > int(destinationvalue):
-                        return True
+                try:
+                    if str(sourcevalue).isdigit() and str(destinationvalue).isdigit():
+                        if int(sourcevalue) > int(destinationvalue):
+                            return True
+
+                except AttributeError as e:
+                    self.logger.error("[WARNING] Condition larger than failed with values %s and %s: %s" % (sourcevalue, destinationvalue, e))
+                    return False
             elif check.lower() == "smaller than":
-                if str(sourcevalue).isdigit() and str(destinationvalue).isdigit():
-                    if int(sourcevalue) < int(destinationvalue):
-                        return True
+                try:
+                    if str(sourcevalue).isdigit() and str(destinationvalue).isdigit():
+                        if int(sourcevalue) < int(destinationvalue):
+                            return True
+
+                except AttributeError as e:
+                    self.logger.error("[WARNING] Condition smaller than failed with values %s and %s: %s" % (sourcevalue, destinationvalue, e))
+                    return False
             else:
                 self.logger.info("Condition: can't handle %s yet. Setting to true" % check)
                     
