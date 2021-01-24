@@ -48,7 +48,7 @@ https://shuffler.io
 <a href="https://github.com/frikky/shuffle/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=frikky/shuffle" />
 </a>
-![Shuffle Architecture](https://github.com/frikky/Shuffle/blob/master/frontend/src/assets/img/icpl_logo.png)
+![ICPL logo](https://github.com/frikky/Shuffle/blob/launch/frontend/src/assets/img/icpl_logo.png)
 
 **Shuffle Apps**
 <a href="https://github.com/frikky/shuffle-apps/graphs/contributors">
