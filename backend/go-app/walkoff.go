@@ -5211,7 +5211,8 @@ func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// FIXME - set this to be per user IF logged in, as there might exist private and public
+	// FIXME - set this to be per user IF logged in,
+	// as there might exist private and public
 	//memcacheName := "all_apps"
 
 	ctx := context.Background()
@@ -5219,10 +5220,11 @@ func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - need to be logged in?
 	user, userErr := handleApiAuthentication(resp, request)
 	if userErr != nil {
-		log.Printf("Api authentication failed in get all apps: %s", userErr)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
+		log.Printf("Continuing with apps even without auth")
+		//log.Printf("Api authentication failed in get all apps: %s", userErr)
+		//resp.WriteHeader(401)
+		//resp.Write([]byte(`{"success": false}`))
+		//return
 	}
 
 	//if item, err := memcache.Get(ctx, memcacheName); err == memcache.ErrCacheMiss {
@@ -5268,9 +5270,9 @@ func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 	newapps := []WorkflowApp{}
 	baseApps := []WorkflowApp{}
 	for _, workflowapp := range workflowapps {
-		if !workflowapp.Activated && workflowapp.Generated {
-			continue
-		}
+		//if !workflowapp.Activated && workflowapp.Generated {
+		//	continue
+		//}
 
 		if workflowapp.Owner != user.Id && user.Role != "admin" && !workflowapp.Sharing {
 			continue

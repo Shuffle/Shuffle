@@ -1496,7 +1496,7 @@ const Admin = (props) => {
 						})}
 					</Grid>
 					<Divider style={{ marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor }} />
-					{isCloud && selectedOrganization.subscriptions !== null && selectedOrganization.subscriptions.length > 0 ? 
+					{isCloud && selectedOrganization.subscriptions !== undefined && selectedOrganization.subscriptions !== null && selectedOrganization.subscriptions.length > 0 ? 
 						<div style={{marginTop: 30, marginBottom: 20}}>
 							<Typography style={{marginTop: 40, marginLeft: 10, marginBottom: 5,}}>
 								Your subscription{selectedOrganization.subscriptions.length > 1 ? "s" : ""}
