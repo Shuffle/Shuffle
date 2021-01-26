@@ -34,6 +34,11 @@ import (
 	"github.com/getkin/kin-openapi/openapi2"
 	"github.com/getkin/kin-openapi/openapi2conv"
 	"github.com/getkin/kin-openapi/openapi3"
+	/*
+		"github.com/frikky/kin-openapi/openapi2"
+		"github.com/frikky/kin-openapi/openapi2conv"
+		"github.com/frikky/kin-openapi/openapi3"
+	*/
 
 	"github.com/google/go-github/v28/github"
 	"golang.org/x/oauth2"
@@ -2801,6 +2806,20 @@ func fixOrgUser(ctx context.Context, org *Org) *Org {
 	return org
 }
 
+// ListBooks returns a list of books, ordered by title.
+func setUser(ctx context.Context, data *User) error {
+	data = fixUserOrg(ctx, data)
+
+	// clear session_token and API_token for user
+	k := datastore.NameKey("Users", data.Id, nil)
+	if _, err := dbclient.Put(ctx, k, data); err != nil {
+		log.Println(err)
+		return err
+	}
+
+	return nil
+}
+
 func fixUserOrg(ctx context.Context, user *User) *User {
 	found := false
 	for _, id := range user.Orgs {
@@ -2856,33 +2875,18 @@ func fixUserOrg(ctx context.Context, user *User) *User {
 	return user
 }
 
-// ListBooks returns a list of books, ordered by title.
-func setUser(ctx context.Context, data *User) error {
-	data = fixUserOrg(ctx, data)
-
-	// clear session_token and API_token for user
-	k := datastore.NameKey("Users", data.Id, nil)
-	if _, err := dbclient.Put(ctx, k, data); err != nil {
-		log.Println(err)
-		return err
-	}
-
-	return nil
-}
-
 // Used for testing only. Shouldn't impact production.
 func handleCors(resp http.ResponseWriter, request *http.Request) bool {
 	//allowedOrigins := "http://localhost:3000"
 	allowedOrigins := "http://localhost:3002"
 
 	resp.Header().Set("Vary", "Origin")
-	resp.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, X-Requested-With, remember-me")
+	resp.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, X-Requested-With, remember-me, Authorization")
 	resp.Header().Set("Access-Control-Allow-Methods", "POST, GET, PUT, DELETE, PATCH")
 	resp.Header().Set("Access-Control-Allow-Credentials", "true")
 	resp.Header().Set("Access-Control-Allow-Origin", allowedOrigins)
 
 	if request.Method == "OPTIONS" {
-
 		resp.WriteHeader(200)
 		resp.Write([]byte("OK"))
 		return true
@@ -3731,7 +3735,7 @@ func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 			return
 		} else {
-			log.Printf("Successfully set up cloud action schedule")
+			log.Printf("[INFO] Successfully set up cloud action schedule")
 		}
 	}
 
@@ -5908,7 +5912,7 @@ func getOpenapi(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("API LENGTH GET: %d, ID: %s", len(parsedApi.Body), id)
+	log.Printf("[INFO] API LENGTH GET: %d, ID: %s", len(parsedApi.Body), id)
 
 	parsedApi.Success = true
 	data, err := json.Marshal(parsedApi)
@@ -6037,8 +6041,11 @@ func handleSwaggerValidation(body []byte) (ParsedOpenApi, error) {
 
 	if strings.HasPrefix(version.Swagger, "3.") || strings.HasPrefix(version.OpenAPI, "3.") {
 		//log.Println("Handling v3 API")
-		swaggerv3, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData(body)
+		swaggerLoader := openapi3.NewSwaggerLoader()
+		swaggerLoader.IsExternalRefsAllowed = true
+		swaggerv3, err := swaggerLoader.LoadSwaggerFromData(body)
 		if err != nil {
+			log.Printf("Failed parsing OpenAPI: %s", err)
 			return ParsedOpenApi{}, err
 		}
 
@@ -6161,23 +6168,26 @@ func validateSwagger(resp http.ResponseWriter, request *http.Request) {
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed reading openapi to json and yaml. Is version defined?: %s"}`, err)))
 			return
 		} else {
-			log.Printf("Successfully parsed YAML (3)!")
+			log.Printf("[INFO] Successfully parsed YAML (3)!")
 		}
 	} else {
 		isJson = true
-		log.Printf("Successfully parsed JSON!")
+		log.Printf("[INFO] Successfully parsed JSON!")
 	}
 
 	if len(version.SwaggerVersion) > 0 && len(version.Swagger) == 0 {
 		version.Swagger = version.SwaggerVersion
 	}
-	log.Printf("Version: %#v", version)
-	log.Printf("OpenAPI: %s", version.OpenAPI)
+	log.Printf("[INFO] Version: %#v", version)
+	log.Printf("[INFO] OpenAPI: %s", version.OpenAPI)
 
 	if strings.HasPrefix(version.Swagger, "3.") || strings.HasPrefix(version.OpenAPI, "3.") {
-		log.Println("Handling v3 API")
-		swagger, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData(body)
+		log.Println("[INFO] Handling v3 API")
+		swaggerLoader := openapi3.NewSwaggerLoader()
+		swaggerLoader.IsExternalRefsAllowed = true
+		swagger, err := swaggerLoader.LoadSwaggerFromData(body)
 		if err != nil {
+			log.Printf("[WARNING] Failed to convert v3 API: %s", err)
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 			return
@@ -6187,11 +6197,10 @@ func validateSwagger(resp http.ResponseWriter, request *http.Request) {
 		hasher.Write(body)
 		idstring := hex.EncodeToString(hasher.Sum(nil))
 
-		log.Printf("Swagger v3 validation success with ID %s!", idstring)
-		log.Printf("Paths: %d", len(swagger.Paths))
+		log.Printf("Swagger v3 validation success with ID %s and %d paths!", idstring, len(swagger.Paths))
 
 		if !isJson {
-			log.Printf("FIXME: NEED TO TRANSFORM FROM YAML TO JSON for %s", idstring)
+			log.Printf("[INFO] NEED TO TRANSFORM FROM YAML TO JSON for %s", idstring)
 		}
 
 		swaggerdata, err := json.Marshal(swagger)
@@ -6215,7 +6224,7 @@ func validateSwagger(resp http.ResponseWriter, request *http.Request) {
 			return
 		}
 
-		log.Printf("Successfully set OpenAPI with ID %s", idstring)
+		log.Printf("[INFO] Successfully set OpenAPI with ID %s", idstring)
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "id": "%s"}`, idstring)))
 		return
@@ -6303,6 +6312,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	log.Printf("[INFO] SETTING APP TO LIVE!!!")
 	user, err := handleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in verify swagger: %s", err)
@@ -6364,17 +6374,25 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	// Test = client side with fetch?
 
 	ctx := context.Background()
-
-	swagger, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData(body)
+	swaggerLoader := openapi3.NewSwaggerLoader()
+	swaggerLoader.IsExternalRefsAllowed = true
+	swagger, err := swaggerLoader.LoadSwaggerFromData(body)
 	if err != nil {
-		log.Printf("Swagger validation error: %s", err)
+		log.Printf("[ERROR] Swagger validation error: %s", err)
 		resp.WriteHeader(500)
 		resp.Write([]byte(`{"success": false, "reason": "Failed verifying openapi"}`))
 		return
 	}
 
+	if swagger.Info == nil {
+		log.Printf("[ERORR] Info is nil?: %#v", swagger)
+		resp.WriteHeader(500)
+		resp.Write([]byte(`{"success": false, "reason": "Info not parsed"}`))
+		return
+	}
+
 	if strings.Contains(swagger.Info.Title, " ") {
-		strings.Replace(swagger.Info.Title, " ", "", -1)
+		swagger.Info.Title = strings.Replace(swagger.Info.Title, " ", "_", -1)
 	}
 
 	basePath, err := buildStructure(swagger, newmd5)
@@ -6396,7 +6414,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 
 	// FIXME: CHECK IF SAME NAME AS NORMAL APP
 	// Can't overwrite existing normal app
-	workflowApps, err := getAllWorkflowApps(ctx, 100)
+	workflowApps, err := getAllWorkflowApps(ctx, 500)
 	if err != nil {
 		log.Printf("Failed getting all workflow apps from database to verify: %s", err)
 		resp.WriteHeader(401)
@@ -6451,7 +6469,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		log.Printf("Failed adding app to db: %s", err)
 		resp.WriteHeader(500)
-		resp.Write([]byte(`{"success": false, "reason": "Failed adding app to db"}`))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed adding app to db: %s"}`, err)))
 		return
 	}
 
@@ -6477,13 +6495,13 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	// 3. Zip and stream it directly in the directory
 	_, err = streamZipdata(ctx, identifier, stitched, "requests\nurllib3")
 	if err != nil {
-		log.Printf("Zipfile error: %s", err)
+		log.Printf("[ERROR] Zipfile error: %s", err)
 		resp.WriteHeader(500)
 		resp.Write([]byte(`{"success": false, "reason": "Failed to build zipfile"}`))
 		return
 	}
 
-	log.Printf("Successfully stitched ZIPFILE for %s", identifier)
+	log.Printf("[INFO] Successfully stitched ZIPFILE for %s", identifier)
 
 	// 4. Upload as cloud function - this apikey is specifically for cloud functions rofl
 	//environmentVariables := map[string]string{
@@ -6502,7 +6520,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	// 4. Build the image locally.
 	// FIXME: Should be moved to a local docker registry
 	dockerLocation := fmt.Sprintf("%s/Dockerfile", basePath)
-	log.Printf("Dockerfile: %s", dockerLocation)
+	log.Printf("[INFO] Dockerfile: %s", dockerLocation)
 
 	versionName := fmt.Sprintf("%s_%s", strings.ToLower(strings.ReplaceAll(api.Name, " ", "-")), api.AppVersion)
 	dockerTags := []string{
@@ -6512,15 +6530,15 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 
 	err = buildImage(dockerTags, dockerLocation)
 	if err != nil {
-		log.Printf("Docker build error: %s", err)
+		log.Printf("[ERROR] Docker build error: %s", err)
 		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error in Docker build"}`)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error in Docker build: %s"}`, err)))
 		return
 	}
 
 	found := false
 	foundNumber := 0
-	log.Printf("Checking for api with ID %s", newmd5)
+	log.Printf("[INFO] Checking for api with ID %s", newmd5)
 	for appCounter, app := range user.PrivateApps {
 		if app.ID == api.ID {
 			found = true
@@ -6546,25 +6564,25 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 
 	err = setUser(ctx, &user)
 	if err != nil {
-		log.Printf("Failed adding verification for user %s: %s", user.Username, err)
+		log.Printf("[ERROR] Failed adding verification for user %s: %s", user.Username, err)
 		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Failed updating user"}`)))
 		return
 	}
 
-	log.Printf("DO I REACH HERE WHEN SAVING?")
+	//log.Printf("DO I REACH HERE WHEN SAVING?")
 	parsed := ParsedOpenApi{
 		ID:   newmd5,
 		Body: string(body),
 	}
 
-	log.Printf("API LENGTH: %d, ID: %s", len(parsed.Body), newmd5)
+	log.Printf("[INFO] API LENGTH: %d, ID: %s", len(parsed.Body), newmd5)
 	// FIXME: Might cause versioning issues if we re-use the same!!
 	// FIXME: Need a way to track different versions of the same app properly.
 	// Hint: Save API.id somewhere, and use newmd5 to save latest version
 	err = setOpenApiDatastore(ctx, newmd5, parsed)
 	if err != nil {
-		log.Printf("Failed saving to datastore: %s", err)
+		log.Printf("[ERROR] Failed saving to datastore: %s", err)
 		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "%"}`, err)))
 	}
@@ -7425,7 +7443,7 @@ func runInit(ctx context.Context) {
 
 	// Getting apps to see if we should initialize a test
 	log.Printf("Getting remote workflow apps")
-	workflowapps, err := getAllWorkflowApps(ctx, 100)
+	workflowapps, err := getAllWorkflowApps(ctx, 500)
 	if err != nil {
 		log.Printf("Failed getting apps (runInit): %s", err)
 	} else if err == nil && len(workflowapps) > 0 {
@@ -8093,6 +8111,182 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	resp.WriteHeader(200)
 	resp.Write(respBody)
 }
+
+//func handleEditOrg(resp http.ResponseWriter, request *http.Request) {
+//	cors := handleCors(resp, request)
+//	if cors {
+//		return
+//	}
+//
+//	user, err := handleApiAuthentication(resp, request)
+//	if err != nil {
+//		log.Printf("Api authentication failed in cloud setup: %s", err)
+//		resp.WriteHeader(401)
+//		resp.Write([]byte(`{"success": false}`))
+//		return
+//	}
+//
+//	ctx := context.Background()
+//	if user.Role != "admin" {
+//		/*
+//			log.Printf("User: %s", user.Role)
+//			dbclient, err := getDatastoreClient(ctx, gceProject)
+//			if err != nil {
+//				log.Printf("Err1: %s", err)
+//			}
+//
+//			user.Role = "admin"
+//			key := datastore.NameKey("Users", strings.ToLower(user.Username), nil)
+//			if _, err := dbclient.Put(ctx, key, &user); err != nil {
+//				log.Printf("Err2: %s", err)
+//			}
+//		*/
+//
+//		log.Printf("Not admin, can't edit org.")
+//		resp.WriteHeader(401)
+//		resp.Write([]byte(`{"success": false, "reason": "Not admin"}`))
+//		return
+//	}
+//
+//	body, err := ioutil.ReadAll(request.Body)
+//	if err != nil {
+//		resp.WriteHeader(401)
+//		resp.Write([]byte(`{"success": false, "reason": "Failed reading body"}`))
+//		return
+//	}
+//
+//	type ReturnData struct {
+//		Image          string `json:"image" datastore:"image"`
+//		Name           string `json:"name" datastore:"name"`
+//		Description    string `json:"description" datastore:"description"`
+//		OrgId          string `json:"org_id" datastore:"org_id"`
+//		SubscriptionId string `json:"subscription_id" datastore:"subscription_id"`
+//		Action         string `json:"action" datastore:"action"`
+//	}
+//
+//	var tmpData ReturnData
+//	err = json.Unmarshal(body, &tmpData)
+//	if err != nil {
+//		log.Printf("Failed unmarshalling test: %s", err)
+//		resp.WriteHeader(401)
+//		resp.Write([]byte(`{"success": false}`))
+//		return
+//	}
+//
+//	var fileId string
+//	location := strings.Split(request.URL.String(), "/")
+//	if location[1] == "api" {
+//		if len(location) <= 4 {
+//			log.Printf("Path too short: %d", len(location))
+//			resp.WriteHeader(401)
+//			resp.Write([]byte(`{"success": false}`))
+//			return
+//		}
+//
+//		fileId = location[4]
+//	}
+//
+//	if tmpData.OrgId != user.ActiveOrg.Id || fileId != user.ActiveOrg.Id {
+//		log.Printf("User can't edit the org. Not part of ORG: %s vs %s", tmpData.OrgId, user.ActiveOrg.Id)
+//		resp.WriteHeader(401)
+//		resp.Write([]byte(`{"success": false, "No permission to edit this org"}`))
+//		return
+//	}
+//
+//	org, err := getOrg(ctx, tmpData.OrgId)
+//	if err != nil {
+//		log.Printf("Organization doesn't exist: %s", err)
+//		resp.WriteHeader(401)
+//		resp.Write([]byte(`{"success": false}`))
+//		return
+//	}
+//
+//	admin := false
+//	userFound := false
+//	for _, inneruser := range org.Users {
+//		if inneruser.Id == user.Id {
+//			userFound = true
+//			if inneruser.Role == "admin" {
+//				admin = true
+//			}
+//
+//			break
+//		}
+//	}
+//
+//	if !userFound {
+//		log.Printf("User %s doesn't exist in organization for edit %s", user.Id, org.Id)
+//		resp.WriteHeader(401)
+//		resp.Write([]byte(`{"success": false}`))
+//		return
+//	}
+//
+//	if !admin {
+//		log.Printf("User %s doesn't have edit rights to %s", user.Id, org.Id)
+//		resp.WriteHeader(401)
+//		resp.Write([]byte(`{"success": false}`))
+//		return
+//	}
+//
+//	if tmpData.Image != org.Image {
+//		org.Image = tmpData.Image
+//	}
+//
+//	if tmpData.Name != org.Name {
+//		org.Name = tmpData.Name
+//	}
+//
+//	if tmpData.Description != org.Description {
+//		org.Description = tmpData.Description
+//	}
+//
+//	if len(tmpData.SubscriptionId) > 0 {
+//		log.Printf("Should update subscription %s with action %s if it exists", tmpData.SubscriptionId, tmpData.Action)
+//		found := false
+//		foundIndex := 0
+//		for index, sub := range org.Subscriptions {
+//			if tmpData.SubscriptionId == sub.Reference {
+//				found = true
+//				foundIndex = index
+//			}
+//		}
+//
+//		if !found {
+//			log.Printf("Couldn't find sub %s in org %s", tmpData.SubscriptionId, tmpData.OrgId)
+//			resp.WriteHeader(401)
+//			resp.Write([]byte(`{"success": false}`))
+//			return
+//		}
+//
+//		if tmpData.Action == "cancel" {
+//			_, err := sub.Cancel(tmpData.SubscriptionId, nil)
+//			//log.Printf("Ret: %#v", subReturn)
+//			if err != nil {
+//				log.Printf("Failed canceling sub %s.", tmpData.SubscriptionId)
+//				resp.WriteHeader(401)
+//				resp.Write([]byte(`{"success": false}`))
+//				return
+//			} else {
+//				log.Printf("Successfully canceled sub %s in org %s", tmpData.SubscriptionId, tmpData.OrgId)
+//				timeNow := time.Now().Unix()
+//				org.Subscriptions[foundIndex].Active = false
+//				org.Subscriptions[foundIndex].CancellationDate = timeNow
+//			}
+//		}
+//	}
+//
+//	//log.Printf("Org: %#v", org)
+//	err = setOrg(ctx, *org, org.Id)
+//	if err != nil {
+//		log.Printf("User %s doesn't have edit rights to %s", user.Id, org.Id)
+//		resp.WriteHeader(401)
+//		resp.Write([]byte(`{"success": false}`))
+//		return
+//	}
+//
+//	resp.WriteHeader(200)
+//	resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Successfully updated org"}`)))
+//}
 
 func initHandlers() {
 	var err error

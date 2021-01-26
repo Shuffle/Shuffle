@@ -195,6 +195,7 @@ const AppCreator = (props) => {
 	const alert = useAlert()
 
 	var upload = ""
+	const increaseAmount = 30
 	const actionNonBodyRequest = ["GET", "HEAD", "DELETE", "CONNECT"]
 	const actionBodyRequest = ["POST", "PUT", "PATCH",]
 	const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth", ]
@@ -228,6 +229,7 @@ const AppCreator = (props) => {
 	const [appBuilding, setAppBuilding] = useState(false)
 	const [extraBodyFields, setExtraBodyFields] = useState([])
 	const [fileUploadEnabled, setFileUploadEnabled] = useState(false)
+	const [actionAmount, setActionAmount] = useState(increaseAmount)
 
 	//const [actions, setActions] = useState([{
 	//	"name": "Get workflows",
@@ -447,11 +449,21 @@ const AppCreator = (props) => {
 		}
 
 		if (data.tags !== undefined && data.tags.length > 0) {
+			var newtags = []
 			for (var key in data.tags) {
-				newWorkflowTags.push(data.tags[key].name)
+				if (data.tags[key].name.length > 50) {
+					console.log("Skipping tag cus it's too long: ", data.tags[key].name.length)
+					continue
+				}
+
+				newtags.push(data.tags[key].name)
 			}
 
-			setNewWorkflowTags(newWorkflowTags)
+			if (newtags.length > 10) {
+				newtags = newtags.slice(0,9)
+			}
+
+			setNewWorkflowTags(newtags)
 		}
 
 		// This is annoying (:
@@ -512,7 +524,7 @@ const AppCreator = (props) => {
 					//console.log("Handle requestbody: ", methodvalue["requestBody"])
 					if (methodvalue["requestBody"]["content"] !== undefined) {
 						if (methodvalue["requestBody"]["content"]["application/json"] !== undefined) {
-							if (methodvalue["requestBody"]["content"]["application/json"]["schema"] !== undefined) {
+							if (methodvalue["requestBody"]["content"]["application/json"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["application/json"]["schema"] !== null) {
 								if (methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"] !== undefined) {
 									var tmpobject = {}
 									for (let [prop, propvalue] of Object.entries(methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"])) {
@@ -529,7 +541,7 @@ const AppCreator = (props) => {
 							}
 						} else if (methodvalue["requestBody"]["content"]["application/xml"] !== undefined) {
 							console.log("METHOD XML: ", methodvalue)
-							if (methodvalue["requestBody"]["content"]["application/xml"]["schema"] !== undefined) {
+							if (methodvalue["requestBody"]["content"]["application/xml"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["application/xml"]["schema"] !== null) {
 								if (methodvalue["requestBody"]["content"]["application/xml"]["schema"]["properties"] !== undefined) {
 									var tmpobject = {}
 									for (let [prop, propvalue] of Object.entries(methodvalue["requestBody"]["content"]["application/xml"]["schema"]["properties"])) {
@@ -555,7 +567,7 @@ const AppCreator = (props) => {
 
 							console.log(methodvalue["requestBody"]["content"])
 							if (methodvalue["requestBody"]["content"]["multipart/form-data"] !== undefined) {
-								if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"] !== undefined) {
+								if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"] !== null) {
 									if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["type"] === "object") {
 										const fieldname = methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["properties"]["fieldname"]
 										if (fieldname !== undefined) {
@@ -616,7 +628,7 @@ const AppCreator = (props) => {
 					} else if (parameter.in === "header") {
 						newaction.headers += `${parameter.name}=${parameter.example}\n`	
 					} else {
-						console.log("WARNING: don't know how to handle: ", parameter)
+						console.log("WARNING: don't know how to handle this param: ", parameter)
 					}
 				}
 
@@ -734,6 +746,17 @@ const AppCreator = (props) => {
 			}
 		}
 
+		if (newActions.length > increaseAmount-1) {
+			setActionAmount(increaseAmount)
+		} else {
+			setActionAmount(newActions.length)
+		}
+
+		if (newActions.length > 1000) {
+			alert.error("Cut down actions from "+newActions.length+" to 999 because of limit")
+			newActions = newActions.slice(0,999)
+		}
+
 		setActions(newActions)
   	setIsAppLoaded(true)
 	}
@@ -811,6 +834,11 @@ const AppCreator = (props) => {
 			}
 
 			const regex = /[A-Za-z0-9 _]/g;
+			if (item.name === undefined) {
+				console.log("Skipping action ", item)
+				continue
+			}
+
 			const found = item.name.match(regex);
 			if (found !== null) {
 				item.name = found.join("")
@@ -1326,7 +1354,7 @@ const AppCreator = (props) => {
 		null
 		:
 		<div>
-			{actions.map((data, index) => {
+			{actions.slice(0,actionAmount).map((data, index) => {
 				var error = data.errors.length > 0 ? 
 					<Tooltip color="primary" title={data.errors.join("\n")} placement="bottom">
 						<ErrorOutline />
@@ -1745,11 +1773,13 @@ const AppCreator = (props) => {
 							id: 'method-option',
 						}}
 						>
-						{actionNonBodyRequest.map(data => (
-							<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+						{actionNonBodyRequest.map((data, index) => {
+							return (
+							<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data}>
 								{data}
 							</MenuItem>
-						))}
+							)
+						})}
 						{actionBodyRequest.map(data => (
 							<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
 								{data}
@@ -2001,27 +2031,40 @@ const AppCreator = (props) => {
 
 	const actionView = 
 		<div style={{color: "white"}}>
-			<h2>Actions</h2>
+			<h2>Actions ({actions.length})</h2>
 			Actions are the tasks performed by an app. Read more about actions and apps
 			<Link target="_blank" to="https://shuffler.io/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}> here</Link>.
 			<div>
 				{loopActions}
-				<Button color="primary" style={{marginTop: "20px", borderRadius: "0px"}} variant="outlined" onClick={() => {
-					setCurrentAction({
-						"name": "",
-						"description": "",
-						"url": "",
-						"file_field": "",
-						"headers": "",
-						"queries": [],
-						"paths": [],
-						"body": "",
-						"errors": [],
-						"method": actionNonBodyRequest[0],
-					})
-  				setCurrentActionMethod(actionNonBodyRequest[0])
-					setActionsModalOpen(true)
-				}}>New action</Button> 				
+				<div style={{display: "flex"}}>
+					<Button color="primary" style={{marginTop: "20px", borderRadius: "0px"}} variant="outlined" onClick={() => {
+						setCurrentAction({
+							"name": "",
+							"description": "",
+							"url": "",
+							"file_field": "",
+							"headers": "",
+							"queries": [],
+							"paths": [],
+							"body": "",
+							"errors": [],
+							"method": actionNonBodyRequest[0],
+						})
+						setCurrentActionMethod(actionNonBodyRequest[0])
+						setActionsModalOpen(true)
+					}}>New action</Button> 				
+					{actionAmount > 0 && actionAmount < actions.length ? null :  
+						<Button color="primary" style={{marginTop: "20px", borderRadius: "0px", textAlign: "center"}} variant="outlined" onClick={() => {
+							if (actionAmount+increaseAmount > actions.length) {
+								setActionAmount(actions.length)
+							} else {
+								setActionAmount(actionAmount+increaseAmount)
+							}
+						}}>
+							See more actions	
+						</Button>
+					}
+				</div>
 			</div>
 		</div>
 

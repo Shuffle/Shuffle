@@ -466,6 +466,7 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 	api.Sharing = false
 	api.Verified = false
 	api.Tested = false
+	api.Invalid = false
 	api.PrivateID = newmd5
 	api.Generated = true
 	api.Activated = true
@@ -658,10 +659,15 @@ func generateYaml(swagger *openapi3.Swagger, newmd5 string) (*openapi3.Swagger, 
 	// This is the python code to be generated
 	// Could just as well be go at this point lol
 	pythonFunctions := []string{}
+	//Verified      bool   `json:"verified" yaml:"verified" required:false datastore:"verified"`
 	for actualPath, path := range swagger.Paths {
 		actualPath = strings.Replace(actualPath, " ", "_", -1)
 		//actualPath = strings.Replace(actualPath, ".", "", -1)
 		actualPath = strings.Replace(actualPath, "\\", "", -1)
+		if !api.Invalid && strings.HasPrefix(actualPath, "tmp") {
+			log.Printf("[WARNING] Set api %s to invalid because of path %s", swagger.Info.Title, actualPath)
+			api.Invalid = true
+		}
 
 		// FIXME: Handle everything behind questionmark (?) with dots as well.
 		// https://godoc.org/github.com/getkin/kin-openapi/openapi3#PathItem
@@ -866,10 +872,10 @@ def run(request):
 func deployAppToDatastore(ctx context.Context, workflowapp WorkflowApp) error {
 	err := setWorkflowAppDatastore(ctx, workflowapp, workflowapp.ID)
 	if err != nil {
-		log.Printf("Failed setting workflowapp: %s", err)
+		log.Printf("[ERROR] Failed setting workflowapp: %s", err)
 		return err
 	} else {
-		log.Printf("Added %s:%s to the database", workflowapp.Name, workflowapp.AppVersion)
+		log.Printf("[INFO] Added %s:%s to the database", workflowapp.Name, workflowapp.AppVersion)
 	}
 
 	return nil

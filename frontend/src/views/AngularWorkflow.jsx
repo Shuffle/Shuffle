@@ -1180,7 +1180,7 @@ const AngularWorkflow = (props) => {
 				setSelectedApp(curapp)
 			}
 
-			if (environments !== undefined) {
+			if (environments !== undefined && environments !== null) {
 				var env = environments.find(a => a.Name === curaction.environment)
 				if (!env || env === undefined) {
 					env = environments[defaultEnvironmentIndex]
@@ -2414,7 +2414,7 @@ const AngularWorkflow = (props) => {
 					app_id: app.id,
 					sharing: app.sharing,
 					private_id: app.private_id,	
-					environment: environments[defaultEnvironmentIndex].Name,
+					environment: environments === null ? "cloud" : environments[defaultEnvironmentIndex].Name,
 					errors: [],
 					id_: newNodeId,
 					_id_: newNodeId,
@@ -2601,6 +2601,11 @@ const AngularWorkflow = (props) => {
 						)
 					})}
 					{filteredApps.filter(innerapp => !internalIds.includes(innerapp.id)).map((app, index) => {	
+						if (app.invalid) {
+							return null
+						}
+
+						console.log("APP: ", app)
 						return(
 							<ParsedAppPaper key={index} app={app} />	
 						)

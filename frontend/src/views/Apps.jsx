@@ -21,6 +21,7 @@ import {Link} from 'react-router-dom';
 import Breadcrumbs from '@material-ui/core/Breadcrumbs';
 import ReactJson from 'react-json-view'
 import Chip from '@material-ui/core/Chip';
+import { useTheme } from '@material-ui/core/styles';
 
 import CachedIcon from '@material-ui/icons/Cached';
 import CloudDownloadIcon from '@material-ui/icons/CloudDownload';
@@ -113,6 +114,7 @@ const Apps = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, userdata } = props;
 
 	//const [workflows, setWorkflows] = React.useState([]);
+	const theme = useTheme();
 	const baseRepository = "https://github.com/frikky/shuffle-apps"
 	const alert = useAlert()
 	const [selectedApp, setSelectedApp] = React.useState({});
@@ -316,10 +318,18 @@ const Apps = (props) => {
 			boxColor = "orange"
 		}
 
+		if (data.invalid) {
+			boxColor = "red"
+		}
+
+		//<div style={{backgroundColor: theme.palette.inputColor, height: 100, width: 100, borderRadius: 3, verticalAlign: "middle", textAlign: "center", display: "table-cell"}}>
+		// <div style={{width: "100px", height: "100px", border: "1px solid black", verticalAlign: "middle", textAlign: "center", display: "table-cell"}}>
 		var imageline = data.large_image.length === 0 ?
-			<img alt={data.title} style={{width: 100, height: 100}} />
+			<img alt={data.title} style={{width: 100, height: 100, backgroundColor: theme.palette.inputColor,}} />
 			: 
-			<img alt={data.title} src={data.large_image} style={{width: 100, height: 100, maxWidth: "100%"}} />
+			<img alt={data.title} src={data.large_image} style={{maxWidth: 100, maxHeight: "100%", display: "block", margin: "0 auto"}} onLoad={(event) => {
+				//console.log("IMG LOADED!: ", event.target)
+			}} />
 
 		// FIXME - add label to apps, as this might be slow with A LOT of apps
 		var newAppname = data.name
@@ -341,7 +351,7 @@ const Apps = (props) => {
 		}
 
 		var description = data.description
-		const maxDescLen = 56
+		const maxDescLen = 51
 		if (description.length > maxDescLen) {
 			description = data.description.slice(0, maxDescLen)+"..."
 		}
@@ -364,8 +374,8 @@ const Apps = (props) => {
 					} 
 				}
 			}}>
-				<Grid container style={{margin: 10, flex: "10"}}>
-					<ButtonBase>
+				<Grid container style={{margin: 10, flex: "10", maxHeight: 110, overflow: "hidden",}}>
+					<ButtonBase style={{backgroundColor: theme.palette.inputColor, border: 3}}>
 						{imageline}
 					</ButtonBase>
 					<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: boxWidth, backgroundColor: boxColor}}>
@@ -520,9 +530,9 @@ const Apps = (props) => {
 			: null
 
 		var imageline = selectedApp.large_image === undefined || selectedApp.large_image.length === 0 ?
-			<img alt={selectedApp.title} style={{width: 100, height: 100}} />
+			<img alt={selectedApp.title} style={{width: 100, height: 100, backgroundColor: theme.palette.inputColor,}} />
 			: 
-			<img alt={selectedApp.title} src={selectedApp.large_image} style={{width: 100, height: 100, maxWidth: "100%"}} />
+			<img alt={selectedApp.title} src={selectedApp.large_image} style={{maxHeight: 100, maxWidth: 100, backgroundColor: theme.palette.inputColor}} />
 
 		const GetAppExample = () => {
 			if (selectedAction.returns === undefined) {
@@ -639,7 +649,7 @@ const Apps = (props) => {
 								updateAppField(selectedApp.id, "sharing", !selectedApp.sharing)
 								//setSelectedAction(event.target.value)
 							}}
-							style={{width: 150, backgroundColor: inputColor, color: "white", height: 35, marginleft: 10,}}
+							style={{width: 150, backgroundColor: theme.palette.surfaceColor, backgroundColor: inputColor, color: "white", height: 35, marginleft: 10,}}
 							SelectDisplayProps={{
 								style: {
 									marginLeft: 10,

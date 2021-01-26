@@ -44,11 +44,12 @@ Please consider [sponsoring](https://github.com/sponsors/frikky) the project if 
 https://shuffler.io
 
 ## Contributors 
+![ICPL logo](https://github.com/frikky/Shuffle/blob/launch/frontend/src/assets/img/icpl_logo.png)
+
 **Shuffle**
 <a href="https://github.com/frikky/shuffle/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=frikky/shuffle" />
 </a>
-![ICPL logo](https://github.com/frikky/Shuffle/blob/launch/frontend/src/assets/img/icpl_logo.png)
 
 **Shuffle Apps**
 <a href="https://github.com/frikky/shuffle-apps/graphs/contributors">

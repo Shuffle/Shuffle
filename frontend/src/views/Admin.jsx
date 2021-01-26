@@ -64,6 +64,7 @@ const Admin = (props) => {
 	const theme = useTheme();
 	const classes = useStyles();
 	const [firstRequest, setFirstRequest] = React.useState(true);
+	const [orgRequest, setOrgRequest] = React.useState(true);
 	const [modalUser, setModalUser] = React.useState({});
 	const [modalOpen, setModalOpen] = React.useState(false);
 
@@ -942,8 +943,8 @@ const Admin = (props) => {
 		}
 	}
 
-	if (selectedOrganization.id === undefined && userdata !== undefined && userdata.active_org !== undefined) {
-		//setSelectedOrganization(userdata.active_org)
+	if (selectedOrganization.id === undefined && userdata !== undefined && userdata.active_org !== undefined && orgRequest) {
+		setOrgRequest(false)
 		handleGetOrg(userdata.active_org.id)
 	}
 
@@ -1655,6 +1656,7 @@ const Admin = (props) => {
 			</div>
 			<div />
 			<Button
+				disabled={isCloud}
 				style={{}}
 				variant="contained"
 				color="primary"
@@ -2399,7 +2401,7 @@ const Admin = (props) => {
 					aria-label="disabled tabs example"
 				>
 					<Tab label=<span><BusinessIcon style={iconStyle} /> Organization</span>/>
-					{isCloud ? null : <Tab label=<span><AccessibilityNewIcon style={iconStyle} />Users</span> />}
+					<Tab label=<span><AccessibilityNewIcon style={iconStyle} />Users</span> />
 					{isCloud ? null : <Tab label=<span><LockIcon style={iconStyle} />App Authentication</span>/>}
 					{isCloud ? null : <Tab label=<span><EcoIcon style={iconStyle} />Environments</span>/>}
 					{isCloud ? null : <Tab label=<span><ScheduleIcon style={iconStyle} />Schedules</span> />}

@@ -106,20 +106,34 @@ type SyncConfig struct {
 
 // Role is just used for feedback for a user
 type Org struct {
-	Name         string       `json:"name" datastore:"name"`
-	Description  string       `json:"description" datastore:"description"`
-	Image        string       `json:"image" datastore:"image,noindex"`
-	Id           string       `json:"id" datastore:"id"`
-	Org          string       `json:"org" datastore:"org"`
-	Users        []User       `json:"users" datastore:"users"`
-	Role         string       `json:"role" datastore:"role"`
-	Roles        []string     `json:"roles" datastore:"roles"`
-	CloudSync    bool         `json:"cloud_sync" datastore:"CloudSync"`
-	SyncConfig   SyncConfig   `json:"sync_config" datastore:"sync_config"`
-	SyncFeatures SyncFeatures `json:"sync_features" datastore:"sync_features"`
-	Created      int64        `json:"created" datastore:"created"`
-	Edited       int64        `json:"edited" datastore:"edited"`
-	Defaults     Defaults     `json:"defaults" datastore:"defaults"`
+	Name          string                `json:"name" datastore:"name"`
+	Description   string                `json:"description" datastore:"description"`
+	Image         string                `json:"image" datastore:"image,noindex"`
+	Id            string                `json:"id" datastore:"id"`
+	Org           string                `json:"org" datastore:"org"`
+	Users         []User                `json:"users" datastore:"users"`
+	Role          string                `json:"role" datastore:"role"`
+	Roles         []string              `json:"roles" datastore:"roles"`
+	CloudSync     bool                  `json:"cloud_sync" datastore:"CloudSync"`
+	SyncConfig    SyncConfig            `json:"sync_config" datastore:"sync_config"`
+	SyncFeatures  SyncFeatures          `json:"sync_features" datastore:"sync_features"`
+	Subscriptions []PaymentSubscription `json:"subscriptions" datastore:"subscriptions"`
+	Created       int64                 `json:"created" datastore:"created"`
+	Edited        int64                 `json:"edited" datastore:"edited"`
+	Defaults      Defaults              `json:"defaults" datastore:"defaults"`
+}
+
+type PaymentSubscription struct {
+	Active           bool   `json:"active" datastore:"active"`
+	Startdate        int64  `json:"startdate" datastore:"startdate"`
+	CancellationDate int64  `json:"cancellationdate" datastore:"cancellationdate"`
+	Enddate          int64  `json:"enddate" datastore:"enddate"`
+	Name             string `json:"name" datastore:"name"`
+	Recurrence       string `json:"recurrence" datastore:"recurrence"`
+	Reference        string `json:"reference" datastore:"reference"`
+	Level            string `json:"level" datastore:"level"`
+	Amount           string `json:"amount" datastore:"amount"`
+	Currency         string `json:"currency" datastore:"currency"`
 }
 
 type Defaults struct {
@@ -162,6 +176,7 @@ type WorkflowApp struct {
 	Downloaded    bool   `json:"downloaded" yaml:"downloaded" required:false datastore:"downloaded"`
 	Sharing       bool   `json:"sharing" yaml:"sharing" required:false datastore:"sharing"`
 	Verified      bool   `json:"verified" yaml:"verified" required:false datastore:"verified"`
+	Invalid       bool   `json:"invalid" yaml:"invalid" required:false datastore:"invalid"`
 	Activated     bool   `json:"activated" yaml:"activated" required:false datastore:"activated"`
 	Tested        bool   `json:"tested" yaml:"tested" required:false datastore:"tested"`
 	Owner         string `json:"owner" datastore:"owner" yaml:"owner"`
@@ -1746,7 +1761,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 		//log.Printf("APPENDING NEW APP FOR NEW WORKFLOW")
 
 		// Adds the Testing app if it's a new workflow
-		workflowapps, err := getAllWorkflowApps(ctx, 100)
+		workflowapps, err := getAllWorkflowApps(ctx, 500)
 		if err == nil {
 			// FIXME: Add real env
 			envName := "Shuffle"
@@ -2185,7 +2200,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("[WORKFLOW INIT] NOT PREVIOUSLY SAVED - SET ACTION AUTH!")
 		//AuthenticationId string `json:"authentication_id,omitempty" datastore:"authentication_id"`
 
-		workflowapps, apperr := getAllWorkflowApps(ctx, 100)
+		workflowapps, apperr := getAllWorkflowApps(ctx, 500)
 		allAuths, err := getAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
 		if err == nil && len(workflowapps) > 0 && apperr == nil {
 			log.Printf("Setting actions")
@@ -2300,7 +2315,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 						//outerapp.Authentication.Required
 						// Authentication Authentication      `json:"authentication" yaml:"authentication" required:false datastore:"authentication"`
-						//workflowapps, apperr := getAllWorkflowApps(ctx)
+						//workflowapps, apperr := getAllWorkflowApps(ctx, 100)
 					}
 				}
 
@@ -2707,7 +2722,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	workflow.Actions = newActions
 	workflow.IsValid = true
-	log.Printf("Tags: %#v", workflow.Tags)
+	log.Printf("[INFO] Tags: %#v", workflow.Tags)
 
 	// FIXME: Is this too drastic? May lead to issues in the future.
 	// Should maybe make a copy for the old org.
@@ -2745,7 +2760,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	cacheKey := fmt.Sprintf("workflowapps-sorted")
 	requestCache.Delete(cacheKey)
-	log.Printf("Saved new version of workflow %s (%s) for org %s", workflow.Name, fileId, workflow.OrgId)
+	log.Printf("[INFO] Saved new version of workflow %s (%s) for org %s", workflow.Name, fileId, workflow.OrgId)
 	resp.WriteHeader(200)
 	newBody, err := json.Marshal(returndata)
 	if err != nil {
@@ -2825,7 +2840,7 @@ func abortExecution(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflowExecution, err := getWorkflowExecution(ctx, executionId)
 	if err != nil {
-		log.Printf("Failed getting execution (abort) %s: %s", executionId, err)
+		log.Printf("[ERROR] Failed getting execution (abort) %s: %s", executionId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting execution ID %s because it doesn't exist (abort)."}`, executionId)))
 		return
@@ -4597,7 +4612,7 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 
 	// Not really deleting it, just removing from user cache
 	if private {
-		log.Printf("Deleting private app")
+		log.Printf("[INFO] Deleting private app")
 		var privateApps []WorkflowApp
 		for _, item := range user.PrivateApps {
 			if item.ID == fileId {
@@ -4610,14 +4625,14 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 		user.PrivateApps = privateApps
 		err = setUser(ctx, &user)
 		if err != nil {
-			log.Printf("Failed removing %s app for user %s: %s", app.Name, user.Username, err)
+			log.Printf("[ERROR]Failed removing %s app for user %s: %s", app.Name, user.Username, err)
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": true"}`)))
 			return
 		}
 	}
 
-	log.Printf("Deleting public app")
+	log.Printf("[INFO] Deleting public app")
 	err = DeleteKey(ctx, "workflowapp", fileId)
 	if err != nil {
 		log.Printf("Failed deleting workflowapp")
@@ -4948,7 +4963,7 @@ func addAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 	app, err := getApp(ctx, appAuth.App.ID)
 	if err != nil {
 		log.Printf("[WARNING] Failed finding app %s while setting auth. Finding it by looping apps.", appAuth.App.ID)
-		workflowapps, err := getAllWorkflowApps(ctx, 100)
+		workflowapps, err := getAllWorkflowApps(ctx, 500)
 		if err != nil {
 			resp.WriteHeader(409)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
@@ -5255,7 +5270,7 @@ func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 	//	return
 	//}
 
-	workflowapps, err := getAllWorkflowApps(ctx, 100)
+	workflowapps, err := getAllWorkflowApps(ctx, 500)
 	if err != nil {
 		log.Printf("Failed getting apps (getworkflowapps): %s", err)
 		resp.WriteHeader(401)
@@ -5266,45 +5281,48 @@ func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 
 	// FIXME - this is really garbage, but is here to protect again null values etc.
 
-	skipApps := []string{"Shuffle Subflow"}
-	newapps := []WorkflowApp{}
-	baseApps := []WorkflowApp{}
-	for _, workflowapp := range workflowapps {
-		//if !workflowapp.Activated && workflowapp.Generated {
-		//	continue
-		//}
+	newapps := workflowapps
+	/*
+		skipApps := []string{"Shuffle Subflow"}
+		newapps := []WorkflowApp{}
+		baseApps := []WorkflowApp{}
+			for _, workflowapp := range workflowapps {
+				//if !workflowapp.Activated && workflowapp.Generated {
+				//	continue
+				//}
 
-		if workflowapp.Owner != user.Id && user.Role != "admin" && !workflowapp.Sharing {
-			continue
-		}
+				if workflowapp.Owner != user.Id && user.Role != "admin" && !workflowapp.Sharing {
+					continue
+				}
 
-		continueOuter := false
-		for _, skip := range skipApps {
-			if workflowapp.Name == skip {
-				continueOuter = true
-				break
+				continueOuter := false
+				for _, skip := range skipApps {
+					if workflowapp.Name == skip {
+						continueOuter = true
+						break
+					}
+				}
+
+				if continueOuter {
+					continue
+				}
+
+				//workflowapp.Environment = "cloud"
+				newactions := []WorkflowAppAction{}
+				for _, action := range workflowapp.Actions {
+					//action.Environment = workflowapp.Environment
+					if len(action.Parameters) == 0 {
+						action.Parameters = []WorkflowAppActionParameter{}
+					}
+
+					newactions = append(newactions, action)
+				}
+
+				workflowapp.Actions = newactions
+				newapps = append(newapps, workflowapp)
+				baseApps = append(baseApps, workflowapp)
 			}
-		}
-
-		if continueOuter {
-			continue
-		}
-
-		//workflowapp.Environment = "cloud"
-		newactions := []WorkflowAppAction{}
-		for _, action := range workflowapp.Actions {
-			//action.Environment = workflowapp.Environment
-			if len(action.Parameters) == 0 {
-				action.Parameters = []WorkflowAppActionParameter{}
-			}
-
-			newactions = append(newactions, action)
-		}
-
-		workflowapp.Actions = newactions
-		newapps = append(newapps, workflowapp)
-		baseApps = append(baseApps, workflowapp)
-	}
+	*/
 
 	if len(user.PrivateApps) > 0 {
 		found := false
@@ -5445,7 +5463,7 @@ func getSpecificApps(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - continue the search here with github repos etc.
 	// Caching might be smart :D
 	ctx := context.Background()
-	workflowapps, err := getAllWorkflowApps(ctx, 100)
+	workflowapps, err := getAllWorkflowApps(ctx, 500)
 	if err != nil {
 		log.Printf("Error: Failed getting workflowapps: %s", err)
 		resp.WriteHeader(401)
@@ -5960,7 +5978,7 @@ func loadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string) error {
 
 	ctx := context.Background()
-	workflowapps, err := getAllWorkflowApps(ctx, 100)
+	workflowapps, err := getAllWorkflowApps(ctx, 500)
 	appCounter := 0
 	if err != nil {
 		log.Printf("Failed to get existing generated apps")
@@ -6332,7 +6350,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 				}
 
 				if len(allapps) == 0 {
-					allapps, err = getAllWorkflowApps(ctx, 100)
+					allapps, err = getAllWorkflowApps(ctx, 500)
 					if err != nil {
 						log.Printf("Failed getting apps to verify: %s", err)
 						continue
@@ -6549,7 +6567,7 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	allapps, err := getAllWorkflowApps(ctx, 100)
+	allapps, err := getAllWorkflowApps(ctx, 500)
 	if err != nil {
 		log.Printf("Failed getting apps to verify: %s", err)
 		resp.WriteHeader(401)
@@ -6719,7 +6737,7 @@ func getAllWorkflowApps(ctx context.Context, maxLen int) ([]WorkflowApp, error) 
 	query := datastore.NewQuery("workflowapp").Order("-edited").Limit(20)
 	//query := datastore.NewQuery("workflowapp").Order("-edited").Limit(40)
 
-	cacheKey := fmt.Sprintf("workflowapps-sorted")
+	cacheKey := fmt.Sprintf("workflowapps-sorted-%d", maxLen)
 	if value, found := requestCache.Get(cacheKey); found {
 		parsedValue := value.(*[]WorkflowApp)
 		log.Printf("[INFO] Returning %d apps from cache", len(*parsedValue))
@@ -6847,7 +6865,7 @@ func setWorkflowAppAuthDatastore(ctx context.Context, workflowappauth AppAuthent
 
 	// New struct, to not add body, author etc
 	if _, err := dbclient.Put(ctx, key, &workflowappauth); err != nil {
-		log.Printf("Error adding workflow app: %s", err)
+		log.Printf("Error adding workflow app auth: %s", err)
 		return err
 	}
 
