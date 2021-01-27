@@ -51,7 +51,7 @@ https://shuffler.io
   <img src="https://contrib.rocks/image?repo=frikky/shuffle" />
 </a>
 
-**Shuffle Apps**
+[**App magicians**](https://github.com/frikky/shuffle-apps)
 <a href="https://github.com/frikky/shuffle-apps/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=frikky/shuffle-apps" />
 </a>
