@@ -21,17 +21,22 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	//"github.com/docker/docker/api/types/filters"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/satori/go.uuid"
 	//network "github.com/docker/docker/api/types/network"
 	//natting "github.com/docker/go-connections/nat"
+	"github.com/mackerelio/go-osstat/cpu"
+	"github.com/mackerelio/go-osstat/memory"
 )
 
 // Starts jobs in bulk, so this could be increased
 var sleepTime = 3
+var maxConcurrency = 50
 
 // Timeout if something rashes
 var workerTimeoutEnv = os.Getenv("SHUFFLE_ORBORUS_EXECUTION_TIMEOUT")
+var concurrencyEnv = os.Getenv("SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY")
 var appSdkVersion = os.Getenv("SHUFFLE_APP_SDK_VERSION")
 var workerVersion = os.Getenv("SHUFFLE_WORKER_VERSION")
 
@@ -47,6 +52,8 @@ var baseUrl = os.Getenv("BASE_URL")
 var environment = os.Getenv("ENVIRONMENT_NAME")
 var dockerApiVersion = os.Getenv("DOCKER_API_VERSION")
 var runningMode = strings.ToLower(os.Getenv("RUNNING_MODE"))
+var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
+var workerIds = []string{}
 
 type ExecutionRequestWrapper struct {
 	Data []ExecutionRequest `json:"data"`
@@ -103,13 +110,25 @@ func getThisContainerId() {
 		out, err := exec.Command("bash", "-c", cmd).Output()
 		if err == nil {
 			containerId = strings.TrimSpace(string(out))
+
+			// cgroup error. Hardcoding this.
+			// https://github.com/moby/moby/issues/7015
+			//log.Printf("Checking if %s is in %s", ".scope", string(out))
+			if strings.Contains(string(out), ".scope") {
+				containerId = "shuffle-orborus"
+				//docker-76c537e9a4b7c7233011f5d70e6b7f2d600b6413ac58a96519b8dca7a3f7117a.scope
+			}
 		} else {
-			log.Printf("Failed getting container ID: %s", err)
+			containerId = "shuffle-orborus"
+			log.Printf("[WARNING] Failed getting container ID: %s", err)
 		}
 	}
+
+	log.Printf("Started with containerId %s", containerId)
 }
 
 // Deploys the internal worker whenever something happens
+// https://docs.docker.com/engine/api/sdk/examples/
 func deployWorker(image string, identifier string, env []string) {
 	// Binds is the actual "-v" volume.
 	hostConfig := &container.HostConfig{
@@ -124,10 +143,14 @@ func deployWorker(image string, identifier string, env []string) {
 
 	// form container id and use it as network source if it's not empty
 	if containerId != "" {
-		log.Printf("[INFO] Found container ID %s", containerId)
+		//log.Printf("[INFO] Found container ID %s", containerId)
 		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
 	} else {
 		//log.Printf("[INFO] Empty self container id, continue without NetworkMode")
+	}
+
+	if cleanupEnv == "true" {
+		hostConfig.AutoRemove = true
 	}
 
 	config := &container.Config{
@@ -135,11 +158,12 @@ func deployWorker(image string, identifier string, env []string) {
 		Env:   env,
 	}
 
-	log.Printf("Identifier: %s", identifier)
+	//log.Printf("[INFO] Identifier: %s", identifier)
 	cont, err := dockercli.ContainerCreate(
 		context.Background(),
 		config,
 		hostConfig,
+		nil,
 		nil,
 		identifier,
 	)
@@ -154,6 +178,7 @@ func deployWorker(image string, identifier string, env []string) {
 				config,
 				hostConfig,
 				nil,
+				nil,
 				identifier,
 			)
 
@@ -167,7 +192,8 @@ func deployWorker(image string, identifier string, env []string) {
 		}
 	}
 
-	err = dockercli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
+	containerStartOptions := types.ContainerStartOptions{}
+	err = dockercli.ContainerStart(context.Background(), cont.ID, containerStartOptions)
 	if err != nil {
 		log.Printf("[ERROR] Failed to start container in environment %s: %s", environment, err)
 		return
@@ -195,6 +221,7 @@ func deployWorker(image string, identifier string, env []string) {
 		//}
 	} else {
 		log.Printf("[INFO] Container %s was created under environment %s", cont.ID, environment)
+		//workerIds = append(workerIds, cont.ID)
 	}
 
 	return
@@ -227,11 +254,11 @@ func initializeImages() {
 	ctx := context.Background()
 
 	if appSdkVersion == "" {
-		appSdkVersion = "0.8.0"
+		appSdkVersion = "0.8.5"
 		log.Printf("[WARNING] SHUFFLE_APP_SDK_VERSION not defined. Defaulting to %s", appSdkVersion)
 	}
 	if workerVersion == "" {
-		workerVersion = "0.8.0"
+		workerVersion = "0.8.54"
 		log.Printf("[WARNING] SHUFFLE_WORKER_VERSION not defined. Defaulting to %s", workerVersion)
 	}
 
@@ -248,9 +275,7 @@ func initializeImages() {
 
 	// check whether they are the same first
 	images := []string{
-		//fmt.Sprintf("%s/%s:app_sdk%s", baseimageregistry, baseimagename, baseimagetagsuffix),
-		//fmt.Sprintf("%s/%s:worker%s", baseimageregistry, baseimagename, baseimagetagsuffix),
-
+		fmt.Sprintf("frikky/shuffle:app_sdk"),
 		fmt.Sprintf("%s/%s/shuffle-app_sdk:%s", baseimageregistry, baseimagename, appSdkVersion),
 		fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion),
 		// fmt.Sprintf("docker.io/%s:app_sdk", baseimagename),
@@ -273,6 +298,40 @@ func initializeImages() {
 		io.Copy(os.Stdout, reader)
 		log.Printf("[INFO] Successfully downloaded and built %s", image)
 	}
+}
+
+// Will be used for checking if there's enough to deploy based on a threshold
+// E.g. having maximum CPU and maxmimum RAM
+// Does this work containerized?
+func getStats() {
+	fmt.Printf("\n")
+
+	memory, err := memory.Get()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		return
+	}
+
+	before, err := cpu.Get()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		return
+	}
+	time.Sleep(time.Duration(250) * time.Millisecond)
+	after, err := cpu.Get()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		return
+	}
+	total := float64(after.Total - before.Total)
+
+	fmt.Printf("[INFO] memory total: %d bytes\n", memory.Total)
+	fmt.Printf("[INFO] memory used: %d bytes\n", memory.Used)
+	fmt.Printf("[INFO] cpu used  : %f%%\n", float64(after.User-before.User)/total*100)
+	fmt.Printf("[INFO] cpu system: %f%%\n", float64(after.System-before.System)/total*100)
+	fmt.Printf("[INFO] cpu idle  : %f%%\n", float64(after.Idle-before.Idle)/total*100)
+
+	fmt.Printf("\n")
 }
 
 // Initial loop etc
@@ -302,7 +361,19 @@ func main() {
 		log.Printf("[INFO] Cleanup process running every %d seconds", workerTimeout)
 	}
 
-	go zombiecheck(workerTimeout)
+	if concurrencyEnv != "" {
+		//var concurrencyEnv = os.Getenv("SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY")
+		tmpInt, err := strconv.Atoi(concurrencyEnv)
+		if err == nil {
+			maxConcurrency = tmpInt
+			log.Printf("[INFO] Max workflow execution concurrency set to %d", maxConcurrency)
+		} else {
+			log.Printf("[WARNING] Env SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY must be a number, not %s. Defaulted to %d", workerTimeoutEnv, maxConcurrency)
+		}
+	}
+
+	ctx := context.Background()
+	go zombiecheck(ctx, workerTimeout)
 
 	log.Printf("[INFO] Running towards %s with Org %s", baseUrl, orgId)
 	httpProxy := os.Getenv("HTTP_PROXY")
@@ -337,6 +408,8 @@ func main() {
 		},
 	}
 
+	//getStats()
+
 	if (len(httpProxy) > 0 || len(httpsProxy) > 0) && baseUrl != "http://shuffle-backend:5001" {
 		client = &http.Client{}
 	} else {
@@ -367,13 +440,15 @@ func main() {
 	hasStarted := false
 	for {
 		//log.Printf("Prerequest")
+		//go getStats()
 		newresp, err := client.Do(req)
+		executionCount := getRunningWorkers(ctx, workerTimeout)
 		//log.Printf("Postrequest")
 		if err != nil {
 			log.Printf("[WARNING] Failed making request: %s", err)
 			zombiecounter += 1
 			if zombiecounter*sleepTime > workerTimeout {
-				go zombiecheck(workerTimeout)
+				go zombiecheck(ctx, workerTimeout)
 				zombiecounter = 0
 			}
 			time.Sleep(time.Duration(sleepTime) * time.Second)
@@ -394,7 +469,7 @@ func main() {
 			log.Printf("[ERROR] Failed reading body: %s", err)
 			zombiecounter += 1
 			if zombiecounter*sleepTime > workerTimeout {
-				go zombiecheck(workerTimeout)
+				go zombiecheck(ctx, workerTimeout)
 				zombiecounter = 0
 			}
 			time.Sleep(time.Duration(sleepTime) * time.Second)
@@ -408,7 +483,7 @@ func main() {
 			sleepTime = 10
 			zombiecounter += 1
 			if zombiecounter*sleepTime > workerTimeout {
-				go zombiecheck(workerTimeout)
+				go zombiecheck(ctx, workerTimeout)
 				zombiecounter = 0
 			}
 			time.Sleep(time.Duration(sleepTime) * time.Second)
@@ -423,11 +498,29 @@ func main() {
 		if len(executionRequests.Data) == 0 {
 			zombiecounter += 1
 			if zombiecounter*sleepTime > workerTimeout {
-				go zombiecheck(workerTimeout)
+				go zombiecheck(ctx, workerTimeout)
 				zombiecounter = 0
 			}
 			time.Sleep(time.Duration(sleepTime) * time.Second)
 			continue
+		}
+
+		// Anything below here verifies concurrency virification
+		if executionCount >= maxConcurrency {
+			if zombiecounter*sleepTime > workerTimeout {
+				go zombiecheck(ctx, workerTimeout)
+				zombiecounter = 0
+			}
+			time.Sleep(time.Duration(sleepTime) * time.Second)
+			continue
+		}
+
+		//log.Printf("[INFO] Got %d new requests. Executing: %d. Max: %d", len(executionRequests.Data), executionCount, maxConcurrency)
+
+		allowed := maxConcurrency - executionCount
+		if len(executionRequests.Data) > allowed {
+			log.Printf("[WARNING] Throttle - Cutting down requests from %d to %d (MAX: %d, CUR: %d)", len(executionRequests.Data), allowed, maxConcurrency, executionCount)
+			executionRequests.Data = executionRequests.Data[0:allowed]
 		}
 
 		// New, abortable version. Should check executionid and remove everything else
@@ -453,6 +546,7 @@ func main() {
 				fmt.Sprintf("EXECUTIONID=%s", execution.ExecutionId),
 				fmt.Sprintf("ENVIRONMENT_NAME=%s", environment),
 				fmt.Sprintf("BASE_URL=%s", baseUrl),
+				fmt.Sprintf("CLEANUP=%s", cleanupEnv),
 			}
 
 			if strings.ToLower(os.Getenv("SHUFFLE_PASS_WORKER_PROXY")) != "false" {
@@ -466,7 +560,7 @@ func main() {
 
 			go deployWorker(workerImage, containerName, env)
 
-			log.Printf("[INFO] %s is deployed and to be removed from queue.", execution.ExecutionId)
+			log.Printf("[INFO] ExecutionID %s was deployed and to be removed from queue.", execution.ExecutionId)
 			zombiecounter += 1
 			toBeRemoved.Data = append(toBeRemoved.Data, execution)
 		}
@@ -528,25 +622,22 @@ func main() {
 	}
 }
 
-// FIXME - add this to remove exited workers
-// Should it check what happened to the execution? idk
-func zombiecheck(workerTimeout int) error {
-	log.Println("[INFO] Looking for old containers")
-	ctx := context.Background()
-
+// Is this ok to do with Docker? idk :)
+func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
 		All: true,
 	})
+	//Filters: filters.Args{
+	//	map[string][]string{"ancestor": {"<imagename>:<version>"}},
+	//},
 
 	if err != nil {
-		log.Printf("[ERROR] Failed creating Containerlist: %s", err)
-		return err
+		log.Printf("[ERROR] Error getting containers: %s", err)
+		return maxConcurrency
 	}
 
-	containerNames := map[string]string{}
-
-	stopContainers := []string{}
-	removeContainers := []string{}
+	currenttime := time.Now().Unix()
+	counter := 0
 	for _, container := range containers {
 		// Skip random containers. Only handle things related to Shuffle.
 		if !strings.Contains(container.Image, baseimagename) {
@@ -568,14 +659,75 @@ func zombiecheck(workerTimeout int) error {
 
 		for _, name := range container.Names {
 			// FIXME - add name_version_uid_uid regex check as well
-			if strings.HasPrefix(name, "/shuffle") {
+			if !strings.HasPrefix(name, "/worker") {
 				continue
 			}
 
-			log.Printf("[INFO] NAME: %s", name)
+			//log.Printf("Time: %d - %d", currenttime-container.Created, int64(workerTimeout))
+			if container.State == "running" && currenttime-container.Created < int64(workerTimeout) {
+				counter += 1
+				break
+			}
+		}
+	}
+
+	return counter
+}
+
+// FIXME - add this to remove exited workers
+// Should it check what happened to the execution? idk
+func zombiecheck(ctx context.Context, workerTimeout int) error {
+	log.Println("[INFO] Looking for old containers (zombies)")
+	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
+		All: true,
+	})
+
+	//log.Printf("Len: %d", len(containers))
+
+	if err != nil {
+		log.Printf("[ERROR] Failed creating Containerlist: %s", err)
+		return err
+	}
+
+	containerNames := map[string]string{}
+
+	stopContainers := []string{}
+	removeContainers := []string{}
+	log.Printf("[INFO] Baseimage: %s, Workertimeout: %d", baseimagename, int64(workerTimeout))
+	baseString := `/bin/sh -c 'python app.py --log-level DEBUG'`
+	for _, container := range containers {
+		// Skip random containers. Only handle things related to Shuffle.
+		if !strings.Contains(container.Image, baseimagename) && container.Command != baseString && container.Command != "./worker" {
+			shuffleFound := false
+			for _, item := range container.Labels {
+				if item == "shuffle" {
+					shuffleFound = true
+					break
+				}
+			}
+
+			// Check image name
+			if !shuffleFound {
+				log.Printf("Skipping: %s, %s", container.Labels, container.Image)
+				continue
+			}
+			//} else {
+			//	log.Printf("NAME: %s", container.Image)
+		} else {
+			//log.Printf("Img: %s", container.Image)
+			//log.Printf("Names: %s", container.Names)
+		}
+
+		for _, name := range container.Names {
+			// FIXME - add name_version_uid_uid regex check as well
+			if strings.HasPrefix(name, "/shuffle") && !strings.HasPrefix(name, "/shuffle-subflow") {
+				continue
+			}
+
+			currenttime := time.Now().Unix()
+			//log.Printf("[INFO] (%s) NAME: %s. TIME: %d", container.State, name, currenttime-container.Created)
 
 			// Need to check time here too because a container can be removed the same instant as its created
-			currenttime := time.Now().Unix()
 			if container.State != "running" && currenttime-container.Created > int64(workerTimeout) {
 				removeContainers = append(removeContainers, container.ID)
 				containerNames[container.ID] = name
@@ -591,9 +743,10 @@ func zombiecheck(workerTimeout int) error {
 	}
 
 	// FIXME - add killing of apps with same execution ID too
+	log.Printf("[INFO] Should STOP %d containers.", len(stopContainers))
 	for _, containername := range stopContainers {
 		log.Printf("[INFO] Stopping and removing container %s", containerNames[containername])
-		go dockercli.ContainerStop(ctx, containername, nil)
+		dockercli.ContainerStop(ctx, containername, nil)
 		removeContainers = append(removeContainers, containername)
 	}
 
@@ -602,8 +755,9 @@ func zombiecheck(workerTimeout int) error {
 		Force:         true,
 	}
 
+	log.Printf("[INFO] Should REMOVE %d containers.", len(removeContainers))
 	for _, containername := range removeContainers {
-		go dockercli.ContainerRemove(ctx, containername, removeOptions)
+		dockercli.ContainerRemove(ctx, containername, removeOptions)
 	}
 
 	return nil

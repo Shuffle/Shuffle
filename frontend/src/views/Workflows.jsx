@@ -43,8 +43,40 @@ import CloudDownloadIcon from '@material-ui/icons/CloudDownload';
 const inputColor = "#383B40"
 const surfaceColor = "#27292D"
 
+export const validateJson = (showResult) => {
+	//showResult = showResult.split(" None").join(" \"None\"")
+	showResult = showResult.split(" False").join(" false")
+	showResult = showResult.split(" True").join(" true")
+
+	var jsonvalid = true
+	try {
+		const tmp = String(JSON.parse(showResult))
+		if (!showResult.includes("{") && !showResult.includes("[")) {
+			jsonvalid = false
+		}
+	} catch (e) {
+		showResult = showResult.split("\'").join("\"")
+
+		try {
+			const tmp = String(JSON.parse(showResult))
+			if (!showResult.includes("{") && !showResult.includes("[")) {
+				jsonvalid = false
+			}
+		} catch (e) {
+			jsonvalid = false
+		}
+	}
+
+	const result = jsonvalid ? JSON.parse(showResult) : showResult
+	//console.log("VALID: ", jsonvalid, result)
+	return {
+		"valid": jsonvalid, 
+		"result": result,
+	}
+}
+
 const Workflows = (props) => {
-  const { globalUrl, isLoggedIn, isLoaded, removeCookie, cookies} = props;
+  const { globalUrl, isLoggedIn, isLoaded, removeCookie, cookies, userdata} = props;
 	document.title = "Shuffle - Workflows"
 
 	const alert = useAlert()
@@ -80,7 +112,7 @@ const Workflows = (props) => {
 	  	duration: 5000,
 	  	startImmediate: false,
 	  	callback: () => {
-				getWorkflowExecution(selectedWorkflow.id) 
+				//getWorkflowExecution(selectedWorkflow.id) 
 	  	}
 	})
 
@@ -183,7 +215,7 @@ const Workflows = (props) => {
 
 			if (responseJson.length > 0){
 				setSelectedWorkflow(responseJson[0])
-				getWorkflowExecution(responseJson[0].id)
+				//getWorkflowExecution(responseJson[0].id)
 			}
     	})
 		.catch(error => {
@@ -202,8 +234,8 @@ const Workflows = (props) => {
 		color: "#ffffff",
 		width: "100%",
 		display: "flex",
-		minWidth: 1366,
-		maxWidth: 1766,
+		minWidth: 1024,
+		maxWidth: 1024,
 		margin: "auto",
 		maxHeight: "90vh",
 	}
@@ -272,7 +304,7 @@ const Workflows = (props) => {
 					setSelectedExecution(responseJson[0])
 					setWorkflowExecutions(responseJson)
 				} else {
-					alert.info("Couldn't find executions for the workflow")
+					//alert.info("Couldn't find executions for the workflow")
 					setSelectedExecution({})
 					setWorkflowExecutions([])
 				}
@@ -298,7 +330,7 @@ const Workflows = (props) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for WORKFLOW EXECUTION :O!")
 			}
-			getWorkflowExecution(workflowid) 
+			//getWorkflowExecution(workflowid) 
 
 			return response.json()
 		})
@@ -361,10 +393,24 @@ const Workflows = (props) => {
 
 		data["owner"] = ""
 		for (var key in data.triggers) {
-			if (data.triggers[key].status == "running") {
-				data.triggers[key].status = "stopped"
+			const trigger = data.triggers[key]
+			if (trigger.app_name === "Shuffle Workflow") {
+				if (trigger.parameters.length > 2) {
+					trigger.parameters[2].value = ""
+				}
+			} 
+			
+			if (trigger.status == "running") {
+				trigger.status = "stopped"
 			}
 		}
+
+		for (var key in data.actions) {
+			data.actions[key].authentication_id = ""
+		}
+
+		//return
+
 		data["org"] = []
 		data["org_id"] = ""
 		data.execution_org = {"id": ""}
@@ -377,12 +423,15 @@ const Workflows = (props) => {
 	}
 
 	const copyWorkflow = (data) => {
+		data = JSON.parse(JSON.stringify(data))
 		alert.success("Copying workflow "+data.name)
+		console.log("data: ", data)
 		data.id = ""
 		data.name = data.name+"_copy"
+		//return
 
 		fetch(globalUrl+"/api/v1/workflows", {
-    	  	method: 'POST',
+    	  method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json',
@@ -397,9 +446,9 @@ const Workflows = (props) => {
 			}
 			return response.json()
 		})
-    	.then((responseJson) => {
+    .then((responseJson) => {
 			getAvailableWorkflows()
-    	})
+    })
 		.catch(error => {
 			alert.error(error.toString())
 		});
@@ -480,7 +529,7 @@ const Workflows = (props) => {
 							<div style={{flex: "10",}} onClick={() => {
 								if (selectedWorkflow.id !== data.id) {
 									setSelectedWorkflow(data)
-									getWorkflowExecution(data.id)
+									//getWorkflowExecution(data.id)
 								}
 							}}>
 								<Typography variant="h6" style={{marginTop: 10, marginBottom: 0, }}>
@@ -537,7 +586,7 @@ const Workflows = (props) => {
 						<div style={{display: "flex", flex: 1}} onClick={() => {
 							if (selectedWorkflow.id !== data.id) {
 								setSelectedWorkflow(data)
-								getWorkflowExecution(data.id)
+								//getWorkflowExecution(data.id)
 							}
 						}}>
 							<Grid item style={{flex: "1", justifyContent: "center", overflow: "hidden", float: "bottom",}}>
@@ -684,22 +733,12 @@ const Workflows = (props) => {
 		}
 
 		var t = new Date(data.started_at*1000)
-		var jsonvalid = true
 		var showResult = data.result.trim()
-		showResult = replaceAll(showResult, " None", " \"None\"");
-		try {
-			const tmp = String(JSON.parse(showResult))
-			if (!tmp.includes("{") && !tmp.includes("[")) {
-				jsonvalid = false
-			}
-		} catch (e) {
-			jsonvalid = false
-		}
+		const validate = validateJson(showResult)
 
-		//console.log("VALID: ", jsonvalid)
-		if (jsonvalid) {
+		if (validate.valid) {
 			showResult = <ReactJson 
-				src={JSON.parse(showResult)} 
+				src={validate.result} 
 				theme="solarized" 
 				collapsed={collapseJson}
 				displayDataTypes={false}
@@ -707,7 +746,7 @@ const Workflows = (props) => {
 			/>
 		} else {
 			// FIXME - have everything parsed as json, either just for frontend
-			// or in the backend
+			// or in the backend?
 			/*	
 			const newdata = {"result": data.result}
 			showResult = <ReactJson 
@@ -767,7 +806,7 @@ const Workflows = (props) => {
 			No results yet 
 		</div>
 
-	const resultsLength = Object.getOwnPropertyNames(selectedExecution).length > 0 && selectedExecution.results !== null ? selectedExecution.results.length : 0 
+	const resultsLength = Object.getOwnPropertyNames(selectedExecution).length > 0 && selectedExecution.results !== null ? selectedExecution.results.length : 0 	
 
 	const ExecutionDetails = () => {
 		var starttime = new Date(selectedExecution.started_at*1000)
@@ -780,23 +819,12 @@ const Workflows = (props) => {
 
 		var arg = null
 		if (selectedExecution.execution_argument !== undefined && selectedExecution.execution_argument.length > 0) {
-			var jsonvalid = true
-
 			var showResult = selectedExecution.execution_argument.trim()
-			showResult = replaceAll(showResult, " None", " \"None\"");
+			const validate = validateJson(showResult)
 
-			try {
-				const tmp = String(JSON.parse(showResult))
-				if (!tmp.includes("{") && !tmp.includes("[")) {
-					jsonvalid = false
-				}
-			} catch (e) {
-				jsonvalid = false
-			}
-
-			arg = jsonvalid ? 
+			arg = validate.valid ? 
 				<ReactJson 
-					src={JSON.parse(showResult)} 
+					src={validate.result} 
 					theme="solarized" 
 					collapsed={true}
 					displayDataTypes={false}
@@ -807,22 +835,11 @@ const Workflows = (props) => {
 
 		var lastresult = null
 		if (selectedExecution.result !== undefined && selectedExecution.result.length > 0) {
-			var jsonvalid = true
 			var showResult = selectedExecution.result.trim()
-			showResult = replaceAll(showResult, " None", " \"None\"");
-
-			try {
-				const tmp = JSON.parse(showResult)
-				if (!tmp.includes("{") && !tmp.includes("[")) {
-					jsonvalid = false
-				}
-			} catch (e) {
-				jsonvalid = false
-			}
-
-			lastresult = jsonvalid ? 
+			const validate = validateJson(showResult)
+			lastresult = validate.valid ? 
 				<ReactJson 
-					src={JSON.parse(showResult)} 
+					src={validate.result} 
 					theme="solarized" 
 					collapsed={true}
 					displayDataTypes={false}
@@ -899,7 +916,7 @@ const Workflows = (props) => {
 				</div>
 				:
 				<h4>
-					There are no executions for this workflow yet
+					Executions have been moved to the Workflow itself. <div/><Link to={`/workflows/${selectedWorkflow.id}?view=executions`} style={{textDecoration: "none", color: "#f85a3e"}}>Click here to see them</Link>
 				</h4>
 		)
 	}
@@ -1204,7 +1221,7 @@ const Workflows = (props) => {
 				<div style={workflowViewStyle}>
 					<div style={{display: "flex"}}>
 						<div style={{flex: "4"}}>
-							<h2>Workflows</h2> 
+							<h2>Workflows ({workflows.length})</h2> 
 						</div>
 						<div style={{marginTop: 20}}>
 							{workflowButtons}
@@ -1222,24 +1239,27 @@ const Workflows = (props) => {
 				</div>
 				<div style={{flex: viewSize.executionsView, marginLeft: "10px", marginRight: "10px"}}>
 					<div style={{display: "flex"}}>
-						<div style={{flex: "10"}}>
+						<div style={{flex: 10}}>
 							<h2>Executions: {selectedWorkflow.name}</h2> 
 						</div>
-						<div style={{flex: "1"}}>
+						{/*
+						<div style={{flex: 1}}>
 							<Button color="primary" style={{marginTop: "20px"}} variant="text" onClick={() => {
 									alert.info("Refreshing executions"); 
-									getWorkflowExecution(selectedWorkflow.id)
+									//getWorkflowExecution(selectedWorkflow.id)
 								}}>
 								<CachedIcon />
 							</Button> 				
 						</div>
+						*/}
 					</div>
 					<Divider style={{marginBottom: "10px", height: "1px", width: "100%", backgroundColor: dividerColor}}/>
 					<div style={scrollStyle}>
 						<ExecutionsView />
 					</div>
 				</div>
-				<div style={{flex: viewSize.executionResults, marginLeft: "10px", marginRight: "10px", minWidth: "33%"}}>
+				{/*
+				<div style={{flex: viewSize.executionResults, marginLeft: "10px", marginRight: "10px", minWidth: "40%"}}>
 					<div style={{display: "flex"}}>
 						<div style={{flex: "1"}}>
 							<h2>Execution Timeline</h2>
@@ -1257,6 +1277,7 @@ const Workflows = (props) => {
 						<ExecutionDetails />
 					</div>
 				</div>
+				*/}
 			</div>
 		)
 	}
@@ -1348,7 +1369,7 @@ const Workflows = (props) => {
 					style={{backgroundColor: inputColor}}
 					variant="outlined"
 					margin="normal"
-					value={downloadUrl}
+					defaultValue={userdata.active_org.defaults.workflow_download_repo !== undefined && userdata.active_org.defaults.workflow_download_repo.length > 0 ? userdata.active_org.defaults.workflow_download_repo : downloadUrl}
 					InputProps={{
 						style:{
 							color: "white",
@@ -1367,7 +1388,7 @@ const Workflows = (props) => {
 							style={{backgroundColor: inputColor}}
 							variant="outlined"
 							margin="normal"
-							value={downloadBranch}
+							defaultValue={userdata.active_org.defaults.workflow_download_branch !== undefined && userdata.active_org.defaults.workflow_download_branch.length > 0 ? userdata.active_org.defaults.workflow_download_branch : downloadBranch}
 							InputProps={{
 								style:{
 									color: "white",

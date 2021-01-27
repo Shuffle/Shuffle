@@ -6,11 +6,6 @@ import TextField from '@material-ui/core/TextField';
 import Button from '@material-ui/core/Button';
 import Paper from '@material-ui/core/Paper';
 
-const hrefStyle = {
-	color: "white", 
-	textDecoration: "none"
-}
-
 const bodyDivStyle = {
 	margin: "auto",
 	marginTop: "100px",
@@ -35,7 +30,7 @@ const useStyles = makeStyles({
 });
 
 const AdminAccount = props => {
-  const { globalUrl, isLoaded, isLoggedIn, setIsLoggedIn, setCookie, } = props;
+  const { globalUrl, isLoaded, isLoggedIn, } = props;
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");

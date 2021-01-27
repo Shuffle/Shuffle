@@ -19,6 +19,7 @@ import Select from '@material-ui/core/Select';
 import MenuItem from '@material-ui/core/MenuItem';
 import Divider from '@material-ui/core/Divider';
 import Dialog from '@material-ui/core/Dialog';
+import Modal from '@material-ui/core/Modal';
 import DialogActions from '@material-ui/core/DialogActions';
 import DialogTitle from '@material-ui/core/DialogTitle';
 import InputLabel from '@material-ui/core/InputLabel';
@@ -37,8 +38,15 @@ import Switch from '@material-ui/core/Switch';
 import ReactJson from 'react-json-view'
 import { useBeforeunload } from 'react-beforeunload';
 import NestedMenuItem from "material-ui-nested-menu-item";
+import Fade from '@material-ui/core/Fade';
 
 import ArrowUpwardIcon from '@material-ui/icons/ArrowUpward';
+import VisibilityIcon from '@material-ui/icons/Visibility';
+import DoneIcon from '@material-ui/icons/Done';
+import CloseIcon from '@material-ui/icons/Close';
+import ErrorIcon from '@material-ui/icons/Error';
+import FindReplaceIcon from '@material-ui/icons/FindReplace';
+import ArrowLeftIcon from '@material-ui/icons/ArrowLeft';
 import CachedIcon from '@material-ui/icons/Cached';
 import AddIcon from '@material-ui/icons/Add';
 import DirectionsRunIcon from '@material-ui/icons/DirectionsRun';
@@ -75,6 +83,7 @@ import cxtmenu from 'cytoscape-cxtmenu';
 
 import { w3cwebsocket as W3CWebSocket } from "websocket";
 import { useAlert } from "react-alert";
+import { validateJson } from "./Workflows";
 import { GetParsedPaths } from "./Apps";
 
 const surfaceColor = "#27292D"
@@ -105,13 +114,14 @@ const splitter = "|~|"
 //const referenceUrl = window.location.origin+"/api/v1/hooks/"
 
 const AngularWorkflow = (props) => {
-  const { globalUrl, isLoggedIn, isLoaded } = props;
+  const { globalUrl, isLoggedIn, isLoaded, userdata } = props;
 	const referenceUrl = globalUrl+"/api/v1/hooks/"
 	const alert = useAlert()
 	const borderRadius = 3
 
 	const [bodyWidth, bodyHeight] = useWindowSize();
 	const appBarSize = 74
+	var to_be_copied = ""
 	const [cystyle, ] = useState(cytoscapestyle) 
 	const [cy, setCy] = React.useState()
 		
@@ -119,9 +129,12 @@ const AngularWorkflow = (props) => {
 	const [currentView, setCurrentView] = React.useState(0)
 	const [triggerAuthentication, setTriggerAuthentication] = React.useState({})
 	const [triggerFolders, setTriggerFolders] = React.useState([])
+	const [workflows, setWorkflows] = React.useState([])
 	const [showEnvironment, setShowEnvironment] = React.useState(false)
 
 	const [workflow, setWorkflow] = React.useState({});
+	const [userSettings, setUserSettings] = React.useState({});
+	const [subworkflow, setSubworkflow] = React.useState({});
 	const [leftViewOpen, setLeftViewOpen] = React.useState(true);
 	const [leftBarSize, setLeftBarSize] = React.useState(350)
 	const [executionText, setExecutionText] = React.useState("");
@@ -140,12 +153,21 @@ const AngularWorkflow = (props) => {
 	const [requiresAuthentication, setRequiresAuthentication] = React.useState(false)
 	const [rightSideBarOpen, setRightSideBarOpen] = React.useState(false)
 	const [showSkippedActions, setShowSkippedActions] = React.useState(false)
+	const [lastExecution, setLastExecution] = React.useState("")
+
+	const [selectedResult, setSelectedResult] = React.useState({})
+	const [codeModalOpen, setCodeModalOpen] = React.useState(false);
 
 	const [variableAnchorEl, setVariableAnchorEl] = React.useState(null)
 
 	const [sourceValue, setSourceValue] = React.useState({})
 	const [destinationValue, setDestinationValue] = React.useState({})
 	const [conditionValue, setConditionValue] = React.useState({})
+	const [dragging, setDragging] = React.useState(false)
+	const [dragPosition, setDragPosition] = React.useState({
+		x: 0,
+		y: 0,
+	})
 
 	// Trigger stuff
 	const [selectedTrigger, setSelectedTrigger] = React.useState({});
@@ -192,7 +214,7 @@ const AngularWorkflow = (props) => {
 	const cloudSyncEnabled = props.userdata !== undefined && props.userdata.active_org !== null && props.userdata.active_org !== undefined ? props.userdata.active_org.cloud_sync === true : false 
 	//const triggerEnvironments = cloudSyncEnabled ? ["cloud", "onprem"] : environments
 	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" 
-	const triggerEnvironments = isCloud ? ["cloud"] : ["cloud", "onprem"] 
+	const triggerEnvironments = isCloud ? ["cloud"] : ["onprem", "cloud"] 
 
 	const unloadText = 'Are you sure you want to leave without saving (CTRL+S)?'
 	useBeforeunload(() => {
@@ -209,6 +231,98 @@ const AngularWorkflow = (props) => {
 				fetchUpdates()
 	  	}
 	})
+
+	const getAvailableWorkflows = (trigger_index) => {
+		fetch(globalUrl+"/api/v1/workflows", {
+    	  method: 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json',
+				},
+	  		credentials: "include",
+    })
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for workflows :O!")
+				return 
+			}
+			return response.json()
+		})
+    .then((responseJson) => {
+			if (responseJson !== undefined) {
+				setWorkflows(responseJson)
+
+				if (trigger_index > -1) {
+					const trigger = workflow.triggers[trigger_index]
+					if (trigger.parameters.length >= 3) {
+						for (var key in trigger.parameters) {
+							const param = trigger.parameters[key]
+							if (param.name === "workflow") {
+								const sub = responseJson.find(data => data.id === param.value)
+								if (sub !== undefined && subworkflow.id !== sub.id) { 
+									setSubworkflow(sub)
+								}
+							}
+						}
+					}
+				}
+			} 
+    })
+		.catch(error => {
+			alert.error(error.toString())
+		});
+	}
+
+	const generateApikey = () => {
+		fetch(globalUrl+"/api/v1/generateapikey", {
+    	  method: 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json',
+				},
+	  			credentials: "include",
+    		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for WORKFLOW EXECUTION :O!")
+			}
+
+			return response.json()
+		})
+    .then((responseJson) => {
+			setUserSettings(responseJson)
+    	})
+		.catch(error => {
+    		console.log(error)
+		});
+	}
+
+	const getSettings = () => {
+		fetch(globalUrl+"/api/v1/getsettings", {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+				credentials: "include",
+			})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for WORKFLOW EXECUTION :O!")
+			}
+
+			return response.json()
+		})
+    .then((responseJson) => {
+			if (responseJson.apikey === undefined || responseJson.apikey.length === 0 || responseJson.apikey === null) {
+				generateApikey()
+			}
+			setUserSettings(responseJson)
+    })
+		.catch(error => {
+    	console.log(error)
+		});
+	}
 
 	const setNewAppAuth = (appAuthData) => {
 		console.log("DAta: ", appAuthData)
@@ -262,6 +376,7 @@ const AngularWorkflow = (props) => {
 				// FIXME: Sort this by time
 				setWorkflowExecutions(responseJson)
 			}
+			//alert.info("Loaded executions")
 			//setWorkflowExecutions(responseJson)
 		})
 		.catch(error => {
@@ -402,7 +517,7 @@ const AngularWorkflow = (props) => {
 
 						if (!visited.includes(item.action.label)) {
 							if (executionRunning) {
-								alert.show("WAITING FOR "+item.action.label+" with result "+item.result)
+								//alert.show("WAITING FOR "+item.action.label+" with result "+item.result)
 								visited.push(item.action.label)
 								setVisited(visited)
 							}
@@ -424,7 +539,7 @@ const AngularWorkflow = (props) => {
 
 						if (!visited.includes(item.action.label)) {
 							if (executionRunning) {
-								alert.show("Success in node "+item.action.label)
+								//alert.show("Success in node "+item.action.label)
 								//+" with result "+item.result)
 								visited.push(item.action.label)
 								setVisited(visited)
@@ -459,7 +574,9 @@ const AngularWorkflow = (props) => {
 						currentnode.addClass('failure-highlight')
 
 						if (!visited.includes(item.action.label)) {
-							alert.error("Success for "+item.action.label+" with result "+item.result)
+							if (!item.action.result.includes("failed condition")) {
+								alert.error("Error for "+item.action.label+" with result "+item.result)
+							}
 							visited.push(item.action.label)
 							setVisited(visited)
 						}
@@ -499,9 +616,11 @@ const AngularWorkflow = (props) => {
 
 			getWorkflowExecution(props.match.params.key)
 		} else if (responseJson.status === "FINISHED") {
+			console.log("STOPPING BECAUSE ITS OVAH!")
 			setExecutionRunning(false)
 			stop()
 			getWorkflowExecution(props.match.params.key)
+			setUpdate(Math.random())
 		}
 	}
 
@@ -566,7 +685,19 @@ const AngularWorkflow = (props) => {
 					// Override just in this place
 					curworkflowAction.errors = []
 					curworkflowAction.isValid = true
+					
+					// Cleans up OpenAPI items
+					var newparams = []
+					for (var key in curworkflowAction.parameters) {
+						const thisitem = curworkflowAction.parameters[key]
+						if (thisitem.name.startsWith("${") && thisitem.name.endsWith("}")) {
+							continue
+						}
 
+						newparams.push(thisitem)
+					}
+
+					curworkflowAction.parameters = newparams
 					newActions.push(curworkflowAction)
 				} else if (type === "TRIGGER") {
 					//console.log("TRIGGER")
@@ -614,7 +745,7 @@ const AngularWorkflow = (props) => {
 			} else {
 				success = true
 				if (responseJson.errors !== undefined) {
-					console.log(responseJson)
+					//console.log(responseJson)
 					workflow.errors = responseJson.errors
 					if (responseJson.errors.length === 0) {
 						workflow.isValid = true
@@ -818,7 +949,16 @@ const AngularWorkflow = (props) => {
 		})
     .then((responseJson) => {
 			if (responseJson.success) {
-				setAppAuthentication(responseJson.data)
+				var newauth = []
+				for (var key in responseJson.data) {
+					if (responseJson.data[key].defined === false) {
+						continue
+					}
+
+					newauth.push(responseJson.data[key])
+				}
+
+				setAppAuthentication(newauth)
 			} else {
 				alert.error("Failed getting authentications")
 			}
@@ -845,7 +985,7 @@ const AngularWorkflow = (props) => {
 
 			return response.json()
 		})
-    	.then((responseJson) => {
+    .then((responseJson) => {
 			// FIXME - handle versions on left bar
 			//handleAppVersioning(responseJson)
 			//var tmpapps = []
@@ -959,14 +1099,20 @@ const AngularWorkflow = (props) => {
 		setRightSideBarOpen(true)
 		setLastSaved(false)
 
-		const triggercheck = workflow.triggers.find(trigger => trigger.id === event.target.data()["source"])
-		if (triggercheck === undefined) {
-			setSelectedEdgeIndex(workflow.branches.findIndex(data => data.id === event.target.data()["id"]))
-			setSelectedEdge(event.target.data())
+		/*
+		 // Used to not be able to edit trigger-based branches. 
+			const triggercheck = workflow.triggers.find(trigger => trigger.id === event.target.data()["source"])
+			if (triggercheck === undefined) {
+		*/
+		setSelectedEdgeIndex(workflow.branches.findIndex(data => data.id === event.target.data()["id"]))
+		setSelectedEdge(event.target.data())
 
+		/*
 		} else {
 			//alert.info("Can't edit branches from triggers") 
+			console.log("IN HERE: !", triggercheck)
 		}
+		*/
 
 		setSelectedAction({})
 		setSelectedTrigger({})
@@ -1034,7 +1180,7 @@ const AngularWorkflow = (props) => {
 				setSelectedApp(curapp)
 			}
 
-			if (environments !== undefined) {
+			if (environments !== undefined && environments !== null) {
 				var env = environments.find(a => a.Name === curaction.environment)
 				if (!env || env === undefined) {
 					env = environments[defaultEnvironmentIndex]
@@ -1070,11 +1216,16 @@ const AngularWorkflow = (props) => {
 		} else if (data.type === "TRIGGER") {
 			//console.log("Should handle trigger "+data.triggertype)
 			//console.log(data)
-
-			setSelectedTriggerIndex(workflow.triggers.findIndex(a => a.id === data.id))
+			const trigger_index = workflow.triggers.findIndex(a => a.id === data.id)
+			setSelectedTriggerIndex(trigger_index)
 			setSelectedTrigger(data)
 			setSelectedActionName(data.name)
 			setSelectedActionEnvironment(data.env)
+
+			if (data.app_name === "Shuffle Workflow") {
+				getAvailableWorkflows(trigger_index) 
+				getSettings() 
+			}
 		} else {
 			alert.error("Can't handle "+data.type)
 		}
@@ -1131,8 +1282,8 @@ const AngularWorkflow = (props) => {
 				// FIXME - do this for both actions and other types?
 				targetnode = workflow.triggers.findIndex(data => data.id === edge.target)
 				if (targetnode !== -1) {
-					if (workflow.triggers[targetnode].app_name !== "User Input") {
-
+					if (workflow.triggers[targetnode].app_name === "User Input" || workflow.triggers[targetnode].app_name === "Shuffle Workflow") {
+					} else {
 						alert.error("Can't have triggers as target of branch")
 						event.target.remove()
 						found = true
@@ -1214,12 +1365,13 @@ const AngularWorkflow = (props) => {
 		if (workflow.start === data.id && workflow.actions.length > 1) {
 			// FIXME - should check branches connected to startnode, as picking random
 			// might just be confusing
-			cy.nodes().forEach(function( ele ) {
+			cy.nodes().some(function( ele ) {
 				if (ele.id() !== workflow.start && ele.data()["label"] !== undefined) {
 					alert.success("Changed startnode to "+ele.data()["label"])
 					ele.data("isStartNode", true)
 					workflow.start = ele.id()
-					return true
+					//throw BreakException
+					return false 
 				}
 			});
 		}
@@ -1240,13 +1392,13 @@ const AngularWorkflow = (props) => {
 		// CTRL = 17
 		//console.log(event.keyCode)
 	    switch( event.keyCode ) {
-	        case 27:
-				console.log("ESCAPE")
-	            break;
+	    case 27:
+					console.log("ESCAPE")
+	        break;
 			case 46:
-				removeNode()		
+				//removeNode()		
 				console.log("DELETE")
-	            break;
+	      break;
 			case 38:
 				console.log("UP")
 	            break;
@@ -1286,11 +1438,11 @@ const AngularWorkflow = (props) => {
 				}
 	            break;
 			case 70:
-				if (previouskey === 17) {
-					event.preventDefault()
-					cy.fit(null, 50)
-				}
-	      break;
+				//if (previouskey === 17) {
+				//	event.preventDefault()
+				//	cy.fit(null, 50)
+				//}
+	      //break;
 			case 65:
 				// As a poweruser myself, I found myself hitting this a few
 				// too many times to just edit text. Need a better bind
@@ -1382,6 +1534,14 @@ const AngularWorkflow = (props) => {
 			getAppAuthentication()
 			getEnvironments()
 			getWorkflowExecution(props.match.params.key)
+			getAvailableWorkflows(-1) 
+			getSettings() 
+
+			const cursearch = typeof window === 'undefined' || window.location === undefined ? "" : window.location.search
+			const tmpView = new URLSearchParams(cursearch).get("view")
+			if (tmpView !== undefined && tmpView !== null && tmpView === "executions") {
+				setExecutionModalOpen(true)
+			}
 			return
 		} 
 
@@ -1722,8 +1882,8 @@ const AngularWorkflow = (props) => {
 
 	const paperVariableStyle = {
 		borderRadius: borderRadius,
-		minHeight: "50px",
-		maxHeight: "50px",
+		minHeight: 50,
+		maxHeight: 50,
 		minWidth: "100%",
 		maxWidth: "100%",
 		marginTop: "5px",
@@ -1764,7 +1924,7 @@ const AngularWorkflow = (props) => {
 		return (
 			<div style={appViewStyle}>
 				<div style={variableScrollStyle}>
-						What are <a href="https://shuffler.io/docs/workflows#workflow_variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>WORKFLOW variables?</a>
+						What are <a target="_blank" href="https://shuffler.io/docs/workflows#workflow_variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>WORKFLOW variables?</a>
 					{workflow.workflow_variables === null ? 
 					null : workflow.workflow_variables.map(variable=> {
 						return (
@@ -1831,7 +1991,7 @@ const AngularWorkflow = (props) => {
 						}}>New workflow variable</Button> 				
 					</div>
 					<Divider style={{marginBottom: 20, marginTop: 20, height: 1, width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
-						What are <a href="https://shuffler.io/docs/workflows#execution_variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>EXECUTION variables?</a>
+						What are <a target="_blank" href="https://shuffler.io/docs/workflows#execution_variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>EXECUTION variables?</a>
 					{workflow.execution_variables === null || workflow.execution_variables === undefined ? 
 					null : workflow.execution_variables.map(variable=> {
 						return (
@@ -1980,9 +2140,22 @@ const AngularWorkflow = (props) => {
 			"large_image": 'data:image/png;base64,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',
 			"is_valid": true,
 			"label": "Webhook",
-			"environment": "cloud",
+			"environment": "onprem",
 			"description": "Simple HTTP webhook",
 			"long_description": "Execute a workflow with an unauthicated POST request",
+		}, 
+		{
+			"name": "Shuffle Workflow",	
+			"type": "TRIGGER",
+			"status": "uninitialized",
+			"trigger_type": "SUBFLOW",
+			"errors": null,
+			"large_image": 'data:image/png;base64,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',
+			"is_valid": true,
+			"label": "Subflow",
+			"environment": "onprem",
+			"description": "Control another workflow",
+			"long_description": "Execute another workflow from this workflow",
 		}, 
 		{
 			"name": "User Input",	
@@ -2007,7 +2180,7 @@ const AngularWorkflow = (props) => {
 			"large_image": "data:image/png;base64,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",
 			"label": "Schedule",
 			"is_valid": true,
-			"environment": "cloud",
+			"environment": "onprem",
 			"long_description": "Create a schedule based on cron",
 		},
 		{
@@ -2108,6 +2281,8 @@ const AngularWorkflow = (props) => {
 					return
 				}
 
+				const triggerLabel = getNextActionName(data.name)
+
 				newNodeId = uuid.v4()
 				const newposition = {
 					"x": e.pageX-cycontainer.offsetLeft,
@@ -2125,7 +2300,7 @@ const AngularWorkflow = (props) => {
 					id_: newNodeId,
 					_id_: newNodeId,
 					id: newNodeId,
-					label: data.label,
+					label: triggerLabel,
 					type: data.type,
 					is_valid: true,
 					trigger_type: data.trigger_type,
@@ -2177,7 +2352,7 @@ const AngularWorkflow = (props) => {
 					data: newcybranch,
 				}
 
-				if (data.name !== "User Input") {
+				if (data.name !== "User Input" && data.name !== "Shuffle Workflow") {
 					//workflow.branches.push(newbranch)
 					cy.add(edgeToBeAdded)
 				}
@@ -2225,13 +2400,21 @@ const AngularWorkflow = (props) => {
 				
 				var newAppPopup = false
 
+				/*
+				 FIXME: Add auth.
+						selectedAction.selectedAuthentication = e.target.value
+						selectedAction.authentication_id = e.target.value.id
+						setSelectedAction(selectedAction)
+						setUpdate(Math.random())
+				*/
+
 				const newAppData = {
 					app_name: app.name,
 					app_version: app.app_version, 
 					app_id: app.id,
 					sharing: app.sharing,
 					private_id: app.private_id,	
-					environment: environments[defaultEnvironmentIndex].Name,
+					environment: environments === null ? "cloud" : environments[defaultEnvironmentIndex].Name,
 					errors: [],
 					id_: newNodeId,
 					_id_: newNodeId,
@@ -2398,7 +2581,7 @@ const AngularWorkflow = (props) => {
 						InputProps={{
 							style:{
 								color: "white",
-								minHeight: "50px", 
+								minHeight: 50, 
 								marginLeft: "5px",
 								maxWidth: "95%",
 								fontSize: "1em",
@@ -2418,6 +2601,11 @@ const AngularWorkflow = (props) => {
 						)
 					})}
 					{filteredApps.filter(innerapp => !internalIds.includes(innerapp.id)).map((app, index) => {	
+						if (app.invalid) {
+							return null
+						}
+
+						console.log("APP: ", app)
 						return(
 							<ParsedAppPaper key={index} app={app} />	
 						)
@@ -2431,9 +2619,10 @@ const AngularWorkflow = (props) => {
 	const getNextActionName = (appName) => {
 		var highest = ""
 		//label = name + _number
-		for (var key in workflow.actions) {
-			const item = workflow.actions[key]
-			if (item.app_name === appName) {
+		const allitems = workflow.actions.concat(workflow.triggers)
+		for (var key in allitems) {
+			const item = allitems[key]
+			if (item.app_name === appName && item.label !== undefined && item.label !== null) {
 				var number = item.label.split("_")
 				if (isNaN(number[-1]) && parseInt(number[number.length-1]) > highest) {
 					highest = number[number.length-1]
@@ -2637,7 +2826,6 @@ const AngularWorkflow = (props) => {
 								foundResult.result = foundResult.result.split(" None").join(" \"None\"")
 								foundResult.result = foundResult.result.split(" False").join(" false")
 								foundResult.result = foundResult.result.split(" True").join(" true")
-								foundResult.result = foundResult.result.split("\'").join("\"")
 
 								var jsonvalid = true
 								try {
@@ -2646,7 +2834,15 @@ const AngularWorkflow = (props) => {
 										jsonvalid = false
 									}
 								} catch (e) {
-									jsonvalid = false
+									try {
+										foundResult.result = foundResult.result.split("\'").join("\"")
+										const tmp = String(JSON.parse(foundResult.result))
+										if (!foundResult.result.includes("{") && !foundResult.result.includes("[")) {
+											jsonvalid = false
+										}
+									} catch (e) {
+										jsonvalid = false
+									}
 								}
 
 								// Finds the FIRST json only
@@ -2670,7 +2866,37 @@ const AngularWorkflow = (props) => {
 			}
 		})
 
-		const changeActionParameter = (event, count) => {
+		const changeActionParameter = (event, count, data) => {
+			if (data.name.startsWith("${") && data.name.endsWith("}")) {
+				// PARAM FIX - Gonna use the ID field, even though it's a hack
+				const paramcheck = selectedAction.parameters.find(param => param.name === "body")
+				if (paramcheck !== undefined) {
+					if (paramcheck["value_replace"] === undefined || paramcheck["value_replace"] === null) {
+						paramcheck["value_replace"] = [{
+							"key": data.name,
+							"value": event.target.value,
+						}]
+
+					} else {
+						const subparamindex = paramcheck["value_replace"].findIndex(param => param.key === data.name)
+						if (subparamindex === -1) {
+							paramcheck["value_replace"].push({
+								"key": data.name,
+								"value": event.target.value,
+							})
+						} else {
+							paramcheck["value_replace"][subparamindex]["value"] = event.target.value
+						}
+					}
+					//console.log("PARAM: ", paramcheck)
+					
+					selectedActionParameters[count]["value_replace"] = paramcheck
+					selectedAction.parameters[count]["value_replace"] = paramcheck
+					setSelectedAction(selectedAction)
+					return
+				}
+			}
+
 			if (event.target.value[event.target.value.length-1] === "$") {
 				if (!showDropdown) {
 					setShowAutocomplete(false)
@@ -2717,6 +2943,7 @@ const AngularWorkflow = (props) => {
 					}
 				}
 
+				//console.log("CURSTRING: ", curstring)
 				if (curstring.length > 0 && actionlist !== null) {
 					// Search back in the action list
 					curstring = curstring.split(" ").join("_").toLowerCase()
@@ -2837,7 +3064,7 @@ const AngularWorkflow = (props) => {
 		if (Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters.length > 0) {
 			return (
 				<div style={{marginTop: "30px"}}>	
-					<b>Arguments</b>
+					<b>Parameters</b>
 					{selectedActionParameters.map((data, count) => {
 						if (data.variant === "") {
 							data.variant = "STATIC_VALUE"
@@ -2863,7 +3090,7 @@ const AngularWorkflow = (props) => {
 							multiline = true
 						}
 
-						if (data.value !== undefined && data.value.startsWith("{") && data.value.endsWith("}")) {
+						if (data.value !== undefined && data.value !== null && data.value.startsWith("{") && data.value.endsWith("}")) {
 							multiline = true
 						}
 
@@ -2872,14 +3099,85 @@ const AngularWorkflow = (props) => {
 							placeholder = data.example
 						}
 
+						if (data.name.startsWith("${") && data.name.endsWith("}")) {
+							const paramcheck = selectedAction.parameters.find(param => param.name === "body")
+							if (paramcheck !== undefined && paramcheck !== null) {
+								if (paramcheck["value_replace"] !== undefined && paramcheck["value_replace"] !== null) {
+									//console.log("IN THE VALUE REPLACE: ", paramcheck["value_replace"])
+									const subparamindex = paramcheck["value_replace"].findIndex(param => param.key === data.name)
+									if (subparamindex !== -1) {
+										data.value = paramcheck["value_replace"][subparamindex]["value"]
+									}
+								}
+							}
+						}
+
+						var disabled = false
+						var rows = "5"
+						var openApiHelperText = "This is an OpenAPI specific field"
+						if (selectedApp.generated && selectedApp.activated && data.name === "body") {
+							const regex = /\${(\w+)}/g
+							const found = placeholder.match(regex)
+							if (found === null) {
+								//setExtraBodyFields([])
+							} else {
+								rows = "1"
+								disabled = true
+								openApiHelperText = "OpenAPI spec: fill the following fields."
+								//console.log("SHOULD ADD TO selectedActionParameters!: ", found, selectedActionParameters)
+								var changed = false
+								for (var specKey in found) {
+									const tmpitem = found[specKey]
+									var skip = false
+									for (var innerkey in selectedActionParameters) {
+										if (selectedActionParameters[innerkey].name === tmpitem) {
+											skip = true
+											break
+										}
+									}
+
+									if (skip) {
+										//console.log("SKIPPING ", tmpitem)
+										continue 
+									}
+
+									changed = true 
+									selectedActionParameters.push({
+										action_field: "",
+										configuration: false,
+										description: "Generated by OpenAPI body example",
+										example: "",
+										id: "",
+										multiline: false,
+										name: tmpitem,
+										options: null,
+										required: false,
+										schema: {type: "string"},
+										skip_multicheck: false,
+										tags: null,
+										value: "",
+										variant: "STATIC_VALUE",
+									})
+								}
+
+								if (changed) {
+									setSelectedActionParameters(selectedActionParameters)
+								}
+
+								return <Divider key={Math.random()} /> 
+							}
+						}
+
+						//console.log("Data: ", data)
 						var datafield = 
 							<TextField
+								disabled={disabled}
 								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
 								InputProps={{
 									style:{
 										color: "white",
-										minHeight: "50px", 
-										marginLeft: "5px",
+										minHeight: 50, 
+										marginLeft: 5,
 										maxWidth: "95%",
 										fontSize: "1em",
 									},
@@ -2901,14 +3199,26 @@ const AngularWorkflow = (props) => {
 								}}
 								fullWidth
 								multiline={multiline}
-								rows="5"
+								rows={rows}
 								color="primary"
 								defaultValue={data.value}
 								type={placeholder.includes("***") ? "password" : "text"}
 								placeholder={placeholder}
 								onChange={(event) => {
-									changeActionParameter(event, count)
+										changeActionParameter(event, count, data)
 								}}
+								helperText={selectedApp.generated && selectedApp.activated && data.name === "body" ? 
+									<span style={{color:"white", marginBottom: 5, marginleft: 5,}}>
+										{openApiHelperText}
+									</span>
+									: 
+									data.name.startsWith("${") && data.name.endsWith("}") ?
+										<span style={{color:"white", marginBottom: 5, marginLeft: 5}}>
+											OpenAPI helperfield	
+										</span>
+									:
+									null
+								}
 								onBlur={(event) => {
 									// Super basic check
 									//if (event.target.value.startsWith("{")) {
@@ -2929,7 +3239,7 @@ const AngularWorkflow = (props) => {
 									InputProps={{
 										style:{
 											color: "white",
-											minHeight: "50px", 
+											minHeight: 50, 
 											marginLeft: "5px",
 											maxWidth: "95%",
 											fontSize: "1em",
@@ -2958,7 +3268,7 @@ const AngularWorkflow = (props) => {
 									type={"text"}
 									placeholder={"The file ID to get"}
 									onChange={(event) => {
-										changeActionParameter(event, count)
+										changeActionParameter(event, count, data)
 									}}
 									onBlur={(event) => {
 									}}
@@ -2967,7 +3277,7 @@ const AngularWorkflow = (props) => {
 							//datafield = `SHOW FILES FROM OTHER NODES? Filename: ${selectedActionParameters[count].value}`	
 							/*
 							if (selectedActionParameters[count].value != fileId) {
-								changeActionParameter(fileId, count)
+								changeActionParameter(fileId, count, data)
 								setUpdate(Math.random())
 
 							}
@@ -2981,7 +3291,7 @@ const AngularWorkflow = (props) => {
 									}
 								}
 
-								changeActionParameter(e, count)
+								changeActionParameter(e, count, data)
 							}
 
 							datafield =
@@ -2995,7 +3305,7 @@ const AngularWorkflow = (props) => {
 									fullWidth
 									onChange={(e) => {
 										console.log("VAL: ", e.target.value)
-										changeActionParameter(e, count)
+										changeActionParameter(e, count, data)
 										setUpdate(Math.random())
 									}}
 									style={{backgroundColor: surfaceColor, color: "white", height: "50px"}}
@@ -3048,7 +3358,7 @@ const AngularWorkflow = (props) => {
 											color: "white",
 											marginLeft: "5px",
 											maxWidth: "95%",
-											height: "50px", 
+											height: 50, 
 											fontSize: "1em",
 										},
 									}}
@@ -3058,7 +3368,7 @@ const AngularWorkflow = (props) => {
 									helperText={<div style={{marginLeft: "5px", color:"white", marginBottom: "2px",}}>Example: $.body will get "data" from {'{"body": "data"}'}</div>}
 									placeholder="Action variable ($.)" 
 									onChange={(event) => {
-										changeActionParameter(event, count)
+										changeActionParameter(event, count, data)
 									}}
 								/>
 							</div>
@@ -3139,6 +3449,40 @@ const AngularWorkflow = (props) => {
 									toComplete += values[key].autocomplete
 								}
 
+								// Handles the fields under OpenAPI body to be parsed.
+								if (data.name.startsWith("${") && data.name.endsWith("}")) {
+									// PARAM FIX - Gonna use the ID field, even though it's a hack
+									const paramcheck = selectedAction.parameters.find(param => param.name === "body")
+									if (paramcheck !== undefined) {
+										if (paramcheck["value_replace"] === undefined) {
+											paramcheck["value_replace"] = [{
+												"key": data.name,
+												"value": toComplete,
+											}]
+
+										} else {
+											const subparamindex = paramcheck["value_replace"].findIndex(param => param.key === data.name)
+											if (subparamindex === -1) {
+												paramcheck["value_replace"].push({
+													"key": data.name,
+													"value": toComplete,
+												})
+											} else {
+												paramcheck["value_replace"][subparamindex]["value"] += toComplete
+											}
+										}
+										
+										selectedActionParameters[count]["value_replace"] = paramcheck
+										selectedAction.parameters[count]["value_replace"] = paramcheck
+										setSelectedAction(selectedAction)
+										setUpdate(Math.random())
+
+										setShowDropdown(false)
+										setMenuPosition(null)
+										return
+									}
+								}
+
 								selectedActionParameters[count].value += toComplete
 								selectedAction.parameters[count].value = selectedActionParameters[count].value 
 								setSelectedAction(selectedAction)
@@ -3153,134 +3497,132 @@ const AngularWorkflow = (props) => {
 							}
 
 							return (
-							  <div >
-									<Menu
-										anchorReference="anchorPosition"
-										anchorPosition={menuPosition}
-										onClose={() => {
-											handleMenuClose()
-										}}
-										open={!!menuPosition}
-										style={{
-											border: `2px solid #f85a3e`, 
-											color: "white", 
-											marginTop: 2,
-										}}
-									>
-									{actionlist.map(innerdata => {
-										const icon = innerdata.type === "action" ? <AppsIcon style={{marginRight: 10}} /> : innerdata.type === "workflow_variable" || innerdata.type === "execution_variable" ? <FavoriteBorderIcon style={{marginRight: 10}} /> : <ScheduleIcon style={{marginRight: 10}} /> 
+								<Menu
+									anchorReference="anchorPosition"
+									anchorPosition={menuPosition}
+									onClose={() => {
+										handleMenuClose()
+									}}
+									open={!!menuPosition}
+									style={{
+										border: `2px solid #f85a3e`, 
+										color: "white", 
+										marginTop: 2,
+									}}
+								>
+								{actionlist.map(innerdata => {
+									const icon = innerdata.type === "action" ? <AppsIcon style={{marginRight: 10}} /> : innerdata.type === "workflow_variable" || innerdata.type === "execution_variable" ? <FavoriteBorderIcon style={{marginRight: 10}} /> : <ScheduleIcon style={{marginRight: 10}} /> 
 
-										const handleExecArgumentHover = (inside) => {
-											var exec_text_field = document.getElementById("execution_argument_input_field")
-											if (exec_text_field !== null) {
-												if (inside) {
-													exec_text_field.style.border = "2px solid #f85a3e"
-												} else {
-													exec_text_field.style.border = ""
-												}
+									const handleExecArgumentHover = (inside) => {
+										var exec_text_field = document.getElementById("execution_argument_input_field")
+										if (exec_text_field !== null) {
+											if (inside) {
+												exec_text_field.style.border = "2px solid #f85a3e"
+											} else {
+												exec_text_field.style.border = ""
 											}
+										}
 
-											// Also doing arguments
-											if (workflow.triggers !== undefined && workflow.triggers !== null && workflow.triggers.length > 0) {
-												for (var key in workflow.triggers) {
-													const item = workflow.triggers[key]
+										// Also doing arguments
+										if (workflow.triggers !== undefined && workflow.triggers !== null && workflow.triggers.length > 0) {
+											for (var key in workflow.triggers) {
+												const item = workflow.triggers[key]
 
-													var node = cy.getElementById(item.id)
-													if (node.length > 0) {
-														if (inside) {
-															node.addClass('shuffle-hover-highlight')
-														} else {
-															node.removeClass('shuffle-hover-highlight')
-														}
+												var node = cy.getElementById(item.id)
+												if (node.length > 0) {
+													if (inside) {
+														node.addClass('shuffle-hover-highlight')
+													} else {
+														node.removeClass('shuffle-hover-highlight')
 													}
-
 												}
+
 											}
 										}
+									}
 
-										const handleActionHover = (inside, actionId) => {
-											var node = cy.getElementById(actionId)
-											if (node.length > 0) {
-												if (inside) {
-													node.addClass('shuffle-hover-highlight')
-												} else {
-													node.removeClass('shuffle-hover-highlight')
-												}
+									const handleActionHover = (inside, actionId) => {
+										var node = cy.getElementById(actionId)
+										if (node.length > 0) {
+											if (inside) {
+												node.addClass('shuffle-hover-highlight')
+											} else {
+												node.removeClass('shuffle-hover-highlight')
 											}
 										}
+									}
 
-										const handleMouseover = () => {
-											if (innerdata.type === "Execution Argument") {
-													handleExecArgumentHover(true)
-												} else if (innerdata.type === "action") {
-													handleActionHover(true, innerdata.id)
-												}
-											} 
-											
-										const handleMouseOut = () => {
-											if (innerdata.type === "Execution Argument") {
-												handleExecArgumentHover(false)
+									const handleMouseover = () => {
+										if (innerdata.type === "Execution Argument") {
+												handleExecArgumentHover(true)
 											} else if (innerdata.type === "action") {
-												handleActionHover(false, innerdata.id)
+												handleActionHover(true, innerdata.id)
 											}
+										} 
+										
+									const handleMouseOut = () => {
+										if (innerdata.type === "Execution Argument") {
+											handleExecArgumentHover(false)
+										} else if (innerdata.type === "action") {
+											handleActionHover(false, innerdata.id)
 										}
+									}
 
-										var parsedPaths = [] 
-										if (typeof(innerdata.example) === "object") {
-											parsedPaths = GetParsedPaths(innerdata.example, "")
-										}
+									var parsedPaths = [] 
+									if (typeof(innerdata.example) === "object") {
+										parsedPaths = GetParsedPaths(innerdata.example, "")
+									}
 
-										return (
-											parsedPaths.length > 0 ?
-												<NestedMenuItem
-													key={innerdata.name}
-													label={
-														<div style={{display: "flex"}}>
-															{icon} {innerdata.name}
-														</div>
-													}
-													parentMenuOpen={!!menuPosition}
-													style={{backgroundColor: inputColor, color: "white", minWidth: 250,}}
-													onClick={() => {
-														handleItemClick([innerdata])
-													}}
-												>
-													{parsedPaths.map((pathdata, index) => {
-														// FIXME: Should be recursive in here
-														const icon = pathdata.type === "value" ? <VpnKeyIcon style={iconStyle} /> : pathdata.type === "list" ? <FormatListNumberedIcon style={iconStyle} /> : <ExpandMoreIcon style={iconStyle} /> 
-														return (
-															<MenuItem key={pathdata.name} style={{backgroundColor: inputColor, color: "white", minWidth: 250,}} value={pathdata} onMouseOver={() => {}}
-																onClick={() => {
-																	handleItemClick([innerdata, pathdata])
-																}}
-															>
-																<Tooltip color="primary" title={`Ex. value: ${pathdata.value}`} placement="left">
-																	<div style={{display: "flex"}}>
-																		{icon} {pathdata.name}
-																	</div>
-																</Tooltip>
-															</MenuItem>
-														)
+									return (
+										parsedPaths.length > 0 ?
+											<NestedMenuItem
+												key={innerdata.name}
+												label={
+													<div style={{display: "flex"}}>
+														{icon} {innerdata.name}
+													</div>
+												}
+												parentMenuOpen={!!menuPosition}
+												style={{backgroundColor: inputColor, color: "white", minWidth: 250,}}
+												onClick={() => {
+													handleItemClick([innerdata])
+												}}
+											>
+												{parsedPaths.map((pathdata, index) => {
+													// FIXME: Should be recursive in here
+													const icon = pathdata.type === "value" ? <VpnKeyIcon style={iconStyle} /> : pathdata.type === "list" ? <FormatListNumberedIcon style={iconStyle} /> : <ExpandMoreIcon style={iconStyle} /> 
+													return (
+														<MenuItem key={pathdata.name} style={{backgroundColor: inputColor, color: "white", minWidth: 250,}} value={pathdata} onMouseOver={() => {}}
+															onClick={() => {
+																handleItemClick([innerdata, pathdata])
+															}}
+														>
+															<Tooltip color="primary" title={`Ex. value: ${pathdata.value}`} placement="left">
+																<div style={{display: "flex"}}>
+																	{icon} {pathdata.name}
+																</div>
+															</Tooltip>
+														</MenuItem>
+													)
 
-													})}
-												</NestedMenuItem>
-											: 
-												<MenuItem key={innerdata.name} style={{backgroundColor: inputColor, color: "white"}} value={innerdata} onMouseOver={() => handleMouseover()} onMouseOut={() => {handleMouseOut()}} 
-													onClick={() => {
-														handleItemClick([innerdata])
-													}}
-												>
-													<Tooltip color="primary" title={`Value: ${innerdata.value}`} placement="left">
-														<div style={{display: "flex"}}>
-															{icon} {innerdata.name}
-														</div>
-													</Tooltip>
-												</MenuItem>
-											
-										)
-									})}	
-								</Menu>
-      				</div>
+												})}
+											</NestedMenuItem>
+										: 
+											<MenuItem key={innerdata.name} style={{backgroundColor: inputColor, color: "white"}} value={innerdata} onMouseOver={() => handleMouseover()} onMouseOut={() => {handleMouseOut()}} 
+												onClick={() => {
+													handleItemClick([innerdata])
+												}}
+											>
+												<Tooltip color="primary" title={`Value: ${innerdata.value}`} placement="left">
+													<div style={{display: "flex"}}>
+														{icon} {innerdata.name}
+													</div>
+												</Tooltip>
+											</MenuItem>
+										
+									)
+								})}	
+							</Menu>
 							)
 						}
 
@@ -3288,6 +3630,14 @@ const AngularWorkflow = (props) => {
 						if (!data.required) {
 							itemColor = "#ffeb3b"
 						}
+
+						var tmpitem = data.name.valueOf()
+						if (data.name.startsWith("${") && data.name.endsWith("}")) {
+							tmpitem = tmpitem.slice(2, data.name.length-1)
+						}
+						
+						tmpitem = tmpitem.charAt(0).toUpperCase()+tmpitem.substring(1)
+
 						return (
 						<div key={data.name}>	
 							<div style={{marginTop: 20, marginBottom: 7, display: "flex"}}>
@@ -3303,7 +3653,7 @@ const AngularWorkflow = (props) => {
 									<div style={{width: 17, height: 17, borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: 10}}/>
 								}
 								<div style={{flex: "10"}}> 
-									<b>{data.name} </b> 
+									<b>{tmpitem} </b> 
 								</div>
 
 								{selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0  ? null : 
@@ -3360,7 +3710,7 @@ const AngularWorkflow = (props) => {
 										onClick={() => setShowAutocomplete(true)}
 										fullWidth
 										open={showAutocomplete}
-										style={{border: `2px solid #f85a3e`, color: "white", height: "50px", marginTop: 2,}}
+										style={{border: `2px solid #f85a3e`, color: "white", height: 50, marginTop: 2,}}
 										onChange={(e) => {
 											if (selectedActionParameters[count].value[selectedActionParameters[count].value.length-1] === ".") {
 												e.target.value.autocomplete = e.target.value.autocomplete.slice(1, e.target.value.autocomplete.length)
@@ -3475,18 +3825,63 @@ const AngularWorkflow = (props) => {
 		})
 	}
 
+	const headerSize = 68
+	const rightsidebarStyle = {
+		position: "fixed", 
+		right: 0, 
+		top: headerSize+1,
+		height: "100%",
+		bottom: 0,
+		minWidth: 350, 
+		maxWidth: 350, 
+		borderLeft: "1px solid rgb(91, 96, 100)",
+		overflow: "scroll",
+		overflowX: "auto",
+		overflowY: "auto",
+		zIndex: 1000,
+	}
+
 	const appApiView = Object.getOwnPropertyNames(selectedAction).length > 0 ? 
 		<div style={appApiViewStyle}>
 			<div style={{display: "flex", minHeight: 40, marginBottom: 30}}>
 				<div style={{flex: 1}}>
 					<h3 style={{marginBottom: 5}}>{selectedAction.app_name}</h3>
-					<a href="https://shuffler.io/docs/workflows#nodes" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>What are actions?</a>
-					{selectedAction.errors !== null && selectedAction.errors.length > 0 ? 
-						<div>
-							Errors: {selectedAction.errors.join("\n")}
-						</div>
-						: null
-					}
+					<div style={{display: "flex",}}>
+						<IconButton style={{marginTop: "auto", marginBottom: "auto", height: 30, paddingLeft: 0, paddingRight: 0}} onClick={() => {
+							console.log("FIND EXAMPLE RESULTS FOR ", selectedAction) 
+							if (workflowExecutions.length > 0) {
+								// Look for the ID
+								const found = false
+								for (var key in workflowExecutions) {
+									if (workflowExecutions[key].results === undefined || workflowExecutions[key].results === null) {
+										continue
+									}
+
+									var foundResult = workflowExecutions[key].results.find(result => result.action.id === selectedAction.id)
+									if (foundResult === undefined || foundResult === null) {
+										continue
+									}
+
+									setSelectedResult(foundResult)
+									setCodeModalOpen(true)
+									break
+								}
+							}
+						}}>
+							<Tooltip color="primary" title="See last result" placement="top">
+								<ArrowLeftIcon style={{color: "white"}}/>
+							</Tooltip>
+						</IconButton>
+						<span style={{}}>
+							<Typography style={{marginTop: 5, marginLeft: 10,}}><a href="https://shuffler.io/docs/workflows#nodes" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>What are actions?</a></Typography>
+							{selectedAction.errors !== null && selectedAction.errors.length > 0 ? 
+								<div>
+									Errors: {selectedAction.errors.join("\n")}
+								</div>
+								: null
+							}
+						</span>
+					</div>
 				</div>
 				<div style={{flex: "1"}}>
 					<Button disabled={selectedAction.id === workflow.start} style={{zIndex: 5000, marginTop: "15px",}} color="primary" variant="outlined" onClick={(e) => {
@@ -3503,7 +3898,7 @@ const AngularWorkflow = (props) => {
 				InputProps={{
 					style:{
 						color: "white",
-						minHeight: "50px", 
+						minHeight: 50, 
 						marginLeft: "5px",
 						maxWidth: "95%",
 						fontSize: "1em",
@@ -3527,7 +3922,7 @@ const AngularWorkflow = (props) => {
 				</div>
 			: null}
 			{selectedAction.authentication !== undefined && selectedAction.authentication.length > 0 ? 
-				<div style={{marginTop: "20px"}}>
+				<div style={{marginTop: 20, overflow: "hidden",}}>
 					Authentication
 					<div style={{display: "flex"}}>
 						<Select
@@ -3546,7 +3941,7 @@ const AngularWorkflow = (props) => {
 								setSelectedAction(selectedAction)
 								setUpdate(Math.random())
 							}}
-							style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+							style={{backgroundColor: inputColor, color: "white", height: 50, maxWidth: rightsidebarStyle.maxWidth-80,}}	
 						>
 							{selectedAction.authentication.map(data => (
 								<MenuItem key={data.id} style={{backgroundColor: inputColor, color: "white"}} value={data}>
@@ -3564,11 +3959,11 @@ const AngularWorkflow = (props) => {
 							if (curaction.selectedAuthentication === null || curaction.selectedAuthentication === undefined || curaction.selectedAuthentication.length === "")
 						*/}
 					 	<Tooltip color="primary" title={"Add authentication option"} placement="top">
-							<Button color="primary" style={{}} variant="text" onClick={() => {
+							<IconButton color="primary" style={{}} onClick={() => {
 								setAuthenticationModalOpen(true)
 							}}>
 								<AddIcon />
-							</Button> 				
+							</IconButton> 				
 						</Tooltip>
 					</div>
 				</div>
@@ -3685,7 +4080,7 @@ const AngularWorkflow = (props) => {
 					{selectedAction.description}
 				</div> : null}
 				<div style={{marginTop: "10px", borderColor: "white", borderWidth: "2px", marginBottom: 200}}>
-						<AppActionArguments key={selectedAction.id} selectedAction={selectedAction} />
+					<AppActionArguments key={selectedAction.id} selectedAction={selectedAction} />
 
 				</div>
 				<div style={{}}>
@@ -3695,22 +4090,6 @@ const AngularWorkflow = (props) => {
 		</div> 
 		: null 
 
-
-	const headerSize = 68
-	const rightsidebarStyle = {
-		position: "fixed", 
-		right: 0, 
-		top: headerSize+1,
-		height: "100%",
-		bottom: 0,
-		minWidth: "350px", 
-		maxWidth: "350px", 
-		borderLeft: "1px solid rgb(91, 96, 100)",
-		overflow: "scroll",
-		overflowX: "auto",
-		overflowY: "auto",
-		zIndex: 1000,
-	}
 
 	const setTriggerFolderWrapperMulti = event => {
 	    const { options } = event.target
@@ -3850,7 +4229,7 @@ const AngularWorkflow = (props) => {
 
 
 		// Set actions based on NEXT node, since it should be able to involve those two
-		console.log("IN APPACTIONARG: ", selectedEdge)
+		//console.log("IN APPACTIONARG: ", selectedEdge)
 		if (actionlist.length === 0) {
 				// FIXME: Have previous execution values in here
 				actionlist.push({"type": "Execution Argument", "name": "Execution Argument", "value": "$exec", "highlight": "exec", "autocomplete": "exec", "example": "hello"})
@@ -3871,7 +4250,7 @@ const AngularWorkflow = (props) => {
 				}
 
 				const destAction = cy.getElementById(selectedEdge.target)
-				console.log(destAction.data())
+				//console.log(destAction.data())
 				var parents = getParents(destAction.data())
 				if (parents.length > 1) {
 					for (var key in parents) {
@@ -3907,7 +4286,7 @@ const AngularWorkflow = (props) => {
 				InputProps={{
 					style:{
 						color: "white",
-						minHeight: "50px", 
+						minHeight: 50, 
 						marginLeft: "5px",
 						maxWidth: "95%",
 						fontSize: "1em",
@@ -3919,11 +4298,18 @@ const AngularWorkflow = (props) => {
 				color="primary"
 				defaultValue={data.value}
 				placeholder={placeholder}
+				helperText={data.value !== undefined && data.value !== null && data.value.includes(".#") ? 
+					<span style={{color:"white", marginBottom: 5, marginleft: 5,}}>
+						Use "Shuffle Tools" app with "Filter List" action to handle loops 
+					</span>
+					: null
+				}
 				onClick={() => {
 					console.log("CHANGE FIELD")
 				}}
 				onBlur={(e) => {
 					changeActionVariable(data.action_field, e.target.value)
+					setUpdate(Math.random())
 				}}
 			/>
 
@@ -4115,9 +4501,15 @@ const AngularWorkflow = (props) => {
 				setDestinationValue({})
 			}}
 		>
+		<span style={{position: "absolute", bottom: 10, left: 10, color: "rgba(255,255,255,0.6)",}}>
+			Conditions can't be used for loops [ .# ] <a target="_blank" href="https://shuffler.io/docs/workflows#conditions" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more</a> 
+		</span>
 		<FormControl>
-			<DialogTitle><div style={{color:"white"}}>Condition</div></DialogTitle>
-				<DialogContent style={{display: "flex"}}>
+			<DialogTitle><span style={{color:"white"}}>Condition</span>
+			</DialogTitle>
+				<DialogContent style={{}}>
+
+					<div style={{display: "flex"}}>
 					<Tooltip color="primary" title={conditionValue.configuration ? "Negated" : "Default"} placement="top">
 						<Button color="primary" variant={conditionValue.configuration ? "contained" : "outlined"} style={{margin: "auto", height: 50, marginBottom: "auto", marginTop: "auto", marginRight: 5}} onClick={(e) => {
 							conditionValue.configuration = !conditionValue.configuration
@@ -4170,15 +4562,15 @@ const AngularWorkflow = (props) => {
 								setVariableAnchorEl(null)
 							}} key={"ends with"}>ends with</MenuItem>
 							<MenuItem style={menuItemStyle} onClick={(e) => {
-								conditionValue.value = "endswith"
-								setConditionValue(conditionValue)
-								setVariableAnchorEl(null)
-							}} key={"ends with"}>ends with</MenuItem>
-							<MenuItem style={menuItemStyle} onClick={(e) => {
 								conditionValue.value = "contains"
 								setConditionValue(conditionValue)
 								setVariableAnchorEl(null)
 							}} key={"contains"}>contains</MenuItem>
+							<MenuItem style={menuItemStyle} onClick={(e) => {
+								conditionValue.value = "contains_any_of"
+								setConditionValue(conditionValue)
+								setVariableAnchorEl(null)
+							}} key={"contains_any_of"}>contains any of</MenuItem>
 							<MenuItem style={menuItemStyle} onClick={(e) => {
 								conditionValue.value = "matches regex"
 								setConditionValue(conditionValue)
@@ -4199,38 +4591,40 @@ const AngularWorkflow = (props) => {
 					<div style={{flex: "2"}}>
 						<AppConditionHandler tmpdata={destinationValue} setData={setDestinationValue} type={"destination"} />
 					</div>
+
+					</div>
 				</DialogContent>
 				<DialogActions>
-	      <Button 
-					style={{borderRadius: "0px"}}
-					onClick={() => {
-						setSelectedEdge({})
+					<Button 
+						style={{borderRadius: "0px"}}
+						onClick={() => {
+							setSelectedEdge({})
 
-						var data = {
-							condition: conditionValue,
-							source: sourceValue,
-							destination: destinationValue,
-						}
-						
-						setConditionsModalOpen(false)
-						if (selectedEdge.conditions === undefined) {
-							selectedEdge.conditions = [data]
-						} else {
-							const curedgeindex = selectedEdge.conditions.findIndex(data => data.source.id === sourceValue.id)
-							if (curedgeindex < 0) {
-								selectedEdge.conditions.push(data)
-							} else {
-								selectedEdge.conditions[curedgeindex] = data
+							var data = {
+								condition: conditionValue,
+								source: sourceValue,
+								destination: destinationValue,
 							}
-						}
+							
+							setConditionsModalOpen(false)
+							if (selectedEdge.conditions === undefined) {
+								selectedEdge.conditions = [data]
+							} else {
+								const curedgeindex = selectedEdge.conditions.findIndex(data => data.source.id === sourceValue.id)
+								if (curedgeindex < 0) {
+									selectedEdge.conditions.push(data)
+								} else {
+									selectedEdge.conditions[curedgeindex] = data
+								}
+							}
 
-						setSelectedEdge(selectedEdge)
-						workflow.branches[selectedEdgeIndex] = selectedEdge
-						setWorkflow(workflow)
-					}} color="primary">
-	        	    	Submit	
-	        	  	</Button>
-				</DialogActions>
+							setSelectedEdge(selectedEdge)
+							workflow.branches[selectedEdgeIndex] = selectedEdge
+							setWorkflow(workflow)
+						}} color="primary">
+							Submit	
+						</Button>
+					</DialogActions>
 			</FormControl>
 		</Dialog>
 
@@ -4238,6 +4632,18 @@ const AngularWorkflow = (props) => {
 		const ConditionHandler = (condition, index) => {
 			const [open, setOpen] = React.useState(false)
 			const [anchorEl, setAnchorEl] = React.useState(null)
+
+			const duplicateCondition = (conditionIndex) => {
+				
+				var newEdge = JSON.parse(JSON.stringify(selectedEdge.conditions[conditionIndex]))
+				const newUuid = uuid.v4()
+				newEdge.condition.id = newUuid
+				newEdge.source.id = newUuid
+				newEdge.destination.id = newUuid
+				selectedEdge.conditions.push(newEdge)
+
+				setUpdate(Math.random())
+			}
 
 			const deleteCondition = (conditionIndex) => {
 				console.log(selectedEdge)
@@ -4271,7 +4677,7 @@ const AngularWorkflow = (props) => {
 			}
 
 			return (
-				<Paper square style={paperVariableStyle} onClick={() => {}}>
+				<Paper key={condition.condition.id} square style={paperVariableStyle} onClick={() => {}}>
 					<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: "2px", backgroundColor: "orange", marginRight: "5px"}} />
 					<div style={{display: "flex", width: "100%"}}>
 						<div style={{flex: "10", display: "flex"}} onClick={() => {
@@ -4280,15 +4686,15 @@ const AngularWorkflow = (props) => {
 								setDestinationValue(condition.destination)
 								setConditionsModalOpen(true)
 							}}>
-							<div style={{flex: 1, textAlign: "left", marginTop: "15px", marginLeft: "10px", overflow: "hidden"}}>
+							<div style={{flex: 1, textAlign: "left", marginTop: "15px", marginLeft: "10px", overflow: "hidden", maxWidth: 72, }}>
 								{condition.source.value} 
 							</div>
 							<Divider style={{height: "100%", width: "1px", marginLeft: "5px", marginRight: "5px", backgroundColor: "rgb(91, 96, 100)"}}/>
-							<div style={{flex: 1, textAlign: "center", marginTop: "15px", overflow: "hidden"}} onClick={() => {}}>
+							<div style={{flex: 1, textAlign: "center", marginTop: "15px", overflow: "hidden", maxWidth: 72,}} onClick={() => {}}>
 								{condition.condition.value}
 							</div>
 							<Divider style={{height: "100%", width: "1px", marginLeft: "5px", marginRight: "5px", backgroundColor: "rgb(91, 96, 100)"}}/>
-							<div style={{flex: 1, textAlign: "left", marginTop: "auto", marginBottom: "auto", marginLeft: "10px", overflow: "hidden"}}>
+							<div style={{flex: 1, textAlign: "left", marginTop: "auto", marginBottom: "auto", marginLeft: "10px", overflow: "hidden", maxWidth: 72, }}>
 								{condition.destination.value} 
 							</div>
 						</div>
@@ -4318,6 +4724,9 @@ const AngularWorkflow = (props) => {
 							  }}
 							>
 							<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
+								duplicateCondition(index)
+							}} key={"Duplicate"}>{"Duplicate"}</MenuItem>
+							<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
 								setOpen(false)
 								deleteCondition(index)
 							}} key={"Delete"}>{"Delete"}</MenuItem>
@@ -4345,7 +4754,7 @@ const AngularWorkflow = (props) => {
 				<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 					<div style={{flex: "1"}}>
 						<h3 style={{marginBottom: "5px"}} >Branch: Conditions - {selectedEdgeIndex}</h3>
-						<a href="https://shuffler.io/docs/conditions" style={{textDecoration: "none", color: "#f85a3e"}}>What are conditions?</a>
+						<a target="_blank" href="https://shuffler.io/docs/conditions" style={{textDecoration: "none", color: "#f85a3e"}}>What are conditions?</a>
 					</div>
 				</div>
 				<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -4569,7 +4978,7 @@ const AngularWorkflow = (props) => {
 				<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 					<div style={{flex: "1"}}>
 						<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}: {selectedTrigger.status}</h3>
-						<a href="https://shuffler.io/docs/triggers#email" style={{textDecoration: "none", color: "#f85a3e"}}>What are email triggers?</a>
+						<a target="_blank" href="https://shuffler.io/docs/triggers#email" style={{textDecoration: "none", color: "#f85a3e"}}>What are email triggers?</a>
 					</div>
 				</div>
 				<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -4583,7 +4992,7 @@ const AngularWorkflow = (props) => {
 							color: "white",
 							marginLeft: "5px",
 							maxWidth: "95%",
-							height: "50px", 
+							height: 50, 
 							fontSize: "1em",
 						},
 					}}
@@ -4602,7 +5011,7 @@ const AngularWorkflow = (props) => {
 								color: "white",
 								marginLeft: "5px",
 								maxWidth: "95%",
-								height: "50px", 
+								height: 50, 
 								fontSize: "1em",
 							},
 						}}
@@ -4636,6 +5045,157 @@ const AngularWorkflow = (props) => {
 		)
 	}
 
+	const SubflowSidebar = () => {
+		if (Object.getOwnPropertyNames(selectedTrigger).length > 0) {
+			if (workflow.triggers[selectedTriggerIndex] === undefined) {
+				return null
+			}
+
+			if (workflow.triggers[selectedTriggerIndex].parameters === undefined || workflow.triggers[selectedTriggerIndex].parameters === null || workflow.triggers[selectedTriggerIndex].parameters.length === 0) {
+				workflow.triggers[selectedTriggerIndex].parameters = []
+				workflow.triggers[selectedTriggerIndex].parameters[0] = {"name": "workflow", "value": ""}
+				workflow.triggers[selectedTriggerIndex].parameters[1] = {"name": "argument", "value": ""}
+				workflow.triggers[selectedTriggerIndex].parameters[2] = {"name": "user_apikey", "value": ""}
+
+				console.log("SETTINGS: ", userSettings)
+				if (userSettings !== undefined && userSettings !== null && userSettings.apikey !== null && userSettings.apikey !== undefined && userSettings.apikey.length > 0) {
+					workflow.triggers[selectedTriggerIndex].parameters[2] = {"name": "user_apikey", "value": userSettings.apikey}
+				}
+			} 
+
+			return(
+				<div style={appApiViewStyle}>
+					<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
+						<div style={{flex: "1"}}>
+							<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}</h3>
+							<a target="_blank" href="https://shuffler.io/docs/triggers#subflow" style={{textDecoration: "none", color: "#f85a3e"}}>What are subflows?</a>
+						</div>
+					</div>
+					<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
+					<div>
+						Name
+					</div>
+					<TextField
+						style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+						InputProps={{
+							style:{
+								color: "white",
+								marginLeft: "5px",
+								maxWidth: "95%",
+								height: 50, 
+								fontSize: "1em",
+							},
+						}}
+						fullWidth
+						color="primary"
+						placeholder={selectedTrigger.label}
+						onChange={selectedTriggerChange}
+					/>
+					<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
+					<div style={{flex: "6", marginTop: "20px"}}>
+						<div>
+							<b>Parameters</b>
+							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
+								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
+								<div style={{flex: "10"}}> 
+									<b>Select a workflow to execute </b> 
+								</div>
+							</div>
+							{workflows === undefined || workflows === null || workflows.length === 0 ? null : 
+								<Select
+									value={subworkflow}
+									SelectDisplayProps={{
+										style: {
+											marginLeft: 10,
+
+										}
+									}}
+									fullWidth
+									onChange={(e) => {
+										setSubworkflow(e.target.value)
+										setUpdate(Math.random())
+										workflow.triggers[selectedTriggerIndex].parameters[0].value = e.target.value.id
+										setWorkflow(workflow)
+									}}
+									style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+								>
+									{workflows.map((data, index) => {
+										if (data.id === workflow.id) {
+											return null	
+										}
+
+										return (
+											<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data}>
+												{data.name}
+											</MenuItem>
+										)
+									})}
+								</Select>
+							}
+							{workflow.triggers[selectedTriggerIndex].parameters[0].value.length === 0 ? null : <span style={{marginTop: 5}}><a href={`/workflows/${workflow.triggers[selectedTriggerIndex].parameters[0].value}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>Explore selected workflow</a></span>}
+							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
+								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
+								<div style={{flex: "10"}}> 
+									<b>Execution Argument: </b> 
+								</div>
+							</div>
+							<TextField
+								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+								InputProps={{
+									style:{
+										color: "white",
+										marginLeft: "5px",
+										maxWidth: "95%",
+										fontSize: "1em",
+									},
+								}}
+								rows="6"
+								multiline
+								fullWidth
+								color="primary"
+								placeholder="Some execution data"
+								defaultValue={workflow.triggers[selectedTriggerIndex].parameters[1].value}
+								onBlur={(e) => {
+									console.log("DATA: ", e.target.value)	
+									workflow.triggers[selectedTriggerIndex].parameters[1].value = e.target.value
+									setWorkflow(workflow)
+								}}
+							/>
+							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
+								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
+								<div style={{flex: "10"}}> 
+									<b>API-key: </b> 
+								</div>
+							</div>
+							<TextField
+								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+								InputProps={{
+									style:{
+										color: "white",
+										marginLeft: "5px",
+										maxWidth: "95%",
+										fontSize: "1em",
+										height: 50,
+									},
+								}}
+								fullWidth
+								color="primary"
+								placeholder="Your apikey"
+								defaultValue={workflow.triggers[selectedTriggerIndex].parameters[2].value}
+								onBlur={(e) => {
+									workflow.triggers[selectedTriggerIndex].parameters[2].value = e.target.value
+									setWorkflow(workflow)
+								}}
+							/>
+						</div>
+					</div>
+				</div> 
+			)
+		}
+
+		return null 
+	}
+
 	const WebhookSidebar = () => {
 		if (Object.getOwnPropertyNames(selectedTrigger).length > 0) {
 			if (workflow.triggers[selectedTriggerIndex] === undefined) {
@@ -4655,7 +5215,7 @@ const AngularWorkflow = (props) => {
 					<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 						<div style={{flex: "1"}}>
 							<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}: {selectedTrigger.status}</h3>
-							<a href="https://shuffler.io/docs/triggers#webhook" style={{textDecoration: "none", color: "#f85a3e"}}>What are webhooks?</a>
+							<a target="_blank" href="https://shuffler.io/docs/triggers#webhook" style={{textDecoration: "none", color: "#f85a3e"}}>What are webhooks?</a>
 						</div>
 					</div>
 					<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -4669,7 +5229,7 @@ const AngularWorkflow = (props) => {
 								color: "white",
 								marginLeft: "5px",
 								maxWidth: "95%",
-								height: "50px", 
+								height: 50, 
 								fontSize: "1em",
 							},
 						}}
@@ -4728,23 +5288,30 @@ const AngularWorkflow = (props) => {
 					<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 					<div style={{flex: "6", marginTop: "20px"}}>
 						<div>
-							<b>Arguments</b>
+							<b>Parameters</b>
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
 								<div style={{flex: "10"}}> 
-									<b>Webhook URI: </b> 
+									<b>Webhook URI </b> 
 								</div>
 							</div>
 							<TextField
 								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+								id="webhook_uri_field"
 								onClick={() => {
-									//alert.info("Saved URI to clipboard")
-									console.log("Copy to clipboooooard")
+  								var copyText = document.getElementById("webhook_uri_field");
+									navigator.clipboard.writeText(copyText.value)
+									copyText.select();
+									copyText.setSelectionRange(0, 99999); /* For mobile devices */
+
+									/* Copy the text inside the text field */
+									document.execCommand("copy");
+									alert.success("Copied Webhook URL")
 								}}
 								InputProps={{
 									style:{
 										color: "white",
-										height: "50px", 
+										height: 50, 
 										marginLeft: "5px",
 										maxWidth: "95%",
 										fontSize: "1em",
@@ -4997,8 +5564,6 @@ const AngularWorkflow = (props) => {
 
 	const UserinputSidebar = () => {
 		if (Object.getOwnPropertyNames(selectedTrigger).length > 0 && workflow.triggers[selectedTriggerIndex] !== undefined) {
-			console.log(workflow.triggers[selectedTriggerIndex])
-			console.log(selectedTrigger)
 			if (workflow.triggers[selectedTriggerIndex].parameters === undefined || workflow.triggers[selectedTriggerIndex].parameters === null || workflow.triggers[selectedTriggerIndex].parameters.length === 0) {
 				workflow.triggers[selectedTriggerIndex].parameters = []
 				workflow.triggers[selectedTriggerIndex].parameters[0] = {"name": "alertinfo", "value": "hello this is an alert"}
@@ -5019,7 +5584,7 @@ const AngularWorkflow = (props) => {
 					<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 						<div style={{flex: "1"}}>
 							<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}: {selectedTrigger.status}</h3>
-							<a href="https://shuffler.io/docs/triggers#user_input" style={{textDecoration: "none", color: "#f85a3e"}}>What is the user input trigger?</a>
+							<a target="_blank" href="https://shuffler.io/docs/triggers#user_input" style={{textDecoration: "none", color: "#f85a3e"}}>What is the user input trigger?</a>
 						</div>
 					</div>
 					<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -5033,7 +5598,7 @@ const AngularWorkflow = (props) => {
 								color: "white",
 								marginLeft: "5px",
 								maxWidth: "95%",
-								height: "50px", 
+								height: 50, 
 								fontSize: "1em",
 							},
 						}}
@@ -5052,7 +5617,7 @@ const AngularWorkflow = (props) => {
 									color: "white",
 									marginLeft: "5px",
 									maxWidth: "95%",
-									height: "50px", 
+									height: 50, 
 									fontSize: "1em",
 								},
 							}}
@@ -5065,7 +5630,7 @@ const AngularWorkflow = (props) => {
 					</div>
 					<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 					<div style={{flex: "6", marginTop: "20px"}}>
-						<b>Arguments</b>
+						<b>Parameters</b>
 						<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 							<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
 							<div style={{flex: "10"}}> 
@@ -5135,7 +5700,7 @@ const AngularWorkflow = (props) => {
 										color: "white",
 										marginLeft: "5px",
 										maxWidth: "95%",
-										height: "50px", 
+										height: 50, 
 										fontSize: "1em",
 									},
 								}}
@@ -5159,7 +5724,7 @@ const AngularWorkflow = (props) => {
 										color: "white",
 										marginLeft: "5px",
 										maxWidth: "95%",
-										height: "50px", 
+										height: 50, 
 										fontSize: "1em",
 									},
 								}}
@@ -5187,7 +5752,7 @@ const AngularWorkflow = (props) => {
 		if (Object.getOwnPropertyNames(selectedTrigger).length > 0 && workflow.triggers[selectedTriggerIndex] !== undefined) {
 			if (workflow.triggers[selectedTriggerIndex].parameters === undefined || workflow.triggers[selectedTriggerIndex].parameters === null || workflow.triggers[selectedTriggerIndex].parameters.length === 0) {
 				workflow.triggers[selectedTriggerIndex].parameters = []
-				workflow.triggers[selectedTriggerIndex].parameters[0] = {"name": "cron", "value": "*/2 * * * *"}
+				workflow.triggers[selectedTriggerIndex].parameters[0] = {"name": "cron", "value": "120"}
 				workflow.triggers[selectedTriggerIndex].parameters[1] = {"name": "execution_argument", "value": '{"example": {"json": "is cool"}}'}
 				setWorkflow(workflow)
 			}
@@ -5197,7 +5762,7 @@ const AngularWorkflow = (props) => {
 					<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 						<div style={{flex: "1"}}>
 							<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}: {selectedTrigger.status}</h3>
-							<a href="https://shuffler.io/docs/triggers#schedule" style={{textDecoration: "none", color: "#f85a3e"}}>What are schedules?</a>
+							<a target="_blank" href="https://shuffler.io/docs/triggers#schedule" style={{textDecoration: "none", color: "#f85a3e"}}>What are schedules?</a>
 						</div>
 					</div>
 					<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -5211,7 +5776,7 @@ const AngularWorkflow = (props) => {
 								color: "white",
 								marginLeft: "5px",
 								maxWidth: "95%",
-								height: "50px", 
+								height: 50, 
 								fontSize: "1em",
 							},
 						}}
@@ -5274,7 +5839,7 @@ const AngularWorkflow = (props) => {
 					<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 					<div style={{flex: "6", marginTop: "20px"}}>
 						<div>
-							<b>Arguments</b>
+							<b>Parameters</b>
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
 								<div style={{flex: "10"}}> 
@@ -5286,7 +5851,7 @@ const AngularWorkflow = (props) => {
 								InputProps={{
 									style:{
 										color: "white",
-										height: "50px", 
+										height: 50, 
 										marginLeft: "5px",
 										maxWidth: "95%",
 										fontSize: "1em",
@@ -5625,6 +6190,12 @@ const AngularWorkflow = (props) => {
 						<WebhookSidebar />
 					</div>
 				)
+			} else if (selectedTrigger.trigger_type === "SUBFLOW") {
+				return(
+					<div style={rightsidebarStyle}>	
+						<SubflowSidebar />
+					</div>
+				)
 			} else if (selectedTrigger.trigger_type === "EMAIL") {
 				return(
 					<div style={rightsidebarStyle}>	
@@ -5693,30 +6264,31 @@ const AngularWorkflow = (props) => {
 
 	const parsedExecutionArgument = () => {
 		var showResult = executionData.execution_argument.trim()
-		showResult = showResult.split(" None").join(" \"None\"")
-		showResult = showResult.split("\'").join("\"")
-		showResult = showResult.split(" False").join(" false")
-		showResult = showResult.split(" True").join(" true")
+		const validate = validateJson(showResult)
 
-		var jsonvalid = true
-		try {
-			const tmp = String(JSON.parse(showResult))
-			if (!showResult.includes("{") && !showResult.includes("[")) {
-				jsonvalid = false
+
+		if (validate.valid) {
+			if (typeof(validate.result) === "string") {
+				try {
+					validate.result = JSON.parse(validate.result)
+				} catch(e) {
+					console.log("Error: ", e)
+					validate.valid = false
+				}
 			}
-		} catch (e) {
-			jsonvalid = false
-		}
 
-		if (jsonvalid) {
 			return (
 				<ReactJson 
-						src={JSON.parse(showResult)} 
-						theme="solarized" 
-						collapsed={true}
-						displayDataTypes={false}
-						name={"Execution argument"}
-					/>
+					src={validate.result} 
+					theme="solarized" 
+					collapsed={true}
+					displayDataTypes={false}
+					onSelect={(select) => {
+						HandleJsonCopy(showResult, select, "exec")
+						console.log("SELECTED!: ", select)	
+					}}
+					name={"Execution Argument"}
+				/>
 			)
 		} 
 
@@ -5757,8 +6329,59 @@ const AngularWorkflow = (props) => {
 		)
 	}
 
+	const HandleJsonCopy = (base, copy, base_node_name) => {
+		console.log("COPY: ", copy)
+		var newitem = JSON.parse(base)
+		to_be_copied = "$"+base_node_name
+		for (var key in copy.namespace) {
+			if (copy.namespace[key].includes("Results for")) {
+				continue
+			}
+
+			if (newitem !== undefined && newitem !== null) {
+				newitem = newitem[copy.namespace[key]]
+				if (!isNaN(copy.namespace[key])) {
+					to_be_copied += ".#"
+				} else {
+					to_be_copied += "."+copy.namespace[key]
+				}
+			}
+		}
+
+		if (newitem !== undefined && newitem !== null) {
+			newitem = newitem[copy.name]
+			if (!isNaN(copy.name)) {
+				to_be_copied += ".#"
+			} else {
+				to_be_copied += "."+copy.name
+			}
+		}
+
+		//console.log(document.activeElement)
+		//if (document.activeElement.nodeName == 'TEXTAREA' || document.activeElement.nodeName == 'INPUT') {
+		//	console.log("HANDLE INPUT FIELD FOR COPY!")
+		//}
+
+		to_be_copied.replace(" ", "_")
+		const elementName = "copy_element_shuffle"
+  	var copyText = document.getElementById(elementName);
+		if (copyText !== null && copyText !== undefined) {
+			navigator.clipboard.writeText(to_be_copied)
+			copyText.select();
+			copyText.setSelectionRange(0, 99999); /* For mobile devices */
+
+			/* Copy the text inside the text field */
+			document.execCommand("copy");
+			alert.success("Copied "+to_be_copied)
+			console.log("COPYING!")
+		} else {
+			console.log("Couldn't find element ", elementName)
+		}
+
+	}
+	
 	const executionModal = 
-		<Drawer  anchor={"right"} open={executionModalOpen} onClose={() => setExecutionModalOpen(false)} PaperProps={{style: {minWidth: 375, maxWidth: 375, backgroundColor: "#1F2023", color: "white", fontSize: 18}}}>
+		<Drawer anchor={"right"} open={executionModalOpen} onClose={() => setExecutionModalOpen(false)} style={{resize: "both", overflow: "auto",}} PaperProps={{style: {resize: "both", overflow: "auto", minWidth: 400, maxWidth: 400, backgroundColor: "#1F2023", color: "white", fontSize: 18}}}>
 			{executionModalView === 0 ?
 			<div style={{padding: 25, }}>
 				<Breadcrumbs aria-label="breadcrumb" separator="›" style={{color: "white", fontSize: 16}}>
@@ -5769,29 +6392,49 @@ const AngularWorkflow = (props) => {
 				</Breadcrumbs>	
 				<Button 
 					style={{borderRadius: "0px"}}
+					variant="outlined"
 					onClick={() => {
 						getWorkflowExecution(props.match.params.key)
 					}} color="primary">
 					<CachedIcon style={{marginRight: 10}}/>
 					Refresh	executions
 				</Button>
-				<Divider style={{backgroundColor: "white", marginTop: 10, marginBottom: 10,}}/>
+				<Divider style={{backgroundColor: "rgba(255,255,255,0.5)", marginTop: 10, marginBottom: 10,}}/>
 				{workflowExecutions.length > 0 ? 
 					<div>
-						{workflowExecutions.map(data => {
-							const statusColor = data.status === "FINISHED" ? "green" : data.status === "ABORTED" ? "red" : "orange"
+						{workflowExecutions.map((data, index) => {
+							const statusColor = data.status === "FINISHED" ? "green" : data.status === "ABORTED" || data.status === "FAILED" ? "red" : "orange"
 							const timeElapsed = data.completed_at-data.started_at
 							const resultsLength = data.results !== undefined && data.results !== null ? data.results.length : 0
 
 							const timestamp = new Date(data.started_at*1000).toISOString().split('.')[0].split("T").join(" ")
 
+							var calculatedResult = data.workflow.actions.length
+							for (var key in data.workflow.triggers) {
+								const trigger = data.workflow.triggers[key]
+								if ((trigger.app_name === "User Input" && trigger.trigger_type === "USERINPUT") || (trigger.app_name === "Shuffle Workflow" && trigger.trigger_type === "SUBFLOW")) {
+									calculatedResult += 1
+								}
+							}
+
 							return (
+								<Tooltip key={data.execution_id} title={data.result} placement="left-start">
 								<Paper elevation={5} key={data.execution_id} square style={executionPaperStyle} onMouseOver={() => {}} onMouseOut={() => {}} onClick={() => {
+
+									if (data.result === undefined || data.result === null || data.result.length === 0) {
+										setExecutionRequest({
+											"execution_id": data.execution_id,
+											"authorization": data.authorization,
+										})
+										start()
+										setExecutionRunning(true)
+										setExecutionRequestStarted(false)
+									}
 									setExecutionModalView(1)
 									setExecutionData(data)
 								}}>
 									<div style={{display: "flex", flex: 1}}>
-										<div style={{marginLeft: 5, width: 2, backgroundColor: statusColor, marginRight: 5}} />
+										<div style={{marginLeft: 0, width: lastExecution === data.execution_id ? 4 : 2, backgroundColor: statusColor, marginRight: 5}} />
 										<div style={{height: "100%", width: 40, borderColor: "white", marginRight: 15}}>
 											{getExecutionSourceImage(data)}
 										</div>
@@ -5801,15 +6444,20 @@ const AngularWorkflow = (props) => {
 										{data.workflow.actions !== null ? 
 											<Tooltip color="primary" title={resultsLength+" actions ran"} placement="top">
 												<div style={{marginRight: 10, marginTop: "auto", marginBottom: "auto",}}>
-													{resultsLength}/{data.workflow.actions.length}
+													{resultsLength}/{calculatedResult}
 												</div>
 											</Tooltip>
 											: null}
 									</div>
 									<Tooltip title={"Inspect execution"} placement="top">
-										<KeyboardArrowRightIcon style={{marginTop: "auto", marginBottom: "auto"}}/>
+										{lastExecution === data.execution_id ?
+											<KeyboardArrowRightIcon style={{color: "#f85a3e", marginTop: "auto", marginBottom: "auto"}}/>
+											:
+											<KeyboardArrowRightIcon style={{marginTop: "auto", marginBottom: "auto"}}/>
+										}
 									</Tooltip>
 								</Paper>
+								</Tooltip>
 							)
 							return 
 						})}
@@ -5823,10 +6471,21 @@ const AngularWorkflow = (props) => {
 			:
 			<div style={{padding: 25, maxWidth: 365, overflowX: "hidden",}}>
 				<Breadcrumbs aria-label="breadcrumb" separator="›" style={{color: "white", fontSize: 16}}>
-					<h2 style={{color: "rgba(255,255,255,0.5)", cursor: "pointer"}} onClick={() => {setExecutionModalView(0)}}>
-						<ArrowBackIcon style={{marginRight: 7, }} />
-						See other Executions	
-					</h2>
+					<span style={{color: "rgba(255,255,255,0.5)", display: "flex"}} onClick={() => {
+							setExecutionRunning(false)
+							stop()
+							getWorkflowExecution(props.match.params.key)
+							setExecutionModalView(0)
+							setLastExecution(executionData.execution_id)
+					}}>
+						<IconButton style={{paddingLeft: 0, marginTop: "auto", marginBottom: "auto", }} onClick={() => {}}>
+							<ArrowBackIcon style={{color: "rgba(255,255,255,0.5)",}} />
+						</IconButton>
+						<h2 style={{color: "rgba(255,255,255,0.5)", cursor: "pointer"}} onClick={() => {
+						}}>
+							See other Executions	
+						</h2>
+					</span>
 				</Breadcrumbs>
 				<Divider style={{backgroundColor: "white", marginTop: 10, marginBottom: 10,}}/>
 					<h2>Executing Workflow</h2>		
@@ -5884,39 +6543,52 @@ const AngularWorkflow = (props) => {
 								return null
 							}
 
-
-							// showResult = replaceAll(showResult, " None", " \"None\"")
-							// Super basic check.
-							//
 							// FIXME: The latter replace doens't really work if ' is used in a string
 							var showResult = data.result.trim()
-							showResult = showResult.split(" None").join(" \"None\"")
-							showResult = showResult.split(" False").join(" false")
-							showResult = showResult.split(" True").join(" true")
-							showResult = showResult.split("\'").join("\"")
-
-							var jsonvalid = true
-							try {
-								const tmp = String(JSON.parse(showResult))
-								if (!showResult.includes("{") && !showResult.includes("[")) {
-									//console.log("IN HERE: ", tmp)
-									jsonvalid = false
-								}
-							} catch (e) {
-								//console.log("Error: ", e)
-								jsonvalid = false
-							}
-
+							const validate = validateJson(showResult)
+							
 							const curapp = apps.find(a => a.name === data.action.app_name && a.app_version === data.action.app_version)
 							const imgsize = 50
 							const statusColor = data.status === "FINISHED" || data.status === "SUCCESS" ? "green" : data.status === "ABORTED" || data.status === "FAILURE" ? "red" : "orange"
-							const actionimg = curapp === null ? 
+			
+							var imgSrc = curapp === undefined ? "" : curapp.large_image
+							if (imgSrc.length === 0) {
+								// Look for the node in the workflow
+								const action = workflow.actions.find(action => action.id === data.action.id)
+								if (action !== undefined && action !== null) {
+									imgSrc = action.large_image
+								}
+							}
+
+							var actionimg = curapp === null ? 
 								null :
-								<img alt={data.action.app_name} src={curapp === undefined ? "" : curapp.large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />
+								<img alt={data.action.app_name} src={imgSrc} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />
+
+							if (triggers.length > 2) {
+								if (data.action.app_name === "shuffle-subflow") {
+									actionimg = <img alt={"Shuffle Subflow"} src={triggers[1].large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />
+								}	
+
+								if (data.action.app_name === "User Input") {
+									actionimg = <img alt={"Shuffle Subflow"} src={triggers[2].large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />
+								}	
+							}
+
+							if (validate.valid && typeof(validate.result) === "string") {
+								validate.result = JSON.parse(validate.result)
+							}
 
 							return (
 								<div key={index} style={{marginBottom: 40,}}>
 									<div style={{display: "flex", marginBottom: 15,}}>
+										<IconButton style={{marginTop: "auto", marginBottom: "auto", height: 30, paddingLeft: 0, width: 30}} onClick={() => {
+											setSelectedResult(data)
+											setCodeModalOpen(true)
+										}}>
+											<Tooltip color="primary" title="Expand result window" placement="top">
+												<ArrowLeftIcon style={{color: "white"}}/>
+											</Tooltip>
+										</IconButton>
 										{actionimg}
 										<div>
 											<div style={{fontSize: 24, marginTop: "auto", marginBottom: "auto"}}><b>{data.action.label}</b></div>
@@ -5924,15 +6596,26 @@ const AngularWorkflow = (props) => {
 										</div>
 									</div>
 									<div style={{marginBottom: 5}}><b>Status </b> {data.status}</div>
-									{jsonvalid ? <ReactJson 
-											src={JSON.parse(showResult)} 
+									{validate.valid ? <span><ReactJson 
+											src={validate.result} 
 											theme="solarized" 
 											collapsed={true}
 											displayDataTypes={false}
+											onSelect={(select) => {
+												HandleJsonCopy(showResult, select, data.action.label)
+												console.log("SELECTED!: ", select)	
+											}}
 											name={"Results for "+data.action.label}
 										/>
+										{data.action.app_name === "shuffle-subflow" ?
+											<span>
+												TBD: Load subexecution result for 
+											</span>
+											: null
+										}
+										</span>
 									: 
-									<div>
+									<div style={{maxHeight: 250, overflowX: "hidden", overflowY: "scroll",}}>
 										<b>Result</b>&nbsp;
 										{data.result}
 									</div>
@@ -5944,6 +6627,182 @@ const AngularWorkflow = (props) => {
 				</div>
 			}
 			</Drawer>
+
+	// This sucks :)
+	const curapp = !codeModalOpen ? {} : selectedResult.action.app_name === "shuffle-subflow" ? triggers[1] : selectedResult.action.app_name === "User Input" ? triggers[2] : apps.find(a => a.name === selectedResult.action.app_name && a.app_version === selectedResult.action.app_version)
+	const imgsize = 50
+	const statusColor = !codeModalOpen ? "red" : selectedResult.status === "FINISHED" || selectedResult.status === "SUCCESS" ? "green" : selectedResult.status === "ABORTED" || selectedResult.status === "FAILURE" ? "red" : "orange"
+	const validate = !codeModalOpen ? "" : validateJson(selectedResult.result.trim())
+	if (validate.valid && typeof(validate.result) === "string") {
+		validate.result = JSON.parse(validate.result)
+	}
+
+	//if (codeModalOpen && selectedResult.result.includes("file_id")) {
+	//	console.log("SHOW RESULT WITH FILES: ", selectedResult.result)
+	//	//const regex = "\b[0-9a-f]{8}\b-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-\b[0-9a-f]{12}\b"
+	//	//const regex = /^[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}/i
+	//	const regex = /^[A-F\d]{8}-[A-F\d]{4}-4[A-F\d]{3}-[89AB][A-F\d]{3}-[A-F\d]{12}$/i
+	//	//const found = selectedResult.result.match(regex)
+	//	const found = "hello how are you cf80fa70-65cf-4963-b474-b459a6dead81 what".match(regex)
+	//	const regex = /\${(\w{8}-\w{4}-\w{3}-\w{3}-\w)}/g
+	//	const found = placeholder.match(regex)
+
+	//	console.log("FOUND: ", found)
+
+	//	//cf80fa70-65cf-4963-b474-b459a6dead81
+	//}
+
+	const codePopoutModal = !codeModalOpen ? null : 
+		<Draggable
+			onDrag={(e) => {
+				if (!dragging) {
+					setDragging(true)
+				}
+			}}
+			onStop={(e) => {
+				if (!dragging) {
+					return
+				}
+
+				setDragging(false)
+
+				const newoffsetX = parseInt(dragPosition.x)-parseInt(e.layerX-e.offsetX)
+				const newoffsetY = parseInt(dragPosition.y)-parseInt(e.layerY-e.offsetY)
+				if ((newoffsetX <= 40 && newoffsetX >= -40) && (newoffsetY <= 40 && newoffsetY >= -40)) {
+					console.log("SKIP X & Y")
+					return
+				}
+
+				setDragPosition({
+					x: e.layerX-e.offsetX,
+					y: e.layerY-e.offsetY,
+				})
+			}}
+			position={dragPosition}
+		>
+			<Dialog 
+				disableEnforceFocus={true}
+				style={{pointerEvents: "none"}}
+				hideBackdrop={true}
+				open={codeModalOpen} 
+				PaperProps={{
+					style: {
+						pointerEvents: "auto",
+						backgroundColor: inputColor,
+						color: "white",
+						minWidth: 750,
+						padding: 30, 
+						maxHeight: 700,
+						overflowY: "auto",
+						overflowX: "hidden",
+						//boxShadow: "none",
+					},
+				}}
+			>
+				<Tooltip title="Find successful execution" placement="top">
+					<IconButton style={{zIndex: 5000, position: "absolute", top: 34, right: 170,}} onClick={(e) => {
+						e.preventDefault()
+						for (var key in workflowExecutions) {
+							const execution = workflowExecutions[key]
+							//console.log(execution.results[0])
+							const result = execution.results.find(data => data.status === "SUCCESS" && data.action.id === selectedResult.action.id)
+							if (result !== undefined) {
+								setSelectedResult(result)
+								setUpdate(Math.random())
+								break
+							}
+						}
+					}}>
+						<DoneIcon style={{color: "white"}}/>
+					</IconButton>
+				</Tooltip>
+				<Tooltip title="Find failed execution" placement="top">
+					<IconButton style={{zIndex: 5000, position: "absolute", top: 34, right: 136,}} onClick={(e) => {
+						e.preventDefault()
+						for (var key in workflowExecutions) {
+							const execution = workflowExecutions[key]
+							//console.log(execution.results[0])
+							const result = execution.results.find(data => data.action.id === selectedResult.action.id && data.status !== "SUCCESS" && data.status !== "SKIPPED" && data.status !== "WAITING")
+							if (result !== undefined) {
+								setSelectedResult(result)
+								setUpdate(Math.random())
+								break
+							}
+						}
+					}}>
+						<ErrorIcon style={{color: "white"}}/>
+					</IconButton>
+				</Tooltip>
+				<Tooltip title="Explore execution" placement="top">
+					<IconButton style={{zIndex: 5000, position: "absolute", top: 34, right: 98,}} onClick={(e) => {
+						e.preventDefault()
+						const executionIndex = workflowExecutions.findIndex(data => data.execution_id === selectedResult.execution_id)
+						if (executionIndex !== -1) {
+							setExecutionModalOpen(true)
+							setExecutionModalView(1)
+							setExecutionData(workflowExecutions[executionIndex])
+						}
+					}}>
+						<VisibilityIcon style={{color: "white"}}/>
+					</IconButton>
+				</Tooltip>
+				<Tooltip title="Close window" placement="top">
+					<IconButton style={{zIndex: 5000, position: "absolute", top: 34, right: 34,}} onClick={(e) => {
+						e.preventDefault()
+						//console.log("CLICKING EXIT")
+						setCodeModalOpen(false)
+					}}>
+						<CloseIcon style={{color: "white"}}/>
+					</IconButton>
+				</Tooltip>
+				<div style={{marginBottom: 40,}} onClick={(event) => {
+					//event.preventDefault()	
+				}}>
+					<div style={{display: "flex", marginBottom: 15,}}>
+						{curapp === null ? null : <img alt={selectedResult.app_name} src={curapp === undefined ? "" : curapp.large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />}
+
+						<div>
+							<div style={{fontSize: 24, marginTop: "auto", marginBottom: "auto"}}><b>{selectedResult.action.label}</b></div>
+							<div style={{fontSize: 14}}>{selectedResult.action.name}</div>
+						</div>
+					</div>
+					<div style={{marginBottom: 5}}><b>Status </b> {selectedResult.status}</div>
+					{validate.valid ? <ReactJson 
+							src={validate.result} 
+							theme="solarized" 
+							collapsed={false}
+							displayDataTypes={false}
+							onSelect={(select) => {
+								HandleJsonCopy(JSON.stringify(validate.result), select, selectedResult.action.label)
+							}}
+							name={"Results for "+selectedResult.action.label}
+						/>
+					: 
+					<div>
+						<b>Result</b>&nbsp;
+						<span onClick={() => {
+							console.log("IN HERE TO CLICK")
+							to_be_copied = selectedResult.result
+							var copyText = document.getElementById("copy_element_shuffle");
+							console.log("PRECOPY: ", to_be_copied)
+							if (copyText !== null && copyText !== undefined) {
+								console.log("COPY: ", copyText)
+								navigator.clipboard.writeText(to_be_copied)
+								copyText.select();
+								copyText.setSelectionRange(0, 99999); /* For mobile devices */
+
+								/* Copy the text inside the text field */
+								document.execCommand("copy");
+								alert.success("Copied "+to_be_copied)
+							} else {
+								console.log("Failed to copy. copy_element_shuffle is undefined")
+							}
+						}}>{selectedResult.result}</span>
+					</div>
+					}
+				</div>
+			</Dialog> 
+		</Draggable> 
 	
 	const newView = isLoggedIn ?
 		<div style={{color: "white"}}>
@@ -6248,17 +7107,26 @@ const AngularWorkflow = (props) => {
 			console.log("FIELDS: ", newFields)
 			newAuthOption.fields = newFields
 			setNewAppAuth(newAuthOption)
-			appAuthentication.push(newAuthOption)
-			setAppAuthentication(appAuthentication)
+			//appAuthentication.push(newAuthOption)
+			//setAppAuthentication(appAuthentication)
 			getAppAuthentication() 
 			setUpdate(authenticationOption.id)
 
+			/*
+				{selectedAction.authentication.map(data => (
+				<MenuItem key={data.id} style={{backgroundColor: inputColor, color: "white"}} value={data}>
+			*/
+
+		}
+
+		if (authenticationOption.label === null || authenticationOption.label === undefined) {
+			authenticationOption.label = selectedApp.name+" authentication"
 		}
 
 		return (
 			<div>
 				<DialogContent>
-					<a href="https://shuffler.io/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is this?</a><div/>
+					<a target="_blank" href="https://shuffler.io/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is this?</a><div/>
 					These are required fields for authenticating with {selectedApp.name} 
 					<div style={{marginTop: 15}}/>
 					<b>Name - what is this used for?</b>
@@ -6269,7 +7137,7 @@ const AngularWorkflow = (props) => {
 									color: "white",
 									marginLeft: "5px",
 									maxWidth: "95%",
-									height: "50px", 
+									height: 50, 
 									fontSize: "1em",
 								},
 							}}
@@ -6295,7 +7163,7 @@ const AngularWorkflow = (props) => {
 												color: "white",
 												marginLeft: "5px",
 												maxWidth: "95%",
-												height: "50px", 
+												height: 50, 
 												fontSize: "1em",
 											},
 										}}
@@ -6340,7 +7208,7 @@ const AngularWorkflow = (props) => {
 					InputProps={{
 						style:{
 							color: "white",
-							height: "50px", 
+							height: 50, 
 							fontSize: "1em",
 						},
 					}}
@@ -6362,6 +7230,8 @@ const AngularWorkflow = (props) => {
 			</div>
 		)
 	}
+
+	
 
 	// This whole part is redundant. Made it part of Arguments instead.
 	const authenticationModal = authenticationModalOpen ? 
@@ -6390,6 +7260,12 @@ const AngularWorkflow = (props) => {
 			{executionVariableModal} 
 			{conditionsModal}
 			{authenticationModal}
+			{codePopoutModal}
+			<TextField
+				id="copy_element_shuffle"
+				value={to_be_copied}
+				style={{display: "none", }}
+			/>
 		</div>
 		:
 		<div>

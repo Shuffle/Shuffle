@@ -43,6 +43,19 @@ Please consider [sponsoring](https://github.com/sponsors/frikky) the project if 
 ## Website
 https://shuffler.io
 
+## Contributors 
+![ICPL logo](https://github.com/frikky/Shuffle/blob/launch/frontend/src/assets/img/icpl_logo.png)
+
+**Shuffle**
+<a href="https://github.com/frikky/shuffle/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=frikky/shuffle" />
+</a>
+
+[**App magicians**](https://github.com/frikky/shuffle-apps)
+<a href="https://github.com/frikky/shuffle-apps/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=frikky/shuffle-apps" />
+</a>
+
 ## License
 All modular information related to Shuffle will be under MIT (anyone can use it for whatever purpose), with Shuffle itself using AGPLv3. 
 

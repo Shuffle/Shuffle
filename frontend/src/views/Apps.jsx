@@ -21,6 +21,7 @@ import {Link} from 'react-router-dom';
 import Breadcrumbs from '@material-ui/core/Breadcrumbs';
 import ReactJson from 'react-json-view'
 import Chip from '@material-ui/core/Chip';
+import { useTheme } from '@material-ui/core/styles';
 
 import CachedIcon from '@material-ui/icons/Cached';
 import CloudDownloadIcon from '@material-ui/icons/CloudDownload';
@@ -46,6 +47,10 @@ const inputColor = "#383B40"
 export const GetParsedPaths = (inputdata, basekey) => {
 	const splitkey = " > "
 	var parsedValues = []
+	if (inputdata === undefined || inputdata === null) {
+		return parsedValues
+	}
+
 	if (typeof(inputdata) !== "object") {
 		return parsedValues
 	}
@@ -106,9 +111,10 @@ export const GetParsedPaths = (inputdata, basekey) => {
 
 
 const Apps = (props) => {
-  const { globalUrl, isLoggedIn, isLoaded } = props;
+  const { globalUrl, isLoggedIn, isLoaded, userdata } = props;
 
 	//const [workflows, setWorkflows] = React.useState([]);
+	const theme = useTheme();
 	const baseRepository = "https://github.com/frikky/shuffle-apps"
 	const alert = useAlert()
 	const [selectedApp, setSelectedApp] = React.useState({});
@@ -134,6 +140,7 @@ const Apps = (props) => {
 	const [field2, setField2] = React.useState("")
 	const [cursearch, setCursearch] = React.useState("")
 	const [sharingConfiguration, setSharingConfiguration] = React.useState("you")
+	const [downloadBranch, setDownloadBranch] = React.useState("master")
 
 	const [isDropzone, setIsDropzone] = React.useState(false);
 	const upload = React.useRef(null);
@@ -311,10 +318,18 @@ const Apps = (props) => {
 			boxColor = "orange"
 		}
 
+		if (data.invalid) {
+			boxColor = "red"
+		}
+
+		//<div style={{backgroundColor: theme.palette.inputColor, height: 100, width: 100, borderRadius: 3, verticalAlign: "middle", textAlign: "center", display: "table-cell"}}>
+		// <div style={{width: "100px", height: "100px", border: "1px solid black", verticalAlign: "middle", textAlign: "center", display: "table-cell"}}>
 		var imageline = data.large_image.length === 0 ?
-			<img alt={data.title} style={{width: 100, height: 100}} />
+			<img alt={data.title} style={{width: 100, height: 100, backgroundColor: theme.palette.inputColor,}} />
 			: 
-			<img alt={data.title} src={data.large_image} style={{width: 100, height: 100, maxWidth: "100%"}} />
+			<img alt={data.title} src={data.large_image} style={{maxWidth: 100, maxHeight: "100%", display: "block", margin: "0 auto"}} onLoad={(event) => {
+				//console.log("IMG LOADED!: ", event.target)
+			}} />
 
 		// FIXME - add label to apps, as this might be slow with A LOT of apps
 		var newAppname = data.name
@@ -336,7 +351,7 @@ const Apps = (props) => {
 		}
 
 		var description = data.description
-		const maxDescLen = 60
+		const maxDescLen = 51
 		if (description.length > maxDescLen) {
 			description = data.description.slice(0, maxDescLen)+"..."
 		}
@@ -359,8 +374,8 @@ const Apps = (props) => {
 					} 
 				}
 			}}>
-				<Grid container style={{margin: 10, flex: "10"}}>
-					<ButtonBase>
+				<Grid container style={{margin: 10, flex: "10", maxHeight: 110, overflow: "hidden",}}>
+					<ButtonBase style={{backgroundColor: theme.palette.inputColor, border: 3}}>
 						{imageline}
 					</ButtonBase>
 					<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: boxWidth, backgroundColor: boxColor}}>
@@ -515,9 +530,9 @@ const Apps = (props) => {
 			: null
 
 		var imageline = selectedApp.large_image === undefined || selectedApp.large_image.length === 0 ?
-			<img alt={selectedApp.title} style={{width: 100, height: 100}} />
+			<img alt={selectedApp.title} style={{width: 100, height: 100, backgroundColor: theme.palette.inputColor,}} />
 			: 
-			<img alt={selectedApp.title} src={selectedApp.large_image} style={{width: 100, height: 100, maxWidth: "100%"}} />
+			<img alt={selectedApp.title} src={selectedApp.large_image} style={{maxHeight: 100, maxWidth: 100, backgroundColor: theme.palette.inputColor}} />
 
 		const GetAppExample = () => {
 			if (selectedAction.returns === undefined) {
@@ -588,10 +603,10 @@ const Apps = (props) => {
 					<div style={{marginRight: 15, marginTop: 10}}>
 						{imageline}
 					</div>
-					<div style={{maxWidth: "75%", overflow: "hidden"}}>
+					<div style={{maxWidth: "85%", overflow: "hidden"}}>
 						<h2 style={{marginTop: 20, marginBottom: 0, }}>{newAppname}</h2>
 						<p style={{marginTop: 5, marginBottom: 0,}}>Version {selectedApp.app_version}</p>	
-						<p style={{marginTop: 5, marginBottom: 0}}>{description}</p>	
+						<p style={{marginTop: 5, marginBottom: 0, maxHeight: 150, overflowY: "auto", overflowX: "hidden",}}>{description}</p>	
 					</div>
 				</div>
 				{activateButton}
@@ -634,7 +649,7 @@ const Apps = (props) => {
 								updateAppField(selectedApp.id, "sharing", !selectedApp.sharing)
 								//setSelectedAction(event.target.value)
 							}}
-							style={{width: 150, backgroundColor: inputColor, color: "white", height: 35, marginleft: 10,}}
+							style={{width: 150, backgroundColor: theme.palette.surfaceColor, backgroundColor: inputColor, color: "white", height: 35, marginleft: 10,}}
 							SelectDisplayProps={{
 								style: {
 									marginLeft: 10,
@@ -699,7 +714,7 @@ const Apps = (props) => {
 
 					{selectedAction.parameters !== undefined && selectedAction.parameters !== null ? 
 						<div style={{marginTop: 15, marginBottom: 15}}>
-							<b>Arguments</b>
+							<b>Parameters</b>
 							{selectedAction.parameters.map(data => {
 									var itemColor = "#f85a3e"
 									if (!data.required) {
@@ -802,12 +817,16 @@ const Apps = (props) => {
 		
     const reader = new FileReader();
 
-    reader.addEventListener('load', (e) => {
-      const content = e.target.result;
-			setOpenApiData(content);
-			setIsDropzone(isDropzone);
-			setOpenApiModal(true)
-    })
+		try {
+			reader.addEventListener('load', (e) => {
+				const content = e.target.result;
+				setOpenApiData(content);
+				setIsDropzone(isDropzone);
+				setOpenApiModal(true)
+			})
+		} catch (e) {
+			console.log("Error in dropzone: ", e)
+		}
 
 		reader.readAsText(files[0]);
   };
@@ -907,7 +926,7 @@ const Apps = (props) => {
 					<div style={{marginTop: 15}}>
 						{apps.length > 0 ? 
 							filteredApps.length > 0 ? 
-								<div style={{height: "75vh", overflowY: "scroll"}}>
+								<div style={{height: "75vh", overflowY: "auto"}}>
 									{filteredApps.map(app => {
 										return (
 											appPaper(app)
@@ -959,6 +978,7 @@ const Apps = (props) => {
 
 		const parsedData = {
 			"url": url,
+			"branch": downloadBranch || 'master'
 		}
 
 		if (field1.length > 0) {
@@ -988,18 +1008,23 @@ const Apps = (props) => {
 			}
 			setIsLoading(false)
 			stop()
+			setValidation(false)
 
 			return response.json()
 		})
     .then((responseJson) => {
-				console.log("DATA: ", responseJson)
-				if (responseJson.reason !== undefined) {
-					alert.error("Failed loading: "+responseJson.reason)
-				}
+			console.log("DATA: ", responseJson)
+			if (responseJson.reason !== undefined) {
+				alert.error("Failed loading: "+responseJson.reason)
+			}
 		})
 		.catch(error => {
 			console.log("ERROR: ", error.toString())
 			alert.error(error.toString())
+
+			stop()
+			setIsLoading(false)
+			setValidation(false)
 		})
 	}
 
@@ -1167,6 +1192,7 @@ const Apps = (props) => {
 				return
 			}
 
+			console.log("Validating response!")
 			validateOpenApi(responseJson)
     })
 		.catch(error => {
@@ -1185,10 +1211,12 @@ const Apps = (props) => {
 
 
 		try {
-			return JSON.stringify(YAML.parse(apidata))
+			const parsed = YAML.parse(YAML.stringify(apidata))
+			//const parsed = YAML.parse(apidata))
+			return YAML.stringify(parsed)
 		} catch(error) {
 			console.log("YAML DECODE ERROR - TRY SOMETHING ELSE?: "+error)
-			setOpenApiError(error.toString())
+			setOpenApiError("Local error: "+ error.toString())
 		}
 
 		return ""
@@ -1197,19 +1225,23 @@ const Apps = (props) => {
 	// Sends the data to backend, which should return a version 3 of the same API
 	// If 200 - continue, otherwise, there's some issue somewhere
 	const validateOpenApi = (openApidata) => {
-		const newApidata = escapeApiData(openApidata)
+		var newApidata = escapeApiData(openApidata)
 		if (newApidata === "") {
+			// Used to return here
+			newApidata = openApidata
 			return
 		}
 
+		//console.log(newApidata)
+
 		setValidation(true)
 		fetch(globalUrl+"/api/v1/validate_openapi", {
-    	  	method: 'POST',
+    	method: 'POST',
 			headers: {
 				'Accept': 'application/json',
 			},
-			body: newApidata,
-	  		credentials: "include",
+			body: openApidata,
+	  	credentials: "include",
 		})
 		.then((response) => {
 			setValidation(false)
@@ -1302,7 +1334,7 @@ const Apps = (props) => {
 					style={{backgroundColor: inputColor}}
 					variant="outlined"
 					margin="normal"
-					defaultValue="https://github.com/frikky/shuffle-apps"
+					defaultValue={userdata.active_org.defaults.app_download_repo !== undefined && userdata.active_org.defaults.app_download_repo.length > 0 ? userdata.active_org.defaults.app_download_repo : "https://github.com/frikky/shuffle-apps"}
 					InputProps={{
 						style:{
 							color: "white",
@@ -1314,6 +1346,25 @@ const Apps = (props) => {
 					placeholder="https://github.com/frikky/shuffle-apps"
 					fullWidth
 					/>
+				<span style={{marginTop: 10}}>Branch (default value is "master"):</span>
+					<div style={{display: "flex"}}>
+						<TextField
+							style={{backgroundColor: inputColor}}
+							variant="outlined"
+							margin="normal"
+							defaultValue={userdata.active_org.defaults.app_download_branch !== undefined && userdata.active_org.defaults.app_download_branch.length > 0 ? userdata.active_org.defaults.app_download_branch : downloadBranch}
+							InputProps={{
+								style:{
+									color: "white",
+									height: "50px",
+									fontSize: "1em",
+								},
+							}}
+							onChange={e => setDownloadBranch(e.target.value)}
+							placeholder="master"
+							fullWidth
+							/>
+					</div>
 
 				<span style={{marginTop: 10}}>Authentication (optional - private repos etc):</span>
 				<div style={{display: "flex"}}>

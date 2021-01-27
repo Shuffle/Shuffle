@@ -74,6 +74,8 @@ const data = [{
 				'shape': 'octagon',
 				'border-color': 'orange',
 				'background-color': '#213243',
+				'background-width': '100%',
+				'background-height': '100%',
 			},
 		},
 		{

@@ -85,7 +85,7 @@ const Settings = (props) => {
 
 	const generateApikey = () => {
 		fetch(globalUrl+"/api/v1/generateapikey", {
-    	  	method: 'GET',
+    	  method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json',
@@ -99,7 +99,7 @@ const Settings = (props) => {
 
 			return response.json()
 		})
-    	.then((responseJson) => {
+    .then((responseJson) => {
 			setUserSettings(responseJson)
     	})
 		.catch(error => {
