@@ -1702,7 +1702,7 @@ const AppCreator = (props) => {
 			<FormControl style={{backgroundColor: surfaceColor, color: "white",}}>
 				<DialogTitle><div style={{color: "white"}}>New action</div></DialogTitle>
 				<DialogContent>
-					<Link target="_blank" to="https://shuffler.io/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more about actions</Link>
+					<a target="_blank" href="https://shuffler.io/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more about actions</Link>
 					<div style={{marginTop: "15px"}}/>
 					Name
 					<TextField
@@ -2033,7 +2033,7 @@ const AppCreator = (props) => {
 		<div style={{color: "white"}}>
 			<h2>Actions ({actions.length})</h2>
 			Actions are the tasks performed by an app. Read more about actions and apps
-			<Link target="_blank" to="https://shuffler.io/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}> here</Link>.
+			<a target="_blank" href="https://shuffler.io/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}> here</Link>.
 			<div>
 				{loopActions}
 				<div style={{display: "flex"}}>
