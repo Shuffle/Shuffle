@@ -40,10 +40,22 @@ class AppBase:
         if action_result["status"] == "EXECUTING":
             action_result["status"] = "FAILURE"
 
+        # FIXME: Add cleanup of parameters to not send to frontend here
+        params = {}
+        #action = action_result["action"]
+        #try:
+        #    for item in action["authentication"]:
+        #        for action["parameters"]
+        #        print("AUTH: ", key, value)
+        #        params[item["key"]] = item["value"]
+        #except KeyError:
+        #    print("No authentication specified!")
+        #    pass
+
         # I wonder if this actually works 
         self.logger.info("Before last stream result")
         url = "%s%s" % (self.base_url, stream_path)
-        print("URL: %s" % url)
+        print("[INFO] URL (URL): %s" % url)
         try:
             ret = requests.post(url, headers=headers, json=action_result)
             self.logger.info("Result: %d" % ret.status_code)
@@ -130,7 +142,7 @@ class AppBase:
                 octothorpe_count = param["value"].count(".#")
                 if octothorpe_count > self.result_wrapper_count:
                     self.result_wrapper_count = octothorpe_count
-                    print("NEW OCTOTHORPE WRAPPER: %d" % octothorpe_count)
+                    print("[INFO] NEW OCTOTHORPE WRAPPER: %d" % octothorpe_count)
 
             # This whole thing is hard.
             # item = [{"data": "1.2.3.4", "dataType": "ip"}] 
@@ -720,7 +732,7 @@ class AppBase:
                     else:
                         tmp = json.loads(parsedlist)[lastsplit[0]]
 
-                    print(tmp)
+                    #print(tmp)
                     return tmp
                 except IndexError as e:
                     return default_error
@@ -751,8 +763,8 @@ class AppBase:
             # Do stuff here.
             innervalue = parse_nested_param(data, maxDepth(data)-0)
             outervalue = parse_nested_param(data, maxDepth(data)-1)
-            print("INNER: ", innervalue)
-            print("OUTER: ", outervalue)
+            #print("INNER: ", innervalue)
+            #print("OUTER: ", outervalue)
         
             if outervalue != innervalue:
                 #print("Outer: ", outervalue, " inner: ", innervalue)
@@ -769,7 +781,7 @@ class AppBase:
                     print("Parsed value from %s: %s" % (thistype, parsed_value))
                     return (parsed_value, True)
         
-            print("DATA: %s\n" % data)
+            #print("DATA: %s\n" % data)
             return (parse_wrapper(data)[0], True)
         
 
@@ -829,12 +841,12 @@ class AppBase:
                 return data
         
             if len(parsedlist) > 0 and not non_string:
-                print("Returning parsed list: ", parsedlist)
+                #print("Returning parsed list: ", parsedlist)
                 return " ".join(parsedlist)
             elif len(parsedlist) == 1 and non_string:
                 return parsedlist[0]
             else:
-                print("Casting back to string because multi: ", parsedlist)
+                #print("Casting back to string because multi: ", parsedlist)
                 newlist = []
                 for item in parsedlist:
                     try:
@@ -848,13 +860,13 @@ class AppBase:
         # Parses JSON loops and such down to the item you're looking for
         def recurse_json(basejson, parsersplit):
             match = "#(\d+):?-?([0-9a-z]+)?#?"
-            print("Split: %s\n%s" % (parsersplit, basejson))
+            #print("Split: %s\n%s" % (parsersplit, basejson))
             try:
                 outercnt = 0
 
                 # Loops over split values
                 for value in parsersplit:
-                    print("VALUE: %s\n" % value)
+                    #print("VALUE: %s\n" % value)
                     actualitem = re.findall(match, value, re.MULTILINE)
                     if value == "#":
                         newvalue = []
@@ -875,7 +887,7 @@ class AppBase:
                         return newvalue, True
 
                     elif len(actualitem) > 0:
-                        print("[INFO] In recursion v2: ", actualitem)
+                        #print("[INFO] In recursion v2: ", actualitem)
 
                         is_loop = True
                         newvalue = []
@@ -884,7 +896,7 @@ class AppBase:
 
                         # Means it's a single item -> continue
                         if seconditem == "":
-                            print("[INFO] In first - handling %s" % firstitem)
+                            #print("[INFO] In first - handling %s" % firstitem)
                             tmpitem = basejson[int(firstitem)]
                             try:
                                 newvalue, is_loop = recurse_json(tmpitem, parsersplit[outercnt+1:])
@@ -1031,7 +1043,7 @@ class AppBase:
             baseresult = baseresult.replace(" True,", " true,")
             baseresult = baseresult.replace(" False", " false,")
 
-            print("[INFP] After third parser return - Formatted: ", baseresult)
+            print("[INFO] After third parser return - Formatted: ", baseresult)
             basejson = {}
             try:
                 basejson = json.loads(baseresult)
@@ -1685,8 +1697,8 @@ class AppBase:
                             #    "id": "body_replacement",
                             #})
 
-                            print("[INFO] APP_SDK DONE: Starting NORMAL execution of function")
-                            print("[INFO] Running with params (0): %s" % params) 
+                            #print("[INFO] APP_SDK DONE: Starting NORMAL execution of function")
+                            #print("[INFO] Running with params (0): %s" % params) 
                             newres = await func(**params)
                             print("[INFO] Returned from execution:", newres)
                             if isinstance(newres, tuple):
@@ -1725,7 +1737,7 @@ class AppBase:
 
                             print("[INFO] POST NEWRES RESULT: ", result)
                         else:
-                            print("[INFO] APP_SDK DONE: Starting MULTI execution (length: %d) with values %s" % (minlength, multi_parameters))
+                            #print("[INFO] APP_SDK DONE: Starting MULTI execution (length: %d) with values %s" % (minlength, multi_parameters))
                             # 1. Use number of executions based on the arrays being similar
                             # 2. Find the right value from the parsed multi_params
 
