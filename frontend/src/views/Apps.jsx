@@ -168,6 +168,10 @@ const Apps = (props) => {
 	})
 
 	function sortByKey(array, key) {
+		if (array === undefined || array === null) {
+			return []
+		}
+
     return array.sort(function(a, b) {
         var x = a[key];
         var y = b[key];
@@ -222,6 +226,7 @@ const Apps = (props) => {
 			return response.json()
 		})
     .then((responseJson) => {
+			console.log("Apps: ", responseJson)
 			responseJson = sortByKey(responseJson, "large_image")
 
 			setApps(responseJson)

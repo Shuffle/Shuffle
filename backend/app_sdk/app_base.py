@@ -1476,6 +1476,7 @@ class AppBase:
 
                                     #json_replacement = tmpitem.replace(actualitem[0][0], replacement, 1)
                                     #print("AFTER POST replacement: %s" % json_replacement)
+                                    #json_replacement = replacement
                                     try:
                                         json_replacement = json.loads(replacement)
                                     except json.decoder.JSONDecodeError as e:

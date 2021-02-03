@@ -839,7 +839,7 @@ func shutdown(executionId, workflowId string) {
 		log.Printf("[INFO] Failed abort request: %s", err)
 	}
 
-	sleepDuration := 0
+	sleepDuration := 1
 	log.Printf("[INFO] Finished shutdown (after %d seconds).", sleepDuration)
 	// Allows everything to finish in subprocesses
 	time.Sleep(time.Duration(sleepDuration) * time.Second)
@@ -2754,7 +2754,7 @@ func main() {
 
 		if firstRequest {
 			firstRequest = false
-			workflowExecution.StartedAt = int64(time.Now().Unix())
+			//workflowExecution.StartedAt = int64(time.Now().Unix())
 
 			cacheKey := fmt.Sprintf("workflowexecution-%s", workflowExecution.ExecutionId)
 			requestCache = cache.New(5*time.Minute, 10*time.Minute)
