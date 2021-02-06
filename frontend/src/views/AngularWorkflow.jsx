@@ -338,7 +338,7 @@ const AngularWorkflow = (props) => {
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for setting app auth :O!")
-			}
+			} 
 
 			return response.json()
 		})
@@ -346,7 +346,10 @@ const AngularWorkflow = (props) => {
 			if (!responseJson.success) {
 				alert.error("Failed to set app auth: "+responseJson.reason)
 			} else {
+				getAppAuthentication(true) 
 				setAuthenticationModalOpen(false) 
+
+				// Needs a refresh with the new authentication..
 				alert.success("Successfully saved new app auth")
 			}
 		})
@@ -930,7 +933,7 @@ const AngularWorkflow = (props) => {
 		"Http",
 	]
 
-	const getAppAuthentication = () => {
+	const getAppAuthentication = (reset) => {
 		fetch(globalUrl+"/api/v1/apps/authentication", {
 			method: 'GET',
 			headers: {
@@ -958,6 +961,10 @@ const AngularWorkflow = (props) => {
 					newauth.push(responseJson.data[key])
 				}
 
+				if (reset === true) {
+					console.log("APP RESET = reset cy")
+					cy.on('select', 'node', (e) => onNodeSelect(e, newauth))
+				}
 				setAppAuthentication(newauth)
 			} else {
 				alert.error("Failed getting authentications")
@@ -992,7 +999,7 @@ const AngularWorkflow = (props) => {
 			//tmpapps = tmpapps.concat(getExtraApps())
 			//tmpapps = tmpapps.concat(responseJson)
 			setApps(responseJson)
-			getAppAuthentication() 
+			//getAppAuthentication() 
 
 			setFilteredApps(responseJson.filter(app => !internalIds.includes(app.name)))
 			setPrioritizedApps(responseJson.filter(app => internalIds.includes(app.name)))
@@ -1118,7 +1125,7 @@ const AngularWorkflow = (props) => {
 		setSelectedTrigger({})
 	}
 
-	const onNodeSelect = (event) => {
+	const onNodeSelect = (event, newAppAuth) => {
 		const data = event.target.data()
 		setLastSaved(false)
 		const branch = workflow.branches.filter(branch => branch.source_id === data.id || branch.destination_id === data.id)
@@ -1149,7 +1156,8 @@ const AngularWorkflow = (props) => {
 						findAuthId = curaction.authentication_id
 					}
 
-					var tmpAuth = JSON.parse(JSON.stringify(appAuthentication))
+					var tmpAuth = JSON.parse(JSON.stringify(newAppAuth))
+					console.log("Checking authentication: ", tmpAuth)
 					for (var key in tmpAuth) {
 						var item = tmpAuth[key]
 
@@ -1168,6 +1176,7 @@ const AngularWorkflow = (props) => {
 					}
 
 					curaction.authentication = authenticationOptions
+					console.log("Authentication: ", authenticationOptions)
 					if (curaction.selectedAuthentication === null || curaction.selectedAuthentication === undefined || curaction.selectedAuthentication.length === "") {
 						curaction.selectedAuthentication = {}
 					}
@@ -1562,7 +1571,7 @@ const AngularWorkflow = (props) => {
 
 			cy.fit(null, 200)
 
-			cy.on('select', 'node', (e) => onNodeSelect(e))
+			cy.on('select', 'node', (e) => onNodeSelect(e, appAuthentication))
 			cy.on('select', 'edge', (e) => onEdgeSelect(e))
 			cy.on('unselect', (e) => onUnselect(e))
 
@@ -2485,8 +2494,6 @@ const AngularWorkflow = (props) => {
 				}
 
 				workflow.actions.push(newAppData)
-
-				console.log(workflow.categories)
 				setWorkflow(workflow)
 
 				if (newAppPopup) {
@@ -7075,8 +7082,9 @@ const AngularWorkflow = (props) => {
 		const handleSubmitCheck = () => {
 			console.log("NEW AUTH: ", authenticationOption)
 			if (authenticationOption.label.length === 0) {
-				alert.info("Label can't be empty")
-				return
+				authenticationOption.label = `Auth for ${selectedApp.name}`
+				//alert.info("Label can't be empty")
+				//return
 			}
 
 			for (var key in selectedApp.authentication.parameters) {
@@ -7106,7 +7114,6 @@ const AngularWorkflow = (props) => {
 			setNewAppAuth(newAuthOption)
 			//appAuthentication.push(newAuthOption)
 			//setAppAuthentication(appAuthentication)
-			getAppAuthentication() 
 			setUpdate(authenticationOption.id)
 
 			/*
@@ -7141,6 +7148,7 @@ const AngularWorkflow = (props) => {
 							fullWidth
 							color="primary"
 							placeholder={"Auth july 2020"}
+							defaultValue={`Auth for ${selectedApp.name}`}
 							onChange={(event) => {
 								authenticationOption.label = event.target.value
 							}}
