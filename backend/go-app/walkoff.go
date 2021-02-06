@@ -190,6 +190,10 @@ type WorkflowApp struct {
 		Name string `json:"name" datastore:"name" yaml:"name"`
 		Url  string `json:"url" datastore:"url" yaml:"url"`
 	} `json:"contact_info" datastore:"contact_info" yaml:"contact_info" required:false`
+	ReferenceInfo struct {
+		DocumentationUrl string `json:"documentation_url" datastore:"documentation_url"`
+		GithubUrl        string `json:"github_url" datastore:"github_url"`
+	}
 	Actions        []WorkflowAppAction `json:"actions" yaml:"actions" required:true datastore:"actions,noindex"`
 	Authentication Authentication      `json:"authentication" yaml:"authentication" required:false datastore:"authentication"`
 	Tags           []string            `json:"tags" yaml:"tags" required:false datastore:"activated"`
@@ -317,6 +321,7 @@ type Action struct {
 	AuthenticationId string `json:"authentication_id" datastore:"authentication_id"`
 	Example          string `json:"example,omitempty" datastore:"example"`
 	AuthNotRequired  bool   `json:"auth_not_required,omitempty" datastore:"auth_not_required" yaml:"auth_not_required"`
+	Category         string `json:"category" datastore:"category"`
 }
 
 // Added environment for location to execute
@@ -406,8 +411,26 @@ type Workflow struct {
 		Name        string `json:"name" datastore:"name"`
 		Value       string `json:"value" datastore:"value,noindex"`
 	} `json:"execution_variables,omitempty" datastore:"execution_variables"`
-	ExecutionEnvironment string `json:"execution_environment" datastore:"execution_environment"`
-	PreviouslySaved      bool   `json:"first_save" datastore:"first_save"`
+	ExecutionEnvironment string     `json:"execution_environment" datastore:"execution_environment"`
+	PreviouslySaved      bool       `json:"first_save" datastore:"first_save"`
+	Categories           Categories `json:"categories" datastore:"categories"`
+}
+
+type Category struct {
+	Name        string `json:"name" datastore:"name"`
+	Description string `json:"description" datastore:"description"`
+	Count       int64  `json:"count" datastore:"count"`
+}
+
+type Categories struct {
+	SIEM          Category `json:"siem" datastore:"siem"`
+	Communication Category `json:"communication" datastore:"communication"`
+	Assets        Category `json:"assets" datastore:"assets"`
+	Cases         Category `json:"cases" datastore:"cases"`
+	Network       Category `json:"network" datastore:"network"`
+	Intel         Category `json:"intel" datastore:"intel"`
+	EDR           Category `json:"edr" datastore:"edr"`
+	Other         Category `json:"other" datastore:"other"`
 }
 
 type ActionResult struct {
@@ -1641,13 +1664,16 @@ func getWorkflows(resp http.ResponseWriter, request *http.Request) {
 			q = q.Limit(35)
 			_, err = dbclient.GetAll(ctx, q, &workflows)
 			if err != nil {
-				log.Printf("Failed getting workflows for user %s: %s", user.Username, err)
+				log.Printf("Failed getting workflows for user %s: %s (0)", user.Username, err)
 				resp.WriteHeader(401)
 				resp.Write([]byte(`{"success": false}`))
 				return
 			}
 		} else {
-			log.Printf("Failed getting workflows for user %s: %s", user.Username, err)
+			log.Printf("Failed getting workflows for user %s: %s (1)", user.Username, err)
+			//DeleteKey(ctx, "workflow", "5694357e-8063-4580-8529-301cc72df951")
+
+			//log.Printf("Workflows: %#v", workflows)
 			resp.WriteHeader(401)
 			resp.Write([]byte(`{"success": false}`))
 			return
@@ -2066,6 +2092,32 @@ func updateAppAuth(auth AppAuthenticationStorage, workflowId, nodeId string, add
 	return nil
 }
 
+func handleCategoryIncrease(workflow Workflow, action Action) Categories {
+	if action.Category == "" {
+		log.Printf("Should find app's categories as it's empty during save")
+		return workflow.Categories
+	}
+
+	newCategory := "cases"
+	log.Printf("Adding %s category", newCategory)
+	switch category := newCategory; {
+	case category == "cases":
+		workflow.Categories.Cases.Count += 1
+	default:
+		log.Printf("Can't handle category %s", category)
+	}
+
+	//Categories           Categories `json:"categories" datastore:"categories"`
+	//found := false
+	//for _, category := range workflow.Categories {
+	//	if category == newCategory {
+	//		log.Printf("Category %s already exists", category)
+	//		return workflow
+	//}
+	//workflow.Categories = handleCategoryIncrease(workflow, action.Category)
+	return workflow.Categories
+}
+
 // Saves a workflow to an ID
 func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
@@ -2166,6 +2218,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - this shouldn't be necessary with proper API checks
 	newActions := []Action{}
 	allNodes := []string{}
+	workflow.Categories = Categories{}
 
 	//log.Printf("Action: %#v", action.Authentication)
 	for _, action := range workflow.Actions {
@@ -2193,6 +2246,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 			action.Errors = []string{}
 		}
 
+		workflow.Categories = handleCategoryIncrease(workflow, action)
 		newActions = append(newActions, action)
 	}
 
@@ -2203,7 +2257,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		workflowapps, apperr := getAllWorkflowApps(ctx, 500)
 		allAuths, err := getAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
 		if err == nil && len(workflowapps) > 0 && apperr == nil {
-			log.Printf("Setting actions")
+			//log.Printf("Setting actions")
 			actionFixing := []Action{}
 			appsAdded := []string{}
 			for _, action := range newActions {
@@ -2533,7 +2587,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - might be a sploit to run someone elses app if getAllWorkflowApps
 	// doesn't check sharing=true
 	// Have to do it like this to add the user's apps
-	log.Println("Apps set starting")
+	//log.Println("Apps set starting")
 	//log.Printf("EXIT ON ERROR: %#v", workflow.Configuration.ExitOnError)
 	workflowApps := []WorkflowApp{}
 	//memcacheName = "all_apps"
@@ -4625,7 +4679,7 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 		user.PrivateApps = privateApps
 		err = setUser(ctx, &user)
 		if err != nil {
-			log.Printf("[ERROR]Failed removing %s app for user %s: %s", app.Name, user.Username, err)
+			log.Printf("[ERROR] Failed removing %s app for user %s: %s", app.Name, user.Username, err)
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": true"}`)))
 			return

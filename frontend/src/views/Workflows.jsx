@@ -191,18 +191,21 @@ const Workflows = (props) => {
     })
 		.then((response) => {
 			if (response.status !== 200) {
-				console.log("Status not 200 for workflows :O!")
+				console.log("Status not 200 for workflows :O!: ", response.status)
+				alert.info("Failed getting workflows.")
+				setWorkflowDone(true)
+
 				return 
 			}
 			return response.json()
 		})
-    	.then((responseJson) => {
+    .then((responseJson) => {
 			setSelectedExecution({})
 			setWorkflowExecutions([])
 
 			if (responseJson !== undefined) {
 				setWorkflows(responseJson)
-					setWorkflowDone(true)
+				setWorkflowDone(true)
 			} else {
 				if (isLoggedIn) {
 					alert.error("An error occurred while loading workflows")

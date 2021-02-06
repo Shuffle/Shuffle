@@ -195,7 +195,7 @@ const AppCreator = (props) => {
 	const alert = useAlert()
 
 	var upload = ""
-	const increaseAmount = 30
+	const increaseAmount = 50
 	const actionNonBodyRequest = ["GET", "HEAD", "DELETE", "CONNECT"]
 	const actionBodyRequest = ["POST", "PUT", "PATCH",]
 	const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth", ]
@@ -1230,6 +1230,11 @@ const AppCreator = (props) => {
 		newAction.errors.push("Can't have the same name")
 
 		actions.push(newAction)
+
+		if (actions.length > actionAmount) { 
+			setActionAmount(actions.length)
+		}
+
 		setActions(actions)
 		setUpdate(Math.random())
 	}
@@ -1537,6 +1542,11 @@ const AppCreator = (props) => {
 			actions.push(currentAction)
 		} else {
 			actions[actionIndex] = currentAction
+		}
+
+
+		if (actions.length > actionAmount) { 
+			setActionAmount(actions.length)
 		}
 
 		setActions(actions)
@@ -1973,6 +1983,7 @@ const AppCreator = (props) => {
 						setUrlPathQueries([]) 
 						setUrlPath("")
 						setFileUploadEnabled(false)
+
 					}}>
 						Submit	
 					</Button>
@@ -2053,8 +2064,10 @@ const AppCreator = (props) => {
 						setCurrentActionMethod(actionNonBodyRequest[0])
 						setActionsModalOpen(true)
 					}}>New action</Button> 				
+					{/*
+					{actionAmount} {actions.length}
 					{actionAmount > 0 && actionAmount < actions.length ? null :  
-						<Button color="primary" style={{marginTop: "20px", borderRadius: "0px", textAlign: "center"}} variant="outlined" onClick={() => {
+						<Button color="primary" style={{float: "right", marginTop: "20px", borderRadius: "0px", textAlign: "center"}} variant="outlined" onClick={() => {
 							if (actionAmount+increaseAmount > actions.length) {
 								setActionAmount(actions.length)
 							} else {
@@ -2064,6 +2077,7 @@ const AppCreator = (props) => {
 							See more actions	
 						</Button>
 					}
+					*/}
 				</div>
 			</div>
 		</div>
@@ -2136,7 +2150,7 @@ const AppCreator = (props) => {
 						</h2>
 					</Link>
 					<h2>
-						{name}
+						{name} ({actions === null || actions === undefined ? 0 : actions.length})
 					</h2>
 				</Breadcrumbs>
 				<Paper style={boxStyle}>

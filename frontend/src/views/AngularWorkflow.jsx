@@ -433,7 +433,7 @@ const AngularWorkflow = (props) => {
 	const abortExecution = () => {
 		setExecutionRunning(false)
 
-		alert.info("Aborting execution")
+		//alert.info("Aborting execution")
 		fetch(globalUrl+"/api/v1/workflows/"+props.match.params.key+"/executions/"+executionRequest.execution_id+"/abort", {
     	  	method: 'GET',
 				headers: {
@@ -1859,13 +1859,6 @@ const AngularWorkflow = (props) => {
 		height: "100%",
 	}
 
-	const scrollStyle = {
-		marginTop: 10,
-		overflow: "scroll",
-		height: "100%",
-		overflowX: "auto",
-		overflowY: "auto",
-	}
 
 	const paperAppStyle = {
 		borderRadius: borderRadius,
@@ -2429,7 +2422,10 @@ const AngularWorkflow = (props) => {
 					authentication: [],
 					execution_variable: undefined,
 					example: example,
+					category: app.categories !== null && app.categories !== undefined && app.categories.length > 0 ? app.categories[0] : ""
 				}
+
+				// FIXME: overwrite category if the ACTION chosen has a different category
 
 				// const image = "url("+app.large_image+")"
 
@@ -2489,6 +2485,8 @@ const AngularWorkflow = (props) => {
 				}
 
 				workflow.actions.push(newAppData)
+
+				console.log(workflow.categories)
 				setWorkflow(workflow)
 
 				if (newAppPopup) {
@@ -2605,7 +2603,6 @@ const AngularWorkflow = (props) => {
 							return null
 						}
 
-						console.log("APP: ", app)
 						return(
 							<ParsedAppPaper key={index} app={app} />	
 						)

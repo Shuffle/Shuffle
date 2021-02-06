@@ -169,7 +169,7 @@ const Apps = (props) => {
 
 	function sortByKey(array, key) {
 		if (array === undefined || array === null) {
-			return []
+			return array
 		}
 
     return array.sort(function(a, b) {
