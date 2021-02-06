@@ -2092,30 +2092,37 @@ func updateAppAuth(auth AppAuthenticationStorage, workflowId, nodeId string, add
 	return nil
 }
 
-func handleCategoryIncrease(workflow Workflow, action Action) Categories {
+// Identifies what a category defined really is
+func handleCategoryIncrease(categories Categories, action Action) Categories {
+	log.Printf("Action: %s, category: %s", action.AppName, action.Category)
 	if action.Category == "" {
 		log.Printf("Should find app's categories as it's empty during save")
-		return workflow.Categories
+		return categories
 	}
 
-	newCategory := "cases"
-	log.Printf("Adding %s category", newCategory)
-	switch category := newCategory; {
-	case category == "cases":
-		workflow.Categories.Cases.Count += 1
-	default:
-		log.Printf("Can't handle category %s", category)
+	// FIXME: Make this an "autodiscover" that's controlled by the category itself
+	// Should just be a list that's looped against :)
+	newCategory := strings.ToLower(action.Category)
+	if strings.Contains(newCategory, "case") || strings.Contains(newCategory, "ticket") || strings.Contains(newCategory, "alert") || strings.Contains(newCategory, "mssp") {
+		categories.Cases.Count += 1
+	} else if strings.Contains(newCategory, "siem") || strings.Contains(newCategory, "event") || strings.Contains(newCategory, "log") || strings.Contains(newCategory, "search") {
+		categories.SIEM.Count += 1
+	} else if strings.Contains(newCategory, "sms") || strings.Contains(newCategory, "comm") || strings.Contains(newCategory, "phone") || strings.Contains(newCategory, "call") || strings.Contains(newCategory, "chat") || strings.Contains(newCategory, "mail") || strings.Contains(newCategory, "phish") {
+		categories.Communication.Count += 1
+	} else if strings.Contains(newCategory, "intel") || strings.Contains(newCategory, "crim") || strings.Contains(newCategory, "ti") {
+		categories.Intel.Count += 1
+	} else if strings.Contains(newCategory, "sand") || strings.Contains(newCategory, "virus") || strings.Contains(newCategory, "malware") || strings.Contains(newCategory, "scan") || strings.Contains(newCategory, "edr") || strings.Contains(newCategory, "endpoint detection") {
+		// Sandbox lol
+		categories.EDR.Count += 1
+	} else if strings.Contains(newCategory, "vuln") || strings.Contains(newCategory, "fim") || strings.Contains(newCategory, "fim") || strings.Contains(newCategory, "integrity") {
+		categories.Assets.Count += 1
+	} else if strings.Contains(newCategory, "network") || strings.Contains(newCategory, "firewall") || strings.Contains(newCategory, "waf") || strings.Contains(newCategory, "switch") {
+		categories.Network.Count += 1
+	} else {
+		categories.Other.Count += 1
 	}
 
-	//Categories           Categories `json:"categories" datastore:"categories"`
-	//found := false
-	//for _, category := range workflow.Categories {
-	//	if category == newCategory {
-	//		log.Printf("Category %s already exists", category)
-	//		return workflow
-	//}
-	//workflow.Categories = handleCategoryIncrease(workflow, action.Category)
-	return workflow.Categories
+	return categories
 }
 
 // Saves a workflow to an ID
@@ -2246,7 +2253,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 			action.Errors = []string{}
 		}
 
-		workflow.Categories = handleCategoryIncrease(workflow, action)
+		workflow.Categories = handleCategoryIncrease(workflow.Categories, action)
 		newActions = append(newActions, action)
 	}
 
