@@ -3841,6 +3841,21 @@ const AngularWorkflow = (props) => {
 		zIndex: 1000,
 	}
 
+	const textFieldStyle = {
+		backgroundColor: inputColor, 
+		borderRadius: borderRadius, 
+	}
+
+
+	const innerTextfieldStyle = {
+		color: "white",
+		minHeight: 50, 
+		marginLeft: "5px",
+		maxWidth: "95%",
+		fontSize: "1em",
+		borderRadius: borderRadius,
+	}
+
 	const appApiView = Object.getOwnPropertyNames(selectedAction).length > 0 ? 
 		<div style={appApiViewStyle}>
 			<div style={{display: "flex", minHeight: 40, marginBottom: 30}}>
@@ -3894,15 +3909,9 @@ const AngularWorkflow = (props) => {
 				Name
 			</Typography>
 			<TextField
-				style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+				style={textFieldStyle} 
 				InputProps={{
-					style:{
-						color: "white",
-						minHeight: 50, 
-						marginLeft: "5px",
-						maxWidth: "95%",
-						fontSize: "1em",
-					},
+					style: innerTextfieldStyle, 
 				}}
 				fullWidth
 				color="primary"
@@ -4048,11 +4057,12 @@ const AngularWorkflow = (props) => {
 					value={selectedActionName}
 					fullWidth
 					onChange={setNewSelectedAction}
-					style={{backgroundColor: inputColor, color: "white", height: 50}}
+					style={{backgroundColor: inputColor, color: "white", height: 50, borderRadius: borderRadius,}}
 					SelectDisplayProps={{
 						style: {
 							marginLeft: 10,
 							maxHeight: 200,
+							borderRadius: borderRadius,
 						}
 					}}
 				>
@@ -6120,15 +6130,9 @@ const AngularWorkflow = (props) => {
 					<Tooltip color="primary" title="An argument to be used for execution. This is a variable available to every node in your workflow." placement="top">
 						<TextField
 							id="execution_argument_input_field"
-							style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+							style={textFieldStyle} 
 							InputProps={{
-								style:{
-									height: 50,
-									color: "white",
-									marginLeft: 5,
-									maxWidth: "95%",
-									fontSize: "1em",
-								},
+								style: innerTextfieldStyle, 
 							}}
 							color="secondary"
 							placeholder={"Execution Argument"}
