@@ -145,6 +145,7 @@ const Apps = (props) => {
 	const [isDropzone, setIsDropzone] = React.useState(false);
 	const upload = React.useRef(null);
 	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" ? true : false
+	const borderRadius = 3
 
 	const { start, stop } = useInterval({
 	  	duration: 5000,
@@ -330,9 +331,9 @@ const Apps = (props) => {
 		//<div style={{backgroundColor: theme.palette.inputColor, height: 100, width: 100, borderRadius: 3, verticalAlign: "middle", textAlign: "center", display: "table-cell"}}>
 		// <div style={{width: "100px", height: "100px", border: "1px solid black", verticalAlign: "middle", textAlign: "center", display: "table-cell"}}>
 		var imageline = data.large_image.length === 0 ?
-			<img alt={data.title} style={{width: 100, height: 100, backgroundColor: theme.palette.inputColor,}} />
+			<img alt={data.title} style={{borderRadius: borderRadius, width: 100, height: 100, backgroundColor: theme.palette.inputColor,}} />
 			: 
-			<img alt={data.title} src={data.large_image} style={{maxWidth: 100, maxHeight: "100%", display: "block", margin: "0 auto"}} onLoad={(event) => {
+			<img alt={data.title} src={data.large_image} style={{borderRadius: borderRadius, maxWidth: 100, minWidth: 100, maxHeight: "100%", display: "block", margin: "0 auto"}} onLoad={(event) => {
 				//console.log("IMG LOADED!: ", event.target)
 			}} />
 
@@ -535,9 +536,9 @@ const Apps = (props) => {
 			: null
 
 		var imageline = selectedApp.large_image === undefined || selectedApp.large_image.length === 0 ?
-			<img alt={selectedApp.title} style={{width: 100, height: 100, backgroundColor: theme.palette.inputColor,}} />
+			<img alt={selectedApp.title} style={{borderRadius: borderRadius, width: 100, height: 100, backgroundColor: theme.palette.inputColor,}} />
 			: 
-			<img alt={selectedApp.title} src={selectedApp.large_image} style={{maxHeight: 100, maxWidth: 100, backgroundColor: theme.palette.inputColor}} />
+			<img alt={selectedApp.title} src={selectedApp.large_image} style={{borderRadius: borderRadius, maxWidth: 100, height: "auto", backgroundColor: theme.palette.inputColor}} />
 
 		const GetAppExample = () => {
 			if (selectedAction.returns === undefined) {

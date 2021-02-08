@@ -395,23 +395,44 @@ const Workflows = (props) => {
 		let exportFileDefaultName = data.name+'.json';
 
 		data["owner"] = ""
-		for (var key in data.triggers) {
-			const trigger = data.triggers[key]
-			if (trigger.app_name === "Shuffle Workflow") {
-				if (trigger.parameters.length > 2) {
-					trigger.parameters[2].value = ""
+		if (data.triggers !== null && data.triggers !== undefined) {
+			for (var key in data.triggers) {
+				const trigger = data.triggers[key]
+				if (trigger.app_name === "Shuffle Workflow") {
+					if (trigger.parameters.length > 2) {
+						trigger.parameters[2].value = ""
+					}
+				} 
+				
+				if (trigger.status == "running") {
+					trigger.status = "stopped"
 				}
-			} 
-			
-			if (trigger.status == "running") {
-				trigger.status = "stopped"
 			}
 		}
 
-		for (var key in data.actions) {
-			data.actions[key].authentication_id = ""
+		if (data.actions !== null && data.actions !== undefined) {
+			for (var key in data.actions) {
+				data.actions[key].authentication_id = ""
+
+				for (var subkey in data.actions[key].parameters) {
+					const param = data.actions[key].parameters[subkey]
+					if (param.name.includes("key") || param.name.includes("user") || param.name.includes("pass") || param.name.includes("api") || param.name.includes("auth") || param.name.includes("secret")) {
+						param.value = ""
+					}
+				}
+			}
 		}
 
+		if (data.workflow_variables !== null && data.workflow_variables !== undefined) {
+			for (var key in data.workflow_variables) {
+				const param = data.workflow_variables[key]
+				if (param.name.includes("key") || param.name.includes("user") || param.name.includes("pass") || param.name.includes("api") || param.name.includes("auth") || param.name.includes("secret")) {
+					param.value = ""
+				}
+			}
+		}
+
+		//console.log(data)
 		//return
 
 		data["org"] = []

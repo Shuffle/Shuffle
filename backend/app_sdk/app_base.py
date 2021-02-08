@@ -62,7 +62,7 @@ class AppBase:
             if ret.status_code != 200:
                 self.logger.info(ret.text)
         except requests.exceptions.ConnectionError as e:
-            self.logger.exception(e)
+            self.logger.exception("ConnectionError: %s" % e)
             return
         except TypeError as e:
             self.logger.exception(e)
@@ -120,6 +120,11 @@ class AppBase:
         # 1. For the first array, take the total amount(y) (2x3=6) and divide it by the current array (x): 2. x/y = 3. This means do 3 of each value
         # 2. For the second array, take the total amount(y) (2x3=6) and divide it by the current array (x): 3. x/y = 2. 
         # 3. What does the 3rd array do? Same, but ehhh?
+        # 
+        # Example4:
+        # What if there are multiple loops inside a single item?
+        # 
+        #
 
         paramlist = []
         listitems = []

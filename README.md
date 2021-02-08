@@ -13,8 +13,10 @@ Please consider [sponsoring](https://github.com/sponsors/frikky) the project if 
 
 ## Support
 * [Discord](https://discord.gg/B2CBzUm)
+* [Twitter](https://twitter.com/shuffleio)
 * [Email](mailto:frikky@shuffler.io)
 * [Open issue](https://github.com/frikky/Shuffle/issues/new)
+* [Shuffler.io](https://shuffler.io/contact)
 
 ## Blogposts
 * [1. Introducing Shuffle](https://medium.com/security-operation-capybara/introducing-shuffle-an-open-source-soar-platform-part-1-58a529de7d12)
@@ -68,12 +70,9 @@ Below is the folder structure with a short explanation
 ├── README.md				# What you're reading right now
 ├── backend					# Contains backend related code.
 │   ├── go-app 			# The backend golang webserver
-│   ├── app_gen 		# Code for app generation outside the Shuffle platform
 │   └── app_sdk			# The SDK used for apps
-├── frontend				# Contains frontend code. ReactJS and cytoscape. Horrible code :)
-├── functions				# Contains google cloud function code mainly.
-│   ├── static_baseline.py	# Static code used by stitcher.go to generate code
-│   ├── stitcher.go		# Attempts to stitch together an app - part of backend now
+├── frontend				# Contains frontend code. ReactJS, Material UI and cytoscape
+├── functions				# Has execution and extension resources, such as the Wazuh integration
 │   ├── onprem				# Code for onprem solutions
 │   │   ├── Orborus 	# Distributes execution locations
 │   │   ├── Worker		# Runs a workflow

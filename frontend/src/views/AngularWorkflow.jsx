@@ -540,7 +540,7 @@ const AngularWorkflow = (props) => {
 						currentnode.removeClass('awaiting-data-highlight')
 						currentnode.addClass('success-highlight')
 
-						if (!visited.includes(item.action.label)) {
+						if (visited !== undefined && visited !== null && !visited.includes(item.action.label)) {
 							if (executionRunning) {
 								//alert.show("Success in node "+item.action.label)
 								//+" with result "+item.result)
@@ -1382,7 +1382,7 @@ const AngularWorkflow = (props) => {
 					//throw BreakException
 					return false 
 				}
-			});
+			})
 		}
 
 
@@ -1766,13 +1766,13 @@ const AngularWorkflow = (props) => {
 	const stopSchedule = (trigger, triggerindex) => {
 		alert.info("Stopping schedule")
 		fetch(globalUrl+"/api/v1/workflows/"+props.match.params.key+"/schedule/"+trigger.id, {
-    	  	method: 'DELETE',
-				headers: {
-					'Content-Type': 'application/json',
-					'Accept': 'application/json',
-				},
-	  			credentials: "include",
-    		})
+			method: 'DELETE',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+				credentials: "include",
+		})
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for stream results :O!")
@@ -1783,21 +1783,16 @@ const AngularWorkflow = (props) => {
 		.then((responseJson) => {
 			// No matter what, it's being stopped.
 			if (!responseJson.success) {
-				alert.error("Failed to stop schedule: " + responseJson.reason)
-
-				workflow.triggers[triggerindex].status = "stopped" 
-				trigger.status = "stopped" 
-				setSelectedTrigger(trigger)
-				setWorkflow(workflow)
-				saveWorkflow(workflow)
+				alert.WARNING("Failed to stop schedule: " + responseJson.reason)
 			} else {
 				alert.success("Successfully stopped schedule")
-				workflow.triggers[triggerindex].status = "stopped" 
-				trigger.status = "stopped" 
-				setSelectedTrigger(trigger)
-				setWorkflow(workflow)
-				saveWorkflow(workflow)
 			}
+
+			workflow.triggers[triggerindex].status = "stopped" 
+			trigger.status = "stopped" 
+			setSelectedTrigger(trigger)
+			setWorkflow(workflow)
+			saveWorkflow(workflow)
 		})
 		.catch(error => {
 			alert.error(error.toString())
@@ -2535,7 +2530,8 @@ const AngularWorkflow = (props) => {
 			newAppname = newAppname.slice(0, maxlen)+".."
 		}
 
-		const image = "url("+app.large_image+")"
+		//const image = "url("+app.large_image+")"
+		const image = app.large_image
 		const newAppStyle = JSON.parse(JSON.stringify(paperAppStyle))
 		const pixelSize = !hover ? "2px" : "4px"
 		newAppStyle.borderLeft = app.is_valid ? `${pixelSize} solid green` : `${pixelSize} solid orange`
@@ -2555,7 +2551,7 @@ const AngularWorkflow = (props) => {
 				<Paper square style={newAppStyle} onMouseOver={() => {setHover(true)}} onMouseOut={() => {setHover(false)}}>
 					<Grid container style={{margin: "10px 10px 10px 15px", flex: "10"}}>
 						<Grid item>
-							<div style={{borderRadius: borderRadius, height: 80, width: 80, backgroundImage: image, backgroundSize: "cover", backgroundRepeat: "no-repeat"}} />
+							<img alt={newAppname} src={image} style={{borderRadius: borderRadius, height: 80, width: 80,}} />
 						</Grid>
 						<Grid style={{display: "flex", flexDirection: "column", marginLeft: "20px", minWidth: 185, maxWidth: 185, overflow: "hidden", maxHeight: 80, }}>
 							<Grid item style={{flex: 1}}>
@@ -5530,6 +5526,7 @@ const AngularWorkflow = (props) => {
 		if (trigger.id === undefined) {
 			return
 		}
+
 		alert.info("Stopping webhook")
 
 		fetch(globalUrl+"/api/v1/hooks/"+trigger.id+"/delete", {
@@ -5548,18 +5545,23 @@ const AngularWorkflow = (props) => {
 			return response.json()
 		})
     .then((responseJson) => {
-			workflow.triggers[triggerindex].status = "stopped"
-			trigger.status = "stopped"
-			setWorkflow(workflow)
-			setSelectedTrigger(trigger)
+			if (workflow.triggers[triggerindex] !== undefined) {
+				workflow.triggers[triggerindex].status = "stopped"
+			}
 
 			if (responseJson.success) {
 				//alert.success("Successfully stopped webhook")
 				// Set the status
 				saveWorkflow(workflow)
 			} else {
-				alert.error("Failed stopping webhook: "+responseJson.reason)
+				if (responseJson.reason !== undefined) {
+					alert.error("Failed stopping webhook: "+responseJson.reason)
+				}
 			}
+
+			trigger.status = "stopped"
+			setWorkflow(workflow)
+			setSelectedTrigger(trigger)
 		})
 		.catch(error => {
 			alert.error(error.toString())
@@ -6937,7 +6939,7 @@ const AngularWorkflow = (props) => {
 		: null
 	
 	const variablesModal = variablesModalOpen ? 
-		<Dialog modal 
+		<Dialog 
 			open={variablesModalOpen} 
 			onClose={() => {
 				setNewVariableName("")

@@ -2150,7 +2150,7 @@ const AppCreator = (props) => {
 						</h2>
 					</Link>
 					<h2>
-						{name} ({actions === null || actions === undefined ? 0 : actions.length})
+						{name} {actions === null || actions === undefined || actions.length === 0 ? null : <span>({actions.length})</span>}
 					</h2>
 				</Breadcrumbs>
 				<Paper style={boxStyle}>

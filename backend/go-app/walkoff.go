@@ -414,6 +414,7 @@ type Workflow struct {
 	ExecutionEnvironment string     `json:"execution_environment" datastore:"execution_environment"`
 	PreviouslySaved      bool       `json:"first_save" datastore:"first_save"`
 	Categories           Categories `json:"categories" datastore:"categories"`
+	ExampleArgument      string     `json:"example_argument" datastore:"example_argument,noindex"`
 }
 
 type Category struct {
@@ -2093,13 +2094,26 @@ func updateAppAuth(auth AppAuthenticationStorage, workflowId, nodeId string, add
 }
 
 // Identifies what a category defined really is
-func handleCategoryIncrease(categories Categories, action Action) Categories {
-	log.Printf("Action: %s, category: %s", action.AppName, action.Category)
+func handleCategoryIncrease(categories Categories, action Action, workflowapps []WorkflowApp) Categories {
 	if action.Category == "" {
-		log.Printf("Should find app's categories as it's empty during save")
+		appName := action.AppName
+		for _, app := range workflowapps {
+			if appName != strings.ToLower(app.Name) {
+				continue
+			}
+
+			if len(app.Categories) > 0 {
+				log.Printf("[INFO] Setting category for %s: %s", app.Name, app.Categories)
+				action.Category = app.Categories[0]
+				break
+			}
+		}
+
+		//log.Printf("Should find app's categories as it's empty during save")
 		return categories
 	}
 
+	//log.Printf("Action: %s, category: %s", action.AppName, action.Category)
 	// FIXME: Make this an "autodiscover" that's controlled by the category itself
 	// Should just be a list that's looped against :)
 	newCategory := strings.ToLower(action.Category)
@@ -2227,6 +2241,8 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	allNodes := []string{}
 	workflow.Categories = Categories{}
 
+	workflowapps, apperr := getAllWorkflowApps(ctx, 500)
+
 	//log.Printf("Action: %#v", action.Authentication)
 	for _, action := range workflow.Actions {
 		allNodes = append(allNodes, action.ID)
@@ -2253,7 +2269,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 			action.Errors = []string{}
 		}
 
-		workflow.Categories = handleCategoryIncrease(workflow.Categories, action)
+		workflow.Categories = handleCategoryIncrease(workflow.Categories, action, workflowapps)
 		newActions = append(newActions, action)
 	}
 
@@ -2261,7 +2277,6 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("[WORKFLOW INIT] NOT PREVIOUSLY SAVED - SET ACTION AUTH!")
 		//AuthenticationId string `json:"authentication_id,omitempty" datastore:"authentication_id"`
 
-		workflowapps, apperr := getAllWorkflowApps(ctx, 500)
 		allAuths, err := getAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
 		if err == nil && len(workflowapps) > 0 && apperr == nil {
 			//log.Printf("Setting actions")
@@ -2819,8 +2834,11 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		Errors:  workflow.Errors,
 	}
 
-	cacheKey := fmt.Sprintf("workflowapps-sorted")
+	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
 	requestCache.Delete(cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
+	requestCache.Delete(cacheKey)
+
 	log.Printf("[INFO] Saved new version of workflow %s (%s) for org %s", workflow.Name, fileId, workflow.OrgId)
 	resp.WriteHeader(200)
 	newBody, err := json.Marshal(returndata)
@@ -4706,7 +4724,9 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		log.Printf("Failed to increase total apps loaded stats: %s", err)
 	}
-	cacheKey := fmt.Sprintf("workflowapps-sorted")
+	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
+	requestCache.Delete(cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
 	requestCache.Delete(cacheKey)
 
 	//err = memcache.Delete(request.Context(), sessionToken)
@@ -5273,7 +5293,9 @@ func updateWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	cacheKey := fmt.Sprintf("workflowapps-sorted")
+	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
+	requestCache.Delete(cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
 	requestCache.Delete(cacheKey)
 
 	log.Printf("Changed workflow app %s", app.ID)
@@ -6166,7 +6188,9 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 							continue
 						}
 
-						cacheKey := fmt.Sprintf("workflowapps-sorted")
+						cacheKey := fmt.Sprintf("workflowapps-sorted-100")
+						requestCache.Delete(cacheKey)
+						cacheKey = fmt.Sprintf("workflowapps-sorted-500")
 						requestCache.Delete(cacheKey)
 					}
 				} else {
@@ -6680,7 +6704,9 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	//memcache.Delete(ctx, "all_apps")
-	cacheKey := fmt.Sprintf("workflowapps-sorted")
+	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
+	requestCache.Delete(cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
 	requestCache.Delete(cacheKey)
 
 	resp.WriteHeader(200)
@@ -6822,6 +6848,10 @@ func getAllWorkflowApps(ctx context.Context, maxLen int) ([]WorkflowApp, error) 
 			_, err := it.Next(&app)
 			if err != nil {
 				break
+			}
+
+			if app.Name == "Shuffle Subflow" {
+				continue
 			}
 
 			found := false
