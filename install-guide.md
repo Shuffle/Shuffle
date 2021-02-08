@@ -127,7 +127,6 @@ export ORG_ID=Shuffle
 export ENVIRONMENT_NAME=Shuffle
 export BASE_URL=http://YOUR-IP:5001
 export DOCKER_API_VERSION=1.40
-export SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
 ```
 
 **WINDOWS USERS:** You'll have to to add the "export" part as an environment variable.
