@@ -6615,7 +6615,7 @@ const AngularWorkflow = (props) => {
 										}
 										</span>
 									: 
-									<div style={{maxHeight: 250, overflowX: "hidden", overflowY: "scroll",}}>
+									<div style={{maxHeight: 250, overflowX: "hidden", overflowY: "auto",}}>
 										<b>Result</b>&nbsp;
 										{data.result}
 									</div>
