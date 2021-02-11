@@ -566,6 +566,9 @@ const AngularWorkflow = (props) => {
 						}
 						break
 					case "FAILURE": 
+						//When status comes as failure, allow user to start workflow execution
+						setExecutionRunning(false)
+
 						currentnode.removeClass('not-executing-highlight')
 						currentnode.removeClass('executing-highlight')
 						currentnode.removeClass('success-highlight')
