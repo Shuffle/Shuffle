@@ -4740,13 +4740,7 @@ func getWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, userErr := handleApiAuthentication(resp, request)
-	if userErr != nil {
-		log.Printf("Api authentication failed in edit workflow: %s", userErr)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
+	ctx := context.Background()
 
 	location := strings.Split(request.URL.String(), "/")
 	var fileId string
@@ -4760,23 +4754,67 @@ func getWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 		fileId = location[4]
 	}
 
-	ctx := context.Background()
 	app, err := getApp(ctx, fileId)
 	if err != nil {
-		log.Printf("Error getting app (app config): %s", fileId)
+		log.Printf("[WARNING] Error getting app %s (app config): %s", fileId, err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+		return
+	}
+
+	//if IsValid       bool   `json:"is_valid" yaml:"is_valid" required:true datastore:"is_valid"`
+	// Sharing       bool   `json:"sharing" yaml:"sharing" required:false datastore:"sharing"`
+	log.Printf("Sharing: %s", app.Sharing)
+	log.Printf("Generated: %s", app.Generated)
+	log.Printf("Downloaded: %s", app.Downloaded)
+
+	// FIXME - Handle sharing and such PROPERLY
+	if app.Sharing && app.Generated {
+		log.Printf("CAN SHARE APP!")
+		parsedApi, err := getOpenApiDatastore(ctx, fileId)
+		if err != nil {
+			log.Printf("[WARNING] OpenApi doesn't exist for: %s - err: %s", fileId, err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		if len(parsedApi.ID) > 0 {
+			parsedApi.Success = true
+		} else {
+			parsedApi.Success = false
+		}
+
+		//log.Printf("PARSEDAPI: %#v", parsedApi)
+		data, err := json.Marshal(parsedApi)
+		if err != nil {
+			log.Printf("[WARNING] Error parsing api json: %s", err)
+			resp.WriteHeader(422)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed marshalling new parsed swagger: %s"}`, err)))
+			return
+		}
+
+		resp.WriteHeader(200)
+		resp.Write(data)
+		return
+	}
+
+	user, userErr := handleApiAuthentication(resp, request)
+	if userErr != nil {
+		log.Printf("[WARNING] Api authentication failed in get app: %s", userErr)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
 
 	if user.Id != app.Owner && user.Role != "admin" {
-		log.Printf("Wrong user (%s) for app %s", user.Username, app.Name)
+		log.Printf("[WARNING] Wrong user (%s) for app %s", user.Username, app.Name)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
 
-	log.Printf("Getting app %s", fileId)
+	log.Printf("Getting app %s (OpenAPI)", fileId)
 	parsedApi, err := getOpenApiDatastore(ctx, fileId)
 	if err != nil {
 		log.Printf("OpenApi doesn't exist for: %s - err: %s", fileId, err)
