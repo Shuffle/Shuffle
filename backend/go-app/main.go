@@ -870,7 +870,7 @@ func deleteUser(resp http.ResponseWriter, request *http.Request) {
 
 	err = setUser(ctx, foundUser)
 	if err != nil {
-		log.Printf("Failed swapping active for user %s (%s)", foundUser, foundUser.Username, foundUser.Id)
+		log.Printf("Failed swapping active for user %s (%s)", foundUser.Username, foundUser.Id)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false}`)))
 		return
@@ -2033,7 +2033,7 @@ func handlePasswordChange(resp http.ResponseWriter, request *http.Request) {
 		if len(users) != 1 {
 			log.Printf(`Found multiple or no users with the same username: %s: %d`, t.Username, len(users))
 			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Found %d users with the same username: %s (%d)"}`, len(users), t.Username)))
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Found %d users with the same username: %s"}`, len(users), t.Username)))
 			return
 		}
 
@@ -2505,7 +2505,7 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if !Userdata.Active {
-		log.Printf("%s is not active, but tried to login", data.Username, err)
+		log.Printf("%s is not active, but tried to login. Error: %v", data.Username, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "This user is deactivated"}`))
 		return
@@ -3584,7 +3584,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 func executeCloudAction(action CloudSyncJob, apikey string) error {
 	data, err := json.Marshal(action)
 	if err != nil {
-		log.Printf("Failed cloud webhook action marshalling", err)
+		log.Printf("Failed cloud webhook action marshalling: %s", err)
 		return err
 	}
 
@@ -5389,7 +5389,7 @@ func handleGetSpecificStats(resp http.ResponseWriter, request *http.Request) {
 
 	b, err := json.Marshal(statisticsItem)
 	if err != nil {
-		log.Println("Failed to marshal data: %s", err)
+		log.Printf("Failed to marshal data: %s", err)
 		resp.WriteHeader(401)
 		return
 	}
@@ -7969,7 +7969,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		log.Printf("Failed marshaling api key data: %s", err)
 		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed cloud sync."}`, err)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed cloud sync: %s"}`, err)))
 		return
 	}
 
