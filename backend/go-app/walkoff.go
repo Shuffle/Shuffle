@@ -16,10 +16,10 @@ import (
 	"time"
 
 	"cloud.google.com/go/datastore"
-	"cloud.google.com/go/scheduler/apiv1"
+	scheduler "cloud.google.com/go/scheduler/apiv1"
 	gyaml "github.com/ghodss/yaml"
 	"github.com/h2non/filetype"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	"google.golang.org/api/cloudfunctions/v1"
 	schedulerpb "google.golang.org/genproto/googleapis/cloud/scheduler/v1"
 
@@ -3501,7 +3501,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	}
 
 	if len(allEnvs) == 0 {
-		log.Printf("[ERROR] No active environments found for org", workflowExecution.ExecutionOrg)
+		log.Printf("[ERROR] No active environments found for org: %s", workflowExecution.ExecutionOrg)
 		return WorkflowExecution{}, "No active environments found", errors.New(fmt.Sprintf("No active env found for org %s", workflowExecution.ExecutionOrg))
 	}
 
@@ -3871,7 +3871,7 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 
 		err = executeCloudAction(action, org.SyncConfig.Apikey)
 		if err != nil {
-			log.Printf("Failed cloud action STOP schedule", err)
+			log.Printf("Failed cloud action STOP schedule: %s", err)
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 			return
@@ -4212,7 +4212,7 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 		err = setSchedule(ctx, newSchedule)
 		if err != nil {
-			log.Printf("Failed setting cloud schedule: returning", err)
+			log.Printf("Failed setting cloud schedule: %s", err)
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 			return
@@ -4221,7 +4221,7 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("Action: %#v", action)
 		err = executeCloudAction(action, org.SyncConfig.Apikey)
 		if err != nil {
-			log.Printf("Failed cloud action START schedule", err)
+			log.Printf("Failed cloud action START schedule: %s", err)
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 			return
@@ -7192,7 +7192,7 @@ func handleDeleteHook(resp http.ResponseWriter, request *http.Request) {
 
 		err = executeCloudAction(action, org.SyncConfig.Apikey)
 		if err != nil {
-			log.Printf("Failed cloud action STOP execution", err)
+			log.Printf("Failed cloud action STOP execution: %s", err)
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 			return
