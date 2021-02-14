@@ -30,6 +30,7 @@ import SettingsPage from "./views/SettingsPage";
 
 import { createMuiTheme, MuiThemeProvider } from '@material-ui/core/styles';
 
+import ScrollToTop from "./components/ScrollToTop";
 import AlertTemplate from "./components/AlertTemplate";
 import { positions, Provider } from "react-alert";
 
@@ -74,6 +75,7 @@ const App = (message, props) => {
 	const [isLoggedIn, setIsLoggedIn] = useState(false);
 	const [dataset, setDataset] = useState(false);
 	const [isLoaded, setIsLoaded] = useState(false);
+	const [curpath, setCurpath] = useState(typeof window === 'undefined' || window.location === undefined ? "" : window.location.pathname)
 
 	useEffect(() => {
 		if (dataset === false) {
@@ -126,6 +128,7 @@ const App = (message, props) => {
 			<Route exact path="/home" render={props => <LandingPageNew isLoaded={isLoaded} {...props} />} />
 		</div> :
 		<div style={{ backgroundColor: "#1F2023", color: "rgba(255, 255, 255, 0.65)", minHeight: "100vh" }}>
+			<ScrollToTop setCurpath={setCurpath} />
 			<Header cookies={cookies} removeCookie={removeCookie} isLoaded={isLoaded} globalUrl={globalUrl} setIsLoggedIn={setIsLoggedIn} isLoggedIn={isLoggedIn} userdata={userdata} {...props} />
 			<Route exact path="/oauth2" render={props => <Oauth2 isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/contact" render={props => <Contact isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />

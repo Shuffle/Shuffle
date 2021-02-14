@@ -4764,9 +4764,9 @@ func getWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 
 	//if IsValid       bool   `json:"is_valid" yaml:"is_valid" required:true datastore:"is_valid"`
 	// Sharing       bool   `json:"sharing" yaml:"sharing" required:false datastore:"sharing"`
-	log.Printf("Sharing: %s", app.Sharing)
-	log.Printf("Generated: %s", app.Generated)
-	log.Printf("Downloaded: %s", app.Downloaded)
+	//log.Printf("Sharing: %s", app.Sharing)
+	//log.Printf("Generated: %s", app.Generated)
+	//log.Printf("Downloaded: %s", app.Downloaded)
 
 	// FIXME - Handle sharing and such PROPERLY
 	if app.Sharing && app.Generated {

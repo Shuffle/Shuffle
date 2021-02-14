@@ -2877,8 +2877,8 @@ func fixUserOrg(ctx context.Context, user *User) *User {
 
 // Used for testing only. Shouldn't impact production.
 func handleCors(resp http.ResponseWriter, request *http.Request) bool {
-	//allowedOrigins := "http://localhost:3000"
-	allowedOrigins := "http://localhost:3002"
+	allowedOrigins := "http://localhost:3000"
+	//allowedOrigins := "http://localhost:3002"
 
 	resp.Header().Set("Vary", "Origin")
 	resp.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, X-Requested-With, remember-me, Authorization")

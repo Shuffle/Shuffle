@@ -83,8 +83,8 @@ import cxtmenu from 'cytoscape-cxtmenu';
 
 import { w3cwebsocket as W3CWebSocket } from "websocket";
 import { useAlert } from "react-alert";
-import { validateJson } from "./Workflows";
-import { GetParsedPaths } from "./Apps";
+import { validateJson } from "./Workflows.jsx";
+import { GetParsedPaths } from "./Apps.jsx";
 
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
@@ -428,7 +428,8 @@ const AngularWorkflow = (props) => {
 			handleUpdateResults(responseJson)
 		})
 		.catch(error => {
-			alert.error(error.toString())
+			console.log("Error: ", error)
+			//alert.error(error.toString())
 			stop()
 		});
 	}
