@@ -7,6 +7,7 @@ import json
 import logging
 import requests
 import urllib.parse
+import http.client
 
 class AppBase:
     __version__ = None
@@ -57,17 +58,18 @@ class AppBase:
         # I wonder if this actually works 
         self.logger.info("Before last stream result")
         url = "%s%s" % (self.base_url, stream_path)
-        print("[INFO] URL (URL): %s" % url)
+        #print("[INFO] URL (URL): %s" % url)
         try:
             ret = requests.post(url, headers=headers, json=action_result)
             self.logger.info("Result: %d" % ret.status_code)
             if ret.status_code != 200:
                 self.logger.info(ret.text)
         except requests.exceptions.ConnectionError as e:
-            self.logger.exception("ConnectionError: %s" % e)
+            #self.logger.exception("ConnectionError: %s" % e)
+            self.logger.exception("Expected connectionerror happened")
             return
         except TypeError as e:
-            self.logger.exception(e)
+            #self.logger.exception(e)
             action_result["status"] = "FAILURE"
             action_result["result"] = "POST error: %s" % e
             self.logger.info("Before typeerror stream result")
@@ -75,6 +77,9 @@ class AppBase:
             self.logger.info("Result: %d" % ret.status_code)
             if ret.status_code != 200:
                 self.logger.info(ret.text)
+        except http.client.RemoteDisconnected as e:
+            self.logger.exception("Expected connectionerror happened")
+            return
 
     async def cartesian_product(self, L):
         if L:

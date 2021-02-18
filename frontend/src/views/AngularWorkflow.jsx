@@ -782,7 +782,7 @@ const AngularWorkflow = (props) => {
 		return true
 	}
 
-	const executeWorkflow = () => {
+	const executeWorkflow = (executionArgument, startNode) => {
 		if (!lastSaved) {
 			//alert.error("You might have forgotten to save before executing.")
 			console.log("FIXME: Might have forgotten to save before executing.")
@@ -804,13 +804,13 @@ const AngularWorkflow = (props) => {
 			curelements[i].addClass("not-executing-highlight")
 		}
 
-		if (executionText.length > 0) { 
-			alert.success("Starting execution with an execution argument")
+		if (executionArgument.length > 0) { 
+			alert.success("Starting execution WITH an execution argument")
 		} else {
 			alert.success("Starting execution")
 		}
 
-		const data = {"execution_argument": executionText, "start": workflow.start}
+		const data = {"execution_argument": executionArgument, "start": startNode}
 		fetch(globalUrl+"/api/v1/workflows/"+props.match.params.key+"/execute", {
     	  method: 'POST',
 				headers: {
@@ -1870,8 +1870,8 @@ const AngularWorkflow = (props) => {
 
 	const paperAppStyle = {
 		borderRadius: borderRadius,
-		minHeight: "100px",
-		maxHeight: "100px",
+		minHeight: 100,
+		maxHeight: 100,
 		minWidth: "100%",
 		maxWidth: "100%",
 		marginTop: "5px",
@@ -2557,7 +2557,7 @@ const AngularWorkflow = (props) => {
 						<Grid item>
 							<img alt={newAppname} src={image} style={{borderRadius: borderRadius, height: 80, width: 80,}} />
 						</Grid>
-						<Grid style={{display: "flex", flexDirection: "column", marginLeft: "20px", minWidth: 185, maxWidth: 185, overflow: "hidden", maxHeight: 80, }}>
+						<Grid style={{display: "flex", flexDirection: "column", marginLeft: "20px", minWidth: 185, maxWidth: 185, overflow: "hidden", maxHeight: 77, }}>
 							<Grid item style={{flex: 1}}>
 								<h4 style={{marginBottom: 0, marginTop: 5}}>{newAppname}</h4>
 							</Grid>
@@ -6121,7 +6121,7 @@ const AngularWorkflow = (props) => {
 			:
 			<Tooltip color="primary" title="Test execution" placement="top">
 				<Button disabled={executionRequestStarted || !workflow.isValid} style={{height: boxSize, width: boxSize}} color="primary" variant="contained" onClick={() => {
-					executeWorkflow()
+					executeWorkflow(executionText, workflow.start)
 				}}>
 					<PlayArrowIcon style={{ fontSize: 60}} />
 				</Button> 				
@@ -6502,10 +6502,28 @@ const AngularWorkflow = (props) => {
 					</span>
 				</Breadcrumbs>
 				<Divider style={{backgroundColor: "white", marginTop: 10, marginBottom: 10,}}/>
-					<h2>Executing Workflow</h2>		
+					<div style={{display: "flex"}}>
+						<h2>Executing Workflow</h2>		
+						<Tooltip color="primary" title="Rerun workflow" placement="top">
+							<Button color="primary" style={{float: "right"}} onClick={() => {
+								console.log("DATA: ", executionData)
+								executeWorkflow(executionData.execution_argument, executionData.start)
+								setExecutionModalOpen(false)
+								//executionText, workflow.start)
+							}}>
+								<CachedIcon style={{}}/>
+							</Button>
+						</Tooltip>
+					</div>
 					{executionData.status !== undefined && executionData.status.length > 0 ?
 						<div>
 							<b>Status: </b>{executionData.status} 
+						</div>
+						: null
+					}
+					{executionData.execution_source !== undefined && executionData.execution_source !== null && executionData.execution_source.length > 0 && executionData.execution_source !== "default" ?
+						<div>
+							<b>Source: </b>{executionData.execution_source} 
 						</div>
 						: null
 					}
@@ -6518,12 +6536,6 @@ const AngularWorkflow = (props) => {
 					{executionData.completed_at !== undefined && executionData.completed_at !== null && executionData.completed_at > 0 ?
 						<div>
 							<b>Finished: </b>{new Date(executionData.completed_at*1000).toISOString()} 
-						</div>
-						: null
-					}
-					{executionData.execution_source !== undefined && executionData.execution_source.length > 0 ?
-						<div>
-							<b>Source: </b>{executionData.execution_source} 
 						</div>
 						: null
 					}

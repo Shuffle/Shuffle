@@ -6904,19 +6904,19 @@ func remoteOrgJobController(org Org, body []byte) error {
 
 	ctx := context.Background()
 	if !responseData.Success {
-		log.Printf("Should stop org job controller")
+		log.Printf("Should stop org job controller because no success?")
 
-		if strings.Contains(responseData.Reason, "Bad apikey") {
-			log.Printf("Bad apikey. Stopping sync for org?: %s", responseData.Reason)
+		if strings.Contains(responseData.Reason, "Bad apikey") || strings.Contains(responseData.Reason, "Error getting the organization") {
+			log.Printf("[WARNING] Remote error; Bad apikey or org error. Stopping sync for org: %s", responseData.Reason)
 
 			if value, exists := scheduledOrgs[org.Id]; exists {
 				// Looks like this does the trick? Hurr
-				log.Printf("STOPPING ORG SCHEDULE for: %s", org.Id)
+				log.Printf("[WARNING] STOPPING ORG SCHEDULE for: %s", org.Id)
 
 				value.Lock()
 				org, err := getOrg(ctx, org.Id)
 				if err != nil {
-					log.Printf("Failed finding org %s: %s", org.Id, err)
+					log.Printf("[WARNING] Failed finding org %s: %s", org.Id, err)
 					return err
 				}
 
@@ -6925,9 +6925,9 @@ func remoteOrgJobController(org Org, body []byte) error {
 				org.CloudSync = false
 				err = setOrg(ctx, *org, org.Id)
 				if err != nil {
-					log.Printf("Failed setting organization when stopping sync: %s", err)
+					log.Printf("[WARNING] Failed setting organization when stopping sync: %s", err)
 				} else {
-					log.Printf("Successfully updated the org to not sync")
+					log.Printf("[INFO] Successfully STOPPED org cloud sync for %s", org.Id)
 				}
 
 				return errors.New("Stopped schedule for org locally because of bad apikey.")
