@@ -444,6 +444,10 @@ const AppCreator = (props) => {
 			}
 
 			if (data.info["x-categories"] !== undefined  && data.info["x-categories"].length > 0) {
+				if (typeof(data.info["x-categories"]) == "array") {
+				} else {
+
+				}
 				setNewWorkflowCategories(data.info["x-categories"])
 			}
 		}
@@ -1991,31 +1995,20 @@ const AppCreator = (props) => {
 			</FormControl>
 		</Dialog>
 
+
+	const categories = [
+		"Communication",
+		"Cases",
+		"EDR",
+		"Intel",
+		"SIEM",
+		"Network",
+		"Assets",
+		"Other",
+	]
 	const tagView = 
 		<div style={{color: "white"}}>
-			<h2>Tags</h2>
-			<ChipInput
-				style={{marginTop: 10}}
-				InputProps={{
-					style:{
-						color: "white",
-					},
-				}}
-				placeholder="Tags"
-				color="primary"
-				fullWidth
-				value={newWorkflowTags}
-				onAdd={(chip) => {
-					newWorkflowTags.push(chip)
-					setNewWorkflowTags(newWorkflowTags)
-					setUpdate("added"+chip)
-				}}
-				onDelete={(chip, index) => {
-					newWorkflowTags.splice(index, 1)
-					setNewWorkflowTags(newWorkflowTags)
-					setUpdate("delete "+chip)
-				}}
-			/>
+			{/*
 			<ChipInput
 				style={{marginTop: 10}}
 				InputProps={{
@@ -2035,6 +2028,51 @@ const AppCreator = (props) => {
 				onDelete={(chip, index) => {
 					newWorkflowCategories.splice(index, 1)
 					setNewWorkflowCategories(newWorkflowCategories)
+					setUpdate("delete "+chip)
+				}}
+			/>
+			*/}
+			<h4>Categories</h4>
+			<Select
+				fullWidth
+				SelectDisplayProps={{
+					style: {
+						marginLeft: 10,
+					}
+				}}
+				onChange={(e) => {
+					setNewWorkflowCategories([e.target.value])
+					setUpdate("added "+e.target.value)
+				}}
+				value={newWorkflowCategories.length === 0 ? "Select a category" : newWorkflowCategories[0]}
+				style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+				>
+				{categories.map(data => (
+					<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+						{data}
+					</MenuItem>
+				))}
+			</Select>
+			<h4>Tags</h4>
+			<ChipInput
+				style={{marginTop: 10}}
+				InputProps={{
+					style:{
+						color: "white",
+					},
+				}}
+				placeholder="Tags"
+				color="primary"
+				fullWidth
+				value={newWorkflowTags}
+				onAdd={(chip) => {
+					newWorkflowTags.push(chip)
+					setNewWorkflowTags(newWorkflowTags)
+					setUpdate("added"+chip)
+				}}
+				onDelete={(chip, index) => {
+					newWorkflowTags.splice(index, 1)
+					setNewWorkflowTags(newWorkflowTags)
 					setUpdate("delete "+chip)
 				}}
 			/>

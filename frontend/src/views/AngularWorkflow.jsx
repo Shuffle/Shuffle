@@ -137,6 +137,7 @@ const AngularWorkflow = (props) => {
 	const [workflow, setWorkflow] = React.useState({});
 	const [userSettings, setUserSettings] = React.useState({});
 	const [subworkflow, setSubworkflow] = React.useState({});
+	const [subworkflowStartnode, setSubworkflowStartnode] = React.useState("");
 	const [leftViewOpen, setLeftViewOpen] = React.useState(true);
 	const [leftBarSize, setLeftBarSize] = React.useState(350)
 	const [executionText, setExecutionText] = React.useState("");
@@ -783,8 +784,8 @@ const AngularWorkflow = (props) => {
 				//alert.success("Successfully saved workflow")
 				setSavingState(1)
 				setTimeout(() => {
-					  setSavingState(0)
-				}, 3000);
+					setSavingState(0)
+				}, 2000);
 			}
 		})
 		.catch(error => {
@@ -830,9 +831,9 @@ const AngularWorkflow = (props) => {
 		}
 
 		if (executionArgument.length > 0) { 
-			alert.success("Starting execution WITH an execution argument")
+			//alert.success("Starting execution WITH an execution argument")
 		} else {
-			alert.success("Starting execution")
+			//alert.success("Starting execution")
 		}
 
 		const data = {"execution_argument": executionArgument, "start": startNode}
@@ -5154,6 +5155,7 @@ const AngularWorkflow = (props) => {
 										setUpdate(Math.random())
 										workflow.triggers[selectedTriggerIndex].parameters[0].value = e.target.value.id
 										setWorkflow(workflow)
+										setSubworkflowStartnode(e.target.value.start)
 									}}
 									style={{backgroundColor: inputColor, color: "white", height: "50px"}}
 								>
@@ -5170,9 +5172,9 @@ const AngularWorkflow = (props) => {
 									})}
 								</Select>
 							}
-							{/*subworkflow === undefined || subworkflow === null || subworkflow.id === undefined ? null : 
+							{/*subworkflow === undefined || subworkflow === null || subworkflow.id === undefined || subworkflow.actions === null || subworkflow.actions === undefined || subworkflow.actions.length === 0 ? null : 
 								<Select
-									value={subworkflow}
+									value={subworkflowStartnode}
 									SelectDisplayProps={{
 										style: {
 											marginLeft: 10,
@@ -5181,21 +5183,24 @@ const AngularWorkflow = (props) => {
 									}}
 									fullWidth
 									onChange={(e) => {
-										setSubworkflow(e.target.value)
-										setUpdate(Math.random())
-										workflow.triggers[selectedTriggerIndex].parameters[0].value = e.target.value.id
-										setWorkflow(workflow)
+										console.log("Change startnode to" + e.target)
+										//setSubworkflow(e.target.value)
+										//setUpdate(Math.random())
+										//workflow.triggers[selectedTriggerIndex].parameters[0].value = e.target.value.id
+										//const [subworkflowStartnode, setSubworkflowStartnode] = React.useState("");
+										//setWorkflow(workflow)
 									}}
 									style={{backgroundColor: inputColor, color: "white", height: "50px"}}
 								>
-									{workflows.map((data, index) => {
+									{subworkflow.actions.map((data, index) => {
+										console.log(data)
 										if (data.id === workflow.id) {
 											return null	
 										}
 
 										return (
 											<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data}>
-												{data.name}
+												{data.index}
 											</MenuItem>
 										)
 									})}

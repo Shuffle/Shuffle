@@ -820,7 +820,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	if len(executionRequests.Data) == 0 {
 		executionRequests.Data = []ExecutionRequest{}
 	} else {
-		log.Printf("[INFO] Executionrequests: %d", len(executionRequests.Data))
+		log.Printf("[INFO] Executionrequests (%s): %d", id, len(executionRequests.Data))
 	}
 
 	newjson, err := json.Marshal(executionRequests)
@@ -3135,7 +3135,6 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 
 		// This one doesn't really matter.
 		log.Printf("[INFO] Running POST execution with body of length %d", len(string(body)))
-		a
 		if body[0] == 34 && body[len(body)-1] == 34 {
 			body = body[1 : len(body)-1]
 		}
@@ -5958,7 +5957,7 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("Starting app hotloading")
+	log.Printf("[INFO] Starting app hotloading")
 
 	// Just need to be logged in
 	// FIXME - should have some permissions?
@@ -5983,7 +5982,7 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("Hotloading from %s", location)
+	log.Printf("[INFO] Hotloading from %s", location)
 	err = handleAppHotload(location, true)
 	if err != nil {
 		log.Printf("Failed app hotload: %s", err)

@@ -541,9 +541,11 @@ class AppBase:
             print(action["parameters"])
         except KeyError:
             action["parameters"] = []
+        except TypeError:
+            pass
 
         self.action = copy.deepcopy(action)
-        self.logger.info("ACTION RESULT (start): %s", action_result)
+        self.logger.info("Sending starting action result (EXECUTING)")
 
         headers = {
             "Content-Type": "application/json",     
@@ -1473,10 +1475,10 @@ class AppBase:
                             except KeyError:
                                 pass
 
-                            print("Return value: %s" % value)
+                            #print("Return value: %s" % value)
                             actionname = action["name"]
                             #print("Multicheck ", actualitem)
-                            print("ITEM LENGTH: %d, Actual item: %s" % (len(actualitem), actualitem))
+                            #print("ITEM LENGTH: %d, Actual item: %s" % (len(actualitem), actualitem))
                             if len(actualitem) > 0:
                                 multiexecution = True
 
@@ -1636,14 +1638,14 @@ class AppBase:
 
                                     # With this parameter ready, add it to... a greater list of parameters. Rofl
                                     print("LENGTH OF ARR: %d" % len(resultarray))
-                                    print("RESULTARRAY: %s" % resultarray)
+                                    #print("RESULTARRAY: %s" % resultarray)
                                     if resultarray not in multi_execution_lists:
                                         multi_execution_lists.append(resultarray)
 
                                     multi_parameters[parameter["name"]] = resultarray
                             else:
                                 # Parses things like int(value)
-                                print("Normal parsing (not looping) with data %s" % value)
+                                print("Normal parsing (not looping)")#with data %s" % value)
                                 value = parse_wrapper_start(value)
 
                                 if parameter["id"] == "body_replacement": 
@@ -1663,7 +1665,7 @@ class AppBase:
                                 #    print("PARAM: %s" % parameter)
                                 #if param.id == "body_replacement":
 
-                                print("POST data value: %s" % value)
+                                #print("POST data value: %s" % value)
                                 params[parameter["name"]] = value
                                 multi_parameters[parameter["name"]] = value 
 
@@ -1719,9 +1721,9 @@ class AppBase:
                             #})
 
                             #print("[INFO] APP_SDK DONE: Starting NORMAL execution of function")
-                            #print("[INFO] Running with params (0): %s" % params) 
+                            print("[INFO] Running execition\n") 
                             newres = await func(**params)
-                            print("[INFO] Returned from execution:", newres)
+                            print("\n[INFO] Returned from execution:", newres)
                             if isinstance(newres, tuple):
                                 print("[INFO] Handling return as tuple")
                                 # Handles files.
@@ -1940,16 +1942,16 @@ class AppBase:
         logger = logging.getLogger(f"{cls.__name__}")
         logger.setLevel(logging.DEBUG)
 
-        print("Started execution: %s!!" % cls)
-        print("Action: %s" % action)
+        #print("Started execution: %s!!" % cls)
+        #print("Action: %s" % action)
         #if isinstance(cls, object):
         #    self.action = cls
 
-        # Authorization for the app/function to control the workflow
-        # Function will crash if its wrong, which it probably should. 
         app = cls(redis=None, logger=logger, console_logger=logger)
 
-        if isinstance(action, object):
+        if isinstance(action, str):
+            print("Normal execution. Action is a string.")
+        elif isinstance(action, object):
             app.action = action
 
             try:
@@ -1967,5 +1969,7 @@ class AppBase:
                 app.base_url = action["base_url"]
             except:
                 pass
+        else:
+            print("ACTION TYPE (unhandled): %s" % type(action))
 
         await app.execute_action(app.action)

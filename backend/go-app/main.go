@@ -6615,7 +6615,7 @@ func healthCheckHandler(resp http.ResponseWriter, request *http.Request) {
 
 // Creates osfs from folderpath with a basepath as directory base
 func createFs(basepath, pathname string) (billy.Filesystem, error) {
-	log.Printf("base: %s, pathname: %s", basepath, pathname)
+	log.Printf("[INFO] MemFS base: %s, pathname: %s", basepath, pathname)
 
 	fs := memfs.New()
 	err := filepath.Walk(pathname,
@@ -6676,19 +6676,19 @@ func handleAppHotload(location string, forceUpdate bool) error {
 		log.Printf("Failed memfs creation - probably bad path: %s", err)
 		return errors.New(fmt.Sprintf("Failed to find directory %s", location))
 	} else {
-		log.Printf("Memfs creation from %s done", location)
+		log.Printf("[INFO] Memfs creation from %s done", location)
 	}
 
 	dir, err := fs.ReadDir("")
 	if err != nil {
-		log.Printf("Failed reading folder: %s", err)
+		log.Printf("[WARNING] Failed reading folder: %s", err)
 		return err
 	}
 
 	//log.Printf("Reading app folder: %#v", dir)
 	_, _, err = iterateAppGithubFolders(fs, dir, "", "", forceUpdate)
 	if err != nil {
-		log.Printf("Err: %s", err)
+		log.Printf("[WARNING] Githubfolders error: %s", err)
 		return err
 	}
 
