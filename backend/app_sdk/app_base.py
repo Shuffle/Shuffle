@@ -538,7 +538,7 @@ class AppBase:
         }
 
         try:
-            print("Parameters: %d" % len(action["parameters"]))
+            print(action["parameters"])
         except KeyError:
             action["parameters"] = []
 

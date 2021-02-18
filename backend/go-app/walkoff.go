@@ -3135,7 +3135,10 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 
 		// This one doesn't really matter.
 		log.Printf("[INFO] Running POST execution with body of length %d", len(string(body)))
-
+		a
+		if body[0] == 34 && body[len(body)-1] == 34 {
+			body = body[1 : len(body)-1]
+		}
 		if body[0] == 34 && body[len(body)-1] == 34 {
 			body = body[1 : len(body)-1]
 		}
@@ -6621,7 +6624,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 				if !reservedFound {
 					buildLaterFirst = append(buildLaterFirst, buildLater)
 				} else {
-					log.Printf("\n\n[WARNING] Skipping build of %s to later\n\n", workflowapp.Name)
+					log.Printf("[WARNING] Skipping build of %s to later", workflowapp.Name)
 				}
 			}
 		}

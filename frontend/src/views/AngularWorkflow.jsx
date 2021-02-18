@@ -121,6 +121,8 @@ const AngularWorkflow = (props) => {
 
 	const [bodyWidth, bodyHeight] = useWindowSize();
 	const appBarSize = 74
+	const headerSize = 60
+
 	var to_be_copied = ""
 	const [cystyle, ] = useState(cytoscapestyle) 
 	const [cy, setCy] = React.useState()
@@ -154,6 +156,9 @@ const AngularWorkflow = (props) => {
 	const [rightSideBarOpen, setRightSideBarOpen] = React.useState(false)
 	const [showSkippedActions, setShowSkippedActions] = React.useState(false)
 	const [lastExecution, setLastExecution] = React.useState("")
+
+	// 0 = normal, 1 = just done, 2 = normal
+	const [savingState, setSavingState] = React.useState(0)
 
 	const [selectedResult, setSelectedResult] = React.useState({})
 	const [codeModalOpen, setCodeModalOpen] = React.useState(false);
@@ -646,6 +651,7 @@ const AngularWorkflow = (props) => {
 
 	const saveWorkflow = (curworkflow) => {
 		var success = false
+		setSavingState(2)
 
 		// This might not be the right course of action, but seems logical, as items could be running already 
 		// Makes it possible to update with a version in current render
@@ -654,7 +660,7 @@ const AngularWorkflow = (props) => {
 		if (curworkflow !== undefined) {
 			useworkflow = curworkflow 
 		} else {
-			alert.info("Saving workflow")
+			//alert.info("Saving workflow")
 		}
 
 		var cyelements = cy.elements()
@@ -752,6 +758,7 @@ const AngularWorkflow = (props) => {
 	  			credentials: "include",
     		})
 		.then((response) => {
+			setSavingState(0)
 			if (response.status !== 200) {
 				console.log("Status not 200 for setting workflows :O!")
 			}
@@ -773,10 +780,15 @@ const AngularWorkflow = (props) => {
 
 					setWorkflow(workflow)
 				}
-				alert.success("Successfully saved workflow")
+				//alert.success("Successfully saved workflow")
+				setSavingState(1)
+				setTimeout(() => {
+					  setSavingState(0)
+				}, 3000);
 			}
 		})
 		.catch(error => {
+			setSavingState(0)
 			alert.error(error.toString())
 		});
 
@@ -3842,7 +3854,6 @@ const AngularWorkflow = (props) => {
 		})
 	}
 
-	const headerSize = 68
 	const rightsidebarStyle = {
 		position: "fixed", 
 		right: 0, 
@@ -5159,11 +5170,42 @@ const AngularWorkflow = (props) => {
 									})}
 								</Select>
 							}
+							{/*subworkflow === undefined || subworkflow === null || subworkflow.id === undefined ? null : 
+								<Select
+									value={subworkflow}
+									SelectDisplayProps={{
+										style: {
+											marginLeft: 10,
+
+										}
+									}}
+									fullWidth
+									onChange={(e) => {
+										setSubworkflow(e.target.value)
+										setUpdate(Math.random())
+										workflow.triggers[selectedTriggerIndex].parameters[0].value = e.target.value.id
+										setWorkflow(workflow)
+									}}
+									style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+								>
+									{workflows.map((data, index) => {
+										if (data.id === workflow.id) {
+											return null	
+										}
+
+										return (
+											<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data}>
+												{data.name}
+											</MenuItem>
+										)
+									})}
+								</Select>
+							*/}
 							{workflow.triggers[selectedTriggerIndex].parameters[0].value.length === 0 ? null : <span style={{marginTop: 5}}><a href={`/workflows/${workflow.triggers[selectedTriggerIndex].parameters[0].value}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>Explore selected workflow</a></span>}
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
 								<div style={{flex: "10"}}> 
-									<b>Execution Argument: </b> 
+									<b>Execution Argument</b> 
 								</div>
 							</div>
 							<TextField
@@ -6160,8 +6202,8 @@ const AngularWorkflow = (props) => {
 						/>
 					</Tooltip>
 					<Tooltip color="primary" title="Save (ctrl+s)" placement="top">
-						<Button color="primary" style={{height: 50, marginLeft: 10, }} variant={lastSaved ? "outlined" : "contained"} onClick={() => saveWorkflow()}>
-							<SaveIcon /> 
+						<Button disabled={savingState !== 0} color="primary" style={{height: 50, width: 64, marginLeft: 10, }} variant={lastSaved ? "outlined" : "contained"} onClick={() => saveWorkflow()}>
+							{savingState === 2 ? <CircularProgress style={{height: 35, width: 35}} /> : savingState === 1 ? <DoneIcon style={{color: "green"}} /> : <SaveIcon /> }
 						</Button> 				
 					</Tooltip>
 					<Tooltip color="secondary" title="Fit to screen (ctrl+f)" placement="top">
