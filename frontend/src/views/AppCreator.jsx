@@ -926,6 +926,7 @@ const AppCreator = (props) => {
 					//console.log(queryitem)
 				}
 			} 
+			//data.paths[item.url][item.method.toLowerCase()].parameters.push(newitem)
 
 			if (item.paths.length > 0) {
 				for (querykey in item.paths) {
@@ -1828,13 +1829,19 @@ const AppCreator = (props) => {
 						}}
 						onBlur={event => {
 							var parsedurl = event.target.value
+							console.log("URL: ", parsedurl)
+							if (parsedurl.includes("<") && parsedurl.includes(">")) {
+								console.log("REPLACE")
+								parsedurl = parsedurl.replace("<", "{")
+								parsedurl = parsedurl.replace(">", "}")
+							}
+
 							if (parsedurl.startsWith("PUT ") || parsedurl.startsWith("GET ") ||parsedurl.startsWith("POST ") || parsedurl.startsWith("DELETE ") ||parsedurl.startsWith("PATCH ") || parsedurl.startsWith("CONNECT ")) {
 								const tmp = parsedurl.split(" ")
 
 								if (tmp.length > 1) {
 									parsedurl = tmp[1]
 									setActionField("url", parsedurl)
-									setUrlPath(parsedurl)
 
 									setCurrentActionMethod(tmp[0].toUpperCase())
 									setActionField("method", tmp[0].toUpperCase())
@@ -1900,12 +1907,15 @@ const AppCreator = (props) => {
 										}
 
 										// Check URL query && headers 
-										setActionField("url", parsedurl)
-										setUrlPath(parsedurl)
+										//setActionField("url", parsedurl)
 									}
 								}
 							}
 
+							if (event.target.value !== parsedurl) {
+								setUrlPath(parsedurl)
+								setActionField("url", parsedurl)
+							}
 							//console.log("URL: ", request.url)
 						}}
 					/>
@@ -1980,7 +1990,7 @@ const AppCreator = (props) => {
 	      <Button color="primary" variant="outlined" style={{borderRadius: "0px"}} onClick={() => {
 						//console.log(urlPathQueries)
 						//console.log(urlPath)
-						//console.log(currentAction)
+						console.log(currentAction)
 						const errors = getActionErrors()		
 						addActionToView(errors)
 						setActionsModalOpen(false)

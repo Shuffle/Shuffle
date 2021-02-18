@@ -2062,7 +2062,7 @@ func updateAppAuth(auth AppAuthenticationStorage, workflowId, nodeId string, add
 	// FIXME: Add a way to use !add to remove
 	updateAuth := false
 	if !workflowFound && add {
-		log.Printf("Adding workflow things to auth!")
+		log.Printf("[INFO] Adding workflow things to auth!")
 		usageItem := AuthenticationUsage{
 			WorkflowId: workflowId,
 			Nodes:      []string{nodeId},
@@ -2073,14 +2073,14 @@ func updateAppAuth(auth AppAuthenticationStorage, workflowId, nodeId string, add
 		auth.NodeCount += 1
 		updateAuth = true
 	} else if !nodeFound && add {
-		log.Printf("Adding node things to auth!")
+		log.Printf("[INFO] Adding node things to auth!")
 		auth.Usage[workflowIndex].Nodes = append(auth.Usage[workflowIndex].Nodes, nodeId)
 		auth.NodeCount += 1
 		updateAuth = true
 	}
 
 	if updateAuth {
-		log.Printf("Updating auth!")
+		log.Printf("[INFO] Updating auth!")
 		ctx := context.Background()
 		err := setWorkflowAppAuthDatastore(ctx, auth, auth.Id)
 		if err != nil {
@@ -4825,7 +4825,7 @@ func getWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("Getting app %s (OpenAPI)", fileId)
+	log.Printf("[INFO] Getting app %s (OpenAPI)", fileId)
 	parsedApi, err := getOpenApiDatastore(ctx, fileId)
 	if err != nil {
 		log.Printf("OpenApi doesn't exist for: %s - err: %s", fileId, err)
@@ -6813,18 +6813,76 @@ func getWorkflowExecutions(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// Query for the specifci workflowId
-	q := datastore.NewQuery("workflowexecution").Filter("workflow_id =", fileId).Order("-started_at").Limit(30)
+	maxAmount := 30
+	q := datastore.NewQuery("workflowexecution").Filter("workflow_id =", fileId).Order("-started_at").Limit(maxAmount)
 	var workflowExecutions []WorkflowExecution
 	_, err = dbclient.GetAll(ctx, q, &workflowExecutions)
 	if err != nil {
+
 		if strings.Contains(fmt.Sprintf("%s", err), "ResourceExhausted") {
-			q = datastore.NewQuery("workflowexecution").Filter("workflow_id =", fileId).Order("-started_at").Limit(15)
-			_, err = dbclient.GetAll(ctx, q, &workflowExecutions)
-			if err != nil {
-				log.Printf("Error getting workflowexec (2): %s", err)
-				resp.WriteHeader(401)
-				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting all workflowexecutions for %s"}`, fileId)))
-				return
+			q = datastore.NewQuery("workflowexecution").Filter("workflow_id =", fileId).Order("-started_at").Limit(1)
+			/*
+				_, err = dbclient.GetAll(ctx, q, &workflowExecutions)
+				if err != nil {
+					log.Printf("Error getting workflowexec (2): %s", err)
+					resp.WriteHeader(401)
+					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting all workflowexecutions for %s"}`, fileId)))
+					return
+				}
+			*/
+
+			cursorStr := ""
+			for {
+				it := dbclient.Run(ctx, q)
+				//_, err = it.Next(&app)
+				for {
+					var workflowExecution WorkflowExecution
+					_, err := it.Next(&workflowExecution)
+					if err != nil {
+						break
+					}
+
+					workflowExecutions = append(workflowExecutions, workflowExecution)
+				}
+
+				//log.Printf("Len: %d", len(workflowExecutions))
+				if len(workflowExecutions) > maxAmount {
+					break
+				}
+
+				nextCursor, err := it.Cursor()
+				if err != iterator.Done && err != nil {
+					if strings.Contains(fmt.Sprintf("%s", err), "ResourceExhausted") {
+						//log.Printf("NEXT!")
+						nextStr := fmt.Sprintf("%s", nextCursor)
+						if cursorStr == nextStr {
+							break
+						}
+
+						cursorStr = nextStr
+
+						continue
+					} else {
+						log.Printf("BREAK: %s", err)
+						break
+					}
+				}
+
+				if err != nil {
+					log.Printf("Cursorerror: %s", err)
+					break
+				} else {
+					//log.Printf("NEXTCURSOR: %s", nextCursor)
+					nextStr := fmt.Sprintf("%s", nextCursor)
+					if cursorStr == nextStr {
+						break
+					}
+
+					cursorStr = nextStr
+					q = q.Start(nextCursor)
+					//cursorStr = nextCursor
+					//break
+				}
 			}
 		} else {
 			log.Printf("Error getting workflowexec: %s", err)

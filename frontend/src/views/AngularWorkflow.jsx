@@ -785,7 +785,7 @@ const AngularWorkflow = (props) => {
 				setSavingState(1)
 				setTimeout(() => {
 					setSavingState(0)
-				}, 2000);
+				}, 1500);
 			}
 		})
 		.catch(error => {

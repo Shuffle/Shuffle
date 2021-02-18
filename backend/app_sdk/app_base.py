@@ -66,7 +66,7 @@ class AppBase:
                 self.logger.info(ret.text)
         except requests.exceptions.ConnectionError as e:
             #self.logger.exception("ConnectionError: %s" % e)
-            self.logger.exception("Expected connectionerror happened")
+            self.logger.exception("Expected ConnectionError happened")
             return
         except TypeError as e:
             #self.logger.exception(e)
@@ -78,7 +78,7 @@ class AppBase:
             if ret.status_code != 200:
                 self.logger.info(ret.text)
         except http.client.RemoteDisconnected as e:
-            self.logger.exception("Expected connectionerror happened")
+            self.logger.exception("Expected Remotedisconnect happened")
             return
 
     async def cartesian_product(self, L):
@@ -432,7 +432,7 @@ class AppBase:
 
             content_path = "/api/v1/files/%s/content?execution_id=%s" % (item, full_execution["execution_id"])
             ret2 = requests.get("%s%s" % (self.url, content_path), headers=headers)
-            print("RET2 (file get): %s" % ret2.text)
+            print("RET2 (file get) done")
             if ret2.status_code == 200:
                 tmpdata = ret1.json()
                 returndata = {
@@ -1721,7 +1721,7 @@ class AppBase:
                             #})
 
                             #print("[INFO] APP_SDK DONE: Starting NORMAL execution of function")
-                            print("[INFO] Running execition\n") 
+                            print("[INFO] Running normal execution\n") 
                             newres = await func(**params)
                             print("\n[INFO] Returned from execution:", newres)
                             if isinstance(newres, tuple):

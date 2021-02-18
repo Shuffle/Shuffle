@@ -6360,13 +6360,13 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 
 		// FIXME: Check whether it's in use.
 		if user.Id != app.Owner && user.Role != "admin" {
-			log.Printf("Wrong user (%s) for app %s when verifying swagger", user.Username, app.Name)
+			log.Printf("[WARNING] Wrong user (%s) for app %s when verifying swagger", user.Username, app.Name)
 			resp.WriteHeader(401)
 			resp.Write([]byte(`{"success": false}`))
 			return
 		}
 
-		log.Printf("EDITING APP WITH ID %s", app.ID)
+		log.Printf("[INFO] EDITING APP WITH ID %s", app.ID)
 		newmd5 = app.ID
 	}
 
@@ -6455,7 +6455,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 
 	identifier = strings.Replace(identifier, " ", "-", -1)
 	identifier = strings.Replace(identifier, "_", "-", -1)
-	log.Printf("Successfully parsed %s. Proceeding to docker container", identifier)
+	log.Printf("[INFO] Successfully parsed %s. Proceeding to docker container", identifier)
 
 	// Now that the baseline is setup, we need to make it into a cloud function
 	// 1. Upload the API to datastore for use
@@ -7517,7 +7517,7 @@ func runInit(ctx context.Context) {
 		}
 	}
 
-	log.Printf("Downloading OpenAPI data for search - EXTRA APPS")
+	log.Printf("[INFO] Downloading OpenAPI data for search - EXTRA APPS")
 	apis := "https://github.com/frikky/security-openapis"
 
 	// THis gets memory problems hahah
