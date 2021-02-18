@@ -378,7 +378,20 @@ const AngularWorkflow = (props) => {
 			if (responseJson.length > 0) {
 				// FIXME: Sort this by time
 				setWorkflowExecutions(responseJson)
+
+				const cursearch = typeof window === 'undefined' || window.location === undefined ? "" : window.location.search
+				const tmpView = new URLSearchParams(cursearch).get("execution_id")
+				if (tmpView !== undefined && tmpView !== null && tmpView.length > 0) {
+					//console.log("SHOW EXECUTION ", tmpView)
+					const execution = responseJson.find(data => data.execution_id === tmpView)
+					if (execution !== null && execution !== undefined) {
+						console.log("EXEC: ", execution)
+						setExecutionData(execution)
+						setExecutionModalView(1)
+					}
+				}
 			}
+
 			//alert.info("Loaded executions")
 			//setWorkflowExecutions(responseJson)
 		})
@@ -6635,7 +6648,11 @@ const AngularWorkflow = (props) => {
 										/>
 										{data.action.app_name === "shuffle-subflow" ?
 											<span>
-												TBD: Load subexecution result for 
+												{validate.valid && data.action.parameters !== undefined && data.action.parameters !== null ? 
+													<a href={`/workflows/${data.action.parameters[0].value}?view=executions&execution_id=${validate.result.execution_id}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>See subflow execution</a>
+												: 
+													"TBD: Load subexecution result for"
+												}
 											</span>
 											: null
 										}

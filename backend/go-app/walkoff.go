@@ -3135,9 +3135,19 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 
 		// This one doesn't really matter.
 		log.Printf("[INFO] Running POST execution with body of length %d", len(string(body)))
+
+		if body[0] == 34 && body[len(body)-1] == 34 {
+			body = body[1 : len(body)-1]
+		}
 		if len(string(body)) < 50 {
+			//log.Println(body)
+			// String in string
+			//log.Println(body)
+
+			//if string(body)[0] == "\"" && string(body)[string(body)
 			log.Printf("Body: %s", string(body))
 		}
+
 		var execution ExecutionRequest
 		err = json.Unmarshal(body, &execution)
 		if err != nil {
