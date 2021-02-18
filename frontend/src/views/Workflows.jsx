@@ -29,6 +29,7 @@ import PublishIcon from '@material-ui/icons/Publish';
 //import JSONPretty from 'react-json-pretty';
 //import JSONPrettyMon from 'react-json-pretty/dist/monikai'
 import ReactJson from 'react-json-view'
+import Dropzone from '../components/Dropzone';
 
 import {Link} from 'react-router-dom';
 import { useAlert } from "react-alert";
@@ -108,6 +109,8 @@ const Workflows = (props) => {
 	const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
 	const [editingWorkflow, setEditingWorkflow] = React.useState({})
 	const [executionLoading, setExecutionLoading] = React.useState(false)
+	const [isDropzone, setIsDropzone] = React.useState(false);
+
 	const { start, stop } = useInterval({
 	  	duration: 5000,
 	  	startImmediate: false,
@@ -179,6 +182,58 @@ const Workflows = (props) => {
 			
 		</Dialog>
 	: null
+
+	const uploadFile = (e) => {
+		const isDropzone = e.dataTransfer === undefined ? false : e.dataTransfer.files.length > 0;
+		const files = isDropzone ? e.dataTransfer.files : e.target.files;
+		
+    const reader = new FileReader();
+		alert.info("Starting upload. Please wait while we validate the workflows")
+
+		try {
+			reader.addEventListener('load', (e) => {
+				var data = e.target.result;
+				setIsDropzone(false)
+				try {
+					data = JSON.parse(reader.result)
+				} catch (e) {
+					alert.error("Invalid JSON: "+e)
+					return
+				}
+
+				// Initialize the workflow itself
+				const ret = setNewWorkflow(data.name, data.description, data.tags, {}, false)
+				.then((response) => {
+					if (response !== undefined) {
+						// SET THE FULL THING
+						data.id = response.id
+
+						// Actually create it
+						const ret = setNewWorkflow(data.name, data.description, data.tags, data, false)
+						.then((response) => {
+							if (response !== undefined) {
+								alert.success("Successfully imported "+data.name)
+							}
+						})
+					}
+				})
+				.catch(error => {
+					alert.error("Import error: "+error.toString())
+				});
+			})
+		} catch (e) {
+			console.log("Error in dropzone: ", e)
+		}
+
+		reader.readAsText(files[0]);
+  }
+
+	useEffect(() => {
+		if (isDropzone) {
+			//redirectOpenApi();
+			setIsDropzone(false);
+		}
+  }, [isDropzone]);
 
 	const getAvailableWorkflows = () => {
 		fetch(globalUrl+"/api/v1/workflows", {
@@ -1477,7 +1532,9 @@ const Workflows = (props) => {
 
 	const loadedCheck = isLoaded && isLoggedIn && workflowDone ? 
 		<div>
-			<WorkflowView />
+			<Dropzone style={{maxWidth: window.innerWidth > 1366 ? 1366 : 1200, margin: "auto", padding: 20 }} onDrop={uploadFile}>
+				<WorkflowView />
+			</Dropzone>
 			{modalView}
 			{deleteModal}
 			{workflowDownloadModalOpen}
