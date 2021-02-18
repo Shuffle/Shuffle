@@ -3667,6 +3667,7 @@ const AngularWorkflow = (props) => {
 						}
 						
 						tmpitem = tmpitem.charAt(0).toUpperCase()+tmpitem.substring(1)
+						const description = data.description === undefined ? "" : data.description 
 
 						return (
 						<div key={data.name}>	
@@ -3680,10 +3681,12 @@ const AngularWorkflow = (props) => {
 										}}/>
 									</Tooltip>
 								:
-									<div style={{width: 17, height: 17, borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: 10}}/>
+									<div style={{width: 17, height: 17, borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: 10, marginTop: 3,}}/>
 								}
 								<div style={{flex: "10"}}> 
-									<b>{tmpitem} </b> 
+									<Tooltip title={description} placement="top">
+										<b>{tmpitem} </b> 
+									</Tooltip>
 								</div>
 
 								{selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0  ? null : 
