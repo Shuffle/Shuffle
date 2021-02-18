@@ -2581,7 +2581,7 @@ const AngularWorkflow = (props) => {
 				<Paper square style={newAppStyle} onMouseOver={() => {setHover(true)}} onMouseOut={() => {setHover(false)}}>
 					<Grid container style={{margin: "10px 10px 10px 15px", flex: "10"}}>
 						<Grid item>
-							<img alt={newAppname} src={image} style={{borderRadius: borderRadius, height: 80, width: 80,}} />
+							<img alt={newAppname} src={image} style={{pointerEvents: "none", userDrag: "none", userSelect: "none", borderRadius: borderRadius, height: 80, width: 80,}} />
 						</Grid>
 						<Grid style={{display: "flex", flexDirection: "column", marginLeft: "20px", minWidth: 185, maxWidth: 185, overflow: "hidden", maxHeight: 77, }}>
 							<Grid item style={{flex: 1}}>
@@ -3681,7 +3681,7 @@ const AngularWorkflow = (props) => {
 										}}/>
 									</Tooltip>
 								:
-									<div style={{width: 17, height: 17, borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: 10, marginTop: 3,}}/>
+									<div style={{width: 17, height: 17, borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: 10, marginTop: 2,}}/>
 								}
 								<div style={{flex: "10"}}> 
 									<Tooltip title={description} placement="top">
