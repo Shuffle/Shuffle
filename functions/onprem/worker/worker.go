@@ -1634,7 +1634,6 @@ func executionInit(workflowExecution WorkflowExecution) error {
 	}
 
 	nextActions = append(nextActions, startAction)
-
 	for _, branch := range workflowExecution.Workflow.Branches {
 		// Check what the parent is first. If it's trigger - skip
 		sourceFound := false

@@ -9,7 +9,6 @@ import requests
 import urllib.parse
 
 class AppBase:
-    """ The base class for Python-based apps in Shuffle, handles logging and callbacks configurations"""
     __version__ = None
     app_name = None
 
@@ -21,7 +20,7 @@ class AppBase:
         # apikey is for the user / org
         # authorization is for the specific workflow
         self.url = os.getenv("CALLBACK_URL", "https://shuffler.io")
-        self.base_url = os.getenv("BASE_URL", "")
+        self.base_url = os.getenv("BASE_URL", "https://shuffler.io")
         self.action = os.getenv("ACTION", "")
         self.authorization = os.getenv("AUTHORIZATION", "")
         self.current_execution_id = os.getenv("EXECUTIONID", "")
@@ -29,7 +28,10 @@ class AppBase:
         self.result_wrapper_count = 0
 
         if isinstance(self.action, str):
-            self.action = json.loads(self.action)
+            try:
+                self.action = json.loads(self.action)
+            except:
+                print("[WARNING] Failed parsing action as JSON")
 
         if len(self.base_url) == 0:
             self.base_url = self.url
@@ -530,8 +532,18 @@ class AppBase:
             "status": "EXECUTING"
         }
 
+        try:
+            print("Parameters: %d" % len(action["parameters"]))
+        except KeyError:
+            action["parameters"] = []
+
         self.action = copy.deepcopy(action)
         self.logger.info("ACTION RESULT (start): %s", action_result)
+
+        headers = {
+            "Content-Type": "application/json",     
+            "Authorization": "Bearer %s" % self.authorization
+        }
 
         if len(self.action) == 0:
             print("ACTION env not defined")
@@ -551,10 +563,6 @@ class AppBase:
             self.send_result(action_result, headers, stream_path) 
             return
 
-        headers = {
-            "Content-Type": "application/json",     
-            "Authorization": "Bearer %s" % self.authorization
-        }
 
         # Add async logger
         # self.console_logger.handlers[0].stream.set_execution_id()
@@ -1363,6 +1371,8 @@ class AppBase:
         actionname = action["name"]
         if " " in actionname:
             actionname.replace(" ", "_", -1) 
+
+
         #if action.generated:
         #    actionname = actionname.lower()
 
@@ -1919,21 +1929,38 @@ class AppBase:
         self.send_result(action_result, headers, stream_path)
         return
 
-
-        #STOPCOPY
-        # !!! Let the above line stay - its used for some horrible codegeneration / stitching !!! # 
-
     @classmethod
-    async def run(cls):
-        """ Connect to Redis and HTTP session, await actions """
+    async def run(cls, action=""):
         logging.basicConfig(format="{asctime} - {name} - {levelname}:{message}", style='{')
         logger = logging.getLogger(f"{cls.__name__}")
         logger.setLevel(logging.DEBUG)
-        print("Started execution!!")
 
-        app = cls(redis=None, logger=logger, console_logger=logger)
+        print("Started execution: %s!!" % cls)
+        print("Action: %s" % action)
+        #if isinstance(cls, object):
+        #    self.action = cls
 
         # Authorization for the app/function to control the workflow
         # Function will crash if its wrong, which it probably should. 
+        app = cls(redis=None, logger=logger, console_logger=logger)
+
+        if isinstance(action, object):
+            app.action = action
+
+            try:
+                app.authorization = action["authorization"]
+                app.current_execution_id = action["execution_id"]
+            except:
+                pass
+
+            try:
+                app.url = action["url"]
+            except:
+                pass
+
+            try:
+                app.base_url = action["base_url"]
+            except:
+                pass
 
         await app.execute_action(app.action)

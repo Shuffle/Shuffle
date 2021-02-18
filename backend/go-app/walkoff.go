@@ -2025,11 +2025,10 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	err = increaseStatisticsField(ctx, "total_workflows", fileId, -1, workflow.OrgId)
-	if err != nil {
-		log.Printf("Failed to increase total workflows: %s", err)
-	}
-
+	//err = increaseStatisticsField(ctx, "total_workflows", fileId, -1, workflow.OrgId)
+	//if err != nil {
+	//	log.Printf("Failed to increase total workflows: %s", err)
+	//}
 	//memcacheName := fmt.Sprintf("%s_%s", user.Username, fileId)
 	//memcache.Delete(ctx, memcacheName)
 	//memcacheName = fmt.Sprintf("%s_workflows", user.Username)

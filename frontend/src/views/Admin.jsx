@@ -31,6 +31,7 @@ import { useTheme } from '@material-ui/core/styles';
 import HandlePayment from './HandlePayment'
 import OrgHeader from '../components/OrgHeader'
 
+import CircularProgress from '@material-ui/core/CircularProgress';
 import EditIcon from '@material-ui/icons/Edit';
 import SelectAllIcon from '@material-ui/icons/SelectAll';
 import OpenInNewIcon from '@material-ui/icons/OpenInNew';
@@ -1374,12 +1375,24 @@ const Admin = (props) => {
 				</span>
 			</div>
 				{selectedOrganization.id === undefined ? 
-					<div style={{height: 250}}/>
-					: 
+					<div style={{paddingTop: 250, width: 250, margin: "auto", textAlign: "center"}}>
+						<CircularProgress />
+						<Typography>
+							Loading Organization 
+						</Typography>
+					</div>
+					:
 					<div>
 						{selectedOrganization.name.length > 0 ?
 							<OrgHeader setSelectedOrganization={setSelectedOrganization} globalUrl={globalUrl} selectedOrganization={selectedOrganization}/>
-						: null}
+						: 
+						<div style={{paddingTop: 250, width: 250, margin: "auto", textAlign: "center"}}>
+							<CircularProgress />
+							<Typography>
+								Loading Organization 
+							</Typography>
+						</div>
+					}
 					<Divider style={{ marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor }} />
 						<Typography variant="h6" style={{marginBottom: "10px", color: "white"}}>Cloud syncronization</Typography>
 							What does <a href="https://shuffler.io/docs/organizations#cloud_sync" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>cloud sync</a> do? Cloud syncronization is a way of getting more out of Shuffle. Shuffle will <b>ALWAYS</b> make every option open source, but features relying on other users can't be done without a collaborative approach.
@@ -1690,7 +1703,7 @@ const Admin = (props) => {
 						style={{ minWidth: 180, maxWidth: 180 }}
 					/>
 				</ListItem>
-				{users === undefined ? null : users.map((data, index) => {
+				{users === undefined || users === null ? null : users.map((data, index) => {
 					var bgColor = "#27292d"
 					if (index % 2 === 0) {
 						bgColor = "#1f2023"
@@ -2074,7 +2087,7 @@ const Admin = (props) => {
 						primary="Actions"
 					/>
 				</ListItem>
-				{authentication === undefined ? null : authentication.map((data, index) => {
+				{authentication === undefined || authentication === null ? null : authentication.map((data, index) => {
 					var bgColor = "#27292d"
 					if (index % 2 === 0) {
 						bgColor = "#1f2023"
@@ -2392,7 +2405,7 @@ const Admin = (props) => {
 
 	const iconStyle = {marginRight: 10}
 	const data = 
-		<div style={{width: 1366, margin: "auto", overflowX: "hidden",}}>
+		<div style={{width: 1366, margin: "auto", overflowX: "hidden", marginTop: 25,}}>
 			<Paper style={paperStyle}>
 				<Tabs
 					value={curTab}
