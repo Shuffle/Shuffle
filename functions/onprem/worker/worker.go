@@ -571,8 +571,6 @@ type WorkflowAppAction struct {
 	AuthNotRequired  bool   `json:"auth_not_required" datastore:"auth_not_required" yaml:"auth_not_required"`
 }
 
-// FIXME: Generate a callback authentication ID?
-// FIXME: Add org check ..
 type WorkflowExecution struct {
 	Type               string         `json:"type" datastore:"type"`
 	Status             string         `json:"status" datastore:"status"`
@@ -580,6 +578,7 @@ type WorkflowExecution struct {
 	ExecutionArgument  string         `json:"execution_argument" datastore:"execution_argument,noindex"`
 	ExecutionId        string         `json:"execution_id" datastore:"execution_id"`
 	ExecutionSource    string         `json:"execution_source" datastore:"execution_source"`
+	ExecutionParent    string         `json:"execution_parent" datastore:"execution_parent"`
 	ExecutionOrg       string         `json:"execution_org" datastore:"execution_org"`
 	WorkflowId         string         `json:"workflow_id" datastore:"workflow_id"`
 	LastNode           string         `json:"last_node" datastore:"last_node"`
@@ -599,6 +598,7 @@ type WorkflowExecution struct {
 	} `json:"execution_variables,omitempty" datastore:"execution_variables,omitempty"`
 	OrgId string `json:"org_id" datastore:"org_id"`
 }
+
 type Action struct {
 	AppName           string                       `json:"app_name,omitempty" datastore:"app_name"`
 	AppVersion        string                       `json:"app_version,omitempty" datastore:"app_version"`
@@ -1273,11 +1273,22 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 				}
 			}
 
+			// FIXME: Add startnode from frontend
 			action.Parameters = []WorkflowAppActionParameter{}
 			for _, parameter := range trigger.Parameters {
 				parameter.Variant = "STATIC_VALUE"
 				action.Parameters = append(action.Parameters, parameter)
 			}
+
+			action.Parameters = append(action.Parameters, WorkflowAppActionParameter{
+				Name:  "source_workflow",
+				Value: workflowExecution.Workflow.ID,
+			})
+
+			action.Parameters = append(action.Parameters, WorkflowAppActionParameter{
+				Name:  "source_execution",
+				Value: workflowExecution.ExecutionId,
+			})
 
 			//trigger.LargeImage = ""
 			//err = handleSubworkflowExecution(client, workflowExecution, trigger, action)

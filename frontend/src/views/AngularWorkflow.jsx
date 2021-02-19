@@ -5175,7 +5175,7 @@ const AngularWorkflow = (props) => {
 									})}
 								</Select>
 							}
-							{/*subworkflow === undefined || subworkflow === null || subworkflow.id === undefined || subworkflow.actions === null || subworkflow.actions === undefined || subworkflow.actions.length === 0 ? null : 
+							{subworkflow === undefined || subworkflow === null || subworkflow.id === undefined || subworkflow.actions === null || subworkflow.actions === undefined || subworkflow.actions.length === 0 ? null : 
 								<Select
 									value={subworkflowStartnode}
 									SelectDisplayProps={{
@@ -5208,8 +5208,8 @@ const AngularWorkflow = (props) => {
 										)
 									})}
 								</Select>
-							*/}
-							{workflow.triggers[selectedTriggerIndex].parameters[0].value.length === 0 ? null : <span style={{marginTop: 5}}><a href={`/workflows/${workflow.triggers[selectedTriggerIndex].parameters[0].value}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>Explore selected workflow</a></span>}
+							}
+							{workflow.triggers[selectedTriggerIndex].parameters[0].value.length === 0 ? null : <span style={{marginTop: 5}}><a href={`/workflows/${workflow.triggers[selectedTriggerIndex].parameters[0].value}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e", marginLeft: 5,}}>Explore selected workflow</a></span>}
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
 								<div style={{flex: "10"}}> 
@@ -6400,6 +6400,9 @@ const AngularWorkflow = (props) => {
 			return <img alt={"email"} src={triggers.find(trigger => trigger.trigger_type === "EMAIL").large_image} style={{width: size, height: size}} />
 		}
 
+		if (execution.execution_parent !== null && execution.execution_parent !== undefined && execution.execution_parent.length > 0) {
+			return <img alt={"parent workflow"} src={triggers.find(trigger => trigger.trigger_type === "SUBFLOW").large_image} style={{width: size, height: size}} />
+		}
 
 		return (
 			<img alt={execution.execution_source} src={defaultImage} style={{width: size, height: size}} />
@@ -6564,7 +6567,7 @@ const AngularWorkflow = (props) => {
 						</h2>
 					</span>
 				</Breadcrumbs>
-				<Divider style={{backgroundColor: "white", marginTop: 10, marginBottom: 10,}}/>
+				<Divider style={{backgroundColor: "rgba(255,255,255,0.6)", marginTop: 10, marginBottom: 10,}}/>
 					<div style={{display: "flex"}}>
 						<h2>Executing Workflow</h2>		
 						<Tooltip color="primary" title="Rerun workflow" placement="top">
@@ -6580,19 +6583,23 @@ const AngularWorkflow = (props) => {
 					</div>
 					{executionData.status !== undefined && executionData.status.length > 0 ?
 						<div>
-							<b>Status: </b>{executionData.status} 
+							<b>Status: &nbsp;&nbsp;</b>{executionData.status} 
 						</div>
 						: null
 					}
 					{executionData.execution_source !== undefined && executionData.execution_source !== null && executionData.execution_source.length > 0 && executionData.execution_source !== "default" ?
 						<div>
-							<b>Source: </b>{executionData.execution_source} 
+							<b>Source: &nbsp;&nbsp;</b>{executionData.execution_parent !== null && executionData.execution_parent !== undefined && executionData.execution_parent.length > 0 ? 
+								<a href={`/workflows/${executionData.execution_source}?view=executions&execution_id=${executionData.execution_parent}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>Parent Workflow</a>
+								:
+								executionData.execution_source
+							} 
 						</div>
 						: null
 					}
 					{executionData.started_at !== undefined ?
 						<div>
-							<b>Started: </b>{new Date(executionData.started_at*1000).toISOString()} 
+							<b>Started: &nbsp;</b>{new Date(executionData.started_at*1000).toISOString()} 
 						</div>
 						: null
 					}
@@ -6602,10 +6609,11 @@ const AngularWorkflow = (props) => {
 						</div>
 						: null
 					}
+					<div style={{marginTop: 10}}/>
 					{executionData.execution_argument !== undefined && executionData.execution_argument.length > 0 ?
 						parsedExecutionArgument()
 					: null }
-					<Divider style={{backgroundColor: "white", marginTop: 30, marginBottom: 30,}}/>
+					<Divider style={{backgroundColor: "rgba(255,255,255,0.6)", marginTop: 15, marginBottom: 30,}}/>
 					{executionData.results !== undefined && executionData.results !== null && executionData.results.length > 1 && executionData.results.find(result => result.status === "SKIPPED" || result.status === "FAILURE") ?
 						<FormControlLabel
 							style={{color: "white", marginBottom: 10, }}

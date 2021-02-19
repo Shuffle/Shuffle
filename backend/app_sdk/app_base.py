@@ -8,6 +8,7 @@ import logging
 import requests
 import urllib.parse
 import http.client
+import urllib3
 
 class AppBase:
     __version__ = None
@@ -66,7 +67,7 @@ class AppBase:
                 self.logger.info(ret.text)
         except requests.exceptions.ConnectionError as e:
             #self.logger.exception("ConnectionError: %s" % e)
-            self.logger.exception("Expected ConnectionError happened")
+            self.logger.info("Expected ConnectionError happened")
             return
         except TypeError as e:
             #self.logger.exception(e)
@@ -78,7 +79,10 @@ class AppBase:
             if ret.status_code != 200:
                 self.logger.info(ret.text)
         except http.client.RemoteDisconnected as e:
-            self.logger.exception("Expected Remotedisconnect happened")
+            self.logger.info("Expected Remotedisconnect happened")
+            return
+        except urllib3.exceptions.ProtocolError as e:
+            self.logger.info("Expected ProtocolError happened")
             return
 
     async def cartesian_product(self, L):

@@ -270,6 +270,7 @@ type WorkflowExecution struct {
 	ExecutionArgument  string         `json:"execution_argument" datastore:"execution_argument,noindex"`
 	ExecutionId        string         `json:"execution_id" datastore:"execution_id"`
 	ExecutionSource    string         `json:"execution_source" datastore:"execution_source"`
+	ExecutionParent    string         `json:"execution_parent" datastore:"execution_parent"`
 	ExecutionOrg       string         `json:"execution_org" datastore:"execution_org"`
 	WorkflowId         string         `json:"workflow_id" datastore:"workflow_id"`
 	LastNode           string         `json:"last_node" datastore:"last_node"`
@@ -2410,7 +2411,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	workflow.Actions = newActions
 	newTriggers := []Trigger{}
 	for _, trigger := range workflow.Triggers {
-		log.Printf("Trigger %s: %s", trigger.TriggerType, trigger.Status)
+		log.Printf("[INFO] Trigger %s: %s", trigger.TriggerType, trigger.Status)
 
 		// Check if it's actually running
 		// FIXME: Do this for other triggers too
@@ -3135,12 +3136,34 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 
 		// This one doesn't really matter.
 		log.Printf("[INFO] Running POST execution with body of length %d", len(string(body)))
-		if body[0] == 34 && body[len(body)-1] == 34 {
-			body = body[1 : len(body)-1]
+
+		if len(body) >= 4 {
+			if body[0] == 34 && body[len(body)-1] == 34 {
+				body = body[1 : len(body)-1]
+			}
+			if body[0] == 34 && body[len(body)-1] == 34 {
+				body = body[1 : len(body)-1]
+			}
 		}
-		if body[0] == 34 && body[len(body)-1] == 34 {
-			body = body[1 : len(body)-1]
+
+		//workflowExecution.ExecutionSource = "default"
+		sourceWorkflow, sourceWorkflowOk := request.URL.Query()["source_workflow"]
+		if sourceWorkflowOk {
+			//log.Printf("Got source workflow %s", sourceWorkflow)
+			workflowExecution.ExecutionSource = sourceWorkflow[0]
+		} else {
+			//log.Printf("Did NOT get source workflow")
+
 		}
+
+		sourceExecution, sourceExecutionOk := request.URL.Query()["source_execution"]
+		if sourceExecutionOk {
+			log.Printf("Got source execution%s", sourceExecution)
+			workflowExecution.ExecutionParent = sourceExecution[0]
+		} else {
+			//log.Printf("Did NOT get source execution")
+		}
+
 		if len(string(body)) < 50 {
 			//log.Println(body)
 			// String in string
