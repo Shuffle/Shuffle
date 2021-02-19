@@ -259,6 +259,7 @@ const AngularWorkflow = (props) => {
 				setWorkflows(responseJson)
 
 				if (trigger_index > -1) {
+					var outersub = {}
 					const trigger = workflow.triggers[trigger_index]
 					if (trigger.parameters.length >= 3) {
 						for (var key in trigger.parameters) {
@@ -267,7 +268,22 @@ const AngularWorkflow = (props) => {
 								const sub = responseJson.find(data => data.id === param.value)
 								if (sub !== undefined && subworkflow.id !== sub.id) { 
 									setSubworkflow(sub)
+									outersub = sub
 								}
+							}
+
+							if (param.name === "startnode" && outersub.id !== undefined) {
+								console.log("SHOULD SET STARTNODE: ", outersub)
+								const innernode = outersub.actions.find(action => action.id === param.value)
+								console.log("FOUND NODE: ", innernode)
+								if (innernode !== undefined && subworkflowStartnode.id !== innernode.id) { 
+									setSubworkflowStartnode(innernode)
+								}
+								/*
+								const sub = responseJson.find(data => data.id === param.value)
+									setSubworkflow(sub)
+								}
+								*/
 							}
 						}
 					}
@@ -391,7 +407,6 @@ const AngularWorkflow = (props) => {
 					//console.log("SHOW EXECUTION ", tmpView)
 					const execution = responseJson.find(data => data.execution_id === tmpView)
 					if (execution !== null && execution !== undefined) {
-						console.log("EXEC: ", execution)
 						setExecutionData(execution)
 						setExecutionModalView(1)
 					}
@@ -5098,6 +5113,7 @@ const AngularWorkflow = (props) => {
 				workflow.triggers[selectedTriggerIndex].parameters[0] = {"name": "workflow", "value": ""}
 				workflow.triggers[selectedTriggerIndex].parameters[1] = {"name": "argument", "value": ""}
 				workflow.triggers[selectedTriggerIndex].parameters[2] = {"name": "user_apikey", "value": ""}
+				workflow.triggers[selectedTriggerIndex].parameters[3] = {"name": "startnode", "value": ""}
 
 				console.log("SETTINGS: ", userSettings)
 				if (userSettings !== undefined && userSettings !== null && userSettings.apikey !== null && userSettings.apikey !== undefined && userSettings.apikey.length > 0) {
@@ -5159,22 +5175,41 @@ const AngularWorkflow = (props) => {
 										workflow.triggers[selectedTriggerIndex].parameters[0].value = e.target.value.id
 										setWorkflow(workflow)
 										setSubworkflowStartnode(e.target.value.start)
+
+										// Sets the startnode
+										if (e.target.value.id !== workflow.id) {
+											const startnode = e.target.value.actions.find(action => action.id === e.target.value.start)
+											if (startnode !== undefined && startnode !== null) {
+												setSubworkflowStartnode(startnode)
+											}
+											console.log("STARTNODE: ", startnode)
+										}
 									}}
 									style={{backgroundColor: inputColor, color: "white", height: "50px"}}
 								>
 									{workflows.map((data, index) => {
+										/*
 										if (data.id === workflow.id) {
 											return null	
 										}
+										*/
 
 										return (
-											<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data}>
+											<MenuItem key={index} style={{backgroundColor: inputColor, color: data.id === workflow.id ? "red" : "white"}} value={data}>
 												{data.name}
 											</MenuItem>
 										)
 									})}
 								</Select>
 							}
+							{workflow.triggers[selectedTriggerIndex].parameters[0].value.length === 0 ? null : <span style={{marginTop: 5}}><a href={`/workflows/${workflow.triggers[selectedTriggerIndex].parameters[0].value}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e", marginLeft: 5,}}>Explore selected workflow</a></span>}
+
+							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
+								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
+								<div style={{flex: "10"}}> 
+									<b>Select the Startnode</b> 
+								</div>
+							</div>
 							{subworkflow === undefined || subworkflow === null || subworkflow.id === undefined || subworkflow.actions === null || subworkflow.actions === undefined || subworkflow.actions.length === 0 ? null : 
 								<Select
 									value={subworkflowStartnode}
@@ -5186,30 +5221,32 @@ const AngularWorkflow = (props) => {
 									}}
 									fullWidth
 									onChange={(e) => {
-										console.log("Change startnode to" + e.target)
-										//setSubworkflow(e.target.value)
+										setSubworkflowStartnode(e.target.value)
+
+										try {
+											workflow.triggers[selectedTriggerIndex].parameters[3].value = e.target.value.id
+										} catch {
+											workflow.triggers[selectedTriggerIndex].parameters[3] = {
+												"name": "startnode",
+												"value": e.target.value.id,
+											}
+										}
+
+										setWorkflow(workflow)
 										//setUpdate(Math.random())
-										//workflow.triggers[selectedTriggerIndex].parameters[0].value = e.target.value.id
-										//const [subworkflowStartnode, setSubworkflowStartnode] = React.useState("");
-										//setWorkflow(workflow)
 									}}
 									style={{backgroundColor: inputColor, color: "white", height: "50px"}}
 								>
-									{subworkflow.actions.map((data, index) => {
-										console.log(data)
-										if (data.id === workflow.id) {
-											return null	
-										}
-
+									{subworkflow.actions.map((action, index) => {
+										//console.log(action)
 										return (
-											<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data}>
-												{data.index}
+											<MenuItem disabled={getParents(selectedTrigger).find(parent => parent.id === action.id)} key={index} style={{backgroundColor: inputColor, color: "white"}} value={action}>
+												{action.label}
 											</MenuItem>
 										)
 									})}
 								</Select>
 							}
-							{workflow.triggers[selectedTriggerIndex].parameters[0].value.length === 0 ? null : <span style={{marginTop: 5}}><a href={`/workflows/${workflow.triggers[selectedTriggerIndex].parameters[0].value}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e", marginLeft: 5,}}>Explore selected workflow</a></span>}
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
 								<div style={{flex: "10"}}> 

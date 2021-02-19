@@ -298,7 +298,7 @@ class AppBase:
                 newparams[key] = value[0]
                 has_loop = True 
             else:
-                print("Key %s is NOT a list within a list: %s" % (key, value))
+                print("Key %s is NOT a list within a list" % (key))
 
                 newparams[key] = value
         
@@ -1054,7 +1054,7 @@ class AppBase:
             except KeyError as error:
                 print(f"KeyError in JSON: {error}")
         
-            print(f"[INFO] After first trycatch. Baseresult: ", baseresult)
+            print(f"[INFO] After first trycatch. Baseresult")#, baseresult)
         
             # 2. Find the JSON data
             if len(baseresult) == 0:
@@ -1067,7 +1067,7 @@ class AppBase:
             baseresult = baseresult.replace(" True,", " true,")
             baseresult = baseresult.replace(" False", " false,")
 
-            print("[INFO] After third parser return - Formatted: ", baseresult)
+            print("[INFO] After third parser return - Formatted")#, baseresult)
             basejson = {}
             try:
                 basejson = json.loads(baseresult)
@@ -1570,9 +1570,9 @@ class AppBase:
                                         multi_parameters[parameter["name"]] = resultarray 
 
                                     multi_execution_lists.append(new_replacement)
-                                    print("MULTI finished: %s" % json_replacement)
+                                    #print("MULTI finished: %s" % json_replacement)
                                 else:
-                                    print("(2) Pre replacement: %s" % actualitem)
+                                    print("(2) Pre replacement. ") #% actualitem)
                                     # This is here to handle for loops within variables.. kindof
                                     # 1. Find the length of the longest array
                                     # 2. Build an array with the base values based on parameter["value"] 

@@ -1163,6 +1163,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 			log.Printf("[WARNING] Actionresult is %s for node %s in %s. Continuing anyway because of workflow configuration.", actionResult.Status, actionResult.Action.ID, workflowExecution.ExecutionId)
 			// Finds ALL childnodes to set them to SKIPPED
 			childNodes = findChildNodes(*workflowExecution, actionResult.Action.ID)
+
 			// Remove duplicates
 			//log.Printf("CHILD NODES: %d", len(childNodes))
 			for _, nodeId := range childNodes {
@@ -1223,6 +1224,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 							Name:       curAction.Name,
 							ID:         curAction.ID,
 						}
+
 						newResult := ActionResult{
 							Action:        newAction,
 							ExecutionId:   actionResult.ExecutionId,
@@ -3127,6 +3129,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	}
 
 	makeNew := true
+	start, startok := request.URL.Query()["start"]
 	if request.Method == "POST" {
 		body, err := ioutil.ReadAll(request.Body)
 		if err != nil {
@@ -3158,7 +3161,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 
 		sourceExecution, sourceExecutionOk := request.URL.Query()["source_execution"]
 		if sourceExecutionOk {
-			log.Printf("Got source execution%s", sourceExecution)
+			//log.Printf("[INFO] Got source execution%s", sourceExecution)
 			workflowExecution.ExecutionParent = sourceExecution[0]
 		} else {
 			//log.Printf("Did NOT get source execution")
@@ -3226,12 +3229,11 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		// Check for parameters of start and ExecutionId
 		// This is mostly used for user input trigger
 
-		start, startok := request.URL.Query()["start"]
 		answer, answerok := request.URL.Query()["answer"]
 		referenceId, referenceok := request.URL.Query()["reference_execution"]
 		if answerok && referenceok {
 			// If answer is false, reference execution with result
-			log.Printf("Answer is OK AND reference is OK!")
+			log.Printf("[INFO] Answer is OK AND reference is OK!")
 			if answer[0] == "false" {
 				log.Printf("Should update reference and return, no need for further execution!")
 
@@ -3302,12 +3304,12 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		}
 
 		// Don't override workflow defaults
-		if startok {
-			log.Printf("Setting start to %s based on query!", start[0])
-			//workflowExecution.Workflow.Start = start[0]
-			workflowExecution.Start = start[0]
-		}
+	}
 
+	if startok {
+		//log.Printf("\n\n[INFO] Setting start to %s based on query!\n\n", start[0])
+		//workflowExecution.Workflow.Start = start[0]
+		workflowExecution.Start = start[0]
 	}
 
 	// FIXME - regex uuid, and check if already exists?
@@ -3495,7 +3497,42 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 				break
 			}
 		}
+
+		if trigger.AppName == "User Input" || trigger.AppName == "Shuffle Workflow" {
+			found := false
+			for _, node := range childNodes {
+				if node == trigger.ID {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				log.Printf("SHOULD SET TRIGGER %s TO BE SKIPPED", trigger.ID)
+
+				curaction := Action{
+					AppName:    trigger.AppName,
+					AppVersion: trigger.AppVersion,
+					Label:      trigger.Label,
+					Name:       trigger.Name,
+					ID:         trigger.ID,
+				}
+
+				defaultResults = append(defaultResults, ActionResult{
+					Action:        curaction,
+					ExecutionId:   workflowExecution.ExecutionId,
+					Authorization: workflowExecution.Authorization,
+					Result:        "Skipped because it's not under the startnode",
+					StartedAt:     0,
+					CompletedAt:   0,
+					Status:        "SKIPPED",
+				})
+			} else {
+				log.Printf("SHOULD KEEP TRIGGER %s", trigger.ID)
+			}
+		}
 	}
+	//childNodes := findChildNodes(workflowExecution, workflowExecution.Start)
 
 	if !startFound {
 		log.Printf("Startnode %s doesn't exist!", workflowExecution.Start)
