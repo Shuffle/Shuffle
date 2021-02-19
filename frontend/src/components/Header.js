@@ -219,16 +219,6 @@ const Header = props => {
 							Settings
 						</Link>
 					</MenuItem>
-					{userdata === undefined || userdata.admin === undefined || userdata.admin === null || !userdata.admin ? null : 
-						<MenuItem onClick={(event) => {
-							event.preventDefault()
-							handleClose() 
-						}}>
-							<Link to="/admin" style={hrefStyle}>
-								Admin
-							</Link>
-						</MenuItem>
-					}
 					<MenuItem style={{color: "white"}} onClick={(event) => {
 						event.preventDefault()
 						handleClose() 
@@ -237,8 +227,15 @@ const Header = props => {
 						Logout
 					</MenuItem>
 				</Menu>
+				{userdata === undefined || userdata.admin === undefined || userdata.admin === null || !userdata.admin ? null : 
+					<Link to="/admin" style={hrefStyle}>
+						<Button color="primary" variant="contained" style={{marginRight: 15, marginTop: 12}}>
+							Admin
+						</Button>
+					</Link>
+				}
 			</div>
-	    </div>
+	  </div>
 
 	const loginTextMobile = !isLoggedIn ? 
     	<div style={{display: "flex"}}>

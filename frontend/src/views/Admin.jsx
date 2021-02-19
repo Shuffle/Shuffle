@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import { makeStyles } from '@material-ui/styles';
 import {Link} from 'react-router-dom';
@@ -25,6 +25,7 @@ import IconButton from '@material-ui/core/IconButton';
 import Avatar from '@material-ui/core/Avatar';
 import Zoom from '@material-ui/core/Zoom';
 import { useAlert } from "react-alert";
+import Dropzone from '../components/Dropzone';
 
 import { Dialog, DialogTitle, DialogActions, DialogContent } from '@material-ui/core';
 import { useTheme } from '@material-ui/core/styles';
@@ -33,6 +34,8 @@ import OrgHeader from '../components/OrgHeader'
 
 import CircularProgress from '@material-ui/core/CircularProgress';
 import EditIcon from '@material-ui/icons/Edit';
+import FileCopyIcon from '@material-ui/icons/FileCopy';
+import PublishIcon from '@material-ui/icons/Publish';
 import SelectAllIcon from '@material-ui/icons/SelectAll';
 import OpenInNewIcon from '@material-ui/icons/OpenInNew';
 import CloudDownloadIcon from '@material-ui/icons/CloudDownload';
@@ -62,6 +65,7 @@ const Admin = (props) => {
 	const { globalUrl, userdata } = props;
 
 	var upload = ""
+	var to_be_copied = ""
 	const theme = useTheme();
 	const classes = useStyles();
 	const [firstRequest, setFirstRequest] = React.useState(true);
@@ -93,6 +97,14 @@ const Admin = (props) => {
 	const [selectedAuthenticationModalOpen, setSelectedAuthenticationModalOpen] = React.useState(false)
 	const [authenticationFields, setAuthenticationFields] = React.useState([])
 	const [showArchived, setShowArchived] = React.useState(false)
+	const [isDropzone, setIsDropzone] = React.useState(false);
+
+	useEffect(() => {
+		if (isDropzone) {
+			//redirectOpenApi();
+			setIsDropzone(false);
+		}
+  }, [isDropzone]);
 
 	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" 
 	const getApps = () => {
@@ -645,6 +657,67 @@ const Admin = (props) => {
 			.catch(error => {
 				console.log("Error in userdata: ", error)
 			});
+	}
+
+	const handleFileUpload = (file_id, file) => {
+		//console.log("FILE: ", file_id, file)
+		fetch(`${globalUrl}/api/v1/files/${file_id}/upload`, {
+			method: 'POST',
+			credentials: "include",
+			body: file,
+		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for apps :O!")
+				return
+			}
+
+			return response.json()
+		})
+		.then((responseJson) => {
+			//console.log("RESPONSE: ", responseJson)
+			//setFiles(responseJson)
+		})
+		.catch(error => {
+			//alert.error(error.toString())
+		});
+	}
+
+	const handleCreateFile = (filename, file) => {
+		const data = {
+			"filename": filename,
+			"org_id": selectedOrganization.id,
+			"workflow_id": "global",
+		}
+
+		fetch(globalUrl + "/api/v1/files/create", {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+			credentials: "include",
+			body: JSON.stringify(data),
+		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for apps :O!")
+				return
+			}
+
+			return response.json()
+		})
+		.then((responseJson) => {
+			//console.log("RESP: ", responseJson)
+			if (responseJson.success) {
+				handleFileUpload(responseJson.id, file) 
+			} else {
+				alert.error("Failed to upload file ", filename)
+			}
+		})
+		.catch(error => {
+			alert.error(error.toString())
+		});
 	}
 
 	const getFiles = () => {
@@ -1778,12 +1851,72 @@ const Admin = (props) => {
 		</div>
 		: null
 
+	const uploadFiles = (files) => {
+		for (var key in files) {
+			try {
+				const filename = files[key].name
+				var filedata = new FormData()
+				filedata.append('shuffle_file', files[key])
+
+				if (typeof(files[key]) === "object") {
+					handleCreateFile(filename, filedata)
+				}
+
+				/*
+				reader.addEventListener('load', (e) => {
+					var data = e.target.result;
+					setIsDropzone(false)
+					console.log(filename)	
+					console.log(data)
+					console.log(files[key])
+				})
+				reader.readAsText(files[key])
+				*/
+			} catch (e) {
+				console.log("Error in dropzone: ", e)
+			}
+		}
+
+		getFiles() 
+	}
+
+	const uploadFile = (e) => {
+		const isDropzone = e.dataTransfer === undefined ? false : e.dataTransfer.files.length > 0;
+		const files = isDropzone ? e.dataTransfer.files : e.target.files;
+		
+    //const reader = new FileReader();
+		//alert.info("Starting fileupload")
+		uploadFiles(files)
+  }
+
 	const filesView = curTab === 5 ?
+		<Dropzone style={{maxWidth: window.innerWidth > 1366 ? 1366 : 1200, margin: "auto", padding: 20 }} onDrop={uploadFile}>
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
 				<h2 style={{display: "inline",}}>Files</h2>
 				<span style={{marginLeft: 25}}>Files from Workflows. <a target="_blank" href="https://shuffler.io/docs/organizations#files" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more</a></span>
 			</div>
+			<Button color="primary" variant="contained" onClick={() => {
+				upload.click()	
+			}}>
+				
+				<PublishIcon /> Upload files
+			</Button>
+			<input hidden type="file" multiple ref={(ref) => upload = ref} onChange={(event) => {
+				//const file = event.target.value
+				//const fileObject = URL.createObjectURL(actualFile)
+				//setFile(fileObject)
+				//const files = event.target.files[0]
+				uploadFiles(event.target.files) 
+			}} />
+			<Button 
+				style={{marginLeft: 5, marginRight: 15, }} 
+				variant="contained"
+				color="primary"
+				onClick={() => getFiles()}
+			> 
+				<CachedIcon />
+			</Button>
 			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor}}/>
 			<List>
 				<ListItem>
@@ -1814,6 +1947,9 @@ const Admin = (props) => {
 					<ListItemText
 						primary="Actions"
 					/>
+					<ListItemText
+						primary="File ID"
+					/>
 				</ListItem>
 				{files === undefined || files === null ? null : files.map((file, index) => {
 					var bgColor = "#27292d"
@@ -1833,13 +1969,19 @@ const Admin = (props) => {
 							/>
 							<ListItemText
 								primary=
-									<Tooltip title={"Go to workflow"} style={{}} aria-label={"Download"}>
-										<a style={{textDecoration: "none", color: "#f85a3e"}} href={`/workflows/${file.workflow_id}`} target="_blank">
-											<IconButton>
-												<OpenInNewIcon style={{color: "white"}} />
+										{file.workflow_id === "global" ? 
+											<IconButton disabled={file.workflow_id === "global"}>
+												<OpenInNewIcon style={{color: file.workflow_id !== "global" ? "white" : "grey",}} />
 											</IconButton>
-										</a>
-									</Tooltip>
+										: 
+											<Tooltip title={"Go to workflow"} style={{}} aria-label={"Download"}>
+												<a style={{textDecoration: "none", color: "#f85a3e"}} href={`/workflows/${file.workflow_id}`} target="_blank">
+													<IconButton disabled={file.workflow_id === "global"}>
+														<OpenInNewIcon style={{color: file.workflow_id !== "global" ? "white" : "grey",}} />
+													</IconButton>
+												</a>
+											</Tooltip>
+										}
 								style={{minWidth: 100, maxWidth: 100, overflow: "hidden"}}
 							/>
 							<ListItemText
@@ -1857,10 +1999,10 @@ const Admin = (props) => {
 							<ListItemText
 								primary=
 									<Tooltip title={"Download file"} style={{}} aria-label={"Download"}>
-										<IconButton onClick={() => {
+										<IconButton disabled={file.status !== "active"} onClick={() => {
 											downloadFile(file)
 										}}>
-											<CloudDownloadIcon style={{color: "white"}} />
+											<CloudDownloadIcon style={{color: file.status === "active" ? "white" : "grey",}} />
 										</IconButton>
 									</Tooltip>
 								style={{minWidth: 75, maxWidth: 75, overflow: "hidden"}}
@@ -1878,11 +2020,31 @@ const Admin = (props) => {
 								</Button>
 							</ListItemText>
 							*/}
+							<ListItemText
+								primary=
+									<IconButton onClick={() => {
+										const elementName = "copy_element_shuffle"
+  									var copyText = document.getElementById(elementName);
+										if (copyText !== null && copyText !== undefined) {
+											navigator.clipboard.writeText(file.id)
+											copyText.select();
+											copyText.setSelectionRange(0, 99999); /* For mobile devices */
+
+											/* Copy the text inside the text field */
+											document.execCommand("copy");
+
+											alert.info(file.id + "copied to clipboard")	
+										}
+									}}>
+										<FileCopyIcon style={{color: "white"}}/>
+									</IconButton>
+							/>
 						</ListItem>
 					)
 				})}
 			</List>
 		</div>
+		</Dropzone>
 		: null
 
 	const schedulesView = curTab === 4 ?
@@ -2445,6 +2607,11 @@ const Admin = (props) => {
 			{editUserModal}
 			{editAuthenticationModal}
 			{data}
+			<TextField
+				id="copy_element_shuffle"
+				value={to_be_copied}
+				style={{display: "none", }}
+			/>
 		</div>
 	)
 }
