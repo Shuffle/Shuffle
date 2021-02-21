@@ -541,8 +541,9 @@ class AppBase:
             "status": "EXECUTING"
         }
 
+        # Simple validation of parameters in general
         try:
-            print(action["parameters"])
+            tmp_parameters = action["parameters"]
         except KeyError:
             action["parameters"] = []
         except TypeError:
@@ -1514,11 +1515,13 @@ class AppBase:
 
                                     if len(json_replacement) > minlength:
                                         minlength = len(json_replacement)
+
+                                    print("PRE new_replacement")
                                     
                                     # FIXME: Only do this IF they want to loop
                                     new_replacement = []
                                     for i in range(len(json_replacement)):
-                                        if isinstance(json_replacement[i], dict) or isinstance(json_replacement[i], dict):
+                                        if isinstance(json_replacement[i], dict) or isinstance(json_replacement[i], list):
                                             tmp_replacer = json.dumps(json_replacement[i])
                                             newvalue = tmpitem.replace(actualitem[0][0], tmp_replacer, 1)
                                         else:
@@ -1727,7 +1730,7 @@ class AppBase:
                             #print("[INFO] APP_SDK DONE: Starting NORMAL execution of function")
                             print("[INFO] Running normal execution\n") 
                             newres = await func(**params)
-                            print("\n[INFO] Returned from execution:", newres)
+                            print("\n[INFO] Returned from execution with datalength!")#, newres)
                             if isinstance(newres, tuple):
                                 print("[INFO] Handling return as tuple")
                                 # Handles files.
@@ -1753,7 +1756,7 @@ class AppBase:
                                 
                                 result = json.dumps(tmp_result)
                             elif isinstance(newres, str):
-                                print("[INFO] Handling return as string")
+                                print("[INFO] Handling return as string of length %d" % len(newres))
                                 result += newres
                             else:
                                 try:
@@ -1762,7 +1765,7 @@ class AppBase:
                                     result += "Failed autocasting. Can't handle %s type from function. Must be string" % type(newres)
                                     print("Can't handle type %s value from function" % (type(newres)))
 
-                            print("[INFO] POST NEWRES RESULT: ", result)
+                            print("[INFO] POST NEWRES RESULT!")#, result)
                         else:
                             #print("[INFO] APP_SDK DONE: Starting MULTI execution (length: %d) with values %s" % (minlength, multi_parameters))
                             # 1. Use number of executions based on the arrays being similar

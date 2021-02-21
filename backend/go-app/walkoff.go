@@ -6163,6 +6163,11 @@ func loadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
+	requestCache.Delete(cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
+	requestCache.Delete(cacheKey)
+
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 }

@@ -1122,6 +1122,7 @@ const Admin = (props) => {
 			<DialogTitle><span style={{ color: "white" }}>Edit authentication for {selectedAuthentication.app.name} ({selectedAuthentication.label})</span></DialogTitle>
 			<DialogContent>
 				{selectedAuthentication.fields.map((data, index) => {
+					console.log("DATA: ", data, selectedAuthentication)
 					return (
 						<div key={index}>
 							<Typography style={{marginBottom: 0, marginTop: 10}}>{data.key}</Typography>

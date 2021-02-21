@@ -1235,7 +1235,7 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 	// IF NOT VISITED && IN toExecuteOnPrem
 	// SKIP if it's not onprem
 	toRemove := []int{}
-	log.Printf("\n\nNEXTACTIONS: %#v\n\n", nextActions)
+	//log.Printf("\n\nNEXTACTIONS: %#v\n\n", nextActions)
 	for index, nextAction := range nextActions {
 		action := getAction(workflowExecution, nextAction, environment)
 		// check visited and onprem
@@ -1698,9 +1698,11 @@ func executionInit(workflowExecution WorkflowExecution) error {
 		}
 	}
 
-	log.Printf("\n\n\n[INFO] CHILDREN FOUND: %#v", children)
-	log.Printf("[INFO] PARENTS FOUND: %#v", parents)
-	log.Printf("[INFO] NEXT ACTIONS: %#v\n\n", nextActions)
+	/*
+		log.Printf("\n\n\n[INFO] CHILDREN FOUND: %#v", children)
+		log.Printf("[INFO] PARENTS FOUND: %#v", parents)
+		log.Printf("[INFO] NEXT ACTIONS: %#v\n\n", nextActions)
+	*/
 
 	log.Printf("[INFO] Actions: %d + Special Triggers: %d", len(workflowExecution.Workflow.Actions), extra)
 	onpremApps := []string{}
@@ -2064,7 +2066,10 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	//	return
 	//}
 
+	resp.WriteHeader(200)
+	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 	runWorkflowExecutionTransaction(ctx, 0, workflowExecution.ExecutionId, actionResult, resp)
+
 }
 
 func findChildNodes(workflowExecution WorkflowExecution, nodeId string) []string {
@@ -2473,15 +2478,20 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 			return
 		}
 	} else {
-		log.Printf("Skipping setexec with status %s", workflowExecution.Status)
+		log.Printf("[INFO] Skipping setexec with status %s", workflowExecution.Status)
+
+		// Just in case. Should MAYBE validate finishing another time as well.
+		// This fixes issues with e.g. Action -> Trigger -> Action.
+		handleExecutionResult(*workflowExecution)
+		//validateFinished(workflowExecution)
 	}
 
 	//if newExecutions && len(nextActions) > 0 {
 	//	handleExecutionResult(*workflowExecution)
 	//}
 
-	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+	//resp.WriteHeader(200)
+	//resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 }
 
 func getWorkflowExecution(ctx context.Context, id string) (*WorkflowExecution, error) {
@@ -2532,7 +2542,7 @@ func validateFinished(workflowExecution WorkflowExecution) {
 		}
 
 		body, err := ioutil.ReadAll(newresp.Body)
-		log.Printf("BACKEND STATUS: %d", newresp.StatusCode)
+		log.Printf("[INFO] BACKEND STATUS: %d", newresp.StatusCode)
 		if err != nil {
 			log.Printf("[ERROR] Failed reading body: %s", err)
 		} else {
