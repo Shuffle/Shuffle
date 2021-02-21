@@ -253,11 +253,11 @@ func initializeImages() {
 	ctx := context.Background()
 
 	if appSdkVersion == "" {
-		appSdkVersion = "0.8.5"
+		appSdkVersion = "0.8.60"
 		log.Printf("[WARNING] SHUFFLE_APP_SDK_VERSION not defined. Defaulting to %s", appSdkVersion)
 	}
 	if workerVersion == "" {
-		workerVersion = "0.8.57"
+		workerVersion = "0.8.60"
 		log.Printf("[WARNING] SHUFFLE_WORKER_VERSION not defined. Defaulting to %s", workerVersion)
 	}
 
@@ -544,9 +544,10 @@ func main() {
 				}
 			}
 
+			// Doesn't work because of USER INPUT
 			if found {
-				log.Printf("[INFO] Skipping duplicate %s", execution.ExecutionId)
-				continue
+				//log.Printf("[INFO] Skipping duplicate %s", execution.ExecutionId)
+				//continue
 			} else {
 				//log.Printf("[INFO] Adding to be ran %s", execution.ExecutionId)
 				executionIds = append(executionIds, execution.ExecutionId)

@@ -3508,7 +3508,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 			}
 
 			if !found {
-				log.Printf("SHOULD SET TRIGGER %s TO BE SKIPPED", trigger.ID)
+				//log.Printf("SHOULD SET TRIGGER %s TO BE SKIPPED", trigger.ID)
 
 				curaction := Action{
 					AppName:    trigger.AppName,

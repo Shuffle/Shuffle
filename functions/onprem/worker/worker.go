@@ -1624,7 +1624,7 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 		}
 
 		if shutdownCheck {
-			log.Println("BREAKING BECAUSE RESULTS IS SAME LENGTH AS ACTIONS. SHOULD CHECK ALL RESULTS FOR WHETHER THEY'RE DONE")
+			log.Println("[INFO] BREAKING BECAUSE RESULTS IS SAME LENGTH AS ACTIONS. SHOULD CHECK ALL RESULTS FOR WHETHER THEY'RE DONE")
 			validateFinished(workflowExecution)
 			shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
 		}
