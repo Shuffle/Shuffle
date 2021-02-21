@@ -1423,6 +1423,20 @@ class AppBase:
                         for parameter in action["parameters"]:
                             counter += 1
 
+                            # Hack for key:value in options using ||
+                            try:
+                                if parameter["options"] != None and len(parameter["options"]) > 0:
+                                    #print(f'OPTIONS: {parameter["options"]}')
+                                    #print(f'OPTIONS VAL: {parameter}')
+                                    if "||" in parameter["value"]:
+                                        splitvalue = parameter["value"].split("||")
+                                        if len(splitvalue) > 1:
+                                            print(f'[INFO] Parsed split || options of actions["parameters"]["name"]')
+                                            action["parameters"][counter]["value"] = splitvalue[1]
+
+                            except (IndexError, KeyError, TypeError) as e:
+                                print("Options err: {e}")
+
                             if parameter["name"] == "body": 
                                 bodyindex = counter
                                 #print("PARAM: %s" % parameter)

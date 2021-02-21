@@ -3355,11 +3355,19 @@ const AngularWorkflow = (props) => {
 									}}
 									style={{backgroundColor: surfaceColor, color: "white", height: "50px"}}
 									>
-									{selectedActionParameters[count].options.map(data => (
-										<MenuItem key={data} style={{backgroundColor: inputColor, color: "white"}} value={data}>
-											{data}
-										</MenuItem>
-									))}
+									{selectedActionParameters[count].options.map((data, index) => {
+										const split_data = data.split("||")
+										var viewed_data = data
+										if (split_data.length > 1) {
+											viewed_data = split_data[0]
+										}
+
+										return (
+											<MenuItem key={data} style={{backgroundColor: inputColor, color: "white"}} value={data}>
+												{viewed_data}
+											</MenuItem>
+										)
+									})}
 								</Select>
 
 						} else if (data.variant === "STATIC_VALUE") {
@@ -6628,15 +6636,15 @@ const AngularWorkflow = (props) => {
 					<div style={{display: "flex"}}>
 						<h2>Executing Workflow</h2>		
 						<Tooltip color="primary" title="Rerun workflow" placement="top">
-							<span>
-							<Button color="primary" style={{float: "right"}} onClick={() => {
-								console.log("DATA: ", executionData)
-								executeWorkflow(executionData.execution_argument, executionData.start)
-								setExecutionModalOpen(false)
-								//executionText, workflow.start)
-							}}>
-								<CachedIcon style={{}}/>
-							</Button>
+							<span style={{}}>
+								<Button color="primary" style={{float: "right", marginTop: 20, marginLeft: 10,}} onClick={() => {
+									console.log("DATA: ", executionData)
+									executeWorkflow(executionData.execution_argument, executionData.start)
+									setExecutionModalOpen(false)
+									//executionText, workflow.start)
+								}}>
+									<CachedIcon style={{}}/>
+								</Button>
 							</span>
 						</Tooltip>
 					</div>
