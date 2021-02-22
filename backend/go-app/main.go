@@ -17,6 +17,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	//"regexp"
@@ -3558,10 +3559,13 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		//	bodyWrapper = string(parsedBody)
 		//}
 
+		url := &url.URL{}
 		newRequest := &http.Request{
+			URL:    url,
 			Method: "POST",
 			Body:   ioutil.NopCloser(bytes.NewReader(b)),
 		}
+		//start, startok := request.URL.Query()["start"]
 
 		// OrgId: activeOrgs[0].Id,
 		workflowExecution, executionResp, err := handleExecution(item, workflow, newRequest)
@@ -6762,6 +6766,7 @@ func handleCloudExecutionOnprem(workflowId, startNode, executionSource, executio
 
 	log.Println(string(b))
 	newRequest := &http.Request{
+		URL:    &url.URL{},
 		Method: "POST",
 		Body:   ioutil.NopCloser(bytes.NewReader(b)),
 	}
