@@ -4,10 +4,13 @@ import {BrowserView, MobileView} from "react-device-detect";
 import {Link} from 'react-router-dom';
 
 import List from '@material-ui/core/List';
+import Avatar from '@material-ui/core/Avatar';
+import Menu from '@material-ui/core/Menu';
 import ListItem from '@material-ui/core/ListItem';
 import MenuItem from '@material-ui/core/MenuItem';
 import Select from '@material-ui/core/Select';
 import Button from '@material-ui/core/Button';
+import IconButton from '@material-ui/core/IconButton';
 import HomeIcon from '@material-ui/icons/Home';
 import PolymerIcon from '@material-ui/icons/Polymer';
 import AppsIcon from '@material-ui/icons/Apps';
@@ -27,6 +30,7 @@ const Header = props => {
 	const [LoginHoverColor, setLoginHoverColor] = useState(hoverOutColor);
 	const [DocsHoverColor, setDocsHoverColor] = useState(hoverOutColor);
   const [HelpHoverColor, setHelpHoverColor] = useState(hoverOutColor);
+  const [anchorEl, setAnchorEl] = React.useState(null);
 
 	const hrefStyle = {
 		color: hoverOutColor,
@@ -101,6 +105,17 @@ const Header = props => {
 	const handleLoginHoverOut = () => {
     	setLoginHoverColor(hoverOutColor)
   	}
+
+
+  const handleClick = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+
 
 	// Should be based on some path
 	const logoCheck = !homePage ?  null : null
@@ -182,76 +197,45 @@ const Header = props => {
 				</List>
 			</div>
 			<div style={{flex: "10", display: "flex", flexDirection: "row-reverse"}}>
-				<List style={{display: 'flex', flexDirection: 'row-reverse'}} component="nav">
-					<ListItem style={{flex: "1", textAlign: "center"}}>
-						<div onMouseOver={handleLoginHover} onMouseOut={handleLoginHoverOut} onClick={handleClickLogout} style={{color: LoginHoverColor, cursor: "pointer"}}> 
-        	    	Logout
-        	  </div>
-        	</ListItem>
-					{logoCheck}		
-        	<ListItem style={{flex: "1", textAlign: "center"}}>
+				<IconButton color="primary" style={{marginRight: 15, }} aria-controls="simple-menu" aria-haspopup="true" onClick={(event) => {
+					setAnchorEl(event.currentTarget);
+				}}>
+					<Avatar style={{height: 35, width: 35,}} alt="Your username here" src="" />
+				</IconButton>
+				<Menu
+					id="simple-menu"
+					anchorEl={anchorEl}
+					keepMounted
+					open={Boolean(anchorEl)}
+					onClose={() => {
+						handleClose()
+					}}
+				>
+					<MenuItem onClick={(event) => {
+						event.preventDefault()
+						handleClose() 
+					}}>
 						<Link to="/settings" style={hrefStyle}>
-							<Button 
-								style={{}} 
-								variant="outlined"
-								color="primary"> Settings</Button>
+							Settings
 						</Link>
-        	</ListItem>
-					{/*
-      		<ListItem>
-						<Link to="/contact" style={hrefStyle}>
-							<Button 
-								style={{}} 
-								variant="contained"
-								color="primary"
-							> 
-								Contact	
-							</Button>
-						</Link>
-					</ListItem>
-					*/}
-					{userdata === undefined || userdata.admin === undefined || userdata.admin === null || !userdata.admin ? null : 
-						<ListItem>
-							<Link to="/admin" style={hrefStyle}>
-								<Button 
-									style={{}} 
-									variant="contained"
-									color="primary"
-								> 
-									Admin	
-								</Button>
-							</Link>
-						</ListItem>
-					}
-					{userdata === undefined || userdata.orgs === undefined || userdata.orgs === null || userdata.orgs.length <= 1 ? null :
-						<ListItem>
-							<Select
-								SelectDisplayProps={{
-									style: {
-										marginLeft: 10,
-									}
-								}}
-								value={userdata.selected_org}
-								fullWidth
-								style={{backgroundColor: theme.palette.surfaceColor, color: "white", height: "50px"}}
-								onChange={(e) => {
-									console.log("SET ORG TO ", e.target.value)
-								}}
-								>
-								{userdata.orgs.map(data => {
-									return (
-										<MenuItem key={data.id} style={{backgroundColor: theme.palette.inputColor, color: "white"}} value={data}>
-											{data.name}
-										</MenuItem>
-									)
-								})}
-							</Select>
-						</ListItem>
-					}
-
-				</List>
+					</MenuItem>
+					<MenuItem style={{color: "white"}} onClick={(event) => {
+						event.preventDefault()
+						handleClose() 
+						handleClickLogout()
+					}}>
+						Logout
+					</MenuItem>
+				</Menu>
+				{userdata === undefined || userdata.admin === undefined || userdata.admin === null || !userdata.admin ? null : 
+					<Link to="/admin" style={hrefStyle}>
+						<Button color="primary" variant="contained" style={{marginRight: 15, marginTop: 12}}>
+							Admin
+						</Button>
+					</Link>
+				}
 			</div>
-	    </div>
+	  </div>
 
 	const loginTextMobile = !isLoggedIn ? 
     	<div style={{display: "flex"}}>
@@ -327,7 +311,7 @@ const Header = props => {
 
 	// <Divider style={{height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 	const loadedCheck = 
-		<div style={{minHeight: 68}}>
+		<div style={{minHeight: 60}}>
 			<BrowserView>
       			{loginTextBrowser}
 			</BrowserView>

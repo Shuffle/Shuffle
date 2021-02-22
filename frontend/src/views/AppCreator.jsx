@@ -195,7 +195,7 @@ const AppCreator = (props) => {
 	const alert = useAlert()
 
 	var upload = ""
-	const increaseAmount = 30
+	const increaseAmount = 50
 	const actionNonBodyRequest = ["GET", "HEAD", "DELETE", "CONNECT"]
 	const actionBodyRequest = ["POST", "PUT", "PATCH",]
 	const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth", ]
@@ -444,6 +444,10 @@ const AppCreator = (props) => {
 			}
 
 			if (data.info["x-categories"] !== undefined  && data.info["x-categories"].length > 0) {
+				if (typeof(data.info["x-categories"]) == "array") {
+				} else {
+
+				}
 				setNewWorkflowCategories(data.info["x-categories"])
 			}
 		}
@@ -922,6 +926,7 @@ const AppCreator = (props) => {
 					//console.log(queryitem)
 				}
 			} 
+			//data.paths[item.url][item.method.toLowerCase()].parameters.push(newitem)
 
 			if (item.paths.length > 0) {
 				for (querykey in item.paths) {
@@ -1230,6 +1235,11 @@ const AppCreator = (props) => {
 		newAction.errors.push("Can't have the same name")
 
 		actions.push(newAction)
+
+		if (actions.length > actionAmount) { 
+			setActionAmount(actions.length)
+		}
+
 		setActions(actions)
 		setUpdate(Math.random())
 	}
@@ -1539,6 +1549,11 @@ const AppCreator = (props) => {
 			actions[actionIndex] = currentAction
 		}
 
+
+		if (actions.length > actionAmount) { 
+			setActionAmount(actions.length)
+		}
+
 		setActions(actions)
 	}
 
@@ -1702,7 +1717,7 @@ const AppCreator = (props) => {
 			<FormControl style={{backgroundColor: surfaceColor, color: "white",}}>
 				<DialogTitle><div style={{color: "white"}}>New action</div></DialogTitle>
 				<DialogContent>
-					<Link target="_blank" to="https://shuffler.io/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more about actions</Link>
+					<a target="_blank" href="https://shuffler.io/docs/workflows#conditions" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more about actions</a>
 					<div style={{marginTop: "15px"}}/>
 					Name
 					<TextField
@@ -1814,13 +1829,19 @@ const AppCreator = (props) => {
 						}}
 						onBlur={event => {
 							var parsedurl = event.target.value
+							console.log("URL: ", parsedurl)
+							if (parsedurl.includes("<") && parsedurl.includes(">")) {
+								console.log("REPLACE")
+								parsedurl = parsedurl.replace("<", "{")
+								parsedurl = parsedurl.replace(">", "}")
+							}
+
 							if (parsedurl.startsWith("PUT ") || parsedurl.startsWith("GET ") ||parsedurl.startsWith("POST ") || parsedurl.startsWith("DELETE ") ||parsedurl.startsWith("PATCH ") || parsedurl.startsWith("CONNECT ")) {
 								const tmp = parsedurl.split(" ")
 
 								if (tmp.length > 1) {
 									parsedurl = tmp[1]
 									setActionField("url", parsedurl)
-									setUrlPath(parsedurl)
 
 									setCurrentActionMethod(tmp[0].toUpperCase())
 									setActionField("method", tmp[0].toUpperCase())
@@ -1886,12 +1907,15 @@ const AppCreator = (props) => {
 										}
 
 										// Check URL query && headers 
-										setActionField("url", parsedurl)
-										setUrlPath(parsedurl)
+										//setActionField("url", parsedurl)
 									}
 								}
 							}
 
+							if (event.target.value !== parsedurl) {
+								setUrlPath(parsedurl)
+								setActionField("url", parsedurl)
+							}
 							//console.log("URL: ", request.url)
 						}}
 					/>
@@ -1966,13 +1990,14 @@ const AppCreator = (props) => {
 	      <Button color="primary" variant="outlined" style={{borderRadius: "0px"}} onClick={() => {
 						//console.log(urlPathQueries)
 						//console.log(urlPath)
-						//console.log(currentAction)
+						console.log(currentAction)
 						const errors = getActionErrors()		
 						addActionToView(errors)
 						setActionsModalOpen(false)
 						setUrlPathQueries([]) 
 						setUrlPath("")
 						setFileUploadEnabled(false)
+
 					}}>
 						Submit	
 					</Button>
@@ -1980,31 +2005,20 @@ const AppCreator = (props) => {
 			</FormControl>
 		</Dialog>
 
+
+	const categories = [
+		"Communication",
+		"Cases",
+		"EDR",
+		"Intel",
+		"SIEM",
+		"Network",
+		"Assets",
+		"Other",
+	]
 	const tagView = 
 		<div style={{color: "white"}}>
-			<h2>Tags</h2>
-			<ChipInput
-				style={{marginTop: 10}}
-				InputProps={{
-					style:{
-						color: "white",
-					},
-				}}
-				placeholder="Tags"
-				color="primary"
-				fullWidth
-				value={newWorkflowTags}
-				onAdd={(chip) => {
-					newWorkflowTags.push(chip)
-					setNewWorkflowTags(newWorkflowTags)
-					setUpdate("added"+chip)
-				}}
-				onDelete={(chip, index) => {
-					newWorkflowTags.splice(index, 1)
-					setNewWorkflowTags(newWorkflowTags)
-					setUpdate("delete "+chip)
-				}}
-			/>
+			{/*
 			<ChipInput
 				style={{marginTop: 10}}
 				InputProps={{
@@ -2027,13 +2041,58 @@ const AppCreator = (props) => {
 					setUpdate("delete "+chip)
 				}}
 			/>
+			*/}
+			<h4>Categories</h4>
+			<Select
+				fullWidth
+				SelectDisplayProps={{
+					style: {
+						marginLeft: 10,
+					}
+				}}
+				onChange={(e) => {
+					setNewWorkflowCategories([e.target.value])
+					setUpdate("added "+e.target.value)
+				}}
+				value={newWorkflowCategories.length === 0 ? "Select a category" : newWorkflowCategories[0]}
+				style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+				>
+				{categories.map(data => (
+					<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+						{data}
+					</MenuItem>
+				))}
+			</Select>
+			<h4>Tags</h4>
+			<ChipInput
+				style={{marginTop: 10}}
+				InputProps={{
+					style:{
+						color: "white",
+					},
+				}}
+				placeholder="Tags"
+				color="primary"
+				fullWidth
+				value={newWorkflowTags}
+				onAdd={(chip) => {
+					newWorkflowTags.push(chip)
+					setNewWorkflowTags(newWorkflowTags)
+					setUpdate("added"+chip)
+				}}
+				onDelete={(chip, index) => {
+					newWorkflowTags.splice(index, 1)
+					setNewWorkflowTags(newWorkflowTags)
+					setUpdate("delete "+chip)
+				}}
+			/>
 		</div>
 
 	const actionView = 
 		<div style={{color: "white"}}>
 			<h2>Actions ({actions.length})</h2>
 			Actions are the tasks performed by an app. Read more about actions and apps
-			<Link target="_blank" to="https://shuffler.io/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}> here</Link>.
+			<a target="_blank" src="https://shuffler.io/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}> here</a>.
 			<div>
 				{loopActions}
 				<div style={{display: "flex"}}>
@@ -2053,8 +2112,10 @@ const AppCreator = (props) => {
 						setCurrentActionMethod(actionNonBodyRequest[0])
 						setActionsModalOpen(true)
 					}}>New action</Button> 				
+					{/*
+					{actionAmount} {actions.length}
 					{actionAmount > 0 && actionAmount < actions.length ? null :  
-						<Button color="primary" style={{marginTop: "20px", borderRadius: "0px", textAlign: "center"}} variant="outlined" onClick={() => {
+						<Button color="primary" style={{float: "right", marginTop: "20px", borderRadius: "0px", textAlign: "center"}} variant="outlined" onClick={() => {
 							if (actionAmount+increaseAmount > actions.length) {
 								setActionAmount(actions.length)
 							} else {
@@ -2064,6 +2125,7 @@ const AppCreator = (props) => {
 							See more actions	
 						</Button>
 					}
+					*/}
 				</div>
 			</div>
 		</div>
@@ -2136,7 +2198,7 @@ const AppCreator = (props) => {
 						</h2>
 					</Link>
 					<h2>
-						{name}
+						{name} {actions === null || actions === undefined || actions.length === 0 ? null : <span>({actions.length})</span>}
 					</h2>
 				</Breadcrumbs>
 				<Paper style={boxStyle}>

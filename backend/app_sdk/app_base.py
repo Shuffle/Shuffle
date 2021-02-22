@@ -7,9 +7,10 @@ import json
 import logging
 import requests
 import urllib.parse
+import http.client
+import urllib3
 
 class AppBase:
-    """ The base class for Python-based apps in Shuffle, handles logging and callbacks configurations"""
     __version__ = None
     app_name = None
 
@@ -21,7 +22,7 @@ class AppBase:
         # apikey is for the user / org
         # authorization is for the specific workflow
         self.url = os.getenv("CALLBACK_URL", "https://shuffler.io")
-        self.base_url = os.getenv("BASE_URL", "")
+        self.base_url = os.getenv("BASE_URL", "https://shuffler.io")
         self.action = os.getenv("ACTION", "")
         self.authorization = os.getenv("AUTHORIZATION", "")
         self.current_execution_id = os.getenv("EXECUTIONID", "")
@@ -29,7 +30,10 @@ class AppBase:
         self.result_wrapper_count = 0
 
         if isinstance(self.action, str):
-            self.action = json.loads(self.action)
+            try:
+                self.action = json.loads(self.action)
+            except:
+                print("[WARNING] Failed parsing action as JSON")
 
         if len(self.base_url) == 0:
             self.base_url = self.url
@@ -40,20 +44,33 @@ class AppBase:
         if action_result["status"] == "EXECUTING":
             action_result["status"] = "FAILURE"
 
+        # FIXME: Add cleanup of parameters to not send to frontend here
+        params = {}
+        #action = action_result["action"]
+        #try:
+        #    for item in action["authentication"]:
+        #        for action["parameters"]
+        #        print("AUTH: ", key, value)
+        #        params[item["key"]] = item["value"]
+        #except KeyError:
+        #    print("No authentication specified!")
+        #    pass
+
         # I wonder if this actually works 
         self.logger.info("Before last stream result")
         url = "%s%s" % (self.base_url, stream_path)
-        print("URL: %s" % url)
+        #print("[INFO] URL (URL): %s" % url)
         try:
             ret = requests.post(url, headers=headers, json=action_result)
             self.logger.info("Result: %d" % ret.status_code)
             if ret.status_code != 200:
                 self.logger.info(ret.text)
         except requests.exceptions.ConnectionError as e:
-            self.logger.exception(e)
+            #self.logger.exception("ConnectionError: %s" % e)
+            self.logger.info("Expected ConnectionError happened")
             return
         except TypeError as e:
-            self.logger.exception(e)
+            #self.logger.exception(e)
             action_result["status"] = "FAILURE"
             action_result["result"] = "POST error: %s" % e
             self.logger.info("Before typeerror stream result")
@@ -61,6 +78,12 @@ class AppBase:
             self.logger.info("Result: %d" % ret.status_code)
             if ret.status_code != 200:
                 self.logger.info(ret.text)
+        except http.client.RemoteDisconnected as e:
+            self.logger.info("Expected Remotedisconnect happened")
+            return
+        except urllib3.exceptions.ProtocolError as e:
+            self.logger.info("Expected ProtocolError happened")
+            return
 
     async def cartesian_product(self, L):
         if L:
@@ -108,6 +131,11 @@ class AppBase:
         # 1. For the first array, take the total amount(y) (2x3=6) and divide it by the current array (x): 2. x/y = 3. This means do 3 of each value
         # 2. For the second array, take the total amount(y) (2x3=6) and divide it by the current array (x): 3. x/y = 2. 
         # 3. What does the 3rd array do? Same, but ehhh?
+        # 
+        # Example4:
+        # What if there are multiple loops inside a single item?
+        # 
+        #
 
         paramlist = []
         listitems = []
@@ -130,7 +158,7 @@ class AppBase:
                 octothorpe_count = param["value"].count(".#")
                 if octothorpe_count > self.result_wrapper_count:
                     self.result_wrapper_count = octothorpe_count
-                    print("NEW OCTOTHORPE WRAPPER: %d" % octothorpe_count)
+                    print("[INFO] NEW OCTOTHORPE WRAPPER: %d" % octothorpe_count)
 
             # This whole thing is hard.
             # item = [{"data": "1.2.3.4", "dataType": "ip"}] 
@@ -270,7 +298,7 @@ class AppBase:
                 newparams[key] = value[0]
                 has_loop = True 
             else:
-                print("Key %s is NOT a list within a list: %s" % (key, value))
+                print("Key %s is NOT a list within a list" % (key))
 
                 newparams[key] = value
         
@@ -408,7 +436,7 @@ class AppBase:
 
             content_path = "/api/v1/files/%s/content?execution_id=%s" % (item, full_execution["execution_id"])
             ret2 = requests.get("%s%s" % (self.url, content_path), headers=headers)
-            print("RET2 (file get): %s" % ret2.text)
+            print("RET2 (file get) done")
             if ret2.status_code == 200:
                 tmpdata = ret1.json()
                 returndata = {
@@ -513,8 +541,21 @@ class AppBase:
             "status": "EXECUTING"
         }
 
+        # Simple validation of parameters in general
+        try:
+            tmp_parameters = action["parameters"]
+        except KeyError:
+            action["parameters"] = []
+        except TypeError:
+            pass
+
         self.action = copy.deepcopy(action)
-        self.logger.info("ACTION RESULT (start): %s", action_result)
+        self.logger.info("Sending starting action result (EXECUTING)")
+
+        headers = {
+            "Content-Type": "application/json",     
+            "Authorization": "Bearer %s" % self.authorization
+        }
 
         if len(self.action) == 0:
             print("ACTION env not defined")
@@ -534,10 +575,6 @@ class AppBase:
             self.send_result(action_result, headers, stream_path) 
             return
 
-        headers = {
-            "Content-Type": "application/json",     
-            "Authorization": "Bearer %s" % self.authorization
-        }
 
         # Add async logger
         # self.console_logger.handlers[0].stream.set_execution_id()
@@ -720,7 +757,7 @@ class AppBase:
                     else:
                         tmp = json.loads(parsedlist)[lastsplit[0]]
 
-                    print(tmp)
+                    #print(tmp)
                     return tmp
                 except IndexError as e:
                     return default_error
@@ -751,8 +788,8 @@ class AppBase:
             # Do stuff here.
             innervalue = parse_nested_param(data, maxDepth(data)-0)
             outervalue = parse_nested_param(data, maxDepth(data)-1)
-            print("INNER: ", innervalue)
-            print("OUTER: ", outervalue)
+            #print("INNER: ", innervalue)
+            #print("OUTER: ", outervalue)
         
             if outervalue != innervalue:
                 #print("Outer: ", outervalue, " inner: ", innervalue)
@@ -769,7 +806,7 @@ class AppBase:
                     print("Parsed value from %s: %s" % (thistype, parsed_value))
                     return (parsed_value, True)
         
-            print("DATA: %s\n" % data)
+            #print("DATA: %s\n" % data)
             return (parse_wrapper(data)[0], True)
         
 
@@ -829,12 +866,12 @@ class AppBase:
                 return data
         
             if len(parsedlist) > 0 and not non_string:
-                print("Returning parsed list: ", parsedlist)
+                #print("Returning parsed list: ", parsedlist)
                 return " ".join(parsedlist)
             elif len(parsedlist) == 1 and non_string:
                 return parsedlist[0]
             else:
-                print("Casting back to string because multi: ", parsedlist)
+                #print("Casting back to string because multi: ", parsedlist)
                 newlist = []
                 for item in parsedlist:
                     try:
@@ -848,13 +885,13 @@ class AppBase:
         # Parses JSON loops and such down to the item you're looking for
         def recurse_json(basejson, parsersplit):
             match = "#(\d+):?-?([0-9a-z]+)?#?"
-            print("Split: %s\n%s" % (parsersplit, basejson))
+            #print("Split: %s\n%s" % (parsersplit, basejson))
             try:
                 outercnt = 0
 
                 # Loops over split values
                 for value in parsersplit:
-                    print("VALUE: %s\n" % value)
+                    #print("VALUE: %s\n" % value)
                     actualitem = re.findall(match, value, re.MULTILINE)
                     if value == "#":
                         newvalue = []
@@ -875,7 +912,7 @@ class AppBase:
                         return newvalue, True
 
                     elif len(actualitem) > 0:
-                        print("[INFO] In recursion v2: ", actualitem)
+                        #print("[INFO] In recursion v2: ", actualitem)
 
                         is_loop = True
                         newvalue = []
@@ -884,7 +921,7 @@ class AppBase:
 
                         # Means it's a single item -> continue
                         if seconditem == "":
-                            print("[INFO] In first - handling %s" % firstitem)
+                            #print("[INFO] In first - handling %s" % firstitem)
                             tmpitem = basejson[int(firstitem)]
                             try:
                                 newvalue, is_loop = recurse_json(tmpitem, parsersplit[outercnt+1:])
@@ -1018,7 +1055,7 @@ class AppBase:
             except KeyError as error:
                 print(f"KeyError in JSON: {error}")
         
-            print(f"[INFO] After first trycatch. Baseresult: ", baseresult)
+            print(f"[INFO] After first trycatch. Baseresult")#, baseresult)
         
             # 2. Find the JSON data
             if len(baseresult) == 0:
@@ -1031,7 +1068,7 @@ class AppBase:
             baseresult = baseresult.replace(" True,", " true,")
             baseresult = baseresult.replace(" False", " false,")
 
-            print("[INFP] After third parser return - Formatted: ", baseresult)
+            print("[INFO] After third parser return - Formatted")#, baseresult)
             basejson = {}
             try:
                 basejson = json.loads(baseresult)
@@ -1346,6 +1383,8 @@ class AppBase:
         actionname = action["name"]
         if " " in actionname:
             actionname.replace(" ", "_", -1) 
+
+
         #if action.generated:
         #    actionname = actionname.lower()
 
@@ -1383,6 +1422,20 @@ class AppBase:
                         bodyindex = -1
                         for parameter in action["parameters"]:
                             counter += 1
+
+                            # Hack for key:value in options using ||
+                            try:
+                                if parameter["options"] != None and len(parameter["options"]) > 0:
+                                    #print(f'OPTIONS: {parameter["options"]}')
+                                    #print(f'OPTIONS VAL: {parameter}')
+                                    if "||" in parameter["value"]:
+                                        splitvalue = parameter["value"].split("||")
+                                        if len(splitvalue) > 1:
+                                            print(f'[INFO] Parsed split || options of actions["parameters"]["name"]')
+                                            action["parameters"][counter]["value"] = splitvalue[1]
+
+                            except (IndexError, KeyError, TypeError) as e:
+                                print("Options err: {e}")
 
                             if parameter["name"] == "body": 
                                 bodyindex = counter
@@ -1441,10 +1494,10 @@ class AppBase:
                             except KeyError:
                                 pass
 
-                            print("Return value: %s" % value)
+                            #print("Return value: %s" % value)
                             actionname = action["name"]
                             #print("Multicheck ", actualitem)
-                            print("ITEM LENGTH: %d, Actual item: %s" % (len(actualitem), actualitem))
+                            #print("ITEM LENGTH: %d, Actual item: %s" % (len(actualitem), actualitem))
                             if len(actualitem) > 0:
                                 multiexecution = True
 
@@ -1464,6 +1517,7 @@ class AppBase:
 
                                     #json_replacement = tmpitem.replace(actualitem[0][0], replacement, 1)
                                     #print("AFTER POST replacement: %s" % json_replacement)
+                                    #json_replacement = replacement
                                     try:
                                         json_replacement = json.loads(replacement)
                                     except json.decoder.JSONDecodeError as e:
@@ -1475,11 +1529,13 @@ class AppBase:
 
                                     if len(json_replacement) > minlength:
                                         minlength = len(json_replacement)
+
+                                    print("PRE new_replacement")
                                     
                                     # FIXME: Only do this IF they want to loop
                                     new_replacement = []
                                     for i in range(len(json_replacement)):
-                                        if isinstance(json_replacement[i], dict) or isinstance(json_replacement[i], dict):
+                                        if isinstance(json_replacement[i], dict) or isinstance(json_replacement[i], list):
                                             tmp_replacer = json.dumps(json_replacement[i])
                                             newvalue = tmpitem.replace(actualitem[0][0], tmp_replacer, 1)
                                         else:
@@ -1531,9 +1587,9 @@ class AppBase:
                                         multi_parameters[parameter["name"]] = resultarray 
 
                                     multi_execution_lists.append(new_replacement)
-                                    print("MULTI finished: %s" % json_replacement)
+                                    #print("MULTI finished: %s" % json_replacement)
                                 else:
-                                    print("(2) Pre replacement: %s" % actualitem)
+                                    print("(2) Pre replacement. ") #% actualitem)
                                     # This is here to handle for loops within variables.. kindof
                                     # 1. Find the length of the longest array
                                     # 2. Build an array with the base values based on parameter["value"] 
@@ -1603,14 +1659,14 @@ class AppBase:
 
                                     # With this parameter ready, add it to... a greater list of parameters. Rofl
                                     print("LENGTH OF ARR: %d" % len(resultarray))
-                                    print("RESULTARRAY: %s" % resultarray)
+                                    #print("RESULTARRAY: %s" % resultarray)
                                     if resultarray not in multi_execution_lists:
                                         multi_execution_lists.append(resultarray)
 
                                     multi_parameters[parameter["name"]] = resultarray
                             else:
                                 # Parses things like int(value)
-                                print("Normal parsing (not looping) with data %s" % value)
+                                print("Normal parsing (not looping)")#with data %s" % value)
                                 value = parse_wrapper_start(value)
 
                                 if parameter["id"] == "body_replacement": 
@@ -1630,7 +1686,7 @@ class AppBase:
                                 #    print("PARAM: %s" % parameter)
                                 #if param.id == "body_replacement":
 
-                                print("POST data value: %s" % value)
+                                #print("POST data value: %s" % value)
                                 params[parameter["name"]] = value
                                 multi_parameters[parameter["name"]] = value 
 
@@ -1685,10 +1741,10 @@ class AppBase:
                             #    "id": "body_replacement",
                             #})
 
-                            print("[INFO] APP_SDK DONE: Starting NORMAL execution of function")
-                            print("[INFO] Running with params (0): %s" % params) 
+                            #print("[INFO] APP_SDK DONE: Starting NORMAL execution of function")
+                            print("[INFO] Running normal execution\n") 
                             newres = await func(**params)
-                            print("[INFO] Returned from execution:", newres)
+                            print("\n[INFO] Returned from execution with datalength!")#, newres)
                             if isinstance(newres, tuple):
                                 print("[INFO] Handling return as tuple")
                                 # Handles files.
@@ -1714,7 +1770,7 @@ class AppBase:
                                 
                                 result = json.dumps(tmp_result)
                             elif isinstance(newres, str):
-                                print("[INFO] Handling return as string")
+                                print("[INFO] Handling return as string of length %d" % len(newres))
                                 result += newres
                             else:
                                 try:
@@ -1723,9 +1779,9 @@ class AppBase:
                                     result += "Failed autocasting. Can't handle %s type from function. Must be string" % type(newres)
                                     print("Can't handle type %s value from function" % (type(newres)))
 
-                            print("[INFO] POST NEWRES RESULT: ", result)
+                            print("[INFO] POST NEWRES RESULT!")#, result)
                         else:
-                            print("[INFO] APP_SDK DONE: Starting MULTI execution (length: %d) with values %s" % (minlength, multi_parameters))
+                            #print("[INFO] APP_SDK DONE: Starting MULTI execution (length: %d) with values %s" % (minlength, multi_parameters))
                             # 1. Use number of executions based on the arrays being similar
                             # 2. Find the right value from the parsed multi_params
 
@@ -1901,21 +1957,40 @@ class AppBase:
         self.send_result(action_result, headers, stream_path)
         return
 
-
-        #STOPCOPY
-        # !!! Let the above line stay - its used for some horrible codegeneration / stitching !!! # 
-
     @classmethod
-    async def run(cls):
-        """ Connect to Redis and HTTP session, await actions """
+    async def run(cls, action=""):
         logging.basicConfig(format="{asctime} - {name} - {levelname}:{message}", style='{')
         logger = logging.getLogger(f"{cls.__name__}")
         logger.setLevel(logging.DEBUG)
-        print("Started execution!!")
+
+        #print("Started execution: %s!!" % cls)
+        #print("Action: %s" % action)
+        #if isinstance(cls, object):
+        #    self.action = cls
 
         app = cls(redis=None, logger=logger, console_logger=logger)
 
-        # Authorization for the app/function to control the workflow
-        # Function will crash if its wrong, which it probably should. 
+        if isinstance(action, str):
+            print("Normal execution. Action is a string.")
+        elif isinstance(action, object):
+            app.action = action
+
+            try:
+                app.authorization = action["authorization"]
+                app.current_execution_id = action["execution_id"]
+            except:
+                pass
+
+            try:
+                app.url = action["url"]
+            except:
+                pass
+
+            try:
+                app.base_url = action["base_url"]
+            except:
+                pass
+        else:
+            print("ACTION TYPE (unhandled): %s" % type(action))
 
         await app.execute_action(app.action)

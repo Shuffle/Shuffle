@@ -190,6 +190,10 @@ type WorkflowApp struct {
 		Name string `json:"name" datastore:"name" yaml:"name"`
 		Url  string `json:"url" datastore:"url" yaml:"url"`
 	} `json:"contact_info" datastore:"contact_info" yaml:"contact_info" required:false`
+	ReferenceInfo struct {
+		DocumentationUrl string `json:"documentation_url" datastore:"documentation_url"`
+		GithubUrl        string `json:"github_url" datastore:"github_url"`
+	}
 	Actions        []WorkflowAppAction `json:"actions" yaml:"actions" required:true datastore:"actions,noindex"`
 	Authentication Authentication      `json:"authentication" yaml:"authentication" required:false datastore:"authentication"`
 	Tags           []string            `json:"tags" yaml:"tags" required:false datastore:"activated"`
@@ -266,6 +270,7 @@ type WorkflowExecution struct {
 	ExecutionArgument  string         `json:"execution_argument" datastore:"execution_argument,noindex"`
 	ExecutionId        string         `json:"execution_id" datastore:"execution_id"`
 	ExecutionSource    string         `json:"execution_source" datastore:"execution_source"`
+	ExecutionParent    string         `json:"execution_parent" datastore:"execution_parent"`
 	ExecutionOrg       string         `json:"execution_org" datastore:"execution_org"`
 	WorkflowId         string         `json:"workflow_id" datastore:"workflow_id"`
 	LastNode           string         `json:"last_node" datastore:"last_node"`
@@ -317,6 +322,7 @@ type Action struct {
 	AuthenticationId string `json:"authentication_id" datastore:"authentication_id"`
 	Example          string `json:"example,omitempty" datastore:"example"`
 	AuthNotRequired  bool   `json:"auth_not_required,omitempty" datastore:"auth_not_required" yaml:"auth_not_required"`
+	Category         string `json:"category" datastore:"category"`
 }
 
 // Added environment for location to execute
@@ -406,8 +412,27 @@ type Workflow struct {
 		Name        string `json:"name" datastore:"name"`
 		Value       string `json:"value" datastore:"value,noindex"`
 	} `json:"execution_variables,omitempty" datastore:"execution_variables"`
-	ExecutionEnvironment string `json:"execution_environment" datastore:"execution_environment"`
-	PreviouslySaved      bool   `json:"first_save" datastore:"first_save"`
+	ExecutionEnvironment string     `json:"execution_environment" datastore:"execution_environment"`
+	PreviouslySaved      bool       `json:"first_save" datastore:"first_save"`
+	Categories           Categories `json:"categories" datastore:"categories"`
+	ExampleArgument      string     `json:"example_argument" datastore:"example_argument,noindex"`
+}
+
+type Category struct {
+	Name        string `json:"name" datastore:"name"`
+	Description string `json:"description" datastore:"description"`
+	Count       int64  `json:"count" datastore:"count"`
+}
+
+type Categories struct {
+	SIEM          Category `json:"siem" datastore:"siem"`
+	Communication Category `json:"communication" datastore:"communication"`
+	Assets        Category `json:"assets" datastore:"assets"`
+	Cases         Category `json:"cases" datastore:"cases"`
+	Network       Category `json:"network" datastore:"network"`
+	Intel         Category `json:"intel" datastore:"intel"`
+	EDR           Category `json:"edr" datastore:"edr"`
+	Other         Category `json:"other" datastore:"other"`
 }
 
 type ActionResult struct {
@@ -796,7 +821,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	if len(executionRequests.Data) == 0 {
 		executionRequests.Data = []ExecutionRequest{}
 	} else {
-		log.Printf("[INFO] Executionrequests: %d", len(executionRequests.Data))
+		log.Printf("[INFO] Executionrequests (%s): %d", id, len(executionRequests.Data))
 	}
 
 	newjson, err := json.Marshal(executionRequests)
@@ -1138,6 +1163,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 			log.Printf("[WARNING] Actionresult is %s for node %s in %s. Continuing anyway because of workflow configuration.", actionResult.Status, actionResult.Action.ID, workflowExecution.ExecutionId)
 			// Finds ALL childnodes to set them to SKIPPED
 			childNodes = findChildNodes(*workflowExecution, actionResult.Action.ID)
+
 			// Remove duplicates
 			//log.Printf("CHILD NODES: %d", len(childNodes))
 			for _, nodeId := range childNodes {
@@ -1198,6 +1224,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 							Name:       curAction.Name,
 							ID:         curAction.ID,
 						}
+
 						newResult := ActionResult{
 							Action:        newAction,
 							ExecutionId:   actionResult.ExecutionId,
@@ -1641,13 +1668,16 @@ func getWorkflows(resp http.ResponseWriter, request *http.Request) {
 			q = q.Limit(35)
 			_, err = dbclient.GetAll(ctx, q, &workflows)
 			if err != nil {
-				log.Printf("Failed getting workflows for user %s: %s", user.Username, err)
+				log.Printf("Failed getting workflows for user %s: %s (0)", user.Username, err)
 				resp.WriteHeader(401)
 				resp.Write([]byte(`{"success": false}`))
 				return
 			}
 		} else {
-			log.Printf("Failed getting workflows for user %s: %s", user.Username, err)
+			log.Printf("Failed getting workflows for user %s: %s (1)", user.Username, err)
+			//DeleteKey(ctx, "workflow", "5694357e-8063-4580-8529-301cc72df951")
+
+			//log.Printf("Workflows: %#v", workflows)
 			resp.WriteHeader(401)
 			resp.Write([]byte(`{"success": false}`))
 			return
@@ -1998,11 +2028,10 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	err = increaseStatisticsField(ctx, "total_workflows", fileId, -1, workflow.OrgId)
-	if err != nil {
-		log.Printf("Failed to increase total workflows: %s", err)
-	}
-
+	//err = increaseStatisticsField(ctx, "total_workflows", fileId, -1, workflow.OrgId)
+	//if err != nil {
+	//	log.Printf("Failed to increase total workflows: %s", err)
+	//}
 	//memcacheName := fmt.Sprintf("%s_%s", user.Username, fileId)
 	//memcache.Delete(ctx, memcacheName)
 	//memcacheName = fmt.Sprintf("%s_workflows", user.Username)
@@ -2036,7 +2065,7 @@ func updateAppAuth(auth AppAuthenticationStorage, workflowId, nodeId string, add
 	// FIXME: Add a way to use !add to remove
 	updateAuth := false
 	if !workflowFound && add {
-		log.Printf("Adding workflow things to auth!")
+		log.Printf("[INFO] Adding workflow things to auth!")
 		usageItem := AuthenticationUsage{
 			WorkflowId: workflowId,
 			Nodes:      []string{nodeId},
@@ -2047,14 +2076,14 @@ func updateAppAuth(auth AppAuthenticationStorage, workflowId, nodeId string, add
 		auth.NodeCount += 1
 		updateAuth = true
 	} else if !nodeFound && add {
-		log.Printf("Adding node things to auth!")
+		log.Printf("[INFO] Adding node things to auth!")
 		auth.Usage[workflowIndex].Nodes = append(auth.Usage[workflowIndex].Nodes, nodeId)
 		auth.NodeCount += 1
 		updateAuth = true
 	}
 
 	if updateAuth {
-		log.Printf("Updating auth!")
+		log.Printf("[INFO] Updating auth!")
 		ctx := context.Background()
 		err := setWorkflowAppAuthDatastore(ctx, auth, auth.Id)
 		if err != nil {
@@ -2064,6 +2093,52 @@ func updateAppAuth(auth AppAuthenticationStorage, workflowId, nodeId string, add
 	}
 
 	return nil
+}
+
+// Identifies what a category defined really is
+func handleCategoryIncrease(categories Categories, action Action, workflowapps []WorkflowApp) Categories {
+	if action.Category == "" {
+		appName := action.AppName
+		for _, app := range workflowapps {
+			if appName != strings.ToLower(app.Name) {
+				continue
+			}
+
+			if len(app.Categories) > 0 {
+				log.Printf("[INFO] Setting category for %s: %s", app.Name, app.Categories)
+				action.Category = app.Categories[0]
+				break
+			}
+		}
+
+		//log.Printf("Should find app's categories as it's empty during save")
+		return categories
+	}
+
+	//log.Printf("Action: %s, category: %s", action.AppName, action.Category)
+	// FIXME: Make this an "autodiscover" that's controlled by the category itself
+	// Should just be a list that's looped against :)
+	newCategory := strings.ToLower(action.Category)
+	if strings.Contains(newCategory, "case") || strings.Contains(newCategory, "ticket") || strings.Contains(newCategory, "alert") || strings.Contains(newCategory, "mssp") {
+		categories.Cases.Count += 1
+	} else if strings.Contains(newCategory, "siem") || strings.Contains(newCategory, "event") || strings.Contains(newCategory, "log") || strings.Contains(newCategory, "search") {
+		categories.SIEM.Count += 1
+	} else if strings.Contains(newCategory, "sms") || strings.Contains(newCategory, "comm") || strings.Contains(newCategory, "phone") || strings.Contains(newCategory, "call") || strings.Contains(newCategory, "chat") || strings.Contains(newCategory, "mail") || strings.Contains(newCategory, "phish") {
+		categories.Communication.Count += 1
+	} else if strings.Contains(newCategory, "intel") || strings.Contains(newCategory, "crim") || strings.Contains(newCategory, "ti") {
+		categories.Intel.Count += 1
+	} else if strings.Contains(newCategory, "sand") || strings.Contains(newCategory, "virus") || strings.Contains(newCategory, "malware") || strings.Contains(newCategory, "scan") || strings.Contains(newCategory, "edr") || strings.Contains(newCategory, "endpoint detection") {
+		// Sandbox lol
+		categories.EDR.Count += 1
+	} else if strings.Contains(newCategory, "vuln") || strings.Contains(newCategory, "fim") || strings.Contains(newCategory, "fim") || strings.Contains(newCategory, "integrity") {
+		categories.Assets.Count += 1
+	} else if strings.Contains(newCategory, "network") || strings.Contains(newCategory, "firewall") || strings.Contains(newCategory, "waf") || strings.Contains(newCategory, "switch") {
+		categories.Network.Count += 1
+	} else {
+		categories.Other.Count += 1
+	}
+
+	return categories
 }
 
 // Saves a workflow to an ID
@@ -2166,6 +2241,9 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - this shouldn't be necessary with proper API checks
 	newActions := []Action{}
 	allNodes := []string{}
+	workflow.Categories = Categories{}
+
+	workflowapps, apperr := getAllWorkflowApps(ctx, 500)
 
 	//log.Printf("Action: %#v", action.Authentication)
 	for _, action := range workflow.Actions {
@@ -2193,6 +2271,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 			action.Errors = []string{}
 		}
 
+		workflow.Categories = handleCategoryIncrease(workflow.Categories, action, workflowapps)
 		newActions = append(newActions, action)
 	}
 
@@ -2200,10 +2279,9 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("[WORKFLOW INIT] NOT PREVIOUSLY SAVED - SET ACTION AUTH!")
 		//AuthenticationId string `json:"authentication_id,omitempty" datastore:"authentication_id"`
 
-		workflowapps, apperr := getAllWorkflowApps(ctx, 500)
 		allAuths, err := getAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
 		if err == nil && len(workflowapps) > 0 && apperr == nil {
-			log.Printf("Setting actions")
+			//log.Printf("Setting actions")
 			actionFixing := []Action{}
 			appsAdded := []string{}
 			for _, action := range newActions {
@@ -2335,7 +2413,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	workflow.Actions = newActions
 	newTriggers := []Trigger{}
 	for _, trigger := range workflow.Triggers {
-		log.Printf("Trigger %s: %s", trigger.TriggerType, trigger.Status)
+		log.Printf("[INFO] Trigger %s: %s", trigger.TriggerType, trigger.Status)
 
 		// Check if it's actually running
 		// FIXME: Do this for other triggers too
@@ -2533,7 +2611,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - might be a sploit to run someone elses app if getAllWorkflowApps
 	// doesn't check sharing=true
 	// Have to do it like this to add the user's apps
-	log.Println("Apps set starting")
+	//log.Println("Apps set starting")
 	//log.Printf("EXIT ON ERROR: %#v", workflow.Configuration.ExitOnError)
 	workflowApps := []WorkflowApp{}
 	//memcacheName = "all_apps"
@@ -2758,8 +2836,11 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		Errors:  workflow.Errors,
 	}
 
-	cacheKey := fmt.Sprintf("workflowapps-sorted")
+	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
 	requestCache.Delete(cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
+	requestCache.Delete(cacheKey)
+
 	log.Printf("[INFO] Saved new version of workflow %s (%s) for org %s", workflow.Name, fileId, workflow.OrgId)
 	resp.WriteHeader(200)
 	newBody, err := json.Marshal(returndata)
@@ -3048,6 +3129,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	}
 
 	makeNew := true
+	start, startok := request.URL.Query()["start"]
 	if request.Method == "POST" {
 		body, err := ioutil.ReadAll(request.Body)
 		if err != nil {
@@ -3057,9 +3139,43 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 
 		// This one doesn't really matter.
 		log.Printf("[INFO] Running POST execution with body of length %d", len(string(body)))
+
+		if len(body) >= 4 {
+			if body[0] == 34 && body[len(body)-1] == 34 {
+				body = body[1 : len(body)-1]
+			}
+			if body[0] == 34 && body[len(body)-1] == 34 {
+				body = body[1 : len(body)-1]
+			}
+		}
+
+		//workflowExecution.ExecutionSource = "default"
+		sourceWorkflow, sourceWorkflowOk := request.URL.Query()["source_workflow"]
+		if sourceWorkflowOk {
+			//log.Printf("Got source workflow %s", sourceWorkflow)
+			workflowExecution.ExecutionSource = sourceWorkflow[0]
+		} else {
+			//log.Printf("Did NOT get source workflow")
+
+		}
+
+		sourceExecution, sourceExecutionOk := request.URL.Query()["source_execution"]
+		if sourceExecutionOk {
+			//log.Printf("[INFO] Got source execution%s", sourceExecution)
+			workflowExecution.ExecutionParent = sourceExecution[0]
+		} else {
+			//log.Printf("Did NOT get source execution")
+		}
+
 		if len(string(body)) < 50 {
+			//log.Println(body)
+			// String in string
+			//log.Println(body)
+
+			//if string(body)[0] == "\"" && string(body)[string(body)
 			log.Printf("Body: %s", string(body))
 		}
+
 		var execution ExecutionRequest
 		err = json.Unmarshal(body, &execution)
 		if err != nil {
@@ -3113,12 +3229,11 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		// Check for parameters of start and ExecutionId
 		// This is mostly used for user input trigger
 
-		start, startok := request.URL.Query()["start"]
 		answer, answerok := request.URL.Query()["answer"]
 		referenceId, referenceok := request.URL.Query()["reference_execution"]
 		if answerok && referenceok {
 			// If answer is false, reference execution with result
-			log.Printf("Answer is OK AND reference is OK!")
+			log.Printf("[INFO] Answer is OK AND reference is OK!")
 			if answer[0] == "false" {
 				log.Printf("Should update reference and return, no need for further execution!")
 
@@ -3189,12 +3304,12 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		}
 
 		// Don't override workflow defaults
-		if startok {
-			log.Printf("Setting start to %s based on query!", start[0])
-			//workflowExecution.Workflow.Start = start[0]
-			workflowExecution.Start = start[0]
-		}
+	}
 
+	if startok {
+		//log.Printf("\n\n[INFO] Setting start to %s based on query!\n\n", start[0])
+		//workflowExecution.Workflow.Start = start[0]
+		workflowExecution.Start = start[0]
 	}
 
 	// FIXME - regex uuid, and check if already exists?
@@ -3382,7 +3497,42 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 				break
 			}
 		}
+
+		if trigger.AppName == "User Input" || trigger.AppName == "Shuffle Workflow" {
+			found := false
+			for _, node := range childNodes {
+				if node == trigger.ID {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				//log.Printf("SHOULD SET TRIGGER %s TO BE SKIPPED", trigger.ID)
+
+				curaction := Action{
+					AppName:    trigger.AppName,
+					AppVersion: trigger.AppVersion,
+					Label:      trigger.Label,
+					Name:       trigger.Name,
+					ID:         trigger.ID,
+				}
+
+				defaultResults = append(defaultResults, ActionResult{
+					Action:        curaction,
+					ExecutionId:   workflowExecution.ExecutionId,
+					Authorization: workflowExecution.Authorization,
+					Result:        "Skipped because it's not under the startnode",
+					StartedAt:     0,
+					CompletedAt:   0,
+					Status:        "SKIPPED",
+				})
+			} else {
+				log.Printf("SHOULD KEEP TRIGGER %s", trigger.ID)
+			}
+		}
 	}
+	//childNodes := findChildNodes(workflowExecution, workflowExecution.Start)
 
 	if !startFound {
 		log.Printf("Startnode %s doesn't exist!", workflowExecution.Start)
@@ -4625,7 +4775,7 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 		user.PrivateApps = privateApps
 		err = setUser(ctx, &user)
 		if err != nil {
-			log.Printf("[ERROR]Failed removing %s app for user %s: %s", app.Name, user.Username, err)
+			log.Printf("[ERROR] Failed removing %s app for user %s: %s", app.Name, user.Username, err)
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": true"}`)))
 			return
@@ -4645,7 +4795,9 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		log.Printf("Failed to increase total apps loaded stats: %s", err)
 	}
-	cacheKey := fmt.Sprintf("workflowapps-sorted")
+	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
+	requestCache.Delete(cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
 	requestCache.Delete(cacheKey)
 
 	//err = memcache.Delete(request.Context(), sessionToken)
@@ -4659,13 +4811,7 @@ func getWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, userErr := handleApiAuthentication(resp, request)
-	if userErr != nil {
-		log.Printf("Api authentication failed in edit workflow: %s", userErr)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
+	ctx := context.Background()
 
 	location := strings.Split(request.URL.String(), "/")
 	var fileId string
@@ -4679,23 +4825,67 @@ func getWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 		fileId = location[4]
 	}
 
-	ctx := context.Background()
 	app, err := getApp(ctx, fileId)
 	if err != nil {
-		log.Printf("Error getting app (app config): %s", fileId)
+		log.Printf("[WARNING] Error getting app %s (app config): %s", fileId, err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+		return
+	}
+
+	//if IsValid       bool   `json:"is_valid" yaml:"is_valid" required:true datastore:"is_valid"`
+	// Sharing       bool   `json:"sharing" yaml:"sharing" required:false datastore:"sharing"`
+	//log.Printf("Sharing: %s", app.Sharing)
+	//log.Printf("Generated: %s", app.Generated)
+	//log.Printf("Downloaded: %s", app.Downloaded)
+
+	// FIXME - Handle sharing and such PROPERLY
+	if app.Sharing && app.Generated {
+		log.Printf("CAN SHARE APP!")
+		parsedApi, err := getOpenApiDatastore(ctx, fileId)
+		if err != nil {
+			log.Printf("[WARNING] OpenApi doesn't exist for: %s - err: %s", fileId, err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		if len(parsedApi.ID) > 0 {
+			parsedApi.Success = true
+		} else {
+			parsedApi.Success = false
+		}
+
+		//log.Printf("PARSEDAPI: %#v", parsedApi)
+		data, err := json.Marshal(parsedApi)
+		if err != nil {
+			log.Printf("[WARNING] Error parsing api json: %s", err)
+			resp.WriteHeader(422)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed marshalling new parsed swagger: %s"}`, err)))
+			return
+		}
+
+		resp.WriteHeader(200)
+		resp.Write(data)
+		return
+	}
+
+	user, userErr := handleApiAuthentication(resp, request)
+	if userErr != nil {
+		log.Printf("[WARNING] Api authentication failed in get app: %s", userErr)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
 
 	if user.Id != app.Owner && user.Role != "admin" {
-		log.Printf("Wrong user (%s) for app %s", user.Username, app.Name)
+		log.Printf("[WARNING] Wrong user (%s) for app %s", user.Username, app.Name)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
 
-	log.Printf("Getting app %s", fileId)
+	log.Printf("[INFO] Getting app %s (OpenAPI)", fileId)
 	parsedApi, err := getOpenApiDatastore(ctx, fileId)
 	if err != nil {
 		log.Printf("OpenApi doesn't exist for: %s - err: %s", fileId, err)
@@ -5212,7 +5402,9 @@ func updateWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	cacheKey := fmt.Sprintf("workflowapps-sorted")
+	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
+	requestCache.Delete(cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
 	requestCache.Delete(cacheKey)
 
 	log.Printf("Changed workflow app %s", app.ID)
@@ -5825,7 +6017,7 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("Starting app hotloading")
+	log.Printf("[INFO] Starting app hotloading")
 
 	// Just need to be logged in
 	// FIXME - should have some permissions?
@@ -5850,7 +6042,7 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("Hotloading from %s", location)
+	log.Printf("[INFO] Hotloading from %s", location)
 	err = handleAppHotload(location, true)
 	if err != nil {
 		log.Printf("Failed app hotload: %s", err)
@@ -5970,6 +6162,11 @@ func loadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s is unsupported"}`, tmpBody.URL)))
 		return
 	}
+
+	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
+	requestCache.Delete(cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
+	requestCache.Delete(cacheKey)
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
@@ -6105,7 +6302,9 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 							continue
 						}
 
-						cacheKey := fmt.Sprintf("workflowapps-sorted")
+						cacheKey := fmt.Sprintf("workflowapps-sorted-100")
+						requestCache.Delete(cacheKey)
+						cacheKey = fmt.Sprintf("workflowapps-sorted-500")
 						requestCache.Delete(cacheKey)
 					}
 				} else {
@@ -6489,7 +6688,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 				if !reservedFound {
 					buildLaterFirst = append(buildLaterFirst, buildLater)
 				} else {
-					log.Printf("\n\n[WARNING] Skipping build of %s to later\n\n", workflowapp.Name)
+					log.Printf("[WARNING] Skipping build of %s to later", workflowapp.Name)
 				}
 			}
 		}
@@ -6619,7 +6818,9 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	//memcache.Delete(ctx, "all_apps")
-	cacheKey := fmt.Sprintf("workflowapps-sorted")
+	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
+	requestCache.Delete(cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
 	requestCache.Delete(cacheKey)
 
 	resp.WriteHeader(200)
@@ -6677,18 +6878,76 @@ func getWorkflowExecutions(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// Query for the specifci workflowId
-	q := datastore.NewQuery("workflowexecution").Filter("workflow_id =", fileId).Order("-started_at").Limit(30)
+	maxAmount := 30
+	q := datastore.NewQuery("workflowexecution").Filter("workflow_id =", fileId).Order("-started_at").Limit(maxAmount)
 	var workflowExecutions []WorkflowExecution
 	_, err = dbclient.GetAll(ctx, q, &workflowExecutions)
 	if err != nil {
+
 		if strings.Contains(fmt.Sprintf("%s", err), "ResourceExhausted") {
-			q = datastore.NewQuery("workflowexecution").Filter("workflow_id =", fileId).Order("-started_at").Limit(15)
-			_, err = dbclient.GetAll(ctx, q, &workflowExecutions)
-			if err != nil {
-				log.Printf("Error getting workflowexec (2): %s", err)
-				resp.WriteHeader(401)
-				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting all workflowexecutions for %s"}`, fileId)))
-				return
+			q = datastore.NewQuery("workflowexecution").Filter("workflow_id =", fileId).Order("-started_at").Limit(1)
+			/*
+				_, err = dbclient.GetAll(ctx, q, &workflowExecutions)
+				if err != nil {
+					log.Printf("Error getting workflowexec (2): %s", err)
+					resp.WriteHeader(401)
+					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting all workflowexecutions for %s"}`, fileId)))
+					return
+				}
+			*/
+
+			cursorStr := ""
+			for {
+				it := dbclient.Run(ctx, q)
+				//_, err = it.Next(&app)
+				for {
+					var workflowExecution WorkflowExecution
+					_, err := it.Next(&workflowExecution)
+					if err != nil {
+						break
+					}
+
+					workflowExecutions = append(workflowExecutions, workflowExecution)
+				}
+
+				//log.Printf("Len: %d", len(workflowExecutions))
+				if len(workflowExecutions) > maxAmount {
+					break
+				}
+
+				nextCursor, err := it.Cursor()
+				if err != iterator.Done && err != nil {
+					if strings.Contains(fmt.Sprintf("%s", err), "ResourceExhausted") {
+						//log.Printf("NEXT!")
+						nextStr := fmt.Sprintf("%s", nextCursor)
+						if cursorStr == nextStr {
+							break
+						}
+
+						cursorStr = nextStr
+
+						continue
+					} else {
+						log.Printf("BREAK: %s", err)
+						break
+					}
+				}
+
+				if err != nil {
+					log.Printf("Cursorerror: %s", err)
+					break
+				} else {
+					//log.Printf("NEXTCURSOR: %s", nextCursor)
+					nextStr := fmt.Sprintf("%s", nextCursor)
+					if cursorStr == nextStr {
+						break
+					}
+
+					cursorStr = nextStr
+					q = q.Start(nextCursor)
+					//cursorStr = nextCursor
+					//break
+				}
 			}
 		} else {
 			log.Printf("Error getting workflowexec: %s", err)
@@ -6761,6 +7020,10 @@ func getAllWorkflowApps(ctx context.Context, maxLen int) ([]WorkflowApp, error) 
 			_, err := it.Next(&app)
 			if err != nil {
 				break
+			}
+
+			if app.Name == "Shuffle Subflow" {
+				continue
 			}
 
 			found := false

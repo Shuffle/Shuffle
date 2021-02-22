@@ -29,6 +29,7 @@ import PublishIcon from '@material-ui/icons/Publish';
 //import JSONPretty from 'react-json-pretty';
 //import JSONPrettyMon from 'react-json-pretty/dist/monikai'
 import ReactJson from 'react-json-view'
+import Dropzone from '../components/Dropzone';
 
 import {Link} from 'react-router-dom';
 import { useAlert } from "react-alert";
@@ -108,6 +109,8 @@ const Workflows = (props) => {
 	const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
 	const [editingWorkflow, setEditingWorkflow] = React.useState({})
 	const [executionLoading, setExecutionLoading] = React.useState(false)
+	const [isDropzone, setIsDropzone] = React.useState(false);
+
 	const { start, stop } = useInterval({
 	  	duration: 5000,
 	  	startImmediate: false,
@@ -180,6 +183,58 @@ const Workflows = (props) => {
 		</Dialog>
 	: null
 
+	const uploadFile = (e) => {
+		const isDropzone = e.dataTransfer === undefined ? false : e.dataTransfer.files.length > 0;
+		const files = isDropzone ? e.dataTransfer.files : e.target.files;
+		
+    const reader = new FileReader();
+		alert.info("Starting upload. Please wait while we validate the workflows")
+
+		try {
+			reader.addEventListener('load', (e) => {
+				var data = e.target.result;
+				setIsDropzone(false)
+				try {
+					data = JSON.parse(reader.result)
+				} catch (e) {
+					alert.error("Invalid JSON: "+e)
+					return
+				}
+
+				// Initialize the workflow itself
+				const ret = setNewWorkflow(data.name, data.description, data.tags, {}, false)
+				.then((response) => {
+					if (response !== undefined) {
+						// SET THE FULL THING
+						data.id = response.id
+
+						// Actually create it
+						const ret = setNewWorkflow(data.name, data.description, data.tags, data, false)
+						.then((response) => {
+							if (response !== undefined) {
+								alert.success("Successfully imported "+data.name)
+							}
+						})
+					}
+				})
+				.catch(error => {
+					alert.error("Import error: "+error.toString())
+				});
+			})
+		} catch (e) {
+			console.log("Error in dropzone: ", e)
+		}
+
+		reader.readAsText(files[0]);
+  }
+
+	useEffect(() => {
+		if (isDropzone) {
+			//redirectOpenApi();
+			setIsDropzone(false);
+		}
+  }, [isDropzone]);
+
 	const getAvailableWorkflows = () => {
 		fetch(globalUrl+"/api/v1/workflows", {
     	  method: 'GET',
@@ -191,18 +246,21 @@ const Workflows = (props) => {
     })
 		.then((response) => {
 			if (response.status !== 200) {
-				console.log("Status not 200 for workflows :O!")
+				console.log("Status not 200 for workflows :O!: ", response.status)
+				alert.info("Failed getting workflows.")
+				setWorkflowDone(true)
+
 				return 
 			}
 			return response.json()
 		})
-    	.then((responseJson) => {
+    .then((responseJson) => {
 			setSelectedExecution({})
 			setWorkflowExecutions([])
 
 			if (responseJson !== undefined) {
 				setWorkflows(responseJson)
-					setWorkflowDone(true)
+				setWorkflowDone(true)
 			} else {
 				if (isLoggedIn) {
 					alert.error("An error occurred while loading workflows")
@@ -392,23 +450,44 @@ const Workflows = (props) => {
 		let exportFileDefaultName = data.name+'.json';
 
 		data["owner"] = ""
-		for (var key in data.triggers) {
-			const trigger = data.triggers[key]
-			if (trigger.app_name === "Shuffle Workflow") {
-				if (trigger.parameters.length > 2) {
-					trigger.parameters[2].value = ""
+		if (data.triggers !== null && data.triggers !== undefined) {
+			for (var key in data.triggers) {
+				const trigger = data.triggers[key]
+				if (trigger.app_name === "Shuffle Workflow") {
+					if (trigger.parameters.length > 2) {
+						trigger.parameters[2].value = ""
+					}
+				} 
+				
+				if (trigger.status == "running") {
+					trigger.status = "stopped"
 				}
-			} 
-			
-			if (trigger.status == "running") {
-				trigger.status = "stopped"
 			}
 		}
 
-		for (var key in data.actions) {
-			data.actions[key].authentication_id = ""
+		if (data.actions !== null && data.actions !== undefined) {
+			for (var key in data.actions) {
+				data.actions[key].authentication_id = ""
+
+				for (var subkey in data.actions[key].parameters) {
+					const param = data.actions[key].parameters[subkey]
+					if (param.name.includes("key") || param.name.includes("user") || param.name.includes("pass") || param.name.includes("api") || param.name.includes("auth") || param.name.includes("secret")) {
+						param.value = ""
+					}
+				}
+			}
 		}
 
+		if (data.workflow_variables !== null && data.workflow_variables !== undefined) {
+			for (var key in data.workflow_variables) {
+				const param = data.workflow_variables[key]
+				if (param.name.includes("key") || param.name.includes("user") || param.name.includes("pass") || param.name.includes("api") || param.name.includes("auth") || param.name.includes("secret")) {
+					param.value = ""
+				}
+			}
+		}
+
+		//console.log(data)
 		//return
 
 		data["org"] = []
@@ -1453,7 +1532,9 @@ const Workflows = (props) => {
 
 	const loadedCheck = isLoaded && isLoggedIn && workflowDone ? 
 		<div>
-			<WorkflowView />
+			<Dropzone style={{maxWidth: window.innerWidth > 1366 ? 1366 : 1200, margin: "auto", padding: 20 }} onDrop={uploadFile}>
+				<WorkflowView />
+			</Dropzone>
 			{modalView}
 			{deleteModal}
 			{workflowDownloadModalOpen}

@@ -299,7 +299,7 @@ func buildImage(tags []string, dockerfileFolder string) error {
 		return err
 	}
 
-	log.Printf("Tags: %s", tags)
+	log.Printf("[INFO] Docker Tags: %s", tags)
 	dockerfileSplit := strings.Split(dockerfileFolder, "/")
 
 	// Create a buffer

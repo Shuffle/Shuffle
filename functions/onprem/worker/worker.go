@@ -571,8 +571,6 @@ type WorkflowAppAction struct {
 	AuthNotRequired  bool   `json:"auth_not_required" datastore:"auth_not_required" yaml:"auth_not_required"`
 }
 
-// FIXME: Generate a callback authentication ID?
-// FIXME: Add org check ..
 type WorkflowExecution struct {
 	Type               string         `json:"type" datastore:"type"`
 	Status             string         `json:"status" datastore:"status"`
@@ -580,6 +578,7 @@ type WorkflowExecution struct {
 	ExecutionArgument  string         `json:"execution_argument" datastore:"execution_argument,noindex"`
 	ExecutionId        string         `json:"execution_id" datastore:"execution_id"`
 	ExecutionSource    string         `json:"execution_source" datastore:"execution_source"`
+	ExecutionParent    string         `json:"execution_parent" datastore:"execution_parent"`
 	ExecutionOrg       string         `json:"execution_org" datastore:"execution_org"`
 	WorkflowId         string         `json:"workflow_id" datastore:"workflow_id"`
 	LastNode           string         `json:"last_node" datastore:"last_node"`
@@ -599,6 +598,7 @@ type WorkflowExecution struct {
 	} `json:"execution_variables,omitempty" datastore:"execution_variables,omitempty"`
 	OrgId string `json:"org_id" datastore:"org_id"`
 }
+
 type Action struct {
 	AppName           string                       `json:"app_name,omitempty" datastore:"app_name"`
 	AppVersion        string                       `json:"app_version,omitempty" datastore:"app_version"`
@@ -839,7 +839,7 @@ func shutdown(executionId, workflowId string) {
 		log.Printf("[INFO] Failed abort request: %s", err)
 	}
 
-	sleepDuration := 0
+	sleepDuration := 1
 	log.Printf("[INFO] Finished shutdown (after %d seconds).", sleepDuration)
 	// Allows everything to finish in subprocesses
 	time.Sleep(time.Duration(sleepDuration) * time.Second)
@@ -1114,16 +1114,16 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 				if isSkipped {
 					//log.Printf("Skipping %s as all parents are done", item.Action.Label)
 					if !arrayContains(visited, item.Action.ID) {
-						log.Printf("Adding visited (1): %s", item.Action.Label)
+						log.Printf("[INFO] Adding visited (1): %s", item.Action.Label)
 						visited = append(visited, item.Action.ID)
 					}
 				} else {
-					log.Printf("Continuing %s as all parents are NOT done", item.Action.Label)
+					log.Printf("[INFO] Continuing %s as all parents are NOT done", item.Action.Label)
 					appendActions = append(appendActions, item.Action.ID)
 				}
 			} else {
 				if item.Status == "FINISHED" {
-					log.Printf("Adding visited (2): %s", item.Action.Label)
+					log.Printf("[INFO] Adding visited (2): %s", item.Action.Label)
 					visited = append(visited, item.Action.ID)
 				}
 			}
@@ -1149,7 +1149,7 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 	// care if it gets stuck in a loop.
 	// FIXME: Force killing a worker should result in a notification somewhere
 	if len(nextActions) == 0 {
-		log.Printf("No next action. Finished? Result vs Actions: %d - %d", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
+		log.Printf("[INFO] No next action. Finished? Result vs Actions: %d - %d", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
 		exit := true
 		for _, item := range workflowExecution.Results {
 			if item.Status == "EXECUTING" {
@@ -1235,6 +1235,7 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 	// IF NOT VISITED && IN toExecuteOnPrem
 	// SKIP if it's not onprem
 	toRemove := []int{}
+	//log.Printf("\n\nNEXTACTIONS: %#v\n\n", nextActions)
 	for index, nextAction := range nextActions {
 		action := getAction(workflowExecution, nextAction, environment)
 		// check visited and onprem
@@ -1273,11 +1274,22 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 				}
 			}
 
+			// FIXME: Add startnode from frontend
 			action.Parameters = []WorkflowAppActionParameter{}
 			for _, parameter := range trigger.Parameters {
 				parameter.Variant = "STATIC_VALUE"
 				action.Parameters = append(action.Parameters, parameter)
 			}
+
+			action.Parameters = append(action.Parameters, WorkflowAppActionParameter{
+				Name:  "source_workflow",
+				Value: workflowExecution.Workflow.ID,
+			})
+
+			action.Parameters = append(action.Parameters, WorkflowAppActionParameter{
+				Name:  "source_execution",
+				Value: workflowExecution.ExecutionId,
+			})
 
 			//trigger.LargeImage = ""
 			//err = handleSubworkflowExecution(client, workflowExecution, trigger, action)
@@ -1366,7 +1378,7 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 		}
 
 		if continueOuter {
-			log.Printf("Parents of %s aren't finished: %s", nextAction, strings.Join(parents[nextAction], ", "))
+			log.Printf("[INFO] Parents of %s aren't finished: %s", nextAction, strings.Join(parents[nextAction], ", "))
 			//for _, tmpaction := range parents[nextAction] {
 			//	action := getAction(workflowExecution, tmpaction)
 			//	_ = action
@@ -1379,10 +1391,10 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 		// get action status
 		actionResult := getResult(workflowExecution, nextAction)
 		if actionResult.Action.ID == action.ID {
-			log.Printf("%s already has status %s.", action.ID, actionResult.Status)
+			log.Printf("[INFO] %s already has status %s.", action.ID, actionResult.Status)
 			continue
 		} else {
-			log.Printf("%s:%s has no status result yet. Should execute.", action.Name, action.ID)
+			log.Printf("[INFO] %s:%s has no status result yet. Should execute.", action.Name, action.ID)
 		}
 
 		appname := action.AppName
@@ -1434,7 +1446,7 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 		}
 
 		// marshal action and put it in there rofl
-		log.Printf("Time to execute %s (%s) with app %s:%s, function %s, env %s with %d parameters.", action.ID, action.Label, action.AppName, action.AppVersion, action.Name, action.Environment, len(action.Parameters))
+		log.Printf("[INFO] Time to execute %s (%s) with app %s:%s, function %s, env %s with %d parameters.", action.ID, action.Label, action.AppName, action.AppVersion, action.Name, action.Environment, len(action.Parameters))
 
 		actionData, err := json.Marshal(action)
 		if err != nil {
@@ -1457,7 +1469,7 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 		// Sending full execution so that it won't have to load in every app
 		// This might be an issue if they can read environments, but that's alright
 		// if everything is generated during execution
-		log.Printf("Deployed with CALLBACK_URL %s and BASE_URL %s", appCallbackUrl, baseUrl)
+		log.Printf("[INFO] Deployed with CALLBACK_URL %s and BASE_URL %s", appCallbackUrl, baseUrl)
 		env := []string{
 			fmt.Sprintf("ACTION=%s", string(actionData)),
 			fmt.Sprintf("EXECUTIONID=%s", workflowExecution.ExecutionId),
@@ -1582,7 +1594,7 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 			}
 		}
 
-		log.Printf("Adding visited (3): %s", action.Label)
+		log.Printf("[INFO] Adding visited (3): %s", action.Label)
 
 		visited = append(visited, action.ID)
 		executed = append(executed, action.ID)
@@ -1612,7 +1624,7 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 		}
 
 		if shutdownCheck {
-			log.Println("BREAKING BECAUSE RESULTS IS SAME LENGTH AS ACTIONS. SHOULD CHECK ALL RESULTS FOR WHETHER THEY'RE DONE")
+			log.Println("[INFO] BREAKING BECAUSE RESULTS IS SAME LENGTH AS ACTIONS. SHOULD CHECK ALL RESULTS FOR WHETHER THEY'RE DONE")
 			validateFinished(workflowExecution)
 			shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
 		}
@@ -1625,16 +1637,23 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 func executionInit(workflowExecution WorkflowExecution) error {
 	parents = map[string][]string{}
 	children = map[string][]string{}
-	triggersHandled := []string{}
 
 	startAction = workflowExecution.Start
+	log.Printf("[INFO] STARTACTION: %s", startAction)
 	if len(startAction) == 0 {
-		log.Printf("Didn't find execution start action. Setting it to workflow start action.")
+		log.Printf("[INFO] Didn't find execution start action. Setting it to workflow start action.")
 		startAction = workflowExecution.Workflow.Start
 	}
 
-	nextActions = append(nextActions, startAction)
+	// Setting up extra counter
+	for _, trigger := range workflowExecution.Workflow.Triggers {
+		//log.Printf("Appname trigger (0): %s", trigger.AppName)
+		if trigger.AppName == "User Input" || trigger.AppName == "Shuffle Workflow" {
+			extra += 1
+		}
+	}
 
+	nextActions = append(nextActions, startAction)
 	for _, branch := range workflowExecution.Workflow.Branches {
 		// Check what the parent is first. If it's trigger - skip
 		sourceFound := false
@@ -1652,27 +1671,15 @@ func executionInit(workflowExecution WorkflowExecution) error {
 		for _, trigger := range workflowExecution.Workflow.Triggers {
 			//log.Printf("Appname trigger (0): %s", trigger.AppName)
 			if trigger.AppName == "User Input" || trigger.AppName == "Shuffle Workflow" {
-				//log.Printf("%s is a special trigger. Checking where.", trigger.AppName)
-
-				found := false
-				for _, check := range triggersHandled {
-					if check == trigger.ID {
-						found = true
-						break
-					}
-				}
-
-				if !found {
-					extra += 1
-				} else {
-					triggersHandled = append(triggersHandled, trigger.ID)
+				if branch.SourceID == "c9560766-3f85-4589-8324-311acd6be820" {
+					log.Printf("BRANCH: %#v", branch)
 				}
 
 				if trigger.ID == branch.SourceID {
-					log.Printf("Trigger %s is the source!", trigger.AppName)
+					log.Printf("[INFO] Trigger %s is the source!", trigger.AppName)
 					sourceFound = true
 				} else if trigger.ID == branch.DestinationID {
-					log.Printf("Trigger %s is the destination!", trigger.AppName)
+					log.Printf("[INFO] Trigger %s is the destination!", trigger.AppName)
 					destinationFound = true
 				}
 			}
@@ -1681,17 +1688,23 @@ func executionInit(workflowExecution WorkflowExecution) error {
 		if sourceFound {
 			parents[branch.DestinationID] = append(parents[branch.DestinationID], branch.SourceID)
 		} else {
-			log.Printf("ID %s was not found in actions! Skipping parent. (TRIGGER?)", branch.SourceID)
+			log.Printf("[INFO] ID %s was not found in actions! Skipping parent. (TRIGGER?)", branch.SourceID)
 		}
 
 		if destinationFound {
 			children[branch.SourceID] = append(children[branch.SourceID], branch.DestinationID)
 		} else {
-			log.Printf("ID %s was not found in actions! Skipping child. (TRIGGER?)", branch.SourceID)
+			log.Printf("[INFO] ID %s was not found in actions! Skipping child. (TRIGGER?)", branch.SourceID)
 		}
 	}
 
-	log.Printf("Actions: %d + Special Triggers: %d", len(workflowExecution.Workflow.Actions), extra)
+	/*
+		log.Printf("\n\n\n[INFO] CHILDREN FOUND: %#v", children)
+		log.Printf("[INFO] PARENTS FOUND: %#v", parents)
+		log.Printf("[INFO] NEXT ACTIONS: %#v\n\n", nextActions)
+	*/
+
+	log.Printf("[INFO] Actions: %d + Special Triggers: %d", len(workflowExecution.Workflow.Actions), extra)
 	onpremApps := []string{}
 	toExecuteOnprem := []string{}
 	for _, action := range workflowExecution.Workflow.Actions {
@@ -1720,7 +1733,7 @@ func executionInit(workflowExecution WorkflowExecution) error {
 	pullOptions := types.ImagePullOptions{}
 	_ = pullOptions
 	for _, image := range onpremApps {
-		log.Printf("Image: %s", image)
+		log.Printf("[INFO] Image: %s", image)
 		// Kind of gambling that the image exists.
 		if strings.Contains(image, " ") {
 			image = strings.ReplaceAll(image, " ", "-")
@@ -2053,7 +2066,10 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	//	return
 	//}
 
+	resp.WriteHeader(200)
+	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 	runWorkflowExecutionTransaction(ctx, 0, workflowExecution.ExecutionId, actionResult, resp)
+
 }
 
 func findChildNodes(workflowExecution WorkflowExecution, nodeId string) []string {
@@ -2462,15 +2478,20 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 			return
 		}
 	} else {
-		log.Printf("Skipping setexec with status %s", workflowExecution.Status)
+		log.Printf("[INFO] Skipping setexec with status %s", workflowExecution.Status)
+
+		// Just in case. Should MAYBE validate finishing another time as well.
+		// This fixes issues with e.g. Action -> Trigger -> Action.
+		handleExecutionResult(*workflowExecution)
+		//validateFinished(workflowExecution)
 	}
 
 	//if newExecutions && len(nextActions) > 0 {
 	//	handleExecutionResult(*workflowExecution)
 	//}
 
-	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+	//resp.WriteHeader(200)
+	//resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 }
 
 func getWorkflowExecution(ctx context.Context, id string) (*WorkflowExecution, error) {
@@ -2488,7 +2509,7 @@ func getWorkflowExecution(ctx context.Context, id string) (*WorkflowExecution, e
 }
 
 func validateFinished(workflowExecution WorkflowExecution) {
-	log.Printf("Status: %s, Actions: %d, Extra: %d, Results: %d\n", workflowExecution.Status, len(workflowExecution.Workflow.Actions), extra, len(workflowExecution.Results))
+	log.Printf("[INFO] Status: %s, Actions: %d, Extra: %d, Results: %d\n", workflowExecution.Status, len(workflowExecution.Workflow.Actions), extra, len(workflowExecution.Results))
 
 	//if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions)+extra {
 	if (len(environments) == 1 && requestsSent == 0 && len(workflowExecution.Results) >= 1) || (len(workflowExecution.Results) >= len(workflowExecution.Workflow.Actions) && len(workflowExecution.Workflow.Actions) > 0) {
@@ -2521,7 +2542,7 @@ func validateFinished(workflowExecution WorkflowExecution) {
 		}
 
 		body, err := ioutil.ReadAll(newresp.Body)
-		log.Printf("BACKEND STATUS: %d", newresp.StatusCode)
+		log.Printf("[INFO] BACKEND STATUS: %d", newresp.StatusCode)
 		if err != nil {
 			log.Printf("[ERROR] Failed reading body: %s", err)
 		} else {
@@ -2693,7 +2714,7 @@ func main() {
 	} else {
 		authorization = os.Getenv("AUTHORIZATION")
 		executionId = os.Getenv("EXECUTIONID")
-		log.Printf("Running normal execution with auth %s and ID %s", authorization, executionId)
+		log.Printf("[INFO] Running normal execution with auth %s and ID %s", authorization, executionId)
 	}
 
 	if len(authorization) == 0 {
@@ -2754,7 +2775,7 @@ func main() {
 
 		if firstRequest {
 			firstRequest = false
-			workflowExecution.StartedAt = int64(time.Now().Unix())
+			//workflowExecution.StartedAt = int64(time.Now().Unix())
 
 			cacheKey := fmt.Sprintf("workflowexecution-%s", workflowExecution.ExecutionId)
 			requestCache = cache.New(5*time.Minute, 10*time.Minute)

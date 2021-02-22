@@ -53,7 +53,7 @@ var environment = os.Getenv("ENVIRONMENT_NAME")
 var dockerApiVersion = os.Getenv("DOCKER_API_VERSION")
 var runningMode = strings.ToLower(os.Getenv("RUNNING_MODE"))
 var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
-var workerIds = []string{}
+var executionIds = []string{}
 
 type ExecutionRequestWrapper struct {
 	Data []ExecutionRequest `json:"data"`
@@ -172,7 +172,7 @@ func deployWorker(image string, identifier string, env []string) {
 		if strings.Contains(fmt.Sprintf("%s", err), "Conflict. The container name ") {
 			uuid := uuid.NewV4()
 			identifier = fmt.Sprintf("%s-%s", identifier, uuid)
-			log.Printf("2 - Identifier: %s", identifier)
+			log.Printf("[INFO] 2 - Identifier: %s", identifier)
 			cont, err = dockercli.ContainerCreate(
 				context.Background(),
 				config,
@@ -221,7 +221,6 @@ func deployWorker(image string, identifier string, env []string) {
 		//}
 	} else {
 		log.Printf("[INFO] Container %s was created under environment %s", cont.ID, environment)
-		//workerIds = append(workerIds, cont.ID)
 	}
 
 	return
@@ -254,11 +253,11 @@ func initializeImages() {
 	ctx := context.Background()
 
 	if appSdkVersion == "" {
-		appSdkVersion = "0.8.5"
+		appSdkVersion = "0.8.60"
 		log.Printf("[WARNING] SHUFFLE_APP_SDK_VERSION not defined. Defaulting to %s", appSdkVersion)
 	}
 	if workerVersion == "" {
-		workerVersion = "0.8.54"
+		workerVersion = "0.8.60"
 		log.Printf("[WARNING] SHUFFLE_WORKER_VERSION not defined. Defaulting to %s", workerVersion)
 	}
 
@@ -515,8 +514,6 @@ func main() {
 			continue
 		}
 
-		//log.Printf("[INFO] Got %d new requests. Executing: %d. Max: %d", len(executionRequests.Data), executionCount, maxConcurrency)
-
 		allowed := maxConcurrency - executionCount
 		if len(executionRequests.Data) > allowed {
 			log.Printf("[WARNING] Throttle - Cutting down requests from %d to %d (MAX: %d, CUR: %d)", len(executionRequests.Data), allowed, maxConcurrency, executionCount)
@@ -538,6 +535,24 @@ func main() {
 			if execution.Status == "ABORT" || execution.Status == "FAILED" {
 				log.Printf("[INFO] Executionstatus issue: ", execution.Status)
 			}
+
+			found := false
+			for _, executionId := range executionIds {
+				if execution.ExecutionId == executionId {
+					found = true
+					break
+				}
+			}
+
+			// Doesn't work because of USER INPUT
+			if found {
+				//log.Printf("[INFO] Skipping duplicate %s", execution.ExecutionId)
+				//continue
+			} else {
+				//log.Printf("[INFO] Adding to be ran %s", execution.ExecutionId)
+				executionIds = append(executionIds, execution.ExecutionId)
+			}
+
 			// Now, how do I execute this one?
 			// FIXME - if error, check the status of the running one. If it's bad, send data back.
 			containerName := fmt.Sprintf("worker-%s", execution.ExecutionId)
@@ -677,6 +692,7 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 // FIXME - add this to remove exited workers
 // Should it check what happened to the execution? idk
 func zombiecheck(ctx context.Context, workerTimeout int) error {
+	executionIds = []string{}
 	log.Println("[INFO] Looking for old containers (zombies)")
 	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
 		All: true,

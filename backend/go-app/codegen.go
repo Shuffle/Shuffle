@@ -418,11 +418,14 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 		fileBalance,
 	)
 
-	if strings.Contains(functionname, "filescan") {
-		//log.Printf("FUNCTION: %s", data)
-		log.Println(data)
-		log.Printf("Queries: %s", queryString)
-	}
+	// Use lowercase when checking
+	/*
+		if strings.Contains(functionname, "filter") {
+			//log.Printf("FUNCTION: %s", data)
+			log.Println(data)
+			log.Printf("Queries: %s", queryString)
+		}
+	*/
 
 	//log.Printf(data)
 	return functionname, data

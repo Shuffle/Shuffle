@@ -83,8 +83,8 @@ import cxtmenu from 'cytoscape-cxtmenu';
 
 import { w3cwebsocket as W3CWebSocket } from "websocket";
 import { useAlert } from "react-alert";
-import { validateJson } from "./Workflows";
-import { GetParsedPaths } from "./Apps";
+import { validateJson } from "./Workflows.jsx";
+import { GetParsedPaths } from "./Apps.jsx";
 
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
@@ -121,6 +121,8 @@ const AngularWorkflow = (props) => {
 
 	const [bodyWidth, bodyHeight] = useWindowSize();
 	const appBarSize = 74
+	const headerSize = 60
+
 	var to_be_copied = ""
 	const [cystyle, ] = useState(cytoscapestyle) 
 	const [cy, setCy] = React.useState()
@@ -135,6 +137,7 @@ const AngularWorkflow = (props) => {
 	const [workflow, setWorkflow] = React.useState({});
 	const [userSettings, setUserSettings] = React.useState({});
 	const [subworkflow, setSubworkflow] = React.useState({});
+	const [subworkflowStartnode, setSubworkflowStartnode] = React.useState("");
 	const [leftViewOpen, setLeftViewOpen] = React.useState(true);
 	const [leftBarSize, setLeftBarSize] = React.useState(350)
 	const [executionText, setExecutionText] = React.useState("");
@@ -154,6 +157,9 @@ const AngularWorkflow = (props) => {
 	const [rightSideBarOpen, setRightSideBarOpen] = React.useState(false)
 	const [showSkippedActions, setShowSkippedActions] = React.useState(false)
 	const [lastExecution, setLastExecution] = React.useState("")
+
+	// 0 = normal, 1 = just done, 2 = normal
+	const [savingState, setSavingState] = React.useState(0)
 
 	const [selectedResult, setSelectedResult] = React.useState({})
 	const [codeModalOpen, setCodeModalOpen] = React.useState(false);
@@ -253,6 +259,7 @@ const AngularWorkflow = (props) => {
 				setWorkflows(responseJson)
 
 				if (trigger_index > -1) {
+					var outersub = {}
 					const trigger = workflow.triggers[trigger_index]
 					if (trigger.parameters.length >= 3) {
 						for (var key in trigger.parameters) {
@@ -261,7 +268,22 @@ const AngularWorkflow = (props) => {
 								const sub = responseJson.find(data => data.id === param.value)
 								if (sub !== undefined && subworkflow.id !== sub.id) { 
 									setSubworkflow(sub)
+									outersub = sub
 								}
+							}
+
+							if (param.name === "startnode" && outersub.id !== undefined) {
+								console.log("SHOULD SET STARTNODE: ", outersub)
+								const innernode = outersub.actions.find(action => action.id === param.value)
+								console.log("FOUND NODE: ", innernode)
+								if (innernode !== undefined && subworkflowStartnode.id !== innernode.id) { 
+									setSubworkflowStartnode(innernode)
+								}
+								/*
+								const sub = responseJson.find(data => data.id === param.value)
+									setSubworkflow(sub)
+								}
+								*/
 							}
 						}
 					}
@@ -338,7 +360,7 @@ const AngularWorkflow = (props) => {
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for setting app auth :O!")
-			}
+			} 
 
 			return response.json()
 		})
@@ -346,7 +368,10 @@ const AngularWorkflow = (props) => {
 			if (!responseJson.success) {
 				alert.error("Failed to set app auth: "+responseJson.reason)
 			} else {
+				getAppAuthentication(true) 
 				setAuthenticationModalOpen(false) 
+
+				// Needs a refresh with the new authentication..
 				alert.success("Successfully saved new app auth")
 			}
 		})
@@ -375,7 +400,19 @@ const AngularWorkflow = (props) => {
 			if (responseJson.length > 0) {
 				// FIXME: Sort this by time
 				setWorkflowExecutions(responseJson)
+
+				const cursearch = typeof window === 'undefined' || window.location === undefined ? "" : window.location.search
+				const tmpView = new URLSearchParams(cursearch).get("execution_id")
+				if (tmpView !== undefined && tmpView !== null && tmpView.length > 0) {
+					//console.log("SHOW EXECUTION ", tmpView)
+					const execution = responseJson.find(data => data.execution_id === tmpView)
+					if (execution !== null && execution !== undefined) {
+						setExecutionData(execution)
+						setExecutionModalView(1)
+					}
+				}
 			}
+
 			//alert.info("Loaded executions")
 			//setWorkflowExecutions(responseJson)
 		})
@@ -425,7 +462,8 @@ const AngularWorkflow = (props) => {
 			handleUpdateResults(responseJson)
 		})
 		.catch(error => {
-			alert.error(error.toString())
+			console.log("Error: ", error)
+			//alert.error(error.toString())
 			stop()
 		});
 	}
@@ -433,7 +471,7 @@ const AngularWorkflow = (props) => {
 	const abortExecution = () => {
 		setExecutionRunning(false)
 
-		alert.info("Aborting execution")
+		//alert.info("Aborting execution")
 		fetch(globalUrl+"/api/v1/workflows/"+props.match.params.key+"/executions/"+executionRequest.execution_id+"/abort", {
     	  	method: 'GET',
 				headers: {
@@ -537,7 +575,7 @@ const AngularWorkflow = (props) => {
 						currentnode.removeClass('awaiting-data-highlight')
 						currentnode.addClass('success-highlight')
 
-						if (!visited.includes(item.action.label)) {
+						if (visited !== undefined && visited !== null && !visited.includes(item.action.label)) {
 							if (executionRunning) {
 								//alert.show("Success in node "+item.action.label)
 								//+" with result "+item.result)
@@ -566,6 +604,9 @@ const AngularWorkflow = (props) => {
 						}
 						break
 					case "FAILURE": 
+						//When status comes as failure, allow user to start workflow execution
+						setExecutionRunning(false)
+
 						currentnode.removeClass('not-executing-highlight')
 						currentnode.removeClass('executing-highlight')
 						currentnode.removeClass('success-highlight')
@@ -626,6 +667,7 @@ const AngularWorkflow = (props) => {
 
 	const saveWorkflow = (curworkflow) => {
 		var success = false
+		setSavingState(2)
 
 		// This might not be the right course of action, but seems logical, as items could be running already 
 		// Makes it possible to update with a version in current render
@@ -634,7 +676,7 @@ const AngularWorkflow = (props) => {
 		if (curworkflow !== undefined) {
 			useworkflow = curworkflow 
 		} else {
-			alert.info("Saving workflow")
+			//alert.info("Saving workflow")
 		}
 
 		var cyelements = cy.elements()
@@ -732,6 +774,7 @@ const AngularWorkflow = (props) => {
 	  			credentials: "include",
     		})
 		.then((response) => {
+			setSavingState(0)
 			if (response.status !== 200) {
 				console.log("Status not 200 for setting workflows :O!")
 			}
@@ -753,10 +796,15 @@ const AngularWorkflow = (props) => {
 
 					setWorkflow(workflow)
 				}
-				alert.success("Successfully saved workflow")
+				//alert.success("Successfully saved workflow")
+				setSavingState(1)
+				setTimeout(() => {
+					setSavingState(0)
+				}, 1500);
 			}
 		})
 		.catch(error => {
+			setSavingState(0)
 			alert.error(error.toString())
 		});
 
@@ -775,7 +823,7 @@ const AngularWorkflow = (props) => {
 		return true
 	}
 
-	const executeWorkflow = () => {
+	const executeWorkflow = (executionArgument, startNode) => {
 		if (!lastSaved) {
 			//alert.error("You might have forgotten to save before executing.")
 			console.log("FIXME: Might have forgotten to save before executing.")
@@ -797,13 +845,13 @@ const AngularWorkflow = (props) => {
 			curelements[i].addClass("not-executing-highlight")
 		}
 
-		if (executionText.length > 0) { 
-			alert.success("Starting execution with an execution argument")
+		if (executionArgument.length > 0) { 
+			//alert.success("Starting execution WITH an execution argument")
 		} else {
-			alert.success("Starting execution")
+			//alert.success("Starting execution")
 		}
 
-		const data = {"execution_argument": executionText, "start": workflow.start}
+		const data = {"execution_argument": executionArgument, "start": startNode}
 		fetch(globalUrl+"/api/v1/workflows/"+props.match.params.key+"/execute", {
     	  method: 'POST',
 				headers: {
@@ -930,7 +978,7 @@ const AngularWorkflow = (props) => {
 		"Http",
 	]
 
-	const getAppAuthentication = () => {
+	const getAppAuthentication = (reset) => {
 		fetch(globalUrl+"/api/v1/apps/authentication", {
 			method: 'GET',
 			headers: {
@@ -958,6 +1006,10 @@ const AngularWorkflow = (props) => {
 					newauth.push(responseJson.data[key])
 				}
 
+				if (reset === true) {
+					console.log("APP RESET = reset cy")
+					cy.on('select', 'node', (e) => onNodeSelect(e, newauth))
+				}
 				setAppAuthentication(newauth)
 			} else {
 				alert.error("Failed getting authentications")
@@ -992,7 +1044,7 @@ const AngularWorkflow = (props) => {
 			//tmpapps = tmpapps.concat(getExtraApps())
 			//tmpapps = tmpapps.concat(responseJson)
 			setApps(responseJson)
-			getAppAuthentication() 
+			//getAppAuthentication() 
 
 			setFilteredApps(responseJson.filter(app => !internalIds.includes(app.name)))
 			setPrioritizedApps(responseJson.filter(app => internalIds.includes(app.name)))
@@ -1118,7 +1170,7 @@ const AngularWorkflow = (props) => {
 		setSelectedTrigger({})
 	}
 
-	const onNodeSelect = (event) => {
+	const onNodeSelect = (event, newAppAuth) => {
 		const data = event.target.data()
 		setLastSaved(false)
 		const branch = workflow.branches.filter(branch => branch.source_id === data.id || branch.destination_id === data.id)
@@ -1149,7 +1201,8 @@ const AngularWorkflow = (props) => {
 						findAuthId = curaction.authentication_id
 					}
 
-					var tmpAuth = JSON.parse(JSON.stringify(appAuthentication))
+					var tmpAuth = JSON.parse(JSON.stringify(newAppAuth))
+					console.log("Checking authentication: ", tmpAuth)
 					for (var key in tmpAuth) {
 						var item = tmpAuth[key]
 
@@ -1168,6 +1221,7 @@ const AngularWorkflow = (props) => {
 					}
 
 					curaction.authentication = authenticationOptions
+					console.log("Authentication: ", authenticationOptions)
 					if (curaction.selectedAuthentication === null || curaction.selectedAuthentication === undefined || curaction.selectedAuthentication.length === "") {
 						curaction.selectedAuthentication = {}
 					}
@@ -1373,7 +1427,7 @@ const AngularWorkflow = (props) => {
 					//throw BreakException
 					return false 
 				}
-			});
+			})
 		}
 
 
@@ -1562,7 +1616,7 @@ const AngularWorkflow = (props) => {
 
 			cy.fit(null, 200)
 
-			cy.on('select', 'node', (e) => onNodeSelect(e))
+			cy.on('select', 'node', (e) => onNodeSelect(e, appAuthentication))
 			cy.on('select', 'edge', (e) => onEdgeSelect(e))
 			cy.on('unselect', (e) => onUnselect(e))
 
@@ -1757,13 +1811,13 @@ const AngularWorkflow = (props) => {
 	const stopSchedule = (trigger, triggerindex) => {
 		alert.info("Stopping schedule")
 		fetch(globalUrl+"/api/v1/workflows/"+props.match.params.key+"/schedule/"+trigger.id, {
-    	  	method: 'DELETE',
-				headers: {
-					'Content-Type': 'application/json',
-					'Accept': 'application/json',
-				},
-	  			credentials: "include",
-    		})
+			method: 'DELETE',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+				credentials: "include",
+		})
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for stream results :O!")
@@ -1774,21 +1828,16 @@ const AngularWorkflow = (props) => {
 		.then((responseJson) => {
 			// No matter what, it's being stopped.
 			if (!responseJson.success) {
-				alert.error("Failed to stop schedule: " + responseJson.reason)
-
-				workflow.triggers[triggerindex].status = "stopped" 
-				trigger.status = "stopped" 
-				setSelectedTrigger(trigger)
-				setWorkflow(workflow)
-				saveWorkflow(workflow)
+				alert.WARNING("Failed to stop schedule: " + responseJson.reason)
 			} else {
 				alert.success("Successfully stopped schedule")
-				workflow.triggers[triggerindex].status = "stopped" 
-				trigger.status = "stopped" 
-				setSelectedTrigger(trigger)
-				setWorkflow(workflow)
-				saveWorkflow(workflow)
 			}
+
+			workflow.triggers[triggerindex].status = "stopped" 
+			trigger.status = "stopped" 
+			setSelectedTrigger(trigger)
+			setWorkflow(workflow)
+			saveWorkflow(workflow)
 		})
 		.catch(error => {
 			alert.error(error.toString())
@@ -1859,18 +1908,11 @@ const AngularWorkflow = (props) => {
 		height: "100%",
 	}
 
-	const scrollStyle = {
-		marginTop: 10,
-		overflow: "scroll",
-		height: "100%",
-		overflowX: "auto",
-		overflowY: "auto",
-	}
 
 	const paperAppStyle = {
 		borderRadius: borderRadius,
-		minHeight: "100px",
-		maxHeight: "100px",
+		minHeight: 100,
+		maxHeight: 100,
 		minWidth: "100%",
 		maxWidth: "100%",
 		marginTop: "5px",
@@ -1924,7 +1966,7 @@ const AngularWorkflow = (props) => {
 		return (
 			<div style={appViewStyle}>
 				<div style={variableScrollStyle}>
-						What are <a target="_blank" href="https://shuffler.io/docs/workflows#workflow_variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>WORKFLOW variables?</a>
+						What are <a rel="norefferer" target="_blank" href="https://shuffler.io/docs/workflows#workflow_variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>WORKFLOW variables?</a>
 					{workflow.workflow_variables === null ? 
 					null : workflow.workflow_variables.map(variable=> {
 						return (
@@ -1991,7 +2033,7 @@ const AngularWorkflow = (props) => {
 						}}>New workflow variable</Button> 				
 					</div>
 					<Divider style={{marginBottom: 20, marginTop: 20, height: 1, width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
-						What are <a target="_blank" href="https://shuffler.io/docs/workflows#execution_variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>EXECUTION variables?</a>
+						What are <a rel="norefferer" target="_blank" href="https://shuffler.io/docs/workflows#execution_variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>EXECUTION variables?</a>
 					{workflow.execution_variables === null || workflow.execution_variables === undefined ? 
 					null : workflow.execution_variables.map(variable=> {
 						return (
@@ -2212,9 +2254,9 @@ const AngularWorkflow = (props) => {
 				<div style={appScrollStyle}>
 					{triggers.map((trigger, index) => {
 						var imageline = trigger.large_image.length === 0 ?
-							<img alt="" style={{width: "80px"}} />
+							<img alt="" style={{width: "80px", pointerEvents: "none", }} />
 							: 
-							<img alt="" src={trigger.large_image} style={{width: 80, height: 80}} />
+							<img alt="" src={trigger.large_image} style={{width: 80, height: 80, pointerEvents: "none", }} />
 
 						const color = trigger.is_valid ? "green" : "orange"
 						return(
@@ -2429,7 +2471,10 @@ const AngularWorkflow = (props) => {
 					authentication: [],
 					execution_variable: undefined,
 					example: example,
+					category: app.categories !== null && app.categories !== undefined && app.categories.length > 0 ? app.categories[0] : ""
 				}
+
+				// FIXME: overwrite category if the ACTION chosen has a different category
 
 				// const image = "url("+app.large_image+")"
 
@@ -2530,7 +2575,8 @@ const AngularWorkflow = (props) => {
 			newAppname = newAppname.slice(0, maxlen)+".."
 		}
 
-		const image = "url("+app.large_image+")"
+		//const image = "url("+app.large_image+")"
+		const image = app.large_image
 		const newAppStyle = JSON.parse(JSON.stringify(paperAppStyle))
 		const pixelSize = !hover ? "2px" : "4px"
 		newAppStyle.borderLeft = app.is_valid ? `${pixelSize} solid green` : `${pixelSize} solid orange`
@@ -2550,9 +2596,9 @@ const AngularWorkflow = (props) => {
 				<Paper square style={newAppStyle} onMouseOver={() => {setHover(true)}} onMouseOut={() => {setHover(false)}}>
 					<Grid container style={{margin: "10px 10px 10px 15px", flex: "10"}}>
 						<Grid item>
-							<div style={{borderRadius: borderRadius, height: 80, width: 80, backgroundImage: image, backgroundSize: "cover", backgroundRepeat: "no-repeat"}} />
+							<img alt={newAppname} src={image} style={{pointerEvents: "none", userDrag: "none", userSelect: "none", borderRadius: borderRadius, height: 80, width: 80,}} />
 						</Grid>
-						<Grid style={{display: "flex", flexDirection: "column", marginLeft: "20px", minWidth: 185, maxWidth: 185, overflow: "hidden", maxHeight: 80, }}>
+						<Grid style={{display: "flex", flexDirection: "column", marginLeft: "20px", minWidth: 185, maxWidth: 185, overflow: "hidden", maxHeight: 77, }}>
 							<Grid item style={{flex: 1}}>
 								<h4 style={{marginBottom: 0, marginTop: 5}}>{newAppname}</h4>
 							</Grid>
@@ -2605,7 +2651,6 @@ const AngularWorkflow = (props) => {
 							return null
 						}
 
-						console.log("APP: ", app)
 						return(
 							<ParsedAppPaper key={index} app={app} />	
 						)
@@ -3310,11 +3355,19 @@ const AngularWorkflow = (props) => {
 									}}
 									style={{backgroundColor: surfaceColor, color: "white", height: "50px"}}
 									>
-									{selectedActionParameters[count].options.map(data => (
-										<MenuItem key={data} style={{backgroundColor: inputColor, color: "white"}} value={data}>
-											{data}
-										</MenuItem>
-									))}
+									{selectedActionParameters[count].options.map((data, index) => {
+										const split_data = data.split("||")
+										var viewed_data = data
+										if (split_data.length > 1) {
+											viewed_data = split_data[0]
+										}
+
+										return (
+											<MenuItem key={data} style={{backgroundColor: inputColor, color: "white"}} value={data}>
+												{viewed_data}
+											</MenuItem>
+										)
+									})}
 								</Select>
 
 						} else if (data.variant === "STATIC_VALUE") {
@@ -3637,6 +3690,7 @@ const AngularWorkflow = (props) => {
 						}
 						
 						tmpitem = tmpitem.charAt(0).toUpperCase()+tmpitem.substring(1)
+						const description = data.description === undefined ? "" : data.description 
 
 						return (
 						<div key={data.name}>	
@@ -3650,10 +3704,12 @@ const AngularWorkflow = (props) => {
 										}}/>
 									</Tooltip>
 								:
-									<div style={{width: 17, height: 17, borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: 10}}/>
+									<div style={{width: 17, height: 17, borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: 10, marginTop: 2,}}/>
 								}
 								<div style={{flex: "10"}}> 
-									<b>{tmpitem} </b> 
+									<Tooltip title={description} placement="top">
+										<b>{tmpitem} </b> 
+									</Tooltip>
 								</div>
 
 								{selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0  ? null : 
@@ -3825,7 +3881,6 @@ const AngularWorkflow = (props) => {
 		})
 	}
 
-	const headerSize = 68
 	const rightsidebarStyle = {
 		position: "fixed", 
 		right: 0, 
@@ -3839,6 +3894,21 @@ const AngularWorkflow = (props) => {
 		overflowX: "auto",
 		overflowY: "auto",
 		zIndex: 1000,
+	}
+
+	const textFieldStyle = {
+		backgroundColor: inputColor, 
+		borderRadius: borderRadius, 
+	}
+
+
+	const innerTextfieldStyle = {
+		color: "white",
+		minHeight: 50, 
+		marginLeft: "5px",
+		maxWidth: "95%",
+		fontSize: "1em",
+		borderRadius: borderRadius,
 	}
 
 	const appApiView = Object.getOwnPropertyNames(selectedAction).length > 0 ? 
@@ -3873,7 +3943,7 @@ const AngularWorkflow = (props) => {
 							</Tooltip>
 						</IconButton>
 						<span style={{}}>
-							<Typography style={{marginTop: 5, marginLeft: 10,}}><a href="https://shuffler.io/docs/workflows#nodes" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>What are actions?</a></Typography>
+							<Typography style={{marginTop: 5, marginLeft: 10,}}><a rel="norefferer" href="https://shuffler.io/docs/workflows#nodes" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>What are actions?</a></Typography>
 							{selectedAction.errors !== null && selectedAction.errors.length > 0 ? 
 								<div>
 									Errors: {selectedAction.errors.join("\n")}
@@ -3894,15 +3964,9 @@ const AngularWorkflow = (props) => {
 				Name
 			</Typography>
 			<TextField
-				style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+				style={textFieldStyle} 
 				InputProps={{
-					style:{
-						color: "white",
-						minHeight: 50, 
-						marginLeft: "5px",
-						maxWidth: "95%",
-						fontSize: "1em",
-					},
+					style: innerTextfieldStyle, 
 				}}
 				fullWidth
 				color="primary"
@@ -3913,11 +3977,13 @@ const AngularWorkflow = (props) => {
 				<div style={{marginTop: 15}}>
 					Authenticate {selectedApp.name}: 
 					<Tooltip color="primary" title={"Add authentication option"} placement="top">
+						<span>
 						<Button color="primary" style={{}} variant="text" onClick={() => {
 							setAuthenticationModalOpen(true)
 						}}>
 							<AddIcon />
 						</Button> 				
+						</span>
 					</Tooltip>
 				</div>
 			: null}
@@ -4048,11 +4114,12 @@ const AngularWorkflow = (props) => {
 					value={selectedActionName}
 					fullWidth
 					onChange={setNewSelectedAction}
-					style={{backgroundColor: inputColor, color: "white", height: 50}}
+					style={{backgroundColor: inputColor, color: "white", height: 50, borderRadius: borderRadius,}}
 					SelectDisplayProps={{
 						style: {
 							marginLeft: 10,
 							maxHeight: 200,
+							borderRadius: borderRadius,
 						}
 					}}
 				>
@@ -4502,7 +4569,7 @@ const AngularWorkflow = (props) => {
 			}}
 		>
 		<span style={{position: "absolute", bottom: 10, left: 10, color: "rgba(255,255,255,0.6)",}}>
-			Conditions can't be used for loops [ .# ] <a target="_blank" href="https://shuffler.io/docs/workflows#conditions" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more</a> 
+			Conditions can't be used for loops [ .# ] <a rel="norefferer" target="_blank" href="https://shuffler.io/docs/workflows#conditions" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more</a> 
 		</span>
 		<FormControl>
 			<DialogTitle><span style={{color:"white"}}>Condition</span>
@@ -4511,6 +4578,7 @@ const AngularWorkflow = (props) => {
 
 					<div style={{display: "flex"}}>
 					<Tooltip color="primary" title={conditionValue.configuration ? "Negated" : "Default"} placement="top">
+						<span>
 						<Button color="primary" variant={conditionValue.configuration ? "contained" : "outlined"} style={{margin: "auto", height: 50, marginBottom: "auto", marginTop: "auto", marginRight: 5}} onClick={(e) => {
 							conditionValue.configuration = !conditionValue.configuration
 							setConditionValue(conditionValue)
@@ -4518,6 +4586,7 @@ const AngularWorkflow = (props) => {
 						}}>
 							{conditionValue.configuration ? "!" : "="}
 						</Button>
+						</span>
 					</Tooltip>
 					<div style={{flex: "2"}}>
 						<AppConditionHandler tmpdata={sourceValue} setData={setSourceValue} type={"source"} />
@@ -4754,7 +4823,7 @@ const AngularWorkflow = (props) => {
 				<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 					<div style={{flex: "1"}}>
 						<h3 style={{marginBottom: "5px"}} >Branch: Conditions - {selectedEdgeIndex}</h3>
-						<a target="_blank" href="https://shuffler.io/docs/conditions" style={{textDecoration: "none", color: "#f85a3e"}}>What are conditions?</a>
+						<a rel="norefferer" target="_blank" href="https://shuffler.io/docs/workflows#conditions" style={{textDecoration: "none", color: "#f85a3e"}}>What are conditions?</a>
 					</div>
 				</div>
 				<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -4978,7 +5047,7 @@ const AngularWorkflow = (props) => {
 				<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 					<div style={{flex: "1"}}>
 						<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}: {selectedTrigger.status}</h3>
-						<a target="_blank" href="https://shuffler.io/docs/triggers#email" style={{textDecoration: "none", color: "#f85a3e"}}>What are email triggers?</a>
+						<a rel="norefferer" target="_blank" href="https://shuffler.io/docs/triggers#email" style={{textDecoration: "none", color: "#f85a3e"}}>What are email triggers?</a>
 					</div>
 				</div>
 				<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -5056,6 +5125,7 @@ const AngularWorkflow = (props) => {
 				workflow.triggers[selectedTriggerIndex].parameters[0] = {"name": "workflow", "value": ""}
 				workflow.triggers[selectedTriggerIndex].parameters[1] = {"name": "argument", "value": ""}
 				workflow.triggers[selectedTriggerIndex].parameters[2] = {"name": "user_apikey", "value": ""}
+				workflow.triggers[selectedTriggerIndex].parameters[3] = {"name": "startnode", "value": ""}
 
 				console.log("SETTINGS: ", userSettings)
 				if (userSettings !== undefined && userSettings !== null && userSettings.apikey !== null && userSettings.apikey !== undefined && userSettings.apikey.length > 0) {
@@ -5068,7 +5138,7 @@ const AngularWorkflow = (props) => {
 					<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 						<div style={{flex: "1"}}>
 							<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}</h3>
-							<a target="_blank" href="https://shuffler.io/docs/triggers#subflow" style={{textDecoration: "none", color: "#f85a3e"}}>What are subflows?</a>
+							<a rel="norefferer" target="_blank" href="https://shuffler.io/docs/triggers#subflow" style={{textDecoration: "none", color: "#f85a3e"}}>What are subflows?</a>
 						</div>
 					</div>
 					<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -5116,27 +5186,83 @@ const AngularWorkflow = (props) => {
 										setUpdate(Math.random())
 										workflow.triggers[selectedTriggerIndex].parameters[0].value = e.target.value.id
 										setWorkflow(workflow)
+										setSubworkflowStartnode(e.target.value.start)
+
+										// Sets the startnode
+										if (e.target.value.id !== workflow.id) {
+											const startnode = e.target.value.actions.find(action => action.id === e.target.value.start)
+											if (startnode !== undefined && startnode !== null) {
+												setSubworkflowStartnode(startnode)
+											}
+											console.log("STARTNODE: ", startnode)
+										}
 									}}
 									style={{backgroundColor: inputColor, color: "white", height: "50px"}}
 								>
 									{workflows.map((data, index) => {
+										/*
 										if (data.id === workflow.id) {
 											return null	
 										}
+										*/
 
 										return (
-											<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data}>
+											<MenuItem key={index} style={{backgroundColor: inputColor, color: data.id === workflow.id ? "red" : "white"}} value={data}>
 												{data.name}
 											</MenuItem>
 										)
 									})}
 								</Select>
 							}
-							{workflow.triggers[selectedTriggerIndex].parameters[0].value.length === 0 ? null : <span style={{marginTop: 5}}><a href={`/workflows/${workflow.triggers[selectedTriggerIndex].parameters[0].value}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>Explore selected workflow</a></span>}
+							{workflow.triggers[selectedTriggerIndex].parameters[0].value.length === 0 ? null : <span style={{marginTop: 5}}><a rel="norefferer" href={`/workflows/${workflow.triggers[selectedTriggerIndex].parameters[0].value}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e", marginLeft: 5,}}>Explore selected workflow</a></span>}
+
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
 								<div style={{flex: "10"}}> 
-									<b>Execution Argument: </b> 
+									<b>Select the Startnode</b> 
+								</div>
+							</div>
+							{subworkflow === undefined || subworkflow === null || subworkflow.id === undefined || subworkflow.actions === null || subworkflow.actions === undefined || subworkflow.actions.length === 0 ? null : 
+								<Select
+									value={subworkflowStartnode}
+									SelectDisplayProps={{
+										style: {
+											marginLeft: 10,
+
+										}
+									}}
+									fullWidth
+									onChange={(e) => {
+										setSubworkflowStartnode(e.target.value)
+
+										try {
+											workflow.triggers[selectedTriggerIndex].parameters[3].value = e.target.value.id
+										} catch {
+											workflow.triggers[selectedTriggerIndex].parameters[3] = {
+												"name": "startnode",
+												"value": e.target.value.id,
+											}
+										}
+
+										setWorkflow(workflow)
+										//setUpdate(Math.random())
+									}}
+									style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+								>
+									{subworkflow.actions.map((action, index) => {
+										//console.log(action)
+										return (
+											<MenuItem disabled={getParents(selectedTrigger).find(parent => parent.id === action.id)} key={index} style={{backgroundColor: inputColor, color: "white"}} value={action}>
+												{action.label}
+											</MenuItem>
+										)
+									})}
+								</Select>
+							}
+							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
+								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
+								<div style={{flex: "10"}}> 
+									<b>Execution Argument</b> 
 								</div>
 							</div>
 							<TextField
@@ -5215,7 +5341,7 @@ const AngularWorkflow = (props) => {
 					<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 						<div style={{flex: "1"}}>
 							<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}: {selectedTrigger.status}</h3>
-							<a target="_blank" href="https://shuffler.io/docs/triggers#webhook" style={{textDecoration: "none", color: "#f85a3e"}}>What are webhooks?</a>
+							<a rel="norefferer" target="_blank" href="https://shuffler.io/docs/triggers#webhook" style={{textDecoration: "none", color: "#f85a3e"}}>What are webhooks?</a>
 						</div>
 					</div>
 					<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -5526,6 +5652,7 @@ const AngularWorkflow = (props) => {
 		if (trigger.id === undefined) {
 			return
 		}
+
 		alert.info("Stopping webhook")
 
 		fetch(globalUrl+"/api/v1/hooks/"+trigger.id+"/delete", {
@@ -5544,18 +5671,23 @@ const AngularWorkflow = (props) => {
 			return response.json()
 		})
     .then((responseJson) => {
-			workflow.triggers[triggerindex].status = "stopped"
-			trigger.status = "stopped"
-			setWorkflow(workflow)
-			setSelectedTrigger(trigger)
+			if (workflow.triggers[triggerindex] !== undefined) {
+				workflow.triggers[triggerindex].status = "stopped"
+			}
 
 			if (responseJson.success) {
 				//alert.success("Successfully stopped webhook")
 				// Set the status
 				saveWorkflow(workflow)
 			} else {
-				alert.error("Failed stopping webhook: "+responseJson.reason)
+				if (responseJson.reason !== undefined) {
+					alert.error("Failed stopping webhook: "+responseJson.reason)
+				}
 			}
+
+			trigger.status = "stopped"
+			setWorkflow(workflow)
+			setSelectedTrigger(trigger)
 		})
 		.catch(error => {
 			alert.error(error.toString())
@@ -5584,7 +5716,7 @@ const AngularWorkflow = (props) => {
 					<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 						<div style={{flex: "1"}}>
 							<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}: {selectedTrigger.status}</h3>
-							<a target="_blank" href="https://shuffler.io/docs/triggers#user_input" style={{textDecoration: "none", color: "#f85a3e"}}>What is the user input trigger?</a>
+							<a rel="norefferer" target="_blank" href="https://shuffler.io/docs/triggers#user_input" style={{textDecoration: "none", color: "#f85a3e"}}>What is the user input trigger?</a>
 						</div>
 					</div>
 					<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -5762,7 +5894,7 @@ const AngularWorkflow = (props) => {
 					<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 						<div style={{flex: "1"}}>
 							<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}: {selectedTrigger.status}</h3>
-							<a target="_blank" href="https://shuffler.io/docs/triggers#schedule" style={{textDecoration: "none", color: "#f85a3e"}}>What are schedules?</a>
+							<a rel="norefferer" target="_blank" href="https://shuffler.io/docs/triggers#schedule" style={{textDecoration: "none", color: "#f85a3e"}}>What are schedules?</a>
 						</div>
 					</div>
 					<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -6019,12 +6151,14 @@ const AngularWorkflow = (props) => {
 					</div>
 				</Menu>
 				<Tooltip color="secondary" title="Workflow settings" placement="top-start">
+					<span>	
 					<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={(event) => {
 						setShowShuffleMenu(!showShuffleMenu)
 						setNewAnchor(event.currentTarget)
 					}}>
 						<SettingsIcon />
 					</Button>
+					</span>	
 				</Tooltip>
 			</div>
 		)
@@ -6075,12 +6209,14 @@ const AngularWorkflow = (props) => {
 					</div>
 				</Menu>
 				<Tooltip color="secondary" title="Workflow settings" placement="top-start">
+					<span>	
 					<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={(event) => {
 						setShowShuffleMenu(!showShuffleMenu)
 						setNewAnchor(event.currentTarget)
 					}}>
 						<SettingsIcon />
 					</Button>
+					</span>	
 				</Tooltip>
 			</div>
 		)
@@ -6092,19 +6228,23 @@ const AngularWorkflow = (props) => {
 		const boxSize = 100
 		const executionButton = executionRunning ? 
 			<Tooltip color="primary" title="Stop execution" placement="top">
+				<span>	
 				<Button style={{height: boxSize, width: boxSize}} color="secondary" variant="contained" onClick={() => {
 					abortExecution()
 				}}>
 					<PauseIcon style={{ fontSize: 60}} />
 				</Button> 
+				</span>	
 			</Tooltip>
 			:
 			<Tooltip color="primary" title="Test execution" placement="top">
-				<Button disabled={executionRequestStarted || !workflow.isValid} style={{height: boxSize, width: boxSize}} color="primary" variant="contained" onClick={() => {
-					executeWorkflow()
-				}}>
-					<PlayArrowIcon style={{ fontSize: 60}} />
-				</Button> 				
+				<span>
+					<Button disabled={executionRequestStarted || !workflow.isValid} style={{height: boxSize, width: boxSize}} color="primary" variant="contained" onClick={() => {
+						executeWorkflow(executionText, workflow.start)
+					}}>
+						<PlayArrowIcon style={{ fontSize: 60}} />
+					</Button> 				
+				</span>
 			</Tooltip>
 
 		return(
@@ -6114,15 +6254,9 @@ const AngularWorkflow = (props) => {
 					<Tooltip color="primary" title="An argument to be used for execution. This is a variable available to every node in your workflow." placement="top">
 						<TextField
 							id="execution_argument_input_field"
-							style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+							style={textFieldStyle} 
 							InputProps={{
-								style:{
-									height: 50,
-									color: "white",
-									marginLeft: 5,
-									maxWidth: "95%",
-									fontSize: "1em",
-								},
+								style: innerTextfieldStyle, 
 							}}
 							color="secondary"
 							placeholder={"Execution Argument"}
@@ -6133,29 +6267,37 @@ const AngularWorkflow = (props) => {
 						/>
 					</Tooltip>
 					<Tooltip color="primary" title="Save (ctrl+s)" placement="top">
-						<Button color="primary" style={{height: 50, marginLeft: 10, }} variant={lastSaved ? "outlined" : "contained"} onClick={() => saveWorkflow()}>
-							<SaveIcon /> 
-						</Button> 				
+						<span>
+							<Button disabled={savingState !== 0} color="primary" style={{height: 50, width: 64, marginLeft: 10, }} variant={lastSaved ? "outlined" : "contained"} onClick={() => saveWorkflow()}>
+								{savingState === 2 ? <CircularProgress style={{height: 35, width: 35}} /> : savingState === 1 ? <DoneIcon style={{color: "green"}} /> : <SaveIcon /> }
+							</Button> 				
+						</span>
 					</Tooltip>
 					<Tooltip color="secondary" title="Fit to screen (ctrl+f)" placement="top">
-						<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={() => cy.fit(null, 50)}>
-							<AspectRatioIcon />  
-						</Button> 				
+						<span>
+							<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={() => cy.fit(null, 50)}>
+								<AspectRatioIcon />  
+							</Button> 				
+						</span>
 					</Tooltip>
 					<Tooltip color="secondary" title="Remove selected item (del)" placement="top-start">
+						<span>
 						<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={() => {
 							removeNode()		
 						}}>
 							<DeleteIcon /> 
 						</Button>
+						</span>
 					</Tooltip>
 					<Tooltip color="secondary" title="Show executions" placement="top-start">
+						<span>
 						<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={() => {
 							setExecutionModalOpen(true)
 							getWorkflowExecution(props.match.params.key)
 						}}>
 							<DirectionsRunIcon />
 						</Button>
+						</span>
 					</Tooltip>
 					{/* <FileMenu />	*/}
 					<WorkflowMenu />	
@@ -6323,6 +6465,9 @@ const AngularWorkflow = (props) => {
 			return <img alt={"email"} src={triggers.find(trigger => trigger.trigger_type === "EMAIL").large_image} style={{width: size, height: size}} />
 		}
 
+		if (execution.execution_parent !== null && execution.execution_parent !== undefined && execution.execution_parent.length > 0) {
+			return <img alt={"parent workflow"} src={triggers.find(trigger => trigger.trigger_type === "SUBFLOW").large_image} style={{width: size, height: size}} />
+		}
 
 		return (
 			<img alt={execution.execution_source} src={defaultImage} style={{width: size, height: size}} />
@@ -6487,17 +6632,41 @@ const AngularWorkflow = (props) => {
 						</h2>
 					</span>
 				</Breadcrumbs>
-				<Divider style={{backgroundColor: "white", marginTop: 10, marginBottom: 10,}}/>
-					<h2>Executing Workflow</h2>		
+				<Divider style={{backgroundColor: "rgba(255,255,255,0.6)", marginTop: 10, marginBottom: 10,}}/>
+					<div style={{display: "flex"}}>
+						<h2>Executing Workflow</h2>		
+						<Tooltip color="primary" title="Rerun workflow" placement="top">
+							<span style={{}}>
+								<Button color="primary" style={{float: "right", marginTop: 20, marginLeft: 10,}} onClick={() => {
+									console.log("DATA: ", executionData)
+									executeWorkflow(executionData.execution_argument, executionData.start)
+									setExecutionModalOpen(false)
+									//executionText, workflow.start)
+								}}>
+									<CachedIcon style={{}}/>
+								</Button>
+							</span>
+						</Tooltip>
+					</div>
 					{executionData.status !== undefined && executionData.status.length > 0 ?
 						<div>
-							<b>Status: </b>{executionData.status} 
+							<b>Status: &nbsp;&nbsp;</b>{executionData.status} 
+						</div>
+						: null
+					}
+					{executionData.execution_source !== undefined && executionData.execution_source !== null && executionData.execution_source.length > 0 && executionData.execution_source !== "default" ?
+						<div>
+							<b>Source: &nbsp;&nbsp;</b>{executionData.execution_parent !== null && executionData.execution_parent !== undefined && executionData.execution_parent.length > 0 ? 
+								<a rel="norefferer" href={`/workflows/${executionData.execution_source}?view=executions&execution_id=${executionData.execution_parent}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>Parent Workflow</a>
+								:
+								executionData.execution_source
+							} 
 						</div>
 						: null
 					}
 					{executionData.started_at !== undefined ?
 						<div>
-							<b>Started: </b>{new Date(executionData.started_at*1000).toISOString()} 
+							<b>Started: &nbsp;</b>{new Date(executionData.started_at*1000).toISOString()} 
 						</div>
 						: null
 					}
@@ -6507,16 +6676,11 @@ const AngularWorkflow = (props) => {
 						</div>
 						: null
 					}
-					{executionData.execution_source !== undefined && executionData.execution_source.length > 0 ?
-						<div>
-							<b>Source: </b>{executionData.execution_source} 
-						</div>
-						: null
-					}
+					<div style={{marginTop: 10}}/>
 					{executionData.execution_argument !== undefined && executionData.execution_argument.length > 0 ?
 						parsedExecutionArgument()
 					: null }
-					<Divider style={{backgroundColor: "white", marginTop: 30, marginBottom: 30,}}/>
+					<Divider style={{backgroundColor: "rgba(255,255,255,0.6)", marginTop: 15, marginBottom: 30,}}/>
 					{executionData.results !== undefined && executionData.results !== null && executionData.results.length > 1 && executionData.results.find(result => result.status === "SKIPPED" || result.status === "FAILURE") ?
 						<FormControlLabel
 							style={{color: "white", marginBottom: 10, }}
@@ -6609,13 +6773,17 @@ const AngularWorkflow = (props) => {
 										/>
 										{data.action.app_name === "shuffle-subflow" ?
 											<span>
-												TBD: Load subexecution result for 
+												{validate.valid && data.action.parameters !== undefined && data.action.parameters !== null ? 
+													<a rel="norefferer" href={`/workflows/${data.action.parameters[0].value}?view=executions&execution_id=${validate.result.execution_id}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>See subflow execution</a>
+												: 
+													"TBD: Load subexecution result for"
+												}
 											</span>
 											: null
 										}
 										</span>
 									: 
-									<div style={{maxHeight: 250, overflowX: "hidden", overflowY: "scroll",}}>
+									<div style={{maxHeight: 250, overflowX: "hidden", overflowY: "auto",}}>
 										<b>Result</b>&nbsp;
 										{data.result}
 									</div>
@@ -6851,7 +7019,7 @@ const AngularWorkflow = (props) => {
 		<FormControl>
 			<DialogTitle><span style={{color: "white"}}>Execution Variable</span></DialogTitle>
 				<DialogContent>
-					Execution Variables are TEMPORARY variables that you can ony be set and used during execution. Learn more <a href="https://shuffler.io/docs/workflow#execution_variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>here</a>
+					Execution Variables are TEMPORARY variables that you can ony be set and used during execution. Learn more <a rel="norefferer" href="https://shuffler.io/docs/workflow#execution_variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>here</a>
 					<TextField
 						onBlur={(event) => setNewVariableName(event.target.value)}
 						color="primary"
@@ -6933,7 +7101,7 @@ const AngularWorkflow = (props) => {
 		: null
 	
 	const variablesModal = variablesModalOpen ? 
-		<Dialog modal 
+		<Dialog 
 			open={variablesModalOpen} 
 			onClose={() => {
 				setNewVariableName("")
@@ -7078,8 +7246,9 @@ const AngularWorkflow = (props) => {
 		const handleSubmitCheck = () => {
 			console.log("NEW AUTH: ", authenticationOption)
 			if (authenticationOption.label.length === 0) {
-				alert.info("Label can't be empty")
-				return
+				authenticationOption.label = `Auth for ${selectedApp.name}`
+				//alert.info("Label can't be empty")
+				//return
 			}
 
 			for (var key in selectedApp.authentication.parameters) {
@@ -7109,7 +7278,6 @@ const AngularWorkflow = (props) => {
 			setNewAppAuth(newAuthOption)
 			//appAuthentication.push(newAuthOption)
 			//setAppAuthentication(appAuthentication)
-			getAppAuthentication() 
 			setUpdate(authenticationOption.id)
 
 			/*
@@ -7126,7 +7294,7 @@ const AngularWorkflow = (props) => {
 		return (
 			<div>
 				<DialogContent>
-					<a target="_blank" href="https://shuffler.io/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is this?</a><div/>
+					<a target="_blank" rel="norefferer" href="https://shuffler.io/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is this?</a><div/>
 					These are required fields for authenticating with {selectedApp.name} 
 					<div style={{marginTop: 15}}/>
 					<b>Name - what is this used for?</b>
@@ -7144,6 +7312,7 @@ const AngularWorkflow = (props) => {
 							fullWidth
 							color="primary"
 							placeholder={"Auth july 2020"}
+							defaultValue={`Auth for ${selectedApp.name}`}
 							onChange={(event) => {
 								authenticationOption.label = event.target.value
 							}}

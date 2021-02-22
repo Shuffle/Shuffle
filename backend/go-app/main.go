@@ -17,6 +17,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	//"regexp"
@@ -2877,8 +2878,8 @@ func fixUserOrg(ctx context.Context, user *User) *User {
 
 // Used for testing only. Shouldn't impact production.
 func handleCors(resp http.ResponseWriter, request *http.Request) bool {
-	//allowedOrigins := "http://localhost:3000"
-	allowedOrigins := "http://localhost:3002"
+	allowedOrigins := "http://localhost:3000"
+	//allowedOrigins := "http://localhost:3002"
 
 	resp.Header().Set("Vary", "Origin")
 	resp.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, X-Requested-With, remember-me, Authorization")
@@ -3558,10 +3559,13 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		//	bodyWrapper = string(parsedBody)
 		//}
 
+		url := &url.URL{}
 		newRequest := &http.Request{
+			URL:    url,
 			Method: "POST",
 			Body:   ioutil.NopCloser(bytes.NewReader(b)),
 		}
+		//start, startok := request.URL.Query()["start"]
 
 		// OrgId: activeOrgs[0].Id,
 		workflowExecution, executionResp, err := handleExecution(item, workflow, newRequest)
@@ -4628,7 +4632,7 @@ func findAvailablePorts(startRange int64, endRange int64) string {
 func handleSendalert(resp http.ResponseWriter, request *http.Request) {
 	user, err := handleApiAuthentication(resp, request)
 	if err != nil {
-		log.Printf("Api authentication failed in getworkflows: %s", err)
+		log.Printf("Api authentication failed in sendalert: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -6360,13 +6364,13 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 
 		// FIXME: Check whether it's in use.
 		if user.Id != app.Owner && user.Role != "admin" {
-			log.Printf("Wrong user (%s) for app %s when verifying swagger", user.Username, app.Name)
+			log.Printf("[WARNING] Wrong user (%s) for app %s when verifying swagger", user.Username, app.Name)
 			resp.WriteHeader(401)
 			resp.Write([]byte(`{"success": false}`))
 			return
 		}
 
-		log.Printf("EDITING APP WITH ID %s", app.ID)
+		log.Printf("[INFO] EDITING APP WITH ID %s", app.ID)
 		newmd5 = app.ID
 	}
 
@@ -6455,7 +6459,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 
 	identifier = strings.Replace(identifier, " ", "-", -1)
 	identifier = strings.Replace(identifier, "_", "-", -1)
-	log.Printf("Successfully parsed %s. Proceeding to docker container", identifier)
+	log.Printf("[INFO] Successfully parsed %s. Proceeding to docker container", identifier)
 
 	// Now that the baseline is setup, we need to make it into a cloud function
 	// 1. Upload the API to datastore for use
@@ -6600,7 +6604,9 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("Failed to increase success execution stats: %s", err)
 	}
 
-	cacheKey := fmt.Sprintf("workflowapps-sorted")
+	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
+	requestCache.Delete(cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
 	requestCache.Delete(cacheKey)
 
 	resp.WriteHeader(200)
@@ -6613,7 +6619,7 @@ func healthCheckHandler(resp http.ResponseWriter, request *http.Request) {
 
 // Creates osfs from folderpath with a basepath as directory base
 func createFs(basepath, pathname string) (billy.Filesystem, error) {
-	log.Printf("base: %s, pathname: %s", basepath, pathname)
+	log.Printf("[INFO] MemFS base: %s, pathname: %s", basepath, pathname)
 
 	fs := memfs.New()
 	err := filepath.Walk(pathname,
@@ -6674,19 +6680,19 @@ func handleAppHotload(location string, forceUpdate bool) error {
 		log.Printf("Failed memfs creation - probably bad path: %s", err)
 		return errors.New(fmt.Sprintf("Failed to find directory %s", location))
 	} else {
-		log.Printf("Memfs creation from %s done", location)
+		log.Printf("[INFO] Memfs creation from %s done", location)
 	}
 
 	dir, err := fs.ReadDir("")
 	if err != nil {
-		log.Printf("Failed reading folder: %s", err)
+		log.Printf("[WARNING] Failed reading folder: %s", err)
 		return err
 	}
 
 	//log.Printf("Reading app folder: %#v", dir)
 	_, _, err = iterateAppGithubFolders(fs, dir, "", "", forceUpdate)
 	if err != nil {
-		log.Printf("Err: %s", err)
+		log.Printf("[WARNING] Githubfolders error: %s", err)
 		return err
 	}
 
@@ -6760,6 +6766,7 @@ func handleCloudExecutionOnprem(workflowId, startNode, executionSource, executio
 
 	log.Println(string(b))
 	newRequest := &http.Request{
+		URL:    &url.URL{},
 		Method: "POST",
 		Body:   ioutil.NopCloser(bytes.NewReader(b)),
 	}
@@ -6902,19 +6909,19 @@ func remoteOrgJobController(org Org, body []byte) error {
 
 	ctx := context.Background()
 	if !responseData.Success {
-		log.Printf("Should stop org job controller")
+		log.Printf("Should stop org job controller because no success?")
 
-		if strings.Contains(responseData.Reason, "Bad apikey") {
-			log.Printf("Bad apikey. Stopping sync for org?: %s", responseData.Reason)
+		if strings.Contains(responseData.Reason, "Bad apikey") || strings.Contains(responseData.Reason, "Error getting the organization") {
+			log.Printf("[WARNING] Remote error; Bad apikey or org error. Stopping sync for org: %s", responseData.Reason)
 
 			if value, exists := scheduledOrgs[org.Id]; exists {
 				// Looks like this does the trick? Hurr
-				log.Printf("STOPPING ORG SCHEDULE for: %s", org.Id)
+				log.Printf("[WARNING] STOPPING ORG SCHEDULE for: %s", org.Id)
 
 				value.Lock()
 				org, err := getOrg(ctx, org.Id)
 				if err != nil {
-					log.Printf("Failed finding org %s: %s", org.Id, err)
+					log.Printf("[WARNING] Failed finding org %s: %s", org.Id, err)
 					return err
 				}
 
@@ -6923,9 +6930,9 @@ func remoteOrgJobController(org Org, body []byte) error {
 				org.CloudSync = false
 				err = setOrg(ctx, *org, org.Id)
 				if err != nil {
-					log.Printf("Failed setting organization when stopping sync: %s", err)
+					log.Printf("[WARNING] Failed setting organization when stopping sync: %s", err)
 				} else {
-					log.Printf("Successfully updated the org to not sync")
+					log.Printf("[INFO] Successfully STOPPED org cloud sync for %s", org.Id)
 				}
 
 				return errors.New("Stopped schedule for org locally because of bad apikey.")
@@ -7515,7 +7522,7 @@ func runInit(ctx context.Context) {
 		}
 	}
 
-	log.Printf("Downloading OpenAPI data for search - EXTRA APPS")
+	log.Printf("[INFO] Downloading OpenAPI data for search - EXTRA APPS")
 	apis := "https://github.com/frikky/security-openapis"
 
 	// THis gets memory problems hahah

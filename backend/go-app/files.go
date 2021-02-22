@@ -135,7 +135,7 @@ func handleGetFiles(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("Got %d files for org %s", len(files), user.ActiveOrg.Id)
+	log.Printf("[INFO] Got %d files for org %s", len(files), user.ActiveOrg.Id)
 	newBody, err := json.Marshal(files)
 	if err != nil {
 		log.Printf("[ERROR] Failed marshaling files: %s", err)
@@ -716,37 +716,44 @@ func handleCreateFile(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// Try to get the org and workflow in case they don't exist
-	workflow, err := getWorkflow(ctx, curfile.WorkflowId)
-	if err != nil {
-		log.Printf("[ERROR] Workflow %s doesn't exist.", curfile.WorkflowId)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Error with workflow id or org id"}`))
-		return
-	}
-
-	_, err = getOrg(ctx, curfile.OrgId)
-	if err != nil {
-		log.Printf("[ERROR] Org %s doesn't exist.", curfile.OrgId)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Error with workflow id or org id"}`))
-		return
-	}
-
-	if workflow.ExecutingOrg.Id != curfile.OrgId {
-		found := false
-		for _, curorg := range workflow.Org {
-			if curorg.Id == curfile.OrgId {
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			log.Printf("[ERROR] Org %s doesn't have access to %s.", curfile.OrgId, curfile.WorkflowId)
+	var workflow *Workflow
+	if curfile.WorkflowId == "global" {
+		// PS: Not a security issue.
+		// Files are global anyway, but the workflow_id is used to identify origin
+		log.Printf("[INFO] Uploading filename %s for org %s as global file.", curfile.Filename, curfile.OrgId)
+	} else {
+		// Try to get the org and workflow in case they don't exist
+		workflow, err = getWorkflow(ctx, curfile.WorkflowId)
+		if err != nil {
+			log.Printf("[ERROR] Workflow %s doesn't exist.", curfile.WorkflowId)
 			resp.WriteHeader(401)
 			resp.Write([]byte(`{"success": false, "reason": "Error with workflow id or org id"}`))
 			return
+		}
+
+		_, err = getOrg(ctx, curfile.OrgId)
+		if err != nil {
+			log.Printf("[ERROR] Org %s doesn't exist.", curfile.OrgId)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false, "reason": "Error with workflow id or org id"}`))
+			return
+		}
+
+		if workflow.ExecutingOrg.Id != curfile.OrgId {
+			found := false
+			for _, curorg := range workflow.Org {
+				if curorg.Id == curfile.OrgId {
+					found = true
+					break
+				}
+			}
+
+			if !found {
+				log.Printf("[ERROR] Org %s doesn't have access to %s.", curfile.OrgId, curfile.WorkflowId)
+				resp.WriteHeader(401)
+				resp.Write([]byte(`{"success": false, "reason": "Error with workflow id or org id"}`))
+				return
+			}
 		}
 	}
 
@@ -776,24 +783,26 @@ func handleCreateFile(resp http.ResponseWriter, request *http.Request) {
 	downloadPath := fmt.Sprintf("%s/%s", folderPath, fileId)
 
 	duplicateWorkflows := []string{}
-	for _, trigger := range workflow.Triggers {
-		if trigger.AppName == "Shuffle Workflow" && trigger.TriggerType == "SUBFLOW" {
-			for _, parameter := range trigger.Parameters {
-				if parameter.Name == "workflow" && len(parameter.Value) > 0 {
+	if curfile.WorkflowId != "global" {
+		for _, trigger := range workflow.Triggers {
+			if trigger.AppName == "Shuffle Workflow" && trigger.TriggerType == "SUBFLOW" {
+				for _, parameter := range trigger.Parameters {
+					if parameter.Name == "workflow" && len(parameter.Value) > 0 {
 
-					found := false
-					for _, workflow := range duplicateWorkflows {
-						if workflow == parameter.Value {
-							found = true
-							break
+						found := false
+						for _, workflow := range duplicateWorkflows {
+							if workflow == parameter.Value {
+								found = true
+								break
+							}
 						}
-					}
 
-					if !found {
-						duplicateWorkflows = append(duplicateWorkflows, parameter.Value)
-					}
+						if !found {
+							duplicateWorkflows = append(duplicateWorkflows, parameter.Value)
+						}
 
-					break
+						break
+					}
 				}
 			}
 		}
