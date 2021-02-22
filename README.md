@@ -6,7 +6,7 @@
 ![Example Shuffle webhook integration](https://github.com/frikky/Shuffle/blob/master/frontend/src/assets/img/shuffle_webhook.png)
 
 ## Try it
-* Self-hosted: Check out the [installation guide](https://github.com/frikky/shuffle/blob/master/install-guide.md)
+* Self-hosted: Check out the [installation guide](https://github.com/frikky/shuffle/blob/master/.github/install-guide.md)
 * Cloud: Register at https://shuffler.io/register and get cooking (missing a lot of features)
 
 Please consider [sponsoring](https://github.com/sponsors/frikky) the project if you want to see more rapid development.
@@ -43,7 +43,20 @@ Please consider [sponsoring](https://github.com/sponsors/frikky) the project if 
 ![Shuffle Architecture](https://github.com/frikky/Shuffle/blob/master/frontend/src/assets/img/shuffle_architecture.png)
 
 ## Website
-https://shuffler.io
+[https://shuffler.io](https://shuffler.io)
+
+## Contributing
+We want to make the world of cybersecurity more accessible and need all the help we can get. Send an email to [frikky@shuffler](mailto:frikky@shuffler.io) and we'll make sure to give you any training you may need.
+
+These are the main areas to contribute in:
+* Frontend (ReactJS)
+* Backend (Golang)
+* App Creation (Python & GUI w/OpenAPI)
+* Documentation (Markdown)
+* Workflow creation (GUI & Conceptualizing) 
+* Content Creation (Blogs, videos etc) 
+
+Contributing guidelines for Github are outlined [here](https://github.com/frikky/Shuffle/blob/master/.github/CONTRIBUTING.md).
 
 ## Contributors 
 ![ICPL logo](https://github.com/frikky/Shuffle/blob/launch/frontend/src/assets/img/icpl_logo.png)
@@ -61,8 +74,10 @@ https://shuffler.io
 ## License
 All modular information related to Shuffle will be under MIT (anyone can use it for whatever purpose), with Shuffle itself using AGPLv3. 
 
-Apps & App SDK: MIT
+Workflows: MIT
+Documentation: MIT
 Shuffle backend: AGPLv3 
+Apps, specification and App SDK: MIT
 
 ### Repository overview 
 Below is the folder structure with a short explanation
