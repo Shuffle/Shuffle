@@ -33,6 +33,7 @@ import { createMuiTheme, MuiThemeProvider } from '@material-ui/core/styles';
 import ScrollToTop from "./components/ScrollToTop";
 import AlertTemplate from "./components/AlertTemplate";
 import { positions, Provider } from "react-alert";
+import {isMobile} from "react-device-detect";
 
 // Production - backend proxy forwarding in nginx
 var globalUrl = window.location.origin
@@ -147,7 +148,7 @@ const App = (message, props) => {
 			<Route exact path="/schedules/:key" render={props => <EditSchedule globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/workflows" render={props => <Workflows cookies={cookies} removeCookie={removeCookie} isLoaded={isLoaded} isLoggedIn={isLoggedIn} globalUrl={globalUrl} cookies={cookies} userdata={userdata} {...props} />} />
 			<Route exact path="/workflows/:key" render={props => <AngularWorkflow userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} {...props} />} />
-			<Route exact path="/docs/:key" render={props => <Docs isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
+			<Route exact path="/docs/:key" render={props => <Docs isMobile={isMobile} isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/docs" render={props => { window.location.pathname = "/docs/about" }} />
 			<Route exact path="/introduction" render={props => <Introduction isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/introduction/:key" render={props => <Introduction isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />

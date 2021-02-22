@@ -1441,7 +1441,7 @@ const Admin = (props) => {
 	}
 
 	const organizationView = curTab === 0 && selectedOrganization.id !== undefined ?
-		<div>
+		<div style={{position: "relative"}}>
 			<div style={{ marginTop: 20, marginBottom: 20, }}>
 				<h2 style={{ display: "inline", }}>Organization overview</h2>
 				<span style={{ marginLeft: 25 }}>
@@ -1457,6 +1457,25 @@ const Admin = (props) => {
 					</div>
 					:
 					<div>
+						<Tooltip title={"Copy Organization ID"} style={{}} aria-label={"Copy orgid"}>
+							<IconButton style={{top: -10, right: 0, position: "absolute",}} onClick={() => {
+								const elementName = "copy_element_shuffle"
+								const org_id = selectedOrganization.id
+								var copyText = document.getElementById(elementName);
+								if (copyText !== null && copyText !== undefined) {
+									navigator.clipboard.writeText(org_id)
+									copyText.select();
+									copyText.setSelectionRange(0, 99999); /* For mobile devices */
+
+								/* Copy the text inside the text field */
+								document.execCommand("copy");
+
+								alert.info(org_id + " copied to clipboard")	
+							}
+						}}>
+							<FileCopyIcon style={{color: "rgba(255,255,255,0.8)"}}/>
+						</IconButton>
+					</Tooltip>
 						{selectedOrganization.name.length > 0 ?
 							<OrgHeader setSelectedOrganization={setSelectedOrganization} globalUrl={globalUrl} selectedOrganization={selectedOrganization}/>
 						: 
@@ -2034,7 +2053,7 @@ const Admin = (props) => {
 											/* Copy the text inside the text field */
 											document.execCommand("copy");
 
-											alert.info(file.id + "copied to clipboard")	
+											alert.info(file.id + " copied to clipboard")	
 										}
 									}}>
 										<FileCopyIcon style={{color: "white"}}/>

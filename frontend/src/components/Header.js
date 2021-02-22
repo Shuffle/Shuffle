@@ -118,6 +118,39 @@ const Header = props => {
 
 
 	// Should be based on some path
+	const avatarMenu = 
+		<span>
+			<IconButton color="primary" style={{marginRight: 15, }} aria-controls="simple-menu" aria-haspopup="true" onClick={(event) => {
+				setAnchorEl(event.currentTarget);
+			}}>
+				<Avatar style={{height: 35, width: 35,}} alt="Your username here" src="" />
+			</IconButton>
+			<Menu
+				id="simple-menu"
+				anchorEl={anchorEl}
+				keepMounted
+				open={Boolean(anchorEl)}
+				onClose={() => {
+					handleClose()
+				}}
+			>
+				<MenuItem onClick={(event) => {
+					event.preventDefault()
+					handleClose() 
+				}}>
+					<Link to="/settings" style={hrefStyle}>
+						Settings
+					</Link>
+				</MenuItem>
+				<MenuItem style={{color: "white"}} onClick={(event) => {
+					event.preventDefault()
+					handleClose() 
+					handleClickLogout()
+				}}>
+					Logout
+				</MenuItem>
+			</Menu>
+		</span>
 	const logoCheck = !homePage ?  null : null
 
 	// Handle top bar or something
@@ -197,36 +230,7 @@ const Header = props => {
 				</List>
 			</div>
 			<div style={{flex: "10", display: "flex", flexDirection: "row-reverse"}}>
-				<IconButton color="primary" style={{marginRight: 15, }} aria-controls="simple-menu" aria-haspopup="true" onClick={(event) => {
-					setAnchorEl(event.currentTarget);
-				}}>
-					<Avatar style={{height: 35, width: 35,}} alt="Your username here" src="" />
-				</IconButton>
-				<Menu
-					id="simple-menu"
-					anchorEl={anchorEl}
-					keepMounted
-					open={Boolean(anchorEl)}
-					onClose={() => {
-						handleClose()
-					}}
-				>
-					<MenuItem onClick={(event) => {
-						event.preventDefault()
-						handleClose() 
-					}}>
-						<Link to="/settings" style={hrefStyle}>
-							Settings
-						</Link>
-					</MenuItem>
-					<MenuItem style={{color: "white"}} onClick={(event) => {
-						event.preventDefault()
-						handleClose() 
-						handleClickLogout()
-					}}>
-						Logout
-					</MenuItem>
-				</Menu>
+				{avatarMenu}
 				{userdata === undefined || userdata.admin === undefined || userdata.admin === null || !userdata.admin ? null : 
 					<Link to="/admin" style={hrefStyle}>
 						<Button color="primary" variant="contained" style={{marginRight: 15, marginTop: 12}}>
@@ -289,25 +293,9 @@ const Header = props => {
 				</List>
 			</div>
 			<div style={{flex: "10", display: "flex", flexDirection: "row-reverse"}}>
-				<List style={{display: 'flex', flexDirection: 'row-reverse'}} component="nav">
-					<ListItem style={{flex: "1", textAlign: "center"}}>
-						<div onMouseOver={handleLoginHover} onMouseOut={handleLoginHoverOut} onClick={handleClickLogout} style={{color: LoginHoverColor, cursor: "pointer"}}> 
-        	    	Logout
-        	  	</div>
-        		</ListItem>
-						{logoCheck}		
-        		<ListItem style={{flex: "1", textAlign: "center"}}>
-							<Link to="/settings" style={hrefStyle}>
-								<Button 
-									style={{}} 
-									variant="contained"
-									color="primary"> Settings</Button>
-							</Link>
-						</ListItem>
-						<ListItem></ListItem>
-				</List>
+				{avatarMenu}
 			</div>
-	    </div>
+	  </div>
 
 	// <Divider style={{height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 	const loadedCheck = 

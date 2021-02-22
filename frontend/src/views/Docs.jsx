@@ -31,7 +31,7 @@ const hrefStyle = {
 }
 
 const Docs = (props) => {
-  const { isLoaded, globalUrl, inputColor, selectedDoc, serverside, isMobile, update} = props;
+  const { isLoaded, globalUrl, selectedDoc, serverside, isMobile, update} = props;
 
 	const theme = useTheme();
 	const [data, setData] = useState("");
@@ -213,7 +213,7 @@ const Docs = (props) => {
 
 	function CodeHandler(props) {
 		return (
-			<pre style={{padding: 15, minWidth: "50%", maxWidth: "100%", backgroundColor: inputColor, overflowX: "auto", overflowY: "hidden",}}>
+			<pre style={{padding: 15, minWidth: "50%", maxWidth: "100%", backgroundColor: theme.palette.inputColor, overflowX: "auto", overflowY: "hidden",}}>
 				<code>
 					{props.value}
 				</code>
@@ -286,8 +286,8 @@ const Docs = (props) => {
 
 	const mobileStyle = {
 		color: "white",
-		marginLeft: 15,
-		marginRight: 15,
+		marginLeft: 25,
+		marginRight: 25,
 		paddingBottom: 50,
 		backgroundColor: "inherit",
 		display: "flex",
@@ -305,6 +305,7 @@ const Docs = (props) => {
 				<Menu
 					id="simple-menu"
 					anchorEl={anchorEl}
+					style={{}}
 					keepMounted
 					open={Boolean(anchorEl)}
 					onClose={handleClose}
@@ -313,7 +314,7 @@ const Docs = (props) => {
 					const path = "/docs/"+item
 					const newname = item.charAt(0).toUpperCase()+item.substring(1).split("_").join(" ").split("-").join(" ")
 					return (
-						<MenuItem key={index} onClick={() => {window.location.pathname = path}}>{newname}</MenuItem>
+						<MenuItem key={index} style={{color: "white",}} onClick={() => {window.location.pathname = path}}>{newname}</MenuItem>
 					)
 				})}
 				</Menu>
