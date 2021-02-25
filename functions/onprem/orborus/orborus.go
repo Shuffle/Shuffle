@@ -106,7 +106,7 @@ func getThisContainerId() {
 	}
 
 	if fCol != "" {
-		cmd := fmt.Sprintf("cat /proc/self/cgroup | grep memory | tail -1 | cut -d/ -f%s", fCol)
+		cmd := fmt.Sprintf("cat /proc/self/cgroup | grep memory | tail -1 | cut -d/ -f%s | grep -o -E '[0-9A-z]{64}'", fCol)
 		out, err := exec.Command("bash", "-c", cmd).Output()
 		if err == nil {
 			containerId = strings.TrimSpace(string(out))
