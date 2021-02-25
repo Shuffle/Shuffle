@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -4577,8 +4578,12 @@ func setExampleresult(ctx context.Context, result AppExecutionExample) error {
 
 // Hmm, so I guess this should use uuid :(
 // Consistency PLX
-func setWorkflow(ctx context.Context, workflow Workflow, id string) error {
+func setWorkflow(ctx context.Context, workflow Workflow, id string, optionalEditedSecondsOffset ...int) error {
 	workflow.Edited = int64(time.Now().Unix())
+	if len(optionalEditedSecondsOffset) > 0 {
+		workflow.Edited += int64(optionalEditedSecondsOffset[0])
+	}
+
 	key := datastore.NameKey("workflow", id, nil)
 
 	// New struct, to not add body, author etc
@@ -6326,9 +6331,25 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 // Onlyname is used to
 func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname, userId, orgId string) error {
 	var err error
+	secondsOffset := 0
 
+	// sort file names
+	filenames := []string{}
 	for _, file := range dir {
-		if len(onlyname) > 0 && file.Name() != onlyname {
+		filename := file.Name()
+		filenames = append(filenames, filename)
+	}
+	sort.Strings(filenames)
+
+	// iterate through sorted filenames
+	for _, filename := range filenames {
+		secondsOffset -= 10
+		if len(onlyname) > 0 && filename != onlyname {
+			continue
+		}
+
+		file, err := fs.Stat(filename)
+		if err != nil {
 			continue
 		}
 
@@ -6349,7 +6370,6 @@ func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra 
 			}
 		case mode.IsRegular():
 			// Check the file
-			filename := file.Name()
 			if strings.HasSuffix(filename, ".json") {
 				path := fmt.Sprintf("%s%s", extra, file.Name())
 				fileReader, err := fs.Open(path)
@@ -6401,9 +6421,10 @@ func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra 
 						}
 					}
 				*/
-
+				
+				log.Printf("Import workflow from file: %s", filename)
 				ctx := context.Background()
-				err = setWorkflow(ctx, workflow, workflow.ID)
+				err = setWorkflow(ctx, workflow, workflow.ID, secondsOffset)
 				if err != nil {
 					log.Printf("Failed setting (download) workflow: %s", err)
 					continue
