@@ -52,8 +52,12 @@ var containerId string
 
 // form container id of current running container
 func getThisContainerId() string {
+	if len(containerId) > 0 {
+		return containerId
+	}
+
 	id := ""
-	cmd := fmt.Sprintf("cat /proc/self/cgroup | grep memory | tail -1 | cut -d/ -f3")
+	cmd := fmt.Sprintf("cat /proc/self/cgroup | grep memory | tail -1 | cut -d/ -f3 | grep -o -E '[0-9A-z]{64}'")
 	out, err := exec.Command("bash", "-c", cmd).Output()
 	if err == nil {
 		id = strings.TrimSpace(string(out))
@@ -861,6 +865,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	}
 
 	// form container id and use it as network source if it's not empty
+	containerId = getThisContainerId()
 	if containerId != "" {
 		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
 	} else {
