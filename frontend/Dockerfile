@@ -1,5 +1,5 @@
 # Build environment
-FROM node as builder
+FROM node:14 as builder
 
 RUN mkdir /usr/src/app
 
@@ -17,10 +17,6 @@ COPY ./public /usr/src/app/public/
 COPY ./src /usr/src/app/src/
 COPY ./*.sh /usr/src/app/
 COPY ./*.json /usr/src/app/
-
-# There were issues with the webpack installer from package.json
-RUN rm -rf /usr/src/app/node_modules/webpack
-#RUN yarn add webpack@4.42.0
 
 RUN yarn build
 
