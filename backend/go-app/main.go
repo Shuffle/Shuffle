@@ -7448,6 +7448,14 @@ func runInit(ctx context.Context) {
 		}
 	}
 
+	// form force-flag to download workflow apps
+	forceUpdateEnv := os.Getenv("SHUFFLE_APP_FORCE_UPDATE")
+	forceUpdate := false
+	if len(forceUpdateEnv) > 0 && forceUpdateEnv == "true" {
+		log.Printf("Forcing to rebuild apps")
+		forceUpdate = true
+	}
+
 	// Getting apps to see if we should initialize a test
 	log.Printf("Getting remote workflow apps")
 	workflowapps, err := getAllWorkflowApps(ctx, 500)
@@ -7513,7 +7521,7 @@ func runInit(ctx context.Context) {
 		//iterateAppGithubFolders(fs, dir, "", "testing")
 
 		// FIXME: Get all the apps?
-		iterateAppGithubFolders(fs, dir, "", "", false)
+		iterateAppGithubFolders(fs, dir, "", "", forceUpdate)
 
 		// Hotloads locally
 		location := os.Getenv("SHUFFLE_APP_HOTLOAD_FOLDER")
