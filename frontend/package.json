@@ -57,7 +57,7 @@
     "shellwords": "^0.1.1",
     "simplebar": "^4.2.3",
     "styled-components": "^4.4.0",
-    "webpack": "^4.42.0",
+    "webpack": "4.44.2",
     "websocket": "^1.0.30",
     "yaml": "^1.7.2",
     "yamljs": "^0.3.0",
