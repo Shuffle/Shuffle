@@ -2,42 +2,15 @@ import React, { useEffect } from 'react';
 
 import { useInterval } from 'react-powerhooks';
 
-import AppsIcon from '@material-ui/icons/Apps';
-import Grid from '@material-ui/core/Grid';
-import Select from '@material-ui/core/Select';
-import Paper from '@material-ui/core/Paper';
-import Divider from '@material-ui/core/Divider';
-import ButtonBase from '@material-ui/core/ButtonBase';
-import Button from '@material-ui/core/Button';
-import TextField from '@material-ui/core/TextField';
-import FormControl from '@material-ui/core/FormControl';
-import MenuItem from '@material-ui/core/MenuItem';
-import Tooltip from '@material-ui/core/Tooltip';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Switch from '@material-ui/core/Switch';
-import Input from '@material-ui/core/Input';
-import YAML from 'yaml'
-import {Link} from 'react-router-dom';
-import Breadcrumbs from '@material-ui/core/Breadcrumbs';
-import ReactJson from 'react-json-view'
-import Chip from '@material-ui/core/Chip';
+import {Grid, Select, Paper, Divider, ButtonBase, Button, TextField, FormControl, MenuItem, Tooltip, FormControlLabel, Switch, Input, Breadcrumbs, Chip, Dialog, DialogTitle, DialogActions, DialogContent, CircularProgress} from '@material-ui/core';
+import {Apps as AppsIcon, Cached as CachedIcon, Publish as PublishIcon, CloudDownload as CloudDownloadIcon, Edit as EditIcon, Delete as DeleteIcon} from '@material-ui/icons';
+
 import { useTheme } from '@material-ui/core/styles';
 
-import CachedIcon from '@material-ui/icons/Cached';
-import CloudDownloadIcon from '@material-ui/icons/CloudDownload';
-import PublishIcon from '@material-ui/icons/Publish';
-import CloudDownload from '@material-ui/icons/CloudDownload';
-import EditIcon from '@material-ui/icons/Edit';
-import DeleteIcon from '@material-ui/icons/Delete';
-
+import YAML from 'yaml'
+import {Link} from 'react-router-dom';
+import ReactJson from 'react-json-view'
 import { useAlert } from "react-alert";
-
-import Dialog from '@material-ui/core/Dialog';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import CircularProgress from '@material-ui/core/CircularProgress';
-
 import Dropzone from '../components/Dropzone';
 
 const surfaceColor = "#27292D"
@@ -420,7 +393,7 @@ const Apps = (props) => {
 				{data.activated && data.private_id !== undefined && data.private_id.length > 0 && data.generated ?
 				<Grid container style={{margin: "10px 10px 10px 10px", flex: "1"}} onClick={() => {downloadApp(data)}}>
 					<Tooltip title={"Download OpenAPI"} style={{marginTop: "28px", width: "100%"}} aria-label={data.name}>
-						<CloudDownload /> 
+						<CloudDownloadIcon /> 
 					</Tooltip>
 				</Grid>
 				: null}
@@ -467,7 +440,7 @@ const Apps = (props) => {
 					color="primary"
 					style={{marginTop: 10, marginRight: 8}}
 				>
-					<CloudDownload /> 
+					<CloudDownloadIcon /> 
 				</Button>
 			</Tooltip>
 			: null
@@ -910,6 +883,7 @@ const Apps = (props) => {
 						</span>
 					}
 					</div>
+					{isCloud ? null :
 					<TextField
 						style={{backgroundColor: inputColor}} 
 						InputProps={{
@@ -929,6 +903,7 @@ const Apps = (props) => {
 							setCursearch(event.target.value)
 						}}
 					/>
+					}
 					<div style={{marginTop: 15}}>
 						{apps.length > 0 ? 
 							filteredApps.length > 0 ? 

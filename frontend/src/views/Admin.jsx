@@ -1,59 +1,17 @@
 import React, { useState, useEffect } from 'react';
 
 import { makeStyles } from '@material-ui/styles';
+import { useTheme } from '@material-ui/core/styles';
 import {Link} from 'react-router-dom';
-import Paper from '@material-ui/core/Paper';
-import Card from '@material-ui/core/Card';
-import Tooltip from '@material-ui/core/Tooltip';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Typography from '@material-ui/core/Typography';
-import Switch from '@material-ui/core/Switch';
-import Select from '@material-ui/core/Select';
-import MenuItem from '@material-ui/core/MenuItem';
-import Divider from '@material-ui/core/Divider';
-import TextField from '@material-ui/core/TextField';
-import Button from '@material-ui/core/Button';
-import Tabs from '@material-ui/core/Tabs';
-import Tab from '@material-ui/core/Tab';
-import Grid from '@material-ui/core/Grid';
-import List from '@material-ui/core/List';
-import ListItem from '@material-ui/core/ListItem';
-import ListItemText from '@material-ui/core/ListItemText';
-import ListItemAvatar from '@material-ui/core/ListItemAvatar';
-import ListItemSecondaryAction from '@material-ui/core/ListItemSecondaryAction';
-import IconButton from '@material-ui/core/IconButton';
-import Avatar from '@material-ui/core/Avatar';
-import Zoom from '@material-ui/core/Zoom';
+
+import {Paper, Card, Tooltip, FormControlLabel, Typography, Switch, Select, MenuItem, Divider, TextField, Button, Tabs, Tab, Grid, List, ListItem, ListItemText, ListItemAvatar, ListItemSecondaryAction, IconButton, Avatar, Zoom,  Dialog, DialogTitle, DialogActions, DialogContent, CircularProgress } from '@material-ui/core';
+
+import {Edit as EditIcon, FileCopy as FileCopyIcon, Publish as PublishIcon, SelectAll as SelectAllIcon, OpenInNew as OpenInNewIcon, CloudDownload as CloudDownloadIcon, Description as DescriptionIcon, Polymer as PolymerIcon, CheckCircle as CheckCircleIcon, Close as CloseIcon, Apps as AppsIcon, Image as ImageIcon, Delete as DeleteIcon, Cached as CachedIcon, AccessibilityNew as AccessibilityNewIcon, Lock as LockIcon, Eco as EcoIcon, Schedule as ScheduleIcon, Cloud as CloudIcon, Business as BusinessIcon} from '@material-ui/icons';
+
 import { useAlert } from "react-alert";
 import Dropzone from '../components/Dropzone';
-
-import { Dialog, DialogTitle, DialogActions, DialogContent } from '@material-ui/core';
-import { useTheme } from '@material-ui/core/styles';
 import HandlePayment from './HandlePayment'
 import OrgHeader from '../components/OrgHeader'
-
-import CircularProgress from '@material-ui/core/CircularProgress';
-import EditIcon from '@material-ui/icons/Edit';
-import FileCopyIcon from '@material-ui/icons/FileCopy';
-import PublishIcon from '@material-ui/icons/Publish';
-import SelectAllIcon from '@material-ui/icons/SelectAll';
-import OpenInNewIcon from '@material-ui/icons/OpenInNew';
-import CloudDownloadIcon from '@material-ui/icons/CloudDownload';
-import DescriptionIcon from '@material-ui/icons/Description';
-import PolymerIcon from '@material-ui/icons/Polymer';
-import CheckCircleIcon from '@material-ui/icons/CheckCircle';
-import CloseIcon from '@material-ui/icons/Close';
-import AppsIcon from '@material-ui/icons/Apps';
-import ImageIcon from '@material-ui/icons/Image';
-import DeleteIcon from '@material-ui/icons/Delete';
-import CachedIcon from '@material-ui/icons/Cached';
-import AccessibilityNewIcon from '@material-ui/icons/AccessibilityNew';
-import LockIcon from '@material-ui/icons/Lock';
-import EcoIcon from '@material-ui/icons/Eco';
-import ScheduleIcon from '@material-ui/icons/Schedule';
-import CloudIcon from '@material-ui/icons/Cloud';
-import BusinessIcon from '@material-ui/icons/Business';
-
 
 const useStyles = makeStyles({
 	notchedOutline: {
@@ -1645,7 +1603,7 @@ const Admin = (props) => {
 				}
 
 					<div style={{backgroundColor: "#1f2023", paddingTop: 25,}}>
-						<HandlePayment stripeKey={props.stripeKey} userdata={userdata} globalUrl={globalUrl} {...props} />
+						<HandlePayment theme={theme} stripeKey={props.stripeKey} userdata={userdata} globalUrl={globalUrl} {...props} />
 					</div>
 			</div>
 		: null

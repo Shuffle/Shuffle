@@ -2,33 +2,13 @@ import React, {useState, useEffect} from 'react';
 import { makeStyles } from '@material-ui/styles';
 import {BrowserView, MobileView} from "react-device-detect";
 
+import {Paper, Typography, FormControlLabel, Button, Divider, Select, MenuItem, FormControl, Switch, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Tooltip, Breadcrumbs, CircularProgress, Chip} from '@material-ui/core';
+import {CheckCircle as CheckCircleIcon, AttachFile as AttachFileIcon, Apps as AppsIcon, ErrorOutline as ErrorOutlineIcon} from '@material-ui/icons';
+
+
 import {Link} from 'react-router-dom';
-import Paper from '@material-ui/core/Paper';
-import Typography from '@material-ui/core/Typography';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Button from '@material-ui/core/Button';
-import Divider from '@material-ui/core/Divider';
-import Select from '@material-ui/core/Select';
-import MenuItem from '@material-ui/core/MenuItem';
-import FormControl from '@material-ui/core/FormControl';
-import Switch from '@material-ui/core/Switch';
-import Dialog from '@material-ui/core/Dialog';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogActions from '@material-ui/core/DialogActions';
-import TextField from '@material-ui/core/TextField';
-import Tooltip from '@material-ui/core/Tooltip';
-import CheckCircleIcon from '@material-ui/icons/CheckCircle';
-import AttachFileIcon from '@material-ui/icons/AttachFile';
-import Breadcrumbs from '@material-ui/core/Breadcrumbs';
-import AppsIcon from '@material-ui/icons/Apps';
-import CircularProgress from '@material-ui/core/CircularProgress';
-
-import Chip from '@material-ui/core/Chip';
-import ChipInput from 'material-ui-chip-input'
-
 import YAML from 'yaml'
-import ErrorOutline from '@material-ui/icons/ErrorOutline';
+import ChipInput from 'material-ui-chip-input'
 import { useAlert } from "react-alert";
 import words from "shellwords"
 
@@ -340,12 +320,10 @@ const AppCreator = (props) => {
 			return response.json()
 		})
 		.then((responseJson) => {
-			console.log("THE BODY IS HERE")
   		setIsAppLoaded(true)
 			if (!responseJson.success) {
 				alert.error("Failed to verify")
 			} else{
-				console.log("HMM 2")
 				var jsonvalid = false 
 				var tmpvalue = ""
 				try {
@@ -1303,13 +1281,13 @@ const AppCreator = (props) => {
 					id: 'outlined-age-simple',
 				}}
 			>
-				{apikeySelection.map(data => {
+				{apikeySelection.map((data, index) => {
 					if (data === undefined) {
 						return null
 					}
 
 					return (
-						<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+						<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data}>
 							{data}
 						</MenuItem>
 					)}
@@ -1327,7 +1305,7 @@ const AppCreator = (props) => {
 				const requiredColor = data.required === true ? "green" : "red"
 				//const required = data.required === true ? <div style={{color: "green", cursor: "pointer"}}>{data.required.toString()}</div> : <div onClick={() => {flipRequired(index)}} style={{display: "inline", color: "red", cursor: "pointer"}}>{data.required.toString()}</div>
 				return (
-					<Paper style={actionListStyle}>
+					<Paper key={index} style={actionListStyle}>
 						<div style={{marginLeft: "5px", width: "100%"}}>
 							<div style={{cursor: "pointer"}} onClick={() => {flipRequired(index)}}>
 								Required: <div style={{display: "inline", color: requiredColor}}>{data.required.toString()}</div>
@@ -1367,7 +1345,7 @@ const AppCreator = (props) => {
 			{actions.slice(0,actionAmount).map((data, index) => {
 				var error = data.errors.length > 0 ? 
 					<Tooltip color="primary" title={data.errors.join("\n")} placement="bottom">
-						<ErrorOutline />
+						<ErrorOutlineIcon />
 					</Tooltip>
 					:
 					<Tooltip color="secondary" title={data.errors.join("\n")} placement="bottom">
@@ -1391,7 +1369,7 @@ const AppCreator = (props) => {
 				const url = data.url
 				const hasFile = data["file_field"] !== undefined && data["file_field"] !== null && data["file_field"].length > 0
 				return (
-					<Paper style={actionListStyle}>
+					<Paper key={index} style={actionListStyle}>
 						{error} 
 					 	<Tooltip title="Edit action" placement="bottom">
 							<div style={{marginLeft: "5px", width: "100%", cursor: "pointer", maxWidth: 725, overflowX: "hidden",}} onClick={() => {
@@ -2057,8 +2035,8 @@ const AppCreator = (props) => {
 				value={newWorkflowCategories.length === 0 ? "Select a category" : newWorkflowCategories[0]}
 				style={{backgroundColor: inputColor, color: "white", height: "50px"}}
 				>
-				{categories.map(data => (
-					<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+				{categories.map((data, index) => (
+					<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data}>
 						{data}
 					</MenuItem>
 				))}
@@ -2332,8 +2310,8 @@ const AppCreator = (props) => {
 							value={authenticationOption}
 							style={{backgroundColor: inputColor, color: "white", height: "50px"}}
 							>
-							{authenticationOptions.map(data => (
-								<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+							{authenticationOptions.map((data, index) => (
+								<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data}>
 									{data}
 								</MenuItem>
 							))}

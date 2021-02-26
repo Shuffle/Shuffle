@@ -1,31 +1,9 @@
 import React, { useEffect} from 'react';
 import { useInterval } from 'react-powerhooks';
 
-import Grid from '@material-ui/core/Grid';
-import Paper from '@material-ui/core/Paper';
-import Tooltip from '@material-ui/core/Tooltip';
-import Divider from '@material-ui/core/Divider';
-import Button from '@material-ui/core/Button';
-import TextField from '@material-ui/core/TextField';
-import FormControl from '@material-ui/core/FormControl';
-import IconButton from '@material-ui/core/IconButton';
-import Menu from '@material-ui/core/Menu';
-import MenuItem from '@material-ui/core/MenuItem';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Chip from '@material-ui/core/Chip';
-import Switch from '@material-ui/core/Switch';
-import Typography from '@material-ui/core/Typography';
-import Zoom from '@material-ui/core/Zoom';
+import {Grid, Paper, Tooltip, Divider, Button, TextField, FormControl, IconButton, Menu, MenuItem, FormControlLabel, Chip, Switch, Typography, Zoom, CircularProgress, Dialog, DialogTitle, DialogActions, DialogContent} from '@material-ui/core';
+import {Cached as CachedIcon, GetApp as GetAppIcon, Apps as AppsIcon, Edit as EditIcon, MoreVert as MoreVertIcon, PlayArrow as PlayArrowIcon, Add as AddIcon, Publish as PublishIcon, CloudDownload as CloudDownloadIcon} from '@material-ui/icons';
 
-import CircularProgress from '@material-ui/core/CircularProgress';
-import CachedIcon from '@material-ui/icons/Cached';
-import GetAppIcon from '@material-ui/icons/GetApp';
-import AppsIcon from '@material-ui/icons/Apps';
-import EditIcon from '@material-ui/icons/Edit';
-import MoreVertIcon from '@material-ui/icons/MoreVert';
-import PlayArrowIcon from '@material-ui/icons/PlayArrow';
-import AddIcon from '@material-ui/icons/Add';
-import PublishIcon from '@material-ui/icons/Publish';
 //import JSONPretty from 'react-json-pretty';
 //import JSONPrettyMon from 'react-json-pretty/dist/monikai'
 import ReactJson from 'react-json-view'
@@ -34,12 +12,6 @@ import Dropzone from '../components/Dropzone';
 import {Link} from 'react-router-dom';
 import { useAlert } from "react-alert";
 import ChipInput from 'material-ui-chip-input'
-
-import Dialog from '@material-ui/core/Dialog';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import CloudDownloadIcon from '@material-ui/icons/CloudDownload';
 
 const inputColor = "#383B40"
 const surfaceColor = "#27292D"

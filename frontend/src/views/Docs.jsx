@@ -1,18 +1,11 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState,} from 'react';
 
 import { useTheme } from '@material-ui/core/styles';
-import Divider from '@material-ui/core/Divider';
 import ReactMarkdown from 'react-markdown';
 import {BrowserView, MobileView} from "react-device-detect";
-import Button from '@material-ui/core/Button';
-import Menu from '@material-ui/core/Menu';
-import MenuItem from '@material-ui/core/MenuItem';
-import Typography from '@material-ui/core/Typography';
-import Paper from '@material-ui/core/Paper';
-import List from '@material-ui/core/List';
-import ListItem from '@material-ui/core/ListItem';
-
 import {Link} from 'react-router-dom';
+
+import {Divider, Button, Menu, MenuItem, Typography, Paper, List} from '@material-ui/core';
 
 const Body = {
   maxWidth: '1000px',
@@ -31,13 +24,13 @@ const hrefStyle = {
 }
 
 const Docs = (props) => {
-  const { isLoaded, globalUrl, selectedDoc, serverside, isMobile, update} = props;
+  const { globalUrl, selectedDoc, serverside, isMobile, } = props;
 
 	const theme = useTheme();
 	const [data, setData] = useState("");
 	const [firstrequest, setFirstrequest] = useState(true);
 	const [list, setList] = useState([]);
-	const [listLoaded, setListLoaded] = useState(false);
+	const [, setListLoaded] = useState(false);
 	const [anchorEl, setAnchorEl] = React.useState(null);
 	const [baseUrl, setBaseUrl] = React.useState(serverside === true ? "" : window.location.href)
 
@@ -153,10 +146,10 @@ const Docs = (props) => {
 
 			// H#
 			if (!found) {
-				var elements = parent.getElementsByTagName('h3')
+				elements = parent.getElementsByTagName('h3')
 				console.log(name)
-				var found = false
-				for (var key in elements) {
+				found = false
+				for (key in elements) {
 					const element = elements[key]
 					if (element.innerHTML === undefined) {
 						continue
@@ -218,15 +211,6 @@ const Docs = (props) => {
 					{props.value}
 				</code>
 			</pre>
-		)
-	}
-
-	function TextWrapper(props) {
-		console.log(props)
-		return (
-			<Typography>
-				{props.value}			
-			</Typography>
 		)
 	}
 

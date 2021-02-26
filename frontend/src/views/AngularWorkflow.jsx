@@ -2,74 +2,15 @@ import React, {useState, useEffect, useLayoutEffect} from 'react';
 import { useInterval } from 'react-powerhooks';
 
 import uuid from "uuid";
-
 import {Link} from 'react-router-dom';
 import { Prompt } from 'react-router'
-import TextField from '@material-ui/core/TextField';
-import Drawer from '@material-ui/core/Drawer';
-import Button from '@material-ui/core/Button';
-import Paper from '@material-ui/core/Paper';
-import Grid from '@material-ui/core/Grid';
-import Tabs from '@material-ui/core/Tabs';
-import InputAdornment from '@material-ui/core/InputAdornment';
-import Tab from '@material-ui/core/Tab';
-import ButtonBase from '@material-ui/core/ButtonBase';
-import Tooltip from '@material-ui/core/Tooltip';
-import Select from '@material-ui/core/Select';
-import MenuItem from '@material-ui/core/MenuItem';
-import Divider from '@material-ui/core/Divider';
-import Dialog from '@material-ui/core/Dialog';
-import Modal from '@material-ui/core/Modal';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import InputLabel from '@material-ui/core/InputLabel';
-import DialogContent from '@material-ui/core/DialogContent';
-import FormControl from '@material-ui/core/FormControl';
-import IconButton from '@material-ui/core/IconButton';
-import Menu from '@material-ui/core/Menu';
-import Input from '@material-ui/core/Input';
-import FormGroup from '@material-ui/core/FormGroup';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Typography from '@material-ui/core/Typography';
-import Checkbox from '@material-ui/core/Checkbox';
-import Breadcrumbs from '@material-ui/core/Breadcrumbs';
-import CircularProgress from '@material-ui/core/CircularProgress';
-import Switch from '@material-ui/core/Switch';
 import ReactJson from 'react-json-view'
 import { useBeforeunload } from 'react-beforeunload';
 import NestedMenuItem from "material-ui-nested-menu-item";
-import Fade from '@material-ui/core/Fade';
 
-import ArrowUpwardIcon from '@material-ui/icons/ArrowUpward';
-import VisibilityIcon from '@material-ui/icons/Visibility';
-import DoneIcon from '@material-ui/icons/Done';
-import CloseIcon from '@material-ui/icons/Close';
-import ErrorIcon from '@material-ui/icons/Error';
-import FindReplaceIcon from '@material-ui/icons/FindReplace';
-import ArrowLeftIcon from '@material-ui/icons/ArrowLeft';
-import CachedIcon from '@material-ui/icons/Cached';
-import AddIcon from '@material-ui/icons/Add';
-import DirectionsRunIcon from '@material-ui/icons/DirectionsRun';
-import PolymerIcon from '@material-ui/icons/Polymer';
-import FormatListNumberedIcon from '@material-ui/icons/FormatListNumbered';
-import CreateIcon from '@material-ui/icons/Create';
-import PlayArrowIcon from '@material-ui/icons/PlayArrow';
-import AspectRatioIcon from '@material-ui/icons/AspectRatio';
-import MoreVertIcon from '@material-ui/icons/MoreVert';
-import AppsIcon from '@material-ui/icons/Apps';
-import ScheduleIcon from '@material-ui/icons/Schedule';
-import FavoriteBorderIcon from '@material-ui/icons/FavoriteBorder';
-import PauseIcon from '@material-ui/icons/Pause';
-import DeleteIcon from '@material-ui/icons/Delete';
-import AddCircleOutlineIcon from '@material-ui/icons/AddCircleOutline';
-import SaveIcon from '@material-ui/icons/Save';
-import KeyboardArrowLeftIcon from '@material-ui/icons/KeyboardArrowLeft';
-import KeyboardArrowRightIcon from '@material-ui/icons/KeyboardArrowRight';
-import ArrowBackIcon from '@material-ui/icons/ArrowBack';
-import SettingsIcon from '@material-ui/icons/Settings';
-import LockOpenIcon from '@material-ui/icons/LockOpen';
-import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
-import VpnKeyIcon from '@material-ui/icons/VpnKey';
+import {TextField, Drawer, Button, Paper, Grid, Tabs, InputAdornment, Tab, ButtonBase, Tooltip, Select, MenuItem, Divider, Dialog, Modal, DialogActions, DialogTitle, InputLabel, DialogContent, FormControl, IconButton, Menu, Input, FormGroup, FormControlLabel, Typography, Checkbox, Breadcrumbs, CircularProgress, Switch, Fade} from '@material-ui/core';
+
+import {ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
 
 import * as cytoscape from 'cytoscape';
 import * as edgehandles from 'cytoscape-edgehandles';
