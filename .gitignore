@@ -18,3 +18,7 @@ functions/generated_apps
 
 backend/onprem/app_sdk/apps
 *test.py
+
+shuffle-database
+*.exe
+*debug*
