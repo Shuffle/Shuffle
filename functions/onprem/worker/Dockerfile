@@ -1,4 +1,4 @@
-from golang as builder
+FROM golang:1.16.0-buster as builder
 
 WORKDIR /app
 
@@ -9,7 +9,13 @@ RUN go get -u github.com/gorilla/mux
 RUN go get -u github.com/patrickmn/go-cache
 
 COPY worker.go /app/worker.go
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o worker .
+RUN go env -w GO111MODULE=auto && \
+    go get github.com/docker/docker/api/types && \
+    go get github.com/docker/docker/api/types/container && \
+    go get github.com/docker/docker/client && \
+    go get github.com/gorilla/mux && \
+    go get github.com/patrickmn/go-cache && \
+    CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o worker .
 
 FROM alpine:3.12
 

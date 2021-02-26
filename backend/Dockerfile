@@ -1,4 +1,4 @@
-from golang as builder
+FROM golang:1.16.0-buster as builder
 
 # Add files
 RUN mkdir /app
