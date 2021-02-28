@@ -35,6 +35,7 @@
     "react": "^16.14.0",
     "react-alert": "^5.5.0",
     "react-alert-template-basic": "^1.0.0",
+    "react-avatar-editor": "^11.1.0",
     "react-beforeunload": "^2.2.1",
     "react-chartjs-2": "^2.8.0",
     "react-cookie": "^4.0.1",

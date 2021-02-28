@@ -32,6 +32,13 @@ import ErrorOutline from '@material-ui/icons/ErrorOutline';
 import { useAlert } from "react-alert";
 import words from "shellwords"
 
+import AvatarEditor from 'react-avatar-editor';
+import AddAPhotoIcon from '@material-ui/icons/AddAPhoto';
+import AddAPhotoOutlinedIcon from '@material-ui/icons/AddAPhotoOutlined';
+import ZoomInOutlinedIcon from '@material-ui/icons/ZoomInOutlined';
+import ZoomOutOutlinedIcon from '@material-ui/icons/ZoomOutOutlined';
+import LoopIcon from '@material-ui/icons/Loop';
+
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
 
@@ -63,6 +70,18 @@ const boxStyle = {
 	display: "flex", 
 	flexDirection: "column",
 	backgroundColor: surfaceColor,
+}
+
+const dividerStyle = { 
+	marginBottom: "10px", 
+	marginTop: "10px", 
+	height: "1px", 
+	width: "100%", 
+	backgroundColor: "grey",
+}
+
+const appIconStyle = { 
+	marginLeft: "5px",
 }
 
 const useStyles = makeStyles({
@@ -2122,8 +2141,114 @@ const AppCreator = (props) => {
 	//	</div> :
 	//	<img src={file} id="logo" style={{width: "100%", height: "100%"}} />
 
-	const imageData = file.length > 0 ? file : fileBase64 
+	const [imageUploadError, setImageUploadError] = useState("");
+	const [openImageModal, setOpenImageModal] = useState("");
+	const [scale, setScale] = useState(1);
+	const [rotate, setRotatation] = useState(0);
+	const [disableImageUpload, setDisableImageUpload] = useState(true);
+
+	let imageData = fileBase64;
+	let croppedData = file.length > 0 ? file : fileBase64
+
 	const imageInfo = <img src={imageData} alt="Click to upload an image (174x174)" id="logo" style={{maxWidth: 174, maxHeight: 174, minWidth: 174, minHeight: 174, objectFit: "contain",}} />
+	
+	const zoomIn = () => {
+		setScale(scale+0.1);
+	}
+	const zoomOut = () => {
+		setScale(scale-0.1);
+	}
+	const rotatation = () => {
+		setRotatation(rotate+10);
+	}
+
+	const onPositionChange = () => {
+		setDisableImageUpload(false);
+	}
+
+	const onCancelSaveAppIcon = () => {
+		setFile("");
+		setOpenImageModal(false)
+		setImageUploadError("")
+	}
+
+	let editor;
+	const setEditorRef = (imgEditor) => { editor = imgEditor; }
+
+	const onSaveAppIcon = () => {
+		if(editor){
+			setFile("");
+			const canvas = editor.getImageScaledToCanvas();
+			setFileBase64(canvas.toDataURL());
+			setOpenImageModal(false)
+			setDisableImageUpload(true);
+		}
+	}
+
+	const errorText = imageUploadError.length > 0 ? <div style={{marginTop: 10}}>Error: {imageUploadError}</div> : null
+	const imageUploadModalView = openImageModal ? 
+		<Dialog open={openImageModal} onClose={onCancelSaveAppIcon}
+			PaperProps={{
+				style: {
+					backgroundColor: surfaceColor,
+					color: "white",
+					minWidth: "300px",
+					minHeight: "300px",
+				},
+			}}
+		>
+			<FormControl>
+				<DialogTitle><div style={{color: "rgba(255,255,255,0.9)"}}>Upload App Icon</div></DialogTitle>
+				{errorText}
+				<DialogContent style={{color: "rgba(255,255,255,0.65)"}}>
+					<AvatarEditor
+						ref={setEditorRef}
+						image={croppedData}
+						width={174}
+						height={174}
+						border={50}
+						color={[0, 0, 0, 0.6]} // RGBA
+						scale={scale}
+						rotate={rotate}
+						onImageChange={onPositionChange}
+						onLoadSuccess={()=>setRotatation(0)}
+					/>
+					<Divider style={dividerStyle}/>
+						<Tooltip title={"New Icon"}>
+							<Button variant="outlined" component="label" color="primary" style={appIconStyle}>
+							<AddAPhotoOutlinedIcon onClick={() => {upload.click()}} color="primary" />	
+							</Button> 
+						</Tooltip>
+						<Tooltip title={"Zoom In"}>
+							<Button variant="outlined" component="label" color="primary" style={appIconStyle}>
+							<ZoomInOutlinedIcon onClick={zoomIn} color="primary" />	
+							</Button> 
+						</Tooltip>
+						<Tooltip title={"Zoom out"}>
+							<Button variant="outlined" component="label" color="primary" style={appIconStyle}>
+							<ZoomOutOutlinedIcon onClick={zoomOut} color="primary" />	
+							</Button> 
+						</Tooltip>
+						<Tooltip title={"Rotate"}>
+							<Button variant="outlined" component="label" color="primary" style={appIconStyle}>
+							<LoopIcon onClick={rotatation} color="primary" />	
+							</Button> 
+						</Tooltip>
+					<Divider style={dividerStyle} />
+				</DialogContent>
+				<DialogActions>
+					<Button style={{borderRadius: "0px"}} onClick={onCancelSaveAppIcon} color="primary">
+						Cancel
+					</Button>
+					<Button variant="contained" style={{borderRadius: "0px"}} disabled={disableImageUpload} onClick={() => {
+								onSaveAppIcon()
+							}} color="primary">
+						Continue	
+					</Button>
+				</DialogActions>
+			</FormControl>
+		</Dialog>
+		: null;
 
 	// Random names for type & autoComplete. Didn't research :^)
 	const landingpageDataBrowser = 
@@ -2139,12 +2264,13 @@ const AppCreator = (props) => {
 						{name}
 					</h2>
 				</Breadcrumbs>
+				{imageUploadModalView}
 				<Paper style={boxStyle}>
 					<h2 style={{marginBottom: "10px", color: "white"}}>General information</h2>
 					<a target="_blank" href="https://shuffler.io/docs/apps#create_openapi_app" style={{textDecoration: "none", color: "#f85a3e"}}>Click here to learn more about app creation</a>
 					<div style={{color: "white", flex: "1", display: "flex", flexDirection: "row"}}>
 					 	<Tooltip title="Click to edit the app's image" placement="bottom">
-							<div style={{flex: "1", margin: 10, border: "1px solid #f85a3e", cursor: "pointer", backgroundColor: inputColor, maxWidth: 174, maxHeight: 174}} onClick={() => {upload.click()}}>
+							<div style={{flex: "1", margin: 10, border: "1px solid #f85a3e", cursor: "pointer", backgroundColor: inputColor, maxWidth: 174, maxHeight: 174}} onClick={() => {setOpenImageModal(true)}}>
 								<input hidden type="file" ref={(ref) => upload = ref} onChange={editHeaderImage} />
 								{imageInfo}
 							</div>
