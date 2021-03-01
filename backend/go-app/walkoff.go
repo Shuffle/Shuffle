@@ -195,6 +195,11 @@ type WorkflowApp struct {
 		DocumentationUrl string `json:"documentation_url" datastore:"documentation_url"`
 		GithubUrl        string `json:"github_url" datastore:"github_url"`
 	}
+	FolderMount struct {
+		FolderMount       bool   `json:"folder_mount" datastore:"folder_mount"`
+		SourceFolder      string `json:"source_folder" datastore:"source_folder"`
+		DestinationFolder string `json:"destination_folder" datastore:"destination_folder"`
+	}
 	Actions        []WorkflowAppAction `json:"actions" yaml:"actions" required:true datastore:"actions,noindex"`
 	Authentication Authentication      `json:"authentication" yaml:"authentication" required:false datastore:"authentication"`
 	Tags           []string            `json:"tags" yaml:"tags" required:false datastore:"activated"`
@@ -6421,7 +6426,7 @@ func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra 
 						}
 					}
 				*/
-				
+
 				log.Printf("Import workflow from file: %s", filename)
 				ctx := context.Background()
 				err = setWorkflow(ctx, workflow, workflow.ID, secondsOffset)

@@ -18,6 +18,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
 	dockerclient "github.com/docker/docker/client"
 
 	"github.com/gorilla/mux"
@@ -876,6 +877,37 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	if cleanupEnv == "true" {
 		hostConfig.AutoRemove = true
 	}
+
+	// FIXME: Add proper foldermounts here
+	//log.Printf("\n\nPRE FOLDERMOUNT\n\n")
+	//volumeBinds := []string{"/tmp/shuffle-mount:/rules"}
+	//volumeBinds := []string{"/tmp/shuffle-mount:/rules"}
+	volumeBinds := []string{}
+	if len(volumeBinds) > 0 {
+		log.Printf("[INFO] Setting up binds for container!")
+		hostConfig.Binds = volumeBinds
+		hostConfig.Mounts = []mount.Mount{}
+		for _, bind := range volumeBinds {
+			if !strings.Contains(bind, ":") || strings.Contains(bind, "..") || strings.HasPrefix(bind, "~") {
+				log.Printf("[WARNING] Bind %s is invalid.", bind)
+				continue
+			}
+
+			log.Printf("[INFO] Appending bind %s", bind)
+			bindSplit := strings.Split(bind, ":")
+			sourceFolder := bindSplit[0]
+			destinationFolder := bindSplit[0]
+			hostConfig.Mounts = append(hostConfig.Mounts, mount.Mount{
+				Type:   mount.TypeBind,
+				Source: sourceFolder,
+				Target: destinationFolder,
+			})
+		}
+	} else {
+		log.Printf("[WARNING] No mounted folders")
+	}
+	//	hostConfig.Binds = volumeBinds
+	//}
 
 	config := &container.Config{
 		Image: image,

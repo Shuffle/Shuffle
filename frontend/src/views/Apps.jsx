@@ -201,7 +201,8 @@ const Apps = (props) => {
 		})
     .then((responseJson) => {
 			//console.log("Apps: ", responseJson)
-			responseJson = sortByKey(responseJson, "large_image")
+			//responseJson = sortByKey(responseJson, "large_image")
+			responseJson = sortByKey(responseJson, "generated")
 
 			setApps(responseJson)
 			setFilteredApps(responseJson)
@@ -781,6 +782,7 @@ const Apps = (props) => {
 		var tmpapps = searchableApps.filter(data => data.name.toLowerCase().includes(searchfield) || data.description.toLowerCase().includes(searchfield))
 		newapps.push(...tmpapps) 
 
+		console.log(newapps)
 		setFilteredApps(newapps)
 		//if ((newapps.length === 0 || searchBackend) && !appSearchLoading) {
 

@@ -987,7 +987,7 @@ const AngularWorkflow = (props) => {
 			setApps(responseJson)
 			//getAppAuthentication() 
 
-			setFilteredApps(responseJson.filter(app => !internalIds.includes(app.name)))
+			setFilteredApps(responseJson.filter(app => !internalIds.includes(app.name) && !(!app.activated && app.generated)))
 			setPrioritizedApps(responseJson.filter(app => internalIds.includes(app.name)))
     })
 		.catch(error => {
@@ -6637,7 +6637,7 @@ const AngularWorkflow = (props) => {
 
 						<b>Actions</b>
 						<div>
-							{executionData.status !== undefined && executionData.status !== "ABORTED" && executionData.status !== "FINISHED" && executionData.status !== "FAILURE" && executionData.status !== "WAITING" ? <CircularProgress style={{marginLeft: 20}}/> : null}
+							{executionData.status !== undefined && executionData.status !== "ABORTED" && executionData.status !== "FINISHED" && executionData.status !== "FAILURE" && executionData.status !== "WAITING" && !(executionData.results === undefined || executionData.results === null || executionData.results.length === 0 && executionData.status === "EXECUTING")? <CircularProgress style={{marginLeft: 20}}/> : null}
 						</div>
 					</div>
 					{executionData.results === undefined || executionData.results === null || executionData.results.length === 0 && executionData.status === "EXECUTING" ?
@@ -6712,7 +6712,7 @@ const AngularWorkflow = (props) => {
 											}}
 											name={"Results for "+data.action.label}
 										/>
-										{data.action.app_name === "shuffle-subflow" ?
+										{data.action.app_name === "shuffle-subflow" && validate.result.success !== undefined && validate.result.success === true ?
 											<span>
 												{validate.valid && data.action.parameters !== undefined && data.action.parameters !== null ? 
 													<a rel="norefferer" href={`/workflows/${data.action.parameters[0].value}?view=executions&execution_id=${validate.result.execution_id}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>See subflow execution</a>
@@ -6724,7 +6724,7 @@ const AngularWorkflow = (props) => {
 										}
 										</span>
 									: 
-									<div style={{maxHeight: 250, overflowX: "hidden", overflowY: "auto",}}>
+									<div style={{maxHeight: 250, overflowX: "hidden", overflowY: "auto", whiteSpace: "pre-wrap"}}>
 										<b>Result</b>&nbsp;
 										{data.result}
 									</div>
