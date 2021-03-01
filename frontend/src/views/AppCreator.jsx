@@ -2305,13 +2305,19 @@ const AppCreator = (props) => {
 					</h2>
 				</Breadcrumbs>
 				{imageUploadModalView}
+				<input hidden type="file" ref={(ref) => upload = ref} onChange={editHeaderImage} />
 				<Paper style={boxStyle}>
 					<h2 style={{marginBottom: "10px", color: "white"}}>General information</h2>
 					<a target="_blank" href="https://shuffler.io/docs/apps#create_openapi_app" style={{textDecoration: "none", color: "#f85a3e"}}>Click here to learn more about app creation</a>
 					<div style={{color: "white", flex: "1", display: "flex", flexDirection: "row"}}>
 					 	<Tooltip title="Click to edit the app's image" placement="bottom">
-							<div style={{flex: "1", margin: 10, border: "1px solid #f85a3e", cursor: "pointer", backgroundColor: inputColor, maxWidth: 174, maxHeight: 174}} onClick={() => {setOpenImageModal(true)}}>
-								<input hidden type="file" ref={(ref) => upload = ref} onChange={editHeaderImage} />
+							<div style={{flex: "1", margin: 10, border: "1px solid #f85a3e", cursor: "pointer", backgroundColor: inputColor, maxWidth: 174, maxHeight: 174}} onClick={() => {
+								if (fileBase64.length === 0) {
+									upload.click()
+								}
+
+								setOpenImageModal(true)
+							}}>
 								{imageInfo}
 							</div>
 						</Tooltip>
