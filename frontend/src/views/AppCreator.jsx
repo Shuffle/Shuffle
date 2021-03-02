@@ -2067,8 +2067,24 @@ const AppCreator = (props) => {
 		</div>
 
 	const actionView = 
-		<div style={{color: "white"}}>
-			<h2>Actions ({actions.length})</h2>
+		<div style={{color: "white", position: "relative",}}>
+			<div style={{position: "absolute", right: 0, top: 0,}}>
+				{actionAmount > 0 && actionAmount < actions.length ? 
+					<Button color="primary" style={{float: "right", borderRadius: 0, textAlign: "center"}} variant="outlined" onClick={() => {
+						setActionAmount(actions.length)
+						/*
+						if (actionAmount+increaseAmount > actions.length) {
+							setActionAmount(actions.length)
+						} else {
+							setActionAmount(actionAmount+increaseAmount)
+						}
+						*/
+					}}>
+						See all actions 
+					</Button>
+				: null}
+			</div>
+			<h2>Actions ({actionAmount} / {actions.length})</h2>
 			Actions are the tasks performed by an app. Read more about actions and apps
 			<a target="_blank" src="https://shuffler.io/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}> here</a>.
 			<div>
@@ -2091,18 +2107,7 @@ const AppCreator = (props) => {
 						setActionsModalOpen(true)
 					}}>New action</Button> 				
 					{/*
-					{actionAmount} {actions.length}
-					{actionAmount > 0 && actionAmount < actions.length ? null :  
-						<Button color="primary" style={{float: "right", marginTop: "20px", borderRadius: "0px", textAlign: "center"}} variant="outlined" onClick={() => {
-							if (actionAmount+increaseAmount > actions.length) {
-								setActionAmount(actions.length)
-							} else {
-								setActionAmount(actionAmount+increaseAmount)
-							}
-						}}>
-							See more actions	
-						</Button>
-					}
+						{actionAmount} {actions.length}
 					*/}
 				</div>
 			</div>
