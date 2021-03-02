@@ -101,7 +101,7 @@ func getThisContainerId() {
 		log.Printf("[INFO] Running containerized in Docker!")
 
 	default:
-		fCol = "3" // for backward-compatibility with production
+		fCol = "0" // for backward-compatibility with production
 		log.Printf("[WARNING] RUNNING_MODE not set - defaulting to Docker (NOT Kubernetes).")
 	}
 
@@ -119,8 +119,10 @@ func getThisContainerId() {
 				//docker-76c537e9a4b7c7233011f5d70e6b7f2d600b6413ac58a96519b8dca7a3f7117a.scope
 			}
 		} else {
-			containerId = "shuffle-orborus"
-			log.Printf("[WARNING] Failed getting container ID: %s", err)
+			if fCol != "0" {
+				containerId = "shuffle-orborus"
+				log.Printf("[WARNING] Failed getting container ID: %s", err)
+			}
 		}
 	}
 

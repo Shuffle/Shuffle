@@ -11,6 +11,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"strings"
@@ -774,8 +775,22 @@ type AppExecutionExample struct {
 }
 
 // removes every container except itself (worker)
-func shutdown(executionId, workflowId string) {
+func shutdown(workflowExecution WorkflowExecution, nodeId string, reason string, handleResultSend bool) {
 	log.Printf("[INFO] Shutdown started")
+	//reason := "Error in execution"
+
+	sleepDuration := 1
+	if handleResultSend {
+		data, err := json.Marshal(workflowExecution)
+		if err == nil {
+			sendResult(workflowExecution, data)
+			log.Printf("[WARNING] Sent shutdown update")
+		} else {
+			log.Printf("[WARNING] DIDNT send update")
+		}
+
+		time.Sleep(time.Duration(sleepDuration) * time.Second)
+	}
 
 	// Might not be necessary because of cleanupEnv hostconfig autoremoval
 	if cleanupEnv == "true" && len(containerIds) > 0 {
@@ -801,7 +816,20 @@ func shutdown(executionId, workflowId string) {
 		log.Printf("[INFO] NOT cleaning up containers. IDS: %d, CLEANUP env: %s", len(containerIds), cleanupEnv)
 	}
 
-	fullUrl := fmt.Sprintf("%s/api/v1/workflows/%s/executions/%s/abort", baseUrl, workflowId, executionId)
+	fullUrl := fmt.Sprintf("%s/api/v1/workflows/%s/executions/%s/abort", baseUrl, workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
+
+	path := fmt.Sprintf("?reason=%s", url.QueryEscape(reason))
+	if len(nodeId) > 0 {
+		path += fmt.Sprintf("&node=%s", url.QueryEscape(nodeId))
+	}
+	if len(environment) > 0 {
+		path += fmt.Sprintf("&env=%s", url.QueryEscape(environment))
+	}
+
+	//fmt.Println(url.QueryEscape(query))
+	fullUrl += path
+	log.Printf("Abort URL: %s", fullUrl)
+
 	req, err := http.NewRequest(
 		"GET",
 		fullUrl,
@@ -844,7 +872,6 @@ func shutdown(executionId, workflowId string) {
 		log.Printf("[INFO] Failed abort request: %s", err)
 	}
 
-	sleepDuration := 1
 	log.Printf("[INFO] Finished shutdown (after %d seconds).", sleepDuration)
 	// Allows everything to finish in subprocesses
 	time.Sleep(time.Duration(sleepDuration) * time.Second)
@@ -931,7 +958,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	err = cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
 	if err != nil {
 		log.Printf("[ERROR] Failed to start container in environment %s: %s", environment, err)
-		//shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+		//shutdown(workflowExecution, workflowExecution.Workflow.ID, true)
 		return err
 	}
 
@@ -1202,7 +1229,7 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 
 		if exit && len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions) {
 			log.Printf("Shutting down.")
-			shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+			shutdown(workflowExecution, "", "", true)
 		}
 
 		// Look for the NEXT missing action
@@ -1547,18 +1574,18 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 				reader, err := dockercli.ImagePull(context.Background(), image, pullOptions)
 				if err != nil {
 					log.Printf("[ERROR] Failed getting %s. The couldn't be find locally, AND is missing.", image)
-					shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+					shutdown(workflowExecution, action.ID, err.Error(), true)
 				}
 
 				buildBuf := new(strings.Builder)
 				_, err = io.Copy(buildBuf, reader)
 				if err != nil {
 					log.Printf("[ERROR] Error in IO copy: %s", err)
-					shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+					shutdown(workflowExecution, action.ID, err.Error(), true)
 				} else {
 					if strings.Contains(buildBuf.String(), "errorDetail") {
 						log.Printf("[ERROR] Docker build:\n%s\nERROR ABOVE: Trying to pull tags from: %s", buildBuf.String(), image)
-						shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+						shutdown(workflowExecution, action.ID, err.Error(), true)
 					}
 
 					log.Printf("[INFO] Successfully downloaded %s", image)
@@ -1571,7 +1598,7 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 					if strings.Contains(err.Error(), "No such image") {
 						//log.Printf("[WARNING] Failed deploying %s from image %s: %s", identifier, image, err)
 						log.Printf("[ERROR] Image doesn't exist. Shutting down")
-						shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+						shutdown(workflowExecution, action.ID, err.Error(), true)
 					}
 				}
 			}
@@ -1599,18 +1626,18 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 						reader, err := dockercli.ImagePull(context.Background(), image, pullOptions)
 						if err != nil {
 							log.Printf("[ERROR] Failed getting %s. The couldn't be find locally, AND is missing.", image)
-							shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+							shutdown(workflowExecution, action.ID, err.Error(), true)
 						}
 
 						buildBuf := new(strings.Builder)
 						_, err = io.Copy(buildBuf, reader)
 						if err != nil {
 							log.Printf("[ERROR] Error in IO copy: %s", err)
-							shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+							shutdown(workflowExecution, action.ID, err.Error(), true)
 						} else {
 							if strings.Contains(buildBuf.String(), "errorDetail") {
 								log.Printf("[ERROR] Docker build:\n%s\nERROR ABOVE: Trying to pull tags from: %s", buildBuf.String(), image)
-								shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+								shutdown(workflowExecution, action.ID, err.Error(), true)
 							}
 
 							log.Printf("[INFO] Successfully downloaded %s", image)
@@ -1623,7 +1650,7 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 							if strings.Contains(err.Error(), "No such image") {
 								//log.Printf("[WARNING] Failed deploying %s from image %s: %s", identifier, image, err)
 								log.Printf("[ERROR] Image doesn't exist. Shutting down")
-								shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+								shutdown(workflowExecution, action.ID, err.Error(), true)
 							}
 						}
 					}
@@ -1663,7 +1690,7 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 		if shutdownCheck {
 			log.Println("[INFO] BREAKING BECAUSE RESULTS IS SAME LENGTH AS ACTIONS. SHOULD CHECK ALL RESULTS FOR WHETHER THEY'RE DONE")
 			validateFinished(workflowExecution)
-			shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+			shutdown(workflowExecution, "", "", true)
 		}
 	}
 
@@ -1781,7 +1808,7 @@ func executionInit(workflowExecution WorkflowExecution) error {
 		//reader, err := dockercli.ImagePull(context.Background(), image, pullOptions)
 		//if err != nil {
 		//	log.Printf("Failed getting %s. The app is missing or some other issue", image)
-		//	shutdown(workflowExecution.ExecutionId)
+		//	shutdown(workflowExecution)
 		//}
 
 		////io.Copy(os.Stdout, reader)
@@ -1799,7 +1826,7 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 	err := executionInit(workflowExecution)
 	if err != nil {
 		log.Printf("[INFO] Workflow setup failed: %s", workflowExecution.ExecutionId, err)
-		shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+		shutdown(workflowExecution, "", "", true)
 	}
 
 	log.Printf("Startaction: %s", startAction)
@@ -1835,7 +1862,11 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 
 		if newresp.StatusCode != 200 {
 			log.Printf("[ERROR] Bad statuscode: %d, %s", newresp.StatusCode, string(body))
-			//shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+
+			if strings.Contains(string(body), "Workflowexecution is already finished") {
+				shutdown(workflowExecution, "", "", false)
+			}
+
 			time.Sleep(time.Duration(sleepTime) * time.Second)
 			continue
 		}
@@ -1849,13 +1880,13 @@ func handleExecution(client *http.Client, req *http.Request, workflowExecution W
 
 		if workflowExecution.Status == "FINISHED" || workflowExecution.Status == "SUCCESS" {
 			log.Printf("[INFO] Workflow %s is finished. Exiting worker.", workflowExecution.ExecutionId)
-			shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+			shutdown(workflowExecution, "", "", true)
 		}
 
 		log.Printf("[INFO] Status: %s, Results: %d, actions: %d", workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extra)
 		if workflowExecution.Status != "EXECUTING" {
 			log.Printf("[WARNING] Exiting as worker execution has status %s!", workflowExecution.Status)
-			shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+			shutdown(workflowExecution, "", "", true)
 		}
 
 	}
@@ -2545,6 +2576,34 @@ func getWorkflowExecution(ctx context.Context, id string) (*WorkflowExecution, e
 	return &WorkflowExecution{}, errors.New("No workflowexecution defined yet")
 }
 
+func sendResult(workflowExecution WorkflowExecution, data []byte) {
+	fullUrl := fmt.Sprintf("%s/api/v1/streams", baseUrl)
+	req, err := http.NewRequest(
+		"POST",
+		fullUrl,
+		bytes.NewBuffer([]byte(data)),
+	)
+
+	if err != nil {
+		log.Printf("[ERROR] Failed creating finishing request: %s", err)
+		shutdown(workflowExecution, "", "", false)
+	}
+
+	newresp, err := topClient.Do(req)
+	if err != nil {
+		log.Printf("[ERROR] Error running finishing request: %s", err)
+		shutdown(workflowExecution, "", "", false)
+	}
+
+	body, err := ioutil.ReadAll(newresp.Body)
+	log.Printf("[INFO] BACKEND STATUS: %d", newresp.StatusCode)
+	if err != nil {
+		log.Printf("[ERROR] Failed reading body: %s", err)
+	} else {
+		log.Printf("[INFO] NEWRESP (from backend): %s", string(body))
+	}
+}
+
 func validateFinished(workflowExecution WorkflowExecution) {
 	log.Printf("[INFO] Status: %s, Actions: %d, Extra: %d, Results: %d\n", workflowExecution.Status, len(workflowExecution.Workflow.Actions), extra, len(workflowExecution.Results))
 
@@ -2557,34 +2616,10 @@ func validateFinished(workflowExecution WorkflowExecution) {
 		data, err := json.Marshal(workflowExecution)
 		if err != nil {
 			log.Printf("[ERROR] Failed to unmarshal data for backend")
-			shutdown(workflowExecution.ExecutionId, "")
+			shutdown(workflowExecution, "", "", true)
 		}
 
-		fullUrl := fmt.Sprintf("%s/api/v1/streams", baseUrl)
-		req, err := http.NewRequest(
-			"POST",
-			fullUrl,
-			bytes.NewBuffer([]byte(data)),
-		)
-
-		if err != nil {
-			log.Printf("[ERROR] Failed creating finishing request: %s", err)
-			shutdown(workflowExecution.ExecutionId, "")
-		}
-
-		newresp, err := topClient.Do(req)
-		if err != nil {
-			log.Printf("[ERROR] Error running finishing request: %s", err)
-			shutdown(workflowExecution.ExecutionId, "")
-		}
-
-		body, err := ioutil.ReadAll(newresp.Body)
-		log.Printf("[INFO] BACKEND STATUS: %d", newresp.StatusCode)
-		if err != nil {
-			log.Printf("[ERROR] Failed reading body: %s", err)
-		} else {
-			log.Printf("[INFO] NEWRESP (from backend): %s", string(body))
-		}
+		sendResult(workflowExecution, data)
 	}
 }
 
@@ -2649,8 +2684,9 @@ func setWorkflowExecution(ctx context.Context, workflowExecution WorkflowExecuti
 	handleExecutionResult(workflowExecution)
 	validateFinished(workflowExecution)
 	if dbSave {
-		shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+		shutdown(workflowExecution, "", "", false)
 	}
+
 	return nil
 }
 
@@ -2691,7 +2727,7 @@ func webserverSetup(workflowExecution WorkflowExecution) net.Listener {
 	listener, err := getAvailablePort()
 	if err != nil {
 		log.Printf("Failed to created listener: %s", err)
-		shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+		shutdown(workflowExecution, "", "", true)
 	}
 	port := listener.Addr().(*net.TCPAddr).Port
 
@@ -2754,14 +2790,17 @@ func main() {
 		log.Printf("[INFO] Running normal execution with auth %s and ID %s", authorization, executionId)
 	}
 
+	workflowExecution := WorkflowExecution{
+		ExecutionId: executionId,
+	}
 	if len(authorization) == 0 {
 		log.Println("[INFO] No AUTHORIZATION key set in env")
-		shutdown(executionId, "")
+		shutdown(workflowExecution, "", "", false)
 	}
 
 	if len(executionId) == 0 {
 		log.Println("[INFO] No EXECUTIONID key set in env")
-		shutdown(executionId, "")
+		shutdown(workflowExecution, "", "", false)
 	}
 
 	data = fmt.Sprintf(`{"execution_id": "%s", "authorization": "%s"}`, executionId, authorization)
@@ -2774,7 +2813,7 @@ func main() {
 
 	if err != nil {
 		log.Println("[ERROR] Failed making request builder for backend")
-		shutdown(executionId, "")
+		shutdown(workflowExecution, "", "", true)
 	}
 	topClient = client
 
@@ -2802,7 +2841,6 @@ func main() {
 			continue
 		}
 
-		var workflowExecution WorkflowExecution
 		err = json.Unmarshal(body, &workflowExecution)
 		if err != nil {
 			log.Printf("[ERROR] Failed workflowExecution unmarshal: %s", err)
@@ -2837,7 +2875,7 @@ func main() {
 				err := executionInit(workflowExecution)
 				if err != nil {
 					log.Printf("[INFO] Workflow setup failed: %s", workflowExecution.ExecutionId, err)
-					shutdown(workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
+					shutdown(workflowExecution, "", "", true)
 				}
 
 				go func() {
@@ -2856,7 +2894,7 @@ func main() {
 
 		if workflowExecution.Status == "FINISHED" || workflowExecution.Status == "SUCCESS" {
 			log.Printf("[INFO] Workflow %s is finished. Exiting worker.", workflowExecution.ExecutionId)
-			shutdown(executionId, workflowExecution.Workflow.ID)
+			shutdown(workflowExecution, "", "", true)
 		}
 
 		if workflowExecution.Status == "EXECUTING" || workflowExecution.Status == "RUNNING" {
@@ -2864,11 +2902,11 @@ func main() {
 			err = handleExecution(client, req, workflowExecution)
 			if err != nil {
 				log.Printf("[INFO] Workflow %s is finished: %s", workflowExecution.ExecutionId, err)
-				shutdown(executionId, workflowExecution.Workflow.ID)
+				shutdown(workflowExecution, "", "", true)
 			}
 		} else {
 			log.Printf("[INFO] Workflow %s has status %s. Exiting worker.", workflowExecution.ExecutionId, workflowExecution.Status)
-			shutdown(executionId, workflowExecution.Workflow.ID)
+			shutdown(workflowExecution, workflowExecution.Workflow.ID, "", true)
 		}
 
 		time.Sleep(time.Duration(sleepTime) * time.Second)

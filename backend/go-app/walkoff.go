@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"sort"
 	"strconv"
@@ -650,6 +651,7 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 	log.Printf("WRAPPER BODY: \n%s", bodyWrapper)
 	job := func() {
 		request := &http.Request{
+			URL:    &url.URL{},
 			Method: "POST",
 			Body:   ioutil.NopCloser(strings.NewReader(bodyWrapper)),
 		}
@@ -1014,7 +1016,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Success"}`)))
 		return
 	} else {
-		//log.Printf("[WARNING] Failed to handle new execution variant: %s", err)
+		//log.Printf("[WARNING] Handling other execution variant: %s", err)
 	}
 
 	var actionResult ActionResult
@@ -2899,6 +2901,8 @@ func abortExecution(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	//log.Printf("\n\nINSIDE ABORT\n\n")
+
 	location := strings.Split(request.URL.String(), "/")
 	var fileId string
 	if location[1] == "api" {
@@ -2974,6 +2978,7 @@ func abortExecution(resp http.ResponseWriter, request *http.Request) {
 
 	workflowExecution.CompletedAt = int64(time.Now().Unix())
 	workflowExecution.Status = "ABORTED"
+	log.Printf("[INFO] Running shutdown of %s", workflowExecution.ExecutionId)
 
 	lastResult := ""
 	newResults := []ActionResult{}
@@ -2994,6 +2999,79 @@ func abortExecution(resp http.ResponseWriter, request *http.Request) {
 	workflowExecution.Results = newResults
 	if len(workflowExecution.Result) == 0 {
 		workflowExecution.Result = lastResult
+	}
+
+	addResult := true
+	for _, result := range workflowExecution.Results {
+		if result.Status != "SKIPPED" {
+			addResult = false
+		}
+	}
+
+	extra := 0
+	for _, trigger := range workflowExecution.Workflow.Triggers {
+		//log.Printf("Appname trigger (0): %s", trigger.AppName)
+		if trigger.AppName == "User Input" || trigger.AppName == "Shuffle Workflow" {
+			extra += 1
+		}
+	}
+
+	parsedReason := "An error occurred during execution of this node"
+	reason, reasonok := request.URL.Query()["reason"]
+	if reasonok {
+		parsedReason = reason[0]
+	}
+
+	if len(workflowExecution.Results) == 0 || addResult {
+		newaction := Action{
+			ID: workflowExecution.Start,
+		}
+
+		for _, action := range workflowExecution.Workflow.Actions {
+			if action.ID == workflowExecution.Start {
+				newaction = action
+				break
+			}
+		}
+
+		workflowExecution.Results = append(workflowExecution.Results, ActionResult{
+			Action:        newaction,
+			ExecutionId:   workflowExecution.ExecutionId,
+			Authorization: workflowExecution.Authorization,
+			Result:        parsedReason,
+			StartedAt:     workflowExecution.StartedAt,
+			CompletedAt:   workflowExecution.StartedAt,
+			Status:        "FAILURE",
+		})
+	} else if len(workflowExecution.Results) >= len(workflowExecution.Workflow.Actions)+extra {
+		log.Printf("[INFO] DONE - Nothing to add during abort!")
+	} else {
+		//log.Printf("VALIDATING INPUT!")
+		node, nodeok := request.URL.Query()["node"]
+		if nodeok {
+			nodeId := node[0]
+			log.Printf("[INFO] Found abort node %s", nodeId)
+			newaction := Action{
+				ID: nodeId,
+			}
+
+			for _, action := range workflowExecution.Workflow.Actions {
+				if action.ID == nodeId {
+					newaction = action
+					break
+				}
+			}
+
+			workflowExecution.Results = append(workflowExecution.Results, ActionResult{
+				Action:        newaction,
+				ExecutionId:   workflowExecution.ExecutionId,
+				Authorization: workflowExecution.Authorization,
+				Result:        parsedReason,
+				StartedAt:     workflowExecution.StartedAt,
+				CompletedAt:   workflowExecution.StartedAt,
+				Status:        "FAILURE",
+			})
+		}
 	}
 
 	err = setWorkflowExecution(ctx, *workflowExecution, true)
@@ -3517,7 +3595,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 				//log.Printf("SHOULD SET TRIGGER %s TO BE SKIPPED", trigger.ID)
 
 				curaction := Action{
-					AppName:    trigger.AppName,
+					AppName:    "shuffle-subflow",
 					AppVersion: trigger.AppVersion,
 					Label:      trigger.Label,
 					Name:       trigger.Name,

@@ -183,7 +183,7 @@ const data = [{
 			css: {
 				'background-color': "#f85a3e",
 				'border-color': '#f85a3e',
-				'border-width': '5px',
+				'border-width': '8px',
 				'transition-property': 'border-width',
 				'transition-duration': '0.25s',
 			},

@@ -786,7 +786,7 @@ const AngularWorkflow = (props) => {
 			curelements[i].addClass("not-executing-highlight")
 		}
 
-		if (executionArgument.length > 0) { 
+		if (executionArgument !== undefined && executionArgument !== null && executionArgument.length > 0) { 
 			//alert.success("Starting execution WITH an execution argument")
 		} else {
 			//alert.success("Starting execution")
@@ -2794,8 +2794,10 @@ const AngularWorkflow = (props) => {
 						}
 
 						var exampledata = item.example === undefined ? "" : item.example
+						console.log("EXAMPLE: ", exampledata)
 						// Find previous execution and their variables
-						if (exampledata === "" && workflowExecutions.length > 0) {
+						//exampledata === "" && 
+						if (workflowExecutions.length > 0) {
 							// Look for the ID
 							const found = false
 							for (var key in workflowExecutions) {
@@ -3172,8 +3174,8 @@ const AngularWorkflow = (props) => {
 											<Tooltip title="Autocomplete text" placement="top">
 												<AddCircleOutlineIcon style={{cursor: "pointer"}} onClick={(event) => {
 													setMenuPosition({
-														top: event.pageY,
-														left: event.pageX,
+														top: event.pageY+10,
+														left: event.pageX+10,
 													})
 													setShowDropdownNumber(count)
 													setShowDropdown(true)
@@ -3235,8 +3237,8 @@ const AngularWorkflow = (props) => {
 												<Tooltip title="Autocomplete text" placement="top">
 													<AddCircleOutlineIcon style={{cursor: "pointer"}} onClick={(event) => {
 														setMenuPosition({
-															top: event.pageY,
-															left: event.pageX,
+															top: event.pageY+10,
+															left: event.pageX+10,
 														})
 														setShowDropdownNumber(count)
 														setShowDropdown(true)
@@ -3586,7 +3588,7 @@ const AngularWorkflow = (props) => {
 													// FIXME: Should be recursive in here
 													const icon = pathdata.type === "value" ? <VpnKeyIcon style={iconStyle} /> : pathdata.type === "list" ? <FormatListNumberedIcon style={iconStyle} /> : <ExpandMoreIcon style={iconStyle} /> 
 													return (
-														<MenuItem key={pathdata.name} style={{backgroundColor: inputColor, color: "white", minWidth: 250,}} value={pathdata} onMouseOver={() => {}}
+														<MenuItem key={pathdata.name} style={{backgroundColor: inputColor, color: "white", minWidth: 250, }} value={pathdata} onMouseOver={() => {}}
 															onClick={() => {
 																handleItemClick([innerdata, pathdata])
 															}}
@@ -6663,19 +6665,25 @@ const AngularWorkflow = (props) => {
 								if (action !== undefined && action !== null) {
 									imgSrc = action.large_image
 								}
+
+								/*
+								if (imgSrc.length === 0) {
+									console.log("CHECK IF ITS A 
+								}
+								*/
 							}
 
 							var actionimg = curapp === null ? 
 								null :
-								<img alt={data.action.app_name} src={imgSrc} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />
+								<img alt={data.action.app_name} src={imgSrc} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`, borderRadius: executionData.start === data.action.id ? 25 : 5}} />
 
 							if (triggers.length > 2) {
 								if (data.action.app_name === "shuffle-subflow") {
-									actionimg = <img alt={"Shuffle Subflow"} src={triggers[1].large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />
+									actionimg = <img alt={"Shuffle Subflow"} src={triggers[1].large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`, borderRadius: executionData.start === data.action.id ? 25 : 5}} />
 								}	
 
 								if (data.action.app_name === "User Input") {
-									actionimg = <img alt={"Shuffle Subflow"} src={triggers[2].large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />
+									actionimg = <img alt={"Shuffle Subflow"} src={triggers[2].large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`, borderRadius: executionData.start === data.action.id ? 25 : 5}} />
 								}	
 							}
 

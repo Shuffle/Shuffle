@@ -3559,9 +3559,8 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		//	bodyWrapper = string(parsedBody)
 		//}
 
-		url := &url.URL{}
 		newRequest := &http.Request{
-			URL:    url,
+			URL:    &url.URL{},
 			Method: "POST",
 			Body:   ioutil.NopCloser(bytes.NewReader(b)),
 		}
@@ -7234,9 +7233,10 @@ func runInit(ctx context.Context) {
 	if count == 0 && err == nil && len(activeOrgs) == 1 {
 		log.Printf("Setting up environment with org %s", activeOrgs[0].Id)
 		item := Environment{
-			Name:  "Shuffle",
-			Type:  "onprem",
-			OrgId: activeOrgs[0].Id,
+			Name:    "Shuffle",
+			Type:    "onprem",
+			OrgId:   activeOrgs[0].Id,
+			Default: true,
 		}
 
 		err = setEnvironment(ctx, &item)
@@ -7419,6 +7419,7 @@ func runInit(ctx context.Context) {
 		log.Printf("Failed getting schedules during service init: %s", err)
 	} else {
 		log.Printf("Setting up %d schedule(s)", len(schedules))
+		url := &url.URL{}
 		for _, schedule := range schedules {
 			if schedule.Environment == "cloud" {
 				log.Printf("Skipping cloud schedule")
@@ -7428,6 +7429,7 @@ func runInit(ctx context.Context) {
 			//log.Printf("Schedule: %#v", schedule)
 			job := func() {
 				request := &http.Request{
+					URL:    url,
 					Method: "POST",
 					Body:   ioutil.NopCloser(strings.NewReader(schedule.WrappedArgument)),
 				}
