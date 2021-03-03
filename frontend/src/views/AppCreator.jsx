@@ -38,6 +38,7 @@ import AddAPhotoOutlinedIcon from '@material-ui/icons/AddAPhotoOutlined';
 import ZoomInOutlinedIcon from '@material-ui/icons/ZoomInOutlined';
 import ZoomOutOutlinedIcon from '@material-ui/icons/ZoomOutOutlined';
 import LoopIcon from '@material-ui/icons/Loop';
+import AddPhotoAlternateIcon from '@material-ui/icons/AddPhotoAlternate';
 
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
@@ -2150,7 +2151,7 @@ const AppCreator = (props) => {
 	let imageData = fileBase64;
 	let croppedData = file.length > 0 ? file : fileBase64
 
-	const imageInfo = <img src={imageData} alt="Click to upload an image (174x174)" id="logo" style={{maxWidth: 174, maxHeight: 174, minWidth: 174, minHeight: 174, objectFit: "contain",}} />
+	const imageInfo = <img src={imageData} id="logo" style={{maxWidth: 174, maxHeight: 174, minWidth: 174, minHeight: 174, objectFit: "contain",}} />
 	
 	const zoomIn = () => {
 		setScale(scale+0.1);
@@ -2272,6 +2273,7 @@ const AppCreator = (props) => {
 					 	<Tooltip title="Click to edit the app's image" placement="bottom">
 							<div style={{flex: "1", margin: 10, border: "1px solid #f85a3e", cursor: "pointer", backgroundColor: inputColor, maxWidth: 174, maxHeight: 174}} onClick={() => {setOpenImageModal(true)}}>
 								<input hidden type="file" ref={(ref) => upload = ref} onChange={editHeaderImage} />
+								<AddPhotoAlternateIcon style={{ width: 100, height: 100, flex: "1", display: "flex", flexDirection: "row", margin: "auto" }}/>
 								{imageInfo}
 							</div>
 						</Tooltip>
