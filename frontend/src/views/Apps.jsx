@@ -215,7 +215,7 @@ const Apps = (props) => {
 				}
 			} 
 			
-			runAppSearch("")
+			//runAppSearch("")
     })
 		.catch(error => {
 			alert.error(error.toString())

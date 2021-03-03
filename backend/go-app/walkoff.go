@@ -214,7 +214,7 @@ type WorkflowAppActionParameter struct {
 	Description    string           `json:"description" datastore:"description,noindex" yaml:"description"`
 	ID             string           `json:"id" datastore:"id" yaml:"id,omitempty"`
 	Name           string           `json:"name" datastore:"name" yaml:"name"`
-	Example        string           `json:"example" datastore:"example" yaml:"example"`
+	Example        string           `json:"example" datastore:"example,noindex" yaml:"example"`
 	Value          string           `json:"value" datastore:"value,noindex" yaml:"value,omitempty"`
 	Multiline      bool             `json:"multiline" datastore:"multiline" yaml:"multiline"`
 	Options        []string         `json:"options" datastore:"options" yaml:"options"`
@@ -259,12 +259,12 @@ type WorkflowAppAction struct {
 	} `json:"execution_variable" datastore:"execution_variables"`
 	Returns struct {
 		Description string           `json:"description" datastore:"returns" yaml:"description,omitempty"`
-		Example     string           `json:"example" datastore:"example" yaml:"example"`
+		Example     string           `json:"example" datastore:"example,noindex" yaml:"example"`
 		ID          string           `json:"id" datastore:"id" yaml:"id,omitempty"`
 		Schema      SchemaDefinition `json:"schema" datastore:"schema" yaml:"schema"`
 	} `json:"returns" datastore:"returns"`
 	AuthenticationId string `json:"authentication_id" datastore:"authentication_id"`
-	Example          string `json:"example" datastore:"example" yaml:"example"`
+	Example          string `json:"example,noindex" datastore:"example" yaml:"example"`
 	AuthNotRequired  bool   `json:"auth_not_required" datastore:"auth_not_required" yaml:"auth_not_required"`
 }
 
@@ -327,7 +327,7 @@ type Action struct {
 	} `json:"position,omitempty"`
 	Priority         int    `json:"priority,omitempty" datastore:"priority"`
 	AuthenticationId string `json:"authentication_id" datastore:"authentication_id"`
-	Example          string `json:"example,omitempty" datastore:"example"`
+	Example          string `json:"example,omitempty" datastore:"example,noindex"`
 	AuthNotRequired  bool   `json:"auth_not_required,omitempty" datastore:"auth_not_required" yaml:"auth_not_required"`
 	Category         string `json:"category" datastore:"category"`
 }
@@ -461,7 +461,7 @@ type AuthenticationParams struct {
 	Description string           `json:"description" datastore:"description,noindex" yaml:"description"`
 	ID          string           `json:"id" datastore:"id" yaml:"id"`
 	Name        string           `json:"name" datastore:"name" yaml:"name"`
-	Example     string           `json:"example" datastore:"example" yaml:"example"`
+	Example     string           `json:"example" datastore:"example,noindex" yaml:"example"`
 	Value       string           `json:"value,omitempty" datastore:"value,noindex" yaml:"value"`
 	Multiline   bool             `json:"multiline" datastore:"multiline" yaml:"multiline"`
 	Required    bool             `json:"required" datastore:"required" yaml:"required"`
@@ -6532,9 +6532,12 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 	var err error
 
 	allapps := []WorkflowApp{}
+
+	// These are slow apps to build with some funky mechanisms
 	reservedNames := []string{
 		"OWA",
 		"NLP",
+		"YARA",
 	}
 
 	buildLaterFirst := []buildLaterStruct{}

@@ -1238,6 +1238,7 @@ const AppCreator = (props) => {
 		})
 
 		setActions(actions)
+		setActionAmount(actionAmount-1)
 		setUpdate(Math.random())
 	}
 
@@ -1914,7 +1915,7 @@ const AppCreator = (props) => {
 					{fileUploadEnabled ? 
 						<TextField
 							required
-							style={{backgroundColor: inputColor, display: "inline-block",}}
+							style={{backgroundColor: inputColor, display: "inline-block", marginLeft: 10, maxWidth: 210, marginTop: 7, }}
 							placeholder={"file"}
 							margin="normal"
 							variant="outlined"

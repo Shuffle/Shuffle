@@ -6673,6 +6673,7 @@ func createFs(basepath, pathname string) (billy.Filesystem, error) {
 
 // Hotloads new apps from a folder
 func handleAppHotload(location string, forceUpdate bool) error {
+
 	basepath := "base"
 	fs, err := createFs(basepath, location)
 	if err != nil {
@@ -6695,7 +6696,11 @@ func handleAppHotload(location string, forceUpdate bool) error {
 		return err
 	}
 
-	cacheKey := fmt.Sprintf("workflowapps-sorted")
+	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
+	requestCache.Delete(cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
+	requestCache.Delete(cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted")
 	requestCache.Delete(cacheKey)
 
 	return nil
