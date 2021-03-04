@@ -50,6 +50,34 @@ function useWindowSize() {
 	return size;
 }
 
+function removeParam(key, sourceURL) {
+	if (sourceURL === undefined) {
+		return
+	}
+
+	var rtn = sourceURL.split("?")[0],
+		param,
+		params_arr = [],
+		queryString = (sourceURL.indexOf("?") !== -1) ? sourceURL.split("?")[1] : "";
+
+	if (queryString !== "") {
+			params_arr = queryString.split("&");
+			for (var i = params_arr.length - 1; i >= 0; i -= 1) {
+					param = params_arr[i].split("=")[0];
+					if (param === key) {
+							params_arr.splice(i, 1);
+					}
+			}
+			rtn = rtn + "?" + params_arr.join("&");
+	}
+
+	if (rtn === "?") {
+		return ""
+	}
+
+	return rtn;
+}
+
 const splitter = "|~|"
 //const referenceUrl = "https://shuffler.io/functions/webhooks/"
 //const referenceUrl = window.location.origin+"/api/v1/hooks/"
@@ -98,6 +126,7 @@ const AngularWorkflow = (props) => {
 	const [rightSideBarOpen, setRightSideBarOpen] = React.useState(false)
 	const [showSkippedActions, setShowSkippedActions] = React.useState(false)
 	const [lastExecution, setLastExecution] = React.useState("")
+	const [curpath, setCurpath] = useState(typeof window === 'undefined' || window.location === undefined ? "" : window.location.pathname)
 
 	// 0 = normal, 1 = just done, 2 = normal
 	const [savingState, setSavingState] = React.useState(0)
@@ -321,7 +350,7 @@ const AngularWorkflow = (props) => {
 		})
 	}
 
-	const getWorkflowExecution = (id) => {
+	const getWorkflowExecution = (id, execution_id) => {
 		fetch(globalUrl+"/api/v1/workflows/"+id+"/executions", {
     	  method: 'GET',
 				headers: {
@@ -343,13 +372,19 @@ const AngularWorkflow = (props) => {
 				setWorkflowExecutions(responseJson)
 
 				const cursearch = typeof window === 'undefined' || window.location === undefined ? "" : window.location.search
-				const tmpView = new URLSearchParams(cursearch).get("execution_id")
+				var tmpView = new URLSearchParams(cursearch).get("execution_id")
+				if (execution_id !== undefined && execution_id !== null && execution_id.length > 0 && (tmpView === undefined || tmpView === null || tmpView.length === 0)) {
+					tmpView = execution_id
+				}
+					
 				if (tmpView !== undefined && tmpView !== null && tmpView.length > 0) {
-					//console.log("SHOW EXECUTION ", tmpView)
 					const execution = responseJson.find(data => data.execution_id === tmpView)
 					if (execution !== null && execution !== undefined) {
 						setExecutionData(execution)
 						setExecutionModalView(1)
+
+						const newitem = removeParam("execution_id", cursearch) 
+						props.history.push(curpath+newitem)
 					}
 				}
 			}
@@ -596,12 +631,12 @@ const AngularWorkflow = (props) => {
 				}
 			}
 
-			getWorkflowExecution(props.match.params.key)
+			getWorkflowExecution(props.match.params.key, "")
 		} else if (responseJson.status === "FINISHED") {
 			console.log("STOPPING BECAUSE ITS OVAH!")
 			setExecutionRunning(false)
 			stop()
-			getWorkflowExecution(props.match.params.key)
+			getWorkflowExecution(props.match.params.key, "")
 			setUpdate(Math.random())
 		}
 	}
@@ -1528,7 +1563,7 @@ const AngularWorkflow = (props) => {
 			getApps()
 			getAppAuthentication()
 			getEnvironments()
-			getWorkflowExecution(props.match.params.key)
+			getWorkflowExecution(props.match.params.key, "")
 			getAvailableWorkflows(-1) 
 			getSettings() 
 
@@ -1536,6 +1571,9 @@ const AngularWorkflow = (props) => {
 			const tmpView = new URLSearchParams(cursearch).get("view")
 			if (tmpView !== undefined && tmpView !== null && tmpView === "executions") {
 				setExecutionModalOpen(true)
+
+				const newitem = removeParam("view", cursearch) 
+				props.history.push(curpath+newitem)
 			}
 			return
 		} 
@@ -5135,7 +5173,17 @@ const AngularWorkflow = (props) => {
 										if (e.target.value.id !== workflow.id) {
 											const startnode = e.target.value.actions.find(action => action.id === e.target.value.start)
 											if (startnode !== undefined && startnode !== null) {
+												//ddsetSubworkflowStartnode(innernode)
 												setSubworkflowStartnode(startnode)
+
+												try {
+													workflow.triggers[selectedTriggerIndex].parameters[3].value = e.target.value.id
+												} catch {
+													workflow.triggers[selectedTriggerIndex].parameters[3] = {
+														"name": "startnode",
+														"value": e.target.value.id,
+													}
+												}
 											}
 											console.log("STARTNODE: ", startnode)
 										}
@@ -6236,7 +6284,7 @@ const AngularWorkflow = (props) => {
 						<span>
 						<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={() => {
 							setExecutionModalOpen(true)
-							getWorkflowExecution(props.match.params.key)
+							getWorkflowExecution(props.match.params.key, "")
 						}}>
 							<DirectionsRunIcon />
 						</Button>
@@ -6482,7 +6530,7 @@ const AngularWorkflow = (props) => {
 					style={{borderRadius: "0px"}}
 					variant="outlined"
 					onClick={() => {
-						getWorkflowExecution(props.match.params.key)
+						getWorkflowExecution(props.match.params.key, "")
 					}} color="primary">
 					<CachedIcon style={{marginRight: 10}}/>
 					Refresh	executions
@@ -6562,7 +6610,7 @@ const AngularWorkflow = (props) => {
 					<span style={{color: "rgba(255,255,255,0.5)", display: "flex"}} onClick={() => {
 							setExecutionRunning(false)
 							stop()
-							getWorkflowExecution(props.match.params.key)
+							getWorkflowExecution(props.match.params.key, "")
 							setExecutionModalView(0)
 							setLastExecution(executionData.execution_id)
 					}}>
@@ -6600,7 +6648,14 @@ const AngularWorkflow = (props) => {
 					{executionData.execution_source !== undefined && executionData.execution_source !== null && executionData.execution_source.length > 0 && executionData.execution_source !== "default" ?
 						<div>
 							<b>Source: &nbsp;&nbsp;</b>{executionData.execution_parent !== null && executionData.execution_parent !== undefined && executionData.execution_parent.length > 0 ? 
-								<a rel="norefferer" href={`/workflows/${executionData.execution_source}?view=executions&execution_id=${executionData.execution_parent}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>Parent Workflow</a>
+								executionData.execution_source  === props.match.params.key ? 
+									<span  style={{cursor: "pointer", color: "#f85a3e"}} onClick={(event) => {
+										getWorkflowExecution(props.match.params.key, executionData.execution_parent) 
+									}}>
+										Parent Execution 
+									</span>
+									:
+									<a rel="norefferer" href={`/workflows/${executionData.execution_source}?view=executions&execution_id=${executionData.execution_parent}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>Parent Workflow</a>
 								:
 								executionData.execution_source
 							} 
@@ -6659,7 +6714,7 @@ const AngularWorkflow = (props) => {
 							const statusColor = data.status === "FINISHED" || data.status === "SUCCESS" ? "green" : data.status === "ABORTED" || data.status === "FAILURE" ? "red" : "orange"
 			
 							var imgSrc = curapp === undefined ? "" : curapp.large_image
-							if (imgSrc.length === 0) {
+							if (imgSrc.length === 0 && workflow.actions !== undefined && workflow.actions !== null) {
 								// Look for the node in the workflow
 								const action = workflow.actions.find(action => action.id === data.action.id)
 								if (action !== undefined && action !== null) {
@@ -6723,7 +6778,15 @@ const AngularWorkflow = (props) => {
 										{data.action.app_name === "shuffle-subflow" && validate.result.success !== undefined && validate.result.success === true ?
 											<span>
 												{validate.valid && data.action.parameters !== undefined && data.action.parameters !== null ? 
-													<a rel="norefferer" href={`/workflows/${data.action.parameters[0].value}?view=executions&execution_id=${validate.result.execution_id}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>See subflow execution</a>
+													data.action.parameters[0].value === props.match.params.key ?
+														<span style={{cursor: "pointer", color: "#f85a3e"}} onClick={(event) => {
+															getWorkflowExecution(props.match.params.key, validate.result.execution_id) 
+														}}>
+														See sub-execution
+														</span>
+													:
+													<a rel="norefferer" href={`/workflows/${data.action.parameters[0].value}?view=executions&execution_id=${validate.result.execution_id}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}} onClick={(event) => {
+													}}>See subflow execution</a>
 												: 
 													"TBD: Load subexecution result for"
 												}
