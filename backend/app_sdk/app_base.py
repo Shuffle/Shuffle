@@ -391,7 +391,8 @@ class AppBase:
 
             print("Ret length: %d" % len(ret))
             if len(ret) == 1:
-                ret = ret[0]
+                #ret = ret[0]
+                print("DONT make list of 1 into 0!!")
 
         print("Return from execution: %s" % ret)
         if ret == None:
@@ -418,7 +419,8 @@ class AppBase:
                 results.append(ret)
 
         if len(results) == 1: 
-            results = results[0]
+            #results = results[0]
+            print("DONT MAKE LIST FROM 1 TO 0!!")
 
         print("\nLOOP: %s\nRESULTS: %s" % (loop_wrapper, results))
         return results
@@ -521,11 +523,11 @@ class AppBase:
                 data["filename"] = curfile["filename"]
                 filename = curfile["filename"]
             except KeyError as e:
-                print("KeyError in file setup: %s" % e)
+                print(f"KeyError in file setup: {e}")
                 pass
 
             ret = requests.post("%s%s" % (self.url, create_path), headers=headers, json=data)
-            print("Ret CREATE: %s" % ret.text)
+            print(f"Ret CREATE: {ret.text}")
             cur_id = ""
             if ret.status_code == 200:
                 print("RET: %s" % ret.text)
@@ -546,7 +548,7 @@ class AppBase:
                 continue
 
             new_headers = {
-                "Authorization": "Bearer %s" % self.authorization,
+                "Authorization": f"Bearer {self.authorization}",
             }
 
             upload_path = "/api/v1/files/%s/upload?execution_id=%s" % (cur_id, full_execution["execution_id"])
@@ -1255,16 +1257,16 @@ class AppBase:
             self.logger.info("Checking %s %s %s" % (sourcevalue, check, destinationvalue))
 
             if check == "=" or check.lower() == "equals":
-                if sourcevalue.lower() == destinationvalue.lower():
+                if str(sourcevalue).lower() == str(destinationvalue).lower():
                     return True
             elif check == "!=" or check.lower() == "does not equal":
-                if sourcevalue.lower() != destinationvalue.lower():
+                if str(sourcevalue).lower() != str(destinationvalue).lower():
                     return True
             elif check.lower() == "startswith":
-                if sourcevalue.lower().startswith(destinationvalue.lower()):
+                if str(sourcevalue).lower().startswith(str(destinationvalue).lower()):
                     return True
             elif check.lower() == "endswith":
-                if sourcevalue.lower().endswith(destinationvalue.lower()):
+                if str(sourcevalue).lower().endswith(str(destinationvalue).lower()):
                     return True
             elif check.lower() == "contains":
                 if destinationvalue.lower() in sourcevalue.lower():

@@ -392,7 +392,11 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
         %s
         %s
         %s
-        return requests.%s(url, headers=headers%s%s%s%s).text
+        ret = requests.%s(url, headers=headers%s%s%s%s)
+        try:
+          return ret.json()
+        except json.decoder.JSONDecodeError:
+          return ret.text
 		`,
 		functionname,
 		authenticationParameter,
@@ -419,6 +423,7 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 	)
 
 	// Use lowercase when checking
+	log.Println(data)
 	/*
 		if strings.Contains(functionname, "filter") {
 			//log.Printf("FUNCTION: %s", data)
@@ -1564,7 +1569,7 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 						newName := string(fmt.Sprintf("%s", string(fieldname)))
 						if newName[0] == 0x22 && newName[len(newName)-1] == 0x22 {
 							parsedName := newName[1 : len(newName)-1]
-							log.Printf("Parse name: %s", parsedName)
+							//log.Printf("[INFO] Parse name: %s", parsedName)
 							fileField = parsedName
 
 							curParam := WorkflowAppActionParameter{

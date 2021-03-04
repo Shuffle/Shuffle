@@ -2700,6 +2700,8 @@ const AngularWorkflow = (props) => {
 		selectedAction.label = event.target.value
 		setSelectedAction(selectedAction)
 
+		console.log("SHOULD CHANGE NAME EVERYWHERE ITS USED TOO BASED ON OLD NAME!")
+
 		/*
 		if (nodeaction.label !== curaction.label) {
 			console.log("BEACH!")
@@ -7032,7 +7034,7 @@ const AngularWorkflow = (props) => {
 		<FormControl>
 			<DialogTitle><span style={{color: "white"}}>Execution Variable</span></DialogTitle>
 				<DialogContent>
-					Execution Variables are TEMPORARY variables that you can ony be set and used during execution. Learn more <a rel="norefferer" href="https://shuffler.io/docs/workflow#execution_variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>here</a>
+					Execution Variables are TEMPORARY variables that you can ony be set and used during execution. Learn more <a rel="norefferer" href="https://shuffler.io/docs/workflows#execution_variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>here</a>
 					<TextField
 						onBlur={(event) => setNewVariableName(event.target.value)}
 						color="primary"
