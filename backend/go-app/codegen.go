@@ -1010,16 +1010,6 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 	optionalQueries := []string{}
 	parameters := []string{}
 	optionalParameters := []WorkflowAppActionParameter{}
-	optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
-		Name:        "ssl_verify",
-		Description: "Check if you want to verify request",
-		Multiline:   false,
-		Required:    false,
-		Example:     "True",
-		Schema: SchemaDefinition{
-			Type: "string",
-		},
-	})
 
 	headersFound := []string{}
 	if len(path.Connect.Parameters) > 0 {
@@ -1106,6 +1096,17 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 		}
 	}
 
+	optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
+		Name:        "ssl_verify",
+		Description: "Check if you want to verify request",
+		Multiline:   false,
+		Required:    false,
+		Example:     "True",
+		Schema: SchemaDefinition{
+			Type: "string",
+		},
+	})
+
 	// ensuring that they end up last in the specification
 	// (order is ish important for optional params) - they need to be last.
 	for _, optionalParam := range optionalParameters {
@@ -1145,16 +1146,6 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 	// FIXME - remove this when authentication is properly introduced
 	parameters := []string{}
 	optionalParameters := []WorkflowAppActionParameter{}
-	optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
-		Name:        "ssl_verify",
-		Description: "Check if you want to verify the SSL certificate request",
-		Multiline:   false,
-		Required:    false,
-		Example:     "False - default=True",
-		Schema: SchemaDefinition{
-			Type: "string",
-		},
-	})
 
 	headersFound := []string{}
 	if len(path.Get.Parameters) > 0 {
@@ -1241,6 +1232,17 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 		}
 	}
 
+	optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
+		Name:        "ssl_verify",
+		Description: "Check if you want to verify the SSL certificate request",
+		Multiline:   false,
+		Required:    false,
+		Example:     "False - default=True",
+		Schema: SchemaDefinition{
+			Type: "string",
+		},
+	})
+
 	// ensuring that they end up last in the specification
 	// (order is ish important for optional params) - they need to be last.
 	for _, optionalParam := range optionalParameters {
@@ -1280,16 +1282,6 @@ func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 	optionalQueries := []string{}
 	parameters := []string{}
 	optionalParameters := []WorkflowAppActionParameter{}
-	optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
-		Name:        "ssl_verify",
-		Description: "Check if you want to verify request",
-		Multiline:   false,
-		Required:    false,
-		Example:     "True",
-		Schema: SchemaDefinition{
-			Type: "string",
-		},
-	})
 
 	headersFound := []string{}
 	if len(path.Head.Parameters) > 0 {
@@ -1374,6 +1366,17 @@ func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 		}
 	}
 
+	optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
+		Name:        "ssl_verify",
+		Description: "Check if you want to verify request",
+		Multiline:   false,
+		Required:    false,
+		Example:     "True",
+		Schema: SchemaDefinition{
+			Type: "string",
+		},
+	})
+
 	// ensuring that they end up last in the specification
 	// (order is ish important for optional params) - they need to be last.
 	for _, optionalParam := range optionalParameters {
@@ -1413,16 +1416,6 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 	optionalQueries := []string{}
 	parameters := []string{}
 	optionalParameters := []WorkflowAppActionParameter{}
-	optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
-		Name:        "ssl_verify",
-		Description: "Check if you want to verify request",
-		Multiline:   false,
-		Required:    false,
-		Example:     "True",
-		Schema: SchemaDefinition{
-			Type: "string",
-		},
-	})
 
 	headersFound := []string{}
 	if len(path.Delete.Parameters) > 0 {
@@ -1508,6 +1501,17 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 		}
 	}
 
+	optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
+		Name:        "ssl_verify",
+		Description: "Check if you want to verify request",
+		Multiline:   false,
+		Required:    false,
+		Example:     "True",
+		Schema: SchemaDefinition{
+			Type: "string",
+		},
+	})
+
 	// ensuring that they end up last in the specification
 	// (order is ish important for optional params) - they need to be last.
 	for _, optionalParam := range optionalParameters {
@@ -1546,16 +1550,6 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 	optionalQueries := []string{}
 	parameters := []string{}
 	optionalParameters := []WorkflowAppActionParameter{}
-	optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
-		Name:        "ssl_verify",
-		Description: "Check if you want to verify request",
-		Multiline:   false,
-		Required:    false,
-		Example:     "True",
-		Schema: SchemaDefinition{
-			Type: "string",
-		},
-	})
 
 	fileField := ""
 	if path.Post.RequestBody != nil {
@@ -1674,6 +1668,17 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 		}
 	}
 
+	optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
+		Name:        "ssl_verify",
+		Description: "Check if you want to verify request",
+		Multiline:   false,
+		Required:    false,
+		Example:     "True",
+		Schema: SchemaDefinition{
+			Type: "string",
+		},
+	})
+
 	// ensuring that they end up last in the specification
 	// (order is ish important for optional params) - they need to be last.
 	for _, optionalParam := range optionalParameters {
@@ -1718,16 +1723,6 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 	optionalQueries := []string{}
 	parameters := []string{}
 	optionalParameters := []WorkflowAppActionParameter{}
-	optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
-		Name:        "ssl_verify",
-		Description: "Check if you want to verify request",
-		Multiline:   false,
-		Required:    false,
-		Example:     "True",
-		Schema: SchemaDefinition{
-			Type: "string",
-		},
-	})
 
 	headersFound := []string{}
 	if len(path.Patch.Parameters) > 0 {
@@ -1812,6 +1807,17 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 		}
 	}
 
+	optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
+		Name:        "ssl_verify",
+		Description: "Check if you want to verify request",
+		Multiline:   false,
+		Required:    false,
+		Example:     "True",
+		Schema: SchemaDefinition{
+			Type: "string",
+		},
+	})
+
 	// ensuring that they end up last in the specification
 	// (order is ish important for optional params) - they need to be last.
 	for _, optionalParam := range optionalParameters {
@@ -1851,16 +1857,6 @@ func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 	optionalQueries := []string{}
 	parameters := []string{}
 	optionalParameters := []WorkflowAppActionParameter{}
-	optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
-		Name:        "ssl_verify",
-		Description: "Check if you want to verify request",
-		Multiline:   false,
-		Required:    false,
-		Example:     "True",
-		Schema: SchemaDefinition{
-			Type: "string",
-		},
-	})
 
 	headersFound := []string{}
 	if len(path.Put.Parameters) > 0 {
@@ -1945,6 +1941,17 @@ func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 
 		}
 	}
+
+	optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
+		Name:        "ssl_verify",
+		Description: "Check if you want to verify request",
+		Multiline:   false,
+		Required:    false,
+		Example:     "True",
+		Schema: SchemaDefinition{
+			Type: "string",
+		},
+	})
 
 	// ensuring that they end up last in the specification
 	// (order is ish important for optional params) - they need to be last.

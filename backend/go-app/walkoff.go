@@ -2188,8 +2188,6 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	// Here to check access rights
 	ctx := context.Background()
-	log.Println("GetWorkflow start")
-
 	tmpworkflow, err := getWorkflow(ctx, fileId)
 	if err != nil {
 		log.Printf("Failed getting the workflow locally (save workflow): %s", err)
@@ -2197,8 +2195,6 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
-
-	log.Println("GetWorkflow end")
 
 	// FIXME - have a check for org etc too..
 	if user.Id != tmpworkflow.Owner && user.Role != "admin" {

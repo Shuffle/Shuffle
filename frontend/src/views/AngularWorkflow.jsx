@@ -2832,7 +2832,6 @@ const AngularWorkflow = (props) => {
 						}
 
 						var exampledata = item.example === undefined ? "" : item.example
-						console.log("EXAMPLE: ", exampledata)
 						// Find previous execution and their variables
 						//exampledata === "" && 
 						if (workflowExecutions.length > 0) {
@@ -3485,10 +3484,11 @@ const AngularWorkflow = (props) => {
 
 								// Handles the fields under OpenAPI body to be parsed.
 								if (data.name.startsWith("${") && data.name.endsWith("}")) {
+									console.log("INSIDE VALUE REPLACE: ", data.name, toComplete)
 									// PARAM FIX - Gonna use the ID field, even though it's a hack
 									const paramcheck = selectedAction.parameters.find(param => param.name === "body")
 									if (paramcheck !== undefined) {
-										if (paramcheck["value_replace"] === undefined) {
+										if (paramcheck["value_replace"] === undefined || paramcheck["value_replace"] === null) {
 											paramcheck["value_replace"] = [{
 												"key": data.name,
 												"value": toComplete,
@@ -4559,14 +4559,14 @@ const AngularWorkflow = (props) => {
 
 					<div style={{display: "flex"}}>
 					<Tooltip color="primary" title={conditionValue.configuration ? "Negated" : "Default"} placement="top">
-						<span>
-						<Button color="primary" variant={conditionValue.configuration ? "contained" : "outlined"} style={{margin: "auto", height: 50, marginBottom: "auto", marginTop: "auto", marginRight: 5}} onClick={(e) => {
-							conditionValue.configuration = !conditionValue.configuration
-							setConditionValue(conditionValue)
-							setUpdate(Math.random())
-						}}>
-							{conditionValue.configuration ? "!" : "="}
-						</Button>
+						<span style={{margin: "auto", height: 50, marginBottom: "auto", marginTop: "auto", marginRight: 5}}>
+							<Button color="primary" variant={conditionValue.configuration ? "contained" : "outlined"} style={{margin: "auto", height: 50, marginBottom: "auto", marginTop: "auto", marginRight: 5}} onClick={(e) => {
+								conditionValue.configuration = !conditionValue.configuration
+								setConditionValue(conditionValue)
+								setUpdate(Math.random())
+							}}>
+								{conditionValue.configuration ? "!" : "="}
+							</Button>
 						</span>
 					</Tooltip>
 					<div style={{flex: "2"}}>
@@ -5205,7 +5205,10 @@ const AngularWorkflow = (props) => {
 									})}
 								</Select>
 							}
-							{workflow.triggers[selectedTriggerIndex].parameters[0].value.length === 0 ? null : <span style={{marginTop: 5}}><a rel="norefferer" href={`/workflows/${workflow.triggers[selectedTriggerIndex].parameters[0].value}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e", marginLeft: 5,}}>Explore selected workflow</a></span>}
+							{workflow.triggers[selectedTriggerIndex].parameters[0].value.length === 0 ? null : 
+								workflow.triggers[selectedTriggerIndex].parameters[0].value === props.match.params.key ? null :
+								<span style={{marginTop: 5}}><a rel="norefferer" href={`/workflows/${workflow.triggers[selectedTriggerIndex].parameters[0].value}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e", marginLeft: 5,}}>Explore selected workflow</a></span>
+							}
 
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
@@ -6935,9 +6938,7 @@ const AngularWorkflow = (props) => {
 						<CloseIcon style={{color: "white"}}/>
 					</IconButton>
 				</Tooltip>
-				<div style={{marginBottom: 40,}} onClick={(event) => {
-					//event.preventDefault()	
-				}}>
+				<div style={{marginBottom: 40,}}>
 					<div style={{display: "flex", marginBottom: 15,}}>
 						{curapp === null ? null : <img alt={selectedResult.app_name} src={curapp === undefined ? "" : curapp.large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />}
 

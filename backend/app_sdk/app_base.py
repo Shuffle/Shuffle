@@ -147,6 +147,7 @@ class AppBase:
         #self.action = action
 
         loopnames = []
+        print(f"Baseparams to check!!: {baseparams}")
         for key, value in baseparams.items():
             check_value = ""
             for param in self.action["parameters"]:
@@ -159,6 +160,7 @@ class AppBase:
                 if octothorpe_count > self.result_wrapper_count:
                     self.result_wrapper_count = octothorpe_count
                     print("[INFO] NEW OCTOTHORPE WRAPPER: %d" % octothorpe_count)
+
 
             # This whole thing is hard.
             # item = [{"data": "1.2.3.4", "dataType": "ip"}] 
@@ -178,12 +180,40 @@ class AppBase:
             # FIXME: Check the above, and fix so that nested looped items can be 
             # Skipped if wanted
 
-            print("\nCHECK: %s" % check_value)
+            #print("\nCHECK: %s" % check_value)
+            #try:
+            #    values = parameter["value_replace"]
+            #    if values != None:
+            #        print(values)
+            #        for val in values:
+            #            print(val)
+            #except:
+            #    pass
+
             should_merge = False
             if "#" in check_value:
                 should_merge = True
 
+            # Specific for OpenAPI body replacement
+            print("\n\n\nDOING STUFF BELOW HERE")
+            if not should_merge:
+                for parameter in self.action["parameters"]:
+                    if parameter["name"] == key:
+                        print("CHECKING BODY FOR VALUE REPLACE DATA!")
+                        try:
+                            values = parameter["value_replace"]
+                            if values != None:
+                                print(values)
+                                for val in values:
+                                    if "#" in val["value"]:
+                                        should_merge = True
+                                        break
+                        except:
+                            pass
+
+            print(f"MERGE: {should_merge}")
             if isinstance(value, list):
+                print("Item {value} is a list.")
                 if len(value) <= 1:
                     if len(value) == 1:
                         baseparams[key] = value[0]
@@ -206,7 +236,7 @@ class AppBase:
                 all_list_keys.append(key)
                 all_lists.append(baseparams[key])
             else:
-                print("%s is not a list: " % value)
+                print(f"{value} is not a list")
 
         print("Listlengths: %s" % listlengths)
         if len(listlengths) == 0:
@@ -271,20 +301,25 @@ class AppBase:
 
     # Runs recursed versions with inner loops and such 
     async def run_recursed_items(self, func, baseparams, loop_wrapper):
+        print(f"RECURSED ITEMS: {baseparams}")
         has_loop = False
 
         newparams = {}
         for key, value in baseparams.items():
             if isinstance(value, list) and len(value) > 0:
-                print("In list check")
+                print(f"In list check for {key}")
+
                 try:
-                    value[0] = json.loads(value[0])
+                    # Added skip for body (OpenAPI) which uses data= in requests
+                    # Can be screwed up if they name theirs body too 
+                    if key != "body":
+                        value[0] = json.loads(value[0])
                 except json.decoder.JSONDecodeError as e:
                     print("JSON casting error: %s" % e)
                 except TypeError as e:
                     print("TypeError: %s" % e)
 
-                print("POST list check")
+                print("POST initial list check")
 
             if isinstance(value, list) and len(value) == 1 and isinstance(value[0], list):
                 try:
@@ -294,12 +329,11 @@ class AppBase:
                 except KeyError:
                     loop_wrapper[key] = 1
 
-                print("Key %s is a list: %s" % (key, value))
+                print(f"Key {key} is a list: {value}")
                 newparams[key] = value[0]
                 has_loop = True 
             else:
-                print("Key %s is NOT a list within a list" % (key))
-
+                print(f"Key {key} is NOT a list within a list. Value: {value}")
                 newparams[key] = value
         
         results = []
@@ -315,6 +349,7 @@ class AppBase:
 
             print("[INFO] Multiplier length: %d" % len(param_multiplier))
             for subparams in param_multiplier:
+                print(f"SUBPARAMS IN MULTI: {subparams}")
                 try:
                     tmp = await func(**subparams)
                 except:
@@ -1361,6 +1396,7 @@ class AppBase:
     
             return True, ""
 
+        # THE START IS ACTUALLY RIGHT HERE :O
         # Checks whether conditions are met, otherwise set 
         branchcheck, tmpresult = check_branch_conditions(action, fullexecution)
         if not branchcheck:
@@ -1437,6 +1473,10 @@ class AppBase:
                             except (IndexError, KeyError, TypeError) as e:
                                 print("Options err: {e}")
 
+                            # This part is purely for OpenAPI accessibility. 
+                            # It replaces the data back into the main item
+                            # Earlier, we handled each of the items and did later string replacement, 
+                            # but this has changed to do lists within items and such
                             if parameter["name"] == "body": 
                                 bodyindex = counter
                                 #print("PARAM: %s" % parameter)
@@ -1445,15 +1485,26 @@ class AppBase:
                                     if values != None:
                                         added = 0
                                         for val in values:
-                                            newparams.append({
-                                                "name": val["key"],
-                                                "value": val["value"],
-                                                "variant": "STATIC_VALUE",
-                                                "id": "body_replacement",
-                                            })
+                                            print(f"VAL: {val}")
+                                            #parameter["value"].replace(val["key"], val["value"], -1)
+                                            print(f'PARAM1: {action["parameters"][counter]["value"]}')
+                                            action["parameters"][counter]["value"] = action["parameters"][counter]["value"].replace(val["key"], val["value"], 1)
+                                            #action["parameters"][counter]["value"].replace(r"${url}", r"$Find_URLs.valid.#.data", 1)
+                                            print(f'PARAM2: {action["parameters"][counter]["value"]}')
+                                            #newparams.append({
+                                            #    "name": val["key"],
+                                            #    "value": val["value"],
+                                            #    "variant": "STATIC_VALUE",
+                                            #    "id": "body_replacement",
+                                            #    "schema": {
+                                            #        "type": "string",
+                                            #    },
+                                            #})
 
-                                            print("Added param %s for body" % val["key"])
+                                            print(f'[INFO] Added param {val["key"]} for body with value {val["value"]} (using OpenAPI)')
                                             added += 1
+
+                                        #action["parameters"]["body"]
 
                                         print("ADDED %d parameters for body" % added)
                                 except KeyError as e:
@@ -1462,6 +1513,7 @@ class AppBase:
 
                                 break
 
+                        print(action["parameters"])
                         for parameter in newparams:
                             action["parameters"].append(parameter)
 
@@ -1478,6 +1530,7 @@ class AppBase:
                         multi_parameters = json.loads(json.dumps(params))
                         multiexecution = False
                         multi_execution_lists = []
+                        remove_params = []
                         for parameter in action["parameters"]:
                             check, value, is_loop = parse_params(action, fullexecution, parameter)
                             if check:
@@ -1506,6 +1559,7 @@ class AppBase:
                                 print("Before first part in multiexec!")
                                 handled = False
                                 if len(actualitem[0]) > 2 and actualitem[0][1] == "SHUFFLE_NO_SPLITTER":
+
                                     print("(1) Pre replacement: %s" % actualitem[0][2])
                                     tmpitem = value
 
@@ -1555,10 +1609,10 @@ class AppBase:
                                     tmpitem = tmpitem.replace(actualitem[0][0], replacement, 1)
 
                                     # This code handles files.
-                                    print("(1) ------------ PARAM: %s" % parameter["schema"]["type"])
                                     resultarray = []
                                     isfile = False
                                     try:
+                                        print("(1) ------------ PARAM: %s" % parameter["schema"]["type"])
                                         if parameter["schema"]["type"] == "file" and len(value) > 0:
                                             print("(1) SHOULD HANDLE FILE IN MULTI. Get based on value %s" % tmpitem) 
                                             # This is silly :)
@@ -1572,8 +1626,10 @@ class AppBase:
                                                 print("(1) FILE VALUE FOR VAL %s: %s" % (tmp_file_split, file_value))
 
                                             isfile = True
+                                    except NameError as e:
+                                        print("(1) SCHEMA NAMEERROR IN FILE HANDLING: %s" % e)
                                     except KeyError as e:
-                                        print("(1) SCHEMA ERROR IN FILE HANDLING: %s" % e)
+                                        print("(1) SCHEMA KEYERROR IN FILE HANDLING: %s" % e)
                                     except json.decoder.JSONDecodeError as e:
                                         print("(1) JSON ERROR IN FILE HANDLING: %s" % e)
 
@@ -1589,7 +1645,7 @@ class AppBase:
                                     multi_execution_lists.append(new_replacement)
                                     #print("MULTI finished: %s" % json_replacement)
                                 else:
-                                    print("(2) Pre replacement. ") #% actualitem)
+                                    print("(2) Pre replacement (loop with variables). ") #% actualitem)
                                     # This is here to handle for loops within variables.. kindof
                                     # 1. Find the length of the longest array
                                     # 2. Build an array with the base values based on parameter["value"] 
@@ -1664,22 +1720,56 @@ class AppBase:
                                         multi_execution_lists.append(resultarray)
 
                                     multi_parameters[parameter["name"]] = resultarray
+
+                                    #if parameter["id"] == "body_replacement": 
+                                    #    print("Should run body MULTI replacement in index %d with %s" % (bodyindex, parameter))
+                                    #    try:
+                                    #        print("PREBODY: %s" % params["body"])
+
+                                    #        parsedarray = str(resultarray)
+                                    #        try:
+                                    #            parsedarray = json.dumps(resultarray)
+                                    #        except:
+                                    #            pass
+
+                                    #        if f'\"{parameter["name"]}\"' in params["body"]:
+                                    #            params["body"] = params["body"].replace(f'\"{parameter["name"]}\"' , parsedarray, -1)
+                                    #            multi_parameters["body"] = multi_parameters["body"].replace(f'\"{parameter["name"]}\"' , parsedarray, -1)
+                                    #        else:
+                                    #            params["body"] = params["body"].replace(parameter["name"], parsedarray, -1)
+                                    #            multi_parameters["body"] = multi_parameters["body"].replace(parameter["name"], parsedarray, -1)
+
+                                    #        #print("POSTBODY: %s" % params["body"])
+                                    #        #if isinstance(multi_parameters, list):
+                                    #        #    print("MULTIPARAM AS LIST (NOT REPLACING!!)!")
+                                    #        #    for multiparam in multi_parameters:
+                                    #        #        print(f"MULTIPARAM: {multiparam}")
+                                    #        #        #multi_parameters["body"] = multi_parameters["body"].replace(parameter["name"], str(parameter["value"]), -1)
+                                    #        #else:
+                        
+                                    #    except KeyError as e:
+                                    #        print("KEYERROR: %s" % e)
+
+                                    #    remove_params.append(parameter["name"])
+                                    #    #bodyindex = counter
+                                    #    continue
+
                             else:
                                 # Parses things like int(value)
                                 print("Normal parsing (not looping)")#with data %s" % value)
                                 value = parse_wrapper_start(value)
 
-                                if parameter["id"] == "body_replacement": 
-                                    print("Should run body replacement in index %d with %s" % (bodyindex, parameter))
-                                    try:
-                                        print("PREBODY: %s" % params["body"])
-                                        params["body"] = params["body"].replace(parameter["name"], parameter["value"], -1)
-                                        print("POSTBODY: %s" % params["body"])
-                                    except KeyError as e:
-                                        print("KEYERROR: %s" % e)
+                                #if parameter["id"] == "body_replacement": 
+                                #    print("Should run body replacement in index %d with %s" % (bodyindex, parameter))
+                                #    try:
+                                #        print("PREBODY: %s" % params["body"])
+                                #        params["body"] = params["body"].replace(parameter["name"], parameter["value"], -1)
+                                #        print("POSTBODY: %s" % params["body"])
+                                #    except KeyError as e:
+                                #        print("KEYERROR: %s" % e)
 
-                                    #bodyindex = counter
-                                    continue
+                                #    #bodyindex = counter
+                                #    continue
 
                                 #for parameter in action["parameters"]:
                                 #if parameter["name"] == "body": 
@@ -1702,6 +1792,8 @@ class AppBase:
                                 except KeyError as e:
                                     print("SCHEMA ERROR IN FILE HANDLING: %s" % e)
 
+
+                        #remove_params.append(parameter["name"])
                         # Fix lists here
                         # FIXME: This doesn't really do anything anymore
                         print("CHECKING multi execution list!")
@@ -1723,7 +1815,7 @@ class AppBase:
 
                             #print("New list length: %d" % len(filteredlist))
                             if len(filteredlist) > 1:
-                                print("Calculating new multi-loop length with %d lists" % len(filteredlist))
+                                print(f"Calculating new multi-loop length with {len(filteredlist)} lists")
                                 tmplength = 1
                                 for innerlist in filteredlist:
                                     tmplength = len(innerlist)*tmplength
@@ -1732,6 +1824,25 @@ class AppBase:
                                 minlength = tmplength
 
                                 print("New multi execution length: %d\n" % tmplength)
+
+                        # Cleaning up extra list params
+                        for subparam in remove_params:
+                            #print(f"DELETING {subparam}")
+                            try:
+                                del params[subparam]
+                            except:
+                                pass
+                                #print(f"Error with subparam deletion of {subparam} in {params}")
+                            try:
+                                del multi_parameters[subparam]
+                            except:
+                                #print(f"Error with subparam deletion of {subparam} in {multi_parameters} (2)")
+                                pass
+
+                        print()
+                        print(f"Param: {params}")
+                        print(f"Multiparams: {multi_parameters}")
+                        print()
                         
                         if not multiexecution:
                             #newparams.append({
@@ -1744,7 +1855,7 @@ class AppBase:
                             #print("[INFO] APP_SDK DONE: Starting NORMAL execution of function")
                             print("[INFO] Running normal execution\n") 
                             newres = await func(**params)
-                            print("\n[INFO] Returned from execution with datalength!")#, newres)
+                            print("\n[INFO] Returned from execution!")#, newres)
                             if isinstance(newres, tuple):
                                 print("[INFO] Handling return as tuple")
                                 # Handles files.
@@ -1772,6 +1883,17 @@ class AppBase:
                             elif isinstance(newres, str):
                                 print("[INFO] Handling return as string of length %d" % len(newres))
                                 result += newres
+                            elif isinstance(newres, dict) or isinstance(newres, list):
+                                try:
+                                    result += json.dumps(newres, indent=4)
+                                except json.JSONDecodeError as e:
+                                    print("Failed decoding result: %s" % e)
+
+                                    try:
+                                        result += str(newres)
+                                    except ValueError:
+                                        result += "Failed autocasting. Can't handle %s type from function. Must be string" % type(newres)
+                                        print("Can't handle type %s value from function" % (type(newres)))
                             else:
                                 try:
                                     result += str(newres)
@@ -1898,10 +2020,16 @@ class AppBase:
 
                             # Dump the result as a string of a list
                             #print("RESULTS: %s" % results)
-                            if isinstance(results, list):
+                            if isinstance(results, list) or isinstance(results, dict):
                                 print("JSON OBJECT? ", json_object)
+
+                                # This part is weird lol
                                 if json_object:
-                                    result = json.dumps(results)
+                                    try:
+                                        result = json.dumps(results)
+                                    except json.JSONDecodeError as e:
+                                        print(f"Failed to decode: {e}")
+                                        result = results
                                 else:
                                     result = "["
                                     for item in results:
@@ -1926,7 +2054,7 @@ class AppBase:
                             else:
                                 print("Normal result - no list?")
                                 result = results
-                                
+
                     print("RESULT: %s" % result)
                     action_result["status"] = "SUCCESS" 
                     action_result["result"] = str(result)

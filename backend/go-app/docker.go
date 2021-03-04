@@ -24,7 +24,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	//"google.golang.org/appengine"
 )
 
 // Parses a directory with a Dockerfile into a tar for Docker images..

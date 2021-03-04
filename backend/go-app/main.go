@@ -62,16 +62,10 @@ import (
 	// githttp "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 
 	// Web
-	// "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/patrickmn/go-cache"
 	"google.golang.org/grpc"
 	http2 "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
-	// Old items (cloud)
-	// "google.golang.org/appengine"
-	// "google.golang.org/appengine/memcache"
-	// applog "google.golang.org/appengine/log"
-	//cloudrun "google.golang.org/api/run/v1"
-	"github.com/patrickmn/go-cache"
 )
 
 // This is used to handle onprem vs offprem databases etc
@@ -5915,7 +5909,7 @@ func getOpenapi(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("[INFO] API LENGTH GET: %d, ID: %s", len(parsedApi.Body), id)
+	log.Printf("[INFO] API LENGTH GET FOR OPENAPI %s: %d, ID: %s", id, len(parsedApi.Body), id)
 
 	parsedApi.Success = true
 	data, err := json.Marshal(parsedApi)
@@ -6579,7 +6573,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 		Body: string(body),
 	}
 
-	log.Printf("[INFO] API LENGTH: %d, ID: %s", len(parsed.Body), newmd5)
+	log.Printf("[INFO] API LENGTH FOR %s: %d, ID: %s", api.Name, len(parsed.Body), newmd5)
 	// FIXME: Might cause versioning issues if we re-use the same!!
 	// FIXME: Need a way to track different versions of the same app properly.
 	// Hint: Save API.id somewhere, and use newmd5 to save latest version
