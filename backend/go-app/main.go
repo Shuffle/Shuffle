@@ -663,7 +663,7 @@ func handleApiAuthentication(resp http.ResponseWriter, request *http.Request) (U
 		sessionToken := c.Value
 		session, err := getSession(ctx, sessionToken)
 		if err != nil {
-			log.Printf("Session %s doesn't exist (session auth): %s", sessionToken, err)
+			log.Printf("[WARNING] Session %s doesn't exist (session auth): %s", sessionToken, err)
 			return User{}, err
 		}
 
@@ -1286,7 +1286,7 @@ func handleLogout(resp http.ResponseWriter, request *http.Request) {
 	//sessionToken = c.Value
 	//session, err := getSession(ctx, sessionToken)
 	//if err != nil {
-	//	log.Printf("Session %s doesn't exist (logout): %s", sessionToken, err)
+	//	log.Printf("[WARNING] Session %s doesn't exist (logout): %s", sessionToken, err)
 	//	resp.WriteHeader(401)
 	//	resp.Write([]byte(`{"success": false, "reason": "Couldn't find your session"}`))
 	//	return
@@ -2471,7 +2471,7 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	log.Printf("Username: %s", data.Username)
+	log.Printf("[INFO] Login Username: %s", data.Username)
 	q := datastore.NewQuery("Users").Filter("Username =", data.Username)
 	var users []User
 	_, err = dbclient.GetAll(ctx, q, &users)
@@ -2509,7 +2509,7 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - have timeout here
 	loginData := `{"success": true}`
 	if len(Userdata.Session) != 0 {
-		log.Println("User session exists - resetting")
+		log.Println("[INFO] User session exists - resetting")
 		expiration := time.Now().Add(3600 * time.Second)
 
 		http.SetCookie(resp, &http.Cookie{
@@ -7204,7 +7204,7 @@ func runInit(ctx context.Context) {
 		} else {
 			if len(users) < 5 && len(users) > 0 {
 				for _, user := range users {
-					log.Printf("Username: %s, role: %s", user.Username, user.Role)
+					log.Printf("[INFO] Username: %s, role: %s", user.Username, user.Role)
 				}
 			} else {
 				log.Printf("Found %d users.", len(users))
