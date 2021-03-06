@@ -423,7 +423,6 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 	)
 
 	// Use lowercase when checking
-	log.Println(data)
 	/*
 		if strings.Contains(functionname, "filter") {
 			//log.Printf("FUNCTION: %s", data)

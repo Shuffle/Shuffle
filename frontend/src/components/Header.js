@@ -151,9 +151,10 @@ const Header = props => {
 				</MenuItem>
 			</Menu>
 		</span>
-	const logoCheck = !homePage ?  null : null
+
 
 	// Handle top bar or something
+	const logoCheck = !homePage ?  null : null
   const loginTextBrowser = !isLoggedIn ? 
     	<div style={{display: "flex"}}>
 			<List style={{display: "flex", flexDirect: "row"}} component="nav">

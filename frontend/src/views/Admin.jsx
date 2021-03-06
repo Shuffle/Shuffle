@@ -430,11 +430,13 @@ const Admin = (props) => {
 
 	const submitUser = (data) => {
 		console.log("INPUT: ", data)
+		setLoginInfo("")
 
 		// Just use this one?
 		var data = { "username": data.Username, "password": data.Password }
 		var baseurl = globalUrl
 		const url = baseurl + '/api/v1/users/register';
+
 		fetch(url, {
 			method: 'POST',
 			credentials: "include",
@@ -446,7 +448,7 @@ const Admin = (props) => {
 			.then(response =>
 				response.json().then(responseJson => {
 					if (responseJson["success"] === false) {
-						setLoginInfo("Error in input: " + responseJson.reason)
+						setLoginInfo("Error: " + responseJson.reason)
 					} else {
 						setLoginInfo("")
 						setModalOpen(false)
@@ -912,11 +914,11 @@ const Admin = (props) => {
 		} else if (newValue === 2) {
 			getAppAuthentication()
 		} else if (newValue === 3) {
-			getEnvironments()
+			getFiles()
 		} else if (newValue === 4) {
 			getSchedules()
 		} else if (newValue === 5) {
-			getFiles()
+			getEnvironments()
 		} else if (newValue === 6) {
 			getOrgs() 
 		}
@@ -1157,11 +1159,11 @@ const Admin = (props) => {
 				},
 			}}
 		>
-			<DialogTitle><span style={{ color: "white" }}><EditIcon /></span></DialogTitle>
+			<DialogTitle><span style={{ color: "white" }}><EditIcon /> Edit user</span></DialogTitle>
 			<DialogContent>
 				<div style={{ display: "flex" }}>
 					<TextField
-						style={{ marginTop: 0, backgroundColor: theme.palette.inputColor, flex: 3 }}
+						style={{ marginTop: 0, backgroundColor: theme.palette.inputColor, flex: 3 , marginRight: 10,}}
 						InputProps={{
 							style: {
 								height: 50,
@@ -1720,13 +1722,20 @@ const Admin = (props) => {
 			</div>
 			<div />
 			<Button
-				disabled={isCloud}
 				style={{}}
 				variant="contained"
 				color="primary"
 				onClick={() => setModalOpen(true)}
 			>
 				Add user
+			</Button>
+			<Button 
+				style={{marginLeft: 5, marginRight: 15, }} 
+				variant="contained"
+				color="primary"
+				onClick={() => getUsers()}
+			> 
+				<CachedIcon />
 			</Button>
 			<Divider style={{ marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor }} />
 			<List>
@@ -1738,7 +1747,7 @@ const Admin = (props) => {
 					
 					<ListItemText
 						primary="API key"
-						style={{ minWidth: 350, maxWidth: 350, overflow: "hidden" }}
+						style={{ minWidth: 360, maxWidth: 360, overflow: "hidden" }}
 					/>
 					
 					<ListItemText
@@ -1769,7 +1778,7 @@ const Admin = (props) => {
 							
 							<ListItemText
 								primary={data.apikey === undefined || data.apikey.length === 0 ? "" : data.apikey}
-								style={{ maxWidth: 350, minWidth: 350, }}
+								style={{ maxWidth: 360, minWidth: 360, }}
 							/>
 							
 							<ListItemText
@@ -1784,7 +1793,12 @@ const Admin = (props) => {
 								fullWidth
 								onChange={(e) => {
 								console.log("VALUE: ", e.target.value)
-								setUser(data.id, "role", e.target.value)
+
+								if (isCloud) {	
+									setUser(data.username, "role", e.target.value)
+								} else {
+									setUser(data.id, "role", e.target.value)
+								}
 							}}
 										style={{ backgroundColor: theme.palette.surfaceColor, color: "white", height: "50px" }}
 										>
@@ -1795,33 +1809,29 @@ const Admin = (props) => {
 								User
 										</MenuItem>
 									</Select>}
-								style = {{ minWidth: 150, maxWidth: 150}}
+								style ={{ minWidth: 135, maxWidth: 135, marginRight: 15,}}
 							/>
 							<ListItemText
 					primary={data.active ? "True" : "False"}
 					style={{ minWidth: 180, maxWidth: 180 }}
 				/>
 				<ListItemText style={{ display: "flex" }}>
-					<Button
-						style={{}}
-						variant="outlined"
-						color="primary"
+					<IconButton
 						onClick={() => {
 							setSelectedUserModalOpen(true)
 							setSelectedUser(data)
 						}}
 					>
-						Edit user
-					</Button>
+						<EditIcon color="primary"/>
+					</IconButton>
 					<Button
-						style={{}}
+						onClick={() => generateApikey(data.id)}
 						variant="outlined"
 						color="primary"
-						onClick={() => generateApikey(data.id)}
 					>
-						Get new API key
+						New apikey 
 					</Button>
-					</ListItemText>
+				</ListItemText>
 				</ListItem>
 					)
 				})}
@@ -1867,7 +1877,7 @@ const Admin = (props) => {
 		uploadFiles(files)
   }
 
-	const filesView = curTab === 5 ?
+	const filesView = curTab === 3 ?
 		<Dropzone style={{maxWidth: window.innerWidth > 1366 ? 1366 : 1200, margin: "auto", padding: 20 }} onDrop={uploadFile}>
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
@@ -2311,7 +2321,7 @@ const Admin = (props) => {
 		</div>
 		: null
 
-	const environmentView = curTab === 3 ?
+	const environmentView = curTab === 5 ?
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
 				<h2 style={{display: "inline",}}>Environments</h2>
@@ -2555,10 +2565,10 @@ const Admin = (props) => {
 				>
 					<Tab label=<span><BusinessIcon style={iconStyle} /> Organization</span>/>
 					<Tab label=<span><AccessibilityNewIcon style={iconStyle} />Users</span> />
-					{isCloud ? null : <Tab label=<span><LockIcon style={iconStyle} />App Authentication</span>/>}
+					<Tab label=<span><LockIcon style={iconStyle} />App Authentication</span>/>
+					<Tab label=<span><DescriptionIcon style={iconStyle} />Files</span> />
+					<Tab label=<span><ScheduleIcon style={iconStyle} />Schedules</span> />
 					{isCloud ? null : <Tab label=<span><EcoIcon style={iconStyle} />Environments</span>/>}
-					{isCloud ? null : <Tab label=<span><ScheduleIcon style={iconStyle} />Schedules</span> />}
-					{isCloud ? null : <Tab label=<span><DescriptionIcon style={iconStyle} />Files</span> />}
 					{window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><CloudIcon style={iconStyle} /> Hybrid</span>/> : null}
 					{window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><BusinessIcon style={iconStyle} /> Organizations</span>/> : null}
 					{window.location.protocol === "http:" && window.location.port === "3000" ? <Tab label=<span><LockIcon style={iconStyle} />Categories</span>/> : null}
