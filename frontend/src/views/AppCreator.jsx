@@ -2015,8 +2015,10 @@ const AppCreator = (props) => {
 		"SIEM",
 		"Network",
 		"Assets",
+		"Eradication",
 		"Other",
 	]
+
 	const tagView = 
 		<div style={{color: "white"}}>
 			{/*
