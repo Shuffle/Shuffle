@@ -319,6 +319,8 @@ const AppCreator = (props) => {
 	const checkQuery = () => {
 		var urlParams = new URLSearchParams(window.location.search)
 		if (!urlParams.has("id")) {
+			setActionAmount(0)
+
   		setIsAppLoaded(true)
 			return	
 		}
@@ -2105,7 +2107,7 @@ const AppCreator = (props) => {
 					</Button>
 				: null}
 			</div>
-			<h2>Actions ({actionAmount} / {actions.length})</h2>
+			<h2>Actions {actionAmount > 0 ? <span>({actionAmount} / {actions.length})</span> : null}</h2>
 			Actions are the tasks performed by an app. Read more about actions and apps
 			<a target="_blank" src="https://shuffler.io/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}> here</a>.
 			<div>
@@ -2199,7 +2201,9 @@ const AppCreator = (props) => {
 
 	const imageInfo = <img src={imageData} id="logo" style={{maxWidth: 174, maxHeight: 174, minWidth: 174, minHeight: 174, objectFit: "contain",}} />
 
-	const alternateImg = <AddPhotoAlternateIcon style={{ width: 100, height: 100, flex: "1", display: "flex", flexDirection: "row", margin: "auto" }}/>
+	const alternateImg = <AddPhotoAlternateIcon style={{ width: 100, height: 100, flex: "1", display: "flex", flexDirection: "row", margin: "auto", marginTop: 30, marginLeft: 40,}} onClick={() => {
+		upload.click()
+	}}/>
 	
 	const zoomIn = () => {
 		setScale(scale+0.1);
