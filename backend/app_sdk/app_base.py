@@ -1404,7 +1404,7 @@ class AppBase:
         if not branchcheck:
             self.logger.info("Failed one or more branch conditions.")
             action_result["result"] = tmpresult
-            action_result["status"] = "FAILURE"
+            action_result["status"] = "SKIPPED"
             try:
                 ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result)
                 self.logger.info("Result: %d" % ret.status_code)
@@ -1430,7 +1430,7 @@ class AppBase:
         try:
             func = getattr(self, actionname, None)
             if func == None:
-                self.logger.debug("Failed executing %s because func is None." % actionname)
+                self.logger.debug(f"Failed executing {actionname} because func is None.")
                 action_result["status"] = "FAILURE" 
                 action_result["result"] = "Function %s doesn't exist." % actionname
             elif callable(func):
