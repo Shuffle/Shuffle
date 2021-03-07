@@ -6103,6 +6103,11 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 
 	log.Printf("[INFO] Starting app hotloading")
 
+	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
+	requestCache.Delete(cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
+	requestCache.Delete(cacheKey)
+
 	// Just need to be logged in
 	// FIXME - should have some permissions?
 	user, err := handleApiAuthentication(resp, request)
@@ -6134,6 +6139,11 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed loading apps: %s"}`, err)))
 		return
 	}
+
+	cacheKey = fmt.Sprintf("workflowapps-sorted-100")
+	requestCache.Delete(cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
+	requestCache.Delete(cacheKey)
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
@@ -6737,7 +6747,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 
 				if len(removeApps) > 0 {
 					for _, item := range removeApps {
-						log.Printf("[WARNING] Removing duplicate: %s", item)
+						log.Printf("[WARNING] Removing duplicate app: %s", item)
 						err = DeleteKey(ctx, "workflowapp", item)
 						if err != nil {
 							log.Printf("[ERROR] Failed deleting duplicate %s: %s", item, err)
@@ -6758,15 +6768,17 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 					continue
 				}
 
-				err = increaseStatisticsField(ctx, "total_apps_created", workflowapp.ID, 1, "")
-				if err != nil {
-					log.Printf("Failed to increase total apps created stats: %s", err)
-				}
+				/*
+					err = increaseStatisticsField(ctx, "total_apps_created", workflowapp.ID, 1, "")
+					if err != nil {
+						log.Printf("Failed to increase total apps created stats: %s", err)
+					}
 
-				err = increaseStatisticsField(ctx, "total_apps_loaded", workflowapp.ID, 1, "")
-				if err != nil {
-					log.Printf("Failed to increase total apps loaded stats: %s", err)
-				}
+					err = increaseStatisticsField(ctx, "total_apps_loaded", workflowapp.ID, 1, "")
+					if err != nil {
+						log.Printf("Failed to increase total apps loaded stats: %s", err)
+					}
+				*/
 
 				//log.Printf("Added %s:%s to the database", workflowapp.Name, workflowapp.AppVersion)
 
@@ -6801,6 +6813,12 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 		return buildLaterFirst, buildLaterList, err
 	}
 
+	// This is getting silly
+	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
+	requestCache.Delete(cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
+	requestCache.Delete(cacheKey)
+
 	//log.Printf("BUILDLATERFIRST: %d, BUILDLATERLIST: %d", len(buildLaterFirst), len(buildLaterList))
 	if len(extra) == 0 {
 		log.Printf("[INFO] Starting build of %d containers (FIRST)", len(buildLaterFirst))
@@ -6811,6 +6829,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 			} else {
 				if len(item.Tags) > 0 {
 					log.Printf("[INFO] Successfully built image %s", item.Tags[0])
+
 				} else {
 					log.Printf("[INFO] Successfully built Docker image")
 				}

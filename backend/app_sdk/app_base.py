@@ -1447,7 +1447,7 @@ class AppBase:
                         params = {}
                         try:
                             for item in action["authentication"]:
-                                print("AUTH: ", key, value)
+                                #print("AUTH: ", key, value)
                                 params[item["key"]] = item["value"]
                         except KeyError:
                             print("No authentication specified!")
@@ -1469,11 +1469,11 @@ class AppBase:
                                     if "||" in parameter["value"]:
                                         splitvalue = parameter["value"].split("||")
                                         if len(splitvalue) > 1:
-                                            print(f'[INFO] Parsed split || options of actions["parameters"]["name"]')
+                                            #print(f'[INFO] Parsed split || options of actions["parameters"]["name"]')
                                             action["parameters"][counter]["value"] = splitvalue[1]
 
                             except (IndexError, KeyError, TypeError) as e:
-                                print("Options err: {e}")
+                                print("[WARNING] Options err: {e}")
 
                             # This part is purely for OpenAPI accessibility. 
                             # It replaces the data back into the main item
@@ -1487,12 +1487,12 @@ class AppBase:
                                     if values != None:
                                         added = 0
                                         for val in values:
-                                            print(f"VAL: {val}")
+                                            #print(f"VAL: {val}")
                                             #parameter["value"].replace(val["key"], val["value"], -1)
-                                            print(f'PARAM1: {action["parameters"][counter]["value"]}')
+                                            #print(f'PARAM1: {action["parameters"][counter]["value"]}')
                                             action["parameters"][counter]["value"] = action["parameters"][counter]["value"].replace(val["key"], val["value"], 1)
                                             #action["parameters"][counter]["value"].replace(r"${url}", r"$Find_URLs.valid.#.data", 1)
-                                            print(f'PARAM2: {action["parameters"][counter]["value"]}')
+                                            #print(f'PARAM2: {action["parameters"][counter]["value"]}')
                                             #newparams.append({
                                             #    "name": val["key"],
                                             #    "value": val["value"],
@@ -1503,7 +1503,8 @@ class AppBase:
                                             #    },
                                             #})
 
-                                            print(f'[INFO] Added param {val["key"]} for body with value {val["value"]} (using OpenAPI)')
+                                            #print(f'[INFO] Added param {val["key"]} for body with value {val["value"]} (using OpenAPI)')
+                                            print(f'[INFO] Added param {val["key"]} for body (using OpenAPI)')
                                             added += 1
 
                                         #action["parameters"]["body"]
@@ -1515,7 +1516,7 @@ class AppBase:
 
                                 break
 
-                        print(action["parameters"])
+                        #print(action["parameters"])
                         for parameter in newparams:
                             action["parameters"].append(parameter)
 
@@ -1841,10 +1842,10 @@ class AppBase:
                                 #print(f"Error with subparam deletion of {subparam} in {multi_parameters} (2)")
                                 pass
 
-                        print()
-                        print(f"Param: {params}")
-                        print(f"Multiparams: {multi_parameters}")
-                        print()
+                        #print()
+                        #print(f"Param: {params}")
+                        #print(f"Multiparams: {multi_parameters}")
+                        #print()
                         
                         if not multiexecution:
                             #newparams.append({

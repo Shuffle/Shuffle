@@ -2010,11 +2010,11 @@ const AppCreator = (props) => {
 	const categories = [
 		"Communication",
 		"Cases",
-		"EDR",
-		"Intel",
 		"SIEM",
-		"Network",
 		"Assets",
+		"Intel",
+		"IAM",
+		"Network",
 		"Eradication",
 		"Other",
 	]

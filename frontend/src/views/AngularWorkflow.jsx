@@ -2450,7 +2450,8 @@ const AngularWorkflow = (props) => {
 					authentication: [],
 					execution_variable: undefined,
 					example: example,
-					category: app.categories !== null && app.categories !== undefined && app.categories.length > 0 ? app.categories[0] : ""
+					category: app.categories !== null && app.categories !== undefined && app.categories.length > 0 ? app.categories[0] : "",
+					authentication_id: "",
 				}
 
 				// FIXME: overwrite category if the ACTION chosen has a different category
@@ -2510,6 +2511,56 @@ const AngularWorkflow = (props) => {
 					}
 					console.log("SHOULD STITCH WITH STARTNODE")
 					cy.add(edgeToBeAdded)
+				}
+							
+				// AUTHENTICATION
+				if (app.authentication.required) {
+					// Setup auth here :)
+					const authenticationOptions = []
+					var findAuthId = ""
+					if (newAppData.authentication_id !== null && newAppData.authentication_id !== undefined && newAppData.authentication_id.length > 0) {
+						findAuthId = newAppData.authentication_id
+					}
+
+					var tmpAuth = JSON.parse(JSON.stringify(appAuthentication))
+					for (var key in tmpAuth) {
+						var item = tmpAuth[key]
+
+						const newfields = {}
+						for (var filterkey in item.fields) {
+							newfields[item.fields[filterkey].key] = item.fields[filterkey].value
+						}
+
+						item.fields = newfields
+						if (item.app.name === app.name) {
+							authenticationOptions.push(item)
+							if (item.id === findAuthId) {
+								newAppData.selectedAuthentication = item
+							}
+						}
+					}
+
+					if (authenticationOptions !== undefined && authenticationOptions !== null && authenticationOptions.length > 0) {
+						for (var key in authenticationOptions) {
+							const option = authenticationOptions[key]
+							if (option.active) {
+								newAppData.selectedAuthentication = option 
+								newAppData.authentication_id = option.id
+								break
+							}
+						}
+					}
+
+					//newAppData.authentication = authenticationOptions
+					//if (newAppData.selectedAuthentication === null || newAppData.selectedAuthentication === undefined || newAppData.selectedAuthentication.length === "") {
+					//	newAppData.selectedAuthentication = {}
+					//} else {
+					//	console.log("CAN WE SELECT AUTH?: ", authenticationOptions)
+					//}
+				} else {
+					newAppData.authentication = []
+					newAppData.authentication_id = ""
+					newAppData.selectedAuthentication = {}
 				}
 
 				workflow.actions.push(newAppData)
