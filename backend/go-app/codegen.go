@@ -260,9 +260,14 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 				queryString += ", "
 			}
 
+			/*
+							queryData += fmt.Sprintf(`
+				        if %s:
+				            url += f"&%s={%s}"`, query, query, query)
+			*/
 			queryData += fmt.Sprintf(`
         if %s:
-            url += f"&%s={%s}"`, query, query, query)
+            params["%s"] = %s`, query, query, query)
 		}
 	} else {
 		//log.Printf("No optional queries?")
@@ -384,6 +389,7 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 	// Extra param for authentication scheme(s)
 	// The last weird one is the body.. Tabs & spaces sucks.
 	data := fmt.Sprintf(`    async def %s(self%s%s%s%s%s%s%s):
+        params={}
         %s
         url=f"%s%s"
         %s
@@ -392,7 +398,7 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
         %s
         %s
         %s
-        ret = requests.%s(url, headers=headers%s%s%s%s)
+        ret = requests.%s(url, headers=headers, params=params%s%s%s%s)
         try:
           return ret.json()
         except json.decoder.JSONDecodeError:
@@ -423,13 +429,11 @@ func makePythoncode(swagger *openapi3.Swagger, name, url, method string, paramet
 	)
 
 	// Use lowercase when checking
-	/*
-		if strings.Contains(functionname, "filter") {
-			//log.Printf("FUNCTION: %s", data)
-			log.Println(data)
-			log.Printf("Queries: %s", queryString)
-		}
-	*/
+	if strings.Contains(functionname, "login") {
+		//log.Printf("FUNCTION: %s", data)
+		log.Println(data)
+		log.Printf("Queries: %s", queryString)
+	}
 
 	//log.Printf(data)
 	return functionname, data
