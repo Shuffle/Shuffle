@@ -377,6 +377,11 @@ const Admin = (props) => {
 	}
 
 	const handleGetOrg = (orgId) => {
+		if (orgId.length === 0) {
+			alert.error("Organization ID not defined. Please contact us on https://shuffler.io if this persists logout.")
+			return 
+		}
+
 		// Just use this one?
 		var baseurl = globalUrl
 		const url = baseurl + '/api/v1/orgs/'+orgId
@@ -870,7 +875,8 @@ const Admin = (props) => {
 		})
 			.then((response) => {
 				if (response.status !== 200) {
-					window.location.pathname = "/workflows"
+					// Ahh, this happens because they're not admin
+					// window.location.pathname = "/workflows"
 					return
 				}
 
@@ -1359,14 +1365,14 @@ const Admin = (props) => {
 
 	const cancelSubscriptions = (subscription_id) => {
 		console.log(selectedOrganization)
+		const orgId = selectedOrganization.id
 		const data = {
 			"subscription_id": subscription_id,
 			"action": "cancel",
 			"org_id": selectedOrganization.id,
 		}
 
-
-		const url = globalUrl + `/api/v1/orgs/${selectedOrganization.id}`;
+		const url = globalUrl + `/api/v1/orgs/${orgId}`;
 		fetch(url, {
 			mode: 'cors',
 			method: 'POST',

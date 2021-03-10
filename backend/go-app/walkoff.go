@@ -17,6 +17,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
+
 	"cloud.google.com/go/datastore"
 	scheduler "cloud.google.com/go/scheduler/apiv1"
 	gyaml "github.com/ghodss/yaml"
@@ -977,6 +980,21 @@ func validateNewWorkerExecution(body []byte) error {
 		return errors.New(fmt.Sprintf("Bad length of trigger: %d (probably normal app)", len(execution.Workflow.Triggers)))
 	}
 
+	if execution.Status == "EXECUTING" {
+		log.Printf("[INFO] Inside executing.")
+		extra := 0
+		for _, trigger := range execution.Workflow.Triggers {
+			//log.Printf("Appname trigger (0): %s", trigger.AppName)
+			if trigger.AppName == "User Input" || trigger.AppName == "Shuffle Workflow" {
+				extra += 1
+			}
+		}
+
+		if len(execution.Workflow.Actions)+extra == len(execution.Results) {
+			execution.Status = "FINISHED"
+		}
+	}
+
 	// FIXME: Add extra here
 	//executionLength := len(baseExecution.Workflow.Actions)
 	//if executionLength != len(execution.Results) {
@@ -986,7 +1004,7 @@ func validateNewWorkerExecution(body []byte) error {
 	//log.Printf("\n\nSHOULD SET BACKEND DATA FOR EXEC \n\n")
 	err = setWorkflowExecution(ctx, execution, true)
 	if err == nil {
-		log.Printf("[INFO] Set workflowexecution based on new worker (>0.8.53) for execution %s", baseExecution.ExecutionId)
+		log.Printf("[INFO] Set workflowexecution based on new worker (>0.8.53) for execution %s. Actions: %d, Triggers: %d, Results: %d", execution.ExecutionId, len(execution.Workflow.Actions), len(execution.Workflow.Triggers), len(execution.Results))
 		//log.Printf("[INFO] Successfully set the execution to wait.")
 	} else {
 		log.Printf("[WARNING] Failed to set the execution to wait.")
@@ -3106,7 +3124,7 @@ func cleanupExecutions(resp http.ResponseWriter, request *http.Request) {
 
 	user, err := handleApiAuthentication(resp, request)
 	if err != nil {
-		log.Printf("Api authentication failed in execute workflow: %s", err)
+		log.Printf("[INFO] Api authentication failed in cleanup executions: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "message": "Not authenticated"}`))
 		return
@@ -3871,7 +3889,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	user, err := handleApiAuthentication(resp, request)
 	if err != nil {
-		log.Printf("Api authentication failed in execute workflow: %s", err)
+		log.Printf("[INFO] Api authentication failed in execute workflow: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -6549,8 +6567,20 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 	buildLaterFirst := []buildLaterStruct{}
 	buildLaterList := []buildLaterStruct{}
 
-	// It's here to prevent getting them in every iteration
 	ctx := context.Background()
+	if forceUpdate {
+		dockercli, err := client.NewEnvClient()
+		if err == nil {
+			_, err := dockercli.ImagePull(ctx, "frikky/shuffle:app_sdk", types.ImagePullOptions{})
+			if err != nil {
+				log.Printf("[WARNING] Failed to download apps with the new App SDK: %s", err)
+			}
+		} else {
+			log.Printf("[WARNING] Failed to download apps with the new App SDK because of docker cli: %s", err)
+		}
+	}
+
+	// It's here to prevent getting them in every iteration
 	for _, file := range dir {
 		if len(onlyname) > 0 && file.Name() != onlyname {
 			continue

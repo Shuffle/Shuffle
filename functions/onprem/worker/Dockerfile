@@ -5,11 +5,11 @@ WORKDIR /app
 COPY worker.go /app/worker.go
 RUN go env -w GO111MODULE=auto 
 
-RUN go get -u github.com/docker/docker/api/types 
-RUN go get -u github.com/docker/docker/api/types/container
-RUN go get -u github.com/docker/docker/client
-RUN go get -u github.com/gorilla/mux
-RUN go get -u github.com/patrickmn/go-cache
+RUN go get github.com/docker/docker/api/types 
+RUN go get github.com/docker/docker/api/types/container
+RUN go get github.com/docker/docker/client
+RUN go get github.com/gorilla/mux
+RUN go get github.com/patrickmn/go-cache
 
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o worker .
 

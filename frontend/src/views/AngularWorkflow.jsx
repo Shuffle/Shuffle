@@ -382,6 +382,12 @@ const AngularWorkflow = (props) => {
 					if (execution !== null && execution !== undefined) {
 						setExecutionData(execution)
 						setExecutionModalView(1)
+						start()
+
+						setExecutionRequest({
+							"execution_id": execution.execution_id,
+							"authorization": execution.authorization,
+						})
 
 						const newitem = removeParam("execution_id", cursearch) 
 						props.history.push(curpath+newitem)

@@ -777,11 +777,11 @@ type AppExecutionExample struct {
 
 // removes every container except itself (worker)
 func shutdown(workflowExecution WorkflowExecution, nodeId string, reason string, handleResultSend bool) {
-	log.Printf("[INFO] Shutdown started with reason %s", reason)
+	log.Printf("[INFO] Shutdown (%s) started with reason %s", workflowExecution.Status, reason)
 	//reason := "Error in execution"
 
 	sleepDuration := 1
-	if handleResultSend {
+	if handleResultSend && requestsSent < 2 {
 		data, err := json.Marshal(workflowExecution)
 		if err == nil {
 			sendResult(workflowExecution, data)
@@ -829,7 +829,7 @@ func shutdown(workflowExecution WorkflowExecution, nodeId string, reason string,
 
 	//fmt.Println(url.QueryEscape(query))
 	fullUrl += path
-	log.Printf("Abort URL: %s", fullUrl)
+	log.Printf("[INFO] Abort URL: %s", fullUrl)
 
 	req, err := http.NewRequest(
 		"GET",
@@ -976,7 +976,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		//log.Printf("[INFO] Info for container: %#v", stats)
 		//log.Printf("%#v", stats.Config)
 		//log.Printf("%#v", stats.ContainerJSONBase.State)
-		log.Printf("STATUS: %s", stats.ContainerJSONBase.State.Status)
+		log.Printf("[INFO] EXECUTION STATUS: %s", stats.ContainerJSONBase.State.Status)
 		if stats.ContainerJSONBase.State.Status == "exited" {
 			logOptions := types.ContainerLogsOptions{
 				ShowStdout: true,
@@ -991,6 +991,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 				io.Copy(buf, out)
 				logs := buf.String()
 				log.Printf("Logs: %s", logs)
+
 				//log.Printf(logs)
 				// check errors
 				/*
@@ -2290,6 +2291,8 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting execution"}`)))
 		return
 	}
+
+	log.Printf(`[INFO] Got result %s from %s`, actionResult.Status, actionResult.Action.ID)
 	resultLength := len(workflowExecution.Results)
 	dbSave := false
 	setExecution := true
@@ -2448,6 +2451,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		for index, item := range workflowExecution.Results {
 			if item.Action.ID == actionResult.Action.ID {
 				found = true
+
 				if item.Status == actionResult.Status {
 					skip = true
 				}
@@ -2478,38 +2482,45 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 			log.Printf("[INFO] Updating %s in workflow %s from %s to %s", actionResult.Action.ID, workflowExecution.ExecutionId, workflowExecution.Results[outerindex].Status, actionResult.Status)
 			workflowExecution.Results[outerindex] = actionResult
 		} else {
-			log.Printf("[INFO] Setting value of %s in workflow %s to %s", actionResult.Action.ID, workflowExecution.ExecutionId, actionResult.Status)
 			workflowExecution.Results = append(workflowExecution.Results, actionResult)
+			log.Printf("[INFO] Setting value (1) of %s in execution %s to %s. New result length: %d", actionResult.Action.ID, workflowExecution.ExecutionId, actionResult.Status, len(workflowExecution.Results))
 		}
 	} else {
-		log.Printf("[INFO] Setting value of %s in workflow %s to %s", actionResult.Action.ID, workflowExecution.ExecutionId, actionResult.Status)
 		workflowExecution.Results = append(workflowExecution.Results, actionResult)
+		log.Printf("[INFO] Setting value (2) of %s in execution %s to %s. New result length: %d", actionResult.Action.ID, workflowExecution.ExecutionId, actionResult.Status, len(workflowExecution.Results))
 	}
 
 	// FIXME: Have a check for skippednodes and their parents
-	for resultIndex, result := range workflowExecution.Results {
-		if result.Status != "SKIPPED" {
-			continue
-		}
+	/*
+		for resultIndex, result := range workflowExecution.Results {
+			if result.Status != "SKIPPED" {
+				continue
+			}
 
-		// Checks if all parents are skipped or failed. Otherwise removes them from the results
-		for _, branch := range workflowExecution.Workflow.Branches {
-			if branch.DestinationID == result.Action.ID {
-				for _, subresult := range workflowExecution.Results {
-					if subresult.Action.ID == branch.SourceID {
-						if subresult.Status != "SKIPPED" && subresult.Status != "FAILURE" {
-							log.Printf("SUBRESULT PARENT STATUS: %s", subresult.Status)
-							log.Printf("Should remove resultIndex: %d", resultIndex)
+			// Checks if all parents are skipped or failed.
+			// Otherwise removes them from the results
+			for _, branch := range workflowExecution.Workflow.Branches {
+				if branch.DestinationID == result.Action.ID {
+					for _, subresult := range workflowExecution.Results {
+						if subresult.Action.ID == branch.SourceID {
+							if subresult.Status != "SKIPPED" && subresult.Status != "FAILURE" {
+								//log.Printf("SUBRESULT PARENT STATUS: %s", subresult.Status)
+								//log.Printf("Should remove resultIndex: %d", resultIndex)
 
-							workflowExecution.Results = append(workflowExecution.Results[:resultIndex], workflowExecution.Results[resultIndex+1:]...)
+								// FIXME: Reinstate this?
+								//workflowExecution.Results = append(workflowExecution.Results[:resultIndex], workflowExecution.Results[resultIndex+1:]...)
+								_ = resultIndex
 
-							break
+								break
+							}
 						}
 					}
 				}
 			}
 		}
-	}
+
+		log.Printf("NEW LENGTH: %d", len(workflowExecution.Results))
+	*/
 
 	extraInputs := 0
 	for _, trigger := range workflowExecution.Workflow.Triggers {
@@ -2697,7 +2708,7 @@ func sendResult(workflowExecution WorkflowExecution, data []byte) {
 }
 
 func validateFinished(workflowExecution WorkflowExecution) {
-	log.Printf("[INFO] Status: %s, Actions: %d, Extra: %d, Results: %d\n", workflowExecution.Status, len(workflowExecution.Workflow.Actions), extra, len(workflowExecution.Results))
+	log.Printf("[INFO] VALIDATION. Status: %s, Actions: %d, Extra: %d, Results: %d\n", workflowExecution.Status, len(workflowExecution.Workflow.Actions), extra, len(workflowExecution.Results))
 
 	//if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions)+extra {
 	if (len(environments) == 1 && requestsSent == 0 && len(workflowExecution.Results) >= 1) || (len(workflowExecution.Results) >= len(workflowExecution.Workflow.Actions) && len(workflowExecution.Workflow.Actions) > 0) {
