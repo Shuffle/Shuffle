@@ -342,7 +342,7 @@ const AngularWorkflow = (props) => {
 				setAuthenticationModalOpen(false) 
 
 				// Needs a refresh with the new authentication..
-				alert.success("Successfully saved new app auth")
+				//alert.success("Successfully saved new app auth")
 			}
 		})
 		.catch(error => {
@@ -1582,7 +1582,7 @@ const AngularWorkflow = (props) => {
 		if (elements.length === 0 && !graphSetup && Object.getOwnPropertyNames(workflow).length > 0) {
 			setGraphSetup(true)
 			setupGraph()
-		} else if (!established && cy !== undefined && apps.length > 0 && Object.getOwnPropertyNames(workflow).length > 0){
+		} else if (!established && cy !== undefined && apps !== null && apps !== undefined && apps.length > 0 && Object.getOwnPropertyNames(workflow).length > 0){
 			setEstablished(true)
 			cy.edgehandles({
 				handleNodes: (el) => el.isNode(),

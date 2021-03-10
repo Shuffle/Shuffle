@@ -8429,6 +8429,7 @@ func initHandlers() {
 
 	// Orgs
 	r.HandleFunc("/api/v1/orgs", handleGetOrgs).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/", handleGetOrgs).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}", handleGetOrg).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}", handleEditOrg).Methods("POST", "OPTIONS")
 	//r.HandleFunc("/api/v1/orgs/{orgId}", handleEditOrg).Methods("POST", "OPTIONS")

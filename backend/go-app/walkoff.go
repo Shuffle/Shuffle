@@ -7056,8 +7056,12 @@ func getWorkflowExecutions(resp http.ResponseWriter, request *http.Request) {
 				}
 
 				if err != nil {
-					log.Printf("Cursorerror: %s", err)
-					break
+					if strings.Contains(fmt.Sprintf("%s", err), "ResourceExhausted") {
+						log.Printf("[WARNING] Cursorerror in app grab WARNING: %s", err)
+					} else {
+						log.Printf("[ERROR] Cursorerror in app grab: %s", err)
+						break
+					}
 				} else {
 					//log.Printf("NEXTCURSOR: %s", nextCursor)
 					nextStr := fmt.Sprintf("%s", nextCursor)
@@ -7115,7 +7119,7 @@ func getAllSchedules(ctx context.Context, orgId string) ([]ScheduleOld, error) {
 //FIXME: Add cursor
 func getAllWorkflowApps(ctx context.Context, maxLen int) ([]WorkflowApp, error) {
 	var apps []WorkflowApp
-	query := datastore.NewQuery("workflowapp").Order("-edited").Limit(20)
+	query := datastore.NewQuery("workflowapp").Order("-edited").Limit(10)
 	//query := datastore.NewQuery("workflowapp").Order("-edited").Limit(40)
 
 	cacheKey := fmt.Sprintf("workflowapps-sorted-%d", maxLen)
