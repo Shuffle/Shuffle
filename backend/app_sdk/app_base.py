@@ -9,6 +9,7 @@ import requests
 import urllib.parse
 import http.client
 import urllib3
+import hashlib
 
 class AppBase:
     __version__ = None
@@ -90,6 +91,135 @@ class AppBase:
             return {(a, ) + b for a in L[0] for b in await self.cartesian_product(L[1:])}
         else:
             return {()}
+
+    # Handles unique fields by negoiating with the backend 
+    def validate_unique_fields(self, params):
+        #print("IN THE UNIQUE FIELDS PLACE!")
+
+        newlist = [params]
+        if isinstance(params, list):
+            #print("ITS A LIST!")
+            newlist = params
+
+        #self.full_execution = os.getenv("FULL_EXECUTION", "") 
+        #print(len(params))
+        #print(params.items())
+        #print(list(params.items()))
+        #print(f"PARAM: {params}")
+        #print(f"NEWLIST: {newlist}")
+
+        # FIXME: Also handle MULTI PARAM
+        values = []
+        param_names = []
+        all_values = {}
+        index = 0
+        for outerparam in newlist:
+
+            #print(f"INNERTYPE: {type(outerparam)}")
+            #print(f"HANDLING PARAM {key}")
+            param_value = ""
+            for key, value in outerparam.items():
+                #print("KEY: %s" % key)
+                #value = params[key]
+                for param in self.action["parameters"]:
+                    try:
+                        if param["name"] == key and param["unique_toggled"]:
+                            print(f"FOUND: {key} with param {param}!")
+                            if isinstance(value, dict) or isinstance(value, list):
+                                try:
+                                    value = json.dumps(value)
+                                except json.decoder.JSONDecodeError as e:
+                                    print(f"Error in json decode for param {value}: {e}")
+                                    continue
+                            elif isinstance(value, int) or isinstance(value, float):
+                                value = str(value)
+                            elif value == False:
+                                value = "False"
+                            elif value == True:
+                                value = "True"
+
+                            print(f"VALUE APPEND: {value}")
+                            param_value += value
+
+                            if param["name"] not in param_names:
+                                param_names.append(param["name"])
+                    except (KeyError, NameError) as e:
+                        print(f"Key/NameError in param handler: {e}")
+
+            print(f"OUTER VALUE: {param_value}")
+            if len(param_value) > 0:
+                md5 = hashlib.md5(param_value.encode('utf-8')).hexdigest()
+                values.append(md5)
+                all_values[md5] = {
+                    "index": index, 
+                }
+
+            index += 1
+
+            # When in here, it means it should be unique
+            # Should this be done by the backend? E.g. ask it if the value is valid?
+            # 1. Check if it's unique towards key:value store in org for action
+            # 2. Check if COMBINATION is unique towards key:value store of action for org
+            # 3. Have a workflow configuration for unique ID's in unison or per field? E.g. if toggled, then send a hash of all fields together alphabetically, but if not, send one field at a time
+
+            # org_id = full_execution["workflow"]["execution_org"]["id"]
+
+            # USE ARRAY?
+
+        new_params = []
+        if len(values) > 0:
+            org_id = self.full_execution["workflow"]["execution_org"]["id"]
+            data = {
+                "append": True,
+                "workflow_check": False,
+                "authorization": self.authorization,
+                "execution_ref": self.current_execution_id,
+                "org_id": org_id,
+                "values": [{
+                        "app": self.action["app_name"],
+                        "action": self.action["name"],
+                        "parameternames": param_names,
+                        "parametervalues": values,
+                }]
+            }
+
+            #print(f"DATA: {data}")
+            # 1594869a676630b397bc34f7dc0951a3
+
+            #print(f"VALUE URL: {url}") 
+            #print(f"RET: {ret.text}")
+            #print(f"ID: {ret.status_code}")
+            url = f"{self.url}/api/v1/orgs/{org_id}/validate_app_values"
+            ret = requests.post(url, json=data)
+            if ret.status_code == 200:
+                json_value = ret.json()
+                if len(json_value["found"]) > 0: 
+                    modifier = 0
+                    for item in json_value["found"]:
+                        print(f"Should remove {item}")
+
+                        try:
+                            print(f"FOUND: {all_values[item]}")
+                            print(f"SHOULD REMOVE INDEX: {all_values[item]['index']}")
+
+                            try:
+                                newlist.pop(all_values[item]["index"]-modifier)
+                                modifier += 1
+                            except IndexError as e:
+                                print(f"Error popping value from array: {e}")
+                        except (NameError, KeyError) as e:
+                            print(f"Failed removal: {e}")
+                        
+                            
+                    #return False
+                else:
+                    print("None of the items were found!")
+                    return newlist
+            else:
+                print(f"[WARNING] Failed checking values with status code {ret.status_code}!")
+
+        #return True
+        return newlist
 
     # Returns a list of all the executions to be done in the inner loop
     # FIXME: Doesn't take into account whether you actually WANT to loop or not
@@ -346,6 +476,26 @@ class AppBase:
             # If here: check for multipliers within this scope.
             ret = []
             param_multiplier = await self.get_param_multipliers(newparams)
+
+            # FIXME: This does a deduplication of the data
+            new_params = self.validate_unique_fields(param_multiplier)
+            print(f"NEW PARAMS: {new_params}")
+            if len(new_params) == 0:
+                print(f"No ID's to handle for validation")
+            else:
+                #subparams = new_params
+                print(f"NEW PARAMS: {new_params}")
+
+            #print("Returned with newparams of length %d", len(new_params))
+            #if isinstance(new_params, list) and len(new_params) == 1:
+            #    params = new_params[0]
+            #else:
+            #    print("[WARNING] SHOULD STOP EXECUTION BECAUSE FIELDS AREN'T UNIQUE")
+            #    action_result["status"] = "SKIPPED"
+            #    action_result["result"] = f"A non-unique value was found"  
+            #    action_result["completed_at"] = int(time.time())
+            #    self.send_result(action_result, headers, stream_path)
+            #    return
 
             print("[INFO] Multiplier length: %d" % len(param_multiplier))
             for subparams in param_multiplier:
@@ -1398,6 +1548,7 @@ class AppBase:
     
             return True, ""
 
+
         # THE START IS ACTUALLY RIGHT HERE :O
         # Checks whether conditions are met, otherwise set 
         branchcheck, tmpresult = check_branch_conditions(action, fullexecution)
@@ -1848,14 +1999,19 @@ class AppBase:
                         #print()
                         
                         if not multiexecution:
-                            #newparams.append({
-                            #    "name": val["key"],
-                            #    "value": val["value"],
-                            #    "variant": "STATIC_VALUE",
-                            #    "id": "body_replacement",
-                            #})
+                            # Runs a single iteration here
+                            new_params = self.validate_unique_fields(params)
+                            print(f"Returned with newparams of length {len(new_params)}")
+                            if isinstance(new_params, list) and len(new_params) == 1:
+                                params = new_params[0]
+                            else:
+                                print("[WARNING] SHOULD STOP EXECUTION BECAUSE FIELDS AREN'T UNIQUE")
+                                action_result["status"] = "SKIPPED"
+                                action_result["result"] = f"A non-unique value was found"  
+                                action_result["completed_at"] = int(time.time())
+                                self.send_result(action_result, headers, stream_path)
+                                return
 
-                            #print("[INFO] APP_SDK DONE: Starting NORMAL execution of function")
                             print("[INFO] Running normal execution\n") 
                             newres = await func(**params)
                             print("\n[INFO] Returned from execution!")#, newres)
@@ -2058,7 +2214,6 @@ class AppBase:
                                 print("Normal result - no list?")
                                 result = results
 
-                    print("RESULT: %s" % result)
                     action_result["status"] = "SUCCESS" 
                     action_result["result"] = str(result)
                     if action_result["result"] == "":

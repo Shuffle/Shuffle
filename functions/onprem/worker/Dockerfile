@@ -1,18 +1,21 @@
 FROM golang:1.16.0-buster as builder
 
 WORKDIR /app
+RUN go get github.com/docker/docker/api/types github.com/docker/docker/api/types/container github.com/docker/docker/client
 
+#RUN go env -w GO111MODULE=auto 
 COPY worker.go /app/worker.go
-RUN go env -w GO111MODULE=auto 
+RUN go mod init worker
+RUN go get github.com/docker/docker/api/types && \
+	go get github.com/docker/docker/api/types/container && \
+	go get github.com/docker/docker/client && \
+	go get github.com/gorilla/mux && \
+	go get github.com/patrickmn/go-cache 
 
-RUN go get github.com/docker/docker/api/types 
-RUN go get github.com/docker/docker/api/types/container
-RUN go get github.com/docker/docker/client
-RUN go get github.com/gorilla/mux
-RUN go get github.com/patrickmn/go-cache
-
+RUN go build
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o worker .
 
+## ALPINE IMAGE
 FROM alpine:3.12
 
 ENV SHUFFLE_BASE_IMAGE_REGISTRY=docker.io

@@ -1,5 +1,6 @@
 import React, {useState, useEffect, useLayoutEffect} from 'react';
 import { useInterval } from 'react-powerhooks';
+import { useTheme } from '@material-ui/core/styles';
 
 import uuid from "uuid";
 import {Link} from 'react-router-dom';
@@ -26,6 +27,7 @@ import { w3cwebsocket as W3CWebSocket } from "websocket";
 import { useAlert } from "react-alert";
 import { validateJson } from "./Workflows.jsx";
 import { GetParsedPaths } from "./Apps.jsx";
+import ConfigureWorkflow from '../components/ConfigureWorkflow.jsx';
 
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
@@ -87,6 +89,7 @@ const AngularWorkflow = (props) => {
 	const referenceUrl = globalUrl+"/api/v1/hooks/"
 	const alert = useAlert()
 	const borderRadius = 3
+	const theme = useTheme();
 
 	const [bodyWidth, bodyHeight] = useWindowSize();
 	const appBarSize = 74
@@ -126,6 +129,7 @@ const AngularWorkflow = (props) => {
 	const [rightSideBarOpen, setRightSideBarOpen] = React.useState(false)
 	const [showSkippedActions, setShowSkippedActions] = React.useState(false)
 	const [lastExecution, setLastExecution] = React.useState("")
+	const [configureWorkflowModalOpen, setConfigureWorkflowModalOpen] = React.useState(false)
 	const [curpath, setCurpath] = useState(typeof window === 'undefined' || window.location === undefined ? "" : window.location.pathname)
 
 	// 0 = normal, 1 = just done, 2 = normal
@@ -639,7 +643,7 @@ const AngularWorkflow = (props) => {
 
 			getWorkflowExecution(props.match.params.key, "")
 		} else if (responseJson.status === "FINISHED") {
-			console.log("STOPPING BECAUSE ITS OVAH!")
+			//console.log("STOPPING BECAUSE ITS OVAH!")
 			setExecutionRunning(false)
 			stop()
 			getWorkflowExecution(props.match.params.key, "")
@@ -1403,7 +1407,7 @@ const AngularWorkflow = (props) => {
 			// might just be confusing
 			cy.nodes().some(function( ele ) {
 				if (ele.id() !== workflow.start && ele.data()["label"] !== undefined) {
-					alert.success("Changed startnode to "+ele.data()["label"])
+					//alert.success("Changed startnode to "+ele.data()["label"])
 					ele.data("isStartNode", true)
 					workflow.start = ele.id()
 					//throw BreakException
@@ -3734,7 +3738,7 @@ const AngularWorkflow = (props) => {
 
 						return (
 						<div key={data.name}>	
-							<div style={{marginTop: 20, marginBottom: 7, display: "flex"}}>
+							<div style={{marginTop: 20, marginBottom: 0, display: "flex"}}>
 
 
 								{data.configuration === true ? 
@@ -3744,15 +3748,15 @@ const AngularWorkflow = (props) => {
 										}}/>
 									</Tooltip>
 								:
-									<div style={{width: 17, height: 17, borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: 10, marginTop: 2,}}/>
+									<div style={{width: 17, height: 17, borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: 10, marginTop: 2, marginTop: "auto", marginBottom: "auto",}}/>
 								}
-								<div style={{flex: "10"}}> 
+								<div style={{flex: "10", marginTop: "auto", marginBottom: "auto",}}> 
 									<Tooltip title={description} placement="top">
 										<b>{tmpitem} </b> 
 									</Tooltip>
 								</div>
 
-								{selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0  ? null : 
+								{/*selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0  ? null : 
 								<div style={{display: "flex"}}>
 									<Tooltip color="primary" title="Static data" placement="top">
 										<div style={{cursor: "pointer", color: staticcolor}} onClick={(e) => {
@@ -3781,6 +3785,29 @@ const AngularWorkflow = (props) => {
 										</div>
 									</Tooltip>
 								</div>	
+							*/}
+							{selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0 && selectedActionParameters[count].required === true && selectedActionParameters[count].unique_toggled !== undefined ? null : 
+								<div style={{display: "flex"}}>
+									<Tooltip color="primary" title="Value must be unique" placement="top">
+										<div style={{cursor: "pointer", color: staticcolor}} onClick={(e) => {}}>
+          						<Checkbox
+          						  checked={selectedActionParameters[count].unique_toggled}
+												style={{
+													color: theme.palette.primary.main,
+												}}
+          						  onChange={(event) => {
+													//console.log("CHECKED!: ", selectedActionParameters[count])
+          						  	selectedActionParameters[count].unique_toggled = !selectedActionParameters[count].unique_toggled
+													selectedAction.parameters[count].unique_toggled = selectedActionParameters[count].unique_toggled
+          						  	setSelectedActionParameters(selectedActionParameters)
+													setSelectedAction(selectedAction)
+													setUpdate(Math.random())
+												}}
+          						  name="requires_unique"
+          						/>
+										</div>
+									</Tooltip>
+								</div>
 							}
 							</div>	
 							{datafield}
@@ -4015,14 +4042,13 @@ const AngularWorkflow = (props) => {
 			/>
 			{selectedApp.name !== undefined && selectedAction.authentication !== undefined && selectedAction.authentication.length === 0 && requiresAuthentication  ?
 				<div style={{marginTop: 15}}>
-					Authenticate {selectedApp.name}: 
 					<Tooltip color="primary" title={"Add authentication option"} placement="top">
 						<span>
-						<Button color="primary" style={{}} variant="text" onClick={() => {
-							setAuthenticationModalOpen(true)
-						}}>
-							<AddIcon />
-						</Button> 				
+							<Button color="primary" style={{}} fullWidth variant="contained" onClick={() => {
+								setAuthenticationModalOpen(true)
+							}}>
+								<AddIcon style={{marginRight: 10, }}/> Authenticate {selectedApp.name}
+							</Button> 				
 						</span>
 					</Tooltip>
 				</div>
@@ -6117,26 +6143,26 @@ const AngularWorkflow = (props) => {
 	const topBarStyle= {
 		position: "fixed", 
 		right: 0, 
-		left: leftBarSize,
-		top: appBarSize, 
+		left: leftBarSize+20,
+		top: appBarSize+20, 
+		/*
 		minWidth: cytoscapeViewWidths, 
 		maxWidth: cytoscapeViewWidths,
-		marginLeft: 20,
-		marginBottom: 20,
+		*/
 	}
 
 	const TopCytoscapeBar = () => {
 		return (
 			<div style={topBarStyle}>	
-				<div style={{margin: 10}}>
+				<div style={{margin: "0px 10px 0px 10px", }}>
 					<Breadcrumbs aria-label="breadcrumb" separator="›" style={{color: "white",}}>
 						<Link to="/workflows" style={{textDecoration: "none", color: "inherit",}}>
-							<h2 style={{color: "rgba(255,255,255,0.5)"}}>
+							<h2 style={{color: "rgba(255,255,255,0.5)", margin: "0px 0px 0px 0px"}}>
 								<PolymerIcon style={{marginRight: 10}} />
 								Workflows
 							</h2>
 						</Link>
-						<h2>
+						<h2 style={{margin: 0,}}>
 							{workflow.name}
 						</h2>
 					</Breadcrumbs>
@@ -7472,6 +7498,24 @@ const AngularWorkflow = (props) => {
 		)
 	}
 
+	const configureWorkflowModal = configureWorkflowModalOpen && apps.length !== 0 ? 
+		<Dialog 
+			open={configureWorkflowModalOpen} 
+			onClose={() => {
+				setConfigureWorkflowModalOpen(false)
+			}}
+			PaperProps={{
+				style: {
+					backgroundColor: surfaceColor,
+					color: "white",
+					minWidth: 600,
+					padding: 15, 
+				},
+			}}
+		>
+			<ConfigureWorkflow workflow={workflow} appAuthentication={appAuthentication} apps={apps} />
+		</Dialog>
+		: null
 	
 
 	// This whole part is redundant. Made it part of Arguments instead.
@@ -7502,6 +7546,7 @@ const AngularWorkflow = (props) => {
 			{conditionsModal}
 			{authenticationModal}
 			{codePopoutModal}
+			{configureWorkflowModal}
 			<TextField
 				id="copy_element_shuffle"
 				value={to_be_copied}

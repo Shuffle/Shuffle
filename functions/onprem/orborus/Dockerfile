@@ -2,7 +2,6 @@ FROM golang:1.16.0-buster as builder
 
 RUN mkdir /app
 WORKDIR /app
-RUN go get github.com/docker/docker/api/types github.com/docker/docker/api/types/container github.com/docker/docker/client
 
 COPY orborus.go /app/orborus.go
 RUN go mod init orborus 

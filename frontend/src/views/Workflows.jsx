@@ -82,6 +82,7 @@ const Workflows = (props) => {
 	const [editingWorkflow, setEditingWorkflow] = React.useState({})
 	const [executionLoading, setExecutionLoading] = React.useState(false)
 	const [isDropzone, setIsDropzone] = React.useState(false);
+	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" 
 
 	const { start, stop } = useInterval({
 	  	duration: 5000,
@@ -1230,11 +1231,13 @@ const Workflows = (props) => {
 						</Button> 				
 					</Tooltip>
 				: null}
+				{isCloud ? null :
 				<Tooltip color="primary" title={"Download workflows"} placement="top">
 					<Button color="primary" style={{}} variant="text" onClick={() => setLoadWorkflowsModalOpen(true)}>
 						<CloudDownloadIcon />
 					</Button> 				
 				</Tooltip>
+				}
 			</span>
 
 		const WorkflowView = () => {

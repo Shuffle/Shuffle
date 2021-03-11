@@ -7722,6 +7722,247 @@ func handleStopCloudSync(syncUrl string, org Org) error {
 	return nil
 }
 
+func handleKeyValueCheck(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Failed reading body"}`))
+		return
+	}
+
+	// Append: Checks if the value should be appended
+	// WorkflowCheck: Checks if the value should only check for workflow in org, or entire org
+	// Authorization: the Authorization to use
+	// ExecutionRef: Ref for the execution
+	// Values: The values to use
+	type DataValues struct {
+		App             string
+		Actions         string
+		ParameterNames  []string
+		ParameterValues []string
+	}
+
+	type ReturnData struct {
+		Append        bool         `json:"append"`
+		WorkflowCheck bool         `json:"workflow_check"`
+		Authorization string       `json:"authorization"`
+		ExecutionRef  string       `json:"execution_ref"`
+		OrgId         string       `json:"org_id"`
+		Values        []DataValues `json:"values"`
+	}
+
+	//for key, value := range data.Apps {
+	var fileId string
+	location := strings.Split(request.URL.String(), "/")
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			log.Printf("Path too short: %d", len(location))
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		fileId = location[4]
+	}
+
+	var tmpData ReturnData
+	err = json.Unmarshal(body, &tmpData)
+	if err != nil {
+		log.Printf("Failed unmarshalling test: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if tmpData.OrgId != fileId {
+		log.Printf("[INFO] OrgId %s and %s don't match", tmpData.OrgId, fileId)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "Organization ID's don't match"}`))
+		return
+	}
+
+	ctx := context.Background()
+
+	org, err := getOrg(ctx, tmpData.OrgId)
+	if err != nil {
+		log.Printf("[INFO] Organization doesn't exist: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	workflowExecution, err := getWorkflowExecution(ctx, tmpData.ExecutionRef)
+	if err != nil {
+		log.Printf("[INFO] User can't edit the org")
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "No permission to get execution"}`))
+		return
+	}
+
+	if workflowExecution.Authorization != tmpData.Authorization {
+		log.Printf("[INFO] Execution auth %s and %s don't match", workflowExecution.Authorization, tmpData.Authorization)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "Auth doesn't match"}`))
+		return
+	}
+
+	if workflowExecution.Status != "EXECUTING" {
+		log.Printf("[INFO] Workflow isn't executing and shouldn't be searching", workflowExecution.ExecutionId)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "Workflow isn't executing"}`))
+		return
+	}
+
+	if workflowExecution.ExecutionOrg != org.Id {
+		log.Printf("[INFO] Org %s wasn't used to execute %s", org.Id, workflowExecution.ExecutionId)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "Bad organization specified"}`))
+		return
+	}
+
+	// Prepared for the future~
+	if len(tmpData.Values) != 1 {
+		log.Printf("[INFO] Filter data can only hande 1 value right now, not %d", len(tmpData.Values))
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "Can't handle multiple apps yet, just one"}`))
+		return
+	}
+
+	value := tmpData.Values[0]
+
+	// FIXME: Alphabetically sort the parameternames
+	// FIXME: Add organization wide search, not just workflow based
+
+	found := []string{}
+	notFound := []string{}
+
+	dbKey := fmt.Sprintf("app_execution_values")
+	parameterNames := fmt.Sprintf("%s_%s", value.App, strings.Join(value.ParameterNames, "_"))
+	log.Printf("[INFO] PARAMNAME: %s", parameterNames)
+	if tmpData.WorkflowCheck {
+		//for _, item := range tmpData.Values {
+		//	log.Printf("[INFO] Should validate if values %#v in app parameter %#v exists WITH WORKFLOW %s", item.ParameterValues, item.ParameterNames, workflowExecution.Workflow.ID)
+
+		// FIXME: Make this alphabetical
+
+		for _, value := range value.ParameterValues {
+			if len(value) == 0 {
+				log.Printf("Shouldn't have value of length 0!")
+				continue
+			}
+
+			log.Printf("[INFO] Looking for value %s", value)
+
+			q := datastore.NewQuery(dbKey).Filter("org_id =", org.Id).Filter("workflow_id =", workflowExecution.Workflow.ID).Filter("parameter_name =", parameterNames).Filter("value =", value)
+			foundCount, err := dbclient.Count(ctx, q)
+			if err != nil {
+				log.Printf("[WARNING] Failed getting key %s: %s", dbKey, err)
+				notFound = append(notFound, value)
+				//found = append(found, value)
+				continue
+			}
+
+			if foundCount > 0 {
+				found = append(found, value)
+			} else {
+				log.Printf("[INFO] Found for %s: %d", dbKey, foundCount)
+				notFound = append(notFound, value)
+			}
+		}
+	} else {
+		log.Printf("[INFO] Should validate if value %s in app %s exists WITH ORG %s", workflowExecution.Workflow.ID)
+
+		for _, value := range value.ParameterValues {
+			if len(value) == 0 {
+				log.Printf("Shouldn't have value of length 0!")
+				continue
+			}
+
+			log.Printf("[INFO] Looking for value %s", value)
+
+			q := datastore.NewQuery(dbKey).Filter("org_id =", org.Id).Filter("workflow_id =", "").Filter("parameter_name =", parameterNames).Filter("value =", value)
+			foundCount, err := dbclient.Count(ctx, q)
+			if err != nil {
+				log.Printf("[WARNING] Failed getting key %s: %s", dbKey, err)
+				notFound = append(notFound, value)
+				//found = append(found, value)
+				continue
+			}
+
+			if foundCount > 0 {
+				found = append(found, value)
+			} else {
+				log.Printf("[INFO] Found for %s: %d", dbKey, foundCount)
+				notFound = append(notFound, value)
+			}
+		}
+	}
+
+	//App             string
+	//Actions         string
+	//ParameterNames  string
+	//ParamererValues []string
+
+	appended := 0
+	if tmpData.Append {
+		log.Printf("[INFO] Should append %d values!", len(notFound))
+		dbKey := fmt.Sprintf("app_execution_values")
+
+		//q := datastore.NewQuery(dbKey).Filter("org_id =", org.Id).Filter("workflow_id", workflowExecution.Workflow.ID).Filter("app_name =", parameterNames).Filter("value =", value)
+		key := datastore.NameKey(dbKey, "", nil)
+		type NewValue struct {
+			OrgId               string `json:"org_id" datastore:"org_id"`
+			WorkflowId          string `json:"workflow_id" datastore:"workflow_id"`
+			WorkflowExecutionId string `json:"workflow_execution_id" datastore:"workflow_execution_id"`
+			ParameterName       string `json:"parameter_name" datastore:"parameter_name"`
+			Value               string `json:"value" datastore:"value"`
+		}
+
+		//parameterNames := strings.Join(value.ParameterNames, "_")
+		for _, notFoundValue := range notFound {
+			newRequest := NewValue{
+				OrgId:               org.Id,
+				WorkflowExecutionId: workflowExecution.ExecutionId,
+				ParameterName:       parameterNames,
+				Value:               notFoundValue,
+			}
+
+			if tmpData.WorkflowCheck {
+				newRequest.WorkflowId = workflowExecution.Workflow.ID
+			}
+
+			if _, err := dbclient.Put(ctx, key, &newRequest); err != nil {
+				log.Printf("Error adding %s to appvalue: %s", notFoundValue, err)
+				continue
+			}
+
+			appended += 1
+			log.Printf("[INFO] Added %s as new appvalue to datastore", notFoundValue)
+		}
+	}
+
+	type returnStruct struct {
+		Success  bool     `json:"success"`
+		Appended int      `json:"appended"`
+		Found    []string `json:"found"`
+	}
+
+	returnData := returnStruct{
+		Success:  true,
+		Appended: appended,
+		Found:    found,
+	}
+
+	b, _ := json.Marshal(returnData)
+	resp.WriteHeader(200)
+	resp.Write(b)
+}
+
 func handleEditOrg(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -8432,6 +8673,10 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/", handleGetOrgs).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}", handleGetOrg).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}", handleEditOrg).Methods("POST", "OPTIONS")
+
+	// This is a new API that validates if a key has been seen before.
+	// Not sure what the best course of action is for it.
+	r.HandleFunc("/api/v1/orgs/{orgId}/validate_app_values", handleKeyValueCheck).Methods("POST", "OPTIONS")
 	//r.HandleFunc("/api/v1/orgs/{orgId}", handleEditOrg).Methods("POST", "OPTIONS")
 
 	// Docker orborus specific

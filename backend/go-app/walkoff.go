@@ -229,6 +229,7 @@ type WorkflowAppActionParameter struct {
 	Schema         SchemaDefinition `json:"schema" datastore:"schema" yaml:"schema"`
 	SkipMulticheck bool             `json:"skip_multicheck" datastore:"skip_multicheck" yaml:"skip_multicheck"`
 	ValueReplace   []Valuereplace   `json:"value_replace" datastore:"value_replace,noindex" yaml:"value_replace,omitempty"`
+	UniqueToggled  bool             `json:"unique_toggled" datastore:"unique_toggled" yaml:"unique_toggled"`
 }
 
 type Valuereplace struct {
@@ -1187,6 +1188,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 			// Find underlying nodes and add them
 		} else {
 			log.Printf("[WARNING] Actionresult is %s for node %s in %s. Continuing anyway because of workflow configuration.", actionResult.Status, actionResult.Action.ID, workflowExecution.ExecutionId)
+
 			// Finds ALL childnodes to set them to SKIPPED
 			childNodes = findChildNodes(*workflowExecution, actionResult.Action.ID)
 
@@ -6119,8 +6121,6 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("[INFO] Starting app hotloading")
-
 	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
 	requestCache.Delete(cacheKey)
 	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
@@ -6149,7 +6149,7 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("[INFO] Hotloading from %s", location)
+	log.Printf("[INFO] Starting hotloading from %s", location)
 	err = handleAppHotload(location, true)
 	if err != nil {
 		log.Printf("Failed app hotload: %s", err)
@@ -6251,6 +6251,20 @@ func loadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 		} else {
 			log.Printf("Updating apps with updates")
 		}
+
+		if tmpBody.ForceUpdate {
+			ctx := context.Background()
+			dockercli, err := client.NewEnvClient()
+			if err == nil {
+				_, err := dockercli.ImagePull(ctx, "frikky/shuffle:app_sdk", types.ImagePullOptions{})
+				if err != nil {
+					log.Printf("[WARNING] Failed to download apps with the new App SDK: %s", err)
+				}
+			} else {
+				log.Printf("[WARNING] Failed to download apps with the new App SDK because of docker cli: %s", err)
+			}
+		}
+
 		iterateAppGithubFolders(fs, dir, "", "", tmpBody.ForceUpdate)
 
 	} else if strings.Contains(tmpBody.URL, "s3") {
@@ -6568,17 +6582,6 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 	buildLaterList := []buildLaterStruct{}
 
 	ctx := context.Background()
-	if forceUpdate {
-		dockercli, err := client.NewEnvClient()
-		if err == nil {
-			_, err := dockercli.ImagePull(ctx, "frikky/shuffle:app_sdk", types.ImagePullOptions{})
-			if err != nil {
-				log.Printf("[WARNING] Failed to download apps with the new App SDK: %s", err)
-			}
-		} else {
-			log.Printf("[WARNING] Failed to download apps with the new App SDK because of docker cli: %s", err)
-		}
-	}
 
 	// It's here to prevent getting them in every iteration
 	for _, file := range dir {

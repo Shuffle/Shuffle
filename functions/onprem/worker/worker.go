@@ -524,7 +524,7 @@ type WorkflowAppActionParameter struct {
 	Description    string           `json:"description" datastore:"description,noindex" yaml:"description"`
 	ID             string           `json:"id" datastore:"id" yaml:"id,omitempty"`
 	Name           string           `json:"name" datastore:"name" yaml:"name"`
-	Example        string           `json:"example" datastore:"example" yaml:"example"`
+	Example        string           `json:"example" datastore:"example,noindex" yaml:"example"`
 	Value          string           `json:"value" datastore:"value,noindex" yaml:"value,omitempty"`
 	Multiline      bool             `json:"multiline" datastore:"multiline" yaml:"multiline"`
 	Options        []string         `json:"options" datastore:"options" yaml:"options"`
@@ -536,6 +536,7 @@ type WorkflowAppActionParameter struct {
 	Schema         SchemaDefinition `json:"schema" datastore:"schema" yaml:"schema"`
 	SkipMulticheck bool             `json:"skip_multicheck" datastore:"skip_multicheck" yaml:"skip_multicheck"`
 	ValueReplace   []Valuereplace   `json:"value_replace" datastore:"value_replace,noindex" yaml:"value_replace,omitempty"`
+	UniqueToggled  bool             `json:"unique_toggled" datastore:"unique_toggled" yaml:"unique_toggled"`
 }
 
 type Valuereplace struct {
@@ -2335,9 +2336,9 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		} else {
 			log.Printf("[WARNING] Actionresult is %s for node %s in %s. Continuing anyway because of workflow configuration.", actionResult.Status, actionResult.Action.ID, workflowExecution.ExecutionId)
 			// Finds ALL childnodes to set them to SKIPPED
-			childNodes = findChildNodes(*workflowExecution, actionResult.Action.ID)
 			// Remove duplicates
 			//log.Printf("CHILD NODES: %d", len(childNodes))
+			childNodes = findChildNodes(*workflowExecution, actionResult.Action.ID)
 			for _, nodeId := range childNodes {
 				if nodeId == actionResult.Action.ID {
 					continue
@@ -2488,6 +2489,84 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	} else {
 		workflowExecution.Results = append(workflowExecution.Results, actionResult)
 		log.Printf("[INFO] Setting value (2) of %s in execution %s to %s. New result length: %d", actionResult.Action.ID, workflowExecution.ExecutionId, actionResult.Status, len(workflowExecution.Results))
+	}
+
+	if actionResult.Status == "SKIPPED" {
+		log.Printf("\n\n[INFO] Handling special case for SKIPPED!\n\n")
+		childNodes := findChildNodes(*workflowExecution, actionResult.Action.ID)
+		for _, nodeId := range childNodes {
+			if nodeId == actionResult.Action.ID {
+				continue
+			}
+
+			// 1. Find the action itself
+			// 2. Create an actionresult
+			curAction := Action{ID: ""}
+			for _, action := range workflowExecution.Workflow.Actions {
+				if action.ID == nodeId {
+					curAction = action
+					break
+				}
+			}
+
+			if len(curAction.ID) == 0 {
+				log.Printf("Couldn't find subnode %s", nodeId)
+				continue
+			}
+
+			resultExists := false
+			for _, result := range workflowExecution.Results {
+				if result.Action.ID == curAction.ID {
+					resultExists = true
+					break
+				}
+			}
+
+			if !resultExists {
+				// Check parents are done here. Only add it IF all parents are skipped
+				skipNodeAdd := false
+				for _, branch := range workflowExecution.Workflow.Branches {
+					if branch.DestinationID == nodeId {
+						// If the branch's source node is NOT in childNodes, it's not a skipped parent
+						sourceNodeFound := false
+						for _, item := range childNodes {
+							if item == branch.SourceID {
+								sourceNodeFound = true
+								break
+							}
+						}
+
+						if !sourceNodeFound {
+							log.Printf("[INFO] Not setting node %s to SKIPPED", nodeId)
+							skipNodeAdd = true
+							break
+						}
+					}
+				}
+
+				if !skipNodeAdd {
+					newAction := Action{
+						AppName:    curAction.AppName,
+						AppVersion: curAction.AppVersion,
+						Label:      curAction.Label,
+						Name:       curAction.Name,
+						ID:         curAction.ID,
+					}
+
+					newResult := ActionResult{
+						Action:        newAction,
+						ExecutionId:   actionResult.ExecutionId,
+						Authorization: actionResult.Authorization,
+						Result:        "Skipped because of previous node",
+						StartedAt:     0,
+						CompletedAt:   0,
+						Status:        "SKIPPED",
+					}
+
+					workflowExecution.Results = append(workflowExecution.Results, newResult)
+				}
+			}
+		}
 	}
 
 	// FIXME: Have a check for skippednodes and their parents
