@@ -569,7 +569,7 @@ const AppCreator = (props) => {
 								}
 							}
 
-							console.log(methodvalue["requestBody"]["content"])
+							//console.log(methodvalue["requestBody"]["content"])
 							if (methodvalue["requestBody"]["content"]["multipart/form-data"] !== undefined) {
 								if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"] !== null) {
 									if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["type"] === "object") {
@@ -1796,8 +1796,8 @@ const AppCreator = (props) => {
 							</MenuItem>
 							)
 						})}
-						{actionBodyRequest.map(data => (
-							<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+						{actionBodyRequest.map((data, index)  => (
+							<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data}>
 								{data}
 							</MenuItem>
 						))}
@@ -1833,8 +1833,8 @@ const AppCreator = (props) => {
 							console.log("URL: ", parsedurl)
 							if (parsedurl.includes("<") && parsedurl.includes(">")) {
 								console.log("REPLACE")
-								parsedurl = parsedurl.replace("<", "{")
-								parsedurl = parsedurl.replace(">", "}")
+								parsedurl = parsedurl.replaceAll("<", "{")
+								parsedurl = parsedurl.replaceAll(">", "}")
 							}
 
 							if (parsedurl.startsWith("PUT ") || parsedurl.startsWith("GET ") ||parsedurl.startsWith("POST ") || parsedurl.startsWith("DELETE ") ||parsedurl.startsWith("PATCH ") || parsedurl.startsWith("CONNECT ")) {
@@ -2208,8 +2208,10 @@ const AppCreator = (props) => {
 	}}/>
 	
 	const zoomIn = () => {
+		console.log("ZOOOMING IN")
 		setScale(scale+0.1);
 	}
+
 	const zoomOut = () => {
 		setScale(scale-0.1);
 	}

@@ -481,10 +481,17 @@ class AppBase:
             new_params = self.validate_unique_fields(param_multiplier)
             print(f"NEW PARAMS: {new_params}")
             if len(new_params) == 0:
-                print(f"No ID's to handle for validation")
+                print("[WARNING] SHOULD STOP MULTI-EXECUTION BECAUSE FIELDS AREN'T UNIQUE")
+                action_result["status"] = "SKIPPED"
+                action_result["result"] = f"All values were non-unique"  
+                action_result["completed_at"] = int(time.time())
+                self.send_result(action_result, headers, stream_path)
+                exit()
+                #return
             else:
                 #subparams = new_params
                 print(f"NEW PARAMS: {new_params}")
+                param_multiplier = new_params
 
             #print("Returned with newparams of length %d", len(new_params))
             #if isinstance(new_params, list) and len(new_params) == 1:
@@ -1821,14 +1828,15 @@ class AppBase:
 
                                             if len(itemlist) > curminlength:
                                                 curminlength = len(itemlist)
+                                            
                                         except json.decoder.JSONDecodeError as e:
                                             print("JSON Error: %s in %s" % (e, actualitem))
 
                                         replacements[to_be_replaced] = actualitem
 
+                                    #print("In second part of else: %s" % (len(itemlist)))
                                     # This is a result array for JUST this value.. 
                                     # What if there are more?
-                                    print("LENGTH: %d. In second part of else: %s" % (len(itemlist), replacements))
                                     resultarray = []
                                     for i in range(0, curminlength): 
                                         tmpitem = json.loads(json.dumps(parameter["value"]))

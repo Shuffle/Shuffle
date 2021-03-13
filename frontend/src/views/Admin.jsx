@@ -1958,7 +1958,7 @@ const Admin = (props) => {
 								primary={new Date(file.created_at*1000).toISOString()}
 							/>
 							<ListItemText
-								style={{maxWidth: 150, minWidth: 150}}
+								style={{maxWidth: 150, minWidth: 150, overflow: "hidden",}}
 								primary={file.filename}
 							/>
 							<ListItemText

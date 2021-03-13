@@ -202,14 +202,40 @@ const Apps = (props) => {
     .then((responseJson) => {
 			//console.log("Apps: ", responseJson)
 			//responseJson = sortByKey(responseJson, "large_image")
-			responseJson = sortByKey(responseJson, "generated")
+			//responseJson = sortByKey(responseJson, "is_valid")
+			//setFilteredApps(responseJson.filter(app => !internalIds.includes(app.name) && !(!app.activated && app.generated)))
+			
+			var privateapps = []
+			var valid = []
+			var invalid = []
+			for (var key in responseJson) {
+				const app = responseJson[key]
+				if (app.is_valid && !(!app.activated && app.generated)) {
+					privateapps.push(app)
+				} else if (app.private_id !== undefined && app.private_id.length > 0) {
+					valid.push(app)
+				} else {
+					invalid.push(app)
+				}
+			}
 
-			setApps(responseJson)
-			setFilteredApps(responseJson)
-			if (responseJson.length > 0) {
-				setSelectedApp(responseJson[0])
-				if (responseJson[0].actions !== null && responseJson[0].actions.length > 0) {
-					setSelectedAction(responseJson[0].actions[0])
+			//console.log(privateapps)
+			//console.log(valid)
+			//console.log(invalid)
+			//console.log(privateapps)
+			//privateapps.reverse()
+			privateapps.push(...valid)
+			privateapps.push(...invalid)
+
+			setApps(privateapps)
+			setFilteredApps(privateapps)
+			if (privateapps.length > 0) {
+				if (selectedApp.id === undefined || selectedApp.id === null) {
+					setSelectedApp(privateapps[0])
+				}
+
+				if (privateapps[0].actions !== null && privateapps[0].actions.length > 0) {
+					setSelectedAction(privateapps[0].actions[0])
 				} else {
 					setSelectedAction({})
 				}
@@ -358,8 +384,7 @@ const Apps = (props) => {
 					<ButtonBase style={{backgroundColor: theme.palette.inputColor, border: 3}}>
 						{imageline}
 					</ButtonBase>
-					<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: boxWidth, backgroundColor: boxColor}}>
-					</div>
+					<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: boxWidth, backgroundColor: boxColor}}/>
 					<Grid container style={{margin: "0px 10px 10px 10px", flex: "1"}}>
 						<Grid style={{display: "flex", flexDirection: "column", width: "100%"}}>
 							<Grid item style={{flex: "1"}}>
@@ -957,7 +982,7 @@ const Apps = (props) => {
 		setValidation(true)
 
 		setIsLoading(true)
-		start()
+		//start()
 
 		const parsedData = {
 			"url": url,
@@ -989,10 +1014,10 @@ const Apps = (props) => {
 			if (response.status === 200) {
 				alert.success("Loaded existing apps!")
 			}
-			setIsLoading(false)
-			stop()
-			setValidation(false)
 
+			//stop()
+			setIsLoading(false)
+			setValidation(false)
 			return response.json()
 		})
     .then((responseJson) => {
@@ -1005,7 +1030,7 @@ const Apps = (props) => {
 			console.log("ERROR: ", error.toString())
 			alert.error(error.toString())
 
-			stop()
+			//stop()
 			setIsLoading(false)
 			setValidation(false)
 		})

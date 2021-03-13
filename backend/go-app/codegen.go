@@ -1105,13 +1105,16 @@ func handleConnect(swagger *openapi3.Swagger, api WorkflowApp, extraParameters [
 
 		}
 	}
-
 	optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
 		Name:        "ssl_verify",
 		Description: "Check if you want to verify request",
 		Multiline:   false,
 		Required:    false,
 		Example:     "True",
+		Options: []string{
+			"True",
+			"False",
+		},
 		Schema: SchemaDefinition{
 			Type: "string",
 		},
@@ -1244,10 +1247,14 @@ func handleGet(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 
 	optionalParameters = append(optionalParameters, WorkflowAppActionParameter{
 		Name:        "ssl_verify",
-		Description: "Check if you want to verify the SSL certificate request",
+		Description: "Check if you want to verify request",
 		Multiline:   false,
 		Required:    false,
-		Example:     "False - default=True",
+		Example:     "True",
+		Options: []string{
+			"True",
+			"False",
+		},
 		Schema: SchemaDefinition{
 			Type: "string",
 		},
@@ -1382,6 +1389,10 @@ func handleHead(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 		Multiline:   false,
 		Required:    false,
 		Example:     "True",
+		Options: []string{
+			"True",
+			"False",
+		},
 		Schema: SchemaDefinition{
 			Type: "string",
 		},
@@ -1517,6 +1528,10 @@ func handleDelete(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []
 		Multiline:   false,
 		Required:    false,
 		Example:     "True",
+		Options: []string{
+			"True",
+			"False",
+		},
 		Schema: SchemaDefinition{
 			Type: "string",
 		},
@@ -1684,6 +1699,10 @@ func handlePost(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wo
 		Multiline:   false,
 		Required:    false,
 		Example:     "True",
+		Options: []string{
+			"True",
+			"False",
+		},
 		Schema: SchemaDefinition{
 			Type: "string",
 		},
@@ -1823,6 +1842,10 @@ func handlePatch(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []W
 		Multiline:   false,
 		Required:    false,
 		Example:     "True",
+		Options: []string{
+			"True",
+			"False",
+		},
 		Schema: SchemaDefinition{
 			Type: "string",
 		},
@@ -1958,6 +1981,10 @@ func handlePut(swagger *openapi3.Swagger, api WorkflowApp, extraParameters []Wor
 		Multiline:   false,
 		Required:    false,
 		Example:     "True",
+		Options: []string{
+			"True",
+			"False",
+		},
 		Schema: SchemaDefinition{
 			Type: "string",
 		},

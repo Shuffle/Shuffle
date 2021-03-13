@@ -2224,6 +2224,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	log.Printf("PRE BODY")
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		log.Printf("Failed hook unmarshaling: %s", err)
@@ -2267,6 +2268,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	allNodes := []string{}
 	workflow.Categories = Categories{}
 
+	log.Printf("PRE APPS")
 	workflowapps, apperr := getAllWorkflowApps(ctx, 500)
 
 	//log.Printf("Action: %#v", action.Authentication)
@@ -2299,6 +2301,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		newActions = append(newActions, action)
 	}
 
+	log.Printf("PRE SAVECHECK")
 	if !workflow.PreviouslySaved {
 		log.Printf("[WORKFLOW INIT] NOT PREVIOUSLY SAVED - SET ACTION AUTH!")
 		//AuthenticationId string `json:"authentication_id,omitempty" datastore:"authentication_id"`
@@ -2434,6 +2437,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		workflow.PreviouslySaved = true
 	}
 
+	log.Printf("PRE TRIGGERS")
 	workflow.Actions = newActions
 	newTriggers := []Trigger{}
 	for _, trigger := range workflow.Triggers {
@@ -2549,6 +2553,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	workflow.Triggers = newTriggers
 
+	log.Printf("PRE VARIABLES")
 	for _, variable := range workflow.WorkflowVariables {
 		if len(variable.Value) == 0 {
 			log.Printf("Can't have an empty variable: %s", variable.Name)
@@ -2596,6 +2601,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// FIXME - append all nodes (actions, triggers etc) to one single array here
+	log.Printf("PRE VARIABLES")
 	if len(foundNodes) != len(allNodes) || len(workflow.Actions) <= 0 {
 		// This shit takes a few seconds lol
 		if !workflow.IsValid {
@@ -2637,18 +2643,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	// Have to do it like this to add the user's apps
 	//log.Println("Apps set starting")
 	//log.Printf("EXIT ON ERROR: %#v", workflow.Configuration.ExitOnError)
-	workflowApps := []WorkflowApp{}
-	//memcacheName = "all_apps"
-	//if item, err := memcache.Get(ctx, memcacheName); err == memcache.ErrCacheMiss {
-	//	// Not in cache
-	//	log.Printf("Apps not in cache.")
-	workflowApps, err = getAllWorkflowApps(ctx, 100)
-	if err != nil {
-		log.Printf("Failed getting all workflow apps from database: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
+	//workflowapps, apperr := getAllWorkflowApps(ctx, 500)
 
 	// Started getting the single apps, but if it's weird, this is faster
 	// 1. Check workflow.Start
@@ -2680,6 +2675,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// Check every app action and param to see whether they exist
+	log.Printf("PRE ACTIONS 2")
 	newActions = []Action{}
 	for _, action := range workflow.Actions {
 		reservedApps := []string{
@@ -2731,7 +2727,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		} else {
 			curapp := WorkflowApp{}
 			// FIXME - can this work with ONLY AppID?
-			for _, app := range workflowApps {
+			for _, app := range workflowapps {
 				if app.ID == action.AppID {
 					curapp = app
 					break
@@ -2860,10 +2856,11 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		Errors:  workflow.Errors,
 	}
 
-	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
-	requestCache.Delete(cacheKey)
-	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
-	requestCache.Delete(cacheKey)
+	// Really don't know why this was happening
+	//cacheKey := fmt.Sprintf("workflowapps-sorted-100")
+	//requestCache.Delete(cacheKey)
+	//cacheKey = fmt.Sprintf("workflowapps-sorted-500")
+	//requestCache.Delete(cacheKey)
 
 	log.Printf("[INFO] Saved new version of workflow %s (%s) for org %s", workflow.Name, fileId, workflow.OrgId)
 	resp.WriteHeader(200)
