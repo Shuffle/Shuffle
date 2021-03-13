@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -45,7 +47,8 @@ type OutlookFolders struct {
 }
 
 func getOutlookFolders(client *http.Client) (OutlookFolders, error) {
-	requestUrl := fmt.Sprintf("https://graph.microsoft.com/v1.0/users/ec03b4f2-fccf-4c35-b0eb-be85a0f5dd43/mailFolders")
+	//requestUrl := fmt.Sprintf("https://graph.microsoft.com/v1.0/users/ec03b4f2-fccf-4c35-b0eb-be85a0f5dd43/mailFolders")
+	requestUrl := fmt.Sprintf("https://graph.microsoft.com/v1.0/me/mailFolders")
 
 	ret, err := client.Get(requestUrl)
 	if err != nil {
@@ -59,7 +62,7 @@ func getOutlookFolders(client *http.Client) (OutlookFolders, error) {
 		return OutlookFolders{}, err
 	}
 
-	log.Printf("[INFO] Folder Body: %s", string(body))
+	//log.Printf("[INFO] Folder Body: %s", string(body))
 	log.Printf("[INFO] Status folders: %d", ret.StatusCode)
 	if ret.StatusCode != 200 {
 		return OutlookFolders{}, err
@@ -165,6 +168,8 @@ func handleNewOutlookRegister(resp http.ResponseWriter, request *http.Request) {
 			continue
 		}
 
+		log.Printf("ITEM: %#v", itemsplit)
+
 		// Do something here
 		if itemsplit[0] == "workflow_id" {
 			trigger.WorkflowId = itemsplit[1]
@@ -192,16 +197,16 @@ func handleNewOutlookRegister(resp http.ResponseWriter, request *http.Request) {
 	//log.Printf("%#v", trigger)
 	log.Println(trigger.WorkflowId)
 	log.Println(trigger.Id)
-	log.Println(trigger.Username)
+	log.Println(senderUser)
 	log.Println(trigger.Type)
-	if trigger.WorkflowId == "" || trigger.Id == "" || trigger.Username == "" || trigger.Type == "" {
+	log.Printf("[INFO] Attempting to set up outlook trigger for %s", senderUser)
+	if trigger.WorkflowId == "" || trigger.Id == "" || senderUser == "" || trigger.Type == "" {
 		log.Printf("[INFO] All oauth items need to contain data to register a new state")
 		resp.WriteHeader(401)
 		return
 	}
 
 	// Should also update the user
-	log.Printf("[INFO] Attempting to set up outlook trigger for %s", senderUser)
 	Userdata, err := getUser(ctx, senderUser)
 	if err != nil {
 		log.Printf("[INFO] Username %s doesn't exist (oauth2): %s", trigger.Username, err)
@@ -465,4 +470,272 @@ func handleGetSpecificTrigger(resp http.ResponseWriter, request *http.Request) {
 
 	resp.WriteHeader(200)
 	resp.Write(b)
+}
+
+// This sets up the sub with outlook itself
+// Parses data from the workflow to see whether access is right to subscribe it
+// Creates the cloud function for outlook return
+// Wait for it to be available, then schedule a workflow to it
+func createOutlookSub(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	location := strings.Split(request.URL.String(), "/")
+
+	var workflowId string
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		workflowId = location[4]
+	}
+
+	ctx := context.Background()
+	workflow, err := getWorkflow(ctx, workflowId)
+	if err != nil {
+		log.Printf("Failed getting the workflow locally (outlook sub): %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	user, err := handleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("Api authentication failed in outlook deploy: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// FIXME - have a check for org etc too..
+	if user.Id != workflow.Owner && user.Role != "admin" {
+		log.Printf("Wrong user (%s) for workflow %s when deploying outlook", user.Username, workflow.ID)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	log.Println("Handle outlook subscription for trigger")
+
+	// Should already be authorized at this point, as the workflow is shared
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		log.Printf("Failed body read for workflow %s", workflow.ID)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	log.Println(string(body))
+
+	// Based on the input data from frontend
+	type CurTrigger struct {
+		Name    string   `json:"name"`
+		Folders []string `json:"folders"`
+		ID      string   `json:"id"`
+	}
+
+	var curTrigger CurTrigger
+	err = json.Unmarshal(body, &curTrigger)
+	if err != nil {
+		log.Printf("Failed body read unmarshal for trigger %s", workflow.ID)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if len(curTrigger.Folders) == 0 {
+		log.Printf("Error for %s. Choosing folders is required, currently 0", workflow.ID)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// Now that it's deployed - wait a few seconds before generating:
+	// 1. Oauth2 token thingies for outlook.office.com
+	// 2. Set the url to have the right mailboxes (probably ID?) ("https://outlook.office.com/api/v2.0/me/mailfolders('inbox')/messages")
+	// 3. Set the callback URL to be the new trigger
+	// 4. Run subscription test
+	// 5. Set the subscriptionId to the trigger object
+
+	// First - lets regenerate an oauth token for outlook.office.com from the original items
+	trigger, err := getTriggerAuth(ctx, curTrigger.ID)
+	if err != nil {
+		log.Printf("Trigger %s doesn't exist - outlook sub.", curTrigger.ID)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": ""}`))
+		return
+	}
+
+	// url doesn't really matter here
+	url := fmt.Sprintf("https://shuffler.io")
+	outlookClient, _, err := getOutlookClient(ctx, "", trigger.OauthToken, url)
+	if err != nil {
+		log.Printf("Oauth client failure - triggerauth: %s", err)
+		resp.WriteHeader(401)
+		return
+	}
+
+	// Location +
+	notificationURL := fmt.Sprintf("https://%s-%s.cloudfunctions.net/outlooktrigger_%s", defaultLocation, gceProject, curTrigger.ID)
+	log.Println(notificationURL)
+
+	// This is here simply to let the function start
+	// Usually takes 10 attempts minimum :O
+	// 10 * 5 = 50 seconds. That's waaay too much :(
+	//notificationURL = "https://europe-west1-shuffler.cloudfunctions.net/outlooktrigger_e2ce43b0-997e-4980-9617-6eadbc68cf88"
+	//notificationURL = "https://de4fc12b.ngrok.io"
+
+	curSubscriptions, err := getOutlookSubscriptions(outlookClient)
+	if err == nil {
+		for _, sub := range curSubscriptions.Value {
+			if sub.NotificationURL == notificationURL {
+				log.Printf("Removing existing subscription %s", sub.Id)
+				removeOutlookSubscription(outlookClient, sub.Id)
+			}
+		}
+	} else {
+		log.Printf("Failed to get subscriptions - need to overwrite")
+	}
+
+	maxFails := 15
+	failCnt := 0
+	log.Println(curTrigger.Folders)
+	for {
+		subId, err := makeOutlookSubscription(outlookClient, curTrigger.Folders, notificationURL)
+		if err != nil {
+			failCnt += 1
+			log.Printf("Failed making oauth subscription, retrying in 5 seconds: %s", err)
+			time.Sleep(5 * time.Second)
+			if failCnt == maxFails {
+				log.Printf("Failed to set up subscription %d times.", maxFails)
+				resp.WriteHeader(401)
+				return
+			}
+
+			continue
+		}
+
+		// Set the ID somewhere here
+		trigger.SubscriptionId = subId
+		err = setTriggerAuth(ctx, *trigger)
+		if err != nil {
+			log.Printf("Failed setting triggerauth: %s", err)
+		}
+
+		break
+	}
+
+	log.Printf("Successfully handled outlook subscription for trigger %s in workflow %s", curTrigger.ID, workflow.ID)
+
+	//log.Printf("%#v", user)
+	resp.WriteHeader(200)
+	resp.Write([]byte(`{"success": true}`))
+}
+
+// Lists the users current subscriptions
+func getOutlookSubscriptions(outlookClient *http.Client) (SubscriptionsWrapper, error) {
+	fullUrl := fmt.Sprintf("https://graph.microsoft.com/v1.0/subscriptions")
+	req, err := http.NewRequest(
+		"GET",
+		fullUrl,
+		nil,
+	)
+	req.Header.Add("Content-Type", "application/json")
+	res, err := outlookClient.Do(req)
+	if err != nil {
+		log.Printf("suberror Client: %s", err)
+		return SubscriptionsWrapper{}, err
+	}
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Printf("Suberror Body: %s", err)
+		return SubscriptionsWrapper{}, err
+	}
+
+	newSubs := SubscriptionsWrapper{}
+	err = json.Unmarshal(body, &newSubs)
+	if err != nil {
+		return SubscriptionsWrapper{}, err
+	}
+
+	return newSubs, nil
+}
+
+type SubscriptionsWrapper struct {
+	OdataContext string         `json:"@odata.context"`
+	Value        []Subscription `json:"value"`
+}
+
+type Subscription struct {
+	ChangeType         string `json:"changeType"`
+	NotificationURL    string `json:"notificationUrl"`
+	Resource           string `json:"resource"`
+	ExpirationDateTime string `json:"expirationDateTime"`
+	ClientState        string `json:"clientState"`
+	Id                 string `json:"id"`
+}
+
+func makeOutlookSubscription(client *http.Client, folderIds []string, notificationURL string) (string, error) {
+	fullUrl := "https://graph.microsoft.com/v1.0/subscriptions"
+
+	// FIXME - this expires rofl
+	t := time.Now().Local().Add(time.Minute * time.Duration(4300))
+	timeFormat := fmt.Sprintf("%d-%02d-%02dT%02d:%02d:%02d.0000000Z", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second())
+	log.Println(timeFormat)
+
+	resource := fmt.Sprintf("me/mailfolders('%s')/messages", strings.Join(folderIds, "','"))
+	log.Println(resource)
+	sub := Subscription{
+		ChangeType:         "created",
+		NotificationURL:    notificationURL,
+		ExpirationDateTime: timeFormat,
+		ClientState:        "This is a test",
+		Resource:           resource,
+	}
+
+	data, err := json.Marshal(sub)
+	if err != nil {
+		log.Printf("Marshal: %s", err)
+		return "", err
+	}
+
+	req, err := http.NewRequest(
+		"POST",
+		fullUrl,
+		bytes.NewBuffer(data),
+	)
+	req.Header.Add("Content-Type", "application/json")
+
+	res, err := client.Do(req)
+	if err != nil {
+		log.Printf("Client: %s", err)
+		return "", err
+	}
+
+	log.Printf("Status: %d", res.StatusCode)
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Printf("Body: %s", err)
+		return "", err
+	}
+
+	if res.StatusCode != 200 && res.StatusCode != 201 {
+		return "", errors.New(fmt.Sprintf("Subscription failed: %s", string(body)))
+	}
+
+	// Use data from body here to create thingy
+	newSub := Subscription{}
+	err = json.Unmarshal(body, &newSub)
+	if err != nil {
+		return "", err
+	}
+
+	return newSub.Id, nil
 }
