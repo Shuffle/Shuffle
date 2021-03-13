@@ -1299,6 +1299,7 @@ class AppBase:
 
             # Matches with space in the first part, but not in subsequent parts.
             # JSON / yaml etc shouldn't have spaces in their fields anyway.
+            #match = ".*?([$]{1}([a-zA-Z0-9 _-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,})[$/, ]?"
             match = ".*?([$]{1}([a-zA-Z0-9 _-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,})"
 
             # Regex to find all the things
@@ -1699,7 +1700,9 @@ class AppBase:
 
                             # Custom format for ${name[0,1,2,...]}$
                             #submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"
-                            submatch = "([${]{2}#?([0-9a-zA-Z_-]+)#?(\[.*\])[}$]{2})"
+                            print(f"Returnedvalue: {value}")
+                            #submatch = "([${]{2}#?([0-9a-zA-Z_-]+)#?(\[.*\])[}$]{2})"
+                            submatch = "([${]{2}#?([0-9a-zA-Z_-]+)#?(\[.*?]}\$))"
                             actualitem = re.findall(submatch, value, re.MULTILINE)
                             try:
                                 if action["skip_multicheck"]:
@@ -1806,7 +1809,7 @@ class AppBase:
                                     multi_execution_lists.append(new_replacement)
                                     #print("MULTI finished: %s" % json_replacement)
                                 else:
-                                    print("(2) Pre replacement (loop with variables). ") #% actualitem)
+                                    print(f"(2) Pre replacement (loop with variables). Variables: {actualitem}") #% actualitem)
                                     # This is here to handle for loops within variables.. kindof
                                     # 1. Find the length of the longest array
                                     # 2. Build an array with the base values based on parameter["value"] 
@@ -1830,7 +1833,7 @@ class AppBase:
                                                 curminlength = len(itemlist)
                                             
                                         except json.decoder.JSONDecodeError as e:
-                                            print("JSON Error: %s in %s" % (e, actualitem))
+                                            print("JSON Error (replace): %s in %s" % (e, actualitem))
 
                                         replacements[to_be_replaced] = actualitem
 
