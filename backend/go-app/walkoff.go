@@ -982,7 +982,7 @@ func validateNewWorkerExecution(body []byte) error {
 	}
 
 	if execution.Status == "EXECUTING" {
-		log.Printf("[INFO] Inside executing.")
+		//log.Printf("[INFO] Inside executing.")
 		extra := 0
 		for _, trigger := range execution.Workflow.Triggers {
 			//log.Printf("Appname trigger (0): %s", trigger.AppName)
@@ -3992,7 +3992,7 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflow, err := getWorkflow(ctx, fileId)
 	if err != nil {
-		log.Printf("Failed getting the workflow locally (stop schedule): %s", err)
+		log.Printf("[WARNING] Failed getting the workflow locally (stop schedule): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -4001,7 +4001,7 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - have a check for org etc too..
 	// FIXME - admin check like this? idk
 	if user.Id != workflow.Owner && user.Role != "admin" && user.Role != "scheduler" {
-		log.Printf("Wrong user (%s) for workflow %s (stop schedule)", user.Username, workflow.ID)
+		log.Printf("[WARNING] Wrong user (%s) for workflow %s (stop schedule)", user.Username, workflow.ID)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -4009,7 +4009,7 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 
 	schedule, err := getSchedule(ctx, scheduleId)
 	if err != nil {
-		log.Printf("Failed finding schedule %s", scheduleId)
+		log.Printf("[WARNING] Failed finding schedule %s", scheduleId)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -4039,15 +4039,15 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 
 		err = executeCloudAction(action, org.SyncConfig.Apikey)
 		if err != nil {
-			log.Printf("Failed cloud action STOP schedule: %s", err)
+			log.Printf("[WARNING] Failed cloud action STOP schedule: %s", err)
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 			return
 		} else {
-			log.Printf("Successfully ran cloud action STOP schedule")
+			log.Printf("[INFO] Successfully ran cloud action STOP schedule")
 			err = DeleteKey(ctx, "schedules", scheduleId)
 			if err != nil {
-				log.Printf("Failed deleting cloud schedule onprem..")
+				log.Printf("[WARNING] Failed deleting cloud schedule onprem..")
 				resp.WriteHeader(401)
 				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed deleting cloud schedule"}`)))
 				return
@@ -4061,7 +4061,7 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 
 	err = deleteSchedule(ctx, scheduleId)
 	if err != nil {
-		log.Printf("Failed deleting schedule: %s", err)
+		log.Printf("[WARNING] Failed deleting schedule: %s", err)
 		if strings.Contains(err.Error(), "Job not found") {
 			resp.WriteHeader(200)
 			resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))

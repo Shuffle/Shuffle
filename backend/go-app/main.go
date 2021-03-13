@@ -42,7 +42,6 @@ import (
 	*/
 
 	"github.com/google/go-github/v28/github"
-	"golang.org/x/oauth2"
 
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
@@ -671,7 +670,7 @@ func handleApiAuthentication(resp http.ResponseWriter, request *http.Request) (U
 		// Should basically never happen
 		Userdata, err := getUser(ctx, session.Id)
 		if err != nil {
-			log.Printf("Username %s doesn't exist (authcheck): %s", session.Username, err)
+			log.Printf("[INFO] Username %s doesn't exist (authcheck): %s", session.Username, err)
 			return User{}, err
 		}
 
@@ -1768,90 +1767,6 @@ type passwordChange struct {
 	Newpassword     string `json:"newpassword"`
 	Newpassword2    string `json:"newpassword2"`
 	Currentpassword string `json:"currentpassword"`
-}
-
-func handlePasswordResetMail(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	log.Println("Handling password reset mail")
-	defaultMessage := "We have sent you an email :)"
-
-	body, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		log.Println("Failed reading body")
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, defaultMessage)))
-		return
-	}
-
-	type passwordReset struct {
-		Username string `json:"username"`
-	}
-
-	var t passwordReset
-	err = json.Unmarshal(body, &t)
-	if err != nil {
-		log.Printf("Failed unmarshaling: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, defaultMessage)))
-		return
-	}
-
-	ctx := context.Background()
-	Userdata, err := getUser(ctx, t.Username)
-	if err != nil {
-		log.Printf("Username %s doesn't exist (pw reset mail): %s", t.Username, err)
-		resp.WriteHeader(200)
-		resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
-		return
-	}
-
-	resetToken := uuid.NewV4()
-	// FIXME:
-	// Weakness with this system is that you can spam someone with password resets,
-	// and they would never be able to reset, as a new token is always generated
-	url := fmt.Sprintf("https://shuffler.io/passwordreset/%s", resetToken.String())
-
-	Userdata.ResetReference = resetToken.String()
-	Userdata.ResetTimeout = 0
-	err = setUser(ctx, Userdata)
-	if err != nil {
-		log.Printf("Error patching User for mail %s: %s", Userdata.Username, err)
-		resp.WriteHeader(200)
-		resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
-		return
-	}
-
-	log.Printf("%#v", Userdata)
-	addr := t.Username
-	const confirmMessage = `
-Reset URL :)
-
-%s
-	`
-
-	msg := &mail.Message{
-		Sender:  "Shuffle <frikky@shuffler.io>",
-		To:      []string{addr},
-		Subject: "Reset your password - Shuffle",
-		Body:    fmt.Sprintf(confirmMessage, url),
-	}
-
-	log.Println(msg.Body)
-	if err := mail.Send(ctx, msg); err != nil {
-		log.Printf("Couldn't send email: %v", err)
-	}
-
-	// FIXME
-	// Generate an email to send
-	// Generate a reset code with a reset link
-	// Build frontend to handle reset link with "new password" etc.
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "%s"}`, defaultMessage)))
 }
 
 func handlePasswordReset(resp http.ResponseWriter, request *http.Request) {
@@ -4954,398 +4869,6 @@ func getDocs(resp http.ResponseWriter, request *http.Request) {
 	resp.Write(b)
 }
 
-type OutlookProfile struct {
-	OdataContext      string      `json:"@odata.context"`
-	BusinessPhones    []string    `json:"businessPhones"`
-	DisplayName       string      `json:"displayName"`
-	GivenName         string      `json:"givenName"`
-	JobTitle          interface{} `json:"jobTitle"`
-	Mail              string      `json:"mail"`
-	MobilePhone       interface{} `json:"mobilePhone"`
-	OfficeLocation    interface{} `json:"officeLocation"`
-	PreferredLanguage interface{} `json:"preferredLanguage"`
-	Surname           string      `json:"surname"`
-	UserPrincipalName string      `json:"userPrincipalName"`
-	ID                string      `json:"id"`
-}
-
-type OutlookFolder struct {
-	ID               string `json:"id"`
-	DisplayName      string `json:"displayName"`
-	ParentFolderID   string `json:"parentFolderId"`
-	ChildFolderCount int    `json:"childFolderCount"`
-	UnreadItemCount  int    `json:"unreadItemCount"`
-	TotalItemCount   int    `json:"totalItemCount"`
-}
-
-type OutlookFolders struct {
-	OdataContext  string          `json:"@odata.context"`
-	OdataNextLink string          `json:"@odata.nextLink"`
-	Value         []OutlookFolder `json:"value"`
-}
-
-func getOutlookFolders(client *http.Client) (OutlookFolders, error) {
-	requestUrl := fmt.Sprintf("https://graph.microsoft.com/v1.0/users/frikky@shuffletest.onmicrosoft.com/mailfolders")
-
-	ret, err := client.Get(requestUrl)
-	if err != nil {
-		log.Printf("FolderErr: %s", err)
-		return OutlookFolders{}, err
-	}
-
-	if ret.StatusCode != 200 {
-		log.Printf("Status folders: %d", ret.StatusCode)
-		return OutlookFolders{}, err
-	}
-
-	body, err := ioutil.ReadAll(ret.Body)
-	if err != nil {
-		log.Printf("Body: %s", err)
-		return OutlookFolders{}, err
-	}
-
-	//log.Printf("Body: %s", string(body))
-
-	mailfolders := OutlookFolders{}
-	err = json.Unmarshal(body, &mailfolders)
-	if err != nil {
-		log.Printf("Unmarshal: %s", err)
-		return OutlookFolders{}, err
-	}
-
-	//fmt.Printf("%#v", mailfolders)
-	// FIXME - recursion for subfolders
-	// Recursive struct
-	// folderEndpoint := fmt.Sprintf("%s/%s/childfolders?$top=40", requestUrl, parentId)
-	//for _, folder := range mailfolders.Value {
-	//	log.Println(folder.DisplayName)
-	//}
-
-	return mailfolders, nil
-}
-
-func getOutlookProfile(client *http.Client) (OutlookProfile, error) {
-	requestUrl := fmt.Sprintf("https://graph.microsoft.com/v1.0/me?$select=mail")
-
-	ret, err := client.Get(requestUrl)
-	if err != nil {
-		log.Printf("FolderErr: %s", err)
-		return OutlookProfile{}, err
-	}
-
-	log.Printf("Status folders: %d", ret.StatusCode)
-	body, err := ioutil.ReadAll(ret.Body)
-	if err != nil {
-		log.Printf("Body: %s", err)
-		return OutlookProfile{}, err
-	}
-
-	profile := OutlookProfile{}
-	err = json.Unmarshal(body, &profile)
-	if err != nil {
-		log.Printf("Unmarshal: %s", err)
-		return OutlookProfile{}, err
-	}
-
-	return profile, nil
-}
-
-func handleNewOutlookRegister(resp http.ResponseWriter, request *http.Request) {
-	code := request.URL.Query().Get("code")
-	if len(code) == 0 {
-		log.Println("No code")
-		resp.WriteHeader(401)
-		return
-	}
-
-	url := fmt.Sprintf("http://%s%s", request.Host, request.URL.EscapedPath())
-	log.Println(url)
-	ctx := context.Background()
-	client, accessToken, err := getOutlookClient(ctx, code, OauthToken{}, url)
-	if err != nil {
-		log.Printf("Oauth client failure - outlook register: %s", err)
-		resp.WriteHeader(401)
-		return
-	}
-	// This should be possible, and will also give the actual username
-	profile, err := getOutlookProfile(client)
-	if err != nil {
-		log.Printf("Outlook profile failure: %s", err)
-		resp.WriteHeader(401)
-		return
-	}
-
-	// This is a state workaround, which should really be for CSRF checks lol
-	state := request.URL.Query().Get("state")
-	if len(state) == 0 {
-		log.Println("No state")
-		resp.WriteHeader(401)
-		return
-	}
-
-	stateitems := strings.Split(state, "%26")
-	if len(stateitems) == 1 {
-		stateitems = strings.Split(state, "&")
-	}
-
-	// FIXME - trigger auth
-	senderUser := ""
-	trigger := TriggerAuth{}
-	for _, item := range stateitems {
-		itemsplit := strings.Split(item, "%3D")
-		if len(itemsplit) == 1 {
-			itemsplit = strings.Split(item, "=")
-		}
-
-		if len(itemsplit) != 2 {
-			continue
-		}
-
-		// Do something here
-		if itemsplit[0] == "workflow_id" {
-			trigger.WorkflowId = itemsplit[1]
-		} else if itemsplit[0] == "trigger_id" {
-			trigger.Id = itemsplit[1]
-		} else if itemsplit[0] == "type" {
-			trigger.Type = itemsplit[1]
-		} else if itemsplit[0] == "username" {
-			trigger.Username = itemsplit[1]
-			trigger.Owner = itemsplit[1]
-			senderUser = itemsplit[1]
-		}
-	}
-
-	// THis is an override based on the user in oauth return
-	trigger.Username = profile.Mail
-	trigger.Code = code
-	trigger.OauthToken = OauthToken{
-		AccessToken:  accessToken.AccessToken,
-		TokenType:    accessToken.TokenType,
-		RefreshToken: accessToken.RefreshToken,
-		Expiry:       accessToken.Expiry,
-	}
-
-	//log.Printf("%#v", trigger)
-	if trigger.WorkflowId == "" || trigger.Id == "" || trigger.Username == "" || trigger.Type == "" {
-		log.Printf("All oauth items need to contain data to register a new state")
-		resp.WriteHeader(401)
-		return
-	}
-
-	// Should also update the user
-	Userdata, err := getUser(ctx, senderUser)
-	if err != nil {
-		log.Printf("Username %s doesn't exist (oauth2): %s", trigger.Username, err)
-		resp.WriteHeader(401)
-		return
-	}
-
-	Userdata.Authentication = append(Userdata.Authentication, UserAuth{
-		Name:        "Outlook",
-		Description: "oauth2",
-		Workflows:   []string{trigger.WorkflowId},
-		Username:    trigger.Username,
-		Fields: []UserAuthField{
-			UserAuthField{
-				Key:   "trigger_id",
-				Value: trigger.Id,
-			},
-			UserAuthField{
-				Key:   "username",
-				Value: trigger.Username,
-			},
-			UserAuthField{
-				Key:   "code",
-				Value: code,
-			},
-			UserAuthField{
-				Key:   "type",
-				Value: trigger.Type,
-			},
-		},
-	})
-
-	// Set apikey for the user if they don't have one
-	if len(Userdata.ApiKey) == 0 {
-		newUser, err := generateApikey(ctx, *Userdata)
-		Userdata = &newUser
-		if err != nil {
-			log.Printf("Failed to generate apikey for user %s when creating outlook sub: %s", Userdata.Username, err)
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false, "reason": ""}`))
-			return
-		}
-	}
-
-	//err = setUser(Userdata)
-	//if err != nil {
-	//	log.Printf("Failed setting user data for %s: %s", Userdata.Username, err)
-	//	resp.WriteHeader(401)
-	//	return
-	//}
-
-	err = setTriggerAuth(ctx, trigger)
-	if err != nil {
-		log.Printf("Failed to set trigger auth for %s - %s", trigger.Username, err)
-		resp.WriteHeader(401)
-		return
-	}
-
-	// FIXME - not sure if these are good at all :)
-	environmentVariables := map[string]string{
-		"FUNCTION_APIKEY": Userdata.ApiKey,
-		"CALLBACKURL":     "https://shuffler.io",
-		"WORKFLOW_ID":     trigger.WorkflowId,
-		"TRIGGER_ID":      trigger.Id,
-	}
-
-	applocation := fmt.Sprintf("gs://%s/triggers/outlooktrigger.zip", bucketName)
-	hookname := fmt.Sprintf("outlooktrigger_%s", trigger.Id)
-
-	err = deployCloudFunctionGo(ctx, hookname, defaultLocation, applocation, environmentVariables)
-	if err != nil {
-		log.Printf("Error deploying hook: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Issue with starting hook. Please wait a second and try again"}`)))
-		return
-	}
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(`{"success": true}`))
-}
-
-type OauthToken struct {
-	AccessToken  string    `json:"AccessToken" datastore:"AccessToken,noindex"`
-	TokenType    string    `json:"TokenType" datastore:"TokenType,noindex"`
-	RefreshToken string    `json:"RefreshToken" datastore:"RefreshToken,noindex"`
-	Expiry       time.Time `json:"Expiry" datastore:"Expiry,noindex"`
-}
-type TriggerAuth struct {
-	Id             string `json:"id" datastore:"id"`
-	SubscriptionId string `json:"subscriptionId" datastore:"subscriptionId"`
-
-	Username   string     `json:"username" datastore:"username,noindex"`
-	WorkflowId string     `json:"workflow_id" datastore:"workflow_id,noindex"`
-	Owner      string     `json:"owner" datastore:"owner"`
-	Type       string     `json:"type" datastore:"type"`
-	Code       string     `json:"code,omitempty" datastore:"code,noindex"`
-	OauthToken OauthToken `json:"oauth_token,omitempty" datastore:"oauth_token"`
-}
-
-func getTriggerAuth(ctx context.Context, id string) (*TriggerAuth, error) {
-	key := datastore.NameKey("trigger_auth", strings.ToLower(id), nil)
-	triggerauth := &TriggerAuth{}
-	if err := dbclient.Get(ctx, key, triggerauth); err != nil {
-		return &TriggerAuth{}, err
-	}
-
-	return triggerauth, nil
-}
-
-func setTriggerAuth(ctx context.Context, trigger TriggerAuth) error {
-	key1 := datastore.NameKey("trigger_auth", strings.ToLower(trigger.Id), nil)
-
-	// New struct, to not add body, author etc
-	if _, err := dbclient.Put(ctx, key1, &trigger); err != nil {
-		log.Printf("Error adding trigger auth: %s", err)
-		return err
-	}
-
-	return nil
-}
-
-// THis all of a sudden became really horrible.. fml
-func getOutlookClient(ctx context.Context, code string, accessToken OauthToken, redirectUri string) (*http.Client, *oauth2.Token, error) {
-
-	conf := &oauth2.Config{
-		ClientID:     "",
-		ClientSecret: "",
-		Scopes: []string{
-			"Mail.Read",
-			"User.Read",
-		},
-		RedirectURL: redirectUri,
-		Endpoint: oauth2.Endpoint{
-			AuthURL:  "https://login.microsoftonline.com/common/oauth2/authorize",
-			TokenURL: "https://login.microsoftonline.com/common/oauth2/token",
-		},
-	}
-
-	if len(code) > 0 {
-		access_token, err := conf.Exchange(ctx, code)
-		if err != nil {
-			log.Printf("Access_token issue: %s", err)
-			return &http.Client{}, access_token, err
-		}
-
-		client := conf.Client(ctx, access_token)
-		return client, access_token, nil
-	} else {
-		// Manually recreate the oauthtoken
-		access_token := &oauth2.Token{
-			AccessToken:  accessToken.AccessToken,
-			TokenType:    accessToken.TokenType,
-			RefreshToken: accessToken.RefreshToken,
-			Expiry:       accessToken.Expiry,
-		}
-
-		client := conf.Client(ctx, access_token)
-		return client, access_token, nil
-	}
-}
-
-func handleGetOutlookFolders(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	// Exchange every time hmm
-	// FIXME
-	// Should really just get the code from the trigger that's being used OR the user
-	triggerId := request.URL.Query().Get("trigger_id")
-	if len(triggerId) == 0 {
-		log.Println("No trigger_id supplied")
-		resp.WriteHeader(401)
-		return
-	}
-
-	ctx := context.Background()
-	trigger, err := getTriggerAuth(ctx, triggerId)
-	if err != nil {
-		log.Printf("Trigger %s doesn't exist - outlook folders.", triggerId)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Trigger doesn't exist."}`))
-		return
-	}
-
-	// FIXME - should be shuffler in literally every case except testing lol
-	redirectDomain := "shuffler.io"
-	url := fmt.Sprintf("https://%s/functions/outlook/register", redirectDomain)
-	outlookClient, _, err := getOutlookClient(ctx, "", trigger.OauthToken, url)
-	if err != nil {
-		log.Printf("Oauth client failure - outlook folders: %s", err)
-		resp.WriteHeader(401)
-		return
-	}
-
-	folders, err := getOutlookFolders(outlookClient)
-	if err != nil {
-		resp.WriteHeader(401)
-		return
-	}
-
-	b, err := json.Marshal(folders.Value)
-	if err != nil {
-		log.Println("Failed to marshal folderdata")
-		resp.WriteHeader(401)
-		return
-	}
-
-	resp.WriteHeader(200)
-	resp.Write(b)
-}
-
 func handleGetSpecificStats(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -5393,66 +4916,6 @@ func handleGetSpecificStats(resp http.ResponseWriter, request *http.Request) {
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(b))
-}
-
-func handleGetSpecificTrigger(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	user, err := handleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("Api authentication failed in getting specific workflow: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	location := strings.Split(request.URL.String(), "/")
-
-	var workflowId string
-	if location[1] == "api" {
-		if len(location) <= 4 {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		workflowId = location[4]
-	}
-
-	if strings.Contains(workflowId, "?") {
-		workflowId = strings.Split(workflowId, "?")[0]
-	}
-
-	ctx := context.Background()
-	trigger, err := getTriggerAuth(ctx, workflowId)
-	if err != nil {
-		log.Printf("Trigger %s doesn't exist - specific trigger.", workflowId)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": ""}`))
-		return
-	}
-
-	if user.Username != trigger.Owner && user.Role != "admin" {
-		log.Printf("Wrong user (%s) for trigger %s", user.Username, trigger.Id)
-		resp.WriteHeader(401)
-		return
-	}
-
-	trigger.OauthToken = OauthToken{}
-	trigger.Code = ""
-
-	b, err := json.Marshal(trigger)
-	if err != nil {
-		log.Println("Failed to marshal data")
-		resp.WriteHeader(401)
-		return
-	}
-
-	resp.WriteHeader(200)
-	resp.Write(b)
 }
 
 func handleDeleteOutlookSub(resp http.ResponseWriter, request *http.Request) {
@@ -7545,7 +7008,7 @@ func runInit(ctx context.Context) {
 	if err != nil {
 		log.Printf("Failed loading repo %s into memory: %s", apis, err)
 	} else {
-		log.Printf("Finished git clone. Looking for updates to the repo.")
+		log.Printf("[INFO] Finished git clone. Looking for updates to the repo.")
 		dir, err := fs.ReadDir("")
 		if err != nil {
 			log.Printf("Failed reading folder: %s", err)
@@ -7856,7 +7319,7 @@ func handleKeyValueCheck(resp http.ResponseWriter, request *http.Request) {
 				continue
 			}
 
-			log.Printf("[INFO] Looking for value %s", value)
+			log.Printf("[INFO] Looking for value %s in Workflow %s of ORG %s", value, workflowExecution.Workflow.ID, org.Id)
 
 			q := datastore.NewQuery(dbKey).Filter("org_id =", org.Id).Filter("workflow_id =", workflowExecution.Workflow.ID).Filter("parameter_name =", parameterNames).Filter("value =", value)
 			foundCount, err := dbclient.Count(ctx, q)
@@ -7875,7 +7338,7 @@ func handleKeyValueCheck(resp http.ResponseWriter, request *http.Request) {
 			}
 		}
 	} else {
-		log.Printf("[INFO] Should validate if value %s in app %s exists WITH ORG %s", workflowExecution.Workflow.ID)
+		//log.Printf("[INFO] Should validate if value %s in app %s exists WITH ORG %s", workflowExecution.Workflow.ID)
 
 		for _, value := range value.ParameterValues {
 			if len(value) == 0 {
@@ -7883,7 +7346,7 @@ func handleKeyValueCheck(resp http.ResponseWriter, request *http.Request) {
 				continue
 			}
 
-			log.Printf("[INFO] Looking for value %s", value)
+			log.Printf("[INFO] Looking for value %s in ORG %s", value, org.Id)
 
 			q := datastore.NewQuery(dbKey).Filter("org_id =", org.Id).Filter("workflow_id =", "").Filter("parameter_name =", parameterNames).Filter("value =", value)
 			foundCount, err := dbclient.Count(ctx, q)
@@ -8653,11 +8116,6 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/hooks/{key}", handleWebhookCallback).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/hooks/{key}/delete", handleDeleteHook).Methods("DELETE", "OPTIONS")
 
-	// Trigger hmm
-	//r.HandleFunc("/api/v1/triggers/{key}", handleGetSpecificTrigger).Methods("GET", "OPTIONS")
-
-	r.HandleFunc("/api/v1/stats/{key}", handleGetSpecificStats).Methods("GET", "OPTIONS")
-
 	// OpenAPI configuration
 	r.HandleFunc("/api/v1/verify_swagger", verifySwagger).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/verify_openapi", verifySwagger).Methods("POST", "OPTIONS")
@@ -8692,6 +8150,12 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/files/{fileId}", handleGetFileMeta).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/files/{fileId}", handleDeleteFile).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/files", handleGetFiles).Methods("GET", "OPTIONS")
+
+	// Trigger hmm
+	r.HandleFunc("/api/v1/triggers/outlook/register", handleNewOutlookRegister).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/triggers/outlook/getFolders", handleGetOutlookFolders).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/triggers/outlook/{key}", handleGetSpecificTrigger).Methods("GET", "OPTIONS")
+	//r.HandleFunc("/api/v1/stats/{key}", handleGetSpecificStats).Methods("GET", "OPTIONS")
 
 	http.Handle("/", r)
 }

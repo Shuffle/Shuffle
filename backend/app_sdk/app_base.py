@@ -28,6 +28,7 @@ class AppBase:
         self.authorization = os.getenv("AUTHORIZATION", "")
         self.current_execution_id = os.getenv("EXECUTIONID", "")
         self.full_execution = os.getenv("FULL_EXECUTION", "") 
+        self.start_time = int(time.time())
         self.result_wrapper_count = 0
 
         if isinstance(self.action, str):
@@ -482,10 +483,17 @@ class AppBase:
             print(f"NEW PARAMS: {new_params}")
             if len(new_params) == 0:
                 print("[WARNING] SHOULD STOP MULTI-EXECUTION BECAUSE FIELDS AREN'T UNIQUE")
-                action_result["status"] = "SKIPPED"
-                action_result["result"] = f"All values were non-unique"  
-                action_result["completed_at"] = int(time.time())
-                self.send_result(action_result, headers, stream_path)
+                action_result = {
+                    "action": self.action,
+                    "authorization": self.authorization,
+                    "execution_id": self.current_execution_id,
+                    "result": f"All {len(param_multiplier)} values were non-unique",
+                    "started_at": self.start_time,
+                    "status": "SKIPPED",
+                    "completed_at": int(time.time()),
+                }
+
+                self.send_result(action_result, {"Content-Type": "application/json", "Authorization": "Bearer %s" % self.authorization}, "/api/v1/streams")
                 exit()
                 #return
             else:
@@ -906,6 +914,41 @@ class AppBase:
                 return data.strip()
             if "split" in thistype:
                 return data.split()
+            if "join" in thistype:
+                print(f"SHOULD JOIN: {data}")
+                try:
+                    splitvalues = data.split(",")
+                    if "," not in data:
+                        return f"join({data})"
+
+                    if len(splitvalues) >= 2:
+                        print(f"SPLITVALUE: {splitvalues[-1]}")
+
+                        # 1. Take the list and parse it from string
+                        # 2. Take all the items and join them
+                        # 3. Parse them back as string and return
+                        values = ",".join(splitvalues[0:-1])
+                        print(f"VALUES: {values}")
+                        tmp = json.loads(values)
+                        print(f"TMP: {tmp}")
+                        #tmp = tmp[1:-1]
+                        #print(f"TMP2: {tmp}")
+                        try:
+                            newvalues = splitvalues[-1].join(str(item).strip() for item in tmp)
+                        except TypeError:
+                            newvalues = splitvalues[-1].join(json.dumps(item).strip() for item in tmp)
+
+                        print(f"new: {newvalues}")
+                        return newvalues
+                    else:
+                        print("Returning default")
+                        return f"join({data})"
+
+                except (KeyError, IndexError) as e:
+                    print(f"ERROR in join(): {e}")
+                except json.decoder.JSONDecodeError as e:
+                    print(f"JSON ERROR in join(): {e}")
+
             if "len" in thistype or "length" in thistype or "lenght" in thistype:
                 tmp = "" 
                 try:
@@ -919,9 +962,9 @@ class AppBase:
                         pass
 
                 if isinstance(tmp, list):
-                    return len(tmp)
+                    return str(len(tmp))
                 elif isinstance(tmp, object):
-                    return len(tmp)
+                    return str(len(tmp))
 
                 return str(len(data))
             if "parse" in thistype:
@@ -967,7 +1010,7 @@ class AppBase:
             #print("Running %s" % data)
         
             # Look for the INNER wrapper first, then move out
-            wrappers = ["int", "number", "lower", "upper", "trim", "strip", "split", "parse", "len", "length", "lenght"]
+            wrappers = ["int", "number", "lower", "upper", "trim", "strip", "split", "parse", "len", "length", "lenght", "join"]
             found = False
             for wrapper in wrappers:
                 if wrapper not in data.lower():
@@ -982,8 +1025,8 @@ class AppBase:
             # Do stuff here.
             innervalue = parse_nested_param(data, maxDepth(data)-0)
             outervalue = parse_nested_param(data, maxDepth(data)-1)
-            #print("INNER: ", innervalue)
-            #print("OUTER: ", outervalue)
+            print("INNER: ", innervalue)
+            print("OUTER: ", outervalue)
         
             if outervalue != innervalue:
                 #print("Outer: ", outervalue, " inner: ", innervalue)
@@ -1224,10 +1267,10 @@ class AppBase:
                                     baseresult = variable["value"]
                                     break
                         except KeyError as e:
-                            print("KeyError wf variables: %s" % e)
+                            print("[INFO] KeyError wf variables: %s" % e)
                             pass
                         except TypeError as e:
-                            print("TypeError wf variables: %s" % e)
+                            print("[INFO] TypeError wf variables: %s" % e)
                             pass
         
                     print("BEFORE EXECUTION VAR")
@@ -1240,10 +1283,10 @@ class AppBase:
                                     baseresult = variable["value"]
                                     break
                         except KeyError as e:
-                            print("KeyError exec variables: %s" % e)
+                            print("[INFO] KeyError exec variables: %s" % e)
                             pass
                         except TypeError as e:
-                            print("TypeError exec variables: %s" % e)
+                            print("[INFO] TypeError exec variables: %s" % e)
                             pass
         
             except KeyError as error:
@@ -1701,7 +1744,8 @@ class AppBase:
                             # Custom format for ${name[0,1,2,...]}$
                             #submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"
                             print(f"Returnedvalue: {value}")
-                            #submatch = "([${]{2}#?([0-9a-zA-Z_-]+)#?(\[.*\])[}$]{2})"
+                            # OLD: Used until 13.03.2021: submatch = "([${]{2}#?([0-9a-zA-Z_-]+)#?(\[.*\])[}$]{2})"
+                            # \${[0-9a-zA-Z_-]+#?(\[.*?]}\$)
                             submatch = "([${]{2}#?([0-9a-zA-Z_-]+)#?(\[.*?]}\$))"
                             actualitem = re.findall(submatch, value, re.MULTILINE)
                             try:
@@ -1722,18 +1766,24 @@ class AppBase:
                                 # Loop WITH variables go in else.
                                 print("Before first part in multiexec!")
                                 handled = False
+
+                                # Has a loop without a variable used inside
                                 if len(actualitem[0]) > 2 and actualitem[0][1] == "SHUFFLE_NO_SPLITTER":
 
                                     print("(1) Pre replacement: %s" % actualitem[0][2])
                                     tmpitem = value
 
-                                    replacement = actualitem[0][2]
+                                    index = 0
+                                    replacement = actualitem[index][2]
+                                    if replacement.endswith("}$"):
+                                        replacement = replacement[:-2]
+
                                     if replacement.startswith("\"") and replacement.endswith("\""):
                                         replacement = replacement[1:len(replacement)-1]
 
                                     print("POST replacement: %s" % replacement)
 
-                                    #json_replacement = tmpitem.replace(actualitem[0][0], replacement, 1)
+                                    #json_replacement = tmpitem.replace(actualitem[index][0], replacement, 1)
                                     #print("AFTER POST replacement: %s" % json_replacement)
                                     #json_replacement = replacement
                                     try:
@@ -1755,9 +1805,9 @@ class AppBase:
                                     for i in range(len(json_replacement)):
                                         if isinstance(json_replacement[i], dict) or isinstance(json_replacement[i], list):
                                             tmp_replacer = json.dumps(json_replacement[i])
-                                            newvalue = tmpitem.replace(actualitem[0][0], tmp_replacer, 1)
+                                            newvalue = tmpitem.replace(actualitem[index][0], tmp_replacer, 1)
                                         else:
-                                            newvalue = tmpitem.replace(actualitem[0][0], json_replacement[i], 1)
+                                            newvalue = tmpitem.replace(actualitem[index][0], json_replacement[i], 1)
 
                                         try:
                                             newvalue = json.loads(newvalue)
@@ -1770,7 +1820,7 @@ class AppBase:
                                     print("New replacement: %s" % new_replacement)
 
                                     # New
-                                    tmpitem = tmpitem.replace(actualitem[0][0], replacement, 1)
+                                    tmpitem = tmpitem.replace(actualitem[index][0], replacement, 1)
 
                                     # This code handles files.
                                     resultarray = []
@@ -1821,8 +1871,14 @@ class AppBase:
                                         try:
                                             to_be_replaced = replace[0]
                                             actualitem = replace[2]
+                                            if actualitem.endswith("}$"):
+                                                actualitem = actualitem[:-2]
                                         except IndexError:
                                             continue
+
+                                        #print(f"\n\nTMPITEM: {actualitem}\n\n")
+                                        #actualitem = parse_wrapper_start(actualitem)
+                                        #print(f"\n\nTMPITEM2: {actualitem}\n\n")
 
                                         try:
                                             itemlist = json.loads(actualitem)
@@ -1836,6 +1892,10 @@ class AppBase:
                                             print("JSON Error (replace): %s in %s" % (e, actualitem))
 
                                         replacements[to_be_replaced] = actualitem
+
+
+                                    # Parses the data as string with length, split etc. before moving on. 
+
 
                                     #print("In second part of else: %s" % (len(itemlist)))
                                     # This is a result array for JUST this value.. 

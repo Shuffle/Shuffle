@@ -2307,10 +2307,12 @@ const AngularWorkflow = (props) => {
 					return
 				}
 
+				/*
 				if (data.is_valid === false) {
 					alert.error(data.name+" is only available on https://shuffler.io so far")
 					return
 				}
+				*/
 
 				const triggerLabel = getNextActionName(data.name)
 
@@ -4929,7 +4931,7 @@ const AngularWorkflow = (props) => {
 		} 
 
 		const setFolders = () => {
-			fetch(globalUrl+"/functions/outlook/getFolders?trigger_id="+selectedTrigger.id, {
+			fetch(globalUrl+"/api/v1/triggers/outlook/getFolders?trigger_id="+selectedTrigger.id, {
 				method: "GET",
 				headers: {"content-type": "application/json"},
 				credentials: "include",
@@ -4942,7 +4944,10 @@ const AngularWorkflow = (props) => {
 				return response.json()
 			})
 			.then((responseJson) => {
-				setTriggerFolders(responseJson)
+				if (responseJson !== null && responseJson.success !== false) {
+					setTriggerFolders(responseJson)
+				}
+
 				if (workflow.triggers[selectedTriggerIndex].parameters.length === 0 && responseJson.length > 0) {
 					workflow.triggers[selectedTriggerIndex].parameters = [{"value": responseJson[0].displayName, "name": "outlookfolder", "id": responseJson[0].id}]
 					selectedTrigger.parameters = [{"value": responseJson[0].displayName, "name": "outlookfolder", "id": responseJson[0].id}]
@@ -4956,7 +4961,7 @@ const AngularWorkflow = (props) => {
 		}
 
 		const getTriggerAuth = () => {
-			fetch(globalUrl+"/api/v1/triggers/"+selectedTrigger.id, {
+			fetch(globalUrl+"/api/v1/triggers/outlook/"+selectedTrigger.id, {
 				method: "GET",
 				headers: {"content-type": "application/json"},
 				credentials: "include",
@@ -4987,15 +4992,22 @@ const AngularWorkflow = (props) => {
 		const outlookButton = 
 			<Button variant="contained" style={{flex: "1",}} onClick={() => {
 				// When window closes, it should get all the folders for the user from backend
-				const redirectUri = "http%3A%2F%2Fshuffler.io"
-				const url = "https://login.microsoftonline.com/common/oauth2/authorize?client_id=70e37005-c954-4290-b573-d4b94e484336&redirect_uri="+redirectUri+"%2Ffunctions%2Foutlook%2Fregister&resource=https%3A%2F%2Fgraph.microsoft.com&response_type=code&scope=Mail.Read+User.Read+https%3A%2F%2Foutlook.office.com%2Fmail.read&state=workflow_id%3D"+props.match.params.key+"%26trigger_id%3D"+selectedTrigger.id+"%26username%3Drheyix.yt@gmail.com%26type%3Doutlook"
+				//const redirectUri = "http%3A%2F%2Fshuffler.io"
+				//const client_id = "70e37005-c954-4290-b573-d4b94e484336"
+				const redirectUri = isCloud ? "https%3A%2F%2Fshuffler.io%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister" : "http%3A%2F%2Flocalhost:5001%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister"
+				console.log(redirectUri)
+				const client_id = "fd55c175-aa30-4fa6-b303-09a29fb3f750"
+				const username = isCloud ? userdata.username : userdata.id
+				console.log("USER: ", username, userdata)
+				const url = "https://login.microsoftonline.com/common/oauth2/authorize?client_id="+client_id+"&redirect_uri="+redirectUri+"&resource=https%3A%2F%2Fgraph.microsoft.com&response_type=code&scope=Mail.Read+User.Read+https%3A%2F%2Foutlook.office.com%2Fmail.read&state=workflow_id%3D"+props.match.params.key+"%26trigger_id%3D"+selectedTrigger.id+"%26username%3D"+username+"%26type%3Doutlook"
+				console.log("URL: ", url)
 
 				var newwin = window.open(url, "", "width=200,height=100")
 				var data = {}
 
 				// Check whether we got a callback somewhere
 				var id = setInterval(function () {
-					fetch(globalUrl+"/api/v1/triggers/"+selectedTrigger.id, {
+					fetch(globalUrl+"/api/v1/triggers/outlook/"+selectedTrigger.id, {
 						method: "GET",
 						headers: {"content-type": "application/json"},
 						credentials: "include",
@@ -5040,46 +5052,50 @@ const AngularWorkflow = (props) => {
 						</div>
 						{outlookButton}
 
-						<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
-							<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
-							<div style={{flex: "10"}}> 
-								<b>Folders: </b>(hold CTRL to select multiple)
-							</div>
-						</div>
-						<Select
-							multiple
-							native
-							rows="10"
-							value={selectedTrigger.parameters[0].value.split(splitter)}
-							style={{backgroundColor: inputColor, color: "white"}}
-							SelectDisplayProps={{
-								style: {
-									marginLeft: 10,
-								}
-							}}
-							onChange={(e) => {
-								//setTriggerFolderWrapper(e)
-								setTriggerFolderWrapperMulti(e)
-							}}
-							fullWidth
-							input={<Input id="select-multiple-native" />}
-							key={selectedTrigger}
-						>
-						{triggerFolders.map(folder => {
-							var folderItem = <option key={folder.displayName} value={folder.displayName} style={{marginLeft: "10px", fontSize: "1.2em"}}>
-								{folder.displayName}
-							</option>
-							if (folder.childFolderCount > 0) {
-								// Here to handle subfolders sometime later	
-								folderItem = 
-								<option key={folder.displayName} value={folder.displayName} style={{marginLeft: "10px", fontSize: "1.2em"}}>
-									{folder.displayName}
-								</option>
-							}
+						{triggerFolders === undefined || triggerFolders === null ? null :
+							<span>
+								<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
+									<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
+									<div style={{flex: "10"}}> 
+										<b>Folders: </b>(hold CTRL to select multiple)
+									</div>
+								</div>
+								<Select
+									multiple
+									native
+									rows="10"
+									value={selectedTrigger.parameters[0].value.split(splitter)}
+									style={{backgroundColor: inputColor, color: "white"}}
+									SelectDisplayProps={{
+										style: {
+											marginLeft: 10,
+										}
+									}}
+									onChange={(e) => {
+										//setTriggerFolderWrapper(e)
+										setTriggerFolderWrapperMulti(e)
+									}}
+									fullWidth
+									input={<Input id="select-multiple-native" />}
+									key={selectedTrigger}
+								>
+									{triggerFolders.map(folder => {
+										var folderItem = <option key={folder.displayName} value={folder.displayName} style={{marginLeft: "10px", fontSize: "1.2em"}}>
+											{folder.displayName}
+										</option>
+										if (folder.childFolderCount > 0) {
+											// Here to handle subfolders sometime later	
+											folderItem = 
+											<option key={folder.displayName} value={folder.displayName} style={{marginLeft: "10px", fontSize: "1.2em"}}>
+												{folder.displayName}
+											</option>
+										}
 
-							return folderItem
-						})}
-						</Select>
+										return folderItem
+									})}
+								</Select>
+							</span>
+					}
 					</div>
 			} else if (triggerAuthentication.type === "gmail") {
 				triggerInfo = "SPECIAL GMAIL"
@@ -5578,10 +5594,10 @@ const AngularWorkflow = (props) => {
 		if (trigger.id === undefined) {
 			return
 		}
-		alert.info("Stopping trigger")
+		alert.info("Deleting mail trigger")
 
 		fetch(globalUrl+"/api/v1/workflows/"+props.match.params.key+"/outlook/"+trigger.id, {
-    	  	method: 'DELETE',
+    	  method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json',
@@ -5615,6 +5631,10 @@ const AngularWorkflow = (props) => {
 
 	const startMailSub = (trigger, triggerindex) => {
 		var folders = []
+
+		if (triggerFolders === null || triggerFolders === undefined) {
+			return null
+		}
 
 		const splitItem = workflow.triggers[selectedTriggerIndex].parameters[0].value.split(splitter)
 		for (var key in splitItem) {
