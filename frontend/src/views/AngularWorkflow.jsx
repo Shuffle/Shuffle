@@ -2221,7 +2221,7 @@ const AngularWorkflow = (props) => {
 			"description": "Add your email provider",
 			"trigger_type": "EMAIL",
 			"errors": null,
-			"is_valid": true ? false : cloudSyncEnabled,
+			"is_valid": cloudSyncEnabled || isCloud ? true : false,
 			"label": "Email",
 			"environment": "cloud",
 			"large_image": 'data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4QAYRXhpZgAASUkqAAgAAAAAAAAAAAAAAP/hAytodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNiAoV2luZG93cykiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6Nzg4QTJBMjVEMDI1MTFFN0EwQUVDODc5QjYyQkFCMUQiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6Nzg4QTJBMjZEMDI1MTFFN0EwQUVDODc5QjYyQkFCMUQiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDo3ODhBMkEyM0QwMjUxMUU3QTBBRUM4NzlCNjJCQUIxRCIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDo3ODhBMkEyNEQwMjUxMUU3QTBBRUM4NzlCNjJCQUIxRCIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/Pv/bAEMAAwICAgICAwICAgMDAwMEBgQEBAQECAYGBQYJCAoKCQgJCQoM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',
@@ -4990,50 +4990,59 @@ const AngularWorkflow = (props) => {
 		}
 
 		const outlookButton = 
-			<Button variant="contained" style={{flex: "1",}} onClick={() => {
-				// When window closes, it should get all the folders for the user from backend
-				//const redirectUri = "http%3A%2F%2Fshuffler.io"
-				//const client_id = "70e37005-c954-4290-b573-d4b94e484336"
-				const redirectUri = isCloud ? "https%3A%2F%2Fshuffler.io%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister" : "http%3A%2F%2Flocalhost:5001%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister"
-				console.log(redirectUri)
-				const client_id = "fd55c175-aa30-4fa6-b303-09a29fb3f750"
-				const username = isCloud ? userdata.username : userdata.id
-				console.log("USER: ", username, userdata)
-				const url = "https://login.microsoftonline.com/common/oauth2/authorize?client_id="+client_id+"&redirect_uri="+redirectUri+"&resource=https%3A%2F%2Fgraph.microsoft.com&response_type=code&scope=Mail.Read+User.Read+https%3A%2F%2Foutlook.office.com%2Fmail.read&state=workflow_id%3D"+props.match.params.key+"%26trigger_id%3D"+selectedTrigger.id+"%26username%3D"+username+"%26type%3Doutlook"
-				console.log("URL: ", url)
+			<Button 
+				fullWidth
+				variant="contained" 
+				style={{flex: "1",}} 
+				color="primary"
+				onClick={() => {
+					const redirectUri = isCloud ? "https%3A%2F%2Fshuffler.io%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister" : "http%3A%2F%2Flocalhost:5001%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister"
+					const client_id = "fd55c175-aa30-4fa6-b303-09a29fb3f750"
+					const username = isCloud ? userdata.username : userdata.id
+					console.log(redirectUri)
+					console.log("USER: ", username, userdata)
 
-				var newwin = window.open(url, "", "width=200,height=100")
-				var data = {}
+					const branch = workflow.branches.find(branch => branch.source_id === selectedTrigger.id)
+					if (branch === undefined || branch === null) {
+						alert.error("No startnode connected to node. Connect it to an action.")	
+						return
+					}
 
-				// Check whether we got a callback somewhere
-				var id = setInterval(function () {
-					fetch(globalUrl+"/api/v1/triggers/outlook/"+selectedTrigger.id, {
-						method: "GET",
-						headers: {"content-type": "application/json"},
-						credentials: "include",
-					})
-					.then((response) => {
-						if (response.status !== 200) {
-							throw new Error("No trigger info :o!")
-						}
+					console.log("BRANCH: ", branch)
+					const startnode = branch.destination_id
+					const url = "https://login.microsoftonline.com/common/oauth2/authorize?client_id="+client_id+"&redirect_uri="+redirectUri+"&resource=https%3A%2F%2Fgraph.microsoft.com&response_type=code&scope=Mail.Read+User.Read+https%3A%2F%2Foutlook.office.com%2Fmail.read&state=workflow_id%3D"+props.match.params.key+"%26trigger_id%3D"+selectedTrigger.id+"%26username%3D"+username+"%26type%3Doutlook%26start%3d"+startnode
+					console.log("URL: ", url)
 
-						return response.json()
-					})
-					.then((responseJson) => {
-						setTriggerAuthentication(responseJson)	
-						clearInterval(id)
-						newwin.close()
-						setFolders()
-					})
-					.catch(error => {
-						console.log(error.toString())
-					})
-				}, 2500)
+					var newwin = window.open(url, "", "width=200,height=100")
 
-				console.log(data)
-				saveWorkflow(workflow)
-			}} color="primary">
-				Outlook
+					// Check whether we got a callback somewhere
+					var id = setInterval(function () {
+						fetch(globalUrl+"/api/v1/triggers/outlook/"+selectedTrigger.id, {
+							method: "GET",
+							headers: {"content-type": "application/json"},
+							credentials: "include",
+						})
+						.then((response) => {
+							if (response.status !== 200) {
+								throw new Error("No trigger info :o!")
+							}
+
+							return response.json()
+						})
+						.then((responseJson) => {
+							setTriggerAuthentication(responseJson)	
+							clearInterval(id)
+							newwin.close()
+							setFolders()
+						})
+						.catch(error => {
+							console.log(error.toString())
+						})
+					}, 2500)
+
+					saveWorkflow(workflow)
+				}} >
+				Microsoft Outlook
 			</Button>
 
 
@@ -5044,20 +5053,25 @@ const AngularWorkflow = (props) => {
 
 			if (triggerAuthentication.type === "outlook") {
 				triggerInfo = <div>
-						<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
-							<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
-							<div style={{flex: "10"}}> 
-								<b>Login: </b> 
-							</div>
-						</div>
-						{outlookButton}
+						{selectedTrigger.status === "running" ? null : 
+							<span>
+								<div style={{marginTop: 20, marginBottom: 7, display: "flex"}}>
+									<div style={{width: 17, height: 17, borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: 10}}/>
+									<div style={{flex: "10"}}> 
+										<b>Login </b> 
+									</div>
+								</div>
+								{outlookButton}
+							</span>
+						}
 
-						{triggerFolders === undefined || triggerFolders === null ? null :
+						{triggerFolders === undefined || triggerFolders === null ? 
+							null :
 							<span>
 								<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 									<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
 									<div style={{flex: "10"}}> 
-										<b>Folders: </b>(hold CTRL to select multiple)
+										<b>Select a folder </b>
 									</div>
 								</div>
 								<Select
@@ -5066,6 +5080,7 @@ const AngularWorkflow = (props) => {
 									rows="10"
 									value={selectedTrigger.parameters[0].value.split(splitter)}
 									style={{backgroundColor: inputColor, color: "white"}}
+									disabled={selectedTrigger.status === "running"}
 									SelectDisplayProps={{
 										style: {
 											marginLeft: 10,
@@ -5080,15 +5095,18 @@ const AngularWorkflow = (props) => {
 									key={selectedTrigger}
 								>
 									{triggerFolders.map(folder => {
-										var folderItem = <option key={folder.displayName} value={folder.displayName} style={{marginLeft: "10px", fontSize: "1.2em"}}>
+										//console.log("FOLDER: ", folder)
+										//var folderItem = <option key={folder.displayName} value={folder.displayName} style={{marginLeft: 10, fontSize: "1.2em", backgroundColor: inputColor,}}>
+										var folderItem = <option key={folder.displayName} style={{backgroundColor: inputColor, fontSize: "1.2em"}} value={folder.displayName}>
 											{folder.displayName}
 										</option>
+
 										if (folder.childFolderCount > 0) {
 											// Here to handle subfolders sometime later	
 											folderItem = 
-											<option key={folder.displayName} value={folder.displayName} style={{marginLeft: "10px", fontSize: "1.2em"}}>
-												{folder.displayName}
-											</option>
+												<option key={folder.displayName} value={folder.displayName} style={{marginLeft: "10px", }}>
+													{folder.displayName}
+												</option>
 										}
 
 										return folderItem
@@ -5117,11 +5135,13 @@ const AngularWorkflow = (props) => {
 					</div>
 				</div>
 				{outlookButton}	
+				{/*
 				<Button variant="contained" style={{marginLeft: "5px", flex: "1",}} onClick={() => {
 					alert.error("REMOVE THIS FIELD FOR GMAIL - make it oAuth something")
 				}} color="primary">
 					Gmail	
 				</Button>
+				*/}
 			</div>
 		
 		return(
@@ -6554,13 +6574,11 @@ const AngularWorkflow = (props) => {
 
 		if (execution.execution_source === "webhook") {
 			return <img alt={"webhook"} src={triggers.find(trigger => trigger.trigger_type === "WEBHOOK").large_image} style={{width: size, height: size}} />
-		}
-
-		if (execution.execution_source === "schedule") {
+		} else if (execution.execution_source === "outlook") {
+			return <img alt={"email"} src={triggers.find(trigger => trigger.trigger_type === "EMAIL").large_image} style={{width: size, height: size}} />
+		} else if (execution.execution_source === "schedule") {
 			return <img alt={"schedule"} src={triggers.find(trigger => trigger.trigger_type === "SCHEDULE").large_image} style={{width: size, height: size}} />
-		}
-
-		if (execution.execution_source === "EMAIL") {
+		} else if (execution.execution_source === "EMAIL") {
 			return <img alt={"email"} src={triggers.find(trigger => trigger.trigger_type === "EMAIL").large_image} style={{width: size, height: size}} />
 		}
 

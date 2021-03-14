@@ -1743,7 +1743,7 @@ class AppBase:
 
                             # Custom format for ${name[0,1,2,...]}$
                             #submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"
-                            print(f"Returnedvalue: {value}")
+                            #print(f"Returnedvalue: {value}")
                             # OLD: Used until 13.03.2021: submatch = "([${]{2}#?([0-9a-zA-Z_-]+)#?(\[.*\])[}$]{2})"
                             # \${[0-9a-zA-Z_-]+#?(\[.*?]}\$)
                             submatch = "([${]{2}#?([0-9a-zA-Z_-]+)#?(\[.*?]}\$))"

@@ -2034,7 +2034,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 			//	log.Printf("Failed to delete webhook: %s", err)
 			//}
 		} else if item.TriggerType == "EMAIL" {
-			err = handleOutlookSubRemoval(ctx, workflow.ID, item.ID)
+			err = handleOutlookSubRemoval(ctx, user, workflow.ID, item.ID)
 			if err != nil {
 				log.Printf("Failed to delete email sub: %s", err)
 			}
@@ -2224,7 +2224,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("PRE BODY")
+	//log.Printf("PRE BODY")
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		log.Printf("Failed hook unmarshaling: %s", err)
@@ -2268,7 +2268,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	allNodes := []string{}
 	workflow.Categories = Categories{}
 
-	log.Printf("PRE APPS")
+	//log.Printf("PRE APPS")
 	workflowapps, apperr := getAllWorkflowApps(ctx, 500)
 
 	//log.Printf("Action: %#v", action.Authentication)
@@ -2553,7 +2553,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	workflow.Triggers = newTriggers
 
-	log.Printf("PRE VARIABLES")
+	//log.Printf("PRE VARIABLES")
 	for _, variable := range workflow.WorkflowVariables {
 		if len(variable.Value) == 0 {
 			log.Printf("Can't have an empty variable: %s", variable.Name)
@@ -2601,7 +2601,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// FIXME - append all nodes (actions, triggers etc) to one single array here
-	log.Printf("PRE VARIABLES")
+	//log.Printf("PRE VARIABLES")
 	if len(foundNodes) != len(allNodes) || len(workflow.Actions) <= 0 {
 		// This shit takes a few seconds lol
 		if !workflow.IsValid {
@@ -2675,7 +2675,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// Check every app action and param to see whether they exist
-	log.Printf("PRE ACTIONS 2")
+	//log.Printf("PRE ACTIONS 2")
 	newActions = []Action{}
 	for _, action := range workflow.Actions {
 		reservedApps := []string{

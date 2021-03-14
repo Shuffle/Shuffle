@@ -73,11 +73,13 @@ var bucketName = "shuffler.appspot.com"
 var baseAppPath = "/home/frikky/git/shaffuru/tmp/apps"
 var baseDockerName = "frikky/shuffle"
 var registryName = "registry.hub.docker.com"
+var runningEnvironment = "onprem"
 
-//var syncUrl = "http://192.168.102.54:5002"
 var syncUrl = "https://shuffler.io"
+var syncSubUrl = "https://shuffler.io"
 
 //var syncUrl = "http://localhost:5002"
+//var syncSubUrl = "https://050196912a9d.ngrok.io"
 
 var dbclient *datastore.Client
 var requestCache *cache.Cache
@@ -3478,10 +3480,12 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		// OrgId: activeOrgs[0].Id,
 		workflowExecution, executionResp, err := handleExecution(item, workflow, newRequest)
 		if err == nil {
-			err = increaseStatisticsField(ctx, "total_webhooks_ran", workflowExecution.Workflow.ID, 1, workflowExecution.ExecutionOrg)
-			if err != nil {
-				log.Printf("Failed to increase total apps loaded stats: %s", err)
-			}
+			/*
+				err = increaseStatisticsField(ctx, "total_webhooks_ran", workflowExecution.Workflow.ID, 1, workflowExecution.ExecutionOrg)
+				if err != nil {
+					log.Printf("Failed to increase total apps loaded stats: %s", err)
+				}
+			*/
 
 			resp.WriteHeader(200)
 			resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
@@ -4918,145 +4922,6 @@ func handleGetSpecificStats(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(b))
 }
 
-func handleDeleteOutlookSub(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	location := strings.Split(request.URL.String(), "/")
-
-	var workflowId string
-	var triggerId string
-	if location[1] == "api" {
-		if len(location) <= 6 {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		workflowId = location[4]
-		triggerId = location[6]
-	}
-
-	if len(workflowId) == 0 || len(triggerId) == 0 {
-		log.Printf("Ids can't be zero when deleting %s", workflowId)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	ctx := context.Background()
-	workflow, err := getWorkflow(ctx, workflowId)
-	if err != nil {
-		log.Printf("Failed getting the workflow locally (delete outlook): %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	user, err := handleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("Api authentication failed in outlook deploy: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	// FIXME - have a check for org etc too..
-	if user.Id != workflow.Owner && user.Role != "admin" {
-		log.Printf("Wrong user (%s) for workflow %s when deploying outlook", user.Username, workflow.ID)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	// Check what kind of sub it is
-	err = handleOutlookSubRemoval(ctx, workflowId, triggerId)
-	if err != nil {
-		log.Printf("Failed sub removal: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(`{"success": true}`))
-}
-
-func removeOutlookSubscription(outlookClient *http.Client, subscriptionId string) error {
-	// DELETE https://graph.microsoft.com/v1.0/subscriptions/{id}
-	fullUrl := fmt.Sprintf("https://graph.microsoft.com/v1.0/subscriptions/%s", subscriptionId)
-	req, err := http.NewRequest(
-		"DELETE",
-		fullUrl,
-		nil,
-	)
-	req.Header.Add("Content-Type", "application/json")
-	res, err := outlookClient.Do(req)
-	if err != nil {
-		log.Printf("Client: %s", err)
-		return err
-	}
-
-	if res.StatusCode != 200 && res.StatusCode != 201 && res.StatusCode != 204 {
-		return errors.New(fmt.Sprintf("Bad status code when deleting subscription: %d", res.StatusCode))
-	}
-
-	body, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		log.Printf("Body: %s", err)
-		return err
-	}
-
-	_ = body
-
-	return nil
-}
-
-// Remove AUTH
-// Remove function
-// Remove subscription
-func handleOutlookSubRemoval(ctx context.Context, workflowId, triggerId string) error {
-	// 1. Get the auth for trigger
-	// 2. Stop the subscription
-	// 3. Remove the function
-	// 4. Remove the database entry for auth
-	trigger, err := getTriggerAuth(ctx, triggerId)
-	if err != nil {
-		log.Printf("Trigger auth %s doesn't exist - outlook sub removal.", triggerId)
-		return err
-	}
-
-	url := fmt.Sprintf("https://shuffler.io")
-	outlookClient, _, err := getOutlookClient(ctx, "", trigger.OauthToken, url)
-	if err != nil {
-		log.Printf("Oauth client failure - triggerauth sub removal: %s", err)
-		return err
-	}
-
-	notificationURL := fmt.Sprintf("https://%s-%s.cloudfunctions.net/outlooktrigger_%s", defaultLocation, gceProject, trigger.Id)
-	curSubscriptions, err := getOutlookSubscriptions(outlookClient)
-	if err == nil {
-		for _, sub := range curSubscriptions.Value {
-			if sub.NotificationURL == notificationURL {
-				log.Printf("Removing existing subscription %s", sub.Id)
-				removeOutlookSubscription(outlookClient, sub.Id)
-			}
-		}
-	} else {
-		log.Printf("Failed to get subscriptions - need to overwrite")
-	}
-
-	// FIXME - not removing the function, as the trigger still exists
-	//err = removeOutlookTriggerFunction(triggerId)
-	//if err != nil {
-	//	return err
-	//}
-
-	return nil
-}
-
 func getOpenapi(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -5971,8 +5836,58 @@ func handleCloudExecutionOnprem(workflowId, startNode, executionSource, executio
 func handleCloudJob(job CloudSyncJob) error {
 	// May need authentication in all of these..?
 
-	log.Printf("Handle job with type %s and action %s", job.Type, job.Action)
-	if job.Type == "webhook" {
+	log.Printf("[INFO] Handle job with type %s and action %s", job.Type, job.Action)
+	if job.Type == "outlook" {
+		if job.Action == "execute" {
+			// FIXME: Get the email
+			ctx := context.Background()
+			maildata := MailData{}
+			err := json.Unmarshal([]byte(job.ThirdItem), &maildata)
+			if err != nil {
+				log.Printf("Maildata unmarshal error: %s", err)
+				return err
+			}
+
+			hookId := job.Id
+			hook, err := getTriggerAuth(ctx, hookId)
+			if err != nil {
+				log.Printf("[INFO] Failed getting trigger %s (callback cloud): %s", hookId, err)
+				return err
+			}
+
+			redirectDomain := "localhost:5001"
+			redirectUrl := fmt.Sprintf("http://%s/api/v1/triggers/outlook/register", redirectDomain)
+			outlookClient, _, err := getOutlookClient(ctx, "", hook.OauthToken, redirectUrl)
+			if err != nil {
+				log.Printf("Oauth client failure - triggerauth: %s", err)
+				return err
+			}
+
+			emails, err := getOutlookEmail(outlookClient, maildata)
+			log.Printf("EMAILS: %d", len(emails))
+			log.Printf("INSIDE GET OUTLOOK EMAIL!: %#v, %s", emails, err)
+
+			//type FullEmail struct {
+			email := FullEmail{}
+			if len(emails) == 1 {
+				email = emails[0]
+			}
+
+			emailBytes, err := json.Marshal(email)
+			if err != nil {
+				log.Printf("[INFO] Failed email marshaling: %s", err)
+				return err
+			}
+
+			log.Printf("Should handle webhook for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
+			err = handleCloudExecutionOnprem(job.PrimaryItemId, job.SecondaryItem, "outlook", string(emailBytes))
+			if err != nil {
+				log.Printf("Failed executing workflow from cloud outlook hook: %s", err)
+			} else {
+				log.Printf("Successfully executed workflow from cloud outlook hook!")
+			}
+		}
+	} else if job.Type == "webhook" {
 		if job.Action == "execute" {
 			log.Printf("Should handle webhook for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
 			err := handleCloudExecutionOnprem(job.PrimaryItemId, job.SecondaryItem, "webhook", job.ThirdItem)
@@ -6138,7 +6053,7 @@ func remoteOrgJobController(org Org, body []byte) error {
 	}
 
 	if len(responseData.Jobs) > 0 {
-		log.Printf("Remote JOB ret: %s", string(body))
+		log.Printf("[INFO] Remote JOB ret: %s", string(body))
 		log.Printf("Got job with reason %s and %d job(s)", responseData.Reason, len(responseData.Jobs))
 	}
 
@@ -7887,6 +7802,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/triggers/outlook/register", handleNewOutlookRegister).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/triggers/outlook/getFolders", handleGetOutlookFolders).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/triggers/outlook/{key}", handleGetSpecificTrigger).Methods("GET", "OPTIONS")
+	//r.HandleFunc("/api/v1/triggers/outlook/{key}/callback", handleOutlookCallback).Methods("POST", "OPTIONS")
 	//r.HandleFunc("/api/v1/stats/{key}", handleGetSpecificStats).Methods("GET", "OPTIONS")
 
 	http.Handle("/", r)

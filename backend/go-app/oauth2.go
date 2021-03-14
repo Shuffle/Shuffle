@@ -9,12 +9,84 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
 	"cloud.google.com/go/datastore"
 	"golang.org/x/oauth2"
 )
+
+type FullEmail struct {
+	OdataContext               string        `json:"@odata.context"`
+	OdataEtag                  string        `json:"@odata.etag"`
+	ID                         string        `json:"id"`
+	Createddatetime            time.Time     `json:"createdDateTime"`
+	Lastmodifieddatetime       time.Time     `json:"lastModifiedDateTime"`
+	Changekey                  string        `json:"changeKey"`
+	Categories                 []interface{} `json:"categories"`
+	Receiveddatetime           time.Time     `json:"receivedDateTime"`
+	Sentdatetime               time.Time     `json:"sentDateTime"`
+	Hasattachments             bool          `json:"hasAttachments"`
+	Internetmessageid          string        `json:"internetMessageId"`
+	Subject                    string        `json:"subject"`
+	Bodypreview                string        `json:"bodyPreview"`
+	Importance                 string        `json:"importance"`
+	Parentfolderid             string        `json:"parentFolderId"`
+	Conversationid             string        `json:"conversationId"`
+	Conversationindex          string        `json:"conversationIndex"`
+	Isdeliveryreceiptrequested interface{}   `json:"isDeliveryReceiptRequested"`
+	Isreadreceiptrequested     bool          `json:"isReadReceiptRequested"`
+	Isread                     bool          `json:"isRead"`
+	Isdraft                    bool          `json:"isDraft"`
+	Weblink                    string        `json:"webLink"`
+	Inferenceclassification    string        `json:"inferenceClassification"`
+	Body                       struct {
+		Contenttype string `json:"contentType"`
+		Content     string `json:"content"`
+	} `json:"body"`
+	Sender struct {
+		Emailaddress struct {
+			Name    string `json:"name"`
+			Address string `json:"address"`
+		} `json:"emailAddress"`
+	} `json:"sender"`
+	From struct {
+		Emailaddress struct {
+			Name    string `json:"name"`
+			Address string `json:"address"`
+		} `json:"emailAddress"`
+	} `json:"from"`
+	Torecipients []struct {
+		Emailaddress struct {
+			Name    string `json:"name"`
+			Address string `json:"address"`
+		} `json:"emailAddress"`
+	} `json:"toRecipients"`
+	Ccrecipients  []interface{} `json:"ccRecipients"`
+	Bccrecipients []interface{} `json:"bccRecipients"`
+	Replyto       []interface{} `json:"replyTo"`
+	Flag          struct {
+		Flagstatus string `json:"flagStatus"`
+	} `json:"flag"`
+}
+
+type MailData struct {
+	Value []struct {
+		Subscriptionid                 string `json:"subscriptionId"`
+		Subscriptionexpirationdatetime string `json:"subscriptionExpirationDateTime"`
+		Changetype                     string `json:"changeType"`
+		Resource                       string `json:"resource"`
+		Resourcedata                   struct {
+			OdataType string `json:"@odata.type"`
+			OdataID   string `json:"@odata.id"`
+			OdataEtag string `json:"@odata.etag"`
+			ID        string `json:"id"`
+		} `json:"resourceData"`
+		Clientstate string `json:"clientState"`
+		Tenantid    string `json:"tenantId"`
+	} `json:"value"`
+}
 
 type OutlookProfile struct {
 	OdataContext      string      `json:"@odata.context"`
@@ -44,6 +116,50 @@ type OutlookFolders struct {
 	OdataContext  string          `json:"@odata.context"`
 	OdataNextLink string          `json:"@odata.nextLink"`
 	Value         []OutlookFolder `json:"value"`
+}
+
+func getOutlookEmail(client *http.Client, maildata MailData) ([]FullEmail, error) {
+	//requestUrl := fmt.Sprintf("https://graph.microsoft.com/v1.0/users/ec03b4f2-fccf-4c35-b0eb-be85a0f5dd43/mailFolders")
+
+	emails := []FullEmail{}
+	for _, email := range maildata.Value {
+		//messageId := email.Resourcedata.ID
+		//requestUrl := fmt.Sprintf("https://graph.microsoft.com/v1.0/me/%s", messageId)
+		requestUrl := fmt.Sprintf("https://graph.microsoft.com/v1.0/%s", email.Resource)
+		log.Printf("URL: %#v", requestUrl)
+
+		ret, err := client.Get(requestUrl)
+		if err != nil {
+			log.Printf("[INFO] OutlookErr: %s", err)
+			return []FullEmail{}, err
+		}
+
+		body, err := ioutil.ReadAll(ret.Body)
+		if err != nil {
+			log.Printf("[WARNING] Failed body decoding from outlook email")
+			return []FullEmail{}, err
+		}
+
+		//type FullEmail struct {
+		log.Printf("[INFO] EMAIL Body: %s", string(body))
+		log.Printf("[INFO] Status email: %d", ret.StatusCode)
+		if ret.StatusCode != 200 {
+			return []FullEmail{}, err
+		}
+
+		//log.Printf("Body: %s", string(body))
+
+		parsedmail := FullEmail{}
+		err = json.Unmarshal(body, &parsedmail)
+		if err != nil {
+			log.Printf("[INFO] Email unmarshal error: %s", err)
+			return []FullEmail{}, err
+		}
+
+		emails = append(emails, parsedmail)
+	}
+
+	return emails, nil
 }
 
 func getOutlookFolders(client *http.Client) (OutlookFolders, error) {
@@ -127,7 +243,7 @@ func handleNewOutlookRegister(resp http.ResponseWriter, request *http.Request) {
 	url := fmt.Sprintf("http://%s%s", request.Host, request.URL.EscapedPath())
 	log.Println(url)
 	ctx := context.Background()
-	client, accessToken, err := getOutlookClient(ctx, code, OauthToken{}, url)
+	_, accessToken, err := getOutlookClient(ctx, code, OauthToken{}, url)
 	if err != nil {
 		log.Printf("Oauth client failure - outlook register: %s", err)
 		resp.WriteHeader(401)
@@ -135,12 +251,15 @@ func handleNewOutlookRegister(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// This should be possible, and will also give the actual username
-	profile, err := getOutlookProfile(client)
-	if err != nil {
-		log.Printf("Outlook profile failure: %s", err)
-		resp.WriteHeader(401)
-		return
-	}
+
+	/*
+		profile, err := getOutlookProfile(client)
+		if err != nil {
+			log.Printf("Outlook profile failure: %s", err)
+			resp.WriteHeader(401)
+			return
+		}
+	*/
 
 	// This is a state workaround, which should really be for CSRF checks lol
 	state := request.URL.Query().Get("state")
@@ -168,7 +287,7 @@ func handleNewOutlookRegister(resp http.ResponseWriter, request *http.Request) {
 			continue
 		}
 
-		log.Printf("ITEM: %#v", itemsplit)
+		//log.Printf("ITEM: %#v", itemsplit)
 
 		// Do something here
 		if itemsplit[0] == "workflow_id" {
@@ -177,6 +296,8 @@ func handleNewOutlookRegister(resp http.ResponseWriter, request *http.Request) {
 			trigger.Id = itemsplit[1]
 		} else if itemsplit[0] == "type" {
 			trigger.Type = itemsplit[1]
+		} else if itemsplit[0] == "start" {
+			trigger.Start = itemsplit[1]
 		} else if itemsplit[0] == "username" {
 			trigger.Username = itemsplit[1]
 			trigger.Owner = itemsplit[1]
@@ -185,7 +306,12 @@ func handleNewOutlookRegister(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// THis is an override based on the user in oauth return
-	trigger.Username = profile.Mail
+	/*
+		if len(profile.Mail) > 0 {
+			trigger.Username = profile.Mail
+		}
+	*/
+
 	trigger.Code = code
 	trigger.OauthToken = OauthToken{
 		AccessToken:  accessToken.AccessToken,
@@ -199,6 +325,7 @@ func handleNewOutlookRegister(resp http.ResponseWriter, request *http.Request) {
 	log.Println(trigger.Id)
 	log.Println(senderUser)
 	log.Println(trigger.Type)
+	log.Printf("STARTNODE: %s", trigger.Start)
 	log.Printf("[INFO] Attempting to set up outlook trigger for %s", senderUser)
 	if trigger.WorkflowId == "" || trigger.Id == "" || senderUser == "" || trigger.Type == "" {
 		log.Printf("[INFO] All oauth items need to contain data to register a new state")
@@ -264,6 +391,7 @@ type OauthToken struct {
 	RefreshToken string    `json:"RefreshToken" datastore:"RefreshToken,noindex"`
 	Expiry       time.Time `json:"Expiry" datastore:"Expiry,noindex"`
 }
+
 type TriggerAuth struct {
 	Id             string `json:"id" datastore:"id"`
 	SubscriptionId string `json:"subscriptionId" datastore:"subscriptionId"`
@@ -273,6 +401,7 @@ type TriggerAuth struct {
 	Owner      string     `json:"owner" datastore:"owner"`
 	Type       string     `json:"type" datastore:"type"`
 	Code       string     `json:"code,omitempty" datastore:"code,noindex"`
+	Start      string     `json:"start" datastore:"start"`
 	OauthToken OauthToken `json:"oauth_token,omitempty" datastore:"oauth_token"`
 }
 
@@ -520,7 +649,7 @@ func createOutlookSub(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Println("Handle outlook subscription for trigger")
+	log.Println("[INFO] Handle outlook subscription for trigger")
 
 	// Should already be authorized at this point, as the workflow is shared
 	body, err := ioutil.ReadAll(request.Body)
@@ -531,8 +660,6 @@ func createOutlookSub(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Println(string(body))
-
 	// Based on the input data from frontend
 	type CurTrigger struct {
 		Name    string   `json:"name"`
@@ -540,6 +667,7 @@ func createOutlookSub(resp http.ResponseWriter, request *http.Request) {
 		ID      string   `json:"id"`
 	}
 
+	//log.Println(string(body))
 	var curTrigger CurTrigger
 	err = json.Unmarshal(body, &curTrigger)
 	if err != nil {
@@ -566,44 +694,74 @@ func createOutlookSub(resp http.ResponseWriter, request *http.Request) {
 	// First - lets regenerate an oauth token for outlook.office.com from the original items
 	trigger, err := getTriggerAuth(ctx, curTrigger.ID)
 	if err != nil {
-		log.Printf("Trigger %s doesn't exist - outlook sub.", curTrigger.ID)
+		log.Printf("[INFO] Trigger %s doesn't exist - outlook sub.", curTrigger.ID)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": ""}`))
 		return
 	}
 
 	// url doesn't really matter here
-	url := fmt.Sprintf("https://shuffler.io")
+	//url := fmt.Sprintf("https://shuffler.io")
+	redirectDomain := "localhost:5001"
+	url := fmt.Sprintf("http://%s/api/v1/triggers/outlook/register", redirectDomain)
 	outlookClient, _, err := getOutlookClient(ctx, "", trigger.OauthToken, url)
 	if err != nil {
 		log.Printf("Oauth client failure - triggerauth: %s", err)
+		resp.Write([]byte(`{"success": false, "reason": ""}`))
 		resp.WriteHeader(401)
 		return
 	}
 
 	// Location +
-	notificationURL := fmt.Sprintf("https://%s-%s.cloudfunctions.net/outlooktrigger_%s", defaultLocation, gceProject, curTrigger.ID)
-	log.Println(notificationURL)
 
 	// This is here simply to let the function start
 	// Usually takes 10 attempts minimum :O
 	// 10 * 5 = 50 seconds. That's waaay too much :(
-	//notificationURL = "https://europe-west1-shuffler.cloudfunctions.net/outlooktrigger_e2ce43b0-997e-4980-9617-6eadbc68cf88"
-	//notificationURL = "https://de4fc12b.ngrok.io"
 
+	if runningEnvironment != "cloud" {
+		org, err := getOrg(ctx, user.ActiveOrg.Id)
+		if err != nil {
+			log.Printf("Failed finding org %s: %s", org.Id, err)
+			return
+		}
+		log.Printf("[INFO] Starting cloud configuration TO STOP trigger %s in org %s", trigger.Id, org.Id)
+
+		action := CloudSyncJob{
+			Type:          "outlook",
+			Action:        "start",
+			OrgId:         org.Id,
+			PrimaryItemId: trigger.Id,
+			SecondaryItem: trigger.Start,
+			ThirdItem:     trigger.WorkflowId,
+		}
+
+		err = executeCloudAction(action, org.SyncConfig.Apikey)
+		if err != nil {
+			log.Printf("[INFO] Failed cloud action START outlook execution: %s", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+			return
+		} else {
+			log.Printf("[INFO] Successfully set up cloud action trigger")
+		}
+	} else {
+		log.Printf("Should configure a running environment for CLOUD")
+	}
+
+	notificationURL := fmt.Sprintf("%s/api/v1/hooks/webhook_%s", syncSubUrl, trigger.Id)
 	curSubscriptions, err := getOutlookSubscriptions(outlookClient)
 	if err == nil {
 		for _, sub := range curSubscriptions.Value {
 			if sub.NotificationURL == notificationURL {
-				log.Printf("Removing existing subscription %s", sub.Id)
+				log.Printf("[INFO] Removing existing subscription %s", sub.Id)
 				removeOutlookSubscription(outlookClient, sub.Id)
 			}
 		}
 	} else {
-		log.Printf("Failed to get subscriptions - need to overwrite")
+		log.Printf("[INFO] Failed to get subscriptions - need to overwrite")
 	}
 
-	maxFails := 15
+	maxFails := 5
 	failCnt := 0
 	log.Println(curTrigger.Folders)
 	for {
@@ -631,7 +789,7 @@ func createOutlookSub(resp http.ResponseWriter, request *http.Request) {
 		break
 	}
 
-	log.Printf("Successfully handled outlook subscription for trigger %s in workflow %s", curTrigger.ID, workflow.ID)
+	log.Printf("[INFO] Successfully handled outlook subscription for trigger %s in workflow %s", curTrigger.ID, workflow.ID)
 
 	//log.Printf("%#v", user)
 	resp.WriteHeader(200)
@@ -686,19 +844,19 @@ func makeOutlookSubscription(client *http.Client, folderIds []string, notificati
 	fullUrl := "https://graph.microsoft.com/v1.0/subscriptions"
 
 	// FIXME - this expires rofl
-	t := time.Now().Local().Add(time.Minute * time.Duration(4300))
+	t := time.Now().Local().Add(time.Minute * time.Duration(4200))
 	timeFormat := fmt.Sprintf("%d-%02d-%02dT%02d:%02d:%02d.0000000Z", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second())
-	log.Println(timeFormat)
 
 	resource := fmt.Sprintf("me/mailfolders('%s')/messages", strings.Join(folderIds, "','"))
-	log.Println(resource)
+	log.Printf("[INFO] Subscription resource to get(s): %s", resource)
 	sub := Subscription{
 		ChangeType:         "created",
+		ClientState:        "Shuffle subscription",
 		NotificationURL:    notificationURL,
 		ExpirationDateTime: timeFormat,
-		ClientState:        "This is a test",
 		Resource:           resource,
 	}
+	//ClientState:        "This is a test",
 
 	data, err := json.Marshal(sub)
 	if err != nil {
@@ -719,7 +877,7 @@ func makeOutlookSubscription(client *http.Client, folderIds []string, notificati
 		return "", err
 	}
 
-	log.Printf("Status: %d", res.StatusCode)
+	log.Printf("[INFO] Subscription Status: %d", res.StatusCode)
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		log.Printf("Body: %s", err)
@@ -738,4 +896,311 @@ func makeOutlookSubscription(client *http.Client, folderIds []string, notificati
 	}
 
 	return newSub.Id, nil
+}
+
+// Basically the same as a webhook
+func handleOutlookCallback(resp http.ResponseWriter, request *http.Request) {
+	path := strings.Split(request.URL.String(), "/")
+	if len(path) < 4 {
+		log.Printf("[INFO] Bad outlook callback URL: %s", path)
+		resp.WriteHeader(403)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// 1. Get config with hookId
+	//fmt.Sprintf("%s/api/v1/hooks/%s", callbackUrl, hookId)
+	ctx := context.Background()
+	location := strings.Split(request.URL.String(), "/")
+
+	var hookId string
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		hookId = location[5]
+	}
+
+	// ID: webhook_<UID>
+	if len(hookId) != 36 {
+		log.Printf("[WARNING] Bad hook ID: %s (%d)", hookId, len(hookId))
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "message": "ID not valid"}`))
+		return
+	}
+
+	//func getTriggerAuth(ctx context.Context, id string) (*TriggerAuth, error) {
+	hook, err := getTriggerAuth(ctx, hookId)
+	if err != nil {
+		log.Printf("[INFO] Failed getting trigger %s (callback): %s", hookId, err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		log.Printf("[INFO] Body data error: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	//log.Printf("[INFO] BODY: %s. Len: %d", string(body), len(body))
+	//key, ok := request.URL.Query()["validationToken"]
+	//if ok {
+	//}
+	token := request.URL.Query().Get("validationToken")
+	if len(body) == 0 && len(token) > 0 {
+		log.Printf("[INFO] Should handle trigger token %s", token)
+		resp.WriteHeader(200)
+		resp.Write([]byte(string(token)))
+		return
+	}
+
+	// 1. Take the body and parse data -> Get the email itself
+
+	maildata := MailData{}
+	err = json.Unmarshal(body, &maildata)
+	if err != nil {
+		log.Printf("Maildata unmarshal error: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	redirectDomain := "localhost:5001"
+	redirectUrl := fmt.Sprintf("http://%s/api/v1/triggers/outlook/register", redirectDomain)
+	outlookClient, _, err := getOutlookClient(ctx, "", hook.OauthToken, redirectUrl)
+	if err != nil {
+		log.Printf("Oauth client failure - triggerauth: %s", err)
+		resp.WriteHeader(401)
+		return
+	}
+
+	emails, err := getOutlookEmail(outlookClient, maildata)
+	log.Printf("EMAILS: %d", len(emails))
+	log.Printf("INSIDE GET OUTLOOK EMAIL!: %#v, %s", emails, err)
+
+	//type FullEmail struct {
+	email := FullEmail{}
+	if len(emails) == 1 {
+		email = emails[0]
+	}
+
+	emailBytes, err := json.Marshal(email)
+	if err != nil {
+		log.Printf("[INFO] Failed email marshaling: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	type ExecutionStruct struct {
+		Start             string `json:"start"`
+		ExecutionSource   string `json:"execution_source"`
+		ExecutionArgument string `json:"execution_argument"`
+	}
+
+	newBody := ExecutionStruct{
+		Start:             hook.Start,
+		ExecutionSource:   "outlook",
+		ExecutionArgument: string(emailBytes),
+	}
+
+	b, err := json.Marshal(newBody)
+	if err != nil {
+		log.Printf("[INFO] Failed newBody marshaling: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	baseUrl := &url.URL{}
+	newRequest := &http.Request{
+		URL:    baseUrl,
+		Method: "POST",
+		Body:   ioutil.NopCloser(bytes.NewReader(b)),
+	}
+
+	workflow := Workflow{
+		ID: "",
+	}
+
+	// OrgId: activeOrgs[0].Id,
+	workflowExecution, executionResp, err := handleExecution(hook.WorkflowId, workflow, newRequest)
+	if err == nil {
+		resp.WriteHeader(200)
+		resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
+		return
+	}
+
+	resp.WriteHeader(500)
+	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, executionResp)))
+}
+
+func removeOutlookSubscription(outlookClient *http.Client, subscriptionId string) error {
+	// DELETE https://graph.microsoft.com/v1.0/subscriptions/{id}
+	fullUrl := fmt.Sprintf("https://graph.microsoft.com/v1.0/subscriptions/%s", subscriptionId)
+	req, err := http.NewRequest(
+		"DELETE",
+		fullUrl,
+		nil,
+	)
+	req.Header.Add("Content-Type", "application/json")
+	res, err := outlookClient.Do(req)
+	if err != nil {
+		log.Printf("Client: %s", err)
+		return err
+	}
+
+	if res.StatusCode != 200 && res.StatusCode != 201 && res.StatusCode != 204 {
+		return errors.New(fmt.Sprintf("Bad status code when deleting subscription: %d", res.StatusCode))
+	}
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Printf("Body: %s", err)
+		return err
+	}
+
+	_ = body
+
+	return nil
+}
+
+// Remove AUTH
+// Remove function
+// Remove subscription
+func handleOutlookSubRemoval(ctx context.Context, user User, workflowId, triggerId string) error {
+	// 1. Get the auth for trigger
+	// 2. Stop the subscription
+	// 3. Remove the function
+	// 4. Remove the database entry for auth
+	trigger, err := getTriggerAuth(ctx, triggerId)
+	if err != nil {
+		log.Printf("Trigger auth %s doesn't exist - outlook sub removal.", triggerId)
+		return err
+	}
+
+	if runningEnvironment != "cloud" {
+		log.Printf("[INFO] SHOULD STOP OUTLOOK SUB ONPREM SYNC WITH CLOUD")
+		org, err := getOrg(ctx, user.ActiveOrg.Id)
+		if err != nil {
+			log.Printf("[INFO] Failed finding org %s during outlook removal: %s", org.Id, err)
+			return err
+		}
+
+		log.Printf("[INFO] Stopping cloud configuration for trigger %s in org %s", trigger.Id, org.Id)
+		action := CloudSyncJob{
+			Type:          "outlook",
+			Action:        "stop",
+			OrgId:         org.Id,
+			PrimaryItemId: trigger.Id,
+			SecondaryItem: trigger.Start,
+			ThirdItem:     trigger.WorkflowId,
+		}
+
+		err = executeCloudAction(action, org.SyncConfig.Apikey)
+		if err != nil {
+			log.Printf("[INFO] Failed cloud action STOP outlook execution: %s", err)
+			return err
+		} else {
+			log.Printf("[INFO] Successfully set STOPPED outlook execution trigger")
+		}
+	} else {
+		log.Printf("SHOULD STOP OUTLOOK SUB IN CLOUD")
+	}
+
+	// Actually delete the thing
+	redirectDomain := "localhost:5001"
+	url := fmt.Sprintf("http://%s/api/v1/triggers/outlook/register", redirectDomain)
+	outlookClient, _, err := getOutlookClient(ctx, "", trigger.OauthToken, url)
+	if err != nil {
+		log.Printf("[WARNING] Oauth client failure - outlook folders: %s", err)
+		return err
+	}
+	notificationURL := fmt.Sprintf("%s/api/v1/hooks/webhook_%s", syncSubUrl, trigger.Id)
+	curSubscriptions, err := getOutlookSubscriptions(outlookClient)
+	if err == nil {
+		for _, sub := range curSubscriptions.Value {
+			if sub.NotificationURL == notificationURL {
+				log.Printf("[INFO] Removing subscription %s from o365", sub.Id)
+				removeOutlookSubscription(outlookClient, sub.Id)
+			}
+		}
+	} else {
+		log.Printf("Failed to get subscriptions - need to overwrite")
+	}
+
+	return nil
+}
+
+func handleDeleteOutlookSub(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	location := strings.Split(request.URL.String(), "/")
+
+	var workflowId string
+	var triggerId string
+	if location[1] == "api" {
+		if len(location) <= 6 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		workflowId = location[4]
+		triggerId = location[6]
+	}
+
+	if len(workflowId) == 0 || len(triggerId) == 0 {
+		log.Printf("Ids can't be zero when deleting %s", workflowId)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	ctx := context.Background()
+	workflow, err := getWorkflow(ctx, workflowId)
+	if err != nil {
+		log.Printf("Failed getting the workflow locally (delete outlook): %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	user, err := handleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("Api authentication failed in outlook deploy: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// FIXME - have a check for org etc too..
+	if user.Id != workflow.Owner && user.Role != "admin" {
+		log.Printf("Wrong user (%s) for workflow %s when deploying outlook", user.Username, workflow.ID)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// Check what kind of sub it is
+	err = handleOutlookSubRemoval(ctx, user, workflowId, triggerId)
+	if err != nil {
+		log.Printf("Failed sub removal: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(`{"success": true}`))
 }
