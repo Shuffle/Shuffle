@@ -126,7 +126,7 @@ func getOutlookEmail(client *http.Client, maildata MailData) ([]FullEmail, error
 		//messageId := email.Resourcedata.ID
 		//requestUrl := fmt.Sprintf("https://graph.microsoft.com/v1.0/me/%s", messageId)
 		requestUrl := fmt.Sprintf("https://graph.microsoft.com/v1.0/%s", email.Resource)
-		log.Printf("URL: %#v", requestUrl)
+		//log.Printf("Outlook email URL: %#v", requestUrl)
 
 		ret, err := client.Get(requestUrl)
 		if err != nil {
@@ -141,8 +141,8 @@ func getOutlookEmail(client *http.Client, maildata MailData) ([]FullEmail, error
 		}
 
 		//type FullEmail struct {
-		log.Printf("[INFO] EMAIL Body: %s", string(body))
-		log.Printf("[INFO] Status email: %d", ret.StatusCode)
+		//log.Printf("[INFO] EMAIL Body: %s", string(body))
+		//log.Printf("[INFO] Status email: %d", ret.StatusCode)
 		if ret.StatusCode != 200 {
 			return []FullEmail{}, err
 		}
@@ -724,7 +724,7 @@ func createOutlookSub(resp http.ResponseWriter, request *http.Request) {
 			log.Printf("Failed finding org %s: %s", org.Id, err)
 			return
 		}
-		log.Printf("[INFO] Starting cloud configuration TO STOP trigger %s in org %s", trigger.Id, org.Id)
+		log.Printf("[INFO] Starting cloud configuration TO START trigger %s in org %s for workflow %s", trigger.Id, org.Id, trigger.WorkflowId)
 
 		action := CloudSyncJob{
 			Type:          "outlook",
@@ -732,7 +732,7 @@ func createOutlookSub(resp http.ResponseWriter, request *http.Request) {
 			OrgId:         org.Id,
 			PrimaryItemId: trigger.Id,
 			SecondaryItem: trigger.Start,
-			ThirdItem:     trigger.WorkflowId,
+			ThirdItem:     workflowId,
 		}
 
 		err = executeCloudAction(action, org.SyncConfig.Apikey)
@@ -982,8 +982,8 @@ func handleOutlookCallback(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	emails, err := getOutlookEmail(outlookClient, maildata)
-	log.Printf("EMAILS: %d", len(emails))
-	log.Printf("INSIDE GET OUTLOOK EMAIL!: %#v, %s", emails, err)
+	log.Printf("[INFO] EMAILS: %d. If this is more than 1, please contact frikky@shuffler.io", len(emails))
+	//log.Printf("INSIDE GET OUTLOOK EMAIL!: %#v, %s", emails, err)
 
 	//type FullEmail struct {
 	email := FullEmail{}
@@ -1087,14 +1087,14 @@ func handleOutlookSubRemoval(ctx context.Context, user User, workflowId, trigger
 	}
 
 	if runningEnvironment != "cloud" {
-		log.Printf("[INFO] SHOULD STOP OUTLOOK SUB ONPREM SYNC WITH CLOUD")
+		log.Printf("[INFO] SHOULD STOP OUTLOOK SUB ONPREM SYNC WITH CLOUD for workflow ID %s", workflowId)
 		org, err := getOrg(ctx, user.ActiveOrg.Id)
 		if err != nil {
 			log.Printf("[INFO] Failed finding org %s during outlook removal: %s", org.Id, err)
 			return err
 		}
 
-		log.Printf("[INFO] Stopping cloud configuration for trigger %s in org %s", trigger.Id, org.Id)
+		log.Printf("[INFO] Stopping cloud configuration for trigger %s in org %s for workflow %s", trigger.Id, org.Id, trigger.WorkflowId)
 		action := CloudSyncJob{
 			Type:          "outlook",
 			Action:        "stop",
@@ -1128,7 +1128,7 @@ func handleOutlookSubRemoval(ctx context.Context, user User, workflowId, trigger
 	if err == nil {
 		for _, sub := range curSubscriptions.Value {
 			if sub.NotificationURL == notificationURL {
-				log.Printf("[INFO] Removing subscription %s from o365", sub.Id)
+				log.Printf("[INFO] Removing subscription %s from o365 for workflow %s", sub.Id, workflowId)
 				removeOutlookSubscription(outlookClient, sub.Id)
 			}
 		}

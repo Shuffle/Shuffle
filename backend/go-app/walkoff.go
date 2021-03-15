@@ -424,7 +424,7 @@ type Workflow struct {
 		Value       string `json:"value" datastore:"value,noindex"`
 	} `json:"execution_variables,omitempty" datastore:"execution_variables"`
 	ExecutionEnvironment string     `json:"execution_environment" datastore:"execution_environment"`
-	PreviouslySaved      bool       `json:"first_save" datastore:"first_save"`
+	PreviouslySaved      bool       `json:"previously_saved" datastore:"first_save"`
 	Categories           Categories `json:"categories" datastore:"categories"`
 	ExampleArgument      string     `json:"example_argument" datastore:"example_argument,noindex"`
 }
@@ -1810,7 +1810,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 			action.IsValid = true
 		}
 
-		action.LargeImage = ""
+		//action.LargeImage = ""
 		newActions = append(newActions, action)
 	}
 
@@ -1962,7 +1962,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("Saved new workflow %s with name %s", workflow.ID, workflow.Name)
+	log.Printf("[INFO] Saved new workflow %s with name %s", workflow.ID, workflow.Name)
 	//memcacheName := fmt.Sprintf("%s_workflows", user.Username)
 	//memcache.Delete(ctx, memcacheName)
 
@@ -2047,7 +2047,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// FIXME - maybe delete workflow executions
-	log.Printf("Should delete workflow %s", fileId)
+	log.Printf("[INFO] Should have deleted workflow %s", fileId)
 	err = DeleteKey(ctx, "workflow", fileId)
 	if err != nil {
 		log.Printf("Failed deleting key %s", fileId)
@@ -2244,6 +2244,8 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	//log.Printf("SAVED: %#v", workflow.PreviouslySaved)
+
 	// FIXME - auth and check if they should have access
 	if fileId != workflow.ID {
 		log.Printf("Path and request ID are not matching: %s:%s.", fileId, workflow.ID)
@@ -2258,7 +2260,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if len(workflow.ExecutingOrg.Id) == 0 {
-		log.Printf("Setting executing org for workflow")
+		log.Printf("[INFO] Setting executing org for workflow")
 		user.ActiveOrg.Users = []User{}
 		workflow.ExecutingOrg = user.ActiveOrg
 	}
@@ -2281,18 +2283,23 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		if action.Environment == "" {
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "An environment for %s is required"}`, action.Label)))
-			return
+			if workflow.PreviouslySaved {
+				resp.WriteHeader(401)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "An environment for %s is required"}`, action.Label)))
+				return
+			}
 			action.IsValid = true
 		}
 
 		// FIXME: Have a good way of tracking errors. ID's or similar.
 		if !action.IsValid && len(action.Errors) > 0 {
 			log.Printf("Node %s is invalid and needs to be remade. Errors: %s", action.Label, strings.Join(action.Errors, "\n"))
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Node %s is invalid and needs to be remade."}`, action.Label)))
-			return
+
+			if workflow.PreviouslySaved {
+				resp.WriteHeader(401)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Node %s is invalid and needs to be remade."}`, action.Label)))
+				return
+			}
 			action.IsValid = true
 			action.Errors = []string{}
 		}
@@ -2301,7 +2308,418 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		newActions = append(newActions, action)
 	}
 
-	log.Printf("PRE SAVECHECK")
+	newTriggers := []Trigger{}
+	for _, trigger := range workflow.Triggers {
+		log.Printf("[INFO] Trigger %s: %s", trigger.TriggerType, trigger.Status)
+
+		// Check if it's actually running
+		// FIXME: Do this for other triggers too
+		if trigger.TriggerType == "SCHEDULE" && trigger.Status != "uninitialized" {
+			schedule, err := getSchedule(ctx, trigger.ID)
+			if err != nil {
+				trigger.Status = "stopped"
+			} else if schedule.Id == "" {
+				trigger.Status = "stopped"
+			}
+		} else if trigger.TriggerType == "SUBFLOW" {
+			for index, param := range trigger.Parameters {
+				if len(param.Value) == 0 && param.Name != "argument" {
+					//log.Printf("Param: %#v", param)
+					if param.Name == "user_apikey" {
+						apikey := ""
+						if len(user.ApiKey) > 0 {
+							apikey = user.ApiKey
+						} else {
+							user, err = generateApikey(ctx, user)
+							if err != nil {
+								workflow.IsValid = false
+								workflow.Errors = []string{"Trigger is missing a parameter: %s", param.Name}
+
+								log.Printf("No type specified for user input node")
+
+								if workflow.PreviouslySaved {
+									resp.WriteHeader(401)
+									resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Trigger %s is missing the parameter %s"}`, trigger.Label, param.Name)))
+									return
+								}
+							}
+
+							apikey = user.ApiKey
+						}
+
+						log.Printf("[INFO] Set apikey in subflow trigger for user during save")
+						trigger.Parameters[index].Value = apikey
+					} else {
+
+						workflow.IsValid = false
+						workflow.Errors = []string{"Trigger is missing a parameter: %s", param.Name}
+
+						log.Printf("No type specified for user input node")
+						if workflow.PreviouslySaved {
+							resp.WriteHeader(401)
+							resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Trigger %s is missing the parameter %s"}`, trigger.Label, param.Name)))
+							return
+						}
+					}
+				}
+			}
+		} else if trigger.TriggerType == "WEBHOOK" && trigger.Status != "uninitialized" {
+			hook, err := getHook(ctx, trigger.ID)
+			if err != nil {
+				log.Printf("Failed getting webhook")
+				trigger.Status = "stopped"
+			} else if hook.Id == "" {
+				trigger.Status = "stopped"
+			}
+		} else if trigger.TriggerType == "USERINPUT" {
+			// E.g. check email
+			sms := ""
+			email := ""
+			triggerType := ""
+			triggerInformation := ""
+			for _, item := range trigger.Parameters {
+				if item.Name == "alertinfo" {
+					triggerInformation = item.Value
+				} else if item.Name == "type" {
+					triggerType = item.Value
+				} else if item.Name == "email" {
+					email = item.Value
+				} else if item.Name == "sms" {
+					sms = item.Value
+				}
+			}
+
+			if len(triggerType) == 0 {
+				log.Printf("No type specified for user input node")
+				if workflow.PreviouslySaved {
+					resp.WriteHeader(401)
+					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "No contact option specified in user input"}`)))
+					return
+				}
+			}
+
+			// FIXME: This is not the right time to send them, BUT it's well served for testing. Save -> send email / sms
+			_ = triggerInformation
+			if strings.Contains(triggerType, "email") {
+				if email == "test@test.com" {
+					log.Printf("Email isn't specified during save.")
+					if workflow.PreviouslySaved {
+						resp.WriteHeader(401)
+						resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Email field in user input can't be empty"}`)))
+						return
+					}
+				}
+
+				log.Printf("Should send email to %s during execution.", email)
+			}
+			if strings.Contains(triggerType, "sms") {
+				if sms == "0000000" {
+					log.Printf("Email isn't specified during save.")
+					if workflow.PreviouslySaved {
+						resp.WriteHeader(401)
+						resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "SMS field in user input can't be empty"}`)))
+						return
+					}
+				}
+
+				log.Printf("Should send SMS to %s during execution.", sms)
+			}
+		}
+
+		//log.Println("TRIGGERS")
+		allNodes = append(allNodes, trigger.ID)
+		newTriggers = append(newTriggers, trigger)
+	}
+
+	workflow.Triggers = newTriggers
+
+	if len(workflow.Actions) == 0 {
+		workflow.Actions = []Action{}
+	}
+	if len(workflow.Branches) == 0 {
+		workflow.Branches = []Branch{}
+	}
+	if len(workflow.Triggers) == 0 {
+		workflow.Triggers = []Trigger{}
+	}
+	if len(workflow.Errors) == 0 {
+		workflow.Errors = []string{}
+	}
+
+	//log.Printf("PRE VARIABLES")
+	for _, variable := range workflow.WorkflowVariables {
+		if len(variable.Value) == 0 {
+			log.Printf("[WARNING] Variable %s is empty!", variable.Name)
+			workflow.Errors = append(workflow.Errors, fmt.Sprintf("Variable %s is empty!", variable.Name))
+			//resp.WriteHeader(401)
+			//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Variable %s can't be empty"}`, variable.Name)))
+			//return
+		}
+	}
+
+	if len(workflow.ExecutionVariables) > 0 {
+		log.Printf("[INFO] Found %d execution variable(s)", len(workflow.ExecutionVariables))
+	}
+
+	if len(workflow.WorkflowVariables) > 0 {
+		log.Printf("[INFO] Found %d workflow variable(s)", len(workflow.WorkflowVariables))
+	}
+
+	// FIXME - do actual checks ROFL
+	// FIXME - minor issues with e.g. hello world and self.console_logger
+	// Nodechecks
+	foundNodes := []string{}
+	for _, node := range allNodes {
+		for _, branch := range workflow.Branches {
+			//log.Println("branch")
+			//log.Println(node)
+			//log.Println(branch.DestinationID)
+			if node == branch.DestinationID || node == branch.SourceID {
+				foundNodes = append(foundNodes, node)
+				break
+			}
+		}
+	}
+
+	// FIXME - append all nodes (actions, triggers etc) to one single array here
+	//log.Printf("PRE VARIABLES")
+	if len(foundNodes) != len(allNodes) || len(workflow.Actions) <= 0 {
+		// This shit takes a few seconds lol
+		if !workflow.IsValid {
+			oldworkflow, err := getWorkflow(ctx, fileId)
+			if err != nil {
+				log.Printf("Workflow %s doesn't exist - oldworkflow.", fileId)
+				if workflow.PreviouslySaved {
+					resp.WriteHeader(401)
+					resp.Write([]byte(`{"success": false, "reason": "Item already exists."}`))
+					return
+				}
+			}
+
+			oldworkflow.IsValid = false
+			err = setWorkflow(ctx, *oldworkflow, fileId)
+			if err != nil {
+				log.Printf("Failed saving workflow to database: %s", err)
+				if workflow.PreviouslySaved {
+					resp.WriteHeader(401)
+					resp.Write([]byte(`{"success": false}`))
+					return
+				}
+			}
+		}
+
+		// FIXME - more checks here - force reload of data or something
+		//if len(allNodes) == 0 {
+		//	resp.WriteHeader(401)
+		//	resp.Write([]byte(`{"success": false, "reason": "Please insert a node"}`))
+		//	return
+		//}
+
+		// Allowed with only a start node
+		//if len(allNodes) != 1 {
+		//	resp.WriteHeader(401)
+		//	resp.Write([]byte(`{"success": false, "reason": "There are nodes with no branches"}`))
+		//	return
+		//}
+	}
+
+	// FIXME - might be a sploit to run someone elses app if getAllWorkflowApps
+	// doesn't check sharing=true
+	// Have to do it like this to add the user's apps
+	//log.Println("Apps set starting")
+	//log.Printf("EXIT ON ERROR: %#v", workflow.Configuration.ExitOnError)
+	//workflowapps, apperr := getAllWorkflowApps(ctx, 500)
+
+	// Started getting the single apps, but if it's weird, this is faster
+	// 1. Check workflow.Start
+	// 2. Check if any node has "isStartnode"
+	if len(workflow.Actions) > 0 {
+		index := -1
+		for indexFound, action := range workflow.Actions {
+			//log.Println("Apps set done")
+			if workflow.Start == action.ID {
+				index = indexFound
+			}
+		}
+
+		if index >= 0 {
+			workflow.Actions[0].IsStartNode = true
+		} else {
+			if workflow.PreviouslySaved {
+				resp.WriteHeader(401)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "You need to set a startnode."}`)))
+				return
+			}
+		}
+	}
+
+	allAuths, err := getAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
+	if userErr != nil {
+		log.Printf("Api authentication failed in get all apps: %s", userErr)
+		if workflow.PreviouslySaved {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+	}
+
+	// Check every app action and param to see whether they exist
+	//log.Printf("PRE ACTIONS 2")
+	newActions = []Action{}
+	for _, action := range workflow.Actions {
+		reservedApps := []string{
+			"0ca8887e-b4af-4e3e-887c-87e9d3bc3d3e",
+		}
+
+		//log.Printf("%s Action execution var: %s", action.Label, action.ExecutionVariable.Name)
+
+		builtin := false
+		for _, id := range reservedApps {
+			if id == action.AppID {
+				builtin = true
+				break
+			}
+		}
+
+		// Check auth
+		// 1. Find the auth in question
+		// 2. Update the node and workflow info in the auth
+		// 3. Get the values in the auth and add them to the action values
+		if len(action.AuthenticationId) > 0 {
+			authFound := false
+			for _, auth := range allAuths {
+				if auth.Id == action.AuthenticationId {
+					authFound = true
+
+					// Updates the auth item itself IF necessary
+					go updateAppAuth(auth, workflow.ID, action.ID, true)
+					break
+				}
+			}
+
+			if !authFound {
+				log.Printf("App auth %s doesn't exist. Setting error", action.AuthenticationId)
+				workflow.Errors = append(workflow.Errors, fmt.Sprintf("App authentication for %s doesn't exist!", action.AppName))
+				workflow.IsValid = false
+
+				action.Errors = append(action.Errors, "App authentication doesn't exist")
+				action.IsValid = false
+				action.AuthenticationId = ""
+				//resp.WriteHeader(401)
+				//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "App auth %s doesn't exist"}`, action.AuthenticationId)))
+				//return
+			}
+		}
+
+		if builtin {
+			newActions = append(newActions, action)
+		} else {
+			curapp := WorkflowApp{}
+			// FIXME - can this work with ONLY AppID?
+			for _, app := range workflowapps {
+				if app.ID == action.AppID {
+					curapp = app
+					break
+				}
+
+				// Has to NOT be generated
+				if app.Name == action.AppName && app.AppVersion == action.AppVersion {
+					curapp = app
+					break
+				}
+			}
+
+			// Check to see if the whole app is valid
+			if curapp.Name != action.AppName {
+				workflow.Errors = append(workflow.Errors, fmt.Sprintf("App %s doesn't exist", action.AppName))
+				action.Errors = append(action.Errors, "This app doesn't exist.")
+				action.IsValid = false
+				workflow.IsValid = false
+
+				// Append with errors
+				newActions = append(newActions, action)
+				log.Printf("App %s doesn't exist. Adding as error.", action.AppName)
+				//resp.WriteHeader(401)
+				//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "App %s doesn't exist"}`, action.AppName)))
+				//return
+			} else {
+				// Check tosee if the appaction is valid
+				curappaction := WorkflowAppAction{}
+				for _, curAction := range curapp.Actions {
+					if action.Name == curAction.Name {
+						curappaction = curAction
+						break
+					}
+				}
+
+				// Check to see if the action is valid
+				if curappaction.Name != action.Name {
+					log.Printf("[ERROR] Action %s in app %s doesn't exist.", action.Name, curapp.Name)
+					if workflow.PreviouslySaved {
+						resp.WriteHeader(401)
+						resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Action %s in app %s doesn't exist"}`, action.Name, curapp.Name)))
+						return
+					}
+				}
+
+				// FIXME - check all parameters to see if they're valid
+				// Includes checking required fields
+
+				newParams := []WorkflowAppActionParameter{}
+				for _, param := range curappaction.Parameters {
+					found := false
+
+					// Handles check for parameter exists + value not empty in used fields
+					for _, actionParam := range action.Parameters {
+						if actionParam.Name == param.Name {
+							found = true
+
+							if actionParam.Value == "" && actionParam.Variant == "STATIC_VALUE" && actionParam.Required == true {
+								log.Printf("[WARNING] Appaction %s with required param '%s' is empty. Can't save.", action.Name, param.Name)
+								//if workflow.PreviouslySaved {
+								//	resp.WriteHeader(401)
+								//	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Appaction %s in app %s with required param '%s' is empty.", "node_id": "%s"}`, action.Name, action.AppName, param.Name, action.ID)))
+								//	return
+								//} else {
+
+								thisError := fmt.Sprintf("Missing parameter %s", param.Name)
+								action.Errors = append(action.Errors, thisError)
+								workflow.Errors = append(workflow.Errors, thisError)
+								action.IsValid = false
+							}
+
+							if actionParam.Variant == "" {
+								actionParam.Variant = "STATIC_VALUE"
+							}
+
+							newParams = append(newParams, actionParam)
+							break
+						}
+					}
+
+					// Handles check for required params
+					if !found && param.Required {
+						log.Printf("Appaction %s with required param %s doesn't exist.", action.Name, param.Name)
+						thisError := fmt.Sprintf("Parameter %s is required", param.Name)
+						action.Errors = append(action.Errors, thisError)
+
+						workflow.Errors = append(workflow.Errors, thisError)
+						action.IsValid = false
+						//newActions = append(newActions, action)
+						//resp.WriteHeader(401)
+						//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Appaction %s with required param '%s' is empty."}`, action.Name, param.Name)))
+						//return
+					}
+
+				}
+
+				action.Parameters = newParams
+				newActions = append(newActions, action)
+			}
+		}
+	}
+
+	//log.Printf("PRE SAVECHECK")
 	if !workflow.PreviouslySaved {
 		log.Printf("[WORKFLOW INIT] NOT PREVIOUSLY SAVED - SET ACTION AUTH!")
 		//AuthenticationId string `json:"authentication_id,omitempty" datastore:"authentication_id"`
@@ -2429,7 +2847,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 			newActions = actionFixing
 		} else {
-			log.Printf("Err: %s - %s", err, apperr)
+			log.Printf("FirstSave error: %s - %s", err, apperr)
 			//workflowapps, apperr := getAllWorkflowApps(ctx, 100)
 			//allAuths, err := getAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
 		}
@@ -2437,386 +2855,8 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		workflow.PreviouslySaved = true
 	}
 
-	log.Printf("PRE TRIGGERS")
-	workflow.Actions = newActions
-	newTriggers := []Trigger{}
-	for _, trigger := range workflow.Triggers {
-		log.Printf("[INFO] Trigger %s: %s", trigger.TriggerType, trigger.Status)
-
-		// Check if it's actually running
-		// FIXME: Do this for other triggers too
-		if trigger.TriggerType == "SCHEDULE" && trigger.Status != "uninitialized" {
-			schedule, err := getSchedule(ctx, trigger.ID)
-			if err != nil {
-				trigger.Status = "stopped"
-			} else if schedule.Id == "" {
-				trigger.Status = "stopped"
-			}
-		} else if trigger.TriggerType == "SUBFLOW" {
-			for index, param := range trigger.Parameters {
-				if len(param.Value) == 0 && param.Name != "argument" {
-					log.Printf("Param: %#v", param)
-					if param.Name == "user_apikey" {
-						apikey := ""
-						if len(user.ApiKey) > 0 {
-							apikey = user.ApiKey
-						} else {
-							user, err = generateApikey(ctx, user)
-							if err != nil {
-								workflow.IsValid = false
-								workflow.Errors = []string{"Trigger is missing a parameter: %s", param.Name}
-
-								log.Printf("No type specified for user input node")
-								resp.WriteHeader(401)
-								resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Trigger %s is missing the parameter %s"}`, trigger.Label, param.Name)))
-								return
-							}
-
-							apikey = user.ApiKey
-						}
-
-						log.Printf("[INFO] Set apikey in subflow trigger for user during save")
-						trigger.Parameters[index].Value = apikey
-					} else {
-
-						workflow.IsValid = false
-						workflow.Errors = []string{"Trigger is missing a parameter: %s", param.Name}
-
-						log.Printf("No type specified for user input node")
-						resp.WriteHeader(401)
-						resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Trigger %s is missing the parameter %s"}`, trigger.Label, param.Name)))
-						return
-					}
-				}
-			}
-		} else if trigger.TriggerType == "WEBHOOK" && trigger.Status != "uninitialized" {
-			hook, err := getHook(ctx, trigger.ID)
-			if err != nil {
-				log.Printf("Failed getting webhook")
-				trigger.Status = "stopped"
-			} else if hook.Id == "" {
-				trigger.Status = "stopped"
-			}
-		} else if trigger.TriggerType == "USERINPUT" {
-			// E.g. check email
-			sms := ""
-			email := ""
-			triggerType := ""
-			triggerInformation := ""
-			for _, item := range trigger.Parameters {
-				if item.Name == "alertinfo" {
-					triggerInformation = item.Value
-				} else if item.Name == "type" {
-					triggerType = item.Value
-				} else if item.Name == "email" {
-					email = item.Value
-				} else if item.Name == "sms" {
-					sms = item.Value
-				}
-			}
-
-			if len(triggerType) == 0 {
-				log.Printf("No type specified for user input node")
-				resp.WriteHeader(401)
-				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "No contact option specified in user input"}`)))
-				return
-			}
-
-			// FIXME: This is not the right time to send them, BUT it's well served for testing. Save -> send email / sms
-			_ = triggerInformation
-			if strings.Contains(triggerType, "email") {
-				if email == "test@test.com" {
-					log.Printf("Email isn't specified during save.")
-					resp.WriteHeader(401)
-					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Email field in user input can't be empty"}`)))
-					return
-				}
-
-				log.Printf("Should send email to %s during execution.", email)
-			}
-			if strings.Contains(triggerType, "sms") {
-				if sms == "0000000" {
-					log.Printf("Email isn't specified during save.")
-					resp.WriteHeader(401)
-					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "SMS field in user input can't be empty"}`)))
-					return
-				}
-
-				log.Printf("Should send SMS to %s during execution.", sms)
-			}
-		}
-
-		//log.Println("TRIGGERS")
-		allNodes = append(allNodes, trigger.ID)
-		newTriggers = append(newTriggers, trigger)
-	}
-
-	workflow.Triggers = newTriggers
-
-	//log.Printf("PRE VARIABLES")
-	for _, variable := range workflow.WorkflowVariables {
-		if len(variable.Value) == 0 {
-			log.Printf("Can't have an empty variable: %s", variable.Name)
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Variable %s can't be empty"}`, variable.Name)))
-			return
-		}
-	}
-
-	if len(workflow.Actions) == 0 {
-		workflow.Actions = []Action{}
-	}
-	if len(workflow.Branches) == 0 {
-		workflow.Branches = []Branch{}
-	}
-	if len(workflow.Triggers) == 0 {
-		workflow.Triggers = []Trigger{}
-	}
-	if len(workflow.Errors) == 0 {
-		workflow.Errors = []string{}
-	}
-
-	if len(workflow.ExecutionVariables) > 0 {
-		log.Printf("[INFO] Found %d execution variable(s)", len(workflow.ExecutionVariables))
-	}
-
-	if len(workflow.WorkflowVariables) > 0 {
-		log.Printf("[INFO] Found %d workflow variable(s)", len(workflow.WorkflowVariables))
-	}
-
-	// FIXME - do actual checks ROFL
-	// FIXME - minor issues with e.g. hello world and self.console_logger
-	// Nodechecks
-	foundNodes := []string{}
-	for _, node := range allNodes {
-		for _, branch := range workflow.Branches {
-			//log.Println("branch")
-			//log.Println(node)
-			//log.Println(branch.DestinationID)
-			if node == branch.DestinationID || node == branch.SourceID {
-				foundNodes = append(foundNodes, node)
-				break
-			}
-		}
-	}
-
-	// FIXME - append all nodes (actions, triggers etc) to one single array here
-	//log.Printf("PRE VARIABLES")
-	if len(foundNodes) != len(allNodes) || len(workflow.Actions) <= 0 {
-		// This shit takes a few seconds lol
-		if !workflow.IsValid {
-			oldworkflow, err := getWorkflow(ctx, fileId)
-			if err != nil {
-				log.Printf("Workflow %s doesn't exist - oldworkflow.", fileId)
-				resp.WriteHeader(401)
-				resp.Write([]byte(`{"success": false, "reason": "Item already exists."}`))
-				return
-			}
-
-			oldworkflow.IsValid = false
-			err = setWorkflow(ctx, *oldworkflow, fileId)
-			if err != nil {
-				log.Printf("Failed saving workflow to database: %s", err)
-				resp.WriteHeader(401)
-				resp.Write([]byte(`{"success": false}`))
-				return
-			}
-		}
-
-		// FIXME - more checks here - force reload of data or something
-		//if len(allNodes) == 0 {
-		//	resp.WriteHeader(401)
-		//	resp.Write([]byte(`{"success": false, "reason": "Please insert a node"}`))
-		//	return
-		//}
-
-		// Allowed with only a start node
-		//if len(allNodes) != 1 {
-		//	resp.WriteHeader(401)
-		//	resp.Write([]byte(`{"success": false, "reason": "There are nodes with no branches"}`))
-		//	return
-		//}
-	}
-
-	// FIXME - might be a sploit to run someone elses app if getAllWorkflowApps
-	// doesn't check sharing=true
-	// Have to do it like this to add the user's apps
-	//log.Println("Apps set starting")
-	//log.Printf("EXIT ON ERROR: %#v", workflow.Configuration.ExitOnError)
-	//workflowapps, apperr := getAllWorkflowApps(ctx, 500)
-
-	// Started getting the single apps, but if it's weird, this is faster
-	// 1. Check workflow.Start
-	// 2. Check if any node has "isStartnode"
-	if len(workflow.Actions) > 0 {
-		index := -1
-		for indexFound, action := range workflow.Actions {
-			//log.Println("Apps set done")
-			if workflow.Start == action.ID {
-				index = indexFound
-			}
-		}
-
-		if index >= 0 {
-			workflow.Actions[0].IsStartNode = true
-		} else {
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "You need to set a startnode."}`)))
-			return
-		}
-	}
-
-	allAuths, err := getAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
-	if userErr != nil {
-		log.Printf("Api authentication failed in get all apps: %s", userErr)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	// Check every app action and param to see whether they exist
-	//log.Printf("PRE ACTIONS 2")
-	newActions = []Action{}
-	for _, action := range workflow.Actions {
-		reservedApps := []string{
-			"0ca8887e-b4af-4e3e-887c-87e9d3bc3d3e",
-		}
-
-		//log.Printf("%s Action execution var: %s", action.Label, action.ExecutionVariable.Name)
-
-		builtin := false
-		for _, id := range reservedApps {
-			if id == action.AppID {
-				builtin = true
-				break
-			}
-		}
-
-		// Check auth
-		// 1. Find the auth in question
-		// 2. Update the node and workflow info in the auth
-		// 3. Get the values in the auth and add them to the action values
-		if len(action.AuthenticationId) > 0 {
-			authFound := false
-			for _, auth := range allAuths {
-				if auth.Id == action.AuthenticationId {
-					authFound = true
-
-					// Updates the auth item itself IF necessary
-					go updateAppAuth(auth, workflow.ID, action.ID, true)
-					break
-				}
-			}
-
-			if !authFound {
-				log.Printf("App auth %s doesn't exist. Setting error", action.AuthenticationId)
-				workflow.Errors = append(workflow.Errors, fmt.Sprintf("App authentication for %s doesn't exist!", action.AppName))
-				workflow.IsValid = false
-
-				action.Errors = append(action.Errors, "App authentication doesn't exist")
-				action.IsValid = false
-				action.AuthenticationId = ""
-				//resp.WriteHeader(401)
-				//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "App auth %s doesn't exist"}`, action.AuthenticationId)))
-				//return
-			}
-		}
-
-		if builtin {
-			newActions = append(newActions, action)
-		} else {
-			curapp := WorkflowApp{}
-			// FIXME - can this work with ONLY AppID?
-			for _, app := range workflowapps {
-				if app.ID == action.AppID {
-					curapp = app
-					break
-				}
-
-				// Has to NOT be generated
-				if app.Name == action.AppName && app.AppVersion == action.AppVersion {
-					curapp = app
-					break
-				}
-			}
-
-			// Check to see if the whole app is valid
-			if curapp.Name != action.AppName {
-				workflow.Errors = append(workflow.Errors, fmt.Sprintf("App %s doesn't exist", action.AppName))
-				action.Errors = append(action.Errors, "This app doesn't exist.")
-				action.IsValid = false
-				workflow.IsValid = false
-
-				// Append with errors
-				newActions = append(newActions, action)
-				log.Printf("App %s doesn't exist. Adding as error.", action.AppName)
-				//resp.WriteHeader(401)
-				//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "App %s doesn't exist"}`, action.AppName)))
-				//return
-			} else {
-				// Check tosee if the appaction is valid
-				curappaction := WorkflowAppAction{}
-				for _, curAction := range curapp.Actions {
-					if action.Name == curAction.Name {
-						curappaction = curAction
-						break
-					}
-				}
-
-				// Check to see if the action is valid
-				if curappaction.Name != action.Name {
-					log.Printf("[ERROR] Action %s in app %s doesn't exist.", action.Name, curapp.Name)
-					resp.WriteHeader(401)
-					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Action %s in app %s doesn't exist"}`, action.Name, curapp.Name)))
-					return
-				}
-
-				// FIXME - check all parameters to see if they're valid
-				// Includes checking required fields
-
-				newParams := []WorkflowAppActionParameter{}
-				for _, param := range curappaction.Parameters {
-					found := false
-
-					// Handles check for parameter exists + value not empty in used fields
-					for _, actionParam := range action.Parameters {
-						if actionParam.Name == param.Name {
-							found = true
-
-							if actionParam.Value == "" && actionParam.Variant == "STATIC_VALUE" && actionParam.Required == true {
-								log.Printf("Appaction %s with required param '%s' is empty.", action.Name, param.Name)
-								resp.WriteHeader(401)
-								resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Appaction %s with required param '%s' is empty."}`, action.Name, param.Name)))
-								return
-
-							}
-
-							if actionParam.Variant == "" {
-								actionParam.Variant = "STATIC_VALUE"
-							}
-
-							newParams = append(newParams, actionParam)
-							break
-						}
-					}
-
-					// Handles check for required params
-					if !found && param.Required {
-						log.Printf("Appaction %s with required param %s doesn't exist.", action.Name, param.Name)
-						action.Errors = append(action.Errors, "Parameter %s is required", param.Name)
-						//newActions = append(newActions, action)
-						//resp.WriteHeader(401)
-						//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Appaction %s with required param '%s' is empty."}`, action.Name, param.Name)))
-						//return
-					}
-
-				}
-
-				action.Parameters = newParams
-				newActions = append(newActions, action)
-			}
-		}
-	}
+	//log.Printf("PRE TRIGGERS")
+	//workflow.Actions = newActions
 
 	workflow.Actions = newActions
 	workflow.IsValid = true
@@ -2834,9 +2874,11 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	err = setWorkflow(ctx, workflow, fileId)
 	if err != nil {
 		log.Printf("Failed saving workflow to database: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
+		if workflow.PreviouslySaved {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
 	}
 
 	totalOldActions := len(tmpworkflow.Actions)
@@ -3235,7 +3277,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		}
 
 		// This one doesn't really matter.
-		log.Printf("[INFO] Running POST execution with body of length %d", len(string(body)))
+		log.Printf("[INFO] Running POST execution with body of length %d for workflow %s", len(string(body)), workflowExecution.Workflow.ID)
 
 		if len(body) >= 4 {
 			if body[0] == 34 && body[len(body)-1] == 34 {
@@ -3446,7 +3488,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		log.Printf("[INFO] No execution source (trigger) specified. Setting to default")
 		workflowExecution.ExecutionSource = "default"
 	} else {
-		log.Printf("[INFO] Execution source is %s for execution ID %s", workflowExecution.ExecutionSource, workflowExecution.ExecutionId)
+		log.Printf("[INFO] Execution source is %s for execution ID %s in workflow %s", workflowExecution.ExecutionSource, workflowExecution.ExecutionId, workflowExecution.Workflow.ID)
 	}
 
 	workflowExecution.ExecutionVariables = workflow.ExecutionVariables
@@ -3648,7 +3690,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 
 	var allEnvs []Environment
 	if len(workflowExecution.ExecutionOrg) > 0 {
-		log.Printf("[INFO] Executing ORG: %s", workflowExecution.ExecutionOrg)
+		//log.Printf("[INFO] Executing ORG: %s", workflowExecution.ExecutionOrg)
 
 		allEnvironments, err := getEnvironments(ctx, workflowExecution.ExecutionOrg)
 		if err != nil {
@@ -3751,7 +3793,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		// FIXME - tmp name based on future companyname-companyId
 		// This leads to issues with overlaps. Should set limits and such instead
 		for _, environment := range environments {
-			log.Printf("[INFO] Execution: %s should execute onprem with execution environment \"%s\"", workflowExecution.ExecutionId, environment)
+			log.Printf("[INFO] Execution: %s should execute onprem with execution environment \"%s\". Workflow: %s", workflowExecution.ExecutionId, environment, workflowExecution.Workflow.ID)
 
 			executionRequest := ExecutionRequest{
 				ExecutionId:   workflowExecution.ExecutionId,

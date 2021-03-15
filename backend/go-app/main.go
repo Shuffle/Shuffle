@@ -2447,7 +2447,7 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(loginData))
 		return
 	} else {
-		log.Printf("User session is empty - create one!")
+		log.Printf("[INFO] User session is empty - create one!")
 
 		sessionToken := uuid.NewV4().String()
 		expiration := time.Now().Add(3600 * time.Second)
@@ -5797,7 +5797,7 @@ func handleCloudExecutionOnprem(workflowId, startNode, executionSource, executio
 	var execution ExecutionRequest
 	err = json.Unmarshal([]byte(parsedArgument), &execution)
 	if err == nil {
-		log.Printf("FOUND EXEC %#v", execution)
+		//log.Printf("[INFO] FOUND EXEC %#v", execution)
 		if len(execution.ExecutionArgument) > 0 {
 			parsedArgument := strings.Replace(string(execution.ExecutionArgument), "\\\"", "\"", -1)
 			log.Printf("New exec argument: %s", execution.ExecutionArgument)
@@ -5822,7 +5822,7 @@ func handleCloudExecutionOnprem(workflowId, startNode, executionSource, executio
 		return err
 	}
 
-	log.Println(string(b))
+	//log.Println(string(b))
 	newRequest := &http.Request{
 		URL:    &url.URL{},
 		Method: "POST",
@@ -5864,8 +5864,8 @@ func handleCloudJob(job CloudSyncJob) error {
 			}
 
 			emails, err := getOutlookEmail(outlookClient, maildata)
-			log.Printf("EMAILS: %d", len(emails))
-			log.Printf("INSIDE GET OUTLOOK EMAIL!: %#v, %s", emails, err)
+			//log.Printf("EMAILS: %d", len(emails))
+			//log.Printf("INSIDE GET OUTLOOK EMAIL!: %#v, %s", emails, err)
 
 			//type FullEmail struct {
 			email := FullEmail{}
@@ -5879,7 +5879,7 @@ func handleCloudJob(job CloudSyncJob) error {
 				return err
 			}
 
-			log.Printf("Should handle webhook for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
+			log.Printf("[INFO] Should handle outlook webhook for workflow %s with start node %s and data of length %d", job.PrimaryItemId, job.SecondaryItem, len(job.ThirdItem))
 			err = handleCloudExecutionOnprem(job.PrimaryItemId, job.SecondaryItem, "outlook", string(emailBytes))
 			if err != nil {
 				log.Printf("Failed executing workflow from cloud outlook hook: %s", err)
@@ -5889,7 +5889,7 @@ func handleCloudJob(job CloudSyncJob) error {
 		}
 	} else if job.Type == "webhook" {
 		if job.Action == "execute" {
-			log.Printf("Should handle webhook for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
+			log.Printf("Should handle normal webhook for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
 			err := handleCloudExecutionOnprem(job.PrimaryItemId, job.SecondaryItem, "webhook", job.ThirdItem)
 			if err != nil {
 				log.Printf("Failed executing workflow from cloud hook: %s", err)
@@ -6053,7 +6053,7 @@ func remoteOrgJobController(org Org, body []byte) error {
 	}
 
 	if len(responseData.Jobs) > 0 {
-		log.Printf("[INFO] Remote JOB ret: %s", string(body))
+		//log.Printf("[INFO] Remote JOB ret: %s", string(body))
 		log.Printf("Got job with reason %s and %d job(s)", responseData.Reason, len(responseData.Jobs))
 	}
 

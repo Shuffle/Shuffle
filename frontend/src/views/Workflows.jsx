@@ -12,6 +12,7 @@ import Dropzone from '../components/Dropzone';
 import {Link} from 'react-router-dom';
 import { useAlert } from "react-alert";
 import ChipInput from 'material-ui-chip-input'
+import uuid from "uuid"
 
 const inputColor = "#383B40"
 const surfaceColor = "#27292D"
@@ -91,31 +92,6 @@ const Workflows = (props) => {
 				//getWorkflowExecution(selectedWorkflow.id) 
 	  	}
 	})
-
-	// DEBUG HERE 
-	const handleClickLogout = () => {
-		//console.log("Cookies: ", cookies)
-    //console.log("SHOULD LOG OUT")
-		//console.log(isLoggedIn)
-
-		// Don't really care about the logout
-		//fetch(globalUrl+"/api/v1/logout", {
-		//	credentials: "include",
-		//	method: 'POST',
-		//	headers: {
-		//		'Content-Type': 'application/json',
-		//	},
-		//})
-		//.then(() => {
-		//	// Log out anyway
-		//	removeCookie("session_token", {path: "/"})
-		//	//window.location = "/login"
-		//})
-		//.catch(error => {
-		//	console.log(error)
-		//	removeCookie("session_token", {path: "/"})
-		//});
-  }
 
 	const deleteModal = deleteModalOpen ? 
 		<Dialog
@@ -231,21 +207,21 @@ const Workflows = (props) => {
 			setSelectedExecution({})
 			setWorkflowExecutions([])
 
+			console.log(responseJson)
+
 			if (responseJson !== undefined) {
 				setWorkflows(responseJson)
 				setWorkflowDone(true)
 			} else {
 				if (isLoggedIn) {
 					alert.error("An error occurred while loading workflows")
-				} else {
-					handleClickLogout() 
 				}
 
 				return
 			}
 
 			if (responseJson.length > 0){
-				setSelectedWorkflow(responseJson[0])
+				//setSelectedWorkflow(responseJson[0])
 				//getWorkflowExecution(responseJson[0].id)
 			}
     	})
@@ -417,12 +393,10 @@ const Workflows = (props) => {
 
 	const exportWorkflow = (data) => {
 		console.log("export")
-		let dataStr = JSON.stringify(data)
-
-		let dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
 		let exportFileDefaultName = data.name+'.json';
 
 		data["owner"] = ""
+		console.log(data)
 		if (data.triggers !== null && data.triggers !== undefined) {
 			for (var key in data.triggers) {
 				const trigger = data.triggers[key]
@@ -435,6 +409,22 @@ const Workflows = (props) => {
 				if (trigger.status == "running") {
 					trigger.status = "stopped"
 				}
+
+				const newId = uuid.v4()
+				for (var branchkey in data.branches) {
+					const branch = data.branches[branchkey]
+					if (branch.source_id === trigger.id) {
+						console.log("CHANGING SOURCE ID")
+						branch.source_id = newId
+					} 
+
+					if (branch.destination_id === trigger.id) {
+						console.log("CHANGING DESTINATION ID")
+						branch.destination_id = newId
+					}
+				}
+
+				trigger.id = newId
 			}
 		}
 
@@ -445,9 +435,31 @@ const Workflows = (props) => {
 				for (var subkey in data.actions[key].parameters) {
 					const param = data.actions[key].parameters[subkey]
 					if (param.name.includes("key") || param.name.includes("user") || param.name.includes("pass") || param.name.includes("api") || param.name.includes("auth") || param.name.includes("secret")) {
-						param.value = ""
+						// FIXME: This may be a vuln if api-keys are generated that start with $
+						if (param.value.startsWith("$")) {
+							console.log("Skipping field, as it's referencing a variable")
+						} else {
+							param.value = ""
+							param.is_valid = false
+						}
 					}
 				}
+
+				const newId = uuid.v4()
+				for (var branchkey in data.branches) {
+					const branch = data.branches[branchkey]
+					if (branch.source_id === data.actions[key].id) {
+						console.log("CHANGING SOURCE ID IN ACTION")
+						branch.source_id = newId
+					} 
+
+					if (branch.destination_id === data.actions[key].id) {
+						console.log("CHANGING DESTINATION ID IN ACTION")
+						branch.destination_id = newId
+					}
+				}
+
+				data.actions[key].id = newId
 			}
 		}
 
@@ -456,6 +468,7 @@ const Workflows = (props) => {
 				const param = data.workflow_variables[key]
 				if (param.name.includes("key") || param.name.includes("user") || param.name.includes("pass") || param.name.includes("api") || param.name.includes("auth") || param.name.includes("secret")) {
 					param.value = ""
+					param.is_valid = false
 				}
 			}
 		}
@@ -465,9 +478,16 @@ const Workflows = (props) => {
 
 		data["org"] = []
 		data["org_id"] = ""
+		data["execution_org"] = {}
+
+		// These are backwards.. True = saved before. Very confuse.
+		data["previously_saved"] = false
+		data["first_save"] = false
 		data.execution_org = {"id": ""}
 		console.log(data)
 
+		let dataStr = JSON.stringify(data)
+		let dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
 		let linkElement = document.createElement('a');
 		linkElement.setAttribute('href', dataUri);
 		linkElement.setAttribute('download', exportFileDefaultName);
@@ -477,9 +497,9 @@ const Workflows = (props) => {
 	const copyWorkflow = (data) => {
 		data = JSON.parse(JSON.stringify(data))
 		alert.success("Copying workflow "+data.name)
-		console.log("data: ", data)
 		data.id = ""
 		data.name = data.name+"_copy"
+		console.log("COPIED DATA: ", data)
 		//return
 
 		fetch(globalUrl+"/api/v1/workflows", {
@@ -503,7 +523,7 @@ const Workflows = (props) => {
     })
 		.catch(error => {
 			alert.error(error.toString())
-		});
+		})
 	}
 
 
@@ -571,6 +591,7 @@ const Workflows = (props) => {
 		}
 
 		const imgSize = 25
+		//console.log("TOP INFO: ", data)
 		return (
 			<Paper square style={paperAppStyle} onClick={(e) => {
 			}}>	
@@ -580,7 +601,7 @@ const Workflows = (props) => {
 						<Grid item style={{flex: 1, display: "flex"}}>
 							<div style={{flex: "10",}} onClick={() => {
 								if (selectedWorkflow.id !== data.id) {
-									setSelectedWorkflow(data)
+									//setSelectedWorkflow(data)
 									//getWorkflowExecution(data.id)
 								}
 							}}>
@@ -637,7 +658,7 @@ const Workflows = (props) => {
 						</Grid>
 						<div style={{display: "flex", flex: 1}} onClick={() => {
 							if (selectedWorkflow.id !== data.id) {
-								setSelectedWorkflow(data)
+								//setSelectedWorkflow(data)
 								//getWorkflowExecution(data.id)
 							}
 						}}>
@@ -1064,6 +1085,9 @@ const Workflows = (props) => {
 						if (response !== undefined) {
 							// SET THE FULL THING
 							data.id = response.id
+							data.first_save = false
+							data.previously_saved = false 
+							data.is_valid = false
 
 							// Actually create it
 							const ret = setNewWorkflow(data.name, data.description, data.tags, data, false)

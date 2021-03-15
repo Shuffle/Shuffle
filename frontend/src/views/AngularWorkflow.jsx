@@ -780,6 +780,11 @@ const AngularWorkflow = (props) => {
 						workflow.isValid = true
 					}
 
+					for (var key in workflow.errors) {
+						//console.log("Error: ", workflow.errors[key])
+						alert.info(workflow.errors[key])
+					}
+
 					setWorkflow(workflow)
 				}
 				//alert.success("Successfully saved workflow")
@@ -5131,7 +5136,7 @@ const AngularWorkflow = (props) => {
 				<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 					<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
 					<div style={{flex: "10"}}> 
-						<b>Login to either: </b> 
+						<b>Login to either </b> 
 					</div>
 				</div>
 				{outlookButton}	
