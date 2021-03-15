@@ -28,6 +28,8 @@ import LandingPageNew from "./views/LandingpageNew";
 import LoginPage from "./views/LoginPage";
 import SettingsPage from "./views/SettingsPage";
 
+import MyView from "./views/MyView";
+
 import { createMuiTheme, MuiThemeProvider } from '@material-ui/core/styles';
 
 import AlertTemplate from "./components/AlertTemplate";
@@ -148,6 +150,7 @@ const App = (message, props) => {
 			<Route exact path="/docs" render={props => { window.location.pathname = "/docs/about" }} />
 			<Route exact path="/introduction" render={props => <Introduction isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/introduction/:key" render={props => <Introduction isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
+			<Route exact path="/myview" render={props => <MyView cookies={cookies} removeCookie={removeCookie} isLoaded={isLoaded} isLoggedIn={isLoggedIn} globalUrl={globalUrl} cookies={cookies} userdata={userdata} {...props} />} />
 			<Route exact path="/" render={props => <LoginPage isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
 		</div>
 
