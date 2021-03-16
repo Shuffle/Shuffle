@@ -204,8 +204,10 @@ const AngularWorkflow = (props) => {
 	})
 
 	const [elements, setElements] = useState([])
+	// No point going as fast, as the nodes aren't realtime anymore, but bulk updated. 
+	// Set it from 2500 to 6000 to reduce overall load
 	const { start, stop } = useInterval({
-	  	duration: 2500,
+	  	duration: 6000,
 	  	startImmediate: false,
 	  	callback: () => {
 				fetchUpdates()

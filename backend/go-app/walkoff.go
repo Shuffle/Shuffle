@@ -2565,6 +2565,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	// Check every app action and param to see whether they exist
 	//log.Printf("PRE ACTIONS 2")
+	allAuths, autherr := getAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
 	newActions = []Action{}
 	for _, action := range workflow.Actions {
 		reservedApps := []string{
@@ -2655,34 +2656,60 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 				// Check to see if the action is valid
 				if curappaction.Name != action.Name {
 					log.Printf("[ERROR] Action %s in app %s doesn't exist.", action.Name, curapp.Name)
-					if workflow.PreviouslySaved {
-						resp.WriteHeader(401)
-						resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Action %s in app %s doesn't exist"}`, action.Name, curapp.Name)))
-						return
-					}
+					thisError := fmt.Sprintf("%s: Action %s in app %s doesn't exist", action.Label, action.Name, action.AppName)
+					workflow.Errors = append(workflow.Errors, thisError)
+					workflow.IsValid = false
+					action.Errors = append(action.Errors, thisError)
+					action.IsValid = false
+					//if workflow.PreviouslySaved {
+					//	resp.WriteHeader(401)
+					//	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Action %s in app %s doesn't exist"}`, action.Name, curapp.Name)))
+					//	return
+					//}
 				}
 
 				// FIXME - check all parameters to see if they're valid
 				// Includes checking required fields
 
+				selectedAuth := AppAuthenticationStorage{}
+				if len(action.AuthenticationId) > 0 && autherr == nil {
+					for _, auth := range allAuths {
+						if auth.Id == action.AuthenticationId {
+							selectedAuth = auth
+							break
+						}
+					}
+				}
+
 				newParams := []WorkflowAppActionParameter{}
 				for _, param := range curappaction.Parameters {
-					found := false
+					paramFound := false
 
 					// Handles check for parameter exists + value not empty in used fields
 					for _, actionParam := range action.Parameters {
 						if actionParam.Name == param.Name {
-							found = true
+							paramFound = true
 
 							if actionParam.Value == "" && actionParam.Variant == "STATIC_VALUE" && actionParam.Required == true {
-								log.Printf("[WARNING] Appaction %s with required param '%s' is empty. Can't save.", action.Name, param.Name)
-								//if workflow.PreviouslySaved {
-								//	resp.WriteHeader(401)
-								//	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Appaction %s in app %s with required param '%s' is empty.", "node_id": "%s"}`, action.Name, action.AppName, param.Name, action.ID)))
-								//	return
-								//} else {
+								// Validating if the field is an authentication field
+								if len(selectedAuth.Id) > 0 {
+									authFound := false
+									for _, field := range selectedAuth.Fields {
+										if field.Key == actionParam.Name {
+											authFound = true
+											//log.Printf("FOUND REQUIRED KEY %s IN AUTH", field.Key)
+											break
+										}
+									}
 
-								thisError := fmt.Sprintf("Missing parameter %s", param.Name)
+									if authFound {
+										newParams = append(newParams, actionParam)
+										continue
+									}
+								}
+
+								log.Printf("[WARNING] Appaction %s with required param '%s' is empty. Can't save.", action.Name, param.Name)
+								thisError := fmt.Sprintf("%s is missing reqired parameter %s", action.Label, param.Name)
 								action.Errors = append(action.Errors, thisError)
 								workflow.Errors = append(workflow.Errors, thisError)
 								action.IsValid = false
@@ -2698,7 +2725,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 					}
 
 					// Handles check for required params
-					if !found && param.Required {
+					if !paramFound && param.Required {
 						log.Printf("Appaction %s with required param %s doesn't exist.", action.Name, param.Name)
 						thisError := fmt.Sprintf("Parameter %s is required", param.Name)
 						action.Errors = append(action.Errors, thisError)
@@ -2719,13 +2746,10 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	//log.Printf("PRE SAVECHECK")
 	if !workflow.PreviouslySaved {
 		log.Printf("[WORKFLOW INIT] NOT PREVIOUSLY SAVED - SET ACTION AUTH!")
-		//AuthenticationId string `json:"authentication_id,omitempty" datastore:"authentication_id"`
 
-		allAuths, err := getAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
-		if err == nil && len(workflowapps) > 0 && apperr == nil {
+		if autherr == nil && len(workflowapps) > 0 && apperr == nil {
 			//log.Printf("Setting actions")
 			actionFixing := []Action{}
 			appsAdded := []string{}
@@ -5389,7 +5413,7 @@ func getAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// Cleanup for frontend
+	// Cleanup for frontend usage. User shouldn't be able to get the data.
 	newAuth := []AppAuthenticationStorage{}
 	for _, auth := range allAuths {
 		newAuthField := auth

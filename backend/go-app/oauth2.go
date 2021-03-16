@@ -17,6 +17,41 @@ import (
 	"golang.org/x/oauth2"
 )
 
+// This is what the structure should be when it's sent into a workflow
+type ParsedShuffleMail struct {
+	Body struct {
+		URI           []string `json:"uri"`
+		Email         []string `json:"email"`
+		Domain        []string `json:"domain"`
+		ContentHeader struct {
+		} `json:"content_header"`
+		Content     string `json:"content"`
+		ContentType string `json:"content_type"`
+		Hash        string `json:"hash"`
+		RawBody     string `json:"raw_body"`
+	} `json:"body"`
+	Header struct {
+		Subject  string   `json:"subject"`
+		From     string   `json:"from"`
+		To       []string `json:"to"`
+		Date     string   `json:"date"`
+		Received []struct {
+			Src  string   `json:"src"`
+			From []string `json:"from"`
+			By   []string `json:"by"`
+			With string   `json:"with"`
+			Date string   `json:"date"`
+		} `json:"received"`
+		ReceivedDomain []string `json:"received_domain"`
+		ReceivedIP     []string `json:"received_ip"`
+		Header         struct {
+		} `json:"header"`
+	} `json:"header"`
+	MessageID      string   `json:"message_id"`
+	EmailFileid    string   `json:"email_fileid"`
+	AttachmentUids []string `json:"attachment_uids"`
+}
+
 type FullEmail struct {
 	OdataContext               string        `json:"@odata.context"`
 	OdataEtag                  string        `json:"@odata.etag"`
@@ -69,6 +104,19 @@ type FullEmail struct {
 	Flag          struct {
 		Flagstatus string `json:"flagStatus"`
 	} `json:"flag"`
+	Attachments []struct {
+		OdataType             string      `json:"@odata.type"`
+		OdataMediacontenttype string      `json:"@odata.mediaContentType"`
+		ID                    string      `json:"id"`
+		Lastmodifieddatetime  time.Time   `json:"lastModifiedDateTime"`
+		Name                  string      `json:"name"`
+		Contenttype           string      `json:"contentType"`
+		Size                  int         `json:"size"`
+		Isinline              bool        `json:"isInline"`
+		Contentid             interface{} `json:"contentId"`
+		Contentlocation       interface{} `json:"contentLocation"`
+		Contentbytes          string      `json:"contentBytes"`
+	}
 }
 
 type MailData struct {
@@ -116,6 +164,47 @@ type OutlookFolders struct {
 	OdataContext  string          `json:"@odata.context"`
 	OdataNextLink string          `json:"@odata.nextLink"`
 	Value         []OutlookFolder `json:"value"`
+}
+
+func getOutlookAttachment(client *http.Client, emailId, attachmentId string) ([]FullEmail, error) {
+	//requestUrl := fmt.Sprintf("https://graph.microsoft.com/v1.0/users/ec03b4f2-fccf-4c35-b0eb-be85a0f5dd43/mailFolders")
+
+	requestUrl := fmt.Sprintf("https://graph.microsoft.com/v1.0/%s/attachments/%s", emailId, attachmentId)
+	//log.Printf("Outlook email URL: %#v", requestUrl)
+
+	ret, err := client.Get(requestUrl)
+	if err != nil {
+		log.Printf("[INFO] OutlookErr: %s", err)
+		return []FullEmail{}, err
+	}
+
+	body, err := ioutil.ReadAll(ret.Body)
+	if err != nil {
+		log.Printf("[WARNING] Failed body decoding from outlook email")
+		return []FullEmail{}, err
+	}
+
+	//type FullEmail struct {
+	log.Printf("[INFO] Attachment Body: %s", string(body))
+	log.Printf("[INFO] Status email: %d", ret.StatusCode)
+	if ret.StatusCode != 200 {
+		return []FullEmail{}, err
+	}
+
+	//log.Printf("Body: %s", string(body))
+
+	/*
+		parsedmail := FullEmail{}
+		err = json.Unmarshal(body, &parsedmail)
+		if err != nil {
+			log.Printf("[INFO] Email unmarshal error: %s", err)
+			return []FullEmail{}, err
+		}
+
+		emails = append(emails, parsedmail)
+	*/
+
+	return []FullEmail{}, nil
 }
 
 func getOutlookEmail(client *http.Client, maildata MailData) ([]FullEmail, error) {
@@ -989,6 +1078,38 @@ func handleOutlookCallback(resp http.ResponseWriter, request *http.Request) {
 	email := FullEmail{}
 	if len(emails) == 1 {
 		email = emails[0]
+	}
+
+	// Parse indicators (domains, emails, ips, domains etc)!
+	newEmail := ParsedShuffleMail{}
+	newEmail.Body.ContentType = email.Body.Contenttype
+	newEmail.Body.Content = email.Body.Content
+	newEmail.Body.RawBody = email.Body.Content
+
+	newEmail.Header.Subject = email.Subject
+	newEmail.Header.From = email.From.Emailaddress.Address
+	for _, to := range email.Torecipients {
+		newEmail.Header.To = append(newEmail.Header.To, to.Emailaddress.Address)
+	}
+	newEmail.Header.Date = email.Receiveddatetime.String()
+
+	newEmail.MessageID = email.ID
+
+	if email.Hasattachments {
+		log.Printf("SHOULD HANDLE ATTACHMENTS FOR EMAIL!")
+
+		for _, attachment := range email.Attachments {
+			parsedAttachment, err := getOutlookAttachment(outlookClient, email.ID, attachment.ID)
+			if err != nil {
+				log.Printf("Failed attachment %s: %s", attachment.ID, err)
+				continue
+			}
+
+			log.Printf("ATTACHMENT: %#v", parsedAttachment)
+		}
+		//log.Printf("%#v", attachments)
+		//log.Printf("%s", err)
+		//GET /users/{id | userPrincipalName}/events/{id}/attachments/{id}
 	}
 
 	emailBytes, err := json.Marshal(email)

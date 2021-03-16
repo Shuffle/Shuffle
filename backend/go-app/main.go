@@ -5882,19 +5882,19 @@ func handleCloudJob(job CloudSyncJob) error {
 			log.Printf("[INFO] Should handle outlook webhook for workflow %s with start node %s and data of length %d", job.PrimaryItemId, job.SecondaryItem, len(job.ThirdItem))
 			err = handleCloudExecutionOnprem(job.PrimaryItemId, job.SecondaryItem, "outlook", string(emailBytes))
 			if err != nil {
-				log.Printf("Failed executing workflow from cloud outlook hook: %s", err)
+				log.Printf("[WARNING] Failed executing workflow from cloud outlook hook: %s", err)
 			} else {
-				log.Printf("Successfully executed workflow from cloud outlook hook!")
+				log.Printf("[INFO] Successfully executed workflow from cloud outlook hook!")
 			}
 		}
 	} else if job.Type == "webhook" {
 		if job.Action == "execute" {
-			log.Printf("Should handle normal webhook for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
+			log.Printf("[INFO] Should handle normal webhook for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
 			err := handleCloudExecutionOnprem(job.PrimaryItemId, job.SecondaryItem, "webhook", job.ThirdItem)
 			if err != nil {
-				log.Printf("Failed executing workflow from cloud hook: %s", err)
+				log.Printf("[INFO] Failed executing workflow from cloud hook: %s", err)
 			} else {
-				log.Printf("Successfully executed workflow from cloud hook!")
+				log.Printf("[INFO] Successfully executed workflow from cloud hook!")
 			}
 		}
 
@@ -5903,9 +5903,9 @@ func handleCloudJob(job CloudSyncJob) error {
 			log.Printf("Should handle schedule for workflow %s with start node %s and data %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
 			err := handleCloudExecutionOnprem(job.PrimaryItemId, job.SecondaryItem, "schedule", job.ThirdItem)
 			if err != nil {
-				log.Printf("Failed executing workflow from cloud schedule: %s", err)
+				log.Printf("[INFO] Failed executing workflow from cloud schedule: %s", err)
 			} else {
-				log.Printf("Successfully executed workflow from cloud schedule")
+				log.Printf("[INFO] Successfully executed workflow from cloud schedule")
 			}
 		}
 	} else if job.Type == "email_trigger" {

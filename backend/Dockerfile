@@ -9,6 +9,7 @@ ADD ./go-app/walkoff.go /app
 ADD ./go-app/docker.go /app
 ADD ./go-app/codegen.go /app
 ADD ./go-app/files.go /app
+ADD ./go-app/oauth2.go /app
 
 ADD ./go-app/go.mod /app
 
