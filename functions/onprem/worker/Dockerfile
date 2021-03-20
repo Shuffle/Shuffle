@@ -10,7 +10,8 @@ RUN go get github.com/docker/docker/api/types && \
 	go get github.com/docker/docker/api/types/container && \
 	go get github.com/docker/docker/client && \
 	go get github.com/gorilla/mux && \
-	go get github.com/patrickmn/go-cache 
+	go get github.com/patrickmn/go-cache && \
+	go get github.com/frikky/shuffle-shared
 
 RUN go build
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o worker .

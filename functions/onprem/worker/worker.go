@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/frikky/shuffle-shared"
+
 	"bytes"
 	"context"
 	"encoding/json"
@@ -83,6 +85,7 @@ func init() {
 	}
 }
 
+/*
 type Userapi struct {
 	Username string `datastore:"username"`
 	ApiKey   string `datastore:"apikey"`
@@ -90,12 +93,12 @@ type Userapi struct {
 
 type ExecutionInfo struct {
 	TotalApiUsage           int64 `json:"total_api_usage" datastore:"total_api_usage"`
-	TotalWorkflowExecutions int64 `json:"total_workflow_executions" datastore:"total_workflow_executions"`
+	Totalshuffle.WorkflowExecutions int64 `json:"total_workflow_executions" datastore:"total_workflow_executions"`
 	TotalAppExecutions      int64 `json:"total_app_executions" datastore:"total_app_executions"`
 	TotalCloudExecutions    int64 `json:"total_cloud_executions" datastore:"total_cloud_executions"`
 	TotalOnpremExecutions   int64 `json:"total_onprem_executions" datastore:"total_onprem_executions"`
 	DailyApiUsage           int64 `json:"daily_api_usage" datastore:"daily_api_usage"`
-	DailyWorkflowExecutions int64 `json:"daily_workflow_executions" datastore:"daily_workflow_executions"`
+	Dailyshuffle.WorkflowExecutions int64 `json:"daily_workflow_executions" datastore:"daily_workflow_executions"`
 	DailyAppExecutions      int64 `json:"daily_app_executions" datastore:"daily_app_executions"`
 	DailyCloudExecutions    int64 `json:"daily_cloud_executions" datastore:"daily_cloud_executions"`
 	DailyOnpremExecutions   int64 `json:"daily_onprem_executions" datastore:"daily_onprem_executions"`
@@ -112,6 +115,7 @@ type StatisticsItem struct {
 	Fieldname string           `json:"field_name" datastore:"field_name"`
 	Data      []StatisticsData `json:"data" datastore:"data"`
 }
+*/
 
 // "Execution by status"
 // Execution history
@@ -130,6 +134,7 @@ type StatisticsItem struct {
 //	Baseline              map[string]int64 `json:"baseline" datastore:"baseline"`
 //}
 
+/*
 type ParsedOpenApi struct {
 	Body    string `datastore:"body,noindex" json:"body"`
 	ID      string `datastore:"id" json:"id"`
@@ -139,7 +144,7 @@ type ParsedOpenApi struct {
 // Limits set for a user so that they can't do a shitload
 type UserLimits struct {
 	DailyApiUsage           int64 `json:"daily_api_usage" datastore:"daily_api_usage"`
-	DailyWorkflowExecutions int64 `json:"daily_workflow_executions" datastore:"daily_workflow_executions"`
+	Dailyshuffle.WorkflowExecutions int64 `json:"daily_workflow_executions" datastore:"daily_workflow_executions"`
 	DailyCloudExecutions    int64 `json:"daily_cloud_executions" datastore:"daily_cloud_executions"`
 	DailyTriggers           int64 `json:"daily_triggers" datastore:"daily_triggers"`
 	DailyMailUsage          int64 `json:"daily_mail_usage" datastore:"daily_mail_usage"`
@@ -380,7 +385,7 @@ type Info struct {
 	Description string `json:"description" datastore:"description,noindex"`
 }
 
-// Actions to be done by webhooks etc
+// shuffle.Actions to be done by webhooks etc
 // Field is the actual field to use from json
 type HookAction struct {
 	Type  string `json:"type" datastore:"type"`
@@ -425,7 +430,7 @@ type SyncFeatures struct {
 	Notifications      SyncData `json:"notifications" datastore:"notifications"`
 	EmailTrigger       SyncData `json:"email_trigger" datastore:"email_trigger"`
 	AppExecutions      SyncData `json:"app_executions" datastore:"app_executions"`
-	WorkflowExecutions SyncData `json:"workflow_executions" datastore:"workflow_executions"`
+	shuffle.WorkflowExecutions SyncData `json:"workflow_executions" datastore:"workflow_executions"`
 	Apps               SyncData `json:"apps" datastore:"apps"`
 	Workflows          SyncData `json:"workflows" datastore:"workflows"`
 	Autocomplete       SyncData `json:"autocomplete" datastore:"autocomplete"`
@@ -520,7 +525,7 @@ type WorkflowApp struct {
 	LastRuntime    int64               `json:"last_runtime" datastore:"last_runtime"`
 }
 
-type WorkflowAppActionParameter struct {
+type shuffle.WorkflowAppActionParameter struct {
 	Description    string           `json:"description" datastore:"description,noindex" yaml:"description"`
 	ID             string           `json:"id" datastore:"id" yaml:"id,omitempty"`
 	Name           string           `json:"name" datastore:"name" yaml:"name"`
@@ -561,7 +566,7 @@ type WorkflowAppAction struct {
 	Tags              []string                     `json:"tags" datastore:"tags" yaml:"tags"`
 	Authentication    []AuthenticationStore        `json:"authentication" datastore:"authentication,noindex" yaml:"authentication,omitempty"`
 	Tested            bool                         `json:"tested" datastore:"tested" yaml:"tested"`
-	Parameters        []WorkflowAppActionParameter `json:"parameters" datastore: "parameters"`
+	Parameters        []shuffle.WorkflowAppActionParameter `json:"parameters" datastore: "parameters"`
 	ExecutionVariable struct {
 		Description string `json:"description" datastore:"description,noindex"`
 		ID          string `json:"id" datastore:"id"`
@@ -579,7 +584,7 @@ type WorkflowAppAction struct {
 	AuthNotRequired  bool   `json:"auth_not_required" datastore:"auth_not_required" yaml:"auth_not_required"`
 }
 
-type WorkflowExecution struct {
+type shuffle.WorkflowExecution struct {
 	Type               string         `json:"type" datastore:"type"`
 	Status             string         `json:"status" datastore:"status"`
 	Start              string         `json:"start" datastore:"start"`
@@ -607,7 +612,7 @@ type WorkflowExecution struct {
 	OrgId string `json:"org_id" datastore:"org_id"`
 }
 
-type Action struct {
+type shuffle.Action struct {
 	AppName           string                       `json:"app_name,omitempty" datastore:"app_name"`
 	AppVersion        string                       `json:"app_version,omitempty" datastore:"app_version"`
 	AppID             string                       `json:"app_id,omitempty" datastore:"app_id"`
@@ -622,7 +627,7 @@ type Action struct {
 	LargeImage        string                       `json:"large_image,omitempty" datastore:"large_image,noindex" yaml:"large_image" required:false`
 	Environment       string                       `json:"environment,omitempty" datastore:"environment"`
 	Name              string                       `json:"name,omitempty" datastore:"name"`
-	Parameters        []WorkflowAppActionParameter `json:"parameters" datastore: "parameters,noindex"`
+	Parameters        []shuffle.WorkflowAppActionParameter `json:"parameters" datastore: "parameters,noindex"`
 	ExecutionVariable struct {
 		Description string `json:"description,omitempty" datastore:"description,noindex"`
 		ID          string `json:"id,omitempty" datastore:"id"`
@@ -640,7 +645,7 @@ type Action struct {
 }
 
 // Added environment for location to execute
-type Trigger struct {
+type shuffle.Trigger struct {
 	AppName         string                       `json:"app_name" datastore:"app_name"`
 	Description     string                       `json:"description" datastore:"description,noindex"`
 	LongDescription string                       `json:"long_description" datastore:"long_description"`
@@ -657,7 +662,7 @@ type Trigger struct {
 	TriggerType     string                       `json:"trigger_type" datastore:"trigger_type"`
 	Name            string                       `json:"name" datastore:"name"`
 	Tags            []string                     `json:"tags" datastore:"tags" yaml:"tags"`
-	Parameters      []WorkflowAppActionParameter `json:"parameters" datastore: "parameters,noindex"`
+	Parameters      []shuffle.WorkflowAppActionParameter `json:"parameters" datastore: "parameters,noindex"`
 	Position        struct {
 		X float64 `json:"x" datastore:"x"`
 		Y float64 `json:"y" datastore:"y"`
@@ -676,9 +681,9 @@ type Branch struct {
 
 // Same format for a lot of stuff
 type Condition struct {
-	Condition   WorkflowAppActionParameter `json:"condition" datastore:"condition"`
-	Source      WorkflowAppActionParameter `json:"source" datastore:"source"`
-	Destination WorkflowAppActionParameter `json:"destination" datastore:"destination"`
+	Condition   shuffle.WorkflowAppActionParameter `json:"condition" datastore:"condition"`
+	Source      shuffle.WorkflowAppActionParameter `json:"source" datastore:"source"`
+	Destination shuffle.WorkflowAppActionParameter `json:"destination" datastore:"destination"`
 }
 
 type Schedule struct {
@@ -729,8 +734,8 @@ type Workflow struct {
 	ExecutionEnvironment string `json:"execution_environment" datastore:"execution_environment"`
 }
 
-type ActionResult struct {
-	Action        Action `json:"action" datastore:"action,noindex"`
+type shuffle.ActionResult struct {
+	Action        shuffle.Action `json:"action" datastore:"action,noindex"`
 	ExecutionId   string `json:"execution_id" datastore:"execution_id"`
 	Authorization string `json:"authorization" datastore:"authorization"`
 	Result        string `json:"result" datastore:"result,noindex"`
@@ -775,9 +780,10 @@ type AppExecutionExample struct {
 	SuccessExamples []string `json:"success_examples" datastore:"success_examples,noindex"`
 	FailureExamples []string `json:"failure_examples" datastore:"failure_examples,noindex"`
 }
+*/
 
 // removes every container except itself (worker)
-func shutdown(workflowExecution WorkflowExecution, nodeId string, reason string, handleResultSend bool) {
+func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason string, handleResultSend bool) {
 	log.Printf("[INFO] Shutdown (%s) started with reason %s", workflowExecution.Status, reason)
 	//reason := "Error in execution"
 
@@ -881,7 +887,7 @@ func shutdown(workflowExecution WorkflowExecution, nodeId string, reason string,
 }
 
 // Deploys the internal worker whenever something happens
-func deployApp(cli *dockerclient.Client, image string, identifier string, env []string) error {
+func deployApp(cli *dockerclient.Client, image string, identifier string, env []string, workflowExecution shuffle.WorkflowExecution) error {
 	// form basic hostConfig
 	ctx := context.Background()
 	hostConfig := &container.HostConfig{
@@ -968,47 +974,51 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	log.Printf("[INFO] Container %s was created for %s", cont.ID, identifier)
 
 	// Waiting to see if it exits.. Stupid, but stable(r)
-	time.Sleep(2 * time.Second)
+	if workflowExecution.ExecutionSource != "default" {
+		log.Printf("Handling NON-default execution source %s - NOT waiting and validating!", workflowExecution.ExecutionSource)
+	} else if workflowExecution.ExecutionSource == "default" {
+		time.Sleep(2 * time.Second)
 
-	stats, err := cli.ContainerInspect(ctx, cont.ID)
-	if err != nil {
-		log.Printf("[ERROR] Failed getting container stats")
-	} else {
-		//log.Printf("[INFO] Info for container: %#v", stats)
-		//log.Printf("%#v", stats.Config)
-		//log.Printf("%#v", stats.ContainerJSONBase.State)
-		log.Printf("[INFO] EXECUTION STATUS: %s", stats.ContainerJSONBase.State.Status)
-		if stats.ContainerJSONBase.State.Status == "exited" {
-			logOptions := types.ContainerLogsOptions{
-				ShowStdout: true,
+		stats, err := cli.ContainerInspect(ctx, cont.ID)
+		if err != nil {
+			log.Printf("[ERROR] Failed getting container stats")
+		} else {
+			//log.Printf("[INFO] Info for container: %#v", stats)
+			//log.Printf("%#v", stats.Config)
+			//log.Printf("%#v", stats.ContainerJSONBase.State)
+			log.Printf("[INFO] EXECUTION STATUS: %s", stats.ContainerJSONBase.State.Status)
+			if stats.ContainerJSONBase.State.Status == "exited" {
+				logOptions := types.ContainerLogsOptions{
+					ShowStdout: true,
+				}
+
+				out, err := cli.ContainerLogs(ctx, cont.ID, logOptions)
+				if err != nil {
+					log.Printf("[INFO] Failed getting logs: %s", err)
+				} else {
+					log.Printf("IN ELSE FOR DEPLOY")
+					buf := new(strings.Builder)
+					io.Copy(buf, out)
+					logs := buf.String()
+					log.Printf("Logs: %s", logs)
+
+					//log.Printf(logs)
+					// check errors
+					/*
+						if strings.Contains(logs, "Error") {
+							log.Printf("ERROR IN %s?", cont.ID)
+							log.Println(logs)
+							//return errors.New(fmt.Sprintf("ERROR FROM CONTAINER %s", cont.ID))
+						} else {
+							log.Printf("NORMAL EXEC OF %s?", cont.ID)
+						}
+					*/
+				}
+
+				log.Printf("ERROR IN CONTAINER DEPLOYMENT - ITS EXITED!")
+
+				return errors.New(fmt.Sprintf(`{"success": false, "reason": "Container %s exited prematurely.","debug": "docker logs -f %s"}`, cont.ID, cont.ID))
 			}
-
-			out, err := cli.ContainerLogs(ctx, cont.ID, logOptions)
-			if err != nil {
-				log.Printf("[INFO] Failed getting logs: %s", err)
-			} else {
-				log.Printf("IN ELSE FOR DEPLOY")
-				buf := new(strings.Builder)
-				io.Copy(buf, out)
-				logs := buf.String()
-				log.Printf("Logs: %s", logs)
-
-				//log.Printf(logs)
-				// check errors
-				/*
-					if strings.Contains(logs, "Error") {
-						log.Printf("ERROR IN %s?", cont.ID)
-						log.Println(logs)
-						//return errors.New(fmt.Sprintf("ERROR FROM CONTAINER %s", cont.ID))
-					} else {
-						log.Printf("NORMAL EXEC OF %s?", cont.ID)
-					}
-				*/
-			}
-
-			log.Printf("ERROR IN CONTAINER DEPLOYMENT - ITS EXITED!")
-
-			return errors.New(fmt.Sprintf(`{"success": false, "reason": "Container %s exited prematurely.","debug": "docker logs -f %s"}`, cont.ID, cont.ID))
 		}
 	}
 
@@ -1072,7 +1082,7 @@ func removeContainer(containername string) error {
 	return nil
 }
 
-func runFilter(workflowExecution WorkflowExecution, action Action) {
+func runFilter(workflowExecution shuffle.WorkflowExecution, action shuffle.Action) {
 	// 1. Get the parameter $.#.id
 	if action.Label == "filter_cases" && len(action.Parameters) > 0 {
 		if action.Parameters[0].Variant == "ACTION_RESULT" {
@@ -1088,7 +1098,7 @@ func runFilter(workflowExecution WorkflowExecution, action Action) {
 
 }
 
-func handleSubworkflowExecution(client *http.Client, workflowExecution WorkflowExecution, action Trigger, baseAction Action) error {
+func handleSubworkflowExecution(client *http.Client, workflowExecution shuffle.WorkflowExecution, action shuffle.Trigger, baseAction shuffle.Action) error {
 	apikey := ""
 	workflowId := ""
 	executionArgument := ""
@@ -1140,14 +1150,14 @@ func handleSubworkflowExecution(client *http.Client, workflowExecution WorkflowE
 	}
 
 	timeNow := time.Now().Unix()
-	//curaction := Action{
+	//curaction := shuffle.Action{
 	//	AppName:    baseAction.AppName,
 	//	AppVersion: baseAction.AppVersion,
 	//	Label:      baseAction.Label,
 	//	Name:       baseAction.Name,
 	//	ID:         baseAction.ID,
 	//}
-	result := ActionResult{
+	result := shuffle.ActionResult{
 		Action:        baseAction,
 		ExecutionId:   workflowExecution.ExecutionId,
 		Authorization: workflowExecution.Authorization,
@@ -1200,7 +1210,7 @@ func removeIndex(s []string, i int) []string {
 	return s[:len(s)-1]
 }
 
-func handleExecutionResult(workflowExecution WorkflowExecution) {
+func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 	if len(startAction) == 0 {
 		startAction = workflowExecution.Start
 		if len(startAction) == 0 {
@@ -1284,7 +1294,7 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 	// care if it gets stuck in a loop.
 	// FIXME: Force killing a worker should result in a notification somewhere
 	if len(nextActions) == 0 {
-		log.Printf("[INFO] No next action. Finished? Result vs Actions: %d - %d", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
+		log.Printf("[INFO] No next action. Finished? Result vs shuffle.Actions: %d - %d", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
 		exit := true
 		for _, item := range workflowExecution.Results {
 			if item.Status == "EXECUTING" {
@@ -1401,7 +1411,7 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 			//visited = append(visited, action.ID)
 			//executed = append(executed, action.ID)
 
-			trigger := Trigger{}
+			trigger := shuffle.Trigger{}
 			for _, innertrigger := range workflowExecution.Workflow.Triggers {
 				if innertrigger.ID == action.ID {
 					trigger = innertrigger
@@ -1410,18 +1420,18 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 			}
 
 			// FIXME: Add startnode from frontend
-			action.Parameters = []WorkflowAppActionParameter{}
+			action.Parameters = []shuffle.WorkflowAppActionParameter{}
 			for _, parameter := range trigger.Parameters {
 				parameter.Variant = "STATIC_VALUE"
 				action.Parameters = append(action.Parameters, parameter)
 			}
 
-			action.Parameters = append(action.Parameters, WorkflowAppActionParameter{
+			action.Parameters = append(action.Parameters, shuffle.WorkflowAppActionParameter{
 				Name:  "source_workflow",
 				Value: workflowExecution.Workflow.ID,
 			})
 
-			action.Parameters = append(action.Parameters, WorkflowAppActionParameter{
+			action.Parameters = append(action.Parameters, shuffle.WorkflowAppActionParameter{
 				Name:  "source_execution",
 				Value: workflowExecution.ExecutionId,
 			})
@@ -1444,7 +1454,7 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 				continue
 			} else {
 				log.Printf("Should stop after this iteration because it's user-input based. %#v", action)
-				trigger := Trigger{}
+				trigger := shuffle.Trigger{}
 				for _, innertrigger := range workflowExecution.Workflow.Triggers {
 					if innertrigger.ID == action.ID {
 						trigger = innertrigger
@@ -1573,7 +1583,7 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 		}
 
 		if len(action.Parameters) == 0 {
-			action.Parameters = []WorkflowAppActionParameter{}
+			action.Parameters = []shuffle.WorkflowAppActionParameter{}
 		}
 
 		if len(action.Errors) == 0 {
@@ -1639,7 +1649,7 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 		// If cleanup is set, it should run for efficiency
 		pullOptions := types.ImagePullOptions{}
 		if cleanupEnv == "true" {
-			err = deployApp(dockercli, images[0], identifier, env)
+			err = deployApp(dockercli, images[0], identifier, env, workflowExecution)
 			if err != nil {
 				if strings.Contains(err.Error(), "exited prematurely") {
 					shutdown(workflowExecution, action.ID, err.Error(), true)
@@ -1666,7 +1676,7 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 					log.Printf("[INFO] Successfully downloaded %s", image)
 				}
 
-				err = deployApp(dockercli, image, identifier, env)
+				err = deployApp(dockercli, image, identifier, env, workflowExecution)
 				if err != nil {
 
 					log.Printf("[ERROR] Failed deploying image for the FOURTH time. Aborting if the image doesn't exist")
@@ -1683,7 +1693,7 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 			}
 		} else {
 
-			err = deployApp(dockercli, image, identifier, env)
+			err = deployApp(dockercli, image, identifier, env, workflowExecution)
 			if err != nil {
 				if strings.Contains(err.Error(), "exited prematurely") {
 					shutdown(workflowExecution, action.ID, err.Error(), true)
@@ -1696,7 +1706,7 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 					image = strings.ReplaceAll(image, " ", "-")
 				}
 
-				err = deployApp(dockercli, image, identifier, env)
+				err = deployApp(dockercli, image, identifier, env, workflowExecution)
 				if err != nil {
 					if strings.Contains(err.Error(), "exited prematurely") {
 						shutdown(workflowExecution, action.ID, err.Error(), true)
@@ -1707,7 +1717,7 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 						image = strings.ReplaceAll(image, " ", "-")
 					}
 
-					err = deployApp(dockercli, image, identifier, env)
+					err = deployApp(dockercli, image, identifier, env, workflowExecution)
 					if err != nil {
 						if strings.Contains(err.Error(), "exited prematurely") {
 							shutdown(workflowExecution, action.ID, err.Error(), true)
@@ -1734,7 +1744,7 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 							log.Printf("[INFO] Successfully downloaded %s", image)
 						}
 
-						err = deployApp(dockercli, image, identifier, env)
+						err = deployApp(dockercli, image, identifier, env, workflowExecution)
 						if err != nil {
 							log.Printf("[ERROR] Failed deploying image for the FOURTH time. Aborting if the image doesn't exist")
 							if strings.Contains(err.Error(), "exited prematurely") {
@@ -1792,7 +1802,7 @@ func handleExecutionResult(workflowExecution WorkflowExecution) {
 	return
 }
 
-func executionInit(workflowExecution WorkflowExecution) error {
+func executionInit(workflowExecution shuffle.WorkflowExecution) error {
 	parents = map[string][]string{}
 	children = map[string][]string{}
 
@@ -1834,10 +1844,10 @@ func executionInit(workflowExecution WorkflowExecution) error {
 				}
 
 				if trigger.ID == branch.SourceID {
-					log.Printf("[INFO] Trigger %s is the source!", trigger.AppName)
+					log.Printf("[INFO] shuffle.Trigger %s is the source!", trigger.AppName)
 					sourceFound = true
 				} else if trigger.ID == branch.DestinationID {
-					log.Printf("[INFO] Trigger %s is the destination!", trigger.AppName)
+					log.Printf("[INFO] shuffle.Trigger %s is the destination!", trigger.AppName)
 					destinationFound = true
 				}
 			}
@@ -1862,7 +1872,7 @@ func executionInit(workflowExecution WorkflowExecution) error {
 		log.Printf("[INFO] NEXT ACTIONS: %#v\n\n", nextActions)
 	*/
 
-	log.Printf("[INFO] Actions: %d + Special Triggers: %d", len(workflowExecution.Workflow.Actions), extra)
+	log.Printf("[INFO] shuffle.Actions: %d + Special shuffle.Triggers: %d", len(workflowExecution.Workflow.Actions), extra)
 	onpremApps := []string{}
 	toExecuteOnprem := []string{}
 	for _, action := range workflowExecution.Workflow.Actions {
@@ -1913,7 +1923,7 @@ func executionInit(workflowExecution WorkflowExecution) error {
 	return nil
 }
 
-func handleExecution(client *http.Client, req *http.Request, workflowExecution WorkflowExecution) error {
+func handleExecution(client *http.Client, req *http.Request, workflowExecution shuffle.WorkflowExecution) error {
 	// if no onprem runs (shouldn't happen, but extra check), exit
 	// if there are some, load the images ASAP for the app
 
@@ -1999,17 +2009,17 @@ func arrayContains(visited []string, id string) bool {
 	return found
 }
 
-func getResult(workflowExecution WorkflowExecution, id string) ActionResult {
+func getResult(workflowExecution shuffle.WorkflowExecution, id string) shuffle.ActionResult {
 	for _, actionResult := range workflowExecution.Results {
 		if actionResult.Action.ID == id {
 			return actionResult
 		}
 	}
 
-	return ActionResult{}
+	return shuffle.ActionResult{}
 }
 
-func getAction(workflowExecution WorkflowExecution, id, environment string) Action {
+func getAction(workflowExecution shuffle.WorkflowExecution, id, environment string) shuffle.Action {
 	for _, action := range workflowExecution.Workflow.Actions {
 		if action.ID == id {
 			return action
@@ -2018,7 +2028,7 @@ func getAction(workflowExecution WorkflowExecution, id, environment string) Acti
 
 	for _, trigger := range workflowExecution.Workflow.Triggers {
 		if trigger.ID == id {
-			return Action{
+			return shuffle.Action{
 				ID:          trigger.ID,
 				AppName:     trigger.AppName,
 				Name:        trigger.AppName,
@@ -2029,12 +2039,12 @@ func getAction(workflowExecution WorkflowExecution, id, environment string) Acti
 		}
 	}
 
-	return Action{}
+	return shuffle.Action{}
 }
 
-func runUserInput(client *http.Client, action Action, workflowId, workflowExecutionId, authorization string, configuration string) error {
+func runUserInput(client *http.Client, action shuffle.Action, workflowId, workflowExecutionId, authorization string, configuration string) error {
 	timeNow := time.Now().Unix()
-	result := ActionResult{
+	result := shuffle.ActionResult{
 		Action:        action,
 		ExecutionId:   workflowExecutionId,
 		Authorization: authorization,
@@ -2104,7 +2114,7 @@ func runTestExecution(client *http.Client, workflowId, apikey string) (string, s
 	}
 
 	log.Printf("[INFO] Test Body: %s", string(body))
-	var workflowExecution WorkflowExecution
+	var workflowExecution shuffle.WorkflowExecution
 	err = json.Unmarshal(body, &workflowExecution)
 	if err != nil {
 		log.Printf("Failed workflowExecution unmarshal: %s", err)
@@ -2124,17 +2134,17 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	//log.Printf("Got result: %s", string(body))
-	var actionResult ActionResult
+	var actionResult shuffle.ActionResult
 	err = json.Unmarshal(body, &actionResult)
 	if err != nil {
-		log.Printf("Failed ActionResult unmarshaling: %s", err)
+		log.Printf("Failed shuffle.ActionResult unmarshaling: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
 	}
 
-	// 1. Get the WorkflowExecution(ExecutionId) from the database
-	// 2. if ActionResult.Authentication != WorkflowExecution.Authentication -> exit
+	// 1. Get the shuffle.WorkflowExecution(ExecutionId) from the database
+	// 2. if shuffle.ActionResult.Authentication != shuffle.WorkflowExecution.Authentication -> exit
 	// 3. Add to and update actionResult in workflowExecution
 	// 4. Push to db
 	// IF FAIL: Set executionstatus: abort or cancel
@@ -2179,7 +2189,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	//if actionResult.Status == "WAITING" && actionResult.Action.AppName == "User Input" {
 	//	log.Printf("SHOULD WAIT A BIT AND RUN CLOUD STUFF WITH USER INPUT! WAITING!")
 
-	//	var trigger Trigger
+	//	var trigger shuffle.Trigger
 	//	err = json.Unmarshal([]byte(actionResult.Result), &trigger)
 	//	if err != nil {
 	//		log.Printf("Failed unmarshaling actionresult for user input: %s", err)
@@ -2199,7 +2209,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	//		actionResult.Result = fmt.Sprintf("Cloud error: %s", err)
 	//		workflowExecution.Results = append(workflowExecution.Results, actionResult)
 	//		workflowExecution.Status = "ABORTED"
-	//		err = setWorkflowExecution(ctx, *workflowExecution, true)
+	//		err = setshuffle.WorkflowExecution(ctx, *workflowExecution, true)
 	//		if err != nil {
 	//			log.Printf("Failed ")
 	//		} else {
@@ -2217,7 +2227,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 
 	//		workflowExecution.Results = append(workflowExecution.Results, actionResult)
 	//		workflowExecution.Status = actionResult.Status
-	//		err = setWorkflowExecution(ctx, *workflowExecution, true)
+	//		err = setshuffle.WorkflowExecution(ctx, *workflowExecution, true)
 	//		if err != nil {
 	//			log.Printf("Failed ")
 	//		} else {
@@ -2234,7 +2244,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 
 }
 
-func findChildNodes(workflowExecution WorkflowExecution, nodeId string) []string {
+func findChildNodes(workflowExecution shuffle.WorkflowExecution, nodeId string) []string {
 	//log.Printf("\nNODE TO FIX: %s\n\n", nodeId)
 	allChildren := []string{nodeId}
 
@@ -2282,7 +2292,7 @@ func findChildNodes(workflowExecution WorkflowExecution, nodeId string) []string
 }
 
 // Will make sure transactions are always ran for an execution. This is recursive if it fails. Allowed to fail up to 5 times
-func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workflowExecutionId string, actionResult ActionResult, resp http.ResponseWriter) {
+func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workflowExecutionId string, actionResult shuffle.ActionResult, resp http.ResponseWriter) {
 	//log.Printf("IN WORKFLOWEXECUTION SUB!")
 	// Should start a tx for the execution here
 	workflowExecution, err := getWorkflowExecution(ctx, workflowExecutionId)
@@ -2306,7 +2316,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	//}
 
 	//key := datastore.NameKey("workflowexecution", workflowExecutionId, nil)
-	//workflowExecution := &WorkflowExecution{}
+	//workflowExecution := &shuffle.WorkflowExecution{}
 	//if err := tx.Get(key, workflowExecution); err != nil {
 	//	log.Printf("[ERROR] tx.Get bug: %v", err)
 	//	tx.Rollback()
@@ -2314,7 +2324,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	//	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting the workflow key"}`)))
 	//	return
 	//}
-	actionResult.Action = Action{
+	actionResult.Action = shuffle.Action{
 		AppName:    actionResult.Action.AppName,
 		AppVersion: actionResult.Action.AppVersion,
 		Label:      actionResult.Action.Label,
@@ -2326,15 +2336,15 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	if actionResult.Status == "ABORTED" || actionResult.Status == "FAILURE" {
 		//dbSave = true
 
-		newResults := []ActionResult{}
+		newResults := []shuffle.ActionResult{}
 		childNodes := []string{}
 		if workflowExecution.Workflow.Configuration.ExitOnError {
-			log.Printf("[WARNING] Actionresult is %s for node %s in %s. Should set workflowExecution and exit all running functions", actionResult.Status, actionResult.Action.ID, workflowExecution.ExecutionId)
+			log.Printf("[WARNING] shuffle.Actionresult is %s for node %s in %s. Should set workflowExecution and exit all running functions", actionResult.Status, actionResult.Action.ID, workflowExecution.ExecutionId)
 			workflowExecution.Status = actionResult.Status
 			workflowExecution.LastNode = actionResult.Action.ID
 			// Find underlying nodes and add them
 		} else {
-			log.Printf("[WARNING] Actionresult is %s for node %s in %s. Continuing anyway because of workflow configuration.", actionResult.Status, actionResult.Action.ID, workflowExecution.ExecutionId)
+			log.Printf("[WARNING] shuffle.Actionresult is %s for node %s in %s. Continuing anyway because of workflow configuration.", actionResult.Status, actionResult.Action.ID, workflowExecution.ExecutionId)
 			// Finds ALL childnodes to set them to SKIPPED
 			// Remove duplicates
 			//log.Printf("CHILD NODES: %d", len(childNodes))
@@ -2346,7 +2356,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 
 				// 1. Find the action itself
 				// 2. Create an actionresult
-				curAction := Action{ID: ""}
+				curAction := shuffle.Action{ID: ""}
 				for _, action := range workflowExecution.Workflow.Actions {
 					if action.ID == nodeId {
 						curAction = action
@@ -2396,7 +2406,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 					}
 
 					if !skipNodeAdd {
-						newResult := ActionResult{
+						newResult := shuffle.ActionResult{
 							Action:        curAction,
 							ExecutionId:   actionResult.ExecutionId,
 							Authorization: actionResult.Authorization,
@@ -2419,7 +2429,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 
 		// Cleans up aborted, and always gives a result
 		lastResult := ""
-		// type ActionResult struct {
+		// type shuffle.ActionResult struct {
 		for _, result := range workflowExecution.Results {
 			if actionResult.Action.ID == result.Action.ID {
 				continue
@@ -2501,7 +2511,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 
 			// 1. Find the action itself
 			// 2. Create an actionresult
-			curAction := Action{ID: ""}
+			curAction := shuffle.Action{ID: ""}
 			for _, action := range workflowExecution.Workflow.Actions {
 				if action.ID == nodeId {
 					curAction = action
@@ -2545,7 +2555,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 				}
 
 				if !skipNodeAdd {
-					newAction := Action{
+					newAction := shuffle.Action{
 						AppName:    curAction.AppName,
 						AppVersion: curAction.AppVersion,
 						Label:      curAction.Label,
@@ -2553,7 +2563,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 						ID:         curAction.ID,
 					}
 
-					newResult := ActionResult{
+					newResult := shuffle.ActionResult{
 						Action:        newAction,
 						ExecutionId:   actionResult.ExecutionId,
 						Authorization: actionResult.Authorization,
@@ -2688,7 +2698,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 			// Result        string `json:"result" datastore:"result,noindex"`
 			// Arbitrary reduction size
 			maxSize := 500000
-			newResults := []ActionResult{}
+			newResults := []shuffle.ActionResult{}
 			for _, item := range workflowExecution.Results {
 				if len(item.Result) > maxSize {
 					item.Result = "[ERROR] Result too large to handle (https://github.com/frikky/shuffle/issues/171)"
@@ -2705,7 +2715,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	// Handled using cachhing, so actually pretty fast
 	cacheKey := fmt.Sprintf("workflowexecution-%s", workflowExecution.ExecutionId)
 	if value, found := requestCache.Get(cacheKey); found {
-		parsedValue := value.(*WorkflowExecution)
+		parsedValue := value.(*shuffle.WorkflowExecution)
 		if len(parsedValue.Results) > 0 && len(parsedValue.Results) != resultLength {
 			setExecution = false
 			if attempts > 5 {
@@ -2731,7 +2741,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		log.Printf("[INFO] Skipping setexec with status %s", workflowExecution.Status)
 
 		// Just in case. Should MAYBE validate finishing another time as well.
-		// This fixes issues with e.g. Action -> Trigger -> Action.
+		// This fixes issues with e.g. shuffle.Action -> shuffle.Trigger -> shuffle.Action.
 		handleExecutionResult(*workflowExecution)
 		//validateFinished(workflowExecution)
 	}
@@ -2744,21 +2754,21 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	//resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 }
 
-func getWorkflowExecution(ctx context.Context, id string) (*WorkflowExecution, error) {
+func getWorkflowExecution(ctx context.Context, id string) (*shuffle.WorkflowExecution, error) {
 	//log.Printf("IN GET WORKFLOW EXEC!")
 	cacheKey := fmt.Sprintf("workflowexecution-%s", id)
 	if value, found := requestCache.Get(cacheKey); found {
-		parsedValue := value.(*WorkflowExecution)
+		parsedValue := value.(*shuffle.WorkflowExecution)
 		//log.Printf("Found execution for id %s with %d results", parsedValue.ExecutionId, len(parsedValue.Results))
 
 		//validateFinished(*parsedValue)
 		return parsedValue, nil
 	}
 
-	return &WorkflowExecution{}, errors.New("No workflowexecution defined yet")
+	return &shuffle.WorkflowExecution{}, errors.New("No workflowexecution defined yet")
 }
 
-func sendResult(workflowExecution WorkflowExecution, data []byte) {
+func sendResult(workflowExecution shuffle.WorkflowExecution, data []byte) {
 	fullUrl := fmt.Sprintf("%s/api/v1/streams", baseUrl)
 	req, err := http.NewRequest(
 		"POST",
@@ -2786,8 +2796,8 @@ func sendResult(workflowExecution WorkflowExecution, data []byte) {
 	}
 }
 
-func validateFinished(workflowExecution WorkflowExecution) {
-	log.Printf("[INFO] VALIDATION. Status: %s, Actions: %d, Extra: %d, Results: %d\n", workflowExecution.Status, len(workflowExecution.Workflow.Actions), extra, len(workflowExecution.Results))
+func validateFinished(workflowExecution shuffle.WorkflowExecution) {
+	log.Printf("[INFO] VALIDATION. Status: %s, shuffle.Actions: %d, Extra: %d, Results: %d\n", workflowExecution.Status, len(workflowExecution.Workflow.Actions), extra, len(workflowExecution.Results))
 
 	//if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions)+extra {
 	if (len(environments) == 1 && requestsSent == 0 && len(workflowExecution.Results) >= 1) || (len(workflowExecution.Results) >= len(workflowExecution.Workflow.Actions) && len(workflowExecution.Workflow.Actions) > 0) {
@@ -2814,10 +2824,10 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	var actionResult ActionResult
+	var actionResult shuffle.ActionResult
 	err = json.Unmarshal(body, &actionResult)
 	if err != nil {
-		log.Printf("Failed ActionResult unmarshaling: %s", err)
+		log.Printf("Failed shuffle.ActionResult unmarshaling: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
@@ -2852,7 +2862,7 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 
 }
 
-func setWorkflowExecution(ctx context.Context, workflowExecution WorkflowExecution, dbSave bool) error {
+func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.WorkflowExecution, dbSave bool) error {
 	//log.Printf("IN SET WORKFLOW EXEC!")
 	//log.Printf("\n\n\nRESULT: %s\n\n\n", workflowExecution.Status)
 	if len(workflowExecution.ExecutionId) == 0 {
@@ -2901,7 +2911,7 @@ func getAvailablePort() (net.Listener, error) {
 	//return fmt.Sprintf(":%d", port)
 }
 
-func webserverSetup(workflowExecution WorkflowExecution) net.Listener {
+func webserverSetup(workflowExecution shuffle.WorkflowExecution) net.Listener {
 	hostname := getLocalIP()
 
 	// FIXME: This MAY not work because of speed between first
@@ -2972,7 +2982,7 @@ func main() {
 		log.Printf("[INFO] Running normal execution with auth %s and ID %s", authorization, executionId)
 	}
 
-	workflowExecution := WorkflowExecution{
+	workflowExecution := shuffle.WorkflowExecution{
 		ExecutionId: executionId,
 	}
 	if len(authorization) == 0 {
@@ -3052,7 +3062,8 @@ func main() {
 			}
 
 			log.Printf("Environments: %s. 1 = webserver, 0 or >1 = default", environments)
-			if len(environments) == 1 { //&& len(workflowExecution.Actions)+len(workflowExecution.Triggers) > 1 {
+			if len(environments) == 1 { //&& workflowExecution.ExecutionSource != "default" {
+				log.Printf("[INFO] Running OPTIMIZED execution (not manual)")
 				listener := webserverSetup(workflowExecution)
 				err := executionInit(workflowExecution)
 				if err != nil {
@@ -3070,6 +3081,9 @@ func main() {
 				//wg := sync.WaitGroup{}
 				//wg.Add(1)
 				//wg.Wait()
+			} else {
+				log.Printf("[INFO] Running NON-OPTIMIZED execution for type %s with %d environments", workflowExecution.ExecutionSource, len(environments))
+
 			}
 
 		}

@@ -1158,6 +1158,13 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	resultLength := len(workflowExecution.Results)
 	dbSave := false
 	setExecution := true
+
+	if actionResult.Action.ID == "" {
+		//log.Printf("[ERROR] Failed handling EMPTY action %#v", actionResult)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't handle empty action"}`)))
+		return
+	}
 	//tx, err := dbclient.NewTransaction(ctx)
 	//if err != nil {
 	//	log.Printf("client.NewTransaction: %v", err)
@@ -1309,6 +1316,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	// FIXME rebuild to be like this or something
 	// workflowExecution/ExecutionId/Nodes/NodeId
 	// Find the appropriate action
+	//log.Printf("[INFO] Setting value of %s in workflow %s to %s (1)", actionResult.Action.ID, workflowExecution.ExecutionId, actionResult.Status)
 	if len(workflowExecution.Results) > 0 {
 		// FIXME
 		skip := false
@@ -1344,14 +1352,14 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 				}
 			}
 
-			log.Printf("[INFO] Updating %s in workflow %s from %s to %s", actionResult.Action.ID, workflowExecution.ExecutionId, workflowExecution.Results[outerindex].Status, actionResult.Status)
+			log.Printf("[INFO] Updating %s in workflow %s from %s to %s (3)", actionResult.Action.ID, workflowExecution.ExecutionId, workflowExecution.Results[outerindex].Status, actionResult.Status)
 			workflowExecution.Results[outerindex] = actionResult
 		} else {
-			log.Printf("[INFO] Setting value of %s in workflow %s to %s", actionResult.Action.ID, workflowExecution.ExecutionId, actionResult.Status)
+			log.Printf("[INFO] Setting value of %s in workflow %s to %s (1)", actionResult.Action.ID, workflowExecution.ExecutionId, actionResult.Status)
 			workflowExecution.Results = append(workflowExecution.Results, actionResult)
 		}
 	} else {
-		log.Printf("[INFO] Setting value of %s in workflow %s to %s", actionResult.Action.ID, workflowExecution.ExecutionId, actionResult.Status)
+		log.Printf("[INFO] Setting value of %s in workflow %s to %s (2)", actionResult.Action.ID, workflowExecution.ExecutionId, actionResult.Status)
 		workflowExecution.Results = append(workflowExecution.Results, actionResult)
 	}
 

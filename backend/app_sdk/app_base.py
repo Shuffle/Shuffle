@@ -1208,7 +1208,9 @@ class AppBase:
                     outercnt += 1
         
             except KeyError as e:
-                print("Lower keyerror: %s" % e)
+                print("[INFO] Lower keyerror: %s" % e)
+                return "", False
+
                 #return basejson
                 #return "KeyError: Couldn't find key: %s" % e
 

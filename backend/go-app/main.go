@@ -3695,7 +3695,7 @@ func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("[INFO] Failed to increase total workflows: %s", err)
 	}
 
-	log.Printf("Set up a new hook with ID %s and environment %s", newId, hook.Environment)
+	log.Printf("[INFO] Set up a new hook with ID %s and environment %s", newId, hook.Environment)
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": true}`))
 }
