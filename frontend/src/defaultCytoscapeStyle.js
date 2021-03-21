@@ -164,7 +164,7 @@ const data = [{
 			css: {
 				'background-color': '#ffef47',
 				'border-color': '#ffef47',
-				'border-width': '5px',
+				'border-width': '8px',
 				'transition-property': 'border-width',
 				'transition-duration': '0.25s',
 			},
@@ -212,10 +212,13 @@ const data = [{
 			selector: 'edge.success-highlight',
 			css: {
 				'width': '5px',
-				'target-arrow-color': '#399645',
-				'line-color': '#399645',
+				'target-arrow-color': '#41dcab',
+				'line-color': '#41dcab',
 				'transition-property': 'line-color, width',
 				'transition-duration': '0.5s',
+				"line-fill": "linear-gradient",
+				"line-gradient-stop-positions": ["0.0", "100"],
+				"line-gradient-stop-colors": ["#41dcab", "#41dcab"],
 			},
 		},
 		{
@@ -223,7 +226,10 @@ const data = [{
 			css: {
 				'target-arrow-color': '#991818',
 				'line-color': '#991818',
-				'line-style': 'dashed'
+				'line-style': 'dashed',
+				"line-fill": "linear-gradient",
+				"line-gradient-stop-positions": ["0.0", "100"],
+				"line-gradient-stop-colors": ["#991818", "#991818"],
 			},
 		},
 		{

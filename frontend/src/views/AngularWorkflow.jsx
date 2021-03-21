@@ -447,7 +447,7 @@ const AngularWorkflow = (props) => {
 			return response.json()
 		})
 		.then((responseJson) => {
-			handleUpdateResults(responseJson)
+			handleUpdateResults(responseJson, executionRequest)
 		})
 		.catch(error => {
 			console.log("Error: ", error)
@@ -484,7 +484,7 @@ const AngularWorkflow = (props) => {
 
 	// Controls the colors and direction of execution results.
 	// Style is in defaultCytoscapeStyle.js
-	const handleUpdateResults = (responseJson) => {
+	const handleUpdateResults = (responseJson, executionRequest) => {
 		//console.log(responseJson)
 		// Loop nodes and find results
 		// Update on every interval? idk
@@ -496,10 +496,15 @@ const AngularWorkflow = (props) => {
 				setExecutionData(responseJson)
 			}
 		}
+
+		//console.log("PRE LOOPING RESULTS: !", responseJson.execution_id, executionRequest.execution_id)
+
 		if (responseJson.execution_id !== executionRequest.execution_id) {
 			cy.elements().removeClass('success-highlight failure-highlight executing-highlight')
 			return
 		}
+
+		//console.log("LOOPING RESULTS!")
 
 		if (responseJson.results !== null && responseJson.results !== []) {
 			for (var key in responseJson.results) {
@@ -562,6 +567,8 @@ const AngularWorkflow = (props) => {
 						currentnode.removeClass('shuffle-hover-highlight')
 						currentnode.removeClass('awaiting-data-highlight')
 						currentnode.addClass('success-highlight')
+						incomingEdges.addClass('success-highlight')
+						outgoingEdges.addClass('success-highlight')
 
 						if (visited !== undefined && visited !== null && !visited.includes(item.action.label)) {
 							if (executionRunning) {
@@ -603,7 +610,7 @@ const AngularWorkflow = (props) => {
 						currentnode.addClass('failure-highlight')
 
 						if (!visited.includes(item.action.label)) {
-							if (!item.action.result.includes("failed condition")) {
+							if (item.action.result !== undefined && item.action.result !== null && !item.action.result.includes("failed condition")) {
 								alert.error("Error for "+item.action.label+" with result "+item.result)
 							}
 							visited.push(item.action.label)
@@ -4014,7 +4021,7 @@ const AngularWorkflow = (props) => {
 								}
 							}
 						}}>
-							<Tooltip color="primary" title="See last result" placement="top">
+							<Tooltip color="primary" title="See previous results for this action" placement="top">
 								<ArrowLeftIcon style={{color: "white"}}/>
 							</Tooltip>
 						</IconButton>
@@ -4029,10 +4036,16 @@ const AngularWorkflow = (props) => {
 						</span>
 					</div>
 				</div>
-				<div style={{flex: "1"}}>
-					<Button disabled={selectedAction.id === workflow.start} style={{zIndex: 5000, marginTop: "15px",}} color="primary" variant="outlined" onClick={(e) => {
-						defineStartnode(e)	
-					}}>Set startnode</Button> 				
+				<div>
+					{selectedAction.id === workflow.start ? null : 
+						<Tooltip color="primary" title={"Make this node the start action"} placement="top">
+							<Button style={{zIndex: 5000, marginTop: "15px",}} color="primary" variant="outlined" onClick={(e) => {
+								defineStartnode(e)	
+							}}>
+								<KeyboardArrowRightIcon />
+							</Button> 				
+						</Tooltip>
+					}
 				</div>
 			</div>
 			<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -6690,17 +6703,21 @@ const AngularWorkflow = (props) => {
 								<Tooltip key={data.execution_id} title={data.result} placement="left-start">
 								<Paper elevation={5} key={data.execution_id} square style={executionPaperStyle} onMouseOver={() => {}} onMouseOut={() => {}} onClick={() => {
 
-									if (data.result === undefined || data.result === null || data.result.length === 0) {
-										setExecutionRequest({
-											"execution_id": data.execution_id,
-											"authorization": data.authorization,
-										})
+									if ((data.result === undefined || data.result === null || data.result.length === 0) && data.status !== "FINISHED" && data.status !== "ABORTED") {
+
 										start()
 										setExecutionRunning(true)
 										setExecutionRequestStarted(false)
 									}
+									
+									const cur_execution = {
+										"execution_id": data.execution_id,
+										"authorization": data.authorization,
+									}
+									setExecutionRequest(cur_execution)
 									setExecutionModalView(1)
 									setExecutionData(data)
+									handleUpdateResults(data, cur_execution)
 								}}>
 									<div style={{display: "flex", flex: 1}}>
 										<div style={{marginLeft: 0, width: lastExecution === data.execution_id ? 4 : 2, backgroundColor: statusColor, marginRight: 5}} />
@@ -6880,7 +6897,17 @@ const AngularWorkflow = (props) => {
 							}
 
 							return (
-								<div key={index} style={{marginBottom: 40,}}>
+								<div key={index} style={{marginBottom: 40,}} onMouseOver={() => {
+									var currentnode = cy.getElementById(data.action.id)
+									if (currentnode.length !== 0) {
+										currentnode.addClass('shuffle-hover-highlight')
+									}
+								}} onMouseOut={() => {
+									var currentnode = cy.getElementById(data.action.id)
+									if (currentnode.length !== 0) {
+										currentnode.removeClass('shuffle-hover-highlight')
+									}
+								}}>
 									<div style={{display: "flex", marginBottom: 15,}}>
 										<IconButton style={{marginTop: "auto", marginBottom: "auto", height: 30, paddingLeft: 0, width: 30}} onClick={() => {
 											setSelectedResult(data)

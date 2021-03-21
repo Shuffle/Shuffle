@@ -981,6 +981,10 @@ func validateNewWorkerExecution(body []byte) error {
 		return errors.New(fmt.Sprintf("Bad length of trigger: %d (probably normal app)", len(execution.Workflow.Triggers)))
 	}
 
+	if baseExecution.Status != "WAITING" && baseExecution.Status != "EXECUTING" {
+		return errors.New(fmt.Sprintf("Workflow is already finished or failed. Can't update"))
+	}
+
 	if execution.Status == "EXECUTING" {
 		//log.Printf("[INFO] Inside executing.")
 		extra := 0
@@ -994,6 +998,8 @@ func validateNewWorkerExecution(body []byte) error {
 		if len(execution.Workflow.Actions)+extra == len(execution.Results) {
 			execution.Status = "FINISHED"
 		}
+
+		log.Printf("BASEEXECUTION LENGTH: %d", len(baseExecution.Workflow.Actions)+extra)
 	}
 
 	// FIXME: Add extra here
@@ -3699,14 +3705,14 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 					Status:        "SKIPPED",
 				})
 			} else {
-				log.Printf("SHOULD KEEP TRIGGER %s", trigger.ID)
+				//log.Printf("SHOULD KEEP TRIGGER %s", trigger.ID)
 			}
 		}
 	}
 	//childNodes := findChildNodes(workflowExecution, workflowExecution.Start)
 
 	if !startFound {
-		log.Printf("Startnode %s doesn't exist!", workflowExecution.Start)
+		log.Printf("[ERROR] Startnode %s doesn't exist!!", workflowExecution.Start)
 		return WorkflowExecution{}, fmt.Sprintf("Workflow action %s doesn't exist in workflow", workflowExecution.Start), errors.New(fmt.Sprintf(`Workflow start node "%s" doesn't exist. Exiting!`, workflowExecution.Start))
 	}
 

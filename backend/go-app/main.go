@@ -3405,7 +3405,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	//resp.WriteHeader(200)
 	//resp.Write([]byte(`{"success": true}`))
 	if hook.Status == "stopped" {
-		log.Printf("Not running %s because hook status is stopped", hook.Id)
+		log.Printf("[WARNING] Not running %s because hook status is stopped", hook.Id)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "The webhook isn't running. Click start to start it"}`)))
 		return
@@ -3436,10 +3436,34 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	//log.Printf("BODY: %s", parsedBody)
+
+	// This is a specific fix for MSteams and may fix other things as well
+	// Scared whether it may stop other things though, but that's a future problem
+	// (famous last words)
+	parsedBody := string(body)
+	if strings.Contains(parsedBody, "choice") {
+		if strings.Count(parsedBody, `\\n`) > 2 {
+			parsedBody = strings.Replace(parsedBody, `\\n`, "", -1)
+		}
+		if strings.Count(parsedBody, `\u0022`) > 2 {
+			parsedBody = strings.Replace(parsedBody, `\u0022`, `"`, -1)
+		}
+		if strings.Count(parsedBody, `\\"`) > 2 {
+			parsedBody = strings.Replace(parsedBody, `\\"`, `"`, -1)
+		}
+
+		if strings.Contains(parsedBody, `"extra": "{`) {
+			parsedBody = strings.Replace(parsedBody, `"extra": "{`, `"extra": {`, 1)
+			parsedBody = strings.Replace(parsedBody, `}"}`, `}}`, 1)
+		}
+	}
+
+	//log.Printf("\n\nPARSEDBODY: %s", parsedBody)
 	newBody := ExecutionStruct{
 		Start:             hook.Start,
 		ExecutionSource:   "webhook",
-		ExecutionArgument: string(body),
+		ExecutionArgument: parsedBody,
 	}
 
 	b, err := json.Marshal(newBody)

@@ -141,11 +141,11 @@ class AppBase:
 
                             print(f"VALUE APPEND: {value}")
                             param_value += value
-
                             if param["name"] not in param_names:
                                 param_names.append(param["name"])
+
                     except (KeyError, NameError) as e:
-                        print(f"Key/NameError in param handler: {e}")
+                        print(f"""Key/NameError in param handler for {param["name"]}: {e}""")
 
             print(f"OUTER VALUE: {param_value}")
             if len(param_value) > 0:
@@ -2292,7 +2292,7 @@ class AppBase:
                     if action_result["result"] == "":
                         action_result["result"] = result
 
-                    self.logger.debug(f"Executed {action['label']}-{action['id']} with result: {result}")
+                    self.logger.debug(f"Executed {action['label']}-{action['id']}")#with result: {result}")
                     #self.logger.debug(f"Data: %s" % action_result)
                 except TypeError as e:
                     print("TypeError issue: %s" % e)
