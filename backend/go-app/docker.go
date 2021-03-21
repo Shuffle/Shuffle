@@ -2,6 +2,8 @@ package main
 
 // Docker
 import (
+	"github.com/frikky/shuffle-shared"
+
 	"archive/tar"
 	"path/filepath"
 
@@ -797,7 +799,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// Just here to verify that the user is logged in
-	_, err := handleApiAuthentication(resp, request)
+	_, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in validate swagger: %s", err)
 		resp.WriteHeader(401)

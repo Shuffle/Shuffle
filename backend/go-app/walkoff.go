@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/frikky/shuffle-shared"
+
 	"bytes"
 	"context"
 	"encoding/json"
@@ -29,7 +31,7 @@ import (
 	schedulerpb "google.golang.org/genproto/googleapis/cloud/scheduler/v1"
 
 	newscheduler "github.com/carlescere/scheduler"
-	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/frikky/kin-openapi/openapi3"
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
@@ -63,435 +65,416 @@ var scheduledOrgs = map[string]*newscheduler.Job{}
 //	},
 //}
 
-type ExecutionRequest struct {
-	ExecutionId       string   `json:"execution_id,omitempty"`
-	ExecutionArgument string   `json:"execution_argument,omitempty"`
-	ExecutionSource   string   `json:"execution_source,omitempty"`
-	WorkflowId        string   `json:"workflow_id,omitempty"`
-	Environments      []string `json:"environments,omitempty"`
-	Authorization     string   `json:"authorization,omitempty"`
-	Status            string   `json:"status,omitempty"`
-	Start             string   `json:"start,omitempty"`
-	Type              string   `json:"type,omitempty"`
-}
-
-type SyncFeatures struct {
-	Webhook            SyncData `json:"webhook" datastore:"webhook"`
-	Schedules          SyncData `json:"schedules" datastore:"schedules"`
-	UserInput          SyncData `json:"user_input" datastore:"user_input"`
-	SendMail           SyncData `json:"send_mail" datastore:"send_mail"`
-	SendSms            SyncData `json:"send_sms" datastore:"send_sms"`
-	Updates            SyncData `json:"updates" datastore:"updates"`
-	Notifications      SyncData `json:"notifications" datastore:"notifications"`
-	EmailTrigger       SyncData `json:"email_trigger" datastore:"email_trigger"`
-	AppExecutions      SyncData `json:"app_executions" datastore:"app_executions"`
-	WorkflowExecutions SyncData `json:"workflow_executions" datastore:"workflow_executions"`
-	Apps               SyncData `json:"apps" datastore:"apps"`
-	Workflows          SyncData `json:"workflows" datastore:"workflows"`
-	Autocomplete       SyncData `json:"autocomplete" datastore:"autocomplete"`
-	Authentication     SyncData `json:"authentication" datastore:"authentication"`
-	Schedule           SyncData `json:"schedule" datastore:"schedule"`
-}
-
-type SyncData struct {
-	Active         bool   `json:"active" datastore:"active"`
-	Type           string `json:"type,omitempty" datastore:"type"`
-	Name           string `json:"name,omitempty" datastore:"name"`
-	Description    string `json:"description,omitempty" datastore:"description"`
-	Limit          int64  `json:"limit,omitempty" datastore:"limit"`
-	StartDate      int64  `json:"start_date,omitempty" datastore:"start_date"`
-	EndDate        int64  `json:"end_date,omitempty" datastore:"end_date"`
-	DataCollection int64  `json:"data_collection,omitempty" datastore:"data_collection"`
-}
-
-type SyncConfig struct {
-	Interval int64  `json:"interval" datastore:"interval"`
-	Apikey   string `json:"api_key" datastore:"api_key"`
-}
-
-// Role is just used for feedback for a user
-type Org struct {
-	Name          string                `json:"name" datastore:"name"`
-	Description   string                `json:"description" datastore:"description"`
-	Image         string                `json:"image" datastore:"image,noindex"`
-	Id            string                `json:"id" datastore:"id"`
-	Org           string                `json:"org" datastore:"org"`
-	Users         []User                `json:"users" datastore:"users"`
-	Role          string                `json:"role" datastore:"role"`
-	Roles         []string              `json:"roles" datastore:"roles"`
-	CloudSync     bool                  `json:"cloud_sync" datastore:"CloudSync"`
-	SyncConfig    SyncConfig            `json:"sync_config" datastore:"sync_config"`
-	SyncFeatures  SyncFeatures          `json:"sync_features" datastore:"sync_features"`
-	Subscriptions []PaymentSubscription `json:"subscriptions" datastore:"subscriptions"`
-	Created       int64                 `json:"created" datastore:"created"`
-	Edited        int64                 `json:"edited" datastore:"edited"`
-	Defaults      Defaults              `json:"defaults" datastore:"defaults"`
-}
-
-type PaymentSubscription struct {
-	Active           bool   `json:"active" datastore:"active"`
-	Startdate        int64  `json:"startdate" datastore:"startdate"`
-	CancellationDate int64  `json:"cancellationdate" datastore:"cancellationdate"`
-	Enddate          int64  `json:"enddate" datastore:"enddate"`
-	Name             string `json:"name" datastore:"name"`
-	Recurrence       string `json:"recurrence" datastore:"recurrence"`
-	Reference        string `json:"reference" datastore:"reference"`
-	Level            string `json:"level" datastore:"level"`
-	Amount           string `json:"amount" datastore:"amount"`
-	Currency         string `json:"currency" datastore:"currency"`
-}
-
-type Defaults struct {
-	AppDownloadRepo        string `json:"app_download_repo" datastore:"app_download_repo"`
-	AppDownloadBranch      string `json:"app_download_branch" datastore:"app_download_branch"`
-	WorkflowDownloadRepo   string `json:"workflow_download_repo" datastore:"workflow_download_repo"`
-	WorkflowDownloadBranch string `json:"workflow_download_branch" datastore:"workflow_download_branch"`
-}
-
-type AppAuthenticationStorage struct {
-	Active        bool                  `json:"active" datastore:"active"`
-	Label         string                `json:"label" datastore:"label"`
-	Id            string                `json:"id" datastore:"id"`
-	App           WorkflowApp           `json:"app" datastore:"app,noindex"`
-	Fields        []AuthenticationStore `json:"fields" datastore:"fields"`
-	Usage         []AuthenticationUsage `json:"usage" datastore:"usage"`
-	WorkflowCount int64                 `json:"workflow_count" datastore:"workflow_count"`
-	NodeCount     int64                 `json:"node_count" datastore:"node_count"`
-	OrgId         string                `json:"org_id" datastore:"org_id"`
-	Created       int64                 `json:"created" datastore:"created"`
-	Edited        int64                 `json:"edited" datastore:"edited"`
-	Defined       bool                  `json:"defined" datastore:"defined"`
-}
-
-type AuthenticationUsage struct {
-	WorkflowId string   `json:"workflow_id" datastore:"workflow_id"`
-	Nodes      []string `json:"nodes" datastore:"nodes"`
-}
-
-// An app inside Shuffle
-// Source      string `json:"source" datastore:"soure" yaml:"source"` - downloadlocation
-type WorkflowApp struct {
-	Name          string `json:"name" yaml:"name" required:true datastore:"name"`
-	IsValid       bool   `json:"is_valid" yaml:"is_valid" required:true datastore:"is_valid"`
-	ID            string `json:"id" yaml:"id,omitempty" required:false datastore:"id"`
-	Link          string `json:"link" yaml:"link" required:false datastore:"link,noindex"`
-	AppVersion    string `json:"app_version" yaml:"app_version" required:true datastore:"app_version"`
-	SharingConfig string `json:"sharing_config" yaml:"sharing_config" datastore:"sharing_config"`
-	Generated     bool   `json:"generated" yaml:"generated" required:false datastore:"generated"`
-	Downloaded    bool   `json:"downloaded" yaml:"downloaded" required:false datastore:"downloaded"`
-	Sharing       bool   `json:"sharing" yaml:"sharing" required:false datastore:"sharing"`
-	Verified      bool   `json:"verified" yaml:"verified" required:false datastore:"verified"`
-	Invalid       bool   `json:"invalid" yaml:"invalid" required:false datastore:"invalid"`
-	Activated     bool   `json:"activated" yaml:"activated" required:false datastore:"activated"`
-	Tested        bool   `json:"tested" yaml:"tested" required:false datastore:"tested"`
-	Owner         string `json:"owner" datastore:"owner" yaml:"owner"`
-	Hash          string `json:"hash" datastore:"hash" yaml:"hash"` // api.yaml+dockerfile+src/app.py for apps
-	PrivateID     string `json:"private_id" yaml:"private_id" required:false datastore:"private_id"`
-	Description   string `json:"description" datastore:"description,noindex" required:false yaml:"description"`
-	Environment   string `json:"environment" datastore:"environment" required:true yaml:"environment"`
-	SmallImage    string `json:"small_image" datastore:"small_image,noindex" required:false yaml:"small_image"`
-	LargeImage    string `json:"large_image" datastore:"large_image,noindex" yaml:"large_image" required:false`
-	ContactInfo   struct {
-		Name string `json:"name" datastore:"name" yaml:"name"`
-		Url  string `json:"url" datastore:"url" yaml:"url"`
-	} `json:"contact_info" datastore:"contact_info" yaml:"contact_info" required:false`
-	ReferenceInfo struct {
-		DocumentationUrl string `json:"documentation_url" datastore:"documentation_url"`
-		GithubUrl        string `json:"github_url" datastore:"github_url"`
-	}
-	FolderMount struct {
-		FolderMount       bool   `json:"folder_mount" datastore:"folder_mount"`
-		SourceFolder      string `json:"source_folder" datastore:"source_folder"`
-		DestinationFolder string `json:"destination_folder" datastore:"destination_folder"`
-	}
-	Actions        []WorkflowAppAction `json:"actions" yaml:"actions" required:true datastore:"actions,noindex"`
-	Authentication Authentication      `json:"authentication" yaml:"authentication" required:false datastore:"authentication"`
-	Tags           []string            `json:"tags" yaml:"tags" required:false datastore:"activated"`
-	Categories     []string            `json:"categories" yaml:"categories" required:false datastore:"categories"`
-	Created        int64               `json:"created" datastore:"created"`
-	Edited         int64               `json:"edited" datastore:"edited"`
-	LastRuntime    int64               `json:"last_runtime" datastore:"last_runtime"`
-}
-
-type WorkflowAppActionParameter struct {
-	Description    string           `json:"description" datastore:"description,noindex" yaml:"description"`
-	ID             string           `json:"id" datastore:"id" yaml:"id,omitempty"`
-	Name           string           `json:"name" datastore:"name" yaml:"name"`
-	Example        string           `json:"example" datastore:"example,noindex" yaml:"example"`
-	Value          string           `json:"value" datastore:"value,noindex" yaml:"value,omitempty"`
-	Multiline      bool             `json:"multiline" datastore:"multiline" yaml:"multiline"`
-	Options        []string         `json:"options" datastore:"options" yaml:"options"`
-	ActionField    string           `json:"action_field" datastore:"action_field" yaml:"actionfield,omitempty"`
-	Variant        string           `json:"variant" datastore:"variant" yaml:"variant,omitempty"`
-	Required       bool             `json:"required" datastore:"required" yaml:"required"`
-	Configuration  bool             `json:"configuration" datastore:"configuration" yaml:"configuration"`
-	Tags           []string         `json:"tags" datastore:"tags" yaml:"tags"`
-	Schema         SchemaDefinition `json:"schema" datastore:"schema" yaml:"schema"`
-	SkipMulticheck bool             `json:"skip_multicheck" datastore:"skip_multicheck" yaml:"skip_multicheck"`
-	ValueReplace   []Valuereplace   `json:"value_replace" datastore:"value_replace,noindex" yaml:"value_replace,omitempty"`
-	UniqueToggled  bool             `json:"unique_toggled" datastore:"unique_toggled" yaml:"unique_toggled"`
-}
-
-type Valuereplace struct {
-	Key   string `json:"key" datastore:"key" yaml:"key"`
-	Value string `json:"value" datastore:"value" yaml:"value"`
-}
-
-type SchemaDefinition struct {
-	Type string `json:"type" datastore:"type"`
-}
-
-type WorkflowAppAction struct {
-	Description       string                       `json:"description" datastore:"description,noindex"`
-	ID                string                       `json:"id" datastore:"id" yaml:"id,omitempty"`
-	Name              string                       `json:"name" datastore:"name"`
-	Label             string                       `json:"label" datastore:"label"`
-	NodeType          string                       `json:"node_type" datastore:"node_type"`
-	Environment       string                       `json:"environment" datastore:"environment"`
-	Sharing           bool                         `json:"sharing" datastore:"sharing"`
-	PrivateID         string                       `json:"private_id" datastore:"private_id"`
-	AppID             string                       `json:"app_id" datastore:"app_id"`
-	Tags              []string                     `json:"tags" datastore:"tags" yaml:"tags"`
-	Authentication    []AuthenticationStore        `json:"authentication" datastore:"authentication,noindex" yaml:"authentication,omitempty"`
-	Tested            bool                         `json:"tested" datastore:"tested" yaml:"tested"`
-	Parameters        []WorkflowAppActionParameter `json:"parameters" datastore: "parameters"`
-	ExecutionVariable struct {
-		Description string `json:"description" datastore:"description,noindex"`
-		ID          string `json:"id" datastore:"id"`
-		Name        string `json:"name" datastore:"name"`
-		Value       string `json:"value" datastore:"value,noindex"`
-	} `json:"execution_variable" datastore:"execution_variables"`
-	Returns struct {
-		Description string           `json:"description" datastore:"returns" yaml:"description,omitempty"`
-		Example     string           `json:"example" datastore:"example,noindex" yaml:"example"`
-		ID          string           `json:"id" datastore:"id" yaml:"id,omitempty"`
-		Schema      SchemaDefinition `json:"schema" datastore:"schema" yaml:"schema"`
-	} `json:"returns" datastore:"returns"`
-	AuthenticationId string `json:"authentication_id" datastore:"authentication_id"`
-	Example          string `json:"example,noindex" datastore:"example" yaml:"example"`
-	AuthNotRequired  bool   `json:"auth_not_required" datastore:"auth_not_required" yaml:"auth_not_required"`
-}
+//type ExecutionRequest struct {
+//	ExecutionId       string   `json:"execution_id,omitempty"`
+//	ExecutionArgument string   `json:"execution_argument,omitempty"`
+//	ExecutionSource   string   `json:"execution_source,omitempty"`
+//	WorkflowId        string   `json:"workflow_id,omitempty"`
+//	Environments      []string `json:"environments,omitempty"`
+//	Authorization     string   `json:"authorization,omitempty"`
+//	Status            string   `json:"status,omitempty"`
+//	Start             string   `json:"start,omitempty"`
+//	Type              string   `json:"type,omitempty"`
+//}
+//
+//type SyncFeatures struct {
+//	Webhook            SyncData `json:"webhook" datastore:"webhook"`
+//	Schedules          SyncData `json:"schedules" datastore:"schedules"`
+//	UserInput          SyncData `json:"user_input" datastore:"user_input"`
+//	SendMail           SyncData `json:"send_mail" datastore:"send_mail"`
+//	SendSms            SyncData `json:"send_sms" datastore:"send_sms"`
+//	Updates            SyncData `json:"updates" datastore:"updates"`
+//	Notifications      SyncData `json:"notifications" datastore:"notifications"`
+//	EmailTrigger       SyncData `json:"email_trigger" datastore:"email_trigger"`
+//	AppExecutions      SyncData `json:"app_executions" datastore:"app_executions"`
+//	WorkflowExecutions SyncData `json:"workflow_executions" datastore:"workflow_executions"`
+//	Apps               SyncData `json:"apps" datastore:"apps"`
+//	Workflows          SyncData `json:"workflows" datastore:"workflows"`
+//	Autocomplete       SyncData `json:"autocomplete" datastore:"autocomplete"`
+//	Authentication     SyncData `json:"authentication" datastore:"authentication"`
+//	Schedule           SyncData `json:"schedule" datastore:"schedule"`
+//}
+//
+//type SyncData struct {
+//	Active         bool   `json:"active" datastore:"active"`
+//	Type           string `json:"type,omitempty" datastore:"type"`
+//	Name           string `json:"name,omitempty" datastore:"name"`
+//	Description    string `json:"description,omitempty" datastore:"description"`
+//	Limit          int64  `json:"limit,omitempty" datastore:"limit"`
+//	StartDate      int64  `json:"start_date,omitempty" datastore:"start_date"`
+//	EndDate        int64  `json:"end_date,omitempty" datastore:"end_date"`
+//	DataCollection int64  `json:"data_collection,omitempty" datastore:"data_collection"`
+//}
+//
+//type SyncConfig struct {
+//	Interval int64  `json:"interval" datastore:"interval"`
+//	Apikey   string `json:"api_key" datastore:"api_key"`
+//}
+//
+//type PaymentSubscription struct {
+//	Active           bool   `json:"active" datastore:"active"`
+//	Startdate        int64  `json:"startdate" datastore:"startdate"`
+//	CancellationDate int64  `json:"cancellationdate" datastore:"cancellationdate"`
+//	Enddate          int64  `json:"enddate" datastore:"enddate"`
+//	Name             string `json:"name" datastore:"name"`
+//	Recurrence       string `json:"recurrence" datastore:"recurrence"`
+//	Reference        string `json:"reference" datastore:"reference"`
+//	Level            string `json:"level" datastore:"level"`
+//	Amount           string `json:"amount" datastore:"amount"`
+//	Currency         string `json:"currency" datastore:"currency"`
+//}
+//
+//type Defaults struct {
+//	AppDownloadRepo        string `json:"app_download_repo" datastore:"app_download_repo"`
+//	AppDownloadBranch      string `json:"app_download_branch" datastore:"app_download_branch"`
+//	WorkflowDownloadRepo   string `json:"workflow_download_repo" datastore:"workflow_download_repo"`
+//	WorkflowDownloadBranch string `json:"workflow_download_branch" datastore:"workflow_download_branch"`
+//}
+//
+//type AppAuthenticationStorage struct {
+//	Active        bool                  `json:"active" datastore:"active"`
+//	Label         string                `json:"label" datastore:"label"`
+//	Id            string                `json:"id" datastore:"id"`
+//	App           WorkflowApp           `json:"app" datastore:"app,noindex"`
+//	Fields        []AuthenticationStore `json:"fields" datastore:"fields"`
+//	Usage         []AuthenticationUsage `json:"usage" datastore:"usage"`
+//	WorkflowCount int64                 `json:"workflow_count" datastore:"workflow_count"`
+//	NodeCount     int64                 `json:"node_count" datastore:"node_count"`
+//	OrgId         string                `json:"org_id" datastore:"org_id"`
+//	Created       int64                 `json:"created" datastore:"created"`
+//	Edited        int64                 `json:"edited" datastore:"edited"`
+//	Defined       bool                  `json:"defined" datastore:"defined"`
+//}
+//
+//type AuthenticationUsage struct {
+//	WorkflowId string   `json:"workflow_id" datastore:"workflow_id"`
+//	Nodes      []string `json:"nodes" datastore:"nodes"`
+//}
+//
+//// An app inside Shuffle
+//// Source      string `json:"source" datastore:"soure" yaml:"source"` - downloadlocation
+//type WorkflowApp struct {
+//	Name          string `json:"name" yaml:"name" required:true datastore:"name"`
+//	IsValid       bool   `json:"is_valid" yaml:"is_valid" required:true datastore:"is_valid"`
+//	ID            string `json:"id" yaml:"id,omitempty" required:false datastore:"id"`
+//	Link          string `json:"link" yaml:"link" required:false datastore:"link,noindex"`
+//	AppVersion    string `json:"app_version" yaml:"app_version" required:true datastore:"app_version"`
+//	SharingConfig string `json:"sharing_config" yaml:"sharing_config" datastore:"sharing_config"`
+//	Generated     bool   `json:"generated" yaml:"generated" required:false datastore:"generated"`
+//	Downloaded    bool   `json:"downloaded" yaml:"downloaded" required:false datastore:"downloaded"`
+//	Sharing       bool   `json:"sharing" yaml:"sharing" required:false datastore:"sharing"`
+//	Verified      bool   `json:"verified" yaml:"verified" required:false datastore:"verified"`
+//	Invalid       bool   `json:"invalid" yaml:"invalid" required:false datastore:"invalid"`
+//	Activated     bool   `json:"activated" yaml:"activated" required:false datastore:"activated"`
+//	Tested        bool   `json:"tested" yaml:"tested" required:false datastore:"tested"`
+//	Owner         string `json:"owner" datastore:"owner" yaml:"owner"`
+//	Hash          string `json:"hash" datastore:"hash" yaml:"hash"` // api.yaml+dockerfile+src/app.py for apps
+//	PrivateID     string `json:"private_id" yaml:"private_id" required:false datastore:"private_id"`
+//	Description   string `json:"description" datastore:"description,noindex" required:false yaml:"description"`
+//	Environment   string `json:"environment" datastore:"environment" required:true yaml:"environment"`
+//	SmallImage    string `json:"small_image" datastore:"small_image,noindex" required:false yaml:"small_image"`
+//	LargeImage    string `json:"large_image" datastore:"large_image,noindex" yaml:"large_image" required:false`
+//	ContactInfo   struct {
+//		Name string `json:"name" datastore:"name" yaml:"name"`
+//		Url  string `json:"url" datastore:"url" yaml:"url"`
+//	} `json:"contact_info" datastore:"contact_info" yaml:"contact_info" required:false`
+//	ReferenceInfo struct {
+//		DocumentationUrl string `json:"documentation_url" datastore:"documentation_url"`
+//		GithubUrl        string `json:"github_url" datastore:"github_url"`
+//	}
+//	FolderMount struct {
+//		FolderMount       bool   `json:"folder_mount" datastore:"folder_mount"`
+//		SourceFolder      string `json:"source_folder" datastore:"source_folder"`
+//		DestinationFolder string `json:"destination_folder" datastore:"destination_folder"`
+//	}
+//	Actions        []WorkflowAppAction `json:"actions" yaml:"actions" required:true datastore:"actions,noindex"`
+//	Authentication Authentication      `json:"authentication" yaml:"authentication" required:false datastore:"authentication"`
+//	Tags           []string            `json:"tags" yaml:"tags" required:false datastore:"activated"`
+//	Categories     []string            `json:"categories" yaml:"categories" required:false datastore:"categories"`
+//	Created        int64               `json:"created" datastore:"created"`
+//	Edited         int64               `json:"edited" datastore:"edited"`
+//	LastRuntime    int64               `json:"last_runtime" datastore:"last_runtime"`
+//}
+//
+//type WorkflowAppActionParameter struct {
+//	Description    string           `json:"description" datastore:"description,noindex" yaml:"description"`
+//	ID             string           `json:"id" datastore:"id" yaml:"id,omitempty"`
+//	Name           string           `json:"name" datastore:"name" yaml:"name"`
+//	Example        string           `json:"example" datastore:"example,noindex" yaml:"example"`
+//	Value          string           `json:"value" datastore:"value,noindex" yaml:"value,omitempty"`
+//	Multiline      bool             `json:"multiline" datastore:"multiline" yaml:"multiline"`
+//	Options        []string         `json:"options" datastore:"options" yaml:"options"`
+//	ActionField    string           `json:"action_field" datastore:"action_field" yaml:"actionfield,omitempty"`
+//	Variant        string           `json:"variant" datastore:"variant" yaml:"variant,omitempty"`
+//	Required       bool             `json:"required" datastore:"required" yaml:"required"`
+//	Configuration  bool             `json:"configuration" datastore:"configuration" yaml:"configuration"`
+//	Tags           []string         `json:"tags" datastore:"tags" yaml:"tags"`
+//	Schema         SchemaDefinition `json:"schema" datastore:"schema" yaml:"schema"`
+//	SkipMulticheck bool             `json:"skip_multicheck" datastore:"skip_multicheck" yaml:"skip_multicheck"`
+//	ValueReplace   []Valuereplace   `json:"value_replace" datastore:"value_replace,noindex" yaml:"value_replace,omitempty"`
+//	UniqueToggled  bool             `json:"unique_toggled" datastore:"unique_toggled" yaml:"unique_toggled"`
+//}
+//
+//type Valuereplace struct {
+//	Key   string `json:"key" datastore:"key" yaml:"key"`
+//	Value string `json:"value" datastore:"value" yaml:"value"`
+//}
+//
+//type SchemaDefinition struct {
+//	Type string `json:"type" datastore:"type"`
+//}
+//
+//type WorkflowAppAction struct {
+//	Description       string                       `json:"description" datastore:"description,noindex"`
+//	ID                string                       `json:"id" datastore:"id" yaml:"id,omitempty"`
+//	Name              string                       `json:"name" datastore:"name"`
+//	Label             string                       `json:"label" datastore:"label"`
+//	NodeType          string                       `json:"node_type" datastore:"node_type"`
+//	Environment       string                       `json:"environment" datastore:"environment"`
+//	Sharing           bool                         `json:"sharing" datastore:"sharing"`
+//	PrivateID         string                       `json:"private_id" datastore:"private_id"`
+//	AppID             string                       `json:"app_id" datastore:"app_id"`
+//	Tags              []string                     `json:"tags" datastore:"tags" yaml:"tags"`
+//	Authentication    []AuthenticationStore        `json:"authentication" datastore:"authentication,noindex" yaml:"authentication,omitempty"`
+//	Tested            bool                         `json:"tested" datastore:"tested" yaml:"tested"`
+//	Parameters        []WorkflowAppActionParameter `json:"parameters" datastore: "parameters"`
+//	ExecutionVariable struct {
+//		Description string `json:"description" datastore:"description,noindex"`
+//		ID          string `json:"id" datastore:"id"`
+//		Name        string `json:"name" datastore:"name"`
+//		Value       string `json:"value" datastore:"value,noindex"`
+//	} `json:"execution_variable" datastore:"execution_variables"`
+//	Returns struct {
+//		Description string           `json:"description" datastore:"returns" yaml:"description,omitempty"`
+//		Example     string           `json:"example" datastore:"example,noindex" yaml:"example"`
+//		ID          string           `json:"id" datastore:"id" yaml:"id,omitempty"`
+//		Schema      SchemaDefinition `json:"schema" datastore:"schema" yaml:"schema"`
+//	} `json:"returns" datastore:"returns"`
+//	AuthenticationId string `json:"authentication_id" datastore:"authentication_id"`
+//	Example          string `json:"example,noindex" datastore:"example" yaml:"example"`
+//	AuthNotRequired  bool   `json:"auth_not_required" datastore:"auth_not_required" yaml:"auth_not_required"`
+//}
 
 // FIXME: Generate a callback authentication ID?
 // FIXME: Add org check ..
-type WorkflowExecution struct {
-	Type               string         `json:"type" datastore:"type"`
-	Status             string         `json:"status" datastore:"status"`
-	Start              string         `json:"start" datastore:"start"`
-	ExecutionArgument  string         `json:"execution_argument" datastore:"execution_argument,noindex"`
-	ExecutionId        string         `json:"execution_id" datastore:"execution_id"`
-	ExecutionSource    string         `json:"execution_source" datastore:"execution_source"`
-	ExecutionParent    string         `json:"execution_parent" datastore:"execution_parent"`
-	ExecutionOrg       string         `json:"execution_org" datastore:"execution_org"`
-	WorkflowId         string         `json:"workflow_id" datastore:"workflow_id"`
-	LastNode           string         `json:"last_node" datastore:"last_node"`
-	Authorization      string         `json:"authorization" datastore:"authorization"`
-	Result             string         `json:"result" datastore:"result,noindex"`
-	StartedAt          int64          `json:"started_at" datastore:"started_at"`
-	CompletedAt        int64          `json:"completed_at" datastore:"completed_at"`
-	ProjectId          string         `json:"project_id" datastore:"project_id"`
-	Locations          []string       `json:"locations" datastore:"locations"`
-	Workflow           Workflow       `json:"workflow" datastore:"workflow,noindex"`
-	Results            []ActionResult `json:"results" datastore:"results,noindex"`
-	ExecutionVariables []struct {
-		Description string `json:"description" datastore:"description,noindex"`
-		ID          string `json:"id" datastore:"id"`
-		Name        string `json:"name" datastore:"name"`
-		Value       string `json:"value" datastore:"value,noindex"`
-	} `json:"execution_variables,omitempty" datastore:"execution_variables,omitempty"`
-	OrgId string `json:"org_id" datastore:"org_id"`
-}
+//type WorkflowExecution struct {
+//	Type               string         `json:"type" datastore:"type"`
+//	Status             string         `json:"status" datastore:"status"`
+//	Start              string         `json:"start" datastore:"start"`
+//	ExecutionArgument  string         `json:"execution_argument" datastore:"execution_argument,noindex"`
+//	ExecutionId        string         `json:"execution_id" datastore:"execution_id"`
+//	ExecutionSource    string         `json:"execution_source" datastore:"execution_source"`
+//	ExecutionParent    string         `json:"execution_parent" datastore:"execution_parent"`
+//	ExecutionOrg       string         `json:"execution_org" datastore:"execution_org"`
+//	WorkflowId         string         `json:"workflow_id" datastore:"workflow_id"`
+//	LastNode           string         `json:"last_node" datastore:"last_node"`
+//	Authorization      string         `json:"authorization" datastore:"authorization"`
+//	Result             string         `json:"result" datastore:"result,noindex"`
+//	StartedAt          int64          `json:"started_at" datastore:"started_at"`
+//	CompletedAt        int64          `json:"completed_at" datastore:"completed_at"`
+//	ProjectId          string         `json:"project_id" datastore:"project_id"`
+//	Locations          []string       `json:"locations" datastore:"locations"`
+//	Workflow           Workflow       `json:"workflow" datastore:"workflow,noindex"`
+//	Results            []ActionResult `json:"results" datastore:"results,noindex"`
+//	ExecutionVariables []struct {
+//		Description string `json:"description" datastore:"description,noindex"`
+//		ID          string `json:"id" datastore:"id"`
+//		Name        string `json:"name" datastore:"name"`
+//		Value       string `json:"value" datastore:"value,noindex"`
+//	} `json:"execution_variables,omitempty" datastore:"execution_variables,omitempty"`
+//	OrgId string `json:"org_id" datastore:"org_id"`
+//}
 
 // This is for the nodes in a workflow, NOT the app action itself.
-type Action struct {
-	AppName           string                       `json:"app_name" datastore:"app_name"`
-	AppVersion        string                       `json:"app_version" datastore:"app_version"`
-	AppID             string                       `json:"app_id" datastore:"app_id"`
-	Errors            []string                     `json:"errors" datastore:"errors"`
-	ID                string                       `json:"id" datastore:"id"`
-	IsValid           bool                         `json:"is_valid" datastore:"is_valid"`
-	IsStartNode       bool                         `json:"isStartNode,omitempty" datastore:"isStartNode"`
-	Sharing           bool                         `json:"sharing,omitempty" datastore:"sharing"`
-	PrivateID         string                       `json:"private_id,omitempty" datastore:"private_id"`
-	Label             string                       `json:"label,omitempty" datastore:"label"`
-	SmallImage        string                       `json:"small_image,omitempty" datastore:"small_image,noindex" required:false yaml:"small_image"`
-	LargeImage        string                       `json:"large_image,omitempty" datastore:"large_image,noindex" yaml:"large_image" required:false`
-	Environment       string                       `json:"environment,omitempty" datastore:"environment"`
-	Name              string                       `json:"name" datastore:"name"`
-	Parameters        []WorkflowAppActionParameter `json:"parameters" datastore: "parameters,noindex"`
-	ExecutionVariable struct {
-		Description string `json:"description,omitempty" datastore:"description,noindex"`
-		ID          string `json:"id,omitempty" datastore:"id"`
-		Name        string `json:"name,omitempty" datastore:"name"`
-		Value       string `json:"value,omitempty" datastore:"value,noindex"`
-	} `json:"execution_variable,omitempty" datastore:"execution_variable,omitempty"`
-	Position struct {
-		X float64 `json:"x,omitempty" datastore:"x"`
-		Y float64 `json:"y,omitempty" datastore:"y"`
-	} `json:"position,omitempty"`
-	Priority         int    `json:"priority,omitempty" datastore:"priority"`
-	AuthenticationId string `json:"authentication_id" datastore:"authentication_id"`
-	Example          string `json:"example,omitempty" datastore:"example,noindex"`
-	AuthNotRequired  bool   `json:"auth_not_required,omitempty" datastore:"auth_not_required" yaml:"auth_not_required"`
-	Category         string `json:"category" datastore:"category"`
-}
+//type Action struct {
+//	AppName           string                       `json:"app_name" datastore:"app_name"`
+//	AppVersion        string                       `json:"app_version" datastore:"app_version"`
+//	AppID             string                       `json:"app_id" datastore:"app_id"`
+//	Errors            []string                     `json:"errors" datastore:"errors"`
+//	ID                string                       `json:"id" datastore:"id"`
+//	IsValid           bool                         `json:"is_valid" datastore:"is_valid"`
+//	IsStartNode       bool                         `json:"isStartNode,omitempty" datastore:"isStartNode"`
+//	Sharing           bool                         `json:"sharing,omitempty" datastore:"sharing"`
+//	PrivateID         string                       `json:"private_id,omitempty" datastore:"private_id"`
+//	Label             string                       `json:"label,omitempty" datastore:"label"`
+//	SmallImage        string                       `json:"small_image,omitempty" datastore:"small_image,noindex" required:false yaml:"small_image"`
+//	LargeImage        string                       `json:"large_image,omitempty" datastore:"large_image,noindex" yaml:"large_image" required:false`
+//	Environment       string                       `json:"environment,omitempty" datastore:"environment"`
+//	Name              string                       `json:"name" datastore:"name"`
+//	Parameters        []WorkflowAppActionParameter `json:"parameters" datastore: "parameters,noindex"`
+//	ExecutionVariable struct {
+//		Description string `json:"description,omitempty" datastore:"description,noindex"`
+//		ID          string `json:"id,omitempty" datastore:"id"`
+//		Name        string `json:"name,omitempty" datastore:"name"`
+//		Value       string `json:"value,omitempty" datastore:"value,noindex"`
+//	} `json:"execution_variable,omitempty" datastore:"execution_variable,omitempty"`
+//	Position struct {
+//		X float64 `json:"x,omitempty" datastore:"x"`
+//		Y float64 `json:"y,omitempty" datastore:"y"`
+//	} `json:"position,omitempty"`
+//	Priority         int    `json:"priority,omitempty" datastore:"priority"`
+//	AuthenticationId string `json:"authentication_id" datastore:"authentication_id"`
+//	Example          string `json:"example,omitempty" datastore:"example,noindex"`
+//	AuthNotRequired  bool   `json:"auth_not_required,omitempty" datastore:"auth_not_required" yaml:"auth_not_required"`
+//	Category         string `json:"category" datastore:"category"`
+//}
+//
+//// Added environment for location to execute
+//type Trigger struct {
+//	AppName         string                       `json:"app_name" datastore:"app_name"`
+//	Description     string                       `json:"description" datastore:"description,noindex"`
+//	LongDescription string                       `json:"long_description" datastore:"long_description"`
+//	Status          string                       `json:"status" datastore:"status"`
+//	AppVersion      string                       `json:"app_version" datastore:"app_version"`
+//	Errors          []string                     `json:"errors" datastore:"errors"`
+//	ID              string                       `json:"id" datastore:"id"`
+//	IsValid         bool                         `json:"is_valid" datastore:"is_valid"`
+//	IsStartNode     bool                         `json:"isStartNode" datastore:"isStartNode"`
+//	Label           string                       `json:"label" datastore:"label"`
+//	SmallImage      string                       `json:"small_image" datastore:"small_image,noindex" required:false yaml:"small_image"`
+//	LargeImage      string                       `json:"large_image" datastore:"large_image,noindex" yaml:"large_image" required:false`
+//	Environment     string                       `json:"environment" datastore:"environment"`
+//	TriggerType     string                       `json:"trigger_type" datastore:"trigger_type"`
+//	Name            string                       `json:"name" datastore:"name"`
+//	Tags            []string                     `json:"tags" datastore:"tags" yaml:"tags"`
+//	Parameters      []WorkflowAppActionParameter `json:"parameters" datastore: "parameters,noindex"`
+//	Position        struct {
+//		X float64 `json:"x" datastore:"x"`
+//		Y float64 `json:"y" datastore:"y"`
+//	} `json:"position"`
+//	Priority int `json:"priority" datastore:"priority"`
+//}
+//
+//type Branch struct {
+//	DestinationID string      `json:"destination_id" datastore:"destination_id"`
+//	ID            string      `json:"id" datastore:"id"`
+//	SourceID      string      `json:"source_id" datastore:"source_id"`
+//	Label         string      `json:"label" datastore:"label"`
+//	HasError      bool        `json:"has_errors" datastore: "has_errors"`
+//	Conditions    []Condition `json:"conditions" datastore: "conditions,noindex"`
+//}
+//
+//// Same format for a lot of stuff
+//type Condition struct {
+//	Condition   WorkflowAppActionParameter `json:"condition" datastore:"condition"`
+//	Source      WorkflowAppActionParameter `json:"source" datastore:"source"`
+//	Destination WorkflowAppActionParameter `json:"destination" datastore:"destination"`
+//}
+//
+//type Schedule struct {
+//	Name              string `json:"name" datastore:"name"`
+//	Frequency         string `json:"frequency" datastore:"frequency"`
+//	ExecutionArgument string `json:"execution_argument" datastore:"execution_argument,noindex"`
+//	Id                string `json:"id" datastore:"id"`
+//	OrgId             string `json:"org_id" datastore:"org_id"`
+//	Environment       string `json:"environment" datastore:"environment"`
+//}
 
-// Added environment for location to execute
-type Trigger struct {
-	AppName         string                       `json:"app_name" datastore:"app_name"`
-	Description     string                       `json:"description" datastore:"description,noindex"`
-	LongDescription string                       `json:"long_description" datastore:"long_description"`
-	Status          string                       `json:"status" datastore:"status"`
-	AppVersion      string                       `json:"app_version" datastore:"app_version"`
-	Errors          []string                     `json:"errors" datastore:"errors"`
-	ID              string                       `json:"id" datastore:"id"`
-	IsValid         bool                         `json:"is_valid" datastore:"is_valid"`
-	IsStartNode     bool                         `json:"isStartNode" datastore:"isStartNode"`
-	Label           string                       `json:"label" datastore:"label"`
-	SmallImage      string                       `json:"small_image" datastore:"small_image,noindex" required:false yaml:"small_image"`
-	LargeImage      string                       `json:"large_image" datastore:"large_image,noindex" yaml:"large_image" required:false`
-	Environment     string                       `json:"environment" datastore:"environment"`
-	TriggerType     string                       `json:"trigger_type" datastore:"trigger_type"`
-	Name            string                       `json:"name" datastore:"name"`
-	Tags            []string                     `json:"tags" datastore:"tags" yaml:"tags"`
-	Parameters      []WorkflowAppActionParameter `json:"parameters" datastore: "parameters,noindex"`
-	Position        struct {
-		X float64 `json:"x" datastore:"x"`
-		Y float64 `json:"y" datastore:"y"`
-	} `json:"position"`
-	Priority int `json:"priority" datastore:"priority"`
-}
+//type Workflow struct {
+//	Actions       []Action   `json:"actions" datastore:"actions,noindex"`
+//	Branches      []Branch   `json:"branches" datastore:"branches,noindex"`
+//	Triggers      []Trigger  `json:"triggers" datastore:"triggers,noindex"`
+//	Schedules     []Schedule `json:"schedules" datastore:"schedules,noindex"`
+//	Configuration struct {
+//		ExitOnError  bool `json:"exit_on_error" datastore:"exit_on_error"`
+//		StartFromTop bool `json:"start_from_top" datastore:"start_from_top"`
+//	} `json:"configuration,omitempty" datastore:"configuration"`
+//	Created           int64    `json:"created" datastore:"created"`
+//	Edited            int64    `json:"edited" datastore:"edited"`
+//	LastRuntime       int64    `json:"last_runtime" datastore:"last_runtime"`
+//	Errors            []string `json:"errors,omitempty" datastore:"errors"`
+//	Tags              []string `json:"tags,omitempty" datastore:"tags"`
+//	ID                string   `json:"id" datastore:"id"`
+//	IsValid           bool     `json:"is_valid" datastore:"is_valid"`
+//	Name              string   `json:"name" datastore:"name"`
+//	Description       string   `json:"description" datastore:"description,noindex"`
+//	Start             string   `json:"start" datastore:"start"`
+//	Owner             string   `json:"owner" datastore:"owner"`
+//	Sharing           string   `json:"sharing" datastore:"sharing"`
+//	Org               []Org    `json:"org,omitempty" datastore:"org"`
+//	ExecutingOrg      Org      `json:"execution_org,omitempty" datastore:"execution_org"`
+//	OrgId             string   `json:"org_id,omitempty" datastore:"org_id"`
+//	WorkflowVariables []struct {
+//		Description string `json:"description" datastore:"description,noindex"`
+//		ID          string `json:"id" datastore:"id"`
+//		Name        string `json:"name" datastore:"name"`
+//		Value       string `json:"value" datastore:"value,noindex"`
+//	} `json:"workflow_variables" datastore:"workflow_variables"`
+//	ExecutionVariables []struct {
+//		Description string `json:"description" datastore:"description,noindex"`
+//		ID          string `json:"id" datastore:"id"`
+//		Name        string `json:"name" datastore:"name"`
+//		Value       string `json:"value" datastore:"value,noindex"`
+//	} `json:"execution_variables,omitempty" datastore:"execution_variables"`
+//	ExecutionEnvironment string     `json:"execution_environment" datastore:"execution_environment"`
+//	PreviouslySaved      bool       `json:"previously_saved" datastore:"first_save"`
+//	Categories           Categories `json:"categories" datastore:"categories"`
+//	ExampleArgument      string     `json:"example_argument" datastore:"example_argument,noindex"`
+//}
 
-type Branch struct {
-	DestinationID string      `json:"destination_id" datastore:"destination_id"`
-	ID            string      `json:"id" datastore:"id"`
-	SourceID      string      `json:"source_id" datastore:"source_id"`
-	Label         string      `json:"label" datastore:"label"`
-	HasError      bool        `json:"has_errors" datastore: "has_errors"`
-	Conditions    []Condition `json:"conditions" datastore: "conditions,noindex"`
-}
+//type Category struct {
+//	Name        string `json:"name" datastore:"name"`
+//	Description string `json:"description" datastore:"description"`
+//	Count       int64  `json:"count" datastore:"count"`
+//}
+//
+//type Categories struct {
+//	SIEM          Category `json:"siem" datastore:"siem"`
+//	Communication Category `json:"communication" datastore:"communication"`
+//	Assets        Category `json:"assets" datastore:"assets"`
+//	Cases         Category `json:"cases" datastore:"cases"`
+//	Network       Category `json:"network" datastore:"network"`
+//	Intel         Category `json:"intel" datastore:"intel"`
+//	EDR           Category `json:"edr" datastore:"edr"`
+//	Other         Category `json:"other" datastore:"other"`
+//}
 
-// Same format for a lot of stuff
-type Condition struct {
-	Condition   WorkflowAppActionParameter `json:"condition" datastore:"condition"`
-	Source      WorkflowAppActionParameter `json:"source" datastore:"source"`
-	Destination WorkflowAppActionParameter `json:"destination" datastore:"destination"`
-}
-
-type Schedule struct {
-	Name              string `json:"name" datastore:"name"`
-	Frequency         string `json:"frequency" datastore:"frequency"`
-	ExecutionArgument string `json:"execution_argument" datastore:"execution_argument,noindex"`
-	Id                string `json:"id" datastore:"id"`
-	OrgId             string `json:"org_id" datastore:"org_id"`
-	Environment       string `json:"environment" datastore:"environment"`
-}
-
-type Workflow struct {
-	Actions       []Action   `json:"actions" datastore:"actions,noindex"`
-	Branches      []Branch   `json:"branches" datastore:"branches,noindex"`
-	Triggers      []Trigger  `json:"triggers" datastore:"triggers,noindex"`
-	Schedules     []Schedule `json:"schedules" datastore:"schedules,noindex"`
-	Configuration struct {
-		ExitOnError  bool `json:"exit_on_error" datastore:"exit_on_error"`
-		StartFromTop bool `json:"start_from_top" datastore:"start_from_top"`
-	} `json:"configuration,omitempty" datastore:"configuration"`
-	Created           int64    `json:"created" datastore:"created"`
-	Edited            int64    `json:"edited" datastore:"edited"`
-	LastRuntime       int64    `json:"last_runtime" datastore:"last_runtime"`
-	Errors            []string `json:"errors,omitempty" datastore:"errors"`
-	Tags              []string `json:"tags,omitempty" datastore:"tags"`
-	ID                string   `json:"id" datastore:"id"`
-	IsValid           bool     `json:"is_valid" datastore:"is_valid"`
-	Name              string   `json:"name" datastore:"name"`
-	Description       string   `json:"description" datastore:"description,noindex"`
-	Start             string   `json:"start" datastore:"start"`
-	Owner             string   `json:"owner" datastore:"owner"`
-	Sharing           string   `json:"sharing" datastore:"sharing"`
-	Org               []Org    `json:"org,omitempty" datastore:"org"`
-	ExecutingOrg      Org      `json:"execution_org,omitempty" datastore:"execution_org"`
-	OrgId             string   `json:"org_id,omitempty" datastore:"org_id"`
-	WorkflowVariables []struct {
-		Description string `json:"description" datastore:"description,noindex"`
-		ID          string `json:"id" datastore:"id"`
-		Name        string `json:"name" datastore:"name"`
-		Value       string `json:"value" datastore:"value,noindex"`
-	} `json:"workflow_variables" datastore:"workflow_variables"`
-	ExecutionVariables []struct {
-		Description string `json:"description" datastore:"description,noindex"`
-		ID          string `json:"id" datastore:"id"`
-		Name        string `json:"name" datastore:"name"`
-		Value       string `json:"value" datastore:"value,noindex"`
-	} `json:"execution_variables,omitempty" datastore:"execution_variables"`
-	ExecutionEnvironment string     `json:"execution_environment" datastore:"execution_environment"`
-	PreviouslySaved      bool       `json:"previously_saved" datastore:"first_save"`
-	Categories           Categories `json:"categories" datastore:"categories"`
-	ExampleArgument      string     `json:"example_argument" datastore:"example_argument,noindex"`
-}
-
-type Category struct {
-	Name        string `json:"name" datastore:"name"`
-	Description string `json:"description" datastore:"description"`
-	Count       int64  `json:"count" datastore:"count"`
-}
-
-type Categories struct {
-	SIEM          Category `json:"siem" datastore:"siem"`
-	Communication Category `json:"communication" datastore:"communication"`
-	Assets        Category `json:"assets" datastore:"assets"`
-	Cases         Category `json:"cases" datastore:"cases"`
-	Network       Category `json:"network" datastore:"network"`
-	Intel         Category `json:"intel" datastore:"intel"`
-	EDR           Category `json:"edr" datastore:"edr"`
-	Other         Category `json:"other" datastore:"other"`
-}
-
-type ActionResult struct {
-	Action        Action `json:"action" datastore:"action,noindex"`
-	ExecutionId   string `json:"execution_id" datastore:"execution_id"`
-	Authorization string `json:"authorization" datastore:"authorization"`
-	Result        string `json:"result" datastore:"result,noindex"`
-	StartedAt     int64  `json:"started_at" datastore:"started_at"`
-	CompletedAt   int64  `json:"completed_at" datastore:"completed_at"`
-	Status        string `json:"status" datastore:"status"`
-}
-
-type Authentication struct {
-	Required   bool                   `json:"required" datastore:"required" yaml:"required" `
-	Parameters []AuthenticationParams `json:"parameters" datastore:"parameters" yaml:"parameters"`
-}
-
-type AuthenticationParams struct {
-	Description string           `json:"description" datastore:"description,noindex" yaml:"description"`
-	ID          string           `json:"id" datastore:"id" yaml:"id"`
-	Name        string           `json:"name" datastore:"name" yaml:"name"`
-	Example     string           `json:"example" datastore:"example,noindex" yaml:"example"`
-	Value       string           `json:"value,omitempty" datastore:"value,noindex" yaml:"value"`
-	Multiline   bool             `json:"multiline" datastore:"multiline" yaml:"multiline"`
-	Required    bool             `json:"required" datastore:"required" yaml:"required"`
-	In          string           `json:"in" datastore:"in" yaml:"in"`
-	Schema      SchemaDefinition `json:"schema" datastore:"schema" yaml:"schema"`
-	Scheme      string           `json:"scheme" datastore:"scheme" yaml:"scheme"` // Deprecated
-}
-
-type AuthenticationStore struct {
-	Key   string `json:"key" datastore:"key"`
-	Value string `json:"value" datastore:"value,noindex"`
-}
-
-type ExecutionRequestWrapper struct {
-	Data []ExecutionRequest `json:"data"`
-}
-
-type AppExecutionExample struct {
-	AppName         string   `json:"app_name" datastore:"app_name"`
-	AppVersion      string   `json:"app_version" datastore:"app_version"`
-	AppAction       string   `json:"app_action" datastore:"app_action"`
-	AppId           string   `json:"app_id" datastore:"app_id"`
-	ExampleId       string   `json:"example_id" datastore:"example_id"`
-	SuccessExamples []string `json:"success_examples" datastore:"success_examples,noindex"`
-	FailureExamples []string `json:"failure_examples" datastore:"failure_examples,noindex"`
-}
+//type ActionResult struct {
+//	Action        Action `json:"action" datastore:"action,noindex"`
+//	ExecutionId   string `json:"execution_id" datastore:"execution_id"`
+//	Authorization string `json:"authorization" datastore:"authorization"`
+//	Result        string `json:"result" datastore:"result,noindex"`
+//	StartedAt     int64  `json:"started_at" datastore:"started_at"`
+//	CompletedAt   int64  `json:"completed_at" datastore:"completed_at"`
+//	Status        string `json:"status" datastore:"status"`
+//}
+//
+//type Authentication struct {
+//	Required   bool                   `json:"required" datastore:"required" yaml:"required" `
+//	Parameters []AuthenticationParams `json:"parameters" datastore:"parameters" yaml:"parameters"`
+//}
+//
+//type AuthenticationParams struct {
+//	Description string           `json:"description" datastore:"description,noindex" yaml:"description"`
+//	ID          string           `json:"id" datastore:"id" yaml:"id"`
+//	Name        string           `json:"name" datastore:"name" yaml:"name"`
+//	Example     string           `json:"example" datastore:"example,noindex" yaml:"example"`
+//	Value       string           `json:"value,omitempty" datastore:"value,noindex" yaml:"value"`
+//	Multiline   bool             `json:"multiline" datastore:"multiline" yaml:"multiline"`
+//	Required    bool             `json:"required" datastore:"required" yaml:"required"`
+//	In          string           `json:"in" datastore:"in" yaml:"in"`
+//	Schema      SchemaDefinition `json:"schema" datastore:"schema" yaml:"schema"`
+//	Scheme      string           `json:"scheme" datastore:"scheme" yaml:"scheme"` // Deprecated
+//}
+//
+//type AuthenticationStore struct {
+//	Key   string `json:"key" datastore:"key"`
+//	Value string `json:"value" datastore:"value,noindex"`
+//}
+//
+//type ExecutionRequestWrapper struct {
+//	Data []ExecutionRequest `json:"data"`
+//}
+//
+//type AppExecutionExample struct {
+//	AppName         string   `json:"app_name" datastore:"app_name"`
+//	AppVersion      string   `json:"app_version" datastore:"app_version"`
+//	AppAction       string   `json:"app_action" datastore:"app_action"`
+//	AppId           string   `json:"app_id" datastore:"app_id"`
+//	ExampleId       string   `json:"example_id" datastore:"example_id"`
+//	SuccessExamples []string `json:"success_examples" datastore:"success_examples,noindex"`
+//	FailureExamples []string `json:"failure_examples" datastore:"failure_examples,noindex"`
+//}
 
 // This might be... a bit off, but that's fine :)
 // This might also be stupid, as we want timelines and such
@@ -551,7 +534,7 @@ func increaseStatisticsField(ctx context.Context, fieldname, id string, amount i
 	return nil
 }
 
-func setWorkflowQueue(ctx context.Context, executionRequest ExecutionRequest, env string) error {
+func setWorkflowQueue(ctx context.Context, executionRequest shuffle.ExecutionRequest, env string) error {
 	orgKey := fmt.Sprintf("workflowqueue-%s", env)
 	key := datastore.NameKey(orgKey, executionRequest.ExecutionId, nil)
 
@@ -577,16 +560,16 @@ func setWorkflowQueue(ctx context.Context, executionRequest ExecutionRequest, en
 //	return nil
 //}
 
-func getWorkflowQueue(ctx context.Context, id string) (ExecutionRequestWrapper, error) {
+func getWorkflowQueue(ctx context.Context, id string) (shuffle.ExecutionRequestWrapper, error) {
 	orgId := fmt.Sprintf("workflowqueue-%s", id)
 	q := datastore.NewQuery(orgId).Limit(10)
-	executions := []ExecutionRequest{}
+	executions := []shuffle.ExecutionRequest{}
 	_, err := dbclient.GetAll(ctx, q, &executions)
 	if err != nil {
-		return ExecutionRequestWrapper{}, err
+		return shuffle.ExecutionRequestWrapper{}, err
 	}
 
-	return ExecutionRequestWrapper{Data: executions}, nil
+	return shuffle.ExecutionRequestWrapper{Data: executions}, nil
 
 	//key := datastore.NameKey("workflowqueue", id, nil)
 	//executions := ExecutionRequestWrapper{}
@@ -660,7 +643,7 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 			Body:   ioutil.NopCloser(strings.NewReader(bodyWrapper)),
 		}
 
-		_, _, err := handleExecution(workflowId, Workflow{ExecutingOrg: Org{Id: orgId}}, request)
+		_, _, err := handleExecution(workflowId, shuffle.Workflow{ExecutingOrg: shuffle.Org{Id: orgId}}, request)
 		if err != nil {
 			log.Printf("Failed to execute %s: %s", workflowId, err)
 		}
@@ -747,7 +730,7 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 
 	// Getting from the request
 	//log.Println(string(body))
-	var removeExecutionRequests ExecutionRequestWrapper
+	var removeExecutionRequests shuffle.ExecutionRequestWrapper
 	err = json.Unmarshal(body, &removeExecutionRequests)
 	if err != nil {
 		log.Printf("Failed executionrequest in queue unmarshaling: %s", err)
@@ -831,7 +814,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if len(executionRequests.Data) == 0 {
-		executionRequests.Data = []ExecutionRequest{}
+		executionRequests.Data = []shuffle.ExecutionRequest{}
 	} else {
 		log.Printf("[INFO] Executionrequests (%s): %d", id, len(executionRequests.Data))
 	}
@@ -861,7 +844,7 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	var actionResult ActionResult
+	var actionResult shuffle.ActionResult
 	err = json.Unmarshal(body, &actionResult)
 	if err != nil {
 		log.Printf("Failed ActionResult unmarshaling: %s", err)
@@ -871,7 +854,7 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	workflowExecution, err := getWorkflowExecution(ctx, actionResult.ExecutionId)
+	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, actionResult.ExecutionId)
 	if err != nil {
 		//log.Printf("Failed getting execution (streamresult) %s: %s", actionResult.ExecutionId, err)
 		resp.WriteHeader(401)
@@ -901,7 +884,7 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 
 // Finds the child nodes of a node in execution and returns them
 // Used if e.g. a node in a branch is exited, and all children have to be stopped
-func findChildNodes(workflowExecution WorkflowExecution, nodeId string) []string {
+func findChildNodes(workflowExecution shuffle.WorkflowExecution, nodeId string) []string {
 	//log.Printf("\nNODE TO FIX: %s\n\n", nodeId)
 	allChildren := []string{nodeId}
 
@@ -955,14 +938,14 @@ func validateNewWorkerExecution(body []byte) error {
 	//}
 
 	ctx := context.Background()
-	var execution WorkflowExecution
+	var execution shuffle.WorkflowExecution
 	err := json.Unmarshal(body, &execution)
 	if err != nil {
 		log.Printf("[WARNING] Failed execution unmarshaling: %s", err)
 		return err
 	}
 
-	baseExecution, err := getWorkflowExecution(ctx, execution.ExecutionId)
+	baseExecution, err := shuffle.GetWorkflowExecution(ctx, execution.ExecutionId)
 	if err != nil {
 		log.Printf("[ERROR] Failed getting execution (workflowqueue) %s: %s", execution.ExecutionId, err)
 		return err
@@ -1044,7 +1027,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		//log.Printf("[WARNING] Handling other execution variant: %s", err)
 	}
 
-	var actionResult ActionResult
+	var actionResult shuffle.ActionResult
 	err = json.Unmarshal(body, &actionResult)
 	if err != nil {
 		log.Printf("Failed ActionResult unmarshaling: %s", err)
@@ -1060,7 +1043,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	// IF FAIL: Set executionstatus: abort or cancel
 
 	ctx := context.Background()
-	workflowExecution, err := getWorkflowExecution(ctx, actionResult.ExecutionId)
+	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, actionResult.ExecutionId)
 	if err != nil {
 		log.Printf("[ERROR] Failed getting execution (workflowqueue) %s: %s", actionResult.ExecutionId, err)
 		resp.WriteHeader(401)
@@ -1099,7 +1082,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	if actionResult.Status == "WAITING" && actionResult.Action.AppName == "User Input" {
 		log.Printf("SHOULD WAIT A BIT AND RUN CLOUD STUFF WITH USER INPUT! WAITING!")
 
-		var trigger Trigger
+		var trigger shuffle.Trigger
 		err = json.Unmarshal([]byte(actionResult.Result), &trigger)
 		if err != nil {
 			log.Printf("Failed unmarshaling actionresult for user input: %s", err)
@@ -1152,9 +1135,9 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 }
 
 // Will make sure transactions are always ran for an execution. This is recursive if it fails. Allowed to fail up to 5 times
-func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workflowExecutionId string, actionResult ActionResult, resp http.ResponseWriter) {
+func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workflowExecutionId string, actionResult shuffle.ActionResult, resp http.ResponseWriter) {
 	// Should start a tx for the execution here
-	workflowExecution, err := getWorkflowExecution(ctx, workflowExecutionId)
+	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, workflowExecutionId)
 	if err != nil {
 		log.Printf("[ERROR] Failed getting execution cache: %s", err)
 		resp.WriteHeader(401)
@@ -1192,7 +1175,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	if actionResult.Status == "ABORTED" || actionResult.Status == "FAILURE" {
 		dbSave = true
 
-		newResults := []ActionResult{}
+		newResults := []shuffle.ActionResult{}
 		childNodes := []string{}
 		if workflowExecution.Workflow.Configuration.ExitOnError {
 			log.Printf("[WARNING] Actionresult is %s for node %s in %s. Should set workflowExecution and exit all running functions", actionResult.Status, actionResult.Action.ID, workflowExecution.ExecutionId)
@@ -1214,7 +1197,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 
 				// 1. Find the action itself
 				// 2. Create an actionresult
-				curAction := Action{ID: ""}
+				curAction := shuffle.Action{ID: ""}
 				for _, action := range workflowExecution.Workflow.Actions {
 					if action.ID == nodeId {
 						curAction = action
@@ -1258,7 +1241,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 					}
 
 					if !skipNodeAdd {
-						newAction := Action{
+						newAction := shuffle.Action{
 							AppName:    curAction.AppName,
 							AppVersion: curAction.AppVersion,
 							Label:      curAction.Label,
@@ -1266,7 +1249,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 							ID:         curAction.ID,
 						}
 
-						newResult := ActionResult{
+						newResult := shuffle.ActionResult{
 							Action:        newAction,
 							ExecutionId:   actionResult.ExecutionId,
 							Authorization: actionResult.Authorization,
@@ -1474,7 +1457,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	}
 
 	// FIXME - why isn't this how it works otherwise, wtf?
-	//workflow, err := getWorkflow(workflowExecution.Workflow.ID)
+	//workflow, err := shuffle.GetWorkflow(workflowExecution.Workflow.ID)
 	//newActions := []Action{}
 	//for _, action := range workflowExecution.Workflow.Actions {
 	//	log.Printf("Name: %s, Env: %s", action.Name, action.Environment)
@@ -1489,7 +1472,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 			// Result        string `json:"result" datastore:"result,noindex"`
 			// Arbitrary reduction size
 			maxSize := 500000
-			newResults := []ActionResult{}
+			newResults := []shuffle.ActionResult{}
 			for _, item := range workflowExecution.Results {
 				if len(item.Result) > maxSize {
 					item.Result = "[ERROR] Result too large to handle (https://github.com/frikky/shuffle/issues/171)"
@@ -1506,7 +1489,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	// Handled using cachhing, so actually pretty fast
 	cacheKey := fmt.Sprintf("workflowexecution-%s", workflowExecution.ExecutionId)
 	if value, found := requestCache.Get(cacheKey); found {
-		parsedValue := value.(*WorkflowExecution)
+		parsedValue := value.(*shuffle.WorkflowExecution)
 		if len(parsedValue.Results) > 0 && len(parsedValue.Results) != resultLength {
 			setExecution = false
 			if attempts > 5 {
@@ -1587,10 +1570,10 @@ func JSONCheck(str string) bool {
 	return json.Unmarshal([]byte(str), &jsonStr) == nil
 }
 
-func handleExecutionStatistics(execution WorkflowExecution) {
+func handleExecutionStatistics(execution shuffle.WorkflowExecution) {
 	// FIXME: CLEAN UP THE JSON THAT'S SAVED.
 	// https://github.com/frikky/Shuffle/issues/172
-	appResults := []AppExecutionExample{}
+	appResults := []shuffle.AppExecutionExample{}
 	for _, result := range execution.Results {
 		resultCheck := JSONCheck(result.Result)
 		if !resultCheck {
@@ -1625,7 +1608,7 @@ func handleExecutionStatistics(execution WorkflowExecution) {
 
 		} else {
 			// CREATE SuccessExamples or FailureExamples
-			executionExample := AppExecutionExample{
+			executionExample := shuffle.AppExecutionExample{
 				AppName:    result.Action.AppName,
 				AppVersion: result.Action.AppVersion,
 				AppAction:  result.Action.Name,
@@ -1672,7 +1655,7 @@ func getWorkflows(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, err := handleApiAuthentication(resp, request)
+	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in getworkflows: %s", err)
 		resp.WriteHeader(401)
@@ -1703,7 +1686,7 @@ func getWorkflows(resp http.ResponseWriter, request *http.Request) {
 
 	q = q.Order("-edited")
 
-	var workflows []Workflow
+	var workflows []shuffle.Workflow
 	_, err = dbclient.GetAll(ctx, q, &workflows)
 	if err != nil {
 		if strings.Contains(fmt.Sprintf("%s", err), "ResourceExhausted") {
@@ -1765,7 +1748,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, err := handleApiAuthentication(resp, request)
+	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in set new workflowhandler: %s", err)
 		resp.WriteHeader(401)
@@ -1781,7 +1764,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	var workflow Workflow
+	var workflow shuffle.Workflow
 	err = json.Unmarshal(body, &workflow)
 	if err != nil {
 		log.Printf("Failed unmarshaling: %s", err)
@@ -1793,7 +1776,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 	workflow.ID = uuid.NewV4().String()
 	workflow.Owner = user.Id
 	workflow.Sharing = "private"
-	user.ActiveOrg.Users = []User{}
+	user.ActiveOrg.Users = []shuffle.User{}
 	workflow.ExecutingOrg = user.ActiveOrg
 	workflow.OrgId = user.ActiveOrg.Id
 	//log.Printf("TRIGGERS: %d", len(workflow.Triggers))
@@ -1805,19 +1788,19 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 	//}
 
 	if len(workflow.Actions) == 0 {
-		workflow.Actions = []Action{}
+		workflow.Actions = []shuffle.Action{}
 	}
 	if len(workflow.Branches) == 0 {
-		workflow.Branches = []Branch{}
+		workflow.Branches = []shuffle.Branch{}
 	}
 	if len(workflow.Triggers) == 0 {
-		workflow.Triggers = []Trigger{}
+		workflow.Triggers = []shuffle.Trigger{}
 	}
 	if len(workflow.Errors) == 0 {
 		workflow.Errors = []string{}
 	}
 
-	newActions := []Action{}
+	newActions := []shuffle.Action{}
 	for _, action := range workflow.Actions {
 		if action.Environment == "" {
 			//action.Environment = baseEnvironment
@@ -1833,11 +1816,11 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 		//log.Printf("APPENDING NEW APP FOR NEW WORKFLOW")
 
 		// Adds the Testing app if it's a new workflow
-		workflowapps, err := getAllWorkflowApps(ctx, 500)
+		workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 500)
 		if err == nil {
 			// FIXME: Add real env
 			envName := "Shuffle"
-			environments, err := getEnvironments(ctx, user.ActiveOrg.Id)
+			environments, err := shuffle.GetEnvironments(ctx, user.ActiveOrg.Id)
 			if err == nil {
 				for _, env := range environments {
 					if env.Default {
@@ -1851,11 +1834,11 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 				if item.Name == "Testing" && item.AppVersion == "1.0.0" {
 					nodeId := "40447f30-fa44-4a4f-a133-4ee710368737"
 					workflow.Start = nodeId
-					newActions = append(newActions, Action{
+					newActions = append(newActions, shuffle.Action{
 						Label:       "Start node",
 						Name:        "hello_world",
 						Environment: envName,
-						Parameters:  []WorkflowAppActionParameter{},
+						Parameters:  []shuffle.WorkflowAppActionParameter{},
 						Position: struct {
 							X float64 "json:\"x,omitempty\" datastore:\"x\""
 							Y float64 "json:\"y,omitempty\" datastore:\"y\""
@@ -1882,7 +1865,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 		// FIXME: Check if they require authentication and if they exist locally
 		//log.Printf("\n\nSHOULD VALIDATE AUTHENTICATION")
 		//AuthenticationId string `json:"authentication_id,omitempty" datastore:"authentication_id"`
-		//allAuths, err := getAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
+		//allAuths, err := shuffle.GetAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
 		//if err == nil {
 		//	log.Printf("AUTH: %#v", allAuths)
 		//	for _, action := range newActions {
@@ -1891,7 +1874,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 		//}
 	}
 
-	workflow.Actions = []Action{}
+	workflow.Actions = []shuffle.Action{}
 	for _, item := range workflow.Actions {
 		oldId := item.ID
 		sourceIndexes := []int{}
@@ -1918,7 +1901,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 		newActions = append(newActions, item)
 	}
 
-	newTriggers := []Trigger{}
+	newTriggers := []shuffle.Trigger{}
 	for _, item := range workflow.Triggers {
 		oldId := item.ID
 		sourceIndexes := []int{}
@@ -1946,7 +1929,7 @@ func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
 		newTriggers = append(newTriggers, item)
 	}
 
-	newSchedules := []Schedule{}
+	newSchedules := []shuffle.Schedule{}
 	for _, item := range workflow.Schedules {
 		item.Id = uuid.NewV4().String()
 		newSchedules = append(newSchedules, item)
@@ -1991,7 +1974,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, err := handleApiAuthentication(resp, request)
+	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in deleting workflow: %s", err)
 		resp.WriteHeader(401)
@@ -2019,7 +2002,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	workflow, err := getWorkflow(ctx, fileId)
+	workflow, err := shuffle.GetWorkflow(ctx, fileId)
 	if err != nil {
 		log.Printf("Failed getting the workflow locally (delete workflow): %s", err)
 		resp.WriteHeader(401)
@@ -2084,7 +2067,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 }
 
 // Adds app auth tracking
-func updateAppAuth(auth AppAuthenticationStorage, workflowId, nodeId string, add bool) error {
+func updateAppAuth(auth shuffle.AppAuthenticationStorage, workflowId, nodeId string, add bool) error {
 	workflowFound := false
 	workflowIndex := 0
 	nodeFound := false
@@ -2108,7 +2091,7 @@ func updateAppAuth(auth AppAuthenticationStorage, workflowId, nodeId string, add
 	updateAuth := false
 	if !workflowFound && add {
 		log.Printf("[INFO] Adding workflow things to auth!")
-		usageItem := AuthenticationUsage{
+		usageItem := shuffle.AuthenticationUsage{
 			WorkflowId: workflowId,
 			Nodes:      []string{nodeId},
 		}
@@ -2127,7 +2110,7 @@ func updateAppAuth(auth AppAuthenticationStorage, workflowId, nodeId string, add
 	if updateAuth {
 		log.Printf("[INFO] Updating auth!")
 		ctx := context.Background()
-		err := setWorkflowAppAuthDatastore(ctx, auth, auth.Id)
+		err := shuffle.SetWorkflowAppAuthDatastore(ctx, auth, auth.Id)
 		if err != nil {
 			log.Printf("Failed setting up app auth %s: %s", auth.Id, err)
 			return err
@@ -2138,7 +2121,7 @@ func updateAppAuth(auth AppAuthenticationStorage, workflowId, nodeId string, add
 }
 
 // Identifies what a category defined really is
-func handleCategoryIncrease(categories Categories, action Action, workflowapps []WorkflowApp) Categories {
+func handleCategoryIncrease(categories shuffle.Categories, action shuffle.Action, workflowapps []shuffle.WorkflowApp) shuffle.Categories {
 	if action.Category == "" {
 		appName := action.AppName
 		for _, app := range workflowapps {
@@ -2191,7 +2174,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	//log.Println("Start")
-	user, userErr := handleApiAuthentication(resp, request)
+	user, userErr := shuffle.HandleApiAuthentication(resp, request)
 	if userErr != nil {
 		log.Printf("Api authentication failed in edit workflow: %s", userErr)
 		resp.WriteHeader(401)
@@ -2222,7 +2205,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	// Here to check access rights
 	ctx := context.Background()
-	tmpworkflow, err := getWorkflow(ctx, fileId)
+	tmpworkflow, err := shuffle.GetWorkflow(ctx, fileId)
 	if err != nil {
 		log.Printf("Failed getting the workflow locally (save workflow): %s", err)
 		resp.WriteHeader(401)
@@ -2247,7 +2230,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	var workflow Workflow
+	var workflow shuffle.Workflow
 	err = json.Unmarshal([]byte(body), &workflow)
 	//log.Printf(string(body))
 	if err != nil {
@@ -2275,17 +2258,17 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	if len(workflow.ExecutingOrg.Id) == 0 {
 		log.Printf("[INFO] Setting executing org for workflow")
-		user.ActiveOrg.Users = []User{}
+		user.ActiveOrg.Users = []shuffle.User{}
 		workflow.ExecutingOrg = user.ActiveOrg
 	}
 
 	// FIXME - this shouldn't be necessary with proper API checks
-	newActions := []Action{}
+	newActions := []shuffle.Action{}
 	allNodes := []string{}
-	workflow.Categories = Categories{}
+	workflow.Categories = shuffle.Categories{}
 
 	//log.Printf("PRE APPS")
-	workflowapps, apperr := getAllWorkflowApps(ctx, 500)
+	workflowapps, apperr := shuffle.GetAllWorkflowApps(ctx, 500)
 
 	//log.Printf("Action: %#v", action.Authentication)
 	for _, action := range workflow.Actions {
@@ -2322,14 +2305,14 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		newActions = append(newActions, action)
 	}
 
-	newTriggers := []Trigger{}
+	newTriggers := []shuffle.Trigger{}
 	for _, trigger := range workflow.Triggers {
 		log.Printf("[INFO] Trigger %s: %s", trigger.TriggerType, trigger.Status)
 
 		// Check if it's actually running
 		// FIXME: Do this for other triggers too
 		if trigger.TriggerType == "SCHEDULE" && trigger.Status != "uninitialized" {
-			schedule, err := getSchedule(ctx, trigger.ID)
+			schedule, err := shuffle.GetSchedule(ctx, trigger.ID)
 			if err != nil {
 				trigger.Status = "stopped"
 			} else if schedule.Id == "" {
@@ -2344,7 +2327,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 						if len(user.ApiKey) > 0 {
 							apikey = user.ApiKey
 						} else {
-							user, err = generateApikey(ctx, user)
+							user, err = shuffle.GenerateApikey(ctx, user)
 							if err != nil {
 								workflow.IsValid = false
 								workflow.Errors = []string{"Trigger is missing a parameter: %s", param.Name}
@@ -2448,13 +2431,13 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	workflow.Triggers = newTriggers
 
 	if len(workflow.Actions) == 0 {
-		workflow.Actions = []Action{}
+		workflow.Actions = []shuffle.Action{}
 	}
 	if len(workflow.Branches) == 0 {
-		workflow.Branches = []Branch{}
+		workflow.Branches = []shuffle.Branch{}
 	}
 	if len(workflow.Triggers) == 0 {
-		workflow.Triggers = []Trigger{}
+		workflow.Triggers = []shuffle.Trigger{}
 	}
 	if len(workflow.Errors) == 0 {
 		workflow.Errors = []string{}
@@ -2500,7 +2483,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	if len(foundNodes) != len(allNodes) || len(workflow.Actions) <= 0 {
 		// This shit takes a few seconds lol
 		if !workflow.IsValid {
-			oldworkflow, err := getWorkflow(ctx, fileId)
+			oldworkflow, err := shuffle.GetWorkflow(ctx, fileId)
 			if err != nil {
 				log.Printf("Workflow %s doesn't exist - oldworkflow.", fileId)
 				if workflow.PreviouslySaved {
@@ -2542,7 +2525,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 	// Have to do it like this to add the user's apps
 	//log.Println("Apps set starting")
 	//log.Printf("EXIT ON ERROR: %#v", workflow.Configuration.ExitOnError)
-	//workflowapps, apperr := getAllWorkflowApps(ctx, 500)
+	//workflowapps, apperr := shuffle.GetAllWorkflowApps(ctx, 500)
 
 	// Started getting the single apps, but if it's weird, this is faster
 	// 1. Check workflow.Start
@@ -2567,7 +2550,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	allAuths, err := getAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
+	allAuths, err := shuffle.GetAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
 	if userErr != nil {
 		log.Printf("Api authentication failed in get all apps: %s", userErr)
 		if workflow.PreviouslySaved {
@@ -2579,8 +2562,8 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	// Check every app action and param to see whether they exist
 	//log.Printf("PRE ACTIONS 2")
-	allAuths, autherr := getAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
-	newActions = []Action{}
+	allAuths, autherr := shuffle.GetAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
+	newActions = []shuffle.Action{}
 	for _, action := range workflow.Actions {
 		reservedApps := []string{
 			"0ca8887e-b4af-4e3e-887c-87e9d3bc3d3e",
@@ -2629,7 +2612,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 		if builtin {
 			newActions = append(newActions, action)
 		} else {
-			curapp := WorkflowApp{}
+			curapp := shuffle.WorkflowApp{}
 			// FIXME - can this work with ONLY AppID?
 			for _, app := range workflowapps {
 				if app.ID == action.AppID {
@@ -2659,7 +2642,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 				//return
 			} else {
 				// Check tosee if the appaction is valid
-				curappaction := WorkflowAppAction{}
+				curappaction := shuffle.WorkflowAppAction{}
 				for _, curAction := range curapp.Actions {
 					if action.Name == curAction.Name {
 						curappaction = curAction
@@ -2685,7 +2668,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 				// FIXME - check all parameters to see if they're valid
 				// Includes checking required fields
 
-				selectedAuth := AppAuthenticationStorage{}
+				selectedAuth := shuffle.AppAuthenticationStorage{}
 				if len(action.AuthenticationId) > 0 && autherr == nil {
 					for _, auth := range allAuths {
 						if auth.Id == action.AuthenticationId {
@@ -2695,7 +2678,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 					}
 				}
 
-				newParams := []WorkflowAppActionParameter{}
+				newParams := []shuffle.WorkflowAppActionParameter{}
 				for _, param := range curappaction.Parameters {
 					paramFound := false
 
@@ -2765,7 +2748,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 		if autherr == nil && len(workflowapps) > 0 && apperr == nil {
 			//log.Printf("Setting actions")
-			actionFixing := []Action{}
+			actionFixing := []shuffle.Action{}
 			appsAdded := []string{}
 			for _, action := range newActions {
 				setAuthentication := false
@@ -2813,7 +2796,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 					// FIXME: Only o this IF there isn't another one for the app already
 					if !authSet {
 						//log.Printf("Validate if the app NEEDS auth or not")
-						outerapp := WorkflowApp{}
+						outerapp := shuffle.WorkflowApp{}
 						for _, app := range workflowapps {
 							if app.Name == action.AppName {
 								outerapp = app
@@ -2839,21 +2822,21 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 							// FIXME: Add app auth
 							if !found {
 								timeNow := int64(time.Now().Unix())
-								authFields := []AuthenticationStore{}
+								authFields := []shuffle.AuthenticationStore{}
 								for _, param := range outerapp.Authentication.Parameters {
-									authFields = append(authFields, AuthenticationStore{
+									authFields = append(authFields, shuffle.AuthenticationStore{
 										Key:   param.Name,
 										Value: "",
 									})
 								}
 
-								appAuth := AppAuthenticationStorage{
+								appAuth := shuffle.AppAuthenticationStorage{
 									Active:        true,
 									Label:         fmt.Sprintf("default_%s", outerapp.Name),
 									Id:            uuid.NewV4().String(),
 									App:           outerapp,
 									Fields:        authFields,
-									Usage:         []AuthenticationUsage{},
+									Usage:         []shuffle.AuthenticationUsage{},
 									WorkflowCount: 0,
 									NodeCount:     0,
 									OrgId:         user.ActiveOrg.Id,
@@ -2861,7 +2844,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 									Edited:        timeNow,
 								}
 
-								err = setWorkflowAppAuthDatastore(ctx, appAuth, appAuth.Id)
+								err = shuffle.SetWorkflowAppAuthDatastore(ctx, appAuth, appAuth.Id)
 								if err != nil {
 									log.Printf("Failed setting appauth for with name %s", appAuth.Label)
 								} else {
@@ -2876,7 +2859,7 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 						//outerapp.Authentication.Required
 						// Authentication Authentication      `json:"authentication" yaml:"authentication" required:false datastore:"authentication"`
-						//workflowapps, apperr := getAllWorkflowApps(ctx, 100)
+						//workflowapps, apperr := shuffle.GetAllWorkflowApps(ctx, 100)
 					}
 				}
 
@@ -2886,8 +2869,8 @@ func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
 			newActions = actionFixing
 		} else {
 			log.Printf("FirstSave error: %s - %s", err, apperr)
-			//workflowapps, apperr := getAllWorkflowApps(ctx, 100)
-			//allAuths, err := getAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
+			//workflowapps, apperr := shuffle.GetAllWorkflowApps(ctx, 100)
+			//allAuths, err := shuffle.GetAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
 		}
 
 		workflow.PreviouslySaved = true
@@ -3022,7 +3005,7 @@ func abortExecution(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	workflowExecution, err := getWorkflowExecution(ctx, executionId)
+	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, executionId)
 	if err != nil {
 		log.Printf("[ERROR] Failed getting execution (abort) %s: %s", executionId, err)
 		resp.WriteHeader(401)
@@ -3041,7 +3024,7 @@ func abortExecution(resp http.ResponseWriter, request *http.Request) {
 
 	if workflowExecution.Authorization != parsedKey {
 		// FIXME: Check the execution if this fails.
-		user, err := handleApiAuthentication(resp, request)
+		user, err := shuffle.HandleApiAuthentication(resp, request)
 		if err != nil {
 			log.Printf("Api authentication failed in abort workflow: %s", err)
 			resp.WriteHeader(401)
@@ -3074,7 +3057,7 @@ func abortExecution(resp http.ResponseWriter, request *http.Request) {
 	log.Printf("[INFO] Running shutdown of %s", workflowExecution.ExecutionId)
 
 	lastResult := ""
-	newResults := []ActionResult{}
+	newResults := []shuffle.ActionResult{}
 	// type ActionResult struct {
 	for _, result := range workflowExecution.Results {
 		if result.Status == "EXECUTING" {
@@ -3116,7 +3099,7 @@ func abortExecution(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if len(workflowExecution.Results) == 0 || addResult {
-		newaction := Action{
+		newaction := shuffle.Action{
 			ID: workflowExecution.Start,
 		}
 
@@ -3127,7 +3110,7 @@ func abortExecution(resp http.ResponseWriter, request *http.Request) {
 			}
 		}
 
-		workflowExecution.Results = append(workflowExecution.Results, ActionResult{
+		workflowExecution.Results = append(workflowExecution.Results, shuffle.ActionResult{
 			Action:        newaction,
 			ExecutionId:   workflowExecution.ExecutionId,
 			Authorization: workflowExecution.Authorization,
@@ -3144,7 +3127,7 @@ func abortExecution(resp http.ResponseWriter, request *http.Request) {
 		if nodeok {
 			nodeId := node[0]
 			log.Printf("[INFO] Found abort node %s", nodeId)
-			newaction := Action{
+			newaction := shuffle.Action{
 				ID: nodeId,
 			}
 
@@ -3155,7 +3138,7 @@ func abortExecution(resp http.ResponseWriter, request *http.Request) {
 				}
 			}
 
-			workflowExecution.Results = append(workflowExecution.Results, ActionResult{
+			workflowExecution.Results = append(workflowExecution.Results, shuffle.ActionResult{
 				Action:        newaction,
 				ExecutionId:   workflowExecution.ExecutionId,
 				Authorization: workflowExecution.Authorization,
@@ -3201,7 +3184,7 @@ func cleanupExecutions(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, err := handleApiAuthentication(resp, request)
+	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("[INFO] Api authentication failed in cleanup executions: %s", err)
 		resp.WriteHeader(401)
@@ -3221,7 +3204,7 @@ func cleanupExecutions(resp http.ResponseWriter, request *http.Request) {
 	timestamp := int64(time.Now().AddDate(0, -2, 0).Unix())
 	log.Println(timestamp)
 	q := datastore.NewQuery("workflowexecution").Filter("started_at <", timestamp)
-	var workflowExecutions []WorkflowExecution
+	var workflowExecutions []shuffle.WorkflowExecution
 	_, err = dbclient.GetAll(ctx, q, &workflowExecutions)
 	if err != nil {
 		log.Printf("Error getting workflowexec (cleanup): %s", err)
@@ -3234,13 +3217,13 @@ func cleanupExecutions(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(`{"success": true}`))
 }
 
-func handleExecution(id string, workflow Workflow, request *http.Request) (WorkflowExecution, string, error) {
+func handleExecution(id string, workflow shuffle.Workflow, request *http.Request) (shuffle.WorkflowExecution, string, error) {
 	ctx := context.Background()
 	if workflow.ID == "" || workflow.ID != id {
-		tmpworkflow, err := getWorkflow(ctx, id)
+		tmpworkflow, err := shuffle.GetWorkflow(ctx, id)
 		if err != nil {
 			log.Printf("Failed getting the workflow locally (execution cleanup): %s", err)
-			return WorkflowExecution{}, "Failed getting workflow", err
+			return shuffle.WorkflowExecution{}, "Failed getting workflow", err
 		}
 
 		workflow = *tmpworkflow
@@ -3248,13 +3231,13 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 
 	if len(workflow.ExecutingOrg.Id) == 0 {
 		log.Printf("[INFO] Stopped execution because there is no executing org for workflow %s", workflow.ID)
-		return WorkflowExecution{}, fmt.Sprintf("Workflow has no executing org defined"), errors.New("Workflow has no executing org defined")
+		return shuffle.WorkflowExecution{}, fmt.Sprintf("Workflow has no executing org defined"), errors.New("Workflow has no executing org defined")
 	}
 
 	if len(workflow.Actions) == 0 {
-		workflow.Actions = []Action{}
+		workflow.Actions = []shuffle.Action{}
 	} else {
-		newactions := []Action{}
+		newactions := []shuffle.Action{}
 		for _, action := range workflow.Actions {
 			action.LargeImage = ""
 			action.SmallImage = ""
@@ -3266,12 +3249,12 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	}
 
 	if len(workflow.Branches) == 0 {
-		workflow.Branches = []Branch{}
+		workflow.Branches = []shuffle.Branch{}
 	}
 	if len(workflow.Triggers) == 0 {
-		workflow.Triggers = []Trigger{}
+		workflow.Triggers = []shuffle.Trigger{}
 	} else {
-		newtriggers := []Trigger{}
+		newtriggers := []shuffle.Trigger{}
 		for _, trigger := range workflow.Triggers {
 			trigger.LargeImage = ""
 			trigger.SmallImage = ""
@@ -3288,21 +3271,21 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 
 	if !workflow.IsValid {
 		log.Printf("[ERROR] Stopped execution as workflow %s is not valid.", workflow.ID)
-		return WorkflowExecution{}, fmt.Sprintf(`workflow %s is invalid`, workflow.ID), errors.New("Failed getting workflow")
+		return shuffle.WorkflowExecution{}, fmt.Sprintf(`workflow %s is invalid`, workflow.ID), errors.New("Failed getting workflow")
 	}
 
 	workflowBytes, err := json.Marshal(workflow)
 	if err != nil {
 		log.Printf("Failed workflow unmarshal in execution: %s", err)
-		return WorkflowExecution{}, "", err
+		return shuffle.WorkflowExecution{}, "", err
 	}
 
 	//log.Println(workflow)
-	var workflowExecution WorkflowExecution
+	var workflowExecution shuffle.WorkflowExecution
 	err = json.Unmarshal(workflowBytes, &workflowExecution.Workflow)
 	if err != nil {
 		log.Printf("Failed execution unmarshaling: %s", err)
-		return WorkflowExecution{}, "Failed unmarshal during execution", err
+		return shuffle.WorkflowExecution{}, "Failed unmarshal during execution", err
 	}
 
 	makeNew := true
@@ -3311,7 +3294,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		body, err := ioutil.ReadAll(request.Body)
 		if err != nil {
 			log.Printf("[ERROR] Failed request POST read: %s", err)
-			return WorkflowExecution{}, "Failed getting body", err
+			return shuffle.WorkflowExecution{}, "Failed getting body", err
 		}
 
 		// This one doesn't really matter.
@@ -3353,11 +3336,11 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 			log.Printf("Body: %s", string(body))
 		}
 
-		var execution ExecutionRequest
+		var execution shuffle.ExecutionRequest
 		err = json.Unmarshal(body, &execution)
 		if err != nil {
 			log.Printf("[WARNING] Failed execution POST unmarshaling - continuing anyway: %s", err)
-			//return WorkflowExecution{}, "", err
+			//return shuffle.WorkflowExecution{}, "", err
 		}
 
 		if execution.Start == "" && len(body) > 0 {
@@ -3388,12 +3371,12 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 
 			if !found {
 				log.Printf("[ERROR] ACTION %s WAS NOT FOUND!", workflow.Start)
-				return WorkflowExecution{}, fmt.Sprintf("Startnode %s was not found in actions", workflow.Start), errors.New(fmt.Sprintf("Startnode %s was not found in actions", workflow.Start))
+				return shuffle.WorkflowExecution{}, fmt.Sprintf("Startnode %s was not found in actions", workflow.Start), errors.New(fmt.Sprintf("Startnode %s was not found in actions", workflow.Start))
 			}
 		} else if len(execution.Start) > 0 {
 
 			log.Printf("[ERROR] START ACTION %s IS WRONG ID LENGTH %d!", execution.Start, len(execution.Start))
-			return WorkflowExecution{}, fmt.Sprintf("Startnode %s was not found in actions", execution.Start), errors.New(fmt.Sprintf("Startnode %s was not found in actions", execution.Start))
+			return shuffle.WorkflowExecution{}, fmt.Sprintf("Startnode %s was not found in actions", execution.Start), errors.New(fmt.Sprintf("Startnode %s was not found in actions", execution.Start))
 		}
 
 		if len(execution.ExecutionId) == 36 {
@@ -3415,18 +3398,18 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 				log.Printf("Should update reference and return, no need for further execution!")
 
 				// Get the reference execution
-				oldExecution, err := getWorkflowExecution(ctx, referenceId[0])
+				oldExecution, err := shuffle.GetWorkflowExecution(ctx, referenceId[0])
 				if err != nil {
 					log.Printf("Failed getting execution (execution) %s: %s", referenceId[0], err)
-					return WorkflowExecution{}, fmt.Sprintf("Failed getting execution ID %s because it doesn't exist.", referenceId[0]), err
+					return shuffle.WorkflowExecution{}, fmt.Sprintf("Failed getting execution ID %s because it doesn't exist.", referenceId[0]), err
 				}
 
 				if oldExecution.Workflow.ID != id {
 					log.Println("Wrong workflowid!")
-					return WorkflowExecution{}, fmt.Sprintf("Bad ID %s", referenceId), errors.New("Bad ID")
+					return shuffle.WorkflowExecution{}, fmt.Sprintf("Bad ID %s", referenceId), errors.New("Bad ID")
 				}
 
-				newResults := []ActionResult{}
+				newResults := []shuffle.ActionResult{}
 				//log.Printf("%#v", oldExecution.Results)
 				for _, result := range oldExecution.Results {
 					log.Printf("%s - %s", result.Action.ID, start[0])
@@ -3453,20 +3436,20 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 				err = setWorkflowExecution(ctx, *oldExecution, true)
 				if err != nil {
 					log.Printf("Error saving workflow execution actionresult setting: %s", err)
-					return WorkflowExecution{}, fmt.Sprintf("Failed setting workflowexecution actionresult in execution: %s", err), err
+					return shuffle.WorkflowExecution{}, fmt.Sprintf("Failed setting workflowexecution actionresult in execution: %s", err), err
 				}
 
-				return WorkflowExecution{}, "", nil
+				return shuffle.WorkflowExecution{}, "", nil
 			}
 		}
 
 		if referenceok {
 			log.Printf("Handling an old execution continuation!")
 			// Will use the old name, but still continue with NEW ID
-			oldExecution, err := getWorkflowExecution(ctx, referenceId[0])
+			oldExecution, err := shuffle.GetWorkflowExecution(ctx, referenceId[0])
 			if err != nil {
 				log.Printf("Failed getting execution (execution) %s: %s", referenceId[0], err)
-				return WorkflowExecution{}, fmt.Sprintf("Failed getting execution ID %s because it doesn't exist.", referenceId[0]), err
+				return shuffle.WorkflowExecution{}, fmt.Sprintf("Failed getting execution ID %s because it doesn't exist.", referenceId[0]), err
 			}
 
 			workflowExecution = *oldExecution
@@ -3492,7 +3475,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	// FIXME - regex uuid, and check if already exists?
 	if len(workflowExecution.ExecutionId) != 36 {
 		log.Printf("Invalid uuid: %s", workflowExecution.ExecutionId)
-		return WorkflowExecution{}, "Invalid uuid", err
+		return shuffle.WorkflowExecution{}, "Invalid uuid", err
 	}
 
 	// FIXME - find owner of workflow
@@ -3553,10 +3536,10 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	topic := "workflows"
 	startFound := false
 	// FIXME - remove this?
-	newActions := []Action{}
-	defaultResults := []ActionResult{}
+	newActions := []shuffle.Action{}
+	defaultResults := []shuffle.ActionResult{}
 
-	allAuths := []AppAuthenticationStorage{}
+	allAuths := []shuffle.AppAuthenticationStorage{}
 	for _, action := range workflowExecution.Workflow.Actions {
 		//action.LargeImage = ""
 		if action.ID == workflowExecution.Start {
@@ -3565,20 +3548,20 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		//log.Println(action.Environment)
 
 		if action.Environment == "" {
-			return WorkflowExecution{}, fmt.Sprintf("Environment is not defined for %s", action.Name), errors.New("Environment not defined!")
+			return shuffle.WorkflowExecution{}, fmt.Sprintf("Environment is not defined for %s", action.Name), errors.New("Environment not defined!")
 		}
 
 		// FIXME: Authentication parameters
 		if len(action.AuthenticationId) > 0 {
 			if len(allAuths) == 0 {
-				allAuths, err = getAllWorkflowAppAuth(ctx, workflow.ExecutingOrg.Id)
+				allAuths, err = shuffle.GetAllWorkflowAppAuth(ctx, workflow.ExecutingOrg.Id)
 				if err != nil {
 					log.Printf("Api authentication failed in get all app auth: %s", err)
-					return WorkflowExecution{}, fmt.Sprintf("Api authentication failed in get all app auth: %s", err), err
+					return shuffle.WorkflowExecution{}, fmt.Sprintf("Api authentication failed in get all app auth: %s", err), err
 				}
 			}
 
-			curAuth := AppAuthenticationStorage{Id: ""}
+			curAuth := shuffle.AppAuthenticationStorage{Id: ""}
 			for _, auth := range allAuths {
 				if auth.Id == action.AuthenticationId {
 					curAuth = auth
@@ -3587,11 +3570,11 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 			}
 
 			if len(curAuth.Id) == 0 {
-				return WorkflowExecution{}, fmt.Sprintf("Auth ID %s doesn't exist", action.AuthenticationId), errors.New(fmt.Sprintf("Auth ID %s doesn't exist", action.AuthenticationId))
+				return shuffle.WorkflowExecution{}, fmt.Sprintf("Auth ID %s doesn't exist", action.AuthenticationId), errors.New(fmt.Sprintf("Auth ID %s doesn't exist", action.AuthenticationId))
 			}
 
 			// Rebuild params with the right data. This is to prevent issues on the frontend
-			newParams := []WorkflowAppActionParameter{}
+			newParams := []shuffle.WorkflowAppActionParameter{}
 			for _, param := range action.Parameters {
 
 				for _, authparam := range curAuth.Fields {
@@ -3620,7 +3603,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		// as it's not a childnode of the startnode
 		// This is a configuration item for the workflow itself.
 		if len(workflowExecution.Results) > 0 {
-			defaultResults = []ActionResult{}
+			defaultResults = []shuffle.ActionResult{}
 			for _, result := range workflowExecution.Results {
 				if result.Status == "WAITING" {
 					result.Status = "FINISHED"
@@ -3644,7 +3627,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 				}
 
 				//log.Printf("[WARNING] Set %s to SKIPPED as it's NOT a childnode of the startnode.", action.ID)
-				curaction := Action{
+				curaction := shuffle.Action{
 					AppName:    action.AppName,
 					AppVersion: action.AppVersion,
 					Label:      action.Label,
@@ -3653,7 +3636,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 				}
 				//action
 				//curaction.Parameters = []
-				defaultResults = append(defaultResults, ActionResult{
+				defaultResults = append(defaultResults, shuffle.ActionResult{
 					Action:        curaction,
 					ExecutionId:   workflowExecution.ExecutionId,
 					Authorization: workflowExecution.Authorization,
@@ -3687,7 +3670,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 			if !found {
 				//log.Printf("SHOULD SET TRIGGER %s TO BE SKIPPED", trigger.ID)
 
-				curaction := Action{
+				curaction := shuffle.Action{
 					AppName:    "shuffle-subflow",
 					AppVersion: trigger.AppVersion,
 					Label:      trigger.Label,
@@ -3695,7 +3678,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 					ID:         trigger.ID,
 				}
 
-				defaultResults = append(defaultResults, ActionResult{
+				defaultResults = append(defaultResults, shuffle.ActionResult{
 					Action:        curaction,
 					ExecutionId:   workflowExecution.ExecutionId,
 					Authorization: workflowExecution.Authorization,
@@ -3713,7 +3696,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 
 	if !startFound {
 		log.Printf("[ERROR] Startnode %s doesn't exist!!", workflowExecution.Start)
-		return WorkflowExecution{}, fmt.Sprintf("Workflow action %s doesn't exist in workflow", workflowExecution.Start), errors.New(fmt.Sprintf(`Workflow start node "%s" doesn't exist. Exiting!`, workflowExecution.Start))
+		return shuffle.WorkflowExecution{}, fmt.Sprintf("Workflow action %s doesn't exist in workflow", workflowExecution.Start), errors.New(fmt.Sprintf(`Workflow start node "%s" doesn't exist. Exiting!`, workflowExecution.Start))
 	}
 
 	// Verification for execution environments
@@ -3726,14 +3709,14 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		workflowExecution.ExecutionOrg = workflow.ExecutingOrg.Id
 	}
 
-	var allEnvs []Environment
+	var allEnvs []shuffle.Environment
 	if len(workflowExecution.ExecutionOrg) > 0 {
 		//log.Printf("[INFO] Executing ORG: %s", workflowExecution.ExecutionOrg)
 
-		allEnvironments, err := getEnvironments(ctx, workflowExecution.ExecutionOrg)
+		allEnvironments, err := shuffle.GetEnvironments(ctx, workflowExecution.ExecutionOrg)
 		if err != nil {
 			log.Printf("Failed finding environments: %s", err)
-			return WorkflowExecution{}, fmt.Sprintf("Workflow environments not found for this org"), errors.New(fmt.Sprintf("Workflow environments not found for this org"))
+			return shuffle.WorkflowExecution{}, fmt.Sprintf("Workflow environments not found for this org"), errors.New(fmt.Sprintf("Workflow environments not found for this org"))
 		}
 
 		for _, curenv := range allEnvironments {
@@ -3745,12 +3728,12 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		}
 	} else {
 		log.Printf("[ERROR] No org identified for execution of %s. Returning", workflowExecution.Workflow.ID)
-		return WorkflowExecution{}, "No org identified for execution", errors.New("No org identified for execution")
+		return shuffle.WorkflowExecution{}, "No org identified for execution", errors.New("No org identified for execution")
 	}
 
 	if len(allEnvs) == 0 {
 		log.Printf("[ERROR] No active environments found for org: %s", workflowExecution.ExecutionOrg)
-		return WorkflowExecution{}, "No active environments found", errors.New(fmt.Sprintf("No active env found for org %s", workflowExecution.ExecutionOrg))
+		return shuffle.WorkflowExecution{}, "No active environments found", errors.New(fmt.Sprintf("No active env found for org %s", workflowExecution.ExecutionOrg))
 	}
 
 	// Check if the actions are children of the startnode?
@@ -3769,7 +3752,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 					onpremExecution = true
 				} else {
 					log.Printf("[ERROR] No handler for environment type %s", env.Type)
-					return WorkflowExecution{}, "No active environments found", errors.New(fmt.Sprintf("No handler for environment type %s", env.Type))
+					return shuffle.WorkflowExecution{}, "No active environments found", errors.New(fmt.Sprintf("No handler for environment type %s", env.Type))
 				}
 				break
 			}
@@ -3777,7 +3760,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 
 		if !found {
 			log.Printf("[ERROR] Couldn't find environment %s. Maybe it's inactive?", action.Environment)
-			return WorkflowExecution{}, "Couldn't find the environment", errors.New(fmt.Sprintf("Couldn't find env %s in org %s", action.Environment, workflowExecution.ExecutionOrg))
+			return shuffle.WorkflowExecution{}, "Couldn't find the environment", errors.New(fmt.Sprintf("Couldn't find env %s in org %s", action.Environment, workflowExecution.ExecutionOrg))
 		}
 
 		found = false
@@ -3802,7 +3785,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	err = imageCheckBuilder(imageNames)
 	if err != nil {
 		log.Printf("[ERROR] Failed building the required images from %#v: %s", imageNames, err)
-		return WorkflowExecution{}, "Failed building missing Docker images", err
+		return shuffle.WorkflowExecution{}, "Failed building missing Docker images", err
 	}
 
 	//b, err := json.Marshal(workflowExecution)
@@ -3812,17 +3795,17 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 	//	//workflowExecution.ExecutionOrg.SyncFeatures = Org{}
 	//}
 
-	workflowExecution.Workflow.ExecutingOrg = Org{
+	workflowExecution.Workflow.ExecutingOrg = shuffle.Org{
 		Id: workflowExecution.Workflow.ExecutingOrg.Id,
 	}
-	workflowExecution.Workflow.Org = []Org{
+	workflowExecution.Workflow.Org = []shuffle.Org{
 		workflowExecution.Workflow.ExecutingOrg,
 	}
 	//Org               []Org    `json:"org,omitempty" datastore:"org"`
 	err = setWorkflowExecution(ctx, workflowExecution, true)
 	if err != nil {
 		log.Printf("Error saving workflow execution for updates %s: %s", topic, err)
-		return WorkflowExecution{}, "Failed getting workflowexecution", err
+		return shuffle.WorkflowExecution{}, "Failed getting workflowexecution", err
 	}
 
 	// Adds queue for onprem execution
@@ -3833,7 +3816,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		for _, environment := range environments {
 			log.Printf("[INFO] Execution: %s should execute onprem with execution environment \"%s\". Workflow: %s", workflowExecution.ExecutionId, environment, workflowExecution.Workflow.ID)
 
-			executionRequest := ExecutionRequest{
+			executionRequest := shuffle.ExecutionRequest{
 				ExecutionId:   workflowExecution.ExecutionId,
 				WorkflowId:    workflowExecution.Workflow.ID,
 				Authorization: workflowExecution.Authorization,
@@ -3863,7 +3846,7 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 		if !featuresList.Workflows.Active || err != nil {
 			log.Printf("Error: %s", err)
 			log.Printf("[ERROR] Cloud not implemented yet. May need to work on app checking and such")
-			return WorkflowExecution{}, "Cloud not implemented yet", errors.New("Cloud not implemented yet")
+			return shuffle.WorkflowExecution{}, "Cloud not implemented yet", errors.New("Cloud not implemented yet")
 		}
 
 		// What it needs to know:
@@ -3873,11 +3856,11 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 
 			//cloudExecuteAction(workflowExecution.ExecutionId, workflowExecution.Workflow.Actions[0], workflowExecution.ExecutionOrg, workflowExecution.Workflow.ID)
 			cloudExecuteAction(workflowExecution)
-			return WorkflowExecution{}, "Cloud not implemented yet (1)", errors.New("Cloud not implemented yet")
+			return shuffle.WorkflowExecution{}, "Cloud not implemented yet (1)", errors.New("Cloud not implemented yet")
 		} else {
 			// If it's here, it should be controlled by Worker.
 			// If worker, should this backend be a proxy? I think so.
-			return WorkflowExecution{}, "Cloud not implemented yet (2)", errors.New("Cloud not implemented yet")
+			return shuffle.WorkflowExecution{}, "Cloud not implemented yet (2)", errors.New("Cloud not implemented yet")
 		}
 	}
 
@@ -3890,21 +3873,21 @@ func handleExecution(id string, workflow Workflow, request *http.Request) (Workf
 }
 
 // This updates stuff locally from remote executions
-func cloudExecuteAction(execution WorkflowExecution) error {
+func cloudExecuteAction(execution shuffle.WorkflowExecution) error {
 	ctx := context.Background()
-	org, err := getOrg(ctx, execution.ExecutionOrg)
+	org, err := shuffle.GetOrg(ctx, execution.ExecutionOrg)
 	if err != nil {
 		return err
 	}
 
 	type ExecutionStruct struct {
-		ExecutionId       string         `json:"execution_id" datastore:"execution_id"`
-		Action            Action         `json:"action" datastore:"action"`
-		Authorization     string         `json:"authorization" datastore:"authorization"`
-		Results           []ActionResult `json:"results" datastore:"results,noindex"`
-		ExecutionArgument string         `json:"execution_argument" datastore:"execution_argument,noindex"`
-		WorkflowId        string         `json:"workflow_id" datastore:"workflow_id"`
-		ExecutionSource   string         `json:"execution_source" datastore:"execution_source"`
+		ExecutionId       string                 `json:"execution_id" datastore:"execution_id"`
+		Action            shuffle.Action         `json:"action" datastore:"action"`
+		Authorization     string                 `json:"authorization" datastore:"authorization"`
+		Results           []shuffle.ActionResult `json:"results" datastore:"results,noindex"`
+		ExecutionArgument string                 `json:"execution_argument" datastore:"execution_argument,noindex"`
+		WorkflowId        string                 `json:"workflow_id" datastore:"workflow_id"`
+		ExecutionSource   string                 `json:"execution_source" datastore:"execution_source"`
 	}
 
 	data := ExecutionStruct{
@@ -3966,7 +3949,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, err := handleApiAuthentication(resp, request)
+	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("[INFO] Api authentication failed in execute workflow: %s", err)
 		resp.WriteHeader(401)
@@ -3995,7 +3978,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	//memcacheName := fmt.Sprintf("%s_%s", user.Username, fileId)
 	ctx := context.Background()
-	workflow, err := getWorkflow(ctx, fileId)
+	workflow, err := shuffle.GetWorkflow(ctx, fileId)
 	if err != nil {
 		log.Printf("Failed getting the workflow locally (execute workflow): %s", err)
 		resp.WriteHeader(401)
@@ -4014,7 +3997,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	log.Printf("[INFO] Starting execution of %s!", fileId)
 
-	user.ActiveOrg.Users = []User{}
+	user.ActiveOrg.Users = []shuffle.User{}
 	workflow.ExecutingOrg = user.ActiveOrg
 	workflowExecution, executionResp, err := handleExecution(fileId, *workflow, request)
 
@@ -4034,7 +4017,7 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, err := handleApiAuthentication(resp, request)
+	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in schedule workflow: %s", err)
 		resp.WriteHeader(401)
@@ -4070,7 +4053,7 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	workflow, err := getWorkflow(ctx, fileId)
+	workflow, err := shuffle.GetWorkflow(ctx, fileId)
 	if err != nil {
 		log.Printf("[WARNING] Failed getting the workflow locally (stop schedule): %s", err)
 		resp.WriteHeader(401)
@@ -4087,7 +4070,7 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	schedule, err := getSchedule(ctx, scheduleId)
+	schedule, err := shuffle.GetSchedule(ctx, scheduleId)
 	if err != nil {
 		log.Printf("[WARNING] Failed finding schedule %s", scheduleId)
 		resp.WriteHeader(401)
@@ -4100,7 +4083,7 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 	if schedule.Environment == "cloud" {
 		log.Printf("[INFO] Should STOP a cloud schedule for workflow %s with schedule ID %s", fileId, scheduleId)
 		// https://shuffler.io/v1/hooks/webhook_80184973-3e82-4852-842e-0290f7f34d7c
-		org, err := getOrg(ctx, user.ActiveOrg.Id)
+		org, err := shuffle.GetOrg(ctx, user.ActiveOrg.Id)
 		if err != nil {
 			log.Printf("Failed finding org %s: %s", org.Id, err)
 			return
@@ -4163,7 +4146,7 @@ func stopScheduleGCP(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, err := handleApiAuthentication(resp, request)
+	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in schedule workflow: %s", err)
 		resp.WriteHeader(401)
@@ -4199,7 +4182,7 @@ func stopScheduleGCP(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	workflow, err := getWorkflow(ctx, fileId)
+	workflow, err := shuffle.GetWorkflow(ctx, fileId)
 	if err != nil {
 		log.Printf("Failed getting the workflow locally (stop schedule GCP): %s", err)
 		resp.WriteHeader(401)
@@ -4217,13 +4200,13 @@ func stopScheduleGCP(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if len(workflow.Actions) == 0 {
-		workflow.Actions = []Action{}
+		workflow.Actions = []shuffle.Action{}
 	}
 	if len(workflow.Branches) == 0 {
-		workflow.Branches = []Branch{}
+		workflow.Branches = []shuffle.Branch{}
 	}
 	if len(workflow.Triggers) == 0 {
-		workflow.Triggers = []Trigger{}
+		workflow.Triggers = []shuffle.Trigger{}
 	}
 	if len(workflow.Errors) == 0 {
 		workflow.Errors = []string{}
@@ -4292,7 +4275,7 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, err := handleApiAuthentication(resp, request)
+	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in schedule workflow: %s", err)
 		resp.WriteHeader(401)
@@ -4320,7 +4303,7 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	workflow, err := getWorkflow(ctx, fileId)
+	workflow, err := shuffle.GetWorkflow(ctx, fileId)
 	if err != nil {
 		log.Printf("Failed getting the workflow locally (schedule workflow): %s", err)
 		resp.WriteHeader(401)
@@ -4338,13 +4321,13 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if len(workflow.Actions) == 0 {
-		workflow.Actions = []Action{}
+		workflow.Actions = []shuffle.Action{}
 	}
 	if len(workflow.Branches) == 0 {
-		workflow.Branches = []Branch{}
+		workflow.Branches = []shuffle.Branch{}
 	}
 	if len(workflow.Triggers) == 0 {
-		workflow.Triggers = []Trigger{}
+		workflow.Triggers = []shuffle.Trigger{}
 	}
 	if len(workflow.Errors) == 0 {
 		workflow.Errors = []string{}
@@ -4358,7 +4341,7 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	var schedule Schedule
+	var schedule shuffle.Schedule
 	err = json.Unmarshal(body, &schedule)
 	if err != nil {
 		log.Printf("Failed schedule POST unmarshaling: %s", err)
@@ -4422,7 +4405,7 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 	if schedule.Environment == "cloud" {
 		log.Printf("[INFO] Should START a cloud schedule for workflow %s with schedule ID %s", workflow.ID, schedule.Id)
 		// https://shuffler.io/v1/hooks/webhook_80184973-3e82-4852-842e-0290f7f34d7c
-		org, err := getOrg(ctx, user.ActiveOrg.Id)
+		org, err := shuffle.GetOrg(ctx, user.ActiveOrg.Id)
 		if err != nil {
 			log.Printf("Failed finding org %s: %s", org.Id, err)
 			return
@@ -4523,7 +4506,7 @@ func getSpecificWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, err := handleApiAuthentication(resp, request)
+	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in getting specific workflow: %s", err)
 		resp.WriteHeader(401)
@@ -4569,7 +4552,7 @@ func getSpecificWorkflow(resp http.ResponseWriter, request *http.Request) {
 	//	return
 	//}
 
-	workflow, err := getWorkflow(ctx, fileId)
+	workflow, err := shuffle.GetWorkflow(ctx, fileId)
 	if err != nil {
 		log.Printf("Workflow %s doesn't exist.", fileId)
 		resp.WriteHeader(401)
@@ -4588,13 +4571,13 @@ func getSpecificWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if len(workflow.Actions) == 0 {
-		workflow.Actions = []Action{}
+		workflow.Actions = []shuffle.Action{}
 	}
 	if len(workflow.Branches) == 0 {
-		workflow.Branches = []Branch{}
+		workflow.Branches = []shuffle.Branch{}
 	}
 	if len(workflow.Triggers) == 0 {
-		workflow.Triggers = []Trigger{}
+		workflow.Triggers = []shuffle.Trigger{}
 	}
 	if len(workflow.Errors) == 0 {
 		workflow.Errors = []string{}
@@ -4643,7 +4626,7 @@ func getSpecificWorkflow(resp http.ResponseWriter, request *http.Request) {
 	resp.Write(body)
 }
 
-func setWorkflowExecution(ctx context.Context, workflowExecution WorkflowExecution, dbSave bool) error {
+func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.WorkflowExecution, dbSave bool) error {
 	//log.Printf("\n\n\nRESULT: %s\n\n\n", workflowExecution.Status)
 	if len(workflowExecution.ExecutionId) == 0 {
 		log.Printf("Workflowexeciton executionId can't be empty.")
@@ -4667,11 +4650,11 @@ func setWorkflowExecution(ctx context.Context, workflowExecution WorkflowExecuti
 	return nil
 }
 
-func getWorkflowExecution(ctx context.Context, id string) (*WorkflowExecution, error) {
-	workflowExecution := &WorkflowExecution{}
+func getWorkflowExecution(ctx context.Context, id string) (*shuffle.WorkflowExecution, error) {
+	workflowExecution := &shuffle.WorkflowExecution{}
 	cacheKey := fmt.Sprintf("workflowexecution-%s", id)
 	if value, found := requestCache.Get(cacheKey); found {
-		parsedValue := value.(*WorkflowExecution)
+		parsedValue := value.(*shuffle.WorkflowExecution)
 		//log.Printf("Found execution for id %s with %d results", parsedValue.ExecutionId, len(parsedValue.Results))
 		return parsedValue, nil
 
@@ -4688,58 +4671,46 @@ func getWorkflowExecution(ctx context.Context, id string) (*WorkflowExecution, e
 
 	key := datastore.NameKey("workflowexecution", strings.ToLower(id), nil)
 	if err := dbclient.Get(ctx, key, workflowExecution); err != nil {
-		return &WorkflowExecution{}, err
+		return &shuffle.WorkflowExecution{}, err
 	}
 
 	return workflowExecution, nil
 }
 
-func getApp(ctx context.Context, id string) (*WorkflowApp, error) {
-	key := datastore.NameKey("workflowapp", strings.ToLower(id), nil)
-	workflowApp := &WorkflowApp{}
-	if err := dbclient.Get(ctx, key, workflowApp); err != nil {
-		return &WorkflowApp{}, err
+//func shuffle.GetApp(ctx context.Context, id string) (*WorkflowApp, error) {
+//	key := datastore.NameKey("workflowapp", strings.ToLower(id), nil)
+//	workflowApp := &WorkflowApp{}
+//	if err := dbclient.Get(ctx, key, workflowApp); err != nil {
+//		return &WorkflowApp{}, err
+//
+//	}
+//
+//	return workflowApp, nil
+//}
+//
+//func shuffle.GetWorkflow(ctx context.Context, id string) (*shuffle.Workflow, error) {
+//	key := datastore.NameKey("workflow", strings.ToLower(id), nil)
+//	workflow := &Workflow{}
+//	if err := dbclient.Get(ctx, key, workflow); err != nil {
+//		return &Workflow{}, err
+//	}
+//
+//	return workflow, nil
+//}
+//
+//func shuffle.GetEnvironments(ctx context.Context, orgId string) ([]Environment, error) {
+//	var environments []Environment
+//	q := datastore.NewQuery("Environments").Filter("org_id =", orgId)
+//
+//	_, err := dbclient.GetAll(ctx, q, &environments)
+//	if err != nil {
+//		return []Environment{}, err
+//	}
+//
+//	return environments, nil
+//}
 
-	}
-
-	return workflowApp, nil
-}
-
-func getWorkflow(ctx context.Context, id string) (*Workflow, error) {
-	key := datastore.NameKey("workflow", strings.ToLower(id), nil)
-	workflow := &Workflow{}
-	if err := dbclient.Get(ctx, key, workflow); err != nil {
-		return &Workflow{}, err
-	}
-
-	return workflow, nil
-}
-
-func getEnvironments(ctx context.Context, orgId string) ([]Environment, error) {
-	var environments []Environment
-	q := datastore.NewQuery("Environments").Filter("org_id =", orgId)
-
-	_, err := dbclient.GetAll(ctx, q, &environments)
-	if err != nil {
-		return []Environment{}, err
-	}
-
-	return environments, nil
-}
-
-func getAllWorkflows(ctx context.Context, orgId string) ([]Workflow, error) {
-	var allworkflows []Workflow
-	q := datastore.NewQuery("workflow").Filter("org_id = ", orgId)
-
-	_, err := dbclient.GetAll(ctx, q, &allworkflows)
-	if err != nil {
-		return []Workflow{}, err
-	}
-
-	return allworkflows, nil
-}
-
-func setExampleresult(ctx context.Context, result AppExecutionExample) error {
+func setExampleresult(ctx context.Context, result shuffle.AppExecutionExample) error {
 	// FIXME: Reintroduce this for stats
 	//key := datastore.NameKey("example_result", result.ExampleId, nil)
 
@@ -4754,7 +4725,7 @@ func setExampleresult(ctx context.Context, result AppExecutionExample) error {
 
 // Hmm, so I guess this should use uuid :(
 // Consistency PLX
-func setWorkflow(ctx context.Context, workflow Workflow, id string, optionalEditedSecondsOffset ...int) error {
+func setWorkflow(ctx context.Context, workflow shuffle.Workflow, id string, optionalEditedSecondsOffset ...int) error {
 	workflow.Edited = int64(time.Now().Unix())
 	if len(optionalEditedSecondsOffset) > 0 {
 		workflow.Edited += int64(optionalEditedSecondsOffset[0])
@@ -4777,7 +4748,7 @@ func deleteAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, userErr := handleApiAuthentication(resp, request)
+	user, userErr := shuffle.HandleApiAuthentication(resp, request)
 	if userErr != nil {
 		log.Printf("Api authentication failed in edit workflow: %s", userErr)
 		resp.WriteHeader(401)
@@ -4831,7 +4802,7 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, userErr := handleApiAuthentication(resp, request)
+	user, userErr := shuffle.HandleApiAuthentication(resp, request)
 	if userErr != nil {
 		log.Printf("Api authentication failed in edit workflow: %s", userErr)
 		resp.WriteHeader(401)
@@ -4854,7 +4825,7 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 
 	ctx := context.Background()
 	log.Printf("ID: %s", fileId)
-	app, err := getApp(ctx, fileId)
+	app, err := shuffle.GetApp(ctx, fileId)
 	if err != nil {
 		log.Printf("Error getting app (delete) %s: %s", fileId, err)
 		resp.WriteHeader(401)
@@ -4879,7 +4850,7 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 
 	// FIXME: Make workflows track themself INSIDE apps, or with a reference
 	q := datastore.NewQuery("workflow").Filter("org_id = ", user.ActiveOrg.Id).Limit(30)
-	var workflows []Workflow
+	var workflows []shuffle.Workflow
 	_, err = dbclient.GetAll(ctx, q, &workflows)
 	if err != nil {
 		log.Printf("Failed getting related workflows for the app: %s", err)
@@ -4893,7 +4864,7 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	for _, workflow := range workflows {
 		found := false
 
-		newActions := []Action{}
+		newActions := []shuffle.Action{}
 		for _, action := range workflow.Actions {
 			if action.AppName == app.Name && action.AppVersion == app.AppVersion {
 				found = true
@@ -4944,7 +4915,7 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	// Not really deleting it, just removing from user cache
 	if private {
 		log.Printf("[INFO] Deleting private app")
-		var privateApps []WorkflowApp
+		var privateApps []shuffle.WorkflowApp
 		for _, item := range user.PrivateApps {
 			if item.ID == fileId {
 				continue
@@ -4954,7 +4925,7 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		user.PrivateApps = privateApps
-		err = setUser(ctx, &user)
+		err = shuffle.SetUser(ctx, &user)
 		if err != nil {
 			log.Printf("[ERROR] Failed removing %s app for user %s: %s", app.Name, user.Username, err)
 			resp.WriteHeader(401)
@@ -5006,7 +4977,7 @@ func getWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 		fileId = location[4]
 	}
 
-	app, err := getApp(ctx, fileId)
+	app, err := shuffle.GetApp(ctx, fileId)
 	if err != nil {
 		log.Printf("[WARNING] Error getting app %s (app config): %s", fileId, err)
 		resp.WriteHeader(401)
@@ -5051,7 +5022,7 @@ func getWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, userErr := handleApiAuthentication(resp, request)
+	user, userErr := shuffle.HandleApiAuthentication(resp, request)
 	if userErr != nil {
 		log.Printf("[WARNING] Api authentication failed in get app: %s", userErr)
 		resp.WriteHeader(401)
@@ -5099,7 +5070,7 @@ func setAuthenticationConfig(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, userErr := handleApiAuthentication(resp, request)
+	user, userErr := shuffle.HandleApiAuthentication(resp, request)
 	if userErr != nil {
 		log.Printf("Api authentication failed in get all apps: %s", userErr)
 		resp.WriteHeader(401)
@@ -5155,7 +5126,7 @@ func setAuthenticationConfig(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	auth, err := getWorkflowAppAuthDatastore(ctx, fileId)
+	auth, err := shuffle.GetWorkflowAppAuthDatastore(ctx, fileId)
 	if err != nil {
 		log.Printf("Authget error: %s", err)
 		resp.WriteHeader(401)
@@ -5174,7 +5145,7 @@ func setAuthenticationConfig(resp http.ResponseWriter, request *http.Request) {
 		q := datastore.NewQuery("workflow").Filter("org_id =", user.ActiveOrg.Id)
 		q = q.Order("-edited").Limit(35)
 
-		var workflows []Workflow
+		var workflows []shuffle.Workflow
 		_, err = dbclient.GetAll(ctx, q, &workflows)
 		if err != nil {
 			log.Printf("Getall error in auth update: %s", err)
@@ -5186,11 +5157,11 @@ func setAuthenticationConfig(resp http.ResponseWriter, request *http.Request) {
 		// FIXME: Add function to remove auth from other auth's
 		actionCnt := 0
 		workflowCnt := 0
-		authenticationUsage := []AuthenticationUsage{}
+		authenticationUsage := []shuffle.AuthenticationUsage{}
 		for _, workflow := range workflows {
-			newActions := []Action{}
+			newActions := []shuffle.Action{}
 			edited := false
-			usage := AuthenticationUsage{
+			usage := shuffle.AuthenticationUsage{
 				WorkflowId: workflow.ID,
 				Nodes:      []string{},
 			}
@@ -5229,7 +5200,7 @@ func setAuthenticationConfig(resp http.ResponseWriter, request *http.Request) {
 			auth.Usage = authenticationUsage
 			auth.Defined = true
 
-			err = setWorkflowAppAuthDatastore(ctx, *auth, auth.Id)
+			err = shuffle.SetWorkflowAppAuthDatastore(ctx, *auth, auth.Id)
 			if err != nil {
 				log.Printf("Failed setting appauth: %s", err)
 				resp.WriteHeader(401)
@@ -5254,7 +5225,7 @@ func addAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, userErr := handleApiAuthentication(resp, request)
+	user, userErr := shuffle.HandleApiAuthentication(resp, request)
 	if userErr != nil {
 		log.Printf("Api authentication failed in get all apps: %s", userErr)
 		resp.WriteHeader(401)
@@ -5270,7 +5241,7 @@ func addAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	var appAuth AppAuthenticationStorage
+	var appAuth shuffle.AppAuthenticationStorage
 	err = json.Unmarshal(body, &appAuth)
 	if err != nil {
 		log.Printf("Failed unmarshaling (appauth): %s", err)
@@ -5283,7 +5254,7 @@ func addAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 	if len(appAuth.Id) == 0 {
 		appAuth.Id = uuid.NewV4().String()
 	} else {
-		auth, err := getWorkflowAppAuthDatastore(ctx, appAuth.Id)
+		auth, err := shuffle.GetWorkflowAppAuthDatastore(ctx, appAuth.Id)
 		if err == nil {
 			// OrgId         string                `json:"org_id" datastore:"org_id"`
 			if auth.OrgId != user.ActiveOrg.Id {
@@ -5331,10 +5302,10 @@ func addAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// FIXME: Doens't validate Org
-	app, err := getApp(ctx, appAuth.App.ID)
+	app, err := shuffle.GetApp(ctx, appAuth.App.ID)
 	if err != nil {
 		log.Printf("[WARNING] Failed finding app %s while setting auth. Finding it by looping apps.", appAuth.App.ID)
-		workflowapps, err := getAllWorkflowApps(ctx, 500)
+		workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 500)
 		if err != nil {
 			resp.WriteHeader(409)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
@@ -5379,7 +5350,7 @@ func addAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 	//appAuth.LargeImage = ""
 	appAuth.OrgId = user.ActiveOrg.Id
 	appAuth.Defined = true
-	err = setWorkflowAppAuthDatastore(ctx, appAuth, appAuth.Id)
+	err = shuffle.SetWorkflowAppAuthDatastore(ctx, appAuth, appAuth.Id)
 	if err != nil {
 		log.Printf("Failed setting up app auth %s: %s", appAuth.Id, err)
 		resp.WriteHeader(409)
@@ -5397,7 +5368,7 @@ func getAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, userErr := handleApiAuthentication(resp, request)
+	user, userErr := shuffle.HandleApiAuthentication(resp, request)
 	if userErr != nil {
 		log.Printf("Api authentication failed in get all apps: %s", userErr)
 		resp.WriteHeader(401)
@@ -5413,7 +5384,7 @@ func getAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 	//	return
 	//}
 	ctx := context.Background()
-	allAuths, err := getAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
+	allAuths, err := shuffle.GetAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
 	if err != nil {
 		log.Printf("Api authentication failed in get all app auth: %s", err)
 		resp.WriteHeader(401)
@@ -5428,7 +5399,7 @@ func getAppAuthentication(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// Cleanup for frontend usage. User shouldn't be able to get the data.
-	newAuth := []AppAuthenticationStorage{}
+	newAuth := []shuffle.AppAuthenticationStorage{}
 	for _, auth := range allAuths {
 		newAuthField := auth
 		for index, _ := range auth.Fields {
@@ -5509,7 +5480,7 @@ func updateWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, userErr := handleApiAuthentication(resp, request)
+	user, userErr := shuffle.HandleApiAuthentication(resp, request)
 	if userErr != nil {
 		log.Printf("Api authentication failed in get all apps: %s", userErr)
 		resp.WriteHeader(401)
@@ -5530,7 +5501,7 @@ func updateWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	app, err := getApp(ctx, fileId)
+	app, err := shuffle.GetApp(ctx, fileId)
 	if err != nil {
 		log.Printf("Error getting app (update app): %s", fileId)
 		resp.WriteHeader(401)
@@ -5575,7 +5546,7 @@ func updateWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 		app.SharingConfig = tmpfields.SharingConfig
 	}
 
-	err = setWorkflowAppDatastore(ctx, *app, app.ID)
+	err = shuffle.SetWorkflowAppDatastore(ctx, *app, app.ID)
 	if err != nil {
 		log.Printf("Failed patching workflowapp: %s", err)
 		resp.WriteHeader(401)
@@ -5606,7 +5577,7 @@ func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	// Just need to be logged in
 	// FIXME - need to be logged in?
-	user, userErr := handleApiAuthentication(resp, request)
+	user, userErr := shuffle.HandleApiAuthentication(resp, request)
 	if userErr != nil {
 		log.Printf("Continuing with apps even without auth")
 		//log.Printf("Api authentication failed in get all apps: %s", userErr)
@@ -5643,7 +5614,7 @@ func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 	//	return
 	//}
 
-	workflowapps, err := getAllWorkflowApps(ctx, 500)
+	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 500)
 	if err != nil {
 		log.Printf("Failed getting apps (getworkflowapps): %s", err)
 		resp.WriteHeader(401)
@@ -5756,7 +5727,7 @@ func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 
 // Bad check for workflowapps :)
 // FIXME - use tags and struct reflection
-func checkWorkflowApp(workflowApp WorkflowApp) error {
+func checkWorkflowApp(workflowApp shuffle.WorkflowApp) error {
 	// Validate fields
 	if workflowApp.Name == "" {
 		return errors.New("App field name doesn't exist")
@@ -5804,7 +5775,7 @@ func getSpecificApps(resp http.ResponseWriter, request *http.Request) {
 
 	// Just need to be logged in
 	// FIXME - should have some permissions?
-	_, err := handleApiAuthentication(resp, request)
+	_, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in set new app: %s", err)
 		resp.WriteHeader(401)
@@ -5836,7 +5807,7 @@ func getSpecificApps(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - continue the search here with github repos etc.
 	// Caching might be smart :D
 	ctx := context.Background()
-	workflowapps, err := getAllWorkflowApps(ctx, 500)
+	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 500)
 	if err != nil {
 		log.Printf("Error: Failed getting workflowapps: %s", err)
 		resp.WriteHeader(401)
@@ -5844,7 +5815,7 @@ func getSpecificApps(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	returnValues := []WorkflowApp{}
+	returnValues := []shuffle.WorkflowApp{}
 	search := strings.ToLower(tmpBody.Search)
 	for _, app := range workflowapps {
 		if !app.Activated && app.Generated {
@@ -5879,7 +5850,7 @@ func validateAppInput(resp http.ResponseWriter, request *http.Request) {
 
 	// Just need to be logged in
 	// FIXME - should have some permissions?
-	_, err := handleApiAuthentication(resp, request)
+	_, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in set new app: %s", err)
 		resp.WriteHeader(401)
@@ -6138,7 +6109,7 @@ func loadSpecificWorkflows(resp http.ResponseWriter, request *http.Request) {
 
 	// Just need to be logged in
 	// FIXME - should have some permissions?
-	user, err := handleApiAuthentication(resp, request)
+	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in load apps: %s", err)
 		resp.WriteHeader(401)
@@ -6205,7 +6176,7 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 
 	// Just need to be logged in
 	// FIXME - should have some permissions?
-	user, err := handleApiAuthentication(resp, request)
+	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in app hotload: %s", err)
 		resp.WriteHeader(401)
@@ -6252,7 +6223,7 @@ func loadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 
 	// Just need to be logged in
 	// FIXME - should have some permissions?
-	_, err := handleApiAuthentication(resp, request)
+	_, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in load specific apps: %s", err)
 		resp.WriteHeader(401)
@@ -6378,7 +6349,7 @@ func loadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string) error {
 
 	ctx := context.Background()
-	workflowapps, err := getAllWorkflowApps(ctx, 500)
+	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 500)
 	appCounter := 0
 	if err != nil {
 		log.Printf("Failed to get existing generated apps")
@@ -6465,7 +6436,7 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 				}
 
 				//log.Printf("Should generate yaml")
-				swagger, api, _, err := generateYaml(swagger, parsedOpenApi.ID)
+				swagger, api, _, err := shuffle.GenerateYaml(swagger, parsedOpenApi.ID)
 				if err != nil {
 					log.Printf("Failed building and generating yaml in loop (%s): %s", filename, err)
 					continue
@@ -6490,7 +6461,7 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 				}
 
 				if !found {
-					err = setWorkflowAppDatastore(ctx, api, api.ID)
+					err = shuffle.SetWorkflowAppDatastore(ctx, api, api.ID)
 					if err != nil {
 						log.Printf("Failed setting workflowapp in loop: %s", err)
 						continue
@@ -6582,7 +6553,7 @@ func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra 
 					continue
 				}
 
-				var workflow Workflow
+				var workflow shuffle.Workflow
 				err = json.Unmarshal(readFile, &workflow)
 				if err != nil {
 					continue
@@ -6595,11 +6566,11 @@ func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra 
 
 				workflow.ID = uuid.NewV4().String()
 				workflow.OrgId = orgId
-				workflow.ExecutingOrg = Org{
+				workflow.ExecutingOrg = shuffle.Org{
 					Id: orgId,
 				}
 
-				workflow.Org = append(workflow.Org, Org{
+				workflow.Org = append(workflow.Org, shuffle.Org{
 					Id: orgId,
 				})
 				workflow.IsValid = false
@@ -6646,7 +6617,7 @@ type buildLaterStruct struct {
 func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string, forceUpdate bool) ([]buildLaterStruct, []buildLaterStruct, error) {
 	var err error
 
-	allapps := []WorkflowApp{}
+	allapps := []shuffle.WorkflowApp{}
 
 	// These are slow apps to build with some funky mechanisms
 	reservedNames := []string{
@@ -6757,7 +6728,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 				combined = append(combined, dockerfileData...)
 				md5 := md5sum(combined)
 
-				var workflowapp WorkflowApp
+				var workflowapp shuffle.WorkflowApp
 				err = gyaml.Unmarshal(appfileData, &workflowapp)
 				if err != nil {
 					log.Printf("Failed unmarshaling workflowapp %s: %s", fullPath, err)
@@ -6772,7 +6743,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 				}
 
 				if len(allapps) == 0 {
-					allapps, err = getAllWorkflowApps(ctx, 500)
+					allapps, err = shuffle.GetAllWorkflowApps(ctx, 500)
 					if err != nil {
 						log.Printf("Failed getting apps to verify: %s", err)
 						continue
@@ -6816,7 +6787,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 						// 2. Check if they're present in the action
 						// 3. Add them IF they DONT exist
 						// 4. Fix python code with reflection (FIXME)
-						appendParams := []WorkflowAppActionParameter{}
+						appendParams := []shuffle.WorkflowAppActionParameter{}
 						for _, fieldname := range workflowapp.Authentication.Parameters {
 							found := false
 							for index, param := range action.Parameters {
@@ -6830,7 +6801,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 							}
 
 							if !found {
-								appendParams = append(appendParams, WorkflowAppActionParameter{
+								appendParams = append(appendParams, shuffle.WorkflowAppActionParameter{
 									Name:          fieldname.Name,
 									Description:   fieldname.Description,
 									Example:       fieldname.Example,
@@ -6872,7 +6843,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 				workflowapp.Downloaded = true
 				workflowapp.Hash = md5
 
-				err = setWorkflowAppDatastore(ctx, workflowapp, workflowapp.ID)
+				err = shuffle.SetWorkflowAppDatastore(ctx, workflowapp, workflowapp.ID)
 				if err != nil {
 					log.Printf("Failed setting workflowapp: %s", err)
 					continue
@@ -6972,7 +6943,7 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 
 	// Just need to be logged in
 	// FIXME - should have some permissions?
-	_, err := handleApiAuthentication(resp, request)
+	_, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in set new app: %s", err)
 		resp.WriteHeader(401)
@@ -6988,7 +6959,7 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	var workflowapp WorkflowApp
+	var workflowapp shuffle.WorkflowApp
 	err = json.Unmarshal(body, &workflowapp)
 	if err != nil {
 		log.Printf("Failed unmarshaling: %s", err)
@@ -6998,7 +6969,7 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	allapps, err := getAllWorkflowApps(ctx, 500)
+	allapps, err := shuffle.GetAllWorkflowApps(ctx, 500)
 	if err != nil {
 		log.Printf("Failed getting apps to verify: %s", err)
 		resp.WriteHeader(401)
@@ -7039,7 +7010,7 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	workflowapp.Generated = false
 	workflowapp.Activated = true
 
-	err = setWorkflowAppDatastore(ctx, workflowapp, workflowapp.ID)
+	err = shuffle.SetWorkflowAppDatastore(ctx, workflowapp, workflowapp.ID)
 	if err != nil {
 		log.Printf("Failed setting workflowapp: %s", err)
 		resp.WriteHeader(401)
@@ -7065,7 +7036,7 @@ func getWorkflowExecutions(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, err := handleApiAuthentication(resp, request)
+	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in getting specific workflow: %s", err)
 		resp.WriteHeader(401)
@@ -7093,7 +7064,7 @@ func getWorkflowExecutions(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	workflow, err := getWorkflow(ctx, fileId)
+	workflow, err := shuffle.GetWorkflow(ctx, fileId)
 	if err != nil {
 		log.Printf("Failed getting the workflow %s locally (get executions): %s", fileId, err)
 		resp.WriteHeader(401)
@@ -7112,7 +7083,7 @@ func getWorkflowExecutions(resp http.ResponseWriter, request *http.Request) {
 	// Query for the specifci workflowId
 	maxAmount := 30
 	q := datastore.NewQuery("workflowexecution").Filter("workflow_id =", fileId).Order("-started_at").Limit(maxAmount)
-	var workflowExecutions []WorkflowExecution
+	var workflowExecutions []shuffle.WorkflowExecution
 	_, err = dbclient.GetAll(ctx, q, &workflowExecutions)
 	if err != nil {
 
@@ -7133,7 +7104,7 @@ func getWorkflowExecutions(resp http.ResponseWriter, request *http.Request) {
 				it := dbclient.Run(ctx, q)
 				//_, err = it.Next(&app)
 				for {
-					var workflowExecution WorkflowExecution
+					var workflowExecution shuffle.WorkflowExecution
 					_, err := it.Next(&workflowExecution)
 					if err != nil {
 						break
@@ -7227,169 +7198,169 @@ func getAllSchedules(ctx context.Context, orgId string) ([]ScheduleOld, error) {
 }
 
 //FIXME: Add cursor
-func getAllWorkflowApps(ctx context.Context, maxLen int) ([]WorkflowApp, error) {
-	var apps []WorkflowApp
-	query := datastore.NewQuery("workflowapp").Order("-edited").Limit(10)
-	//query := datastore.NewQuery("workflowapp").Order("-edited").Limit(40)
+//func shuffle.GetAllWorkflowApps(ctx context.Context, maxLen int) ([]shuffle.WorkflowApp, error) {
+//	var apps []WorkflowApp
+//	query := datastore.NewQuery("workflowapp").Order("-edited").Limit(10)
+//	//query := datastore.NewQuery("workflowapp").Order("-edited").Limit(40)
+//
+//	cacheKey := fmt.Sprintf("workflowapps-sorted-%d", maxLen)
+//	if value, found := requestCache.Get(cacheKey); found {
+//		parsedValue := value.(*[]WorkflowApp)
+//		log.Printf("[INFO] Returning %d apps from cache", len(*parsedValue))
+//		return *parsedValue, nil
+//	}
+//
+//	cursorStr := ""
+//
+//	// NOT BEING UPDATED
+//	// FIXME: Update the app with the correct actions. HOW DOES THIS WORK??
+//	// Seems like only actions are wrong. Could get the app individually.
+//	// Guessing it's a memory issue.
+//	//Actions        []WorkflowAppAction `json:"actions" yaml:"actions" required:true datastore:"actions,noindex"`
+//	//errors.New(nil)
+//	var err error
+//	for {
+//		it := dbclient.Run(ctx, query)
+//		//_, err = it.Next(&app)
+//		for {
+//			var app WorkflowApp
+//			_, err := it.Next(&app)
+//			if err != nil {
+//				break
+//			}
+//
+//			if app.Name == "Shuffle Subflow" {
+//				continue
+//			}
+//
+//			found := false
+//			//log.Printf("ACTIONS: %d - %s", len(app.Actions), app.Name)
+//			for _, innerapp := range apps {
+//				if innerapp.Name == app.Name {
+//					found = true
+//					break
+//				}
+//			}
+//
+//			if !found {
+//				apps = append(apps, app)
+//			}
+//		}
+//
+//		if err != iterator.Done {
+//			//log.Printf("[INFO] Failed fetching results: %v", err)
+//			//break
+//		}
+//
+//		// Get the cursor for the next page of results.
+//		nextCursor, err := it.Cursor()
+//		if err != nil {
+//			log.Printf("Cursorerror: %s", err)
+//			break
+//		} else {
+//			//log.Printf("NEXTCURSOR: %s", nextCursor)
+//			nextStr := fmt.Sprintf("%s", nextCursor)
+//			if cursorStr == nextStr {
+//				break
+//			}
+//
+//			cursorStr = nextStr
+//			query = query.Start(nextCursor)
+//			//cursorStr = nextCursor
+//			//break
+//		}
+//
+//		if len(apps) > maxLen {
+//			break
+//		}
+//	}
+//
+//	if len(apps) > 20 {
+//		log.Printf("[INFO] Setting %d apps in cache", len(apps))
+//		requestCache.Set(cacheKey, &apps, cache.DefaultExpiration)
+//	}
+//
+//	//var allworkflowapps []WorkflowApp
+//	//_, err := dbclient.GetAll(ctx, query, &allworkflowapps)
+//	//if err != nil {
+//	//	if strings.Contains(fmt.Sprintf("%s", err), "ResourceExhausted") {
+//	//		//datastore.NewQuery("workflowapp").Limit(30).Order("-edited")
+//	//		query = datastore.NewQuery("workflowapp").Order("-edited").Limit(25)
+//	//		//q := q.Limit(25)
+//	//		_, err := dbclient.GetAll(ctx, query, &allworkflowapps)
+//	//		if err != nil {
+//	//			return []WorkflowApp{}, err
+//	//		}
+//	//	} else {
+//	//		return []WorkflowApp{}, err
+//	//	}
+//	//}
+//
+//	return apps, nil
+//}
 
-	cacheKey := fmt.Sprintf("workflowapps-sorted-%d", maxLen)
-	if value, found := requestCache.Get(cacheKey); found {
-		parsedValue := value.(*[]WorkflowApp)
-		log.Printf("[INFO] Returning %d apps from cache", len(*parsedValue))
-		return *parsedValue, nil
-	}
-
-	cursorStr := ""
-
-	// NOT BEING UPDATED
-	// FIXME: Update the app with the correct actions. HOW DOES THIS WORK??
-	// Seems like only actions are wrong. Could get the app individually.
-	// Guessing it's a memory issue.
-	//Actions        []WorkflowAppAction `json:"actions" yaml:"actions" required:true datastore:"actions,noindex"`
-	//errors.New(nil)
-	var err error
-	for {
-		it := dbclient.Run(ctx, query)
-		//_, err = it.Next(&app)
-		for {
-			var app WorkflowApp
-			_, err := it.Next(&app)
-			if err != nil {
-				break
-			}
-
-			if app.Name == "Shuffle Subflow" {
-				continue
-			}
-
-			found := false
-			//log.Printf("ACTIONS: %d - %s", len(app.Actions), app.Name)
-			for _, innerapp := range apps {
-				if innerapp.Name == app.Name {
-					found = true
-					break
-				}
-			}
-
-			if !found {
-				apps = append(apps, app)
-			}
-		}
-
-		if err != iterator.Done {
-			//log.Printf("[INFO] Failed fetching results: %v", err)
-			//break
-		}
-
-		// Get the cursor for the next page of results.
-		nextCursor, err := it.Cursor()
-		if err != nil {
-			log.Printf("Cursorerror: %s", err)
-			break
-		} else {
-			//log.Printf("NEXTCURSOR: %s", nextCursor)
-			nextStr := fmt.Sprintf("%s", nextCursor)
-			if cursorStr == nextStr {
-				break
-			}
-
-			cursorStr = nextStr
-			query = query.Start(nextCursor)
-			//cursorStr = nextCursor
-			//break
-		}
-
-		if len(apps) > maxLen {
-			break
-		}
-	}
-
-	if len(apps) > 20 {
-		log.Printf("[INFO] Setting %d apps in cache", len(apps))
-		requestCache.Set(cacheKey, &apps, cache.DefaultExpiration)
-	}
-
-	//var allworkflowapps []WorkflowApp
-	//_, err := dbclient.GetAll(ctx, query, &allworkflowapps)
-	//if err != nil {
-	//	if strings.Contains(fmt.Sprintf("%s", err), "ResourceExhausted") {
-	//		//datastore.NewQuery("workflowapp").Limit(30).Order("-edited")
-	//		query = datastore.NewQuery("workflowapp").Order("-edited").Limit(25)
-	//		//q := q.Limit(25)
-	//		_, err := dbclient.GetAll(ctx, query, &allworkflowapps)
-	//		if err != nil {
-	//			return []WorkflowApp{}, err
-	//		}
-	//	} else {
-	//		return []WorkflowApp{}, err
-	//	}
-	//}
-
-	return apps, nil
-}
-
-func getAllWorkflowAppAuth(ctx context.Context, OrgId string) ([]AppAuthenticationStorage, error) {
-	var allworkflowapps []AppAuthenticationStorage
-	q := datastore.NewQuery("workflowappauth").Filter("org_id = ", OrgId)
-
-	_, err := dbclient.GetAll(ctx, q, &allworkflowapps)
-	if err != nil {
-		return []AppAuthenticationStorage{}, err
-	}
-
-	return allworkflowapps, nil
-}
-
-func getWorkflowAppAuthDatastore(ctx context.Context, id string) (*AppAuthenticationStorage, error) {
-
-	key := datastore.NameKey("workflowappauth", id, nil)
-	appAuth := &AppAuthenticationStorage{}
-	// New struct, to not add body, author etc
-	if err := dbclient.Get(ctx, key, appAuth); err != nil {
-		return &AppAuthenticationStorage{}, err
-	}
-
-	return appAuth, nil
-}
-
-func setWorkflowAppAuthDatastore(ctx context.Context, workflowappauth AppAuthenticationStorage, id string) error {
-	timeNow := int64(time.Now().Unix())
-	if workflowappauth.Created == 0 {
-		workflowappauth.Created = timeNow
-	}
-
-	workflowappauth.Edited = timeNow
-
-	key := datastore.NameKey("workflowappauth", id, nil)
-
-	// New struct, to not add body, author etc
-	if _, err := dbclient.Put(ctx, key, &workflowappauth); err != nil {
-		log.Printf("Error adding workflow app auth: %s", err)
-		return err
-	}
-
-	return nil
-}
-
-// Hmm, so I guess this should use uuid :(
-// Consistency PLX
-func setWorkflowAppDatastore(ctx context.Context, workflowapp WorkflowApp, id string) error {
-	timeNow := int64(time.Now().Unix())
-	if workflowapp.Created == 0 {
-		workflowapp.Created = timeNow
-	}
-
-	workflowapp.Edited = timeNow
-	key := datastore.NameKey("workflowapp", id, nil)
-
-	// New struct, to not add body, author etc
-	if _, err := dbclient.Put(ctx, key, &workflowapp); err != nil {
-		log.Printf("Error adding workflow app: %s", err)
-		return err
-	}
-
-	return nil
-}
+//func shuffle.GetAllWorkflowAppAuth(ctx context.Context, OrgId string) ([]shuffle.AppAuthenticationStorage, error) {
+//	var allworkflowapps []AppAuthenticationStorage
+//	q := datastore.NewQuery("workflowappauth").Filter("org_id = ", OrgId)
+//
+//	_, err := dbclient.GetAll(ctx, q, &allworkflowapps)
+//	if err != nil {
+//		return []AppAuthenticationStorage{}, err
+//	}
+//
+//	return allworkflowapps, nil
+//}
+//
+//func getWorkflowAppAuthDatastore(ctx context.Context, id string) (*AppAuthenticationStorage, error) {
+//
+//	key := datastore.NameKey("workflowappauth", id, nil)
+//	appAuth := &AppAuthenticationStorage{}
+//	// New struct, to not add body, author etc
+//	if err := dbclient.Get(ctx, key, appAuth); err != nil {
+//		return &AppAuthenticationStorage{}, err
+//	}
+//
+//	return appAuth, nil
+//}
+//
+//func shuffle.SetWorkflowAppAuthDatastore(ctx context.Context, workflowappauth AppAuthenticationStorage, id string) error {
+//	timeNow := int64(time.Now().Unix())
+//	if workflowappauth.Created == 0 {
+//		workflowappauth.Created = timeNow
+//	}
+//
+//	workflowappauth.Edited = timeNow
+//
+//	key := datastore.NameKey("workflowappauth", id, nil)
+//
+//	// New struct, to not add body, author etc
+//	if _, err := dbclient.Put(ctx, key, &workflowappauth); err != nil {
+//		log.Printf("Error adding workflow app auth: %s", err)
+//		return err
+//	}
+//
+//	return nil
+//}
+//
+//// Hmm, so I guess this should use uuid :(
+//// Consistency PLX
+//func SetWorkflowAppDatastore(ctx context.Context, workflowapp WorkflowApp, id string) error {
+//	timeNow := int64(time.Now().Unix())
+//	if workflowapp.Created == 0 {
+//		workflowapp.Created = timeNow
+//	}
+//
+//	workflowapp.Edited = timeNow
+//	key := datastore.NameKey("workflowapp", id, nil)
+//
+//	// New struct, to not add body, author etc
+//	if _, err := dbclient.Put(ctx, key, &workflowapp); err != nil {
+//		log.Printf("Error adding workflow app: %s", err)
+//		return err
+//	}
+//
+//	return nil
+//}
 
 // Starts a new webhook
 func handleStopHook(resp http.ResponseWriter, request *http.Request) {
@@ -7398,7 +7369,7 @@ func handleStopHook(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, err := handleApiAuthentication(resp, request)
+	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in set new workflowhandler: %s", err)
 		resp.WriteHeader(401)
@@ -7481,7 +7452,7 @@ func handleDeleteHook(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, err := handleApiAuthentication(resp, request)
+	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in set new workflowhandler: %s", err)
 		resp.WriteHeader(401)
@@ -7543,7 +7514,7 @@ func handleDeleteHook(resp http.ResponseWriter, request *http.Request) {
 	log.Printf("Hook: %#v", hook)
 	if hook.Environment == "cloud" {
 		log.Printf("[INFO] Should STOP cloud webhook https://shuffler.io/api/v1/hooks/webhook_%s", hook.Id)
-		org, err := getOrg(ctx, user.ActiveOrg.Id)
+		org, err := shuffle.GetOrg(ctx, user.ActiveOrg.Id)
 		if err != nil {
 			log.Printf("Failed finding org %s: %s", org.Id, err)
 			return
@@ -7622,7 +7593,7 @@ func handleStartHook(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, err := handleApiAuthentication(resp, request)
+	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in set new workflowhandler: %s", err)
 		resp.WriteHeader(401)
@@ -7730,7 +7701,7 @@ func removeOutlookTriggerFunction(ctx context.Context, triggerId string) error {
 	return nil
 }
 
-func handleUserInput(trigger Trigger, organizationId string, workflowId string, referenceExecution string) error {
+func handleUserInput(trigger shuffle.Trigger, organizationId string, workflowId string, referenceExecution string) error {
 	// E.g. check email
 	sms := ""
 	email := ""
@@ -7768,7 +7739,7 @@ func handleUserInput(trigger Trigger, organizationId string, workflowId string, 
 			FifthItem:     referenceExecution,
 		}
 
-		org, err := getOrg(ctx, organizationId)
+		org, err := shuffle.GetOrg(ctx, organizationId)
 		if err != nil {
 			log.Printf("Failed email send to cloud (1): %s", err)
 			return err
@@ -7794,7 +7765,7 @@ func handleUserInput(trigger Trigger, organizationId string, workflowId string, 
 			FifthItem:     referenceExecution,
 		}
 
-		org, err := getOrg(ctx, organizationId)
+		org, err := shuffle.GetOrg(ctx, organizationId)
 		if err != nil {
 			log.Printf("Failed sms send to cloud (3): %s", err)
 			return err

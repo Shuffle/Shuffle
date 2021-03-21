@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/frikky/shuffle-shared"
+
 	"bytes"
 	"context"
 	"encoding/json"
@@ -423,32 +425,32 @@ func handleNewOutlookRegister(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// Should also update the user
-	Userdata, err := getUser(ctx, senderUser)
+	Userdata, err := shuffle.GetUser(ctx, senderUser)
 	if err != nil {
 		log.Printf("[INFO] Username %s doesn't exist (oauth2): %s", trigger.Username, err)
 		resp.WriteHeader(401)
 		return
 	}
 
-	Userdata.Authentication = append(Userdata.Authentication, UserAuth{
+	Userdata.Authentication = append(Userdata.Authentication, shuffle.UserAuth{
 		Name:        "Outlook",
 		Description: "oauth2",
 		Workflows:   []string{trigger.WorkflowId},
 		Username:    trigger.Username,
-		Fields: []UserAuthField{
-			UserAuthField{
+		Fields: []shuffle.UserAuthField{
+			shuffle.UserAuthField{
 				Key:   "trigger_id",
 				Value: trigger.Id,
 			},
-			UserAuthField{
+			shuffle.UserAuthField{
 				Key:   "username",
 				Value: trigger.Username,
 			},
-			UserAuthField{
+			shuffle.UserAuthField{
 				Key:   "code",
 				Value: code,
 			},
-			UserAuthField{
+			shuffle.UserAuthField{
 				Key:   "type",
 				Value: trigger.Type,
 			},
@@ -456,7 +458,7 @@ func handleNewOutlookRegister(resp http.ResponseWriter, request *http.Request) {
 	})
 
 	// Set apikey for the user if they don't have one
-	err = setUser(ctx, Userdata)
+	err = shuffle.SetUser(ctx, Userdata)
 	if err != nil {
 		log.Printf("Failed setting user data for %s: %s", Userdata.Username, err)
 		resp.WriteHeader(401)
@@ -636,7 +638,7 @@ func handleGetSpecificTrigger(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, err := handleApiAuthentication(resp, request)
+	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in getting specific workflow: %s", err)
 		resp.WriteHeader(401)
@@ -714,7 +716,7 @@ func createOutlookSub(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	workflow, err := getWorkflow(ctx, workflowId)
+	workflow, err := shuffle.GetWorkflow(ctx, workflowId)
 	if err != nil {
 		log.Printf("Failed getting the workflow locally (outlook sub): %s", err)
 		resp.WriteHeader(401)
@@ -722,7 +724,7 @@ func createOutlookSub(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, err := handleApiAuthentication(resp, request)
+	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in outlook deploy: %s", err)
 		resp.WriteHeader(401)
@@ -808,7 +810,7 @@ func createOutlookSub(resp http.ResponseWriter, request *http.Request) {
 	// 10 * 5 = 50 seconds. That's waaay too much :(
 
 	if runningEnvironment != "cloud" {
-		org, err := getOrg(ctx, user.ActiveOrg.Id)
+		org, err := shuffle.GetOrg(ctx, user.ActiveOrg.Id)
 		if err != nil {
 			log.Printf("Failed finding org %s: %s", org.Id, err)
 			return
@@ -1147,7 +1149,7 @@ func handleOutlookCallback(resp http.ResponseWriter, request *http.Request) {
 		Body:   ioutil.NopCloser(bytes.NewReader(b)),
 	}
 
-	workflow := Workflow{
+	workflow := shuffle.Workflow{
 		ID: "",
 	}
 
@@ -1196,7 +1198,7 @@ func removeOutlookSubscription(outlookClient *http.Client, subscriptionId string
 // Remove AUTH
 // Remove function
 // Remove subscription
-func handleOutlookSubRemoval(ctx context.Context, user User, workflowId, triggerId string) error {
+func handleOutlookSubRemoval(ctx context.Context, user shuffle.User, workflowId, triggerId string) error {
 	// 1. Get the auth for trigger
 	// 2. Stop the subscription
 	// 3. Remove the function
@@ -1209,7 +1211,7 @@ func handleOutlookSubRemoval(ctx context.Context, user User, workflowId, trigger
 
 	if runningEnvironment != "cloud" {
 		log.Printf("[INFO] SHOULD STOP OUTLOOK SUB ONPREM SYNC WITH CLOUD for workflow ID %s", workflowId)
-		org, err := getOrg(ctx, user.ActiveOrg.Id)
+		org, err := shuffle.GetOrg(ctx, user.ActiveOrg.Id)
 		if err != nil {
 			log.Printf("[INFO] Failed finding org %s during outlook removal: %s", org.Id, err)
 			return err
@@ -1289,7 +1291,7 @@ func handleDeleteOutlookSub(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	workflow, err := getWorkflow(ctx, workflowId)
+	workflow, err := shuffle.GetWorkflow(ctx, workflowId)
 	if err != nil {
 		log.Printf("Failed getting the workflow locally (delete outlook): %s", err)
 		resp.WriteHeader(401)
@@ -1297,7 +1299,7 @@ func handleDeleteOutlookSub(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, err := handleApiAuthentication(resp, request)
+	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in outlook deploy: %s", err)
 		resp.WriteHeader(401)
