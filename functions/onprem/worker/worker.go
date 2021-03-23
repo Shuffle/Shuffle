@@ -1780,8 +1780,8 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		} else if found {
 			// If result exists and execution variable exists, update execution value
 			//log.Printf("Exec var backend: %s", workflowExecution.Results[outerindex].Action.ExecutionVariable.Name)
-			actionVarName := workflowExecution.Results[outerindex].Action.ExecutionVariable.Name
 			// Finds potential execution arguments
+			actionVarName := workflowExecution.Results[outerindex].Action.ExecutionVariable.Name
 			if len(actionVarName) > 0 {
 				log.Printf("EXECUTION VARIABLE LOCAL: %s", actionVarName)
 				for index, execvar := range workflowExecution.ExecutionVariables {

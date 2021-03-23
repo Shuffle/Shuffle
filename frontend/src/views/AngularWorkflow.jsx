@@ -173,7 +173,6 @@ const AngularWorkflow = (props) => {
 
 	const [selectedApp, setSelectedApp] = React.useState({});
 	const [selectedAction, setSelectedAction] = React.useState({});
-	const [selectedActionName, setSelectedActionName] = React.useState({});
 	const [selectedActionEnvironment, setSelectedActionEnvironment] = React.useState({});
 
 	const [executionRequest, setExecutionRequest] = React.useState({})
@@ -1173,19 +1172,24 @@ const AngularWorkflow = (props) => {
 	const onNodeSelect = (event, newAppAuth) => {
 		const data = event.target.data()
 		setLastSaved(false)
-		const branch = workflow.branches.filter(branch => branch.source_id === data.id || branch.destination_id === data.id)
+		//const branch = workflow.branches.filter(branch => branch.source_id === data.id || branch.destination_id === data.id)
 		console.log("NODE: ", data)
-		console.log("BRANCHES: ", branch)
+		//console.log("BRANCHES: ", branch)
 
 		if (data.type === "ACTION") {
+
+
 			// FIXME - unselect
 			//console.log(cy.elements('[_id!="${data._id}"]`))
 			// Does it choose the wrong action?
 			var curaction = workflow.actions.find(a => a.id === data.id)
 			if (!curaction || curaction === undefined) { 
+				//event.target.unselect()
 				//alert.error("Action not found. Please remake it.")
 				return
 			}
+
+			setSelectedAction(curaction)
 
 			const curapp = apps.find(a => a.name === curaction.app_name && a.app_version === curaction.app_version)
 			if (!curapp || curapp === undefined) {
@@ -1202,7 +1206,7 @@ const AngularWorkflow = (props) => {
 					}
 
 					var tmpAuth = JSON.parse(JSON.stringify(newAppAuth))
-					console.log("Checking authentication: ", tmpAuth)
+					//console.log("Checking authentication: ", tmpAuth)
 					for (var key in tmpAuth) {
 						var item = tmpAuth[key]
 
@@ -1221,7 +1225,7 @@ const AngularWorkflow = (props) => {
 					}
 
 					curaction.authentication = authenticationOptions
-					console.log("Authentication: ", authenticationOptions)
+					//console.log("Authentication: ", authenticationOptions)
 					if (curaction.selectedAuthentication === null || curaction.selectedAuthentication === undefined || curaction.selectedAuthentication.length === "") {
 						curaction.selectedAuthentication = {}
 					}
@@ -1243,8 +1247,6 @@ const AngularWorkflow = (props) => {
 				setSelectedActionEnvironment(env)
 			}
 
-			setSelectedActionName(curaction.name)	
-			setSelectedAction(curaction)
 
 			/*
 			var params = []
@@ -1273,7 +1275,6 @@ const AngularWorkflow = (props) => {
 			const trigger_index = workflow.triggers.findIndex(a => a.id === data.id)
 			setSelectedTriggerIndex(trigger_index)
 			setSelectedTrigger(data)
-			setSelectedActionName(data.name)
 			setSelectedActionEnvironment(data.env)
 
 			if (data.app_name === "Shuffle Workflow") {
@@ -1781,7 +1782,6 @@ const AngularWorkflow = (props) => {
 	const removeNode = () => {
 		setSelectedApp({})
 		setSelectedAction({})
-		setSelectedActionName("")
 
 		const selectedNode = cy.$(':selected')
 		if (selectedNode.data() === undefined) {
@@ -2757,7 +2757,6 @@ const AngularWorkflow = (props) => {
 		//setSelectedActionEnvironment(env)
 		
 		setSelectedAction(selectedAction)
-		setSelectedActionName(e.target.value)
 	}
 
 	// APPSELECT at top
@@ -2766,7 +2765,7 @@ const AngularWorkflow = (props) => {
 	// ACTION select
 	//
 	const selectedNameChange = (event) => {
-		console.log("OLDNAME: ", selectedActionName)
+		//console.log("OLDNAME: ", selectedAction.name)
 		event.target.value = event.target.value.replace("(", "")
 		event.target.value = event.target.value.replace(")", "")
 		event.target.value = event.target.value.replace("$", "")
@@ -2777,7 +2776,7 @@ const AngularWorkflow = (props) => {
 		selectedAction.label = event.target.value
 		setSelectedAction(selectedAction)
 
-		console.log("SHOULD CHANGE NAME EVERYWHERE ITS USED TOO BASED ON OLD NAME!")
+		//console.log("SHOULD CHANGE NAME EVERYWHERE ITS USED TOO BASED ON OLD NAME!")
 
 		/*
 		if (nodeaction.label !== curaction.label) {
@@ -3103,7 +3102,6 @@ const AngularWorkflow = (props) => {
 			selectedActionParameters[count].action_field = fieldvalue 
 			selectedAction.parameters = selectedActionParameters
 
-			setSelectedActionName(selectedActionName)
 			setSelectedApp(selectedApp)
 			setSelectedAction(selectedAction)
 			setUpdate(fieldvalue)
@@ -3124,7 +3122,6 @@ const AngularWorkflow = (props) => {
 			// FIXME - check if startnode
 
 			// Set value 
-			setSelectedActionName(selectedActionName)
 			setSelectedApp(selectedApp)
 
 			setSelectedAction(selectedAction)
@@ -3151,7 +3148,6 @@ const AngularWorkflow = (props) => {
 			selectedAction.parameters = selectedActionParameters
 
 			// This is a stupid workaround to make it refresh rofl
-			setSelectedActionName({})
 			setSelectedAction({})
 			setSelectedTrigger({})
 			setSelectedApp({})
@@ -3159,7 +3155,6 @@ const AngularWorkflow = (props) => {
 			// FIXME - check if startnode
 
 			// Set value 
-			setSelectedActionName(selectedActionName)
 			setSelectedApp(selectedApp)
 			setSelectedAction(selectedAction)
 		}
@@ -4199,7 +4194,7 @@ const AngularWorkflow = (props) => {
 					<b>Actions</b>
 				</div>
 				<Select
-					value={selectedActionName}
+					value={selectedAction.name}
 					fullWidth
 					onChange={setNewSelectedAction}
 					style={{backgroundColor: inputColor, color: "white", height: 50, borderRadius: borderRadius,}}
@@ -4266,7 +4261,6 @@ const AngularWorkflow = (props) => {
 		workflow.triggers[selectedTriggerIndex].parameters[0] = {"value": fixedValue, "name": "outlookfolder"}
 
 		// This resets state for some reason (:
-		setSelectedActionName({})
 		setSelectedAction({})
 		setSelectedTrigger({})
 		setSelectedApp({})
@@ -4293,7 +4287,6 @@ const AngularWorkflow = (props) => {
 	//		setWorkflow(workflow)
 
 	//		// This resets state for some reason (:
-	//		setSelectedActionName({})
 	//		setSelectedActionEnvironment({})
 	//		setSelectedAction({})
 	//		setSelectedTrigger({})

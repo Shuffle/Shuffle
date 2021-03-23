@@ -206,8 +206,7 @@ const Workflows = (props) => {
     .then((responseJson) => {
 			setSelectedExecution({})
 			setWorkflowExecutions([])
-
-			console.log(responseJson)
+			//console.log(responseJson)
 
 			if (responseJson !== undefined) {
 				setWorkflows(responseJson)

@@ -63,7 +63,6 @@ import (
 
 	// Web
 	"github.com/gorilla/mux"
-	"github.com/patrickmn/go-cache"
 	"google.golang.org/api/option"
 	"google.golang.org/grpc"
 	http2 "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
@@ -84,7 +83,6 @@ var syncSubUrl = "https://shuffler.io"
 //var syncSubUrl = "https://050196912a9d.ngrok.io"
 
 var dbclient *datastore.Client
-var requestCache *cache.Cache
 
 type Userapi struct {
 	Username string `datastore:"username"`
@@ -667,36 +665,6 @@ func parseLoginParameters(resp http.ResponseWriter, request *http.Request) (logi
 	return t, nil
 }
 
-// Can check against HIBP etc?
-// Removed for localhost
-func checkPasswordStrength(password string) error {
-	// Check password strength here
-	if len(password) < 3 {
-		return errors.New("Minimum password length is 3.")
-	}
-
-	//if len(password) > 128 {
-	//	return errors.New("Maximum password length is 128.")
-	//}
-
-	//re := regexp.MustCompile("[0-9]+")
-	//if len(re.FindAllString(password, -1)) == 0 {
-	//	return errors.New("Password must contain a number")
-	//}
-
-	//re = regexp.MustCompile("[a-z]+")
-	//if len(re.FindAllString(password, -1)) == 0 {
-	//	return errors.New("Password must contain a lower case char")
-	//}
-
-	//re = regexp.MustCompile("[A-Z]+")
-	//if len(re.FindAllString(password, -1)) == 0 {
-	//	return errors.New("Password must contain an upper case char")
-	//}
-
-	return nil
-}
-
 func deleteUser(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -959,7 +927,7 @@ func handleSetEnvironments(resp http.ResponseWriter, request *http.Request) {
 func createNewUser(username, password, role, apikey string, org shuffle.Org) error {
 	// Returns false if there is an issue
 	// Use this for register
-	err := checkPasswordStrength(password)
+	err := shuffle.CheckPasswordStrength(password)
 	if err != nil {
 		log.Printf("Bad password strength: %s", err)
 		return err
@@ -1145,104 +1113,6 @@ func handleCookie(request *http.Request) bool {
 	return true
 }
 
-func handleLogout(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	http.SetCookie(resp, &http.Cookie{
-		Name:    "session_token",
-		Value:   "",
-		Path:    "/",
-		Expires: time.Unix(0, 0),
-	})
-
-	userInfo, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("Api authentication failed in handleLogout: %s", err)
-		resp.WriteHeader(200)
-		resp.Write([]byte(`{"success": true, "reason": "Not logged in"}`))
-		return
-	}
-
-	ctx := context.Background()
-	session, err := shuffle.GetSession(ctx, userInfo.Session)
-	if err != nil {
-		log.Printf("Session %#v doesn't exist: %s", session, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "No session"}`))
-		return
-	}
-
-	// Check cookie
-	//c, err := request.Cookie("session_token")
-	//if err != nil {
-	//	resp.WriteHeader(200)
-	//	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-	//	return
-	//} else {
-	//	log.Printf("Session cookie is set to %s!", c.Value)
-	//}
-
-	//var Userdata User
-	//ctx := context.Background()
-	//sessionToken = c.Value
-	//session, err := getSession(ctx, sessionToken)
-	//if err != nil {
-	//	log.Printf("[WARNING] Session %s doesn't exist (logout): %s", sessionToken, err)
-	//	resp.WriteHeader(401)
-	//	resp.Write([]byte(`{"success": false, "reason": "Couldn't find your session"}`))
-	//	return
-	//}
-
-	// Get session first
-	// Should basically never happen
-	//_, err = shuffle.GetUser(ctx, session.Id)
-	//if err != nil {
-	//	log.Printf("Username %s doesn't exist (logout): %s", session.Username, err)
-	//	resp.WriteHeader(401)
-	//	resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
-	//	return
-	//}
-
-	//	Userdata = *tmpdata
-	//}
-
-	// FIXME
-	// Session might delete someone elses here?
-	// No need to think about before possible scale..?
-	err = shuffle.SetSession(ctx, userInfo, "")
-	if err != nil {
-		log.Printf("Error removing session for: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
-		return
-	}
-
-	err = DeleteKey(ctx, "sessions", userInfo.Session)
-	if err != nil {
-		log.Printf("Error deleting key %s for %s: %s", userInfo.Session, userInfo.Username, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
-		return
-	}
-
-	userInfo.Session = ""
-	err = shuffle.SetUser(ctx, &userInfo)
-	if err != nil {
-		log.Printf("Failed updating user: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Failed updating apikey"}`))
-		return
-	}
-
-	//memcache.Delete(request.Context(), sessionToken)
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(`{"success": false, "reason": "Successfully logged out"}`))
-}
-
 func handleUpdateUser(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -1368,105 +1238,6 @@ func handleUpdateUser(resp http.ResponseWriter, request *http.Request) {
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
-}
-
-func handleApiGeneration(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	userInfo, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("Api authentication failed in apigen: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	ctx := context.Background()
-	if request.Method == "GET" {
-		newUserInfo, err := shuffle.GenerateApikey(ctx, userInfo)
-		if err != nil {
-			log.Printf("Failed to generate apikey for user %s: %s", userInfo.Username, err)
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false, "reason": ""}`))
-			return
-		}
-		userInfo = newUserInfo
-		log.Printf("Updated apikey for user %s", userInfo.Username)
-	} else if request.Method == "POST" {
-		log.Printf("Handling post!")
-		body, err := ioutil.ReadAll(request.Body)
-		if err != nil {
-			log.Println("Failed reading body")
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Missing field: user_id"}`)))
-			return
-		}
-
-		type userId struct {
-			UserId string `json:"user_id"`
-		}
-
-		var t userId
-		err = json.Unmarshal(body, &t)
-		if err != nil {
-			log.Printf("Failed unmarshaling userId: %s", err)
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed unmarshaling. Missing field: user_id"}`)))
-			return
-		}
-
-		if userInfo.Role != "admin" {
-			log.Printf("%s tried and failed to change apikey for %s", userInfo.Username, t.UserId)
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "You need to be admin to change others' apikey"}`)))
-			return
-		}
-
-		foundUser, err := shuffle.GetUser(ctx, t.UserId)
-		if err != nil {
-			log.Printf("Can't find user %s (apikey gen): %s", t.UserId, err)
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false}`)))
-			return
-		}
-
-		newUserInfo, err := shuffle.GenerateApikey(ctx, *foundUser)
-		if err != nil {
-			log.Printf("Failed to generate apikey for user %s: %s", foundUser.Username, err)
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-			return
-		}
-		foundUser = &newUserInfo
-
-		resp.WriteHeader(200)
-		resp.Write([]byte(fmt.Sprintf(`{"success": true, "username": "%s", "verified": %t, "apikey": "%s"}`, foundUser.Username, foundUser.Verified, foundUser.ApiKey)))
-		return
-	}
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true, "username": "%s", "verified": %t, "apikey": "%s"}`, userInfo.Username, userInfo.Verified, userInfo.ApiKey)))
-}
-
-func handleSettings(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	userInfo, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("Api authentication failed in apigen: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true, "username": "%s", "verified": %t, "apikey": "%s"}`, userInfo.Username, userInfo.Verified, userInfo.ApiKey)))
 }
 
 func handleInfo(resp http.ResponseWriter, request *http.Request) {
@@ -1645,13 +1416,6 @@ type passwordReset struct {
 	Reference string `json:"reference"`
 }
 
-type passwordChange struct {
-	Username        string `json:"username"`
-	Newpassword     string `json:"newpassword"`
-	Newpassword2    string `json:"newpassword2"`
-	Currentpassword string `json:"currentpassword"`
-}
-
 func handlePasswordReset(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -1738,159 +1502,6 @@ func handlePasswordReset(resp http.ResponseWriter, request *http.Request) {
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "%s"}`, defaultMessage)))
-}
-
-func handlePasswordChange(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	log.Println("Handling password change")
-	body, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		log.Println("Failed reading body")
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false}`)))
-		return
-	}
-
-	// Get the current user - check if they're admin or the "username" user.
-	var t passwordChange
-	err = json.Unmarshal(body, &t)
-	if err != nil {
-		log.Println("Failed unmarshaling")
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false}`)))
-		return
-	}
-
-	userInfo, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("Api authentication failed in set new workflowhandler: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	curUserFound := false
-	if t.Username != userInfo.Username && userInfo.Role != "admin" {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Admin required to change others' passwords"}`))
-		return
-	} else if t.Username == userInfo.Username {
-		curUserFound = true
-	}
-
-	if userInfo.Role != "admin" {
-		if t.Newpassword != t.Newpassword2 {
-			err := "Passwords don't match"
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-			return
-		}
-
-		if len(t.Newpassword) < 10 || len(t.Newpassword2) < 10 {
-			err := "Passwords too short - 2"
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-			return
-		}
-	} else {
-		// Check ORG HERE?
-	}
-
-	// Current password
-	err = checkPasswordStrength(t.Newpassword)
-	if err != nil {
-		log.Printf("Bad password strength: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-		return
-	}
-
-	ctx := context.Background()
-	foundUser := shuffle.User{}
-	if !curUserFound {
-		log.Printf("Have to find a different user")
-		q := datastore.NewQuery("Users").Filter("Username =", strings.ToLower(t.Username))
-		var users []shuffle.User
-		_, err = dbclient.GetAll(ctx, q, &users)
-		if err != nil {
-			log.Printf("Failed getting user %s", t.Username)
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
-			return
-		}
-
-		if len(users) != 1 {
-			log.Printf(`Found multiple or no users with the same username: %s: %d`, t.Username, len(users))
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Found %d users with the same username: %s"}`, len(users), t.Username)))
-			return
-		}
-
-		foundUser = users[0]
-		orgFound := false
-		if userInfo.ActiveOrg.Id == foundUser.ActiveOrg.Id {
-			orgFound = true
-		} else {
-			log.Printf("FoundUser: %#v", foundUser.Orgs)
-			for _, item := range foundUser.Orgs {
-				if item == userInfo.ActiveOrg.Id {
-					orgFound = true
-					break
-				}
-			}
-		}
-
-		if !orgFound {
-			log.Printf("User %s is admin, but can't change user's passowrd outside their own org.", userInfo.Id)
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't change users outside your org."}`)))
-			return
-		}
-	} else {
-		// Admins can re-generate others' passwords as well.
-		if userInfo.Role != "admin" {
-			err = bcrypt.CompareHashAndPassword([]byte(userInfo.Password), []byte(t.Newpassword))
-			if err != nil {
-				log.Printf("Bad password for %s: %s", userInfo.Username, err)
-				resp.WriteHeader(401)
-				resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
-				return
-			}
-		}
-	}
-
-	if len(foundUser.Id) == 0 {
-		log.Printf("Something went wrong in password reset: couldn't find user.")
-		resp.WriteHeader(500)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(t.Newpassword), 8)
-	if err != nil {
-		log.Printf("New password failure for %s: %s", userInfo.Username, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
-		return
-	}
-
-	userInfo.Password = string(hashedPassword)
-	err = shuffle.SetUser(ctx, &foundUser)
-	if err != nil {
-		log.Printf("Error fixing password for user %s: %s", userInfo.Username, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Username and/or password is incorrect"}`))
-		return
-	}
-
-	//memcache.Delete(ctx, sessionToken)
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 }
 
 // FIXME - forward this to emails or whatever CRM system in use
@@ -2162,65 +1773,6 @@ func handleGetOrgs(resp http.ResponseWriter, request *http.Request) {
 	resp.Write(newjson)
 }
 
-func handleGetUsers(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	user, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("Api authentication failed in set new workflowhandler: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	if user.Role != "admin" {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Not admin"}`))
-		return
-	}
-
-	// FIXME: Check by org.
-	ctx := context.Background()
-	org, err := shuffle.GetOrg(ctx, user.ActiveOrg.Id)
-	if err != nil {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Failed getting org users"}`))
-		return
-	}
-
-	newUsers := []shuffle.User{}
-	for _, item := range org.Users {
-		if len(item.Username) == 0 {
-			continue
-		}
-
-		//for _, tmpUser := range newUsers {
-		//	if tmpUser.Name
-		//}
-
-		item.Password = ""
-		item.Session = ""
-		item.VerificationToken = ""
-		item.Orgs = []string{}
-
-		newUsers = append(newUsers, item)
-	}
-
-	newjson, err := json.Marshal(newUsers)
-	if err != nil {
-		log.Printf("Failed unmarshal: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed unpacking"}`)))
-		return
-	}
-
-	resp.WriteHeader(200)
-	resp.Write(newjson)
-}
-
 func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -2307,7 +1859,7 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - have timeout here
 	loginData := `{"success": true}`
 	if len(Userdata.Session) != 0 {
-		log.Println("[INFO] User session exists - resetting")
+		log.Println("[INFO] User session already exists - resetting it")
 		expiration := time.Now().Add(3600 * time.Second)
 
 		http.SetCookie(resp, &http.Cookie{
@@ -3350,7 +2902,7 @@ func executeCloudAction(action CloudSyncJob, apikey string) error {
 
 // Starts a new webhook
 func handleNewHook(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -3504,137 +3056,6 @@ func handleNewHook(resp http.ResponseWriter, request *http.Request) {
 	log.Printf("[INFO] Set up a new hook with ID %s and environment %s", newId, hook.Environment)
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": true}`))
-}
-
-func sendHookResult(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	user, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("Api authentication failed in set new workflowhandler: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-	_ = user
-
-	location := strings.Split(request.URL.String(), "/")
-
-	var workflowId string
-	if location[1] == "api" {
-		if len(location) <= 4 {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		workflowId = location[4]
-	}
-
-	if len(workflowId) != 32 {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "message": "ID not valid"}`))
-		return
-	}
-
-	ctx := context.Background()
-	hook, err := getHook(ctx, workflowId)
-	if err != nil {
-		log.Printf("Failed getting hook %s (send): %s", workflowId, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	body, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		log.Printf("Body data error: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	log.Printf("SET the hook results for %s to %s", workflowId, body)
-	// FIXME - set the hook result in the DB somehow as interface{}
-	// FIXME - should the hook do the transform? Hmm
-
-	b, err := json.Marshal(hook)
-	if err != nil {
-		log.Printf("Failed marshalling: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(b))
-	return
-}
-
-func handleGetHook(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	user, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("Api authentication failed in set new workflowhandler: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	location := strings.Split(request.URL.String(), "/")
-
-	var workflowId string
-	if location[1] == "api" {
-		if len(location) <= 4 {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		workflowId = location[4]
-	}
-
-	if len(workflowId) != 36 {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "message": "ID not valid"}`))
-		return
-	}
-
-	ctx := context.Background()
-	hook, err := getHook(ctx, workflowId)
-	if err != nil {
-		log.Printf("Failed getting hook %s (get hook): %s", workflowId, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	if user.Id != hook.Owner && user.Role != "admin" && user.Role != "scheduler" {
-		log.Printf("Wrong user (%s) for hook %s", user.Username, hook.Id)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	b, err := json.Marshal(hook)
-	if err != nil {
-		log.Printf("Failed marshalling: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	// FIXME - get some real data?
-	resp.WriteHeader(200)
-	resp.Write([]byte(b))
-	return
 }
 
 func getSpecificSchedule(resp http.ResponseWriter, request *http.Request) {
@@ -5465,9 +4886,9 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
-	requestCache.Delete(cacheKey)
+	shuffle.DeleteCache(ctx, cacheKey)
 	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
-	requestCache.Delete(cacheKey)
+	shuffle.DeleteCache(ctx, cacheKey)
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true, "id": "%s"}`, api.ID)))
@@ -5533,7 +4954,7 @@ func createFs(basepath, pathname string) (billy.Filesystem, error) {
 }
 
 // Hotloads new apps from a folder
-func handleAppHotload(location string, forceUpdate bool) error {
+func handleAppHotload(ctx context.Context, location string, forceUpdate bool) error {
 
 	basepath := "base"
 	fs, err := createFs(basepath, location)
@@ -5557,12 +4978,12 @@ func handleAppHotload(location string, forceUpdate bool) error {
 		return err
 	}
 
-	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
-	requestCache.Delete(cacheKey)
+	cacheKey := fmt.Sprintf("workflowapps-sorted")
+	shuffle.DeleteCache(ctx, cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-100")
+	shuffle.DeleteCache(ctx, cacheKey)
 	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
-	requestCache.Delete(cacheKey)
-	cacheKey = fmt.Sprintf("workflowapps-sorted")
-	requestCache.Delete(cacheKey)
+	shuffle.DeleteCache(ctx, cacheKey)
 
 	return nil
 }
@@ -5731,7 +5152,7 @@ func handleCloudJob(job CloudSyncJob) error {
 			log.Printf("Should handle user_input CONTINUE for workflow %s with start node %s and execution ID %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
 			// FIXME: Handle authorization
 			ctx := context.Background()
-			workflowExecution, err := getWorkflowExecution(ctx, job.ThirdItem)
+			workflowExecution, err := shuffle.GetWorkflowExecution(ctx, job.ThirdItem)
 			if err != nil {
 				return err
 			}
@@ -5741,7 +5162,7 @@ func handleCloudJob(job CloudSyncJob) error {
 			}
 
 			workflowExecution.Status = "EXECUTING"
-			err = setWorkflowExecution(ctx, *workflowExecution, true)
+			err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
 			if err != nil {
 				return err
 			}
@@ -5767,7 +5188,7 @@ func handleCloudJob(job CloudSyncJob) error {
 		} else if job.Action == "stop" {
 			log.Printf("Should handle user_input STOP for workflow %s with start node %s and execution ID %s", job.PrimaryItemId, job.SecondaryItem, job.ThirdItem)
 			ctx := context.Background()
-			workflowExecution, err := getWorkflowExecution(ctx, job.ThirdItem)
+			workflowExecution, err := shuffle.GetWorkflowExecution(ctx, job.ThirdItem)
 			if err != nil {
 				return err
 			}
@@ -5794,7 +5215,7 @@ func handleCloudJob(job CloudSyncJob) error {
 
 			workflowExecution.Results = newResults
 			workflowExecution.Status = "ABORTED"
-			err = setWorkflowExecution(ctx, *workflowExecution, true)
+			err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
 			if err != nil {
 				return err
 			}
@@ -5925,7 +5346,7 @@ func runInit(ctx context.Context) {
 		log.Printf("Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
 	}
 
-	requestCache = cache.New(5*time.Minute, 10*time.Minute)
+	//requestCache = cache.New(5*time.Minute, 10*time.Minute)
 
 	/*
 			proxyUrl, err := url.Parse(httpProxy)
@@ -6201,7 +5622,7 @@ func runInit(ctx context.Context) {
 				}
 
 				if setLocal {
-					err = setWorkflow(ctx, workflow, workflow.ID)
+					err = shuffle.SetWorkflow(ctx, workflow, workflow.ID)
 					if err != nil {
 						log.Printf("Failed setting workflow in init: %s", err)
 					} else {
@@ -6444,7 +5865,7 @@ func runInit(ctx context.Context) {
 		// Hotloads locally
 		location := os.Getenv("SHUFFLE_APP_HOTLOAD_FOLDER")
 		if len(location) != 0 {
-			handleAppHotload(location, false)
+			handleAppHotload(ctx, location, false)
 		}
 	}
 
@@ -6713,7 +6134,7 @@ func handleKeyValueCheck(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	workflowExecution, err := getWorkflowExecution(ctx, tmpData.ExecutionRef)
+	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, tmpData.ExecutionRef)
 	if err != nil {
 		log.Printf("[INFO] User can't edit the org")
 		resp.WriteHeader(401)
@@ -7467,7 +6888,7 @@ func initHandlers() {
 	ctx := context.Background()
 
 	log.Printf("Starting Shuffle backend - initializing database connection")
-	requestCache = cache.New(5*time.Minute, 10*time.Minute)
+	//requestCache = cache.New(5*time.Minute, 10*time.Minute)
 	dbclient, err = datastore.NewClient(ctx, gceProject, option.WithGRPCDialOption(grpc.WithNoProxy()))
 	if err != nil {
 		panic(fmt.Sprintf("DBclient error during init: %s", err))
@@ -7488,29 +6909,30 @@ func initHandlers() {
 
 	// Make user related locations
 	// Fix user changes with org
-	r.HandleFunc("/api/v1/users/generateapikey", handleApiGeneration).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users/login", handleLogin).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/users/logout", handleLogout).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users/register", handleRegister).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users/checkusers", checkAdminLogin).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/getinfo", handleInfo).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/users/getsettings", handleSettings).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/users/getusers", handleGetUsers).Methods("GET", "OPTIONS")
+
+	r.HandleFunc("/api/v1/users/generateapikey", shuffle.HandleApiGeneration).Methods("GET", "POST", "OPTIONS")
+	r.HandleFunc("/api/v1/users/logout", shuffle.HandleLogout).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/users/getsettings", shuffle.HandleSettings).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/users/getusers", shuffle.HandleGetUsers).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/updateuser", handleUpdateUser).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/users/{user}", deleteUser).Methods("DELETE", "OPTIONS")
-	r.HandleFunc("/api/v1/users/passwordchange", handlePasswordChange).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/users", handleGetUsers).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/users/passwordchange", shuffle.HandlePasswordChange).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/users", shuffle.HandleGetUsers).Methods("GET", "OPTIONS")
 
 	// General - duplicates and old.
+	r.HandleFunc("/api/v1/getusers", shuffle.HandleGetUsers).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/login", handleLogin).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/logout", handleLogout).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/logout", shuffle.HandleLogout).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/register", handleRegister).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/checkusers", checkAdminLogin).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/getusers", handleGetUsers).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/getinfo", handleInfo).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/getsettings", handleSettings).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/generateapikey", handleApiGeneration).Methods("GET", "POST", "OPTIONS")
-	r.HandleFunc("/api/v1/passwordchange", handlePasswordChange).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/getsettings", shuffle.HandleSettings).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/generateapikey", shuffle.HandleApiGeneration).Methods("GET", "POST", "OPTIONS")
+	r.HandleFunc("/api/v1/passwordchange", shuffle.HandlePasswordChange).Methods("POST", "OPTIONS")
 
 	r.HandleFunc("/api/v1/getenvironments", handleGetEnvironments).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/setenvironments", handleSetEnvironments).Methods("PUT", "OPTIONS")
@@ -7542,11 +6964,11 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/apps", setNewWorkflowApp).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/search", getSpecificApps).Methods("POST", "OPTIONS")
 
-	r.HandleFunc("/api/v1/apps/authentication", getAppAuthentication).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/apps/authentication", addAppAuthentication).Methods("PUT", "OPTIONS")
-	r.HandleFunc("/api/v1/apps/authentication/{appauthId}/config", setAuthenticationConfig).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/authentication", shuffle.GetAppAuthentication).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/authentication", shuffle.AddAppAuthentication).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/authentication/{appauthId}/config", shuffle.SetAuthenticationConfig).Methods("POST", "OPTIONS")
 
-	r.HandleFunc("/api/v1/apps/authentication/{appauthId}", deleteAppAuthentication).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/authentication/{appauthId}", shuffle.DeleteAppAuthentication).Methods("DELETE", "OPTIONS")
 
 	// Legacy app things
 	r.HandleFunc("/api/v1/workflows/apps/validate", validateAppInput).Methods("POST", "OPTIONS")
@@ -7556,8 +6978,8 @@ func initHandlers() {
 	// Workflows
 	// FIXME - implement the queue counter lol
 	/* Everything below here increases the counters*/
-	r.HandleFunc("/api/v1/workflows", getWorkflows).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows", setNewWorkflow).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows", shuffle.GetWorkflows).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows", shuffle.SetNewWorkflow).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/schedules", handleGetSchedules).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/schedule", scheduleWorkflow).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/download_remote", loadSpecificWorkflows).Methods("POST", "OPTIONS")
@@ -7567,8 +6989,8 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/workflows/{key}/outlook/{triggerId}", handleDeleteOutlookSub).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/executions", getWorkflowExecutions).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/executions/{key}/abort", abortExecution).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/{key}", getSpecificWorkflow).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/{key}", saveWorkflow).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}", shuffle.GetSpecificWorkflow).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}", shuffle.SaveWorkflow).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}", deleteWorkflow).Methods("DELETE", "OPTIONS")
 
 	// Triggers

@@ -44,7 +44,6 @@ import (
 	//"cloud.google.com/go/firestore"
 	// "google.golang.org/api/option"
 
-	"github.com/patrickmn/go-cache"
 	"google.golang.org/api/iterator"
 )
 
@@ -992,7 +991,7 @@ func validateNewWorkerExecution(body []byte) error {
 	//}
 
 	//log.Printf("\n\nSHOULD SET BACKEND DATA FOR EXEC \n\n")
-	err = setWorkflowExecution(ctx, execution, true)
+	err = shuffle.SetWorkflowExecution(ctx, execution, true)
 	if err == nil {
 		log.Printf("[INFO] Set workflowexecution based on new worker (>0.8.53) for execution %s. Actions: %d, Triggers: %d, Results: %d", execution.ExecutionId, len(execution.Workflow.Actions), len(execution.Workflow.Triggers), len(execution.Results))
 		//log.Printf("[INFO] Successfully set the execution to wait.")
@@ -1102,7 +1101,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 			actionResult.Result = fmt.Sprintf("Cloud error: %s", err)
 			workflowExecution.Results = append(workflowExecution.Results, actionResult)
 			workflowExecution.Status = "ABORTED"
-			err = setWorkflowExecution(ctx, *workflowExecution, true)
+			err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
 			if err != nil {
 				log.Printf("Failed to set execution during wait")
 			} else {
@@ -1120,7 +1119,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 
 			workflowExecution.Results = append(workflowExecution.Results, actionResult)
 			workflowExecution.Status = actionResult.Status
-			err = setWorkflowExecution(ctx, *workflowExecution, true)
+			err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
 			if err != nil {
 				log.Printf("Failed ")
 			} else {
@@ -1144,7 +1143,8 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting execution"}`)))
 		return
 	}
-	resultLength := len(workflowExecution.Results)
+
+	//resultLength := len(workflowExecution.Results)
 	dbSave := false
 	setExecution := true
 
@@ -1488,10 +1488,12 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	// Validating that action results hasn't changed
 	// Handled using cachhing, so actually pretty fast
 	cacheKey := fmt.Sprintf("workflowexecution-%s", workflowExecution.ExecutionId)
-	if value, found := requestCache.Get(cacheKey); found {
-		parsedValue := value.(*shuffle.WorkflowExecution)
-		if len(parsedValue.Results) > 0 && len(parsedValue.Results) != resultLength {
-			setExecution = false
+	cache, err := shuffle.GetCache(ctx, cacheKey)
+	if err == nil {
+		cacheData := []byte(cache.([]uint8))
+		//log.Printf("CACHEDATA: %#v", cacheData)
+		err = json.Unmarshal(cacheData, &workflowExecution)
+		if err == nil {
 			if attempts > 5 {
 				//log.Printf("\n\nSkipping execution input - %d vs %d. Attempts: (%d)\n\n", len(parsedValue.Results), resultLength, attempts)
 			}
@@ -1504,8 +1506,24 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		}
 	}
 
+	//if value, found := requestCache.Get(cacheKey); found {
+	//	parsedValue := value.(*shuffle.WorkflowExecution)
+	//	if len(parsedValue.Results) > 0 && len(parsedValue.Results) != resultLength {
+	//		setExecution = false
+	//		if attempts > 5 {
+	//			//log.Printf("\n\nSkipping execution input - %d vs %d. Attempts: (%d)\n\n", len(parsedValue.Results), resultLength, attempts)
+	//		}
+
+	//		attempts += 1
+	//		if len(workflowExecution.Results) <= len(workflowExecution.Workflow.Actions) {
+	//			runWorkflowExecutionTransaction(ctx, attempts, workflowExecutionId, actionResult, resp)
+	//			return
+	//		}
+	//	}
+	//}
+
 	if setExecution || workflowExecution.Status == "FINISHED" || workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
-		err = setWorkflowExecution(ctx, *workflowExecution, dbSave)
+		err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, dbSave)
 		if err != nil {
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed setting workflowexecution actionresult: %s"}`, err)))
@@ -1540,7 +1558,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	//		log.Printf("[ERROR] QUITTING: tx.Commit %d: %v", attempts, err)
 
 	//		workflowExecution.Status = "ABORTED"
-	//		setWorkflowExecution(ctx, *workflowExecution, true)
+	//		shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
 
 	//		resp.WriteHeader(401)
 	//		resp.Write([]byte(`{"success": false}`))
@@ -1741,233 +1759,6 @@ func getWorkflows(resp http.ResponseWriter, request *http.Request) {
 	resp.Write(newjson)
 }
 
-// FIXME - add to actual database etc
-func setNewWorkflow(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	user, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("Api authentication failed in set new workflowhandler: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	body, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		log.Printf("Error with body read: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	var workflow shuffle.Workflow
-	err = json.Unmarshal(body, &workflow)
-	if err != nil {
-		log.Printf("Failed unmarshaling: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	workflow.ID = uuid.NewV4().String()
-	workflow.Owner = user.Id
-	workflow.Sharing = "private"
-	user.ActiveOrg.Users = []shuffle.User{}
-	workflow.ExecutingOrg = user.ActiveOrg
-	workflow.OrgId = user.ActiveOrg.Id
-	//log.Printf("TRIGGERS: %d", len(workflow.Triggers))
-
-	ctx := context.Background()
-	//err = increaseStatisticsField(ctx, "total_workflows", workflow.ID, 1, workflow.OrgId)
-	//if err != nil {
-	//	log.Printf("Failed to increase total workflows stats: %s", err)
-	//}
-
-	if len(workflow.Actions) == 0 {
-		workflow.Actions = []shuffle.Action{}
-	}
-	if len(workflow.Branches) == 0 {
-		workflow.Branches = []shuffle.Branch{}
-	}
-	if len(workflow.Triggers) == 0 {
-		workflow.Triggers = []shuffle.Trigger{}
-	}
-	if len(workflow.Errors) == 0 {
-		workflow.Errors = []string{}
-	}
-
-	newActions := []shuffle.Action{}
-	for _, action := range workflow.Actions {
-		if action.Environment == "" {
-			//action.Environment = baseEnvironment
-			action.IsValid = true
-		}
-
-		//action.LargeImage = ""
-		newActions = append(newActions, action)
-	}
-
-	// Initialized without functions = adding a hello world node.
-	if len(newActions) == 0 {
-		//log.Printf("APPENDING NEW APP FOR NEW WORKFLOW")
-
-		// Adds the Testing app if it's a new workflow
-		workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 500)
-		if err == nil {
-			// FIXME: Add real env
-			envName := "Shuffle"
-			environments, err := shuffle.GetEnvironments(ctx, user.ActiveOrg.Id)
-			if err == nil {
-				for _, env := range environments {
-					if env.Default {
-						envName = env.Name
-						break
-					}
-				}
-			}
-
-			for _, item := range workflowapps {
-				if item.Name == "Testing" && item.AppVersion == "1.0.0" {
-					nodeId := "40447f30-fa44-4a4f-a133-4ee710368737"
-					workflow.Start = nodeId
-					newActions = append(newActions, shuffle.Action{
-						Label:       "Start node",
-						Name:        "hello_world",
-						Environment: envName,
-						Parameters:  []shuffle.WorkflowAppActionParameter{},
-						Position: struct {
-							X float64 "json:\"x,omitempty\" datastore:\"x\""
-							Y float64 "json:\"y,omitempty\" datastore:\"y\""
-						}{X: 449.5, Y: 446},
-						Priority:    0,
-						Errors:      []string{},
-						ID:          nodeId,
-						IsValid:     true,
-						IsStartNode: true,
-						Sharing:     true,
-						PrivateID:   "",
-						SmallImage:  "",
-						AppName:     item.Name,
-						AppVersion:  item.AppVersion,
-						AppID:       item.ID,
-						LargeImage:  item.LargeImage,
-					})
-					break
-				}
-			}
-		}
-	} else {
-		log.Printf("[INFO] Has %d actions already", len(newActions))
-		// FIXME: Check if they require authentication and if they exist locally
-		//log.Printf("\n\nSHOULD VALIDATE AUTHENTICATION")
-		//AuthenticationId string `json:"authentication_id,omitempty" datastore:"authentication_id"`
-		//allAuths, err := shuffle.GetAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
-		//if err == nil {
-		//	log.Printf("AUTH: %#v", allAuths)
-		//	for _, action := range newActions {
-		//		log.Printf("ACTION: %#v", action)
-		//	}
-		//}
-	}
-
-	workflow.Actions = []shuffle.Action{}
-	for _, item := range workflow.Actions {
-		oldId := item.ID
-		sourceIndexes := []int{}
-		destinationIndexes := []int{}
-		for branchIndex, branch := range workflow.Branches {
-			if branch.SourceID == oldId {
-				sourceIndexes = append(sourceIndexes, branchIndex)
-			}
-
-			if branch.DestinationID == oldId {
-				destinationIndexes = append(destinationIndexes, branchIndex)
-			}
-		}
-
-		item.ID = uuid.NewV4().String()
-		for _, index := range sourceIndexes {
-			workflow.Branches[index].SourceID = item.ID
-		}
-
-		for _, index := range destinationIndexes {
-			workflow.Branches[index].DestinationID = item.ID
-		}
-
-		newActions = append(newActions, item)
-	}
-
-	newTriggers := []shuffle.Trigger{}
-	for _, item := range workflow.Triggers {
-		oldId := item.ID
-		sourceIndexes := []int{}
-		destinationIndexes := []int{}
-		for branchIndex, branch := range workflow.Branches {
-			if branch.SourceID == oldId {
-				sourceIndexes = append(sourceIndexes, branchIndex)
-			}
-
-			if branch.DestinationID == oldId {
-				destinationIndexes = append(destinationIndexes, branchIndex)
-			}
-		}
-
-		item.ID = uuid.NewV4().String()
-		for _, index := range sourceIndexes {
-			workflow.Branches[index].SourceID = item.ID
-		}
-
-		for _, index := range destinationIndexes {
-			workflow.Branches[index].DestinationID = item.ID
-		}
-
-		item.Status = "uninitialized"
-		newTriggers = append(newTriggers, item)
-	}
-
-	newSchedules := []shuffle.Schedule{}
-	for _, item := range workflow.Schedules {
-		item.Id = uuid.NewV4().String()
-		newSchedules = append(newSchedules, item)
-	}
-
-	timeNow := int64(time.Now().Unix())
-	workflow.Actions = newActions
-	workflow.Triggers = newTriggers
-	workflow.Schedules = newSchedules
-	workflow.IsValid = true
-	workflow.Configuration.ExitOnError = false
-	workflow.Created = timeNow
-
-	workflowjson, err := json.Marshal(workflow)
-	if err != nil {
-		log.Printf("Failed workflow json setting marshalling: %s", err)
-		resp.WriteHeader(http.StatusInternalServerError)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	err = setWorkflow(ctx, workflow, workflow.ID)
-	if err != nil {
-		log.Printf("Failed setting workflow: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	log.Printf("[INFO] Saved new workflow %s with name %s", workflow.ID, workflow.Name)
-	//memcacheName := fmt.Sprintf("%s_workflows", user.Username)
-	//memcache.Delete(ctx, memcacheName)
-
-	resp.WriteHeader(200)
-	//log.Println(string(workflowjson))
-	resp.Write(workflowjson)
-}
-
 func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -2066,875 +1857,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(`{"success": true}`))
 }
 
-// Adds app auth tracking
-func updateAppAuth(auth shuffle.AppAuthenticationStorage, workflowId, nodeId string, add bool) error {
-	workflowFound := false
-	workflowIndex := 0
-	nodeFound := false
-	for index, workflow := range auth.Usage {
-		if workflow.WorkflowId == workflowId {
-			// Check if node exists
-			workflowFound = true
-			workflowIndex = index
-			for _, actionId := range workflow.Nodes {
-				if actionId == nodeId {
-					nodeFound = true
-					break
-				}
-			}
-
-			break
-		}
-	}
-
-	// FIXME: Add a way to use !add to remove
-	updateAuth := false
-	if !workflowFound && add {
-		log.Printf("[INFO] Adding workflow things to auth!")
-		usageItem := shuffle.AuthenticationUsage{
-			WorkflowId: workflowId,
-			Nodes:      []string{nodeId},
-		}
-
-		auth.Usage = append(auth.Usage, usageItem)
-		auth.WorkflowCount += 1
-		auth.NodeCount += 1
-		updateAuth = true
-	} else if !nodeFound && add {
-		log.Printf("[INFO] Adding node things to auth!")
-		auth.Usage[workflowIndex].Nodes = append(auth.Usage[workflowIndex].Nodes, nodeId)
-		auth.NodeCount += 1
-		updateAuth = true
-	}
-
-	if updateAuth {
-		log.Printf("[INFO] Updating auth!")
-		ctx := context.Background()
-		err := shuffle.SetWorkflowAppAuthDatastore(ctx, auth, auth.Id)
-		if err != nil {
-			log.Printf("Failed setting up app auth %s: %s", auth.Id, err)
-			return err
-		}
-	}
-
-	return nil
-}
-
 // Identifies what a category defined really is
-func handleCategoryIncrease(categories shuffle.Categories, action shuffle.Action, workflowapps []shuffle.WorkflowApp) shuffle.Categories {
-	if action.Category == "" {
-		appName := action.AppName
-		for _, app := range workflowapps {
-			if appName != strings.ToLower(app.Name) {
-				continue
-			}
-
-			if len(app.Categories) > 0 {
-				log.Printf("[INFO] Setting category for %s: %s", app.Name, app.Categories)
-				action.Category = app.Categories[0]
-				break
-			}
-		}
-
-		//log.Printf("Should find app's categories as it's empty during save")
-		return categories
-	}
-
-	//log.Printf("Action: %s, category: %s", action.AppName, action.Category)
-	// FIXME: Make this an "autodiscover" that's controlled by the category itself
-	// Should just be a list that's looped against :)
-	newCategory := strings.ToLower(action.Category)
-	if strings.Contains(newCategory, "case") || strings.Contains(newCategory, "ticket") || strings.Contains(newCategory, "alert") || strings.Contains(newCategory, "mssp") {
-		categories.Cases.Count += 1
-	} else if strings.Contains(newCategory, "siem") || strings.Contains(newCategory, "event") || strings.Contains(newCategory, "log") || strings.Contains(newCategory, "search") {
-		categories.SIEM.Count += 1
-	} else if strings.Contains(newCategory, "sms") || strings.Contains(newCategory, "comm") || strings.Contains(newCategory, "phone") || strings.Contains(newCategory, "call") || strings.Contains(newCategory, "chat") || strings.Contains(newCategory, "mail") || strings.Contains(newCategory, "phish") {
-		categories.Communication.Count += 1
-	} else if strings.Contains(newCategory, "intel") || strings.Contains(newCategory, "crim") || strings.Contains(newCategory, "ti") {
-		categories.Intel.Count += 1
-	} else if strings.Contains(newCategory, "sand") || strings.Contains(newCategory, "virus") || strings.Contains(newCategory, "malware") || strings.Contains(newCategory, "scan") || strings.Contains(newCategory, "edr") || strings.Contains(newCategory, "endpoint detection") {
-		// Sandbox lol
-		categories.EDR.Count += 1
-	} else if strings.Contains(newCategory, "vuln") || strings.Contains(newCategory, "fim") || strings.Contains(newCategory, "fim") || strings.Contains(newCategory, "integrity") {
-		categories.Assets.Count += 1
-	} else if strings.Contains(newCategory, "network") || strings.Contains(newCategory, "firewall") || strings.Contains(newCategory, "waf") || strings.Contains(newCategory, "switch") {
-		categories.Network.Count += 1
-	} else {
-		categories.Other.Count += 1
-	}
-
-	return categories
-}
-
-// Saves a workflow to an ID
-func saveWorkflow(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	//log.Println("Start")
-	user, userErr := shuffle.HandleApiAuthentication(resp, request)
-	if userErr != nil {
-		log.Printf("Api authentication failed in edit workflow: %s", userErr)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	//log.Println("PostUser")
-	location := strings.Split(request.URL.String(), "/")
-
-	var fileId string
-	if location[1] == "api" {
-		if len(location) <= 4 {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		fileId = location[4]
-	}
-
-	if len(fileId) != 36 {
-		log.Printf(`ID %s is not valid`, fileId)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Workflow ID to save is not valid"}`))
-		return
-	}
-
-	// Here to check access rights
-	ctx := context.Background()
-	tmpworkflow, err := shuffle.GetWorkflow(ctx, fileId)
-	if err != nil {
-		log.Printf("Failed getting the workflow locally (save workflow): %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	// FIXME - have a check for org etc too..
-	if user.Id != tmpworkflow.Owner && user.Role != "admin" {
-		log.Printf("Wrong user (%s) for workflow %s (save)", user.Username, tmpworkflow.ID)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	//log.Printf("PRE BODY")
-	body, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		log.Printf("Failed hook unmarshaling: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	var workflow shuffle.Workflow
-	err = json.Unmarshal([]byte(body), &workflow)
-	//log.Printf(string(body))
-	if err != nil {
-		log.Printf(string(body))
-		log.Printf("[ERROR] Failed workflow unmarshaling: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-		return
-	}
-
-	//log.Printf("SAVED: %#v", workflow.PreviouslySaved)
-
-	// FIXME - auth and check if they should have access
-	if fileId != workflow.ID {
-		log.Printf("Path and request ID are not matching: %s:%s.", fileId, workflow.ID)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	// Fixing wrong owners when importing
-	if workflow.Owner == "" {
-		workflow.Owner = user.Id
-	}
-
-	if len(workflow.ExecutingOrg.Id) == 0 {
-		log.Printf("[INFO] Setting executing org for workflow")
-		user.ActiveOrg.Users = []shuffle.User{}
-		workflow.ExecutingOrg = user.ActiveOrg
-	}
-
-	// FIXME - this shouldn't be necessary with proper API checks
-	newActions := []shuffle.Action{}
-	allNodes := []string{}
-	workflow.Categories = shuffle.Categories{}
-
-	//log.Printf("PRE APPS")
-	workflowapps, apperr := shuffle.GetAllWorkflowApps(ctx, 500)
-
-	//log.Printf("Action: %#v", action.Authentication)
-	for _, action := range workflow.Actions {
-		allNodes = append(allNodes, action.ID)
-
-		if len(action.Errors) > 0 || !action.IsValid {
-			action.IsValid = true
-			action.Errors = []string{}
-		}
-
-		if action.Environment == "" {
-			if workflow.PreviouslySaved {
-				resp.WriteHeader(401)
-				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "An environment for %s is required"}`, action.Label)))
-				return
-			}
-			action.IsValid = true
-		}
-
-		// FIXME: Have a good way of tracking errors. ID's or similar.
-		if !action.IsValid && len(action.Errors) > 0 {
-			log.Printf("Node %s is invalid and needs to be remade. Errors: %s", action.Label, strings.Join(action.Errors, "\n"))
-
-			if workflow.PreviouslySaved {
-				resp.WriteHeader(401)
-				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Node %s is invalid and needs to be remade."}`, action.Label)))
-				return
-			}
-			action.IsValid = true
-			action.Errors = []string{}
-		}
-
-		workflow.Categories = handleCategoryIncrease(workflow.Categories, action, workflowapps)
-		newActions = append(newActions, action)
-	}
-
-	newTriggers := []shuffle.Trigger{}
-	for _, trigger := range workflow.Triggers {
-		log.Printf("[INFO] Trigger %s: %s", trigger.TriggerType, trigger.Status)
-
-		// Check if it's actually running
-		// FIXME: Do this for other triggers too
-		if trigger.TriggerType == "SCHEDULE" && trigger.Status != "uninitialized" {
-			schedule, err := shuffle.GetSchedule(ctx, trigger.ID)
-			if err != nil {
-				trigger.Status = "stopped"
-			} else if schedule.Id == "" {
-				trigger.Status = "stopped"
-			}
-		} else if trigger.TriggerType == "SUBFLOW" {
-			for index, param := range trigger.Parameters {
-				if len(param.Value) == 0 && param.Name != "argument" {
-					//log.Printf("Param: %#v", param)
-					if param.Name == "user_apikey" {
-						apikey := ""
-						if len(user.ApiKey) > 0 {
-							apikey = user.ApiKey
-						} else {
-							user, err = shuffle.GenerateApikey(ctx, user)
-							if err != nil {
-								workflow.IsValid = false
-								workflow.Errors = []string{"Trigger is missing a parameter: %s", param.Name}
-
-								log.Printf("No type specified for user input node")
-
-								if workflow.PreviouslySaved {
-									resp.WriteHeader(401)
-									resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Trigger %s is missing the parameter %s"}`, trigger.Label, param.Name)))
-									return
-								}
-							}
-
-							apikey = user.ApiKey
-						}
-
-						log.Printf("[INFO] Set apikey in subflow trigger for user during save")
-						trigger.Parameters[index].Value = apikey
-					} else {
-
-						workflow.IsValid = false
-						workflow.Errors = []string{"Trigger is missing a parameter: %s", param.Name}
-
-						log.Printf("No type specified for user input node")
-						if workflow.PreviouslySaved {
-							resp.WriteHeader(401)
-							resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Trigger %s is missing the parameter %s"}`, trigger.Label, param.Name)))
-							return
-						}
-					}
-				}
-			}
-		} else if trigger.TriggerType == "WEBHOOK" && trigger.Status != "uninitialized" {
-			hook, err := getHook(ctx, trigger.ID)
-			if err != nil {
-				log.Printf("Failed getting webhook")
-				trigger.Status = "stopped"
-			} else if hook.Id == "" {
-				trigger.Status = "stopped"
-			}
-		} else if trigger.TriggerType == "USERINPUT" {
-			// E.g. check email
-			sms := ""
-			email := ""
-			triggerType := ""
-			triggerInformation := ""
-			for _, item := range trigger.Parameters {
-				if item.Name == "alertinfo" {
-					triggerInformation = item.Value
-				} else if item.Name == "type" {
-					triggerType = item.Value
-				} else if item.Name == "email" {
-					email = item.Value
-				} else if item.Name == "sms" {
-					sms = item.Value
-				}
-			}
-
-			if len(triggerType) == 0 {
-				log.Printf("No type specified for user input node")
-				if workflow.PreviouslySaved {
-					resp.WriteHeader(401)
-					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "No contact option specified in user input"}`)))
-					return
-				}
-			}
-
-			// FIXME: This is not the right time to send them, BUT it's well served for testing. Save -> send email / sms
-			_ = triggerInformation
-			if strings.Contains(triggerType, "email") {
-				if email == "test@test.com" {
-					log.Printf("Email isn't specified during save.")
-					if workflow.PreviouslySaved {
-						resp.WriteHeader(401)
-						resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Email field in user input can't be empty"}`)))
-						return
-					}
-				}
-
-				log.Printf("Should send email to %s during execution.", email)
-			}
-			if strings.Contains(triggerType, "sms") {
-				if sms == "0000000" {
-					log.Printf("Email isn't specified during save.")
-					if workflow.PreviouslySaved {
-						resp.WriteHeader(401)
-						resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "SMS field in user input can't be empty"}`)))
-						return
-					}
-				}
-
-				log.Printf("Should send SMS to %s during execution.", sms)
-			}
-		}
-
-		//log.Println("TRIGGERS")
-		allNodes = append(allNodes, trigger.ID)
-		newTriggers = append(newTriggers, trigger)
-	}
-
-	workflow.Triggers = newTriggers
-
-	if len(workflow.Actions) == 0 {
-		workflow.Actions = []shuffle.Action{}
-	}
-	if len(workflow.Branches) == 0 {
-		workflow.Branches = []shuffle.Branch{}
-	}
-	if len(workflow.Triggers) == 0 {
-		workflow.Triggers = []shuffle.Trigger{}
-	}
-	if len(workflow.Errors) == 0 {
-		workflow.Errors = []string{}
-	}
-
-	//log.Printf("PRE VARIABLES")
-	for _, variable := range workflow.WorkflowVariables {
-		if len(variable.Value) == 0 {
-			log.Printf("[WARNING] Variable %s is empty!", variable.Name)
-			workflow.Errors = append(workflow.Errors, fmt.Sprintf("Variable %s is empty!", variable.Name))
-			//resp.WriteHeader(401)
-			//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Variable %s can't be empty"}`, variable.Name)))
-			//return
-		}
-	}
-
-	if len(workflow.ExecutionVariables) > 0 {
-		log.Printf("[INFO] Found %d execution variable(s)", len(workflow.ExecutionVariables))
-	}
-
-	if len(workflow.WorkflowVariables) > 0 {
-		log.Printf("[INFO] Found %d workflow variable(s)", len(workflow.WorkflowVariables))
-	}
-
-	// FIXME - do actual checks ROFL
-	// FIXME - minor issues with e.g. hello world and self.console_logger
-	// Nodechecks
-	foundNodes := []string{}
-	for _, node := range allNodes {
-		for _, branch := range workflow.Branches {
-			//log.Println("branch")
-			//log.Println(node)
-			//log.Println(branch.DestinationID)
-			if node == branch.DestinationID || node == branch.SourceID {
-				foundNodes = append(foundNodes, node)
-				break
-			}
-		}
-	}
-
-	// FIXME - append all nodes (actions, triggers etc) to one single array here
-	//log.Printf("PRE VARIABLES")
-	if len(foundNodes) != len(allNodes) || len(workflow.Actions) <= 0 {
-		// This shit takes a few seconds lol
-		if !workflow.IsValid {
-			oldworkflow, err := shuffle.GetWorkflow(ctx, fileId)
-			if err != nil {
-				log.Printf("Workflow %s doesn't exist - oldworkflow.", fileId)
-				if workflow.PreviouslySaved {
-					resp.WriteHeader(401)
-					resp.Write([]byte(`{"success": false, "reason": "Item already exists."}`))
-					return
-				}
-			}
-
-			oldworkflow.IsValid = false
-			err = setWorkflow(ctx, *oldworkflow, fileId)
-			if err != nil {
-				log.Printf("Failed saving workflow to database: %s", err)
-				if workflow.PreviouslySaved {
-					resp.WriteHeader(401)
-					resp.Write([]byte(`{"success": false}`))
-					return
-				}
-			}
-		}
-
-		// FIXME - more checks here - force reload of data or something
-		//if len(allNodes) == 0 {
-		//	resp.WriteHeader(401)
-		//	resp.Write([]byte(`{"success": false, "reason": "Please insert a node"}`))
-		//	return
-		//}
-
-		// Allowed with only a start node
-		//if len(allNodes) != 1 {
-		//	resp.WriteHeader(401)
-		//	resp.Write([]byte(`{"success": false, "reason": "There are nodes with no branches"}`))
-		//	return
-		//}
-	}
-
-	// FIXME - might be a sploit to run someone elses app if getAllWorkflowApps
-	// doesn't check sharing=true
-	// Have to do it like this to add the user's apps
-	//log.Println("Apps set starting")
-	//log.Printf("EXIT ON ERROR: %#v", workflow.Configuration.ExitOnError)
-	//workflowapps, apperr := shuffle.GetAllWorkflowApps(ctx, 500)
-
-	// Started getting the single apps, but if it's weird, this is faster
-	// 1. Check workflow.Start
-	// 2. Check if any node has "isStartnode"
-	if len(workflow.Actions) > 0 {
-		index := -1
-		for indexFound, action := range workflow.Actions {
-			//log.Println("Apps set done")
-			if workflow.Start == action.ID {
-				index = indexFound
-			}
-		}
-
-		if index >= 0 {
-			workflow.Actions[0].IsStartNode = true
-		} else {
-			if workflow.PreviouslySaved {
-				resp.WriteHeader(401)
-				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "You need to set a startnode."}`)))
-				return
-			}
-		}
-	}
-
-	allAuths, err := shuffle.GetAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
-	if userErr != nil {
-		log.Printf("Api authentication failed in get all apps: %s", userErr)
-		if workflow.PreviouslySaved {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-	}
-
-	// Check every app action and param to see whether they exist
-	//log.Printf("PRE ACTIONS 2")
-	allAuths, autherr := shuffle.GetAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
-	newActions = []shuffle.Action{}
-	for _, action := range workflow.Actions {
-		reservedApps := []string{
-			"0ca8887e-b4af-4e3e-887c-87e9d3bc3d3e",
-		}
-
-		//log.Printf("%s Action execution var: %s", action.Label, action.ExecutionVariable.Name)
-
-		builtin := false
-		for _, id := range reservedApps {
-			if id == action.AppID {
-				builtin = true
-				break
-			}
-		}
-
-		// Check auth
-		// 1. Find the auth in question
-		// 2. Update the node and workflow info in the auth
-		// 3. Get the values in the auth and add them to the action values
-		if len(action.AuthenticationId) > 0 {
-			authFound := false
-			for _, auth := range allAuths {
-				if auth.Id == action.AuthenticationId {
-					authFound = true
-
-					// Updates the auth item itself IF necessary
-					go updateAppAuth(auth, workflow.ID, action.ID, true)
-					break
-				}
-			}
-
-			if !authFound {
-				log.Printf("App auth %s doesn't exist. Setting error", action.AuthenticationId)
-				workflow.Errors = append(workflow.Errors, fmt.Sprintf("App authentication for %s doesn't exist!", action.AppName))
-				workflow.IsValid = false
-
-				action.Errors = append(action.Errors, "App authentication doesn't exist")
-				action.IsValid = false
-				action.AuthenticationId = ""
-				//resp.WriteHeader(401)
-				//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "App auth %s doesn't exist"}`, action.AuthenticationId)))
-				//return
-			}
-		}
-
-		if builtin {
-			newActions = append(newActions, action)
-		} else {
-			curapp := shuffle.WorkflowApp{}
-			// FIXME - can this work with ONLY AppID?
-			for _, app := range workflowapps {
-				if app.ID == action.AppID {
-					curapp = app
-					break
-				}
-
-				// Has to NOT be generated
-				if app.Name == action.AppName && app.AppVersion == action.AppVersion {
-					curapp = app
-					break
-				}
-			}
-
-			// Check to see if the whole app is valid
-			if curapp.Name != action.AppName {
-				workflow.Errors = append(workflow.Errors, fmt.Sprintf("App %s doesn't exist", action.AppName))
-				action.Errors = append(action.Errors, "This app doesn't exist.")
-				action.IsValid = false
-				workflow.IsValid = false
-
-				// Append with errors
-				newActions = append(newActions, action)
-				log.Printf("App %s doesn't exist. Adding as error.", action.AppName)
-				//resp.WriteHeader(401)
-				//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "App %s doesn't exist"}`, action.AppName)))
-				//return
-			} else {
-				// Check tosee if the appaction is valid
-				curappaction := shuffle.WorkflowAppAction{}
-				for _, curAction := range curapp.Actions {
-					if action.Name == curAction.Name {
-						curappaction = curAction
-						break
-					}
-				}
-
-				// Check to see if the action is valid
-				if curappaction.Name != action.Name {
-					log.Printf("[ERROR] Action %s in app %s doesn't exist.", action.Name, curapp.Name)
-					thisError := fmt.Sprintf("%s: Action %s in app %s doesn't exist", action.Label, action.Name, action.AppName)
-					workflow.Errors = append(workflow.Errors, thisError)
-					workflow.IsValid = false
-					action.Errors = append(action.Errors, thisError)
-					action.IsValid = false
-					//if workflow.PreviouslySaved {
-					//	resp.WriteHeader(401)
-					//	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Action %s in app %s doesn't exist"}`, action.Name, curapp.Name)))
-					//	return
-					//}
-				}
-
-				// FIXME - check all parameters to see if they're valid
-				// Includes checking required fields
-
-				selectedAuth := shuffle.AppAuthenticationStorage{}
-				if len(action.AuthenticationId) > 0 && autherr == nil {
-					for _, auth := range allAuths {
-						if auth.Id == action.AuthenticationId {
-							selectedAuth = auth
-							break
-						}
-					}
-				}
-
-				newParams := []shuffle.WorkflowAppActionParameter{}
-				for _, param := range curappaction.Parameters {
-					paramFound := false
-
-					// Handles check for parameter exists + value not empty in used fields
-					for _, actionParam := range action.Parameters {
-						if actionParam.Name == param.Name {
-							paramFound = true
-
-							if actionParam.Value == "" && actionParam.Variant == "STATIC_VALUE" && actionParam.Required == true {
-								// Validating if the field is an authentication field
-								if len(selectedAuth.Id) > 0 {
-									authFound := false
-									for _, field := range selectedAuth.Fields {
-										if field.Key == actionParam.Name {
-											authFound = true
-											//log.Printf("FOUND REQUIRED KEY %s IN AUTH", field.Key)
-											break
-										}
-									}
-
-									if authFound {
-										newParams = append(newParams, actionParam)
-										continue
-									}
-								}
-
-								log.Printf("[WARNING] Appaction %s with required param '%s' is empty. Can't save.", action.Name, param.Name)
-								thisError := fmt.Sprintf("%s is missing reqired parameter %s", action.Label, param.Name)
-								action.Errors = append(action.Errors, thisError)
-								workflow.Errors = append(workflow.Errors, thisError)
-								action.IsValid = false
-							}
-
-							if actionParam.Variant == "" {
-								actionParam.Variant = "STATIC_VALUE"
-							}
-
-							newParams = append(newParams, actionParam)
-							break
-						}
-					}
-
-					// Handles check for required params
-					if !paramFound && param.Required {
-						log.Printf("Appaction %s with required param %s doesn't exist.", action.Name, param.Name)
-						thisError := fmt.Sprintf("Parameter %s is required", param.Name)
-						action.Errors = append(action.Errors, thisError)
-
-						workflow.Errors = append(workflow.Errors, thisError)
-						action.IsValid = false
-						//newActions = append(newActions, action)
-						//resp.WriteHeader(401)
-						//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Appaction %s with required param '%s' is empty."}`, action.Name, param.Name)))
-						//return
-					}
-
-				}
-
-				action.Parameters = newParams
-				newActions = append(newActions, action)
-			}
-		}
-	}
-
-	if !workflow.PreviouslySaved {
-		log.Printf("[WORKFLOW INIT] NOT PREVIOUSLY SAVED - SET ACTION AUTH!")
-
-		if autherr == nil && len(workflowapps) > 0 && apperr == nil {
-			//log.Printf("Setting actions")
-			actionFixing := []shuffle.Action{}
-			appsAdded := []string{}
-			for _, action := range newActions {
-				setAuthentication := false
-				if len(action.AuthenticationId) > 0 {
-					//found := false
-					authenticationFound := false
-					for _, auth := range allAuths {
-						if auth.Id == action.AuthenticationId {
-							authenticationFound = true
-							break
-						}
-					}
-
-					if !authenticationFound {
-						setAuthentication = true
-					}
-				} else {
-					// FIXME: 1. Validate if the app needs auth
-					// 1. Validate if auth for the app exists
-					// var appAuth AppAuthenticationStorage
-					setAuthentication = true
-
-					//App           WorkflowApp           `json:"app" datastore:"app,noindex"`
-				}
-
-				if setAuthentication {
-					authSet := false
-					for _, auth := range allAuths {
-						if !auth.Active {
-							continue
-						}
-
-						if !auth.Defined {
-							continue
-						}
-
-						if auth.App.Name == action.AppName {
-							//log.Printf("FOUND AUTH FOR APP %s: %s", auth.App.Name, auth.Id)
-							action.AuthenticationId = auth.Id
-							authSet = true
-							break
-						}
-					}
-
-					// FIXME: Only o this IF there isn't another one for the app already
-					if !authSet {
-						//log.Printf("Validate if the app NEEDS auth or not")
-						outerapp := shuffle.WorkflowApp{}
-						for _, app := range workflowapps {
-							if app.Name == action.AppName {
-								outerapp = app
-								break
-							}
-						}
-
-						if len(outerapp.ID) > 0 && outerapp.Authentication.Required {
-							found := false
-							for _, auth := range allAuths {
-								if auth.App.ID == outerapp.ID {
-									found = true
-									break
-								}
-							}
-
-							for _, added := range appsAdded {
-								if outerapp.ID == added {
-									found = true
-								}
-							}
-
-							// FIXME: Add app auth
-							if !found {
-								timeNow := int64(time.Now().Unix())
-								authFields := []shuffle.AuthenticationStore{}
-								for _, param := range outerapp.Authentication.Parameters {
-									authFields = append(authFields, shuffle.AuthenticationStore{
-										Key:   param.Name,
-										Value: "",
-									})
-								}
-
-								appAuth := shuffle.AppAuthenticationStorage{
-									Active:        true,
-									Label:         fmt.Sprintf("default_%s", outerapp.Name),
-									Id:            uuid.NewV4().String(),
-									App:           outerapp,
-									Fields:        authFields,
-									Usage:         []shuffle.AuthenticationUsage{},
-									WorkflowCount: 0,
-									NodeCount:     0,
-									OrgId:         user.ActiveOrg.Id,
-									Created:       timeNow,
-									Edited:        timeNow,
-								}
-
-								err = shuffle.SetWorkflowAppAuthDatastore(ctx, appAuth, appAuth.Id)
-								if err != nil {
-									log.Printf("Failed setting appauth for with name %s", appAuth.Label)
-								} else {
-									appsAdded = append(appsAdded, outerapp.ID)
-								}
-							}
-
-							action.Errors = append(action.Errors, "Requires authentication")
-							action.IsValid = false
-							workflow.IsValid = false
-						}
-
-						//outerapp.Authentication.Required
-						// Authentication Authentication      `json:"authentication" yaml:"authentication" required:false datastore:"authentication"`
-						//workflowapps, apperr := shuffle.GetAllWorkflowApps(ctx, 100)
-					}
-				}
-
-				actionFixing = append(actionFixing, action)
-			}
-
-			newActions = actionFixing
-		} else {
-			log.Printf("FirstSave error: %s - %s", err, apperr)
-			//workflowapps, apperr := shuffle.GetAllWorkflowApps(ctx, 100)
-			//allAuths, err := shuffle.GetAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
-		}
-
-		workflow.PreviouslySaved = true
-	}
-
-	//log.Printf("PRE TRIGGERS")
-	//workflow.Actions = newActions
-
-	workflow.Actions = newActions
-	workflow.IsValid = true
-	log.Printf("[INFO] Tags: %#v", workflow.Tags)
-
-	// FIXME: Is this too drastic? May lead to issues in the future.
-	// Should maybe make a copy for the old org.
-	if workflow.OrgId != user.ActiveOrg.Id {
-		log.Printf("[WARNING] Editing workflow to be owned by %s", user.ActiveOrg.Id)
-		workflow.OrgId = user.ActiveOrg.Id
-		workflow.ExecutingOrg = user.ActiveOrg
-		workflow.Org = append(workflow.Org, user.ActiveOrg)
-	}
-
-	err = setWorkflow(ctx, workflow, fileId)
-	if err != nil {
-		log.Printf("Failed saving workflow to database: %s", err)
-		if workflow.PreviouslySaved {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-	}
-
-	totalOldActions := len(tmpworkflow.Actions)
-	totalNewActions := len(workflow.Actions)
-	err = increaseStatisticsField(ctx, "total_workflow_actions", workflow.ID, int64(totalNewActions-totalOldActions), workflow.OrgId)
-	if err != nil {
-		log.Printf("Failed to change total actions data: %s", err)
-	}
-
-	type returnData struct {
-		Success bool     `json:"success"`
-		Errors  []string `json:"errors"`
-	}
-
-	returndata := returnData{
-		Success: true,
-		Errors:  workflow.Errors,
-	}
-
-	// Really don't know why this was happening
-	//cacheKey := fmt.Sprintf("workflowapps-sorted-100")
-	//requestCache.Delete(cacheKey)
-	//cacheKey = fmt.Sprintf("workflowapps-sorted-500")
-	//requestCache.Delete(cacheKey)
-
-	log.Printf("[INFO] Saved new version of workflow %s (%s) for org %s", workflow.Name, fileId, workflow.OrgId)
-	resp.WriteHeader(200)
-	newBody, err := json.Marshal(returndata)
-	if err != nil {
-		resp.Write([]byte(`{"success": true}`))
-		return
-	}
-
-	resp.Write(newBody)
-}
 
 func getWorkflowLocal(fileId string, request *http.Request) ([]byte, error) {
 	fullUrl := fmt.Sprintf("%s/api/v1/workflows/%s", localBase, fileId)
@@ -3150,7 +2073,7 @@ func abortExecution(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	err = setWorkflowExecution(ctx, *workflowExecution, true)
+	err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
 	if err != nil {
 		log.Printf("Error saving workflow execution for updates when aborting %s: %s", topic, err)
 		resp.WriteHeader(401)
@@ -3433,7 +2356,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 				}
 
 				oldExecution.Results = newResults
-				err = setWorkflowExecution(ctx, *oldExecution, true)
+				err = shuffle.SetWorkflowExecution(ctx, *oldExecution, true)
 				if err != nil {
 					log.Printf("Error saving workflow execution actionresult setting: %s", err)
 					return shuffle.WorkflowExecution{}, fmt.Sprintf("Failed setting workflowexecution actionresult in execution: %s", err), err
@@ -3801,8 +2724,9 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 	workflowExecution.Workflow.Org = []shuffle.Org{
 		workflowExecution.Workflow.ExecutingOrg,
 	}
+
 	//Org               []Org    `json:"org,omitempty" datastore:"org"`
-	err = setWorkflowExecution(ctx, workflowExecution, true)
+	err = shuffle.SetWorkflowExecution(ctx, workflowExecution, true)
 	if err != nil {
 		log.Printf("Error saving workflow execution for updates %s: %s", topic, err)
 		return shuffle.WorkflowExecution{}, "Failed getting workflowexecution", err
@@ -4486,7 +3410,7 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	workflow.Schedules = append(workflow.Schedules, schedule)
-	err = setWorkflow(ctx, *workflow, workflow.ID)
+	err = shuffle.SetWorkflow(ctx, *workflow, workflow.ID)
 	if err != nil {
 		log.Printf("Failed setting workflow for schedule: %s", err)
 		resp.WriteHeader(401)
@@ -4499,217 +3423,6 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 	return
 }
 
-// FIXME - add to actual database etc
-func getSpecificWorkflow(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	user, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("Api authentication failed in getting specific workflow: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	location := strings.Split(request.URL.String(), "/")
-
-	var fileId string
-	if location[1] == "api" {
-		if len(location) <= 4 {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		fileId = location[4]
-	}
-
-	if strings.Contains(fileId, "?") {
-		fileId = strings.Split(fileId, "?")[0]
-	}
-
-	if len(fileId) != 36 {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Workflow ID when getting workflow is not valid"}`))
-		return
-	}
-
-	ctx := context.Background()
-	//memcacheName := fmt.Sprintf("%s_%s", user.Username, fileId)
-	//if item, err := memcache.Get(ctx, memcacheName); err == memcache.ErrCacheMiss {
-	//	// Not in cache
-	//	log.Printf("User %s not in cache.", memcacheName)
-	//} else if err != nil {
-	//	log.Printf("Error getting item: %v", err)
-	//} else {
-	//	log.Printf("Got workflow %s from cache", fileId)
-	//	// FIXME - verify if value is ok? Can unmarshal etc.
-	//	resp.WriteHeader(200)
-	//	resp.Write(item.Value)
-	//	return
-	//}
-
-	workflow, err := shuffle.GetWorkflow(ctx, fileId)
-	if err != nil {
-		log.Printf("Workflow %s doesn't exist.", fileId)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Item already exists."}`))
-		return
-	}
-
-	// CHECK orgs of user, or if user is owner
-	// FIXME - add org check too, and not just owner
-	// Check workflow.Sharing == private / public / org  too
-	if user.Id != workflow.Owner && user.Role != "admin" {
-		log.Printf("Wrong user (%s) for workflow %s (get workflow)", user.Username, workflow.ID)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	if len(workflow.Actions) == 0 {
-		workflow.Actions = []shuffle.Action{}
-	}
-	if len(workflow.Branches) == 0 {
-		workflow.Branches = []shuffle.Branch{}
-	}
-	if len(workflow.Triggers) == 0 {
-		workflow.Triggers = []shuffle.Trigger{}
-	}
-	if len(workflow.Errors) == 0 {
-		workflow.Errors = []string{}
-	}
-
-	// Only required for individuals I think
-	//newactions := []Action{}
-	//for _, item := range workflow.Actions {
-	//	item.LargeImage = ""
-	//	item.SmallImage = ""
-	//	newactions = append(newactions, item)
-	//}
-	//workflow.Actions = newactions
-
-	//newtriggers := []Trigger{}
-	//for _, item := range workflow.Triggers {
-	//	item.LargeImage = ""
-	//	newtriggers = append(newtriggers, item)
-	//}
-	//workflow.Triggers = newtriggers
-
-	body, err := json.Marshal(workflow)
-	if err != nil {
-		log.Printf("Failed workflow GET marshalling: %s", err)
-		resp.WriteHeader(http.StatusInternalServerError)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	//item := &memcache.Item{
-	//	Key:        memcacheName,
-	//	Value:      body,
-	//	Expiration: time.Minute * 60,
-	//}
-	//if err := memcache.Add(ctx, item); err == memcache.ErrNotStored {
-	//	if err := memcache.Set(ctx, item); err != nil {
-	//		log.Printf("Error setting item: %v", err)
-	//	}
-	//} else if err != nil {
-	//	log.Printf("error adding item: %v", err)
-	//} else {
-	//	//log.Printf("Set cache for %s", item.Key)
-	//}
-
-	resp.WriteHeader(200)
-	resp.Write(body)
-}
-
-func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.WorkflowExecution, dbSave bool) error {
-	//log.Printf("\n\n\nRESULT: %s\n\n\n", workflowExecution.Status)
-	if len(workflowExecution.ExecutionId) == 0 {
-		log.Printf("Workflowexeciton executionId can't be empty.")
-		return errors.New("ExecutionId can't be empty.")
-	}
-
-	cacheKey := fmt.Sprintf("workflowexecution-%s", workflowExecution.ExecutionId)
-	requestCache.Set(cacheKey, &workflowExecution, cache.DefaultExpiration)
-	if !dbSave && workflowExecution.Status == "EXECUTING" && len(workflowExecution.Results) > 1 {
-		//log.Printf("[WARNING] SHOULD skip DB saving for execution")
-		return nil
-	}
-
-	// New struct, to not add body, author etc
-	key := datastore.NameKey("workflowexecution", workflowExecution.ExecutionId, nil)
-	if _, err := dbclient.Put(ctx, key, &workflowExecution); err != nil {
-		log.Printf("Error adding workflow_execution: %s", err)
-		return err
-	}
-
-	return nil
-}
-
-func getWorkflowExecution(ctx context.Context, id string) (*shuffle.WorkflowExecution, error) {
-	workflowExecution := &shuffle.WorkflowExecution{}
-	cacheKey := fmt.Sprintf("workflowexecution-%s", id)
-	if value, found := requestCache.Get(cacheKey); found {
-		parsedValue := value.(*shuffle.WorkflowExecution)
-		//log.Printf("Found execution for id %s with %d results", parsedValue.ExecutionId, len(parsedValue.Results))
-		return parsedValue, nil
-
-		//log.Printf("[INFO] FOUND key %s with value length %d", cacheKey, len(parsedValue))
-		//err := json.Unmarshal([]byte(parsedValue), &workflowExecution)
-		//if err == nil {
-		//	log.Printf("SHOULD RETURN CACHED EXECUTION of length %d", len(parsedValue))
-		//} else {
-		//	log.Printf("Failed unmarshalling cached value: %s", err)
-		//}
-	} else {
-		//log.Printf("[ERROR] Couldn't find key %s", cacheKey)
-	}
-
-	key := datastore.NameKey("workflowexecution", strings.ToLower(id), nil)
-	if err := dbclient.Get(ctx, key, workflowExecution); err != nil {
-		return &shuffle.WorkflowExecution{}, err
-	}
-
-	return workflowExecution, nil
-}
-
-//func shuffle.GetApp(ctx context.Context, id string) (*WorkflowApp, error) {
-//	key := datastore.NameKey("workflowapp", strings.ToLower(id), nil)
-//	workflowApp := &WorkflowApp{}
-//	if err := dbclient.Get(ctx, key, workflowApp); err != nil {
-//		return &WorkflowApp{}, err
-//
-//	}
-//
-//	return workflowApp, nil
-//}
-//
-//func shuffle.GetWorkflow(ctx context.Context, id string) (*shuffle.Workflow, error) {
-//	key := datastore.NameKey("workflow", strings.ToLower(id), nil)
-//	workflow := &Workflow{}
-//	if err := dbclient.Get(ctx, key, workflow); err != nil {
-//		return &Workflow{}, err
-//	}
-//
-//	return workflow, nil
-//}
-//
-//func shuffle.GetEnvironments(ctx context.Context, orgId string) ([]Environment, error) {
-//	var environments []Environment
-//	q := datastore.NewQuery("Environments").Filter("org_id =", orgId)
-//
-//	_, err := dbclient.GetAll(ctx, q, &environments)
-//	if err != nil {
-//		return []Environment{}, err
-//	}
-//
-//	return environments, nil
-//}
-
 func setExampleresult(ctx context.Context, result shuffle.AppExecutionExample) error {
 	// FIXME: Reintroduce this for stats
 	//key := datastore.NameKey("example_result", result.ExampleId, nil)
@@ -4721,78 +3434,6 @@ func setExampleresult(ctx context.Context, result shuffle.AppExecutionExample) e
 	//}
 
 	return nil
-}
-
-// Hmm, so I guess this should use uuid :(
-// Consistency PLX
-func setWorkflow(ctx context.Context, workflow shuffle.Workflow, id string, optionalEditedSecondsOffset ...int) error {
-	workflow.Edited = int64(time.Now().Unix())
-	if len(optionalEditedSecondsOffset) > 0 {
-		workflow.Edited += int64(optionalEditedSecondsOffset[0])
-	}
-
-	key := datastore.NameKey("workflow", id, nil)
-
-	// New struct, to not add body, author etc
-	if _, err := dbclient.Put(ctx, key, &workflow); err != nil {
-		log.Printf("Error adding workflow: %s", err)
-		return err
-	}
-
-	return nil
-}
-
-func deleteAppAuthentication(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	user, userErr := shuffle.HandleApiAuthentication(resp, request)
-	if userErr != nil {
-		log.Printf("Api authentication failed in edit workflow: %s", userErr)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	if user.Role != "admin" {
-		log.Printf("Need to be admin to delete appauth")
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	location := strings.Split(request.URL.String(), "/")
-	log.Printf("%#v", location)
-	var fileId string
-	if location[1] == "api" {
-		if len(location) <= 5 {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		fileId = location[5]
-	}
-
-	// FIXME: Set affected workflows to have errors
-	// 1. Get the auth
-	// 2. Loop the workflows (.Usage) and set them to have errors
-	// 3. Loop the nodes in workflows and do the same
-
-	log.Printf("ID: %s", fileId)
-	ctx := context.Background()
-	err := DeleteKey(ctx, "workflowappauth", fileId)
-	if err != nil {
-		log.Printf("Failed deleting workflowapp")
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed deleting workflow app"}`)))
-		return
-	}
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(`{"success": true}`))
 }
 
 // FIXME: Not suitable for cloud right now :O
@@ -4896,7 +3537,7 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 				//}
 			}
 
-			err = setWorkflow(ctx, workflow, workflow.ID)
+			err = shuffle.SetWorkflow(ctx, workflow, workflow.ID)
 			if err != nil {
 				log.Printf("Failed setting workflow when deleting app: %s", err)
 				continue
@@ -4948,9 +3589,9 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("Failed to increase total apps loaded stats: %s", err)
 	}
 	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
-	requestCache.Delete(cacheKey)
+	shuffle.DeleteCache(ctx, cacheKey)
 	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
-	requestCache.Delete(cacheKey)
+	shuffle.DeleteCache(ctx, cacheKey)
 
 	//err = memcache.Delete(request.Context(), sessionToken)
 	resp.WriteHeader(200)
@@ -5064,416 +3705,6 @@ func getWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 	resp.Write(data)
 }
 
-func setAuthenticationConfig(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	user, userErr := shuffle.HandleApiAuthentication(resp, request)
-	if userErr != nil {
-		log.Printf("Api authentication failed in get all apps: %s", userErr)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	if user.Role != "admin" {
-		log.Printf("[WARNING] User isn't admin during auth edit config")
-		resp.WriteHeader(409)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Must be admin to perform this action"}`)))
-		return
-	}
-
-	var fileId string
-	location := strings.Split(request.URL.String(), "/")
-	if location[1] == "api" {
-		if len(location) <= 5 {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		fileId = location[5]
-	}
-
-	body, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		log.Printf("Error with body read: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	type configAuth struct {
-		Id     string `json:"id"`
-		Action string `json:"action"`
-	}
-
-	var config configAuth
-	err = json.Unmarshal(body, &config)
-	if err != nil {
-		log.Printf("Failed unmarshaling (appauth): %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	if config.Id != fileId {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Bad ID match"}`))
-		return
-	}
-
-	ctx := context.Background()
-	auth, err := shuffle.GetWorkflowAppAuthDatastore(ctx, fileId)
-	if err != nil {
-		log.Printf("Authget error: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": ":("}`))
-		return
-	}
-
-	if auth.OrgId != user.ActiveOrg.Id {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "User can't edit this org"}`))
-		return
-	}
-
-	if config.Action == "assign_everywhere" {
-		log.Printf("Should set authentication config")
-		q := datastore.NewQuery("workflow").Filter("org_id =", user.ActiveOrg.Id)
-		q = q.Order("-edited").Limit(35)
-
-		var workflows []shuffle.Workflow
-		_, err = dbclient.GetAll(ctx, q, &workflows)
-		if err != nil {
-			log.Printf("Getall error in auth update: %s", err)
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false, "reason": "Failed getting workflows to update"}`))
-			return
-		}
-
-		// FIXME: Add function to remove auth from other auth's
-		actionCnt := 0
-		workflowCnt := 0
-		authenticationUsage := []shuffle.AuthenticationUsage{}
-		for _, workflow := range workflows {
-			newActions := []shuffle.Action{}
-			edited := false
-			usage := shuffle.AuthenticationUsage{
-				WorkflowId: workflow.ID,
-				Nodes:      []string{},
-			}
-
-			for _, action := range workflow.Actions {
-				if action.AppName == auth.App.Name {
-					action.AuthenticationId = auth.Id
-
-					edited = true
-					actionCnt += 1
-					usage.Nodes = append(usage.Nodes, action.ID)
-				}
-
-				newActions = append(newActions, action)
-			}
-
-			workflow.Actions = newActions
-			if edited {
-				//auth.Usage = usage
-				authenticationUsage = append(authenticationUsage, usage)
-				err = setWorkflow(ctx, workflow, workflow.ID)
-				if err != nil {
-					log.Printf("Failed setting (authupdate) workflow: %s", err)
-					continue
-				}
-
-				workflowCnt += 1
-			}
-		}
-
-		//Usage         []AuthenticationUsage `json:"usage" datastore:"usage"`
-		log.Printf("[INFO] Found %d workflows, %d actions", workflowCnt, actionCnt)
-		if actionCnt > 0 && workflowCnt > 0 {
-			auth.WorkflowCount = int64(workflowCnt)
-			auth.NodeCount = int64(actionCnt)
-			auth.Usage = authenticationUsage
-			auth.Defined = true
-
-			err = shuffle.SetWorkflowAppAuthDatastore(ctx, *auth, auth.Id)
-			if err != nil {
-				log.Printf("Failed setting appauth: %s", err)
-				resp.WriteHeader(401)
-				resp.Write([]byte(`{"success": false, "reason": "Failed setting app auth for all workflows"}`))
-				return
-			} else {
-				// FIXME: Remove ALL workflows from other auths using the same
-			}
-		}
-	}
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(`{"success": true}`))
-	//var config configAuth
-
-	//log.Printf("Should set %s
-}
-
-func addAppAuthentication(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	user, userErr := shuffle.HandleApiAuthentication(resp, request)
-	if userErr != nil {
-		log.Printf("Api authentication failed in get all apps: %s", userErr)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	body, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		log.Printf("Error with body read: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	var appAuth shuffle.AppAuthenticationStorage
-	err = json.Unmarshal(body, &appAuth)
-	if err != nil {
-		log.Printf("Failed unmarshaling (appauth): %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	ctx := context.Background()
-	if len(appAuth.Id) == 0 {
-		appAuth.Id = uuid.NewV4().String()
-	} else {
-		auth, err := shuffle.GetWorkflowAppAuthDatastore(ctx, appAuth.Id)
-		if err == nil {
-			// OrgId         string                `json:"org_id" datastore:"org_id"`
-			if auth.OrgId != user.ActiveOrg.Id {
-				log.Printf("[WARNING] User isn't a part of the right org during auth edit")
-				resp.WriteHeader(409)
-				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": ":("}`)))
-				return
-			}
-
-			if user.Role != "admin" {
-				log.Printf("[WARNING] User isn't admin during auth edit")
-				resp.WriteHeader(409)
-				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": ":("}`)))
-				return
-			}
-
-			if !auth.Active {
-				log.Printf("[WARNING] Auth isn't active for edit")
-				resp.WriteHeader(409)
-				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't update an inactive auth"}`)))
-				return
-			}
-
-			if auth.App.Name != appAuth.App.Name {
-				log.Printf("[WARNING] User tried to modify auth")
-				resp.WriteHeader(409)
-				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad app configuration: need to specify correct name"}`)))
-				return
-			}
-		}
-	}
-
-	if len(appAuth.Label) == 0 {
-		resp.WriteHeader(409)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Label can't be empty"}`)))
-		return
-	}
-
-	// Super basic check
-	if len(appAuth.App.ID) != 36 && len(appAuth.App.ID) != 32 {
-		log.Printf("Bad ID for app: %s", appAuth.App.ID)
-		resp.WriteHeader(409)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "App has to be defined"}`)))
-		return
-	}
-
-	// FIXME: Doens't validate Org
-	app, err := shuffle.GetApp(ctx, appAuth.App.ID)
-	if err != nil {
-		log.Printf("[WARNING] Failed finding app %s while setting auth. Finding it by looping apps.", appAuth.App.ID)
-		workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 500)
-		if err != nil {
-			resp.WriteHeader(409)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-			return
-		}
-
-		foundIndex := -1
-		for i, workflowapp := range workflowapps {
-			if workflowapp.Name == appAuth.App.Name {
-				foundIndex = i
-				break
-			}
-		}
-
-		if foundIndex >= 0 {
-			log.Printf("[INFO] Found app %s by looping auth", appAuth.App.ID)
-		} else {
-			log.Printf("[ERROR] Failed finding app %s which has auth after looping", appAuth.App.ID)
-			resp.WriteHeader(409)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-			return
-		}
-	}
-
-	// Check if the items are correct
-	for _, field := range appAuth.Fields {
-		found := false
-		for _, param := range app.Authentication.Parameters {
-			if field.Key == param.Name {
-				found = true
-			}
-		}
-
-		if !found {
-			log.Printf("Failed finding field %s in appauth fields", field.Key)
-			resp.WriteHeader(409)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "All auth fields required"}`)))
-			return
-		}
-	}
-
-	//appAuth.LargeImage = ""
-	appAuth.OrgId = user.ActiveOrg.Id
-	appAuth.Defined = true
-	err = shuffle.SetWorkflowAppAuthDatastore(ctx, appAuth, appAuth.Id)
-	if err != nil {
-		log.Printf("Failed setting up app auth %s: %s", appAuth.Id, err)
-		resp.WriteHeader(409)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-		return
-	}
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(`{"success": true}`))
-}
-
-func getAppAuthentication(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	user, userErr := shuffle.HandleApiAuthentication(resp, request)
-	if userErr != nil {
-		log.Printf("Api authentication failed in get all apps: %s", userErr)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	// FIXME: Auth to get the right ones only
-	//if user.Role != "admin" {
-	//	log.Printf("User isn't admin")
-	//	resp.WriteHeader(401)
-	//	resp.Write([]byte(`{"success": false}`))
-	//	return
-	//}
-	ctx := context.Background()
-	allAuths, err := shuffle.GetAllWorkflowAppAuth(ctx, user.ActiveOrg.Id)
-	if err != nil {
-		log.Printf("Api authentication failed in get all app auth: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	if len(allAuths) == 0 {
-		resp.WriteHeader(200)
-		resp.Write([]byte(`{"success": true, "data": []}`))
-		return
-	}
-
-	// Cleanup for frontend usage. User shouldn't be able to get the data.
-	newAuth := []shuffle.AppAuthenticationStorage{}
-	for _, auth := range allAuths {
-		newAuthField := auth
-		for index, _ := range auth.Fields {
-			newAuthField.Fields[index].Value = "auth placeholder (replaced during execution)"
-		}
-
-		newAuth = append(newAuth, newAuthField)
-	}
-
-	newbody, err := json.Marshal(allAuths)
-	if err != nil {
-		log.Printf("Failed unmarshalling all app auths: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed unpacking workflow app auth"}`)))
-		return
-	}
-
-	data := fmt.Sprintf(`{"success": true, "data": %s}`, string(newbody))
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(data))
-
-	/*
-		data := `{
-			"success": true,
-			"data": [
-				{
-					"app": {
-						"name": "thehive",
-						"description": "what",
-						"app_version": "1.0.0",
-						"id": "4f97da9d-1caf-41cc-aa13-67104d8d825c",
-						"large_image": "asd"
-					},
-					"fields": {
-						"apikey": "hello",
-						"url": "url"
-					},
-					"usage": [{
-						"workflow_id": "asd",
-						"nodes": [{
-							"node_id": ""
-						}]
-					}],
-					"label": "Original",
-					"id": "4f97da9d-1caf-41cc-aa13-67104d8d825d",
-					"active": true
-				},
-				{
-					"app": {
-						"name": "thehive",
-						"description": "what",
-						"app_version": "1.0.0",
-						"id": "4f97da9d-1caf-41cc-aa13-67104d8d825c",
-						"large_image": "asd"
-					},
-					"fields": {
-						"apikey": "hello",
-						"url": "url"
-					},
-					"usage": [{
-						"workflow_id": "asd",
-						"nodes": [{
-							"node_id": ""
-						}]
-					}],
-					"label": "Number 2",
-					"id": "4f97da9d-1caf-41cc-aa13-67104d8d825d",
-					"active": true
-				}
-			]
-		}`
-	*/
-}
 func updateWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -5555,9 +3786,9 @@ func updateWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
-	requestCache.Delete(cacheKey)
+	shuffle.DeleteCache(ctx, cacheKey)
 	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
-	requestCache.Delete(cacheKey)
+	shuffle.DeleteCache(ctx, cacheKey)
 
 	log.Printf("Changed workflow app %s", app.ID)
 	resp.WriteHeader(200)
@@ -6169,10 +4400,11 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	ctx := context.Background()
 	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
-	requestCache.Delete(cacheKey)
+	shuffle.DeleteCache(ctx, cacheKey)
 	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
-	requestCache.Delete(cacheKey)
+	shuffle.DeleteCache(ctx, cacheKey)
 
 	// Just need to be logged in
 	// FIXME - should have some permissions?
@@ -6198,7 +4430,7 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	log.Printf("[INFO] Starting hotloading from %s", location)
-	err = handleAppHotload(location, true)
+	err = handleAppHotload(ctx, location, true)
 	if err != nil {
 		log.Printf("Failed app hotload: %s", err)
 		resp.WriteHeader(500)
@@ -6207,9 +4439,9 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	cacheKey = fmt.Sprintf("workflowapps-sorted-100")
-	requestCache.Delete(cacheKey)
+	shuffle.DeleteCache(ctx, cacheKey)
 	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
-	requestCache.Delete(cacheKey)
+	shuffle.DeleteCache(ctx, cacheKey)
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
@@ -6337,10 +4569,11 @@ func loadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	ctx := context.Background()
 	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
-	requestCache.Delete(cacheKey)
+	shuffle.DeleteCache(ctx, cacheKey)
 	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
-	requestCache.Delete(cacheKey)
+	shuffle.DeleteCache(ctx, cacheKey)
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
@@ -6477,9 +4710,9 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 						}
 
 						cacheKey := fmt.Sprintf("workflowapps-sorted-100")
-						requestCache.Delete(cacheKey)
+						shuffle.DeleteCache(ctx, cacheKey)
 						cacheKey = fmt.Sprintf("workflowapps-sorted-500")
-						requestCache.Delete(cacheKey)
+						shuffle.DeleteCache(ctx, cacheKey)
 					}
 				} else {
 					//log.Printf("Skipped upload of %s (%s)", api.Name, api.ID)
@@ -6593,7 +4826,7 @@ func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra 
 
 				log.Printf("Import workflow from file: %s", filename)
 				ctx := context.Background()
-				err = setWorkflow(ctx, workflow, workflow.ID, secondsOffset)
+				err = shuffle.SetWorkflow(ctx, workflow, workflow.ID, secondsOffset)
 				if err != nil {
 					log.Printf("Failed setting (download) workflow: %s", err)
 					continue
@@ -6896,9 +5129,9 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 
 	// This is getting silly
 	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
-	requestCache.Delete(cacheKey)
+	shuffle.DeleteCache(ctx, cacheKey)
 	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
-	requestCache.Delete(cacheKey)
+	shuffle.DeleteCache(ctx, cacheKey)
 
 	//log.Printf("BUILDLATERFIRST: %d, BUILDLATERLIST: %d", len(buildLaterFirst), len(buildLaterList))
 	if len(extra) == 0 {
@@ -7020,11 +5253,10 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("Added %s:%s to the database", workflowapp.Name, workflowapp.AppVersion)
 	}
 
-	//memcache.Delete(ctx, "all_apps")
 	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
-	requestCache.Delete(cacheKey)
+	shuffle.DeleteCache(ctx, cacheKey)
 	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
-	requestCache.Delete(cacheKey)
+	shuffle.DeleteCache(ctx, cacheKey)
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
