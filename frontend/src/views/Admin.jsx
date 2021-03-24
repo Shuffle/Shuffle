@@ -348,7 +348,9 @@ const Admin = (props) => {
 
 	const deleteUser = (data) => {
 		// Just use this one?
-		const url = globalUrl + '/api/v1/users/' + data.id
+		const userId = isCloud ? data.username : data.id 
+		
+		const url = globalUrl + '/api/v1/users/' + userId
 		fetch(url, {
 			method: 'DELETE',
 			credentials: "include",
@@ -1038,7 +1040,8 @@ const Admin = (props) => {
 
 
 
-	const generateApikey = (userId) => {
+	const generateApikey = (user) => {
+		const userId = isCloud ? user.username : user.id
 		const data = { "user_id": userId }
 
 		fetch(globalUrl + "/api/v1/generateapikey", {
@@ -1209,7 +1212,7 @@ const Admin = (props) => {
 					style={{}}
 					variant="outlined"
 					color="primary"
-					onClick={() => generateApikey(selectedUser.id)}
+					onClick={() => generateApikey(selectedUser)}
 				>
 					Get new API key
 				</Button>
@@ -1748,12 +1751,12 @@ const Admin = (props) => {
 				<ListItem>
 					<ListItemText
 						primary="Username"
-						style={{ minWidth: 200, maxWidth: 200 }}
+						style={{ minWidth: 300, maxWidth: 300}}
 					/>
 					
 					<ListItemText
 						primary="API key"
-						style={{ minWidth: 360, maxWidth: 360, overflow: "hidden" }}
+						style={{ minWidth: 100, maxWidth: 100, overflow: "hidden" }}
 					/>
 					
 					<ListItemText
@@ -1779,42 +1782,61 @@ const Admin = (props) => {
 						<ListItem key={index} style={{backgroundColor: bgColor}}>
 							<ListItemText
 								primary={data.username}
-								style={{ minWidth: 200, maxWidth: 200 }}
+								style={{ minWidth: 300, maxWidth: 300, overflow: "hidden",}}
 							/>
 							
 							<ListItemText
-								primary={data.apikey === undefined || data.apikey.length === 0 ? "" : data.apikey}
-								style={{ maxWidth: 360, minWidth: 360, }}
-							/>
+								style={{ maxWidth: 100, minWidth: 100, }}
+								primary={data.apikey === undefined || data.apikey.length === 0 ? "" : 
+									<Tooltip title={"Copy Api Key"} style={{}} aria-label={"Copy APIkey"}>
+										<IconButton style={{}} onClick={() => {
+												const elementName = "copy_element_shuffle"
+												var copyText = document.getElementById(elementName);
+												if (copyText !== null && copyText !== undefined) {
+													navigator.clipboard.writeText(data.apikey)
+													copyText.select();
+													copyText.setSelectionRange(0, 99999); /* For mobile devices */
+
+												/* Copy the text inside the text field */
+												document.execCommand("copy");
+
+												alert.info("Apikey copied to clipboard")	
+											}
+										}}>
+										<FileCopyIcon style={{color: "rgba(255,255,255,0.8)"}}/>
+									</IconButton>
+								</Tooltip>
+							}/>
 							
 							<ListItemText
 								primary=
-								{<Select
-									SelectDisplayProps={{
-									style: {
-										marginLeft: 10,
+									{<Select
+										SelectDisplayProps={{
+										style: {
+											marginLeft: 10,
+										}
+									}}
+									value={data.role}
+									fullWidth
+									onChange={(e) => {
+									console.log("VALUE: ", e.target.value)
+
+									if (isCloud) {	
+										setUser(data.username, "role", e.target.value)
+									} else {
+										setUser(data.id, "role", e.target.value)
 									}
 								}}
-								value={data.role}
-								fullWidth
-								onChange={(e) => {
-								console.log("VALUE: ", e.target.value)
-
-								if (isCloud) {	
-									setUser(data.username, "role", e.target.value)
-								} else {
-									setUser(data.id, "role", e.target.value)
-								}
-							}}
 										style={{ backgroundColor: theme.palette.surfaceColor, color: "white", height: "50px" }}
-										>
-							<MenuItem style={{ backgroundColor: theme.palette.inputColor, color: "white" }} value={"admin"}>
-								Admin
-										</MenuItem>
-							<MenuItem style={{ backgroundColor: theme.palette.inputColor, color: "white" }} value={"user"}>
-								User
-										</MenuItem>
-									</Select>}
+									>
+									<MenuItem style={{ backgroundColor: theme.palette.inputColor, color: "white" }} value={"admin"}>
+										Admin
+									</MenuItem>
+									<MenuItem style={{ backgroundColor: theme.palette.inputColor, color: "white" }} value={"user"}>
+										User
+									</MenuItem>
+								</Select>
+								}
 								style ={{ minWidth: 135, maxWidth: 135, marginRight: 15,}}
 							/>
 							<ListItemText
@@ -1831,7 +1853,9 @@ const Admin = (props) => {
 						<EditIcon color="primary"/>
 					</IconButton>
 					<Button
-						onClick={() => generateApikey(data.id)}
+						onClick={() => {
+							generateApikey(data)
+						}}
 						variant="outlined"
 						color="primary"
 					>
@@ -1932,7 +1956,7 @@ const Admin = (props) => {
 					/>
 					<ListItemText
 						primary="Status"
-						style={{minWidth: 75, maxWidth: 75}}
+						style={{minWidth: 75, maxWidth: 75, marginLeft: 10,}}
 					/>
 					<ListItemText
 						primary="Filesize"
@@ -1984,7 +2008,7 @@ const Admin = (props) => {
 							/>
 							<ListItemText
 								primary={file.status}
-								style={{minWidth: 75, maxWidth: 75, overflow: "hidden"}}
+								style={{minWidth: 75, maxWidth: 75, overflow: "hidden", marginLeft: 10,}}
 							/>
 							<ListItemText
 								primary={file.filesize}
@@ -2221,7 +2245,7 @@ const Admin = (props) => {
 					/>
 					<ListItemText
 						primary="App Name"
-						style={{minWidth: 150, maxWidth: 150}}
+						style={{minWidth: 175, maxWidth: 175, marginLeft: 10,}}
 					/>
 					<ListItemText
 						primary="Ready"
@@ -2257,15 +2281,15 @@ const Admin = (props) => {
 							/>
 							<ListItemText
 								primary={data.label}
-								style={{minWidth: 225, maxWidth: 225}}
+								style={{minWidth: 225, maxWidth: 225, overflow: "hidden",}}
 							/>
 							<ListItemText
 								primary={data.app.name}
-								style={{minWidth: 150, maxWidth: 150}}
+								style={{minWidth: 175, maxWidth: 175, marginLeft: 10}}
 							/>
 							<ListItemText
 								primary={data.defined === false ? "No" : "Yes"}
-								style={{minWidth: 100, maxWidth: 100}}
+								style={{minWidth: 100, maxWidth: 100, marginLeft: 10,}}
 							/>
 							<ListItemText
 								primary={data.workflow_count === null ? 0 : data.workflow_count}

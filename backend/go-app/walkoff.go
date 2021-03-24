@@ -1802,7 +1802,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// FIXME - have a check for org etc too..
-	if user.Id != workflow.Owner && user.Role != "admin" {
+	if user.Id != workflow.Owner {
 		log.Printf("Wrong user (%s) for workflow %s", user.Username, workflow.ID)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
@@ -1956,7 +1956,7 @@ func abortExecution(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		// FIXME - have a check for org etc too..
-		if user.Id != workflowExecution.Workflow.Owner && user.Role != "admin" {
+		if user.Id != workflowExecution.Workflow.Owner {
 			log.Printf("[INFO] Wrong user (%s) for workflowexecution workflow %s", user.Username, workflowExecution.Workflow.ID)
 			resp.WriteHeader(401)
 			resp.Write([]byte(`{"success": false}`))
@@ -2912,7 +2912,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	// FIXME - have a check for org etc too..
 	// FIXME - admin check like this? idk
-	if user.Id != workflow.Owner && user.Role != "admin" && user.Role != "scheduler" && user.Role != fmt.Sprintf("workflow_%s", fileId) {
+	if user.Id != workflow.Owner && user.Role != "scheduler" && user.Role != fmt.Sprintf("workflow_%s", fileId) {
 		log.Printf("Wrong user (%s) for workflow %s (execute)", user.Username, workflow.ID)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
@@ -2987,7 +2987,7 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 
 	// FIXME - have a check for org etc too..
 	// FIXME - admin check like this? idk
-	if user.Id != workflow.Owner && user.Role != "admin" && user.Role != "scheduler" {
+	if user.Id != workflow.Owner && user.Role != "scheduler" {
 		log.Printf("[WARNING] Wrong user (%s) for workflow %s (stop schedule)", user.Username, workflow.ID)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
@@ -3116,7 +3116,7 @@ func stopScheduleGCP(resp http.ResponseWriter, request *http.Request) {
 
 	// FIXME - have a check for org etc too..
 	// FIXME - admin check like this? idk
-	if user.Id != workflow.Owner && user.Role != "admin" && user.Role != "scheduler" {
+	if user.Id != workflow.Owner && user.Role != "scheduler" {
 		log.Printf("Wrong user (%s) for workflow %s (stop schedule)", user.Username, workflow.ID)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
@@ -3237,7 +3237,7 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	// FIXME - have a check for org etc too..
 	// FIXME - admin check like this? idk
-	if user.Id != workflow.Owner && user.Role != "admin" && user.Role != "scheduler" {
+	if user.Id != workflow.Owner && user.Role != "scheduler" {
 		log.Printf("Wrong user (%s) for workflow %s", user.Username, workflow.ID)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
@@ -3478,14 +3478,14 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - actually delete other than private apps too..
 	private := false
 	if app.Downloaded && user.Role == "admin" {
-		log.Printf("Deleting downloaded app (authenticated users can do this)")
-	} else if user.Id != app.Owner && user.Role != "admin" {
-		log.Printf("Wrong user (%s) for app %s (delete)", user.Username, app.Name)
+		log.Printf("[INFO] Deleting downloaded app (authenticated users can do this)")
+	} else if user.Id != app.Owner {
+		log.Printf("[WARNING] Wrong user (%s) for app %s (delete)", user.Username, app.Name)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	} else {
-		log.Printf("App to be deleted is private")
+		log.Printf("[WARNING] App to be deleted is private")
 		private = true
 	}
 
@@ -3494,7 +3494,7 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	var workflows []shuffle.Workflow
 	_, err = dbclient.GetAll(ctx, q, &workflows)
 	if err != nil {
-		log.Printf("Failed getting related workflows for the app: %s", err)
+		log.Printf("[WARNING] Failed getting related workflows for the app: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
@@ -3671,7 +3671,7 @@ func getWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if user.Id != app.Owner && user.Role != "admin" {
+	if user.Id != app.Owner {
 		log.Printf("[WARNING] Wrong user (%s) for app %s", user.Username, app.Name)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
@@ -3703,96 +3703,6 @@ func getWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 
 	resp.WriteHeader(200)
 	resp.Write(data)
-}
-
-func updateWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	user, userErr := shuffle.HandleApiAuthentication(resp, request)
-	if userErr != nil {
-		log.Printf("Api authentication failed in get all apps: %s", userErr)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	location := strings.Split(request.URL.String(), "/")
-	var fileId string
-	if location[1] == "api" {
-		if len(location) <= 4 {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		fileId = location[4]
-	}
-
-	ctx := context.Background()
-	app, err := shuffle.GetApp(ctx, fileId)
-	if err != nil {
-		log.Printf("Error getting app (update app): %s", fileId)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	if user.Id != app.Owner && user.Role != "admin" {
-		log.Printf("Wrong user (%s) for app %s in update app", user.Username, app.Name)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	body, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		log.Printf("Error with body read in update app: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	type updatefields struct {
-		Sharing       bool   `json:"sharing"`
-		SharingConfig string `json:"sharing_config"`
-	}
-
-	var tmpfields updatefields
-	err = json.Unmarshal(body, &tmpfields)
-	if err != nil {
-		log.Printf("Error with unmarshal body in update app: %s\n%s", err, string(body))
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	if tmpfields.Sharing != app.Sharing {
-		app.Sharing = tmpfields.Sharing
-	}
-
-	if tmpfields.SharingConfig != app.SharingConfig {
-		app.SharingConfig = tmpfields.SharingConfig
-	}
-
-	err = shuffle.SetWorkflowAppDatastore(ctx, *app, app.ID)
-	if err != nil {
-		log.Printf("Failed patching workflowapp: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
-	shuffle.DeleteCache(ctx, cacheKey)
-	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
-	shuffle.DeleteCache(ctx, cacheKey)
-
-	log.Printf("Changed workflow app %s", app.ID)
-	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 }
 
 func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
@@ -4432,9 +4342,9 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 	log.Printf("[INFO] Starting hotloading from %s", location)
 	err = handleAppHotload(ctx, location, true)
 	if err != nil {
-		log.Printf("Failed app hotload: %s", err)
+		log.Printf("[WARNING] Failed app hotload: %s", err)
 		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed loading apps: %s"}`, err)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
 	}
 
@@ -4625,7 +4535,7 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 				}
 
 				if contOuter {
-					log.Printf("Skipping %s", filename)
+					//log.Printf("Skipping %s", filename)
 					continue
 				}
 
@@ -4859,12 +4769,10 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 		"YARA",
 	}
 
+	// It's here to prevent getting them in every iteration
 	buildLaterFirst := []buildLaterStruct{}
 	buildLaterList := []buildLaterStruct{}
-
 	ctx := context.Background()
-
-	// It's here to prevent getting them in every iteration
 	for _, file := range dir {
 		if len(onlyname) > 0 && file.Name() != onlyname {
 			continue
@@ -4882,10 +4790,6 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 
 			// Go routine? Hmm, this can be super quick I guess
 			buildFirst, buildLast, err := iterateAppGithubFolders(fs, dir, tmpExtra, "", forceUpdate)
-			if err != nil {
-				log.Printf("Error reading folder: %s", err)
-				continue
-			}
 
 			for _, item := range buildFirst {
 				buildLaterFirst = append(buildLaterFirst, item)
@@ -4893,6 +4797,15 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 
 			for _, item := range buildLast {
 				buildLaterList = append(buildLaterList, item)
+			}
+
+			if err != nil {
+				log.Printf("[WARNING] Error reading folder: %s", err)
+				//buildFirst, buildLast, err := iterateAppGithubFolders(fs, dir, tmpExtra, "", forceUpdate)
+
+				if !forceUpdate {
+					return buildLaterFirst, buildLaterList, err
+				}
 			}
 
 		case mode.IsRegular():
@@ -4964,8 +4877,9 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 				var workflowapp shuffle.WorkflowApp
 				err = gyaml.Unmarshal(appfileData, &workflowapp)
 				if err != nil {
-					log.Printf("Failed unmarshaling workflowapp %s: %s", fullPath, err)
-					continue
+					log.Printf("[WARNING] Failed building workflowapp %s: %s", extra, err)
+					return buildLaterFirst, buildLaterList, errors.New(fmt.Sprintf("Failed building %s: %s", extra, err))
+					//continue
 				}
 
 				newName := workflowapp.Name
@@ -5007,7 +4921,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 
 				// Fixes (appends) authentication parameters if they're required
 				if workflowapp.Authentication.Required {
-					log.Printf("Checking authentication fields and appending for %s!", workflowapp.Name)
+					log.Printf("[INFO] Checking authentication fields and appending for %s!", workflowapp.Name)
 					// FIXME:
 					// Might require reflection into the python code to append the fields as well
 					for index, action := range workflowapp.Actions {
@@ -5305,7 +5219,7 @@ func getWorkflowExecutions(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// FIXME - have a check for org etc too..
-	if user.Id != workflow.Owner && user.Role != "admin" {
+	if user.Id != workflow.Owner {
 		log.Printf("Wrong user (%s) for workflow %s (get execution)", user.Username, workflow.ID)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
@@ -5637,7 +5551,7 @@ func handleStopHook(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if user.Id != hook.Owner && user.Role != "admin" {
+	if user.Id != hook.Owner {
 		log.Printf("Wrong user (%s) for workflow %s", user.Username, hook.Id)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
@@ -5720,7 +5634,7 @@ func handleDeleteHook(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if user.Id != hook.Owner && user.Role != "admin" && user.ActiveOrg.Id != hook.OrgId {
+	if user.Id != hook.Owner && user.ActiveOrg.Id != hook.OrgId {
 		log.Printf("Wrong user (%s) for workflow %s", user.Username, hook.Id)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
@@ -5861,7 +5775,7 @@ func handleStartHook(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if user.Id != hook.Owner && user.Role != "admin" {
+	if user.Id != hook.Owner {
 		log.Printf("Wrong user (%s) for workflow %s", user.Username, hook.Id)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))

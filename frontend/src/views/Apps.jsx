@@ -195,6 +195,10 @@ const Apps = (props) => {
 			setIsLoading(false)
 			if (response.status !== 200) {
 				console.log("Status not 200 for apps :O!")
+
+				if (isCloud) {
+					window.location.pathname = "/search"
+				}
 			}
 
 			return response.json()
@@ -648,11 +652,17 @@ const Apps = (props) => {
 						<Select
 							value={sharingConfiguration}
 							onChange={(event) => {
-								setSharingConfiguration(event.target.value)
-								alert.info("Changed sharing to "+event.target.value)
+								alert.info("Changing sharing to "+event.target.value)
 
-								updateAppField(selectedApp.id, "sharing", !selectedApp.sharing)
-								//setSelectedAction(event.target.value)
+								setSharingConfiguration(event.target.value)
+
+								if (event.target.value === "you") {
+									updateAppField(selectedApp.id, "sharing", false)
+								} else if (event.target.value === "everyone") {
+									updateAppField(selectedApp.id, "sharing", true)
+								} else {
+									console.log("Can't handle value for sharing: ", event.target.value)
+								}
 							}}
 							style={{width: 150, backgroundColor: theme.palette.surfaceColor, backgroundColor: inputColor, color: "white", height: 35, marginleft: 10,}}
 							SelectDisplayProps={{
@@ -910,9 +920,8 @@ const Apps = (props) => {
 						</span>
 					}
 					</div>
-					{isCloud ? null :
 					<TextField
-						style={{backgroundColor: inputColor}} 
+						style={{backgroundColor: inputColor, borderRadius: 5,}} 
 						InputProps={{
 							style:{
 								color: "white",
@@ -920,6 +929,7 @@ const Apps = (props) => {
 								marginLeft: "5px",
 								maxWidth: "95%",
 								fontSize: "1em",
+								borderRadius: 5,
 							},
 						}}
 						fullWidth
@@ -930,7 +940,6 @@ const Apps = (props) => {
 							setCursearch(event.target.value)
 						}}
 					/>
-					}
 					<div style={{marginTop: 15}}>
 						{apps.length > 0 ? 
 							filteredApps.length > 0 ? 
@@ -1057,8 +1066,11 @@ const Apps = (props) => {
 			return response.json()
 		})
 		.then((responseJson) => {
-			if (responseJson.reason !== undefined && responseJson.reason.length > 0) {
-				alert.info("Hotloading: ", responseJson.reason)
+			if (responseJson.success === true) {
+				alert.info("Successfully finished hotload")
+			} else {
+				alert.error("Failed hotload: ", responseJson.reason)
+				//(responseJson.reason !== undefined && responseJson.reason.length > 0) {
 			}
     })
 		.catch(error => {
@@ -1116,6 +1128,8 @@ const Apps = (props) => {
 		const data = {}
 		data[fieldname] = fieldvalue
 
+		console.log("DATA: ", data)
+
 		fetch(globalUrl+"/api/v1/apps/"+app_id, {
     	method: 'PATCH',
 			headers: {
@@ -1132,9 +1146,9 @@ const Apps = (props) => {
 			//console.log(responseJson)
 			//alert.info(responseJson)
 			if (responseJson.success) {
-				alert.info("Success")
+				alert.success("Successfully updated app configuration")
 			} else {
-				alert.error("Error updating app")
+				alert.error("Error updating app configuration")
 			}
     })
 		.catch(error => {

@@ -527,7 +527,6 @@ const Workflows = (props) => {
 
 
 	const deleteWorkflow = (id) => {
-		alert.success("Deleted workflow "+id)
 		fetch(globalUrl+"/api/v1/workflows/"+id, {
     	  method: 'DELETE',
 				headers: {
@@ -539,6 +538,9 @@ const Workflows = (props) => {
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for setting workflows :O!")
+				alert.error("Failed deleting workflow")
+			} else {
+				alert.success("Deleted workflow "+id)
 			}
 
 			return response.json()

@@ -2502,7 +2502,9 @@ const AppCreator = (props) => {
 					}}>
 						{appBuilding ? <CircularProgress /> : "Save"}
 					</Button>
-					{errorCode.length > 0 ? `Error: ${errorCode}` : null}
+					<Typography style={{marginTop: 5}}>
+						{errorCode.length > 0 ? `Error: ${errorCode}` : null}
+					</Typography>
 				</Paper>
 		</div>
 

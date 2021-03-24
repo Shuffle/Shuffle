@@ -88,7 +88,7 @@ const AngularWorkflow = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, userdata } = props;
 	const referenceUrl = globalUrl+"/api/v1/hooks/"
 	const alert = useAlert()
-	const borderRadius = 3
+	const borderRadius = 5
 	const theme = useTheme();
 
 	const [bodyWidth, bodyHeight] = useWindowSize();
@@ -883,6 +883,19 @@ const AngularWorkflow = (props) => {
 				setExecutionRequestStarted(false)
 			}
 
+			if (responseJson.execution_id === "" || responseJson.execution_id === undefined || responseJson.authorization === "" || responseJson.authorization === undefined ) {
+				alert.error("Something went wrong during execution startup")
+				console.log("BAD RESPONSE FOR EXECUTION: ", responseJson)
+				setExecutionRunning(false)
+				setExecutionRequestStarted(false)
+				stop()
+
+				for (var i = 0; i < curelements.length; i++) {
+					curelements[i].removeClass("not-executing-highlight")
+				}
+				return
+			}
+
 			setExecutionRequest({
 				"execution_id": responseJson.execution_id,
 				"authorization": responseJson.authorization,
@@ -1021,7 +1034,7 @@ const AngularWorkflow = (props) => {
 
 
 	const getApps = () => {
-		fetch(globalUrl+"/api/v1/workflows/apps", {
+		fetch(globalUrl+"/api/v1/apps", {
 			method: 'GET',
 			headers: {
 				'Content-Type': 'application/json',
@@ -1042,11 +1055,16 @@ const AngularWorkflow = (props) => {
 			//var tmpapps = []
 			//tmpapps = tmpapps.concat(getExtraApps())
 			//tmpapps = tmpapps.concat(responseJson)
+			console.log("APPS: ", responseJson)
 			setApps(responseJson)
-			//getAppAuthentication() 
 
-			setFilteredApps(responseJson.filter(app => !internalIds.includes(app.name) && !(!app.activated && app.generated)))
-			setPrioritizedApps(responseJson.filter(app => internalIds.includes(app.name)))
+			if (isCloud) {
+				setFilteredApps(responseJson.filter(app => !internalIds.includes(app.name)))
+				setPrioritizedApps(responseJson.filter(app => internalIds.includes(app.name)))
+			} else {
+				setFilteredApps(responseJson.filter(app => !internalIds.includes(app.name) && !(!app.activated && app.generated)))
+				setPrioritizedApps(responseJson.filter(app => internalIds.includes(app.name)))
+			}
     })
 		.catch(error => {
 			alert.error(error.toString())
@@ -1172,6 +1190,12 @@ const AngularWorkflow = (props) => {
 	const onNodeSelect = (event, newAppAuth) => {
 		const data = event.target.data()
 		setLastSaved(false)
+		
+		const node = cy.getElementById(data.id)
+		if (node.length > 0) {
+			node.addClass('shuffle-hover-highlight')
+		}
+
 		//const branch = workflow.branches.filter(branch => branch.source_id === data.id || branch.destination_id === data.id)
 		console.log("NODE: ", data)
 		//console.log("BRANCHES: ", branch)
@@ -2757,6 +2781,7 @@ const AngularWorkflow = (props) => {
 		//setSelectedActionEnvironment(env)
 		
 		setSelectedAction(selectedAction)
+		setUpdate(Math.random())
 	}
 
 	// APPSELECT at top
@@ -2996,6 +3021,7 @@ const AngularWorkflow = (props) => {
 					selectedActionParameters[count]["value_replace"] = paramcheck
 					selectedAction.parameters[count]["value_replace"] = paramcheck
 					setSelectedAction(selectedAction)
+					//setUpdate(Math.random())
 					return
 				}
 			}
@@ -3088,6 +3114,7 @@ const AngularWorkflow = (props) => {
 			selectedActionParameters[count].value = event.target.value
 			selectedAction.parameters[count].value = event.target.value
 			setSelectedAction(selectedAction)
+			//setUpdate(Math.random())
 			//setUpdate(event.target.value)
 		}
 
@@ -3125,7 +3152,7 @@ const AngularWorkflow = (props) => {
 			setSelectedApp(selectedApp)
 
 			setSelectedAction(selectedAction)
-			setUpdate(fieldvalue)
+			setUpdate(Math.random())
 		}
 
 		const changeActionParameterVariant = (data, count) => {
@@ -3157,6 +3184,7 @@ const AngularWorkflow = (props) => {
 			// Set value 
 			setSelectedApp(selectedApp)
 			setSelectedAction(selectedAction)
+			setUpdate(Math.random())
 		}
 
 		// FIXME: Issue #40 - selectedActionParameters not reset
@@ -3177,6 +3205,7 @@ const AngularWorkflow = (props) => {
 							selectedActionParameters[count].value = selectedAction.selectedAuthentication.fields[data.name]
 							selectedAction.parameters[count].value = selectedAction.selectedAuthentication.fields[data.name]
 							setSelectedAction(selectedAction)
+							//setUpdate(Math.random())
 
 							return null	
 						}
