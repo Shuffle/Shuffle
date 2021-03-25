@@ -46,6 +46,16 @@ import mobileImage from '../assets/img/mobile.svg';
 import bagImage from '../assets/img/bag.svg';
 import bookImage from '../assets/img/book.svg';
 
+import {
+	DataGrid,
+	GridToolbarContainer,
+	GridDensitySelector,
+	GridToolbar,
+  } from '@material-ui/data-grid';
+import { makeStyles } from '@material-ui/core/styles';
+
+import ListIcon from '@material-ui/icons/List';
+import GridOnIcon from '@material-ui/icons/GridOn';
 
 const inputColor = "#383B40"
 const surfaceColor = "#27292D"
@@ -152,6 +162,7 @@ const MyView = (props) => {
 	const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
 	const [editingWorkflow, setEditingWorkflow] = React.useState({})
 	const [executionLoading, setExecutionLoading] = React.useState(false)
+	const [view, setView] = React.useState("grid")
 	const { start, stop } = useInterval({
 	  	duration: 5000,
 	  	startImmediate: false,
@@ -305,6 +316,22 @@ const MyView = (props) => {
 		cursor: "pointer",
 		display: "flex",
 		boxSizing: "border-box",
+	}
+
+	const gridContainer = {
+		cursor: "pointer",
+		height: "auto",
+		color: "white",
+		margin: "10px",
+		backgroundColor: surfaceColor,
+	}
+
+	const workFlowActionStyle = {
+		flex: "1", 
+		display: "flex", 
+		width: "150px", 
+		justifyContent: "space-between", 
+		overflow: "hidden"
 	}
 
 	const getWorkflowExecution = (id) => {
@@ -508,6 +535,25 @@ const MyView = (props) => {
 		});
 	}
 
+	const getWorkFlowMeta = (data) => {
+		let schedules = 0
+		let webhooks = 0
+		let webhookImg = ""
+		let scheduleImg = "" 
+		if (data.triggers !== undefined && data.triggers !== null && data.triggers.length > 0) {
+			for (let key in data.triggers) {
+				if (data.triggers[key].app_name === "Webhook") {
+					webhooks += 1
+					webhookImg = data.triggers[key].large_image
+				} else if (data.triggers[key].app_name === "Schedule") {
+					schedules += 1
+					scheduleImg = data.triggers[key].large_image
+				}
+			}
+		}
+		return [schedules, webhooks, webhookImg, scheduleImg];
+	}
+
 	// dropdown with copy etc I guess
 	const WorkflowPaper = (props) => {
   	const { data } = props;
@@ -530,21 +576,8 @@ const MyView = (props) => {
 		}
 
 		const actions = data.actions !== null ? data.actions.length : 0
-		var schedules = 0
-		var webhooks = 0
-		var webhookImg = ""
-		var scheduleImg = "" 
-		if (data.triggers !== undefined && data.triggers !== null && data.triggers.length > 0) {
-			for (var key in data.triggers) {
-				if (data.triggers[key].app_name === "Webhook") {
-					webhooks += 1
-					webhookImg = data.triggers[key].large_image
-				} else if (data.triggers[key].app_name === "Schedule") {
-					schedules += 1
-					scheduleImg = data.triggers[key].large_image
-				}
-			}
-		}
+		
+		const [schedules, webhooks] = getWorkFlowMeta(data);
 
 		const imgSize = 25
 		return (
@@ -570,7 +603,7 @@ const MyView = (props) => {
 								</Typography>
 							</div>
 						</Grid>
-						<Grid item style={{flex: "1", display: "flex", width: "150px", justifyContent: "space-between", overflow: "hidden",}}>
+						<Grid item style={workFlowActionStyle}>
 							<Tooltip color="primary" title="Edit workflow" placement="bottom">
 								<BubbleChartIcon/>
 							</Tooltip>
@@ -1187,6 +1220,16 @@ borderRadius: "4px", color: "black", height: "30px", "width": "30px", fontSize: 
 
 		const workflowButtons = 
 			<span>
+				{view === "grid" && (
+				<Tooltip color="primary" title={"List View"} placement="top">
+					<Button color="primary" variant="text" onClick={() => setView("list")}><ListIcon /></Button>
+				</Tooltip>
+				)}
+				{view === "list" && (
+				<Tooltip color="primary" title={"Grid View"} placement="top">
+					<Button color="primary" variant="text" onClick={() => setView("grid")}><GridOnIcon /></Button>
+				</Tooltip>
+				)}
 				{workflows.length > 0 ?
 					<Tooltip color="primary" title={"Create new workflow"} placement="top">
 						<Button color="primary" style={{}} variant="text" onClick={() => setModalOpen(true)}><AddIcon /></Button> 				
@@ -1213,6 +1256,120 @@ borderRadius: "4px", color: "black", height: "30px", "width": "30px", fontSize: 
 					</Button> 				
 				</Tooltip>
 			</span>
+
+		const useStyles = makeStyles((theme) => ({
+			root: {
+			  border: 0,
+			  '& .MuiDataGrid-columnsContainer': {
+				backgroundColor: theme.palette.type === 'light' ? '#fafafa' : '#1d1d1d',
+			  },
+			  '& .MuiDataGrid-iconSeparator': {
+				display: 'none',
+			  },
+			  '& .MuiDataGrid-colCell, .MuiDataGrid-cell': {
+				borderRight: `1px solid ${
+				  theme.palette.type === 'light' ? 'white' : '#303030'
+				}`,
+			  },
+			  '& .MuiDataGrid-columnsContainer, .MuiDataGrid-cell': {
+				borderBottom: `1px solid ${
+				  theme.palette.type === 'light' ? '#f0f0f0' : '#303030'
+				}`,
+			  },
+			  '& .MuiDataGrid-cell': {
+				color:
+				  theme.palette.type === 'light'
+					? 'white'
+					: 'rgba(255,255,255,0.65)',
+			  },
+			  '& .MuiPaginationItem-root, .MuiTablePagination-actions, .MuiTablePagination-caption': {
+				borderRadius: 0,
+				color: "white",
+			  },
+			},
+		  }));
+		const classes = useStyles();
+
+		const WorkflowGridView = () => {
+			let workflowData = "";
+			if (workflows.length > 0) {
+				const columns = [
+					{ field: 'id', headerName: 'ID', width: 70, sortable: false, },
+					{ field: 'title', headerName: 'Title', width: 330, },
+					{ field: 'actions', headerName: 'Actions', width: 200, sortable: false, 
+						disableClickEventBubbling: true,
+						renderCell: (params) => {
+							const data = params.row.record;
+							let [schedules, webhooks] = getWorkFlowMeta(data);
+
+							return <Grid item>
+									<Link to={"/workflows/"+data.id}>
+											<EditIcon style={{background: "#F85A3E",
+	boxShadow: "0px 1px 2px rgba(0, 0, 0, 0.16), 0px 2px 4px rgba(0, 0, 0, 0.12), 0px 1px 8px rgba(0, 0, 0, 0.1)",
+	borderRadius: "4px", color: "black", height: "20px", "width": "20px", fontSize: "small"}} />
+									</Link>
+									<Tooltip color="primary" title="Edit workflow" placement="bottom">
+										<BubbleChartIcon/>
+									</Tooltip>
+									<Tooltip color="primary" title="Execute workflow" placement="bottom">
+										<PlayArrowIcon color="secondary" disabled={!data.is_valid} onClick={() => executeWorkflow(data.id)} />
+									</Tooltip>
+									<Tooltip color="primary" title={`Actions: ${data.actions.length}`} placement="bottom">
+										<AppsIcon />
+									</Tooltip>
+									{webhooks > 0 ? 
+										<Tooltip color="primary" title={`Webhooks: ${webhooks}`} placement="bottom">
+											<RestoreIcon />
+										</Tooltip>
+									: null}
+									{schedules > 0 ? 
+										<Tooltip color="primary" title={`Schedules: ${schedules}`} placement="bottom">
+											<RestoreIcon />
+										</Tooltip>
+									: null}
+								</Grid>
+							}
+					},
+					{ field: 'tags', headerName: 'Tags', width: 390, sortable: false, 
+						disableClickEventBubbling: true,
+						renderCell: (params) => {
+							const data = params.row.record;
+							return <Grid item>
+										{data.tags !== undefined ?
+											data.tags.map((tag, index) => {
+												if (index >= 3) {
+													return null
+												}
+												return (
+													<Chip
+														key={index}
+														style={{height: 30, marginRight: 5, marginTop: 2, cursor: "pointer",}}
+														label={tag}
+														variant="outlined"
+														color="primary"
+													/>
+												)
+											})
+										: null}
+									</Grid>
+							}
+						},
+				];
+				let rows = [];
+				rows = workflows.map((data, index) => {
+					let obj = {"id":index+1, "title":data.name, "record":data,};
+					return obj;
+				});
+				workflowData = <DataGrid color="primary" className={classes.root} rows={rows} columns={columns} pageSize={5} checkboxSelection autoHeight density="standard" components={{
+					Toolbar: GridToolbar,
+				  }} />
+			}
+			return (
+				<div style={gridContainer}>
+					{workflowData}
+				</div>	
+			);
+		}	
 
 		const WorkflowView = () => {
 			if (workflows.length === 0) {
@@ -1287,18 +1444,25 @@ borderRadius: "4px", color: "black", height: "30px", "width": "30px", fontSize: 
 						</div>
 					</div>
 
-					<div style={paperAppContainer}>
-						{workflows.map((data, index) => {
-							return (
-								<WorkflowPaper key={index} data={data} />
-							)
-						})}
-					</div>
+					{view === "grid" && (
+						<div style={paperAppContainer}>
+							{workflows.map((data, index) => {
+								return (
+									<WorkflowPaper key={index} data={data} />
+								)
+							})}
+						</div>
+					)}
+					
+					{view === "list" && (
+						<WorkflowGridView />
+					)}
+
 				</div>
 			</div>
 		)
 	}
-
+	
 	const importWorkflowsFromUrl = (url) => {
 		console.log("IMPORT WORKFLOWS FROM ", downloadUrl)
 
