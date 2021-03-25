@@ -4395,7 +4395,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	if test.Editing {
 		// Quick verification test
 		ctx := context.Background()
-		app, err := shuffle.GetApp(ctx, test.Id)
+		app, err := shuffle.GetApp(ctx, test.Id, user)
 		if err != nil {
 			log.Printf("Error getting app when editing: %s", app.Name)
 			resp.WriteHeader(401)
@@ -4748,7 +4748,7 @@ func handleAppHotload(ctx context.Context, location string, forceUpdate bool) er
 	shuffle.DeleteCache(ctx, cacheKey)
 	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
 	shuffle.DeleteCache(ctx, cacheKey)
-	shuffle.DeleteCache(ctx, fmt.Sprintf("apps_%s", user.Id))
+	//shuffle.DeleteCache(ctx, fmt.Sprintf("apps_%s", user.Id))
 
 	return nil
 }
@@ -5562,7 +5562,7 @@ func runInit(ctx context.Context) {
 
 	// Getting apps to see if we should initialize a test
 	log.Printf("Getting remote workflow apps")
-	workflowapps, err := shuffle.GetPrioritizedApps(ctx, user)
+	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 500)
 	if err != nil {
 		log.Printf("Failed getting apps (runInit): %s", err)
 	} else if err == nil && len(workflowapps) > 0 {

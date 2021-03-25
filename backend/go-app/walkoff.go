@@ -3466,7 +3466,7 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 
 	ctx := context.Background()
 	log.Printf("ID: %s", fileId)
-	app, err := shuffle.GetApp(ctx, fileId)
+	app, err := shuffle.GetApp(ctx, fileId, user)
 	if err != nil {
 		log.Printf("Error getting app (delete) %s: %s", fileId, err)
 		resp.WriteHeader(401)
@@ -3618,7 +3618,7 @@ func getWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
 		fileId = location[4]
 	}
 
-	app, err := shuffle.GetApp(ctx, fileId)
+	app, err := shuffle.GetApp(ctx, fileId, shuffle.User{})
 	if err != nil {
 		log.Printf("[WARNING] Error getting app %s (app config): %s", fileId, err)
 		resp.WriteHeader(401)

@@ -2,8 +2,8 @@ module shuffle
 
 go 1.13
 
-replace github.com/frikky/shuffle-shared => ../../../../git/shuffle-shared
-replace github.com/frikky/kin-openapi => ../../../../git/kin-openapi
+//replace github.com/frikky/shuffle-shared => ../../../../git/shuffle-shared
+//replace github.com/frikky/kin-openapi => ../../../../git/kin-openapi
 
 require (
 	cloud.google.com/go v0.75.0
@@ -18,7 +18,7 @@ require (
 	github.com/docker/docker v1.13.1
 	github.com/docker/go-connections v0.4.0
 	github.com/docker/go-units v0.4.0 // indirect
-	github.com/frikky/shuffle-shared v0.0.12 // indirect
+	github.com/frikky/shuffle-shared v0.0.15
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-git/go-billy/v5 v5.0.0
 	github.com/go-git/go-git/v5 v5.0.0
