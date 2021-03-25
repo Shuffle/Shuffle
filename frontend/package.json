@@ -5,6 +5,7 @@
   "private": true,
   "dependencies": {
     "@material-ui/core": "^4.5.2",
+    "@material-ui/data-grid": "^4.0.0-alpha.22",
     "@material-ui/icons": "^4.5.1",
     "@material-ui/styles": "^4.5.2",
     "@use-it/interval": "^1.0.0",
