@@ -92,8 +92,7 @@ const AngularWorkflow = (props) => {
 	const theme = useTheme();
 
 	const [bodyWidth, bodyHeight] = useWindowSize();
-	const appBarSize = 74
-	const headerSize = 60
+	const appBarSize = 75
 
 	var to_be_copied = ""
 	const [cystyle, ] = useState(cytoscapestyle) 
@@ -124,6 +123,7 @@ const AngularWorkflow = (props) => {
 	const [newVariableDescription, setNewVariableDescription] = React.useState("");
 	const [newVariableValue, setNewVariableValue] = React.useState("");
 	const [workflowDone, setWorkflowDone] = React.useState(false)
+	const [authLoaded, setAuthLoaded] = React.useState(false)
 	const [localFirstrequest, setLocalFirstrequest] = React.useState(true)
 	const [requiresAuthentication, setRequiresAuthentication] = React.useState(false)
 	const [rightSideBarOpen, setRightSideBarOpen] = React.useState(false)
@@ -1002,7 +1002,6 @@ const AngularWorkflow = (props) => {
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for apps :O!")
-				return
 			}
 
 			return response.json()
@@ -1018,18 +1017,27 @@ const AngularWorkflow = (props) => {
 					newauth.push(responseJson.data[key])
 				}
 
-				if (reset === true) {
-					console.log("APP RESET = reset cy")
+				if (cy !== undefined) {
+					console.log("NEW AUTH = reset cy's onnodeselect")
+
+					// Remove the old listener for select, run with new one 
+					cy.removeListener('select')
+
 					cy.on('select', 'node', (e) => onNodeSelect(e, newauth))
+					cy.on('select', 'edge', (e) => onEdgeSelect(e))
 				}
+
 				setAppAuthentication(newauth)
+				setAuthLoaded(true)
 			} else {
+				setAuthLoaded(true)
 				alert.error("Failed getting authentications")
 			}
 		})
 		.catch(error => {
-			alert.error(error.toString())
-		});
+			setAuthLoaded(true)
+			alert.error("Auth loading error: ", error.toString())
+		})
 	}
 
 
@@ -1187,17 +1195,20 @@ const AngularWorkflow = (props) => {
 		setSelectedTrigger({})
 	}
 
+	// Nodeselectbatching:
+	// https://stackoverflow.com/questions/16677856/cy-onselect-callback-only-once
 	const onNodeSelect = (event, newAppAuth) => {
 		const data = event.target.data()
 		setLastSaved(false)
 		
-		const node = cy.getElementById(data.id)
-		if (node.length > 0) {
-			node.addClass('shuffle-hover-highlight')
-		}
+		//const node = cy.getElementById(data.id)
+		//if (node.length > 0) {
+		//	node.addClass('shuffle-hover-highlight')
+		//}
 
 		//const branch = workflow.branches.filter(branch => branch.source_id === data.id || branch.destination_id === data.id)
 		console.log("NODE: ", data)
+		console.log("APPAUTH: ", newAppAuth)
 		//console.log("BRANCHES: ", branch)
 
 		if (data.type === "ACTION") {
@@ -1213,13 +1224,14 @@ const AngularWorkflow = (props) => {
 				return
 			}
 
-			setSelectedAction(curaction)
 
 			const curapp = apps.find(a => a.name === curaction.app_name && a.app_version === curaction.app_version)
 			if (!curapp || curapp === undefined) {
-				alert.error("App "+curaction.app_name+" not found. Did someone delete it?")
+				alert.error("App "+curaction.app_name+" not found. Is it activated?")
 				//return
 			} else {
+
+				console.log("AUTHENTICATION: ", curapp.authentication)
 				setRequiresAuthentication(curapp.authentication.required && curapp.authentication.parameters !== undefined && curapp.authentication.parameters !== null)
 				if (curapp.authentication.required) {
 					// Setup auth here :)
@@ -1230,6 +1242,8 @@ const AngularWorkflow = (props) => {
 					}
 
 					var tmpAuth = JSON.parse(JSON.stringify(newAppAuth))
+					console.log("FOUND AUTH: ", tmpAuth)
+
 					//console.log("Checking authentication: ", tmpAuth)
 					for (var key in tmpAuth) {
 						var item = tmpAuth[key]
@@ -1248,6 +1262,7 @@ const AngularWorkflow = (props) => {
 						}
 					}
 
+					console.log("OPTIONS: ", authenticationOptions)
 					curaction.authentication = authenticationOptions
 					//console.log("Authentication: ", authenticationOptions)
 					if (curaction.selectedAuthentication === null || curaction.selectedAuthentication === undefined || curaction.selectedAuthentication.length === "") {
@@ -1260,6 +1275,7 @@ const AngularWorkflow = (props) => {
 				}
 
 				setSelectedApp(curapp)
+				setSelectedAction(curaction)
 			}
 
 			if (environments !== undefined && environments !== null) {
@@ -1271,28 +1287,6 @@ const AngularWorkflow = (props) => {
 				setSelectedActionEnvironment(env)
 			}
 
-
-			/*
-			var params = []
-			const fixedName = "$"+curaction.label.toLowerCase().replace(" ", "_")
-			for (var actionkey in workflow.actions) {
-				if (workflow.actions[actionkey].id === curaction.id) {
-					continue
-				}
-
-				for (var paramkey in workflow.actions[actionkey].parameters) {
-					const param = workflow.actions[actionkey].parameters[paramkey]
-					if (param.value === null || param.value === undefined || !param.value.includes("$")) {
-						continue
-					}
-
-					const innername = param.value.toLowerCase().replace(" ", "_")
-					if (innername.includes(fixedName)) {
-						console.log("FOUND!: ", innername)
-					}
-				}
-			}
-			*/
 		} else if (data.type === "TRIGGER") {
 			//console.log("Should handle trigger "+data.triggertype)
 			//console.log(data)
@@ -1631,7 +1625,12 @@ const AngularWorkflow = (props) => {
 		if (elements.length === 0 && !graphSetup && Object.getOwnPropertyNames(workflow).length > 0) {
 			setGraphSetup(true)
 			setupGraph()
-		} else if (!established && cy !== undefined && apps !== null && apps !== undefined && apps.length > 0 && Object.getOwnPropertyNames(workflow).length > 0){
+		} else if (!established && cy !== undefined && apps !== null && apps !== undefined && apps.length > 0 && Object.getOwnPropertyNames(workflow).length > 0 && authLoaded){
+			//This part has to load LAST, as it's kind of not async. 
+			//This means we need everything else to happen first.
+			console.log("AUTH IN HERE: ", appAuthentication)
+
+
 			setEstablished(true)
 			cy.edgehandles({
 				handleNodes: (el) => el.isNode(),
@@ -2648,9 +2647,9 @@ const AngularWorkflow = (props) => {
 		const [hover, setHover] = React.useState(false)
 
 		// FIXME - add label to apps, as this might be slow with A LOT of apps
-		var newAppname = app.name
-		newAppname = newAppname.replace("_", " ").charAt(0).toUpperCase()+newAppname.substring(1)
 		const maxlen = 24
+		var newAppname = app.name.replace("_", " ", -1)
+		newAppname = newAppname.charAt(0).toUpperCase()+newAppname.substring(1)
 		if (newAppname.length > maxlen) {
 			newAppname = newAppname.slice(0, maxlen)+".."
 		}
@@ -2660,7 +2659,6 @@ const AngularWorkflow = (props) => {
 		const newAppStyle = JSON.parse(JSON.stringify(paperAppStyle))
 		const pixelSize = !hover ? "2px" : "4px"
 		newAppStyle.borderLeft = app.is_valid ? `${pixelSize} solid green` : `${pixelSize} solid orange`
-	
 
 		return (
 			<Draggable 
@@ -3991,7 +3989,7 @@ const AngularWorkflow = (props) => {
 	const rightsidebarStyle = {
 		position: "fixed", 
 		right: 0, 
-		top: headerSize+1,
+		top: appBarSize+1,
 		height: "100%",
 		bottom: 0,
 		minWidth: 350, 
@@ -6537,9 +6535,11 @@ const AngularWorkflow = (props) => {
 	//}}>Execute websocket</Button> 				
 	//
 	
-	const leftView = leftViewOpen ? <div style={{minWidth: leftBarSize, maxWidth: leftBarSize, borderRight: "1px solid rgb(91, 96, 100)"}}>	
-		<HandleLeftView />
-	</div> : 
+	const leftView = leftViewOpen ? 
+		<div style={{minWidth: leftBarSize, maxWidth: leftBarSize, borderRight: "1px solid rgb(91, 96, 100)"}}>	
+			<HandleLeftView />
+		</div> 
+		: 
 		<div style={{minWidth: leftBarSize, maxWidth: leftBarSize, borderRight: "1px solid rgb(91, 96, 100)"}}>	
 			<div style={{cursor: "pointer", height: 20, marginTop: 10, marginLeft: 10}} onClick={() => {
 					setLeftViewOpen(true)
@@ -7172,7 +7172,7 @@ const AngularWorkflow = (props) => {
 					elements={elements} 
 					minZoom={0.35}
 					maxZoom={2.00}
-					style={{width: bodyWidth-leftBarSize-15, height: bodyHeight-appBarSize-1, backgroundColor: surfaceColor}} 
+					style={{width: bodyWidth-leftBarSize-15, height: bodyHeight-appBarSize-5, backgroundColor: surfaceColor}} 
 					stylesheet={cystyle}
 					boxSelectionEnabled={true}
 					autounselectify={false}

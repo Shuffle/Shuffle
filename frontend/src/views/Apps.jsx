@@ -2,8 +2,8 @@ import React, { useEffect } from 'react';
 
 import { useInterval } from 'react-powerhooks';
 
-import {Grid, Select, Paper, Divider, ButtonBase, Button, TextField, FormControl, MenuItem, Tooltip, FormControlLabel, Switch, Input, Breadcrumbs, Chip, Dialog, DialogTitle, DialogActions, DialogContent, CircularProgress} from '@material-ui/core';
-import {Apps as AppsIcon, Cached as CachedIcon, Publish as PublishIcon, CloudDownload as CloudDownloadIcon, Edit as EditIcon, Delete as DeleteIcon} from '@material-ui/icons';
+import {IconButton, Typography, Grid, Select, Paper, Divider, ButtonBase, Button, TextField, FormControl, MenuItem, Tooltip, FormControlLabel, Switch, Input, Breadcrumbs, Chip, Dialog, DialogTitle, DialogActions, DialogContent, CircularProgress} from '@material-ui/core';
+import {OpenInNew as OpenInNewIcon,Apps as AppsIcon, Cached as CachedIcon, Publish as PublishIcon, CloudDownload as CloudDownloadIcon, Edit as EditIcon, Delete as DeleteIcon} from '@material-ui/icons';
 
 import { useTheme } from '@material-ui/core/styles';
 
@@ -607,7 +607,7 @@ const Apps = (props) => {
 
 		//fetch(globalUrl+"/api/v1/get_openapi/"+urlParams.get("id"), 
 		var baseInfo = newAppname.length > 0 ?
-			<div>
+			<div style={{position: "relative"}}>
 				<div style={{display: "flex"}}>
 					<div style={{marginRight: 15, marginTop: 10}}>
 						{imageline}
@@ -618,6 +618,14 @@ const Apps = (props) => {
 						<p style={{marginTop: 5, marginBottom: 0, maxHeight: 150, overflowY: "auto", overflowX: "hidden",}}>{description}</p>	
 					</div>
 				</div>
+				{isCloud ? 
+					<a href={"https://shuffler.io/apps/"+selectedApp.id} style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">
+						<IconButton style={{top: -10, right: 0, position: "absolute", color: "#f85a3e"}} >
+							<OpenInNewIcon style={{}} />
+						</IconButton>
+					</a>
+				: null}
+
 				{activateButton}
 				{(props.userdata !== undefined && (props.userdata.role === "admin" || props.userdata.id === selectedApp.owner) || !selectedApp.generated) ? 
 					<div>
@@ -886,7 +894,7 @@ const Apps = (props) => {
 				<div style={{flex: 1, marginLeft: 10, marginRight: 10}}>
 					<div style={{display: "flex", minHeight: 84.81}}>
 						<div style={{flex: 1}}>
-							<h2>Your apps ({apps.length+searchableApps.length})</h2> 
+							<h2>Activated apps ({apps.length+searchableApps.length})</h2> 
 						</div>
 						{isCloud ? null : 
 						<span>
@@ -959,9 +967,13 @@ const Apps = (props) => {
 								</div>
 							: 
 							<Paper square style={uploadViewPaperStyle}>
-								<h4 style={{margin: 10, }}>
-									Try a broader search term, e.g. http, alert, ticket etc. 
-								</h4>
+								<Typography style={{margin: 10, }}>
+									<span>
+										<Link to={"https://shuffler.io/search"} style={{textDecoration: "none", color: "#f85a3e"}}>	
+											Click here 
+										</Link> to search ALL apps, not just your activated ones.
+									</span>
+								</Typography>
 								<div/>
 
 								{appSearchLoading ? 
