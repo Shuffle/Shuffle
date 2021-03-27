@@ -191,6 +191,45 @@ const Admin = (props) => {
 			});
 	}
 
+	const handleStopOrgSync = (org_id) => {
+		if (org_id === undefined || org_id === null) {
+			alert.error("Couldn't get org "+org_id)
+			return 
+		}
+
+		const data = {}
+
+		const url = globalUrl + '/api/v1/orgs/' + org_id + "/stop_sync";
+		fetch(url, {
+			mode: 'cors',
+			method: 'POST',
+			body: JSON.stringify(data),
+			credentials: 'include',
+			crossDomain: true,
+			withCredentials: true,
+			headers: {
+				'Content-Type': 'application/json; charset=utf-8',
+			},
+		})
+		.then(response => {
+			if (response.status === 200) {
+				console.log("Cloud sync success?")
+				alert.success("Successfully stopped cloud sync")
+			} else {
+				console.log("Cloud sync fail?")
+				alert.error("Failed stopping sync. Try again, and contact support if this persists.")
+			}
+
+			return response.json()
+		})
+    .then((responseJson) => {
+			handleGetOrg(org_id) 
+		})
+		.catch(error => {
+			alert.error("Err: " + error.toString())
+		})
+	}
+
 	const enableCloudSync = (apikey, organization, disableSync) => {
 		setOrgSyncResponse("")
 
@@ -1475,27 +1514,41 @@ const Admin = (props) => {
 								<Typography style={{whiteSpace: "nowrap", marginTop: 25, marginRight: 10}}>
 									Your Apikey 
 								</Typography>
-								<TextField
-									color="primary"
-									style={{backgroundColor: theme.palette.inputColor, }}
-									InputProps={{
-										style: {
-											height: "50px",
-											color: "white",
-											fontSize: "1em",
-										},
-									}}
-									required
-									fullWidth={true}
-									disabled={true}
-									autoComplete="cloud apikey"
-									id="apikey_field"
-									margin="normal"
-									placeholder="Cloud Apikey"
-									variant="outlined"
-									defaultValue={userSettings.apikey}
-								/>
-							</div>
+								<div style={{display: "flex"}}>
+									<TextField
+										color="primary"
+										style={{backgroundColor: theme.palette.inputColor, }}
+										InputProps={{
+											style: {
+												height: "50px",
+												color: "white",
+												fontSize: "1em",
+											},
+										}}
+										required
+										fullWidth={true}
+										disabled={true}
+										autoComplete="cloud apikey"
+										id="apikey_field"
+										margin="normal"
+										placeholder="Cloud Apikey"
+										variant="outlined"
+										defaultValue={userSettings.apikey}
+									/>
+									{selectedOrganization.cloud_sync_active ? 
+										<Button
+											style={{ width: 150, height: 50, marginLeft: 10, marginTop: 17, }}
+											variant="contained"
+											color="primary"
+											onClick={() => {
+												handleStopOrgSync(selectedOrganization.id)
+											}}
+										>
+											Stop Sync	
+										</Button>
+									: null}
+								</div>
+								</div>
 						</div>
 					:
 					<div>

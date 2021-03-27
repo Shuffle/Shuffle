@@ -785,6 +785,10 @@ const AngularWorkflow = (props) => {
 				console.log(responseJson)
 				alert.error("Failed to save: "+responseJson.reason)
 			} else {
+				if (responseJson.new_id !== undefined && responseJson.new_id !== null) {
+					window.location.pathname = "/workflows/"+responseJson.new_id
+				}
+
 				success = true
 				if (responseJson.errors !== undefined) {
 					//console.log(responseJson)
@@ -800,6 +804,7 @@ const AngularWorkflow = (props) => {
 
 					setWorkflow(workflow)
 				}
+
 				//alert.success("Successfully saved workflow")
 				setSavingState(1)
 				setTimeout(() => {
@@ -832,6 +837,11 @@ const AngularWorkflow = (props) => {
 			//alert.error("You might have forgotten to save before executing.")
 			console.log("FIXME: Might have forgotten to save before executing.")
 		}
+
+		if (workflow.public) {
+			alert.info("Save it to get a new version")
+		}
+
 
 		var returncheck = monitorUpdates()
 		if (!returncheck) {
@@ -1041,7 +1051,7 @@ const AngularWorkflow = (props) => {
 		})
 		.catch(error => {
 			setAuthLoaded(true)
-			alert.error("Auth loading error: ", error.toString())
+			alert.error("Auth loading error: "+error.toString())
 		})
 	}
 
@@ -1108,6 +1118,11 @@ const AngularWorkflow = (props) => {
 			}
 			if (responseJson.errors === undefined) {
 				responseJson.errors = []
+			}
+
+			if (responseJson.public) {
+				alert.info("This workflow is public. You'll have to save it to make it your own!") 
+				setLastSaved(false)
 			}
 
 			setWorkflow(responseJson)
@@ -6256,6 +6271,14 @@ const AngularWorkflow = (props) => {
 						<h2 style={{margin: 0,}}>
 							{workflow.name}
 						</h2>
+
+						{workflow.public ? 
+							<h2 style={{margin: 0,}}>
+								Public Workflow PREVIEW
+							</h2>
+							:
+							null
+						}
 					</Breadcrumbs>
 				</div>
 			</div>
@@ -6380,7 +6403,7 @@ const AngularWorkflow = (props) => {
 				</Menu>
 				<Tooltip color="secondary" title="Workflow settings" placement="top-start">
 					<span>	
-					<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={(event) => {
+					<Button disabled={workflow.public} color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={(event) => {
 						setShowShuffleMenu(!showShuffleMenu)
 						setNewAnchor(event.currentTarget)
 					}}>
@@ -6407,9 +6430,9 @@ const AngularWorkflow = (props) => {
 				</span>	
 			</Tooltip>
 			:
-			<Tooltip color="primary" title="Test execution" placement="top">
+			<Tooltip color="primary" title="Test Execution" placement="top">
 				<span>
-					<Button disabled={executionRequestStarted || !workflow.isValid} style={{height: boxSize, width: boxSize}} color="primary" variant="contained" onClick={() => {
+					<Button disabled={workflow.public || executionRequestStarted || !workflow.isValid} style={{height: boxSize, width: boxSize}} color="primary" variant="contained" onClick={() => {
 						executeWorkflow(executionText, workflow.start)
 					}}>
 						<PlayArrowIcon style={{ fontSize: 60}} />
@@ -6425,6 +6448,7 @@ const AngularWorkflow = (props) => {
 						<TextField
 							id="execution_argument_input_field"
 							style={textFieldStyle} 
+							disabled={workflow.public}
 							InputProps={{
 								style: innerTextfieldStyle, 
 							}}
@@ -6461,7 +6485,7 @@ const AngularWorkflow = (props) => {
 					</Tooltip>
 					<Tooltip color="secondary" title="Show executions" placement="top-start">
 						<span>
-						<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={() => {
+						<Button disabled={workflow.public} color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={() => {
 							setExecutionModalOpen(true)
 							getWorkflowExecution(props.match.params.key, "")
 						}}>

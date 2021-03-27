@@ -1894,211 +1894,6 @@ func getWorkflowLocal(fileId string, request *http.Request) ([]byte, error) {
 	return body, nil
 }
 
-func abortExecution(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	//log.Printf("\n\nINSIDE ABORT\n\n")
-
-	location := strings.Split(request.URL.String(), "/")
-	var fileId string
-	if location[1] == "api" {
-		if len(location) <= 4 {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		fileId = location[4]
-	}
-
-	if len(fileId) != 36 {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Workflow ID to abort is not valid"}`))
-		return
-	}
-
-	executionId := location[6]
-	if len(executionId) != 36 {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "ExecutionID not valid"}`))
-		return
-	}
-
-	ctx := context.Background()
-	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, executionId)
-	if err != nil {
-		log.Printf("[ERROR] Failed getting execution (abort) %s: %s", executionId, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting execution ID %s because it doesn't exist (abort)."}`, executionId)))
-		return
-	}
-
-	apikey := request.Header.Get("Authorization")
-	parsedKey := ""
-	if strings.HasPrefix(apikey, "Bearer ") {
-		apikeyCheck := strings.Split(apikey, " ")
-		if len(apikeyCheck) == 2 {
-			parsedKey = apikeyCheck[1]
-		}
-	}
-
-	if workflowExecution.Authorization != parsedKey {
-		// FIXME: Check the execution if this fails.
-		user, err := shuffle.HandleApiAuthentication(resp, request)
-		if err != nil {
-			log.Printf("Api authentication failed in abort workflow: %s", err)
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		// FIXME - have a check for org etc too..
-		if user.Id != workflowExecution.Workflow.Owner {
-			log.Printf("[INFO] Wrong user (%s) for workflowexecution workflow %s", user.Username, workflowExecution.Workflow.ID)
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-	} else {
-		//log.Printf("[INFO] API key to abort/finish execution %s is correct.", executionId)
-	}
-
-	if workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" || workflowExecution.Status == "FINISHED" {
-		log.Printf("[INFO] Stopped execution of %s with status %s", executionId, workflowExecution.Status)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Status for %s is %s, which can't be aborted."}`, executionId, workflowExecution.Status)))
-		return
-	}
-
-	topic := "workflowexecution"
-
-	workflowExecution.CompletedAt = int64(time.Now().Unix())
-	workflowExecution.Status = "ABORTED"
-	log.Printf("[INFO] Running shutdown of %s", workflowExecution.ExecutionId)
-
-	lastResult := ""
-	newResults := []shuffle.ActionResult{}
-	// type ActionResult struct {
-	for _, result := range workflowExecution.Results {
-		if result.Status == "EXECUTING" {
-			result.Status = "ABORTED"
-			result.Result = "Aborted because of error in another node (1)"
-		}
-
-		if len(result.Result) > 0 {
-			lastResult = result.Result
-		}
-
-		newResults = append(newResults, result)
-	}
-
-	workflowExecution.Results = newResults
-	if len(workflowExecution.Result) == 0 {
-		workflowExecution.Result = lastResult
-	}
-
-	addResult := true
-	for _, result := range workflowExecution.Results {
-		if result.Status != "SKIPPED" {
-			addResult = false
-		}
-	}
-
-	extra := 0
-	for _, trigger := range workflowExecution.Workflow.Triggers {
-		//log.Printf("Appname trigger (0): %s", trigger.AppName)
-		if trigger.AppName == "User Input" || trigger.AppName == "Shuffle Workflow" {
-			extra += 1
-		}
-	}
-
-	parsedReason := "An error occurred during execution of this node"
-	reason, reasonok := request.URL.Query()["reason"]
-	if reasonok {
-		parsedReason = reason[0]
-	}
-
-	if len(workflowExecution.Results) == 0 || addResult {
-		newaction := shuffle.Action{
-			ID: workflowExecution.Start,
-		}
-
-		for _, action := range workflowExecution.Workflow.Actions {
-			if action.ID == workflowExecution.Start {
-				newaction = action
-				break
-			}
-		}
-
-		workflowExecution.Results = append(workflowExecution.Results, shuffle.ActionResult{
-			Action:        newaction,
-			ExecutionId:   workflowExecution.ExecutionId,
-			Authorization: workflowExecution.Authorization,
-			Result:        parsedReason,
-			StartedAt:     workflowExecution.StartedAt,
-			CompletedAt:   workflowExecution.StartedAt,
-			Status:        "FAILURE",
-		})
-	} else if len(workflowExecution.Results) >= len(workflowExecution.Workflow.Actions)+extra {
-		log.Printf("[INFO] DONE - Nothing to add during abort!")
-	} else {
-		//log.Printf("VALIDATING INPUT!")
-		node, nodeok := request.URL.Query()["node"]
-		if nodeok {
-			nodeId := node[0]
-			log.Printf("[INFO] Found abort node %s", nodeId)
-			newaction := shuffle.Action{
-				ID: nodeId,
-			}
-
-			for _, action := range workflowExecution.Workflow.Actions {
-				if action.ID == nodeId {
-					newaction = action
-					break
-				}
-			}
-
-			workflowExecution.Results = append(workflowExecution.Results, shuffle.ActionResult{
-				Action:        newaction,
-				ExecutionId:   workflowExecution.ExecutionId,
-				Authorization: workflowExecution.Authorization,
-				Result:        parsedReason,
-				StartedAt:     workflowExecution.StartedAt,
-				CompletedAt:   workflowExecution.StartedAt,
-				Status:        "FAILURE",
-			})
-		}
-	}
-
-	err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
-	if err != nil {
-		log.Printf("Error saving workflow execution for updates when aborting %s: %s", topic, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed setting workflowexecution status to abort"}`)))
-		return
-	}
-
-	err = increaseStatisticsField(ctx, "workflow_executions_aborted", workflowExecution.Workflow.ID, 1, workflowExecution.ExecutionOrg)
-	if err != nil {
-		log.Printf("Failed to increase aborted execution stats: %s", err)
-	}
-
-	// FIXME - allowed to edit it? idk
-	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
-
-	// Not sure what's up here
-	//if workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
-	//	log.Printf("Workflowexecution is already aborted. No further action can be taken")
-	//	resp.WriteHeader(401)
-	//	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflowexecution is aborted because of %s with result %s and status %s"}`, workflowExecution.LastNode, workflowExecution.Result, workflowExecution.Status)))
-	//	return
-	//}
-}
-
 //// New execution with firestore
 
 func cleanupExecutions(resp http.ResponseWriter, request *http.Request) {
@@ -3002,11 +2797,10 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("Schedule: %#v", schedule)
+	//log.Printf("Schedule: %#v", schedule)
 
 	if schedule.Environment == "cloud" {
 		log.Printf("[INFO] Should STOP a cloud schedule for workflow %s with schedule ID %s", fileId, scheduleId)
-		// https://shuffler.io/v1/hooks/webhook_80184973-3e82-4852-842e-0290f7f34d7c
 		org, err := shuffle.GetOrg(ctx, user.ActiveOrg.Id)
 		if err != nil {
 			log.Printf("Failed finding org %s: %s", org.Id, err)
@@ -3015,7 +2809,7 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 
 		// 1. Send request to cloud
 		// 2. Remove schedule if success
-		action := CloudSyncJob{
+		action := shuffle.CloudSyncJob{
 			Type:          "schedule",
 			Action:        "stop",
 			OrgId:         org.Id,
@@ -3328,7 +3122,6 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	if schedule.Environment == "cloud" {
 		log.Printf("[INFO] Should START a cloud schedule for workflow %s with schedule ID %s", workflow.ID, schedule.Id)
-		// https://shuffler.io/v1/hooks/webhook_80184973-3e82-4852-842e-0290f7f34d7c
 		org, err := shuffle.GetOrg(ctx, user.ActiveOrg.Id)
 		if err != nil {
 			log.Printf("Failed finding org %s: %s", org.Id, err)
@@ -3339,7 +3132,7 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 		// 2 = schedule (cron, frequency)
 		// 3 = workflowId
 		// 4 = execution argument
-		action := CloudSyncJob{
+		action := shuffle.CloudSyncJob{
 			Type:          "schedule",
 			Action:        "start",
 			OrgId:         org.Id,
@@ -5592,123 +5385,6 @@ func handleStopHook(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(`{"success": true, "reason": "Stopped webhook"}`))
 }
 
-func handleDeleteHook(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	user, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("Api authentication failed in set new workflowhandler: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	location := strings.Split(request.URL.String(), "/")
-
-	var fileId string
-	if location[1] == "api" {
-		if len(location) <= 4 {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		fileId = location[4]
-	}
-
-	if len(fileId) != 36 {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Workflow ID when deleting hook is not valid"}`))
-		return
-	}
-
-	ctx := context.Background()
-	hook, err := getHook(ctx, fileId)
-	if err != nil {
-		log.Printf("Failed getting hook %s (delete): %s", fileId, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	if user.Id != hook.Owner && user.ActiveOrg.Id != hook.OrgId {
-		log.Printf("Wrong user (%s) for workflow %s", user.Username, hook.Id)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	if len(hook.Workflows) > 0 {
-		//err = increaseStatisticsField(ctx, "total_workflow_triggers", hook.Workflows[0], -1, user.ActiveOrg.Id)
-		//if err != nil {
-		//	log.Printf("Failed to increase total workflows: %s", err)
-		//}
-	}
-
-	hook.Status = "stopped"
-	err = setHook(ctx, *hook)
-	if err != nil {
-		log.Printf("Failed setting hook: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	log.Printf("Hook: %#v", hook)
-	if hook.Environment == "cloud" {
-		log.Printf("[INFO] Should STOP cloud webhook https://shuffler.io/api/v1/hooks/webhook_%s", hook.Id)
-		org, err := shuffle.GetOrg(ctx, user.ActiveOrg.Id)
-		if err != nil {
-			log.Printf("Failed finding org %s: %s", org.Id, err)
-			return
-		}
-
-		action := CloudSyncJob{
-			Type:          "webhook",
-			Action:        "stop",
-			OrgId:         org.Id,
-			PrimaryItemId: hook.Id,
-		}
-
-		if len(hook.Workflows) > 0 {
-			action.SecondaryItem = hook.Workflows[0]
-		}
-
-		err = executeCloudAction(action, org.SyncConfig.Apikey)
-		if err != nil {
-			log.Printf("Failed cloud action STOP execution: %s", err)
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-			return
-		}
-		// https://shuffler.io/v1/hooks/webhook_80184973-3e82-4852-842e-0290f7f34d7c
-	}
-
-	// This is here to force stop and remove the old webhook
-	//image := "webhook"
-	//err = removeWebhookFunction(ctx, fileId)
-	//if err != nil {
-	//	log.Printf("Function removal issue for %s-%s: %s", image, fileId, err)
-	//	if strings.Contains(err.Error(), "does not exist") {
-	//		resp.WriteHeader(200)
-	//		resp.Write([]byte(`{"success": true, "reason": "Stopped webhook"}`))
-
-	//	} else {
-	//		resp.WriteHeader(401)
-	//		resp.Write([]byte(`{"success": false, "reason": "Couldn't stop webhook, please try again later"}`))
-	//	}
-
-	//	return
-	//}
-
-	log.Printf("Successfully deleted webhook %s", fileId)
-	resp.WriteHeader(200)
-	resp.Write([]byte(`{"success": true, "reason": "Stopped webhook"}`))
-}
-
 func removeWebhookFunction(ctx context.Context, hookid string) error {
 	service, err := cloudfunctions.NewService(ctx)
 	if err != nil {
@@ -5794,7 +5470,7 @@ func handleStartHook(resp http.ResponseWriter, request *http.Request) {
 
 	environmentVariables := map[string]string{
 		"FUNCTION_APIKEY": user.ApiKey,
-		"CALLBACKURL":     "https://shuffler.io",
+		"CALLBACKURL":     syncUrl,
 		"HOOKID":          fileId,
 	}
 
@@ -5874,7 +5550,7 @@ func handleUserInput(trigger shuffle.Trigger, organizationId string, workflowId 
 	ctx := context.Background()
 	startNode := trigger.ID
 	if strings.Contains(triggerType, "email") {
-		action := CloudSyncJob{
+		action := shuffle.CloudSyncJob{
 			Type:          "user_input",
 			Action:        "send_email",
 			OrgId:         organizationId,
@@ -5900,7 +5576,7 @@ func handleUserInput(trigger shuffle.Trigger, organizationId string, workflowId 
 		log.Printf("Should send email to %s during execution.", email)
 	}
 	if strings.Contains(triggerType, "sms") {
-		action := CloudSyncJob{
+		action := shuffle.CloudSyncJob{
 			Type:          "user_input",
 			Action:        "send_sms",
 			OrgId:         organizationId,

@@ -82,6 +82,7 @@ const Workflows = (props) => {
 	const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
 	const [editingWorkflow, setEditingWorkflow] = React.useState({})
 	const [executionLoading, setExecutionLoading] = React.useState(false)
+	const [importLoading, setImportLoading] = React.useState(false)
 	const [isDropzone, setIsDropzone] = React.useState(false);
 	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" 
 
@@ -390,10 +391,7 @@ const Workflows = (props) => {
 		}
 	}
 
-	const exportWorkflow = (data) => {
-		console.log("export")
-		let exportFileDefaultName = data.name+'.json';
-
+	const sanitizeWorkflow = (data) => {
 		data["owner"] = ""
 		console.log(data)
 		if (data.triggers !== null && data.triggers !== undefined) {
@@ -413,16 +411,17 @@ const Workflows = (props) => {
 				for (var branchkey in data.branches) {
 					const branch = data.branches[branchkey]
 					if (branch.source_id === trigger.id) {
-						console.log("CHANGING SOURCE ID")
+						//console.log("CHANGING SOURCE ID")
 						branch.source_id = newId
 					} 
 
 					if (branch.destination_id === trigger.id) {
-						console.log("CHANGING DESTINATION ID")
+						//console.log("CHANGING DESTINATION ID")
 						branch.destination_id = newId
 					}
 				}
 
+				trigger.environment = isCloud ? "cloud" : "Shuffle"
 				trigger.id = newId
 			}
 		}
@@ -458,6 +457,7 @@ const Workflows = (props) => {
 					}
 				}
 
+				data.actions[key].environment = isCloud ? "cloud" : "Shuffle"
 				data.actions[key].id = newId
 			}
 		}
@@ -482,8 +482,15 @@ const Workflows = (props) => {
 		// These are backwards.. True = saved before. Very confuse.
 		data["previously_saved"] = false
 		data["first_save"] = false
-		data.execution_org = {"id": ""}
 		console.log(data)
+
+		return data
+	}
+
+	const exportWorkflow = (data) => {
+		console.log("export")
+		let exportFileDefaultName = data.name+'.json';
+		data = sanitizeWorkflow(data)	
 
 		let dataStr = JSON.stringify(data)
 		let dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
@@ -491,6 +498,44 @@ const Workflows = (props) => {
 		linkElement.setAttribute('href', dataUri);
 		linkElement.setAttribute('download', exportFileDefaultName);
 		linkElement.click();
+	}
+
+	const publishWorkflow = (data) => {
+		data = JSON.parse(JSON.stringify(data))
+		data = sanitizeWorkflow(data) 
+		alert.info("Sanitizing and publishing "+data.name)
+
+		const url = isCloud ? globalUrl : "https://shuffler.io"
+
+		// This ALWAYS talks to Shuffle cloud
+		fetch(url+"/api/v1/workflows/"+data.id+"/publish", {
+    	  method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json',
+				},
+				body: JSON.stringify(data),
+	  		credentials: "include",
+    	})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for workflow publish :O!")
+			} else {
+				alert.success("Successfully published workflow")
+			}
+
+			return response.json()
+		})
+    .then((responseJson) => {
+			if (responseJson.reason !== undefined) {
+				alert.error("Failed publishing: ", responseJson.reason) 
+			}
+
+			getAvailableWorkflows()
+    })
+		.catch(error => {
+			alert.error(error.toString())
+		})
 	}
 
 	const copyWorkflow = (data) => {
@@ -564,9 +609,14 @@ const Workflows = (props) => {
 			boxWidth = "4px"
 		}
 
-		var boxColor = "orange"
+		var boxColor = "#f85a3e"
 		if (data.is_valid) {
 			boxColor = "green"
+		}
+
+		//console.log(data)
+		if (!data.previously_saved) {
+			boxColor = "#f85a3e"
 		}
 
 		const menuClick = (event) => {
@@ -640,10 +690,16 @@ const Workflows = (props) => {
 										setNewWorkflowTags(JSON.parse(JSON.stringify(data.tags)))
 									}
 								}} key={"change"}>{"Change details"}</MenuItem>
+								{isCloud ? 
+									<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
+										console.log("Should publish", data)
+										publishWorkflow(data)
+									}} key={"publish"}>{"Publish Workflow"}</MenuItem>
+								: null}
 								<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
 									copyWorkflow(data)		
 									setOpen(false)
-								}} key={"copy"}>{"Copy"}</MenuItem>
+								}} key={"duplicate"}>{"Duplicate Workflow"}</MenuItem>
 								<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
 									exportWorkflow(data)		
 									setOpen(false)
@@ -1005,7 +1061,7 @@ const Workflows = (props) => {
 		if (editingWorkflow.id !== undefined) {
 			console.log("Building original workflow")
 			method = "PUT"
-			extraData = "/"+editingWorkflow.id
+			extraData = "/"+editingWorkflow.id+"?skip_save=true"
 			workflowdata = editingWorkflow
 
 			console.log("REMOVING OWNER")
@@ -1043,6 +1099,7 @@ const Workflows = (props) => {
 			} else if (!redirect) {
 				// Update :)		
 				getAvailableWorkflows()
+				setImportLoading(false)
 			} else { 
 				alert.info("Successfully changed basic info for workflow")
 			}
@@ -1051,12 +1108,15 @@ const Workflows = (props) => {
     })
 		.catch(error => {
 			alert.error(error.toString())
+			setImportLoading(false)
 		});
 	}
 
 
 	const importFiles = (event) => {
 		console.log("Importing!")
+
+		setImportLoading(true)
 		const file = event.target.value
 		if (event.target.files.length > 0) {
 			for (var key in event.target.files) {
@@ -1077,6 +1137,7 @@ const Workflows = (props) => {
 						data = JSON.parse(reader.result)
 					} catch (e) {
 						alert.error("Invalid JSON: "+e)
+						setImportLoading(false)
 						return
 					}
 
@@ -1242,9 +1303,15 @@ const Workflows = (props) => {
 					</Tooltip>
 				: null}
 				<Tooltip color="primary" title={"Import workflows"} placement="top">
-					<Button color="primary" style={{}} variant="text" onClick={() => upload.click()}>
-						<PublishIcon />
-					</Button> 				
+					{importLoading ? 
+						<Button color="primary" style={{}} variant="text" onClick={() => {}}>
+							<CircularProgress style={{maxHeight: 15, maxWidth: 15,}} />
+						</Button> 				
+						: 
+						<Button color="primary" style={{}} variant="text" onClick={() => upload.click()}>
+							<PublishIcon />
+						</Button> 				
+					}
 				</Tooltip>
 				<input hidden type="file" multiple="multiple" ref={(ref) => upload = ref} onChange={importFiles} />
 				{workflows.length > 0 ? 

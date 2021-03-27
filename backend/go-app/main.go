@@ -932,7 +932,7 @@ func createNewUser(username, password, role, apikey string, org shuffle.Org) err
 	neworg, err := shuffle.GetOrg(ctx, org.Id)
 	if err == nil {
 		//neworg.Users = append(neworg.Users, *newUser)
-		err = setOrg(ctx, *neworg, neworg.Id)
+		err = shuffle.SetOrg(ctx, *neworg, neworg.Id)
 		if err != nil {
 			log.Printf("Failed updating org with user %s", newUser.Username)
 		} else {
@@ -1164,7 +1164,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 
 	userInfo, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
-		log.Printf("Api authentication failed in handleInfo: %s", err)
+		log.Printf("[WARNING] Api authentication failed in handleInfo: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -1572,7 +1572,7 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("Handling login of %s", data.Username)
+	log.Printf("[INFO] Handling login of %s", data.Username)
 
 	err = checkUsername(data.Username)
 	if err != nil {
@@ -1674,39 +1674,6 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 	resp.WriteHeader(200)
 	resp.Write([]byte(loginData))
 }
-
-func setOrg(ctx context.Context, org shuffle.Org, id string) error {
-	// clear session_token and API_token for user
-	timeNow := int64(time.Now().Unix())
-	if org.Created == 0 {
-		org.Created = timeNow
-	}
-
-	org.Edited = timeNow
-
-	k := datastore.NameKey("Organizations", id, nil)
-	if _, err := dbclient.Put(ctx, k, &org); err != nil {
-		log.Printf("Failed setting org: %s", err)
-		return err
-	}
-
-	// FIXME: Make this update every user to have the correct org data.
-	//org = fixOrgUser(ctx, &org)
-	//_ = org
-
-	return nil
-}
-
-// ListBooks returns a list of books, ordered by title.
-//func getUser(ctx context.Context, id string) (*User, error) {
-//	key := datastore.NameKey("Users", id, nil)
-//	curUser := &User{}
-//	if err := dbclient.Get(ctx, key, curUser); err != nil {
-//		return &User{}, err
-//	}
-//
-//	return curUser, nil
-//}
 
 // Index = Username
 func DeleteKeys(ctx context.Context, entity string, value []string) error {
@@ -1818,7 +1785,7 @@ func fixOrgUser(ctx context.Context, org *shuffle.Org) *shuffle.Org {
 	//		org.Users = append(org.Users, *user)
 	//	}
 
-	//	err = setOrg(ctx, *org, orgId)
+	//	err = shuffle.SetOrg(ctx, *org, orgId)
 	//	if err != nil {
 	//		log.Printf("Failed setting org %s", orgId)
 	//	}
@@ -1873,7 +1840,7 @@ func fixUserOrg(ctx context.Context, user *shuffle.User) *shuffle.User {
 			org.Users = append(org.Users, *user)
 		}
 
-		err = setOrg(ctx, *org, orgId)
+		err = shuffle.SetOrg(ctx, *org, orgId)
 		if err != nil {
 			log.Printf("Failed setting org %s", orgId)
 		}
@@ -2052,7 +2019,7 @@ func handleSetHook(resp http.ResponseWriter, request *http.Request) {
 
 	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
-		log.Printf("Api authentication failed in set new workflowhandler: %s", err)
+		log.Printf("[INFO] Api authentication failed in set new workflowhandler: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -2362,7 +2329,7 @@ func handleDeleteSchedule(resp http.ResponseWriter, request *http.Request) {
 
 	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
-		log.Printf("Api authentication failed in set new workflowhandler: %s", err)
+		log.Printf("[WARNING] Api authentication failed in set new workflowhandler: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -2616,7 +2583,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	}
 }
 
-func executeCloudAction(action CloudSyncJob, apikey string) error {
+func executeCloudAction(action shuffle.CloudSyncJob, apikey string) error {
 	data, err := json.Marshal(action)
 	if err != nil {
 		log.Printf("Failed cloud webhook action marshalling: %s", err)
@@ -2659,164 +2626,6 @@ func executeCloudAction(action CloudSyncJob, apikey string) error {
 	}
 
 	return nil
-}
-
-// Starts a new webhook
-func handleNewHook(resp http.ResponseWriter, request *http.Request) {
-	cors := shuffle.HandleCors(resp, request)
-	if cors {
-		return
-	}
-
-	user, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("Api authentication failed in set new workflowhandler: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	type requestData struct {
-		Type        string `json:"type"`
-		Description string `json:"description"`
-		Id          string `json:"id"`
-		Name        string `json:"name"`
-		Workflow    string `json:"workflow"`
-		Start       string `json:"start"`
-		Environment string `json:"environment"`
-	}
-
-	body, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		log.Printf("Body data error: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	//log.Printf("Data: %s", string(body))
-
-	ctx := context.Background()
-	var requestdata requestData
-	err = yaml.Unmarshal([]byte(body), &requestdata)
-	if err != nil {
-		log.Printf("Failed unmarshaling inputdata: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-	log.Printf("%#v", requestdata)
-
-	// CBA making a real thing. Already had some code lol
-	newId := requestdata.Id
-	if len(newId) != 36 {
-		log.Printf("Bad ID")
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Invalid ID"}`))
-		return
-	}
-
-	if requestdata.Id == "" || requestdata.Name == "" {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Requires fields id and name can't be empty"}`))
-		return
-
-	}
-
-	validTypes := []string{
-		"webhook",
-	}
-
-	isTypeValid := false
-	for _, thistype := range validTypes {
-		if requestdata.Type == thistype {
-			isTypeValid = true
-			break
-		}
-	}
-
-	if !(isTypeValid) {
-		log.Printf("Type %s is not valid. Try any of these: %s", requestdata.Type, strings.Join(validTypes, ", "))
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	// Let remote endpoint handle access checks (shuffler.io)
-	currentUrl := fmt.Sprintf("https://shuffler.io/api/v1/hooks/webhook_%s", newId)
-	startNode := requestdata.Start
-	if requestdata.Environment == "cloud" {
-		// https://shuffler.io/v1/hooks/webhook_80184973-3e82-4852-842e-0290f7f34d7c
-		log.Printf("[INFO] Should START a cloud webhook for url %s for startnode %s", currentUrl, startNode)
-		org, err := shuffle.GetOrg(ctx, user.ActiveOrg.Id)
-		if err != nil {
-			log.Printf("Failed finding org %s: %s", org.Id, err)
-			return
-		}
-
-		action := CloudSyncJob{
-			Type:          "webhook",
-			Action:        "start",
-			OrgId:         org.Id,
-			PrimaryItemId: newId,
-			SecondaryItem: startNode,
-			ThirdItem:     requestdata.Workflow,
-		}
-
-		err = executeCloudAction(action, org.SyncConfig.Apikey)
-		if err != nil {
-			log.Printf("Failed cloud action START execution: %s", err)
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-			return
-		} else {
-			log.Printf("[INFO] Successfully set up cloud action schedule")
-		}
-	}
-
-	hook := Hook{
-		Id:        newId,
-		Start:     startNode,
-		Workflows: []string{requestdata.Workflow},
-		Info: Info{
-			Name:        requestdata.Name,
-			Description: requestdata.Description,
-			Url:         fmt.Sprintf("https://shuffler.io/api/v1/hooks/webhook_%s", newId),
-		},
-		Type:   "webhook",
-		Owner:  user.Username,
-		Status: "uninitialized",
-		Actions: []HookAction{
-			HookAction{
-				Type:  "workflow",
-				Name:  requestdata.Name,
-				Id:    requestdata.Workflow,
-				Field: "",
-			},
-		},
-		Running:     false,
-		OrgId:       user.ActiveOrg.Id,
-		Environment: requestdata.Environment,
-	}
-
-	hook.Status = "running"
-	hook.Running = true
-	err = setHook(ctx, hook)
-	if err != nil {
-		log.Printf("Failed setting hook: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	err = increaseStatisticsField(ctx, "total_workflow_triggers", requestdata.Workflow, 1, user.ActiveOrg.Id)
-	if err != nil {
-		log.Printf("[INFO] Failed to increase total workflows: %s", err)
-	}
-
-	log.Printf("[INFO] Set up a new hook with ID %s and environment %s", newId, hook.Environment)
-	resp.WriteHeader(200)
-	resp.Write([]byte(`{"success": true}`))
 }
 
 func getSpecificSchedule(resp http.ResponseWriter, request *http.Request) {
@@ -3462,7 +3271,7 @@ func handleGetallHooks(resp http.ResponseWriter, request *http.Request) {
 
 	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
-		log.Printf("Api authentication failed in set new workflowhandler: %s", err)
+		log.Printf("[WARNING] Api authentication failed in set new workflowhandler: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -3532,7 +3341,7 @@ func findAvailablePorts(startRange int64, endRange int64) string {
 func handleSendalert(resp http.ResponseWriter, request *http.Request) {
 	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
-		log.Printf("Api authentication failed in sendalert: %s", err)
+		log.Printf("[WARNING] Api authentication failed in sendalert: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -4753,22 +4562,6 @@ func handleAppHotload(ctx context.Context, location string, forceUpdate bool) er
 	return nil
 }
 
-// Primary = usually an outer ID, e.g. workflow ID
-// Secondary = something to specify what inside workflow to execute
-// Third = Some data to add to it
-type CloudSyncJob struct {
-	Id            string `json:"id" datastore:"id"`
-	Type          string `json:"type" datastore:"type"`
-	Action        string `json:"action" datastore:"action"`
-	OrgId         string `json:"org_id" datastore:"org_id"`
-	PrimaryItemId string `json:"primary_item_id" datastore:"primary_item_id"`
-	SecondaryItem string `json:"secondary_item" datastore:"secondary_item"`
-	ThirdItem     string `json:"third_item" datastore:"third_item"`
-	FourthItem    string `json:"fourth_item" datastore:"fourth_item"`
-	FifthItem     string `json:"fifth_item" datastore:"fifth_item"`
-	Created       string `json:"created" datastore:"created"`
-}
-
 func handleCloudExecutionOnprem(workflowId, startNode, executionSource, executionArgument string) error {
 	ctx := context.Background()
 	// 1. Get the workflow
@@ -4826,7 +4619,7 @@ func handleCloudExecutionOnprem(workflowId, startNode, executionSource, executio
 	return err
 }
 
-func handleCloudJob(job CloudSyncJob) error {
+func handleCloudJob(job shuffle.CloudSyncJob) error {
 	// May need authentication in all of these..?
 
 	log.Printf("[INFO] Handle job with type %s and action %s", job.Type, job.Action)
@@ -4932,7 +4725,7 @@ func handleCloudJob(job CloudSyncJob) error {
 				return err
 			}
 
-			fullUrl := fmt.Sprintf("https://shuffler.io/api/v1/workflows/%s/execute?authorization=%s&start=%s&reference_execution=%s&answer=true", job.PrimaryItemId, job.FourthItem, job.SecondaryItem, job.ThirdItem)
+			fullUrl := fmt.Sprintf("%s/api/v1/workflows/%s/execute?authorization=%s&start=%s&reference_execution=%s&answer=true", syncUrl, job.PrimaryItemId, job.FourthItem, job.SecondaryItem, job.ThirdItem)
 			newRequest, err := http.NewRequest(
 				"GET",
 				fullUrl,
@@ -4997,9 +4790,9 @@ func handleCloudJob(job CloudSyncJob) error {
 // Handles jobs from remote (cloud)
 func remoteOrgJobController(org shuffle.Org, body []byte) error {
 	type retStruct struct {
-		Success bool           `json:"success"`
-		Reason  string         `json:"reason"`
-		Jobs    []CloudSyncJob `json:"jobs"`
+		Success bool                   `json:"success"`
+		Reason  string                 `json:"reason"`
+		Jobs    []shuffle.CloudSyncJob `json:"jobs"`
 	}
 
 	responseData := retStruct{}
@@ -5010,9 +4803,9 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 
 	ctx := context.Background()
 	if !responseData.Success {
-		log.Printf("Should stop org job controller because no success?")
+		log.Printf("[WARNING] Should stop org job controller because no success?")
 
-		if strings.Contains(responseData.Reason, "Bad apikey") || strings.Contains(responseData.Reason, "Error getting the organization") {
+		if strings.Contains(responseData.Reason, "Bad apikey") || strings.Contains(responseData.Reason, "Error getting the organization") || strings.Contains(responseData.Reason, "Organization isn't syncing") {
 			log.Printf("[WARNING] Remote error; Bad apikey or org error. Stopping sync for org: %s", responseData.Reason)
 
 			if value, exists := scheduledOrgs[org.Id]; exists {
@@ -5029,7 +4822,20 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 				org.SyncConfig.Interval = 0
 				org.SyncConfig.Apikey = ""
 				org.CloudSync = false
-				err = setOrg(ctx, *org, org.Id)
+
+				// Just in case
+				org, err = handleStopCloudSync(syncUrl, *org)
+
+				startDate := time.Now().Unix()
+				org.SyncFeatures.Webhook = shuffle.SyncData{Active: false, Type: "trigger", Name: "Webhook", StartDate: startDate}
+				org.SyncFeatures.UserInput = shuffle.SyncData{Active: false, Type: "trigger", Name: "User Input", StartDate: startDate}
+				org.SyncFeatures.EmailTrigger = shuffle.SyncData{Active: false, Type: "action", Name: "Email Trigger", StartDate: startDate}
+				org.SyncFeatures.Schedules = shuffle.SyncData{Active: false, Type: "trigger", Name: "Schedule", StartDate: startDate, Limit: 0}
+				org.SyncFeatures.SendMail = shuffle.SyncData{Active: false, Type: "action", Name: "Send Email", StartDate: startDate, Limit: 0}
+				org.SyncFeatures.SendSms = shuffle.SyncData{Active: false, Type: "action", Name: "Send SMS", StartDate: startDate, Limit: 0}
+				org.CloudSyncActive = false
+
+				err = shuffle.SetOrg(ctx, *org, org.Id)
 				if err != nil {
 					log.Printf("[WARNING] Failed setting organization when stopping sync: %s", err)
 				} else {
@@ -5082,8 +4888,7 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 		return err
 	}
 
-	//log.Printf("Data: %s", respBody)
-
+	//log.Printf("Remote Data: %s", respBody)
 	err = remoteOrgJobController(org, respBody)
 	if err != nil {
 		log.Printf("[ERROR] Failed job controller run for %s: %s", respBody, err)
@@ -5126,7 +4931,7 @@ func runInit(ctx context.Context) {
 					},
 
 					// 15 second timeout
-					Timeout: 15 * time.Second,
+					Timeout: 15 * 15time.Second,
 
 					// don't follow redirect
 					CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -5172,7 +4977,7 @@ func runInit(ctx context.Context) {
 				CloudSync: false,
 			}
 
-			err = setOrg(ctx, newOrg, orgId)
+			err = shuffle.SetOrg(ctx, newOrg, orgId)
 			if err != nil {
 				log.Printf("Failed setting organization: %s", err)
 			} else {
@@ -5219,7 +5024,7 @@ func runInit(ctx context.Context) {
 			}
 
 			if setOrgBool {
-				err = setOrg(ctx, activeOrg, activeOrg.Id)
+				err = shuffle.SetOrg(ctx, activeOrg, activeOrg.Id)
 				if err != nil {
 					log.Printf("Failed setting org %s: %s!", activeOrg.Name, err)
 				} else {
@@ -5741,9 +5546,9 @@ func handleVerifyCloudsync(orgId string) (shuffle.SyncFeatures, error) {
 
 // Actually stops syncing with cloud for an org.
 // Disables potential schedules, removes environments, breaks workflows etc.
-func handleStopCloudSync(syncUrl string, org shuffle.Org) error {
+func handleStopCloudSync(syncUrl string, org shuffle.Org) (*shuffle.Org, error) {
 	if len(org.SyncConfig.Apikey) == 0 {
-		return errors.New(fmt.Sprintf("Couldn't find any sync key to disable org %s", org.Id))
+		return &org, errors.New(fmt.Sprintf("Couldn't find any sync key to disable org %s", org.Id))
 	}
 
 	log.Printf("Should run cloud sync disable for org %s with URL %s and sync key %s", org.Id, syncUrl, org.SyncConfig.Apikey)
@@ -5758,28 +5563,28 @@ func handleStopCloudSync(syncUrl string, org shuffle.Org) error {
 	req.Header.Add("Authorization", fmt.Sprintf(`Bearer %s`, org.SyncConfig.Apikey))
 	newresp, err := client.Do(req)
 	if err != nil {
-		return err
+		return &org, err
 	}
 
 	respBody, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
-		return err
+		return &org, err
 	}
 	log.Printf("Remote disable ret: %s", string(respBody))
 
 	responseData := retStruct{}
 	err = json.Unmarshal(respBody, &responseData)
 	if err != nil {
-		return err
+		return &org, err
 	}
 
 	if newresp.StatusCode != 200 {
-		return errors.New(fmt.Sprintf("Got status code %d when disabling org remotely. Expected 200. Contact support.", newresp.StatusCode))
+		return &org, errors.New(fmt.Sprintf("Got status code %d when disabling org remotely. Expected 200. Contact support.", newresp.StatusCode))
 	}
 
 	if !responseData.Success {
 		//log.Printf("Success reason: %s", responseData.Reason)
-		return errors.New(responseData.Reason)
+		return &org, errors.New(responseData.Reason)
 	}
 
 	log.Printf("Everything is success. Should disable org sync for %s", org.Id)
@@ -5789,18 +5594,18 @@ func handleStopCloudSync(syncUrl string, org shuffle.Org) error {
 	org.SyncFeatures = shuffle.SyncFeatures{}
 	org.SyncConfig = shuffle.SyncConfig{}
 
-	err = setOrg(ctx, org, org.Id)
+	err = shuffle.SetOrg(ctx, org, org.Id)
 	if err != nil {
 		newerror := fmt.Sprintf("ERROR: Failed updating even though there was success: %s", err)
 		log.Printf(newerror)
-		return errors.New(newerror)
+		return &org, errors.New(newerror)
 	}
 
 	var environments []shuffle.Environment
 	q := datastore.NewQuery("Environments").Filter("org_id =", org.Id)
 	_, err = dbclient.GetAll(ctx, q, &environments)
 	if err != nil {
-		return err
+		return &org, err
 	}
 
 	// Don't disable, this will be deleted entirely
@@ -5810,9 +5615,9 @@ func handleStopCloudSync(syncUrl string, org shuffle.Org) error {
 			environment.Archived = true
 			err = setEnvironment(ctx, &environment)
 			if err == nil {
-				log.Printf("Updated cloud environment %s", environment.Name)
+				log.Printf("[INFO] Updated cloud environment %s", environment.Name)
 			} else {
-				log.Printf("Failed to update cloud environment %s", environment.Name)
+				log.Printf("[INFO] Failed to update cloud environment %s", environment.Name)
 			}
 		}
 	}
@@ -5820,12 +5625,12 @@ func handleStopCloudSync(syncUrl string, org shuffle.Org) error {
 	// FIXME: This doesn't work?
 	if value, exists := scheduledOrgs[org.Id]; exists {
 		// Looks like this does the trick? Hurr
-		log.Printf("STOPPING ORG SCHEDULE for: %s", org.Id)
+		log.Printf("[WARNING] STOPPING ORG SCHEDULE for: %s", org.Id)
 
 		value.Lock()
 	}
 
-	return nil
+	return &org, nil
 }
 
 // INFO: https://docs.google.com/drawings/d/1JJebpPeEVEbmH_qsAC6zf9Noygp7PytvesrkhE19QrY/edit
@@ -5885,13 +5690,13 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// FIXME: Check if user is admin of this org
-	log.Printf("Checking org %s", org.Name)
+	//log.Printf("Checking org %s", org.Name)
 	userFound := false
 	admin := false
 	for _, inneruser := range org.Users {
 		if inneruser.Id == user.Id {
 			userFound = true
-			log.Printf("Role: %s", inneruser.Role)
+			//log.Printf("[INFO] Role: %s", inneruser.Role)
 			if inneruser.Role == "admin" {
 				admin = true
 			}
@@ -5923,17 +5728,17 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	apiPath := "/api/v1/cloud/sync/setup"
 	if tmpData.Disable {
 		if !org.CloudSync {
-			log.Printf("Org %s isn't syncing. Can't stop.", org.Id)
+			log.Printf("[WARNING] Org %s isn't syncing. Can't stop.", org.Id)
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Skipped cloud sync setup. Already syncing."}`)))
 			return
 		}
 
-		log.Printf("Should disable sync for org %s", org.Id)
+		log.Printf("[INFO] Should disable sync for org %s", org.Id)
 		apiPath := "/api/v1/cloud/sync/stop"
 		syncPath := fmt.Sprintf("%s%s", syncUrl, apiPath)
 
-		err = handleStopCloudSync(syncPath, *org)
+		_, err = handleStopCloudSync(syncPath, *org)
 		if err != nil {
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
@@ -6027,7 +5832,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	interval := int(responseData.IntervalSeconds)
-	log.Printf("Starting cloud sync on interval %d", interval)
+	log.Printf("[INFO] Starting cloud sync on interval %d", interval)
 	job := func() {
 		err := remoteOrgJobHandler(*org, interval)
 		if err != nil {
@@ -6039,13 +5844,13 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		log.Printf("[CRITICAL] Failed to schedule org: %s", err)
 	} else {
-		log.Printf("Started sync on interval %d for org %s", interval, org.Name)
+		log.Printf("[INFO] Started sync on interval %d for org %s", interval, org.Name)
 		scheduledOrgs[org.Id] = jobret
 	}
 
 	// FIXME: Add this for every feature
 	if org.SyncFeatures.Workflows.Active {
-		log.Printf("Should activate cloud workflows for org %s!", org.Id)
+		log.Printf("[INFO] Should activate cloud workflows for org %s!", org.Id)
 
 		// 1. Find environment
 		// 2. If cloud env found, enable it (un-archive)
@@ -6063,9 +5868,9 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 					environment.Archived = false
 					err = setEnvironment(ctx, &environment)
 					if err == nil {
-						log.Printf("Re-added cloud environment %s", environment.Name)
+						log.Printf("[INFO] Re-added cloud environment %s", environment.Name)
 					} else {
-						log.Printf("Failed to re-enable cloud environment %s", environment.Name)
+						log.Printf("[INFO] Failed to re-enable cloud environment %s", environment.Name)
 					}
 
 					found = true
@@ -6074,7 +5879,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 			}
 
 			if !found {
-				log.Printf("Env for cloud not found. Should add it!")
+				log.Printf("[INFO] Env for cloud not found. Should add it!")
 				newEnv := shuffle.Environment{
 					Name:       "Cloud",
 					Type:       "cloud",
@@ -6096,7 +5901,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	err = setOrg(ctx, *org, org.Id)
+	err = shuffle.SetOrg(ctx, *org, org.Id)
 	if err != nil {
 		log.Printf("ERROR: Failed updating org even though there was success: %s", err)
 		resp.WriteHeader(400)
@@ -6106,7 +5911,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 
 	if responseData.IntervalSeconds > 0 {
 		// FIXME:
-		log.Printf("Should set up interval for %d with session key %s for org %s", responseData.IntervalSeconds, responseData.SessionKey, org.Name)
+		log.Printf("[INFO] Should set up interval for %d with session key %s for org %s", responseData.IntervalSeconds, responseData.SessionKey, org.Name)
 	}
 
 	resp.WriteHeader(200)
@@ -6220,13 +6025,13 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/workflows/{key}/outlook", createOutlookSub).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/outlook/{triggerId}", handleDeleteOutlookSub).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/executions", getWorkflowExecutions).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/{key}/executions/{key}/abort", abortExecution).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/executions/{key}/abort", shuffle.AbortExecution).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}", deleteWorkflow).Methods("DELETE", "OPTIONS")
 
 	// Triggers
-	r.HandleFunc("/api/v1/hooks/new", handleNewHook).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/hooks/new", shuffle.HandleNewHook).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/hooks/{key}", handleWebhookCallback).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/hooks/{key}/delete", handleDeleteHook).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/hooks/{key}/delete", shuffle.HandleDeleteHook).Methods("DELETE", "OPTIONS")
 
 	// OpenAPI configuration
 	r.HandleFunc("/api/v1/verify_swagger", verifySwagger).Methods("POST", "OPTIONS")

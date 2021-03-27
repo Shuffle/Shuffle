@@ -863,7 +863,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 	tagFound := ""
 	for _, image := range images {
 		for _, tag := range image.RepoTags {
-			log.Printf("Image: %s", tag)
+			log.Printf("[INFO] Docker Image: %s", tag)
 
 			if strings.ToLower(tag) == strings.ToLower(version.Name) {
 				img = image

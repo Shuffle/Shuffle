@@ -380,7 +380,7 @@ const Apps = (props) => {
 					}
 
 					if (data.sharing) {
-						setSharingConfiguration("everyone")
+						setSharingConfiguration(isCloud ? "public" : "everyone")
 					} 
 				}
 			}}>
@@ -602,7 +602,7 @@ const Apps = (props) => {
 
 		const userRoles = [
 			"you",
-			"everyone",
+			isCloud ? "public" : "everyone",
 		]
 
 		//fetch(globalUrl+"/api/v1/get_openapi/"+urlParams.get("id"), 
@@ -666,7 +666,7 @@ const Apps = (props) => {
 
 								if (event.target.value === "you") {
 									updateAppField(selectedApp.id, "sharing", false)
-								} else if (event.target.value === "everyone") {
+								} else if (event.target.value === "everyone" || event.target.value === "public") {
 									updateAppField(selectedApp.id, "sharing", true)
 								} else {
 									console.log("Can't handle value for sharing: ", event.target.value)

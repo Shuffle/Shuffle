@@ -817,7 +817,7 @@ func createOutlookSub(resp http.ResponseWriter, request *http.Request) {
 		}
 		log.Printf("[INFO] Starting cloud configuration TO START trigger %s in org %s for workflow %s", trigger.Id, org.Id, trigger.WorkflowId)
 
-		action := CloudSyncJob{
+		action := shuffle.CloudSyncJob{
 			Type:          "outlook",
 			Action:        "start",
 			OrgId:         org.Id,
@@ -1218,7 +1218,7 @@ func handleOutlookSubRemoval(ctx context.Context, user shuffle.User, workflowId,
 		}
 
 		log.Printf("[INFO] Stopping cloud configuration for trigger %s in org %s for workflow %s", trigger.Id, org.Id, trigger.WorkflowId)
-		action := CloudSyncJob{
+		action := shuffle.CloudSyncJob{
 			Type:          "outlook",
 			Action:        "stop",
 			OrgId:         org.Id,
