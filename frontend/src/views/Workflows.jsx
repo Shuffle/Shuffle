@@ -447,12 +447,12 @@ const Workflows = (props) => {
 				for (var branchkey in data.branches) {
 					const branch = data.branches[branchkey]
 					if (branch.source_id === data.actions[key].id) {
-						console.log("CHANGING SOURCE ID IN ACTION")
+						//console.log("CHANGING SOURCE ID IN ACTION")
 						branch.source_id = newId
 					} 
 
 					if (branch.destination_id === data.actions[key].id) {
-						console.log("CHANGING DESTINATION ID IN ACTION")
+						//console.log("CHANGING DESTINATION ID IN ACTION")
 						branch.destination_id = newId
 					}
 				}
@@ -505,10 +505,8 @@ const Workflows = (props) => {
 		data = sanitizeWorkflow(data) 
 		alert.info("Sanitizing and publishing "+data.name)
 
-		const url = isCloud ? globalUrl : "https://shuffler.io"
-
 		// This ALWAYS talks to Shuffle cloud
-		fetch(url+"/api/v1/workflows/"+data.id+"/publish", {
+		fetch(globalUrl+"/api/v1/workflows/"+data.id+"/publish", {
     	  method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
@@ -521,7 +519,11 @@ const Workflows = (props) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for workflow publish :O!")
 			} else {
-				alert.success("Successfully published workflow")
+				if (isCloud) { 
+					alert.success("Successfully published workflow")
+				} else {
+					alert.success("Successfully published workflow to https://shuffler.io")
+				}
 			}
 
 			return response.json()
@@ -690,12 +692,10 @@ const Workflows = (props) => {
 										setNewWorkflowTags(JSON.parse(JSON.stringify(data.tags)))
 									}
 								}} key={"change"}>{"Change details"}</MenuItem>
-								{isCloud ? 
-									<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
-										console.log("Should publish", data)
-										publishWorkflow(data)
-									}} key={"publish"}>{"Publish Workflow"}</MenuItem>
-								: null}
+								<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
+									console.log("Should publish", data)
+									publishWorkflow(data)
+								}} key={"publish"}>{"Publish Workflow"}</MenuItem>
 								<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
 									copyWorkflow(data)		
 									setOpen(false)

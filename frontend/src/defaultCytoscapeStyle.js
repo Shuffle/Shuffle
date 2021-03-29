@@ -39,6 +39,23 @@ const data = [{
 				'border-color': '#81c784',
 				'background-width': '100%',
 				'background-height': '100%',
+				'border-radius': '5px',
+			},
+		},
+		{
+			selector: `node[app_name="Shuffle Tools"]`,
+			css: {
+				'width': '30px',
+				'height': '30px',
+				'font-size': '0px',
+			},
+		},
+		{
+			selector: `node[app_name="Testing"]`,
+			css: {
+				'width': '30px',
+				'height': '30px',
+				'font-size': '0px',
 			},
 		},
 		{
@@ -112,7 +129,7 @@ const data = [{
 			},
 		},
 		{
-			selector: 'node:selected',
+			selector: ':selected',
 			css: {
 				'background-color': '#77b0d0',
 				'border-color': '#77b0d0',
@@ -187,6 +204,8 @@ const data = [{
 				'border-width': '12px',
 				'transition-property': 'border-width',
 				'transition-duration': '0.25s',
+				'font-size': '30px',
+				'label': 'data(label)',
 			},
 		},
 		{

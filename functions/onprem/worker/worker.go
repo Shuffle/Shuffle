@@ -24,6 +24,7 @@ import (
 	//"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/mount"
 	dockerclient "github.com/docker/docker/client"
+	"github.com/satori/go.uuid"
 
 	"github.com/gorilla/mux"
 	"github.com/patrickmn/go-cache"
@@ -278,7 +279,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 
 	// Waiting to see if it exits.. Stupid, but stable(r)
 	if workflowExecution.ExecutionSource != "default" {
-		log.Printf("Handling NON-default execution source %s - NOT waiting and validating!", workflowExecution.ExecutionSource)
+		log.Printf("[INFO] Handling NON-default execution source %s - NOT waiting and validating!", workflowExecution.ExecutionSource)
 	} else if workflowExecution.ExecutionSource == "default" {
 		time.Sleep(2 * time.Second)
 
@@ -850,12 +851,13 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		appname = strings.Replace(appname, ".", "-", -1)
 		appversion = strings.Replace(appversion, ".", "-", -1)
 
-		image := fmt.Sprintf("%s:%s_%s", baseimagename, action.AppName, action.AppVersion)
+		image := fmt.Sprintf("%s:%s_%s", baseimagename, strings.ToLower(action.AppName), action.AppVersion)
 		if strings.Contains(image, " ") {
 			image = strings.ReplaceAll(image, " ", "-")
 		}
 
-		identifier := fmt.Sprintf("%s_%s_%s_%s", appname, appversion, action.ID, workflowExecution.ExecutionId)
+		// Added UUID to identifier just in case
+		identifier := fmt.Sprintf("%s_%s_%s_%s_%s", appname, appversion, action.ID, workflowExecution.ExecutionId, uuid.NewV4())
 		if strings.Contains(identifier, " ") {
 			identifier = strings.ReplaceAll(identifier, " ", "-")
 		}
@@ -938,15 +940,15 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		}
 
 		// Uses a few ways of getting / checking if an app is available
-		// 1. Try original
-		// 2. Go to lowercase
+		// 1. Try original with lowercase
+		// 2. Go to original
 		// 3. Add remote repo location
 		// 4. Actually download last repo
 
 		images := []string{
-			fmt.Sprintf("%s/%s:%s_%s", registryName, baseimagename, strings.ToLower(action.AppName), action.AppVersion),
 			image,
-			fmt.Sprintf("%s:%s_%s", baseimagename, strings.ToLower(action.AppName), action.AppVersion),
+			fmt.Sprintf("%s:%s_%s", baseimagename, action.AppName, action.AppVersion),
+			fmt.Sprintf("%s/%s:%s_%s", registryName, baseimagename, strings.ToLower(action.AppName), action.AppVersion),
 		}
 
 		// If cleanup is set, it should run for efficiency
@@ -959,6 +961,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 				}
 
 				log.Printf("[WARNING] Failed CLEANUP execution. Downloading image remotely.")
+				image = images[2]
 				reader, err := dockercli.ImagePull(context.Background(), image, pullOptions)
 				if err != nil {
 					log.Printf("[ERROR] Failed getting %s. The couldn't be find locally, AND is missing.", image)
@@ -996,7 +999,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			}
 		} else {
 
-			err = deployApp(dockercli, image, identifier, env, workflowExecution)
+			err = deployApp(dockercli, images[0], identifier, env, workflowExecution)
 			if err != nil {
 				if strings.Contains(err.Error(), "exited prematurely") {
 					shutdown(workflowExecution, action.ID, err.Error(), true)
@@ -1004,7 +1007,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 
 				// Trying to replace with lowercase to deploy again. This seems to work with Dockerhub well.
 				// FIXME: Should try to remotely download directly if this persists.
-				image = fmt.Sprintf("%s:%s_%s", baseimagename, strings.ToLower(action.AppName), action.AppVersion)
+				image = images[1]
 				if strings.Contains(image, " ") {
 					image = strings.ReplaceAll(image, " ", "-")
 				}
@@ -1015,7 +1018,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 						shutdown(workflowExecution, action.ID, err.Error(), true)
 					}
 
-					image = fmt.Sprintf("%s/%s:%s_%s", registryName, baseimagename, strings.ToLower(action.AppName), action.AppVersion)
+					image = images[2]
 					if strings.Contains(image, " ") {
 						image = strings.ReplaceAll(image, " ", "-")
 					}
@@ -1026,7 +1029,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 							shutdown(workflowExecution, action.ID, err.Error(), true)
 						}
 
-						log.Printf("[WARNING] Failed deploying image THRICE. Attempting to download the latter as last resort.")
+						log.Printf("[WARNING] Failed deploying image THREE TIMES. Attempting to download the latter as last resort.")
 						reader, err := dockercli.ImagePull(context.Background(), image, pullOptions)
 						if err != nil {
 							log.Printf("[ERROR] Failed getting %s. The couldn't be find locally, AND is missing.", image)

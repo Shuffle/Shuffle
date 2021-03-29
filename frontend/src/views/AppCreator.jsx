@@ -1565,9 +1565,9 @@ const AppCreator = (props) => {
 		}
 
 		// Url verification
-		if (currentAction.url.length === 0) {
-			errormessage.push("URL path can't be empty.")
-		} else if (!currentAction.url.startsWith("/") && baseUrl.length > 0) {
+		//if (currentAction.url.length === 0) {
+		//	errormessage.push("URL path can't be empty.")
+		if (!currentAction.url.startsWith("/") && baseUrl.length > 0 && currentAction.url.length > 0) {
 			errormessage.push("URL must start with /")
 		}
 

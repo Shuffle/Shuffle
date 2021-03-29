@@ -981,7 +981,7 @@ func validateNewWorkerExecution(body []byte) error {
 			execution.Status = "FINISHED"
 		}
 
-		log.Printf("BASEEXECUTION LENGTH: %d", len(baseExecution.Workflow.Actions)+extra)
+		log.Printf("[INFO] BASEEXECUTION LENGTH: %d", len(baseExecution.Workflow.Actions)+extra)
 	}
 
 	// FIXME: Add extra here
@@ -4782,6 +4782,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 				workflowapp.Sharing = true
 				workflowapp.Downloaded = true
 				workflowapp.Hash = md5
+				workflowapp.Public = true
 
 				err = shuffle.SetWorkflowAppDatastore(ctx, workflowapp, workflowapp.ID)
 				if err != nil {

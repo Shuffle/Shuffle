@@ -11,7 +11,8 @@ RUN go get github.com/docker/docker/api/types && \
 	go get github.com/docker/docker/client && \
 	go get github.com/gorilla/mux && \
 	go get github.com/patrickmn/go-cache && \
-	go get github.com/frikky/shuffle-shared
+	go get github.com/frikky/shuffle-shared && \
+	go get github.com/satori/go.uuid
 
 RUN go build
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o worker .
@@ -21,7 +22,7 @@ FROM alpine:3.12
 
 ENV SHUFFLE_BASE_IMAGE_REGISTRY=docker.io
 ENV SHUFFLE_BASE_IMAGE_NAME=frikky/shuffle
-ENV SHUFFLE_BASE_IMAGE_TAG_SUFFIX=0.8.5
+ENV SHUFFLE_BASE_IMAGE_TAG_SUFFIX=0.8.70
 
 RUN apk add --no-cache bash
 COPY --from=builder /app/ /

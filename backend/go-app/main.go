@@ -77,6 +77,8 @@ var registryName = "registry.hub.docker.com"
 var runningEnvironment = "onprem"
 
 var syncUrl = "https://shuffler.io"
+
+//var syncUrl = "http://localhost:5002"
 var syncSubUrl = "https://shuffler.io"
 
 //var syncUrl = "http://localhost:5002"
@@ -5463,12 +5465,12 @@ func runInit(ctx context.Context) {
 		}
 
 		iterateOpenApiGithub(fs, dir, "", "")
-		log.Printf("Finished downloading extra API samples")
+		log.Printf("[INFO] Finished downloading extra API samples")
 	}
 
 	workflowLocation := os.Getenv("SHUFFLE_DOWNLOAD_WORKFLOW_LOCATION")
 	if len(workflowLocation) > 0 {
-		log.Printf("Downloading WORKFLOWS from %s if no workflows - EXTRA workflows", workflowLocation)
+		log.Printf("[INFO] Downloading WORKFLOWS from %s if no workflows - EXTRA workflows", workflowLocation)
 		q := datastore.NewQuery("workflow").Limit(35)
 		var workflows []shuffle.Workflow
 		_, err = dbclient.GetAll(ctx, q, &workflows)
@@ -5918,6 +5920,138 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	resp.Write(respBody)
 }
 
+func makeWorkflowPublic(resp http.ResponseWriter, request *http.Request) {
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
+
+	user, userErr := shuffle.HandleApiAuthentication(resp, request)
+	if userErr != nil {
+		log.Printf("[WARNING] Api authentication failed in make workflow public: %s", userErr)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	location := strings.Split(request.URL.String(), "/")
+	var fileId string
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		fileId = location[4]
+	}
+
+	ctx := context.Background()
+	if strings.Contains(fileId, "?") {
+		fileId = strings.Split(fileId, "?")[0]
+	}
+
+	if len(fileId) != 36 {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Workflow ID when getting workflow is not valid"}`))
+		return
+	}
+
+	workflow, err := shuffle.GetWorkflow(ctx, fileId)
+	if err != nil {
+		log.Printf("[WARNING] Workflow %s doesn't exist in app publish. User: %s", fileId, user.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// CHECK orgs of user, or if user is owner
+	// FIXME - add org check too, and not just owner
+	// Check workflow.Sharing == private / public / org  too
+	if user.Id != workflow.Owner || len(user.Id) == 0 {
+		if workflow.OrgId == user.ActiveOrg.Id && user.Role == "admin" {
+			log.Printf("[INFO] User %s is accessing workflow %s as admin", user.Username, workflow.ID)
+		} else {
+			log.Printf("[WARNING] Wrong user (%s) for workflow %s (get workflow)", user.Username, workflow.ID)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+	}
+
+	if !workflow.IsValid || !workflow.PreviouslySaved {
+		log.Printf("[INFO] Failed uploading workflow because it's invalid or not saved")
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Invalid workflows are not sharable"}`))
+		return
+	}
+
+	// Starting validation of the POST workflow
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		log.Printf("[WARNING] Body data error on mail: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	parsedWorkflow := shuffle.Workflow{}
+	err = json.Unmarshal(body, &parsedWorkflow)
+	if err != nil {
+		log.Printf("[WARNING] Unmarshal error on mail: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// Super basic validation. Doesn't really matter.
+	if parsedWorkflow.ID != workflow.ID || len(parsedWorkflow.Actions) != len(workflow.Actions) {
+		log.Printf("[WARNING] Bad ID during publish: %s vs %s", workflow.ID, parsedWorkflow.ID)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if !workflow.IsValid || !workflow.PreviouslySaved {
+		log.Printf("[INFO] Failed uploading new workflow because it's invalid or not saved")
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Invalid workflows are not sharable"}`))
+		return
+	}
+
+	workflowData, err := json.Marshal(parsedWorkflow)
+	if err != nil {
+		log.Printf("[WARNING] Failed marshalling workflow: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// Sanitization is done in the frontend as well
+	parsedWorkflow = shuffle.SanitizeWorkflow(parsedWorkflow)
+	parsedWorkflow.ID = uuid.NewV4().String()
+	action := shuffle.CloudSyncJob{
+		Type:          "workflow",
+		Action:        "publish",
+		OrgId:         user.ActiveOrg.Id,
+		PrimaryItemId: workflow.ID,
+		SecondaryItem: string(workflowData),
+		FifthItem:     user.Id,
+	}
+
+	err = executeCloudAction(action, user.ActiveOrg.SyncConfig.Apikey)
+	if err != nil {
+		log.Printf("[WARNING] Failed cloud PUBLISH: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		return
+	}
+
+	log.Printf("[INFO] Successfully published workflow %s (%s) TO CLOUD", workflow.Name, workflow.ID)
+	resp.WriteHeader(200)
+	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+}
+
 func initHandlers() {
 	var err error
 	ctx := context.Background()
@@ -6041,6 +6175,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/get_openapi/{key}", getOpenapi).Methods("GET", "OPTIONS")
 
 	// NEW for 0.8.0
+	r.HandleFunc("/api/v1/workflows/{key}/publish", makeWorkflowPublic).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/cloud/setup", handleCloudSetup).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs", shuffle.HandleGetOrgs).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/", shuffle.HandleGetOrgs).Methods("GET", "OPTIONS")

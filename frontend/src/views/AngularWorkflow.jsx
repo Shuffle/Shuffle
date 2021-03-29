@@ -92,7 +92,6 @@ const AngularWorkflow = (props) => {
 	const theme = useTheme();
 
 	const [bodyWidth, bodyHeight] = useWindowSize();
-	const appBarSize = 75
 
 	var to_be_copied = ""
 	const [cystyle, ] = useState(cytoscapestyle) 
@@ -190,17 +189,21 @@ const AngularWorkflow = (props) => {
 	const [workflowExecutions, setWorkflowExecutions] = React.useState([]);
 	const [defaultEnvironmentIndex, setDefaultEnvironmentIndex] = React.useState(0)
 
+	// This should all be set once, not on every iteration
+	// Use states and don't update lol
 	const cloudSyncEnabled = props.userdata !== undefined && props.userdata.active_org !== null && props.userdata.active_org !== undefined ? props.userdata.active_org.cloud_sync === true : false 
 	//const triggerEnvironments = cloudSyncEnabled ? ["cloud", "onprem"] : environments
 	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" 
+	const appBarSize = isCloud ? 75 : 60
 	const triggerEnvironments = isCloud ? ["cloud"] : ["onprem", "cloud"] 
-
 	const unloadText = 'Are you sure you want to leave without saving (CTRL+S)?'
+
 	useBeforeunload(() => {
 		if (!lastSaved) {
 			return unloadText
 		}
 	})
+
 
 	const [elements, setElements] = useState([])
 	// No point going as fast, as the nodes aren't realtime anymore, but bulk updated. 
@@ -1121,7 +1124,7 @@ const AngularWorkflow = (props) => {
 			}
 
 			if (responseJson.public) {
-				alert.info("This workflow is public. You'll have to save it to make it your own!") 
+				alert.info("This workflow is public. You will have to save it to make it your own!") 
 				setLastSaved(false)
 			}
 
@@ -1215,9 +1218,36 @@ const AngularWorkflow = (props) => {
 		setSelectedTrigger({})
 	}
 
+	// Comparing locations between nodes and setting views
+	const onNodeDrag = (event, newAppAuth) => {
+		//console.log("DRAGGING: ", event.target)
+		//console.log("LEN2: ", event.target.edges.length)
+
+
+		/*
+		event.target.animate({
+			style: {
+				"border-width": "12px",
+				"border-opacity": ".7",
+			}
+		}, {
+			duration: animationDuration,	
+		})
+		event.target.animate({
+			style: {
+				"border-width": "12px",
+				"border-opacity": ".7",
+			}
+		}, {
+			duration: animationDuration,	
+		})
+		*/
+	}
+
 	// Nodeselectbatching:
 	// https://stackoverflow.com/questions/16677856/cy-onselect-callback-only-once
 	const onNodeSelect = (event, newAppAuth) => {
+
 		const data = event.target.data()
 		setLastSaved(false)
 		
@@ -1619,6 +1649,17 @@ const AngularWorkflow = (props) => {
 		});
 	}
 
+
+	if (!firstrequest && graphSetup && established && props.match.params.key !== workflow.id && workflow.id !== undefined && workflow.id !== null && workflow.id.length > 0) {
+		//console.log(props.match.params.key, workflow.id)
+		//getWorkflow()
+		//setCy()
+		//getWorkflowExecution(props.match.params.key, "")
+		//setEstablished(false)
+		//setGraphSetup(false)
+		window.location.pathname = "/workflows/"+props.match.params.key
+	}
+
 	useEffect(() => {
 		if (firstrequest) {
 			setFirstrequest(false)
@@ -1642,14 +1683,14 @@ const AngularWorkflow = (props) => {
 		} 
 
 		// App length necessary cus of cy initialization
-		if (elements.length === 0 && !graphSetup && Object.getOwnPropertyNames(workflow).length > 0) {
+		if (elements.length === 0 && workflow.actions !== undefined && !graphSetup && Object.getOwnPropertyNames(workflow).length > 0) {
 			setGraphSetup(true)
 			setupGraph()
 		} else if (!established && cy !== undefined && apps !== null && apps !== undefined && apps.length > 0 && Object.getOwnPropertyNames(workflow).length > 0 && authLoaded){
 			//This part has to load LAST, as it's kind of not async. 
 			//This means we need everything else to happen first.
-			console.log("AUTH IN HERE: ", appAuthentication)
-
+			//
+			//console.log("IN THIS PART AGAIN")
 
 			setEstablished(true)
 			cy.edgehandles({
@@ -1676,6 +1717,9 @@ const AngularWorkflow = (props) => {
 			cy.on('mouseout', 'edge', (e) => onEdgeHoverOut(e))
 			cy.on('mouseover', 'node', (e) => onNodeHover(e))
 			cy.on('mouseout', 'node', (e) => onNodeHoverOut(e))
+
+			// Handles dragging
+			//cy.on('drag', 'node', (e) => onNodeDrag(e))
 
 			//cy.on('mouseover', 'node', () => $(targetElement).addClass('mouseover'));
 
@@ -1711,7 +1755,7 @@ const AngularWorkflow = (props) => {
 	const onNodeHover = (event) => {
 		event.target.animate({
 			style: {
-				"border-width": "5px",
+				"border-width": "7px",
 				"border-opacity": ".7",
 			}
 		}, {
@@ -1727,17 +1771,23 @@ const AngularWorkflow = (props) => {
 
 	// This is here to have a proper transition for lines
 	const onEdgeHover = (event) => {
+		if (event === null || event === undefined) {
+			return 
+		}
+
 		const sourcecolor = cy.getElementById(event.target.data("source")).style("border-color")
 		const targetcolor = cy.getElementById(event.target.data("target")).style("border-color")
-		event.target.animate({
-			style: {
-				"line-fill": "linear-gradient",
-				'target-arrow-color': targetcolor,
-				"line-gradient-stop-colors": [sourcecolor, targetcolor],
-				"line-gradient-stop-positions": [0, 1],
-			},
-			duration: 0,
-		})
+		if (sourcecolor !== null && sourcecolor !== undefined && targetcolor !== null && targetcolor !== undefined) {
+			event.target.animate({
+				style: {
+					"line-fill": "linear-gradient",
+					'target-arrow-color': targetcolor,
+					"line-gradient-stop-colors": [sourcecolor, targetcolor],
+					"line-gradient-stop-positions": [0, 1],
+				},
+				duration: 0,
+			})
+		}
 	}
 
 
@@ -1799,6 +1849,31 @@ const AngularWorkflow = (props) => {
 				conditions: conditions,
 				hasErrors: branch.has_errors
 			};
+
+			// This is an attempt at prettier edges. The numbers are weird to work with.
+			/*
+			//http://manual.graphspace.org/projects/graphspace-python/en/latest/demos/edge-types.html
+			const sourcenode = actions.find(node => node.data._id === branch.source_id)
+			const destinationnode = actions.find(node => node.data._id === branch.destination_id)
+			if (sourcenode !== undefined && destinationnode !== undefined && branch.source_id !== branch.destination_id) { 
+				//node.data._id = action["id"]
+				console.log("SOURCE: ", sourcenode.position)
+				console.log("DESTINATIONNODE: ", destinationnode.position)
+
+				var opposite = true 
+				if (sourcenode.position.x > destinationnode.position.x) {
+					opposite = false 
+				} else {
+					opposite = true 
+				}
+
+				edge.style = {
+					'control-point-distance': opposite ? ["25%", "-75%"] : ["-10%", "90%"],
+					'control-point-weight': ['0.3', '0.7'],
+				}
+			}
+			*/
+
 			return edge;
 		})
 
@@ -4506,7 +4581,7 @@ const AngularWorkflow = (props) => {
 					: null
 				}
 				onClick={() => {
-					console.log("CHANGE FIELD")
+					//console.log("CHANGE FIELD")
 				}}
 				onBlur={(e) => {
 					changeActionVariable(data.action_field, e.target.value)
@@ -4803,6 +4878,7 @@ const AngularWorkflow = (props) => {
 						onClick={() => {
 							setSelectedEdge({})
 
+
 							var data = {
 								condition: conditionValue,
 								source: sourceValue,
@@ -4819,6 +4895,18 @@ const AngularWorkflow = (props) => {
 								} else {
 									selectedEdge.conditions[curedgeindex] = data
 								}
+							}
+
+							var label = ""
+							if (selectedEdge.conditions.length === 1) {
+								label = selectedEdge.conditions.length+" condition"
+							} else if (selectedEdge.conditions.length > 1) {
+								label = selectedEdge.conditions.length+" conditions"
+							}
+
+							var currentedge = cy.getElementById(selectedEdge.id)
+							if (currentedge !== undefined && currentedge !== null) {
+								currentedge.data().label = label
 							}
 
 							setSelectedEdge(selectedEdge)
@@ -6494,7 +6582,7 @@ const AngularWorkflow = (props) => {
 						</span>
 					</Tooltip>
 					{/* <FileMenu />	*/}
-					<WorkflowMenu />	
+					{workflow.configuration !== null && workflow.configuration !== undefined && workflow.configuration.exit_on_error !== undefined ? <WorkflowMenu />	 : null}
 				</div>
 			</div>
 		)
@@ -7211,6 +7299,7 @@ const AngularWorkflow = (props) => {
 					stylesheet={cystyle}
 					boxSelectionEnabled={true}
 					autounselectify={false}
+					showGrid={true}
 					cy={(incy) => {
 						// FIXME: There's something specific loading when
 						// you do the first hover of a node. Why is this different?
