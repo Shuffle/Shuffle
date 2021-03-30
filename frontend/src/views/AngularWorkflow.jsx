@@ -10,8 +10,7 @@ import { useBeforeunload } from 'react-beforeunload';
 import NestedMenuItem from "material-ui-nested-menu-item";
 
 import {TextField, Drawer, Button, Paper, Grid, Tabs, InputAdornment, Tab, ButtonBase, Tooltip, Select, MenuItem, Divider, Dialog, Modal, DialogActions, DialogTitle, InputLabel, DialogContent, FormControl, IconButton, Menu, Input, FormGroup, FormControlLabel, Typography, Checkbox, Breadcrumbs, CircularProgress, Switch, Fade} from '@material-ui/core';
-
-import {ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
+import {GetApp as GetAppIcon, Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
 
 import * as cytoscape from 'cytoscape';
 import * as edgehandles from 'cytoscape-edgehandles';
@@ -90,6 +89,8 @@ const AngularWorkflow = (props) => {
 	const alert = useAlert()
 	const borderRadius = 5
 	const theme = useTheme();
+	const green = "#86c142"
+	const yellow = "#FECC00"
 
 	const [bodyWidth, bodyHeight] = useWindowSize();
 
@@ -97,7 +98,6 @@ const AngularWorkflow = (props) => {
 	const [cystyle, ] = useState(cytoscapestyle) 
 	const [cy, setCy] = React.useState()
 		
-	const [appSearch, setAppSearch] = React.useState("")
 	const [currentView, setCurrentView] = React.useState(0)
 	const [triggerAuthentication, setTriggerAuthentication] = React.useState({})
 	const [triggerFolders, setTriggerFolders] = React.useState([])
@@ -284,14 +284,14 @@ const AngularWorkflow = (props) => {
     		})
 		.then((response) => {
 			if (response.status !== 200) {
-				console.log("Status not 200 for WORKFLOW EXECUTION :O!")
+				console.log("Status not 200 for APIKEY gen :O!")
 			}
 
 			return response.json()
 		})
     .then((responseJson) => {
 			setUserSettings(responseJson)
-    	})
+    })
 		.catch(error => {
     		console.log(error)
 		});
@@ -308,7 +308,7 @@ const AngularWorkflow = (props) => {
 			})
 		.then((response) => {
 			if (response.status !== 200) {
-				console.log("Status not 200 for WORKFLOW EXECUTION :O!")
+				console.log("Status not 200 for get settings :O!")
 			}
 
 			return response.json()
@@ -477,7 +477,7 @@ const AngularWorkflow = (props) => {
     		})
 		.then((response) => {
 			if (response.status !== 200) {
-				console.log("Status not 200 for WORKFLOW EXECUTION :O!")
+				console.log("Status not 200 for ABORT EXECUTION :O!")
 			} else {
 				alert.success("Execution aborted")
 			}
@@ -798,6 +798,21 @@ const AngularWorkflow = (props) => {
 					workflow.errors = responseJson.errors
 					if (responseJson.errors.length === 0) {
 						workflow.isValid = true
+						workflow.is_valid = true
+
+						//console.log("ELEMENTS: ", cy.elements())
+						//const setupGraph = () => {
+						const cyelements = cy.elements()
+						for (var i = 0; i < cyelements.length; i++) {
+							cyelements[i].removeStyle()
+							cyelements[i].data().is_valid = true
+							cyelements[i].data().errors = []
+						}
+
+						for (var key in workflow.actions) {
+							workflow.actions[key].is_valid = true
+							workflow.actions[key].errors = [] 
+						}
 					}
 
 					for (var key in workflow.errors) {
@@ -1049,7 +1064,7 @@ const AngularWorkflow = (props) => {
 				setAuthLoaded(true)
 			} else {
 				setAuthLoaded(true)
-				alert.error("Failed getting authentications")
+				//alert.error("Failed getting authentications")
 			}
 		})
 		.catch(error => {
@@ -1119,6 +1134,7 @@ const AngularWorkflow = (props) => {
 			if (responseJson.isValid === undefined) {
 				responseJson.isValid = true
 			}
+
 			if (responseJson.errors === undefined) {
 				responseJson.errors = []
 			}
@@ -1219,9 +1235,20 @@ const AngularWorkflow = (props) => {
 	}
 
 	// Comparing locations between nodes and setting views
-	const onNodeDrag = (event, newAppAuth) => {
+	const onNodeDrag = (event) => {
 		//console.log("DRAGGING: ", event.target)
 		//console.log("LEN2: ", event.target.edges.length)
+
+		const nodedata = event.target.data()
+		if (nodedata.app_name == "Shuffle Tools" || nodedata.app_name == "Testing") {
+			//console.log("NODE: ", 
+			//selector: `node[app_name="Shuffle Tools"]`,
+			console.log(event.target)
+
+			// 1. Find location of node
+			// 2. Check if it's within view of another node (inside)
+			// 3. If it is, then hide text
+		}
 
 
 		/*
@@ -1258,7 +1285,7 @@ const AngularWorkflow = (props) => {
 
 		//const branch = workflow.branches.filter(branch => branch.source_id === data.id || branch.destination_id === data.id)
 		console.log("NODE: ", data)
-		console.log("APPAUTH: ", newAppAuth)
+		//console.log("APPAUTH: ", newAppAuth)
 		//console.log("BRANCHES: ", branch)
 
 		if (data.type === "ACTION") {
@@ -1682,15 +1709,21 @@ const AngularWorkflow = (props) => {
 			return
 		} 
 
+
 		// App length necessary cus of cy initialization
+		//console.log("PRE ELEMENTS: !", workflow.actions, graphSetup, apps, authLoaded, cy)
 		if (elements.length === 0 && workflow.actions !== undefined && !graphSetup && Object.getOwnPropertyNames(workflow).length > 0) {
 			setGraphSetup(true)
 			setupGraph()
+
+			//console.log("IN ELEMENT CHECK!")
 		} else if (!established && cy !== undefined && apps !== null && apps !== undefined && apps.length > 0 && Object.getOwnPropertyNames(workflow).length > 0 && authLoaded){
 			//This part has to load LAST, as it's kind of not async. 
 			//This means we need everything else to happen first.
 			//
 			//console.log("IN THIS PART AGAIN")
+			
+			//console.log("IN ESTABLISHED!")
 
 			setEstablished(true)
 			cy.edgehandles({
@@ -1719,7 +1752,7 @@ const AngularWorkflow = (props) => {
 			cy.on('mouseout', 'node', (e) => onNodeHoverOut(e))
 
 			// Handles dragging
-			//cy.on('drag', 'node', (e) => onNodeDrag(e))
+			cy.on('drag', 'node', (e) => onNodeDrag(e))
 
 			//cy.on('mouseover', 'node', () => $(targetElement).addClass('mouseover'));
 
@@ -1801,12 +1834,15 @@ const AngularWorkflow = (props) => {
 			node.data.type = "ACTION"
 			node.isStartNode = action["id"] === workflow.start
 
+
 			var example = ""
 			if (action.example !== undefined && action.example !== null && action.example.length > 0) {
 				example = action.example
 			}
 
 			node.data.example = example
+
+			//node.data.is_valid = false
 
 			return node;
 		})
@@ -2094,7 +2130,7 @@ const AngularWorkflow = (props) => {
 							<div key={variable.name} >
 								<Paper square style={paperVariableStyle} onClick={() => {
 								}}>
-									<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: "2px", backgroundColor: "orange", marginRight: "5px"}} />
+									<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: "2px", backgroundColor: yellow, marginRight: "5px"}} />
 									<div style={{display: "flex", width: "100%"}}>
 										<div style={{flex: "10", marginTop: "15px", marginLeft: "10px", overflow: "hidden"}} onClick={() => {
 										setNewVariableName(variable.name)
@@ -2161,11 +2197,12 @@ const AngularWorkflow = (props) => {
 							<div>
 								<Paper square style={paperVariableStyle} onClick={() => {
 								}}>
-									<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: "2px", backgroundColor: "orange", marginRight: "5px"}} />
+									<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: "2px", backgroundColor: yellow, marginRight: "5px"}} />
 									<div style={{display: "flex", width: "100%"}}>
 										<div style={{flex: "10", marginTop: "15px", marginLeft: "10px", overflow: "hidden"}} onClick={() => {
-										setNewVariableName(variable.name)
-										setExecutionVariablesModalOpen(true)}}>
+											setNewVariableName(variable.name)
+											setExecutionVariablesModalOpen(true)
+										}}>
 											Name: {variable.name} 
 										</div>
 										<div style={{flex: "1", marginLeft: "0px"}}>
@@ -2228,7 +2265,7 @@ const AngularWorkflow = (props) => {
 	
 	const HandleLeftView = () => {
 		// Defaults to apps.
-		var thisview = <AppView />
+		var thisview = <AppView allApps={apps} prioritizedApps={prioritizedApps} filteredApps={filteredApps} />
 		if (currentView === 1) {
 			thisview = <TriggersView />
 		} else if (currentView === 2) {
@@ -2379,7 +2416,7 @@ const AngularWorkflow = (props) => {
 							: 
 							<img alt="" src={trigger.large_image} style={{width: 80, height: 80, pointerEvents: "none", }} />
 
-						const color = trigger.is_valid ? "green" : "orange"
+						const color = trigger.is_valid ? green : yellow
 						return(
 							<Draggable 
 								key={index}
@@ -2724,108 +2761,114 @@ const AngularWorkflow = (props) => {
 
 	const appScrollStyle = {
 		overflow: "scroll",
-		maxHeight: bodyHeight-appBarSize-55,
-		minHeight: bodyHeight-appBarSize-55,
+		maxHeight: bodyHeight-appBarSize-55-50,
+		minHeight: bodyHeight-appBarSize-55-50,
+		marginTop: 1,
 		overflowY: "auto",
 		overflowX: "hidden",
 	}
 
-	const runAppSearch = (event) => {
-		setAppSearch(event.target.value)
-		setFilteredApps(apps.filter(app => app.name.toLowerCase().includes(event.target.value.trim().toLowerCase())))
-	}
+	const AppView = (props) => {
+  	const { allApps, prioritizedApps, filteredApps } = props;
+		const [visibleApps, setVisibleApps] = React.useState(prioritizedApps.concat(filteredApps.filter(innerapp => !internalIds.includes(innerapp.id))))
 
-	const ParsedAppPaper = (props) => {
-		const app = props.app
-		const [hover, setHover] = React.useState(false)
+		const ParsedAppPaper = (props) => {
+			const app = props.app
+			const [hover, setHover] = React.useState(false)
 
-		// FIXME - add label to apps, as this might be slow with A LOT of apps
-		const maxlen = 24
-		var newAppname = app.name.replace("_", " ", -1)
-		newAppname = newAppname.charAt(0).toUpperCase()+newAppname.substring(1)
-		if (newAppname.length > maxlen) {
-			newAppname = newAppname.slice(0, maxlen)+".."
-		}
+			const maxlen = 24
+			var newAppname = app.name.replace("_", " ", -1)
+			newAppname = newAppname.charAt(0).toUpperCase()+newAppname.substring(1)
+			if (newAppname.length > maxlen) {
+				newAppname = newAppname.slice(0, maxlen)+".."
+			}
 
-		//const image = "url("+app.large_image+")"
-		const image = app.large_image
-		const newAppStyle = JSON.parse(JSON.stringify(paperAppStyle))
-		const pixelSize = !hover ? "2px" : "4px"
-		newAppStyle.borderLeft = app.is_valid ? `${pixelSize} solid green` : `${pixelSize} solid orange`
+			//const image = "url("+app.large_image+")"
+			const image = app.large_image
+			const newAppStyle = JSON.parse(JSON.stringify(paperAppStyle))
+			const pixelSize = !hover ? "2px" : "4px"
+			newAppStyle.borderLeft = app.is_valid ? `${pixelSize} solid ${green}` : `${pixelSize} solid ${yellow}`
 
-		return (
-			<Draggable 
-					onDrag={(e) => {handleAppDrag(e, app)}}
-					onStop={(e) => {handleDragStop(e, app)}}
-					key={app.id}
-					dragging={false}
-					position={{
-						x: 0,
-						y: 0,
-					}}
-				>
-				<Paper square style={newAppStyle} onMouseOver={() => {setHover(true)}} onMouseOut={() => {setHover(false)}}>
-					<Grid container style={{margin: "10px 10px 10px 15px", flex: "10"}}>
-						<Grid item>
-							<img alt={newAppname} src={image} style={{pointerEvents: "none", userDrag: "none", userSelect: "none", borderRadius: borderRadius, height: 80, width: 80,}} />
+			return (
+				<Draggable 
+						onDrag={(e) => {handleAppDrag(e, app)}}
+						onStop={(e) => {handleDragStop(e, app)}}
+						key={app.id}
+						dragging={false}
+						position={{
+							x: 0,
+							y: 0,
+						}}
+					>
+					<Paper square style={newAppStyle} onMouseOver={() => {setHover(true)}} onMouseOut={() => {setHover(false)}}>
+						<Grid container style={{margin: "10px 10px 10px 15px", flex: "10"}}>
+							<Grid item>
+								<img alt={newAppname} src={image} style={{pointerEvents: "none", userDrag: "none", userSelect: "none", borderRadius: borderRadius, height: 80, width: 80,}} />
+							</Grid>
+							<Grid style={{display: "flex", flexDirection: "column", marginLeft: "20px", minWidth: 185, maxWidth: 185, overflow: "hidden", maxHeight: 77, }}>
+								<Grid item style={{flex: 1}}>
+									<h4 style={{marginBottom: 0, marginTop: 5}}>{newAppname}</h4>
+								</Grid>
+								<Grid item style={{flex: 1}}>
+									Version: {app.app_version}	
+								</Grid>
+								<Grid item style={{flex: 1, width: "100%", maxHeight: 27, overflow: "hidden",}}>
+									{app.description}
+								</Grid>
+							</Grid>
 						</Grid>
-						<Grid style={{display: "flex", flexDirection: "column", marginLeft: "20px", minWidth: 185, maxWidth: 185, overflow: "hidden", maxHeight: 77, }}>
-							<Grid item style={{flex: 1}}>
-								<h4 style={{marginBottom: 0, marginTop: 5}}>{newAppname}</h4>
-							</Grid>
-							<Grid item style={{flex: 1}}>
-								Version: {app.app_version}	
-							</Grid>
-							<Grid item style={{flex: 1, width: "100%", maxHeight: 27, overflow: "hidden",}}>
-								{app.description}
-							</Grid>
-						</Grid>
-					</Grid>
 					</Paper>
 				</Draggable>
-			)
-	}
+				)
+		}
 
-	const AppView = () => {
+		const runSearch = (event) => {
+			if (event.target.value.length > 0) {
+				setVisibleApps(allApps.filter(app => app.name.toLowerCase().includes(event.target.value.trim().toLowerCase())))
+			} else {
+				setVisibleApps(prioritizedApps.concat(filteredApps.filter(innerapp => !internalIds.includes(innerapp.id))))
+			}
+		}
+
 		return(
 			<div style={appViewStyle}>
 				<div style={{flex: "1"}}>
+						<TextField
+							style={{backgroundColor: inputColor, borderRadius: borderRadius, marginTop: 5, marginRight: 10,}} 
+							InputProps={{
+								style:{
+									color: "white",
+									minHeight: 50, 
+									marginLeft: "5px",
+									maxWidth: "95%",
+									fontSize: "1em",
+								},
+								endAdornment: (
+									<InputAdornment position="end">
+										<Tooltip title="Run search" placement="top">
+											<SearchIcon style={{cursor: "pointer"}} />
+										</Tooltip>
+									</InputAdornment>
+								)
+							}}
+							fullWidth
+							color="primary"
+							placeholder={"Search Apps"}
+							id="appsearch"
+							onBlur={(event) => {
+								runSearch(event)
+							}}
+						/>
 					<div style={appScrollStyle}>
-					{/*
-					<TextField
-						style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
-						style={{backgroundColor: inputColor}} 
-						InputProps={{
-							style:{
-								color: "white",
-								minHeight: 50, 
-								marginLeft: "5px",
-								maxWidth: "95%",
-								fontSize: "1em",
-							},
-						}}
-						fullWidth
-						color="primary"
-						placeholder={"Search apps"}
-						onChange={(event) => {
-							runAppSearch(event)
-						}}
-					/>
-					*/}
-					{prioritizedApps.map((app, index) => {	
-						return(
-							<ParsedAppPaper key={index} app={app} />	
-						)
-					})}
-					{filteredApps.filter(innerapp => !internalIds.includes(innerapp.id)).map((app, index) => {	
-						if (app.invalid) {
-							return null
-						}
+						{visibleApps.map((app, index) => {	
+							if (app.invalid) {
+								return null
+							}
 
-						return(
-							<ParsedAppPaper key={index} app={app} />	
-						)
-					})}
+							return(
+								<ParsedAppPaper key={index} app={app} />	
+							)
+						})}
 					</div>
 				</div>
 			</div>
@@ -2979,10 +3022,10 @@ const AngularWorkflow = (props) => {
 	const AppActionArguments = (props) => {
 		const [selectedActionParameters, setSelectedActionParameters] = React.useState([])
 		const [selectedVariableParameter, setSelectedVariableParameter] = React.useState("")
-		const [showDropdown, setShowDropdown] = React.useState(false)
-		const [showDropdownNumber, setShowDropdownNumber] = React.useState(0)
 		const [actionlist, setActionlist] = React.useState([])
 		const [jsonList, setJsonList] = React.useState([])
+		const [showDropdown, setShowDropdown] = React.useState(false)
+		const [showDropdownNumber, setShowDropdownNumber] = React.useState(0)
 		const [showAutocomplete, setShowAutocomplete] = React.useState(false)
 		const [menuPosition, setMenuPosition] = useState(null)
 
@@ -3865,6 +3908,7 @@ const AngularWorkflow = (props) => {
 						}
 						
 						tmpitem = tmpitem.charAt(0).toUpperCase()+tmpitem.substring(1)
+						tmpitem = tmpitem.replaceAll("_", " ")
 						const description = data.description === undefined ? "" : data.description 
 
 						return (
@@ -4121,7 +4165,7 @@ const AngularWorkflow = (props) => {
 		<div style={appApiViewStyle}>
 			<div style={{display: "flex", minHeight: 40, marginBottom: 30}}>
 				<div style={{flex: 1}}>
-					<h3 style={{marginBottom: 5}}>{selectedAction.app_name}</h3>
+					<h3 style={{marginBottom: 5}}>{selectedAction.app_name.replaceAll("_", " ")}</h3>
 					<div style={{display: "flex",}}>
 						<IconButton style={{marginTop: "auto", marginBottom: "auto", height: 30, paddingLeft: 0, paddingRight: 0}} onClick={() => {
 							console.log("FIND EXAMPLE RESULTS FOR ", selectedAction) 
@@ -4969,7 +5013,7 @@ const AngularWorkflow = (props) => {
 
 			return (
 				<Paper key={condition.condition.id} square style={paperVariableStyle} onClick={() => {}}>
-					<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: "2px", backgroundColor: "orange", marginRight: "5px"}} />
+					<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: "2px", backgroundColor: yellow, marginRight: "5px"}} />
 					<div style={{display: "flex", width: "100%"}}>
 						<div style={{flex: "10", display: "flex"}} onClick={() => {
 								setSourceValue(condition.source)
@@ -5371,6 +5415,11 @@ const AngularWorkflow = (props) => {
 	}
 
 	const SubflowSidebar = () => {
+		const [menuPosition, setMenuPosition] = useState(null)
+		const [showDropdown, setShowDropdown] = React.useState(false)
+		const [showDropdownNumber, setShowDropdownNumber] = React.useState(0)
+		const [showAutocomplete, setShowAutocomplete] = React.useState(false)
+
 		if (Object.getOwnPropertyNames(selectedTrigger).length > 0) {
 			if (workflow.triggers[selectedTriggerIndex] === undefined) {
 				return null
@@ -5485,48 +5534,50 @@ const AngularWorkflow = (props) => {
 								<span style={{marginTop: 5}}><a rel="norefferer" href={`/workflows/${workflow.triggers[selectedTriggerIndex].parameters[0].value}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e", marginLeft: 5,}}>Explore selected workflow</a></span>
 							}
 
-							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
-								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
-								<div style={{flex: "10"}}> 
-									<b>Select the Startnode</b> 
-								</div>
-							</div>
 							{subworkflow === undefined || subworkflow === null || subworkflow.id === undefined || subworkflow.actions === null || subworkflow.actions === undefined || subworkflow.actions.length === 0 ? null : 
-								<Select
-									value={subworkflowStartnode}
-									SelectDisplayProps={{
-										style: {
-											marginLeft: 10,
+								<span>
+									<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
+										<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
+										<div style={{flex: "10"}}> 
+											<b>Select the Startnode</b> 
+										</div>
+									</div>
+										<Select
+										value={subworkflowStartnode}
+										SelectDisplayProps={{
+											style: {
+												marginLeft: 10,
 
-										}
-									}}
-									fullWidth
-									onChange={(e) => {
-										setSubworkflowStartnode(e.target.value)
-
-										try {
-											workflow.triggers[selectedTriggerIndex].parameters[3].value = e.target.value.id
-										} catch {
-											workflow.triggers[selectedTriggerIndex].parameters[3] = {
-												"name": "startnode",
-												"value": e.target.value.id,
 											}
-										}
+										}}
+										fullWidth
+										onChange={(e) => {
+											setSubworkflowStartnode(e.target.value)
 
-										setWorkflow(workflow)
-										//setUpdate(Math.random())
-									}}
-									style={{backgroundColor: inputColor, color: "white", height: "50px"}}
-								>
-									{subworkflow.actions.map((action, index) => {
-										//console.log(action)
-										return (
-											<MenuItem disabled={getParents(selectedTrigger).find(parent => parent.id === action.id)} key={index} style={{backgroundColor: inputColor, color: "white"}} value={action}>
-												{action.label}
-											</MenuItem>
-										)
-									})}
-								</Select>
+											try {
+												workflow.triggers[selectedTriggerIndex].parameters[3].value = e.target.value.id
+											} catch {
+												workflow.triggers[selectedTriggerIndex].parameters[3] = {
+													"name": "startnode",
+													"value": e.target.value.id,
+												}
+											}
+
+											setWorkflow(workflow)
+											//setUpdate(Math.random())
+										}}
+										style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+									>
+										{subworkflow.actions.map((action, index) => {
+											//console.log(action)
+											return (
+												<MenuItem disabled={getParents(selectedTrigger).find(parent => parent.id === action.id)} key={index} style={{backgroundColor: inputColor, color: "white"}} value={action}>
+													{action.label}
+												</MenuItem>
+											)
+										})}
+									</Select>
+								</span>
 							}
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
@@ -5543,6 +5594,21 @@ const AngularWorkflow = (props) => {
 										maxWidth: "95%",
 										fontSize: "1em",
 									},
+									endAdornment: (
+										<InputAdornment position="end">
+											<Tooltip title="Autocomplete text" placement="top">
+												<AddCircleOutlineIcon style={{cursor: "pointer"}} onClick={(event) => {
+													setMenuPosition({
+														top: event.pageY+10,
+														left: event.pageX+10,
+													})
+													//setShowDropdownNumber(count)
+													setShowDropdown(true)
+													setShowAutocomplete(true)
+												}}/>
+											</Tooltip>
+										</InputAdornment>
+									)
 								}}
 								rows="6"
 								multiline
@@ -6321,7 +6387,7 @@ const AngularWorkflow = (props) => {
 		return null 
 	}
 
-	const cytoscapeViewWidths = 750
+	const cytoscapeViewWidths = 800
 	const bottomBarStyle = {
 		position: "fixed", 
 		right: 20, 
@@ -6551,7 +6617,7 @@ const AngularWorkflow = (props) => {
 					<Tooltip color="primary" title="Save (ctrl+s)" placement="top">
 						<span>
 							<Button disabled={savingState !== 0} color="primary" style={{height: 50, width: 64, marginLeft: 10, }} variant={lastSaved ? "outlined" : "contained"} onClick={() => saveWorkflow()}>
-								{savingState === 2 ? <CircularProgress style={{height: 35, width: 35}} /> : savingState === 1 ? <DoneIcon style={{color: "green"}} /> : <SaveIcon /> }
+								{savingState === 2 ? <CircularProgress style={{height: 35, width: 35}} /> : savingState === 1 ? <DoneIcon style={{color: green}} /> : <SaveIcon /> }
 							</Button> 				
 						</span>
 					</Tooltip>
@@ -6562,7 +6628,7 @@ const AngularWorkflow = (props) => {
 							</Button> 				
 						</span>
 					</Tooltip>
-					<Tooltip color="secondary" title="Remove selected item (del)" placement="top-start">
+					<Tooltip disabled={workflow.public} color="secondary" title="Remove selected item (del)" placement="top-start">
 						<span>
 						<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={() => {
 							removeNode()		
@@ -6581,6 +6647,28 @@ const AngularWorkflow = (props) => {
 						</Button>
 						</span>
 					</Tooltip>
+					{workflow.public ? 
+						<Tooltip color="secondary" title="Download workflow" placement="top-start">
+							<span>
+							<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="contained" onClick={() => {
+								//setExecutionModalOpen(true)
+								//getWorkflowExecution(props.match.params.key, "")
+								//data = sanitizeWorkflow(workflow)	
+								const data = workflow
+								let exportFileDefaultName = data.name+'.json';
+
+								let dataStr = JSON.stringify(data)
+								let dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+								let linkElement = document.createElement('a');
+								linkElement.setAttribute('href', dataUri);
+								linkElement.setAttribute('download', exportFileDefaultName);
+								linkElement.click();
+							}}>
+								<GetAppIcon />
+							</Button>
+							</span>
+						</Tooltip>
+					: null}
 					{/* <FileMenu />	*/}
 					{workflow.configuration !== null && workflow.configuration !== undefined && workflow.configuration.exit_on_error !== undefined ? <WorkflowMenu />	 : null}
 				</div>
@@ -6830,7 +6918,7 @@ const AngularWorkflow = (props) => {
 				{workflowExecutions.length > 0 ? 
 					<div>
 						{workflowExecutions.map((data, index) => {
-							const statusColor = data.status === "FINISHED" ? "green" : data.status === "ABORTED" || data.status === "FAILED" ? "red" : "orange"
+							const statusColor = data.status === "FINISHED" ? green : data.status === "ABORTED" || data.status === "FAILED" ? "red" : yellow
 							const timeElapsed = data.completed_at-data.started_at
 							const resultsLength = data.results !== undefined && data.results !== null ? data.results.length : 0
 
@@ -7006,7 +7094,7 @@ const AngularWorkflow = (props) => {
 							
 							const curapp = apps.find(a => a.name === data.action.app_name && a.app_version === data.action.app_version)
 							const imgsize = 50
-							const statusColor = data.status === "FINISHED" || data.status === "SUCCESS" ? "green" : data.status === "ABORTED" || data.status === "FAILURE" ? "red" : "orange"
+							const statusColor = data.status === "FINISHED" || data.status === "SUCCESS" ? green : data.status === "ABORTED" || data.status === "FAILURE" ? "red" : yellow
 			
 							var imgSrc = curapp === undefined ? "" : curapp.large_image
 							if (imgSrc.length === 0 && workflow.actions !== undefined && workflow.actions !== null) {
@@ -7116,7 +7204,7 @@ const AngularWorkflow = (props) => {
 	// This sucks :)
 	const curapp = !codeModalOpen ? {} : selectedResult.action.app_name === "shuffle-subflow" ? triggers[1] : selectedResult.action.app_name === "User Input" ? triggers[2] : apps.find(a => a.name === selectedResult.action.app_name && a.app_version === selectedResult.action.app_version)
 	const imgsize = 50
-	const statusColor = !codeModalOpen ? "red" : selectedResult.status === "FINISHED" || selectedResult.status === "SUCCESS" ? "green" : selectedResult.status === "ABORTED" || selectedResult.status === "FAILURE" ? "red" : "orange"
+	const statusColor = !codeModalOpen ? "red" : selectedResult.status === "FINISHED" || selectedResult.status === "SUCCESS" ? green : selectedResult.status === "ABORTED" || selectedResult.status === "FAILURE" ? "red" : yellow
 	const validate = !codeModalOpen ? "" : validateJson(selectedResult.result.trim())
 	if (validate.valid && typeof(validate.result) === "string") {
 		validate.result = JSON.parse(validate.result)
@@ -7287,7 +7375,7 @@ const AngularWorkflow = (props) => {
 			</Dialog> 
 		</Draggable> 
 	
-	const newView = isLoggedIn ?
+	const newView = //isLoggedIn ?
 		<div style={{color: "white"}}>
 			<div style={{display: "flex", borderTop: "1px solid rgba(91, 96, 100, 1)"}}>
 				{leftView}
@@ -7313,10 +7401,13 @@ const AngularWorkflow = (props) => {
 			<BottomCytoscapeBar />
 			<TopCytoscapeBar />
 		</div> 
+
+		/*
 		: 
 		<div style={{color: "white"}}>
 			TMP FOR NOT LOGGED IN 
 		</div>
+		*/
 
 	const executionVariableModal = executionVariablesModalOpen ? 
 		<Dialog modal 
@@ -7756,7 +7847,8 @@ const AngularWorkflow = (props) => {
 			<AuthenticationData app={selectedApp} />	
 		</Dialog> : null
 
-	const loadedCheck = isLoaded && isLoggedIn && workflowDone ? 
+	//const loadedCheck = isLoaded && isLoggedIn && workflowDone ? 
+	const loadedCheck = isLoaded && workflowDone ? 
 		<div>
 			{newView}
 			{variablesModal}

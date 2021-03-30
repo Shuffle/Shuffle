@@ -55,7 +55,6 @@ const data = [{
 			css: {
 				'width': '30px',
 				'height': '30px',
-				'font-size': '0px',
 			},
 		},
 		{

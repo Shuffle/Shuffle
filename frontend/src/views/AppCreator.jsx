@@ -1340,7 +1340,9 @@ const AppCreator = (props) => {
 								placeholder={'Query name'}
 								helperText={<span style={{color:"white", marginBottom: "2px",}}>Click required switch</span>}
 								onBlur={(e) => {
-									urlPathQueries[index].name = e.target.value
+									console.log("IN BLUR: ", e.target.value)
+									urlPathQueries[index].name = e.target.value.replaceAll("=", "")
+
 									setUrlPathQueries(urlPathQueries)
 								}}
 								InputProps={{

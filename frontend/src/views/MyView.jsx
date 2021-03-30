@@ -68,17 +68,21 @@ const flexContainerStyle = {
 }
 
 const flexBoxStyle = {
-	width: 333,
 	height: 125,
 	borderRadius: 4,
 	boxSizing: "border-box",
 	letterSpacing: "0.4px",
 	color: "#D6791E",
+	margin: 10, 
+	flex: 1, 
 }
 
-const activeWorkflowStyle = {backgroundColor: "#FFF5EE"}
-const availableWorkflowStyle = {backgroundColor: "#F0F3FF"}
-const notificationStyle = {backgroundColor: "#E5F9FF"}
+//const activeWorkflowStyle = {backgroundColor: "#FFF5EE"}
+//const notificationStyle = {backgroundColor: "#E5F9FF"}
+//const activeWorkflowStyle = {backgroundColor: "#3d3f43"}
+const availableWorkflowStyle = {backgroundColor: "#3d3f43"}
+const notificationStyle = {backgroundColor: "#3d3f43"}
+const activeWorkflowStyle = {backgroundColor: "#3d3f43"}
 
 const flexContentStyle = {
 	display: "flex", 
@@ -301,8 +305,6 @@ const MyView = (props) => {
 		flexWrap: 'wrap',
 		alignContent: "space-between",
 	}
-
-
 
 	const paperAppStyle = {
 		minHeight: 130,
@@ -573,13 +575,16 @@ const MyView = (props) => {
 			boxColor = "#86c142"
 		}
 
+		if (!data.previously_saved) {
+			boxColor = "#f85a3e"
+		}
+
 		const menuClick = (event) => {
 			setOpen(!open)
 			setAnchorEl(event.currentTarget);
 		}
 
 		var parsedName = data.name
-		console.log("LEN: ", parsedName.length)
 		if (parsedName !== undefined && parsedName !== null && parsedName.length > 25) {
 			parsedName = parsedName.slice(0,25)+".." 
 		}
@@ -589,7 +594,7 @@ const MyView = (props) => {
 		const [triggers, schedules, webhooks, subflows] = getWorkflowMeta(data)
 
 		return (
-			<Grid item xs={4} spacing={4} style={{padding: 10,}}>
+			<Grid item xs={4} style={{padding: "12px 10px 12px 10px",}}>
 				<Paper square style={paperAppStyle}  >	
 					<div style={{position: "absolute", bottom: 1, left: 1, height: 12, width: 12, backgroundColor: boxColor, borderRadius: "0 100px 0 0",}} />
 					<Grid item style={{display: "flex", flexDirection: "column", width: "100%"}}>
@@ -608,7 +613,7 @@ const MyView = (props) => {
 								</span>
 							</Tooltip>
 							<Tooltip color="primary" title="Trigger amount" placement="bottom">
-								<span style={{marginLeft: 10, color: "#979797", display: "flex"}}>
+								<span style={{marginLeft: 15, color: "#979797", display: "flex"}}>
 									<RestoreIcon style={{color: "#979797", marginTop: "auto", marginBottom: "auto",}}/> 
 									<Typography style={{marginLeft: 5, marginTop: "auto", marginBottom: "auto",}}>
 										{triggers}
@@ -616,7 +621,7 @@ const MyView = (props) => {
 								</span>
 							</Tooltip>
 							<Tooltip color="primary" title="Subflows used" placement="bottom">
-								<span style={{marginLeft: 10, display: "flex", color: "#979797", }}>
+								<span style={{marginLeft: 15, display: "flex", color: "#979797", }}>
 									<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" style={{color: "#979797", marginTop: "auto", marginBottom: "auto",}}>
 										<path d="M0 0H15V15H0V0ZM16 16H18V18H16V16ZM16 13H18V15H16V13ZM16 10H18V12H16V10ZM16 7H18V9H16V7ZM16 4H18V6H16V4ZM13 16H15V18H13V16ZM10 16H12V18H10V16ZM7 16H9V18H7V16ZM4 16H6V18H4V16Z" fill="#979797"/>
 									</svg>
@@ -1420,10 +1425,6 @@ const MyView = (props) => {
 					<div style={{display: "flex"}}>
 						<div style={{flex: "1"}}>
 							<h2>Workflows</h2>
-							<p>THIS IS SOME WORKFLOW INFORMATION WHY ISN’T IT GROWING THE CORRECT WAY.</p> 
-						</div>
-						<div style={{marginTop: 20}}>
-							{workflowButtons}
 						</div>
 					</div>
 
@@ -1457,6 +1458,15 @@ const MyView = (props) => {
 						</div>
 					</div>
 
+					<div style={{display: "flex", margin: 20}}>
+						<div style={{flex: 10}}>
+							<Typography>This is your workflow view. <a rel="norefferer" target="_blank" href="https://shuffler.io/docs/workflows" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more about Workflows</a></Typography>
+						</div>
+						<div style={{float: "right",}}>
+							{workflowButtons}
+						</div>
+					</div>
+					<div style={{marginTop: 15,}} />
 					{view === "grid" && (
 						<Grid container spacing={4} style={paperAppContainer}>
 							{workflows.map((data, index) => {
@@ -1471,6 +1481,7 @@ const MyView = (props) => {
 						<WorkflowGridView />
 					)}
 
+					<div style={{marginBottom: 100}}/>
 				</div>
 			</div>
 		)
