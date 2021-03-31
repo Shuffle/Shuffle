@@ -140,6 +140,7 @@ const Workflows = (props) => {
 	const [file, setFile] = React.useState("");
 
 	const [workflows, setWorkflows] = React.useState([]);
+	const [filteredWorkflows, setFilteredWorkflows] = React.useState([]);
 	const [selectedWorkflow, setSelectedWorkflow] = React.useState({});
 	const [selectedExecution, setSelectedExecution] = React.useState({});
 	const [workflowExecutions, setWorkflowExecutions] = React.useState([]);
@@ -166,7 +167,80 @@ const Workflows = (props) => {
 	const [importLoading, setImportLoading] = React.useState(false)
 	const [isDropzone, setIsDropzone] = React.useState(false);
 	const [view, setView] = React.useState("grid")
+	const [filters, setFilters] = React.useState([])
 	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" 
+
+	const findWorkflow = (filters) => {
+		if (filters.length === 0) {
+			setFilteredWorkflows(workflows)
+			return
+		}
+
+		var newWorkflows = []
+		for (var workflowKey in workflows) {
+			const curWorkflow = workflows[workflowKey]
+
+			var found = [false]
+			if (curWorkflow.tags === undefined || curWorkflow.tags === null) {
+				found = filters.map(filter => curWorkflow.name.toLowerCase().includes(filter))
+			} else {
+				found = filters.map(filter => curWorkflow.name.toLowerCase().includes(filter.toLowerCase()) || curWorkflow.tags.includes(filter))
+			}
+			//console.log("FOUND: ", found)
+			//if (found) {
+			if (found.every(v => v === true)) {
+				newWorkflows.push(curWorkflow)
+				continue
+			}
+		}
+
+		if (newWorkflows.length !== workflows.length) {
+			setFilteredWorkflows(newWorkflows)
+		}
+	}
+
+	const addFilter = (data) => {
+		if (data === null || data === undefined) {
+			return
+		}
+
+		if (data.includes("<") && data.includes(">")) {
+			return
+		}
+
+		if (filters.includes(data)) {
+			return
+		}
+
+		filters.push(data.toLowerCase())
+		setFilters(filters)
+
+		findWorkflow(filters)
+	}
+
+	const removeFilter = (index) => {
+		var newfilters = filters
+
+		if (index < 0) {
+			console.log("Can't handle index: ", index)
+			return
+		}
+
+
+		//console.log("Removing filter index", index)
+		newfilters.splice(index, 1)
+		//console.log("FILTER LENGTH: ", filters.length)
+
+		if (newfilters.length === 0) {
+			newfilters = []
+			setFilters(newfilters)
+		} else {
+			setFilters(newfilters)
+		}
+		//console.log("FILTERS: ", newfilters)
+
+		findWorkflow(newfilters) 
+	}
 
 	const deleteModal = deleteModalOpen ? 
 		<Dialog
@@ -290,6 +364,7 @@ const Workflows = (props) => {
 
 			if (responseJson !== undefined) {
 				setWorkflows(responseJson)
+				setFilteredWorkflows(responseJson)
 				setWorkflowDone(true)
 			} else {
 				if (isLoggedIn) {
@@ -635,6 +710,11 @@ const Workflows = (props) => {
 		});
 	}
 
+
+	const handleChipClick = (e) => {
+		addFilter(e.target.innerHTML)
+	}
+
 	const WorkflowPaper = (props) => {
   	const { data } = props;
 		const [open, setOpen] = React.useState(false);
@@ -674,8 +754,10 @@ const Workflows = (props) => {
 					<div style={{position: "absolute", bottom: 1, left: 1, height: 12, width: 12, backgroundColor: boxColor, borderRadius: "0 100px 0 0",}} />
 					<Grid item style={{display: "flex", flexDirection: "column", width: "100%"}}>
 						<Grid item style={{flex: 1, display: "flex", maxHeight: 34,}}>
-							<Typography variant="h6" style={{marginBottom: 0, paddingBottom: 0, maxHeight: 30,}}>
-								{parsedName}
+							<Typography variant="h6" style={{marginBottom: 0, paddingBottom: 0, maxHeight: 30, flex: 10,}}>
+								<Link to={"/workflows/"+data.id} style={{textDecoration: "none", color: "inherit",}}>
+									{parsedName}
+								</Link>
 							</Typography>
 						</Grid>
 						<Grid item style={workflowActionStyle}>
@@ -732,6 +814,7 @@ const Workflows = (props) => {
 											key={index}
 											style={{backgroundColor: "#3d3f43", height: 30, marginRight: 5, paddingLeft: 5, paddingRight: 5, height: 28, cursor: "pointer", borderColor: "#3d3f43", color: "white",}}
 											label={tag}
+											onClick={handleChipClick}
 											variant="outlined"
 											color="primary"
 										/>
@@ -809,7 +892,7 @@ const Workflows = (props) => {
 						<Grid>
 							<Link to={"/workflows/"+data.id}>
 								<Tooltip title="Edit workflow" placement="bottom">
-									<EditIcon style={{background: "#F85A3E", borderRadius: "4px", color: "black", height: 20, width: 20, padding: 7, fontSize: "small"}} />
+									<EditIcon style={{borderRadius: "4px", color: "#F85A3E", height: 20, width: 20, padding: 7, fontSize: "small"}} />
 								</Tooltip>
 							</Link>	
 						</Grid>
@@ -1180,7 +1263,7 @@ const Workflows = (props) => {
 	borderRadius: "4px", color: "black", height: "20px", "width": "20px", fontSize: "small"}} />
 									</Link>
 									<Tooltip color="primary" title="Edit workflow" placement="bottom">
-										<BubbleChartIcon/>
+										<BubbleChartIcon />
 									</Tooltip>
 									<Tooltip color="primary" title="Execute workflow" placement="bottom">
 										<PlayArrowIcon color="secondary" disabled={!data.is_valid} onClick={() => executeWorkflow(data.id)} />
@@ -1296,10 +1379,11 @@ const Workflows = (props) => {
 						fullWidth
 					  />
 					<ChipInput
-						style={{marginTop: 10}}
+						style={{marginTop: 10, }}
 						InputProps={{
 							style:{
 								color: "white",
+								backgroundColor: inputColor,
 							},
 						}}
 						placeholder="Tags"
@@ -1436,8 +1520,29 @@ const Workflows = (props) => {
 			<div style={viewStyle}>	
 				<div style={workflowViewStyle}>
 					<div style={{display: "flex"}}>
-						<div style={{flex: "1"}}>
+						<div style={{flex: 3}}>
 							<h2>Workflows</h2>
+						</div>
+						<div style={{flex: 2, float: "right", marginTop: 10,}}>
+							<ChipInput
+								style={{}}
+								InputProps={{
+									style:{
+										color: "white",
+									},
+								}}
+								placeholder="Filters"
+								color="primary"
+								fullWidth
+								value={filters}
+								onAdd={(chip) => {
+									addFilter(chip)
+								}}
+								onDelete={(chip, index) => {
+									removeFilter(index)
+									//setUpdate("delete "+chip)
+								}}
+							/>
 						</div>
 					</div>
 
@@ -1475,7 +1580,7 @@ const Workflows = (props) => {
 
 					<div style={{display: "flex", margin: "20px 0px 20px 0px"}}>
 						<div style={{flex: 10}}>
-							<Typography>This is your workflow view. <a rel="norefferer" target="_blank" href="https://shuffler.io/docs/workflows" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more about Workflows</a></Typography>
+							<Typography>Your workflow view. <a rel="norefferer" target="_blank" href="https://shuffler.io/docs/workflows" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more about Workflows</a></Typography>
 						</div>
 						<div style={{float: "right",}}>
 							{workflowButtons}
@@ -1484,7 +1589,7 @@ const Workflows = (props) => {
 					<div style={{marginTop: 15,}} />
 					{view === "grid" && (
 						<Grid container spacing={4} style={paperAppContainer}>
-							{workflows.map((data, index) => {
+							{filteredWorkflows.map((data, index) => {
 								return (
 									<WorkflowPaper key={index} data={data} />
 								)
@@ -1600,7 +1705,7 @@ const Workflows = (props) => {
 					onChange={e => setDownloadUrl(e.target.value)}
 					placeholder="https://github.com/frikky/shuffle-apps"
 					fullWidth
-					/>
+				/>
 
 					<span style={{marginTop: 10}}>Branch (default value is "master"):</span>
 					<div style={{display: "flex"}}>
