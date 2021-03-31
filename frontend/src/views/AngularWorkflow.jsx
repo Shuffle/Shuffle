@@ -2777,11 +2777,12 @@ const AngularWorkflow = (props) => {
 			const [hover, setHover] = React.useState(false)
 
 			const maxlen = 24
-			var newAppname = app.name.replace("_", " ", -1)
+			var newAppname = app.name
 			newAppname = newAppname.charAt(0).toUpperCase()+newAppname.substring(1)
 			if (newAppname.length > maxlen) {
 				newAppname = newAppname.slice(0, maxlen)+".."
 			}
+			app.name.replaceAll("_", " ", -1)
 
 			//const image = "url("+app.large_image+")"
 			const image = app.large_image
@@ -2807,13 +2808,17 @@ const AngularWorkflow = (props) => {
 							</Grid>
 							<Grid style={{display: "flex", flexDirection: "column", marginLeft: "20px", minWidth: 185, maxWidth: 185, overflow: "hidden", maxHeight: 77, }}>
 								<Grid item style={{flex: 1}}>
-									<h4 style={{marginBottom: 0, marginTop: 5}}>{newAppname}</h4>
+									<Typography variant="body1" style={{marginBottom: 0, marginTop: 5}}>{newAppname}</Typography>
 								</Grid>
 								<Grid item style={{flex: 1}}>
-									Version: {app.app_version}	
+									<Typography variant="body2" color="textSecondary"> 
+										Version: {app.app_version}	
+									</Typography>
 								</Grid>
 								<Grid item style={{flex: 1, width: "100%", maxHeight: 27, overflow: "hidden",}}>
-									{app.description}
+									<Typography variant="body2" color="textSecondary"> 
+										{app.description}
+									</Typography>
 								</Grid>
 							</Grid>
 						</Grid>
@@ -2833,43 +2838,52 @@ const AngularWorkflow = (props) => {
 		return(
 			<div style={appViewStyle}>
 				<div style={{flex: "1"}}>
-						<TextField
-							style={{backgroundColor: inputColor, borderRadius: borderRadius, marginTop: 5, marginRight: 10,}} 
-							InputProps={{
-								style:{
-									color: "white",
-									minHeight: 50, 
-									marginLeft: "5px",
-									maxWidth: "95%",
-									fontSize: "1em",
-								},
-								endAdornment: (
-									<InputAdornment position="end">
-										<Tooltip title="Run search" placement="top">
-											<SearchIcon style={{cursor: "pointer"}} />
-										</Tooltip>
-									</InputAdornment>
-								)
-							}}
-							fullWidth
-							color="primary"
-							placeholder={"Search Apps"}
-							id="appsearch"
-							onBlur={(event) => {
-								runSearch(event)
-							}}
-						/>
-					<div style={appScrollStyle}>
-						{visibleApps.map((app, index) => {	
-							if (app.invalid) {
-								return null
-							}
-
-							return(
-								<ParsedAppPaper key={index} app={app} />	
+					<TextField
+						style={{backgroundColor: inputColor, borderRadius: borderRadius, marginTop: 5, marginRight: 10,}} 
+						InputProps={{
+							style:{
+								color: "white",
+								minHeight: 50, 
+								marginLeft: "5px",
+								maxWidth: "95%",
+								fontSize: "1em",
+							},
+							endAdornment: (
+								<InputAdornment position="end">
+									<Tooltip title="Run search" placement="top">
+										<SearchIcon style={{cursor: "pointer"}} />
+									</Tooltip>
+								</InputAdornment>
 							)
-						})}
-					</div>
+						}}
+						fullWidth
+						color="primary"
+						placeholder={"Search Active Apps"}
+						id="appsearch"
+						onBlur={(event) => {
+							runSearch(event)
+						}}
+					/>
+					{visibleApps.length > 0 ?
+						<div style={appScrollStyle}>
+							{visibleApps.map((app, index) => {	
+								if (app.invalid) {
+									return null
+								}
+
+								return(
+									<ParsedAppPaper key={index} app={app} />	
+								)
+							})}
+						</div>
+						:
+						<div style={{textAlign: "center", width: leftBarSize}}>
+							<CircularProgress style={{marginTop: 25, height: 35, width: 35, marginLeft: "auto", marginRight: "auto", }} /> 
+							<Typography variant="body1" color="textSecondary">
+								Loading apps
+							</Typography>
+						</div>
+					}
 				</div>
 			</div>
 		)
@@ -2925,13 +2939,13 @@ const AngularWorkflow = (props) => {
 	//
 	const selectedNameChange = (event) => {
 		//console.log("OLDNAME: ", selectedAction.name)
-		event.target.value = event.target.value.replace("(", "")
-		event.target.value = event.target.value.replace(")", "")
-		event.target.value = event.target.value.replace("$", "")
-		event.target.value = event.target.value.replace("#", "")
-		event.target.value = event.target.value.replace(".", "")
-		event.target.value = event.target.value.replace(",", "")
-		event.target.value = event.target.value.replace(" ", "_")
+		event.target.value = event.target.value.replaceAll("(", "")
+		event.target.value = event.target.value.replaceAll(")", "")
+		event.target.value = event.target.value.replaceAll("$", "")
+		event.target.value = event.target.value.replaceAll("#", "")
+		event.target.value = event.target.value.replaceAll(".", "")
+		event.target.value = event.target.value.replaceAll(",", "")
+		event.target.value = event.target.value.replaceAll(" ", "_")
 		selectedAction.label = event.target.value
 		setSelectedAction(selectedAction)
 
@@ -4384,10 +4398,10 @@ const AngularWorkflow = (props) => {
 							newActionname = data.label
 						}
 						// ROFL FIXME - loop
-						newActionname = newActionname.replace("_", " ")
-						newActionname = newActionname.replace("_", " ")
-						newActionname = newActionname.replace("_", " ")
-						newActionname = newActionname.replace("_", " ")
+						newActionname = newActionname.replaceAll("_", " ")
+						newActionname = newActionname.replaceAll("_", " ")
+						newActionname = newActionname.replaceAll("_", " ")
+						newActionname = newActionname.replaceAll("_", " ")
 						newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
 						return (
 						<MenuItem key={data.name} style={{maxWidth: 400, overflowX: "hidden", backgroundColor: inputColor, color: "white"}} value={data.name}>
@@ -6877,7 +6891,7 @@ const AngularWorkflow = (props) => {
 		//	console.log("HANDLE INPUT FIELD FOR COPY!")
 		//}
 
-		to_be_copied.replace(" ", "_")
+		to_be_copied.replaceAll(" ", "_")
 		const elementName = "copy_element_shuffle"
   	var copyText = document.getElementById(elementName);
 		if (copyText !== null && copyText !== undefined) {
@@ -7023,37 +7037,59 @@ const AngularWorkflow = (props) => {
 						</Tooltip>
 					</div>
 					{executionData.status !== undefined && executionData.status.length > 0 ?
-						<div>
-							<b>Status: &nbsp;&nbsp;</b>{executionData.status} 
+						<div style={{display: "flex"}}>
+							<Typography variant="body1">
+								<b>Status &nbsp;</b>
+							</Typography>
+							<Typography variant="body1" color="textSecondary">
+								{executionData.status} 
+							</Typography>
 						</div>
 						: null
 					}
 					{executionData.execution_source !== undefined && executionData.execution_source !== null && executionData.execution_source.length > 0 && executionData.execution_source !== "default" ?
-						<div>
-							<b>Source: &nbsp;&nbsp;</b>{executionData.execution_parent !== null && executionData.execution_parent !== undefined && executionData.execution_parent.length > 0 ? 
-								executionData.execution_source  === props.match.params.key ? 
-									<span  style={{cursor: "pointer", color: "#f85a3e"}} onClick={(event) => {
-										getWorkflowExecution(props.match.params.key, executionData.execution_parent) 
-									}}>
-										Parent Execution 
-									</span>
+						<div style={{display: "flex"}}>
+							<Typography variant="body1">
+								<b>Source &nbsp;&nbsp;</b>
+							</Typography>
+							<Typography variant="body1" color="textSecondary">
+								{executionData.execution_parent !== null && executionData.execution_parent !== undefined && executionData.execution_parent.length > 0 ? 
+									executionData.execution_source  === props.match.params.key ? 
+
+										<span  style={{cursor: "pointer", color: "#f85a3e"}} onClick={(event) => {
+											getWorkflowExecution(props.match.params.key, executionData.execution_parent) 
+										}}>
+											Parent Execution 
+										</span>
+
+										:
+										<a rel="norefferer" href={`/workflows/${executionData.execution_source}?view=executions&execution_id=${executionData.execution_parent}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>Parent Workflow</a>
 									:
-									<a rel="norefferer" href={`/workflows/${executionData.execution_source}?view=executions&execution_id=${executionData.execution_parent}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>Parent Workflow</a>
-								:
-								executionData.execution_source
-							} 
+									executionData.execution_source
+								} 
+							</Typography>
 						</div>
 						: null
 					}
 					{executionData.started_at !== undefined ?
-						<div>
-							<b>Started: &nbsp;</b>{new Date(executionData.started_at*1000).toISOString()} 
+						<div style={{display: "flex"}}>
+							<Typography variant="body1">
+								<b>Started &nbsp;&nbsp;</b>
+							</Typography> 
+							<Typography variant="body1" color="textSecondary">
+								{new Date(executionData.started_at*1000).toISOString()} 
+							</Typography>
 						</div>
 						: null
 					}
 					{executionData.completed_at !== undefined && executionData.completed_at !== null && executionData.completed_at > 0 ?
-						<div>
-							<b>Finished: </b>{new Date(executionData.completed_at*1000).toISOString()} 
+						<div style={{display: "flex"}}>
+							<Typography variant="body1">
+								<b>Finished &nbsp;</b>
+							</Typography>
+							<Typography variant="body1" color="textSecondary">
+								{new Date(executionData.completed_at*1000).toISOString()} 
+							</Typography>
 						</div>
 						: null
 					}
@@ -7153,10 +7189,21 @@ const AngularWorkflow = (props) => {
 										{actionimg}
 										<div>
 											<div style={{fontSize: 24, marginTop: "auto", marginBottom: "auto"}}><b>{data.action.label}</b></div>
-											<div style={{fontSize: 14}}>{data.action.name}</div>
+											<div style={{fontSize: 14}}>
+												<Typography variant="body2" color="textsecondary">
+													{data.action.name}
+												</Typography>
+											</div>
 										</div>
 									</div>
-									<div style={{marginBottom: 5}}><b>Status </b> {data.status}</div>
+									<div style={{marginBottom: 5, display: "flex",}}>
+										<Typography variant="body1">
+											<b>Status &nbsp;</b> 
+										</Typography>
+										<Typography variant="body1" color="textSecondary">
+											{data.status}
+										</Typography>
+									</div>
 									{validate.valid ? <span><ReactJson 
 											src={validate.result} 
 											theme="solarized" 
@@ -7188,9 +7235,13 @@ const AngularWorkflow = (props) => {
 										}
 										</span>
 									: 
-									<div style={{maxHeight: 250, overflowX: "hidden", overflowY: "auto", whiteSpace: "pre-wrap"}}>
-										<b>Result</b>&nbsp;
-										{data.result}
+									<div style={{maxHeight: 250, overflowX: "hidden", overflowY: "auto", whiteSpace: "pre-wrap", }}>
+										<Typography variant="body1" style={{display: 'inline-block'}}>
+											<b>Result</b>&nbsp;
+										</Typography> 
+										<Typography variant="body1" color="textSecondary" style={{display: 'inline-block'}}>
+											{data.result}
+										</Typography>
 									</div>
 									}
 								</div>

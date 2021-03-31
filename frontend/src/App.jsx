@@ -13,6 +13,7 @@ import EditWebhook from "./views/EditWebhook";
 import AngularWorkflow from "./views/AngularWorkflow";
 
 import Header from './components/Header';
+import theme from './theme'
 import Apps from './views/Apps';
 import AppCreator from './views/AppCreator';
 
@@ -44,34 +45,8 @@ if (window.location.protocol == "http:" && window.location.port === "3000") {
 	//globalUrl = "http://localhost:5002"
 }
 
-const theme = createMuiTheme({
-	palette: {
-		primary: {
-			main: "#f85a3e"
-		},
-		secondary: {
-			main: '#e8eaf6',
-		},
-		surfaceColor: "#27292d",
-		inputColor: "#383B40"
-	},
-	typography: {
-		useNextVariants: true
-	},
-	overrides: {
-		MuiMenu: {
-			list: {
-				backgroundColor: "#383B40",
-			},
-		},
-	},
-});
-
-
-// FIXME - set client side cookies
 const App = (message, props) => {
 	const [userdata, setUserData] = useState({});
-	//const [homePage, ] = useState(true);
 	const [cookies, setCookie, removeCookie] = useCookies([]);
 	const [isLoggedIn, setIsLoggedIn] = useState(false);
 	const [dataset, setDataset] = useState(false);

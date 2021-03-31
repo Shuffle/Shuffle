@@ -9,7 +9,7 @@ require (
 	github.com/docker/docker v20.10.1+incompatible
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
-	github.com/frikky/shuffle-shared v0.0.12 // indirect
+	github.com/frikky/shuffle-shared v0.0.23 // indirect
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/mackerelio/go-osstat v0.1.0
 	github.com/opencontainers/go-digest v1.0.0 // indirect

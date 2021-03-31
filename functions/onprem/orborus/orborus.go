@@ -537,8 +537,8 @@ func main() {
 
 			// Doesn't work because of USER INPUT
 			if found {
-				//log.Printf("[INFO] Skipping duplicate %s", execution.ExecutionId)
-				//continue
+				log.Printf("[INFO] Skipping duplicate %s", execution.ExecutionId)
+				continue
 			} else {
 				//log.Printf("[INFO] Adding to be ran %s", execution.ExecutionId)
 				executionIds = append(executionIds, execution.ExecutionId)

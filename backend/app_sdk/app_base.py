@@ -1543,7 +1543,7 @@ class AppBase:
                     sourcevalue = condition["source"]["value"]
                     check, sourcevalue, is_loop = parse_params(action, fullexecution, condition["source"])
                     if check:
-                        return False, "Failed condition: %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)
+                        return False, {"success": False, "reason": "Failed condition: %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)}
 
 
                     #sourcevalue = sourcevalue.encode("utf-8")
@@ -1552,7 +1552,7 @@ class AppBase:
 
                     check, destinationvalue, is_loop = parse_params(action, fullexecution, condition["destination"])
                     if check:
-                        return False, "Failed condition: %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)
+                        return False, {"success": False, "reason": "Failed condition: %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)}
 
                     #destinationvalue = destinationvalue.encode("utf-8")
                     destinationvalue = parse_wrapper_start(destinationvalue)
@@ -1593,7 +1593,7 @@ class AppBase:
 
                     if not validation:
                         self.logger.info("Failed condition check for %s %s %s." % (sourcevalue, condition["condition"]["value"], destinationvalue))
-                        return False, "Failed condition: %s %s %s" % (sourcevalue, condition["condition"]["value"], destinationvalue)
+                        return False, {"success": False, "reason": "Failed condition: %s %s %s" % (sourcevalue, condition["condition"]["value"], destinationvalue)}
 
 
                 # Make a general parser here, at least to get param["name"] = param["value"] in maparameter[string]string

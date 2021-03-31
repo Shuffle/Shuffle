@@ -2,7 +2,7 @@ import React, { useEffect} from 'react';
 import { useInterval } from 'react-powerhooks';
 import { makeStyles } from '@material-ui/core/styles';
 
-import {Grid, Paper, Tooltip, Divider, Button, TextField, FormControl, IconButton, Menu, MenuItem, FormControlLabel, Chip, Switch, Typography, Zoom, CircularProgress, Dialog, DialogTitle, DialogActions, DialogContent} from '@material-ui/core';
+import {Avatar, Grid, Paper, Tooltip, Divider, Button, TextField, FormControl, IconButton, Menu, MenuItem, FormControlLabel, Chip, Switch, Typography, Zoom, CircularProgress, Dialog, DialogTitle, DialogActions, DialogContent} from '@material-ui/core';
 import {FileCopy as FileCopyIcon, Delete as DeleteIcon, BubbleChart as BubbleChartIcon, Restore as RestoreIcon, Cached as CachedIcon, GetApp as GetAppIcon, Apps as AppsIcon, Edit as EditIcon, MoreVert as MoreVertIcon, PlayArrow as PlayArrowIcon, Add as AddIcon, Publish as PublishIcon, CloudUpload as CloudUploadIcon, CloudDownload as CloudDownloadIcon} from '@material-ui/icons';
 //import {Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
 
@@ -85,6 +85,10 @@ const activeWorkflowStyle = {backgroundColor: "#3d3f43"}
 const fontSize_16 = {fontSize: "16px",}
 const counterStyle = {fontSize: "36px",fontWeight:"bold"}
 const blockRightStyle = {textAlign: "right",padding: "20px 20px 0px 0px",width:"100%"}
+
+const chipStyle = {
+	backgroundColor: "#3d3f43", height: 30, marginRight: 5, paddingLeft: 5, paddingRight: 5, height: 28, cursor: "pointer", borderColor: "#3d3f43", color: "white",
+}
 
 const flexContentStyle = {
 	display: "flex", 
@@ -452,12 +456,10 @@ const Workflows = (props) => {
 	}
 
 	const workflowActionStyle = {
-		flex: "1", 
 		display: "flex", 
-		width: 150, 
+		width: 160, 
 		height: 44,
 		justifyContent: "space-between", 
-		overflow: "hidden"
 	}
 
 	const executeWorkflow = (id) => {
@@ -741,7 +743,7 @@ const Workflows = (props) => {
 
 		var parsedName = data.name
 		if (parsedName !== undefined && parsedName !== null && parsedName.length > 25) {
-			parsedName = parsedName.slice(0,25)+".." 
+			parsedName = parsedName.slice(0,26)+".." 
 		}
 
 
@@ -753,12 +755,14 @@ const Workflows = (props) => {
 				<Paper square style={paperAppStyle}  >	
 					<div style={{position: "absolute", bottom: 1, left: 1, height: 12, width: 12, backgroundColor: boxColor, borderRadius: "0 100px 0 0",}} />
 					<Grid item style={{display: "flex", flexDirection: "column", width: "100%"}}>
-						<Grid item style={{flex: 1, display: "flex", maxHeight: 34,}}>
-							<Typography variant="h6" style={{marginBottom: 0, paddingBottom: 0, maxHeight: 30, flex: 10,}}>
-								<Link to={"/workflows/"+data.id} style={{textDecoration: "none", color: "inherit",}}>
-									{parsedName}
-								</Link>
-							</Typography>
+						<Grid item style={{display: "flex", maxHeight: 34,}}>
+							<Tooltip title={`Edit ${data.name}`} placement="bottom">
+								<Typography variant="body1" style={{marginBottom: 0, paddingBottom: 0, maxHeight: 30, flex: 10,}}>
+									<Link to={"/workflows/"+data.id} style={{textDecoration: "none", color: "inherit",}}>
+										{parsedName}
+									</Link>
+								</Typography>
+							</Tooltip>
 						</Grid>
 						<Grid item style={workflowActionStyle}>
 							<Tooltip color="primary" title="Action amount" placement="bottom">
@@ -778,7 +782,31 @@ const Workflows = (props) => {
 								</span>
 							</Tooltip>
 							<Tooltip color="primary" title="Subflows used" placement="bottom">
-								<span style={{marginLeft: 15, display: "flex", color: "#979797", }}>
+								<span style={{marginLeft: 15, display: "flex", color: "#979797", cursor: "pointer"}} onClick={() => {
+									if (subflows === 0) {
+										alert.info("No subflows for "+data.name)
+										return
+									}
+
+									var newWorkflows = [data]
+									for (var key in data.triggers) {
+										const trigger = data.triggers[key]
+										if (trigger.app_name !== "Shuffle Workflow") {
+											continue
+										}
+
+										if (trigger.parameters !== undefined && trigger.parameters !== null && trigger.parameters.length > 0 && trigger.parameters[0].name === "workflow") {
+											const newWorkflow = workflows.find(item => item.id === trigger.parameters[0].value)	
+											if (newWorkflow !== null && newWorkflow !== undefined) {
+												newWorkflows.push(newWorkflow)
+												continue
+											}
+										}
+									}
+
+									setFilters(["Subflows of "+data.name])
+									setFilteredWorkflows(newWorkflows)
+								}}>
 									<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" style={{color: "#979797", marginTop: "auto", marginBottom: "auto",}}>
 										<path d="M0 0H15V15H0V0ZM16 16H18V18H16V16ZM16 13H18V15H16V13ZM16 10H18V12H16V10ZM16 7H18V9H16V7ZM16 4H18V6H16V4ZM13 16H15V18H13V16ZM10 16H12V18H10V16ZM7 16H9V18H7V16ZM4 16H6V18H4V16Z" fill="#979797"/>
 									</svg>
@@ -802,17 +830,18 @@ const Workflows = (props) => {
 							: null}
 							*/}
 						</Grid>
-						<Grid item style={{flex: "1", justifyContent: "left", overflow: "hidden", marginTop: 5,}}>
+						<Grid item style={{justifyContent: "left", overflow: "hidden", marginTop: 5,}}>
 							{data.tags !== undefined ?
 								data.tags.map((tag, index) => {
 									if (index >= 3) {
 										return null
 									}
 
+
 									return (
 										<Chip
 											key={index}
-											style={{backgroundColor: "#3d3f43", height: 30, marginRight: 5, paddingLeft: 5, paddingRight: 5, height: 28, cursor: "pointer", borderColor: "#3d3f43", color: "white",}}
+											style={chipStyle}
 											label={tag}
 											onClick={handleChipClick}
 											variant="outlined"
@@ -889,6 +918,7 @@ const Workflows = (props) => {
 
 							</Menu>
 						</Grid>
+						{/*
 						<Grid>
 							<Link to={"/workflows/"+data.id}>
 								<Tooltip title="Edit workflow" placement="bottom">
@@ -896,6 +926,7 @@ const Workflows = (props) => {
 								</Tooltip>
 							</Link>	
 						</Grid>
+						*/}
 					</Grid>
 					: null}
 				</Paper>
@@ -1236,7 +1267,7 @@ const Workflows = (props) => {
 				} else if (data.triggers[key].app_name === "Schedule") {
 					schedules += 1
 					//scheduleImg = data.triggers[key].large_image
-				} else if (data.triggers[key].app_name === "Subflow") {
+				} else if (data.triggers[key].app_name === "Shuffle Workflow") {
 					subflows += 1
 				}
 			}
@@ -1298,7 +1329,7 @@ const Workflows = (props) => {
 												return (
 													<Chip
 														key={index}
-														style={{backgroundColor: "#3d3f43", height: 30, marginRight: 5, paddingLeft: 5, paddingRight: 5, height: 28, cursor: "pointer", borderColor: "#3d3f43", color: "white",}}
+														style={chipStyle}
 														label={tag}
 														variant="outlined"
 														color="primary"
@@ -1383,7 +1414,6 @@ const Workflows = (props) => {
 						InputProps={{
 							style:{
 								color: "white",
-								backgroundColor: inputColor,
 							},
 						}}
 						placeholder="Tags"
@@ -1523,27 +1553,6 @@ const Workflows = (props) => {
 						<div style={{flex: 3}}>
 							<h2>Workflows</h2>
 						</div>
-						<div style={{flex: 2, float: "right", marginTop: 10,}}>
-							<ChipInput
-								style={{}}
-								InputProps={{
-									style:{
-										color: "white",
-									},
-								}}
-								placeholder="Filters"
-								color="primary"
-								fullWidth
-								value={filters}
-								onAdd={(chip) => {
-									addFilter(chip)
-								}}
-								onDelete={(chip, index) => {
-									removeFilter(index)
-									//setUpdate("delete "+chip)
-								}}
-							/>
-						</div>
 					</div>
 
 					{/*
@@ -1578,11 +1587,49 @@ const Workflows = (props) => {
 					</div>
 					*/}
 
-					<div style={{display: "flex", margin: "20px 0px 20px 0px"}}>
-						<div style={{flex: 10}}>
-							<Typography>Your workflow view. <a rel="norefferer" target="_blank" href="https://shuffler.io/docs/workflows" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more about Workflows</a></Typography>
+					{/*
+					chipRenderer={({ value, isFocused, isDisabled, handleClick, handleRequestDelete }, key) => {
+						console.log("VALUE: ", value)
+
+						return (
+							<Chip
+								key={key}
+								style={chipStyle}
+
+							>
+								{value}
+							</Chip>
+						)
+					}}
+					*/}
+					<div style={{display: "flex", margin: "0px 0px 20px 0px"}}>
+						<div style={{flex: 1}}>
+							<Typography style={{marginTop: 7, marginBottom: "auto"}}>
+								<a rel="norefferer" target="_blank" href="https://shuffler.io/docs/workflows" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more about Workflows</a>
+							</Typography>
 						</div>
-						<div style={{float: "right",}}>
+						<div style={{flex: 1, float: "right",}}>
+							<ChipInput
+								style={{}}
+								InputProps={{
+									style:{
+										color: "white",
+										//backgroundColor: inputColor,
+									},
+								}}
+								placeholder="Filter Your Workflows"
+								color="primary"
+								fullWidth
+								value={filters}
+								onAdd={(chip) => {
+									addFilter(chip)
+								}}
+								onDelete={(chip, index) => {
+									removeFilter(index)
+								}}
+							/>
+						</div>
+						<div style={{float: "right", flex: 1, textAlign: "right",}}>
 							{workflowButtons}
 						</div>
 					</div>

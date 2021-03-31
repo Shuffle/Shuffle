@@ -47,7 +47,6 @@ const data = [{
 			css: {
 				'width': '30px',
 				'height': '30px',
-				'font-size': '0px',
 			},
 		},
 		{
@@ -118,6 +117,8 @@ const data = [{
 			css: {
 				'shape': 'ellipse',
 				'border-color': '#80deea',
+				'width': '80px',
+				'height': '80px',
 			},
 		},
 		{
