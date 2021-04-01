@@ -2,46 +2,23 @@ import React, { useEffect } from 'react';
 
 import { useInterval } from 'react-powerhooks';
 
-import AppsIcon from '@material-ui/icons/Apps';
-import Grid from '@material-ui/core/Grid';
-import Select from '@material-ui/core/Select';
-import Paper from '@material-ui/core/Paper';
-import Divider from '@material-ui/core/Divider';
-import ButtonBase from '@material-ui/core/ButtonBase';
-import Button from '@material-ui/core/Button';
-import TextField from '@material-ui/core/TextField';
-import FormControl from '@material-ui/core/FormControl';
-import MenuItem from '@material-ui/core/MenuItem';
-import Tooltip from '@material-ui/core/Tooltip';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Switch from '@material-ui/core/Switch';
-import Input from '@material-ui/core/Input';
-import YAML from 'yaml'
-import {Link} from 'react-router-dom';
-import Breadcrumbs from '@material-ui/core/Breadcrumbs';
-import ReactJson from 'react-json-view'
-import Chip from '@material-ui/core/Chip';
+import {IconButton, Typography, Grid, Select, Paper, Divider, ButtonBase, Button, TextField, FormControl, MenuItem, Tooltip, FormControlLabel, Switch, Input, Breadcrumbs, Chip, Dialog, DialogTitle, DialogActions, DialogContent, CircularProgress} from '@material-ui/core';
+import {OpenInNew as OpenInNewIcon,Apps as AppsIcon, Cached as CachedIcon, Publish as PublishIcon, CloudDownload as CloudDownloadIcon, Edit as EditIcon, Delete as DeleteIcon} from '@material-ui/icons';
+
 import { useTheme } from '@material-ui/core/styles';
 
-import CachedIcon from '@material-ui/icons/Cached';
-import CloudDownloadIcon from '@material-ui/icons/CloudDownload';
-import PublishIcon from '@material-ui/icons/Publish';
-import CloudDownload from '@material-ui/icons/CloudDownload';
-import EditIcon from '@material-ui/icons/Edit';
-import DeleteIcon from '@material-ui/icons/Delete';
-
+import YAML from 'yaml'
+import {Link} from 'react-router-dom';
+import ReactJson from 'react-json-view'
 import { useAlert } from "react-alert";
-
-import Dialog from '@material-ui/core/Dialog';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import CircularProgress from '@material-ui/core/CircularProgress';
-
 import Dropzone from '../components/Dropzone';
 
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
+
+const chipStyle = {
+	backgroundColor: "#3d3f43", height: 30, marginRight: 5, paddingLeft: 5, paddingRight: 5, height: 28, cursor: "pointer", borderColor: "#3d3f43", color: "white",
+}
 
 // Parses JSON data into keys that can be used everywhere :)
 export const GetParsedPaths = (inputdata, basekey) => {
@@ -200,7 +177,7 @@ const Apps = (props) => {
 		minHeight: 130,
 		maxHeight: 130,
 		minWidth: "100%",
-		maxWidth: "100%",
+		maxWidth: 612.5,
 		marginBottom: 5, 
 		borderRadius: 5, 
 		color: "white",
@@ -222,26 +199,57 @@ const Apps = (props) => {
 			setIsLoading(false)
 			if (response.status !== 200) {
 				console.log("Status not 200 for apps :O!")
+
+				if (isCloud) {
+					window.location.pathname = "/search"
+				}
 			}
 
 			return response.json()
 		})
     .then((responseJson) => {
 			//console.log("Apps: ", responseJson)
-			responseJson = sortByKey(responseJson, "large_image")
+			//responseJson = sortByKey(responseJson, "large_image")
+			//responseJson = sortByKey(responseJson, "is_valid")
+			//setFilteredApps(responseJson.filter(app => !internalIds.includes(app.name) && !(!app.activated && app.generated)))
+			
+			var privateapps = []
+			var valid = []
+			var invalid = []
+			for (var key in responseJson) {
+				const app = responseJson[key]
+				if (app.is_valid && !(!app.activated && app.generated)) {
+					privateapps.push(app)
+				} else if (app.private_id !== undefined && app.private_id.length > 0) {
+					valid.push(app)
+				} else {
+					invalid.push(app)
+				}
+			}
 
-			setApps(responseJson)
-			setFilteredApps(responseJson)
-			if (responseJson.length > 0) {
-				setSelectedApp(responseJson[0])
-				if (responseJson[0].actions !== null && responseJson[0].actions.length > 0) {
-					setSelectedAction(responseJson[0].actions[0])
+			//console.log(privateapps)
+			//console.log(valid)
+			//console.log(invalid)
+			//console.log(privateapps)
+			//privateapps.reverse()
+			privateapps.push(...valid)
+			privateapps.push(...invalid)
+
+			setApps(privateapps)
+			setFilteredApps(privateapps)
+			if (privateapps.length > 0) {
+				if (selectedApp.id === undefined || selectedApp.id === null) {
+					setSelectedApp(privateapps[0])
+				}
+
+				if (privateapps[0].actions !== null && privateapps[0].actions.length > 0) {
+					setSelectedAction(privateapps[0].actions[0])
 				} else {
 					setSelectedAction({})
 				}
 			} 
 			
-			runAppSearch("")
+			//runAppSearch("")
     })
 		.catch(error => {
 			alert.error(error.toString())
@@ -337,11 +345,9 @@ const Apps = (props) => {
 				//console.log("IMG LOADED!: ", event.target)
 			}} />
 
-		// FIXME - add label to apps, as this might be slow with A LOT of apps
 		var newAppname = data.name
-		newAppname = newAppname.replace("_", " ")
 		newAppname = newAppname.charAt(0).toUpperCase()+newAppname.substring(1)
-
+		newAppname = newAppname.replaceAll("_", " ")
 		var sharing = "public"
 		if (!data.sharing) {
 			sharing = "private"
@@ -357,7 +363,7 @@ const Apps = (props) => {
 		}
 
 		var description = data.description
-		const maxDescLen = 51
+		const maxDescLen = 60
 		if (description.length > maxDescLen) {
 			description = data.description.slice(0, maxDescLen)+"..."
 		}
@@ -366,6 +372,7 @@ const Apps = (props) => {
 		return (
 			<Paper square key={data.id} style={paperAppStyle} onClick={() => {
 				if (selectedApp.id !== data.id) {
+					data.name = newAppname
 					setSelectedApp(data)
 
 					console.log(data)
@@ -376,7 +383,7 @@ const Apps = (props) => {
 					}
 
 					if (data.sharing) {
-						setSharingConfiguration("everyone")
+						setSharingConfiguration(isCloud ? "public" : "everyone")
 					} 
 				}
 			}}>
@@ -384,19 +391,22 @@ const Apps = (props) => {
 					<ButtonBase style={{backgroundColor: theme.palette.inputColor, border: 3}}>
 						{imageline}
 					</ButtonBase>
-					<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: boxWidth, backgroundColor: boxColor}}>
-					</div>
-					<Grid container style={{margin: "0px 10px 10px 10px", flex: "1"}}>
-						<Grid style={{display: "flex", flexDirection: "column", width: "100%"}}>
+					<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: boxWidth, backgroundColor: boxColor}}/>
+					<Grid container style={{margin: "0px 0px 10px 10px", flex: "1"}}>
+						<Grid style={{display: "flex", flexDirection: "column", }}>
 							<Grid item style={{flex: "1"}}>
-								<h3 style={{marginBottom: "0px"}}>{newAppname}</h3>
+								<Typography variant="body1" style={{marginBottom: "0px", marginTop: 5,}}>
+									{newAppname}
+								</Typography>
 							</Grid>
-							<div style={{display: "flex", flex: "1"}}>
-								<Grid item style={{flex: "1", justifyContent: "center", overflow: "hidden"}}>
-									{description}	
+							<div style={{display: "flex", flex: "1", marginTop: 5,}}>
+								<Grid item style={{flex: 1, justifyContent: "center", overflow: "hidden", maxHeight: 43, overflow: "hidden",}}>
+									<Typography variant="body2" color="textSecondary">
+										{description}	
+									</Typography>
 								</Grid>
 							</div>
-							<Grid item style={{flex: "1", justifyContent: "center", marginTop: 5}}>
+							<Grid item style={{flex: 1, justifyContent: "center", marginTop: 8}}>
 								{data.tags === null || data.tags === undefined ? null : data.tags.map((tag, index) => {
 									if (index >= 3) {
 										return null
@@ -405,7 +415,7 @@ const Apps = (props) => {
 									return (
 										<Chip
 											key={index}
-											style={{height: 25, marginRight: 5, cursor: "pointer",}}
+											style={chipStyle}
 											label={tag}
 											variant="outlined"
 											color="primary"
@@ -420,7 +430,7 @@ const Apps = (props) => {
 				{data.activated && data.private_id !== undefined && data.private_id.length > 0 && data.generated ?
 				<Grid container style={{margin: "10px 10px 10px 10px", flex: "1"}} onClick={() => {downloadApp(data)}}>
 					<Tooltip title={"Download OpenAPI"} style={{marginTop: "28px", width: "100%"}} aria-label={data.name}>
-						<CloudDownload /> 
+						<CloudDownloadIcon /> 
 					</Tooltip>
 				</Grid>
 				: null}
@@ -447,7 +457,7 @@ const Apps = (props) => {
 		// FIXME - add label to apps, as this might be slow with A LOT of apps
 		var newAppname = selectedApp.name
 		if (newAppname !== undefined && newAppname.length > 0) {
-			newAppname = newAppname.replace("_", " ")
+			newAppname = newAppname.replaceAll("_", " ")
 			newAppname = newAppname.charAt(0).toUpperCase()+newAppname.substring(1)
 		} else {
 			newAppname = ""
@@ -467,7 +477,7 @@ const Apps = (props) => {
 					color="primary"
 					style={{marginTop: 10, marginRight: 8}}
 				>
-					<CloudDownload /> 
+					<CloudDownloadIcon /> 
 				</Button>
 			</Tooltip>
 			: null
@@ -599,22 +609,36 @@ const Apps = (props) => {
 
 		const userRoles = [
 			"you",
-			"everyone",
+			isCloud ? "public" : "everyone",
 		]
 
 		//fetch(globalUrl+"/api/v1/get_openapi/"+urlParams.get("id"), 
 		var baseInfo = newAppname.length > 0 ?
-			<div>
+			<div style={{position: "relative"}}>
 				<div style={{display: "flex"}}>
 					<div style={{marginRight: 15, marginTop: 10}}>
 						{imageline}
 					</div>
 					<div style={{maxWidth: "85%", overflow: "hidden"}}>
-						<h2 style={{marginTop: 20, marginBottom: 0, }}>{newAppname}</h2>
-						<p style={{marginTop: 5, marginBottom: 0,}}>Version {selectedApp.app_version}</p>	
-						<p style={{marginTop: 5, marginBottom: 0, maxHeight: 150, overflowY: "auto", overflowX: "hidden",}}>{description}</p>	
+						<Typography variant="h6" style={{marginBottom: 0, }}>
+							{newAppname}
+						</Typography>
+						<Typography variant="body1" color="textSecondary">
+							Version {selectedApp.app_version}
+						</Typography>	
+						<Typography variant="body2" color="textSecondary" style={{marginTop: 5, marginBottom: 0, maxHeight: 150, overflowY: "auto", overflowX: "hidden",}}>
+							{description}
+						</Typography>	
 					</div>
 				</div>
+				{isCloud ? 
+					<a href={"https://shuffler.io/apps/"+selectedApp.id} style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">
+						<IconButton style={{top: -10, right: 0, position: "absolute", color: "#f85a3e"}} >
+							<OpenInNewIcon style={{}} />
+						</IconButton>
+					</a>
+				: null}
+
 				{activateButton}
 				{(props.userdata !== undefined && (props.userdata.role === "admin" || props.userdata.id === selectedApp.owner) || !selectedApp.generated) ? 
 					<div>
@@ -633,7 +657,7 @@ const Apps = (props) => {
 							return (
 								<Chip
 									key={index}
-									style={{height: 25, marginRight: 5, marginTop: 7, cursor: "pointer",}}
+									style={chipStyle}
 									variant="outlined"
 									label={tag}
 									color="primary"
@@ -645,15 +669,21 @@ const Apps = (props) => {
 				{props.userdata !== undefined && props.userdata.id === selectedApp.owner ? 
 					<div style={{marginTop: 15}}>
 						{/*<p><b>ID:</b> {selectedApp.id}</p>*/}
-						<b style={{marginRight: 15}}>Sharing:</b> 
+						<b style={{marginRight: 15}}>Sharing </b> 
 						<Select
 							value={sharingConfiguration}
 							onChange={(event) => {
-								setSharingConfiguration(event.target.value)
-								alert.info("Changed sharing to "+event.target.value)
+								alert.info("Changing sharing to "+event.target.value)
 
-								updateAppField(selectedApp.id, "sharing", !selectedApp.sharing)
-								//setSelectedAction(event.target.value)
+								setSharingConfiguration(event.target.value)
+
+								if (event.target.value === "you") {
+									updateAppField(selectedApp.id, "sharing", false)
+								} else if (event.target.value === "everyone" || event.target.value === "public") {
+									updateAppField(selectedApp.id, "sharing", true)
+								} else {
+									console.log("Can't handle value for sharing: ", event.target.value)
+								}
 							}}
 							style={{width: 150, backgroundColor: theme.palette.surfaceColor, backgroundColor: inputColor, color: "white", height: 35, marginleft: 10,}}
 							SelectDisplayProps={{
@@ -696,12 +726,7 @@ const Apps = (props) => {
 							>
 								{selectedApp.actions.map(data => {
 										var newActionname = data.label !== undefined && data.label.length > 0 ? data.label : data.name
-
-										// ROFL FIXME - loop
-										newActionname = newActionname.replace("_", " ")
-										newActionname = newActionname.replace("_", " ")
-										newActionname = newActionname.replace("_", " ")
-										newActionname = newActionname.replace("_", " ")
+										newActionname = newActionname.replaceAll("_", " ")
 										newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
 										return (
 											<MenuItem key={data.name} style={{backgroundColor: inputColor, color: "white"}} value={data}>
@@ -760,7 +785,9 @@ const Apps = (props) => {
 						&nbsp;- <a href="https://apis.guru/browse-apis/" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">OpenAPI directory</a>
 						&nbsp;- <a href="https://editor.swagger.io/" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">OpenAPI Validator</a>
 						<div/>
-						Apps interact with eachother in workflows. They are created with the app creator, using OpenAPI specification or manually in python. The links above are references to OpenAPI tools and other app repositories. There's thousands of them.
+						<Typography variant="body2" color="textSecondary">
+							Apps interact with eachother in workflows. They are created with the app creator, using OpenAPI specification or manually in python. The links above are references to OpenAPI tools and other app repositories. There's thousands of them.
+						</Typography>
 						<div/>
 						<Divider style={{height: 1, backgroundColor: dividerColor, marginTop: 20, marginBottom: 20}} />
 						<div style={{}}>
@@ -778,7 +805,7 @@ const Apps = (props) => {
 							&nbsp;OR&nbsp;
 							<Link to="/apps/new" style={{marginLeft: 5, textDecoration: "none", color: "#f85a3e"}}>
 								<Button
-									variant="text"
+									variant="outlined"
 									component="label"
 									color="primary"
 									style={{}}
@@ -808,6 +835,7 @@ const Apps = (props) => {
 		var tmpapps = searchableApps.filter(data => data.name.toLowerCase().includes(searchfield) || data.description.toLowerCase().includes(searchfield))
 		newapps.push(...tmpapps) 
 
+		console.log(newapps)
 		setFilteredApps(newapps)
 		//if ((newapps.length === 0 || searchBackend) && !appSearchLoading) {
 
@@ -854,29 +882,31 @@ const Apps = (props) => {
 	const appView = isLoggedIn ? 
 		<Dropzone style={{maxWidth: window.innerWidth > 1366 ? 1366 : 1200, margin: "auto", padding: 20 }} onDrop={uploadFile}>
 			<div style={appViewStyle}>	
-				<div style={{flex: 1}}>
+				<div style={{flex: 1, }}>
 					<Breadcrumbs aria-label="breadcrumb" separator="›" style={{color: "white",}}>
 						<Link to="/apps" style={{textDecoration: "none", color: "inherit",}}>
-							<h2 style={{color: "rgba(255,255,255,0.5)"}}>
+							<Typography variant="h6" style={{color: "rgba(255,255,255,0.5)"}}>
 								<AppsIcon style={{marginRight: 10}} />
 								App upload
-							</h2>
+							</Typography>
 						</Link>
 						{selectedApp.activated && selectedApp.private_id !== undefined && selectedApp.private_id.length > 0 && selectedApp.generated ?
 							<Link to={`/apps/edit/${selectedApp.id}`} style={{textDecoration: "none", color: "inherit",}}>
-								<h2>
+								<Typography variant="h6">
 									{selectedApp.name}
-								</h2>
+								</Typography>
 							</Link>
 						: null}
 					</Breadcrumbs>
+					<div style={{marginTop: 15}} />
 					<UploadView/>
 				</div>
-				<Divider style={{marginBottom: 10, marginTop: 10, height: "100%", width: 1, backgroundColor: dividerColor}}/>
-				<div style={{flex: 1, marginLeft: 10, marginRight: 10}}>
-					<div style={{display: "flex", minHeight: 84.81}}>
-						<div style={{flex: 1}}>
-							<h2>Your apps ({apps.length+searchableApps.length})</h2> 
+				<div style={{flex: 1, marginLeft: 10, marginRight: 10, }}>
+					<div style={{display: "flex",}}>
+						<div style={{flex: 1, marginBottom: 15, }}>
+							<Typography variant="h6">
+								Activated apps ({apps.length+searchableApps.length})
+							</Typography> 
 						</div>
 						{isCloud ? null : 
 						<span>
@@ -911,7 +941,7 @@ const Apps = (props) => {
 					}
 					</div>
 					<TextField
-						style={{backgroundColor: inputColor}} 
+						style={{backgroundColor: inputColor, borderRadius: 5,}} 
 						InputProps={{
 							style:{
 								color: "white",
@@ -919,6 +949,7 @@ const Apps = (props) => {
 								marginLeft: "5px",
 								maxWidth: "95%",
 								fontSize: "1em",
+								borderRadius: 5,
 							},
 						}}
 						fullWidth
@@ -948,9 +979,13 @@ const Apps = (props) => {
 								</div>
 							: 
 							<Paper square style={uploadViewPaperStyle}>
-								<h4 style={{margin: 10, }}>
-									Try a broader search term, e.g. http, alert, ticket etc. 
-								</h4>
+								<Typography style={{margin: 10, }}>
+									<span>
+										<a href={"https://shuffler.io/search"} style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">
+											Click here 
+										</a> to search ALL apps, not just your activated ones.
+									</span>
+								</Typography>
 								<div/>
 
 								{appSearchLoading ? 
@@ -980,7 +1015,7 @@ const Apps = (props) => {
 		setValidation(true)
 
 		setIsLoading(true)
-		start()
+		//start()
 
 		const parsedData = {
 			"url": url,
@@ -1012,10 +1047,10 @@ const Apps = (props) => {
 			if (response.status === 200) {
 				alert.success("Loaded existing apps!")
 			}
-			setIsLoading(false)
-			stop()
-			setValidation(false)
 
+			//stop()
+			setIsLoading(false)
+			setValidation(false)
 			return response.json()
 		})
     .then((responseJson) => {
@@ -1028,7 +1063,7 @@ const Apps = (props) => {
 			console.log("ERROR: ", error.toString())
 			alert.error(error.toString())
 
-			stop()
+			//stop()
 			setIsLoading(false)
 			setValidation(false)
 		})
@@ -1055,8 +1090,11 @@ const Apps = (props) => {
 			return response.json()
 		})
 		.then((responseJson) => {
-			if (responseJson.reason !== undefined && responseJson.reason.length > 0) {
-				alert.info("Hotloading: ", responseJson.reason)
+			if (responseJson.success === true) {
+				alert.info("Successfully finished hotload")
+			} else {
+				alert.error("Failed hotload: ", responseJson.reason)
+				//(responseJson.reason !== undefined && responseJson.reason.length > 0) {
 			}
     })
 		.catch(error => {
@@ -1114,6 +1152,8 @@ const Apps = (props) => {
 		const data = {}
 		data[fieldname] = fieldvalue
 
+		console.log("DATA: ", data)
+
 		fetch(globalUrl+"/api/v1/apps/"+app_id, {
     	method: 'PATCH',
 			headers: {
@@ -1130,9 +1170,9 @@ const Apps = (props) => {
 			//console.log(responseJson)
 			//alert.info(responseJson)
 			if (responseJson.success) {
-				alert.info("Success")
+				alert.success("Successfully updated app configuration")
 			} else {
-				alert.error("Error updating app")
+				alert.error("Error updating app configuration")
 			}
     })
 		.catch(error => {

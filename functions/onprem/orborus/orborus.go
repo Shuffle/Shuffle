@@ -5,6 +5,8 @@ package main
 */
 
 import (
+	"github.com/frikky/shuffle-shared"
+
 	"bytes"
 	"context"
 	"encoding/json"
@@ -55,19 +57,6 @@ var runningMode = strings.ToLower(os.Getenv("RUNNING_MODE"))
 var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
 var executionIds = []string{}
 
-type ExecutionRequestWrapper struct {
-	Data []ExecutionRequest `json:"data"`
-}
-
-type ExecutionRequest struct {
-	ExecutionId       string `json:"execution_id"`
-	ExecutionArgument string `json:"execution_argument"`
-	WorkflowId        string `json:"workflow_id"`
-	Authorization     string `json:"authorization"`
-	Status            string `json:"status"`
-	Type              string `json:"type"`
-}
-
 var dockercli *dockerclient.Client
 var containerId string
 
@@ -106,7 +95,7 @@ func getThisContainerId() {
 	}
 
 	if fCol != "" {
-		cmd := fmt.Sprintf("cat /proc/self/cgroup | grep memory | tail -1 | cut -d/ -f%s", fCol)
+		cmd := fmt.Sprintf("cat /proc/self/cgroup | grep memory | tail -1 | cut -d/ -f%s | grep -o -E '[0-9A-z]{64}'", fCol)
 		out, err := exec.Command("bash", "-c", cmd).Output()
 		if err == nil {
 			containerId = strings.TrimSpace(string(out))
@@ -119,12 +108,14 @@ func getThisContainerId() {
 				//docker-76c537e9a4b7c7233011f5d70e6b7f2d600b6413ac58a96519b8dca7a3f7117a.scope
 			}
 		} else {
-			containerId = "shuffle-orborus"
-			log.Printf("[WARNING] Failed getting container ID: %s", err)
+			if fCol == "0" {
+				containerId = "shuffle-orborus"
+				log.Printf("[WARNING] Failed getting container ID: %s", err)
+			}
 		}
 	}
 
-	log.Printf("Started with containerId %s", containerId)
+	log.Printf(`[INFO] Started with containerId "%s"`, containerId)
 }
 
 // Deploys the internal worker whenever something happens
@@ -257,7 +248,7 @@ func initializeImages() {
 		log.Printf("[WARNING] SHUFFLE_APP_SDK_VERSION not defined. Defaulting to %s", appSdkVersion)
 	}
 	if workerVersion == "" {
-		workerVersion = "0.8.60"
+		workerVersion = "0.8.70"
 		log.Printf("[WARNING] SHUFFLE_WORKER_VERSION not defined. Defaulting to %s", workerVersion)
 	}
 
@@ -475,7 +466,7 @@ func main() {
 			continue
 		}
 
-		var executionRequests ExecutionRequestWrapper
+		var executionRequests shuffle.ExecutionRequestWrapper
 		err = json.Unmarshal(body, &executionRequests)
 		if err != nil {
 			log.Printf("[WARNING] Failed executionrequest in queue unmarshaling: %s", err)
@@ -521,7 +512,7 @@ func main() {
 		}
 
 		// New, abortable version. Should check executionid and remove everything else
-		var toBeRemoved ExecutionRequestWrapper
+		var toBeRemoved shuffle.ExecutionRequestWrapper
 		for _, execution := range executionRequests.Data {
 			if len(execution.ExecutionArgument) > 0 {
 				log.Printf("[INFO] Argument: %#v", execution.ExecutionArgument)
@@ -546,8 +537,8 @@ func main() {
 
 			// Doesn't work because of USER INPUT
 			if found {
-				//log.Printf("[INFO] Skipping duplicate %s", execution.ExecutionId)
-				//continue
+				log.Printf("[INFO] Skipping duplicate %s", execution.ExecutionId)
+				continue
 			} else {
 				//log.Printf("[INFO] Adding to be ran %s", execution.ExecutionId)
 				executionIds = append(executionIds, execution.ExecutionId)

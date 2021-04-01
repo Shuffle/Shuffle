@@ -2,6 +2,8 @@ package main
 
 // Docker
 import (
+	"github.com/frikky/shuffle-shared"
+
 	"archive/tar"
 	"path/filepath"
 
@@ -24,7 +26,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	//"google.golang.org/appengine"
 )
 
 // Parses a directory with a Dockerfile into a tar for Docker images..
@@ -798,7 +799,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// Just here to verify that the user is logged in
-	_, err := handleApiAuthentication(resp, request)
+	_, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in validate swagger: %s", err)
 		resp.WriteHeader(401)
@@ -862,7 +863,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 	tagFound := ""
 	for _, image := range images {
 		for _, tag := range image.RepoTags {
-			log.Printf("Image: %s", tag)
+			log.Printf("[INFO] Docker Image: %s", tag)
 
 			if strings.ToLower(tag) == strings.ToLower(version.Name) {
 				img = image

@@ -54,7 +54,7 @@ These are the main areas to contribute in:
 * Workflow creation (GUI & Conceptualizing) 
 * Content Creation (Blogs, videos etc) 
 
-Contributing guidelines for Github are outlined [here](https://github.com/frikky/Shuffle/blob/master/.github/CONTRIBUTING.md).
+Contributing guidelines are outlined [here](https://github.com/frikky/Shuffle/blob/master/.github/CONTRIBUTING.md).
 
 ## Contributors 
 ![ICPL logo](https://github.com/frikky/Shuffle/blob/launch/frontend/src/assets/img/icpl_logo.png)

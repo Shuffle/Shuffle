@@ -2,35 +2,23 @@ import React, {useState, useEffect} from 'react';
 import { makeStyles } from '@material-ui/styles';
 import {BrowserView, MobileView} from "react-device-detect";
 
+import {Paper, Typography, FormControlLabel, Button, Divider, Select, MenuItem, FormControl, Switch, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Tooltip, Breadcrumbs, CircularProgress, Chip} from '@material-ui/core';
+import {CheckCircle as CheckCircleIcon, AttachFile as AttachFileIcon, Apps as AppsIcon, ErrorOutline as ErrorOutlineIcon} from '@material-ui/icons';
+
+
 import {Link} from 'react-router-dom';
-import Paper from '@material-ui/core/Paper';
-import Typography from '@material-ui/core/Typography';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Button from '@material-ui/core/Button';
-import Divider from '@material-ui/core/Divider';
-import Select from '@material-ui/core/Select';
-import MenuItem from '@material-ui/core/MenuItem';
-import FormControl from '@material-ui/core/FormControl';
-import Switch from '@material-ui/core/Switch';
-import Dialog from '@material-ui/core/Dialog';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogActions from '@material-ui/core/DialogActions';
-import TextField from '@material-ui/core/TextField';
-import Tooltip from '@material-ui/core/Tooltip';
-import CheckCircleIcon from '@material-ui/icons/CheckCircle';
-import AttachFileIcon from '@material-ui/icons/AttachFile';
-import Breadcrumbs from '@material-ui/core/Breadcrumbs';
-import AppsIcon from '@material-ui/icons/Apps';
-import CircularProgress from '@material-ui/core/CircularProgress';
-
-import Chip from '@material-ui/core/Chip';
-import ChipInput from 'material-ui-chip-input'
-
 import YAML from 'yaml'
-import ErrorOutline from '@material-ui/icons/ErrorOutline';
+import ChipInput from 'material-ui-chip-input'
 import { useAlert } from "react-alert";
 import words from "shellwords"
+
+import AvatarEditor from 'react-avatar-editor';
+import AddAPhotoIcon from '@material-ui/icons/AddAPhoto';
+import AddAPhotoOutlinedIcon from '@material-ui/icons/AddAPhotoOutlined';
+import ZoomInOutlinedIcon from '@material-ui/icons/ZoomInOutlined';
+import ZoomOutOutlinedIcon from '@material-ui/icons/ZoomOutOutlined';
+import LoopIcon from '@material-ui/icons/Loop';
+import AddPhotoAlternateIcon from '@material-ui/icons/AddPhotoAlternate';
 
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
@@ -63,6 +51,18 @@ const boxStyle = {
 	display: "flex", 
 	flexDirection: "column",
 	backgroundColor: surfaceColor,
+}
+
+const dividerStyle = { 
+	marginBottom: "10px", 
+	marginTop: "10px", 
+	height: "1px", 
+	width: "100%", 
+	backgroundColor: "grey",
+}
+
+const appIconStyle = { 
+	marginLeft: "5px",
 }
 
 const useStyles = makeStyles({
@@ -319,6 +319,8 @@ const AppCreator = (props) => {
 	const checkQuery = () => {
 		var urlParams = new URLSearchParams(window.location.search)
 		if (!urlParams.has("id")) {
+			setActionAmount(0)
+
   		setIsAppLoaded(true)
 			return	
 		}
@@ -340,12 +342,10 @@ const AppCreator = (props) => {
 			return response.json()
 		})
 		.then((responseJson) => {
-			console.log("THE BODY IS HERE")
   		setIsAppLoaded(true)
 			if (!responseJson.success) {
 				alert.error("Failed to verify")
 			} else{
-				console.log("HMM 2")
 				var jsonvalid = false 
 				var tmpvalue = ""
 				try {
@@ -569,7 +569,7 @@ const AppCreator = (props) => {
 								}
 							}
 
-							console.log(methodvalue["requestBody"]["content"])
+							//console.log(methodvalue["requestBody"]["content"])
 							if (methodvalue["requestBody"]["content"]["multipart/form-data"] !== undefined) {
 								if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"] !== null) {
 									if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["type"] === "object") {
@@ -1260,6 +1260,7 @@ const AppCreator = (props) => {
 		})
 
 		setActions(actions)
+		setActionAmount(actionAmount-1)
 		setUpdate(Math.random())
 	}
 
@@ -1303,13 +1304,13 @@ const AppCreator = (props) => {
 					id: 'outlined-age-simple',
 				}}
 			>
-				{apikeySelection.map(data => {
+				{apikeySelection.map((data, index) => {
 					if (data === undefined) {
 						return null
 					}
 
 					return (
-						<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+						<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data}>
 							{data}
 						</MenuItem>
 					)}
@@ -1327,7 +1328,7 @@ const AppCreator = (props) => {
 				const requiredColor = data.required === true ? "green" : "red"
 				//const required = data.required === true ? <div style={{color: "green", cursor: "pointer"}}>{data.required.toString()}</div> : <div onClick={() => {flipRequired(index)}} style={{display: "inline", color: "red", cursor: "pointer"}}>{data.required.toString()}</div>
 				return (
-					<Paper style={actionListStyle}>
+					<Paper key={index} style={actionListStyle}>
 						<div style={{marginLeft: "5px", width: "100%"}}>
 							<div style={{cursor: "pointer"}} onClick={() => {flipRequired(index)}}>
 								Required: <div style={{display: "inline", color: requiredColor}}>{data.required.toString()}</div>
@@ -1339,7 +1340,9 @@ const AppCreator = (props) => {
 								placeholder={'Query name'}
 								helperText={<span style={{color:"white", marginBottom: "2px",}}>Click required switch</span>}
 								onBlur={(e) => {
-									urlPathQueries[index].name = e.target.value
+									console.log("IN BLUR: ", e.target.value)
+									urlPathQueries[index].name = e.target.value.replaceAll("=", "")
+
 									setUrlPathQueries(urlPathQueries)
 								}}
 								InputProps={{
@@ -1367,7 +1370,7 @@ const AppCreator = (props) => {
 			{actions.slice(0,actionAmount).map((data, index) => {
 				var error = data.errors.length > 0 ? 
 					<Tooltip color="primary" title={data.errors.join("\n")} placement="bottom">
-						<ErrorOutline />
+						<ErrorOutlineIcon />
 					</Tooltip>
 					:
 					<Tooltip color="secondary" title={data.errors.join("\n")} placement="bottom">
@@ -1391,7 +1394,7 @@ const AppCreator = (props) => {
 				const url = data.url
 				const hasFile = data["file_field"] !== undefined && data["file_field"] !== null && data["file_field"].length > 0
 				return (
-					<Paper style={actionListStyle}>
+					<Paper key={index} style={actionListStyle}>
 						{error} 
 					 	<Tooltip title="Edit action" placement="bottom">
 							<div style={{marginLeft: "5px", width: "100%", cursor: "pointer", maxWidth: 725, overflowX: "hidden",}} onClick={() => {
@@ -1564,9 +1567,9 @@ const AppCreator = (props) => {
 		}
 
 		// Url verification
-		if (currentAction.url.length === 0) {
-			errormessage.push("URL path can't be empty.")
-		} else if (!currentAction.url.startsWith("/") && baseUrl.length > 0) {
+		//if (currentAction.url.length === 0) {
+		//	errormessage.push("URL path can't be empty.")
+		if (!currentAction.url.startsWith("/") && baseUrl.length > 0 && currentAction.url.length > 0) {
 			errormessage.push("URL must start with /")
 		}
 
@@ -1795,8 +1798,8 @@ const AppCreator = (props) => {
 							</MenuItem>
 							)
 						})}
-						{actionBodyRequest.map(data => (
-							<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+						{actionBodyRequest.map((data, index)  => (
+							<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data}>
 								{data}
 							</MenuItem>
 						))}
@@ -1832,8 +1835,8 @@ const AppCreator = (props) => {
 							console.log("URL: ", parsedurl)
 							if (parsedurl.includes("<") && parsedurl.includes(">")) {
 								console.log("REPLACE")
-								parsedurl = parsedurl.replace("<", "{")
-								parsedurl = parsedurl.replace(">", "}")
+								parsedurl = parsedurl.replaceAll("<", "{")
+								parsedurl = parsedurl.replaceAll(">", "}")
 							}
 
 							if (parsedurl.startsWith("PUT ") || parsedurl.startsWith("GET ") ||parsedurl.startsWith("POST ") || parsedurl.startsWith("DELETE ") ||parsedurl.startsWith("PATCH ") || parsedurl.startsWith("CONNECT ")) {
@@ -1936,7 +1939,7 @@ const AppCreator = (props) => {
 					{fileUploadEnabled ? 
 						<TextField
 							required
-							style={{backgroundColor: inputColor, display: "inline-block",}}
+							style={{backgroundColor: inputColor, display: "inline-block", marginLeft: 10, maxWidth: 210, marginTop: 7, }}
 							placeholder={"file"}
 							margin="normal"
 							variant="outlined"
@@ -2009,13 +2012,15 @@ const AppCreator = (props) => {
 	const categories = [
 		"Communication",
 		"Cases",
-		"EDR",
-		"Intel",
 		"SIEM",
-		"Network",
 		"Assets",
+		"Intel",
+		"IAM",
+		"Network",
+		"Eradication",
 		"Other",
 	]
+
 	const tagView = 
 		<div style={{color: "white"}}>
 			{/*
@@ -2057,8 +2062,8 @@ const AppCreator = (props) => {
 				value={newWorkflowCategories.length === 0 ? "Select a category" : newWorkflowCategories[0]}
 				style={{backgroundColor: inputColor, color: "white", height: "50px"}}
 				>
-				{categories.map(data => (
-					<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+				{categories.map((data, index) => (
+					<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data}>
 						{data}
 					</MenuItem>
 				))}
@@ -2089,8 +2094,24 @@ const AppCreator = (props) => {
 		</div>
 
 	const actionView = 
-		<div style={{color: "white"}}>
-			<h2>Actions ({actions.length})</h2>
+		<div style={{color: "white", position: "relative",}}>
+			<div style={{position: "absolute", right: 0, top: 0,}}>
+				{actionAmount > 0 && actionAmount < actions.length ? 
+					<Button color="primary" style={{float: "right", borderRadius: 0, textAlign: "center"}} variant="outlined" onClick={() => {
+						setActionAmount(actions.length)
+						/*
+						if (actionAmount+increaseAmount > actions.length) {
+							setActionAmount(actions.length)
+						} else {
+							setActionAmount(actionAmount+increaseAmount)
+						}
+						*/
+					}}>
+						See all actions 
+					</Button>
+				: null}
+			</div>
+			<h2>Actions {actionAmount > 0 ? <span>({actionAmount} / {actions.length})</span> : null}</h2>
 			Actions are the tasks performed by an app. Read more about actions and apps
 			<a target="_blank" src="https://shuffler.io/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}> here</a>.
 			<div>
@@ -2113,18 +2134,7 @@ const AppCreator = (props) => {
 						setActionsModalOpen(true)
 					}}>New action</Button> 				
 					{/*
-					{actionAmount} {actions.length}
-					{actionAmount > 0 && actionAmount < actions.length ? null :  
-						<Button color="primary" style={{float: "right", marginTop: "20px", borderRadius: "0px", textAlign: "center"}} variant="outlined" onClick={() => {
-							if (actionAmount+increaseAmount > actions.length) {
-								setActionAmount(actions.length)
-							} else {
-								setActionAmount(actionAmount+increaseAmount)
-							}
-						}}>
-							See more actions	
-						</Button>
-					}
+						{actionAmount} {actions.length}
 					*/}
 				</div>
 			</div>
@@ -2184,8 +2194,120 @@ const AppCreator = (props) => {
 	//	</div> :
 	//	<img src={file} id="logo" style={{width: "100%", height: "100%"}} />
 
-	const imageData = file.length > 0 ? file : fileBase64 
-	const imageInfo = <img src={imageData} alt="Click to upload an image (174x174)" id="logo" style={{maxWidth: 174, maxHeight: 174, minWidth: 174, minHeight: 174, objectFit: "contain",}} />
+	const [imageUploadError, setImageUploadError] = useState("");
+	const [openImageModal, setOpenImageModal] = useState("");
+	const [scale, setScale] = useState(1);
+	const [rotate, setRotatation] = useState(0);
+	const [disableImageUpload, setDisableImageUpload] = useState(true);
+
+	let imageData = fileBase64;
+	let croppedData = file.length > 0 ? file : fileBase64
+
+	const imageInfo = <img src={imageData} id="logo" style={{maxWidth: 174, maxHeight: 174, minWidth: 174, minHeight: 174, objectFit: "contain",}} />
+
+	const alternateImg = <AddPhotoAlternateIcon style={{ width: 100, height: 100, flex: "1", display: "flex", flexDirection: "row", margin: "auto", marginTop: 30, marginLeft: 40,}} onClick={() => {
+		upload.click()
+	}}/>
+	
+	const zoomIn = () => {
+		console.log("ZOOOMING IN")
+		setScale(scale+0.1);
+	}
+
+	const zoomOut = () => {
+		setScale(scale-0.1);
+	}
+	const rotatation = () => {
+		setRotatation(rotate+10);
+	}
+
+	const onPositionChange = () => {
+		setDisableImageUpload(false);
+	}
+
+	const onCancelSaveAppIcon = () => {
+		setFile("");
+		setOpenImageModal(false)
+		setImageUploadError("")
+	}
+
+	let editor;
+	const setEditorRef = (imgEditor) => { editor = imgEditor; }
+
+	const onSaveAppIcon = () => {
+		if(editor){
+			setFile("");
+			const canvas = editor.getImageScaledToCanvas();
+			setFileBase64(canvas.toDataURL());
+			setOpenImageModal(false)
+			setDisableImageUpload(true);
+		}
+	}
+
+	const errorText = imageUploadError.length > 0 ? <div style={{marginTop: 10}}>Error: {imageUploadError}</div> : null
+	const imageUploadModalView = openImageModal ? 
+		<Dialog open={openImageModal} onClose={onCancelSaveAppIcon}
+			PaperProps={{
+				style: {
+					backgroundColor: surfaceColor,
+					color: "white",
+					minWidth: "300px",
+					minHeight: "300px",
+				},
+			}}
+		>
+			<FormControl>
+				<DialogTitle><div style={{color: "rgba(255,255,255,0.9)"}}>Upload App Icon</div></DialogTitle>
+				{errorText}
+				<DialogContent style={{color: "rgba(255,255,255,0.65)"}}>
+					<AvatarEditor
+						ref={setEditorRef}
+						image={croppedData}
+						width={174}
+						height={174}
+						border={50}
+						color={[0, 0, 0, 0.6]} // RGBA
+						scale={scale}
+						rotate={rotate}
+						onImageChange={onPositionChange}
+						onLoadSuccess={()=>setRotatation(0)}
+					/>
+					<Divider style={dividerStyle}/>
+						<Tooltip title={"New Icon"}>
+							<Button variant="outlined" component="label" color="primary" style={appIconStyle}>
+							<AddAPhotoOutlinedIcon onClick={() => {upload.click()}} color="primary" />	
+							</Button> 
+						</Tooltip>
+						<Tooltip title={"Zoom In"}>
+							<Button variant="outlined" component="label" color="primary" style={appIconStyle}>
+							<ZoomInOutlinedIcon onClick={zoomIn} color="primary" />	
+							</Button> 
+						</Tooltip>
+						<Tooltip title={"Zoom out"}>
+							<Button variant="outlined" component="label" color="primary" style={appIconStyle}>
+							<ZoomOutOutlinedIcon onClick={zoomOut} color="primary" />	
+							</Button> 
+						</Tooltip>
+						<Tooltip title={"Rotate"}>
+							<Button variant="outlined" component="label" color="primary" style={appIconStyle}>
+							<LoopIcon onClick={rotatation} color="primary" />	
+							</Button> 
+						</Tooltip>
+					<Divider style={dividerStyle} />
+				</DialogContent>
+				<DialogActions>
+					<Button style={{borderRadius: "0px"}} onClick={onCancelSaveAppIcon} color="primary">
+						Cancel
+					</Button>
+					<Button variant="contained" style={{borderRadius: "0px"}} disabled={disableImageUpload} onClick={() => {
+								onSaveAppIcon()
+							}} color="primary">
+						Continue	
+					</Button>
+				</DialogActions>
+			</FormControl>
+		</Dialog>
+		: null;
 
 	// Random names for type & autoComplete. Didn't research :^)
 	const landingpageDataBrowser = 
@@ -2201,14 +2323,25 @@ const AppCreator = (props) => {
 						{name} {actions === null || actions === undefined || actions.length === 0 ? null : <span>({actions.length})</span>}
 					</h2>
 				</Breadcrumbs>
+				{imageUploadModalView}
+				<input hidden type="file" ref={(ref) => upload = ref} onChange={editHeaderImage} />
 				<Paper style={boxStyle}>
 					<h2 style={{marginBottom: "10px", color: "white"}}>General information</h2>
 					<a target="_blank" href="https://shuffler.io/docs/apps#create_openapi_app" style={{textDecoration: "none", color: "#f85a3e"}}>Click here to learn more about app creation</a>
 					<div style={{color: "white", flex: "1", display: "flex", flexDirection: "row"}}>
 					 	<Tooltip title="Click to edit the app's image" placement="bottom">
-							<div style={{flex: "1", margin: 10, border: "1px solid #f85a3e", cursor: "pointer", backgroundColor: inputColor, maxWidth: 174, maxHeight: 174}} onClick={() => {upload.click()}}>
-								<input hidden type="file" ref={(ref) => upload = ref} onChange={editHeaderImage} />
+							<div style={{flex: "1", margin: 10, border: "1px solid #f85a3e", cursor: "pointer", backgroundColor: inputColor, maxWidth: 174, maxHeight: 174}} onClick={() => {
+									/*
+									if (fileBase64.length === 0) {
+										upload.click()
+									}
+									*/
+
+									setOpenImageModal(true)
+								}}>
+								{!imageData && (alternateImg)}
 								{imageInfo}
+								<input hidden type="file" ref={(ref) => upload = ref} onChange={editHeaderImage} />
 							</div>
 						</Tooltip>
 						<div style={{flex: "3", color: "white",}}>
@@ -2332,8 +2465,8 @@ const AppCreator = (props) => {
 							value={authenticationOption}
 							style={{backgroundColor: inputColor, color: "white", height: "50px"}}
 							>
-							{authenticationOptions.map(data => (
-								<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+							{authenticationOptions.map((data, index) => (
+								<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data}>
 									{data}
 								</MenuItem>
 							))}
@@ -2371,7 +2504,9 @@ const AppCreator = (props) => {
 					}}>
 						{appBuilding ? <CircularProgress /> : "Save"}
 					</Button>
-					{errorCode.length > 0 ? `Error: ${errorCode}` : null}
+					<Typography style={{marginTop: 5}}>
+						{errorCode.length > 0 ? `Error: ${errorCode}` : null}
+					</Typography>
 				</Paper>
 		</div>
 

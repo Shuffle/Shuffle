@@ -6,7 +6,7 @@ const data = [{
 				'font-family': 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif, sans-serif',
 				'font-weight': 'lighter',
 				'margin-right': '10px',
-				'font-size': '15px',
+				'font-size': '18px',
 				'width': '80px',
 				'height': '80px',
 				'color': 'white',
@@ -20,14 +20,15 @@ const data = [{
 			selector: 'edge',
 			css: {
 				'target-arrow-shape': 'triangle',
-				'target-arrow-color': 'yellow',
+				'target-arrow-color': 'grey',
 				'curve-style': 'unbundled-bezier',
 				'label': 'data(label)',
 				'text-margin-y': '-15px',
+				'width': '2px',
 				"color": "white",
 				"line-fill": "linear-gradient",
-				"line-gradient-stop-colors": ["cyan", "yellow"],
 				"line-gradient-stop-positions": ["0.0", "100"],
+				"line-gradient-stop-colors": ["grey", "grey"],
 			},
 		},
 		{
@@ -38,6 +39,21 @@ const data = [{
 				'border-color': '#81c784',
 				'background-width': '100%',
 				'background-height': '100%',
+				'border-radius': '5px',
+			},
+		},
+		{
+			selector: `node[app_name="Shuffle Tools"]`,
+			css: {
+				'width': '30px',
+				'height': '30px',
+			},
+		},
+		{
+			selector: `node[app_name="Testing"]`,
+			css: {
+				'width': '30px',
+				'height': '30px',
 			},
 		},
 		{
@@ -101,6 +117,8 @@ const data = [{
 			css: {
 				'shape': 'ellipse',
 				'border-color': '#80deea',
+				'width': '80px',
+				'height': '80px',
 			},
 		},
 		{
@@ -111,7 +129,7 @@ const data = [{
 			},
 		},
 		{
-			selector: 'node:selected',
+			selector: ':selected',
 			css: {
 				'background-color': '#77b0d0',
 				'border-color': '#77b0d0',
@@ -163,7 +181,7 @@ const data = [{
 			css: {
 				'background-color': '#ffef47',
 				'border-color': '#ffef47',
-				'border-width': '5px',
+				'border-width': '8px',
 				'transition-property': 'border-width',
 				'transition-duration': '0.25s',
 			},
@@ -183,9 +201,11 @@ const data = [{
 			css: {
 				'background-color': "#f85a3e",
 				'border-color': '#f85a3e',
-				'border-width': '5px',
+				'border-width': '12px',
 				'transition-property': 'border-width',
 				'transition-duration': '0.25s',
+				'font-size': '30px',
+				'label': 'data(label)',
 			},
 		},
 		{
@@ -211,10 +231,13 @@ const data = [{
 			selector: 'edge.success-highlight',
 			css: {
 				'width': '5px',
-				'target-arrow-color': '#399645',
-				'line-color': '#399645',
+				'target-arrow-color': '#41dcab',
+				'line-color': '#41dcab',
 				'transition-property': 'line-color, width',
 				'transition-duration': '0.5s',
+				"line-fill": "linear-gradient",
+				"line-gradient-stop-positions": ["0.0", "100"],
+				"line-gradient-stop-colors": ["#41dcab", "#41dcab"],
 			},
 		},
 		{
@@ -222,7 +245,10 @@ const data = [{
 			css: {
 				'target-arrow-color': '#991818',
 				'line-color': '#991818',
-				'line-style': 'dashed'
+				'line-style': 'dashed',
+				"line-fill": "linear-gradient",
+				"line-gradient-stop-positions": ["0.0", "100"],
+				"line-gradient-stop-colors": ["#991818", "#991818"],
 			},
 		},
 		{

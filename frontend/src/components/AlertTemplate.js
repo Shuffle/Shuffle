@@ -18,6 +18,7 @@ const alertStyle = {
   width: 400,
   boxSizing: 'border-box',
 	zIndex: 100001,
+	overflow: "hidden",
 }
 
 const buttonStyle = {
