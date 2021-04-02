@@ -859,7 +859,6 @@ class AppBase:
                 return parse_nested_param(string + ')', level)
             elif len(re.findall("\(", string)) < len(re.findall("\)", string)):
                 return parse_nested_param('(' + string, level)
-        
             else:
                 return 'Failed to parse params'
         
@@ -950,16 +949,29 @@ class AppBase:
                     print(f"JSON ERROR in join(): {e}")
 
             if "len" in thistype or "length" in thistype or "lenght" in thistype:
+                print(f"Trying to length-parse: {data}")
+
                 tmp = "" 
                 try:
-                    tmp = json.loads(tmpdata)
-                except: 
+                    tmp = json.loads(data)
+                except (NameError, KeyError, TypeError, json.decoder.JSONDecodeError) as e:
                     try:
-                        tmpdata = data.replace("\'", "\"")
-                        tmp = json.loads(tmpdata)
-                    except:
-                        print("[ERROR] Parsing bug for length in app sdk")
+                        print(f"[WARNING] INITIAL Parsing bug for length in app sdk: {e}")
+                        #data = data.replace("\'", "\"")
+                        data = data.replace("True", "true")
+                        data = data.replace("False", "false")
+                        data = data.replace("None", "null")
+                        data = data.replace("\"", "\\\"")
+                        data = data.replace("'", "\"")
+
+                        tmp = json.loads(data)
+                    except (NameError, KeyError, TypeError, json.decoder.JSONDecodeError) as e:
+                        print(f"[ERROR] Parsing bug for length in app sdk: {e}")
                         pass
+
+                if tmp == "":
+                    print("[WARNING] Length parsing: item wasn't parsed")
+                    tmp = data
 
                 if isinstance(tmp, list):
                     return str(len(tmp))
@@ -1028,20 +1040,29 @@ class AppBase:
             print("INNER: ", innervalue)
             print("OUTER: ", outervalue)
         
+            # FIXME: There is a known bug here with nested paranthesis
+            #if outervalue != innervalue:
+            #    # FIXME: This line right here WILL break things when we 
+            #    # Do recursive paranthesis in the future
+            #    innervalue = outervalue 
+
+            #    #print("Outer: ", outervalue, " inner: ", innervalue)
+            #    for key in range(len(innervalue)):
+            #        # Replace OUTERVALUE[key] with INNERVALUE[key] in data.
+            #        print("\nReplace %s\nwith\n%s\nin\n%s" % (outervalue[key], innervalue[key], data))
+            #        data = data.replace(outervalue[key], innervalue[key])
+            #else:
             if outervalue != innervalue:
-                #print("Outer: ", outervalue, " inner: ", innervalue)
-                for key in range(len(innervalue)):
-                    # Replace OUTERVALUE[key] with INNERVALUE[key] in data.
-                    print("Replace %s with %s in %s" % (outervalue[key], innervalue[key], data))
-                    data = data.replace(outervalue[key], innervalue[key])
-            else:
-                for thistype in wrappers:
-                    if thistype.lower() not in data.lower():
-                        continue
-        
-                    parsed_value = parse_type(innervalue[0], thistype.lower())
-                    print("Parsed value from %s: %s" % (thistype, parsed_value))
-                    return (parsed_value, True)
+                print("Setting inner to outer")
+                innervalue = outervalue
+
+            for thistype in wrappers:
+                if thistype.lower() not in data.lower():
+                    continue
+    
+                parsed_value = parse_type(innervalue[0], thistype.lower())
+                print("Parsed value from %s: %s" % (thistype, parsed_value))
+                return (parsed_value, True)
         
             #print("DATA: %s\n" % data)
             return (parse_wrapper(data)[0], True)

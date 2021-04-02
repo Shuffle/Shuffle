@@ -1058,7 +1058,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if workflowExecution.Status == "FINISHED" {
-		log.Printf("Workflowexecution is already FINISHED. No further action can be taken")
+		log.Printf("[INFO] Workflowexecution is already FINISHED. No further action can be taken.")
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflowexecution is already finished because of %s with status %s"}`, workflowExecution.LastNode, workflowExecution.Status)))
 		return

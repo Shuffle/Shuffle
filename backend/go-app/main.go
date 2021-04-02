@@ -5140,12 +5140,13 @@ func runInit(ctx context.Context) {
 	// Gets environments and inits if it doesn't exist
 	count, err := getEnvironmentCount()
 	if count == 0 && err == nil && len(activeOrgs) == 1 {
-		log.Printf("Setting up environment with org %s", activeOrgs[0].Id)
+		log.Printf("[INFO] Setting up environment with org %s", activeOrgs[0].Id)
 		item := shuffle.Environment{
 			Name:    "Shuffle",
 			Type:    "onprem",
 			OrgId:   activeOrgs[0].Id,
 			Default: true,
+			Id:      uuid.NewV4().String(),
 		}
 
 		err = setEnvironment(ctx, &item)
@@ -5889,6 +5890,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 					Registered: true,
 					Default:    false,
 					OrgId:      org.Id,
+					Id:         uuid.NewV4().String(),
 				}
 
 				err = setEnvironment(ctx, &newEnv)

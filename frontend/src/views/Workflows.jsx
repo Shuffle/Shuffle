@@ -166,6 +166,7 @@ const Workflows = (props) => {
 	const [newWorkflowTags, setNewWorkflowTags] = React.useState([]);
 	const [update, setUpdate] = React.useState("test");
 	const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
+	const [publishModalOpen, setPublishModalOpen] = React.useState(false);
 	const [editingWorkflow, setEditingWorkflow] = React.useState({})
 	const [executionLoading, setExecutionLoading] = React.useState(false)
 	const [importLoading, setImportLoading] = React.useState(false)
@@ -246,6 +247,49 @@ const Workflows = (props) => {
 		findWorkflow(newfilters) 
 	}
 
+	const publishModal = publishModalOpen ? 
+		<Dialog
+			open={publishModalOpen}
+			onClose={() => {
+				setPublishModalOpen(false)
+				setSelectedWorkflow({})
+			}}
+			PaperProps={{
+				style: {
+					backgroundColor: surfaceColor,
+					color: "white",
+					minWidth: 500,
+					padding: 50,
+				},
+			}}
+		>
+			<DialogTitle style={{marginBottom: 0, }}>
+				<div style={{textAlign: "center", color: "rgba(255,255,255,0.9)"}}>
+					Are you sure you want to PUBLISH this workflow? 
+				</div>
+			</DialogTitle>
+			<DialogContent style={{color: "rgba(255,255,255,0.65)", textAlign: "center"}}>
+				<div>
+					<Typography variant="body1" style={{marginBottom: 20,}}>
+						Before publishing, we will sanitize all inputs, remove references to you, randomize ID's and remove your authentication.
+					</Typography>
+				</div>
+				<Button variant="contained" style={{}} onClick={() => {
+					publishWorkflow(selectedWorkflow) 
+					setPublishModalOpen(false)
+				}} color="primary">
+					Yes
+				</Button>
+				<Button style={{}} onClick={() => {
+					setPublishModalOpen(false)
+				}} color="primary">
+					No
+				</Button>
+			</DialogContent>
+			
+		</Dialog>
+	: null
+
 	const deleteModal = deleteModalOpen ? 
 		<Dialog
 			open={deleteModalOpen}
@@ -263,7 +307,7 @@ const Workflows = (props) => {
 		>
 			<DialogTitle>
 				<div style={{textAlign: "center", color: "rgba(255,255,255,0.9)"}}>
-					Are you sure? <div/>Other workflows relying on this one may stop working
+					Are you sure you want to delete this workflow? <div/>Other workflows relying on this one may stop working
 				</div>
 			</DialogTitle>
 			<DialogContent style={{color: "rgba(255,255,255,0.65)", textAlign: "center"}}>
@@ -888,7 +932,8 @@ const Workflows = (props) => {
 									{"Change details"}
 								</MenuItem>
 								<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
-									publishWorkflow(data) 
+									setSelectedWorkflow(data) 
+									setPublishModalOpen(true)
 								}} key={"publish"}>
 									<CloudUploadIcon style={{marginLeft: 0, marginRight: 8}}/>
 									{"Publish Workflow"}
@@ -1830,6 +1875,7 @@ const Workflows = (props) => {
 			</Dropzone>
 			{modalView}
 			{deleteModal}
+			{publishModal} 
 			{workflowDownloadModalOpen}
 		</div>
 		:

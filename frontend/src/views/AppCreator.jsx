@@ -501,7 +501,8 @@ const AppCreator = (props) => {
 				}
 
 				if (!allowedfunctions.includes(method.toUpperCase())) {
-					alert.info("Skipped method (not allowed) "+method)
+					console.log("Invalid method: ", method, "data: ", methodvalue)
+					alert.info("Skipped method (not allowed): "+method)
 					continue
 				}
 

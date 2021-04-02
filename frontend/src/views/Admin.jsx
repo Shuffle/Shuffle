@@ -474,6 +474,39 @@ const Admin = (props) => {
 		});
 	}
 
+	const inviteUser = (data) => {
+		console.log("INPUT: ", data)
+		setLoginInfo("")
+
+		// Just use this one?
+		var data = { "username": data.Username, "type": "invite", "org_id": selectedOrganization.id}
+		var baseurl = globalUrl
+		const url = baseurl + '/api/v1/users/register_org';
+
+		fetch(url, {
+			method: 'POST',
+			credentials: "include",
+			body: JSON.stringify(data),
+			headers: {
+				'Content-Type': 'application/json',
+			},
+		})
+			.then(response =>
+				response.json().then(responseJson => {
+					if (responseJson["success"] === false) {
+						setLoginInfo("Error: " + responseJson.reason)
+					} else {
+						setLoginInfo("")
+						setModalOpen(false)
+						getUsers()
+					}
+				}),
+			)
+			.catch(error => {
+				console.log("Error in userdata: ", error)
+			});
+	}
+
 	const submitUser = (data) => {
 		console.log("INPUT: ", data)
 		setLoginInfo("")
@@ -1689,6 +1722,11 @@ const Admin = (props) => {
 				{curTab === 1 ? "Add user" : "Add environment"}
 			</span></DialogTitle>
 			<DialogContent>
+				{curTab === 1 && isCloud ? 
+					<Typography variant="body1" style={{marginBottom: 10}}>
+						We'll send an email to invite them to your organization.
+					</Typography>
+				: null}
 				{curTab === 1 ?
 					<div>
 						Username
@@ -1712,32 +1750,36 @@ const Admin = (props) => {
 							variant="outlined"
 							onChange={(event) => changeModalData("Username", event.target.value)}
 						/>
-						Password
-						<TextField
-							color="primary"
-							style={{ backgroundColor: theme.palette.inputColor }}
-							InputProps={{
-								style: {
-									height: "50px",
-									color: "white",
-									fontSize: "1em",
-								},
-							}}
-							required
-							fullWidth={true}
-							autoComplete="password"
-							type="password"
-							placeholder="********"
-							id="pwfield"
-							margin="normal"
-							variant="outlined"
-							onChange={(event) => changeModalData("Password", event.target.value)}
-						/>
+						{isCloud ? null :
+							<span>
+								Password
+								<TextField
+									color="primary"
+									style={{ backgroundColor: theme.palette.inputColor }}
+									InputProps={{
+										style: {
+											height: "50px",
+											color: "white",
+											fontSize: "1em",
+										},
+									}}
+									required
+									fullWidth={true}
+									autoComplete="password"
+									type="password"
+									placeholder="********"
+									id="pwfield"
+									margin="normal"
+									variant="outlined"
+									onChange={(event) => changeModalData("Password", event.target.value)}
+								/>
+							</span>
+						}
 					</div>
-					: curTab === 3 ?
+					: curTab === 5 ?
 						<div>
 							Environment Name
-					<TextField
+							<TextField
 								color="primary"
 								style={{ backgroundColor: theme.palette.inputColor }}
 								autoFocus
@@ -1766,8 +1808,12 @@ const Admin = (props) => {
 				</Button>
 				<Button variant="contained" style={{ borderRadius: "0px" }} onClick={() => {
 					if (curTab === 1) {
-						submitUser(modalUser)
-					} else if (curTab === 3) {
+						if (isCloud) {
+							inviteUser(modalUser) 
+						} else {
+							submitUser(modalUser)
+						}
+					} else if (curTab === 5) {
 						submitEnvironment(modalUser)
 					}
 				}} color="primary">
@@ -2353,9 +2399,7 @@ const Admin = (props) => {
 								style={{minWidth: 110, maxWidth: 110, overflow: "hidden"}}
 							/>
 							<ListItemText
-								primary={data.fields.map(data => {
-									return data.key
-								}).join(", ")}
+								primary={data.fields === null || data.fields === undefined ? "" : data.fields.map(data => {return data.key}).join(", ")}
 								style={{minWidth: 200, maxWidth: 200, overflow: "hidden"}}
 							/>
 							<ListItemText>
@@ -2651,7 +2695,7 @@ const Admin = (props) => {
 					<Tab label=<span><LockIcon style={iconStyle} />App Authentication</span>/>
 					<Tab label=<span><DescriptionIcon style={iconStyle} />Files</span> />
 					<Tab label=<span><ScheduleIcon style={iconStyle} />Schedules</span> />
-					{isCloud ? null : <Tab label=<span><EcoIcon style={iconStyle} />Environments</span>/>}
+					{/*isCloud ? null : <Tab label=<span><EcoIcon style={iconStyle} />Environments</span>/>*/}
 					{window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><CloudIcon style={iconStyle} /> Hybrid</span>/> : null}
 					{window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><BusinessIcon style={iconStyle} /> Organizations</span>/> : null}
 					{window.location.protocol === "http:" && window.location.port === "3000" ? <Tab label=<span><LockIcon style={iconStyle} />Categories</span>/> : null}
