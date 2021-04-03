@@ -950,35 +950,24 @@ class AppBase:
 
             if "len" in thistype or "length" in thistype or "lenght" in thistype:
                 print(f"Trying to length-parse: {data}")
-
-                tmp = "" 
                 try:
-                    tmp = json.loads(data)
+                    tmp_len = json.loads(data, parse_float=str, parse_int=str, parse_constant=str)
                 except (NameError, KeyError, TypeError, json.decoder.JSONDecodeError) as e:
                     try:
                         print(f"[WARNING] INITIAL Parsing bug for length in app sdk: {e}")
-                        #data = data.replace("\'", "\"")
+                        # data = data.replace("\'", "\"")
                         data = data.replace("True", "true")
                         data = data.replace("False", "false")
                         data = data.replace("None", "null")
                         data = data.replace("\"", "\\\"")
                         data = data.replace("'", "\"")
 
-                        tmp = json.loads(data)
+                        tmp_len = json.loads(data, parse_float=str, parse_int=str, parse_constant=str)
                     except (NameError, KeyError, TypeError, json.decoder.JSONDecodeError) as e:
-                        print(f"[ERROR] Parsing bug for length in app sdk: {e}")
-                        pass
+                        tmp_len = str(data)
 
-                if tmp == "":
-                    print("[WARNING] Length parsing: item wasn't parsed")
-                    tmp = data
+                return str(len(tmp_len))
 
-                if isinstance(tmp, list):
-                    return str(len(tmp))
-                elif isinstance(tmp, object):
-                    return str(len(tmp))
-
-                return str(len(data))
             if "parse" in thistype:
                 splitvalues = []
                 default_error = """Error. Expected syntax: parse(["hello","test1"],0:1)""" 
@@ -1015,58 +1004,65 @@ class AppBase:
         def parse_wrapper(data):
             try:
                 if "(" not in data or ")" not in data:
-                    return (data, False)
+                    return data, False
             except TypeError:
-                return (data, False)
-        
-            #print("Running %s" % data)
-        
-            # Look for the INNER wrapper first, then move out
-            wrappers = ["int", "number", "lower", "upper", "trim", "strip", "split", "parse", "len", "length", "lenght", "join"]
-            found = False
-            for wrapper in wrappers:
-                if wrapper not in data.lower():
-                    continue
-        
-                found = True
-                break
-        
-            if not found:
-                return (data, False)
-        
+                return data, False
+
+            wrappers = ["int", "number", "lower", "upper", "trim", "strip", "split", "parse", "len", "length", "lenght",
+                        "join"]
+
+            if not any(wrapper in data for wrapper in wrappers):
+                return data, False
+
             # Do stuff here.
-            innervalue = parse_nested_param(data, maxDepth(data)-0)
-            outervalue = parse_nested_param(data, maxDepth(data)-1)
-            print("INNER: ", innervalue)
-            print("OUTER: ", outervalue)
-        
-            # FIXME: There is a known bug here with nested paranthesis
-            #if outervalue != innervalue:
-            #    # FIXME: This line right here WILL break things when we 
-            #    # Do recursive paranthesis in the future
-            #    innervalue = outervalue 
+            inner_value = parse_nested_param(data, maxDepth(data) - 0)
+            outer_value = parse_nested_param(data, maxDepth(data) - 1)
 
-            #    #print("Outer: ", outervalue, " inner: ", innervalue)
-            #    for key in range(len(innervalue)):
-            #        # Replace OUTERVALUE[key] with INNERVALUE[key] in data.
-            #        print("\nReplace %s\nwith\n%s\nin\n%s" % (outervalue[key], innervalue[key], data))
-            #        data = data.replace(outervalue[key], innervalue[key])
-            #else:
-            if outervalue != innervalue:
-                print("Setting inner to outer")
-                innervalue = outervalue
+            print("INNER: ", inner_value)
+            print("OUTER: ", outer_value)
 
-            for thistype in wrappers:
-                if thistype.lower() not in data.lower():
-                    continue
-    
-                parsed_value = parse_type(innervalue[0], thistype.lower())
-                print("Parsed value from %s: %s" % (thistype, parsed_value))
-                return (parsed_value, True)
-        
-            #print("DATA: %s\n" % data)
-            return (parse_wrapper(data)[0], True)
-        
+            wrapper_group = "|".join(wrappers)
+            parse_string = data
+            max_depth = maxDepth(parse_string)
+
+            if outer_value != inner_value:
+                for casting_items in reversed(range(max_depth + 1)):
+                    c_parentheses = parse_nested_param(parse_string, casting_items)[0]
+                    match_string = re.escape(c_parentheses)
+                    custom_casting = re.findall(fr"({wrapper_group})\({match_string}", parse_string)
+
+                    # no matching ; go next group
+                    if len(custom_casting) == 0:
+                        continue
+
+                    inner_result = parse_type(c_parentheses, custom_casting[0])
+
+                    # if result is a string then parse else return
+                    if isinstance(inner_result, str):
+                        parse_string = parse_string.replace(f"{custom_casting[0]}({c_parentheses})", inner_result)
+                    elif isinstance(inner_result, list):
+                        parse_string = parse_string.replace(f"{custom_casting[0]}({c_parentheses})",
+                                                            json.dumps(inner_result))
+                    else:
+                        parse_string = inner_result
+                        break
+            else:
+                c_parentheses = parse_nested_param(parse_string, 0)[0]
+                match_string = re.escape(c_parentheses)
+                custom_casting = re.findall(fr"({wrapper_group})\({match_string}", parse_string)
+
+                # check if a wrapper was found
+                if len(custom_casting) != 0:
+                    inner_result = parse_type(c_parentheses, custom_casting[0])
+                    if isinstance(inner_result, str):
+                        parse_string = parse_string.replace(f"{custom_casting[0]}({c_parentheses})", inner_result)
+                    elif isinstance(inner_result, list):
+                        parse_string = parse_string.replace(f"{custom_casting[0]}({c_parentheses})",
+                                                            json.dumps(inner_result))
+                    else:
+                        parse_string = inner_result
+
+            return parse_string, True
 
         # Looks for parantheses to grab special cases within a string, e.g:
         # int(1) lower(HELLO) or length(what's the length)
