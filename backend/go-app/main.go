@@ -861,8 +861,8 @@ func createNewUser(username, password, role, apikey string, org shuffle.OrgMini)
 	q := datastore.NewQuery("Users").Filter("Username =", username)
 	var users []shuffle.User
 	_, err = dbclient.GetAll(ctx, q, &users)
-	if err != nil {
-		log.Printf("Failed getting user for registration: %s", err)
+	if err != nil && len(users) == 0 {
+		log.Printf("[WARNING] Failed getting user for registration: %s", err)
 		return err
 	}
 

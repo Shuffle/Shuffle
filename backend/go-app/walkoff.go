@@ -2076,19 +2076,20 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 		}
 
 		//log.Printf("Execution data: %#v", execution)
-		if len(execution.Start) == 36 {
+		if len(execution.Start) == 36 && len(workflow.Actions) > 0 {
 			log.Printf("[INFO] Should start execution on node %s", execution.Start)
 			workflowExecution.Start = execution.Start
 
 			found := false
 			for _, action := range workflow.Actions {
-				if action.ID == workflow.Start {
+				if action.ID == execution.Start {
 					found = true
+					break
 				}
 			}
 
 			if !found {
-				log.Printf("[ERROR] ACTION %s WAS NOT FOUND!", workflow.Start)
+				log.Printf("[ERROR] ACTION %s WAS NOT FOUND!", execution.Start)
 				return shuffle.WorkflowExecution{}, fmt.Sprintf("Startnode %s was not found in actions", workflow.Start), errors.New(fmt.Sprintf("Startnode %s was not found in actions", workflow.Start))
 			}
 		} else if len(execution.Start) > 0 {
@@ -2708,10 +2709,14 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - have a check for org etc too..
 	// FIXME - admin check like this? idk
 	if user.Id != workflow.Owner && user.Role != "scheduler" && user.Role != fmt.Sprintf("workflow_%s", fileId) {
-		log.Printf("Wrong user (%s) for workflow %s (execute)", user.Username, workflow.ID)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
+		if workflow.OrgId == user.ActiveOrg.Id && user.Role == "admin" {
+			log.Printf("[INFO] Letting user %s execute %s because they're admin of the same org", user.Username, workflow.ID)
+		} else {
+			log.Printf("[WARNING] Wrong user (%s) for workflow %s (execute)", user.Username, workflow.ID)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
 	}
 
 	log.Printf("[INFO] Starting execution of %s!", fileId)
