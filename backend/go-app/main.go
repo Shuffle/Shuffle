@@ -5424,10 +5424,10 @@ func runInit(ctx context.Context) {
 	}
 
 	// Getting apps to see if we should initialize a test
-	log.Printf("Getting remote workflow apps")
+	log.Printf("[INFO] Getting and validating workflowapps")
 	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 500)
-	if err != nil {
-		log.Printf("Failed getting apps (runInit): %s", err)
+	if err != nil && len(workflowapps) == 0 {
+		log.Printf("[WARNING] Failed getting apps (runInit): %s", err)
 	} else if err == nil && len(workflowapps) > 0 {
 		var allworkflowapps []shuffle.WorkflowApp
 		q := datastore.NewQuery("workflowapp")
