@@ -2043,7 +2043,7 @@ const Admin = (props) => {
 					/>
 					<ListItemText
 						primary="Name"
-						style={{maxWidth: 150, minWidth: 150, overflow: "hidden",}}
+						style={{maxWidth: 150, minWidth: 150, overflow: "hidden", marginLeft: 10,}}
 					/>
 					<ListItemText
 						primary="Workflow"
@@ -2077,11 +2077,11 @@ const Admin = (props) => {
 					return (
 						<ListItem key={index} style={{backgroundColor: bgColor}} >
 							<ListItemText
-								style={{maxWidth: 225, minWidth: 225}}
+								style={{maxWidth: 225, minWidth: 225, overflow: "hidden",}}
 								primary={new Date(file.created_at*1000).toISOString()}
 							/>
 							<ListItemText
-								style={{maxWidth: 150, minWidth: 150, overflow: "hidden",}}
+								style={{maxWidth: 150, minWidth: 150, overflow: "hidden", marginLeft: 10, }}
 								primary={file.filename}
 							/>
 							<ListItemText

@@ -1243,7 +1243,7 @@ const AngularWorkflow = (props) => {
 		if (nodedata.app_name == "Shuffle Tools" || nodedata.app_name == "Testing") {
 			//console.log("NODE: ", 
 			//selector: `node[app_name="Shuffle Tools"]`,
-			console.log(event.target)
+			//console.log(event.target)
 
 			// 1. Find location of node
 			// 2. Check if it's within view of another node (inside)
@@ -1387,6 +1387,42 @@ const AngularWorkflow = (props) => {
 	const onEdgeAdded = (event) => {
 		setLastSaved(false)
 		const edge = event.target.data()
+		var targetnode = workflow.triggers.findIndex(data => data.id === edge.target)
+		if (targetnode !== -1) {
+			console.log("TARGETNODE: ", targetnode)
+			if (workflow.triggers[targetnode].app_name === "User Input" || workflow.triggers[targetnode].app_name === "Shuffle Workflow") {
+			} else {
+				alert.error("Can't have triggers as target of branch")
+				event.target.remove()
+			}
+		}
+
+		targetnode = -1
+		var sourcenode = workflow.triggers.findIndex(data => data.id === edge.source)
+		//console.log("SOURCENODE: ", sourcenode)
+		if (sourcenode !== -1) {
+			if (workflow.triggers[sourcenode].app_name === "User Input" || workflow.triggers[sourcenode].app_name === "Shuffle Workflow") {
+				//console.log("NORMAL TRIGGER")
+			} else {
+				var currentnode = cy.getElementById(workflow.triggers[sourcenode].id)
+				if (currentnode !== null && currentnode !== undefined) {
+					console.log("SHOULD CHECK IF TRIGGER HAS MULTIPLE EDGES: ", currentnode)
+					// https://js.cytoscape.org/#edges.connectedNodes
+					//console.log("CURRENTNODE: ", currentnode)
+					//console.log("EDGES: ", currentnode.connectedEdges(`node[id=${workflow.triggers[sourcenode].id}]`))
+					//console.log("EDGES2: ", currentnode.connectedEdges())
+					//currentnode.connectedEdges().animate({style: {lineColor: "red"}})
+					//console.log("OUTGOERS: ", currentnode.outgoers())
+
+					//console.log("LEN2: ", currentnode.edges().length)
+					//if (currentnode.connectedNodes().length > 0) {
+					//	alert.error("Can't have multiple branches from this trigger")
+					//	event.target.remove()
+					//} 
+				} 
+			}
+		}
+
 		//console.log(workflow.branches)
 
 		// Check if: 
@@ -1407,7 +1443,7 @@ const AngularWorkflow = (props) => {
 				found = true
 				break
 			} else if (edge.target === workflow.start) {
-				var targetnode = workflow.triggers.findIndex(data => data.id === edge.source)
+				targetnode = workflow.triggers.findIndex(data => data.id === edge.source)
 				if (targetnode === -1) {
 					alert.error("Can't make arrow to starting node")
 					event.target.remove()
@@ -1428,10 +1464,14 @@ const AngularWorkflow = (props) => {
 				// 	break
 				// }
 			} else {
+				console.log("INSIDE LAST CHECK: ", edge)
+
 				// Find the targetnode and check if its a trigger 
 				// FIXME - do this for both actions and other types?
+				/*
 				targetnode = workflow.triggers.findIndex(data => data.id === edge.target)
 				if (targetnode !== -1) {
+					console.log("TARGETNODE: ", targetnode)
 					if (workflow.triggers[targetnode].app_name === "User Input" || workflow.triggers[targetnode].app_name === "Shuffle Workflow") {
 					} else {
 						alert.error("Can't have triggers as target of branch")
@@ -1440,6 +1480,9 @@ const AngularWorkflow = (props) => {
 						break
 					}
 				} 
+				*/
+
+				
 			}
 		}
 
@@ -1491,6 +1534,7 @@ const AngularWorkflow = (props) => {
 
 		workflow.branches = workflow.branches.filter(a => a.id !== edge.data().id)
 		setWorkflow(workflow)
+		event.target.remove()
 
 		// trigger as source check
 		const indexcheck = workflow.triggers.findIndex(data => edge.data()["source"] === data.id)
@@ -6811,6 +6855,9 @@ const AngularWorkflow = (props) => {
 					theme="solarized" 
 					collapsed={true}
 					displayDataTypes={false}
+					enableClipboard={(copy) => {
+						handleReactJsonClipboard(copy)
+					}}
 					onSelect={(select) => {
 						HandleJsonCopy(showResult, select, "exec")
 						console.log("SELECTED!: ", select)	
@@ -6856,6 +6903,22 @@ const AngularWorkflow = (props) => {
 		return (
 			<img alt={execution.execution_source} src={defaultImage} style={{width: size, height: size}} />
 		)
+	}
+
+	const handleReactJsonClipboard = (copy) => {
+		console.log("COPY: ", copy)
+
+		const elementName = "copy_element_shuffle"
+		var copyText = document.getElementById(elementName);
+		if (copyText !== null && copyText !== undefined) {
+			navigator.clipboard.writeText(JSON.stringify(copy))
+			copyText.select();
+			copyText.setSelectionRange(0, 99999); /* For mobile devices */
+
+			/* Copy the text inside the text field */
+			document.execCommand("copy");
+			alert.success("Copied data")
+		}
 	}
 
 	const HandleJsonCopy = (base, copy, base_node_name) => {
@@ -7204,10 +7267,14 @@ const AngularWorkflow = (props) => {
 											{data.status}
 										</Typography>
 									</div>
-									{validate.valid ? <span><ReactJson 
+									{validate.valid ? <span>
+										<ReactJson 
 											src={validate.result} 
 											theme="solarized" 
 											collapsed={true}
+											enableClipboard={(copy) => {
+												handleReactJsonClipboard(copy)
+											}}
 											displayDataTypes={false}
 											onSelect={(select) => {
 												HandleJsonCopy(showResult, select, data.action.label)
@@ -7394,6 +7461,9 @@ const AngularWorkflow = (props) => {
 							theme="solarized" 
 							collapsed={false}
 							displayDataTypes={false}
+							enableClipboard={(copy) => {
+								handleReactJsonClipboard(copy)
+							}}
 							onSelect={(select) => {
 								HandleJsonCopy(JSON.stringify(validate.result), select, selectedResult.action.label)
 							}}

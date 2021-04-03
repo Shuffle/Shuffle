@@ -642,7 +642,7 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 			Body:   ioutil.NopCloser(strings.NewReader(bodyWrapper)),
 		}
 
-		_, _, err := handleExecution(workflowId, shuffle.Workflow{ExecutingOrg: shuffle.Org{Id: orgId}}, request)
+		_, _, err := handleExecution(workflowId, shuffle.Workflow{ExecutingOrg: shuffle.OrgMini{Id: orgId}}, request)
 		if err != nil {
 			log.Printf("Failed to execute %s: %s", workflowId, err)
 		}
@@ -2513,10 +2513,10 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 	//	//workflowExecution.ExecutionOrg.SyncFeatures = Org{}
 	//}
 
-	workflowExecution.Workflow.ExecutingOrg = shuffle.Org{
+	workflowExecution.Workflow.ExecutingOrg = shuffle.OrgMini{
 		Id: workflowExecution.Workflow.ExecutingOrg.Id,
 	}
-	workflowExecution.Workflow.Org = []shuffle.Org{
+	workflowExecution.Workflow.Org = []shuffle.OrgMini{
 		workflowExecution.Workflow.ExecutingOrg,
 	}
 
@@ -2698,8 +2698,8 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 	//memcacheName := fmt.Sprintf("%s_%s", user.Username, fileId)
 	ctx := context.Background()
 	workflow, err := shuffle.GetWorkflow(ctx, fileId)
-	if err != nil {
-		log.Printf("Failed getting the workflow locally (execute workflow): %s", err)
+	if err != nil && workflow.ID == "" {
+		log.Printf("[WARNING] Failed getting the workflow locally (execute workflow): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -2716,7 +2716,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	log.Printf("[INFO] Starting execution of %s!", fileId)
 
-	user.ActiveOrg.Users = []shuffle.User{}
+	user.ActiveOrg.Users = []shuffle.UserMini{}
 	workflow.ExecutingOrg = user.ActiveOrg
 	workflowExecution, executionResp, err := handleExecution(fileId, *workflow, request)
 
@@ -4502,11 +4502,11 @@ func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra 
 
 				workflow.ID = uuid.NewV4().String()
 				workflow.OrgId = orgId
-				workflow.ExecutingOrg = shuffle.Org{
+				workflow.ExecutingOrg = shuffle.OrgMini{
 					Id: orgId,
 				}
 
-				workflow.Org = append(workflow.Org, shuffle.Org{
+				workflow.Org = append(workflow.Org, shuffle.OrgMini{
 					Id: orgId,
 				})
 				workflow.IsValid = false

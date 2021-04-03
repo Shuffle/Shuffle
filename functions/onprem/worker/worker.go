@@ -24,7 +24,7 @@ import (
 	//"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/mount"
 	dockerclient "github.com/docker/docker/client"
-	"github.com/satori/go.uuid"
+	//"github.com/satori/go.uuid"
 
 	"github.com/gorilla/mux"
 	"github.com/patrickmn/go-cache"
@@ -857,17 +857,25 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		}
 
 		// Added UUID to identifier just in case
-		identifier := fmt.Sprintf("%s_%s_%s_%s_%s", appname, appversion, action.ID, workflowExecution.ExecutionId, uuid.NewV4())
+		//identifier := fmt.Sprintf("%s_%s_%s_%s_%s", appname, appversion, action.ID, workflowExecution.ExecutionId, uuid.NewV4())
+		identifier := fmt.Sprintf("%s_%s_%s_%s", appname, appversion, action.ID, workflowExecution.ExecutionId)
 		if strings.Contains(identifier, " ") {
 			identifier = strings.ReplaceAll(identifier, " ", "-")
 		}
+
+		//if arrayContains(executed, action.ID) || arrayContains(visited, action.ID) {
+		//	log.Printf("[WARNING] Action %s is already executed")
+		//	continue
+		//}
+		//visited = append(visited, action.ID)
+		//executed = append(executed, action.ID)
 
 		// FIXME - check whether it's running locally yet too
 		dockercli, err := dockerclient.NewEnvClient()
 		if err != nil {
 			log.Printf("[ERROR] Unable to create docker client (2): %s", err)
 			//return err
-			return
+			continue
 		}
 
 		stats, err := dockercli.ContainerInspect(context.Background(), identifier)
@@ -1309,6 +1317,7 @@ func arrayContains(visited []string, id string) bool {
 	for _, item := range visited {
 		if item == id {
 			found = true
+			break
 		}
 	}
 
@@ -2094,7 +2103,7 @@ func sendResult(workflowExecution shuffle.WorkflowExecution, data []byte) {
 	}
 
 	body, err := ioutil.ReadAll(newresp.Body)
-	log.Printf("[INFO] BACKEND STATUS: %d", newresp.StatusCode)
+	//log.Printf("[INFO] BACKEND STATUS: %d", newresp.StatusCode)
 	if err != nil {
 		log.Printf("[ERROR] Failed reading body: %s", err)
 	} else {

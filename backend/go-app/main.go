@@ -842,7 +842,7 @@ func handleSetEnvironments(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(`{"success": true}`))
 }
 
-func createNewUser(username, password, role, apikey string, org shuffle.Org) error {
+func createNewUser(username, password, role, apikey string, org shuffle.OrgMini) error {
 	// Returns false if there is an issue
 	// Use this for register
 	err := shuffle.CheckPasswordStrength(password)
@@ -893,7 +893,10 @@ func createNewUser(username, password, role, apikey string, org shuffle.Org) err
 		newUser.Roles = []string{"user"}
 	}
 
-	newUser.ActiveOrg = org
+	newUser.ActiveOrg = shuffle.OrgMini{
+		Id:   org.Id,
+		Name: org.Name,
+	}
 
 	if len(apikey) > 0 {
 		newUser.ApiKey = apikey
@@ -1000,7 +1003,10 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 		_, err = dbclient.GetAll(ctx, q, &orgs)
 		if err == nil && len(orgs) == 1 {
 			log.Printf("No org exists in auth. Setting to default (first one)")
-			currentOrg = orgs[0]
+			currentOrg = shuffle.OrgMini{
+				Id:   orgs[0].Id,
+				Name: orgs[0].Name,
+			}
 		}
 
 	}
@@ -1274,7 +1280,11 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 				}
 
 				if len(newOrgs) > 0 {
-					userInfo.ActiveOrg = newOrgs[0]
+					userInfo.ActiveOrg = shuffle.OrgMini{
+						Id:   newOrgs[0].Id,
+						Name: newOrgs[0].Name,
+					}
+
 					userInfo.Orgs = newStringOrgs
 
 					err = shuffle.SetUser(ctx, &userInfo)
@@ -1291,7 +1301,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		} else {
 			// 1. Check if the org exists by ID
 			// 2. if it does, overwrite user
-			userInfo.ActiveOrg = shuffle.Org{
+			userInfo.ActiveOrg = shuffle.OrgMini{
 				Id: userInfo.Orgs[0],
 			}
 			err = shuffle.SetUser(ctx, &userInfo)
@@ -1304,12 +1314,15 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	// FIXME: Remove this dependency by updating users' orgs when org itself is updated
 	org, err := shuffle.GetOrg(ctx, userInfo.ActiveOrg.Id)
 	if err == nil {
-		userInfo.ActiveOrg = *org
-		userInfo.ActiveOrg.Users = []shuffle.User{}
+		userInfo.ActiveOrg = shuffle.OrgMini{
+			Id:   org.Id,
+			Name: org.Name,
+		}
+
+		userInfo.ActiveOrg.Users = []shuffle.UserMini{}
 	}
 
-	userInfo.ActiveOrg.Users = []shuffle.User{}
-	userInfo.ActiveOrg.SyncConfig = shuffle.SyncConfig{}
+	userInfo.ActiveOrg.Users = []shuffle.UserMini{}
 	currentOrg, err := json.Marshal(userInfo.ActiveOrg)
 	if err != nil {
 		currentOrg = []byte("{}")
@@ -4988,6 +5001,39 @@ func runInit(ctx context.Context) {
 			}
 		} else {
 			log.Printf("There are %d org(s).", len(activeOrgs))
+
+			if len(activeOrgs) == 1 {
+				if len(activeOrgs[0].Users) == 0 {
+					log.Printf("ORG doesn't have any users??")
+
+					q := datastore.NewQuery("Users")
+					var users []shuffle.User
+					_, err = dbclient.GetAll(ctx, q, &users)
+					if err != nil && len(users) == 0 {
+						log.Printf("Failed getting users in org fix")
+					} else {
+						// Remapping everyone to admin. This should never happen.
+
+						for _, user := range users {
+							user.ActiveOrg = shuffle.OrgMini{
+								Id:   activeOrgs[0].Id,
+								Name: activeOrgs[0].Name,
+								Role: "admin",
+							}
+
+							activeOrgs[0].Users = append(activeOrgs[0].Users, user)
+						}
+
+						err = shuffle.SetOrg(ctx, activeOrgs[0], activeOrgs[0].Id)
+						if err != nil {
+							log.Printf("Failed setting org: %s", err)
+						} else {
+							log.Printf("Successfully updated org to have users!")
+						}
+					}
+
+				}
+			}
 		}
 	}
 
@@ -5004,7 +5050,7 @@ func runInit(ctx context.Context) {
 				newUser := shuffle.User{
 					Username: user.Username,
 					Id:       user.Id,
-					ActiveOrg: shuffle.Org{
+					ActiveOrg: shuffle.OrgMini{
 						Id: activeOrg.Id,
 					},
 					Orgs: []string{activeOrg.Id},
@@ -5050,7 +5096,7 @@ func runInit(ctx context.Context) {
 	q := datastore.NewQuery("Users").Filter("active =", true)
 	var activeusers []shuffle.User
 	_, err = dbclient.GetAll(ctx, q, &activeusers)
-	if err != nil {
+	if err != nil && len(activeusers) == 0 {
 		log.Printf("Error getting users during init: %s", err)
 	} else {
 		q := datastore.NewQuery("Users")
@@ -5074,9 +5120,9 @@ func runInit(ctx context.Context) {
 					if len(user.Orgs) == 0 {
 						defaultName := "default"
 						user.Orgs = []string{defaultName}
-						user.ActiveOrg = shuffle.Org{
+						user.ActiveOrg = shuffle.OrgMini{
 							Name: defaultName,
-							Role: "user",
+							Role: "admin",
 						}
 					}
 
@@ -5101,9 +5147,10 @@ func runInit(ctx context.Context) {
 			} else {
 				apikey := os.Getenv("SHUFFLE_DEFAULT_APIKEY")
 
-				tmpOrg := shuffle.Org{
+				tmpOrg := shuffle.OrgMini{
 					Name: "default",
 				}
+
 				err = createNewUser(username, password, "admin", apikey, tmpOrg)
 				if err != nil {
 					log.Printf("Failed to create default user %s: %s", username, err)
@@ -5123,7 +5170,11 @@ func runInit(ctx context.Context) {
 			if len(activeOrgs) == 1 && len(users) > 0 {
 				for _, user := range users {
 					if user.ActiveOrg.Id == "" && len(user.Username) > 0 {
-						user.ActiveOrg = activeOrgs[0]
+						user.ActiveOrg = shuffle.OrgMini{
+							Id:   activeOrgs[0].Id,
+							Name: activeOrgs[0].Name,
+						}
+
 						err = shuffle.SetUser(ctx, &user)
 						if err != nil {
 							log.Printf("Failed updating user %s with org", user.Username)
@@ -5178,7 +5229,7 @@ func runInit(ctx context.Context) {
 		q := datastore.NewQuery("workflow").Limit(35)
 		var workflows []shuffle.Workflow
 		_, err = dbclient.GetAll(ctx, q, &workflows)
-		if err != nil {
+		if err != nil && len(workflows) == 0 {
 			log.Printf("Error getting workflows in runinit: %s", err)
 		} else {
 			updated := 0
@@ -5187,7 +5238,11 @@ func runInit(ctx context.Context) {
 				setLocal := false
 				if workflow.ExecutingOrg.Id == "" || len(workflow.OrgId) == 0 {
 					workflow.OrgId = activeOrgs[0].Id
-					workflow.ExecutingOrg = activeOrgs[0]
+					workflow.ExecutingOrg = shuffle.OrgMini{
+						Id:   activeOrgs[0].Id,
+						Name: activeOrgs[0].Name,
+					}
+
 					setLocal = true
 				} else if workflow.Edited == 0 {
 					workflow.Edited = timeNow
@@ -5475,7 +5530,7 @@ func runInit(ctx context.Context) {
 		q := datastore.NewQuery("workflow").Limit(35)
 		var workflows []shuffle.Workflow
 		_, err = dbclient.GetAll(ctx, q, &workflows)
-		if err != nil {
+		if err != nil && len(workflows) == 0 {
 			log.Printf("Error getting workflows: %s", err)
 		} else {
 			if len(workflows) == 0 {
@@ -6041,7 +6096,15 @@ func makeWorkflowPublic(resp http.ResponseWriter, request *http.Request) {
 		FifthItem:     user.Id,
 	}
 
-	err = executeCloudAction(action, user.ActiveOrg.SyncConfig.Apikey)
+	org, err := shuffle.GetOrg(ctx, user.ActiveOrg.Id)
+	if err != nil {
+		log.Printf("[WARNING] Failed setting getting org during cloud job setting: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		return
+	}
+
+	err = executeCloudAction(action, org.SyncConfig.Apikey)
 	if err != nil {
 		log.Printf("[WARNING] Failed cloud PUBLISH: %s", err)
 		resp.WriteHeader(401)
@@ -6160,7 +6223,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/workflows/{key}/schedule/{schedule}", stopSchedule).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/outlook", createOutlookSub).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/outlook/{triggerId}", handleDeleteOutlookSub).Methods("DELETE", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/{key}/executions", getWorkflowExecutions).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/executions", shuffle.GetWorkflowExecutions).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/executions/{key}/abort", shuffle.AbortExecution).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}", deleteWorkflow).Methods("DELETE", "OPTIONS")
 
