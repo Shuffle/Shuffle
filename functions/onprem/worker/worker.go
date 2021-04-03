@@ -53,6 +53,7 @@ var nextActions []string
 var containerIds []string
 var extra int
 var startAction string
+var results []shuffle.ActionResult
 
 var containerId string
 
@@ -264,7 +265,10 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	)
 
 	if err != nil {
-		log.Printf("[WARNING] Container CREATE error: %s", err)
+		if !strings.Contains(err.Error(), "Conflict. The container name") {
+			log.Printf("[ERROR] Container CREATE error: %s", err)
+		}
+
 		return err
 	}
 
@@ -963,7 +967,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		pullOptions := types.ImagePullOptions{}
 		if cleanupEnv == "true" {
 			err = deployApp(dockercli, images[0], identifier, env, workflowExecution)
-			if err != nil {
+			if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 				if strings.Contains(err.Error(), "exited prematurely") {
 					shutdown(workflowExecution, action.ID, err.Error(), true)
 				}
@@ -978,7 +982,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 
 				buildBuf := new(strings.Builder)
 				_, err = io.Copy(buildBuf, reader)
-				if err != nil {
+				if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 					log.Printf("[ERROR] Error in IO copy: %s", err)
 					shutdown(workflowExecution, action.ID, err.Error(), true)
 				} else {
@@ -991,7 +995,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 				}
 
 				err = deployApp(dockercli, image, identifier, env, workflowExecution)
-				if err != nil {
+				if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 
 					log.Printf("[ERROR] Failed deploying image for the FOURTH time. Aborting if the image doesn't exist")
 					if strings.Contains(err.Error(), "exited prematurely") {
@@ -1008,7 +1012,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		} else {
 
 			err = deployApp(dockercli, images[0], identifier, env, workflowExecution)
-			if err != nil {
+			if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 				if strings.Contains(err.Error(), "exited prematurely") {
 					shutdown(workflowExecution, action.ID, err.Error(), true)
 				}
@@ -1021,7 +1025,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 				}
 
 				err = deployApp(dockercli, image, identifier, env, workflowExecution)
-				if err != nil {
+				if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 					if strings.Contains(err.Error(), "exited prematurely") {
 						shutdown(workflowExecution, action.ID, err.Error(), true)
 					}
@@ -1032,14 +1036,14 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 					}
 
 					err = deployApp(dockercli, image, identifier, env, workflowExecution)
-					if err != nil {
+					if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 						if strings.Contains(err.Error(), "exited prematurely") {
 							shutdown(workflowExecution, action.ID, err.Error(), true)
 						}
 
 						log.Printf("[WARNING] Failed deploying image THREE TIMES. Attempting to download the latter as last resort.")
 						reader, err := dockercli.ImagePull(context.Background(), image, pullOptions)
-						if err != nil {
+						if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 							log.Printf("[ERROR] Failed getting %s. The couldn't be find locally, AND is missing.", image)
 							shutdown(workflowExecution, action.ID, err.Error(), true)
 						}
@@ -1059,7 +1063,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 						}
 
 						err = deployApp(dockercli, image, identifier, env, workflowExecution)
-						if err != nil {
+						if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 							log.Printf("[ERROR] Failed deploying image for the FOURTH time. Aborting if the image doesn't exist")
 							if strings.Contains(err.Error(), "exited prematurely") {
 								shutdown(workflowExecution, action.ID, err.Error(), true)
@@ -1119,6 +1123,8 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 func executionInit(workflowExecution shuffle.WorkflowExecution) error {
 	parents = map[string][]string{}
 	children = map[string][]string{}
+
+	results = workflowExecution.Results
 
 	startAction = workflowExecution.Start
 	log.Printf("[INFO] STARTACTION: %s", startAction)
@@ -1501,57 +1507,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	//if actionResult.Status == "WAITING" && actionResult.Action.AppName == "User Input" {
-	//	log.Printf("SHOULD WAIT A BIT AND RUN CLOUD STUFF WITH USER INPUT! WAITING!")
-
-	//	var trigger shuffle.Trigger
-	//	err = json.Unmarshal([]byte(actionResult.Result), &trigger)
-	//	if err != nil {
-	//		log.Printf("Failed unmarshaling actionresult for user input: %s", err)
-	//		resp.WriteHeader(401)
-	//		resp.Write([]byte(`{"success": false}`))
-	//		return
-	//	}
-
-	//	orgId := workflowExecution.ExecutionOrg
-	//	if len(workflowExecution.OrgId) == 0 && len(workflowExecution.Workflow.OrgId) > 0 {
-	//		orgId = workflowExecution.Workflow.OrgId
-	//	}
-
-	//	err := handleUserInput(trigger, orgId, workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
-	//	if err != nil {
-	//		log.Printf("Failed userinput handler: %s", err)
-	//		actionResult.Result = fmt.Sprintf("Cloud error: %s", err)
-	//		workflowExecution.Results = append(workflowExecution.Results, actionResult)
-	//		workflowExecution.Status = "ABORTED"
-	//		err = setshuffle.WorkflowExecution(ctx, *workflowExecution, true)
-	//		if err != nil {
-	//			log.Printf("Failed ")
-	//		} else {
-	//			log.Printf("Successfully set the execution to waiting.")
-	//		}
-
-	//		resp.WriteHeader(401)
-	//		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error: %s"}`, err)))
-	//	} else {
-	//		log.Printf("Successful userinput handler")
-	//		resp.WriteHeader(200)
-	//		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "CLOUD IS DONE"}`)))
-
-	//		actionResult.Result = "Waiting for user feedback based on configuration"
-
-	//		workflowExecution.Results = append(workflowExecution.Results, actionResult)
-	//		workflowExecution.Status = actionResult.Status
-	//		err = setshuffle.WorkflowExecution(ctx, *workflowExecution, true)
-	//		if err != nil {
-	//			log.Printf("Failed ")
-	//		} else {
-	//			log.Printf("Successfully set the execution to waiting.")
-	//		}
-	//	}
-
-	//	return
-	//}
+	results = append(results, actionResult)
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
@@ -1622,30 +1578,33 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	resultLength := len(workflowExecution.Results)
 	dbSave := false
 	setExecution := true
-	//tx, err := dbclient.NewTransaction(ctx)
-	//if err != nil {
-	//	log.Printf("client.NewTransaction: %v", err)
-	//	resp.WriteHeader(401)
-	//	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed creating transaction"}`)))
-	//	return
-	//}
 
-	//key := datastore.NameKey("workflowexecution", workflowExecutionId, nil)
-	//workflowExecution := &shuffle.WorkflowExecution{}
-	//if err := tx.Get(key, workflowExecution); err != nil {
-	//	log.Printf("[ERROR] tx.Get bug: %v", err)
-	//	tx.Rollback()
-	//	resp.WriteHeader(401)
-	//	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting the workflow key"}`)))
-	//	return
-	//}
+	if len(actionResult.Action.ExecutionVariable.Name) > 0 {
+		actionResult.Action.ExecutionVariable.Value = actionResult.Result
+
+		foundIndex := -1
+		for i, executionVariable := range workflowExecution.ExecutionVariables {
+			if executionVariable.Name == actionResult.Action.ExecutionVariable.Name {
+				foundIndex = i
+				break
+			}
+		}
+
+		if foundIndex >= 0 {
+			workflowExecution.ExecutionVariables[foundIndex] = actionResult.Action.ExecutionVariable
+		} else {
+			workflowExecution.ExecutionVariables = append(workflowExecution.ExecutionVariables, actionResult.Action.ExecutionVariable)
+		}
+	}
+
 	actionResult.Action = shuffle.Action{
-		AppName:    actionResult.Action.AppName,
-		AppVersion: actionResult.Action.AppVersion,
-		Label:      actionResult.Action.Label,
-		Name:       actionResult.Action.Name,
-		ID:         actionResult.Action.ID,
-		Parameters: actionResult.Action.Parameters,
+		AppName:           actionResult.Action.AppName,
+		AppVersion:        actionResult.Action.AppVersion,
+		Label:             actionResult.Action.Label,
+		Name:              actionResult.Action.Name,
+		ID:                actionResult.Action.ID,
+		Parameters:        actionResult.Action.Parameters,
+		ExecutionVariable: actionResult.Action.ExecutionVariable,
 	}
 
 	if actionResult.Status == "ABORTED" || actionResult.Status == "FAILURE" {
@@ -2024,6 +1983,10 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 
 			workflowExecution.Results = newResults
 		}
+	}
+
+	if len(results) != len(workflowExecution.Results) {
+		log.Printf("\n\n[WARNING] There may have been an issue in transaction queue. Result lengths: %d vs %d. Should check which exists the base results, but not in entire execution, then append.\n\n", len(results), len(workflowExecution.Results))
 	}
 
 	// Validating that action results hasn't changed

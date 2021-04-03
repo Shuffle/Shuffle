@@ -1464,7 +1464,7 @@ const AngularWorkflow = (props) => {
 				// 	break
 				// }
 			} else {
-				console.log("INSIDE LAST CHECK: ", edge)
+				//console.log("INSIDE LAST CHECK: ", edge)
 
 				// Find the targetnode and check if its a trigger 
 				// FIXME - do this for both actions and other types?
@@ -2871,9 +2871,9 @@ const AngularWorkflow = (props) => {
 				)
 		}
 
-		const runSearch = (event) => {
-			if (event.target.value.length > 0) {
-				setVisibleApps(allApps.filter(app => app.name.toLowerCase().includes(event.target.value.trim().toLowerCase())))
+		const runSearch = (value) => {
+			if (value.length > 0) {
+				setVisibleApps(allApps.filter(app => app.name.toLowerCase().includes(value.trim().toLowerCase())))
 			} else {
 				setVisibleApps(prioritizedApps.concat(filteredApps.filter(innerapp => !internalIds.includes(innerapp.id))))
 			}
@@ -2904,8 +2904,14 @@ const AngularWorkflow = (props) => {
 						color="primary"
 						placeholder={"Search Active Apps"}
 						id="appsearch"
+						onKeyPress={(event) => {
+							if (event.key === "Enter") {
+								console.log("ENTER!")
+								runSearch(event.target.value)
+							}
+						}}
 						onBlur={(event) => {
-							runSearch(event)
+							runSearch(event.target.value)
 						}}
 					/>
 					{visibleApps.length > 0 ?
@@ -7253,7 +7259,7 @@ const AngularWorkflow = (props) => {
 										<div>
 											<div style={{fontSize: 24, marginTop: "auto", marginBottom: "auto"}}><b>{data.action.label}</b></div>
 											<div style={{fontSize: 14}}>
-												<Typography variant="body2" color="textsecondary">
+												<Typography variant="body2" color="textSecondary">
 													{data.action.name}
 												</Typography>
 											</div>
@@ -7261,7 +7267,7 @@ const AngularWorkflow = (props) => {
 									</div>
 									<div style={{marginBottom: 5, display: "flex",}}>
 										<Typography variant="body1">
-											<b>Status &nbsp;</b> 
+											<b>Status&nbsp;</b> 
 										</Typography>
 										<Typography variant="body1" color="textSecondary">
 											{data.status}
