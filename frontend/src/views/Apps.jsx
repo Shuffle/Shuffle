@@ -631,6 +631,37 @@ const Apps = (props) => {
 						</Typography>	
 					</div>
 				</div>
+				{selectedApp.versions !== null && selectedApp.versions !== undefined && selectedApp.versions.length > 0 ? 
+					<Select
+						defaultValue={selectedApp.app_version}
+						onChange={(event) => {
+							console.log("Changing version to index "+event.target.value)
+							const newversion = selectedApp.versions.find(tmpApp => tmpApp.version == event.target.value)
+							console.log("New version: ", newversion)
+							selectedApp.app_version = selectedApp.app_version
+							setSelectedApp(selectedApp)
+
+							if (newversion !== undefined && newversion !== null) {
+								getApp(newversion.id, true) 
+							}
+						}}
+						style={{position: "absolute", top: -10, right: isCloud ? 50 : 0, backgroundColor: theme.palette.surfaceColor, backgroundColor: inputColor, color: "white", height: 35, marginleft: 10,}}
+						SelectDisplayProps={{
+							style: {
+								marginLeft: 10,
+							}
+						}}
+					>
+						{selectedApp.versions.map((data, index) => {
+							return (
+								<MenuItem key={data.version} style={{backgroundColor: inputColor, color: "white"}} value={data.version}>
+									{data.version}
+
+								</MenuItem>
+							)
+						})}
+					</Select>
+				: null }
 				{isCloud ? 
 					<a href={"https://shuffler.io/apps/"+selectedApp.id} style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">
 						<IconButton style={{top: -10, right: 0, position: "absolute", color: "#f85a3e"}} >
@@ -835,7 +866,7 @@ const Apps = (props) => {
 		var tmpapps = searchableApps.filter(data => data.name.toLowerCase().includes(searchfield) || data.description.toLowerCase().includes(searchfield))
 		newapps.push(...tmpapps) 
 
-		console.log(newapps)
+		//console.log(newapps)
 		setFilteredApps(newapps)
 		//if ((newapps.length === 0 || searchBackend) && !appSearchLoading) {
 
@@ -1108,7 +1139,7 @@ const Apps = (props) => {
 		setValidation(true)
 
 		var cors = "cors"
-		if (openApi.includes("localhost")) {
+		if (openApi.includes("= localhost")) {
 			cors = "no-cors"
 		}
 
@@ -1120,6 +1151,48 @@ const Apps = (props) => {
 			response.text().then(function (text) {
 				validateOpenApi(text)
 			})
+		})
+		.catch(error => {
+			alert.error(error.toString())
+		});
+	}
+
+	const getApp = (appId, setApp) => {
+		fetch(globalUrl+"/api/v1/apps/"+appId+"/config?openapi=false", {
+			headers: {
+				'Accept': 'application/json',
+			},
+	  	credentials: "include",
+		})
+		.then((response) => {
+			if (response.status === 200) {
+				//alert.success("Successfully GOT app "+appId)		
+			} else {
+				alert.error("Failed getting app")		
+			}
+
+			return response.json()
+		})
+    .then((responseJson) => {
+			console.log(responseJson)
+
+			if (setApp) {
+				if (selectedApp.versions !== undefined && selectedApp.versions !== null) {
+					responseJson.versions = selectedApp.versions
+				}
+
+				if (selectedApp.loop_versions !== undefined && selectedApp.loop_versions !== null) {
+					responseJson.loop_versions = selectedApp.loop_versions
+				}
+
+				//alert.info("Should set app to selected")
+				if (responseJson.actions !== undefined && responseJson.actions !== null && responseJson.actions.length > 0) {
+					setSelectedAction(responseJson.actions[0])
+				} else {
+					setSelectedAction({})
+				}
+				setSelectedApp(responseJson)
+			}
 		})
 		.catch(error => {
 			alert.error(error.toString())

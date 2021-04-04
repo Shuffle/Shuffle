@@ -3396,113 +3396,6 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(`{"success": true}`))
 }
 
-func getWorkflowAppConfig(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	ctx := context.Background()
-
-	location := strings.Split(request.URL.String(), "/")
-	var fileId string
-	if location[1] == "api" {
-		if len(location) <= 4 {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		fileId = location[4]
-	}
-
-	app, err := shuffle.GetApp(ctx, fileId, shuffle.User{})
-	if err != nil {
-		log.Printf("[WARNING] Error getting app %s (app config): %s", fileId, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
-		return
-	}
-
-	//if IsValid       bool   `json:"is_valid" yaml:"is_valid" required:true datastore:"is_valid"`
-	// Sharing       bool   `json:"sharing" yaml:"sharing" required:false datastore:"sharing"`
-	//log.Printf("Sharing: %s", app.Sharing)
-	//log.Printf("Generated: %s", app.Generated)
-	//log.Printf("Downloaded: %s", app.Downloaded)
-
-	// FIXME - Handle sharing and such PROPERLY
-	if app.Sharing && app.Generated {
-		log.Printf("CAN SHARE APP!")
-		parsedApi, err := getOpenApiDatastore(ctx, fileId)
-		if err != nil {
-			log.Printf("[WARNING] OpenApi doesn't exist for: %s - err: %s", fileId, err)
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		if len(parsedApi.ID) > 0 {
-			parsedApi.Success = true
-		} else {
-			parsedApi.Success = false
-		}
-
-		//log.Printf("PARSEDAPI: %#v", parsedApi)
-		data, err := json.Marshal(parsedApi)
-		if err != nil {
-			log.Printf("[WARNING] Error parsing api json: %s", err)
-			resp.WriteHeader(422)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed marshalling new parsed swagger: %s"}`, err)))
-			return
-		}
-
-		resp.WriteHeader(200)
-		resp.Write(data)
-		return
-	}
-
-	user, userErr := shuffle.HandleApiAuthentication(resp, request)
-	if userErr != nil {
-		log.Printf("[WARNING] Api authentication failed in get app: %s", userErr)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	if user.Id != app.Owner {
-		log.Printf("[WARNING] Wrong user (%s) for app %s", user.Username, app.Name)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	log.Printf("[INFO] Getting app %s (OpenAPI)", fileId)
-	parsedApi, err := getOpenApiDatastore(ctx, fileId)
-	if err != nil {
-		log.Printf("OpenApi doesn't exist for: %s - err: %s", fileId, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	//log.Printf("Parsed API: %#v", parsedApi)
-	if len(parsedApi.ID) > 0 {
-		parsedApi.Success = true
-	} else {
-		parsedApi.Success = false
-	}
-
-	data, err := json.Marshal(parsedApi)
-	if err != nil {
-		resp.WriteHeader(422)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed marshalling new parsed swagger: %s"}`, err)))
-		return
-	}
-
-	resp.WriteHeader(200)
-	resp.Write(data)
-}
-
 func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -3525,34 +3418,6 @@ func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 		//return
 	}
 
-	//if item, err := memcache.Get(ctx, memcacheName); err == memcache.ErrCacheMiss {
-	//	// Not in cache
-	//	log.Printf("Apps not in cache.")
-	//} else if err != nil {
-	//	log.Printf("Error getting item: %v", err)
-	//} else {
-	//	// FIXME - verify if value is ok? Can unmarshal etc.
-	//	allApps := item.Value
-
-	//	if userErr == nil && len(user.PrivateApps) > 0 {
-	//		var parsedApps []WorkflowApp
-	//		err = json.Unmarshal(allApps, &parsedApps)
-	//		if err == nil {
-	//			log.Printf("Shouldve added %d apps", len(user.PrivateApps))
-	//			user.PrivateApps = append(user.PrivateApps, parsedApps...)
-
-	//			tmpApps, err := json.Marshal(user.PrivateApps)
-	//			if err == nil {
-	//				allApps = tmpApps
-	//			}
-	//		}
-	//	}
-
-	//	resp.WriteHeader(200)
-	//	resp.Write(allApps)
-	//	return
-	//}
-
 	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 500)
 	if err != nil {
 		log.Printf("Failed getting apps (getworkflowapps): %s", err)
@@ -3560,52 +3425,8 @@ func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
-	//log.Printf("Length: %d", len(workflowapps))
-
-	// FIXME - this is really garbage, but is here to protect again null values etc.
 
 	newapps := workflowapps
-	/*
-		skipApps := []string{"Shuffle Subflow"}
-		newapps := []WorkflowApp{}
-		baseApps := []WorkflowApp{}
-			for _, workflowapp := range workflowapps {
-				//if !workflowapp.Activated && workflowapp.Generated {
-				//	continue
-				//}
-
-				if workflowapp.Owner != user.Id && user.Role != "admin" && !workflowapp.Sharing {
-					continue
-				}
-
-				continueOuter := false
-				for _, skip := range skipApps {
-					if workflowapp.Name == skip {
-						continueOuter = true
-						break
-					}
-				}
-
-				if continueOuter {
-					continue
-				}
-
-				//workflowapp.Environment = "cloud"
-				newactions := []WorkflowAppAction{}
-				for _, action := range workflowapp.Actions {
-					//action.Environment = workflowapp.Environment
-					if len(action.Parameters) == 0 {
-						action.Parameters = []WorkflowAppActionParameter{}
-					}
-
-					newactions = append(newactions, action)
-				}
-
-				workflowapp.Actions = newactions
-				newapps = append(newapps, workflowapp)
-				baseApps = append(baseApps, workflowapp)
-			}
-	*/
 
 	if len(user.PrivateApps) > 0 {
 		found := false
@@ -3625,7 +3446,6 @@ func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 
 	// Double unmarshal because of user apps
 	newbody, err := json.Marshal(newapps)
-	//newbody, err := json.Marshal(workflowapps)
 	if err != nil {
 		log.Printf("Failed unmarshalling all newapps: %s", err)
 		resp.WriteHeader(401)
@@ -3633,33 +3453,6 @@ func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	//basebody, err := json.Marshal(baseApps)
-	////newbody, err := json.Marshal(workflowapps)
-	//if err != nil {
-	//	log.Printf("Failed unmarshalling all baseapps: %s", err)
-	//	resp.WriteHeader(401)
-	//	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed unpacking workflow apps"}`)))
-	//	return
-	//}
-
-	// Refreshed every hour
-	//item := &memcache.Item{
-	//	Key:        memcacheName,
-	//	Value:      basebody,
-	//	Expiration: time.Minute * 60,
-	//}
-	//if err := memcache.Add(ctx, item); err == memcache.ErrNotStored {
-	//	if err := memcache.Set(ctx, item); err != nil {
-	//		log.Printf("Error setting item: %v", err)
-	//	}
-	//} else if err != nil {
-	//	log.Printf("error adding item: %v", err)
-	//} else {
-	//	log.Printf("Set cache for %s", item.Key)
-	//}
-
-	//log.Println(string(body))
-	//log.Println(string(newbody))
 	resp.WriteHeader(200)
 	resp.Write(newbody)
 }

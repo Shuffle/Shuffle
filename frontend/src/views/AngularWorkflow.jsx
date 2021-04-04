@@ -1302,9 +1302,10 @@ const AngularWorkflow = (props) => {
 			}
 
 
-			const curapp = apps.find(a => a.name === curaction.app_name && a.app_version === curaction.app_version)
+			console.log(apps)
+			const curapp = apps.find(a => a.name === curaction.app_name && (a.app_version === curaction.app_version || a.loop_versions.includes(curaction.app_version)))
 			if (!curapp || curapp === undefined) {
-				alert.error("App "+curaction.app_name+" not found. Is it activated?")
+				alert.error(`App ${curaction.app_name}:${curaction.app_version} not found. Is it activated?`)
 				//return
 			} else {
 
@@ -2169,9 +2170,9 @@ const AngularWorkflow = (props) => {
 				<div style={variableScrollStyle}>
 						What are <a rel="norefferer" target="_blank" href="https://shuffler.io/docs/workflows#workflow_variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>WORKFLOW variables?</a>
 					{workflow.workflow_variables === null ? 
-					null : workflow.workflow_variables.map(variable=> {
+					null : workflow.workflow_variables.map((variable, index) => {
 						return (
-							<div key={variable.name} >
+							<div key={index} >
 								<Paper square style={paperVariableStyle} onClick={() => {
 								}}>
 									<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: "2px", backgroundColor: yellow, marginRight: "5px"}} />
@@ -2906,7 +2907,6 @@ const AngularWorkflow = (props) => {
 						id="appsearch"
 						onKeyPress={(event) => {
 							if (event.key === "Enter") {
-								console.log("ENTER!")
 								runSearch(event.target.value)
 							}
 						}}
@@ -4215,6 +4215,66 @@ const AngularWorkflow = (props) => {
 		borderRadius: borderRadius, 
 	}
 
+	const getApp = (appId, setApp) => {
+		fetch(globalUrl+"/api/v1/apps/"+appId+"/config?openapi=false", {
+			headers: {
+				'Accept': 'application/json',
+			},
+	  	credentials: "include",
+		})
+		.then((response) => {
+			if (response.status === 200) {
+				//alert.success("Successfully GOT app "+appId)		
+			} else {
+				alert.error("Failed getting app")		
+			}
+
+			return response.json()
+		})
+    .then((responseJson) => {
+			console.log(responseJson)
+
+			if (setApp && responseJson.actions !== undefined && responseJson.actions !== null) {
+				if (selectedApp.versions !== undefined && selectedApp.versions !== null) {
+					responseJson.versions = selectedApp.versions
+				}
+
+				if (selectedApp.loop_versions !== undefined && selectedApp.loop_versions !== null) {
+					responseJson.loop_versions = selectedApp.loop_versions
+				}
+
+				var foundAction = responseJson.actions.find(action => action.name === selectedAction.name)
+				console.log("Old : ", selectedAction)
+				console.log("Found: ", foundAction)
+				if (foundAction !== null && foundAction !== undefined) {
+					for (var paramkey in foundAction.parameters) {
+						const param = foundAction.parameters[paramkey]
+
+						const foundParam = selectedAction.parameters.find(item => item.name === param.name)
+						if (foundParam === undefined) {
+							console.log("COULDNT find Param: ", param)
+						} else {
+							console.log("FoundP: ", foundParam)
+							foundAction.parameters[paramkey] = foundParam 
+						}
+					}
+				} else {
+					alert.error("Couldn't find action "+selectedAction.name)
+				}
+
+				// Updating params for the new action 
+				selectedAction.parameters = foundAction.parameters
+				selectedAction.app_id = appId
+				selectedAction.app_version = responseJson.app_version
+
+				setSelectedAction(selectedAction)
+				setSelectedApp(responseJson)
+			}
+		})
+		.catch(error => {
+			alert.error(error.toString())
+		});
+	}
 
 	const innerTextfieldStyle = {
 		color: "white",
@@ -4267,16 +4327,42 @@ const AngularWorkflow = (props) => {
 						</span>
 					</div>
 				</div>
-				<div>
+				<div style={{display: "flex", flexDirection: "column",}}>
 					{selectedAction.id === workflow.start ? null : 
 						<Tooltip color="primary" title={"Make this node the start action"} placement="top">
-							<Button style={{zIndex: 5000, marginTop: "15px",}} color="primary" variant="outlined" onClick={(e) => {
+							<Button style={{zIndex: 5000, marginTop: 10,}} color="primary" variant="outlined" onClick={(e) => {
 								defineStartnode(e)	
 							}}>
 								<KeyboardArrowRightIcon />
 							</Button> 				
 						</Tooltip>
 					}
+					{selectedApp.versions !== null && selectedApp.versions !== undefined && selectedApp.versions.length > 0 ? 
+						<Select
+							defaultValue={selectedAction.app_version}
+							onChange={(event) => {
+								const newversion = selectedApp.versions.find(tmpApp => tmpApp.version == event.target.value)
+								if (newversion !== undefined && newversion !== null) {
+									getApp(newversion.id, true) 
+								}
+							}}
+							style={{marginTop: 10, backgroundColor: theme.palette.surfaceColor, backgroundColor: inputColor, color: "white", height: 35, marginleft: 10,}}
+							SelectDisplayProps={{
+								style: {
+									marginLeft: 10,
+								}
+							}}
+						>
+							{selectedApp.versions.map((data, index) => {
+								return (
+									<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data.version}>
+										{data.version}
+
+									</MenuItem>
+								)
+							})}
+						</Select>
+					: null }
 				</div>
 			</div>
 			<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
