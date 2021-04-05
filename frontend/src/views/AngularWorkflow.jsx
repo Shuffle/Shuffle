@@ -27,6 +27,7 @@ import { useAlert } from "react-alert";
 import { validateJson } from "./Workflows.jsx";
 import { GetParsedPaths } from "./Apps.jsx";
 import ConfigureWorkflow from '../components/ConfigureWorkflow.jsx';
+import ParsedAction from '../components/ParsedAction.jsx';
 
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
@@ -87,7 +88,6 @@ const AngularWorkflow = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, userdata } = props;
 	const referenceUrl = globalUrl+"/api/v1/hooks/"
 	const alert = useAlert()
-	const borderRadius = 5
 	const theme = useTheme();
 	const green = "#86c142"
 	const yellow = "#FECC00"
@@ -128,7 +128,7 @@ const AngularWorkflow = (props) => {
 	const [rightSideBarOpen, setRightSideBarOpen] = React.useState(false)
 	const [showSkippedActions, setShowSkippedActions] = React.useState(false)
 	const [lastExecution, setLastExecution] = React.useState("")
-	const [configureWorkflowModalOpen, setConfigureWorkflowModalOpen] = React.useState(true)
+	const [configureWorkflowModalOpen, setConfigureWorkflowModalOpen] = React.useState(false)
 	const [curpath, setCurpath] = useState(typeof window === 'undefined' || window.location === undefined ? "" : window.location.pathname)
 
 	// 0 = normal, 1 = just done, 2 = normal
@@ -1151,8 +1151,11 @@ const AngularWorkflow = (props) => {
 
 			//console.log(responseJson)
 			// Add error checks
-			if (!responseJson.public && (!responseJson.previously_saved || (!responseJson.is_valid || (responseJson.errors !== undefined || responseJson.errors !== null || responseJson.errors !== responseJson.errors.length > 0)))) {
-				setConfigureWorkflowModalOpen(true)
+			console.log(responseJson)
+			if (!responseJson.public) {
+				if ((!responseJson.previously_saved || (!responseJson.is_valid || (responseJson.errors !== undefined || responseJson.errors !== null || responseJson.errors !== responseJson.errors.length > 0)))) {
+					setConfigureWorkflowModalOpen(true)
+				}
 			}
     })
 		.catch(error => {
@@ -2127,7 +2130,7 @@ const AngularWorkflow = (props) => {
 
 
 	const paperAppStyle = {
-		borderRadius: borderRadius,
+		borderRadius: theme.palette.borderRadius,
 		minHeight: 100,
 		maxHeight: 100,
 		minWidth: "100%",
@@ -2140,7 +2143,7 @@ const AngularWorkflow = (props) => {
 	}
 
 	const paperVariableStyle = {
-		borderRadius: borderRadius,
+		borderRadius: theme.palette.borderRadius,
 		minHeight: 50,
 		maxHeight: 50,
 		minWidth: "100%",
@@ -2629,6 +2632,7 @@ const AngularWorkflow = (props) => {
 
 	const handleAppDrag = (e, app) => {
 		const cycontainer = cy.container()
+
 		// Chrome lol
 		//if (e.srcElement !== undefined && e.srcElement.localName === "canvas") {
 		if (e.pageX > cycontainer.offsetLeft && e.pageX < cycontainer.offsetLeft+cycontainer.offsetWidth && e.pageY > cycontainer.offsetTop && e.pageY < cycontainer.offsetTop+cycontainer.offsetHeight) {
@@ -2641,6 +2645,10 @@ const AngularWorkflow = (props) => {
 				currentnode[0].renderedPosition("x", e.pageX-cycontainer.offsetLeft)
 				currentnode[0].renderedPosition("y", e.pageY-cycontainer.offsetTop)
 			} else{
+				if (workflow.public) {
+					return
+				}
+
 				if (app.actions === undefined || app.actions === null || app.actions.length === 0) {
 					alert.error("App "+app.name+" currently has no actions to perform. Please go to https://shuffler.io/apps to edit it.")
 					return
@@ -2669,13 +2677,14 @@ const AngularWorkflow = (props) => {
 						setUpdate(Math.random())
 				*/
 
+				console.log("ENVS: ", environments)
 				const newAppData = {
 					app_name: app.name,
 					app_version: app.app_version, 
 					app_id: app.id,
 					sharing: app.sharing,
 					private_id: app.private_id,	
-					environment: environments === null ? "cloud" : environments[defaultEnvironmentIndex].Name,
+					environment: environments === null || environments === [] ? "cloud" : environments[defaultEnvironmentIndex].Name,
 					errors: [],
 					id_: newNodeId,
 					_id_: newNodeId,
@@ -2865,7 +2874,7 @@ const AngularWorkflow = (props) => {
 					<Paper square style={newAppStyle} onMouseOver={() => {setHover(true)}} onMouseOut={() => {setHover(false)}}>
 						<Grid container style={{margin: "10px 10px 10px 15px", flex: "10"}}>
 							<Grid item>
-								<img alt={newAppname} src={image} style={{pointerEvents: "none", userDrag: "none", userSelect: "none", borderRadius: borderRadius, height: 80, width: 80,}} />
+								<img alt={newAppname} src={image} style={{pointerEvents: "none", userDrag: "none", userSelect: "none", borderRadius: theme.palette.borderRadius, height: 80, width: 80,}} />
 							</Grid>
 							<Grid style={{display: "flex", flexDirection: "column", marginLeft: "20px", minWidth: 185, maxWidth: 185, overflow: "hidden", maxHeight: 77, }}>
 								<Grid item style={{flex: 1}}>
@@ -2900,7 +2909,7 @@ const AngularWorkflow = (props) => {
 			<div style={appViewStyle}>
 				<div style={{flex: "1"}}>
 					<TextField
-						style={{backgroundColor: inputColor, borderRadius: borderRadius, marginTop: 5, marginRight: 10,}} 
+						style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius, marginTop: 5, marginRight: 10,}} 
 						InputProps={{
 							style:{
 								color: "white",
@@ -3099,1040 +3108,7 @@ const AngularWorkflow = (props) => {
 	// Dropdown -> static, action, local env, global env
 	// VALUE (JSON)
 	// {data.name}, {data.description}, {data.required}, {data.schema.type}
-	const AppActionArguments = (props) => {
-		const [selectedActionParameters, setSelectedActionParameters] = React.useState([])
-		const [selectedVariableParameter, setSelectedVariableParameter] = React.useState("")
-		const [actionlist, setActionlist] = React.useState([])
-		const [jsonList, setJsonList] = React.useState([])
-		const [showDropdown, setShowDropdown] = React.useState(false)
-		const [showDropdownNumber, setShowDropdownNumber] = React.useState(0)
-		const [showAutocomplete, setShowAutocomplete] = React.useState(false)
-		const [menuPosition, setMenuPosition] = useState(null)
-
-		useEffect(() => {
-			if (selectedActionParameters !== null && selectedActionParameters.length === 0) {
-				if (selectedAction.parameters !== null && selectedAction.parameters.length > 0) {
-					setSelectedActionParameters(selectedAction.parameters)
-				}
-			}
-			
-			if ((selectedVariableParameter === null || selectedVariableParameter === undefined) && (workflow.workflow_variables !== null && workflow.workflow_variables.length > 0)) {
-				// FIXME - this is the bad thing
-				setSelectedVariableParameter(workflow.workflow_variables[0].name)
-			} 
-
-			if (actionlist.length === 0) {
-				// FIXME: Have previous execution values in here
-				actionlist.push({"type": "Execution Argument", "name": "Execution Argument", "value": "$exec", "highlight": "exec", "autocomplete": "exec", "example": "hello"})
-				if (workflow.workflow_variables !== null && workflow.workflow_variables !== undefined && workflow.workflow_variables.length > 0) {
-					for (var key in workflow.workflow_variables) {
-						const item = workflow.workflow_variables[key]
-						actionlist.push({"type": "workflow_variable", "name": item.name, "value": item.value, "id": item.id, "autocomplete": `${item.name.split(" ").join("_")}`, "example": item.value})
-					}
-				}
-
-				// FIXME: Add values from previous executions if they exist
-				if (workflow.execution_variables !== null && workflow.execution_variables !== undefined && workflow.execution_variables.length > 0) {
-					for (var key in workflow.execution_variables) {
-						const item = workflow.execution_variables[key]
-						actionlist.push({"type": "execution_variable", "name": item.name, "value": item.value, "id": item.id, "autocomplete": `${item.name.split(" ").join("_")}`, "example": ""})
-					}
-				}
-
-				// Loops parent nodes' old results to fix autocomplete
-				var parents = getParents(selectedAction)
-				if (parents.length > 1) {
-					for (var key in parents) {
-						const item = parents[key]
-						if (item.label === "Execution Argument") {
-							continue
-						}
-
-						var exampledata = item.example === undefined ? "" : item.example
-						// Find previous execution and their variables
-						//exampledata === "" && 
-						if (workflowExecutions.length > 0) {
-							// Look for the ID
-							const found = false
-							for (var key in workflowExecutions) {
-								if (workflowExecutions[key].results === undefined || workflowExecutions[key].results === null) {
-									continue
-								}
-
-								var foundResult = workflowExecutions[key].results.find(result => result.action.id === item.id)
-								if (foundResult === undefined) {
-									continue
-								}
-
-								foundResult.result = foundResult.result.trim()
-								foundResult.result = foundResult.result.split(" None").join(" \"None\"")
-								foundResult.result = foundResult.result.split(" False").join(" false")
-								foundResult.result = foundResult.result.split(" True").join(" true")
-
-								var jsonvalid = true
-								try {
-									const tmp = String(JSON.parse(foundResult.result))
-									if (!foundResult.result.includes("{") && !foundResult.result.includes("[")) {
-										jsonvalid = false
-									}
-								} catch (e) {
-									try {
-										foundResult.result = foundResult.result.split("\'").join("\"")
-										const tmp = String(JSON.parse(foundResult.result))
-										if (!foundResult.result.includes("{") && !foundResult.result.includes("[")) {
-											jsonvalid = false
-										}
-									} catch (e) {
-										jsonvalid = false
-									}
-								}
-
-								// Finds the FIRST json only
-								if (jsonvalid) {
-									exampledata = JSON.parse(foundResult.result)
-									break
-								} 
-								//else {
-								//	console.log("Invalid JSON: ", foundResult.result)
-								//}
-							}
-						}
-
-						// 1. Take 
-						const actionvalue = {"type": "action", "id": item.id, "name": item.label, "autocomplete": `${item.label.split(" ").join("_")}`, "example": exampledata}
-						actionlist.push(actionvalue)
-					}
-				}
-
-				setActionlist(actionlist)
-			}
-		})
-
-		const changeActionParameter = (event, count, data) => {
-			if (data.name.startsWith("${") && data.name.endsWith("}")) {
-				// PARAM FIX - Gonna use the ID field, even though it's a hack
-				const paramcheck = selectedAction.parameters.find(param => param.name === "body")
-				if (paramcheck !== undefined) {
-					if (paramcheck["value_replace"] === undefined || paramcheck["value_replace"] === null) {
-						paramcheck["value_replace"] = [{
-							"key": data.name,
-							"value": event.target.value,
-						}]
-
-					} else {
-						const subparamindex = paramcheck["value_replace"].findIndex(param => param.key === data.name)
-						if (subparamindex === -1) {
-							paramcheck["value_replace"].push({
-								"key": data.name,
-								"value": event.target.value,
-							})
-						} else {
-							paramcheck["value_replace"][subparamindex]["value"] = event.target.value
-						}
-					}
-					//console.log("PARAM: ", paramcheck)
-					
-					selectedActionParameters[count]["value_replace"] = paramcheck
-					selectedAction.parameters[count]["value_replace"] = paramcheck
-					setSelectedAction(selectedAction)
-					//setUpdate(Math.random())
-					return
-				}
-			}
-
-			if (event.target.value[event.target.value.length-1] === "$") {
-				if (!showDropdown) {
-					setShowAutocomplete(false)
-					setShowDropdown(true)
-					setShowDropdownNumber(count)
-				}
-			} else {
-				if (showDropdown) {
-					setShowDropdown(false)
-				}
-			}
-
-			// bad detection mechanism probably
-			if (event.target.value[event.target.value.length-1] === "." && actionlist.length > 0) {
-				console.log("GET THE LAST ARGUMENT FOR NODE!")
-				// THIS IS AN EXAMPLE OF SHOWING IT 
-				/*
-				const inputdata = {"data": "1.2.3.4", "dataType": "4.5.6.6"}
-				setJsonList(GetParsedPaths(inputdata, ""))
-				if (!showDropdown) {
-					setShowAutocomplete(false)
-					setShowDropdown(true)
-					setShowDropdownNumber(count)
-				}
-				console.log(jsonList)
-				*/
-
-				// Search for the item backwards
-				// 1. Reverse search backwards from . -> $
-				// 2. Search the actionlist for the item  
-				// 3. Find the data for the specific item
-
-				var curstring = ""
-				var record = false
-				for (var key in selectedActionParameters[count].value) {
-					const item = selectedActionParameters[count].value[key]
-					if (record) {
-						curstring += item
-					}
-
-					if (item === "$") {
-						record = true
-						curstring = ""
-					}
-				}
-
-				//console.log("CURSTRING: ", curstring)
-				if (curstring.length > 0 && actionlist !== null) {
-					// Search back in the action list
-					curstring = curstring.split(" ").join("_").toLowerCase()
-					var actionItem = actionlist.find(data => data.autocomplete.split(" ").join("_").toLowerCase() === curstring)
-					if (actionItem !== undefined) {
-						console.log("Found item: ", actionItem)
-
-						//actionItem.example = actionItem.example.trim()
-						//actionItem.example = actionItem.example.split(" None").join(" \"None\"")
-						//actionItem.example  = actionItem.example.split("\'").join("\"")
-
-						var jsonvalid = true
-						try {
-							const tmp = String(JSON.parse(actionItem.example))
-							if (!actionItem.example.includes("{") && !actionItem.example.includes("[")) {
-								jsonvalid = false
-							}
-						} catch (e) {
-							jsonvalid = false
-						}
-
-						if (jsonvalid) {
-							setJsonList(GetParsedPaths(JSON.parse(actionItem.example), ""))
-
-							if (!showDropdown) {
-								setShowAutocomplete(false)
-								setShowDropdown(true)
-								setShowDropdownNumber(count)
-							}
-						}
-					}
-				}
-			} else {
-				if (jsonList.length > 0) {
-					setJsonList([])
-				}
-			}
-
-			selectedActionParameters[count].value = event.target.value
-			selectedAction.parameters[count].value = event.target.value
-			setSelectedAction(selectedAction)
-			//setUpdate(Math.random())
-			//setUpdate(event.target.value)
-		}
-
-		const changeActionParameterVariable = (fieldvalue, count) => {
-			//console.log("CALLED THIS ONE WITH VALUE!", fieldvalue)
-			//if (selectedVariableParameter === fieldvalue) {
-			//	return
-			//}
-
-			setSelectedVariableParameter(fieldvalue)
-
-			selectedActionParameters[count].action_field = fieldvalue 
-			selectedAction.parameters = selectedActionParameters
-
-			setSelectedApp(selectedApp)
-			setSelectedAction(selectedAction)
-			setUpdate(fieldvalue)
-		}
-
-		// Sets ACTION_RESULT things
-		const changeActionParameterActionResult = (fieldvalue, count) => {
-			//cy.nodes().forEach(function( ele ) {
-			//	if (ele.data()["label"] === fieldvalue) {
-			//		selectedActionParameters[count].action_field = ele.id()
-			//		return
-			//	}
-			//});
-
-			selectedActionParameters[count].action_field = fieldvalue
-			selectedAction.parameters = selectedActionParameters
-
-			// FIXME - check if startnode
-
-			// Set value 
-			setSelectedApp(selectedApp)
-
-			setSelectedAction(selectedAction)
-			setUpdate(Math.random())
-		}
-
-		const changeActionParameterVariant = (data, count) => {
-			selectedActionParameters[count].variant = data
-			selectedActionParameters[count].value = "" 
-
-			if (data === "ACTION_RESULT") {
-				var parents = getParents(selectedAction)
-				if (parents.length > 0) {
-					selectedActionParameters[count].action_field = parents[0].label
-				} else {
-					selectedActionParameters[count].action_field = ""
-				}
-			} else if (data === "WORKFLOW_VARIABLE") {
-				if (workflow.workflow_variables !== null && workflow.workflow_variables !== undefined && workflow.workflow_variables.length > 0) {
-					selectedActionParameters[count].action_field = workflow.workflow_variables[0].name
-				}
-			}
-			
-			selectedAction.parameters = selectedActionParameters
-
-			// This is a stupid workaround to make it refresh rofl
-			setSelectedAction({})
-			setSelectedTrigger({})
-			setSelectedApp({})
-			setSelectedEdge({})
-			// FIXME - check if startnode
-
-			// Set value 
-			setSelectedApp(selectedApp)
-			setSelectedAction(selectedAction)
-			setUpdate(Math.random())
-		}
-
-		// FIXME: Issue #40 - selectedActionParameters not reset
-		if (Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters.length > 0) {
-			return (
-				<div style={{marginTop: "30px"}}>	
-					<b>Parameters</b>
-					{selectedActionParameters.map((data, count) => {
-						if (data.variant === "") {
-							data.variant = "STATIC_VALUE"
-						}
-
-
-						// selectedAction.selectedAuthentication = e.target.value
-						// selectedAction.authentication_id = e.target.value.id
-						if (!selectedAction.auth_not_required && selectedAction.selectedAuthentication !== undefined && selectedAction.selectedAuthentication.fields !== undefined && selectedAction.selectedAuthentication.fields[data.name] !== undefined) {
-							// This sets the placeholder in the frontend. (Replaced in backend)
-							selectedActionParameters[count].value = selectedAction.selectedAuthentication.fields[data.name]
-							selectedAction.parameters[count].value = selectedAction.selectedAuthentication.fields[data.name]
-							setSelectedAction(selectedAction)
-							//setUpdate(Math.random())
-
-							return null	
-						}
-
-						var staticcolor = "inherit"
-						var actioncolor = "inherit"
-						var varcolor = "inherit"
-						var multiline
-						if (data.multiline !== undefined && data.multiline !== null && data.multiline === true) {
-							multiline = true
-						}
-
-						if (data.value !== undefined && data.value !== null && data.value.startsWith("{") && data.value.endsWith("}")) {
-							multiline = true
-						}
-
-						var placeholder = "Static value"
-						if (data.example !== undefined && data.example !== null && data.example.length > 0) {
-							placeholder = data.example
-						}
-
-						if (data.name.startsWith("${") && data.name.endsWith("}")) {
-							const paramcheck = selectedAction.parameters.find(param => param.name === "body")
-							if (paramcheck !== undefined && paramcheck !== null) {
-								if (paramcheck["value_replace"] !== undefined && paramcheck["value_replace"] !== null) {
-									//console.log("IN THE VALUE REPLACE: ", paramcheck["value_replace"])
-									const subparamindex = paramcheck["value_replace"].findIndex(param => param.key === data.name)
-									if (subparamindex !== -1) {
-										data.value = paramcheck["value_replace"][subparamindex]["value"]
-									}
-								}
-							}
-						}
-
-						var disabled = false
-						var rows = "5"
-						var openApiHelperText = "This is an OpenAPI specific field"
-						if (selectedApp.generated && selectedApp.activated && data.name === "body") {
-							const regex = /\${(\w+)}/g
-							const found = placeholder.match(regex)
-							if (found === null) {
-								//setExtraBodyFields([])
-							} else {
-								rows = "1"
-								disabled = true
-								openApiHelperText = "OpenAPI spec: fill the following fields."
-								//console.log("SHOULD ADD TO selectedActionParameters!: ", found, selectedActionParameters)
-								var changed = false
-								for (var specKey in found) {
-									const tmpitem = found[specKey]
-									var skip = false
-									for (var innerkey in selectedActionParameters) {
-										if (selectedActionParameters[innerkey].name === tmpitem) {
-											skip = true
-											break
-										}
-									}
-
-									if (skip) {
-										//console.log("SKIPPING ", tmpitem)
-										continue 
-									}
-
-									changed = true 
-									selectedActionParameters.push({
-										action_field: "",
-										configuration: false,
-										description: "Generated by OpenAPI body example",
-										example: "",
-										id: "",
-										multiline: false,
-										name: tmpitem,
-										options: null,
-										required: false,
-										schema: {type: "string"},
-										skip_multicheck: false,
-										tags: null,
-										value: "",
-										variant: "STATIC_VALUE",
-									})
-								}
-
-								if (changed) {
-									setSelectedActionParameters(selectedActionParameters)
-								}
-
-								return <Divider key={Math.random()} /> 
-							}
-						}
-
-						//console.log("Data: ", data)
-						var datafield = 
-							<TextField
-								disabled={disabled}
-								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
-								InputProps={{
-									style:{
-										color: "white",
-										minHeight: 50, 
-										marginLeft: 5,
-										maxWidth: "95%",
-										fontSize: "1em",
-									},
-									endAdornment: (
-										<InputAdornment position="end">
-											<Tooltip title="Autocomplete text" placement="top">
-												<AddCircleOutlineIcon style={{cursor: "pointer"}} onClick={(event) => {
-													setMenuPosition({
-														top: event.pageY+10,
-														left: event.pageX+10,
-													})
-													setShowDropdownNumber(count)
-													setShowDropdown(true)
-													setShowAutocomplete(true)
-												}}/>
-											</Tooltip>
-										</InputAdornment>
-									)
-								}}
-								fullWidth
-								multiline={multiline}
-								rows={rows}
-								color="primary"
-								defaultValue={data.value}
-								type={placeholder.includes("***") ? "password" : "text"}
-								placeholder={placeholder}
-								onChange={(event) => {
-										changeActionParameter(event, count, data)
-								}}
-								helperText={selectedApp.generated && selectedApp.activated && data.name === "body" ? 
-									<span style={{color:"white", marginBottom: 5, marginleft: 5,}}>
-										{openApiHelperText}
-									</span>
-									: 
-									data.name.startsWith("${") && data.name.endsWith("}") ?
-										<span style={{color:"white", marginBottom: 5, marginLeft: 5}}>
-											OpenAPI helperfield	
-										</span>
-									:
-									null
-								}
-								onBlur={(event) => {
-									// Super basic check
-									//if (event.target.value.startsWith("{")) {
-									//	console.log("VALIDATING JSON")
-									//	try {
-									//		JSON.parse(event.target.value)
-									//	} catch (e) {
-									//		alert.error("Failed to parse json: ", e)
-									//	}
-									//}
-								}}
-							/>
-
-						if (selectedActionParameters[count].schema !== undefined && selectedActionParameters[count].schema !== null && selectedActionParameters[count].schema.type === "file") {
-							datafield = 
-								<TextField
-									style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
-									InputProps={{
-										style:{
-											color: "white",
-											minHeight: 50, 
-											marginLeft: "5px",
-											maxWidth: "95%",
-											fontSize: "1em",
-										},
-										endAdornment: (
-											<InputAdornment position="end">
-												<Tooltip title="Autocomplete text" placement="top">
-													<AddCircleOutlineIcon style={{cursor: "pointer"}} onClick={(event) => {
-														setMenuPosition({
-															top: event.pageY+10,
-															left: event.pageX+10,
-														})
-														setShowDropdownNumber(count)
-														setShowDropdown(true)
-														setShowAutocomplete(true)
-													}}/>
-												</Tooltip>
-											</InputAdornment>
-										)
-									}}
-									fullWidth
-									multiline={multiline}
-									rows="5"
-									color="primary"
-									defaultValue={data.value}
-									type={"text"}
-									placeholder={"The file ID to get"}
-									onChange={(event) => {
-										changeActionParameter(event, count, data)
-									}}
-									onBlur={(event) => {
-									}}
-								/>
-							//const fileId = "6daabec1-892b-469c-b603-c902e47223a9"
-							//datafield = `SHOW FILES FROM OTHER NODES? Filename: ${selectedActionParameters[count].value}`	
-							/*
-							if (selectedActionParameters[count].value != fileId) {
-								changeActionParameter(fileId, count, data)
-								setUpdate(Math.random())
-
-							}
-							*/
-						} else if (selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0) {
-							if (selectedActionParameters[count].value === "" && selectedActionParameters[count].required) {
-								// Rofl, dirty workaround :)
-								const e = {
-									target: {
-										value: selectedActionParameters[count].options[0],
-									}
-								}
-
-								changeActionParameter(e, count, data)
-							}
-
-							datafield =
-								<Select
-									SelectDisplayProps={{
-										style: {
-											marginLeft: 10,
-										}
-									}}
-									value={selectedActionParameters[count].value}
-									fullWidth
-									onChange={(e) => {
-										console.log("VAL: ", e.target.value)
-										changeActionParameter(e, count, data)
-										setUpdate(Math.random())
-									}}
-									style={{backgroundColor: surfaceColor, color: "white", height: "50px"}}
-									>
-									{selectedActionParameters[count].options.map((data, index) => {
-										const split_data = data.split("||")
-										var viewed_data = data
-										if (split_data.length > 1) {
-											viewed_data = split_data[0]
-										}
-
-										return (
-											<MenuItem key={data} style={{backgroundColor: inputColor, color: "white"}} value={data}>
-												{viewed_data}
-											</MenuItem>
-										)
-									})}
-								</Select>
-
-						} else if (data.variant === "STATIC_VALUE") {
-							staticcolor = "#f85a3e"	
-						} else if (data.variant === "ACTION_RESULT") {
-							// Gets the parents of the current node
-							var parents = getParents(selectedAction)
-							actioncolor = "#f85a3e"
-							// set the datafield
-							//var datafieldvalue = "Error: No parents. Action not eligible"
-							//if (parents.length > 0) {
-							//	datafieldvalue = parents[0].label
-							//}
-							const fixedActionText = selectedActionParameters[count].value 
-
-							datafield = 
-							<div>
-								<Select
-									SelectDisplayProps={{
-										style: {
-											marginLeft: 10,
-										}
-									}}
-									value={selectedActionParameters[count].action_field}
-									fullWidth
-									onChange={(e) => {
-										changeActionParameterActionResult(e.target.value, count) 
-									}}
-									style={{backgroundColor: surfaceColor, color: "white", height: "50px"}}
-									>
-									{parents.map(data => (
-										<MenuItem key={data.label} style={{backgroundColor: inputColor, color: "white"}} value={data.label}>
-											{data.label}
-										</MenuItem>
-									))}
-								</Select>
-								<TextField
-									style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
-									InputProps={{
-										style:{
-											color: "white",
-											marginLeft: "5px",
-											maxWidth: "95%",
-											height: 50, 
-											fontSize: "1em",
-										},
-									}}
-									fullWidth
-									color="primary"
-									defaultValue={data.value}
-									helperText={<div style={{marginLeft: "5px", color:"white", marginBottom: "2px",}}>Example: $.body will get "data" from {'{"body": "data"}'}</div>}
-									placeholder="Action variable ($.)" 
-									onChange={(event) => {
-										changeActionParameter(event, count, data)
-									}}
-								/>
-							</div>
-
-						} else if (data.variant === "WORKFLOW_VARIABLE") {
-							varcolor = "#f85a3e"
-							if ((workflow.workflow_variables === null || workflow.workflow_variables === undefined || workflow.workflow_variables.length === 0) && (workflow.execution_variables === null || workflow.execution_variables === undefined || workflow.execution_variables.length === 0)) {
-								setCurrentView(2)
-								datafield = 
-								<div>
-								<div>
-									Looks like you don't have any variables yet.  
-								</div>
-								<div style={{width: "100%", margin: "auto"}}>
-									<Button style={{margin: "auto", marginTop: "10px"}} color="primary" variant="outlined" onClick={() => {
-										setVariablesModalOpen(true)
-										setLastSaved(false)
-									}}>New workflow variable</Button> 				
-								</div>
-								</div>
-							} else {
-								// FIXME - this is a shitty solution that needs re-renders all the time
-								datafield = 
-								<Select
-									SelectDisplayProps={{
-										style: {
-											marginLeft: 10,
-										}
-									}}
-									fullWidth
-									value={selectedAction.parameters[count].action_field}
-									onChange={(e) => {
-										console.log(e.target.value)
-										changeActionParameterVariable(e.target.value, count) 
-									}}
-									style={{backgroundColor: inputColor, color: "white", height: "50px"}}
-									>
-									{workflow.workflow_variables !== undefined && workflow.workflow_variables !== null ? workflow.workflow_variables.map(data => (
-										<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data.name}>
-											{data.name}
-										</MenuItem>
-									)) : null}
-									<Divider />
-									{workflow.execution_variables !== undefined && workflow.execution_variables !== null ? workflow.execution_variables.map(data => (
-										<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data.name}>
-											{data.name}
-										</MenuItem>
-									)) : null}
-								</Select>
-							}
-						}
-
-						// Shows nested list of nodes > their JSON lists
-						const ActionlistWrapper = (props) => {
-
-							const handleMenuClose = () => {
-								setShowAutocomplete(false)
-
-								if (!selectedActionParameters[count].value[selectedActionParameters[count].value.length-1] === "$") {
-									setShowDropdown(false)
-								}
-
-								setUpdate(Math.random())
-								setMenuPosition(null)
-							}
-
-							const handleItemClick = (values) => {
-								if (values === undefined || values === null || values.length === 0) {
-									return
-								}
-
-								var toComplete = selectedActionParameters[count].value.trim().endsWith("$") ? values[0].autocomplete : "$"+values[0].autocomplete
-								for (var key in values) {
-									if (key == 0 || values[key].autocomplete.length === 0) {
-										continue
-									}
-
-									toComplete += values[key].autocomplete
-								}
-
-								// Handles the fields under OpenAPI body to be parsed.
-								if (data.name.startsWith("${") && data.name.endsWith("}")) {
-									console.log("INSIDE VALUE REPLACE: ", data.name, toComplete)
-									// PARAM FIX - Gonna use the ID field, even though it's a hack
-									const paramcheck = selectedAction.parameters.find(param => param.name === "body")
-									if (paramcheck !== undefined) {
-										if (paramcheck["value_replace"] === undefined || paramcheck["value_replace"] === null) {
-											paramcheck["value_replace"] = [{
-												"key": data.name,
-												"value": toComplete,
-											}]
-
-										} else {
-											const subparamindex = paramcheck["value_replace"].findIndex(param => param.key === data.name)
-											if (subparamindex === -1) {
-												paramcheck["value_replace"].push({
-													"key": data.name,
-													"value": toComplete,
-												})
-											} else {
-												paramcheck["value_replace"][subparamindex]["value"] += toComplete
-											}
-										}
-										
-										selectedActionParameters[count]["value_replace"] = paramcheck
-										selectedAction.parameters[count]["value_replace"] = paramcheck
-										setSelectedAction(selectedAction)
-										setUpdate(Math.random())
-
-										setShowDropdown(false)
-										setMenuPosition(null)
-										return
-									}
-								}
-
-								selectedActionParameters[count].value += toComplete
-								selectedAction.parameters[count].value = selectedActionParameters[count].value 
-								setSelectedAction(selectedAction)
-								setUpdate(Math.random())
-
-								setShowDropdown(false)
-								setMenuPosition(null)
-							}
-
-							const iconStyle = {
-								marginRight: 15,
-							}
-
-							return (
-								<Menu
-									anchorReference="anchorPosition"
-									anchorPosition={menuPosition}
-									onClose={() => {
-										handleMenuClose()
-									}}
-									open={!!menuPosition}
-									style={{
-										border: `2px solid #f85a3e`, 
-										color: "white", 
-										marginTop: 2,
-									}}
-								>
-								{actionlist.map(innerdata => {
-									const icon = innerdata.type === "action" ? <AppsIcon style={{marginRight: 10}} /> : innerdata.type === "workflow_variable" || innerdata.type === "execution_variable" ? <FavoriteBorderIcon style={{marginRight: 10}} /> : <ScheduleIcon style={{marginRight: 10}} /> 
-
-									const handleExecArgumentHover = (inside) => {
-										var exec_text_field = document.getElementById("execution_argument_input_field")
-										if (exec_text_field !== null) {
-											if (inside) {
-												exec_text_field.style.border = "2px solid #f85a3e"
-											} else {
-												exec_text_field.style.border = ""
-											}
-										}
-
-										// Also doing arguments
-										if (workflow.triggers !== undefined && workflow.triggers !== null && workflow.triggers.length > 0) {
-											for (var key in workflow.triggers) {
-												const item = workflow.triggers[key]
-
-												var node = cy.getElementById(item.id)
-												if (node.length > 0) {
-													if (inside) {
-														node.addClass('shuffle-hover-highlight')
-													} else {
-														node.removeClass('shuffle-hover-highlight')
-													}
-												}
-
-											}
-										}
-									}
-
-									const handleActionHover = (inside, actionId) => {
-										var node = cy.getElementById(actionId)
-										if (node.length > 0) {
-											if (inside) {
-												node.addClass('shuffle-hover-highlight')
-											} else {
-												node.removeClass('shuffle-hover-highlight')
-											}
-										}
-									}
-
-									const handleMouseover = () => {
-										if (innerdata.type === "Execution Argument") {
-												handleExecArgumentHover(true)
-											} else if (innerdata.type === "action") {
-												handleActionHover(true, innerdata.id)
-											}
-										} 
-										
-									const handleMouseOut = () => {
-										if (innerdata.type === "Execution Argument") {
-											handleExecArgumentHover(false)
-										} else if (innerdata.type === "action") {
-											handleActionHover(false, innerdata.id)
-										}
-									}
-
-									var parsedPaths = [] 
-									if (typeof(innerdata.example) === "object") {
-										parsedPaths = GetParsedPaths(innerdata.example, "")
-									}
-
-									return (
-										parsedPaths.length > 0 ?
-											<NestedMenuItem
-												key={innerdata.name}
-												label={
-													<div style={{display: "flex"}}>
-														{icon} {innerdata.name}
-													</div>
-												}
-												parentMenuOpen={!!menuPosition}
-												style={{backgroundColor: inputColor, color: "white", minWidth: 250,}}
-												onClick={() => {
-													handleItemClick([innerdata])
-												}}
-											>
-												{parsedPaths.map((pathdata, index) => {
-													// FIXME: Should be recursive in here
-													const icon = pathdata.type === "value" ? <VpnKeyIcon style={iconStyle} /> : pathdata.type === "list" ? <FormatListNumberedIcon style={iconStyle} /> : <ExpandMoreIcon style={iconStyle} /> 
-													return (
-														<MenuItem key={pathdata.name} style={{backgroundColor: inputColor, color: "white", minWidth: 250, }} value={pathdata} onMouseOver={() => {}}
-															onClick={() => {
-																handleItemClick([innerdata, pathdata])
-															}}
-														>
-															<Tooltip color="primary" title={`Ex. value: ${pathdata.value}`} placement="left">
-																<div style={{display: "flex"}}>
-																	{icon} {pathdata.name}
-																</div>
-															</Tooltip>
-														</MenuItem>
-													)
-
-												})}
-											</NestedMenuItem>
-										: 
-											<MenuItem key={innerdata.name} style={{backgroundColor: inputColor, color: "white"}} value={innerdata} onMouseOver={() => handleMouseover()} onMouseOut={() => {handleMouseOut()}} 
-												onClick={() => {
-													handleItemClick([innerdata])
-												}}
-											>
-												<Tooltip color="primary" title={`Value: ${innerdata.value}`} placement="left">
-													<div style={{display: "flex"}}>
-														{icon} {innerdata.name}
-													</div>
-												</Tooltip>
-											</MenuItem>
-										
-									)
-								})}	
-							</Menu>
-							)
-						}
-
-						var itemColor = "#f85a3e"
-						if (!data.required) {
-							itemColor = "#ffeb3b"
-						}
-
-						var tmpitem = data.name.valueOf()
-						if (data.name.startsWith("${") && data.name.endsWith("}")) {
-							tmpitem = tmpitem.slice(2, data.name.length-1)
-						}
-						
-						tmpitem = tmpitem.charAt(0).toUpperCase()+tmpitem.substring(1)
-						tmpitem = tmpitem.replaceAll("_", " ")
-						const description = data.description === undefined ? "" : data.description 
-
-						return (
-						<div key={data.name}>	
-							<div style={{marginTop: 20, marginBottom: 0, display: "flex"}}>
-
-
-								{data.configuration === true ? 
-									<Tooltip color="primary" title={`Authenticate ${selectedApp.name}`} placement="top">
-										<LockOpenIcon style={{cursor: "pointer", width: 24, height: 24, marginRight: 10, }} onClick={() => {
-											setAuthenticationModalOpen(true)
-										}}/>
-									</Tooltip>
-								:
-									<div style={{width: 17, height: 17, borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: 10, marginTop: 2, marginTop: "auto", marginBottom: "auto",}}/>
-								}
-								<div style={{flex: "10", marginTop: "auto", marginBottom: "auto",}}> 
-									<Tooltip title={description} placement="top">
-										<b>{tmpitem} </b> 
-									</Tooltip>
-								</div>
-
-								{/*selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0  ? null : 
-								<div style={{display: "flex"}}>
-									<Tooltip color="primary" title="Static data" placement="top">
-										<div style={{cursor: "pointer", color: staticcolor}} onClick={(e) => {
-												e.preventDefault()
-												changeActionParameterVariant("STATIC_VALUE", count) 
-											}}>
-											<CreateIcon />
-										</div>
-									</Tooltip>
-									&nbsp;|&nbsp;
-									<Tooltip color="primary" title="Data from previous action" placement="top">
-										<div style={{cursor: "pointer", color: actioncolor}} onClick={(e) => {
-											e.preventDefault()
-											changeActionParameterVariant("ACTION_RESULT", count) 
-										}}>
-											<AppsIcon />
-										</div>
-									</Tooltip>
-									&nbsp;|&nbsp;
-									<Tooltip color="primary" title="Use local variable" placement="top">
-										<div style={{cursor: "pointer", color: varcolor}} onClick={(e) => {
-											e.preventDefault()
-											changeActionParameterVariant("WORKFLOW_VARIABLE", count) 
-										}}>
-											<FavoriteBorderIcon />
-										</div>
-									</Tooltip>
-								</div>	
-							*/}
-							{selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0 && selectedActionParameters[count].required === true && selectedActionParameters[count].unique_toggled !== undefined ? null : 
-								<div style={{display: "flex"}}>
-									<Tooltip color="primary" title="Value must be unique" placement="top">
-										<div style={{cursor: "pointer", color: staticcolor}} onClick={(e) => {}}>
-          						<Checkbox
-          						  checked={selectedActionParameters[count].unique_toggled}
-												style={{
-													color: theme.palette.primary.main,
-												}}
-          						  onChange={(event) => {
-													//console.log("CHECKED!: ", selectedActionParameters[count])
-          						  	selectedActionParameters[count].unique_toggled = !selectedActionParameters[count].unique_toggled
-													selectedAction.parameters[count].unique_toggled = selectedActionParameters[count].unique_toggled
-          						  	setSelectedActionParameters(selectedActionParameters)
-													setSelectedAction(selectedAction)
-													setUpdate(Math.random())
-												}}
-          						  name="requires_unique"
-          						/>
-										</div>
-									</Tooltip>
-								</div>
-							}
-							</div>	
-							{datafield}
-							{showDropdown && showDropdownNumber === count && data.variant === "STATIC_VALUE" && jsonList.length > 0 ?
-							  <FormControl fullWidth style={{marginTop: 0}}>
-									<InputLabel id="action-autocompleter" style={{marginLeft: 10, color: "white"}}>Autocomplete</InputLabel>
-									<Select
-									  labelId="action-autocompleter"
-										SelectDisplayProps={{
-											style: {
-												marginLeft: 10,
-											}
-										}}
-										onClose={() => {
-											setShowAutocomplete(false)
-
-											if (!selectedActionParameters[count].value[selectedActionParameters[count].value.length-1] === ".") {
-												setShowDropdown(false)
-											}
-
-											setUpdate(Math.random())
-										}}
-										onClick={() => setShowAutocomplete(true)}
-										fullWidth
-										open={showAutocomplete}
-										style={{border: `2px solid #f85a3e`, color: "white", height: 50, marginTop: 2,}}
-										onChange={(e) => {
-											if (selectedActionParameters[count].value[selectedActionParameters[count].value.length-1] === ".") {
-												e.target.value.autocomplete = e.target.value.autocomplete.slice(1, e.target.value.autocomplete.length)
-											}
-
-											selectedActionParameters[count].value += e.target.value.autocomplete
-											selectedAction.parameters[count].value = selectedActionParameters[count].value 
-											setSelectedAction(selectedAction)
-											setUpdate(Math.random())
-
-											setShowDropdown(false)
-										}}
-									>
-										{jsonList.map(data => {
-											const iconStyle = {
-												marginRight: 15,
-											}
-
-											const icon = data.type === "value" ? <VpnKeyIcon style={iconStyle} /> : data.type === "list" ? <FormatListNumberedIcon style={iconStyle} /> : <ExpandMoreIcon style={iconStyle} /> 
-											return (
-												<MenuItem key={data.name} style={{backgroundColor: inputColor, color: "white"}} value={data} onMouseOver={() => {}}>
-													<Tooltip color="primary" title={`Ex. value: ${data.value}`} placement="left">
-														<div style={{display: "flex"}}>
-															{icon} {data.name}
-														</div>
-													</Tooltip>
-												</MenuItem>
-											)
-										})}
-									</Select>
-      					</FormControl>
-							: null}
-							{showDropdown && showDropdownNumber === count && data.variant === "STATIC_VALUE" && jsonList.length === 0 ?
-									<ActionlistWrapper actionlist={actionlist} />
-							: null}
-
-
-						</div>
-					)})}
-				</div>
-				)
-			} 
-		return null
-	}
+	
 
 	//height: "100%",
 	const appApiViewStyle = {
@@ -4148,49 +3124,7 @@ const AngularWorkflow = (props) => {
 		overflow: "auto",
 	}
 
-	const defineStartnode = () => {
-		var oldstartnode = cy.getElementById(workflow.start)
-		if (oldstartnode.length > 0) {
-			oldstartnode[0].data("isStartNode", false)
-			var oldnodecnt = workflow.actions.findIndex(a => a.id === workflow.start)
-			if (workflow.actions[oldnodecnt] !== undefined) {
-				workflow.actions[oldnodecnt].isStartNode = false
-			}
-		}
-
-		var newstartnode = cy.getElementById(selectedAction.id)
-		if (newstartnode.length > 0) {
-			newstartnode[0].data("isStartNode", true)
-			var newnodecnt = workflow.actions.findIndex(a => a.id === selectedAction.id)
-			console.log("NEW NODE CNT: ", newnodecnt)
-			if (workflow.actions[newnodecnt] !== undefined) {
-				workflow.actions[newnodecnt].isStartNode = true
-				console.log(workflow.actions[newnodecnt])
-			}
-		}
-
-		// Find branches with triggers as source nodes
-		// Move these targets to be the new node
-		// Set arrows pointing to new startnode with errors
-		//for (var key in workflow.branches) {
-		//	var item = workflow.branches[key]	
-		//	if (item.destination_id === oldstartnode[0].data()["id"]) {
-		//		var curbranch = cy.getElementById(item.id)
-		//		if (curbranch.length > 0) {
-		//			//console.log(curbranch[0].data())
-		//			//curbranch[0].data("target", selectedAction.id)
-		//			//curbranch[0].data("hasErrors", true)
-		//			//workflow.branches[key].destination_id = selectedAction.id
-		//			//console.log(curbranch[0].data())
-		//		}
-		//	}
-		//}
-
-		setUpdate("start_node"+selectedAction.id)
-		workflow.start = selectedAction.id
-		setWorkflow(workflow)
-		//setStartNode(selectedAction.id)
-	}
+	
 
 	function sortByKey(array, key) {
 		if (array === undefined) {
@@ -4226,353 +3160,43 @@ const AngularWorkflow = (props) => {
 		zIndex: 1000,
 	}
 
-	const textFieldStyle = {
-		backgroundColor: inputColor, 
-		borderRadius: borderRadius, 
-	}
-
-	const getApp = (appId, setApp) => {
-		fetch(globalUrl+"/api/v1/apps/"+appId+"/config?openapi=false", {
-			headers: {
-				'Accept': 'application/json',
-			},
-	  	credentials: "include",
-		})
-		.then((response) => {
-			if (response.status === 200) {
-				//alert.success("Successfully GOT app "+appId)		
-			} else {
-				alert.error("Failed getting app")		
-			}
-
-			return response.json()
-		})
-    .then((responseJson) => {
-			if (setApp && responseJson.actions !== undefined && responseJson.actions !== null) {
-				if (selectedApp.versions !== undefined && selectedApp.versions !== null) {
-					responseJson.versions = selectedApp.versions
-				}
-
-				if (selectedApp.loop_versions !== undefined && selectedApp.loop_versions !== null) {
-					responseJson.loop_versions = selectedApp.loop_versions
-				}
-
-				var foundAction = responseJson.actions.find(action => action.name === selectedAction.name)
-				if (foundAction !== null && foundAction !== undefined) {
-					for (var paramkey in foundAction.parameters) {
-						const param = foundAction.parameters[paramkey]
-
-						const foundParam = selectedAction.parameters.find(item => item.name === param.name)
-						if (foundParam === undefined) {
-							//console.log("COULDNT find Param: ", param)
-						} else {
-							foundAction.parameters[paramkey] = foundParam 
-						}
-					}
-				} else {
-					alert.error("Couldn't find action "+selectedAction.name)
-				}
-
-				// Updating params for the new action 
-				selectedAction.parameters = foundAction.parameters
-				selectedAction.app_id = appId
-				selectedAction.app_version = responseJson.app_version
-
-				setSelectedAction(selectedAction)
-				setSelectedApp(responseJson)
-			}
-		})
-		.catch(error => {
-			alert.error(error.toString())
-		});
-	}
-
-	const innerTextfieldStyle = {
-		color: "white",
-		minHeight: 50, 
-		marginLeft: "5px",
-		maxWidth: "95%",
-		fontSize: "1em",
-		borderRadius: borderRadius,
-	}
-
 	const appApiView = Object.getOwnPropertyNames(selectedAction).length > 0 ? 
-		<div style={appApiViewStyle}>
-			<div style={{display: "flex", minHeight: 40, marginBottom: 30}}>
-				<div style={{flex: 1}}>
-					<h3 style={{marginBottom: 5}}>{selectedAction.app_name.replaceAll("_", " ")}</h3>
-					<div style={{display: "flex",}}>
-						<IconButton style={{marginTop: "auto", marginBottom: "auto", height: 30, paddingLeft: 0, paddingRight: 0}} onClick={() => {
-							console.log("FIND EXAMPLE RESULTS FOR ", selectedAction) 
-							if (workflowExecutions.length > 0) {
-								// Look for the ID
-								const found = false
-								for (var key in workflowExecutions) {
-									if (workflowExecutions[key].results === undefined || workflowExecutions[key].results === null) {
-										continue
-									}
+		<ParsedAction 
+			selectedAction={selectedAction}
+			workflow={workflow} 
+			setWorkflow={setWorkflow} 
+			setSelectedAction={setSelectedAction}
+			setUpdate={setUpdate}
+			selectedApp={selectedApp}
+			workflowExecutions={workflowExecutions}
+			setSelectedResult={setSelectedResult}
+			getParents={getParents}
+			setSelectedApp={setSelectedApp}
+			setSelectedTrigger={setSelectedTrigger}
+			setSelectedEdge={setSelectedEdge}
+			setCurrentView={setCurrentView}
+			cy={cy}
+			setAuthenticationModalOpen={setAuthenticationModalOpen}
 
-									var foundResult = workflowExecutions[key].results.find(result => result.action.id === selectedAction.id)
-									if (foundResult === undefined || foundResult === null) {
-										continue
-									}
-
-									setSelectedResult(foundResult)
-									setCodeModalOpen(true)
-									break
-								}
-							}
-						}}>
-							<Tooltip color="primary" title="See previous results for this action" placement="top">
-								<ArrowLeftIcon style={{color: "white"}}/>
-							</Tooltip>
-						</IconButton>
-						<span style={{}}>
-							<Typography style={{marginTop: 5, marginLeft: 10,}}><a rel="norefferer" href="https://shuffler.io/docs/workflows#nodes" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>What are actions?</a></Typography>
-							{selectedAction.errors !== null && selectedAction.errors.length > 0 ? 
-								<div>
-									Errors: {selectedAction.errors.join("\n")}
-								</div>
-								: null
-							}
-						</span>
-					</div>
-				</div>
-				<div style={{display: "flex", flexDirection: "column",}}>
-					{selectedAction.id === workflow.start ? null : 
-						<Tooltip color="primary" title={"Make this node the start action"} placement="top">
-							<Button style={{zIndex: 5000, marginTop: 10,}} color="primary" variant="outlined" onClick={(e) => {
-								defineStartnode(e)	
-							}}>
-								<KeyboardArrowRightIcon />
-							</Button> 				
-						</Tooltip>
-					}
-					{selectedApp.versions !== null && selectedApp.versions !== undefined && selectedApp.versions.length > 0 ? 
-						<Select
-							defaultValue={selectedAction.app_version}
-							onChange={(event) => {
-								const newversion = selectedApp.versions.find(tmpApp => tmpApp.version == event.target.value)
-								if (newversion !== undefined && newversion !== null) {
-									getApp(newversion.id, true) 
-								}
-							}}
-							style={{marginTop: 10, backgroundColor: theme.palette.surfaceColor, backgroundColor: inputColor, color: "white", height: 35, marginleft: 10,}}
-							SelectDisplayProps={{
-								style: {
-									marginLeft: 10,
-								}
-							}}
-						>
-							{selectedApp.versions.map((data, index) => {
-								return (
-									<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data.version}>
-										{data.version}
-
-									</MenuItem>
-								)
-							})}
-						</Select>
-					: null }
-				</div>
-			</div>
-			<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
-			<Typography>
-				Name
-			</Typography>
-			<TextField
-				style={textFieldStyle} 
-				InputProps={{
-					style: innerTextfieldStyle, 
-				}}
-				fullWidth
-				color="primary"
-				placeholder={selectedAction.label}
-				onChange={selectedNameChange}
-			/>
-			{selectedApp.name !== undefined && selectedAction.authentication !== undefined && selectedAction.authentication.length === 0 && requiresAuthentication  ?
-				<div style={{marginTop: 15}}>
-					<Tooltip color="primary" title={"Add authentication option"} placement="top">
-						<span>
-							<Button color="primary" style={{}} fullWidth variant="contained" onClick={() => {
-								setAuthenticationModalOpen(true)
-							}}>
-								<AddIcon style={{marginRight: 10, }}/> Authenticate {selectedApp.name}
-							</Button> 				
-						</span>
-					</Tooltip>
-				</div>
-			: null}
-			{selectedAction.authentication !== undefined && selectedAction.authentication.length > 0 ? 
-				<div style={{marginTop: 20, overflow: "hidden",}}>
-					Authentication
-					<div style={{display: "flex"}}>
-						<Select
-							labelId="select-app-auth"
-							value={selectedAction.selectedAuthentication}
-							SelectDisplayProps={{
-								style: {
-									marginLeft: 10,
-								}
-							}}
-							fullWidth
-							onChange={(e) => {
-								console.log("CHOSE AN AUTHENTICATION OPTION: ", e.target.value)
-								selectedAction.selectedAuthentication = e.target.value
-								selectedAction.authentication_id = e.target.value.id
-								setSelectedAction(selectedAction)
-								setUpdate(Math.random())
-							}}
-							style={{backgroundColor: inputColor, color: "white", height: 50, maxWidth: rightsidebarStyle.maxWidth-80,}}	
-						>
-							{selectedAction.authentication.map(data => (
-								<MenuItem key={data.id} style={{backgroundColor: inputColor, color: "white"}} value={data}>
-									{data.label} - ({data.app.app_version})
-								</MenuItem>
-							))}
-						</Select>
-
-						{/*
-
-						<Button fullWidth style={{margin: "auto", marginTop: "10px",}} color="primary" variant="contained" onClick={() => setAuthenticationModalOpen(true)}>
-							AUTHENTICATE
-						</Button>
-						curaction.authentication = authenticationOptions
-							if (curaction.selectedAuthentication === null || curaction.selectedAuthentication === undefined || curaction.selectedAuthentication.length === "")
-						*/}
-					 	<Tooltip color="primary" title={"Add authentication option"} placement="top">
-							<IconButton color="primary" style={{}} onClick={() => {
-								setAuthenticationModalOpen(true)
-							}}>
-								<AddIcon />
-							</IconButton> 				
-						</Tooltip>
-					</div>
-				</div>
-				: null}
-			{showEnvironment ? 
-				<div style={{marginTop: "20px"}}>
-					<Typography>
-						Environment
-					</Typography>
-					<Select
-						value={selectedActionEnvironment === undefined || selectedActionEnvironment.Name === undefined ? "" : selectedActionEnvironment.Name}
-						SelectDisplayProps={{
-							style: {
-								marginLeft: 10,
-
-							}
-						}}
-						fullWidth
-						onChange={(e) => {
-							const env = environments.find(a => a.Name === e.target.value)
-							setSelectedActionEnvironment(env) 
-							selectedAction.environment = env.Name
-							setSelectedAction(selectedAction)
-						}}
-						style={{backgroundColor: inputColor, color: "white", height: "50px"}}
-					>
-						{environments.map(data => {
-							if (data.archived) {
-								return null
-							}
-							
-							return (
-								<MenuItem key={data.Name} style={{backgroundColor: inputColor, color: "white"}} value={data.Name}>
-									{data.Name}
-								</MenuItem>
-							)
-						})}
-					</Select>
-				</div>
-				: null}
-			{workflow.execution_variables !== undefined && workflow.execution_variables !== null && workflow.execution_variables.length > 0 ?
-				<div style={{marginTop: "20px"}}>
-					Set execution variable (optional) 
-					<Select
-						value={selectedAction.execution_variable !== undefined ? selectedAction.execution_variable.name : "No selection"}
-						SelectDisplayProps={{
-							style: {
-								marginLeft: 10,
-							}
-						}}
-						fullWidth
-						onChange={(e) => {
-							if (e.target.value === "No selection") {
-								selectedAction.execution_variable = {"name": "No selection"}
-							} else {
-								const value = workflow.execution_variables.find(a => a.name === e.target.value)
-								selectedAction.execution_variable = value
-							}
-							setSelectedAction(selectedAction)
-							setUpdate(Math.random())
-						}}
-						style={{backgroundColor: inputColor, color: "white", height: "50px"}}
-					>
-							<MenuItem style={{backgroundColor: inputColor, color: "white"}} value="No selection">
-								<em>No selection</em>
-							</MenuItem>
-							<Divider />
-							{workflow.execution_variables.map(data => (
-								<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data.name}>
-									{data.name}
-								</MenuItem>
-							))}
-					</Select>
-				</div>
-				: null}
-			<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
-			<div style={{flex: "6", marginTop: "20px"}}>
-				<div style={{marginBottom: 5}}>
-					<b>Actions</b>
-				</div>
-				<Select
-					value={selectedAction.name}
-					fullWidth
-					onChange={setNewSelectedAction}
-					style={{backgroundColor: inputColor, color: "white", height: 50, borderRadius: borderRadius,}}
-					SelectDisplayProps={{
-						style: {
-							marginLeft: 10,
-							maxHeight: 200,
-							borderRadius: borderRadius,
-						}
-					}}
-				>
-					{sortByKey(selectedApp.actions, "label").map(data => {
-						var newActionname = data.name
-						if (data.label !== undefined && data.label !== null && data.label.length > 0) {
-							newActionname = data.label
-						}
-						// ROFL FIXME - loop
-						newActionname = newActionname.replaceAll("_", " ")
-						newActionname = newActionname.replaceAll("_", " ")
-						newActionname = newActionname.replaceAll("_", " ")
-						newActionname = newActionname.replaceAll("_", " ")
-						newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
-						return (
-						<MenuItem key={data.name} style={{maxWidth: 400, overflowX: "hidden", backgroundColor: inputColor, color: "white"}} value={data.name}>
-							{newActionname}
-
-						</MenuItem>
-						)
-					})}
-				</Select>
-				{selectedAction.description !== undefined && selectedAction.description.length > 0 ?
-				<div style={{marginTop: 10, marginBottom: 10, maxHeight: 60, overflow: "hidden"}}>
-					{selectedAction.description}
-				</div> : null}
-				<div style={{marginTop: "10px", borderColor: "white", borderWidth: "2px", marginBottom: 200}}>
-					<AppActionArguments key={selectedAction.id} selectedAction={selectedAction} />
-
-				</div>
-				<div style={{}}>
-						
-				</div> 
-			</div>
-		</div> 
-		: null 
-
+			setVariablesModalOpen={setVariablesModalOpen}
+			setLastSaved={setLastSaved}
+			setCodeModalOpen={setCodeModalOpen}
+			selectedNameChange={selectedNameChange}
+			rightsidebarStyle={rightsidebarStyle}
+			showEnvironment={showEnvironment}
+			selectedActionEnvironment={selectedActionEnvironment}
+			environments={environments}
+			setNewSelectedAction={setNewSelectedAction}
+			sortByKey={sortByKey}
+			
+			appApiViewStyle={appApiViewStyle}
+			globalUrl={globalUrl}
+			setSelectedActionEnvironment={setSelectedActionEnvironment}
+			requiresAuthentication={requiresAuthentication}
+		/>
+	
+		: 
+		null
 
 	const setTriggerFolderWrapperMulti = event => {
 	    const { options } = event.target
@@ -4763,7 +3387,7 @@ const AngularWorkflow = (props) => {
 
 		var datafield = 
 			<TextField
-				style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+				style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 				InputProps={{
 					style:{
 						color: "white",
@@ -5516,7 +4140,7 @@ const AngularWorkflow = (props) => {
 					Name
 				</div>
 				<TextField
-					style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+					style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 					InputProps={{
 						style:{
 							color: "white",
@@ -5535,7 +4159,7 @@ const AngularWorkflow = (props) => {
 				<div style={{marginTop: "20px"}}>
 					Environment:
 					<TextField
-						style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+						style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 						InputProps={{
 							style:{
 								color: "white",
@@ -5612,7 +4236,7 @@ const AngularWorkflow = (props) => {
 						Name
 					</div>
 					<TextField
-						style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+						style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 						InputProps={{
 							style:{
 								color: "white",
@@ -5747,7 +4371,7 @@ const AngularWorkflow = (props) => {
 								</div>
 							</div>
 							<TextField
-								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+								style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 								InputProps={{
 									style:{
 										color: "white",
@@ -5790,7 +4414,7 @@ const AngularWorkflow = (props) => {
 								</div>
 							</div>
 							<TextField
-								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+								style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 								InputProps={{
 									style:{
 										color: "white",
@@ -5845,7 +4469,7 @@ const AngularWorkflow = (props) => {
 						Name
 					</div>
 					<TextField
-						style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+						style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 						InputProps={{
 							style:{
 								color: "white",
@@ -5918,7 +4542,7 @@ const AngularWorkflow = (props) => {
 								</div>
 							</div>
 							<TextField
-								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+								style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 								id="webhook_uri_field"
 								onClick={() => {
   								var copyText = document.getElementById("webhook_uri_field");
@@ -6224,7 +4848,7 @@ const AngularWorkflow = (props) => {
 						Name
 					</div>
 					<TextField
-						style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+						style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 						InputProps={{
 							style:{
 								color: "white",
@@ -6243,7 +4867,7 @@ const AngularWorkflow = (props) => {
 					<div style={{marginTop: "20px"}}>
 						Environment:
 						<TextField
-							style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+							style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 							InputProps={{
 								style:{
 									color: "white",
@@ -6270,7 +4894,7 @@ const AngularWorkflow = (props) => {
 							</div>
 						</div>
 						<TextField
-							style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+							style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 							InputProps={{
 								style:{
 									color: "white",
@@ -6326,7 +4950,7 @@ const AngularWorkflow = (props) => {
 						</FormGroup>
 						{workflow.triggers[selectedTriggerIndex].parameters[2] !== undefined && workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("email") ?
 							<TextField
-								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+								style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 								InputProps={{
 									style:{
 										color: "white",
@@ -6350,7 +4974,7 @@ const AngularWorkflow = (props) => {
 						}
 						{workflow.triggers[selectedTriggerIndex].parameters[2] !== undefined && workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("sms") ?
 							<TextField
-								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+								style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 								InputProps={{
 									style:{
 										color: "white",
@@ -6402,7 +5026,7 @@ const AngularWorkflow = (props) => {
 						Name
 					</div>
 					<TextField
-						style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+						style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 						InputProps={{
 							style:{
 								color: "white",
@@ -6479,7 +5103,7 @@ const AngularWorkflow = (props) => {
 								</div>
 							</div>
 							<TextField
-								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+								style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 								InputProps={{
 									style:{
 										color: "white",
@@ -6505,7 +5129,7 @@ const AngularWorkflow = (props) => {
 								</div>
 							</div>
 							<TextField
-								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+								style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 								InputProps={{
 									style:{
 										color: "white",
@@ -6762,10 +5386,10 @@ const AngularWorkflow = (props) => {
 					<Tooltip color="primary" title="An argument to be used for execution. This is a variable available to every node in your workflow." placement="top">
 						<TextField
 							id="execution_argument_input_field"
-							style={textFieldStyle} 
+							style={theme.palette.textFieldStyle} 
 							disabled={workflow.public}
 							InputProps={{
-								style: innerTextfieldStyle, 
+								style: theme.palette.innerTextfieldStyle, 
 							}}
 							color="secondary"
 							placeholder={"Execution Argument"}
@@ -6780,32 +5404,6 @@ const AngularWorkflow = (props) => {
 							<Button disabled={savingState !== 0} color="primary" style={{height: 50, width: 64, marginLeft: 10, }} variant={lastSaved ? "outlined" : "contained"} onClick={() => saveWorkflow()}>
 								{savingState === 2 ? <CircularProgress style={{height: 35, width: 35}} /> : savingState === 1 ? <DoneIcon style={{color: green}} /> : <SaveIcon /> }
 							</Button> 				
-						</span>
-					</Tooltip>
-					<Tooltip color="secondary" title="Fit to screen (ctrl+f)" placement="top">
-						<span>
-							<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={() => cy.fit(null, 50)}>
-								<AspectRatioIcon />  
-							</Button> 				
-						</span>
-					</Tooltip>
-					<Tooltip disabled={workflow.public} color="secondary" title="Remove selected item (del)" placement="top-start">
-						<span>
-						<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={() => {
-							removeNode()		
-						}}>
-							<DeleteIcon /> 
-						</Button>
-						</span>
-					</Tooltip>
-					<Tooltip color="secondary" title="Show executions" placement="top-start">
-						<span>
-						<Button disabled={workflow.public} color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={() => {
-							setExecutionModalOpen(true)
-							getWorkflowExecution(props.match.params.key, "")
-						}}>
-							<DirectionsRunIcon />
-						</Button>
 						</span>
 					</Tooltip>
 					{workflow.public ? 
@@ -6830,6 +5428,32 @@ const AngularWorkflow = (props) => {
 							</span>
 						</Tooltip>
 					: null}
+					<Tooltip color="secondary" title="Fit to screen (ctrl+f)" placement="top">
+						<span>
+							<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={() => cy.fit(null, 50)}>
+								<AspectRatioIcon />  
+							</Button> 				
+						</span>
+					</Tooltip>
+					<Tooltip color="secondary" title="Remove selected item (del)" placement="top-start">
+						<span>
+						<Button color="primary" disabled={workflow.public} style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={() => {
+							removeNode()		
+						}}>
+							<DeleteIcon /> 
+						</Button>
+						</span>
+					</Tooltip>
+					<Tooltip color="secondary" title="Show executions" placement="top-start">
+						<span>
+						<Button disabled={workflow.public} color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={() => {
+							setExecutionModalOpen(true)
+							getWorkflowExecution(props.match.params.key, "")
+						}}>
+							<DirectionsRunIcon />
+						</Button>
+						</span>
+					</Tooltip>	
 					{/* <FileMenu />	*/}
 					{workflow.configuration !== null && workflow.configuration !== undefined && workflow.configuration.exit_on_error !== undefined ? <WorkflowMenu />	 : null}
 				</div>
@@ -7942,7 +6566,7 @@ const AngularWorkflow = (props) => {
 					<div style={{marginTop: 15}}/>
 					<b>Name - what is this used for?</b>
 					<TextField
-							style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+							style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 							InputProps={{
 								style:{
 									color: "white",
@@ -7969,7 +6593,7 @@ const AngularWorkflow = (props) => {
 								<LockOpenIcon style={{marginRight: 10}}/>
 								<b>{data.name}</b>
 								<TextField
-										style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+										style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 										InputProps={{
 											style:{
 												color: "white",
@@ -8016,7 +6640,7 @@ const AngularWorkflow = (props) => {
 			<div>
 				The API endpoint to use (URL) - predefined in the app
 				<TextField
-					style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+					style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 					InputProps={{
 						style:{
 							color: "white",

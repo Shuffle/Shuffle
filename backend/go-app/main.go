@@ -6085,11 +6085,6 @@ func initHandlers() {
 		panic(fmt.Sprintf("DBclient error during init: %s", err))
 	}
 
-	//dbclient, err := shuffle.GetDatastoreClient(ctx, gceProject)
-	//if err != nil {
-	//	panic(fmt.Sprintf("Error setting datastore connector: %s", err))
-	//}
-
 	_ = shuffle.RunInit(*dbclient, storage.Client{}, gceProject, "onprem", true)
 	log.Printf("Finished Shuffle database init")
 

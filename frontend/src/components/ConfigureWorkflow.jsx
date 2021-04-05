@@ -95,7 +95,7 @@ const Workflow = (props) => {
 			}
 
 			if (action.errors !== undefined && action.errors !== null && action.errors.length > 0) {
-				console.log("Node has errors!: ", action.errors)
+				//console.log("Node has errors!: ", action.errors)
 			}
 
 			if (newaction.must_authenticate) {
@@ -103,19 +103,23 @@ const Workflow = (props) => {
 				for (var key in appAuthentication) {
 					const auth = appAuthentication[key]
 					if (auth.app.name === app.name && auth.active) {
-						console.log("Found auth: ", auth)
+						//console.log("Found auth: ", auth)
 						authenticationOptions.push(auth)
 						newaction.authenticationId = auth.id
 						break
 					}
 				}
 
-				console.log("APPAUTH: ", app.authentication, action)
 				if (newaction.authenticationId === null || newaction.authenticationId === undefined || newaction.authenticationId.length === "") {
-					console.log("FAILED to authentication node!")
-					newactions.push(newaction)
+					//console.log("FAILED to authenticate node!")
+
+					if (newactions.find(tmpaction => tmpaction.app_id === newaction.app_id && tmpaction.app_name === newaction.app_name) !== undefined) {
+						console.log("Action already found.")
+					} else {
+						newactions.push(newaction)
+					}
 				} else {
-					console.log("Skipping node as it's already authenticated.")
+					//console.log("Skipping node as it's already authenticated.")
 					newaction.authentication = authenticationOptions
 					workflow.actions[key] = newaction
 				}
@@ -157,16 +161,12 @@ const Workflow = (props) => {
 			setConfigureWorkflowModalOpen(false)
 		}
 
-		console.log("VARIABLES: ", requiredVariables)
-		console.log("ACTIONS: ", newactions)
 		setRequiredTriggers(requiredTriggers)
 		setRequiredVariables(requiredVariables)
 		setRequiredActions(newactions)
 	}
 
-	console.log("AUTH: ", appAuthentication)
 	if (appAuthentication.length !== previousAuth.length) {
-		console.log("APP AUTH CHANGED!")
 		var newactions = []
 		for (var actionkey in requiredActions) {
 			var newaction = requiredActions[actionkey]
@@ -175,7 +175,6 @@ const Workflow = (props) => {
 			for (var key in appAuthentication) {
 				const auth = appAuthentication[key]
 				if (auth.app.name === app.name && auth.active) {
-					console.log("FOUND AUTH FOR: ", auth.app.name)
 					newaction.auth_done = true
 					break
 				}
@@ -193,10 +192,7 @@ const Workflow = (props) => {
 	const TriggerSection = (props) => {
 		const {trigger} = props
 
-		console.log(trigger)
-
 		return (
-			<div>
 				<ListItem>
 					<ListItemAvatar>
 						<Avatar variant="rounded">
@@ -275,7 +271,6 @@ const Workflow = (props) => {
 						/>
 						*/}
 				</ListItem>
-			</div>
 		)
 	}
 
@@ -343,16 +338,13 @@ const Workflow = (props) => {
 					<ListItemText
 						primary={action.app_name}
 						secondary={action.app_version}
-						style={{minWidth: 175, maxWidth: 175, marginLeft: 10}}
+						style={{}}
 					/>
 					{action.must_authenticate ? 
 						action.auth_done ? 
-							<div>
-								<Button color="primary" variant="outlined" onClick={() => {
-								}}>
-									Finished	
-								</Button>
-							</div>
+							<Button color="primary" variant="outlined" onClick={() => {}}>
+								Authenticated	
+							</Button>
 						:
 							selectedAction.app_name === action.app_name ? 
 								<CircularProgress />
@@ -377,8 +369,6 @@ const Workflow = (props) => {
 		)
 	}
 
-	console.log(requiredActions)
-
 	return (
 		<div>
 			<Typography variant="h6">{workflow.name}</Typography>
@@ -401,11 +391,13 @@ const Workflow = (props) => {
 			{requiredVariables.length > 0 ? 
 				<span>
 					<Typography variant="body1" style={{marginTop: 10}}>Variables</Typography>
-					{requiredVariables.map((data, index) => {
-						return (
-							<VariableSection key={index} variable={data} />
-						)
-					})}
+					<List>
+						{requiredVariables.map((data, index) => {
+							return (
+								<VariableSection key={index} variable={data} />
+							)
+						})}
+					</List>
 				</span>
 			: null}
 
@@ -413,21 +405,25 @@ const Workflow = (props) => {
 			{requiredTriggers.length > 0 ? 
 				<span>
 					<Typography variant="body1" style={{marginTop: 10}}>Triggers</Typography>
-					{requiredTriggers.map((data, index) => {
-						return (
-							<TriggerSection key={index} trigger={data} />
-						)
-					})}
+					<List>
+						{requiredTriggers.map((data, index) => {
+							return (
+								<TriggerSection key={index} trigger={data} />
+							)
+						})}
+					</List>
 				</span>
 			: null }
 			<div style={{textAlign: "center", display: "flex", marginTop: 20, }}>
 				<ButtonGroup style={{margin: "auto",}}>
+					{/*
 					<Button color="primary" variant={"outlined"} style={{
 					}} onClick={() => {
 						setConfigureWorkflowModalOpen(false)
 					}}>
 						Skip 
 					</Button>
+					*/}
 					<Button color="primary" variant={"contained"} style={{
 					}} onClick={() => {
 						saveWorkflow(workflow)
