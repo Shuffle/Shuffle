@@ -1079,7 +1079,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if actionResult.Status == "WAITING" && actionResult.Action.AppName == "User Input" {
-		log.Printf("SHOULD WAIT A BIT AND RUN CLOUD STUFF WITH USER INPUT! WAITING!")
+		log.Printf("[INFO] SHOULD WAIT A BIT AND RUN CLOUD STUFF WITH USER INPUT! WAITING!")
 
 		var trigger shuffle.Trigger
 		err = json.Unmarshal([]byte(actionResult.Result), &trigger)
@@ -4919,187 +4919,6 @@ func getWorkflowExecutions(resp http.ResponseWriter, request *http.Request) {
 	resp.Write(newjson)
 }
 
-func getAllSchedules(ctx context.Context, orgId string) ([]ScheduleOld, error) {
-	var schedules []ScheduleOld
-
-	q := datastore.NewQuery("schedules").Filter("org = ", orgId)
-	if orgId == "ALL" {
-		q = datastore.NewQuery("schedules")
-	}
-
-	_, err := dbclient.GetAll(ctx, q, &schedules)
-	if err != nil {
-		return []ScheduleOld{}, err
-	}
-
-	return schedules, nil
-}
-
-//FIXME: Add cursor
-//func shuffle.GetAllWorkflowApps(ctx context.Context, maxLen int) ([]shuffle.WorkflowApp, error) {
-//	var apps []WorkflowApp
-//	query := datastore.NewQuery("workflowapp").Order("-edited").Limit(10)
-//	//query := datastore.NewQuery("workflowapp").Order("-edited").Limit(40)
-//
-//	cacheKey := fmt.Sprintf("workflowapps-sorted-%d", maxLen)
-//	if value, found := requestCache.Get(cacheKey); found {
-//		parsedValue := value.(*[]WorkflowApp)
-//		log.Printf("[INFO] Returning %d apps from cache", len(*parsedValue))
-//		return *parsedValue, nil
-//	}
-//
-//	cursorStr := ""
-//
-//	// NOT BEING UPDATED
-//	// FIXME: Update the app with the correct actions. HOW DOES THIS WORK??
-//	// Seems like only actions are wrong. Could get the app individually.
-//	// Guessing it's a memory issue.
-//	//Actions        []WorkflowAppAction `json:"actions" yaml:"actions" required:true datastore:"actions,noindex"`
-//	//errors.New(nil)
-//	var err error
-//	for {
-//		it := dbclient.Run(ctx, query)
-//		//_, err = it.Next(&app)
-//		for {
-//			var app WorkflowApp
-//			_, err := it.Next(&app)
-//			if err != nil {
-//				break
-//			}
-//
-//			if app.Name == "Shuffle Subflow" {
-//				continue
-//			}
-//
-//			found := false
-//			//log.Printf("ACTIONS: %d - %s", len(app.Actions), app.Name)
-//			for _, innerapp := range apps {
-//				if innerapp.Name == app.Name {
-//					found = true
-//					break
-//				}
-//			}
-//
-//			if !found {
-//				apps = append(apps, app)
-//			}
-//		}
-//
-//		if err != iterator.Done {
-//			//log.Printf("[INFO] Failed fetching results: %v", err)
-//			//break
-//		}
-//
-//		// Get the cursor for the next page of results.
-//		nextCursor, err := it.Cursor()
-//		if err != nil {
-//			log.Printf("Cursorerror: %s", err)
-//			break
-//		} else {
-//			//log.Printf("NEXTCURSOR: %s", nextCursor)
-//			nextStr := fmt.Sprintf("%s", nextCursor)
-//			if cursorStr == nextStr {
-//				break
-//			}
-//
-//			cursorStr = nextStr
-//			query = query.Start(nextCursor)
-//			//cursorStr = nextCursor
-//			//break
-//		}
-//
-//		if len(apps) > maxLen {
-//			break
-//		}
-//	}
-//
-//	if len(apps) > 20 {
-//		log.Printf("[INFO] Setting %d apps in cache", len(apps))
-//		requestCache.Set(cacheKey, &apps, cache.DefaultExpiration)
-//	}
-//
-//	//var allworkflowapps []WorkflowApp
-//	//_, err := dbclient.GetAll(ctx, query, &allworkflowapps)
-//	//if err != nil {
-//	//	if strings.Contains(fmt.Sprintf("%s", err), "ResourceExhausted") {
-//	//		//datastore.NewQuery("workflowapp").Limit(30).Order("-edited")
-//	//		query = datastore.NewQuery("workflowapp").Order("-edited").Limit(25)
-//	//		//q := q.Limit(25)
-//	//		_, err := dbclient.GetAll(ctx, query, &allworkflowapps)
-//	//		if err != nil {
-//	//			return []WorkflowApp{}, err
-//	//		}
-//	//	} else {
-//	//		return []WorkflowApp{}, err
-//	//	}
-//	//}
-//
-//	return apps, nil
-//}
-
-//func shuffle.GetAllWorkflowAppAuth(ctx context.Context, OrgId string) ([]shuffle.AppAuthenticationStorage, error) {
-//	var allworkflowapps []AppAuthenticationStorage
-//	q := datastore.NewQuery("workflowappauth").Filter("org_id = ", OrgId)
-//
-//	_, err := dbclient.GetAll(ctx, q, &allworkflowapps)
-//	if err != nil {
-//		return []AppAuthenticationStorage{}, err
-//	}
-//
-//	return allworkflowapps, nil
-//}
-//
-//func getWorkflowAppAuthDatastore(ctx context.Context, id string) (*AppAuthenticationStorage, error) {
-//
-//	key := datastore.NameKey("workflowappauth", id, nil)
-//	appAuth := &AppAuthenticationStorage{}
-//	// New struct, to not add body, author etc
-//	if err := dbclient.Get(ctx, key, appAuth); err != nil {
-//		return &AppAuthenticationStorage{}, err
-//	}
-//
-//	return appAuth, nil
-//}
-//
-//func shuffle.SetWorkflowAppAuthDatastore(ctx context.Context, workflowappauth AppAuthenticationStorage, id string) error {
-//	timeNow := int64(time.Now().Unix())
-//	if workflowappauth.Created == 0 {
-//		workflowappauth.Created = timeNow
-//	}
-//
-//	workflowappauth.Edited = timeNow
-//
-//	key := datastore.NameKey("workflowappauth", id, nil)
-//
-//	// New struct, to not add body, author etc
-//	if _, err := dbclient.Put(ctx, key, &workflowappauth); err != nil {
-//		log.Printf("Error adding workflow app auth: %s", err)
-//		return err
-//	}
-//
-//	return nil
-//}
-//
-//// Hmm, so I guess this should use uuid :(
-//// Consistency PLX
-//func SetWorkflowAppDatastore(ctx context.Context, workflowapp WorkflowApp, id string) error {
-//	timeNow := int64(time.Now().Unix())
-//	if workflowapp.Created == 0 {
-//		workflowapp.Created = timeNow
-//	}
-//
-//	workflowapp.Edited = timeNow
-//	key := datastore.NameKey("workflowapp", id, nil)
-//
-//	// New struct, to not add body, author etc
-//	if _, err := dbclient.Put(ctx, key, &workflowapp); err != nil {
-//		log.Printf("Error adding workflow app: %s", err)
-//		return err
-//	}
-//
-//	return nil
-//}
-
 // Starts a new webhook
 func handleStopHook(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
@@ -5372,7 +5191,7 @@ func handleUserInput(trigger shuffle.Trigger, organizationId string, workflowId 
 			return err
 		}
 
-		log.Printf("Should send email to %s during execution.", email)
+		log.Printf("[INFO] Should send email to %s during execution.", email)
 	}
 	if strings.Contains(triggerType, "sms") {
 		action := shuffle.CloudSyncJob{

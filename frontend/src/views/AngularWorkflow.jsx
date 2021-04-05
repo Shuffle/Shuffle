@@ -128,7 +128,7 @@ const AngularWorkflow = (props) => {
 	const [rightSideBarOpen, setRightSideBarOpen] = React.useState(false)
 	const [showSkippedActions, setShowSkippedActions] = React.useState(false)
 	const [lastExecution, setLastExecution] = React.useState("")
-	const [configureWorkflowModalOpen, setConfigureWorkflowModalOpen] = React.useState(false)
+	const [configureWorkflowModalOpen, setConfigureWorkflowModalOpen] = React.useState(true)
 	const [curpath, setCurpath] = useState(typeof window === 'undefined' || window.location === undefined ? "" : window.location.pathname)
 
 	// 0 = normal, 1 = just done, 2 = normal
@@ -707,8 +707,10 @@ const AngularWorkflow = (props) => {
 				newBranches.push(parsedElement)
 			} else {
 				if (type === "ACTION") {
-					// FIXME - check whether position is new to not fuck up params etc.
-					var curworkflowAction = useworkflow.actions.find(a => a.id === cyelements[key].data()["id"])
+					const cyelement = cyelements[key].data()
+					const elementid = cyelement.id === undefined || cyelement.id === null ? cyelement["_id"] : cyelement.id
+				
+					var curworkflowAction = useworkflow.actions.find(a => a !== undefined && (a["id"] === elementid || a["_id"] === elementid))
 					if (curworkflowAction === undefined)  {
 						curworkflowAction = cyelements[key].data() 
 					} 
@@ -1114,13 +1116,13 @@ const AngularWorkflow = (props) => {
 	
 	const getWorkflow = () => {
 		fetch(globalUrl+"/api/v1/workflows/"+props.match.params.key, {
-    	  	method: 'GET',
+    	  method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json',
 				},
-	  			credentials: "include",
-    		})
+	  		credentials: "include",
+    })
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for workflows :O!")
@@ -1146,6 +1148,12 @@ const AngularWorkflow = (props) => {
 
 			setWorkflow(responseJson)
 			setWorkflowDone(true)
+
+			//console.log(responseJson)
+			// Add error checks
+			if (!responseJson.public && (!responseJson.previously_saved || (!responseJson.is_valid || (responseJson.errors !== undefined || responseJson.errors !== null || responseJson.errors !== responseJson.errors.length > 0)))) {
+				setConfigureWorkflowModalOpen(true)
+			}
     })
 		.catch(error => {
 			alert.error(error.toString())
@@ -1289,11 +1297,6 @@ const AngularWorkflow = (props) => {
 		//console.log("BRANCHES: ", branch)
 
 		if (data.type === "ACTION") {
-
-
-			// FIXME - unselect
-			//console.log(cy.elements('[_id!="${data._id}"]`))
-			// Does it choose the wrong action?
 			var curaction = workflow.actions.find(a => a.id === data.id)
 			if (!curaction || curaction === undefined) { 
 				//event.target.unselect()
@@ -1301,15 +1304,27 @@ const AngularWorkflow = (props) => {
 				return
 			}
 
-
-			console.log(apps)
+			//console.log(apps)
 			const curapp = apps.find(a => a.name === curaction.app_name && (a.app_version === curaction.app_version || a.loop_versions.includes(curaction.app_version)))
 			if (!curapp || curapp === undefined) {
 				alert.error(`App ${curaction.app_name}:${curaction.app_version} not found. Is it activated?`)
+
+				const tmpapp = {
+					name: curaction.app_name,
+					app_name: curaction.app_name, 
+					app_version: curaction.app_version, 
+					id: curaction.app_id,
+					actions: [curaction],
+				}
+
+				console.log(tmpapp)
+				console.log(curaction)
+				setSelectedApp(tmpapp)
+				setSelectedAction(curaction)
 				//return
 			} else {
 
-				console.log("AUTHENTICATION: ", curapp.authentication)
+				//console.log("AUTHENTICATION: ", curapp.authentication)
 				setRequiresAuthentication(curapp.authentication.required && curapp.authentication.parameters !== undefined && curapp.authentication.parameters !== null)
 				if (curapp.authentication.required) {
 					// Setup auth here :)
@@ -2147,6 +2162,7 @@ const AngularWorkflow = (props) => {
 		}
 
 		const deleteVariable = (variableName) => {
+			console.log("Delete:" ,variableName)
 			workflow.workflow_variables = workflow.workflow_variables.filter(data => data.name !== variableName)
 			setWorkflow(workflow)
 		}
@@ -2208,7 +2224,7 @@ const AngularWorkflow = (props) => {
 												  setOpen(false)
 												  setAnchorEl(null)
 											  }}
-      										>
+      								>
 
 											<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
 												setOpen(false)
@@ -4232,8 +4248,6 @@ const AngularWorkflow = (props) => {
 			return response.json()
 		})
     .then((responseJson) => {
-			console.log(responseJson)
-
 			if (setApp && responseJson.actions !== undefined && responseJson.actions !== null) {
 				if (selectedApp.versions !== undefined && selectedApp.versions !== null) {
 					responseJson.versions = selectedApp.versions
@@ -4244,17 +4258,14 @@ const AngularWorkflow = (props) => {
 				}
 
 				var foundAction = responseJson.actions.find(action => action.name === selectedAction.name)
-				console.log("Old : ", selectedAction)
-				console.log("Found: ", foundAction)
 				if (foundAction !== null && foundAction !== undefined) {
 					for (var paramkey in foundAction.parameters) {
 						const param = foundAction.parameters[paramkey]
 
 						const foundParam = selectedAction.parameters.find(item => item.name === param.name)
 						if (foundParam === undefined) {
-							console.log("COULDNT find Param: ", param)
+							//console.log("COULDNT find Param: ", param)
 						} else {
-							console.log("FoundP: ", foundParam)
 							foundAction.parameters[paramkey] = foundParam 
 						}
 					}
@@ -7878,9 +7889,15 @@ const AngularWorkflow = (props) => {
 				} 
 			}
 
+			console.log("Action: ", selectedAction)
 			selectedAction.authentication_id = authenticationOption.id
 			selectedAction.selectedAuthentication = authenticationOption
-			selectedAction.authentication.push(authenticationOption)
+			if (selectedAction.authentication === undefined || selectedAction.authentication === null) {
+				selectedAction.authentication = [authenticationOption]
+			} else {
+				selectedAction.authentication.push(authenticationOption)
+			}
+
 			setSelectedAction(selectedAction)
 
 			var newAuthOption = JSON.parse(JSON.stringify(authenticationOption))
@@ -7898,6 +7915,12 @@ const AngularWorkflow = (props) => {
 			setNewAppAuth(newAuthOption)
 			//appAuthentication.push(newAuthOption)
 			//setAppAuthentication(appAuthentication)
+			//
+			
+			if (configureWorkflowModalOpen) {
+				setSelectedAction({})
+			}
+
 			setUpdate(authenticationOption.id)
 
 			/*
@@ -8024,18 +8047,23 @@ const AngularWorkflow = (props) => {
 		<Dialog 
 			open={configureWorkflowModalOpen} 
 			onClose={() => {
-				setConfigureWorkflowModalOpen(false)
+				//setConfigureWorkflowModalOpen(false)
 			}}
 			PaperProps={{
 				style: {
 					backgroundColor: surfaceColor,
 					color: "white",
 					minWidth: 600,
-					padding: 15, 
+					padding: 50, 
 				},
 			}}
 		>
-			<ConfigureWorkflow workflow={workflow} appAuthentication={appAuthentication} apps={apps} />
+			<IconButton style={{zIndex: 5000, position: "absolute", top: 14, right: 14, color: "grey"}} onClick={() => {
+				setConfigureWorkflowModalOpen(false)
+			}}>
+				<CloseIcon  />
+			</IconButton>
+			<ConfigureWorkflow theme={theme} globalUrl={globalUrl} workflow={workflow} setSelectedAction={setSelectedAction} setSelectedApp={setSelectedApp} setAuthenticationModalOpen={setAuthenticationModalOpen} appAuthentication={appAuthentication} selectedAction={selectedAction} apps={apps} setConfigureWorkflowModalOpen={setConfigureWorkflowModalOpen} saveWorkflow={saveWorkflow} newWebhook={newWebhook} submitSchedule={submitSchedule} referenceUrl={referenceUrl} isCloud={isCloud} />
 		</Dialog>
 		: null
 	
@@ -8046,6 +8074,10 @@ const AngularWorkflow = (props) => {
 			open={authenticationModalOpen} 
 			onClose={() => {
 				//setAuthenticationModalOpen(false)
+				//
+				if (configureWorkflowModalOpen) {
+					setSelectedAction({})
+				}
 			}}
 			PaperProps={{
 				style: {
@@ -8056,6 +8088,14 @@ const AngularWorkflow = (props) => {
 				},
 			}}
 		>
+			<IconButton style={{zIndex: 5000, position: "absolute", top: 14, right: 14, color: "grey"}} onClick={() => {
+				setAuthenticationModalOpen(false)
+				if (configureWorkflowModalOpen) {
+					setSelectedAction({})
+				}
+			}}>
+				<CloseIcon  />
+			</IconButton>
 			<DialogTitle><div style={{color: "white"}}>Authentication for {selectedApp.name}</div></DialogTitle>
 			<AuthenticationData app={selectedApp} />	
 		</Dialog> : null

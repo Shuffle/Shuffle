@@ -459,9 +459,9 @@ const Admin = (props) => {
 
 
 				// FIXME: Set up features
-				Object.keys(responseJson.sync_features).map(function(key, index) {
-					//console.log(responseJson.sync_features[key])
-				})
+				//Object.keys(responseJson.sync_features).map(function(key, index) {
+				//	//console.log(responseJson.sync_features[key])
+				//})
 
 				//setOrgName(responseJson.name)
 				//setOrgDescription(responseJson.description)
@@ -849,7 +849,6 @@ const Admin = (props) => {
 				return response.json()
 			})
 			.then((responseJson) => {
-				console.log(responseJson)
 				setSchedules(responseJson)
 			})
 			.catch(error => {
@@ -988,34 +987,45 @@ const Admin = (props) => {
 		});
 	}
 
+	const views = {
+		0: "organization",
+		1: "users",
+		2: "app_auth",
+		3: "files",
+		4: "schedules",
+		5: "environments",
+		6: "categories",
+	}
 	const setConfig = (event, newValue) => {
+		console.log("Value: ", newValue)
+
+		setCurTab(parseInt(newValue))
 		if (newValue === 1) {
+			document.title = "Shuffle - admin - users"
 			getUsers()
 		} else if (newValue === 2) {
+			document.title = "Shuffle - admin - app authentication"
 			getAppAuthentication()
 		} else if (newValue === 3) {
+			document.title = "Shuffle - admin - files"
 			getFiles()
 		} else if (newValue === 4) {
+			document.title = "Shuffle - admin - schedules"
 			getSchedules()
 		} else if (newValue === 5) {
+			document.title = "Shuffle - admin - environments"
 			getEnvironments()
 		} else if (newValue === 6) {
+			document.title = "Shuffle - admin - orgs"
 			getOrgs() 
+		} else {
+			document.title = "Shuffle - admin"
 		}
 
 		if (newValue === 6) {
 			console.log("Should get apps for categories.")
 		}
 
-		const views = {
-			0: "organization",
-			1: "users",
-			2: "app_auth",
-			3: "environments",
-			4: "schedules",
-			5: "files",
-			6: "categories",
-		}
 
 		//var theURL = window.location.pathname
 		//FIXME: Add url edits
@@ -1027,33 +1037,21 @@ const Admin = (props) => {
 		//window.location.pathame = newpath
 
 		setModalUser({})
-		setCurTab(newValue)
 	}
 
 
 	if (firstRequest) {
 		setFirstRequest(false)
+		document.title = "Shuffle - admin"
 		if (!isCloud) {
 			getUsers()
 		} else {
 			getSettings()
 		}
 
-		const views = {
-			"organization": 0,
-			"users": 1,
-			"app_auth": 2,
-			"environments": 3,
-			"schedules": 4,
-			"files": 5,
-		}
-
 		if (props.match.params.key !== undefined) {
-			const tmpitem = views[props.match.params.key]
-			if (tmpitem !== undefined) {
-				//setCurTab(tmpitem)
-				setConfig("", tmpitem)
-			}
+			//const tmpitem = views[props.match.params.key]
+			setConfig("", props.match.params.key)
 		}
 	}
 
@@ -2092,11 +2090,13 @@ const Admin = (props) => {
 											</IconButton>
 										: 
 											<Tooltip title={"Go to workflow"} style={{}} aria-label={"Download"}>
-												<a style={{textDecoration: "none", color: "#f85a3e"}} href={`/workflows/${file.workflow_id}`} target="_blank">
-													<IconButton disabled={file.workflow_id === "global"}>
-														<OpenInNewIcon style={{color: file.workflow_id !== "global" ? "white" : "grey",}} />
-													</IconButton>
-												</a>
+												<span>
+													<a style={{textDecoration: "none", color: "#f85a3e"}} href={`/workflows/${file.workflow_id}`} target="_blank">
+														<IconButton disabled={file.workflow_id === "global"}>
+															<OpenInNewIcon style={{color: file.workflow_id !== "global" ? "white" : "grey",}} />
+														</IconButton>
+													</a>
+												</span>
 											</Tooltip>
 										}
 								style={{minWidth: 100, maxWidth: 100, overflow: "hidden"}}
@@ -2116,11 +2116,13 @@ const Admin = (props) => {
 							<ListItemText
 								primary=
 									<Tooltip title={"Download file"} style={{}} aria-label={"Download"}>
-										<IconButton disabled={file.status !== "active"} onClick={() => {
-											downloadFile(file)
-										}}>
-											<CloudDownloadIcon style={{color: file.status === "active" ? "white" : "grey",}} />
-										</IconButton>
+										<span>
+											<IconButton disabled={file.status !== "active"} onClick={() => {
+												downloadFile(file)
+											}}>
+												<CloudDownloadIcon style={{color: file.status === "active" ? "white" : "grey",}} />
+											</IconButton>
+										</span>
 									</Tooltip>
 								style={{minWidth: 75, maxWidth: 75, overflow: "hidden"}}
 							/>

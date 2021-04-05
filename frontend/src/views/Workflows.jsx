@@ -585,7 +585,7 @@ const Workflows = (props) => {
 
 				for (var subkey in data.actions[key].parameters) {
 					const param = data.actions[key].parameters[subkey]
-					if (param.name.includes("key") || param.name.includes("user") || param.name.includes("pass") || param.name.includes("api") || param.name.includes("auth") || param.name.includes("secret")) {
+					if (param.name.includes("key") || param.name.includes("user") || param.name.includes("pass") || param.name.includes("api") || param.name.includes("auth") || param.name.includes("secret") || param.name.includes("domain") || param.name.includes("url")) {
 						// FIXME: This may be a vuln if api-keys are generated that start with $
 						if (param.value.startsWith("$")) {
 							console.log("Skipping field, as it's referencing a variable")
@@ -645,8 +645,8 @@ const Workflows = (props) => {
 		let exportFileDefaultName = data.name+'.json';
 		data = sanitizeWorkflow(data)	
 
-		//console.log("EXPORT: ", data)
-		//return
+		// Add correct ID's for triggers
+		// Add mag
 
 		let dataStr = JSON.stringify(data)
 		let dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
