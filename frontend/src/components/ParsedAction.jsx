@@ -1,18 +1,65 @@
 import React, {useState, useEffect, useLayoutEffect} from 'react';
 
-import { useTheme } from '@material-ui/core/styles';
 import { GetParsedPaths } from "../views/Apps.jsx";
+import { sortByKey } from "../views/AngularWorkflow.jsx";
+import { useTheme } from '@material-ui/core/styles';
 import NestedMenuItem from "material-ui-nested-menu-item";
 
 import {TextField, Drawer, Button, Paper, Grid, Tabs, InputAdornment, Tab, ButtonBase, Tooltip, Select, MenuItem, Divider, Dialog, Modal, DialogActions, DialogTitle, InputLabel, DialogContent, FormControl, IconButton, Menu, Input, FormGroup, FormControlLabel, Typography, Checkbox, Breadcrumbs, CircularProgress, Switch, Fade} from '@material-ui/core';
 import {GetApp as GetAppIcon, Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
 
-
-
 const ParsedAction = (props) => {
-	const {workflow, setWorkflow, setAction, setSelectedAction, setUpdate, appActionArguments, selectedApp, workflowExecutions, setSelectedResult, selectedAction, getParents, setSelectedApp, setSelectedTrigger, setSelectedEdge, setCurrentView, cy, setAuthenticationModalOpen,setVariablesModalOpen, setLastSaved, setCodeModalOpen, selectedNameChange, rightsidebarStyle, showEnvironment, selectedActionEnvironment, environments, setNewSelectedAction, sortByKey, appApiViewStyle, globalUrl, setSelectedActionEnvironment, requiresAuthentication } = props
+	const {workflow, setWorkflow, setAction, setSelectedAction, setUpdate, appActionArguments, selectedApp, workflowExecutions, setSelectedResult, selectedAction, setSelectedApp, setSelectedTrigger, setSelectedEdge, setCurrentView, cy, setAuthenticationModalOpen,setVariablesModalOpen, setCodeModalOpen, selectedNameChange, rightsidebarStyle, showEnvironment, selectedActionEnvironment, environments, setNewSelectedAction, appApiViewStyle, globalUrl, setSelectedActionEnvironment, requiresAuthentication, hideExtraTypes } = props
 
 	const theme = useTheme();
+	const getParents = (action) => {
+		if (cy === undefined) {
+			return []
+		}
+
+		var allkeys = [action.id]
+		var handled = []
+		var results = []
+
+		while(true) {
+			for (var key in allkeys) {
+				var currentnode = cy.getElementById(allkeys[key])
+				if (handled.includes(currentnode.data().id)) {
+					continue
+				} else {
+					// Get the name / label here too?
+					handled.push(currentnode.data().id)
+					results.push(currentnode.data())
+				}
+
+				if (currentnode.length === 0) {
+					continue
+				}
+
+				const incomingEdges = currentnode.incomers('edge')
+				if (incomingEdges.length === 0) {
+					continue
+				}
+
+				for (var i = 0; i < incomingEdges.length; i++) {
+					var tmp = incomingEdges[i]
+					if (!allkeys.includes(tmp.data().source)) {
+						allkeys.push(tmp.data().source)
+					}
+				}
+			}
+			if (results.length === allkeys.length) {
+				break
+			}
+		}
+
+		// Remove self
+		results = results.filter(data => data.id !== action.id) 
+		results = results.filter(data => data.type !== "TRIGGER") 
+		results.push({"label": "Execution Argument", "type": "INTERNAL"})
+		return results
+	}
+
 
 	const getApp = (appId, setApp) => {
 		fetch(globalUrl+"/api/v1/apps/"+appId+"/config?openapi=false", {
@@ -71,6 +118,10 @@ const ParsedAction = (props) => {
 	}
 
 	const defineStartnode = () => {
+		if (cy === undefined) {
+			return
+		}
+
 		var oldstartnode = cy.getElementById(workflow.start)
 		if (oldstartnode.length > 0) {
 			oldstartnode[0].data("isStartNode", false)
@@ -405,9 +456,12 @@ const ParsedAction = (props) => {
 
 			// This is a stupid workaround to make it refresh rofl
 			setSelectedAction({})
-			setSelectedTrigger({})
-			setSelectedApp({})
-			setSelectedEdge({})
+
+			if (setSelectedTrigger !== undefined) {
+				setSelectedTrigger({})
+				setSelectedApp({})
+				setSelectedEdge({})
+			}
 			// FIXME - check if startnode
 
 			// Set value 
@@ -419,7 +473,7 @@ const ParsedAction = (props) => {
 		// FIXME: Issue #40 - selectedActionParameters not reset
 		if (Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters.length > 0) {
 			return (
-				<div style={{marginTop: "30px"}}>	
+				<div style={{marginTop: hideExtraTypes ? 10 : 30}}>	
 					<b>Parameters</b>
 					{selectedActionParameters.map((data, count) => {
 						if (data.variant === "") {
@@ -539,19 +593,21 @@ const ParsedAction = (props) => {
 										fontSize: "1em",
 									},
 									endAdornment: (
-										<InputAdornment position="end">
-											<Tooltip title="Autocomplete text" placement="top">
-												<AddCircleOutlineIcon style={{cursor: "pointer"}} onClick={(event) => {
-													setMenuPosition({
-														top: event.pageY+10,
-														left: event.pageX+10,
-													})
-													setShowDropdownNumber(count)
-													setShowDropdown(true)
-													setShowAutocomplete(true)
-												}}/>
-											</Tooltip>
-										</InputAdornment>
+										hideExtraTypes ? null :
+											<InputAdornment position="end">
+												<Tooltip title="Autocomplete text" placement="top">
+													<AddCircleOutlineIcon style={{cursor: "pointer"}} onClick={(event) => {
+														setMenuPosition({
+															top: event.pageY+10,
+															left: event.pageX+10,
+														})
+														setShowDropdownNumber(count)
+														setShowDropdown(true)
+														setShowAutocomplete(true)
+													}}/>
+												</Tooltip>
+											</InputAdornment>
+										
 									)
 								}}
 								fullWidth
@@ -559,7 +615,7 @@ const ParsedAction = (props) => {
 								rows={rows}
 								color="primary"
 								defaultValue={data.value}
-								type={placeholder.includes("***") ? "password" : "text"}
+								type={placeholder.includes("***") || (data.configuration && (data.name.toLowerCase().includes("api") || data.name.toLowerCase().includes("key") || data.name.toLowerCase().includes("pass"))) ? "password" : "text"}
 								placeholder={placeholder}
 								onChange={(event) => {
 										changeActionParameter(event, count, data)
@@ -602,19 +658,20 @@ const ParsedAction = (props) => {
 											fontSize: "1em",
 										},
 										endAdornment: (
-											<InputAdornment position="end">
-												<Tooltip title="Autocomplete text" placement="top">
-													<AddCircleOutlineIcon style={{cursor: "pointer"}} onClick={(event) => {
-														setMenuPosition({
-															top: event.pageY+10,
-															left: event.pageX+10,
-														})
-														setShowDropdownNumber(count)
-														setShowDropdown(true)
-														setShowAutocomplete(true)
-													}}/>
-												</Tooltip>
-											</InputAdornment>
+											hideExtraTypes ? null :
+												<InputAdornment position="end">
+													<Tooltip title="Autocomplete text" placement="top">
+														<AddCircleOutlineIcon style={{cursor: "pointer"}} onClick={(event) => {
+															setMenuPosition({
+																top: event.pageY+10,
+																left: event.pageX+10,
+															})
+															setShowDropdownNumber(count)
+															setShowDropdown(true)
+															setShowAutocomplete(true)
+														}}/>
+													</Tooltip>
+												</InputAdornment>
 										)
 									}}
 									fullWidth
@@ -684,106 +741,6 @@ const ParsedAction = (props) => {
 
 						} else if (data.variant === "STATIC_VALUE") {
 							staticcolor = "#f85a3e"	
-						} else if (data.variant === "ACTION_RESULT") {
-							// Gets the parents of the current node
-							var parents = getParents(selectedAction)
-							actioncolor = "#f85a3e"
-							// set the datafield
-							//var datafieldvalue = "Error: No parents. Action not eligible"
-							//if (parents.length > 0) {
-							//	datafieldvalue = parents[0].label
-							//}
-							const fixedActionText = selectedActionParameters[count].value 
-
-							datafield = 
-							<div>
-								<Select
-									SelectDisplayProps={{
-										style: {
-											marginLeft: 10,
-										}
-									}}
-									value={selectedActionParameters[count].action_field}
-									fullWidth
-									onChange={(e) => {
-										changeActionParameterActionResult(e.target.value, count) 
-									}}
-									style={{backgroundColor: theme.palette.surfaceColor, color: "white", height: "50px"}}
-									>
-									{parents.map(data => (
-										<MenuItem key={data.label} style={{backgroundColor: theme.palette.inputColor, color: "white"}} value={data.label}>
-											{data.label}
-										</MenuItem>
-									))}
-								</Select>
-								<TextField
-									style={{backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius,}} 
-									InputProps={{
-										style:{
-											color: "white",
-											marginLeft: "5px",
-											maxWidth: "95%",
-											height: 50, 
-											fontSize: "1em",
-										},
-									}}
-									fullWidth
-									color="primary"
-									defaultValue={data.value}
-									helperText={<div style={{marginLeft: "5px", color:"white", marginBottom: "2px",}}>Example: $.body will get "data" from {'{"body": "data"}'}</div>}
-									placeholder="Action variable ($.)" 
-									onChange={(event) => {
-										changeActionParameter(event, count, data)
-									}}
-								/>
-							</div>
-
-						} else if (data.variant === "WORKFLOW_VARIABLE") {
-							varcolor = "#f85a3e"
-							if ((workflow.workflow_variables === null || workflow.workflow_variables === undefined || workflow.workflow_variables.length === 0) && (workflow.execution_variables === null || workflow.execution_variables === undefined || workflow.execution_variables.length === 0)) {
-								setCurrentView(2)
-								datafield = 
-								<div>
-								<div>
-									Looks like you don't have any variables yet.  
-								</div>
-								<div style={{width: "100%", margin: "auto"}}>
-									<Button style={{margin: "auto", marginTop: "10px"}} color="primary" variant="outlined" onClick={() => {
-										setVariablesModalOpen(true)
-										setLastSaved(false)
-									}}>New workflow variable</Button> 				
-								</div>
-								</div>
-							} else {
-								// FIXME - this is a shitty solution that needs re-renders all the time
-								datafield = 
-								<Select
-									SelectDisplayProps={{
-										style: {
-											marginLeft: 10,
-										}
-									}}
-									fullWidth
-									value={selectedAction.parameters[count].action_field}
-									onChange={(e) => {
-										console.log(e.target.value)
-										changeActionParameterVariable(e.target.value, count) 
-									}}
-									style={{backgroundColor: theme.palette.inputColor, color: "white", height: "50px"}}
-									>
-									{workflow.workflow_variables !== undefined && workflow.workflow_variables !== null ? workflow.workflow_variables.map(data => (
-										<MenuItem style={{backgroundColor: theme.palette.inputColor, color: "white"}} value={data.name}>
-											{data.name}
-										</MenuItem>
-									)) : null}
-									<Divider />
-									{workflow.execution_variables !== undefined && workflow.execution_variables !== null ? workflow.execution_variables.map(data => (
-										<MenuItem style={{backgroundColor: theme.palette.inputColor, color: "white"}} value={data.name}>
-											{data.name}
-										</MenuItem>
-									)) : null}
-								</Select>
-							}
 						}
 
 						// Shows nested list of nodes > their JSON lists
@@ -894,26 +851,29 @@ const ParsedAction = (props) => {
 											for (var key in workflow.triggers) {
 												const item = workflow.triggers[key]
 
-												var node = cy.getElementById(item.id)
-												if (node.length > 0) {
-													if (inside) {
-														node.addClass('shuffle-hover-highlight')
-													} else {
-														node.removeClass('shuffle-hover-highlight')
+												if (cy !== undefined) {
+													var node = cy.getElementById(item.id)
+													if (node.length > 0) {
+														if (inside) {
+															node.addClass('shuffle-hover-highlight')
+														} else {
+															node.removeClass('shuffle-hover-highlight')
+														}
 													}
 												}
-
 											}
 										}
 									}
 
 									const handleActionHover = (inside, actionId) => {
-										var node = cy.getElementById(actionId)
-										if (node.length > 0) {
-											if (inside) {
-												node.addClass('shuffle-hover-highlight')
-											} else {
-												node.removeClass('shuffle-hover-highlight')
+										if (cy !== undefined) {
+											var node = cy.getElementById(actionId)
+											if (node.length > 0) {
+												if (inside) {
+													node.addClass('shuffle-hover-highlight')
+												} else {
+													node.removeClass('shuffle-hover-highlight')
+												}
 											}
 										}
 									}
@@ -1009,8 +969,6 @@ const ParsedAction = (props) => {
 						return (
 						<div key={data.name}>	
 							<div style={{marginTop: 20, marginBottom: 0, display: "flex"}}>
-
-
 								{data.configuration === true ? 
 									<Tooltip color="primary" title={`Authenticate ${selectedApp.name}`} placement="top">
 										<LockOpenIcon style={{cursor: "pointer", width: 24, height: 24, marginRight: 10, }} onClick={() => {
@@ -1056,7 +1014,7 @@ const ParsedAction = (props) => {
 									</Tooltip>
 								</div>	
 							*/}
-							{selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0 && selectedActionParameters[count].required === true && selectedActionParameters[count].unique_toggled !== undefined ? null : 
+							{(selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0 && selectedActionParameters[count].required === true && selectedActionParameters[count].unique_toggled !== undefined) || hideExtraTypes ? null : 
 								<div style={{display: "flex"}}>
 									<Tooltip color="primary" title="Value must be unique" placement="top">
 										<div style={{cursor: "pointer", color: staticcolor}} onClick={(e) => {}}>
@@ -1150,99 +1108,106 @@ const ParsedAction = (props) => {
 	}
 	return ( 
 		<div style={appApiViewStyle}>
-			<div style={{display: "flex", minHeight: 40, marginBottom: 30}}>
-				<div style={{flex: 1}}>
-					<h3 style={{marginBottom: 5}}>{selectedAction.app_name.replaceAll("_", " ")}</h3>
-					<div style={{display: "flex",}}>
-						<IconButton style={{marginTop: "auto", marginBottom: "auto", height: 30, paddingLeft: 0, paddingRight: 0}} onClick={() => {
-							console.log("FIND EXAMPLE RESULTS FOR ", selectedAction) 
-							if (workflowExecutions.length > 0) {
-								// Look for the ID
-								const found = false
-								for (var key in workflowExecutions) {
-									if (workflowExecutions[key].results === undefined || workflowExecutions[key].results === null) {
-										continue
-									}
+			{hideExtraTypes === true ? null : 
+				<span>
+				<div style={{display: "flex", minHeight: 40, marginBottom: 30}}>
+					<div style={{flex: 1}}>
+						<h3 style={{marginBottom: 5}}>{selectedAction.app_name.replaceAll("_", " ")}</h3>
+						<div style={{display: "flex",}}>
+							<IconButton style={{marginTop: "auto", marginBottom: "auto", height: 30, paddingLeft: 0, paddingRight: 0}} onClick={() => {
+								console.log("FIND EXAMPLE RESULTS FOR ", selectedAction) 
+								if (workflowExecutions.length > 0) {
+									// Look for the ID
+									const found = false
+									for (var key in workflowExecutions) {
+										if (workflowExecutions[key].results === undefined || workflowExecutions[key].results === null) {
+											continue
+										}
 
-									var foundResult = workflowExecutions[key].results.find(result => result.action.id === selectedAction.id)
-									if (foundResult === undefined || foundResult === null) {
-										continue
-									}
+										var foundResult = workflowExecutions[key].results.find(result => result.action.id === selectedAction.id)
+										if (foundResult === undefined || foundResult === null) {
+											continue
+										}
 
-									setSelectedResult(foundResult)
-									setCodeModalOpen(true)
-									break
+										setSelectedResult(foundResult)
+
+										if (setCodeModalOpen !== undefined) {
+											setCodeModalOpen(true)
+										}
+										break
+									}
 								}
-							}
-						}}>
-							<Tooltip color="primary" title="See previous results for this action" placement="top">
-								<ArrowLeftIcon style={{color: "white"}}/>
+							}}>
+								<Tooltip color="primary" title="See previous results for this action" placement="top">
+									<ArrowLeftIcon style={{color: "white"}}/>
+								</Tooltip>
+							</IconButton>
+							<span style={{}}>
+								<Typography style={{marginTop: 5, marginLeft: 10,}}><a rel="norefferer" href="https://shuffler.io/docs/workflows#nodes" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>What are actions?</a></Typography>
+								{selectedAction.errors !== undefined && selectedAction.errors !== null && selectedAction.errors.length > 0 ? 
+									<div>
+										Errors: {selectedAction.errors.join("\n")}
+									</div>
+									: null
+								}
+							</span>
+						</div>
+					</div>
+					<div style={{display: "flex", flexDirection: "column",}}>
+						{selectedAction.id === workflow.start ? null : 
+							<Tooltip color="primary" title={"Make this node the start action"} placement="top">
+								<Button style={{zIndex: 5000, marginTop: 10,}} color="primary" variant="outlined" onClick={(e) => {
+									defineStartnode(e)	
+								}}>
+									<KeyboardArrowRightIcon />
+								</Button> 				
 							</Tooltip>
-						</IconButton>
-						<span style={{}}>
-							<Typography style={{marginTop: 5, marginLeft: 10,}}><a rel="norefferer" href="https://shuffler.io/docs/workflows#nodes" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>What are actions?</a></Typography>
-							{selectedAction.errors !== null && selectedAction.errors.length > 0 ? 
-								<div>
-									Errors: {selectedAction.errors.join("\n")}
-								</div>
-								: null
-							}
-						</span>
+						}
+						{selectedApp.versions !== null && selectedApp.versions !== undefined && selectedApp.versions.length > 1 ? 
+							<Select
+								defaultValue={selectedAction.app_version}
+								onChange={(event) => {
+									const newversion = selectedApp.versions.find(tmpApp => tmpApp.version == event.target.value)
+									if (newversion !== undefined && newversion !== null) {
+										getApp(newversion.id, true) 
+									}
+								}}
+								style={{marginTop: 10, backgroundColor: theme.palette.surfaceColor, backgroundColor: theme.palette.inputColor, color: "white", height: 35, marginleft: 10,}}
+								SelectDisplayProps={{
+									style: {
+										marginLeft: 10,
+									}
+								}}
+							>
+								{selectedApp.versions.map((data, index) => {
+									return (
+										<MenuItem key={index} style={{backgroundColor: theme.palette.inputColor, color: "white"}} value={data.version}>
+											{data.version}
+
+										</MenuItem>
+									)
+								})}
+							</Select>
+						: null }
 					</div>
 				</div>
-				<div style={{display: "flex", flexDirection: "column",}}>
-					{selectedAction.id === workflow.start ? null : 
-						<Tooltip color="primary" title={"Make this node the start action"} placement="top">
-							<Button style={{zIndex: 5000, marginTop: 10,}} color="primary" variant="outlined" onClick={(e) => {
-								defineStartnode(e)	
-							}}>
-								<KeyboardArrowRightIcon />
-							</Button> 				
-						</Tooltip>
-					}
-					{selectedApp.versions !== null && selectedApp.versions !== undefined && selectedApp.versions.length > 0 ? 
-						<Select
-							defaultValue={selectedAction.app_version}
-							onChange={(event) => {
-								const newversion = selectedApp.versions.find(tmpApp => tmpApp.version == event.target.value)
-								if (newversion !== undefined && newversion !== null) {
-									getApp(newversion.id, true) 
-								}
-							}}
-							style={{marginTop: 10, backgroundColor: theme.palette.theme.palette.surfaceColor, backgroundColor: theme.palette.inputColor, color: "white", height: 35, marginleft: 10,}}
-							SelectDisplayProps={{
-								style: {
-									marginLeft: 10,
-								}
-							}}
-						>
-							{selectedApp.versions.map((data, index) => {
-								return (
-									<MenuItem key={index} style={{backgroundColor: theme.palette.inputColor, color: "white"}} value={data.version}>
-										{data.version}
-
-									</MenuItem>
-								)
-							})}
-						</Select>
-					: null }
-				</div>
-			</div>
-			<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
-			<Typography>
-				Name
-			</Typography>
-			<TextField
-				style={theme.palette.textFieldStyle} 
-				InputProps={{
-					style: theme.palette.innerTextfieldStyle, 
-				}}
-				fullWidth
-				color="primary"
-				placeholder={selectedAction.label}
-				onChange={selectedNameChange}
-			/>
-			{selectedApp.name !== undefined && selectedAction.authentication !== undefined && selectedAction.authentication.length === 0 && requiresAuthentication  ?
+				<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
+				<Typography>
+					Name
+				</Typography>
+				<TextField
+					style={theme.palette.textFieldStyle} 
+					InputProps={{
+						style: theme.palette.innerTextfieldStyle, 
+					}}
+					fullWidth
+					color="primary"
+					placeholder={selectedAction.label}
+					onChange={selectedNameChange}
+				/>
+				</span>
+			}
+			{selectedApp.name !== undefined && selectedAction.authentication !== null && selectedAction.authentication !== undefined && selectedAction.authentication.length === 0 && requiresAuthentication ?
 				<div style={{marginTop: 15}}>
 					<Tooltip color="primary" title={"Add authentication option"} placement="top">
 						<span>
@@ -1255,8 +1220,8 @@ const ParsedAction = (props) => {
 					</Tooltip>
 				</div>
 			: null}
-			{selectedAction.authentication !== undefined && selectedAction.authentication.length > 0 ? 
-				<div style={{marginTop: 20, overflow: "hidden",}}>
+			{selectedAction.authentication !== undefined && selectedAction.authentication !== null && selectedAction.authentication.length > 0 ? 
+				<div style={{marginTop: 15, }}>
 					Authentication
 					<div style={{display: "flex"}}>
 						<Select
@@ -1277,11 +1242,14 @@ const ParsedAction = (props) => {
 							}}
 							style={{backgroundColor: theme.palette.inputColor, color: "white", height: 50, maxWidth: rightsidebarStyle.maxWidth-80,}}	
 						>
-							{selectedAction.authentication.map(data => (
-								<MenuItem key={data.id} style={{backgroundColor: theme.palette.inputColor, color: "white"}} value={data}>
-									{data.label} - ({data.app.app_version})
-								</MenuItem>
-							))}
+							{selectedAction.authentication.map(data => {
+								console.log("DATA: ", data)
+								return(
+									<MenuItem key={data.id} style={{backgroundColor: theme.palette.inputColor, color: "white"}} value={data}>
+										{data.label} - ({data.app.app_version})
+									</MenuItem>
+								)
+							})}
 						</Select>
 
 						{/*
@@ -1302,7 +1270,7 @@ const ParsedAction = (props) => {
 					</div>
 				</div>
 				: null}
-			{showEnvironment ? 
+			{showEnvironment !== undefined && showEnvironment ? 
 				<div style={{marginTop: "20px"}}>
 					<Typography>
 						Environment
@@ -1375,46 +1343,50 @@ const ParsedAction = (props) => {
 				: null}
 			<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 			<div style={{flex: "6", marginTop: "20px"}}>
-				<div style={{marginBottom: 5}}>
-					<b>Actions</b>
-				</div>
-				<Select
-					value={selectedAction.name}
-					fullWidth
-					onChange={setNewSelectedAction}
-					style={{backgroundColor: theme.palette.inputColor, color: "white", height: 50, borderRadius: theme.palette.borderRadius,}}
-					SelectDisplayProps={{
-						style: {
-							marginLeft: 10,
-							maxHeight: 200,
-							borderRadius: theme.palette.borderRadius,
-						}
-					}}
-				>
-					{sortByKey(selectedApp.actions, "label").map(data => {
-						var newActionname = data.name
-						if (data.label !== undefined && data.label !== null && data.label.length > 0) {
-							newActionname = data.label
-						}
-						// ROFL FIXME - loop
-						newActionname = newActionname.replaceAll("_", " ")
-						newActionname = newActionname.replaceAll("_", " ")
-						newActionname = newActionname.replaceAll("_", " ")
-						newActionname = newActionname.replaceAll("_", " ")
-						newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
-						return (
-						<MenuItem key={data.name} style={{maxWidth: 400, overflowX: "hidden", backgroundColor: theme.palette.inputColor, color: "white"}} value={data.name}>
-							{newActionname}
+				{hideExtraTypes ? null : 
+					<div style={{marginBottom: 5}}>
+						<b>Actions</b>
+					</div>
+				}
+				{setNewSelectedAction !== undefined ? 
+					<Select
+						value={selectedAction.name}
+						fullWidth
+						onChange={setNewSelectedAction}
+						style={{backgroundColor: theme.palette.inputColor, color: "white", height: 50, borderRadius: theme.palette.borderRadius,}}
+						SelectDisplayProps={{
+							style: {
+								marginLeft: 10,
+								maxHeight: 200,
+								borderRadius: theme.palette.borderRadius,
+							}
+						}}
+					>
+						{sortByKey(selectedApp.actions, "label").map(data => {
+							var newActionname = data.name
+							if (data.label !== undefined && data.label !== null && data.label.length > 0) {
+								newActionname = data.label
+							}
+							// ROFL FIXME - loop
+							newActionname = newActionname.replaceAll("_", " ")
+							newActionname = newActionname.replaceAll("_", " ")
+							newActionname = newActionname.replaceAll("_", " ")
+							newActionname = newActionname.replaceAll("_", " ")
+							newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
+							return (
+							<MenuItem key={data.name} style={{maxWidth: 400, overflowX: "hidden", backgroundColor: theme.palette.inputColor, color: "white"}} value={data.name}>
+								{newActionname}
 
-						</MenuItem>
-						)
-					})}
-				</Select>
-				{selectedAction.description !== undefined && selectedAction.description.length > 0 ?
+							</MenuItem>
+							)
+						})}
+					</Select>
+				: null}
+				{selectedAction.description !== undefined && selectedAction.description.length > 0 && hideExtraTypes !== true ?
 				<div style={{marginTop: 10, marginBottom: 10, maxHeight: 60, overflow: "hidden"}}>
 					{selectedAction.description}
 				</div> : null}
-				<div style={{marginTop: "10px", borderColor: "white", borderWidth: "2px", marginBottom: 200}}>
+				<div style={{marginTop: "10px", borderColor: "white", borderWidth: "2px", marginBottom: 50,}}>
 					<AppActionArguments key={selectedAction.id} selectedAction={selectedAction} />
 				</div>
 			</div>

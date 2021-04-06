@@ -280,11 +280,19 @@ const Apps = (props) => {
 			if (!responseJson.success) {
 				alert.error("Failed to download file")
 			} else {
-				const inputdata = YAML.parse(responseJson.body)
+				console.log(responseJson)
+				const basedata = atob(responseJson.openapi)
+				console.log("BASE: ", basedata)
+				var inputdata = JSON.parse(basedata)
+				console.log("POST INPUT: ", inputdata)
+				inputdata = JSON.parse(inputdata.body)
+
 				const newpaths = {}
-				Object.keys(inputdata["paths"]).forEach(function(key) {
-					newpaths[key.split("?")[0]] = inputdata.paths[key]
-				})
+				if (inputdata["paths"] !== undefined) {
+					Object.keys(inputdata["paths"]).forEach(function(key) {
+						newpaths[key.split("?")[0]] = inputdata.paths[key]
+					})
+				}
 
 				inputdata.paths = newpaths
 				console.log("INPUT: ", inputdata)

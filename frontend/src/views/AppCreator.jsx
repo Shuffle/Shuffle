@@ -301,12 +301,12 @@ const AppCreator = (props) => {
 			return response.json()
 		})
 		.then((responseJson) => {
-			if (!responseJson.success) {
+			if (responseJson.success === false) {
 				alert.error("Failed to get the app")
   			setIsAppLoaded(true)
+				window.location.pathname = "/search"
 			} else {
-				const data = JSON.parse(responseJson.body)
-				parseIncomingOpenapiData(data)
+				parseIncomingOpenapiData(responseJson)
 			}
 		})
 		.catch(error => {
@@ -346,27 +346,8 @@ const AppCreator = (props) => {
 			if (!responseJson.success) {
 				alert.error("Failed to verify")
 			} else{
-				var jsonvalid = false 
-				var tmpvalue = ""
-				try {
-					tmpvalue = JSON.parse(responseJson.body)
-					jsonvalid = true
-				} catch (e) {
-					console.log("Error JSON: ", e)
-				}
-
-				if (!jsonvalid) {
-					try {
-						tmpvalue = YAML.parse(responseJson.body, )
-						jsonvalid = true
-					} catch(e) {
-						console.log("Error YAML: ", e)
-					}
-				}
-
-				if (jsonvalid) {
-					parseIncomingOpenapiData(tmpvalue)
-				}
+				parseIncomingOpenapiData(responseJson)
+				
 			}
 		})
 		.catch(error => {
@@ -427,9 +408,33 @@ const AppCreator = (props) => {
 	// Sets the data up as it should be at later points
 	// This is the data FROM the database, not what's being saved
 	const parseIncomingOpenapiData = (data) => {
-		//console.log("DATA: ", data.info)
-		setBasedata(data)
+		const parsedapp = data.openapi === undefined ? data : JSON.parse(atob(data.openapi))
+		data = parsedapp.body === undefined ? parsedapp : parsedapp.body
 
+		var jsonvalid = false 
+		var tmpvalue = ""
+		try {
+			data = JSON.parse(data)
+			jsonvalid = true
+		} catch (e) {
+			console.log("Error JSON: ", e)
+		}
+
+		if (!jsonvalid) {
+			try {
+				data = YAML.parse(data)
+				jsonvalid = true
+			} catch(e) {
+				console.log("Error YAML: ", e)
+			}
+		}
+
+		if (!jsonvalid) {
+			alert.info("OpenAPI data is invalid.")
+			return
+		}
+
+		setBasedata(data)
 		if (data.info !== null && data.info !== undefined)  {
 			setName(data.info.title)
 			setDescription(data.info.description)
@@ -490,210 +495,211 @@ const AppCreator = (props) => {
 			"PUT",
 		]
 
-		// FIXME - headers?
 		var newActions = []
 		var wordlist = {}
-		for (let [path, pathvalue] of Object.entries(data.paths)) {
-			for (let [method, methodvalue] of Object.entries(pathvalue)) {
-				if (methodvalue === null) {
-					alert.info("Skipped method (null)"+method)
-					continue
-				}
+		if (data.paths !== null && data.paths !== undefined) {
+			for (let [path, pathvalue] of Object.entries(data.paths)) {
+				for (let [method, methodvalue] of Object.entries(pathvalue)) {
+					if (methodvalue === null) {
+						alert.info("Skipped method (null)"+method)
+						continue
+					}
 
-				if (!allowedfunctions.includes(method.toUpperCase())) {
-					console.log("Invalid method: ", method, "data: ", methodvalue)
-					alert.info("Skipped method (not allowed): "+method)
-					continue
-				}
+					if (!allowedfunctions.includes(method.toUpperCase())) {
+						console.log("Invalid method: ", method, "data: ", methodvalue)
+						alert.info("Skipped method (not allowed): "+method)
+						continue
+					}
 
-				var tmpname = methodvalue.summary
-				if (methodvalue.operationId !== undefined && methodvalue.operationId !== null && methodvalue.operationId.length > 0 && (tmpname === undefined || tmpname.length === 0)) {
-					tmpname = methodvalue.operationId
-				}
+					var tmpname = methodvalue.summary
+					if (methodvalue.operationId !== undefined && methodvalue.operationId !== null && methodvalue.operationId.length > 0 && (tmpname === undefined || tmpname.length === 0)) {
+						tmpname = methodvalue.operationId
+					}
 
-				var newaction = {
-					"name": tmpname,
-					"description": methodvalue.description,
-					"url": path,
-					"file_field": "",
-					"method": method.toUpperCase(),
-					"headers": "",
-					"queries": [],
-					"paths": [],
-					"body": "",
-					"errors": [],
-					"example_response": "",
-				}
+					var newaction = {
+						"name": tmpname,
+						"description": methodvalue.description,
+						"url": path,
+						"file_field": "",
+						"method": method.toUpperCase(),
+						"headers": "",
+						"queries": [],
+						"paths": [],
+						"body": "",
+						"errors": [],
+						"example_response": "",
+					}
 
-				if (methodvalue["requestBody"] !== undefined) {
-					//console.log("Handle requestbody: ", methodvalue["requestBody"])
-					if (methodvalue["requestBody"]["content"] !== undefined) {
-						if (methodvalue["requestBody"]["content"]["application/json"] !== undefined) {
-							if (methodvalue["requestBody"]["content"]["application/json"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["application/json"]["schema"] !== null) {
-								if (methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"] !== undefined) {
-									var tmpobject = {}
-									for (let [prop, propvalue] of Object.entries(methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"])) {
-										tmpobject[prop] = `\$\{${prop}\}`
+					if (methodvalue["requestBody"] !== undefined) {
+						//console.log("Handle requestbody: ", methodvalue["requestBody"])
+						if (methodvalue["requestBody"]["content"] !== undefined) {
+							if (methodvalue["requestBody"]["content"]["application/json"] !== undefined) {
+								if (methodvalue["requestBody"]["content"]["application/json"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["application/json"]["schema"] !== null) {
+									if (methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"] !== undefined) {
+										var tmpobject = {}
+										for (let [prop, propvalue] of Object.entries(methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"])) {
+											tmpobject[prop] = `\$\{${prop}\}`
+										}
+
+										for (var subkey in methodvalue["requestBody"]["content"]["application/json"]["schema"]["required"]) {
+											const tmpitem = methodvalue["requestBody"]["content"]["application/json"]["schema"]["required"][subkey]
+											tmpobject[tmpitem] = `\$\{${tmpitem}\}`
+										}
+
+										newaction["body"] = JSON.stringify(tmpobject, null, 2)
 									}
-
-									for (var subkey in methodvalue["requestBody"]["content"]["application/json"]["schema"]["required"]) {
-										const tmpitem = methodvalue["requestBody"]["content"]["application/json"]["schema"]["required"][subkey]
-										tmpobject[tmpitem] = `\$\{${tmpitem}\}`
-									}
-
-									newaction["body"] = JSON.stringify(tmpobject, null, 2)
 								}
-							}
-						} else if (methodvalue["requestBody"]["content"]["application/xml"] !== undefined) {
-							console.log("METHOD XML: ", methodvalue)
-							if (methodvalue["requestBody"]["content"]["application/xml"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["application/xml"]["schema"] !== null) {
-								if (methodvalue["requestBody"]["content"]["application/xml"]["schema"]["properties"] !== undefined) {
-									var tmpobject = {}
-									for (let [prop, propvalue] of Object.entries(methodvalue["requestBody"]["content"]["application/xml"]["schema"]["properties"])) {
-										tmpobject[prop] = `\$\{${prop}\}`
+							} else if (methodvalue["requestBody"]["content"]["application/xml"] !== undefined) {
+								console.log("METHOD XML: ", methodvalue)
+								if (methodvalue["requestBody"]["content"]["application/xml"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["application/xml"]["schema"] !== null) {
+									if (methodvalue["requestBody"]["content"]["application/xml"]["schema"]["properties"] !== undefined) {
+										var tmpobject = {}
+										for (let [prop, propvalue] of Object.entries(methodvalue["requestBody"]["content"]["application/xml"]["schema"]["properties"])) {
+											tmpobject[prop] = `\$\{${prop}\}`
+										}
+
+										for (var subkey in methodvalue["requestBody"]["content"]["application/xml"]["schema"]["required"]) {
+											const tmpitem = methodvalue["requestBody"]["content"]["application/xml"]["schema"]["required"][subkey]
+											tmpobject[tmpitem] = `\$\{${tmpitem}\}`
+										}
+
+										//console.log("OBJ XML: ", tmpobject)
+										//newaction["body"] = XML.stringify(tmpobject, null, 2)
 									}
-
-									for (var subkey in methodvalue["requestBody"]["content"]["application/xml"]["schema"]["required"]) {
-										const tmpitem = methodvalue["requestBody"]["content"]["application/xml"]["schema"]["required"][subkey]
-										tmpobject[tmpitem] = `\$\{${tmpitem}\}`
+								}
+							} else {
+								if (methodvalue["requestBody"]["content"]["example"] !== undefined) {
+									if (methodvalue["requestBody"]["content"]["example"]["example"] !== undefined) {
+										newaction["body"] = methodvalue["requestBody"]["content"]["example"]["example"] 
+										//JSON.stringify(tmpobject, null, 2)
 									}
-
-									//console.log("OBJ XML: ", tmpobject)
-									//newaction["body"] = XML.stringify(tmpobject, null, 2)
 								}
-							}
-						} else {
-							if (methodvalue["requestBody"]["content"]["example"] !== undefined) {
-								if (methodvalue["requestBody"]["content"]["example"]["example"] !== undefined) {
-									newaction["body"] = methodvalue["requestBody"]["content"]["example"]["example"] 
-									//JSON.stringify(tmpobject, null, 2)
-								}
-							}
 
-							//console.log(methodvalue["requestBody"]["content"])
-							if (methodvalue["requestBody"]["content"]["multipart/form-data"] !== undefined) {
-								if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"] !== null) {
-									if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["type"] === "object") {
-										const fieldname = methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["properties"]["fieldname"]
-										if (fieldname !== undefined) {
-											console.log("FIELDNAME: ", fieldname)
-											newaction.file_field = fieldname["value"]
+								//console.log(methodvalue["requestBody"]["content"])
+								if (methodvalue["requestBody"]["content"]["multipart/form-data"] !== undefined) {
+									if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"] !== null) {
+										if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["type"] === "object") {
+											const fieldname = methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["properties"]["fieldname"]
+											if (fieldname !== undefined) {
+												console.log("FIELDNAME: ", fieldname)
+												newaction.file_field = fieldname["value"]
+											}
 										}
 									}
 								}
 							}
 						}
 					}
-				}
 
-				// HAHAHA wtf is this.
-				if (methodvalue.responses !== undefined && methodvalue.responses !== null) {
-					if (methodvalue.responses.default !== undefined) {
-						if (methodvalue.responses.default.content !== undefined) {
-							if (methodvalue.responses.default.content["text/plain"] !== undefined) {
-								if (methodvalue.responses.default.content["text/plain"]["schema"] !== undefined) {
-									if (methodvalue.responses.default.content["text/plain"]["schema"]["example"] !== undefined) {
-										newaction.example_response = methodvalue.responses.default.content["text/plain"]["schema"]["example"] 
+					// HAHAHA wtf is this.
+					if (methodvalue.responses !== undefined && methodvalue.responses !== null) {
+						if (methodvalue.responses.default !== undefined) {
+							if (methodvalue.responses.default.content !== undefined) {
+								if (methodvalue.responses.default.content["text/plain"] !== undefined) {
+									if (methodvalue.responses.default.content["text/plain"]["schema"] !== undefined) {
+										if (methodvalue.responses.default.content["text/plain"]["schema"]["example"] !== undefined) {
+											newaction.example_response = methodvalue.responses.default.content["text/plain"]["schema"]["example"] 
+										}
 									}
 								}
 							}
 						}
 					}
-				}
 
-				for (var key in methodvalue.parameters) {
-					const parameter = handleGetRef(methodvalue.parameters[key], data)
-					if (parameter.in === "query") {
-						var tmpaction = {
-							"description": parameter.description,
-							"name": parameter.name,
-							"required": parameter.required,
-							"in": "query",
+					for (var key in methodvalue.parameters) {
+						const parameter = handleGetRef(methodvalue.parameters[key], data)
+						if (parameter.in === "query") {
+							var tmpaction = {
+								"description": parameter.description,
+								"name": parameter.name,
+								"required": parameter.required,
+								"in": "query",
+							}
+
+							if (parameter.required === undefined) {
+								tmpaction.required = false	
+							}
+
+							newaction.queries.push(tmpaction)
+						} else if (parameter.in === "path") {
+							// FIXME - parse this to the URL too
+							newaction.paths.push(parameter.name)
+
+						// FIXME: This doesn't follow OpenAPI3 exactly. 
+						// https://swagger.io/docs/specification/describing-request-body/
+						// https://swagger.io/docs/specification/describing-parameters/
+						// Need to split the data.
+						} else if (parameter.in === "body") {
+							// FIXME: Add tracking for components
+							// E.G: https://raw.githubusercontent.com/owentl/Shuffle/master/gosecure.yaml
+							if (parameter.example !== undefined) {
+								newaction.body = parameter.example
+							}
+						} else if (parameter.in === "header") {
+							newaction.headers += `${parameter.name}=${parameter.example}\n`	
+						} else {
+							console.log("WARNING: don't know how to handle this param: ", parameter)
 						}
-
-						if (parameter.required === undefined) {
-							tmpaction.required = false	
-						}
-
-						newaction.queries.push(tmpaction)
-					} else if (parameter.in === "path") {
-						// FIXME - parse this to the URL too
-						newaction.paths.push(parameter.name)
-
-					// FIXME: This doesn't follow OpenAPI3 exactly. 
-					// https://swagger.io/docs/specification/describing-request-body/
-					// https://swagger.io/docs/specification/describing-parameters/
-					// Need to split the data.
-					} else if (parameter.in === "body") {
-						// FIXME: Add tracking for components
-						// E.G: https://raw.githubusercontent.com/owentl/Shuffle/master/gosecure.yaml
-						if (parameter.example !== undefined) {
-							newaction.body = parameter.example
-						}
-					} else if (parameter.in === "header") {
-						newaction.headers += `${parameter.name}=${parameter.example}\n`	
-					} else {
-						console.log("WARNING: don't know how to handle this param: ", parameter)
 					}
-				}
 
 
-				if (newaction.name === "" || newaction.name === undefined) {
-					// Find a unique part of the string
-					// FIXME: Looks for length between /, find the one where they differ
-					// Should find others with the same START to their path 
-					// Make a list of reserved names? Aka things that show up only once
-					if (Object.getOwnPropertyNames(wordlist).length === 0) {
-						for (let [newpath, pathvalue] of Object.entries(data.paths)) {
-							const newpathsplit = newpath.split("/")
-							for(var key in newpathsplit) {
-								const pathitem = newpathsplit[key].toLowerCase()
-								if (wordlist[pathitem] === undefined) {
-									wordlist[pathitem] = 1
-								} else {
-									wordlist[pathitem] += 1
+					if (newaction.name === "" || newaction.name === undefined) {
+						// Find a unique part of the string
+						// FIXME: Looks for length between /, find the one where they differ
+						// Should find others with the same START to their path 
+						// Make a list of reserved names? Aka things that show up only once
+						if (Object.getOwnPropertyNames(wordlist).length === 0) {
+							for (let [newpath, pathvalue] of Object.entries(data.paths)) {
+								const newpathsplit = newpath.split("/")
+								for(var key in newpathsplit) {
+									const pathitem = newpathsplit[key].toLowerCase()
+									if (wordlist[pathitem] === undefined) {
+										wordlist[pathitem] = 1
+									} else {
+										wordlist[pathitem] += 1
+									}
 								}
 							}
-						}
-					} 
+						} 
 
-					//console.log("WORDLIST: ", wordlist)
+						//console.log("WORDLIST: ", wordlist)
 
-					// Remove underscores and make it normal with upper case etc
-					const urlsplit = path.split("/")
-					if (urlsplit.length > 0) {
-						var curname = ""
-						for(var key in urlsplit) {
-							var subpath = urlsplit[key]	
-							if (wordlist[subpath] > 2 || subpath.length < 1) {
-								continue
+						// Remove underscores and make it normal with upper case etc
+						const urlsplit = path.split("/")
+						if (urlsplit.length > 0) {
+							var curname = ""
+							for(var key in urlsplit) {
+								var subpath = urlsplit[key]	
+								if (wordlist[subpath] > 2 || subpath.length < 1) {
+									continue
+								}
+							
+								curname = subpath
+								break
 							}
-						
-							curname = subpath
-							break
-						}
 
-						// FIXME: If name exists, 
-						// FIXME: Check if first part of parsedname is verb, otherwise use method
-						const parsedname = curname.split("_").join(" ").split("-").join(" ").split("{").join(" ").split("}").join(" ").trim()
-						if (parsedname.length === 0) {
-							newaction.errors.push("Missing name")
-						} else {
-							const newname = method.charAt(0).toUpperCase() + method.slice(1) + " " + parsedname
-							const searchactions = newActions.find(data => data.name === newname) 
-							console.log("SEARCH: ", searchactions)
-							if (searchactions !== undefined) {
+							// FIXME: If name exists, 
+							// FIXME: Check if first part of parsedname is verb, otherwise use method
+							const parsedname = curname.split("_").join(" ").split("-").join(" ").split("{").join(" ").split("}").join(" ").trim()
+							if (parsedname.length === 0) {
 								newaction.errors.push("Missing name")
 							} else {
-								newaction.name = newname
+								const newname = method.charAt(0).toUpperCase() + method.slice(1) + " " + parsedname
+								const searchactions = newActions.find(data => data.name === newname) 
+								console.log("SEARCH: ", searchactions)
+								if (searchactions !== undefined) {
+									newaction.errors.push("Missing name")
+								} else {
+									newaction.name = newname
+								}
 							}
-						}
 
-					} else {
-						newaction.errors.push("Missing name")
+						} else {
+							newaction.errors.push("Missing name")
+						}
 					}
+					newActions.push(newaction)
 				}
-				newActions.push(newaction)
 			}
 
 			if (data.servers !== undefined && data.servers.length > 0) {
@@ -721,8 +727,7 @@ const AppCreator = (props) => {
 			} 
 		}
 
-
-		// FIXME: Have multiple authentication options?
+		console.log("INVALID9: ", data)
 		if (securitySchemes !== undefined) {
 			for (const [key, value] of Object.entries(securitySchemes)) {
 				if (value.scheme === "bearer") {

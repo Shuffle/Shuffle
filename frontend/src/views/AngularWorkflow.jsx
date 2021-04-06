@@ -5,8 +5,8 @@ import { useTheme } from '@material-ui/core/styles';
 import uuid from "uuid";
 import {Link} from 'react-router-dom';
 import { Prompt } from 'react-router'
-import ReactJson from 'react-json-view'
 import { useBeforeunload } from 'react-beforeunload';
+import ReactJson from 'react-json-view'
 import NestedMenuItem from "material-ui-nested-menu-item";
 
 import {TextField, Drawer, Button, Paper, Grid, Tabs, InputAdornment, Tab, ButtonBase, Tooltip, Select, MenuItem, Divider, Dialog, Modal, DialogActions, DialogTitle, InputLabel, DialogContent, FormControl, IconButton, Menu, Input, FormGroup, FormControlLabel, Typography, Checkbox, Breadcrumbs, CircularProgress, Switch, Fade} from '@material-ui/core';
@@ -50,6 +50,25 @@ function useWindowSize() {
 		return () => window.removeEventListener('resize', updateSize);
 	}, []);
 	return size;
+}
+
+export function sortByKey(array, key) {
+	if (array === undefined) {
+		return []
+	}
+
+	if (key.startsWith("-") && key.length > 2) {
+		key = key.slice(1, key.length)
+		return array.sort(function(a, b) {
+			var x = a[key]; var y = b[key]
+			return ((x < y) ? -1 : ((x > y) ? 1 : 0))
+		}).reverse()
+	}
+
+	return array.sort(function(a, b) {
+		var x = a[key]; var y = b[key]
+		return ((x < y) ? -1 : ((x > y) ? 1 : 0))
+	})
 }
 
 function removeParam(key, sourceURL) {
@@ -2678,13 +2697,14 @@ const AngularWorkflow = (props) => {
 				*/
 
 				console.log("ENVS: ", environments)
+				const parsedEnvironments = environments === null || environments === [] ? "cloud" : environments[defaultEnvironmentIndex] === undefined ? "cloud" : environments[defaultEnvironmentIndex].Name
 				const newAppData = {
 					app_name: app.name,
 					app_version: app.app_version, 
 					app_id: app.id,
 					sharing: app.sharing,
 					private_id: app.private_id,	
-					environment: environments === null || environments === [] ? "cloud" : environments[defaultEnvironmentIndex].Name,
+					environment: parsedEnvironments,
 					errors: [],
 					id_: newNodeId,
 					_id_: newNodeId,
@@ -3126,24 +3146,7 @@ const AngularWorkflow = (props) => {
 
 	
 
-	function sortByKey(array, key) {
-		if (array === undefined) {
-			return []
-		}
-
-		if (key.startsWith("-") && key.length > 2) {
-			key = key.slice(1, key.length)
-			return array.sort(function(a, b) {
-				var x = a[key]; var y = b[key]
-				return ((x < y) ? -1 : ((x > y) ? 1 : 0))
-			}).reverse()
-		}
-
-	  return array.sort(function(a, b) {
-			var x = a[key]; var y = b[key]
-			return ((x < y) ? -1 : ((x > y) ? 1 : 0))
-		})
-	}
+	
 
 	const rightsidebarStyle = {
 		position: "fixed", 
@@ -3170,7 +3173,6 @@ const AngularWorkflow = (props) => {
 			selectedApp={selectedApp}
 			workflowExecutions={workflowExecutions}
 			setSelectedResult={setSelectedResult}
-			getParents={getParents}
 			setSelectedApp={setSelectedApp}
 			setSelectedTrigger={setSelectedTrigger}
 			setSelectedEdge={setSelectedEdge}
