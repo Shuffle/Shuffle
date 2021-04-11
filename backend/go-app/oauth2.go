@@ -458,7 +458,7 @@ func handleNewOutlookRegister(resp http.ResponseWriter, request *http.Request) {
 	})
 
 	// Set apikey for the user if they don't have one
-	err = shuffle.SetUser(ctx, Userdata)
+	err = shuffle.SetUser(ctx, Userdata, true)
 	if err != nil {
 		log.Printf("Failed setting user data for %s: %s", Userdata.Username, err)
 		resp.WriteHeader(401)

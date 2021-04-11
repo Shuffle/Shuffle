@@ -17,6 +17,7 @@ const Workflow = (props) => {
 	const [requiredTriggers, setRequiredTriggers] = React.useState([])
 	const [previousAuth, setPreviousAuth] = React.useState(appAuthentication)
 	const [firstLoad, setFirstLoad] = React.useState("")
+	const [itemChanged, setItemChanged] = React.useState(false)
 	var finished = false
 
 	if (workflow === undefined || workflow === null) {
@@ -216,6 +217,7 @@ const Workflow = (props) => {
 
 							newWebhook(workflow.triggers[trigger.index])
 							saveWorkflow(workflow)
+							setItemChanged(true) 
 						}}>
 							{trigger.status !== "running" ? "Start" : "Running"}
 						</Button>
@@ -232,6 +234,7 @@ const Workflow = (props) => {
 
 							submitSchedule(workflow.triggers[trigger.index], trigger.index)
 							saveWorkflow(workflow)
+							setItemChanged(true) 
 						}}>
 							{trigger.status !== "running" ? "Start" : "Running"}
 						</Button>
@@ -350,6 +353,7 @@ const Workflow = (props) => {
 								<CircularProgress />
 								:
 								<Button color="primary" variant="contained" onClick={() => {
+									setItemChanged(true) 
 									setSelectedAction(action.action)
 									setSelectedApp(action.app)
 									setAuthenticationModalOpen(true)
@@ -359,8 +363,9 @@ const Workflow = (props) => {
 						: 
 					null}
 					{action.must_activate ? 
-						<Button color="primary" variant="contained" onClick={() => {
+						<Button disabled={true} color="primary" variant="contained" onClick={() => {
 							console.log("SHOULD ACTIVATE: ", action)
+							setItemChanged(true) 
 						}}>
 						 Activate	
 						</Button>
@@ -426,8 +431,12 @@ const Workflow = (props) => {
 					*/}
 					<Button color="primary" variant={"contained"} style={{
 					}} onClick={() => {
-						saveWorkflow(workflow)
-						window.location.reload()
+						if (itemChanged) {
+							saveWorkflow(workflow)
+							window.location.reload()
+						} else {
+							setConfigureWorkflowModalOpen(false)
+						}
 					}}>
 						Finish setup
 					</Button>

@@ -728,9 +728,8 @@ func handleRegisterVerification(resp http.ResponseWriter, request *http.Request)
 
 	Userdata := users[0]
 
-	// FIXME: Not for cloud!
 	Userdata.Verified = true
-	err = shuffle.SetUser(ctx, &Userdata)
+	err = shuffle.SetUser(ctx, &Userdata, true)
 	if err != nil {
 		log.Printf("Failed adding verification for user %s: %s", Userdata.Username, err)
 		resp.WriteHeader(401)
@@ -740,7 +739,7 @@ func handleRegisterVerification(resp http.ResponseWriter, request *http.Request)
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "%s"}`, defaultMessage)))
-	log.Printf("%s SUCCESSFULLY FINISHED REGISTRATION", Userdata.Username)
+	log.Printf("[INFO] %s SUCCESSFULLY FINISHED REGISTRATION", Userdata.Username)
 }
 
 func handleSetEnvironments(resp http.ResponseWriter, request *http.Request) {
@@ -928,7 +927,7 @@ func createNewUser(username, password, role, apikey string, org shuffle.OrgMini)
 	newUser.Id = ID.String()
 	newUser.VerificationToken = verifyToken.String()
 
-	err = shuffle.SetUser(ctx, newUser)
+	err = shuffle.SetUser(ctx, newUser, true)
 	if err != nil {
 		log.Printf("Error adding User %s: %s", username, err)
 		return err
@@ -941,14 +940,14 @@ func createNewUser(username, password, role, apikey string, org shuffle.OrgMini)
 		if err != nil {
 			log.Printf("Failed updating org with user %s", newUser.Username)
 		} else {
-			log.Printf("Successfully updated org with user %s!", newUser.Username)
+			log.Printf("[INFO] Successfully updated org with user %s!", newUser.Username)
 		}
 	}
 
-	err = increaseStatisticsField(ctx, "successful_register", username, 1, org.Id)
-	if err != nil {
-		log.Printf("Failed to increase total apps loaded stats: %s", err)
-	}
+	//err = increaseStatisticsField(ctx, "successful_register", username, 1, org.Id)
+	//if err != nil {
+	//	log.Printf("Failed to increase total apps loaded stats: %s", err)
+	//}
 
 	return nil
 }
@@ -1152,7 +1151,7 @@ func handleUpdateUser(resp http.ResponseWriter, request *http.Request) {
 		foundUser.Username = t.Username
 	}
 
-	err = shuffle.SetUser(ctx, foundUser)
+	err = shuffle.SetUser(ctx, foundUser, true)
 	if err != nil {
 		log.Printf("Error patching user %s: %s", foundUser.Username, err)
 		resp.WriteHeader(401)
@@ -1287,7 +1286,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 
 					userInfo.Orgs = newStringOrgs
 
-					err = shuffle.SetUser(ctx, &userInfo)
+					err = shuffle.SetUser(ctx, &userInfo, true)
 					if err != nil {
 						log.Printf("Error patching User for activeOrg: %s", err)
 					} else {
@@ -1304,7 +1303,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 			userInfo.ActiveOrg = shuffle.OrgMini{
 				Id: userInfo.Orgs[0],
 			}
-			err = shuffle.SetUser(ctx, &userInfo)
+			err = shuffle.SetUser(ctx, &userInfo, true)
 			if err != nil {
 				log.Printf("Error patching User for activeOrg: %s", err)
 			}
@@ -1423,7 +1422,7 @@ func handlePasswordReset(resp http.ResponseWriter, request *http.Request) {
 	Userdata.Password = string(hashedPassword)
 	Userdata.ResetTimeout = 0
 	Userdata.ResetReference = ""
-	err = shuffle.SetUser(ctx, &Userdata)
+	err = shuffle.SetUser(ctx, &Userdata, true)
 	if err != nil {
 		log.Printf("Error adding User %s: %s", Userdata.Username, err)
 		resp.WriteHeader(200)
@@ -1630,7 +1629,7 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		Userdata.Session = sessionToken
-		err = shuffle.SetUser(ctx, &Userdata)
+		err = shuffle.SetUser(ctx, &Userdata, true)
 		if err != nil {
 			log.Printf("Failed updating user when setting session: %s", err)
 			resp.WriteHeader(500)
@@ -1641,7 +1640,7 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 		loginData = fmt.Sprintf(`{"success": true, "cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]}`, sessionToken, expiration.Unix())
 	}
 
-	log.Printf("%s SUCCESSFULLY LOGGED IN with session %s", data.Username, Userdata.Session)
+	log.Printf("[INFO] %s SUCCESSFULLY LOGGED IN with session %s", data.Username, Userdata.Session)
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(loginData))
@@ -4204,6 +4203,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	swaggerLoader.IsExternalRefsAllowed = true
 	swagger, err := swaggerLoader.LoadSwaggerFromData(body)
 	if err != nil {
+		log.Println(string(body))
 		log.Printf("[ERROR] Swagger validation error: %s", err)
 		resp.WriteHeader(500)
 		resp.Write([]byte(`{"success": false, "reason": "Failed verifying openapi"}`))
@@ -4389,7 +4389,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 		user.PrivateApps[foundNumber] = api
 	}
 
-	err = shuffle.SetUser(ctx, &user)
+	err = shuffle.SetUser(ctx, &user, true)
 	if err != nil {
 		log.Printf("[ERROR] Failed adding verification for user %s: %s", user.Username, err)
 		resp.WriteHeader(500)
@@ -5083,7 +5083,7 @@ func runInit(ctx context.Context) {
 						}
 					}
 
-					err = shuffle.SetUser(ctx, &user)
+					err = shuffle.SetUser(ctx, &user, true)
 					if err != nil {
 						log.Printf("Failed to reset user")
 					} else {
@@ -5132,7 +5132,7 @@ func runInit(ctx context.Context) {
 							Name: activeOrgs[0].Name,
 						}
 
-						err = shuffle.SetUser(ctx, &user)
+						err = shuffle.SetUser(ctx, &user, true)
 						if err != nil {
 							log.Printf("Failed updating user %s with org", user.Username)
 						} else {

@@ -136,6 +136,7 @@ export const validateJson = (showResult) => {
 const Workflows = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, removeCookie, cookies, userdata} = props;
 	document.title = "Shuffle - Workflows"
+	const referenceUrl = globalUrl+"/api/v1/hooks/"
 
 	const alert = useAlert()
 	const classes = useStyles();
@@ -544,9 +545,7 @@ const Workflows = (props) => {
 		}
 	}
 
-	const sanitizeWorkflow = (data) => {
-		data["owner"] = ""
-		console.log("Sanitize start: ", data)
+	const deduplicateIds = (data) => {
 		if (data.triggers !== null && data.triggers !== undefined) {
 			for (var key in data.triggers) {
 				const trigger = data.triggers[key]
@@ -561,6 +560,17 @@ const Workflows = (props) => {
 				}
 
 				const newId = uuid.v4()
+				if (trigger.trigger_type === "WEBHOOK") {
+					//"http://localhost:5002/api/v1/hooks/webhook_db179eb0-cb0c-4d2a-9c4b-53d2625a5008"
+					const hookname = "webhook_"+newId
+					if (trigger.parameters.length === 2) {
+						trigger.parameters[0].value = referenceUrl+"webhook_"+trigger.id
+						trigger.parameters[1].value = "webhook_"+trigger.id
+					} else {
+						alert.info("Something is wrong with the webhook in the copy")
+					}
+				}
+
 				for (var branchkey in data.branches) {
 					const branch = data.branches[branchkey]
 					if (branch.source_id === trigger.id) {
@@ -626,8 +636,13 @@ const Workflows = (props) => {
 			}
 		}
 
-		//console.log(data)
-		//return
+		return data
+	}
+
+	const sanitizeWorkflow = (data) => {
+		data["owner"] = ""
+		console.log("Sanitize start: ", data)
+		data = deduplicateIds(data)
 
 		data["org"] = []
 		data["org_id"] = ""
@@ -701,7 +716,8 @@ const Workflows = (props) => {
 		alert.success("Copying workflow "+data.name)
 		data.id = ""
 		data.name = data.name+"_copy"
-		console.log("COPIED DATA: ", data)
+		data = deduplicateIds(data) 
+		//console.log("COPIED DATA: ", data)
 		//return
 
 		fetch(globalUrl+"/api/v1/workflows", {

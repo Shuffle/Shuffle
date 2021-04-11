@@ -5730,7 +5730,7 @@ const AngularWorkflow = (props) => {
 
 							const timestamp = new Date(data.started_at*1000).toISOString().split('.')[0].split("T").join(" ")
 
-							var calculatedResult = data.workflow.actions.length
+							var calculatedResult = data.workflow.actions !== undefined && data.workflow.actions !== null ? data.workflow.actions.length : 0
 							for (var key in data.workflow.triggers) {
 								const trigger = data.workflow.triggers[key]
 								if ((trigger.app_name === "User Input" && trigger.trigger_type === "USERINPUT") || (trigger.app_name === "Shuffle Workflow" && trigger.trigger_type === "SUBFLOW")) {

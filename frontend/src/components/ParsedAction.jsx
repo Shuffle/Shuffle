@@ -87,17 +87,21 @@ const ParsedAction = (props) => {
 					responseJson.loop_versions = selectedApp.loop_versions
 				}
 
-				var foundAction = responseJson.actions.find(action => action.name === selectedAction.name)
+				var foundAction = responseJson.actions.find(action => action.name.toLowerCase() === selectedAction.name.toLowerCase())
+				console.log("FOUNDACTION: ", foundAction)
 				if (foundAction !== null && foundAction !== undefined) {
+					var foundparams = []
 					for (var paramkey in foundAction.parameters) {
 						const param = foundAction.parameters[paramkey]
 
-						const foundParam = selectedAction.parameters.find(item => item.name === param.name)
+						const foundParam = selectedAction.parameters.find(item => item.name.toLowerCase() === param.name.toLowerCase())
 						if (foundParam === undefined) {
-							//console.log("COULDNT find Param: ", param)
+							console.log("COULDNT find Param: ", param)
 						} else {
 							foundAction.parameters[paramkey] = foundParam 
 						}
+
+						//foundparams.push(param.name)
 					}
 				} else {
 					alert.error("Couldn't find action "+selectedAction.name)
@@ -285,6 +289,8 @@ const ParsedAction = (props) => {
 							"value": event.target.value,
 						}]
 
+						console.log("IN IF: ", paramcheck)
+
 					} else {
 						const subparamindex = paramcheck["value_replace"].findIndex(param => param.key === data.name)
 						if (subparamindex === -1) {
@@ -295,11 +301,25 @@ const ParsedAction = (props) => {
 						} else {
 							paramcheck["value_replace"][subparamindex]["value"] = event.target.value
 						}
+
+						console.log("IN ELSE: ", paramcheck)
 					}
 					//console.log("PARAM: ", paramcheck)
-					
-					selectedActionParameters[count]["value_replace"] = paramcheck
-					selectedAction.parameters[count]["value_replace"] = paramcheck
+					//if (paramcheck.id === undefined) {
+					//	console.log("Normal paramcheck")
+					//} else {
+					//	selectedActionParameters[count]["value_replace"] = paramcheck
+					//	selectedAction.parameters[count]["value_replace"] = paramcheck
+					//}
+
+					if (paramcheck["value_replace"] === undefined) {
+						selectedActionParameters[count]["value_replace"] = paramcheck
+						selectedAction.parameters[count]["value_replace"] = paramcheck
+					} else {
+						selectedActionParameters[count]["value_replace"] = paramcheck["value_replace"]
+						selectedAction.parameters[count]["value_replace"] = paramcheck["value_replace"]
+					}
+					console.log("RESULT: ", selectedAction)
 					setSelectedAction(selectedAction)
 					//setUpdate(Math.random())
 					return
@@ -718,7 +738,6 @@ const ParsedAction = (props) => {
 									value={selectedActionParameters[count].value}
 									fullWidth
 									onChange={(e) => {
-										console.log("VAL: ", e.target.value)
 										changeActionParameter(e, count, data)
 										setUpdate(Math.random())
 									}}
@@ -1234,7 +1253,7 @@ const ParsedAction = (props) => {
 							}}
 							fullWidth
 							onChange={(e) => {
-								console.log("CHOSE AN AUTHENTICATION OPTION: ", e.target.value)
+								//console.log("CHOSE AN AUTHENTICATION OPTION: ", e.target.value)
 								selectedAction.selectedAuthentication = e.target.value
 								selectedAction.authentication_id = e.target.value.id
 								setSelectedAction(selectedAction)
@@ -1243,7 +1262,7 @@ const ParsedAction = (props) => {
 							style={{backgroundColor: theme.palette.inputColor, color: "white", height: 50, maxWidth: rightsidebarStyle.maxWidth-80,}}	
 						>
 							{selectedAction.authentication.map(data => {
-								console.log("DATA: ", data)
+								//console.log("AUTH DATA: ", data)
 								return(
 									<MenuItem key={data.id} style={{backgroundColor: theme.palette.inputColor, color: "white"}} value={data}>
 										{data.label} - ({data.app.app_version})

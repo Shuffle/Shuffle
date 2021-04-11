@@ -338,7 +338,6 @@ const AppCreator = (props) => {
 				throw new Error("NOT 200 :O")
 			}
 
-			//console.log("DATA: ", response.text())
 			return response.json()
 		})
 		.then((responseJson) => {
@@ -373,6 +372,7 @@ const AppCreator = (props) => {
 
 	const handleGetRef = (parameter, data) => {
 		if (parameter["$ref"] === undefined) {
+			console.log("$ref not found in getref: ")
 			return parameter
 		}
 
@@ -530,6 +530,8 @@ const AppCreator = (props) => {
 						"example_response": "",
 					}
 
+					//console.log("Schema is application/json: ", methodvalue)
+					//console.log("DATA", data)
 					if (methodvalue["requestBody"] !== undefined) {
 						//console.log("Handle requestbody: ", methodvalue["requestBody"])
 						if (methodvalue["requestBody"]["content"] !== undefined) {
@@ -541,12 +543,22 @@ const AppCreator = (props) => {
 											tmpobject[prop] = `\$\{${prop}\}`
 										}
 
+										//console.log("Data: ", data)
 										for (var subkey in methodvalue["requestBody"]["content"]["application/json"]["schema"]["required"]) {
 											const tmpitem = methodvalue["requestBody"]["content"]["application/json"]["schema"]["required"][subkey]
 											tmpobject[tmpitem] = `\$\{${tmpitem}\}`
 										}
 
 										newaction["body"] = JSON.stringify(tmpobject, null, 2)
+									} else if (methodvalue["requestBody"]["content"]["application/json"]["schema"]["$ref"] !== undefined && methodvalue["requestBody"]["content"]["application/json"]["schema"]["$ref"] !== null) {
+										const retRef = handleGetRef(methodvalue["requestBody"]["content"]["application/json"]["schema"], data) 
+										var newbody = {}
+										// Can handle default, required, description and type
+										for (var propkey in retRef.properties) {
+											const parsedkey = propkey.replaceAll(" ", "_").toLowerCase() 
+											newbody[parsedkey] = "${"+parsedkey+"}"
+										}
+										newaction["body"] = JSON.stringify(newbody, null, 2)
 									}
 								}
 							} else if (methodvalue["requestBody"]["content"]["application/xml"] !== undefined) {
@@ -599,6 +611,117 @@ const AppCreator = (props) => {
 									if (methodvalue.responses.default.content["text/plain"]["schema"] !== undefined) {
 										if (methodvalue.responses.default.content["text/plain"]["schema"]["example"] !== undefined) {
 											newaction.example_response = methodvalue.responses.default.content["text/plain"]["schema"]["example"] 
+										}
+									}
+								}
+							}
+						} else {
+							var selectedReturn = ""
+							if (methodvalue.responses["200"] !== undefined) {
+								selectedReturn = "200"
+							} else if (methodvalue.responses["201"] !== undefined) {
+								selectedReturn = "201"
+							}
+
+							// Parsing examples. This should be standardized lol
+							if (methodvalue.responses[selectedReturn] !== undefined) {
+								const selectedExample = methodvalue.responses[selectedReturn] 
+								if (selectedExample["content"] !== undefined) {
+									if (selectedExample["content"]["application/json"] !== undefined) {
+										if (selectedExample["content"]["application/json"]["schema"] !== undefined) {
+											if (selectedExample["content"]["application/json"]["schema"]["$ref"] !== undefined) {
+												//console.log("REF EXAMPLE: ", selectedExample["content"]["application/json"]["schema"])
+												const parameter = handleGetRef(selectedExample["content"]["application/json"]["schema"], data)
+												//console.log("GOT REF RETURN AS EXAMPLE: ", parameter)
+												
+												if (parameter.properties !== undefined && parameter["type"] === "object") {
+													var newbody = {}
+													for (var propkey in parameter.properties) {
+														const parsedkey = propkey.replaceAll(" ", "_").toLowerCase() 
+														if (parameter.properties[propkey].type === "string") {
+															if (parameter.properties[propkey].description !== undefined) {
+																newbody[parsedkey] = parameter.properties[propkey].description 
+															} else {
+																newbody[parsedkey] = ""
+															}
+														} else if (parameter.properties[propkey].type.includes("int")) {
+															newbody[parsedkey] = 0
+														} else {
+															console.log("CANT HANDLE TYPE ", parameter.properties[propkey].type)
+															newbody[parsedkey] = []
+														}
+													}
+													newaction.example_response = JSON.stringify(newbody, null, 2)
+												} else {
+													console.log("CANT HANDLE PARAM: (1) ", parameter.properties)
+												}
+											} else {
+												// Just selecting the first one. bleh.
+												if (selectedExample["content"]["application/json"]["schema"]["allOf"] !== undefined) {
+													//console.log("ALLOF: ", selectedExample["content"]["application/json"]["schema"]["allOf"])
+													//console.log("BAD EXAMPLE: (SKIP ALLOF) ", selectedExample["content"]["application/json"]["schema"]["allOf"])
+													var selectedComponent = selectedExample["content"]["application/json"]["schema"]["allOf"]
+													if (selectedComponent.length >= 1) {
+														selectedComponent = selectedComponent[0]
+
+														const parameter = handleGetRef(selectedComponent, data)
+														if (parameter.properties !== undefined && parameter["type"] === "object") {
+															var newbody = {}
+															for (var propkey in parameter.properties) {
+																const parsedkey = propkey.replaceAll(" ", "_").toLowerCase() 
+																if (parameter.properties[propkey].type === "string") {
+																	if (parameter.properties[propkey].description !== undefined) {
+																		newbody[parsedkey] = parameter.properties[propkey].description 
+																	} else {
+																		newbody[parsedkey] = ""
+																	}
+																} else if (parameter.properties[propkey].type.includes("int")) {
+																	newbody[parsedkey] = 0
+																} else {
+																	console.log("CANT HANDLE TYPE ", parameter.properties[propkey].type)
+																	newbody[parsedkey] = []
+																}
+															}
+
+															newaction.example_response = JSON.stringify(newbody, null, 2)
+															//newaction.example_response = JSON.stringify(parameter.properties, null, 2)
+														} else {
+															//newaction.example_response = parameter.properties
+															console.log("CANT HANDLE PARAM: (3) ", parameter.properties)
+														}
+													} else {
+
+													}
+												} else if (selectedExample["content"]["application/json"]["schema"]["properties"] !== undefined) {
+													if (selectedExample["content"]["application/json"]["schema"]["properties"]["data"] !== undefined) {
+														const parameter = handleGetRef(selectedExample["content"]["application/json"]["schema"]["properties"]["data"], data)
+														if (parameter.properties !== undefined && parameter["type"] === "object") {
+															var newbody = {}
+															for (var propkey in parameter.properties) {
+																const parsedkey = propkey.replaceAll(" ", "_").toLowerCase() 
+																if (parameter.properties[propkey].type === "string") {
+																	if (parameter.properties[propkey].description !== undefined) {
+																		newbody[parsedkey] = parameter.properties[propkey].description 
+																	} else {
+																		newbody[parsedkey] = ""
+																	}
+																} else if (parameter.properties[propkey].type.includes("int")) {
+																	newbody[parsedkey] = 0
+																} else {
+																	console.log("CANT HANDLE TYPE ", parameter.properties[propkey].type)
+																	newbody[parsedkey] = []
+																}
+															}
+
+															newaction.example_response = JSON.stringify(newbody, null, 2)
+															//newaction.example_response = JSON.stringify(parameter.properties, null, 2)
+														} else {
+															//newaction.example_response = parameter.properties
+															console.log("CANT HANDLE PARAM: (2) ", parameter.properties)
+														}
+													}
+												}
+											}
 										}
 									}
 								}
@@ -727,7 +850,6 @@ const AppCreator = (props) => {
 			} 
 		}
 
-		console.log("INVALID9: ", data)
 		if (securitySchemes !== undefined) {
 			for (const [key, value] of Object.entries(securitySchemes)) {
 				if (value.scheme === "bearer") {

@@ -2051,7 +2051,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 			//log.Println(body)
 
 			//if string(body)[0] == "\"" && string(body)[string(body)
-			log.Printf("Body: %s", string(body))
+			log.Printf("[INFO] Body: %s", string(body))
 		}
 
 		var execution shuffle.ExecutionRequest
@@ -2093,9 +2093,9 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 				return shuffle.WorkflowExecution{}, fmt.Sprintf("Startnode %s was not found in actions", workflow.Start), errors.New(fmt.Sprintf("Startnode %s was not found in actions", workflow.Start))
 			}
 		} else if len(execution.Start) > 0 {
-
-			log.Printf("[ERROR] START ACTION %s IS WRONG ID LENGTH %d!", execution.Start, len(execution.Start))
-			return shuffle.WorkflowExecution{}, fmt.Sprintf("Startnode %s was not found in actions", execution.Start), errors.New(fmt.Sprintf("Startnode %s was not found in actions", execution.Start))
+			//log.Printf("[INFO] !")
+			//log.Printf("[ERROR] START ACTION %s IS WRONG ID LENGTH %d!", execution.Start, len(execution.Start))
+			//return shuffle.WorkflowExecution{}, fmt.Sprintf("Startnode %s was not found in actions", execution.Start), errors.New(fmt.Sprintf("Startnode %s was not found in actions", execution.Start))
 		}
 
 		if len(execution.ExecutionId) == 36 {
@@ -2245,10 +2245,10 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 
 	//log.Println(string(mappedData))
 
-	if len(workflowExecution.Start) == 0 {
+	if len(workflowExecution.Start) == 0 && len(workflowExecution.Workflow.Start) > 0 {
 		workflowExecution.Start = workflowExecution.Workflow.Start
 	}
-	log.Printf("[INFO] New startnode: %s", workflowExecution.Start)
+	//log.Printf("[INFO] New startnode: %s", workflowExecution.Start)
 
 	childNodes := findChildNodes(workflowExecution, workflowExecution.Start)
 
@@ -2411,12 +2411,19 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 			}
 		}
 	}
-	//childNodes := findChildNodes(workflowExecution, workflowExecution.Start)
 
 	if !startFound {
-		log.Printf("[ERROR] Startnode %s doesn't exist!!", workflowExecution.Start)
-		return shuffle.WorkflowExecution{}, fmt.Sprintf("Workflow action %s doesn't exist in workflow", workflowExecution.Start), errors.New(fmt.Sprintf(`Workflow start node "%s" doesn't exist. Exiting!`, workflowExecution.Start))
+		if len(workflowExecution.Start) == 0 && len(workflowExecution.Workflow.Start) > 0 {
+			workflowExecution.Start = workflow.Start
+		} else if len(workflowExecution.Workflow.Actions) > 0 {
+			workflowExecution.Start = workflowExecution.Workflow.Actions[0].ID
+		} else {
+			log.Printf("[ERROR] Startnode %s doesn't exist!!", workflowExecution.Start)
+			return shuffle.WorkflowExecution{}, fmt.Sprintf("Workflow action %s doesn't exist in workflow", workflowExecution.Start), errors.New(fmt.Sprintf(`Workflow start node "%s" doesn't exist. Exiting!`, workflowExecution.Start))
+		}
 	}
+
+	//log.Printf("EXECUTION START: %s", workflowExecution.Start)
 
 	// Verification for execution environments
 	workflowExecution.Results = defaultResults
@@ -3364,7 +3371,7 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		user.PrivateApps = privateApps
-		err = shuffle.SetUser(ctx, &user)
+		err = shuffle.SetUser(ctx, &user, true)
 		if err != nil {
 			log.Printf("[ERROR] Failed removing %s app for user %s: %s", app.Name, user.Username, err)
 			resp.WriteHeader(401)
@@ -4197,7 +4204,7 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 				if !found {
 					err = shuffle.SetWorkflowAppDatastore(ctx, api, api.ID)
 					if err != nil {
-						log.Printf("Failed setting workflowapp in loop: %s", err)
+						log.Printf("[WARNING] Failed setting workflowapp in loop: %s", err)
 						continue
 					} else {
 						appCounter += 1
@@ -4584,7 +4591,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 
 				err = shuffle.SetWorkflowAppDatastore(ctx, workflowapp, workflowapp.ID)
 				if err != nil {
-					log.Printf("Failed setting workflowapp: %s", err)
+					log.Printf("[WARNING] Failed setting workflowapp in intro: %s", err)
 					continue
 				}
 
