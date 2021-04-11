@@ -1405,7 +1405,7 @@ const ParsedAction = (props) => {
 				<div style={{marginTop: 10, marginBottom: 10, maxHeight: 60, overflow: "hidden"}}>
 					{selectedAction.description}
 				</div> : null}
-				<div style={{marginTop: "10px", borderColor: "white", borderWidth: "2px", marginBottom: 50,}}>
+				<div style={{marginTop: "10px", borderColor: "white", borderWidth: "2px", marginBottom: hideExtraTypes ? 50 : 200 ,}}>
 					<AppActionArguments key={selectedAction.id} selectedAction={selectedAction} />
 				</div>
 			</div>

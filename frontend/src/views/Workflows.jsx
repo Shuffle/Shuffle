@@ -595,7 +595,7 @@ const Workflows = (props) => {
 
 				for (var subkey in data.actions[key].parameters) {
 					const param = data.actions[key].parameters[subkey]
-					if (param.name.includes("key") || param.name.includes("user") || param.name.includes("pass") || param.name.includes("api") || param.name.includes("auth") || param.name.includes("secret") || param.name.includes("domain") || param.name.includes("url")) {
+					if (param.name.includes("key") || param.name.includes("user") || param.name.includes("pass") || param.name.includes("api") || param.name.includes("auth") || param.name.includes("secret") || param.name.includes("domain") || param.name.includes("url") || param.name.includes("mail")) {
 						// FIXME: This may be a vuln if api-keys are generated that start with $
 						if (param.value.startsWith("$")) {
 							console.log("Skipping field, as it's referencing a variable")
@@ -629,7 +629,7 @@ const Workflows = (props) => {
 		if (data.workflow_variables !== null && data.workflow_variables !== undefined) {
 			for (var key in data.workflow_variables) {
 				const param = data.workflow_variables[key]
-				if (param.name.includes("key") || param.name.includes("user") || param.name.includes("pass") || param.name.includes("api") || param.name.includes("auth") || param.name.includes("secret")) {
+				if (param.name.includes("key") || param.name.includes("user") || param.name.includes("pass") || param.name.includes("api") || param.name.includes("auth") || param.name.includes("secret")|| param.name.includes("email")) {
 					param.value = ""
 					param.is_valid = false
 				}

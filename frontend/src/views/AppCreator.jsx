@@ -536,6 +536,7 @@ const AppCreator = (props) => {
 						//console.log("Handle requestbody: ", methodvalue["requestBody"])
 						if (methodvalue["requestBody"]["content"] !== undefined) {
 							if (methodvalue["requestBody"]["content"]["application/json"] !== undefined) {
+								newaction["headers"] = "Content-Type=application/json\nAccept=application/json"
 								if (methodvalue["requestBody"]["content"]["application/json"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["application/json"]["schema"] !== null) {
 									if (methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"] !== undefined) {
 										var tmpobject = {}
@@ -558,11 +559,13 @@ const AppCreator = (props) => {
 											const parsedkey = propkey.replaceAll(" ", "_").toLowerCase() 
 											newbody[parsedkey] = "${"+parsedkey+"}"
 										}
+
 										newaction["body"] = JSON.stringify(newbody, null, 2)
 									}
 								}
 							} else if (methodvalue["requestBody"]["content"]["application/xml"] !== undefined) {
 								console.log("METHOD XML: ", methodvalue)
+								newaction["headers"] = "Content-Type=application/xml\nAccept=application/xml"
 								if (methodvalue["requestBody"]["content"]["application/xml"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["application/xml"]["schema"] !== null) {
 									if (methodvalue["requestBody"]["content"]["application/xml"]["schema"]["properties"] !== undefined) {
 										var tmpobject = {}
@@ -851,6 +854,9 @@ const AppCreator = (props) => {
 		}
 
 		if (securitySchemes !== undefined) {
+			// FIXME: Should add Oauth2 (Microsoft) and JWT (Wazuh)
+			//console.log("SECURITY: ", securitySchemes)
+			//if (Object.entries(securitySchemes) > 1 && 
 			for (const [key, value] of Object.entries(securitySchemes)) {
 				if (value.scheme === "bearer") {
 					setAuthenticationOption("Bearer auth")
@@ -1240,7 +1246,7 @@ const AppCreator = (props) => {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json',
 				},
-				body: JSON.stringify(data),
+				body: JSON.stringify(data, null, 4),
 	  			credentials: "include",
     		})
 		.then((response) => {
@@ -2428,8 +2434,8 @@ const AppCreator = (props) => {
 						Cancel
 					</Button>
 					<Button variant="contained" style={{borderRadius: "0px"}} disabled={disableImageUpload} onClick={() => {
-								onSaveAppIcon()
-							}} color="primary">
+						onSaveAppIcon()
+					}} color="primary">
 						Continue	
 					</Button>
 				</DialogActions>

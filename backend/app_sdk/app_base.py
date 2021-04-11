@@ -1708,23 +1708,21 @@ class AppBase:
                                     if values != None:
                                         added = 0
                                         for val in values:
-                                            #print(f"VAL: {val}")
-                                            #parameter["value"].replace(val["key"], val["value"], -1)
-                                            #print(f'PARAM1: {action["parameters"][counter]["value"]}')
-                                            action["parameters"][counter]["value"] = action["parameters"][counter]["value"].replace(val["key"], val["value"], 1)
-                                            #action["parameters"][counter]["value"].replace(r"${url}", r"$Find_URLs.valid.#.data", 1)
-                                            #print(f'PARAM2: {action["parameters"][counter]["value"]}')
-                                            #newparams.append({
-                                            #    "name": val["key"],
-                                            #    "value": val["value"],
-                                            #    "variant": "STATIC_VALUE",
-                                            #    "id": "body_replacement",
-                                            #    "schema": {
-                                            #        "type": "string",
-                                            #    },
-                                            #})
+                                            replace_value = val["value"]
+                                            replace_key = val["key"]
+                                            if (val["value"].startswith("{") and val["value"].endswith("}")) or (val["value"].startswith("[") and val["value"].endswith("]")):
+                                                print(f"""Trying to parse as JSON: {val["value"]}""")
+                                                try:
+                                                    value_replace = json.loads(val["value"])
+                                                    # If it gets here, remove the "" infront and behind the key as well since this is preventing the JSON from being loaded
+                                                    replace_key = f"\"{replace_key}\""
+                                                except json.decoder.JSONDecodeError as e:
+                                                    print("Failed JSON replacement for OpenAPI %s", val["key"])
+                                            elif val["value"].lower() == "true" or val["value"].lower() == "false":
+                                                replace_key = f"\"{replace_key}\""
 
-                                            #print(f'[INFO] Added param {val["key"]} for body with value {val["value"]} (using OpenAPI)')
+                                            action["parameters"][counter]["value"] = action["parameters"][counter]["value"].replace(replace_key, replace_value, 1)
+
                                             print(f'[INFO] Added param {val["key"]} for body (using OpenAPI)')
                                             added += 1
 
@@ -1734,6 +1732,34 @@ class AppBase:
                                 except KeyError as e:
                                     print("KeyError body OpenAPI: %s" % e)
                                     pass
+
+                                try:
+                                    newvalue = json.loads(action["parameters"][counter]["value"])
+                                    deletekeys = []
+                                    for key, value in newvalue.items():
+                                        if isinstance(value, str) and len(value) == 0:
+                                            deletekeys.append(key)
+                                            continue
+
+                                    for deletekey in deletekeys:
+                                        del newvalue[deletekey]
+
+                                    action["parameters"][counter]["value"] = json.dumps(newvalue)
+
+                                except json.decoder.JSONDecodeError as e:
+                                    print("Failed JSON replacement for OpenAPI keys (2) %s", val["key"])
+
+                                #if "\n" in action["parameters"][counter]["value"]:
+                                #    print("MODIFYING BODY!!")
+                                #    newbody = ""
+                                #    for line in action["parameters"][counter]["value"].split("\n"):
+                                #        if ": \"\"" in line:
+                                #            print("Skipping line %s" % line)
+                                #            continue
+
+                                #        newbody += line
+
+                                #    print("New body: %s" % newbody)
 
                                 break
 

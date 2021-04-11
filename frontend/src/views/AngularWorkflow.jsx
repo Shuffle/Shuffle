@@ -4412,7 +4412,7 @@ const AngularWorkflow = (props) => {
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
 								<div style={{flex: "10"}}> 
-									<b>API-key: </b> 
+									<b>API-key </b> 
 								</div>
 							</div>
 							<TextField

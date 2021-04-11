@@ -10,6 +10,8 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
+	//"unicode/utf8"
+
 	"errors"
 	"path/filepath"
 
@@ -4191,7 +4193,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 			return
 		}
 
-		log.Printf("[INFO] EDITING APP WITH ID %s", app.ID)
+		log.Printf("[INFO] EDITING APP WITH ID %s and md5 %s", app.ID, newmd5)
 		newmd5 = app.ID
 	}
 
@@ -4199,11 +4201,29 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	// Test = client side with fetch?
 
 	ctx := context.Background()
+	//s := string(body)
+	//if !utf8.ValidString(s) {
+	//	v := make([]rune, 0, len(s))
+	//	for i, r := range s {
+	//		if r == utf8.RuneError {
+	//			_, size := utf8.DecodeRuneInString(s[i:])
+	//			if size == 1 {
+	//				continue
+	//			}
+	//		}
+	//		v = append(v, r)
+	//	}
+	//	s = string(v)
+	//}
+	//fmt.Printf("%q\n", s)
+
+	//body  = []byte(strings.Replace(string(body), '<80>', '', -1))
+
+	//log.Println(string(body))
 	swaggerLoader := openapi3.NewSwaggerLoader()
 	swaggerLoader.IsExternalRefsAllowed = true
 	swagger, err := swaggerLoader.LoadSwaggerFromData(body)
 	if err != nil {
-		log.Println(string(body))
 		log.Printf("[ERROR] Swagger validation error: %s", err)
 		resp.WriteHeader(500)
 		resp.Write([]byte(`{"success": false, "reason": "Failed verifying openapi"}`))
