@@ -5827,6 +5827,17 @@ const AngularWorkflow = (props) => {
 								</Button>
 							</span>
 						</Tooltip>
+						{executionData.status === "EXECUTING" ? 
+							<Tooltip color="primary" title="Abort workflow" placement="top">
+								<span style={{}}>
+									<Button color="primary" style={{float: "right", marginTop: 20, marginLeft: 10,}} onClick={() => {
+										abortExecution()
+									}}>
+										<PauseIcon style={{}} />
+									</Button>
+								</span>
+							</Tooltip>
+						: null}
 					</div>
 					{executionData.status !== undefined && executionData.status.length > 0 ?
 						<div style={{display: "flex"}}>

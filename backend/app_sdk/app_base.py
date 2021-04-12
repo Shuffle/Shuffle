@@ -2371,7 +2371,6 @@ class AppBase:
         #    self.action = cls
 
         app = cls(redis=None, logger=logger, console_logger=logger)
-
         if isinstance(action, str):
             print("Normal execution. Action is a string.")
         elif isinstance(action, object):

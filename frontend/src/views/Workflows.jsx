@@ -561,7 +561,6 @@ const Workflows = (props) => {
 
 				const newId = uuid.v4()
 				if (trigger.trigger_type === "WEBHOOK") {
-					//"http://localhost:5002/api/v1/hooks/webhook_db179eb0-cb0c-4d2a-9c4b-53d2625a5008"
 					const hookname = "webhook_"+newId
 					if (trigger.parameters.length === 2) {
 						trigger.parameters[0].value = referenceUrl+"webhook_"+trigger.id
@@ -574,12 +573,10 @@ const Workflows = (props) => {
 				for (var branchkey in data.branches) {
 					const branch = data.branches[branchkey]
 					if (branch.source_id === trigger.id) {
-						//console.log("CHANGING SOURCE ID")
 						branch.source_id = newId
 					} 
 
 					if (branch.destination_id === trigger.id) {
-						//console.log("CHANGING DESTINATION ID")
 						branch.destination_id = newId
 					}
 				}
@@ -610,14 +607,16 @@ const Workflows = (props) => {
 				for (var branchkey in data.branches) {
 					const branch = data.branches[branchkey]
 					if (branch.source_id === data.actions[key].id) {
-						//console.log("CHANGING SOURCE ID IN ACTION")
 						branch.source_id = newId
 					} 
 
 					if (branch.destination_id === data.actions[key].id) {
-						//console.log("CHANGING DESTINATION ID IN ACTION")
 						branch.destination_id = newId
 					}
+				}
+
+				if (data.actions[key].id === data.start) {
+					data.start = newId
 				}
 
 				//data.actions[key].environment = isCloud ? "cloud" : "Shuffle"
@@ -629,7 +628,7 @@ const Workflows = (props) => {
 		if (data.workflow_variables !== null && data.workflow_variables !== undefined) {
 			for (var key in data.workflow_variables) {
 				const param = data.workflow_variables[key]
-				if (param.name.includes("key") || param.name.includes("user") || param.name.includes("pass") || param.name.includes("api") || param.name.includes("auth") || param.name.includes("secret")|| param.name.includes("email")) {
+				if (param.name.includes("key") || param.name.includes("user") || param.name.includes("pass") || param.name.includes("api") || param.name.includes("auth") || param.name.includes("secret") || param.name.includes("email")) {
 					param.value = ""
 					param.is_valid = false
 				}
@@ -659,6 +658,7 @@ const Workflows = (props) => {
 	const exportWorkflow = (data) => {
 		let exportFileDefaultName = data.name+'.json';
 		data = sanitizeWorkflow(data)	
+		return
 
 		// Add correct ID's for triggers
 		// Add mag

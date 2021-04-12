@@ -5023,7 +5023,9 @@ func runInit(ctx context.Context) {
 		_, err = dbclient.GetAll(ctx, q, &users)
 		if err == nil {
 			setOrgBool := false
+			usernames := []string{}
 			for _, user := range users {
+				usernames = append(usernames, user.Username)
 				newUser := shuffle.User{
 					Username: user.Username,
 					Id:       user.Id,
@@ -5047,6 +5049,8 @@ func runInit(ctx context.Context) {
 					setOrgBool = true
 				}
 			}
+
+			log.Printf("Users found: %s", strings.Join(usernames, ", "))
 
 			if setOrgBool {
 				err = shuffle.SetOrg(ctx, activeOrg, activeOrg.Id)
@@ -5076,9 +5080,11 @@ func runInit(ctx context.Context) {
 	if err != nil && len(activeusers) == 0 {
 		log.Printf("Error getting users during init: %s", err)
 	} else {
+		log.Printf("Parsing all users and setting them to active.")
 		q := datastore.NewQuery("Users")
 		var users []shuffle.User
 		_, err := dbclient.GetAll(ctx, q, &users)
+		//log.Printf("User ret: %s", err)
 
 		if len(activeusers) == 0 && len(users) > 0 {
 			log.Printf("No active users found - setting ALL to active")
@@ -5136,7 +5142,7 @@ func runInit(ctx context.Context) {
 				}
 			}
 		} else {
-			if len(users) < 5 && len(users) > 0 {
+			if len(users) < 10 && len(users) > 0 {
 				for _, user := range users {
 					log.Printf("[INFO] Username: %s, role: %s", user.Username, user.Role)
 				}
@@ -5414,7 +5420,7 @@ func runInit(ctx context.Context) {
 				if workflowapp.Edited == 0 {
 					err = shuffle.SetWorkflowAppDatastore(ctx, workflowapp, workflowapp.ID)
 					if err == nil {
-						log.Printf("Updating time for workflowapp %s:%s", workflowapp.Name, workflowapp.AppVersion)
+						log.Printf("[INFO] Updating time for workflowapp %s:%s", workflowapp.Name, workflowapp.AppVersion)
 					}
 				}
 			}
@@ -6115,7 +6121,7 @@ func initHandlers() {
 
 	// Make user related locations
 	// Fix user changes with org
-	r.HandleFunc("/api/v1/users/login", handleLogin).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/users/login", shuffle.HandleLogin).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users/register", handleRegister).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users/checkusers", checkAdminLogin).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/getinfo", handleInfo).Methods("GET", "OPTIONS")
