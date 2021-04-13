@@ -1802,7 +1802,7 @@ const Workflows = (props) => {
 					style={{backgroundColor: inputColor}}
 					variant="outlined"
 					margin="normal"
-					defaultValue={userdata.active_org.defaults.workflow_download_repo !== undefined && userdata.active_org.defaults.workflow_download_repo.length > 0 ? userdata.active_org.defaults.workflow_download_repo : downloadUrl}
+					defaultValue={downloadUrl}
 					InputProps={{
 						style:{
 							color: "white",
@@ -1821,7 +1821,7 @@ const Workflows = (props) => {
 							style={{backgroundColor: inputColor}}
 							variant="outlined"
 							margin="normal"
-							defaultValue={userdata.active_org.defaults.workflow_download_branch !== undefined && userdata.active_org.defaults.workflow_download_branch.length > 0 ? userdata.active_org.defaults.workflow_download_branch : downloadBranch}
+							defaultValue={downloadBranch}
 							InputProps={{
 								style:{
 									color: "white",

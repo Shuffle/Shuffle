@@ -1111,7 +1111,7 @@ const Admin = (props) => {
 
 
 	const generateApikey = (user) => {
-		const userId = isCloud ? user.username : user.id
+		const userId = user.id
 		const data = { "user_id": userId }
 
 		fetch(globalUrl + "/api/v1/generateapikey", {

@@ -1326,8 +1326,7 @@ const AngularWorkflow = (props) => {
 				return
 			}
 
-			//console.log(apps)
-			const curapp = apps.find(a => a.name === curaction.app_name && (a.app_version === curaction.app_version || a.loop_versions.includes(curaction.app_version)))
+			const curapp = apps.find(a => a.name === curaction.app_name && ((a.app_version === curaction.app_version || (a.loop_versions !== null && a.loop_versions.includes(curaction.app_version)))))
 			if (!curapp || curapp === undefined) {
 				alert.error(`App ${curaction.app_name}:${curaction.app_version} not found. Is it activated?`)
 

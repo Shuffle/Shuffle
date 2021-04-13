@@ -1592,16 +1592,15 @@ class AppBase:
                         "matches regex",
                     ]
 
-                    # FIXME - what should I do here?
                     if not condition["condition"]["value"] in available_checks:
                         self.logger.warning("Skipping %s %s %s because %s is invalid." % (sourcevalue, condition["condition"]["value"], destinationvalue, condition["condition"]["value"]))
                         continue
 
                     #print(destinationvalue)
                     # NEGATE 
-                    validation = run_validation(sourcevalue, condition["condition"]["value"], destinationvalue)
 
                     # Configuration = negated because of WorkflowAppActionParam..
+                    validation = run_validation(sourcevalue, condition["condition"]["value"], destinationvalue)
                     try:
                         if condition["condition"]["configuration"]:
                             validation = not validation
@@ -1622,6 +1621,14 @@ class AppBase:
         # THE START IS ACTUALLY RIGHT HERE :O
         # Checks whether conditions are met, otherwise set 
         branchcheck, tmpresult = check_branch_conditions(action, fullexecution)
+        if isinstance(tmpresult, object) or isinstance(tmpresult, list):
+            print("Fixing branch return as object -> string")
+            try:
+                tmpresult = tmpresult.replace("'", "\"")
+                tmpresult = json.dumps(tmpresult) 
+            except json.decoder.JSONDecodeError as e:
+                print(f"[WARNING] Failed condition parsing {tmpresult} to string")
+
         if not branchcheck:
             self.logger.info("Failed one or more branch conditions.")
             action_result["result"] = tmpresult

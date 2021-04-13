@@ -81,7 +81,7 @@ const Workflow = (props) => {
 				"app": {},
 			}
 
-			const app = apps.find(app => app.name === action.app_name && (app.app_version === action.app_version || app.loop_versions.includes(action.app_version)))
+			const app = apps.find(app => app.name === action.app_name && (app.app_version === action.app_version || (app.loop_versions !== null && app.loop_versions.includes(action.app_version))))
 			if (app === undefined || app === null) {
 				console.log("App not found!")
 
