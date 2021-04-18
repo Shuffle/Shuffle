@@ -785,6 +785,7 @@ const AngularWorkflow = (props) => {
 
 		// Errors are backend defined
 		useworkflow.errors = []
+		useworkflow.previously_saved = true
 
 		setLastSaved(true)
 		fetch(globalUrl+"/api/v1/workflows/"+props.match.params.key, {
@@ -1170,7 +1171,7 @@ const AngularWorkflow = (props) => {
 
 			//console.log(responseJson)
 			// Add error checks
-			console.log(responseJson)
+			console.log("Workflow: ", responseJson)
 			if (!responseJson.public) {
 				if ((!responseJson.previously_saved || (!responseJson.is_valid || (responseJson.errors !== undefined || responseJson.errors !== null || responseJson.errors !== responseJson.errors.length > 0)))) {
 					setConfigureWorkflowModalOpen(true)

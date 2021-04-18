@@ -1366,12 +1366,15 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// FIXME - have a check for org etc too..
-	if user.Id != workflow.Owner {
-		log.Printf("Wrong user (%s) for workflow %s", user.Username, workflow.ID)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
+	if user.Id != workflow.Owner || len(user.Id) == 0 {
+		if workflow.OrgId == user.ActiveOrg.Id && user.Role == "admin" {
+			log.Printf("[INFO] User %s is deleting workflow %s as admin. Owner: %s", user.Username, workflow.ID, workflow.Owner)
+		} else {
+			log.Printf("Wrong user (%s) for workflow %s", user.Username, workflow.ID)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
 	}
 
 	// Clean up triggers and executions

@@ -373,7 +373,11 @@ const Admin = (props) => {
 			.then(response =>
 				response.json().then(responseJson => {
 					if (responseJson["success"] === false) {
-						alert.error("Failed setting new password")
+						if (responseJson.reason !== undefined) {
+							alert.error(responseJson.reason)
+						} else {
+							alert.error("Failed setting new password")
+						}
 					} else {
 						alert.success("Successfully updated password!")
 						setSelectedUserModalOpen(false)
@@ -387,7 +391,7 @@ const Admin = (props) => {
 
 	const deleteUser = (data) => {
 		// Just use this one?
-		const userId = isCloud ? data.username : data.id 
+		const userId = data.id 
 		
 		const url = globalUrl + '/api/v1/users/' + userId
 		fetch(url, {
@@ -1076,7 +1080,6 @@ const Admin = (props) => {
 	const setUser = (userId, field, value) => {
 		const data = { "user_id": userId }
 		data[field] = value
-		console.log("DATA: ", data)
 
 		fetch(globalUrl + "/api/v1/users/updateuser", {
 			method: 'PUT',
@@ -1238,37 +1241,41 @@ const Admin = (props) => {
 				},
 			}}
 		>
-			<DialogTitle><span style={{ color: "white" }}><EditIcon /> Edit user</span></DialogTitle>
+			<DialogTitle><span style={{ color: "white" }}><EditIcon style={{marginTop: 5}}/> Editing {selectedUser.username}</span></DialogTitle>
 			<DialogContent>
-				<div style={{ display: "flex" }}>
-					<TextField
-						style={{ marginTop: 0, backgroundColor: theme.palette.inputColor, flex: 3 , marginRight: 10,}}
-						InputProps={{
-							style: {
-								height: 50,
-								color: "white",
-							},
-						}}
-						color="primary"
-						required
-						fullWidth={true}
-						placeholder="New password"
-						type="password"
-						id="standard-required"
-						autoComplete="password"
-						margin="normal"
-						variant="outlined"
-						onChange={e => setNewPassword(e.target.value)}
-					/>
-					<Button
-						style={{ maxHeight: 50, flex: 1 }}
-						variant="outlined"
-						color="primary"
-						onClick={() => onPasswordChange()}
-					>
-						Submit
-					</Button>
-				</div>
+				{isCloud ? 
+					null
+					:
+					<div style={{ display: "flex" }}>
+						<TextField
+							style={{ marginTop: 0, backgroundColor: theme.palette.inputColor, flex: 3 , marginRight: 10,}}
+							InputProps={{
+								style: {
+									height: 50,
+									color: "white",
+								},
+							}}
+							color="primary"
+							required
+							fullWidth={true}
+							placeholder="New password"
+							type="password"
+							id="standard-required"
+							autoComplete="password"
+							margin="normal"
+							variant="outlined"
+							onChange={e => setNewPassword(e.target.value)}
+						/>
+						<Button
+							style={{ maxHeight: 50, flex: 1 }}
+							variant="outlined"
+							color="primary"
+							onClick={() => onPasswordChange()}
+						>
+							Submit
+						</Button>
+					</div>
+				}
 				<Divider style={{ marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor }} />
 				<Button
 					style={{}}
@@ -1848,12 +1855,12 @@ const Admin = (props) => {
 				<ListItem>
 					<ListItemText
 						primary="Username"
-						style={{ minWidth: 300, maxWidth: 300}}
+						style={{ minWidth: 350, maxWidth: 350}}
 					/>
 					
 					<ListItemText
 						primary="API key"
-						style={{ minWidth: 100, maxWidth: 100, overflow: "hidden" }}
+						style={{ marginleft: 10, minWidth: 100, maxWidth: 100, overflow: "hidden" }}
 					/>
 					
 					<ListItemText
@@ -1879,11 +1886,11 @@ const Admin = (props) => {
 						<ListItem key={index} style={{backgroundColor: bgColor}}>
 							<ListItemText
 								primary={data.username}
-								style={{ minWidth: 300, maxWidth: 300, overflow: "hidden",}}
+								style={{ minWidth: 350, maxWidth: 350, overflow: "hidden",}}
 							/>
 							
 							<ListItemText
-								style={{ maxWidth: 100, minWidth: 100, }}
+								style={{ marginLeft: 10, maxWidth: 100, minWidth: 100, }}
 								primary={data.apikey === undefined || data.apikey.length === 0 ? "" : 
 									<Tooltip title={"Copy Api Key"} style={{}} aria-label={"Copy APIkey"}>
 										<IconButton style={{}} onClick={() => {
@@ -1918,11 +1925,7 @@ const Admin = (props) => {
 									onChange={(e) => {
 									console.log("VALUE: ", e.target.value)
 
-									if (isCloud) {	
-										setUser(data.username, "role", e.target.value)
-									} else {
-										setUser(data.id, "role", e.target.value)
-									}
+									setUser(data.id, "role", e.target.value)
 								}}
 										style={{ backgroundColor: theme.palette.surfaceColor, color: "white", height: "50px" }}
 									>

@@ -436,7 +436,14 @@ const AppCreator = (props) => {
 
 		setBasedata(data)
 		if (data.info !== null && data.info !== undefined)  {
-			setName(data.info.title)
+			if (data.info.title !== undefined && data.info.title !== null) {
+				if (data.info.title.length > 29) {
+					setName(data.info.title.slice(0, 29))
+				} else {
+					setName(data.info.title)
+				}
+			}
+
 			setDescription(data.info.description)
 			document.title = "Apps - "+data.info.title
 
@@ -2500,7 +2507,7 @@ const AppCreator = (props) => {
 										}
 									}
 
-									if (e.target.value.length > 100) {
+									if (e.target.value.length > 29) {
 										alert.error("Choose a shorter name.")
 										return
 									}
