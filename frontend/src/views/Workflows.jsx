@@ -658,7 +658,7 @@ const Workflows = (props) => {
 	const exportWorkflow = (data) => {
 		let exportFileDefaultName = data.name+'.json';
 		data = sanitizeWorkflow(data)	
-		return
+		//return
 
 		// Add correct ID's for triggers
 		// Add mag

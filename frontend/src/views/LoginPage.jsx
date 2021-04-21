@@ -110,6 +110,7 @@ const LoginDialog = props => {
 							}
 
 							setIsLoggedIn(true)
+
 							window.location.pathname = "/workflows"
 						}
 					}),

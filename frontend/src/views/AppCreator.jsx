@@ -1994,7 +1994,7 @@ const AppCreator = (props) => {
 								setUpdate(Math.random())
 							} else if (parsedurl.startsWith("curl")) {
 								const request = parseCurl(event.target.value)
-								if (request !== event.target.value) {
+								if (request !== event.target.value && request.method !== undefined && request.method !== null) {
 									if (request.method.toUpperCase() !== currentAction.Method) {
 										setCurrentActionMethod(request.method.toUpperCase())
 										setActionField("method", request.method.toUpperCase())

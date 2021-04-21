@@ -546,6 +546,10 @@ const ParsedAction = (props) => {
 						var disabled = false
 						var rows = "5"
 						var openApiHelperText = "This is an OpenAPI specific field"
+						if (selectedApp.generated && data.name === "url" && data.required && data.configuration && hideExtraTypes) {
+							console.log("GENERATED WITH DATA: ", data)
+							return null
+						}
 						if (selectedApp.generated && data.name === "body") {
 							const regex = /\${(\w+)}/g
 							const found = placeholder.match(regex)

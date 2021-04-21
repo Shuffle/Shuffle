@@ -1,7 +1,7 @@
 version: '3'
 services:
   frontend:
-    #build: ./frontend
+    build: ./frontend
     image: ghcr.io/frikky/shuffle-frontend:0.8.74
     container_name: shuffle-frontend
     hostname: shuffle-frontend
@@ -79,6 +79,8 @@ services:
       - "8000:8000"
     networks:
       - shuffle
+    environment:
+    -  _JAVA_OPTIONS="-Xmx2g"
     restart: unless-stopped
     volumes:
       - ${DB_LOCATION}:/etc/shuffle

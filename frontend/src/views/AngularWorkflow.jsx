@@ -688,6 +688,13 @@ const AngularWorkflow = (props) => {
 
 	const saveWorkflow = (curworkflow) => {
 		var success = false
+
+		if (isCloud && !isLoggedIn) {
+			console.log("Should redirect to register with redirect.")
+			window.location.href = `/register?view=/workflows/${props.match.params.key}&message=You need sign up to use workflows with Shuffle`
+			return
+		}
+
 		setSavingState(2)
 
 		// This might not be the right course of action, but seems logical, as items could be running already 
@@ -1163,7 +1170,7 @@ const AngularWorkflow = (props) => {
 
 			if (responseJson.public) {
 				alert.info("This workflow is public. You will have to save it to make it your own!") 
-				setLastSaved(false)
+				//setLastSaved(false)
 			}
 
 			setWorkflow(responseJson)
@@ -1267,8 +1274,9 @@ const AngularWorkflow = (props) => {
 
 	// Comparing locations between nodes and setting views
 	const onNodeDrag = (event) => {
-		//console.log("DRAGGING: ", event.target)
-		//console.log("LEN2: ", event.target.edges.length)
+		if (Object.getOwnPropertyNames(selectedAction).length === 0) {
+			return
+		}
 
 		const nodedata = event.target.data()
 		if (nodedata.app_name == "Shuffle Tools" || nodedata.app_name == "Testing") {
@@ -1280,6 +1288,12 @@ const AngularWorkflow = (props) => {
 			// 2. Check if it's within view of another node (inside)
 			// 3. If it is, then hide text
 		}
+
+		console.log(nodedata)
+		var x = event.clientX, y = event.clientY,
+		elementMouseIsOver = document.elementFromPoint(x, y)
+		console.log("ELEMENT: ", elementMouseIsOver)
+
 
 
 		/*
@@ -2952,10 +2966,11 @@ const AngularWorkflow = (props) => {
 						id="appsearch"
 						onKeyPress={(event) => {
 							if (event.key === "Enter") {
-								runSearch(event.target.value)
+								event.target.blur(event)
 							}
 						}}
 						onBlur={(event) => {
+							console.log("BLUR: ", event.target.value)
 							runSearch(event.target.value)
 						}}
 					/>
@@ -2972,12 +2987,19 @@ const AngularWorkflow = (props) => {
 							})}
 						</div>
 						:
-						<div style={{textAlign: "center", width: leftBarSize}}>
-							<CircularProgress style={{marginTop: 25, height: 35, width: 35, marginLeft: "auto", marginRight: "auto", }} /> 
-							<Typography variant="body1" color="textSecondary">
-								Loading apps
-							</Typography>
-						</div>
+						apps.length > 0 ? 
+							<div style={{textAlign: "center", width: leftBarSize, marginTop: 10, }}>
+								<Typography variant="body1" color="textSecondary">
+									Couldn't find app. Is it active?	
+								</Typography>
+							</div>
+						:
+							<div style={{textAlign: "center", width: leftBarSize}}>
+								<CircularProgress style={{marginTop: 25, height: 35, width: 35, marginLeft: "auto", marginRight: "auto", }} /> 
+								<Typography variant="body1" color="textSecondary">
+									Loading apps
+								</Typography>
+							</div>
 					}
 				</div>
 			</div>
@@ -5385,25 +5407,27 @@ const AngularWorkflow = (props) => {
 			<div style={bottomBarStyle}>	
 				{executionButton} 
 				<div style={{marginLeft: "10px", left: boxSize, bottom: 0, position: "absolute"}}>
-					<Tooltip color="primary" title="An argument to be used for execution. This is a variable available to every node in your workflow." placement="top">
-						<TextField
-							id="execution_argument_input_field"
-							style={theme.palette.textFieldStyle} 
-							disabled={workflow.public}
-							InputProps={{
-								style: theme.palette.innerTextfieldStyle, 
-							}}
-							color="secondary"
-							placeholder={"Execution Argument"}
-							defaultValue={executionText}
-							onBlur={(e) => {
-								setExecutionText(e.target.value)
-							}}
-						/>
-					</Tooltip>
+					{workflow.public ? null :
+						<Tooltip color="primary" title="An argument to be used for execution. This is a variable available to every node in your workflow." placement="top">
+							<TextField
+								id="execution_argument_input_field"
+								style={theme.palette.textFieldStyle} 
+								disabled={workflow.public}
+								InputProps={{
+									style: theme.palette.innerTextfieldStyle, 
+								}}
+								color="secondary"
+								placeholder={"Execution Argument"}
+								defaultValue={executionText}
+								onBlur={(e) => {
+									setExecutionText(e.target.value)
+								}}
+							/>
+						</Tooltip>
+					}
 					<Tooltip color="primary" title="Save (ctrl+s)" placement="top">
 						<span>
-							<Button disabled={savingState !== 0} color="primary" style={{height: 50, width: 64, marginLeft: 10, }} variant={lastSaved ? "outlined" : "contained"} onClick={() => saveWorkflow()}>
+							<Button disabled={savingState !== 0} color="primary" style={{height: workflow.public ? 100 : 50, width: workflow.public ? 100 : 64, marginLeft: 10, }} variant={lastSaved && !(workflow.public) ? "outlined" : "contained"} onClick={() => saveWorkflow()}>
 								{savingState === 2 ? <CircularProgress style={{height: 35, width: 35}} /> : savingState === 1 ? <DoneIcon style={{color: green}} /> : <SaveIcon /> }
 							</Button> 				
 						</span>
@@ -5411,7 +5435,7 @@ const AngularWorkflow = (props) => {
 					{workflow.public ? 
 						<Tooltip color="secondary" title="Download workflow" placement="top-start">
 							<span>
-							<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="contained" onClick={() => {
+							<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={() => {
 								//setExecutionModalOpen(true)
 								//getWorkflowExecution(props.match.params.key, "")
 								//data = sanitizeWorkflow(workflow)	
@@ -6519,10 +6543,16 @@ const AngularWorkflow = (props) => {
 				//return
 			}
 
+			// Automatically mapping fields that already exist (predefined). 
+			// Warning if fields are NOT filled
 			for (var key in selectedApp.authentication.parameters) {
 				if (authenticationOption.fields[selectedApp.authentication.parameters[key].name].length === 0) {
-					alert.info("Field "+selectedApp.authentication.parameters[key].name+" can't be empty")
-					return
+					if (selectedApp.authentication.parameters[key].value !== undefined && selectedApp.authentication.parameters[key].value !== null && selectedApp.authentication.parameters[key].value.length > 0) {
+						authenticationOption.fields[selectedApp.authentication.parameters[key].name] = selectedApp.authentication.parameters[key].value
+					} else {
+						alert.info("Field "+selectedApp.authentication.parameters[key].name+" can't be empty")
+						return
+					}
 				} 
 			}
 
@@ -6597,8 +6627,8 @@ const AngularWorkflow = (props) => {
 								authenticationOption.label = event.target.value
 							}}
 						/>
-					{selectedApp.link.length > 0 ? <div style={{marginTop: 15}}><EndpointData /></div> : null}
 					<Divider style={{marginTop: 15, marginBottom: 15, backgroundColor: "rgb(91, 96, 100)"}}/>
+					{/*selectedApp.link.length > 0 ? <div style={{marginTop: 15}}><EndpointData /></div> : null*/}
 					<div style={{}}/>
 						{selectedApp.authentication.parameters.map((data, index) => { 
 						return (
@@ -6619,6 +6649,7 @@ const AngularWorkflow = (props) => {
 										fullWidth
 										type={data.example !== undefined && data.example.includes("***") ? "password" : "text"}
 										color="primary"
+										defaultValue={data.value !== undefined && data.value !== null ? data.value : ""}
 										placeholder={data.example} 
 										onChange={(event) => {
 											authenticationOption.fields[data.name] = event.target.value
@@ -6664,7 +6695,6 @@ const AngularWorkflow = (props) => {
 					fullWidth
 					type="text"
 					color="primary"
-					disabled={true}
 					placeholder="Bearer token" 
 					defaultValue={selectedApp.link}
 					onChange={(event) => {

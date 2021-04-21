@@ -2,7 +2,7 @@ module shuffle
 
 go 1.13
 
-//replace github.com/frikky/shuffle-shared => ../../../../git/shuffle-shared
+replace github.com/frikky/shuffle-shared => ../../../../git/shuffle-shared
 
 //replace github.com/frikky/kin-openapi => ../../../../git/kin-openapi
 
@@ -14,6 +14,7 @@ require (
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Microsoft/go-winio v0.4.14 // indirect
 	github.com/basgys/goxml2json v1.1.0
+	github.com/bradfitz/slice v0.0.0-20180809154707-2b758aa73013 // indirect
 	github.com/carlescere/scheduler v0.0.0-20170109141437-ee74d2f83d82
 	github.com/docker/distribution v2.7.1+incompatible // indirect
 	github.com/docker/docker v1.13.1

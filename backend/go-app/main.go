@@ -5208,9 +5208,14 @@ func runInit(ctx context.Context) {
 	}
 
 	// Fixing workflows to have real activeorg IDs
+	//workflowQ := datastore.NewQuery("workflow")
+	//ret, err := dbclient.GetAll(ctx, workflowQ, &workflows)
+	//log.Printf("[INFO] Found %d workflows during startup", workflowCount)
+	//log.Printf("%#v, %s", ret, err)
+
+	var workflows []shuffle.Workflow
 	if len(activeOrgs) == 1 {
 		q := datastore.NewQuery("workflow").Limit(35)
-		var workflows []shuffle.Workflow
 		_, err = dbclient.GetAll(ctx, q, &workflows)
 		if err != nil && len(workflows) == 0 {
 			log.Printf("Error getting workflows in runinit: %s", err)

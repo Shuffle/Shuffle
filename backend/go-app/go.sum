@@ -57,6 +57,8 @@ github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239/go.mod h1:2FmKhYU
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5/go.mod h1:wHh0iHkYZB8zMSxRWpUBQtwG5a7fFgvEO+odwuTv2gs=
 github.com/basgys/goxml2json v1.1.0 h1:4ln5i4rseYfXNd86lGEB+Vi652IsIXIvggKM/BhUKVw=
 github.com/basgys/goxml2json v1.1.0/go.mod h1:wH7a5Np/Q4QoECFIU8zTQlZwZkrilY0itPfecMw41Dw=
+github.com/bradfitz/slice v0.0.0-20180809154707-2b758aa73013 h1:/P9/RL0xgWE+ehnCUUN5h3RpG3dmoMCOONO1CCvq23Y=
+github.com/bradfitz/slice v0.0.0-20180809154707-2b758aa73013/go.mod h1:pccXHIvs3TV/TUqSNyEvF99sxjX2r4FFRIyw6TZY9+w=
 github.com/carlescere/scheduler v0.0.0-20170109141437-ee74d2f83d82 h1:9bAydALqAjBfPHd/eAiJBHnMZUYov8m2PkXVr+YGQeI=
 github.com/carlescere/scheduler v0.0.0-20170109141437-ee74d2f83d82/go.mod h1:tyA14J0sA3Hph4dt+AfCjPrYR13+vVodshQSM7km9qw=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
