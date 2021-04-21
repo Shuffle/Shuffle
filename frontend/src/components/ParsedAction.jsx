@@ -603,7 +603,6 @@ const ParsedAction = (props) => {
 							}
 						}
 
-						//console.log("Data: ", data)
 						var datafield = 
 							<TextField
 								disabled={disabled}
@@ -636,6 +635,7 @@ const ParsedAction = (props) => {
 								}}
 								fullWidth
 								multiline={multiline}
+								id={"rightside_field_"+count}
 								rows={rows}
 								color="primary"
 								defaultValue={data.value}
@@ -705,6 +705,7 @@ const ParsedAction = (props) => {
 									defaultValue={data.value}
 									type={"text"}
 									placeholder={"The file ID to get"}
+									id={"rightside_field_"+count}
 									onChange={(event) => {
 										changeActionParameter(event, count, data)
 									}}
@@ -741,6 +742,7 @@ const ParsedAction = (props) => {
 									}}
 									value={selectedActionParameters[count].value}
 									fullWidth
+									id={"rightside_field_"+count}
 									onChange={(e) => {
 										changeActionParameter(e, count, data)
 										setUpdate(Math.random())

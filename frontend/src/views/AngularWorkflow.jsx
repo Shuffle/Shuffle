@@ -1273,10 +1273,65 @@ const AngularWorkflow = (props) => {
 	}
 
 	// Comparing locations between nodes and setting views
-	const onNodeDrag = (event) => {
-		if (Object.getOwnPropertyNames(selectedAction).length === 0) {
+	var styledElements = []
+	var originalLocation = {
+		x: 0,
+		y: 0,
+	}
+	const onNodeDragStop = (event, selectedAction) => {
+		const nodedata = event.target.data()
+
+		if (nodedata.id === selectedAction.id) {
 			return
 		}
+
+		console.log("DRAGGED NODE: ", nodedata)
+		console.log("TARGET NODE: ", selectedAction)
+		if (styledElements.length === 1) {
+			console.log("Should reset location and autofill: ", styledElements, selectedAction)
+			//event.target.position = originalLocation
+			//curworkflowTrigger.position = cyelements[key].position()
+			if (originalLocation.x !== 0 || originalLocation.y !== 0) {
+				const currentnode = cy.getElementById(nodedata.id)
+				if (currentnode !== null && currentnode !== undefined) {
+					//currentnode.position = originalLocation
+					currentnode.position("x", originalLocation.x)
+					currentnode.position("y", originalLocation.y)
+				}
+
+				originalLocation = {x: 0, y: 0}
+			}
+
+			const curElement = document.getElementById(styledElements[0])
+			if (curElement !== null && curElement !== undefined) {
+				console.log("ELE: ", curElement)
+				curElement.style.border = curElement.style.original_border
+				const newValue = "$"+nodedata.label.toLowerCase().replace(" ", "_")
+				curElement.value = newValue
+				if (curElement.id.startsWith("rightside_field_")) {
+					console.log("FOUND FIELD WITH NUMBER: ", curElement.id)
+					const idsplit = curElement.id.split("_")
+					console.log(idsplit)
+					if (idsplit.length === 3 && !isNaN(idsplit[2])) {
+						console.log("ADDING TO PARAM ", idsplit[2])
+						console.log("PARAM: ", selectedAction)
+
+						selectedAction.parameters[idsplit[2]].value = newValue
+					}
+				}
+			}
+		}
+
+		originalLocation = {
+			x: 0,
+			y: 0,
+		}
+	}
+
+	const onNodeDrag = (event, selectedAction) => {
+		//if (Object.getOwnPropertyNames(selectedAction).length === 0) {
+		//	return
+		//}
 
 		const nodedata = event.target.data()
 		if (nodedata.app_name == "Shuffle Tools" || nodedata.app_name == "Testing") {
@@ -1289,12 +1344,62 @@ const AngularWorkflow = (props) => {
 			// 3. If it is, then hide text
 		}
 
-		console.log(nodedata)
-		var x = event.clientX, y = event.clientY,
-		elementMouseIsOver = document.elementFromPoint(x, y)
-		console.log("ELEMENT: ", elementMouseIsOver)
+		if (nodedata.id === selectedAction.id) {
+			return
+		}
 
+		if (originalLocation.x === 0 && originalLocation.y === 0) {
+			console.log("Updating location!: ", nodedata) 
+			originalLocation.x = nodedata.position.x 
+			originalLocation.y = nodedata.position.y
+		}
 
+		// Part of autocomplete. Styles elements in frontend to indicate 
+		// what and where we may input data for the user.
+		const onMouseUpdate = (e) => {
+			const x = e.pageX;
+			const y = e.pageY;
+
+			const elementMouseIsOver = document.elementFromPoint(x, y)
+			if (elementMouseIsOver !== undefined && elementMouseIsOver !== null) {
+				// Color for #f85a3e translated to rgb
+				const newBorder = "3px solid rgb(248, 90, 62)"
+				if (elementMouseIsOver.style.border != newBorder && elementMouseIsOver.id.includes("rightside")) {
+					console.log(elementMouseIsOver.style.border)
+					if (elementMouseIsOver.style.border !== undefined) {
+						elementMouseIsOver.style.original_border = elementMouseIsOver.style.border 
+					} else {
+						elementMouseIsOver.style.original_border = ""
+					}
+
+					elementMouseIsOver.style.border = newBorder
+					console.log("STYLED: ", styledElements)
+					for (var key in styledElements) {
+						const curElement = document.getElementById(styledElements[key])
+						if (curElement !== null && curElement !== undefined) {
+							curElement.style.border = curElement.style.original_border
+						}
+					}
+
+					styledElements = []
+					styledElements.push(elementMouseIsOver.id)
+				} else if (elementMouseIsOver.id === "cytoscape_view" || elementMouseIsOver.id === "") {
+					for (var key in styledElements) {
+						const curElement = document.getElementById(styledElements[key])
+						if (curElement !== null && curElement !== undefined) {
+							curElement.style.border = curElement.style.original_border
+						}
+					}
+
+					styledElements = []
+				}
+			}
+
+			// Ensure it only happens once
+			document.removeEventListener('mousemove', onMouseUpdate, false)
+		}
+
+		document.addEventListener('mousemove', onMouseUpdate, false);
 
 		/*
 		event.target.animate({
@@ -1405,6 +1510,11 @@ const AngularWorkflow = (props) => {
 
 				setSelectedApp(curapp)
 				setSelectedAction(curaction)
+
+				cy.removeListener('drag')
+				cy.removeListener('free')
+				cy.on('drag', 'node', (e) => onNodeDrag(e, curaction))
+				cy.on('free', 'node', (e) => onNodeDragStop(e, curaction))
 			}
 
 			if (environments !== undefined && environments !== null) {
@@ -1848,7 +1958,8 @@ const AngularWorkflow = (props) => {
 			cy.on('mouseout', 'node', (e) => onNodeHoverOut(e))
 
 			// Handles dragging
-			cy.on('drag', 'node', (e) => onNodeDrag(e))
+			cy.on('drag', 'node', (e) => onNodeDrag(e, selectedAction))
+			cy.on('free', 'node', (e) => onNodeDragStop(e, selectedAction))
 
 			//cy.on('mouseover', 'node', () => $(targetElement).addClass('mouseover'));
 
@@ -5495,7 +5606,7 @@ const AngularWorkflow = (props) => {
 		if (Object.getOwnPropertyNames(selectedAction).length > 0) {
 			//console.time('ACTIONSTART')
 			return(
-				<div style={rightsidebarStyle}>	
+				<div id="rightside_actions" style={rightsidebarStyle}>	
 					{appApiView}
 				</div>
 			)
@@ -6273,6 +6384,7 @@ const AngularWorkflow = (props) => {
 					boxSelectionEnabled={true}
 					autounselectify={false}
 					showGrid={true}
+					id="cytoscape_view"
 					cy={(incy) => {
 						// FIXME: There's something specific loading when
 						// you do the first hover of a node. Why is this different?
