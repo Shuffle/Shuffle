@@ -53,6 +53,9 @@ github.com/Masterminds/semver v1.5.0/go.mod h1:MB6lktGJrhw8PrUyiEoblNEGEQ+RzHPF0
 github.com/Microsoft/go-winio v0.4.14 h1:+hMXMk01us9KgxGb7ftKQt2Xpf5hH/yky+TDA+qxleU=
 github.com/Microsoft/go-winio v0.4.14/go.mod h1:qXqCSQ3Xa7+6tgxaGTIe4Kpcdsi+P8jBhyzoq1bpyYA=
 github.com/alcortesm/tgz v0.0.0-20161220082320-9c5fe88206d7/go.mod h1:6zEj6s6u/ghQa61ZWa/C2Aw3RkjiTBOix7dkqa1VLIs=
+github.com/algolia/algoliasearch-client-go v2.25.0+incompatible h1:FGQr9l++u4uQPDXrW8jM5kNJm3Iw5SxEJJtYXSFmPRY=
+github.com/algolia/algoliasearch-client-go/v3 v3.18.1 h1:FP2Xtqqs/sefR5Qluygp+jVV+juXzEdJaPrZTCDLhDQ=
+github.com/algolia/algoliasearch-client-go/v3 v3.18.1/go.mod h1:i7tLoP7TYDmHX3Q7vkIOL4syVse/k5VJ+k0i8WqFiJk=
 github.com/anmitsu/go-shlex v0.0.0-20161002113705-648efa622239/go.mod h1:2FmKhYUyUczH0OGQWaF5ceTx0UBShxjsH6f8oGKYe2c=
 github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5/go.mod h1:wHh0iHkYZB8zMSxRWpUBQtwG5a7fFgvEO+odwuTv2gs=
 github.com/basgys/goxml2json v1.1.0 h1:4ln5i4rseYfXNd86lGEB+Vi652IsIXIvggKM/BhUKVw=

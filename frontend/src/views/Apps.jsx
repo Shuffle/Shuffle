@@ -187,7 +187,7 @@ const Apps = (props) => {
 	}
 
 	const getApps = () => {
-		fetch(globalUrl+"/api/v1/workflows/apps", {
+		fetch(globalUrl+"/api/v1/apps", {
     	  method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',

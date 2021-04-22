@@ -2471,9 +2471,8 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	// Scared whether it may stop other things though, but that's a future problem
 	// (famous last words)
 
-	parsedBody = shuffle.GetExecutiobody(body)
-
 	//log.Printf("\n\nPARSEDBODY: %s", parsedBody)
+	parsedBody := shuffle.GetExecutionbody(body)
 	newBody := shuffle.ExecutionStruct{
 		Start:             hook.Start,
 		ExecutionSource:   "webhook",

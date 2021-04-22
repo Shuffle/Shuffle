@@ -1213,10 +1213,10 @@ class AppBase:
                             return basejson, False
         
                         if isinstance(basejson, list): 
-                            print("VALUE IN ISINSTANCE IS NOT TO BE USED (list): %s" % value)
+                            print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (list): %s" % value)
                             return basejson, False
                         elif isinstance(basejson[value], str):
-                            print(f"LOADING STRING '%s' AS JSON" % basejson[value]) 
+                            print(f"[INFO] LOADING STRING '%s' AS JSON" % basejson[value]) 
                             try:
                                 basejson = json.loads(basejson[value])
                             except json.decoder.JSONDecodeError as e:

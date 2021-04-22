@@ -66,7 +66,7 @@ const Admin = (props) => {
 
 	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" 
 	const getApps = () => {
-		fetch(globalUrl+"/api/v1/workflows/apps", {
+		fetch(globalUrl+"/api/v1/apps", {
     	  method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',
