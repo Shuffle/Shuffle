@@ -1212,7 +1212,10 @@ class AppBase:
                         if len(value) == 0:
                             return basejson, False
         
-                        if isinstance(basejson[value], str):
+                        if isinstance(basejson, list): 
+                            print("VALUE IN ISINSTANCE IS NOT TO BE USED (list): %s" % value)
+                            return basejson, False
+                        elif isinstance(basejson[value], str):
                             print(f"LOADING STRING '%s' AS JSON" % basejson[value]) 
                             try:
                                 basejson = json.loads(basejson[value])
@@ -1754,7 +1757,7 @@ class AppBase:
                                     action["parameters"][counter]["value"] = json.dumps(newvalue)
 
                                 except json.decoder.JSONDecodeError as e:
-                                    print("Failed JSON replacement for OpenAPI keys (2) %s", val["key"])
+                                    print("Failed JSON replacement for OpenAPI keys (2) {e}")
 
                                 #if "\n" in action["parameters"][counter]["value"]:
                                 #    print("MODIFYING BODY!!")
@@ -1852,7 +1855,6 @@ class AppBase:
 
                                     print("PRE new_replacement")
                                     
-                                    # FIXME: Only do this IF they want to loop
                                     new_replacement = []
                                     for i in range(len(json_replacement)):
                                         if isinstance(json_replacement[i], dict) or isinstance(json_replacement[i], list):

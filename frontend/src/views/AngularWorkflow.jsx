@@ -1348,7 +1348,7 @@ const AngularWorkflow = (props) => {
 			return
 		}
 
-		if (originalLocation.x === 0 && originalLocation.y === 0) {
+		if (originalLocation.x === 0 && originalLocation.y === 0 && nodedata.position !== undefined) {
 			console.log("Updating location!: ", nodedata) 
 			originalLocation.x = nodedata.position.x 
 			originalLocation.y = nodedata.position.y

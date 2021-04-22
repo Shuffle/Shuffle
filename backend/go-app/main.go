@@ -2457,12 +2457,6 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("This should trigger in the cloud. Duplicate action allowed onprem.")
 	}
 
-	type ExecutionStruct struct {
-		Start             string `json:"start"`
-		ExecutionSource   string `json:"execution_source"`
-		ExecutionArgument string `json:"execution_argument"`
-	}
-
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		log.Printf("Body data error: %s", err)
@@ -2476,26 +2470,11 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	// This is a specific fix for MSteams and may fix other things as well
 	// Scared whether it may stop other things though, but that's a future problem
 	// (famous last words)
-	parsedBody := string(body)
-	if strings.Contains(parsedBody, "choice") {
-		if strings.Count(parsedBody, `\\n`) > 2 {
-			parsedBody = strings.Replace(parsedBody, `\\n`, "", -1)
-		}
-		if strings.Count(parsedBody, `\u0022`) > 2 {
-			parsedBody = strings.Replace(parsedBody, `\u0022`, `"`, -1)
-		}
-		if strings.Count(parsedBody, `\\"`) > 2 {
-			parsedBody = strings.Replace(parsedBody, `\\"`, `"`, -1)
-		}
 
-		if strings.Contains(parsedBody, `"extra": "{`) {
-			parsedBody = strings.Replace(parsedBody, `"extra": "{`, `"extra": {`, 1)
-			parsedBody = strings.Replace(parsedBody, `}"}`, `}}`, 1)
-		}
-	}
+	parsedBody = shuffle.GetExecutiobody(body)
 
 	//log.Printf("\n\nPARSEDBODY: %s", parsedBody)
-	newBody := ExecutionStruct{
+	newBody := shuffle.ExecutionStruct{
 		Start:             hook.Start,
 		ExecutionSource:   "webhook",
 		ExecutionArgument: parsedBody,
