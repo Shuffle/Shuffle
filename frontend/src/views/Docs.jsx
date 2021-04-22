@@ -1,13 +1,11 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState,} from 'react';
 
-import Divider from '@material-ui/core/Divider';
+import { useTheme } from '@material-ui/core/styles';
 import ReactMarkdown from 'react-markdown';
 import {BrowserView, MobileView} from "react-device-detect";
-import Button from '@material-ui/core/Button';
-import Menu from '@material-ui/core/Menu';
-import MenuItem from '@material-ui/core/MenuItem';
-
 import {Link} from 'react-router-dom';
+
+import {Divider, Button, Menu, MenuItem, Typography, Paper, List} from '@material-ui/core';
 
 const Body = {
   maxWidth: '1000px',
@@ -20,26 +18,21 @@ const Body = {
 };
 
 const dividerColor = "rgb(225, 228, 232)"
-
-const SideBar = {
-	maxWidth: 250,
-	flex: "1",
-	position: "fixed",
-}
-
 const hrefStyle = {
 	color: "rgba(255, 255, 255, 0.40)", 
 	textDecoration: "none"
 }
 
 const Docs = (props) => {
-  const { isLoaded, globalUrl, inputColor } = props;
+  const { globalUrl, selectedDoc, serverside, isMobile, } = props;
 
+	const theme = useTheme();
 	const [data, setData] = useState("");
 	const [firstrequest, setFirstrequest] = useState(true);
 	const [list, setList] = useState([]);
-	const [listLoaded, setListLoaded] = useState(false);
+	const [, setListLoaded] = useState(false);
 	const [anchorEl, setAnchorEl] = React.useState(null);
+	const [baseUrl, setBaseUrl] = React.useState(serverside === true ? "" : window.location.href)
 
   function handleClick(event) {
 		setAnchorEl(event.currentTarget);
@@ -49,77 +42,21 @@ const Docs = (props) => {
 		setAnchorEl(null);
 	}
 
-	useEffect(() => {
-		if (firstrequest) {
-			setFirstrequest(false)
-			fetchDocList()
-			fetchDocs(props.match.params.key)
-			return
-		}
+	const SidebarPaperStyle = {
+		backgroundColor: theme.palette.surfaceColor,
+		overflowX: "hidden",
+		position: "relative",
+		padding: 30,
+		paddingTop: 15,
+		borderRadius: 5,
+	}
 
-		// Continue this, and find the h2 with the data in it lol
-		if (window.location.hash.length > 0) {
-			var parent = document.getElementById("markdown_wrapper")
-			if (parent !== null) {
-				var elements = parent.getElementsByTagName('h2')
-
-				const name = window.location.hash.slice(1, window.location.hash.lenth).toLowerCase().split("%20").join(" ").split("_").join(" ").split("-").join(" ")
-
-				console.log(name)
-				var found = false
-				for (var key in elements) {
-					const element = elements[key]
-					if (element.innerHTML === undefined) {
-						continue
-					}
-
-					// Fix location..
-					if (element.innerHTML.toLowerCase() === name) {
-						element.scrollIntoView({behavior: "smooth"})
-						found = true
-						//element.scrollTo({
-						//	top: element.offsetTop-100,
-						//	behavior: "smooth"
-						//})
-					}
-				}
-
-				// H#
-				if (!found) {
-					var elements = parent.getElementsByTagName('h3')
-					console.log(name)
-					var found = false
-					for (var key in elements) {
-						const element = elements[key]
-						if (element.innerHTML === undefined) {
-							continue
-						}
-
-						// Fix location..
-						if (element.innerHTML.toLowerCase() === name) {
-							element.scrollIntoView({behavior: "smooth"})
-							found = true
-							//element.scrollTo({
-							//	top: element.offsetTop-100,
-							//	behavior: "smooth"
-							//})
-						}
-					}
-				}
-			}
-			//console.log(element)
-
-			//console.log("NAME: ", name)
-			//console.log(document.body.innerHTML)
-			//   parent = document.getElementById(parent);
-
-			//var descendants = parent.getElementsByTagName(tagname);
-
-			// this.scrollDiv.current.scrollIntoView({ behavior: 'smooth' });
-
-			//$(".parent").find("h2:contains('Statistics')").parent();
-		}
-	})
+	const SideBar = {
+		maxWidth: 250,
+		flex: "1",
+		position: "fixed",
+		marginTop: 35,
+	}
 
 	const fetchDocList = () => {
 		fetch(globalUrl+"/api/v1/docs", {
@@ -143,16 +80,17 @@ const Docs = (props) => {
 
 	const fetchDocs = (docId) => {
 		fetch(globalUrl+"/api/v1/docs/"+docId, {
-    	  	method: 'GET',
+    	  method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json',
 				},
-    		})
+    	})
 		.then((response) => response.json())
-    	.then((responseJson) => {
+    .then((responseJson) => {
 			if (responseJson.success) {
 				setData(responseJson.reason)
+				document.title = "Shuffle "+docId+" documentation"
 			} else {
 				setData("# Error\nThis page doesn't exist.")
 			}
@@ -160,13 +98,99 @@ const Docs = (props) => {
 		.catch(error => {});
 	}
 
+	if (firstrequest) {
+		setFirstrequest(false)
+
+		if (selectedDoc !== undefined) {
+			setData(selectedDoc.reason)
+			setList(selectedDoc.list)
+			setListLoaded(true)
+		} else {
+			fetchDocList()
+			fetchDocs(props.match.params.key)
+		}
+	}
+
+	// Handles search-based changes that origin from outside this file
+	if (serverside !== true && window.location.href !== baseUrl) {
+		setBaseUrl(window.location.href)
+		fetchDocs(props.match.params.key)
+	}
+
+	const parseElementScroll = () => {
+		var parent = document.getElementById("markdown_wrapper_outer")
+		if (parent !== null) {
+			//console.log("IN PARENT")
+			var elements = parent.getElementsByTagName('h2')
+
+			const name = window.location.hash.slice(1, window.location.hash.lenth).toLowerCase().split("%20").join(" ").split("_").join(" ").split("-").join(" ")
+
+			//console.log(name)
+			var found = false
+			for (var key in elements) {
+				const element = elements[key]
+				if (element.innerHTML === undefined) {
+					continue
+				}
+
+				// Fix location..
+				if (element.innerHTML.toLowerCase() === name) {
+					element.scrollIntoView({behavior: "smooth"})
+					found = true
+					//element.scrollTo({
+					//	top: element.offsetTop-100,
+					//	behavior: "smooth"
+					//})
+				}
+			}
+
+			// H#
+			if (!found) {
+				elements = parent.getElementsByTagName('h3')
+				console.log(name)
+				found = false
+				for (key in elements) {
+					const element = elements[key]
+					if (element.innerHTML === undefined) {
+						continue
+					}
+
+					// Fix location..
+					if (element.innerHTML.toLowerCase() === name) {
+						element.scrollIntoView({behavior: "smooth"})
+						found = true
+						//element.scrollTo({
+							//	top: element.offsetTop-100,
+							//	behavior: "smooth"
+							//})
+						}
+					}
+				}
+			}
+			//console.log(element)
+
+			//console.log("NAME: ", name)
+			//console.log(document.body.innerHTML)
+			//   parent = document.getElementById(parent);
+
+			//var descendants = parent.getElementsByTagName(tagname);
+
+			// this.scrollDiv.current.scrollIntoView({ behavior: 'smooth' });
+
+			//$(".parent").find("h2:contains('Statistics')").parent();
+	}
+
+	if (serverside !== true && window.location.hash.length > 0) {
+		parseElementScroll()
+	}
+
 	const markdownStyle = {
 		color: "rgba(255, 255, 255, 0.65)", 
 		flex: "1",
-		maxWidth: 750,
+		maxWidth: isMobile ? "100%" : 750,
 		overflow: "hidden",
 		paddingBottom: 200, 
-		marginLeft: 250, 
+		marginLeft: isMobile ? 0 : 275, 
 	}
 
 	function OuterLink(props) {
@@ -182,7 +206,7 @@ const Docs = (props) => {
 
 	function CodeHandler(props) {
 		return (
-			<pre style={{padding: 10, minWidth: "50%", maxWidth: "100%", backgroundColor: inputColor}}>
+			<pre style={{padding: 15, minWidth: "50%", maxWidth: "100%", backgroundColor: theme.palette.inputColor, overflowX: "auto", overflowY: "hidden",}}>
 				<code>
 					{props.value}
 				</code>
@@ -193,10 +217,10 @@ const Docs = (props) => {
 	function Heading(props) {
 		const element = React.createElement(`h${props.level}`, {style: {marginTop: 40}}, props.children)
 		return (
-			<span>
-				{props.level !== 1 ? <Divider style={{width: "90%", marginTop: 40, backgroundColor: inputColor}} /> : null}
+			<Typography>
+				{props.level !== 1 ? <Divider style={{width: "90%", marginTop: 40, backgroundColor: theme.palette.inputColor}} /> : null}
 				{element}
-			</span>
+			</Typography>
 		)
 	}
 	//React.createElement("p", {style: {color: "red", backgroundColor: "blue"}}, this.props.paragraph)
@@ -213,26 +237,28 @@ const Docs = (props) => {
   const postDataBrowser = 
 		<div style={Body}>
 			<div style={SideBar}>
-				<ul style={{listStyle: "none", paddingLeft: "0"}}>
-					{list.map((item, index) => {
-						const path = "/docs/"+item
-						const newname = item.charAt(0).toUpperCase()+item.substring(1).split("_").join(" ").split("-").join(" ")
-						return (
-							<li key={index} style={{marginTop: "10px"}}>
-								<Link style={hrefStyle} to={path} onClick={() => {fetchDocs(item)}}>
-									<h2>{newname}</h2>
-								</Link>
-							</li>
-						)
-					})}
-				</ul>
+				<Paper style={SidebarPaperStyle}>
+					<List style={{listStyle: "none", paddingLeft: "0", }}>
+						{list.map((item, index) => {
+							const path = "/docs/"+item
+							const newname = item.charAt(0).toUpperCase()+item.substring(1).split("_").join(" ").split("-").join(" ")
+							return (
+								<li key={index} style={{marginTop: 15,}}>
+									<Link key={index} style={hrefStyle} to={path} onClick={() => {fetchDocs(item)}}>
+										<Typography variant="h6"><b>{newname}</b></Typography>
+									</Link>
+								</li>
+							)
+						})}
+					</List>
+				</Paper>
 			</div>
-			<div id="markdown_wrapper" style={markdownStyle}>
+			<div id="markdown_wrapper_outer" style={markdownStyle}>
 				<ReactMarkdown 
 					id="markdown_wrapper" 
 					escapeHtml={false}
 					source={data} 
-	 				renderers={{
+					renderers={{
 						link: OuterLink, 
 						image: Img,
 						code: CodeHandler,
@@ -244,46 +270,56 @@ const Docs = (props) => {
 
 	const mobileStyle = {
 		color: "white",
-		marginLeft: "15px",
-		marginRight: "15px",
-		paddingBottom: "50px",
+		marginLeft: 25,
+		marginRight: 25,
+		paddingBottom: 50,
 		backgroundColor: "inherit",
+		display: "flex",
+		flexDirection: "column",
 	}
 
 	const postDataMobile = 
 		<div style={mobileStyle}>
-			<Button aria-controls="simple-menu" aria-haspopup="true" variant="outlined" color="primary" onClick={handleClick}>
-				<div style={{color: "white"}}>
-		        More items
-				</div>
-			</Button>
-			<Menu
-				id="simple-menu"
-				anchorEl={anchorEl}
-				keepMounted
-				open={Boolean(anchorEl)}
-				onClose={handleClose}
-			>
-			{list.map(item => {
-				const path = "/docs/"+item
-				const newname = item.charAt(0).toUpperCase()+item.substring(1).split("_").join(" ").split("-").join(" ")
-				return (
-					<MenuItem onClick={() => {window.location.pathname = path}}>{newname}</MenuItem>
-				)
-			})}
-			</Menu>
-			<div style={markdownStyle}>
+			<div>
+				<Button fullWidth aria-controls="simple-menu" aria-haspopup="true" variant="outlined" color="primary" onClick={handleClick}>
+					<div style={{color: "white"}}>
+						More docs 
+					</div>
+				</Button>
+				<Menu
+					id="simple-menu"
+					anchorEl={anchorEl}
+					style={{}}
+					keepMounted
+					open={Boolean(anchorEl)}
+					onClose={handleClose}
+				>
+				{list.map((item, index) => {
+					const path = "/docs/"+item
+					const newname = item.charAt(0).toUpperCase()+item.substring(1).split("_").join(" ").split("-").join(" ")
+					return (
+						<MenuItem key={index} style={{color: "white",}} onClick={() => {window.location.pathname = path}}>{newname}</MenuItem>
+					)
+				})}
+				</Menu>
+			</div>
+			<div id="markdown_wrapper_outer" style={markdownStyle}>
 				<ReactMarkdown 
 					id="markdown_wrapper" 
 					escapeHtml={false}
 					source={data} 
-	 				renderers={{link: OuterLink, image: Img}}
+					renderers={{
+						link: OuterLink, 
+						image: Img,
+						code: CodeHandler,
+						heading: Heading,
+					}}
 				/>
 			</div>
 			<Divider style={{marginTop: "10px", marginBottom: "10px", backgroundColor: dividerColor}}/>
-			<Button aria-controls="simple-menu" aria-haspopup="true" variant="outlined" color="primary" onClick={handleClick}>
+			<Button fullWidth aria-controls="simple-menu" aria-haspopup="true" variant="outlined" color="primary" onClick={handleClick}>
 				<div style={{color: "white"}}>
-		        	More items
+		      More docs 
 				</div>
 			</Button>
 
@@ -297,7 +333,7 @@ const Docs = (props) => {
  	// {imageModal}
 
 
-	const loadedCheck = isLoaded && listLoaded ? 
+	const loadedCheck = 
 		<div>
 			<BrowserView>
 				{postDataBrowser}	
@@ -305,9 +341,6 @@ const Docs = (props) => {
 			<MobileView>
 				{postDataMobile}	
 			</MobileView>
-		</div>
-		:
-		<div>
 		</div>
 
 	return (

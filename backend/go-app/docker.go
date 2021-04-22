@@ -2,12 +2,15 @@ package main
 
 // Docker
 import (
+	"github.com/frikky/shuffle-shared"
+
 	"archive/tar"
 	"path/filepath"
 
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -23,7 +26,6 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	//"google.golang.org/appengine"
 )
 
 // Parses a directory with a Dockerfile into a tar for Docker images..
@@ -125,11 +127,28 @@ func getParsedTarMemory(fs billy.Filesystem, tw *tar.Writer, baseDir, extra stri
 				return err
 			}
 
+			//log.Printf("FILENAME: %s", filename)
 			readFile, err := ioutil.ReadAll(fileReader)
 			if err != nil {
 				log.Printf("Not file: %s", err)
 				return err
 			}
+
+			// Fixes issues with older versions of Docker and reference formats
+			// Specific to Shuffle rn. Could expand.
+			// FIXME: Seems like the issue was with multi-stage builds
+			/*
+				if filename == "Dockerfile" {
+					log.Printf("Should search and replace in readfile.")
+
+					referenceCheck := "FROM frikky/shuffle:"
+					if strings.Contains(string(readFile), referenceCheck) {
+						log.Printf("SHOULD SEARCH & REPLACE!")
+						newReference := fmt.Sprintf("FROM registry.hub.docker.com/frikky/shuffle:")
+						readFile = []byte(strings.Replace(string(readFile), referenceCheck, newReference, -1))
+					}
+				}
+			*/
 
 			//log.Printf("Filename: %s", filename)
 			// FIXME - might need the folder from EXTRA here
@@ -156,8 +175,23 @@ func getParsedTarMemory(fs billy.Filesystem, tw *tar.Writer, baseDir, extra stri
 	return nil
 }
 
+/*
+// Fixes App SDK issues.. meh
+func fixTags(tags []string) []string {
+	checkTag := "frikky/shuffle"
+	newTags := []string{}
+	for _, tag := range tags {
+		if strings.HasPrefix(tag, checkTags) {
+			newTags.append(newTags, fmt.Sprintf("registry.hub.docker.com/%s", tag))
+		}
+
+		newTags.append(tag)
+	}
+}
+*/
+
 // Custom Docker image builder wrapper in memory
-func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder string) error {
+func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder string, downloadIfFail bool) error {
 	ctx := context.Background()
 	client, err := client.NewEnvClient()
 	if err != nil {
@@ -169,7 +203,7 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 	tw := tar.NewWriter(buf)
 	defer tw.Close()
 
-	log.Printf("Setting up memory build structure for folder: %s", dockerfileFolder)
+	log.Printf("[INFO] Setting up memory build structure for folder: %s", dockerfileFolder)
 	err = getParsedTarMemory(fs, tw, dockerfileFolder, "")
 	if err != nil {
 		log.Printf("Tar issue: %s", err)
@@ -197,17 +231,56 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 	}
 
 	// Build the actual image
+	log.Printf("[INFO] Building %s. This may take up to a few minutes.", dockerfileFolder)
 	imageBuildResponse, err := client.ImageBuild(
 		ctx,
 		dockerFileTarReader,
 		buildOptions,
 	)
+
+	//log.Printf("Response: %#v", imageBuildResponse.Body)
 	//log.Printf("IMAGERESPONSE: %#v", imageBuildResponse.Body)
 
 	defer imageBuildResponse.Body.Close()
-	_, newerr := io.Copy(os.Stdout, imageBuildResponse.Body)
+	buildBuf := new(strings.Builder)
+	_, newerr := io.Copy(buildBuf, imageBuildResponse.Body)
 	if newerr != nil {
 		log.Printf("Failed reading Docker build STDOUT: %s", newerr)
+	} else {
+		log.Printf("STRING: %s", buildBuf.String())
+		if strings.Contains(buildBuf.String(), "errorDetail") {
+			log.Printf("[ERROR] Docker build:\n%s\nERROR ABOVE: Trying to pull tags from: %s", buildBuf.String(), strings.Join(tags, "\n"))
+
+			// Handles pulling of the same image if applicable
+			// This fixes some issues with older versions of Docker which can't build
+			// on their own ( <17.05 )
+			pullOptions := types.ImagePullOptions{}
+			downloaded := false
+			for _, image := range tags {
+				// Is this ok? Not sure. Tags shouldn't be controlled here prolly.
+				image = strings.ToLower(image)
+
+				newImage := fmt.Sprintf("%s/%s", registryName, image)
+				log.Printf("[INFO] Pulling image %s", newImage)
+				reader, err := client.ImagePull(ctx, newImage, pullOptions)
+				if err != nil {
+					log.Printf("[ERROR] Failed getting image %s: %s", newImage, err)
+					continue
+				}
+
+				// Attempt to retag the image to not contain registry...
+
+				//newBuf := buildBuf
+				downloaded = true
+				io.Copy(os.Stdout, reader)
+				log.Printf("[INFO] Successfully downloaded and built %s", newImage)
+			}
+
+			if !downloaded {
+				return errors.New(fmt.Sprintf("Failed to build / download images %s", strings.Join(tags, ",")))
+			}
+			//baseDockerName
+		}
 	}
 
 	if err != nil {
@@ -227,7 +300,7 @@ func buildImage(tags []string, dockerfileFolder string) error {
 		return err
 	}
 
-	log.Printf("Tags: %s", tags)
+	log.Printf("[INFO] Docker Tags: %s", tags)
 	dockerfileSplit := strings.Split(dockerfileFolder, "/")
 
 	// Create a buffer
@@ -272,9 +345,15 @@ func buildImage(tags []string, dockerfileFolder string) error {
 
 	// Read the STDOUT from the build process
 	defer imageBuildResponse.Body.Close()
-	_, err = io.Copy(os.Stdout, imageBuildResponse.Body)
+	buildBuf := new(strings.Builder)
+	_, err = io.Copy(buildBuf, imageBuildResponse.Body)
 	if err != nil {
 		return err
+	} else {
+		if strings.Contains(buildBuf.String(), "errorDetail") {
+			log.Printf("[ERROR] Docker build:\n%s\nERROR ABOVE: Trying to pull tags from: %s", buildBuf.String(), strings.Join(tags, "\n"))
+			return errors.New(fmt.Sprintf("Failed building %s. Check backend logs for details. Most likely means you have an old version of Docker.", strings.Join(tags, ",")))
+		}
 	}
 
 	return nil
@@ -424,7 +503,7 @@ func handleStopHookDocker(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	hook, err := getHook(ctx, fileId)
 	if err != nil {
-		log.Printf("Failed getting hook: %s", err)
+		log.Printf("Failed getting hook %s (stop docker): %s", fileId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -556,7 +635,7 @@ func handleStartHookDocker(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	hook, err := getHook(ctx, fileId)
 	if err != nil {
-		log.Printf("Failed getting hook: %s", err)
+		log.Printf("Failed getting hook %s (start docker): %s", fileId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -636,7 +715,7 @@ func handleStartHookDocker(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// FIXME - get some real data?
-	log.Printf("Successfully started %s-%s on port %s with filepath %s", image, fileId, port, filepath)
+	log.Printf("[INFO] Successfully started %s-%s on port %s with filepath %s", image, fileId, port, filepath)
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": true, "message": "Started webhook"}`))
 	return
@@ -644,7 +723,7 @@ func handleStartHookDocker(resp http.ResponseWriter, request *http.Request) {
 
 // Checks if an image exists
 func imageCheckBuilder(images []string) error {
-	log.Printf("[FIXME] ImageNames to check: %#v", images)
+	//log.Printf("[FIXME] ImageNames to check: %#v", images)
 	return nil
 
 	ctx := context.Background()
@@ -704,10 +783,115 @@ func hookTest() {
 
 	returnHook, err := getHook(ctx, hook.Id)
 	if err != nil {
-		log.Printf("Failed getting hook: %s", err)
+		log.Printf("Failed getting hook %s (test): %s", hook.Id, err)
 	}
 
 	if len(returnHook.Id) > 0 {
 		log.Printf("Success! - %s", returnHook.Id)
 	}
+}
+
+//https://stackoverflow.com/questions/23935141/how-to-copy-docker-images-from-one-host-to-another-without-using-a-repository
+func getDockerImage(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	// Just here to verify that the user is logged in
+	_, err := shuffle.HandleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("Api authentication failed in validate swagger: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Failed reading body"}`))
+		return
+	}
+
+	type requestCheck struct {
+		Name string `datastore:"name" json:"name" yaml:"name"`
+	}
+
+	//body = []byte(`swagger: "2.0"`)
+	//body = []byte(`swagger: '1.0'`)
+	//newbody := string(body)
+	//newbody = strings.TrimSpace(newbody)
+	//body = []byte(newbody)
+	//log.Println(string(body))
+	//tmpbody, err := yaml.YAMLToJSON(body)
+	//log.Println(err)
+	//log.Println(string(tmpbody))
+
+	// This has to be done in a weird way because Datastore doesn't
+	// support map[string]interface and similar (openapi3.Swagger)
+	var version requestCheck
+
+	err = json.Unmarshal(body, &version)
+	if err != nil {
+		resp.WriteHeader(422)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed JSON marshalling: %s"}`, err)))
+		return
+	}
+
+	log.Printf("Image to load: %s", version.Name)
+	//cli, err := client.NewEnvClient()
+	//if err != nil {
+	//	log.Println("Unable to create docker client")
+	//	return err
+	//}
+
+	dockercli, err := client.NewEnvClient()
+	if err != nil {
+		log.Printf("Unable to create docker client: %s", err)
+		resp.WriteHeader(422)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed JSON marshalling: %s"}`, err)))
+		return
+	}
+
+	ctx := context.Background()
+	images, err := dockercli.ImageList(ctx, types.ImageListOptions{
+		All: true,
+	})
+
+	img := types.ImageSummary{}
+	tagFound := ""
+	for _, image := range images {
+		for _, tag := range image.RepoTags {
+			log.Printf("[INFO] Docker Image: %s", tag)
+
+			if strings.ToLower(tag) == strings.ToLower(version.Name) {
+				img = image
+				tagFound = tag
+				break
+			}
+		}
+	}
+
+	if len(img.ID) == 0 {
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "message": "Couldn't find image %s"}`, version.Name)))
+		return
+	}
+	_ = tagFound
+
+	/*
+		log.Printf("IMg: %#v", img)
+		pullOptions := types.ImagePullOptions{}
+		log.Printf("[INFO] Pulling image %s", image)
+		reader, err := dockercli.ImagePull(ctx, tag, pullOptions)
+		if err != nil {
+			log.Printf("[ERROR] Failed getting image %s: %s", image, err)
+		}
+
+		io.Copy(os.Stdout, r)
+	*/
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(fmt.Sprintf(`{"success": true, "message": "Downloading image %s"}`, version.Name)))
 }

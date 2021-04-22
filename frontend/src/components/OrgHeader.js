@@ -3,9 +3,15 @@ import { makeStyles } from '@material-ui/styles';
 import { useTheme } from '@material-ui/core/styles';
 
 import Tooltip from '@material-ui/core/Tooltip';
+import Grid from '@material-ui/core/Grid';
 import Button from '@material-ui/core/Button';
 import TextField from '@material-ui/core/TextField';
+import Typography from '@material-ui/core/Typography';
 import { useAlert } from "react-alert";
+import IconButton from '@material-ui/core/IconButton';
+import ExpandLessIcon from '@material-ui/icons/ExpandLess';
+import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
+import SaveIcon from '@material-ui/icons/Save';
 
 const useStyles = makeStyles({
 	notchedOutline: {
@@ -23,11 +29,17 @@ const OrgHeader = (props) => {
 	const classes = useStyles()
 
 	var upload = ""
+	const defaultBranch = "master"
 	const [orgName, setOrgName] = React.useState(selectedOrganization.name)
 	const [orgDescription, setOrgDescription] = React.useState(selectedOrganization.description)
+	const [appDownloadUrl, setAppDownloadUrl] = React.useState(selectedOrganization.defaults === undefined ? "https://github.com/frikky/shuffle-apps" : selectedOrganization.defaults.app_download_repo === undefined || selectedOrganization.defaults.app_download_repo.length === 0 ? "https://github.com/frikky/shuffle-apps" : selectedOrganization.defaults.app_download_repo)
+	const [appDownloadBranch, setAppDownloadBranch] = React.useState(selectedOrganization.defaults === undefined ? defaultBranch : selectedOrganization.defaults.app_download_branch === undefined || selectedOrganization.defaults.app_download_branch.length === 0 ? defaultBranch : selectedOrganization.defaults.app_download_branch)
+	const [workflowDownloadUrl, setWorkflowDownloadUrl] = React.useState(selectedOrganization.defaults === undefined ? "https://github.com/frikky/shuffle-apps" : selectedOrganization.defaults.workflow_download_repo === undefined || selectedOrganization.defaults.workflow_download_repo.length === 0 ? "https://github.com/frikky/shuffle-workflows" : selectedOrganization.defaults.workflow_download_repo)
+	const [workflowDownloadBranch, setWorkflowDownloadBranch] = React.useState(selectedOrganization.defaults === undefined ? defaultBranch : selectedOrganization.defaults.workflow_download_branch === undefined || selectedOrganization.defaults.workflow_download_branch.length === 0 ? defaultBranch : selectedOrganization.defaults.workflow_download_branch)
 
 	const [file, setFile] = React.useState("")
 	const [fileBase64, setFileBase64] = React.useState(selectedOrganization.image)
+	const [expanded, setExpanded] = React.useState(false)
 
 	if (file !== "") {
 		const img = document.getElementById('logo')
@@ -55,12 +67,13 @@ const OrgHeader = (props) => {
 		}
 	}
 
-	const handleEditOrg = (name, description, orgId, image) => {
+	const handleEditOrg = (name, description, orgId, image, defaults) => {
 		const data = { 
 			"name": name, 
 			"description": description,
 			"org_id": orgId,
 			"image": image,
+			"defaults": defaults,
 		}
 
 		const url = globalUrl + `/api/v1/orgs/${selectedOrganization.id}`;
@@ -102,9 +115,14 @@ const OrgHeader = (props) => {
 			style={{ width: 150, height: 55, flex: 1 }}
 			variant="contained"
 			color="primary"
-			onClick={() => handleEditOrg(orgName, orgDescription, selectedOrganization.id, selectedOrganization.image)}
+			onClick={() => handleEditOrg(orgName, orgDescription, selectedOrganization.id, selectedOrganization.image, {
+				"app_download_repo": appDownloadUrl, 
+				"app_download_branch": appDownloadBranch,
+				"workflow_download_repo": workflowDownloadUrl,
+				"workflow_download_branch": workflowDownloadBranch,
+			})}
 		>
-			Save Changes	
+			<SaveIcon />
 		</Button>
 
 	var imageData = file.length > 0 ? file : fileBase64 
@@ -113,7 +131,7 @@ const OrgHeader = (props) => {
 	return (
 		<div>
 			<div style={{color: "white", flex: "1", display: "flex", flexDirection: "row"}}>
-				<Tooltip title="Click to edit the app's image - 174x174" placement="bottom">
+				<Tooltip title="Click to edit the organizations's image (174x174)" placement="bottom">
 					<div style={{flex: "1", margin: "10px 25px 10px 0px", border: imageData !== undefined && imageData.length > 0 ? null : "1px solid #f85a3e", cursor: "pointer", backgroundColor: imageData !== undefined && imageData.length > 0 ? null : theme.palette.inputColor, maxWidth: 174, maxHeight: 174}} onClick={() => {upload.click()}}>
 						<input hidden type="file" ref={(ref) => upload = ref} onChange={editHeaderImage} />
 						{imageInfo}
@@ -188,9 +206,151 @@ const OrgHeader = (props) => {
 						<div style={{margin: "auto", textalign: "center",}}>
 							{orgSaveButton}
 						</div>
-								</div>
-							</div>
 						</div>
+					</div>
+				</div>
+				<div style={{textAlign: "center",}}>
+					<IconButton style={{color: "white", marginTop: 10, }} onClick={() => {
+						setExpanded(!expanded)	
+					}}>
+						{expanded ? 
+							<ExpandLessIcon />
+							:
+							<ExpandMoreIcon />
+						}
+					</IconButton>
+					{expanded ? 
+						<Grid container spacing={3} style={{textAlign: "left"}}>
+							<Grid item xs={6} style={{}}>
+								<span>
+									<Typography>
+										App Download URL
+									</Typography>
+									<TextField
+										required
+										style={{flex: "1", marginTop: "5px", marginRight: "15px", backgroundColor: theme.palette.inputColor}}
+										fullWidth={true}
+										type="name"
+										id="outlined-with-placeholder"
+										margin="normal"
+										variant="outlined"
+										placeholder="A description for the organization"
+										value={appDownloadUrl}
+										onChange={e => {
+											setAppDownloadUrl(e.target.value)
+										}}
+										InputProps={{
+											classes: {
+												notchedOutline: classes.notchedOutline,
+											},
+											style:{
+												color: "white",
+											},
+										}}
+										/>
+								</span>
+							</Grid>
+							<Grid item xs={6} style={{}}>
+								<span>
+									<Typography>
+										App Download Branch 
+									</Typography>
+									<TextField
+										required
+										style={{flex: "1", marginTop: "5px", marginRight: "15px", backgroundColor: theme.palette.inputColor}}
+										fullWidth={true}
+										type="name"
+										id="outlined-with-placeholder"
+										margin="normal"
+										variant="outlined"
+										placeholder="A description for the organization"
+										value={appDownloadBranch}
+										onChange={e => {
+											setAppDownloadBranch(e.target.value)
+										}}
+										InputProps={{
+											classes: {
+												notchedOutline: classes.notchedOutline,
+											},
+											style:{
+												color: "white",
+											},
+										}}
+										/>
+								</span>
+							</Grid>
+							<Grid item xs={6} style={{}}>
+								<span>
+									<Typography>
+										Workflow Download URL
+									</Typography>
+									<TextField
+										required
+										style={{flex: "1", marginTop: "5px", marginRight: "15px", backgroundColor: theme.palette.inputColor}}
+										fullWidth={true}
+										type="name"
+										id="outlined-with-placeholder"
+										margin="normal"
+										variant="outlined"
+										placeholder="A description for the organization"
+										value={workflowDownloadUrl}
+										onChange={e => {
+											setWorkflowDownloadUrl(e.target.value)
+										}}
+										InputProps={{
+											classes: {
+												notchedOutline: classes.notchedOutline,
+											},
+											style:{
+												color: "white",
+											},
+										}}
+										/>
+								</span>
+							</Grid>
+							<Grid item xs={6} style={{}}>
+								<span>
+									<Typography>
+										Workflow Download Branch 
+									</Typography>
+									<TextField
+										required
+										style={{flex: "1", marginTop: "5px", marginRight: "15px", backgroundColor: theme.palette.inputColor}}
+										fullWidth={true}
+										type="name"
+										id="outlined-with-placeholder"
+										margin="normal"
+										variant="outlined"
+										placeholder="A description for the organization"
+										value={workflowDownloadBranch}
+										onChange={e => {
+											setWorkflowDownloadBranch(e.target.value)
+										}}
+										InputProps={{
+											classes: {
+												notchedOutline: classes.notchedOutline,
+											},
+											style:{
+												color: "white",
+											},
+										}}
+										/>
+								</span>
+							</Grid>
+							{/*
+							<span style={{textAlign: "center"}}>
+								{expanded ? 
+									<ExpandLessIcon />
+									:
+									<ExpandMoreIcon />
+								}
+							</span>
+							*/}
+						</Grid>
+					: 
+					null
+					}
+				</div>
 			</div>
 	)
 }

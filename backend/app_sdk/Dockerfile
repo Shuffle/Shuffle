@@ -1,4 +1,4 @@
-FROM python:3.7-alpine as base
+FROM python:3.9.4-alpine as base
 
 FROM base as builder
 RUN apk --no-cache add --update alpine-sdk libffi libffi-dev musl-dev openssl-dev
@@ -7,7 +7,7 @@ RUN mkdir /install
 WORKDIR /install
 
 COPY requirements.txt /requirements.txt
-RUN pip install --prefix="/install" -r /requirements.txt
+RUN pip3 install -r /requirements.txt
 
 FROM base
 

@@ -2,32 +2,23 @@ import React, {useState, useEffect} from 'react';
 import { makeStyles } from '@material-ui/styles';
 import {BrowserView, MobileView} from "react-device-detect";
 
+import {Paper, Typography, FormControlLabel, Button, Divider, Select, MenuItem, FormControl, Switch, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Tooltip, Breadcrumbs, CircularProgress, Chip} from '@material-ui/core';
+import {CheckCircle as CheckCircleIcon, AttachFile as AttachFileIcon, Apps as AppsIcon, ErrorOutline as ErrorOutlineIcon} from '@material-ui/icons';
+
+
 import {Link} from 'react-router-dom';
-import Paper from '@material-ui/core/Paper';
-import FormControlLabel from '@material-ui/core/FormControlLabel';
-import Button from '@material-ui/core/Button';
-import Divider from '@material-ui/core/Divider';
-import Select from '@material-ui/core/Select';
-import MenuItem from '@material-ui/core/MenuItem';
-import FormControl from '@material-ui/core/FormControl';
-import Switch from '@material-ui/core/Switch';
-import Dialog from '@material-ui/core/Dialog';
-import DialogTitle from '@material-ui/core/DialogTitle';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogActions from '@material-ui/core/DialogActions';
-import TextField from '@material-ui/core/TextField';
-import Tooltip from '@material-ui/core/Tooltip';
-import CheckCircleIcon from '@material-ui/icons/CheckCircle';
-import Breadcrumbs from '@material-ui/core/Breadcrumbs';
-import AppsIcon from '@material-ui/icons/Apps';
-import CircularProgress from '@material-ui/core/CircularProgress';
-
-import Chip from '@material-ui/core/Chip';
+import YAML from 'yaml'
 import ChipInput from 'material-ui-chip-input'
-
-import ErrorOutline from '@material-ui/icons/ErrorOutline';
 import { useAlert } from "react-alert";
 import words from "shellwords"
+
+import AvatarEditor from 'react-avatar-editor';
+import AddAPhotoIcon from '@material-ui/icons/AddAPhoto';
+import AddAPhotoOutlinedIcon from '@material-ui/icons/AddAPhotoOutlined';
+import ZoomInOutlinedIcon from '@material-ui/icons/ZoomInOutlined';
+import ZoomOutOutlinedIcon from '@material-ui/icons/ZoomOutOutlined';
+import LoopIcon from '@material-ui/icons/Loop';
+import AddPhotoAlternateIcon from '@material-ui/icons/AddPhotoAlternate';
 
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
@@ -60,6 +51,18 @@ const boxStyle = {
 	display: "flex", 
 	flexDirection: "column",
 	backgroundColor: surfaceColor,
+}
+
+const dividerStyle = { 
+	marginBottom: "10px", 
+	marginTop: "10px", 
+	height: "1px", 
+	width: "100%", 
+	backgroundColor: "grey",
+}
+
+const appIconStyle = { 
+	marginLeft: "5px",
 }
 
 const useStyles = makeStyles({
@@ -99,7 +102,12 @@ const parseCurl = (s) => {
 		return ""
 	}
 
-  var args = rewrite(words.split(s))
+	try {
+  	var args = rewrite(words.split(s))
+	} catch (e) {
+		return s
+	}
+	
   var out = { method: 'GET', header: {} }
   var state = ''
 
@@ -187,6 +195,7 @@ const AppCreator = (props) => {
 	const alert = useAlert()
 
 	var upload = ""
+	const increaseAmount = 50
 	const actionNonBodyRequest = ["GET", "HEAD", "DELETE", "CONNECT"]
 	const actionBodyRequest = ["POST", "PUT", "PATCH",]
 	const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth", ]
@@ -218,6 +227,9 @@ const AppCreator = (props) => {
 	const [actions, setActions] = useState([])
 	const [errorCode, setErrorCode] = useState("")
 	const [appBuilding, setAppBuilding] = useState(false)
+	const [extraBodyFields, setExtraBodyFields] = useState([])
+	const [fileUploadEnabled, setFileUploadEnabled] = useState(false)
+	const [actionAmount, setActionAmount] = useState(increaseAmount)
 
 	//const [actions, setActions] = useState([{
 	//	"name": "Get workflows",
@@ -246,6 +258,7 @@ const AppCreator = (props) => {
   	const [currentActionMethod, setCurrentActionMethod] = useState(actionNonBodyRequest[0])
   	const [currentAction, setCurrentAction] = useState({
 			"name": "",
+			"file_field": "",
 			"description": "",
 			"url": "",
 			"headers": "",
@@ -253,6 +266,7 @@ const AppCreator = (props) => {
 			"queries": [],
 			"body": "",
 			"errors": [],
+			"example_response": "",
 			"method": actionNonBodyRequest[0],
 		});
 
@@ -262,7 +276,7 @@ const AppCreator = (props) => {
 		if (firstrequest) {
 			setFirstrequest(false)
 			if (window.location.pathname.includes("apps/edit")) {
-  				setIsEditing(true)
+  			setIsEditing(true)
 				handleEditApp()
 			} else {
 				checkQuery()
@@ -305,6 +319,8 @@ const AppCreator = (props) => {
 	const checkQuery = () => {
 		var urlParams = new URLSearchParams(window.location.search)
 		if (!urlParams.has("id")) {
+			setActionAmount(0)
+
   		setIsAppLoaded(true)
 			return	
 		}
@@ -322,15 +338,35 @@ const AppCreator = (props) => {
 				throw new Error("NOT 200 :O")
 			}
 
+			//console.log("DATA: ", response.text())
 			return response.json()
 		})
 		.then((responseJson) => {
   		setIsAppLoaded(true)
 			if (!responseJson.success) {
 				alert.error("Failed to verify")
-			} else {
-				const data = JSON.parse(responseJson.body)
-				parseIncomingOpenapiData(data)
+			} else{
+				var jsonvalid = false 
+				var tmpvalue = ""
+				try {
+					tmpvalue = JSON.parse(responseJson.body)
+					jsonvalid = true
+				} catch (e) {
+					console.log("Error JSON: ", e)
+				}
+
+				if (!jsonvalid) {
+					try {
+						tmpvalue = YAML.parse(responseJson.body, )
+						jsonvalid = true
+					} catch(e) {
+						console.log("Error YAML: ", e)
+					}
+				}
+
+				if (jsonvalid) {
+					parseIncomingOpenapiData(tmpvalue)
+				}
 			}
 		})
 		.catch(error => {
@@ -353,16 +389,52 @@ const AppCreator = (props) => {
 		//}
 	}
 
+
+	const handleGetRef = (parameter, data) => {
+		if (parameter["$ref"] === undefined) {
+			return parameter
+		}
+
+		const paramsplit = parameter["$ref"].split("/")
+		if (paramsplit[0] !== "#") {
+			console.log("Bad param: ", paramsplit)
+			return parameter
+		}
+
+		var newitem = data
+		for (var key in paramsplit) {
+			var tmpparam = paramsplit[key]
+			if (tmpparam === "#") {
+				continue
+			}
+
+			if (newitem[tmpparam] === undefined) {
+				return parameter
+			}
+
+			newitem = newitem[tmpparam]
+		}
+
+		return newitem 
+
+		//console.log("Should get ", parameter["$ref"])
+		//const subkeys = parameter["$ref"].split("/")
+		// setBasedata(data)
+
+		//	handleGetReference(parameter["$ref"])
+	}
+
 	// Sets the data up as it should be at later points
 	// This is the data FROM the database, not what's being saved
 	const parseIncomingOpenapiData = (data) => {
+		//console.log("DATA: ", data.info)
 		setBasedata(data)
 
-		setName(data.info.title)
-		setDescription(data.info.description)
-		document.title = "Apps - "+data.info.title
-
 		if (data.info !== null && data.info !== undefined)  {
+			setName(data.info.title)
+			setDescription(data.info.description)
+			document.title = "Apps - "+data.info.title
+
 			if (data.info["x-logo"] !== undefined) {
 				setFileBase64(data.info["x-logo"])
 			}
@@ -372,16 +444,30 @@ const AppCreator = (props) => {
 			}
 
 			if (data.info["x-categories"] !== undefined  && data.info["x-categories"].length > 0) {
+				if (typeof(data.info["x-categories"]) == "array") {
+				} else {
+
+				}
 				setNewWorkflowCategories(data.info["x-categories"])
 			}
 		}
 
 		if (data.tags !== undefined && data.tags.length > 0) {
+			var newtags = []
 			for (var key in data.tags) {
-				newWorkflowTags.push(data.tags[key].name)
+				if (data.tags[key].name.length > 50) {
+					console.log("Skipping tag cus it's too long: ", data.tags[key].name.length)
+					continue
+				}
+
+				newtags.push(data.tags[key].name)
 			}
 
-			setNewWorkflowTags(newWorkflowTags)
+			if (newtags.length > 10) {
+				newtags = newtags.slice(0,9)
+			}
+
+			setNewWorkflowTags(newtags)
 		}
 
 		// This is annoying (:
@@ -410,16 +496,17 @@ const AppCreator = (props) => {
 		for (let [path, pathvalue] of Object.entries(data.paths)) {
 			for (let [method, methodvalue] of Object.entries(pathvalue)) {
 				if (methodvalue === null) {
-					alert.info("Skipped method "+method)
+					alert.info("Skipped method (null)"+method)
 					continue
 				}
 
 				if (!allowedfunctions.includes(method.toUpperCase())) {
+					alert.info("Skipped method (not allowed) "+method)
 					continue
 				}
 
 				var tmpname = methodvalue.summary
-				if (methodvalue.operationId !== undefined && methodvalue.operationId !== null && methodvalue.operationId.length > 0) {
+				if (methodvalue.operationId !== undefined && methodvalue.operationId !== null && methodvalue.operationId.length > 0 && (tmpname === undefined || tmpname.length === 0)) {
 					tmpname = methodvalue.operationId
 				}
 
@@ -427,16 +514,94 @@ const AppCreator = (props) => {
 					"name": tmpname,
 					"description": methodvalue.description,
 					"url": path,
+					"file_field": "",
 					"method": method.toUpperCase(),
 					"headers": "",
 					"queries": [],
 					"paths": [],
 					"body": "",
 					"errors": [],
+					"example_response": "",
+				}
+
+				if (methodvalue["requestBody"] !== undefined) {
+					//console.log("Handle requestbody: ", methodvalue["requestBody"])
+					if (methodvalue["requestBody"]["content"] !== undefined) {
+						if (methodvalue["requestBody"]["content"]["application/json"] !== undefined) {
+							if (methodvalue["requestBody"]["content"]["application/json"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["application/json"]["schema"] !== null) {
+								if (methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"] !== undefined) {
+									var tmpobject = {}
+									for (let [prop, propvalue] of Object.entries(methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"])) {
+										tmpobject[prop] = `\$\{${prop}\}`
+									}
+
+									for (var subkey in methodvalue["requestBody"]["content"]["application/json"]["schema"]["required"]) {
+										const tmpitem = methodvalue["requestBody"]["content"]["application/json"]["schema"]["required"][subkey]
+										tmpobject[tmpitem] = `\$\{${tmpitem}\}`
+									}
+
+									newaction["body"] = JSON.stringify(tmpobject, null, 2)
+								}
+							}
+						} else if (methodvalue["requestBody"]["content"]["application/xml"] !== undefined) {
+							console.log("METHOD XML: ", methodvalue)
+							if (methodvalue["requestBody"]["content"]["application/xml"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["application/xml"]["schema"] !== null) {
+								if (methodvalue["requestBody"]["content"]["application/xml"]["schema"]["properties"] !== undefined) {
+									var tmpobject = {}
+									for (let [prop, propvalue] of Object.entries(methodvalue["requestBody"]["content"]["application/xml"]["schema"]["properties"])) {
+										tmpobject[prop] = `\$\{${prop}\}`
+									}
+
+									for (var subkey in methodvalue["requestBody"]["content"]["application/xml"]["schema"]["required"]) {
+										const tmpitem = methodvalue["requestBody"]["content"]["application/xml"]["schema"]["required"][subkey]
+										tmpobject[tmpitem] = `\$\{${tmpitem}\}`
+									}
+
+									//console.log("OBJ XML: ", tmpobject)
+									//newaction["body"] = XML.stringify(tmpobject, null, 2)
+								}
+							}
+						} else {
+							if (methodvalue["requestBody"]["content"]["example"] !== undefined) {
+								if (methodvalue["requestBody"]["content"]["example"]["example"] !== undefined) {
+									newaction["body"] = methodvalue["requestBody"]["content"]["example"]["example"] 
+									//JSON.stringify(tmpobject, null, 2)
+								}
+							}
+
+							//console.log(methodvalue["requestBody"]["content"])
+							if (methodvalue["requestBody"]["content"]["multipart/form-data"] !== undefined) {
+								if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"] !== null) {
+									if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["type"] === "object") {
+										const fieldname = methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["properties"]["fieldname"]
+										if (fieldname !== undefined) {
+											console.log("FIELDNAME: ", fieldname)
+											newaction.file_field = fieldname["value"]
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+
+				// HAHAHA wtf is this.
+				if (methodvalue.responses !== undefined && methodvalue.responses !== null) {
+					if (methodvalue.responses.default !== undefined) {
+						if (methodvalue.responses.default.content !== undefined) {
+							if (methodvalue.responses.default.content["text/plain"] !== undefined) {
+								if (methodvalue.responses.default.content["text/plain"]["schema"] !== undefined) {
+									if (methodvalue.responses.default.content["text/plain"]["schema"]["example"] !== undefined) {
+										newaction.example_response = methodvalue.responses.default.content["text/plain"]["schema"]["example"] 
+									}
+								}
+							}
+						}
+					}
 				}
 
 				for (var key in methodvalue.parameters) {
-					const parameter = methodvalue.parameters[key]
+					const parameter = handleGetRef(methodvalue.parameters[key], data)
 					if (parameter.in === "query") {
 						var tmpaction = {
 							"description": parameter.description,
@@ -466,8 +631,11 @@ const AppCreator = (props) => {
 						}
 					} else if (parameter.in === "header") {
 						newaction.headers += `${parameter.name}=${parameter.example}\n`	
+					} else {
+						console.log("WARNING: don't know how to handle this param: ", parameter)
 					}
 				}
+
 
 				if (newaction.name === "" || newaction.name === undefined) {
 					// Find a unique part of the string
@@ -582,6 +750,17 @@ const AppCreator = (props) => {
 			}
 		}
 
+		if (newActions.length > increaseAmount-1) {
+			setActionAmount(increaseAmount)
+		} else {
+			setActionAmount(newActions.length)
+		}
+
+		if (newActions.length > 1000) {
+			alert.error("Cut down actions from "+newActions.length+" to 999 because of limit")
+			newActions = newActions.slice(0,999)
+		}
+
 		setActions(newActions)
   	setIsAppLoaded(true)
 	}
@@ -659,6 +838,11 @@ const AppCreator = (props) => {
 			}
 
 			const regex = /[A-Za-z0-9 _]/g;
+			if (item.name === undefined) {
+				console.log("Skipping action ", item)
+				continue
+			}
+
 			const found = item.name.match(regex);
 			if (found !== null) {
 				item.name = found.join("")
@@ -668,16 +852,57 @@ const AppCreator = (props) => {
 				"responses": {
 					"default": {
 					  "description": "default",
-					  "schema": {}
+						"content": {
+							"text/plain": {
+					  		"schema": {
+									"type": "string",
+									"example": "",
+								},
+							},
+						},
 					}
 				},
 				"summary": item.name,
 				"operationId": item.name.split(" ").join("_"),
 				"description": item.description,
-				"parameters": []
+				"parameters": [],
+				"requestBody": {
+					"content": {
+
+					}
+				},
 			}
 
 			//console.log("ACTION: ", item)
+
+			if (item.example_response !== undefined && item.example_response.length > 0) {
+				// FIXME: Shallow copy of the string
+				var showResult = Object.assign("", item.example_response).trim()
+				showResult = showResult.split(" None").join(" \"None\"")
+				showResult = showResult.split("\'").join("\"")
+				showResult = showResult.split(" False").join(" false")
+				showResult = showResult.split(" True").join(" true")
+
+				var jsonvalid = true
+				try {
+					const tmp = String(JSON.parse(showResult))
+					if (!showResult.includes("{") && !showResult.includes("[")) {
+						jsonvalid = false
+					}
+				} catch (e) {
+					jsonvalid = false
+				}
+
+				data.paths[item.url][item.method.toLowerCase()].responses["default"]["content"]["text/plain"].schema.type = "string"
+				if (jsonvalid) {
+					// FIXME: Add a JSON parser here - don't run it as a string.
+					data.paths[item.url][item.method.toLowerCase()].responses["default"]["content"]["text/plain"].schema.example = showResult
+
+				} else {
+					data.paths[item.url][item.method.toLowerCase()].responses["default"]["content"]["text/plain"].schema.example = item.example_response
+
+				}
+			}
 
 			if (item.queries.length > 0) {
 				for (var querykey in item.queries) {
@@ -701,6 +926,7 @@ const AppCreator = (props) => {
 					//console.log(queryitem)
 				}
 			} 
+			//data.paths[item.url][item.method.toLowerCase()].parameters.push(newitem)
 
 			if (item.paths.length > 0) {
 				for (querykey in item.paths) {
@@ -761,7 +987,7 @@ const AppCreator = (props) => {
 						"type": "string",
 					},
 				}
-
+				
 				// FIXME - add application/json if JSON example?
 				data.paths[item.url][item.method.toLowerCase()]["requestBody"] = {
 					"description": "Generated by Shuffler.io",
@@ -773,7 +999,38 @@ const AppCreator = (props) => {
 					},
 				}
 
+				/*
+				data.paths[item.url][item.method.toLowerCase()]["requestBody"] = {
+					"description": "Generated by Shuffler.io",
+					"required": required,
+					"content": {
+						"example": {
+							"example": item.body,
+						},
+					},
+				}
+				*/
+
 				data.paths[item.url][item.method.toLowerCase()].parameters.push(newitem)
+			}
+
+			// https://swagger.io/docs/specification/describing-request-body/file-upload/
+			if (item.file_field !== undefined && item.file_field !== null && item.file_field.length > 0) {
+				console.log("HANDLE FILEFIELD SAVE: ", item.file_field)
+				data.paths[item.url][item.method.toLowerCase()]["requestBody"]["content"]["multipart/form-data"] = {
+
+					"schema": {
+						"type": "object",
+						"properties": {
+							"fieldname": {
+								"type": "string",
+								"value": item.file_field,
+							},
+						},
+					},
+				}
+
+				console.log(data.paths[item.url][item.method.toLowerCase()]["requestBody"]["content"]["multipart/form-data"])
 			}
 
 			if (item.headers.length > 0) {
@@ -782,7 +1039,6 @@ const AppCreator = (props) => {
 				const headersSplit = item.headers.split("\n")
 				for (var key in headersSplit) {
 					const header = headersSplit[key]
-					console.log("HEADER: ", header)
 					var key = ""
 					var value = ""
 					if (header.length > 0 && header.includes("= ")) {
@@ -979,6 +1235,11 @@ const AppCreator = (props) => {
 		newAction.errors.push("Can't have the same name")
 
 		actions.push(newAction)
+
+		if (actions.length > actionAmount) { 
+			setActionAmount(actions.length)
+		}
+
 		setActions(actions)
 		setUpdate(Math.random())
 	}
@@ -989,6 +1250,7 @@ const AppCreator = (props) => {
 			"name": "",
 			"description": "",
 			"url": "",
+			"file_field": "",
 			"headers": "",
 			"paths": [],
 			"queries": [],
@@ -998,6 +1260,7 @@ const AppCreator = (props) => {
 		})
 
 		setActions(actions)
+		setActionAmount(actionAmount-1)
 		setUpdate(Math.random())
 	}
 
@@ -1041,13 +1304,13 @@ const AppCreator = (props) => {
 					id: 'outlined-age-simple',
 				}}
 			>
-				{apikeySelection.map(data => {
+				{apikeySelection.map((data, index) => {
 					if (data === undefined) {
 						return null
 					}
 
 					return (
-						<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+						<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data}>
 							{data}
 						</MenuItem>
 					)}
@@ -1065,7 +1328,7 @@ const AppCreator = (props) => {
 				const requiredColor = data.required === true ? "green" : "red"
 				//const required = data.required === true ? <div style={{color: "green", cursor: "pointer"}}>{data.required.toString()}</div> : <div onClick={() => {flipRequired(index)}} style={{display: "inline", color: "red", cursor: "pointer"}}>{data.required.toString()}</div>
 				return (
-					<Paper style={actionListStyle}>
+					<Paper key={index} style={actionListStyle}>
 						<div style={{marginLeft: "5px", width: "100%"}}>
 							<div style={{cursor: "pointer"}} onClick={() => {flipRequired(index)}}>
 								Required: <div style={{display: "inline", color: requiredColor}}>{data.required.toString()}</div>
@@ -1077,7 +1340,9 @@ const AppCreator = (props) => {
 								placeholder={'Query name'}
 								helperText={<span style={{color:"white", marginBottom: "2px",}}>Click required switch</span>}
 								onBlur={(e) => {
-									urlPathQueries[index].name = e.target.value
+									console.log("IN BLUR: ", e.target.value)
+									urlPathQueries[index].name = e.target.value.replaceAll("=", "")
+
 									setUrlPathQueries(urlPathQueries)
 								}}
 								InputProps={{
@@ -1102,14 +1367,14 @@ const AppCreator = (props) => {
 		null
 		:
 		<div>
-			{actions.map((data, index) => {
+			{actions.slice(0,actionAmount).map((data, index) => {
 				var error = data.errors.length > 0 ? 
 					<Tooltip color="primary" title={data.errors.join("\n")} placement="bottom">
-						<ErrorOutline />
+						<ErrorOutlineIcon />
 					</Tooltip>
 					:
 					<Tooltip color="secondary" title={data.errors.join("\n")} placement="bottom">
-						<CheckCircleIcon />
+						<CheckCircleIcon style={{marginTop: 6}}/>
 					</Tooltip>
 				
 
@@ -1127,8 +1392,9 @@ const AppCreator = (props) => {
 				}
 
 				const url = data.url
+				const hasFile = data["file_field"] !== undefined && data["file_field"] !== null && data["file_field"].length > 0
 				return (
-					<Paper style={actionListStyle}>
+					<Paper key={index} style={actionListStyle}>
 						{error} 
 					 	<Tooltip title="Edit action" placement="bottom">
 							<div style={{marginLeft: "5px", width: "100%", cursor: "pointer", maxWidth: 725, overflowX: "hidden",}} onClick={() => {
@@ -1137,15 +1403,23 @@ const AppCreator = (props) => {
 								setUrlPathQueries(data.queries)
 								setUrlPath(data.url)
 								setActionsModalOpen(true)
+
+								if (data["body"] !== undefined && data["body"] !== null && data["body"].length > 0) {
+									findBodyParams(data["body"])
+								}
+
+								if (hasFile) {
+									setFileUploadEnabled(true)
+								}
 							}}>
 							<div style={{display: "flex"}}>
 								<Chip
 									style={{backgroundColor: bgColor, color: "white", borderRadius: 5, minWidth: 80, marginRight: 10, marginTop: 2, cursor: "pointer", fontSize: 14,}}
 									label={data.method}
-									variant="contained"
 								/>
 								<span style={{fontSize: 16, marginTop: "auto", marginBottom: "auto",}}>
-									{url} - {data.name}
+								{hasFile ? <AttachFileIcon style={{height: 20, width: 20}} /> : null} {url} - {data.name}
+						
 								</span>
 							</div>
 							</div>
@@ -1177,24 +1451,51 @@ const AppCreator = (props) => {
 	const setActionField = (field, value) => {
 		currentAction[field] = value
 		setCurrentAction(currentAction)	
+
 		//setUrlPathQueries(currentAction.queries)
 	}
 
+	const findBodyParams = (body) => {
+		const regex = /\${(\w+)}/g
+		const found = body.match(regex)
+		if (found === null) {
+			setExtraBodyFields([])
+		} else {
+			setExtraBodyFields(found)
+		}
+	}
+
 	const bodyInfo = actionBodyRequest.includes(currentActionMethod) ?
-		<div>
-			Body - used as example in action argument
+		<div style={{marginTop: 10}}>
+			<b>Request Body</b>: {extraBodyFields.length > 0 ? 
+				<Typography style={{display: "inline-block"}}>
+					Variables: {extraBodyFields.join(", ")}
+				</Typography>
+			: 
+			<Typography style={{display: "inline-block"}}>
+				{`Add variables with \$\{ variable_name }`}
+			</Typography>
+			}
 			<TextField
 				required
 				style={{flex: "1", marginRight: "15px", backgroundColor: inputColor}}
 				fullWidth={true}
-				placeholder={'{\n\t"username": "testing@test.com"\n\t"name": "test testington"\n}'}
+				placeholder={'{\n\t"username": "${username}",\n\t"apikey": "${apikey}",\n\t"search": "1.2.3.5"}'}
 				margin="normal"
 				variant="outlined"
 				multiline
 				rows="5"
 				defaultValue={currentAction["body"]}
-				onChange={e => setActionField("body", e.target.value)}
+				onChange={e => {
+					setActionField("body", e.target.value)
+					findBodyParams(e.target.value)
+				}}
 				key={currentAction}
+				helperText={
+					<span style={{color:"white", marginBottom: "2px",}}>
+						Shows an example body to the user. ${} creates variables.
+					</span>
+				}
 				InputProps={{
 					classes: {
 						notchedOutline: classes.notchedOutline,
@@ -1205,8 +1506,39 @@ const AppCreator = (props) => {
 				}}
 			/>
 
+			<div>
+			</div>
 		</div>
 		: null
+
+	const exampleResponse = 
+		<div style={{}}>
+			<b>Example success response</b> 
+			<TextField
+				required
+				style={{flex: "1", marginRight: "15px", backgroundColor: inputColor}}
+				fullWidth={true}
+				placeholder={'{\n\t"email": "testing@test.com",\n\t"firstname": "testing"\n}'}
+				margin="normal"
+				variant="outlined"
+				multiline
+				rows="2"
+				defaultValue={currentAction["example_response"]}
+				onChange={e => setActionField("example_response", e.target.value)}
+				helperText={<span style={{color:"white", marginBottom: "2px",}}>
+					Helps with autocompletion and understanding of the endpoint 
+				</span>}
+				key={currentAction}
+				InputProps={{
+					classes: {
+						notchedOutline: classes.notchedOutline,
+					},
+					style:{
+						color: "white",
+					},
+				}}
+			/>
+		</div>
 
 	const addActionToView = (errors) => {
 		currentAction.errors = errors
@@ -1220,6 +1552,11 @@ const AppCreator = (props) => {
 			actions[actionIndex] = currentAction
 		}
 
+
+		if (actions.length > actionAmount) { 
+			setActionAmount(actions.length)
+		}
+
 		setActions(actions)
 	}
 
@@ -1230,9 +1567,9 @@ const AppCreator = (props) => {
 		}
 
 		// Url verification
-		if (currentAction.url.length === 0) {
-			errormessage.push("URL path can't be empty.")
-		} else if (!currentAction.url.startsWith("/") && baseUrl.length > 0) {
+		//if (currentAction.url.length === 0) {
+		//	errormessage.push("URL path can't be empty.")
+		if (!currentAction.url.startsWith("/") && baseUrl.length > 0 && currentAction.url.length > 0) {
 			errormessage.push("URL must start with /")
 		}
 
@@ -1329,7 +1666,7 @@ const AppCreator = (props) => {
 		const queries = values[1]
 
 		if (currentAction.paths !== paths && urlPath.length > 0) {
-			console.log("IN PATHS SETTER: !", paths)
+			//console.log("IN PATHS SETTER: !", paths)
 			setActionField("paths", paths)
 		} 
 
@@ -1361,12 +1698,12 @@ const AppCreator = (props) => {
 			open={actionsModalOpen} 
 			fullWidth
 			onClose={() => {
-				console.log("CLOSED?")
 				setUrlPath("")
 				setCurrentAction({
 					"name": "",
 					"description": "",
 					"url": "",
+					"file_field": "",
 					"headers": "",
 					"paths": [],
 					"queries": [],
@@ -1377,12 +1714,13 @@ const AppCreator = (props) => {
 				setCurrentActionMethod(apikeySelection[0])
 				setUrlPathQueries([])
 				setActionsModalOpen(false)
+				setFileUploadEnabled(false)
 			}}
 		>
 			<FormControl style={{backgroundColor: surfaceColor, color: "white",}}>
 				<DialogTitle><div style={{color: "white"}}>New action</div></DialogTitle>
 				<DialogContent>
-					<Link target="_blank" to="https://shuffler.io/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more about actions</Link>
+					<a target="_blank" href="https://shuffler.io/docs/workflows#conditions" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more about actions</a>
 					<div style={{marginTop: "15px"}}/>
 					Name
 					<TextField
@@ -1453,13 +1791,15 @@ const AppCreator = (props) => {
 							id: 'method-option',
 						}}
 						>
-						{actionNonBodyRequest.map(data => (
-							<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+						{actionNonBodyRequest.map((data, index) => {
+							return (
+							<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data}>
 								{data}
 							</MenuItem>
-						))}
-						{actionBodyRequest.map(data => (
-							<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+							)
+						})}
+						{actionBodyRequest.map((data, index)  => (
+							<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data}>
 								{data}
 							</MenuItem>
 						))}
@@ -1492,69 +1832,93 @@ const AppCreator = (props) => {
 						}}
 						onBlur={event => {
 							var parsedurl = event.target.value
-							if (parsedurl.startsWith("curl")) {
-								const request = parseCurl(event.target.value)
-								console.log(request)
-								if (request.method.toUpperCase() !== currentAction.Method) {
-									setCurrentActionMethod(request.method.toUpperCase())
-									setActionField("method", request.method.toUpperCase())
+							console.log("URL: ", parsedurl)
+							if (parsedurl.includes("<") && parsedurl.includes(">")) {
+								console.log("REPLACE")
+								parsedurl = parsedurl.replaceAll("<", "{")
+								parsedurl = parsedurl.replaceAll(">", "}")
+							}
+
+							if (parsedurl.startsWith("PUT ") || parsedurl.startsWith("GET ") ||parsedurl.startsWith("POST ") || parsedurl.startsWith("DELETE ") ||parsedurl.startsWith("PATCH ") || parsedurl.startsWith("CONNECT ")) {
+								const tmp = parsedurl.split(" ")
+
+								if (tmp.length > 1) {
+									parsedurl = tmp[1]
+									setActionField("url", parsedurl)
+
+									setCurrentActionMethod(tmp[0].toUpperCase())
+									setActionField("method", tmp[0].toUpperCase())
 								}
 
-								if (request.header !== undefined && request.header !== null) {
-									var headers = []
-									for (let [key, value] of Object.entries(request.header)) {
-										if (parameterName !== undefined && key.toLowerCase() === parameterName.toLowerCase()) {
-											continue
+								setUpdate(Math.random())
+							} else if (parsedurl.startsWith("curl")) {
+								const request = parseCurl(event.target.value)
+								if (request !== event.target.value) {
+									if (request.method.toUpperCase() !== currentAction.Method) {
+										setCurrentActionMethod(request.method.toUpperCase())
+										setActionField("method", request.method.toUpperCase())
+									}
+
+									if (request.header !== undefined && request.header !== null) {
+										var headers = []
+										for (let [key, value] of Object.entries(request.header)) {
+											if (parameterName !== undefined && key.toLowerCase() === parameterName.toLowerCase()) {
+												continue
+											}
+
+											if (key === "Authorization" && authenticationOption === "Bearer auth") {
+												continue
+											} 
+
+											headers += key+"="+value+"\n"
 										}
 
-										if (key === "Authorization" && authenticationOption === "Bearer auth") {
-											continue
-										} 
-
-										headers += key+"="+value+"\n"
+										setActionField("headers", headers)
 									}
 
-									setActionField("headers", headers)
-								}
+									if (request.body !== undefined && request.body !== null) {
+										setActionField("body", request.body)
+									}
 
-								if (request.body !== undefined && request.body !== null) {
-									setActionField("body", request.body)
-								}
-
-								// Parse URL
-								if (request.url !== undefined) {
-									parsedurl = request.url
-								}
+									// Parse URL
+									if (request.url !== undefined) {
+										parsedurl = request.url
+									}
 							}
 
+							console.log("PARSED: ", parsedurl)
 							if (parsedurl !== undefined) {
-								if (parsedurl.includes("<") && parsedurl.includes(">")) {
-									parsedurl = parsedurl.split("<").join("{")
-									parsedurl = parsedurl.split(">").join("}")
-								}
-
-								if (parsedurl.startsWith("http") || parsedurl.startsWith("ftp")) {
-									if (parsedurl !== undefined && parsedurl.includes(parameterName)) {
-										// Remove <> etc.
-										// 
-										
-										console.log("IT HAS THE PARAM NAME!")
-										const newurl = new URL(encodeURI(parsedurl))
-										newurl.searchParams.delete(parameterName)
-										parsedurl = decodeURI(newurl.href)
+									if (parsedurl.includes("<") && parsedurl.includes(">")) {
+										parsedurl = parsedurl.split("<").join("{")
+										parsedurl = parsedurl.split(">").join("}")
 									}
 
-									// Remove the base URL itself
-									if (parsedurl !== undefined && baseUrl !== undefined && baseUrl.length > 0 && parsedurl.includes(baseUrl)) {
-										parsedurl = parsedurl.replace(baseUrl, "")
-									}
+									if (parsedurl.startsWith("http") || parsedurl.startsWith("ftp")) {
+										if (parsedurl !== undefined && parsedurl.includes(parameterName)) {
+											// Remove <> etc.
+											// 
+											
+											console.log("IT HAS THE PARAM NAME!")
+											const newurl = new URL(encodeURI(parsedurl))
+											newurl.searchParams.delete(parameterName)
+											parsedurl = decodeURI(newurl.href)
+										}
 
-									// Check URL query && headers 
-									setActionField("url", parsedurl)
-									setUrlPath(parsedurl)
+										// Remove the base URL itself
+										if (parsedurl !== undefined && baseUrl !== undefined && baseUrl.length > 0 && parsedurl.includes(baseUrl)) {
+											parsedurl = parsedurl.replace(baseUrl, "")
+										}
+
+										// Check URL query && headers 
+										//setActionField("url", parsedurl)
+									}
 								}
 							}
 
+							if (event.target.value !== parsedurl) {
+								setUrlPath(parsedurl)
+								setActionField("url", parsedurl)
+							}
 							//console.log("URL: ", request.url)
 						}}
 					/>
@@ -1563,8 +1927,38 @@ const AppCreator = (props) => {
 					<Button color="primary" style={{marginTop: "5px", marginBottom: "10px", borderRadius: "0px"}} variant="outlined" onClick={() => {
 						addPathQuery()
 					}}>New query</Button> 				
+					{currentActionMethod === "POST" ?
+						<Button color="primary" variant={fileUploadEnabled ? "contained" : "outlined"} style={{marginLeft: 10, marginTop: "5px", marginBottom: "10px", borderRadius: "0px"}} onClick={() => {
+							setFileUploadEnabled(!fileUploadEnabled)
+							if (fileUploadEnabled && currentAction["file_field"].length > 0) {
+								setActionField("file_field", "")
+							}
+							setUpdate(Math.random())
+						}}>Enable Fileupload</Button> 				
+					: null}
+					{fileUploadEnabled ? 
+						<TextField
+							required
+							style={{backgroundColor: inputColor, display: "inline-block", marginLeft: 10, maxWidth: 210, marginTop: 7, }}
+							placeholder={"file"}
+							margin="normal"
+							variant="outlined"
+							id="standard-required"
+							defaultValue={currentAction["file_field"]}
+							onChange={e => setActionField("file_field", e.target.value)}
+							helperText={<span style={{color:"white", marginBottom: "2px",}}>The File field to interact with</span>}
+							InputProps={{
+								classes: {
+									notchedOutline: classes.notchedOutline,
+								},
+								style:{
+									color: "white",
+								},
+							}}
+						/>
+						: null}
 					<div/>
-					Headers - static for the action
+					<b>Headers</b>: static for the action
 					<TextField
 						required
 						style={{flex: "1", marginRight: "15px", marginTop: "5px", backgroundColor: inputColor}}
@@ -1575,7 +1969,7 @@ const AppCreator = (props) => {
 						id="standard-required"
 						defaultValue={currentAction["headers"]}
 						multiline
-						rows="5"
+						rows="2"
 						onChange={e => setActionField("headers", e.target.value)}
 						helperText={<span style={{color:"white", marginBottom: "2px",}}>Headers that are part of the request. Default: EMPTY</span>}
 						InputProps={{
@@ -1588,6 +1982,8 @@ const AppCreator = (props) => {
 						}}
 					/>
 					{bodyInfo}
+					<Divider style={{backgroundColor: "rgba(255,255,255,0.5)", marginTop: 15, marginBottom: 15}} />
+					{exampleResponse}
 				</DialogContent>
 				<DialogActions>
 	      <Button style={{borderRadius: "0px"}} onClick={() => {
@@ -1595,14 +1991,16 @@ const AppCreator = (props) => {
 					Cancel	
 				</Button>
 	      <Button color="primary" variant="outlined" style={{borderRadius: "0px"}} onClick={() => {
-						console.log(urlPathQueries)
-						console.log(urlPath)
-						// value={urlPath}
+						//console.log(urlPathQueries)
+						//console.log(urlPath)
+						console.log(currentAction)
 						const errors = getActionErrors()		
 						addActionToView(errors)
 						setActionsModalOpen(false)
 						setUrlPathQueries([]) 
 						setUrlPath("")
+						setFileUploadEnabled(false)
+
 					}}>
 						Submit	
 					</Button>
@@ -1610,31 +2008,22 @@ const AppCreator = (props) => {
 			</FormControl>
 		</Dialog>
 
+
+	const categories = [
+		"Communication",
+		"Cases",
+		"SIEM",
+		"Assets",
+		"Intel",
+		"IAM",
+		"Network",
+		"Eradication",
+		"Other",
+	]
+
 	const tagView = 
 		<div style={{color: "white"}}>
-			<h2>Tags</h2>
-			<ChipInput
-				style={{marginTop: 10}}
-				InputProps={{
-					style:{
-						color: "white",
-					},
-				}}
-				placeholder="Tags"
-				color="primary"
-				fullWidth
-				value={newWorkflowTags}
-				onAdd={(chip) => {
-					newWorkflowTags.push(chip)
-					setNewWorkflowTags(newWorkflowTags)
-					setUpdate("added"+chip)
-				}}
-				onDelete={(chip, index) => {
-					newWorkflowTags.splice(index, 1)
-					setNewWorkflowTags(newWorkflowTags)
-					setUpdate("delete "+chip)
-				}}
-			/>
+			{/*
 			<ChipInput
 				style={{marginTop: 10}}
 				InputProps={{
@@ -1657,30 +2046,97 @@ const AppCreator = (props) => {
 					setUpdate("delete "+chip)
 				}}
 			/>
+			*/}
+			<h4>Categories</h4>
+			<Select
+				fullWidth
+				SelectDisplayProps={{
+					style: {
+						marginLeft: 10,
+					}
+				}}
+				onChange={(e) => {
+					setNewWorkflowCategories([e.target.value])
+					setUpdate("added "+e.target.value)
+				}}
+				value={newWorkflowCategories.length === 0 ? "Select a category" : newWorkflowCategories[0]}
+				style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+				>
+				{categories.map((data, index) => (
+					<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data}>
+						{data}
+					</MenuItem>
+				))}
+			</Select>
+			<h4>Tags</h4>
+			<ChipInput
+				style={{marginTop: 10}}
+				InputProps={{
+					style:{
+						color: "white",
+					},
+				}}
+				placeholder="Tags"
+				color="primary"
+				fullWidth
+				value={newWorkflowTags}
+				onAdd={(chip) => {
+					newWorkflowTags.push(chip)
+					setNewWorkflowTags(newWorkflowTags)
+					setUpdate("added"+chip)
+				}}
+				onDelete={(chip, index) => {
+					newWorkflowTags.splice(index, 1)
+					setNewWorkflowTags(newWorkflowTags)
+					setUpdate("delete "+chip)
+				}}
+			/>
 		</div>
 
 	const actionView = 
-		<div style={{color: "white"}}>
-			<h2>Actions</h2>
+		<div style={{color: "white", position: "relative",}}>
+			<div style={{position: "absolute", right: 0, top: 0,}}>
+				{actionAmount > 0 && actionAmount < actions.length ? 
+					<Button color="primary" style={{float: "right", borderRadius: 0, textAlign: "center"}} variant="outlined" onClick={() => {
+						setActionAmount(actions.length)
+						/*
+						if (actionAmount+increaseAmount > actions.length) {
+							setActionAmount(actions.length)
+						} else {
+							setActionAmount(actionAmount+increaseAmount)
+						}
+						*/
+					}}>
+						See all actions 
+					</Button>
+				: null}
+			</div>
+			<h2>Actions {actionAmount > 0 ? <span>({actionAmount} / {actions.length})</span> : null}</h2>
 			Actions are the tasks performed by an app. Read more about actions and apps
-			<Link target="_blank" to="https://shuffler.io/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}> here</Link>.
+			<a target="_blank" src="https://shuffler.io/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}> here</a>.
 			<div>
 				{loopActions}
-				<Button color="primary" style={{marginTop: "20px", borderRadius: "0px"}} variant="outlined" onClick={() => {
-					setCurrentAction({
-						"name": "",
-						"description": "",
-						"url": "",
-						"headers": "",
-						"queries": [],
-						"paths": [],
-						"body": "",
-						"errors": [],
-						"method": actionNonBodyRequest[0],
-					})
-  				setCurrentActionMethod(actionNonBodyRequest[0])
-					setActionsModalOpen(true)
-				}}>New action</Button> 				
+				<div style={{display: "flex"}}>
+					<Button color="primary" style={{marginTop: "20px", borderRadius: "0px"}} variant="outlined" onClick={() => {
+						setCurrentAction({
+							"name": "",
+							"description": "",
+							"url": "",
+							"file_field": "",
+							"headers": "",
+							"queries": [],
+							"paths": [],
+							"body": "",
+							"errors": [],
+							"method": actionNonBodyRequest[0],
+						})
+						setCurrentActionMethod(actionNonBodyRequest[0])
+						setActionsModalOpen(true)
+					}}>New action</Button> 				
+					{/*
+						{actionAmount} {actions.length}
+					*/}
+				</div>
 			</div>
 		</div>
 
@@ -1738,8 +2194,120 @@ const AppCreator = (props) => {
 	//	</div> :
 	//	<img src={file} id="logo" style={{width: "100%", height: "100%"}} />
 
-	const imageData = file.length > 0 ? file : fileBase64 
-	const imageInfo = <img src={imageData} alt="Click to upload an image (174x174)" id="logo" style={{maxWidth: 174, maxHeight: 174, minWidth: 174, minHeight: 174, objectFit: "contain",}} />
+	const [imageUploadError, setImageUploadError] = useState("");
+	const [openImageModal, setOpenImageModal] = useState("");
+	const [scale, setScale] = useState(1);
+	const [rotate, setRotatation] = useState(0);
+	const [disableImageUpload, setDisableImageUpload] = useState(true);
+
+	let imageData = fileBase64;
+	let croppedData = file.length > 0 ? file : fileBase64
+
+	const imageInfo = <img src={imageData} id="logo" style={{maxWidth: 174, maxHeight: 174, minWidth: 174, minHeight: 174, objectFit: "contain",}} />
+
+	const alternateImg = <AddPhotoAlternateIcon style={{ width: 100, height: 100, flex: "1", display: "flex", flexDirection: "row", margin: "auto", marginTop: 30, marginLeft: 40,}} onClick={() => {
+		upload.click()
+	}}/>
+	
+	const zoomIn = () => {
+		console.log("ZOOOMING IN")
+		setScale(scale+0.1);
+	}
+
+	const zoomOut = () => {
+		setScale(scale-0.1);
+	}
+	const rotatation = () => {
+		setRotatation(rotate+10);
+	}
+
+	const onPositionChange = () => {
+		setDisableImageUpload(false);
+	}
+
+	const onCancelSaveAppIcon = () => {
+		setFile("");
+		setOpenImageModal(false)
+		setImageUploadError("")
+	}
+
+	let editor;
+	const setEditorRef = (imgEditor) => { editor = imgEditor; }
+
+	const onSaveAppIcon = () => {
+		if(editor){
+			setFile("");
+			const canvas = editor.getImageScaledToCanvas();
+			setFileBase64(canvas.toDataURL());
+			setOpenImageModal(false)
+			setDisableImageUpload(true);
+		}
+	}
+
+	const errorText = imageUploadError.length > 0 ? <div style={{marginTop: 10}}>Error: {imageUploadError}</div> : null
+	const imageUploadModalView = openImageModal ? 
+		<Dialog open={openImageModal} onClose={onCancelSaveAppIcon}
+			PaperProps={{
+				style: {
+					backgroundColor: surfaceColor,
+					color: "white",
+					minWidth: "300px",
+					minHeight: "300px",
+				},
+			}}
+		>
+			<FormControl>
+				<DialogTitle><div style={{color: "rgba(255,255,255,0.9)"}}>Upload App Icon</div></DialogTitle>
+				{errorText}
+				<DialogContent style={{color: "rgba(255,255,255,0.65)"}}>
+					<AvatarEditor
+						ref={setEditorRef}
+						image={croppedData}
+						width={174}
+						height={174}
+						border={50}
+						color={[0, 0, 0, 0.6]} // RGBA
+						scale={scale}
+						rotate={rotate}
+						onImageChange={onPositionChange}
+						onLoadSuccess={()=>setRotatation(0)}
+					/>
+					<Divider style={dividerStyle}/>
+						<Tooltip title={"New Icon"}>
+							<Button variant="outlined" component="label" color="primary" style={appIconStyle}>
+							<AddAPhotoOutlinedIcon onClick={() => {upload.click()}} color="primary" />	
+							</Button> 
+						</Tooltip>
+						<Tooltip title={"Zoom In"}>
+							<Button variant="outlined" component="label" color="primary" style={appIconStyle}>
+							<ZoomInOutlinedIcon onClick={zoomIn} color="primary" />	
+							</Button> 
+						</Tooltip>
+						<Tooltip title={"Zoom out"}>
+							<Button variant="outlined" component="label" color="primary" style={appIconStyle}>
+							<ZoomOutOutlinedIcon onClick={zoomOut} color="primary" />	
+							</Button> 
+						</Tooltip>
+						<Tooltip title={"Rotate"}>
+							<Button variant="outlined" component="label" color="primary" style={appIconStyle}>
+							<LoopIcon onClick={rotatation} color="primary" />	
+							</Button> 
+						</Tooltip>
+					<Divider style={dividerStyle} />
+				</DialogContent>
+				<DialogActions>
+					<Button style={{borderRadius: "0px"}} onClick={onCancelSaveAppIcon} color="primary">
+						Cancel
+					</Button>
+					<Button variant="contained" style={{borderRadius: "0px"}} disabled={disableImageUpload} onClick={() => {
+								onSaveAppIcon()
+							}} color="primary">
+						Continue	
+					</Button>
+				</DialogActions>
+			</FormControl>
+		</Dialog>
+		: null;
 
 	// Random names for type & autoComplete. Didn't research :^)
 	const landingpageDataBrowser = 
@@ -1752,17 +2320,28 @@ const AppCreator = (props) => {
 						</h2>
 					</Link>
 					<h2>
-						{name}
+						{name} {actions === null || actions === undefined || actions.length === 0 ? null : <span>({actions.length})</span>}
 					</h2>
 				</Breadcrumbs>
+				{imageUploadModalView}
+				<input hidden type="file" ref={(ref) => upload = ref} onChange={editHeaderImage} />
 				<Paper style={boxStyle}>
 					<h2 style={{marginBottom: "10px", color: "white"}}>General information</h2>
 					<a target="_blank" href="https://shuffler.io/docs/apps#create_openapi_app" style={{textDecoration: "none", color: "#f85a3e"}}>Click here to learn more about app creation</a>
 					<div style={{color: "white", flex: "1", display: "flex", flexDirection: "row"}}>
 					 	<Tooltip title="Click to edit the app's image" placement="bottom">
-							<div style={{flex: "1", margin: 10, border: "1px solid #f85a3e", cursor: "pointer", backgroundColor: inputColor, maxWidth: 174, maxHeight: 174}} onClick={() => {upload.click()}}>
-								<input hidden type="file" ref={(ref) => upload = ref} onChange={editHeaderImage} />
+							<div style={{flex: "1", margin: 10, border: "1px solid #f85a3e", cursor: "pointer", backgroundColor: inputColor, maxWidth: 174, maxHeight: 174}} onClick={() => {
+									/*
+									if (fileBase64.length === 0) {
+										upload.click()
+									}
+									*/
+
+									setOpenImageModal(true)
+								}}>
+								{!imageData && (alternateImg)}
 								{imageInfo}
+								<input hidden type="file" ref={(ref) => upload = ref} onChange={editHeaderImage} />
 							</div>
 						</Tooltip>
 						<div style={{flex: "3", color: "white",}}>
@@ -1886,8 +2465,8 @@ const AppCreator = (props) => {
 							value={authenticationOption}
 							style={{backgroundColor: inputColor, color: "white", height: "50px"}}
 							>
-							{authenticationOptions.map(data => (
-								<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data}>
+							{authenticationOptions.map((data, index) => (
+								<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={data}>
 									{data}
 								</MenuItem>
 							))}
@@ -1925,7 +2504,9 @@ const AppCreator = (props) => {
 					}}>
 						{appBuilding ? <CircularProgress /> : "Save"}
 					</Button>
-					{errorCode.length > 0 ? `Error: ${errorCode}` : null}
+					<Typography style={{marginTop: 5}}>
+						{errorCode.length > 0 ? `Error: ${errorCode}` : null}
+					</Typography>
 				</Paper>
 		</div>
 

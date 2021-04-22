@@ -1,11 +1,7 @@
 import React, {useState, useEffect} from 'react';
 
-import Paper from '@material-ui/core/Paper';
-import Button from '@material-ui/core/Button';
-import Divider from '@material-ui/core/Divider';
+import {Paper, Button, Divider, TextField} from '@material-ui/core';
 import {Link} from 'react-router-dom';
-
-import TextField from '@material-ui/core/TextField';
 import { useAlert } from "react-alert";
 import { useTheme } from '@material-ui/core/styles';
 
@@ -85,7 +81,7 @@ const Settings = (props) => {
 
 	const generateApikey = () => {
 		fetch(globalUrl+"/api/v1/generateapikey", {
-    	  	method: 'GET',
+    	  method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json',
@@ -99,7 +95,7 @@ const Settings = (props) => {
 
 			return response.json()
 		})
-    	.then((responseJson) => {
+    .then((responseJson) => {
 			setUserSettings(responseJson)
     	})
 		.catch(error => {

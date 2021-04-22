@@ -1,4 +1,4 @@
-from golang as builder
+FROM golang:1.16.0-buster as builder
 
 # Add files
 RUN mkdir /app
@@ -7,14 +7,12 @@ WORKDIR /app
 ADD ./go-app/main.go /app
 ADD ./go-app/walkoff.go /app
 ADD ./go-app/docker.go /app
-ADD ./go-app/codegen.go /app
-ADD ./go-app/files.go /app
+ADD ./go-app/oauth2.go /app
 
 ADD ./go-app/go.mod /app
 
 # Required files for code generation
 ADD ./app_sdk/app_base.py /app_sdk
-ADD ./app_sdk/static_baseline.py /app_sdk
 ADD ./app_sdk_kali/app_base.py /app_sdk_kali
 ADD ./app_sdk_kali/static_baseline.py /app_sdk_kali
 ADD ./app_sdk_blackarch/app_base.py /app_sdk_blackarch

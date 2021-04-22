@@ -1,9 +1,5 @@
 # app_sdk.py
 This is the SDK used for apps to behave like they should. 
-To change it in the backend, upload it to Buckets/shuffler.appspot.com/generated_apps/baseline.
-
-# static_baseline.py
-It's used for python code generation and should be under MIT. Has to be located here because it's used by the backend.
 
 ## If you want to update apps.. PS: downloads from docker hub do overrides.. :)
 1. Write your code & check if runtime works

@@ -13,10 +13,9 @@ import EditWebhook from "./views/EditWebhook";
 import AngularWorkflow from "./views/AngularWorkflow";
 
 import Header from './components/Header';
+import theme from './theme'
 import Apps from './views/Apps';
 import AppCreator from './views/AppCreator';
-import Contact from './views/Contact';
-import Oauth2 from './views/Oauth2';
 
 import Dashboard from "./views/Dashboard";
 import AdminSetup from "./views/AdminSetup";
@@ -28,10 +27,14 @@ import LandingPageNew from "./views/LandingpageNew";
 import LoginPage from "./views/LoginPage";
 import SettingsPage from "./views/SettingsPage";
 
+import MyView from "./views/MyView";
+
 import { createMuiTheme, MuiThemeProvider } from '@material-ui/core/styles';
 
+import ScrollToTop from "./components/ScrollToTop";
 import AlertTemplate from "./components/AlertTemplate";
 import { positions, Provider } from "react-alert";
+import {isMobile} from "react-device-detect";
 
 // Production - backend proxy forwarding in nginx
 var globalUrl = window.location.origin
@@ -42,38 +45,13 @@ if (window.location.protocol == "http:" && window.location.port === "3000") {
 	//globalUrl = "http://localhost:5002"
 }
 
-const theme = createMuiTheme({
-	palette: {
-		primary: {
-			main: "#f85a3e"
-		},
-		secondary: {
-			main: '#e8eaf6',
-		},
-		surfaceColor: "#27292d",
-		inputColor: "#383B40"
-	},
-	typography: {
-		useNextVariants: true
-	},
-	overrides: {
-		MuiMenu: {
-			list: {
-				backgroundColor: "#383B40",
-			},
-		},
-	},
-});
-
-
-// FIXME - set client side cookies
 const App = (message, props) => {
 	const [userdata, setUserData] = useState({});
-	//const [homePage, ] = useState(true);
 	const [cookies, setCookie, removeCookie] = useCookies([]);
 	const [isLoggedIn, setIsLoggedIn] = useState(false);
 	const [dataset, setDataset] = useState(false);
 	const [isLoaded, setIsLoaded] = useState(false);
+	const [curpath, setCurpath] = useState(typeof window === 'undefined' || window.location === undefined ? "" : window.location.pathname)
 
 	useEffect(() => {
 		if (dataset === false) {
@@ -126,9 +104,8 @@ const App = (message, props) => {
 			<Route exact path="/home" render={props => <LandingPageNew isLoaded={isLoaded} {...props} />} />
 		</div> :
 		<div style={{ backgroundColor: "#1F2023", color: "rgba(255, 255, 255, 0.65)", minHeight: "100vh" }}>
+			<ScrollToTop setCurpath={setCurpath} />
 			<Header cookies={cookies} removeCookie={removeCookie} isLoaded={isLoaded} globalUrl={globalUrl} setIsLoggedIn={setIsLoggedIn} isLoggedIn={isLoggedIn} userdata={userdata} {...props} />
-			<Route exact path="/oauth2" render={props => <Oauth2 isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
-			<Route exact path="/contact" render={props => <Contact isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/login" render={props => <LoginPage isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
 			<Route exact path="/admin" render={props => <Admin userdata={userdata} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
 			<Route exact path="/admin/:key" render={props => <Admin isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
@@ -142,12 +119,13 @@ const App = (message, props) => {
 			<Route exact path="/apps/new" render={props => <AppCreator isLoaded={isLoaded} isLoggedIn={isLoggedIn} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/apps/edit/:appid" render={props => <AppCreator isLoaded={isLoaded} isLoggedIn={isLoggedIn} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/schedules/:key" render={props => <EditSchedule globalUrl={globalUrl} {...props} />} />
-			<Route exact path="/workflows" render={props => <Workflows cookies={cookies} removeCookie={removeCookie} isLoaded={isLoaded} isLoggedIn={isLoggedIn} globalUrl={globalUrl} cookies={cookies} {...props} />} />
+			<Route exact path="/workflows" render={props => <Workflows cookies={cookies} removeCookie={removeCookie} isLoaded={isLoaded} isLoggedIn={isLoggedIn} globalUrl={globalUrl} cookies={cookies} userdata={userdata} {...props} />} />
 			<Route exact path="/workflows/:key" render={props => <AngularWorkflow userdata={userdata} globalUrl={globalUrl} isLoaded={isLoaded} isLoggedIn={isLoggedIn} {...props} />} />
-			<Route exact path="/docs/:key" render={props => <Docs isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
+			<Route exact path="/docs/:key" render={props => <Docs isMobile={isMobile} isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/docs" render={props => { window.location.pathname = "/docs/about" }} />
 			<Route exact path="/introduction" render={props => <Introduction isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/introduction/:key" render={props => <Introduction isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
+			<Route exact path="/myview" render={props => <MyView cookies={cookies} removeCookie={removeCookie} isLoaded={isLoaded} isLoggedIn={isLoggedIn} globalUrl={globalUrl} cookies={cookies} userdata={userdata} {...props} />} />
 			<Route exact path="/" render={props => <LoginPage isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
 		</div>
 
