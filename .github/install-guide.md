@@ -7,7 +7,8 @@ The Docker setup is done with docker-compose and is a single command to get set 
 **PS: if you're setting up Shuffle on Windows, go to the next step (Windows Docker setup)**
 
 1. Make sure you have Docker and [docker-compose](https://docs.docker.com/compose/install/) installed.
-2. Run docker-compose.
+2. Adapt the .env file to your convenience.
+3. Run docker-compose.
 ```
 git clone https://github.com/frikky/Shuffle
 cd Shuffle
@@ -16,7 +17,7 @@ docker-compose up -d
 
 When you're done, skip to the "After installation" step below.
 
-## Windows Docker setup 
+## Windows Docker setup
 This step is for setting up with Docker on windows from scratch.
 
 1. Make sure you have [Docker](https://docs.docker.com/docker-for-windows/install/) and [docker-compose](https://docs.docker.com/compose/install/) installed. WSL2 may be required.
@@ -34,7 +35,7 @@ docker-compose up -d
 ### Configurations (proxies, default users etc.)
 https://shuffler.io/docs/configuration
 
-### After installation 
+### After installation
 1. After installation, go to http://localhost:3001/adminsetup (or your servername)
 
 2. Now set up your admin account (username & password). Shuffle doesn't have a default username and password.
@@ -82,14 +83,14 @@ docker-compose up
 
 Related issue: #47
 
-# Local development installation 
+# Local development installation
 Local development is pretty straight forward with **ReactJS** and **Golang**. This part is intended to help you run the code for development purposes.
 
 **PS: You have to stop the Backend Docker container to get this one working**
 **PPS: Use the "Launch" branch when developing to get it set up easier**
 
 ## Frontend - ReactJS /w cytoscape
-http://localhost:3000 - Requires [npm](https://nodejs.org/en/download/)/[yarn](https://yarnpkg.com/lang/en/docs/install/#debian-stable)/your preferred manager. Runs independently from backend. 
+http://localhost:3000 - Requires [npm](https://nodejs.org/en/download/)/[yarn](https://yarnpkg.com/lang/en/docs/install/#debian-stable)/your preferred manager. Runs independently from backend.
 ```bash
 cd frontend
 npm i
@@ -97,7 +98,7 @@ npm start
 ```
 
 ## Backend - Golang
-http://localhost:5001 - REST API - requires [>=go1.13](https://golang.org/dl/) 
+http://localhost:5001 - REST API - requires [>=go1.13](https://golang.org/dl/)
 ```bash
 export DATASTORE_EMULATOR_HOST=0.0.0.0:8000
 cd backend/go-app
@@ -114,7 +115,7 @@ docker run -p 8000:8000 google/cloud-sdk gcloud beta emulators datastore start -
 
 ## Orborus
 Execution of Workflows:
-PS: This requires some specific environment variables 
+PS: This requires some specific environment variables
 ```
 cd functions/onprem/orborus
 go run orborus.go
