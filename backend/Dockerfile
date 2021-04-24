@@ -17,6 +17,24 @@ ADD ./app_sdk_kali/app_base.py /app_sdk_kali
 ADD ./app_sdk_kali/static_baseline.py /app_sdk_kali
 ADD ./app_sdk_blackarch/app_base.py /app_sdk_blackarch
 ADD ./app_sdk_blackarch/static_baseline.py /app_sdk_blackarch
+ADD ./app_sdk_jupyter_all_spark_notebook/app_base.py /app_sdk_jupyter_all_spark_notebook
+ADD ./app_sdk_jupyter_all_spark_notebook/static_baseline.py /app_sdk_jupyter_all_spark_notebook
+ADD ./app_sdk_jupyter_base/app_base.py /app_sdk_jupyter_base
+ADD ./app_sdk_jupyter_base/static_baseline.py /app_sdk_jupyter_base
+ADD ./app_sdk_jupyter_datascience_notebook/app_base.py /app_sdk_jupyter_datascience_notebook
+ADD ./app_sdk_jupyter_datascience_notebook/static_baseline.py /app_sdk_jupyter_datascience_notebook
+ADD ./app_sdk_jupyter_minimal/app_base.py /app_sdk_jupyter_minimal
+ADD ./app_sdk_jupyter_minimal/static_baseline.py /app_sdk_jupyter_minimal
+ADD ./app_sdk_jupyter_pyspark_notebook/app_base.py /app_sdk_jupyter_pyspark_notebook
+ADD ./app_sdk_jupyter_pyspark_notebook/static_baseline.py /app_sdk_jupyter_pyspark_notebook
+ADD ./app_sdk_jupyter_r_notebook/app_base.py /app_sdk_jupyter_r_notebook
+ADD ./app_sdk_jupyter_r_notebook/static_baseline.py /app_sdk_jupyter_r_notebook
+ADD ./app_sdk_jupyter_sagemath_notebook/app_base.py /app_sdk_jupyter_sagemath_notebook
+ADD ./app_sdk_jupyter_sagemath_notebook/static_baseline.py /app_sdk_jupyter_sagemath_notebook
+ADD ./app_sdk_jupyter_scipy_notebook/app_base.py /app_sdk_jupyter_scipy_notebook
+ADD ./app_sdk_jupyter_scipy_notebook/static_baseline.py /app_sdk_jupyter_scipy_notebook
+ADD ./app_sdk_jupyter_tensorflow_notebook/app_base.py /app_sdk_jupyter_tensorflow_notebook
+ADD ./app_sdk_jupyter_tensorflow_notebook/static_baseline.py /app_sdk_jupyter_tensorflow_notebook
 ADD ./app_gen /app_gen
 
 RUN go get -v
@@ -33,6 +51,15 @@ COPY --from=builder /app/ /app
 COPY --from=builder /app_sdk/ /app_sdk
 COPY --from=builder /app_sdk_kali/ /app_sdk_kali
 COPY --from=builder /app_sdk_blackarch/ /app_sdk_blackarch
+COPY --from=builder /app_sdk_jupyter_all_spark_notebook/ /app_sdk_jupyter_all_spark_notebook
+COPY --from=builder /app_sdk_jupyter_base/ /app_sdk_jupyter_base
+COPY --from=builder /app_sdk_jupyter_datascience_notebook/ /app_sdk_jupyter_datascience_notebook
+COPY --from=builder /app_sdk_jupyter_minimal/ /app_sdk_jupyter_minimal
+COPY --from=builder /app_sdk_jupyter_pyspark_notebook/ /app_sdk_jupyter_pyspark_notebook
+COPY --from=builder /app_sdk_jupyter_r_notebook/ /app_sdk_jupyter_r_notebook
+COPY --from=builder /app_sdk_jupyter_sagemath_notebook/ /app_sdk_jupyter_sagemath_notebook
+COPY --from=builder /app_sdk_jupyter_scipy_notebook/ /app_sdk_jupyter_scipy_notebook
+COPY --from=builder /app_sdk_jupyter_tensorflow_notebook/ /app_sdk_jupyter_tensorflow_notebook
 COPY --from=builder /app_gen/ /app_gen
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
