@@ -35,6 +35,8 @@ ADD ./app_sdk_jupyter_scipy_notebook/app_base.py /app_sdk_jupyter_scipy_notebook
 ADD ./app_sdk_jupyter_scipy_notebook/static_baseline.py /app_sdk_jupyter_scipy_notebook
 ADD ./app_sdk_jupyter_tensorflow_notebook/app_base.py /app_sdk_jupyter_tensorflow_notebook
 ADD ./app_sdk_jupyter_tensorflow_notebook/static_baseline.py /app_sdk_jupyter_tensorflow_notebook
+ADD ./app_sdk_homeassistant/app_base.py /app_sdk_homeassistant
+ADD ./app_sdk_homeassistant/static_baseline.py /app_sdk_homeassistant
 ADD ./app_gen /app_gen
 
 RUN go get -v
@@ -60,6 +62,7 @@ COPY --from=builder /app_sdk_jupyter_r_notebook/ /app_sdk_jupyter_r_notebook
 COPY --from=builder /app_sdk_jupyter_sagemath_notebook/ /app_sdk_jupyter_sagemath_notebook
 COPY --from=builder /app_sdk_jupyter_scipy_notebook/ /app_sdk_jupyter_scipy_notebook
 COPY --from=builder /app_sdk_jupyter_tensorflow_notebook/ /app_sdk_jupyter_tensorflow_notebook
+COPY --from=builder /app_sdk_homeassistant/ /app_sdk_homeassistant
 COPY --from=builder /app_gen/ /app_gen
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
