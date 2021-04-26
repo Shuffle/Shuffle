@@ -1467,6 +1467,8 @@ const Workflows = (props) => {
 						color="primary"
 						defaultValue={newWorkflowDescription}
 						placeholder="Description"
+						rows="6"
+						multiline
 						margin="dense"
 						fullWidth
 					  />

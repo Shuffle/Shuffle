@@ -47,7 +47,7 @@ services:
       - database
   orborus:
     #build: ./functions/onprem/orborus
-    image: ghcr.io/frikky/shuffle-orborus:0.8.75
+    image: ghcr.io/frikky/shuffle-orborus:0.8.76
     container_name: shuffle-orborus
     hostname: shuffle-orborus
     networks:
@@ -61,13 +61,14 @@ services:
       - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
       - BASE_URL=http://${OUTER_HOSTNAME}:${BACKEND_PORT}
       - DOCKER_API_VERSION=1.40
-      - HTTP_PROXY=${SHUFFLE_HTTP_PROXY}
-      - HTTPS_PROXY=${SHUFFLE_HTTPS_PROXY}
-      - SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
       - SHUFFLE_ORBORUS_EXECUTION_TIMEOUT=600
       - SHUFFLE_BASE_IMAGE_NAME=${SHUFFLE_BASE_IMAGE_NAME}
       - SHUFFLE_BASE_IMAGE_REGISTRY=${SHUFFLE_BASE_IMAGE_REGISTRY}
       - SHUFFLE_BASE_IMAGE_TAG_SUFFIX=${SHUFFLE_BASE_IMAGE_TAG_SUFFIX}
+      - HTTP_PROXY=${SHUFFLE_HTTP_PROXY}
+      - HTTPS_PROXY=${SHUFFLE_HTTPS_PROXY}
+      - SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
+      - SHUFFLE_PASS_APP_PROXY=${SHUFFLE_PASS_APP_PROXY}
       - CLEANUP=${SHUFFLE_CONTAINER_AUTO_CLEANUP}
     restart: unless-stopped
   database:

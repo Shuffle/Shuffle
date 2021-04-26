@@ -934,6 +934,12 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			fmt.Sprintf("BASE_URL=%s", appCallbackUrl),
 		}
 
+		if strings.ToLower(os.Getenv("SHUFFLE_PASS_APP_PROXY")) == "true" {
+			//log.Printf("APPENDING PROXY TO THE APP!")
+			env = append(env, fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")))
+			env = append(env, fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")))
+		}
+
 		// Fixes issue:
 		// standard_init_linux.go:185: exec user process caused "argument list too long"
 		// https://devblogs.microsoft.com/oldnewthing/20100203-00/?p=15083
@@ -1255,7 +1261,7 @@ func handleDefaultExecution(client *http.Client, req *http.Request, workflowExec
 	for {
 		//fullUrl := fmt.Sprintf("%s/api/v1/workflows/%s/executions/%s/abort", baseUrl, workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
 		fullUrl := fmt.Sprintf("%s/api/v1/streams/results", baseUrl)
-		log.Printf("URL: %s", fullUrl)
+		//log.Printf("[INFO] URL: %s", fullUrl)
 		req, err := http.NewRequest(
 			"POST",
 			fullUrl,
@@ -1597,7 +1603,7 @@ func getWorkflowExecution(ctx context.Context, id string) (*shuffle.WorkflowExec
 
 func sendResult(workflowExecution shuffle.WorkflowExecution, data []byte) {
 	if workflowExecution.ExecutionSource == "default" {
-		log.Printf("Not sending backend info since source is default")
+		log.Printf("[INFO] Not sending backend info since source is default")
 		return
 	}
 

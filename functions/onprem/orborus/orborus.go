@@ -244,11 +244,11 @@ func initializeImages() {
 	ctx := context.Background()
 
 	if appSdkVersion == "" {
-		appSdkVersion = "0.8.60"
+		appSdkVersion = "0.8.75"
 		log.Printf("[WARNING] SHUFFLE_APP_SDK_VERSION not defined. Defaulting to %s", appSdkVersion)
 	}
 	if workerVersion == "" {
-		workerVersion = "0.8.72"
+		workerVersion = "0.8.76"
 		log.Printf("[WARNING] SHUFFLE_WORKER_VERSION not defined. Defaulting to %s", workerVersion)
 	}
 
@@ -553,9 +553,11 @@ func main() {
 				fmt.Sprintf("ENVIRONMENT_NAME=%s", environment),
 				fmt.Sprintf("BASE_URL=%s", baseUrl),
 				fmt.Sprintf("CLEANUP=%s", cleanupEnv),
+				fmt.Sprintf("SHUFFLE_PASS_APP_PROXY=%s", os.Getenv("SHUFFLE_PASS_APP_PROXY")),
 			}
 
-			if strings.ToLower(os.Getenv("SHUFFLE_PASS_WORKER_PROXY")) != "false" {
+			//log.Printf("Running worker with proxy? %s", os.Getenv("SHUFFLE_PASS_WORKER_PROXY"))
+			if strings.ToLower(os.Getenv("SHUFFLE_PASS_WORKER_PROXY")) == "true" {
 				env = append(env, fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")))
 				env = append(env, fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")))
 			}
@@ -715,7 +717,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 
 			// Check image name
 			if !shuffleFound {
-				log.Printf("Skipping: %s, %s", container.Labels, container.Image)
+				log.Printf("[WARNING] Zombie container skip: %#v, %s", container.Labels, container.Image)
 				continue
 			}
 			//} else {

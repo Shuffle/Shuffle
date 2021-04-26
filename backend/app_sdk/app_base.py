@@ -1621,13 +1621,14 @@ class AppBase:
             return True, ""
 
 
+
         # THE START IS ACTUALLY RIGHT HERE :O
         # Checks whether conditions are met, otherwise set 
         branchcheck, tmpresult = check_branch_conditions(action, fullexecution)
         if isinstance(tmpresult, object) or isinstance(tmpresult, list):
             print("Fixing branch return as object -> string")
             try:
-                tmpresult = tmpresult.replace("'", "\"")
+                #tmpresult = tmpresult.replace("'", "\"")
                 tmpresult = json.dumps(tmpresult) 
             except json.decoder.JSONDecodeError as e:
                 print(f"[WARNING] Failed condition parsing {tmpresult} to string")

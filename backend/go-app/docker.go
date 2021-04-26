@@ -214,11 +214,28 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 
 	// Dockerfile is inside the TAR itself. Not local context
 	// docker build --build-arg http_proxy=http://my.proxy.url
+	// Attempt at setting name according to #359: https://github.com/frikky/Shuffle/issues/359
+	labels := map[string]string{}
+	target := ""
+	if len(tags) > 0 {
+		if strings.Contains(tags[0], ":") {
+			version := strings.Split(tags[0], ":")
+			if len(version) == 2 {
+				target = fmt.Sprintf("shuffle-build-%s", version[1])
+				tags = append(tags, target)
+				labels["name"] = target
+			}
+		}
+	}
+
+	_ = labels
 	buildOptions := types.ImageBuildOptions{
 		Remove:    true,
 		Tags:      tags,
 		BuildArgs: map[string]*string{},
+		Labels:    labels,
 	}
+
 	// NetworkMode: "host",
 
 	httpProxy := os.Getenv("HTTP_PROXY")
@@ -231,13 +248,14 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 	}
 
 	// Build the actual image
-	log.Printf("[INFO] Building %s. This may take up to a few minutes.", dockerfileFolder)
+	log.Printf(`[INFO] Building %s with proxy "%s". Tags: "%s". This may take up to a few minutes.`, dockerfileFolder, httpsProxy, strings.Join(tags, ","))
 	imageBuildResponse, err := client.ImageBuild(
 		ctx,
 		dockerFileTarReader,
 		buildOptions,
 	)
 
+	log.Printf("RESPONSE: %#v", imageBuildResponse)
 	//log.Printf("Response: %#v", imageBuildResponse.Body)
 	//log.Printf("IMAGERESPONSE: %#v", imageBuildResponse.Body)
 
