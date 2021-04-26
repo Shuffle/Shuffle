@@ -2,7 +2,7 @@ version: '3'
 services:
   frontend:
     #build: ./frontend
-    image: ghcr.io/frikky/shuffle-frontend:0.8.75
+    image: ghcr.io/frikky/shuffle-frontend:0.8.76
     container_name: shuffle-frontend
     hostname: shuffle-frontend
     ports:
@@ -17,7 +17,7 @@ services:
       - backend
   backend:
     #build: ./backend
-    image: ghcr.io/frikky/shuffle-backend:0.8.75
+    image: ghcr.io/frikky/shuffle-backend:0.8.76
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
     # Here for debugging:
