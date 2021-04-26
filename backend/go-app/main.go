@@ -2479,6 +2479,21 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		ExecutionArgument: parsedBody,
 	}
 
+	if len(hook.Workflows) == 1 {
+		workflow, err := shuffle.GetWorkflow(ctx, hook.Workflows[0])
+		if err == nil {
+			for _, branch := range workflow.Branches {
+				if branch.SourceID == hook.Id {
+					log.Printf("Found ID %s for hook", hook.Id)
+					if branch.DestinationID != hook.Start {
+						newBody.Start = branch.DestinationID
+						break
+					}
+				}
+			}
+		}
+	}
+
 	b, err := json.Marshal(newBody)
 	if err != nil {
 		log.Printf("Failed newBody marshaling: %s", err)
@@ -5359,6 +5374,9 @@ func runInit(ctx context.Context) {
 
 			//log.Printf("Schedule: %#v", schedule)
 			job := func() {
+				//log.Printf("[INFO] Running schedule %s with interval %d.", schedule.Id, schedule.Seconds)
+				//log.Printf("ARG: %s", schedule.WrappedArgument)
+
 				request := &http.Request{
 					URL:    url,
 					Method: "POST",
@@ -5367,7 +5385,7 @@ func runInit(ctx context.Context) {
 
 				_, _, err := handleExecution(schedule.WorkflowId, shuffle.Workflow{}, request)
 				if err != nil {
-					log.Printf("Failed to execute %s: %s", schedule.WorkflowId, err)
+					log.Printf("[WARNING] Failed to execute %s: %s", schedule.WorkflowId, err)
 				}
 			}
 

@@ -1657,7 +1657,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 			}
 
 			if !found {
-				log.Printf("[ERROR] ACTION %s WAS NOT FOUND!", execution.Start)
+				log.Printf("[ERROR] Action %s was NOT found! Exiting execution.", execution.Start)
 				return shuffle.WorkflowExecution{}, fmt.Sprintf("Startnode %s was not found in actions", workflow.Start), errors.New(fmt.Sprintf("Startnode %s was not found in actions", workflow.Start))
 			}
 		} else if len(execution.Start) > 0 {
