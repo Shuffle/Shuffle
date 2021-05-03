@@ -4612,7 +4612,7 @@ func handleCloudJob(job shuffle.CloudSyncJob) error {
 		if job.Action == "execute" {
 			// FIXME: Get the email
 			ctx := context.Background()
-			maildata := MailData{}
+			maildata := shuffle.MailData{}
 			err := json.Unmarshal([]byte(job.ThirdItem), &maildata)
 			if err != nil {
 				log.Printf("Maildata unmarshal error: %s", err)
@@ -4620,7 +4620,7 @@ func handleCloudJob(job shuffle.CloudSyncJob) error {
 			}
 
 			hookId := job.Id
-			hook, err := getTriggerAuth(ctx, hookId)
+			hook, err := shuffle.GetTriggerAuth(ctx, hookId)
 			if err != nil {
 				log.Printf("[INFO] Failed getting trigger %s (callback cloud): %s", hookId, err)
 				return err
@@ -4639,7 +4639,7 @@ func handleCloudJob(job shuffle.CloudSyncJob) error {
 			//log.Printf("INSIDE GET OUTLOOK EMAIL!: %#v, %s", emails, err)
 
 			//type FullEmail struct {
-			email := FullEmail{}
+			email := shuffle.FullEmail{}
 			if len(emails) == 1 {
 				email = emails[0]
 			}
@@ -6247,7 +6247,7 @@ func initHandlers() {
 
 	// Trigger hmm
 	r.HandleFunc("/api/v1/triggers/outlook/register", handleNewOutlookRegister).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/triggers/outlook/getFolders", handleGetOutlookFolders).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/triggers/outlook/getFolders", shuffle.HandleGetOutlookFolders).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/triggers/outlook/{key}", handleGetSpecificTrigger).Methods("GET", "OPTIONS")
 	//r.HandleFunc("/api/v1/triggers/outlook/{key}/callback", handleOutlookCallback).Methods("POST", "OPTIONS")
 	//r.HandleFunc("/api/v1/stats/{key}", handleGetSpecificStats).Methods("GET", "OPTIONS")

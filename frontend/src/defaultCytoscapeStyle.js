@@ -40,6 +40,7 @@ const data = [{
 				'background-width': '100%',
 				'background-height': '100%',
 				'border-radius': '5px',
+				'z-index': 5001,
 			},
 		},
 		{
@@ -47,6 +48,8 @@ const data = [{
 			css: {
 				'width': '30px',
 				'height': '30px',
+				'z-index': 5000,
+				'font-size': '0px',
 			},
 		},
 		{
@@ -54,6 +57,8 @@ const data = [{
 			css: {
 				'width': '30px',
 				'height': '30px',
+				'z-index': 5000,
+				'font-size': '0px',
 			},
 		},
 		{
@@ -119,6 +124,7 @@ const data = [{
 				'border-color': '#80deea',
 				'width': '80px',
 				'height': '80px',
+				'font-size': '18px',
 			},
 		},
 		{
@@ -204,8 +210,9 @@ const data = [{
 				'border-width': '12px',
 				'transition-property': 'border-width',
 				'transition-duration': '0.25s',
-				'font-size': '30px',
 				'label': 'data(label)',
+				'font-size': '18px',
+				'color': 'white',
 			},
 		},
 		{
@@ -238,17 +245,6 @@ const data = [{
 				"line-fill": "linear-gradient",
 				"line-gradient-stop-positions": ["0.0", "100"],
 				"line-gradient-stop-colors": ["#41dcab", "#41dcab"],
-			},
-		},
-		{
-			selector: 'edge[?hasErrors]',
-			css: {
-				'target-arrow-color': '#991818',
-				'line-color': '#991818',
-				'line-style': 'dashed',
-				"line-fill": "linear-gradient",
-				"line-gradient-stop-positions": ["0.0", "100"],
-				"line-gradient-stop-colors": ["#991818", "#991818"],
 			},
 		},
 		{
@@ -291,6 +287,19 @@ const data = [{
 				'target-arrow-color': '#f85a3e',
 			},
 		}
-		]
+]
+
+//{
+//	selector: 'edge[?hasErrors]',
+//	css: {
+//		'target-arrow-color': '#991818',
+//		'line-color': '#991818',
+//		'line-style': 'dashed',
+//		"line-fill": "linear-gradient",
+//		"line-gradient-stop-positions": ["0.0", "100"],
+//		"line-gradient-stop-colors": ["#991818", "#991818"],
+//	},
+//},
+
 
 export default data 

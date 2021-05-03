@@ -113,6 +113,8 @@ github.com/frikky/shuffle-shared v0.0.32 h1:Uy/zcAetSVYtRr3HEkUb7aE7Ggm0oSFxVeUN
 github.com/frikky/shuffle-shared v0.0.32/go.mod h1:H7SqOta/EAYnfYuWzwzYSh/oWfF0kgnuaJTQNKQBvoQ=
 github.com/frikky/shuffle-shared v0.0.37 h1:6nN1Im22TBuWUCG5L619xTgEPIPXCY68QThIfNiuG8k=
 github.com/frikky/shuffle-shared v0.0.37/go.mod h1:H7SqOta/EAYnfYuWzwzYSh/oWfF0kgnuaJTQNKQBvoQ=
+github.com/frikky/shuffle-shared v0.0.38 h1:OZSwU1HDOaPzdlG1s77svgXJKzlNewM6GjeH1/8EIUM=
+github.com/frikky/shuffle-shared v0.0.38/go.mod h1:H7SqOta/EAYnfYuWzwzYSh/oWfF0kgnuaJTQNKQBvoQ=
 github.com/getkin/kin-openapi v0.8.0 h1:a6TQjTqwkyscC4/hShJX7WhCVE+4bi9lzw61XHQW5hE=
 github.com/getkin/kin-openapi v0.8.0/go.mod h1:zZQMFkVgRHCdhgb6ihCTIo9dyDZFvX0k/xAKqw1FhPw=
 github.com/getkin/kin-openapi v0.52.0 h1:6WqsF5d6PfJ8AscdD+9Rtb2RP2iBWyC7V6GcjssWg7M=
