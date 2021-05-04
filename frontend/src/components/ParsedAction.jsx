@@ -492,6 +492,7 @@ const ParsedAction = (props) => {
 
 		// FIXME: Issue #40 - selectedActionParameters not reset
 		if (Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters.length > 0) {
+			var authWritten = false
 			return (
 				<div style={{marginTop: hideExtraTypes ? 10 : 30}}>	
 					<b>Parameters</b>
@@ -509,8 +510,17 @@ const ParsedAction = (props) => {
 							selectedAction.parameters[count].value = selectedAction.selectedAuthentication.fields[data.name]
 							setSelectedAction(selectedAction)
 							//setUpdate(Math.random())
+							
+							if (authWritten) {
+								return null
+							}
 
-							return null	
+							authWritten = true
+							return (
+								<Typography id="skip_auth" variant="body2" color="textSecondary" style={{marginTop: 5,}}>
+									Authentication fields are hidden
+								</Typography>
+							)
 						}
 
 						var staticcolor = "inherit"
@@ -550,6 +560,7 @@ const ParsedAction = (props) => {
 							console.log("GENERATED WITH DATA: ", data)
 							return null
 						}
+
 						if (selectedApp.generated && data.name === "body") {
 							const regex = /\${(\w+)}/g
 							const found = placeholder.match(regex)
@@ -747,7 +758,7 @@ const ParsedAction = (props) => {
 										changeActionParameter(e, count, data)
 										setUpdate(Math.random())
 									}}
-									style={{backgroundColor: theme.palette.surfaceColor, color: "white", height: "50px"}}
+									style={{backgroundColor: theme.palette.surfaceColor, color: "white", height: "50px", borderRadius: theme.palette.borderRadius,}}
 									>
 									{selectedActionParameters[count].options.map((data, index) => {
 										const split_data = data.split("||")
@@ -1086,7 +1097,7 @@ const ParsedAction = (props) => {
 										onClick={() => setShowAutocomplete(true)}
 										fullWidth
 										open={showAutocomplete}
-										style={{border: `2px solid #f85a3e`, color: "white", height: 50, marginTop: 2,}}
+										style={{border: `2px solid #f85a3e`, color: "white", height: 50, marginTop: 2, borderRadius: theme.palette.borderRadius,}}
 										onChange={(e) => {
 											if (selectedActionParameters[count].value[selectedActionParameters[count].value.length-1] === ".") {
 												e.target.value.autocomplete = e.target.value.autocomplete.slice(1, e.target.value.autocomplete.length)
@@ -1168,7 +1179,7 @@ const ParsedAction = (props) => {
 								</Tooltip>
 							</IconButton>
 							<span style={{}}>
-								<Typography style={{marginTop: 5, marginLeft: 10,}}><a rel="norefferer" href="https://shuffler.io/docs/workflows#nodes" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>What are actions?</a></Typography>
+								<Typography style={{marginTop: 5,}}><a rel="norefferer" href="https://shuffler.io/docs/workflows#nodes" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>What are actions?</a></Typography>
 								{selectedAction.errors !== undefined && selectedAction.errors !== null && selectedAction.errors.length > 0 ? 
 									<div>
 										Errors: {selectedAction.errors.join("\n")}
@@ -1197,7 +1208,7 @@ const ParsedAction = (props) => {
 										getApp(newversion.id, true) 
 									}
 								}}
-								style={{marginTop: 10, backgroundColor: theme.palette.surfaceColor, backgroundColor: theme.palette.inputColor, color: "white", height: 35, marginleft: 10,}}
+								style={{marginTop: 10, backgroundColor: theme.palette.surfaceColor, backgroundColor: theme.palette.inputColor, color: "white", height: 35, marginleft: 10, borderRadius: theme.palette.borderRadius,}}
 								SelectDisplayProps={{
 									style: {
 										marginLeft: 10,
@@ -1265,7 +1276,7 @@ const ParsedAction = (props) => {
 								setSelectedAction(selectedAction)
 								setUpdate(Math.random())
 							}}
-							style={{backgroundColor: theme.palette.inputColor, color: "white", height: 50, maxWidth: rightsidebarStyle.maxWidth-80,}}	
+							style={{backgroundColor: theme.palette.inputColor, color: "white", height: 50, maxWidth: rightsidebarStyle.maxWidth-80, borderRadius: theme.palette.borderRadius,}}	
 						>
 							{selectedAction.authentication.map(data => {
 								//console.log("AUTH DATA: ", data)
@@ -1295,6 +1306,7 @@ const ParsedAction = (props) => {
 					</div>
 				</div>
 				: null}
+
 			{showEnvironment !== undefined && showEnvironment ? 
 				<div style={{marginTop: "20px"}}>
 					<Typography>
@@ -1315,7 +1327,7 @@ const ParsedAction = (props) => {
 							selectedAction.environment = env.Name
 							setSelectedAction(selectedAction)
 						}}
-						style={{backgroundColor: theme.palette.inputColor, color: "white", height: "50px"}}
+						style={{backgroundColor: theme.palette.inputColor, color: "white", height: "50px", borderRadius: theme.palette.borderRadius,}}
 					>
 						{environments.map(data => {
 							if (data.archived) {
@@ -1331,6 +1343,7 @@ const ParsedAction = (props) => {
 					</Select>
 				</div>
 				: null}
+
 			{workflow.execution_variables !== undefined && workflow.execution_variables !== null && workflow.execution_variables.length > 0 ?
 				<div style={{marginTop: "20px"}}>
 					Set execution variable (optional) 
@@ -1352,7 +1365,7 @@ const ParsedAction = (props) => {
 							setSelectedAction(selectedAction)
 							setUpdate(Math.random())
 						}}
-						style={{backgroundColor: theme.palette.inputColor, color: "white", height: "50px"}}
+						style={{backgroundColor: theme.palette.inputColor, color: "white", height: "50px", borderRadius: theme.palette.borderRadius,}}
 					>
 							<MenuItem style={{backgroundColor: theme.palette.inputColor, color: "white"}} value="No selection">
 								<em>No selection</em>
@@ -1366,6 +1379,7 @@ const ParsedAction = (props) => {
 					</Select>
 				</div>
 				: null}
+
 			<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 			<div style={{flex: "6", marginTop: "20px"}}>
 				{hideExtraTypes ? null : 
@@ -1373,6 +1387,7 @@ const ParsedAction = (props) => {
 						<b>Actions</b>
 					</div>
 				}
+
 				{setNewSelectedAction !== undefined ? 
 					<Select
 						value={selectedAction.name}
@@ -1383,7 +1398,6 @@ const ParsedAction = (props) => {
 							style: {
 								marginLeft: 10,
 								maxHeight: 200,
-								borderRadius: theme.palette.borderRadius,
 							}
 						}}
 					>
@@ -1407,10 +1421,12 @@ const ParsedAction = (props) => {
 						})}
 					</Select>
 				: null}
+
 				{selectedAction.description !== undefined && selectedAction.description.length > 0 && hideExtraTypes !== true ?
 				<div style={{marginTop: 10, marginBottom: 10, maxHeight: 60, overflow: "hidden"}}>
 					{selectedAction.description}
 				</div> : null}
+
 				<div style={{marginTop: "10px", borderColor: "white", borderWidth: "2px", marginBottom: hideExtraTypes ? 50 : 200 ,}}>
 					<AppActionArguments key={selectedAction.id} selectedAction={selectedAction} />
 				</div>

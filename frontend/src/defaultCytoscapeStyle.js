@@ -24,7 +24,7 @@ const data = [{
 				'curve-style': 'unbundled-bezier',
 				'label': 'data(label)',
 				'text-margin-y': '-15px',
-				'width': '2px',
+				'width': '5px',
 				"color": "white",
 				"line-fill": "linear-gradient",
 				"line-gradient-stop-positions": ["0.0", "100"],
@@ -232,6 +232,17 @@ const data = [{
 				'line-color': '#ffef47',
 				'transition-property': 'line-color, width',
 				'transition-duration': '0.25s',
+			},
+		},
+		{
+			selector: `edge[?decorator]`,
+			css: {
+				'width': '1px',
+				'line-style': 'dashed',
+				"line-fill": "linear-gradient",
+				'target-arrow-color': '#f34079',
+				"line-gradient-stop-positions": ["0.0", "100"],
+				"line-gradient-stop-colors": ["#f86a3e", "#f34079"],
 			},
 		},
 		{

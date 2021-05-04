@@ -1644,7 +1644,7 @@ const Admin = (props) => {
 							}
 
 							const item = selectedOrganization.sync_features[key]
-							const newkey = key.replace("_", " ")
+							const newkey = key.replaceAll("_", " ")
 							const griditem = {
 								"primary": newkey,
 								"secondary": item.description === undefined || item.description === null || item.description.length === 0 ? "Not defined yet" : item.description,

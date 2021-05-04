@@ -5181,14 +5181,32 @@ func runInit(ctx context.Context) {
 			log.Printf("Failed setting up new environment")
 		}
 	} else if len(activeOrgs) == 1 {
-		log.Printf("Setting up all environments with org %s", activeOrgs[0].Id)
+		log.Printf("[INFO] Setting up all environments with org %s", activeOrgs[0].Id)
 		var environments []shuffle.Environment
 		q := datastore.NewQuery("Environments")
 		_, err = dbclient.GetAll(ctx, q, &environments)
 		if err == nil {
+			existingEnv := []string{}
+			_ = existingEnv
 			for _, item := range environments {
-				if item.OrgId == activeOrgs[0].Id {
+				//if shuffle.ArrayContains(existingEnv, item.Name) {
+				//	log.Printf("[WARNING] Env %s already exists - deleting it. %#v", item.Name, item)
+				//	err = DeleteKey(ctx, "Environments", item.Name)
+				//	if err != nil {
+				//		log.Printf("[WARNING] Env deletion error: %s", err)
+				//	}
+
+				//	continue
+				//}
+
+				//existingEnv = append(existingEnv, item.Name)
+
+				if item.OrgId == activeOrgs[0].Id && len(item.Id) > 0 {
 					continue
+				}
+
+				if len(item.Id) == 0 {
+					item.Id = uuid.NewV4().String()
 				}
 
 				item.OrgId = activeOrgs[0].Id

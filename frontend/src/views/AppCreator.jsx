@@ -1409,11 +1409,14 @@ const AppCreator = (props) => {
 	//console.log("Location: ", parameterLocation)
   //console.log("Name: ", parameterName)
 	const apiKey = authenticationOption === "API key" ? 
-		<div style={{color: "white"}}>
-			<h4>API key</h4>
+		<div style={{color: "white", marginTop: 20, }}>
+			<Typography variant="body1">API key authentication</Typography>
+			<Typography variant="body2" color="textSecondary">
+				Add the name of the field used for authentication, e.g. "X-APIKEY"
+			</Typography>
 			<TextField
 				required
-				style={{flex: "1", marginRight: "15px", backgroundColor: inputColor}}
+				style={{flex: "1", backgroundColor: inputColor}}
 				fullWidth={true}
 				placeholder="Field Name (not token)"
 				type="name"
@@ -2550,9 +2553,9 @@ const AppCreator = (props) => {
 							/>
 						</div>
 					</div>
-					<Divider style={{marginBottom: "10px", marginTop: "30px", height: "1px", width: "100%", backgroundColor: "grey"}}/>
-					<h3 style={{marginBottom: "10px", color: "white",}}>API information</h3>
-					<span style={{color: "white"}}>Base URL - leave empty if user changeable</span>
+					<Divider style={{marginBottom: 10, marginTop: 30, height: 1, width: "100%", backgroundColor: "grey"}}/>
+					<Typography variant="h6" style={{marginTop: 10, marginBottom: 10, color: "white",}}>API information</Typography>
+					<Typography variant="body1">Base URL - used as suggestion to the user</Typography>
 					<TextField
 						color="primary"
 						style={{backgroundColor: inputColor, marginTop: "5px"}}
@@ -2590,9 +2593,8 @@ const AppCreator = (props) => {
 							setBaseUrl(tmpstring)
 						}}
 					/>
-					<FormControl style={{marginTop: "15px",}} variant="outlined">
-						<h5 style={{marginBottom: "10px", color: "white",}}>Authentication
-						</h5>
+					<FormControl style={{marginTop: 30,}} variant="outlined">
+						<Typography variant="body1">Authentication type</Typography>
 						<Select
 							fullWidth
 							onChange={(e) => {
