@@ -1,4 +1,5 @@
 import React, {useState, useEffect, useLayoutEffect} from 'react';
+import { makeStyles, createStyles } from '@material-ui/core/styles';
 
 import { GetParsedPaths } from "../views/Apps.jsx";
 import { GetIconInfo } from "../views/Workflows.jsx";
@@ -6,8 +7,22 @@ import { sortByKey } from "../views/AngularWorkflow.jsx";
 import { useTheme } from '@material-ui/core/styles';
 import NestedMenuItem from "material-ui-nested-menu-item";
 
-import {TextField, Drawer, Button, Paper, Grid, Tabs, InputAdornment, Tab, ButtonBase, Tooltip, Select, MenuItem, Divider, Dialog, Modal, DialogActions, DialogTitle, InputLabel, DialogContent, FormControl, IconButton, Menu, Input, FormGroup, FormControlLabel, Typography, Checkbox, Breadcrumbs, CircularProgress, Switch, Fade} from '@material-ui/core';
+import {Popper, TextField, Drawer, Button, Paper, Grid, Tabs, InputAdornment, Tab, ButtonBase, Tooltip, Select, MenuItem, Divider, Dialog, Modal, DialogActions, DialogTitle, InputLabel, DialogContent, FormControl, IconButton, Menu, Input, FormGroup, FormControlLabel, Typography, Checkbox, Breadcrumbs, CircularProgress, Switch, Fade} from '@material-ui/core';
 import {GetApp as GetAppIcon, Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
+import Autocomplete from '@material-ui/lab/Autocomplete';
+
+const useStyles = makeStyles((theme) =>
+  createStyles({
+    root: {
+      "& .MuiAutocomplete-listbox": {
+        border: "2px solid grey",
+        fontSize: 18,
+        "& li:nth-child(even)": { backgroundColor: "#CCC" },
+        "& li:nth-child(odd)": { backgroundColor: "#FFF" }
+      }
+    }
+  })
+)
 
 const ParsedAction = (props) => {
 	const {workflow, setWorkflow, setAction, setSelectedAction, setUpdate, appActionArguments, selectedApp, workflowExecutions, setSelectedResult, selectedAction, setSelectedApp, setSelectedTrigger, setSelectedEdge, setCurrentView, cy, setAuthenticationModalOpen,setVariablesModalOpen, setCodeModalOpen, selectedNameChange, rightsidebarStyle, showEnvironment, selectedActionEnvironment, environments, setNewSelectedAction, appApiViewStyle, globalUrl, setSelectedActionEnvironment, requiresAuthentication, hideExtraTypes } = props
@@ -1143,6 +1158,13 @@ const ParsedAction = (props) => {
 			} 
 		return null
 	}
+
+	const CustomPopper = function (props) {
+		const classes = useStyles()
+		return <Popper {...props} className={classes.root} placement="bottom" />
+	}
+	// PopperComponent={CustomPopper} 
+
 	return ( 
 		<div style={appApiViewStyle}>
 			{hideExtraTypes === true ? null : 
@@ -1383,13 +1405,75 @@ const ParsedAction = (props) => {
 
 			<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 			<div style={{flex: "6", marginTop: "20px"}}>
-				{hideExtraTypes ? null : 
+				{/*hideExtraTypes ? null : 
 					<div style={{marginBottom: 5}}>
 						<b>Actions</b>
 					</div>
-				}
+				*/}
 
 				{setNewSelectedAction !== undefined ? 
+					<Autocomplete
+  					id="action_search"
+						getOptionLabel={(option) => option.name}
+						getOptionSelected={(option, value) => option.name === value.name}
+	  				options={sortByKey(selectedApp.actions, "label")}
+						fullWidth
+						style={{backgroundColor: theme.palette.inputColor, color: "white", height: 50, borderRadius: theme.palette.borderRadius,}}
+						onChange={(event, newValue) => {
+							console.log("Changed to ", event.target, newValue)
+							// Workaround with event lol
+							setNewSelectedAction({"target": {"value": newValue.name}}) 
+						}}
+						renderOption={(data) => {
+							var newActionname = data.name
+							if (data.label !== undefined && data.label !== null && data.label.length > 0) {
+								newActionname = data.label
+							}
+
+							const iconInfo = GetIconInfo({"name": data.name})
+							const useIcon = iconInfo.originalIcon
+
+							// ROFL FIXME - loop
+							newActionname = newActionname.replaceAll("_", " ")
+							newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
+
+							return (
+								<div style={{display: "flex"}}>
+									<span style={{marginRight: 10, marginTop: "auto", marginBottom: "auto",}}>{useIcon}</span> 
+									<span style={{}}>{newActionname}</span>
+								</div>
+							)
+						}}
+				  	renderInput={(params) => {
+							return (
+								<TextField 
+									style={{backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius, color: "white", }} 
+									InputProps={{
+										style:{
+											color: "white",
+											minHeight: 50, 
+											marginLeft: "5px",
+											maxWidth: "95%",
+											fontSize: "1em",
+										},
+										startAdornment: (
+											<InputAdornment position="start">
+												<Tooltip title="Run search" placement="top">
+													<SearchIcon style={{cursor: "pointer"}} />
+												</Tooltip>
+											</InputAdornment>
+										)
+									}}
+									{...params} 
+									label="Find Actions" 
+									variant="outlined" 
+								/>
+							)
+						}}
+					/>
+				: null}
+
+				{/*setNewSelectedAction !== undefined ? 
 					<Select
 						value={selectedAction.name}
 						fullWidth
@@ -1413,19 +1497,16 @@ const ParsedAction = (props) => {
 
 							// ROFL FIXME - loop
 							newActionname = newActionname.replaceAll("_", " ")
-							newActionname = newActionname.replaceAll("_", " ")
-							newActionname = newActionname.replaceAll("_", " ")
-							newActionname = newActionname.replaceAll("_", " ")
 							newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
 							return (
 								<MenuItem key={data.name} style={{maxWidth: 400, overflowX: "hidden", backgroundColor: theme.palette.inputColor, color: "white", display: "flex",}} value={data.name}>
 									<span style={{marginRight: 10, marginTop: "auto", marginBottom: "auto",}}>{useIcon}</span> 
-									<span style={{marginTop: "auto", marginBottom: "auto",}} >{newActionname}</span>
+									<span style={{}}>{newActionname}</span>
 								</MenuItem>
 							)
 						})}
 					</Select>
-				: null}
+				: null*/}
 
 				{selectedAction.description !== undefined && selectedAction.description.length > 0 && hideExtraTypes !== true ?
 				<div style={{marginTop: 10, marginBottom: 10, maxHeight: 60, overflow: "hidden"}}>

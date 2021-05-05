@@ -3392,7 +3392,15 @@ const AngularWorkflow = (props) => {
 	}
 
 	const setNewSelectedAction = (e) => {
+		// FIXME - should change icon-node (descriptor) as well 
+		console.log("Got value: ", e)
 		const newaction = selectedApp.actions.find(a => a.name === e.target.value)
+
+		//console.log("Failed to parse app?: ", newaction)
+		if (newaction === undefined || newaction === null) {
+			alert.error("Failed to find the action")
+			return
+		}
 
 		// Does this one find the wrong one?
 		selectedAction.name = newaction.name

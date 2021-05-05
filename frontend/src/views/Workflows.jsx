@@ -84,14 +84,14 @@ export const GetIconInfo = (action) => {
 		{"key": "download", "values": ["get", "download"]},
 		{"key": "search", "values": ["search", "find"]},
 		{"key": "delete", "values": ["delete", "remove"]},
-		{"key": "send", "values": ["send", "dispatch", "mail", "forward", "post"]},
-		{"key": "list", "values": ["list"]},
+		{"key": "send", "values": ["send", "dispatch", "mail", "forward", "post", "submit"]},
 		{"key": "repeat", "values": ["repeat", "retry"]},
 		{"key": "execute", "values": ["execute", "run", "play"]},
 		{"key": "extract", "values": ["extract", "unpack", "decompress"]},
 		{"key": "inflate", "values": ["inflate", "pack", "compress",]},
-		{"key": "edit", "values": ["update", "edit", "put", "patch", "change", "parse", "translate", "replace", "filter", "conver", "map"]},
-		{"key": "compare", "values": ["compare", "convert", "to"]},
+		{"key": "edit", "values": ["update", "edit", "put", "patch", "change", "parse", "replace", "filter", "conver", "map"]},
+		{"key": "compare", "values": ["compare", "convert", "to", "filter", "translate", ]},
+		{"key": "list", "values": ["list"]},
 	]
 
 	var selectedKey = ""
