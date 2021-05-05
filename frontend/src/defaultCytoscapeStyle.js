@@ -118,6 +118,35 @@ const data = [{
 			},
 		},
 		{
+			selector: 'node[?isButton]',
+			css: {
+				'shape': 'ellipse',
+				'border-color': '#80deea',
+				'width': '30px',
+				'height': '30px',
+				'z-index': '5002',
+				'font-size': '0px',
+			},
+		},
+		{
+			selector: 'node[?isDescriptor]',
+			css: {
+				'shape': 'ellipse',
+				'border-color': '#80deea',
+				'width': '12px',
+				'height': '12px',
+				'z-index': '5002',
+				'font-size': '10px',
+				'text-valign': 'center',
+				'text-halign': 'center',
+				'border': '1px solid black',
+				'margin-right': '0px',
+				'text-margin-x': '0px',
+				'background-color': 'data(imageColor)',
+				'background-image': 'data(image)',
+			},
+		},
+		{
 			selector: 'node[?isStartNode]',
 			css: {
 				'shape': 'ellipse',

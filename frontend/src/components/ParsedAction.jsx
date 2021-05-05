@@ -1,6 +1,7 @@
 import React, {useState, useEffect, useLayoutEffect} from 'react';
 
 import { GetParsedPaths } from "../views/Apps.jsx";
+import { GetIconInfo } from "../views/Workflows.jsx";
 import { sortByKey } from "../views/AngularWorkflow.jsx";
 import { useTheme } from '@material-ui/core/styles';
 import NestedMenuItem from "material-ui-nested-menu-item";
@@ -1406,6 +1407,10 @@ const ParsedAction = (props) => {
 							if (data.label !== undefined && data.label !== null && data.label.length > 0) {
 								newActionname = data.label
 							}
+
+							const iconInfo = GetIconInfo({"name": data.name})
+							const useIcon = iconInfo.originalIcon
+
 							// ROFL FIXME - loop
 							newActionname = newActionname.replaceAll("_", " ")
 							newActionname = newActionname.replaceAll("_", " ")
@@ -1413,10 +1418,10 @@ const ParsedAction = (props) => {
 							newActionname = newActionname.replaceAll("_", " ")
 							newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
 							return (
-							<MenuItem key={data.name} style={{maxWidth: 400, overflowX: "hidden", backgroundColor: theme.palette.inputColor, color: "white"}} value={data.name}>
-								{newActionname}
-
-							</MenuItem>
+								<MenuItem key={data.name} style={{maxWidth: 400, overflowX: "hidden", backgroundColor: theme.palette.inputColor, color: "white", display: "flex",}} value={data.name}>
+									<span style={{marginRight: 10, marginTop: "auto", marginBottom: "auto",}}>{useIcon}</span> 
+									<span style={{marginTop: "auto", marginBottom: "auto",}} >{newActionname}</span>
+								</MenuItem>
 							)
 						})}
 					</Select>

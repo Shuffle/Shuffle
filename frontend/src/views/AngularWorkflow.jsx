@@ -24,7 +24,7 @@ import cxtmenu from 'cytoscape-cxtmenu';
 
 import { w3cwebsocket as W3CWebSocket } from "websocket";
 import { useAlert } from "react-alert";
-import { validateJson } from "./Workflows.jsx";
+import { validateJson, GetIconInfo } from "./Workflows.jsx";
 import { GetParsedPaths } from "./Apps.jsx";
 import ConfigureWorkflow from '../components/ConfigureWorkflow.jsx';
 import ParsedAction from '../components/ParsedAction.jsx';
@@ -1299,6 +1299,7 @@ const AngularWorkflow = (props) => {
 		y: 0,
 	}
 
+	var hiddenNodes = []
 	const onNodeDragStop = (event, selectedAction) => {
 		const nodedata = event.target.data()
 
@@ -1306,8 +1307,8 @@ const AngularWorkflow = (props) => {
 			return
 		}
 
-		console.log("DRAGGED NODE: ", nodedata)
-		console.log("TARGET NODE: ", selectedAction)
+		//console.log("DRAGGED NODE: ", nodedata)
+		//console.log("TARGET NODE: ", selectedAction)
 		if (styledElements.length === 1) {
 			console.log("Should reset location and autofill: ", styledElements, selectedAction)
 			//event.target.position = originalLocation
@@ -1343,6 +1344,54 @@ const AngularWorkflow = (props) => {
 			}
 		}
 
+		const skipnames = []
+		if (nodedata.app_name !== undefined && ((
+			nodedata.app_name !== "Shuffle Tools" &&
+			nodedata.app_name !== "Testing" &&
+			nodedata.app_name !== "Shuffle Workflow" &&
+			nodedata.app_name !== "User Input" &&
+			nodedata.app_name !== "Schedule" &&
+			nodedata.app_name !== "Email") || nodedata.isStartNode) 
+		) {
+			const allNodes = cy.nodes().jsons()
+			var found = false
+			for (var key in allNodes) {
+				const currentNode = allNodes[key]
+				if (currentNode.data.attachedTo === nodedata.id && currentNode.data.isDescriptor) {
+					found = true 
+					console.log("FOUND THE NODE!")
+					break
+				}
+			}
+
+			// Readding the icon after moving the node
+			if (!found) {
+				const iconInfo = GetIconInfo(nodedata)
+				const svg_pin = `<svg width="24" height="24" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
+				const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
+
+				const offset = nodedata.isStartNode ? 36 : 44
+				const decoratorNode = {
+					position: {
+						x: nodedata.position.x+offset,
+						y: nodedata.position.y+offset,
+					},
+					locked: true,
+					data: {
+						"isDescriptor": true,
+						"isValid": true,
+						"is_valid": true,
+						"label": "",
+						"image": svgpin_Url,
+						"imageColor": iconInfo.iconBackgroundColor,
+						"attachedTo": nodedata.id,
+					},
+				}
+
+				cy.add(decoratorNode)
+			}
+		}
+
 		originalLocation = {
 			x: 0,
 			y: 0,
@@ -1355,7 +1404,7 @@ const AngularWorkflow = (props) => {
 		//}
 
 		const nodedata = event.target.data()
-		console.log("Dragging node!!")
+		//console.log("Dragging node!!")
 		if (nodedata.app_name == "Shuffle Tools" || nodedata.app_name == "Testing") {
 			//console.log("NODE: ", 
 			//selector: `node[app_name="Shuffle Tools"]`,
@@ -1366,12 +1415,24 @@ const AngularWorkflow = (props) => {
 			// 3. If it is, then hide text
 		}
 
+		if (nodedata.app_id !== undefined) {
+			//console.log("Trying to remove friendly nodes")
+			const allNodes = cy.nodes().jsons()
+			//console.log("NOT UNDEFINED IN HOVEROUT!", allNodes)
+			for (var key in allNodes) {
+				const currentNode = allNodes[key]
+				if (currentNode.data.attachedTo === nodedata.id) {
+					cy.getElementById(currentNode.data.id).remove()
+				}
+			}
+		}
+
 		if (nodedata.id === selectedAction.id) {
 			return
 		}
 
 		if (originalLocation.x === 0 && originalLocation.y === 0 && nodedata.position !== undefined) {
-			console.log("Updating location!: ", nodedata) 
+			//console.log("Updating location!: ", nodedata) 
 			originalLocation.x = nodedata.position.x 
 			originalLocation.y = nodedata.position.y
 		}
@@ -2045,7 +2106,7 @@ const AngularWorkflow = (props) => {
 		const nodedata = event.target.data()
 		if (nodedata.app_name !== undefined) {
 			const allNodes = cy.nodes().jsons()
-			console.log("NOT UNDEFINED IN HOVEROUT!", allNodes)
+			//console.log("NOT UNDEFINED IN HOVEROUT!", allNodes)
 			for (var key in allNodes) {
 				const currentNode = allNodes[key]
 				if (currentNode.data.isButton && currentNode.data.attachedTo !== nodedata.id) {
@@ -2074,7 +2135,7 @@ const AngularWorkflow = (props) => {
 	}
 
 	const onNodeHover = (event) => {
-		console.log("TAR: ", event.target)
+		//console.log("TAR: ", event.target)
 
 		//var parentNode = cy.$('#' + event.target.data("id"));
 		//if (parentNode.data('isButton') || parentNode.data('buttonId'))
@@ -2168,7 +2229,6 @@ const AngularWorkflow = (props) => {
 		}
 	}
 
-
 	const setupGraph = () => {
 		const actions = workflow.actions.map(action => {
 			const node = {}
@@ -2187,9 +2247,39 @@ const AngularWorkflow = (props) => {
 
 			node.data.example = example
 
-			//node.data.is_valid = false
-
 			return node;
+		})
+
+		const decoratorNodes = workflow.actions.map(action => {
+			if (!action.isStartNode) {
+				if (action.app_name === "Testing" || action.app_name === "Shuffle Tools") {
+					return null
+				}
+			}
+
+			const iconInfo = GetIconInfo(action)
+			const svg_pin = `<svg width="24" height="24" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
+			const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
+
+			const offset = action.isStartNode ? 36 : 44
+			const decoratorNode = {
+				position: {
+					x: action.position.x+offset,
+					y: action.position.y+offset,
+				},
+				locked: true,
+				data: {
+					"isDescriptor": true,
+					"isValid": true,
+					"is_valid": true,
+					"label": "",
+					"image": svgpin_Url,
+					"imageColor": iconInfo.iconBackgroundColor,
+					"attachedTo": action.id,
+				},
+			}
+			return decoratorNode
+			return null
 		})
 
 		const triggers = workflow.triggers.map(trigger => {
@@ -2204,7 +2294,9 @@ const AngularWorkflow = (props) => {
 		})
 
 		// FIXME - tmp branch update
-		var insertedNodes = [].concat(actions, triggers)
+		var insertedNodes = [].concat(actions, triggers, decoratorNodes)
+		insertedNodes = insertedNodes.filter(node => node !== null)
+
 		var edges = workflow.branches.map((branch, index) => {
 			//workflow.branches[index].conditions = [{
 

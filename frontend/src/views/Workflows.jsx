@@ -3,7 +3,7 @@ import { useInterval } from 'react-powerhooks';
 import { makeStyles } from '@material-ui/core/styles';
 
 import {Avatar, Grid, Paper, Tooltip, Divider, Button, TextField, FormControl, IconButton, Menu, MenuItem, FormControlLabel, Chip, Switch, Typography, Zoom, CircularProgress, Dialog, DialogTitle, DialogActions, DialogContent} from '@material-ui/core';
-import {FileCopy as FileCopyIcon, Delete as DeleteIcon, BubbleChart as BubbleChartIcon, Restore as RestoreIcon, Cached as CachedIcon, GetApp as GetAppIcon, Apps as AppsIcon, Edit as EditIcon, MoreVert as MoreVertIcon, PlayArrow as PlayArrowIcon, Add as AddIcon, Publish as PublishIcon, CloudUpload as CloudUploadIcon, CloudDownload as CloudDownloadIcon} from '@material-ui/icons';
+import {Compare as CompareIcon, Maximize as MaximizeIcon, Minimize as MinimizeIcon, Toc as TocIcon, Send as SendIcon, Search as SearchIcon, FileCopy as FileCopyIcon, Delete as DeleteIcon, BubbleChart as BubbleChartIcon, Restore as RestoreIcon, Cached as CachedIcon, GetApp as GetAppIcon, Apps as AppsIcon, Edit as EditIcon, MoreVert as MoreVertIcon, PlayArrow as PlayArrowIcon, Add as AddIcon, Publish as PublishIcon, CloudUpload as CloudUploadIcon, CloudDownload as CloudDownloadIcon} from '@material-ui/icons';
 //import {Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
 
 import {DataGrid, GridToolbarContainer, GridDensitySelector, GridToolbar} from '@material-ui/data-grid';
@@ -74,6 +74,127 @@ const useStyles = makeStyles((theme) => ({
 		},
 	},
 }));
+
+
+// Returns information about the icon, the color etc to be used
+// This can be used for actions of all types
+export const GetIconInfo = (action) => {
+	// Finds the icon based on the action. Should be verbs.
+	const iconList = [
+		{"key": "download", "values": ["get", "download"]},
+		{"key": "search", "values": ["search", "find"]},
+		{"key": "delete", "values": ["delete", "remove"]},
+		{"key": "send", "values": ["send", "dispatch", "mail", "forward", "post"]},
+		{"key": "list", "values": ["list"]},
+		{"key": "repeat", "values": ["repeat", "retry"]},
+		{"key": "execute", "values": ["execute", "run", "play"]},
+		{"key": "extract", "values": ["extract", "unpack", "decompress"]},
+		{"key": "inflate", "values": ["inflate", "pack", "compress",]},
+		{"key": "edit", "values": ["update", "edit", "put", "patch", "change", "parse", "translate", "replace", "filter", "conver", "map"]},
+		{"key": "compare", "values": ["compare", "convert", "to"]},
+	]
+
+	var selectedKey = ""
+	if (action.name === undefined || action.name === null) {
+	} else {
+		const actionname = action.name.toLowerCase()
+		for (var key in iconList) {
+			const found = iconList[key].values.find(value => actionname.includes(value))
+			if (found !== null && found !== undefined) {
+				//console.log("FOUND: ", found)
+				selectedKey = iconList[key].key
+				break
+			}
+		}
+	}
+		
+	//console.log("KEY!!: ", selectedKey)
+
+	const parsedIcons = {
+		"repeat": {
+			"icon": "M19 8l-4 4h3c0 3.31-2.69 6-6 6-1.01 0-1.97-.25-2.8-.7l-1.46 1.46C8.97 19.54 10.43 20 12 20c4.42 0 8-3.58 8-8h3l-4-4zM6 12c0-3.31 2.69-6 6-6 1.01 0 1.97.25 2.8.7l1.46-1.46C15.03 4.46 13.57 4 12 4c-4.42 0-8 3.58-8 8H1l4 4 4-4H6z",
+			"iconColor": "white",
+			"iconBackgroundColor": "orange",
+			"originalIcon": <CachedIcon />,
+		},
+		"edit": {
+			"icon": "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z",
+			"iconColor": "white",
+			"iconBackgroundColor": "orange",
+			"originalIcon": <EditIcon />,
+		},
+		"compare": {
+			"icon": "M10 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h5v2h2V1h-2v2zm0 15H5l5-6v6zm9-15h-5v2h5v13l-5-6v9h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z",
+			"iconColor": "white",
+			"iconBackgroundColor": "orange",
+			"originalIcon": <CompareIcon />,
+		},
+		"extract": {
+			"icon": "M3 3h18v2H3z",
+			"iconColor": "white",
+			"iconBackgroundColor": "orange",
+			"originalIcon": <MaximizeIcon />,
+		},
+		"inflate": {
+			"icon": "M6 19h12v2H6z",
+			"iconColor": "white",
+			"iconBackgroundColor": "orange",
+			"originalIcon": <MinimizeIcon />,
+		},
+		"list": {
+			"icon": "M3 9h14V7H3v2zm0 4h14v-2H3v2zm0 4h14v-2H3v2zm16 0h2v-2h-2v2zm0-10v2h2V7h-2zm0 6h2v-2h-2v2z",
+			"iconColor": "white",
+			"iconBackgroundColor": "orange",
+			"originalIcon": <TocIcon />,
+		},
+		"execute": {
+			"icon": "M8 5v14l11-7z",
+			"iconColor": "white",
+			"iconBackgroundColor": "orange",
+			"originalIcon": <PlayArrowIcon />,
+		},
+		"delete": {
+			"icon": "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z",
+			"iconColor": "white",
+			"iconBackgroundColor": "orange",
+			"originalIcon": <DeleteIcon />,
+		},
+		"send": {
+			"icon": "M2.01 21L23 12 2.01 3 2 10l15 2-15 2z",
+			"iconColor": "white",
+			"iconBackgroundColor": "orange",
+			"originalIcon": <SendIcon />,
+		},
+		"download": {
+			"icon": "M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z",
+			"iconColor": "white",
+			"iconBackgroundColor": "orange",
+			"originalIcon": <GetAppIcon />,
+		},
+		"search": {
+			"icon": "M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z",
+			"iconColor": "white",
+			"iconBackgroundColor": "green",
+			"originalIcon": <SearchIcon />,
+		}
+	}
+
+	const selectedItem = parsedIcons[selectedKey]
+	if (selectedItem === undefined || selectedItem === null) {
+		return {
+			"icon": "",
+			"iconColor": "",
+			"iconBackground": "black",
+			"originalIcon": "",
+		}
+	}
+
+	if (parsedIcons[selectedKey].icon === "") {
+		console.log(`MISSING PATH FOR ${selectedKey} (find in scope): `, parsedIcons[selectedKey].originalIcon.type.type)
+	}
+
+	return selectedItem
+}
 
 //const activeWorkflowStyle = {backgroundColor: "#FFF5EE"}
 //const notificationStyle = {backgroundColor: "#E5F9FF"}
