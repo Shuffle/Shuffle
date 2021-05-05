@@ -1366,6 +1366,7 @@ const AngularWorkflow = (props) => {
 
 			// Readding the icon after moving the node
 			if (!found) {
+				console.log("Node wasn't found")
 				const iconInfo = GetIconInfo(nodedata)
 				const svg_pin = `<svg width="24" height="24" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
 				const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
@@ -1389,7 +1390,11 @@ const AngularWorkflow = (props) => {
 				}
 
 				cy.add(decoratorNode)
+			} else {
+				console.log("Node already exists - don't add descriptor node")
 			}
+		} else {
+			console.log("Shouldnt re-add info? ")
 		}
 
 		originalLocation = {
@@ -1609,6 +1614,7 @@ const AngularWorkflow = (props) => {
 				setSelectedActionEnvironment(env)
 			}
 
+			setRightSideBarOpen(true)
 		} else if (data.type === "TRIGGER") {
 			//console.log("Should handle trigger "+data.triggertype)
 			//console.log(data)
@@ -1621,11 +1627,11 @@ const AngularWorkflow = (props) => {
 				getAvailableWorkflows(trigger_index) 
 				getSettings() 
 			}
+			setRightSideBarOpen(true)
 		} else {
 			alert.error("Can't handle "+data.type)
 		}
 
-		setRightSideBarOpen(true)
 	}
 
 	// Checks for errors in edges when they're added 
@@ -3392,11 +3398,7 @@ const AngularWorkflow = (props) => {
 	}
 
 	const setNewSelectedAction = (e) => {
-		// FIXME - should change icon-node (descriptor) as well 
-		console.log("Got value: ", e)
 		const newaction = selectedApp.actions.find(a => a.name === e.target.value)
-
-		//console.log("Failed to parse app?: ", newaction)
 		if (newaction === undefined || newaction === null) {
 			alert.error("Failed to find the action")
 			return
@@ -3419,6 +3421,24 @@ const AngularWorkflow = (props) => {
 		
 		setSelectedAction(selectedAction)
 		setUpdate(Math.random())
+
+		// FIXME - should change icon-node (descriptor) as well 
+		const allNodes = cy.nodes().jsons()
+		for (var key in allNodes) {
+			const currentNode = allNodes[key]
+			if (currentNode.data.attachedTo === selectedAction.id && currentNode.data.isDescriptor) {
+				const foundnode = cy.getElementById(currentNode.data.id)
+				if (foundnode !== null && foundnode !== undefined) {
+					const iconInfo = GetIconInfo(newaction)
+					const svg_pin = `<svg width="24" height="24" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
+					const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
+					foundnode.data("image", svgpin_Url)
+					foundnode.data("imageColor", iconInfo.iconBackgroundColor) 
+				}
+
+				break
+			}
+		}
 	}
 
 	// APPSELECT at top
