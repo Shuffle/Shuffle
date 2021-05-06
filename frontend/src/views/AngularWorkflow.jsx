@@ -100,6 +100,7 @@ function removeParam(key, sourceURL) {
 }
 
 const splitter = "|~|"
+const svgSize = 24 
 //const referenceUrl = "https://shuffler.io/functions/webhooks/"
 //const referenceUrl = window.location.origin+"/api/v1/hooks/"
 
@@ -1368,7 +1369,7 @@ const AngularWorkflow = (props) => {
 			if (!found) {
 				console.log("Node wasn't found")
 				const iconInfo = GetIconInfo(nodedata)
-				const svg_pin = `<svg width="24" height="24" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
+				const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
 				const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
 
 				const offset = nodedata.isStartNode ? 36 : 44
@@ -2264,7 +2265,7 @@ const AngularWorkflow = (props) => {
 			}
 
 			const iconInfo = GetIconInfo(action)
-			const svg_pin = `<svg width="24" height="24" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
+			const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
 			const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
 
 			const offset = action.isStartNode ? 36 : 44
@@ -2428,7 +2429,12 @@ const AngularWorkflow = (props) => {
 
 		} 
 
-		selectedNode.remove()
+		if (selectedNode.data().decorator === true) {
+			alert.info("This edge can't be deleted.")
+		} else { 
+			selectedNode.remove()
+		}
+
 		setSelectedTrigger({})
 		setSelectedTriggerIndex({})
 	}
@@ -3430,7 +3436,7 @@ const AngularWorkflow = (props) => {
 				const foundnode = cy.getElementById(currentNode.data.id)
 				if (foundnode !== null && foundnode !== undefined) {
 					const iconInfo = GetIconInfo(newaction)
-					const svg_pin = `<svg width="24" height="24" viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
+					const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
 					const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
 					foundnode.data("image", svgpin_Url)
 					foundnode.data("imageColor", iconInfo.iconBackgroundColor) 

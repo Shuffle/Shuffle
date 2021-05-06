@@ -1420,7 +1420,6 @@ const ParsedAction = (props) => {
 						fullWidth
 						style={{backgroundColor: theme.palette.inputColor, color: "white", height: 50, borderRadius: theme.palette.borderRadius,}}
 						onChange={(event, newValue) => {
-							console.log("Changed to ", event.target, newValue)
 							// Workaround with event lol
 							setNewSelectedAction({"target": {"value": newValue.name}}) 
 						}}

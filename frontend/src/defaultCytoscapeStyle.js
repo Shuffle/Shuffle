@@ -133,8 +133,8 @@ const data = [{
 			css: {
 				'shape': 'ellipse',
 				'border-color': '#80deea',
-				'width': '12px',
-				'height': '12px',
+				'width': '5px',
+				'height': '5px',
 				'z-index': '5002',
 				'font-size': '10px',
 				'text-valign': 'center',

@@ -81,15 +81,15 @@ const useStyles = makeStyles((theme) => ({
 export const GetIconInfo = (action) => {
 	// Finds the icon based on the action. Should be verbs.
 	const iconList = [
-		{"key": "download", "values": ["get", "download"]},
+		{"key": "download", "values": ["get", "download", "return", "hello world"]},
 		{"key": "search", "values": ["search", "find"]},
 		{"key": "delete", "values": ["delete", "remove"]},
 		{"key": "send", "values": ["send", "dispatch", "mail", "forward", "post", "submit"]},
-		{"key": "repeat", "values": ["repeat", "retry"]},
-		{"key": "execute", "values": ["execute", "run", "play"]},
+		{"key": "repeat", "values": ["repeat", "retry", "pause",]},
+		{"key": "execute", "values": ["execute", "run", "play", "raise",]},
 		{"key": "extract", "values": ["extract", "unpack", "decompress"]},
 		{"key": "inflate", "values": ["inflate", "pack", "compress",]},
-		{"key": "edit", "values": ["update", "edit", "put", "patch", "change", "parse", "replace", "filter", "conver", "map"]},
+		{"key": "edit", "values": ["update", "create", "edit", "put", "patch", "change", "parse", "replace", "filter", "conver", "map"]},
 		{"key": "compare", "values": ["compare", "convert", "to", "filter", "translate", ]},
 		{"key": "list", "values": ["list"]},
 	]
@@ -480,7 +480,7 @@ const Workflows = (props) => {
 						const ret = setNewWorkflow(data.name, data.description, data.tags, data, false)
 						.then((response) => {
 							if (response !== undefined) {
-								alert.success("Successfully imported "+data.name)
+								alert.success(`Successfully imported ${data.name}`)
 							}
 						})
 					}
