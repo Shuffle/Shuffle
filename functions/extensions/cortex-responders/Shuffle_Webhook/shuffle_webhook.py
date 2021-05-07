@@ -16,7 +16,6 @@ class Shuffle(Responder):
    def run(self):
       Responder.run(self)
       headers = {
-         "Authorization": "Bearer %s"  % self.api_key,
          "Content-Type": "application/json",
          "Accept": "application/json",
          "User-Agent": "Cortex-Analyzer"

@@ -17,13 +17,6 @@
       "required": true
     },
 		{
-      "name": "api_key",
-      "description": "The API key to your Shuffle user",
-      "type": "string",
-      "multi": false,
-      "required": true
-    },
-    {
       "name": "verifyssl",
       "description": "Verify SSL certificate",
       "type": "boolean",

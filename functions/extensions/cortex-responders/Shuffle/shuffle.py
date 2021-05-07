@@ -16,7 +16,8 @@ class Shuffle(Responder):
       Responder.run(self)
       parsed_url = "%s/api/v1/workflows/%s/execute" % (self.url, self.workflow_id)
       headers = {
-         "Authorization": "Bearer %s"  % self.api_key
+         "Authorization": "Bearer %s"  % self.api_key,
+         "User-Agent": "Cortex-Analyzer"
       }
       requests.post(parsed_url, headers=headers,verify=self.verify)
 
