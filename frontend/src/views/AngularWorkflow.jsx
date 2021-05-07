@@ -9,8 +9,9 @@ import { useBeforeunload } from 'react-beforeunload';
 import ReactJson from 'react-json-view'
 import NestedMenuItem from "material-ui-nested-menu-item";
 
+
 import {TextField, Drawer, Button, Paper, Grid, Tabs, InputAdornment, Tab, ButtonBase, Tooltip, Select, MenuItem, Divider, Dialog, Modal, DialogActions, DialogTitle, InputLabel, DialogContent, FormControl, IconButton, Menu, Input, FormGroup, FormControlLabel, Typography, Checkbox, Breadcrumbs, CircularProgress, Switch, Fade} from '@material-ui/core';
-import {GetApp as GetAppIcon, Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
+import {FileCopy as FileCopyIcon, GetApp as GetAppIcon, Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
 
 import * as cytoscape from 'cytoscape';
 import * as edgehandles from 'cytoscape-edgehandles';
@@ -1367,16 +1368,17 @@ const AngularWorkflow = (props) => {
 
 			// Readding the icon after moving the node
 			if (!found) {
-				console.log("Node wasn't found")
+				//console.log("Node wasn't found")
 				const iconInfo = GetIconInfo(nodedata)
 				const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
 				const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
 
 				const offset = nodedata.isStartNode ? 36 : 44
+				//console.log(event.target.position())
 				const decoratorNode = {
 					position: {
-						x: nodedata.position.x+offset,
-						y: nodedata.position.y+offset,
+						x: event.target.position().x+offset,
+						y: event.target.position().y+offset,
 					},
 					locked: true,
 					data: {
@@ -1395,7 +1397,7 @@ const AngularWorkflow = (props) => {
 				console.log("Node already exists - don't add descriptor node")
 			}
 		} else {
-			console.log("Shouldnt re-add info? ")
+			//console.log("Shouldnt re-add info? ")
 		}
 
 		originalLocation = {
@@ -1424,7 +1426,6 @@ const AngularWorkflow = (props) => {
 		if (nodedata.app_id !== undefined) {
 			//console.log("Trying to remove friendly nodes")
 			const allNodes = cy.nodes().jsons()
-			//console.log("NOT UNDEFINED IN HOVEROUT!", allNodes)
 			for (var key in allNodes) {
 				const currentNode = allNodes[key]
 				if (currentNode.data.attachedTo === nodedata.id) {
@@ -1513,9 +1514,20 @@ const AngularWorkflow = (props) => {
 	// Nodeselectbatching:
 	// https://stackoverflow.com/questions/16677856/cy-onselect-callback-only-once
 	const onNodeSelect = (event, newAppAuth) => {
-
 		const data = event.target.data()
+		console.log("NODE: ", data)
+
 		setLastSaved(false)
+		if (data.isButton) {
+			console.log("BUTTON CLICKED: ", data)
+			event.target.unselect()
+			return
+		} else if (data.isDescriptor) {
+			console.log("Can't select descriptor")
+			event.target.unselect()
+			return
+		}
+
 		
 		//const node = cy.getElementById(data.id)
 		//if (node.length > 0) {
@@ -1523,7 +1535,6 @@ const AngularWorkflow = (props) => {
 		//}
 
 		//const branch = workflow.branches.filter(branch => branch.source_id === data.id || branch.destination_id === data.id)
-		console.log("NODE: ", data)
 		//console.log("APPAUTH: ", newAppAuth)
 		//console.log("BRANCHES: ", branch)
 
@@ -1758,6 +1769,7 @@ const AngularWorkflow = (props) => {
 	const onNodeAdded = (event) => {
 		setLastSaved(false)
 		const node = event.target
+		const nodedata = event.target.data()
 
 		if (node.isNode() && cy.nodes().size() === 1) {
 			//setStartNode(node.data('id'))
@@ -1778,6 +1790,58 @@ const AngularWorkflow = (props) => {
 			}
 
 			setWorkflow(workflow)
+		}
+
+		if (nodedata.app_name !== undefined && ((
+			nodedata.app_name !== "Shuffle Tools" &&
+			nodedata.app_name !== "Testing" &&
+			nodedata.app_name !== "Shuffle Workflow" &&
+			nodedata.app_name !== "User Input" &&
+			nodedata.app_name !== "Schedule" &&
+			nodedata.app_name !== "Email") || nodedata.isStartNode) 
+		) {
+			const allNodes = cy.nodes().jsons()
+			var found = false
+			for (var key in allNodes) {
+				const currentNode = allNodes[key]
+				if (currentNode.data.attachedTo === nodedata.id && currentNode.data.isDescriptor) {
+					found = true 
+					console.log("FOUND THE NODE!")
+					break
+				}
+			}
+
+			// Readding the icon after moving the node
+			if (!found) {
+				console.log("Node wasn't found")
+				const iconInfo = GetIconInfo(nodedata)
+				const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
+				const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
+
+				const offset = nodedata.isStartNode ? 36 : 44
+				const decoratorNode = {
+					position: {
+						x: event.target.position().x+offset,
+						y: event.target.position().y+offset,
+					},
+					locked: true,
+					data: {
+						"isDescriptor": true,
+						"isValid": true,
+						"is_valid": true,
+						"label": "",
+						"image": svgpin_Url,
+						"imageColor": iconInfo.iconBackgroundColor,
+						"attachedTo": nodedata.id,
+					},
+				}
+
+				cy.add(decoratorNode)
+			} else {
+				console.log("Node already exists - don't add descriptor node")
+			}
+		} else {
+			//console.log("Shouldnt re-add info? ")
 		}
 	}
 
@@ -1836,6 +1900,18 @@ const AngularWorkflow = (props) => {
 			//		return false 
 			//	}
 			//})
+		}
+
+		if (data.app_id !== undefined) {
+			//console.log("Trying to remove friendly nodes")
+			const allNodes = cy.nodes().jsons()
+			//console.log("NOT UNDEFINED IN HOVEROUT!", allNodes)
+			for (var key in allNodes) {
+				const currentNode = allNodes[key]
+				if (currentNode.data.attachedTo === data.id) {
+					cy.getElementById(currentNode.data.id).remove()
+				}
+			}
 		}
 
 
@@ -2113,7 +2189,6 @@ const AngularWorkflow = (props) => {
 		const nodedata = event.target.data()
 		if (nodedata.app_name !== undefined) {
 			const allNodes = cy.nodes().jsons()
-			//console.log("NOT UNDEFINED IN HOVEROUT!", allNodes)
 			for (var key in allNodes) {
 				const currentNode = allNodes[key]
 				if (currentNode.data.isButton && currentNode.data.attachedTo !== nodedata.id) {
@@ -2141,44 +2216,111 @@ const AngularWorkflow = (props) => {
 		})
 	}
 
+	const addCopyButton = (event) => {
+		var parentNode = cy.$('#' + event.target.data("id"));
+		if (parentNode.data('isButton') || parentNode.data('buttonId'))
+			return
+
+		parentNode.lock()
+		const px = parentNode.position('x') - 65
+		const py = parentNode.position('y') + 25
+		const circleId = newNodeId = uuid.v4()
+
+		parentNode.data('circleId', circleId)
+
+		const iconInfo = {
+			"icon": "M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm-1 4l6 6v10c0 1.1-.9 2-2 2H7.99C6.89 23 6 22.1 6 21l.01-14c0-1.1.89-2 1.99-2h7zm-1 7h5.5L14 6.5V12z",
+			"iconColor": "black",
+			"iconBackgroundColor": "white",
+		}
+		const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
+		const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
+
+		cy.add({
+				group: 'nodes',
+				data: { 
+					weight: 30, 
+					id: circleId, 
+					name: "TEEEXT", 
+					isButton: true, 
+					buttonType: "copy",
+					attachedTo: event.target.data("id"),
+					icon: svgpin_Url,
+					iconBackground: iconInfo.iconBackgroundColor,
+					is_valid: true,
+				},
+				position: { x: px, y: py },
+				locked: true
+		}).unselectify()
+	}
+
+	const addDeleteButton = (event) => {
+		var parentNode = cy.$('#' + event.target.data("id"));
+		if (parentNode.data('isButton') || parentNode.data('buttonId'))
+			return
+
+		parentNode.lock()
+		const px = parentNode.position('x') - 65
+		const py = parentNode.position('y') - 25
+		const circleId = newNodeId = uuid.v4()
+
+		parentNode.data('circleId', circleId)
+
+		const iconInfo = {
+			"icon": "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z",
+			"iconColor": "black",
+			"iconBackgroundColor": "white",
+		}
+		const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
+		const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
+
+		cy.add({
+				group: 'nodes',
+				data: { 
+					weight: 30, 
+					id: circleId, 
+					name: "TEEEXT", 
+					isButton: true, 
+					buttonType: "delete",
+					attachedTo: event.target.data("id"),
+					icon: svgpin_Url,
+					iconBackground: iconInfo.iconBackgroundColor,
+					is_valid: true,
+				},
+				position: { x: px, y: py },
+				locked: true
+		}).unselectify()
+	}
+
 	const onNodeHover = (event) => {
 		//console.log("TAR: ", event.target)
 
-		//var parentNode = cy.$('#' + event.target.data("id"));
-		//if (parentNode.data('isButton') || parentNode.data('buttonId'))
-		//	return
+		var parentNode = cy.$('#' + event.target.data("id"));
+		if (parentNode.data('isButton') || parentNode.data('buttonId'))
+			return
 
-		//const nodedata = event.target.data()
-		//if (event.target.data().app_name !== undefined) { 
-		//	const allNodes = cy.nodes().jsons()
-		//	console.log("NOT UNDEFINED IN HOVEROUT!", allNodes)
-		//	for (var key in allNodes) {
-		//		const currentNode = allNodes[key]
-		//		if (currentNode.data.isButton && currentNode.data.attachedTo !== nodedata.id) {
-		//			cy.getElementById(currentNode.data.id).remove()
-		//		}
-		//	}
+		const nodedata = event.target.data()
+		if (event.target.data().app_name !== undefined) { 
+			const allNodes = cy.nodes().jsons()
 
-		//	parentNode.lock()
-		//	const px = parentNode.position('x') 
-		//	const py = parentNode.position('y') - 100 
-		//	const circleId = newNodeId = uuid.v4()
+			var found = false
+			for (var key in allNodes) {
+				const currentNode = allNodes[key]
+				if (currentNode.data.isButton && currentNode.data.attachedTo !== nodedata.id) {
+					cy.getElementById(currentNode.data.id).remove()
+				} 
 
-		//	parentNode.data('circleId', circleId)
-		//	cy.add({
-		//			group: 'nodes',
-		//			data: { weight: 30, id: circleId, name: "TEEEXT", isButton: true, attachedTo: event.target.data("id")},
-		//			position: { x: px, y: py },
-		//			locked: true
-		//	}).css({
-		//			'background-color': 'blue',
-		//			'shape': 'ellipse',
-		//			'background-opacity': 0.5,
-		//			'height': '30px',
-		//			'width': '30px',
-		//			'z-index': 5002,
-		//	}).unselectify()
-		//}
+				if (currentNode.data.isButton && currentNode.data.attachedTo === nodedata.id) {
+					found = true
+				}
+			}
+
+			//if (!found) {
+			//	addDeleteButton(event)
+			//	addCopyButton(event) 
+			//}
+		}
+
 
 		const parsedStyle = {
 			"border-width": "7px",

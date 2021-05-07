@@ -16,11 +16,23 @@ const useStyles = makeStyles((theme) =>
     root: {
       "& .MuiAutocomplete-listbox": {
         border: "2px solid grey",
+				color: "white",
         fontSize: 18,
-        "& li:nth-child(even)": { backgroundColor: "#CCC" },
-        "& li:nth-child(odd)": { backgroundColor: "#FFF" }
+        "& li:nth-child(even)": { 
+					backgroundColor: "#CCC" 
+				},
+        "& li:nth-child(odd)": { 
+					backgroundColor: "#FFF" 
+				}
       }
-    }
+    },
+		inputRoot: {
+			color: "white",
+			// This matches the specificity of the default styles at https://github.com/mui-org/material-ui/blob/v4.11.3/packages/material-ui-lab/src/Autocomplete/Autocomplete.js#L90
+			"&:hover .MuiOutlinedInput-notchedOutline": {
+				borderColor: "#f86a3e"
+			},
+		}
   })
 )
 
@@ -28,6 +40,7 @@ const ParsedAction = (props) => {
 	const {workflow, setWorkflow, setAction, setSelectedAction, setUpdate, appActionArguments, selectedApp, workflowExecutions, setSelectedResult, selectedAction, setSelectedApp, setSelectedTrigger, setSelectedEdge, setCurrentView, cy, setAuthenticationModalOpen,setVariablesModalOpen, setCodeModalOpen, selectedNameChange, rightsidebarStyle, showEnvironment, selectedActionEnvironment, environments, setNewSelectedAction, appApiViewStyle, globalUrl, setSelectedActionEnvironment, requiresAuthentication, hideExtraTypes } = props
 
 	const theme = useTheme();
+	const classes = useStyles()
 	const getParents = (action) => {
 		if (cy === undefined) {
 			return []
@@ -533,7 +546,7 @@ const ParsedAction = (props) => {
 
 							authWritten = true
 							return (
-								<Typography id="skip_auth" variant="body2" color="textSecondary" style={{marginTop: 5,}}>
+								<Typography key={count} id="skip_auth" variant="body2" color="textSecondary" style={{marginTop: 5,}}>
 									Authentication fields are hidden
 								</Typography>
 							)
@@ -1159,11 +1172,10 @@ const ParsedAction = (props) => {
 		return null
 	}
 
-	const CustomPopper = function (props) {
-		const classes = useStyles()
-		return <Popper {...props} className={classes.root} placement="bottom" />
-	}
-	// PopperComponent={CustomPopper} 
+	//const CustomPopper = function (props) {
+	//	const classes = useStyles()
+	//	return <Popper {...props} className={classes.root} placement="bottom" />
+	//}
 
 	return ( 
 		<div style={appApiViewStyle}>
@@ -1414,14 +1426,31 @@ const ParsedAction = (props) => {
 				{setNewSelectedAction !== undefined ? 
 					<Autocomplete
   					id="action_search"
-						getOptionLabel={(option) => option.name}
-						getOptionSelected={(option, value) => option.name === value.name}
+						autoHighlight
+						value={selectedAction}
+						classes={{inputRoot: classes.inputRoot}}
+						ListboxProps={{
+							style: {
+								backgroundColor: theme.palette.inputColor,
+								color: "white",
+							}
+						}}
+						getOptionLabel={(option) => {
+							if (option === undefined || option === null || option.name === undefined || option.name === undefined) {
+								return null
+							}
+
+							const newname = (option.name.charAt(0).toUpperCase()+option.name.substring(1)).replaceAll("_", " ")
+							return newname
+						}}
 	  				options={sortByKey(selectedApp.actions, "label")}
 						fullWidth
-						style={{backgroundColor: theme.palette.inputColor, color: "white", height: 50, borderRadius: theme.palette.borderRadius,}}
+						style={{backgroundColor: theme.palette.inputColor, height: 50, borderRadius: theme.palette.borderRadius,}}
 						onChange={(event, newValue) => {
 							// Workaround with event lol
-							setNewSelectedAction({"target": {"value": newValue.name}}) 
+							if (newValue !== undefined && newValue !== null) {
+								setNewSelectedAction({"target": {"value": newValue.name}}) 
+							} 
 						}}
 						renderOption={(data) => {
 							var newActionname = data.name
@@ -1433,8 +1462,7 @@ const ParsedAction = (props) => {
 							const useIcon = iconInfo.originalIcon
 
 							// ROFL FIXME - loop
-							newActionname = newActionname.replaceAll("_", " ")
-							newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
+							newActionname = (newActionname.charAt(0).toUpperCase()+newActionname.substring(1)).replaceAll("_", " ")
 
 							return (
 								<div style={{display: "flex"}}>
@@ -1446,23 +1474,7 @@ const ParsedAction = (props) => {
 				  	renderInput={(params) => {
 							return (
 								<TextField 
-									style={{backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius, color: "white", }} 
-									InputProps={{
-										style:{
-											color: "white",
-											minHeight: 50, 
-											marginLeft: "5px",
-											maxWidth: "95%",
-											fontSize: "1em",
-										},
-										startAdornment: (
-											<InputAdornment position="start">
-												<Tooltip title="Run search" placement="top">
-													<SearchIcon style={{cursor: "pointer"}} />
-												</Tooltip>
-											</InputAdornment>
-										)
-									}}
+									style={{backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius, }} 
 									{...params} 
 									label="Find Actions" 
 									variant="outlined" 
@@ -1470,6 +1482,7 @@ const ParsedAction = (props) => {
 							)
 						}}
 					/>
+
 				: null}
 
 				{/*setNewSelectedAction !== undefined ? 

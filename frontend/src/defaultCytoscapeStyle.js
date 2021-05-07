@@ -121,11 +121,13 @@ const data = [{
 			selector: 'node[?isButton]',
 			css: {
 				'shape': 'ellipse',
-				'border-color': '#80deea',
-				'width': '30px',
-				'height': '30px',
+				'width': '15px',
+				'height': '15px',
 				'z-index': '5002',
 				'font-size': '0px',
+				'border': '1px solid black',
+				'background-image': 'data(icon)',
+				'background-color': 'data(iconBackground)',
 			},
 		},
 		{

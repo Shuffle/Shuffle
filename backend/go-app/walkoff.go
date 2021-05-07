@@ -2360,14 +2360,29 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// FIXME - have a check for org etc too..
-	// FIXME - admin check like this? idk
 	if user.Id != workflow.Owner && user.Role != "scheduler" {
-		log.Printf("[WARNING] Wrong user (%s) for workflow %s (stop schedule)", user.Username, workflow.ID)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
+		if workflow.OrgId == user.ActiveOrg.Id && user.Role == "admin" {
+			log.Printf("[DEBUG] User %s is accessing workflow %s as admin", user.Username, workflow.ID)
+		} else {
+			log.Printf("[WARNING] Wrong user (%s) for workflow %s (stop schedule)", user.Username, workflow.ID)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
 	}
+
+	//if user.Id != workflow.Owner || len(user.Id) == 0 {
+	//	if workflow.OrgId == user.ActiveOrg.Id && user.Role == "admin" {
+	//		log.Printf("[INFO] User %s is accessing workflow %s as admin", user.Username, workflow.ID)
+	//	} else if workflow.Public {
+	//		log.Printf("[INFO] Letting user %s access workflow %s because it's public", user.Username, workflow.ID)
+	//	} else {
+	//		log.Printf("[WARNING] Wrong user (%s) for workflow %s (get workflow)", user.Username, workflow.ID)
+	//		resp.WriteHeader(401)
+	//		resp.Write([]byte(`{"success": false}`))
+	//		return
+	//	}
+	//}
 
 	schedule, err := shuffle.GetSchedule(ctx, scheduleId)
 	if err != nil {

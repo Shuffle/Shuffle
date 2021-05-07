@@ -81,7 +81,7 @@ const useStyles = makeStyles((theme) => ({
 export const GetIconInfo = (action) => {
 	// Finds the icon based on the action. Should be verbs.
 	const iconList = [
-		{"key": "download", "values": ["get", "download", "return", "hello world"]},
+		{"key": "download", "values": ["get", "download", "return", "hello_world", "curl",]},
 		{"key": "search", "values": ["search", "find"]},
 		{"key": "delete", "values": ["delete", "remove"]},
 		{"key": "send", "values": ["send", "dispatch", "mail", "forward", "post", "submit"]},
@@ -91,7 +91,7 @@ export const GetIconInfo = (action) => {
 		{"key": "inflate", "values": ["inflate", "pack", "compress",]},
 		{"key": "edit", "values": ["update", "create", "edit", "put", "patch", "change", "parse", "replace", "filter", "conver", "map"]},
 		{"key": "compare", "values": ["compare", "convert", "to", "filter", "translate", ]},
-		{"key": "list", "values": ["list"]},
+		{"key": "list", "values": ["list", "head", "options"]},
 	]
 
 	var selectedKey = ""
