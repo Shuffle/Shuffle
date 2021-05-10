@@ -93,6 +93,8 @@ github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7
 github.com/flynn/go-shlex v0.0.0-20150515145356-3f9db97f8568/go.mod h1:xEzjJPgXI435gkrCt3MPfRiAkVrwSbHsst4LCFVfpJc=
 github.com/frikky/kin-openapi v0.38.0 h1:V7ttwIJS8Vks4KL+mZVj1ZSqhIcQtgaG8akeqXEQgsE=
 github.com/frikky/kin-openapi v0.38.0/go.mod h1:Fr28TtCHL4K0kIqtqui8HWxN1LG5uAh3z/tDfFyiA1s=
+github.com/frikky/kin-openapi v0.39.0 h1:qBrbLo9XwTIgIRJFsfXrmNzQz291xiiG0IcoML21t5s=
+github.com/frikky/kin-openapi v0.39.0/go.mod h1:ev9OZAw7Bv5p0w93j91++6a1ElPzGcCofst+kmrWsj4=
 github.com/frikky/shuffle-shared v0.0.12 h1:+0EIfThmK47Po+LogPYZR4XjbS4Ds19WNMFu2YUSjhw=
 github.com/frikky/shuffle-shared v0.0.12/go.mod h1:SEY432/xs4oBkOUnGwxiYKCZWZLRaheGInhAoW7N8ww=
 github.com/frikky/shuffle-shared v0.0.15 h1:508ceeEHfPBMCC8/K4Zve3kwRQqiXNJSw6+BDoq9X4E=
@@ -115,6 +117,8 @@ github.com/frikky/shuffle-shared v0.0.37 h1:6nN1Im22TBuWUCG5L619xTgEPIPXCY68QThI
 github.com/frikky/shuffle-shared v0.0.37/go.mod h1:H7SqOta/EAYnfYuWzwzYSh/oWfF0kgnuaJTQNKQBvoQ=
 github.com/frikky/shuffle-shared v0.0.38 h1:OZSwU1HDOaPzdlG1s77svgXJKzlNewM6GjeH1/8EIUM=
 github.com/frikky/shuffle-shared v0.0.38/go.mod h1:H7SqOta/EAYnfYuWzwzYSh/oWfF0kgnuaJTQNKQBvoQ=
+github.com/frikky/shuffle-shared v0.0.40 h1:H0au2np5xSy9mZEUWN+a29IORk+YP95FipENBD7iJRw=
+github.com/frikky/shuffle-shared v0.0.40/go.mod h1:H7SqOta/EAYnfYuWzwzYSh/oWfF0kgnuaJTQNKQBvoQ=
 github.com/getkin/kin-openapi v0.8.0 h1:a6TQjTqwkyscC4/hShJX7WhCVE+4bi9lzw61XHQW5hE=
 github.com/getkin/kin-openapi v0.8.0/go.mod h1:zZQMFkVgRHCdhgb6ihCTIo9dyDZFvX0k/xAKqw1FhPw=
 github.com/getkin/kin-openapi v0.52.0 h1:6WqsF5d6PfJ8AscdD+9Rtb2RP2iBWyC7V6GcjssWg7M=

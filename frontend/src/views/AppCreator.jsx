@@ -371,8 +371,13 @@ const AppCreator = (props) => {
 
 
 	const handleGetRef = (parameter, data) => {
-		if (parameter["$ref"] === undefined) {
-			console.log("$ref not found in getref: ")
+		try {
+			if (parameter === null || parameter["$ref"] === undefined) {
+				console.log("$ref not found in getref: ")
+				return parameter
+			}
+		} catch (e) {
+			console.log("Failed getting $ref of ", parameter)
 			return parameter
 		}
 
@@ -638,7 +643,7 @@ const AppCreator = (props) => {
 								const selectedExample = methodvalue.responses[selectedReturn] 
 								if (selectedExample["content"] !== undefined) {
 									if (selectedExample["content"]["application/json"] !== undefined) {
-										if (selectedExample["content"]["application/json"]["schema"] !== undefined) {
+										if (selectedExample["content"]["application/json"]["schema"] !== undefined && selectedExample["content"]["application/json"]["schema"] !== null) {
 											if (selectedExample["content"]["application/json"]["schema"]["$ref"] !== undefined) {
 												//console.log("REF EXAMPLE: ", selectedExample["content"]["application/json"]["schema"])
 												const parameter = handleGetRef(selectedExample["content"]["application/json"]["schema"], data)
