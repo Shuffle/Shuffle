@@ -6554,6 +6554,15 @@ const AngularWorkflow = (props) => {
 							</Button> 				
 						</span>
 					</Tooltip>
+					<Tooltip color="secondary" title="Undo" placement="top-start">
+						<span>	
+						<Button disabled={history.length === 0} color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={(event) => {
+							handleHistoryUndo(history)
+						}}>
+							<UndoIcon />
+						</Button>
+						</span>	
+					</Tooltip>
 					<Tooltip color="secondary" title="Remove selected item (del)" placement="top-start">
 						<span>
 						<Button color="primary" disabled={workflow.public} style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={() => {
@@ -6575,17 +6584,6 @@ const AngularWorkflow = (props) => {
 					</Tooltip>	
 					{/* <FileMenu />	*/}
 					{workflow.configuration !== null && workflow.configuration !== undefined && workflow.configuration.exit_on_error !== undefined ? <WorkflowMenu />	 : null}
-					{history.length > 0 ?
-						<Tooltip color="secondary" title="Undo" placement="top-start">
-							<span>	
-							<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={(event) => {
-								handleHistoryUndo(history)
-							}}>
-								<UndoIcon />
-							</Button>
-							</span>	
-						</Tooltip>
-					: null}
 				</div>
 			</div>
 		)

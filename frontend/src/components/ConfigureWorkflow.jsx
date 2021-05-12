@@ -2,6 +2,7 @@ import React, {useState} from 'react';
 
 import { InputAdornment, Tooltip, TextField, CircularProgress, ButtonGroup, Button, Avatar, ListItemAvatar, Typography, List, ListItem, ListItemText} from '@material-ui/core';
 import {FavoriteBorder as FavoriteBorderIcon} from '@material-ui/icons';
+import { FixName } from "../views/Apps.jsx";
 
 // Handles workflow updates on first open to highlight the issues of the workflow
 // Variables
@@ -88,8 +89,22 @@ const Workflow = (props) => {
 				newaction.must_activate = true
 			} else {
 				if (action.authentication_id === "" && app.authentication.required === true) {
-					newaction.must_authenticate = true
-					newaction.action_ids.push(action.id)
+					// Check if configuration is filled or not
+					var filled = true 
+					for (var key in action.parameters) {
+						if (action.parameters[key].configuration) {
+							console.log("Found config: ", action.parameters[key])
+							if (action.parameters[key].value === null || action.parameters[key].value.length === 0) {
+								filled = false
+								break
+							}
+						}
+					}
+
+					if (!filled) {
+						newaction.must_authenticate = true
+						newaction.action_ids.push(action.id)
+					}
 				}
 
 				newaction.app = app
@@ -339,7 +354,7 @@ const Workflow = (props) => {
 						</Avatar>
 					</ListItemAvatar>
 					<ListItemText
-						primary={action.app_name}
+						primary={FixName(action.app_name)}
 						secondary={action.app_version}
 						style={{}}
 					/>

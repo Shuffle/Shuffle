@@ -20,6 +20,13 @@ const chipStyle = {
 	backgroundColor: "#3d3f43", height: 30, marginRight: 5, paddingLeft: 5, paddingRight: 5, height: 28, cursor: "pointer", borderColor: "#3d3f43", color: "white",
 }
 
+// Fixes names by making them uppercase and such
+// Used for labels. A lot of places don't use this yet
+export const FixName = (name) => {
+	const newAppname = (name.charAt(0).toUpperCase()+name.substring(1)).replaceAll("_", " ")
+	return newAppname
+}
+
 // Parses JSON data into keys that can be used everywhere :)
 export const GetParsedPaths = (inputdata, basekey) => {
 	const splitkey = " > "
