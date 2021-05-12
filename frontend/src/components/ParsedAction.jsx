@@ -312,10 +312,13 @@ const ParsedAction = (props) => {
 				// PARAM FIX - Gonna use the ID field, even though it's a hack
 				const paramcheck = selectedAction.parameters.find(param => param.name === "body")
 				if (paramcheck !== undefined) {
+					// Escapes all double quotes
+					const toReplace = event.target.value.trim().replaceAll("\\\"", "\"").replaceAll("\"", "\\\"")
+					console.log("REPLACE WITH: ", toReplace)
 					if (paramcheck["value_replace"] === undefined || paramcheck["value_replace"] === null) {
 						paramcheck["value_replace"] = [{
 							"key": data.name,
-							"value": event.target.value,
+							"value": toReplace,
 						}]
 
 						console.log("IN IF: ", paramcheck)
@@ -325,10 +328,10 @@ const ParsedAction = (props) => {
 						if (subparamindex === -1) {
 							paramcheck["value_replace"].push({
 								"key": data.name,
-								"value": event.target.value,
+								"value": toReplace,
 							})
 						} else {
-							paramcheck["value_replace"][subparamindex]["value"] = event.target.value
+							paramcheck["value_replace"][subparamindex]["value"] = toReplace 
 						}
 
 						console.log("IN ELSE: ", paramcheck)
@@ -868,6 +871,7 @@ const ParsedAction = (props) => {
 												paramcheck["value_replace"][subparamindex]["value"] += toComplete
 											}
 										}
+
 										
 										selectedActionParameters[count]["value_replace"] = paramcheck
 										selectedAction.parameters[count]["value_replace"] = paramcheck

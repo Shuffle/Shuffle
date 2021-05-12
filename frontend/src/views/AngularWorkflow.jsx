@@ -156,6 +156,7 @@ const AngularWorkflow = (props) => {
 		left: 0,
 		selected: "",
 	})
+	const [history, setHistory] = React.useState([])
 
 	const [appAuthentication, setAppAuthentication] = React.useState([]);
 	const [variablesModalOpen, setVariablesModalOpen] = React.useState(false);
@@ -233,8 +234,6 @@ const AngularWorkflow = (props) => {
 	const [workflowExecutions, setWorkflowExecutions] = React.useState([]);
 	const [defaultEnvironmentIndex, setDefaultEnvironmentIndex] = React.useState(0)
 
-	useTraceUpdate(props) 
-
 	// This should all be set once, not on every iteration
 	// Use states and don't update lol
 	const cloudSyncEnabled = props.userdata !== undefined && props.userdata.active_org !== null && props.userdata.active_org !== undefined ? props.userdata.active_org.cloud_sync === true : false 
@@ -250,18 +249,16 @@ const AngularWorkflow = (props) => {
 		}
 	})
 
-
 	const [elements, setElements] = useState([])
 	// No point going as fast, as the nodes aren't realtime anymore, but bulk updated. 
 	// Set it from 2500 to 6000 to reduce overall load
 	const { start, stop } = useInterval({
-		duration: 6000,
+		duration: 3000,
 		startImmediate: false,
 		callback: () => {
 			fetchUpdates()
 		}
 	})
-	console.log("STATE UPDATE?")
 
 	const getAvailableWorkflows = (trigger_index) => {
 		fetch(globalUrl+"/api/v1/workflows", {
@@ -1251,6 +1248,12 @@ const AngularWorkflow = (props) => {
 	const onUnselect = (event) => {
 		console.time("UNSELECT")
 
+		const nodedata = event.target.data()
+		if (nodedata.app_name === undefined && nodedata.source === undefined) {
+			return
+		}
+
+
 		// Attempt at rewrite of name in other actions in following nodes.
 		// Should probably be done in the onBlur for the textfield instead
 		/*
@@ -1321,7 +1324,7 @@ const AngularWorkflow = (props) => {
 			const triggercheck = workflow.triggers.find(trigger => trigger.id === event.target.data()["source"])
 			if (triggercheck === undefined) {
 		*/
-		console.log(event.target.data())
+		//console.log(event.target.data())
 		if (event.target.data().decorator) {
 			alert.info("This edge can't be edited.")
 		} else {
@@ -1398,6 +1401,7 @@ const AngularWorkflow = (props) => {
 			nodedata.app_name !== "Testing" &&
 			nodedata.app_name !== "Shuffle Workflow" &&
 			nodedata.app_name !== "User Input" &&
+			nodedata.app_name !== "Webhook" &&
 			nodedata.app_name !== "Schedule" &&
 			nodedata.app_name !== "Email") || nodedata.isStartNode) 
 		) {
@@ -1438,7 +1442,7 @@ const AngularWorkflow = (props) => {
 					},
 				}
 
-				cy.add(decoratorNode)
+				cy.add(decoratorNode).unselectify()
 			} else {
 				console.log("Node already exists - don't add descriptor node")
 			}
@@ -1561,11 +1565,123 @@ const AngularWorkflow = (props) => {
 	// https://stackoverflow.com/questions/16677856/cy-onselect-callback-only-once
 	const onNodeSelect = (event, newAppAuth) => {
 		const data = event.target.data()
-		console.log("NODE: ", data)
 
 		setLastSaved(false)
 		if (data.isButton) {
 			console.log("BUTTON CLICKED: ", data)
+			if (data.buttonType === "delete") {
+				console.log("DELETE!")
+				const parentNode = cy.getElementById(data.attachedTo)
+				if (parentNode !== null && parentNode !== undefined) {
+					parentNode.remove()
+				}
+
+				//for (var key in allNodes) {
+				//	const currentNode = allNodes[key]
+				//	if (currentNode.data.attachedTo === data.attachedTo) {
+				//		cy.getElementById(currentNode.data.id).remove()
+				//	}
+				//}
+			} else if (data.buttonType === "copy") {
+				console.log("COPY!")
+				// 1. Find parent
+				// 2. Find branches for parent
+				// 3. Make a new node that's moved a little bit
+				const parentNode = cy.getElementById(data.attachedTo)
+				if (parentNode !== null && parentNode !== undefined) {
+					//parentNode.data()
+					var newNodeData = JSON.parse(JSON.stringify(parentNode.data()))
+					newNodeData.id = uuid.v4()
+					newNodeData.position = {
+						"x": newNodeData.position.x+100,
+						"y": newNodeData.position.y+100,
+					}
+					newNodeData.isStartNode = false
+					newNodeData.errors = []
+					newNodeData.is_valid = true
+					newNodeData.isValid = true
+
+					cy.add({
+							group: 'nodes',
+							data:  newNodeData,
+							position: newNodeData.position,
+					})
+
+					// Readding the icon after moving the node
+					//console.log("Node wasn't found")
+					if (newNodeData.app_name !== "Testing" || newNodeData.app_name !== "Shuffle Workflow") {
+					} else {
+						const iconInfo = GetIconInfo(newNodeData)
+						const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
+						const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
+
+						const offset = newNodeData.isStartNode ? 36 : 44
+						//console.log(event.target.position())
+						const decoratorNode = {
+							position: {
+								x: newNodeData.position.x+offset,
+								y: newNodeData.position.y+offset,
+							},
+							locked: true,
+							data: {
+								"isDescriptor": true,
+								"isValid": true,
+								"is_valid": true,
+								"label": "",
+								"image": svgpin_Url,
+								"imageColor": iconInfo.iconBackgroundColor,
+								"attachedTo": newNodeData.id,
+							},
+						}
+
+						cy.add(decoratorNode).unselectify()
+					}
+
+					workflow.actions.push(newNodeData)
+
+					const sourcebranches = workflow.branches.filter(foundbranch => foundbranch.source_id === parentNode.data("id"))
+					const destinationbranches = workflow.branches.filter(foundbranch => foundbranch.destination_id === parentNode.data("id"))
+
+					//for (var key in sourcebranches) {
+					//	var newbranch = JSON.parse(JSON.stringify(sourcebranches[key]))
+					//	newbranch.id = uuid.v4()
+					//	newbranch.source_id = newNodeData.id
+					//	cy.add({
+					//		group: "edges",
+					//		data: newbranch,
+					//	})
+					//}
+
+					for (var key in sourcebranches) {
+						var newbranch = JSON.parse(JSON.stringify(sourcebranches[key]))
+						newbranch.id = uuid.v4()
+						newbranch.source_id = newNodeData.id
+
+						newbranch._id = newbranch.id
+						newbranch.source = newbranch.source_id
+						newbranch.target = newbranch.destination_id
+						cy.add({
+							group: "edges",
+							data: newbranch,
+						})
+					}
+
+					for (var key in destinationbranches) {
+						var newbranch = JSON.parse(JSON.stringify(destinationbranches[key]))
+						newbranch.id = uuid.v4()
+						newbranch.destination_id = newNodeData.id
+
+						newbranch._id = newbranch.id
+						newbranch.source = newbranch.source_id
+						newbranch.target = newbranch.destination_id
+						cy.add({
+							group: "edges",
+							data: newbranch,
+						})
+					}
+				}
+			}
+
 			event.target.unselect()
 			return
 		} else if (data.isDescriptor) {
@@ -1574,7 +1690,7 @@ const AngularWorkflow = (props) => {
 			return
 		}
 
-		
+		console.log("NODE: ", data)
 		//const node = cy.getElementById(data.id)
 		//if (node.length > 0) {
 		//	node.addClass('shuffle-hover-highlight')
@@ -1815,6 +1931,12 @@ const AngularWorkflow = (props) => {
 			workflow.branches.push(newbranch)
 			setWorkflow(workflow)
 		}
+
+		history.push({
+			"type": "edge",
+			"action": "added",
+			"data": edge,
+		})
 	}
 
 	const onNodeAdded = (event) => {
@@ -1895,6 +2017,12 @@ const AngularWorkflow = (props) => {
 		//} else {
 		//	//console.log("Shouldnt re-add info? ")
 		//}
+		
+		history.push({
+			"type": "node",
+			"action": "added",
+			"data": nodedata,
+		})
 	}
 
 	const onEdgeRemoved = (event) => {
@@ -2252,9 +2380,9 @@ const AngularWorkflow = (props) => {
 		if (parentNode.data('isButton') || parentNode.data('buttonId'))
 			return
 
-		parentNode.lock()
+		//parentNode.lock()
 		const px = parentNode.position('x') - 65
-		const py = parentNode.position('y') + 25
+		const py = parentNode.position('y') - 25
 		const circleId = newNodeId = uuid.v4()
 
 		parentNode.data('circleId', circleId)
@@ -2282,7 +2410,8 @@ const AngularWorkflow = (props) => {
 				},
 				position: { x: px, y: py },
 				locked: true
-		}).unselectify()
+		})
+		//.unselectify()
 	}
 
 	const addDeleteButton = (event) => {
@@ -2290,9 +2419,9 @@ const AngularWorkflow = (props) => {
 		if (parentNode.data('isButton') || parentNode.data('buttonId'))
 			return
 
-		parentNode.lock()
+		//parentNode.lock()
 		const px = parentNode.position('x') - 65
-		const py = parentNode.position('y') - 25
+		const py = parentNode.position('y') + 25
 		const circleId = newNodeId = uuid.v4()
 
 		parentNode.data('circleId', circleId)
@@ -2320,7 +2449,8 @@ const AngularWorkflow = (props) => {
 				},
 				position: { x: px, y: py },
 				locked: true
-		}).unselectify()
+		})
+		//.unselectify()
 	}
 
 	const onNodeHover = (event) => {
@@ -2346,10 +2476,10 @@ const AngularWorkflow = (props) => {
 				}
 			}
 
-			//if (!found) {
-			//	addDeleteButton(event)
-			//	addCopyButton(event) 
-			//}
+			if (!found) {
+				addDeleteButton(event)
+				addCopyButton(event) 
+			}
 		}
 
 
@@ -3197,7 +3327,7 @@ const AngularWorkflow = (props) => {
 
 				if (data.name !== "User Input" && data.name !== "Shuffle Workflow") {
 					//workflow.branches.push(newbranch)
-					cy.add(edgeToBeAdded)
+					//cy.add(edgeToBeAdded)
 				}
 
 				setWorkflow(workflow)
@@ -3481,7 +3611,10 @@ const AngularWorkflow = (props) => {
 
 		const runSearch = (value) => {
 			if (value.length > 0) {
-				const newApps = allApps.filter(app => app.name.toLowerCase().includes(value.trim().toLowerCase() || app.description.toLowerCase().includes(value.trim().toLowerCase())))
+				const newApps = allApps.filter(app => (app.name.toLowerCase().includes(value.trim().toLowerCase() || app.description.toLowerCase().includes(value.trim().toLowerCase()))) && !(!app.activated && app.generated))
+
+				//setFilteredApps(responseJson.filter(app => !internalIds.includes(app.name) && !(!app.activated && app.generated)))
+				//console.log("FOUND: ", newApps)
 				setVisibleApps(newApps)
 			} else {
 				setVisibleApps(prioritizedApps.concat(filteredApps.filter(innerapp => !internalIds.includes(innerapp.id))))
@@ -6118,8 +6251,6 @@ const AngularWorkflow = (props) => {
 	}
 
 	const TopCytoscapeBar = (props) => {
-		useTraceUpdate(props) 
-
 		return (
 			<div style={topBarStyle}>	
 				<div style={{margin: "0px 10px 0px 10px", }}>
@@ -6280,8 +6411,6 @@ const AngularWorkflow = (props) => {
 	const BottomCytoscapeBar = () => {
 		const [anchorEl, setAnchorEl] = React.useState(null)
 
-		useTraceUpdate(props) 
-
 		const boxSize = 100
 		const executionButton = executionRunning ? 
 			<Tooltip color="primary" title="Stop execution" placement="top">
@@ -6390,8 +6519,6 @@ const AngularWorkflow = (props) => {
 
 	const RightSideBar = (props) => {
 		const {workflow, setWorkflow, setAction, setSelectedAction, setUpdate, appActionArguments, selectedApp, workflowExecutions, setSelectedResult, selectedAction, setSelectedApp, setSelectedTrigger, setSelectedEdge, setCurrentView, cy, setAuthenticationModalOpen,setVariablesModalOpen, setCodeModalOpen, selectedNameChange, rightsidebarStyle, showEnvironment, selectedActionEnvironment, environments, setNewSelectedAction, appApiViewStyle, globalUrl, setSelectedActionEnvironment, requiresAuthentication, hideExtraTypes, scrollConfig, setScrollConfig } = props
-
-		useTraceUpdate(props) 
 
 		if (!rightSideBarOpen) {
 			return null

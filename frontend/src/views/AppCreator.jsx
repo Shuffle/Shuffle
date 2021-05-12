@@ -2516,11 +2516,16 @@ const AppCreator = (props) => {
 									}
 
 									if (e.target.value.length > 29) {
-										alert.error("Choose a shorter name.")
+										alert.error("Choose a shorter name (max 29).")
 										return
 									}
 
+									//e.target.value.trim()
+
 									setName(e.target.value)
+								}}
+								onBlur={e => {
+									setName(e.target.value.trim())
 								}}
 								color="primary"
 								InputProps={{
