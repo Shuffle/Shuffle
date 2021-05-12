@@ -37,7 +37,7 @@ const useStyles = makeStyles((theme) =>
 )
 
 const ParsedAction = (props) => {
-	const {workflow, setWorkflow, setAction, setSelectedAction, setUpdate, appActionArguments, selectedApp, workflowExecutions, setSelectedResult, selectedAction, setSelectedApp, setSelectedTrigger, setSelectedEdge, setCurrentView, cy, setAuthenticationModalOpen,setVariablesModalOpen, setCodeModalOpen, selectedNameChange, rightsidebarStyle, showEnvironment, selectedActionEnvironment, environments, setNewSelectedAction, appApiViewStyle, globalUrl, setSelectedActionEnvironment, requiresAuthentication, hideExtraTypes } = props
+	const {workflow, setWorkflow, setAction, setSelectedAction, setUpdate, appActionArguments, selectedApp, workflowExecutions, setSelectedResult, selectedAction, setSelectedApp, setSelectedTrigger, setSelectedEdge, setCurrentView, cy, setAuthenticationModalOpen,setVariablesModalOpen, setCodeModalOpen, selectedNameChange, rightsidebarStyle, showEnvironment, selectedActionEnvironment, environments, setNewSelectedAction, appApiViewStyle, globalUrl, setSelectedActionEnvironment, requiresAuthentication, hideExtraTypes, scrollConfig, setScrollConfig } = props
 
 	const theme = useTheme();
 	const classes = useStyles()
@@ -643,6 +643,7 @@ const ParsedAction = (props) => {
 							}
 						}
 
+						const clickedFieldId = "rightside_field_"+count
 						var datafield = 
 							<TextField
 								disabled={disabled}
@@ -675,7 +676,15 @@ const ParsedAction = (props) => {
 								}}
 								fullWidth
 								multiline={multiline}
-								id={"rightside_field_"+count}
+								onClick={() => {
+									//console.log("Clicked field: ", clickedFieldId)
+									if (setScrollConfig !== undefined && scrollConfig !== null && scrollConfig !== undefined && scrollConfig.selected !== clickedFieldId) {
+										scrollConfig.selected = clickedFieldId
+										setScrollConfig(scrollConfig)
+										//console.log("Change field id!")
+									}
+								}}
+								id={clickedFieldId}
 								rows={rows}
 								color="primary"
 								defaultValue={data.value}
@@ -1178,7 +1187,7 @@ const ParsedAction = (props) => {
 	//}
 
 	return ( 
-		<div style={appApiViewStyle}>
+		<div style={appApiViewStyle} id="parsed_action_view">
 			{hideExtraTypes === true ? null : 
 				<span>
 				<div style={{display: "flex", minHeight: 40, marginBottom: 30}}>

@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useLayoutEffect} from 'react';
+import React, {useRef, useState, useEffect, useLayoutEffect} from 'react';
 import { useInterval } from 'react-powerhooks';
 import { useTheme } from '@material-ui/core/styles';
 
@@ -29,6 +29,8 @@ import { validateJson, GetIconInfo } from "./Workflows.jsx";
 import { GetParsedPaths } from "./Apps.jsx";
 import ConfigureWorkflow from '../components/ConfigureWorkflow.jsx';
 import ParsedAction from '../components/ParsedAction.jsx';
+import Scroll from 'react-scroll'
+import { Element as ScrollElement, animateScroll as scroll, scrollSpy, scroller } from 'react-scroll'
 
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
@@ -105,6 +107,22 @@ const svgSize = 24
 //const referenceUrl = "https://shuffler.io/functions/webhooks/"
 //const referenceUrl = window.location.origin+"/api/v1/hooks/"
 
+function useTraceUpdate(props) {
+  const prev = useRef(props)
+  useEffect(() => {
+    const changedProps = Object.entries(props).reduce((ps, [k, v]) => {
+      if (prev.current[k] !== v) {
+        ps[k] = [prev.current[k], v];
+      }
+      return ps;
+    }, {});
+    if (Object.keys(changedProps).length > 0) {
+      console.log('Changed props:', changedProps);
+    }
+    prev.current = props;
+  });
+}
+
 const AngularWorkflow = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, userdata } = props;
 	const referenceUrl = globalUrl+"/api/v1/hooks/"
@@ -133,7 +151,11 @@ const AngularWorkflow = (props) => {
 	const [leftBarSize, setLeftBarSize] = React.useState(350)
 	const [executionText, setExecutionText] = React.useState("");
 	const [executionRequestStarted, setExecutionRequestStarted] = React.useState(false);
-	const [scrollLocation, setScrollLocation] = React.useState(0)
+	const [scrollConfig, setScrollConfig] = React.useState({
+		top: 0,
+		left: 0,
+		selected: "",
+	})
 
 	const [appAuthentication, setAppAuthentication] = React.useState([]);
 	const [variablesModalOpen, setVariablesModalOpen] = React.useState(false);
@@ -211,6 +233,8 @@ const AngularWorkflow = (props) => {
 	const [workflowExecutions, setWorkflowExecutions] = React.useState([]);
 	const [defaultEnvironmentIndex, setDefaultEnvironmentIndex] = React.useState(0)
 
+	useTraceUpdate(props) 
+
 	// This should all be set once, not on every iteration
 	// Use states and don't update lol
 	const cloudSyncEnabled = props.userdata !== undefined && props.userdata.active_org !== null && props.userdata.active_org !== undefined ? props.userdata.active_org.cloud_sync === true : false 
@@ -231,12 +255,13 @@ const AngularWorkflow = (props) => {
 	// No point going as fast, as the nodes aren't realtime anymore, but bulk updated. 
 	// Set it from 2500 to 6000 to reduce overall load
 	const { start, stop } = useInterval({
-	  	duration: 6000,
-	  	startImmediate: false,
-	  	callback: () => {
-				fetchUpdates()
-	  	}
+		duration: 6000,
+		startImmediate: false,
+		callback: () => {
+			fetchUpdates()
+		}
 	})
+	console.log("STATE UPDATE?")
 
 	const getAvailableWorkflows = (trigger_index) => {
 		fetch(globalUrl+"/api/v1/workflows", {
@@ -488,7 +513,7 @@ const AngularWorkflow = (props) => {
 			console.log("Error: ", error)
 			//alert.error(error.toString())
 			stop()
-		});
+		})
 	}
 
 	const abortExecution = () => {
@@ -527,9 +552,19 @@ const AngularWorkflow = (props) => {
 		if (JSON.stringify(responseJson) !== JSON.stringify(executionData)) {
 			// FIXME: If another is selected, don't edit.. 
 			// Doesn't work because this is some async garbage
-			if (executionData.execution_id === undefined || responseJson.execution_id === executionData.execution_id) {
-				setExecutionData(responseJson)
+			if (executionData.execution_id === undefined || (responseJson.execution_id === executionData.execution_id && responseJson.results !== undefined && responseJson.results !== null)) {
+
+				if (executionData.status !== responseJson.status || executionData.result !== responseJson.result || executionData.results.length !== responseJson.results.length) {
+					console.log("Updated state with this data:")
+					console.log(responseJson)
+					console.log(executionData)
+					setExecutionData(responseJson)
+				} else {
+					console.log("NOT updating state.")
+				}
 			}
+		} else {
+			console.log("JSON is same")
 		}
 
 		//console.log("PRE LOOPING RESULTS: !", responseJson.execution_id, executionRequest.execution_id)
@@ -541,7 +576,7 @@ const AngularWorkflow = (props) => {
 
 		//console.log("LOOPING RESULTS!")
 
-		if (responseJson.results !== null && responseJson.results !== []) {
+		if (responseJson.results !== null && responseJson.results.length > 0) {
 			for (var key in responseJson.results) {
 				var item = responseJson.results[key]
 				var currentnode = cy.getElementById(item.action.id)
@@ -635,7 +670,9 @@ const AngularWorkflow = (props) => {
 						break
 					case "FAILURE": 
 						//When status comes as failure, allow user to start workflow execution
-						setExecutionRunning(false)
+						if (executionRunning) {
+							setExecutionRunning(false)
+						}
 
 						currentnode.removeClass('not-executing-highlight')
 						currentnode.removeClass('executing-highlight')
@@ -670,7 +707,10 @@ const AngularWorkflow = (props) => {
 		if (responseJson.status === "ABORTED" || responseJson.status === "STOPPED" || responseJson.status === "FAILURE" || responseJson.status == "WAITING") {
 			stop()
 
-			setExecutionRunning(false)
+			if (executionRunning) {
+				setExecutionRunning(false)
+			}
+
 			var curelements = cy.elements()
 			for (var i = 0; i < curelements.length; i++) {
 				if (curelements[i].classes().includes("executing-highlight")) {
@@ -692,6 +732,8 @@ const AngularWorkflow = (props) => {
 			stop()
 			getWorkflowExecution(props.match.params.key, "")
 			setUpdate(Math.random())
+		} else {
+			console.log("Nothing to update")
 		}
 	}
 
@@ -1262,7 +1304,11 @@ const AngularWorkflow = (props) => {
 
 		// Can be used for right side view
 		setRightSideBarOpen(false)
-		setScrollLocation(0)
+		setScrollConfig({
+			top: 0,
+			left: 0,
+			selected: "",
+		})
 		console.timeEnd("UNSELECT")
 	}
 
@@ -1644,6 +1690,11 @@ const AngularWorkflow = (props) => {
 			alert.error("Can't handle "+data.type)
 		}
 
+		setScrollConfig({
+			top: 0,
+			left: 0,
+			selected: "",
+		})
 	}
 
 	// Checks for errors in edges when they're added 
@@ -1792,57 +1843,58 @@ const AngularWorkflow = (props) => {
 			setWorkflow(workflow)
 		}
 
-		if (nodedata.app_name !== undefined && ((
-			nodedata.app_name !== "Shuffle Tools" &&
-			nodedata.app_name !== "Testing" &&
-			nodedata.app_name !== "Shuffle Workflow" &&
-			nodedata.app_name !== "User Input" &&
-			nodedata.app_name !== "Schedule" &&
-			nodedata.app_name !== "Email") || nodedata.isStartNode) 
-		) {
-			const allNodes = cy.nodes().jsons()
-			var found = false
-			for (var key in allNodes) {
-				const currentNode = allNodes[key]
-				if (currentNode.data.attachedTo === nodedata.id && currentNode.data.isDescriptor) {
-					found = true 
-					console.log("FOUND THE NODE!")
-					break
-				}
-			}
+		//if (nodedata.app_name !== undefined && ((
+		//	nodedata.app_name !== "Shuffle Tools" &&
+		//	nodedata.app_name !== "Testing" &&
+		//	nodedata.app_name !== "Shuffle Workflow" &&
+		//	nodedata.app_name !== "User Input" &&
+		//	nodedata.app_name !== "Webhook" &&
+		//	nodedata.app_name !== "Schedule" &&
+		//	nodedata.app_name !== "Email") || nodedata.isStartNode) 
+		//) {
+		//	const allNodes = cy.nodes().jsons()
+		//	var found = false
+		//	for (var key in allNodes) {
+		//		const currentNode = allNodes[key]
+		//		if (currentNode.data.attachedTo === nodedata.id && currentNode.data.isDescriptor) {
+		//			found = true 
+		//			console.log("FOUND THE NODE!")
+		//			break
+		//		}
+		//	}
 
-			// Readding the icon after moving the node
-			if (!found) {
-				console.log("Node wasn't found")
-				const iconInfo = GetIconInfo(nodedata)
-				const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
-				const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
+		//	// Readding the icon after moving the node
+		//	if (!found) {
+		//		console.log("Node wasn't found")
+		//		const iconInfo = GetIconInfo(nodedata)
+		//		const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
+		//		const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
 
-				const offset = nodedata.isStartNode ? 36 : 44
-				const decoratorNode = {
-					position: {
-						x: event.target.position().x+offset,
-						y: event.target.position().y+offset,
-					},
-					locked: true,
-					data: {
-						"isDescriptor": true,
-						"isValid": true,
-						"is_valid": true,
-						"label": "",
-						"image": svgpin_Url,
-						"imageColor": iconInfo.iconBackgroundColor,
-						"attachedTo": nodedata.id,
-					},
-				}
+		//		const offset = nodedata.isStartNode ? 36 : 44
+		//		const decoratorNode = {
+		//			position: {
+		//				x: event.target.position().x+offset,
+		//				y: event.target.position().y+offset,
+		//			},
+		//			locked: true,
+		//			data: {
+		//				"isDescriptor": true,
+		//				"isValid": true,
+		//				"is_valid": true,
+		//				"label": "",
+		//				"image": svgpin_Url,
+		//				"imageColor": iconInfo.iconBackgroundColor,
+		//				"attachedTo": nodedata.id,
+		//			},
+		//		}
 
-				cy.add(decoratorNode)
-			} else {
-				console.log("Node already exists - don't add descriptor node")
-			}
-		} else {
-			//console.log("Shouldnt re-add info? ")
-		}
+		//		cy.add(decoratorNode)
+		//	} else {
+		//		console.log("Node already exists - don't add descriptor node")
+		//	}
+		//} else {
+		//	//console.log("Shouldnt re-add info? ")
+		//}
 	}
 
 	const onEdgeRemoved = (event) => {
@@ -2159,28 +2211,7 @@ const AngularWorkflow = (props) => {
 		}
 	})
 
-	useEffect(() => {
-		console.log("Inside useeffect for action")
-		if (Object.getOwnPropertyNames(selectedAction).length !== 0) {
-			var rightSideActionView = document.getElementById("rightside_actions")
-			if (rightSideActionView !== undefined && rightSideActionView !== null) {
-				console.log("set scroll for ", rightSideActionView)
-				//rightSideActionView.scrollTop = 250
-				//rightSideActionView.scrollRight = 250
-
-				console.log("FOUND RIGHTSIDE: ", rightSideActionView.scrollTop, scrollLocation)
-				if (scrollLocation !== 0 && scrollLocation !== undefined && scrollLocation !== 0) {
-					console.log("SCROLL IS NOT 0: ", scrollLocation)
-					rightSideActionView.scrollTop = scrollLocation
-				} else {
-					console.log("SCROLL IS 0: ", scrollLocation, rightSideActionView.scrollTop)
-					if (rightSideActionView.scrollTop !== scrollLocation) {
-						setScrollLocation(rightSideActionView.scrollTop)
-					}
-				}
-			}	
-		}
-	}, [selectedAction])
+	//}, [selectedAction])
 
 	var previousnodecolor = ""
 	//var previousedgecolor = ""
@@ -3555,6 +3586,9 @@ const AngularWorkflow = (props) => {
 		// Does this one find the wrong one?
 		selectedAction.name = newaction.name
 		selectedAction.parameters = JSON.parse(JSON.stringify(newaction.parameters))
+		selectedAction.errors = []
+		selectedAction.isValid = true
+		selectedAction.is_valid = true
 
 		if (newaction.returns.example !== undefined && newaction.returns.example !== null && newaction.returns.example.length > 0) {
 			selectedAction.example = newaction.returns.example 
@@ -6083,7 +6117,9 @@ const AngularWorkflow = (props) => {
 		*/
 	}
 
-	const TopCytoscapeBar = () => {
+	const TopCytoscapeBar = (props) => {
+		useTraceUpdate(props) 
+
 		return (
 			<div style={topBarStyle}>	
 				<div style={{margin: "0px 10px 0px 10px", }}>
@@ -6244,6 +6280,8 @@ const AngularWorkflow = (props) => {
 	const BottomCytoscapeBar = () => {
 		const [anchorEl, setAnchorEl] = React.useState(null)
 
+		useTraceUpdate(props) 
+
 		const boxSize = 100
 		const executionButton = executionRunning ? 
 			<Tooltip color="primary" title="Stop execution" placement="top">
@@ -6351,6 +6389,10 @@ const AngularWorkflow = (props) => {
 	}
 
 	const RightSideBar = (props) => {
+		const {workflow, setWorkflow, setAction, setSelectedAction, setUpdate, appActionArguments, selectedApp, workflowExecutions, setSelectedResult, selectedAction, setSelectedApp, setSelectedTrigger, setSelectedEdge, setCurrentView, cy, setAuthenticationModalOpen,setVariablesModalOpen, setCodeModalOpen, selectedNameChange, rightsidebarStyle, showEnvironment, selectedActionEnvironment, environments, setNewSelectedAction, appApiViewStyle, globalUrl, setSelectedActionEnvironment, requiresAuthentication, hideExtraTypes, scrollConfig, setScrollConfig } = props
+
+		useTraceUpdate(props) 
+
 		if (!rightSideBarOpen) {
 			return null
 		}
@@ -6360,14 +6402,46 @@ const AngularWorkflow = (props) => {
 				return null
 			} 
 
-			console.time('ACTIONSTART')
-			return(
-				<div id="rightside_actions" style={rightsidebarStyle} onLoad={() => {
-					console.log("LOADED RIGHTSIDE")	
-				}}>	
-					HELO
+			return (
+				<div id="rightside_actions" style={rightsidebarStyle}>
+					<ParsedAction 
+						id="rightside_subactions"
+						scrollConfig={scrollConfig}
+						setScrollConfig={setScrollConfig}
+						selectedAction={selectedAction}
+						workflow={workflow} 
+						setWorkflow={setWorkflow} 
+						setSelectedAction={setSelectedAction}
+						setUpdate={setUpdate}
+						selectedApp={selectedApp}
+						workflowExecutions={workflowExecutions}
+						setSelectedResult={setSelectedResult}
+						setSelectedApp={setSelectedApp}
+						setSelectedTrigger={setSelectedTrigger}
+						setSelectedEdge={setSelectedEdge}
+						setCurrentView={setCurrentView}
+						cy={cy}
+						setAuthenticationModalOpen={setAuthenticationModalOpen}
+
+						setVariablesModalOpen={setVariablesModalOpen}
+						setLastSaved={setLastSaved}
+						setCodeModalOpen={setCodeModalOpen}
+						selectedNameChange={selectedNameChange}
+						rightsidebarStyle={rightsidebarStyle}
+						showEnvironment={showEnvironment}
+						selectedActionEnvironment={selectedActionEnvironment}
+						environments={environments}
+						setNewSelectedAction={setNewSelectedAction}
+						sortByKey={sortByKey}
+						
+						appApiViewStyle={appApiViewStyle}
+						globalUrl={globalUrl}
+						setSelectedActionEnvironment={setSelectedActionEnvironment}
+						requiresAuthentication={requiresAuthentication}
+					/>
 				</div>
 			)
+
 		} else if (Object.getOwnPropertyNames(selectedTrigger).length > 0) {
 			if (selectedTrigger.trigger_type === "SCHEDULE") {
 				//console.log("SCHEDULE")
@@ -7129,7 +7203,7 @@ const AngularWorkflow = (props) => {
 			</Dialog> 
 		</Draggable> 
 	
-	const newView = //isLoggedIn ?
+	const newView = 
 		<div style={{color: "white"}}>
 			<div style={{display: "flex", borderTop: "1px solid rgba(91, 96, 100, 1)"}}>
 				{leftView}
@@ -7152,45 +7226,40 @@ const AngularWorkflow = (props) => {
 				/>
 			</div>
 			{executionModal}
+			<RightSideBar 
+				scrollConfig={scrollConfig}
+				setScrollConfig={setScrollConfig}
+				selectedAction={selectedAction}
+				workflow={workflow} 
+				setWorkflow={setWorkflow} 
+				setSelectedAction={setSelectedAction}
+				setUpdate={setUpdate}
+				selectedApp={selectedApp}
+				workflowExecutions={workflowExecutions}
+				setSelectedResult={setSelectedResult}
+				setSelectedApp={setSelectedApp}
+				setSelectedTrigger={setSelectedTrigger}
+				setSelectedEdge={setSelectedEdge}
+				setCurrentView={setCurrentView}
+				cy={cy}
+				setAuthenticationModalOpen={setAuthenticationModalOpen}
 
-			{rightSideBarOpen && Object.getOwnPropertyNames(selectedAction).length !== 0 ?
-				<div id="rightside_actions" style={rightsidebarStyle}>
-					<ParsedAction 
-						selectedAction={selectedAction}
-						workflow={workflow} 
-						setWorkflow={setWorkflow} 
-						setSelectedAction={setSelectedAction}
-						setUpdate={setUpdate}
-						selectedApp={selectedApp}
-						workflowExecutions={workflowExecutions}
-						setSelectedResult={setSelectedResult}
-						setSelectedApp={setSelectedApp}
-						setSelectedTrigger={setSelectedTrigger}
-						setSelectedEdge={setSelectedEdge}
-						setCurrentView={setCurrentView}
-						cy={cy}
-						setAuthenticationModalOpen={setAuthenticationModalOpen}
-
-						setVariablesModalOpen={setVariablesModalOpen}
-						setLastSaved={setLastSaved}
-						setCodeModalOpen={setCodeModalOpen}
-						selectedNameChange={selectedNameChange}
-						rightsidebarStyle={rightsidebarStyle}
-						showEnvironment={showEnvironment}
-						selectedActionEnvironment={selectedActionEnvironment}
-						environments={environments}
-						setNewSelectedAction={setNewSelectedAction}
-						sortByKey={sortByKey}
-						
-						appApiViewStyle={appApiViewStyle}
-						globalUrl={globalUrl}
-						setSelectedActionEnvironment={setSelectedActionEnvironment}
-						requiresAuthentication={requiresAuthentication}
-					/>
-				</div>
-			: 
-				<RightSideBar />
-			}
+				setVariablesModalOpen={setVariablesModalOpen}
+				setLastSaved={setLastSaved}
+				setCodeModalOpen={setCodeModalOpen}
+				selectedNameChange={selectedNameChange}
+				rightsidebarStyle={rightsidebarStyle}
+				showEnvironment={showEnvironment}
+				selectedActionEnvironment={selectedActionEnvironment}
+				environments={environments}
+				setNewSelectedAction={setNewSelectedAction}
+				sortByKey={sortByKey}
+				
+				appApiViewStyle={appApiViewStyle}
+				globalUrl={globalUrl}
+				setSelectedActionEnvironment={setSelectedActionEnvironment}
+				requiresAuthentication={requiresAuthentication}
+			/>
 			<BottomCytoscapeBar />
 			<TopCytoscapeBar />
 		</div> 
@@ -7723,13 +7792,54 @@ const AngularWorkflow = (props) => {
 		<div>
 		</div>
 
+		// Awful way of handling scroll
+		if (scrollConfig !== undefined && setScrollConfig !== undefined && Object.getOwnPropertyNames(selectedAction).length !== 0) {
+			//console.log("SET CONFIG: ", scrollConfig)
+			const rightSideActionView = document.getElementById("rightside_actions")
+			if (rightSideActionView !== undefined && rightSideActionView !== null) {
+				//console.log("FOUND RIGHTSIDE: ", rightSideActionView.scrollTop, scrollConfig)
+				if (scrollConfig.top !== 0 && scrollConfig.top !== undefined && scrollConfig.top !== 0) {
+					//console.log("SCROLL IS NOT 0: ", scrollConfig.top)
+					//rightSideActionView.scrollTop = scrollConfig.top
+					setTimeout(() => {
+						scroller.scrollTo('elements_wrapper', {
+							containerId: 'rightside_actions',
+							offset: scrollConfig.top, 
+						})
+
+						if (scrollConfig.selected !== undefined && scrollConfig.selected !== null) {
+							const selectedField = document.getElementById(scrollConfig.selected)
+							if (selectedField !== undefined && selectedField !== null) {
+								selectedField.focus()
+								//const val = selectedField.value
+								//console.log("VAL: ", val)
+								//selectedField.value = ''
+								//selectedField.value = val
+							}
+						}
+					}, 5)
+				} else {
+					//console.log("SCROLL IS 0: ", scrollConfig.top, rightSideActionView.scrollTop)
+					if (rightSideActionView.scrollTop !== scrollConfig.top) {
+						setScrollConfig({
+							top: rightSideActionView.scrollTop,
+							left: 0,
+							selected: "",
+						})
+					}
+				}
+			}	
+		}
+
 	return (
 		<div>	
-		  <Prompt
-				when={!lastSaved}
-				message={unloadText}
-			/>
-			{loadedCheck}
+			<ScrollElement name="elements_wrapper">
+				<Prompt
+					when={!lastSaved}
+					message={unloadText}
+				/>
+				{loadedCheck}
+			</ScrollElement>
 		</div>	
 	)
 }
