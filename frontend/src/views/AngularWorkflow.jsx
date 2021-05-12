@@ -11,7 +11,7 @@ import NestedMenuItem from "material-ui-nested-menu-item";
 
 
 import {TextField, Drawer, Button, Paper, Grid, Tabs, InputAdornment, Tab, ButtonBase, Tooltip, Select, MenuItem, Divider, Dialog, Modal, DialogActions, DialogTitle, InputLabel, DialogContent, FormControl, IconButton, Menu, Input, FormGroup, FormControlLabel, Typography, Checkbox, Breadcrumbs, CircularProgress, Switch, Fade} from '@material-ui/core';
-import {FileCopy as FileCopyIcon, GetApp as GetAppIcon, Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
+import {Undo as UndoIcon, FileCopy as FileCopyIcon, GetApp as GetAppIcon, Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
 
 import * as cytoscape from 'cytoscape';
 import * as edgehandles from 'cytoscape-edgehandles';
@@ -156,7 +156,9 @@ const AngularWorkflow = (props) => {
 		left: 0,
 		selected: "",
 	})
+
 	const [history, setHistory] = React.useState([])
+	const [historyIndex, setHistoryIndex] = React.useState(history.length)
 
 	const [appAuthentication, setAppAuthentication] = React.useState([]);
 	const [variablesModalOpen, setVariablesModalOpen] = React.useState(false);
@@ -1937,6 +1939,8 @@ const AngularWorkflow = (props) => {
 			"action": "added",
 			"data": edge,
 		})
+		setHistory(history)
+		setHistoryIndex(history.length)
 	}
 
 	const onNodeAdded = (event) => {
@@ -1963,6 +1967,16 @@ const AngularWorkflow = (props) => {
 			}
 
 			setWorkflow(workflow)
+		}
+
+		if (nodedata.app_name !== undefined) {
+			history.push({
+				"type": "node",
+				"action": "added",
+				"data": nodedata,
+			})
+			setHistory(history)
+			setHistoryIndex(history.length)
 		}
 
 		//if (nodedata.app_name !== undefined && ((
@@ -2018,11 +2032,6 @@ const AngularWorkflow = (props) => {
 		//	//console.log("Shouldnt re-add info? ")
 		//}
 		
-		history.push({
-			"type": "node",
-			"action": "added",
-			"data": nodedata,
-		})
 	}
 
 	const onEdgeRemoved = (event) => {
@@ -2042,6 +2051,16 @@ const AngularWorkflow = (props) => {
 			//	group: "edges",
 			//	data: newcybranch,
 			//}
+		}
+
+		if (edge.data().source !== undefined) {
+			history.push({
+				"type": "edge",
+				"action": "removed",
+				"data": edge.data().source,
+			})
+			setHistory(history)
+			setHistoryIndex(history.length)
 		}
 	}
 
@@ -2092,6 +2111,14 @@ const AngularWorkflow = (props) => {
 					cy.getElementById(currentNode.data.id).remove()
 				}
 			}
+
+			history.push({
+				"type": "node",
+				"action": "removed",
+				"data": data,
+			})
+			setHistory(history)
+			setHistoryIndex(history.length)
 		}
 
 
@@ -2116,42 +2143,44 @@ const AngularWorkflow = (props) => {
 	      break;
 			case 38:
 				console.log("UP")
-	            break;
+	    	break;
 			case 37:
 				console.log("LEFT")
-	            break;
+	      break;
 			case 40:
 				console.log("DOWN")
-	            break;
+	      break;
 			case 39:
 				console.log("RIGHT")
-	            break;
+	      break;
 			case 90:
 				if (previouskey === 17) {
 					console.log("CTRL+Z")
+					handleHistoryUndo() 
 				}
-	            break;
+
+	      break;
 			case 67:
 				if (previouskey === 17) {
 					console.log("CTRL+C")
 				}
-	            break;
+	      break;
 			case 86:
 				if (previouskey === 17) {
 					console.log("CTRL+V")
 				}
-	            break;
+	      break;
 			case 88:
 				if (previouskey === 17) {
 					console.log("CTRL+V")
 				}
-	            break;
+	      break;
 			case 83:
 				if (previouskey === 17) {
 					event.preventDefault()
 					saveWorkflow()
 				}
-	            break;
+	      break;
 			case 70:
 				//if (previouskey === 17) {
 				//	event.preventDefault()
@@ -6408,6 +6437,40 @@ const AngularWorkflow = (props) => {
 		)
 	}
 
+	const handleHistoryUndo = () => {
+		console.log("history: ", history, "index: ", historyIndex)
+		var item = history[historyIndex-1]
+		if (historyIndex === 0) {
+			item = history[historyIndex]
+		}
+
+		if (item === undefined) {
+			console.log("Couldn't find the action you're looking for")
+			return
+		}
+
+		console.log("HANDLE: ", item)
+		if (item.type === "node" && item.action === "removed") {
+			// Re-add the node 
+				
+			cy.add({
+					group: 'nodes',
+					data: item.data,
+					position: item.data.position,
+			})
+		} else if (item.action === "added") {
+			console.log("Should remove item!")
+			const currentitem = cy.getElementById(item.data.id)
+			if (currentitem !== undefined && currentitem !== null) {
+				currentitem.remove()
+			}
+		}
+
+		if (historyIndex > 0) {
+			setHistoryIndex(historyIndex-1)
+		}
+	}
+
 	const BottomCytoscapeBar = () => {
 		const [anchorEl, setAnchorEl] = React.useState(null)
 
@@ -6512,6 +6575,17 @@ const AngularWorkflow = (props) => {
 					</Tooltip>	
 					{/* <FileMenu />	*/}
 					{workflow.configuration !== null && workflow.configuration !== undefined && workflow.configuration.exit_on_error !== undefined ? <WorkflowMenu />	 : null}
+					{history.length > 0 ?
+						<Tooltip color="secondary" title="Undo" placement="top-start">
+							<span>	
+							<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={(event) => {
+								handleHistoryUndo(history)
+							}}>
+								<UndoIcon />
+							</Button>
+							</span>	
+						</Tooltip>
+					: null}
 				</div>
 			</div>
 		)
