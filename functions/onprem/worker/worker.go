@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/frikky/shuffle-shared"
 
+	//"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -24,6 +25,9 @@ import (
 	//"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/mount"
 	dockerclient "github.com/docker/docker/client"
+	//"github.com/go-git/go-billy/v5/memfs"
+
+	newdockerclient "github.com/fsouza/go-dockerclient"
 	//"github.com/satori/go.uuid"
 
 	"github.com/gorilla/mux"
@@ -1780,8 +1784,94 @@ func runWebserver(listener net.Listener) {
 	log.Fatal(http.Serve(listener, nil))
 }
 
+func downloadDockerImage(client *http.Client, imageName string) {
+	data := fmt.Sprintf(`{"name": "%s"}`, imageName)
+	fullUrl := fmt.Sprintf("%s/api/v1/get_docker_image", baseUrl)
+
+	req, err := http.NewRequest(
+		"POST",
+		fullUrl,
+		bytes.NewBuffer([]byte(data)),
+	)
+
+	authorization := os.Getenv("AUTHORIZATION")
+	if len(authorization) > 0 {
+		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", authorization))
+	} else {
+		log.Printf("[WARNING] No auth found.")
+		req.Header.Add("Authorization", fmt.Sprintf("Bearer db0373c6-1083-4dec-a05d-3ba73f02ccd4"))
+		//return
+	}
+
+	newresp, err := client.Do(req)
+	if err != nil {
+		log.Printf("[ERROR] Failed request: %s", err)
+		return
+	}
+
+	if newresp.StatusCode != 200 {
+		log.Printf("[ERROR] DOWNLOAD StatusCode (1): %d", newresp.StatusCode)
+		return
+	}
+
+	// Write the body to file
+
+	newClient, err := newdockerclient.NewClientFromEnv()
+	if err != nil {
+		log.Printf("[WARNING] Failed setting up docker env in download: %s", newClient)
+		return
+	}
+
+	newImageName := strings.Replace(imageName, "/", "_", -1)
+	newFileName := newImageName + ".tar.gz"
+	//os.Create(newFileName)
+
+	tar, err := os.Create(newFileName)
+	if err != nil {
+		log.Printf("[WARNING] Failed creating file: %s", err)
+		return
+	}
+
+	//fs := memfs.New()
+	//if err != nil {
+	//	log.Printf("[WARNING] Failed making memory file: %s", err)
+	//	return
+	//}
+
+	//imageName = strings.Replace(imageName, "/", "_", -1)
+	//tar, err := fs.Create(imageName + ".tar.gz")
+	//if err != nil {
+	//	log.Printf("[WARNING] Failed making file: %s", err)
+	//	return
+	//}
+	defer tar.Close()
+	_, err = io.Copy(tar, newresp.Body)
+
+	//OutputStream: outFile,
+	//Context:      context.Background(),
+	imageOptions := newdockerclient.LoadImageOptions{
+		InputStream: tar,
+	}
+
+	//log.Printf("BUF: %s", buf.String())
+	err = newClient.LoadImage(imageOptions)
+	if err != nil {
+		log.Printf("[WARNING] Failed loading image %s: %s", imageName, err)
+		return
+	}
+
+	log.Printf("[INFO] Successfully loaded image %s", imageName)
+	//err = os.Remove(newImageName)
+	//if err != nil {
+	//	log.Printf("[WARNING] Failed removing file: %s", err)
+	//}
+
+	return
+}
+
 // Initial loop etc
 func main() {
+
 	log.Printf("[INFO] Setting up worker environment")
 	sleepTime := 5
 
@@ -1803,6 +1893,10 @@ func main() {
 			log.Printf("Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
 		}
 	}
+
+	imageName := "frikky/shuffle:Testing_1.0.0"
+	downloadDockerImage(client, imageName)
+	os.Exit(3)
 
 	// WORKER_TESTING_WORKFLOW should be a workflow ID
 	authorization := ""

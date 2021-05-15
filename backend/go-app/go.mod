@@ -3,6 +3,7 @@ module shuffle
 go 1.13
 
 replace github.com/frikky/shuffle-shared => ../../../../git/shuffle-shared
+
 //replace github.com/frikky/kin-openapi => ../../../../git/kin-openapi
 
 require (
@@ -11,17 +12,17 @@ require (
 	cloud.google.com/go/pubsub v1.3.1
 	cloud.google.com/go/storage v1.12.0
 	github.com/Masterminds/semver v1.5.0 // indirect
-	github.com/Microsoft/go-winio v0.4.14 // indirect
 	github.com/algolia/algoliasearch-client-go/v3 v3.18.1 // indirect
 	github.com/basgys/goxml2json v1.1.0
 	github.com/bradfitz/slice v0.0.0-20180809154707-2b758aa73013 // indirect
 	github.com/carlescere/scheduler v0.0.0-20170109141437-ee74d2f83d82
 	github.com/docker/distribution v2.7.1+incompatible // indirect
-	github.com/docker/docker v1.13.1
+	github.com/docker/docker v20.10.3-0.20210216175712-646072ed6524+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/frikky/kin-openapi v0.39.0
 	github.com/frikky/shuffle-shared v0.0.40
+	github.com/fsouza/go-dockerclient v1.7.2 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-git/go-billy/v5 v5.0.0
 	github.com/go-git/go-git/v5 v5.0.0
@@ -29,7 +30,6 @@ require (
 	github.com/gorilla/handlers v1.4.2 // indirect
 	github.com/gorilla/mux v1.8.0
 	github.com/h2non/filetype v1.0.12
-	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/satori/go.uuid v1.2.0
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9

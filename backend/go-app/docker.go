@@ -5,20 +5,25 @@ import (
 	"github.com/frikky/shuffle-shared"
 
 	"archive/tar"
+	"bufio"
 	"path/filepath"
+	"strconv"
 
 	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	//"github.com/docker/docker"
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
+	//"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	newdockerclient "github.com/fsouza/go-dockerclient"
 	"github.com/go-git/go-billy/v5"
+	"github.com/go-git/go-billy/v5/memfs"
 
-	network "github.com/docker/docker/api/types/network"
-	natting "github.com/docker/go-connections/nat"
+	//network "github.com/docker/docker/api/types/network"
+	//natting "github.com/docker/go-connections/nat"
 
 	"io"
 	"io/ioutil"
@@ -409,89 +414,6 @@ func stopWebhook(image string, identifier string) error {
 	return nil
 }
 
-// FIXME - remember to set DOCKER_API_VERSION
-// FIXME - remove github.com/docker/docker/vendor
-// FIXME - Library dependencies for NAT is fucked..
-// https://docs.docker.com/develop/sdk/examples/
-func deployWebhook(image string, identifier string, path string, port string, callbackurl string, apikey string) error {
-	cli, err := client.NewEnvClient()
-	if err != nil {
-		fmt.Println("Unable to create docker client")
-		return err
-	}
-
-	newport, err := natting.NewPort("tcp", port)
-	if err != nil {
-		fmt.Println("Unable to create docker port")
-		return err
-	}
-
-	// FIXME - logging?
-
-	hostConfig := &container.HostConfig{
-		PortBindings: natting.PortMap{
-			newport: []natting.PortBinding{
-				{
-					HostIP:   "0.0.0.0",
-					HostPort: port,
-				},
-			},
-		},
-		RestartPolicy: container.RestartPolicy{
-			Name: "always",
-		},
-		LogConfig: container.LogConfig{
-			Type:   "json-file",
-			Config: map[string]string{},
-		},
-	}
-
-	//networkConfig := &network.NetworkSettings{}
-	networkConfig := &network.NetworkingConfig{
-		EndpointsConfig: map[string]*network.EndpointSettings{},
-	}
-
-	test := &network.EndpointSettings{
-		Gateway: "helo",
-	}
-
-	networkConfig.EndpointsConfig["bridge"] = test
-
-	exposedPorts := map[natting.Port]struct{}{
-		newport: struct{}{},
-	}
-
-	config := &container.Config{
-		Image: image,
-		Env: []string{
-			fmt.Sprintf("URIPATH=%s", path),
-			fmt.Sprintf("HOOKPORT=%s", port),
-			fmt.Sprintf("CALLBACKURL=%s", callbackurl),
-			fmt.Sprintf("APIKEY=%s", apikey),
-			fmt.Sprintf("HOOKID=%s", identifier),
-		},
-		ExposedPorts: exposedPorts,
-		Hostname:     fmt.Sprintf("%s-%s", image, identifier),
-	}
-
-	cont, err := cli.ContainerCreate(
-		context.Background(),
-		config,
-		hostConfig,
-		networkConfig,
-		fmt.Sprintf("%s-%s", image, identifier),
-	)
-
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-
-	cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
-	log.Printf("Container %s is created", cont.ID)
-	return nil
-}
-
 // Starts a new webhook
 func handleStopHookDocker(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
@@ -624,121 +546,6 @@ func handleDeleteHookDocker(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(`{"success": true, "message": "Deleted webhook"}`))
 }
 
-// Starts a new webhook
-func handleStartHookDocker(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	location := strings.Split(request.URL.String(), "/")
-
-	var fileId string
-	if location[1] == "api" {
-		if len(location) <= 4 {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		fileId = location[4]
-	}
-
-	if len(fileId) != 32 {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "message": "ID not valid"}`))
-		return
-	}
-
-	ctx := context.Background()
-	hook, err := getHook(ctx, fileId)
-	if err != nil {
-		log.Printf("Failed getting hook %s (start docker): %s", fileId, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	if len(hook.Info.Url) == 0 {
-		log.Printf("Hook url can't be empty.")
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	log.Printf("Status: %s", hook.Status)
-	log.Printf("Running: %t", hook.Running)
-	if hook.Running || hook.Status == "Running" {
-		message := fmt.Sprintf("Error: %s is already running", hook.Id)
-		log.Println(message)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "message": "%s"}`, message)))
-		return
-	}
-
-	// FIXME - verify?
-	// FIXME - static port? Generate from available range.
-	image := "webhook"
-	filepath := "/webhook"
-	baseUrl := "http://localhost"
-	callbackUrl := "http://localhost:8001"
-
-	// This is here to force stop and remove the old webhook
-	err = stopWebhook(image, fileId)
-	if err != nil {
-		log.Printf("Container stop issue for %s-%s: %s", image, fileId, err)
-	}
-
-	// Dynamic ish ports
-	var startPort int64 = 5001
-	var endPort int64 = 5010
-	port := findAvailablePorts(startPort, endPort)
-	if len(port) == 0 {
-		message := fmt.Sprintf("Not ports available in the range %d-%d", startPort, endPort)
-		log.Println(message)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "message": "%s"}`, message)))
-		return
-
-	}
-
-	hook.Status = "running"
-	hook.Running = true
-
-	// Set this for more than just hooks?
-	if hook.Type == "webhook" {
-		hook.Info.Url = fmt.Sprintf("%s:%s%s", baseUrl, port, filepath)
-	}
-	err = setHook(ctx, *hook)
-	if err != nil {
-		log.Printf("Failed setting hook: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	// Cloud run? Let's make a generic webhook that can be deployed easily
-	log.Printf("Should run a webhook with the following: \nUrl: %s\nId: %s\n", hook.Info.Url, hook.Id)
-
-	// FIXME - set port based on what the user specified / what was generated
-	// FIXME - add nonstatic APIKEY
-	apiKey := "ASD"
-
-	err = deployWebhook(image, fileId, filepath, port, callbackUrl, apiKey)
-	if err != nil {
-		log.Printf("Failed starting container %s-%s: %s", image, fileId, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	// FIXME - get some real data?
-	log.Printf("[INFO] Successfully started %s-%s on port %s with filepath %s", image, fileId, port, filepath)
-	resp.WriteHeader(200)
-	resp.Write([]byte(`{"success": true, "message": "Started webhook"}`))
-	return
-}
-
 // Checks if an image exists
 func imageCheckBuilder(images []string) error {
 	//log.Printf("[FIXME] ImageNames to check: %#v", images)
@@ -819,7 +626,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 	// Just here to verify that the user is logged in
 	_, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
-		log.Printf("Api authentication failed in validate swagger: %s", err)
+		log.Printf("[WARNING] Api authentication failed in DOWNLOAD IMAGE: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -857,7 +664,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("Image to load: %s", version.Name)
+	log.Printf("[DEBUG] Image to load: %s", version.Name)
 	//cli, err := client.NewEnvClient()
 	//if err != nil {
 	//	log.Println("Unable to create docker client")
@@ -896,20 +703,59 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "message": "Couldn't find image %s"}`, version.Name)))
 		return
 	}
+
 	_ = tagFound
+	log.Printf("Img (%s) found: %#v", tagFound, img)
 
-	/*
-		log.Printf("IMg: %#v", img)
-		pullOptions := types.ImagePullOptions{}
-		log.Printf("[INFO] Pulling image %s", image)
-		reader, err := dockercli.ImagePull(ctx, tag, pullOptions)
-		if err != nil {
-			log.Printf("[ERROR] Failed getting image %s: %s", image, err)
-		}
+	basepath := "base"
+	location := fmt.Sprintf("%s.tar.gz", tagFound)
+	fs := memfs.New()
 
-		io.Copy(os.Stdout, r)
-	*/
+	//Close after function return
+	f, err := fs.Create(fmt.Sprintf("%s/%s", basepath, location))
+	if err != nil {
+		log.Printf("[WARNING] Failed making file: %s", err)
+		return
+	}
 
-	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true, "message": "Downloading image %s"}`, version.Name)))
+	newClient, err := newdockerclient.NewClientFromEnv()
+	if err != nil {
+		log.Printf("[WARNING] Failed setting up docker env: %s", newClient)
+		return
+	}
+
+	//https://github.com/fsouza/go-dockerclient/issues/600
+	defer f.Close()
+	w := bufio.NewWriter(f)
+	opts := newdockerclient.ExportImageOptions{
+		Name:         tagFound,
+		OutputStream: w,
+	}
+
+	if err := newClient.ExportImage(opts); err != nil {
+		log.Printf("[WARNING] FAILED to save image to file: %s", err)
+		return
+	}
+
+	w.Flush()
+	FileHeader := make([]byte, 512)
+	f.Read(FileHeader)
+	FileContentType := http.DetectContentType(FileHeader)
+
+	//Get the file size
+	//FileStat, _ := f.Stat() //Get info from file
+	//FileSize := strconv.FormatInt(f.Size(), 10) //Get file size as a string
+
+	//Send the headers
+	resp.Header().Set("Content-Disposition", "attachment; filename="+location)
+	resp.Header().Set("Content-Type", FileContentType)
+	resp.Header().Set("Content-Length", strconv.FormatInt(img.Size, 10))
+
+	//Send the file
+	//We read 512 bytes from the file already, so we reset the offset back to 0
+	f.Seek(0, 0)
+	io.Copy(resp, f) //'Copy' the file to the client
+
+	//resp.WriteHeader(200)
+	//resp.Write([]byte(fmt.Sprintf(`{"success": true, "message": "Downloading image %s"}`, version.Name)))
 }
