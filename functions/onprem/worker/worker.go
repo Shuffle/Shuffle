@@ -1894,9 +1894,9 @@ func main() {
 		}
 	}
 
-	imageName := "frikky/shuffle:Testing_1.0.0"
-	downloadDockerImage(client, imageName)
-	os.Exit(3)
+	//imageName := "frikky/shuffle:Testing_1.0.0"
+	//downloadDockerImage(client, imageName)
+	//os.Exit(3)
 
 	// WORKER_TESTING_WORKFLOW should be a workflow ID
 	authorization := ""
