@@ -688,7 +688,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 	tagFound := ""
 	for _, image := range images {
 		for _, tag := range image.RepoTags {
-			log.Printf("[INFO] Docker Image: %s", tag)
+			//log.Printf("[INFO] Docker Image: %s", tag)
 
 			if strings.ToLower(tag) == strings.ToLower(version.Name) {
 				img = image
@@ -704,8 +704,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	_ = tagFound
-	log.Printf("Img (%s) found: %#v", tagFound, img)
+	log.Printf("[INFO] Img found (%s): %#v", tagFound, img)
 
 	basepath := "base"
 	location := fmt.Sprintf("%s.tar.gz", tagFound)

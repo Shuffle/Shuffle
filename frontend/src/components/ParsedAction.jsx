@@ -53,11 +53,15 @@ const ParsedAction = (props) => {
 		while(true) {
 			for (var key in allkeys) {
 				var currentnode = cy.getElementById(allkeys[key])
-				if (handled.includes(currentnode.data().id)) {
+				if (currentnode === undefined) {
+					continue
+				}
+
+				if (handled.includes(currentnode.data("id"))) {
 					continue
 				} else {
 					// Get the name / label here too?
-					handled.push(currentnode.data().id)
+					handled.push(currentnode.data("id"))
 					results.push(currentnode.data())
 				}
 
