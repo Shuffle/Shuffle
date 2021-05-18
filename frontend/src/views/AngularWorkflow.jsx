@@ -1475,7 +1475,7 @@ const AngularWorkflow = (props) => {
 			// 3. If it is, then hide text
 		}
 
-		if (nodedata.app_id !== undefined) {
+		if (nodedata.app_name !== undefined) {
 			//console.log("Trying to remove friendly nodes")
 			const allNodes = cy.nodes().jsons()
 			for (var key in allNodes) {
@@ -1484,6 +1484,8 @@ const AngularWorkflow = (props) => {
 					cy.getElementById(currentNode.data.id).remove()
 				}
 			}
+		} else {
+			console.log("No appid? ", nodedata)
 		}
 
 		if (nodedata.id === selectedAction.id) {
@@ -2101,7 +2103,7 @@ const AngularWorkflow = (props) => {
 			//})
 		}
 
-		if (data.app_id !== undefined) {
+		if (data.app_name !== undefined) {
 			//console.log("Trying to remove friendly nodes")
 			const allNodes = cy.nodes().jsons()
 			//console.log("NOT UNDEFINED IN HOVEROUT!", allNodes)
