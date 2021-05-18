@@ -3,7 +3,7 @@ import { useInterval } from 'react-powerhooks';
 import { makeStyles } from '@material-ui/core/styles';
 
 import {Avatar, Grid, Paper, Tooltip, Divider, Button, TextField, FormControl, IconButton, Menu, MenuItem, FormControlLabel, Chip, Switch, Typography, Zoom, CircularProgress, Dialog, DialogTitle, DialogActions, DialogContent} from '@material-ui/core';
-import {Compare as CompareIcon, Maximize as MaximizeIcon, Minimize as MinimizeIcon, Toc as TocIcon, Send as SendIcon, Search as SearchIcon, FileCopy as FileCopyIcon, Delete as DeleteIcon, BubbleChart as BubbleChartIcon, Restore as RestoreIcon, Cached as CachedIcon, GetApp as GetAppIcon, Apps as AppsIcon, Edit as EditIcon, MoreVert as MoreVertIcon, PlayArrow as PlayArrowIcon, Add as AddIcon, Publish as PublishIcon, CloudUpload as CloudUploadIcon, CloudDownload as CloudDownloadIcon} from '@material-ui/icons';
+import {Compare as CompareIcon, Maximize as MaximizeIcon, Minimize as MinimizeIcon, AddCircle as AddCircleIcon, Toc as TocIcon, Send as SendIcon, Search as SearchIcon, FileCopy as FileCopyIcon, Delete as DeleteIcon, BubbleChart as BubbleChartIcon, Restore as RestoreIcon, Cached as CachedIcon, GetApp as GetAppIcon, Apps as AppsIcon, Edit as EditIcon, MoreVert as MoreVertIcon, PlayArrow as PlayArrowIcon, Add as AddIcon, Publish as PublishIcon, CloudUpload as CloudUploadIcon, CloudDownload as CloudDownloadIcon} from '@material-ui/icons';
 //import {Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
 
 import {DataGrid, GridToolbarContainer, GridDensitySelector, GridToolbar} from '@material-ui/data-grid';
@@ -614,6 +614,7 @@ const Workflows = (props) => {
 		position: "relative",
 	}
 
+
 	const gridContainer = {
 		height: "auto",
 		color: "white",
@@ -897,6 +898,39 @@ const Workflows = (props) => {
 	const handleChipClick = (e) => {
 		addFilter(e.target.innerHTML)
 	}
+
+
+	const NewWorkflowPaper = (props) => {
+		const [hover, setHover] = React.useState(false)
+
+		const innerColor = "rgba(255,255,255,0.3)"
+		const setupPaperStyle = {
+			minHeight: paperAppStyle.minHeight,
+			width: paperAppStyle.width,
+			color: innerColor,
+			padding: paperAppStyle.padding, 
+			borderRadius: paperAppStyle.borderRadius, 
+			display: "flex",
+			boxSizing: "border-box",
+			position: "relative",
+			border: `2px solid ${innerColor}`,
+			cursor: "pointer",
+			backgroundColor: hover ? "rgba(39,41,45,0.5)" : "rgba(39,41,45,1)",
+		}
+
+		return(
+			<Grid item xs={4} style={{padding: "12px 10px 12px 10px",}}>
+				<Paper square style={setupPaperStyle} onClick={() => setModalOpen(true)} onMouseOver={() => {setHover(true)}} onMouseOut={() => {setHover(false)}}>	
+					<Tooltip title={`New Workflow`} placement="bottom">
+						<span style={{textAlign: "center", width: 300, margin: "auto",}}>
+							<AddCircleIcon style={{height: 65, width: 65, }}/>
+						</span>
+					</Tooltip>
+				</Paper>
+			</Grid>
+		)
+	}
+
 
 	const WorkflowPaper = (props) => {
   	const { data } = props;
@@ -1469,7 +1503,8 @@ const Workflows = (props) => {
 							const data = params.row.record;
 							let [triggers, schedules, webhooks, subflows] = getWorkflowMeta(data);
 
-							return <Grid item>
+							return 
+								<Grid item>
 									<Link to={"/workflows/"+data.id}>
 											<EditIcon style={{background: "#F85A3E",
 	boxShadow: "0px 1px 2px rgba(0, 0, 0, 0.16), 0px 2px 4px rgba(0, 0, 0, 0.12), 0px 1px 8px rgba(0, 0, 0, 0.1)",
@@ -1501,7 +1536,8 @@ const Workflows = (props) => {
 						disableClickEventBubbling: true,
 						renderCell: (params) => {
 							const data = params.row.record;
-							return <Grid item>
+							return 
+								<Grid item>
 										{data.tags !== undefined ?
 											data.tags.map((tag, index) => {
 												if (index >= 3) {
@@ -1525,12 +1561,18 @@ const Workflows = (props) => {
 				];
 				let rows = [];
 				rows = workflows.map((data, index) => {
-					let obj = {"id":index+1, "title":data.name, "record":data,};
+					let obj = {
+						"id":index+1, 
+						"title":data.name, 
+						"record":data,
+					}
+
 					return obj;
 				});
-				workflowData = <DataGrid color="primary" className={classes.root} rows={rows} columns={columns} pageSize={5} checkboxSelection autoHeight density="standard" components={{
-					Toolbar: GridToolbar,
-				  }} />
+				workflowData = 
+					<DataGrid color="primary" className={classes.root} rows={rows} columns={columns} pageSize={5} checkboxSelection autoHeight density="standard" components={{
+						Toolbar: GridToolbar,
+					}} />
 			}
 			return (
 				<div style={gridContainer}>
@@ -1820,6 +1862,7 @@ const Workflows = (props) => {
 					<div style={{marginTop: 15,}} />
 					{view === "grid" && (
 						<Grid container spacing={4} style={paperAppContainer}>
+							<NewWorkflowPaper />
 							{filteredWorkflows.map((data, index) => {
 								return (
 									<WorkflowPaper key={index} data={data} />
@@ -1828,9 +1871,9 @@ const Workflows = (props) => {
 						</Grid>
 					)}
 					
-					{view === "list" && (
+					{/*view === "list" && (
 						<WorkflowGridView />
-					)}
+					)*/}
 
 					<div style={{marginBottom: 100}}/>
 				</div>
