@@ -12,7 +12,9 @@ RUN go get github.com/docker/docker/api/types && \
 	go get github.com/gorilla/mux && \
 	go get github.com/patrickmn/go-cache && \
 	go get github.com/frikky/shuffle-shared && \
-	go get github.com/satori/go.uuid
+	go get github.com/satori/go.uuid && \
+	go get github.com/fsouza/go-dockerclient && \
+	go get google.golang.org/grpc/balancer/grpclb@v1.37.1
 
 RUN go build
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o worker .
