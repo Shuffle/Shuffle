@@ -1936,7 +1936,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 		}
 	}
 
-	for _, trigger := range workflowExecution.Workflow.Triggers {
+	for triggerIndex, trigger := range workflowExecution.Workflow.Triggers {
 		//log.Printf("[INFO] ID: %s vs %s", trigger.ID, workflowExecution.Start)
 		if trigger.ID == workflowExecution.Start {
 			if trigger.AppName == "User Input" {
@@ -1975,7 +1975,78 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 					Status:        "SKIPPED",
 				})
 			} else {
-				//log.Printf("SHOULD KEEP TRIGGER %s", trigger.ID)
+				// Replaces trigger with the subflow
+				if trigger.AppName == "Shuffle Workflow" {
+					replaceActions := false
+					workflowAction := ""
+					for _, param := range trigger.Parameters {
+						if param.Name == "argument" && !strings.Contains(param.Value, ".#") {
+							replaceActions = true
+						}
+
+						if param.Name == "startnode" {
+							workflowAction = param.Value
+						}
+					}
+
+					if replaceActions {
+						replacementNodes, newBranches, lastnode := shuffle.GetReplacementNodes(ctx, workflowExecution, trigger)
+						log.Printf("REPLACEMENTS: %d, %d", len(replacementNodes), len(newBranches))
+						if len(replacementNodes) > 0 {
+							//workflowExecution.Workflow.Actions = append(workflowExecution.Workflow.Actions, action)
+
+							//lastnode = replacementNodes[0]
+							// Have to validate in case it's the same workflow and such
+							for _, action := range replacementNodes {
+								found := false
+								for subActionIndex, subaction := range newActions {
+									if subaction.ID == action.ID {
+										found = true
+										//newActions[subActionIndex].Name = action.Name
+										newActions[subActionIndex].Label = action.Label
+										break
+									}
+								}
+
+								if !found {
+									newActions = append(newActions, action)
+								}
+
+								// Check if it's already set to have a value
+								for resultIndex, result := range defaultResults {
+									if result.Action.ID == action.ID {
+										defaultResults = append(defaultResults[:resultIndex], defaultResults[resultIndex+1:]...)
+										break
+									}
+								}
+							}
+
+							for _, branch := range newBranches {
+								workflowExecution.Workflow.Branches = append(workflowExecution.Workflow.Branches, branch)
+							}
+
+							// Append branches:
+							// parent -> new inner node (FIRST one)
+							for branchIndex, branch := range workflowExecution.Workflow.Branches {
+								if branch.DestinationID == trigger.ID {
+									log.Printf("REPLACE DESTINATION WITH %s!!", workflowAction)
+									workflowExecution.Workflow.Branches[branchIndex].DestinationID = workflowAction
+								}
+
+								if branch.SourceID == trigger.ID {
+									log.Printf("REPLACE SOURCE WITH LASTNODE %s!!", lastnode)
+									workflowExecution.Workflow.Branches[branchIndex].SourceID = lastnode
+								}
+							}
+
+							// Remove the trigger
+							workflowExecution.Workflow.Triggers = append(workflowExecution.Workflow.Triggers[:triggerIndex], workflowExecution.Workflow.Triggers[triggerIndex+1:]...)
+							workflow.Triggers = append(workflow.Triggers[:triggerIndex], workflow.Triggers[triggerIndex+1:]...)
+						}
+
+						log.Printf("NEW ACTION LENGTH %d, RESULT: %d, Triggers: %d", len(newActions), len(defaultResults), len(workflowExecution.Workflow.Triggers))
+					}
+				}
 			}
 		}
 	}
@@ -4333,6 +4404,54 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	//if workflowapp.Environment == "" {
 	//	workflowapp.Environment = baseEnvironment
 	//}
+
+	// Fixes (appends) authentication parameters if they're required
+	if workflowapp.Authentication.Required {
+		log.Printf("[INFO] Checking authentication fields and appending for %s!", workflowapp.Name)
+		// FIXME:
+		// Might require reflection into the python code to append the fields as well
+		for index, action := range workflowapp.Actions {
+			if action.AuthNotRequired {
+				log.Printf("Skipping auth setup: %s", action.Name)
+				continue
+			}
+
+			// 1. Check if authentication params exists at all
+			// 2. Check if they're present in the action
+			// 3. Add them IF they DONT exist
+			// 4. Fix python code with reflection (FIXME)
+			appendParams := []shuffle.WorkflowAppActionParameter{}
+			for _, fieldname := range workflowapp.Authentication.Parameters {
+				found := false
+				for index, param := range action.Parameters {
+					if param.Name == fieldname.Name {
+						found = true
+
+						action.Parameters[index].Configuration = true
+						//log.Printf("Set config to true for field %s!", param.Name)
+						break
+					}
+				}
+
+				if !found {
+					appendParams = append(appendParams, shuffle.WorkflowAppActionParameter{
+						Name:          fieldname.Name,
+						Description:   fieldname.Description,
+						Example:       fieldname.Example,
+						Required:      fieldname.Required,
+						Configuration: true,
+						Schema:        fieldname.Schema,
+					})
+				}
+			}
+
+			if len(appendParams) > 0 {
+				log.Printf("[AUTH] Appending %d params to the START of %s", len(appendParams), action.Name)
+				workflowapp.Actions[index].Parameters = append(appendParams, workflowapp.Actions[index].Parameters...)
+			}
+
+		}
+	}
 
 	workflowapp.ID = uuid.NewV4().String()
 	workflowapp.IsValid = true

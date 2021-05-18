@@ -563,7 +563,7 @@ const AngularWorkflow = (props) => {
 				}
 			}
 		} else {
-			console.log("JSON is same")
+			//console.log("JSON is same")
 		}
 
 		//console.log("PRE LOOPING RESULTS: !", responseJson.execution_id, executionRequest.execution_id)
@@ -732,7 +732,7 @@ const AngularWorkflow = (props) => {
 			getWorkflowExecution(props.match.params.key, "")
 			setUpdate(Math.random())
 		} else {
-			console.log("Nothing to update")
+			//console.log("Nothing to update")
 		}
 	}
 
@@ -1596,10 +1596,13 @@ const AngularWorkflow = (props) => {
 					//parentNode.data()
 					var newNodeData = JSON.parse(JSON.stringify(parentNode.data()))
 					newNodeData.id = uuid.v4()
-					newNodeData.position = {
-						"x": newNodeData.position.x+100,
-						"y": newNodeData.position.y+100,
+					if (newNodeData.position !== undefined) {
+						newNodeData.position = {
+							"x": newNodeData.position.x+100,
+							"y": newNodeData.position.y+100,
+						}
 					}
+
 					newNodeData.isStartNode = false
 					newNodeData.errors = []
 					newNodeData.is_valid = true
@@ -1713,6 +1716,7 @@ const AngularWorkflow = (props) => {
 			}
 
 			const curapp = apps.find(a => a.name === curaction.app_name && ((a.app_version === curaction.app_version || (a.loop_versions !== null && a.loop_versions.includes(curaction.app_version)))))
+			console.log("APP: ", curapp)
 			if (!curapp || curapp === undefined) {
 				alert.error(`App ${curaction.app_name}:${curaction.app_version} not found. Is it activated?`)
 
@@ -1734,6 +1738,7 @@ const AngularWorkflow = (props) => {
 				//console.log("AUTHENTICATION: ", curapp.authentication)
 				setRequiresAuthentication(curapp.authentication.required && curapp.authentication.parameters !== undefined && curapp.authentication.parameters !== null)
 				if (curapp.authentication.required) {
+					console.log("App requires auth.")
 					// Setup auth here :)
 					const authenticationOptions = []
 					var findAuthId = ""
@@ -2793,7 +2798,9 @@ const AngularWorkflow = (props) => {
 		.then((responseJson) => {
 			// No matter what, it's being stopped.
 			if (!responseJson.success) {
-				alert.WARNING("Failed to stop schedule: " + responseJson.reason)
+				if (responseJson.reason !== undefined) {
+					alert.error("Failed to stop schedule: " + responseJson.reason)
+				}
 			} else {
 				alert.success("Successfully stopped schedule")
 			}

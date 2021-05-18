@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 import { useInterval } from 'react-powerhooks';
 
 import {IconButton, Typography, Grid, Select, Paper, Divider, ButtonBase, Button, TextField, FormControl, MenuItem, Tooltip, FormControlLabel, Switch, Input, Breadcrumbs, Chip, Dialog, DialogTitle, DialogActions, DialogContent, CircularProgress} from '@material-ui/core';
-import {OpenInNew as OpenInNewIcon,Apps as AppsIcon, Cached as CachedIcon, Publish as PublishIcon, CloudDownload as CloudDownloadIcon, Edit as EditIcon, Delete as DeleteIcon} from '@material-ui/icons';
+import {LockOpen as LockOpenIcon, OpenInNew as OpenInNewIcon,Apps as AppsIcon, Cached as CachedIcon, Publish as PublishIcon, CloudDownload as CloudDownloadIcon, Edit as EditIcon, Delete as DeleteIcon} from '@material-ui/icons';
 
 import { useTheme } from '@material-ui/core/styles';
 
@@ -333,6 +333,10 @@ const Apps = (props) => {
 
 	// dropdown with copy etc I guess
 	const appPaper = (data) => {
+		if (data.name === "" && data.id === "") {
+			return null
+		}
+
 		var boxWidth = "2px"
 		if (selectedApp.id === data.id) {
 			boxWidth = "4px"
@@ -801,9 +805,14 @@ const Apps = (props) => {
 									const circleSize = 10
 									return (
 										<MenuItem key={data.name} style={{backgroundColor: inputColor, color: "white"}} value={data}>
-											<div style={{width: circleSize, height: circleSize, borderRadius: circleSize / 2, backgroundColor: itemColor, marginRight: "10px"}}/>
+											{data.configuration === true ? 
+												<Tooltip color="primary" title={`Authenticate ${selectedApp.name}`} placement="top">
+													<LockOpenIcon style={{cursor: "pointer", width: 24, height: 24, marginRight: 10, }} />
+												</Tooltip>
+											:
+												<div style={{width: 17, height: 17, borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: 10, marginTop: 2, marginTop: "auto", marginBottom: "auto",}}/>
+											}
 											{data.name}
-
 										</MenuItem>
 									)
 								})}

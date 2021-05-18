@@ -1023,10 +1023,6 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 				// Trying to replace with lowercase to deploy again. This seems to work with Dockerhub well.
 				// FIXME: Should try to remotely download directly if this persists.
 				image = images[1]
-				if strings.Contains(image, " ") {
-					image = strings.ReplaceAll(image, " ", "-")
-				}
-
 				err = deployApp(dockercli, image, identifier, env, workflowExecution)
 				if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 					if strings.Contains(err.Error(), "exited prematurely") {
@@ -1034,10 +1030,6 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 					}
 
 					image = images[2]
-					if strings.Contains(image, " ") {
-						image = strings.ReplaceAll(image, " ", "-")
-					}
-
 					err = deployApp(dockercli, image, identifier, env, workflowExecution)
 					if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 						if strings.Contains(err.Error(), "exited prematurely") {

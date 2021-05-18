@@ -311,8 +311,29 @@ const Workflows = (props) => {
 			if (curWorkflow.tags === undefined || curWorkflow.tags === null) {
 				found = filters.map(filter => curWorkflow.name.toLowerCase().includes(filter))
 			} else {
-				found = filters.map(filter => curWorkflow.name.toLowerCase().includes(filter.toLowerCase()) || curWorkflow.tags.includes(filter))
+				found = filters.map(filter => {
+					if (filter === undefined) {
+						return false
+					}
+
+					if (curWorkflow.name.toLowerCase().includes(filter.toLowerCase())) {
+						return true
+					} else if (curWorkflow.tags.includes(filter)) {
+						return true
+					} else if (curWorkflow.actions !== null && curWorkflow.actions !== undefined) {
+						const newfilter = filter.toLowerCase()
+						for (var key in curWorkflow.actions) {
+							const action = curWorkflow.actions[key]
+							if (action.app_name.toLowerCase().includes(newfilter)) {
+								return true
+							}
+						}
+					}
+
+					return false
+				})
 			}
+
 			//console.log("FOUND: ", found)
 			//if (found) {
 			if (found.every(v => v === true)) {
@@ -604,6 +625,8 @@ const Workflows = (props) => {
 
 	const paperAppStyle = {
 		minHeight: 130,
+		maxHeight: 130,
+		overflow: "hidden",
 		width: "100%",
 		color: "white",
 		backgroundColor: surfaceColor,
@@ -1503,7 +1526,7 @@ const Workflows = (props) => {
 							const data = params.row.record;
 							let [triggers, schedules, webhooks, subflows] = getWorkflowMeta(data);
 
-							return 
+							return (
 								<Grid item>
 									<Link to={"/workflows/"+data.id}>
 											<EditIcon style={{background: "#F85A3E",
@@ -1530,13 +1553,14 @@ const Workflows = (props) => {
 										</Tooltip>
 									: null}
 								</Grid>
-							}
+							)
+						}
 					},
 					{ field: 'tags', headerName: 'Tags', width: 390, sortable: false, 
 						disableClickEventBubbling: true,
 						renderCell: (params) => {
 							const data = params.row.record;
-							return 
+							return (
 								<Grid item>
 										{data.tags !== undefined ?
 											data.tags.map((tag, index) => {
@@ -1556,6 +1580,7 @@ const Workflows = (props) => {
 											})
 										: null}
 									</Grid>
+								)
 							}
 						},
 				];
@@ -1707,11 +1732,11 @@ const Workflows = (props) => {
 
 		const workflowButtons = 
 			<span>
-				{workflows.length > 0 ?
+				{/*workflows.length > 0 ?
 					<Tooltip color="primary" title={"Create new workflow"} placement="top">
 						<Button color="primary" style={{}} variant="text" onClick={() => setModalOpen(true)}><AddIcon /></Button> 				
 					</Tooltip>
-				: null}
+				: null*/}
 				<Tooltip color="primary" title={"Import workflows"} placement="top">
 					{importLoading ? 
 						<Button color="primary" style={{}} variant="text" onClick={() => {}}>
