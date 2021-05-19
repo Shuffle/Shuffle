@@ -1,6 +1,6 @@
 #!/bin/bash
 NAME=shuffle-app_sdk
-VERSION=0.8.80
+VERSION=0.8.81
 
 docker rmi docker.pkg.github.com/frikky/shuffle/$NAME:$VERSION --force
 docker build . -t frikky/shuffle:app_sdk -t frikky/$NAME:$VERSION -t docker.pkg.github.com/frikky/shuffle/$NAME:$VERSION -t ghcr.io/frikky/$NAME:$VERSION

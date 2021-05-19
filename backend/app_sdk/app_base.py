@@ -516,7 +516,27 @@ class AppBase:
             for subparams in param_multiplier:
                 print(f"SUBPARAMS IN MULTI: {subparams}")
                 try:
-                    tmp = await func(**subparams)
+                    #tmp = await func(**subparams)
+
+                    while True:
+                        try:
+                            tmp = await func(**subparams)
+                            break
+                        except TypeError as e:
+                            errorstring = "%s" % e
+                            if "got an unexpected keyword argument" in errorstring:
+                                fieldsplit = errorstring.split("'")
+                                if len(fieldsplit) > 1:
+                                    field = fieldsplit[1]
+                    
+                                    try:
+                                        del subparams[field]
+                                        print("Removed field invalid field %s" % field)
+                                    except KeyError:
+                                        break
+                            else:
+                                raise e
+
                 except:
                     e = ""
                     try:
@@ -2139,7 +2159,28 @@ class AppBase:
                                 return
 
                             print("[INFO] Running normal execution\n") 
-                            newres = await func(**params)
+
+                            #newres = await func(**params)
+                            while True:
+                                try:
+                                    newres = await func(**params)
+                                    break
+                                except TypeError as e:
+                                    errorstring = "%s" % e
+                                    if "got an unexpected keyword argument" in errorstring:
+                                        fieldsplit = errorstring.split("'")
+                                        if len(fieldsplit) > 1:
+                                            field = fieldsplit[1]
+                            
+                                            try:
+                                                del params[field]
+                                                print("Removed field invalid field %s" % field)
+                                            except KeyError:
+                                                break
+                                    else:
+                                        raise e
+                                        #break
+
                             print("\n[INFO] Returned from execution!")#, newres)
                             if isinstance(newres, tuple):
                                 print("[INFO] Handling return as tuple")
