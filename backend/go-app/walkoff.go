@@ -1024,7 +1024,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflowexecution is aborted because of %s with result %s and status %s"}`, workflowExecution.LastNode, workflowExecution.Result, workflowExecution.Status)))
 			return
 		} else {
-			log.Printf("Continuing even though it's aborted.")
+			log.Printf("[WARNING] Continuing workflow even though it's aborted (ExitOnError config)")
 		}
 	}
 
@@ -1936,6 +1936,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 		}
 	}
 
+	removeTriggers := []string{}
 	for triggerIndex, trigger := range workflowExecution.Workflow.Triggers {
 		//log.Printf("[INFO] ID: %s vs %s", trigger.ID, workflowExecution.Start)
 		if trigger.ID == workflowExecution.Start {
@@ -1976,80 +1977,98 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 				})
 			} else {
 				// Replaces trigger with the subflow
-				if trigger.AppName == "Shuffle Workflow" {
-					replaceActions := false
-					workflowAction := ""
-					for _, param := range trigger.Parameters {
-						if param.Name == "argument" && !strings.Contains(param.Value, ".#") {
-							replaceActions = true
-						}
+				//if trigger.AppName == "Shuffle Workflow" {
+				//	replaceActions := false
+				//	workflowAction := ""
+				//	for _, param := range trigger.Parameters {
+				//		if param.Name == "argument" && !strings.Contains(param.Value, ".#") {
+				//			replaceActions = true
+				//		}
 
-						if param.Name == "startnode" {
-							workflowAction = param.Value
-						}
-					}
+				//		if param.Name == "startnode" {
+				//			workflowAction = param.Value
+				//		}
+				//	}
 
-					if replaceActions {
-						replacementNodes, newBranches, lastnode := shuffle.GetReplacementNodes(ctx, workflowExecution, trigger)
-						log.Printf("REPLACEMENTS: %d, %d", len(replacementNodes), len(newBranches))
-						if len(replacementNodes) > 0 {
-							//workflowExecution.Workflow.Actions = append(workflowExecution.Workflow.Actions, action)
+				//	if replaceActions {
+				//		replacementNodes, newBranches, lastnode := shuffle.GetReplacementNodes(ctx, workflowExecution, trigger, trigger.Label)
+				//		log.Printf("REPLACEMENTS: %d, %d", len(replacementNodes), len(newBranches))
+				//		if len(replacementNodes) > 0 {
+				//			for _, action := range replacementNodes {
+				//				found := false
 
-							//lastnode = replacementNodes[0]
-							// Have to validate in case it's the same workflow and such
-							for _, action := range replacementNodes {
-								found := false
-								for subActionIndex, subaction := range newActions {
-									if subaction.ID == action.ID {
-										found = true
-										//newActions[subActionIndex].Name = action.Name
-										newActions[subActionIndex].Label = action.Label
-										break
-									}
-								}
+				//				for subActionIndex, subaction := range newActions {
+				//					if subaction.ID == action.ID {
+				//						found = true
+				//						//newActions[subActionIndex].Name = action.Name
+				//						newActions[subActionIndex].Label = action.Label
+				//						break
+				//					}
+				//				}
 
-								if !found {
-									newActions = append(newActions, action)
-								}
+				//				if !found {
+				//					action.SubAction = true
+				//					newActions = append(newActions, action)
+				//				}
 
-								// Check if it's already set to have a value
-								for resultIndex, result := range defaultResults {
-									if result.Action.ID == action.ID {
-										defaultResults = append(defaultResults[:resultIndex], defaultResults[resultIndex+1:]...)
-										break
-									}
-								}
-							}
+				//				// Check if it's already set to have a value
+				//				for resultIndex, result := range defaultResults {
+				//					if result.Action.ID == action.ID {
+				//						defaultResults = append(defaultResults[:resultIndex], defaultResults[resultIndex+1:]...)
+				//						break
+				//					}
+				//				}
+				//			}
 
-							for _, branch := range newBranches {
-								workflowExecution.Workflow.Branches = append(workflowExecution.Workflow.Branches, branch)
-							}
+				//			for _, branch := range newBranches {
+				//				workflowExecution.Workflow.Branches = append(workflowExecution.Workflow.Branches, branch)
+				//			}
 
-							// Append branches:
-							// parent -> new inner node (FIRST one)
-							for branchIndex, branch := range workflowExecution.Workflow.Branches {
-								if branch.DestinationID == trigger.ID {
-									log.Printf("REPLACE DESTINATION WITH %s!!", workflowAction)
-									workflowExecution.Workflow.Branches[branchIndex].DestinationID = workflowAction
-								}
+				//			// Append branches:
+				//			// parent -> new inner node (FIRST one)
+				//			for branchIndex, branch := range workflowExecution.Workflow.Branches {
+				//				if branch.DestinationID == trigger.ID {
+				//					log.Printf("REPLACE DESTINATION WITH %s!!", workflowAction)
+				//					workflowExecution.Workflow.Branches[branchIndex].DestinationID = workflowAction
+				//				}
 
-								if branch.SourceID == trigger.ID {
-									log.Printf("REPLACE SOURCE WITH LASTNODE %s!!", lastnode)
-									workflowExecution.Workflow.Branches[branchIndex].SourceID = lastnode
-								}
-							}
+				//				if branch.SourceID == trigger.ID {
+				//					log.Printf("REPLACE SOURCE WITH LASTNODE %s!!", lastnode)
+				//					workflowExecution.Workflow.Branches[branchIndex].SourceID = lastnode
+				//				}
+				//			}
 
-							// Remove the trigger
-							workflowExecution.Workflow.Triggers = append(workflowExecution.Workflow.Triggers[:triggerIndex], workflowExecution.Workflow.Triggers[triggerIndex+1:]...)
-							workflow.Triggers = append(workflow.Triggers[:triggerIndex], workflow.Triggers[triggerIndex+1:]...)
-						}
+				//			// Remove the trigger
+				//			removeTriggers = append(removeTriggers, workflowExecution.Workflow.Triggers[triggerIndex].ID)
+				//		}
 
-						log.Printf("NEW ACTION LENGTH %d, RESULT: %d, Triggers: %d", len(newActions), len(defaultResults), len(workflowExecution.Workflow.Triggers))
-					}
-				}
+				//		log.Printf("NEW ACTION LENGTH %d, RESULT: %d, Triggers: %d, BRANCHES: %d", len(newActions), len(defaultResults), len(workflowExecution.Workflow.Triggers), len(workflowExecution.Workflow.Branches))
+				//	}
+				//}
+				_ = triggerIndex
 			}
 		}
 	}
+
+	//newTriggers := []shuffle.Trigger{}
+	//for _, trigger := range workflowExecution.Workflow.Triggers {
+	//	found := false
+	//	for _, triggerId := range removeTriggers {
+	//		if trigger.ID == triggerId {
+	//			found = true
+	//			break
+	//		}
+	//	}
+
+	//	if found {
+	//		log.Printf("[WARNING] Removed trigger %s during execution", trigger.ID)
+	//		continue
+	//	}
+
+	//	newTriggers = append(newTriggers, trigger)
+	//}
+	//workflowExecution.Workflow.Triggers = newTriggers
+	_ = removeTriggers
 
 	if !startFound {
 		if len(workflowExecution.Start) == 0 && len(workflowExecution.Workflow.Start) > 0 {

@@ -554,9 +554,9 @@ const AngularWorkflow = (props) => {
 			if (executionData.execution_id === undefined || (responseJson.execution_id === executionData.execution_id && responseJson.results !== undefined && responseJson.results !== null)) {
 
 				if (executionData.status !== responseJson.status || executionData.result !== responseJson.result || executionData.results.length !== responseJson.results.length) {
-					console.log("Updated state with this data:")
-					console.log(responseJson)
-					console.log(executionData)
+					//console.log("Updated state with this data:")
+					//console.log(responseJson)
+					//console.log(executionData)
 					setExecutionData(responseJson)
 				} else {
 					console.log("NOT updating state.")
@@ -1731,6 +1731,7 @@ const AngularWorkflow = (props) => {
 				console.log(tmpapp)
 				console.log(curaction)
 				setSelectedApp(tmpapp)
+				//setSelectedAction(JSON.parse(JSON.stringify(curaction)))
 				setSelectedAction(curaction)
 				//return
 			} else {
@@ -1779,6 +1780,7 @@ const AngularWorkflow = (props) => {
 					curaction.selectedAuthentication = {}
 				}
 
+				//setSelectedAction(JSON.parse(JSON.stringify(curaction)))
 				setSelectedApp(curapp)
 				setSelectedAction(curaction)
 
@@ -3365,7 +3367,7 @@ const AngularWorkflow = (props) => {
 
 				if (data.name !== "User Input" && data.name !== "Shuffle Workflow") {
 					//workflow.branches.push(newbranch)
-					//cy.add(edgeToBeAdded)
+					cy.add(edgeToBeAdded)
 				}
 
 				setWorkflow(workflow)
@@ -3865,7 +3867,7 @@ const AngularWorkflow = (props) => {
 				} 
 				
 				if (currentnode.data() === undefined) {
-					console.log("Node doesn't have any data (getParents)! Probably a trigger.")
+					//console.log("Node doesn't have any data (getParents)! Probably a trigger.")
 					handled.push(allkeys[key])
 					results.push({"id": allkeys[key], "type": "TRIGGER"})
 				} else {
@@ -5037,7 +5039,7 @@ const AngularWorkflow = (props) => {
 
 			}
 
-			console.log("ACTIONS: ", actionlist)
+			//console.log("ACTIONS: ", actionlist)
 			setActionlist(actionlist)
 		}
 
@@ -5260,6 +5262,7 @@ const AngularWorkflow = (props) => {
 				workflow.triggers[selectedTriggerIndex].parameters[1] = {"name": "argument", "value": ""}
 				workflow.triggers[selectedTriggerIndex].parameters[2] = {"name": "user_apikey", "value": ""}
 				workflow.triggers[selectedTriggerIndex].parameters[3] = {"name": "startnode", "value": ""}
+				workflow.triggers[selectedTriggerIndex].parameters[4] = {"name": "check_result", "value": "true"}
 
 				console.log("SETTINGS: ", userSettings)
 				if (userSettings !== undefined && userSettings !== null && userSettings.apikey !== null && userSettings.apikey !== undefined && userSettings.apikey.length > 0) {
@@ -5268,7 +5271,7 @@ const AngularWorkflow = (props) => {
 			} 
 
 			return(
-				<div style={appApiViewStyle}>
+				<div style={appApiViewStyle}>					
 					<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 						<div style={{flex: "1"}}>
 							<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}</h3>
@@ -5294,6 +5297,27 @@ const AngularWorkflow = (props) => {
 						color="primary"
 						placeholder={selectedTrigger.label}
 						onChange={selectedTriggerChange}
+					/>
+					<FormControlLabel
+						control={
+							<Checkbox 
+								checked={workflow.triggers[selectedTriggerIndex].parameters[4] !== undefined && workflow.triggers[selectedTriggerIndex].parameters[4].value === "true"} 
+								onChange={() => {
+									const newvalue = workflow.triggers[selectedTriggerIndex].parameters[4] === undefined || workflow.triggers[selectedTriggerIndex].parameters[4].value === "false" ? "true" : "false"
+									workflow.triggers[selectedTriggerIndex].parameters[4] = {
+										"name": "check_result",
+										"value": newvalue,
+									}
+
+									setWorkflow(workflow)
+									setUpdate(Math.random())
+								}} 
+								color="primary"
+								value="Wait for results" 
+							/>
+						}
+						style={{marginTop: 10}}
+						label={<div style={{color: "white"}}>Wait for results</div>}
 					/>
 					<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 					<div style={{flex: "6", marginTop: "20px"}}>
@@ -5384,7 +5408,7 @@ const AngularWorkflow = (props) => {
 										fullWidth
 										onChange={(e) => {
 											setSubworkflowStartnode(e.target.value)
-											console.log("WF: ", workflow)
+											//console.log("WF: ", workflow)
 
 											const branchId = uuid.v4()
 											const newbranch = {
@@ -5418,15 +5442,17 @@ const AngularWorkflow = (props) => {
 												}
 											}
 
-											const cybranch = {
-												group: "edges",
-												source: newbranch.source_id,
-												target: newbranch.destination_id,
-												id: branchId,
-												data: newbranch,
-											}
+											if (workflow.id == subworkflow.id) {
+												const cybranch = {
+													group: "edges",
+													source: newbranch.source_id,
+													target: newbranch.destination_id,
+													id: branchId,
+													data: newbranch,
+												}
 
-											cy.add(cybranch)
+												cy.add(cybranch)
+											}
 
 											try {
 												workflow.triggers[selectedTriggerIndex].parameters[3].value = e.target.value.id
@@ -7017,7 +7043,7 @@ const AngularWorkflow = (props) => {
 					{executionData.status !== undefined && executionData.status.length > 0 ?
 						<div style={{display: "flex"}}>
 							<Typography variant="body1">
-								<b>Status &nbsp;</b>
+								<b>Status &nbsp;&nbsp;</b>
 							</Typography>
 							<Typography variant="body1" color="textSecondary">
 								{executionData.status} 
@@ -7144,7 +7170,7 @@ const AngularWorkflow = (props) => {
 							}
 
 							return (
-								<div key={index} style={{marginBottom: 40,}} onMouseOver={() => {
+								<div key={index} style={{marginBottom: 40, border: data.action.sub_action === true ? "1px solid rgba(255,255,255,0.3)" : null, borderRadius: theme.palette.borderRadius,}} onMouseOver={() => {
 									var currentnode = cy.getElementById(data.action.id)
 									if (currentnode.length !== 0) {
 										currentnode.addClass('shuffle-hover-highlight')
