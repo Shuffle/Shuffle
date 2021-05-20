@@ -106,19 +106,6 @@ type ExecutionInfo struct {
 	DailyOnpremExecutions   int64 `json:"daily_onprem_executions" datastore:"daily_onprem_executions"`
 }
 
-type StatisticsData struct {
-	Timestamp int64  `json:"timestamp" datastore:"timestamp"`
-	Id        string `json:"id" datastore:"id"`
-	Amount    int64  `json:"amount" datastore:"amount"`
-}
-
-type StatisticsItem struct {
-	Total     int64            `json:"total" datastore:"total"`
-	Fieldname string           `json:"field_name" datastore:"field_name"`
-	Data      []StatisticsData `json:"data" datastore:"data"`
-	OrgId     string           `json:"org_id" datastore:"org_id"`
-}
-
 // "Execution by status"
 // Execution history
 //type GlobalStatistics struct {
@@ -593,53 +580,6 @@ func checkFileExistsLocal(basepath string, filepath string) bool {
 	return true
 }
 
-func handleGetallSchedules(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	var err error
-	var limit = 50
-
-	// FIXME - add org search and public / private
-	key, ok := request.URL.Query()["limit"]
-	if ok {
-		limit, err = strconv.Atoi(key[0])
-		if err != nil {
-			limit = 50
-		}
-	}
-
-	// Max datastore limit
-	if limit > 1000 {
-		limit = 1000
-	}
-
-	// Get URLs from a database index (mapped by orborus)
-	ctx := context.Background()
-	q := datastore.NewQuery("schedules").Limit(limit)
-	var allschedules Schedules
-
-	_, err = dbclient.GetAll(ctx, q, &allschedules.Schedules)
-	if err != nil {
-		log.Println(err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting schedules"}`)))
-		return
-	}
-
-	newjson, err := json.Marshal(allschedules)
-	if err != nil {
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed unpacking"}`)))
-		return
-	}
-
-	resp.WriteHeader(200)
-	resp.Write(newjson)
-}
-
 func redirect(w http.ResponseWriter, req *http.Request) {
 	// remove/add not default ports from req.Host
 	target := "https://" + req.Host + req.URL.Path
@@ -681,166 +621,6 @@ func checkUsername(Username string) error {
 	}
 
 	return nil
-}
-
-func handleRegisterVerification(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	defaultMessage := "Successfully registered"
-
-	var reference string
-	location := strings.Split(request.URL.String(), "/")
-	if len(location) <= 4 {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	reference = location[4]
-
-	if len(reference) != 36 {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Id when registering verification is not valid"}`))
-		return
-	}
-
-	ctx := context.Background()
-	// With user, do a search for workflows with user or user's org attached
-	// Only giving 200 to not give any suspicion whether they're onto an actual user or not
-	q := datastore.NewQuery("Users").Filter("verification_token =", reference)
-	var users []shuffle.User
-	_, err := dbclient.GetAll(ctx, q, &users)
-	if err != nil {
-		log.Printf("Failed getting users for verification token: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, defaultMessage)))
-		return
-	}
-
-	// FIXME - check reset_timeout
-	if len(users) != 1 {
-		log.Printf("Error - no user with verification id %s", reference)
-		resp.WriteHeader(200)
-		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "%s"}`, defaultMessage)))
-		return
-	}
-
-	Userdata := users[0]
-
-	Userdata.Verified = true
-	err = shuffle.SetUser(ctx, &Userdata, true)
-	if err != nil {
-		log.Printf("Failed adding verification for user %s: %s", Userdata.Username, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "%s"}`, defaultMessage)))
-		return
-	}
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "%s"}`, defaultMessage)))
-	log.Printf("[INFO] %s SUCCESSFULLY FINISHED REGISTRATION", Userdata.Username)
-}
-
-func handleSetEnvironments(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	// FIXME: Overhaul the top part.
-	// Only admin can change environments, but if there are no users, anyone can make (first)
-	user, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Can't handle set env auth"}`))
-		return
-	}
-
-	if user.Role != "admin" {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Can't set environment without being admin"}`))
-		return
-	}
-
-	ctx := context.Background()
-	var environments []shuffle.Environment
-	q := datastore.NewQuery("Environments").Filter("org_id =", user.ActiveOrg.Id)
-	_, err = dbclient.GetAll(ctx, q, &environments)
-	if err != nil {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Can't get environments when setting"}`))
-		return
-	}
-
-	body, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		log.Println("Failed reading body")
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed to read data"}`)))
-		return
-	}
-
-	var newEnvironments []shuffle.Environment
-	err = json.Unmarshal(body, &newEnvironments)
-	if err != nil {
-		log.Printf("Failed unmarshaling: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed to unmarshal data"}`)))
-		return
-	}
-
-	if len(newEnvironments) < 1 {
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "One environment is required"}`)))
-		return
-	}
-
-	// Clear old data? Removed for archiving purpose. No straight deletion
-	//for _, item := range environments {
-	//	err = DeleteKey(ctx, "Environments", item.Name)
-	//	if err != nil {
-	//		resp.WriteHeader(401)
-	//		resp.Write([]byte(`{"success": false, "reason": "Error cleaning up environment"}`))
-	//		return
-	//	}
-	//}
-
-	openEnvironments := 0
-	for _, item := range newEnvironments {
-		if !item.Archived {
-			openEnvironments += 1
-		}
-	}
-
-	if openEnvironments < 1 {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Can't archived all environments"}`))
-		return
-	}
-
-	for _, item := range newEnvironments {
-		if item.OrgId != user.ActiveOrg.Id {
-			item.OrgId = user.ActiveOrg.Id
-		}
-
-		err = setEnvironment(ctx, &item)
-		if err != nil {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false, "reason": "Failed setting environment variable"}`))
-			return
-		}
-	}
-
-	//DeleteKey(ctx, entity string, value string) error {
-	// FIXME - check which are in use
-	//log.Printf("FIXME: Set new environments: %#v", newEnvironments)
-	//log.Printf("DONT DELETE ONES THAT ARE IN USE")
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(`{"success": true}`))
 }
 
 func createNewUser(username, password, role, apikey string, org shuffle.OrgMini) error {
@@ -962,7 +742,7 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 
 	// FIXME: Overhaul the top part.
 	// Only admin can CREATE users, but if there are no users, anyone can make (first)
-	count, countErr := getUserCount()
+	count, countErr := shuffle.GetUserCount()
 	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		if (countErr == nil && count > 0) || countErr != nil {
@@ -1036,133 +816,6 @@ func handleCookie(request *http.Request) bool {
 	}
 
 	return true
-}
-
-func handleUpdateUser(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	userInfo, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("Api authentication failed in apigen: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	body, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		log.Println("Failed reading body")
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Missing field: user_id"}`)))
-		return
-	}
-
-	type newUserStruct struct {
-		Role     string `json:"role"`
-		Username string `json:"username"`
-		UserId   string `json:"user_id"`
-	}
-
-	ctx := context.Background()
-	var t newUserStruct
-	err = json.Unmarshal(body, &t)
-	if err != nil {
-		log.Printf("Failed unmarshaling userId: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed unmarshaling. Missing field: user_id"}`)))
-		return
-	}
-
-	// Should this role reflect the users' org access?
-	// When you change org -> change user role
-	if userInfo.Role != "admin" {
-		log.Printf("%s tried to update user %s", userInfo.Username, t.UserId)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "You need to be admin to change other users"}`)))
-		return
-	}
-
-	foundUser, err := shuffle.GetUser(ctx, t.UserId)
-	if err != nil {
-		log.Printf("Can't find user %s (update user): %s", t.UserId, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false}`)))
-		return
-	}
-
-	orgFound := false
-	for _, item := range foundUser.Orgs {
-		if item == userInfo.ActiveOrg.Id {
-			orgFound = true
-			break
-		}
-	}
-
-	if !orgFound {
-		log.Printf("User %s is admin, but can't edit users outside their own org.", userInfo.Id)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't change users outside your org."}`)))
-		return
-	}
-
-	if t.Role != "admin" && t.Role != "user" {
-		log.Printf("%s tried and failed to update user %s", userInfo.Username, t.UserId)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can only change to role user and admin"}`)))
-		return
-	} else {
-		// Same user - can't edit yourself
-		if userInfo.Id == t.UserId {
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't update the role of your own user"}`)))
-			return
-		}
-
-		log.Printf("Updated user %s from %s to %s", foundUser.Username, foundUser.Role, t.Role)
-		foundUser.Role = t.Role
-		foundUser.Roles = []string{t.Role}
-	}
-
-	if len(t.Username) > 0 {
-		q := datastore.NewQuery("Users").Filter("username =", t.Username)
-		var users []shuffle.User
-		_, err = dbclient.GetAll(ctx, q, &users)
-		if err != nil {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false, "reason": "Failed getting users when updating user"}`))
-			return
-		}
-
-		found := false
-		for _, item := range users {
-			if item.Username == t.Username {
-				found = true
-				break
-			}
-		}
-
-		if found {
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "User with username %s already exists"}`, t.Username)))
-			return
-		}
-
-		foundUser.Username = t.Username
-	}
-
-	err = shuffle.SetUser(ctx, foundUser, true)
-	if err != nil {
-		log.Printf("Error patching user %s: %s", foundUser.Username, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false}`)))
-		return
-	}
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 }
 
 func handleInfo(resp http.ResponseWriter, request *http.Request) {
@@ -1350,94 +1003,6 @@ type passwordReset struct {
 	Reference string `json:"reference"`
 }
 
-func handlePasswordReset(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	log.Println("Handling password reset")
-	defaultMessage := "Successfully handled password reset"
-
-	body, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		log.Println("Failed reading body")
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false}`)))
-		return
-	}
-
-	var t passwordReset
-	err = json.Unmarshal(body, &t)
-	if err != nil {
-		log.Println("Failed unmarshaling")
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false}`)))
-		return
-	}
-
-	if t.Password1 != t.Password2 {
-		resp.WriteHeader(401)
-		err := "Passwords don't match"
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-		return
-	}
-
-	if len(t.Password1) < 10 || len(t.Password2) < 10 {
-		resp.WriteHeader(401)
-		err := "Passwords don't match - 2"
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-		return
-	}
-
-	ctx := context.Background()
-
-	// With user, do a search for workflows with user or user's org attached
-	// Only giving 200 to not give any suspicion whether they're onto an actual user or not
-	q := datastore.NewQuery("Users").Filter("reset_reference =", t.Reference)
-	var users []shuffle.User
-	_, err = dbclient.GetAll(ctx, q, &users)
-	if err != nil {
-		log.Printf("Failed getting users: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, defaultMessage)))
-		return
-	}
-
-	// FIXME - check reset_timeout
-	if len(users) != 1 {
-		log.Printf("Error - no user with id %s", t.Reference)
-		resp.WriteHeader(200)
-		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "%s"}`, defaultMessage)))
-		return
-	}
-
-	Userdata := users[0]
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(t.Password1), 8)
-	if err != nil {
-		log.Printf("Wrong password for %s: %s", Userdata.Username, err)
-		resp.WriteHeader(200)
-		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "%s"}`, defaultMessage)))
-		return
-	}
-
-	Userdata.Password = string(hashedPassword)
-	Userdata.ResetTimeout = 0
-	Userdata.ResetReference = ""
-	err = shuffle.SetUser(ctx, &Userdata, true)
-	if err != nil {
-		log.Printf("Error adding User %s: %s", Userdata.Username, err)
-		resp.WriteHeader(200)
-		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "%s"}`, defaultMessage)))
-		return
-	}
-
-	// FIXME - maybe send a mail here to say that the password was changed
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "%s"}`, defaultMessage)))
-}
-
 // FIXME - forward this to emails or whatever CRM system in use
 func handleContact(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
@@ -1485,35 +1050,13 @@ func handleContact(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(fmt.Sprintf(`{"success": true, "message": "Thanks for reaching out. We will contact you soon!"}`)))
 }
 
-func getEnvironmentCount() (int, error) {
-	ctx := context.Background()
-	q := datastore.NewQuery("Environments").Limit(1)
-	count, err := dbclient.Count(ctx, q)
-	if err != nil {
-		return 0, err
-	}
-
-	return count, nil
-}
-
-func getUserCount() (int, error) {
-	ctx := context.Background()
-	q := datastore.NewQuery("Users").Limit(1)
-	count, err := dbclient.Count(ctx, q)
-	if err != nil {
-		return 0, err
-	}
-
-	return count, nil
-}
-
 func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
 		return
 	}
 
-	count, err := getUserCount()
+	count, err := shuffle.GetUserCount()
 	if err != nil {
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
@@ -1646,37 +1189,6 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(loginData))
-}
-
-// Index = Username
-func DeleteKeys(ctx context.Context, entity string, value []string) error {
-	// Non indexed User data
-	keys := []*datastore.Key{}
-	for _, item := range value {
-		keys = append(keys, datastore.NameKey(entity, item, nil))
-	}
-
-	err := dbclient.DeleteMulti(ctx, keys)
-	if err != nil {
-		log.Printf("Error deleting %s from %s: %s", value, entity, err)
-		return err
-	}
-
-	return nil
-}
-
-// Index = Username
-func DeleteKey(ctx context.Context, entity string, value string) error {
-	// Non indexed User data
-	key1 := datastore.NameKey(entity, value, nil)
-
-	err := dbclient.Delete(ctx, key1)
-	if err != nil {
-		log.Printf("Error deleting %s from %s: %s", value, entity, err)
-		return err
-	}
-
-	return nil
 }
 
 func setOpenApiDatastore(ctx context.Context, id string, data ParsedOpenApi) error {
@@ -2335,7 +1847,7 @@ func handleDeleteSchedule(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	err = DeleteKey(ctx, "schedules", workflowId)
+	err = shuffle.DeleteKey(ctx, "schedules", workflowId)
 	if err != nil {
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "message": "Can't delete"}`))
@@ -2484,7 +1996,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		if err == nil {
 			for _, branch := range workflow.Branches {
 				if branch.SourceID == hook.Id {
-					log.Printf("Found ID %s for hook", hook.Id)
+					log.Printf("[INFO] Found ID %s for hook", hook.Id)
 					if branch.DestinationID != hook.Start {
 						newBody.Start = branch.DestinationID
 						break
@@ -3634,55 +3146,6 @@ func getDocs(resp http.ResponseWriter, request *http.Request) {
 
 	resp.WriteHeader(200)
 	resp.Write(b)
-}
-
-func handleGetSpecificStats(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	_, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("Api authentication failed in getting specific workflow: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	location := strings.Split(request.URL.String(), "/")
-
-	var statsId string
-	if location[1] == "api" {
-		if len(location) <= 4 {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		statsId = location[4]
-	}
-
-	ctx := context.Background()
-	statisticsId := "global_statistics"
-	nameKey := statsId
-	key := datastore.NameKey(statisticsId, nameKey, nil)
-	statisticsItem := StatisticsItem{}
-	if err := dbclient.Get(ctx, key, &statisticsItem); err != nil {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	b, err := json.Marshal(statisticsItem)
-	if err != nil {
-		log.Printf("Failed to marshal data: %s", err)
-		resp.WriteHeader(401)
-		return
-	}
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(b))
 }
 
 func getOpenapi(resp http.ResponseWriter, request *http.Request) {
@@ -4893,7 +4356,7 @@ func runInit(ctx context.Context) {
 				for _, user := range users {
 					user.Active = true
 					if len(user.Username) == 0 {
-						DeleteKey(ctx, "Users", strings.ToLower(user.Username))
+						shuffle.DeleteKey(ctx, "Users", strings.ToLower(user.Username))
 						continue
 					}
 
@@ -4915,7 +4378,7 @@ func runInit(ctx context.Context) {
 						log.Printf("Failed to reset user")
 					} else {
 						log.Printf("Remade user %s with ID", user.Id)
-						err = DeleteKey(ctx, "Users", strings.ToLower(user.Username))
+						err = shuffle.DeleteKey(ctx, "Users", strings.ToLower(user.Username))
 						if err != nil {
 							log.Printf("Failed to delete old user by username")
 						}
@@ -4973,7 +4436,7 @@ func runInit(ctx context.Context) {
 	}
 
 	// Gets environments and inits if it doesn't exist
-	count, err := getEnvironmentCount()
+	count, err := shuffle.GetEnvironmentCount()
 	if count == 0 && err == nil && len(activeOrgs) == 1 {
 		log.Printf("[INFO] Setting up environment with org %s", activeOrgs[0].Id)
 		item := shuffle.Environment{
@@ -5957,7 +5420,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/users/logout", shuffle.HandleLogout).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users/getsettings", shuffle.HandleSettings).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/users/getusers", shuffle.HandleGetUsers).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/users/updateuser", handleUpdateUser).Methods("PUT", "OPTIONS")
+	r.HandleFunc("/api/v1/users/updateuser", shuffle.HandleUpdateUser).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/users/{user}", shuffle.DeleteUser).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/users/passwordchange", shuffle.HandlePasswordChange).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users", shuffle.HandleGetUsers).Methods("GET", "OPTIONS")

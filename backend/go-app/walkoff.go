@@ -487,8 +487,8 @@ func increaseStatisticsField(ctx context.Context, fieldname, id string, amount i
 	nameKey := fieldname
 	key := datastore.NameKey(statisticsId, nameKey, nil)
 
-	statisticsItem := StatisticsItem{}
-	newData := StatisticsData{
+	statisticsItem := shuffle.StatisticsItem{}
+	newData := shuffle.StatisticsData{
 		Timestamp: int64(time.Now().Unix()),
 		Amount:    amount,
 		Id:        id,
@@ -497,11 +497,11 @@ func increaseStatisticsField(ctx context.Context, fieldname, id string, amount i
 	if err := dbclient.Get(ctx, key, &statisticsItem); err != nil {
 		// Should init
 		if strings.Contains(fmt.Sprintf("%s", err), "entity") {
-			statisticsItem = StatisticsItem{
+			statisticsItem = shuffle.StatisticsItem{
 				Total:     amount,
 				OrgId:     orgId,
 				Fieldname: fieldname,
-				Data: []StatisticsData{
+				Data: []shuffle.StatisticsData{
 					newData,
 				},
 			}
@@ -752,7 +752,7 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 		ids = append(ids, execution.ExecutionId)
 	}
 
-	err = DeleteKeys(ctx, parsedId, ids)
+	err = shuffle.DeleteKeys(ctx, parsedId, ids)
 	if err != nil {
 		log.Printf("[ERROR] Failed deleting %d execution keys for org %s", len(ids), id)
 	} else {
@@ -796,7 +796,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 
 	id := request.Header.Get("Org-Id")
 	if len(id) == 0 {
-		log.Printf("No org-id header set")
+		log.Printf("[INFO] No org-id header set")
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Specify the org-id header."}`)))
 		return
@@ -843,10 +843,11 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	//log.Printf("Data: %s", string(body))
 	var actionResult shuffle.ActionResult
 	err = json.Unmarshal(body, &actionResult)
 	if err != nil {
-		log.Printf("Failed ActionResult unmarshaling: %s", err)
+		log.Printf("[WARNING] Failed ActionResult unmarshaling (stream result): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
@@ -863,7 +864,7 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 
 	// Authorization is done here
 	if workflowExecution.Authorization != actionResult.Authorization {
-		log.Printf("Bad authorization key when getting stream results %s.", actionResult.ExecutionId)
+		log.Printf("[WARNING] Bad authorization key when getting stream results %s.", actionResult.ExecutionId)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad authorization key or execution_id might not exist."}`)))
 		return
@@ -941,7 +942,7 @@ func validateNewWorkerExecution(body []byte) error {
 	//log.Printf("\n\nSHOULD SET BACKEND DATA FOR EXEC \n\n")
 	err = shuffle.SetWorkflowExecution(ctx, execution, true)
 	if err == nil {
-		log.Printf("[INFO] Set workflowexecution based on new worker (>0.8.53) for execution %s. Actions: %d, Triggers: %d, Results: %d", execution.ExecutionId, len(execution.Workflow.Actions), len(execution.Workflow.Triggers), len(execution.Results))
+		log.Printf("[INFO] Set workflowexecution based on new worker (>0.8.53) for execution %s. Actions: %d, Triggers: %d, Results: %d, Status: %s, Result: %s", execution.ExecutionId, len(execution.Workflow.Actions), len(execution.Workflow.Triggers), len(execution.Results), execution.Status, execution.Result)
 		//log.Printf("[INFO] Successfully set the execution to wait.")
 	} else {
 		log.Printf("[WARNING] Failed to set the execution to wait.")
@@ -977,7 +978,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	var actionResult shuffle.ActionResult
 	err = json.Unmarshal(body, &actionResult)
 	if err != nil {
-		log.Printf("Failed ActionResult unmarshaling: %s", err)
+		log.Printf("[WARNING] Failed ActionResult unmarshaling (queue): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
@@ -1007,15 +1008,13 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if workflowExecution.Status == "FINISHED" {
-		log.Printf("[INFO] Workflowexecution is already FINISHED. No further action can be taken.")
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflowexecution is already finished because of %s with status %s"}`, workflowExecution.LastNode, workflowExecution.Status)))
-		return
-	}
+	//if workflowExecution.Status == "FINISHED" {
+	//	log.Printf("[INFO] Workflowexecution is already FINISHED. No further action can be taken.")
+	//	resp.WriteHeader(401)
+	//	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflowexecution is already finished because of %s with status %s"}`, workflowExecution.LastNode, workflowExecution.Status)))
+	//	return
+	//}
 
-	// Not sure what's up here
-	// FIXME - remove comment
 	if workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
 
 		if workflowExecution.Workflow.Configuration.ExitOnError {
@@ -1283,7 +1282,7 @@ func getWorkflows(resp http.ResponseWriter, request *http.Request) {
 			}
 		} else {
 			log.Printf("Failed getting workflows for user %s: %s (1)", user.Username, err)
-			//DeleteKey(ctx, "workflow", "5694357e-8063-4580-8529-301cc72df951")
+			//shuffle.DeleteKey(ctx, "workflow", "5694357e-8063-4580-8529-301cc72df951")
 
 			//log.Printf("Workflows: %#v", workflows)
 			resp.WriteHeader(401)
@@ -1404,7 +1403,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	// FIXME - maybe delete workflow executions
 	log.Printf("[INFO] Should have deleted workflow %s", fileId)
-	err = DeleteKey(ctx, "workflow", fileId)
+	err = shuffle.DeleteKey(ctx, "workflow", fileId)
 	if err != nil {
 		log.Printf("Failed deleting key %s", fileId)
 		resp.WriteHeader(401)
@@ -2511,7 +2510,7 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 			return
 		} else {
 			log.Printf("[INFO] Successfully ran cloud action STOP schedule")
-			err = DeleteKey(ctx, "schedules", scheduleId)
+			err = shuffle.DeleteKey(ctx, "schedules", scheduleId)
 			if err != nil {
 				log.Printf("[WARNING] Failed deleting cloud schedule onprem..")
 				resp.WriteHeader(401)
@@ -2634,7 +2633,7 @@ func stopScheduleGCP(resp http.ResponseWriter, request *http.Request) {
 
 func deleteSchedule(ctx context.Context, id string) error {
 	log.Printf("Should stop schedule %s!", id)
-	err := DeleteKey(ctx, "schedules", id)
+	err := shuffle.DeleteKey(ctx, "schedules", id)
 	if err != nil {
 		log.Printf("Failed to delete schedule: %s", err)
 		return err
@@ -3054,7 +3053,7 @@ func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	log.Printf("[INFO] Deleting public app")
-	err = DeleteKey(ctx, "workflowapp", fileId)
+	err = shuffle.DeleteKey(ctx, "workflowapp", fileId)
 	if err != nil {
 		log.Printf("Failed deleting workflowapp")
 		resp.WriteHeader(401)
@@ -4247,7 +4246,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 				if len(removeApps) > 0 {
 					for _, item := range removeApps {
 						log.Printf("[WARNING] Removing duplicate app: %s", item)
-						err = DeleteKey(ctx, "workflowapp", item)
+						err = shuffle.DeleteKey(ctx, "workflowapp", item)
 						if err != nil {
 							log.Printf("[ERROR] Failed deleting duplicate %s: %s", item, err)
 						}
@@ -4946,6 +4945,23 @@ func handleUserInput(trigger shuffle.Trigger, organizationId string, workflowId 
 		}
 
 		log.Printf("Should send SMS to %s during execution.", sms)
+	}
+
+	return nil
+}
+
+// Index = Username
+func DeleteKeys(ctx context.Context, entity string, value []string) error {
+	// Non indexed User data
+	keys := []*datastore.Key{}
+	for _, item := range value {
+		keys = append(keys, datastore.NameKey(entity, item, nil))
+	}
+
+	err := dbclient.DeleteMulti(ctx, keys)
+	if err != nil {
+		log.Printf("Error deleting %s from %s: %s", value, entity, err)
+		return err
 	}
 
 	return nil

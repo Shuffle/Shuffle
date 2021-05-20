@@ -244,11 +244,11 @@ func initializeImages() {
 	ctx := context.Background()
 
 	if appSdkVersion == "" {
-		appSdkVersion = "0.8.80"
+		appSdkVersion = "0.8.82"
 		log.Printf("[WARNING] SHUFFLE_APP_SDK_VERSION not defined. Defaulting to %s", appSdkVersion)
 	}
 	if workerVersion == "" {
-		workerVersion = "0.8.80"
+		workerVersion = "0.8.82"
 		log.Printf("[WARNING] SHUFFLE_WORKER_VERSION not defined. Defaulting to %s", workerVersion)
 	}
 

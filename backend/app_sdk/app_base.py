@@ -1239,11 +1239,14 @@ class AppBase:
                             print(f"[INFO] LOADING STRING '%s' AS JSON" % basejson[value]) 
                             try:
                                 basejson = json.loads(basejson[value])
+                                print("BASEJSON: %s" % basejson)
                             except json.decoder.JSONDecodeError as e:
                                 print("RETURNING BECAUSE '%s' IS A NORMAL STRING" % basejson[value])
                                 return basejson[value], False
                         else:
                             basejson = basejson[value]
+
+                    print("Parsed BASEJSON: %s" % basejson)
         
                     outercnt += 1
         
@@ -1363,6 +1366,7 @@ class AppBase:
         
             data, is_loop = recurse_json(basejson, parsersplit[1:])
             parseditem = data
+            print("DATA: %s" % data)
             if is_loop:
                 print("DATA IS A LOOP - SHOULD WRAP")
                 if parsersplit[-1] == "#":
@@ -1414,6 +1418,8 @@ class AppBase:
                                 parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value))
                             except json.decoder.JSONDecodeError as e:
                                 parameter["value"] = parameter["value"].replace(to_be_replaced, value)
+
+                        print("VALUE: %s" % value)
 
 
             if parameter["variant"] == "WORKFLOW_VARIABLE":
@@ -2161,6 +2167,7 @@ class AppBase:
                             print("[INFO] Running normal execution\n") 
 
                             #newres = await func(**params)
+                            print("PARAMS: %s" % params)
                             while True:
                                 try:
                                     newres = await func(**params)
@@ -2181,7 +2188,7 @@ class AppBase:
                                         raise e
                                         #break
 
-                            print("\n[INFO] Returned from execution!")#, newres)
+                            print("\n[INFO] Returned from execution with %s of types %s" % (newres, type(newres)))#, newres)
                             if isinstance(newres, tuple):
                                 print("[INFO] Handling return as tuple")
                                 # Handles files.

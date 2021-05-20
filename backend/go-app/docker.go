@@ -260,7 +260,7 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 		buildOptions,
 	)
 
-	log.Printf("RESPONSE: %#v", imageBuildResponse)
+	//log.Printf("RESPONSE: %#v", imageBuildResponse)
 	//log.Printf("Response: %#v", imageBuildResponse.Body)
 	//log.Printf("IMAGERESPONSE: %#v", imageBuildResponse.Body)
 
@@ -525,7 +525,7 @@ func handleDeleteHookDocker(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	err := DeleteKey(ctx, "hooks", fileId)
+	err := shuffle.DeleteKey(ctx, "hooks", fileId)
 	if err != nil {
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "message": "Can't delete"}`))
