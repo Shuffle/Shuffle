@@ -20,6 +20,9 @@ require (
 	github.com/docker/docker v20.10.3-0.20210216175712-646072ed6524+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/docker/go-units v0.4.0 // indirect
+	github.com/elastic/go-elasticsearch v0.0.0 // indirect
+	github.com/elastic/go-elasticsearch/v7 v7.12.0 // indirect
+	github.com/elastic/go-elasticsearch/v8 v8.0.0-20210519083322-55daf7425ecb // indirect
 	github.com/frikky/kin-openapi v0.39.0
 	github.com/frikky/shuffle-shared v0.0.40
 	github.com/fsouza/go-dockerclient v1.7.2 // indirect

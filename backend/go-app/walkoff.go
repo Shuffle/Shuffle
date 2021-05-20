@@ -660,7 +660,7 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 
 	// Doesn't need running/not running. If stopped, we just delete it.
 	timeNow := int64(time.Now().Unix())
-	schedule := ScheduleOld{
+	schedule := shuffle.ScheduleOld{
 		Id:                   scheduleId,
 		WorkflowId:           workflowId,
 		StartNode:            startNode,
@@ -674,7 +674,7 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 		Environment:          "onprem",
 	}
 
-	err = setSchedule(ctx, schedule)
+	err = shuffle.SetSchedule(ctx, schedule)
 	if err != nil {
 		log.Printf("Failed to set schedule: %s", err)
 		return err
@@ -2828,7 +2828,7 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		timeNow := int64(time.Now().Unix())
-		newSchedule := ScheduleOld{
+		newSchedule := shuffle.ScheduleOld{
 			Id:                   schedule.Id,
 			WorkflowId:           workflow.ID,
 			StartNode:            startNode,
@@ -2842,7 +2842,7 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 			Environment:          "cloud",
 		}
 
-		err = setSchedule(ctx, newSchedule)
+		err = shuffle.SetSchedule(ctx, newSchedule)
 		if err != nil {
 			log.Printf("Failed setting cloud schedule: %s", err)
 			resp.WriteHeader(401)
@@ -3883,7 +3883,7 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 						log.Printf("Added %s:%s to the database from OpenAPI repo", api.Name, api.AppVersion)
 
 						// Set OpenAPI datastore
-						err = setOpenApiDatastore(ctx, parsedOpenApi.ID, parsedOpenApi)
+						err = shuffle.SetOpenApiDatastore(ctx, parsedOpenApi.ID, parsedOpenApi)
 						if err != nil {
 							log.Printf("Failed uploading openapi to datastore in loop: %s", err)
 							continue
