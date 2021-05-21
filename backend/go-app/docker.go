@@ -441,7 +441,7 @@ func handleStopHookDocker(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	hook, err := getHook(ctx, fileId)
+	hook, err := shuffle.GetHook(ctx, fileId)
 	if err != nil {
 		log.Printf("Failed getting hook %s (stop docker): %s", fileId, err)
 		resp.WriteHeader(401)
@@ -461,8 +461,8 @@ func handleStopHookDocker(resp http.ResponseWriter, request *http.Request) {
 
 	hook.Status = "stopped"
 	hook.Running = false
-	hook.Actions = []HookAction{}
-	err = setHook(ctx, *hook)
+	hook.Actions = []shuffle.HookAction{}
+	err = shuffle.SetHook(ctx, *hook)
 	if err != nil {
 		log.Printf("Failed setting hook: %s", err)
 		resp.WriteHeader(401)
@@ -592,7 +592,7 @@ func imageCheckBuilder(images []string) error {
 }
 
 func hookTest() {
-	var hook Hook
+	var hook shuffle.Hook
 	err := json.Unmarshal([]byte(webhook), &hook)
 	log.Println(webhook)
 	if err != nil {
@@ -601,12 +601,12 @@ func hookTest() {
 	}
 
 	ctx := context.Background()
-	err = setHook(ctx, hook)
+	err = shuffle.SetHook(ctx, hook)
 	if err != nil {
 		log.Printf("Failed setting hook: %s", err)
 	}
 
-	returnHook, err := getHook(ctx, hook.Id)
+	returnHook, err := shuffle.GetHook(ctx, hook.Id)
 	if err != nil {
 		log.Printf("Failed getting hook %s (test): %s", hook.Id, err)
 	}

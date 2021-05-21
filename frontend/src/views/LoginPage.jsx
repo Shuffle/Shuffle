@@ -162,6 +162,7 @@ const LoginDialog = props => {
 
 	//var loginChange = register ? (<div><p onClick={setLoginCheck(false)}>Want to register? Click here.</p></div>) : (<div><p onClick={setLoginCheck(true)}>Go back to login? Click here.</p></div>);
 	var formtitle = register ? <div>Login</div> : <div>Register</div>
+	const imgsize = 120
 	const basedata =
 		<div style={bodyDivStyle}>
 			<Paper style={{
@@ -169,8 +170,14 @@ const LoginDialog = props => {
 				paddingRight: "30px",
 				paddingBottom: "30px",
 				paddingTop: "30px",
+				position: "relative",
 				backgroundColor: theme.palette.surfaceColor,
 			}}>
+				{/*
+				<div style={{position: "absolute", top: -imgsize/2, left: 250-imgsize/2, height: imgsize, width: imgsize, borderRadius: imgsize/2, }}>
+					<img src="https://shuffler.io/images/Shuffle_logo.png" style={{height: imgsize, width: imgsize, border: "2px solid rgba(255,255,255,0.6)", borderRadius: imgsize/2,}}/>
+				</div>
+				*/}
 				<form onSubmit={onSubmit} style={{ margin: "15px 15px 15px 15px", color: "white", }}>
 					<h2>{formtitle}</h2>
 					Username

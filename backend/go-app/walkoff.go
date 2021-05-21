@@ -533,69 +533,6 @@ func increaseStatisticsField(ctx context.Context, fieldname, id string, amount i
 	return nil
 }
 
-func setWorkflowQueue(ctx context.Context, executionRequest shuffle.ExecutionRequest, env string) error {
-	orgKey := fmt.Sprintf("workflowqueue-%s", env)
-	key := datastore.NameKey(orgKey, executionRequest.ExecutionId, nil)
-
-	// New struct, to not add body, author etc
-	if _, err := dbclient.Put(ctx, key, &executionRequest); err != nil {
-		log.Printf("Error adding workflow queue: %s", err)
-		return err
-	}
-
-	return nil
-}
-
-//
-//func setWorkflowQueue(ctx context.Context, executionRequests ExecutionRequestWrapper, id string) error {
-//	key := datastore.NameKey("workflowqueue", id, nil)
-//
-//	// New struct, to not add body, author etc
-//	if _, err := dbclient.Put(ctx, key, &executionRequests); err != nil {
-//		log.Printf("Error adding workflow queue: %s", err)
-//		return err
-//	}
-//
-//	return nil
-//}
-
-func getWorkflowQueue(ctx context.Context, id string) (shuffle.ExecutionRequestWrapper, error) {
-	orgId := fmt.Sprintf("workflowqueue-%s", id)
-	q := datastore.NewQuery(orgId).Limit(10)
-	executions := []shuffle.ExecutionRequest{}
-	_, err := dbclient.GetAll(ctx, q, &executions)
-	if err != nil {
-		return shuffle.ExecutionRequestWrapper{}, err
-	}
-
-	return shuffle.ExecutionRequestWrapper{Data: executions}, nil
-
-	//key := datastore.NameKey("workflowqueue", id, nil)
-	//executions := ExecutionRequestWrapper{}
-	//if err := dbclient.Get(ctx, key, &workflows); err != nil {
-	//	return ExecutionRequestWrapper{}, err
-	//}
-
-	//return workflows, nil
-}
-
-//func setWorkflowqueuetest(id string) {
-//	data := ExecutionRequestWrapper{
-//		Data: []ExecutionRequest{
-//			ExecutionRequest{
-//				ExecutionId:   "2349bf96-51ad-68d2-5ca6-75ef8f7ee814",
-//				WorkflowId:    "8e344a2e-db51-448f-804c-eb959a32c139",
-//				Authorization: "wut",
-//			},
-//		},
-//	}
-//
-//	err := setWorkflowQueue(data, id)
-//	if err != nil {
-//		log.Printf("Fail: %s", err)
-//	}
-//}
-
 // Frequency = cronjob OR minutes between execution
 func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode, frequency, orgId string, body []byte) error {
 	var err error
@@ -704,7 +641,7 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 
 	//setWorkflowqueuetest(id)
 	ctx := context.Background()
-	executionRequests, err := getWorkflowQueue(ctx, id)
+	executionRequests, err := shuffle.GetWorkflowQueue(ctx, id)
 	if err != nil {
 		log.Printf("(1) Failed reading body for workflowqueue: %s", err)
 		resp.WriteHeader(401)
@@ -756,7 +693,7 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 	if err != nil {
 		log.Printf("[ERROR] Failed deleting %d execution keys for org %s", len(ids), id)
 	} else {
-		//log.Printf("[INFO] Deleted %d keys from org %s", len(ids), parsedId)
+		log.Printf("[INFO] Deleted %d keys from org %s", len(ids), parsedId)
 	}
 
 	//var newExecutionRequests ExecutionRequestWrapper
@@ -776,7 +713,7 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 
 	// Push only the remaining to the DB (remove)
 	//if len(executionRequests.Data) != len(newExecutionRequests.Data) {
-	//	err := setWorkflowQueue(ctx, newExecutionRequests, id)
+	//	err := shuffle.SetWorkflowQueue(ctx, newExecutionRequests, id)
 	//	if err != nil {
 	//		log.Printf("Fail: %s", err)
 	//	}
@@ -803,7 +740,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	executionRequests, err := getWorkflowQueue(ctx, id)
+	executionRequests, err := shuffle.GetWorkflowQueue(ctx, id)
 	if err != nil {
 		// Skipping as this comes up over and over
 		//log.Printf("(2) Failed reading body for workflowqueue: %s", err)
@@ -816,6 +753,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		executionRequests.Data = []shuffle.ExecutionRequest{}
 	} else {
 		log.Printf("[INFO] Executionrequests (%s): %d", id, len(executionRequests.Data))
+		log.Printf("IDS: %#v", executionRequests.Data[0].ExecutionId)
 	}
 
 	newjson, err := json.Marshal(executionRequests)
@@ -2217,7 +2155,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 			//}
 
 			//log.Printf("Execution request: %#v", executionRequest)
-			err = setWorkflowQueue(ctx, executionRequest, environment)
+			err = shuffle.SetWorkflowQueue(ctx, executionRequest, environment)
 			if err != nil {
 				log.Printf("[ERROR] Failed adding execution to db: %s", err)
 			}
@@ -3637,7 +3575,7 @@ func loadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - should have some permissions?
 	_, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
-		log.Printf("Api authentication failed in load specific apps: %s", err)
+		log.Printf("[WARNING] Api authentication failed in load specific apps: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -3707,9 +3645,9 @@ func loadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 		_ = r
 
 		if tmpBody.ForceUpdate {
-			log.Printf("Running with force update!")
+			log.Printf("[INFO] Running with force update!")
 		} else {
-			log.Printf("Updating apps with updates")
+			log.Printf("[INFO] Updating apps with updates (no force)")
 		}
 
 		if tmpBody.ForceUpdate {
@@ -4230,7 +4168,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 						}
 
 						if len(appendParams) > 0 {
-							log.Printf("[AUTH] Appending %d params to the START of %s", len(appendParams), action.Name)
+							//log.Printf("[AUTH] Appending %d params to the START of %s", len(appendParams), action.Name)
 							workflowapp.Actions[index].Parameters = append(appendParams, workflowapp.Actions[index].Parameters...)
 						}
 
@@ -4464,7 +4402,7 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 			}
 
 			if len(appendParams) > 0 {
-				log.Printf("[AUTH] Appending %d params to the START of %s", len(appendParams), action.Name)
+				//log.Printf("[AUTH] Appending %d params to the START of %s", len(appendParams), action.Name)
 				workflowapp.Actions[index].Parameters = append(appendParams, workflowapp.Actions[index].Parameters...)
 			}
 
@@ -4681,7 +4619,7 @@ func handleStopHook(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	hook, err := getHook(ctx, fileId)
+	hook, err := shuffle.GetHook(ctx, fileId)
 	if err != nil {
 		log.Printf("Failed getting hook %s (stop): %s", fileId, err)
 		resp.WriteHeader(401)
@@ -4708,8 +4646,8 @@ func handleStopHook(resp http.ResponseWriter, request *http.Request) {
 
 	hook.Status = "stopped"
 	hook.Running = false
-	hook.Actions = []HookAction{}
-	err = setHook(ctx, *hook)
+	hook.Actions = []shuffle.HookAction{}
+	err = shuffle.SetHook(ctx, *hook)
 	if err != nil {
 		log.Printf("Failed setting hook: %s", err)
 		resp.WriteHeader(401)
@@ -4788,7 +4726,7 @@ func handleStartHook(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	hook, err := getHook(ctx, fileId)
+	hook, err := shuffle.GetHook(ctx, fileId)
 	if err != nil {
 		log.Printf("Failed getting hook %s (start): %s", fileId, err)
 		resp.WriteHeader(401)
@@ -4830,7 +4768,7 @@ func handleStartHook(resp http.ResponseWriter, request *http.Request) {
 
 	hook.Status = "running"
 	hook.Running = true
-	err = setHook(ctx, *hook)
+	err = shuffle.SetHook(ctx, *hook)
 	if err != nil {
 		log.Printf("Failed setting hook: %s", err)
 		resp.WriteHeader(401)
@@ -4945,23 +4883,6 @@ func handleUserInput(trigger shuffle.Trigger, organizationId string, workflowId 
 		}
 
 		log.Printf("Should send SMS to %s during execution.", sms)
-	}
-
-	return nil
-}
-
-// Index = Username
-func DeleteKeys(ctx context.Context, entity string, value []string) error {
-	// Non indexed User data
-	keys := []*datastore.Key{}
-	for _, item := range value {
-		keys = append(keys, datastore.NameKey(entity, item, nil))
-	}
-
-	err := dbclient.DeleteMulti(ctx, keys)
-	if err != nil {
-		log.Printf("Error deleting %s from %s: %s", value, entity, err)
-		return err
 	}
 
 	return nil

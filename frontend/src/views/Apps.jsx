@@ -447,11 +447,11 @@ const Apps = (props) => {
 				</Grid>	
 
 				{data.activated && data.private_id !== undefined && data.private_id.length > 0 && data.generated ?
-				<Grid container style={{margin: "10px 10px 10px 10px", flex: "1"}} onClick={() => {downloadApp(data)}}>
-					<Tooltip title={"Download OpenAPI"} style={{marginTop: "28px", width: "100%"}} aria-label={data.name}>
-						<CloudDownloadIcon /> 
-					</Tooltip>
-				</Grid>
+					<Grid container style={{margin: "10px 10px 10px 10px", flex: "1"}} onClick={() => {downloadApp(data)}}>
+						<Tooltip title={"Download OpenAPI"} style={{marginTop: "28px", width: "100%"}} aria-label={data.name}>
+							<CloudDownloadIcon /> 
+						</Tooltip>
+					</Grid>
 				: null}
 			</Paper>
 		)

@@ -1,8 +1,8 @@
 version: '3'
 services:
   frontend:
-    #build: ./frontend
-    image: ghcr.io/frikky/shuffle-frontend:0.8.80
+    build: ./frontend
+    image: ghcr.io/frikky/shuffle-frontend:0.8.90
     container_name: shuffle-frontend
     hostname: shuffle-frontend
     ports:
@@ -16,8 +16,8 @@ services:
     depends_on:
       - backend
   backend:
-    #build: ./backend
-    image: ghcr.io/frikky/shuffle-backend:0.8.80
+    build: ./backend
+    image: ghcr.io/frikky/shuffle-backend:0.8.90
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
     # Here for debugging:
@@ -85,6 +85,33 @@ services:
     restart: unless-stopped
     volumes:
       - ${DB_LOCATION}:/etc/shuffle
+  opensearch:
+    image: opensearchproject/opensearch:latest
+    hostname: shuffle-opensearch
+    container_name: shuffle-opensearch
+    environment:
+      - cluster.name=shuffle-cluster
+      - node.name=shuffle-opensearch
+      - discovery.seed_hosts=shuffle-opensearch
+      - cluster.initial_master_nodes=shuffle-opensearch
+      - bootstrap.memory_lock=true 
+      - "OPENSEARCH_JAVA_OPTS=-Xms2048m -Xmx2048m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+      - cluster.routing.allocation.disk.threshold_enabled=false
+      - opendistro_security.disabled=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536 # maximum number of open files for the OpenSearch user, set to at least 65536 on modern systems
+        hard: 65536
+    volumes:
+      - ${DB_LOCATION}/opensearch:/usr/share/opensearch/data
+    #ports:
+    #  - 9200:9200
+    networks:
+      - shuffle
+
 networks:
   shuffle:
     driver: bridge

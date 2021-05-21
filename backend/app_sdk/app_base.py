@@ -1247,7 +1247,6 @@ class AppBase:
                             basejson = basejson[value]
 
                     print("Parsed BASEJSON: %s" % basejson)
-        
                     outercnt += 1
         
             except KeyError as e:
