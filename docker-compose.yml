@@ -1,7 +1,7 @@
 version: '3'
 services:
   frontend:
-    build: ./frontend
+    #build: ./frontend
     image: ghcr.io/frikky/shuffle-frontend:0.8.90
     container_name: shuffle-frontend
     hostname: shuffle-frontend
@@ -16,7 +16,7 @@ services:
     depends_on:
       - backend
   backend:
-    build: ./backend
+    #build: ./backend
     image: ghcr.io/frikky/shuffle-backend:0.8.90
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
@@ -31,6 +31,7 @@ services:
       - ${SHUFFLE_FILE_LOCATION}:/shuffle-files
     environment:
       - DATASTORE_EMULATOR_HOST=shuffle-database:8000
+      - SHUFFLE_OPENSEARCH_URL=http://shuffle-opensearch:9200
       - SHUFFLE_APP_HOTLOAD_FOLDER=/shuffle-apps
       - SHUFFLE_FILE_LOCATION=/shuffle-files
       - ORG_ID=${ORG_ID}
@@ -44,10 +45,11 @@ services:
       - HTTPS_PROXY=${SHUFFLE_HTTPS_PROXY}
     restart: unless-stopped
     depends_on:
-      - database
+      - opensearch 
+      #- database
   orborus:
     #build: ./functions/onprem/orborus
-    image: ghcr.io/frikky/shuffle-orborus:0.8.80
+    image: ghcr.io/frikky/shuffle-orborus:0.8.90
     container_name: shuffle-orborus
     hostname: shuffle-orborus
     networks:
@@ -55,8 +57,8 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      - SHUFFLE_APP_SDK_VERSION=0.8.80
-      - SHUFFLE_WORKER_VERSION=0.8.80
+      - SHUFFLE_APP_SDK_VERSION=0.8.90
+      - SHUFFLE_WORKER_VERSION=0.8.90
       - ORG_ID=${ORG_ID}
       - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
       - BASE_URL=http://${OUTER_HOSTNAME}:${BACKEND_PORT}
@@ -71,20 +73,6 @@ services:
       - SHUFFLE_PASS_APP_PROXY=${SHUFFLE_PASS_APP_PROXY}
       - CLEANUP=${SHUFFLE_CONTAINER_AUTO_CLEANUP}
     restart: unless-stopped
-  database:
-    #build: ./backend/database
-    image: frikky/shuffle:database
-    container_name: shuffle-database
-    hostname: shuffle-database
-    ports:
-      - "8000:8000"
-    networks:
-      - shuffle
-    environment:
-    -  _JAVA_OPTIONS="-Xmx2g"
-    restart: unless-stopped
-    volumes:
-      - ${DB_LOCATION}:/etc/shuffle
   opensearch:
     image: opensearchproject/opensearch:latest
     hostname: shuffle-opensearch
@@ -106,11 +94,27 @@ services:
         soft: 65536 # maximum number of open files for the OpenSearch user, set to at least 65536 on modern systems
         hard: 65536
     volumes:
-      - ${DB_LOCATION}/opensearch:/usr/share/opensearch/data
-    #ports:
-    #  - 9200:9200
+      #- ${DB_LOCATION}/opensearch:/usr/share/opensearch/data
+      #- tmp/opensearch:/usr/share/opensearch/data
+      - ${DB_LOCATION}:/usr/share/opensearch/data
+    ports:
+      - 9200:9200
     networks:
       - shuffle
+  #database:
+  #  #build: ./backend/database
+  #  image: frikky/shuffle:database
+  #  container_name: shuffle-database
+  #  hostname: shuffle-database
+  #  ports:
+  #    - "8000:8000"
+  #  networks:
+  #    - shuffle
+  #  environment:
+  #  -  _JAVA_OPTIONS="-Xmx2g"
+  #  restart: unless-stopped
+  #  volumes:
+  #    - ${DB_LOCATION}:/etc/shuffle
 
 networks:
   shuffle:

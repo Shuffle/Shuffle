@@ -780,6 +780,37 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 			}
 		} else {
 			log.Printf("[WARNING] Couldn't find an org to attach to. Create?")
+
+			orgSetupName := "default"
+			orgId := uuid.NewV4().String()
+			newOrg := shuffle.Org{
+				Name:      orgSetupName,
+				Id:        orgId,
+				Org:       orgSetupName,
+				Users:     []shuffle.User{},
+				Roles:     []string{"admin", "user"},
+				CloudSync: false,
+			}
+
+			err = shuffle.SetOrg(ctx, newOrg, orgId)
+			if err != nil {
+				log.Printf("Failed setting organization: %s", err)
+			} else {
+				log.Printf("Successfully created the default org!")
+
+				item := shuffle.Environment{
+					Name:    "Shuffle",
+					Type:    "onprem",
+					OrgId:   orgId,
+					Default: true,
+					Id:      uuid.NewV4().String(),
+				}
+
+				err = shuffle.SetEnvironment(ctx, &item)
+				if err != nil {
+					log.Printf("[WARNING] Failed setting up new environment for new org")
+				}
+			}
 		}
 	}
 
@@ -981,6 +1012,64 @@ type passwordReset struct {
 	Password1 string `json:"newpassword"`
 	Password2 string `json:"newpassword2"`
 	Reference string `json:"reference"`
+}
+
+// This might be... a bit off, but that's fine :)
+// This might also be stupid, as we want timelines and such
+// Anyway, these are super basic stupid stats.
+func increaseStatisticsField(ctx context.Context, fieldname, id string, amount int64, orgId string) error {
+
+	// 1. Get current stats
+	// 2. Increase field(s)
+	// 3. Put new stats
+	statisticsId := "global_statistics"
+	nameKey := fieldname
+	key := datastore.NameKey(statisticsId, nameKey, nil)
+
+	statisticsItem := shuffle.StatisticsItem{}
+	newData := shuffle.StatisticsData{
+		Timestamp: int64(time.Now().Unix()),
+		Amount:    amount,
+		Id:        id,
+	}
+
+	if err := dbclient.Get(ctx, key, &statisticsItem); err != nil {
+		// Should init
+		if strings.Contains(fmt.Sprintf("%s", err), "entity") {
+			statisticsItem = shuffle.StatisticsItem{
+				Total:     amount,
+				OrgId:     orgId,
+				Fieldname: fieldname,
+				Data: []shuffle.StatisticsData{
+					newData,
+				},
+			}
+
+			if _, err := dbclient.Put(ctx, key, &statisticsItem); err != nil {
+				log.Printf("Error setting base stats: %s", err)
+				return err
+			}
+
+			return nil
+		}
+		//log.Printf("STATSERR: %s", err)
+
+		return err
+	}
+
+	statisticsItem.Total += amount
+	statisticsItem.Data = append(statisticsItem.Data, newData)
+
+	// New struct, to not add body, author etc
+	// FIXME - reintroduce
+	//if _, err := dbclient.Put(ctx, key, &statisticsItem); err != nil {
+	//	log.Printf("Error stats to %s: %s", fieldname, err)
+	//	return err
+	//}
+
+	//log.Printf("Stats: %#v", statisticsItem)
+
+	return nil
 }
 
 // FIXME - forward this to emails or whatever CRM system in use
@@ -3458,7 +3547,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	// Hint: Save API.id somewhere, and use newmd5 to save latest version
 	err = shuffle.SetOpenApiDatastore(ctx, newmd5, parsed)
 	if err != nil {
-		log.Printf("[ERROR] Failed saving to datastore: %s", err)
+		log.Printf("[ERROR] Failed saving app %s to database: %s", newmd5, err)
 		resp.WriteHeader(500)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "%"}`, err)))
 	}
@@ -3927,7 +4016,7 @@ func runInitEs(ctx context.Context) {
 	log.Printf("ORGS: %d", len(activeOrgs))
 	if err != nil {
 		if fmt.Sprintf("%s", err) == "EOF" {
-			time.Sleep(5 * time.Second)
+			time.Sleep(7 * time.Second)
 			runInitEs(ctx)
 			return
 		}
@@ -3941,37 +4030,37 @@ func runInitEs(ctx context.Context) {
 
 		if len(activeOrgs) == 0 {
 			log.Printf(`No orgs. Setting NEW org "default"`)
-			orgSetupName := "default"
-			orgId := uuid.NewV4().String()
-			newOrg := shuffle.Org{
-				Name:      orgSetupName,
-				Id:        orgId,
-				Org:       orgSetupName,
-				Users:     []shuffle.User{},
-				Roles:     []string{"admin", "user"},
-				CloudSync: false,
-			}
+			//orgSetupName := "default"
+			//orgId := uuid.NewV4().String()
+			//newOrg := shuffle.Org{
+			//	Name:      orgSetupName,
+			//	Id:        orgId,
+			//	Org:       orgSetupName,
+			//	Users:     []shuffle.User{},
+			//	Roles:     []string{"admin", "user"},
+			//	CloudSync: false,
+			//}
 
-			err = shuffle.SetOrg(ctx, newOrg, orgId)
-			if err != nil {
-				log.Printf("Failed setting organization: %s", err)
-			} else {
-				log.Printf("Successfully created the default org!")
-				setUsers = true
-			}
+			//err = shuffle.SetOrg(ctx, newOrg, orgId)
+			//if err != nil {
+			//	log.Printf("Failed setting organization: %s", err)
+			//} else {
+			//	log.Printf("Successfully created the default org!")
+			//	setUsers = true
 
-			item := shuffle.Environment{
-				Name:    "Shuffle",
-				Type:    "onprem",
-				OrgId:   orgId,
-				Default: true,
-				Id:      uuid.NewV4().String(),
-			}
+			//	item := shuffle.Environment{
+			//		Name:    "Shuffle",
+			//		Type:    "onprem",
+			//		OrgId:   orgId,
+			//		Default: true,
+			//		Id:      uuid.NewV4().String(),
+			//	}
 
-			err = shuffle.SetEnvironment(ctx, &item)
-			if err != nil {
-				log.Printf("[WARNING] Failed setting up new environment for new org")
-			}
+			//	err = shuffle.SetEnvironment(ctx, &item)
+			//	if err != nil {
+			//		log.Printf("[WARNING] Failed setting up new environment for new org")
+			//	}
+			//}
 
 		} else {
 			log.Printf("[DEBUG] There are %d org(s).", len(activeOrgs))
@@ -4120,7 +4209,7 @@ func runInitEs(ctx context.Context) {
 	if err != nil && len(workflowapps) == 0 {
 		log.Printf("[WARNING] Failed getting apps (runInit): %s", err)
 	} else if err == nil {
-		log.Printf("Downloading default workflow apps")
+		log.Printf("[DEBUG] Downloading default apps")
 		fs := memfs.New()
 		storer := memory.NewStorage()
 
@@ -5237,9 +5326,11 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 		// 1. Find environment
 		// 2. If cloud env found, enable it (un-archive)
 		// 3. If it doesn't create it
-		var environments []shuffle.Environment
-		q := datastore.NewQuery("Environments").Filter("org_id =", org.Id)
-		_, err = dbclient.GetAll(ctx, q, &environments)
+
+		//var environments []shuffle.Environment
+		//q := datastore.NewQuery("Environments").Filter("org_id =", org.Id)
+		//_, err = dbclient.GetAll(ctx, q, &environments)
+		environments, err := shuffle.GetEnvironments(ctx, org.Id)
 		if err == nil {
 
 			// Don't disable, this will be deleted entirely
@@ -5573,11 +5664,19 @@ func initHandlers() {
 		panic(fmt.Sprintf("[DEBUG] Database client for ELASTICSEARCH error during init: %s", err))
 	}
 
+	elasticConfig := "elasticsearch"
+	if strings.ToLower(os.Getenv("SHUFFLE_ELASTIC")) == "false" {
+		elasticConfig = ""
+	}
+
 	_ = shuffle.RunInit(*dbclient, *es, storage.Client{}, gceProject, "onprem", true, "elasticsearch")
 	log.Printf("[DEBUG] Finished Shuffle database init")
 
-	//go runInit(ctx)
-	go runInitEs(ctx)
+	if elasticConfig == "elasticsearch" {
+		go runInitEs(ctx)
+	} else {
+		go runInit(ctx)
+	}
 
 	r := mux.NewRouter()
 	r.HandleFunc("/api/v1/_ah/health", healthCheckHandler)

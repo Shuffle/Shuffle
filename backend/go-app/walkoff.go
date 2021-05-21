@@ -22,7 +22,6 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 
-	"cloud.google.com/go/datastore"
 	scheduler "cloud.google.com/go/scheduler/apiv1"
 	gyaml "github.com/ghodss/yaml"
 	"github.com/h2non/filetype"
@@ -43,8 +42,6 @@ import (
 	//"google.golang.org/appengine/memcache"
 	//"cloud.google.com/go/firestore"
 	// "google.golang.org/api/option"
-
-	"google.golang.org/api/iterator"
 )
 
 var localBase = "http://localhost:5001"
@@ -474,65 +471,6 @@ var scheduledOrgs = map[string]*newscheduler.Job{}
 //	SuccessExamples []string `json:"success_examples" datastore:"success_examples,noindex"`
 //	FailureExamples []string `json:"failure_examples" datastore:"failure_examples,noindex"`
 //}
-
-// This might be... a bit off, but that's fine :)
-// This might also be stupid, as we want timelines and such
-// Anyway, these are super basic stupid stats.
-func increaseStatisticsField(ctx context.Context, fieldname, id string, amount int64, orgId string) error {
-
-	// 1. Get current stats
-	// 2. Increase field(s)
-	// 3. Put new stats
-	statisticsId := "global_statistics"
-	nameKey := fieldname
-	key := datastore.NameKey(statisticsId, nameKey, nil)
-
-	statisticsItem := shuffle.StatisticsItem{}
-	newData := shuffle.StatisticsData{
-		Timestamp: int64(time.Now().Unix()),
-		Amount:    amount,
-		Id:        id,
-	}
-
-	if err := dbclient.Get(ctx, key, &statisticsItem); err != nil {
-		// Should init
-		if strings.Contains(fmt.Sprintf("%s", err), "entity") {
-			statisticsItem = shuffle.StatisticsItem{
-				Total:     amount,
-				OrgId:     orgId,
-				Fieldname: fieldname,
-				Data: []shuffle.StatisticsData{
-					newData,
-				},
-			}
-
-			if _, err := dbclient.Put(ctx, key, &statisticsItem); err != nil {
-				log.Printf("Error setting base stats: %s", err)
-				return err
-			}
-
-			return nil
-		}
-		//log.Printf("STATSERR: %s", err)
-
-		return err
-	}
-
-	statisticsItem.Total += amount
-	statisticsItem.Data = append(statisticsItem.Data, newData)
-
-	// New struct, to not add body, author etc
-	// FIXME - reintroduce
-	//if _, err := dbclient.Put(ctx, key, &statisticsItem); err != nil {
-	//	log.Printf("Error stats to %s: %s", fieldname, err)
-	//	return err
-	//}
-
-	//log.Printf("Stats: %#v", statisticsItem)
-
-	return nil
-}
-
 // Frequency = cronjob OR minutes between execution
 func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode, frequency, orgId string, body []byte) error {
 	var err error
@@ -1169,98 +1107,6 @@ func handleExecutionStatistics(execution shuffle.WorkflowExecution) {
 	}
 }
 
-func getWorkflows(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	user, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("Api authentication failed in getworkflows: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	//memcacheName := fmt.Sprintf("%s_workflows", user.Username)
-	ctx := context.Background()
-	//if item, err := memcache.Get(ctx, memcacheName); err == memcache.ErrCacheMiss {
-	//	// Not in cache
-	//	//log.Printf("Workflows not in cache.")
-	//} else if err != nil {
-	//	log.Printf("Error getting item: %v", err)
-	//} else {
-	//	// FIXME - verify if value is ok? Can unmarshal etc.
-	//	resp.WriteHeader(200)
-	//	resp.Write(item.Value)
-	//	return
-	//}
-
-	// With user, do a search for workflows with user or user's org attached
-	q := datastore.NewQuery("workflow").Filter("owner =", user.Id)
-	if user.Role == "admin" {
-		q = datastore.NewQuery("workflow").Filter("org_id =", user.ActiveOrg.Id)
-		log.Printf("[INFO] Getting workflows (ADMIN) for organization %s", user.ActiveOrg.Id)
-	}
-
-	q = q.Order("-edited")
-
-	var workflows []shuffle.Workflow
-	_, err = dbclient.GetAll(ctx, q, &workflows)
-	if err != nil {
-		if strings.Contains(fmt.Sprintf("%s", err), "ResourceExhausted") {
-			q = q.Limit(35)
-			_, err = dbclient.GetAll(ctx, q, &workflows)
-			if err != nil {
-				log.Printf("Failed getting workflows for user %s: %s (0)", user.Username, err)
-				resp.WriteHeader(401)
-				resp.Write([]byte(`{"success": false}`))
-				return
-			}
-		} else {
-			log.Printf("Failed getting workflows for user %s: %s (1)", user.Username, err)
-			//shuffle.DeleteKey(ctx, "workflow", "5694357e-8063-4580-8529-301cc72df951")
-
-			//log.Printf("Workflows: %#v", workflows)
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-	}
-
-	if len(workflows) == 0 {
-		resp.WriteHeader(200)
-		resp.Write([]byte("[]"))
-		return
-	}
-
-	newjson, err := json.Marshal(workflows)
-	if err != nil {
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed unpacking workflows"}`)))
-		return
-	}
-
-	//item := &memcache.Item{
-	//	Key:        memcacheName,
-	//	Value:      newjson,
-	//	Expiration: time.Minute * 10,
-	//}
-	//if err := memcache.Add(ctx, item); err == memcache.ErrNotStored {
-	//	if err := memcache.Set(ctx, item); err != nil {
-	//		log.Printf("Error setting item: %v", err)
-	//	}
-	//} else if err != nil {
-	//	log.Printf("Error adding item: %v", err)
-	//} else {
-	//	//log.Printf("Set cache for %s", item.Key)
-	//}
-
-	resp.WriteHeader(200)
-	resp.Write(newjson)
-}
-
 func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -1297,7 +1143,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflow, err := shuffle.GetWorkflow(ctx, fileId)
 	if err != nil {
-		log.Printf("Failed getting the workflow locally (delete workflow): %s", err)
+		log.Printf("[WARNING] Failed getting workflow %s locally (delete workflow): %s", fileId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -1340,7 +1186,6 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// FIXME - maybe delete workflow executions
-	log.Printf("[INFO] Should have deleted workflow %s", fileId)
 	err = shuffle.DeleteKey(ctx, "workflow", fileId)
 	if err != nil {
 		log.Printf("Failed deleting key %s", fileId)
@@ -1348,15 +1193,14 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(`{"success": false, "reason": "Failed deleting key"}`))
 		return
 	}
+	log.Printf("[INFO] Should have deleted workflow %s", fileId)
 
-	//err = increaseStatisticsField(ctx, "total_workflows", fileId, -1, workflow.OrgId)
-	//if err != nil {
-	//	log.Printf("Failed to increase total workflows: %s", err)
-	//}
 	//memcacheName := fmt.Sprintf("%s_%s", user.Username, fileId)
 	//memcache.Delete(ctx, memcacheName)
 	//memcacheName = fmt.Sprintf("%s_workflows", user.Username)
 	//memcache.Delete(ctx, memcacheName)
+	cacheKey := fmt.Sprintf("%s_workflows", user.Id)
+	shuffle.DeleteCache(ctx, cacheKey)
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": true}`))
@@ -1400,45 +1244,6 @@ func getWorkflowLocal(fileId string, request *http.Request) ([]byte, error) {
 }
 
 //// New execution with firestore
-
-func cleanupExecutions(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	user, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("[INFO] Api authentication failed in cleanup executions: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "message": "Not authenticated"}`))
-		return
-	}
-
-	if user.Role != "admin" {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "message": "Insufficient permissions"}`))
-		return
-	}
-
-	ctx := context.Background()
-
-	// Removes three months from today
-	timestamp := int64(time.Now().AddDate(0, -2, 0).Unix())
-	log.Println(timestamp)
-	q := datastore.NewQuery("workflowexecution").Filter("started_at <", timestamp)
-	var workflowExecutions []shuffle.WorkflowExecution
-	_, err = dbclient.GetAll(ctx, q, &workflowExecutions)
-	if err != nil {
-		log.Printf("Error getting workflowexec (cleanup): %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting all workflowexecutions"}`)))
-		return
-	}
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(`{"success": true}`))
-}
 
 func handleExecution(id string, workflow shuffle.Workflow, request *http.Request) (shuffle.WorkflowExecution, string, error) {
 	ctx := context.Background()
@@ -2849,168 +2654,6 @@ func setExampleresult(ctx context.Context, result shuffle.AppExecutionExample) e
 	//}
 
 	return nil
-}
-
-// FIXME: Not suitable for cloud right now :O
-func deleteWorkflowApp(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	user, userErr := shuffle.HandleApiAuthentication(resp, request)
-	if userErr != nil {
-		log.Printf("Api authentication failed in edit workflow: %s", userErr)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	location := strings.Split(request.URL.String(), "/")
-	log.Printf("%#v", location)
-	var fileId string
-	if location[1] == "api" {
-		if len(location) <= 4 {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		fileId = location[4]
-	}
-
-	ctx := context.Background()
-	log.Printf("ID: %s", fileId)
-	app, err := shuffle.GetApp(ctx, fileId, user)
-	if err != nil {
-		log.Printf("Error getting app (delete) %s: %s", fileId, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	// FIXME - check whether it's in use and maybe restrict again for later?
-	// FIXME - actually delete other than private apps too..
-	private := false
-	if app.Downloaded && user.Role == "admin" {
-		log.Printf("[INFO] Deleting downloaded app (authenticated users can do this)")
-	} else if user.Id != app.Owner {
-		log.Printf("[WARNING] Wrong user (%s) for app %s (delete)", user.Username, app.Name)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	} else {
-		log.Printf("[WARNING] App to be deleted is private")
-		private = true
-	}
-
-	// FIXME: Make workflows track themself INSIDE apps, or with a reference
-	q := datastore.NewQuery("workflow").Filter("org_id = ", user.ActiveOrg.Id).Limit(30)
-	var workflows []shuffle.Workflow
-	_, err = dbclient.GetAll(ctx, q, &workflows)
-	if err != nil {
-		log.Printf("[WARNING] Failed getting related workflows for the app: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-		return
-	}
-
-	// Finds workflows using the app to set errors
-	// FIXME: this will be WAY too big for cloud :O
-	for _, workflow := range workflows {
-		found := false
-
-		newActions := []shuffle.Action{}
-		for _, action := range workflow.Actions {
-			if action.AppName == app.Name && action.AppVersion == app.AppVersion {
-				found = true
-				action.Errors = append(action.Errors, "App has been deleted")
-				action.IsValid = false
-			}
-
-			newActions = append(newActions, action)
-		}
-
-		if found {
-			workflow.IsValid = false
-			workflow.Errors = append(workflow.Errors, fmt.Sprintf("App %s_%s has been deleted", app.Name, app.AppVersion))
-			workflow.Actions = newActions
-
-			for _, trigger := range workflow.Triggers {
-				_ = trigger
-				//log.Printf("TRIGGER: %#v", trigger)
-				//err = deleteSchedule(ctx, scheduleId)
-				//if err != nil {
-				//	if strings.Contains(err.Error(), "Job not found") {
-				//		resp.WriteHeader(200)
-				//		resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
-				//	} else {
-				//		resp.WriteHeader(401)
-				//		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed stopping schedule"}`)))
-				//	}
-				//	return
-				//}
-			}
-
-			err = shuffle.SetWorkflow(ctx, workflow, workflow.ID)
-			if err != nil {
-				log.Printf("Failed setting workflow when deleting app: %s", err)
-				continue
-			} else {
-				log.Printf("Set %s (%s) to have errors", workflow.ID, workflow.Name)
-			}
-
-		}
-
-	}
-
-	//resp.WriteHeader(200)
-	//resp.Write([]byte(`{"success": true}`))
-	//return
-
-	// Not really deleting it, just removing from user cache
-	if private {
-		log.Printf("[INFO] Deleting private app")
-		var privateApps []shuffle.WorkflowApp
-		for _, item := range user.PrivateApps {
-			if item.ID == fileId {
-				continue
-			}
-
-			privateApps = append(privateApps, item)
-		}
-
-		user.PrivateApps = privateApps
-		err = shuffle.SetUser(ctx, &user, true)
-		if err != nil {
-			log.Printf("[ERROR] Failed removing %s app for user %s: %s", app.Name, user.Username, err)
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": true"}`)))
-			return
-		}
-	}
-
-	log.Printf("[INFO] Deleting public app")
-	err = shuffle.DeleteKey(ctx, "workflowapp", fileId)
-	if err != nil {
-		log.Printf("Failed deleting workflowapp")
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed deleting workflow app"}`)))
-		return
-	}
-
-	err = increaseStatisticsField(ctx, "total_apps_deleted", fileId, 1, user.ActiveOrg.Id)
-	if err != nil {
-		log.Printf("Failed to increase total apps loaded stats: %s", err)
-	}
-	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
-	shuffle.DeleteCache(ctx, cacheKey)
-	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
-	shuffle.DeleteCache(ctx, cacheKey)
-
-	//err = memcache.Delete(request.Context(), sessionToken)
-	resp.WriteHeader(200)
-	resp.Write([]byte(`{"success": true}`))
 }
 
 func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
@@ -4431,157 +4074,6 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
-}
-
-func getWorkflowExecutions(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	user, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("Api authentication failed in getting specific workflow: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	location := strings.Split(request.URL.String(), "/")
-
-	var fileId string
-	if location[1] == "api" {
-		if len(location) <= 4 {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		fileId = location[4]
-	}
-
-	if len(fileId) != 36 {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Workflow ID when getting workflow executions is not valid"}`))
-		return
-	}
-
-	ctx := context.Background()
-	workflow, err := shuffle.GetWorkflow(ctx, fileId)
-	if err != nil {
-		log.Printf("Failed getting the workflow %s locally (get executions): %s", fileId, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	// FIXME - have a check for org etc too..
-	if user.Id != workflow.Owner {
-		log.Printf("Wrong user (%s) for workflow %s (get execution)", user.Username, workflow.ID)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	// Query for the specifci workflowId
-	maxAmount := 30
-	q := datastore.NewQuery("workflowexecution").Filter("workflow_id =", fileId).Order("-started_at").Limit(maxAmount)
-	var workflowExecutions []shuffle.WorkflowExecution
-	_, err = dbclient.GetAll(ctx, q, &workflowExecutions)
-	if err != nil {
-
-		if strings.Contains(fmt.Sprintf("%s", err), "ResourceExhausted") {
-			q = datastore.NewQuery("workflowexecution").Filter("workflow_id =", fileId).Order("-started_at").Limit(1)
-			/*
-				_, err = dbclient.GetAll(ctx, q, &workflowExecutions)
-				if err != nil {
-					log.Printf("Error getting workflowexec (2): %s", err)
-					resp.WriteHeader(401)
-					resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting all workflowexecutions for %s"}`, fileId)))
-					return
-				}
-			*/
-
-			cursorStr := ""
-			for {
-				it := dbclient.Run(ctx, q)
-				//_, err = it.Next(&app)
-				for {
-					var workflowExecution shuffle.WorkflowExecution
-					_, err := it.Next(&workflowExecution)
-					if err != nil {
-						break
-					}
-
-					workflowExecutions = append(workflowExecutions, workflowExecution)
-				}
-
-				//log.Printf("Len: %d", len(workflowExecutions))
-				if len(workflowExecutions) > maxAmount {
-					break
-				}
-
-				nextCursor, err := it.Cursor()
-				if err != iterator.Done && err != nil {
-					if strings.Contains(fmt.Sprintf("%s", err), "ResourceExhausted") {
-						//log.Printf("NEXT!")
-						nextStr := fmt.Sprintf("%s", nextCursor)
-						if cursorStr == nextStr {
-							break
-						}
-
-						cursorStr = nextStr
-
-						continue
-					} else {
-						log.Printf("BREAK: %s", err)
-						break
-					}
-				}
-
-				if err != nil {
-					if strings.Contains(fmt.Sprintf("%s", err), "ResourceExhausted") {
-						log.Printf("[WARNING] Cursorerror in app grab WARNING: %s", err)
-					} else {
-						log.Printf("[ERROR] Cursorerror in app grab: %s", err)
-						break
-					}
-				} else {
-					//log.Printf("NEXTCURSOR: %s", nextCursor)
-					nextStr := fmt.Sprintf("%s", nextCursor)
-					if cursorStr == nextStr {
-						break
-					}
-
-					cursorStr = nextStr
-					q = q.Start(nextCursor)
-					//cursorStr = nextCursor
-					//break
-				}
-			}
-		} else {
-			log.Printf("Error getting workflowexec: %s", err)
-			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting all workflowexecutions for %s"}`, fileId)))
-			return
-		}
-	}
-
-	if len(workflowExecutions) == 0 {
-		resp.WriteHeader(200)
-		resp.Write([]byte("[]"))
-		return
-	}
-
-	newjson, err := json.Marshal(workflowExecutions)
-	if err != nil {
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed unpacking workflow executions"}`)))
-		return
-	}
-
-	resp.WriteHeader(200)
-	resp.Write(newjson)
 }
 
 // Starts a new webhook

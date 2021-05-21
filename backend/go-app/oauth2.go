@@ -802,7 +802,7 @@ func handleDeleteOutlookSub(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflow, err := shuffle.GetWorkflow(ctx, workflowId)
 	if err != nil {
-		log.Printf("Failed getting the workflow locally (delete outlook): %s", err)
+		log.Printf("[WARNING] Failed getting the workflow locally (delete outlook): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -863,7 +863,7 @@ func createOutlookSub(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflow, err := shuffle.GetWorkflow(ctx, workflowId)
 	if err != nil {
-		log.Printf("Failed getting the workflow locally (outlook sub): %s", err)
+		log.Printf("[WARNING] Failed getting the workflow locally (outlook sub): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return

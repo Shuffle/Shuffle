@@ -357,7 +357,7 @@ const Apps = (props) => {
 
 		//<div style={{backgroundColor: theme.palette.inputColor, height: 100, width: 100, borderRadius: 3, verticalAlign: "middle", textAlign: "center", display: "table-cell"}}>
 		// <div style={{width: "100px", height: "100px", border: "1px solid black", verticalAlign: "middle", textAlign: "center", display: "table-cell"}}>
-		var imageline = data.large_image.length === 0 ?
+		var imageline = data.large_image === undefined || data.large_image.length === 0 ?
 			<img alt={data.title} style={{borderRadius: borderRadius, width: 100, height: 100, backgroundColor: theme.palette.inputColor,}} />
 			: 
 			<img alt={data.title} src={data.large_image} style={{borderRadius: borderRadius, maxWidth: 100, minWidth: 100, maxHeight: "100%", display: "block", margin: "0 auto"}} onLoad={(event) => {
