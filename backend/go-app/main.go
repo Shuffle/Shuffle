@@ -731,7 +731,6 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// FIXME: Overhaul the top part.
 	// Only admin can CREATE users, but if there are no users, anyone can make (first)
 	ctx := context.Background()
 	users, countErr := shuffle.GetAllUsers(ctx)
@@ -794,9 +793,9 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 
 			err = shuffle.SetOrg(ctx, newOrg, orgId)
 			if err != nil {
-				log.Printf("Failed setting organization: %s", err)
+				log.Printf("[WARNING] Failed setting init organization: %s", err)
 			} else {
-				log.Printf("Successfully created the default org!")
+				log.Printf("[DEBUG] Successfully created the default org!")
 
 				item := shuffle.Environment{
 					Name:    "Shuffle",
@@ -808,7 +807,12 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 
 				err = shuffle.SetEnvironment(ctx, &item)
 				if err != nil {
-					log.Printf("[WARNING] Failed setting up new environment for new org")
+					log.Printf("[WARNING] Failed setting up new environment for new org: %s")
+				}
+
+				currentOrg = shuffle.OrgMini{
+					Id:   newOrg.Id,
+					Name: newOrg.Name,
 				}
 			}
 		}
@@ -4013,7 +4017,7 @@ func runInitEs(ctx context.Context) {
 	log.Printf("[DEBUG] Getting organizations")
 	activeOrgs, err := shuffle.GetAllOrgs(ctx)
 	setUsers := false
-	log.Printf("ORGS: %d", len(activeOrgs))
+	//log.Printf("ORGS: %d", len(activeOrgs))
 	if err != nil {
 		if fmt.Sprintf("%s", err) == "EOF" {
 			time.Sleep(7 * time.Second)
@@ -4551,7 +4555,7 @@ func runInit(ctx context.Context) {
 					log.Printf("[INFO] Username: %s, role: %s", user.Username, user.Role)
 				}
 			} else {
-				log.Printf("Found %d users.", len(users))
+				log.Printf("[INIT] Found %d users.", len(users))
 			}
 
 			if len(activeOrgs) == 1 && len(users) > 0 {
@@ -5669,8 +5673,18 @@ func initHandlers() {
 		elasticConfig = ""
 	}
 
-	_ = shuffle.RunInit(*dbclient, *es, storage.Client{}, gceProject, "onprem", true, "elasticsearch")
-	log.Printf("[DEBUG] Finished Shuffle database init")
+	for {
+		_, err = shuffle.RunInit(*dbclient, *es, storage.Client{}, gceProject, "onprem", true, "elasticsearch")
+		if err != nil {
+			log.Printf("[DEBUG] Error in initial database connection. Retrying in 5 seconds. %s", err)
+			time.Sleep(5 * time.Second)
+			continue
+		}
+
+		break
+	}
+
+	log.Printf("[DEBUG] Initialized Shuffle database connection. Setting up environment.")
 
 	if elasticConfig == "elasticsearch" {
 		go runInitEs(ctx)
