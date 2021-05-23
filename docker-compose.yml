@@ -16,7 +16,7 @@ services:
     depends_on:
       - backend
   backend:
-    build: ./backend
+    #build: ./backend
     image: ghcr.io/frikky/shuffle-backend:0.8.91
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
@@ -49,7 +49,7 @@ services:
       #- database
   orborus:
     #build: ./functions/onprem/orborus
-    image: ghcr.io/frikky/shuffle-orborus:0.8.90
+    image: ghcr.io/frikky/shuffle-orborus:0.8.91
     container_name: shuffle-orborus
     hostname: shuffle-orborus
     networks:
