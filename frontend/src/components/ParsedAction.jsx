@@ -597,6 +597,14 @@ const ParsedAction = (props) => {
 							return null
 						}
 
+						if (selectedApp.generated && data.name === "headers") {
+							console.log("HEADER: ", data)
+							//if (data.value.length === 0) {
+
+							//}
+							//setSelectedActionParameters(selectedActionParameters)
+						}
+
 						if (selectedApp.generated && data.name === "body") {
 							const regex = /\${(\w+)}/g
 							const found = placeholder.match(regex)

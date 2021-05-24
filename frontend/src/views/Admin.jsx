@@ -149,7 +149,7 @@ const Admin = (props) => {
 			response.json().then(responseJson => {
 				console.log("RESP: ", responseJson)
 				if (responseJson["success"] === false) {
-					alert.error("Failed stopping schedule")
+					alert.error("Failed deleting auth")
 				} else {
 					getAppAuthentication() 
 					alert.success("Successfully deleted authentication!")
@@ -880,7 +880,7 @@ const Admin = (props) => {
 			.then((responseJson) => {
 				if (responseJson.success) {
 					//console.log(responseJson.data)
-					console.log(responseJson)
+					//console.log(responseJson)
 					setAuthentication(responseJson.data)
 				} else {
 					alert.error("Failed getting authentications")
@@ -1001,7 +1001,7 @@ const Admin = (props) => {
 		6: "categories",
 	}
 	const setConfig = (event, newValue) => {
-		console.log("Value: ", newValue)
+		//console.log("Value: ", newValue)
 
 		setCurTab(parseInt(newValue))
 		if (newValue === 1) {

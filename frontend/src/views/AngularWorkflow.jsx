@@ -5664,13 +5664,17 @@ const AngularWorkflow = (props) => {
 								id="webhook_uri_field"
 								onClick={() => {
   								var copyText = document.getElementById("webhook_uri_field")
-									navigator.clipboard.writeText(copyText.value)
-									copyText.select()
-									copyText.setSelectionRange(0, 99999) /* For mobile devices */
+									if (copyText !== undefined && copyText !== null) {
+										navigator.clipboard.writeText(copyText.value)
+										copyText.select()
+										copyText.setSelectionRange(0, 99999) /* For mobile devices */
 
-									/* Copy the text inside the text field */
-									document.execCommand("copy")
-									alert.success("Copied Webhook URL")
+										/* Copy the text inside the text field */
+										document.execCommand("copy")
+										alert.success("Copied Webhook URL")
+									} else {
+										console.log("Couldn't find webhook URI field: ", copyText)
+									}
 								}}
 								InputProps={{
 									style:{
@@ -6848,6 +6852,8 @@ const AngularWorkflow = (props) => {
 			/* Copy the text inside the text field */
 			document.execCommand("copy")
 			alert.success("Copied data")
+		} else {
+			console.log("Failed to copy from "+elementName+": ", copyText)
 		}
 	}
 

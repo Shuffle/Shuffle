@@ -3,7 +3,7 @@ import { makeStyles } from '@material-ui/styles';
 import {BrowserView, MobileView} from "react-device-detect";
 
 import {Paper, Typography, FormControlLabel, Button, Divider, Select, MenuItem, FormControl, Switch, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Tooltip, Breadcrumbs, CircularProgress, Chip} from '@material-ui/core';
-import {CheckCircle as CheckCircleIcon, AttachFile as AttachFileIcon, Apps as AppsIcon, ErrorOutline as ErrorOutlineIcon} from '@material-ui/icons';
+import {Add as AddIcon, CheckCircle as CheckCircleIcon, AttachFile as AttachFileIcon, Apps as AppsIcon, ErrorOutline as ErrorOutlineIcon} from '@material-ui/icons';
 
 
 import {Link} from 'react-router-dom';
@@ -230,6 +230,12 @@ const AppCreator = (props) => {
 	const [extraBodyFields, setExtraBodyFields] = useState([])
 	const [fileUploadEnabled, setFileUploadEnabled] = useState(false)
 	const [actionAmount, setActionAmount] = useState(increaseAmount)
+	const defaultAuth = {
+		"name": "",
+		"type": "header",
+		"example": "hello",
+	}
+	const [extraAuth, setExtraAuth] = useState([defaultAuth])
 
 	//const [actions, setActions] = useState([{
 	//	"name": "Get workflows",
@@ -1413,6 +1419,98 @@ const AppCreator = (props) => {
 	//console.log("Option: ", authenticationOption)
 	//console.log("Location: ", parameterLocation)
   //console.log("Name: ", parameterName)
+	const extraKeys =
+		<div style={{marginTop: 25}}>
+			{extraAuth.map((value, index) => {
+				return (
+					<span style={{display: "flex"}}>
+						<TextField
+							required
+							style={{height: 50, flex: 2, backgroundColor: inputColor, marginRight: 5, }}
+							fullWidth={true}
+							placeholder="Name"
+							id="standard-required"
+							margin="normal"
+							variant="outlined"
+							defaultValue={extraAuth[index].name}
+							onChange={e => {
+								extraAuth[index].name = e.target.value
+								setExtraAuth(extraAuth)
+							}}	
+							InputProps={{
+								//classes: {
+								//	notchedOutline: classes.notchedOutline,
+								//},
+								style:{
+									color: "white",
+									minHeight: 50, 
+									marginLeft: 5,
+									maxWidth: "95%",
+									fontSize: "1em",
+								},
+							}}
+						/>
+						<TextField
+							required
+							style={{height: 50, flex: 2, backgroundColor: inputColor, marginRight: 5,}}
+							fullWidth={true}
+							placeholder="Field Name (not token)"
+							type="name"
+							id="standard-required"
+							margin="normal"
+							variant="outlined"
+							defaultValue={extraAuth[index].example}
+							onChange={e => {
+								extraAuth[index].example = e.target.value
+								setExtraAuth(extraAuth)
+							}}
+							InputProps={{
+								style:{
+									color: "white",
+									minHeight: 50, 
+									marginLeft: 5,
+									maxWidth: "95%",
+									fontSize: "1em",
+								},
+							}}
+						/>
+						<Select
+							fullWidth
+							onChange={(e) => {
+								//console.log(e.target.value)
+								//setParameterLocation(e.target.value) 
+								extraAuth[index].type = e.target.value
+								setExtraAuth(extraAuth)
+							}}
+							value={extraAuth[index].type}
+							style={{flex: 1, backgroundColor: inputColor, paddingLeft: "10px", color: "white", height: 50, borderRadius: 5, }}
+							inputProps={{
+								name: 'age',
+								id: 'outlined-age-simple',
+							}}
+						>
+							<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={"header"}>
+								Header
+							</MenuItem>
+							<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={"query"}>
+							 Query	
+							</MenuItem>
+						</Select>
+						{index === extraAuth.length-1 ? 
+							<Button color="primary" style={{maxWidth: 50, }} variant="contained" onClick={() => {
+									console.log("ADD NEW!")
+									extraAuth.push(defaultAuth)
+									setExtraAuth(extraAuth)
+									setUpdate(Math.random())
+							}}>
+								<AddIcon style={{}}/> 
+							</Button> 				
+						: <span style={{width: 50, }}/>}
+					</span>
+				)
+			})}
+		</div>
+
 	const apiKey = authenticationOption === "API key" ? 
 		<div style={{color: "white", marginTop: 20, }}>
 			<Typography variant="body1">API key authentication</Typography>
@@ -1447,7 +1545,7 @@ const AppCreator = (props) => {
 					setParameterLocation(e.target.value) 
 				}}
 				value={parameterLocation}
-				style={{backgroundColor: inputColor, paddingLeft: "10px", color: "white", height: "50px"}}
+				style={{borderRadius: 5, backgroundColor: inputColor, paddingLeft: "10px", color: "white", height: "50px"}}
 				inputProps={{
 					name: 'age',
 					id: 'outlined-age-simple',
@@ -2628,6 +2726,7 @@ const AppCreator = (props) => {
 					{basicAuth}
 					{bearerAuth}
 					{apiKey}
+					{extraKeys}
 
 					{/*authenticationOption === "No authentication" ? null :
 						<FormControlLabel
