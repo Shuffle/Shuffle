@@ -3,8 +3,7 @@ import { makeStyles } from '@material-ui/styles';
 import {BrowserView, MobileView} from "react-device-detect";
 
 import {Paper, Typography, FormControlLabel, Button, Divider, Select, MenuItem, FormControl, Switch, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Tooltip, Breadcrumbs, CircularProgress, Chip} from '@material-ui/core';
-import {Add as AddIcon, CheckCircle as CheckCircleIcon, AttachFile as AttachFileIcon, Apps as AppsIcon, ErrorOutline as ErrorOutlineIcon} from '@material-ui/icons';
-
+import {FileCopy as FileCopyIcon, Delete as DeleteIcon, Remove as RemoveIcon, Add as AddIcon, CheckCircle as CheckCircleIcon, AttachFile as AttachFileIcon, Apps as AppsIcon, ErrorOutline as ErrorOutlineIcon} from '@material-ui/icons';
 
 import {Link} from 'react-router-dom';
 import YAML from 'yaml'
@@ -198,7 +197,8 @@ const AppCreator = (props) => {
 	const increaseAmount = 50
 	const actionNonBodyRequest = ["GET", "HEAD", "DELETE", "CONNECT"]
 	const actionBodyRequest = ["POST", "PUT", "PATCH",]
-	const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth", ]
+	//const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth", "Oauth2"]
+	const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth"]
 	const apikeySelection = ["Header", "Query",]
 
 	const [name, setName] = useState("");
@@ -233,9 +233,9 @@ const AppCreator = (props) => {
 	const defaultAuth = {
 		"name": "",
 		"type": "header",
-		"example": "hello",
+		"example": "",
 	}
-	const [extraAuth, setExtraAuth] = useState([defaultAuth])
+	const [extraAuth, setExtraAuth] = useState([])
 
 	//const [actions, setActions] = useState([{
 	//	"name": "Get workflows",
@@ -898,6 +898,10 @@ const AppCreator = (props) => {
 					setAuthenticationOption("Basic auth")
 					setAuthenticationRequired(true)
 					break
+				} else if (value.scheme === "oauth2") {
+					setAuthenticationOption("Oauth2")
+					setAuthenticationRequired(true)
+					break
 				}
 			}
 		}
@@ -1256,6 +1260,26 @@ const AppCreator = (props) => {
 				"type": "http",
 				"scheme": "basic",
 			}
+		} else if (authenticationOption === "Oauth2") {
+			data.components.securitySchemes["Oauth2"] = {
+				"type": "oauth2",
+				"flow": {
+					"authorizationCode": {
+
+					},
+				},
+			}
+		}
+
+		if (setExtraAuth.length > 0) {
+			for (var key in extraAuth) {
+				const curauth = extraAuth[key]
+				data.components.securitySchemes[curauth.name] = {
+					"type": "apiKey",
+					"in": curauth.type,
+					"name": curauth.name,
+				}
+			}
 		}
 
 		fetch(globalUrl+"/api/v1/verify_openapi", {
@@ -1420,13 +1444,24 @@ const AppCreator = (props) => {
 	//console.log("Location: ", parameterLocation)
   //console.log("Name: ", parameterName)
 	const extraKeys =
-		<div style={{marginTop: 25}}>
+		<div style={{marginTop: 50}}>
+			<Typography variant="body1">Extra headers or queries</Typography>
+			{extraAuth.length === 0 ? 
+				<Button color="primary" style={{maxWidth: 50, }} variant="contained" onClick={() => {
+						console.log("ADD NEW!")
+						extraAuth.push(defaultAuth)
+						setExtraAuth(extraAuth)
+						setUpdate(Math.random())
+				}}>
+					<AddIcon style={{}}/> 
+				</Button> 				
+			: <span style={{width: 50, }}/>}
 			{extraAuth.map((value, index) => {
 				return (
-					<span style={{display: "flex"}}>
+					<span style={{display: "flex", height: 50, marginTop: 5, }}>
 						<TextField
 							required
-							style={{height: 50, flex: 2, backgroundColor: inputColor, marginRight: 5, }}
+							style={{height: 50, flex: 2, marginTop: 0, marginBottom: 0, backgroundColor: inputColor, marginRight: 5, }}
 							fullWidth={true}
 							placeholder="Name"
 							id="standard-required"
@@ -1438,9 +1473,9 @@ const AppCreator = (props) => {
 								setExtraAuth(extraAuth)
 							}}	
 							InputProps={{
-								//classes: {
-								//	notchedOutline: classes.notchedOutline,
-								//},
+								classes: {
+									notchedOutline: classes.notchedOutline,
+								},
 								style:{
 									color: "white",
 									minHeight: 50, 
@@ -1452,9 +1487,9 @@ const AppCreator = (props) => {
 						/>
 						<TextField
 							required
-							style={{height: 50, flex: 2, backgroundColor: inputColor, marginRight: 5,}}
+							style={{height: 50, marginTop: 0, marginBottom: 0, flex: 2, backgroundColor: inputColor, marginRight: 5,}}
 							fullWidth={true}
-							placeholder="Field Name (not token)"
+							placeholder="Example - input an example for the user"
 							type="name"
 							id="standard-required"
 							margin="normal"
@@ -1477,9 +1512,8 @@ const AppCreator = (props) => {
 						<Select
 							fullWidth
 							onChange={(e) => {
-								//console.log(e.target.value)
-								//setParameterLocation(e.target.value) 
 								extraAuth[index].type = e.target.value
+								setUpdate(Math.random())
 								setExtraAuth(extraAuth)
 							}}
 							value={extraAuth[index].type}
@@ -1496,20 +1530,38 @@ const AppCreator = (props) => {
 							 Query	
 							</MenuItem>
 						</Select>
-						{index === extraAuth.length-1 ? 
-							<Button color="primary" style={{maxWidth: 50, }} variant="contained" onClick={() => {
-									console.log("ADD NEW!")
+						<div style={{display: "flex", width: 100, }}>
+							{index === extraAuth.length-1 ? 
+							<Button color="primary" style={{}} variant="outlined" onClick={() => {
 									extraAuth.push(defaultAuth)
 									setExtraAuth(extraAuth)
 									setUpdate(Math.random())
 							}}>
 								<AddIcon style={{}}/> 
 							</Button> 				
-						: <span style={{width: 50, }}/>}
+						: <span style={{}}/>}
+							<Button color="primary" style={{}} variant="outlined" onClick={() => {
+									const tmpAuth = extraAuth.filter(item => item.type === value.type && item.name !== value.name)
+									setExtraAuth(tmpAuth)
+									console.log(tmpAuth)
+									setUpdate(Math.random())
+							}}>
+								<RemoveIcon style={{}}/> 
+							</Button> 				
+						</div>
 					</span>
 				)
 			})}
 		</div>
+
+	const oauth2Auth = authenticationOption === "Oauth2" ? 
+		<div style={{color: "white", marginTop: 20, }}>
+			<Typography variant="body1">Oauth2 authentication</Typography>
+			<Typography variant="body2" color="textSecondary">
+				Add the URL to redirect to 
+			</Typography>
+		</div>
+		: null
 
 	const apiKey = authenticationOption === "API key" ? 
 		<div style={{color: "white", marginTop: 20, }}>
@@ -1682,12 +1734,12 @@ const AppCreator = (props) => {
 							<div style={{color: "#f85a3e", cursor: "pointer", marginRight: 15, }} onClick={() => {
 								duplicateAction(index)
 							}}>
-								Duplicate	
+								<FileCopyIcon color="secondary"/>
 							</div>
 						</Tooltip>
 					 	<Tooltip title="Delete action" placement="bottom" style={{minWidth: 60}} >
 							<div style={{color: "#f85a3e", cursor: "pointer"}} onClick={() => {deleteAction(index)}}>
-								Delete
+								<DeleteIcon color="secondary"/>
 							</div>
 						</Tooltip>
 					</Paper>
@@ -1777,9 +1829,6 @@ const AppCreator = (props) => {
 				</span>}
 				key={currentAction}
 				InputProps={{
-					classes: {
-						notchedOutline: classes.notchedOutline,
-					},
 					style:{
 						color: "white",
 					},
@@ -2015,9 +2064,6 @@ const AppCreator = (props) => {
 						defaultValue={currentAction["description"]}
 						onChange={e => setActionField("description", e.target.value)}
 						InputProps={{
-							classes: {
-								notchedOutline: classes.notchedOutline,
-							},
 							style:{
 								color: "white",
 							},
@@ -2220,9 +2266,6 @@ const AppCreator = (props) => {
 						onChange={e => setActionField("headers", e.target.value)}
 						helperText={<span style={{color:"white", marginBottom: "2px",}}>Headers that are part of the request. Default: EMPTY</span>}
 						InputProps={{
-							classes: {
-								notchedOutline: classes.notchedOutline,
-							},
 							style:{
 								color: "white",
 							},
@@ -2726,6 +2769,7 @@ const AppCreator = (props) => {
 					{basicAuth}
 					{bearerAuth}
 					{apiKey}
+					{oauth2Auth}
 					{extraKeys}
 
 					{/*authenticationOption === "No authentication" ? null :
