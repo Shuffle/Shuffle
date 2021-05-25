@@ -3400,9 +3400,6 @@ const AngularWorkflow = (props) => {
 
 		const handleAppDrag = (e, app) => {
 				const cycontainer = cy.container()
-				console.log("X: ", e.pageX)
-				console.log("Y: ", e.pageY)
-				console.log("Height: ", cycontainer.offsetHeight)
 
 				// Chrome lol
 				//if (e.srcElement !== undefined && e.srcElement.localName === "canvas") {
@@ -3413,8 +3410,6 @@ const AngularWorkflow = (props) => {
 							return
 						}
 
-						console.log("RENDEREDX: ", e.pageX-cycontainer.offsetLeft)
-						console.log("RENDEREDY: ", e.pageY-cycontainer.offsetTop)
 						currentnode[0].renderedPosition("x", e.pageX-cycontainer.offsetLeft)
 						currentnode[0].renderedPosition("y", e.pageY-cycontainer.offsetTop)
 					} else{
@@ -3480,14 +3475,8 @@ const AngularWorkflow = (props) => {
 						// FIXME: overwrite category if the ACTION chosen has a different category
 
 						// const image = "url("+app.large_image+")"
-
 						// FIXME - find the cytoscape offset position 
 						// Can this be done with zoom calculations?
-						console.log("LAYERX: ", e.layerX)
-						console.log("LAYERY: ", e.layerY)
-						console.log("RENDEREDX: ", e.pageX-cycontainer.offsetLeft)
-						console.log("RENDEREDY: ", e.pageY-cycontainer.offsetTop)
-						console.log("E: ", e)
 						const nodeToBeAdded = {
 							group: "nodes",
 							data: newAppData,
@@ -3593,8 +3582,8 @@ const AngularWorkflow = (props) => {
 							newAppData.selectedAuthentication = {}
 						}
 
-						workflow.actions.push(newAppData)
-						setWorkflow(workflow)
+						//workflow.actions.push(newAppData)
+						//setWorkflow(workflow)
 
 						if (newAppPopup) {
 							//alert.error("SHOULD MAKE USER AUTHENTICATE THE APP OR SET hasError")

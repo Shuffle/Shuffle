@@ -100,10 +100,6 @@ services:
       - 9200:9200
     networks:
       - shuffle
-    #volumes:
-    #  #- ${DB_LOCATION}/opensearch:/usr/share/opensearch/data
-    #  #- tmp/opensearch:/usr/share/opensearch/data
-    #  - ${DB_LOCATION}:/usr/share/opensearch/data
   #database:
   #  #build: ./backend/database
   #  image: frikky/shuffle:database
@@ -122,9 +118,3 @@ services:
 networks:
   shuffle:
     driver: bridge
-#volumes:
-#  opensearch-data1:
-#    driver: local
-#    driver_opts:
-#      type: nfs 
-#      device: ${DB_LOCATION}
