@@ -3379,200 +3379,6 @@ const AngularWorkflow = (props) => {
 		}
 	}
 
-	const handleAppDrag = (e, app) => {
-		const cycontainer = cy.container()
-
-		// Chrome lol
-		//if (e.srcElement !== undefined && e.srcElement.localName === "canvas") {
-		if (e.pageX > cycontainer.offsetLeft && e.pageX < cycontainer.offsetLeft+cycontainer.offsetWidth && e.pageY > cycontainer.offsetTop && e.pageY < cycontainer.offsetTop+cycontainer.offsetHeight) {
-			if (newNodeId.length > 0) {
-				var currentnode = cy.getElementById(newNodeId)
-				if (currentnode.length === 0) {
-					return
-				}
-
-				currentnode[0].renderedPosition("x", e.pageX-cycontainer.offsetLeft)
-				currentnode[0].renderedPosition("y", e.pageY-cycontainer.offsetTop)
-			} else{
-				if (workflow.public) {
-					return
-				}
-
-				if (app.actions === undefined || app.actions === null || app.actions.length === 0) {
-					alert.error("App "+app.name+" currently has no actions to perform. Please go to https://shuffler.io/apps to edit it.")
-					return
-				}
-
-				newNodeId = uuid.v4()
-				const actionType = "ACTION"
-				const actionLabel = getNextActionName(app.name)
-				var parameters = null
-				var example = ""
-
-				if (app.actions[0].parameters !== null && app.actions[0].parameters.length > 0) {
-					parameters = app.actions[0].parameters
-				}
-				if (app.actions[0].returns.example !== undefined && app.actions[0].returns.example !== null && app.actions[0].returns.example.length > 0) {
-					example = app.actions[0].returns.example
-				}
-				
-				var newAppPopup = false
-
-				/*
-				 FIXME: Add auth.
-						selectedAction.selectedAuthentication = e.target.value
-						selectedAction.authentication_id = e.target.value.id
-						setSelectedAction(selectedAction)
-						setUpdate(Math.random())
-				*/
-
-				console.log("ENVS: ", environments)
-				const parsedEnvironments = environments === null || environments === [] ? "cloud" : environments[defaultEnvironmentIndex] === undefined ? "cloud" : environments[defaultEnvironmentIndex].Name
-				const newAppData = {
-					app_name: app.name,
-					app_version: app.app_version, 
-					app_id: app.id,
-					sharing: app.sharing,
-					private_id: app.private_id,	
-					environment: parsedEnvironments,
-					errors: [],
-					id_: newNodeId,
-					_id_: newNodeId,
-					id: newNodeId,
-					is_valid: true,
-					label: actionLabel,
-					type: actionType,
-					name: app.actions[0].name,
-					parameters: parameters,
-					isStartNode: false,
-					large_image: app.large_image,
-					authentication: [],
-					execution_variable: undefined,
-					example: example,
-					category: app.categories !== null && app.categories !== undefined && app.categories.length > 0 ? app.categories[0] : "",
-					authentication_id: "",
-				}
-
-				// FIXME: overwrite category if the ACTION chosen has a different category
-
-				// const image = "url("+app.large_image+")"
-
-				// FIXME - find the cytoscape offset position 
-				// Can this be done with zoom calculations?
-				const nodeToBeAdded = {
-					group: "nodes",
-					data: newAppData,
-					renderedPosition: {
-						x: e.layerX,
-						y: e.layerY,
-					}
-				}
-
-				cy.add(nodeToBeAdded)
-
-				if (workflow.actions === undefined || workflow.actions.length === 0) {
-					workflow.start = newAppData.id
-					workflow.actions = []
-					newAppData.isStartNode = true
-					//setStartNode(newAppData.id)
-				}
-
-				if (workflow.actions.length > 0 && elements.length === 0) {
-					const actions = workflow.actions.map(action => {
-						const node = {}
-						node.position = action.position
-						node.data = action
-
-						node.data._id = action["id"]
-						node.data.type = "ACTION"
-						node.isStartNode = action["id"] === workflow.start
-
-						return node
-					})
-
-					const tmpelements = [].concat(actions)
-					setElements(tmpelements)
-				}
-
-				if (workflow.actions.length === 1 && workflow.actions[0].id === workflow.start) {
-					const newEdgeUuid = uuid.v4()
-					const newcybranch = { 
-						"source": workflow.start,
-						"target": newNodeId,
-						"_id": newEdgeUuid,
-						"id": newEdgeUuid,
-						"hasErrors": false,
-					}
-
-					const edgeToBeAdded = {
-						group: "edges",
-						data: newcybranch,
-					}
-					console.log("SHOULD STITCH WITH STARTNODE")
-					cy.add(edgeToBeAdded)
-				}
-							
-				// AUTHENTICATION
-				if (app.authentication.required) {
-					// Setup auth here :)
-					const authenticationOptions = []
-					var findAuthId = ""
-					if (newAppData.authentication_id !== null && newAppData.authentication_id !== undefined && newAppData.authentication_id.length > 0) {
-						findAuthId = newAppData.authentication_id
-					}
-
-					var tmpAuth = JSON.parse(JSON.stringify(appAuthentication))
-					for (var key in tmpAuth) {
-						var item = tmpAuth[key]
-
-						const newfields = {}
-						for (var filterkey in item.fields) {
-							newfields[item.fields[filterkey].key] = item.fields[filterkey].value
-						}
-
-						item.fields = newfields
-						if (item.app.name === app.name) {
-							authenticationOptions.push(item)
-							if (item.id === findAuthId) {
-								newAppData.selectedAuthentication = item
-							}
-						}
-					}
-
-					if (authenticationOptions !== undefined && authenticationOptions !== null && authenticationOptions.length > 0) {
-						for (var key in authenticationOptions) {
-							const option = authenticationOptions[key]
-							if (option.active) {
-								newAppData.selectedAuthentication = option 
-								newAppData.authentication_id = option.id
-								break
-							}
-						}
-					}
-
-					//newAppData.authentication = authenticationOptions
-					//if (newAppData.selectedAuthentication === null || newAppData.selectedAuthentication === undefined || newAppData.selectedAuthentication.length === "") {
-					//	newAppData.selectedAuthentication = {}
-					//} else {
-					//	console.log("CAN WE SELECT AUTH?: ", authenticationOptions)
-					//}
-				} else {
-					newAppData.authentication = []
-					newAppData.authentication_id = ""
-					newAppData.selectedAuthentication = {}
-				}
-
-				workflow.actions.push(newAppData)
-				setWorkflow(workflow)
-
-				if (newAppPopup) {
-					//alert.error("SHOULD MAKE USER AUTHENTICATE THE APP OR SET hasError")
-					//alert.info("Remember: set the authentication for the user itself, not the app") 
-				}
-			}
-		}
-	}
-
 	const handleDragStop = (e, app) => {
 		newNodeId = ""
 		console.log("STOP!: ", e)
@@ -3591,6 +3397,212 @@ const AngularWorkflow = (props) => {
 	const AppView = (props) => {
   	const { allApps, prioritizedApps, filteredApps } = props;
 		const [visibleApps, setVisibleApps] = React.useState(prioritizedApps.concat(filteredApps.filter(innerapp => !internalIds.includes(innerapp.id))))
+
+		const handleAppDrag = (e, app) => {
+				const cycontainer = cy.container()
+				console.log("X: ", e.pageX)
+				console.log("Y: ", e.pageY)
+				console.log("Height: ", cycontainer.offsetHeight)
+
+				// Chrome lol
+				//if (e.srcElement !== undefined && e.srcElement.localName === "canvas") {
+				if (e.pageX > cycontainer.offsetLeft && e.pageX < cycontainer.offsetLeft+cycontainer.offsetWidth && e.pageY > cycontainer.offsetTop && e.pageY < cycontainer.offsetTop+cycontainer.offsetHeight) {
+					if (newNodeId.length > 0) {
+						var currentnode = cy.getElementById(newNodeId)
+						if (currentnode.length === 0) {
+							return
+						}
+
+						console.log("RENDEREDX: ", e.pageX-cycontainer.offsetLeft)
+						console.log("RENDEREDY: ", e.pageY-cycontainer.offsetTop)
+						currentnode[0].renderedPosition("x", e.pageX-cycontainer.offsetLeft)
+						currentnode[0].renderedPosition("y", e.pageY-cycontainer.offsetTop)
+					} else{
+						if (workflow.public) {
+							return
+						}
+
+						if (app.actions === undefined || app.actions === null || app.actions.length === 0) {
+							alert.error("App "+app.name+" currently has no actions to perform. Please go to https://shuffler.io/apps to edit it.")
+							return
+						}
+
+						newNodeId = uuid.v4()
+						const actionType = "ACTION"
+						const actionLabel = getNextActionName(app.name)
+						var parameters = null
+						var example = ""
+
+						if (app.actions[0].parameters !== null && app.actions[0].parameters.length > 0) {
+							parameters = app.actions[0].parameters
+						}
+						if (app.actions[0].returns.example !== undefined && app.actions[0].returns.example !== null && app.actions[0].returns.example.length > 0) {
+							example = app.actions[0].returns.example
+						}
+						
+						var newAppPopup = false
+
+						/*
+						 FIXME: Add auth.
+								selectedAction.selectedAuthentication = e.target.value
+								selectedAction.authentication_id = e.target.value.id
+								setSelectedAction(selectedAction)
+								setUpdate(Math.random())
+						*/
+
+						console.log("ENVS: ", environments)
+						const parsedEnvironments = environments === null || environments === [] ? "cloud" : environments[defaultEnvironmentIndex] === undefined ? "cloud" : environments[defaultEnvironmentIndex].Name
+						const newAppData = {
+							app_name: app.name,
+							app_version: app.app_version, 
+							app_id: app.id,
+							sharing: app.sharing,
+							private_id: app.private_id,	
+							environment: parsedEnvironments,
+							errors: [],
+							id_: newNodeId,
+							_id_: newNodeId,
+							id: newNodeId,
+							is_valid: true,
+							label: actionLabel,
+							type: actionType,
+							name: app.actions[0].name,
+							parameters: parameters,
+							isStartNode: false,
+							large_image: app.large_image,
+							authentication: [],
+							execution_variable: undefined,
+							example: example,
+							category: app.categories !== null && app.categories !== undefined && app.categories.length > 0 ? app.categories[0] : "",
+							authentication_id: "",
+						}
+
+						// FIXME: overwrite category if the ACTION chosen has a different category
+
+						// const image = "url("+app.large_image+")"
+
+						// FIXME - find the cytoscape offset position 
+						// Can this be done with zoom calculations?
+						console.log("LAYERX: ", e.layerX)
+						console.log("LAYERY: ", e.layerY)
+						console.log("RENDEREDX: ", e.pageX-cycontainer.offsetLeft)
+						console.log("RENDEREDY: ", e.pageY-cycontainer.offsetTop)
+						console.log("E: ", e)
+						const nodeToBeAdded = {
+							group: "nodes",
+							data: newAppData,
+							renderedPosition: {
+								//x: e.layerX,
+								//y: e.layerY,
+								x: e.pageX-cycontainer.offsetLeft,
+								y: e.pageY-cycontainer.offsetTop,
+							}
+						}
+
+						cy.add(nodeToBeAdded)
+
+						if (workflow.actions === undefined || workflow.actions.length === 0) {
+							workflow.start = newAppData.id
+							workflow.actions = []
+							newAppData.isStartNode = true
+							//setStartNode(newAppData.id)
+						}
+
+						if (workflow.actions.length > 0 && elements.length === 0) {
+							const actions = workflow.actions.map(action => {
+								const node = {}
+								node.position = action.position
+								node.data = action
+
+								node.data._id = action["id"]
+								node.data.type = "ACTION"
+								node.isStartNode = action["id"] === workflow.start
+
+								return node
+							})
+
+							const tmpelements = [].concat(actions)
+							setElements(tmpelements)
+						}
+
+						if (workflow.actions.length === 1 && workflow.actions[0].id === workflow.start) {
+							const newEdgeUuid = uuid.v4()
+							const newcybranch = { 
+								"source": workflow.start,
+								"target": newNodeId,
+								"_id": newEdgeUuid,
+								"id": newEdgeUuid,
+								"hasErrors": false,
+							}
+
+							const edgeToBeAdded = {
+								group: "edges",
+								data: newcybranch,
+							}
+							console.log("SHOULD STITCH WITH STARTNODE")
+							cy.add(edgeToBeAdded)
+						}
+									
+						// AUTHENTICATION
+						if (app.authentication.required) {
+							// Setup auth here :)
+							const authenticationOptions = []
+							var findAuthId = ""
+							if (newAppData.authentication_id !== null && newAppData.authentication_id !== undefined && newAppData.authentication_id.length > 0) {
+								findAuthId = newAppData.authentication_id
+							}
+
+							var tmpAuth = JSON.parse(JSON.stringify(appAuthentication))
+							for (var key in tmpAuth) {
+								var item = tmpAuth[key]
+
+								const newfields = {}
+								for (var filterkey in item.fields) {
+									newfields[item.fields[filterkey].key] = item.fields[filterkey].value
+								}
+
+								item.fields = newfields
+								if (item.app.name === app.name) {
+									authenticationOptions.push(item)
+									if (item.id === findAuthId) {
+										newAppData.selectedAuthentication = item
+									}
+								}
+							}
+
+							if (authenticationOptions !== undefined && authenticationOptions !== null && authenticationOptions.length > 0) {
+								for (var key in authenticationOptions) {
+									const option = authenticationOptions[key]
+									if (option.active) {
+										newAppData.selectedAuthentication = option 
+										newAppData.authentication_id = option.id
+										break
+									}
+								}
+							}
+
+							//newAppData.authentication = authenticationOptions
+							//if (newAppData.selectedAuthentication === null || newAppData.selectedAuthentication === undefined || newAppData.selectedAuthentication.length === "") {
+							//	newAppData.selectedAuthentication = {}
+							//} else {
+							//	console.log("CAN WE SELECT AUTH?: ", authenticationOptions)
+							//}
+						} else {
+							newAppData.authentication = []
+							newAppData.authentication_id = ""
+							newAppData.selectedAuthentication = {}
+						}
+
+						workflow.actions.push(newAppData)
+						setWorkflow(workflow)
+
+						if (newAppPopup) {
+							//alert.error("SHOULD MAKE USER AUTHENTICATE THE APP OR SET hasError")
+							//alert.info("Remember: set the authentication for the user itself, not the app") 
+						}
+					}
+				}
+		}
 
 		const ParsedAppPaper = (props) => {
 			const app = props.app
@@ -6845,6 +6857,12 @@ const AngularWorkflow = (props) => {
 		const elementName = "copy_element_shuffle"
 		var copyText = document.getElementById(elementName);
 		if (copyText !== null && copyText !== undefined) {
+			if (copy.namespace !== undefined && copy.name !== undefined && copy.src !== undefined) {
+				copy = copy.src
+			}
+
+			console.log("NEW: ", copy)
+
 			navigator.clipboard.writeText(JSON.stringify(copy))
 			copyText.select()
 			copyText.setSelectionRange(0, 99999) /* For mobile devices */
