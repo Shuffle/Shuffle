@@ -74,8 +74,7 @@ def debug(msg):
 # Skips container kills to stop self-recursion
 def filter_msg(alert):
     # These are things that recursively happen because Shuffle starts Docker containers
-    # Docker integration rules: https://github.com/wazuh/wazuh-ruleset/blob/ae36745db1d3f312db0392f5925c2f2b0ec009a9/rules/0560-docker_integration_rules.xml
-    skip = ["87924", "87900", "87901", "87902", "87903", "87904", "86001", "86002", "86003", "87932", "80710", "87929", "87928",]
+    skip = ["87924", "87900", "87901", "87902", "87903", "87904", "86001", "86002", "86003", "87932", "80710", "87929", "87928", "5710"]
     if alert["rule"]["id"] in skip:
         return False
 
@@ -96,14 +95,14 @@ def generate_msg(alert):
     level = alert['rule']['level']
 
     if (level <= 4):
-        color = "good"
+        severity = 1
     elif (level >= 5 and level <= 7):
-        color = "warning"
+        severity = 2
     else:
-        color = "danger"
+        severity = 3
 
     msg = {}
-    msg['color'] = color
+    msg['severity'] = severity 
     msg['pretext'] = "WAZUH Alert"
     msg['title'] = alert['rule']['description'] if 'description' in alert['rule'] else "N/A"
     msg['text'] = alert.get('full_log')

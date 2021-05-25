@@ -871,16 +871,18 @@ const AppCreator = (props) => {
 			} 
 		}
 
+		
+		console.log("SECURITYSCHEMES: ", securitySchemes)
 		if (securitySchemes !== undefined) {
 			// FIXME: Should add Oauth2 (Microsoft) and JWT (Wazuh)
 			//console.log("SECURITY: ", securitySchemes)
 			//if (Object.entries(securitySchemes) > 1 && 
+			var newauth = []
 			for (const [key, value] of Object.entries(securitySchemes)) {
 				if (value.scheme === "bearer") {
 					setAuthenticationOption("Bearer auth")
 					setAuthenticationRequired(true)
-					break
-				} else if (value.type === "apiKey") {
+				} else if (key === "ApiKeyAuth") {
 					setAuthenticationOption("API key")
 
 					value.in = value.in.charAt(0).toUpperCase() + value.in.slice(1);
@@ -893,16 +895,23 @@ const AppCreator = (props) => {
 					console.log("PARAM NAME: ", value.name)
   				setParameterName(value.name)
 					setAuthenticationRequired(true)
-					break
 				} else if (value.scheme === "basic") {
 					setAuthenticationOption("Basic auth")
 					setAuthenticationRequired(true)
-					break
 				} else if (value.scheme === "oauth2") {
 					setAuthenticationOption("Oauth2")
 					setAuthenticationRequired(true)
-					break
+				} else {
+					newauth.push({
+						"name": key,
+						"type": value.in,
+						"example": "",
+					})
 				}
+			}
+			
+			if (newauth.length > 0) {
+				setExtraAuth(newauth)
 			}
 		}
 
@@ -1445,20 +1454,22 @@ const AppCreator = (props) => {
   //console.log("Name: ", parameterName)
 	const extraKeys =
 		<div style={{marginTop: 50}}>
-			<Typography variant="body1">Extra headers or queries</Typography>
-			{extraAuth.length === 0 ? 
-				<Button color="primary" style={{maxWidth: 50, }} variant="contained" onClick={() => {
-						console.log("ADD NEW!")
-						extraAuth.push(defaultAuth)
-						setExtraAuth(extraAuth)
-						setUpdate(Math.random())
-				}}>
-					<AddIcon style={{}}/> 
-				</Button> 				
-			: <span style={{width: 50, }}/>}
+			<div style={{display: "flex"}}>
+				<Typography variant="body1">Extra authentication options</Typography>
+				{extraAuth.length === 0 ? 
+					<Button color="primary" style={{maxWidth: 50, marginLeft: 15, }} variant="contained" onClick={() => {
+							console.log("ADD NEW!")
+							extraAuth.push(defaultAuth)
+							setExtraAuth(extraAuth)
+							setUpdate(Math.random())
+					}}>
+						<AddIcon style={{}}/> 
+					</Button> 				
+				: <span style={{width: 50, }}/>}
+			</div>
 			{extraAuth.map((value, index) => {
 				return (
-					<span style={{display: "flex", height: 50, marginTop: 5, }}>
+					<span key={index} style={{display: "flex", height: 50, marginTop: 5, }}>
 						<TextField
 							required
 							style={{height: 50, flex: 2, marginTop: 0, marginBottom: 0, backgroundColor: inputColor, marginRight: 5, }}
