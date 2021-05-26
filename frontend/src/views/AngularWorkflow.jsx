@@ -1141,7 +1141,6 @@ const AngularWorkflow = (props) => {
 
 					// Remove the old listener for select, run with new one 
 					cy.removeListener('select')
-
 					cy.on('select', 'node', (e) => onNodeSelect(e, newauth))
 					cy.on('select', 'edge', (e) => onEdgeSelect(e))
 				}
@@ -1355,10 +1354,17 @@ const AngularWorkflow = (props) => {
 	var hiddenNodes = []
 	const onNodeDragStop = (event, selectedAction) => {
 		const nodedata = event.target.data()
-
+		console.log("IN NODE DRAG STOP: ", nodedata)
 		if (nodedata.id === selectedAction.id) {
 			return
 		}
+
+		if (nodedata.finished === false) {
+			return
+		}
+
+		//console.log("Drag: ", nodedata)
+		//return 
 
 		//console.log("DRAGGED NODE: ", nodedata)
 		//console.log("TARGET NODE: ", selectedAction)
@@ -1462,8 +1468,12 @@ const AngularWorkflow = (props) => {
 		//if (Object.getOwnPropertyNames(selectedAction).length === 0) {
 		//	return
 		//}
-
 		const nodedata = event.target.data()
+		//console.log("Dragging: ", nodedata)
+		if (nodedata.finished === false) {
+			return
+		}
+
 		//console.log("Dragging node!!")
 		if (nodedata.app_name == "Shuffle Tools" || nodedata.app_name == "Testing") {
 			//console.log("NODE: ", 
@@ -1569,8 +1579,6 @@ const AngularWorkflow = (props) => {
 	// https://stackoverflow.com/questions/16677856/cy-onselect-callback-only-once
 	const onNodeSelect = (event, newAppAuth) => {
 		const data = event.target.data()
-
-		setLastSaved(false)
 		if (data.isButton) {
 			console.log("BUTTON CLICKED: ", data)
 			if (data.buttonType === "delete") {
@@ -1697,7 +1705,6 @@ const AngularWorkflow = (props) => {
 			return
 		}
 
-		console.log("NODE: ", data)
 		//const node = cy.getElementById(data.id)
 		//if (node.length > 0) {
 		//	node.addClass('shuffle-hover-highlight')
@@ -1709,6 +1716,7 @@ const AngularWorkflow = (props) => {
 
 		if (data.type === "ACTION") {
 			var curaction = workflow.actions.find(a => a.id === data.id)
+			console.log("INSIDE CURACTION: ", curaction)
 			if (!curaction || curaction === undefined) { 
 				//event.target.unselect()
 				//alert.error("Action not found. Please remake it.")
@@ -1781,7 +1789,11 @@ const AngularWorkflow = (props) => {
 				}
 
 				//setSelectedAction(JSON.parse(JSON.stringify(curaction)))
-				setSelectedApp(curapp)
+				console.log("CURAPP: ", curapp, selectedApp)
+				if (curapp.id !== selectedApp.id) {
+					setSelectedApp(curapp)
+				}
+
 				setSelectedAction(curaction)
 
 				cy.removeListener('drag')
@@ -1799,7 +1811,6 @@ const AngularWorkflow = (props) => {
 				setSelectedActionEnvironment(env)
 			}
 
-			setRightSideBarOpen(true)
 		} else if (data.type === "TRIGGER") {
 			//console.log("Should handle trigger "+data.triggertype)
 			//console.log(data)
@@ -1812,10 +1823,18 @@ const AngularWorkflow = (props) => {
 				getAvailableWorkflows(trigger_index) 
 				getSettings() 
 			}
-			setRightSideBarOpen(true)
 		} else {
 			alert.error("Can't handle "+data.type)
 		}
+
+		//console.log("BAR: ", rightSideBarOpen, "SAVE: ", lastSaved)
+		setRightSideBarOpen(true)
+		setLastSaved(false)
+
+		// Refresh listeners
+		//cy.removeListener('select')
+		//cy.on('select', 'node', (e) => onNodeSelect(e, newAppAuth, curapp, rightSideBarOpen, lastSaved))
+		//cy.on('select', 'edge', (e) => onEdgeSelect(e))
 
 		setScrollConfig({
 			top: 0,
@@ -1840,28 +1859,38 @@ const AngularWorkflow = (props) => {
 
 		targetnode = -1
 		var sourcenode = workflow.triggers.findIndex(data => data.id === edge.source)
-		//console.log("SOURCENODE: ", sourcenode)
+		console.log("SOURCENODE: ", sourcenode)
 		if (sourcenode !== -1) {
 			if (workflow.triggers[sourcenode].app_name === "User Input" || workflow.triggers[sourcenode].app_name === "Shuffle Workflow") {
 				//console.log("NORMAL TRIGGER")
 			} else {
-				var currentnode = cy.getElementById(workflow.triggers[sourcenode].id)
-				if (currentnode !== null && currentnode !== undefined) {
-					console.log("SHOULD CHECK IF TRIGGER HAS MULTIPLE EDGES: ", currentnode)
-					// https://js.cytoscape.org/#edges.connectedNodes
-					//console.log("CURRENTNODE: ", currentnode)
-					//console.log("EDGES: ", currentnode.connectedEdges(`node[id=${workflow.triggers[sourcenode].id}]`))
-					//console.log("EDGES2: ", currentnode.connectedEdges())
-					//currentnode.connectedEdges().animate({style: {lineColor: "red"}})
-					//console.log("OUTGOERS: ", currentnode.outgoers())
+				//var currentnode = cy.getElementById(workflow.triggers[sourcenode].id)
+				//console.log("NODE: ", currentnode)
+				//if (currentnode !== null && currentnode !== undefined) {
+				//	console.log("SHOULD CHECK IF TRIGGER HAS MULTIPLE EDGES: ", currentnode)
+				//if (workflow.branches !== undefined && workflow.branches !== null) {
+				//	const found_branches = workflow.branches.filter(branch => branch.source == workflow.triggers[sourcenode].id)
+				//	console.log("FOUND BRANCHES: ", found_branches)
+				//	if (found_branches.length > 0) {
+				//		alert.error("Can't have multiple branches from this trigger")
+				//		event.target.remove()	
+				//	}
+				//}
 
-					//console.log("LEN2: ", currentnode.edges().length)
-					//if (currentnode.connectedNodes().length > 0) {
-					//	alert.error("Can't have multiple branches from this trigger")
-					//	event.target.remove()
-					//} 
-				} 
-			}
+				//if (cy.edges().size() === 1) {
+				// https://js.cytoscape.org/#edges.connectedNodes
+				//console.log("CURRENTNODE: ", currentnode)
+				//console.log("EDGES: ", currentnode.connectedEdges(`node[id=${workflow.triggers[sourcenode].id}]`))
+				//console.log("EDGES2: ", currentnode.connectedEdges())
+				//currentnode.connectedEdges().animate({style: {lineColor: "red"}})
+				//console.log("OUTGOERS: ", currentnode.outgoers())
+
+				//console.log("LEN2: ", currentnode.edges().length)
+				//if (currentnode.connectedNodes().length > 0) {
+				//	alert.error("Can't have multiple branches from this trigger")
+				//	event.target.remove()
+				//} 
+			} 
 		}
 
 		//console.log(workflow.branches)
@@ -1953,14 +1982,18 @@ const AngularWorkflow = (props) => {
 	}
 
 	const onNodeAdded = (event) => {
-		setLastSaved(false)
 		const node = event.target
 		const nodedata = event.target.data()
+		if (nodedata.finished === false || (nodedata.id !== undefined && nodedata.is_valid === undefined)) {
+			console.log("RETURNING (NOT ADDING) NODE ADD FOR: ", nodedata)
+			return
+		}
 
+		//console.log("IS IT ADDED TO THE WORKFLOW?: ", nodedata)
 		if (node.isNode() && cy.nodes().size() === 1) {
 			//setStartNode(node.data('id'))
 			workflow.start = node.data('id')
-			setWorkflow(workflow)
+			nodedata.isStartNode = true
 		} else {
 			if (workflow.actions === null) {
 				return
@@ -1974,9 +2007,74 @@ const AngularWorkflow = (props) => {
 					action.isStartNode = false
 				}
 			}
+		}
+
+		if (nodedata.type === "ACTION") {
+			if (workflow.actions.length === 1 && workflow.actions[0].id === workflow.start) {
+				const newEdgeUuid = uuid.v4()
+				const newcybranch = { 
+					"source": workflow.start,
+					"target": nodedata.id,
+					"_id": newEdgeUuid,
+					"id": newEdgeUuid,
+					"hasErrors": false,
+				}
+
+				const edgeToBeAdded = {
+					group: "edges",
+					data: newcybranch,
+				}
+
+				console.log("SHOULD STITCH WITH STARTNODE")
+				cy.add(edgeToBeAdded)
+			}
+
+			if (workflow.actions === undefined || workflow.actions === null) {
+				workflow.actions = [nodedata]
+			} else {
+				workflow.actions.push(nodedata)
+			}
+
+			setWorkflow(workflow)
+		} else if (nodedata.type === "TRIGGER") {
+			if (workflow.triggers === undefined) {
+				workflow.triggers = [nodedata]
+			} else {
+				workflow.triggers.push(nodedata)
+			}
+
+			const newEdgeUuid = uuid.v4()
+			const newcybranch = { 
+				"source": nodedata.id,
+				"target": workflow.start,
+				"source_id": nodedata.id,
+				"destination_id": workflow.start,
+				"_id": newEdgeUuid,
+				"id": newEdgeUuid,
+				"hasErrors": false,
+				"decorator": false,
+			}
+
+			const edgeToBeAdded = {
+				group: "edges",
+				data: newcybranch,
+			}
+
+			if (nodedata.name !== "User Input" && nodedata.name !== "Shuffle Workflow") {
+				//workflow.branches.push(newbranch)
+				if (workflow.actions !== undefined && workflow.actions !== null && workflow.actions.length > 0) {
+					cy.add(edgeToBeAdded)
+				}
+			}
+
+			//if (data.trigger_type === "WEBHOOK") {
+			//	newWebhook(newAppData)
+			//	saveWorkflow(workflow)
+			//}
 
 			setWorkflow(workflow)
 		}
+
 
 		if (nodedata.app_name !== undefined) {
 			history.push({
@@ -2076,7 +2174,12 @@ const AngularWorkflow = (props) => {
 	const onNodeRemoved = (event) => {
 		const node = event.target
 		const data = node.data()
-		setLastSaved(false)
+
+		if (data.finished === false) {
+			return
+		}
+
+		//setLastSaved(false)
 
 		workflow.actions = workflow.actions.filter(a => a.id !== data.id)
 		workflow.triggers = workflow.triggers.filter(a => a.id !== data.id)
@@ -2366,8 +2469,6 @@ const AngularWorkflow = (props) => {
 			//cy.on('cxtdragover', 'node', (e) => edgeHandler.preview(e.target))
 			//cy.on('cxtdragout', 'node', (e) => edgeHandler.unpreview(e.target))
 
-			// RIGHT HERE..?
-			// This is wrong sometimes.. I'm mad
 			document.title = "Workflow - "+workflow.name
 			registerKeys()
 			//setStartNode(workflow.start)
@@ -2493,13 +2594,12 @@ const AngularWorkflow = (props) => {
 
 	const onNodeHover = (event) => {
 		//console.log("TAR: ", event.target)
-
+		const nodedata = event.target.data()
 		var parentNode = cy.$('#' + event.target.data("id"));
 		if (parentNode.data('isButton') || parentNode.data('buttonId'))
 			return
 
-		const nodedata = event.target.data()
-		if (event.target.data().app_name !== undefined) { 
+		if (nodedata.app_name !== undefined) { 
 			const allNodes = cy.nodes().jsons()
 
 			var found = false
@@ -3239,7 +3339,9 @@ const AngularWorkflow = (props) => {
 							<Draggable 
 								key={index}
 								onDrag={(e) => {handleTriggerDrag(e, trigger)}}
-								onStop={(e) => {handleDragStop(e)}}
+								onStop={(e) => {
+									handleDragStop(e)
+								}}
 								dragging={false}
 								position={{
 									x: 0,
@@ -3274,6 +3376,7 @@ const AngularWorkflow = (props) => {
 	}
 
 	var newNodeId = ""
+	var parsedApp = {}
 	const handleTriggerDrag = (e, data) => {
 		const cycontainer = cy.container()
 		// Chrome lol
@@ -3288,7 +3391,6 @@ const AngularWorkflow = (props) => {
 				currentnode[0].renderedPosition("x", e.pageX-cycontainer.offsetLeft)
 				currentnode[0].renderedPosition("y", e.pageY-cycontainer.offsetTop)
 			} else{
-				console.log(workflow)
 				if (workflow.start === "" || workflow.start === undefined) {
 					alert.error("Define a starting action first.")
 					return
@@ -3307,7 +3409,6 @@ const AngularWorkflow = (props) => {
 					"y": e.pageY-cycontainer.offsetTop,
 				}
 
-				console.log(data)
 				const newAppData = {
 					app_name: data.name,
 					app_version: "1.0.0",
@@ -3318,6 +3419,7 @@ const AngularWorkflow = (props) => {
 					id_: newNodeId,
 					_id_: newNodeId,
 					id: newNodeId,
+					finished: false,
 					label: triggerLabel,
 					type: data.type,
 					is_valid: true,
@@ -3341,48 +3443,97 @@ const AngularWorkflow = (props) => {
 				}
 
 				cy.add(nodeToBeAdded)
-
-				if (workflow.triggers === undefined) {
-					workflow.triggers = [newAppData]
-				} else {
-					workflow.triggers.push(newAppData)
-				}
-
-				const newEdgeUuid = uuid.v4()
-				const newcybranch = { 
-					"source": newNodeId,
-					"target": workflow.start,
-					"source_id": newNodeId,
-					"destination_id": workflow.start,
-					"_id": newEdgeUuid,
-					"id": newEdgeUuid,
-					"hasErrors": false,
-					"decorator": false,
-				}
-
-				const edgeToBeAdded = {
-					group: "edges",
-					data: newcybranch,
-				}
-
-				if (data.name !== "User Input" && data.name !== "Shuffle Workflow") {
-					//workflow.branches.push(newbranch)
-					cy.add(edgeToBeAdded)
-				}
-
-				setWorkflow(workflow)
-				//if (data.trigger_type === "WEBHOOK") {
-				//	newWebhook(newAppData)
-				//	saveWorkflow(workflow)
-				//}
+				parsedApp = nodeToBeAdded
+				return
 			}
 		}
 	}
 
 	const handleDragStop = (e, app) => {
-		newNodeId = ""
 		console.log("STOP!: ", e)
-		console.log("APP!: ", app)
+		console.log("APP!: ", parsedApp)
+		//const onNodeAdded = (event) => {
+		//const node = event.target
+		//const nodedata = event.target.data()
+		var currentnode = cy.getElementById(newNodeId)
+		if (currentnode === undefined || currentnode === null || currentnode.length === 0) {
+			return
+		}
+
+		// Using remove & replace, as this triggers the function
+		// onNodeAdded() with this node after it's added 
+		
+		currentnode.remove()
+		parsedApp.data.finished = true
+		parsedApp.data.position = currentnode.renderedPosition()
+		parsedApp.position = currentnode.renderedPosition()
+		parsedApp.renderedPosition = currentnode.renderedPosition()
+
+		var newAppData = parsedApp.data
+		if (newAppData.type === "ACTION") {
+			// AUTHENTICATION
+			if (app.authentication.required) {
+				// Setup auth here :)
+				const authenticationOptions = []
+				var findAuthId = ""
+				if (newAppData.authentication_id !== null && newAppData.authentication_id !== undefined && newAppData.authentication_id.length > 0) {
+					findAuthId = newAppData.authentication_id
+				}
+
+				var tmpAuth = JSON.parse(JSON.stringify(appAuthentication))
+				for (var key in tmpAuth) {
+					var item = tmpAuth[key]
+
+					const newfields = {}
+					for (var filterkey in item.fields) {
+						newfields[item.fields[filterkey].key] = item.fields[filterkey].value
+					}
+
+					item.fields = newfields
+					if (item.app.name === app.name) {
+						authenticationOptions.push(item)
+						if (item.id === findAuthId) {
+							newAppData.selectedAuthentication = item
+						}
+					}
+				}
+
+				if (authenticationOptions !== undefined && authenticationOptions !== null && authenticationOptions.length > 0) {
+					for (var key in authenticationOptions) {
+						const option = authenticationOptions[key]
+						if (option.active) {
+							newAppData.selectedAuthentication = option 
+							newAppData.authentication_id = option.id
+							break
+						}
+					}
+				}
+
+				//newAppData.authentication = authenticationOptions
+				//if (newAppData.selectedAuthentication === null || newAppData.selectedAuthentication === undefined || newAppData.selectedAuthentication.length === "") {
+				//	newAppData.selectedAuthentication = {}
+				//} else {
+				//	console.log("CAN WE SELECT AUTH?: ", authenticationOptions)
+				//}
+				//
+				//
+
+				//console.log(parsedApp)			
+			} else {
+				newAppData.authentication = []
+				newAppData.authentication_id = ""
+				newAppData.selectedAuthentication = {}
+			}
+
+			parsedApp.data = newAppData
+			cy.add(parsedApp)
+		} else if (newAppData.type === "TRIGGER") {
+			cy.add(parsedApp)
+
+		}
+
+		newNodeId = ""
+		parsedApp = {}
 	}
 
 	const appScrollStyle = {
@@ -3394,204 +3545,102 @@ const AngularWorkflow = (props) => {
 		overflowX: "hidden",
 	}
 
-	const AppView = (props) => {
-  	const { allApps, prioritizedApps, filteredApps } = props;
-		const [visibleApps, setVisibleApps] = React.useState(prioritizedApps.concat(filteredApps.filter(innerapp => !internalIds.includes(innerapp.id))))
+	const handleAppDrag = (e, app) => {
+		const cycontainer = cy.container()
 
-		const handleAppDrag = (e, app) => {
-				const cycontainer = cy.container()
+		// Chrome lol
+		//if (e.srcElement !== undefined && e.srcElement.localName === "canvas") {
+		if (e.pageX > cycontainer.offsetLeft && e.pageX < cycontainer.offsetLeft+cycontainer.offsetWidth && e.pageY > cycontainer.offsetTop && e.pageY < cycontainer.offsetTop+cycontainer.offsetHeight) {
+			console.log("NODEID: ", newNodeId)
+			if (newNodeId.length > 0) {
+				var currentnode = cy.getElementById(newNodeId)
+				if (currentnode === undefined || currentnode === null || currentnode.length === 0) {
+					return
+				}
 
-				// Chrome lol
-				//if (e.srcElement !== undefined && e.srcElement.localName === "canvas") {
-				if (e.pageX > cycontainer.offsetLeft && e.pageX < cycontainer.offsetLeft+cycontainer.offsetWidth && e.pageY > cycontainer.offsetTop && e.pageY < cycontainer.offsetTop+cycontainer.offsetHeight) {
-					if (newNodeId.length > 0) {
-						var currentnode = cy.getElementById(newNodeId)
-						if (currentnode.length === 0) {
-							return
-						}
+				currentnode[0].renderedPosition("x", e.pageX-cycontainer.offsetLeft)
+				currentnode[0].renderedPosition("y", e.pageY-cycontainer.offsetTop)
+			} else {
+				console.log("IN NEW NODE!")
+				if (workflow.public) {
+					console.log("workflow is public - not adding")
+					return
+				}
 
-						currentnode[0].renderedPosition("x", e.pageX-cycontainer.offsetLeft)
-						currentnode[0].renderedPosition("y", e.pageY-cycontainer.offsetTop)
-					} else{
-						if (workflow.public) {
-							return
-						}
+				console.log("IN NEW NODE2!")
+				if (app.actions === undefined || app.actions === null || app.actions.length === 0) {
+					alert.error("App "+app.name+" currently has no actions to perform. Please go to https://shuffler.io/apps to edit it.")
+					return
+				}
 
-						if (app.actions === undefined || app.actions === null || app.actions.length === 0) {
-							alert.error("App "+app.name+" currently has no actions to perform. Please go to https://shuffler.io/apps to edit it.")
-							return
-						}
+				console.log("IN NEW NODE3!")
+				newNodeId = uuid.v4()
+				const actionType = "ACTION"
+				const actionLabel = getNextActionName(app.name)
+				var parameters = null
+				var example = ""
 
-						newNodeId = uuid.v4()
-						const actionType = "ACTION"
-						const actionLabel = getNextActionName(app.name)
-						var parameters = null
-						var example = ""
+				if (app.actions[0].parameters !== null && app.actions[0].parameters.length > 0) {
+					parameters = app.actions[0].parameters
+				}
+				if (app.actions[0].returns.example !== undefined && app.actions[0].returns.example !== null && app.actions[0].returns.example.length > 0) {
+					example = app.actions[0].returns.example
+				}
+				
+				const parsedEnvironments = environments === null || environments === [] ? "cloud" : environments[defaultEnvironmentIndex] === undefined ? "cloud" : environments[defaultEnvironmentIndex].Name
+				const newAppData = {
+					app_name: app.name,
+					app_version: app.app_version, 
+					app_id: app.id,
+					sharing: app.sharing,
+					private_id: app.private_id,	
+					environment: parsedEnvironments,
+					errors: [],
+					id_: newNodeId,
+					_id_: newNodeId,
+					id: newNodeId,
+					is_valid: true,
+					label: actionLabel,
+					type: actionType,
+					name: app.actions[0].name,
+					parameters: parameters,
+					isStartNode: false,
+					large_image: app.large_image,
+					authentication: [],
+					execution_variable: undefined,
+					example: example,
+					category: app.categories !== null && app.categories !== undefined && app.categories.length > 0 ? app.categories[0] : "",
+					authentication_id: "",
+					finished: false,
+				}
 
-						if (app.actions[0].parameters !== null && app.actions[0].parameters.length > 0) {
-							parameters = app.actions[0].parameters
-						}
-						if (app.actions[0].returns.example !== undefined && app.actions[0].returns.example !== null && app.actions[0].returns.example.length > 0) {
-							example = app.actions[0].returns.example
-						}
-						
-						var newAppPopup = false
+				// FIXME: overwrite category if the ACTION chosen has a different category
 
-						/*
-						 FIXME: Add auth.
-								selectedAction.selectedAuthentication = e.target.value
-								selectedAction.authentication_id = e.target.value.id
-								setSelectedAction(selectedAction)
-								setUpdate(Math.random())
-						*/
-
-						console.log("ENVS: ", environments)
-						const parsedEnvironments = environments === null || environments === [] ? "cloud" : environments[defaultEnvironmentIndex] === undefined ? "cloud" : environments[defaultEnvironmentIndex].Name
-						const newAppData = {
-							app_name: app.name,
-							app_version: app.app_version, 
-							app_id: app.id,
-							sharing: app.sharing,
-							private_id: app.private_id,	
-							environment: parsedEnvironments,
-							errors: [],
-							id_: newNodeId,
-							_id_: newNodeId,
-							id: newNodeId,
-							is_valid: true,
-							label: actionLabel,
-							type: actionType,
-							name: app.actions[0].name,
-							parameters: parameters,
-							isStartNode: false,
-							large_image: app.large_image,
-							authentication: [],
-							execution_variable: undefined,
-							example: example,
-							category: app.categories !== null && app.categories !== undefined && app.categories.length > 0 ? app.categories[0] : "",
-							authentication_id: "",
-						}
-
-						// FIXME: overwrite category if the ACTION chosen has a different category
-
-						// const image = "url("+app.large_image+")"
-						// FIXME - find the cytoscape offset position 
-						// Can this be done with zoom calculations?
-						const nodeToBeAdded = {
-							group: "nodes",
-							data: newAppData,
-							renderedPosition: {
-								//x: e.layerX,
-								//y: e.layerY,
-								x: e.pageX-cycontainer.offsetLeft,
-								y: e.pageY-cycontainer.offsetTop,
-							}
-						}
-
-						cy.add(nodeToBeAdded)
-
-						if (workflow.actions === undefined || workflow.actions.length === 0) {
-							workflow.start = newAppData.id
-							workflow.actions = []
-							newAppData.isStartNode = true
-							//setStartNode(newAppData.id)
-						}
-
-						if (workflow.actions.length > 0 && elements.length === 0) {
-							const actions = workflow.actions.map(action => {
-								const node = {}
-								node.position = action.position
-								node.data = action
-
-								node.data._id = action["id"]
-								node.data.type = "ACTION"
-								node.isStartNode = action["id"] === workflow.start
-
-								return node
-							})
-
-							const tmpelements = [].concat(actions)
-							setElements(tmpelements)
-						}
-
-						if (workflow.actions.length === 1 && workflow.actions[0].id === workflow.start) {
-							const newEdgeUuid = uuid.v4()
-							const newcybranch = { 
-								"source": workflow.start,
-								"target": newNodeId,
-								"_id": newEdgeUuid,
-								"id": newEdgeUuid,
-								"hasErrors": false,
-							}
-
-							const edgeToBeAdded = {
-								group: "edges",
-								data: newcybranch,
-							}
-							console.log("SHOULD STITCH WITH STARTNODE")
-							cy.add(edgeToBeAdded)
-						}
-									
-						// AUTHENTICATION
-						if (app.authentication.required) {
-							// Setup auth here :)
-							const authenticationOptions = []
-							var findAuthId = ""
-							if (newAppData.authentication_id !== null && newAppData.authentication_id !== undefined && newAppData.authentication_id.length > 0) {
-								findAuthId = newAppData.authentication_id
-							}
-
-							var tmpAuth = JSON.parse(JSON.stringify(appAuthentication))
-							for (var key in tmpAuth) {
-								var item = tmpAuth[key]
-
-								const newfields = {}
-								for (var filterkey in item.fields) {
-									newfields[item.fields[filterkey].key] = item.fields[filterkey].value
-								}
-
-								item.fields = newfields
-								if (item.app.name === app.name) {
-									authenticationOptions.push(item)
-									if (item.id === findAuthId) {
-										newAppData.selectedAuthentication = item
-									}
-								}
-							}
-
-							if (authenticationOptions !== undefined && authenticationOptions !== null && authenticationOptions.length > 0) {
-								for (var key in authenticationOptions) {
-									const option = authenticationOptions[key]
-									if (option.active) {
-										newAppData.selectedAuthentication = option 
-										newAppData.authentication_id = option.id
-										break
-									}
-								}
-							}
-
-							//newAppData.authentication = authenticationOptions
-							//if (newAppData.selectedAuthentication === null || newAppData.selectedAuthentication === undefined || newAppData.selectedAuthentication.length === "") {
-							//	newAppData.selectedAuthentication = {}
-							//} else {
-							//	console.log("CAN WE SELECT AUTH?: ", authenticationOptions)
-							//}
-						} else {
-							newAppData.authentication = []
-							newAppData.authentication_id = ""
-							newAppData.selectedAuthentication = {}
-						}
-
-						//workflow.actions.push(newAppData)
-						//setWorkflow(workflow)
-
-						if (newAppPopup) {
-							//alert.error("SHOULD MAKE USER AUTHENTICATE THE APP OR SET hasError")
-							//alert.info("Remember: set the authentication for the user itself, not the app") 
-						}
+				// const image = "url("+app.large_image+")"
+				// FIXME - find the cytoscape offset position 
+				// Can this be done with zoom calculations?
+				const nodeToBeAdded = {
+					group: "nodes",
+					data: newAppData,
+					renderedPosition: {
+						//x: e.layerX,
+						//y: e.layerY,
+						x: e.pageX-cycontainer.offsetLeft,
+						y: e.pageY-cycontainer.offsetTop,
 					}
 				}
+
+				console.log("IN NEW NODE4: !", nodeToBeAdded)
+				parsedApp = nodeToBeAdded
+				cy.add(nodeToBeAdded)
+				return
+				}
+			}
 		}
+
+	const AppView = (props) => {
+  	const { allApps, prioritizedApps, filteredApps } = props;
+		const [visibleApps, setVisibleApps] = React.useState(prioritizedApps.concat(filteredApps.filter(innerapp => !internalIds.includes(innerapp.id))))	
 
 		const ParsedAppPaper = (props) => {
 			const app = props.app
@@ -3614,7 +3663,9 @@ const AngularWorkflow = (props) => {
 			return (
 				<Draggable 
 						onDrag={(e) => {handleAppDrag(e, app)}}
-						onStop={(e) => {handleDragStop(e, app)}}
+						onStop={(e) => {
+							handleDragStop(e, app)
+						}}
 						key={app.id}
 						dragging={false}
 						position={{
@@ -4813,7 +4864,7 @@ const AngularWorkflow = (props) => {
 									native
 									rows="10"
 									value={selectedTrigger.parameters[0].value.split(splitter)}
-									style={{backgroundColor: inputColor, color: "white"}}
+									style={{backgroundColor: inputColor, color: "white", height: 50,}}
 									disabled={selectedTrigger.status === "running"}
 									SelectDisplayProps={{
 										style: {
@@ -5343,11 +5394,12 @@ const AngularWorkflow = (props) => {
 									onChange={(e) => {
 										setUpdate(Math.random())
 										workflow.triggers[selectedTriggerIndex].parameters[0].value = e.target.value.id
-										setWorkflow(workflow)
 										setSubworkflowStartnode(e.target.value.start)
 
 										// Sets the startnode
 										if (e.target.value.id !== workflow.id) {
+											console.log("WORKFLOW: ", e.target.value)
+
 											setSubworkflow(e.target.value)
 											const startnode = e.target.value.actions.find(action => action.id === e.target.value.start)
 											if (startnode !== undefined && startnode !== null) {
@@ -5365,17 +5417,19 @@ const AngularWorkflow = (props) => {
 											}
 											console.log("STARTNODE: ", startnode)
 										} else {
-											setSubworkflow(workflow)
+											console.log("WORKFLOW: ", workflow)
+											setSubworkflow(e.target.value)
 										}
+
+										setWorkflow(workflow)
 									}}
-									style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+									style={{backgroundColor: inputColor, color: "white", height: 50}}
 								>
 									{workflows.map((data, index) => {
-										/*
 										if (data.id === workflow.id) {
-											return null	
+											//return null	
+											data = workflow
 										}
-										*/
 
 										return (
 											<MenuItem key={index} style={{backgroundColor: inputColor, color: data.id === workflow.id ? "red" : "white"}} value={data}>
@@ -5467,7 +5521,7 @@ const AngularWorkflow = (props) => {
 											setWorkflow(workflow)
 											//setUpdate(Math.random())
 										}}
-										style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+										style={{backgroundColor: inputColor, color: "white", height: 50}}
 									>
 										{subworkflow.actions.map((action, index) => {
 											//console.log(action)
@@ -5635,7 +5689,7 @@ const AngularWorkflow = (props) => {
 									setWorkflow(workflow)
 									setUpdate(Math.random())
 								}}
-								style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+								style={{backgroundColor: inputColor, color: "white", height: 50}}
 							>
 								{triggerEnvironments.map(data => {
 									if (data.archived) {
@@ -6200,7 +6254,7 @@ const AngularWorkflow = (props) => {
 								setWorkflow(workflow)
 								setUpdate(Math.random())
 							}}
-							style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+							style={{backgroundColor: inputColor, color: "white", height: 50}}
 						>
 							{triggerEnvironments.map(data => {
 								if (data.archived) {
@@ -7875,7 +7929,7 @@ const AngularWorkflow = (props) => {
 												onChange={(e) => {
 													authenticationOption.fields[data.name] = e.target.value
 												}}
-												style={{backgroundColor: theme.palette.surfaceColor, color: "white", height: "50px"}}
+												style={{backgroundColor: theme.palette.surfaceColor, color: "white", height: 50}}
 												>
 													<MenuItem key={"false"} style={{backgroundColor: theme.palette.inputColor, color: "white"}} value={"false"}>
 														false

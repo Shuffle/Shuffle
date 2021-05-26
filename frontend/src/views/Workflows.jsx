@@ -208,7 +208,7 @@ const counterStyle = {fontSize: "36px",fontWeight:"bold"}
 const blockRightStyle = {textAlign: "right",padding: "20px 20px 0px 0px",width:"100%"}
 
 const chipStyle = {
-	backgroundColor: "#3d3f43", height: 30, marginRight: 5, paddingLeft: 5, paddingRight: 5, height: 28, cursor: "pointer", borderColor: "#3d3f43", color: "white",
+	backgroundColor: "#3d3f43", height: 30, marginRight: 5, paddingLeft: 5, paddingRight: 5, height: 28, cursor: "pointer", borderColor: "#3d3f43", color: "white", 
 }
 
 const flexContentStyle = {
@@ -1556,7 +1556,7 @@ const Workflows = (props) => {
 							)
 						}
 					},
-					{ field: 'tags', headerName: 'Tags', width: 390, sortable: false, 
+					{ field: 'tags', headerName: 'Tags', maxHeight: 15, width: 390, sortable: false, 
 						disableClickEventBubbling: true,
 						renderCell: (params) => {
 							const data = params.row.record;

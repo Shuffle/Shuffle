@@ -1485,8 +1485,6 @@ const ParsedAction = (props) => {
 
 							const iconInfo = GetIconInfo({"name": data.name})
 							const useIcon = iconInfo.originalIcon
-
-							// ROFL FIXME - loop
 							newActionname = (newActionname.charAt(0).toUpperCase()+newActionname.substring(1)).replaceAll("_", " ")
 
 							return (
