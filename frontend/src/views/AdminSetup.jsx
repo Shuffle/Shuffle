@@ -2,9 +2,7 @@
 import React, {useState} from 'react';
 import { makeStyles } from '@material-ui/styles';
 
-import TextField from '@material-ui/core/TextField';
-import Button from '@material-ui/core/Button';
-import Paper from '@material-ui/core/Paper';
+import {CircularProgress, TextField, Button, Paper, Typography} from '@material-ui/core'
 
 const bodyDivStyle = {
 	margin: "auto",
@@ -35,6 +33,7 @@ const AdminAccount = props => {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [firstRequest, setFirstRequest] = useState(true);
+  const [loginLoading, setLoginLoading] = useState(false);
 
   	// Used to swap from login to register. True = login, false = register
 	const register = true
@@ -81,6 +80,7 @@ const AdminAccount = props => {
 	}
 
 	const onSubmit = (e) => {
+  	setLoginLoading(true)
 		e.preventDefault()
 		// FIXME - add some check here ROFL
 
@@ -97,6 +97,7 @@ const AdminAccount = props => {
 		})
 		.then(response =>
 			response.json().then(responseJson => {
+  			setLoginLoading(false)
 				if (responseJson["success"] === false) {
 					setLoginInfo(responseJson["reason"])
 				} else {
@@ -106,6 +107,7 @@ const AdminAccount = props => {
 			}),
 		)
 		.catch(error => {
+  		setLoginLoading(false)
 			setLoginInfo("Error in userdata: ", error)
 		});
 	}
@@ -161,7 +163,7 @@ const AdminAccount = props => {
 							id="emailfield"
 							margin="normal"
 							variant="outlined"
-      	 					onChange={onChangeUser}
+      	 			onChange={onChangeUser}
 						/>
 					</div>
 					Password	
@@ -191,7 +193,9 @@ const AdminAccount = props => {
 						/>
 					</div>
 					<div style={{display: "flex", marginTop: "15px"}}>
-						<Button color="primary" variant="contained" type="submit" style={{flex: "1", marginRight: "5px"}} disabled={!handleValidateForm()}>SUBMIT</Button> 				
+						<Button color="primary" variant="contained" type="submit" style={{flex: "1", marginRight: "5px"}} disabled={!handleValidateForm() || loginLoading}>
+  						{loginLoading ? <CircularProgress color="secondary" style={{color: "white",}} /> : "SUBMIT"}
+						</Button> 				
 						
 					</div>
 					<div style={{marginTop: "10px"}}>

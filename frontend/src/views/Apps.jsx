@@ -243,6 +243,9 @@ const Apps = (props) => {
 			privateapps.push(...invalid)
 
 			setApps(privateapps)
+
+			//handleSearchChange(event.target.value)
+			//setCursearch(event.target.value)
 			setFilteredApps(privateapps)
 			if (privateapps.length > 0) {
 				if (selectedApp.id === undefined || selectedApp.id === null) {
@@ -995,26 +998,29 @@ const Apps = (props) => {
 						</span>
 					}
 					</div>
-					<TextField
-						style={{backgroundColor: inputColor, borderRadius: 5,}} 
-						InputProps={{
-							style:{
-								color: "white",
-								minHeight: "50px", 
-								marginLeft: "5px",
-								maxWidth: "95%",
-								fontSize: "1em",
-								borderRadius: 5,
-							},
-						}}
-						fullWidth
-						color="primary"
-						placeholder={"Search apps"}
-						onChange={(event) => {
-							handleSearchChange(event.target.value)
-							setCursearch(event.target.value)
-						}}
-					/>
+					<div style={{height: 50}}>
+						<TextField
+							style={{backgroundColor: inputColor, borderRadius: 5,}} 
+							InputProps={{
+								style:{
+									color: "white",
+									minHeight: "50px", 
+									marginLeft: "5px",
+									maxWidth: "95%",
+									fontSize: "1em",
+									borderRadius: 5,
+								},
+							}}
+							disabled={apps === undefined || apps === null || apps.length === 0}
+							fullWidth
+							color="primary"
+							placeholder={"Search apps"}
+							onChange={(event) => {
+								handleSearchChange(event.target.value)
+								setCursearch(event.target.value)
+							}}
+						/>
+					</div>
 					<div style={{marginTop: 15}}>
 						{apps.length > 0 ? 
 							filteredApps.length > 0 ? 

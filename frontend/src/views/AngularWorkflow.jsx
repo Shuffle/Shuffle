@@ -1721,7 +1721,7 @@ const AngularWorkflow = (props) => {
 
 		if (data.type === "ACTION") {
 			var curaction = workflow.actions.find(a => a.id === data.id)
-			console.log("INSIDE CURACTION: ", curaction)
+			//console.log("INSIDE CURACTION: ", curaction)
 			if (!curaction || curaction === undefined) { 
 				//event.target.unselect()
 				//alert.error("Action not found. Please remake it.")
@@ -1729,7 +1729,7 @@ const AngularWorkflow = (props) => {
 			}
 
 			const curapp = apps.find(a => a.name === curaction.app_name && ((a.app_version === curaction.app_version || (a.loop_versions !== null && a.loop_versions.includes(curaction.app_version)))))
-			console.log("APP: ", curapp)
+			//console.log("APP: ", curapp)
 			if (!curapp || curapp === undefined) {
 				alert.error(`App ${curaction.app_name}:${curaction.app_version} not found. Is it activated?`)
 
@@ -1752,7 +1752,7 @@ const AngularWorkflow = (props) => {
 				//console.log("AUTHENTICATION: ", curapp.authentication)
 				setRequiresAuthentication(curapp.authentication.required && curapp.authentication.parameters !== undefined && curapp.authentication.parameters !== null)
 				if (curapp.authentication.required) {
-					console.log("App requires auth.")
+					//console.log("App requires auth.")
 					// Setup auth here :)
 					const authenticationOptions = []
 					var findAuthId = ""
@@ -1761,7 +1761,7 @@ const AngularWorkflow = (props) => {
 					}
 
 					var tmpAuth = JSON.parse(JSON.stringify(newAppAuth))
-					console.log("FOUND AUTH: ", tmpAuth)
+					//console.log("FOUND AUTH: ", tmpAuth)
 
 					//console.log("Checking authentication: ", tmpAuth)
 					for (var key in tmpAuth) {
@@ -1781,7 +1781,7 @@ const AngularWorkflow = (props) => {
 						}
 					}
 
-					console.log("OPTIONS: ", authenticationOptions)
+					//console.log("OPTIONS: ", authenticationOptions)
 					curaction.authentication = authenticationOptions
 					//console.log("Authentication: ", authenticationOptions)
 					if (curaction.selectedAuthentication === null || curaction.selectedAuthentication === undefined || curaction.selectedAuthentication.length === "") {
@@ -1794,11 +1794,8 @@ const AngularWorkflow = (props) => {
 				}
 
 				//setSelectedAction(JSON.parse(JSON.stringify(curaction)))
-				console.log("CURAPP: ", curapp, selectedApp)
-				if (curapp.id !== selectedApp.id) {
-					setSelectedApp(curapp)
-				}
-
+				//console.log("CURAPP: ", curapp, selectedApp)
+				setSelectedApp(curapp)
 				setSelectedAction(curaction)
 
 				cy.removeListener('drag')
