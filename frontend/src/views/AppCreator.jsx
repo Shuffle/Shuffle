@@ -198,7 +198,7 @@ const AppCreator = (props) => {
 	const actionNonBodyRequest = ["GET", "HEAD", "DELETE", "CONNECT"]
 	const actionBodyRequest = ["POST", "PUT", "PATCH",]
 	//const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth", "Oauth2"]
-	const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth"]
+	const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth", "JWT"]
 	const apikeySelection = ["Header", "Query",]
 
 	const [name, setName] = useState("");
@@ -1263,7 +1263,12 @@ const AppCreator = (props) => {
 				"scheme": "bearer",
 				"bearerFormat": "UUID",
 			}
-
+		} else if (authenticationOption === "JWT") {
+			data.components.securitySchemes["BearerAuth"] = {
+				"type": "http",
+				"scheme": "bearer",
+				"bearerFormat": "JWT",
+			}
 		} else if (authenticationOption === "Basic auth") {
 			data.components.securitySchemes["BasicAuth"] = {
 				"type": "http",

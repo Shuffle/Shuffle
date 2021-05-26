@@ -39,7 +39,12 @@ const inputColor = "#383B40"
 cytoscape.use(edgehandles);
 cytoscape.use(clipboard);
 cytoscape.use(undoRedo);
-cytoscape.use( cxtmenu );
+cytoscape.use(cxtmenu);
+
+// Adds specific text to items
+//import popper from 'cytoscape-popper';
+//cytoscape.use(popper);
+
 
 // https://stackoverflow.com/questions/19014250/rerender-view-on-browser-resize-with-react
 function useWindowSize() {
@@ -2462,6 +2467,42 @@ const AngularWorkflow = (props) => {
 			cy.on('drag', 'node', (e) => onNodeDrag(e, selectedAction))
 			cy.on('free', 'node', (e) => onNodeDragStop(e, selectedAction))
 
+			//let popper2 = cy.popper({
+			//  content: () => {
+			//    let div = document.createElement('div');
+			//
+			//    div.innerHTML = 'Popper content'
+			//
+			//    document.body.appendChild(div)
+			//
+			//    return div
+			//  },
+			//  renderedPosition: () => ({ x: 100, y: 200 }),
+			//  popper: {} // my popper options here
+			//});
+
+			//let popper1 = cy.nodes()[0].popper({
+			//  content: () => {
+			//    let div = document.createElement('div')
+			//
+			//    div.innerHTML = 'Popper content'
+			//    document.body.appendChild(div)
+			//
+			//    return div
+			//  },
+			//  popper: {} // my popper options here
+			//})
+			//let update = () => {
+			//  popper.update()
+			//}
+
+			//let node = cy.nodes().first()
+			//node.on('position', update)
+
+
+			
+
+
 			//cy.on('mouseover', 'node', () => $(targetElement).addClass('mouseover'));
 
 			//cy.on('cxttapstart', 'node', (e) => edgeHandler.start(e.target))
@@ -3397,7 +3438,7 @@ const AngularWorkflow = (props) => {
 				}
 
 				if (data.is_valid === false) {
-					alert.error(data.name+" trigger isn't available yet")
+					alert.error(data.name+" requires hybrid version of Shuffle")
 					return
 				}
 
