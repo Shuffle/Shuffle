@@ -6,6 +6,7 @@ import { GetIconInfo } from "../views/Workflows.jsx";
 import { sortByKey } from "../views/AngularWorkflow.jsx";
 import { useTheme } from '@material-ui/core/styles';
 import NestedMenuItem from "material-ui-nested-menu-item";
+//import NestedMenuItem from "./NestedMenu.jsx";
 
 import {Popper, TextField, Drawer, Button, Paper, Grid, Tabs, InputAdornment, Tab, ButtonBase, Tooltip, Select, MenuItem, Divider, Dialog, Modal, DialogActions, DialogTitle, InputLabel, DialogContent, FormControl, IconButton, Menu, Input, FormGroup, FormControlLabel, Typography, Checkbox, Breadcrumbs, CircularProgress, Switch, Fade} from '@material-ui/core';
 import {GetApp as GetAppIcon, Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
@@ -921,6 +922,7 @@ const ParsedAction = (props) => {
 										border: `2px solid #f85a3e`, 
 										color: "white", 
 										marginTop: 2,
+										maxHeight: 400, 
 									}}
 								>
 								{actionlist.map(innerdata => {
@@ -970,11 +972,11 @@ const ParsedAction = (props) => {
 
 									const handleMouseover = () => {
 										if (innerdata.type === "Execution Argument") {
-												handleExecArgumentHover(true)
-											} else if (innerdata.type === "action") {
-												handleActionHover(true, innerdata.id)
-											}
-										} 
+											handleExecArgumentHover(true)
+										} else if (innerdata.type === "action") {
+											handleActionHover(true, innerdata.id)
+										}
+									} 
 										
 									const handleMouseOut = () => {
 										if (innerdata.type === "Execution Argument") {
@@ -999,8 +1001,15 @@ const ParsedAction = (props) => {
 													</div>
 												}
 												parentMenuOpen={!!menuPosition}
-												style={{backgroundColor: theme.palette.inputColor, color: "white", minWidth: 250,}}
+												style={{backgroundColor: theme.palette.inputColor, color: "white", minWidth: 250, maxWidth: 250, maxHeight: 400, scrollX: "", }}
+												//PaperProps={{
+												//	style: {
+												//		maxHeight: 400, 
+												//		width: 250, 
+												//	}
+												//}}
 												onClick={() => {
+													console.log("CLICKED: ", innerdata)
 													handleItemClick([innerdata])
 												}}
 											>
@@ -1008,7 +1017,7 @@ const ParsedAction = (props) => {
 													// FIXME: Should be recursive in here
 													const icon = pathdata.type === "value" ? <VpnKeyIcon style={iconStyle} /> : pathdata.type === "list" ? <FormatListNumberedIcon style={iconStyle} /> : <ExpandMoreIcon style={iconStyle} /> 
 													return (
-														<MenuItem key={pathdata.name} style={{backgroundColor: theme.palette.inputColor, color: "white", minWidth: 250, }} value={pathdata} onMouseOver={() => {}}
+														<MenuItem key={pathdata.name} style={{backgroundColor: theme.palette.inputColor, color: "white", minWidth: 250, }} value={pathdata} onMouseOver={() => {console.log("HOVER: ", pathdata)}}
 															onClick={() => {
 																handleItemClick([innerdata, pathdata])
 															}}
@@ -1024,7 +1033,7 @@ const ParsedAction = (props) => {
 												})}
 											</NestedMenuItem>
 										: 
-											<MenuItem key={innerdata.name} style={{backgroundColor: theme.palette.inputColor, color: "white"}} value={innerdata} onMouseOver={() => handleMouseover()} onMouseOut={() => {handleMouseOut()}} 
+											<MenuItem key={innerdata.name} style={{backgroundColor: theme.palette.inputColor, color: "white", minWidth: 250, maxWidth: 250, marginRight: 250, }} value={innerdata} onMouseOver={() => handleMouseover()} onMouseOut={() => {handleMouseOut()}} 
 												onClick={() => {
 													handleItemClick([innerdata])
 												}}

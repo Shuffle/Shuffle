@@ -1144,7 +1144,7 @@ const Apps = (props) => {
 		.then((response) => {
 			setIsLoading(false)
 			if (response.status === 200) {
-				alert.success("Hotloaded apps!")
+				//alert.success("Hotloaded apps!")
 				getApps()
 			}
 

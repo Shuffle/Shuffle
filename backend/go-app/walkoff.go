@@ -3421,7 +3421,7 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 				//log.Printf("%s", string(readFile))
 				swagger, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData([]byte(parsedOpenApi.Body))
 				if err != nil {
-					log.Printf("Swagger validation error in loop (%s): %s", filename, err)
+					log.Printf("[WARNING] Swagger validation error in loop (%s): %s. Continuing.", filename, err)
 					continue
 				}
 
@@ -3432,7 +3432,7 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 				//log.Printf("Should generate yaml")
 				swagger, api, _, err := shuffle.GenerateYaml(swagger, parsedOpenApi.ID)
 				if err != nil {
-					log.Printf("Failed building and generating yaml in loop (%s): %s", filename, err)
+					log.Printf("Failed building and generating yaml in loop (2) (%s): %s. Continuing.", filename, err)
 					continue
 				}
 

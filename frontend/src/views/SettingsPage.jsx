@@ -29,6 +29,7 @@ const Settings = (props) => {
 
 	const [userInfo, ] = useState(userdata)
 	const [userSettings, setUserSettings] = useState({})
+	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" 
 
 	const bodyDivStyle = {
 		margin: "auto",
@@ -421,7 +422,7 @@ const Settings = (props) => {
 						/>
 					</div>
 					<Button
-						disabled={(newPassword.length < 10 || newPassword2.length < 10) || newPassword !== newPassword2 || currentPassword.length < 10}
+						disabled={(isCloud && (newPassword.length < 10 || newPassword2.length < 10 || currentPassword.length < 10)) || newPassword !== newPassword2 || newPassword.length === 0}
 						style={{width: "100%", height: "60px", marginTop: "10px"}}
 						variant="contained"
 						color="primary"

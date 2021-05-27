@@ -15,6 +15,7 @@ import (
 	"errors"
 	"path/filepath"
 
+	"crypto/tls"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -4240,7 +4241,7 @@ func runInitEs(ctx context.Context) {
 			cloneOptions.ReferenceName = plumbing.ReferenceName(branch)
 		}
 
-		log.Printf("Getting apps from %s", url)
+		log.Printf("[DEBUG] Getting apps from %s", url)
 
 		r, err := git.Clone(storer, fs, cloneOptions)
 
@@ -5649,7 +5650,7 @@ func initHandlers() {
 	//requestCache = cache.New(5*time.Minute, 10*time.Minute)
 	dbclient, err = datastore.NewClient(ctx, gceProject, option.WithGRPCDialOption(grpc.WithNoProxy()))
 	if err != nil {
-		panic(fmt.Sprintf("[DEBUG] Database client error during init: %s", err))
+		log.Fatalf("[DEBUG] Database client error during init: %s", err)
 	}
 
 	esUrl := os.Getenv("SHUFFLE_OPENSEARCH_URL")
@@ -5657,15 +5658,33 @@ func initHandlers() {
 		esUrl = "http://shuffle-opensearch:9200"
 	}
 
-	es, err := elasticsearch.NewClient(
-		elasticsearch.Config{
-			Addresses: []string{esUrl},
-			Username:  os.Getenv("SHUFFLE_OPENSEARCH_USERNAME"),
-			Password:  os.Getenv("SHUFFLE_OPENSEARCH_PASSWORD"),
+	config := elasticsearch.Config{
+		Addresses: []string{esUrl},
+		Username:  os.Getenv("SHUFFLE_OPENSEARCH_USERNAME"),
+		Password:  os.Getenv("SHUFFLE_OPENSEARCH_PASSWORD"),
+		Transport: &http.Transport{
+			MaxIdleConnsPerHost:   100,
+			ResponseHeaderTimeout: time.Second,
+			TLSClientConfig: &tls.Config{
+				MinVersion: tls.VersionTLS11,
+			},
 		},
-	)
+	}
+
+	certificateLocation := os.Getenv("SHUFFLE_OPENSEARCH_CERTIFICATE_FILE")
+	if len(certificateLocation) > 0 {
+		cert, err := ioutil.ReadFile(certificateLocation)
+		if err != nil {
+			log.Fatalf("[WARNING] Failed configuring certificates: %s not found", err)
+		} else {
+			config.CACert = cert
+		}
+		log.Printf("[INFO] Added certificate %#v elastic client.", certificateLocation)
+	}
+
+	es, err := elasticsearch.NewClient(config)
 	if err != nil {
-		panic(fmt.Sprintf("[DEBUG] Database client for ELASTICSEARCH error during init: %s", err))
+		log.Fatalf("[DEBUG] Database client for ELASTICSEARCH error during init (fatal): %s", err)
 	}
 
 	elasticConfig := "elasticsearch"

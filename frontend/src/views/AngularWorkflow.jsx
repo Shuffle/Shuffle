@@ -2270,7 +2270,7 @@ const AngularWorkflow = (props) => {
 			case 90:
 				if (previouskey === 17) {
 					console.log("CTRL+Z")
-					handleHistoryUndo() 
+					//handleHistoryUndo() 
 				}
 
 	      break;

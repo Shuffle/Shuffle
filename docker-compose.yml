@@ -17,7 +17,7 @@ services:
       - backend
   backend:
     #build: ./backend
-    image: ghcr.io/frikky/shuffle-backend:0.8.93
+    image: ghcr.io/frikky/shuffle-backend:0.8.95
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
     # Here for debugging:
@@ -29,9 +29,10 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock 
       - ${SHUFFLE_APP_HOTLOAD_LOCATION}:/shuffle-apps     
       - ${SHUFFLE_FILE_LOCATION}:/shuffle-files
+      #- ${SHUFFLE_OPENSEARCH_CERTIFICATE_FILE}:/shuffle-files/es_certificate
     environment:
       - DATASTORE_EMULATOR_HOST=shuffle-database:8000
-      - SHUFFLE_OPENSEARCH_URL=http://shuffle-opensearch:9200
+      #- SHUFFLE_OPENSEARCH_URL=${SHUFFLE_OPENSEARCH_URL}
       - SHUFFLE_APP_HOTLOAD_FOLDER=/shuffle-apps
       - SHUFFLE_FILE_LOCATION=/shuffle-files
       - ORG_ID=${ORG_ID}

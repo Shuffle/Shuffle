@@ -2700,7 +2700,7 @@ const Admin = (props) => {
 					<Tab label=<span><LockIcon style={iconStyle} />App Authentication</span>/>
 					<Tab label=<span><DescriptionIcon style={iconStyle} />Files</span> />
 					<Tab label=<span><ScheduleIcon style={iconStyle} />Schedules</span> />
-					{/*isCloud ? null : <Tab label=<span><EcoIcon style={iconStyle} />Environments</span>/>*/}
+					{isCloud ? null : <Tab label=<span><EcoIcon style={iconStyle} />Environments</span>/>}
 					{window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><CloudIcon style={iconStyle} /> Hybrid</span>/> : null}
 					{window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><BusinessIcon style={iconStyle} /> Organizations</span>/> : null}
 					{window.location.protocol === "http:" && window.location.port === "3000" ? <Tab label=<span><LockIcon style={iconStyle} />Categories</span>/> : null}
