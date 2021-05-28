@@ -1585,7 +1585,7 @@ const AngularWorkflow = (props) => {
 	const onNodeSelect = (event, newAppAuth) => {
 		const data = event.target.data()
 		if (data.isButton) {
-			console.log("BUTTON CLICKED: ", data)
+			//console.log("BUTTON CLICKED: ", data)
 			if (data.buttonType === "delete") {
 				console.log("DELETE!")
 				const parentNode = cy.getElementById(data.attachedTo)

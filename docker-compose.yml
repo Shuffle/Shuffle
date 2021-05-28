@@ -101,6 +101,7 @@ services:
       - 9200:9200
     networks:
       - shuffle
+    restart: unless-stopped
   # OLD DATABASE:
   #database:
   #  #build: ./backend/database

@@ -112,16 +112,28 @@ const ParsedAction = (props) => {
 			return response.json()
 		})
     .then((responseJson) => {
-			if (setApp && responseJson.actions !== undefined && responseJson.actions !== null) {
+			console.log("RESPONSE: ", responseJson)
+
+			const parsedapp = responseJson.app !== undefined && responseJson.app !== null ? JSON.parse(atob(responseJson.app)) : {}
+			console.log("PARSED: ", parsedapp)
+			//data = parsedapp.body === undefined ? parsedapp : parsedapp.body
+
+			if (setApp && parsedapp.actions !== undefined && parsedapp.actions !== null) {
+				console.log("Inside first if")
 				if (selectedApp.versions !== undefined && selectedApp.versions !== null) {
-					responseJson.versions = selectedApp.versions
+					parsedapp.versions = selectedApp.versions
 				}
 
 				if (selectedApp.loop_versions !== undefined && selectedApp.loop_versions !== null) {
-					responseJson.loop_versions = selectedApp.loop_versions
+					parsedapp.loop_versions = selectedApp.loop_versions
 				}
 
-				var foundAction = responseJson.actions.find(action => action.name.toLowerCase() === selectedAction.name.toLowerCase())
+				// Find authentication, and if it works?
+				// If authentication has less OR more fields, it has to change
+				//console.log(selected
+
+				console.log("Inside first if2")
+				var foundAction = parsedapp.actions.find(action => action.name.toLowerCase() === selectedAction.name.toLowerCase())
 				console.log("FOUNDACTION: ", foundAction)
 				if (foundAction !== null && foundAction !== undefined) {
 					var foundparams = []
@@ -134,20 +146,23 @@ const ParsedAction = (props) => {
 						} else {
 							foundAction.parameters[paramkey] = foundParam 
 						}
-
 						//foundparams.push(param.name)
 					}
 				} else {
 					alert.error("Couldn't find action "+selectedAction.name)
 				}
 
+
+				selectedAction.errors = []
+				selectedAction.is_valid = true
+
 				// Updating params for the new action 
 				selectedAction.parameters = foundAction.parameters
 				selectedAction.app_id = appId
-				selectedAction.app_version = responseJson.app_version
+				selectedAction.app_version = parsedapp.app_version
 
 				setSelectedAction(selectedAction)
-				setSelectedApp(responseJson)
+				setSelectedApp(parsedapp)
 			}
 		})
 		.catch(error => {
@@ -665,6 +680,9 @@ const ParsedAction = (props) => {
 								disabled={disabled}
 								style={{backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius,}} 
 								InputProps={{
+									classes: {
+										notchedOutline: classes.notchedOutline,
+									},
 									style:{
 										color: "white",
 										minHeight: 50, 
@@ -1273,6 +1291,7 @@ const ParsedAction = (props) => {
 								defaultValue={selectedAction.app_version}
 								onChange={(event) => {
 									const newversion = selectedApp.versions.find(tmpApp => tmpApp.version == event.target.value)
+									console.log("NEWVERSION: ", newversion)
 									if (newversion !== undefined && newversion !== null) {
 										getApp(newversion.id, true) 
 									}
@@ -1303,6 +1322,9 @@ const ParsedAction = (props) => {
 				<TextField
 					style={theme.palette.textFieldStyle} 
 					InputProps={{
+						classes: {
+							notchedOutline: classes.notchedOutline,
+						},
 						style: theme.palette.innerTextfieldStyle, 
 					}}
 					fullWidth

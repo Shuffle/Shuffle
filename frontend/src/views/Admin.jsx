@@ -151,7 +151,10 @@ const Admin = (props) => {
 				if (responseJson["success"] === false) {
 					alert.error("Failed deleting auth")
 				} else {
-					getAppAuthentication() 
+					// Need to wait because query in ES is too fast  
+					setTimeout(() => {
+						getAppAuthentication() 
+					}, 1000);
 					alert.success("Successfully deleted authentication!")
 				}
 			}),

@@ -1362,7 +1362,6 @@ class AppBase:
                     return str(baseresult)+str(appendresult), False
 
             print("[INFO] After fourth parser return as JSON")
-        
             data, is_loop = recurse_json(basejson, parsersplit[1:])
             parseditem = data
             print("DATA: %s" % data)
@@ -1405,12 +1404,23 @@ class AppBase:
                             continue
 
                         # Handles for loops etc. 
-                        value, is_loop = get_json_value(fullexecution, to_be_replaced) 
+                        # FIXME: Should it dump to string here? Doesn't that defeat the purpose?
+                        # Trying without string dumping.
 
+                        value, is_loop = get_json_value(fullexecution, to_be_replaced) 
+                        print("\n\nType of value: %s. Value: %s" % (type(value), value))
                         if isinstance(value, str):
                             parameter["value"] = parameter["value"].replace(to_be_replaced, value)
-                        elif isinstance(value, dict):
-                            parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value))
+                        elif isinstance(value, dict) or isinstance(value, list):
+                            # Changed from JSON dump to str() 28.05.2021
+                            # This makes it so the parameters gets lists and dicts straight up
+                            #parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value))
+
+                            try:
+                                parameter["value"] = parameter["value"].replace(to_be_replaced, str(value))
+                            except:
+                                parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value))
+                                print("Failed parsing value as string?")
                         else:
                             print("Unknown type %s" % type(value))
                             try:
@@ -1418,7 +1428,7 @@ class AppBase:
                             except json.decoder.JSONDecodeError as e:
                                 parameter["value"] = parameter["value"].replace(to_be_replaced, value)
 
-                        print("VALUE: %s" % value)
+                        print("VALUE: %s" % parameter["value"])
 
 
             if parameter["variant"] == "WORKFLOW_VARIABLE":
