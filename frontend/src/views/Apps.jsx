@@ -442,6 +442,17 @@ const Apps = (props) => {
 											label={tag}
 											variant="outlined"
 											color="primary"
+											onClick={() => {
+												//console.log("SEARCH: ", event.target.value)
+												handleSearchChange(tag)
+												setCursearch(tag)
+												//id="app_search_field"
+												const searchfield = document.getElementById("app_search_field")
+												if (searchfield !== null && searchfield !== undefined) {
+													console.log("SEARCHFIELD: ", searchfield)
+													searchfield.value = tag
+												}
+											}}
 										/>
 									)
 								})}
@@ -890,8 +901,8 @@ const Apps = (props) => {
 		}
 
 		const searchfield = search.toLowerCase()
-		var newapps = apps.filter(data => data.name.toLowerCase().includes(searchfield) || data.description.toLowerCase().includes(searchfield))
-		var tmpapps = searchableApps.filter(data => data.name.toLowerCase().includes(searchfield) || data.description.toLowerCase().includes(searchfield))
+		var newapps = apps.filter(data => data.name.toLowerCase().includes(searchfield) || data.description.toLowerCase().includes(searchfield) || (data.tags !== null && data.tags.includes(search)))
+		var tmpapps = searchableApps.filter(data => data.name.toLowerCase().includes(searchfield) || data.description.toLowerCase().includes(searchfield) || (data.tags !== null && data.tags.includes(search)))
 		newapps.push(...tmpapps) 
 
 		//console.log(newapps)
@@ -1015,6 +1026,7 @@ const Apps = (props) => {
 							disabled={apps === undefined || apps === null || apps.length === 0}
 							fullWidth
 							color="primary"
+							id="app_search_field"
 							placeholder={"Search apps"}
 							onChange={(event) => {
 								handleSearchChange(event.target.value)

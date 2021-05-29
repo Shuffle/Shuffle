@@ -5979,6 +5979,7 @@ const AngularWorkflow = (props) => {
 									rows="4"
 									defaultValue={trigger_header_auth}
 									color="primary"
+									disabled={selectedTrigger.status === "running"}
 									placeholder={"AUTH_HEADER=AUTH_VALUE1"}
 									onBlur={(e) => {
 										const value = e.target.value
