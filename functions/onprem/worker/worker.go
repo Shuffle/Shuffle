@@ -201,16 +201,15 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	ctx := context.Background()
 
 	// Max 10% CPU every second
+	//CPUShares: 128,
+	//CPUQuota:  10000,
+	//CPUPeriod: 100000,
 	hostConfig := &container.HostConfig{
 		LogConfig: container.LogConfig{
 			Type:   "json-file",
 			Config: map[string]string{},
 		},
-		Resources: container.Resources{
-			CPUShares: 128,
-			CPUQuota:  10000,
-			CPUPeriod: 100000,
-		},
+		Resources: container.Resources{},
 	}
 
 	// form container id and use it as network source if it's not empty

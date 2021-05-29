@@ -55,7 +55,7 @@ class AppBase:
         #        for action["parameters"]
         #        print("AUTH: ", key, value)
         #        params[item["key"]] = item["value"]
-        #except KeyError:
+       #except KeyError:
         #    print("No authentication specified!")
         #    pass
 

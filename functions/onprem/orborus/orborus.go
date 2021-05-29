@@ -123,16 +123,16 @@ func getThisContainerId() {
 func deployWorker(image string, identifier string, env []string) {
 	// Binds is the actual "-v" volume.
 	// Max 20% CPU every second
+
+	//CPUQuota:  25000,
+	//CPUPeriod: 100000,
+	//CPUShares: 256,
 	hostConfig := &container.HostConfig{
 		LogConfig: container.LogConfig{
 			Type:   "json-file",
 			Config: map[string]string{},
 		},
-		Resources: container.Resources{
-			CPUShares: 256,
-			CPUQuota:  25000,
-			CPUPeriod: 100000,
-		},
+		Resources: container.Resources{},
 		Binds: []string{
 			"/var/run/docker.sock:/var/run/docker.sock:rw",
 		},
