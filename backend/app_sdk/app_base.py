@@ -22,6 +22,7 @@ class AppBase:
 
         # apikey is for the user / org
         # authorization is for the specific workflow
+
         self.url = os.getenv("CALLBACK_URL", "https://shuffler.io")
         self.base_url = os.getenv("BASE_URL", "https://shuffler.io")
         self.action = os.getenv("ACTION", "")

@@ -199,14 +199,17 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 func deployApp(cli *dockerclient.Client, image string, identifier string, env []string, workflowExecution shuffle.WorkflowExecution) error {
 	// form basic hostConfig
 	ctx := context.Background()
+
+	// Max 10% CPU every second
 	hostConfig := &container.HostConfig{
 		LogConfig: container.LogConfig{
 			Type:   "json-file",
 			Config: map[string]string{},
 		},
 		Resources: container.Resources{
-			CPUShares: 256,
-			CPUPeriod: 10000,
+			CPUShares: 128,
+			CPUQuota:  10000,
+			CPUPeriod: 100000,
 		},
 	}
 

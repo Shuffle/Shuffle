@@ -1246,6 +1246,12 @@ func getWorkflowLocal(fileId string, request *http.Request) ([]byte, error) {
 //// New execution with firestore
 
 func handleExecution(id string, workflow shuffle.Workflow, request *http.Request) (shuffle.WorkflowExecution, string, error) {
+	//go func() {
+	//	log.Printf("\n\nPRE TIME: %s\n\n", time.Now().Format("2006-01-02 15:04:05"))
+	//	_ = <-time.After(time.Second * 60)
+	//	log.Printf("\n\nPOST TIME: %s\n\n", time.Now().Format("2006-01-02 15:04:05"))
+	//}()
+
 	ctx := context.Background()
 	if workflow.ID == "" || workflow.ID != id {
 		tmpworkflow, err := shuffle.GetWorkflow(ctx, id)

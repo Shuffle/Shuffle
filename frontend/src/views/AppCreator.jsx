@@ -1478,7 +1478,7 @@ const AppCreator = (props) => {
 	const extraKeys =
 		<div style={{marginTop: 50}}>
 			<div style={{display: "flex"}}>
-				<Typography variant="body1">Add global headers or queries</Typography>
+				<Typography variant="body1">Extra configuration items</Typography>
 				{extraAuth.length === 0 ? 
 					<Button color="primary" style={{maxWidth: 50, marginLeft: 15, }} variant="contained" onClick={() => {
 							console.log("ADD NEW!")

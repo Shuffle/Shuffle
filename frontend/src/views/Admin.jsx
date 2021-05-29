@@ -226,7 +226,9 @@ const Admin = (props) => {
 			return response.json()
 		})
     .then((responseJson) => {
-			handleGetOrg(org_id) 
+			setTimeout(() => {
+				handleGetOrg(org_id) 
+			}, 1000)
 		})
 		.catch(error => {
 			alert.error("Err: " + error.toString())
@@ -262,7 +264,9 @@ const Admin = (props) => {
 				console.log("Cloud sync fail?")
 			}
 
-			return response.json()
+			setTimeout(() => {
+				return response.json()
+			}, 1000)
 		})
     .then((responseJson) => {
 			if (!responseJson.success && responseJson.reason !== undefined) {
@@ -349,7 +353,9 @@ const Admin = (props) => {
 					} else {
 						alert.success("Successfully updated auth everywhere!")
 						setSelectedUserModalOpen(false)
-						getAppAuthentication() 
+						setTimeout(() => {
+							getAppAuthentication() 
+						}, 1000)
 					}
 				}),
 			)
@@ -505,7 +511,9 @@ const Admin = (props) => {
 					} else {
 						setLoginInfo("")
 						setModalOpen(false)
-						getUsers()
+						setTimeout(() => {
+							getUsers()
+						}, 1000)
 					}
 				}),
 			)
@@ -538,7 +546,9 @@ const Admin = (props) => {
 					} else {
 						setLoginInfo("")
 						setModalOpen(false)
-						getUsers()
+						setTimeout(() => {
+							getUsers()
+						}, 1000)
 					}
 				}),
 			)
