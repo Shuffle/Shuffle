@@ -26,7 +26,13 @@ const theme = createMuiTheme({
 			maxWidth: "95%",
 			fontSize: "1em",
 			borderRadius: 5,
-		}
+		},
+  	tooltip: {
+  	  backgroundColor: "white",
+  	  color: 'rgba(0, 0, 0, 0.87)',
+  	  boxShadow: 1,
+  	  fontSize: 11,
+  	},
    },
    typography: { 
 			"fontFamily": `"Roboto", "Helvetica", "Arial", sans-serif`,

@@ -328,7 +328,21 @@ const data = [{
 			css: {
 				'target-arrow-color': '#f85a3e',
 			},
-		}
+		},
+		{
+			selector: `edge[?source_workflow]`,
+			css: {
+				"background-opacity": "1",
+				'font-size': '0px',
+			},
+		},
+		{
+			selector: `node[?source_workflow]`,
+			css: {
+				"background-opacity": "0",
+				'font-size': '0px',
+			},
+		},
 ]
 
 //{

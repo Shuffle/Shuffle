@@ -659,6 +659,11 @@ const AppCreator = (props) => {
 													var newbody = {}
 													for (var propkey in parameter.properties) {
 														const parsedkey = propkey.replaceAll(" ", "_").toLowerCase() 
+														if (parameter.properties[propkey].type === undefined) {
+															console.log("Skipping: ", parameter.properties[propkey])
+															continue
+														}
+														
 														if (parameter.properties[propkey].type === "string") {
 															if (parameter.properties[propkey].description !== undefined) {
 																newbody[parsedkey] = parameter.properties[propkey].description 
@@ -668,7 +673,7 @@ const AppCreator = (props) => {
 														} else if (parameter.properties[propkey].type.includes("int")) {
 															newbody[parsedkey] = 0
 														} else {
-															console.log("CANT HANDLE TYPE ", parameter.properties[propkey].type)
+															console.log("CANT HANDLE JSON TYPE ", parameter.properties[propkey].type, parameter.properties[propkey])
 															newbody[parsedkey] = []
 														}
 													}
@@ -690,6 +695,11 @@ const AppCreator = (props) => {
 															var newbody = {}
 															for (var propkey in parameter.properties) {
 																const parsedkey = propkey.replaceAll(" ", "_").toLowerCase() 
+																if (parameter.properties[propkey].type === undefined) {
+																	console.log("Skipping: ", parameter.properties[propkey])
+																	continue
+																}
+
 																if (parameter.properties[propkey].type === "string") {
 																	if (parameter.properties[propkey].description !== undefined) {
 																		newbody[parsedkey] = parameter.properties[propkey].description 
@@ -699,7 +709,7 @@ const AppCreator = (props) => {
 																} else if (parameter.properties[propkey].type.includes("int")) {
 																	newbody[parsedkey] = 0
 																} else {
-																	console.log("CANT HANDLE TYPE ", parameter.properties[propkey].type)
+																	console.log("CANT HANDLE JSON TYPE (2) ", parameter.properties[propkey].type)
 																	newbody[parsedkey] = []
 																}
 															}
@@ -720,16 +730,22 @@ const AppCreator = (props) => {
 															var newbody = {}
 															for (var propkey in parameter.properties) {
 																const parsedkey = propkey.replaceAll(" ", "_").toLowerCase() 
+																if (parameter.properties[propkey].type === undefined) {
+																	console.log("Skipping: ", parameter.properties[propkey])
+																	continue
+																}
+
 																if (parameter.properties[propkey].type === "string") {
 																	if (parameter.properties[propkey].description !== undefined) {
 																		newbody[parsedkey] = parameter.properties[propkey].description 
 																	} else {
 																		newbody[parsedkey] = ""
 																	}
+																	console.log(parameter.properties[propkey])
 																} else if (parameter.properties[propkey].type.includes("int")) {
 																	newbody[parsedkey] = 0
 																} else {
-																	console.log("CANT HANDLE TYPE ", parameter.properties[propkey].type)
+																	console.log("CANT HANDLE JSON TYPE (3) ", parameter.properties[propkey].type)
 																	newbody[parsedkey] = []
 																}
 															}
@@ -882,6 +898,8 @@ const AppCreator = (props) => {
 				if (value.scheme === "bearer") {
 					setAuthenticationOption("Bearer auth")
 					setAuthenticationRequired(true)
+				} else if (key === "oauth2") {
+					alert.info("Can't handle Oauth2 auth yet.")
 				} else if (key === "ApiKeyAuth") {
 					setAuthenticationOption("API key")
 
@@ -1460,7 +1478,7 @@ const AppCreator = (props) => {
 	const extraKeys =
 		<div style={{marginTop: 50}}>
 			<div style={{display: "flex"}}>
-				<Typography variant="body1">Extra authentication options</Typography>
+				<Typography variant="body1">Add global headers or queries</Typography>
 				{extraAuth.length === 0 ? 
 					<Button color="primary" style={{maxWidth: 50, marginLeft: 15, }} variant="contained" onClick={() => {
 							console.log("ADD NEW!")
@@ -1506,7 +1524,6 @@ const AppCreator = (props) => {
 							style={{height: 50, marginTop: 0, marginBottom: 0, flex: 2, backgroundColor: inputColor, marginRight: 5,}}
 							fullWidth={true}
 							placeholder="Example - input an example for the user"
-							type="name"
 							id="standard-required"
 							margin="normal"
 							variant="outlined"

@@ -1202,8 +1202,10 @@ const AngularWorkflow = (props) => {
 		});
 	}
 	
-	const getWorkflow = () => {
-		fetch(globalUrl+"/api/v1/workflows/"+props.match.params.key, {
+	const getWorkflow = (workflow_id, sourcenode) => {
+		console.log(`Getting workflow ${workflow_id} with append value ${sourcenode}`)
+
+		fetch(globalUrl+"/api/v1/workflows/"+workflow_id, {
     	  method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',
@@ -1234,15 +1236,124 @@ const AngularWorkflow = (props) => {
 				//setLastSaved(false)
 			}
 
-			setWorkflow(responseJson)
-			setWorkflowDone(true)
+			// Appends SUBFLOWS. Does NOT run during normal grabbing of workflows.
+			if (sourcenode.id !== undefined) {
+				console.log("WORKFLOW: ", responseJson)
 
-			//console.log(responseJson)
-			// Add error checks
-			console.log("Workflow: ", responseJson)
-			if (!responseJson.public) {
-				if ((!responseJson.previously_saved || (!responseJson.is_valid || (responseJson.errors !== undefined || responseJson.errors !== null || responseJson.errors !== responseJson.errors.length > 0)))) {
-					setConfigureWorkflowModalOpen(true)
+				var nodefound = false
+				const target = sourcenode.parameters.find(item => item.name === "startnode")
+				console.log(sourcenode.parameters)
+				console.log(target)
+				const target_id = target === undefined ? "" : target.value
+				const actions = responseJson.actions.map(action => {
+					const node = {
+						group: "nodes",
+					}
+
+					// Set it dynamically?
+					node.position = {
+						x: sourcenode.position.x+action.position.x,
+						y: sourcenode.position.y+action.position.y,
+					}
+
+					node.data = action
+
+					node.data._id = action["id"]
+					node.data.type = "ACTION"
+					node.data.source_workflow = responseJson.id
+					if (action.id === target_id) {
+						nodefound = true
+					}
+
+					var example = ""
+					if (action.example !== undefined && action.example !== null && action.example.length > 0) {
+						example = action.example
+					}
+
+					node.data.example = example
+					return node;
+				})
+
+				var edges = responseJson.branches.map((branch, index) => {
+					const edge = { };
+					var conditions = responseJson.branches[index].conditions
+					if (conditions === undefined || conditions === null) {
+						conditions = []
+					}
+
+					var label = ""
+					if (conditions.length === 1) {
+						label = conditions.length+" condition"
+					} else if (conditions.length > 1) {
+						label = conditions.length+" conditions"
+					}
+
+					const sourceFound = actions.findIndex(action => action.data.id === branch.source_id) 
+					if (sourceFound < 0) {
+						return null
+					}
+
+					const destinationFound = actions.findIndex(action => action.data.id === branch.destination_id) 
+					if (destinationFound < 0) {
+						return null
+					}
+
+					edge.data = {
+						id: branch.id,
+						_id: branch.id,
+						source: branch.source_id,
+						target: branch.destination_id,
+						label: label,
+						conditions: conditions,
+						hasErrors: branch.has_errors,
+						decorator: false,
+						source_workflow: responseJson.id,
+					}
+
+					return edge;
+				})
+
+
+				//console.log("Adding node: ", node)
+				//cy.on('add', 'node', (e) => onNodeAdded(e))
+				edges = edges.filter(edge => edge !== null)
+				cy.removeListener('add')
+				cy.add(actions)
+				cy.add(edges)
+
+				if (nodefound === true) {
+					const newId = uuid.v4()
+					cy.add({
+						group: "edges",
+						data: {
+							id: newId,
+							_id: newId,
+							source: sourcenode.id,
+							target: target_id,
+							label: "Subflow",
+							decorator: true,
+							source_workflow: responseJson.id,
+						}
+					})
+				}
+
+				cy.fit(null, 100)
+				//cy.zoom(2.0)
+				cy.on('add', 'node', (e) => onNodeAdded(e))
+				cy.on('add', 'edge', (e) => onEdgeAdded(e))
+
+				//for (var key in 
+			} else {
+				setWorkflow(responseJson)
+				setWorkflowDone(true)
+
+				//console.log(responseJson)
+				// Add error checks
+				console.log("Workflow: ", responseJson)
+				if (!responseJson.public) {
+					if ((!responseJson.previously_saved || (!responseJson.is_valid || (responseJson.errors !== undefined || responseJson.errors !== null || responseJson.errors !== responseJson.errors.length > 0)))) {
+						setConfigureWorkflowModalOpen(true)
+					}
 				}
 			}
     })
@@ -1355,6 +1466,57 @@ const AngularWorkflow = (props) => {
 		x: 0,
 		y: 0,
 	}
+
+
+	const onCtxTap = (event) => {
+		const nodedata = event.target.data()
+		console.log(nodedata)
+		if (nodedata.type === "TRIGGER" && nodedata.app_name === "Shuffle Workflow") {
+			if (nodedata.parameters === null) {
+				alert.error("Set a workflow first")
+				return
+			}
+
+			const workflow_id = nodedata.parameters.find(param => param.name === "workflow")
+			if (workflow.id === workflow_id.valu) {
+				return
+			}
+
+			cy.animation({ 
+				zoom: 0,
+				center: {
+					eles: event.target,
+				},
+			})
+			.play()
+			.promise()
+			.then( () => {
+				console.log("DONE: ", workflow_id)
+				//cy.elements().remove()
+				getWorkflow(workflow_id.value, nodedata)
+				cy.fit(null, 50)
+				//props.match.params.key
+				//cy.animation({ 
+				//	zoom: 500,
+				//	center: {
+				//		eles: cy.nodes(),
+				//	},
+				//})
+				//.play()
+				//.promise()
+			})
+
+			//const animationDuration = 150
+			//style: {
+			//maxZoom={2.00}
+			//cy.animate({
+			//	fit: 100,
+			//}, {
+			//	duration: 500,	
+			//})
+		}
+	}
+	//cy.on('cxttap', "node", (e) => onCtxTap(e))
 
 	var hiddenNodes = []
 	const onNodeDragStop = (event, selectedAction) => {
@@ -2398,7 +2560,7 @@ const AngularWorkflow = (props) => {
 	useEffect(() => {
 		if (firstrequest) {
 			setFirstrequest(false)
-			getWorkflow()
+			getWorkflow(props.match.params.key, {})
 			getApps()
 			getAppAuthentication()
 			getEnvironments()
@@ -2463,6 +2625,8 @@ const AngularWorkflow = (props) => {
 			// Handles dragging
 			cy.on('drag', 'node', (e) => onNodeDrag(e, selectedAction))
 			cy.on('free', 'node', (e) => onNodeDragStop(e, selectedAction))
+
+			cy.on('cxttap', "node", (e) => onCtxTap(e))
 
 			//let popper2 = cy.popper({
 			//  content: () => {
@@ -5663,8 +5827,11 @@ const AngularWorkflow = (props) => {
 				workflow.triggers[selectedTriggerIndex].parameters = []
 				workflow.triggers[selectedTriggerIndex].parameters[0] = {"name": "url", "value": referenceUrl+"webhook_"+selectedTrigger.id}
 				workflow.triggers[selectedTriggerIndex].parameters[1] = {"name": "tmp", "value": "webhook_"+selectedTrigger.id}
+				workflow.triggers[selectedTriggerIndex].parameters[2] = {"name": "auth_headers", "value": ""}
 				setWorkflow(workflow)
 			}
+
+			const trigger_header_auth = workflow.triggers[selectedTriggerIndex].parameters.length > 2 ? workflow.triggers[selectedTriggerIndex].parameters[2].value : ""
 			//const cronValue = "*/15 * * * *"
 
 			return(
@@ -5758,6 +5925,7 @@ const AngularWorkflow = (props) => {
 								onClick={() => {
   								var copyText = document.getElementById("webhook_uri_field")
 									if (copyText !== undefined && copyText !== null) {
+										console.log("NAVIGATOR: ", navigator)
 										navigator.clipboard.writeText(copyText.value)
 										copyText.select()
 										copyText.setSelectionRange(0, 99999) /* For mobile devices */
@@ -5787,18 +5955,55 @@ const AngularWorkflow = (props) => {
 									setTriggerCronWrapper(e.target.value)
 								}}
 							/>
+							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
+								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: yellow, marginRight: "10px"}}/>
+								<div style={{flex: "10"}}> 
+									<b>Required headers</b> 
+								</div>
+							</div>
+							<div>
+								<TextField
+									style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
+									id="webhook_uri_header"
+									onClick={() => {}}
+									InputProps={{
+										style:{
+											color: "white",
+											marginLeft: "5px",
+											maxWidth: "95%",
+											fontSize: "1em",
+										},
+									}}
+									fullWidth
+									multiline
+									rows="4"
+									defaultValue={trigger_header_auth}
+									color="primary"
+									placeholder={"AUTH_HEADER=AUTH_VALUE1"}
+									onBlur={(e) => {
+										const value = e.target.value
+										if (selectedTrigger.parameters === null) {
+											selectedTrigger.parameters = []
+										} 
+
+										workflow.triggers[selectedTriggerIndex].parameters[2] = {"value": value, "name": "auth_headers"}
+										//setSelectedTrigger(workflow.triggers[selectedTr
+										setWorkflow(workflow)
+									}}
+								/>
+							</div>
 							<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<Button variant="contained" style={{flex: "1",}} disabled={selectedTrigger.status === "running"} onClick={() => {
-									newWebhook(selectedTrigger)
+									newWebhook(workflow.triggers[selectedTriggerIndex])
 								}} color="primary">
-	    		    	    		Start	
-	    		    	  		</Button>
+	    		    	  Start	
+	    		    	</Button>
 								<Button variant="contained" style={{flex: "1",}} disabled={selectedTrigger.status !== "running"} onClick={() => {
 									deleteWebhook(selectedTrigger, selectedTriggerIndex)
 								}} color="primary">
-	    		    	    		Stop	
-	    		    	  		</Button>
+	    		    	  Stop	
+	    		    	</Button>
 							</div>
 						</div>
 					</div>
@@ -5953,6 +6158,14 @@ const AngularWorkflow = (props) => {
 			startNode = branch.destination_id
 		}
 
+		const param = trigger.parameters.find(param => param.name === "auth_headers")
+		console.log("PARAM: ", param)
+		var auth = ""	
+		if (param !== undefined && param !== null) {
+			auth = param.value
+		}
+
+		console.log("TRIG: ", trigger)
 		const data = {
 			"name": hookname, 
 			"type": "webhook", 
@@ -5960,6 +6173,7 @@ const AngularWorkflow = (props) => {
 			"workflow": workflow.id,
 			"start": startNode,
 			"environment": trigger.environment,
+			"auth": auth,
 		}
 
 		fetch(globalUrl+"/api/v1/hooks/new", {
@@ -6943,6 +7157,7 @@ const AngularWorkflow = (props) => {
 			}
 
 			console.log("NEW: ", copy)
+			console.log("NAVIGATOR: ", navigator)
 
 			navigator.clipboard.writeText(JSON.stringify(copy))
 			copyText.select()
@@ -6993,6 +7208,7 @@ const AngularWorkflow = (props) => {
 		const elementName = "copy_element_shuffle"
   	var copyText = document.getElementById(elementName)
 		if (copyText !== null && copyText !== undefined) {
+			console.log("NAVIGATOR: ", navigator)
 			navigator.clipboard.writeText(to_be_copied)
 			copyText.select()
 			copyText.setSelectionRange(0, 99999); /* For mobile devices */
@@ -7525,6 +7741,7 @@ const AngularWorkflow = (props) => {
 							console.log("PRECOPY: ", to_be_copied)
 							if (copyText !== null && copyText !== undefined) {
 								console.log("COPY: ", copyText)
+								console.log("NAVIGATOR: ", navigator)
 								navigator.clipboard.writeText(to_be_copied)
 								copyText.select();
 								copyText.setSelectionRange(0, 99999); /* For mobile devices */

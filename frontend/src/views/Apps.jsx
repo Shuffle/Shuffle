@@ -243,6 +243,7 @@ const Apps = (props) => {
 			privateapps.push(...invalid)
 
 			setApps(privateapps)
+			setCursearch("")
 
 			//handleSearchChange(event.target.value)
 			//setCursearch(event.target.value)
@@ -1236,12 +1237,14 @@ const Apps = (props) => {
 			headers: {
 				'Accept': 'application/json',
 			},
-	  		credentials: "include",
+	  	credentials: "include",
 		})
 		.then((response) => {
 			if (response.status === 200) {
 				alert.success("Successfully deleted app")		
-				getApps()
+				setTimeout(() => {
+					getApps()
+				}, 1000);
 			} else {
 				alert.error("Failed deleting app")		
 			}

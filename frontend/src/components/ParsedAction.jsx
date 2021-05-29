@@ -12,30 +12,38 @@ import {Popper, TextField, Drawer, Button, Paper, Grid, Tabs, InputAdornment, Ta
 import {GetApp as GetAppIcon, Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
 import Autocomplete from '@material-ui/lab/Autocomplete';
 
-const useStyles = makeStyles((theme) =>
-  createStyles({
-    root: {
-      "& .MuiAutocomplete-listbox": {
-        border: "2px solid grey",
-				color: "white",
-        fontSize: 18,
-        "& li:nth-child(even)": { 
-					backgroundColor: "#CCC" 
-				},
-        "& li:nth-child(odd)": { 
-					backgroundColor: "#FFF" 
-				}
-      }
-    },
-		inputRoot: {
+
+const useStyles = makeStyles({
+	notchedOutline: {
+		borderColor: "#f85a3e !important"
+	},
+	root: {
+		"& .MuiAutocomplete-listbox": {
+			border: "2px solid grey",
 			color: "white",
-			// This matches the specificity of the default styles at https://github.com/mui-org/material-ui/blob/v4.11.3/packages/material-ui-lab/src/Autocomplete/Autocomplete.js#L90
-			"&:hover .MuiOutlinedInput-notchedOutline": {
-				borderColor: "#f86a3e"
+			fontSize: 18,
+			"& li:nth-child(even)": { 
+				backgroundColor: "#CCC" 
 			},
+			"& li:nth-child(odd)": { 
+				backgroundColor: "#FFF" 
+			}
 		}
-  })
-)
+	},
+	inputRoot: {
+		color: "white",
+		// This matches the specificity of the default styles at https://github.com/mui-org/material-ui/blob/v4.11.3/packages/material-ui-lab/src/Autocomplete/Autocomplete.js#L90
+		"&:hover .MuiOutlinedInput-notchedOutline": {
+			borderColor: "#f86a3e"
+		},
+	}
+})
+//const useStyles = makeStyles((theme) =>
+//  createStyles({
+//		notchedOutline: {
+//			borderColor: "#f85a3e !important"
+//		},
+//)
 
 const ParsedAction = (props) => {
 	const {workflow, setWorkflow, setAction, setSelectedAction, setUpdate, appActionArguments, selectedApp, workflowExecutions, setSelectedResult, selectedAction, setSelectedApp, setSelectedTrigger, setSelectedEdge, setCurrentView, cy, setAuthenticationModalOpen,setVariablesModalOpen, setCodeModalOpen, selectedNameChange, rightsidebarStyle, showEnvironment, selectedActionEnvironment, environments, setNewSelectedAction, appApiViewStyle, globalUrl, setSelectedActionEnvironment, requiresAuthentication, hideExtraTypes, scrollConfig, setScrollConfig } = props
@@ -678,11 +686,8 @@ const ParsedAction = (props) => {
 						var datafield = 
 							<TextField
 								disabled={disabled}
-								style={{backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius,}} 
+								style={{backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius, border: selectedActionParameters[count].required || selectedActionParameters[count].configuration ? "2px solid #f85a3e" : "",}} 
 								InputProps={{
-									classes: {
-										notchedOutline: classes.notchedOutline,
-									},
 									style:{
 										color: "white",
 										minHeight: 50, 
@@ -1069,20 +1074,26 @@ const ParsedAction = (props) => {
 							)
 						}
 
-						var itemColor = "#f85a3e"
-						if (!data.required) {
-							itemColor = "#ffeb3b"
-						}
 
 						var tmpitem = data.name.valueOf()
 						if (data.name.startsWith("${") && data.name.endsWith("}")) {
 							tmpitem = tmpitem.slice(2, data.name.length-1)
 						}
 						
-						tmpitem = tmpitem.charAt(0).toUpperCase()+tmpitem.substring(1)
-						tmpitem = tmpitem.replaceAll("_", " ")
+						tmpitem = (tmpitem.charAt(0).toUpperCase()+tmpitem.substring(1)).replaceAll("_", " ")
 						const description = data.description === undefined ? "" : data.description 
+						const tooltipDescription = 
+							<span>
+								<Typography variant="body2">- Required: {data.required === true || data.configuration === true ? "True" : "False"}</Typography>
+								<Typography variant="body2">- Example: {data.example}</Typography>
+								<Typography variant="body2">- Description: {description}</Typography>
+							</span>
 
+						//var itemColor = "#f85a3e"
+						//if (!data.required) {
+						//	itemColor = "#ffeb3b"
+						//}
+						{/*<div style={{width: 17, height: 17, borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: 10, marginTop: 2, marginTop: "auto", marginBottom: "auto",}}/>*/}
 						return (
 						<div key={data.name}>	
 							<div style={{marginTop: 20, marginBottom: 0, display: "flex"}}>
@@ -1093,10 +1104,10 @@ const ParsedAction = (props) => {
 										}}/>
 									</Tooltip>
 								:
-									<div style={{width: 17, height: 17, borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: 10, marginTop: 2, marginTop: "auto", marginBottom: "auto",}}/>
+									null
 								}
 								<div style={{flex: "10", marginTop: "auto", marginBottom: "auto",}}> 
-									<Tooltip title={description} placement="top">
+									<Tooltip title={tooltipDescription} placement="top">
 										<b>{tmpitem} </b> 
 									</Tooltip>
 								</div>
@@ -1133,12 +1144,12 @@ const ParsedAction = (props) => {
 							*/}
 							{(selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0 && selectedActionParameters[count].required === true && selectedActionParameters[count].unique_toggled !== undefined) || hideExtraTypes ? null : 
 								<div style={{display: "flex"}}>
-									<Tooltip color="primary" title="Value must be unique" placement="top">
+									<Tooltip color="secondary" title="Value must be unique" placement="top">
 										<div style={{cursor: "pointer", color: staticcolor}} onClick={(e) => {}}>
           						<Checkbox
           						  checked={selectedActionParameters[count].unique_toggled}
 												style={{
-													color: theme.palette.primary.main,
+													color: theme.palette.primary.secondary,
 												}}
           						  onChange={(event) => {
 													//console.log("CHECKED!: ", selectedActionParameters[count])
@@ -1235,7 +1246,7 @@ const ParsedAction = (props) => {
 				<span>
 				<div style={{display: "flex", minHeight: 40, marginBottom: 30}}>
 					<div style={{flex: 1}}>
-						<h3 style={{marginBottom: 5}}>{selectedAction.app_name.replaceAll("_", " ")}</h3>
+						<h3 style={{marginBottom: 5}}>{(selectedAction.app_name.charAt(0).toUpperCase()+selectedAction.app_name.substring(1)).replaceAll("_", " ")}</h3>
 						<div style={{display: "flex",}}>
 							<IconButton style={{marginTop: "auto", marginBottom: "auto", height: 30, paddingLeft: 0, paddingRight: 0}} onClick={() => {
 								console.log("FIND EXAMPLE RESULTS FOR ", selectedAction) 
@@ -1322,9 +1333,6 @@ const ParsedAction = (props) => {
 				<TextField
 					style={theme.palette.textFieldStyle} 
 					InputProps={{
-						classes: {
-							notchedOutline: classes.notchedOutline,
-						},
 						style: theme.palette.innerTextfieldStyle, 
 					}}
 					fullWidth

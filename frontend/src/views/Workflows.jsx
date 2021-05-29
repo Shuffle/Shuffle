@@ -458,7 +458,9 @@ const Workflows = (props) => {
 					console.log("Editing: ", editingWorkflow)
 					if (selectedWorkflowId) {
 						deleteWorkflow(selectedWorkflowId)		
-						getAvailableWorkflows() 
+						setTimeout(() => {
+							getAvailableWorkflows() 
+						}, 1000)
 					}
 					setDeleteModalOpen(false)
 				}} color="primary">

@@ -2001,6 +2001,17 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("This should trigger in the cloud. Duplicate action allowed onprem.")
 	}
 
+	// Check auth
+	if len(hook.Auth) > 0 {
+		err = shuffle.CheckHookAuth(request, hook.Auth)
+		if err != nil {
+			log.Printf("[WARNING] Failed auth for hook %s: %s", hook.Id, err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false, "reason": "Bad authentication headers"}`))
+			return
+		}
+	}
+
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		log.Printf("Body data error: %s", err)
@@ -3262,7 +3273,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("[INFO] SETTING APP TO LIVE!!!")
+	log.Printf("[INFO] TRY TO SET APP TO LIVE!!!")
 	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in verify swagger: %s", err)
@@ -4210,7 +4221,7 @@ func runInitEs(ctx context.Context) {
 
 	// Getting apps to see if we should initialize a test
 	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 500)
-	log.Printf("[INFO] Getting and validating workflowapps. Got %d with err %s", len(workflowapps), err)
+	log.Printf("[INFO] Getting and validating workflowapps. Got %d with err %#v", len(workflowapps), err)
 	if err != nil && len(workflowapps) == 0 {
 		log.Printf("[WARNING] Failed getting apps (runInit): %s", err)
 	} else if err == nil {

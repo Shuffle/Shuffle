@@ -154,7 +154,7 @@ const Admin = (props) => {
 					// Need to wait because query in ES is too fast  
 					setTimeout(() => {
 						getAppAuthentication() 
-					}, 1000);
+					}, 1000)
 					alert.success("Successfully deleted authentication!")
 				}
 			}),

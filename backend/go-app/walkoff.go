@@ -3461,7 +3461,7 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 						continue
 					} else {
 						appCounter += 1
-						log.Printf("Added %s:%s to the database from OpenAPI repo", api.Name, api.AppVersion)
+						log.Printf("[INFO] Added %s:%s to the database from OpenAPI repo", api.Name, api.AppVersion)
 
 						// Set OpenAPI datastore
 						err = shuffle.SetOpenApiDatastore(ctx, parsedOpenApi.ID, parsedOpenApi)
@@ -4064,7 +4064,7 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(`{"success": false}`))
 		return
 	} else {
-		log.Printf("Added %s:%s to the database", workflowapp.Name, workflowapp.AppVersion)
+		log.Printf("[INFO] Added %s:%s to the database", workflowapp.Name, workflowapp.AppVersion)
 	}
 
 	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
