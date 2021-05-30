@@ -1749,7 +1749,7 @@ const AngularWorkflow = (props) => {
 		if (data.isButton) {
 			//console.log("BUTTON CLICKED: ", data)
 			if (data.buttonType === "delete") {
-				console.log("DELETE!")
+				//console.log("DELETE!")
 				const parentNode = cy.getElementById(data.attachedTo)
 				if (parentNode !== null && parentNode !== undefined) {
 					parentNode.remove()
@@ -2007,6 +2007,247 @@ const AngularWorkflow = (props) => {
 		})
 	}
 
+	const GetExampleResult = (item) => {
+		var exampledata = item.example === undefined ? "" : item.example
+		if (workflowExecutions.length > 0) {
+			// Look for the ID
+			const found = false
+			for (var key in workflowExecutions) {
+				if (workflowExecutions[key].results === undefined || workflowExecutions[key].results === null) {
+					continue
+				}
+
+				var foundResult = {"result": ""}
+				if (item.id === "exec") {
+					//console.log("EXEC: ", workflowExecutions[key].execution_argument)
+					if (workflowExecutions[key].execution_argument !== undefined && workflowExecutions[key].execution_argument !== null && workflowExecutions[key].execution_argument.length > 0) {
+						foundResult.result = workflowExecutions[key].execution_argument
+					} else {
+						continue
+					}
+				} else {
+					foundResult = workflowExecutions[key].results.find(result => result.action.id === item.id)
+					if (foundResult === undefined) {
+						continue
+					}
+				}
+
+				foundResult.result = foundResult.result.trim()
+				foundResult.result = foundResult.result.split(" None").join(" \"None\"")
+				foundResult.result = foundResult.result.split(" False").join(" false")
+				foundResult.result = foundResult.result.split(" True").join(" true")
+
+				var jsonvalid = true
+				try {
+					const tmp = String(JSON.parse(foundResult.result))
+					if (!foundResult.result.includes("{") && !foundResult.result.includes("[")) {
+						jsonvalid = false
+					}
+				} catch (e) {
+					try {
+						foundResult.result = foundResult.result.split("\'").join("\"")
+						const tmp = String(JSON.parse(foundResult.result))
+						if (!foundResult.result.includes("{") && !foundResult.result.includes("[")) {
+							jsonvalid = false
+						}
+					} catch (e) {
+						jsonvalid = false
+					}
+				}
+
+				// Finds the FIRST json only
+				if (jsonvalid) {
+					//console.log("VALID!")
+					exampledata = JSON.parse(foundResult.result)
+					break
+				} else {
+					//console.log("INVALID: ", foundResult.result)
+				}
+			}
+		}
+
+		//console.log("EXAMPLE: ", exampledata)
+		return exampledata
+	}
+
+	const GetParamMatch = (paramname, exampledata, basekey) => {
+		const splitkey = "."
+		//console.log(typeof(exampledata))
+		//console.log("MATCHING WITH: ", exampledata)
+		if (typeof(exampledata) !== "object") {
+			return ""
+		}
+
+		// Basically just a stupid if-else :)
+		const synonyms = {
+			"id": ["id", "ref", "sourceref", "reference", "sourcereference", "alert id", "case id", "incident id", "service id",],
+			"title": ["title", "name", "message"],
+			"description": ["description", "explanation", "story", "details",],
+			"email": ["mail", "email", "sender", "receiver", "recipient"],
+			"data": ["data", "ip", "domain", "url", "hash", "md5", "sha2", "sha256", "value", "item",],
+		}
+
+		// 1. Find the right synonym
+		// 2. 
+		var selectedsynonyms = [paramname]
+		for (const [key, value] of Object.entries(synonyms)) {
+			if (key === paramname || value.includes(paramname)) {
+				if (!value.includes(key)) {
+					value.push(key.toLowerCase())
+				}
+
+				selectedsynonyms = value
+				break	
+			}
+		}
+		//console.log("SELECTED: ", selectedsynonyms)
+
+		//console.log("SYNONYMS FOR ", paramname, selectedsynonyms)
+		var toreturn = ""
+
+		for (const [key, value] of Object.entries(exampledata)) {
+			// Check if loop or JSON
+			const extra = basekey.length > 0 ? splitkey : ""
+			const basekeyname = `${basekey.slice(1, basekey.length).split(".").join(splitkey)}${extra}${key}`
+
+			// Handle direct loop!
+			//if (!isNaN(key) && basekey === "") {
+			//	//console.log("Handling direct loop: ", key, value)
+			//	//parsedValues.push({"type": "object", "name": "Node", "autocomplete": `${basekey}`})
+			//	//parsedValues.push({"type": "list", "name": `${splitkey}list`, "autocomplete": `${basekey}.#`})
+			//	//for (var subkey in returnValues) {
+			//	//	parsedValues.push(returnValues[subkey])
+			//	//}
+
+			//	toreturn = GetParsedPaths(paramname, value, `${basekey}.#`)
+			//	console.log("LIST, TORETURN: ", value, toreturn)
+			//	if (toreturn.length > 0) {
+			//		break
+			//	}
+			//}
+
+			//console.log("KEY: ", key, "VALUE: ", value, "BASEKEY: ", basekeyname)
+			if (typeof(value) === 'object') {
+				if (Array.isArray(value)) {
+					//console.log("LIST!!: ", value, key)
+					var selectedkey = ""
+					if (isNaN(key)) {
+						selectedkey = `.${key}`
+					}
+
+					for (var subitem in value) {
+						toreturn = GetParamMatch(paramname, value[subitem], `${basekey}${selectedkey}.#`)
+						if (toreturn.length > 0) {
+							break
+						}
+					}
+
+					if (toreturn.length > 0) {
+						break
+					}
+				} else {
+					var selectedkey = ""
+					if (isNaN(key)) {
+						selectedkey = `.${key}`
+					}
+
+					toreturn = GetParamMatch(paramname, value, `${basekey}${selectedkey}`)
+					//console.log("OBJECT: ", value, toreturn, key)
+					if (toreturn.length > 0) {
+						break
+					}
+				}
+				//console.log("VALUE IS OBJECT: ", key, value)
+			} else {
+				//console.log("SINGLE ITEM: ", key)
+				if (selectedsynonyms.includes(key.toLowerCase())) {
+					//parsedValues.push({"type": "value", "name": basekeyname, "autocomplete": `${basekey}.${key}`, "value": value,})
+					//console.log("STRING: ", key, value)
+					toreturn = `${basekey}.${key}`
+					//toreturn = basekeyname
+					break
+				}
+			}
+		}
+
+		return toreturn
+	}
+
+	// Takes an action as input, then runs through and updates the relevant fields
+	// based on previous actions' 
+	const RunAutocompleter = (dstdata) => {
+		// **PS: The right action should already be set here**
+		// 1. Check execution argument
+		// 2. Check parents in order
+		var exampledata = GetExampleResult({"id": "exec", "name": "exec",})
+		//console.log("EXAMPLE RETURN: ", exampledata)
+		var parentlabel = "exec"
+		for (var paramkey in dstdata.parameters) {
+			const param = dstdata.parameters[paramkey]
+			// Skip authentication params
+			if (param.configuration) {
+				continue
+			}
+
+			const paramname = param.name.toLowerCase().trim().replaceAll("_", " ")
+			//console.log("PARAM: ", param)
+			//console.log("PARAMNAME: ", paramname)
+
+			const foundresult = GetParamMatch(paramname, exampledata, "")
+			if (foundresult.length > 0) {
+				//console.log("FOUND: ", paramname, foundresult)
+
+				if (dstdata.parameters[paramkey].value.length === 0) {
+					dstdata.parameters[paramkey].value = `$${parentlabel}${foundresult}`
+				} else {
+					//console.log("Skipping ", dstdata.parameters[paramkey], " because it already has a value")
+				}
+			}
+		}
+		
+		var parents = getParents(dstdata)
+		console.log("PARENTS: ", parents)
+		if (parents.length > 1) {
+			for (var key in parents) {
+				const item = parents[key]
+				if (item.label === "Execution Argument") {
+					continue
+				}
+
+				parentlabel = item.label.toLowerCase().trim().replaceAll(" ", "_")
+				exampledata = GetExampleResult(item)
+				for (var paramkey in dstdata.parameters) {
+					const param = dstdata.parameters[paramkey]
+					// Skip authentication params
+					if (param.configuration) {
+						continue
+					}
+
+					const paramname = param.name.toLowerCase().trim().replaceAll("_", " ")
+					//console.log("PARAM: ", param)
+					//console.log("PARAMNAME: ", paramname)
+
+					const foundresult = GetParamMatch(paramname, exampledata, "")
+					if (foundresult.length > 0) {
+						//console.log("FOUND: ", paramname, foundresult)
+
+						if (dstdata.parameters[paramkey].value.length === 0) {
+							dstdata.parameters[paramkey].value = `$${parentlabel}${foundresult}`
+						} else {
+							//console.log("Skipping ", dstdata.parameters[paramkey], " because it already has a value")
+						}
+					}
+				}
+				// Check agains every param 
+			}
+		}
+
+		return dstdata
+	}
+
+	//const FixNameUpdater = (sourcenode) => {
+	//}
+
 	// Checks for errors in edges when they're added 
 	const onEdgeAdded = (event) => {
 		setLastSaved(false)
@@ -2020,6 +2261,7 @@ const AngularWorkflow = (props) => {
 				event.target.remove()
 			}
 		}
+
 
 		targetnode = -1
 		var sourcenode = workflow.triggers.findIndex(data => data.id === edge.source)
@@ -2056,6 +2298,7 @@ const AngularWorkflow = (props) => {
 				//} 
 			} 
 		}
+
 
 		//console.log(workflow.branches)
 
@@ -2118,6 +2361,19 @@ const AngularWorkflow = (props) => {
 
 				
 			}
+		}
+
+
+		// 1. Guess what the next node's action should be
+		// 2. Get result from previous nodes (if any)
+		// 3. TRY to automatically map them in based on synonyms
+		const newsource = cy.getElementById(edge.source)
+		const newdst = cy.getElementById(edge.target)
+		if (newsource !== undefined && newsource !== null && newdst !== undefined && newdst !== null) {
+			//const srcdata = newsource.data()
+			//console.log("EDGE: ", edge)
+			const dstdata = RunAutocompleter(newdst.data())
+			console.log("DST: ", dstdata)
 		}
 
 		var newbranch = { 
@@ -2426,6 +2682,9 @@ const AngularWorkflow = (props) => {
 	    switch( event.keyCode ) {
 	    case 27:
 					console.log("ESCAPE")
+					if (configureWorkflowModalOpen === true) {
+						setConfigureWorkflowModalOpen(false)
+					}
 	        break;
 			case 46:
 				//removeNode()		
@@ -2730,6 +2989,8 @@ const AngularWorkflow = (props) => {
 		})
 	}
 
+	const buttonColor = "rgba(255,255,255,0.9)"
+	const buttonBackgroundColor = "#1f2023"
 	const addCopyButton = (event) => {
 		var parentNode = cy.$('#' + event.target.data("id"));
 		if (parentNode.data('isButton') || parentNode.data('buttonId'))
@@ -2744,9 +3005,10 @@ const AngularWorkflow = (props) => {
 
 		const iconInfo = {
 			"icon": "M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm-1 4l6 6v10c0 1.1-.9 2-2 2H7.99C6.89 23 6 22.1 6 21l.01-14c0-1.1.89-2 1.99-2h7zm-1 7h5.5L14 6.5V12z",
-			"iconColor": "black",
-			"iconBackgroundColor": "white",
+			"iconColor": buttonColor,
+			"iconBackgroundColor": buttonBackgroundColor,
 		}
+
 		const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
 		const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
 
@@ -2783,8 +3045,8 @@ const AngularWorkflow = (props) => {
 
 		const iconInfo = {
 			"icon": "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z",
-			"iconColor": "black",
-			"iconBackgroundColor": "white",
+			"iconColor": buttonColor,
+			"iconBackgroundColor": buttonBackgroundColor,
 		}
 		const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
 		const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
@@ -2811,6 +3073,10 @@ const AngularWorkflow = (props) => {
 	const onNodeHover = (event) => {
 		//console.log("TAR: ", event.target)
 		const nodedata = event.target.data()
+		if (nodedata.finished === false) {
+			return
+		}
+
 		var parentNode = cy.$('#' + event.target.data("id"));
 		if (parentNode.data('isButton') || parentNode.data('buttonId'))
 			return
@@ -3687,8 +3953,8 @@ const AngularWorkflow = (props) => {
 	}
 
 	const handleDragStop = (e, app) => {
-		console.log("STOP!: ", e)
-		console.log("APP!: ", parsedApp)
+		//console.log("STOP!: ", e)
+		//console.log("APP!: ", parsedApp)
 		//const onNodeAdded = (event) => {
 		//const node = event.target
 		//const nodedata = event.target.data()
@@ -3798,19 +4064,16 @@ const AngularWorkflow = (props) => {
 				currentnode[0].renderedPosition("x", e.pageX-cycontainer.offsetLeft)
 				currentnode[0].renderedPosition("y", e.pageY-cycontainer.offsetTop)
 			} else {
-				console.log("IN NEW NODE!")
 				if (workflow.public) {
 					console.log("workflow is public - not adding")
 					return
 				}
 
-				console.log("IN NEW NODE2!")
 				if (app.actions === undefined || app.actions === null || app.actions.length === 0) {
 					alert.error("App "+app.name+" currently has no actions to perform. Please go to https://shuffler.io/apps to edit it.")
 					return
 				}
 
-				console.log("IN NEW NODE3!")
 				newNodeId = uuid.v4()
 				const actionType = "ACTION"
 				const actionLabel = getNextActionName(app.name)
@@ -3867,7 +4130,6 @@ const AngularWorkflow = (props) => {
 					}
 				}
 
-				console.log("IN NEW NODE4: !", nodeToBeAdded)
 				parsedApp = nodeToBeAdded
 				cy.add(nodeToBeAdded)
 				return
@@ -4046,40 +4308,45 @@ const AngularWorkflow = (props) => {
 		}
 
 		// Does this one find the wrong one?
-		selectedAction.name = newaction.name
-		selectedAction.parameters = JSON.parse(JSON.stringify(newaction.parameters))
-		selectedAction.errors = []
-		selectedAction.isValid = true
-		selectedAction.is_valid = true
+		var newSelectedAction = selectedAction
+		newSelectedAction.name = newaction.name
+		newSelectedAction.parameters = JSON.parse(JSON.stringify(newaction.parameters))
+		newSelectedAction.errors = []
+		newSelectedAction.isValid = true
+		newSelectedAction.is_valid = true
 
-		if (selectedAction.app_name === "Shuffle Tools") {
-			const iconInfo = GetIconInfo(selectedAction)
+		if (newSelectedAction.app_name === "Shuffle Tools") {
+			const iconInfo = GetIconInfo(newSelectedAction)
 			console.log("ICONINFO: ", iconInfo)
 			const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
 			const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
-			selectedAction.large_image = svgpin_Url
-			selectedAction.fillGradient = iconInfo.fillGradient
-			selectedAction.fillstyle = "solid"
-			if (selectedAction.fillGradient !== undefined && selectedAction.fillGradient !== null && selectedAction.fillGradient.length > 0) {
-				selectedAction.fillstyle = 'linear-gradient'
-				console.log("GRADIENT!: ", selectedAction)
+			newSelectedAction.large_image = svgpin_Url
+			newSelectedAction.fillGradient = iconInfo.fillGradient
+			newSelectedAction.fillstyle = "solid"
+			if (newSelectedAction.fillGradient !== undefined && newSelectedAction.fillGradient !== null && newSelectedAction.fillGradient.length > 0) {
+				newSelectedAction.fillstyle = 'linear-gradient'
+				console.log("GRADIENT!: ", newSelectedAction)
 				//action.fillstyle = 
 				//'background-fill': 'data(fillstyle)',
 			} else {
-				selectedAction.iconBackground = iconInfo.iconBackgroundColor
+				newSelectedAction.iconBackground = iconInfo.iconBackgroundColor
 			}
 
-			const foundnode = cy.getElementById(selectedAction.id)
+			const foundnode = cy.getElementById(newSelectedAction.id)
 			if (foundnode !== null && foundnode !== undefined) {
 				console.log("UPDATING NODE!")
-				foundnode.data(selectedAction)
+				foundnode.data(newSelectedAction)
 			}
 		}
 
-		console.log("ACTION: ", selectedAction)
+		// Takes an action as input, then runs through and updates the relevant fields
+		// based on previous actions' 
+		newSelectedAction = RunAutocompleter(newSelectedAction)
+
+		console.log("ACTION: ", newSelectedAction)
 
 		if (newaction.returns.example !== undefined && newaction.returns.example !== null && newaction.returns.example.length > 0) {
-			selectedAction.example = newaction.returns.example 
+			newSelectedAction.example = newaction.returns.example 
 		}
 
 		// FIXME - this is broken sometimes lol
@@ -4089,7 +4356,7 @@ const AngularWorkflow = (props) => {
 		//} 
 		//setSelectedActionEnvironment(env)
 		
-		setSelectedAction(selectedAction)
+		setSelectedAction(newSelectedAction)
 		setUpdate(Math.random())
 
 		// FIXME - should change icon-node (descriptor) as well 

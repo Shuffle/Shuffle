@@ -622,7 +622,7 @@ const ParsedAction = (props) => {
 						}
 
 						if (selectedApp.generated && data.name === "headers") {
-							console.log("HEADER: ", data)
+							//console.log("HEADER: ", data)
 							//if (data.value.length === 0) {
 
 							//}
@@ -942,10 +942,9 @@ const ParsedAction = (props) => {
 									}}
 									open={!!menuPosition}
 									style={{
-										border: `2px solid #f85a3e`, 
 										color: "white", 
 										marginTop: 2,
-										maxHeight: 400, 
+										maxHeight: 650, 
 									}}
 								>
 								{actionlist.map(innerdata => {
@@ -1024,7 +1023,7 @@ const ParsedAction = (props) => {
 													</div>
 												}
 												parentMenuOpen={!!menuPosition}
-												style={{backgroundColor: theme.palette.inputColor, color: "white", minWidth: 250, maxWidth: 250, maxHeight: 400, scrollX: "", }}
+												style={{backgroundColor: theme.palette.inputColor, color: "white", minWidth: 250, maxWidth: 250, maxHeight: 650, scrollX: "", }}
 												//PaperProps={{
 												//	style: {
 												//		maxHeight: 400, 
@@ -1040,7 +1039,7 @@ const ParsedAction = (props) => {
 													// FIXME: Should be recursive in here
 													const icon = pathdata.type === "value" ? <VpnKeyIcon style={iconStyle} /> : pathdata.type === "list" ? <FormatListNumberedIcon style={iconStyle} /> : <ExpandMoreIcon style={iconStyle} /> 
 													return (
-														<MenuItem key={pathdata.name} style={{backgroundColor: theme.palette.inputColor, color: "white", minWidth: 250, }} value={pathdata} onMouseOver={() => {console.log("HOVER: ", pathdata)}}
+														<MenuItem key={pathdata.name} style={{backgroundColor: theme.palette.inputColor, color: "white", minWidth: 250, maxWidth: 250, }} value={pathdata} onMouseOver={() => {console.log("HOVER: ", pathdata)}}
 															onClick={() => {
 																handleItemClick([innerdata, pathdata])
 															}}
@@ -1189,7 +1188,7 @@ const ParsedAction = (props) => {
 										onClick={() => setShowAutocomplete(true)}
 										fullWidth
 										open={showAutocomplete}
-										style={{border: `2px solid #f85a3e`, color: "white", height: 50, marginTop: 2, borderRadius: theme.palette.borderRadius,}}
+										style={{color: "white", height: 50, marginTop: 2, borderRadius: theme.palette.borderRadius,}}
 										onChange={(e) => {
 											if (selectedActionParameters[count].value[selectedActionParameters[count].value.length-1] === ".") {
 												e.target.value.autocomplete = e.target.value.autocomplete.slice(1, e.target.value.autocomplete.length)
@@ -1240,6 +1239,7 @@ const ParsedAction = (props) => {
 	//	return <Popper {...props} className={classes.root} placement="bottom" />
 	//}
 
+	const baselabel = selectedAction.label
 	return ( 
 		<div style={appApiViewStyle} id="parsed_action_view">
 			{hideExtraTypes === true ? null : 
@@ -1339,6 +1339,21 @@ const ParsedAction = (props) => {
 					color="primary"
 					placeholder={selectedAction.label}
 					onChange={selectedNameChange}
+					onBlur={(e) => {
+						const name = e.target.value
+						console.log("CHANGED FROM2: ", baselabel)
+						console.log("CHANGED TO: ", name)
+						for (var key in workflow.actions) {
+							for (var subkey in workflow.actions[key].parameters) {
+								const param = workflow.actions[key].parameters[subkey]
+								if (param.value.includes(baselabel)) {
+									//if (param.value.toLowerCase().includes(baselabel)) {
+									console.log("FOUND: ", param)
+									workflow.actions[key].parameters[subkey].value.replaceAll(baselabel, e.target.value)
+								}
+							}
+						}
+					}}
 				/>
 				</span>
 			}

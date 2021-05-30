@@ -29,7 +29,7 @@ export const FixName = (name) => {
 
 // Parses JSON data into keys that can be used everywhere :)
 export const GetParsedPaths = (inputdata, basekey) => {
-	const splitkey = " > "
+	const splitkey = "."
 	var parsedValues = []
 	if (inputdata === undefined || inputdata === null) {
 		return parsedValues
@@ -47,8 +47,8 @@ export const GetParsedPaths = (inputdata, basekey) => {
 		// Handle direct loop!
 		if (!isNaN(key) && basekey === "") {
 			console.log("Handling direct loop.")
-			parsedValues.push({"type": "object", "name": "Node", "autocomplete": `${basekey}`})
-			parsedValues.push({"type": "list", "name": `${splitkey}list`, "autocomplete": `${basekey}.#`})
+			parsedValues.push({"type": "object", "name": "Node", "autocomplete": `${basekey}`.toLowerCase()})
+			parsedValues.push({"type": "list", "name": `${splitkey}list`, "autocomplete": `${basekey}.#`.toLowerCase()})
 			const returnValues = GetParsedPaths(value, `${basekey}.#`)
 			for (var subkey in returnValues) {
 				parsedValues.push(returnValues[subkey])
@@ -61,8 +61,8 @@ export const GetParsedPaths = (inputdata, basekey) => {
 		if (typeof(value) === 'object') {
 			if (Array.isArray(value)) {
 				// Check if each item is object
-				parsedValues.push({"type": "object", "name": basekeyname, "autocomplete": `${basekey}.${key}`})
-				parsedValues.push({"type": "list", "name": `${basekeyname}${splitkey}list`, "autocomplete": `${basekey}.${key}.#`})
+				parsedValues.push({"type": "object", "name": basekeyname, "autocomplete": `${basekey}.${key}`.toLowerCase()})
+				parsedValues.push({"type": "list", "name": `${basekeyname}${splitkey}list`, "autocomplete": `${basekey}.${key}.#`.toLowerCase()})
 
 				// Only check the first. This would be probably be dumb otherwise.
 				for (var subkey in value) {
@@ -79,14 +79,14 @@ export const GetParsedPaths = (inputdata, basekey) => {
 				}
 				//console.log(key+" is array")
 			} else {
-				parsedValues.push({"type": "object", "name": basekeyname, "autocomplete": `${basekey}.${key}`})
+				parsedValues.push({"type": "object", "name": basekeyname, "autocomplete": `${basekey}.${key}`.toLowerCase()})
 				const returnValues = GetParsedPaths(value, `${basekey}.${key}`)
 				for (var subkey in returnValues) {
 					parsedValues.push(returnValues[subkey])
 				}
 			}
 		} else {
-			parsedValues.push({"type": "value", "name": basekeyname, "autocomplete": `${basekey}.${key}`, "value": value,})
+			parsedValues.push({"type": "value", "name": basekeyname, "autocomplete": `${basekey}.${key}`.toLowerCase(), "value": value,})
 		}
 	}
 

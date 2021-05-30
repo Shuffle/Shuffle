@@ -3,7 +3,7 @@ import { useInterval } from 'react-powerhooks';
 import { makeStyles } from '@material-ui/core/styles';
 
 import {Avatar, Grid, Paper, Tooltip, Divider, Button, TextField, FormControl, IconButton, Menu, MenuItem, FormControlLabel, Chip, Switch, Typography, Zoom, CircularProgress, Dialog, DialogTitle, DialogActions, DialogContent} from '@material-ui/core';
-import {Compare as CompareIcon, Maximize as MaximizeIcon, Minimize as MinimizeIcon, AddCircle as AddCircleIcon, Toc as TocIcon, Send as SendIcon, Search as SearchIcon, FileCopy as FileCopyIcon, Delete as DeleteIcon, BubbleChart as BubbleChartIcon, Restore as RestoreIcon, Cached as CachedIcon, GetApp as GetAppIcon, Apps as AppsIcon, Edit as EditIcon, MoreVert as MoreVertIcon, PlayArrow as PlayArrowIcon, Add as AddIcon, Publish as PublishIcon, CloudUpload as CloudUploadIcon, CloudDownload as CloudDownloadIcon} from '@material-ui/icons';
+import {Close as CloseIcon, Compare as CompareIcon, Maximize as MaximizeIcon, Minimize as MinimizeIcon, AddCircle as AddCircleIcon, Toc as TocIcon, Send as SendIcon, Search as SearchIcon, FileCopy as FileCopyIcon, Delete as DeleteIcon, BubbleChart as BubbleChartIcon, Restore as RestoreIcon, Cached as CachedIcon, GetApp as GetAppIcon, Apps as AppsIcon, Edit as EditIcon, MoreVert as MoreVertIcon, PlayArrow as PlayArrowIcon, Add as AddIcon, Publish as PublishIcon, CloudUpload as CloudUploadIcon, CloudDownload as CloudDownloadIcon} from '@material-ui/icons';
 //import {Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
 
 //https://next.material-ui.com/components/material-icons/
@@ -78,6 +78,7 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 
+// Takes an action in Shuffle and 
 // Returns information about the icon, the color etc to be used
 // This can be used for actions of all types
 export const GetIconInfo = (action) => {
@@ -95,10 +96,11 @@ export const GetIconInfo = (action) => {
 		{"key": "send", "values": ["send", "dispatch", "mail", "forward", "post", "submit", "mark", "set"]},
 		{"key": "repeat", "values": ["repeat", "retry", "pause",]},
 		{"key": "execute", "values": ["execute", "run", "play", "raise",]},
-		{"key": "extract", "values": ["extract", "unpack", "decompress"]},
+		{"key": "extract", "values": ["extract", "unpack", "decompress", "open"]},
 		{"key": "inflate", "values": ["inflate", "pack", "compress",]},
 		{"key": "edit", "values": ["update", "create", "edit", "put", "patch", "change", "replace", "conver", "map", "format", "escape"]},
 		{"key": "compare", "values": ["compare", "convert", "to", "filter", "translate", "parse"]},
+		{"key": "close", "values": ["close", "stop", "cancel",]},
 	]
 
 	var selectedKey = ""
@@ -203,6 +205,13 @@ export const GetIconInfo = (action) => {
 			"iconColor": "white",
 			"iconBackgroundColor": "#03030e",
 			"originalIcon": <DeleteIcon />,
+			"fillGradient": ["#03030e", "#205d66"]
+		},
+		"close": {
+			"icon": "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z",
+			"iconColor": "white",
+			"iconBackgroundColor": "#03030e",
+			"originalIcon": <CloseIcon />,
 			"fillGradient": ["#03030e", "#205d66"]
 		},
 		"send": {

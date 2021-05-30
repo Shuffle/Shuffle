@@ -131,7 +131,7 @@ const data = [{
 				'height': '15px',
 				'z-index': '5002',
 				'font-size': '0px',
-				'border': '1px solid black',
+				'border': '1px solid rgba(255,255,255,0.9)',
 				'background-image': 'data(icon)',
 				'background-color': 'data(iconBackground)',
 			},
