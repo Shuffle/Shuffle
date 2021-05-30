@@ -2193,6 +2193,20 @@ const AngularWorkflow = (props) => {
 				cy.add(edgeToBeAdded)
 			}
 
+			if (nodedata.app_name === "Shuffle Tools") {
+				const iconInfo = GetIconInfo(nodedata)
+				const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
+				const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
+				nodedata.large_image = svgpin_Url
+				nodedata.fillGradient = iconInfo.fillGradient
+				nodedata.fillstyle = "solid"
+				if (nodedata.fillGradient !== undefined && nodedata.fillGradient !== null && nodedata.fillGradient.length > 0) {
+					nodedata.fillstyle = 'linear-gradient'
+				} else {
+					nodedata.iconBackground = iconInfo.iconBackgroundColor
+				}
+			}
+
 			if (workflow.actions === undefined || workflow.actions === null) {
 				workflow.actions = [nodedata]
 			} else {
@@ -2882,6 +2896,25 @@ const AngularWorkflow = (props) => {
 	const setupGraph = () => {
 		const actions = workflow.actions.map(action => {
 			const node = {}
+
+			if (!action.isStartNode && action.app_name === "Shuffle Tools") {
+				const iconInfo = GetIconInfo(action)
+				const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
+				const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
+				action.large_image = svgpin_Url
+				action.fillGradient = iconInfo.fillGradient
+				action.fillstyle = "solid"
+				if (action.fillGradient !== undefined && action.fillGradient !== null && action.fillGradient.length > 0) {
+					action.fillstyle = 'linear-gradient'
+					//console.log("GRADIENT!: ", action)
+					//action.fillstyle = 
+					//'background-fill': 'data(fillstyle)',
+				} else {
+					action.iconBackground = iconInfo.iconBackgroundColor
+				}
+				//console.log("FOUND NODE INFO: ", action)
+			}
+
 			node.position = action.position
 			node.data = action
 
@@ -2902,7 +2935,9 @@ const AngularWorkflow = (props) => {
 
 		const decoratorNodes = workflow.actions.map(action => {
 			if (!action.isStartNode) {
-				if (action.app_name === "Testing" || action.app_name === "Shuffle Tools") {
+				if (action.app_name === "Testing") {
+					return null
+				} else if (action.app_name === "Shuffle Tools") {
 					return null
 				}
 			}
@@ -4016,6 +4051,32 @@ const AngularWorkflow = (props) => {
 		selectedAction.errors = []
 		selectedAction.isValid = true
 		selectedAction.is_valid = true
+
+		if (selectedAction.app_name === "Shuffle Tools") {
+			const iconInfo = GetIconInfo(selectedAction)
+			console.log("ICONINFO: ", iconInfo)
+			const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
+			const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
+			selectedAction.large_image = svgpin_Url
+			selectedAction.fillGradient = iconInfo.fillGradient
+			selectedAction.fillstyle = "solid"
+			if (selectedAction.fillGradient !== undefined && selectedAction.fillGradient !== null && selectedAction.fillGradient.length > 0) {
+				selectedAction.fillstyle = 'linear-gradient'
+				console.log("GRADIENT!: ", selectedAction)
+				//action.fillstyle = 
+				//'background-fill': 'data(fillstyle)',
+			} else {
+				selectedAction.iconBackground = iconInfo.iconBackgroundColor
+			}
+
+			const foundnode = cy.getElementById(selectedAction.id)
+			if (foundnode !== null && foundnode !== undefined) {
+				console.log("UPDATING NODE!")
+				foundnode.data(selectedAction)
+			}
+		}
+
+		console.log("ACTION: ", selectedAction)
 
 		if (newaction.returns.example !== undefined && newaction.returns.example !== null && newaction.returns.example.length > 0) {
 			selectedAction.example = newaction.returns.example 

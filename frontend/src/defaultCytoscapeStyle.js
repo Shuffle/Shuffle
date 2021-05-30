@@ -50,7 +50,13 @@ const data = [{
 				'height': '30px',
 				'z-index': 5000,
 				'font-size': '0px',
-			},
+				'background-width': '75%',
+				'background-height': '75%',
+				'background-color': 'data(iconBackground)',
+				'background-fill': 'data(fillstyle)',
+				'background-gradient-direction': 'to-right',
+				'background-gradient-stop-colors': 'data(fillGradient)',
+			}
 		},
 		{
 			selector: `node[app_name="Testing"]`,
@@ -156,6 +162,8 @@ const data = [{
 				'width': '80px',
 				'height': '80px',
 				'font-size': '18px',
+				'background-width': '100%',
+				'background-height': '100%',
 			},
 		},
 		{

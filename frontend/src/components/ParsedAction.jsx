@@ -1515,6 +1515,7 @@ const ParsedAction = (props) => {
 							if (newValue !== undefined && newValue !== null) {
 								setNewSelectedAction({"target": {"value": newValue.name}}) 
 							} 
+
 						}}
 						renderOption={(data) => {
 							var newActionname = data.name
@@ -1524,6 +1525,7 @@ const ParsedAction = (props) => {
 
 							const iconInfo = GetIconInfo({"name": data.name})
 							const useIcon = iconInfo.originalIcon
+
 							newActionname = (newActionname.charAt(0).toUpperCase()+newActionname.substring(1)).replaceAll("_", " ")
 
 							return (

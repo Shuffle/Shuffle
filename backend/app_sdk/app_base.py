@@ -1345,7 +1345,9 @@ class AppBase:
         
             print("[INFO] After second return")
             if len(parsersplit) == 1:
-                return str(baseresult)+str(appendresult), False
+                returndata = str(baseresult)+str(appendresult)
+                print("RETURNING: %s" % returndata)
+                return returndata, False
         
             baseresult = baseresult.replace(" True,", " true,")
             baseresult = baseresult.replace(" False", " false,")
@@ -1365,7 +1367,15 @@ class AppBase:
             print("[INFO] After fourth parser return as JSON")
             data, is_loop = recurse_json(basejson, parsersplit[1:])
             parseditem = data
-            print("DATA: %s" % data)
+
+            if isinstance(parseditem, dict) or isinstance(parseditem, list):
+                try:
+                    parseditem = json.dumps(parseditem)
+                except json.decoder.JSONDecodeError as e:
+                    print("Parseditem issue: %s" % e)
+                    pass
+
+            print("DATA: (%s) %s" % (type(data), data))
             if is_loop:
                 print("DATA IS A LOOP - SHOULD WRAP")
                 if parsersplit[-1] == "#":
@@ -1376,8 +1386,18 @@ class AppBase:
                     print("SET DATA WRAPPER TO %s!" % parsersplit[-1])
                     parseditem = "${%s%s}$" % (parsersplit[-1], json.dumps(data))
 
+
             print("Before last return with %s" % appendresult)
-            return str(parseditem)+str(appendresult), is_loop
+            returndata = str(parseditem)+str(appendresult)
+
+            # New in 0.8.97: Don't return items without lists
+            print("RETURNDATA: %s" % returndata)
+            #return returndata, is_loop
+            try:
+                return json.dumps(json.loads(returndata)), is_loop
+            except json.decoder.JSONDecodeError as e:
+                print("Error in decoder: %s" % e)
+                return returndata, is_loop
 
         # Parses parameters sent to it and returns whether it did it successfully with the values found
         def parse_params(action, fullexecution, parameter):
@@ -1415,13 +1435,13 @@ class AppBase:
                         elif isinstance(value, dict) or isinstance(value, list):
                             # Changed from JSON dump to str() 28.05.2021
                             # This makes it so the parameters gets lists and dicts straight up
-                            #parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value))
+                            parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value))
 
-                            try:
-                                parameter["value"] = parameter["value"].replace(to_be_replaced, str(value))
-                            except:
-                                parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value))
-                                print("Failed parsing value as string?")
+                            #try:
+                            #    parameter["value"] = parameter["value"].replace(to_be_replaced, str(value))
+                            #except:
+                            #    parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value))
+                            #    print("Failed parsing value as string?")
                         else:
                             print("Unknown type %s" % type(value))
                             try:
@@ -1947,6 +1967,13 @@ class AppBase:
                                         params[parameter["name"]] = resultarray 
                                         multi_parameters[parameter["name"]] = resultarray 
 
+                                    if len(resultarray) == 0:
+                                        print("[WARNING] Returning empty array because the array length to be looped is 0 (1)")
+                                        action_result["status"] = "SUCCESS" 
+                                        action_result["result"] = "[]"
+                                        self.send_result(action_result, headers, stream_path)
+                                        return
+
                                     multi_execution_lists.append(new_replacement)
                                     #print("MULTI finished: %s" % json_replacement)
                                 else:
@@ -2031,6 +2058,13 @@ class AppBase:
 
                                     # With this parameter ready, add it to... a greater list of parameters. Rofl
                                     print("LENGTH OF ARR: %d" % len(resultarray))
+                                    if len(resultarray) == 0:
+                                        print("[WARNING] Returning empty array because the array length to be looped is 0 (0)")
+                                        action_result["status"] = "SUCCESS" 
+                                        action_result["result"] = "[]"
+                                        self.send_result(action_result, headers, stream_path)
+                                        return
+
                                     #print("RESULTARRAY: %s" % resultarray)
                                     if resultarray not in multi_execution_lists:
                                         multi_execution_lists.append(resultarray)

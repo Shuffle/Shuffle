@@ -65,6 +65,12 @@ const Workflow = (props) => {
 			return null
 		}
 
+		if (apps === undefined || apps === null || apps.length === 0) {
+			console.log("No apps loaded: ", apps)
+			setConfigureWorkflowModalOpen(false)
+			return null
+		} 
+
 		setFirstLoad(workflow.id)
 		const newactions = []
 		for (var key in workflow.actions) {

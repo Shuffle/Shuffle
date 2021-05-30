@@ -59,7 +59,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - SHUFFLE_APP_SDK_VERSION=0.8.97
-      - SHUFFLE_WORKER_VERSION=0.8.97
+      - SHUFFLE_WORKER_VERSION=nightly
       - ORG_ID=${ORG_ID}
       - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
       - BASE_URL=http://${OUTER_HOSTNAME}:${BACKEND_PORT}
@@ -85,7 +85,7 @@ services:
       - discovery.seed_hosts=shuffle-opensearch
       - cluster.initial_master_nodes=shuffle-opensearch
       - bootstrap.memory_lock=true 
-      - "OPENSEARCH_JAVA_OPTS=-Xms2048m -Xmx2048m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+      - "OPENSEARCH_JAVA_OPTS=-Xms1024m -Xmx1024m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
       - cluster.routing.allocation.disk.threshold_enabled=false
       - opendistro_security.disabled=true
     ulimits:
