@@ -2,7 +2,7 @@ version: '3'
 services:
   frontend:
     #build: ./frontend
-    image: ghcr.io/frikky/shuffle-frontend:0.8.98
+    image: ghcr.io/frikky/shuffle-frontend:nightly
     container_name: shuffle-frontend
     hostname: shuffle-frontend
     ports:
@@ -17,7 +17,7 @@ services:
       - backend
   backend:
     #build: ./backend
-    image: ghcr.io/frikky/shuffle-backend:0.8.97
+    image: ghcr.io/frikky/shuffle-backend:nightly
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
     # Here for debugging:
@@ -30,20 +30,7 @@ services:
       - ${SHUFFLE_APP_HOTLOAD_LOCATION}:/shuffle-apps     
       - ${SHUFFLE_FILE_LOCATION}:/shuffle-files
       #- ${SHUFFLE_OPENSEARCH_CERTIFICATE_FILE}:/shuffle-files/es_certificate
-    environment:
-      - DATASTORE_EMULATOR_HOST=shuffle-database:8000
-      #- SHUFFLE_OPENSEARCH_URL=${SHUFFLE_OPENSEARCH_URL}
-      - SHUFFLE_APP_HOTLOAD_FOLDER=/shuffle-apps
-      - SHUFFLE_FILE_LOCATION=/shuffle-files
-      - ORG_ID=${ORG_ID}
-      - SHUFFLE_APP_DOWNLOAD_LOCATION=${SHUFFLE_APP_DOWNLOAD_LOCATION}
-      - SHUFFLE_DOWNLOAD_AUTH_BRANCH=${SHUFFLE_DOWNLOAD_AUTH_BRANCH}
-      - SHUFFLE_DEFAULT_USERNAME=${SHUFFLE_DEFAULT_USERNAME}
-      - SHUFFLE_DEFAULT_PASSWORD=${SHUFFLE_DEFAULT_PASSWORD}
-      - SHUFFLE_DEFAULT_APIKEY=${SHUFFLE_DEFAULT_APIKEY}
-      - SHUFFLE_APP_FORCE_UPDATE=${SHUFFLE_APP_FORCE_UPDATE}
-      - HTTP_PROXY=${SHUFFLE_HTTP_PROXY}
-      - HTTPS_PROXY=${SHUFFLE_HTTPS_PROXY}
+    env_file: .env 
     restart: unless-stopped
     depends_on:
       - opensearch 

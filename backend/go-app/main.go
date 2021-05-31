@@ -4,18 +4,14 @@ import (
 	"github.com/frikky/shuffle-shared"
 
 	"bufio"
-
 	"bytes"
 	"context"
 	"crypto/md5"
+	"crypto/tls"
+	//"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
-	//"unicode/utf8"
-
 	"errors"
-	"path/filepath"
-
-	"crypto/tls"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -24,6 +20,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	//"regexp"
 	"strings"
 	"time"
@@ -5669,19 +5666,31 @@ func initHandlers() {
 		esUrl = "http://shuffle-opensearch:9200"
 	}
 
+	// https://github.com/elastic/go-elasticsearch/blob/f741c073f324c15d3d401d945ee05b0c410bd06d/elasticsearch.go#L98
 	config := elasticsearch.Config{
 		Addresses: []string{esUrl},
 		Username:  os.Getenv("SHUFFLE_OPENSEARCH_USERNAME"),
 		Password:  os.Getenv("SHUFFLE_OPENSEARCH_PASSWORD"),
-		Transport: &http.Transport{
-			MaxIdleConnsPerHost:   100,
-			ResponseHeaderTimeout: time.Second,
-			TLSClientConfig: &tls.Config{
-				MinVersion: tls.VersionTLS11,
-			},
-		},
+		APIKey:    os.Getenv("SHUFFLE_OPENSEARCH_APIKEY"),
+		CloudID:   os.Getenv("SHUFFLE_OPENSEARCH_CLOUDID"),
 	}
 
+	//config.Transport.TLSClientConfig
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.MaxIdleConnsPerHost = 1000
+	transport.ResponseHeaderTimeout = time.Second * 10
+
+	skipSSLVerify := false
+	if strings.ToLower(os.Getenv("SHUFFLE_OPENSEARCH_SKIPSSL_VERIFY")) == "true" {
+		skipSSLVerify = true
+	}
+
+	transport.TLSClientConfig = &tls.Config{
+		MinVersion:         tls.VersionTLS11,
+		InsecureSkipVerify: skipSSLVerify,
+	}
+
+	//https://github.com/elastic/go-elasticsearch/blob/master/_examples/security/elasticsearch-cluster.yml
 	certificateLocation := os.Getenv("SHUFFLE_OPENSEARCH_CERTIFICATE_FILE")
 	if len(certificateLocation) > 0 {
 		cert, err := ioutil.ReadFile(certificateLocation)
@@ -5689,9 +5698,20 @@ func initHandlers() {
 			log.Fatalf("[WARNING] Failed configuring certificates: %s not found", err)
 		} else {
 			config.CACert = cert
+
+			//if transport.TLSClientConfig.RootCAs, err = x509.SystemCertPool(); err != nil {
+			//	log.Fatalf("[ERROR] Problem adding system CA: %s", err)
+			//}
+
+			//// --> Add the custom certificate authority
+			//if ok := transport.TLSClientConfig.RootCAs.AppendCertsFromPEM(cert); !ok {
+			//	log.Fatalf("[ERROR] Problem adding CA from file %q", *cert)
+			//}
 		}
+
 		log.Printf("[INFO] Added certificate %#v elastic client.", certificateLocation)
 	}
+	config.Transport = transport
 
 	es, err := elasticsearch.NewClient(config)
 	if err != nil {
