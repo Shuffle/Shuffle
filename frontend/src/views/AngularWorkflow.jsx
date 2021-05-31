@@ -1552,10 +1552,11 @@ const AngularWorkflow = (props) => {
 
 			const curElement = document.getElementById(styledElements[0])
 			if (curElement !== null && curElement !== undefined) {
-				console.log("ELE: ", curElement)
+				//console.log("ELE: ", curElement)
 				curElement.style.border = curElement.style.original_border
-				const newValue = "$"+nodedata.label.toLowerCase().replaceAll(" ", "_")
-				curElement.value = newValue
+				var newValue = "$"+nodedata.label.toLowerCase().replaceAll(" ", "_")
+				var paramname = ""
+				var idnumber = -1
 				if (curElement.id.startsWith("rightside_field_")) {
 					console.log("FOUND FIELD WITH NUMBER: ", curElement.id)
 					const idsplit = curElement.id.split("_")
@@ -1563,10 +1564,31 @@ const AngularWorkflow = (props) => {
 					if (idsplit.length === 3 && !isNaN(idsplit[2])) {
 						console.log("ADDING TO PARAM ", idsplit[2])
 						console.log("PARAM: ", selectedAction)
-
+					
 						selectedAction.parameters[idsplit[2]].value = newValue
+						paramname = selectedAction.parameters[idsplit[2]].name
+						idnumber = idsplit[2]
 					}
 				}
+
+				console.log("ID ETC: ", idnumber, paramname)
+				if (idnumber >= 0 && paramname.length > 0) {
+					const exampledata = GetExampleResult(nodedata) 
+					const parsedname = paramname.toLowerCase().trim().replaceAll("_", " ")
+					console.log("EX: ", exampledata)
+
+					console.log("NAME: ", parsedname)
+					const foundresult = GetParamMatch(parsedname, exampledata, "")
+					console.log("RESULT: ", foundresult)
+					if (foundresult.length > 0) {
+						console.log("FOUND: ", paramname, foundresult)
+						newValue = `${newValue}${foundresult}`
+					} 
+
+					selectedAction.parameters[idnumber].value = newValue
+				}
+
+				curElement.value = newValue
 			}
 		}
 
@@ -1686,7 +1708,7 @@ const AngularWorkflow = (props) => {
 				// Color for #f85a3e translated to rgb
 				const newBorder = "3px solid rgb(248, 90, 62)"
 				if (elementMouseIsOver.style.border != newBorder && elementMouseIsOver.id.includes("rightside")) {
-					console.log(elementMouseIsOver.style.border)
+					//console.log(elementMouseIsOver.style.border)
 					if (elementMouseIsOver.style.border !== undefined) {
 						elementMouseIsOver.style.original_border = elementMouseIsOver.style.border 
 					} else {
