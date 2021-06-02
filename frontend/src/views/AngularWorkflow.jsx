@@ -2228,7 +2228,7 @@ const AngularWorkflow = (props) => {
 		}
 		
 		var parents = getParents(dstdata)
-		console.log("PARENTS: ", parents)
+		//console.log("PARENTS: ", parents)
 		if (parents.length > 1) {
 			for (var key in parents) {
 				const item = parents[key]
@@ -2272,8 +2272,9 @@ const AngularWorkflow = (props) => {
 
 	// Checks for errors in edges when they're added 
 	const onEdgeAdded = (event) => {
-		setLastSaved(false)
 		const edge = event.target.data()
+		console.log("EDGE ADDED: ", edge)
+		//setLastSaved(false)
 		var targetnode = workflow.triggers.findIndex(data => data.id === edge.target)
 		if (targetnode !== -1) {
 			console.log("TARGETNODE: ", targetnode)
@@ -2892,6 +2893,9 @@ const AngularWorkflow = (props) => {
 
 			setEstablished(true)
 			// Validate if the node is just a node lol
+			console.log("CY: ", cy)
+			//console.log("CY: ", cy.edgehandles())
+			//try {
 			cy.edgehandles({
 				handleNodes: (el) => el.isNode() && !el.data("isButton") && !el.data("isDescriptor"),
 				preview: false,
@@ -2900,6 +2904,9 @@ const AngularWorkflow = (props) => {
 					return false;
 				},
 			})
+			//} catch (e) {
+			//	console.log("Error in edgehandles: ", e)
+			//}
 
 			cy.fit(null, 200)
 
@@ -6276,6 +6283,12 @@ const AngularWorkflow = (props) => {
   								var copyText = document.getElementById("webhook_uri_field")
 									if (copyText !== undefined && copyText !== null) {
 										console.log("NAVIGATOR: ", navigator)
+										const clipboard = navigator.clipboard
+										if (clipboard === undefined) {
+											alert.error("Can only copy over HTTPS (port 3443)")
+											return
+										} 
+
 										navigator.clipboard.writeText(copyText.value)
 										copyText.select()
 										copyText.setSelectionRange(0, 99999) /* For mobile devices */
@@ -7510,6 +7523,12 @@ const AngularWorkflow = (props) => {
 			console.log("NEW: ", copy)
 			console.log("NAVIGATOR: ", navigator)
 
+			const clipboard = navigator.clipboard
+			if (clipboard === undefined) {
+				alert.error("Can only copy over HTTPS (port 3443)")
+				return
+			} 
+
 			navigator.clipboard.writeText(JSON.stringify(copy))
 			copyText.select()
 			copyText.setSelectionRange(0, 99999) /* For mobile devices */
@@ -7560,6 +7579,12 @@ const AngularWorkflow = (props) => {
   	var copyText = document.getElementById(elementName)
 		if (copyText !== null && copyText !== undefined) {
 			console.log("NAVIGATOR: ", navigator)
+			const clipboard = navigator.clipboard
+			if (clipboard === undefined) {
+				alert.error("Can only copy over HTTPS (port 3443)")
+				return
+			} 
+
 			navigator.clipboard.writeText(to_be_copied)
 			copyText.select()
 			copyText.setSelectionRange(0, 99999); /* For mobile devices */
@@ -8093,7 +8118,14 @@ const AngularWorkflow = (props) => {
 							if (copyText !== null && copyText !== undefined) {
 								console.log("COPY: ", copyText)
 								console.log("NAVIGATOR: ", navigator)
+								const clipboard = navigator.clipboard
+								if (clipboard === undefined) {
+									alert.error("Can only copy over HTTPS (port 3443)")
+									return
+								} 
+
 								navigator.clipboard.writeText(to_be_copied)
+
 								copyText.select();
 								copyText.setSelectionRange(0, 99999); /* For mobile devices */
 

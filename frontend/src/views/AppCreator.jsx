@@ -1,10 +1,12 @@
 import React, {useState, useEffect} from 'react';
 import { makeStyles } from '@material-ui/styles';
+import { useTheme } from '@material-ui/core/styles';
 import {BrowserView, MobileView} from "react-device-detect";
 
 import {Paper, Typography, FormControlLabel, Button, Divider, Select, MenuItem, FormControl, Switch, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Tooltip, Breadcrumbs, CircularProgress, Chip} from '@material-ui/core';
-import {FileCopy as FileCopyIcon, Delete as DeleteIcon, Remove as RemoveIcon, Add as AddIcon, CheckCircle as CheckCircleIcon, AttachFile as AttachFileIcon, Apps as AppsIcon, ErrorOutline as ErrorOutlineIcon} from '@material-ui/icons';
+import {LockOpen as LockOpenIcon, FileCopy as FileCopyIcon, Delete as DeleteIcon, Remove as RemoveIcon, Add as AddIcon, CheckCircle as CheckCircleIcon, AttachFile as AttachFileIcon, Apps as AppsIcon, ErrorOutline as ErrorOutlineIcon} from '@material-ui/icons';
 
+import uuid from "uuid";
 import {Link} from 'react-router-dom';
 import YAML from 'yaml'
 import ChipInput from 'material-ui-chip-input'
@@ -192,6 +194,7 @@ const AppCreator = (props) => {
   const { globalUrl, isLoaded } = props;
 	const classes = useStyles();
 	const alert = useAlert()
+	const theme = useTheme();
 
 	var upload = ""
 	const increaseAmount = 50
@@ -236,6 +239,12 @@ const AppCreator = (props) => {
 		"example": "",
 	}
 	const [extraAuth, setExtraAuth] = useState([])
+
+
+	const [app, setApp] = useState({}) 
+	const [appAuthentication, setAppAuthentication] = React.useState([]);
+	const [selectedAction, setSelectedAction] = useState({})
+	const [authLoaded, setAuthLoaded] = useState(false)
 
 	//const [actions, setActions] = useState([{
 	//	"name": "Get workflows",
@@ -2416,6 +2425,401 @@ const AppCreator = (props) => {
 			/>
 		</div>
 
+	const ParsedActionHandler = () => {  
+		const passedOrg = {"id": "", "name": ""}
+		const owner = ""
+		const passedTags = ["single test"]
+
+		const [, setUpdate] = useState()
+		const [authenticationModalOpen, setAuthenticationModalOpen] = useState(false);
+		const [selectedApp, setSelectedApp] = useState({
+			versions: [{
+				"id": selectedAction.app_id,
+				"version": selectedAction.app_version,
+			}],
+			loop_versions: [selectedAction.app_version],
+			id: selectedAction.app_id,
+			name: selectedAction.app_name,
+			version: selectedAction.app_version,
+		})
+
+		const [requiresAuthentication, setRequiresAuthentication] = useState(app.authentication.required && app.authentication.parameters !== undefined && app.authentication.parameters !== null)
+		const [workflow, setWorkflow] = useState({
+			name: "",	
+			description: "",	
+			actions: [selectedAction],
+			start: selectedAction.id,
+			tags: passedTags,
+			execution_org: passedOrg,
+			org_id: passedOrg.id,
+			id: uuid.v4(),
+			isValid: true,
+			owner: owner,
+			created: Date.now(),
+		})
+
+		const EndpointData = () => {
+			const [tmpVar, setTmpVar] = React.useState("")
+
+			return (
+				<div>
+					The API endpoint to use (URL) - predefined in the app
+					<TextField
+						style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
+						InputProps={{
+							style:{
+								color: "white",
+								height: 50, 
+								fontSize: "1em",
+							},
+						}}
+						fullWidth
+						type="text"
+						color="primary"
+						disabled={true}
+						placeholder="Bearer token" 
+						defaultValue={selectedApp.link}
+						onChange={(event) => {
+							setTmpVar(event.target.value)
+						}}
+						onBlur={() => {
+							selectedApp.link = tmpVar
+							console.log("LINK: ", selectedApp.link)
+							setSelectedApp(selectedApp)
+						}}
+					/>
+				</div>
+			)
+		}
+
+		const setAppActionAuthentication = (newauth) => {
+			if (app.authentication.required) {
+				var findAuthId = ""
+				if (selectedAction.authentication_id !== null && selectedAction.authentication_id !== undefined && selectedAction.authentication_id.length > 0) {
+					findAuthId = selectedAction.authentication_id
+				}
+
+				var baseAuthOptions = []
+				for (var key in newauth) {
+					var item = newauth[key]
+
+					const newfields = {}
+					for (var filterkey in item.fields) {
+						newfields[item.fields[filterkey].key] = item.fields[filterkey].value
+					}
+
+					item.fields = newfields
+					if (item.app.name === app.name) {
+						baseAuthOptions.push(item)
+
+						if (item.id === findAuthId) {
+							selectedAction.selectedAuthentication = item
+						}
+					}
+				}
+
+				selectedAction.authentication = baseAuthOptions 
+				//console.log("Authentication: ", authenticationOptions)
+				if (selectedAction.selectedAuthentication === null || selectedAction.selectedAuthentication === undefined || selectedAction.selectedAuthentication.length === "") {
+					selectedAction.selectedAuthentication = {}
+				}
+			} else {
+				selectedAction.authentication = []
+				selectedAction.authentication_id = ""
+				selectedAction.selectedAuthentication = {}
+			}
+
+			setSelectedAction(selectedAction)
+			console.log(selectedAction)
+		}
+
+		//{selectedAction.authentication !== undefined && selectedAction.authentication.length > 0 ? 
+		const getAppAuthentication = () => {
+			fetch(globalUrl+"/api/v1/apps/authentication", {
+				method: 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json',
+				},
+				credentials: "include",
+			})
+			.then((response) => {
+				if (response.status !== 200) {
+					console.log("Status not 200 for apps :O!")
+				}
+
+				return response.json()
+			})
+			.then((responseJson) => {
+				if (responseJson.success && responseJson.data !== undefined && responseJson.data !== null && responseJson.data.length !== 0) {
+					var newauth = []
+					for (var key in responseJson.data) {
+						if (responseJson.data[key].defined === false) {
+							continue
+						}
+
+						newauth.push(responseJson.data[key])
+					}
+
+					setAppAuthentication(newauth)
+					setAppActionAuthentication(newauth)
+				} else {
+					if (app.authentication.required) {
+						const tmpParams = selectedAction.parameters
+						selectedAction.parameters = []
+
+						for (var paramkey in app.authentication.parameters) {
+							var item = app.authentication.parameters[paramkey]
+							item.configuration = true
+
+							const found = selectedAction.parameters.find(param => param.name === item.name)
+							if (found === null || found === undefined) {
+								selectedAction.parameters.push(item)
+							}
+						}
+
+						for (var paramkey in tmpParams) {
+							var item = tmpParams[paramkey]
+							//item.configuration = true
+							
+							const found = selectedAction.parameters.find(param => param.name === item.name)
+							if (found === null || found === undefined) {
+								selectedAction.parameters.push(item)
+							}
+						}
+
+						setSelectedAction(selectedAction)
+					}
+
+					//alert.error("Failed getting authentications")
+				}
+			})
+			.catch(error => {
+				alert.error("Auth loading error: "+error.toString())
+			})
+		}
+
+		if (!authLoaded && appAuthentication.length === 0 && selectedAction.id !== undefined) {
+			setAuthLoaded(true)
+			getAppAuthentication()
+		} else if (selectedAction.id === undefined && currentAction.name !== undefined && currentAction.name !== null && currentAction.name.length > 0) {
+			var methodName = `${currentAction.method}_${currentAction.name}`
+			if (currentAction.method.toLowerCase() === "custom" || currentAction.name.toLowerCase().startsWith(currentAction.method.toLowerCase())) {
+				methodName = currentAction.name
+			}
+
+			methodName = methodName.toLowerCase().replaceAll(" ", "_")
+			if (app.actions !== null && app.actions !== undefined) { 
+				var newselectedaction = app.actions.find(item => item.name.toLowerCase().replaceAll(" ", "_") === methodName)
+				if (newselectedaction !== undefined && newselectedaction !== null) {
+					newselectedaction.app_id = app.id
+					newselectedaction.app_name = app.name
+					newselectedaction.app_version = app.app_version
+					newselectedaction.authentication = []
+					newselectedaction.authentication_id = ""
+					newselectedaction.selectedAuthentication = {}
+					setSelectedAction(newselectedaction)
+				}
+			}
+		}
+
+		const setNewAppAuth = (appAuthData) => {
+			//console.log("DAta: ", appAuthData)
+			fetch(globalUrl+"/api/v1/apps/authentication", {
+					method: 'PUT',
+					headers: {
+						'Content-Type': 'application/json',
+						'Accept': 'application/json',
+					},
+					body: JSON.stringify(appAuthData),
+					credentials: "include",
+				})
+			.then((response) => {
+				if (response.status !== 200) {
+					console.log("Status not 200 for setting app auth :O!")
+				} 
+
+				return response.json()
+			})
+			.then((responseJson) => {
+				if (!responseJson.success) {
+					alert.error("Failed to set app auth: "+responseJson.reason)
+				} else {
+					getAppAuthentication(true) 
+					setAuthenticationModalOpen(false) 
+
+					// Needs a refresh with the new authentication..
+					//alert.success("Successfully saved new app auth")
+				}
+			})
+			.catch(error => {
+				alert.error(error.toString())
+			})
+		}
+
+		const AuthenticationData = (props) => {
+			const selectedApp = props.app
+			console.log("APP: ", selectedApp)
+
+			const [authenticationOption, setAuthenticationOptions] = React.useState({
+				app: JSON.parse(JSON.stringify(selectedApp)),
+				fields: {},
+				label: "",
+				usage: [{
+					workflow_id: workflow.id,
+				}],
+				id: uuid.v4(),
+				active: true,
+			})
+
+			if (selectedApp.authentication === undefined) {
+				return null
+			}
+
+			if (selectedApp.authentication.parameters === null || selectedApp.authentication.parameters === undefined || selectedApp.authentication.parameters.length === 0) {
+				return null
+			}
+
+			authenticationOption.app.actions = []
+
+			for (var key in selectedApp.authentication.parameters) {
+				if (authenticationOption.fields[selectedApp.authentication.parameters[key].name] === undefined) {
+					authenticationOption.fields[selectedApp.authentication.parameters[key].name] = ""
+				}
+			}
+
+			const handleSubmitCheck = () => {
+				console.log("NEW AUTH: ", authenticationOption)
+				if (authenticationOption.label.length === 0) {
+					authenticationOption.label = `Auth for ${selectedApp.name}`
+					//alert.info("Label can't be empty")
+					//return
+				}
+
+				for (var key in selectedApp.authentication.parameters) {
+					if (authenticationOption.fields[selectedApp.authentication.parameters[key].name].length === 0) {
+						alert.info("Field "+selectedApp.authentication.parameters[key].name+" can't be empty")
+						return
+					} 
+				}
+
+				console.log("Action: ", selectedAction)
+				selectedAction.authentication_id = authenticationOption.id
+				selectedAction.selectedAuthentication = authenticationOption
+				if (selectedAction.authentication === undefined || selectedAction.authentication === null) {
+					selectedAction.authentication = [authenticationOption]
+				} else {
+					selectedAction.authentication.push(authenticationOption)
+				}
+
+				setSelectedAction(selectedAction)
+
+				var newAuthOption = JSON.parse(JSON.stringify(authenticationOption))
+				var newFields = []
+				for (const key in newAuthOption.fields) {
+					const value = newAuthOption.fields[key]
+					newFields.push({
+						key: key,
+						value: value,
+					})
+				}
+
+				console.log("FIELDS: ", newFields)
+				newAuthOption.fields = newFields
+				setNewAppAuth(newAuthOption)
+				//appAuthentication.push(newAuthOption)
+				//setAppAuthentication(appAuthentication)
+				//
+				
+				setUpdate(authenticationOption.id)
+
+				/*
+					{selectedAction.authentication.map(data => (
+					<MenuItem key={data.id} style={{backgroundColor: inputColor, color: "white"}} value={data}>
+				*/
+
+			}
+
+			if (authenticationOption.label === null || authenticationOption.label === undefined) {
+				authenticationOption.label = selectedApp.name+" authentication"
+			}
+
+			return (
+				<div>
+					<DialogContent>
+						<a target="_blank" rel="norefferer" href="https://shuffler.io/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is this?</a><div/>
+						These are required fields for authenticating with {selectedApp.name} 
+						<div style={{marginTop: 15}}/>
+						<b>Name - what is this used for?</b>
+						<TextField
+								style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
+								InputProps={{
+									style:{
+										color: "white",
+										marginLeft: "5px",
+										maxWidth: "95%",
+										height: 50, 
+										fontSize: "1em",
+									},
+								}}
+								fullWidth
+								color="primary"
+								placeholder={"Auth july 2020"}
+								defaultValue={`Auth for ${selectedApp.name}`}
+								onChange={(event) => {
+									authenticationOption.label = event.target.value
+								}}
+							/>
+						{selectedApp.link.length > 0 ? <div style={{marginTop: 15}}><EndpointData /></div> : null}
+						<Divider style={{marginTop: 15, marginBottom: 15, backgroundColor: "rgb(91, 96, 100)"}}/>
+						<div style={{}}/>
+							{selectedApp.authentication.parameters.map((data, index) => { 
+							return (
+								<div key={index} style={{marginTop: 10}}>
+									<LockOpenIcon style={{marginRight: 10}}/>
+									<b>{data.name}</b>
+									<TextField
+											style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
+											InputProps={{
+												style:{
+													color: "white",
+													marginLeft: "5px",
+													maxWidth: "95%",
+													height: 50, 
+													fontSize: "1em",
+												},
+											}}
+											fullWidth
+											type={data.example !== undefined && data.example.includes("***") ? "password" : "text"}
+											color="primary"
+											placeholder={data.example} 
+											onChange={(event) => {
+												authenticationOption.fields[data.name] = event.target.value
+											}}
+										/>
+								</div>
+							)
+						})}
+					</DialogContent>
+					<DialogActions>
+					<Button 
+						style={{borderRadius: "0px"}}
+						onClick={() => {
+							setAuthenticationModalOpen(false)
+						}} color="primary">
+							Cancel
+						</Button>
+						<Button style={{borderRadius: "0px"}} onClick={() => {
+							handleSubmitCheck() 	
+						}} color="primary">
+							Submit	
+						</Button>
+					</DialogActions>	
+				</div>
+			)
+		}
+	}
+
 	const actionView = 
 		<div style={{color: "white", position: "relative",}}>
 			<div style={{position: "absolute", right: 0, top: 0,}}>
@@ -2628,6 +3032,7 @@ const AppCreator = (props) => {
 						Continue	
 					</Button>
 				</DialogActions>
+				<ParsedActionHandler />
 			</FormControl>
 		</Dialog>
 		: null;

@@ -1522,14 +1522,20 @@ const Admin = (props) => {
 								const org_id = selectedOrganization.id
 								var copyText = document.getElementById(elementName);
 								if (copyText !== null && copyText !== undefined) {
+									const clipboard = navigator.clipboard
+									if (clipboard === undefined) {
+										alert.error("Can only copy over HTTPS (port 3443)")
+										return
+									} 
+
 									navigator.clipboard.writeText(org_id)
 									copyText.select();
 									copyText.setSelectionRange(0, 99999); /* For mobile devices */
 
-								/* Copy the text inside the text field */
-								document.execCommand("copy");
+									/* Copy the text inside the text field */
+									document.execCommand("copy");
 
-								alert.info(org_id + " copied to clipboard")	
+									alert.info(org_id + " copied to clipboard")	
 							}
 						}}>
 							<FileCopyIcon style={{color: "rgba(255,255,255,0.8)"}}/>
@@ -1910,6 +1916,12 @@ const Admin = (props) => {
 												const elementName = "copy_element_shuffle"
 												var copyText = document.getElementById(elementName);
 												if (copyText !== null && copyText !== undefined) {
+													const clipboard = navigator.clipboard
+													if (clipboard === undefined) {
+														alert.error("Can only copy over HTTPS (port 3443)")
+														return
+													} 
+
 													navigator.clipboard.writeText(data.apikey)
 													copyText.select();
 													copyText.setSelectionRange(0, 99999); /* For mobile devices */
@@ -2161,6 +2173,12 @@ const Admin = (props) => {
 										const elementName = "copy_element_shuffle"
   									var copyText = document.getElementById(elementName);
 										if (copyText !== null && copyText !== undefined) {
+											const clipboard = navigator.clipboard
+											if (clipboard === undefined) {
+												alert.error("Can only copy over HTTPS (port 3443)")
+												return
+											} 
+
 											navigator.clipboard.writeText(file.id)
 											copyText.select();
 											copyText.setSelectionRange(0, 99999); /* For mobile devices */

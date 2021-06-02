@@ -4385,3 +4385,86 @@ func handleUserInput(trigger shuffle.Trigger, organizationId string, workflowId 
 
 	return nil
 }
+
+func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
+
+	user, err := shuffle.HandleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("[WARNING] Api authentication failed in execute SINGLE workflow - CONTINUING ANYWAY: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "You need to sign up to try it out}`))
+		return
+	}
+
+	location := strings.Split(request.URL.String(), "/")
+	var fileId string
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		fileId = location[4]
+	}
+
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		log.Printf("[INFO] Failed workflowrequest POST read: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	ctx := context.Background()
+	workflowExecution, err := shuffle.PrepareSingleAction(ctx, user, fileId, body)
+	if err != nil {
+		log.Printf("[INFO] Failed workflowrequest POST read: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	//workflowExecution.ProjectId = gceProject
+	//workflowExecution.Locations = []string{defaultLocation}
+
+	environments, err := shuffle.GetEnvironments(ctx, user.ActiveOrg.Id)
+	environment := "Shuffle"
+	if len(environments) >= 1 {
+		environment = environments[0].Name
+	} else {
+		log.Printf("[ERROR] No environments found for org %s. Exiting", user.ActiveOrg.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	log.Printf("[INFO] Execution: %s should execute onprem with execution environment \"%s\". Workflow: %s", workflowExecution.ExecutionId, environment, workflowExecution.Workflow.ID)
+
+	executionRequest := shuffle.ExecutionRequest{
+		ExecutionId:   workflowExecution.ExecutionId,
+		WorkflowId:    workflowExecution.Workflow.ID,
+		Authorization: workflowExecution.Authorization,
+		Environments:  []string{environment},
+	}
+
+	err = shuffle.SetWorkflowQueue(ctx, executionRequest, environment)
+	if err != nil {
+		log.Printf("[ERROR] Failed adding execution to db: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	time.Sleep(2 * time.Second)
+	log.Printf("[INFO] Starting validation of execution %s", workflowExecution.ExecutionId)
+
+	returnBytes := shuffle.HandleRetValidation(ctx, workflowExecution)
+
+	resp.WriteHeader(200)
+	resp.Write(returnBytes)
+}
