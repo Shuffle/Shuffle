@@ -1967,12 +1967,12 @@ class AppBase:
                                         params[parameter["name"]] = resultarray 
                                         multi_parameters[parameter["name"]] = resultarray 
 
-                                    if len(resultarray) == 0:
-                                        print("[WARNING] Returning empty array because the array length to be looped is 0 (1)")
-                                        action_result["status"] = "SUCCESS" 
-                                        action_result["result"] = "[]"
-                                        self.send_result(action_result, headers, stream_path)
-                                        return
+                                    #if len(resultarray) == 0:
+                                    #    print("[WARNING] Returning empty array because the array length to be looped is 0 (1)")
+                                    #    action_result["status"] = "SUCCESS" 
+                                    #    action_result["result"] = "[]"
+                                    #    self.send_result(action_result, headers, stream_path)
+                                    #    return
 
                                     multi_execution_lists.append(new_replacement)
                                     #print("MULTI finished: %s" % json_replacement)

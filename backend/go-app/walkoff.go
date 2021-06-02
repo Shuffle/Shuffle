@@ -1179,10 +1179,10 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 			}
 		}
 
-		err = increaseStatisticsField(ctx, "total_workflow_triggers", workflow.ID, -1, workflow.OrgId)
-		if err != nil {
-			log.Printf("Failed to increase total workflows: %s", err)
-		}
+		//err = increaseStatisticsField(ctx, "total_workflow_triggers", workflow.ID, -1, workflow.OrgId)
+		//if err != nil {
+		//	log.Printf("Failed to increase total workflows: %s", err)
+		//}
 	}
 
 	// FIXME - maybe delete workflow executions
@@ -3408,14 +3408,14 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 
 				readFile, err := ioutil.ReadAll(fileReader)
 				if err != nil {
-					log.Printf("Filereader error yaml for %s: %s", filename, err)
+					log.Printf("[WARNING] Filereader error yaml for %s: %s", filename, err)
 					continue
 				}
 
 				// 1. This parses OpenAPI v2 to v3 etc, for use.
 				parsedOpenApi, err := handleSwaggerValidation(readFile)
 				if err != nil {
-					log.Printf("Validation error for %s: %s", filename, err)
+					log.Printf("[WARNING] Validation error for %s: %s", filename, err)
 					continue
 				}
 

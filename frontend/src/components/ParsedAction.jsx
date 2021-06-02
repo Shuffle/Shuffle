@@ -50,6 +50,7 @@ const ParsedAction = (props) => {
 
 	const theme = useTheme();
 	const classes = useStyles()
+	const keywords = ["len(", "lower(", "upper(", "trim(", "split(", "length(", "number(", "parse(", "join("]
 	const getParents = (action) => {
 		if (cy === undefined) {
 			return []
@@ -757,6 +758,23 @@ const ParsedAction = (props) => {
 								}}
 							/>
 
+						console.log("FIELD VALUE: ", data.value)
+            //const regexp = new RegExp("\W+\.", "g")
+						//let match
+						//while ((match = regexp.exec(data.value)) !== null) {
+						//	console.log(`Found ${match[0]} start=${match.index} end=${regexp.lastIndex}.`);
+						//}
+
+						//const str = = data.value.search(submatch)
+						//console.log("FOUND? ", n)
+						for (var key in keywords) {
+							const keyword = keywords[key]
+							if (data.value.includes(keyword)) {
+								console.log("INCLUDED: ", keyword)
+							}
+						}
+
+						//const keywords = ["len", "lower", "upper", "trim", "split", "length", "number", "parse", "join"]
 						if (selectedActionParameters[count].schema !== undefined && selectedActionParameters[count].schema !== null && selectedActionParameters[count].schema.type === "file") {
 							datafield = 
 								<TextField
@@ -875,7 +893,11 @@ const ParsedAction = (props) => {
 									return
 								}
 
+								console.log("AUTOCOMPLETE1: ", values)
+
 								var toComplete = selectedActionParameters[count].value.trim().endsWith("$") ? values[0].autocomplete : "$"+values[0].autocomplete
+								toComplete = toComplete.toLowerCase().replaceAll(" ", "_")
+								console.log("AUTOCOMPLETE: ", toComplete)
 								for (var key in values) {
 									if (key == 0 || values[key].autocomplete.length === 0) {
 										continue
@@ -1353,6 +1375,9 @@ const ParsedAction = (props) => {
 								}
 							}
 						}
+
+						console.log("DID REPLACE ACTUALLY WORK?? - Something is buggy.")
+						setWorkflow(workflow)
 					}}
 				/>
 				</span>

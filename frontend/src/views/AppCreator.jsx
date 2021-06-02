@@ -2443,7 +2443,7 @@ const AppCreator = (props) => {
 			version: selectedAction.app_version,
 		})
 
-		const [requiresAuthentication, setRequiresAuthentication] = useState(app.authentication.required && app.authentication.parameters !== undefined && app.authentication.parameters !== null)
+		const [requiresAuthentication, setRequiresAuthentication] = useState(app.authentication !== null && app.authentication !== undefined && app.authentication.required && app.authentication.parameters !== undefined && app.authentication.parameters !== null ? true : false)
 		const [workflow, setWorkflow] = useState({
 			name: "",	
 			description: "",	
@@ -2699,7 +2699,7 @@ const AppCreator = (props) => {
 				for (var key in selectedApp.authentication.parameters) {
 					if (authenticationOption.fields[selectedApp.authentication.parameters[key].name].length === 0) {
 						alert.info("Field "+selectedApp.authentication.parameters[key].name+" can't be empty")
-						return
+						return null
 					} 
 				}
 
@@ -2744,6 +2744,7 @@ const AppCreator = (props) => {
 				authenticationOption.label = selectedApp.name+" authentication"
 			}
 
+			console.log("PRE RETURN")
 			return (
 				<div>
 					<DialogContent>
@@ -3032,7 +3033,7 @@ const AppCreator = (props) => {
 						Continue	
 					</Button>
 				</DialogActions>
-				<ParsedActionHandler />
+				{/*<ParsedActionHandler />*/}
 			</FormControl>
 		</Dialog>
 		: null;

@@ -3177,7 +3177,7 @@ func handleSwaggerValidation(body []byte) (shuffle.ParsedOpenApi, error) {
 		//log.Printf("Json err: %s", err)
 		err = yaml.Unmarshal(body, &version)
 		if err != nil {
-			log.Printf("Yaml error (1): %s", err)
+			log.Printf("[WARNING] Yaml error (1): %s", err)
 		} else {
 			//log.Printf("Successfully parsed YAML!")
 		}
@@ -3220,7 +3220,7 @@ func handleSwaggerValidation(body []byte) (shuffle.ParsedOpenApi, error) {
 			//log.Printf("Json error? %s", err)
 			err = yaml.Unmarshal(body, &swagger)
 			if err != nil {
-				log.Printf("Yaml error (2): %s", err)
+				log.Printf("[WARNING] Yaml error (2): %s", err)
 				return shuffle.ParsedOpenApi{}, err
 			} else {
 				//log.Printf("Valid yaml!")
@@ -4181,14 +4181,14 @@ func runInitEs(ctx context.Context) {
 
 	for _, org := range activeOrgs {
 		if !org.CloudSync {
-			log.Printf("Skipping org %s because sync isn't set (1).", org.Id)
+			log.Printf("[WARNING] Skipping org %s because sync isn't set (1).", org.Id)
 			continue
 		}
 
 		//interval := int(org.SyncConfig.Interval)
 		interval := 15
 		if interval == 0 {
-			log.Printf("Skipping org %s because sync isn't set (0).", org.Id)
+			log.Printf("[WARNING] Skipping org %s because sync isn't set (0).", org.Id)
 			continue
 		}
 
@@ -4204,7 +4204,7 @@ func runInitEs(ctx context.Context) {
 		if err != nil {
 			log.Printf("[CRITICAL] Failed to schedule org: %s", err)
 		} else {
-			log.Printf("Started sync on interval %d for org %s", interval, org.Name)
+			log.Printf("[INFO] Started sync on interval %d for org %s (%s)", interval, org.Name, org.Id)
 			scheduledOrgs[org.Id] = jobret
 		}
 	}
@@ -5035,7 +5035,7 @@ func handleStopCloudSync(syncUrl string, org shuffle.Org) (*shuffle.Org, error) 
 		return &org, errors.New(fmt.Sprintf("Couldn't find any sync key to disable org %s", org.Id))
 	}
 
-	log.Printf("Should run cloud sync disable for org %s with URL %s and sync key %s", org.Id, syncUrl, org.SyncConfig.Apikey)
+	log.Printf("[INFO] Should run cloud sync disable for org %s with URL %s and sync key %s", org.Id, syncUrl, org.SyncConfig.Apikey)
 
 	client := &http.Client{}
 	req, err := http.NewRequest(
@@ -5071,7 +5071,7 @@ func handleStopCloudSync(syncUrl string, org shuffle.Org) (*shuffle.Org, error) 
 		return &org, errors.New(responseData.Reason)
 	}
 
-	log.Printf("Everything is success. Should disable org sync for %s", org.Id)
+	log.Printf("[INFO] Everything is success. Should disable org sync for %s", org.Id)
 
 	ctx := context.Background()
 	org.CloudSync = false
@@ -5080,15 +5080,14 @@ func handleStopCloudSync(syncUrl string, org shuffle.Org) (*shuffle.Org, error) 
 
 	err = shuffle.SetOrg(ctx, org, org.Id)
 	if err != nil {
-		newerror := fmt.Sprintf("ERROR: Failed updating even though there was success: %s", err)
+		newerror := fmt.Sprintf("[WARNING] ERROR: Failed updating even though there was success: %s", err)
 		log.Printf(newerror)
 		return &org, errors.New(newerror)
 	}
 
-	var environments []shuffle.Environment
-	q := datastore.NewQuery("Environments").Filter("org_id =", org.Id)
-	_, err = dbclient.GetAll(ctx, q, &environments)
+	environments, err := shuffle.GetEnvironments(ctx, org.Id)
 	if err != nil {
+		log.Printf("[WARNING] Failed getting envs in stop sync: %s", err)
 		return &org, err
 	}
 
@@ -5237,9 +5236,9 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	// Everything below here is to SET UP CLOUD SYNC.
 	// If you want to disable cloud sync, see previous section.
 	if org.CloudSync {
-		log.Printf("Org %s is already syncing. Skip", org.Id)
+		log.Printf("[WARNING] Org %s is already syncing. Skip", org.Id)
 		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Org is already syncing. Nothing to set up."}`)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Your org is already syncing. Nothing to set up."}`)))
 		return
 	}
 
@@ -5332,18 +5331,15 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 		scheduledOrgs[org.Id] = jobret
 	}
 
-	// FIXME: Add this for every feature
+	// ONLY checked added if workflows are allow huh
 	if org.SyncFeatures.Workflows.Active {
 		log.Printf("[INFO] Should activate cloud workflows for org %s!", org.Id)
 
 		// 1. Find environment
 		// 2. If cloud env found, enable it (un-archive)
 		// 3. If it doesn't create it
-
-		//var environments []shuffle.Environment
-		//q := datastore.NewQuery("Environments").Filter("org_id =", org.Id)
-		//_, err = dbclient.GetAll(ctx, q, &environments)
 		environments, err := shuffle.GetEnvironments(ctx, org.Id)
+		log.Printf("GETTING ENVS: %#s", environments)
 		if err == nil {
 
 			// Don't disable, this will be deleted entirely

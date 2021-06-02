@@ -1571,17 +1571,13 @@ const AngularWorkflow = (props) => {
 					}
 				}
 
-				console.log("ID ETC: ", idnumber, paramname)
 				if (idnumber >= 0 && paramname.length > 0) {
 					const exampledata = GetExampleResult(nodedata) 
 					const parsedname = paramname.toLowerCase().trim().replaceAll("_", " ")
-					console.log("EX: ", exampledata)
 
-					console.log("NAME: ", parsedname)
 					const foundresult = GetParamMatch(parsedname, exampledata, "")
-					console.log("RESULT: ", foundresult)
 					if (foundresult.length > 0) {
-						console.log("FOUND: ", paramname, foundresult)
+						console.log("FOUND RESULT: ", paramname, foundresult)
 						newValue = `${newValue}${foundresult}`
 					} 
 
@@ -2100,9 +2096,13 @@ const AngularWorkflow = (props) => {
 			return ""
 		}
 
+		if (exampledata === null) {
+			return ""
+		}
+
 		// Basically just a stupid if-else :)
 		const synonyms = {
-			"id": ["id", "ref", "sourceref", "reference", "sourcereference", "alert id", "case id", "incident id", "service id",],
+			"id": ["id", "ref", "sourceref", "reference", "sourcereference", "alert id", "case id", "incident id", "service id", "sid", "uid", "uuid"],
 			"title": ["title", "name", "message"],
 			"description": ["description", "explanation", "story", "details",],
 			"email": ["mail", "email", "sender", "receiver", "recipient"],
@@ -7535,7 +7535,7 @@ const AngularWorkflow = (props) => {
 
 			/* Copy the text inside the text field */
 			document.execCommand("copy")
-			alert.success("Copied data")
+			//alert.success("Copied data")
 		} else {
 			console.log("Failed to copy from "+elementName+": ", copyText)
 		}
@@ -7544,7 +7544,7 @@ const AngularWorkflow = (props) => {
 	const HandleJsonCopy = (base, copy, base_node_name) => {
 		console.log("COPY: ", copy)
 		var newitem = JSON.parse(base)
-		to_be_copied = "$"+base_node_name
+		to_be_copied = "$"+base_node_name.toLowerCase().replaceAll(" ", "_")
 		for (var key in copy.namespace) {
 			if (copy.namespace[key].includes("Results for")) {
 				continue
@@ -7591,7 +7591,7 @@ const AngularWorkflow = (props) => {
 
 			/* Copy the text inside the text field */
 			document.execCommand("copy");
-			alert.success("Copied "+to_be_copied)
+			//alert.success("Copied "+to_be_copied)
 			console.log("COPYING!")
 		} else {
 			console.log("Couldn't find element ", elementName)
@@ -8097,7 +8097,7 @@ const AngularWorkflow = (props) => {
 					{validate.valid ? <ReactJson 
 							src={validate.result} 
 							theme="solarized" 
-							collapsed={false}
+							collapsed={selectedResult.result.length < 10000 ? false : true}
 							displayDataTypes={false}
 							enableClipboard={(copy) => {
 								handleReactJsonClipboard(copy)
@@ -8131,7 +8131,7 @@ const AngularWorkflow = (props) => {
 
 								/* Copy the text inside the text field */
 								document.execCommand("copy");
-								alert.success("Copied "+to_be_copied)
+								//alert.success("Copied "+to_be_copied)
 							} else {
 								console.log("Failed to copy. copy_element_shuffle is undefined")
 							}

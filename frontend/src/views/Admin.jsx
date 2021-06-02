@@ -154,7 +154,7 @@ const Admin = (props) => {
 					// Need to wait because query in ES is too fast  
 					setTimeout(() => {
 						getAppAuthentication() 
-					}, 1000)
+					}, 500)
 					alert.success("Successfully deleted authentication!")
 				}
 			}),
@@ -228,7 +228,7 @@ const Admin = (props) => {
     .then((responseJson) => {
 			setTimeout(() => {
 				handleGetOrg(org_id) 
-			}, 1000)
+			}, 500)
 		})
 		.catch(error => {
 			alert.error("Err: " + error.toString())
@@ -264,12 +264,13 @@ const Admin = (props) => {
 				console.log("Cloud sync fail?")
 			}
 
-			setTimeout(() => {
-				return response.json()
-			}, 1000)
+			return response.json()
+			//setTimeout(() => {
+			//}, 1000)
 		})
     .then((responseJson) => {
-			if (!responseJson.success && responseJson.reason !== undefined) {
+			console.log("RESP: ", responseJson)
+			if (responseJson.success === false && responseJson.reason !== undefined) {
 				setOrgSyncResponse(responseJson.reason)
 				alert.error("Failed to handle sync: "+responseJson.reason)
 			} else if (!responseJson.success) {
@@ -355,7 +356,7 @@ const Admin = (props) => {
 						setSelectedUserModalOpen(false)
 						setTimeout(() => {
 							getAppAuthentication() 
-						}, 1000)
+						}, 500)
 					}
 				}),
 			)
@@ -513,7 +514,7 @@ const Admin = (props) => {
 						setModalOpen(false)
 						setTimeout(() => {
 							getUsers()
-						}, 1000)
+						}, 500)
 					}
 				}),
 			)
@@ -548,7 +549,7 @@ const Admin = (props) => {
 						setModalOpen(false)
 						setTimeout(() => {
 							getUsers()
-						}, 1000)
+						}, 500)
 					}
 				}),
 			)
@@ -1649,7 +1650,7 @@ const Admin = (props) => {
 							</div>
 							{orgSyncResponse.length > 0 ? 
 								<Typography style={{marginTop: 5, marginBottom: 10}}>
-									Message from Shuffle: <b>{orgSyncResponse}</b>
+									Message from Shuffle Cloud: <b>{orgSyncResponse}</b>
 								</Typography>
 								: null
 							}

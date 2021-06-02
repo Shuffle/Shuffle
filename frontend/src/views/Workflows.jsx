@@ -531,7 +531,7 @@ const Workflows = (props) => {
 						deleteWorkflow(selectedWorkflowId)		
 						setTimeout(() => {
 							getAvailableWorkflows() 
-						}, 1000)
+						}, 500)
 					}
 					setDeleteModalOpen(false)
 				}} color="primary">
@@ -1489,7 +1489,9 @@ const Workflows = (props) => {
 				window.location.pathname = "/workflows/"+responseJson["id"] 
 			} else if (!redirect) {
 				// Update :)		
-				getAvailableWorkflows()
+				setTimeout(() => {
+					getAvailableWorkflows()
+				}, 500)
 				setImportLoading(false)
 			} else { 
 				alert.info("Successfully changed basic info for workflow")
