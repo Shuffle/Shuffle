@@ -1,7 +1,7 @@
 # Installation guide
 Installation of Shuffle is currently only available in docker. Looking for how to update Shuffle? Check the [updating guide](https://shuffler.io/docs/configuration#updating_shuffle)
 
-## Docker
+## Docker - *nix OS
 The Docker setup is done with docker-compose and is a single command to get set up.
 
 **PS: if you're setting up Shuffle on Windows, go to the next step (Windows Docker setup)**
@@ -57,9 +57,9 @@ https://shuffler.io/docs/configuration
 
 ### After installation 
 1. After installation, go to http://localhost:3001/adminsetup (or your servername - https is on port 3443)
-
-2. Now set up your admin account (username & password). Shuffle doesn't have a default username and password.
-3. Check out https://shuffler.io/docs/configuration as it has a lot of useful information to get started
+2. Now set up your admin account (username & password). Shuffle doesn't have a default username and password. 
+3. Sign in with the same Username & Password! Go to /apps and see if you have any apps yet. If not - you may need to [configure proxies](https://shuffler.io/docs/configuration#production_readiness)
+4. Check out https://shuffler.io/docs/configuration as it has a lot of useful information to get started
 
 ![Admin account setup](https://github.com/frikky/Shuffle/blob/master/frontend/src/assets/img/shuffle_adminaccount.png)
 
@@ -87,7 +87,7 @@ npm start
 ## Backend - Golang
 http://localhost:5001 - REST API - requires [>=go1.13](https://golang.org/dl/) 
 ```bash
-export DATASTORE_EMULATOR_HOST=0.0.0.0:8000
+export SHUFFLE_OPENSEARCH_URL="http://localhost:9200"
 cd backend/go-app
 go run *.go
 ```
@@ -107,7 +107,6 @@ PS: This requires some specific environment variables
 cd functions/onprem/orborus
 go run orborus.go
 ```
-
 
 Environments (modify for Windows):
 ```
