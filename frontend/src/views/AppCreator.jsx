@@ -200,8 +200,8 @@ const AppCreator = (props) => {
 	const increaseAmount = 50
 	const actionNonBodyRequest = ["GET", "HEAD", "DELETE", "CONNECT"]
 	const actionBodyRequest = ["POST", "PUT", "PATCH",]
-	//const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth", "Oauth2"]
-	const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth", "JWT"]
+	//const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth", "JWT", "Oauth2"]
+	const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth"]
 	const apikeySelection = ["Header", "Query",]
 
 	const [name, setName] = useState("");
@@ -2058,7 +2058,7 @@ const AppCreator = (props) => {
 			<FormControl style={{backgroundColor: surfaceColor, color: "white",}}>
 				<DialogTitle><div style={{color: "white"}}>New action</div></DialogTitle>
 				<DialogContent>
-					<a target="_blank" href="https://shuffler.io/docs/workflows#conditions" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more about actions</a>
+					<a target="_blank" href="https://shuffler.io/docs/apps#create_openapi_app" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more about actions</a>
 					<div style={{marginTop: "15px"}}/>
 					Name
 					<TextField
@@ -2840,8 +2840,7 @@ const AppCreator = (props) => {
 				: null}
 			</div>
 			<h2>Actions {actionAmount > 0 ? <span>({actionAmount} / {actions.length})</span> : null}</h2>
-			Actions are the tasks performed by an app. Read more about actions and apps
-			<a target="_blank" src="https://shuffler.io/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}> here</a>.
+			Actions are the tasks performed by an app - usually single URL paths for REST API's.
 			<div>
 				{loopActions}
 				<div style={{display: "flex"}}>

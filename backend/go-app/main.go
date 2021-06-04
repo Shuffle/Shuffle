@@ -5686,7 +5686,7 @@ func initHandlers() {
 			log.Printf("[DEBUG] Setting Opensearch proxy to %s", httpProxy)
 			transport.Proxy = http.ProxyURL(url_proxy)
 		} else {
-			log.PrintF("[ERROR] Failed setting proxy for %s", httpProxy)
+			log.Printf("[ERROR] Failed setting proxy for %s", httpProxy)
 		}
 	}
 

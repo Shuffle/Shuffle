@@ -1,8 +1,8 @@
 # Installation guide
 Installation of Shuffle is currently only available in docker. Looking for how to update Shuffle? Check the [updating guide](https://shuffler.io/docs/configuration#updating_shuffle)
 
-## Docker - *nix OS
-The Docker setup is done with docker-compose and is a single command to get set up.
+# Docker - *nix
+The Docker setup is done with docker-compose 
 
 **PS: if you're setting up Shuffle on Windows, go to the next step (Windows Docker setup)**
 

@@ -682,6 +682,60 @@ class AppBase:
         else:
             return returns
 
+    def set_cache(self, key, value):
+        org_id = self.full_execution["workflow"]["execution_org"]["id"]
+        url = "%s/api/v1/orgs/%s/set_cache" % (self.url, org_id)
+        data = {
+            "workflow_id": self.full_execution["workflow"]["id"],
+            "execution_id": self.current_execution_id,
+            "authorization": self.authorization,
+            "org_id": org_id,
+            "key": key,
+            "value": str(value),
+        }
+
+        response = requests.post(url, json=data)
+        try:
+            allvalues = response.json()
+            allvalues["key"] = key
+            allvalues["value"] = str(value)
+            return allvalues
+        except:
+            print("Value couldn't be parsed")
+            #return response.json()
+            return {"success": False}
+
+    def get_cache(self, key):
+        org_id = self.full_execution["workflow"]["execution_org"]["id"]
+        url = "%s/api/v1/orgs/%s/get_cache" % (self.url, org_id)
+        data = {
+            "workflow_id": self.full_execution["workflow"]["id"],
+            "execution_id": self.current_execution_id,
+            "authorization": self.authorization,
+            "org_id": org_id,
+            "key": key,
+        }
+
+        value = requests.post(url, json=data)
+        try:
+            allvalues = value.json()
+            print("VAL1: ", allvalues)
+            allvalues["key"] = key 
+            print("VAL2: ", allvalues)
+
+            try:
+                parsedvalue = json.loads(allvalues["value"])
+                allvalues["value"] = parsedvalue
+            except:
+                print("Parsing of value as JSON failed")
+                return {"success": False}
+
+            return allvalues
+        except:
+            print("Value couldn't be parsed, or json dump of value failed")
+            #return value.json()
+            return {"success": False}
+
     # Sets files in the backend
     def set_files(self, infiles):
         full_execution = self.full_execution
