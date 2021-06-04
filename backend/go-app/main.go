@@ -44,8 +44,6 @@ import (
 		"github.com/frikky/kin-openapi/openapi3"
 	*/
 
-	"github.com/google/go-github/v28/github"
-
 	"github.com/go-git/go-billy/v5"
 	"github.com/go-git/go-billy/v5/memfs"
 	"github.com/go-git/go-git/v5"
@@ -2824,197 +2822,7 @@ type Result struct {
 	List    []string `json:"list"`
 }
 
-var docs_list = Result{List: []string{}}
-
-func getDocList(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	ctx := context.Background()
-	//if item, err := memcache.Get(ctx, "docs_list"); err == memcache.ErrCacheMiss {
-	//	// Not in cache
-	//} else if err != nil {
-	//	// Error with cache
-	//	log.Printf("Error getting item: %v", err)
-	//} else {
-	//	resp.WriteHeader(200)
-	//	resp.Write([]byte(item.Value))
-	//	return
-	//}
-
-	if len(docs_list.List) > 0 {
-		b, err := json.Marshal(docs_list)
-		if err != nil {
-			log.Printf("Failed marshaling result: %s", err)
-			//http.Error(resp, err.Error(), 500)
-		} else {
-			resp.WriteHeader(200)
-			resp.Write(b)
-			return
-		}
-	}
-
-	client := github.NewClient(nil)
-	_, item1, _, err := client.Repositories.GetContents(ctx, "frikky", "shuffle-docs", "docs", nil)
-	if err != nil {
-		log.Printf("Github error: %s", err)
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error listing directory: %s"`, err)))
-		return
-	}
-
-	if len(item1) == 0 {
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "No docs available."}`)))
-		return
-	}
-
-	names := []string{}
-	for _, item := range item1 {
-		if !strings.HasSuffix(*item.Name, "md") {
-			continue
-		}
-
-		names = append(names, (*item.Name)[0:len(*item.Name)-3])
-	}
-
-	log.Println(names)
-
-	var result Result
-	result.Success = true
-	result.Reason = "Success"
-	result.List = names
-	docs_list = result
-
-	b, err := json.Marshal(result)
-	if err != nil {
-		http.Error(resp, err.Error(), 500)
-		return
-	}
-
-	//item := &memcache.Item{
-	//	Key:        "docs_list",
-	//	Value:      b,
-	//	Expiration: time.Minute * 60,
-	//}
-
-	//if err := memcache.Add(ctx, item); err == memcache.ErrNotStored {
-	//	if err := memcache.Set(ctx, item); err != nil {
-	//		log.Printf("Error setting item: %v", err)
-	//	}
-	//} else if err != nil {
-	//	log.Printf("error adding item: %v", err)
-	//} else {
-	//	log.Printf("Set cache for %s", item.Key)
-	//}
-
-	resp.WriteHeader(200)
-	resp.Write(b)
-}
-
 // r.HandleFunc("/api/v1/docs/{key}", getDocs).Methods("GET", "OPTIONS")
-var alldocs = map[string][]byte{}
-
-func getDocs(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	location := strings.Split(request.URL.String(), "/")
-	if len(location) != 5 {
-		resp.WriteHeader(404)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad path. Use e.g. /api/v1/docs/workflows.md"}`)))
-		return
-	}
-
-	//ctx := context.Background()
-	docPath := fmt.Sprintf("https://raw.githubusercontent.com/shaffuru/shuffle-docs/master/docs/%s.md", location[4])
-	//location[4]
-	//var, ok := alldocs["asd"]
-	key, ok := alldocs[fmt.Sprintf("%s", location[4])]
-	// Custom cache for github issues lol
-	if ok {
-		resp.WriteHeader(200)
-		resp.Write(key)
-		return
-	}
-
-	client := &http.Client{}
-	req, err := http.NewRequest(
-		"GET",
-		docPath,
-		nil,
-	)
-
-	if err != nil {
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad path. Use e.g. /api/v1/docs/workflows.md"}`)))
-		resp.WriteHeader(404)
-		//setBadMemcache(ctx, docPath)
-		return
-	}
-
-	newresp, err := client.Do(req)
-	if err != nil {
-		resp.WriteHeader(404)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad path. Use e.g. /api/v1/docs/workflows.md"}`)))
-		//setBadMemcache(ctx, docPath)
-		return
-	}
-
-	body, err := ioutil.ReadAll(newresp.Body)
-	if err != nil {
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't parse data"}`)))
-		//setBadMemcache(ctx, docPath)
-		return
-	}
-
-	type Result struct {
-		Success bool   `json:"success"`
-		Reason  string `json:"reason"`
-	}
-
-	var result Result
-	result.Success = true
-
-	//applog.Infof(ctx, string(body))
-	//applog.Infof(ctx, "Url: %s", docPath)
-	//applog.Infof(ctx, "Status: %d", newresp.StatusCode)
-	//applog.Infof(ctx, "GOT BODY OF LENGTH %d", len(string(body)))
-
-	result.Reason = string(body)
-	b, err := json.Marshal(result)
-	if err != nil {
-		http.Error(resp, err.Error(), 500)
-		//setBadMemcache(ctx, docPath)
-		return
-	}
-
-	alldocs[location[4]] = b
-
-	// Add to cache if it doesn't exist
-	//item := &memcache.Item{
-	//	Key:        docPath,
-	//	Value:      b,
-	//	Expiration: time.Minute * 60,
-	//}
-
-	//if err := memcache.Add(ctx, item); err == memcache.ErrNotStored {
-	//	if err := memcache.Set(ctx, item); err != nil {
-	//		log.Printf("Error setting item: %v", err)
-	//	}
-	//} else if err != nil {
-	//	log.Printf("error adding item: %v", err)
-	//} else {
-	//	log.Printf("Set cache for %s", item.Key)
-	//}
-
-	resp.WriteHeader(200)
-	resp.Write(b)
-}
 
 func getOpenapi(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
@@ -5735,7 +5543,7 @@ func initHandlers() {
 	}
 
 	for {
-		_, err = shuffle.RunInit(*dbclient, *es, storage.Client{}, gceProject, "onprem", true, "elasticsearch")
+		_, err = shuffle.RunInit(*dbclient, *es, storage.Client{}, gceProject, "onprem", true, elasticConfig)
 		if err != nil {
 			log.Printf("[DEBUG] Error in initial database connection. Retrying in 5 seconds. %s", err)
 			time.Sleep(5 * time.Second)
@@ -5786,8 +5594,8 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/getenvironments", shuffle.HandleGetEnvironments).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/setenvironments", shuffle.HandleSetEnvironments).Methods("PUT", "OPTIONS")
 
-	r.HandleFunc("/api/v1/docs", getDocList).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/docs/{key}", getDocs).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/docs", shuffle.GetDocList).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/docs/{key}", shuffle.GetDocs).Methods("GET", "OPTIONS")
 
 	// Queuebuilder and Workflow streams. First is to update a stream, second to get a stream
 	// Changed from workflows/streams to streams, as appengine was messing up

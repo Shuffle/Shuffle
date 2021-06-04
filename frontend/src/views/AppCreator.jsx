@@ -2058,7 +2058,7 @@ const AppCreator = (props) => {
 			<FormControl style={{backgroundColor: surfaceColor, color: "white",}}>
 				<DialogTitle><div style={{color: "white"}}>New action</div></DialogTitle>
 				<DialogContent>
-					<a target="_blank" href="https://shuffler.io/docs/apps#create_openapi_app" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more about actions</a>
+					<a target="_blank" href="https://shuffler.io/docs/app_creation#actions" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more about actions</a>
 					<div style={{marginTop: "15px"}}/>
 					Name
 					<TextField
@@ -2748,7 +2748,7 @@ const AppCreator = (props) => {
 			return (
 				<div>
 					<DialogContent>
-						<a target="_blank" rel="norefferer" href="https://shuffler.io/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is this?</a><div/>
+						<a target="_blank" rel="norefferer" href="https://shuffler.io/docs/app_creation#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is this?</a><div/>
 						These are required fields for authenticating with {selectedApp.name} 
 						<div style={{marginTop: 15}}/>
 						<b>Name - what is this used for?</b>
@@ -2871,7 +2871,7 @@ const AppCreator = (props) => {
 		<div style={{color: "white"}}>
 			<h2>Test</h2>
 			Test an action to see whether it performs in an expected way. 
-			<a target="_blank" href="https://shuffler.io/docs/apps#testing" style={{textDecoration: "none", color: "#f85a3e"}}>&nbsp;TBD: Click here to learn more about testing</a>.
+			<a target="_blank" href="https://shuffler.io/docs/app_creation#testing" style={{textDecoration: "none", color: "#f85a3e"}}>&nbsp;TBD: Click here to learn more about testing</a>.
 			<div>
 				Test :)
 			</div>
@@ -3055,7 +3055,7 @@ const AppCreator = (props) => {
 				<input hidden type="file" ref={(ref) => upload = ref} onChange={editHeaderImage} />
 				<Paper style={boxStyle}>
 					<h2 style={{marginBottom: "10px", color: "white"}}>General information</h2>
-					<a target="_blank" href="https://shuffler.io/docs/apps#create_openapi_app" style={{textDecoration: "none", color: "#f85a3e"}}>Click here to learn more about app creation</a>
+					<a target="_blank" href="https://shuffler.io/docs/app_creation#app-creator-instructions" style={{textDecoration: "none", color: "#f85a3e"}}>Click here to learn more about app creation</a>
 					<div style={{color: "white", flex: "1", display: "flex", flexDirection: "row"}}>
 					 	<Tooltip title="Click to edit the app's image" placement="bottom">
 							<div style={{flex: "1", margin: 10, border: "1px solid #f85a3e", cursor: "pointer", backgroundColor: inputColor, maxWidth: 174, maxHeight: 174}} onClick={() => {
