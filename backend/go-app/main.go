@@ -5675,9 +5675,24 @@ func initHandlers() {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.MaxIdleConnsPerHost = 1000
 	transport.ResponseHeaderTimeout = time.Second * 10
+	transport.Proxy = nil
+
+	if len(os.Getenv("SHUFFLE_OPENSEARCH_PROXY")) > 0 {
+		httpProxy := os.Getenv("SHUFFLE_OPENSEARCH_PROXY")
+
+		url_i := url.URL{}
+		url_proxy, err := url_i.Parse(httpProxy)
+		if err == nil {
+			log.Printf("[DEBUG] Setting Opensearch proxy to %s", httpProxy)
+			transport.Proxy = http.ProxyURL(url_proxy)
+		} else {
+			log.PrintF("[ERROR] Failed setting proxy for %s", httpProxy)
+		}
+	}
 
 	skipSSLVerify := false
 	if strings.ToLower(os.Getenv("SHUFFLE_OPENSEARCH_SKIPSSL_VERIFY")) == "true" {
+		log.Printf("[DEBUG] SKIPPING SSL verification with Opensearch")
 		skipSSLVerify = true
 	}
 

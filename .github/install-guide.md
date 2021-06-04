@@ -6,11 +6,21 @@ The Docker setup is done with docker-compose and is a single command to get set 
 
 **PS: if you're setting up Shuffle on Windows, go to the next step (Windows Docker setup)**
 
-1. Make sure you have Docker and [docker-compose](https://docs.docker.com/compose/install/) installed.
-2. Run docker-compose.
+1. Make sure you have [Docker](https://docs.docker.com/get-docker/) and [docker-compose](https://docs.docker.com/compose/install/) installed.
+2. Download Shuffle
 ```
 git clone https://github.com/frikky/Shuffle
 cd Shuffle
+```
+
+3. Fix prerequisites for the Opensearch database (Elasticsearch): 
+```
+sudo sysctl -w vm.max_map_count=262144 			# https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html
+sudo chown 1000:1000 -R shuffle-database 		# Requires for Opensearch 
+```
+
+4. Run docker-compose.
+```
 docker-compose up -d
 ```
 
@@ -26,7 +36,18 @@ This step is for setting up with Docker on windows from scratch.
 ```
 OUTER_HOSTNAME=YOUR.IP.HERE
 ```
-5. Run docker-compose
+
+5. Configure max memory (WSL) by opening a new CMD/Powershell window. Required for Elasticsearch
+```
+wsl -d docker-desktop
+sysctl -w vm.max_map_count=262144
+echo "vm.max_map_count = 262144" > /etc/sysctl.d/99-docker-desktop.conf
+echo -e "\nvm.max_map_count = 262144\n" >> /etc/sysctl.d/00-alpine.conf
+
+# https://stackoverflow.com/questions/42111566/elasticsearch-in-windows-docker-image-vm-max-map-count
+```
+
+6. Run docker-compose
 ```
 docker-compose up -d
 ```
@@ -35,7 +56,7 @@ docker-compose up -d
 https://shuffler.io/docs/configuration
 
 ### After installation 
-1. After installation, go to http://localhost:3001/adminsetup (or your servername)
+1. After installation, go to http://localhost:3001/adminsetup (or your servername - https is on port 3443)
 
 2. Now set up your admin account (username & password). Shuffle doesn't have a default username and password.
 3. Check out https://shuffler.io/docs/configuration as it has a lot of useful information to get started
@@ -44,43 +65,10 @@ https://shuffler.io/docs/configuration
 
 ### Useful info
 * Check out [getting started](https://shuffler.io/docs/getting_started)
+* The default state of Shuffle is NOT scalable. See [production setup](https://shuffler.io/docs/configuration#production_readiness) for more info
 * The server is available on http://localhost:3001 (or your servername)
 * Further configurations can be done in docker-compose.yml and .env.
-* Default database location is /etc/shuffle
-
-### Execution problems
-If you have problems with your first execution (hello world), you might need to set the correct Docker API version. Here's how:
-
-1. Find your API version by running "docker version"
-```
-$ docker version
-
-Client:
- Version:      17.09.1-ce
- API version:  1.32 # <-- this one
- Go version:   go1.8.3
- Git commit:   19e2cf6
- Built:        Thu Dec  7 22:24:16 2017
- OS/Arch:      linux/amd64
-
-Server:
- Version:      17.09.1-ce
- API version:  1.32 (minimum version 1.12)
- Go version:   go1.8.3
- Git commit:   19e2cf6
- Built:        Thu Dec  7 22:22:56 2017
- OS/Arch:      linux/amd64
- Experimental: false
-```
-
-2. Open docker-compose.yml and change the line with "DOCKER_API_VERSION" to your version.
-3. Restart docker-compose
-```
-docker-compose down
-docker-compose up
-```
-
-Related issue: #47
+* Default database location is in the same folder: ./shuffle-database
 
 # Local development installation 
 Local development is pretty straight forward with **ReactJS** and **Golang**. This part is intended to help you run the code for development purposes.

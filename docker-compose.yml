@@ -34,6 +34,8 @@ services:
     environment:
       - SHUFFLE_APP_HOTLOAD_FOLDER=/shuffle-apps
       - SHUFFLE_FILE_LOCATION=/shuffle-files
+      - HTTP_PROXY=${SHUFFLE_HTTP_PROXY}
+      - HTTPS_PROXY=${SHUFFLE_HTTPS_PROXY}
     restart: unless-stopped
     depends_on:
       - opensearch 
@@ -70,14 +72,10 @@ services:
     hostname: shuffle-opensearch
     container_name: shuffle-opensearch
     environment:
-      - cluster.name=shuffle-cluster
-      - node.name=shuffle-opensearch
-      - discovery.seed_hosts=shuffle-opensearch
-      - cluster.initial_master_nodes=shuffle-opensearch
       - bootstrap.memory_lock=true 
       - "OPENSEARCH_JAVA_OPTS=-Xms1024m -Xmx1024m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
-      - cluster.routing.allocation.disk.threshold_enabled=false
       - opendistro_security.disabled=true
+      - discovery.seed_hosts=shuffle-opensearch
     ulimits:
       memlock:
         soft: -1
