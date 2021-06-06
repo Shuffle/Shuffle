@@ -758,7 +758,7 @@ const ParsedAction = (props) => {
 								}}
 							/>
 
-						console.log("FIELD VALUE: ", data.value)
+						//console.log("FIELD VALUE: ", data.value)
             //const regexp = new RegExp("\W+\.", "g")
 						//let match
 						//while ((match = regexp.exec(data.value)) !== null) {

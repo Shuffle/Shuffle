@@ -88,7 +88,7 @@ export const GetIconInfo = (action) => {
 		{"key": "cache_get", "values": ["get_cache"]},
 		{"key": "filter", "values": ["filter"]},
 		{"key": "merge", "values": ["join", "merge"]},
-		{"key": "search", "values": ["search", "find", "locate"]},
+		{"key": "search", "values": ["search", "find", "locate", "index",]},
 		{"key": "list", "values": ["list", "head", "options"]},
 		{"key": "download", "values": ["get", "download", "return", "hello_world", "curl",]},
 		{"key": "add", "values": ["add"]},

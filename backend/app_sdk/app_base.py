@@ -2265,7 +2265,7 @@ class AppBase:
                             print("[INFO] Running normal execution\n") 
 
                             #newres = await func(**params)
-                            print("PARAMS: %s" % params)
+                            #print("PARAMS: %s" % params)
                             while True:
                                 try:
                                     newres = await func(**params)

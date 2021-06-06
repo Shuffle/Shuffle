@@ -536,7 +536,7 @@ const AngularWorkflow = (props) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for ABORT EXECUTION :O!")
 			} else {
-				alert.success("Execution aborted")
+				//alert.success("Execution aborted")
 			}
 
 			return response.json()
@@ -1108,10 +1108,10 @@ const AngularWorkflow = (props) => {
 
 	// This can be used to only show prioritzed ones later
 	// Right now, it can prioritize authenticated ones
+	//"Testing",
 	const internalIds = [
 		"Shuffle Tools",
-		"Testing",
-		"Http",
+		"http",
 	]
 
 	const getAppAuthentication = (reset) => {
@@ -4231,7 +4231,22 @@ const AngularWorkflow = (props) => {
 
 		const runSearch = (value) => {
 			if (value.length > 0) {
-				const newApps = allApps.filter(app => (app.name.toLowerCase().includes(value.trim().toLowerCase() || app.description.toLowerCase().includes(value.trim().toLowerCase()))) && !(!app.activated && app.generated))
+				var newApps = allApps.filter(app => (app.name.toLowerCase().includes(value.trim().toLowerCase() || app.description.toLowerCase().includes(value.trim().toLowerCase()))) && !(!app.activated && app.generated))
+
+				// Extend search
+				if (newApps.length === 0) {
+					const searchvalue = value.trim().toLowerCase()
+					newApps = allApps.filter(app => {
+						for (var key in app.actions) {
+							const inneraction = app.actions[key]
+							if (inneraction.name.toLowerCase().includes(searchvalue)) {
+								return true
+							}
+						}
+
+						return false
+					})
+				}
 
 				//setFilteredApps(responseJson.filter(app => !internalIds.includes(app.name) && !(!app.activated && app.generated)))
 				//console.log("FOUND: ", newApps)
@@ -7874,11 +7889,11 @@ const AngularWorkflow = (props) => {
 							}
 
 							if (data.action.app_name === "Shuffle Tools") {
-								console.log("APP (TOOLS): ", data.action)
+								//console.log("APP (TOOLS): ", data.action)
 
 								const nodedata = cy.getElementById(data.action.id).data()
-								if (nodedata.fillstyle === "linear-gradient") {
-									console.log("LINEAR :D")
+								if (nodedata !== undefined && nodedata !== null && nodedata.fillstyle === "linear-gradient") {
+									//console.log("LINEAR :D")
 									var imgStyle = {
 										marginRight: 20, 
 										width: imgsize, 
@@ -7888,7 +7903,7 @@ const AngularWorkflow = (props) => {
 										background: `linear-gradient(to right, ${nodedata.fillGradient})`
 									}
 
-									console.log("STYLE: ", imgStyle)
+									//console.log("STYLE: ", imgStyle)
 
 									actionimg = <img alt={nodedata.label} src={nodedata.large_image} style={imgStyle} />
 								}
@@ -8595,7 +8610,7 @@ const AngularWorkflow = (props) => {
 					{/*selectedApp.link.length > 0 ? <div style={{marginTop: 15}}><EndpointData /></div> : null*/}
 					<div style={{}}/>
 						{selectedApp.authentication.parameters.map((data, index) => { 
-							console.log("AUTH: ", data)
+							//console.log("AUTH: ", data)
 
 							return (
 								<div key={index} style={{marginTop: 10}}>
