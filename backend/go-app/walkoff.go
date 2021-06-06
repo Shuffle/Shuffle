@@ -691,7 +691,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		executionRequests.Data = []shuffle.ExecutionRequest{}
 	} else {
 		log.Printf("[INFO] Executionrequests (%s): %d", id, len(executionRequests.Data))
-		log.Printf("IDS: %#v", executionRequests.Data[0].ExecutionId)
+		//log.Printf("IDS: %#v", executionRequests.Data[0].ExecutionId)
 	}
 
 	newjson, err := json.Marshal(executionRequests)
@@ -768,6 +768,7 @@ func validateNewWorkerExecution(body []byte) error {
 		log.Printf("[WARNING] Failed execution unmarshaling: %s", err)
 		return err
 	}
+	//log.Printf("\n\nGOT EXEC WITH RESULT %#v (%d)\n\n", execution.Status, len(execution.Results))
 
 	baseExecution, err := shuffle.GetWorkflowExecution(ctx, execution.ExecutionId)
 	if err != nil {
@@ -788,9 +789,9 @@ func validateNewWorkerExecution(body []byte) error {
 		return errors.New(fmt.Sprintf("Bad length of trigger: %d (probably normal app)", len(execution.Workflow.Triggers)))
 	}
 
-	if baseExecution.Status != "WAITING" && baseExecution.Status != "EXECUTING" {
-		return errors.New(fmt.Sprintf("Workflow is already finished or failed. Can't update"))
-	}
+	//if baseExecution.Status != "WAITING" && baseExecution.Status != "EXECUTING" {
+	//	return errors.New(fmt.Sprintf("Workflow is already finished or failed. Can't update"))
+	//}
 
 	if execution.Status == "EXECUTING" {
 		//log.Printf("[INFO] Inside executing.")
@@ -818,7 +819,7 @@ func validateNewWorkerExecution(body []byte) error {
 	//log.Printf("\n\nSHOULD SET BACKEND DATA FOR EXEC \n\n")
 	err = shuffle.SetWorkflowExecution(ctx, execution, true)
 	if err == nil {
-		log.Printf("[INFO] Set workflowexecution based on new worker (>0.8.53) for execution %s. Actions: %d, Triggers: %d, Results: %d, Status: %s, Result: %s", execution.ExecutionId, len(execution.Workflow.Actions), len(execution.Workflow.Triggers), len(execution.Results), execution.Status, execution.Result)
+		log.Printf("[INFO] Set workflowexecution based on new worker (>0.8.53) for execution %s. Actions: %d, Triggers: %d, Results: %d, Status: %s", execution.ExecutionId, len(execution.Workflow.Actions), len(execution.Workflow.Triggers), len(execution.Results), execution.Status) //, execution.Result)
 		//log.Printf("[INFO] Successfully set the execution to wait.")
 	} else {
 		log.Printf("[WARNING] Failed to set the execution to wait.")

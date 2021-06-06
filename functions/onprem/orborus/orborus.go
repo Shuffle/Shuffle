@@ -254,7 +254,7 @@ func initializeImages() {
 		log.Printf("[WARNING] SHUFFLE_APP_SDK_VERSION not defined. Defaulting to %s", appSdkVersion)
 	}
 	if workerVersion == "" {
-		workerVersion = "nighty"
+		workerVersion = "nightly"
 		log.Printf("[WARNING] SHUFFLE_WORKER_VERSION not defined. Defaulting to %s", workerVersion)
 	}
 
@@ -438,7 +438,6 @@ func main() {
 		//log.Printf("Prerequest")
 		//go getStats()
 		newresp, err := client.Do(req)
-		executionCount := getRunningWorkers(ctx, workerTimeout)
 		//log.Printf("Postrequest")
 		if err != nil {
 			log.Printf("[WARNING] Failed making request: %s", err)
@@ -501,7 +500,8 @@ func main() {
 			continue
 		}
 
-		// Anything below here verifies concurrency virification
+		// Anything below here verifies concurrency
+		executionCount := getRunningWorkers(ctx, workerTimeout)
 		if executionCount >= maxConcurrency {
 			if zombiecounter*sleepTime > workerTimeout {
 				go zombiecheck(ctx, workerTimeout)
@@ -641,12 +641,17 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
 		All: true,
 	})
-	//Filters: filters.Args{
-	//	map[string][]string{"ancestor": {"<imagename>:<version>"}},
-	//},
 
+	// Automatically updates the version
 	if err != nil {
 		log.Printf("[ERROR] Error getting containers: %s", err)
+
+		newVersionSplit := strings.Split(fmt.Sprintf("%s", err), "version is")
+		if len(newVersionSplit) > 1 {
+			dockerApiVersion = strings.TrimSpace(newVersionSplit[1])
+			log.Printf("[INFO] Changed the API version to default to %s", dockerApiVersion)
+		}
+
 		return maxConcurrency
 	}
 

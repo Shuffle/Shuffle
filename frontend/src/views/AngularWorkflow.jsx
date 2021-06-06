@@ -11,7 +11,7 @@ import NestedMenuItem from "material-ui-nested-menu-item";
 
 
 import {TextField, Drawer, Button, Paper, Grid, Tabs, InputAdornment, Tab, ButtonBase, Tooltip, Select, MenuItem, Divider, Dialog, Modal, DialogActions, DialogTitle, InputLabel, DialogContent, FormControl, IconButton, Menu, Input, FormGroup, FormControlLabel, Typography, Checkbox, Breadcrumbs, CircularProgress, Switch, Fade} from '@material-ui/core';
-import {Undo as UndoIcon, FileCopy as FileCopyIcon, GetApp as GetAppIcon, Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
+import {OpenInNew as OpenInNewIcon,Undo as UndoIcon, FileCopy as FileCopyIcon, GetApp as GetAppIcon, Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
 
 import * as cytoscape from 'cytoscape';
 import * as edgehandles from 'cytoscape-edgehandles';
@@ -7864,7 +7864,8 @@ const AngularWorkflow = (props) => {
 
 							if (triggers.length > 2) {
 								if (data.action.app_name === "shuffle-subflow") {
-									actionimg = <img alt={"Shuffle Subflow"} src={triggers[1].large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`, borderRadius: executionData.start === data.action.id ? 25 : 5}} />
+									const parsedImage = triggers[1].large_image
+									actionimg = <img alt={"Shuffle Subflow"} src={parsedImage} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`, borderRadius: executionData.start === data.action.id ? 25 : 5}} />
 								}	
 
 								if (data.action.app_name === "User Input") {
@@ -7872,8 +7873,40 @@ const AngularWorkflow = (props) => {
 								}	
 							}
 
+							if (data.action.app_name === "Shuffle Tools") {
+								console.log("APP (TOOLS): ", data.action)
+
+								const nodedata = cy.getElementById(data.action.id).data()
+								if (nodedata.fillstyle === "linear-gradient") {
+									console.log("LINEAR :D")
+									var imgStyle = {
+										marginRight: 20, 
+										width: imgsize, 
+										height: imgsize, 
+										border: `2px solid ${statusColor}`, 
+										borderRadius: executionData.start === data.action.id ? 25 : 5,
+										background: `linear-gradient(to right, ${nodedata.fillGradient})`
+									}
+
+									console.log("STYLE: ", imgStyle)
+
+									actionimg = <img alt={nodedata.label} src={nodedata.large_image} style={imgStyle} />
+								}
+							}	
+
+						
 							if (validate.valid && typeof(validate.result) === "string") {
 								validate.result = JSON.parse(validate.result)
+							}  
+							
+							if (validate.valid && typeof(validate.result) === "object") {
+								if (validate.result.result !== undefined && validate.result.result !== null) {
+									try {
+										validate.result.result = JSON.parse(validate.result.result)
+									} catch (e) {
+										console.log("ERROR PARSING: ", e)
+									}
+								}
 							}
 
 							return (
@@ -7888,24 +7921,46 @@ const AngularWorkflow = (props) => {
 										currentnode.removeClass('shuffle-hover-highlight')
 									}
 								}}>
-									<div style={{display: "flex", marginBottom: 15,}}>
-										<IconButton style={{marginTop: "auto", marginBottom: "auto", height: 30, paddingLeft: 0, width: 30}} onClick={() => {
-											setSelectedResult(data)
-											setCodeModalOpen(true)
-										}}>
-											<Tooltip color="primary" title="Expand result window" placement="top">
-												<ArrowLeftIcon style={{color: "white"}}/>
-											</Tooltip>
-										</IconButton>
-										{actionimg}
-										<div>
-											<div style={{fontSize: 24, marginTop: "auto", marginBottom: "auto"}}><b>{data.action.label}</b></div>
-											<div style={{fontSize: 14}}>
-												<Typography variant="body2" color="textSecondary">
-													{data.action.name}
-												</Typography>
+									<div style={{display: "flex", }}>
+										<div style={{display: "flex", marginBottom: 15,}}>
+											<IconButton style={{marginTop: "auto", marginBottom: "auto", height: 30, paddingLeft: 0, width: 30}} onClick={() => {
+												setSelectedResult(data)
+												setCodeModalOpen(true)
+											}}>
+												<Tooltip color="primary" title="Expand result window" placement="top">
+													<ArrowLeftIcon style={{color: "white"}}/>
+												</Tooltip>
+											</IconButton>
+											{actionimg}
+											<div>
+												<div style={{fontSize: 24, marginTop: "auto", marginBottom: "auto"}}><b>{data.action.label}</b></div>
+												<div style={{fontSize: 14}}>
+													<Typography variant="body2" color="textSecondary">
+														{data.action.name}
+													</Typography>
+												</div>
 											</div>
 										</div>
+										{data.action.app_name === "shuffle-subflow" && validate.result.success !== undefined && validate.result.success === true ?
+											<span style={{flex: 10, float: "right", textAlign: "right",}}>
+												{validate.valid && data.action.parameters !== undefined && data.action.parameters !== null ? 
+													data.action.parameters[0].value === props.match.params.key ?
+														<span style={{cursor: "pointer", color: "#f85a3e"}} onClick={(event) => {
+															getWorkflowExecution(props.match.params.key, validate.result.execution_id) 
+														}}>
+														See sub-execution
+														</span>
+													:
+													<a rel="norefferer" href={`/workflows/${data.action.parameters[0].value}?view=executions&execution_id=${validate.result.execution_id}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}} onClick={(event) => {
+													}}>
+													<OpenInNewIcon />
+													</a>
+												: 
+													"TBD: Load subexecution result for"
+												}
+											</span>
+											: null
+										}
 									</div>
 									<div style={{marginBottom: 5, display: "flex",}}>
 										<Typography variant="body1">
@@ -7930,24 +7985,6 @@ const AngularWorkflow = (props) => {
 											}}
 											name={"Results for "+data.action.label}
 										/>
-										{data.action.app_name === "shuffle-subflow" && validate.result.success !== undefined && validate.result.success === true ?
-											<span>
-												{validate.valid && data.action.parameters !== undefined && data.action.parameters !== null ? 
-													data.action.parameters[0].value === props.match.params.key ?
-														<span style={{cursor: "pointer", color: "#f85a3e"}} onClick={(event) => {
-															getWorkflowExecution(props.match.params.key, validate.result.execution_id) 
-														}}>
-														See sub-execution
-														</span>
-													:
-													<a rel="norefferer" href={`/workflows/${data.action.parameters[0].value}?view=executions&execution_id=${validate.result.execution_id}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}} onClick={(event) => {
-													}}>See subflow execution</a>
-												: 
-													"TBD: Load subexecution result for"
-												}
-											</span>
-											: null
-										}
 										</span>
 									: 
 									<div style={{maxHeight: 250, overflowX: "hidden", overflowY: "auto", whiteSpace: "pre-wrap", }}>

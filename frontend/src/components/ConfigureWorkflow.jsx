@@ -99,7 +99,7 @@ const Workflow = (props) => {
 					var filled = true 
 					for (var key in action.parameters) {
 						if (action.parameters[key].configuration) {
-							console.log("Found config: ", action.parameters[key])
+							//console.log("Found config: ", action.parameters[key])
 							if (action.parameters[key].value === null || action.parameters[key].value.length === 0) {
 								filled = false
 								break
