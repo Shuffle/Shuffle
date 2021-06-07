@@ -12,10 +12,12 @@ require (
 	github.com/docker/docker v20.10.5+incompatible
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
-	github.com/frikky/shuffle-shared v0.0.55
+	github.com/elastic/go-elasticsearch/v8 v8.0.0-20210531084204-f01628963386 // indirect
+	github.com/frikky/shuffle-shared v0.0.56
 	github.com/fsouza/go-dockerclient v1.7.2
 	github.com/go-git/go-billy/v5 v5.3.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/google/go-github/v28 v28.1.1 // indirect
 	github.com/gorilla/mux v1.8.0
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect

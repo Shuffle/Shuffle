@@ -7567,6 +7567,10 @@ const AngularWorkflow = (props) => {
 	}
 
 	const HandleJsonCopy = (base, copy, base_node_name) => {
+		if (typeof(copy.name) === "string") {
+			copy.name = copy.name.replaceAll(" ", "_")
+		}
+
 		console.log("COPY: ", copy)
 		var newitem = JSON.parse(base)
 		to_be_copied = "$"+base_node_name.toLowerCase().replaceAll(" ", "_")
@@ -7919,7 +7923,7 @@ const AngularWorkflow = (props) => {
 									try {
 										validate.result.result = JSON.parse(validate.result.result)
 									} catch (e) {
-										console.log("ERROR PARSING: ", e)
+										//console.log("ERROR PARSING: ", e)
 									}
 								}
 							}

@@ -1220,6 +1220,9 @@ class AppBase:
 
                 # Loops over split values
                 for value in parsersplit:
+                    #if " " in value:
+                    #    value = value.replace(" ", "_", -1)
+
                     #print("VALUE: %s\n" % value)
                     actualitem = re.findall(match, value, re.MULTILINE)
                     if value == "#":
@@ -1287,21 +1290,43 @@ class AppBase:
                         if len(value) == 0:
                             return basejson, False
         
-                        if isinstance(basejson, list): 
-                            print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (list): %s" % value)
-                            return basejson, False
-                        elif isinstance(basejson[value], str):
-                            print(f"[INFO] LOADING STRING '%s' AS JSON" % basejson[value]) 
-                            try:
-                                basejson = json.loads(basejson[value])
-                                print("BASEJSON: %s" % basejson)
-                            except json.decoder.JSONDecodeError as e:
-                                print("RETURNING BECAUSE '%s' IS A NORMAL STRING" % basejson[value])
-                                return basejson[value], False
-                        else:
-                            basejson = basejson[value]
+                        try:
+                            if isinstance(basejson, list): 
+                                print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (list): %s" % value)
+                                return basejson, False
+                            elif isinstance(basejson[value], str):
+                                print(f"[INFO] LOADING STRING '%s' AS JSON" % basejson[value]) 
+                                try:
+                                    basejson = json.loads(basejson[value])
+                                    print("BASEJSON: %s" % basejson)
+                                except json.decoder.JSONDecodeError as e:
+                                    print("RETURNING BECAUSE '%s' IS A NORMAL STRING" % basejson[value])
+                                    return basejson[value], False
+                            else:
+                                basejson = basejson[value]
+                        except KeyError as e:
+                            print("[WARNING] Running secondary value check with replacement of underscore in %s: %s" % (value, e))
+                            if "_" in value:
+                                value = value.replace("_", " ", -1)
+                            elif " " in value:
+                                value = value.replace(" ", "_", -1)
 
-                    print("Parsed BASEJSON: %s" % basejson)
+                            if isinstance(basejson, list): 
+                                print("[WARNING] VALUE IN ISINSTANCE IS NOT TO BE USED (list): %s" % value)
+                                return basejson, False
+                            elif isinstance(basejson[value], str):
+                                print(f"[INFO] LOADING STRING '%s' AS JSON" % basejson[value]) 
+                                try:
+                                    basejson = json.loads(basejson[value])
+                                    print("BASEJSON: %s" % basejson)
+                                except json.decoder.JSONDecodeError as e:
+                                    print("RETURNING BECAUSE '%s' IS A NORMAL STRING" % basejson[value])
+                                    return basejson[value], False
+                            else:
+                                basejson = basejson[value]
+                            
+
+                    #print("Parsed BASEJSON: %s" % basejson)
                     outercnt += 1
         
             except KeyError as e:
