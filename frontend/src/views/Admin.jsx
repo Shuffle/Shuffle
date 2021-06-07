@@ -154,7 +154,7 @@ const Admin = (props) => {
 					// Need to wait because query in ES is too fast  
 					setTimeout(() => {
 						getAppAuthentication() 
-					}, 500)
+					}, 1000)
 					alert.success("Successfully deleted authentication!")
 				}
 			}),
@@ -228,7 +228,7 @@ const Admin = (props) => {
     .then((responseJson) => {
 			setTimeout(() => {
 				handleGetOrg(org_id) 
-			}, 500)
+			}, 1000)
 		})
 		.catch(error => {
 			alert.error("Err: " + error.toString())
@@ -356,7 +356,7 @@ const Admin = (props) => {
 						setSelectedUserModalOpen(false)
 						setTimeout(() => {
 							getAppAuthentication() 
-						}, 500)
+						}, 1000)
 					}
 				}),
 			)
@@ -514,7 +514,7 @@ const Admin = (props) => {
 						setModalOpen(false)
 						setTimeout(() => {
 							getUsers()
-						}, 500)
+						}, 1000)
 					}
 				}),
 			)
@@ -549,7 +549,7 @@ const Admin = (props) => {
 						setModalOpen(false)
 						setTimeout(() => {
 							getUsers()
-						}, 500)
+						}, 1000)
 					}
 				}),
 			)

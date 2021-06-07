@@ -531,7 +531,7 @@ const Workflows = (props) => {
 						deleteWorkflow(selectedWorkflowId)		
 						setTimeout(() => {
 							getAvailableWorkflows() 
-						}, 500)
+						}, 1000)
 					}
 					setDeleteModalOpen(false)
 				}} color="primary">
@@ -1491,7 +1491,7 @@ const Workflows = (props) => {
 				// Update :)		
 				setTimeout(() => {
 					getAvailableWorkflows()
-				}, 500)
+				}, 1000)
 				setImportLoading(false)
 			} else { 
 				alert.info("Successfully changed basic info for workflow")

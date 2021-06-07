@@ -2106,7 +2106,11 @@ func executeCloudAction(action shuffle.CloudSyncJob, apikey string) error {
 		return err
 	}
 
-	client := &http.Client{}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	client := &http.Client{
+		Transport: transport,
+	}
+
 	syncUrl := fmt.Sprintf("%s/api/v1/cloud/sync/handle_action", syncUrl)
 	req, err := http.NewRequest(
 		"POST",
@@ -3828,6 +3832,22 @@ func remoteOrgJobHandler(org shuffle.Org, interval int) error {
 	return nil
 }
 
+func runInitCloudSetup() {
+	action := shuffle.CloudSyncJob{
+		Type:          "setup",
+		Action:        "init",
+		OrgId:         "",
+		PrimaryItemId: "",
+	}
+
+	err := executeCloudAction(action, "")
+	if err != nil {
+		log.Printf("[INFO] Failed initial setup: %s", err)
+	} else {
+		log.Printf("[INFO] Ran initial setup!")
+	}
+}
+
 func runInitEs(ctx context.Context) {
 	log.Printf("[DEBUG] Starting INIT setup (ES)")
 
@@ -3842,7 +3862,8 @@ func runInitEs(ctx context.Context) {
 			return
 		}
 
-		log.Printf("Error getting organizations: %s", err)
+		log.Printf("[DEBUG] Error getting organizations: %s", err)
+		runInitCloudSetup()
 	} else {
 		// Add all users to it
 		if len(activeOrgs) == 1 {
@@ -3850,7 +3871,9 @@ func runInitEs(ctx context.Context) {
 		}
 
 		if len(activeOrgs) == 0 {
-			log.Printf(`No orgs. Setting NEW org "default"`)
+			log.Printf(`[DEBUG] No orgs. Setting NEW org "default"`)
+			runInitCloudSetup()
+
 			//orgSetupName := "default"
 			//orgId := uuid.NewV4().String()
 			//newOrg := shuffle.Org{

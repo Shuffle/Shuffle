@@ -308,7 +308,7 @@ const AngularWorkflow = (props) => {
 							}
 
 							if (param.name === "startnode" && outersub.id !== undefined) {
-								console.log("SHOULD SET STARTNODE: ", outersub)
+								console.log("SHOULD SET STARTNODE IN SUBFLOW SELECTION: ", outersub)
 								const innernode = outersub.actions.find(action => action.id === param.value)
 								console.log("FOUND NODE: ", innernode)
 								if (innernode !== undefined && subworkflowStartnode.id !== innernode.id) { 

@@ -727,7 +727,7 @@ class AppBase:
                 parsedvalue = json.loads(allvalues["value"])
                 allvalues["value"] = parsedvalue
             except:
-                print("Parsing of value as JSON failed")
+                print("Parsing of value as JSON failed. Continue anyway!")
 
             return allvalues
         except:
@@ -1377,7 +1377,10 @@ class AppBase:
                         cachedata = self.get_cache(actual_key)
                         print("CACHE: %s" % cachedata)
                         parsersplit.pop(1)
-                        baseresult = cachedata
+                        try:
+                            baseresult = json.dumps(cachedata)
+                        except json.decoder.JSONDecodeError as e:
+                            print("Failed json dumping: %s" % e)
 
                     #returndata = str(baseresult)+str(appendresult)
                 else:
