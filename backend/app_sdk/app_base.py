@@ -728,7 +728,6 @@ class AppBase:
                 allvalues["value"] = parsedvalue
             except:
                 print("Parsing of value as JSON failed")
-                return {"success": False}
 
             return allvalues
         except:
@@ -1362,12 +1361,25 @@ class AppBase:
                         appendresult += char
 
                 actionname_lower = "exec"
+            elif actionname_lower.startswith("shuffle_cache "): 
+                actionname_lower = "shuffle_cache"
 
             actionname_lower = actionname_lower.replace(" ", "_", -1)
 
             try: 
                 if actionname_lower == "exec" or actionname_lower == "webhook" or actionname_lower == "schedule" or actionname_lower == "userinput" or actionname_lower == "email_trigger" or actionname_lower == "trigger": 
                     baseresult = execution_data["execution_argument"]
+                elif actionname_lower == "shuffle_cache":
+                    print("SHOULD GET CACHE KEY: %s" % parsersplit) 
+                    if len(parsersplit) > 1:
+                        actual_key = parsersplit[1]
+                        print("KEY: %s" % actual_key)
+                        cachedata = self.get_cache(actual_key)
+                        print("CACHE: %s" % cachedata)
+                        parsersplit.pop(1)
+                        baseresult = cachedata
+
+                    #returndata = str(baseresult)+str(appendresult)
                 else:
                     #print("Within execution data check. Execution data: %s", execution_data["results"])
                     if execution_data["results"] != None:

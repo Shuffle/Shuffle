@@ -13,7 +13,7 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/elastic/go-elasticsearch/v8 v8.0.0-20210531084204-f01628963386 // indirect
-	github.com/frikky/shuffle-shared v0.0.56
+	github.com/frikky/shuffle-shared v0.0.59
 	github.com/fsouza/go-dockerclient v1.7.2
 	github.com/go-git/go-billy/v5 v5.3.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
@@ -23,6 +23,5 @@ require (
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/sirupsen/logrus v1.8.1 // indirect
 	google.golang.org/grpc v1.37.1 // indirect
 )

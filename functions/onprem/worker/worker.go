@@ -518,7 +518,7 @@ func removeIndex(s []string, i int) []string {
 }
 
 func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
-	log.Printf("Inside execution results with %d / %d results", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
+	log.Printf("[INFO] Inside execution results with %d / %d results", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
 	if len(startAction) == 0 {
 		startAction = workflowExecution.Start
 		if len(startAction) == 0 {
@@ -567,7 +567,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 				if isSkipped {
 					//log.Printf("Skipping %s as all parents are done", item.Action.Label)
 					if !arrayContains(visited, item.Action.ID) {
-						log.Printf("[INFO] Adding visited (1): %s", item.Action.Label)
+						log.Printf("[INFO] Adding visited (1): %s\n", item.Action.Label)
 						visited = append(visited, item.Action.ID)
 					}
 				} else {
@@ -576,7 +576,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 				}
 			} else {
 				if item.Status == "FINISHED" {
-					log.Printf("[INFO] Adding visited (2): %s", item.Action.Label)
+					log.Printf("[INFO] Adding visited (2): %s\n", item.Action.Label)
 					visited = append(visited, item.Action.ID)
 				}
 			}
@@ -1100,7 +1100,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			}
 		}
 
-		log.Printf("[INFO] Adding visited (3): %s", action.Label)
+		log.Printf("[INFO] Adding visited (3): %s\n", action.Label)
 
 		visited = append(visited, action.ID)
 		executed = append(executed, action.ID)
@@ -1553,12 +1553,36 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	resultLength := len(workflowExecution.Results)
 	setExecution := true
 
-	workflowExecution, dbSave, err := shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult)
+	workflowExecution, dbSave, err := shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, true)
 	if err != nil {
-		log.Printf("[ERROR] Failed execution of parsedexecution: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting execution"}`)))
-		return
+		log.Printf("[DEBUG] Rerunning transaction? %s", err)
+		if strings.Contains(fmt.Sprintf("%s", err), "Rerun this transaction") {
+			workflowExecution, err := getWorkflowExecution(ctx, workflowExecutionId)
+			if err != nil {
+				log.Printf("[ERROR] Failed getting execution cache (2): %s", err)
+				resp.WriteHeader(401)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting execution (2)"}`)))
+				return
+			}
+
+			resultLength = len(workflowExecution.Results)
+			setExecution = true
+
+			workflowExecution, dbSave, err = shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, false)
+			if err != nil {
+				log.Printf("[ERROR] Failed execution of parsedexecution (2): %s", err)
+				resp.WriteHeader(401)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting execution (2)"}`)))
+				return
+			} else {
+				log.Printf("[DEBUG] Successfully got ParsedExecution with %d results!", len(workflowExecution.Results))
+			}
+		} else {
+			log.Printf("[ERROR] Failed execution of parsedexecution: %s", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting execution"}`)))
+			return
+		}
 	}
 	//log.Printf(`[INFO] Got result %s from %s`, actionResult.Status, actionResult.Action.ID)
 	//dbSave := false
