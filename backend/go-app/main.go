@@ -3082,7 +3082,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("[INFO] TRY TO SET APP TO LIVE!!!")
+	//log.Printf("[INFO] TRY TO SET APP TO LIVE!!!")
 	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in verify swagger: %s", err)
@@ -3136,7 +3136,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 			return
 		}
 
-		log.Printf("[INFO] EDITING APP WITH ID %s and md5 %s", app.ID, newmd5)
+		log.Printf("[INFO] %s is EDITING APP WITH ID %s and md5 %s", user.Id, app.ID, newmd5)
 		newmd5 = app.ID
 	}
 
@@ -3944,9 +3944,9 @@ func runInitEs(ctx context.Context) {
 
 	schedules, err := shuffle.GetAllSchedules(ctx, "ALL")
 	if err != nil {
-		log.Printf("Failed getting schedules during service init: %s", err)
+		log.Printf("[WARNING] Failed getting schedules during service init: %s", err)
 	} else {
-		log.Printf("Setting up %d schedule(s)", len(schedules))
+		log.Printf("[INFO] Setting up %d schedule(s)", len(schedules))
 		url := &url.URL{}
 		for _, schedule := range schedules {
 			if schedule.Environment == "cloud" {
@@ -3983,7 +3983,7 @@ func runInitEs(ctx context.Context) {
 
 	users, err := shuffle.GetAllUsers(ctx)
 	if len(users) == 0 {
-		log.Printf("Trying to set up user based on environments SHUFFLE_DEFAULT_USERNAME & SHUFFLE_DEFAULT_PASSWORD")
+		log.Printf("[INFO] Trying to set up user based on environments SHUFFLE_DEFAULT_USERNAME & SHUFFLE_DEFAULT_PASSWORD")
 		username := os.Getenv("SHUFFLE_DEFAULT_USERNAME")
 		password := os.Getenv("SHUFFLE_DEFAULT_PASSWORD")
 		if len(username) == 0 || len(password) == 0 {
@@ -4005,7 +4005,7 @@ func runInitEs(ctx context.Context) {
 	}
 	_ = setUsers
 
-	log.Printf("Starting cloud schedules for orgs!")
+	log.Printf("[INFO] Starting cloud schedules for orgs if enabled!")
 	type requestStruct struct {
 		ApiKey string `json:"api_key"`
 	}
@@ -4023,7 +4023,7 @@ func runInitEs(ctx context.Context) {
 			continue
 		}
 
-		log.Printf("Should start schedule for org %s", org.Name)
+		log.Printf("[DEBUG] Should start schedule for org %s", org.Name)
 		job := func() {
 			err := remoteOrgJobHandler(org, interval)
 			if err != nil {
@@ -4614,7 +4614,7 @@ func runInit(ctx context.Context) {
 			continue
 		}
 
-		log.Printf("Should start schedule for org %s", org.Name)
+		log.Printf("[DEBUG] Should start schedule for org %s", org.Name)
 		job := func() {
 			err := remoteOrgJobHandler(org, interval)
 			if err != nil {
@@ -5568,7 +5568,7 @@ func initHandlers() {
 	for {
 		_, err = shuffle.RunInit(*dbclient, *es, storage.Client{}, gceProject, "onprem", true, elasticConfig)
 		if err != nil {
-			log.Printf("[DEBUG] Error in initial database connection. Retrying in 5 seconds. %s", err)
+			log.Printf("[ERROR] Error in initial database connection. Retrying in 5 seconds. %s", err)
 			time.Sleep(5 * time.Second)
 			continue
 		}
