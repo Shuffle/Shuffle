@@ -68,7 +68,7 @@ const LoginDialog = props => {
 				}),
 			)
 			.catch(error => {
-				setLoginInfo("Error logging in - please refresh in a minute: ", error)
+				setLoginInfo("Error logging in - please refresh in a minute ", error)
 			})
 	}
 
@@ -139,7 +139,7 @@ const LoginDialog = props => {
 					}),
 				)
 				.catch(error => {
-					setLoginInfo("Error in userdata: ", error)
+					setLoginInfo("Error in from backend: ", error)
 				});
 		}
 	}

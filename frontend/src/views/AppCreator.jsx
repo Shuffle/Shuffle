@@ -970,7 +970,7 @@ const AppCreator = (props) => {
 		const basePath = "/"+(splitBase.slice(3, )).join("/")
 		
 		const data = {
-  			"swagger": "3.0",
+  			"openapi": "3.0",
   			"info": {
   			  "title": name,
   			  "description": description,

@@ -171,6 +171,8 @@ github.com/frikky/shuffle-shared v0.0.56 h1:stC793SdQeBh98yJqCL74aXFo9YYhVIg8CQJ
 github.com/frikky/shuffle-shared v0.0.56/go.mod h1:BknTfpun3qte5bumR3OqQHf9XWPIsyj8woiXCjIlbBc=
 github.com/frikky/shuffle-shared v0.0.57 h1:YDlOVjg8bUBcinehcmorxzOoV5O55oUfG8q7TOiBOeU=
 github.com/frikky/shuffle-shared v0.0.57/go.mod h1:BknTfpun3qte5bumR3OqQHf9XWPIsyj8woiXCjIlbBc=
+github.com/frikky/shuffle-shared v0.0.60 h1:o6/QLsu3Rbjr4+BQWs9DF4B5qZCg0gPpZWPYXmjVWqM=
+github.com/frikky/shuffle-shared v0.0.60/go.mod h1:BknTfpun3qte5bumR3OqQHf9XWPIsyj8woiXCjIlbBc=
 github.com/fsouza/go-dockerclient v1.7.2 h1:bBEAcqLTkpq205jooP5RVroUKiVEWgGecHyeZc4OFjo=
 github.com/fsouza/go-dockerclient v1.7.2/go.mod h1:+ugtMCVRwnPfY7d8/baCzZ3uwB0BrG5DB8OzbtxaRz8=
 github.com/getkin/kin-openapi v0.8.0 h1:a6TQjTqwkyscC4/hShJX7WhCVE+4bi9lzw61XHQW5hE=

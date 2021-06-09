@@ -3168,6 +3168,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	swagger, err := swaggerLoader.LoadSwaggerFromData(body)
 	if err != nil {
 		log.Printf("[ERROR] Swagger validation error: %s", err)
+		//log.Printf("%s", string(body))
 		resp.WriteHeader(500)
 		resp.Write([]byte(`{"success": false, "reason": "Failed verifying openapi"}`))
 		return

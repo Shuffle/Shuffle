@@ -2102,7 +2102,7 @@ const AngularWorkflow = (props) => {
 
 		// Basically just a stupid if-else :)
 		const synonyms = {
-			"id": ["id", "ref", "sourceref", "reference", "sourcereference", "alert id", "case id", "incident id", "service id", "sid", "uid", "uuid"],
+			"id": ["id", "ref", "sourceref", "reference", "sourcereference", "alert id", "case id", "incident id", "service id", "sid", "uid", "uuid", "team id"],
 			"title": ["title", "name", "message"],
 			"description": ["description", "explanation", "story", "details",],
 			"email": ["mail", "email", "sender", "receiver", "recipient"],

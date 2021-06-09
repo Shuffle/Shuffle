@@ -1639,7 +1639,7 @@ const Apps = (props) => {
             hidden
             type="file"
             ref={upload}
-            accept="application/JSON, text/yaml, text/x-yaml, application/x-yaml, application/vnd.yaml"
+            accept="application/JSON, application/YAML, text/yaml, text/x-yaml, application/x-yaml, application/vnd.yaml"
             multiple={false}
             onChange={uploadFile}
           />
