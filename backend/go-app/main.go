@@ -793,8 +793,14 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 			} else {
 				log.Printf("[DEBUG] Successfully created the default org!")
 
+				defaultEnv := os.Getenv("ORG_ID")
+				if len(defaultEnv) == 0 {
+					defaultEnv = "Shuffle"
+					log.Printf("[DEBUG] Setting default environment for org to %s", defaultEnv)
+				}
+
 				item := shuffle.Environment{
-					Name:    "Shuffle",
+					Name:    defaultEnv,
 					Type:    "onprem",
 					OrgId:   orgId,
 					Default: true,
@@ -3852,6 +3858,12 @@ func runInitCloudSetup() {
 func runInitEs(ctx context.Context) {
 	log.Printf("[DEBUG] Starting INIT setup (ES)")
 
+	defaultEnv := os.Getenv("ORG_ID")
+	if len(defaultEnv) == 0 {
+		defaultEnv = "Shuffle"
+		log.Printf("[DEBUG] Setting default environment for org to %s", defaultEnv)
+	}
+
 	log.Printf("[DEBUG] Getting organizations")
 	activeOrgs, err := shuffle.GetAllOrgs(ctx)
 	setUsers := false
@@ -3894,7 +3906,7 @@ func runInitEs(ctx context.Context) {
 			//	setUsers = true
 
 			//	item := shuffle.Environment{
-			//		Name:    "Shuffle",
+			//		Name:    defaultEnv,
 			//		Type:    "onprem",
 			//		OrgId:   orgId,
 			//		Default: true,
@@ -3987,20 +3999,58 @@ func runInitEs(ctx context.Context) {
 		log.Printf("[INFO] Trying to set up user based on environments SHUFFLE_DEFAULT_USERNAME & SHUFFLE_DEFAULT_PASSWORD")
 		username := os.Getenv("SHUFFLE_DEFAULT_USERNAME")
 		password := os.Getenv("SHUFFLE_DEFAULT_PASSWORD")
-		if len(username) == 0 || len(password) == 0 {
-			log.Printf("SHUFFLE_DEFAULT_USERNAME and SHUFFLE_DEFAULT_PASSWORD not defined as environments. Running without default user.")
+
+		if len(username) == 0 || len(password) == 0 || len(activeOrgs) > 0 {
+			log.Printf("[DEBUG] SHUFFLE_DEFAULT_USERNAME and SHUFFLE_DEFAULT_PASSWORD not defined as environments. Running without default user.")
 		} else {
 			apikey := os.Getenv("SHUFFLE_DEFAULT_APIKEY")
 
-			tmpOrg := shuffle.OrgMini{
-				Name: "default",
+			log.Printf("[DEBUG] Creating org for default user %s", username)
+			orgId := uuid.NewV4().String()
+			orgSetupName := "default"
+			newOrg := shuffle.Org{
+				Name:      orgSetupName,
+				Id:        orgId,
+				Org:       orgSetupName,
+				Users:     []shuffle.User{},
+				Roles:     []string{"admin", "user"},
+				CloudSync: false,
 			}
 
-			err = createNewUser(username, password, "admin", apikey, tmpOrg)
+			err = shuffle.SetOrg(ctx, newOrg, orgId)
+			setUsers := false
 			if err != nil {
-				log.Printf("Failed to create default user %s: %s", username, err)
+				log.Printf("[WARNING] Failed setting organization when creating original user: %s", err)
 			} else {
-				log.Printf("Successfully created user %s", username)
+				log.Printf("[DEBUG] Successfully created the default org with id %s!", orgId)
+				setUsers = true
+
+				item := shuffle.Environment{
+					Name:    defaultEnv,
+					Type:    "onprem",
+					OrgId:   orgId,
+					Default: true,
+					Id:      uuid.NewV4().String(),
+				}
+
+				err = shuffle.SetEnvironment(ctx, &item)
+				if err != nil {
+					log.Printf("[WARNING] Failed setting up new environment")
+				}
+			}
+
+			if setUsers {
+				tmpOrg := shuffle.OrgMini{
+					Name: orgSetupName,
+					Id:   orgId,
+				}
+
+				err = createNewUser(username, password, "admin", apikey, tmpOrg)
+				if err != nil {
+					log.Printf("[INFO] Failed to create default user %s: %s", username, err)
+				} else {
+					log.Printf("[INFO] Successfully created user %s", username)
+				}
 			}
 		}
 	}
@@ -4134,7 +4184,7 @@ func runInitEs(ctx context.Context) {
 		log.Printf("[INFO] Finished downloading extra API samples")
 	}
 
-	log.Printf("[INFO] Finished INIT")
+	log.Printf("[INFO] Finished INIT (ES)")
 }
 
 // Handles configuration items during Shuffle startup
@@ -4206,7 +4256,7 @@ func runInit(ctx context.Context) {
 
 		log.Printf("Organizations exist!")
 		if len(activeOrgs) == 0 {
-			log.Printf(`No orgs. Setting org "default"`)
+			log.Printf(`[DEBUG] No orgs. Setting org "default"`)
 			orgSetupName := "default"
 			orgId := uuid.NewV4().String()
 			newOrg := shuffle.Org{
@@ -4230,7 +4280,7 @@ func runInit(ctx context.Context) {
 
 			if len(activeOrgs) == 1 {
 				if len(activeOrgs[0].Users) == 0 {
-					log.Printf("ORG doesn't have any users??")
+					log.Printf("[WARNING] ORG doesn't have any users??")
 
 					q := datastore.NewQuery("Users")
 					var users []shuffle.User
@@ -4424,8 +4474,15 @@ func runInit(ctx context.Context) {
 	count, err := shuffle.GetEnvironmentCount()
 	if count == 0 && err == nil && len(activeOrgs) == 1 {
 		log.Printf("[INFO] Setting up environment with org %s", activeOrgs[0].Id)
+
+		defaultEnv := os.Getenv("ORG_ID")
+		if len(defaultEnv) == 0 {
+			defaultEnv = "Shuffle"
+			log.Printf("[DEBUG] Setting default environment for org to %s", defaultEnv)
+		}
+
 		item := shuffle.Environment{
-			Name:    "Shuffle",
+			Name:    defaultEnv,
 			Type:    "onprem",
 			OrgId:   activeOrgs[0].Id,
 			Default: true,
@@ -4761,7 +4818,7 @@ func runInit(ctx context.Context) {
 	log.Printf("[INFO] Downloading OpenAPI data for search - EXTRA APPS")
 	apis := "https://github.com/frikky/security-openapis"
 
-	// THis gets memory problems hahah
+	// FIXME: This part gets memory problems. Fix in the future to load these apps too.
 	//apis := "https://github.com/APIs-guru/openapi-directory"
 	fs := memfs.New()
 	storer := memory.NewStorage()

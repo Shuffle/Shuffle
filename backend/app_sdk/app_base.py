@@ -1440,7 +1440,7 @@ class AppBase:
             print("[INFO] After second return")
             if len(parsersplit) == 1:
                 returndata = str(baseresult)+str(appendresult)
-                print("RETURNING: %s" % returndata)
+                print("RETURNING!")#: %s" % returndata)
                 return returndata, False
         
             baseresult = baseresult.replace(" True,", " true,")
@@ -1523,7 +1523,8 @@ class AppBase:
                         # Trying without string dumping.
 
                         value, is_loop = get_json_value(fullexecution, to_be_replaced) 
-                        print("\n\nType of value: %s. Value: %s" % (type(value), value))
+                        #print("\n\nType of value: %s. Value: %s" % (type(value), value))
+                        print("\n\nType of value: %s" % type(value))
                         if isinstance(value, str):
                             parameter["value"] = parameter["value"].replace(to_be_replaced, value)
                         elif isinstance(value, dict) or isinstance(value, list):
@@ -1543,8 +1544,7 @@ class AppBase:
                             except json.decoder.JSONDecodeError as e:
                                 parameter["value"] = parameter["value"].replace(to_be_replaced, value)
 
-                        print("VALUE: %s" % parameter["value"])
-
+                        #print("VALUE: %s" % parameter["value"])
 
             if parameter["variant"] == "WORKFLOW_VARIABLE":
                 print("Handling workflow variable")
@@ -2326,7 +2326,8 @@ class AppBase:
                                         raise e
                                         #break
 
-                            print("\n[INFO] Returned from execution with %s of types %s" % (newres, type(newres)))#, newres)
+                            print("\n[INFO] Returned from execution with types %s" % type(newres))
+                            #print("\n[INFO] Returned from execution with %s of types %s" % (newres, type(newres)))#, newres)
                             if isinstance(newres, tuple):
                                 print("[INFO] Handling return as tuple")
                                 # Handles files.

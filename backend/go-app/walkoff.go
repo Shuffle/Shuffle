@@ -22,12 +22,9 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 
-	scheduler "cloud.google.com/go/scheduler/apiv1"
 	gyaml "github.com/ghodss/yaml"
 	"github.com/h2non/filetype"
 	uuid "github.com/satori/go.uuid"
-	"google.golang.org/api/cloudfunctions/v1"
-	schedulerpb "google.golang.org/genproto/googleapis/cloud/scheduler/v1"
 
 	newscheduler "github.com/carlescere/scheduler"
 	"github.com/frikky/kin-openapi/openapi3"
@@ -48,7 +45,7 @@ var localBase = "http://localhost:5001"
 var baseEnvironment = "onprem"
 
 var cloudname = "cloud"
-var defaultLocation = "europe-west2"
+
 var scheduledJobs = map[string]*newscheduler.Job{}
 var scheduledOrgs = map[string]*newscheduler.Job{}
 
@@ -1530,8 +1527,8 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 		//workflowExecution.Stream = "tmp"
 		//workflowExecution.WorkflowQueue = "tmp"
 		//workflowExecution.SubscriptionNameNodestream = "testcompany-nodestream"
+		//workflowExecution.Locations = []string{"europe-west2"}
 		workflowExecution.ProjectId = gceProject
-		workflowExecution.Locations = []string{"europe-west2"}
 		workflowExecution.WorkflowId = workflow.ID
 		workflowExecution.StartedAt = int64(time.Now().Unix())
 		workflowExecution.CompletedAt = 0
@@ -2401,26 +2398,6 @@ func deleteSchedule(ctx context.Context, id string) error {
 	return nil
 }
 
-func deleteScheduleGCP(ctx context.Context, id string) error {
-	c, err := scheduler.NewCloudSchedulerClient(ctx)
-	if err != nil {
-		log.Printf("%s", err)
-		return err
-	}
-
-	req := &schedulerpb.DeleteJobRequest{
-		Name: fmt.Sprintf("projects/%s/locations/europe-west2/jobs/schedule_%s", gceProject, id),
-	}
-
-	err = c.DeleteJob(ctx, req)
-	if err != nil {
-		log.Printf("%s", err)
-		return err
-	}
-
-	return nil
-}
-
 func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -2891,151 +2868,6 @@ func validateAppInput(resp http.ResponseWriter, request *http.Request) {
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
-}
-
-// Deploy to google cloud function :)
-func deployCloudFunctionPython(ctx context.Context, name, localization, applocation string, environmentVariables map[string]string) error {
-	service, err := cloudfunctions.NewService(ctx)
-	if err != nil {
-		return err
-	}
-
-	// ProjectsLocationsListCall
-	projectsLocationsFunctionsService := cloudfunctions.NewProjectsLocationsFunctionsService(service)
-	location := fmt.Sprintf("projects/%s/locations/%s", gceProject, localization)
-	functionName := fmt.Sprintf("%s/functions/%s", location, name)
-
-	cloudFunction := &cloudfunctions.CloudFunction{
-		AvailableMemoryMb:    128,
-		EntryPoint:           "authorization",
-		EnvironmentVariables: environmentVariables,
-		HttpsTrigger:         &cloudfunctions.HttpsTrigger{},
-		MaxInstances:         0,
-		Name:                 functionName,
-		Runtime:              "python37",
-		SourceArchiveUrl:     applocation,
-	}
-
-	//getCall := projectsLocationsFunctionsService.Get(fmt.Sprintf("%s/functions/function-5", location))
-	//resp, err := getCall.Do()
-
-	createCall := projectsLocationsFunctionsService.Create(location, cloudFunction)
-	_, err = createCall.Do()
-	if err != nil {
-		log.Printf("Failed creating new function. SKIPPING patch, as it probably already exists: %s", err)
-
-		// FIXME - have patching code or nah?
-		createCall := projectsLocationsFunctionsService.Patch(fmt.Sprintf("%s/functions/%s", location, name), cloudFunction)
-		_, err = createCall.Do()
-		if err != nil {
-			log.Println("Failed patching function")
-			return err
-		}
-
-		log.Printf("Successfully patched %s to %s", name, localization)
-	} else {
-		log.Printf("Successfully deployed %s to %s", name, localization)
-	}
-
-	// FIXME - use response to define the HTTPS entrypoint. It's default to an easy one tho
-
-	return nil
-}
-
-// Deploy to google cloud function :)
-func deployCloudFunctionGo(ctx context.Context, name, localization, applocation string, environmentVariables map[string]string) error {
-	service, err := cloudfunctions.NewService(ctx)
-	if err != nil {
-		return err
-	}
-
-	// ProjectsLocationsListCall
-	projectsLocationsFunctionsService := cloudfunctions.NewProjectsLocationsFunctionsService(service)
-	location := fmt.Sprintf("projects/%s/locations/%s", gceProject, localization)
-	functionName := fmt.Sprintf("%s/functions/%s", location, name)
-
-	cloudFunction := &cloudfunctions.CloudFunction{
-		AvailableMemoryMb:    128,
-		EntryPoint:           "Authorization",
-		EnvironmentVariables: environmentVariables,
-		HttpsTrigger:         &cloudfunctions.HttpsTrigger{},
-		MaxInstances:         1,
-		Name:                 functionName,
-		Runtime:              "go111",
-		SourceArchiveUrl:     applocation,
-	}
-
-	//getCall := projectsLocationsFunctionsService.Get(fmt.Sprintf("%s/functions/function-5", location))
-	//resp, err := getCall.Do()
-
-	createCall := projectsLocationsFunctionsService.Create(location, cloudFunction)
-	_, err = createCall.Do()
-	if err != nil {
-		log.Println("Failed creating new function. Attempting patch, as it might exist already")
-
-		createCall := projectsLocationsFunctionsService.Patch(fmt.Sprintf("%s/functions/%s", location, name), cloudFunction)
-		_, err = createCall.Do()
-		if err != nil {
-			log.Println("Failed patching function")
-			return err
-		}
-
-		log.Printf("Successfully patched %s to %s", name, localization)
-	} else {
-		log.Printf("Successfully deployed %s to %s", name, localization)
-	}
-
-	// FIXME - use response to define the HTTPS entrypoint. It's default to an easy one tho
-
-	return nil
-}
-
-// Deploy to google cloud function :)
-func deployWebhookFunction(ctx context.Context, name, localization, applocation string, environmentVariables map[string]string) error {
-	service, err := cloudfunctions.NewService(ctx)
-	if err != nil {
-		return err
-	}
-
-	// ProjectsLocationsListCall
-	projectsLocationsFunctionsService := cloudfunctions.NewProjectsLocationsFunctionsService(service)
-	location := fmt.Sprintf("projects/%s/locations/%s", gceProject, localization)
-	functionName := fmt.Sprintf("%s/functions/%s", location, name)
-
-	cloudFunction := &cloudfunctions.CloudFunction{
-		AvailableMemoryMb:    128,
-		EntryPoint:           "Authorization",
-		EnvironmentVariables: environmentVariables,
-		HttpsTrigger:         &cloudfunctions.HttpsTrigger{},
-		MaxInstances:         1,
-		Name:                 functionName,
-		Runtime:              "go111",
-		SourceArchiveUrl:     applocation,
-	}
-
-	//getCall := projectsLocationsFunctionsService.Get(fmt.Sprintf("%s/functions/function-5", location))
-	//resp, err := getCall.Do()
-
-	createCall := projectsLocationsFunctionsService.Create(location, cloudFunction)
-	_, err = createCall.Do()
-	if err != nil {
-		log.Println("Failed creating new function. Attempting patch, as it might exist already")
-
-		createCall := projectsLocationsFunctionsService.Patch(fmt.Sprintf("%s/functions/%s", location, name), cloudFunction)
-		_, err = createCall.Do()
-		if err != nil {
-			log.Println("Failed patching function")
-			return err
-		}
-
-		log.Printf("Successfully patched %s to %s", name, localization)
-	} else {
-		log.Printf("Successfully deployed %s to %s", name, localization)
-	}
-
-	// FIXME - use response to define the HTTPS entrypoint. It's default to an easy one tho
-
-	return nil
 }
 
 func loadGithubWorkflows(url, username, password, userId, branch, orgId string) error {
@@ -4083,228 +3915,6 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 }
 
-// Starts a new webhook
-func handleStopHook(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	user, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("Api authentication failed in set new workflowhandler: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	location := strings.Split(request.URL.String(), "/")
-
-	var fileId string
-	if location[1] == "api" {
-		if len(location) <= 4 {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		fileId = location[4]
-	}
-
-	if len(fileId) != 32 {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Workflow ID when stopping hook is not valid"}`))
-		return
-	}
-
-	ctx := context.Background()
-	hook, err := shuffle.GetHook(ctx, fileId)
-	if err != nil {
-		log.Printf("Failed getting hook %s (stop): %s", fileId, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	if user.Id != hook.Owner {
-		log.Printf("Wrong user (%s) for workflow %s", user.Username, hook.Id)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	log.Printf("Status: %s", hook.Status)
-	log.Printf("Running: %t", hook.Running)
-	if !hook.Running {
-		message := fmt.Sprintf("Error: %s isn't running", hook.Id)
-		log.Println(message)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, message)))
-		return
-	}
-
-	hook.Status = "stopped"
-	hook.Running = false
-	hook.Actions = []shuffle.HookAction{}
-	err = shuffle.SetHook(ctx, *hook)
-	if err != nil {
-		log.Printf("Failed setting hook: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	image := "webhook"
-
-	// This is here to force stop and remove the old webhook
-	// FIXME
-	err = removeWebhookFunction(ctx, fileId)
-	if err != nil {
-		log.Printf("Container stop issue for %s-%s: %s", image, fileId, err)
-	}
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(`{"success": true, "reason": "Stopped webhook"}`))
-}
-
-func removeWebhookFunction(ctx context.Context, hookid string) error {
-	service, err := cloudfunctions.NewService(ctx)
-	if err != nil {
-		return err
-	}
-
-	// ProjectsLocationsListCall
-	projectsLocationsFunctionsService := cloudfunctions.NewProjectsLocationsFunctionsService(service)
-	location := fmt.Sprintf("projects/%s/locations/%s", gceProject, defaultLocation)
-	functionName := fmt.Sprintf("%s/functions/webhook_%s", location, hookid)
-
-	deleteCall := projectsLocationsFunctionsService.Delete(functionName)
-	resp, err := deleteCall.Do()
-	if err != nil {
-		log.Printf("Failed to delete %s from %s: %s", hookid, defaultLocation, err)
-		return err
-	} else {
-		log.Printf("Successfully deleted %s from %s", hookid, defaultLocation)
-	}
-
-	_ = resp
-	return nil
-}
-
-func handleStartHook(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	user, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("Api authentication failed in set new workflowhandler: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	location := strings.Split(request.URL.String(), "/")
-
-	var fileId string
-	if location[1] == "api" {
-		if len(location) <= 4 {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		fileId = location[4]
-	}
-
-	if len(fileId) != 36 {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Workflow ID when starting hook is not valid"}`))
-		return
-	}
-
-	ctx := context.Background()
-	hook, err := shuffle.GetHook(ctx, fileId)
-	if err != nil {
-		log.Printf("Failed getting hook %s (start): %s", fileId, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	if user.Id != hook.Owner {
-		log.Printf("Wrong user (%s) for workflow %s", user.Username, hook.Id)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	log.Printf("Status: %s", hook.Status)
-	log.Printf("Running: %t", hook.Running)
-	if hook.Running || hook.Status == "Running" {
-		message := fmt.Sprintf("Error: %s is already running", hook.Id)
-		log.Println(message)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, message)))
-		return
-	}
-
-	environmentVariables := map[string]string{
-		"FUNCTION_APIKEY": user.ApiKey,
-		"CALLBACKURL":     syncUrl,
-		"HOOKID":          fileId,
-	}
-
-	applocation := fmt.Sprintf("gs://%s/triggers/webhook.zip", bucketName)
-	hookname := fmt.Sprintf("webhook_%s", fileId)
-	err = deployWebhookFunction(ctx, hookname, "europe-west2", applocation, environmentVariables)
-	if err != nil {
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-		return
-	}
-
-	hook.Status = "running"
-	hook.Running = true
-	err = shuffle.SetHook(ctx, *hook)
-	if err != nil {
-		log.Printf("Failed setting hook: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	log.Printf("Starting function %s?", fileId)
-	resp.WriteHeader(200)
-	resp.Write([]byte(`{"success": true, "reason": "Started webhook"}`))
-	return
-}
-
-func removeOutlookTriggerFunction(ctx context.Context, triggerId string) error {
-	service, err := cloudfunctions.NewService(ctx)
-	if err != nil {
-		return err
-	}
-
-	// ProjectsLocationsListCall
-	projectsLocationsFunctionsService := cloudfunctions.NewProjectsLocationsFunctionsService(service)
-	location := fmt.Sprintf("projects/%s/locations/%s", gceProject, defaultLocation)
-	functionName := fmt.Sprintf("%s/functions/outlooktrigger_%s", location, triggerId)
-
-	deleteCall := projectsLocationsFunctionsService.Delete(functionName)
-	resp, err := deleteCall.Do()
-	if err != nil {
-		log.Printf("Failed to delete %s from %s: %s", triggerId, defaultLocation, err)
-		return err
-	} else {
-		log.Printf("Successfully deleted %s from %s", triggerId, defaultLocation)
-	}
-
-	_ = resp
-	return nil
-}
-
 func handleUserInput(trigger shuffle.Trigger, organizationId string, workflowId string, referenceExecution string) error {
 	// E.g. check email
 	sms := ""
@@ -4429,9 +4039,6 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
-
-	//workflowExecution.ProjectId = gceProject
-	//workflowExecution.Locations = []string{defaultLocation}
 
 	environments, err := shuffle.GetEnvironments(ctx, user.ActiveOrg.Id)
 	environment := "Shuffle"

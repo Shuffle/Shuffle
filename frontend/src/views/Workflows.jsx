@@ -92,7 +92,7 @@ export const GetIconInfo = (action) => {
 		{"key": "list", "values": ["list", "head", "options"]},
 		{"key": "download", "values": ["get", "download", "return", "hello_world", "curl",]},
 		{"key": "add", "values": ["add"]},
-		{"key": "delete", "values": ["delete", "remove"]},
+		{"key": "delete", "values": ["delete", "remove", "clear", "clean",]},
 		{"key": "send", "values": ["send", "dispatch", "mail", "forward", "post", "submit", "mark", "set"]},
 		{"key": "repeat", "values": ["repeat", "retry", "pause",]},
 		{"key": "execute", "values": ["execute", "run", "play", "raise",]},
