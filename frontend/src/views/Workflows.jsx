@@ -780,7 +780,7 @@ const Workflows = (props) => {
 				const newId = uuid.v4()
 				if (trigger.trigger_type === "WEBHOOK") {
 					const hookname = "webhook_"+newId
-					if (trigger.parameters.length === 2) {
+					if (trigger.parameters !== undefined && trigger.parameters !== null && trigger.parameters.length === 2) {
 						trigger.parameters[0].value = referenceUrl+"webhook_"+trigger.id
 						trigger.parameters[1].value = "webhook_"+trigger.id
 					} else {

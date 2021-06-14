@@ -1369,6 +1369,7 @@ const AngularWorkflow = (props) => {
 		if (nodedata.app_name === undefined && nodedata.source === undefined) {
 			return
 		}
+		event.target.removeClass("selected")
 
 
 		// Attempt at rewrite of name in other actions in following nodes.
@@ -2735,6 +2736,13 @@ const AngularWorkflow = (props) => {
 			case 67:
 				if (previouskey === 17) {
 					console.log("CTRL+C")
+					const filteredelements = cy.filter(function(element, i){
+						return element.hasClass('selected')
+					})
+
+					for (var key in filteredelements) {
+					}
+					console.log("FILTERED: ", filteredelements)
 				}
 	      break;
 			case 86:
@@ -2910,8 +2918,30 @@ const AngularWorkflow = (props) => {
 
 			cy.fit(null, 200)
 
-			cy.on('select', 'node', (e) => onNodeSelect(e, appAuthentication))
+			cy.on('boxselect', 'node', (e) => {
+				if (e.target.data("isButton") || e.target.data("isDescriptor")) {
+					e.target.unselect()
+				}
+
+				e.target.addClass("selected")
+			})
+
+			cy.on('boxstart', (e) => {
+				console.log("START")
+				cy.removeListener('select')
+				//onNodeSelect(e, appAuthentication)
+			})
+			cy.on('boxend', (e) => {
+				console.log("END")
+				cy.removeListener('select')
+				//onNodeSelect(e, appAuthentication)
+			})
+
+			cy.on('select', 'node', (e) => {
+				onNodeSelect(e, appAuthentication)
+			})
 			cy.on('select', 'edge', (e) => onEdgeSelect(e))
+
 			cy.on('unselect', (e) => onUnselect(e))
 
 			cy.on('add', 'node', (e) => onNodeAdded(e))
@@ -4083,7 +4113,6 @@ const AngularWorkflow = (props) => {
 		// Chrome lol
 		//if (e.srcElement !== undefined && e.srcElement.localName === "canvas") {
 		if (e.pageX > cycontainer.offsetLeft && e.pageX < cycontainer.offsetLeft+cycontainer.offsetWidth && e.pageY > cycontainer.offsetTop && e.pageY < cycontainer.offsetTop+cycontainer.offsetHeight) {
-			console.log("NODEID: ", newNodeId)
 			if (newNodeId.length > 0) {
 				var currentnode = cy.getElementById(newNodeId)
 				if (currentnode === undefined || currentnode === null || currentnode.length === 0) {
