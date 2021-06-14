@@ -3001,9 +3001,9 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
+	cacheKey := fmt.Sprintf("workflowapps-sorted-500")
 	shuffle.DeleteCache(ctx, cacheKey)
-	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
+	cacheKey = fmt.Sprintf("workflowapps-sorted-0")
 	shuffle.DeleteCache(ctx, cacheKey)
 
 	// Just need to be logged in
@@ -3535,20 +3535,20 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 				appPython := fmt.Sprintf("%s/src/app.py", extra)
 				appPythonReader, err := fs.Open(appPython)
 				if err != nil {
-					log.Printf("Failed to read %s", appPython)
+					log.Printf("Failed to read python app %s", appPython)
 					continue
 				}
 
 				appPythonData, err := ioutil.ReadAll(appPythonReader)
 				if err != nil {
-					log.Printf("Failed reading %s: %s", appPython, err)
+					log.Printf("Failed reading appdata %s: %s", appPython, err)
 					continue
 				}
 
 				dockerFp := fmt.Sprintf("%s/Dockerfile", extra)
 				dockerfile, err := fs.Open(dockerFp)
 				if err != nil {
-					log.Printf("Failed to read %s", appPython)
+					log.Printf("Failed to read dockerfil %s", appPython)
 					continue
 				}
 
@@ -3580,9 +3580,9 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 				}
 
 				if len(allapps) == 0 {
-					allapps, err = shuffle.GetAllWorkflowApps(ctx, 500)
+					allapps, err = shuffle.GetAllWorkflowApps(ctx, 0)
 					if err != nil {
-						log.Printf("Failed getting apps to verify: %s", err)
+						log.Printf("[WARNING] Failed getting apps to verify: %s", err)
 						continue
 					}
 				}
@@ -3659,7 +3659,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 
 				err = checkWorkflowApp(workflowapp)
 				if err != nil {
-					log.Printf("%s for app %s:%s", err, workflowapp.Name, workflowapp.AppVersion)
+					log.Printf("[DEBUG] %s for app %s:%s", err, workflowapp.Name, workflowapp.AppVersion)
 					continue
 				}
 

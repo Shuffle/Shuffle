@@ -52,7 +52,7 @@ var baseimagetagsuffix = os.Getenv("SHUFFLE_BASE_IMAGE_TAG_SUFFIX")
 var orgId = os.Getenv("ORG_ID")
 var baseUrl = os.Getenv("BASE_URL")
 
-//var environment = os.Getenv("ENVIRONMENT_NAME")
+var environment = os.Getenv("ENVIRONMENT_NAME")
 var dockerApiVersion = os.Getenv("DOCKER_API_VERSION")
 var runningMode = strings.ToLower(os.Getenv("RUNNING_MODE"))
 var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
@@ -729,7 +729,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 
 			// Check image name
 			if !shuffleFound {
-				log.Printf("[WARNING] Zombie container skip: %#v, %s", container.Labels, container.Image)
+				//log.Printf("[WARNING] Zombie container skip: %#v, %s", container.Labels, container.Image)
 				continue
 			}
 			//} else {

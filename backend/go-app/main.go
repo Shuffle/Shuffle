@@ -3881,9 +3881,7 @@ func runInitEs(ctx context.Context) {
 		// Add all users to it
 		if len(activeOrgs) == 1 {
 			setUsers = true
-		}
-
-		if len(activeOrgs) == 0 {
+		} else if len(activeOrgs) == 0 {
 			log.Printf(`[DEBUG] No orgs. Setting NEW org "default"`)
 			runInitCloudSetup()
 

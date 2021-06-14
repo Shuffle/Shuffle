@@ -96,9 +96,9 @@ const ParsedAction = (props) => {
 			}
 		}
 
-		// Remove self
-		results = results.filter(data => data.id !== action.id) 
-		results = results.filter(data => data.type !== "TRIGGER") 
+		// Some obscure bug made this have to be done.. zz
+		results = results.filter(data => data !== undefined && action !== undefined && data.id !== action.id) 
+		results = results.filter(data => data !== undefined && data.type !== "TRIGGER") 
 		results.push({"label": "Execution Argument", "type": "INTERNAL"})
 		return results
 	}
@@ -767,12 +767,12 @@ const ParsedAction = (props) => {
 
 						//const str = = data.value.search(submatch)
 						//console.log("FOUND? ", n)
-						for (var key in keywords) {
-							const keyword = keywords[key]
-							if (data.value.includes(keyword)) {
-								console.log("INCLUDED: ", keyword)
-							}
-						}
+						//for (var key in keywords) {
+						//	const keyword = keywords[key]
+						//	if (data.value.includes(keyword)) {
+						//		console.log("INCLUDED: ", keyword)
+						//	}
+						//}
 
 						//const keywords = ["len", "lower", "upper", "trim", "split", "length", "number", "parse", "join"]
 						if (selectedActionParameters[count].schema !== undefined && selectedActionParameters[count].schema !== null && selectedActionParameters[count].schema.type === "file") {
@@ -1485,7 +1485,9 @@ const ParsedAction = (props) => {
 
 			{workflow.execution_variables !== undefined && workflow.execution_variables !== null && workflow.execution_variables.length > 0 ?
 				<div style={{marginTop: "20px"}}>
-					Set execution variable (optional) 
+					<Typography>
+						Set execution variable (optional) 
+					</Typography>
 					<Select
 						value={selectedAction.execution_variable !== undefined ? selectedAction.execution_variable.name : "No selection"}
 						SelectDisplayProps={{
