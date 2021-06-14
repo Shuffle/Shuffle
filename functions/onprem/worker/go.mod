@@ -12,8 +12,7 @@ require (
 	github.com/docker/docker v20.10.5+incompatible
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
-	github.com/elastic/go-elasticsearch/v8 v8.0.0-20210531084204-f01628963386 // indirect
-	github.com/frikky/shuffle-shared v0.0.59
+	github.com/frikky/shuffle-shared v0.0.63
 	github.com/fsouza/go-dockerclient v1.7.2
 	github.com/go-git/go-billy/v5 v5.3.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect

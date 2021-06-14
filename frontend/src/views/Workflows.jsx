@@ -86,7 +86,7 @@ export const GetIconInfo = (action) => {
 	const iconList = [
 		{"key": "cache_add", "values": ["set_cache"]},
 		{"key": "cache_get", "values": ["get_cache"]},
-		{"key": "filter", "values": ["filter"]},
+		{"key": "filter", "values": ["filter", "route", "router",]},
 		{"key": "merge", "values": ["join", "merge"]},
 		{"key": "search", "values": ["search", "find", "locate", "index",]},
 		{"key": "list", "values": ["list", "head", "options"]},
@@ -94,7 +94,7 @@ export const GetIconInfo = (action) => {
 		{"key": "add", "values": ["add"]},
 		{"key": "delete", "values": ["delete", "remove", "clear", "clean",]},
 		{"key": "send", "values": ["send", "dispatch", "mail", "forward", "post", "submit", "mark", "set"]},
-		{"key": "repeat", "values": ["repeat", "retry", "pause",]},
+		{"key": "repeat", "values": ["repeat", "retry", "pause", "skip",]},
 		{"key": "execute", "values": ["execute", "run", "play", "raise",]},
 		{"key": "extract", "values": ["extract", "unpack", "decompress", "open"]},
 		{"key": "inflate", "values": ["inflate", "pack", "compress",]},

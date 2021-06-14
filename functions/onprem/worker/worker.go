@@ -703,7 +703,18 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			continue
 		}
 
-		if action.AppName == "Shuffle Workflow" {
+		if action.AppName == "Shuffle Tools" && (action.Name == "skip_me" || action.Name == "router" || action.Name == "route") {
+			err := runSkipAction(topClient, action, workflowExecution.Workflow.ID, workflowExecution.ExecutionId, workflowExecution.Authorization, "SKIPPED")
+			if err != nil {
+				log.Printf("[DEBUG] Error in skipme for %s: %s", action.Label, err)
+			} else {
+				log.Printf("[INFO] Adding visited (4): %s\n", action.Label)
+
+				visited = append(visited, action.ID)
+				executed = append(executed, action.ID)
+				continue
+			}
+		} else if action.AppName == "Shuffle Workflow" {
 			//log.Printf("SHUFFLE WORKFLOW: %#v", action)
 			action.Environment = environment
 			action.AppName = "shuffle-subflow"
@@ -1275,7 +1286,7 @@ func handleDefaultExecution(client *http.Client, req *http.Request, workflowExec
 		shutdown(workflowExecution, "", "", true)
 	}
 
-	log.Printf("DEFAULT EXECUTION Startaction: %s", startAction)
+	log.Printf("[DEBUG] DEFAULT EXECUTION Startaction: %s", startAction)
 
 	ctx := context.Background()
 	setWorkflowExecution(ctx, workflowExecution, false)
@@ -1386,6 +1397,51 @@ func getAction(workflowExecution shuffle.WorkflowExecution, id, environment stri
 	}
 
 	return shuffle.Action{}
+}
+
+func runSkipAction(client *http.Client, action shuffle.Action, workflowId, workflowExecutionId, authorization string, configuration string) error {
+	timeNow := time.Now().Unix()
+	result := shuffle.ActionResult{
+		Action:        action,
+		ExecutionId:   workflowExecutionId,
+		Authorization: authorization,
+		Result:        configuration,
+		StartedAt:     timeNow,
+		CompletedAt:   0,
+		Status:        "SUCCESS",
+	}
+
+	resultData, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+
+	streamUrl := fmt.Sprintf("%s/api/v1/streams", baseUrl)
+	req, err := http.NewRequest(
+		"POST",
+		streamUrl,
+		bytes.NewBuffer([]byte(resultData)),
+	)
+
+	if err != nil {
+		log.Printf("Error building test request: %s", err)
+		return err
+	}
+
+	newresp, err := client.Do(req)
+	if err != nil {
+		log.Printf("Error running test request: %s", err)
+		return err
+	}
+
+	body, err := ioutil.ReadAll(newresp.Body)
+	if err != nil {
+		log.Printf("Failed reading body when waiting: %s", err)
+		return err
+	}
+
+	log.Printf("[INFO] User Input Body: %s", string(body))
+	return nil
 }
 
 func runUserInput(client *http.Client, action shuffle.Action, workflowId, workflowExecutionId, authorization string, configuration string) error {
@@ -2051,9 +2107,30 @@ func main() {
 				}
 			}
 
-			log.Printf("Environments: %s. Source: %s. 1 = webserver, 0 or >1 = default", environments, workflowExecution.ExecutionSource)
-			if len(environments) == 1 && workflowExecution.ExecutionSource != "default" {
-				log.Printf("[INFO] Running OPTIMIZED execution (not manual)")
+			// Checks if a subflow is child of the startnode, as sub-subflows aren't working properly yet
+			childNodes := shuffle.FindChildNodes(workflowExecution, workflowExecution.Start)
+			log.Printf("[DEBUG] Looking for subflow in %#v to check execution pattern as child of %s", childNodes, workflowExecution.Start)
+			subflowFound := false
+			for _, childNode := range childNodes {
+				for _, trigger := range workflowExecution.Workflow.Triggers {
+					if trigger.ID != childNode {
+						continue
+					}
+
+					if trigger.AppName == "Shuffle Workflow" {
+						subflowFound = true
+						break
+					}
+				}
+
+				if subflowFound {
+					break
+				}
+			}
+
+			log.Printf("\n\nEnvironments: %s. Source: %s. 1 env = webserver, 0 or >1 = default. Subflow exists: %#v\n\n", environments, workflowExecution.ExecutionSource, subflowFound)
+			if len(environments) == 1 && workflowExecution.ExecutionSource != "default" && !subflowFound {
+				log.Printf("\n\n[INFO] Running OPTIMIZED execution (not manual)\n\n")
 				listener := webserverSetup(workflowExecution)
 				err := executionInit(workflowExecution)
 				if err != nil {
@@ -2073,7 +2150,7 @@ func main() {
 				//wg.Add(1)
 				//wg.Wait()
 			} else {
-				log.Printf("[INFO] Running NON-OPTIMIZED execution for type %s with %d environments. This only happens when ran manually. Status: %s", workflowExecution.ExecutionSource, len(environments), workflowExecution.Status)
+				log.Printf("\n\n[INFO] Running NON-OPTIMIZED execution for type %s with %d environments. This only happens when ran manually. Status: %s\n\n", workflowExecution.ExecutionSource, len(environments), workflowExecution.Status)
 				//err := executionInit(workflowExecution)
 				//if err != nil {
 				//	log.Printf("[INFO] Workflow setup failed: %s", workflowExecution.ExecutionId, err)

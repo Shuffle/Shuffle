@@ -786,6 +786,10 @@ func validateNewWorkerExecution(body []byte) error {
 		return errors.New(fmt.Sprintf("Bad length of trigger: %d (probably normal app)", len(execution.Workflow.Triggers)))
 	}
 
+	if len(baseExecution.Results) >= len(execution.Results) {
+		return errors.New(fmt.Sprintf("Can't have less actions in a full execution than what exists: %d (old) vs %d (new)", len(baseExecution.Results), len(execution.Results)))
+	}
+
 	//if baseExecution.Status != "WAITING" && baseExecution.Status != "EXECUTING" {
 	//	return errors.New(fmt.Sprintf("Workflow is already finished or failed. Can't update"))
 	//}
