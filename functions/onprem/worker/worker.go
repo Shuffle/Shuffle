@@ -27,7 +27,7 @@ import (
 	dockerclient "github.com/docker/docker/client"
 	//"github.com/go-git/go-billy/v5/memfs"
 
-	newdockerclient "github.com/fsouza/go-dockerclient"
+	//newdockerclient "github.com/fsouza/go-dockerclient"
 	//"github.com/satori/go.uuid"
 
 	"github.com/gorilla/mux"
@@ -58,6 +58,7 @@ var containerIds []string
 var extra int
 var startAction string
 var results []shuffle.ActionResult
+var allLogs map[string]string
 
 var containerId string
 
@@ -93,7 +94,7 @@ func init() {
 
 // removes every container except itself (worker)
 func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason string, handleResultSend bool) {
-	log.Printf("[INFO] Shutdown (%s) started with reason %s. Result amount: %d. ResultsSent: %d, Send result: %#v", workflowExecution.Status, reason, len(workflowExecution.Results), requestsSent, handleResultSend)
+	log.Printf("[INFO] Shutdown (%s) started with reason %#v. Result amount: %d. ResultsSent: %d, Send result: %#v", workflowExecution.Status, reason, len(workflowExecution.Results), requestsSent, handleResultSend)
 	//reason := "Error in execution"
 
 	sleepDuration := 1
@@ -184,19 +185,23 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 			log.Printf("[INFO] Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
 		}
 	}
+
+	log.Printf("[INFO] All App Logs: %#v", allLogs)
 	_, err = client.Do(req)
 	if err != nil {
-		log.Printf("[INFO] Failed abort request: %s", err)
+		log.Printf("[WARNING] Failed abort request: %s", err)
 	}
 
-	log.Printf("[INFO] Finished shutdown (after %d seconds).", sleepDuration)
-	// Allows everything to finish in subprocesses
+	log.Printf("[INFO] Finished shutdown (after %d seconds). ", sleepDuration)
+	//Finished shutdown (after %d seconds). ", sleepDuration)
+
+	// Allows everything to finish in subprocesses (apps)
 	time.Sleep(time.Duration(sleepDuration) * time.Second)
 	os.Exit(3)
 }
 
 // Deploys the internal worker whenever something happens
-func deployApp(cli *dockerclient.Client, image string, identifier string, env []string, workflowExecution shuffle.WorkflowExecution) error {
+func deployApp(cli *dockerclient.Client, image string, identifier string, env []string, workflowExecution shuffle.WorkflowExecution, actionId string) error {
 	// form basic hostConfig
 	ctx := context.Background()
 
@@ -289,7 +294,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 
 	// Waiting to see if it exits.. Stupid, but stable(r)
 	if workflowExecution.ExecutionSource != "default" {
-		log.Printf("[INFO] Handling NON-default execution source %s - NOT waiting and validating!", workflowExecution.ExecutionSource)
+		log.Printf("[INFO] Handling NON-default execution source %s - NOT waiting or validating!", workflowExecution.ExecutionSource)
 	} else if workflowExecution.ExecutionSource == "default" {
 		time.Sleep(2 * time.Second)
 
@@ -301,30 +306,29 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 			//log.Printf("%#v", stats.Config)
 			//log.Printf("%#v", stats.ContainerJSONBase.State)
 			log.Printf("[INFO] EXECUTION STATUS: %s", stats.ContainerJSONBase.State.Status)
-			if stats.ContainerJSONBase.State.Status == "exited" {
-				logOptions := types.ContainerLogsOptions{
-					ShowStdout: true,
-				}
+			logOptions := types.ContainerLogsOptions{
+				ShowStdout: true,
+			}
 
-				exit := true
-				out, err := cli.ContainerLogs(ctx, cont.ID, logOptions)
-				if err != nil {
-					log.Printf("[INFO] Failed getting logs: %s", err)
-				} else {
-					buf := new(strings.Builder)
-					io.Copy(buf, out)
-					logs := buf.String()
-					log.Printf("Execution Logs: %s", logs)
+			exit := true
+			out, err := cli.ContainerLogs(ctx, cont.ID, logOptions)
+			if err != nil {
+				log.Printf("[INFO] Failed getting logs: %s", err)
+			} else {
+				buf := new(strings.Builder)
+				io.Copy(buf, out)
+				logs := buf.String()
+				//allLogs[actionId] = logs
 
-					if strings.Contains(logs, "Normal execution.") {
-						exit = false
-					}
+				if stats.ContainerJSONBase.State.Status == "exited" && strings.Contains(logs, "Normal execution.") {
+					log.Printf("[WARNING] BAD Execution Logs for %s: %s", actionId, logs)
+					exit = false
 				}
+			}
 
-				if exit {
-					log.Printf("ERROR IN CONTAINER DEPLOYMENT - ITS EXITED!")
-					return errors.New(fmt.Sprintf(`{"success": false, "reason": "Container %s exited prematurely.","debug": "docker logs -f %s"}`, cont.ID, cont.ID))
-				}
+			if exit {
+				log.Printf("ERROR IN CONTAINER DEPLOYMENT - ITS EXITED!")
+				return errors.New(fmt.Sprintf(`{"success": false, "reason": "Container %s exited prematurely.","debug": "docker logs -f %s"}`, cont.ID, cont.ID))
 			}
 		}
 	}
@@ -348,7 +352,6 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		logOptions := types.ContainerLogsOptions{
 			ShowStdout: true,
 		}
-
 	*/
 
 	containerIds = append(containerIds, cont.ID)
@@ -443,7 +446,7 @@ func handleSubworkflowExecution(client *http.Client, workflowExecution shuffle.W
 		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", apikey))
 		newresp, err := client.Do(req)
 		if err != nil {
-			log.Printf("Error running test request: %s", err)
+			log.Printf("[DEBUG] Error running test request: %s", err)
 			return err
 		}
 
@@ -984,7 +987,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		// If cleanup is set, it should run for efficiency
 		pullOptions := types.ImagePullOptions{}
 		if cleanupEnv == "true" {
-			err = deployApp(dockercli, images[0], identifier, env, workflowExecution)
+			err = deployApp(dockercli, images[0], identifier, env, workflowExecution, action.ID)
 			if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 				if strings.Contains(err.Error(), "exited prematurely") {
 					log.Printf("[DEBUG] Shutting down (2)")
@@ -992,37 +995,46 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 				}
 
 				image = images[2]
-				err = deployApp(dockercli, image, identifier, env, workflowExecution)
+				err = deployApp(dockercli, image, identifier, env, workflowExecution, action.ID)
 				if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 					if strings.Contains(err.Error(), "exited prematurely") {
 						log.Printf("[DEBUG] Shutting down (3)")
 						shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
 					}
-					log.Printf("[WARNING] Failed CLEANUP execution. Downloading image remotely.")
-					reader, err := dockercli.ImagePull(context.Background(), image, pullOptions)
-					if err != nil {
-						log.Printf("[ERROR] Failed getting %s. Couldn't be find locally, AND is missing.", image)
-						log.Printf("[DEBUG] Shutting down (4)")
-						shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
-					}
 
-					buildBuf := new(strings.Builder)
-					_, err = io.Copy(buildBuf, reader)
-					if err != nil && !strings.Contains(fmt.Sprintf("%s", err.Error()), "Conflict. The container name") {
-						log.Printf("[ERROR] Error in IO copy: %s", err)
-						log.Printf("[DEBUG] Shutting down (5)")
-						shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
+					log.Printf("[WARNING] Failed CLEANUP execution. Downloading image %s remotely.", image)
+
+					err := downloadDockerImageBackend(topClient, image)
+					if err == nil {
+						log.Printf("[DEBUG] Downloaded image %s from backend (CLEANUP)", image)
 					} else {
-						if strings.Contains(buildBuf.String(), "errorDetail") {
-							log.Printf("[ERROR] Docker build:\n%s\nERROR ABOVE: Trying to pull tags from: %s", buildBuf.String(), image)
-							log.Printf("[DEBUG] Shutting down (6)")
+						log.Printf("[WARNING] Failed to download image %s (CLEANUP): %s", image, err)
+
+						reader, err := dockercli.ImagePull(context.Background(), image, pullOptions)
+						if err != nil {
+							log.Printf("[ERROR] Failed getting %s. Couldn't be find locally, AND is missing.", image)
+							log.Printf("[DEBUG] Shutting down (4)")
 							shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
 						}
 
-						log.Printf("[INFO] Successfully downloaded %s", image)
+						buildBuf := new(strings.Builder)
+						_, err = io.Copy(buildBuf, reader)
+						if err != nil && !strings.Contains(fmt.Sprintf("%s", err.Error()), "Conflict. The container name") {
+							log.Printf("[ERROR] Error in IO copy: %s", err)
+							log.Printf("[DEBUG] Shutting down (5)")
+							shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
+						} else {
+							if strings.Contains(buildBuf.String(), "errorDetail") {
+								log.Printf("[ERROR] Docker build:\n%s\nERROR ABOVE: Trying to pull tags from: %s", buildBuf.String(), image)
+								log.Printf("[DEBUG] Shutting down (6)")
+								shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
+							}
+
+							log.Printf("[INFO] Successfully downloaded %s", image)
+						}
 					}
 
-					err = deployApp(dockercli, image, identifier, env, workflowExecution)
+					err = deployApp(dockercli, image, identifier, env, workflowExecution, action.ID)
 					if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 
 						log.Printf("[ERROR] Failed deploying image for the FOURTH time. Aborting if the image doesn't exist")
@@ -1042,7 +1054,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			}
 		} else {
 
-			err = deployApp(dockercli, images[0], identifier, env, workflowExecution)
+			err = deployApp(dockercli, images[0], identifier, env, workflowExecution, action.ID)
 			if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 				if strings.Contains(err.Error(), "exited prematurely") {
 					log.Printf("[DEBUG] Shutting down (9)")
@@ -1052,7 +1064,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 				// Trying to replace with lowercase to deploy again. This seems to work with Dockerhub well.
 				// FIXME: Should try to remotely download directly if this persists.
 				image = images[1]
-				err = deployApp(dockercli, image, identifier, env, workflowExecution)
+				err = deployApp(dockercli, image, identifier, env, workflowExecution, action.ID)
 				if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 					if strings.Contains(err.Error(), "exited prematurely") {
 						log.Printf("[DEBUG] Shutting down (10)")
@@ -1060,38 +1072,44 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 					}
 
 					image = images[2]
-					err = deployApp(dockercli, image, identifier, env, workflowExecution)
+					err = deployApp(dockercli, image, identifier, env, workflowExecution, action.ID)
 					if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 						if strings.Contains(err.Error(), "exited prematurely") {
 							log.Printf("[DEBUG] Shutting down (11)")
 							shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
 						}
 
-						log.Printf("[WARNING] Failed deploying image THREE TIMES. Attempting to download the latter as last resort.")
-						reader, err := dockercli.ImagePull(context.Background(), image, pullOptions)
-						if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
-							log.Printf("[ERROR] Failed getting %s. The couldn't be find locally, AND is missing.", image)
-							log.Printf("[DEBUG] Shutting down (12)")
-							shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
-						}
+						log.Printf("[WARNING] Failed deploying image THREE TIMES. Attempting to download %s as last resort from backend and dockerhub.", image)
 
-						buildBuf := new(strings.Builder)
-						_, err = io.Copy(buildBuf, reader)
-						if err != nil {
-							log.Printf("[ERROR] Error in IO copy: %s", err)
-							log.Printf("[DEBUG] Shutting down (13)")
-							shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
+						err := downloadDockerImageBackend(topClient, image)
+						if err == nil {
+							log.Printf("[DEBUG] Downloaded image %s from backend (CLEANUP)", image)
 						} else {
-							if strings.Contains(buildBuf.String(), "errorDetail") {
-								log.Printf("[ERROR] Docker build:\n%s\nERROR ABOVE: Trying to pull tags from: %s", buildBuf.String(), image)
-								log.Printf("[DEBUG] Shutting down (14)")
+							reader, err := dockercli.ImagePull(context.Background(), image, pullOptions)
+							if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
+								log.Printf("[ERROR] Failed getting %s. The couldn't be find locally, AND is missing.", image)
+								log.Printf("[DEBUG] Shutting down (12)")
 								shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
 							}
 
-							log.Printf("[INFO] Successfully downloaded %s", image)
+							buildBuf := new(strings.Builder)
+							_, err = io.Copy(buildBuf, reader)
+							if err != nil {
+								log.Printf("[ERROR] Error in IO copy: %s", err)
+								log.Printf("[DEBUG] Shutting down (13)")
+								shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
+							} else {
+								if strings.Contains(buildBuf.String(), "errorDetail") {
+									log.Printf("[ERROR] Docker build:\n%s\nERROR ABOVE: Trying to pull tags from: %s", buildBuf.String(), image)
+									log.Printf("[DEBUG] Shutting down (14)")
+									shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
+								}
+
+								log.Printf("[INFO] Successfully downloaded %s", image)
+							}
 						}
 
-						err = deployApp(dockercli, image, identifier, env, workflowExecution)
+						err = deployApp(dockercli, image, identifier, env, workflowExecution, action.ID)
 						if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 							log.Printf("[ERROR] Failed deploying image for the FOURTH time. Aborting if the image doesn't exist")
 							if strings.Contains(err.Error(), "exited prematurely") {
@@ -1556,7 +1574,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		log.Printf("[ERROR] Failed getting execution (workflowqueue) %s: %s", actionResult.ExecutionId, err)
 		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting execution ID %s because it doesn't exist."}`, actionResult.ExecutionId)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting execution ID %s because it doesn't exist locally."}`, actionResult.ExecutionId)))
 		return
 	}
 
@@ -1895,7 +1913,8 @@ func runWebserver(listener net.Listener) {
 	log.Fatal(http.Serve(listener, nil))
 }
 
-func downloadDockerImage(client *http.Client, imageName string) {
+func downloadDockerImageBackend(client *http.Client, imageName string) error {
+	log.Printf("[DEBUG] Trying to download image %s from backend as it doesn't exist", imageName)
 	data := fmt.Sprintf(`{"name": "%s"}`, imageName)
 	dockerImgUrl := fmt.Sprintf("%s/api/v1/get_docker_image", baseUrl)
 
@@ -1909,75 +1928,65 @@ func downloadDockerImage(client *http.Client, imageName string) {
 	if len(authorization) > 0 {
 		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", authorization))
 	} else {
-		log.Printf("[WARNING] No auth found.")
-		req.Header.Add("Authorization", fmt.Sprintf("Bearer db0373c6-1083-4dec-a05d-3ba73f02ccd4"))
+		log.Printf("[WARNING] No auth found - running backend download without it.")
+		//req.Header.Add("Authorization", fmt.Sprintf("Bearer db0373c6-1083-4dec-a05d-3ba73f02ccd4"))
 		//return
 	}
 
 	newresp, err := client.Do(req)
 	if err != nil {
 		log.Printf("[ERROR] Failed request: %s", err)
-		return
+		return err
 	}
 
 	if newresp.StatusCode != 200 {
-		log.Printf("[ERROR] DOWNLOAD StatusCode (1): %d", newresp.StatusCode)
-		return
-	}
-
-	// Write the body to file
-
-	newClient, err := newdockerclient.NewClientFromEnv()
-	if err != nil {
-		log.Printf("[WARNING] Failed setting up docker env in download: %s", newClient)
-		return
+		log.Printf("[ERROR] Docker download for image %s (backend) StatusCode (1): %d", imageName, newresp.StatusCode)
+		return errors.New(fmt.Sprintf("Failed to get image - status code %d", newresp.StatusCode))
 	}
 
 	newImageName := strings.Replace(imageName, "/", "_", -1)
-	newFileName := newImageName + ".tar.gz"
-	//os.Create(newFileName)
+	newFileName := newImageName + ".tar"
 
 	tar, err := os.Create(newFileName)
 	if err != nil {
 		log.Printf("[WARNING] Failed creating file: %s", err)
-		return
+		return err
 	}
 
-	//fs := memfs.New()
-	//if err != nil {
-	//	log.Printf("[WARNING] Failed making memory file: %s", err)
-	//	return
-	//}
-
-	//imageName = strings.Replace(imageName, "/", "_", -1)
-	//tar, err := fs.Create(imageName + ".tar.gz")
-	//if err != nil {
-	//	log.Printf("[WARNING] Failed making file: %s", err)
-	//	return
-	//}
 	defer tar.Close()
 	_, err = io.Copy(tar, newresp.Body)
-
-	//OutputStream: outFile,
-	//Context:      context.Background(),
-	imageOptions := newdockerclient.LoadImageOptions{
-		InputStream: tar,
-	}
-
-	//log.Printf("BUF: %s", buf.String())
-	err = newClient.LoadImage(imageOptions)
 	if err != nil {
-		log.Printf("[WARNING] Failed loading image %s: %s", imageName, err)
-		return
+		log.Printf("[WARNING] Failed response body copying: %s", err)
+		return err
+	}
+	tar.Seek(0, 0)
+
+	dockercli, err := dockerclient.NewEnvClient()
+	if err != nil {
+		log.Printf("[ERROR] Unable to create docker client (3): %s", err)
+		return err
 	}
 
-	log.Printf("[INFO] Successfully loaded image %s", imageName)
-	//err = os.Remove(newImageName)
-	//if err != nil {
-	//	log.Printf("[WARNING] Failed removing file: %s", err)
-	//}
+	imageLoadResponse, err := dockercli.ImageLoad(context.Background(), tar, true)
+	if err != nil {
+		log.Printf("[ERROR] Error loading: %s", err)
+		return err
+	}
 
-	return
+	body, err := ioutil.ReadAll(imageLoadResponse.Body)
+	if err != nil {
+		log.Printf("[ERROR] Error reading: %s", err)
+		return err
+	}
+
+	if strings.Contains(string(body), "no such file") {
+		return errors.New(string(body))
+	}
+
+	os.Remove(newFileName)
+
+	log.Printf("[INFO] Successfully loaded image %s: %s", imageName, string(body))
+	return nil
 }
 
 // Initial loop etc
@@ -2004,9 +2013,8 @@ func main() {
 		}
 	}
 
-	//imageName := "frikky/shuffle:Testing_1.0.0"
-	//downloadDockerImage(client, imageName)
-	//os.Exit(3)
+	//imageName := fmt.Sprintf("%s/%s:shuffle_openapi_1.0.0", registryName, baseimagename)
+	//downloadDockerImageBackend(client, imageName)
 
 	// WORKER_TESTING_WORKFLOW should be a workflow ID
 	authorization := ""

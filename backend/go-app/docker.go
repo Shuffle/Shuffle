@@ -5,9 +5,9 @@ import (
 	"github.com/frikky/shuffle-shared"
 
 	"archive/tar"
-	"bufio"
+	//"bufio"
 	"path/filepath"
-	"strconv"
+	//"strconv"
 
 	"bytes"
 	"context"
@@ -20,7 +20,6 @@ import (
 	"github.com/docker/docker/client"
 	newdockerclient "github.com/fsouza/go-dockerclient"
 	"github.com/go-git/go-billy/v5"
-	"github.com/go-git/go-billy/v5/memfs"
 
 	//network "github.com/docker/docker/api/types/network"
 	//natting "github.com/docker/go-connections/nat"
@@ -624,13 +623,13 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// Just here to verify that the user is logged in
-	_, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("[WARNING] Api authentication failed in DOWNLOAD IMAGE: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
+	//_, err := shuffle.HandleApiAuthentication(resp, request)
+	//if err != nil {
+	//	log.Printf("[WARNING] Api authentication failed in DOWNLOAD IMAGE: %s", err)
+	//	resp.WriteHeader(401)
+	//	resp.Write([]byte(`{"success": false}`))
+	//	return
+	//}
 
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
@@ -642,16 +641,6 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 	type requestCheck struct {
 		Name string `datastore:"name" json:"name" yaml:"name"`
 	}
-
-	//body = []byte(`swagger: "2.0"`)
-	//body = []byte(`swagger: '1.0'`)
-	//newbody := string(body)
-	//newbody = strings.TrimSpace(newbody)
-	//body = []byte(newbody)
-	//log.Println(string(body))
-	//tmpbody, err := yaml.YAMLToJSON(body)
-	//log.Println(err)
-	//log.Println(string(tmpbody))
 
 	// This has to be done in a weird way because Datastore doesn't
 	// support map[string]interface and similar (openapi3.Swagger)
@@ -665,15 +654,9 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	log.Printf("[DEBUG] Image to load: %s", version.Name)
-	//cli, err := client.NewEnvClient()
-	//if err != nil {
-	//	log.Println("Unable to create docker client")
-	//	return err
-	//}
-
 	dockercli, err := client.NewEnvClient()
 	if err != nil {
-		log.Printf("Unable to create docker client: %s", err)
+		log.Printf("[WARNING] Unable to create docker client: %s", err)
 		resp.WriteHeader(422)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed JSON marshalling: %s"}`, err)))
 		return
@@ -686,75 +669,125 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 
 	img := types.ImageSummary{}
 	tagFound := ""
+
+	img2 := types.ImageSummary{}
+	tagFound2 := ""
+
+	alternativeNameSplit := strings.Split(version.Name, "/")
+	alternativeName := version.Name
+	if len(alternativeNameSplit) == 3 {
+		alternativeName = strings.Join(alternativeNameSplit[1:3], "/")
+	}
+
 	for _, image := range images {
 		for _, tag := range image.RepoTags {
-			//log.Printf("[INFO] Docker Image: %s", tag)
-
 			if strings.ToLower(tag) == strings.ToLower(version.Name) {
 				img = image
 				tagFound = tag
 				break
 			}
+
+			if strings.ToLower(tag) == strings.ToLower(alternativeName) {
+				img2 = image
+				tagFound2 = tag
+			}
 		}
 	}
 
+	// REBUILDS THE APP
 	if len(img.ID) == 0 {
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "message": "Couldn't find image %s"}`, version.Name)))
-		return
+		if len(img2.ID) == 0 {
+			workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 500)
+			log.Printf("[INFO] Getting workflowapps for a rebuild. Got %d with err %#v", len(workflowapps), err)
+			if err == nil {
+				imageName := ""
+				imageVersion := ""
+				newNameSplit := strings.Split(version.Name, ":")
+				if len(newNameSplit) == 2 {
+					log.Printf("[DEBUG] Found name %#v", newNameSplit)
+
+					findVersionSplit := strings.Split(newNameSplit[1], "_")
+					log.Printf("[DEBUG] Found another split %#v", findVersionSplit)
+					if len(findVersionSplit) == 2 {
+						imageVersion = findVersionSplit[len(findVersionSplit)-1]
+						imageName = findVersionSplit[0]
+					} else if len(findVersionSplit) >= 2 {
+						imageVersion = findVersionSplit[len(findVersionSplit)-1]
+						imageName = strings.Join(findVersionSplit[0:len(findVersionSplit)-1], "_")
+					} else {
+						log.Printf("[DEBUG] Couldn't parse appname & version for %#v", findVersionSplit)
+					}
+				}
+
+				if len(imageName) > 0 && len(imageVersion) > 0 {
+					log.Printf("Looking for appname %s with version %s", imageName, imageVersion)
+					foundApp := shuffle.WorkflowApp{}
+					for _, app := range workflowapps {
+						if strings.ToLower(strings.Replace(app.Name, " ", "_", -1)) == imageName && app.AppVersion == imageVersion {
+							if app.Generated {
+								foundApp = app
+								break
+							}
+
+							break
+						}
+					}
+
+					if len(foundApp.ID) > 0 {
+						openApiApp, err := shuffle.GetOpenApiDatastore(ctx, foundApp.ID)
+						if err != nil {
+							log.Printf("[ERROR] Failed getting OpenAPI app %s to database: %s", foundApp.ID, err)
+						} else {
+							log.Printf("[DEBUG] Found OpenAPI app for %s as generated - now building!", version.Name)
+							user := shuffle.User{}
+
+							//img = version.Name
+							if len(alternativeName) > 0 {
+								tagFound = alternativeName
+							} else {
+								tagFound = version.Name
+							}
+
+							buildSwaggerApp(resp, []byte(openApiApp.Body), user)
+						}
+					}
+				}
+			} else {
+				log.Printf("[WARNING] Couldn't find an image with registry name %s and %s", version.Name, alternativeName)
+				resp.WriteHeader(401)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "message": "Couldn't find image %s"}`, version.Name)))
+				return
+			}
+		}
+
+		if len(tagFound) == 0 && len(tagFound2) > 0 {
+			img = img2
+			tagFound = tagFound2
+		}
 	}
 
-	log.Printf("[INFO] Img found (%s): %#v", tagFound, img)
-
-	basepath := "base"
-	location := fmt.Sprintf("%s.tar.gz", tagFound)
-	fs := memfs.New()
-
-	//Close after function return
-	f, err := fs.Create(fmt.Sprintf("%s/%s", basepath, location))
-	if err != nil {
-		log.Printf("[WARNING] Failed making file: %s", err)
-		return
-	}
+	//log.Printf("[INFO] Img found (%s): %#v", tagFound, img)
+	log.Printf("[INFO] Img found to be downloaded: %s", tagFound)
 
 	newClient, err := newdockerclient.NewClientFromEnv()
 	if err != nil {
 		log.Printf("[WARNING] Failed setting up docker env: %s", newClient)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "message": "Couldn't make docker client"}`)))
 		return
 	}
 
-	//https://github.com/fsouza/go-dockerclient/issues/600
-	defer f.Close()
-	w := bufio.NewWriter(f)
+	////https://github.com/fsouza/go-dockerclient/issues/600
+	//defer fileReader.Close()
 	opts := newdockerclient.ExportImageOptions{
 		Name:         tagFound,
-		OutputStream: w,
+		OutputStream: resp,
 	}
 
 	if err := newClient.ExportImage(opts); err != nil {
 		log.Printf("[WARNING] FAILED to save image to file: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "message": "Couldn't export image"}`)))
 		return
 	}
-
-	w.Flush()
-	FileHeader := make([]byte, 512)
-	f.Read(FileHeader)
-	FileContentType := http.DetectContentType(FileHeader)
-
-	//Get the file size
-	//FileStat, _ := f.Stat() //Get info from file
-	//FileSize := strconv.FormatInt(f.Size(), 10) //Get file size as a string
-
-	//Send the headers
-	resp.Header().Set("Content-Disposition", "attachment; filename="+location)
-	resp.Header().Set("Content-Type", FileContentType)
-	resp.Header().Set("Content-Length", strconv.FormatInt(img.Size, 10))
-
-	//Send the file
-	//We read 512 bytes from the file already, so we reset the offset back to 0
-	f.Seek(0, 0)
-	io.Copy(resp, f) //'Copy' the file to the client
-
-	//resp.WriteHeader(200)
-	//resp.Write([]byte(fmt.Sprintf(`{"success": true, "message": "Downloading image %s"}`, version.Name)))
 }

@@ -3081,29 +3081,7 @@ func handleSwaggerValidation(body []byte) (shuffle.ParsedOpenApi, error) {
 	return parsed, err
 }
 
-// Creates an app from the app builder
-func verifySwagger(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	//log.Printf("[INFO] TRY TO SET APP TO LIVE!!!")
-	user, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("Api authentication failed in verify swagger: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	body, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Failed reading body"}`))
-		return
-	}
-
+func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 	type Test struct {
 		Editing bool   `datastore:"editing"`
 		Id      string `datastore:"id"`
@@ -3111,7 +3089,7 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	var test Test
-	err = json.Unmarshal(body, &test)
+	err := json.Unmarshal(body, &test)
 	if err != nil {
 		log.Printf("Failed unmarshalling test: %s", err)
 		resp.WriteHeader(401)
@@ -3123,7 +3101,8 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	hasher := md5.New()
 	hasher.Write(body)
 	newmd5 := hex.EncodeToString(hasher.Sum(nil))
-	if test.Editing {
+
+	if test.Editing && len(user.Id) > 0 {
 		// Quick verification test
 		ctx := context.Background()
 		app, err := shuffle.GetApp(ctx, test.Id, user)
@@ -3150,25 +3129,6 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	// Test = client side with fetch?
 
 	ctx := context.Background()
-	//s := string(body)
-	//if !utf8.ValidString(s) {
-	//	v := make([]rune, 0, len(s))
-	//	for i, r := range s {
-	//		if r == utf8.RuneError {
-	//			_, size := utf8.DecodeRuneInString(s[i:])
-	//			if size == 1 {
-	//				continue
-	//			}
-	//		}
-	//		v = append(v, r)
-	//	}
-	//	s = string(v)
-	//}
-	//fmt.Printf("%q\n", s)
-
-	//body  = []byte(strings.Replace(string(body), '<80>', '', -1))
-
-	//log.Println(string(body))
 	swaggerLoader := openapi3.NewSwaggerLoader()
 	swaggerLoader.IsExternalRefsAllowed = true
 	swagger, err := swaggerLoader.LoadSwaggerFromData(body)
@@ -3300,20 +3260,6 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 
 	log.Printf("[INFO] Successfully stitched ZIPFILE for %s", identifier)
 
-	// 4. Upload as cloud function - this apikey is specifically for cloud functions rofl
-	//environmentVariables := map[string]string{
-	//	"FUNCTION_APIKEY": apikey,
-	//}
-
-	//fullLocation := fmt.Sprintf("gs://%s/%s", bucketName, applocation)
-	//err = deployCloudFunctionPython(ctx, identifier, defaultLocation, fullLocation, environmentVariables)
-	//if err != nil {
-	//	log.Printf("Error uploading cloud function: %s", err)
-	//	resp.WriteHeader(500)
-	//	resp.Write([]byte(`{"success": false, "reason": "Failed to upload function"}`))
-	//	return
-	//}
-
 	// 4. Build the image locally.
 	// FIXME: Should be moved to a local docker registry
 	dockerLocation := fmt.Sprintf("%s/Dockerfile", basePath)
@@ -3359,12 +3305,14 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 		user.PrivateApps[foundNumber] = api
 	}
 
-	err = shuffle.SetUser(ctx, &user, true)
-	if err != nil {
-		log.Printf("[ERROR] Failed adding verification for user %s: %s", user.Username, err)
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Failed updating user"}`)))
-		return
+	if len(user.Id) > 0 {
+		err = shuffle.SetUser(ctx, &user, true)
+		if err != nil {
+			log.Printf("[ERROR] Failed adding verification for user %s: %s", user.Username, err)
+			resp.WriteHeader(500)
+			resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Failed updating user"}`)))
+			return
+		}
 	}
 
 	//log.Printf("DO I REACH HERE WHEN SAVING?")
@@ -3405,8 +3353,36 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	shuffle.DeleteCache(ctx, cacheKey)
 	shuffle.DeleteCache(ctx, fmt.Sprintf("apps_%s", user.Id))
 
-	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true, "id": "%s"}`, api.ID)))
+	if len(user.Id) > 0 {
+		resp.WriteHeader(200)
+		resp.Write([]byte(fmt.Sprintf(`{"success": true, "id": "%s"}`, api.ID)))
+	}
+}
+
+// Creates an app from the app builder
+func verifySwagger(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	//log.Printf("[INFO] TRY TO SET APP TO LIVE!!!")
+	user, err := shuffle.HandleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("Api authentication failed in verify swagger: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Failed reading body"}`))
+		return
+	}
+
+	buildSwaggerApp(resp, body, user)
 }
 
 func healthCheckHandler(resp http.ResponseWriter, request *http.Request) {
