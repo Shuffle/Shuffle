@@ -310,7 +310,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 				ShowStdout: true,
 			}
 
-			exit := true
+			exit := false
 			out, err := cli.ContainerLogs(ctx, cont.ID, logOptions)
 			if err != nil {
 				log.Printf("[INFO] Failed getting logs: %s", err)
@@ -318,11 +318,13 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 				buf := new(strings.Builder)
 				io.Copy(buf, out)
 				logs := buf.String()
+
+				// FIXME: Re-add log tracking which can be sent to backend
 				//allLogs[actionId] = logs
 
-				if stats.ContainerJSONBase.State.Status == "exited" && strings.Contains(logs, "Normal execution.") {
+				if stats.ContainerJSONBase.State.Status == "exited" && !strings.Contains(logs, "Normal execution.") {
 					log.Printf("[WARNING] BAD Execution Logs for %s: %s", actionId, logs)
-					exit = false
+					exit = true
 				}
 			}
 
@@ -994,20 +996,33 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 					shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
 				}
 
-				image = images[2]
-				err = deployApp(dockercli, image, identifier, env, workflowExecution, action.ID)
-				if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
-					if strings.Contains(err.Error(), "exited prematurely") {
-						log.Printf("[DEBUG] Shutting down (3)")
-						shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
-					}
-
-					log.Printf("[WARNING] Failed CLEANUP execution. Downloading image %s remotely.", image)
-
-					err := downloadDockerImageBackend(topClient, image)
-					if err == nil {
-						log.Printf("[DEBUG] Downloaded image %s from backend (CLEANUP)", image)
+				err := downloadDockerImageBackend(topClient, image)
+				executed := false
+				if err == nil {
+					log.Printf("[DEBUG] Downloaded image %s from backend (CLEANUP)", image)
+					//err = deployApp(dockercli, image, identifier, env, workflow, action.ID)
+					err = deployApp(dockercli, image, identifier, env, workflowExecution, action.ID)
+					if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
+						if strings.Contains(err.Error(), "exited prematurely") {
+							log.Printf("[DEBUG] Shutting down (41)")
+							shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
+						}
 					} else {
+						executed = true
+					}
+				}
+
+				if !executed {
+					image = images[2]
+					err = deployApp(dockercli, image, identifier, env, workflowExecution, action.ID)
+					if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
+						if strings.Contains(err.Error(), "exited prematurely") {
+							log.Printf("[DEBUG] Shutting down (3)")
+							shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
+						}
+
+						//log.Printf("[WARNING] Failed CLEANUP execution. Downloading image %s remotely.", image)
+
 						log.Printf("[WARNING] Failed to download image %s (CLEANUP): %s", image, err)
 
 						reader, err := dockercli.ImagePull(context.Background(), image, pullOptions)
@@ -1032,22 +1047,22 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 
 							log.Printf("[INFO] Successfully downloaded %s", image)
 						}
-					}
 
-					err = deployApp(dockercli, image, identifier, env, workflowExecution, action.ID)
-					if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
+						err = deployApp(dockercli, image, identifier, env, workflowExecution, action.ID)
+						if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 
-						log.Printf("[ERROR] Failed deploying image for the FOURTH time. Aborting if the image doesn't exist")
-						if strings.Contains(err.Error(), "exited prematurely") {
-							log.Printf("[DEBUG] Shutting down (7)")
-							shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
-						}
+							log.Printf("[ERROR] Failed deploying image for the FOURTH time. Aborting if the image doesn't exist")
+							if strings.Contains(err.Error(), "exited prematurely") {
+								log.Printf("[DEBUG] Shutting down (7)")
+								shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
+							}
 
-						if strings.Contains(err.Error(), "No such image") {
-							//log.Printf("[WARNING] Failed deploying %s from image %s: %s", identifier, image, err)
-							log.Printf("[ERROR] Image doesn't exist. Shutting down")
-							log.Printf("[DEBUG] Shutting down (8)")
-							shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
+							if strings.Contains(err.Error(), "No such image") {
+								//log.Printf("[WARNING] Failed deploying %s from image %s: %s", identifier, image, err)
+								log.Printf("[ERROR] Image doesn't exist. Shutting down")
+								log.Printf("[DEBUG] Shutting down (8)")
+								shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
+							}
 						}
 					}
 				}
@@ -1071,20 +1086,34 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 						shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
 					}
 
-					image = images[2]
-					err = deployApp(dockercli, image, identifier, env, workflowExecution, action.ID)
-					if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
-						if strings.Contains(err.Error(), "exited prematurely") {
-							log.Printf("[DEBUG] Shutting down (11)")
-							shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
-						}
-
-						log.Printf("[WARNING] Failed deploying image THREE TIMES. Attempting to download %s as last resort from backend and dockerhub.", image)
-
-						err := downloadDockerImageBackend(topClient, image)
-						if err == nil {
-							log.Printf("[DEBUG] Downloaded image %s from backend (CLEANUP)", image)
+					log.Printf("[DEBUG] Failed deploy. Downloading image %s", image)
+					err := downloadDockerImageBackend(topClient, image)
+					executed := false
+					if err == nil {
+						log.Printf("[DEBUG] Downloaded image %s from backend (CLEANUP)", image)
+						//err = deployApp(dockercli, image, identifier, env, workflow, action.ID)
+						err = deployApp(dockercli, image, identifier, env, workflowExecution, action.ID)
+						if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
+							if strings.Contains(err.Error(), "exited prematurely") {
+								log.Printf("[DEBUG] Shutting down (40)")
+								shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
+							}
 						} else {
+							executed = true
+						}
+					}
+
+					if !executed {
+						image = images[2]
+						err = deployApp(dockercli, image, identifier, env, workflowExecution, action.ID)
+						if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
+							if strings.Contains(err.Error(), "exited prematurely") {
+								log.Printf("[DEBUG] Shutting down (11)")
+								shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
+							}
+
+							log.Printf("[WARNING] Failed deploying image THREE TIMES. Attempting to download %s as last resort from backend and dockerhub.", image)
+
 							reader, err := dockercli.ImagePull(context.Background(), image, pullOptions)
 							if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 								log.Printf("[ERROR] Failed getting %s. The couldn't be find locally, AND is missing.", image)

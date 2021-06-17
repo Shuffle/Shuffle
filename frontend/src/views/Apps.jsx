@@ -665,7 +665,7 @@ const Apps = (props) => {
 						</Typography>	
 					</div>
 				</div>
-				{selectedApp.versions !== null && selectedApp.versions !== undefined && selectedApp.versions.length > 0 ? 
+				{selectedApp.versions !== null && selectedApp.versions !== undefined && selectedApp.versions.length > 1 ? 
 					<Select
 						defaultValue={selectedApp.app_version}
 						onChange={(event) => {

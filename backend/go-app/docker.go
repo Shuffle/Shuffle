@@ -697,7 +697,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 	// REBUILDS THE APP
 	if len(img.ID) == 0 {
 		if len(img2.ID) == 0 {
-			workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 500)
+			workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 0)
 			log.Printf("[INFO] Getting workflowapps for a rebuild. Got %d with err %#v", len(workflowapps), err)
 			if err == nil {
 				imageName := ""
@@ -720,16 +720,22 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 				}
 
 				if len(imageName) > 0 && len(imageVersion) > 0 {
-					log.Printf("Looking for appname %s with version %s", imageName, imageVersion)
 					foundApp := shuffle.WorkflowApp{}
+					imageName = strings.ToLower(imageName)
+					imageVersion = strings.ToLower(imageVersion)
+					log.Printf("[DEBUG] Looking for appname %s with version %s", imageName, imageVersion)
+
 					for _, app := range workflowapps {
 						if strings.ToLower(strings.Replace(app.Name, " ", "_", -1)) == imageName && app.AppVersion == imageVersion {
 							if app.Generated {
+								log.Printf("[DEBUG] Found matching app %s:%s - %s", imageName, imageVersion, app.ID)
 								foundApp = app
 								break
+							} else {
+								log.Printf("[WARNING] Trying to rebuild app that isn't generated - not allowed. Looking further.")
 							}
 
-							break
+							//break
 						}
 					}
 
@@ -767,7 +773,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	//log.Printf("[INFO] Img found (%s): %#v", tagFound, img)
-	log.Printf("[INFO] Img found to be downloaded: %s", tagFound)
+	log.Printf("[INFO] Img found to be downloaded by client: %s", tagFound)
 
 	newClient, err := newdockerclient.NewClientFromEnv()
 	if err != nil {

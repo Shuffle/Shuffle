@@ -23,7 +23,7 @@ require (
 	github.com/elastic/go-elasticsearch v0.0.0 // indirect
 	github.com/elastic/go-elasticsearch/v7 v7.12.0 // indirect
 	github.com/frikky/kin-openapi v0.39.0
-	github.com/frikky/shuffle-shared v0.0.63
+	github.com/frikky/shuffle-shared v0.0.66
 	github.com/fsouza/go-dockerclient v1.7.2 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-git/go-billy/v5 v5.0.0

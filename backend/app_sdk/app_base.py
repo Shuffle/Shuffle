@@ -514,6 +514,7 @@ class AppBase:
             #    return
 
             print("[INFO] Multiplier length: %d" % len(param_multiplier))
+            tmp = ""
             for subparams in param_multiplier:
                 print(f"SUBPARAMS IN MULTI: {subparams}")
                 try:
@@ -2306,6 +2307,7 @@ class AppBase:
 
                             #newres = await func(**params)
                             #print("PARAMS: %s" % params)
+                            newres = ""
                             while True:
                                 try:
                                     newres = await func(**params)

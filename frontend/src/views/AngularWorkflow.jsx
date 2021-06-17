@@ -2742,6 +2742,15 @@ const AngularWorkflow = (props) => {
 
 					for (var key in filteredelements) {
 					}
+
+					var copyText = document.getElementById("copy_element_shuffle")
+					if (copyText !== undefined && copyText !== null) {
+						const clipboard = navigator.clipboard
+						if (clipboard === undefined) {
+							alert.error("Can only copy over HTTPS (port 3443)")
+							return
+						}
+					}
 					console.log("FILTERED: ", filteredelements)
 				}
 	      break;

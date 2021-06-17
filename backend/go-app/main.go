@@ -3091,7 +3091,7 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 	var test Test
 	err := json.Unmarshal(body, &test)
 	if err != nil {
-		log.Printf("Failed unmarshalling test: %s", err)
+		log.Printf("[WARNING] Failed unmarshalling test: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -3107,7 +3107,7 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 		ctx := context.Background()
 		app, err := shuffle.GetApp(ctx, test.Id, user)
 		if err != nil {
-			log.Printf("Error getting app when editing: %s", app.Name)
+			log.Printf("[WARNING] Error getting app when editing: %s", app.Name)
 			resp.WriteHeader(401)
 			resp.Write([]byte(`{"success": false}`))
 			return
@@ -3325,15 +3325,19 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 	// FIXME: Might cause versioning issues if we re-use the same!!
 	// FIXME: Need a way to track different versions of the same app properly.
 	// Hint: Save API.id somewhere, and use newmd5 to save latest version
-	err = shuffle.SetOpenApiDatastore(ctx, newmd5, parsed)
-	if err != nil {
-		log.Printf("[ERROR] Failed saving app %s to database: %s", newmd5, err)
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "%"}`, err)))
+
+	if len(user.Id) > 0 {
+		err = shuffle.SetOpenApiDatastore(ctx, newmd5, parsed)
+		if err != nil {
+			log.Printf("[ERROR] Failed saving app %s to database: %s", newmd5, err)
+			resp.WriteHeader(500)
+			resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "%"}`, err)))
+		}
+
+		shuffle.SetOpenApiDatastore(ctx, api.ID, parsed)
 	}
 
 	// Backup every single one
-	shuffle.SetOpenApiDatastore(ctx, api.ID, parsed)
 
 	/*
 		err = increaseStatisticsField(ctx, "total_apps_created", newmd5, 1, user.ActiveOrg.Id)
@@ -3350,6 +3354,8 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
 	shuffle.DeleteCache(ctx, cacheKey)
 	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
+	shuffle.DeleteCache(ctx, cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-1000")
 	shuffle.DeleteCache(ctx, cacheKey)
 	shuffle.DeleteCache(ctx, fmt.Sprintf("apps_%s", user.Id))
 
@@ -3474,6 +3480,8 @@ func handleAppHotload(ctx context.Context, location string, forceUpdate bool) er
 	cacheKey = fmt.Sprintf("workflowapps-sorted-100")
 	shuffle.DeleteCache(ctx, cacheKey)
 	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
+	shuffle.DeleteCache(ctx, cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-1000")
 	shuffle.DeleteCache(ctx, cacheKey)
 	//shuffle.DeleteCache(ctx, fmt.Sprintf("apps_%s", user.Id))
 
@@ -4073,7 +4081,7 @@ func runInitEs(ctx context.Context) {
 	}
 
 	// Getting apps to see if we should initialize a test
-	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 500)
+	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000)
 	log.Printf("[INFO] Getting and validating workflowapps. Got %d with err %#v", len(workflowapps), err)
 	if err != nil && len(workflowapps) == 0 {
 		log.Printf("[WARNING] Failed getting apps (runInit): %s", err)
@@ -4713,7 +4721,7 @@ func runInit(ctx context.Context) {
 	}
 
 	// Getting apps to see if we should initialize a test
-	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 500)
+	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000)
 	log.Printf("[INFO] Getting and validating workflowapps. Got %d with err %s", len(workflowapps), err)
 	if err != nil && len(workflowapps) == 0 {
 		log.Printf("[WARNING] Failed getting apps (runInit): %s", err)

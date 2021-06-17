@@ -2666,7 +2666,7 @@ func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 		//return
 	}
 
-	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 500)
+	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000)
 	if err != nil {
 		log.Printf("Failed getting apps (getworkflowapps): %s", err)
 		resp.WriteHeader(401)
@@ -2787,7 +2787,7 @@ func getSpecificApps(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - continue the search here with github repos etc.
 	// Caching might be smart :D
 	ctx := context.Background()
-	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 500)
+	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000)
 	if err != nil {
 		log.Printf("Error: Failed getting workflowapps: %s", err)
 		resp.WriteHeader(401)
@@ -3005,7 +3005,9 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	cacheKey := fmt.Sprintf("workflowapps-sorted-500")
+	cacheKey := fmt.Sprintf("workflowapps-sorted-1000")
+	shuffle.DeleteCache(ctx, cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
 	shuffle.DeleteCache(ctx, cacheKey)
 	cacheKey = fmt.Sprintf("workflowapps-sorted-0")
 	shuffle.DeleteCache(ctx, cacheKey)
@@ -3045,6 +3047,8 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 	cacheKey = fmt.Sprintf("workflowapps-sorted-100")
 	shuffle.DeleteCache(ctx, cacheKey)
 	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
+	shuffle.DeleteCache(ctx, cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-1000")
 	shuffle.DeleteCache(ctx, cacheKey)
 
 	resp.WriteHeader(200)
@@ -3178,6 +3182,8 @@ func loadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 	shuffle.DeleteCache(ctx, cacheKey)
 	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
 	shuffle.DeleteCache(ctx, cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-1000")
+	shuffle.DeleteCache(ctx, cacheKey)
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
@@ -3186,7 +3192,7 @@ func loadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string) error {
 
 	ctx := context.Background()
-	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 500)
+	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000)
 	appCounter := 0
 	if err != nil {
 		log.Printf("Failed to get existing generated apps")
@@ -3316,6 +3322,8 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 						cacheKey := fmt.Sprintf("workflowapps-sorted-100")
 						shuffle.DeleteCache(ctx, cacheKey)
 						cacheKey = fmt.Sprintf("workflowapps-sorted-500")
+						shuffle.DeleteCache(ctx, cacheKey)
+						cacheKey = fmt.Sprintf("workflowapps-sorted-1000")
 						shuffle.DeleteCache(ctx, cacheKey)
 					}
 				} else {
@@ -3741,6 +3749,8 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 	shuffle.DeleteCache(ctx, cacheKey)
 	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
 	shuffle.DeleteCache(ctx, cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-1000")
+	shuffle.DeleteCache(ctx, cacheKey)
 
 	//log.Printf("BUILDLATERFIRST: %d, BUILDLATERLIST: %d", len(buildLaterFirst), len(buildLaterList))
 	if len(extra) == 0 {
@@ -3811,7 +3821,7 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	allapps, err := shuffle.GetAllWorkflowApps(ctx, 500)
+	allapps, err := shuffle.GetAllWorkflowApps(ctx, 1000)
 	if err != nil {
 		log.Printf("Failed getting apps to verify: %s", err)
 		resp.WriteHeader(401)
@@ -3913,6 +3923,8 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
 	shuffle.DeleteCache(ctx, cacheKey)
 	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
+	shuffle.DeleteCache(ctx, cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-1000")
 	shuffle.DeleteCache(ctx, cacheKey)
 
 	resp.WriteHeader(200)
