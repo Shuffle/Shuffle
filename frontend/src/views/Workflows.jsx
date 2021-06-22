@@ -743,7 +743,7 @@ const Workflows = (props) => {
 
 			return response.json()
 		})
-    	.then((responseJson) => {
+    .then((responseJson) => {
 			if (!responseJson.success) {
 				alert.error(responseJson.reason)
 			}
@@ -783,6 +783,10 @@ const Workflows = (props) => {
 					if (trigger.parameters !== undefined && trigger.parameters !== null && trigger.parameters.length === 2) {
 						trigger.parameters[0].value = referenceUrl+"webhook_"+trigger.id
 						trigger.parameters[1].value = "webhook_"+trigger.id
+					} else if (trigger.parameters !== undefined && trigger.parameters !== null && trigger.parameters.length === 3) {
+						trigger.parameters[0].value = referenceUrl+"webhook_"+trigger.id
+						trigger.parameters[1].value = "webhook_"+trigger.id
+						// FIXME: Add auth here?
 					} else {
 						alert.info("Something is wrong with the webhook in the copy")
 					}
@@ -955,7 +959,9 @@ const Workflows = (props) => {
 			return response.json()
 		})
     .then((responseJson) => {
-			getAvailableWorkflows()
+			setTimeout(() => {
+				getAvailableWorkflows()
+			}, 1000)
     })
 		.catch(error => {
 			alert.error(error.toString())
@@ -983,7 +989,9 @@ const Workflows = (props) => {
 			return response.json()
 		})
 		.then((responseJson) => {
-			getAvailableWorkflows()
+			setTimeout(() => {
+				getAvailableWorkflows()
+			}, 1000)
 		})
 		.catch(error => {
 			alert.error(error.toString())
@@ -2011,7 +2019,9 @@ const Workflows = (props) => {
 		.then((response) => {
 			if (response.status === 200) {
 				alert.success("Successfully loaded workflows from "+downloadUrl)
-				getAvailableWorkflows()
+				setTimeout(() => {
+					getAvailableWorkflows()
+				}, 1000)
 			}
 
 			return response.json()

@@ -6148,7 +6148,7 @@ const AngularWorkflow = (props) => {
 										{subworkflow.actions.map((action, index) => {
 											//console.log(action)
 											return (
-												<MenuItem disabled={getParents(selectedTrigger).find(parent => parent.id === action.id)} key={index} style={{backgroundColor: inputColor, color: "white"}} value={action}>
+												<MenuItem  key={index} style={{backgroundColor: inputColor, color: getParents(selectedTrigger).find(parent => parent.id === action.id) ? "red" : "white"}} value={action}>
 													{action.label}
 												</MenuItem>
 											)

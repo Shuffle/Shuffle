@@ -28,7 +28,7 @@ docker-compose up -d
 
 When you're done, skip to the "After installation" step below.
 
-## Windows Docker setup 
+## Windows with WSL  
 This step is for setting up with Docker on windows from scratch.
 
 1. Make sure you have [Docker](https://docs.docker.com/docker-for-windows/install/) and [docker-compose](https://docs.docker.com/compose/install/) installed. WSL2 may be required.

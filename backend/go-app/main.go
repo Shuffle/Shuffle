@@ -615,13 +615,13 @@ func createNewUser(username, password, role, apikey string, org shuffle.OrgMini)
 	// Use this for register
 	err := shuffle.CheckPasswordStrength(password)
 	if err != nil {
-		log.Printf("Bad password strength: %s", err)
+		log.Printf("[WARNING] Bad password strength: %s", err)
 		return err
 	}
 
 	err = checkUsername(username)
 	if err != nil {
-		log.Printf("Bad Username strength: %s", err)
+		log.Printf("[WARNING] Bad Username strength: %s", err)
 		return err
 	}
 
@@ -5272,7 +5272,9 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 	resp.Write(respBody)
 }
 
-/*
+// Runs DB migration from Datastore to Opensearch
+// If the function has "ALL" in it, that means it's intended to be used for Orgs
+// but that we've added a function to grab everything
 func migrateDatabase(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
 	if cors {
@@ -5294,72 +5296,210 @@ func migrateDatabase(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	type dbSetup struct {
-		dbUrl string
-	}
-
-	config := elasticsearch.Config{
-		Addresses: []string{
-			"https://192.168.3.8:9200",
-		},
-		Username: "",
-		Password: "",
-	}
-
-	//es, err := elasticsearch.NewDefaultClient()
-	es, err := elasticsearch.NewClient(config)
-	if err != nil {
-		log.Printf("[WARNING] Failed connecting with es7: %s", err)
+	if strings.ToLower(os.Getenv("SHUFFLE_ELASTIC")) != "false" {
+		log.Printf("[WARNING] Failed to migrate because main DB is Elastic. Set SHUFFLE_ELASTIC=false in .env")
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
-	_ = es
 
-	/*
-		q := datastore.NewQuery(indexType)
-		var users []shuffle.User
-		_, err = dbclient.GetAll(ctx, q, &users)
-		if err == nil && len(users) > 0 {
+	ctx := context.Background()
+	es := getEsConfig()
+	_, err := shuffle.RunInit(*dbclient, *es, storage.Client{}, gceProject, "onprem", false, "")
+	if err != nil {
+		log.Printf("[WARNING] Failed to start migration because of init issues: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	log.Printf("\n\n------- STARTING MIGRATION TO OPENSEARCH --------")
+	users, err := shuffle.GetAllUsers(ctx)
+	if err != nil {
+		log.Printf("[ERROR] Failed getting users: %#v", err)
+	} else {
+		log.Printf("[DEBUG] Found %d user(s) to be migrated", len(users))
+	}
+
+	orgs, err := shuffle.GetAllOrgs(ctx)
+	if err != nil {
+		log.Printf("[ERROR] Failed getting orgs: %#v", err)
+	} else {
+		log.Printf("[DEBUG] Found %d org(s) to be migrated", len(orgs))
+	}
+
+	workflows, err := shuffle.GetAllWorkflows(ctx, "ALL")
+	if err != nil {
+		log.Printf("[ERROR] Failed getting workflows: %#v", err)
+	} else {
+		log.Printf("[DEBUG] Found %d workflows(s) to be migrated", len(workflows))
+	}
+
+	apps, err := shuffle.GetAllWorkflowApps(ctx, 0)
+	if err != nil {
+		log.Printf("[ERROR] Failed getting apps: %#v", err)
+	} else {
+		log.Printf("[DEBUG] Found %d app(s) to be migrated", len(apps))
+	}
+
+	openapiApps, err := shuffle.GetAllOpenApi(ctx)
+	if err != nil {
+		log.Printf("[ERROR] Failed getting openapi apps: %#v", err)
+	} else {
+		log.Printf("[DEBUG] Found %d openapi(s) to be migrated", len(openapiApps))
+	}
+
+	workflowappauth, err := shuffle.GetAllWorkflowAppAuth(ctx, "ALL")
+	if err != nil {
+		log.Printf("[ERROR] Failed getting app auth: %#v", err)
+	} else {
+		log.Printf("[DEBUG] Found %d appauth(s) to be migrated", len(workflowappauth))
+	}
+
+	environments, err := shuffle.GetEnvironments(ctx, "ALL")
+	if err != nil {
+		log.Printf("[ERROR] Failed getting environments: %#v", err)
+	} else {
+		log.Printf("[DEBUG] Found %d environment(s) to be migrated", len(environments))
+	}
+
+	hooks, err := shuffle.GetAllHooks(ctx)
+	if err != nil {
+		log.Printf("[ERROR] Failed getting hooks: %#v", err)
+	} else {
+		log.Printf("[DEBUG] Found %d hook(s) to be migrated", len(hooks))
+	}
+
+	schedules, err := shuffle.GetAllSchedules(ctx, "ALL")
+	if err != nil {
+		log.Printf("[ERROR] Failed getting schedules: %#v", err)
+	} else {
+		log.Printf("[DEBUG] Found %d schedule(s) to be migrated", len(schedules))
+	}
+
+	log.Printf("\n\n------- SWAPPING TO OPENSEARCH DB WITH ACQUIRED INFO ---------")
+	userSuccess := 0
+	orgSuccess := 0
+	workflowSuccess := 0
+	appSuccess := 0
+	openapiSuccess := 0
+	authSuccess := 0
+	envSuccess := 0
+	hookSuccess := 0
+	scheduleSuccess := 0
+	_, err = shuffle.RunInit(*dbclient, *es, storage.Client{}, gceProject, "onprem", false, "elasticsearch")
+
+	for _, item := range orgs {
+		err = shuffle.SetOrg(ctx, item, item.Id)
+		if err != nil {
+			//log.Printf("[WARNING] Failed to update org in opensearch: %s", err)
 		} else {
-			log.Printf("[WARNING] Failed getting USERS: %s", err)
-
-			for _, user := range users {
-				id := user.Id
-				log.Printf("Indexing %s (%s)", user.Username, id)
-
-				b, err := json.Marshal(user)
-				if err != nil {
-					log.Printf("[WARNING] Failed marshalling %s - %s: %s", id, indexType, err)
-					return
-				}
-
-				req := esapi.IndexRequest{
-					Index:      indexType,
-					DocumentID: id,
-					Body:       strings.NewReader(string(b)),
-					Refresh:    "true",
-				}
-
-				res, err := req.Do(context.Background(), es)
-				if err != nil {
-					log.Printf("Error getting response: %s", err)
-				}
-
-				defer res.Body.Close()
-				if res.IsError() {
-					log.Printf("[%s] Error indexing document ID=%d", res.Status(), id)
-				} else {
-					log.Printf("Successfully indexed %s of ID %s", indexType, id)
-				}
-
-				break
-			}
+			//log.Printf("[DEBUG] Set org %s (%s) in opensearch", item.Name, item.Id)
+			orgSuccess += 1
 		}
+	}
 
+	log.Printf("----- ORGS FOUND: %d - success: %d - failed: %d", len(orgs), orgSuccess, len(orgs)-orgSuccess)
+
+	for _, item := range workflowappauth {
+		err = shuffle.SetWorkflowAppAuthDatastore(ctx, item, item.Id)
+		if err != nil {
+			//log.Printf("[WARNING] Failed to update app auth in opensearch: %s", err)
+		} else {
+			//log.Printf("[DEBUG] Set app auth %s in opensearch", item.Id)
+			authSuccess += 1
+		}
+	}
+
+	log.Printf("----- AUTH FOUND: %d - success: %d - failed: %d", len(workflowappauth), authSuccess, len(workflowappauth)-authSuccess)
+
+	for _, item := range environments {
+		err = shuffle.SetEnvironment(ctx, &item)
+		if err != nil {
+			//log.Printf("[WARNING] Failed to update env in opensearch: %s", err)
+		} else {
+			//log.Printf("[DEBUG] Set env %s in opensearch", item.Id)
+			envSuccess += 1
+		}
+	}
+
+	log.Printf("----- ENVS FOUND: %d - success: %d - failed: %d", len(environments), envSuccess, len(environments)-envSuccess)
+
+	for _, item := range hooks {
+		err = shuffle.SetHook(ctx, item)
+		if err != nil {
+			//log.Printf("[WARNING] Failed to update hooks in opensearch: %s", err)
+		} else {
+			//log.Printf("[DEBUG] Set hook %s in opensearch", item.Id)
+			hookSuccess += 1
+		}
+	}
+
+	log.Printf("---- HOOKS FOUND: %d - success: %d - failed: %d", len(hooks), hookSuccess, len(hooks)-hookSuccess)
+
+	for _, item := range schedules {
+		err = shuffle.SetSchedule(ctx, item)
+		if err != nil {
+			//log.Printf("[WARNING] Failed to update schedule in opensearch: %s", err)
+		} else {
+			//log.Printf("[DEBUG] Set schedule %s in opensearch", item.Id)
+			scheduleSuccess += 1
+		}
+	}
+
+	log.Printf(" SCHEDULES FOUND: %d - success: %d - failed: %d", len(schedules), scheduleSuccess, len(schedules)-scheduleSuccess)
+
+	for _, item := range users {
+		err = shuffle.SetUser(ctx, &item, false)
+		if err != nil {
+			//log.Printf("[WARNING] Failed to update user in opensearch: %s", err)
+		} else {
+			//log.Printf("[DEBUG] Set user %s (%s) in opensearch", item.Username, item.Id)
+			userSuccess += 1
+		}
+	}
+
+	log.Printf("---- USERS FOUND: %d - success: %d - failed: %d", len(users), userSuccess, len(users)-userSuccess)
+
+	for _, item := range workflows {
+		err = shuffle.SetWorkflow(ctx, item, item.ID)
+		if err != nil {
+			//log.Printf("[WARNING] Failed to update workflow in opensearch: %s", err)
+		} else {
+			//log.Printf("[DEBUG] Set workflow %s (%s) in opensearch", item.Name, item.ID)
+			workflowSuccess += 1
+		}
+	}
+
+	log.Printf(" WORKFLOWS FOUND: %d - success: %d - failed: %d", len(workflows), workflowSuccess, len(workflows)-workflowSuccess)
+
+	for _, item := range openapiApps {
+		err = shuffle.SetOpenApiDatastore(ctx, item.ID, item)
+		if err != nil {
+			//log.Printf("[WARNING] Failed to update openapi app in opensearch: %s", err)
+		} else {
+			//log.Printf("[DEBUG] Set openapi %s in opensearch", item.ID)
+			openapiSuccess += 1
+		}
+	}
+
+	log.Printf("-- OpenAPI FOUND: %d - success: %d - failed: %d", len(openapiApps), openapiSuccess, len(openapiApps)-openapiSuccess)
+
+	for _, item := range apps {
+		err = shuffle.SetWorkflowAppDatastore(ctx, item, item.ID)
+		if err != nil {
+			//log.Printf("[WARNING] Failed to update app in opensearch: %s", err)
+		} else {
+			//log.Printf("[DEBUG] Set app %s (%s) in opensearch", item.Name, item.ID)
+			appSuccess += 1
+		}
+	}
+
+	log.Printf("----- APPS FOUND: %d - success: %d - failed: %d", len(apps), appSuccess, len(apps)-appSuccess)
+
+	// Handle users
 	// 1. Get users
 	// 2. Get organizations
-	// 3. Get files
 	// 4. Get workflows
 	// 5. Get apps
 	// 6. Get workflowappauth
@@ -5368,14 +5508,14 @@ func migrateDatabase(resp http.ResponseWriter, request *http.Request) {
 	// 10. Get hooks
 	// 11. Get openapi3
 	// 12. Get schedules
-	// 13. Get sessions
-	// 14. Get workflowqueue
 
 	//log.Printf("[INFO] Successfully published workflow %s (%s) TO CLOUD", workflow.Name, workflow.ID)
+	log.Printf("\n\n[DEBUG] Successfully updated ran migration from Datastore to Opensearch!")
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+	log.Printf("[DEBUG] Panicing to force-restart Shuffle post-migration. Stop Shuffle and change database. Docs: https://shuffler.io/docs/configuration#database_migration")
+	os.Exit(0)
 }
-*/
 
 func makeWorkflowPublic(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
@@ -5517,17 +5657,7 @@ func makeWorkflowPublic(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 }
 
-func initHandlers() {
-	var err error
-	ctx := context.Background()
-
-	log.Printf("[DEBUG] Starting Shuffle backend - initializing database connection")
-	//requestCache = cache.New(5*time.Minute, 10*time.Minute)
-	dbclient, err = datastore.NewClient(ctx, gceProject, option.WithGRPCDialOption(grpc.WithNoProxy()))
-	if err != nil {
-		log.Fatalf("[DEBUG] Database client error during init: %s", err)
-	}
-
+func getEsConfig() *elasticsearch.Client {
 	esUrl := os.Getenv("SHUFFLE_OPENSEARCH_URL")
 	if len(esUrl) == 0 {
 		esUrl = "http://shuffle-opensearch:9200"
@@ -5544,7 +5674,7 @@ func initHandlers() {
 
 	//config.Transport.TLSClientConfig
 	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.MaxIdleConnsPerHost = 1000
+	transport.MaxIdleConnsPerHost = 100
 	transport.ResponseHeaderTimeout = time.Second * 10
 	transport.Proxy = nil
 
@@ -5600,6 +5730,21 @@ func initHandlers() {
 		log.Fatalf("[DEBUG] Database client for ELASTICSEARCH error during init (fatal): %s", err)
 	}
 
+	return es
+}
+
+func initHandlers() {
+	var err error
+	ctx := context.Background()
+
+	log.Printf("[DEBUG] Starting Shuffle backend - initializing database connection")
+	//requestCache = cache.New(5*time.Minute, 10*time.Minute)
+	dbclient, err = datastore.NewClient(ctx, gceProject, option.WithGRPCDialOption(grpc.WithNoProxy()))
+	if err != nil {
+		log.Fatalf("[DEBUG] Database client error during init: %s", err)
+	}
+
+	es := getEsConfig()
 	elasticConfig := "elasticsearch"
 	if strings.ToLower(os.Getenv("SHUFFLE_ELASTIC")) == "false" {
 		elasticConfig = ""
@@ -5749,7 +5894,7 @@ func initHandlers() {
 
 	// Docker orborus specific - downloads an image
 	r.HandleFunc("/api/v1/get_docker_image", getDockerImage).Methods("POST", "OPTIONS")
-	//r.HandleFunc("/api/v1/migrate_database", migrateDatabase).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/migrate_database", migrateDatabase).Methods("POST", "OPTIONS")
 
 	// Important for email, IDS etc. Create this by:
 	// PS: For cloud, this has to use cloud storage.

@@ -35,8 +35,8 @@ services:
       - SHUFFLE_APP_HOTLOAD_FOLDER=/shuffle-apps
       - SHUFFLE_FILE_LOCATION=/shuffle-files
     restart: unless-stopped
-    depends_on:
-      - opensearch 
+    #depends_on:
+      #- opensearch 
       #- database
   orborus:
     #build: ./functions/onprem/orborus
@@ -92,21 +92,20 @@ services:
     networks:
       - shuffle
     restart: unless-stopped
-  # OLD DATABASE:
-  #database:
-  #  #build: ./backend/database
-  #  image: frikky/shuffle:database
-  #  container_name: shuffle-database
-  #  hostname: shuffle-database
-  #  ports:
-  #    - "8000:8000"
-  #  networks:
-  #    - shuffle
-  #  environment:
-  #  -  _JAVA_OPTIONS="-Xmx2g"
-  #  restart: unless-stopped
-  #  volumes:
-  #    - ${DB_LOCATION}:/etc/shuffle
+  database:
+    #build: ./backend/database
+    image: frikky/shuffle:database
+    container_name: shuffle-database
+    hostname: shuffle-database
+    ports:
+      - "8000:8000"
+    networks:
+      - shuffle
+    environment:
+    -  _JAVA_OPTIONS="-Xmx2g"
+    restart: unless-stopped
+    volumes:
+      - ${DB_LOCATION}:/etc/shuffle
 
 networks:
   shuffle:

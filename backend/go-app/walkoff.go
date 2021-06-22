@@ -1117,7 +1117,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
-		log.Printf("Api authentication failed in deleting workflow: %s", err)
+		log.Printf("[WARNING] Api authentication failed in delete workflow: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -1201,6 +1201,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 	//memcache.Delete(ctx, memcacheName)
 	//memcacheName = fmt.Sprintf("%s_workflows", user.Username)
 	//memcache.Delete(ctx, memcacheName)
+	//cacheKey := fmt.Sprintf("%s_workflows", user.Id)
 	cacheKey := fmt.Sprintf("%s_workflows", user.Id)
 	shuffle.DeleteCache(ctx, cacheKey)
 
@@ -1258,7 +1259,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 	if workflow.ID == "" || workflow.ID != id {
 		tmpworkflow, err := shuffle.GetWorkflow(ctx, id)
 		if err != nil {
-			log.Printf("Failed getting the workflow locally (execution cleanup): %s", err)
+			log.Printf("[WARNING] Failed getting the workflow locally (execution setup): %s", err)
 			return shuffle.WorkflowExecution{}, "Failed getting workflow", err
 		}
 
@@ -2438,7 +2439,7 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflow, err := shuffle.GetWorkflow(ctx, fileId)
 	if err != nil {
-		log.Printf("Failed getting the workflow locally (schedule workflow): %s", err)
+		log.Printf("[WARNING] Failed getting the workflow locally (schedule workflow): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -3623,7 +3624,7 @@ func iterateAppGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra strin
 
 				// Fixes (appends) authentication parameters if they're required
 				if workflowapp.Authentication.Required {
-					log.Printf("[INFO] Checking authentication fields and appending for %s!", workflowapp.Name)
+					//log.Printf("[INFO] Checking authentication fields and appending for %s!", workflowapp.Name)
 					// FIXME:
 					// Might require reflection into the python code to append the fields as well
 					for index, action := range workflowapp.Actions {
@@ -3859,7 +3860,7 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 
 	// Fixes (appends) authentication parameters if they're required
 	if workflowapp.Authentication.Required {
-		log.Printf("[INFO] Checking authentication fields and appending for %s!", workflowapp.Name)
+		//log.Printf("[INFO] Checking authentication fields and appending for %s!", workflowapp.Name)
 		// FIXME:
 		// Might require reflection into the python code to append the fields as well
 		for index, action := range workflowapp.Actions {
