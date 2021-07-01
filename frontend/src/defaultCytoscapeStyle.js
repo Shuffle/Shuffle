@@ -24,7 +24,7 @@ const data = [{
 				'curve-style': 'unbundled-bezier',
 				'label': 'data(label)',
 				'text-margin-y': '-15px',
-				'width': '2px',
+				'width': '5px',
 				"color": "white",
 				"line-fill": "linear-gradient",
 				"line-gradient-stop-positions": ["0.0", "100"],
@@ -40,6 +40,7 @@ const data = [{
 				'background-width': '100%',
 				'background-height': '100%',
 				'border-radius': '5px',
+				'z-index': 5001,
 			},
 		},
 		{
@@ -47,13 +48,23 @@ const data = [{
 			css: {
 				'width': '30px',
 				'height': '30px',
-			},
+				'z-index': 5000,
+				'font-size': '0px',
+				'background-width': '75%',
+				'background-height': '75%',
+				'background-color': 'data(iconBackground)',
+				'background-fill': 'data(fillstyle)',
+				'background-gradient-direction': 'to-right',
+				'background-gradient-stop-colors': 'data(fillGradient)',
+			}
 		},
 		{
 			selector: `node[app_name="Testing"]`,
 			css: {
 				'width': '30px',
 				'height': '30px',
+				'z-index': 5000,
+				'font-size': '0px',
 			},
 		},
 		{
@@ -113,12 +124,46 @@ const data = [{
 			},
 		},
 		{
+			selector: 'node[?isButton]',
+			css: {
+				'shape': 'ellipse',
+				'width': '15px',
+				'height': '15px',
+				'z-index': '5002',
+				'font-size': '0px',
+				'border': '1px solid rgba(255,255,255,0.9)',
+				'background-image': 'data(icon)',
+				'background-color': 'data(iconBackground)',
+			},
+		},
+		{
+			selector: 'node[?isDescriptor]',
+			css: {
+				'shape': 'ellipse',
+				'border-color': '#80deea',
+				'width': '5px',
+				'height': '5px',
+				'z-index': '5002',
+				'font-size': '10px',
+				'text-valign': 'center',
+				'text-halign': 'center',
+				'border': '1px solid black',
+				'margin-right': '0px',
+				'text-margin-x': '0px',
+				'background-color': 'data(imageColor)',
+				'background-image': 'data(image)',
+			},
+		},
+		{
 			selector: 'node[?isStartNode]',
 			css: {
 				'shape': 'ellipse',
 				'border-color': '#80deea',
 				'width': '80px',
 				'height': '80px',
+				'font-size': '18px',
+				'background-width': '100%',
+				'background-height': '100%',
 			},
 		},
 		{
@@ -204,8 +249,9 @@ const data = [{
 				'border-width': '12px',
 				'transition-property': 'border-width',
 				'transition-duration': '0.25s',
-				'font-size': '30px',
 				'label': 'data(label)',
+				'font-size': '18px',
+				'color': 'white',
 			},
 		},
 		{
@@ -228,6 +274,17 @@ const data = [{
 			},
 		},
 		{
+			selector: `edge[?decorator]`,
+			css: {
+				'width': '1px',
+				'line-style': 'dashed',
+				"line-fill": "linear-gradient",
+				'target-arrow-color': '#f34079',
+				"line-gradient-stop-positions": ["0.0", "100"],
+				"line-gradient-stop-colors": ["#f86a3e", "#f34079"],
+			},
+		},
+		{
 			selector: 'edge.success-highlight',
 			css: {
 				'width': '5px',
@@ -238,17 +295,6 @@ const data = [{
 				"line-fill": "linear-gradient",
 				"line-gradient-stop-positions": ["0.0", "100"],
 				"line-gradient-stop-colors": ["#41dcab", "#41dcab"],
-			},
-		},
-		{
-			selector: 'edge[?hasErrors]',
-			css: {
-				'target-arrow-color': '#991818',
-				'line-color': '#991818',
-				'line-style': 'dashed',
-				"line-fill": "linear-gradient",
-				"line-gradient-stop-positions": ["0.0", "100"],
-				"line-gradient-stop-colors": ["#991818", "#991818"],
 			},
 		},
 		{
@@ -290,7 +336,34 @@ const data = [{
 			css: {
 				'target-arrow-color': '#f85a3e',
 			},
-		}
-		]
+		},
+		{
+			selector: `edge[?source_workflow]`,
+			css: {
+				"background-opacity": "1",
+				'font-size': '0px',
+			},
+		},
+		{
+			selector: `node[?source_workflow]`,
+			css: {
+				"background-opacity": "0",
+				'font-size': '0px',
+			},
+		},
+]
+
+//{
+//	selector: 'edge[?hasErrors]',
+//	css: {
+//		'target-arrow-color': '#991818',
+//		'line-color': '#991818',
+//		'line-style': 'dashed',
+//		"line-fill": "linear-gradient",
+//		"line-gradient-stop-positions": ["0.0", "100"],
+//		"line-gradient-stop-colors": ["#991818", "#991818"],
+//	},
+//},
+
 
 export default data 

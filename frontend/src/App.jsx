@@ -115,8 +115,8 @@ const App = (message, props) => {
 			<Route exact path="/webhooks/:key" render={props => <EditWebhook isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/schedules" render={props => <Schedules globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/dashboard" render={props => <Dashboard isLoaded={isLoaded} isLoggedIn={isLoggedIn} globalUrl={globalUrl} {...props} />} />
-			<Route exact path="/apps" render={props => <Apps isLoaded={isLoaded} isLoggedIn={isLoggedIn} globalUrl={globalUrl} userdata={userdata} {...props} />} />
 			<Route exact path="/apps/new" render={props => <AppCreator isLoaded={isLoaded} isLoggedIn={isLoggedIn} globalUrl={globalUrl} {...props} />} />
+			<Route exact path="/apps" render={props => <Apps isLoaded={isLoaded} isLoggedIn={isLoggedIn} globalUrl={globalUrl} userdata={userdata} {...props} />} />
 			<Route exact path="/apps/edit/:appid" render={props => <AppCreator isLoaded={isLoaded} isLoggedIn={isLoggedIn} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/schedules/:key" render={props => <EditSchedule globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/workflows" render={props => <Workflows cookies={cookies} removeCookie={removeCookie} isLoaded={isLoaded} isLoggedIn={isLoggedIn} globalUrl={globalUrl} cookies={cookies} userdata={userdata} {...props} />} />
@@ -125,7 +125,6 @@ const App = (message, props) => {
 			<Route exact path="/docs" render={props => { window.location.pathname = "/docs/about" }} />
 			<Route exact path="/introduction" render={props => <Introduction isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/introduction/:key" render={props => <Introduction isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
-			<Route exact path="/myview" render={props => <MyView cookies={cookies} removeCookie={removeCookie} isLoaded={isLoaded} isLoggedIn={isLoggedIn} globalUrl={globalUrl} cookies={cookies} userdata={userdata} {...props} />} />
 			<Route exact path="/" render={props => <LoginPage isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
 		</div>
 

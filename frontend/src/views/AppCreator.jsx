@@ -1,11 +1,12 @@
 import React, {useState, useEffect} from 'react';
 import { makeStyles } from '@material-ui/styles';
+import { useTheme } from '@material-ui/core/styles';
 import {BrowserView, MobileView} from "react-device-detect";
 
 import {Paper, Typography, FormControlLabel, Button, Divider, Select, MenuItem, FormControl, Switch, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Tooltip, Breadcrumbs, CircularProgress, Chip} from '@material-ui/core';
-import {CheckCircle as CheckCircleIcon, AttachFile as AttachFileIcon, Apps as AppsIcon, ErrorOutline as ErrorOutlineIcon} from '@material-ui/icons';
+import {LockOpen as LockOpenIcon, FileCopy as FileCopyIcon, Delete as DeleteIcon, Remove as RemoveIcon, Add as AddIcon, CheckCircle as CheckCircleIcon, AttachFile as AttachFileIcon, Apps as AppsIcon, ErrorOutline as ErrorOutlineIcon} from '@material-ui/icons';
 
-
+import uuid from "uuid";
 import {Link} from 'react-router-dom';
 import YAML from 'yaml'
 import ChipInput from 'material-ui-chip-input'
@@ -193,12 +194,14 @@ const AppCreator = (props) => {
   const { globalUrl, isLoaded } = props;
 	const classes = useStyles();
 	const alert = useAlert()
+	const theme = useTheme();
 
 	var upload = ""
 	const increaseAmount = 50
 	const actionNonBodyRequest = ["GET", "HEAD", "DELETE", "CONNECT"]
 	const actionBodyRequest = ["POST", "PUT", "PATCH",]
-	const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth", ]
+	//const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth", "JWT", "Oauth2"]
+	const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth"]
 	const apikeySelection = ["Header", "Query",]
 
 	const [name, setName] = useState("");
@@ -230,6 +233,18 @@ const AppCreator = (props) => {
 	const [extraBodyFields, setExtraBodyFields] = useState([])
 	const [fileUploadEnabled, setFileUploadEnabled] = useState(false)
 	const [actionAmount, setActionAmount] = useState(increaseAmount)
+	const defaultAuth = {
+		"name": "",
+		"type": "header",
+		"example": "",
+	}
+	const [extraAuth, setExtraAuth] = useState([])
+
+
+	const [app, setApp] = useState({}) 
+	const [appAuthentication, setAppAuthentication] = React.useState([]);
+	const [selectedAction, setSelectedAction] = useState({})
+	const [authLoaded, setAuthLoaded] = useState(false)
 
 	//const [actions, setActions] = useState([{
 	//	"name": "Get workflows",
@@ -301,12 +316,12 @@ const AppCreator = (props) => {
 			return response.json()
 		})
 		.then((responseJson) => {
-			if (!responseJson.success) {
+			if (responseJson.success === false) {
 				alert.error("Failed to get the app")
   			setIsAppLoaded(true)
+				window.location.pathname = "/search"
 			} else {
-				const data = JSON.parse(responseJson.body)
-				parseIncomingOpenapiData(data)
+				parseIncomingOpenapiData(responseJson)
 			}
 		})
 		.catch(error => {
@@ -338,7 +353,6 @@ const AppCreator = (props) => {
 				throw new Error("NOT 200 :O")
 			}
 
-			//console.log("DATA: ", response.text())
 			return response.json()
 		})
 		.then((responseJson) => {
@@ -346,27 +360,8 @@ const AppCreator = (props) => {
 			if (!responseJson.success) {
 				alert.error("Failed to verify")
 			} else{
-				var jsonvalid = false 
-				var tmpvalue = ""
-				try {
-					tmpvalue = JSON.parse(responseJson.body)
-					jsonvalid = true
-				} catch (e) {
-					console.log("Error JSON: ", e)
-				}
-
-				if (!jsonvalid) {
-					try {
-						tmpvalue = YAML.parse(responseJson.body, )
-						jsonvalid = true
-					} catch(e) {
-						console.log("Error YAML: ", e)
-					}
-				}
-
-				if (jsonvalid) {
-					parseIncomingOpenapiData(tmpvalue)
-				}
+				parseIncomingOpenapiData(responseJson)
+				
 			}
 		})
 		.catch(error => {
@@ -391,7 +386,13 @@ const AppCreator = (props) => {
 
 
 	const handleGetRef = (parameter, data) => {
-		if (parameter["$ref"] === undefined) {
+		try {
+			if (parameter === null || parameter["$ref"] === undefined) {
+				console.log("$ref not found in getref: ")
+				return parameter
+			}
+		} catch (e) {
+			console.log("Failed getting $ref of ", parameter)
 			return parameter
 		}
 
@@ -427,11 +428,42 @@ const AppCreator = (props) => {
 	// Sets the data up as it should be at later points
 	// This is the data FROM the database, not what's being saved
 	const parseIncomingOpenapiData = (data) => {
-		//console.log("DATA: ", data.info)
-		setBasedata(data)
+		const parsedapp = data.openapi === undefined ? data : JSON.parse(atob(data.openapi))
+		data = parsedapp.body === undefined ? parsedapp : parsedapp.body
 
+		var jsonvalid = false 
+		var tmpvalue = ""
+		try {
+			data = JSON.parse(data)
+			jsonvalid = true
+		} catch (e) {
+			console.log("Error JSON: ", e)
+		}
+
+		if (!jsonvalid) {
+			try {
+				data = YAML.parse(data)
+				jsonvalid = true
+			} catch(e) {
+				console.log("Error YAML: ", e)
+			}
+		}
+
+		if (!jsonvalid) {
+			alert.info("OpenAPI data is invalid.")
+			return
+		}
+
+		setBasedata(data)
 		if (data.info !== null && data.info !== undefined)  {
-			setName(data.info.title)
+			if (data.info.title !== undefined && data.info.title !== null) {
+				if (data.info.title.length > 29) {
+					setName(data.info.title.slice(0, 29))
+				} else {
+					setName(data.info.title)
+				}
+			}
+
 			setDescription(data.info.description)
 			document.title = "Apps - "+data.info.title
 
@@ -490,209 +522,353 @@ const AppCreator = (props) => {
 			"PUT",
 		]
 
-		// FIXME - headers?
 		var newActions = []
 		var wordlist = {}
-		for (let [path, pathvalue] of Object.entries(data.paths)) {
-			for (let [method, methodvalue] of Object.entries(pathvalue)) {
-				if (methodvalue === null) {
-					alert.info("Skipped method (null)"+method)
-					continue
-				}
+		if (data.paths !== null && data.paths !== undefined) {
+			for (let [path, pathvalue] of Object.entries(data.paths)) {
+				for (let [method, methodvalue] of Object.entries(pathvalue)) {
+					if (methodvalue === null) {
+						alert.info("Skipped method (null)"+method)
+						continue
+					}
 
-				if (!allowedfunctions.includes(method.toUpperCase())) {
-					alert.info("Skipped method (not allowed) "+method)
-					continue
-				}
+					if (!allowedfunctions.includes(method.toUpperCase())) {
+						console.log("Invalid method: ", method, "data: ", methodvalue)
+						alert.info("Skipped method (not allowed): "+method)
+						continue
+					}
 
-				var tmpname = methodvalue.summary
-				if (methodvalue.operationId !== undefined && methodvalue.operationId !== null && methodvalue.operationId.length > 0 && (tmpname === undefined || tmpname.length === 0)) {
-					tmpname = methodvalue.operationId
-				}
+					var tmpname = methodvalue.summary
+					if (methodvalue.operationId !== undefined && methodvalue.operationId !== null && methodvalue.operationId.length > 0 && (tmpname === undefined || tmpname.length === 0)) {
+						tmpname = methodvalue.operationId
+					}
 
-				var newaction = {
-					"name": tmpname,
-					"description": methodvalue.description,
-					"url": path,
-					"file_field": "",
-					"method": method.toUpperCase(),
-					"headers": "",
-					"queries": [],
-					"paths": [],
-					"body": "",
-					"errors": [],
-					"example_response": "",
-				}
+					var newaction = {
+						"name": tmpname,
+						"description": methodvalue.description,
+						"url": path,
+						"file_field": "",
+						"method": method.toUpperCase(),
+						"headers": "",
+						"queries": [],
+						"paths": [],
+						"body": "",
+						"errors": [],
+						"example_response": "",
+					}
 
-				if (methodvalue["requestBody"] !== undefined) {
-					//console.log("Handle requestbody: ", methodvalue["requestBody"])
-					if (methodvalue["requestBody"]["content"] !== undefined) {
-						if (methodvalue["requestBody"]["content"]["application/json"] !== undefined) {
-							if (methodvalue["requestBody"]["content"]["application/json"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["application/json"]["schema"] !== null) {
-								if (methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"] !== undefined) {
-									var tmpobject = {}
-									for (let [prop, propvalue] of Object.entries(methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"])) {
-										tmpobject[prop] = `\$\{${prop}\}`
+					//console.log("Schema is application/json: ", methodvalue)
+					//console.log("DATA", data)
+					if (methodvalue["requestBody"] !== undefined) {
+						//console.log("Handle requestbody: ", methodvalue["requestBody"])
+						if (methodvalue["requestBody"]["content"] !== undefined) {
+							if (methodvalue["requestBody"]["content"]["application/json"] !== undefined) {
+								newaction["headers"] = "Content-Type=application/json\nAccept=application/json"
+								if (methodvalue["requestBody"]["content"]["application/json"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["application/json"]["schema"] !== null) {
+									if (methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"] !== undefined) {
+										var tmpobject = {}
+										for (let [prop, propvalue] of Object.entries(methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"])) {
+											tmpobject[prop] = `\$\{${prop}\}`
+										}
+
+										//console.log("Data: ", data)
+										for (var subkey in methodvalue["requestBody"]["content"]["application/json"]["schema"]["required"]) {
+											const tmpitem = methodvalue["requestBody"]["content"]["application/json"]["schema"]["required"][subkey]
+											tmpobject[tmpitem] = `\$\{${tmpitem}\}`
+										}
+
+										newaction["body"] = JSON.stringify(tmpobject, null, 2)
+									} else if (methodvalue["requestBody"]["content"]["application/json"]["schema"]["$ref"] !== undefined && methodvalue["requestBody"]["content"]["application/json"]["schema"]["$ref"] !== null) {
+										const retRef = handleGetRef(methodvalue["requestBody"]["content"]["application/json"]["schema"], data) 
+										var newbody = {}
+										// Can handle default, required, description and type
+										for (var propkey in retRef.properties) {
+											const parsedkey = propkey.replaceAll(" ", "_").toLowerCase() 
+											newbody[parsedkey] = "${"+parsedkey+"}"
+										}
+
+										newaction["body"] = JSON.stringify(newbody, null, 2)
 									}
-
-									for (var subkey in methodvalue["requestBody"]["content"]["application/json"]["schema"]["required"]) {
-										const tmpitem = methodvalue["requestBody"]["content"]["application/json"]["schema"]["required"][subkey]
-										tmpobject[tmpitem] = `\$\{${tmpitem}\}`
-									}
-
-									newaction["body"] = JSON.stringify(tmpobject, null, 2)
 								}
-							}
-						} else if (methodvalue["requestBody"]["content"]["application/xml"] !== undefined) {
-							console.log("METHOD XML: ", methodvalue)
-							if (methodvalue["requestBody"]["content"]["application/xml"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["application/xml"]["schema"] !== null) {
-								if (methodvalue["requestBody"]["content"]["application/xml"]["schema"]["properties"] !== undefined) {
-									var tmpobject = {}
-									for (let [prop, propvalue] of Object.entries(methodvalue["requestBody"]["content"]["application/xml"]["schema"]["properties"])) {
-										tmpobject[prop] = `\$\{${prop}\}`
+							} else if (methodvalue["requestBody"]["content"]["application/xml"] !== undefined) {
+								console.log("METHOD XML: ", methodvalue)
+								newaction["headers"] = "Content-Type=application/xml\nAccept=application/xml"
+								if (methodvalue["requestBody"]["content"]["application/xml"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["application/xml"]["schema"] !== null) {
+									if (methodvalue["requestBody"]["content"]["application/xml"]["schema"]["properties"] !== undefined) {
+										var tmpobject = {}
+										for (let [prop, propvalue] of Object.entries(methodvalue["requestBody"]["content"]["application/xml"]["schema"]["properties"])) {
+											tmpobject[prop] = `\$\{${prop}\}`
+										}
+
+										for (var subkey in methodvalue["requestBody"]["content"]["application/xml"]["schema"]["required"]) {
+											const tmpitem = methodvalue["requestBody"]["content"]["application/xml"]["schema"]["required"][subkey]
+											tmpobject[tmpitem] = `\$\{${tmpitem}\}`
+										}
+
+										//console.log("OBJ XML: ", tmpobject)
+										//newaction["body"] = XML.stringify(tmpobject, null, 2)
 									}
-
-									for (var subkey in methodvalue["requestBody"]["content"]["application/xml"]["schema"]["required"]) {
-										const tmpitem = methodvalue["requestBody"]["content"]["application/xml"]["schema"]["required"][subkey]
-										tmpobject[tmpitem] = `\$\{${tmpitem}\}`
+								}
+							} else {
+								if (methodvalue["requestBody"]["content"]["example"] !== undefined) {
+									if (methodvalue["requestBody"]["content"]["example"]["example"] !== undefined) {
+										newaction["body"] = methodvalue["requestBody"]["content"]["example"]["example"] 
+										//JSON.stringify(tmpobject, null, 2)
 									}
-
-									//console.log("OBJ XML: ", tmpobject)
-									//newaction["body"] = XML.stringify(tmpobject, null, 2)
 								}
-							}
-						} else {
-							if (methodvalue["requestBody"]["content"]["example"] !== undefined) {
-								if (methodvalue["requestBody"]["content"]["example"]["example"] !== undefined) {
-									newaction["body"] = methodvalue["requestBody"]["content"]["example"]["example"] 
-									//JSON.stringify(tmpobject, null, 2)
-								}
-							}
 
-							//console.log(methodvalue["requestBody"]["content"])
-							if (methodvalue["requestBody"]["content"]["multipart/form-data"] !== undefined) {
-								if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"] !== null) {
-									if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["type"] === "object") {
-										const fieldname = methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["properties"]["fieldname"]
-										if (fieldname !== undefined) {
-											console.log("FIELDNAME: ", fieldname)
-											newaction.file_field = fieldname["value"]
+								//console.log(methodvalue["requestBody"]["content"])
+								if (methodvalue["requestBody"]["content"]["multipart/form-data"] !== undefined) {
+									if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"] !== null) {
+										if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["type"] === "object") {
+											const fieldname = methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["properties"]["fieldname"]
+											if (fieldname !== undefined) {
+												console.log("FIELDNAME: ", fieldname)
+												newaction.file_field = fieldname["value"]
+											}
 										}
 									}
 								}
 							}
 						}
 					}
-				}
 
-				// HAHAHA wtf is this.
-				if (methodvalue.responses !== undefined && methodvalue.responses !== null) {
-					if (methodvalue.responses.default !== undefined) {
-						if (methodvalue.responses.default.content !== undefined) {
-							if (methodvalue.responses.default.content["text/plain"] !== undefined) {
-								if (methodvalue.responses.default.content["text/plain"]["schema"] !== undefined) {
-									if (methodvalue.responses.default.content["text/plain"]["schema"]["example"] !== undefined) {
-										newaction.example_response = methodvalue.responses.default.content["text/plain"]["schema"]["example"] 
+					// HAHAHA wtf is this.
+					if (methodvalue.responses !== undefined && methodvalue.responses !== null) {
+						if (methodvalue.responses.default !== undefined) {
+							if (methodvalue.responses.default.content !== undefined) {
+								if (methodvalue.responses.default.content["text/plain"] !== undefined) {
+									if (methodvalue.responses.default.content["text/plain"]["schema"] !== undefined) {
+										if (methodvalue.responses.default.content["text/plain"]["schema"]["example"] !== undefined) {
+											newaction.example_response = methodvalue.responses.default.content["text/plain"]["schema"]["example"] 
+										}
+									}
+								}
+							}
+						} else {
+							var selectedReturn = ""
+							if (methodvalue.responses["200"] !== undefined) {
+								selectedReturn = "200"
+							} else if (methodvalue.responses["201"] !== undefined) {
+								selectedReturn = "201"
+							}
+
+							// Parsing examples. This should be standardized lol
+							if (methodvalue.responses[selectedReturn] !== undefined) {
+								const selectedExample = methodvalue.responses[selectedReturn] 
+								if (selectedExample["content"] !== undefined) {
+									if (selectedExample["content"]["application/json"] !== undefined) {
+										if (selectedExample["content"]["application/json"]["schema"] !== undefined && selectedExample["content"]["application/json"]["schema"] !== null) {
+											if (selectedExample["content"]["application/json"]["schema"]["$ref"] !== undefined) {
+												//console.log("REF EXAMPLE: ", selectedExample["content"]["application/json"]["schema"])
+												const parameter = handleGetRef(selectedExample["content"]["application/json"]["schema"], data)
+												//console.log("GOT REF RETURN AS EXAMPLE: ", parameter)
+												
+												if (parameter.properties !== undefined && parameter["type"] === "object") {
+													var newbody = {}
+													for (var propkey in parameter.properties) {
+														const parsedkey = propkey.replaceAll(" ", "_").toLowerCase() 
+														if (parameter.properties[propkey].type === undefined) {
+															console.log("Skipping: ", parameter.properties[propkey])
+															continue
+														}
+														
+														if (parameter.properties[propkey].type === "string") {
+															if (parameter.properties[propkey].description !== undefined) {
+																newbody[parsedkey] = parameter.properties[propkey].description 
+															} else {
+																newbody[parsedkey] = ""
+															}
+														} else if (parameter.properties[propkey].type.includes("int")) {
+															newbody[parsedkey] = 0
+														} else {
+															console.log("CANT HANDLE JSON TYPE ", parameter.properties[propkey].type, parameter.properties[propkey])
+															newbody[parsedkey] = []
+														}
+													}
+													newaction.example_response = JSON.stringify(newbody, null, 2)
+												} else {
+													console.log("CANT HANDLE PARAM: (1) ", parameter.properties)
+												}
+											} else {
+												// Just selecting the first one. bleh.
+												if (selectedExample["content"]["application/json"]["schema"]["allOf"] !== undefined) {
+													//console.log("ALLOF: ", selectedExample["content"]["application/json"]["schema"]["allOf"])
+													//console.log("BAD EXAMPLE: (SKIP ALLOF) ", selectedExample["content"]["application/json"]["schema"]["allOf"])
+													var selectedComponent = selectedExample["content"]["application/json"]["schema"]["allOf"]
+													if (selectedComponent.length >= 1) {
+														selectedComponent = selectedComponent[0]
+
+														const parameter = handleGetRef(selectedComponent, data)
+														if (parameter.properties !== undefined && parameter["type"] === "object") {
+															var newbody = {}
+															for (var propkey in parameter.properties) {
+																const parsedkey = propkey.replaceAll(" ", "_").toLowerCase() 
+																if (parameter.properties[propkey].type === undefined) {
+																	console.log("Skipping: ", parameter.properties[propkey])
+																	continue
+																}
+
+																if (parameter.properties[propkey].type === "string") {
+																	if (parameter.properties[propkey].description !== undefined) {
+																		newbody[parsedkey] = parameter.properties[propkey].description 
+																	} else {
+																		newbody[parsedkey] = ""
+																	}
+																} else if (parameter.properties[propkey].type.includes("int")) {
+																	newbody[parsedkey] = 0
+																} else {
+																	console.log("CANT HANDLE JSON TYPE (2) ", parameter.properties[propkey].type)
+																	newbody[parsedkey] = []
+																}
+															}
+
+															newaction.example_response = JSON.stringify(newbody, null, 2)
+															//newaction.example_response = JSON.stringify(parameter.properties, null, 2)
+														} else {
+															//newaction.example_response = parameter.properties
+															console.log("CANT HANDLE PARAM: (3) ", parameter.properties)
+														}
+													} else {
+
+													}
+												} else if (selectedExample["content"]["application/json"]["schema"]["properties"] !== undefined) {
+													if (selectedExample["content"]["application/json"]["schema"]["properties"]["data"] !== undefined) {
+														const parameter = handleGetRef(selectedExample["content"]["application/json"]["schema"]["properties"]["data"], data)
+														if (parameter.properties !== undefined && parameter["type"] === "object") {
+															var newbody = {}
+															for (var propkey in parameter.properties) {
+																const parsedkey = propkey.replaceAll(" ", "_").toLowerCase() 
+																if (parameter.properties[propkey].type === undefined) {
+																	console.log("Skipping: ", parameter.properties[propkey])
+																	continue
+																}
+
+																if (parameter.properties[propkey].type === "string") {
+																	if (parameter.properties[propkey].description !== undefined) {
+																		newbody[parsedkey] = parameter.properties[propkey].description 
+																	} else {
+																		newbody[parsedkey] = ""
+																	}
+																	console.log(parameter.properties[propkey])
+																} else if (parameter.properties[propkey].type.includes("int")) {
+																	newbody[parsedkey] = 0
+																} else {
+																	console.log("CANT HANDLE JSON TYPE (3) ", parameter.properties[propkey].type)
+																	newbody[parsedkey] = []
+																}
+															}
+
+															newaction.example_response = JSON.stringify(newbody, null, 2)
+															//newaction.example_response = JSON.stringify(parameter.properties, null, 2)
+														} else {
+															//newaction.example_response = parameter.properties
+															console.log("CANT HANDLE PARAM: (2) ", parameter.properties)
+														}
+													}
+												}
+											}
+										}
 									}
 								}
 							}
 						}
 					}
-				}
 
-				for (var key in methodvalue.parameters) {
-					const parameter = handleGetRef(methodvalue.parameters[key], data)
-					if (parameter.in === "query") {
-						var tmpaction = {
-							"description": parameter.description,
-							"name": parameter.name,
-							"required": parameter.required,
-							"in": "query",
+					for (var key in methodvalue.parameters) {
+						const parameter = handleGetRef(methodvalue.parameters[key], data)
+						if (parameter.in === "query") {
+							var tmpaction = {
+								"description": parameter.description,
+								"name": parameter.name,
+								"required": parameter.required,
+								"in": "query",
+							}
+
+							if (parameter.required === undefined) {
+								tmpaction.required = false	
+							}
+
+							newaction.queries.push(tmpaction)
+						} else if (parameter.in === "path") {
+							// FIXME - parse this to the URL too
+							newaction.paths.push(parameter.name)
+
+						// FIXME: This doesn't follow OpenAPI3 exactly. 
+						// https://swagger.io/docs/specification/describing-request-body/
+						// https://swagger.io/docs/specification/describing-parameters/
+						// Need to split the data.
+						} else if (parameter.in === "body") {
+							// FIXME: Add tracking for components
+							// E.G: https://raw.githubusercontent.com/owentl/Shuffle/master/gosecure.yaml
+							if (parameter.example !== undefined) {
+								newaction.body = parameter.example
+							}
+						} else if (parameter.in === "header") {
+							newaction.headers += `${parameter.name}=${parameter.example}\n`	
+						} else {
+							console.log("WARNING: don't know how to handle this param: ", parameter)
 						}
-
-						if (parameter.required === undefined) {
-							tmpaction.required = false	
-						}
-
-						newaction.queries.push(tmpaction)
-					} else if (parameter.in === "path") {
-						// FIXME - parse this to the URL too
-						newaction.paths.push(parameter.name)
-
-					// FIXME: This doesn't follow OpenAPI3 exactly. 
-					// https://swagger.io/docs/specification/describing-request-body/
-					// https://swagger.io/docs/specification/describing-parameters/
-					// Need to split the data.
-					} else if (parameter.in === "body") {
-						// FIXME: Add tracking for components
-						// E.G: https://raw.githubusercontent.com/owentl/Shuffle/master/gosecure.yaml
-						if (parameter.example !== undefined) {
-							newaction.body = parameter.example
-						}
-					} else if (parameter.in === "header") {
-						newaction.headers += `${parameter.name}=${parameter.example}\n`	
-					} else {
-						console.log("WARNING: don't know how to handle this param: ", parameter)
 					}
-				}
 
 
-				if (newaction.name === "" || newaction.name === undefined) {
-					// Find a unique part of the string
-					// FIXME: Looks for length between /, find the one where they differ
-					// Should find others with the same START to their path 
-					// Make a list of reserved names? Aka things that show up only once
-					if (Object.getOwnPropertyNames(wordlist).length === 0) {
-						for (let [newpath, pathvalue] of Object.entries(data.paths)) {
-							const newpathsplit = newpath.split("/")
-							for(var key in newpathsplit) {
-								const pathitem = newpathsplit[key].toLowerCase()
-								if (wordlist[pathitem] === undefined) {
-									wordlist[pathitem] = 1
-								} else {
-									wordlist[pathitem] += 1
+					if (newaction.name === "" || newaction.name === undefined) {
+						// Find a unique part of the string
+						// FIXME: Looks for length between /, find the one where they differ
+						// Should find others with the same START to their path 
+						// Make a list of reserved names? Aka things that show up only once
+						if (Object.getOwnPropertyNames(wordlist).length === 0) {
+							for (let [newpath, pathvalue] of Object.entries(data.paths)) {
+								const newpathsplit = newpath.split("/")
+								for(var key in newpathsplit) {
+									const pathitem = newpathsplit[key].toLowerCase()
+									if (wordlist[pathitem] === undefined) {
+										wordlist[pathitem] = 1
+									} else {
+										wordlist[pathitem] += 1
+									}
 								}
 							}
-						}
-					} 
+						} 
 
-					//console.log("WORDLIST: ", wordlist)
+						//console.log("WORDLIST: ", wordlist)
 
-					// Remove underscores and make it normal with upper case etc
-					const urlsplit = path.split("/")
-					if (urlsplit.length > 0) {
-						var curname = ""
-						for(var key in urlsplit) {
-							var subpath = urlsplit[key]	
-							if (wordlist[subpath] > 2 || subpath.length < 1) {
-								continue
+						// Remove underscores and make it normal with upper case etc
+						const urlsplit = path.split("/")
+						if (urlsplit.length > 0) {
+							var curname = ""
+							for(var key in urlsplit) {
+								var subpath = urlsplit[key]	
+								if (wordlist[subpath] > 2 || subpath.length < 1) {
+									continue
+								}
+							
+								curname = subpath
+								break
 							}
-						
-							curname = subpath
-							break
-						}
 
-						// FIXME: If name exists, 
-						// FIXME: Check if first part of parsedname is verb, otherwise use method
-						const parsedname = curname.split("_").join(" ").split("-").join(" ").split("{").join(" ").split("}").join(" ").trim()
-						if (parsedname.length === 0) {
-							newaction.errors.push("Missing name")
-						} else {
-							const newname = method.charAt(0).toUpperCase() + method.slice(1) + " " + parsedname
-							const searchactions = newActions.find(data => data.name === newname) 
-							console.log("SEARCH: ", searchactions)
-							if (searchactions !== undefined) {
+							// FIXME: If name exists, 
+							// FIXME: Check if first part of parsedname is verb, otherwise use method
+							const parsedname = curname.split("_").join(" ").split("-").join(" ").split("{").join(" ").split("}").join(" ").trim()
+							if (parsedname.length === 0) {
 								newaction.errors.push("Missing name")
 							} else {
-								newaction.name = newname
+								const newname = method.charAt(0).toUpperCase() + method.slice(1) + " " + parsedname
+								const searchactions = newActions.find(data => data.name === newname) 
+								console.log("SEARCH: ", searchactions)
+								if (searchactions !== undefined) {
+									newaction.errors.push("Missing name")
+								} else {
+									newaction.name = newname
+								}
 							}
-						}
 
-					} else {
-						newaction.errors.push("Missing name")
+						} else {
+							newaction.errors.push("Missing name")
+						}
 					}
+					newActions.push(newaction)
 				}
-				newActions.push(newaction)
 			}
 
 			if (data.servers !== undefined && data.servers.length > 0) {
@@ -720,15 +896,20 @@ const AppCreator = (props) => {
 			} 
 		}
 
-
-		// FIXME: Have multiple authentication options?
+		
+		console.log("SECURITYSCHEMES: ", securitySchemes)
 		if (securitySchemes !== undefined) {
+			// FIXME: Should add Oauth2 (Microsoft) and JWT (Wazuh)
+			//console.log("SECURITY: ", securitySchemes)
+			//if (Object.entries(securitySchemes) > 1 && 
+			var newauth = []
 			for (const [key, value] of Object.entries(securitySchemes)) {
 				if (value.scheme === "bearer") {
 					setAuthenticationOption("Bearer auth")
 					setAuthenticationRequired(true)
-					break
-				} else if (value.type === "apiKey") {
+				} else if (key === "oauth2") {
+					alert.info("Can't handle Oauth2 auth yet.")
+				} else if (key === "ApiKeyAuth") {
 					setAuthenticationOption("API key")
 
 					value.in = value.in.charAt(0).toUpperCase() + value.in.slice(1);
@@ -741,12 +922,23 @@ const AppCreator = (props) => {
 					console.log("PARAM NAME: ", value.name)
   				setParameterName(value.name)
 					setAuthenticationRequired(true)
-					break
 				} else if (value.scheme === "basic") {
 					setAuthenticationOption("Basic auth")
 					setAuthenticationRequired(true)
-					break
+				} else if (value.scheme === "oauth2") {
+					setAuthenticationOption("Oauth2")
+					setAuthenticationRequired(true)
+				} else {
+					newauth.push({
+						"name": key,
+						"type": value.in,
+						"example": "",
+					})
 				}
+			}
+			
+			if (newauth.length > 0) {
+				setExtraAuth(newauth)
 			}
 		}
 
@@ -778,7 +970,7 @@ const AppCreator = (props) => {
 		const basePath = "/"+(splitBase.slice(3, )).join("/")
 		
 		const data = {
-  			"swagger": "3.0",
+  			"openapi": "3.0",
   			"info": {
   			  "title": name,
   			  "description": description,
@@ -1098,11 +1290,36 @@ const AppCreator = (props) => {
 				"scheme": "bearer",
 				"bearerFormat": "UUID",
 			}
-
+		} else if (authenticationOption === "JWT") {
+			data.components.securitySchemes["BearerAuth"] = {
+				"type": "http",
+				"scheme": "bearer",
+				"bearerFormat": "JWT",
+			}
 		} else if (authenticationOption === "Basic auth") {
 			data.components.securitySchemes["BasicAuth"] = {
 				"type": "http",
 				"scheme": "basic",
+			}
+		} else if (authenticationOption === "Oauth2") {
+			data.components.securitySchemes["Oauth2"] = {
+				"type": "oauth2",
+				"flow": {
+					"authorizationCode": {
+
+					},
+				},
+			}
+		}
+
+		if (setExtraAuth.length > 0) {
+			for (var key in extraAuth) {
+				const curauth = extraAuth[key]
+				data.components.securitySchemes[curauth.name] = {
+					"type": "apiKey",
+					"in": curauth.type,
+					"name": curauth.name,
+				}
 			}
 		}
 
@@ -1112,7 +1329,7 @@ const AppCreator = (props) => {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json',
 				},
-				body: JSON.stringify(data),
+				body: JSON.stringify(data, null, 4),
 	  			credentials: "include",
     		})
 		.then((response) => {
@@ -1267,12 +1484,136 @@ const AppCreator = (props) => {
 	//console.log("Option: ", authenticationOption)
 	//console.log("Location: ", parameterLocation)
   //console.log("Name: ", parameterName)
+	const extraKeys =
+		<div style={{marginTop: 50}}>
+			<div style={{display: "flex"}}>
+				<Typography variant="body1">Extra configuration items</Typography>
+				{extraAuth.length === 0 ? 
+					<Button color="primary" style={{maxWidth: 50, marginLeft: 15, }} variant="contained" onClick={() => {
+							console.log("ADD NEW!")
+							extraAuth.push(defaultAuth)
+							setExtraAuth(extraAuth)
+							setUpdate(Math.random())
+					}}>
+						<AddIcon style={{}}/> 
+					</Button> 				
+				: <span style={{width: 50, }}/>}
+			</div>
+			{extraAuth.map((value, index) => {
+				return (
+					<span key={index} style={{display: "flex", height: 50, marginTop: 5, }}>
+						<TextField
+							required
+							style={{height: 50, flex: 2, marginTop: 0, marginBottom: 0, backgroundColor: inputColor, marginRight: 5, }}
+							fullWidth={true}
+							placeholder="Name"
+							id="standard-required"
+							margin="normal"
+							variant="outlined"
+							defaultValue={extraAuth[index].name}
+							onChange={e => {
+								extraAuth[index].name = e.target.value
+								setExtraAuth(extraAuth)
+							}}	
+							InputProps={{
+								classes: {
+									notchedOutline: classes.notchedOutline,
+								},
+								style:{
+									color: "white",
+									minHeight: 50, 
+									marginLeft: 5,
+									maxWidth: "95%",
+									fontSize: "1em",
+								},
+							}}
+						/>
+						<TextField
+							required
+							style={{height: 50, marginTop: 0, marginBottom: 0, flex: 2, backgroundColor: inputColor, marginRight: 5,}}
+							fullWidth={true}
+							placeholder="Example - input an example for the user"
+							id="standard-required"
+							margin="normal"
+							variant="outlined"
+							defaultValue={extraAuth[index].example}
+							onChange={e => {
+								extraAuth[index].example = e.target.value
+								setExtraAuth(extraAuth)
+							}}
+							InputProps={{
+								style:{
+									color: "white",
+									minHeight: 50, 
+									marginLeft: 5,
+									maxWidth: "95%",
+									fontSize: "1em",
+								},
+							}}
+						/>
+						<Select
+							fullWidth
+							onChange={(e) => {
+								extraAuth[index].type = e.target.value
+								setUpdate(Math.random())
+								setExtraAuth(extraAuth)
+							}}
+							value={extraAuth[index].type}
+							style={{flex: 1, backgroundColor: inputColor, paddingLeft: "10px", color: "white", height: 50, borderRadius: 5, }}
+							inputProps={{
+								name: 'age',
+								id: 'outlined-age-simple',
+							}}
+						>
+							<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={"header"}>
+								Header
+							</MenuItem>
+							<MenuItem key={index} style={{backgroundColor: inputColor, color: "white"}} value={"query"}>
+							 Query	
+							</MenuItem>
+						</Select>
+						<div style={{display: "flex", width: 100, }}>
+							{index === extraAuth.length-1 ? 
+							<Button color="primary" style={{}} variant="outlined" onClick={() => {
+									extraAuth.push(defaultAuth)
+									setExtraAuth(extraAuth)
+									setUpdate(Math.random())
+							}}>
+								<AddIcon style={{}}/> 
+							</Button> 				
+						: <span style={{}}/>}
+							<Button color="primary" style={{}} variant="outlined" onClick={() => {
+									const tmpAuth = extraAuth.filter(item => item.type === value.type && item.name !== value.name)
+									setExtraAuth(tmpAuth)
+									console.log(tmpAuth)
+									setUpdate(Math.random())
+							}}>
+								<RemoveIcon style={{}}/> 
+							</Button> 				
+						</div>
+					</span>
+				)
+			})}
+		</div>
+
+	const oauth2Auth = authenticationOption === "Oauth2" ? 
+		<div style={{color: "white", marginTop: 20, }}>
+			<Typography variant="body1">Oauth2 authentication</Typography>
+			<Typography variant="body2" color="textSecondary">
+				Add the URL to redirect to 
+			</Typography>
+		</div>
+		: null
+
 	const apiKey = authenticationOption === "API key" ? 
-		<div style={{color: "white"}}>
-			<h4>API key</h4>
+		<div style={{color: "white", marginTop: 20, }}>
+			<Typography variant="body1">API key authentication</Typography>
+			<Typography variant="body2" color="textSecondary">
+				Add the name of the field used for authentication, e.g. "X-APIKEY"
+			</Typography>
 			<TextField
 				required
-				style={{flex: "1", marginRight: "15px", backgroundColor: inputColor}}
+				style={{flex: "1", backgroundColor: inputColor}}
 				fullWidth={true}
 				placeholder="Field Name (not token)"
 				type="name"
@@ -1298,7 +1639,7 @@ const AppCreator = (props) => {
 					setParameterLocation(e.target.value) 
 				}}
 				value={parameterLocation}
-				style={{backgroundColor: inputColor, paddingLeft: "10px", color: "white", height: "50px"}}
+				style={{borderRadius: 5, backgroundColor: inputColor, paddingLeft: "10px", color: "white", height: "50px"}}
 				inputProps={{
 					name: 'age',
 					id: 'outlined-age-simple',
@@ -1435,12 +1776,12 @@ const AppCreator = (props) => {
 							<div style={{color: "#f85a3e", cursor: "pointer", marginRight: 15, }} onClick={() => {
 								duplicateAction(index)
 							}}>
-								Duplicate	
+								<FileCopyIcon color="secondary"/>
 							</div>
 						</Tooltip>
 					 	<Tooltip title="Delete action" placement="bottom" style={{minWidth: 60}} >
 							<div style={{color: "#f85a3e", cursor: "pointer"}} onClick={() => {deleteAction(index)}}>
-								Delete
+								<DeleteIcon color="secondary"/>
 							</div>
 						</Tooltip>
 					</Paper>
@@ -1530,9 +1871,6 @@ const AppCreator = (props) => {
 				</span>}
 				key={currentAction}
 				InputProps={{
-					classes: {
-						notchedOutline: classes.notchedOutline,
-					},
 					style:{
 						color: "white",
 					},
@@ -1720,7 +2058,7 @@ const AppCreator = (props) => {
 			<FormControl style={{backgroundColor: surfaceColor, color: "white",}}>
 				<DialogTitle><div style={{color: "white"}}>New action</div></DialogTitle>
 				<DialogContent>
-					<a target="_blank" href="https://shuffler.io/docs/workflows#conditions" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more about actions</a>
+					<a target="_blank" href="https://shuffler.io/docs/app_creation#actions" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more about actions</a>
 					<div style={{marginTop: "15px"}}/>
 					Name
 					<TextField
@@ -1768,9 +2106,6 @@ const AppCreator = (props) => {
 						defaultValue={currentAction["description"]}
 						onChange={e => setActionField("description", e.target.value)}
 						InputProps={{
-							classes: {
-								notchedOutline: classes.notchedOutline,
-							},
 							style:{
 								color: "white",
 							},
@@ -1853,7 +2188,7 @@ const AppCreator = (props) => {
 								setUpdate(Math.random())
 							} else if (parsedurl.startsWith("curl")) {
 								const request = parseCurl(event.target.value)
-								if (request !== event.target.value) {
+								if (request !== event.target.value && request.method !== undefined && request.method !== null) {
 									if (request.method.toUpperCase() !== currentAction.Method) {
 										setCurrentActionMethod(request.method.toUpperCase())
 										setActionField("method", request.method.toUpperCase())
@@ -1973,9 +2308,6 @@ const AppCreator = (props) => {
 						onChange={e => setActionField("headers", e.target.value)}
 						helperText={<span style={{color:"white", marginBottom: "2px",}}>Headers that are part of the request. Default: EMPTY</span>}
 						InputProps={{
-							classes: {
-								notchedOutline: classes.notchedOutline,
-							},
 							style:{
 								color: "white",
 							},
@@ -2093,6 +2425,402 @@ const AppCreator = (props) => {
 			/>
 		</div>
 
+	const ParsedActionHandler = () => {  
+		const passedOrg = {"id": "", "name": ""}
+		const owner = ""
+		const passedTags = ["single test"]
+
+		const [, setUpdate] = useState()
+		const [authenticationModalOpen, setAuthenticationModalOpen] = useState(false);
+		const [selectedApp, setSelectedApp] = useState({
+			versions: [{
+				"id": selectedAction.app_id,
+				"version": selectedAction.app_version,
+			}],
+			loop_versions: [selectedAction.app_version],
+			id: selectedAction.app_id,
+			name: selectedAction.app_name,
+			version: selectedAction.app_version,
+		})
+
+		const [requiresAuthentication, setRequiresAuthentication] = useState(app.authentication !== null && app.authentication !== undefined && app.authentication.required && app.authentication.parameters !== undefined && app.authentication.parameters !== null ? true : false)
+		const [workflow, setWorkflow] = useState({
+			name: "",	
+			description: "",	
+			actions: [selectedAction],
+			start: selectedAction.id,
+			tags: passedTags,
+			execution_org: passedOrg,
+			org_id: passedOrg.id,
+			id: uuid.v4(),
+			isValid: true,
+			owner: owner,
+			created: Date.now(),
+		})
+
+		const EndpointData = () => {
+			const [tmpVar, setTmpVar] = React.useState("")
+
+			return (
+				<div>
+					The API endpoint to use (URL) - predefined in the app
+					<TextField
+						style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
+						InputProps={{
+							style:{
+								color: "white",
+								height: 50, 
+								fontSize: "1em",
+							},
+						}}
+						fullWidth
+						type="text"
+						color="primary"
+						disabled={true}
+						placeholder="Bearer token" 
+						defaultValue={selectedApp.link}
+						onChange={(event) => {
+							setTmpVar(event.target.value)
+						}}
+						onBlur={() => {
+							selectedApp.link = tmpVar
+							console.log("LINK: ", selectedApp.link)
+							setSelectedApp(selectedApp)
+						}}
+					/>
+				</div>
+			)
+		}
+
+		const setAppActionAuthentication = (newauth) => {
+			if (app.authentication.required) {
+				var findAuthId = ""
+				if (selectedAction.authentication_id !== null && selectedAction.authentication_id !== undefined && selectedAction.authentication_id.length > 0) {
+					findAuthId = selectedAction.authentication_id
+				}
+
+				var baseAuthOptions = []
+				for (var key in newauth) {
+					var item = newauth[key]
+
+					const newfields = {}
+					for (var filterkey in item.fields) {
+						newfields[item.fields[filterkey].key] = item.fields[filterkey].value
+					}
+
+					item.fields = newfields
+					if (item.app.name === app.name) {
+						baseAuthOptions.push(item)
+
+						if (item.id === findAuthId) {
+							selectedAction.selectedAuthentication = item
+						}
+					}
+				}
+
+				selectedAction.authentication = baseAuthOptions 
+				//console.log("Authentication: ", authenticationOptions)
+				if (selectedAction.selectedAuthentication === null || selectedAction.selectedAuthentication === undefined || selectedAction.selectedAuthentication.length === "") {
+					selectedAction.selectedAuthentication = {}
+				}
+			} else {
+				selectedAction.authentication = []
+				selectedAction.authentication_id = ""
+				selectedAction.selectedAuthentication = {}
+			}
+
+			setSelectedAction(selectedAction)
+			console.log(selectedAction)
+		}
+
+		//{selectedAction.authentication !== undefined && selectedAction.authentication.length > 0 ? 
+		const getAppAuthentication = () => {
+			fetch(globalUrl+"/api/v1/apps/authentication", {
+				method: 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json',
+				},
+				credentials: "include",
+			})
+			.then((response) => {
+				if (response.status !== 200) {
+					console.log("Status not 200 for apps :O!")
+				}
+
+				return response.json()
+			})
+			.then((responseJson) => {
+				if (responseJson.success && responseJson.data !== undefined && responseJson.data !== null && responseJson.data.length !== 0) {
+					var newauth = []
+					for (var key in responseJson.data) {
+						if (responseJson.data[key].defined === false) {
+							continue
+						}
+
+						newauth.push(responseJson.data[key])
+					}
+
+					setAppAuthentication(newauth)
+					setAppActionAuthentication(newauth)
+				} else {
+					if (app.authentication.required) {
+						const tmpParams = selectedAction.parameters
+						selectedAction.parameters = []
+
+						for (var paramkey in app.authentication.parameters) {
+							var item = app.authentication.parameters[paramkey]
+							item.configuration = true
+
+							const found = selectedAction.parameters.find(param => param.name === item.name)
+							if (found === null || found === undefined) {
+								selectedAction.parameters.push(item)
+							}
+						}
+
+						for (var paramkey in tmpParams) {
+							var item = tmpParams[paramkey]
+							//item.configuration = true
+							
+							const found = selectedAction.parameters.find(param => param.name === item.name)
+							if (found === null || found === undefined) {
+								selectedAction.parameters.push(item)
+							}
+						}
+
+						setSelectedAction(selectedAction)
+					}
+
+					//alert.error("Failed getting authentications")
+				}
+			})
+			.catch(error => {
+				alert.error("Auth loading error: "+error.toString())
+			})
+		}
+
+		if (!authLoaded && appAuthentication.length === 0 && selectedAction.id !== undefined) {
+			setAuthLoaded(true)
+			getAppAuthentication()
+		} else if (selectedAction.id === undefined && currentAction.name !== undefined && currentAction.name !== null && currentAction.name.length > 0) {
+			var methodName = `${currentAction.method}_${currentAction.name}`
+			if (currentAction.method.toLowerCase() === "custom" || currentAction.name.toLowerCase().startsWith(currentAction.method.toLowerCase())) {
+				methodName = currentAction.name
+			}
+
+			methodName = methodName.toLowerCase().replaceAll(" ", "_")
+			if (app.actions !== null && app.actions !== undefined) { 
+				var newselectedaction = app.actions.find(item => item.name.toLowerCase().replaceAll(" ", "_") === methodName)
+				if (newselectedaction !== undefined && newselectedaction !== null) {
+					newselectedaction.app_id = app.id
+					newselectedaction.app_name = app.name
+					newselectedaction.app_version = app.app_version
+					newselectedaction.authentication = []
+					newselectedaction.authentication_id = ""
+					newselectedaction.selectedAuthentication = {}
+					setSelectedAction(newselectedaction)
+				}
+			}
+		}
+
+		const setNewAppAuth = (appAuthData) => {
+			//console.log("DAta: ", appAuthData)
+			fetch(globalUrl+"/api/v1/apps/authentication", {
+					method: 'PUT',
+					headers: {
+						'Content-Type': 'application/json',
+						'Accept': 'application/json',
+					},
+					body: JSON.stringify(appAuthData),
+					credentials: "include",
+				})
+			.then((response) => {
+				if (response.status !== 200) {
+					console.log("Status not 200 for setting app auth :O!")
+				} 
+
+				return response.json()
+			})
+			.then((responseJson) => {
+				if (!responseJson.success) {
+					alert.error("Failed to set app auth: "+responseJson.reason)
+				} else {
+					getAppAuthentication(true) 
+					setAuthenticationModalOpen(false) 
+
+					// Needs a refresh with the new authentication..
+					//alert.success("Successfully saved new app auth")
+				}
+			})
+			.catch(error => {
+				alert.error(error.toString())
+			})
+		}
+
+		const AuthenticationData = (props) => {
+			const selectedApp = props.app
+			console.log("APP: ", selectedApp)
+
+			const [authenticationOption, setAuthenticationOptions] = React.useState({
+				app: JSON.parse(JSON.stringify(selectedApp)),
+				fields: {},
+				label: "",
+				usage: [{
+					workflow_id: workflow.id,
+				}],
+				id: uuid.v4(),
+				active: true,
+			})
+
+			if (selectedApp.authentication === undefined) {
+				return null
+			}
+
+			if (selectedApp.authentication.parameters === null || selectedApp.authentication.parameters === undefined || selectedApp.authentication.parameters.length === 0) {
+				return null
+			}
+
+			authenticationOption.app.actions = []
+
+			for (var key in selectedApp.authentication.parameters) {
+				if (authenticationOption.fields[selectedApp.authentication.parameters[key].name] === undefined) {
+					authenticationOption.fields[selectedApp.authentication.parameters[key].name] = ""
+				}
+			}
+
+			const handleSubmitCheck = () => {
+				console.log("NEW AUTH: ", authenticationOption)
+				if (authenticationOption.label.length === 0) {
+					authenticationOption.label = `Auth for ${selectedApp.name}`
+					//alert.info("Label can't be empty")
+					//return
+				}
+
+				for (var key in selectedApp.authentication.parameters) {
+					if (authenticationOption.fields[selectedApp.authentication.parameters[key].name].length === 0) {
+						alert.info("Field "+selectedApp.authentication.parameters[key].name+" can't be empty")
+						return null
+					} 
+				}
+
+				console.log("Action: ", selectedAction)
+				selectedAction.authentication_id = authenticationOption.id
+				selectedAction.selectedAuthentication = authenticationOption
+				if (selectedAction.authentication === undefined || selectedAction.authentication === null) {
+					selectedAction.authentication = [authenticationOption]
+				} else {
+					selectedAction.authentication.push(authenticationOption)
+				}
+
+				setSelectedAction(selectedAction)
+
+				var newAuthOption = JSON.parse(JSON.stringify(authenticationOption))
+				var newFields = []
+				for (const key in newAuthOption.fields) {
+					const value = newAuthOption.fields[key]
+					newFields.push({
+						key: key,
+						value: value,
+					})
+				}
+
+				console.log("FIELDS: ", newFields)
+				newAuthOption.fields = newFields
+				setNewAppAuth(newAuthOption)
+				//appAuthentication.push(newAuthOption)
+				//setAppAuthentication(appAuthentication)
+				//
+				
+				setUpdate(authenticationOption.id)
+
+				/*
+					{selectedAction.authentication.map(data => (
+					<MenuItem key={data.id} style={{backgroundColor: inputColor, color: "white"}} value={data}>
+				*/
+
+			}
+
+			if (authenticationOption.label === null || authenticationOption.label === undefined) {
+				authenticationOption.label = selectedApp.name+" authentication"
+			}
+
+			console.log("PRE RETURN")
+			return (
+				<div>
+					<DialogContent>
+						<a target="_blank" rel="norefferer" href="https://shuffler.io/docs/app_creation#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is this?</a><div/>
+						These are required fields for authenticating with {selectedApp.name} 
+						<div style={{marginTop: 15}}/>
+						<b>Name - what is this used for?</b>
+						<TextField
+								style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
+								InputProps={{
+									style:{
+										color: "white",
+										marginLeft: "5px",
+										maxWidth: "95%",
+										height: 50, 
+										fontSize: "1em",
+									},
+								}}
+								fullWidth
+								color="primary"
+								placeholder={"Auth july 2020"}
+								defaultValue={`Auth for ${selectedApp.name}`}
+								onChange={(event) => {
+									authenticationOption.label = event.target.value
+								}}
+							/>
+						{selectedApp.link.length > 0 ? <div style={{marginTop: 15}}><EndpointData /></div> : null}
+						<Divider style={{marginTop: 15, marginBottom: 15, backgroundColor: "rgb(91, 96, 100)"}}/>
+						<div style={{}}/>
+							{selectedApp.authentication.parameters.map((data, index) => { 
+							return (
+								<div key={index} style={{marginTop: 10}}>
+									<LockOpenIcon style={{marginRight: 10}}/>
+									<b>{data.name}</b>
+									<TextField
+											style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
+											InputProps={{
+												style:{
+													color: "white",
+													marginLeft: "5px",
+													maxWidth: "95%",
+													height: 50, 
+													fontSize: "1em",
+												},
+											}}
+											fullWidth
+											type={data.example !== undefined && data.example.includes("***") ? "password" : "text"}
+											color="primary"
+											placeholder={data.example} 
+											onChange={(event) => {
+												authenticationOption.fields[data.name] = event.target.value
+											}}
+										/>
+								</div>
+							)
+						})}
+					</DialogContent>
+					<DialogActions>
+					<Button 
+						style={{borderRadius: "0px"}}
+						onClick={() => {
+							setAuthenticationModalOpen(false)
+						}} color="primary">
+							Cancel
+						</Button>
+						<Button style={{borderRadius: "0px"}} onClick={() => {
+							handleSubmitCheck() 	
+						}} color="primary">
+							Submit	
+						</Button>
+					</DialogActions>	
+				</div>
+			)
+		}
+	}
+
 	const actionView = 
 		<div style={{color: "white", position: "relative",}}>
 			<div style={{position: "absolute", right: 0, top: 0,}}>
@@ -2112,8 +2840,7 @@ const AppCreator = (props) => {
 				: null}
 			</div>
 			<h2>Actions {actionAmount > 0 ? <span>({actionAmount} / {actions.length})</span> : null}</h2>
-			Actions are the tasks performed by an app. Read more about actions and apps
-			<a target="_blank" src="https://shuffler.io/docs/apps#actions" style={{textDecoration: "none", color: "#f85a3e"}}> here</a>.
+			Actions are the tasks performed by an app - usually single URL paths for REST API's.
 			<div>
 				{loopActions}
 				<div style={{display: "flex"}}>
@@ -2144,7 +2871,7 @@ const AppCreator = (props) => {
 		<div style={{color: "white"}}>
 			<h2>Test</h2>
 			Test an action to see whether it performs in an expected way. 
-			<a target="_blank" href="https://shuffler.io/docs/apps#testing" style={{textDecoration: "none", color: "#f85a3e"}}>&nbsp;TBD: Click here to learn more about testing</a>.
+			<a target="_blank" href="https://shuffler.io/docs/app_creation#testing" style={{textDecoration: "none", color: "#f85a3e"}}>&nbsp;TBD: Click here to learn more about testing</a>.
 			<div>
 				Test :)
 			</div>
@@ -2300,11 +3027,12 @@ const AppCreator = (props) => {
 						Cancel
 					</Button>
 					<Button variant="contained" style={{borderRadius: "0px"}} disabled={disableImageUpload} onClick={() => {
-								onSaveAppIcon()
-							}} color="primary">
+						onSaveAppIcon()
+					}} color="primary">
 						Continue	
 					</Button>
 				</DialogActions>
+				{/*<ParsedActionHandler />*/}
 			</FormControl>
 		</Dialog>
 		: null;
@@ -2327,7 +3055,7 @@ const AppCreator = (props) => {
 				<input hidden type="file" ref={(ref) => upload = ref} onChange={editHeaderImage} />
 				<Paper style={boxStyle}>
 					<h2 style={{marginBottom: "10px", color: "white"}}>General information</h2>
-					<a target="_blank" href="https://shuffler.io/docs/apps#create_openapi_app" style={{textDecoration: "none", color: "#f85a3e"}}>Click here to learn more about app creation</a>
+					<a target="_blank" href="https://shuffler.io/docs/app_creation#app-creator-instructions" style={{textDecoration: "none", color: "#f85a3e"}}>Click here to learn more about app creation</a>
 					<div style={{color: "white", flex: "1", display: "flex", flexDirection: "row"}}>
 					 	<Tooltip title="Click to edit the app's image" placement="bottom">
 							<div style={{flex: "1", margin: 10, border: "1px solid #f85a3e", cursor: "pointer", backgroundColor: inputColor, maxWidth: 174, maxHeight: 174}} onClick={() => {
@@ -2366,12 +3094,17 @@ const AppCreator = (props) => {
 										}
 									}
 
-									if (e.target.value.length > 100) {
-										alert.error("Choose a shorter name.")
+									if (e.target.value.length > 29) {
+										alert.error("Choose a shorter name (max 29).")
 										return
 									}
 
+									//e.target.value.trim()
+
 									setName(e.target.value)
+								}}
+								onBlur={e => {
+									setName(e.target.value.trim())
 								}}
 								color="primary"
 								InputProps={{
@@ -2409,9 +3142,9 @@ const AppCreator = (props) => {
 							/>
 						</div>
 					</div>
-					<Divider style={{marginBottom: "10px", marginTop: "30px", height: "1px", width: "100%", backgroundColor: "grey"}}/>
-					<h3 style={{marginBottom: "10px", color: "white",}}>API information</h3>
-					<span style={{color: "white"}}>Base URL - leave empty if user changeable</span>
+					<Divider style={{marginBottom: 10, marginTop: 30, height: 1, width: "100%", backgroundColor: "grey"}}/>
+					<Typography variant="h6" style={{marginTop: 10, marginBottom: 10, color: "white",}}>API information</Typography>
+					<Typography variant="body1">Base URL - used as suggestion to the user</Typography>
 					<TextField
 						color="primary"
 						style={{backgroundColor: inputColor, marginTop: "5px"}}
@@ -2449,9 +3182,8 @@ const AppCreator = (props) => {
 							setBaseUrl(tmpstring)
 						}}
 					/>
-					<FormControl style={{marginTop: "15px",}} variant="outlined">
-						<h5 style={{marginBottom: "10px", color: "white",}}>Authentication
-						</h5>
+					<FormControl style={{marginTop: 30,}} variant="outlined">
+						<Typography variant="body1">Authentication type</Typography>
 						<Select
 							fullWidth
 							onChange={(e) => {
@@ -2475,6 +3207,8 @@ const AppCreator = (props) => {
 					{basicAuth}
 					{bearerAuth}
 					{apiKey}
+					{oauth2Auth}
+					{extraKeys}
 
 					{/*authenticationOption === "No authentication" ? null :
 						<FormControlLabel

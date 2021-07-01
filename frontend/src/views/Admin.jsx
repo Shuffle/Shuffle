@@ -66,7 +66,7 @@ const Admin = (props) => {
 
 	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" 
 	const getApps = () => {
-		fetch(globalUrl+"/api/v1/workflows/apps", {
+		fetch(globalUrl+"/api/v1/apps", {
     	  method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',
@@ -149,9 +149,12 @@ const Admin = (props) => {
 			response.json().then(responseJson => {
 				console.log("RESP: ", responseJson)
 				if (responseJson["success"] === false) {
-					alert.error("Failed stopping schedule")
+					alert.error("Failed deleting auth")
 				} else {
-					getAppAuthentication() 
+					// Need to wait because query in ES is too fast  
+					setTimeout(() => {
+						getAppAuthentication() 
+					}, 1000)
 					alert.success("Successfully deleted authentication!")
 				}
 			}),
@@ -223,7 +226,9 @@ const Admin = (props) => {
 			return response.json()
 		})
     .then((responseJson) => {
-			handleGetOrg(org_id) 
+			setTimeout(() => {
+				handleGetOrg(org_id) 
+			}, 1000)
 		})
 		.catch(error => {
 			alert.error("Err: " + error.toString())
@@ -260,9 +265,12 @@ const Admin = (props) => {
 			}
 
 			return response.json()
+			//setTimeout(() => {
+			//}, 1000)
 		})
     .then((responseJson) => {
-			if (!responseJson.success && responseJson.reason !== undefined) {
+			console.log("RESP: ", responseJson)
+			if (responseJson.success === false && responseJson.reason !== undefined) {
 				setOrgSyncResponse(responseJson.reason)
 				alert.error("Failed to handle sync: "+responseJson.reason)
 			} else if (!responseJson.success) {
@@ -346,7 +354,9 @@ const Admin = (props) => {
 					} else {
 						alert.success("Successfully updated auth everywhere!")
 						setSelectedUserModalOpen(false)
-						getAppAuthentication() 
+						setTimeout(() => {
+							getAppAuthentication() 
+						}, 1000)
 					}
 				}),
 			)
@@ -373,7 +383,11 @@ const Admin = (props) => {
 			.then(response =>
 				response.json().then(responseJson => {
 					if (responseJson["success"] === false) {
-						alert.error("Failed setting new password")
+						if (responseJson.reason !== undefined) {
+							alert.error(responseJson.reason)
+						} else {
+							alert.error("Failed setting new password")
+						}
 					} else {
 						alert.success("Successfully updated password!")
 						setSelectedUserModalOpen(false)
@@ -387,7 +401,7 @@ const Admin = (props) => {
 
 	const deleteUser = (data) => {
 		// Just use this one?
-		const userId = isCloud ? data.username : data.id 
+		const userId = data.id 
 		
 		const url = globalUrl + '/api/v1/users/' + userId
 		fetch(url, {
@@ -459,9 +473,9 @@ const Admin = (props) => {
 
 
 				// FIXME: Set up features
-				Object.keys(responseJson.sync_features).map(function(key, index) {
-					//console.log(responseJson.sync_features[key])
-				})
+				//Object.keys(responseJson.sync_features).map(function(key, index) {
+				//	//console.log(responseJson.sync_features[key])
+				//})
 
 				//setOrgName(responseJson.name)
 				//setOrgDescription(responseJson.description)
@@ -472,6 +486,41 @@ const Admin = (props) => {
 			console.log("Error getting org: ", error)
 			alert.error("Error getting current organization")
 		});
+	}
+
+	const inviteUser = (data) => {
+		console.log("INPUT: ", data)
+		setLoginInfo("")
+
+		// Just use this one?
+		var data = { "username": data.Username, "type": "invite", "org_id": selectedOrganization.id}
+		var baseurl = globalUrl
+		const url = baseurl + '/api/v1/users/register_org';
+
+		fetch(url, {
+			method: 'POST',
+			credentials: "include",
+			body: JSON.stringify(data),
+			headers: {
+				'Content-Type': 'application/json',
+			},
+		})
+			.then(response =>
+				response.json().then(responseJson => {
+					if (responseJson["success"] === false) {
+						setLoginInfo("Error: " + responseJson.reason)
+					} else {
+						setLoginInfo("")
+						setModalOpen(false)
+						setTimeout(() => {
+							getUsers()
+						}, 1000)
+					}
+				}),
+			)
+			.catch(error => {
+				console.log("Error in userdata: ", error)
+			});
 	}
 
 	const submitUser = (data) => {
@@ -498,7 +547,9 @@ const Admin = (props) => {
 					} else {
 						setLoginInfo("")
 						setModalOpen(false)
-						getUsers()
+						setTimeout(() => {
+							getUsers()
+						}, 1000)
 					}
 				}),
 			)
@@ -816,7 +867,6 @@ const Admin = (props) => {
 				return response.json()
 			})
 			.then((responseJson) => {
-				console.log(responseJson)
 				setSchedules(responseJson)
 			})
 			.catch(error => {
@@ -844,7 +894,7 @@ const Admin = (props) => {
 			.then((responseJson) => {
 				if (responseJson.success) {
 					//console.log(responseJson.data)
-					console.log(responseJson)
+					//console.log(responseJson)
 					setAuthentication(responseJson.data)
 				} else {
 					alert.error("Failed getting authentications")
@@ -955,34 +1005,45 @@ const Admin = (props) => {
 		});
 	}
 
+	const views = {
+		0: "organization",
+		1: "users",
+		2: "app_auth",
+		3: "files",
+		4: "schedules",
+		5: "environments",
+		6: "categories",
+	}
 	const setConfig = (event, newValue) => {
+		//console.log("Value: ", newValue)
+
+		setCurTab(parseInt(newValue))
 		if (newValue === 1) {
+			document.title = "Shuffle - admin - users"
 			getUsers()
 		} else if (newValue === 2) {
+			document.title = "Shuffle - admin - app authentication"
 			getAppAuthentication()
 		} else if (newValue === 3) {
+			document.title = "Shuffle - admin - files"
 			getFiles()
 		} else if (newValue === 4) {
+			document.title = "Shuffle - admin - schedules"
 			getSchedules()
 		} else if (newValue === 5) {
+			document.title = "Shuffle - admin - environments"
 			getEnvironments()
 		} else if (newValue === 6) {
+			document.title = "Shuffle - admin - orgs"
 			getOrgs() 
+		} else {
+			document.title = "Shuffle - admin"
 		}
 
 		if (newValue === 6) {
 			console.log("Should get apps for categories.")
 		}
 
-		const views = {
-			0: "organization",
-			1: "users",
-			2: "app_auth",
-			3: "environments",
-			4: "schedules",
-			5: "files",
-			6: "categories",
-		}
 
 		//var theURL = window.location.pathname
 		//FIXME: Add url edits
@@ -994,33 +1055,21 @@ const Admin = (props) => {
 		//window.location.pathame = newpath
 
 		setModalUser({})
-		setCurTab(newValue)
 	}
 
 
 	if (firstRequest) {
 		setFirstRequest(false)
+		document.title = "Shuffle - admin"
 		if (!isCloud) {
 			getUsers()
 		} else {
 			getSettings()
 		}
 
-		const views = {
-			"organization": 0,
-			"users": 1,
-			"app_auth": 2,
-			"environments": 3,
-			"schedules": 4,
-			"files": 5,
-		}
-
 		if (props.match.params.key !== undefined) {
-			const tmpitem = views[props.match.params.key]
-			if (tmpitem !== undefined) {
-				//setCurTab(tmpitem)
-				setConfig("", tmpitem)
-			}
+			//const tmpitem = views[props.match.params.key]
+			setConfig("", props.match.params.key)
 		}
 	}
 
@@ -1045,7 +1094,6 @@ const Admin = (props) => {
 	const setUser = (userId, field, value) => {
 		const data = { "user_id": userId }
 		data[field] = value
-		console.log("DATA: ", data)
 
 		fetch(globalUrl + "/api/v1/users/updateuser", {
 			method: 'PUT',
@@ -1080,7 +1128,7 @@ const Admin = (props) => {
 
 
 	const generateApikey = (user) => {
-		const userId = isCloud ? user.username : user.id
+		const userId = user.id
 		const data = { "user_id": userId }
 
 		fetch(globalUrl + "/api/v1/generateapikey", {
@@ -1207,37 +1255,41 @@ const Admin = (props) => {
 				},
 			}}
 		>
-			<DialogTitle><span style={{ color: "white" }}><EditIcon /> Edit user</span></DialogTitle>
+			<DialogTitle><span style={{ color: "white" }}><EditIcon style={{marginTop: 5}}/> Editing {selectedUser.username}</span></DialogTitle>
 			<DialogContent>
-				<div style={{ display: "flex" }}>
-					<TextField
-						style={{ marginTop: 0, backgroundColor: theme.palette.inputColor, flex: 3 , marginRight: 10,}}
-						InputProps={{
-							style: {
-								height: 50,
-								color: "white",
-							},
-						}}
-						color="primary"
-						required
-						fullWidth={true}
-						placeholder="New password"
-						type="password"
-						id="standard-required"
-						autoComplete="password"
-						margin="normal"
-						variant="outlined"
-						onChange={e => setNewPassword(e.target.value)}
-					/>
-					<Button
-						style={{ maxHeight: 50, flex: 1 }}
-						variant="outlined"
-						color="primary"
-						onClick={() => onPasswordChange()}
-					>
-						Submit
-					</Button>
-				</div>
+				{isCloud ? 
+					null
+					:
+					<div style={{ display: "flex" }}>
+						<TextField
+							style={{ marginTop: 0, backgroundColor: theme.palette.inputColor, flex: 3 , marginRight: 10,}}
+							InputProps={{
+								style: {
+									height: 50,
+									color: "white",
+								},
+							}}
+							color="primary"
+							required
+							fullWidth={true}
+							placeholder="New password"
+							type="password"
+							id="standard-required"
+							autoComplete="password"
+							margin="normal"
+							variant="outlined"
+							onChange={e => setNewPassword(e.target.value)}
+						/>
+						<Button
+							style={{ maxHeight: 50, flex: 1 }}
+							variant="outlined"
+							color="primary"
+							onClick={() => onPasswordChange()}
+						>
+							Submit
+						</Button>
+					</div>
+				}
 				<Divider style={{ marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor }} />
 				<Button
 					style={{}}
@@ -1471,14 +1523,20 @@ const Admin = (props) => {
 								const org_id = selectedOrganization.id
 								var copyText = document.getElementById(elementName);
 								if (copyText !== null && copyText !== undefined) {
+									const clipboard = navigator.clipboard
+									if (clipboard === undefined) {
+										alert.error("Can only copy over HTTPS (port 3443)")
+										return
+									} 
+
 									navigator.clipboard.writeText(org_id)
 									copyText.select();
 									copyText.setSelectionRange(0, 99999); /* For mobile devices */
 
-								/* Copy the text inside the text field */
-								document.execCommand("copy");
+									/* Copy the text inside the text field */
+									document.execCommand("copy");
 
-								alert.info(org_id + " copied to clipboard")	
+									alert.info(org_id + " copied to clipboard")	
 							}
 						}}>
 							<FileCopyIcon style={{color: "rgba(255,255,255,0.8)"}}/>
@@ -1592,7 +1650,7 @@ const Admin = (props) => {
 							</div>
 							{orgSyncResponse.length > 0 ? 
 								<Typography style={{marginTop: 5, marginBottom: 10}}>
-									Message from Shuffle: <b>{orgSyncResponse}</b>
+									Message from Shuffle Cloud: <b>{orgSyncResponse}</b>
 								</Typography>
 								: null
 							}
@@ -1606,7 +1664,7 @@ const Admin = (props) => {
 							}
 
 							const item = selectedOrganization.sync_features[key]
-							const newkey = key.replace("_", " ")
+							const newkey = key.replaceAll("_", " ")
 							const griditem = {
 								"primary": newkey,
 								"secondary": item.description === undefined || item.description === null || item.description.length === 0 ? "Not defined yet" : item.description,
@@ -1689,6 +1747,11 @@ const Admin = (props) => {
 				{curTab === 1 ? "Add user" : "Add environment"}
 			</span></DialogTitle>
 			<DialogContent>
+				{curTab === 1 && isCloud ? 
+					<Typography variant="body1" style={{marginBottom: 10}}>
+						We'll send an email to invite them to your organization.
+					</Typography>
+				: null}
 				{curTab === 1 ?
 					<div>
 						Username
@@ -1712,32 +1775,36 @@ const Admin = (props) => {
 							variant="outlined"
 							onChange={(event) => changeModalData("Username", event.target.value)}
 						/>
-						Password
-						<TextField
-							color="primary"
-							style={{ backgroundColor: theme.palette.inputColor }}
-							InputProps={{
-								style: {
-									height: "50px",
-									color: "white",
-									fontSize: "1em",
-								},
-							}}
-							required
-							fullWidth={true}
-							autoComplete="password"
-							type="password"
-							placeholder="********"
-							id="pwfield"
-							margin="normal"
-							variant="outlined"
-							onChange={(event) => changeModalData("Password", event.target.value)}
-						/>
+						{isCloud ? null :
+							<span>
+								Password
+								<TextField
+									color="primary"
+									style={{ backgroundColor: theme.palette.inputColor }}
+									InputProps={{
+										style: {
+											height: "50px",
+											color: "white",
+											fontSize: "1em",
+										},
+									}}
+									required
+									fullWidth={true}
+									autoComplete="password"
+									type="password"
+									placeholder="********"
+									id="pwfield"
+									margin="normal"
+									variant="outlined"
+									onChange={(event) => changeModalData("Password", event.target.value)}
+								/>
+							</span>
+						}
 					</div>
-					: curTab === 3 ?
+					: curTab === 5 ?
 						<div>
 							Environment Name
-					<TextField
+							<TextField
 								color="primary"
 								style={{ backgroundColor: theme.palette.inputColor }}
 								autoFocus
@@ -1766,8 +1833,12 @@ const Admin = (props) => {
 				</Button>
 				<Button variant="contained" style={{ borderRadius: "0px" }} onClick={() => {
 					if (curTab === 1) {
-						submitUser(modalUser)
-					} else if (curTab === 3) {
+						if (isCloud) {
+							inviteUser(modalUser) 
+						} else {
+							submitUser(modalUser)
+						}
+					} else if (curTab === 5) {
 						submitEnvironment(modalUser)
 					}
 				}} color="primary">
@@ -1804,12 +1875,12 @@ const Admin = (props) => {
 				<ListItem>
 					<ListItemText
 						primary="Username"
-						style={{ minWidth: 300, maxWidth: 300}}
+						style={{ minWidth: 350, maxWidth: 350}}
 					/>
 					
 					<ListItemText
 						primary="API key"
-						style={{ minWidth: 100, maxWidth: 100, overflow: "hidden" }}
+						style={{ marginleft: 10, minWidth: 100, maxWidth: 100, overflow: "hidden" }}
 					/>
 					
 					<ListItemText
@@ -1835,17 +1906,23 @@ const Admin = (props) => {
 						<ListItem key={index} style={{backgroundColor: bgColor}}>
 							<ListItemText
 								primary={data.username}
-								style={{ minWidth: 300, maxWidth: 300, overflow: "hidden",}}
+								style={{ minWidth: 350, maxWidth: 350, overflow: "hidden",}}
 							/>
 							
 							<ListItemText
-								style={{ maxWidth: 100, minWidth: 100, }}
+								style={{ marginLeft: 10, maxWidth: 100, minWidth: 100, }}
 								primary={data.apikey === undefined || data.apikey.length === 0 ? "" : 
 									<Tooltip title={"Copy Api Key"} style={{}} aria-label={"Copy APIkey"}>
 										<IconButton style={{}} onClick={() => {
 												const elementName = "copy_element_shuffle"
 												var copyText = document.getElementById(elementName);
 												if (copyText !== null && copyText !== undefined) {
+													const clipboard = navigator.clipboard
+													if (clipboard === undefined) {
+														alert.error("Can only copy over HTTPS (port 3443)")
+														return
+													} 
+
 													navigator.clipboard.writeText(data.apikey)
 													copyText.select();
 													copyText.setSelectionRange(0, 99999); /* For mobile devices */
@@ -1874,11 +1951,7 @@ const Admin = (props) => {
 									onChange={(e) => {
 									console.log("VALUE: ", e.target.value)
 
-									if (isCloud) {	
-										setUser(data.username, "role", e.target.value)
-									} else {
-										setUser(data.id, "role", e.target.value)
-									}
+									setUser(data.id, "role", e.target.value)
 								}}
 										style={{ backgroundColor: theme.palette.surfaceColor, color: "white", height: "50px" }}
 									>
@@ -1997,7 +2070,7 @@ const Admin = (props) => {
 					/>
 					<ListItemText
 						primary="Name"
-						style={{maxWidth: 150, minWidth: 150, overflow: "hidden",}}
+						style={{maxWidth: 150, minWidth: 150, overflow: "hidden", marginLeft: 10,}}
 					/>
 					<ListItemText
 						primary="Workflow"
@@ -2031,11 +2104,11 @@ const Admin = (props) => {
 					return (
 						<ListItem key={index} style={{backgroundColor: bgColor}} >
 							<ListItemText
-								style={{maxWidth: 225, minWidth: 225}}
+								style={{maxWidth: 225, minWidth: 225, overflow: "hidden",}}
 								primary={new Date(file.created_at*1000).toISOString()}
 							/>
 							<ListItemText
-								style={{maxWidth: 150, minWidth: 150, overflow: "hidden",}}
+								style={{maxWidth: 150, minWidth: 150, overflow: "hidden", marginLeft: 10, }}
 								primary={file.filename}
 							/>
 							<ListItemText
@@ -2046,11 +2119,13 @@ const Admin = (props) => {
 											</IconButton>
 										: 
 											<Tooltip title={"Go to workflow"} style={{}} aria-label={"Download"}>
-												<a style={{textDecoration: "none", color: "#f85a3e"}} href={`/workflows/${file.workflow_id}`} target="_blank">
-													<IconButton disabled={file.workflow_id === "global"}>
-														<OpenInNewIcon style={{color: file.workflow_id !== "global" ? "white" : "grey",}} />
-													</IconButton>
-												</a>
+												<span>
+													<a style={{textDecoration: "none", color: "#f85a3e"}} href={`/workflows/${file.workflow_id}`} target="_blank">
+														<IconButton disabled={file.workflow_id === "global"}>
+															<OpenInNewIcon style={{color: file.workflow_id !== "global" ? "white" : "grey",}} />
+														</IconButton>
+													</a>
+												</span>
 											</Tooltip>
 										}
 								style={{minWidth: 100, maxWidth: 100, overflow: "hidden"}}
@@ -2070,11 +2145,13 @@ const Admin = (props) => {
 							<ListItemText
 								primary=
 									<Tooltip title={"Download file"} style={{}} aria-label={"Download"}>
-										<IconButton disabled={file.status !== "active"} onClick={() => {
-											downloadFile(file)
-										}}>
-											<CloudDownloadIcon style={{color: file.status === "active" ? "white" : "grey",}} />
-										</IconButton>
+										<span>
+											<IconButton disabled={file.status !== "active"} onClick={() => {
+												downloadFile(file)
+											}}>
+												<CloudDownloadIcon style={{color: file.status === "active" ? "white" : "grey",}} />
+											</IconButton>
+										</span>
 									</Tooltip>
 								style={{minWidth: 75, maxWidth: 75, overflow: "hidden"}}
 							/>
@@ -2097,6 +2174,12 @@ const Admin = (props) => {
 										const elementName = "copy_element_shuffle"
   									var copyText = document.getElementById(elementName);
 										if (copyText !== null && copyText !== undefined) {
+											const clipboard = navigator.clipboard
+											if (clipboard === undefined) {
+												alert.error("Can only copy over HTTPS (port 3443)")
+												return
+											} 
+
 											navigator.clipboard.writeText(file.id)
 											copyText.select();
 											copyText.setSelectionRange(0, 99999); /* For mobile devices */
@@ -2353,9 +2436,7 @@ const Admin = (props) => {
 								style={{minWidth: 110, maxWidth: 110, overflow: "hidden"}}
 							/>
 							<ListItemText
-								primary={data.fields.map(data => {
-									return data.key
-								}).join(", ")}
+								primary={data.fields === null || data.fields === undefined ? "" : data.fields.map(data => {return data.key}).join(", ")}
 								style={{minWidth: 200, maxWidth: 200, overflow: "hidden"}}
 							/>
 							<ListItemText>

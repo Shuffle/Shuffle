@@ -1,12 +1,13 @@
 {
   "name": "shuffler",
   "homepage": "https://shuffler.io",
-  "version": "0.8.53",
+  "version": "0.8.92",
   "private": true,
   "dependencies": {
     "@material-ui/core": "^4.5.2",
     "@material-ui/data-grid": "^4.0.0-alpha.22",
     "@material-ui/icons": "^4.5.1",
+    "@material-ui/lab": "^4.0.0-alpha.58",
     "@material-ui/styles": "^4.5.2",
     "@use-it/interval": "^1.0.0",
     "babel-eslint": "^10.1.0",

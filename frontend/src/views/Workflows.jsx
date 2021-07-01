@@ -3,9 +3,10 @@ import { useInterval } from 'react-powerhooks';
 import { makeStyles } from '@material-ui/core/styles';
 
 import {Avatar, Grid, Paper, Tooltip, Divider, Button, TextField, FormControl, IconButton, Menu, MenuItem, FormControlLabel, Chip, Switch, Typography, Zoom, CircularProgress, Dialog, DialogTitle, DialogActions, DialogContent} from '@material-ui/core';
-import {FileCopy as FileCopyIcon, Delete as DeleteIcon, BubbleChart as BubbleChartIcon, Restore as RestoreIcon, Cached as CachedIcon, GetApp as GetAppIcon, Apps as AppsIcon, Edit as EditIcon, MoreVert as MoreVertIcon, PlayArrow as PlayArrowIcon, Add as AddIcon, Publish as PublishIcon, CloudUpload as CloudUploadIcon, CloudDownload as CloudDownloadIcon} from '@material-ui/icons';
+import {Close as CloseIcon, Compare as CompareIcon, Maximize as MaximizeIcon, Minimize as MinimizeIcon, AddCircle as AddCircleIcon, Toc as TocIcon, Send as SendIcon, Search as SearchIcon, FileCopy as FileCopyIcon, Delete as DeleteIcon, BubbleChart as BubbleChartIcon, Restore as RestoreIcon, Cached as CachedIcon, GetApp as GetAppIcon, Apps as AppsIcon, Edit as EditIcon, MoreVert as MoreVertIcon, PlayArrow as PlayArrowIcon, Add as AddIcon, Publish as PublishIcon, CloudUpload as CloudUploadIcon, CloudDownload as CloudDownloadIcon} from '@material-ui/icons';
 //import {Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
 
+//https://next.material-ui.com/components/material-icons/
 import {DataGrid, GridToolbarContainer, GridDensitySelector, GridToolbar} from '@material-ui/data-grid';
 
 //import JSONPretty from 'react-json-pretty';
@@ -25,6 +26,7 @@ import CytoscapeWrapper from '../components/RenderCytoscape'
 
 const inputColor = "#383B40"
 const surfaceColor = "#27292D"
+const svgSize = 24
 
 const flexContainerStyle = {
 	display: "flex",
@@ -75,6 +77,196 @@ const useStyles = makeStyles((theme) => ({
 	},
 }));
 
+
+// Takes an action in Shuffle and 
+// Returns information about the icon, the color etc to be used
+// This can be used for actions of all types
+export const GetIconInfo = (action) => {
+	// Finds the icon based on the action. Should be verbs.
+	const iconList = [
+		{"key": "cache_add", "values": ["set_cache"]},
+		{"key": "cache_get", "values": ["get_cache"]},
+		{"key": "filter", "values": ["filter", "route", "router",]},
+		{"key": "merge", "values": ["join", "merge"]},
+		{"key": "search", "values": ["search", "find", "locate", "index",]},
+		{"key": "list", "values": ["list", "head", "options"]},
+		{"key": "download", "values": ["get", "download", "return", "hello_world", "curl",]},
+		{"key": "add", "values": ["add"]},
+		{"key": "delete", "values": ["delete", "remove", "clear", "clean",]},
+		{"key": "send", "values": ["send", "dispatch", "mail", "forward", "post", "submit", "mark", "set"]},
+		{"key": "repeat", "values": ["repeat", "retry", "pause", "skip",]},
+		{"key": "execute", "values": ["execute", "run", "play", "raise",]},
+		{"key": "extract", "values": ["extract", "unpack", "decompress", "open"]},
+		{"key": "inflate", "values": ["inflate", "pack", "compress",]},
+		{"key": "edit", "values": ["update", "create", "edit", "put", "patch", "change", "replace", "conver", "map", "format", "escape"]},
+		{"key": "compare", "values": ["compare", "convert", "to", "filter", "translate", "parse"]},
+		{"key": "close", "values": ["close", "stop", "cancel",]},
+	]
+
+	var selectedKey = ""
+	if (action.name === undefined || action.name === null) {
+	} else {
+		const actionname = action.name.toLowerCase()
+		for (var key in iconList) {
+			//console.log(iconList[key], actionname)
+			const found = iconList[key].values.find(value => actionname.includes(value))
+			if (found !== null && found !== undefined) {
+				selectedKey = iconList[key].key
+				break
+			}
+		}
+	}
+		
+	// Some of these are manually parsed or created instead of material ui
+	//M8 0C3.58 0 0 1.79 0 4C0 6.21 3.58 8 8 8C12.42 8 16 6.21 16 4C16 1.79 12.42 0 8 0ZM0 6V9C0 11.21 3.58 13 8 13C12.42 13 16 11.21 16 9V6C16 8.21 12.42 10 8 10C3.58 10 0 8.21 0 6ZM0 11V14C0 16.21 3.58 18 8 18C9.41 18 10.79 17.81 12 17.46V14.46C10.79 14.81 9.41 15 8 15C3.58 15 0 13.21 0 11ZM17 11V14H14V16H17V19H19V16H22V14H19V11
+	//https://www.figma.com/file/uCfnMs5w6wnLx6ehPHEV74/Figma-Material-Design-System-v3_0?node-id=834%3A21
+	//COLORS: https://www.pinterest.co.uk/pin/326299935499972946/
+	const defaultColor = "#f76b1c"
+	const defaultGradient = ["#fad961", "#f76b1c"]
+	const parsedIcons = {
+		"cache_add": {
+			"icon": "M11 3C6.58 3 3 4.79 3 7C3 9.21 6.58 11 11 11C15.42 11 19 9.21 19 7C19 4.79 15.42 3 11 3ZM3 9V12C3 14.21 6.58 16 11 16C15.42 16 19 14.21 19 12V9C19 11.21 15.42 13 11 13C6.58 13 3 11.21 3 9ZM3 14V17C3 19.21 6.58 21 11 21C12.41 21 13.79 20.81 15 20.46V17.46C13.79 17.81 12.41 18 11 18C6.58 18 3 16.21 3 14ZM20 14V17H17V19H20V22H22V19H25V17H22V14",
+			"iconColor": "white",
+			"iconBackgroundColor": "#8acc3f",
+			"originalIcon": "",
+			"fillGradient": ["#8acc3f", "#459622"]
+		},
+		"cache_get": {
+			"icon": "M12 2C7.58 2 4 3.79 4 6C4 8.06 7.13 9.74 11.15 9.96C12.45 8.7 14.19 8 16 8C16.8 8 17.59 8.14 18.34 8.41C19.37 7.74 20 6.91 20 6C20 3.79 16.42 2 12 2ZM4 8V11C4 12.68 6.08 14.11 9 14.71C9.06 13.7 9.32 12.72 9.77 11.82C6.44 11.34 4 9.82 4 8ZM15.93 9.94C14.75 9.95 13.53 10.4 12.46 11.46C8.21 15.71 13.71 22.5 18.75 19.17L23.29 23.71L24.71 22.29L20.17 17.75C22.66 13.97 19.47 9.93 15.93 9.94ZM15.9 12C17.47 11.95 19 13.16 19 15C19 15.7956 18.6839 16.5587 18.1213 17.1213C17.5587 17.6839 16.7956 18 16 18C13.33 18 12 14.77 13.88 12.88C14.47 12.29 15.19 12 15.9 12ZM4 13V16C4 18.05 7.09 19.72 11.06 19.95C10.17 19.07 9.54 17.95 9.22 16.74C6.18 16.17 4 14.72 4 13Z",
+			"iconColor": "white",
+			"iconBackgroundColor": "#8acc3f",
+			"originalIcon": "",
+			"fillGradient": ["#8acc3f", "#459622"]
+		},
+		"repeat": {
+			"icon": "M19 8l-4 4h3c0 3.31-2.69 6-6 6-1.01 0-1.97-.25-2.8-.7l-1.46 1.46C8.97 19.54 10.43 20 12 20c4.42 0 8-3.58 8-8h3l-4-4zM6 12c0-3.31 2.69-6 6-6 1.01 0 1.97.25 2.8.7l1.46-1.46C15.03 4.46 13.57 4 12 4c-4.42 0-8 3.58-8 8H1l4 4 4-4H6z",
+			"iconColor": "white",
+			"iconBackgroundColor": defaultColor,
+			"originalIcon": <CachedIcon />,
+		},
+		"add": {
+			"icon": "M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z",
+			"iconColor": "white",
+			"iconBackgroundColor": defaultColor,
+			"originalIcon": <AddIcon />,
+		},
+		"edit": {
+			"icon": "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z",
+			"iconColor": "white",
+			"iconBackgroundColor": defaultColor,
+			"originalIcon": <EditIcon />,
+		},
+		"filter": {
+			"icon": "M4.25 5.61C6.27 8.2 10 13 10 13v6c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-6s3.72-4.8 5.74-7.39c.51-.66.04-1.61-.79-1.61H5.04c-.83 0-1.3.95-.79 1.61z",
+			"iconColor": "white",
+			"iconBackgroundColor": "#f5515f",
+			"originalIcon": "",
+			"fillGradient": ["#f5515f", "#a1051d"],
+		},
+		"merge": {
+			"icon": "M17 20.41 18.41 19 15 15.59 13.59 17 17 20.41zM7.5 8H11v5.59L5.59 19 7 20.41l6-6V8h3.5L12 3.5 7.5 8z",
+			"iconColor": "white",
+			"iconBackgroundColor": "#f5515f",
+			"originalIcon": "",
+			"fillGradient": ["#f5515f", "#a1051d"],
+		},
+		"compare": {
+			"icon": "M10 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h5v2h2V1h-2v2zm0 15H5l5-6v6zm9-15h-5v2h5v13l-5-6v9h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z",
+			"iconColor": "white",
+			"iconBackgroundColor": defaultColor,
+			"originalIcon": <CompareIcon />,
+		},
+		"extract": {
+			"icon": "M3 3h18v2H3z",
+			"iconColor": "white",
+			"iconBackgroundColor": defaultColor,
+			"originalIcon": <MaximizeIcon />,
+		},
+		"inflate": {
+			"icon": "M6 19h12v2H6z",
+			"iconColor": "white",
+			"iconBackgroundColor": defaultColor,
+			"originalIcon": <MinimizeIcon />,
+		},
+		"list": {
+			"icon": "M3 9h14V7H3v2zm0 4h14v-2H3v2zm0 4h14v-2H3v2zm16 0h2v-2h-2v2zm0-10v2h2V7h-2zm0 6h2v-2h-2v2z",
+			"iconColor": "white",
+			"iconBackgroundColor": defaultColor,
+			"originalIcon": <TocIcon />,
+		},
+		"execute": {
+			"icon": "M8 5v14l11-7z",
+			"iconColor": "white",
+			"iconBackgroundColor": defaultColor,
+			"originalIcon": <PlayArrowIcon />,
+		},
+		"delete": {
+			"icon": "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z",
+			"iconColor": "white",
+			"iconBackgroundColor": "#03030e",
+			"originalIcon": <DeleteIcon />,
+			"fillGradient": ["#03030e", "#205d66"]
+		},
+		"close": {
+			"icon": "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z",
+			"iconColor": "white",
+			"iconBackgroundColor": "#03030e",
+			"originalIcon": <CloseIcon />,
+			"fillGradient": ["#03030e", "#205d66"]
+		},
+		"send": {
+			"icon": "M2.01 21L23 12 2.01 3 2 10l15 2-15 2z",
+			"iconColor": "white",
+			"iconBackgroundColor": "#0373da",
+			"originalIcon": <SendIcon />,
+			"fillGradient": ["#0bc8bf", "#0373da"]
+		},
+		"download": {
+			"icon": "M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z",
+			"iconColor": "white",
+			"iconBackgroundColor": "#0373da",
+			"originalIcon": <GetAppIcon />,
+			"fillGradient": ["#0bc8bf", "#0373da"]
+		},
+		"search": {
+			"icon": "M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z",
+			"iconColor": "white",
+			"iconBackgroundColor": "green",
+			"originalIcon": <SearchIcon />,
+		}
+	}
+
+
+	var selectedItem = parsedIcons[selectedKey]
+	if (selectedItem === undefined || selectedItem === null) {
+		return {
+			"icon": "",
+			"iconColor": "",
+			"iconBackground": "black",
+			"originalIcon": "",
+		}
+	}
+
+	if (selectedItem.fillGradient === undefined) {
+			selectedItem.fillGradient = defaultGradient
+			selectedItem.iconBackgroundColor = defaultColor 
+	}
+
+	if (selectedItem.icon === "" || selectedItem.icon === undefined) {
+		console.log(`MISSING PATH FOR ${selectedKey} (find in scope): `, selectedItem.originalIcon.type.type)
+	} 
+	
+	if (selectedItem.originalIcon === undefined || selectedItem.originalIcon === "" && (selectedItem.icon !== "" && selectedItem.icon !== undefined)) {
+			const svg_pin = <svg width={svgSize} height={svgSize} viewBox={`0 0 ${svgSize} ${svgSize}`} version="1.1" xmlns="http://www.w3.org/2000/svg"><path d={selectedItem.icon} fill={selectedItem.iconColor}></path></svg>
+			//const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
+			selectedItem.originalIcon = svg_pin
+			//parsedIcons[selectedKey].originalIcon = svg_pin
+			//console.log("ADDED ICON: ", svg_pin)
+	}
+
+	return selectedItem
+}
+
 //const activeWorkflowStyle = {backgroundColor: "#FFF5EE"}
 //const notificationStyle = {backgroundColor: "#E5F9FF"}
 //const activeWorkflowStyle = {backgroundColor: "#3d3f43"}
@@ -87,7 +279,7 @@ const counterStyle = {fontSize: "36px",fontWeight:"bold"}
 const blockRightStyle = {textAlign: "right",padding: "20px 20px 0px 0px",width:"100%"}
 
 const chipStyle = {
-	backgroundColor: "#3d3f43", height: 30, marginRight: 5, paddingLeft: 5, paddingRight: 5, height: 28, cursor: "pointer", borderColor: "#3d3f43", color: "white",
+	backgroundColor: "#3d3f43", height: 30, marginRight: 5, paddingLeft: 5, paddingRight: 5, height: 28, cursor: "pointer", borderColor: "#3d3f43", color: "white", 
 }
 
 const flexContentStyle = {
@@ -136,6 +328,7 @@ export const validateJson = (showResult) => {
 const Workflows = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, removeCookie, cookies, userdata} = props;
 	document.title = "Shuffle - Workflows"
+	const referenceUrl = globalUrl+"/api/v1/hooks/"
 
 	const alert = useAlert()
 	const classes = useStyles();
@@ -166,6 +359,7 @@ const Workflows = (props) => {
 	const [newWorkflowTags, setNewWorkflowTags] = React.useState([]);
 	const [update, setUpdate] = React.useState("test");
 	const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
+	const [publishModalOpen, setPublishModalOpen] = React.useState(false);
 	const [editingWorkflow, setEditingWorkflow] = React.useState({})
 	const [executionLoading, setExecutionLoading] = React.useState(false)
 	const [importLoading, setImportLoading] = React.useState(false)
@@ -188,8 +382,29 @@ const Workflows = (props) => {
 			if (curWorkflow.tags === undefined || curWorkflow.tags === null) {
 				found = filters.map(filter => curWorkflow.name.toLowerCase().includes(filter))
 			} else {
-				found = filters.map(filter => curWorkflow.name.toLowerCase().includes(filter.toLowerCase()) || curWorkflow.tags.includes(filter))
+				found = filters.map(filter => {
+					if (filter === undefined) {
+						return false
+					}
+
+					if (curWorkflow.name.toLowerCase().includes(filter.toLowerCase())) {
+						return true
+					} else if (curWorkflow.tags.includes(filter)) {
+						return true
+					} else if (curWorkflow.actions !== null && curWorkflow.actions !== undefined) {
+						const newfilter = filter.toLowerCase()
+						for (var key in curWorkflow.actions) {
+							const action = curWorkflow.actions[key]
+							if (action.app_name.toLowerCase().includes(newfilter)) {
+								return true
+							}
+						}
+					}
+
+					return false
+				})
 			}
+
 			//console.log("FOUND: ", found)
 			//if (found) {
 			if (found.every(v => v === true)) {
@@ -246,6 +461,49 @@ const Workflows = (props) => {
 		findWorkflow(newfilters) 
 	}
 
+	const publishModal = publishModalOpen ? 
+		<Dialog
+			open={publishModalOpen}
+			onClose={() => {
+				setPublishModalOpen(false)
+				setSelectedWorkflow({})
+			}}
+			PaperProps={{
+				style: {
+					backgroundColor: surfaceColor,
+					color: "white",
+					minWidth: 500,
+					padding: 50,
+				},
+			}}
+		>
+			<DialogTitle style={{marginBottom: 0, }}>
+				<div style={{textAlign: "center", color: "rgba(255,255,255,0.9)"}}>
+					Are you sure you want to PUBLISH this workflow? 
+				</div>
+			</DialogTitle>
+			<DialogContent style={{color: "rgba(255,255,255,0.65)", textAlign: "center"}}>
+				<div>
+					<Typography variant="body1" style={{marginBottom: 20,}}>
+						Before publishing, we will sanitize all inputs, remove references to you, randomize ID's and remove your authentication.
+					</Typography>
+				</div>
+				<Button variant="contained" style={{}} onClick={() => {
+					publishWorkflow(selectedWorkflow) 
+					setPublishModalOpen(false)
+				}} color="primary">
+					Yes
+				</Button>
+				<Button style={{}} onClick={() => {
+					setPublishModalOpen(false)
+				}} color="primary">
+					No
+				</Button>
+			</DialogContent>
+			
+		</Dialog>
+	: null
+
 	const deleteModal = deleteModalOpen ? 
 		<Dialog
 			open={deleteModalOpen}
@@ -263,7 +521,7 @@ const Workflows = (props) => {
 		>
 			<DialogTitle>
 				<div style={{textAlign: "center", color: "rgba(255,255,255,0.9)"}}>
-					Are you sure? <div/>Other workflows relying on this one may stop working
+					Are you sure you want to delete this workflow? <div/>Other workflows relying on this one may stop working
 				</div>
 			</DialogTitle>
 			<DialogContent style={{color: "rgba(255,255,255,0.65)", textAlign: "center"}}>
@@ -271,7 +529,9 @@ const Workflows = (props) => {
 					console.log("Editing: ", editingWorkflow)
 					if (selectedWorkflowId) {
 						deleteWorkflow(selectedWorkflowId)		
-						getAvailableWorkflows() 
+						setTimeout(() => {
+							getAvailableWorkflows() 
+						}, 1000)
 					}
 					setDeleteModalOpen(false)
 				}} color="primary">
@@ -314,7 +574,7 @@ const Workflows = (props) => {
 						const ret = setNewWorkflow(data.name, data.description, data.tags, data, false)
 						.then((response) => {
 							if (response !== undefined) {
-								alert.success("Successfully imported "+data.name)
+								alert.success(`Successfully imported ${data.name}`)
 							}
 						})
 					}
@@ -438,6 +698,8 @@ const Workflows = (props) => {
 
 	const paperAppStyle = {
 		minHeight: 130,
+		maxHeight: 130,
+		overflow: "hidden",
 		width: "100%",
 		color: "white",
 		backgroundColor: surfaceColor,
@@ -447,6 +709,7 @@ const Workflows = (props) => {
 		boxSizing: "border-box",
 		position: "relative",
 	}
+
 
 	const gridContainer = {
 		height: "auto",
@@ -480,7 +743,7 @@ const Workflows = (props) => {
 
 			return response.json()
 		})
-    	.then((responseJson) => {
+    .then((responseJson) => {
 			if (!responseJson.success) {
 				alert.error(responseJson.reason)
 			}
@@ -500,9 +763,7 @@ const Workflows = (props) => {
 		}
 	}
 
-	const sanitizeWorkflow = (data) => {
-		data["owner"] = ""
-		console.log("Sanitize start: ", data)
+	const deduplicateIds = (data) => {
 		if (data.triggers !== null && data.triggers !== undefined) {
 			for (var key in data.triggers) {
 				const trigger = data.triggers[key]
@@ -517,15 +778,27 @@ const Workflows = (props) => {
 				}
 
 				const newId = uuid.v4()
+				if (trigger.trigger_type === "WEBHOOK") {
+					const hookname = "webhook_"+newId
+					if (trigger.parameters !== undefined && trigger.parameters !== null && trigger.parameters.length === 2) {
+						trigger.parameters[0].value = referenceUrl+"webhook_"+trigger.id
+						trigger.parameters[1].value = "webhook_"+trigger.id
+					} else if (trigger.parameters !== undefined && trigger.parameters !== null && trigger.parameters.length === 3) {
+						trigger.parameters[0].value = referenceUrl+"webhook_"+trigger.id
+						trigger.parameters[1].value = "webhook_"+trigger.id
+						// FIXME: Add auth here?
+					} else {
+						alert.info("Something is wrong with the webhook in the copy")
+					}
+				}
+
 				for (var branchkey in data.branches) {
 					const branch = data.branches[branchkey]
 					if (branch.source_id === trigger.id) {
-						//console.log("CHANGING SOURCE ID")
 						branch.source_id = newId
 					} 
 
 					if (branch.destination_id === trigger.id) {
-						//console.log("CHANGING DESTINATION ID")
 						branch.destination_id = newId
 					}
 				}
@@ -541,7 +814,7 @@ const Workflows = (props) => {
 
 				for (var subkey in data.actions[key].parameters) {
 					const param = data.actions[key].parameters[subkey]
-					if (param.name.includes("key") || param.name.includes("user") || param.name.includes("pass") || param.name.includes("api") || param.name.includes("auth") || param.name.includes("secret")) {
+					if (param.name.includes("key") || param.name.includes("user") || param.name.includes("pass") || param.name.includes("api") || param.name.includes("auth") || param.name.includes("secret") || param.name.includes("domain") || param.name.includes("url") || param.name.includes("mail")) {
 						// FIXME: This may be a vuln if api-keys are generated that start with $
 						if (param.value.startsWith("$")) {
 							console.log("Skipping field, as it's referencing a variable")
@@ -556,14 +829,16 @@ const Workflows = (props) => {
 				for (var branchkey in data.branches) {
 					const branch = data.branches[branchkey]
 					if (branch.source_id === data.actions[key].id) {
-						//console.log("CHANGING SOURCE ID IN ACTION")
 						branch.source_id = newId
 					} 
 
 					if (branch.destination_id === data.actions[key].id) {
-						//console.log("CHANGING DESTINATION ID IN ACTION")
 						branch.destination_id = newId
 					}
+				}
+
+				if (data.actions[key].id === data.start) {
+					data.start = newId
 				}
 
 				//data.actions[key].environment = isCloud ? "cloud" : "Shuffle"
@@ -575,15 +850,20 @@ const Workflows = (props) => {
 		if (data.workflow_variables !== null && data.workflow_variables !== undefined) {
 			for (var key in data.workflow_variables) {
 				const param = data.workflow_variables[key]
-				if (param.name.includes("key") || param.name.includes("user") || param.name.includes("pass") || param.name.includes("api") || param.name.includes("auth") || param.name.includes("secret")) {
+				if (param.name.includes("key") || param.name.includes("user") || param.name.includes("pass") || param.name.includes("api") || param.name.includes("auth") || param.name.includes("secret") || param.name.includes("email")) {
 					param.value = ""
 					param.is_valid = false
 				}
 			}
 		}
 
-		//console.log(data)
-		//return
+		return data
+	}
+
+	const sanitizeWorkflow = (data) => {
+		data["owner"] = ""
+		console.log("Sanitize start: ", data)
+		data = deduplicateIds(data)
 
 		data["org"] = []
 		data["org_id"] = ""
@@ -600,9 +880,10 @@ const Workflows = (props) => {
 	const exportWorkflow = (data) => {
 		let exportFileDefaultName = data.name+'.json';
 		data = sanitizeWorkflow(data)	
-
-		//console.log("EXPORT: ", data)
 		//return
+
+		// Add correct ID's for triggers
+		// Add mag
 
 		let dataStr = JSON.stringify(data)
 		let dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
@@ -657,7 +938,8 @@ const Workflows = (props) => {
 		alert.success("Copying workflow "+data.name)
 		data.id = ""
 		data.name = data.name+"_copy"
-		console.log("COPIED DATA: ", data)
+		data = deduplicateIds(data) 
+		//console.log("COPIED DATA: ", data)
 		//return
 
 		fetch(globalUrl+"/api/v1/workflows", {
@@ -677,7 +959,9 @@ const Workflows = (props) => {
 			return response.json()
 		})
     .then((responseJson) => {
-			getAvailableWorkflows()
+			setTimeout(() => {
+				getAvailableWorkflows()
+			}, 1000)
     })
 		.catch(error => {
 			alert.error(error.toString())
@@ -705,7 +989,9 @@ const Workflows = (props) => {
 			return response.json()
 		})
 		.then((responseJson) => {
-			getAvailableWorkflows()
+			setTimeout(() => {
+				getAvailableWorkflows()
+			}, 1000)
 		})
 		.catch(error => {
 			alert.error(error.toString())
@@ -716,6 +1002,39 @@ const Workflows = (props) => {
 	const handleChipClick = (e) => {
 		addFilter(e.target.innerHTML)
 	}
+
+
+	const NewWorkflowPaper = (props) => {
+		const [hover, setHover] = React.useState(false)
+
+		const innerColor = "rgba(255,255,255,0.3)"
+		const setupPaperStyle = {
+			minHeight: paperAppStyle.minHeight,
+			width: paperAppStyle.width,
+			color: innerColor,
+			padding: paperAppStyle.padding, 
+			borderRadius: paperAppStyle.borderRadius, 
+			display: "flex",
+			boxSizing: "border-box",
+			position: "relative",
+			border: `2px solid ${innerColor}`,
+			cursor: "pointer",
+			backgroundColor: hover ? "rgba(39,41,45,0.5)" : "rgba(39,41,45,1)",
+		}
+
+		return(
+			<Grid item xs={4} style={{padding: "12px 10px 12px 10px",}}>
+				<Paper square style={setupPaperStyle} onClick={() => setModalOpen(true)} onMouseOver={() => {setHover(true)}} onMouseOut={() => {setHover(false)}}>	
+					<Tooltip title={`New Workflow`} placement="bottom">
+						<span style={{textAlign: "center", width: 300, margin: "auto",}}>
+							<AddCircleIcon style={{height: 65, width: 65, }}/>
+						</span>
+					</Tooltip>
+				</Paper>
+			</Grid>
+		)
+	}
+
 
 	const WorkflowPaper = (props) => {
   	const { data } = props;
@@ -888,7 +1207,8 @@ const Workflows = (props) => {
 									{"Change details"}
 								</MenuItem>
 								<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
-									publishWorkflow(data) 
+									setSelectedWorkflow(data) 
+									setPublishModalOpen(true)
 								}} key={"publish"}>
 									<CloudUploadIcon style={{marginLeft: 0, marginRight: 8}}/>
 									{"Publish Workflow"}
@@ -956,7 +1276,7 @@ const Workflows = (props) => {
 
 	const resultsPaper = (data) => {
 		var boxWidth = "2px"
-		var boxColor = "orange"
+		var boxColor = "orange" 
 		if (data.status === "ABORTED" || data.status === "UNFINISHED" || data.status === "FAILURE"){
 			boxColor = "red"	
 		} else if (data.status === "FINISHED" || data.status === "SUCCESS") {
@@ -1177,7 +1497,9 @@ const Workflows = (props) => {
 				window.location.pathname = "/workflows/"+responseJson["id"] 
 			} else if (!redirect) {
 				// Update :)		
-				getAvailableWorkflows()
+				setTimeout(() => {
+					getAvailableWorkflows()
+				}, 1000)
 				setImportLoading(false)
 			} else { 
 				alert.info("Successfully changed basic info for workflow")
@@ -1287,7 +1609,8 @@ const Workflows = (props) => {
 							const data = params.row.record;
 							let [triggers, schedules, webhooks, subflows] = getWorkflowMeta(data);
 
-							return <Grid item>
+							return (
+								<Grid item>
 									<Link to={"/workflows/"+data.id}>
 											<EditIcon style={{background: "#F85A3E",
 	boxShadow: "0px 1px 2px rgba(0, 0, 0, 0.16), 0px 2px 4px rgba(0, 0, 0, 0.12), 0px 1px 8px rgba(0, 0, 0, 0.1)",
@@ -1313,13 +1636,15 @@ const Workflows = (props) => {
 										</Tooltip>
 									: null}
 								</Grid>
-							}
+							)
+						}
 					},
-					{ field: 'tags', headerName: 'Tags', width: 390, sortable: false, 
+					{ field: 'tags', headerName: 'Tags', maxHeight: 15, width: 390, sortable: false, 
 						disableClickEventBubbling: true,
 						renderCell: (params) => {
 							const data = params.row.record;
-							return <Grid item>
+							return (
+								<Grid item>
 										{data.tags !== undefined ?
 											data.tags.map((tag, index) => {
 												if (index >= 3) {
@@ -1338,17 +1663,24 @@ const Workflows = (props) => {
 											})
 										: null}
 									</Grid>
+								)
 							}
 						},
 				];
 				let rows = [];
 				rows = workflows.map((data, index) => {
-					let obj = {"id":index+1, "title":data.name, "record":data,};
+					let obj = {
+						"id":index+1, 
+						"title":data.name, 
+						"record":data,
+					}
+
 					return obj;
 				});
-				workflowData = <DataGrid color="primary" className={classes.root} rows={rows} columns={columns} pageSize={5} checkboxSelection autoHeight density="standard" components={{
-					Toolbar: GridToolbar,
-				  }} />
+				workflowData = 
+					<DataGrid color="primary" className={classes.root} rows={rows} columns={columns} pageSize={5} checkboxSelection autoHeight density="standard" components={{
+						Toolbar: GridToolbar,
+					}} />
 			}
 			return (
 				<div style={gridContainer}>
@@ -1406,6 +1738,8 @@ const Workflows = (props) => {
 						color="primary"
 						defaultValue={newWorkflowDescription}
 						placeholder="Description"
+						rows="6"
+						multiline
 						margin="dense"
 						fullWidth
 					  />
@@ -1481,11 +1815,11 @@ const Workflows = (props) => {
 
 		const workflowButtons = 
 			<span>
-				{workflows.length > 0 ?
+				{/*workflows.length > 0 ?
 					<Tooltip color="primary" title={"Create new workflow"} placement="top">
 						<Button color="primary" style={{}} variant="text" onClick={() => setModalOpen(true)}><AddIcon /></Button> 				
 					</Tooltip>
-				: null}
+				: null*/}
 				<Tooltip color="primary" title={"Import workflows"} placement="top">
 					{importLoading ? 
 						<Button color="primary" style={{}} variant="text" onClick={() => {}}>
@@ -1636,6 +1970,7 @@ const Workflows = (props) => {
 					<div style={{marginTop: 15,}} />
 					{view === "grid" && (
 						<Grid container spacing={4} style={paperAppContainer}>
+							<NewWorkflowPaper />
 							{filteredWorkflows.map((data, index) => {
 								return (
 									<WorkflowPaper key={index} data={data} />
@@ -1644,9 +1979,9 @@ const Workflows = (props) => {
 						</Grid>
 					)}
 					
-					{view === "list" && (
+					{/*view === "list" && (
 						<WorkflowGridView />
-					)}
+					)*/}
 
 					<div style={{marginBottom: 100}}/>
 				</div>
@@ -1684,7 +2019,9 @@ const Workflows = (props) => {
 		.then((response) => {
 			if (response.status === 200) {
 				alert.success("Successfully loaded workflows from "+downloadUrl)
-				getAvailableWorkflows()
+				setTimeout(() => {
+					getAvailableWorkflows()
+				}, 1000)
 			}
 
 			return response.json()
@@ -1741,7 +2078,7 @@ const Workflows = (props) => {
 					style={{backgroundColor: inputColor}}
 					variant="outlined"
 					margin="normal"
-					defaultValue={userdata.active_org.defaults.workflow_download_repo !== undefined && userdata.active_org.defaults.workflow_download_repo.length > 0 ? userdata.active_org.defaults.workflow_download_repo : downloadUrl}
+					defaultValue={downloadUrl}
 					InputProps={{
 						style:{
 							color: "white",
@@ -1760,7 +2097,7 @@ const Workflows = (props) => {
 							style={{backgroundColor: inputColor}}
 							variant="outlined"
 							margin="normal"
-							defaultValue={userdata.active_org.defaults.workflow_download_branch !== undefined && userdata.active_org.defaults.workflow_download_branch.length > 0 ? userdata.active_org.defaults.workflow_download_branch : downloadBranch}
+							defaultValue={downloadBranch}
 							InputProps={{
 								style:{
 									color: "white",
@@ -1830,6 +2167,7 @@ const Workflows = (props) => {
 			</Dropzone>
 			{modalView}
 			{deleteModal}
+			{publishModal} 
 			{workflowDownloadModalOpen}
 		</div>
 		:

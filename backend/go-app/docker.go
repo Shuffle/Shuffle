@@ -5,20 +5,24 @@ import (
 	"github.com/frikky/shuffle-shared"
 
 	"archive/tar"
+	//"bufio"
 	"path/filepath"
+	//"strconv"
 
 	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	//"github.com/docker/docker"
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
+	//"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	newdockerclient "github.com/fsouza/go-dockerclient"
 	"github.com/go-git/go-billy/v5"
 
-	network "github.com/docker/docker/api/types/network"
-	natting "github.com/docker/go-connections/nat"
+	//network "github.com/docker/docker/api/types/network"
+	//natting "github.com/docker/go-connections/nat"
 
 	"io"
 	"io/ioutil"
@@ -214,11 +218,28 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 
 	// Dockerfile is inside the TAR itself. Not local context
 	// docker build --build-arg http_proxy=http://my.proxy.url
+	// Attempt at setting name according to #359: https://github.com/frikky/Shuffle/issues/359
+	labels := map[string]string{}
+	target := ""
+	if len(tags) > 0 {
+		if strings.Contains(tags[0], ":") {
+			version := strings.Split(tags[0], ":")
+			if len(version) == 2 {
+				target = fmt.Sprintf("shuffle-build-%s", version[1])
+				tags = append(tags, target)
+				labels["name"] = target
+			}
+		}
+	}
+
+	_ = labels
 	buildOptions := types.ImageBuildOptions{
 		Remove:    true,
 		Tags:      tags,
 		BuildArgs: map[string]*string{},
+		Labels:    labels,
 	}
+
 	// NetworkMode: "host",
 
 	httpProxy := os.Getenv("HTTP_PROXY")
@@ -231,13 +252,14 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 	}
 
 	// Build the actual image
-	log.Printf("[INFO] Building %s. This may take up to a few minutes.", dockerfileFolder)
+	log.Printf(`[INFO] Building %s with proxy "%s". Tags: "%s". This may take up to a few minutes.`, dockerfileFolder, httpsProxy, strings.Join(tags, ","))
 	imageBuildResponse, err := client.ImageBuild(
 		ctx,
 		dockerFileTarReader,
 		buildOptions,
 	)
 
+	//log.Printf("RESPONSE: %#v", imageBuildResponse)
 	//log.Printf("Response: %#v", imageBuildResponse.Body)
 	//log.Printf("IMAGERESPONSE: %#v", imageBuildResponse.Body)
 
@@ -391,89 +413,6 @@ func stopWebhook(image string, identifier string) error {
 	return nil
 }
 
-// FIXME - remember to set DOCKER_API_VERSION
-// FIXME - remove github.com/docker/docker/vendor
-// FIXME - Library dependencies for NAT is fucked..
-// https://docs.docker.com/develop/sdk/examples/
-func deployWebhook(image string, identifier string, path string, port string, callbackurl string, apikey string) error {
-	cli, err := client.NewEnvClient()
-	if err != nil {
-		fmt.Println("Unable to create docker client")
-		return err
-	}
-
-	newport, err := natting.NewPort("tcp", port)
-	if err != nil {
-		fmt.Println("Unable to create docker port")
-		return err
-	}
-
-	// FIXME - logging?
-
-	hostConfig := &container.HostConfig{
-		PortBindings: natting.PortMap{
-			newport: []natting.PortBinding{
-				{
-					HostIP:   "0.0.0.0",
-					HostPort: port,
-				},
-			},
-		},
-		RestartPolicy: container.RestartPolicy{
-			Name: "always",
-		},
-		LogConfig: container.LogConfig{
-			Type:   "json-file",
-			Config: map[string]string{},
-		},
-	}
-
-	//networkConfig := &network.NetworkSettings{}
-	networkConfig := &network.NetworkingConfig{
-		EndpointsConfig: map[string]*network.EndpointSettings{},
-	}
-
-	test := &network.EndpointSettings{
-		Gateway: "helo",
-	}
-
-	networkConfig.EndpointsConfig["bridge"] = test
-
-	exposedPorts := map[natting.Port]struct{}{
-		newport: struct{}{},
-	}
-
-	config := &container.Config{
-		Image: image,
-		Env: []string{
-			fmt.Sprintf("URIPATH=%s", path),
-			fmt.Sprintf("HOOKPORT=%s", port),
-			fmt.Sprintf("CALLBACKURL=%s", callbackurl),
-			fmt.Sprintf("APIKEY=%s", apikey),
-			fmt.Sprintf("HOOKID=%s", identifier),
-		},
-		ExposedPorts: exposedPorts,
-		Hostname:     fmt.Sprintf("%s-%s", image, identifier),
-	}
-
-	cont, err := cli.ContainerCreate(
-		context.Background(),
-		config,
-		hostConfig,
-		networkConfig,
-		fmt.Sprintf("%s-%s", image, identifier),
-	)
-
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-
-	cli.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
-	log.Printf("Container %s is created", cont.ID)
-	return nil
-}
-
 // Starts a new webhook
 func handleStopHookDocker(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
@@ -501,7 +440,7 @@ func handleStopHookDocker(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	hook, err := getHook(ctx, fileId)
+	hook, err := shuffle.GetHook(ctx, fileId)
 	if err != nil {
 		log.Printf("Failed getting hook %s (stop docker): %s", fileId, err)
 		resp.WriteHeader(401)
@@ -521,8 +460,8 @@ func handleStopHookDocker(resp http.ResponseWriter, request *http.Request) {
 
 	hook.Status = "stopped"
 	hook.Running = false
-	hook.Actions = []HookAction{}
-	err = setHook(ctx, *hook)
+	hook.Actions = []shuffle.HookAction{}
+	err = shuffle.SetHook(ctx, *hook)
 	if err != nil {
 		log.Printf("Failed setting hook: %s", err)
 		resp.WriteHeader(401)
@@ -585,7 +524,7 @@ func handleDeleteHookDocker(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	err := DeleteKey(ctx, "hooks", fileId)
+	err := shuffle.DeleteKey(ctx, "hooks", fileId)
 	if err != nil {
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "message": "Can't delete"}`))
@@ -604,121 +543,6 @@ func handleDeleteHookDocker(resp http.ResponseWriter, request *http.Request) {
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": true, "message": "Deleted webhook"}`))
-}
-
-// Starts a new webhook
-func handleStartHookDocker(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	location := strings.Split(request.URL.String(), "/")
-
-	var fileId string
-	if location[1] == "api" {
-		if len(location) <= 4 {
-			resp.WriteHeader(401)
-			resp.Write([]byte(`{"success": false}`))
-			return
-		}
-
-		fileId = location[4]
-	}
-
-	if len(fileId) != 32 {
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "message": "ID not valid"}`))
-		return
-	}
-
-	ctx := context.Background()
-	hook, err := getHook(ctx, fileId)
-	if err != nil {
-		log.Printf("Failed getting hook %s (start docker): %s", fileId, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	if len(hook.Info.Url) == 0 {
-		log.Printf("Hook url can't be empty.")
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	log.Printf("Status: %s", hook.Status)
-	log.Printf("Running: %t", hook.Running)
-	if hook.Running || hook.Status == "Running" {
-		message := fmt.Sprintf("Error: %s is already running", hook.Id)
-		log.Println(message)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "message": "%s"}`, message)))
-		return
-	}
-
-	// FIXME - verify?
-	// FIXME - static port? Generate from available range.
-	image := "webhook"
-	filepath := "/webhook"
-	baseUrl := "http://localhost"
-	callbackUrl := "http://localhost:8001"
-
-	// This is here to force stop and remove the old webhook
-	err = stopWebhook(image, fileId)
-	if err != nil {
-		log.Printf("Container stop issue for %s-%s: %s", image, fileId, err)
-	}
-
-	// Dynamic ish ports
-	var startPort int64 = 5001
-	var endPort int64 = 5010
-	port := findAvailablePorts(startPort, endPort)
-	if len(port) == 0 {
-		message := fmt.Sprintf("Not ports available in the range %d-%d", startPort, endPort)
-		log.Println(message)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "message": "%s"}`, message)))
-		return
-
-	}
-
-	hook.Status = "running"
-	hook.Running = true
-
-	// Set this for more than just hooks?
-	if hook.Type == "webhook" {
-		hook.Info.Url = fmt.Sprintf("%s:%s%s", baseUrl, port, filepath)
-	}
-	err = setHook(ctx, *hook)
-	if err != nil {
-		log.Printf("Failed setting hook: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	// Cloud run? Let's make a generic webhook that can be deployed easily
-	log.Printf("Should run a webhook with the following: \nUrl: %s\nId: %s\n", hook.Info.Url, hook.Id)
-
-	// FIXME - set port based on what the user specified / what was generated
-	// FIXME - add nonstatic APIKEY
-	apiKey := "ASD"
-
-	err = deployWebhook(image, fileId, filepath, port, callbackUrl, apiKey)
-	if err != nil {
-		log.Printf("Failed starting container %s-%s: %s", image, fileId, err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
-
-	// FIXME - get some real data?
-	log.Printf("[INFO] Successfully started %s-%s on port %s with filepath %s", image, fileId, port, filepath)
-	resp.WriteHeader(200)
-	resp.Write([]byte(`{"success": true, "message": "Started webhook"}`))
-	return
 }
 
 // Checks if an image exists
@@ -767,7 +591,7 @@ func imageCheckBuilder(images []string) error {
 }
 
 func hookTest() {
-	var hook Hook
+	var hook shuffle.Hook
 	err := json.Unmarshal([]byte(webhook), &hook)
 	log.Println(webhook)
 	if err != nil {
@@ -776,12 +600,12 @@ func hookTest() {
 	}
 
 	ctx := context.Background()
-	err = setHook(ctx, hook)
+	err = shuffle.SetHook(ctx, hook)
 	if err != nil {
 		log.Printf("Failed setting hook: %s", err)
 	}
 
-	returnHook, err := getHook(ctx, hook.Id)
+	returnHook, err := shuffle.GetHook(ctx, hook.Id)
 	if err != nil {
 		log.Printf("Failed getting hook %s (test): %s", hook.Id, err)
 	}
@@ -799,13 +623,13 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// Just here to verify that the user is logged in
-	_, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("Api authentication failed in validate swagger: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
+	//_, err := shuffle.HandleApiAuthentication(resp, request)
+	//if err != nil {
+	//	log.Printf("[WARNING] Api authentication failed in DOWNLOAD IMAGE: %s", err)
+	//	resp.WriteHeader(401)
+	//	resp.Write([]byte(`{"success": false}`))
+	//	return
+	//}
 
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
@@ -818,16 +642,6 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 		Name string `datastore:"name" json:"name" yaml:"name"`
 	}
 
-	//body = []byte(`swagger: "2.0"`)
-	//body = []byte(`swagger: '1.0'`)
-	//newbody := string(body)
-	//newbody = strings.TrimSpace(newbody)
-	//body = []byte(newbody)
-	//log.Println(string(body))
-	//tmpbody, err := yaml.YAMLToJSON(body)
-	//log.Println(err)
-	//log.Println(string(tmpbody))
-
 	// This has to be done in a weird way because Datastore doesn't
 	// support map[string]interface and similar (openapi3.Swagger)
 	var version requestCheck
@@ -839,16 +653,10 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("Image to load: %s", version.Name)
-	//cli, err := client.NewEnvClient()
-	//if err != nil {
-	//	log.Println("Unable to create docker client")
-	//	return err
-	//}
-
+	log.Printf("[DEBUG] Image to load: %s", version.Name)
 	dockercli, err := client.NewEnvClient()
 	if err != nil {
-		log.Printf("Unable to create docker client: %s", err)
+		log.Printf("[WARNING] Unable to create docker client: %s", err)
 		resp.WriteHeader(422)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed JSON marshalling: %s"}`, err)))
 		return
@@ -861,37 +669,131 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 
 	img := types.ImageSummary{}
 	tagFound := ""
+
+	img2 := types.ImageSummary{}
+	tagFound2 := ""
+
+	alternativeNameSplit := strings.Split(version.Name, "/")
+	alternativeName := version.Name
+	if len(alternativeNameSplit) == 3 {
+		alternativeName = strings.Join(alternativeNameSplit[1:3], "/")
+	}
+
 	for _, image := range images {
 		for _, tag := range image.RepoTags {
-			log.Printf("[INFO] Docker Image: %s", tag)
-
 			if strings.ToLower(tag) == strings.ToLower(version.Name) {
 				img = image
 				tagFound = tag
 				break
 			}
+
+			if strings.ToLower(tag) == strings.ToLower(alternativeName) {
+				img2 = image
+				tagFound2 = tag
+			}
 		}
 	}
 
+	// REBUILDS THE APP
 	if len(img.ID) == 0 {
+		if len(img2.ID) == 0 {
+			workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 0)
+			log.Printf("[INFO] Getting workflowapps for a rebuild. Got %d with err %#v", len(workflowapps), err)
+			if err == nil {
+				imageName := ""
+				imageVersion := ""
+				newNameSplit := strings.Split(version.Name, ":")
+				if len(newNameSplit) == 2 {
+					log.Printf("[DEBUG] Found name %#v", newNameSplit)
+
+					findVersionSplit := strings.Split(newNameSplit[1], "_")
+					log.Printf("[DEBUG] Found another split %#v", findVersionSplit)
+					if len(findVersionSplit) == 2 {
+						imageVersion = findVersionSplit[len(findVersionSplit)-1]
+						imageName = findVersionSplit[0]
+					} else if len(findVersionSplit) >= 2 {
+						imageVersion = findVersionSplit[len(findVersionSplit)-1]
+						imageName = strings.Join(findVersionSplit[0:len(findVersionSplit)-1], "_")
+					} else {
+						log.Printf("[DEBUG] Couldn't parse appname & version for %#v", findVersionSplit)
+					}
+				}
+
+				if len(imageName) > 0 && len(imageVersion) > 0 {
+					foundApp := shuffle.WorkflowApp{}
+					imageName = strings.ToLower(imageName)
+					imageVersion = strings.ToLower(imageVersion)
+					log.Printf("[DEBUG] Looking for appname %s with version %s", imageName, imageVersion)
+
+					for _, app := range workflowapps {
+						if strings.ToLower(strings.Replace(app.Name, " ", "_", -1)) == imageName && app.AppVersion == imageVersion {
+							if app.Generated {
+								log.Printf("[DEBUG] Found matching app %s:%s - %s", imageName, imageVersion, app.ID)
+								foundApp = app
+								break
+							} else {
+								log.Printf("[WARNING] Trying to rebuild app that isn't generated - not allowed. Looking further.")
+							}
+
+							//break
+						}
+					}
+
+					if len(foundApp.ID) > 0 {
+						openApiApp, err := shuffle.GetOpenApiDatastore(ctx, foundApp.ID)
+						if err != nil {
+							log.Printf("[ERROR] Failed getting OpenAPI app %s to database: %s", foundApp.ID, err)
+						} else {
+							log.Printf("[DEBUG] Found OpenAPI app for %s as generated - now building!", version.Name)
+							user := shuffle.User{}
+
+							//img = version.Name
+							if len(alternativeName) > 0 {
+								tagFound = alternativeName
+							} else {
+								tagFound = version.Name
+							}
+
+							buildSwaggerApp(resp, []byte(openApiApp.Body), user)
+						}
+					}
+				}
+			} else {
+				log.Printf("[WARNING] Couldn't find an image with registry name %s and %s", version.Name, alternativeName)
+				resp.WriteHeader(401)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "message": "Couldn't find image %s"}`, version.Name)))
+				return
+			}
+		}
+
+		if len(tagFound) == 0 && len(tagFound2) > 0 {
+			img = img2
+			tagFound = tagFound2
+		}
+	}
+
+	//log.Printf("[INFO] Img found (%s): %#v", tagFound, img)
+	log.Printf("[INFO] Img found to be downloaded by client: %s", tagFound)
+
+	newClient, err := newdockerclient.NewClientFromEnv()
+	if err != nil {
+		log.Printf("[WARNING] Failed setting up docker env: %s", newClient)
 		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "message": "Couldn't find image %s"}`, version.Name)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "message": "Couldn't make docker client"}`)))
 		return
 	}
-	_ = tagFound
 
-	/*
-		log.Printf("IMg: %#v", img)
-		pullOptions := types.ImagePullOptions{}
-		log.Printf("[INFO] Pulling image %s", image)
-		reader, err := dockercli.ImagePull(ctx, tag, pullOptions)
-		if err != nil {
-			log.Printf("[ERROR] Failed getting image %s: %s", image, err)
-		}
+	////https://github.com/fsouza/go-dockerclient/issues/600
+	//defer fileReader.Close()
+	opts := newdockerclient.ExportImageOptions{
+		Name:         tagFound,
+		OutputStream: resp,
+	}
 
-		io.Copy(os.Stdout, r)
-	*/
-
-	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true, "message": "Downloading image %s"}`, version.Name)))
+	if err := newClient.ExportImage(opts); err != nil {
+		log.Printf("[WARNING] FAILED to save image to file: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "message": "Couldn't export image"}`)))
+		return
+	}
 }

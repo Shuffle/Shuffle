@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 import { useInterval } from 'react-powerhooks';
 
 import {IconButton, Typography, Grid, Select, Paper, Divider, ButtonBase, Button, TextField, FormControl, MenuItem, Tooltip, FormControlLabel, Switch, Input, Breadcrumbs, Chip, Dialog, DialogTitle, DialogActions, DialogContent, CircularProgress} from '@material-ui/core';
-import {OpenInNew as OpenInNewIcon,Apps as AppsIcon, Cached as CachedIcon, Publish as PublishIcon, CloudDownload as CloudDownloadIcon, Edit as EditIcon, Delete as DeleteIcon} from '@material-ui/icons';
+import {LockOpen as LockOpenIcon, OpenInNew as OpenInNewIcon,Apps as AppsIcon, Cached as CachedIcon, Publish as PublishIcon, CloudDownload as CloudDownloadIcon, Edit as EditIcon, Delete as DeleteIcon} from '@material-ui/icons';
 
 import { useTheme } from '@material-ui/core/styles';
 
@@ -20,9 +20,16 @@ const chipStyle = {
 	backgroundColor: "#3d3f43", height: 30, marginRight: 5, paddingLeft: 5, paddingRight: 5, height: 28, cursor: "pointer", borderColor: "#3d3f43", color: "white",
 }
 
+// Fixes names by making them uppercase and such
+// Used for labels. A lot of places don't use this yet
+export const FixName = (name) => {
+	const newAppname = (name.charAt(0).toUpperCase()+name.substring(1)).replaceAll("_", " ")
+	return newAppname
+}
+
 // Parses JSON data into keys that can be used everywhere :)
 export const GetParsedPaths = (inputdata, basekey) => {
-	const splitkey = " > "
+	const splitkey = "."
 	var parsedValues = []
 	if (inputdata === undefined || inputdata === null) {
 		return parsedValues
@@ -40,8 +47,8 @@ export const GetParsedPaths = (inputdata, basekey) => {
 		// Handle direct loop!
 		if (!isNaN(key) && basekey === "") {
 			console.log("Handling direct loop.")
-			parsedValues.push({"type": "object", "name": "Node", "autocomplete": `${basekey}`})
-			parsedValues.push({"type": "list", "name": `${splitkey}list`, "autocomplete": `${basekey}.#`})
+			parsedValues.push({"type": "object", "name": "Node", "autocomplete": `${basekey.replaceAll(" ", "_")}`})
+			parsedValues.push({"type": "list", "name": `${splitkey}list`, "autocomplete": `${basekey.replaceAll(" ", "_")}.#`})
 			const returnValues = GetParsedPaths(value, `${basekey}.#`)
 			for (var subkey in returnValues) {
 				parsedValues.push(returnValues[subkey])
@@ -54,8 +61,8 @@ export const GetParsedPaths = (inputdata, basekey) => {
 		if (typeof(value) === 'object') {
 			if (Array.isArray(value)) {
 				// Check if each item is object
-				parsedValues.push({"type": "object", "name": basekeyname, "autocomplete": `${basekey}.${key}`})
-				parsedValues.push({"type": "list", "name": `${basekeyname}${splitkey}list`, "autocomplete": `${basekey}.${key}.#`})
+				parsedValues.push({"type": "object", "name": basekeyname, "autocomplete": `${basekey}.${key.replaceAll(" ", "_")}`})
+				parsedValues.push({"type": "list", "name": `${basekeyname}${splitkey}list`, "autocomplete": `${basekey}.${key.replaceAll(" ", "_")}.#`})
 
 				// Only check the first. This would be probably be dumb otherwise.
 				for (var subkey in value) {
@@ -72,14 +79,14 @@ export const GetParsedPaths = (inputdata, basekey) => {
 				}
 				//console.log(key+" is array")
 			} else {
-				parsedValues.push({"type": "object", "name": basekeyname, "autocomplete": `${basekey}.${key}`})
+				parsedValues.push({"type": "object", "name": basekeyname, "autocomplete": `${basekey}.${key.replaceAll(" ", "_")}`})
 				const returnValues = GetParsedPaths(value, `${basekey}.${key}`)
 				for (var subkey in returnValues) {
 					parsedValues.push(returnValues[subkey])
 				}
 			}
 		} else {
-			parsedValues.push({"type": "value", "name": basekeyname, "autocomplete": `${basekey}.${key}`, "value": value,})
+			parsedValues.push({"type": "value", "name": basekeyname, "autocomplete": `${basekey}.${key.replaceAll(" ", "_")}`, "value": value,})
 		}
 	}
 
@@ -187,7 +194,7 @@ const Apps = (props) => {
 	}
 
 	const getApps = () => {
-		fetch(globalUrl+"/api/v1/workflows/apps", {
+		fetch(globalUrl+"/api/v1/apps", {
     	  method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',
@@ -236,6 +243,10 @@ const Apps = (props) => {
 			privateapps.push(...invalid)
 
 			setApps(privateapps)
+			setCursearch("")
+
+			//handleSearchChange(event.target.value)
+			//setCursearch(event.target.value)
 			setFilteredApps(privateapps)
 			if (privateapps.length > 0) {
 				if (selectedApp.id === undefined || selectedApp.id === null) {
@@ -280,11 +291,19 @@ const Apps = (props) => {
 			if (!responseJson.success) {
 				alert.error("Failed to download file")
 			} else {
-				const inputdata = YAML.parse(responseJson.body)
+				console.log(responseJson)
+				const basedata = atob(responseJson.openapi)
+				console.log("BASE: ", basedata)
+				var inputdata = JSON.parse(basedata)
+				console.log("POST INPUT: ", inputdata)
+				inputdata = JSON.parse(inputdata.body)
+
 				const newpaths = {}
-				Object.keys(inputdata["paths"]).forEach(function(key) {
-					newpaths[key.split("?")[0]] = inputdata.paths[key]
-				})
+				if (inputdata["paths"] !== undefined) {
+					Object.keys(inputdata["paths"]).forEach(function(key) {
+						newpaths[key.split("?")[0]] = inputdata.paths[key]
+					})
+				}
 
 				inputdata.paths = newpaths
 				console.log("INPUT: ", inputdata)
@@ -318,6 +337,10 @@ const Apps = (props) => {
 
 	// dropdown with copy etc I guess
 	const appPaper = (data) => {
+		if (data.name === "" && data.id === "") {
+			return null
+		}
+
 		var boxWidth = "2px"
 		if (selectedApp.id === data.id) {
 			boxWidth = "4px"
@@ -338,7 +361,7 @@ const Apps = (props) => {
 
 		//<div style={{backgroundColor: theme.palette.inputColor, height: 100, width: 100, borderRadius: 3, verticalAlign: "middle", textAlign: "center", display: "table-cell"}}>
 		// <div style={{width: "100px", height: "100px", border: "1px solid black", verticalAlign: "middle", textAlign: "center", display: "table-cell"}}>
-		var imageline = data.large_image.length === 0 ?
+		var imageline = data.large_image === undefined || data.large_image.length === 0 ?
 			<img alt={data.title} style={{borderRadius: borderRadius, width: 100, height: 100, backgroundColor: theme.palette.inputColor,}} />
 			: 
 			<img alt={data.title} src={data.large_image} style={{borderRadius: borderRadius, maxWidth: 100, minWidth: 100, maxHeight: "100%", display: "block", margin: "0 auto"}} onLoad={(event) => {
@@ -419,6 +442,17 @@ const Apps = (props) => {
 											label={tag}
 											variant="outlined"
 											color="primary"
+											onClick={() => {
+												//console.log("SEARCH: ", event.target.value)
+												handleSearchChange(tag)
+												setCursearch(tag)
+												//id="app_search_field"
+												const searchfield = document.getElementById("app_search_field")
+												if (searchfield !== null && searchfield !== undefined) {
+													console.log("SEARCHFIELD: ", searchfield)
+													searchfield.value = tag
+												}
+											}}
 										/>
 									)
 								})}
@@ -428,11 +462,11 @@ const Apps = (props) => {
 				</Grid>	
 
 				{data.activated && data.private_id !== undefined && data.private_id.length > 0 && data.generated ?
-				<Grid container style={{margin: "10px 10px 10px 10px", flex: "1"}} onClick={() => {downloadApp(data)}}>
-					<Tooltip title={"Download OpenAPI"} style={{marginTop: "28px", width: "100%"}} aria-label={data.name}>
-						<CloudDownloadIcon /> 
-					</Tooltip>
-				</Grid>
+					<Grid container style={{margin: "10px 10px 10px 10px", flex: "1"}} onClick={() => {downloadApp(data)}}>
+						<Tooltip title={"Download OpenAPI"} style={{marginTop: "28px", width: "100%"}} aria-label={data.name}>
+							<CloudDownloadIcon /> 
+						</Tooltip>
+					</Grid>
 				: null}
 			</Paper>
 		)
@@ -631,6 +665,37 @@ const Apps = (props) => {
 						</Typography>	
 					</div>
 				</div>
+				{selectedApp.versions !== null && selectedApp.versions !== undefined && selectedApp.versions.length > 1 ? 
+					<Select
+						defaultValue={selectedApp.app_version}
+						onChange={(event) => {
+							console.log("Changing version to index "+event.target.value)
+							const newversion = selectedApp.versions.find(tmpApp => tmpApp.version == event.target.value)
+							console.log("New version: ", newversion)
+							selectedApp.app_version = selectedApp.app_version
+							setSelectedApp(selectedApp)
+
+							if (newversion !== undefined && newversion !== null) {
+								getApp(newversion.id, true) 
+							}
+						}}
+						style={{position: "absolute", top: -10, right: isCloud ? 50 : 0, backgroundColor: theme.palette.surfaceColor, backgroundColor: inputColor, color: "white", height: 35, marginleft: 10,}}
+						SelectDisplayProps={{
+							style: {
+								marginLeft: 10,
+							}
+						}}
+					>
+						{selectedApp.versions.map((data, index) => {
+							return (
+								<MenuItem key={data.version} style={{backgroundColor: inputColor, color: "white"}} value={data.version}>
+									{data.version}
+
+								</MenuItem>
+							)
+						})}
+					</Select>
+				: null }
 				{isCloud ? 
 					<a href={"https://shuffler.io/apps/"+selectedApp.id} style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">
 						<IconButton style={{top: -10, right: 0, position: "absolute", color: "#f85a3e"}} >
@@ -755,9 +820,14 @@ const Apps = (props) => {
 									const circleSize = 10
 									return (
 										<MenuItem key={data.name} style={{backgroundColor: inputColor, color: "white"}} value={data}>
-											<div style={{width: circleSize, height: circleSize, borderRadius: circleSize / 2, backgroundColor: itemColor, marginRight: "10px"}}/>
+											{data.configuration === true ? 
+												<Tooltip color="primary" title={`Authenticate ${selectedApp.name}`} placement="top">
+													<LockOpenIcon style={{cursor: "pointer", width: 24, height: 24, marginRight: 10, }} />
+												</Tooltip>
+											:
+												<div style={{width: 17, height: 17, borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: 10, marginTop: 2, marginTop: "auto", marginBottom: "auto",}}/>
+											}
 											{data.name}
-
 										</MenuItem>
 									)
 								})}
@@ -831,11 +901,11 @@ const Apps = (props) => {
 		}
 
 		const searchfield = search.toLowerCase()
-		var newapps = apps.filter(data => data.name.toLowerCase().includes(searchfield) || data.description.toLowerCase().includes(searchfield))
-		var tmpapps = searchableApps.filter(data => data.name.toLowerCase().includes(searchfield) || data.description.toLowerCase().includes(searchfield))
+		var newapps = apps.filter(data => data.name.toLowerCase().includes(searchfield) || data.description.toLowerCase().includes(searchfield) || (data.tags !== null && data.tags.includes(search)))
+		var tmpapps = searchableApps.filter(data => data.name.toLowerCase().includes(searchfield) || data.description.toLowerCase().includes(searchfield) || (data.tags !== null && data.tags.includes(search)))
 		newapps.push(...tmpapps) 
 
-		console.log(newapps)
+		//console.log(newapps)
 		setFilteredApps(newapps)
 		//if ((newapps.length === 0 || searchBackend) && !appSearchLoading) {
 
@@ -940,26 +1010,30 @@ const Apps = (props) => {
 						</span>
 					}
 					</div>
-					<TextField
-						style={{backgroundColor: inputColor, borderRadius: 5,}} 
-						InputProps={{
-							style:{
-								color: "white",
-								minHeight: "50px", 
-								marginLeft: "5px",
-								maxWidth: "95%",
-								fontSize: "1em",
-								borderRadius: 5,
-							},
-						}}
-						fullWidth
-						color="primary"
-						placeholder={"Search apps"}
-						onChange={(event) => {
-							handleSearchChange(event.target.value)
-							setCursearch(event.target.value)
-						}}
-					/>
+					<div style={{height: 50}}>
+						<TextField
+							style={{backgroundColor: inputColor, borderRadius: 5,}} 
+							InputProps={{
+								style:{
+									color: "white",
+									minHeight: "50px", 
+									marginLeft: "5px",
+									maxWidth: "95%",
+									fontSize: "1em",
+									borderRadius: 5,
+								},
+							}}
+							disabled={apps === undefined || apps === null || apps.length === 0}
+							fullWidth
+							color="primary"
+							id="app_search_field"
+							placeholder={"Search apps"}
+							onChange={(event) => {
+								handleSearchChange(event.target.value)
+								setCursearch(event.target.value)
+							}}
+						/>
+					</div>
 					<div style={{marginTop: 15}}>
 						{apps.length > 0 ? 
 							filteredApps.length > 0 ? 
@@ -1083,7 +1157,7 @@ const Apps = (props) => {
 		.then((response) => {
 			setIsLoading(false)
 			if (response.status === 200) {
-				alert.success("Hotloaded apps!")
+				//alert.success("Hotloaded apps!")
 				getApps()
 			}
 
@@ -1108,7 +1182,7 @@ const Apps = (props) => {
 		setValidation(true)
 
 		var cors = "cors"
-		if (openApi.includes("localhost")) {
+		if (openApi.includes("= localhost")) {
 			cors = "no-cors"
 		}
 
@@ -1126,6 +1200,48 @@ const Apps = (props) => {
 		});
 	}
 
+	const getApp = (appId, setApp) => {
+		fetch(globalUrl+"/api/v1/apps/"+appId+"/config?openapi=false", {
+			headers: {
+				'Accept': 'application/json',
+			},
+	  	credentials: "include",
+		})
+		.then((response) => {
+			if (response.status === 200) {
+				//alert.success("Successfully GOT app "+appId)		
+			} else {
+				alert.error("Failed getting app")		
+			}
+
+			return response.json()
+		})
+    .then((responseJson) => {
+			console.log(responseJson)
+
+			if (setApp) {
+				if (selectedApp.versions !== undefined && selectedApp.versions !== null) {
+					responseJson.versions = selectedApp.versions
+				}
+
+				if (selectedApp.loop_versions !== undefined && selectedApp.loop_versions !== null) {
+					responseJson.loop_versions = selectedApp.loop_versions
+				}
+
+				//alert.info("Should set app to selected")
+				if (responseJson.actions !== undefined && responseJson.actions !== null && responseJson.actions.length > 0) {
+					setSelectedAction(responseJson.actions[0])
+				} else {
+					setSelectedAction({})
+				}
+				setSelectedApp(responseJson)
+			}
+		})
+		.catch(error => {
+			alert.error(error.toString())
+		});
+	}
+
 	const deleteApp = (appId) => {
 		alert.info("Attempting to delete app")		
 		fetch(globalUrl+"/api/v1/apps/"+appId, {
@@ -1133,12 +1249,14 @@ const Apps = (props) => {
 			headers: {
 				'Accept': 'application/json',
 			},
-	  		credentials: "include",
+	  	credentials: "include",
 		})
 		.then((response) => {
 			if (response.status === 200) {
 				alert.success("Successfully deleted app")		
-				getApps()
+				setTimeout(() => {
+					getApps()
+				}, 1000);
 			} else {
 				alert.error("Failed deleting app")		
 			}
@@ -1380,7 +1498,7 @@ const Apps = (props) => {
 					style={{backgroundColor: inputColor}}
 					variant="outlined"
 					margin="normal"
-					defaultValue={userdata.active_org.defaults.app_download_repo !== undefined && userdata.active_org.defaults.app_download_repo.length > 0 ? userdata.active_org.defaults.app_download_repo : "https://github.com/frikky/shuffle-apps"}
+					defaultValue={"https://github.com/frikky/shuffle-apps"}
 					InputProps={{
 						style:{
 							color: "white",
@@ -1398,7 +1516,7 @@ const Apps = (props) => {
 							style={{backgroundColor: inputColor}}
 							variant="outlined"
 							margin="normal"
-							defaultValue={userdata.active_org.defaults.app_download_branch !== undefined && userdata.active_org.defaults.app_download_branch.length > 0 ? userdata.active_org.defaults.app_download_branch : downloadBranch}
+							defaultValue={downloadBranch}
 							InputProps={{
 								style:{
 									color: "white",
@@ -1521,7 +1639,7 @@ const Apps = (props) => {
             hidden
             type="file"
             ref={upload}
-            accept="application/JSON, text/yaml, text/x-yaml, application/x-yaml, application/vnd.yaml"
+            accept="application/JSON, application/YAML, text/yaml, text/x-yaml, application/x-yaml, application/vnd.yaml"
             multiple={false}
             onChange={uploadFile}
           />

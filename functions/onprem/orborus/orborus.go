@@ -51,6 +51,7 @@ var baseimagetagsuffix = os.Getenv("SHUFFLE_BASE_IMAGE_TAG_SUFFIX")
 
 var orgId = os.Getenv("ORG_ID")
 var baseUrl = os.Getenv("BASE_URL")
+
 var environment = os.Getenv("ENVIRONMENT_NAME")
 var dockerApiVersion = os.Getenv("DOCKER_API_VERSION")
 var runningMode = strings.ToLower(os.Getenv("RUNNING_MODE"))
@@ -122,11 +123,17 @@ func getThisContainerId() {
 // https://docs.docker.com/engine/api/sdk/examples/
 func deployWorker(image string, identifier string, env []string) {
 	// Binds is the actual "-v" volume.
+	// Max 20% CPU every second
+
+	//CPUQuota:  25000,
+	//CPUPeriod: 100000,
+	//CPUShares: 256,
 	hostConfig := &container.HostConfig{
 		LogConfig: container.LogConfig{
 			Type:   "json-file",
 			Config: map[string]string{},
 		},
+		Resources: container.Resources{},
 		Binds: []string{
 			"/var/run/docker.sock:/var/run/docker.sock:rw",
 		},
@@ -244,11 +251,11 @@ func initializeImages() {
 	ctx := context.Background()
 
 	if appSdkVersion == "" {
-		appSdkVersion = "0.8.60"
+		appSdkVersion = "0.8.97"
 		log.Printf("[WARNING] SHUFFLE_APP_SDK_VERSION not defined. Defaulting to %s", appSdkVersion)
 	}
 	if workerVersion == "" {
-		workerVersion = "0.8.70"
+		workerVersion = "nightly"
 		log.Printf("[WARNING] SHUFFLE_WORKER_VERSION not defined. Defaulting to %s", workerVersion)
 	}
 
@@ -432,7 +439,6 @@ func main() {
 		//log.Printf("Prerequest")
 		//go getStats()
 		newresp, err := client.Do(req)
-		executionCount := getRunningWorkers(ctx, workerTimeout)
 		//log.Printf("Postrequest")
 		if err != nil {
 			log.Printf("[WARNING] Failed making request: %s", err)
@@ -495,7 +501,8 @@ func main() {
 			continue
 		}
 
-		// Anything below here verifies concurrency virification
+		// Anything below here verifies concurrency
+		executionCount := getRunningWorkers(ctx, workerTimeout)
 		if executionCount >= maxConcurrency {
 			if zombiecounter*sleepTime > workerTimeout {
 				go zombiecheck(ctx, workerTimeout)
@@ -553,9 +560,11 @@ func main() {
 				fmt.Sprintf("ENVIRONMENT_NAME=%s", environment),
 				fmt.Sprintf("BASE_URL=%s", baseUrl),
 				fmt.Sprintf("CLEANUP=%s", cleanupEnv),
+				fmt.Sprintf("SHUFFLE_PASS_APP_PROXY=%s", os.Getenv("SHUFFLE_PASS_APP_PROXY")),
 			}
 
-			if strings.ToLower(os.Getenv("SHUFFLE_PASS_WORKER_PROXY")) != "false" {
+			//log.Printf("Running worker with proxy? %s", os.Getenv("SHUFFLE_PASS_WORKER_PROXY"))
+			if strings.ToLower(os.Getenv("SHUFFLE_PASS_WORKER_PROXY")) == "true" {
 				env = append(env, fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")))
 				env = append(env, fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")))
 			}
@@ -633,12 +642,17 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
 		All: true,
 	})
-	//Filters: filters.Args{
-	//	map[string][]string{"ancestor": {"<imagename>:<version>"}},
-	//},
 
+	// Automatically updates the version
 	if err != nil {
 		log.Printf("[ERROR] Error getting containers: %s", err)
+
+		newVersionSplit := strings.Split(fmt.Sprintf("%s", err), "version is")
+		if len(newVersionSplit) > 1 {
+			dockerApiVersion = strings.TrimSpace(newVersionSplit[1])
+			log.Printf("[INFO] Changed the API version to default to %s", dockerApiVersion)
+		}
+
 		return maxConcurrency
 	}
 
@@ -715,7 +729,7 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 
 			// Check image name
 			if !shuffleFound {
-				log.Printf("Skipping: %s, %s", container.Labels, container.Image)
+				//log.Printf("[WARNING] Zombie container skip: %#v, %s", container.Labels, container.Image)
 				continue
 			}
 			//} else {

@@ -19,6 +19,11 @@ functions/generated_apps
 backend/onprem/app_sdk/apps
 *test.py
 
-shuffle-database
 *.exe
 *debug*
+
+shuffle-database/batch_metrics_enabled.conf
+shuffle-database/logging_enabled.conf
+shuffle-database/nodes
+shuffle-database/performance_analyzer_enabled.conf
+shuffle-database/rca_enabled.conf

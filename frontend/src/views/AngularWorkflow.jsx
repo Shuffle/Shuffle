@@ -1,16 +1,17 @@
-import React, {useState, useEffect, useLayoutEffect} from 'react';
+import React, {useRef, useState, useEffect, useLayoutEffect} from 'react';
 import { useInterval } from 'react-powerhooks';
 import { useTheme } from '@material-ui/core/styles';
 
 import uuid from "uuid";
 import {Link} from 'react-router-dom';
 import { Prompt } from 'react-router'
-import ReactJson from 'react-json-view'
 import { useBeforeunload } from 'react-beforeunload';
+import ReactJson from 'react-json-view'
 import NestedMenuItem from "material-ui-nested-menu-item";
 
+
 import {TextField, Drawer, Button, Paper, Grid, Tabs, InputAdornment, Tab, ButtonBase, Tooltip, Select, MenuItem, Divider, Dialog, Modal, DialogActions, DialogTitle, InputLabel, DialogContent, FormControl, IconButton, Menu, Input, FormGroup, FormControlLabel, Typography, Checkbox, Breadcrumbs, CircularProgress, Switch, Fade} from '@material-ui/core';
-import {GetApp as GetAppIcon, Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
+import {OpenInNew as OpenInNewIcon,Undo as UndoIcon, FileCopy as FileCopyIcon, GetApp as GetAppIcon, Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
 
 import * as cytoscape from 'cytoscape';
 import * as edgehandles from 'cytoscape-edgehandles';
@@ -24,9 +25,12 @@ import cxtmenu from 'cytoscape-cxtmenu';
 
 import { w3cwebsocket as W3CWebSocket } from "websocket";
 import { useAlert } from "react-alert";
-import { validateJson } from "./Workflows.jsx";
+import { validateJson, GetIconInfo } from "./Workflows.jsx";
 import { GetParsedPaths } from "./Apps.jsx";
 import ConfigureWorkflow from '../components/ConfigureWorkflow.jsx';
+import ParsedAction from '../components/ParsedAction.jsx';
+import Scroll from 'react-scroll'
+import { Element as ScrollElement, animateScroll as scroll, scrollSpy, scroller } from 'react-scroll'
 
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
@@ -35,7 +39,12 @@ const inputColor = "#383B40"
 cytoscape.use(edgehandles);
 cytoscape.use(clipboard);
 cytoscape.use(undoRedo);
-cytoscape.use( cxtmenu );
+cytoscape.use(cxtmenu);
+
+// Adds specific text to items
+//import popper from 'cytoscape-popper';
+//cytoscape.use(popper);
+
 
 // https://stackoverflow.com/questions/19014250/rerender-view-on-browser-resize-with-react
 function useWindowSize() {
@@ -49,6 +58,25 @@ function useWindowSize() {
 		return () => window.removeEventListener('resize', updateSize);
 	}, []);
 	return size;
+}
+
+export function sortByKey(array, key) {
+	if (array === undefined) {
+		return []
+	}
+
+	if (key.startsWith("-") && key.length > 2) {
+		key = key.slice(1, key.length)
+		return array.sort(function(a, b) {
+			var x = a[key]; var y = b[key]
+			return ((x < y) ? -1 : ((x > y) ? 1 : 0))
+		}).reverse()
+	}
+
+	return array.sort(function(a, b) {
+		var x = a[key]; var y = b[key]
+		return ((x < y) ? -1 : ((x > y) ? 1 : 0))
+	})
 }
 
 function removeParam(key, sourceURL) {
@@ -80,14 +108,30 @@ function removeParam(key, sourceURL) {
 }
 
 const splitter = "|~|"
+const svgSize = 24 
 //const referenceUrl = "https://shuffler.io/functions/webhooks/"
 //const referenceUrl = window.location.origin+"/api/v1/hooks/"
+
+function useTraceUpdate(props) {
+  const prev = useRef(props)
+  useEffect(() => {
+    const changedProps = Object.entries(props).reduce((ps, [k, v]) => {
+      if (prev.current[k] !== v) {
+        ps[k] = [prev.current[k], v];
+      }
+      return ps;
+    }, {});
+    if (Object.keys(changedProps).length > 0) {
+      console.log('Changed props:', changedProps);
+    }
+    prev.current = props;
+  });
+}
 
 const AngularWorkflow = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, userdata } = props;
 	const referenceUrl = globalUrl+"/api/v1/hooks/"
 	const alert = useAlert()
-	const borderRadius = 5
 	const theme = useTheme();
 	const green = "#86c142"
 	const yellow = "#FECC00"
@@ -112,6 +156,14 @@ const AngularWorkflow = (props) => {
 	const [leftBarSize, setLeftBarSize] = React.useState(350)
 	const [executionText, setExecutionText] = React.useState("");
 	const [executionRequestStarted, setExecutionRequestStarted] = React.useState(false);
+	const [scrollConfig, setScrollConfig] = React.useState({
+		top: 0,
+		left: 0,
+		selected: "",
+	})
+
+	const [history, setHistory] = React.useState([])
+	const [historyIndex, setHistoryIndex] = React.useState(history.length)
 
 	const [appAuthentication, setAppAuthentication] = React.useState([]);
 	const [variablesModalOpen, setVariablesModalOpen] = React.useState(false);
@@ -204,16 +256,15 @@ const AngularWorkflow = (props) => {
 		}
 	})
 
-
 	const [elements, setElements] = useState([])
 	// No point going as fast, as the nodes aren't realtime anymore, but bulk updated. 
 	// Set it from 2500 to 6000 to reduce overall load
 	const { start, stop } = useInterval({
-	  	duration: 6000,
-	  	startImmediate: false,
-	  	callback: () => {
-				fetchUpdates()
-	  	}
+		duration: 3000,
+		startImmediate: false,
+		callback: () => {
+			fetchUpdates()
+		}
 	})
 
 	const getAvailableWorkflows = (trigger_index) => {
@@ -236,6 +287,7 @@ const AngularWorkflow = (props) => {
 			if (responseJson !== undefined) {
 				setWorkflows(responseJson)
 
+				// Sets up subflow trigger with the right info
 				if (trigger_index > -1) {
 					var outersub = {}
 					const trigger = workflow.triggers[trigger_index]
@@ -243,15 +295,20 @@ const AngularWorkflow = (props) => {
 						for (var key in trigger.parameters) {
 							const param = trigger.parameters[key]
 							if (param.name === "workflow") {
-								const sub = responseJson.find(data => data.id === param.value)
-								if (sub !== undefined && subworkflow.id !== sub.id) { 
-									setSubworkflow(sub)
-									outersub = sub
+								if (param.value === workflow.id) {
+									setSubworkflow(workflow)
+									outersub = workflow 
+								} else {
+									const sub = responseJson.find(data => data.id === param.value)
+									if (sub !== undefined && subworkflow.id !== sub.id) { 
+										setSubworkflow(sub)
+										outersub = sub
+									}
 								}
 							}
 
 							if (param.name === "startnode" && outersub.id !== undefined) {
-								console.log("SHOULD SET STARTNODE: ", outersub)
+								console.log("SHOULD SET STARTNODE IN SUBFLOW SELECTION: ", outersub)
 								const innernode = outersub.actions.find(action => action.id === param.value)
 								console.log("FOUND NODE: ", innernode)
 								if (innernode !== undefined && subworkflowStartnode.id !== innernode.id) { 
@@ -460,7 +517,7 @@ const AngularWorkflow = (props) => {
 			console.log("Error: ", error)
 			//alert.error(error.toString())
 			stop()
-		});
+		})
 	}
 
 	const abortExecution = () => {
@@ -479,7 +536,7 @@ const AngularWorkflow = (props) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for ABORT EXECUTION :O!")
 			} else {
-				alert.success("Execution aborted")
+				//alert.success("Execution aborted")
 			}
 
 			return response.json()
@@ -499,9 +556,19 @@ const AngularWorkflow = (props) => {
 		if (JSON.stringify(responseJson) !== JSON.stringify(executionData)) {
 			// FIXME: If another is selected, don't edit.. 
 			// Doesn't work because this is some async garbage
-			if (executionData.execution_id === undefined || responseJson.execution_id === executionData.execution_id) {
-				setExecutionData(responseJson)
+			if (executionData.execution_id === undefined || (responseJson.execution_id === executionData.execution_id && responseJson.results !== undefined && responseJson.results !== null)) {
+
+				if (executionData.status !== responseJson.status || executionData.result !== responseJson.result || executionData.results.length !== responseJson.results.length) {
+					//console.log("Updated state with this data:")
+					//console.log(responseJson)
+					//console.log(executionData)
+					setExecutionData(responseJson)
+				} else {
+					console.log("NOT updating state.")
+				}
 			}
+		} else {
+			//console.log("JSON is same")
 		}
 
 		//console.log("PRE LOOPING RESULTS: !", responseJson.execution_id, executionRequest.execution_id)
@@ -513,7 +580,7 @@ const AngularWorkflow = (props) => {
 
 		//console.log("LOOPING RESULTS!")
 
-		if (responseJson.results !== null && responseJson.results !== []) {
+		if (responseJson.results !== null && responseJson.results.length > 0) {
 			for (var key in responseJson.results) {
 				var item = responseJson.results[key]
 				var currentnode = cy.getElementById(item.action.id)
@@ -607,7 +674,9 @@ const AngularWorkflow = (props) => {
 						break
 					case "FAILURE": 
 						//When status comes as failure, allow user to start workflow execution
-						setExecutionRunning(false)
+						if (executionRunning) {
+							setExecutionRunning(false)
+						}
 
 						currentnode.removeClass('not-executing-highlight')
 						currentnode.removeClass('executing-highlight')
@@ -642,7 +711,10 @@ const AngularWorkflow = (props) => {
 		if (responseJson.status === "ABORTED" || responseJson.status === "STOPPED" || responseJson.status === "FAILURE" || responseJson.status == "WAITING") {
 			stop()
 
-			setExecutionRunning(false)
+			if (executionRunning) {
+				setExecutionRunning(false)
+			}
+
 			var curelements = cy.elements()
 			for (var i = 0; i < curelements.length; i++) {
 				if (curelements[i].classes().includes("executing-highlight")) {
@@ -664,11 +736,20 @@ const AngularWorkflow = (props) => {
 			stop()
 			getWorkflowExecution(props.match.params.key, "")
 			setUpdate(Math.random())
+		} else {
+			//console.log("Nothing to update")
 		}
 	}
 
 	const saveWorkflow = (curworkflow) => {
 		var success = false
+
+		if (isCloud && !isLoggedIn) {
+			console.log("Should redirect to register with redirect.")
+			window.location.href = `/register?view=/workflows/${props.match.params.key}&message=You need sign up to use workflows with Shuffle`
+			return
+		}
+
 		setSavingState(2)
 
 		// This might not be the right course of action, but seems logical, as items could be running already 
@@ -685,6 +766,7 @@ const AngularWorkflow = (props) => {
 		var newActions = []
 		var newTriggers = []
 		var newBranches = []
+		var newVBranches = []
 		for (var key in cyelements) {
 			if (cyelements[key].data === undefined) {
 				continue
@@ -702,13 +784,20 @@ const AngularWorkflow = (props) => {
 					source_id: cyelements[key].data().source,
 					destination_id: cyelements[key].data().target,
 					conditions: cyelements[key].data().conditions,
+					decorator: cyelements[key].data().decorator,
 				}
 
-				newBranches.push(parsedElement)
+				if (parsedElement.decorator) {
+					newVBranches.push(parsedElement)
+				} else {
+					newBranches.push(parsedElement)
+				}
 			} else {
 				if (type === "ACTION") {
-					// FIXME - check whether position is new to not fuck up params etc.
-					var curworkflowAction = useworkflow.actions.find(a => a.id === cyelements[key].data()["id"])
+					const cyelement = cyelements[key].data()
+					const elementid = cyelement.id === undefined || cyelement.id === null ? cyelement["_id"] : cyelement.id
+				
+					var curworkflowAction = useworkflow.actions.find(a => a !== undefined && (a["id"] === elementid || a["_id"] === elementid))
 					if (curworkflowAction === undefined)  {
 						curworkflowAction = cyelements[key].data() 
 					} 
@@ -761,9 +850,11 @@ const AngularWorkflow = (props) => {
 		useworkflow.actions = newActions
 		useworkflow.triggers = newTriggers
 		useworkflow.branches = newBranches
+		useworkflow.visual_branches = newVBranches
 
 		// Errors are backend defined
 		useworkflow.errors = []
+		useworkflow.previously_saved = true
 
 		setLastSaved(true)
 		fetch(globalUrl+"/api/v1/workflows/"+props.match.params.key, {
@@ -1017,10 +1108,10 @@ const AngularWorkflow = (props) => {
 
 	// This can be used to only show prioritzed ones later
 	// Right now, it can prioritize authenticated ones
+	//"Testing",
 	const internalIds = [
 		"Shuffle Tools",
-		"Testing",
-		"Http",
+		"http",
 	]
 
 	const getAppAuthentication = (reset) => {
@@ -1055,7 +1146,6 @@ const AngularWorkflow = (props) => {
 
 					// Remove the old listener for select, run with new one 
 					cy.removeListener('select')
-
 					cy.on('select', 'node', (e) => onNodeSelect(e, newauth))
 					cy.on('select', 'edge', (e) => onEdgeSelect(e))
 				}
@@ -1096,7 +1186,7 @@ const AngularWorkflow = (props) => {
 			//var tmpapps = []
 			//tmpapps = tmpapps.concat(getExtraApps())
 			//tmpapps = tmpapps.concat(responseJson)
-			//console.log("APPS: ", responseJson)
+			console.log("APPS: ", responseJson)
 			setApps(responseJson)
 
 			if (isCloud) {
@@ -1112,15 +1202,17 @@ const AngularWorkflow = (props) => {
 		});
 	}
 	
-	const getWorkflow = () => {
-		fetch(globalUrl+"/api/v1/workflows/"+props.match.params.key, {
-    	  	method: 'GET',
+	const getWorkflow = (workflow_id, sourcenode) => {
+		console.log(`Getting workflow ${workflow_id} with append value ${sourcenode}`)
+
+		fetch(globalUrl+"/api/v1/workflows/"+workflow_id, {
+    	  method: 'GET',
 				headers: {
 					'Content-Type': 'application/json',
 					'Accept': 'application/json',
 				},
-	  			credentials: "include",
-    		})
+	  		credentials: "include",
+    })
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for workflows :O!")
@@ -1141,11 +1233,129 @@ const AngularWorkflow = (props) => {
 
 			if (responseJson.public) {
 				alert.info("This workflow is public. You will have to save it to make it your own!") 
-				setLastSaved(false)
+				//setLastSaved(false)
 			}
 
-			setWorkflow(responseJson)
-			setWorkflowDone(true)
+			// Appends SUBFLOWS. Does NOT run during normal grabbing of workflows.
+			if (sourcenode.id !== undefined) {
+				console.log("WORKFLOW: ", responseJson)
+
+				var nodefound = false
+				const target = sourcenode.parameters.find(item => item.name === "startnode")
+				console.log(sourcenode.parameters)
+				console.log(target)
+				const target_id = target === undefined ? "" : target.value
+				const actions = responseJson.actions.map(action => {
+					const node = {
+						group: "nodes",
+					}
+
+					// Set it dynamically?
+					node.position = {
+						x: sourcenode.position.x+action.position.x,
+						y: sourcenode.position.y+action.position.y,
+					}
+
+					node.data = action
+
+					node.data._id = action["id"]
+					node.data.type = "ACTION"
+					node.data.source_workflow = responseJson.id
+					if (action.id === target_id) {
+						nodefound = true
+					}
+
+					var example = ""
+					if (action.example !== undefined && action.example !== null && action.example.length > 0) {
+						example = action.example
+					}
+
+					node.data.example = example
+					return node;
+				})
+
+				var edges = responseJson.branches.map((branch, index) => {
+					const edge = { };
+					var conditions = responseJson.branches[index].conditions
+					if (conditions === undefined || conditions === null) {
+						conditions = []
+					}
+
+					var label = ""
+					if (conditions.length === 1) {
+						label = conditions.length+" condition"
+					} else if (conditions.length > 1) {
+						label = conditions.length+" conditions"
+					}
+
+					const sourceFound = actions.findIndex(action => action.data.id === branch.source_id) 
+					if (sourceFound < 0) {
+						return null
+					}
+
+					const destinationFound = actions.findIndex(action => action.data.id === branch.destination_id) 
+					if (destinationFound < 0) {
+						return null
+					}
+
+					edge.data = {
+						id: branch.id,
+						_id: branch.id,
+						source: branch.source_id,
+						target: branch.destination_id,
+						label: label,
+						conditions: conditions,
+						hasErrors: branch.has_errors,
+						decorator: false,
+						source_workflow: responseJson.id,
+					}
+
+					return edge;
+				})
+
+
+				//console.log("Adding node: ", node)
+				//cy.on('add', 'node', (e) => onNodeAdded(e))
+				edges = edges.filter(edge => edge !== null)
+				cy.removeListener('add')
+				cy.add(actions)
+				cy.add(edges)
+
+				if (nodefound === true) {
+					const newId = uuid.v4()
+					cy.add({
+						group: "edges",
+						data: {
+							id: newId,
+							_id: newId,
+							source: sourcenode.id,
+							target: target_id,
+							label: "Subflow",
+							decorator: true,
+							source_workflow: responseJson.id,
+						}
+					})
+				}
+
+				cy.fit(null, 100)
+				//cy.zoom(2.0)
+				cy.on('add', 'node', (e) => onNodeAdded(e))
+				cy.on('add', 'edge', (e) => onEdgeAdded(e))
+
+				//for (var key in 
+			} else {
+				setWorkflow(responseJson)
+				setWorkflowDone(true)
+
+				//console.log(responseJson)
+				// Add error checks
+				console.log("Workflow: ", responseJson)
+				if (!responseJson.public) {
+					if ((!responseJson.previously_saved || (!responseJson.is_valid || (responseJson.errors !== undefined || responseJson.errors !== null || responseJson.errors !== responseJson.errors.length > 0)))) {
+						setConfigureWorkflowModalOpen(true)
+					}
+				}
+			}
     })
 		.catch(error => {
 			alert.error(error.toString())
@@ -1154,6 +1364,13 @@ const AngularWorkflow = (props) => {
 
 	const onUnselect = (event) => {
 		console.time("UNSELECT")
+
+		const nodedata = event.target.data()
+		if (nodedata.app_name === undefined && nodedata.source === undefined) {
+			return
+		}
+		event.target.removeClass("selected")
+
 
 		// Attempt at rewrite of name in other actions in following nodes.
 		// Should probably be done in the onBlur for the textfield instead
@@ -1208,6 +1425,11 @@ const AngularWorkflow = (props) => {
 
 		// Can be used for right side view
 		setRightSideBarOpen(false)
+		setScrollConfig({
+			top: 0,
+			left: 0,
+			selected: "",
+		})
 		console.timeEnd("UNSELECT")
 	}
 
@@ -1220,8 +1442,13 @@ const AngularWorkflow = (props) => {
 			const triggercheck = workflow.triggers.find(trigger => trigger.id === event.target.data()["source"])
 			if (triggercheck === undefined) {
 		*/
-		setSelectedEdgeIndex(workflow.branches.findIndex(data => data.id === event.target.data()["id"]))
-		setSelectedEdge(event.target.data())
+		//console.log(event.target.data())
+		if (event.target.data().decorator) {
+			alert.info("This edge can't be edited.")
+		} else {
+			setSelectedEdgeIndex(workflow.branches.findIndex(data => data.id === event.target.data()["id"]))
+			setSelectedEdge(event.target.data())
+		}
 
 		/*
 		} else {
@@ -1235,21 +1462,284 @@ const AngularWorkflow = (props) => {
 	}
 
 	// Comparing locations between nodes and setting views
-	const onNodeDrag = (event) => {
-		//console.log("DRAGGING: ", event.target)
-		//console.log("LEN2: ", event.target.edges.length)
+	var styledElements = []
+	var originalLocation = {
+		x: 0,
+		y: 0,
+	}
 
+
+	const onCtxTap = (event) => {
 		const nodedata = event.target.data()
+		console.log(nodedata)
+		if (nodedata.type === "TRIGGER" && nodedata.app_name === "Shuffle Workflow") {
+			if (nodedata.parameters === null) {
+				alert.error("Set a workflow first")
+				return
+			}
+
+			const workflow_id = nodedata.parameters.find(param => param.name === "workflow")
+			if (workflow.id === workflow_id.valu) {
+				return
+			}
+
+			cy.animation({ 
+				zoom: 0,
+				center: {
+					eles: event.target,
+				},
+			})
+			.play()
+			.promise()
+			.then( () => {
+				console.log("DONE: ", workflow_id)
+				//cy.elements().remove()
+				getWorkflow(workflow_id.value, nodedata)
+				cy.fit(null, 50)
+				//props.match.params.key
+				//cy.animation({ 
+				//	zoom: 500,
+				//	center: {
+				//		eles: cy.nodes(),
+				//	},
+				//})
+				//.play()
+				//.promise()
+			})
+
+			//const animationDuration = 150
+			//style: {
+			//maxZoom={2.00}
+			//cy.animate({
+			//	fit: 100,
+			//}, {
+			//	duration: 500,	
+			//})
+		}
+	}
+	//cy.on('cxttap', "node", (e) => onCtxTap(e))
+
+	var hiddenNodes = []
+	const onNodeDragStop = (event, selectedAction) => {
+		const nodedata = event.target.data()
+		console.log("IN NODE DRAG STOP: ", nodedata)
+		if (nodedata.id === selectedAction.id) {
+			return
+		}
+
+		if (nodedata.finished === false) {
+			return
+		}
+
+		//console.log("Drag: ", nodedata)
+		//return 
+
+		//console.log("DRAGGED NODE: ", nodedata)
+		//console.log("TARGET NODE: ", selectedAction)
+		if (styledElements.length === 1) {
+			console.log("Should reset location and autofill: ", styledElements, selectedAction)
+			//event.target.position = originalLocation
+			//curworkflowTrigger.position = cyelements[key].position()
+			if (originalLocation.x !== 0 || originalLocation.y !== 0) {
+				const currentnode = cy.getElementById(nodedata.id)
+				if (currentnode !== null && currentnode !== undefined) {
+					//currentnode.position = originalLocation
+					currentnode.position("x", originalLocation.x)
+					currentnode.position("y", originalLocation.y)
+				}
+
+				originalLocation = {x: 0, y: 0}
+			}
+
+			const curElement = document.getElementById(styledElements[0])
+			if (curElement !== null && curElement !== undefined) {
+				//console.log("ELE: ", curElement)
+				curElement.style.border = curElement.style.original_border
+				var newValue = "$"+nodedata.label.toLowerCase().replaceAll(" ", "_")
+				var paramname = ""
+				var idnumber = -1
+				if (curElement.id.startsWith("rightside_field_")) {
+					console.log("FOUND FIELD WITH NUMBER: ", curElement.id)
+					const idsplit = curElement.id.split("_")
+					console.log(idsplit)
+					if (idsplit.length === 3 && !isNaN(idsplit[2])) {
+						console.log("ADDING TO PARAM ", idsplit[2])
+						console.log("PARAM: ", selectedAction)
+					
+						selectedAction.parameters[idsplit[2]].value = newValue
+						paramname = selectedAction.parameters[idsplit[2]].name
+						idnumber = idsplit[2]
+					}
+				}
+
+				if (idnumber >= 0 && paramname.length > 0) {
+					const exampledata = GetExampleResult(nodedata) 
+					const parsedname = paramname.toLowerCase().trim().replaceAll("_", " ")
+
+					const foundresult = GetParamMatch(parsedname, exampledata, "")
+					if (foundresult.length > 0) {
+						console.log("FOUND RESULT: ", paramname, foundresult)
+						newValue = `${newValue}${foundresult}`
+					} 
+
+					selectedAction.parameters[idnumber].value = newValue
+				}
+
+				curElement.value = newValue
+			}
+		}
+
+		const skipnames = []
+		if (nodedata.app_name !== undefined && ((
+			nodedata.app_name !== "Shuffle Tools" &&
+			nodedata.app_name !== "Testing" &&
+			nodedata.app_name !== "Shuffle Workflow" &&
+			nodedata.app_name !== "User Input" &&
+			nodedata.app_name !== "Webhook" &&
+			nodedata.app_name !== "Schedule" &&
+			nodedata.app_name !== "Email") || nodedata.isStartNode) 
+		) {
+			const allNodes = cy.nodes().jsons()
+			var found = false
+			for (var key in allNodes) {
+				const currentNode = allNodes[key]
+				if (currentNode.data.attachedTo === nodedata.id && currentNode.data.isDescriptor) {
+					found = true 
+					console.log("FOUND THE NODE!")
+					break
+				}
+			}
+
+			// Readding the icon after moving the node
+			if (!found) {
+				//console.log("Node wasn't found")
+				const iconInfo = GetIconInfo(nodedata)
+				const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
+				const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
+
+				const offset = nodedata.isStartNode ? 36 : 44
+				//console.log(event.target.position())
+				const decoratorNode = {
+					position: {
+						x: event.target.position().x+offset,
+						y: event.target.position().y+offset,
+					},
+					locked: true,
+					data: {
+						"isDescriptor": true,
+						"isValid": true,
+						"is_valid": true,
+						"label": "",
+						"image": svgpin_Url,
+						"imageColor": iconInfo.iconBackgroundColor,
+						"attachedTo": nodedata.id,
+					},
+				}
+
+				cy.add(decoratorNode).unselectify()
+			} else {
+				console.log("Node already exists - don't add descriptor node")
+			}
+		} else {
+			//console.log("Shouldnt re-add info? ")
+		}
+
+		originalLocation = {
+			x: 0,
+			y: 0,
+		}
+	}
+
+	const onNodeDrag = (event, selectedAction) => {
+		//if (Object.getOwnPropertyNames(selectedAction).length === 0) {
+		//	return
+		//}
+		const nodedata = event.target.data()
+		//console.log("Dragging: ", nodedata)
+		if (nodedata.finished === false) {
+			return
+		}
+
+		//console.log("Dragging node!!")
 		if (nodedata.app_name == "Shuffle Tools" || nodedata.app_name == "Testing") {
 			//console.log("NODE: ", 
 			//selector: `node[app_name="Shuffle Tools"]`,
-			console.log(event.target)
+			//console.log(event.target)
 
 			// 1. Find location of node
 			// 2. Check if it's within view of another node (inside)
 			// 3. If it is, then hide text
 		}
 
+		if (nodedata.app_name !== undefined) {
+			//console.log("Trying to remove friendly nodes")
+			const allNodes = cy.nodes().jsons()
+			for (var key in allNodes) {
+				const currentNode = allNodes[key]
+				if (currentNode.data.attachedTo === nodedata.id) {
+					cy.getElementById(currentNode.data.id).remove()
+				}
+			}
+		} else {
+			console.log("No appid? ", nodedata)
+		}
+
+		if (nodedata.id === selectedAction.id) {
+			return
+		}
+
+		if (originalLocation.x === 0 && originalLocation.y === 0 && nodedata.position !== undefined) {
+			//console.log("Updating location!: ", nodedata) 
+			originalLocation.x = nodedata.position.x 
+			originalLocation.y = nodedata.position.y
+		}
+
+		// Part of autocomplete. Styles elements in frontend to indicate 
+		// what and where we may input data for the user.
+		const onMouseUpdate = (e) => {
+			const x = e.pageX;
+			const y = e.pageY;
+
+			const elementMouseIsOver = document.elementFromPoint(x, y)
+			if (elementMouseIsOver !== undefined && elementMouseIsOver !== null) {
+				// Color for #f85a3e translated to rgb
+				const newBorder = "3px solid rgb(248, 90, 62)"
+				if (elementMouseIsOver.style.border != newBorder && elementMouseIsOver.id.includes("rightside")) {
+					//console.log(elementMouseIsOver.style.border)
+					if (elementMouseIsOver.style.border !== undefined) {
+						elementMouseIsOver.style.original_border = elementMouseIsOver.style.border 
+					} else {
+						elementMouseIsOver.style.original_border = ""
+					}
+
+					elementMouseIsOver.style.border = newBorder
+					console.log("STYLED: ", styledElements)
+					for (var key in styledElements) {
+						const curElement = document.getElementById(styledElements[key])
+						if (curElement !== null && curElement !== undefined) {
+							curElement.style.border = curElement.style.original_border
+						}
+					}
+
+					styledElements = []
+					styledElements.push(elementMouseIsOver.id)
+				} else if (elementMouseIsOver.id === "cytoscape_view" || elementMouseIsOver.id === "") {
+					for (var key in styledElements) {
+						const curElement = document.getElementById(styledElements[key])
+						if (curElement !== null && curElement !== undefined) {
+							curElement.style.border = curElement.style.original_border
+						}
+					}
+
+					styledElements = []
+				}
+			}
+
+			// Ensure it only happens once
+			document.removeEventListener('mousemove', onMouseUpdate, false)
+		}
+
+		document.addEventListener('mousemove', onMouseUpdate, false);
 
 		/*
 		event.target.animate({
@@ -1274,43 +1764,176 @@ const AngularWorkflow = (props) => {
 	// Nodeselectbatching:
 	// https://stackoverflow.com/questions/16677856/cy-onselect-callback-only-once
 	const onNodeSelect = (event, newAppAuth) => {
-
 		const data = event.target.data()
-		setLastSaved(false)
-		
+		if (data.isButton) {
+			//console.log("BUTTON CLICKED: ", data)
+			if (data.buttonType === "delete") {
+				//console.log("DELETE!")
+				const parentNode = cy.getElementById(data.attachedTo)
+				if (parentNode !== null && parentNode !== undefined) {
+					parentNode.remove()
+				}
+
+				//for (var key in allNodes) {
+				//	const currentNode = allNodes[key]
+				//	if (currentNode.data.attachedTo === data.attachedTo) {
+				//		cy.getElementById(currentNode.data.id).remove()
+				//	}
+				//}
+			} else if (data.buttonType === "copy") {
+				console.log("COPY!")
+				// 1. Find parent
+				// 2. Find branches for parent
+				// 3. Make a new node that's moved a little bit
+				const parentNode = cy.getElementById(data.attachedTo)
+				if (parentNode !== null && parentNode !== undefined) {
+					//parentNode.data()
+					var newNodeData = JSON.parse(JSON.stringify(parentNode.data()))
+					newNodeData.id = uuid.v4()
+					if (newNodeData.position !== undefined) {
+						newNodeData.position = {
+							"x": newNodeData.position.x+100,
+							"y": newNodeData.position.y+100,
+						}
+					}
+
+					newNodeData.isStartNode = false
+					newNodeData.errors = []
+					newNodeData.is_valid = true
+					newNodeData.isValid = true
+
+					cy.add({
+							group: 'nodes',
+							data:  newNodeData,
+							position: newNodeData.position,
+					})
+
+					// Readding the icon after moving the node
+					//console.log("Node wasn't found")
+					if (newNodeData.app_name !== "Testing" || newNodeData.app_name !== "Shuffle Workflow") {
+					} else {
+						const iconInfo = GetIconInfo(newNodeData)
+						const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
+						const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
+
+						const offset = newNodeData.isStartNode ? 36 : 44
+						//console.log(event.target.position())
+						const decoratorNode = {
+							position: {
+								x: newNodeData.position.x+offset,
+								y: newNodeData.position.y+offset,
+							},
+							locked: true,
+							data: {
+								"isDescriptor": true,
+								"isValid": true,
+								"is_valid": true,
+								"label": "",
+								"image": svgpin_Url,
+								"imageColor": iconInfo.iconBackgroundColor,
+								"attachedTo": newNodeData.id,
+							},
+						}
+
+						cy.add(decoratorNode).unselectify()
+					}
+
+					workflow.actions.push(newNodeData)
+
+					const sourcebranches = workflow.branches.filter(foundbranch => foundbranch.source_id === parentNode.data("id"))
+					const destinationbranches = workflow.branches.filter(foundbranch => foundbranch.destination_id === parentNode.data("id"))
+
+					//for (var key in sourcebranches) {
+					//	var newbranch = JSON.parse(JSON.stringify(sourcebranches[key]))
+					//	newbranch.id = uuid.v4()
+					//	newbranch.source_id = newNodeData.id
+					//	cy.add({
+					//		group: "edges",
+					//		data: newbranch,
+					//	})
+					//}
+
+					for (var key in sourcebranches) {
+						var newbranch = JSON.parse(JSON.stringify(sourcebranches[key]))
+						newbranch.id = uuid.v4()
+						newbranch.source_id = newNodeData.id
+
+						newbranch._id = newbranch.id
+						newbranch.source = newbranch.source_id
+						newbranch.target = newbranch.destination_id
+						cy.add({
+							group: "edges",
+							data: newbranch,
+						})
+					}
+
+					for (var key in destinationbranches) {
+						var newbranch = JSON.parse(JSON.stringify(destinationbranches[key]))
+						newbranch.id = uuid.v4()
+						newbranch.destination_id = newNodeData.id
+
+						newbranch._id = newbranch.id
+						newbranch.source = newbranch.source_id
+						newbranch.target = newbranch.destination_id
+						cy.add({
+							group: "edges",
+							data: newbranch,
+						})
+					}
+				}
+			}
+
+			event.target.unselect()
+			return
+		} else if (data.isDescriptor) {
+			console.log("Can't select descriptor")
+			event.target.unselect()
+			return
+		}
+
 		//const node = cy.getElementById(data.id)
 		//if (node.length > 0) {
 		//	node.addClass('shuffle-hover-highlight')
 		//}
 
 		//const branch = workflow.branches.filter(branch => branch.source_id === data.id || branch.destination_id === data.id)
-		console.log("NODE: ", data)
 		//console.log("APPAUTH: ", newAppAuth)
 		//console.log("BRANCHES: ", branch)
 
 		if (data.type === "ACTION") {
-
-
-			// FIXME - unselect
-			//console.log(cy.elements('[_id!="${data._id}"]`))
-			// Does it choose the wrong action?
 			var curaction = workflow.actions.find(a => a.id === data.id)
+			//console.log("INSIDE CURACTION: ", curaction)
 			if (!curaction || curaction === undefined) { 
 				//event.target.unselect()
 				//alert.error("Action not found. Please remake it.")
 				return
 			}
 
-
-			const curapp = apps.find(a => a.name === curaction.app_name && a.app_version === curaction.app_version)
+			const curapp = apps.find(a => a.name === curaction.app_name && ((a.app_version === curaction.app_version || (a.loop_versions !== null && a.loop_versions.includes(curaction.app_version)))))
+			//console.log("APP: ", curapp)
 			if (!curapp || curapp === undefined) {
-				alert.error("App "+curaction.app_name+" not found. Is it activated?")
+				alert.error(`App ${curaction.app_name}:${curaction.app_version} not found. Is it activated?`)
+
+				const tmpapp = {
+					name: curaction.app_name,
+					app_name: curaction.app_name, 
+					app_version: curaction.app_version, 
+					id: curaction.app_id,
+					actions: [curaction],
+				}
+
+				console.log(tmpapp)
+				console.log(curaction)
+				setSelectedApp(tmpapp)
+				//setSelectedAction(JSON.parse(JSON.stringify(curaction)))
+				setSelectedAction(curaction)
 				//return
 			} else {
 
-				console.log("AUTHENTICATION: ", curapp.authentication)
+				//console.log("AUTHENTICATION: ", curapp.authentication)
 				setRequiresAuthentication(curapp.authentication.required && curapp.authentication.parameters !== undefined && curapp.authentication.parameters !== null)
 				if (curapp.authentication.required) {
+					//console.log("App requires auth.")
 					// Setup auth here :)
 					const authenticationOptions = []
 					var findAuthId = ""
@@ -1319,7 +1942,7 @@ const AngularWorkflow = (props) => {
 					}
 
 					var tmpAuth = JSON.parse(JSON.stringify(newAppAuth))
-					console.log("FOUND AUTH: ", tmpAuth)
+					//console.log("FOUND AUTH: ", tmpAuth)
 
 					//console.log("Checking authentication: ", tmpAuth)
 					for (var key in tmpAuth) {
@@ -1339,7 +1962,7 @@ const AngularWorkflow = (props) => {
 						}
 					}
 
-					console.log("OPTIONS: ", authenticationOptions)
+					//console.log("OPTIONS: ", authenticationOptions)
 					curaction.authentication = authenticationOptions
 					//console.log("Authentication: ", authenticationOptions)
 					if (curaction.selectedAuthentication === null || curaction.selectedAuthentication === undefined || curaction.selectedAuthentication.length === "") {
@@ -1351,8 +1974,15 @@ const AngularWorkflow = (props) => {
 					curaction.selectedAuthentication = {}
 				}
 
+				//setSelectedAction(JSON.parse(JSON.stringify(curaction)))
+				//console.log("CURAPP: ", curapp, selectedApp)
 				setSelectedApp(curapp)
 				setSelectedAction(curaction)
+
+				cy.removeListener('drag')
+				cy.removeListener('free')
+				cy.on('drag', 'node', (e) => onNodeDrag(e, curaction))
+				cy.on('free', 'node', (e) => onNodeDragStop(e, curaction))
 			}
 
 			if (environments !== undefined && environments !== null) {
@@ -1380,13 +2010,325 @@ const AngularWorkflow = (props) => {
 			alert.error("Can't handle "+data.type)
 		}
 
+		//console.log("BAR: ", rightSideBarOpen, "SAVE: ", lastSaved)
 		setRightSideBarOpen(true)
+		setLastSaved(false)
+
+		// Refresh listeners
+		//cy.removeListener('select')
+		//cy.on('select', 'node', (e) => onNodeSelect(e, newAppAuth, curapp, rightSideBarOpen, lastSaved))
+		//cy.on('select', 'edge', (e) => onEdgeSelect(e))
+
+		setScrollConfig({
+			top: 0,
+			left: 0,
+			selected: "",
+		})
 	}
+
+	const GetExampleResult = (item) => {
+		var exampledata = item.example === undefined ? "" : item.example
+		if (workflowExecutions.length > 0) {
+			// Look for the ID
+			const found = false
+			for (var key in workflowExecutions) {
+				if (workflowExecutions[key].results === undefined || workflowExecutions[key].results === null) {
+					continue
+				}
+
+				var foundResult = {"result": ""}
+				if (item.id === "exec") {
+					//console.log("EXEC: ", workflowExecutions[key].execution_argument)
+					if (workflowExecutions[key].execution_argument !== undefined && workflowExecutions[key].execution_argument !== null && workflowExecutions[key].execution_argument.length > 0) {
+						foundResult.result = workflowExecutions[key].execution_argument
+					} else {
+						continue
+					}
+				} else {
+					foundResult = workflowExecutions[key].results.find(result => result.action.id === item.id)
+					if (foundResult === undefined) {
+						continue
+					}
+				}
+
+				foundResult.result = foundResult.result.trim()
+				foundResult.result = foundResult.result.split(" None").join(" \"None\"")
+				foundResult.result = foundResult.result.split(" False").join(" false")
+				foundResult.result = foundResult.result.split(" True").join(" true")
+
+				var jsonvalid = true
+				try {
+					const tmp = String(JSON.parse(foundResult.result))
+					if (!foundResult.result.includes("{") && !foundResult.result.includes("[")) {
+						jsonvalid = false
+					}
+				} catch (e) {
+					try {
+						foundResult.result = foundResult.result.split("\'").join("\"")
+						const tmp = String(JSON.parse(foundResult.result))
+						if (!foundResult.result.includes("{") && !foundResult.result.includes("[")) {
+							jsonvalid = false
+						}
+					} catch (e) {
+						jsonvalid = false
+					}
+				}
+
+				// Finds the FIRST json only
+				if (jsonvalid) {
+					//console.log("VALID!")
+					exampledata = JSON.parse(foundResult.result)
+					break
+				} else {
+					//console.log("INVALID: ", foundResult.result)
+				}
+			}
+		}
+
+		//console.log("EXAMPLE: ", exampledata)
+		return exampledata
+	}
+
+	const GetParamMatch = (paramname, exampledata, basekey) => {
+		const splitkey = "."
+		//console.log(typeof(exampledata))
+		//console.log("MATCHING WITH: ", exampledata)
+		if (typeof(exampledata) !== "object") {
+			return ""
+		}
+
+		if (exampledata === null) {
+			return ""
+		}
+
+		// Basically just a stupid if-else :)
+		const synonyms = {
+			"id": ["id", "ref", "sourceref", "reference", "sourcereference", "alert id", "case id", "incident id", "service id", "sid", "uid", "uuid", "team id"],
+			"title": ["title", "name", "message"],
+			"description": ["description", "explanation", "story", "details",],
+			"email": ["mail", "email", "sender", "receiver", "recipient"],
+			"data": ["data", "ip", "domain", "url", "hash", "md5", "sha2", "sha256", "value", "item",],
+		}
+
+		// 1. Find the right synonym
+		// 2. 
+		var selectedsynonyms = [paramname]
+		for (const [key, value] of Object.entries(synonyms)) {
+			if (key === paramname || value.includes(paramname)) {
+				if (!value.includes(key)) {
+					value.push(key.toLowerCase())
+				}
+
+				selectedsynonyms = value
+				break	
+			}
+		}
+		//console.log("SELECTED: ", selectedsynonyms)
+
+		//console.log("SYNONYMS FOR ", paramname, selectedsynonyms)
+		var toreturn = ""
+
+		for (const [key, value] of Object.entries(exampledata)) {
+			// Check if loop or JSON
+			const extra = basekey.length > 0 ? splitkey : ""
+			const basekeyname = `${basekey.slice(1, basekey.length).split(".").join(splitkey)}${extra}${key}`
+
+			// Handle direct loop!
+			//if (!isNaN(key) && basekey === "") {
+			//	//console.log("Handling direct loop: ", key, value)
+			//	//parsedValues.push({"type": "object", "name": "Node", "autocomplete": `${basekey}`})
+			//	//parsedValues.push({"type": "list", "name": `${splitkey}list`, "autocomplete": `${basekey}.#`})
+			//	//for (var subkey in returnValues) {
+			//	//	parsedValues.push(returnValues[subkey])
+			//	//}
+
+			//	toreturn = GetParsedPaths(paramname, value, `${basekey}.#`)
+			//	console.log("LIST, TORETURN: ", value, toreturn)
+			//	if (toreturn.length > 0) {
+			//		break
+			//	}
+			//}
+
+			//console.log("KEY: ", key, "VALUE: ", value, "BASEKEY: ", basekeyname)
+			if (typeof(value) === 'object') {
+				if (Array.isArray(value)) {
+					//console.log("LIST!!: ", value, key)
+					var selectedkey = ""
+					if (isNaN(key)) {
+						selectedkey = `.${key}`
+					}
+
+					for (var subitem in value) {
+						toreturn = GetParamMatch(paramname, value[subitem], `${basekey}${selectedkey}.#`)
+						if (toreturn.length > 0) {
+							break
+						}
+					}
+
+					if (toreturn.length > 0) {
+						break
+					}
+				} else {
+					var selectedkey = ""
+					if (isNaN(key)) {
+						selectedkey = `.${key}`
+					}
+
+					toreturn = GetParamMatch(paramname, value, `${basekey}${selectedkey}`)
+					//console.log("OBJECT: ", value, toreturn, key)
+					if (toreturn.length > 0) {
+						break
+					}
+				}
+				//console.log("VALUE IS OBJECT: ", key, value)
+			} else {
+				//console.log("SINGLE ITEM: ", key)
+				if (selectedsynonyms.includes(key.toLowerCase())) {
+					//parsedValues.push({"type": "value", "name": basekeyname, "autocomplete": `${basekey}.${key}`, "value": value,})
+					//console.log("STRING: ", key, value)
+					toreturn = `${basekey}.${key}`
+					//toreturn = basekeyname
+					break
+				}
+			}
+		}
+
+		return toreturn
+	}
+
+	// Takes an action as input, then runs through and updates the relevant fields
+	// based on previous actions' 
+	const RunAutocompleter = (dstdata) => {
+		// **PS: The right action should already be set here**
+		// 1. Check execution argument
+		// 2. Check parents in order
+		var exampledata = GetExampleResult({"id": "exec", "name": "exec",})
+		//console.log("EXAMPLE RETURN: ", exampledata)
+		var parentlabel = "exec"
+		for (var paramkey in dstdata.parameters) {
+			const param = dstdata.parameters[paramkey]
+			// Skip authentication params
+			if (param.configuration) {
+				continue
+			}
+
+			const paramname = param.name.toLowerCase().trim().replaceAll("_", " ")
+			//console.log("PARAM: ", param)
+			//console.log("PARAMNAME: ", paramname)
+
+			const foundresult = GetParamMatch(paramname, exampledata, "")
+			if (foundresult.length > 0) {
+				//console.log("FOUND: ", paramname, foundresult)
+
+				if (dstdata.parameters[paramkey].value.length === 0) {
+					dstdata.parameters[paramkey].value = `$${parentlabel}${foundresult}`
+				} else {
+					//console.log("Skipping ", dstdata.parameters[paramkey], " because it already has a value")
+				}
+			}
+		}
+		
+		var parents = getParents(dstdata)
+		//console.log("PARENTS: ", parents)
+		if (parents.length > 1) {
+			for (var key in parents) {
+				const item = parents[key]
+				if (item.label === "Execution Argument") {
+					continue
+				}
+
+				parentlabel = item.label.toLowerCase().trim().replaceAll(" ", "_")
+				exampledata = GetExampleResult(item)
+				for (var paramkey in dstdata.parameters) {
+					const param = dstdata.parameters[paramkey]
+					// Skip authentication params
+					if (param.configuration) {
+						continue
+					}
+
+					const paramname = param.name.toLowerCase().trim().replaceAll("_", " ")
+					//console.log("PARAM: ", param)
+					//console.log("PARAMNAME: ", paramname)
+
+					const foundresult = GetParamMatch(paramname, exampledata, "")
+					if (foundresult.length > 0) {
+						//console.log("FOUND: ", paramname, foundresult)
+
+						if (dstdata.parameters[paramkey].value.length === 0) {
+							dstdata.parameters[paramkey].value = `$${parentlabel}${foundresult}`
+						} else {
+							//console.log("Skipping ", dstdata.parameters[paramkey], " because it already has a value")
+						}
+					}
+				}
+				// Check agains every param 
+			}
+		}
+
+		return dstdata
+	}
+
+	//const FixNameUpdater = (sourcenode) => {
+	//}
 
 	// Checks for errors in edges when they're added 
 	const onEdgeAdded = (event) => {
-		setLastSaved(false)
 		const edge = event.target.data()
+		console.log("EDGE ADDED: ", edge)
+		//setLastSaved(false)
+		var targetnode = workflow.triggers.findIndex(data => data.id === edge.target)
+		if (targetnode !== -1) {
+			console.log("TARGETNODE: ", targetnode)
+			if (workflow.triggers[targetnode].app_name === "User Input" || workflow.triggers[targetnode].app_name === "Shuffle Workflow") {
+			} else {
+				alert.error("Can't have triggers as target of branch")
+				event.target.remove()
+			}
+		}
+
+		console.log("TARGET: ", event.target.target().data())
+		if (event.target.target().data("isButton") === true || event.target.target().data("isDescriptor") === true) {
+			event.target.remove()
+			return
+		}
+
+		targetnode = -1
+		var sourcenode = workflow.triggers.findIndex(data => data.id === edge.source)
+		console.log("SOURCENODE: ", sourcenode)
+		if (sourcenode !== -1) {
+			if (workflow.triggers[sourcenode].app_name === "User Input" || workflow.triggers[sourcenode].app_name === "Shuffle Workflow") {
+				//console.log("NORMAL TRIGGER")
+			} else {
+				//var currentnode = cy.getElementById(workflow.triggers[sourcenode].id)
+				//console.log("NODE: ", currentnode)
+				//if (currentnode !== null && currentnode !== undefined) {
+				//	console.log("SHOULD CHECK IF TRIGGER HAS MULTIPLE EDGES: ", currentnode)
+				//if (workflow.branches !== undefined && workflow.branches !== null) {
+				//	const found_branches = workflow.branches.filter(branch => branch.source == workflow.triggers[sourcenode].id)
+				//	console.log("FOUND BRANCHES: ", found_branches)
+				//	if (found_branches.length > 0) {
+				//		alert.error("Can't have multiple branches from this trigger")
+				//		event.target.remove()	
+				//	}
+				//}
+
+				//if (cy.edges().size() === 1) {
+				// https://js.cytoscape.org/#edges.connectedNodes
+				//console.log("CURRENTNODE: ", currentnode)
+				//console.log("EDGES: ", currentnode.connectedEdges(`node[id=${workflow.triggers[sourcenode].id}]`))
+				//console.log("EDGES2: ", currentnode.connectedEdges())
+				//currentnode.connectedEdges().animate({style: {lineColor: "red"}})
+				//console.log("OUTGOERS: ", currentnode.outgoers())
+
+				//console.log("LEN2: ", currentnode.edges().length)
+				//if (currentnode.connectedNodes().length > 0) {
+				//	alert.error("Can't have multiple branches from this trigger")
+				//	event.target.remove()
+				//} 
+			} 
+		}
+
+
 		//console.log(workflow.branches)
 
 		// Check if: 
@@ -1407,7 +2349,7 @@ const AngularWorkflow = (props) => {
 				found = true
 				break
 			} else if (edge.target === workflow.start) {
-				var targetnode = workflow.triggers.findIndex(data => data.id === edge.source)
+				targetnode = workflow.triggers.findIndex(data => data.id === edge.source)
 				if (targetnode === -1) {
 					alert.error("Can't make arrow to starting node")
 					event.target.remove()
@@ -1428,10 +2370,14 @@ const AngularWorkflow = (props) => {
 				// 	break
 				// }
 			} else {
+				//console.log("INSIDE LAST CHECK: ", edge)
+
 				// Find the targetnode and check if its a trigger 
 				// FIXME - do this for both actions and other types?
+				/*
 				targetnode = workflow.triggers.findIndex(data => data.id === edge.target)
 				if (targetnode !== -1) {
+					console.log("TARGETNODE: ", targetnode)
 					if (workflow.triggers[targetnode].app_name === "User Input" || workflow.triggers[targetnode].app_name === "Shuffle Workflow") {
 					} else {
 						alert.error("Can't have triggers as target of branch")
@@ -1440,7 +2386,23 @@ const AngularWorkflow = (props) => {
 						break
 					}
 				} 
+				*/
+
+				
 			}
+		}
+
+
+		// 1. Guess what the next node's action should be
+		// 2. Get result from previous nodes (if any)
+		// 3. TRY to automatically map them in based on synonyms
+		const newsource = cy.getElementById(edge.source)
+		const newdst = cy.getElementById(edge.target)
+		if (newsource !== undefined && newsource !== null && newdst !== undefined && newdst !== null) {
+			//const srcdata = newsource.data()
+			//console.log("EDGE: ", edge)
+			const dstdata = RunAutocompleter(newdst.data())
+			console.log("DST: ", dstdata)
 		}
 
 		var newbranch = { 
@@ -1449,6 +2411,7 @@ const AngularWorkflow = (props) => {
 			"id_": edge.id,
 			"id": edge.id,
 			"hasErrors": false,
+			"decorator": false,
 		}
 
 		if (!found) {
@@ -1457,16 +2420,29 @@ const AngularWorkflow = (props) => {
 			workflow.branches.push(newbranch)
 			setWorkflow(workflow)
 		}
+
+		history.push({
+			"type": "edge",
+			"action": "added",
+			"data": edge,
+		})
+		setHistory(history)
+		setHistoryIndex(history.length)
 	}
 
 	const onNodeAdded = (event) => {
-		setLastSaved(false)
 		const node = event.target
+		const nodedata = event.target.data()
+		if (nodedata.finished === false || (nodedata.id !== undefined && nodedata.is_valid === undefined)) {
+			console.log("RETURNING (NOT ADDING) NODE ADD FOR: ", nodedata)
+			return
+		}
 
+		//console.log("IS IT ADDED TO THE WORKFLOW?: ", nodedata)
 		if (node.isNode() && cy.nodes().size() === 1) {
 			//setStartNode(node.data('id'))
 			workflow.start = node.data('id')
-			setWorkflow(workflow)
+			nodedata.isStartNode = true
 		} else {
 			if (workflow.actions === null) {
 				return
@@ -1480,9 +2456,152 @@ const AngularWorkflow = (props) => {
 					action.isStartNode = false
 				}
 			}
+		}
+
+		if (nodedata.type === "ACTION") {
+			if (workflow.actions.length === 1 && workflow.actions[0].id === workflow.start) {
+				const newEdgeUuid = uuid.v4()
+				const newcybranch = { 
+					"source": workflow.start,
+					"target": nodedata.id,
+					"_id": newEdgeUuid,
+					"id": newEdgeUuid,
+					"hasErrors": false,
+				}
+
+				const edgeToBeAdded = {
+					group: "edges",
+					data: newcybranch,
+				}
+
+				console.log("SHOULD STITCH WITH STARTNODE")
+				cy.add(edgeToBeAdded)
+			}
+
+			if (nodedata.app_name === "Shuffle Tools") {
+				const iconInfo = GetIconInfo(nodedata)
+				const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
+				const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
+				nodedata.large_image = svgpin_Url
+				nodedata.fillGradient = iconInfo.fillGradient
+				nodedata.fillstyle = "solid"
+				if (nodedata.fillGradient !== undefined && nodedata.fillGradient !== null && nodedata.fillGradient.length > 0) {
+					nodedata.fillstyle = 'linear-gradient'
+				} else {
+					nodedata.iconBackground = iconInfo.iconBackgroundColor
+				}
+			}
+
+			if (workflow.actions === undefined || workflow.actions === null) {
+				workflow.actions = [nodedata]
+			} else {
+				workflow.actions.push(nodedata)
+			}
+
+			setWorkflow(workflow)
+		} else if (nodedata.type === "TRIGGER") {
+			if (workflow.triggers === undefined) {
+				workflow.triggers = [nodedata]
+			} else {
+				workflow.triggers.push(nodedata)
+			}
+
+			const newEdgeUuid = uuid.v4()
+			const newcybranch = { 
+				"source": nodedata.id,
+				"target": workflow.start,
+				"source_id": nodedata.id,
+				"destination_id": workflow.start,
+				"_id": newEdgeUuid,
+				"id": newEdgeUuid,
+				"hasErrors": false,
+				"decorator": false,
+			}
+
+			const edgeToBeAdded = {
+				group: "edges",
+				data: newcybranch,
+			}
+
+			if (nodedata.name !== "User Input" && nodedata.name !== "Shuffle Workflow") {
+				//workflow.branches.push(newbranch)
+				if (workflow.actions !== undefined && workflow.actions !== null && workflow.actions.length > 0) {
+					cy.add(edgeToBeAdded)
+				}
+			}
+
+			//if (data.trigger_type === "WEBHOOK") {
+			//	newWebhook(newAppData)
+			//	saveWorkflow(workflow)
+			//}
 
 			setWorkflow(workflow)
 		}
+
+
+		if (nodedata.app_name !== undefined) {
+			history.push({
+				"type": "node",
+				"action": "added",
+				"data": nodedata,
+			})
+			setHistory(history)
+			setHistoryIndex(history.length)
+		}
+
+		//if (nodedata.app_name !== undefined && ((
+		//	nodedata.app_name !== "Shuffle Tools" &&
+		//	nodedata.app_name !== "Testing" &&
+		//	nodedata.app_name !== "Shuffle Workflow" &&
+		//	nodedata.app_name !== "User Input" &&
+		//	nodedata.app_name !== "Webhook" &&
+		//	nodedata.app_name !== "Schedule" &&
+		//	nodedata.app_name !== "Email") || nodedata.isStartNode) 
+		//) {
+		//	const allNodes = cy.nodes().jsons()
+		//	var found = false
+		//	for (var key in allNodes) {
+		//		const currentNode = allNodes[key]
+		//		if (currentNode.data.attachedTo === nodedata.id && currentNode.data.isDescriptor) {
+		//			found = true 
+		//			console.log("FOUND THE NODE!")
+		//			break
+		//		}
+		//	}
+
+		//	// Readding the icon after moving the node
+		//	if (!found) {
+		//		console.log("Node wasn't found")
+		//		const iconInfo = GetIconInfo(nodedata)
+		//		const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
+		//		const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
+
+		//		const offset = nodedata.isStartNode ? 36 : 44
+		//		const decoratorNode = {
+		//			position: {
+		//				x: event.target.position().x+offset,
+		//				y: event.target.position().y+offset,
+		//			},
+		//			locked: true,
+		//			data: {
+		//				"isDescriptor": true,
+		//				"isValid": true,
+		//				"is_valid": true,
+		//				"label": "",
+		//				"image": svgpin_Url,
+		//				"imageColor": iconInfo.iconBackgroundColor,
+		//				"attachedTo": nodedata.id,
+		//			},
+		//		}
+
+		//		cy.add(decoratorNode)
+		//	} else {
+		//		console.log("Node already exists - don't add descriptor node")
+		//	}
+		//} else {
+		//	//console.log("Shouldnt re-add info? ")
+		//}
+		
 	}
 
 	const onEdgeRemoved = (event) => {
@@ -1491,6 +2610,7 @@ const AngularWorkflow = (props) => {
 
 		workflow.branches = workflow.branches.filter(a => a.id !== edge.data().id)
 		setWorkflow(workflow)
+		event.target.remove()
 
 		// trigger as source check
 		const indexcheck = workflow.triggers.findIndex(data => edge.data()["source"] === data.id)
@@ -1502,33 +2622,80 @@ const AngularWorkflow = (props) => {
 			//	data: newcybranch,
 			//}
 		}
+
+		if (edge.data().source !== undefined) {
+			history.push({
+				"type": "edge",
+				"action": "removed",
+				"data": edge.data().source,
+			})
+			setHistory(history)
+			setHistoryIndex(history.length)
+		}
 	}
 
 	const onNodeRemoved = (event) => {
 		const node = event.target
 		const data = node.data()
-		setLastSaved(false)
 
-		//var currentnode = cy.getElementById(data.id)
-		//if (currentnode.length === 0) {
-		//}
-		if (workflow.start === data.id && workflow.actions.length > 1) {
-			// FIXME - should check branches connected to startnode, as picking random
-			// might just be confusing
-			cy.nodes().some(function( ele ) {
-				if (ele.id() !== workflow.start && ele.data()["label"] !== undefined) {
-					//alert.success("Changed startnode to "+ele.data()["label"])
-					ele.data("isStartNode", true)
-					workflow.start = ele.id()
-					//throw BreakException
-					return false 
-				}
-			})
+		if (data.finished === false) {
+			return
 		}
 
+		//setLastSaved(false)
 
 		workflow.actions = workflow.actions.filter(a => a.id !== data.id)
 		workflow.triggers = workflow.triggers.filter(a => a.id !== data.id)
+		if (workflow.start === data.id && workflow.actions.length > 0) {
+			// FIXME - should check branches connected to startnode, as picking random
+			// is just confusing
+			if (workflow.actions[0].id !== data.id) {
+				const ele = cy.getElementById(workflow.actions[0].id)
+				if (ele !== undefined && ele !== null) {
+					ele.data("isStartNode", true)
+					workflow.start = ele.id()
+				}
+			} else {
+				if (workflow.actions.length > 1) {
+					const ele = cy.getElementById(workflow.actions[1].id)
+					if (ele !== undefined && ele !== null) {
+						ele.data("isStartNode", true)
+						workflow.start = ele.id()
+					}
+				}
+			}
+
+			//cy.nodes().some(function( ele ) {
+			//	if (ele.id() !== workflow.start && ele.data()["label"] !== undefined) {
+			//		//alert.success("Changed startnode to "+ele.data()["label"])
+			//		ele.data("isStartNode", true)
+			//		workflow.start = ele.id()
+			//		throw BreakException
+			//		return false 
+			//	}
+			//})
+		}
+
+		if (data.app_name !== undefined) {
+			//console.log("Trying to remove friendly nodes")
+			const allNodes = cy.nodes().jsons()
+			//console.log("NOT UNDEFINED IN HOVEROUT!", allNodes)
+			for (var key in allNodes) {
+				const currentNode = allNodes[key]
+				if (currentNode.data.attachedTo === data.id) {
+					cy.getElementById(currentNode.data.id).remove()
+				}
+			}
+
+			history.push({
+				"type": "node",
+				"action": "removed",
+				"data": data,
+			})
+			setHistory(history)
+			setHistoryIndex(history.length)
+		}
+
 
 		setWorkflow(workflow)
 		if (data.type === "TRIGGER") {
@@ -1544,6 +2711,9 @@ const AngularWorkflow = (props) => {
 	    switch( event.keyCode ) {
 	    case 27:
 					console.log("ESCAPE")
+					if (configureWorkflowModalOpen === true) {
+						setConfigureWorkflowModalOpen(false)
+					}
 	        break;
 			case 46:
 				//removeNode()		
@@ -1551,42 +2721,60 @@ const AngularWorkflow = (props) => {
 	      break;
 			case 38:
 				console.log("UP")
-	            break;
+	    	break;
 			case 37:
 				console.log("LEFT")
-	            break;
+	      break;
 			case 40:
 				console.log("DOWN")
-	            break;
+	      break;
 			case 39:
 				console.log("RIGHT")
-	            break;
+	      break;
 			case 90:
 				if (previouskey === 17) {
 					console.log("CTRL+Z")
+					//handleHistoryUndo() 
 				}
-	            break;
+
+	      break;
 			case 67:
 				if (previouskey === 17) {
 					console.log("CTRL+C")
+					const filteredelements = cy.filter(function(element, i){
+						return element.hasClass('selected')
+					})
+
+					for (var key in filteredelements) {
+					}
+
+					var copyText = document.getElementById("copy_element_shuffle")
+					if (copyText !== undefined && copyText !== null) {
+						const clipboard = navigator.clipboard
+						if (clipboard === undefined) {
+							alert.error("Can only copy over HTTPS (port 3443)")
+							return
+						}
+					}
+					console.log("FILTERED: ", filteredelements)
 				}
-	            break;
+	      break;
 			case 86:
 				if (previouskey === 17) {
 					console.log("CTRL+V")
 				}
-	            break;
+	      break;
 			case 88:
 				if (previouskey === 17) {
 					console.log("CTRL+V")
 				}
-	            break;
+	      break;
 			case 83:
 				if (previouskey === 17) {
 					event.preventDefault()
 					saveWorkflow()
 				}
-	            break;
+	      break;
 			case 70:
 				//if (previouskey === 17) {
 				//	event.preventDefault()
@@ -1690,7 +2878,7 @@ const AngularWorkflow = (props) => {
 	useEffect(() => {
 		if (firstrequest) {
 			setFirstrequest(false)
-			getWorkflow()
+			getWorkflow(props.match.params.key, {})
 			getApps()
 			getAppAuthentication()
 			getEnvironments()
@@ -1726,19 +2914,48 @@ const AngularWorkflow = (props) => {
 			//console.log("IN ESTABLISHED!")
 
 			setEstablished(true)
+			// Validate if the node is just a node lol
+			console.log("CY: ", cy)
+			//console.log("CY: ", cy.edgehandles())
+			//try {
 			cy.edgehandles({
-				handleNodes: (el) => el.isNode(),
+				handleNodes: (el) => el.isNode() && !el.data("isButton") && !el.data("isDescriptor"),
 				preview: false,
 				toggleOffOnLeave: false,
 				loopAllowed: function( node ){
 					return false;
 				},
 			})
+			//} catch (e) {
+			//	console.log("Error in edgehandles: ", e)
+			//}
 
 			cy.fit(null, 200)
 
-			cy.on('select', 'node', (e) => onNodeSelect(e, appAuthentication))
+			cy.on('boxselect', 'node', (e) => {
+				if (e.target.data("isButton") || e.target.data("isDescriptor")) {
+					e.target.unselect()
+				}
+
+				e.target.addClass("selected")
+			})
+
+			cy.on('boxstart', (e) => {
+				console.log("START")
+				cy.removeListener('select')
+				//onNodeSelect(e, appAuthentication)
+			})
+			cy.on('boxend', (e) => {
+				console.log("END")
+				cy.removeListener('select')
+				//onNodeSelect(e, appAuthentication)
+			})
+
+			cy.on('select', 'node', (e) => {
+				onNodeSelect(e, appAuthentication)
+			})
 			cy.on('select', 'edge', (e) => onEdgeSelect(e))
+
 			cy.on('unselect', (e) => onUnselect(e))
 
 			cy.on('add', 'node', (e) => onNodeAdded(e))
@@ -1752,7 +2969,46 @@ const AngularWorkflow = (props) => {
 			cy.on('mouseout', 'node', (e) => onNodeHoverOut(e))
 
 			// Handles dragging
-			cy.on('drag', 'node', (e) => onNodeDrag(e))
+			cy.on('drag', 'node', (e) => onNodeDrag(e, selectedAction))
+			cy.on('free', 'node', (e) => onNodeDragStop(e, selectedAction))
+
+			cy.on('cxttap', "node", (e) => onCtxTap(e))
+
+			//let popper2 = cy.popper({
+			//  content: () => {
+			//    let div = document.createElement('div');
+			//
+			//    div.innerHTML = 'Popper content'
+			//
+			//    document.body.appendChild(div)
+			//
+			//    return div
+			//  },
+			//  renderedPosition: () => ({ x: 100, y: 200 }),
+			//  popper: {} // my popper options here
+			//});
+
+			//let popper1 = cy.nodes()[0].popper({
+			//  content: () => {
+			//    let div = document.createElement('div')
+			//
+			//    div.innerHTML = 'Popper content'
+			//    document.body.appendChild(div)
+			//
+			//    return div
+			//  },
+			//  popper: {} // my popper options here
+			//})
+			//let update = () => {
+			//  popper.update()
+			//}
+
+			//let node = cy.nodes().first()
+			//node.on('position', update)
+
+
+			
+
 
 			//cy.on('mouseover', 'node', () => $(targetElement).addClass('mouseover'));
 
@@ -1761,8 +3017,6 @@ const AngularWorkflow = (props) => {
 			//cy.on('cxtdragover', 'node', (e) => edgeHandler.preview(e.target))
 			//cy.on('cxtdragout', 'node', (e) => edgeHandler.unpreview(e.target))
 
-			// RIGHT HERE..?
-			// This is wrong sometimes.. I'm mad
 			document.title = "Workflow - "+workflow.name
 			registerKeys()
 			//setStartNode(workflow.start)
@@ -1772,25 +3026,165 @@ const AngularWorkflow = (props) => {
 		}
 	})
 
+	//}, [selectedAction])
+
 	var previousnodecolor = ""
 	//var previousedgecolor = ""
 	const animationDuration = 150
 	const onNodeHoverOut = (event) => {
-		event.target.animate({
-			style: {
-				"border-width": "1px",
+		const nodedata = event.target.data()
+		if (nodedata.app_name !== undefined) {
+			const allNodes = cy.nodes().jsons()
+			for (var key in allNodes) {
+				const currentNode = allNodes[key]
+				if (currentNode.data.isButton && currentNode.data.attachedTo !== nodedata.id) {
+					cy.getElementById(currentNode.data.id).remove()
+				}
 			}
+		}
+
+		var parsedStyle = {
+			"border-width": "1px",
+			'font-size': '18px',
+		}
+
+		if ((nodedata.app_name === "Testing" || nodedata.app_name === "Shuffle Tools") && !nodedata.isStartNode) {
+			parsedStyle = {
+				"border-width": "1px",
+				'font-size': '0px',
+			}
+		}
+
+		event.target.animate({
+			style: parsedStyle,
 		}, {
 			duration: animationDuration,	
 		})
 	}
 
+	const buttonColor = "rgba(255,255,255,0.9)"
+	const buttonBackgroundColor = "#1f2023"
+	const addCopyButton = (event) => {
+		var parentNode = cy.$('#' + event.target.data("id"));
+		if (parentNode.data('isButton') || parentNode.data('buttonId'))
+			return
+
+		//parentNode.lock()
+		const px = parentNode.position('x') - 65
+		const py = parentNode.position('y') - 25
+		const circleId = newNodeId = uuid.v4()
+
+		parentNode.data('circleId', circleId)
+
+		const iconInfo = {
+			"icon": "M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm-1 4l6 6v10c0 1.1-.9 2-2 2H7.99C6.89 23 6 22.1 6 21l.01-14c0-1.1.89-2 1.99-2h7zm-1 7h5.5L14 6.5V12z",
+			"iconColor": buttonColor,
+			"iconBackgroundColor": buttonBackgroundColor,
+		}
+
+		const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
+		const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
+
+		cy.add({
+				group: 'nodes',
+				data: { 
+					weight: 30, 
+					id: circleId, 
+					name: "TEEEXT", 
+					isButton: true, 
+					buttonType: "copy",
+					attachedTo: event.target.data("id"),
+					icon: svgpin_Url,
+					iconBackground: iconInfo.iconBackgroundColor,
+					is_valid: true,
+				},
+				position: { x: px, y: py },
+				locked: true
+		})
+		//.unselectify()
+	}
+
+	const addDeleteButton = (event) => {
+		var parentNode = cy.$('#' + event.target.data("id"));
+		if (parentNode.data('isButton') || parentNode.data('buttonId'))
+			return
+
+		//parentNode.lock()
+		const px = parentNode.position('x') - 65
+		const py = parentNode.position('y') + 25
+		const circleId = newNodeId = uuid.v4()
+
+		parentNode.data('circleId', circleId)
+
+		const iconInfo = {
+			"icon": "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z",
+			"iconColor": buttonColor,
+			"iconBackgroundColor": buttonBackgroundColor,
+		}
+		const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
+		const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
+
+		cy.add({
+				group: 'nodes',
+				data: { 
+					weight: 30, 
+					id: circleId, 
+					name: "TEEEXT", 
+					isButton: true, 
+					buttonType: "delete",
+					attachedTo: event.target.data("id"),
+					icon: svgpin_Url,
+					iconBackground: iconInfo.iconBackgroundColor,
+					is_valid: true,
+				},
+				position: { x: px, y: py },
+				locked: true
+		})
+		//.unselectify()
+	}
+
 	const onNodeHover = (event) => {
-		event.target.animate({
-			style: {
-				"border-width": "7px",
-				"border-opacity": ".7",
+		//console.log("TAR: ", event.target)
+		const nodedata = event.target.data()
+		if (nodedata.finished === false) {
+			return
+		}
+
+		var parentNode = cy.$('#' + event.target.data("id"));
+		if (parentNode.data('isButton') || parentNode.data('buttonId'))
+			return
+
+		if (nodedata.app_name !== undefined) { 
+			const allNodes = cy.nodes().jsons()
+
+			var found = false
+			for (var key in allNodes) {
+				const currentNode = allNodes[key]
+				if (currentNode.data.isButton && currentNode.data.attachedTo !== nodedata.id) {
+					cy.getElementById(currentNode.data.id).remove()
+				} 
+
+				if (currentNode.data.isButton && currentNode.data.attachedTo === nodedata.id) {
+					found = true
+				}
 			}
+
+			if (!found) {
+				addDeleteButton(event)
+				addCopyButton(event) 
+			}
+		}
+
+
+		const parsedStyle = {
+			"border-width": "7px",
+			"border-opacity": ".7",
+			'font-size': '25px',
+			'color': 'white',
+		}
+
+		event.target.animate({
+			style: parsedStyle
 		}, {
 			duration: animationDuration,	
 		})
@@ -1799,6 +3193,16 @@ const AngularWorkflow = (props) => {
 	}
 
 	const onEdgeHoverOut = (event) => {
+		if (event === null || event === undefined) {
+			event.target.removeStyle()
+			return 
+		}
+
+		const edgeData = event.target.data()
+		if (edgeData.decorator === true) {
+			return
+		}
+
 		event.target.removeStyle()
 	}
 
@@ -1808,13 +3212,18 @@ const AngularWorkflow = (props) => {
 			return 
 		}
 
+		const edgeData = event.target.data()
+		if (edgeData.decorator === true) {
+			return
+		}
+
 		const sourcecolor = cy.getElementById(event.target.data("source")).style("border-color")
 		const targetcolor = cy.getElementById(event.target.data("target")).style("border-color")
 		if (sourcecolor !== null && sourcecolor !== undefined && targetcolor !== null && targetcolor !== undefined) {
 			event.target.animate({
 				style: {
-					"line-fill": "linear-gradient",
 					'target-arrow-color': targetcolor,
+					"line-fill": "linear-gradient",
 					"line-gradient-stop-colors": [sourcecolor, targetcolor],
 					"line-gradient-stop-positions": [0, 1],
 				},
@@ -1823,10 +3232,28 @@ const AngularWorkflow = (props) => {
 		}
 	}
 
-
 	const setupGraph = () => {
 		const actions = workflow.actions.map(action => {
 			const node = {}
+
+			if (!action.isStartNode && action.app_name === "Shuffle Tools") {
+				const iconInfo = GetIconInfo(action)
+				const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
+				const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
+				action.large_image = svgpin_Url
+				action.fillGradient = iconInfo.fillGradient
+				action.fillstyle = "solid"
+				if (action.fillGradient !== undefined && action.fillGradient !== null && action.fillGradient.length > 0) {
+					action.fillstyle = 'linear-gradient'
+					//console.log("GRADIENT!: ", action)
+					//action.fillstyle = 
+					//'background-fill': 'data(fillstyle)',
+				} else {
+					action.iconBackground = iconInfo.iconBackgroundColor
+				}
+				//console.log("FOUND NODE INFO: ", action)
+			}
+
 			node.position = action.position
 			node.data = action
 
@@ -1842,9 +3269,41 @@ const AngularWorkflow = (props) => {
 
 			node.data.example = example
 
-			//node.data.is_valid = false
-
 			return node;
+		})
+
+		const decoratorNodes = workflow.actions.map(action => {
+			if (!action.isStartNode) {
+				if (action.app_name === "Testing") {
+					return null
+				} else if (action.app_name === "Shuffle Tools") {
+					return null
+				}
+			}
+
+			const iconInfo = GetIconInfo(action)
+			const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
+			const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
+
+			const offset = action.isStartNode ? 36 : 44
+			const decoratorNode = {
+				position: {
+					x: action.position.x+offset,
+					y: action.position.y+offset,
+				},
+				locked: true,
+				data: {
+					"isDescriptor": true,
+					"isValid": true,
+					"is_valid": true,
+					"label": "",
+					"image": svgpin_Url,
+					"imageColor": iconInfo.iconBackgroundColor,
+					"attachedTo": action.id,
+				},
+			}
+			return decoratorNode
+			return null
 		})
 
 		const triggers = workflow.triggers.map(trigger => {
@@ -1859,8 +3318,10 @@ const AngularWorkflow = (props) => {
 		})
 
 		// FIXME - tmp branch update
-		var insertedNodes = [].concat(actions, triggers)
-		const edges = workflow.branches.map((branch, index) => {
+		var insertedNodes = [].concat(actions, triggers, decoratorNodes)
+		insertedNodes = insertedNodes.filter(node => node !== null)
+
+		var edges = workflow.branches.map((branch, index) => {
 			//workflow.branches[index].conditions = [{
 
 			const edge = { };
@@ -1883,8 +3344,9 @@ const AngularWorkflow = (props) => {
 				target: branch.destination_id,
 				label: label,
 				conditions: conditions,
-				hasErrors: branch.has_errors
-			};
+				hasErrors: branch.has_errors,
+				decorator: false,
+			}
 
 			// This is an attempt at prettier edges. The numbers are weird to work with.
 			/*
@@ -1913,12 +3375,44 @@ const AngularWorkflow = (props) => {
 			return edge;
 		})
 
+		if (workflow.visual_branches !== undefined && workflow.visual_branches !== null && workflow.visual_branches.length > 0) {
+			const visualedges = workflow.visual_branches.map((branch, index) => {
+				const edge = { };
+
+				if (workflow.branches[index] === undefined) {
+					return {}
+				}
+
+				var conditions = workflow.branches[index].conditions
+				if (conditions === undefined || conditions === null) {
+					conditions = []
+				}
+
+				const label = "Subflow"
+				edge.data = {
+					id: branch.id,
+					_id: branch.id,
+					source: branch.source_id,
+					target: branch.destination_id,
+					label: label,
+					decorator: true,
+				}
+
+				return edge;
+			})
+
+			edges = edges.concat(visualedges)
+		}
+
 		setWorkflow(workflow)
 
 		// Verifies if a branch is valid and skips others
 		var newedges = []
 		for (var key in edges) {
 			var item = edges[key]
+			if (item.data === undefined) {
+				continue
+			}
 
 			const sourcecheck = insertedNodes.find(data => data.data.id === item.data.source)
 			const destcheck = insertedNodes.find(data => data.data.id === item.data.target)
@@ -1960,7 +3454,12 @@ const AngularWorkflow = (props) => {
 
 		} 
 
-		selectedNode.remove()
+		if (selectedNode.data().decorator === true) {
+			alert.info("This edge can't be deleted.")
+		} else { 
+			selectedNode.remove()
+		}
+
 		setSelectedTrigger({})
 		setSelectedTriggerIndex({})
 	}
@@ -1985,7 +3484,9 @@ const AngularWorkflow = (props) => {
 		.then((responseJson) => {
 			// No matter what, it's being stopped.
 			if (!responseJson.success) {
-				alert.WARNING("Failed to stop schedule: " + responseJson.reason)
+				if (responseJson.reason !== undefined) {
+					alert.error("Failed to stop schedule: " + responseJson.reason)
+				}
 			} else {
 				alert.success("Successfully stopped schedule")
 			}
@@ -2067,7 +3568,7 @@ const AngularWorkflow = (props) => {
 
 
 	const paperAppStyle = {
-		borderRadius: borderRadius,
+		borderRadius: theme.palette.borderRadius,
 		minHeight: 100,
 		maxHeight: 100,
 		minWidth: "100%",
@@ -2080,7 +3581,7 @@ const AngularWorkflow = (props) => {
 	}
 
 	const paperVariableStyle = {
-		borderRadius: borderRadius,
+		borderRadius: theme.palette.borderRadius,
 		minHeight: 50,
 		maxHeight: 50,
 		minWidth: "100%",
@@ -2102,6 +3603,7 @@ const AngularWorkflow = (props) => {
 		}
 
 		const deleteVariable = (variableName) => {
+			console.log("Delete:" ,variableName)
 			workflow.workflow_variables = workflow.workflow_variables.filter(data => data.name !== variableName)
 			setWorkflow(workflow)
 		}
@@ -2125,9 +3627,9 @@ const AngularWorkflow = (props) => {
 				<div style={variableScrollStyle}>
 						What are <a rel="norefferer" target="_blank" href="https://shuffler.io/docs/workflows#workflow_variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>WORKFLOW variables?</a>
 					{workflow.workflow_variables === null ? 
-					null : workflow.workflow_variables.map(variable=> {
+					null : workflow.workflow_variables.map((variable, index) => {
 						return (
-							<div key={variable.name} >
+							<div key={index} >
 								<Paper square style={paperVariableStyle} onClick={() => {
 								}}>
 									<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: "2px", backgroundColor: yellow, marginRight: "5px"}} />
@@ -2163,7 +3665,7 @@ const AngularWorkflow = (props) => {
 												  setOpen(false)
 												  setAnchorEl(null)
 											  }}
-      										>
+      								>
 
 											<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
 												setOpen(false)
@@ -2390,7 +3892,7 @@ const AngularWorkflow = (props) => {
 			"description": "Add your email provider",
 			"trigger_type": "EMAIL",
 			"errors": null,
-			"is_valid": (cloudSyncEnabled && !isCloud) ? true : false,
+			"is_valid": cloudSyncEnabled || isCloud ? true : false,
 			"label": "Email",
 			"environment": "cloud",
 			"large_image": 'data:image/png;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/4QAYRXhpZgAASUkqAAgAAAAAAAAAAAAAAP/hAytodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNiAoV2luZG93cykiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6Nzg4QTJBMjVEMDI1MTFFN0EwQUVDODc5QjYyQkFCMUQiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6Nzg4QTJBMjZEMDI1MTFFN0EwQUVDODc5QjYyQkFCMUQiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDo3ODhBMkEyM0QwMjUxMUU3QTBBRUM4NzlCNjJCQUIxRCIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDo3ODhBMkEyNEQwMjUxMUU3QTBBRUM4NzlCNjJCQUIxRCIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/Pv/bAEMAAwICAgICAwICAgMDAwMEBgQEBAQECAYGBQYJCAoKCQgJCQoMDwwKCw4LCQkNEQ0ODxAQERAKDBITEhATDxAQEP/AAAsIAGQAZAEBEQD/xAAeAAABAwUBAQAAAAAAAAAAAAAAAQgJAgQFBwoGA//EAEoQAAECBAMEBwMDEQgDAAAAAAECAwAEBREGBxIIITFRCRMiMkFSYRRicSNCQxUWGBk2U1dYc3WBlJWzwdLTJDNjZXKDkeEmgqH/2gAIAQEAAD8Ak8JKipSlBwuDSpSeDw8qeRguQQrUAQNAV4JH3s+sA7OnT8n1fcv9Bfzc7wWAAToIAOsJ8Uq++H0gI1XSUlYWdSkji6fMnkBAdS9SidesWUpI3OjyjkYXtXCgbEDSFW3JT5D6+sIOzp0/J9X3NX0F/NzvBYABOggA6wnxSr74fSAjVdJSVhZ1KSOLp8yeQEBJUSVKCysaVKHB0eVPIwXIIVqAIGgK8Ej72fWFS640kNtzjcukcGli6k/GENwVagAQO0EcEjmj1g33AATe1wD3SnmffgG/Tp337mv535T+EaB2k9tzInZilVyuMq+up4iUjWxh+mFLs8s23dbv0stnmsgnwBiNPOHpddozHExMSmWsrSsA0tZIaMs0JudCfV50FKf/AFQPjDYsT7S+0LjJ8zGJc68aTqiSrSqtPoQD6ISoJH6BGFkM5c3qW8Jim5qYvlXArUFNVuZSb89y43Tlv0ju15ltMtKZzUmsRSbZGuSxC0mebcHIrV8r/wALEP02c+l2ywzAmZXDGeND+saqvEIRVWXFP0x1Z3AOE9thPx1JHioQ/un1Kn1eQZqtLn2ZuSmkJdamZVwOIWlQuktKTuUg8xFybgnUACB2gjgkc0e9BvuAAm9rgHulPM+/CpDik3bal1p8FPd8/GEtp7Ojq+r36OPUe96wWv2dF79vR5/8T/qI/ukM6RMZMGcyWyUqDMzjZ5vRWKwmy26UlQ3IQOBmLHx3IFibncIeqvWKtiCqTVbrtSmahUJ11T0zNTLqnHXnFG5UpSiSSeZi0ggggh2GxRt8Y92X69K4cr83N1zLuadCZumLXrcp4Ue0/KXPZPiW+6r0O+JxsF4zwvmFhSl42wXV5eo0Sqy6ZySmWFakJbUO/wDHiCk7wQQd4jN2v2dF79vR5v8AE/6g6rrflPYfar/S69Or9EIAAE6QoAHshfFJ5r9Ibpt3bTrOzBkbPYhpb7f11V5aqZh9le8iZUm65i3i20ntcirQPGIA6nU6jWqlNVirzr05PTzy5iZmHllTjrqyVKWoneSSSSYtoIIIIIIkI6J/axmsA4+Rs84yqZ+tvFb5VQ1vL7EjVCNyN/Bt4C1vOEn5xiYndYghVr3IHeKuY9yKVJbJu63MrV4qY7h+EVA6rEKKwvclSuLp8quQiDnpWM5ZnMrafn8HS04pykZfy6KMw2D2BNEByZUPXWQj/aEM0h3uwvk5PYmoeLM4HcnqHmth/CU1KytdwrNy5M+uUdQtZmZBYIu83oN2z3wbcbWk7ym2Zej6zuwXJ49y5yXwbUqXNgpUPZlpelnh32XmyrU24k7ik7/0WMey+wI2OPxesJfqyv5oPsCNjj8XrCX6sr+aD7AjY4/F6wl+rq/mhs2b2SGzXjPGc3s9bKuzngiq4zZGjEWJ3pRTlKwkyrcVOKCrOzVr6GRex73AiIe65TvqRWqhSet632Kadl9enTq0LKb28L24R86ZUp6jVKUrFMmVy85IvtzMu8g2U24hQUlQPMEAx0h7O+abGdWR+DM0mnAF16lMuzRTxamgNDzQHIOJWI2IpxDZ0Lm3ZdQ4tti6U/CEdeDaHJhxYWAklahwdAF9KeRjmXzRxJMYxzLxXiyacUt2sVqdnlFRuflHlq/jHmIlv6D37is1T/mlM/cvQ5zNnZ7xtl/jWc2htlFUtIYrfs7iXCLy+rpeLGk7zcDczN2vpdFrnvcSTsrIPaHwNtBYcmKlhsv02t0h4ydfw7UE9XUKPOJJC2Xmzv3KBAWNyrbvEDaDjjbTa3XVpQhAKlKUbBIHEk+ENLxdnDj/AGr8T1LJ7Zgra6NgymPmSxhmU0LhB+kkaV4OPkGynu6gG4PAlwGUuT2AMjsDy2BMuqGin06XBcdWTrfm3j3333D2nHFHeVH/AOCwjmnxr92Ve/Oc1+9VGGibDogMVP1vZWmKI+4b4dxJOybS1G4S06ht7QPipxf/ADD4kurbGhE21LpHBtwXUn4xbVNpb9OnGAAFrl3EkI4JukgFHrHMFWpdyUrE/KvAhxmZdbUDxBCyDFnEuHQej/wjNU/5rTP3L0PQ2hs1cR4f+pOUWU/VTGZeOtbFK1jW3SZNO6YqkwPBtlJ7IPfcKUi++NdYh2H5LB1CoWLtnXFD2Fs1sLS6rV+ZUXG8SqWouPtVVP0yXnCo6+8gqFtwAGAbkdpzbFcTgXNLB1Qyay9pBEri1iXm9VQxPNo/vJeVdT/dyJ3XcG9YNgTvt6TFODKZsY4nlc2MsaEmRypn25em45oMi2eqpiUANsVllA8gsiYtvUiyzcpJhz8rOylSkGqjITTUzKzTKXmHmlhSHG1C6VJI3EEEEGOXnGv3ZV785zX71UYaJjehfk3mdn/GM4oHRM4sWEBfcsiUZ1Eeu+JBUhxSbttS60+Cnu+fjCAaDbR1fV9rRx6n3vW8c5+2Bl1MZV7TGYmDXmlIaZrkxNyhIsFy0wrr2lD00OJjT0SfdE5mphvJnIrOXHmJutdalatSmZSSlxqmKhNuNOpYlWU8VOOLISAOdzuBiQLZ5yrxJQTVs382Q0/mVjrQ9VAk6m6RJp3y9Llz4NtA9ojvuFSjfdG54N8fGekZOpyUxTajKtTMrNNLYfYdSFIdbULKSpJ3EEEgiG4ZXz07s0Zis7OuJpp1zAmJFvP5cVSYWSJVYut2hurPzkC62Ce83dHFFogGxr92Ve/Oc1+9VGGiezo0MupnLzY/wezPy5bm8RqmMROsqFiUvr+SWf8AaQ2besOl6rrflPYfar/S69Or9EIAAE6QoAHshfFJ5r9Ii76Y7Z4mJgUHaSw7IqWhlCKHiLQN6RcmWmP9Nypsn8mIizj3GWGdOY2T9Xka1gSuJlH6bO/VKWbflm5hlubDam0v9U4lSC4lClBKiLp1G1iY3v8AbSdtr8LTP7Ekf6UL9tJ22vwss/sOR/pQfbSdtr8LLP7Dkf6UH20nba/C0z+w5H+lHmMxOkB2qc1MOKwrjjMNmfkPaGZxrTSZRl1iYZWFtPNOobC21pULhSSDx8DDe5uamJ6aenZt1Tr8w4p11auKlqNyT8SY2ZszZH1raIzqw1ldSG1hqozSXKlMAHTKyLZCn3VHwsi4HvKSPGOjSj0im0CjyVBpMqJen06XalZZhG7Q22kJQE+4AAIulJbJu63MrV4qY7h+EVA6rEKKwvclSuLp8quQjB45wVhrMbB9YwNjGnIn6JW5VyQnWVjihYtoTysbEKHAgGOf7a72U8abKeZszhStMOzVAnVreoNXCfk5uXvuSojcHUAgLTz3jcRGi4IIIIIuqVSqnXKnK0ajSD89PzzyJeWlpdsrcecUbJQlI3kkkAAROd0eGxqjZiy7XiLF8sy5j/FjaFVEiyhJMDeiSB9D2lkbiqw4JEO58CrUQAdJV4pPkHu+sIpxDZ0Lm3ZdQ4tti6U/CFJKiVKUFle5Sk8HR5U8jBcghWoAgaArwSPIfe9Y8PnJkvl1nzgScy7zMoDVQpMyLtlXZekHfmvNucULHgR8DcEiIZtqro1s58gZucxFg6QmsbYJQVOonpFkqnJNrw9pYTcgAfSJuk8Tp4Qz9SSklKgQQbEHwgggjYeTOz9m7n/iFGHMq8Fz1YdCgJiZSjRKSiT8955XYQB6m58AYmN2LejtwJsyoYxri52XxVmC43unA3/ZpAEb0ygVvv4F09ojgEgm7wSSq5Kgsr3KUODo8qeRguQQrUAQNAV4JHkPvesKl1bY0Im2pdI4NuC6k/GENwVagAQO0EcEjmj1g33AATe1wD3SnmffgG/Tp337mv535T+EG4i4KiCbAnvE8j7kaHzf2Hdl/O1+YqONcraexU3jd6p0i8jNFfPU1ZLnxWlUNjxL0LOTs6+tzC+bWLKSkHUWpmXl5xKR4BJAbJjD0/oTcEoeH1Uz5rbzfe0sUZlolH+pTigFelo3Nlr0UuyZgSYZn6vQ6zjKaQQpr6uz3yBI462WQhNvRVxDscMYVwvgujMYfwfh+n0Wly/ZZlJCVQw2k8tCABp9YypsL6iQAe0U8Unkj3YDcE6gAQO0EcEjmj3oN9wAE3tcA90p5n34VIcUm7bUutPgp7vn4wOpS05MNtiyZdAW0PKo+MASkuIbIulbPXKHNfOEa+V9m6zf7Vq633rcIpSoqbQ6T2lvdQo80coVxRbRMLRuVLuBts+VJ4iKnEhtb6ECwl0BxseVR8YAlJcQ2RdK2euUOa+cI18r7N1m/wBq1db71uEUpUVNodJ7S3uoUeaOUK4otomFo3Kl3A22fKk8RFTiQ2t9CBYS6A42PKo+MASkuIbIulbPXKHNfOPtKSkvNy6JiYaC3F71KJO+P//Z',
@@ -2421,7 +3923,9 @@ const AngularWorkflow = (props) => {
 							<Draggable 
 								key={index}
 								onDrag={(e) => {handleTriggerDrag(e, trigger)}}
-								onStop={(e) => {handleDragStop(e)}}
+								onStop={(e) => {
+									handleDragStop(e)
+								}}
 								dragging={false}
 								position={{
 									x: 0,
@@ -2456,6 +3960,7 @@ const AngularWorkflow = (props) => {
 	}
 
 	var newNodeId = ""
+	var parsedApp = {}
 	const handleTriggerDrag = (e, data) => {
 		const cycontainer = cy.container()
 		// Chrome lol
@@ -2470,14 +3975,13 @@ const AngularWorkflow = (props) => {
 				currentnode[0].renderedPosition("x", e.pageX-cycontainer.offsetLeft)
 				currentnode[0].renderedPosition("y", e.pageY-cycontainer.offsetTop)
 			} else{
-				console.log(workflow)
 				if (workflow.start === "" || workflow.start === undefined) {
 					alert.error("Define a starting action first.")
 					return
 				}
 
 				if (data.is_valid === false) {
-					alert.error(data.name+" trigger isn't available yet")
+					alert.error(data.name+" requires hybrid version of Shuffle")
 					return
 				}
 
@@ -2489,7 +3993,6 @@ const AngularWorkflow = (props) => {
 					"y": e.pageY-cycontainer.offsetTop,
 				}
 
-				console.log(data)
 				const newAppData = {
 					app_name: data.name,
 					app_version: "1.0.0",
@@ -2500,6 +4003,7 @@ const AngularWorkflow = (props) => {
 					id_: newNodeId,
 					_id_: newNodeId,
 					id: newNodeId,
+					finished: false,
 					label: triggerLabel,
 					type: data.type,
 					is_valid: true,
@@ -2523,63 +4027,128 @@ const AngularWorkflow = (props) => {
 				}
 
 				cy.add(nodeToBeAdded)
-
-				if (workflow.triggers === undefined) {
-					workflow.triggers = [newAppData]
-				} else {
-					workflow.triggers.push(newAppData)
-				}
-
-				const newEdgeUuid = uuid.v4()
-				const newbranch = { 
-					"source_id": newNodeId,
-					"destination_id": workflow.start,
-					"id_": newEdgeUuid,
-					"id": newEdgeUuid,
-					"hasErrors": false,
-				}
-
-				const newcybranch = { 
-					"source": newNodeId,
-					"target": workflow.start,
-					"_id": newEdgeUuid,
-					"id": newEdgeUuid,
-					"hasErrors": false,
-				}
-
-				const edgeToBeAdded = {
-					group: "edges",
-					data: newcybranch,
-				}
-
-				if (data.name !== "User Input" && data.name !== "Shuffle Workflow") {
-					//workflow.branches.push(newbranch)
-					cy.add(edgeToBeAdded)
-				}
-
-				setWorkflow(workflow)
-				//if (data.trigger_type === "WEBHOOK") {
-				//	newWebhook(newAppData)
-				//	saveWorkflow(workflow)
-				//}
+				parsedApp = nodeToBeAdded
+				return
 			}
 		}
 	}
 
+	const handleDragStop = (e, app) => {
+		//console.log("STOP!: ", e)
+		//console.log("APP!: ", parsedApp)
+		//const onNodeAdded = (event) => {
+		//const node = event.target
+		//const nodedata = event.target.data()
+		var currentnode = cy.getElementById(newNodeId)
+		if (currentnode === undefined || currentnode === null || currentnode.length === 0) {
+			return
+		}
+
+		// Using remove & replace, as this triggers the function
+		// onNodeAdded() with this node after it's added 
+		
+		currentnode.remove()
+		parsedApp.data.finished = true
+		parsedApp.data.position = currentnode.renderedPosition()
+		parsedApp.position = currentnode.renderedPosition()
+		parsedApp.renderedPosition = currentnode.renderedPosition()
+
+		var newAppData = parsedApp.data
+		if (newAppData.type === "ACTION") {
+			// AUTHENTICATION
+			if (app.authentication.required) {
+				// Setup auth here :)
+				const authenticationOptions = []
+				var findAuthId = ""
+				if (newAppData.authentication_id !== null && newAppData.authentication_id !== undefined && newAppData.authentication_id.length > 0) {
+					findAuthId = newAppData.authentication_id
+				}
+
+				var tmpAuth = JSON.parse(JSON.stringify(appAuthentication))
+				for (var key in tmpAuth) {
+					var item = tmpAuth[key]
+
+					const newfields = {}
+					for (var filterkey in item.fields) {
+						newfields[item.fields[filterkey].key] = item.fields[filterkey].value
+					}
+
+					item.fields = newfields
+					if (item.app.name === app.name) {
+						authenticationOptions.push(item)
+						if (item.id === findAuthId) {
+							newAppData.selectedAuthentication = item
+						}
+					}
+				}
+
+				if (authenticationOptions !== undefined && authenticationOptions !== null && authenticationOptions.length > 0) {
+					for (var key in authenticationOptions) {
+						const option = authenticationOptions[key]
+						if (option.active) {
+							newAppData.selectedAuthentication = option 
+							newAppData.authentication_id = option.id
+							break
+						}
+					}
+				}
+
+				//newAppData.authentication = authenticationOptions
+				//if (newAppData.selectedAuthentication === null || newAppData.selectedAuthentication === undefined || newAppData.selectedAuthentication.length === "") {
+				//	newAppData.selectedAuthentication = {}
+				//} else {
+				//	console.log("CAN WE SELECT AUTH?: ", authenticationOptions)
+				//}
+				//
+				//
+
+				//console.log(parsedApp)			
+			} else {
+				newAppData.authentication = []
+				newAppData.authentication_id = ""
+				newAppData.selectedAuthentication = {}
+			}
+
+			parsedApp.data = newAppData
+			cy.add(parsedApp)
+		} else if (newAppData.type === "TRIGGER") {
+			cy.add(parsedApp)
+
+		}
+
+		newNodeId = ""
+		parsedApp = {}
+	}
+
+	const appScrollStyle = {
+		overflow: "scroll",
+		maxHeight: bodyHeight-appBarSize-55-50,
+		minHeight: bodyHeight-appBarSize-55-50,
+		marginTop: 1,
+		overflowY: "auto",
+		overflowX: "hidden",
+	}
+
 	const handleAppDrag = (e, app) => {
 		const cycontainer = cy.container()
+
 		// Chrome lol
 		//if (e.srcElement !== undefined && e.srcElement.localName === "canvas") {
 		if (e.pageX > cycontainer.offsetLeft && e.pageX < cycontainer.offsetLeft+cycontainer.offsetWidth && e.pageY > cycontainer.offsetTop && e.pageY < cycontainer.offsetTop+cycontainer.offsetHeight) {
 			if (newNodeId.length > 0) {
 				var currentnode = cy.getElementById(newNodeId)
-				if (currentnode.length === 0) {
+				if (currentnode === undefined || currentnode === null || currentnode.length === 0) {
 					return
 				}
 
 				currentnode[0].renderedPosition("x", e.pageX-cycontainer.offsetLeft)
 				currentnode[0].renderedPosition("y", e.pageY-cycontainer.offsetTop)
-			} else{
+			} else {
+				if (workflow.public) {
+					console.log("workflow is public - not adding")
+					return
+				}
+
 				if (app.actions === undefined || app.actions === null || app.actions.length === 0) {
 					alert.error("App "+app.name+" currently has no actions to perform. Please go to https://shuffler.io/apps to edit it.")
 					return
@@ -2598,23 +4167,14 @@ const AngularWorkflow = (props) => {
 					example = app.actions[0].returns.example
 				}
 				
-				var newAppPopup = false
-
-				/*
-				 FIXME: Add auth.
-						selectedAction.selectedAuthentication = e.target.value
-						selectedAction.authentication_id = e.target.value.id
-						setSelectedAction(selectedAction)
-						setUpdate(Math.random())
-				*/
-
+				const parsedEnvironments = environments === null || environments === [] ? "cloud" : environments[defaultEnvironmentIndex] === undefined ? "cloud" : environments[defaultEnvironmentIndex].Name
 				const newAppData = {
 					app_name: app.name,
 					app_version: app.app_version, 
 					app_id: app.id,
 					sharing: app.sharing,
 					private_id: app.private_id,	
-					environment: environments === null ? "cloud" : environments[defaultEnvironmentIndex].Name,
+					environment: parsedEnvironments,
 					errors: [],
 					id_: newNodeId,
 					_id_: newNodeId,
@@ -2631,146 +4191,35 @@ const AngularWorkflow = (props) => {
 					example: example,
 					category: app.categories !== null && app.categories !== undefined && app.categories.length > 0 ? app.categories[0] : "",
 					authentication_id: "",
+					finished: false,
 				}
 
 				// FIXME: overwrite category if the ACTION chosen has a different category
 
 				// const image = "url("+app.large_image+")"
-
 				// FIXME - find the cytoscape offset position 
 				// Can this be done with zoom calculations?
 				const nodeToBeAdded = {
 					group: "nodes",
 					data: newAppData,
 					renderedPosition: {
-						x: e.layerX,
-						y: e.layerY,
+						//x: e.layerX,
+						//y: e.layerY,
+						x: e.pageX-cycontainer.offsetLeft,
+						y: e.pageY-cycontainer.offsetTop,
 					}
 				}
 
+				parsedApp = nodeToBeAdded
 				cy.add(nodeToBeAdded)
-
-				if (workflow.actions === undefined || workflow.actions.length === 0) {
-					workflow.start = newAppData.id
-					workflow.actions = []
-					newAppData.isStartNode = true
-					//setStartNode(newAppData.id)
-				}
-
-				if (workflow.actions.length > 0 && elements.length === 0) {
-					const actions = workflow.actions.map(action => {
-						const node = {}
-						node.position = action.position
-						node.data = action
-
-						node.data._id = action["id"]
-						node.data.type = "ACTION"
-						node.isStartNode = action["id"] === workflow.start
-
-						return node
-					})
-
-					const tmpelements = [].concat(actions)
-					setElements(tmpelements)
-				}
-
-				if (workflow.actions.length === 1 && workflow.actions[0].id === workflow.start) {
-					const newEdgeUuid = uuid.v4()
-					const newcybranch = { 
-						"source": workflow.start,
-						"target": newNodeId,
-						"_id": newEdgeUuid,
-						"id": newEdgeUuid,
-						"hasErrors": false,
-					}
-
-					const edgeToBeAdded = {
-						group: "edges",
-						data: newcybranch,
-					}
-					console.log("SHOULD STITCH WITH STARTNODE")
-					cy.add(edgeToBeAdded)
-				}
-							
-				// AUTHENTICATION
-				if (app.authentication.required) {
-					// Setup auth here :)
-					const authenticationOptions = []
-					var findAuthId = ""
-					if (newAppData.authentication_id !== null && newAppData.authentication_id !== undefined && newAppData.authentication_id.length > 0) {
-						findAuthId = newAppData.authentication_id
-					}
-
-					var tmpAuth = JSON.parse(JSON.stringify(appAuthentication))
-					for (var key in tmpAuth) {
-						var item = tmpAuth[key]
-
-						const newfields = {}
-						for (var filterkey in item.fields) {
-							newfields[item.fields[filterkey].key] = item.fields[filterkey].value
-						}
-
-						item.fields = newfields
-						if (item.app.name === app.name) {
-							authenticationOptions.push(item)
-							if (item.id === findAuthId) {
-								newAppData.selectedAuthentication = item
-							}
-						}
-					}
-
-					if (authenticationOptions !== undefined && authenticationOptions !== null && authenticationOptions.length > 0) {
-						for (var key in authenticationOptions) {
-							const option = authenticationOptions[key]
-							if (option.active) {
-								newAppData.selectedAuthentication = option 
-								newAppData.authentication_id = option.id
-								break
-							}
-						}
-					}
-
-					//newAppData.authentication = authenticationOptions
-					//if (newAppData.selectedAuthentication === null || newAppData.selectedAuthentication === undefined || newAppData.selectedAuthentication.length === "") {
-					//	newAppData.selectedAuthentication = {}
-					//} else {
-					//	console.log("CAN WE SELECT AUTH?: ", authenticationOptions)
-					//}
-				} else {
-					newAppData.authentication = []
-					newAppData.authentication_id = ""
-					newAppData.selectedAuthentication = {}
-				}
-
-				workflow.actions.push(newAppData)
-				setWorkflow(workflow)
-
-				if (newAppPopup) {
-					//alert.error("SHOULD MAKE USER AUTHENTICATE THE APP OR SET hasError")
-					//alert.info("Remember: set the authentication for the user itself, not the app") 
+				return
 				}
 			}
 		}
-	}
-
-	const handleDragStop = (e, app) => {
-		newNodeId = ""
-		console.log("STOP!: ", e)
-		console.log("APP!: ", app)
-	}
-
-	const appScrollStyle = {
-		overflow: "scroll",
-		maxHeight: bodyHeight-appBarSize-55-50,
-		minHeight: bodyHeight-appBarSize-55-50,
-		marginTop: 1,
-		overflowY: "auto",
-		overflowX: "hidden",
-	}
 
 	const AppView = (props) => {
   	const { allApps, prioritizedApps, filteredApps } = props;
-		const [visibleApps, setVisibleApps] = React.useState(prioritizedApps.concat(filteredApps.filter(innerapp => !internalIds.includes(innerapp.id))))
+		const [visibleApps, setVisibleApps] = React.useState(prioritizedApps.concat(filteredApps.filter(innerapp => !internalIds.includes(innerapp.id))))	
 
 		const ParsedAppPaper = (props) => {
 			const app = props.app
@@ -2782,7 +4231,7 @@ const AngularWorkflow = (props) => {
 			if (newAppname.length > maxlen) {
 				newAppname = newAppname.slice(0, maxlen)+".."
 			}
-			app.name.replaceAll("_", " ", -1)
+			newAppname = newAppname.replaceAll("_", " ")
 
 			//const image = "url("+app.large_image+")"
 			const image = app.large_image
@@ -2793,7 +4242,9 @@ const AngularWorkflow = (props) => {
 			return (
 				<Draggable 
 						onDrag={(e) => {handleAppDrag(e, app)}}
-						onStop={(e) => {handleDragStop(e, app)}}
+						onStop={(e) => {
+							handleDragStop(e, app)
+						}}
 						key={app.id}
 						dragging={false}
 						position={{
@@ -2804,11 +4255,13 @@ const AngularWorkflow = (props) => {
 					<Paper square style={newAppStyle} onMouseOver={() => {setHover(true)}} onMouseOut={() => {setHover(false)}}>
 						<Grid container style={{margin: "10px 10px 10px 15px", flex: "10"}}>
 							<Grid item>
-								<img alt={newAppname} src={image} style={{pointerEvents: "none", userDrag: "none", userSelect: "none", borderRadius: borderRadius, height: 80, width: 80,}} />
+								<img alt={newAppname} src={image} style={{pointerEvents: "none", userDrag: "none", userSelect: "none", borderRadius: theme.palette.borderRadius, height: 80, width: 80,}} />
 							</Grid>
 							<Grid style={{display: "flex", flexDirection: "column", marginLeft: "20px", minWidth: 185, maxWidth: 185, overflow: "hidden", maxHeight: 77, }}>
 								<Grid item style={{flex: 1}}>
-									<Typography variant="body1" style={{marginBottom: 0, marginTop: 5}}>{newAppname}</Typography>
+									<Typography variant="body1" style={{marginBottom: 0, marginTop: 5}}>
+										{newAppname}
+									</Typography>
 								</Grid>
 								<Grid item style={{flex: 1}}>
 									<Typography variant="body2" color="textSecondary"> 
@@ -2827,9 +4280,28 @@ const AngularWorkflow = (props) => {
 				)
 		}
 
-		const runSearch = (event) => {
-			if (event.target.value.length > 0) {
-				setVisibleApps(allApps.filter(app => app.name.toLowerCase().includes(event.target.value.trim().toLowerCase())))
+		const runSearch = (value) => {
+			if (value.length > 0) {
+				var newApps = allApps.filter(app => (app.name.toLowerCase().includes(value.trim().toLowerCase() || app.description.toLowerCase().includes(value.trim().toLowerCase()))) && !(!app.activated && app.generated))
+
+				// Extend search
+				if (newApps.length === 0) {
+					const searchvalue = value.trim().toLowerCase()
+					newApps = allApps.filter(app => {
+						for (var key in app.actions) {
+							const inneraction = app.actions[key]
+							if (inneraction.name.toLowerCase().includes(searchvalue)) {
+								return true
+							}
+						}
+
+						return false
+					})
+				}
+
+				//setFilteredApps(responseJson.filter(app => !internalIds.includes(app.name) && !(!app.activated && app.generated)))
+				//console.log("FOUND: ", newApps)
+				setVisibleApps(newApps)
 			} else {
 				setVisibleApps(prioritizedApps.concat(filteredApps.filter(innerapp => !internalIds.includes(innerapp.id))))
 			}
@@ -2839,7 +4311,7 @@ const AngularWorkflow = (props) => {
 			<div style={appViewStyle}>
 				<div style={{flex: "1"}}>
 					<TextField
-						style={{backgroundColor: inputColor, borderRadius: borderRadius, marginTop: 5, marginRight: 10,}} 
+						style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius, marginTop: 5, marginRight: 10,}} 
 						InputProps={{
 							style:{
 								color: "white",
@@ -2860,8 +4332,14 @@ const AngularWorkflow = (props) => {
 						color="primary"
 						placeholder={"Search Active Apps"}
 						id="appsearch"
+						onKeyPress={(event) => {
+							if (event.key === "Enter") {
+								event.target.blur(event)
+							}
+						}}
 						onBlur={(event) => {
-							runSearch(event)
+							console.log("BLUR: ", event.target.value)
+							runSearch(event.target.value)
 						}}
 					/>
 					{visibleApps.length > 0 ?
@@ -2877,12 +4355,19 @@ const AngularWorkflow = (props) => {
 							})}
 						</div>
 						:
-						<div style={{textAlign: "center", width: leftBarSize}}>
-							<CircularProgress style={{marginTop: 25, height: 35, width: 35, marginLeft: "auto", marginRight: "auto", }} /> 
-							<Typography variant="body1" color="textSecondary">
-								Loading apps
-							</Typography>
-						</div>
+						apps.length > 0 ? 
+							<div style={{textAlign: "center", width: leftBarSize, marginTop: 10, }}>
+								<Typography variant="body1" color="textSecondary">
+									Couldn't find app. Is it active?	
+								</Typography>
+							</div>
+						:
+							<div style={{textAlign: "center", width: leftBarSize}}>
+								<CircularProgress style={{marginTop: 25, height: 35, width: 35, marginLeft: "auto", marginRight: "auto", }} /> 
+								<Typography variant="body1" color="textSecondary">
+									Loading apps
+								</Typography>
+							</div>
 					}
 				</div>
 			</div>
@@ -2912,13 +4397,51 @@ const AngularWorkflow = (props) => {
 
 	const setNewSelectedAction = (e) => {
 		const newaction = selectedApp.actions.find(a => a.name === e.target.value)
+		if (newaction === undefined || newaction === null) {
+			alert.error("Failed to find the action")
+			return
+		}
 
 		// Does this one find the wrong one?
-		selectedAction.name = newaction.name
-		selectedAction.parameters = JSON.parse(JSON.stringify(newaction.parameters))
+		var newSelectedAction = selectedAction
+		newSelectedAction.name = newaction.name
+		newSelectedAction.parameters = JSON.parse(JSON.stringify(newaction.parameters))
+		newSelectedAction.errors = []
+		newSelectedAction.isValid = true
+		newSelectedAction.is_valid = true
+
+		if (newSelectedAction.app_name === "Shuffle Tools") {
+			const iconInfo = GetIconInfo(newSelectedAction)
+			console.log("ICONINFO: ", iconInfo)
+			const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
+			const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
+			newSelectedAction.large_image = svgpin_Url
+			newSelectedAction.fillGradient = iconInfo.fillGradient
+			newSelectedAction.fillstyle = "solid"
+			if (newSelectedAction.fillGradient !== undefined && newSelectedAction.fillGradient !== null && newSelectedAction.fillGradient.length > 0) {
+				newSelectedAction.fillstyle = 'linear-gradient'
+				console.log("GRADIENT!: ", newSelectedAction)
+				//action.fillstyle = 
+				//'background-fill': 'data(fillstyle)',
+			} else {
+				newSelectedAction.iconBackground = iconInfo.iconBackgroundColor
+			}
+
+			const foundnode = cy.getElementById(newSelectedAction.id)
+			if (foundnode !== null && foundnode !== undefined) {
+				console.log("UPDATING NODE!")
+				foundnode.data(newSelectedAction)
+			}
+		}
+
+		// Takes an action as input, then runs through and updates the relevant fields
+		// based on previous actions' 
+		newSelectedAction = RunAutocompleter(newSelectedAction)
+
+		console.log("ACTION: ", newSelectedAction)
 
 		if (newaction.returns.example !== undefined && newaction.returns.example !== null && newaction.returns.example.length > 0) {
-			selectedAction.example = newaction.returns.example 
+			newSelectedAction.example = newaction.returns.example 
 		}
 
 		// FIXME - this is broken sometimes lol
@@ -2928,8 +4451,26 @@ const AngularWorkflow = (props) => {
 		//} 
 		//setSelectedActionEnvironment(env)
 		
-		setSelectedAction(selectedAction)
+		setSelectedAction(newSelectedAction)
 		setUpdate(Math.random())
+
+		// FIXME - should change icon-node (descriptor) as well 
+		const allNodes = cy.nodes().jsons()
+		for (var key in allNodes) {
+			const currentNode = allNodes[key]
+			if (currentNode.data.attachedTo === selectedAction.id && currentNode.data.isDescriptor) {
+				const foundnode = cy.getElementById(currentNode.data.id)
+				if (foundnode !== null && foundnode !== undefined) {
+					const iconInfo = GetIconInfo(newaction)
+					const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
+					const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
+					foundnode.data("image", svgpin_Url)
+					foundnode.data("imageColor", iconInfo.iconBackgroundColor) 
+				}
+
+				break
+			}
+		}
 	}
 
 	// APPSELECT at top
@@ -2941,7 +4482,17 @@ const AngularWorkflow = (props) => {
 		//console.log("OLDNAME: ", selectedAction.name)
 		event.target.value = event.target.value.replaceAll("(", "")
 		event.target.value = event.target.value.replaceAll(")", "")
+		event.target.value = event.target.value.replaceAll("]", "")
+		event.target.value = event.target.value.replaceAll("[", "")
+		event.target.value = event.target.value.replaceAll("{", "")
+		event.target.value = event.target.value.replaceAll("}", "")
+		event.target.value = event.target.value.replaceAll("*", "")
+		event.target.value = event.target.value.replaceAll("!", "")
+		event.target.value = event.target.value.replaceAll("@", "")
+		event.target.value = event.target.value.replaceAll("#", "")
 		event.target.value = event.target.value.replaceAll("$", "")
+		event.target.value = event.target.value.replaceAll("%", "")
+		event.target.value = event.target.value.replaceAll("&", "")
 		event.target.value = event.target.value.replaceAll("#", "")
 		event.target.value = event.target.value.replaceAll(".", "")
 		event.target.value = event.target.value.replaceAll(",", "")
@@ -2984,22 +4535,38 @@ const AngularWorkflow = (props) => {
 		setSelectedTrigger(selectedTrigger)
 	}
 
+	// Starts on current node and climbs UP the tree to the root object. 
+	// Sends back everything in it's path
 	const getParents = (action) => {
 		var allkeys = [action.id]
 		var handled = []
 		var results = []
 
+		// maxiter = max amount of parent nodes to loop
+		// also handles breaks if there are issues
+		var iterations = 0
+		var maxiter = 10
 		while(true) {
 			for (var key in allkeys) {
 				var currentnode = cy.getElementById(allkeys[key])
-				if (handled.includes(currentnode.data().id)) {
+				if (currentnode === undefined || currentnode === null) {
 					continue
+				} 
+				
+				if (currentnode.data() === undefined) {
+					//console.log("Node doesn't have any data (getParents)! Probably a trigger.")
+					handled.push(allkeys[key])
+					results.push({"id": allkeys[key], "type": "TRIGGER"})
 				} else {
-					// Get the name / label here too?
-					handled.push(currentnode.data().id)
-					results.push(currentnode.data())
+					if (handled.includes(currentnode.data().id)) {
+						continue
+					} else {
+						handled.push(currentnode.data().id)
+						results.push(currentnode.data())
+					}
 				}
 
+				// Get the name / label here too?
 				if (currentnode.length === 0) {
 					continue
 				}
@@ -3016,9 +4583,12 @@ const AngularWorkflow = (props) => {
 					}
 				}
 			}
-			if (results.length === allkeys.length) {
+
+			if (results.length === allkeys.length || iterations === maxiter) {
 				break
 			}
+
+			iterations += 1
 		}
 
 		// Remove self
@@ -3033,1041 +4603,7 @@ const AngularWorkflow = (props) => {
 	// Dropdown -> static, action, local env, global env
 	// VALUE (JSON)
 	// {data.name}, {data.description}, {data.required}, {data.schema.type}
-	const AppActionArguments = (props) => {
-		const [selectedActionParameters, setSelectedActionParameters] = React.useState([])
-		const [selectedVariableParameter, setSelectedVariableParameter] = React.useState("")
-		const [actionlist, setActionlist] = React.useState([])
-		const [jsonList, setJsonList] = React.useState([])
-		const [showDropdown, setShowDropdown] = React.useState(false)
-		const [showDropdownNumber, setShowDropdownNumber] = React.useState(0)
-		const [showAutocomplete, setShowAutocomplete] = React.useState(false)
-		const [menuPosition, setMenuPosition] = useState(null)
-
-		useEffect(() => {
-			if (selectedActionParameters !== null && selectedActionParameters.length === 0) {
-				if (selectedAction.parameters !== null && selectedAction.parameters.length > 0) {
-					setSelectedActionParameters(selectedAction.parameters)
-				}
-			}
-			
-			if ((selectedVariableParameter === null || selectedVariableParameter === undefined) && (workflow.workflow_variables !== null && workflow.workflow_variables.length > 0)) {
-				// FIXME - this is the bad thing
-				setSelectedVariableParameter(workflow.workflow_variables[0].name)
-			} 
-
-			if (actionlist.length === 0) {
-				// FIXME: Have previous execution values in here
-				actionlist.push({"type": "Execution Argument", "name": "Execution Argument", "value": "$exec", "highlight": "exec", "autocomplete": "exec", "example": "hello"})
-				if (workflow.workflow_variables !== null && workflow.workflow_variables !== undefined && workflow.workflow_variables.length > 0) {
-					for (var key in workflow.workflow_variables) {
-						const item = workflow.workflow_variables[key]
-						actionlist.push({"type": "workflow_variable", "name": item.name, "value": item.value, "id": item.id, "autocomplete": `${item.name.split(" ").join("_")}`, "example": item.value})
-					}
-				}
-
-				// FIXME: Add values from previous executions if they exist
-				if (workflow.execution_variables !== null && workflow.execution_variables !== undefined && workflow.execution_variables.length > 0) {
-					for (var key in workflow.execution_variables) {
-						const item = workflow.execution_variables[key]
-						actionlist.push({"type": "execution_variable", "name": item.name, "value": item.value, "id": item.id, "autocomplete": `${item.name.split(" ").join("_")}`, "example": ""})
-					}
-				}
-
-				// Loops parent nodes' old results to fix autocomplete
-				var parents = getParents(selectedAction)
-				if (parents.length > 1) {
-					for (var key in parents) {
-						const item = parents[key]
-						if (item.label === "Execution Argument") {
-							continue
-						}
-
-						var exampledata = item.example === undefined ? "" : item.example
-						// Find previous execution and their variables
-						//exampledata === "" && 
-						if (workflowExecutions.length > 0) {
-							// Look for the ID
-							const found = false
-							for (var key in workflowExecutions) {
-								if (workflowExecutions[key].results === undefined || workflowExecutions[key].results === null) {
-									continue
-								}
-
-								var foundResult = workflowExecutions[key].results.find(result => result.action.id === item.id)
-								if (foundResult === undefined) {
-									continue
-								}
-
-								foundResult.result = foundResult.result.trim()
-								foundResult.result = foundResult.result.split(" None").join(" \"None\"")
-								foundResult.result = foundResult.result.split(" False").join(" false")
-								foundResult.result = foundResult.result.split(" True").join(" true")
-
-								var jsonvalid = true
-								try {
-									const tmp = String(JSON.parse(foundResult.result))
-									if (!foundResult.result.includes("{") && !foundResult.result.includes("[")) {
-										jsonvalid = false
-									}
-								} catch (e) {
-									try {
-										foundResult.result = foundResult.result.split("\'").join("\"")
-										const tmp = String(JSON.parse(foundResult.result))
-										if (!foundResult.result.includes("{") && !foundResult.result.includes("[")) {
-											jsonvalid = false
-										}
-									} catch (e) {
-										jsonvalid = false
-									}
-								}
-
-								// Finds the FIRST json only
-								if (jsonvalid) {
-									exampledata = JSON.parse(foundResult.result)
-									break
-								} 
-								//else {
-								//	console.log("Invalid JSON: ", foundResult.result)
-								//}
-							}
-						}
-
-						// 1. Take 
-						const actionvalue = {"type": "action", "id": item.id, "name": item.label, "autocomplete": `${item.label.split(" ").join("_")}`, "example": exampledata}
-						actionlist.push(actionvalue)
-					}
-				}
-
-				setActionlist(actionlist)
-			}
-		})
-
-		const changeActionParameter = (event, count, data) => {
-			if (data.name.startsWith("${") && data.name.endsWith("}")) {
-				// PARAM FIX - Gonna use the ID field, even though it's a hack
-				const paramcheck = selectedAction.parameters.find(param => param.name === "body")
-				if (paramcheck !== undefined) {
-					if (paramcheck["value_replace"] === undefined || paramcheck["value_replace"] === null) {
-						paramcheck["value_replace"] = [{
-							"key": data.name,
-							"value": event.target.value,
-						}]
-
-					} else {
-						const subparamindex = paramcheck["value_replace"].findIndex(param => param.key === data.name)
-						if (subparamindex === -1) {
-							paramcheck["value_replace"].push({
-								"key": data.name,
-								"value": event.target.value,
-							})
-						} else {
-							paramcheck["value_replace"][subparamindex]["value"] = event.target.value
-						}
-					}
-					//console.log("PARAM: ", paramcheck)
-					
-					selectedActionParameters[count]["value_replace"] = paramcheck
-					selectedAction.parameters[count]["value_replace"] = paramcheck
-					setSelectedAction(selectedAction)
-					//setUpdate(Math.random())
-					return
-				}
-			}
-
-			if (event.target.value[event.target.value.length-1] === "$") {
-				if (!showDropdown) {
-					setShowAutocomplete(false)
-					setShowDropdown(true)
-					setShowDropdownNumber(count)
-				}
-			} else {
-				if (showDropdown) {
-					setShowDropdown(false)
-				}
-			}
-
-			// bad detection mechanism probably
-			if (event.target.value[event.target.value.length-1] === "." && actionlist.length > 0) {
-				console.log("GET THE LAST ARGUMENT FOR NODE!")
-				// THIS IS AN EXAMPLE OF SHOWING IT 
-				/*
-				const inputdata = {"data": "1.2.3.4", "dataType": "4.5.6.6"}
-				setJsonList(GetParsedPaths(inputdata, ""))
-				if (!showDropdown) {
-					setShowAutocomplete(false)
-					setShowDropdown(true)
-					setShowDropdownNumber(count)
-				}
-				console.log(jsonList)
-				*/
-
-				// Search for the item backwards
-				// 1. Reverse search backwards from . -> $
-				// 2. Search the actionlist for the item  
-				// 3. Find the data for the specific item
-
-				var curstring = ""
-				var record = false
-				for (var key in selectedActionParameters[count].value) {
-					const item = selectedActionParameters[count].value[key]
-					if (record) {
-						curstring += item
-					}
-
-					if (item === "$") {
-						record = true
-						curstring = ""
-					}
-				}
-
-				//console.log("CURSTRING: ", curstring)
-				if (curstring.length > 0 && actionlist !== null) {
-					// Search back in the action list
-					curstring = curstring.split(" ").join("_").toLowerCase()
-					var actionItem = actionlist.find(data => data.autocomplete.split(" ").join("_").toLowerCase() === curstring)
-					if (actionItem !== undefined) {
-						console.log("Found item: ", actionItem)
-
-						//actionItem.example = actionItem.example.trim()
-						//actionItem.example = actionItem.example.split(" None").join(" \"None\"")
-						//actionItem.example  = actionItem.example.split("\'").join("\"")
-
-						var jsonvalid = true
-						try {
-							const tmp = String(JSON.parse(actionItem.example))
-							if (!actionItem.example.includes("{") && !actionItem.example.includes("[")) {
-								jsonvalid = false
-							}
-						} catch (e) {
-							jsonvalid = false
-						}
-
-						if (jsonvalid) {
-							setJsonList(GetParsedPaths(JSON.parse(actionItem.example), ""))
-
-							if (!showDropdown) {
-								setShowAutocomplete(false)
-								setShowDropdown(true)
-								setShowDropdownNumber(count)
-							}
-						}
-					}
-				}
-			} else {
-				if (jsonList.length > 0) {
-					setJsonList([])
-				}
-			}
-
-			selectedActionParameters[count].value = event.target.value
-			selectedAction.parameters[count].value = event.target.value
-			setSelectedAction(selectedAction)
-			//setUpdate(Math.random())
-			//setUpdate(event.target.value)
-		}
-
-		const changeActionParameterVariable = (fieldvalue, count) => {
-			//console.log("CALLED THIS ONE WITH VALUE!", fieldvalue)
-			//if (selectedVariableParameter === fieldvalue) {
-			//	return
-			//}
-
-			setSelectedVariableParameter(fieldvalue)
-
-			selectedActionParameters[count].action_field = fieldvalue 
-			selectedAction.parameters = selectedActionParameters
-
-			setSelectedApp(selectedApp)
-			setSelectedAction(selectedAction)
-			setUpdate(fieldvalue)
-		}
-
-		// Sets ACTION_RESULT things
-		const changeActionParameterActionResult = (fieldvalue, count) => {
-			//cy.nodes().forEach(function( ele ) {
-			//	if (ele.data()["label"] === fieldvalue) {
-			//		selectedActionParameters[count].action_field = ele.id()
-			//		return
-			//	}
-			//});
-
-			selectedActionParameters[count].action_field = fieldvalue
-			selectedAction.parameters = selectedActionParameters
-
-			// FIXME - check if startnode
-
-			// Set value 
-			setSelectedApp(selectedApp)
-
-			setSelectedAction(selectedAction)
-			setUpdate(Math.random())
-		}
-
-		const changeActionParameterVariant = (data, count) => {
-			selectedActionParameters[count].variant = data
-			selectedActionParameters[count].value = "" 
-
-			if (data === "ACTION_RESULT") {
-				var parents = getParents(selectedAction)
-				if (parents.length > 0) {
-					selectedActionParameters[count].action_field = parents[0].label
-				} else {
-					selectedActionParameters[count].action_field = ""
-				}
-			} else if (data === "WORKFLOW_VARIABLE") {
-				if (workflow.workflow_variables !== null && workflow.workflow_variables !== undefined && workflow.workflow_variables.length > 0) {
-					selectedActionParameters[count].action_field = workflow.workflow_variables[0].name
-				}
-			}
-			
-			selectedAction.parameters = selectedActionParameters
-
-			// This is a stupid workaround to make it refresh rofl
-			setSelectedAction({})
-			setSelectedTrigger({})
-			setSelectedApp({})
-			setSelectedEdge({})
-			// FIXME - check if startnode
-
-			// Set value 
-			setSelectedApp(selectedApp)
-			setSelectedAction(selectedAction)
-			setUpdate(Math.random())
-		}
-
-		// FIXME: Issue #40 - selectedActionParameters not reset
-		if (Object.getOwnPropertyNames(selectedAction).length > 0 && selectedActionParameters.length > 0) {
-			return (
-				<div style={{marginTop: "30px"}}>	
-					<b>Parameters</b>
-					{selectedActionParameters.map((data, count) => {
-						if (data.variant === "") {
-							data.variant = "STATIC_VALUE"
-						}
-
-
-						// selectedAction.selectedAuthentication = e.target.value
-						// selectedAction.authentication_id = e.target.value.id
-						if (!selectedAction.auth_not_required && selectedAction.selectedAuthentication !== undefined && selectedAction.selectedAuthentication.fields !== undefined && selectedAction.selectedAuthentication.fields[data.name] !== undefined) {
-							// This sets the placeholder in the frontend. (Replaced in backend)
-							selectedActionParameters[count].value = selectedAction.selectedAuthentication.fields[data.name]
-							selectedAction.parameters[count].value = selectedAction.selectedAuthentication.fields[data.name]
-							setSelectedAction(selectedAction)
-							//setUpdate(Math.random())
-
-							return null	
-						}
-
-						var staticcolor = "inherit"
-						var actioncolor = "inherit"
-						var varcolor = "inherit"
-						var multiline
-						if (data.multiline !== undefined && data.multiline !== null && data.multiline === true) {
-							multiline = true
-						}
-
-						if (data.value !== undefined && data.value !== null && data.value.startsWith("{") && data.value.endsWith("}")) {
-							multiline = true
-						}
-
-						var placeholder = "Static value"
-						if (data.example !== undefined && data.example !== null && data.example.length > 0) {
-							placeholder = data.example
-						}
-
-						if (data.name.startsWith("${") && data.name.endsWith("}")) {
-							const paramcheck = selectedAction.parameters.find(param => param.name === "body")
-							if (paramcheck !== undefined && paramcheck !== null) {
-								if (paramcheck["value_replace"] !== undefined && paramcheck["value_replace"] !== null) {
-									//console.log("IN THE VALUE REPLACE: ", paramcheck["value_replace"])
-									const subparamindex = paramcheck["value_replace"].findIndex(param => param.key === data.name)
-									if (subparamindex !== -1) {
-										data.value = paramcheck["value_replace"][subparamindex]["value"]
-									}
-								}
-							}
-						}
-
-						var disabled = false
-						var rows = "5"
-						var openApiHelperText = "This is an OpenAPI specific field"
-						if (selectedApp.generated && selectedApp.activated && data.name === "body") {
-							const regex = /\${(\w+)}/g
-							const found = placeholder.match(regex)
-							if (found === null) {
-								//setExtraBodyFields([])
-							} else {
-								rows = "1"
-								disabled = true
-								openApiHelperText = "OpenAPI spec: fill the following fields."
-								//console.log("SHOULD ADD TO selectedActionParameters!: ", found, selectedActionParameters)
-								var changed = false
-								for (var specKey in found) {
-									const tmpitem = found[specKey]
-									var skip = false
-									for (var innerkey in selectedActionParameters) {
-										if (selectedActionParameters[innerkey].name === tmpitem) {
-											skip = true
-											break
-										}
-									}
-
-									if (skip) {
-										//console.log("SKIPPING ", tmpitem)
-										continue 
-									}
-
-									changed = true 
-									selectedActionParameters.push({
-										action_field: "",
-										configuration: false,
-										description: "Generated by OpenAPI body example",
-										example: "",
-										id: "",
-										multiline: false,
-										name: tmpitem,
-										options: null,
-										required: false,
-										schema: {type: "string"},
-										skip_multicheck: false,
-										tags: null,
-										value: "",
-										variant: "STATIC_VALUE",
-									})
-								}
-
-								if (changed) {
-									setSelectedActionParameters(selectedActionParameters)
-								}
-
-								return <Divider key={Math.random()} /> 
-							}
-						}
-
-						//console.log("Data: ", data)
-						var datafield = 
-							<TextField
-								disabled={disabled}
-								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
-								InputProps={{
-									style:{
-										color: "white",
-										minHeight: 50, 
-										marginLeft: 5,
-										maxWidth: "95%",
-										fontSize: "1em",
-									},
-									endAdornment: (
-										<InputAdornment position="end">
-											<Tooltip title="Autocomplete text" placement="top">
-												<AddCircleOutlineIcon style={{cursor: "pointer"}} onClick={(event) => {
-													setMenuPosition({
-														top: event.pageY+10,
-														left: event.pageX+10,
-													})
-													setShowDropdownNumber(count)
-													setShowDropdown(true)
-													setShowAutocomplete(true)
-												}}/>
-											</Tooltip>
-										</InputAdornment>
-									)
-								}}
-								fullWidth
-								multiline={multiline}
-								rows={rows}
-								color="primary"
-								defaultValue={data.value}
-								type={placeholder.includes("***") ? "password" : "text"}
-								placeholder={placeholder}
-								onChange={(event) => {
-										changeActionParameter(event, count, data)
-								}}
-								helperText={selectedApp.generated && selectedApp.activated && data.name === "body" ? 
-									<span style={{color:"white", marginBottom: 5, marginleft: 5,}}>
-										{openApiHelperText}
-									</span>
-									: 
-									data.name.startsWith("${") && data.name.endsWith("}") ?
-										<span style={{color:"white", marginBottom: 5, marginLeft: 5}}>
-											OpenAPI helperfield	
-										</span>
-									:
-									null
-								}
-								onBlur={(event) => {
-									// Super basic check
-									//if (event.target.value.startsWith("{")) {
-									//	console.log("VALIDATING JSON")
-									//	try {
-									//		JSON.parse(event.target.value)
-									//	} catch (e) {
-									//		alert.error("Failed to parse json: ", e)
-									//	}
-									//}
-								}}
-							/>
-
-						if (selectedActionParameters[count].schema !== undefined && selectedActionParameters[count].schema !== null && selectedActionParameters[count].schema.type === "file") {
-							datafield = 
-								<TextField
-									style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
-									InputProps={{
-										style:{
-											color: "white",
-											minHeight: 50, 
-											marginLeft: "5px",
-											maxWidth: "95%",
-											fontSize: "1em",
-										},
-										endAdornment: (
-											<InputAdornment position="end">
-												<Tooltip title="Autocomplete text" placement="top">
-													<AddCircleOutlineIcon style={{cursor: "pointer"}} onClick={(event) => {
-														setMenuPosition({
-															top: event.pageY+10,
-															left: event.pageX+10,
-														})
-														setShowDropdownNumber(count)
-														setShowDropdown(true)
-														setShowAutocomplete(true)
-													}}/>
-												</Tooltip>
-											</InputAdornment>
-										)
-									}}
-									fullWidth
-									multiline={multiline}
-									rows="5"
-									color="primary"
-									defaultValue={data.value}
-									type={"text"}
-									placeholder={"The file ID to get"}
-									onChange={(event) => {
-										changeActionParameter(event, count, data)
-									}}
-									onBlur={(event) => {
-									}}
-								/>
-							//const fileId = "6daabec1-892b-469c-b603-c902e47223a9"
-							//datafield = `SHOW FILES FROM OTHER NODES? Filename: ${selectedActionParameters[count].value}`	
-							/*
-							if (selectedActionParameters[count].value != fileId) {
-								changeActionParameter(fileId, count, data)
-								setUpdate(Math.random())
-
-							}
-							*/
-						} else if (selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0) {
-							if (selectedActionParameters[count].value === "" && selectedActionParameters[count].required) {
-								// Rofl, dirty workaround :)
-								const e = {
-									target: {
-										value: selectedActionParameters[count].options[0],
-									}
-								}
-
-								changeActionParameter(e, count, data)
-							}
-
-							datafield =
-								<Select
-									SelectDisplayProps={{
-										style: {
-											marginLeft: 10,
-										}
-									}}
-									value={selectedActionParameters[count].value}
-									fullWidth
-									onChange={(e) => {
-										console.log("VAL: ", e.target.value)
-										changeActionParameter(e, count, data)
-										setUpdate(Math.random())
-									}}
-									style={{backgroundColor: surfaceColor, color: "white", height: "50px"}}
-									>
-									{selectedActionParameters[count].options.map((data, index) => {
-										const split_data = data.split("||")
-										var viewed_data = data
-										if (split_data.length > 1) {
-											viewed_data = split_data[0]
-										}
-
-										return (
-											<MenuItem key={data} style={{backgroundColor: inputColor, color: "white"}} value={data}>
-												{viewed_data}
-											</MenuItem>
-										)
-									})}
-								</Select>
-
-						} else if (data.variant === "STATIC_VALUE") {
-							staticcolor = "#f85a3e"	
-						} else if (data.variant === "ACTION_RESULT") {
-							// Gets the parents of the current node
-							var parents = getParents(selectedAction)
-							actioncolor = "#f85a3e"
-							// set the datafield
-							//var datafieldvalue = "Error: No parents. Action not eligible"
-							//if (parents.length > 0) {
-							//	datafieldvalue = parents[0].label
-							//}
-							const fixedActionText = selectedActionParameters[count].value 
-
-							datafield = 
-							<div>
-								<Select
-									SelectDisplayProps={{
-										style: {
-											marginLeft: 10,
-										}
-									}}
-									value={selectedActionParameters[count].action_field}
-									fullWidth
-									onChange={(e) => {
-										changeActionParameterActionResult(e.target.value, count) 
-									}}
-									style={{backgroundColor: surfaceColor, color: "white", height: "50px"}}
-									>
-									{parents.map(data => (
-										<MenuItem key={data.label} style={{backgroundColor: inputColor, color: "white"}} value={data.label}>
-											{data.label}
-										</MenuItem>
-									))}
-								</Select>
-								<TextField
-									style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
-									InputProps={{
-										style:{
-											color: "white",
-											marginLeft: "5px",
-											maxWidth: "95%",
-											height: 50, 
-											fontSize: "1em",
-										},
-									}}
-									fullWidth
-									color="primary"
-									defaultValue={data.value}
-									helperText={<div style={{marginLeft: "5px", color:"white", marginBottom: "2px",}}>Example: $.body will get "data" from {'{"body": "data"}'}</div>}
-									placeholder="Action variable ($.)" 
-									onChange={(event) => {
-										changeActionParameter(event, count, data)
-									}}
-								/>
-							</div>
-
-						} else if (data.variant === "WORKFLOW_VARIABLE") {
-							varcolor = "#f85a3e"
-							if ((workflow.workflow_variables === null || workflow.workflow_variables === undefined || workflow.workflow_variables.length === 0) && (workflow.execution_variables === null || workflow.execution_variables === undefined || workflow.execution_variables.length === 0)) {
-								setCurrentView(2)
-								datafield = 
-								<div>
-								<div>
-									Looks like you don't have any variables yet.  
-								</div>
-								<div style={{width: "100%", margin: "auto"}}>
-									<Button style={{margin: "auto", marginTop: "10px"}} color="primary" variant="outlined" onClick={() => {
-										setVariablesModalOpen(true)
-										setLastSaved(false)
-									}}>New workflow variable</Button> 				
-								</div>
-								</div>
-							} else {
-								// FIXME - this is a shitty solution that needs re-renders all the time
-								datafield = 
-								<Select
-									SelectDisplayProps={{
-										style: {
-											marginLeft: 10,
-										}
-									}}
-									fullWidth
-									value={selectedAction.parameters[count].action_field}
-									onChange={(e) => {
-										console.log(e.target.value)
-										changeActionParameterVariable(e.target.value, count) 
-									}}
-									style={{backgroundColor: inputColor, color: "white", height: "50px"}}
-									>
-									{workflow.workflow_variables !== undefined && workflow.workflow_variables !== null ? workflow.workflow_variables.map(data => (
-										<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data.name}>
-											{data.name}
-										</MenuItem>
-									)) : null}
-									<Divider />
-									{workflow.execution_variables !== undefined && workflow.execution_variables !== null ? workflow.execution_variables.map(data => (
-										<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data.name}>
-											{data.name}
-										</MenuItem>
-									)) : null}
-								</Select>
-							}
-						}
-
-						// Shows nested list of nodes > their JSON lists
-						const ActionlistWrapper = (props) => {
-
-							const handleMenuClose = () => {
-								setShowAutocomplete(false)
-
-								if (!selectedActionParameters[count].value[selectedActionParameters[count].value.length-1] === "$") {
-									setShowDropdown(false)
-								}
-
-								setUpdate(Math.random())
-								setMenuPosition(null)
-							}
-
-							const handleItemClick = (values) => {
-								if (values === undefined || values === null || values.length === 0) {
-									return
-								}
-
-								var toComplete = selectedActionParameters[count].value.trim().endsWith("$") ? values[0].autocomplete : "$"+values[0].autocomplete
-								for (var key in values) {
-									if (key == 0 || values[key].autocomplete.length === 0) {
-										continue
-									}
-
-									toComplete += values[key].autocomplete
-								}
-
-								// Handles the fields under OpenAPI body to be parsed.
-								if (data.name.startsWith("${") && data.name.endsWith("}")) {
-									console.log("INSIDE VALUE REPLACE: ", data.name, toComplete)
-									// PARAM FIX - Gonna use the ID field, even though it's a hack
-									const paramcheck = selectedAction.parameters.find(param => param.name === "body")
-									if (paramcheck !== undefined) {
-										if (paramcheck["value_replace"] === undefined || paramcheck["value_replace"] === null) {
-											paramcheck["value_replace"] = [{
-												"key": data.name,
-												"value": toComplete,
-											}]
-
-										} else {
-											const subparamindex = paramcheck["value_replace"].findIndex(param => param.key === data.name)
-											if (subparamindex === -1) {
-												paramcheck["value_replace"].push({
-													"key": data.name,
-													"value": toComplete,
-												})
-											} else {
-												paramcheck["value_replace"][subparamindex]["value"] += toComplete
-											}
-										}
-										
-										selectedActionParameters[count]["value_replace"] = paramcheck
-										selectedAction.parameters[count]["value_replace"] = paramcheck
-										setSelectedAction(selectedAction)
-										setUpdate(Math.random())
-
-										setShowDropdown(false)
-										setMenuPosition(null)
-										return
-									}
-								}
-
-								selectedActionParameters[count].value += toComplete
-								selectedAction.parameters[count].value = selectedActionParameters[count].value 
-								setSelectedAction(selectedAction)
-								setUpdate(Math.random())
-
-								setShowDropdown(false)
-								setMenuPosition(null)
-							}
-
-							const iconStyle = {
-								marginRight: 15,
-							}
-
-							return (
-								<Menu
-									anchorReference="anchorPosition"
-									anchorPosition={menuPosition}
-									onClose={() => {
-										handleMenuClose()
-									}}
-									open={!!menuPosition}
-									style={{
-										border: `2px solid #f85a3e`, 
-										color: "white", 
-										marginTop: 2,
-									}}
-								>
-								{actionlist.map(innerdata => {
-									const icon = innerdata.type === "action" ? <AppsIcon style={{marginRight: 10}} /> : innerdata.type === "workflow_variable" || innerdata.type === "execution_variable" ? <FavoriteBorderIcon style={{marginRight: 10}} /> : <ScheduleIcon style={{marginRight: 10}} /> 
-
-									const handleExecArgumentHover = (inside) => {
-										var exec_text_field = document.getElementById("execution_argument_input_field")
-										if (exec_text_field !== null) {
-											if (inside) {
-												exec_text_field.style.border = "2px solid #f85a3e"
-											} else {
-												exec_text_field.style.border = ""
-											}
-										}
-
-										// Also doing arguments
-										if (workflow.triggers !== undefined && workflow.triggers !== null && workflow.triggers.length > 0) {
-											for (var key in workflow.triggers) {
-												const item = workflow.triggers[key]
-
-												var node = cy.getElementById(item.id)
-												if (node.length > 0) {
-													if (inside) {
-														node.addClass('shuffle-hover-highlight')
-													} else {
-														node.removeClass('shuffle-hover-highlight')
-													}
-												}
-
-											}
-										}
-									}
-
-									const handleActionHover = (inside, actionId) => {
-										var node = cy.getElementById(actionId)
-										if (node.length > 0) {
-											if (inside) {
-												node.addClass('shuffle-hover-highlight')
-											} else {
-												node.removeClass('shuffle-hover-highlight')
-											}
-										}
-									}
-
-									const handleMouseover = () => {
-										if (innerdata.type === "Execution Argument") {
-												handleExecArgumentHover(true)
-											} else if (innerdata.type === "action") {
-												handleActionHover(true, innerdata.id)
-											}
-										} 
-										
-									const handleMouseOut = () => {
-										if (innerdata.type === "Execution Argument") {
-											handleExecArgumentHover(false)
-										} else if (innerdata.type === "action") {
-											handleActionHover(false, innerdata.id)
-										}
-									}
-
-									var parsedPaths = [] 
-									if (typeof(innerdata.example) === "object") {
-										parsedPaths = GetParsedPaths(innerdata.example, "")
-									}
-
-									return (
-										parsedPaths.length > 0 ?
-											<NestedMenuItem
-												key={innerdata.name}
-												label={
-													<div style={{display: "flex"}}>
-														{icon} {innerdata.name}
-													</div>
-												}
-												parentMenuOpen={!!menuPosition}
-												style={{backgroundColor: inputColor, color: "white", minWidth: 250,}}
-												onClick={() => {
-													handleItemClick([innerdata])
-												}}
-											>
-												{parsedPaths.map((pathdata, index) => {
-													// FIXME: Should be recursive in here
-													const icon = pathdata.type === "value" ? <VpnKeyIcon style={iconStyle} /> : pathdata.type === "list" ? <FormatListNumberedIcon style={iconStyle} /> : <ExpandMoreIcon style={iconStyle} /> 
-													return (
-														<MenuItem key={pathdata.name} style={{backgroundColor: inputColor, color: "white", minWidth: 250, }} value={pathdata} onMouseOver={() => {}}
-															onClick={() => {
-																handleItemClick([innerdata, pathdata])
-															}}
-														>
-															<Tooltip color="primary" title={`Ex. value: ${pathdata.value}`} placement="left">
-																<div style={{display: "flex"}}>
-																	{icon} {pathdata.name}
-																</div>
-															</Tooltip>
-														</MenuItem>
-													)
-
-												})}
-											</NestedMenuItem>
-										: 
-											<MenuItem key={innerdata.name} style={{backgroundColor: inputColor, color: "white"}} value={innerdata} onMouseOver={() => handleMouseover()} onMouseOut={() => {handleMouseOut()}} 
-												onClick={() => {
-													handleItemClick([innerdata])
-												}}
-											>
-												<Tooltip color="primary" title={`Value: ${innerdata.value}`} placement="left">
-													<div style={{display: "flex"}}>
-														{icon} {innerdata.name}
-													</div>
-												</Tooltip>
-											</MenuItem>
-										
-									)
-								})}	
-							</Menu>
-							)
-						}
-
-						var itemColor = "#f85a3e"
-						if (!data.required) {
-							itemColor = "#ffeb3b"
-						}
-
-						var tmpitem = data.name.valueOf()
-						if (data.name.startsWith("${") && data.name.endsWith("}")) {
-							tmpitem = tmpitem.slice(2, data.name.length-1)
-						}
-						
-						tmpitem = tmpitem.charAt(0).toUpperCase()+tmpitem.substring(1)
-						tmpitem = tmpitem.replaceAll("_", " ")
-						const description = data.description === undefined ? "" : data.description 
-
-						return (
-						<div key={data.name}>	
-							<div style={{marginTop: 20, marginBottom: 0, display: "flex"}}>
-
-
-								{data.configuration === true ? 
-									<Tooltip color="primary" title={`Authenticate ${selectedApp.name}`} placement="top">
-										<LockOpenIcon style={{cursor: "pointer", width: 24, height: 24, marginRight: 10, }} onClick={() => {
-											setAuthenticationModalOpen(true)
-										}}/>
-									</Tooltip>
-								:
-									<div style={{width: 17, height: 17, borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: 10, marginTop: 2, marginTop: "auto", marginBottom: "auto",}}/>
-								}
-								<div style={{flex: "10", marginTop: "auto", marginBottom: "auto",}}> 
-									<Tooltip title={description} placement="top">
-										<b>{tmpitem} </b> 
-									</Tooltip>
-								</div>
-
-								{/*selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0  ? null : 
-								<div style={{display: "flex"}}>
-									<Tooltip color="primary" title="Static data" placement="top">
-										<div style={{cursor: "pointer", color: staticcolor}} onClick={(e) => {
-												e.preventDefault()
-												changeActionParameterVariant("STATIC_VALUE", count) 
-											}}>
-											<CreateIcon />
-										</div>
-									</Tooltip>
-									&nbsp;|&nbsp;
-									<Tooltip color="primary" title="Data from previous action" placement="top">
-										<div style={{cursor: "pointer", color: actioncolor}} onClick={(e) => {
-											e.preventDefault()
-											changeActionParameterVariant("ACTION_RESULT", count) 
-										}}>
-											<AppsIcon />
-										</div>
-									</Tooltip>
-									&nbsp;|&nbsp;
-									<Tooltip color="primary" title="Use local variable" placement="top">
-										<div style={{cursor: "pointer", color: varcolor}} onClick={(e) => {
-											e.preventDefault()
-											changeActionParameterVariant("WORKFLOW_VARIABLE", count) 
-										}}>
-											<FavoriteBorderIcon />
-										</div>
-									</Tooltip>
-								</div>	
-							*/}
-							{selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0 && selectedActionParameters[count].required === true && selectedActionParameters[count].unique_toggled !== undefined ? null : 
-								<div style={{display: "flex"}}>
-									<Tooltip color="primary" title="Value must be unique" placement="top">
-										<div style={{cursor: "pointer", color: staticcolor}} onClick={(e) => {}}>
-          						<Checkbox
-          						  checked={selectedActionParameters[count].unique_toggled}
-												style={{
-													color: theme.palette.primary.main,
-												}}
-          						  onChange={(event) => {
-													//console.log("CHECKED!: ", selectedActionParameters[count])
-          						  	selectedActionParameters[count].unique_toggled = !selectedActionParameters[count].unique_toggled
-													selectedAction.parameters[count].unique_toggled = selectedActionParameters[count].unique_toggled
-          						  	setSelectedActionParameters(selectedActionParameters)
-													setSelectedAction(selectedAction)
-													setUpdate(Math.random())
-												}}
-          						  name="requires_unique"
-          						/>
-										</div>
-									</Tooltip>
-								</div>
-							}
-							</div>	
-							{datafield}
-							{showDropdown && showDropdownNumber === count && data.variant === "STATIC_VALUE" && jsonList.length > 0 ?
-							  <FormControl fullWidth style={{marginTop: 0}}>
-									<InputLabel id="action-autocompleter" style={{marginLeft: 10, color: "white"}}>Autocomplete</InputLabel>
-									<Select
-									  labelId="action-autocompleter"
-										SelectDisplayProps={{
-											style: {
-												marginLeft: 10,
-											}
-										}}
-										onClose={() => {
-											setShowAutocomplete(false)
-
-											if (!selectedActionParameters[count].value[selectedActionParameters[count].value.length-1] === ".") {
-												setShowDropdown(false)
-											}
-
-											setUpdate(Math.random())
-										}}
-										onClick={() => setShowAutocomplete(true)}
-										fullWidth
-										open={showAutocomplete}
-										style={{border: `2px solid #f85a3e`, color: "white", height: 50, marginTop: 2,}}
-										onChange={(e) => {
-											if (selectedActionParameters[count].value[selectedActionParameters[count].value.length-1] === ".") {
-												e.target.value.autocomplete = e.target.value.autocomplete.slice(1, e.target.value.autocomplete.length)
-											}
-
-											selectedActionParameters[count].value += e.target.value.autocomplete
-											selectedAction.parameters[count].value = selectedActionParameters[count].value 
-											setSelectedAction(selectedAction)
-											setUpdate(Math.random())
-
-											setShowDropdown(false)
-										}}
-									>
-										{jsonList.map(data => {
-											const iconStyle = {
-												marginRight: 15,
-											}
-
-											const icon = data.type === "value" ? <VpnKeyIcon style={iconStyle} /> : data.type === "list" ? <FormatListNumberedIcon style={iconStyle} /> : <ExpandMoreIcon style={iconStyle} /> 
-											return (
-												<MenuItem key={data.name} style={{backgroundColor: inputColor, color: "white"}} value={data} onMouseOver={() => {}}>
-													<Tooltip color="primary" title={`Ex. value: ${data.value}`} placement="left">
-														<div style={{display: "flex"}}>
-															{icon} {data.name}
-														</div>
-													</Tooltip>
-												</MenuItem>
-											)
-										})}
-									</Select>
-      					</FormControl>
-							: null}
-							{showDropdown && showDropdownNumber === count && data.variant === "STATIC_VALUE" && jsonList.length === 0 ?
-									<ActionlistWrapper actionlist={actionlist} />
-							: null}
-
-
-						</div>
-					)})}
-				</div>
-				)
-			} 
-		return null
-	}
-
+	
 	//height: "100%",
 	const appApiViewStyle = {
 		display: "flex", 
@@ -4082,70 +4618,7 @@ const AngularWorkflow = (props) => {
 		overflow: "auto",
 	}
 
-	const defineStartnode = () => {
-		var oldstartnode = cy.getElementById(workflow.start)
-		if (oldstartnode.length > 0) {
-			oldstartnode[0].data("isStartNode", false)
-			var oldnodecnt = workflow.actions.findIndex(a => a.id === workflow.start)
-			if (workflow.actions[oldnodecnt] !== undefined) {
-				workflow.actions[oldnodecnt].isStartNode = false
-			}
-		}
-
-		var newstartnode = cy.getElementById(selectedAction.id)
-		if (newstartnode.length > 0) {
-			newstartnode[0].data("isStartNode", true)
-			var newnodecnt = workflow.actions.findIndex(a => a.id === selectedAction.id)
-			console.log("NEW NODE CNT: ", newnodecnt)
-			if (workflow.actions[newnodecnt] !== undefined) {
-				workflow.actions[newnodecnt].isStartNode = true
-				console.log(workflow.actions[newnodecnt])
-			}
-		}
-
-		// Find branches with triggers as source nodes
-		// Move these targets to be the new node
-		// Set arrows pointing to new startnode with errors
-		//for (var key in workflow.branches) {
-		//	var item = workflow.branches[key]	
-		//	if (item.destination_id === oldstartnode[0].data()["id"]) {
-		//		var curbranch = cy.getElementById(item.id)
-		//		if (curbranch.length > 0) {
-		//			//console.log(curbranch[0].data())
-		//			//curbranch[0].data("target", selectedAction.id)
-		//			//curbranch[0].data("hasErrors", true)
-		//			//workflow.branches[key].destination_id = selectedAction.id
-		//			//console.log(curbranch[0].data())
-		//		}
-		//	}
-		//}
-
-		setUpdate("start_node"+selectedAction.id)
-		workflow.start = selectedAction.id
-		setWorkflow(workflow)
-		//setStartNode(selectedAction.id)
-	}
-
-	function sortByKey(array, key) {
-		if (array === undefined) {
-			return []
-		}
-
-		if (key.startsWith("-") && key.length > 2) {
-			key = key.slice(1, key.length)
-			return array.sort(function(a, b) {
-				var x = a[key]; var y = b[key]
-				return ((x < y) ? -1 : ((x > y) ? 1 : 0))
-			}).reverse()
-		}
-
-	  return array.sort(function(a, b) {
-			var x = a[key]; var y = b[key]
-			return ((x < y) ? -1 : ((x > y) ? 1 : 0))
-		})
-	}
-
-	const rightsidebarStyle = {
+	var rightsidebarStyle = {
 		position: "fixed", 
 		right: 0, 
 		top: appBarSize+1,
@@ -4159,273 +4632,6 @@ const AngularWorkflow = (props) => {
 		overflowY: "auto",
 		zIndex: 1000,
 	}
-
-	const textFieldStyle = {
-		backgroundColor: inputColor, 
-		borderRadius: borderRadius, 
-	}
-
-
-	const innerTextfieldStyle = {
-		color: "white",
-		minHeight: 50, 
-		marginLeft: "5px",
-		maxWidth: "95%",
-		fontSize: "1em",
-		borderRadius: borderRadius,
-	}
-
-	const appApiView = Object.getOwnPropertyNames(selectedAction).length > 0 ? 
-		<div style={appApiViewStyle}>
-			<div style={{display: "flex", minHeight: 40, marginBottom: 30}}>
-				<div style={{flex: 1}}>
-					<h3 style={{marginBottom: 5}}>{selectedAction.app_name.replaceAll("_", " ")}</h3>
-					<div style={{display: "flex",}}>
-						<IconButton style={{marginTop: "auto", marginBottom: "auto", height: 30, paddingLeft: 0, paddingRight: 0}} onClick={() => {
-							console.log("FIND EXAMPLE RESULTS FOR ", selectedAction) 
-							if (workflowExecutions.length > 0) {
-								// Look for the ID
-								const found = false
-								for (var key in workflowExecutions) {
-									if (workflowExecutions[key].results === undefined || workflowExecutions[key].results === null) {
-										continue
-									}
-
-									var foundResult = workflowExecutions[key].results.find(result => result.action.id === selectedAction.id)
-									if (foundResult === undefined || foundResult === null) {
-										continue
-									}
-
-									setSelectedResult(foundResult)
-									setCodeModalOpen(true)
-									break
-								}
-							}
-						}}>
-							<Tooltip color="primary" title="See previous results for this action" placement="top">
-								<ArrowLeftIcon style={{color: "white"}}/>
-							</Tooltip>
-						</IconButton>
-						<span style={{}}>
-							<Typography style={{marginTop: 5, marginLeft: 10,}}><a rel="norefferer" href="https://shuffler.io/docs/workflows#nodes" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>What are actions?</a></Typography>
-							{selectedAction.errors !== null && selectedAction.errors.length > 0 ? 
-								<div>
-									Errors: {selectedAction.errors.join("\n")}
-								</div>
-								: null
-							}
-						</span>
-					</div>
-				</div>
-				<div>
-					{selectedAction.id === workflow.start ? null : 
-						<Tooltip color="primary" title={"Make this node the start action"} placement="top">
-							<Button style={{zIndex: 5000, marginTop: "15px",}} color="primary" variant="outlined" onClick={(e) => {
-								defineStartnode(e)	
-							}}>
-								<KeyboardArrowRightIcon />
-							</Button> 				
-						</Tooltip>
-					}
-				</div>
-			</div>
-			<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
-			<Typography>
-				Name
-			</Typography>
-			<TextField
-				style={textFieldStyle} 
-				InputProps={{
-					style: innerTextfieldStyle, 
-				}}
-				fullWidth
-				color="primary"
-				placeholder={selectedAction.label}
-				onChange={selectedNameChange}
-			/>
-			{selectedApp.name !== undefined && selectedAction.authentication !== undefined && selectedAction.authentication.length === 0 && requiresAuthentication  ?
-				<div style={{marginTop: 15}}>
-					<Tooltip color="primary" title={"Add authentication option"} placement="top">
-						<span>
-							<Button color="primary" style={{}} fullWidth variant="contained" onClick={() => {
-								setAuthenticationModalOpen(true)
-							}}>
-								<AddIcon style={{marginRight: 10, }}/> Authenticate {selectedApp.name}
-							</Button> 				
-						</span>
-					</Tooltip>
-				</div>
-			: null}
-			{selectedAction.authentication !== undefined && selectedAction.authentication.length > 0 ? 
-				<div style={{marginTop: 20, overflow: "hidden",}}>
-					Authentication
-					<div style={{display: "flex"}}>
-						<Select
-							labelId="select-app-auth"
-							value={selectedAction.selectedAuthentication}
-							SelectDisplayProps={{
-								style: {
-									marginLeft: 10,
-								}
-							}}
-							fullWidth
-							onChange={(e) => {
-								console.log("CHOSE AN AUTHENTICATION OPTION: ", e.target.value)
-								selectedAction.selectedAuthentication = e.target.value
-								selectedAction.authentication_id = e.target.value.id
-								setSelectedAction(selectedAction)
-								setUpdate(Math.random())
-							}}
-							style={{backgroundColor: inputColor, color: "white", height: 50, maxWidth: rightsidebarStyle.maxWidth-80,}}	
-						>
-							{selectedAction.authentication.map(data => (
-								<MenuItem key={data.id} style={{backgroundColor: inputColor, color: "white"}} value={data}>
-									{data.label} - ({data.app.app_version})
-								</MenuItem>
-							))}
-						</Select>
-
-						{/*
-
-						<Button fullWidth style={{margin: "auto", marginTop: "10px",}} color="primary" variant="contained" onClick={() => setAuthenticationModalOpen(true)}>
-							AUTHENTICATE
-						</Button>
-						curaction.authentication = authenticationOptions
-							if (curaction.selectedAuthentication === null || curaction.selectedAuthentication === undefined || curaction.selectedAuthentication.length === "")
-						*/}
-					 	<Tooltip color="primary" title={"Add authentication option"} placement="top">
-							<IconButton color="primary" style={{}} onClick={() => {
-								setAuthenticationModalOpen(true)
-							}}>
-								<AddIcon />
-							</IconButton> 				
-						</Tooltip>
-					</div>
-				</div>
-				: null}
-			{showEnvironment ? 
-				<div style={{marginTop: "20px"}}>
-					<Typography>
-						Environment
-					</Typography>
-					<Select
-						value={selectedActionEnvironment === undefined || selectedActionEnvironment.Name === undefined ? "" : selectedActionEnvironment.Name}
-						SelectDisplayProps={{
-							style: {
-								marginLeft: 10,
-
-							}
-						}}
-						fullWidth
-						onChange={(e) => {
-							const env = environments.find(a => a.Name === e.target.value)
-							setSelectedActionEnvironment(env) 
-							selectedAction.environment = env.Name
-							setSelectedAction(selectedAction)
-						}}
-						style={{backgroundColor: inputColor, color: "white", height: "50px"}}
-					>
-						{environments.map(data => {
-							if (data.archived) {
-								return null
-							}
-							
-							return (
-								<MenuItem key={data.Name} style={{backgroundColor: inputColor, color: "white"}} value={data.Name}>
-									{data.Name}
-								</MenuItem>
-							)
-						})}
-					</Select>
-				</div>
-				: null}
-			{workflow.execution_variables !== undefined && workflow.execution_variables !== null && workflow.execution_variables.length > 0 ?
-				<div style={{marginTop: "20px"}}>
-					Set execution variable (optional) 
-					<Select
-						value={selectedAction.execution_variable !== undefined ? selectedAction.execution_variable.name : "No selection"}
-						SelectDisplayProps={{
-							style: {
-								marginLeft: 10,
-							}
-						}}
-						fullWidth
-						onChange={(e) => {
-							if (e.target.value === "No selection") {
-								selectedAction.execution_variable = {"name": "No selection"}
-							} else {
-								const value = workflow.execution_variables.find(a => a.name === e.target.value)
-								selectedAction.execution_variable = value
-							}
-							setSelectedAction(selectedAction)
-							setUpdate(Math.random())
-						}}
-						style={{backgroundColor: inputColor, color: "white", height: "50px"}}
-					>
-							<MenuItem style={{backgroundColor: inputColor, color: "white"}} value="No selection">
-								<em>No selection</em>
-							</MenuItem>
-							<Divider />
-							{workflow.execution_variables.map(data => (
-								<MenuItem style={{backgroundColor: inputColor, color: "white"}} value={data.name}>
-									{data.name}
-								</MenuItem>
-							))}
-					</Select>
-				</div>
-				: null}
-			<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
-			<div style={{flex: "6", marginTop: "20px"}}>
-				<div style={{marginBottom: 5}}>
-					<b>Actions</b>
-				</div>
-				<Select
-					value={selectedAction.name}
-					fullWidth
-					onChange={setNewSelectedAction}
-					style={{backgroundColor: inputColor, color: "white", height: 50, borderRadius: borderRadius,}}
-					SelectDisplayProps={{
-						style: {
-							marginLeft: 10,
-							maxHeight: 200,
-							borderRadius: borderRadius,
-						}
-					}}
-				>
-					{sortByKey(selectedApp.actions, "label").map(data => {
-						var newActionname = data.name
-						if (data.label !== undefined && data.label !== null && data.label.length > 0) {
-							newActionname = data.label
-						}
-						// ROFL FIXME - loop
-						newActionname = newActionname.replaceAll("_", " ")
-						newActionname = newActionname.replaceAll("_", " ")
-						newActionname = newActionname.replaceAll("_", " ")
-						newActionname = newActionname.replaceAll("_", " ")
-						newActionname = newActionname.charAt(0).toUpperCase()+newActionname.substring(1)
-						return (
-						<MenuItem key={data.name} style={{maxWidth: 400, overflowX: "hidden", backgroundColor: inputColor, color: "white"}} value={data.name}>
-							{newActionname}
-
-						</MenuItem>
-						)
-					})}
-				</Select>
-				{selectedAction.description !== undefined && selectedAction.description.length > 0 ?
-				<div style={{marginTop: 10, marginBottom: 10, maxHeight: 60, overflow: "hidden"}}>
-					{selectedAction.description}
-				</div> : null}
-				<div style={{marginTop: "10px", borderColor: "white", borderWidth: "2px", marginBottom: 200}}>
-					<AppActionArguments key={selectedAction.id} selectedAction={selectedAction} />
-
-				</div>
-				<div style={{}}>
-						
-				</div> 
-			</div>
-		</div> 
-		: null 
-
 
 	const setTriggerFolderWrapperMulti = event => {
 	    const { options } = event.target
@@ -4616,7 +4822,7 @@ const AngularWorkflow = (props) => {
 
 		var datafield = 
 			<TextField
-				style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+				style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 				InputProps={{
 					style:{
 						color: "white",
@@ -5209,6 +5415,8 @@ const AngularWorkflow = (props) => {
 				color="primary"
 				onClick={() => {
 					const redirectUri = isCloud ? "https%3A%2F%2Fshuffler.io%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister" : "http%3A%2F%2Flocalhost:5001%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister"
+					//const redirectUri = isCloud ? "http%3A%2F%2Flocalhost:5002%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister" : "http%3A%2F%2Flocalhost:5001%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister"
+
 					const client_id = "fd55c175-aa30-4fa6-b303-09a29fb3f750"
 					const username = isCloud ? userdata.username : userdata.id
 					console.log(redirectUri)
@@ -5291,7 +5499,7 @@ const AngularWorkflow = (props) => {
 									native
 									rows="10"
 									value={selectedTrigger.parameters[0].value.split(splitter)}
-									style={{backgroundColor: inputColor, color: "white"}}
+									style={{backgroundColor: inputColor, color: "white", height: 50,}}
 									disabled={selectedTrigger.status === "running"}
 									SelectDisplayProps={{
 										style: {
@@ -5369,7 +5577,7 @@ const AngularWorkflow = (props) => {
 					Name
 				</div>
 				<TextField
-					style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+					style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 					InputProps={{
 						style:{
 							color: "white",
@@ -5388,7 +5596,7 @@ const AngularWorkflow = (props) => {
 				<div style={{marginTop: "20px"}}>
 					Environment:
 					<TextField
-						style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+						style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 						InputProps={{
 							style:{
 								color: "white",
@@ -5433,6 +5641,302 @@ const AngularWorkflow = (props) => {
 		const [showDropdown, setShowDropdown] = React.useState(false)
 		const [showDropdownNumber, setShowDropdownNumber] = React.useState(0)
 		const [showAutocomplete, setShowAutocomplete] = React.useState(false)
+		const [actionlist, setActionlist] = React.useState([])
+
+		if (actionlist.length === 0) {
+				// FIXME: Have previous execution values in here
+				actionlist.push({"type": "Execution Argument", "name": "Execution Argument", "value": "$exec", "highlight": "exec", "autocomplete": "exec", "example": "hello"})
+				if (workflow.workflow_variables !== null && workflow.workflow_variables !== undefined && workflow.workflow_variables.length > 0) {
+					for (var key in workflow.workflow_variables) {
+						const item = workflow.workflow_variables[key]
+						actionlist.push({"type": "workflow_variable", "name": item.name, "value": item.value, "id": item.id, "autocomplete": `${item.name.split(" ").join("_")}`, "example": item.value})
+					}
+				}
+
+				// FIXME: Add values from previous executions if they exist
+				if (workflow.execution_variables !== null && workflow.execution_variables !== undefined && workflow.execution_variables.length > 0) {
+					for (var key in workflow.execution_variables) {
+						const item = workflow.execution_variables[key]
+						actionlist.push({"type": "execution_variable", "name": item.name, "value": item.value, "id": item.id, "autocomplete": `${item.name.split(" ").join("_")}`, "example": ""})
+					}
+				}
+
+			var parents = getParents(selectedAction)
+			if (parents.length > 1) {
+				for (var key in parents) {
+					const item = parents[key]
+					if (item.label === "Execution Argument") {
+						continue
+					}
+
+					var exampledata = item.example === undefined ? "" : item.example
+					// Find previous execution and their variables
+					//exampledata === "" && 
+					if (workflowExecutions.length > 0) {
+						// Look for the ID
+						const found = false
+						for (var key in workflowExecutions) {
+							if (workflowExecutions[key].results === undefined || workflowExecutions[key].results === null) {
+								continue
+							}
+
+							var foundResult = workflowExecutions[key].results.find(result => result.action.id === item.id)
+							if (foundResult === undefined) {
+								continue
+							}
+
+							foundResult.result = foundResult.result.trim()
+							foundResult.result = foundResult.result.split(" None").join(" \"None\"")
+							foundResult.result = foundResult.result.split(" False").join(" false")
+							foundResult.result = foundResult.result.split(" True").join(" true")
+
+							var jsonvalid = true
+							try {
+								const tmp = String(JSON.parse(foundResult.result))
+								if (!foundResult.result.includes("{") && !foundResult.result.includes("[")) {
+									jsonvalid = false
+								}
+							} catch (e) {
+								try {
+									foundResult.result = foundResult.result.split("\'").join("\"")
+									const tmp = String(JSON.parse(foundResult.result))
+									if (!foundResult.result.includes("{") && !foundResult.result.includes("[")) {
+										jsonvalid = false
+									}
+								} catch (e) {
+									jsonvalid = false
+								}
+							}
+
+							// Finds the FIRST json only
+							if (jsonvalid) {
+								exampledata = JSON.parse(foundResult.result)
+								break
+							} 
+							//else {
+							//	console.log("Invalid JSON: ", foundResult.result)
+							//}
+						}
+					}
+
+					// 1. Take 
+					const actionvalue = {"type": "action", "id": item.id, "name": item.label, "autocomplete": `${item.label.split(" ").join("_")}`, "example": exampledata}
+					actionlist.push(actionvalue)
+				}
+
+			}
+
+			//console.log("ACTIONS: ", actionlist)
+			setActionlist(actionlist)
+		}
+
+		// Shows nested list of nodes > their JSON lists
+		const ActionlistWrapper = (props) => {
+  		const { data } = props;
+
+			const handleMenuClose = () => {
+				setShowAutocomplete(false)
+
+				//if (!selectedActionParameters[count].value[selectedActionParameters[count].value.length-1] === "$") {
+				//	setShowDropdown(false)
+				//}
+
+				setUpdate(Math.random())
+				setMenuPosition(null)
+			}
+
+			const handleItemClick = (values) => {
+				if (values === undefined || values === null || values.length === 0) {
+					return
+				}
+
+				var toComplete = workflow.triggers[selectedTriggerIndex].parameters[1].value.trim().endsWith("$") ? values[0].autocomplete : "$"+values[0].autocomplete
+				for (var key in values) {
+					if (key == 0 || values[key].autocomplete.length === 0) {
+						continue
+					}
+
+					toComplete += values[key].autocomplete
+				}
+
+				// Handles the fields under OpenAPI body to be parsed.
+				if (data.name.startsWith("${") && data.name.endsWith("}")) {
+					console.log("INSIDE VALUE REPLACE: ", data.name, toComplete)
+					// PARAM FIX - Gonna use the ID field, even though it's a hack
+					const paramcheck = selectedAction.parameters.find(param => param.name === "body")
+					if (paramcheck !== undefined) {
+						if (paramcheck["value_replace"] === undefined || paramcheck["value_replace"] === null) {
+							paramcheck["value_replace"] = [{
+								"key": data.name,
+								"value": toComplete,
+							}]
+
+						} else {
+							const subparamindex = paramcheck["value_replace"].findIndex(param => param.key === data.name)
+							if (subparamindex === -1) {
+								paramcheck["value_replace"].push({
+									"key": data.name,
+									"value": toComplete,
+								})
+							} else {
+								paramcheck["value_replace"][subparamindex]["value"] += toComplete
+							}
+						}
+						
+						workflow.triggers[selectedTriggerIndex].parameters[1]["value_replace"] = paramcheck
+						setSelectedAction(selectedAction)
+						setUpdate(Math.random())
+
+						setShowDropdown(false)
+						setMenuPosition(null)
+						return
+					}
+				}
+
+				//workflow.triggers[selectedTriggerIndex].parameters[1].value = selectedActionParameters[count].value 
+				setSelectedAction(selectedAction)
+				setUpdate(Math.random())
+
+				setShowDropdown(false)
+				setMenuPosition(null)
+			}
+
+			const iconStyle = {
+				marginRight: 15,
+			}
+
+			return (
+				<Menu
+					anchorReference="anchorPosition"
+					anchorPosition={menuPosition}
+					onClose={() => {
+						handleMenuClose()
+					}}
+					open={!!menuPosition}
+					style={{
+						border: `2px solid #f85a3e`, 
+						color: "white", 
+						marginTop: 2,
+					}}
+				>
+				{actionlist.map(innerdata => {
+					const icon = innerdata.type === "action" ? <AppsIcon style={{marginRight: 10}} /> : innerdata.type === "workflow_variable" || innerdata.type === "execution_variable" ? <FavoriteBorderIcon style={{marginRight: 10}} /> : <ScheduleIcon style={{marginRight: 10}} /> 
+
+					const handleExecArgumentHover = (inside) => {
+						var exec_text_field = document.getElementById("execution_argument_input_field")
+						if (exec_text_field !== null) {
+							if (inside) {
+								exec_text_field.style.border = "2px solid #f85a3e"
+							} else {
+								exec_text_field.style.border = ""
+							}
+						}
+
+						// Also doing arguments
+						if (workflow.triggers !== undefined && workflow.triggers !== null && workflow.triggers.length > 0) {
+							for (var key in workflow.triggers) {
+								const item = workflow.triggers[key]
+
+								if (cy !== undefined) {
+									var node = cy.getElementById(item.id)
+									if (node.length > 0) {
+										if (inside) {
+											node.addClass('shuffle-hover-highlight')
+										} else {
+											node.removeClass('shuffle-hover-highlight')
+										}
+									}
+								}
+							}
+						}
+					}
+
+					const handleActionHover = (inside, actionId) => {
+						if (cy !== undefined) {
+							var node = cy.getElementById(actionId)
+							if (node.length > 0) {
+								if (inside) {
+									node.addClass('shuffle-hover-highlight')
+								} else {
+									node.removeClass('shuffle-hover-highlight')
+								}
+							}
+						}
+					}
+
+					const handleMouseover = () => {
+						if (innerdata.type === "Execution Argument") {
+								handleExecArgumentHover(true)
+							} else if (innerdata.type === "action") {
+								handleActionHover(true, innerdata.id)
+							}
+						} 
+						
+					const handleMouseOut = () => {
+						if (innerdata.type === "Execution Argument") {
+							handleExecArgumentHover(false)
+						} else if (innerdata.type === "action") {
+							handleActionHover(false, innerdata.id)
+						}
+					}
+
+					var parsedPaths = [] 
+					if (typeof(innerdata.example) === "object") {
+						parsedPaths = GetParsedPaths(innerdata.example, "")
+					}
+
+					return (
+						parsedPaths.length > 0 ?
+							<NestedMenuItem
+								key={innerdata.name}
+								label={
+									<div style={{display: "flex"}}>
+										{icon} {innerdata.name}
+									</div>
+								}
+								parentMenuOpen={!!menuPosition}
+								style={{backgroundColor: theme.palette.inputColor, color: "white", minWidth: 250,}}
+								onClick={() => {
+									handleItemClick([innerdata])
+								}}
+							>
+								{parsedPaths.map((pathdata, index) => {
+									// FIXME: Should be recursive in here
+									const icon = pathdata.type === "value" ? <VpnKeyIcon style={iconStyle} /> : pathdata.type === "list" ? <FormatListNumberedIcon style={iconStyle} /> : <ExpandMoreIcon style={iconStyle} /> 
+									return (
+										<MenuItem key={pathdata.name} style={{backgroundColor: theme.palette.inputColor, color: "white", minWidth: 250, }} value={pathdata} onMouseOver={() => {}}
+											onClick={() => {
+												handleItemClick([innerdata, pathdata])
+											}}
+										>
+											<Tooltip color="primary" title={`Ex. value: ${pathdata.value}`} placement="left">
+												<div style={{display: "flex"}}>
+													{icon} {pathdata.name}
+												</div>
+											</Tooltip>
+										</MenuItem>
+									)
+
+								})}
+							</NestedMenuItem>
+						: 
+							<MenuItem key={innerdata.name} style={{backgroundColor: theme.palette.inputColor, color: "white"}} value={innerdata} onMouseOver={() => handleMouseover()} onMouseOut={() => {handleMouseOut()}} 
+								onClick={() => {
+									handleItemClick([innerdata])
+								}}
+							>
+								<Tooltip color="primary" title={`Value: ${innerdata.value}`} placement="left">
+									<div style={{display: "flex"}}>
+										{icon} {innerdata.name}
+									</div>
+								</Tooltip>
+							</MenuItem>
+						
+					)
+				})}	
+			</Menu>
+			)
+		}
 
 		if (Object.getOwnPropertyNames(selectedTrigger).length > 0) {
 			if (workflow.triggers[selectedTriggerIndex] === undefined) {
@@ -5445,6 +5949,7 @@ const AngularWorkflow = (props) => {
 				workflow.triggers[selectedTriggerIndex].parameters[1] = {"name": "argument", "value": ""}
 				workflow.triggers[selectedTriggerIndex].parameters[2] = {"name": "user_apikey", "value": ""}
 				workflow.triggers[selectedTriggerIndex].parameters[3] = {"name": "startnode", "value": ""}
+				workflow.triggers[selectedTriggerIndex].parameters[4] = {"name": "check_result", "value": "true"}
 
 				console.log("SETTINGS: ", userSettings)
 				if (userSettings !== undefined && userSettings !== null && userSettings.apikey !== null && userSettings.apikey !== undefined && userSettings.apikey.length > 0) {
@@ -5453,7 +5958,7 @@ const AngularWorkflow = (props) => {
 			} 
 
 			return(
-				<div style={appApiViewStyle}>
+				<div style={appApiViewStyle}>					
 					<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 						<div style={{flex: "1"}}>
 							<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}</h3>
@@ -5465,7 +5970,7 @@ const AngularWorkflow = (props) => {
 						Name
 					</div>
 					<TextField
-						style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+						style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 						InputProps={{
 							style:{
 								color: "white",
@@ -5479,6 +5984,27 @@ const AngularWorkflow = (props) => {
 						color="primary"
 						placeholder={selectedTrigger.label}
 						onChange={selectedTriggerChange}
+					/>
+					<FormControlLabel
+						control={
+							<Checkbox 
+								checked={workflow.triggers[selectedTriggerIndex].parameters[4] !== undefined && workflow.triggers[selectedTriggerIndex].parameters[4].value === "true"} 
+								onChange={() => {
+									const newvalue = workflow.triggers[selectedTriggerIndex].parameters[4] === undefined || workflow.triggers[selectedTriggerIndex].parameters[4].value === "false" ? "true" : "false"
+									workflow.triggers[selectedTriggerIndex].parameters[4] = {
+										"name": "check_result",
+										"value": newvalue,
+									}
+
+									setWorkflow(workflow)
+									setUpdate(Math.random())
+								}} 
+								color="primary"
+								value="Wait for results" 
+							/>
+						}
+						style={{marginTop: 10}}
+						label={<div style={{color: "white"}}>Wait for results</div>}
 					/>
 					<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 					<div style={{flex: "6", marginTop: "20px"}}>
@@ -5501,14 +6027,15 @@ const AngularWorkflow = (props) => {
 									}}
 									fullWidth
 									onChange={(e) => {
-										setSubworkflow(e.target.value)
 										setUpdate(Math.random())
 										workflow.triggers[selectedTriggerIndex].parameters[0].value = e.target.value.id
-										setWorkflow(workflow)
 										setSubworkflowStartnode(e.target.value.start)
 
 										// Sets the startnode
 										if (e.target.value.id !== workflow.id) {
+											console.log("WORKFLOW: ", e.target.value)
+
+											setSubworkflow(e.target.value)
 											const startnode = e.target.value.actions.find(action => action.id === e.target.value.start)
 											if (startnode !== undefined && startnode !== null) {
 												//ddsetSubworkflowStartnode(innernode)
@@ -5524,16 +6051,20 @@ const AngularWorkflow = (props) => {
 												}
 											}
 											console.log("STARTNODE: ", startnode)
+										} else {
+											console.log("WORKFLOW: ", workflow)
+											setSubworkflow(e.target.value)
 										}
+
+										setWorkflow(workflow)
 									}}
-									style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+									style={{backgroundColor: inputColor, color: "white", height: 50}}
 								>
 									{workflows.map((data, index) => {
-										/*
 										if (data.id === workflow.id) {
-											return null	
+											//return null	
+											data = workflow
 										}
-										*/
 
 										return (
 											<MenuItem key={index} style={{backgroundColor: inputColor, color: data.id === workflow.id ? "red" : "white"}} value={data}>
@@ -5567,6 +6098,51 @@ const AngularWorkflow = (props) => {
 										fullWidth
 										onChange={(e) => {
 											setSubworkflowStartnode(e.target.value)
+											//console.log("WF: ", workflow)
+
+											const branchId = uuid.v4()
+											const newbranch = {
+												"source_id": workflow.triggers[selectedTriggerIndex].id,
+												"destination_id": e.target.value.id,
+												"source": workflow.triggers[selectedTriggerIndex].id,
+												"target": e.target.value.id,
+												"has_errors": false,
+												"id": branchId,
+												"_id": branchId,
+												"label": "Subflow",
+												"decorator": true,
+											}
+
+											if (workflow.visual_branches !== undefined) {
+												if (workflow.visual_branches === null) {
+													workflow.visual_branches = [newbranch]
+												} else if (workflow.visual_branches.length === 0) {
+													workflow.visual_branches.push(newbranch)
+												} else {
+													const foundIndex = workflow.visual_branches.findIndex(branch => branch.source_id === newbranch.source_id) 
+													if (foundIndex !== -1) {
+														const currentEdge = cy.getElementById(workflow.visual_branches[foundIndex].id)
+														if (currentEdge !== undefined && currentEdge !== null) {
+															currentEdge.remove()
+														}
+													}
+							
+													workflow.visual_branches.splice(foundIndex, 1)
+													workflow.visual_branches.push(newbranch)
+												}
+											}
+
+											if (workflow.id == subworkflow.id) {
+												const cybranch = {
+													group: "edges",
+													source: newbranch.source_id,
+													target: newbranch.destination_id,
+													id: branchId,
+													data: newbranch,
+												}
+
+												cy.add(cybranch)
+											}
 
 											try {
 												workflow.triggers[selectedTriggerIndex].parameters[3].value = e.target.value.id
@@ -5580,12 +6156,12 @@ const AngularWorkflow = (props) => {
 											setWorkflow(workflow)
 											//setUpdate(Math.random())
 										}}
-										style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+										style={{backgroundColor: inputColor, color: "white", height: 50}}
 									>
 										{subworkflow.actions.map((action, index) => {
 											//console.log(action)
 											return (
-												<MenuItem disabled={getParents(selectedTrigger).find(parent => parent.id === action.id)} key={index} style={{backgroundColor: inputColor, color: "white"}} value={action}>
+												<MenuItem  key={index} style={{backgroundColor: inputColor, color: getParents(selectedTrigger).find(parent => parent.id === action.id) ? "red" : "white"}} value={action}>
 													{action.label}
 												</MenuItem>
 											)
@@ -5600,7 +6176,7 @@ const AngularWorkflow = (props) => {
 								</div>
 							</div>
 							<TextField
-								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+								style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 								InputProps={{
 									style:{
 										color: "white",
@@ -5616,7 +6192,7 @@ const AngularWorkflow = (props) => {
 														top: event.pageY+10,
 														left: event.pageX+10,
 													})
-													//setShowDropdownNumber(count)
+													//setShowDropdownNumber(3)
 													setShowDropdown(true)
 													setShowAutocomplete(true)
 												}}/>
@@ -5636,14 +6212,17 @@ const AngularWorkflow = (props) => {
 									setWorkflow(workflow)
 								}}
 							/>
+							{showDropdown ?
+								<ActionlistWrapper actionlist={actionlist} data={workflow.triggers[selectedTriggerIndex]} />
+							: null}
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: "10px"}}/>
 								<div style={{flex: "10"}}> 
-									<b>API-key: </b> 
+									<b>API-key </b> 
 								</div>
 							</div>
 							<TextField
-								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+								style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 								InputProps={{
 									style:{
 										color: "white",
@@ -5681,8 +6260,11 @@ const AngularWorkflow = (props) => {
 				workflow.triggers[selectedTriggerIndex].parameters = []
 				workflow.triggers[selectedTriggerIndex].parameters[0] = {"name": "url", "value": referenceUrl+"webhook_"+selectedTrigger.id}
 				workflow.triggers[selectedTriggerIndex].parameters[1] = {"name": "tmp", "value": "webhook_"+selectedTrigger.id}
+				workflow.triggers[selectedTriggerIndex].parameters[2] = {"name": "auth_headers", "value": ""}
 				setWorkflow(workflow)
 			}
+
+			const trigger_header_auth = workflow.triggers[selectedTriggerIndex].parameters.length > 2 ? workflow.triggers[selectedTriggerIndex].parameters[2].value : ""
 			//const cronValue = "*/15 * * * *"
 
 			return(
@@ -5698,7 +6280,7 @@ const AngularWorkflow = (props) => {
 						Name
 					</div>
 					<TextField
-						style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+						style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 						InputProps={{
 							style:{
 								color: "white",
@@ -5745,7 +6327,7 @@ const AngularWorkflow = (props) => {
 									setWorkflow(workflow)
 									setUpdate(Math.random())
 								}}
-								style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+								style={{backgroundColor: inputColor, color: "white", height: 50}}
 							>
 								{triggerEnvironments.map(data => {
 									if (data.archived) {
@@ -5771,17 +6353,28 @@ const AngularWorkflow = (props) => {
 								</div>
 							</div>
 							<TextField
-								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+								style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 								id="webhook_uri_field"
 								onClick={() => {
-  								var copyText = document.getElementById("webhook_uri_field");
-									navigator.clipboard.writeText(copyText.value)
-									copyText.select();
-									copyText.setSelectionRange(0, 99999); /* For mobile devices */
+  								var copyText = document.getElementById("webhook_uri_field")
+									if (copyText !== undefined && copyText !== null) {
+										console.log("NAVIGATOR: ", navigator)
+										const clipboard = navigator.clipboard
+										if (clipboard === undefined) {
+											alert.error("Can only copy over HTTPS (port 3443)")
+											return
+										} 
 
-									/* Copy the text inside the text field */
-									document.execCommand("copy");
-									alert.success("Copied Webhook URL")
+										navigator.clipboard.writeText(copyText.value)
+										copyText.select()
+										copyText.setSelectionRange(0, 99999) /* For mobile devices */
+
+										/* Copy the text inside the text field */
+										document.execCommand("copy")
+										alert.success("Copied Webhook URL")
+									} else {
+										console.log("Couldn't find webhook URI field: ", copyText)
+									}
 								}}
 								InputProps={{
 									style:{
@@ -5801,18 +6394,56 @@ const AngularWorkflow = (props) => {
 									setTriggerCronWrapper(e.target.value)
 								}}
 							/>
+							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
+								<div style={{width: "17px", height: "17px", borderRadius: 17 / 2, backgroundColor: yellow, marginRight: "10px"}}/>
+								<div style={{flex: "10"}}> 
+									<b>Required headers</b> 
+								</div>
+							</div>
+							<div>
+								<TextField
+									style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
+									id="webhook_uri_header"
+									onClick={() => {}}
+									InputProps={{
+										style:{
+											color: "white",
+											marginLeft: "5px",
+											maxWidth: "95%",
+											fontSize: "1em",
+										},
+									}}
+									fullWidth
+									multiline
+									rows="4"
+									defaultValue={trigger_header_auth}
+									color="primary"
+									disabled={selectedTrigger.status === "running"}
+									placeholder={"AUTH_HEADER=AUTH_VALUE1"}
+									onBlur={(e) => {
+										const value = e.target.value
+										if (selectedTrigger.parameters === null) {
+											selectedTrigger.parameters = []
+										} 
+
+										workflow.triggers[selectedTriggerIndex].parameters[2] = {"value": value, "name": "auth_headers"}
+										//setSelectedTrigger(workflow.triggers[selectedTr
+										setWorkflow(workflow)
+									}}
+								/>
+							</div>
 							<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 							<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
 								<Button variant="contained" style={{flex: "1",}} disabled={selectedTrigger.status === "running"} onClick={() => {
-									newWebhook(selectedTrigger)
+									newWebhook(workflow.triggers[selectedTriggerIndex])
 								}} color="primary">
-	    		    	    		Start	
-	    		    	  		</Button>
+	    		    	  Start	
+	    		    	</Button>
 								<Button variant="contained" style={{flex: "1",}} disabled={selectedTrigger.status !== "running"} onClick={() => {
 									deleteWebhook(selectedTrigger, selectedTriggerIndex)
 								}} color="primary">
-	    		    	    		Stop	
-	    		    	  		</Button>
+	    		    	  Stop	
+	    		    	</Button>
 							</div>
 						</div>
 					</div>
@@ -5840,7 +6471,7 @@ const AngularWorkflow = (props) => {
 	//	})
 	//	.catch(error => {
     //		console.log(error.toString())
-	//	});
+	//	})
 	//}
 
 	const stopMailSub = (trigger, triggerindex) => {
@@ -5895,7 +6526,7 @@ const AngularWorkflow = (props) => {
 			const item = splitItem[key] 
 			const curfolder = triggerFolders.find(a => a.displayName === item)	
 			if (curfolder === undefined) {
-				alert.error("Something went wrong with outlook folder "+item)
+				alert.error("Something went wrong with outlook folder: "+item)
 				return
 			}
 
@@ -5967,6 +6598,14 @@ const AngularWorkflow = (props) => {
 			startNode = branch.destination_id
 		}
 
+		const param = trigger.parameters.find(param => param.name === "auth_headers")
+		console.log("PARAM: ", param)
+		var auth = ""	
+		if (param !== undefined && param !== null) {
+			auth = param.value
+		}
+
+		console.log("TRIG: ", trigger)
 		const data = {
 			"name": hookname, 
 			"type": "webhook", 
@@ -5974,6 +6613,7 @@ const AngularWorkflow = (props) => {
 			"workflow": workflow.id,
 			"start": startNode,
 			"environment": trigger.environment,
+			"auth": auth,
 		}
 
 		fetch(globalUrl+"/api/v1/hooks/new", {
@@ -6077,7 +6717,7 @@ const AngularWorkflow = (props) => {
 						Name
 					</div>
 					<TextField
-						style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+						style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 						InputProps={{
 							style:{
 								color: "white",
@@ -6096,7 +6736,7 @@ const AngularWorkflow = (props) => {
 					<div style={{marginTop: "20px"}}>
 						Environment:
 						<TextField
-							style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+							style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 							InputProps={{
 								style:{
 									color: "white",
@@ -6123,7 +6763,7 @@ const AngularWorkflow = (props) => {
 							</div>
 						</div>
 						<TextField
-							style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+							style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 							InputProps={{
 								style:{
 									color: "white",
@@ -6179,7 +6819,7 @@ const AngularWorkflow = (props) => {
 						</FormGroup>
 						{workflow.triggers[selectedTriggerIndex].parameters[2] !== undefined && workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("email") ?
 							<TextField
-								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+								style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 								InputProps={{
 									style:{
 										color: "white",
@@ -6203,7 +6843,7 @@ const AngularWorkflow = (props) => {
 						}
 						{workflow.triggers[selectedTriggerIndex].parameters[2] !== undefined && workflow.triggers[selectedTriggerIndex].parameters[2].value.includes("sms") ?
 							<TextField
-								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+								style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 								InputProps={{
 									style:{
 										color: "white",
@@ -6255,7 +6895,7 @@ const AngularWorkflow = (props) => {
 						Name
 					</div>
 					<TextField
-						style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+						style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 						InputProps={{
 							style:{
 								color: "white",
@@ -6306,7 +6946,7 @@ const AngularWorkflow = (props) => {
 								setWorkflow(workflow)
 								setUpdate(Math.random())
 							}}
-							style={{backgroundColor: inputColor, color: "white", height: "50px"}}
+							style={{backgroundColor: inputColor, color: "white", height: 50}}
 						>
 							{triggerEnvironments.map(data => {
 								if (data.archived) {
@@ -6332,7 +6972,7 @@ const AngularWorkflow = (props) => {
 								</div>
 							</div>
 							<TextField
-								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+								style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 								InputProps={{
 									style:{
 										color: "white",
@@ -6358,7 +6998,7 @@ const AngularWorkflow = (props) => {
 								</div>
 							</div>
 							<TextField
-								style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+								style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 								InputProps={{
 									style:{
 										color: "white",
@@ -6425,7 +7065,7 @@ const AngularWorkflow = (props) => {
 		*/
 	}
 
-	const TopCytoscapeBar = () => {
+	const TopCytoscapeBar = (props) => {
 		return (
 			<div style={topBarStyle}>	
 				<div style={{margin: "0px 10px 0px 10px", }}>
@@ -6468,7 +7108,7 @@ const AngularWorkflow = (props) => {
 	}
 
 	const FileMenu = () => {
-		const [newAnchor, setNewAnchor] = React.useState(null);
+		const [newAnchor, setNewAnchor] = React.useState(null)
 		const [showShuffleMenu, setShowShuffleMenu] = React.useState(false)
 
 		{ /*const [showShuffleMenu, setShowShuffleMenu] = React.useState(true) */}
@@ -6526,7 +7166,7 @@ const AngularWorkflow = (props) => {
 	}
 
 	const WorkflowMenu = () => {
-		const [newAnchor, setNewAnchor] = React.useState(null);
+		const [newAnchor, setNewAnchor] = React.useState(null)
 		const [showShuffleMenu, setShowShuffleMenu] = React.useState(false)
 
 		{ /*const [showShuffleMenu, setShowShuffleMenu] = React.useState(true) */}
@@ -6583,8 +7223,42 @@ const AngularWorkflow = (props) => {
 		)
 	}
 
+	const handleHistoryUndo = () => {
+		console.log("history: ", history, "index: ", historyIndex)
+		var item = history[historyIndex-1]
+		if (historyIndex === 0) {
+			item = history[historyIndex]
+		}
+
+		if (item === undefined) {
+			console.log("Couldn't find the action you're looking for")
+			return
+		}
+
+		console.log("HANDLE: ", item)
+		if (item.type === "node" && item.action === "removed") {
+			// Re-add the node 
+				
+			cy.add({
+					group: 'nodes',
+					data: item.data,
+					position: item.data.position,
+			})
+		} else if (item.action === "added") {
+			console.log("Should remove item!")
+			const currentitem = cy.getElementById(item.data.id)
+			if (currentitem !== undefined && currentitem !== null) {
+				currentitem.remove()
+			}
+		}
+
+		if (historyIndex > 0) {
+			setHistoryIndex(historyIndex-1)
+		}
+	}
+
 	const BottomCytoscapeBar = () => {
-		const [anchorEl, setAnchorEl] = React.useState(null);
+		const [anchorEl, setAnchorEl] = React.useState(null)
 
 		const boxSize = 100
 		const executionButton = executionRunning ? 
@@ -6612,29 +7286,53 @@ const AngularWorkflow = (props) => {
 			<div style={bottomBarStyle}>	
 				{executionButton} 
 				<div style={{marginLeft: "10px", left: boxSize, bottom: 0, position: "absolute"}}>
-					<Tooltip color="primary" title="An argument to be used for execution. This is a variable available to every node in your workflow." placement="top">
-						<TextField
-							id="execution_argument_input_field"
-							style={textFieldStyle} 
-							disabled={workflow.public}
-							InputProps={{
-								style: innerTextfieldStyle, 
-							}}
-							color="secondary"
-							placeholder={"Execution Argument"}
-							defaultValue={executionText}
-							onBlur={(e) => {
-								setExecutionText(e.target.value)
-							}}
-						/>
-					</Tooltip>
+					{workflow.public ? null :
+						<Tooltip color="primary" title="An argument to be used for execution. This is a variable available to every node in your workflow." placement="top">
+							<TextField
+								id="execution_argument_input_field"
+								style={theme.palette.textFieldStyle} 
+								disabled={workflow.public}
+								InputProps={{
+									style: theme.palette.innerTextfieldStyle, 
+								}}
+								color="secondary"
+								placeholder={"Execution Argument"}
+								defaultValue={executionText}
+								onBlur={(e) => {
+									setExecutionText(e.target.value)
+								}}
+							/>
+						</Tooltip>
+					}
 					<Tooltip color="primary" title="Save (ctrl+s)" placement="top">
 						<span>
-							<Button disabled={savingState !== 0} color="primary" style={{height: 50, width: 64, marginLeft: 10, }} variant={lastSaved ? "outlined" : "contained"} onClick={() => saveWorkflow()}>
+							<Button disabled={savingState !== 0} color="primary" style={{height: workflow.public ? 100 : 50, width: workflow.public ? 100 : 64, marginLeft: 10, }} variant={lastSaved && !(workflow.public) ? "outlined" : "contained"} onClick={() => saveWorkflow()}>
 								{savingState === 2 ? <CircularProgress style={{height: 35, width: 35}} /> : savingState === 1 ? <DoneIcon style={{color: green}} /> : <SaveIcon /> }
 							</Button> 				
 						</span>
 					</Tooltip>
+					{workflow.public ? 
+						<Tooltip color="secondary" title="Download workflow" placement="top-start">
+							<span>
+							<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={() => {
+								//setExecutionModalOpen(true)
+								//getWorkflowExecution(props.match.params.key, "")
+								//data = sanitizeWorkflow(workflow)	
+								const data = workflow
+								let exportFileDefaultName = data.name+'.json';
+
+								let dataStr = JSON.stringify(data)
+								let dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr)
+								let linkElement = document.createElement('a')
+								linkElement.setAttribute('href', dataUri)
+								linkElement.setAttribute('download', exportFileDefaultName)
+								linkElement.click()
+							}}>
+								<GetAppIcon />
+							</Button>
+							</span>
+						</Tooltip>
+					: null}
 					<Tooltip color="secondary" title="Fit to screen (ctrl+f)" placement="top">
 						<span>
 							<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={() => cy.fit(null, 50)}>
@@ -6642,9 +7340,18 @@ const AngularWorkflow = (props) => {
 							</Button> 				
 						</span>
 					</Tooltip>
-					<Tooltip disabled={workflow.public} color="secondary" title="Remove selected item (del)" placement="top-start">
+					<Tooltip color="secondary" title="Undo" placement="top-start">
+						<span>	
+						<Button disabled={history.length === 0} color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={(event) => {
+							handleHistoryUndo(history)
+						}}>
+							<UndoIcon />
+						</Button>
+						</span>	
+					</Tooltip>
+					<Tooltip color="secondary" title="Remove selected item (del)" placement="top-start">
 						<span>
-						<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={() => {
+						<Button color="primary" disabled={workflow.public} style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={() => {
 							removeNode()		
 						}}>
 							<DeleteIcon /> 
@@ -6660,29 +7367,7 @@ const AngularWorkflow = (props) => {
 							<DirectionsRunIcon />
 						</Button>
 						</span>
-					</Tooltip>
-					{workflow.public ? 
-						<Tooltip color="secondary" title="Download workflow" placement="top-start">
-							<span>
-							<Button color="primary" style={{height: 50, marginLeft: 10, }} variant="contained" onClick={() => {
-								//setExecutionModalOpen(true)
-								//getWorkflowExecution(props.match.params.key, "")
-								//data = sanitizeWorkflow(workflow)	
-								const data = workflow
-								let exportFileDefaultName = data.name+'.json';
-
-								let dataStr = JSON.stringify(data)
-								let dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-								let linkElement = document.createElement('a');
-								linkElement.setAttribute('href', dataUri);
-								linkElement.setAttribute('download', exportFileDefaultName);
-								linkElement.click();
-							}}>
-								<GetAppIcon />
-							</Button>
-							</span>
-						</Tooltip>
-					: null}
+					</Tooltip>	
 					{/* <FileMenu />	*/}
 					{workflow.configuration !== null && workflow.configuration !== undefined && workflow.configuration.exit_on_error !== undefined ? <WorkflowMenu />	 : null}
 				</div>
@@ -6690,18 +7375,58 @@ const AngularWorkflow = (props) => {
 		)
 	}
 
-	const RightSideBar = () => {
+	const RightSideBar = (props) => {
+		const {workflow, setWorkflow, setAction, setSelectedAction, setUpdate, appActionArguments, selectedApp, workflowExecutions, setSelectedResult, selectedAction, setSelectedApp, setSelectedTrigger, setSelectedEdge, setCurrentView, cy, setAuthenticationModalOpen,setVariablesModalOpen, setCodeModalOpen, selectedNameChange, rightsidebarStyle, showEnvironment, selectedActionEnvironment, environments, setNewSelectedAction, appApiViewStyle, globalUrl, setSelectedActionEnvironment, requiresAuthentication, hideExtraTypes, scrollConfig, setScrollConfig } = props
+
 		if (!rightSideBarOpen) {
 			return null
 		}
 
 		if (Object.getOwnPropertyNames(selectedAction).length > 0) {
-			//console.time('ACTIONSTART')
-			return(
-				<div style={rightsidebarStyle}>	
-					{appApiView}
+			if (Object.getOwnPropertyNames(selectedAction).length === 0) {
+				return null
+			} 
+
+			return (
+				<div id="rightside_actions" style={rightsidebarStyle}>
+					<ParsedAction 
+						id="rightside_subactions"
+						scrollConfig={scrollConfig}
+						setScrollConfig={setScrollConfig}
+						selectedAction={selectedAction}
+						workflow={workflow} 
+						setWorkflow={setWorkflow} 
+						setSelectedAction={setSelectedAction}
+						setUpdate={setUpdate}
+						selectedApp={selectedApp}
+						workflowExecutions={workflowExecutions}
+						setSelectedResult={setSelectedResult}
+						setSelectedApp={setSelectedApp}
+						setSelectedTrigger={setSelectedTrigger}
+						setSelectedEdge={setSelectedEdge}
+						setCurrentView={setCurrentView}
+						cy={cy}
+						setAuthenticationModalOpen={setAuthenticationModalOpen}
+
+						setVariablesModalOpen={setVariablesModalOpen}
+						setLastSaved={setLastSaved}
+						setCodeModalOpen={setCodeModalOpen}
+						selectedNameChange={selectedNameChange}
+						rightsidebarStyle={rightsidebarStyle}
+						showEnvironment={showEnvironment}
+						selectedActionEnvironment={selectedActionEnvironment}
+						environments={environments}
+						setNewSelectedAction={setNewSelectedAction}
+						sortByKey={sortByKey}
+						
+						appApiViewStyle={appApiViewStyle}
+						globalUrl={globalUrl}
+						setSelectedActionEnvironment={setSelectedActionEnvironment}
+						requiresAuthentication={requiresAuthentication}
+					/>
 				</div>
 			)
+
 		} else if (Object.getOwnPropertyNames(selectedTrigger).length > 0) {
 			if (selectedTrigger.trigger_type === "SCHEDULE") {
 				//console.log("SCHEDULE")
@@ -6811,6 +7536,9 @@ const AngularWorkflow = (props) => {
 					theme="solarized" 
 					collapsed={true}
 					displayDataTypes={false}
+					enableClipboard={(copy) => {
+						handleReactJsonClipboard(copy)
+					}}
 					onSelect={(select) => {
 						HandleJsonCopy(showResult, select, "exec")
 						console.log("SELECTED!: ", select)	
@@ -6858,10 +7586,45 @@ const AngularWorkflow = (props) => {
 		)
 	}
 
+	const handleReactJsonClipboard = (copy) => {
+		console.log("COPY: ", copy)
+
+		const elementName = "copy_element_shuffle"
+		var copyText = document.getElementById(elementName);
+		if (copyText !== null && copyText !== undefined) {
+			if (copy.namespace !== undefined && copy.name !== undefined && copy.src !== undefined) {
+				copy = copy.src
+			}
+
+			console.log("NEW: ", copy)
+			console.log("NAVIGATOR: ", navigator)
+
+			const clipboard = navigator.clipboard
+			if (clipboard === undefined) {
+				alert.error("Can only copy over HTTPS (port 3443)")
+				return
+			} 
+
+			navigator.clipboard.writeText(JSON.stringify(copy))
+			copyText.select()
+			copyText.setSelectionRange(0, 99999) /* For mobile devices */
+
+			/* Copy the text inside the text field */
+			document.execCommand("copy")
+			//alert.success("Copied data")
+		} else {
+			console.log("Failed to copy from "+elementName+": ", copyText)
+		}
+	}
+
 	const HandleJsonCopy = (base, copy, base_node_name) => {
+		if (typeof(copy.name) === "string") {
+			copy.name = copy.name.replaceAll(" ", "_")
+		}
+
 		console.log("COPY: ", copy)
 		var newitem = JSON.parse(base)
-		to_be_copied = "$"+base_node_name
+		to_be_copied = "$"+base_node_name.toLowerCase().replaceAll(" ", "_")
 		for (var key in copy.namespace) {
 			if (copy.namespace[key].includes("Results for")) {
 				continue
@@ -6893,15 +7656,22 @@ const AngularWorkflow = (props) => {
 
 		to_be_copied.replaceAll(" ", "_")
 		const elementName = "copy_element_shuffle"
-  	var copyText = document.getElementById(elementName);
+  	var copyText = document.getElementById(elementName)
 		if (copyText !== null && copyText !== undefined) {
+			console.log("NAVIGATOR: ", navigator)
+			const clipboard = navigator.clipboard
+			if (clipboard === undefined) {
+				alert.error("Can only copy over HTTPS (port 3443)")
+				return
+			} 
+
 			navigator.clipboard.writeText(to_be_copied)
-			copyText.select();
+			copyText.select()
 			copyText.setSelectionRange(0, 99999); /* For mobile devices */
 
 			/* Copy the text inside the text field */
 			document.execCommand("copy");
-			alert.success("Copied "+to_be_copied)
+			//alert.success("Copied "+to_be_copied)
 			console.log("COPYING!")
 		} else {
 			console.log("Couldn't find element ", elementName)
@@ -6938,7 +7708,7 @@ const AngularWorkflow = (props) => {
 
 							const timestamp = new Date(data.started_at*1000).toISOString().split('.')[0].split("T").join(" ")
 
-							var calculatedResult = data.workflow.actions.length
+							var calculatedResult = data.workflow.actions !== undefined && data.workflow.actions !== null ? data.workflow.actions.length : 0
 							for (var key in data.workflow.triggers) {
 								const trigger = data.workflow.triggers[key]
 								if ((trigger.app_name === "User Input" && trigger.trigger_type === "USERINPUT") || (trigger.app_name === "Shuffle Workflow" && trigger.trigger_type === "SUBFLOW")) {
@@ -7035,11 +7805,22 @@ const AngularWorkflow = (props) => {
 								</Button>
 							</span>
 						</Tooltip>
+						{executionData.status === "EXECUTING" ? 
+							<Tooltip color="primary" title="Abort workflow" placement="top">
+								<span style={{}}>
+									<Button color="primary" style={{float: "right", marginTop: 20, marginLeft: 10,}} onClick={() => {
+										abortExecution()
+									}}>
+										<PauseIcon style={{}} />
+									</Button>
+								</span>
+							</Tooltip>
+						: null}
 					</div>
 					{executionData.status !== undefined && executionData.status.length > 0 ?
 						<div style={{display: "flex"}}>
 							<Typography variant="body1">
-								<b>Status &nbsp;</b>
+								<b>Status &nbsp;&nbsp;</b>
 							</Typography>
 							<Typography variant="body1" color="textSecondary">
 								{executionData.status} 
@@ -7153,7 +7934,8 @@ const AngularWorkflow = (props) => {
 
 							if (triggers.length > 2) {
 								if (data.action.app_name === "shuffle-subflow") {
-									actionimg = <img alt={"Shuffle Subflow"} src={triggers[1].large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`, borderRadius: executionData.start === data.action.id ? 25 : 5}} />
+									const parsedImage = triggers[1].large_image
+									actionimg = <img alt={"Shuffle Subflow"} src={parsedImage} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`, borderRadius: executionData.start === data.action.id ? 25 : 5}} />
 								}	
 
 								if (data.action.app_name === "User Input") {
@@ -7161,12 +7943,44 @@ const AngularWorkflow = (props) => {
 								}	
 							}
 
+							if (data.action.app_name === "Shuffle Tools") {
+								//console.log("APP (TOOLS): ", data.action)
+
+								const nodedata = cy.getElementById(data.action.id).data()
+								if (nodedata !== undefined && nodedata !== null && nodedata.fillstyle === "linear-gradient") {
+									//console.log("LINEAR :D")
+									var imgStyle = {
+										marginRight: 20, 
+										width: imgsize, 
+										height: imgsize, 
+										border: `2px solid ${statusColor}`, 
+										borderRadius: executionData.start === data.action.id ? 25 : 5,
+										background: `linear-gradient(to right, ${nodedata.fillGradient})`
+									}
+
+									//console.log("STYLE: ", imgStyle)
+
+									actionimg = <img alt={nodedata.label} src={nodedata.large_image} style={imgStyle} />
+								}
+							}	
+
+						
 							if (validate.valid && typeof(validate.result) === "string") {
 								validate.result = JSON.parse(validate.result)
+							}  
+							
+							if (validate.valid && typeof(validate.result) === "object") {
+								if (validate.result.result !== undefined && validate.result.result !== null) {
+									try {
+										validate.result.result = JSON.parse(validate.result.result)
+									} catch (e) {
+										//console.log("ERROR PARSING: ", e)
+									}
+								}
 							}
 
 							return (
-								<div key={index} style={{marginBottom: 40,}} onMouseOver={() => {
+								<div key={index} style={{marginBottom: 40, border: data.action.sub_action === true ? "1px solid rgba(255,255,255,0.3)" : null, borderRadius: theme.palette.borderRadius,}} onMouseOver={() => {
 									var currentnode = cy.getElementById(data.action.id)
 									if (currentnode.length !== 0) {
 										currentnode.addClass('shuffle-hover-highlight')
@@ -7177,46 +7991,28 @@ const AngularWorkflow = (props) => {
 										currentnode.removeClass('shuffle-hover-highlight')
 									}
 								}}>
-									<div style={{display: "flex", marginBottom: 15,}}>
-										<IconButton style={{marginTop: "auto", marginBottom: "auto", height: 30, paddingLeft: 0, width: 30}} onClick={() => {
-											setSelectedResult(data)
-											setCodeModalOpen(true)
-										}}>
-											<Tooltip color="primary" title="Expand result window" placement="top">
-												<ArrowLeftIcon style={{color: "white"}}/>
-											</Tooltip>
-										</IconButton>
-										{actionimg}
-										<div>
-											<div style={{fontSize: 24, marginTop: "auto", marginBottom: "auto"}}><b>{data.action.label}</b></div>
-											<div style={{fontSize: 14}}>
-												<Typography variant="body2" color="textsecondary">
-													{data.action.name}
-												</Typography>
+									<div style={{display: "flex", }}>
+										<div style={{display: "flex", marginBottom: 15,}}>
+											<IconButton style={{marginTop: "auto", marginBottom: "auto", height: 30, paddingLeft: 0, width: 30}} onClick={() => {
+												setSelectedResult(data)
+												setCodeModalOpen(true)
+											}}>
+												<Tooltip color="primary" title="Expand result window" placement="top">
+													<ArrowLeftIcon style={{color: "white"}}/>
+												</Tooltip>
+											</IconButton>
+											{actionimg}
+											<div>
+												<div style={{fontSize: 24, marginTop: "auto", marginBottom: "auto"}}><b>{data.action.label}</b></div>
+												<div style={{fontSize: 14}}>
+													<Typography variant="body2" color="textSecondary">
+														{data.action.name}
+													</Typography>
+												</div>
 											</div>
 										</div>
-									</div>
-									<div style={{marginBottom: 5, display: "flex",}}>
-										<Typography variant="body1">
-											<b>Status &nbsp;</b> 
-										</Typography>
-										<Typography variant="body1" color="textSecondary">
-											{data.status}
-										</Typography>
-									</div>
-									{validate.valid ? <span><ReactJson 
-											src={validate.result} 
-											theme="solarized" 
-											collapsed={true}
-											displayDataTypes={false}
-											onSelect={(select) => {
-												HandleJsonCopy(showResult, select, data.action.label)
-												console.log("SELECTED!: ", select)	
-											}}
-											name={"Results for "+data.action.label}
-										/>
 										{data.action.app_name === "shuffle-subflow" && validate.result.success !== undefined && validate.result.success === true ?
-											<span>
+											<span style={{flex: 10, float: "right", textAlign: "right",}}>
 												{validate.valid && data.action.parameters !== undefined && data.action.parameters !== null ? 
 													data.action.parameters[0].value === props.match.params.key ?
 														<span style={{cursor: "pointer", color: "#f85a3e"}} onClick={(event) => {
@@ -7226,13 +8022,39 @@ const AngularWorkflow = (props) => {
 														</span>
 													:
 													<a rel="norefferer" href={`/workflows/${data.action.parameters[0].value}?view=executions&execution_id=${validate.result.execution_id}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}} onClick={(event) => {
-													}}>See subflow execution</a>
+													}}>
+													<OpenInNewIcon />
+													</a>
 												: 
 													"TBD: Load subexecution result for"
 												}
 											</span>
 											: null
 										}
+									</div>
+									<div style={{marginBottom: 5, display: "flex",}}>
+										<Typography variant="body1">
+											<b>Status&nbsp;</b> 
+										</Typography>
+										<Typography variant="body1" color="textSecondary">
+											{data.status}
+										</Typography>
+									</div>
+									{validate.valid ? <span>
+										<ReactJson 
+											src={validate.result} 
+											theme="solarized" 
+											collapsed={true}
+											enableClipboard={(copy) => {
+												handleReactJsonClipboard(copy)
+											}}
+											displayDataTypes={false}
+											onSelect={(select) => {
+												HandleJsonCopy(showResult, select, data.action.label)
+												console.log("SELECTED!: ", select)	
+											}}
+											name={"Results for "+data.action.label}
+										/>
 										</span>
 									: 
 									<div style={{maxHeight: 250, overflowX: "hidden", overflowY: "auto", whiteSpace: "pre-wrap", }}>
@@ -7392,8 +8214,11 @@ const AngularWorkflow = (props) => {
 					{validate.valid ? <ReactJson 
 							src={validate.result} 
 							theme="solarized" 
-							collapsed={false}
+							collapsed={selectedResult.result.length < 10000 ? false : true}
 							displayDataTypes={false}
+							enableClipboard={(copy) => {
+								handleReactJsonClipboard(copy)
+							}}
 							onSelect={(select) => {
 								HandleJsonCopy(JSON.stringify(validate.result), select, selectedResult.action.label)
 							}}
@@ -7409,13 +8234,21 @@ const AngularWorkflow = (props) => {
 							console.log("PRECOPY: ", to_be_copied)
 							if (copyText !== null && copyText !== undefined) {
 								console.log("COPY: ", copyText)
+								console.log("NAVIGATOR: ", navigator)
+								const clipboard = navigator.clipboard
+								if (clipboard === undefined) {
+									alert.error("Can only copy over HTTPS (port 3443)")
+									return
+								} 
+
 								navigator.clipboard.writeText(to_be_copied)
+
 								copyText.select();
 								copyText.setSelectionRange(0, 99999); /* For mobile devices */
 
 								/* Copy the text inside the text field */
 								document.execCommand("copy");
-								alert.success("Copied "+to_be_copied)
+								//alert.success("Copied "+to_be_copied)
 							} else {
 								console.log("Failed to copy. copy_element_shuffle is undefined")
 							}
@@ -7426,7 +8259,7 @@ const AngularWorkflow = (props) => {
 			</Dialog> 
 		</Draggable> 
 	
-	const newView = //isLoggedIn ?
+	const newView = 
 		<div style={{color: "white"}}>
 			<div style={{display: "flex", borderTop: "1px solid rgba(91, 96, 100, 1)"}}>
 				{leftView}
@@ -7439,6 +8272,7 @@ const AngularWorkflow = (props) => {
 					boxSelectionEnabled={true}
 					autounselectify={false}
 					showGrid={true}
+					id="cytoscape_view"
 					cy={(incy) => {
 						// FIXME: There's something specific loading when
 						// you do the first hover of a node. Why is this different?
@@ -7448,7 +8282,40 @@ const AngularWorkflow = (props) => {
 				/>
 			</div>
 			{executionModal}
-			<RightSideBar />
+			<RightSideBar 
+				scrollConfig={scrollConfig}
+				setScrollConfig={setScrollConfig}
+				selectedAction={selectedAction}
+				workflow={workflow} 
+				setWorkflow={setWorkflow} 
+				setSelectedAction={setSelectedAction}
+				setUpdate={setUpdate}
+				selectedApp={selectedApp}
+				workflowExecutions={workflowExecutions}
+				setSelectedResult={setSelectedResult}
+				setSelectedApp={setSelectedApp}
+				setSelectedTrigger={setSelectedTrigger}
+				setSelectedEdge={setSelectedEdge}
+				setCurrentView={setCurrentView}
+				cy={cy}
+				setAuthenticationModalOpen={setAuthenticationModalOpen}
+
+				setVariablesModalOpen={setVariablesModalOpen}
+				setLastSaved={setLastSaved}
+				setCodeModalOpen={setCodeModalOpen}
+				selectedNameChange={selectedNameChange}
+				rightsidebarStyle={rightsidebarStyle}
+				showEnvironment={showEnvironment}
+				selectedActionEnvironment={selectedActionEnvironment}
+				environments={environments}
+				setNewSelectedAction={setNewSelectedAction}
+				sortByKey={sortByKey}
+				
+				appApiViewStyle={appApiViewStyle}
+				globalUrl={globalUrl}
+				setSelectedActionEnvironment={setSelectedActionEnvironment}
+				requiresAuthentication={requiresAuthentication}
+			/>
 			<BottomCytoscapeBar />
 			<TopCytoscapeBar />
 		</div> 
@@ -7460,6 +8327,7 @@ const AngularWorkflow = (props) => {
 		</div>
 		*/
 
+	
 	const executionVariableModal = executionVariablesModalOpen ? 
 		<Dialog modal 
 			open={executionVariablesModalOpen} 
@@ -7709,16 +8577,28 @@ const AngularWorkflow = (props) => {
 				//return
 			}
 
+			// Automatically mapping fields that already exist (predefined). 
+			// Warning if fields are NOT filled
 			for (var key in selectedApp.authentication.parameters) {
 				if (authenticationOption.fields[selectedApp.authentication.parameters[key].name].length === 0) {
-					alert.info("Field "+selectedApp.authentication.parameters[key].name+" can't be empty")
-					return
+					if (selectedApp.authentication.parameters[key].value !== undefined && selectedApp.authentication.parameters[key].value !== null && selectedApp.authentication.parameters[key].value.length > 0) {
+						authenticationOption.fields[selectedApp.authentication.parameters[key].name] = selectedApp.authentication.parameters[key].value
+					} else {
+						alert.info("Field "+selectedApp.authentication.parameters[key].name+" can't be empty")
+						return
+					}
 				} 
 			}
 
+			console.log("Action: ", selectedAction)
 			selectedAction.authentication_id = authenticationOption.id
 			selectedAction.selectedAuthentication = authenticationOption
-			selectedAction.authentication.push(authenticationOption)
+			if (selectedAction.authentication === undefined || selectedAction.authentication === null) {
+				selectedAction.authentication = [authenticationOption]
+			} else {
+				selectedAction.authentication.push(authenticationOption)
+			}
+
 			setSelectedAction(selectedAction)
 
 			var newAuthOption = JSON.parse(JSON.stringify(authenticationOption))
@@ -7736,6 +8616,12 @@ const AngularWorkflow = (props) => {
 			setNewAppAuth(newAuthOption)
 			//appAuthentication.push(newAuthOption)
 			//setAppAuthentication(appAuthentication)
+			//
+			
+			if (configureWorkflowModalOpen) {
+				setSelectedAction({})
+			}
+
 			setUpdate(authenticationOption.id)
 
 			/*
@@ -7757,7 +8643,7 @@ const AngularWorkflow = (props) => {
 					<div style={{marginTop: 15}}/>
 					<b>Name - what is this used for?</b>
 					<TextField
-							style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+							style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 							InputProps={{
 								style:{
 									color: "white",
@@ -7775,36 +8661,63 @@ const AngularWorkflow = (props) => {
 								authenticationOption.label = event.target.value
 							}}
 						/>
-					{selectedApp.link.length > 0 ? <div style={{marginTop: 15}}><EndpointData /></div> : null}
 					<Divider style={{marginTop: 15, marginBottom: 15, backgroundColor: "rgb(91, 96, 100)"}}/>
+					{/*selectedApp.link.length > 0 ? <div style={{marginTop: 15}}><EndpointData /></div> : null*/}
 					<div style={{}}/>
 						{selectedApp.authentication.parameters.map((data, index) => { 
-						return (
-							<div key={index} style={{marginTop: 10}}>
-								<LockOpenIcon style={{marginRight: 10}}/>
-								<b>{data.name}</b>
-								<TextField
-										style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
-										InputProps={{
-											style:{
-												color: "white",
-												marginLeft: "5px",
-												maxWidth: "95%",
-												height: 50, 
-												fontSize: "1em",
-											},
-										}}
-										fullWidth
-										type={data.example !== undefined && data.example.includes("***") ? "password" : "text"}
-										color="primary"
-										placeholder={data.example} 
-										onChange={(event) => {
-											authenticationOption.fields[data.name] = event.target.value
-										}}
-									/>
-							</div>
-						)
-					})}
+							//console.log("AUTH: ", data)
+
+							return (
+								<div key={index} style={{marginTop: 10}}>
+									<LockOpenIcon style={{marginRight: 10}}/>
+									<b>{data.name}</b>
+
+									{data.schema !== undefined && data.schema !== null && data.schema.type === "bool" ? 
+										<Select
+												SelectDisplayProps={{
+													style: {
+														marginLeft: 10,
+													}
+												}}
+												defaultValue={"false"}
+												fullWidth
+												onChange={(e) => {
+													authenticationOption.fields[data.name] = e.target.value
+												}}
+												style={{backgroundColor: theme.palette.surfaceColor, color: "white", height: 50}}
+												>
+													<MenuItem key={"false"} style={{backgroundColor: theme.palette.inputColor, color: "white"}} value={"false"}>
+														false
+													</MenuItem>
+													<MenuItem key={"true"} style={{backgroundColor: theme.palette.inputColor, color: "white"}} value={"true"}>
+														true
+													</MenuItem>
+											</Select>
+										: 
+											<TextField
+												style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
+												InputProps={{
+													style:{
+														color: "white",
+														marginLeft: "5px",
+														maxWidth: "95%",
+														height: 50, 
+														fontSize: "1em",
+													},
+												}}
+												fullWidth
+												type={data.example !== undefined && data.example.includes("***") ? "password" : "text"}
+												color="primary"
+												defaultValue={data.value !== undefined && data.value !== null ? data.value : ""}
+												placeholder={data.example} 
+												onChange={(event) => {
+													authenticationOption.fields[data.name] = event.target.value
+												}}
+											/>
+									}
+								</div>
+							)
+						})}
 				</DialogContent>
 				<DialogActions>
 				<Button 
@@ -7815,6 +8728,7 @@ const AngularWorkflow = (props) => {
 						Cancel
 					</Button>
 					<Button style={{borderRadius: "0px"}} onClick={() => {
+						setAuthenticationOptions(authenticationOption)
 						handleSubmitCheck() 	
 					}} color="primary">
 						Submit	
@@ -7831,7 +8745,7 @@ const AngularWorkflow = (props) => {
 			<div>
 				The API endpoint to use (URL) - predefined in the app
 				<TextField
-					style={{backgroundColor: inputColor, borderRadius: borderRadius,}} 
+					style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
 					InputProps={{
 						style:{
 							color: "white",
@@ -7842,7 +8756,6 @@ const AngularWorkflow = (props) => {
 					fullWidth
 					type="text"
 					color="primary"
-					disabled={true}
 					placeholder="Bearer token" 
 					defaultValue={selectedApp.link}
 					onChange={(event) => {
@@ -7862,18 +8775,23 @@ const AngularWorkflow = (props) => {
 		<Dialog 
 			open={configureWorkflowModalOpen} 
 			onClose={() => {
-				setConfigureWorkflowModalOpen(false)
+				//setConfigureWorkflowModalOpen(false)
 			}}
 			PaperProps={{
 				style: {
 					backgroundColor: surfaceColor,
 					color: "white",
 					minWidth: 600,
-					padding: 15, 
+					padding: 50, 
 				},
 			}}
 		>
-			<ConfigureWorkflow workflow={workflow} appAuthentication={appAuthentication} apps={apps} />
+			<IconButton style={{zIndex: 5000, position: "absolute", top: 14, right: 14, color: "grey"}} onClick={() => {
+				setConfigureWorkflowModalOpen(false)
+			}}>
+				<CloseIcon  />
+			</IconButton>
+			<ConfigureWorkflow theme={theme} globalUrl={globalUrl} workflow={workflow} setSelectedAction={setSelectedAction} setSelectedApp={setSelectedApp} setAuthenticationModalOpen={setAuthenticationModalOpen} appAuthentication={appAuthentication} selectedAction={selectedAction} apps={apps} setConfigureWorkflowModalOpen={setConfigureWorkflowModalOpen} saveWorkflow={saveWorkflow} newWebhook={newWebhook} submitSchedule={submitSchedule} referenceUrl={referenceUrl} isCloud={isCloud} />
 		</Dialog>
 		: null
 	
@@ -7884,6 +8802,10 @@ const AngularWorkflow = (props) => {
 			open={authenticationModalOpen} 
 			onClose={() => {
 				//setAuthenticationModalOpen(false)
+				//
+				if (configureWorkflowModalOpen) {
+					setSelectedAction({})
+				}
 			}}
 			PaperProps={{
 				style: {
@@ -7894,6 +8816,14 @@ const AngularWorkflow = (props) => {
 				},
 			}}
 		>
+			<IconButton style={{zIndex: 5000, position: "absolute", top: 14, right: 14, color: "grey"}} onClick={() => {
+				setAuthenticationModalOpen(false)
+				if (configureWorkflowModalOpen) {
+					setSelectedAction({})
+				}
+			}}>
+				<CloseIcon  />
+			</IconButton>
 			<DialogTitle><div style={{color: "white"}}>Authentication for {selectedApp.name}</div></DialogTitle>
 			<AuthenticationData app={selectedApp} />	
 		</Dialog> : null
@@ -7918,14 +8848,54 @@ const AngularWorkflow = (props) => {
 		<div>
 		</div>
 
+		// Awful way of handling scroll
+		if (scrollConfig !== undefined && setScrollConfig !== undefined && Object.getOwnPropertyNames(selectedAction).length !== 0) {
+			//console.log("SET CONFIG: ", scrollConfig)
+			const rightSideActionView = document.getElementById("rightside_actions")
+			if (rightSideActionView !== undefined && rightSideActionView !== null) {
+				//console.log("FOUND RIGHTSIDE: ", rightSideActionView.scrollTop, scrollConfig)
+				if (scrollConfig.top !== 0 && scrollConfig.top !== undefined && scrollConfig.top !== 0) {
+					//console.log("SCROLL IS NOT 0: ", scrollConfig.top)
+					//rightSideActionView.scrollTop = scrollConfig.top
+					setTimeout(() => {
+						scroller.scrollTo('elements_wrapper', {
+							containerId: 'rightside_actions',
+							offset: scrollConfig.top, 
+						})
+
+						if (scrollConfig.selected !== undefined && scrollConfig.selected !== null) {
+							const selectedField = document.getElementById(scrollConfig.selected)
+							if (selectedField !== undefined && selectedField !== null) {
+								selectedField.focus()
+								//const val = selectedField.value
+								//console.log("VAL: ", val)
+								//selectedField.value = ''
+								//selectedField.value = val
+							}
+						}
+					}, 5)
+				} else {
+					//console.log("SCROLL IS 0: ", scrollConfig.top, rightSideActionView.scrollTop)
+					if (rightSideActionView.scrollTop !== scrollConfig.top) {
+						setScrollConfig({
+							top: rightSideActionView.scrollTop,
+							left: 0,
+							selected: "",
+						})
+					}
+				}
+			}	
+		}
 
 	return (
 		<div>	
-		  <Prompt
-				when={!lastSaved}
-				message={unloadText}
-			/>
-			{loadedCheck}
+			<ScrollElement name="elements_wrapper">
+				<Prompt
+					when={!lastSaved}
+					message={unloadText}
+				/>
+				{loadedCheck}
+			</ScrollElement>
 		</div>	
 	)
 }

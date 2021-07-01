@@ -2,9 +2,7 @@
 import React, { useState } from 'react';
 import { makeStyles } from '@material-ui/styles';
 
-import TextField from '@material-ui/core/TextField';
-import Button from '@material-ui/core/Button';
-import Paper from '@material-ui/core/Paper';
+import {CircularProgress, TextField, Button, Paper, Typography} from '@material-ui/core'
 import { useTheme } from '@material-ui/core/styles';
 
 
@@ -15,7 +13,7 @@ const hrefStyle = {
 
 const bodyDivStyle = {
 	margin: "auto",
-	marginTop: "100px",
+	marginTop: 150,
 	width: "500px",
 }
 
@@ -33,6 +31,7 @@ const LoginDialog = props => {
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
 	const [firstRequest, setFirstRequest] = useState(true);
+  const [loginLoading, setLoginLoading] = useState(false);
 
 	// Used to swap from login to register. True = login, false = register
 
@@ -69,7 +68,7 @@ const LoginDialog = props => {
 				}),
 			)
 			.catch(error => {
-				setLoginInfo("Error logging in: ", error)
+				setLoginInfo("Error logging in - please refresh in a minute ", error)
 			})
 	}
 
@@ -79,6 +78,7 @@ const LoginDialog = props => {
 	}
 
 	const onSubmit = (e) => {
+  	setLoginLoading(true)
 		e.preventDefault()
 		setLoginInfo("")
 		// FIXME - add some check here ROFL
@@ -101,6 +101,7 @@ const LoginDialog = props => {
 			})
 				.then(response =>
 					response.json().then(responseJson => {
+  					setLoginLoading(false)
 						if (responseJson["success"] === false) {
 							setLoginInfo(responseJson["reason"])
 						} else {
@@ -110,11 +111,13 @@ const LoginDialog = props => {
 							}
 
 							setIsLoggedIn(true)
+
 							window.location.pathname = "/workflows"
 						}
 					}),
 				)
 				.catch(error => {
+  				setLoginLoading(false)
 					setLoginInfo("Error logging in: " + error)
 				});
 		} else {
@@ -136,7 +139,7 @@ const LoginDialog = props => {
 					}),
 				)
 				.catch(error => {
-					setLoginInfo("Error in userdata: ", error)
+					setLoginInfo("Error in from backend: ", error)
 				});
 		}
 	}
@@ -161,6 +164,7 @@ const LoginDialog = props => {
 
 	//var loginChange = register ? (<div><p onClick={setLoginCheck(false)}>Want to register? Click here.</p></div>) : (<div><p onClick={setLoginCheck(true)}>Go back to login? Click here.</p></div>);
 	var formtitle = register ? <div>Login</div> : <div>Register</div>
+	const imgsize = 100
 	const basedata =
 		<div style={bodyDivStyle}>
 			<Paper style={{
@@ -168,8 +172,12 @@ const LoginDialog = props => {
 				paddingRight: "30px",
 				paddingBottom: "30px",
 				paddingTop: "30px",
+				position: "relative",
 				backgroundColor: theme.palette.surfaceColor,
 			}}>
+				<div style={{position: "absolute", top: -imgsize/2-10, left: 250-imgsize/2, height: imgsize, width: imgsize,  }}>
+					<img src="images/Shuffle_logo.png" style={{height: imgsize+10, width: imgsize+10, border: "2px solid rgba(255,255,255,0.6)", borderRadius: imgsize,}}/>
+				</div>
 				<form onSubmit={onSubmit} style={{ margin: "15px 15px 15px 15px", color: "white", }}>
 					<h2>{formtitle}</h2>
 					Username
@@ -225,8 +233,9 @@ const LoginDialog = props => {
 						/>
 					</div>
 					<div style={{ display: "flex", marginTop: "15px" }}>
-						<Button color="primary" variant="contained" type="submit" style={{ flex: "1", marginRight: "5px" }} disabled={!handleValidateForm()}>SUBMIT</Button>
-
+						<Button color="primary" variant="contained" type="submit" style={{ flex: "1", marginRight: "5px" }} disabled={!handleValidateForm() || loginLoading}>
+  						{loginLoading ? <CircularProgress color="secondary" style={{color: "white",}} /> : "SUBMIT"}
+						</Button>
 					</div>
 					<div style={{ marginTop: "10px" }}>
 						{loginInfo}
