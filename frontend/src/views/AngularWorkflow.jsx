@@ -2286,6 +2286,11 @@ const AngularWorkflow = (props) => {
 			}
 		}
 
+		console.log("TARGET: ", event.target.target().data())
+		if (event.target.target().data("isButton") === true || event.target.target().data("isDescriptor") === true) {
+			event.target.remove()
+			return
+		}
 
 		targetnode = -1
 		var sourcenode = workflow.triggers.findIndex(data => data.id === edge.source)
@@ -3373,6 +3378,11 @@ const AngularWorkflow = (props) => {
 		if (workflow.visual_branches !== undefined && workflow.visual_branches !== null && workflow.visual_branches.length > 0) {
 			const visualedges = workflow.visual_branches.map((branch, index) => {
 				const edge = { };
+
+				if (workflow.branches[index] === undefined) {
+					return {}
+				}
+
 				var conditions = workflow.branches[index].conditions
 				if (conditions === undefined || conditions === null) {
 					conditions = []
@@ -3400,6 +3410,9 @@ const AngularWorkflow = (props) => {
 		var newedges = []
 		for (var key in edges) {
 			var item = edges[key]
+			if (item.data === undefined) {
+				continue
+			}
 
 			const sourcecheck = insertedNodes.find(data => data.data.id === item.data.source)
 			const destcheck = insertedNodes.find(data => data.data.id === item.data.target)

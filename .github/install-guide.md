@@ -17,8 +17,14 @@ cd Shuffle
 
 3. Fix prerequisites for the Opensearch database (Elasticsearch): 
 ```
+sudo chown 1000:1000 -R shuffle-database 		# Required for Opensearch 
 sudo sysctl -w vm.max_map_count=262144 			# https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html
-sudo chown 1000:1000 -R shuffle-database 		# Requires for Opensearch 
+
+# To make the changes permanent, do:
+# 1. Open the file /etc/sysctl.conf
+# 2. Go to the bottom of the file
+# 3. Add this line:
+vm.max_map_count=262144
 ```
 
 4. Run docker-compose.

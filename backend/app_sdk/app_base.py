@@ -1213,7 +1213,7 @@ class AppBase:
 
         # Parses JSON loops and such down to the item you're looking for
         def recurse_json(basejson, parsersplit):
-            match = "#(\d+):?-?([0-9a-z]+)?#?"
+            match = "#([0-9a-z]+):?-?([0-9a-z]+)?#?"
             #print("Split: %s\n%s" % (parsersplit, basejson))
             try:
                 outercnt = 0
@@ -1225,6 +1225,7 @@ class AppBase:
 
                     #print("VALUE: %s\n" % value)
                     actualitem = re.findall(match, value, re.MULTILINE)
+                    #print("ACTUAL RECURSE: (%s) %s" % (value, actualitem))
                     if value == "#":
                         newvalue = []
                         for innervalue in basejson:
@@ -1253,7 +1254,12 @@ class AppBase:
 
                         # Means it's a single item -> continue
                         if seconditem == "":
-                            #print("[INFO] In first - handling %s" % firstitem)
+                            print("[INFO] In first - handling %s. Len: %d" % (firstitem, len(basejson)))
+                            if firstitem.lower() == "max" or firstitem.lower() == "last": 
+                                firstitem = len(basejson)-1
+                            if firstitem.lower() == "min" or firstitem.lower() == "first": 
+                                firstitem = 0
+
                             tmpitem = basejson[int(firstitem)]
                             try:
                                 newvalue, is_loop = recurse_json(tmpitem, parsersplit[outercnt+1:])
@@ -1261,16 +1267,23 @@ class AppBase:
                                 newvalue, is_loop = (tmpitem, parsersplit[outercnt+1:])
                         else:
                             print("[INFO] In ELSE - handling %s and %s" % (firstitem, seconditem))
-                            if seconditem == "max": 
-                                seconditem = len(basejson)
-                            if seconditem == "min": 
+                            if firstitem.lower() == "max" or firstitem.lower() == "last": 
+                                firstitem = len(basejson)-1
+                            if firstitem.lower() == "min" or firstitem.lower() == "first": 
+                                firstitem = 0
+                            if seconditem.lower() == "max" or seconditem.lower() == "last": 
+                                seconditem = len(basejson)-1
+                            if seconditem.lower() == "min" or seconditem.lower() == "first": 
                                 seconditem = 0
 
                             newvalue = []
-                            for i in range(int(firstitem), int(seconditem)):
+                            if int(seconditem) > len(basejson):
+                                seconditem = len(basejson)
+
+                            for i in range(int(firstitem), int(seconditem)+1):
                                 # 1. Check the next item (message)
                                 # 2. Call this function again
-                                print("Base: %s" % basejson[i])
+                                #print("Base: %s" % basejson[i])
 
                                 try:
                                     ret, is_loop  = recurse_json(basejson[i], parsersplit[outercnt+1:])
@@ -1279,10 +1292,11 @@ class AppBase:
                                     #ret = innervalue
                                     ret, is_loop  = recurse_json(innervalue, parsersplit[outercnt:])
                                     
-                                print(ret)
+                                #print("IN LIST: %s" % ret)
                                 #exit()
                                 newvalue.append(ret)
 
+                        #print("Returning %s" % newvalue)
                         return newvalue, is_loop 
 
                     else:
