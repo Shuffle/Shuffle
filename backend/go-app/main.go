@@ -5304,8 +5304,8 @@ func migrateDatabase(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	es := shuffle.GetEsConfig()
-	_, err := shuffle.RunInit(*dbclient, *es, storage.Client{}, gceProject, "onprem", false, "")
+	//es := shuffle.GetEsConfig()
+	_, err := shuffle.RunInit(*dbclient, storage.Client{}, gceProject, "onprem", false, "")
 	if err != nil {
 		log.Printf("[WARNING] Failed to start migration because of init issues: %s", err)
 		resp.WriteHeader(401)
@@ -5387,7 +5387,7 @@ func migrateDatabase(resp http.ResponseWriter, request *http.Request) {
 	envSuccess := 0
 	hookSuccess := 0
 	scheduleSuccess := 0
-	_, err = shuffle.RunInit(*dbclient, *es, storage.Client{}, gceProject, "onprem", false, "elasticsearch")
+	_, err = shuffle.RunInit(*dbclient, storage.Client{}, gceProject, "onprem", false, "elasticsearch")
 
 	for _, item := range orgs {
 		err = shuffle.SetOrg(ctx, item, item.Id)
@@ -5668,14 +5668,14 @@ func initHandlers() {
 		log.Fatalf("[DEBUG] Database client error during init: %s", err)
 	}
 
-	es := shuffle.GetEsConfig()
+	//es := shuffle.GetEsConfig()
 	elasticConfig := "elasticsearch"
 	if strings.ToLower(os.Getenv("SHUFFLE_ELASTIC")) == "false" {
 		elasticConfig = ""
 	}
 
 	for {
-		_, err = shuffle.RunInit(*dbclient, *es, storage.Client{}, gceProject, "onprem", true, elasticConfig)
+		_, err = shuffle.RunInit(*dbclient, storage.Client{}, gceProject, "onprem", true, elasticConfig)
 		if err != nil {
 			log.Printf("[ERROR] Error in initial database connection. Retrying in 5 seconds. %s", err)
 			time.Sleep(5 * time.Second)

@@ -559,19 +559,19 @@ const Admin = (props) => {
 	}
 
 	// Horrible frontend fix for environments
-	const setDefaultEnvironment = (name) => {
-		// FIXME - add some check here ROFL
-		alert.info("Setting default env to " + name)
+	const setDefaultEnvironment = (environment) => {
+		// FIXME - add more checks to this 
+		alert.info("Setting default env to " + environment.name)
 		var newEnv = []
 		for (var key in environments) {
-			if (environments[key].Name == name) {
+			if (environments[key].id == environment.id) {
 				if (environments[key].archived) {
 					alert.error("Can't set archived to default")
 					return
 				}
 
 				environments[key].default = true
-			} else if (environments[key].default == true && environments[key].name !== name) {
+			} else if (environments[key].default == true && environments[key].id !== environment.id) {
 				environments[key].default = false 
 			}
 
@@ -592,11 +592,15 @@ const Admin = (props) => {
 				response.json().then(responseJson => {
 					if (responseJson["success"] === false) {
 						alert.error(responseJson.reason)
-						getEnvironments()
+						setTimeout(() => {
+							getEnvironments()
+						}, 1500)
 					} else {
 						setLoginInfo("")
 						setModalOpen(false)
-						getEnvironments()
+						setTimeout(() => {
+							getEnvironments()
+						}, 1500)
 					}
 				}),
 			)
@@ -632,23 +636,46 @@ const Admin = (props) => {
 		})
 	}
 
-	const deleteEnvironment = (name) => {
+	const deleteEnvironment = (environment) => {
 		// FIXME - add some check here ROFL
-		alert.info("Deleting environment " + name)
+		//const name = environment.name
+
+		//alert.info("Modifying environment " + name)
+		//var newEnv = []
+		//for (var key in environments) {
+		//	if (environments[key].Name == name) {
+		//		if (environments[key].default) {
+		//			alert.error("Can't modify the default environment")
+		//			return
+		//		}
+
+		//		if (environments[key].type === "cloud" && !environments[key].archived) {
+		//			alert.error("Can't modify cloud environments")
+		//			return
+		//		}
+
+		//		environments[key].archived = !environments[key].archived
+		//	}
+
+		//	newEnv.push(environments[key])
+		//}
+		const id = environment.id
+
+		alert.info("Modifying environment " + environment.name)
 		var newEnv = []
 		for (var key in environments) {
-			if (environments[key].Name == name) {
+			if (environments[key].id == id) {
 				if (environments[key].default) {
-					alert.error("Can't delete the default environment")
+					alert.error("Can't modify the default environment")
 					return
 				}
 
-				if (environments[key].type === "cloud") {
-					alert.error("Can't delete the cloud environments")
+				if (environments[key].type === "cloud" && !environments[key].archived) {
+					alert.error("Can't modify cloud environments")
 					return
 				}
 
-				environments[key].archived = true
+				environments[key].archived = !environments[key].archived
 			}
 
 			newEnv.push(environments[key])
@@ -2489,7 +2516,7 @@ const Admin = (props) => {
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
 				<h2 style={{display: "inline",}}>Environments</h2>
-				<span style={{marginLeft: 25}}>Decides what Orborus environment to execute an action in a workflow in.<a target="_blank" href="https://shuffler.io/docs/organizations#environments" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more</a></span>
+				<span style={{marginLeft: 25}}>Decides what Orborus environment to execute an action in a workflow in. <a target="_blank" href="https://shuffler.io/docs/organizations#environments" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more</a></span>
 			</div>
 			<Button 
 				style={{}} 
@@ -2572,13 +2599,13 @@ const Admin = (props) => {
 								{environment.default ? 
 									null
 									: 
-									<Button variant="outlined" style={{borderRadius: "0px"}} onClick={() => setDefaultEnvironment(environment.Name)} color="primary">Set default</Button>
+									<Button variant="outlined" style={{borderRadius: "0px"}} onClick={() => setDefaultEnvironment(environment)} color="primary">Set default</Button>
 								}
 							</ListItemText>
 							<ListItemText
 								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
 							>
-								<Button disabled={environment.archived} variant="outlined" style={{borderRadius: "0px"}} onClick={() => deleteEnvironment(environment.Name)} color="primary">Archive</Button>
+								<Button variant={environment.archived ? "contained" : "outlined"} style={{borderRadius: "0px"}} onClick={() => deleteEnvironment(environment)} color="primary">{environment.archived ? "Activate" : "Disable"}</Button>
 								{/*<Button disabled={environment.archived} variant="outlined" style={{borderRadius: "0px"}} onClick={() => flushQueue(environment.Name)} color="primary">Flush Queue</Button>*/}
 							</ListItemText>
 							<ListItemText

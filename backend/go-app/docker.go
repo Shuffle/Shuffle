@@ -220,19 +220,18 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 	// docker build --build-arg http_proxy=http://my.proxy.url
 	// Attempt at setting name according to #359: https://github.com/frikky/Shuffle/issues/359
 	labels := map[string]string{}
-	target := ""
-	if len(tags) > 0 {
-		if strings.Contains(tags[0], ":") {
-			version := strings.Split(tags[0], ":")
-			if len(version) == 2 {
-				target = fmt.Sprintf("shuffle-build-%s", version[1])
-				tags = append(tags, target)
-				labels["name"] = target
-			}
-		}
-	}
+	//target := ""
+	//if len(tags) > 0 {
+	//	if strings.Contains(tags[0], ":") {
+	//		version := strings.Split(tags[0], ":")
+	//		if len(version) == 2 {
+	//			target = fmt.Sprintf("shuffle-build-%s", version[1])
+	//			tags = append(tags, target)
+	//			labels["name"] = target
+	//		}
+	//	}
+	//}
 
-	_ = labels
 	buildOptions := types.ImageBuildOptions{
 		Remove:    true,
 		Tags:      tags,
