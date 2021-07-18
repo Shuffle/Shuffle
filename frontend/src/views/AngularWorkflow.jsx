@@ -8612,8 +8612,12 @@ const AngularWorkflow = (props) => {
 					if (selectedApp.authentication.parameters[key].value !== undefined && selectedApp.authentication.parameters[key].value !== null && selectedApp.authentication.parameters[key].value.length > 0) {
 						authenticationOption.fields[selectedApp.authentication.parameters[key].name] = selectedApp.authentication.parameters[key].value
 					} else {
-						alert.info("Field "+selectedApp.authentication.parameters[key].name+" can't be empty")
-						return
+						if (selectedApp.authentication.parameters[key].schema.type === "bool") {
+							authenticationOption.fields[selectedApp.authentication.parameters[key].name] = "false"
+						} else {
+							alert.info("Field "+selectedApp.authentication.parameters[key].name+" can't be empty")
+							return
+						}
 					}
 				} 
 			}
@@ -8710,6 +8714,7 @@ const AngularWorkflow = (props) => {
 												defaultValue={"false"}
 												fullWidth
 												onChange={(e) => {
+													console.log("Value: ", e.target.value)
 													authenticationOption.fields[data.name] = e.target.value
 												}}
 												style={{backgroundColor: theme.palette.surfaceColor, color: "white", height: 50}}

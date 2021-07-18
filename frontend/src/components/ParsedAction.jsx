@@ -1168,6 +1168,7 @@ const ParsedAction = (props) => {
 									<Tooltip color="secondary" title="Value must be unique" placement="top">
 										<div style={{cursor: "pointer", color: staticcolor}} onClick={(e) => {}}>
           						<Checkbox
+												tabIndex="-1"
           						  checked={selectedActionParameters[count].unique_toggled}
 												style={{
 													color: theme.palette.primary.secondary,
