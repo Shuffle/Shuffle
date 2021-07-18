@@ -262,45 +262,47 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 	//log.Printf("Response: %#v", imageBuildResponse.Body)
 	log.Printf("[DEBUG] IMAGERESPONSE: %#v", imageBuildResponse.Body)
 
-	//defer imageBuildResponse.Body.Close()
-	buildBuf := new(strings.Builder)
-	_, newerr := io.Copy(buildBuf, imageBuildResponse.Body)
-	if newerr != nil {
-		log.Printf("[WARNING] Failed reading Docker build STDOUT: %s", newerr)
-	} else {
-		log.Printf("[INFO] STRING: %s", buildBuf.String())
-		if strings.Contains(buildBuf.String(), "errorDetail") {
-			log.Printf("[ERROR] Docker build:\n%s\nERROR ABOVE: Trying to pull tags from: %s", buildBuf.String(), strings.Join(tags, "\n"))
+	if imageBuildResponse.Body != nil {
+		defer imageBuildResponse.Body.Close()
+		buildBuf := new(strings.Builder)
+		_, newerr := io.Copy(buildBuf, imageBuildResponse.Body)
+		if newerr != nil {
+			log.Printf("[WARNING] Failed reading Docker build STDOUT: %s", newerr)
+		} else {
+			log.Printf("[INFO] STRING: %s", buildBuf.String())
+			if strings.Contains(buildBuf.String(), "errorDetail") {
+				log.Printf("[ERROR] Docker build:\n%s\nERROR ABOVE: Trying to pull tags from: %s", buildBuf.String(), strings.Join(tags, "\n"))
 
-			// Handles pulling of the same image if applicable
-			// This fixes some issues with older versions of Docker which can't build
-			// on their own ( <17.05 )
-			pullOptions := types.ImagePullOptions{}
-			downloaded := false
-			for _, image := range tags {
-				// Is this ok? Not sure. Tags shouldn't be controlled here prolly.
-				image = strings.ToLower(image)
+				// Handles pulling of the same image if applicable
+				// This fixes some issues with older versions of Docker which can't build
+				// on their own ( <17.05 )
+				pullOptions := types.ImagePullOptions{}
+				downloaded := false
+				for _, image := range tags {
+					// Is this ok? Not sure. Tags shouldn't be controlled here prolly.
+					image = strings.ToLower(image)
 
-				newImage := fmt.Sprintf("%s/%s", registryName, image)
-				log.Printf("[INFO] Pulling image %s", newImage)
-				reader, err := client.ImagePull(ctx, newImage, pullOptions)
-				if err != nil {
-					log.Printf("[ERROR] Failed getting image %s: %s", newImage, err)
-					continue
+					newImage := fmt.Sprintf("%s/%s", registryName, image)
+					log.Printf("[INFO] Pulling image %s", newImage)
+					reader, err := client.ImagePull(ctx, newImage, pullOptions)
+					if err != nil {
+						log.Printf("[ERROR] Failed getting image %s: %s", newImage, err)
+						continue
+					}
+
+					// Attempt to retag the image to not contain registry...
+
+					//newBuf := buildBuf
+					downloaded = true
+					io.Copy(os.Stdout, reader)
+					log.Printf("[INFO] Successfully downloaded and built %s", newImage)
 				}
 
-				// Attempt to retag the image to not contain registry...
-
-				//newBuf := buildBuf
-				downloaded = true
-				io.Copy(os.Stdout, reader)
-				log.Printf("[INFO] Successfully downloaded and built %s", newImage)
+				if !downloaded {
+					return errors.New(fmt.Sprintf("Failed to build / download images %s", strings.Join(tags, ",")))
+				}
+				//baseDockerName
 			}
-
-			if !downloaded {
-				return errors.New(fmt.Sprintf("Failed to build / download images %s", strings.Join(tags, ",")))
-			}
-			//baseDockerName
 		}
 	}
 
