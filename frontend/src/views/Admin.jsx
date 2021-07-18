@@ -663,7 +663,7 @@ const Admin = (props) => {
 		//}
 		const id = environment.id
 
-		alert.info("Modifying environment " + environment.name)
+		//alert.info("Modifying environment " + environment.Name)
 		var newEnv = []
 		for (var key in environments) {
 			if (environments[key].id == id) {

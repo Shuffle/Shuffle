@@ -2011,14 +2011,19 @@ const AngularWorkflow = (props) => {
 			//console.log("Should handle trigger "+data.triggertype)
 			//console.log(data)
 			const trigger_index = workflow.triggers.findIndex(a => a.id === data.id)
-			setSelectedTriggerIndex(trigger_index)
-			setSelectedTrigger(data)
-			setSelectedActionEnvironment(data.env)
 
 			if (data.app_name === "Shuffle Workflow") {
 				getAvailableWorkflows(trigger_index) 
 				getSettings() 
+			} else if (data.app_name === "Webhook") {
+				if (workflow.triggers[trigger_index].parameters !== undefined) {
+					workflow.triggers[trigger_index].parameters[0] = {"name": "url", "value": referenceUrl+"webhook_"+selectedTrigger.id}
+				}
 			}
+
+			setSelectedTriggerIndex(trigger_index)
+			setSelectedTrigger(data)
+			setSelectedActionEnvironment(data.env)
 		} else {
 			alert.error("Can't handle "+data.type)
 		}
