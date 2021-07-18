@@ -930,9 +930,22 @@ const AngularWorkflow = (props) => {
 	}
 
 	const monitorUpdates = () => {
-		const firstnode = cy.getElementById(workflow.start)
+		var firstnode = cy.getElementById(workflow.start)
 		if (firstnode.length === 0) {
-			return false
+			var found = false
+			for (var key in workflow.actions) {
+				if (workflow.actions[key].isStartNode) {
+					console.log("Updating startnode")
+					workflow.start = workflow.actions[key].id
+					firstnode = cy.getElementById(workflow.actions[key].id)
+					found = true
+					break
+				}
+			} 
+
+			if (!found) {
+				return false
+			} 
 		}
 
 		cy.elements().removeClass('success-highlight failure-highlight executing-highlight')
@@ -6265,7 +6278,13 @@ const AngularWorkflow = (props) => {
 				setWorkflow(workflow)
 			} else {
 				// Always update
-				workflow.triggers[selectedTriggerIndex].parameters[0].value = referenceUrl+"webhook_"+selectedTrigger.id
+				const newUrl = referenceUrl+"webhook_"+selectedTrigger.id
+				console.log("Validating webhook url: ", newUrl)
+				if (newUrl !== workflow.triggers[selectedTriggerIndex].parameters[0].value) {
+					console.log("Url is wrong - updating")
+					workflow.triggers[selectedTriggerIndex].parameters[0].value = newUrl
+					setWorkflow(workflow)
+				}
 			}
 
 			const trigger_header_auth = workflow.triggers[selectedTriggerIndex].parameters.length > 2 ? workflow.triggers[selectedTriggerIndex].parameters[2].value : ""
@@ -6650,7 +6669,7 @@ const AngularWorkflow = (props) => {
 			return
 		}
 
-		alert.info("Stopping webhook")
+		//alert.info("Stopping webhook")
 
 		fetch(globalUrl+"/api/v1/hooks/"+trigger.id+"/delete", {
     	  method: 'DELETE',

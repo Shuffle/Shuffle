@@ -1551,23 +1551,32 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 	}
 
 	workflowExecution.ExecutionVariables = workflow.ExecutionVariables
-	// Local authorization for this single workflow used in workers.
-
-	// FIXME: Used for cloud
-	//mappedData, err := json.Marshal(workflowExecution)
-	//if err != nil {
-	//	log.Printf("Failed workflowexecution marshalling: %s", err)
-	//	resp.WriteHeader(http.StatusInternalServerError)
-	//	resp.Write([]byte(`{"success": false}`))
-	//	return
-	//}
-
-	//log.Println(string(mappedData))
 
 	if len(workflowExecution.Start) == 0 && len(workflowExecution.Workflow.Start) > 0 {
 		workflowExecution.Start = workflowExecution.Workflow.Start
 	}
-	//log.Printf("[INFO] New startnode: %s", workflowExecution.Start)
+
+	startnodeFound := false
+	newStartnode := ""
+	for _, item := range workflowExecution.Workflow.Actions {
+		if item.ID == workflowExecution.Start {
+			startnodeFound = true
+		}
+
+		if item.IsStartNode {
+			newStartnode = item.ID
+		}
+	}
+
+	if !startnodeFound {
+		log.Printf("[INFO] Couldn't find startnode %s. Remapping to %#v", workflowExecution.Start, newStartnode)
+
+		if len(newStartnode) > 0 {
+			workflowExecution.Start = newStartnode
+		} else {
+			return shuffle.WorkflowExecution{}, fmt.Sprintf("Startnode couldn't be found"), errors.New("Startnode isn't defined in this workflow..")
+		}
+	}
 
 	childNodes := shuffle.FindChildNodes(workflowExecution, workflowExecution.Start)
 
@@ -2122,8 +2131,6 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// FIXME - have a check for org etc too..
-	// FIXME - admin check like this? idk
 	if user.Id != workflow.Owner && user.Role != "scheduler" && user.Role != fmt.Sprintf("workflow_%s", fileId) {
 		if workflow.OrgId == user.ActiveOrg.Id && user.Role == "admin" {
 			log.Printf("[INFO] Letting user %s execute %s because they're admin of the same org", user.Username, workflow.ID)

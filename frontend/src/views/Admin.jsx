@@ -184,7 +184,9 @@ const Admin = (props) => {
 					if (responseJson["success"] === false) {
 						alert.error("Failed stopping schedule")
 					} else {
-						getSchedules()
+						setTimeout(() => {
+							getSchedules()
+						}, 1500)
 						alert.success("Successfully stopped schedule!")
 					}
 				}),
