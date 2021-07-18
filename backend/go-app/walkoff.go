@@ -506,7 +506,7 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 	//log.Printf("BODY: %s", string(body))
 	parsedArgument := strings.Replace(string(body), "\"", "\\\"", -1)
 	bodyWrapper := fmt.Sprintf(`{"start": "%s", "execution_source": "schedule", "execution_argument": "%s"}`, startNode, parsedArgument)
-	log.Printf("WRAPPER BODY: \n%s", bodyWrapper)
+	log.Printf("[INFO] Body for schedule %s in workflow %s: \n%s", scheduleId, workflowId, bodyWrapper)
 	job := func() {
 		request := &http.Request{
 			URL:    &url.URL{},
@@ -1155,7 +1155,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 		if workflow.OrgId == user.ActiveOrg.Id && user.Role == "admin" {
 			log.Printf("[INFO] User %s is deleting workflow %s as admin. Owner: %s", user.Username, workflow.ID, workflow.Owner)
 		} else {
-			log.Printf("Wrong user (%s) for workflow %s", user.Username, workflow.ID)
+			log.Printf("[WARNING] Wrong user (%s) for workflow %s (delete workflow)", user.Username, workflow.ID)
 			resp.WriteHeader(401)
 			resp.Write([]byte(`{"success": false}`))
 			return
@@ -2201,9 +2201,9 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if user.Id != workflow.Owner && user.Role != "scheduler" {
+	if user.Id != workflow.Owner || len(user.Id) == 0 {
 		if workflow.OrgId == user.ActiveOrg.Id && user.Role == "admin" {
-			log.Printf("[DEBUG] User %s is accessing workflow %s as admin", user.Username, workflow.ID)
+			log.Printf("[DEBUG] User %s is accessing workflow %s as admin (stop schedule)", user.Username, workflow.ID)
 		} else {
 			log.Printf("[WARNING] Wrong user (%s) for workflow %s (stop schedule)", user.Username, workflow.ID)
 			resp.WriteHeader(401)
@@ -2347,7 +2347,7 @@ func stopScheduleGCP(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - have a check for org etc too..
 	// FIXME - admin check like this? idk
 	if user.Id != workflow.Owner && user.Role != "scheduler" {
-		log.Printf("Wrong user (%s) for workflow %s (stop schedule)", user.Username, workflow.ID)
+		log.Printf("[WARNING] Wrong user (%s) for workflow %s (stop schedule)", user.Username, workflow.ID)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -2411,7 +2411,7 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
-		log.Printf("Api authentication failed in schedule workflow: %s", err)
+		log.Printf("[WARNING] Api authentication failed in schedule workflow: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -2445,13 +2445,15 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// FIXME - have a check for org etc too..
-	// FIXME - admin check like this? idk
-	if user.Id != workflow.Owner && user.Role != "scheduler" {
-		log.Printf("Wrong user (%s) for workflow %s", user.Username, workflow.ID)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
+	if user.Id != workflow.Owner || len(user.Id) == 0 {
+		if workflow.OrgId == user.ActiveOrg.Id && user.Role == "admin" {
+			log.Printf("[INFO] User %s is deleting workflow %s as admin. Owner: %s", user.Username, workflow.ID, workflow.Owner)
+		} else {
+			log.Printf("[WARNING] Wrong user (%s) for workflow %s (schedule start). Owner: %s", user.Username, workflow.ID, workflow.Owner)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
 	}
 
 	if len(workflow.Actions) == 0 {
@@ -2496,7 +2498,7 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 		startNode = workflow.Start
 	}
 
-	log.Printf("Startnode: %s", startNode)
+	//log.Printf("Startnode: %s", startNode)
 
 	if len(schedule.Id) != 36 {
 		log.Printf("ID length is not 36 for schedule: %s", err)
@@ -2597,7 +2599,7 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	log.Printf("Schedulearg: %s", parsedBody)
+	//log.Printf("Schedulearg: %s", parsedBody)
 
 	err = createSchedule(
 		ctx,
@@ -3282,7 +3284,7 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 				//log.Printf("Should generate yaml")
 				swagger, api, _, err := shuffle.GenerateYaml(swagger, parsedOpenApi.ID)
 				if err != nil {
-					log.Printf("Failed building and generating yaml in loop (2) (%s): %s. Continuing.", filename, err)
+					log.Printf("[WARNING] Failed building and generating yaml in loop (2) (%s): %s. Continuing.", filename, err)
 					continue
 				}
 

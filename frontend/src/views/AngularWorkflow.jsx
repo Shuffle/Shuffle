@@ -6263,6 +6263,9 @@ const AngularWorkflow = (props) => {
 				workflow.triggers[selectedTriggerIndex].parameters[1] = {"name": "tmp", "value": "webhook_"+selectedTrigger.id}
 				workflow.triggers[selectedTriggerIndex].parameters[2] = {"name": "auth_headers", "value": ""}
 				setWorkflow(workflow)
+			} else {
+				// Always update
+				workflow.triggers[selectedTriggerIndex].parameters[0].value = referenceUrl+"webhook_"+selectedTrigger.id
 			}
 
 			const trigger_header_auth = workflow.triggers[selectedTriggerIndex].parameters.length > 2 ? workflow.triggers[selectedTriggerIndex].parameters[2].value : ""

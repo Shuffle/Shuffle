@@ -810,18 +810,22 @@ func handleDeleteOutlookSub(resp http.ResponseWriter, request *http.Request) {
 
 	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
-		log.Printf("Api authentication failed in outlook deploy: %s", err)
+		log.Printf("[WARNING] Api authentication failed in outlook deploy: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
 	}
 
 	// FIXME - have a check for org etc too..
-	if user.Id != workflow.Owner && user.Role != "admin" {
-		log.Printf("Wrong user (%s) for workflow %s when deploying outlook", user.Username, workflow.ID)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
+	if user.Id != workflow.Owner || len(user.Id) == 0 {
+		if workflow.OrgId == user.ActiveOrg.Id && user.Role == "admin" {
+			log.Printf("[INFO] User %s is accessing %s as admin (delete outlook sub)", user.Username, workflow.ID)
+		} else {
+			log.Printf("[WARNING] Wrong user (%s) for workflow %s when deploying outlook", user.Username, workflow.ID)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
 	}
 
 	// Check what kind of sub it is
@@ -879,7 +883,7 @@ func createOutlookSub(resp http.ResponseWriter, request *http.Request) {
 
 	// FIXME - have a check for org etc too..
 	if user.Id != workflow.Owner && user.Role != "admin" {
-		log.Printf("Wrong user (%s) for workflow %s when deploying outlook", user.Username, workflow.ID)
+		log.Printf("[WARNING] Wrong user (%s) for workflow %s when deploying outlook", user.Username, workflow.ID)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return

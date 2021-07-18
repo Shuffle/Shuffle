@@ -3161,7 +3161,7 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 	//log.Printf("Should generate yaml")
 	swagger, api, pythonfunctions, err := shuffle.GenerateYaml(swagger, newmd5)
 	if err != nil {
-		log.Printf("Failed building and generating yaml: %s", err)
+		log.Printf("[WARNING] Failed building and generating yaml (buildapp): %s", err)
 		resp.WriteHeader(500)
 		resp.Write([]byte(`{"success": false, "reason": "Failed building and parsing yaml"}`))
 		return

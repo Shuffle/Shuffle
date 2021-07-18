@@ -2048,7 +2048,9 @@ const Admin = (props) => {
 			}
 		}
 
-		getFiles() 
+		setTimeout(() => {
+			getFiles() 
+		}, 2500)
 	}
 
 	const uploadFile = (e) => {
