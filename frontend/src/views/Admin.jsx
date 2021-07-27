@@ -29,6 +29,7 @@ const Admin = (props) => {
 	const [firstRequest, setFirstRequest] = React.useState(true);
 	const [orgRequest, setOrgRequest] = React.useState(true);
 	const [modalUser, setModalUser] = React.useState({});
+	const [orgName, setOrgName] = React.useState("")
 	const [modalOpen, setModalOpen] = React.useState(false);
 
 	const [cloudSyncModalOpen, setCloudSyncModalOpen] = React.useState(false);
@@ -365,6 +366,45 @@ const Admin = (props) => {
 			.catch(error => {
 				alert.error("Err: " + error.toString())
 			});
+	}
+
+	const createSubOrg = (currentOrgId, name) => {
+		const data = { "name": name, "org_id": currentOrgId}
+		console.log(data)
+		const url = globalUrl + `/api/v1/orgs/${currentOrgId}/create_sub_org`
+
+		fetch(url, {
+			mode: 'cors',
+			method: 'POST',
+			body: JSON.stringify(data),
+			credentials: 'include',
+			crossDomain: true,
+			withCredentials: true,
+			headers: {
+				'Content-Type': 'application/json; charset=utf-8',
+			},
+		})
+			.then(response =>
+				response.json().then(responseJson => {
+					if (responseJson["success"] === false) {
+						if (responseJson.reason !== undefined) {
+							alert.error(responseJson.reason)
+						} else {
+							alert.error("Failed setting new password")
+						}
+					} else {
+						alert.success("Successfully updated password!")
+						setSelectedUserModalOpen(false)
+					}
+
+					setOrgName("")
+					setModalOpen(false)
+				}),
+			)
+			.catch(error => {
+				alert.error("Err: " + error.toString())
+			});
+
 	}
 
 	const onPasswordChange = () => {
@@ -1773,14 +1813,20 @@ const Admin = (props) => {
 			}}
 		>
 			<DialogTitle><span style={{ color: "white" }}>
-				{curTab === 1 ? "Add user" : "Add environment"}
+				{curTab === 1 ? "Add user" : curTab === 7 ? "Add Sub-Organization" : "Add environment"}
 			</span></DialogTitle>
 			<DialogContent>
 				{curTab === 1 && isCloud ? 
 					<Typography variant="body1" style={{marginBottom: 10}}>
 						We'll send an email to invite them to your organization.
 					</Typography>
-				: null}
+				: 
+				curTab === 7 ? 
+					<Typography variant="body1" style={{marginBottom: 10}}>
+						The organization created will become a child of your current organization, and be available to you.
+					</Typography>
+				:
+				null }
 				{curTab === 1 ?
 					<div>
 						Username
@@ -1830,6 +1876,31 @@ const Admin = (props) => {
 							</span>
 						}
 					</div>
+					: curTab === 7 ? 
+						<div>
+							Name	
+							<TextField
+								color="primary"
+								style={{ backgroundColor: theme.palette.inputColor }}
+								autoFocus
+								InputProps={{
+									style: {
+										height: "50px",
+										color: "white",
+										fontSize: "1em",
+									},
+								}}
+								required
+								fullWidth={true}
+								placeholder={`${selectedOrganization.name} Copycat Inc.`}
+								id="orgname"
+								margin="normal"
+								variant="outlined"
+								onChange={(event) => {
+									setOrgName(event.target.value)
+								}}
+							/>
+						</div>
 					: curTab === 5 ?
 						<div>
 							Environment Name
@@ -1867,6 +1938,8 @@ const Admin = (props) => {
 						} else {
 							submitUser(modalUser)
 						}
+					} else if (curTab === 7) {
+						createSubOrg(selectedOrganization.id, orgName) 
 					} else if (curTab === 5) {
 						submitEnvironment(modalUser)
 					}
@@ -2334,13 +2407,13 @@ const Admin = (props) => {
 						style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
 					/>
 				</ListItem>
-				{categories.map(data => {
+				{categories.map((data, index) => {
 					if (data.apps.length === 0) {
 						return null
 					}
 
 					return (
-						<ListItem>
+						<ListItem key={index}>
 							<ListItemText
 								primary={data.name}
 								style={{minWidth: 150, maxWidth: 150}}
@@ -2633,12 +2706,11 @@ const Admin = (props) => {
 				style={{}} 
 				variant="contained"
 				color="primary"
-				disabled
 				onClick={() => {
 					setModalOpen(true)
 				}}
 			> 
-				Add organization 
+				Add suborganization 
 			</Button>
 			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor}}/>
 			<List>
@@ -2772,13 +2844,13 @@ const Admin = (props) => {
 				<div style={{padding: 15}}>
 					{organizationView}
 					{authenticationView}
-					{appCategoryView}
 					{usersView}	
 					{environmentView}
 					{schedulesView}
 					{filesView}
 					{hybridTab}
 					{organizationsTab}
+					{appCategoryView}
 				</div>
 			</Paper>
 		</div>

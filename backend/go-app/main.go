@@ -976,38 +976,67 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 			}
 			err = shuffle.SetUser(ctx, &userInfo, true)
 			if err != nil {
-				log.Printf("Error patching User for activeOrg: %s", err)
+				log.Printf("[INFO] Error patching User for activeOrg: %s", err)
 			}
 		}
 	}
 
-	// FIXME: Remove this dependency by updating users' orgs when org itself is updated
 	org, err := shuffle.GetOrg(ctx, userInfo.ActiveOrg.Id)
 	if err == nil {
 		userInfo.ActiveOrg = shuffle.OrgMini{
-			Id:   org.Id,
-			Name: org.Name,
+			Id:         org.Id,
+			Name:       org.Name,
+			CreatorOrg: org.CreatorOrg,
+			Role:       userInfo.ActiveOrg.Role,
+			Image:      org.Image,
 		}
 
 		userInfo.ActiveOrg.Users = []shuffle.UserMini{}
 	}
 
 	userInfo.ActiveOrg.Users = []shuffle.UserMini{}
-	currentOrg, err := json.Marshal(userInfo.ActiveOrg)
-	if err != nil {
-		currentOrg = []byte("{}")
+	userOrgs := []shuffle.OrgMini{}
+	for _, item := range userInfo.Orgs {
+		if item == userInfo.ActiveOrg.Id {
+			userOrgs = append(userOrgs, userInfo.ActiveOrg)
+			continue
+		}
+
+		org, err := shuffle.GetOrg(ctx, item)
+		if err == nil {
+			userOrgs = append(userOrgs, shuffle.OrgMini{
+				Id:         org.Id,
+				Name:       org.Name,
+				CreatorOrg: org.CreatorOrg,
+				Image:      org.Image,
+			})
+			// Role:       "admin",
+		}
 	}
 
-	returnData := fmt.Sprintf(`{
-	"success": true, 
-	"username": "%s",
-	"admin": %s, 
-	"tutorials": [],
-	"id": "%s",
-	"orgs": [%s], 
-	"active_org": %s,
-	"cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]
-}`, userInfo.Username, parsedAdmin, userInfo.Id, currentOrg, currentOrg, userInfo.Session, expiration.Unix())
+	returnValue := shuffle.HandleInfo{
+		Success:   true,
+		Username:  userInfo.Username,
+		Admin:     parsedAdmin,
+		Id:        userInfo.Id,
+		Orgs:      userOrgs,
+		ActiveOrg: userInfo.ActiveOrg,
+		Cookies: []shuffle.SessionCookie{
+			shuffle.SessionCookie{
+				Key:        "session_token",
+				Value:      userInfo.Session,
+				Expiration: expiration.Unix(),
+			},
+		},
+	}
+
+	returnData, err := json.Marshal(returnValue)
+	if err != nil {
+		log.Printf("[WARNING] Failed marshalling info: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(returnData))

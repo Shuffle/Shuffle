@@ -75,7 +75,7 @@ const App = (message, props) => {
 		.then(response => response.json())
 		.then(responseJson => {
 			if (responseJson.success === true) {
-				//console.log(responseJson.success)
+				console.log(responseJson)
 				setUserData(responseJson)
 				setIsLoggedIn(true)
 				//console.log("Cookies: ", cookies)

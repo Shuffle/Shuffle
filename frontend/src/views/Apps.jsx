@@ -932,7 +932,11 @@ const Apps = (props) => {
 			console.log("Error in dropzone: ", e)
 		}
 
-		reader.readAsText(files[0]);
+		try {
+			reader.readAsText(files[0]);
+		} catch(error) {
+			alert.error("Failed to read file")
+		}
   };
 
   useEffect(() => {
