@@ -390,10 +390,10 @@ const Admin = (props) => {
 						if (responseJson.reason !== undefined) {
 							alert.error(responseJson.reason)
 						} else {
-							alert.error("Failed setting new password")
+							alert.error("Failed creating suborg")
 						}
 					} else {
-						alert.success("Successfully updated password!")
+						alert.success("Successfully created suborg!")
 						setSelectedUserModalOpen(false)
 					}
 
@@ -499,6 +499,10 @@ const Admin = (props) => {
 			if (responseJson["success"] === false) {
 				alert.error("Failed getting org: ", responseJson.readon)
 			} else {
+				if (responseJson.sync_features === undefined || responseJson.sync_features === null) {
+					responseJson.sync_features = {}
+
+				}
 				setSelectedOrganization(responseJson)
 				var lists = {
 					"active": {
@@ -1726,65 +1730,65 @@ const Admin = (props) => {
 						</div>
 					}
 					<Typography style={{marginTop: 40, marginLeft: 10, marginBottom: 5,}}>Cloud sync features</Typography>
-					<Grid container style={{width: "100%", marginBottom: 15, }}>
-						{Object.keys(selectedOrganization.sync_features).map(function(key, index) {
-							if (key === "schedule") {
-								return null
-							}
+						<Grid container style={{width: "100%", marginBottom: 15, }}>
+							{selectedOrganization.sync_features === undefined || selectedOrganization.sync_features === null ? null : Object.keys(selectedOrganization.sync_features).map(function(key, index) {
+								if (key === "schedule") {
+									return null
+								}
 
-							const item = selectedOrganization.sync_features[key]
-							const newkey = key.replaceAll("_", " ")
-							const griditem = {
-								"primary": newkey,
-								"secondary": item.description === undefined || item.description === null || item.description.length === 0 ? "Not defined yet" : item.description,
-								"limit": item.limit,
-								"usage": 0, 
-								"data_collection": "None",
-								"active": item.active,
-								"icon": <PolymerIcon style={{color: itemColor}}/>,
-							}
+								const item = selectedOrganization.sync_features[key]
+								const newkey = key.replaceAll("_", " ")
+								const griditem = {
+									"primary": newkey,
+									"secondary": item.description === undefined || item.description === null || item.description.length === 0 ? "Not defined yet" : item.description,
+									"limit": item.limit,
+									"usage": 0, 
+									"data_collection": "None",
+									"active": item.active,
+									"icon": <PolymerIcon style={{color: itemColor}}/>,
+								}
 
-							return (
-								<Zoom key={index} >
-									<GridItem data={griditem} />
-								</Zoom>
-							)
-						})}
-					</Grid>
-					<Divider style={{ marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor }} />
-					{isCloud && selectedOrganization.subscriptions !== undefined && selectedOrganization.subscriptions !== null && selectedOrganization.subscriptions.length > 0 ? 
-						<div style={{marginTop: 30, marginBottom: 20}}>
-							<Typography style={{marginTop: 40, marginLeft: 10, marginBottom: 5,}}>
-								Your subscription{selectedOrganization.subscriptions.length > 1 ? "s" : ""}
-							</Typography>
-							<Grid container spacing={3} style={{marginTop: 15}}>
-								{selectedOrganization.subscriptions.reverse().map((sub, index) => {
-									return (
-										<Grid item key={index} xs={4}>
-											<Card elevation={6} style={{backgroundColor: theme.palette.inputColor, color: "white", padding: 25, textAlign: "left",}}>
-													<b>Type</b>: {sub.level}<div/>
-													<b>Recurrence</b>: {sub.recurrence}<div/>
-													{sub.active ? 
-														<div>
-															<b>Started</b>: {new Date(sub.startdate*1000).toISOString()}<div/>
-															<Button variant="outlined" color="primary" style={{marginTop: 15}} onClick={() => {
-																cancelSubscriptions(sub.reference) 
-															}}>
-																Cancel subscription
-															</Button>
-														</div>
-														: 
-														<div>
-															<b>Cancelled</b>: {new Date(sub.cancellationdate*1000).toISOString()}<div/>
-															<Typography color="textSecondary">
-																<b>Status</b>: Deactivated
-															</Typography>
-														</div>
-													}
-											</Card>
-										</Grid>
-									)
+								return (
+									<Zoom key={index} >
+										<GridItem data={griditem} />
+									</Zoom>
+								)
 							})}
+						</Grid>
+						<Divider style={{ marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor }} />
+						{isCloud && selectedOrganization.subscriptions !== undefined && selectedOrganization.subscriptions !== null && selectedOrganization.subscriptions.length > 0 ? 
+							<div style={{marginTop: 30, marginBottom: 20}}>
+								<Typography style={{marginTop: 40, marginLeft: 10, marginBottom: 5,}}>
+									Your subscription{selectedOrganization.subscriptions.length > 1 ? "s" : ""}
+								</Typography>
+								<Grid container spacing={3} style={{marginTop: 15}}>
+									{selectedOrganization.subscriptions.reverse().map((sub, index) => {
+										return (
+											<Grid item key={index} xs={4}>
+												<Card elevation={6} style={{backgroundColor: theme.palette.inputColor, color: "white", padding: 25, textAlign: "left",}}>
+														<b>Type</b>: {sub.level}<div/>
+														<b>Recurrence</b>: {sub.recurrence}<div/>
+														{sub.active ? 
+															<div>
+																<b>Started</b>: {new Date(sub.startdate*1000).toISOString()}<div/>
+																<Button variant="outlined" color="primary" style={{marginTop: 15}} onClick={() => {
+																	cancelSubscriptions(sub.reference) 
+																}}>
+																	Cancel subscription
+																</Button>
+															</div>
+															: 
+															<div>
+																<b>Cancelled</b>: {new Date(sub.cancellationdate*1000).toISOString()}<div/>
+																<Typography color="textSecondary">
+																	<b>Status</b>: Deactivated
+																</Typography>
+															</div>
+														}
+												</Card>
+											</Grid>
+										)
+								})}
 						</Grid>
 							<Divider style={{ marginTop: 20, backgroundColor: theme.palette.inputColor }} />
 						</div>
@@ -1813,7 +1817,7 @@ const Admin = (props) => {
 			}}
 		>
 			<DialogTitle><span style={{ color: "white" }}>
-				{curTab === 1 ? "Add user" : curTab === 7 ? "Add Sub-Organization" : "Add environment"}
+				{curTab === 1 ? "Add user" : curTab === 6 ? "Add Sub-Organization" : "Add environment"}
 			</span></DialogTitle>
 			<DialogContent>
 				{curTab === 1 && isCloud ? 
@@ -1821,7 +1825,7 @@ const Admin = (props) => {
 						We'll send an email to invite them to your organization.
 					</Typography>
 				: 
-				curTab === 7 ? 
+				curTab === 6 ? 
 					<Typography variant="body1" style={{marginBottom: 10}}>
 						The organization created will become a child of your current organization, and be available to you.
 					</Typography>
@@ -1876,7 +1880,7 @@ const Admin = (props) => {
 							</span>
 						}
 					</div>
-					: curTab === 7 ? 
+					: curTab === 6 ? 
 						<div>
 							Name	
 							<TextField
@@ -1938,7 +1942,7 @@ const Admin = (props) => {
 						} else {
 							submitUser(modalUser)
 						}
-					} else if (curTab === 7) {
+					} else if (curTab === 6) {
 						createSubOrg(selectedOrganization.id, orgName) 
 					} else if (curTab === 5) {
 						submitEnvironment(modalUser)
@@ -2513,6 +2517,7 @@ const Admin = (props) => {
 						bgColor = "#1f2023"
 					}
 
+
 					return (
 						<ListItem key={index} style={{backgroundColor: bgColor}}>
 							<ListItemText
@@ -2696,7 +2701,7 @@ const Admin = (props) => {
 		</div>
 		: null
 
-	const organizationsTab = curTab === 7 ?
+	const organizationsTab = curTab === 6 ?
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
 				<h2 style={{display: "inline",}}>Organizations</h2>
@@ -2716,16 +2721,20 @@ const Admin = (props) => {
 			<List>
 				<ListItem>
 					<ListItemText
-						primary="Name"
-						style={{minWidth: 150, maxWidth: 150}}
+						primary="Logo"
+						style={{minWidth: 100, maxWidth: 100}}
 					/>
 					<ListItemText
-						primary="id"
-						style={{minWidth: 200, maxWidth: 200}}
+						primary="Name"
+						style={{minWidth: 250, maxWidth: 250}}
 					/>
 					<ListItemText
 						primary="Your role"
 						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="id"
+						style={{minWidth: 400, maxWidth: 400}}
 					/>
 					<ListItemText
 						primary="Selected"
@@ -2736,24 +2745,40 @@ const Admin = (props) => {
 						style={{minWidth: 150, maxWidth: 150}}
 					/>
 				</ListItem>
-				{organizations !== undefined && organizations !== null && organizations.length > 0 ? 
+				{userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 0 ? 
 					<span>
-						{organizations.map((data, index) => {
+						{userdata.orgs.map((data, index) => {
 							const isSelected = props.userdata.active_org.id === undefined ? "False" : props.userdata.active_org.id === data.id ? "True" : "False"
 
+							const imagesize = 40
+							const imageStyle = {width: imagesize, height: imagesize, pointerEvents: "none", }
+							const image = data.image === "" ? 
+								<img alt={data.name} src={theme.palette.defaultImage} style={imageStyle} />
+								:
+								<img alt={data.name} src={data.image} style={imageStyle} />
+
+							var bgColor = "#27292d"
+							if (index % 2 === 0) {
+								bgColor = "#1f2023"
+							}
+
 							return (
-								<ListItem key={index}>
+								<ListItem key={index} style={{backgroundColor: bgColor,}}>
 									<ListItemText
-										primary={data.name}
-										style={{minWidth: 150, maxWidth: 150}}
+										primary={image}
+										style={{minWidth: 100, maxWidth: 100}}
 									/>
 									<ListItemText
-										primary={data.id}
-										style={{minWidth: 200, maxWidth: 200}}
+										primary={data.name}
+										style={{minWidth: 250, maxWidth: 250}}
 									/>
 									<ListItemText
 										primary={data.role}
 										style={{minWidth: 150, maxWidth: 150}}
+									/>
+									<ListItemText
+										primary={data.id}
+										style={{minWidth: 400, maxWidth: 400}}
 									/>
 									<ListItemText
 										primary={isSelected}
@@ -2776,7 +2801,7 @@ const Admin = (props) => {
 		</div>
 		: null
 
-	const hybridTab = curTab === 6 ?
+	const hybridTab = curTab === 7 ?
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
 				<h2 style={{display: "inline",}}>Hybrid</h2>
@@ -2836,9 +2861,9 @@ const Admin = (props) => {
 					<Tab label=<span><DescriptionIcon style={iconStyle} />Files</span> />
 					<Tab label=<span><ScheduleIcon style={iconStyle} />Schedules</span> />
 					{isCloud ? null : <Tab label=<span><EcoIcon style={iconStyle} />Environments</span>/>}
-					{window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><CloudIcon style={iconStyle} /> Hybrid</span>/> : null}
-					{window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><BusinessIcon style={iconStyle} /> Organizations</span>/> : null}
-					{window.location.protocol === "http:" && window.location.port === "3000" ? <Tab label=<span><LockIcon style={iconStyle} />Categories</span>/> : null}
+					{isCloud ? null : <Tab label=<span><BusinessIcon style={iconStyle} /> Organizations</span>/>}
+					{/*window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><CloudIcon style={iconStyle} /> Hybrid</span>/> : null*/}
+					{/*window.location.protocol === "http:" && window.location.port === "3000" ? <Tab label=<span><LockIcon style={iconStyle} />Categories</span>/> : null*/}
 				</Tabs>
 				<Divider style={{marginTop: 0, marginBottom: 10, backgroundColor: "rgb(91, 96, 100)"}} />
 				<div style={{padding: 15}}>

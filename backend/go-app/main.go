@@ -739,12 +739,15 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	apikey := ""
 	if count != 0 {
 		if user.Role != "admin" {
 			resp.WriteHeader(401)
 			resp.Write([]byte(`{"success": false, "reason": "Can't register without being admin (2)"}`))
 			return
 		}
+	} else {
+		apikey = uuid.NewV4().String()
 	}
 
 	// Gets a struct of Username, password
@@ -819,7 +822,7 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	err = createNewUser(data.Username, data.Password, role, "", currentOrg)
+	err = createNewUser(data.Username, data.Password, role, apikey, currentOrg)
 	if err != nil {
 		log.Printf("[WARNING] Failed registering user: %s", err)
 		resp.WriteHeader(401)
@@ -828,7 +831,7 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	resp.WriteHeader(200)
-	resp.Write([]byte(`{"success": true}`))
+	resp.Write([]byte(fmt.Sprintf(`{"success": true, "apikey": "%s"}`, apikey)))
 	log.Printf("[INFO] %s Successfully registered.", data.Username)
 }
 
@@ -4147,12 +4150,12 @@ func runInitEs(ctx context.Context) {
 		r, err := git.Clone(storer, fs, cloneOptions)
 
 		if err != nil {
-			log.Printf("Failed loading repo into memory (init): %s", err)
+			log.Printf("[WARNING] Failed loading repo into memory (init): %s", err)
 		}
 
 		dir, err := fs.ReadDir("")
 		if err != nil {
-			log.Printf("Failed reading folder: %s", err)
+			log.Printf("[WARNING] Failed reading folder (init): %s", err)
 		}
 		_ = r
 		//iterateAppGithubFolders(fs, dir, "", "testing")
@@ -5837,6 +5840,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/orgs/{orgId}", shuffle.HandleGetOrg).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}", shuffle.HandleEditOrg).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/create_sub_org", shuffle.HandleCreateSubOrg).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/orgs/{orgId}/change", shuffle.HandleChangeUserOrg).Methods("POST", "OPTIONS") // Swaps to the org
 
 	// This is a new API that validates if a key has been seen before.
 	// Not sure what the best course of action is for it.

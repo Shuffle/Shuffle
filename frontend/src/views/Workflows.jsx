@@ -1,6 +1,7 @@
 import React, { useEffect} from 'react';
 import { useInterval } from 'react-powerhooks';
 import { makeStyles } from '@material-ui/core/styles';
+import { useTheme } from '@material-ui/core/styles';
 
 import {Avatar, Grid, Paper, Tooltip, Divider, Button, TextField, FormControl, IconButton, Menu, MenuItem, FormControlLabel, Chip, Switch, Typography, Zoom, CircularProgress, Dialog, DialogTitle, DialogActions, DialogContent} from '@material-ui/core';
 import {Close as CloseIcon, Compare as CompareIcon, Maximize as MaximizeIcon, Minimize as MinimizeIcon, AddCircle as AddCircleIcon, Toc as TocIcon, Send as SendIcon, Search as SearchIcon, FileCopy as FileCopyIcon, Delete as DeleteIcon, BubbleChart as BubbleChartIcon, Restore as RestoreIcon, Cached as CachedIcon, GetApp as GetAppIcon, Apps as AppsIcon, Edit as EditIcon, MoreVert as MoreVertIcon, PlayArrow as PlayArrowIcon, Add as AddIcon, Publish as PublishIcon, CloudUpload as CloudUploadIcon, CloudDownload as CloudDownloadIcon} from '@material-ui/icons';
@@ -328,6 +329,7 @@ export const validateJson = (showResult) => {
 const Workflows = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, removeCookie, cookies, userdata} = props;
 	document.title = "Shuffle - Workflows"
+	const theme = useTheme();
 	const referenceUrl = globalUrl+"/api/v1/hooks/"
 
 	const alert = useAlert()
@@ -390,6 +392,10 @@ const Workflows = (props) => {
 					if (curWorkflow.name.toLowerCase().includes(filter.toLowerCase())) {
 						return true
 					} else if (curWorkflow.tags.includes(filter)) {
+						return true
+					} else if (curWorkflow.owner === filter) {
+						return true
+					} else if (curWorkflow.org_id === filter) {
 						return true
 					} else if (curWorkflow.actions !== null && curWorkflow.actions !== undefined) {
 						const newfilter = filter.toLowerCase()
@@ -1065,9 +1071,22 @@ const Workflows = (props) => {
 			parsedName = parsedName.slice(0,26)+".." 
 		}
 
-
 		const actions = data.actions !== null ? data.actions.length : 0
 		const [triggers, schedules, webhooks, subflows] = getWorkflowMeta(data)
+
+		const imagesize = 22
+		const foundOrg = userdata.orgs.find(org => org.id === data["org_id"])
+
+		//position: "absolute", bottom: 5, right: -5, 
+		const imageStyle = {width: imagesize, height: imagesize, pointerEvents: "none", marginRight: 10, marginLeft: data.creator_org !== undefined && data.creator_org.length > 0 ? 20 : 0, borderRadius: 10, border: foundOrg.id === userdata.active_org.id ? `4px solid ${boxColor}` : null, cursor: "pointer", marginRight: 10, }
+
+		//<Tooltip title={`Org: ${foundOrg.name}`} placement="bottom">
+		const image = foundOrg.image === "" ? 
+			<img alt={foundOrg.name} src={theme.palette.defaultImage} style={imageStyle} />
+			:
+			<img alt={foundOrg.name} src={foundOrg.image} style={imageStyle} onClick={() => {
+				//setFilteredWorkflows(newWorkflows)
+			}}/>
 
 		return (
 			<Grid item xs={4} style={{padding: "12px 10px 12px 10px",}}>
@@ -1075,6 +1094,15 @@ const Workflows = (props) => {
 					<div style={{position: "absolute", bottom: 1, left: 1, height: 12, width: 12, backgroundColor: boxColor, borderRadius: "0 100px 0 0",}} />
 					<Grid item style={{display: "flex", flexDirection: "column", width: "100%"}}>
 						<Grid item style={{display: "flex", maxHeight: 34,}}>
+							<Tooltip title={`Org "${foundOrg.name}"`} placement="bottom">
+								<div styl={{cursor: "pointer"}} onClick={() => {
+									addFilter(foundOrg.id) 
+									//setFilters(["Org "+foundOrg.name])
+									//setFilteredWorkflows(newWorkflows)
+								}}>
+									{image}
+								</div>
+							</Tooltip>
 							<Tooltip title={`Edit ${data.name}`} placement="bottom">
 								<Typography variant="body1" style={{marginBottom: 0, paddingBottom: 0, maxHeight: 30, flex: 10,}}>
 									<Link to={"/workflows/"+data.id} style={{textDecoration: "none", color: "inherit",}}>
