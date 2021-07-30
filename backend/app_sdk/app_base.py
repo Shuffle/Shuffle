@@ -1675,7 +1675,7 @@ class AppBase:
                         return True
                     
                 return False 
-            elif check.lower() == "larger than":
+            elif check.lower() == "larger than" or check.lower() == "bigger than":
                 try:
                     if str(sourcevalue).isdigit() and str(destinationvalue).isdigit():
                         if int(sourcevalue) > int(destinationvalue):
@@ -1684,7 +1684,7 @@ class AppBase:
                 except AttributeError as e:
                     self.logger.error("[WARNING] Condition larger than failed with values %s and %s: %s" % (sourcevalue, destinationvalue, e))
                     return False
-            elif check.lower() == "smaller than":
+            elif check.lower() == "smaller than" or check.lower() == "less than":
                 try:
                     if str(sourcevalue).isdigit() and str(destinationvalue).isdigit():
                         if int(sourcevalue) < int(destinationvalue):
