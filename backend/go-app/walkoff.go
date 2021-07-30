@@ -1190,12 +1190,12 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - maybe delete workflow executions
 	err = shuffle.DeleteKey(ctx, "workflow", fileId)
 	if err != nil {
-		log.Printf("Failed deleting key %s", fileId)
+		log.Printf("[DEBUG]] Failed deleting key %s", fileId)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "Failed deleting key"}`))
 		return
 	}
-	log.Printf("[INFO] Should have deleted workflow %s", fileId)
+	log.Printf("[INFO] Should have deleted workflow %s (%s)", workflow.Name, fileId)
 
 	//memcacheName := fmt.Sprintf("%s_%s", user.Username, fileId)
 	//memcache.Delete(ctx, memcacheName)
@@ -1204,6 +1204,7 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 	//cacheKey := fmt.Sprintf("%s_workflows", user.Id)
 	cacheKey := fmt.Sprintf("%s_workflows", user.Id)
 	shuffle.DeleteCache(ctx, cacheKey)
+	log.Printf("[DEBUG] Cleared workflow cache for %s (%s)", user.Username, user.Id)
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": true}`))

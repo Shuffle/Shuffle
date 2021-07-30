@@ -1979,7 +1979,7 @@ const Workflows = (props) => {
 										//backgroundColor: inputColor,
 									},
 								}}
-								placeholder="Filter Your Workflows"
+								placeholder="Add Filter"
 								color="primary"
 								fullWidth
 								value={filters}
