@@ -3975,10 +3975,9 @@ func runInitEs(ctx context.Context) {
 		log.Printf("[INFO] Setting up %d schedule(s)", len(schedules))
 
 		url := &url.URL{}
-		job := func(schedule ScheduleOld) func() {
+		job := func(schedule shuffle.ScheduleOld) func() {
 			return func() {
-				//log.Printf("[INFO] Running schedule %s with interval %d.", schedule.Id, schedule.Seconds)
-				//log.Printf("ARG: %s", schedule.WrappedArgument)
+				log.Printf("[INFO] Running schedule %s with interval %d.", schedule.Id, schedule.Seconds)
 
 				request := &http.Request{
 					URL:    url,
@@ -4000,7 +3999,6 @@ func runInitEs(ctx context.Context) {
 			}
 
 			//log.Printf("Schedule: %#v", schedule)
-
 			//log.Printf("Schedule time: every %d seconds", schedule.Seconds)
 			jobret, err := newscheduler.Every(schedule.Seconds).Seconds().NotImmediately().Run(job(schedule))
 			if err != nil {
