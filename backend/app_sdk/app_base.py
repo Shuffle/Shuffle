@@ -10,6 +10,8 @@ import urllib.parse
 import http.client
 import urllib3
 import hashlib
+from liquid import Liquid
+import liquid
 
 class AppBase:
     __version__ = None
@@ -1509,6 +1511,31 @@ class AppBase:
                 print("Error in decoder: %s" % e)
                 return returndata, is_loop
 
+        def parse_liquid(template):
+            #print("Inside liquid with glob: %s" % globals())
+            try:
+                #print(globals())
+                print("Running with \"%s\"" % template)
+                run = Liquid(template, {'mode': 'python'})
+                ret = run.render(**globals())
+                return ret
+                #try:
+                    #run = Liquid(template)
+                    #return ret
+                #except liquid.exceptions.LiquidSyntaxError as  e:
+                #    run = Liquid(template, {'mode': 'python'})
+                #    ret = run.render(**globals())
+                #    return ret
+                #except liquid.exceptions.LiquidRenderError as e:
+                #    print("Render error: %s" % e)
+
+            except liquid.exceptions.LiquidRenderError as e:
+                print("Render error: %s" % e)
+            except liquid.exceptions.LiquidSyntaxError as  e:
+                print("Syntax error: %s" % e)
+
+            return template
+
         # Parses parameters sent to it and returns whether it did it successfully with the values found
         def parse_params(action, fullexecution, parameter):
             # Skip if it starts with $?
@@ -1518,7 +1545,8 @@ class AppBase:
             # Matches with space in the first part, but not in subsequent parts.
             # JSON / yaml etc shouldn't have spaces in their fields anyway.
             #match = ".*?([$]{1}([a-zA-Z0-9 _-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,})[$/, ]?"
-            match = ".*?([$]{1}([a-zA-Z0-9 _-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,})"
+            #match = ".*?([$]{1}([a-zA-Z0-9 _-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,})"
+            match = ".*?([$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,})" # Removed space - no longer ok
 
             # Regex to find all the things
             if parameter["variant"] == "STATIC_VALUE":
@@ -1640,6 +1668,15 @@ class AppBase:
                             except json.decoder.JSONDecodeError as e:
                                 parameter["value"] = parameter["value"].replace(to_be_replaced, value)
 
+            # Just here in case it breaks 
+            # Implemented 02.08.2021
+            print("Pre liquid: %s" % parameter["value"])
+            try:
+                parameter["value"] = parse_liquid(parameter["value"])
+            except:
+                pass
+
+            print("POST liquid: %s" % parameter["value"])
             return "", parameter["value"], is_loop
 
         def run_validation(sourcevalue, check, destinationvalue):
