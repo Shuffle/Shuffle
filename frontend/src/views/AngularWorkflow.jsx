@@ -3483,7 +3483,7 @@ const AngularWorkflow = (props) => {
 	}
 
 	const stopSchedule = (trigger, triggerindex) => {
-		alert.info("Stopping schedule")
+		//alert.info("Stopping schedule")
 		fetch(globalUrl+"/api/v1/workflows/"+props.match.params.key+"/schedule/"+trigger.id, {
 			method: 'DELETE',
 			headers: {

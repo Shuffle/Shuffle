@@ -1067,26 +1067,36 @@ const Workflows = (props) => {
 		}
 
 		var parsedName = data.name
-		if (parsedName !== undefined && parsedName !== null && parsedName.length > 25) {
-			parsedName = parsedName.slice(0,26)+".." 
+		if (parsedName !== undefined && parsedName !== null && parsedName.length > 22) {
+			parsedName = parsedName.slice(0,23)+".." 
 		}
 
 		const actions = data.actions !== null ? data.actions.length : 0
 		const [triggers, schedules, webhooks, subflows] = getWorkflowMeta(data)
 
 		const imagesize = 22
-		const foundOrg = userdata.orgs.find(org => org.id === data["org_id"])
 
-		//position: "absolute", bottom: 5, right: -5, 
-		const imageStyle = {width: imagesize, height: imagesize, pointerEvents: "none", marginRight: 10, marginLeft: data.creator_org !== undefined && data.creator_org.length > 0 ? 20 : 0, borderRadius: 10, border: foundOrg.id === userdata.active_org.id ? `4px solid ${boxColor}` : null, cursor: "pointer", marginRight: 10, }
+		var image = ""
+		var orgName = ""
+		var orgId = ""
+		if (userdata.orgs !== undefined) {
+			const foundOrg = userdata.orgs.find(org => org.id === data["org_id"])
+			if (foundOrg !== undefined && foundOrg !== null) {
+				//position: "absolute", bottom: 5, right: -5, 
+				const imageStyle = {width: imagesize, height: imagesize, pointerEvents: "none", marginRight: 10, marginLeft: data.creator_org !== undefined && data.creator_org.length > 0 ? 20 : 0, borderRadius: 10, border: foundOrg.id === userdata.active_org.id ? `3px solid ${boxColor}` : null, cursor: "pointer", marginRight: 10, }
 
-		//<Tooltip title={`Org: ${foundOrg.name}`} placement="bottom">
-		const image = foundOrg.image === "" ? 
-			<img alt={foundOrg.name} src={theme.palette.defaultImage} style={imageStyle} />
-			:
-			<img alt={foundOrg.name} src={foundOrg.image} style={imageStyle} onClick={() => {
-				//setFilteredWorkflows(newWorkflows)
-			}}/>
+				//<Tooltip title={`Org: ${foundOrg.name}`} placement="bottom">
+				image = foundOrg.image === "" ? 
+					<img alt={foundOrg.name} src={theme.palette.defaultImage} style={imageStyle} />
+					:
+					<img alt={foundOrg.name} src={foundOrg.image} style={imageStyle} onClick={() => {
+						//setFilteredWorkflows(newWorkflows)
+					}}/>
+
+				orgName = foundOrg.name
+				orgId = foundOrg.id
+			}
+		}
 
 		return (
 			<Grid item xs={4} style={{padding: "12px 10px 12px 10px",}}>
@@ -1094,10 +1104,10 @@ const Workflows = (props) => {
 					<div style={{position: "absolute", bottom: 1, left: 1, height: 12, width: 12, backgroundColor: boxColor, borderRadius: "0 100px 0 0",}} />
 					<Grid item style={{display: "flex", flexDirection: "column", width: "100%"}}>
 						<Grid item style={{display: "flex", maxHeight: 34,}}>
-							<Tooltip title={`Org "${foundOrg.name}"`} placement="bottom">
+							<Tooltip title={`Org "${orgName}"`} placement="bottom">
 								<div styl={{cursor: "pointer"}} onClick={() => {
-									addFilter(foundOrg.id) 
-									//setFilters(["Org "+foundOrg.name])
+									addFilter(orgId) 
+									//setFilters(["Org "+orgName])
 									//setFilteredWorkflows(newWorkflows)
 								}}>
 									{image}

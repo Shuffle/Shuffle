@@ -2,7 +2,7 @@ module shuffle
 
 go 1.13
 
-replace github.com/frikky/shuffle-shared => ../../../../git/shuffle-shared
+//replace github.com/frikky/shuffle-shared => ../../../../git/shuffle-shared
 
 //replace github.com/frikky/kin-openapi => ../../../../git/kin-openapi
 
@@ -22,7 +22,7 @@ require (
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/elastic/go-elasticsearch/v7 v7.13.1 // indirect
 	github.com/frikky/kin-openapi v0.39.0
-	github.com/frikky/shuffle-shared v0.0.76
+	github.com/frikky/shuffle-shared v0.0.78
 	github.com/fsouza/go-dockerclient v1.7.2
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-git/go-billy/v5 v5.0.0

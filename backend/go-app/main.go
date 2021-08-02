@@ -993,8 +993,6 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 			Role:       userInfo.ActiveOrg.Role,
 			Image:      org.Image,
 		}
-
-		userInfo.ActiveOrg.Users = []shuffle.UserMini{}
 	}
 
 	userInfo.ActiveOrg.Users = []shuffle.UserMini{}
@@ -4078,7 +4076,7 @@ func runInitEs(ctx context.Context) {
 
 	for _, org := range activeOrgs {
 		if !org.CloudSync {
-			log.Printf("[WARNING] Skipping org %s because sync isn't set (1).", org.Id)
+			log.Printf("[WARNING] Skipping org syncCheck for %s because sync isn't set (1).", org.Id)
 			continue
 		}
 

@@ -84,10 +84,10 @@ const Header = props => {
 			return response.json();
 		}).then(function(responseJson) {	
 			if (responseJson.success !== undefined && responseJson.success) {
-				alert.success("Successfully changed active organization - refreshing!")
 				setTimeout(() => {
 					window.location.reload()
 				}, 2000)
+				alert.success("Successfully changed active organization - refreshing!")
 			} else {
 				alert.error("Failed changing org: ", responseJson.reason)
 			}
