@@ -1914,11 +1914,13 @@ const AngularWorkflow = (props) => {
 		//console.log("BRANCHES: ", branch)
 
 		if (data.type === "ACTION") {
+			//setSelectedApp({})
+			//setSelectedAction({})
 			var curaction = workflow.actions.find(a => a.id === data.id)
 			//console.log("INSIDE CURACTION: ", curaction)
 			if (!curaction || curaction === undefined) { 
 				//event.target.unselect()
-				//alert.error("Action not found. Please remake it.")
+				alert.error("Action not found. Please remake it.")
 				return
 			}
 
@@ -1989,6 +1991,16 @@ const AngularWorkflow = (props) => {
 
 				//setSelectedAction(JSON.parse(JSON.stringify(curaction)))
 				//console.log("CURAPP: ", curapp, selectedApp)
+				//console.log("ACTION: ", curaction)
+				if (curaction.parameters !== undefined && curaction.parameters !== null && curaction.parameters.length > 0) {
+					//console.log("params: ", curaction.parameters)
+					for (var key in curaction.parameters) {
+						if (curaction.parameters[key].options !== undefined && curaction.parameters[key].options !== null && curaction.parameters[key].options.length > 0 && curaction.parameters[key].value == "") {
+							curaction.parameters[key].value = curaction.parameters[key].options[0]
+						}
+					}
+				}
+
 				setSelectedApp(curapp)
 				setSelectedAction(curaction)
 
@@ -2759,22 +2771,22 @@ const AngularWorkflow = (props) => {
 			case 67:
 				if (previouskey === 17) {
 					console.log("CTRL+C")
-					const filteredelements = cy.filter(function(element, i){
-						return element.hasClass('selected')
-					})
+					//const filteredelements = cy.filter(function(element, i){
+					//	return element.hasClass('selected')
+					//})
 
-					for (var key in filteredelements) {
-					}
+					//for (var key in filteredelements) {
+					//}
 
-					var copyText = document.getElementById("copy_element_shuffle")
-					if (copyText !== undefined && copyText !== null) {
-						const clipboard = navigator.clipboard
-						if (clipboard === undefined) {
-							alert.error("Can only copy over HTTPS (port 3443)")
-							return
-						}
-					}
-					console.log("FILTERED: ", filteredelements)
+					//var copyText = document.getElementById("copy_element_shuffle")
+					//if (copyText !== undefined && copyText !== null) {
+					//	const clipboard = navigator.clipboard
+					//	if (clipboard === undefined) {
+					//		alert.error("Can only copy over HTTPS (port 3443)")
+					//		return
+					//	}
+					//}
+					//console.log("FILTERED: ", filteredelements)
 				}
 	      break;
 			case 86:

@@ -91,7 +91,7 @@ export const GetIconInfo = (action) => {
 		{"key": "merge", "values": ["join", "merge"]},
 		{"key": "search", "values": ["search", "find", "locate", "index",]},
 		{"key": "list", "values": ["list", "head", "options"]},
-		{"key": "download", "values": ["get", "download", "return", "hello_world", "curl",]},
+		{"key": "download", "values": ["capture", "get", "download", "return", "hello_world", "curl",]},
 		{"key": "add", "values": ["add"]},
 		{"key": "delete", "values": ["delete", "remove", "clear", "clean",]},
 		{"key": "send", "values": ["send", "dispatch", "mail", "forward", "post", "submit", "mark", "set"]},

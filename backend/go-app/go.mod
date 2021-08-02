@@ -21,7 +21,7 @@ require (
 	github.com/docker/go-connections v0.4.0
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/elastic/go-elasticsearch/v7 v7.13.1 // indirect
-	github.com/frikky/kin-openapi v0.39.0
+	github.com/frikky/kin-openapi v0.40.0
 	github.com/frikky/shuffle-shared v0.0.78
 	github.com/fsouza/go-dockerclient v1.7.2
 	github.com/ghodss/yaml v1.0.0

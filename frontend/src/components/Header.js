@@ -283,7 +283,7 @@ const Header = props => {
 						}}
 						value={userdata.active_org.id}
 						fullWidth
-						style={{backgroundColor: theme.palette.surfaceColor, marginRight: 15, color: "white", height: 50, width: 200}}
+						style={{marginTop: 5, backgroundColor: theme.palette.surfaceColor, marginRight: 15, color: "white", height: 50, width: 200}}
 						onChange={(e) => {
 							handleClickChangeOrg(e.target.value) 
 						}}

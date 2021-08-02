@@ -279,7 +279,7 @@ class AppBase:
         #self.action = action
 
         loopnames = []
-        print(f"Baseparams to check!!: {baseparams}")
+        #print(f"Baseparams to check!!: {baseparams}")
         for key, value in baseparams.items():
             check_value = ""
             for param in self.action["parameters"]:
@@ -327,11 +327,11 @@ class AppBase:
                 should_merge = True
 
             # Specific for OpenAPI body replacement
-            print("\n\n\nDOING STUFF BELOW HERE")
+            #print("\n\n\nDOING STUFF BELOW HERE")
             if not should_merge:
                 for parameter in self.action["parameters"]:
                     if parameter["name"] == key:
-                        print("CHECKING BODY FOR VALUE REPLACE DATA!")
+                        #print("CHECKING BODY FOR VALUE REPLACE DATA!")
                         try:
                             values = parameter["value_replace"]
                             if values != None:
@@ -343,7 +343,7 @@ class AppBase:
                         except:
                             pass
 
-            print(f"MERGE: {should_merge}")
+            #print(f"MERGE: {should_merge}")
             if isinstance(value, list):
                 print("Item {value} is a list.")
                 if len(value) <= 1:
@@ -368,7 +368,8 @@ class AppBase:
                 all_list_keys.append(key)
                 all_lists.append(baseparams[key])
             else:
-                print(f"{value} is not a list")
+                #print(f"{value} is not a list")
+                pass
 
         print("Listlengths: %s" % listlengths)
         if len(listlengths) == 0:
@@ -433,7 +434,7 @@ class AppBase:
 
     # Runs recursed versions with inner loops and such 
     async def run_recursed_items(self, func, baseparams, loop_wrapper):
-        print(f"RECURSED ITEMS: {baseparams}")
+        #print(f"RECURSED ITEMS: {baseparams}")
         has_loop = False
 
         newparams = {}
@@ -465,7 +466,7 @@ class AppBase:
                 newparams[key] = value[0]
                 has_loop = True 
             else:
-                print(f"Key {key} is NOT a list within a list. Value: {value}")
+                #print(f"Key {key} is NOT a list within a list. Value: {value}")
                 newparams[key] = value
         
         results = []
@@ -473,7 +474,7 @@ class AppBase:
             print("[WARNING] Should run inner loop: %s" % newparams)
             ret = await self.run_recursed_items(func, newparams, loop_wrapper)
         else:
-            print("[INFO] Should run multiplier check with params (inner): %s" % newparams)
+            #print("[INFO] Should run multiplier check with params (inner): %s" % newparams)
             # 1. Find the loops that are required and create new multipliers
             # If here: check for multipliers within this scope.
             ret = []
@@ -481,7 +482,7 @@ class AppBase:
 
             # FIXME: This does a deduplication of the data
             new_params = self.validate_unique_fields(param_multiplier)
-            print(f"NEW PARAMS: {new_params}")
+            #print(f"NEW PARAMS: {new_params}")
             if len(new_params) == 0:
                 print("[WARNING] SHOULD STOP MULTI-EXECUTION BECAUSE FIELDS AREN'T UNIQUE")
                 action_result = {
@@ -499,7 +500,7 @@ class AppBase:
                 #return
             else:
                 #subparams = new_params
-                print(f"NEW PARAMS: {new_params}")
+                #print(f"NEW PARAMS: {new_params}")
                 param_multiplier = new_params
 
             #print("Returned with newparams of length %d", len(new_params))
@@ -516,7 +517,7 @@ class AppBase:
             print("[INFO] Multiplier length: %d" % len(param_multiplier))
             #tmp = ""
             for subparams in param_multiplier:
-                print(f"SUBPARAMS IN MULTI: {subparams}")
+                #print(f"SUBPARAMS IN MULTI: {subparams}")
                 try:
                     #tmp = await func(**subparams)
 
@@ -549,7 +550,7 @@ class AppBase:
 
                     tmp = "An error occured during execution: %s" % e 
 
-                print("RET from execution: %s" % ret)
+                #print("RET from execution: %s" % ret)
                 new_value = tmp
                 if tmp == None:
                     new_value = ""
