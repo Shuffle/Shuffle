@@ -83,7 +83,7 @@ services:
         soft: -1
         hard: -1
       nofile:
-        soft: 65536 # maximum number of open files for the OpenSearch user, set to at least 65536 on modern systems
+        soft: 65536 
         hard: 65536
     volumes:
       - ${DB_LOCATION}:/usr/share/opensearch/data:rw
@@ -92,21 +92,6 @@ services:
     networks:
       - shuffle
     restart: unless-stopped
-  #database:
-  #  #build: ./backend/database
-  #  image: frikky/shuffle:database
-  #  container_name: shuffle-database
-  #  hostname: shuffle-database
-  #  ports:
-  #    - "8000:8000"
-  #  networks:
-  #    - shuffle
-  #  environment:
-  #  -  _JAVA_OPTIONS="-Xmx2g"
-  #  restart: unless-stopped
-  #  volumes:
-  #    - ${DB_LOCATION}:/etc/shuffle
-
 networks:
   shuffle:
     driver: bridge
