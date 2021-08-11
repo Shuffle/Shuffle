@@ -1067,8 +1067,8 @@ const Workflows = (props) => {
 		}
 
 		var parsedName = data.name
-		if (parsedName !== undefined && parsedName !== null && parsedName.length > 22) {
-			parsedName = parsedName.slice(0,23)+".." 
+		if (parsedName !== undefined && parsedName !== null && parsedName.length > 20) {
+			parsedName = parsedName.slice(0,21)+".." 
 		}
 
 		const actions = data.actions !== null ? data.actions.length : 0

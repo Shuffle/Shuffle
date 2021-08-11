@@ -1512,10 +1512,22 @@ class AppBase:
                 return returndata, is_loop
 
         def parse_liquid(template):
+
             #print("Inside liquid with glob: %s" % globals())
             try:
+                if len(template) > 250000:
+                    print("Skipping liquid - size is %d" % len(template))
+                    return template
+
+                if not "{{" in template or not "}}" in template: 
+                    print("Skipping liquid - missing {{ }} ")
+                    return template
+
+                #if not "{{" in template or not "}}" in template: 
+                #    return template
+
                 #print(globals())
-                print("Running with \"%s\"" % template)
+                print("Running liquid with data of length %d" % len(template))
                 run = Liquid(template, {'mode': 'python'})
                 ret = run.render(**globals())
                 return ret
@@ -1533,6 +1545,9 @@ class AppBase:
                 print("Render error: %s" % e)
             except liquid.exceptions.LiquidSyntaxError as  e:
                 print("Syntax error: %s" % e)
+            except:
+                print("General exception for liquid")
+                pass
 
             return template
 
@@ -1670,13 +1685,13 @@ class AppBase:
 
             # Just here in case it breaks 
             # Implemented 02.08.2021
-            print("Pre liquid: %s" % parameter["value"])
+            #print("Pre liquid: %s" % parameter["value"])
             try:
                 parameter["value"] = parse_liquid(parameter["value"])
             except:
                 pass
 
-            print("POST liquid: %s" % parameter["value"])
+            #print("POST liquid: %s" % parameter["value"])
             return "", parameter["value"], is_loop
 
         def run_validation(sourcevalue, check, destinationvalue):
