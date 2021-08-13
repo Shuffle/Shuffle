@@ -1950,8 +1950,8 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 	//Org               []Org    `json:"org,omitempty" datastore:"org"`
 	err = shuffle.SetWorkflowExecution(ctx, workflowExecution, true)
 	if err != nil {
-		log.Printf("Error saving workflow execution for updates %s: %s", topic, err)
-		return shuffle.WorkflowExecution{}, "Failed getting workflowexecution", err
+		log.Printf("[WARNING] Error saving workflow execution for updates %s: %s", topic, err)
+		return shuffle.WorkflowExecution{}, fmt.Sprintf("Failed setting workflowexecution: %s", err), err
 	}
 
 	// Adds queue for onprem execution

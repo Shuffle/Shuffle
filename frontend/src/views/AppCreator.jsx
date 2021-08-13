@@ -1097,8 +1097,15 @@ const AppCreator = (props) => {
 			}
 
 			if (item.queries.length > 0) {
+				var skipped = false
 				for (var querykey in item.queries) {
 					const queryitem = item.queries[querykey]
+
+					if (queryitem.name.toLowerCase() == "url") {
+						console.log(item.name+" uses a bad query: url")
+						skipped = true
+						break
+					}
 
 					var newitem = {
 						"in": "query",
@@ -1117,12 +1124,27 @@ const AppCreator = (props) => {
 					data.paths[item.url][item.method.toLowerCase()].parameters.push(newitem)
 					//console.log(queryitem)
 				}
+
+				// Bad code as it doesn't allow for "anything".
+				if (skipped) {
+					alert.info("Bad configuration of "+item.name+". Skipping because queries are invalid.")
+					continue
+				}
 			} 
 			//data.paths[item.url][item.method.toLowerCase()].parameters.push(newitem)
 
 			if (item.paths.length > 0) {
 				for (querykey in item.paths) {
 					const queryitem = item.paths[querykey]
+
+					if (queryitem.toLowerCase() == "url") {
+						queryitem = "action_url"
+					}
+
+					if (queryitem.toLowerCase() == "apikey") {
+						queryitem = "action_apikey"
+					}
+
 					newitem = {
 						"in": "path",
 						"name": queryitem,
@@ -1315,6 +1337,13 @@ const AppCreator = (props) => {
 		if (setExtraAuth.length > 0) {
 			for (var key in extraAuth) {
 				const curauth = extraAuth[key]
+
+				if (curauth.name.toLowerCase() == "url") {
+					alert.error("Can't add extra auth with Name URL")
+					setAppBuilding(false)
+					return
+				}
+
 				data.components.securitySchemes[curauth.name] = {
 					"type": "apiKey",
 					"in": curauth.type,

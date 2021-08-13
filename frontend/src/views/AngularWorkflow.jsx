@@ -8138,6 +8138,7 @@ const AngularWorkflow = (props) => {
 	//	//cf80fa70-65cf-4963-b474-b459a6dead81
 	//}
 
+	console.log(selectedResult)
 	const codePopoutModal = !codeModalOpen ? null : 
 		<Draggable
 			onDrag={(e) => {
@@ -8295,6 +8296,35 @@ const AngularWorkflow = (props) => {
 						}}>{selectedResult.result}</span>
 					</div>
 					}
+					<div>
+						{selectedResult.action.parameters !== null && selectedResult.action.parameters !== undefined ?
+							<div>
+								<Divider style={{backgroundColor: theme.palette.surfaceColor, marginTop: 15, marginBottom: 15, }}/>
+								<Typography variant="h6" style={{marginBottom: 0, marginTop: 0}}>
+									Variables
+								</Typography>
+								{selectedResult.action.parameters.map((data, index) => {
+									if (data.value.length === 0) {
+										return null
+									}
+
+									if (data.example !== undefined && data.example !== null && data.example.includes("***")) {
+										return null
+									}
+
+									return (
+										<div key={index} style={{}}>
+											<Typography variant="body1" style={{marginBottom: 0, marginTop: 5}}>
+												<b>{data.name}</b>: {data.value}
+											</Typography>
+										</div>
+									)
+								})}
+							</div>
+							: 
+							null
+						}
+					</div>
 				</div>
 			</Dialog> 
 		</Draggable> 

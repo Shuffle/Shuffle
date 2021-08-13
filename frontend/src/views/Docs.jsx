@@ -234,7 +234,7 @@ const Docs = (props) => {
 	//	);
 	//}
 
-  const postDataBrowser = 
+  const postDataBrowser = list === undefined || list === null ? null :
 		<div style={Body}>
 			<div style={SideBar}>
 				<Paper style={SidebarPaperStyle}>
@@ -278,7 +278,7 @@ const Docs = (props) => {
 		flexDirection: "column",
 	}
 
-	const postDataMobile = 
+	const postDataMobile = list === undefined || list === null ? null :
 		<div style={mobileStyle}>
 			<div>
 				<Button fullWidth aria-controls="simple-menu" aria-haspopup="true" variant="outlined" color="primary" onClick={handleClick}>
