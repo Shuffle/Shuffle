@@ -1,4 +1,4 @@
-FROM python:3.9.4-alpine as base
+FROM python:3.10.0b4-alpine as base
 
 FROM base as builder
 RUN apk --no-cache add --update alpine-sdk libffi libffi-dev musl-dev openssl-dev
