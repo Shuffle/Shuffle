@@ -46,7 +46,7 @@ const useStyles = makeStyles({
 //)
 
 const ParsedAction = (props) => {
-	const {workflow, setWorkflow, setAction, setSelectedAction, setUpdate, appActionArguments, selectedApp, workflowExecutions, setSelectedResult, selectedAction, setSelectedApp, setSelectedTrigger, setSelectedEdge, setCurrentView, cy, setAuthenticationModalOpen,setVariablesModalOpen, setCodeModalOpen, selectedNameChange, rightsidebarStyle, showEnvironment, selectedActionEnvironment, environments, setNewSelectedAction, appApiViewStyle, globalUrl, setSelectedActionEnvironment, requiresAuthentication, hideExtraTypes, scrollConfig, setScrollConfig } = props
+	const {workflow, setWorkflow, setAction, setSelectedAction, setUpdate, appActionArguments, selectedApp, workflowExecutions, setSelectedResult, selectedAction, setSelectedApp, setSelectedTrigger, setSelectedEdge, setCurrentView, cy, setAuthenticationModalOpen,setVariablesModalOpen, setCodeModalOpen, selectedNameChange, rightsidebarStyle, showEnvironment, selectedActionEnvironment, environments, setNewSelectedAction, appApiViewStyle, globalUrl, setSelectedActionEnvironment, requiresAuthentication, hideExtraTypes, scrollConfig, setScrollConfig, authenticationType, appAuthentication, getAppAuthentication } = props
 
 	const theme = useTheme();
 	const classes = useStyles()
@@ -1389,6 +1389,42 @@ const ParsedAction = (props) => {
 					<Tooltip color="primary" title={"Add authentication option"} placement="top">
 						<span>
 							<Button color="primary" style={{}} fullWidth variant="contained" onClick={() => {
+								console.log(authenticationType)
+								if (authenticationType.type === "oauth2" && authenticationType.redirect_uri !== undefined && authenticationType.redirect_uri !== null) {
+									// FIXME: Sending client secret and senitive info like this may not be ok.
+									const client_id = "dae24316-4bec-4832-b660-4cba6dc2477b"
+									const client_secret = "._Qu3EvYY-OW_D57uy79qwEo.32qD6.l0z"
+									const authentication_url = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
+									const resources = "UserAuthenticationMethod.ReadWrite.All"
+
+									const redirectUri = `http://${window.location.host}/set_authentication`
+									const state = `workflow_id%3D${workflow.id}%26reference_action_id%3d${selectedAction.app_id}%26app_name%3d${selectedAction.app_name}%26app_id%3d${selectedAction.app_id}%26app_version%3d${selectedAction.app_version}%26authentication_url%3d${authentication_url}%26scope%3d${resources}%26client_id%3d${client_id}%26client_secret%3d${client_secret}`
+
+									const url = `https://login.microsoftonline.com/common/oauth2/authorize?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${resources}&state=${state}`
+									// &resource=https%3A%2F%2Fgraph.microsoft.com&
+									
+									var newwin = window.open(url, "", "width=200,height=100")
+									console.log(newwin)
+									setTimeout(() => {
+										console.log(newwin)
+										console.log("CLOSED", newwin.closed)
+									}, 1000)
+									setTimeout(() => {
+										console.log(newwin)
+										console.log("CLOSED", newwin.closed)
+										if (newwin.closed) {
+											getAppAuthentication(true)
+											setTimeout(() => {
+												console.log("APPAUTH: ", appAuthentication)
+											}, 1500)
+										}
+									}, 10000)
+
+									return
+									//do {
+									//} while (
+								}
+
 								setAuthenticationModalOpen(true)
 							}}>
 								<AddIcon style={{marginRight: 10, }}/> Authenticate {selectedApp.name}

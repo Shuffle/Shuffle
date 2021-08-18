@@ -1552,7 +1552,6 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 	}
 
 	workflowExecution.ExecutionVariables = workflow.ExecutionVariables
-
 	if len(workflowExecution.Start) == 0 && len(workflowExecution.Workflow.Start) > 0 {
 		workflowExecution.Start = workflowExecution.Workflow.Start
 	}
@@ -1621,20 +1620,40 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 				return shuffle.WorkflowExecution{}, fmt.Sprintf("Auth ID %s doesn't exist", action.AuthenticationId), errors.New(fmt.Sprintf("Auth ID %s doesn't exist", action.AuthenticationId))
 			}
 
-			// Rebuild params with the right data. This is to prevent issues on the frontend
 			newParams := []shuffle.WorkflowAppActionParameter{}
-			for _, param := range action.Parameters {
+			if strings.ToLower(curAuth.Type) == "oauth2" {
+				log.Printf("\n\nShould replace auth parameters!!!\n\n")
 
-				for _, authparam := range curAuth.Fields {
-					if param.Name == authparam.Key {
-						param.Value = authparam.Value
-						//log.Printf("Name: %s - value: %s", param.Name, param.Value)
-						//log.Printf("Name: %s - value: %s\n", param.Name, param.Value)
-						break
-					}
+				for _, param := range curAuth.Fields {
+					newParams = append(newParams, shuffle.WorkflowAppActionParameter{
+						Name:  param.Key,
+						Value: param.Value,
+					})
 				}
 
-				newParams = append(newParams, param)
+				for _, param := range action.Parameters {
+					log.Printf("Param: %#v", param)
+					if param.Configuration {
+						continue
+					}
+
+					newParams = append(newParams, param)
+				}
+			} else {
+				// Rebuild params with the right data. This is to prevent issues on the frontend
+				for _, param := range action.Parameters {
+
+					for _, authparam := range curAuth.Fields {
+						if param.Name == authparam.Key {
+							param.Value = authparam.Value
+							//log.Printf("Name: %s - value: %s", param.Name, param.Value)
+							//log.Printf("Name: %s - value: %s\n", param.Name, param.Value)
+							break
+						}
+					}
+
+					newParams = append(newParams, param)
+				}
 			}
 
 			action.Parameters = newParams

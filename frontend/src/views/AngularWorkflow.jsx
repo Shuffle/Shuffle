@@ -171,6 +171,7 @@ const AngularWorkflow = (props) => {
 	const [authenticationModalOpen, setAuthenticationModalOpen] = React.useState(false);
 	const [conditionsModalOpen, setConditionsModalOpen] = React.useState(false);
 	const [newVariableName, setNewVariableName] = React.useState("");
+	const [authenticationType, setAuthenticationType] = React.useState("");
 	const [newVariableDescription, setNewVariableDescription] = React.useState("");
 	const [newVariableValue, setNewVariableValue] = React.useState("");
 	const [workflowDone, setWorkflowDone] = React.useState(false)
@@ -1944,9 +1945,19 @@ const AngularWorkflow = (props) => {
 				setSelectedAction(curaction)
 				//return
 			} else {
+				console.log("AUTHENTICATION: ", curapp.authentication)
+				setAuthenticationType(curapp.authentication.type === "oauth2" && curapp.authentication.redirect_uri !== undefined && curapp.authentication.redirect_uri !== null ? 
+					{
+						"type": "oauth2",
+						"redirect_uri": curapp.authentication.redirect_uri,
+					} : {
+						"type": ""
+					}
+				)
 
-				//console.log("AUTHENTICATION: ", curapp.authentication)
-				setRequiresAuthentication(curapp.authentication.required && curapp.authentication.parameters !== undefined && curapp.authentication.parameters !== null)
+				const requiresAuth = curapp.authentication.required //&& ((curapp.authentication.parameters !== undefined && curapp.authentication.parameters !== null) || (curapp.authentication.type === "oauth2" && curapp.authentication.redirect_uri !== undefined && curapp.authentication.redirect_uri !== null))
+				console.log("AUTHCHECK: ", requiresAuth)
+				setRequiresAuthentication(requiresAuth)
 				if (curapp.authentication.required) {
 					//console.log("App requires auth.")
 					// Setup auth here :)
@@ -7431,6 +7442,9 @@ const AngularWorkflow = (props) => {
 				<div id="rightside_actions" style={rightsidebarStyle}>
 					<ParsedAction 
 						id="rightside_subactions"
+						getAppAuthentication={getAppAuthentication}
+						appAuthentication={appAuthentication}
+						authenticationType={authenticationType}
 						scrollConfig={scrollConfig}
 						setScrollConfig={setScrollConfig}
 						selectedAction={selectedAction}
@@ -8138,7 +8152,7 @@ const AngularWorkflow = (props) => {
 	//	//cf80fa70-65cf-4963-b474-b459a6dead81
 	//}
 
-	console.log(selectedResult)
+	//console.log(selectedResult)
 	const codePopoutModal = !codeModalOpen ? null : 
 		<Draggable
 			onDrag={(e) => {
@@ -8709,10 +8723,11 @@ const AngularWorkflow = (props) => {
 			authenticationOption.label = selectedApp.name+" authentication"
 		}
 
+		//console.log(
 		return (
 			<div>
 				<DialogContent>
-					<a target="_blank" rel="norefferer" href="https://shuffler.io/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is this?</a><div/>
+					<a target="_blank" rel="norefferer" href="https://shuffler.io/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is app authentication?</a><div/>
 					These are required fields for authenticating with {selectedApp.name} 
 					<div style={{marginTop: 15}}/>
 					<b>Name - what is this used for?</b>

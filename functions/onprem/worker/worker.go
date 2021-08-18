@@ -1958,7 +1958,6 @@ func downloadDockerImageBackend(client *http.Client, imageName string) error {
 		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", authorization))
 	} else {
 		log.Printf("[WARNING] No auth found - running backend download without it.")
-		//req.Header.Add("Authorization", fmt.Sprintf("Bearer db0373c6-1083-4dec-a05d-3ba73f02ccd4"))
 		//return
 	}
 

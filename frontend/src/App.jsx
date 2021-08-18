@@ -22,6 +22,7 @@ import AdminSetup from "./views/AdminSetup";
 import Admin from "./views/Admin";
 import Docs from "./views/Docs";
 import Introduction from "./views/Introduction";
+import SetAuthentication from "./views/SetAuthentication";
 
 import LandingPageNew from "./views/LandingpageNew";
 import LoginPage from "./views/LoginPage";
@@ -125,6 +126,7 @@ const App = (message, props) => {
 			<Route exact path="/docs" render={props => { window.location.pathname = "/docs/about" }} />
 			<Route exact path="/introduction" render={props => <Introduction isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/introduction/:key" render={props => <Introduction isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
+			<Route exact path="/set_authentication" render={props => <SetAuthentication userdata={userdata} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
 			<Route exact path="/" render={props => <LoginPage isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
 		</div>
 

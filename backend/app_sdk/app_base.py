@@ -1529,6 +1529,8 @@ class AppBase:
                 #print(globals())
                 print("Running liquid with data of length %d" % len(template))
                 run = Liquid(template, {'mode': 'python'})
+
+                # Can't handle self yet (?)
                 ret = run.render(**globals())
                 return ret
                 #try:
@@ -2059,7 +2061,7 @@ class AppBase:
 
                                     #json_replacement = tmpitem.replace(actualitem[index][0], replacement, 1)
                                     #print("AFTER POST replacement: %s" % json_replacement)
-                                    #json_replacement = replacement
+                                    json_replacement = replacement
                                     try:
                                         json_replacement = json.loads(replacement)
                                     except json.decoder.JSONDecodeError as e:
