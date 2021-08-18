@@ -1950,6 +1950,8 @@ const AngularWorkflow = (props) => {
 					{
 						"type": "oauth2",
 						"redirect_uri": curapp.authentication.redirect_uri,
+						"token_uri": curapp.authentication.token_uri,
+						"scope": curapp.authentication.scope,
 					} : {
 						"type": ""
 					}
