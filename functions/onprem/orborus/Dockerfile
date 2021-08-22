@@ -15,7 +15,7 @@ RUN go get github.com/docker/docker/api/types && \
 RUN go build
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o orborus .
 
-FROM alpine:3.12
+FROM alpine:latest
 RUN apk add --no-cache bash
 COPY --from=builder /app/ /
 
