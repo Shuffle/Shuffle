@@ -28,6 +28,7 @@ import { useAlert } from "react-alert";
 import { validateJson, GetIconInfo } from "./Workflows.jsx";
 import { GetParsedPaths } from "./Apps.jsx";
 import ConfigureWorkflow from '../components/ConfigureWorkflow.jsx';
+import AuthenticationOauth2 from "../components/Oauth2Auth.jsx";
 import ParsedAction from '../components/ParsedAction.jsx';
 import Scroll from 'react-scroll'
 import { Element as ScrollElement, animateScroll as scroll, scrollSpy, scroller } from 'react-scroll'
@@ -404,7 +405,7 @@ const AngularWorkflow = (props) => {
 			if (!responseJson.success) {
 				alert.error("Failed to set app auth: "+responseJson.reason)
 			} else {
-				getAppAuthentication(true) 
+				getAppAuthentication(true, false) 
 				setAuthenticationModalOpen(false) 
 
 				// Needs a refresh with the new authentication..
@@ -1128,7 +1129,7 @@ const AngularWorkflow = (props) => {
 		"http",
 	]
 
-	const getAppAuthentication = (reset) => {
+	const getAppAuthentication = (reset, updateAction) => {
 		fetch(globalUrl+"/api/v1/apps/authentication", {
 			method: 'GET',
 			headers: {
@@ -1154,6 +1155,8 @@ const AngularWorkflow = (props) => {
 
 					newauth.push(responseJson.data[key])
 				}
+							
+				//{selectedAction.authentication.map(data => {
 
 				if (cy !== undefined) {
 					console.log("NEW AUTH = reset cy's onnodeselect")
@@ -1166,6 +1169,65 @@ const AngularWorkflow = (props) => {
 
 				setAppAuthentication(newauth)
 				setAuthLoaded(true)
+
+				if (updateAction === true) {
+					//console.log("Should update authentication for selectedAction!!")
+					console.log(responseJson)
+		
+					if (selectedApp.authentication.required) {
+						//console.log("App requires auth!!")
+						// Setup auth here :)
+						const authenticationOptions = []
+						var findAuthId = ""
+						if (selectedAction.authentication_id !== null && selectedAction.authentication_id !== undefined && selectedAction.authentication_id.length > 0) {
+							findAuthId = selectedAction.authentication_id
+						}
+
+						var tmpAuth = JSON.parse(JSON.stringify(responseJson.data))
+						console.log("FOUND AUTH: ", tmpAuth)
+
+						//console.log("Checking authentication: ", tmpAuth)
+						var latest = 0
+						for (var key in tmpAuth) {
+							var item = tmpAuth[key]
+
+							const newfields = {}
+							for (var filterkey in item.fields) {
+								newfields[item.fields[filterkey].key] = item.fields[filterkey].value
+							}
+
+							item.fields = newfields
+							if (item.app.name === selectedApp.name) {
+								authenticationOptions.push(item)
+
+								// Always becoming the last one
+								if (item.edited > latest) {
+									latest = item.edited
+									selectedAction.selectedAuthentication = item
+								}
+							}
+						}
+
+						//if (item.id === findAuthId) {
+						//	selectedAction.selectedAuthentication = item
+						//}
+
+						console.log("ACTION: ", selectedAction)
+
+						//console.log("OPTIONS: ", authenticationOptions)
+						selectedAction.authentication = authenticationOptions
+						//console.log("Authentication: ", authenticationOptions)
+						if (selectedAction.selectedAuthentication === null || selectedAction.selectedAuthentication === undefined || selectedAction.selectedAuthentication.length === "") {
+							selectedAction.selectedAuthentication = {}
+						}
+				
+						setSelectedAction(selectedAction)
+
+						alert.info("Updated authentication for app?")
+					} else {
+						alert.info("No authentication to update")
+					}
+				}
 			} else {
 				setAuthLoaded(true)
 				//alert.error("Failed getting authentications")
@@ -1945,7 +2007,8 @@ const AngularWorkflow = (props) => {
 				setSelectedAction(curaction)
 				//return
 			} else {
-				console.log("AUTHENTICATION: ", curapp.authentication)
+				//console.log("AUTHENTICATION: ", curapp.authentication)
+				//console.log(curapp.authentication)
 				setAuthenticationType(curapp.authentication.type === "oauth2" && curapp.authentication.redirect_uri !== undefined && curapp.authentication.redirect_uri !== null ? 
 					{
 						"type": "oauth2",
@@ -5450,6 +5513,10 @@ const AngularWorkflow = (props) => {
 			setLocalFirstrequest(false)
 		}
 
+		const handleButtonRequest = () => {
+
+		}
+
 		const outlookButton = 
 			<Button 
 				fullWidth
@@ -8625,6 +8692,7 @@ const AngularWorkflow = (props) => {
 		: null
 
 
+
 	const AuthenticationData = (props) => {
 		const selectedApp = props.app
 
@@ -8883,12 +8951,13 @@ const AngularWorkflow = (props) => {
 			}}>
 				<CloseIcon  />
 			</IconButton>
-			<ConfigureWorkflow theme={theme} globalUrl={globalUrl} workflow={workflow} setSelectedAction={setSelectedAction} setSelectedApp={setSelectedApp} setAuthenticationModalOpen={setAuthenticationModalOpen} appAuthentication={appAuthentication} selectedAction={selectedAction} apps={apps} setConfigureWorkflowModalOpen={setConfigureWorkflowModalOpen} saveWorkflow={saveWorkflow} newWebhook={newWebhook} submitSchedule={submitSchedule} referenceUrl={referenceUrl} isCloud={isCloud} />
+			<ConfigureWorkflow theme={theme} setAuthenticationType={setAuthenticationType} globalUrl={globalUrl} workflow={workflow} setSelectedAction={setSelectedAction} setSelectedApp={setSelectedApp} setAuthenticationModalOpen={setAuthenticationModalOpen} appAuthentication={appAuthentication} selectedAction={selectedAction} apps={apps} setConfigureWorkflowModalOpen={setConfigureWorkflowModalOpen} saveWorkflow={saveWorkflow} newWebhook={newWebhook} submitSchedule={submitSchedule} referenceUrl={referenceUrl} isCloud={isCloud} />
 		</Dialog>
 		: null
 	
 
 	// This whole part is redundant. Made it part of Arguments instead.
+	//console.log("TYPE: ", authenticationType)
 	const authenticationModal = authenticationModalOpen ? 
 		<Dialog 
 			open={authenticationModalOpen} 
@@ -8917,7 +8986,11 @@ const AngularWorkflow = (props) => {
 				<CloseIcon  />
 			</IconButton>
 			<DialogTitle><div style={{color: "white"}}>Authentication for {selectedApp.name}</div></DialogTitle>
-			<AuthenticationData app={selectedApp} />	
+			{authenticationType.type === "oauth2" ? 
+				<AuthenticationOauth2 saveWorkflow={saveWorkflow} selectedApp={selectedApp} workflow={workflow} selectedAction={selectedAction} authenticationType={authenticationType} getAppAuthentication={getAppAuthentication} appAuthentication={appAuthentication} setSelectedAction={setSelectedAction} setNewAppAuth={setNewAppAuth} setAuthenticationModalOpen={setAuthenticationModalOpen} />
+				:
+				<AuthenticationData app={selectedApp} />	
+			}
 		</Dialog> : null
 
 	//const loadedCheck = isLoaded && isLoggedIn && workflowDone ? 

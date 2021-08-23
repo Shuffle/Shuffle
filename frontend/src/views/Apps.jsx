@@ -984,19 +984,19 @@ const Apps = (props) => {
 						</div>
 						{isCloud ? null : 
 						<span>
-							<Tooltip title={"Reload apps locally"} style={{marginTop: "28px", width: "100%"}} aria-label={"Upload"}>
-								<Button
-									variant="outlined"
-									component="label"
-									color="primary"
-									style={{margin: 5, maxHeight: 50, marginTop: 10}}
-									onClick={() => {
-										hotloadApps()
-									}}
-								>
-									<CachedIcon />
-								</Button>
-							</Tooltip>
+								<Tooltip title={"Reload apps locally"} style={{marginTop: "28px", width: "100%"}} aria-label={"Upload"}>
+									<Button
+										variant="outlined"
+										component="label"
+										color="primary"
+										style={{margin: 5, maxHeight: 50, marginTop: 10}}
+										onClick={() => {
+											hotloadApps()
+										}}
+									>
+										<CachedIcon />
+									</Button>
+								</Tooltip>
 							<Tooltip title={"Download from Github"} style={{marginTop: "28px", width: "100%"}} aria-label={"Upload"}>
 								<Button
 									variant="outlined"
@@ -1012,7 +1012,7 @@ const Apps = (props) => {
 								</Button>
 							</Tooltip>
 						</span>
-					}
+						}
 					</div>
 					<div style={{height: 50}}>
 						<TextField
@@ -1575,11 +1575,13 @@ const Apps = (props) => {
 				<Button style={{borderRadius: "0px"}} onClick={() => setLoadAppsModalOpen(false)} color="primary">
 					Cancel
 				</Button>
-	      <Button style={{borderRadius: "0px"}} disabled={openApi.length === 0 || !openApi.includes("http")} onClick={() => {
-					handleGithubValidation(true) 
-				}} color="primary">
-	      	Force update	
-	      </Button>
+				{isCloud ? null : 
+					<Button style={{borderRadius: "0px"}} disabled={openApi.length === 0 || !openApi.includes("http")} onClick={() => {
+						handleGithubValidation(true) 
+					}} color="primary">
+						Force update	
+					</Button>
+				}
 	      <Button variant="outlined" style={{float: "left", borderRadius: "0px"}} disabled={openApi.length === 0 || !openApi.includes("http")} onClick={() => {
 					handleGithubValidation(false) 
 				}} color="primary">

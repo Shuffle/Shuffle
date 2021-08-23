@@ -12,7 +12,7 @@ import { FixName } from "../views/Apps.jsx";
 //
 // Specifically used for UNSAVED workflows only?
 const Workflow = (props) => {
-	const { globalUrl, theme, workflow, appAuthentication, setSelectedAction, setAuthenticationModalOpen, setSelectedApp, apps, selectedAction,setConfigureWorkflowModalOpen, saveWorkflow, newWebhook, submitSchedule, referenceUrl, isCloud, } = props
+	const { globalUrl, theme, workflow, appAuthentication, setSelectedAction, setAuthenticationModalOpen, setSelectedApp, apps, selectedAction,setConfigureWorkflowModalOpen, saveWorkflow, newWebhook, submitSchedule, referenceUrl, isCloud, setAuthenticationType, } = props
 	const [requiredActions, setRequiredActions] = React.useState([])
 	const [requiredVariables, setRequiredVariables] = React.useState([])
 	const [requiredTriggers, setRequiredTriggers] = React.useState([])
@@ -374,6 +374,17 @@ const Workflow = (props) => {
 								<CircularProgress />
 								:
 								<Button color="primary" variant="contained" onClick={() => {
+									setAuthenticationType(action.app.authentication.type === "oauth2" && action.app.authentication.redirect_uri !== undefined && action.app.authentication.redirect_uri !== null ? 
+										{
+											"type": "oauth2",
+											"redirect_uri": action.app.authentication.redirect_uri,
+											"token_uri": action.app.authentication.token_uri,
+											"scope": action.app.authentication.scope,
+										} : {
+											"type": ""
+										}
+									)
+
 									setItemChanged(true) 
 									setSelectedAction(action.action)
 									setSelectedApp(action.app)
