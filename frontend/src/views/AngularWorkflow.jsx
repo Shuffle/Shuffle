@@ -1172,7 +1172,7 @@ const AngularWorkflow = (props) => {
 
 				if (updateAction === true) {
 					//console.log("Should update authentication for selectedAction!!")
-					console.log(responseJson)
+					//console.log(responseJson)
 		
 					if (selectedApp.authentication.required) {
 						//console.log("App requires auth!!")
@@ -1184,7 +1184,7 @@ const AngularWorkflow = (props) => {
 						}
 
 						var tmpAuth = JSON.parse(JSON.stringify(responseJson.data))
-						console.log("FOUND AUTH: ", tmpAuth)
+						//console.log("FOUND AUTH: ", tmpAuth)
 
 						//console.log("Checking authentication: ", tmpAuth)
 						var latest = 0
@@ -1211,8 +1211,7 @@ const AngularWorkflow = (props) => {
 						//if (item.id === findAuthId) {
 						//	selectedAction.selectedAuthentication = item
 						//}
-
-						console.log("ACTION: ", selectedAction)
+						//console.log("ACTION: ", selectedAction)
 
 						//console.log("OPTIONS: ", authenticationOptions)
 						selectedAction.authentication = authenticationOptions
@@ -2007,14 +2006,16 @@ const AngularWorkflow = (props) => {
 				setSelectedAction(curaction)
 				//return
 			} else {
-				//console.log("AUTHENTICATION: ", curapp.authentication)
-				//console.log(curapp.authentication)
+				console.log("AUTHENTICATION: ", curapp.authentication)
+				console.log(curapp.authentication)
 				setAuthenticationType(curapp.authentication.type === "oauth2" && curapp.authentication.redirect_uri !== undefined && curapp.authentication.redirect_uri !== null ? 
 					{
-						"type": "oauth2",
-						"redirect_uri": curapp.authentication.redirect_uri,
-						"token_uri": curapp.authentication.token_uri,
-						"scope": curapp.authentication.scope,
+						"type": 					"oauth2",
+						"redirect_uri": 	curapp.authentication.redirect_uri,
+						"token_uri": 			curapp.authentication.token_uri,
+						"scope": 					curapp.authentication.scope,
+						"client_id": 			curapp.authentication.client_id,
+						"client_secret":	curapp.authentication.client_secret,
 					} : {
 						"type": ""
 					}

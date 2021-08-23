@@ -10,9 +10,12 @@ const AuthenticationOauth2 = (props) => {
 	const theme = useTheme();
 
 	//const [update, setUpdate] = React.useState("|")
-	const [clientId, setClientId] = React.useState("")
-	const [clientSecret, setClientSecret] = React.useState("")
+	const [defaultConfigSet, setDefaultConfigSet] = React.useState(authenticationType.client_id !== undefined && authenticationType.client_id !== null && authenticationType.client_id.length > 0 && authenticationType.client_secret !== undefined && authenticationType.client_secret !== null && authenticationType.client_secret.length > 0)
+	const [clientId, setClientId] = React.useState(defaultConfigSet ? authenticationType.client_id : "")
+	const [clientSecret, setClientSecret] = React.useState(defaultConfigSet ? authenticationType.client_secret : "")
 	const [buttonClicked, setButtonClicked] = React.useState(false)
+
+	const [manuallyConfigure, setManuallyConfigure] = React.useState(false)
 	const [authenticationOption, setAuthenticationOptions] = React.useState({
 		app: JSON.parse(JSON.stringify(selectedApp)),
 		fields: {},
@@ -23,6 +26,10 @@ const AuthenticationOauth2 = (props) => {
 		id: uuidv4(),
 		active: true,
 	})
+
+	if (selectedApp.authentication === undefined) {
+		return null
+	}
 
 	const handleOauth2Request = (client_id, client_secret) => {
 		setButtonClicked(true)
@@ -81,13 +88,6 @@ const AuthenticationOauth2 = (props) => {
 		//} while (
 	}
 
-	if (selectedApp.authentication === undefined) {
-		return null
-	}
-
-	if (selectedApp.authentication.parameters === null || selectedApp.authentication.parameters === undefined || selectedApp.authentication.parameters.length === 0) {
-		return null
-	}
 
 	authenticationOption.app.actions = []
 
@@ -172,7 +172,7 @@ const AuthenticationOauth2 = (props) => {
 			<DialogContent>
 				<span style={{}}>
 					<b>Oauth2 requires a client ID and secret to authenticate. This is usually made in the remote system.</b>
-					<a target="_blank" rel="norefferer" href="https://shuffler.io/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more about Oauth2</a><div/>
+					<a target="_blank" rel="norefferer" href="https://shuffler.io/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}> Learn more about Oauth2 with Shuffle</a><div/>
 				</span>
 				{/*<TextField
 						style={{backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius,}} 
@@ -195,48 +195,53 @@ const AuthenticationOauth2 = (props) => {
 					/>
 				<Divider style={{marginTop: 15, marginBottom: 15, backgroundColor: "rgb(91, 96, 100)"}}/>
 				*/}
-				<TextField
-						style={{marginTop: 20, backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius,}} 
-						InputProps={{
-							style:{
-								color: "white",
-								marginLeft: "5px",
-								maxWidth: "95%",
-								height: 50, 
-								fontSize: "1em",
-							},
-						}}
-						fullWidth
-						color="primary"
-						placeholder={"Client ID"}
-						onChange={(event) => {
-							setClientId(event.target.value)
-							//authenticationOption.label = event.target.value
-						}}
-					/>
-				<TextField
-						style={{backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius,}} 
-						InputProps={{
-							style:{
-								color: "white",
-								marginLeft: "5px",
-								maxWidth: "95%",
-								height: 50, 
-								fontSize: "1em",
-							},
-						}}
-						fullWidth
-						color="primary"
-						placeholder={"Client Secret"}
-						onChange={(event) => {
-							setClientSecret(event.target.value)
-							//authenticationOption.label = event.target.value
-						}}
-					/>
+
+				{!manuallyConfigure ? null :
+					<span>
+						<TextField
+								style={{marginTop: 20, backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius,}} 
+								InputProps={{
+									style:{
+										color: "white",
+										marginLeft: "5px",
+										maxWidth: "95%",
+										height: 50, 
+										fontSize: "1em",
+									},
+								}}
+								fullWidth
+								color="primary"
+								placeholder={"Client ID"}
+								onChange={(event) => {
+									setClientId(event.target.value)
+									//authenticationOption.label = event.target.value
+								}}
+							/>
+						<TextField
+								style={{backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius,}} 
+								InputProps={{
+									style:{
+										color: "white",
+										marginLeft: "5px",
+										maxWidth: "95%",
+										height: 50, 
+										fontSize: "1em",
+									},
+								}}
+								fullWidth
+								color="primary"
+								placeholder={"Client Secret"}
+								onChange={(event) => {
+									setClientSecret(event.target.value)
+									//authenticationOption.label = event.target.value
+								}}
+							/>
+						</span>
+					}
 				<Button 
-					style={{marginTop: 20, borderRadius: theme.palette.borderRadius}}
+					style={{marginBottom: 40, marginTop: 20, borderRadius: theme.palette.borderRadius}}
 					disabled={clientSecret.length === 0 || clientId.length === 0}
-					variant="outlined"
+					variant="contained"
 					fullWidth
 					onClick={() => {
 						//setAuthenticationModalOpen(false)
@@ -245,11 +250,36 @@ const AuthenticationOauth2 = (props) => {
 					color="primary"
 				>
 					{buttonClicked ? 
-						<CircularProgress style={{}} /> 
+						<CircularProgress style={{color: "white", }} /> 
 						:
 						"Oauth2 request"
 					}
 				</Button>
+
+				{defaultConfigSet ? 
+					<span style={{}}>
+						... or 
+						<Button 
+							style={{marginLeft: 10, borderRadius: theme.palette.borderRadius}}
+							disabled={clientSecret.length === 0 || clientId.length === 0}
+							variant="text"
+							onClick={() => {
+								setManuallyConfigure(!manuallyConfigure) 
+
+								if (manuallyConfigure) {
+									setClientId(authenticationType.client_id)
+									setClientSecret(authenticationType.client_secret)
+								} else {
+									setClientId("")
+									setClientSecret("")
+								}
+							}} 
+							color="primary"
+						>
+							{manuallyConfigure ? "Use auto-config" : "Manually configure Oauth2"}
+						</Button>
+					</span>
+				: null}
 			</DialogContent>
 		</div>
 	)
