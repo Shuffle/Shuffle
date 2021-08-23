@@ -3361,9 +3361,12 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 			log.Printf("[ERROR] Failed saving app %s to database: %s", newmd5, err)
 			resp.WriteHeader(500)
 			resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "%"}`, err)))
+			return
 		}
 
 		shuffle.SetOpenApiDatastore(ctx, api.ID, parsed)
+	} else {
+		//log.Printf("
 	}
 
 	// Backup every single one
@@ -3388,6 +3391,7 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 	shuffle.DeleteCache(ctx, cacheKey)
 	shuffle.DeleteCache(ctx, fmt.Sprintf("apps_%s", user.Id))
 
+	log.Printf("[DEBUG] Successfully built app %s (%s)", api.Name, api.ID)
 	if len(user.Id) > 0 {
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "id": "%s"}`, api.ID)))
@@ -3870,6 +3874,15 @@ func runInitCloudSetup() {
 
 func runInitEs(ctx context.Context) {
 	log.Printf("[DEBUG] Starting INIT setup (ES)")
+
+	httpProxy := os.Getenv("HTTP_PROXY")
+	if len(httpProxy) > 0 {
+		log.Printf("Running with HTTP proxy %s (env: HTTP_PROXY)", httpProxy)
+	}
+	httpsProxy := os.Getenv("HTTPS_PROXY")
+	if len(httpsProxy) > 0 {
+		log.Printf("Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
+	}
 
 	defaultEnv := os.Getenv("ORG_ID")
 	if len(defaultEnv) == 0 {

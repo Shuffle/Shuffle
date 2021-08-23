@@ -18,7 +18,7 @@ import Dropzone from '../components/Dropzone';
 import {Link} from 'react-router-dom';
 import { useAlert } from "react-alert";
 import ChipInput from 'material-ui-chip-input'
-import uuid from "uuid"
+import { v4 as uuidv4 } from 'uuid';
 import CytoscapeWrapper from '../components/RenderCytoscape'
 
 //import mobileImage from '../assets/img/mobile.svg';
@@ -783,7 +783,7 @@ const Workflows = (props) => {
 					trigger.status = "stopped"
 				}
 
-				const newId = uuid.v4()
+				const newId = uuidv4()
 				if (trigger.trigger_type === "WEBHOOK") {
 					const hookname = "webhook_"+newId
 					if (trigger.parameters !== undefined && trigger.parameters !== null && trigger.parameters.length === 2) {
@@ -831,7 +831,7 @@ const Workflows = (props) => {
 					}
 				}
 
-				const newId = uuid.v4()
+				const newId = uuidv4()
 				for (var branchkey in data.branches) {
 					const branch = data.branches[branchkey]
 					if (branch.source_id === data.actions[key].id) {

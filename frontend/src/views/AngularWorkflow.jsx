@@ -2,7 +2,7 @@ import React, {useRef, useState, useEffect, useLayoutEffect} from 'react';
 import { useInterval } from 'react-powerhooks';
 import { useTheme } from '@material-ui/core/styles';
 
-import uuid from "uuid";
+import { v4 as uuidv4 } from 'uuid';
 import {Link} from 'react-router-dom';
 import { Prompt } from 'react-router'
 import { useBeforeunload } from 'react-beforeunload';
@@ -1336,7 +1336,7 @@ const AngularWorkflow = (props) => {
 				cy.add(edges)
 
 				if (nodefound === true) {
-					const newId = uuid.v4()
+					const newId = uuidv4()
 					cy.add({
 						group: "edges",
 						data: {
@@ -1803,7 +1803,7 @@ const AngularWorkflow = (props) => {
 				if (parentNode !== null && parentNode !== undefined) {
 					//parentNode.data()
 					var newNodeData = JSON.parse(JSON.stringify(parentNode.data()))
-					newNodeData.id = uuid.v4()
+					newNodeData.id = uuidv4.v4()
 					if (newNodeData.position !== undefined) {
 						newNodeData.position = {
 							"x": newNodeData.position.x+100,
@@ -1859,7 +1859,7 @@ const AngularWorkflow = (props) => {
 
 					//for (var key in sourcebranches) {
 					//	var newbranch = JSON.parse(JSON.stringify(sourcebranches[key]))
-					//	newbranch.id = uuid.v4()
+					//	newbranch.id = uuidv4()
 					//	newbranch.source_id = newNodeData.id
 					//	cy.add({
 					//		group: "edges",
@@ -1869,7 +1869,7 @@ const AngularWorkflow = (props) => {
 
 					for (var key in sourcebranches) {
 						var newbranch = JSON.parse(JSON.stringify(sourcebranches[key]))
-						newbranch.id = uuid.v4()
+						newbranch.id = uuidv4()
 						newbranch.source_id = newNodeData.id
 
 						newbranch._id = newbranch.id
@@ -1883,7 +1883,7 @@ const AngularWorkflow = (props) => {
 
 					for (var key in destinationbranches) {
 						var newbranch = JSON.parse(JSON.stringify(destinationbranches[key]))
-						newbranch.id = uuid.v4()
+						newbranch.id = uuidv4()
 						newbranch.destination_id = newNodeData.id
 
 						newbranch._id = newbranch.id
@@ -2503,7 +2503,7 @@ const AngularWorkflow = (props) => {
 
 		if (nodedata.type === "ACTION") {
 			if (workflow.actions.length === 1 && workflow.actions[0].id === workflow.start) {
-				const newEdgeUuid = uuid.v4()
+				const newEdgeUuid = uuidv4()
 				const newcybranch = { 
 					"source": workflow.start,
 					"target": nodedata.id,
@@ -2549,7 +2549,7 @@ const AngularWorkflow = (props) => {
 				workflow.triggers.push(nodedata)
 			}
 
-			const newEdgeUuid = uuid.v4()
+			const newEdgeUuid = uuidv4()
 			const newcybranch = { 
 				"source": nodedata.id,
 				"target": workflow.start,
@@ -3115,7 +3115,7 @@ const AngularWorkflow = (props) => {
 		//parentNode.lock()
 		const px = parentNode.position('x') - 65
 		const py = parentNode.position('y') - 25
-		const circleId = newNodeId = uuid.v4()
+		const circleId = newNodeId = uuidv4()
 
 		parentNode.data('circleId', circleId)
 
@@ -3155,7 +3155,7 @@ const AngularWorkflow = (props) => {
 		//parentNode.lock()
 		const px = parentNode.position('x') - 65
 		const py = parentNode.position('y') + 25
-		const circleId = newNodeId = uuid.v4()
+		const circleId = newNodeId = uuidv4()
 
 		parentNode.data('circleId', circleId)
 
@@ -4030,7 +4030,7 @@ const AngularWorkflow = (props) => {
 
 				const triggerLabel = getNextActionName(data.name)
 
-				newNodeId = uuid.v4()
+				newNodeId = uuidv4()
 				const newposition = {
 					"x": e.pageX-cycontainer.offsetLeft,
 					"y": e.pageY-cycontainer.offsetTop,
@@ -4197,7 +4197,7 @@ const AngularWorkflow = (props) => {
 					return
 				}
 
-				newNodeId = uuid.v4()
+				newNodeId = uuidv4()
 				const actionType = "ACTION"
 				const actionLabel = getNextActionName(app.name)
 				var parameters = null
@@ -5234,7 +5234,7 @@ const AngularWorkflow = (props) => {
 			const duplicateCondition = (conditionIndex) => {
 				
 				var newEdge = JSON.parse(JSON.stringify(selectedEdge.conditions[conditionIndex]))
-				const newUuid = uuid.v4()
+				const newUuid = uuidv4()
 				newEdge.condition.id = newUuid
 				newEdge.source.id = newUuid
 				newEdge.destination.id = newUuid
@@ -5346,7 +5346,7 @@ const AngularWorkflow = (props) => {
 		}
 
 		// FIXME - remove index
-		const conditionId = uuid.v4()
+		const conditionId = uuidv4()
 		return(
 			<div style={appApiViewStyle}>
 				<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
@@ -6143,7 +6143,7 @@ const AngularWorkflow = (props) => {
 											setSubworkflowStartnode(e.target.value)
 											//console.log("WF: ", workflow)
 
-											const branchId = uuid.v4()
+											const branchId = uuidv4()
 											const newbranch = {
 												"source_id": workflow.triggers[selectedTriggerIndex].id,
 												"destination_id": e.target.value.id,
@@ -8474,7 +8474,7 @@ const AngularWorkflow = (props) => {
 								"name": newVariableName,		
 								"description": "An execution variable",		
 								"value": "",
-								"id": uuid.v4(),
+								"id": uuidv4(),
 							})
 						}
 
@@ -8607,7 +8607,7 @@ const AngularWorkflow = (props) => {
 								"name": newVariableName,		
 								"description": newVariableDescription,		
 								"value": newVariableValue,
-								"id": uuid.v4(),
+								"id": uuidv4(),
 							})
 						}
 
@@ -8635,7 +8635,7 @@ const AngularWorkflow = (props) => {
 			usage: [{
 				workflow_id: workflow.id,
 			}],
-			id: uuid.v4(),
+			id: uuidv4(),
 			active: true,
 		})
 

@@ -81,8 +81,12 @@ https://shuffler.io/docs/configuration
 # Local development installation 
 Local development is pretty straight forward with **ReactJS** and **Golang**. This part is intended to help you run the code for development purposes.
 
-**PS: You have to stop the Backend Docker container to get this one working**
-**PPS: Use the "Launch" branch when developing to get it set up easier**
+1. Fork the project! This allows for pull-requests to Shuffle.
+2. Find the part below that matches what you want to change (e.g. frontend)
+3. Run that part locally - NOT in Docker
+
+**PS: You have to stop the Backend Docker container to get the backend running**
+**PPS: Use the "launch" branch when developing to get it set up easier**
 
 ## Frontend - ReactJS /w cytoscape
 http://localhost:3000 - Requires [npm](https://nodejs.org/en/download/)/[yarn](https://yarnpkg.com/lang/en/docs/install/#debian-stable)/your preferred manager. Runs independently from backend. 
