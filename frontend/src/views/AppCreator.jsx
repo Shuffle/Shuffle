@@ -6,7 +6,7 @@ import {BrowserView, MobileView} from "react-device-detect";
 import {Paper, Typography, FormControlLabel, Button, Divider, Select, MenuItem, FormControl, Switch, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Tooltip, Breadcrumbs, CircularProgress, Chip} from '@material-ui/core';
 import {LockOpen as LockOpenIcon, FileCopy as FileCopyIcon, Delete as DeleteIcon, Remove as RemoveIcon, Add as AddIcon, CheckCircle as CheckCircleIcon, AttachFile as AttachFileIcon, Apps as AppsIcon, ErrorOutline as ErrorOutlineIcon} from '@material-ui/icons';
 
-import uuid from "uuid";
+import { v4 as uuidv4 } from 'uuid';
 import {Link} from 'react-router-dom';
 import YAML from 'yaml'
 import ChipInput from 'material-ui-chip-input'
@@ -2481,7 +2481,7 @@ const AppCreator = (props) => {
 			tags: passedTags,
 			execution_org: passedOrg,
 			org_id: passedOrg.id,
-			id: uuid.v4(),
+			id: uuidv4(),
 			isValid: true,
 			owner: owner,
 			created: Date.now(),
@@ -2697,7 +2697,7 @@ const AppCreator = (props) => {
 				usage: [{
 					workflow_id: workflow.id,
 				}],
-				id: uuid.v4(),
+				id: uuidv4(),
 				active: true,
 			})
 
