@@ -1748,6 +1748,17 @@ class AppBase:
                 except AttributeError as e:
                     self.logger.error("[WARNING] Condition smaller than failed with values %s and %s: %s" % (sourcevalue, destinationvalue, e))
                     return False
+            elif check.lower() == "re" or check.lower() == "matches regex":
+                try:
+                    found = re.search(destinationvalue, sourcevalue)
+                except re.error as e:
+                    print("[WARNING] Regex error in condition: %s" % e)
+                    return False
+
+                if found == None:
+                    return False
+
+                return True
             else:
                 self.logger.info("Condition: can't handle %s yet. Setting to true" % check)
                     
