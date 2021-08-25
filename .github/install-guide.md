@@ -45,14 +45,28 @@ This step is for setting up with Docker on windows from scratch.
 OUTER_HOSTNAME=YOUR.IP.HERE
 ```
 
-5. Configure max memory (WSL) by opening a new CMD/Powershell window. Required for Elasticsearch
+5. Configure max memory (WSL) by opening a new CMD/Powershell window. Required for Opensearch (Elasticsearch). Run one command at a time, otherwise it may not work (WSL issues)!
 ```
 wsl -d docker-desktop
-sysctl -w vm.max_map_count=262144
-echo "vm.max_map_count = 262144" > /etc/sysctl.d/99-docker-desktop.conf
-echo -e "\nvm.max_map_count = 262144\n" >> /etc/sysctl.d/00-alpine.conf
+```
 
+```
+sysctl -w vm.max_map_count=262144
+```
+
+```
+echo "vm.max_map_count = 262144" > /etc/sysctl.d/99-docker-desktop.conf
+```
+
+```
+echo -e "\nvm.max_map_count = 262144\n" >> /etc/sysctl.d/00-alpine.conf
+```
+
+```
 # https://stackoverflow.com/questions/42111566/elasticsearch-in-windows-docker-image-vm-max-map-count
+
+exit
+```
 ```
 
 6. Run docker-compose
@@ -106,11 +120,8 @@ go run *.go
 
 **WINDOWS USERS:** You'll have to to add the "export" part as an environment variable.
 
-## Database - Datastore
-Based on Google datastore
-```
-docker run -p 8000:8000 google/cloud-sdk gcloud beta emulators datastore start --project=shuffle --host-port 0.0.0.0:8000 --no-store-on-disk
-```
+## Database - Opensearch
+This is a database based on Elasticsearch, hence we're using Elasticsearch API's for it. To get it running, we suggest you run the original docker-compose, as there's no good one-liner for getting opensearch working.
 
 ## Orborus
 Execution of Workflows:
