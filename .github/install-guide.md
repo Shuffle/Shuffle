@@ -67,7 +67,6 @@ echo -e "\nvm.max_map_count = 262144\n" >> /etc/sysctl.d/00-alpine.conf
 
 exit
 ```
-```
 
 6. Run docker-compose
 ```
