@@ -39,6 +39,7 @@ var environment = os.Getenv("ENVIRONMENT_NAME")
 var baseUrl = os.Getenv("BASE_URL")
 var appCallbackUrl = os.Getenv("BASE_URL")
 var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
+var timezone = os.Getenv("TZ")
 var baseimagename = "frikky/shuffle"
 var registryName = "registry.hub.docker.com"
 var fallbackName = "shuffle-orborus"
@@ -957,6 +958,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			fmt.Sprintf("AUTHORIZATION=%s", workflowExecution.Authorization),
 			fmt.Sprintf("CALLBACK_URL=%s", baseUrl),
 			fmt.Sprintf("BASE_URL=%s", appCallbackUrl),
+			fmt.Sprintf("TZ=%s", timezone),
 		}
 
 		if strings.ToLower(os.Getenv("SHUFFLE_PASS_APP_PROXY")) == "true" {
@@ -2039,6 +2041,10 @@ func main() {
 		if len(httpsProxy) > 0 {
 			log.Printf("Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
 		}
+	}
+
+	if timezone == "" {
+		timezone = "Europe/Amsterdam"
 	}
 
 	//imageName := fmt.Sprintf("%s/%s:shuffle_openapi_1.0.0", registryName, baseimagename)

@@ -55,6 +55,7 @@ var environment = os.Getenv("ENVIRONMENT_NAME")
 var dockerApiVersion = os.Getenv("DOCKER_API_VERSION")
 var runningMode = strings.ToLower(os.Getenv("RUNNING_MODE"))
 var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
+var timezone = os.Getenv("TZ")
 var executionIds = []string{}
 
 var dockercli *dockerclient.Client
@@ -345,6 +346,10 @@ func main() {
 		os.Exit(3)
 	}
 
+	if timezone == "" {
+		timezone = "Europe/Amsterdam"
+	}
+
 	workerTimeout := 600
 	if workerTimeoutEnv != "" {
 		tmpInt, err := strconv.Atoi(workerTimeoutEnv)
@@ -559,6 +564,7 @@ func main() {
 				fmt.Sprintf("ENVIRONMENT_NAME=%s", environment),
 				fmt.Sprintf("BASE_URL=%s", baseUrl),
 				fmt.Sprintf("CLEANUP=%s", cleanupEnv),
+				fmt.Sprintf("TZ=%s", timezone),
 				fmt.Sprintf("SHUFFLE_PASS_APP_PROXY=%s", os.Getenv("SHUFFLE_PASS_APP_PROXY")),
 			}
 

@@ -31,7 +31,7 @@ ENV SHUFFLE_BASE_IMAGE_REGISTRY=docker.io
 ENV SHUFFLE_BASE_IMAGE_NAME=frikky/shuffle
 ENV SHUFFLE_BASE_IMAGE_TAG_SUFFIX=0.8.70
 
-RUN apk add --no-cache bash
+RUN apk add --no-cache bash tzdata
 COPY --from=builder /app/ /
 
 CMD ["./worker"]
