@@ -2047,6 +2047,8 @@ func main() {
 		timezone = "Europe/Amsterdam"
 	}
 
+	log.Printf("[INFO] Running with timezone %s", timezone)
+
 	//imageName := fmt.Sprintf("%s/%s:shuffle_openapi_1.0.0", registryName, baseimagename)
 	//downloadDockerImageBackend(client, imageName)
 

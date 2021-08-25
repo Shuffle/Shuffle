@@ -350,6 +350,8 @@ func main() {
 		timezone = "Europe/Amsterdam"
 	}
 
+	log.Printf("[INFO] Running with timezone %s", timezone)
+
 	workerTimeout := 600
 	if workerTimeoutEnv != "" {
 		tmpInt, err := strconv.Atoi(workerTimeoutEnv)
