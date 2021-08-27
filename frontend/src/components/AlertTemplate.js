@@ -15,7 +15,7 @@ const alertStyle = {
   justifyContent: 'space-between',
   alignItems: 'center',
   boxShadow: '0px 2px 2px 2px rgba(0, 0, 0, 0.03)',
-  width: 400,
+  width: 300,
   boxSizing: 'border-box',
 	zIndex: 100001,
 	overflow: "hidden",

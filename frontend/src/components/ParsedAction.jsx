@@ -1397,7 +1397,7 @@ const ParsedAction = (props) => {
 					<Tooltip color="primary" title={"Add authentication option"} placement="top">
 						<span>
 							<Button color="primary" style={{}} fullWidth variant="contained" onClick={() => {
-								console.log(authenticationType)	
+								//console.log(authenticationType)	
 
 								setAuthenticationModalOpen(true)
 							}}>

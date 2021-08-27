@@ -57,27 +57,32 @@ const AuthenticationOauth2 = (props) => {
 		try {
 
 			var newwin = window.open(url, "", "width=400,height=200")
-			console.log(newwin)
-			setTimeout(() => {
-				console.log(newwin)
-				console.log("CLOSED", newwin.closed)
-			}, 1000)
+			//console.log(newwin)
+		
+			var open = true
+  		const timer = setInterval(() => {
+  		  if (newwin.closed) {
+  		    clearInterval(timer);
+  		    //alert('"Secure Payment" window closed!');
 
-			setTimeout(() => {
-				console.log(newwin)
-				console.log("CLOSED", newwin.closed)
-				if (newwin.closed) {
 					getAppAuthentication(true, true)
 					setTimeout(() => {
 						console.log("APPAUTH: ", appAuthentication)
-								
-						//{selectedAction.authentication.map(data => {
-						
 						setAuthenticationModalOpen(false)
-						saveWorkflow(workflow)
 					}, 1500)
-				}
-			}, 10000)
+  		  }
+  		}, 1000);
+			//do {
+			//	setTimeout(() => {
+			//		console.log(newwin)
+			//		console.log("CLOSED", newwin.closed)
+			//		if (newwin.closed) {
+
+			//			open = false
+			//		}
+			//	}, 1000)
+			//}
+			//while(open === true)
 		} catch (e) {
 			alert.error("Failed authentication - probably bad credentials. Try again")
 			setButtonClicked(false)

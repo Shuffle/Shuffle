@@ -1204,6 +1204,18 @@ const AngularWorkflow = (props) => {
 								if (item.edited > latest) {
 									latest = item.edited
 									selectedAction.selectedAuthentication = item
+
+									for (var key in workflow.actions) {
+										console.log(workflow.actions[key].app_name)
+										if (workflow.actions[key].app_name == selectedApp.name) {
+											console.log("Setting auth at: ", workflow.actions[key], item.id)
+											workflow.actions[key].selectedAuthentication = item
+											workflow.actions[key].authentication_id = item.id
+											//if (workflow.actions[key].selectedAuthentication === undefined || workflow.actions[key].selectedAuthentication === null || workflow.actions[key].selectedAuthentication.length === 0) {
+											//	console.log("Setting inner auth: ", workflow.actions[key])
+											//}
+										}
+									}
 								}
 							}
 						}
@@ -1221,8 +1233,11 @@ const AngularWorkflow = (props) => {
 						}
 				
 						setSelectedAction(selectedAction)
+						setWorkflow(workflow)
+						saveWorkflow(workflow)
+						//for (var key in 
 
-						alert.info("Updated authentication for app?")
+						alert.info("Added and updated authentication!")
 					} else {
 						alert.info("No authentication to update")
 					}
@@ -2006,8 +2021,8 @@ const AngularWorkflow = (props) => {
 				setSelectedAction(curaction)
 				//return
 			} else {
-				console.log("AUTHENTICATION: ", curapp.authentication)
-				console.log(curapp.authentication)
+				//console.log("AUTHENTICATION: ", curapp.authentication)
+				//console.log(curapp.authentication)
 				setAuthenticationType(curapp.authentication.type === "oauth2" && curapp.authentication.redirect_uri !== undefined && curapp.authentication.redirect_uri !== null ? 
 					{
 						"type": 					"oauth2",
@@ -2022,7 +2037,7 @@ const AngularWorkflow = (props) => {
 				)
 
 				const requiresAuth = curapp.authentication.required //&& ((curapp.authentication.parameters !== undefined && curapp.authentication.parameters !== null) || (curapp.authentication.type === "oauth2" && curapp.authentication.redirect_uri !== undefined && curapp.authentication.redirect_uri !== null))
-				console.log("AUTHCHECK: ", requiresAuth)
+				//console.log("AUTHCHECK: ", requiresAuth)
 				setRequiresAuthentication(requiresAuth)
 				if (curapp.authentication.required) {
 					//console.log("App requires auth.")
@@ -2541,7 +2556,7 @@ const AngularWorkflow = (props) => {
 		const node = event.target
 		const nodedata = event.target.data()
 		if (nodedata.finished === false || (nodedata.id !== undefined && nodedata.is_valid === undefined)) {
-			console.log("RETURNING (NOT ADDING) NODE ADD FOR: ", nodedata)
+			//console.log("RETURNING (NOT ADDING) NODE ADD FOR: ", nodedata)
 			return
 		}
 
@@ -7721,16 +7736,20 @@ const AngularWorkflow = (props) => {
 				copy = copy.src
 			}
 
-			console.log("NEW: ", copy)
-			console.log("NAVIGATOR: ", navigator)
-
 			const clipboard = navigator.clipboard
 			if (clipboard === undefined) {
 				alert.error("Can only copy over HTTPS (port 3443)")
 				return
 			} 
 
-			navigator.clipboard.writeText(JSON.stringify(copy))
+			var stringified = JSON.stringify(copy)
+			if (stringified.startsWith("\"") && stringified.endsWith("\"")) {
+				stringified = stringified.substring(1, stringified.length-1)
+			}
+
+			console.log("NEW: ", stringified)
+
+			navigator.clipboard.writeText(stringified)
 			copyText.select()
 			copyText.setSelectionRange(0, 99999) /* For mobile devices */
 

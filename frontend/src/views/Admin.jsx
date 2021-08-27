@@ -156,7 +156,7 @@ const Admin = (props) => {
 					setTimeout(() => {
 						getAppAuthentication() 
 					}, 1000)
-					alert.success("Successfully deleted authentication!")
+					//alert.success("Successfully deleted authentication!")
 				}
 			}),
 		)
@@ -188,7 +188,7 @@ const Admin = (props) => {
 						setTimeout(() => {
 							getSchedules()
 						}, 1500)
-						alert.success("Successfully stopped schedule!")
+						//alert.success("Successfully stopped schedule!")
 					}
 				}),
 			)
