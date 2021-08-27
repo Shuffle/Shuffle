@@ -135,62 +135,67 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 		log.Printf("[INFO] NOT cleaning up containers. IDS: %d, CLEANUP env: %s", len(containerIds), cleanupEnv)
 	}
 
-	abortUrl := fmt.Sprintf("%s/api/v1/workflows/%s/executions/%s/abort", baseUrl, workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
+	if len(reason) > 0 && len(nodeId) > 0 {
+		log.Printf("[INFO] Running abort of workflow because it should be finished")
 
-	path := fmt.Sprintf("?reason=%s", url.QueryEscape(reason))
-	if len(nodeId) > 0 {
-		path += fmt.Sprintf("&node=%s", url.QueryEscape(nodeId))
-	}
-	if len(environment) > 0 {
-		path += fmt.Sprintf("&env=%s", url.QueryEscape(environment))
-	}
-
-	//fmt.Println(url.QueryEscape(query))
-	abortUrl += path
-	log.Printf("[INFO] Abort URL: %s", abortUrl)
-
-	req, err := http.NewRequest(
-		"GET",
-		abortUrl,
-		nil,
-	)
-
-	if err != nil {
-		log.Println("[INFO] Failed building request: %s", err)
-	}
-
-	// FIXME: Add an API call to the backend
-	authorization := os.Getenv("AUTHORIZATION")
-	if len(authorization) > 0 {
-		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", authorization))
-	} else {
-		log.Printf("[ERROR] No authorization specified for abort")
-	}
-
-	req.Header.Add("Content-Type", "application/json")
-	client := &http.Client{
-		Transport: &http.Transport{
-			Proxy: nil,
-		},
-	}
-
-	httpProxy := os.Getenv("HTTP_PROXY")
-	httpsProxy := os.Getenv("HTTPS_PROXY")
-	if (len(httpProxy) > 0 || len(httpsProxy) > 0) && baseUrl != "http://shuffle-backend:5001" {
-		client = &http.Client{}
-	} else {
-		if len(httpProxy) > 0 {
-			log.Printf("[INFO] Running with HTTP proxy %s (env: HTTP_PROXY)", httpProxy)
+		abortUrl := fmt.Sprintf("%s/api/v1/workflows/%s/executions/%s/abort", baseUrl, workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
+		path := fmt.Sprintf("?reason=%s", url.QueryEscape(reason))
+		if len(nodeId) > 0 {
+			path += fmt.Sprintf("&node=%s", url.QueryEscape(nodeId))
 		}
-		if len(httpsProxy) > 0 {
-			log.Printf("[INFO] Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
+		if len(environment) > 0 {
+			path += fmt.Sprintf("&env=%s", url.QueryEscape(environment))
 		}
-	}
 
-	log.Printf("[INFO] All App Logs: %#v", allLogs)
-	_, err = client.Do(req)
-	if err != nil {
-		log.Printf("[WARNING] Failed abort request: %s", err)
+		//fmt.Println(url.QueryEscape(query))
+		abortUrl += path
+		log.Printf("[INFO] Abort URL: %s", abortUrl)
+
+		req, err := http.NewRequest(
+			"GET",
+			abortUrl,
+			nil,
+		)
+
+		if err != nil {
+			log.Println("[INFO] Failed building request: %s", err)
+		}
+
+		// FIXME: Add an API call to the backend
+		authorization := os.Getenv("AUTHORIZATION")
+		if len(authorization) > 0 {
+			req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", authorization))
+		} else {
+			log.Printf("[ERROR] No authorization specified for abort")
+		}
+
+		req.Header.Add("Content-Type", "application/json")
+		client := &http.Client{
+			Transport: &http.Transport{
+				Proxy: nil,
+			},
+		}
+
+		httpProxy := os.Getenv("HTTP_PROXY")
+		httpsProxy := os.Getenv("HTTPS_PROXY")
+		if (len(httpProxy) > 0 || len(httpsProxy) > 0) && baseUrl != "http://shuffle-backend:5001" {
+			client = &http.Client{}
+		} else {
+			if len(httpProxy) > 0 {
+				log.Printf("[INFO] Running with HTTP proxy %s (env: HTTP_PROXY)", httpProxy)
+			}
+			if len(httpsProxy) > 0 {
+				log.Printf("[INFO] Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
+			}
+		}
+
+		log.Printf("[INFO] All App Logs: %#v", allLogs)
+		_, err = client.Do(req)
+		if err != nil {
+			log.Printf("[WARNING] Failed abort request: %s", err)
+		}
+	} else {
+		log.Printf("[INFO] NOT running abort during shutdown.")
 	}
 
 	log.Printf("[INFO] Finished shutdown (after %d seconds). ", sleepDuration)
@@ -759,6 +764,16 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			action.Parameters = append(action.Parameters, shuffle.WorkflowAppActionParameter{
 				Name:  "source_execution",
 				Value: workflowExecution.ExecutionId,
+			})
+
+			action.Parameters = append(action.Parameters, shuffle.WorkflowAppActionParameter{
+				Name:  "source_node",
+				Value: trigger.ID,
+			})
+
+			action.Parameters = append(action.Parameters, shuffle.WorkflowAppActionParameter{
+				Name:  "source_auth",
+				Value: workflowExecution.Authorization,
 			})
 
 			//trigger.LargeImage = ""

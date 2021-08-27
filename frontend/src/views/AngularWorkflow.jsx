@@ -4880,6 +4880,7 @@ const AngularWorkflow = (props) => {
 		if (actionlist.length === 0) {
 				// FIXME: Have previous execution values in here
 				actionlist.push({"type": "Execution Argument", "name": "Execution Argument", "value": "$exec", "highlight": "exec", "autocomplete": "exec", "example": "hello"})
+				//actionlist.push({"type": "Key:Value store", "name": "Shuffle KV store", "value": "$shuffle_cache", "highlight": "shuffle_cache", "autocomplete": "shuffle_cache", "example": ""})
 
 				if (workflow.workflow_variables !== null && workflow.workflow_variables !== undefined && workflow.workflow_variables.length > 0) {
 					for (var key in workflow.workflow_variables) {

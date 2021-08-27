@@ -359,6 +359,10 @@ const Workflows = (props) => {
 	const [newWorkflowName, setNewWorkflowName] = React.useState("");
 	const [newWorkflowDescription, setNewWorkflowDescription] = React.useState("");
 	const [newWorkflowTags, setNewWorkflowTags] = React.useState([]);
+
+	const [showExtraOptions, setShowExtraOptions] = React.useState(true);
+	const [defaultReturnValue, setDefaultReturnValue] = React.useState("");
+
 	const [update, setUpdate] = React.useState("test");
 	const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
 	const [publishModalOpen, setPublishModalOpen] = React.useState(false);
@@ -368,6 +372,8 @@ const Workflows = (props) => {
 	const [isDropzone, setIsDropzone] = React.useState(false);
 	const [view, setView] = React.useState("grid")
 	const [filters, setFilters] = React.useState([])
+	const [submitLoading, setSubmitLoading] = React.useState(false)
+
 	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" 
 
 	const findWorkflow = (filters) => {
@@ -570,14 +576,14 @@ const Workflows = (props) => {
 				}
 
 				// Initialize the workflow itself
-				const ret = setNewWorkflow(data.name, data.description, data.tags, {}, false)
+				const ret = setNewWorkflow(data.name, data.description, data.tags, data.default_return_value, {}, false)
 				.then((response) => {
 					if (response !== undefined) {
 						// SET THE FULL THING
 						data.id = response.id
 
 						// Actually create it
-						const ret = setNewWorkflow(data.name, data.description, data.tags, data, false)
+						const ret = setNewWorkflow(data.name, data.description, data.tags, data.default_return_value, data, false)
 						.then((response) => {
 							if (response !== undefined) {
 								alert.success(`Successfully imported ${data.name}`)
@@ -1233,10 +1239,12 @@ const Workflows = (props) => {
 								}}
 							>
 								<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
+									//console.log("DATA:" ,data)
 									setModalOpen(true)
 									setEditingWorkflow(data)
 									setNewWorkflowName(data.name)
 									setNewWorkflowDescription(data.description)
+									setDefaultReturnValue(data.default_return_value)
 									if (data.tags !== undefined && data.tags !== null) {
 										setNewWorkflowTags(JSON.parse(JSON.stringify(data.tags)))
 									}
@@ -1489,7 +1497,7 @@ const Workflows = (props) => {
 	}
 
 	// Can create and set workflows
-	const setNewWorkflow = (name, description, tags, editingWorkflow, redirect) => {
+	const setNewWorkflow = (name, description, tags, defaultReturnValue, editingWorkflow, redirect) => {
 
 		var method = "POST"
 		var extraData = ""
@@ -1511,6 +1519,12 @@ const Workflows = (props) => {
 		if (tags !== undefined) {
 			workflowdata["tags"] = tags 
 		}
+
+		if (defaultReturnValue !== undefined) {
+			workflowdata["default_return_value"] = defaultReturnValue 
+			//console.log("WORKFLOW: ", workflowdata)
+		}
+
 		//console.log(workflowdata)
 		//return
 
@@ -1521,26 +1535,31 @@ const Workflows = (props) => {
 					'Accept': 'application/json',
 				},
 				body: JSON.stringify(workflowdata),
-	  			credentials: "include",
-    		})
+	  		credentials: "include",
+    })
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for workflows :O!")
 				return 
 			}
+			setSubmitLoading(false)
+
 			return response.json()
 		})
     .then((responseJson) => {
 			if (method === "POST" && redirect) {
 				window.location.pathname = "/workflows/"+responseJson["id"] 
+				setModalOpen(false)
 			} else if (!redirect) {
 				// Update :)		
 				setTimeout(() => {
 					getAvailableWorkflows()
 				}, 1000)
 				setImportLoading(false)
+				setModalOpen(false)
 			} else { 
 				alert.info("Successfully changed basic info for workflow")
+				setModalOpen(false)
 			}
 
 			return responseJson
@@ -1548,6 +1567,8 @@ const Workflows = (props) => {
 		.catch(error => {
 			alert.error(error.toString())
 			setImportLoading(false)
+			setModalOpen(false)
+			setSubmitLoading(false)
 		});
 	}
 
@@ -1581,7 +1602,7 @@ const Workflows = (props) => {
 					}
 
 					// Initialize the workflow itself
-					const ret = setNewWorkflow(data.name, data.description, data.tags, {}, false)
+					const ret = setNewWorkflow(data.name, data.description, data.tags, data.default_return_value, {}, false)
 					.then((response) => {
 						if (response !== undefined) {
 							// SET THE FULL THING
@@ -1591,7 +1612,7 @@ const Workflows = (props) => {
 							data.is_valid = false
 
 							// Actually create it
-							const ret = setNewWorkflow(data.name, data.description, data.tags, data, false)
+							const ret = setNewWorkflow(data.name, data.description, data.tags, data.default_return_value, data, false)
 							.then((response) => {
 								if (response !== undefined) {
 									alert.success("Successfully imported "+data.name)
@@ -1776,7 +1797,7 @@ const Workflows = (props) => {
 						color="primary"
 						defaultValue={newWorkflowDescription}
 						placeholder="Description"
-						rows="6"
+						rows="3"
 						multiline
 						margin="dense"
 						fullWidth
@@ -1802,11 +1823,29 @@ const Workflows = (props) => {
 							setUpdate("delete "+chip)
 						}}
 					/>
+					{showExtraOptions ? 
+						<TextField
+							onBlur={(event) => setDefaultReturnValue(event.target.value)}
+							InputProps={{
+								style:{
+									color: "white",
+								},
+							}}
+							color="primary"
+							defaultValue={defaultReturnValue}
+							placeholder="Default return value (used for Subflows if the subflow fails)"
+							rows="3"
+							multiline
+							margin="dense"
+							fullWidth
+							/>
+						: null}
 				</DialogContent>
 				<DialogActions>
 					<Button style={{}} onClick={() => {
 						setNewWorkflowName("")
 						setNewWorkflowDescription("")
+						setDefaultReturnValue("")
 						setEditingWorkflow({})
 						setNewWorkflowTags([])
 						setModalOpen(false)
@@ -1816,18 +1855,24 @@ const Workflows = (props) => {
 					<Button style={{}} disabled={newWorkflowName.length === 0} onClick={() => {
 						console.log("Tags: ", newWorkflowTags)
 						if (editingWorkflow.id !== undefined) {
-							setNewWorkflow(newWorkflowName, newWorkflowDescription, newWorkflowTags, editingWorkflow, false)
+							setNewWorkflow(newWorkflowName, newWorkflowDescription, newWorkflowTags, defaultReturnValue, editingWorkflow, false)
 							setNewWorkflowName("")
+							setDefaultReturnValue("")
 							setNewWorkflowDescription("")
 							setEditingWorkflow({})
 							setNewWorkflowTags([])
 						} else {
-							setNewWorkflow(newWorkflowName, newWorkflowDescription, newWorkflowTags, {}, true)
+							setNewWorkflow(newWorkflowName, newWorkflowDescription, newWorkflowTags, defaultReturnValue, {}, true)
 						}
 
-						setModalOpen(false)
+						setSubmitLoading(true)
+
 					}} color="primary">
-	        	Submit	
+						{submitLoading ? 
+							<CircularProgress />
+							:
+	        		"Submit"
+						}
 	        </Button>
 				</DialogActions>
 			</FormControl>
@@ -2065,7 +2110,7 @@ const Workflows = (props) => {
 			return response.json()
 		})
     .then((responseJson) => {
-				console.log("DATA: ", responseJson)
+				//console.log("DATA: ", responseJson)
 				if (!responseJson.success) {
 					if (responseJson.reason !== undefined) {
 						alert.error("Failed loading: "+responseJson.reason)
@@ -2192,6 +2237,8 @@ const Workflows = (props) => {
 	      <Button style={{borderRadius: "0px"}} disabled={downloadUrl.length === 0 || !downloadUrl.includes("http")} onClick={() => {
 					handleGithubValidation() 
 				}} color="primary">
+						Submit
+					
 	        Submit	
 	      </Button>
 			</DialogActions>

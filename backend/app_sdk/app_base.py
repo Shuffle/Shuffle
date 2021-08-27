@@ -1714,6 +1714,29 @@ class AppBase:
             elif check.lower() == "contains":
                 if destinationvalue.lower() in sourcevalue.lower():
                     return True
+
+            elif check.lower() == "is empty":
+                if len(sourcevalue) == 0:
+                    return True
+
+                if str(sourcevalue) == 0:
+                    return True
+
+                return False
+                #if tmp == "[]":
+                #    tmp = []
+
+                #if type(tmp) == list and len(tmp) == 0 and not flip:
+                #    new_list.append(item)
+                #elif type(tmp) == list and len(tmp) > 0 and flip:
+                #    new_list.append(item)
+                #elif type(tmp) == str and not tmp and not flip:
+                #    new_list.append(item)
+                #elif type(tmp) == str and tmp and flip:
+                #    new_list.append(item)
+                #else:
+                #    failed_list.append(item)
+
             elif check.lower() == "contains_any_of":
                 newvalue = [destinationvalue.lower()]
                 if "," in destinationvalue:

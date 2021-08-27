@@ -628,7 +628,7 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 	if err != nil {
 		log.Printf("[ERROR] Failed deleting %d execution keys for org %s", len(ids), id)
 	} else {
-		log.Printf("[INFO] Deleted %d keys from org %s", len(ids), parsedId)
+		//log.Printf("[INFO] Deleted %d keys from org %s", len(ids), parsedId)
 	}
 
 	//var newExecutionRequests ExecutionRequestWrapper
@@ -687,7 +687,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	if len(executionRequests.Data) == 0 {
 		executionRequests.Data = []shuffle.ExecutionRequest{}
 	} else {
-		log.Printf("[INFO] Executionrequests (%s): %d", id, len(executionRequests.Data))
+		//log.Printf("[INFO] Executionrequests (%s): %d", id, len(executionRequests.Data))
 		//log.Printf("IDS: %#v", executionRequests.Data[0].ExecutionId)
 	}
 
@@ -755,80 +755,6 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 
 }
 
-// Checks if data is sent from Worker >0.8.51, which sends a full execution
-// instead of individial results
-func validateNewWorkerExecution(body []byte) error {
-	ctx := context.Background()
-	var execution shuffle.WorkflowExecution
-	err := json.Unmarshal(body, &execution)
-	if err != nil {
-		log.Printf("[WARNING] Failed execution unmarshaling: %s", err)
-		return err
-	}
-	//log.Printf("\n\nGOT EXEC WITH RESULT %#v (%d)\n\n", execution.Status, len(execution.Results))
-
-	baseExecution, err := shuffle.GetWorkflowExecution(ctx, execution.ExecutionId)
-	if err != nil {
-		log.Printf("[ERROR] Failed getting execution (workflowqueue) %s: %s", execution.ExecutionId, err)
-		return err
-	}
-
-	if baseExecution.Authorization != execution.Authorization {
-		return errors.New("Bad authorization when validating execution")
-	}
-
-	// used to validate if it's actually the right marshal
-	if len(baseExecution.Workflow.Actions) != len(execution.Workflow.Actions) {
-		return errors.New(fmt.Sprintf("Bad length of actions (probably normal app): %d", len(execution.Workflow.Actions)))
-	}
-
-	if len(baseExecution.Workflow.Triggers) != len(execution.Workflow.Triggers) {
-		return errors.New(fmt.Sprintf("Bad length of trigger: %d (probably normal app)", len(execution.Workflow.Triggers)))
-	}
-
-	if len(baseExecution.Results) >= len(execution.Results) {
-		return errors.New(fmt.Sprintf("Can't have less actions in a full execution than what exists: %d (old) vs %d (new)", len(baseExecution.Results), len(execution.Results)))
-	}
-
-	//if baseExecution.Status != "WAITING" && baseExecution.Status != "EXECUTING" {
-	//	return errors.New(fmt.Sprintf("Workflow is already finished or failed. Can't update"))
-	//}
-
-	if execution.Status == "EXECUTING" {
-		//log.Printf("[INFO] Inside executing.")
-		extra := 0
-		for _, trigger := range execution.Workflow.Triggers {
-			//log.Printf("Appname trigger (0): %s", trigger.AppName)
-			if trigger.AppName == "User Input" || trigger.AppName == "Shuffle Workflow" {
-				extra += 1
-			}
-		}
-
-		if len(execution.Workflow.Actions)+extra == len(execution.Results) {
-			execution.Status = "FINISHED"
-		}
-
-		//log.Printf("[INFO] BASEEXECUTION LENGTH: %d", len(baseExecution.Workflow.Actions)+extra)
-	}
-
-	// FIXME: Add extra here
-	//executionLength := len(baseExecution.Workflow.Actions)
-	//if executionLength != len(execution.Results) {
-	//	return errors.New(fmt.Sprintf("Bad length of actions vs results: want: %d have: %d", executionLength, len(execution.Results)))
-	//}
-
-	//log.Printf("\n\nSHOULD SET BACKEND DATA FOR EXEC \n\n")
-	err = shuffle.SetWorkflowExecution(ctx, execution, true)
-	if err == nil {
-		log.Printf("[INFO] Set workflowexecution based on new worker (>0.8.53) for execution %s. Actions: %d, Triggers: %d, Results: %d, Status: %s", execution.ExecutionId, len(execution.Workflow.Actions), len(execution.Workflow.Triggers), len(execution.Results), execution.Status) //, execution.Result)
-		//log.Printf("[INFO] Successfully set the execution to wait.")
-	} else {
-		log.Printf("[WARNING] Failed to set the execution to wait.")
-	}
-
-	return nil
-}
-
 func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
@@ -844,7 +770,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	//log.Printf("Actionresult unmarshal: %s", string(body))
-	err = validateNewWorkerExecution(body)
+	err = shuffle.ValidateNewWorkerExecution(body)
 	if err == nil {
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Success"}`)))
@@ -980,31 +906,9 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		return
 	}
 
-	//log.Printf("NEW LENGTH: %d", len(workflowExecution.Results))
-
 	_ = dbSave
 	//resultLength := len(workflowExecution.Results)
 	setExecution := true
-
-	//newExecution, err := shuffle.GetWorkflowExecution(ctx, workflowExecution.ExecutionId)
-	//if err == nil {
-	//	//log.Printf("GOT GOOD EXECUTION CACHE FOR %s!", workflowExecution.ExecutionId)
-	//	if len(newExecution.Results) > 0 && len(newExecution.Results) != resultLength {
-	//		setExecution = false
-	//		if attempts > 5 {
-	//			//log.Printf("\n\nSkipping execution input - %d vs %d. Attempts: (%d)\n\n", len(parsedValue.Results), resultLength, attempts)
-	//		}
-
-	//		attempts += 1
-	//		//if len(workflowExecution.Results) <= len(workflowExecution.Workflow.Actions) {
-	//		//	log.Printf("RUNNING AGAIN!!")
-	//		//	runWorkflowExecutionTransaction(ctx, attempts, workflowExecutionId, actionResult, resp)
-	//		//	return
-	//	}
-	//} else {
-	//	log.Printf("[WARNING] Failed getting cache for %s: %s", workflowExecution.ExecutionId, err)
-	//}
-
 	if setExecution || workflowExecution.Status == "FINISHED" || workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
 		err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
 		//err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, dbSave)
@@ -1347,6 +1251,22 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 			}
 		}
 
+		sourceAuth, sourceAuthOk := request.URL.Query()["source_auth"]
+		if sourceAuthOk {
+			//log.Printf("\n\n\nSETTING SOURCE WORKFLOW AUTH TO %s!!!\n\n\n", sourceAuth[0])
+			workflowExecution.ExecutionSourceAuth = sourceAuth[0]
+		} else {
+			//log.Printf("Did NOT get source workflow")
+		}
+
+		sourceNode, sourceNodeOk := request.URL.Query()["source_node"]
+		if sourceNodeOk {
+			//log.Printf("\n\n\nSETTING SOURCE WORKFLOW NODE TO %s!!!\n\n\n", sourceNode[0])
+			workflowExecution.ExecutionSourceNode = sourceNode[0]
+		} else {
+			//log.Printf("Did NOT get source workflow")
+		}
+
 		//workflowExecution.ExecutionSource = "default"
 		sourceWorkflow, sourceWorkflowOk := request.URL.Query()["source_workflow"]
 		if sourceWorkflowOk {
@@ -1354,7 +1274,6 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 			workflowExecution.ExecutionSource = sourceWorkflow[0]
 		} else {
 			//log.Printf("Did NOT get source workflow")
-
 		}
 
 		sourceExecution, sourceExecutionOk := request.URL.Query()["source_execution"]
@@ -1371,7 +1290,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 			//log.Println(body)
 
 			//if string(body)[0] == "\"" && string(body)[string(body)
-			log.Printf("[INFO] Body: %s", string(body))
+			log.Printf("[DEBUG] Body: %s", string(body))
 		}
 
 		var execution shuffle.ExecutionRequest
@@ -2230,7 +2149,7 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 
 	if user.Id != workflow.Owner || len(user.Id) == 0 {
 		if workflow.OrgId == user.ActiveOrg.Id && user.Role == "admin" {
-			log.Printf("[DEBUG] User %s is accessing workflow %s as admin (stop schedule)", user.Username, workflow.ID)
+			log.Printf("[AUDIT] User %s is accessing workflow %s as admin (stop schedule)", user.Username, workflow.ID)
 		} else {
 			log.Printf("[WARNING] Wrong user (%s) for workflow %s (stop schedule)", user.Username, workflow.ID)
 			resp.WriteHeader(401)
