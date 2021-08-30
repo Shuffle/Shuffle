@@ -1544,6 +1544,10 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 				log.Printf("\n\nShould replace auth parameters!!!\n\n")
 
 				for _, param := range curAuth.Fields {
+					if param.Key == "expiration" {
+						continue
+					}
+
 					newParams = append(newParams, shuffle.WorkflowAppActionParameter{
 						Name:  param.Key,
 						Value: param.Value,
