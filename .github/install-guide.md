@@ -90,9 +90,10 @@ https://shuffler.io/docs/configuration
 * Default database location is in the same folder: ./shuffle-database
 
 # Local development installation
-Local development is pretty straight forward with **ReactJS** and **Golang**. This part is intended to help you run the code for development purposes.
+Local development is pretty straight forward with **ReactJS** and **Golang**. This part is intended to help you run the code for development purposes. We recommend having Shuffle running with the Docker-compose, then manually running the portion that you want to test and/or edit.
 
 **PS: You have to stop the Backend Docker container to get this one working**
+
 **PPS: Use the "Launch" branch when developing to get it set up easier**
 
 ## Frontend - ReactJS /w cytoscape
@@ -113,11 +114,8 @@ go run *.go
 
 **WINDOWS USERS:** You'll have to to add the "export" part as an environment variable.
 
-## Database - Datastore
-Based on Google datastore
-```
-docker run -p 8000:8000 google/cloud-sdk gcloud beta emulators datastore start --project=shuffle --host-port 0.0.0.0:8000 --no-store-on-disk
-```
+## Database - Opensearch 
+Make sure this is running through the docker-compose, and that the backend points to it with SHUFFLE_OPENSEARCH_URL defined
 
 ## Orborus
 Execution of Workflows:
