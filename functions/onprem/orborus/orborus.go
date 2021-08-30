@@ -16,7 +16,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -53,13 +52,12 @@ var orgId = os.Getenv("ORG_ID")
 var baseUrl = os.Getenv("BASE_URL")
 var environment = os.Getenv("ENVIRONMENT_NAME")
 var dockerApiVersion = os.Getenv("DOCKER_API_VERSION")
-var runningMode = strings.ToLower(os.Getenv("RUNNING_MODE"))
 var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
 var timezone = os.Getenv("TZ")
+var containerName = os.Getenv("CONTAINER_NAME")
 var executionIds = []string{}
 
 var dockercli *dockerclient.Client
-var containerId string
 
 func init() {
 	var err error
@@ -68,60 +66,16 @@ func init() {
 	if err != nil {
 		panic(fmt.Sprintf("Unable to create docker client: %s", err))
 	}
-
-	getThisContainerId()
-}
-
-// form id of current running container
-func getThisContainerId() {
-	fCol := ""
-
-	// some adjusting based on current running mode
-	switch runningMode {
-	case "kubernetes":
-		// cgroup will be like:
-		// 11:net_cls,net_prio:/kubepods/besteffort/podf132b44d-cfcf-43f7-9906-79f58e268333/851466f8b5ed5aa0f265b1c95c6d2bafbc51a38dd5c5a1621b6e586572150009
-		fCol = "5"
-		log.Printf("[INFO] Running containerized in Kubernetes!")
-
-	case "docker":
-		// cgroup will be like:
-		// 12:perf_event:/docker/0f06810364f52a2cd6e80bfba27419cb8a29758a204cd676388f4913bb366f2b
-		fCol = "3"
-		log.Printf("[INFO] Running containerized in Docker!")
-
-	default:
-		fCol = "3" // for backward-compatibility with production
-		log.Printf("[WARNING] RUNNING_MODE not set - defaulting to Docker (NOT Kubernetes).")
-	}
-
-	if fCol != "" {
-		cmd := fmt.Sprintf("cat /proc/self/cgroup | grep memory | tail -1 | cut -d/ -f%s | grep -o -E '[0-9A-z]{64}'", fCol)
-		out, err := exec.Command("bash", "-c", cmd).Output()
-		if err == nil {
-			containerId = strings.TrimSpace(string(out))
-
-			// cgroup error. Hardcoding this.
-			// https://github.com/moby/moby/issues/7015
-			//log.Printf("Checking if %s is in %s", ".scope", string(out))
-			if strings.Contains(string(out), ".scope") {
-				containerId = "shuffle-orborus"
-				//docker-76c537e9a4b7c7233011f5d70e6b7f2d600b6413ac58a96519b8dca7a3f7117a.scope
-			}
-		} else {
-			if fCol == "0" {
-				containerId = "shuffle-orborus"
-				log.Printf("[WARNING] Failed getting container ID: %s", err)
-			}
-		}
-	}
-
-	log.Printf(`[INFO] Started with containerId "%s"`, containerId)
 }
 
 // Deploys the internal worker whenever something happens
 // https://docs.docker.com/engine/api/sdk/examples/
 func deployWorker(image string, identifier string, env []string) {
+	if containerName == "" {
+		log.Printf("[INFO] CONTAINER_NAME is not set, defaulting to 'shuffle-orborus'")
+		containerName = "shuffle-orborus"
+	}
+
 	// Binds is the actual "-v" volume.
 	// Max 20% CPU every second
 
@@ -137,14 +91,7 @@ func deployWorker(image string, identifier string, env []string) {
 		Binds: []string{
 			"/var/run/docker.sock:/var/run/docker.sock:rw",
 		},
-	}
-
-	// form container id and use it as network source if it's not empty
-	if containerId != "" {
-		//log.Printf("[INFO] Found container ID %s", containerId)
-		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
-	} else {
-		//log.Printf("[INFO] Empty self container id, continue without NetworkMode")
+		NetworkMode: container.NetworkMode(fmt.Sprintf("container:%s", containerName))
 	}
 
 	if cleanupEnv == "true" {
