@@ -112,6 +112,16 @@ cd backend/go-app
 go run *.go
 ```
 
+Large portions of the backend is written in another repository - [shuffle-shared](https://github.com/frikky/shuffle-shared). If you want to update any of this code and test in realtime, we recommend following these steps:
+1. Clone shuffle-shared to a local repository
+2. Open the Shuffle backend's go.mod file (./shuffle/backend/go.mod)  (**NOT** in shuffle-shared)
+3. Change the following line to point to your directory AFTER the =>
+```
+//replace github.com/frikky/shuffle-shared => ../../../../git/shuffle-shared
+```
+4. Make the changes you want, then restart the backend server!
+5. With your changes made, make a pull request :fire:
+
 **WINDOWS USERS:** You'll have to to add the "export" part as an environment variable.
 
 ## Database - Opensearch 
