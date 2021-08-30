@@ -16,7 +16,7 @@ services:
     depends_on:
       - backend
   backend:
-    #build: ./backend
+    # build: ./backend
     image: ghcr.io/frikky/shuffle-backend:nightly
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
@@ -36,7 +36,8 @@ services:
       - SHUFFLE_FILE_LOCATION=/shuffle-files
     restart: unless-stopped
     #depends_on:
-    # - opensearch #- Not necessary because dependancy is handled within the backend itself instead
+      #- opensearch #Not necessary because dependancy is handled within the backend itself instead
+      #- database
   orborus:
     #build: ./functions/onprem/orborus
     image: ghcr.io/frikky/shuffle-orborus:nightly

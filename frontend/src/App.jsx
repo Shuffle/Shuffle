@@ -41,8 +41,7 @@ import {isMobile} from "react-device-detect";
 var globalUrl = window.location.origin
 
 // CORS used for testing purposes. Should only happen with specific port and http
-//window.location.protocol == "http:" && 
-if (window.location.port === "3000") {
+if ( window.location.port === "3000") {
 	globalUrl = "http://localhost:5001"
 	//globalUrl = "http://localhost:5002"
 }

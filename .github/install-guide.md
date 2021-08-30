@@ -38,39 +38,37 @@ When you're done, skip to the "After installation" step below.
 This step is for setting up with Docker on windows from scratch.
 
 1. Make sure you have [Docker](https://docs.docker.com/docker-for-windows/install/) and [docker-compose](https://docs.docker.com/compose/install/) installed. WSL2 may be required.
+
 2. Go to https://github.com/frikky/shuffle/releases and download the latest .zip release (or install git)
+
 3. Unzip the folder and enter it
+
 4. Open the .env file and change the line with "OUTER_HOSTNAME" to contain your IP:
+
 ```
 OUTER_HOSTNAME=YOUR.IP.HERE
 ```
 
-5. Configure max memory (WSL) by opening a new CMD/Powershell window. Required for Opensearch (Elasticsearch). Run one command at a time, otherwise it may not work (WSL issues)!
+5. Configure max memory (WSL) by opening a new CMD/Powershell window. Run each command one-by-one, or else installation might not work. (Required for fixing consistent restart of Elasticsearch issue in Windows Operation System).
 ```
 wsl -d docker-desktop
 ```
-
 ```
 sysctl -w vm.max_map_count=262144
 ```
-
 ```
 echo "vm.max_map_count = 262144" > /etc/sysctl.d/99-docker-desktop.conf
 ```
-
 ```
 echo -e "\nvm.max_map_count = 262144\n" >> /etc/sysctl.d/00-alpine.conf
 ```
-
 ```
 # https://stackoverflow.com/questions/42111566/elasticsearch-in-windows-docker-image-vm-max-map-count
-
-exit
 ```
 
 6. Run docker-compose
 ```
-docker-compose up -d
+docker compose up -d
 ```
 
 ### Configurations (proxies, default users etc.)
@@ -91,18 +89,14 @@ https://shuffler.io/docs/configuration
 * Further configurations can be done in docker-compose.yml and .env.
 * Default database location is in the same folder: ./shuffle-database
 
-# Local development installation 
+# Local development installation
 Local development is pretty straight forward with **ReactJS** and **Golang**. This part is intended to help you run the code for development purposes.
 
-1. Fork the project! This allows for pull-requests to Shuffle.
-2. Find the part below that matches what you want to change (e.g. frontend)
-3. Run that part locally - NOT in Docker
-
-**PS: You have to stop the Backend Docker container to get the backend running**
-**PPS: Use the "launch" branch when developing to get it set up easier**
+**PS: You have to stop the Backend Docker container to get this one working**
+**PPS: Use the "Launch" branch when developing to get it set up easier**
 
 ## Frontend - ReactJS /w cytoscape
-http://localhost:3000 - Requires [npm](https://nodejs.org/en/download/)/[yarn](https://yarnpkg.com/lang/en/docs/install/#debian-stable)/your preferred manager. Runs independently from backend. 
+http://localhost:3000 - Requires [npm](https://nodejs.org/en/download/)/[yarn](https://yarnpkg.com/lang/en/docs/install/#debian-stable)/your preferred manager. Runs independently from backend.
 ```bash
 cd frontend
 npm i
@@ -110,7 +104,7 @@ npm start
 ```
 
 ## Backend - Golang
-http://localhost:5001 - REST API - requires [>=go1.13](https://golang.org/dl/) 
+http://localhost:5001 - REST API - requires [>=go1.13](https://golang.org/dl/)
 ```bash
 export SHUFFLE_OPENSEARCH_URL="http://localhost:9200"
 cd backend/go-app
@@ -119,12 +113,15 @@ go run *.go
 
 **WINDOWS USERS:** You'll have to to add the "export" part as an environment variable.
 
-## Database - Opensearch
-This is a database based on Elasticsearch, hence we're using Elasticsearch API's for it. To get it running, we suggest you run the original docker-compose, as there's no good one-liner for getting opensearch working.
+## Database - Datastore
+Based on Google datastore
+```
+docker run -p 8000:8000 google/cloud-sdk gcloud beta emulators datastore start --project=shuffle --host-port 0.0.0.0:8000 --no-store-on-disk
+```
 
 ## Orborus
 Execution of Workflows:
-PS: This requires some specific environment variables 
+PS: This requires some specific environment variables
 ```
 cd functions/onprem/orborus
 go run orborus.go
