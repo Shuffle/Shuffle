@@ -1215,6 +1215,8 @@ class AppBase:
                 return " ".join(newlist)
 
         # Parses JSON loops and such down to the item you're looking for
+        # $nodename.#.id 
+        # $nodename.data.#min-max.info.id
         def recurse_json(basejson, parsersplit):
             match = "#([0-9a-z]+):?-?([0-9a-z]+)?#?"
             #print("Split: %s\n%s" % (parsersplit, basejson))
@@ -1254,15 +1256,17 @@ class AppBase:
                         newvalue = []
                         firstitem = actualitem[0][0]
                         seconditem = actualitem[0][1]
+                        print("ACTUAL PARSED: %s" % actualitem)
 
                         # Means it's a single item -> continue
                         if seconditem == "":
                             print("[INFO] In first - handling %s. Len: %d" % (firstitem, len(basejson)))
                             if firstitem.lower() == "max" or firstitem.lower() == "last": 
                                 firstitem = len(basejson)-1
-                            if firstitem.lower() == "min" or firstitem.lower() == "first": 
+                            elif firstitem.lower() == "min" or firstitem.lower() == "first": 
                                 firstitem = 0
 
+                            #print("Post lower checks")
                             tmpitem = basejson[int(firstitem)]
                             try:
                                 newvalue, is_loop = recurse_json(tmpitem, parsersplit[outercnt+1:])
@@ -1272,13 +1276,15 @@ class AppBase:
                             print("[INFO] In ELSE - handling %s and %s" % (firstitem, seconditem))
                             if firstitem.lower() == "max" or firstitem.lower() == "last": 
                                 firstitem = len(basejson)-1
-                            if firstitem.lower() == "min" or firstitem.lower() == "first": 
+                            elif firstitem.lower() == "min" or firstitem.lower() == "first": 
                                 firstitem = 0
+
                             if seconditem.lower() == "max" or seconditem.lower() == "last": 
                                 seconditem = len(basejson)-1
-                            if seconditem.lower() == "min" or seconditem.lower() == "first": 
+                            elif seconditem.lower() == "min" or seconditem.lower() == "first": 
                                 seconditem = 0
 
+                            print("Post lower checks")
                             newvalue = []
                             if int(seconditem) > len(basejson):
                                 seconditem = len(basejson)

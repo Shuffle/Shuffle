@@ -5870,6 +5870,7 @@ func initHandlers() {
 	// PS: For cloud, this has to use cloud storage.
 	// https://developer.box.com/reference/get-files-id-content/
 	// 1. Creating the "get file" option. Make it possible to run this in the frontend.
+	r.HandleFunc("/api/v1/files/namespaces/{namespace}", shuffle.HandleGetFileNamespace).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/files/{fileId}/content", shuffle.HandleGetFileContent).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/files/create", shuffle.HandleCreateFile).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/files/{fileId}/upload", shuffle.HandleUploadFile).Methods("POST", "OPTIONS")

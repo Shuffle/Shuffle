@@ -4,7 +4,7 @@ import { makeStyles } from '@material-ui/styles';
 import { useTheme } from '@material-ui/core/styles';
 import {Link} from 'react-router-dom';
 
-import {Paper, Card, Tooltip, FormControlLabel, Typography, Switch, Select, MenuItem, Divider, TextField, Button, Tabs, Tab, Grid, List, ListItem, ListItemText, ListItemAvatar, ListItemSecondaryAction, IconButton, Avatar, Zoom,  Dialog, DialogTitle, DialogActions, DialogContent, CircularProgress } from '@material-ui/core';
+import {FormControl, InputLabel, Paper, Card, Tooltip, FormControlLabel, Typography, Switch, Select, MenuItem, Divider, TextField, Button, Tabs, Tab, Grid, List, ListItem, ListItemText, ListItemAvatar, ListItemSecondaryAction, IconButton, Avatar, Zoom,  Dialog, DialogTitle, DialogActions, DialogContent, CircularProgress } from '@material-ui/core';
 
 import {Edit as EditIcon, FileCopy as FileCopyIcon, Publish as PublishIcon, SelectAll as SelectAllIcon, OpenInNew as OpenInNewIcon, CloudDownload as CloudDownloadIcon, Description as DescriptionIcon, Polymer as PolymerIcon, CheckCircle as CheckCircleIcon, Close as CloseIcon, Apps as AppsIcon, Image as ImageIcon, Delete as DeleteIcon, Cached as CachedIcon, AccessibilityNew as AccessibilityNewIcon, Lock as LockIcon, Eco as EcoIcon, Schedule as ScheduleIcon, Cloud as CloudIcon, Business as BusinessIcon} from '@material-ui/icons';
 
@@ -49,6 +49,8 @@ const Admin = (props) => {
 	const [authentication, setAuthentication] = React.useState([]);
 	const [schedules, setSchedules] = React.useState([])
 	const [files, setFiles] = React.useState([])
+	const [selectedNamespace, setSelectedNamespace] = React.useState("default")
+	const [fileNamespaces, setFileNamespaces] = React.useState([]);
 	const [selectedUser, setSelectedUser] = React.useState({})
 	const [newPassword, setNewPassword] = React.useState("");
 	const [selectedUserModalOpen, setSelectedUserModalOpen] = React.useState(false)
@@ -868,8 +870,16 @@ const Admin = (props) => {
 				return response.json()
 			})
 			.then((responseJson) => {
-				//console.log(responseJson)
-				setFiles(responseJson)
+				if (responseJson.files === undefined || responseJson.files === null) {
+					setFiles(responseJson)
+				} else {
+					setFiles(responseJson.files)
+				}
+
+				console.log("NAMESPACES: ", responseJson.namespaces)
+				if (responseJson.namespaces !== undefined && responseJson.namespaces !== null) {
+					setFileNamespaces(responseJson.namespaces)
+				}
 			})
 			.catch(error => {
 				alert.error(error.toString())
@@ -2169,6 +2179,30 @@ const Admin = (props) => {
 			> 
 				<CachedIcon />
 			</Button>
+
+			{fileNamespaces !== undefined && fileNamespaces !== null && fileNamespaces.length > 1 ? 
+				<FormControl>
+					<InputLabel id="input-namespace-label">Namespace</InputLabel>
+					<Select
+						labelId="input-namespace-select-label"
+						id="input-namespace-select-id"
+						style={{color: "white", minWidth: 100, float: "right",}}
+						value={selectedNamespace}
+						onChange={(event) => {
+							console.log("CHANGE NAMESPACE: ", event.target)
+							setSelectedNamespace(event.target.value)
+						}}
+					>
+						{fileNamespaces.map((data, index) => {
+							return (
+								<MenuItem key={index} value={data} style={{color: "white"}}>{data}</MenuItem>
+							)
+						})}
+						
+					</Select>
+				</FormControl>
+			: null}
+
 			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor}}/>
 			<List>
 				<ListItem>
@@ -2204,6 +2238,14 @@ const Admin = (props) => {
 					/>
 				</ListItem>
 				{files === undefined || files === null ? null : files.map((file, index) => {
+					if (file.namespace === "") {
+						file.namespace = "default"
+					}
+
+					if (file.namespace !== selectedNamespace) {
+						return null
+					}
+
 					var bgColor = "#27292d"
 					if (index % 2 === 0) {
 						bgColor = "#1f2023"
