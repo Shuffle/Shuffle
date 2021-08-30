@@ -36,7 +36,7 @@ services:
       - SHUFFLE_FILE_LOCATION=/shuffle-files
     restart: unless-stopped
     #depends_on:
-      #- opensearch
+      #- opensearch #Not necessary because dependancy is handled within the backend itself instead
       #- database
   orborus:
     #build: ./functions/onprem/orborus
