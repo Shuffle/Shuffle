@@ -12,6 +12,10 @@ import {Popper, TextField, TextareaAutosize, Drawer, Button, Paper, Grid, Tabs, 
 import {GetApp as GetAppIcon, Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
 import Autocomplete from '@material-ui/lab/Autocomplete';
 
+import CodeMirror from '@uiw/react-codemirror';
+import 'codemirror/keymap/sublime';
+import 'codemirror/theme/gruvbox-dark.css';
+
 
 const useStyles = makeStyles({
 	notchedOutline: {
@@ -337,12 +341,13 @@ const ParsedAction = (props) => {
 		})
 
 		const changeActionParameter = (event, count, data) => {
+			console.log(event)
 			if (data.name.startsWith("${") && data.name.endsWith("}")) {
 				// PARAM FIX - Gonna use the ID field, even though it's a hack
 				const paramcheck = selectedAction.parameters.find(param => param.name === "body")
 				if (paramcheck !== undefined) {
 					// Escapes all double quotes
-					const toReplace = event.target.value.trim().replaceAll("\\\"", "\"").replaceAll("\"", "\\\"")
+					const toReplace = event.target.value.trim().replaceAll("\\\"", "\"").replaceAll("\"", "\\\"");
 					console.log("REPLACE WITH: ", toReplace)
 					if (paramcheck["value_replace"] === undefined || paramcheck["value_replace"] === null) {
 						paramcheck["value_replace"] = [{
@@ -474,6 +479,150 @@ const ParsedAction = (props) => {
 
 			selectedActionParameters[count].value = event.target.value
 			selectedAction.parameters[count].value = event.target.value
+			setSelectedAction(selectedAction)
+			//setUpdate(Math.random())
+			//setUpdate(event.target.value)
+		}
+
+		const changeActionParameterCodemirror = (event, count, data) => {
+			console.log(event)
+			if (data.name.startsWith("${") && data.name.endsWith("}")) {
+				// PARAM FIX - Gonna use the ID field, even though it's a hack
+				const paramcheck = selectedAction.parameters.find(param => param.name === "body")
+				if (paramcheck !== undefined) {
+					// Escapes all double quotes
+					const toReplace = event.target.value.trim().replaceAll("\\\"", "\"").replaceAll("\"", "\\\"");
+					console.log("REPLACE WITH: ", toReplace)
+					if (paramcheck["value_replace"] === undefined || paramcheck["value_replace"] === null) {
+						paramcheck["value_replace"] = [{
+							"key": data.name,
+							"value": toReplace,
+						}]
+
+						console.log("IN IF: ", paramcheck)
+
+					} else {
+						const subparamindex = paramcheck["value_replace"].findIndex(param => param.key === data.name)
+						if (subparamindex === -1) {
+							paramcheck["value_replace"].push({
+								"key": data.name,
+								"value": toReplace,
+							})
+						} else {
+							paramcheck["value_replace"][subparamindex]["value"] = toReplace 
+						}
+
+						console.log("IN ELSE: ", paramcheck)
+					}
+					//console.log("PARAM: ", paramcheck)
+					//if (paramcheck.id === undefined) {
+					//	console.log("Normal paramcheck")
+					//} else {
+					//	selectedActionParameters[count]["value_replace"] = paramcheck
+					//	selectedAction.parameters[count]["value_replace"] = paramcheck
+					//}
+
+					if (paramcheck["value_replace"] === undefined) {
+						selectedActionParameters[count]["value_replace"] = paramcheck
+						selectedAction.parameters[count]["value_replace"] = paramcheck
+					} else {
+						selectedActionParameters[count]["value_replace"] = paramcheck["value_replace"]
+						selectedAction.parameters[count]["value_replace"] = paramcheck["value_replace"]
+					}
+					console.log("RESULT: ", selectedAction)
+					setSelectedAction(selectedAction)
+					//setUpdate(Math.random())
+					return
+				}
+			}
+
+			if (event.display.maxLine.text[event.display.maxLine.text.length-1] === "$") {
+				if (!showDropdown) {
+					setShowAutocomplete(false)
+					setShowDropdown(true)
+					setShowDropdownNumber(count)
+				}
+			} else {
+				if (showDropdown) {
+					setShowDropdown(false)
+				}
+			}
+
+			// bad detection mechanism probably
+			if (event.display.maxLine.text[event.display.maxLine.text.length-1] === "." && actionlist.length > 0) {
+				console.log("GET THE LAST ARGUMENT FOR NODE!")
+				// THIS IS AN EXAMPLE OF SHOWING IT 
+				/*
+				const inputdata = {"data": "1.2.3.4", "dataType": "4.5.6.6"}
+				setJsonList(GetParsedPaths(inputdata, ""))
+				if (!showDropdown) {
+					setShowAutocomplete(false)
+					setShowDropdown(true)
+					setShowDropdownNumber(count)
+				}
+				console.log(jsonList)
+				*/
+
+				// Search for the item backwards
+				// 1. Reverse search backwards from . -> $
+				// 2. Search the actionlist for the item  
+				// 3. Find the data for the specific item
+
+				var curstring = ""
+				var record = false
+				for (var key in selectedActionParameters[count].value) {
+					const item = selectedActionParameters[count].value[key]
+					if (record) {
+						curstring += item
+					}
+
+					if (item === "$") {
+						record = true
+						curstring = ""
+					}
+				}
+
+				//console.log("CURSTRING: ", curstring)
+				if (curstring.length > 0 && actionlist !== null) {
+					// Search back in the action list
+					curstring = curstring.split(" ").join("_").toLowerCase()
+					var actionItem = actionlist.find(data => data.autocomplete.split(" ").join("_").toLowerCase() === curstring)
+					if (actionItem !== undefined) {
+						console.log("Found item: ", actionItem)
+
+						//actionItem.example = actionItem.example.trim()
+						//actionItem.example = actionItem.example.split(" None").join(" \"None\"")
+						//actionItem.example  = actionItem.example.split("\'").join("\"")
+
+						var jsonvalid = true
+						try {
+							const tmp = String(JSON.parse(actionItem.example))
+							if (!actionItem.example.includes("{") && !actionItem.example.includes("[")) {
+								jsonvalid = false
+							}
+						} catch (e) {
+							jsonvalid = false
+						}
+
+						if (jsonvalid) {
+							setJsonList(GetParsedPaths(JSON.parse(actionItem.example), ""))
+
+							if (!showDropdown) {
+								setShowAutocomplete(false)
+								setShowDropdown(true)
+								setShowDropdownNumber(count)
+							}
+						}
+					}
+				}
+			} else {
+				if (jsonList.length > 0) {
+					setJsonList([])
+				}
+			}
+
+			selectedActionParameters[count].value = event.display.maxLine.text
+			selectedAction.parameters[count].value = event.display.maxLine.text
 			setSelectedAction(selectedAction)
 			//setUpdate(Math.random())
 			//setUpdate(event.target.value)
@@ -686,7 +835,8 @@ const ParsedAction = (props) => {
 						const clickedFieldId = "rightside_field_"+count
 						var datafield = 
 							//<TextareaAutosize
-							<TextField
+							
+							<CodeMirror
 								disabled={disabled}
 								style={{backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius, border: selectedActionParameters[count].required || selectedActionParameters[count].configuration ? "2px solid #f85a3e" : "", color: "white", width: "100%", fontSize: "1em",}} 
 								InputProps={{
@@ -697,23 +847,23 @@ const ParsedAction = (props) => {
 										maxWidth: "95%",
 										fontSize: "1em",
 									},
-									endAdornment: (
-										hideExtraTypes ? null :
-											<InputAdornment position="end">
-												<Tooltip title="Autocomplete text" placement="top">
-													<AddCircleOutlineIcon style={{cursor: "pointer"}} onClick={(event) => {
-														setMenuPosition({
-															top: event.pageY+10,
-															left: event.pageX+10,
-														})
-														setShowDropdownNumber(count)
-														setShowDropdown(true)
-														setShowAutocomplete(true)
-													}}/>
-												</Tooltip>
-											</InputAdornment>
+									// endAdornment: (
+									// 	hideExtraTypes ? null :
+									// 		<InputAdornment position="end">
+									// 			<Tooltip title="Autocomplete the text" placement="top">
+									// 				<AddCircleOutlineIcon style={{cursor: "pointer"}} onClick={(event) => {
+									// 					setMenuPosition({
+									// 						top: event.pageY+10,
+									// 						left: event.pageX+10,
+									// 					})
+									// 					setShowDropdownNumber(count)
+									// 					setShowDropdown(true)
+									// 					setShowAutocomplete(true)
+									// 				}}/>
+									// 			</Tooltip>
+									// 		</InputAdornment>
 										
-									)
+									// )
 								}}
 								fullWidth
 								multiline={multiline}
@@ -729,11 +879,22 @@ const ParsedAction = (props) => {
 								rows={rows}
 								color="primary"
 								defaultValue={data.value}
+								
+								value={data.value}
+								options={{
+									theme: 'gruvbox-dark',
+									keyMap: 'sublime',
+									mode: 'python',
+								}}
+								height = {200}
+
 								type={placeholder.includes("***") || (data.configuration && (data.name.toLowerCase().includes("api") || data.name.toLowerCase().includes("key") || data.name.toLowerCase().includes("pass"))) ? "password" : "text"}
 								placeholder={placeholder}
+								
 								onChange={(event) => {
-										changeActionParameter(event, count, data)
+									changeActionParameterCodemirror(event, count, data)
 								}}
+								
 								helperText={selectedApp.generated && selectedApp.activated && data.name === "body" ? 
 									<span style={{color:"white", marginBottom: 5, marginleft: 5,}}>
 										{openApiHelperText}
@@ -791,7 +952,7 @@ const ParsedAction = (props) => {
 										endAdornment: (
 											hideExtraTypes ? null :
 												<InputAdornment position="end">
-													<Tooltip title="Autocomplete text" placement="top">
+													<Tooltip title="Autocomplete the text" placement="top">
 														<AddCircleOutlineIcon style={{cursor: "pointer"}} onClick={(event) => {
 															setMenuPosition({
 																top: event.pageY+10,
@@ -1116,14 +1277,6 @@ const ParsedAction = (props) => {
 						//	itemColor = "#ffeb3b"
 						//}
 						{/*<div style={{width: 17, height: 17, borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: 10, marginTop: 2, marginTop: "auto", marginBottom: "auto",}}/>*/}
-
-
-		
-						if (authenticationType.type === "oauth2" && data.configuration === true) {
-							return null
-						}
-						//&& authenticationType.redirect_uri !== undefined && authenticationType.redirect_uri !== null) {
-
 						return (
 						<div key={data.name}>	
 							<div style={{marginTop: 20, marginBottom: 0, display: "flex"}}>
@@ -1397,7 +1550,47 @@ const ParsedAction = (props) => {
 					<Tooltip color="primary" title={"Add authentication option"} placement="top">
 						<span>
 							<Button color="primary" style={{}} fullWidth variant="contained" onClick={() => {
-								//console.log(authenticationType)	
+								console.log(authenticationType)
+								if (authenticationType.type === "oauth2" && authenticationType.redirect_uri !== undefined && authenticationType.redirect_uri !== null) {
+									// FIXME: Sending client secret and senitive info like this may not be ok.
+									const client_id = "dae24316-4bec-4832-b660-4cba6dc2477b"
+									const client_secret = "._Qu3EvYY-OW_D57uy79qwEo.32qD6.l0z"
+
+									const authentication_url = authenticationType.token_uri
+
+									const resources = "UserAuthenticationMethod.ReadWrite.All"
+									if (authenticationType.scope !== undefined && authenticationType.scope !== null) {
+										console.log("EDIT SCOPE!")
+									}
+
+									const redirectUri = `http://${window.location.host}/set_authentication`
+									const state = `workflow_id%3D${workflow.id}%26reference_action_id%3d${selectedAction.app_id}%26app_name%3d${selectedAction.app_name}%26app_id%3d${selectedAction.app_id}%26app_version%3d${selectedAction.app_version}%26authentication_url%3d${authentication_url}%26scope%3d${resources}%26client_id%3d${client_id}%26client_secret%3d${client_secret}`
+
+									const url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${resources}&state=${state}`
+									// &resource=https%3A%2F%2Fgraph.microsoft.com&
+									
+									// Awful, but works for prototyping
+									var newwin = window.open(url, "", "width=200,height=100")
+									console.log(newwin)
+									setTimeout(() => {
+										console.log(newwin)
+										console.log("CLOSED", newwin.closed)
+									}, 1000)
+									setTimeout(() => {
+										console.log(newwin)
+										console.log("CLOSED", newwin.closed)
+										if (newwin.closed) {
+											getAppAuthentication(true)
+											setTimeout(() => {
+												console.log("APPAUTH: ", appAuthentication)
+											}, 1500)
+										}
+									}, 10000)
+
+									return
+									//do {
+									//} while (
+								}
 
 								setAuthenticationModalOpen(true)
 							}}>
