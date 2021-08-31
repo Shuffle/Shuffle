@@ -12,6 +12,8 @@ import urllib3
 import hashlib
 from liquid import Liquid
 import liquid
+import zipfile
+from io import BytesIO
 
 class AppBase:
     __version__ = None
@@ -615,7 +617,23 @@ class AppBase:
         print("\nLOOP: %s\nRESULTS: %s" % (loop_wrapper, results))
         return results
 
+    # Downloads all files from a namespace
+    # Currently only working on local version of Shuffle
+    def get_file_namespace(self, namespace):
+        org_id = self.full_execution["workflow"]["execution_org"]["id"]
 
+        get_path = "/api/v1/files/namespaces/%s?execution_id=%s" % (namespace, self.full_execution["execution_id"])
+        headers = {
+            "Authorization": "Bearer %s" % self.authorization
+        }
+
+        ret1 = requests.get("%s%s" % (self.url, get_path), headers=headers)
+        if ret1.status_code != 200:
+            return None 
+
+        filebytes = BytesIO(ret1.content)
+        myzipfile = zipfile.ZipFile(filebytes)
+        return myzipfile
 
     # Things to consider for files:
     # - How can you download / stream a file? 
@@ -2655,6 +2673,19 @@ class AppBase:
                 self.logger.error(f"App {self.__class__.__name__}.{action['name']} is not callable")
                 action_result["status"] = "FAILURE" 
                 action_result["result"] = "Function %s is not callable." % actionname
+
+        # https://ptb.discord.com/channels/747075026288902237/882017498550112286/882043773138382890
+        except (requests.exceptions.RequestException, TimeoutError) as e:
+            print(f"Failed to execute request: {e}")
+            self.logger.exception(f"Failed to execute {e}-{action['id']}")
+            action_result["status"] = "SUCCESS" 
+            try:
+                action_result["result"] = json.dumps({
+                    "success": False, 
+                    "reason": f"Request error - failing silently. Details: {e}"
+                })
+            except json.decoder.JSONDecodeError as e:
+                action_result["result"] = f"Request error: {e}"
 
         except Exception as e:
             print(f"Failed to execute: {e}")

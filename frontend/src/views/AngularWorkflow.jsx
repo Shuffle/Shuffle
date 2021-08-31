@@ -1612,7 +1612,7 @@ const AngularWorkflow = (props) => {
 	var hiddenNodes = []
 	const onNodeDragStop = (event, selectedAction) => {
 		const nodedata = event.target.data()
-		console.log("IN NODE DRAG STOP: ", nodedata)
+		//console.log("IN NODE DRAG STOP: ", nodedata)
 		if (nodedata.id === selectedAction.id) {
 			return
 		}

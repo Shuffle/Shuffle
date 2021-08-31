@@ -341,7 +341,7 @@ const ParsedAction = (props) => {
 		})
 
 		const changeActionParameter = (event, count, data) => {
-			console.log(event)
+			//console.log(event)
 			if (data.name.startsWith("${") && data.name.endsWith("}")) {
 				// PARAM FIX - Gonna use the ID field, even though it's a hack
 				const paramcheck = selectedAction.parameters.find(param => param.name === "body")
@@ -833,12 +833,12 @@ const ParsedAction = (props) => {
 						}
 
 						const clickedFieldId = "rightside_field_"+count
+						//<TextareaAutosize
+						// <CodeMirror
 						var datafield = 
-							//<TextareaAutosize
-							
-							<CodeMirror
+							<TextField
 								disabled={disabled}
-								style={{backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius, border: selectedActionParameters[count].required || selectedActionParameters[count].configuration ? "2px solid #f85a3e" : "", color: "white", width: "100%", fontSize: "1em",}} 
+								style={{backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius, border: selectedActionParameters[count].required || selectedActionParameters[count].configuration ? "2px solid #f85a3e" : "", color: "white", width: "100%", fontSize: "1em", }} 
 								InputProps={{
 									style:{
 										color: "white",
@@ -847,23 +847,23 @@ const ParsedAction = (props) => {
 										maxWidth: "95%",
 										fontSize: "1em",
 									},
-									// endAdornment: (
-									// 	hideExtraTypes ? null :
-									// 		<InputAdornment position="end">
-									// 			<Tooltip title="Autocomplete the text" placement="top">
-									// 				<AddCircleOutlineIcon style={{cursor: "pointer"}} onClick={(event) => {
-									// 					setMenuPosition({
-									// 						top: event.pageY+10,
-									// 						left: event.pageX+10,
-									// 					})
-									// 					setShowDropdownNumber(count)
-									// 					setShowDropdown(true)
-									// 					setShowAutocomplete(true)
-									// 				}}/>
-									// 			</Tooltip>
-									// 		</InputAdornment>
-										
-									// )
+									 endAdornment: (
+									 	hideExtraTypes ? null :
+									 		<InputAdornment position="end">
+									 			<Tooltip title="Autocomplete the text" placement="top">
+									 				<AddCircleOutlineIcon style={{cursor: "pointer"}} onClick={(event) => {
+									 					setMenuPosition({
+									 						top: event.pageY+10,
+									 						left: event.pageX+10,
+									 					})
+									 					setShowDropdownNumber(count)
+									 					setShowDropdown(true)
+									 					setShowAutocomplete(true)
+									 				}}/>
+									 			</Tooltip>
+									 		</InputAdornment>
+									
+									 )
 								}}
 								fullWidth
 								multiline={multiline}
@@ -879,20 +879,20 @@ const ParsedAction = (props) => {
 								rows={rows}
 								color="primary"
 								defaultValue={data.value}
-								
-								value={data.value}
-								options={{
-									theme: 'gruvbox-dark',
-									keyMap: 'sublime',
-									mode: 'python',
-								}}
-								height = {200}
+								//value={data.value}
+								//options={{
+								//	theme: 'gruvbox-dark',
+								//	keyMap: 'sublime',
+								//	mode: 'python',
+								//}}
+								//height={multiline ? 50 : 150}
 
 								type={placeholder.includes("***") || (data.configuration && (data.name.toLowerCase().includes("api") || data.name.toLowerCase().includes("key") || data.name.toLowerCase().includes("pass"))) ? "password" : "text"}
 								placeholder={placeholder}
 								
 								onChange={(event) => {
-									changeActionParameterCodemirror(event, count, data)
+									//changeActionParameterCodemirror(event, count, data)
+									changeActionParameter(event, count, data)
 								}}
 								
 								helperText={selectedApp.generated && selectedApp.activated && data.name === "body" ? 
