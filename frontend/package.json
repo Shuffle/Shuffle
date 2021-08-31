@@ -64,7 +64,7 @@
     "websocket": "^1.0.30",
     "yaml": "^1.7.2",
     "yamljs": "^0.3.0",
-    "zone.js": "~0.8.26"
+    "zone.js": "~0.11.4"
   },
   "scripts": {
     "start": "set HTTPS=true&&react-scripts start",
