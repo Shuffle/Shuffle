@@ -201,7 +201,7 @@ const AppCreator = (props) => {
 	const actionNonBodyRequest = ["GET", "HEAD", "DELETE", "CONNECT"]
 	const actionBodyRequest = ["POST", "PUT", "PATCH",]
 	//const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth", "JWT", "Oauth2"]
-	const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth"]
+	const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth"]//, "Oauth2"]
 	const apikeySelection = ["Header", "Query",]
 
 	const [name, setName] = useState("");
@@ -220,6 +220,9 @@ const AppCreator = (props) => {
 	const [newWorkflowCategories, setNewWorkflowCategories] = React.useState([]);
 	const [parameterName, setParameterName] = useState("");
 	const [parameterLocation, setParameterLocation] = useState(apikeySelection.length > 0 ? apikeySelection[0] : "");
+	const [refreshUrl, setRefreshUrl] = useState("");
+	const [oauth2Scopes, setOauth2Scopes] = useState(["google.com"]);
+
 	const [urlPath, setUrlPath] = useState("");
 	//const [urlPathQueries, setUrlPathQueries] = useState([{"name": "test", "required": false}]);
 	const [urlPathQueries, setUrlPathQueries] = useState([]);
@@ -904,11 +907,24 @@ const AppCreator = (props) => {
 			//if (Object.entries(securitySchemes) > 1 && 
 			var newauth = []
 			for (const [key, value] of Object.entries(securitySchemes)) {
+				console.log(key, value)
 				if (value.scheme === "bearer") {
 					setAuthenticationOption("Bearer auth")
 					setAuthenticationRequired(true)
-				} else if (key === "oauth2") {
-					alert.info("Can't handle Oauth2 auth yet.")
+				} else if (key === "Oauth2") {
+					//alert.info("Can't handle Oauth2 auth yet.")
+					setAuthenticationOption("Oauth2")
+					setAuthenticationRequired(true)
+
+					if (value.flow.authorizationCode.authorizationUrl !== undefined) {
+  					setParameterName(value.flow.authorizationCode.authorizationUrl)
+					}
+					if (value.flow.authorizationCode.tokenUrl !== undefined) {
+  					setParameterLocation(value.flow.authorizationCode.tokenUrl)
+					}
+					if (value.flow.authorizationCode.refreshUrl !== undefined) {
+  					setRefreshUrl(value.flow.authorizationCode.refreshUrl)
+					}
 				} else if (key === "ApiKeyAuth") {
 					setAuthenticationOption("API key")
 
@@ -1324,13 +1340,25 @@ const AppCreator = (props) => {
 				"scheme": "basic",
 			}
 		} else if (authenticationOption === "Oauth2") {
+			//parameterName, parameterValue, revocationUrl
 			data.components.securitySchemes["Oauth2"] = {
 				"type": "oauth2",
+				"description": "Oauth2.0 authorizationCode authentication",
 				"flow": {
 					"authorizationCode": {
-
+						"authorizationUrl": parameterName,
+						"tokenUrl": parameterLocation,
+						"refreshUrl": refreshUrl,
+						"scopes": [],
 					},
 				},
+			}
+
+			if (oauth2Scopes.scopes > 0) {
+				for (var key in oauth2Scopes) {
+					const scope = oauth2Scopes[key]
+					data.components.securitySchemes["Oauth2"]["flow"]["authorizationCode"]["scopes"].push(scope)
+				}
 			}
 		}
 
@@ -1629,8 +1657,70 @@ const AppCreator = (props) => {
 		<div style={{color: "white", marginTop: 20, }}>
 			<Typography variant="body1">Oauth2 authentication</Typography>
 			<Typography variant="body2" color="textSecondary">
-				Add the URL to redirect to 
+				Base Authorization URL
 			</Typography>
+			<TextField
+				required
+				style={{flex: "1", backgroundColor: inputColor}}
+				fullWidth={true}
+				placeholder="https://.../oauth2/authorize"
+				type="name"
+				id="standard-required"
+				margin="normal"
+				variant="outlined"
+				value={parameterName}
+				onChange={e => setParameterName(e.target.value)}	
+				InputProps={{
+					classes: {
+						notchedOutline: classes.notchedOutline,
+					},
+					style:{
+						color: "white",
+					},
+				}}
+			/>
+			<Typography variant="body2" color="textSecondary">
+				Token URL
+			</Typography>
+			<TextField
+				required
+				style={{flex: "1", backgroundColor: inputColor}}
+				fullWidth={true}
+				placeholder="https://.../oauth2/token"
+				type="name"
+				id="standard-required"
+				margin="normal"
+				variant="outlined"
+				value={parameterLocation}
+				onChange={e => setParameterLocation(e.target.value)}	
+				InputProps={{
+					classes: {
+						notchedOutline: classes.notchedOutline,
+					},
+					style:{
+						color: "white",
+					},
+				}}
+			/>
+			<Typography variant="body2" color="textSecondary">
+				Refresh-token URL
+			</Typography>
+			<TextField
+				style={{flex: "1", backgroundColor: inputColor}}
+				fullWidth={true}
+				placeholder="The URL to retrieve refresh-tokens at"
+				type="name"
+				id="standard-required"
+				margin="normal"
+				variant="outlined"
+				value={refreshUrl}
+				onChange={e => setRefreshUrl(e.target.value)}	
+				InputProps={{
+					style:{
+						color: "white",
+					},
+				}}
+			/>
 		</div>
 		: null
 
