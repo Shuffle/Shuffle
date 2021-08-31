@@ -11,8 +11,8 @@ import { FixName } from "../views/Apps.jsx";
 // Triggers
 //
 // Specifically used for UNSAVED workflows only?
-const Workflow = (props) => {
-	const { globalUrl, theme, workflow, appAuthentication, setSelectedAction, setAuthenticationModalOpen, setSelectedApp, apps, selectedAction,setConfigureWorkflowModalOpen, saveWorkflow, newWebhook, submitSchedule, referenceUrl, isCloud, setAuthenticationType, } = props
+const ConfigureWorkflow = (props) => {
+	const { globalUrl, theme, workflow, appAuthentication, setSelectedAction, setAuthenticationModalOpen, setSelectedApp, apps, selectedAction,setConfigureWorkflowModalOpen, saveWorkflow, newWebhook, submitSchedule, referenceUrl, isCloud, setAuthenticationType, alert, } = props
 	const [requiredActions, setRequiredActions] = React.useState([])
 	const [requiredVariables, setRequiredVariables] = React.useState([])
 	const [requiredTriggers, setRequiredTriggers] = React.useState([])
@@ -90,7 +90,7 @@ const Workflow = (props) => {
 
 			const app = apps.find(app => app.name === action.app_name && (app.app_version === action.app_version || (app.loop_versions !== null && app.loop_versions.includes(action.app_version))))
 			if (app === undefined || app === null) {
-				console.log("App not found!")
+				console.log("App not found: ", action.app_name)
 
 				newaction.must_activate = true
 			} else {
@@ -395,8 +395,8 @@ const Workflow = (props) => {
 						: 
 					null}
 					{action.must_activate ? 
-						<Button disabled={true} color="primary" variant="contained" onClick={() => {
-							console.log("SHOULD ACTIVATE: ", action)
+						<Button color="primary" variant="contained" onClick={() => {
+							activateApp(action.app_id, action.app_name, action.app_version)
 							setItemChanged(true) 
 						}}>
 						 Activate	
@@ -404,6 +404,35 @@ const Workflow = (props) => {
 					: null}
 				</ListItem>
 		)
+	}
+
+	const activateApp = (app_id, app_name, app_version) => {
+		fetch(`${globalUrl}/api/v1/apps/app_id/activate?app_name=${app_name}&app_version=${app_version}`, {
+    	  method: 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json',
+				},
+	  		credentials: "include",
+    })
+		.then((response) => {
+			if (response.status !== 200) {
+				//window.location.pathname = "/search"
+				//alert.error("Failed to find this app. Is it public?")
+			}
+
+			return response.json()
+		})
+		.then((responseJson) => {
+			if (responseJson.success === false) {
+				alert.error("Failed to activate the app")
+			} else {
+				alert.success("App activated for your organization!")
+			}
+		})
+		.catch(error => {
+			alert.error(error.toString())
+		});
 	}
 
 	return (
@@ -478,4 +507,4 @@ const Workflow = (props) => {
 	)
 }
 
-export default Workflow 
+export default ConfigureWorkflow 

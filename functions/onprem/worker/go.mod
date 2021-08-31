@@ -12,7 +12,7 @@ require (
 	github.com/docker/docker v20.10.5+incompatible
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
-	github.com/frikky/shuffle-shared v0.0.86
+	github.com/frikky/shuffle-shared v0.0.88
 	github.com/fsouza/go-dockerclient v1.7.2
 	github.com/go-git/go-billy/v5 v5.3.1 // indirect
 	github.com/go-git/go-git/v5 v5.4.2 // indirect

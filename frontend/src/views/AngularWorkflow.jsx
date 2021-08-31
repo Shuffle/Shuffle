@@ -74,6 +74,10 @@ export function sortByKey(array, key) {
 		}).reverse()
 	}
 
+	if (array === undefined || array === null) {
+		return []
+	}
+
 	return array.sort(function(a, b) {
 		var x = a[key]; var y = b[key]
 		return ((x < y) ? -1 : ((x > y) ? 1 : 0))
@@ -8157,7 +8161,7 @@ const AngularWorkflow = (props) => {
 										</div>
 										{data.action.app_name === "shuffle-subflow" && validate.result.success !== undefined && validate.result.success === true ?
 											<span style={{flex: 10, float: "right", textAlign: "right",}}>
-												{validate.valid && data.action.parameters !== undefined && data.action.parameters !== null ? 
+												{validate.valid && data.action.parameters !== undefined && data.action.parameters !== null && data.action.parameters.length > 0 ? 
 													data.action.parameters[0].value === props.match.params.key ?
 														<span style={{cursor: "pointer", color: "#f85a3e"}} onClick={(event) => {
 															getWorkflowExecution(props.match.params.key, validate.result.execution_id) 
@@ -8170,7 +8174,7 @@ const AngularWorkflow = (props) => {
 													<OpenInNewIcon />
 													</a>
 												: 
-													"TBD: Load subexecution result for"
+													""
 												}
 											</span>
 											: null
@@ -8972,7 +8976,7 @@ const AngularWorkflow = (props) => {
 			}}>
 				<CloseIcon  />
 			</IconButton>
-			<ConfigureWorkflow theme={theme} setAuthenticationType={setAuthenticationType} globalUrl={globalUrl} workflow={workflow} setSelectedAction={setSelectedAction} setSelectedApp={setSelectedApp} setAuthenticationModalOpen={setAuthenticationModalOpen} appAuthentication={appAuthentication} selectedAction={selectedAction} apps={apps} setConfigureWorkflowModalOpen={setConfigureWorkflowModalOpen} saveWorkflow={saveWorkflow} newWebhook={newWebhook} submitSchedule={submitSchedule} referenceUrl={referenceUrl} isCloud={isCloud} />
+			<ConfigureWorkflow alert={alert} theme={theme} setAuthenticationType={setAuthenticationType} globalUrl={globalUrl} workflow={workflow} setSelectedAction={setSelectedAction} setSelectedApp={setSelectedApp} setAuthenticationModalOpen={setAuthenticationModalOpen} appAuthentication={appAuthentication} selectedAction={selectedAction} apps={apps} setConfigureWorkflowModalOpen={setConfigureWorkflowModalOpen} saveWorkflow={saveWorkflow} newWebhook={newWebhook} submitSchedule={submitSchedule} referenceUrl={referenceUrl} isCloud={isCloud} />
 		</Dialog>
 		: null
 	

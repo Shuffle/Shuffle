@@ -331,7 +331,8 @@ const ParsedAction = (props) => {
 						}
 
 						// 1. Take 
-						const actionvalue = {"type": "action", "id": item.id, "name": item.label, "autocomplete": `${item.label.split(" ").join("_")}`, "example": exampledata}
+						const itemlabelComplete = item.label === null || item.label === undefined ? "" : item.label.split(" ").join("_")
+						const actionvalue = {"type": "action", "id": item.id, "name": item.label, "autocomplete": itemlabelComplete, "example": exampledata}
 						actionlist.push(actionvalue)
 					}
 				}

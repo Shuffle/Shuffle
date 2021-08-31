@@ -2076,9 +2076,9 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 	if user.Id != workflow.Owner && user.Role != "scheduler" && user.Role != fmt.Sprintf("workflow_%s", fileId) {
 		if workflow.OrgId == user.ActiveOrg.Id && user.Role == "admin" {
-			log.Printf("[INFO] Letting user %s execute %s because they're admin of the same org", user.Username, workflow.ID)
+			log.Printf("[AUDIT] Letting user %s execute %s because they're admin of the same org", user.Username, workflow.ID)
 		} else {
-			log.Printf("[WARNING] Wrong user (%s) for workflow %s (execute)", user.Username, workflow.ID)
+			log.Printf("[AUDIT] Wrong user (%s) for workflow %s (execute)", user.Username, workflow.ID)
 			resp.WriteHeader(401)
 			resp.Write([]byte(`{"success": false}`))
 			return

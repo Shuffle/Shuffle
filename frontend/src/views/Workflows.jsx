@@ -873,6 +873,7 @@ const Workflows = (props) => {
 	}
 
 	const sanitizeWorkflow = (data) => {
+		data = JSON.parse(JSON.stringify(data))
 		data["owner"] = ""
 		console.log("Sanitize start: ", data)
 		data = deduplicateIds(data)
@@ -890,6 +891,7 @@ const Workflows = (props) => {
 	}
 
 	const exportWorkflow = (data) => {
+		data = JSON.parse(JSON.stringify(data))
 		let exportFileDefaultName = data.name+'.json';
 		data = sanitizeWorkflow(data)	
 		//return
