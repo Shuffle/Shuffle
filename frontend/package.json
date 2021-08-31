@@ -33,7 +33,7 @@
     "material-ui-nested-menu-item": "^1.0.2",
     "md5-file": "^4.0.0",
     "mdbreact": "^4.21.1",
-    "moment": "~2.20.1",
+    "moment": "~2.29.1",
     "react": "^16.14.0",
     "react-alert": "^5.5.0",
     "react-alert-template-basic": "^1.0.0",
