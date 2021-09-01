@@ -16,7 +16,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -42,7 +41,6 @@ var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
 var timezone = os.Getenv("TZ")
 var baseimagename = "frikky/shuffle"
 var registryName = "registry.hub.docker.com"
-var fallbackName = "shuffle-orborus"
 var sleepTime = 2
 var requestCache *cache.Cache
 var topClient *http.Client
@@ -60,38 +58,6 @@ var extra int
 var startAction string
 var results []shuffle.ActionResult
 var allLogs map[string]string
-
-var containerId string
-
-// form container id of current running container
-func getThisContainerId() string {
-	if len(containerId) > 0 {
-		return containerId
-	}
-
-	id := ""
-	cmd := fmt.Sprintf("cat /proc/self/cgroup | grep memory | tail -1 | cut -d/ -f3 | grep -o -E '[0-9A-z]{64}'")
-	out, err := exec.Command("bash", "-c", cmd).Output()
-	if err == nil {
-		id = strings.TrimSpace(string(out))
-
-		//log.Printf("Checking if %s is in %s", ".scope", string(out))
-		if strings.Contains(string(out), ".scope") {
-			id = fallbackName
-		}
-	}
-
-	return id
-}
-
-func init() {
-	containerId = getThisContainerId()
-	if len(containerId) == 0 {
-		log.Printf("[WARNING] No container ID found. Not running containerized? This should only show during testing")
-	} else {
-		log.Printf("[INFO] Found container ID for this worker: %s", containerId)
-	}
-}
 
 // removes every container except itself (worker)
 func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason string, handleResultSend bool) {
@@ -221,14 +187,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 			Config: map[string]string{},
 		},
 		Resources: container.Resources{},
-	}
-
-	// form container id and use it as network source if it's not empty
-	containerId = getThisContainerId()
-	if containerId != "" {
-		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
-	} else {
-		log.Printf("[WARNING] Empty self container id, continue without NetworkMode")
+		NetworkMode: container.NetworkMode(fmt.Sprintf("container:worker-%s", workflowExecution.ExecutionId)),
 	}
 
 	// Removing because log extraction should happen first

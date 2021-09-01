@@ -56,6 +56,7 @@ var dockerApiVersion = os.Getenv("DOCKER_API_VERSION")
 var runningMode = strings.ToLower(os.Getenv("RUNNING_MODE"))
 var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
 var timezone = os.Getenv("TZ")
+var containerName = os.Getenv("CONTAINER_NAME")
 var executionIds = []string{}
 
 var dockercli *dockerclient.Client
@@ -101,18 +102,25 @@ func getThisContainerId() {
 		if err == nil {
 			containerId = strings.TrimSpace(string(out))
 
-			// cgroup error. Hardcoding this.
+			// cgroup error. Use fallback strategy below.
 			// https://github.com/moby/moby/issues/7015
 			//log.Printf("Checking if %s is in %s", ".scope", string(out))
 			if strings.Contains(string(out), ".scope") {
-				containerId = "shuffle-orborus"
+				containerId = ""
 				//docker-76c537e9a4b7c7233011f5d70e6b7f2d600b6413ac58a96519b8dca7a3f7117a.scope
 			}
 		} else {
-			if fCol == "0" {
-				containerId = "shuffle-orborus"
-				log.Printf("[WARNING] Failed getting container ID: %s", err)
-			}
+			log.Printf("[WARNING] Failed getting container ID: %s", err)
+		}
+	}
+
+	if containerId == "" {
+		if containerName != "" {
+			containerId = containerName
+			log.Printf("[INFO] Falling back to CONTAINER_NAME as container ID")
+		} else {
+			containerId = "shuffle-orborus"
+			log.Printf(`[WARNING] CONTAINER_NAME is not set. Falling back to default name "%s" as container ID`, containerId)
 		}
 	}
 
@@ -137,14 +145,7 @@ func deployWorker(image string, identifier string, env []string) {
 		Binds: []string{
 			"/var/run/docker.sock:/var/run/docker.sock:rw",
 		},
-	}
-
-	// form container id and use it as network source if it's not empty
-	if containerId != "" {
-		//log.Printf("[INFO] Found container ID %s", containerId)
-		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
-	} else {
-		//log.Printf("[INFO] Empty self container id, continue without NetworkMode")
+		NetworkMode: container.NetworkMode(fmt.Sprintf("container:%s", containerId)),
 	}
 
 	if cleanupEnv == "true" {
