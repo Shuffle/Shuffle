@@ -56,7 +56,7 @@ var dockerApiVersion = os.Getenv("DOCKER_API_VERSION")
 var runningMode = strings.ToLower(os.Getenv("RUNNING_MODE"))
 var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
 var timezone = os.Getenv("TZ")
-var containerName = os.Getenv("CONTAINER_NAME")
+var containerName = os.Getenv("ORBORUS_CONTAINER_NAME")
 var executionIds = []string{}
 
 var dockercli *dockerclient.Client
