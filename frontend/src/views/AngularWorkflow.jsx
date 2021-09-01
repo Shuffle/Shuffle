@@ -1874,6 +1874,22 @@ const AngularWorkflow = (props) => {
 				//		cy.getElementById(currentNode.data.id).remove()
 				//	}
 				//}
+			} else if (data.buttonType === "set_startnode") {
+				const parentNode = cy.getElementById(data.attachedTo)
+				if (parentNode !== null && parentNode !== undefined) {
+					var oldstartnode = cy.getElementById(workflow.start)
+					if (oldstartnode !== null && oldstartnode !== undefined && oldstartnode.length > 0) {
+						try {
+							oldstartnode[0].data("isStartNode", false)
+						} catch (e) {
+							console.log("Startnode error: ", e)
+						}
+					}
+
+					workflow.start = parentNode.data('id')
+					parentNode.data('isStartNode', true) 
+				}
+
 			} else if (data.buttonType === "copy") {
 				console.log("COPY!")
 				// 1. Find parent
@@ -1993,6 +2009,7 @@ const AngularWorkflow = (props) => {
 		//const branch = workflow.branches.filter(branch => branch.source_id === data.id || branch.destination_id === data.id)
 		//console.log("APPAUTH: ", newAppAuth)
 		//console.log("BRANCHES: ", branch)
+		console.log("CLICK: ", data)
 
 		if (data.type === "ACTION") {
 			//setSelectedApp({})
@@ -2363,7 +2380,7 @@ const AngularWorkflow = (props) => {
 					continue
 				}
 
-				parentlabel = item.label.toLowerCase().trim().replaceAll(" ", "_")
+				parentlabel = item.label === undefined ? "" : item.label.toLowerCase().trim().replaceAll(" ", "_")
 				exampledata = GetExampleResult(item)
 				for (var paramkey in dstdata.parameters) {
 					const param = dstdata.parameters[paramkey]
@@ -3190,6 +3207,46 @@ const AngularWorkflow = (props) => {
 
 	const buttonColor = "rgba(255,255,255,0.9)"
 	const buttonBackgroundColor = "#1f2023"
+	const addStartnodeButton = (event) => {
+		var parentNode = cy.$('#' + event.target.data("id"));
+		if (parentNode.data('isButton') || parentNode.data('buttonId'))
+			return
+
+		//parentNode.lock()
+		const px = parentNode.position('x') - 65
+		const py = parentNode.position('y') - 45
+		const circleId = newNodeId = uuidv4()
+
+		parentNode.data('circleId', circleId)
+
+		const iconInfo = {
+			"icon": "M9.4 2H15V12H8L7.6 10H2V17H0V0H9L9.4 2ZM9 10H11V8H13V6H11V4H9V6L8 4V2H6V4H4V2H2V4H4V6H2V8H4V6H6V8H8V6L9 8V10ZM6 6V4H8V6H6ZM9 6H11V8H9V6Z",
+			"iconColor": buttonColor,
+			"iconBackgroundColor": buttonBackgroundColor,
+		}
+
+		const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
+		const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
+
+		cy.add({
+				group: 'nodes',
+				data: { 
+					weight: 30, 
+					id: circleId, 
+					name: "TEEEXT", 
+					isButton: true, 
+					buttonType: "set_startnode",
+					attachedTo: event.target.data("id"),
+					icon: svgpin_Url,
+					iconBackground: iconInfo.iconBackgroundColor,
+					is_valid: true,
+				},
+				position: { x: px, y: py },
+				locked: true
+		})
+		//.unselectify()
+	}
+
 	const addCopyButton = (event) => {
 		var parentNode = cy.$('#' + event.target.data("id"));
 		if (parentNode.data('isButton') || parentNode.data('buttonId'))
@@ -3197,7 +3254,7 @@ const AngularWorkflow = (props) => {
 
 		//parentNode.lock()
 		const px = parentNode.position('x') - 65
-		const py = parentNode.position('y') - 25
+		const py = parentNode.position('y') - 5
 		const circleId = newNodeId = uuidv4()
 
 		parentNode.data('circleId', circleId)
@@ -3237,7 +3294,7 @@ const AngularWorkflow = (props) => {
 
 		//parentNode.lock()
 		const px = parentNode.position('x') - 65
-		const py = parentNode.position('y') + 25
+		const py = parentNode.position('y') + 35
 		const circleId = newNodeId = uuidv4()
 
 		parentNode.data('circleId', circleId)
@@ -3298,6 +3355,7 @@ const AngularWorkflow = (props) => {
 			if (!found) {
 				addDeleteButton(event)
 				addCopyButton(event) 
+				addStartnodeButton(event) 
 			}
 		}
 
