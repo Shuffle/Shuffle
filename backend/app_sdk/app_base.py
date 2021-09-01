@@ -1283,6 +1283,8 @@ class AppBase:
                                 firstitem = len(basejson)-1
                             elif firstitem.lower() == "min" or firstitem.lower() == "first": 
                                 firstitem = 0
+                            else:
+                                firstitem = int(firstitem)
 
                             #print("Post lower checks")
                             tmpitem = basejson[int(firstitem)]
@@ -1296,11 +1298,15 @@ class AppBase:
                                 firstitem = len(basejson)-1
                             elif firstitem.lower() == "min" or firstitem.lower() == "first": 
                                 firstitem = 0
+                            else:
+                                firstitem = int(firstitem)
 
                             if seconditem.lower() == "max" or seconditem.lower() == "last": 
                                 seconditem = len(basejson)-1
                             elif seconditem.lower() == "min" or seconditem.lower() == "first": 
                                 seconditem = 0
+                            else:
+                                seconditem = int(seconditem)
 
                             print("Post lower checks")
                             newvalue = []
@@ -1313,11 +1319,11 @@ class AppBase:
                                 #print("Base: %s" % basejson[i])
 
                                 try:
-                                    ret, is_loop  = recurse_json(basejson[i], parsersplit[outercnt+1:])
+                                    ret, tmp_loop = recurse_json(basejson[i], parsersplit[outercnt+1:])
                                 except IndexError:
                                     print("INDEXERROR: ", parsersplit[outercnt])
                                     #ret = innervalue
-                                    ret, is_loop  = recurse_json(innervalue, parsersplit[outercnt:])
+                                    ret, tmp_loop = recurse_json(innervalue, parsersplit[outercnt:])
                                     
                                 #print("IN LIST: %s" % ret)
                                 #exit()
@@ -1535,24 +1541,25 @@ class AppBase:
                 print("Error in decoder: %s" % e)
                 return returndata, is_loop
 
-        def parse_liquid(template):
+        def parse_liquid(template, self):
 
             #print("Inside liquid with glob: %s" % globals())
             try:
-                if len(template) > 250000:
+                if len(template) > 5000000:
                     print("Skipping liquid - size is %d" % len(template))
                     return template
 
-                if not "{{" in template or not "}}" in template: 
-                    print("Skipping liquid - missing {{ }} ")
-                    return template
+                #if not "{{" in template or not "}}" in template: 
+                #    if not "{%" in template or not "%}" in template: 
+                #        print("Skipping liquid - missing {{ }} and {% %}")
+                #        return template
 
                 #if not "{{" in template or not "}}" in template: 
                 #    return template
 
                 #print(globals())
                 print("Running liquid with data of length %d" % len(template))
-                run = Liquid(template, {'mode': 'python'})
+                run = Liquid(template, {'mode': 'wild'})
 
                 # Can't handle self yet (?)
                 ret = run.render(**globals())
@@ -1578,7 +1585,7 @@ class AppBase:
             return template
 
         # Parses parameters sent to it and returns whether it did it successfully with the values found
-        def parse_params(action, fullexecution, parameter):
+        def parse_params(action, fullexecution, parameter, self):
             # Skip if it starts with $?
             jsonparsevalue = "$."
             is_loop = False
@@ -1713,7 +1720,7 @@ class AppBase:
             # Implemented 02.08.2021
             #print("Pre liquid: %s" % parameter["value"])
             try:
-                parameter["value"] = parse_liquid(parameter["value"])
+                parameter["value"] = parse_liquid(parameter["value"], self)
             except:
                 pass
 
@@ -1811,7 +1818,7 @@ class AppBase:
                     
             return False
 
-        def check_branch_conditions(action, fullexecution):
+        def check_branch_conditions(action, fullexecution, self):
             # relevantbranches = workflow.branches where destination = action
             try:
                 if fullexecution["workflow"]["branches"] == None or len(fullexecution["workflow"]["branches"]) == 0:
@@ -1839,7 +1846,7 @@ class AppBase:
 
                     # Parse all values first here
                     sourcevalue = condition["source"]["value"]
-                    check, sourcevalue, is_loop = parse_params(action, fullexecution, condition["source"])
+                    check, sourcevalue, is_loop = parse_params(action, fullexecution, condition["source"], self)
                     if check:
                         return False, {"success": False, "reason": "Failed condition: %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)}
 
@@ -1848,7 +1855,7 @@ class AppBase:
                     sourcevalue = parse_wrapper_start(sourcevalue)
                     destinationvalue = condition["destination"]["value"]
 
-                    check, destinationvalue, is_loop = parse_params(action, fullexecution, condition["destination"])
+                    check, destinationvalue, is_loop = parse_params(action, fullexecution, condition["destination"], self)
                     if check:
                         return False, {"success": False, "reason": "Failed condition: %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)}
 
@@ -1902,7 +1909,7 @@ class AppBase:
 
         # THE START IS ACTUALLY RIGHT HERE :O
         # Checks whether conditions are met, otherwise set 
-        branchcheck, tmpresult = check_branch_conditions(action, fullexecution)
+        branchcheck, tmpresult = check_branch_conditions(action, fullexecution, self)
         if isinstance(tmpresult, object) or isinstance(tmpresult, list):
             print("Fixing branch return as object -> string")
             try:
@@ -2071,7 +2078,7 @@ class AppBase:
                         multi_execution_lists = []
                         remove_params = []
                         for parameter in action["parameters"]:
-                            check, value, is_loop = parse_params(action, fullexecution, parameter)
+                            check, value, is_loop = parse_params(action, fullexecution, parameter, self)
                             if check:
                                 raise "Value check error: %s" % Exception(check)
 
@@ -2430,7 +2437,7 @@ class AppBase:
                                 self.send_result(action_result, headers, stream_path)
                                 return
 
-                            print("[INFO] Running normal execution\n") 
+                            print("[INFO] Running normal execution (not loop)\n") 
 
                             #newres = await func(**params)
                             #print("PARAMS: %s" % params)

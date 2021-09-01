@@ -3502,7 +3502,7 @@ func handleAppHotload(ctx context.Context, location string, forceUpdate bool) er
 	}
 
 	//log.Printf("Reading app folder: %#v", dir)
-	_, _, err = shuffle.IterateAppGithubFolders(ctx, fs, dir, "", "", forceUpdate)
+	_, _, err = IterateAppGithubFolders(ctx, fs, dir, "", "", forceUpdate)
 	if err != nil {
 		log.Printf("[WARNING] Githubfolders error: %s", err)
 		return err
@@ -4174,7 +4174,7 @@ func runInitEs(ctx context.Context) {
 		//iterateAppGithubFolders(fs, dir, "", "testing")
 
 		// FIXME: Get all the apps?
-		_, _, err = shuffle.IterateAppGithubFolders(ctx, fs, dir, "", "", forceUpdate)
+		_, _, err = IterateAppGithubFolders(ctx, fs, dir, "", "", forceUpdate)
 		if err != nil {
 			log.Printf("[WARNING] Error from app load in init: %s", err)
 		}
@@ -4829,7 +4829,7 @@ func runInit(ctx context.Context) {
 		//iterateAppGithubFolders(fs, dir, "", "testing")
 
 		// FIXME: Get all the apps?
-		_, _, err = shuffle.IterateAppGithubFolders(ctx, fs, dir, "", "", forceUpdate)
+		_, _, err = IterateAppGithubFolders(ctx, fs, dir, "", "", forceUpdate)
 		if err != nil {
 			log.Printf("[WARNING] Error from app load in init: %s", err)
 		}
@@ -5791,8 +5791,8 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/apps/{appId}", shuffle.DeleteWorkflowApp).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}/config", shuffle.GetWorkflowAppConfig).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/run_hotload", handleAppHotloadRequest).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/apps/get_existing", shuffle.LoadSpecificApps).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/apps/download_remote", shuffle.LoadSpecificApps).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/get_existing", LoadSpecificApps).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/download_remote", LoadSpecificApps).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/validate", validateAppInput).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps", getWorkflowApps).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps", setNewWorkflowApp).Methods("PUT", "OPTIONS")

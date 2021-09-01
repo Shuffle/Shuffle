@@ -19,8 +19,8 @@ import (
 	"strings"
 	"time"
 
-	//"github.com/docker/docker/api/types"
-	//"github.com/docker/docker/client"
+	"github.com/docker/docker/api/types"
+	dockerclient "github.com/docker/docker/client"
 	//gyaml "github.com/ghodss/yaml"
 
 	"github.com/h2non/filetype"
@@ -39,6 +39,7 @@ import (
 	//"google.golang.org/appengine/memcache"
 	//"cloud.google.com/go/firestore"
 	// "google.golang.org/api/option"
+	gyaml "github.com/ghodss/yaml"
 )
 
 var localBase = "http://localhost:5001"
@@ -3551,4 +3552,486 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 
 	resp.WriteHeader(200)
 	resp.Write(returnBytes)
+}
+
+// Onlyname is used to
+func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string, forceUpdate bool) ([]shuffle.BuildLaterStruct, []shuffle.BuildLaterStruct, error) {
+	var err error
+
+	allapps := []shuffle.WorkflowApp{}
+
+	// These are slow apps to build with some funky mechanisms
+	reservedNames := []string{
+		"OWA",
+		"NLP",
+		"YARA",
+	}
+
+	// It's here to prevent getting them in every iteration
+	buildLaterFirst := []shuffle.BuildLaterStruct{}
+	buildLaterList := []shuffle.BuildLaterStruct{}
+	for _, file := range dir {
+		if len(onlyname) > 0 && file.Name() != onlyname {
+			continue
+		}
+
+		// Folder?
+		switch mode := file.Mode(); {
+		case mode.IsDir():
+			tmpExtra := fmt.Sprintf("%s%s/", extra, file.Name())
+			dir, err := fs.ReadDir(tmpExtra)
+			if err != nil {
+				log.Printf("Failed to read dir: %s", err)
+				continue
+			}
+
+			// Go routine? Hmm, this can be super quick I guess
+			buildFirst, buildLast, err := IterateAppGithubFolders(ctx, fs, dir, tmpExtra, "", forceUpdate)
+
+			for _, item := range buildFirst {
+				buildLaterFirst = append(buildLaterFirst, item)
+			}
+
+			for _, item := range buildLast {
+				buildLaterList = append(buildLaterList, item)
+			}
+
+			if err != nil {
+				log.Printf("[WARNING] Error reading folder: %s", err)
+				//buildFirst, buildLast, err := IterateAppGithubFolders(fs, dir, tmpExtra, "", forceUpdate)
+
+				if !forceUpdate {
+					return buildLaterFirst, buildLaterList, err
+				}
+			}
+
+		case mode.IsRegular():
+			// Check the file
+			filename := file.Name()
+			if filename == "Dockerfile" {
+				// Set up to make md5 and check if the app is new (api.yaml+src/app.py+Dockerfile)
+				// Check if Dockerfile, app.py or api.yaml has changed. Hash?
+				//log.Printf("Handle Dockerfile in location %s", extra)
+				// Try api.yaml and api.yml
+				fullPath := fmt.Sprintf("%s%s", extra, "api.yaml")
+				fileReader, err := fs.Open(fullPath)
+				if err != nil {
+					fullPath = fmt.Sprintf("%s%s", extra, "api.yml")
+					fileReader, err = fs.Open(fullPath)
+					if err != nil {
+						log.Printf("Failed finding api.yaml/yml: %s", err)
+						continue
+					}
+				}
+
+				//log.Printf("HANDLING DOCKER FILEREADER - SEARCH&REPLACE?")
+
+				appfileData, err := ioutil.ReadAll(fileReader)
+				if err != nil {
+					log.Printf("Failed reading %s: %s", fullPath, err)
+					continue
+				}
+
+				if len(appfileData) == 0 {
+					log.Printf("Failed reading %s - length is 0.", fullPath)
+					continue
+				}
+
+				// func md5sum(data []byte) string {
+				// Make hash
+				appPython := fmt.Sprintf("%s/src/app.py", extra)
+				appPythonReader, err := fs.Open(appPython)
+				if err != nil {
+					log.Printf("Failed to read python app %s", appPython)
+					continue
+				}
+
+				appPythonData, err := ioutil.ReadAll(appPythonReader)
+				if err != nil {
+					log.Printf("Failed reading appdata %s: %s", appPython, err)
+					continue
+				}
+
+				dockerFp := fmt.Sprintf("%s/Dockerfile", extra)
+				dockerfile, err := fs.Open(dockerFp)
+				if err != nil {
+					log.Printf("Failed to read dockerfil %s", appPython)
+					continue
+				}
+
+				dockerfileData, err := ioutil.ReadAll(dockerfile)
+				if err != nil {
+					log.Printf("Failed to read dockerfile")
+					continue
+				}
+
+				combined := []byte{}
+				combined = append(combined, appfileData...)
+				combined = append(combined, appPythonData...)
+				combined = append(combined, dockerfileData...)
+				md5 := md5sum(combined)
+
+				var workflowapp shuffle.WorkflowApp
+				err = gyaml.Unmarshal(appfileData, &workflowapp)
+				if err != nil {
+					log.Printf("[WARNING] Failed building workflowapp %s: %s", extra, err)
+					return buildLaterFirst, buildLaterList, errors.New(fmt.Sprintf("Failed building %s: %s", extra, err))
+					//continue
+				}
+
+				newName := workflowapp.Name
+				newName = strings.ReplaceAll(newName, " ", "-")
+
+				tags := []string{
+					fmt.Sprintf("%s:%s_%s", baseDockerName, strings.ToLower(newName), workflowapp.AppVersion),
+				}
+
+				if len(allapps) == 0 {
+					allapps, err = shuffle.GetAllWorkflowApps(ctx, 0)
+					if err != nil {
+						log.Printf("[WARNING] Failed getting apps to verify: %s", err)
+						continue
+					}
+				}
+
+				// Make an option to override existing apps?
+				//Hash string `json:"hash" datastore:"hash" yaml:"hash"` // api.yaml+dockerfile+src/app.py for apps
+				removeApps := []string{}
+				skip := false
+				for _, app := range allapps {
+					if app.Name == workflowapp.Name && app.AppVersion == workflowapp.AppVersion {
+						// FIXME: Check if there's a new APP_SDK as well.
+						// Skip this check if app_sdk is new.
+						if app.Hash == md5 && app.Hash != "" && !forceUpdate {
+							skip = true
+							break
+						}
+
+						//log.Printf("Overriding app %s:%s as it exists but has different hash.", app.Name, app.AppVersion)
+						removeApps = append(removeApps, app.ID)
+					}
+				}
+
+				if skip && !forceUpdate {
+					continue
+				}
+
+				// Fixes (appends) authentication parameters if they're required
+				if workflowapp.Authentication.Required {
+					//log.Printf("[INFO] Checking authentication fields and appending for %s!", workflowapp.Name)
+					// FIXME:
+					// Might require reflection into the python code to append the fields as well
+					for index, action := range workflowapp.Actions {
+						if action.AuthNotRequired {
+							log.Printf("Skipping auth setup: %s", action.Name)
+							continue
+						}
+
+						// 1. Check if authentication params exists at all
+						// 2. Check if they're present in the action
+						// 3. Add them IF they DONT exist
+						// 4. Fix python code with reflection (FIXME)
+						appendParams := []shuffle.WorkflowAppActionParameter{}
+						for _, fieldname := range workflowapp.Authentication.Parameters {
+							found := false
+							for index, param := range action.Parameters {
+								if param.Name == fieldname.Name {
+									found = true
+
+									action.Parameters[index].Configuration = true
+									//log.Printf("Set config to true for field %s!", param.Name)
+									break
+								}
+							}
+
+							if !found {
+								appendParams = append(appendParams, shuffle.WorkflowAppActionParameter{
+									Name:          fieldname.Name,
+									Description:   fieldname.Description,
+									Example:       fieldname.Example,
+									Required:      fieldname.Required,
+									Configuration: true,
+									Schema:        fieldname.Schema,
+								})
+							}
+						}
+
+						if len(appendParams) > 0 {
+							//log.Printf("[AUTH] Appending %d params to the START of %s", len(appendParams), action.Name)
+							workflowapp.Actions[index].Parameters = append(appendParams, workflowapp.Actions[index].Parameters...)
+						}
+
+					}
+				}
+
+				err = checkWorkflowApp(workflowapp)
+				if err != nil {
+					log.Printf("[DEBUG] %s for app %s:%s", err, workflowapp.Name, workflowapp.AppVersion)
+					continue
+				}
+
+				if len(removeApps) > 0 {
+					for _, item := range removeApps {
+						log.Printf("[WARNING] Removing duplicate app: %s", item)
+						err = shuffle.DeleteKey(ctx, "workflowapp", item)
+						if err != nil {
+							log.Printf("[ERROR] Failed deleting duplicate %s: %s", item, err)
+						}
+					}
+				}
+
+				workflowapp.ID = uuid.NewV4().String()
+				workflowapp.IsValid = true
+				workflowapp.Verified = true
+				workflowapp.Sharing = true
+				workflowapp.Downloaded = true
+				workflowapp.Hash = md5
+				workflowapp.Public = true
+
+				err = shuffle.SetWorkflowAppDatastore(ctx, workflowapp, workflowapp.ID)
+				if err != nil {
+					log.Printf("[WARNING] Failed setting workflowapp in intro: %s", err)
+					continue
+				}
+
+				/*
+					err = increaseStatisticsField(ctx, "total_apps_created", workflowapp.ID, 1, "")
+					if err != nil {
+						log.Printf("Failed to increase total apps created stats: %s", err)
+					}
+
+					err = increaseStatisticsField(ctx, "total_apps_loaded", workflowapp.ID, 1, "")
+					if err != nil {
+						log.Printf("Failed to increase total apps loaded stats: %s", err)
+					}
+				*/
+
+				//log.Printf("Added %s:%s to the database", workflowapp.Name, workflowapp.AppVersion)
+
+				// ID  can be used to e.g. set a build status.
+				buildLater := shuffle.BuildLaterStruct{
+					Tags:  tags,
+					Extra: extra,
+					Id:    workflowapp.ID,
+				}
+
+				reservedFound := false
+				for _, appname := range reservedNames {
+					if strings.ToUpper(workflowapp.Name) == strings.ToUpper(appname) {
+						buildLaterList = append(buildLaterList, buildLater)
+
+						reservedFound = true
+						break
+					}
+				}
+
+				/// Only upload if successful and no errors
+				if !reservedFound {
+					buildLaterFirst = append(buildLaterFirst, buildLater)
+				} else {
+					log.Printf("[WARNING] Skipping build of %s to later", workflowapp.Name)
+				}
+			}
+		}
+	}
+
+	if len(buildLaterFirst) == 0 && len(buildLaterList) == 0 {
+		return buildLaterFirst, buildLaterList, err
+	}
+
+	// This is getting silly
+	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
+	shuffle.DeleteCache(ctx, cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
+	shuffle.DeleteCache(ctx, cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-1000")
+	shuffle.DeleteCache(ctx, cacheKey)
+
+	if len(extra) == 0 {
+		log.Printf("[INFO] Starting build of %d containers (FIRST)", len(buildLaterFirst))
+		for _, item := range buildLaterFirst {
+			err = buildImageMemory(fs, item.Tags, item.Extra, true)
+			if err != nil {
+				log.Printf("Failed image build memory: %s", err)
+			} else {
+				if len(item.Tags) > 0 {
+					log.Printf("[INFO] Successfully built image %s", item.Tags[0])
+
+				} else {
+					log.Printf("[INFO] Successfully built Docker image")
+				}
+			}
+		}
+
+		log.Printf("[INFO] Starting build of %d skipped docker images", len(buildLaterList))
+		for _, item := range buildLaterList {
+			err = buildImageMemory(fs, item.Tags, item.Extra, true)
+			if err != nil {
+				log.Printf("[INFO] Failed image build memory: %s", err)
+			} else {
+				if len(item.Tags) > 0 {
+					log.Printf("[INFO] Successfully built image %s", item.Tags[0])
+				} else {
+					log.Printf("[INFO] Successfully built Docker image")
+				}
+			}
+		}
+	}
+
+	return buildLaterFirst, buildLaterList, err
+}
+
+func LoadSpecificApps(resp http.ResponseWriter, request *http.Request) {
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
+
+	// Just need to be logged in
+	user, err := shuffle.HandleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("[WARNING] Api authentication failed in load specific apps: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		log.Printf("Error with body read: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// Field1 & 2 can be a lot of things.
+	// Field1 = Username
+	// Field2 = Password
+	type tmpStruct struct {
+		URL         string `json:"url"`
+		Branch      string `json:"branch"`
+		Field1      string `json:"field_1"`
+		Field2      string `json:"field_2"`
+		ForceUpdate bool   `json:"force_update"`
+	}
+	//log.Printf("Body: %s", string(body))
+
+	var tmpBody tmpStruct
+	err = json.Unmarshal(body, &tmpBody)
+	if err != nil {
+		log.Printf("Error with unmarshal tmpBody: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	fs := memfs.New()
+	ctx := context.Background()
+	if strings.Contains(tmpBody.URL, "github") || strings.Contains(tmpBody.URL, "gitlab") || strings.Contains(tmpBody.URL, "bitbucket") {
+		cloneOptions := &git.CloneOptions{
+			URL: tmpBody.URL,
+		}
+
+		if len(tmpBody.Branch) > 0 && tmpBody.Branch != "master" && tmpBody.Branch != "main" {
+			cloneOptions.ReferenceName = plumbing.ReferenceName(tmpBody.Branch)
+		}
+
+		// FIXME: Better auth.
+		if len(tmpBody.Field1) > 0 && len(tmpBody.Field2) > 0 {
+			cloneOptions.Auth = &http2.BasicAuth{
+				Username: tmpBody.Field1,
+				Password: tmpBody.Field2,
+			}
+		}
+
+		storer := memory.NewStorage()
+		r, err := git.Clone(storer, fs, cloneOptions)
+		if err != nil {
+			log.Printf("Failed loading repo %s into memory (github workflows 2): %s", tmpBody.URL, err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+			return
+		}
+
+		dir, err := fs.ReadDir("/")
+		if err != nil {
+			log.Printf("FAiled reading folder: %s", err)
+		}
+		_ = r
+
+		if tmpBody.ForceUpdate {
+			log.Printf("[AUDIT] Running with force update from user %s (%s) for %s!", user.Username, user.Id, tmpBody.URL)
+		} else {
+			log.Printf("[AUDIT] Updating apps with updates for user %s (%s) for %s (no force)", user.Username, user.Id, tmpBody.URL)
+		}
+
+		// As it's not even Docker
+		if tmpBody.ForceUpdate {
+			dockercli, err := dockerclient.NewEnvClient()
+			if err == nil {
+				_, err := dockercli.ImagePull(ctx, "frikky/shuffle:app_sdk", types.ImagePullOptions{})
+				if err != nil {
+					log.Printf("[WARNING] Failed to download apps with the new App SDK: %s", err)
+				}
+			} else {
+				log.Printf("[WARNING] Failed to download apps with the new App SDK because of docker cli: %s", err)
+			}
+		}
+
+		IterateAppGithubFolders(ctx, fs, dir, "", "", tmpBody.ForceUpdate)
+
+	} else if strings.Contains(tmpBody.URL, "s3") {
+		//https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
+
+		//sess := session.Must(session.NewSession())
+		//downloader := s3manager.NewDownloader(sess)
+
+		//// Write the contents of S3 Object to the file
+		//storer := memory.NewStorage()
+		//n, err := downloader.Download(storer, &s3.GetObjectInput{
+		//	Bucket: aws.String(myBucket),
+		//	Key:    aws.String(myString),
+		//})
+		//if err != nil {
+		//	return fmt.Errorf("failed to download file, %v", err)
+		//}
+		//fmt.Printf("file downloaded, %d bytes\n", n)
+	} else {
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s is unsupported"}`, tmpBody.URL)))
+		return
+	}
+
+	cacheKey := fmt.Sprintf("workflowapps-sorted-100")
+	shuffle.DeleteCache(ctx, cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-500")
+	shuffle.DeleteCache(ctx, cacheKey)
+	cacheKey = fmt.Sprintf("workflowapps-sorted-1000")
+	shuffle.DeleteCache(ctx, cacheKey)
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+}
+
+// Bad check for workflowapps :)
+// FIXME - use tags and struct reflection
+func checkWorkflowApp(workflowApp shuffle.WorkflowApp) error {
+	// Validate fields
+	if workflowApp.Name == "" {
+		return errors.New("App field name doesn't exist")
+	}
+
+	if workflowApp.Description == "" {
+		return errors.New("App field description doesn't exist")
+	}
+
+	if workflowApp.AppVersion == "" {
+		return errors.New("App field app_version doesn't exist")
+	}
+
+	if workflowApp.ContactInfo.Name == "" {
+		return errors.New("App field contact_info.name doesn't exist")
+	}
+
+	return nil
 }
