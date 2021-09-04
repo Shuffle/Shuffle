@@ -1559,7 +1559,7 @@ class AppBase:
 
                 #print(globals())
                 print("Running liquid with data of length %d" % len(template))
-                run = Liquid(template, {'mode': 'wild'})
+                run = Liquid(template, mode="wild", from_file=False)
 
                 # Can't handle self yet (?)
                 ret = run.render(**globals())
@@ -1573,14 +1573,12 @@ class AppBase:
                 #    return ret
                 #except liquid.exceptions.LiquidRenderError as e:
                 #    print("Render error: %s" % e)
-
-            except liquid.exceptions.LiquidRenderError as e:
-                print("Render error: %s" % e)
-            except liquid.exceptions.LiquidSyntaxError as  e:
-                print("Syntax error: %s" % e)
+            except jinja2.exceptions.TemplateNotFound as e:
+                print("[ERROR] Template error: %s" % e)
+            except jinja2.exceptions.TemplateSyntaxError as e:
+                print("[ERROR] Syntax error: %s" % e)
             except:
-                print("General exception for liquid")
-                pass
+                print("[ERROR] General exception for liquid")
 
             return template
 
