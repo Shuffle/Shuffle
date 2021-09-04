@@ -1602,11 +1602,13 @@ class AppBase:
             escape_replacement = "\\%\\%\\%\\%\\%"
             end_variable = "^_^"
 
-            print("Input value: %s" % parameter["value"])
+            #print("Input value: %s" % parameter["value"])
             try:
                 parameter["value"] = parameter["value"].replace(escaped_dollar, escape_replacement, -1)
             except:
-                print("Error in initial replacement!")
+                print("Error in initial replacement of escaped dollar!")
+
+            #print("POST input value: %s" % parameter["value"])
 
             # Regex to find all the things
             if parameter["variant"] == "STATIC_VALUE":
@@ -1728,6 +1730,14 @@ class AppBase:
                             except json.decoder.JSONDecodeError as e:
                                 parameter["value"] = parameter["value"].replace(to_be_replaced, value)
 
+            #print("PRE Replaced data: %s" % parameter["value"])
+
+            try:
+                parameter["value"] = parameter["value"].replace(end_variable, "", -1)
+                parameter["value"] = parameter["value"].replace(escape_replacement, "$", -1)
+            except:
+                print("Error in datareplacement")
+
             # Just here in case it breaks 
             # Implemented 02.08.2021
             #print("Pre liquid: %s" % parameter["value"])
@@ -1736,14 +1746,9 @@ class AppBase:
             except:
                 pass
 
-            #print("POST liquid: %s" % parameter["value"])
-            try:
-                parameter["value"] = parameter["value"].replace(end_variable, "", -1)
-                parameter["value"] = parameter["value"].replace(escape_replacement, escaped_dollar, -1)
-            except:
-                print("Error in datareplacement")
-                pass
+            #print("Replaced data: %s" % parameter["value"])
 
+            #print("POST liquid: %s" % parameter["value"])
             return "", parameter["value"], is_loop
 
         def run_validation(sourcevalue, check, destinationvalue):
