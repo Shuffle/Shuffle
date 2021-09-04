@@ -1594,7 +1594,19 @@ class AppBase:
             # JSON / yaml etc shouldn't have spaces in their fields anyway.
             #match = ".*?([$]{1}([a-zA-Z0-9 _-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,})[$/, ]?"
             #match = ".*?([$]{1}([a-zA-Z0-9 _-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,})"
-            match = ".*?([$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,})" # Removed space - no longer ok
+
+            match = ".*?([$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,})" # Removed space - no longer ok. Force underscore.
+
+            # Extra replacements for certain scenarios
+            escaped_dollar = "\\$"
+            escape_replacement = "\\%\\%\\%\\%\\%"
+            end_variable = "^_^"
+
+            print("Input value: %s" % parameter["value"])
+            try:
+                parameter["value"] = parameter["value"].replace(escaped_dollar, escape_replacement, -1)
+            except:
+                print("Error in initial replacement!")
 
             # Regex to find all the things
             if parameter["variant"] == "STATIC_VALUE":
@@ -1725,6 +1737,13 @@ class AppBase:
                 pass
 
             #print("POST liquid: %s" % parameter["value"])
+            try:
+                parameter["value"] = parameter["value"].replace(end_variable, "", -1)
+                parameter["value"] = parameter["value"].replace(escape_replacement, escaped_dollar, -1)
+            except:
+                print("Error in datareplacement")
+                pass
+
             return "", parameter["value"], is_loop
 
         def run_validation(sourcevalue, check, destinationvalue):
