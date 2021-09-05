@@ -757,6 +757,9 @@ class AppBase:
             #return value.json()
             return {"success": False}
 
+    def set_file(self, infiles):
+        return self.set_files(infiles)
+
     # Sets files in the backend
     def set_files(self, infiles):
         full_execution = self.full_execution
@@ -1009,6 +1012,34 @@ class AppBase:
                 return data.strip()
             if "split" in thistype:
                 return data.split()
+            if "replace" in thistype:
+                print("Running replace!")
+                splitvalues = data.split(",")
+
+                if len(splitvalues) > 2:
+                    for i in range(len(splitvalues)):
+                        if i != 0:
+                            if splitvalues[i] == "  ":
+                                splitvalues[i] = " "
+                                continue
+
+                            splitvalues[i] = splitvalues[i].strip()
+
+                            if splitvalues[i] == "\"\"":
+                                splitvalues[i] = ""
+                            if splitvalues[i] == "\" \"":
+                                splitvalues[i] = " "
+                            if len(splitvalues[i]) > 2:
+                                if splitvalues[i][0] == "\"" and splitvalues[i][len(splitvalues[i])-1] == "\"":
+                                    splitvalues[i] = splitvalues[i][1:-1]
+                                if splitvalues[i][0] == "'" and splitvalues[i][len(splitvalues[i])-1] == "'":
+                                    splitvalues[i] = splitvalues[i][1:-1]
+                            
+
+                    replacementvalue = splitvalues[0]
+                    return replacementvalue.replace(splitvalues[1], splitvalues[2], -1) 
+                else: 
+                    return f"replace({data})"
             if "join" in thistype:
                 print(f"SHOULD JOIN: {data}")
                 try:
@@ -1104,8 +1135,7 @@ class AppBase:
             except TypeError:
                 return data, False
 
-            wrappers = ["int", "number", "lower", "upper", "trim", "strip", "split", "parse", "len", "length", "lenght",
-                        "join"]
+            wrappers = ["int", "number", "lower", "upper", "trim", "strip", "split", "parse", "len", "length", "lenght", "join", "replace"]
 
             if not any(wrapper in data for wrapper in wrappers):
                 return data, False
@@ -2051,33 +2081,37 @@ class AppBase:
                                     print("KeyError body OpenAPI: %s" % e)
                                     pass
 
+                                
+                                print(f"""HANDLING {action["parameters"][counter]["value"]}""")
                                 try:
                                     newvalue = json.loads(action["parameters"][counter]["value"])
                                     deletekeys = []
                                     for key, value in newvalue.items():
+                                        print(key, value)
                                         if isinstance(value, str) and len(value) == 0:
+                                            deletekeys.append(key)
+                                            continue
+
+                                        if value == "${%s}" % key:
+                                            print("Deleting %s because key = value")
                                             deletekeys.append(key)
                                             continue
 
                                     for deletekey in deletekeys:
                                         del newvalue[deletekey]
 
+                                    print("Post delete: %s" % newvalue)
+                                    for key, value in newvalue.items():
+                                        try:
+                                            value = json.loads(value)
+                                            newvalue[key] = value
+                                        except json.decoder.JSONDecodeError as e:
+                                            print("Inner overwrite issue: %s" % e)
+
                                     action["parameters"][counter]["value"] = json.dumps(newvalue)
 
                                 except json.decoder.JSONDecodeError as e:
                                     print("Failed JSON replacement for OpenAPI keys (2) {e}")
-
-                                #if "\n" in action["parameters"][counter]["value"]:
-                                #    print("MODIFYING BODY!!")
-                                #    newbody = ""
-                                #    for line in action["parameters"][counter]["value"].split("\n"):
-                                #        if ": \"\"" in line:
-                                #            print("Skipping line %s" % line)
-                                #            continue
-
-                                #        newbody += line
-
-                                #    print("New body: %s" % newbody)
 
                                 break
 

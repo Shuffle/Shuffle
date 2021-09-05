@@ -3,7 +3,7 @@
 
 ### DEFAULT 
 NAME=shuffle-app_sdk
-VERSION=0.9.14
+VERSION=0.9.15
 
 docker rmi docker.pkg.github.com/frikky/shuffle/$NAME:$VERSION --force
 docker build . -f Dockerfile -t frikky/shuffle:app_sdk -t frikky/$NAME:$VERSION -t docker.pkg.github.com/frikky/shuffle/$NAME:$VERSION -t ghcr.io/frikky/$NAME:$VERSION

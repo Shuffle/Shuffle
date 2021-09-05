@@ -3565,7 +3565,9 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 		"OWA",
 		"NLP",
 		"YARA",
+		"ATTACK-PREDICTOR",
 	}
+	//if strings.ToUpper(workflowapp.Name) == strings.ToUpper(appname) {
 
 	// It's here to prevent getting them in every iteration
 	buildLaterFirst := []shuffle.BuildLaterStruct{}

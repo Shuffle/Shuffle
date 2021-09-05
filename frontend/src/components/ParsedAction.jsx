@@ -1326,7 +1326,7 @@ const ParsedAction = (props) => {
 									</Tooltip>
 								</div>	
 							*/}
-							{(selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0 && selectedActionParameters[count].required === true && selectedActionParameters[count].unique_toggled !== undefined) || hideExtraTypes ? null : 
+							{/*(selectedActionParameters[count].options !== undefined && selectedActionParameters[count].options !== null && selectedActionParameters[count].options.length > 0 && selectedActionParameters[count].required === true && selectedActionParameters[count].unique_toggled !== undefined) || hideExtraTypes ? null : 
 								<div style={{display: "flex"}}>
 									<Tooltip color="secondary" title="Value must be unique" placement="top">
 										<div style={{cursor: "pointer", color: staticcolor}} onClick={(e) => {}}>
@@ -1349,7 +1349,7 @@ const ParsedAction = (props) => {
 										</div>
 									</Tooltip>
 								</div>
-							}
+							*/}
 							</div>	
 							{datafield}
 							{showDropdown && showDropdownNumber === count && data.variant === "STATIC_VALUE" && jsonList.length > 0 ?
