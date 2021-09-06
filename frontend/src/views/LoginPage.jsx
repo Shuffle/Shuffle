@@ -1,6 +1,7 @@
 /* eslint-disable react/no-multi-comp */
 import React, { useState } from 'react';
 import { makeStyles } from '@material-ui/styles';
+import { useInterval } from 'react-powerhooks';
 
 import {CircularProgress, TextField, Button, Paper, Typography} from '@material-ui/core'
 import { useTheme } from '@material-ui/core/styles';
@@ -27,11 +28,12 @@ const useStyles = makeStyles({
 const LoginDialog = props => {
 	const theme = useTheme();
 
-	const { globalUrl, isLoaded, isLoggedIn, setIsLoggedIn, setCookie, register } = props;
+	const { globalUrl, isLoaded, isLoggedIn, setIsLoggedIn, setCookie, register, checkLogin } = props;
 	const [username, setUsername] = useState("");
 	const [password, setPassword] = useState("");
 	const [firstRequest, setFirstRequest] = useState(true);
   const [loginLoading, setLoginLoading] = useState(false);
+  const [loginViewLoading, setLoginViewLoading] = useState(false);
 
 	// Used to swap from login to register. True = login, false = register
 
@@ -47,7 +49,6 @@ const LoginDialog = props => {
 		window.location.pathname = "/workflows"
 	}
 
-
 	const checkAdmin = () => {
 		const url = globalUrl + '/api/v1/checkusers';
 		fetch(url, {
@@ -58,6 +59,12 @@ const LoginDialog = props => {
 		})
 			.then(response =>
 				response.json().then(responseJson => {
+					if (loginViewLoading) {
+						setLoginViewLoading(false)
+						checkLogin()
+						stop()
+					}
+
 					if (responseJson["success"] === false) {
 						setLoginInfo(responseJson["reason"])
 					} else {
@@ -68,9 +75,20 @@ const LoginDialog = props => {
 				}),
 			)
 			.catch(error => {
-				setLoginInfo("Error logging in - please refresh in a minute ", error)
+				if (!loginViewLoading) {
+					setLoginViewLoading(true)
+					start()
+				}
 			})
 	}
+
+	const { start, stop } = useInterval({
+		duration: 3000,
+		startImmediate: false,
+		callback: () => {
+			checkAdmin()
+		}
+	})
 
 	if (firstRequest) {
 		setFirstRequest(false)
@@ -178,6 +196,39 @@ const LoginDialog = props => {
 				<div style={{position: "absolute", top: -imgsize/2-10, left: 250-imgsize/2, height: imgsize, width: imgsize,  }}>
 					<img src="images/Shuffle_logo.png" style={{height: imgsize+10, width: imgsize+10, border: "2px solid rgba(255,255,255,0.6)", borderRadius: imgsize,}}/>
 				</div>
+				{loginViewLoading ? 
+					<div style={{textAlign: "center", marginTop: 50, }}>
+						<Typography variant="body2" style={{marginBottom: 20, color: "white",}}>
+							Waiting for Shuffle the database to become available. This may take up to a minute.	
+						</Typography>
+  					<CircularProgress color="secondary" style={{color: "white",}} />
+
+
+						<Paper style={{
+							paddingLeft: "30px",
+							paddingRight: "30px",
+							paddingBottom: "30px",
+							paddingTop: "30px",
+							position: "relative",
+							backgroundColor: theme.palette.inputColor,
+							textAlign: "left", 
+							marginTop: 15, 
+						}}>
+							<Typography variant="body2" style={{marginBottom: 20, color: "white",}}>
+								<b>Make sure Shuffle is <a href="https://github.com/frikky/Shuffle/blob/master/.github/install-guide.md" style={{textDecoration: "none", color: "#f86a3e"}}>installed correctly</a></b>
+							</Typography>
+							<Typography variant="body2" style={{marginBottom: 20, color: "white",}}>
+								<b>1.</b> Make sure shuffle-database folder has correct access: <br/><br/>
+								sudo chown 1000:1000 -R shuffle-database 		
+							</Typography>
+
+							<Typography variant="body2" style={{marginBottom: 20, color: "white",}}>
+								<b>2</b>. Ensure vm.max_map_count is set:<br/><br/>
+								sudo sysctl -w vm.max_map_count=262144 			
+							</Typography>
+						</Paper>
+					</div>
+				:
 				<form onSubmit={onSubmit} style={{ margin: "15px 15px 15px 15px", color: "white", }}>
 					<h2>{formtitle}</h2>
 					Username
@@ -241,6 +292,7 @@ const LoginDialog = props => {
 						{loginInfo}
 					</div>
 				</form>
+				}
 			</Paper>
 		</div>
 

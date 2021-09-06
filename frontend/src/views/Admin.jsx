@@ -870,10 +870,10 @@ const Admin = (props) => {
 				return response.json()
 			})
 			.then((responseJson) => {
-				if (responseJson.files === undefined || responseJson.files === null) {
-					setFiles(responseJson)
-				} else {
+				if (responseJson.files !== undefined && responseJson.files !== null) {
 					setFiles(responseJson.files)
+				} else {
+					setFiles([])
 				}
 
 				console.log("NAMESPACES: ", responseJson.namespaces)
@@ -2237,7 +2237,7 @@ const Admin = (props) => {
 						primary="File ID"
 					/>
 				</ListItem>
-				{files === undefined || files === null ? null : files.map((file, index) => {
+				{files === undefined || files === null || files.length === 0 ? null : files.map((file, index) => {
 					if (file.namespace === "") {
 						file.namespace = "default"
 					}

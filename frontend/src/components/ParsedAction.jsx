@@ -1553,44 +1553,7 @@ const ParsedAction = (props) => {
 							<Button color="primary" style={{}} fullWidth variant="contained" onClick={() => {
 								console.log(authenticationType)
 								if (authenticationType.type === "oauth2" && authenticationType.redirect_uri !== undefined && authenticationType.redirect_uri !== null) {
-									// FIXME: Sending client secret and senitive info like this may not be ok.
-									const client_id = "dae24316-4bec-4832-b660-4cba6dc2477b"
-									const client_secret = "._Qu3EvYY-OW_D57uy79qwEo.32qD6.l0z"
-
-									const authentication_url = authenticationType.token_uri
-
-									const resources = "UserAuthenticationMethod.ReadWrite.All"
-									if (authenticationType.scope !== undefined && authenticationType.scope !== null) {
-										console.log("EDIT SCOPE!")
-									}
-
-									const redirectUri = `http://${window.location.host}/set_authentication`
-									const state = `workflow_id%3D${workflow.id}%26reference_action_id%3d${selectedAction.app_id}%26app_name%3d${selectedAction.app_name}%26app_id%3d${selectedAction.app_id}%26app_version%3d${selectedAction.app_version}%26authentication_url%3d${authentication_url}%26scope%3d${resources}%26client_id%3d${client_id}%26client_secret%3d${client_secret}`
-
-									const url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${resources}&state=${state}`
-									// &resource=https%3A%2F%2Fgraph.microsoft.com&
-									
-									// Awful, but works for prototyping
-									var newwin = window.open(url, "", "width=200,height=100")
-									console.log(newwin)
-									setTimeout(() => {
-										console.log(newwin)
-										console.log("CLOSED", newwin.closed)
-									}, 1000)
-									setTimeout(() => {
-										console.log(newwin)
-										console.log("CLOSED", newwin.closed)
-										if (newwin.closed) {
-											getAppAuthentication(true)
-											setTimeout(() => {
-												console.log("APPAUTH: ", appAuthentication)
-											}, 1500)
-										}
-									}, 10000)
-
-									return
-									//do {
-									//} while (
+									return null
 								}
 
 								setAuthenticationModalOpen(true)

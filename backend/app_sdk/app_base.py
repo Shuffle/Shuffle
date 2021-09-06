@@ -521,7 +521,7 @@ class AppBase:
             print("[INFO] Multiplier length: %d" % len(param_multiplier))
             #tmp = ""
             for subparams in param_multiplier:
-                #print(f"SUBPARAMS IN MULTI: {subparams}")
+                print(f"SUBPARAMS IN MULTI: {subparams}")
                 try:
                     #tmp = await func(**subparams)
 
@@ -530,6 +530,7 @@ class AppBase:
                             tmp = await func(**subparams)
                             break
                         except TypeError as e:
+                            print("BASE TYPEERROR: %s" % e)
                             errorstring = "%s" % e
                             if "got an unexpected keyword argument" in errorstring:
                                 fieldsplit = errorstring.split("'")
@@ -2087,26 +2088,30 @@ class AppBase:
                                     newvalue = json.loads(action["parameters"][counter]["value"])
                                     deletekeys = []
                                     for key, value in newvalue.items():
-                                        print(key, value)
+                                        print("%s: %s" % (key, value))
                                         if isinstance(value, str) and len(value) == 0:
                                             deletekeys.append(key)
                                             continue
 
                                         if value == "${%s}" % key:
-                                            print("Deleting %s because key = value")
+                                            print("Deleting %s because key = value" % key)
                                             deletekeys.append(key)
                                             continue
 
                                     for deletekey in deletekeys:
                                         del newvalue[deletekey]
 
-                                    print("Post delete: %s" % newvalue)
+                                    #print("Post delete: %s" % newvalue)
                                     for key, value in newvalue.items():
+                                        if isinstance(value, bool):
+                                            continue
+
                                         try:
                                             value = json.loads(value)
                                             newvalue[key] = value
                                         except json.decoder.JSONDecodeError as e:
                                             print("Inner overwrite issue: %s" % e)
+                                            continue
 
                                     action["parameters"][counter]["value"] = json.dumps(newvalue)
 
