@@ -1201,7 +1201,12 @@ class AppBase:
         # =
         # Authorization=Bearer  authkey
         # ^ Double space.
-        def parse_wrapper_start(data):
+        def parse_wrapper_start(data, self):
+            try:
+                data = parse_liquid(data, self)
+            except:
+                pass
+
             if "(" not in data or ")" not in data:
                 return data
 
@@ -1917,19 +1922,18 @@ class AppBase:
                     sourcevalue = condition["source"]["value"]
                     check, sourcevalue, is_loop = parse_params(action, fullexecution, condition["source"], self)
                     if check:
-                        return False, {"success": False, "reason": "Failed condition: %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)}
-
+                        return False, {"success": False, "reason": "Failed condition (1): %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)}
 
                     #sourcevalue = sourcevalue.encode("utf-8")
-                    sourcevalue = parse_wrapper_start(sourcevalue)
+                    sourcevalue = parse_wrapper_start(sourcevalue, self)
                     destinationvalue = condition["destination"]["value"]
 
                     check, destinationvalue, is_loop = parse_params(action, fullexecution, condition["destination"], self)
                     if check:
-                        return False, {"success": False, "reason": "Failed condition: %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)}
+                        return False, {"success": False, "reason": "Failed condition (2): %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)}
 
                     #destinationvalue = destinationvalue.encode("utf-8")
-                    destinationvalue = parse_wrapper_start(destinationvalue)
+                    destinationvalue = parse_wrapper_start(destinationvalue, self)
                     available_checks = [
                         "=",
                         "equals",
@@ -1966,7 +1970,7 @@ class AppBase:
 
                     if not validation:
                         self.logger.info("Failed condition check for %s %s %s." % (sourcevalue, condition["condition"]["value"], destinationvalue))
-                        return False, {"success": False, "reason": "Failed condition: %s %s %s" % (sourcevalue, condition["condition"]["value"], destinationvalue)}
+                        return False, {"success": False, "reason": "Failed condition (3): %s %s %s" % (sourcevalue, condition["condition"]["value"], destinationvalue)}
 
 
                 # Make a general parser here, at least to get param["name"] = param["value"] in maparameter[string]string
@@ -2431,7 +2435,7 @@ class AppBase:
 
                                 # This part has fucked over so many random JSON usages because of weird paranthesis parsing
 
-                                value = parse_wrapper_start(value)
+                                value = parse_wrapper_start(value, self)
                                 print("Post return: %s" % value)
 
                                 #if parameter["id"] == "body_replacement": 
