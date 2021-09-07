@@ -2113,9 +2113,12 @@ class AppBase:
                                             print("Deleting %s because key = value" % key)
                                             deletekeys.append(key)
                                             continue
-
+                                    
                                     for deletekey in deletekeys:
-                                        del newvalue[deletekey]
+                                        try:
+                                            del newvalue[deletekey]
+                                        except:
+                                            pass
 
                                     #print("Post delete: %s" % newvalue)
                                     for key, value in newvalue.items():
@@ -2128,8 +2131,16 @@ class AppBase:
                                         except json.decoder.JSONDecodeError as e:
                                             print("Inner overwrite issue: %s" % e)
                                             continue
+                                        except:
+                                            print("General error in newvalue items loop")
+                                            continue
 
-                                    action["parameters"][counter]["value"] = json.dumps(newvalue)
+                                    try:
+                                        action["parameters"][counter]["value"] = json.dumps(newvalue)
+                                    except json.decoder.JSONDecodeError as e:
+                                        print("[WARNING] JsonDecodeError: %s" % e)
+                                        action["parameters"][counter]["value"] = newvalue
+                                        
 
                                 except json.decoder.JSONDecodeError as e:
                                     print("Failed JSON replacement for OpenAPI keys (2) {e}")
@@ -2137,6 +2148,7 @@ class AppBase:
                                 break
 
                         #print(action["parameters"])
+                        print("Pre parameters")
                         for parameter in newparams:
                             action["parameters"].append(parameter)
 
@@ -2150,6 +2162,7 @@ class AppBase:
 
                         # Multi_parameter has the data for each. variable
                         minlength = 0
+                        print("Pre-loading parameters")
                         multi_parameters = json.loads(json.dumps(params))
                         multiexecution = False
                         multi_execution_lists = []

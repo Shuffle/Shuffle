@@ -8,7 +8,9 @@ WORKDIR /install
 
 FROM base
 
-RUN apk update && apk add --no-cache tzdata
+#--no-cache 
+RUN apk update && apk add --update tzdata libmagic alpine-sdk libffi libffi-dev musl-dev openssl-dev
+
 COPY --from=builder /install /usr/local
 COPY requirements.txt /requirements.txt
 RUN pip3 install -r /requirements.txt
