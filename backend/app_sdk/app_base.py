@@ -521,7 +521,7 @@ class AppBase:
             print("[INFO] Multiplier length: %d" % len(param_multiplier))
             #tmp = ""
             for subparams in param_multiplier:
-                print(f"SUBPARAMS IN MULTI: {subparams}")
+                #print(f"SUBPARAMS IN MULTI: {subparams}")
                 try:
                     #tmp = await func(**subparams)
 
@@ -1129,6 +1129,7 @@ class AppBase:
                     return default_error
 
         # Parses the INNER value and recurses until everything is done
+        # Looks for a way to use e.g. int() or number() as a value
         def parse_wrapper(data):
             try:
                 if "(" not in data or ")" not in data:
@@ -1177,7 +1178,7 @@ class AppBase:
                 c_parentheses = parse_nested_param(parse_string, 0)[0]
                 match_string = re.escape(c_parentheses)
                 custom_casting = re.findall(fr"({wrapper_group})\({match_string}", parse_string)
-
+                print("In ELSE: %s" % custom_casting)
                 # check if a wrapper was found
                 if len(custom_casting) != 0:
                     inner_result = parse_type(c_parentheses, custom_casting[0])
@@ -1189,6 +1190,7 @@ class AppBase:
                     else:
                         parse_string = inner_result
 
+            print("PARSE STRING: %s" % parse_string)
             return parse_string, True
 
         # Looks for parantheses to grab special cases within a string, e.g:
@@ -1203,16 +1205,28 @@ class AppBase:
             if "(" not in data or ")" not in data:
                 return data
 
+            if isinstance(data, str) and len(data) > 4:
+                if (data[0] == "{" or data[0] == "[") and (data[len(data)-1] == "]" or data[len(data)-1] == "}"):
+                    print("Skipping parser because use of {[ and ]}")
+                    return data
+
             newdata = []
             newstring = ""
             record = True
             paranCnt = 0
+            charcnt = 0 
             for char in data:
                 if char == "(":
-                    paranCnt += 1
-        
-                    if not record:
-                        record = True 
+                    charskip = False
+                    if charcnt > 0:
+                        if data[charcnt-1] == " ":
+                            charskip = True 
+
+                    if not charskip:
+                        paranCnt += 1
+            
+                        if not record:
+                            record = True 
         
                 if record:
                     newstring += char
@@ -1227,6 +1241,8 @@ class AppBase:
         
                     if paranCnt == 0:
                         record = False
+            
+                charcnt += 1
         
             if len(newstring) > 0:
                 newdata.append(newstring)
@@ -1378,7 +1394,7 @@ class AppBase:
                                     basejson = json.loads(basejson[value])
                                     print("BASEJSON: %s" % basejson)
                                 except json.decoder.JSONDecodeError as e:
-                                    print("RETURNING BECAUSE '%s' IS A NORMAL STRING" % basejson[value])
+                                    print("RETURNING BECAUSE '%s' IS A NORMAL STRING (0)" % basejson[value])
                                     return basejson[value], False
                             else:
                                 basejson = basejson[value]
@@ -1398,7 +1414,7 @@ class AppBase:
                                     basejson = json.loads(basejson[value])
                                     print("BASEJSON: %s" % basejson)
                                 except json.decoder.JSONDecodeError as e:
-                                    print("RETURNING BECAUSE '%s' IS A NORMAL STRING" % basejson[value])
+                                    print("RETURNING BECAUSE '%s' IS A NORMAL STRING (1)" % basejson[value])
                                     return basejson[value], False
                             else:
                                 basejson = basejson[value]
@@ -2206,9 +2222,9 @@ class AppBase:
                                     for i in range(len(json_replacement)):
                                         if isinstance(json_replacement[i], dict) or isinstance(json_replacement[i], list):
                                             tmp_replacer = json.dumps(json_replacement[i])
-                                            newvalue = tmpitem.replace(actualitem[index][0], tmp_replacer, 1)
+                                            newvalue = tmpitem.replace(str(actualitem[index][0]), str(tmp_replacer), 1)
                                         else:
-                                            newvalue = tmpitem.replace(actualitem[index][0], json_replacement[i], 1)
+                                            newvalue = tmpitem.replace(str(actualitem[index][0]), str(json_replacement[i]), 1)
 
                                         try:
                                             newvalue = json.loads(newvalue)
@@ -2281,6 +2297,7 @@ class AppBase:
                                             actualitem = replace[2]
                                             if actualitem.endswith("}$"):
                                                 actualitem = actualitem[:-2]
+
                                         except IndexError:
                                             continue
 
@@ -2344,6 +2361,7 @@ class AppBase:
                                             print("(2) JSON ERROR IN FILE HANDLING: %s" % e)
 
                                         if not isfile:
+                                            tmpitem = tmpitem.replace("\\\\", "\\", -1)
                                             resultarray.append(tmpitem)
 
                                     # With this parameter ready, add it to... a greater list of parameters. Rofl
@@ -2397,7 +2415,11 @@ class AppBase:
                             else:
                                 # Parses things like int(value)
                                 print("Normal parsing (not looping)")#with data %s" % value)
+
+                                # This part has fucked over so many random JSON usages because of weird paranthesis parsing
+
                                 value = parse_wrapper_start(value)
+                                print("Post return: %s" % value)
 
                                 #if parameter["id"] == "body_replacement": 
                                 #    print("Should run body replacement in index %d with %s" % (bodyindex, parameter))
@@ -2436,7 +2458,7 @@ class AppBase:
                         #remove_params.append(parameter["name"])
                         # Fix lists here
                         # FIXME: This doesn't really do anything anymore
-                        print("CHECKING multi execution list!")
+                        print("CHECKING multi execution list: %d!" % len(multi_execution_lists))
                         if len(multi_execution_lists) > 0:
                             print("\n Multi execution list has more data: %d" % len(multi_execution_lists))
                             filteredlist = []

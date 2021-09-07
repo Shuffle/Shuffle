@@ -215,7 +215,7 @@ const LoginDialog = props => {
 							marginTop: 15, 
 						}}>
 							<Typography variant="body2" style={{marginBottom: 20, color: "white",}}>
-								<b>Make sure Shuffle is <a href="https://github.com/frikky/Shuffle/blob/master/.github/install-guide.md" style={{textDecoration: "none", color: "#f86a3e"}}>installed correctly</a></b>
+								<b>Are you sure Shuffle is <a rel="norefferer" target="_blank" href="https://github.com/frikky/Shuffle/blob/master/.github/install-guide.md" style={{textDecoration: "none", color: "#f86a3e"}}>installed correctly</a></b>
 							</Typography>
 							<Typography variant="body2" style={{marginBottom: 20, color: "white",}}>
 								<b>1.</b> Make sure shuffle-database folder has correct access: <br/><br/>
@@ -227,6 +227,9 @@ const LoginDialog = props => {
 								sudo sysctl -w vm.max_map_count=262144 			
 							</Typography>
 						</Paper>
+						<Typography variant="body2" style={{marginBottom: 10, color: "white", marginTop: 20, }}>
+							Need help? <a rel="norefferer" target="_blank" href="https://discord.gg/B2CBzUm" style={{textDecoration: "none", color: "#f86a3e"}}>Join the Discord!</a>
+						</Typography>
 					</div>
 				:
 				<form onSubmit={onSubmit} style={{ margin: "15px 15px 15px 15px", color: "white", }}>

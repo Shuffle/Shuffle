@@ -45,7 +45,9 @@ const AuthenticationOauth2 = (props) => {
 			console.log("EDIT SCOPE!")
 		}
 
-		const redirectUri = `http://${window.location.host}/set_authentication`
+		console.log(window.location)
+		//const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" 
+		const redirectUri = `${window.location.protocol}//${window.location.host}/set_authentication`
 		const state = `workflow_id%3D${workflow.id}%26reference_action_id%3d${selectedAction.app_id}%26app_name%3d${selectedAction.app_name}%26app_id%3d${selectedAction.app_id}%26app_version%3d${selectedAction.app_version}%26authentication_url%3d${authentication_url}%26scope%3d${resources}%26client_id%3d${client_id}%26client_secret%3d${client_secret}`
 
 		const url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${resources}&state=${state}`

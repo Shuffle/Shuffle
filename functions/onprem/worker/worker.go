@@ -186,7 +186,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 			Type:   "json-file",
 			Config: map[string]string{},
 		},
-		Resources: container.Resources{},
+		Resources:   container.Resources{},
 		NetworkMode: container.NetworkMode(fmt.Sprintf("container:worker-%s", workflowExecution.ExecutionId)),
 	}
 
@@ -1107,7 +1107,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 								if strings.Contains(buildBuf.String(), "errorDetail") {
 									log.Printf("[ERROR] Docker build:\n%s\nERROR ABOVE: Trying to pull tags from: %s", buildBuf.String(), image)
 									log.Printf("[DEBUG] Shutting down (14)")
-									shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
+									shutdown(workflowExecution, action.ID, fmt.Sprintf("Error deploying container: %s", buildBuf.String()), true)
 								}
 
 								log.Printf("[INFO] Successfully downloaded %s", image)
