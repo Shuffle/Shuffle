@@ -1,5 +1,5 @@
 NAME=shuffle-worker
-VERSION=0.9.15
+VERSION=0.9.16
 
 echo "Running docker build with $NAME:$VERSION"
 #CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o worker.bin .

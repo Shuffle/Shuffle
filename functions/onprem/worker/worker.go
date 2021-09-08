@@ -944,13 +944,19 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		// Fixes issue:
 		// standard_init_linux.go:185: exec user process caused "argument list too long"
 		// https://devblogs.microsoft.com/oldnewthing/20100203-00/?p=15083
-		maxSize := 32700 - len(string(actionData)) - 2000
-		if len(executionData) < maxSize {
-			log.Printf("[INFO] ADDING FULL_EXECUTION because size is smaller than %d", maxSize)
-			env = append(env, fmt.Sprintf("FULL_EXECUTION=%s", string(executionData)))
-		} else {
-			log.Printf("[WARNING] Skipping FULL_EXECUTION because size is larger than %d", maxSize)
-		}
+
+		// FIXME: Ensure to NEVER do this anymore
+		// This potentially breaks too much stuff. Better to have the app poll the data.
+		_ = executionData
+		/*
+			maxSize := 32700 - len(string(actionData)) - 2000
+			if len(executionData) < maxSize {
+				log.Printf("[INFO] ADDING FULL_EXECUTION because size is smaller than %d", maxSize)
+				env = append(env, fmt.Sprintf("FULL_EXECUTION=%s", string(executionData)))
+			} else {
+				log.Printf("[WARNING] Skipping FULL_EXECUTION because size is larger than %d", maxSize)
+			}
+		*/
 
 		// Uses a few ways of getting / checking if an app is available
 		// 1. Try original with lowercase

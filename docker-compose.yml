@@ -78,6 +78,7 @@ services:
       - node.name=shuffle-opensearch
       - discovery.seed_hosts=shuffle-opensearch
       - cluster.initial_master_nodes=shuffle-opensearch
+      - node.store.allow_mmap=false
     ulimits:
       memlock:
         soft: -1
