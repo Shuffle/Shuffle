@@ -84,6 +84,7 @@ npm start
 http://localhost:5001 - REST API - requires [>=go1.13](https://golang.org/dl/)
 ```bash
 export SHUFFLE_OPENSEARCH_URL="http://localhost:9200"
+export SHUFFLE_ELASTIC=true
 cd backend/go-app
 go run *.go
 ```
