@@ -901,7 +901,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	//log.Printf("BASE LENGTH: %d", len(workflowExecution.Results))
 	workflowExecution, dbSave, err := shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, false)
 	if err != nil {
-		log.Printf("[ERROR] Failed execution of parsedexecution: %s", err)
+		log.Printf("[ERROR] Failed running of parsedexecution: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting execution"}`)))
 		return
@@ -3865,16 +3865,18 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 			}
 		}
 
-		log.Printf("[INFO] Starting build of %d skipped docker images", len(buildLaterList))
-		for _, item := range buildLaterList {
-			err = buildImageMemory(fs, item.Tags, item.Extra, true)
-			if err != nil {
-				log.Printf("[INFO] Failed image build memory: %s", err)
-			} else {
-				if len(item.Tags) > 0 {
-					log.Printf("[INFO] Successfully built image %s", item.Tags[0])
+		if len(buildLaterList) > 0 {
+			log.Printf("[INFO] Starting build of %d skipped docker images", len(buildLaterList))
+			for _, item := range buildLaterList {
+				err = buildImageMemory(fs, item.Tags, item.Extra, true)
+				if err != nil {
+					log.Printf("[INFO] Failed image build memory: %s", err)
 				} else {
-					log.Printf("[INFO] Successfully built Docker image")
+					if len(item.Tags) > 0 {
+						log.Printf("[INFO] Successfully built image %s", item.Tags[0])
+					} else {
+						log.Printf("[INFO] Successfully built Docker image")
+					}
 				}
 			}
 		}

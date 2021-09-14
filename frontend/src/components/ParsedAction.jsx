@@ -54,6 +54,9 @@ const ParsedAction = (props) => {
 
 	const theme = useTheme();
 	const classes = useStyles()
+
+	const [expansionModalOpen, setExpansionModalOpen] = React.useState(false);
+
 	const keywords = ["len(", "lower(", "upper(", "trim(", "split(", "length(", "number(", "parse(", "join("]
 	const getParents = (action) => {
 		if (cy === undefined) {
@@ -869,7 +872,8 @@ const ParsedAction = (props) => {
 								fullWidth
 								multiline={multiline}
 								onClick={() => {
-									//console.log("Clicked field: ", clickedFieldId)
+									console.log("Clicked field: ", clickedFieldId)
+									setExpansionModalOpen(false)
 									if (setScrollConfig !== undefined && scrollConfig !== null && scrollConfig !== undefined && scrollConfig.selected !== clickedFieldId) {
 										scrollConfig.selected = clickedFieldId
 										setScrollConfig(scrollConfig)
@@ -1420,6 +1424,27 @@ const ParsedAction = (props) => {
 		return null
 	}
 
+	const expansionModal = 
+		<Dialog modal 
+			open={expansionModalOpen} 
+			onClose={() => {
+				setExpansionModalOpen(false)
+			}}
+			PaperProps={{
+				style: {
+					backgroundColor: theme.palette.surfaceColor,
+					color: "white",
+					minWidth: 600,
+					padding: 50, 
+				},
+			}}
+		>
+			<DialogTitle><span style={{color: "white"}}>Workflow Variable</span></DialogTitle>
+			<DialogContent>
+				Hello
+			</DialogContent>
+		</Dialog>
+
 	//const CustomPopper = function (props) {
 	//	const classes = useStyles()
 	//	return <Popper {...props} className={classes.root} placement="bottom" />
@@ -1428,6 +1453,7 @@ const ParsedAction = (props) => {
 	const baselabel = selectedAction.label
 	return ( 
 		<div style={appApiViewStyle} id="parsed_action_view">
+			{expansionModal}
 			{hideExtraTypes === true ? null : 
 				<span>
 				<div style={{display: "flex", minHeight: 40, marginBottom: 30}}>

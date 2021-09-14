@@ -4978,6 +4978,7 @@ func handleStopCloudSync(syncUrl string, org shuffle.Org) (*shuffle.Org, error) 
 		return &org, err
 	}
 
+	// FIXME: If it says bad API-key, stop cloud sync for the Org
 	if newresp.StatusCode != 200 {
 		return &org, errors.New(fmt.Sprintf("Got status code %d when disabling org remotely. Expected 200. Contact support.", newresp.StatusCode))
 	}

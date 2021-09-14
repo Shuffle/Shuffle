@@ -18,13 +18,6 @@ cd Shuffle
 3. Fix prerequisites for the Opensearch database (Elasticsearch): 
 ```
 sudo chown 1000:1000 -R shuffle-database 		# Required for Opensearch 
-sudo sysctl -w vm.max_map_count=262144 			# https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html
-
-# To make the changes permanent, do:
-# 1. Open the file /etc/sysctl.conf
-# 2. Go to the bottom of the file
-# 3. Add this line:
-vm.max_map_count=262144
 ```
 
 4. Run docker-compose.
@@ -47,23 +40,6 @@ This step is for setting up with Docker on windows from scratch.
 
 ```
 OUTER_HOSTNAME=YOUR.IP.HERE
-```
-
-5. Configure max memory (WSL) by opening a new CMD/Powershell window. Run each command one-by-one, or else installation might not work. (Required for fixing consistent restart of Elasticsearch issue in Windows Operation System).
-```
-wsl -d docker-desktop
-```
-```
-sysctl -w vm.max_map_count=262144
-```
-```
-echo "vm.max_map_count = 262144" > /etc/sysctl.d/99-docker-desktop.conf
-```
-```
-echo -e "\nvm.max_map_count = 262144\n" >> /etc/sysctl.d/00-alpine.conf
-```
-```
-# https://stackoverflow.com/questions/42111566/elasticsearch-in-windows-docker-image-vm-max-map-count
 ```
 
 6. Run docker-compose
