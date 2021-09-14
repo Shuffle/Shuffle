@@ -66,6 +66,7 @@ const appIconStyle = {
 	marginLeft: "5px",
 }
 
+
 const useStyles = makeStyles({
 	notchedOutline: {
 		borderColor: "#f85a3e !important"
@@ -222,6 +223,8 @@ const AppCreator = (props) => {
 	const [parameterLocation, setParameterLocation] = useState(apikeySelection.length > 0 ? apikeySelection[0] : "");
 	const [refreshUrl, setRefreshUrl] = useState("");
 	const [oauth2Scopes, setOauth2Scopes] = useState(["google.com"]);
+	const [projectCategories, setProjectCategories] = useState([]);
+	const [selectedCategory, setSelectedCategory] = useState("");
 
 	const [urlPath, setUrlPath] = useState("");
 	//const [urlPathQueries, setUrlPathQueries] = useState([{"name": "test", "required": false}]);
@@ -231,6 +234,7 @@ const AppCreator = (props) => {
 	const [firstrequest, setFirstrequest] = React.useState(true)
 	const [basedata, setBasedata] = React.useState({})
 	const [actions, setActions] = useState([])
+	const [filteredActions, setFilteredActions] = useState([])
 	const [errorCode, setErrorCode] = useState("")
 	const [appBuilding, setAppBuilding] = useState(false)
 	const [extraBodyFields, setExtraBodyFields] = useState([])
@@ -288,6 +292,7 @@ const AppCreator = (props) => {
 			"method": actionNonBodyRequest[0],
 		});
 
+	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" 
 
 
 	useEffect(() => {
@@ -391,7 +396,7 @@ const AppCreator = (props) => {
 	const handleGetRef = (parameter, data) => {
 		try {
 			if (parameter === null || parameter["$ref"] === undefined) {
-				console.log("$ref not found in getref: ")
+				//console.log("$ref not found in getref: ")
 				return parameter
 			}
 		} catch (e) {
@@ -527,6 +532,7 @@ const AppCreator = (props) => {
 
 		var newActions = []
 		var wordlist = {}
+		var all_categories = []
 		if (data.paths !== null && data.paths !== undefined) {
 			for (let [path, pathvalue] of Object.entries(data.paths)) {
 				for (let [method, methodvalue] of Object.entries(pathvalue)) {
@@ -559,6 +565,24 @@ const AppCreator = (props) => {
 						"errors": [],
 						"example_response": "",
 					}
+
+					// Finding category
+					if (path.includes("/")) {
+						const pathsplit = path.split("/")
+						var categoryindex = -1
+							// Stupid way of finding a category/grouping
+						for (var key in pathsplit) {
+							if (pathsplit[key].length > 0 && pathsplit[key] !== "v1" && pathsplit[key] !== "v2" && pathsplit[key] !== "api" && pathsplit[key] !== "1.0" && pathsplit[key] !== "apis") {
+								newaction["category"] = pathsplit[key]
+								if (!all_categories.includes(pathsplit[key])) {
+									all_categories.push(pathsplit[key])
+								}
+								break
+							}
+						}
+					}
+
+					//console.log("Category: 
 
 					//console.log("Schema is application/json: ", methodvalue)
 					//console.log("DATA", data)
@@ -964,12 +988,15 @@ const AppCreator = (props) => {
 			setActionAmount(newActions.length)
 		}
 
-		if (newActions.length > 1000) {
+		//const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" 
+		if (newActions.length > 1000 && isCloud) {
 			alert.error("Cut down actions from "+newActions.length+" to 999 because of limit")
 			newActions = newActions.slice(0,999)
 		}
 
+		setProjectCategories(all_categories)
 		setActions(newActions)
+		setFilteredActions(newActions)
   	setIsAppLoaded(true)
 	}
 
@@ -1515,6 +1542,7 @@ const AppCreator = (props) => {
 		}
 
 		setActions(actions)
+		setFilteredActions(actions)
 		setUpdate(Math.random())
 	}
 
@@ -1534,6 +1562,7 @@ const AppCreator = (props) => {
 		})
 
 		setActions(actions)
+		setFilteredActions(actions)
 		setActionAmount(actionAmount-1)
 		setUpdate(Math.random())
 	}
@@ -1827,7 +1856,7 @@ const AppCreator = (props) => {
 		null
 		:
 		<div>
-			{actions.slice(0,actionAmount).map((data, index) => {
+			{filteredActions.slice(0,actionAmount).map((data, index) => {
 				var error = data.errors.length > 0 ? 
 					<Tooltip color="primary" title={data.errors.join("\n")} placement="bottom">
 						<ErrorOutlineIcon />
@@ -2015,6 +2044,7 @@ const AppCreator = (props) => {
 		}
 
 		setActions(actions)
+		setFilteredActions(actions)
 	}
 
 	const getActionErrors = () => {
@@ -2943,12 +2973,12 @@ const AppCreator = (props) => {
 	const actionView = 
 		<div style={{color: "white", position: "relative",}}>
 			<div style={{position: "absolute", right: 0, top: 0,}}>
-				{actionAmount > 0 && actionAmount < actions.length ? 
+				{actionAmount > 0 && actionAmount < filteredActions.length ? 
 					<Button color="primary" style={{float: "right", borderRadius: 0, textAlign: "center"}} variant="outlined" onClick={() => {
-						setActionAmount(actions.length)
+						setActionAmount(filteredActions.length)
 						/*
-						if (actionAmount+increaseAmount > actions.length) {
-							setActionAmount(actions.length)
+						if (actionAmount+increaseAmount > filteredActions.length) {
+							setActionAmount(filteredActions.length)
 						} else {
 							setActionAmount(actionAmount+increaseAmount)
 						}
@@ -2958,7 +2988,55 @@ const AppCreator = (props) => {
 					</Button>
 				: null}
 			</div>
-			<h2>Actions {actionAmount > 0 ? <span>({actionAmount} / {actions.length})</span> : null}</h2>
+			<h2>Actions {actionAmount > 0 ? <span>({actionAmount} / {filteredActions.length})</span> : null}</h2>
+
+			{projectCategories !== undefined && projectCategories !== null && projectCategories.length > 1 ?
+				<div style={{marginTop: 5, marginBottom: 5}}>
+					{projectCategories.map((tag, index) => {
+						const newname = tag.charAt(0).toUpperCase() + tag.slice(1) 
+						return (
+							<Chip
+								key={index}
+								style={{
+									backgroundColor: tag === selectedCategory ? "#f86a3e" : "#3d3f43", 
+									height: 30, 
+									marginRight: 5, 
+									paddingLeft: 5, 
+									paddingRight: 5, 
+									height: 28, 
+									cursor: "pointer", 
+									borderColor: "#3d3f43", 
+									color: "white", 
+								}}
+								label={newname}
+								onClick={() => {
+									if (selectedCategory === tag) {
+										setFilteredActions(actions)
+										setSelectedCategory("")
+										setActionAmount(50)
+										return
+									}
+
+									const foundActions = actions.filter(data => data.category === tag)
+									setFilteredActions(foundActions)
+									setSelectedCategory(tag)
+									if (actionAmount > foundActions.length) {
+										setActionAmount(foundActions.length)
+									}
+
+									//{filteredActions.slice(0,actionAmount).map((data, index) => {
+									
+									//console.log("Found: ", foundActions)
+									//{filteredActions.slice(0,actionAmount).map((data, index) => {
+									//{actions.slice(0,actionAmount).map((data, index) => {
+								}}
+								variant={selectedCategory === tag ? "contained " : "outlined"}
+								color={selectedCategory === tag ? "primary" : "secondary"}
+							/>
+						)
+					})}
+				</div>
+			: null}
 			Actions are the tasks performed by an app - usually single URL paths for REST API's.
 			<div>
 				{loopActions}

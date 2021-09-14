@@ -59,15 +59,19 @@ const LoginDialog = props => {
 		})
 			.then(response =>
 				response.json().then(responseJson => {
-					if (loginViewLoading) {
-						setLoginViewLoading(false)
-						checkLogin()
-						stop()
-					}
-
 					if (responseJson["success"] === false) {
 						setLoginInfo(responseJson["reason"])
 					} else {
+						if (loginViewLoading) {
+							setLoginViewLoading(false)
+							checkLogin()
+							stop()
+
+							if (responseJson.reason !== undefined && responseJson.reason !== null) {
+								setLoginInfo(responseJson.reason)
+							}
+						}
+
 						if (responseJson.reason === "stay") {
 							window.location.pathname = "/adminsetup"
 						}
@@ -199,8 +203,16 @@ const LoginDialog = props => {
 				{loginViewLoading ? 
 					<div style={{textAlign: "center", marginTop: 50, }}>
 						<Typography variant="body2" style={{marginBottom: 20, color: "white",}}>
-							Waiting for Shuffle the database to become available. This may take up to a minute.	
+							Waiting for the Shuffle database to become available. This may take up to a minute.
 						</Typography>
+
+						{loginInfo === undefined || loginInfo === null || loginInfo.length === 0 ? 
+							null 
+							:
+							<div style={{ marginTop: "10px" }}>
+								Response: {loginInfo}
+							</div>
+						}
   					<CircularProgress color="secondary" style={{color: "white",}} />
 
 
@@ -215,7 +227,7 @@ const LoginDialog = props => {
 							marginTop: 15, 
 						}}>
 							<Typography variant="body2" style={{marginBottom: 20, color: "white",}}>
-								<b>Are you sure Shuffle is <a rel="norefferer" target="_blank" href="https://github.com/frikky/Shuffle/blob/master/.github/install-guide.md" style={{textDecoration: "none", color: "#f86a3e"}}>installed correctly</a></b>
+								<b>Are you sure Shuffle is <a rel="norefferer" target="_blank" href="https://github.com/frikky/Shuffle/blob/master/.github/install-guide.md" style={{textDecoration: "none", color: "#f86a3e"}}>installed correctly</a>?</b>
 							</Typography>
 							<Typography variant="body2" style={{marginBottom: 20, color: "white",}}>
 								<b>1.</b> Make sure shuffle-database folder has correct access: <br/><br/>
