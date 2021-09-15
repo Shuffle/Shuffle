@@ -1500,7 +1500,7 @@ const ParsedAction = (props) => {
 						</div>
 					</div>
 					<div style={{display: "flex", flexDirection: "column",}}>
-						{selectedAction.id === workflow.start ? null : 
+						{/*selectedAction.id === workflow.start ? null : 
 							<Tooltip color="primary" title={"Make this node the start action"} placement="top">
 								<Button style={{zIndex: 5000, marginTop: 10,}} color="primary" variant="outlined" onClick={(e) => {
 									defineStartnode(e)	
@@ -1508,7 +1508,7 @@ const ParsedAction = (props) => {
 									<KeyboardArrowRightIcon />
 								</Button> 				
 							</Tooltip>
-						}
+						*/}
 						{selectedApp.versions !== null && selectedApp.versions !== undefined && selectedApp.versions.length > 1 ? 
 							<Select
 								defaultValue={selectedAction.app_version}

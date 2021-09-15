@@ -3212,6 +3212,10 @@ const AngularWorkflow = (props) => {
 		if (parentNode.data('isButton') || parentNode.data('buttonId'))
 			return
 
+		if (parentNode.data("isStartNode")) {
+			return 
+		}
+
 		//parentNode.lock()
 		const px = parentNode.position('x') - 65
 		const py = parentNode.position('y') - 45

@@ -3667,6 +3667,25 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 					continue
 				}
 
+				readmeNames := []string{"readme", "readme.md"}
+				for _, readmeName := range readmeNames {
+					readmePath := fmt.Sprintf("%s/%s", extra, readmeName)
+					readmeInfo, err := fs.Open(readmePath)
+					if err != nil {
+						log.Printf("[WARNING] Failed to read README path %s", readmePath)
+						continue
+					}
+
+					dockerfileData, err := ioutil.ReadAll(dockerfile)
+					if err != nil {
+						log.Printf("[WARNING] Failed to read readme file at %s", readmePath)
+						continue
+					} else {
+						log.Printf("[INFO] Found file with name %s", readmeName)
+						break
+					}
+				}
+
 				combined := []byte{}
 				combined = append(combined, appfileData...)
 				combined = append(combined, appPythonData...)
