@@ -8,6 +8,7 @@ import { Prompt } from 'react-router'
 import { useBeforeunload } from 'react-beforeunload';
 import ReactJson from 'react-json-view'
 import NestedMenuItem from "material-ui-nested-menu-item";
+import ReactMarkdown from 'react-markdown';
 
 
 import {TextField, Drawer, Button, Paper, Grid, Tabs, InputAdornment, Tab, ButtonBase, Tooltip, Select, MenuItem, Divider, Dialog, Modal, DialogActions, DialogTitle, InputLabel, DialogContent, FormControl, IconButton, Menu, Input, FormGroup, FormControlLabel, Typography, Checkbox, Breadcrumbs, CircularProgress, Switch, Fade} from '@material-ui/core';
@@ -334,6 +335,38 @@ const AngularWorkflow = (props) => {
 		.catch(error => {
 			alert.error(error.toString())
 		});
+	}
+
+
+	function OuterLink(props) {
+		if (props.href.includes("http") || props.href.includes("mailto")) {
+			return <a href={props.href} style={{color: "#f85a3e", textDecoration: "none"}}>{props.children}</a>
+		}
+		return <Link to={props.href} style={{color: "#f85a3e", textDecoration: "none"}}>{props.children}</Link>
+	}
+
+	function Img(props) {
+		return <img style={{maxWidth: "100%"}} alt={props.alt} src={props.src}/>
+	}
+
+	function CodeHandler(props) {
+		return (
+			<pre style={{padding: 15, minWidth: "50%", maxWidth: "100%", backgroundColor: theme.palette.inputColor, overflowX: "auto", overflowY: "hidden",}}>
+				<code>
+					{props.value}
+				</code>
+			</pre>
+		)
+	}
+
+	function Heading(props) {
+		const element = React.createElement(`h${props.level}`, {style: {marginTop: 40}}, props.children)
+		return (
+			<Typography>
+				{props.level !== 1 ? <Divider style={{width: "90%", marginTop: 40, backgroundColor: theme.palette.inputColor}} /> : null}
+				{element}
+			</Typography>
+		)
 	}
 
 	const generateApikey = () => {
@@ -8794,12 +8827,14 @@ const AngularWorkflow = (props) => {
 			active: true,
 		})
 
-		if (selectedApp.authentication === undefined) {
-			return null
-		}
-
-		if (selectedApp.authentication.parameters === null || selectedApp.authentication.parameters === undefined || selectedApp.authentication.parameters.length === 0) {
-			return null
+		if (selectedApp.authentication === undefined || selectedApp.authentication.parameters === null || selectedApp.authentication.parameters === undefined || selectedApp.authentication.parameters.length === 0) {
+			return (
+				<DialogContent style={{textAlign: "center", marginTop: 50,}}>
+					<Typography variant="h4">
+						{selectedApp.name} does not require authentication
+					</Typography>
+				</DialogContent>
+			)
 		}
 
 		authenticationOption.app.actions = []
@@ -8883,6 +8918,7 @@ const AngularWorkflow = (props) => {
 		//console.log(
 		return (
 			<div>
+				<DialogTitle><div style={{color: "white"}}>Authentication for {selectedApp.name}</div></DialogTitle>
 				<DialogContent>
 					<a target="_blank" rel="norefferer" href="https://shuffler.io/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is app authentication?</a><div/>
 					These are required fields for authenticating with {selectedApp.name} 
@@ -9044,7 +9080,7 @@ const AngularWorkflow = (props) => {
 	
 
 	// This whole part is redundant. Made it part of Arguments instead.
-	//console.log("TYPE: ", authenticationType)
+	console.log(selectedApp)
 	const authenticationModal = authenticationModalOpen ? 
 		<Dialog 
 			open={authenticationModalOpen} 
@@ -9059,12 +9095,26 @@ const AngularWorkflow = (props) => {
 				style: {
 					backgroundColor: surfaceColor,
 					color: "white",
-					minWidth: 600,
+					minWidth: 1100,
+					minHeight: 700,
+					maxHeight: 700,
 					padding: 15, 
+					overflow: "hidden",
 				},
 			}}
 		>
-			<IconButton style={{zIndex: 5000, position: "absolute", top: 14, right: 14, color: "grey"}} onClick={() => {
+			<div style={{zIndex: 5000, position: "absolute", top: 20, right: 54, height: 50, width: 50,}}>
+				{selectedApp.reference_info === undefined || selectedApp.reference_info === null || selectedApp.reference_info.github_url === undefined || selectedApp.reference_info.github_url === null || selectedApp.reference_info.github_url.length === 0 ? 
+					<a rel="norefferer" target="_blank" href={"https://github.com/frikky/shuffle-apps"} style={{textDecoration: "none", color: "#f86a3e"}}>
+						<img alt={`Documentation image for ${selectedApp.name}`} src={selectedApp.large_image} style={{width: 30, height: 30, border: "2px solid rgba(255,255,255,0.6)", borderRadius: theme.palette.borderRadius,}} />
+					</a>
+					:
+					<a rel="norefferer" target="_blank" href={selectedApp.reference_info.github_url} style={{textDecoration: "none", color: "#f86a3e"}}>
+						<img alt={`Documentation image for ${selectedApp.name}`} src={selectedApp.large_image} style={{width: 30, height: 30, border: "2px solid rgba(255,255,255,0.6)", borderRadius: theme.palette.borderRadius,}} />
+					</a>
+				}
+			</div>
+			<IconButton style={{zIndex: 5000, position: "absolute", top: 14, right: 18, color: "grey"}} onClick={() => {
 				setAuthenticationModalOpen(false)
 				if (configureWorkflowModalOpen) {
 					setSelectedAction({})
@@ -9072,12 +9122,56 @@ const AngularWorkflow = (props) => {
 			}}>
 				<CloseIcon  />
 			</IconButton>
-			<DialogTitle><div style={{color: "white"}}>Authentication for {selectedApp.name}</div></DialogTitle>
-			{authenticationType.type === "oauth2" ? 
-				<AuthenticationOauth2 saveWorkflow={saveWorkflow} selectedApp={selectedApp} workflow={workflow} selectedAction={selectedAction} authenticationType={authenticationType} getAppAuthentication={getAppAuthentication} appAuthentication={appAuthentication} setSelectedAction={setSelectedAction} setNewAppAuth={setNewAppAuth} setAuthenticationModalOpen={setAuthenticationModalOpen} />
-				:
-				<AuthenticationData app={selectedApp} />	
-			}
+			<div style={{display: "flex", flexDirection: "row",}}>
+				<div style={{flex: 1, padding: 0, minHeight: 650, maxHeight: 650, overflowY: "auto", overflowX: "hidden", }}>
+					{authenticationType.type === "oauth2" ? 
+						<AuthenticationOauth2 saveWorkflow={saveWorkflow} selectedApp={selectedApp} workflow={workflow} selectedAction={selectedAction} authenticationType={authenticationType} getAppAuthentication={getAppAuthentication} appAuthentication={appAuthentication} setSelectedAction={setSelectedAction} setNewAppAuth={setNewAppAuth} setAuthenticationModalOpen={setAuthenticationModalOpen} />
+					:
+						<AuthenticationData app={selectedApp} />	
+					}
+				</div>
+				<div style={{flex: 2, borderLeft: `1px solid ${inputColor}`, padding: "70px 30px 30px 30px", maxHeight: 630, minHeight: 630, overflowY: "auto", overflowX: "hidden"}}>
+					{selectedApp.documentation === undefined || selectedApp.documentation === null || selectedApp.documentation.length === 0 ? 
+							<span style={{textAlign: "center", }}>
+								<Typography variant="h4">
+									There is currently no documentation for this app. 
+								</Typography>
+								<Typography variant="h6" style={{marginTop: 25}}>
+									Want help with this app? <a rel="norefferer" target="_blank" href="https://discord.gg/B2CBzUm" style={{textDecoration: "none", color: "#f86a3e"}}>Join the Discord!</a>
+								</Typography>
+
+								<Typography variant="h4" style={{marginTop: 50,}}>
+									Want to help change this app?
+								</Typography>
+								{selectedApp.reference_info === undefined || selectedApp.reference_info === null || selectedApp.reference_info.github_url === undefined || selectedApp.reference_info.github_url === null || selectedApp.reference_info.github_url.length === 0 ? 
+									<span>
+										<Typography variant="h6" style={{marginTop: 25}}>
+											<a rel="norefferer" target="_blank" href={"https://github.com/frikky/shuffle-apps"} style={{textDecoration: "none", color: "#f86a3e"}}>Check it out on Github!</a>
+										</Typography>
+									</span>
+									:
+									<span>
+										<Typography variant="h6" style={{marginTop: 25}}>
+											<a rel="norefferer" target="_blank" href={selectedApp.reference_info.github_url} style={{textDecoration: "none", color: "#f86a3e"}}>Check it out on Github!</a>
+										</Typography>
+									</span>
+								}
+							</span>
+						: 
+							<ReactMarkdown 
+								id="markdown_wrapper" 
+								escapeHtml={true}
+								source={selectedApp.documentation} 
+								renderers={{
+									link: OuterLink, 
+									image: Img,
+									code: CodeHandler,
+									heading: Heading,
+								}}
+							/>
+					}
+				</div>
+			</div>
 		</Dialog> : null
 
 	//const loadedCheck = isLoaded && isLoggedIn && workflowDone ? 

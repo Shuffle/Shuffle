@@ -176,6 +176,7 @@ const AuthenticationOauth2 = (props) => {
 	//console.log(
 	return (
 		<div>
+			<DialogTitle><div style={{color: "white"}}>Authentication for {selectedApp.name}</div></DialogTitle>
 			<DialogContent>
 				<span style={{}}>
 					<b>Oauth2 requires a client ID and secret to authenticate. This is usually made in the remote system.</b>

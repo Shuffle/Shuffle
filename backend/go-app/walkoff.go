@@ -3667,25 +3667,6 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 					continue
 				}
 
-				readmeNames := []string{"readme", "readme.md"}
-				for _, readmeName := range readmeNames {
-					readmePath := fmt.Sprintf("%s/%s", extra, readmeName)
-					readmeInfo, err := fs.Open(readmePath)
-					if err != nil {
-						log.Printf("[WARNING] Failed to read README path %s", readmePath)
-						continue
-					}
-
-					dockerfileData, err := ioutil.ReadAll(dockerfile)
-					if err != nil {
-						log.Printf("[WARNING] Failed to read readme file at %s", readmePath)
-						continue
-					} else {
-						log.Printf("[INFO] Found file with name %s", readmeName)
-						break
-					}
-				}
-
 				combined := []byte{}
 				combined = append(combined, appfileData...)
 				combined = append(combined, appPythonData...)
@@ -3702,6 +3683,49 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 
 				newName := workflowapp.Name
 				newName = strings.ReplaceAll(newName, " ", "-")
+
+				readmeNames := []string{"README.md", "README", "readme", "readme.md", "README.MD"}
+				for _, readmeName := range readmeNames {
+					readmePath := fmt.Sprintf("%s%s", extra, readmeName)
+					readmeInfo, err := fs.Open(readmePath)
+					if err != nil {
+						//log.Printf("[WARNING] Failed to read README path %s", readmePath)
+						continue
+					}
+
+					fileData, err := ioutil.ReadAll(readmeInfo)
+					if err != nil {
+						log.Printf("[WARNING] Failed to read readme file at %s", readmePath)
+						continue
+					} else {
+						workflowapp.Documentation = string(fileData)
+						log.Printf("[INFO] Found %s (README) file of length %d for %s:%s", readmePath, len(workflowapp.Documentation), newName, workflowapp.AppVersion)
+						break
+					}
+				}
+
+				if len(workflowapp.Documentation) == 0 {
+					for _, readmeName := range readmeNames {
+						readmePath := fmt.Sprintf("%s../%s", extra, readmeName)
+						readmeInfo, err := fs.Open(readmePath)
+						if err != nil {
+							//log.Printf("[WARNING] Failed to read README path %s", readmePath)
+							continue
+						}
+
+						fileData, err := ioutil.ReadAll(readmeInfo)
+						if err != nil {
+							log.Printf("[WARNING] Failed to read readme file at %s", readmePath)
+							continue
+						} else {
+							workflowapp.Documentation = string(fileData)
+							log.Printf("[INFO] Found %s (README) file of length %d for %s:%s", readmePath, len(workflowapp.Documentation), newName, workflowapp.AppVersion)
+							break
+						}
+					}
+				}
+
+				workflowapp.ReferenceInfo.GithubUrl = fmt.Sprintf("https://github.com/frikky/shuffle-apps/tree/master/%s/%s", strings.ToLower(newName), workflowapp.AppVersion)
 
 				tags := []string{
 					fmt.Sprintf("%s:%s_%s", baseDockerName, strings.ToLower(newName), workflowapp.AppVersion),

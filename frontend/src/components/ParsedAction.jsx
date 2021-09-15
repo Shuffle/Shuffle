@@ -9,7 +9,7 @@ import NestedMenuItem from "material-ui-nested-menu-item";
 //import NestedMenuItem from "./NestedMenu.jsx";
 
 import {Popper, TextField, TextareaAutosize, Drawer, Button, Paper, Grid, Tabs, InputAdornment, Tab, ButtonBase, Tooltip, Select, MenuItem, Divider, Dialog, Modal, DialogActions, DialogTitle, InputLabel, DialogContent, FormControl, IconButton, Menu, Input, FormGroup, FormControlLabel, Typography, Checkbox, Breadcrumbs, CircularProgress, Switch, Fade} from '@material-ui/core';
-import {GetApp as GetAppIcon, Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
+import {HelpOutline as HelpOutlineIcon, Description as DescriptionIcon, GetApp as GetAppIcon, Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
 import Autocomplete from '@material-ui/lab/Autocomplete';
 
 import CodeMirror from '@uiw/react-codemirror';
@@ -1459,7 +1459,7 @@ const ParsedAction = (props) => {
 				<div style={{display: "flex", minHeight: 40, marginBottom: 30}}>
 					<div style={{flex: 1}}>
 						<h3 style={{marginBottom: 5}}>{(selectedAction.app_name.charAt(0).toUpperCase()+selectedAction.app_name.substring(1)).replaceAll("_", " ")}</h3>
-						<div style={{display: "flex",}}>
+						<div style={{display: "flex", marginTop: 10, }}>
 							<IconButton style={{marginTop: "auto", marginBottom: "auto", height: 30, paddingLeft: 0, paddingRight: 0}} onClick={() => {
 								console.log("FIND EXAMPLE RESULTS FOR ", selectedAction) 
 								if (workflowExecutions.length > 0) {
@@ -1488,15 +1488,20 @@ const ParsedAction = (props) => {
 									<ArrowLeftIcon style={{color: "white"}}/>
 								</Tooltip>
 							</IconButton>
-							<span style={{}}>
-								<Typography style={{marginTop: 5,}}><a rel="norefferer" href="https://shuffler.io/docs/workflows#nodes" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>What are actions?</a></Typography>
-								{selectedAction.errors !== undefined && selectedAction.errors !== null && selectedAction.errors.length > 0 ? 
-									<div>
-										Errors: {selectedAction.errors.join("\n")}
-									</div>
-									: null
-								}
-							</span>
+							<IconButton style={{marginTop: "auto", marginBottom: "auto", height: 30, paddingLeft: 10, paddingRight: 0}} onClick={() => {
+								setAuthenticationModalOpen(true)
+							}}>
+								<Tooltip color="primary" title="Read app docs" placement="top">
+									<DescriptionIcon style={{color: "white"}} />
+								</Tooltip>
+							</IconButton>
+							<IconButton style={{marginTop: "auto", marginBottom: "auto", height: 30, paddingLeft: 25, paddingRight: 0}} onClick={() => {}}>
+								<a rel="norefferer" href="https://shuffler.io/docs/workflows#nodes" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>
+									<Tooltip color="primary" title="What are actions?" placement="top">
+										<HelpOutlineIcon style={{color: "white"}}/>
+									</Tooltip>
+								</a>
+							</IconButton>
 						</div>
 					</div>
 					<div style={{display: "flex", flexDirection: "column",}}>
