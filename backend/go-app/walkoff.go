@@ -1540,6 +1540,33 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 				return shuffle.WorkflowExecution{}, fmt.Sprintf("Auth ID %s doesn't exist", action.AuthenticationId), errors.New(fmt.Sprintf("Auth ID %s doesn't exist", action.AuthenticationId))
 			}
 
+			if curAuth.Encrypted {
+				setField := true
+				newFields := []shuffle.AuthenticationStore{}
+				for _, field := range curAuth.Fields {
+					parsedKey := fmt.Sprintf("%s_%d_%s_%s", curAuth.OrgId, curAuth.Created, curAuth.Label, field.Key)
+					newValue, err := shuffle.HandleKeyDecryption(field.Value, parsedKey)
+					if err != nil {
+						log.Printf("[WARNING] Failed decryption for %s: %s", field.Key, err)
+						setField = false
+						break
+					}
+
+					field.Value = newValue
+					newFields = append(newFields, field)
+				}
+
+				if setField {
+					curAuth.Fields = newFields
+				}
+			} else {
+				log.Printf("[INFO] AUTH IS NOT ENCRYPTED - attempting encrypting!")
+				err = shuffle.SetWorkflowAppAuthDatastore(ctx, curAuth, curAuth.Id)
+				if err != nil {
+					log.Printf("[WARNING] Failed running encryption during execution: %s", err)
+				}
+			}
+
 			newParams := []shuffle.WorkflowAppActionParameter{}
 			if strings.ToLower(curAuth.Type) == "oauth2" {
 				log.Printf("\n\nShould replace auth parameters!!!\n\n")
@@ -3699,7 +3726,7 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 						continue
 					} else {
 						workflowapp.Documentation = string(fileData)
-						log.Printf("[INFO] Found %s (README) file of length %d for %s:%s", readmePath, len(workflowapp.Documentation), newName, workflowapp.AppVersion)
+						//log.Printf("[INFO] Found %s (README) file of length %d for %s:%s", readmePath, len(workflowapp.Documentation), newName, workflowapp.AppVersion)
 						break
 					}
 				}
@@ -3719,7 +3746,7 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 							continue
 						} else {
 							workflowapp.Documentation = string(fileData)
-							log.Printf("[INFO] Found %s (README) file of length %d for %s:%s", readmePath, len(workflowapp.Documentation), newName, workflowapp.AppVersion)
+							//log.Printf("[INFO] Found %s (README) file of length %d for %s:%s", readmePath, len(workflowapp.Documentation), newName, workflowapp.AppVersion)
 							break
 						}
 					}

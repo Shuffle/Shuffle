@@ -1488,7 +1488,7 @@ const ParsedAction = (props) => {
 									<ArrowLeftIcon style={{color: "white"}}/>
 								</Tooltip>
 							</IconButton>
-							<IconButton style={{marginTop: "auto", marginBottom: "auto", height: 30, paddingLeft: 10, paddingRight: 0}} onClick={() => {
+							<IconButton style={{marginTop: "auto", marginBottom: "auto", height: 30, paddingLeft: 25, paddingRight: 0}} onClick={() => {
 								setAuthenticationModalOpen(true)
 							}}>
 								<Tooltip color="primary" title="Read app docs" placement="top">

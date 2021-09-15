@@ -9123,18 +9123,22 @@ const AngularWorkflow = (props) => {
 				<CloseIcon  />
 			</IconButton>
 			<div style={{display: "flex", flexDirection: "row",}}>
-				<div style={{flex: 1, padding: 0, minHeight: 650, maxHeight: 650, overflowY: "auto", overflowX: "hidden", }}>
+				<div style={{flex: 2, padding: 0, minHeight: 650, maxHeight: 650, overflowY: "auto", overflowX: "hidden", }}>
 					{authenticationType.type === "oauth2" ? 
 						<AuthenticationOauth2 saveWorkflow={saveWorkflow} selectedApp={selectedApp} workflow={workflow} selectedAction={selectedAction} authenticationType={authenticationType} getAppAuthentication={getAppAuthentication} appAuthentication={appAuthentication} setSelectedAction={setSelectedAction} setNewAppAuth={setNewAppAuth} setAuthenticationModalOpen={setAuthenticationModalOpen} />
 					:
 						<AuthenticationData app={selectedApp} />	
 					}
 				</div>
-				<div style={{flex: 2, borderLeft: `1px solid ${inputColor}`, padding: "70px 30px 30px 30px", maxHeight: 630, minHeight: 630, overflowY: "auto", overflowX: "hidden"}}>
+				<div style={{flex: 3, borderLeft: `1px solid ${inputColor}`, padding: "70px 30px 30px 30px", maxHeight: 630, minHeight: 630, overflowY: "auto", overflowX: "hidden"}}>
 					{selectedApp.documentation === undefined || selectedApp.documentation === null || selectedApp.documentation.length === 0 ? 
 							<span style={{textAlign: "center", }}>
+								<Typography variant="h6">
+									Description: {selectedApp.description}
+								</Typography>
+								<Divider style={{marginTop: 25, marginBottom: 25, backgroundColor: inputColor, }} />
 								<Typography variant="h4">
-									There is currently no documentation for this app. 
+									There is currently no extended documentation available for this app. 
 								</Typography>
 								<Typography variant="h6" style={{marginTop: 25}}>
 									Want help with this app? <a rel="norefferer" target="_blank" href="https://discord.gg/B2CBzUm" style={{textDecoration: "none", color: "#f86a3e"}}>Join the Discord!</a>
