@@ -1601,7 +1601,7 @@ const ParsedAction = (props) => {
 					<div style={{display: "flex"}}>
 						<Select
 							labelId="select-app-auth"
-							value={selectedAction.selectedAuthentication}
+							value={Object.getOwnPropertyNames(selectedAction.selectedAuthentication).length === 0 ? "No selection" : selectedAction.selectedAuthentication}
 							SelectDisplayProps={{
 								style: {
 									marginLeft: 10,
@@ -1609,14 +1609,32 @@ const ParsedAction = (props) => {
 							}}
 							fullWidth
 							onChange={(e) => {
-								//console.log("CHOSE AN AUTHENTICATION OPTION: ", e.target.value)
-								selectedAction.selectedAuthentication = e.target.value
-								selectedAction.authentication_id = e.target.value.id
-								setSelectedAction(selectedAction)
-								setUpdate(Math.random())
+								if (e.target.value === "No selection") {
+									selectedAction.selectedAuthentication = {}
+									selectedAction.authentication_id = ""
+
+									for (var key in selectedAction.parameters) {
+										console.log(selectedAction.parameters[key])
+										if (selectedAction.parameters[key].configuration) {
+											selectedAction.parameters[key].value = ""
+										}
+									}
+									setSelectedAction(selectedAction)
+									setUpdate(Math.random())
+								} else {
+									//console.log("CHOSE AN AUTHENTICATION OPTION: ", e.target.value)
+									selectedAction.selectedAuthentication = e.target.value
+									selectedAction.authentication_id = e.target.value.id
+									setSelectedAction(selectedAction)
+									setUpdate(Math.random())
+								}
 							}}
 							style={{backgroundColor: theme.palette.inputColor, color: "white", height: 50, maxWidth: rightsidebarStyle.maxWidth-80, borderRadius: theme.palette.borderRadius,}}	
 						>
+
+							<MenuItem style={{backgroundColor: theme.palette.inputColor, color: "white"}} value="No selection">
+								<em>No selection</em>
+							</MenuItem>
 							{selectedAction.authentication.map(data => {
 								//console.log("AUTH DATA: ", data)
 								return(
@@ -1711,7 +1729,7 @@ const ParsedAction = (props) => {
 							<MenuItem style={{backgroundColor: theme.palette.inputColor, color: "white"}} value="No selection">
 								<em>No selection</em>
 							</MenuItem>
-							<Divider />
+							<Divider style={{backgroundColor: theme.palette.inputColor }} />
 							{workflow.execution_variables.map(data => (
 								<MenuItem style={{backgroundColor: theme.palette.inputColor, color: "white"}} value={data.name}>
 									{data.name}
