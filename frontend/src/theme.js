@@ -12,6 +12,7 @@ const theme = createMuiTheme({
 		text: {
 			secondary: "rgba(255,255,255,0.7)",
 		},
+		type: 'dark',
 		surfaceColor: "#27292d",
 		inputColor: "#383B40",
 		borderRadius: 5,

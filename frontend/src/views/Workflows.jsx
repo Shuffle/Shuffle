@@ -4,7 +4,7 @@ import { makeStyles } from '@material-ui/core/styles';
 import { useTheme } from '@material-ui/core/styles';
 
 import {Avatar, Grid, Paper, Tooltip, Divider, Button, TextField, FormControl, IconButton, Menu, MenuItem, FormControlLabel, Chip, Switch, Typography, Zoom, CircularProgress, Dialog, DialogTitle, DialogActions, DialogContent} from '@material-ui/core';
-import {Close as CloseIcon, Compare as CompareIcon, Maximize as MaximizeIcon, Minimize as MinimizeIcon, AddCircle as AddCircleIcon, Toc as TocIcon, Send as SendIcon, Search as SearchIcon, FileCopy as FileCopyIcon, Delete as DeleteIcon, BubbleChart as BubbleChartIcon, Restore as RestoreIcon, Cached as CachedIcon, GetApp as GetAppIcon, Apps as AppsIcon, Edit as EditIcon, MoreVert as MoreVertIcon, PlayArrow as PlayArrowIcon, Add as AddIcon, Publish as PublishIcon, CloudUpload as CloudUploadIcon, CloudDownload as CloudDownloadIcon} from '@material-ui/icons';
+import {GridOn as GridOnIcon, List as ListIcon, Close as CloseIcon, Compare as CompareIcon, Maximize as MaximizeIcon, Minimize as MinimizeIcon, AddCircle as AddCircleIcon, Toc as TocIcon, Send as SendIcon, Search as SearchIcon, FileCopy as FileCopyIcon, Delete as DeleteIcon, BubbleChart as BubbleChartIcon, Restore as RestoreIcon, Cached as CachedIcon, GetApp as GetAppIcon, Apps as AppsIcon, Edit as EditIcon, MoreVert as MoreVertIcon, PlayArrow as PlayArrowIcon, Add as AddIcon, Publish as PublishIcon, CloudUpload as CloudUploadIcon, CloudDownload as CloudDownloadIcon} from '@material-ui/icons';
 //import {Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
 
 //https://next.material-ui.com/components/material-icons/
@@ -47,13 +47,13 @@ const flexBoxStyle = {
 }
 
 const useStyles = makeStyles((theme) => ({
-	root: {
+	datagrid: {
 		border: 0,
 		'& .MuiDataGrid-columnsContainer': {
-		backgroundColor: theme.palette.type === 'light' ? '#fafafa' : '#1d1d1d',
+			backgroundColor: theme.palette.type === 'light' ? '#fafafa' : theme.palette.inputColor,
 		},
 		'& .MuiDataGrid-iconSeparator': {
-		display: 'none',
+			display: 'none',
 		},
 		'& .MuiDataGrid-colCell, .MuiDataGrid-cell': {
 		borderRight: `1px solid ${
@@ -330,10 +330,10 @@ const Workflows = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, removeCookie, cookies, userdata} = props;
 	document.title = "Shuffle - Workflows"
 	const theme = useTheme();
-	const referenceUrl = globalUrl+"/api/v1/hooks/"
-
 	const alert = useAlert()
-	const classes = useStyles();
+	const classes = useStyles(theme);
+
+	const referenceUrl = globalUrl+"/api/v1/hooks/"
 
 	var upload = ""
 	const [file, setFile] = React.useState("");
@@ -1659,48 +1659,99 @@ const Workflows = (props) => {
 		return [triggers, schedules, webhooks, subflows]
 	}
 
-	const WorkflowGridView = () => {
+	const WorkflowListView = () => {
 			let workflowData = "";
 			if (workflows.length > 0) {
 				const columns = [
-					{ field: 'title', headerName: 'Title', width: 330, },
-					{ field: 'actions', headerName: 'Actions', width: 200, sortable: false, 
+					{ field: 'title', headerName: 'Title', width: 330, renderCell: (params) => {
+						const data = params.row.record
+
+						return (
+							<Grid item>
+								<Link to={`/workflows/{data.id}`} style={{textDecoration: "none", color: "inherit",}}>
+									<Typography>
+										{data.name}
+									</Typography>
+								</Link>
+							</Grid>
+						)
+					}},
+					{/* field: 'category', headerName: 'category', width: 140, renderCell: (params) => {
+						const data = params.row.record
+						const category = data.category === undefined ? "not defined" : data.category
+						return (
+							<Typography>
+								{category}
+							</Typography>
+						)
+					} */},
+					{ field: 'actions', headerName: 'Options', width: 200, sortable: false, 
 						disableClickEventBubbling: true,
 						renderCell: (params) => {
 							const data = params.row.record;
+							const actions = data.actions !== null ? data.actions.length : 0
 							let [triggers, schedules, webhooks, subflows] = getWorkflowMeta(data);
 
 							return (
 								<Grid item>
-									<Link to={"/workflows/"+data.id}>
-											<EditIcon style={{background: "#F85A3E",
-	boxShadow: "0px 1px 2px rgba(0, 0, 0, 0.16), 0px 2px 4px rgba(0, 0, 0, 0.12), 0px 1px 8px rgba(0, 0, 0, 0.1)",
-	borderRadius: "4px", color: "black", height: "20px", "width": "20px", fontSize: "small"}} />
-									</Link>
-									<Tooltip color="primary" title="Edit workflow" placement="bottom">
-										<BubbleChartIcon />
-									</Tooltip>
-									<Tooltip color="primary" title="Execute workflow" placement="bottom">
-										<PlayArrowIcon color="secondary" disabled={!data.is_valid} onClick={() => executeWorkflow(data.id)} />
-									</Tooltip>
-									<Tooltip color="primary" title={`Actions: ${data.actions.length}`} placement="bottom">
-										<AppsIcon />
-									</Tooltip>
-									{webhooks > 0 ? 
-										<Tooltip color="primary" title={`Webhooks: ${webhooks}`} placement="bottom">
-											<RestoreIcon />
+									<div style={{display: "flex"}}>
+										<Tooltip color="primary" title="Action amount" placement="bottom">
+											<span style={{color: "#979797", display: "flex"}}>
+												<BubbleChartIcon style={{marginTop: "auto", marginBottom: "auto",}} /> 
+												<Typography style={{marginLeft: 5, marginTop: "auto", marginBottom: "auto",}}>
+													{actions}
+												</Typography>
+											</span>
 										</Tooltip>
-									: null}
-									{schedules > 0 ? 
-										<Tooltip color="primary" title={`Schedules: ${schedules}`} placement="bottom">
-											<RestoreIcon />
+										<Tooltip color="primary" title="Trigger amount" placement="bottom">
+											<span style={{marginLeft: 15, color: "#979797", display: "flex"}}>
+												<RestoreIcon style={{color: "#979797", marginTop: "auto", marginBottom: "auto",}}/> 
+												<Typography style={{marginLeft: 5, marginTop: "auto", marginBottom: "auto",}}>
+													{triggers}
+												</Typography>
+											</span>
 										</Tooltip>
-									: null}
+										<Tooltip color="primary" title="Subflows used" placement="bottom">
+											<span style={{marginLeft: 15, display: "flex", color: "#979797", cursor: "pointer"}} onClick={() => {
+												if (subflows === 0) {
+													alert.info("No subflows for "+data.name)
+													return
+												}
+
+												var newWorkflows = [data]
+												for (var key in data.triggers) {
+													const trigger = data.triggers[key]
+													if (trigger.app_name !== "Shuffle Workflow") {
+														continue
+													}
+
+													if (trigger.parameters !== undefined && trigger.parameters !== null && trigger.parameters.length > 0 && trigger.parameters[0].name === "workflow") {
+														const newWorkflow = workflows.find(item => item.id === trigger.parameters[0].value)	
+														if (newWorkflow !== null && newWorkflow !== undefined) {
+															newWorkflows.push(newWorkflow)
+															continue
+														}
+													}
+												}
+
+												setFilters(["Subflows of "+data.name])
+												setFilteredWorkflows(newWorkflows)
+											}}>
+												<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" style={{color: "#979797", marginTop: "auto", marginBottom: "auto",}}>
+													<path d="M0 0H15V15H0V0ZM16 16H18V18H16V16ZM16 13H18V15H16V13ZM16 10H18V12H16V10ZM16 7H18V9H16V7ZM16 4H18V6H16V4ZM13 16H15V18H13V16ZM10 16H12V18H10V16ZM7 16H9V18H7V16ZM4 16H6V18H4V16Z" fill="#979797"/>
+												</svg>
+												<Typography style={{marginLeft: 5, marginTop: "auto", marginBottom: "auto",}}>
+													{subflows}
+												</Typography>
+											</span>
+
+										</Tooltip>
+									</div>
 								</Grid>
 							)
 						}
 					},
-					{ field: 'tags', headerName: 'Tags', maxHeight: 15, width: 390, sortable: false, 
+					{/* field: 'tags', headerName: 'Tags', maxHeight: 15, width: 390, sortable: false, 
 						disableClickEventBubbling: true,
 						renderCell: (params) => {
 							const data = params.row.record;
@@ -1726,7 +1777,7 @@ const Workflows = (props) => {
 									</Grid>
 								)
 							}
-						},
+						*/}
 				];
 				let rows = [];
 				rows = workflows.map((data, index) => {
@@ -1739,9 +1790,19 @@ const Workflows = (props) => {
 					return obj;
 				});
 				workflowData = 
-					<DataGrid color="primary" className={classes.root} rows={rows} columns={columns} pageSize={5} checkboxSelection autoHeight density="standard" components={{
-						Toolbar: GridToolbar,
-					}} />
+					<DataGrid 
+						color="primary" 
+						className={classes.datagrid}
+						rows={rows} 
+						columns={columns} 
+						pageSize={20} 
+						checkboxSelection 
+						autoHeight 
+						density="standard" 
+						components={{
+							Toolbar: GridToolbar,
+						}} 
+					/>
 			}
 			return (
 				<div style={gridContainer}>
@@ -1905,6 +1966,16 @@ const Workflows = (props) => {
 						<Button color="primary" style={{}} variant="text" onClick={() => setModalOpen(true)}><AddIcon /></Button> 				
 					</Tooltip>
 				: null*/}
+				{view === "list" && (
+					<Tooltip color="primary" title={"Grid View"} placement="top">
+						<Button color="primary" variant="text" onClick={() => setView("grid")}><GridOnIcon /></Button>
+					</Tooltip>
+				)}
+				{view === "grid" && (
+					<Tooltip color="primary" title={"List View"} placement="top">
+						<Button color="primary" variant="text" onClick={() => setView("list")}><ListIcon /></Button>
+					</Tooltip>
+				)}
 				<Tooltip color="primary" title={"Import workflows"} placement="top">
 					{importLoading ? 
 						<Button color="primary" style={{}} variant="text" onClick={() => {}}>
@@ -2053,7 +2124,7 @@ const Workflows = (props) => {
 						</div>
 					</div>
 					<div style={{marginTop: 15,}} />
-					{view === "grid" && (
+					{view === "grid" ?
 						<Grid container spacing={4} style={paperAppContainer}>
 							<NewWorkflowPaper />
 							{filteredWorkflows.map((data, index) => {
@@ -2062,11 +2133,9 @@ const Workflows = (props) => {
 								)
 							})}
 						</Grid>
-					)}
-					
-					{/*view === "list" && (
-						<WorkflowGridView />
-					)*/}
+						:
+						<WorkflowListView />
+					}
 
 					<div style={{marginBottom: 100}}/>
 				</div>
