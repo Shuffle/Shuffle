@@ -857,6 +857,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	userInfo, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("[WARNING] Api authentication failed in handleInfo: %s", err)
+
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
@@ -1177,8 +1178,10 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	//ssoUrl = org.SSOConfig.SOSOEntrypoint
+	redirectUri := shuffle.SSOUrl
 	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "redirect"}`)))
+	resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "redirect", "sso_url": "%s"}`, redirectUri)))
 }
 
 func handleLogin(resp http.ResponseWriter, request *http.Request) {
@@ -5866,7 +5869,7 @@ func initHandlers() {
 	// Docker orborus specific - downloads an image
 	r.HandleFunc("/api/v1/get_docker_image", getDockerImage).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/migrate_database", migrateDatabase).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/login_sso", shuffle.HandleSSO).Methods("GET", "POST", "OPTIONS")
+	r.HandleFunc("/api/v1/login_sso", shuffle.HandleSSO).Methods("POST", "OPTIONS")
 
 	// Important for email, IDS etc. Create this by:
 	// PS: For cloud, this has to use cloud storage.

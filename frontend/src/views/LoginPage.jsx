@@ -34,6 +34,7 @@ const LoginDialog = props => {
 	const [firstRequest, setFirstRequest] = useState(true);
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginViewLoading, setLoginViewLoading] = useState(false);
+  const [ssoUrl, setSSOUrl] = useState("")
 
 	// Used to swap from login to register. True = login, false = register
 
@@ -62,6 +63,10 @@ const LoginDialog = props => {
 					if (responseJson["success"] === false) {
 						setLoginInfo(responseJson["reason"])
 					} else {
+						if (responseJson.sso_url !== undefined && responseJson.sso_url !== null) {
+							setSSOUrl(responseJson.sso_url)
+						}
+
 						if (loginViewLoading) {
 							setLoginViewLoading(false)
 							checkLogin()
@@ -306,17 +311,21 @@ const LoginDialog = props => {
 					<div style={{ marginTop: "10px" }}>
 						{loginInfo}
 					</div>
-					<Typography style={{textAlign: "center", }}>
-						Or
-					</Typography>
-					<div style={{textAlign: "center", margin: 10, }}>
-						<Button fullWidth color="secondary" variant="outlined" type="button" style={{ flex: "1", marginTop: 5}} onClick={() => {
-							console.log("CLICK")
-							window.location = "https://dev-23367303.okta.com/app/dev-23367303_shuffletest_1/exk1vg1j7bYUYEG0k5d7/sso/saml"
-						}}>
-							Use SSO
-						</Button>
-					</div>
+  				{ssoUrl !== undefined && ssoUrl !== null && ssoUrl.length > 0 ? 
+						<div>
+							<Typography style={{textAlign: "center", }}>
+								Or
+							</Typography>
+							<div style={{textAlign: "center", margin: 10, }}>
+								<Button fullWidth color="secondary" variant="outlined" type="button" style={{ flex: "1", marginTop: 5}} onClick={() => {
+									console.log("CLICK")
+									window.location = ssoUrl
+								}}>
+									Use SSO
+								</Button>
+							</div>
+						</div>
+					: null}
 				</form>
 				}
 			</Paper>

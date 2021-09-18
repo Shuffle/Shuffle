@@ -36,6 +36,8 @@ const OrgHeader = (props) => {
 	const [appDownloadBranch, setAppDownloadBranch] = React.useState(selectedOrganization.defaults === undefined ? defaultBranch : selectedOrganization.defaults.app_download_branch === undefined || selectedOrganization.defaults.app_download_branch.length === 0 ? defaultBranch : selectedOrganization.defaults.app_download_branch)
 	const [workflowDownloadUrl, setWorkflowDownloadUrl] = React.useState(selectedOrganization.defaults === undefined ? "https://github.com/frikky/shuffle-apps" : selectedOrganization.defaults.workflow_download_repo === undefined || selectedOrganization.defaults.workflow_download_repo.length === 0 ? "https://github.com/frikky/shuffle-workflows" : selectedOrganization.defaults.workflow_download_repo)
 	const [workflowDownloadBranch, setWorkflowDownloadBranch] = React.useState(selectedOrganization.defaults === undefined ? defaultBranch : selectedOrganization.defaults.workflow_download_branch === undefined || selectedOrganization.defaults.workflow_download_branch.length === 0 ? defaultBranch : selectedOrganization.defaults.workflow_download_branch)
+	const [ssoEntrypoint, setSsoEntrypoint] = React.useState(selectedOrganization.sso_config === undefined ? "" : selectedOrganization.sso_config.sso_entrypoint === undefined || selectedOrganization.sso_config.sso_entrypoint.length === 0 ? "" : selectedOrganization.sso_config.sso_entrypoint)
+	const [ssoCertificate, setSsoCertificate] = React.useState(selectedOrganization.sso_config === undefined ? "" : selectedOrganization.sso_config.sso_certificate === undefined || selectedOrganization.sso_config.sso_certificate.length === 0 ? "" : selectedOrganization.sso_config.sso_certificate)
 
 	const [file, setFile] = React.useState("")
 	const [fileBase64, setFileBase64] = React.useState(selectedOrganization.image)
@@ -67,13 +69,14 @@ const OrgHeader = (props) => {
 		}
 	}
 
-	const handleEditOrg = (name, description, orgId, image, defaults) => {
+	const handleEditOrg = (name, description, orgId, image, defaults, sso_config) => {
 		const data = { 
 			"name": name, 
 			"description": description,
 			"org_id": orgId,
 			"image": image,
 			"defaults": defaults,
+			"sso_config": sso_config,
 		}
 
 		const url = globalUrl + `/api/v1/orgs/${selectedOrganization.id}`;
@@ -111,19 +114,25 @@ const OrgHeader = (props) => {
 	}
 
 	const orgSaveButton = 
-		<Button
-			style={{ width: 150, height: 55, flex: 1 }}
-			variant="contained"
-			color="primary"
-			onClick={() => handleEditOrg(orgName, orgDescription, selectedOrganization.id, selectedOrganization.image, {
-				"app_download_repo": appDownloadUrl, 
-				"app_download_branch": appDownloadBranch,
-				"workflow_download_repo": workflowDownloadUrl,
-				"workflow_download_branch": workflowDownloadBranch,
-			})}
-		>
-			<SaveIcon />
-		</Button>
+		<Tooltip title="Save any unsaved data" placement="bottom">
+			<Button
+				style={{ width: 150, height: 55, flex: 1 }}
+				variant="contained"
+				color="primary"
+				onClick={() => handleEditOrg(orgName, orgDescription, selectedOrganization.id, selectedOrganization.image, {
+					"app_download_repo": appDownloadUrl, 
+					"app_download_branch": appDownloadBranch,
+					"workflow_download_repo": workflowDownloadUrl,
+					"workflow_download_branch": workflowDownloadBranch,
+				},
+				{
+					"sso_entrypoint": ssoEntrypoint,
+					"sso_certificate": ssoCertificate,
+				})}
+			>
+				<SaveIcon />
+			</Button>
+		</Tooltip>
 
 	var imageData = file.length > 0 ? file : fileBase64 
 	imageData = imageData === undefined || imageData.length === 0 ? defaultImage : imageData
@@ -325,6 +334,69 @@ const OrgHeader = (props) => {
 										value={workflowDownloadBranch}
 										onChange={e => {
 											setWorkflowDownloadBranch(e.target.value)
+										}}
+										InputProps={{
+											classes: {
+												notchedOutline: classes.notchedOutline,
+											},
+											style:{
+												color: "white",
+											},
+										}}
+										/>
+								</span>
+							</Grid>
+							<Grid item xs={6} style={{}}>
+								<span>
+									<Typography>
+										SSO Entrypoint
+									</Typography>
+									<TextField
+										required
+										style={{flex: "1", marginTop: "5px", marginRight: "15px", backgroundColor: theme.palette.inputColor}}
+										fullWidth={true}
+										type="name"
+										multiline={true}
+										rows={2}
+										disabled={selectedOrganization.manager_orgs !== undefined && selectedOrganization.manager_orgs !== null && selectedOrganization.manager_orgs.length > 0}
+										id="outlined-with-placeholder"
+										margin="normal"
+										variant="outlined"
+										placeholder="The entrypoint URL from your provider"
+										value={ssoEntrypoint}
+										onChange={e => {
+											setSsoEntrypoint(e.target.value)
+										}}
+										InputProps={{
+											classes: {
+												notchedOutline: classes.notchedOutline,
+											},
+											style:{
+												color: "white",
+											},
+										}}
+										/>
+								</span>
+							</Grid>
+							<Grid item xs={6} style={{}}>
+								<span>
+									<Typography>
+										SSO Certificate
+									</Typography>
+									<TextField
+										required
+										style={{flex: "1", marginTop: "5px", marginRight: "15px", backgroundColor: theme.palette.inputColor}}
+										fullWidth={true}
+										type="name"
+										id="outlined-with-placeholder"
+										margin="normal"
+										variant="outlined"
+										multiline={true}
+										rows={2}
+										placeholder="The X509 certificate to use"
+										value={ssoCertificate}
+										onChange={e => {
+											setSsoCertificate(e.target.value)
 										}}
 										InputProps={{
 											classes: {
