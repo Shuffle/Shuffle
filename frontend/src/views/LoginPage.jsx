@@ -299,12 +299,23 @@ const LoginDialog = props => {
 						/>
 					</div>
 					<div style={{ display: "flex", marginTop: "15px" }}>
-						<Button color="primary" variant="contained" type="submit" style={{ flex: "1", marginRight: "5px" }} disabled={!handleValidateForm() || loginLoading}>
+						<Button color="primary" variant="contained" type="submit" style={{ flex: "1", }} disabled={!handleValidateForm() || loginLoading}>
   						{loginLoading ? <CircularProgress color="secondary" style={{color: "white",}} /> : "SUBMIT"}
 						</Button>
 					</div>
 					<div style={{ marginTop: "10px" }}>
 						{loginInfo}
+					</div>
+					<Typography style={{textAlign: "center", }}>
+						Or
+					</Typography>
+					<div style={{textAlign: "center", margin: 10, }}>
+						<Button fullWidth color="secondary" variant="outlined" type="button" style={{ flex: "1", marginTop: 5}} onClick={() => {
+							console.log("CLICK")
+							window.location = "https://dev-23367303.okta.com/app/dev-23367303_shuffletest_1/exk1vg1j7bYUYEG0k5d7/sso/saml"
+						}}>
+							Use SSO
+						</Button>
 					</div>
 				</form>
 				}

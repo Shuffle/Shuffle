@@ -289,6 +289,10 @@ const Header = props => {
 						}}
 						>
 						{userdata.orgs.map((data, index) => {
+							if (data.name === undefined || data.name === null || data.name.length === 0) {
+								return null
+							}
+
 							const imagesize = 22
 							const imageStyle = {width: imagesize, height: imagesize, pointerEvents: "none", marginRight: 10, marginLeft: data.creator_org !== undefined && data.creator_org.length > 0 ? 20 : 0}
 							const image = data.image === "" ? 

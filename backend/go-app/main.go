@@ -5866,6 +5866,7 @@ func initHandlers() {
 	// Docker orborus specific - downloads an image
 	r.HandleFunc("/api/v1/get_docker_image", getDockerImage).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/migrate_database", migrateDatabase).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/login_sso", shuffle.HandleSSO).Methods("GET", "POST", "OPTIONS")
 
 	// Important for email, IDS etc. Create this by:
 	// PS: For cloud, this has to use cloud storage.
