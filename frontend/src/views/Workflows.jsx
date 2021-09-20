@@ -99,7 +99,7 @@ export const GetIconInfo = (action) => {
 		{"key": "execute", "values": ["execute", "run", "play", "raise",]},
 		{"key": "extract", "values": ["extract", "unpack", "decompress", "open"]},
 		{"key": "inflate", "values": ["inflate", "pack", "compress",]},
-		{"key": "edit", "values": ["update", "create", "edit", "put", "patch", "change", "replace", "conver", "map", "format", "escape", "describe", ]},
+		{"key": "edit", "values": ["modify", "update", "create", "edit", "put", "patch", "change", "replace", "conver", "map", "format", "escape", "describe", ]},
 		{"key": "compare", "values": ["compare", "convert", "to", "filter", "translate", "parse"]},
 		{"key": "close", "values": ["close", "stop", "cancel", "block", ]},
 	]

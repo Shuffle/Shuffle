@@ -1,0 +1,17 @@
+#apiVersion: v1
+#kind: PersistentVolumeClaim
+#metadata:
+#  name: opensearch-claim0
+#  namespace: {{ .Values.namespace }}
+#  labels:
+#    app: opensearch-claim0
+#spec:
+#  selector:
+#    matchLabels:
+#      app: opensearch-claim0
+#  accessModes:
+#    - ReadWriteOnce
+#  storageClassName: local-storage
+#  resources:
+#    requests:
+#      storage: 5Gi

@@ -2005,7 +2005,11 @@ const Admin = (props) => {
 					/>
 					<ListItemText
 						primary="Active"
-						style={{ minWidth: 180, maxWidth: 180 }}
+						style={{ minWidth: 150, maxWidth: 150 }}
+					/>
+					<ListItemText
+						primary="Type"
+						style={{ minWidth: 150 , maxWidth: 150 }}
 					/>
 					<ListItemText
 						primary="Actions"
@@ -2081,10 +2085,14 @@ const Admin = (props) => {
 								}
 								style ={{ minWidth: 135, maxWidth: 135, marginRight: 15,}}
 							/>
-							<ListItemText
-					primary={data.active ? "True" : "False"}
-					style={{ minWidth: 180, maxWidth: 180 }}
-				/>
+					<ListItemText
+						primary={data.active ? "True" : "False"}
+						style={{ minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary={data.login_type === undefined || data.login_type === null || data.login_type.length === 0 ? "Normal" : data.login_type}
+						style={{ minWidth: 150, maxWidth: 150}}
+					/>
 				<ListItemText style={{ display: "flex" }}>
 					<IconButton
 						onClick={() => {
