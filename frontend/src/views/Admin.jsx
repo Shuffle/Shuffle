@@ -52,6 +52,7 @@ const Admin = (props) => {
 	const [selectedNamespace, setSelectedNamespace] = React.useState("default")
 	const [fileNamespaces, setFileNamespaces] = React.useState([]);
 	const [selectedUser, setSelectedUser] = React.useState({})
+	const [newUsername, setNewUsername] = React.useState("");
 	const [newPassword, setNewPassword] = React.useState("");
 	const [selectedUserModalOpen, setSelectedUserModalOpen] = React.useState(false)
 	const [selectedAuthentication, setSelectedAuthentication] = React.useState({})
@@ -1201,6 +1202,7 @@ const Admin = (props) => {
 					alert.error("Failed setting user: " + responseJson.reason)
 				} else {
 					alert.success("Set the user field " + field + " to " + value)
+					setSelectedUserModalOpen(false)
 				}
 			})
 			.catch(error => {
@@ -1340,6 +1342,44 @@ const Admin = (props) => {
 		>
 			<DialogTitle><span style={{ color: "white" }}><EditIcon style={{marginTop: 5}}/> Editing {selectedUser.username}</span></DialogTitle>
 			<DialogContent>
+				{isCloud ? 
+					null
+					:
+					<div style={{ display: "flex" }}>
+						<TextField
+							style={{ marginTop: 0, backgroundColor: theme.palette.inputColor, flex: 3 , marginRight: 10,}}
+							InputProps={{
+								style: {
+									height: 50,
+									color: "white",
+								},
+							}}
+							color="primary"
+							required
+							fullWidth={true}
+							placeholder="New username"
+							type="text"
+							id="standard-required"
+							autoComplete="username"
+							margin="normal"
+							variant="outlined"
+							defaultValue={selectedUser.username}
+							onChange={e => {
+								setNewUsername(e.target.value)
+							}}
+						/>
+						<Button
+							style={{ maxHeight: 50, flex: 1 }}
+							variant="outlined"
+							color="primary"
+							onClick={() => {
+								setUser(selectedUser.id, "username", newUsername)
+							}}
+						>
+							Submit
+						</Button>
+					</div>
+				}
 				{isCloud ? 
 					null
 					:
@@ -1626,7 +1666,7 @@ const Admin = (props) => {
 						</IconButton>
 					</Tooltip>
 						{selectedOrganization.name.length > 0 ?
-							<OrgHeader setSelectedOrganization={setSelectedOrganization} globalUrl={globalUrl} selectedOrganization={selectedOrganization}/>
+							<OrgHeader userdata={userdata} setSelectedOrganization={setSelectedOrganization} globalUrl={globalUrl} selectedOrganization={selectedOrganization}/>
 						: 
 						<div style={{paddingTop: 250, width: 250, margin: "auto", textAlign: "center"}}>
 							<CircularProgress />
@@ -2069,10 +2109,9 @@ const Admin = (props) => {
 									value={data.role}
 									fullWidth
 									onChange={(e) => {
-									console.log("VALUE: ", e.target.value)
-
-									setUser(data.id, "role", e.target.value)
-								}}
+										console.log("VALUE: ", e.target.value)
+										setUser(data.id, "role", e.target.value)
+									}}
 										style={{ backgroundColor: theme.palette.surfaceColor, color: "white", height: "50px" }}
 									>
 									<MenuItem style={{ backgroundColor: theme.palette.inputColor, color: "white" }} value={"admin"}>

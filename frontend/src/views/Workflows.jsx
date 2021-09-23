@@ -354,6 +354,8 @@ const Workflows = (props) => {
 	const [downloadUrl, setDownloadUrl] = React.useState("https://github.com/frikky/shuffle-workflows")
 	const [downloadBranch, setDownloadBranch] = React.useState("master")
 	const [loadWorkflowsModalOpen, setLoadWorkflowsModalOpen] = React.useState(false)
+	const [exportModalOpen, setExportModalOpen] = React.useState(false)
+	const [exportData, setExportData] = React.useState("");
 
 	const [modalOpen, setModalOpen] = React.useState(false);
 	const [newWorkflowName, setNewWorkflowName] = React.useState("");
@@ -472,6 +474,50 @@ const Workflows = (props) => {
 
 		findWorkflow(newfilters) 
 	}
+
+	const exportVerifyModal = exportModalOpen ? 
+		<Dialog
+			open={exportModalOpen}
+			onClose={() => {
+				setExportModalOpen(false)
+				setSelectedWorkflow({})
+			}}
+			PaperProps={{
+				style: {
+					backgroundColor: surfaceColor,
+					color: "white",
+					minWidth: 500,
+					padding: 30,
+				},
+			}}
+		>
+			<DialogTitle style={{marginBottom: 0, }}>
+				<div style={{textAlign: "center", color: "rgba(255,255,255,0.9)"}}>
+					Want to auto-sanitize this workflow before exporting?
+				</div>
+			</DialogTitle>
+			<DialogContent style={{color: "rgba(255,255,255,0.65)", textAlign: "center"}}>
+				<Typography variant="body1" style={{}}>
+					This will make potentially sensitive fields such as username, password, url etc. empty 
+				</Typography>
+				<Button variant="contained" style={{marginTop: 20, }} onClick={() => {
+					setExportModalOpen(false)
+					exportWorkflow(exportData, true)		
+					setExportData("")
+				}} color="primary">
+					Yes
+				</Button>
+				<Button style={{marginTop: 20, }} onClick={() => {
+					setExportModalOpen(false)
+					exportWorkflow(exportData, false)		
+					setExportData("")
+				}} color="primary">
+					No
+				</Button>
+			</DialogContent>
+			
+		</Dialog>
+	: null
 
 	const publishModal = publishModalOpen ? 
 		<Dialog
@@ -771,7 +817,7 @@ const Workflows = (props) => {
 
 	const exportAllWorkflows = () => {
 		for (var key in workflows) {
-			exportWorkflow(workflows[key])
+			exportWorkflow(workflows[key], false)
 		}
 	}
 
@@ -890,10 +936,13 @@ const Workflows = (props) => {
 		return data
 	}
 
-	const exportWorkflow = (data) => {
+	const exportWorkflow = (data, sanitize) => {
 		data = JSON.parse(JSON.stringify(data))
 		let exportFileDefaultName = data.name+'.json';
-		data = sanitizeWorkflow(data)	
+
+		if (sanitize === true) {
+			data = sanitizeWorkflow(data)	
+		}
 		//return
 
 		// Add correct ID's for triggers
@@ -1269,7 +1318,8 @@ const Workflows = (props) => {
 									{"Duplicate Workflow"}
 								</MenuItem>
 								<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
-									exportWorkflow(data)		
+									setExportModalOpen(true)
+									setExportData(data)
 									setOpen(false)
 								}} key={"export"}>
 									<GetAppIcon style={{marginLeft: 0, marginRight: 8}}/>
@@ -2323,6 +2373,7 @@ const Workflows = (props) => {
 			</Dropzone>
 			{modalView}
 			{deleteModal}
+			{exportVerifyModal}
 			{publishModal} 
 			{workflowDownloadModalOpen}
 		</div>

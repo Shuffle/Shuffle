@@ -8186,7 +8186,7 @@ const AngularWorkflow = (props) => {
 								}	
 							}
 
-							if (data.action.app_name === "Shuffle Tools") {
+							if (data.action.app_name === "Shuffle Tools" && data.action.id !== undefined && cy !== undefined) {
 								//console.log("APP (TOOLS): ", data.action)
 
 								const nodedata = cy.getElementById(data.action.id).data()

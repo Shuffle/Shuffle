@@ -1146,8 +1146,37 @@ const AppCreator = (props) => {
 
 					if (queryitem.name.toLowerCase() == "url") {
 						console.log(item.name+" uses a bad query: url")
-						skipped = true
-						break
+						continue
+						//skipped = true
+						//break
+					}
+
+				 	if (queryitem.name.toLowerCase() == "url"
+					|| queryitem.name.toLowerCase() == "body"
+					|| queryitem.name.toLowerCase() == "queries"
+					|| queryitem.name.toLowerCase() == "headers"
+					|| queryitem.name.includes("[") 
+					|| queryitem.name.includes("]") 
+					|| queryitem.name.includes("{") 
+					|| queryitem.name.includes("}") 
+					|| queryitem.name.includes("(") 
+					|| queryitem.name.includes(")")
+					|| queryitem.name.includes("!")
+					|| queryitem.name.includes("@")
+					|| queryitem.name.includes("#")
+					|| queryitem.name.includes("$")
+					|| queryitem.name.includes("%")
+					|| queryitem.name.includes("^")
+					|| queryitem.name.includes("&")
+					|| queryitem.name.includes(":")
+					|| queryitem.name.includes(";")
+					|| queryitem.name.includes("<")
+					|| queryitem.name.includes(">")
+					|| queryitem.name.includes("\"")
+					|| queryitem.name.includes("\'")
+					) {
+						console.log(item.name+" error: uses a bad query - not adding: ", queryitem.name)
+						continue
 					}
 
 					var newitem = {
@@ -1344,10 +1373,13 @@ const AppCreator = (props) => {
 				return
 			}
 
+			var newparamName = parameterName.replaceAll("\"", "")
+			newparamName = newparamName.replaceAll("\'", "")
+
 			data.components.securitySchemes["ApiKeyAuth"] = {
 				"type": "apiKey",
 				"in": parameterLocation.toLowerCase(),
-				"name": parameterName,
+				"name": newparamName,
 			}
 		} else if (authenticationOption === "Bearer auth") {
 			data.components.securitySchemes["BearerAuth"] = {
@@ -1367,13 +1399,16 @@ const AppCreator = (props) => {
 				"scheme": "basic",
 			}
 		} else if (authenticationOption === "Oauth2") {
+			var newparamName = parameterName.replaceAll("\"", "")
+			newparamName = newparamName.replaceAll("\'", "")
+
 			//parameterName, parameterValue, revocationUrl
 			data.components.securitySchemes["Oauth2"] = {
 				"type": "oauth2",
 				"description": "Oauth2.0 authorizationCode authentication",
 				"flow": {
 					"authorizationCode": {
-						"authorizationUrl": parameterName,
+						"authorizationUrl": newparamName,
 						"tokenUrl": parameterLocation,
 						"refreshUrl": refreshUrl,
 						"scopes": [],
@@ -1769,8 +1804,10 @@ const AppCreator = (props) => {
 				margin="normal"
 				variant="outlined"
 				value={parameterName}
-				helperText={<span style={{color:"white", marginBottom: "2px",}}>Can't be empty. Can't contain any of the following characters: !#$%&'^+-._~|]+$</span>}
-				onChange={e => setParameterName(e.target.value)}	
+				helperText={<span style={{color:"white", marginBottom: "2px",}}>Can't be empty. Can't contain any of the following characters: !#$%&'^"+-._~|]+$</span>}
+				onChange={e => {
+					setParameterName(e.target.value)
+				}}	
 				InputProps={{
 					classes: {
 						notchedOutline: classes.notchedOutline,
@@ -1954,11 +1991,60 @@ const AppCreator = (props) => {
 		}
 	}
 
+	const HandleIndividualChip = (props) => {
+  	const { chipData, index } = props;
+		const [chipRequired, setChipRequired] = useState(false)
+
+		return (
+			<Tooltip title={chipRequired ? "Make not required" : "Make required"}>
+				<Chip
+					style={{
+						backgroundColor: chipRequired ? "#f86a3e" : "#3d3f43", 
+						height: 30, 
+						margin: 3, 
+						paddingLeft: 5, 
+						paddingRight: 5, 
+						height: 28, 
+						cursor: "pointer", 
+						borderColor: "#3d3f43", 
+						color: "white", 
+					}}
+					label={chipData}
+					onClick={() => {
+						console.log("CLICK: ", chipData)
+						setChipRequired(!chipRequired)
+					}}
+				/>
+			</Tooltip>
+		)
+	}
+
+	const SetExtraBodyField = (props) => {
+  	const { extraBodyFields } = props;
+
+		if (extraBodyFields === undefined || extraBodyFields === null) {
+			return null
+		}
+
+		//const parsedlist = extraBodyFields.join(", ")
+		//console.log("LIST: ", parsedlist)
+
+		return (
+			<span>
+				{extraBodyFields.map((data, index) => {
+					return (
+						<HandleIndividualChip key={index} chipData={data} />
+					)
+				})}
+			</span>
+		)
+	}
+
 	const bodyInfo = actionBodyRequest.includes(currentActionMethod) ?
 		<div style={{marginTop: 10}}>
 			<b>Request Body</b>: {extraBodyFields.length > 0 ? 
 				<Typography style={{display: "inline-block"}}>
-					Variables: {extraBodyFields.join(", ")}
+					<SetExtraBodyField extraBodyFields={extraBodyFields}/>
 				</Typography>
 			: 
 			<Typography style={{display: "inline-block"}}>
@@ -2988,10 +3074,13 @@ const AppCreator = (props) => {
 					</Button>
 				: null}
 			</div>
-			<h2>Actions {actionAmount > 0 ? <span>({actionAmount} / {filteredActions.length})</span> : null}</h2>
+			<Typography variant="h6">Actions {actionAmount > 0 ? <span>({actionAmount} / {filteredActions.length})</span> : null}</Typography>
+			<Typography variant="body2" style={{marginTop: 10, marginBottom: 10}}>
+				Actions are the tasks performed by an app - usually single URL paths for REST API's.
+			</Typography>
 
 			{projectCategories !== undefined && projectCategories !== null && projectCategories.length > 1 ?
-				<div style={{marginTop: 5, marginBottom: 5}}>
+				<div style={{marginTop: 10, marginBottom: 10}}>
 					{projectCategories.map((tag, index) => {
 						const newname = tag.charAt(0).toUpperCase() + tag.slice(1) 
 						return (
@@ -3000,7 +3089,7 @@ const AppCreator = (props) => {
 								style={{
 									backgroundColor: tag === selectedCategory ? "#f86a3e" : "#3d3f43", 
 									height: 30, 
-									marginRight: 5, 
+									margin: 3, 
 									paddingLeft: 5, 
 									paddingRight: 5, 
 									height: 28, 
@@ -3037,7 +3126,6 @@ const AppCreator = (props) => {
 					})}
 				</div>
 			: null}
-			Actions are the tasks performed by an app - usually single URL paths for REST API's.
 			<div>
 				{loopActions}
 				<div style={{display: "flex"}}>

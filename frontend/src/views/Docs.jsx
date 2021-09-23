@@ -243,9 +243,9 @@ const Docs = (props) => {
 							const path = "/docs/"+item
 							const newname = item.charAt(0).toUpperCase()+item.substring(1).split("_").join(" ").split("-").join(" ")
 							return (
-								<li key={index} style={{marginTop: 15,}}>
+								<li key={index} style={{marginTop: 10,}}>
 									<Link key={index} style={hrefStyle} to={path} onClick={() => {fetchDocs(item)}}>
-										<Typography variant="h6"><b>{newname}</b></Typography>
+										<Typography style={{color: props.match.params.key.toLowerCase() === item.toLowerCase() ? "#f86a3e" : "inherit"}} variant="body1"><b>> {newname}</b></Typography>
 									</Link>
 								</li>
 							)

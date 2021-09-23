@@ -1,7 +1,7 @@
 version: '3'
 services:
   frontend:
-    build: ./frontend
+    #build: ./frontend
     image: ghcr.io/frikky/shuffle-frontend:nightly
     container_name: shuffle-frontend
     hostname: shuffle-frontend
@@ -16,7 +16,7 @@ services:
     depends_on:
       - backend
   backend:
-    build: ./backend
+    #build: ./backend
     image: ghcr.io/frikky/shuffle-backend:nightly
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
@@ -62,7 +62,7 @@ services:
       - SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
       - SHUFFLE_PASS_APP_PROXY=${SHUFFLE_PASS_APP_PROXY}
       - SHUFFLE_ORBORUS_EXECUTION_TIMEOUT=600
-      - SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY=15
+      - SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY=5
       - CLEANUP=${SHUFFLE_CONTAINER_AUTO_CLEANUP}
     restart: unless-stopped
   opensearch:
