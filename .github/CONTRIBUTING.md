@@ -16,13 +16,22 @@ As with everything else, app creation for Shuffle is made as accessibl as possib
 Workflows are where the magic of Shuffle automation happens. Our current ones [are outlined here](https://github.com/frikky/security-openapis), and will be automatically imported into Shuffle instances in the future. They are split into Prepare and Response, but don't necessarily have to be. If you'd like to talk about workflow creation or use-cases in general, either Open a [new issue](https://github.com/frikky/shuffle-workflows/issues/new) or send us an email at [frikky@shuffler.io](mailto:frikky@shuffler.io) 
 
 #### Documentation (Markdown)
-Documentation is essential to any product, and Shuffle is no exception. Documentation in Shuffle uses markdown and is located in the [shuffle-docs](https://github.com/frikky/shuffle-docs/tree/master/docs) repository. These are then loaded into Shuffle when someone visits [https://shuffler/docs/about](https://shuffler/docs/about), then cached for later use. If you make an edit, expect it on our website in about an hour.
+Documentation is essential to any product, and Shuffle is no exception. Documentation in Shuffle uses markdown and is located in the [shuffle-docs](https://github.com/frikky/shuffle-docs/tree/master/docs) repository. These are then loaded into Shuffle when someone visits [https://shuffler/docs/about](https://shuffler/docs/about), then cached for later use. If you make an edit, expect it on our website in about an hour. 
 
 #### Frontend (ReactJS)
 The frontend of Shuffle is what everyone sees when they log in. Our goal here is to make it easy to get started and keep going with Shuffle - removing any blockers from the point of accessibility. If you'd like to get started, find [an issue](https://github.com/frikky/Shuffle/issues) and check the [installation guide](https://github.com/frikky/Shuffle/blob/master/install-guide.md#local-development-installation) for setting it up locally without Docker. 
 
 #### Backend (Golang)
 The backend of Shuffle is our REST API Server that runs in the background, handling all the API-calls in general, whether from users or apps. If you'd like to get started, find [an issue](https://github.com/frikky/Shuffle/issues) and check the [installation guide](https://github.com/frikky/Shuffle/blob/master/install-guide.md#local-development-installation) for setting it up locally without Docker. 
+
+#### Scaling (Golang & Python)
+Shuffle runs using Docker, and is built to scale. There are many areas that may revolve around scaling, but the main issues come down to how we use Docker in our [architecture](https://shuffler.io/docs/architecture). If you want to help by submitting Helm charts (K8s), Docker swarm configurations, blogposts, or talk about code changes that would help scaling - please reach out (or just start building!), and we can discuss the possibilities. Make sure to read about the architecture first :)
+
+#### Testing 
+Whether it's security testing, code testing or CI/CD, we could always need another hand. E.g. an example of CI/CD used for apps can be found [here](https://github.com/Shuffle/Shuffle-apps/blob/master/.github/workflows/ci.yaml), but we don't at all limit the scope to Github actions. If you find a security issue, whether open source or not, please contact [security@shuffler.io](mailto:security@shuffler.io) or [contact us on our website](https://shuffler.io/contact).
+
+#### Community 
+What is a product without a community? Want to help out? Whether it be through blogposts, videos or community management, don't hesitate to [reach out](https://shuffler.io/contact) if you would like to help, and get a more keen understanding of how we work. (PS: We're hiring)
 
 ## Working on an issue
 
