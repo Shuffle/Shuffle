@@ -66,18 +66,19 @@ services:
       - CLEANUP=${SHUFFLE_CONTAINER_AUTO_CLEANUP}
     restart: unless-stopped
   opensearch:
-    image: opensearchproject/opensearch:1.0.0-beta1
+    image: opensearchproject/opensearch:1.0.0
     hostname: shuffle-opensearch
     container_name: shuffle-opensearch
     environment:
-      - bootstrap.memory_lock=true 
+      - bootstrap.memory_lock=true
       - "OPENSEARCH_JAVA_OPTS=-Xms1024m -Xmx1024m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
-      - opendistro_security.disabled=true
+      - plugins.security.disabled=true
       - cluster.routing.allocation.disk.threshold_enabled=false
       - cluster.name=shuffle-cluster
       - node.name=shuffle-opensearch
       - discovery.seed_hosts=shuffle-opensearch
       - cluster.initial_master_nodes=shuffle-opensearch
+      - node.store.allow_mmap=false
     ulimits:
       memlock:
         soft: -1
