@@ -9,7 +9,6 @@ import { useTheme } from '@material-ui/core/styles';
 
 import YAML from 'yaml'
 import {Link} from 'react-router-dom';
-import ReactJson from 'react-json-view'
 import { useAlert } from "react-alert";
 import Dropzone from '../components/Dropzone';
 
@@ -620,15 +619,6 @@ const Apps = (props) => {
 								</MenuItem>
 							)
 						})}
-						{/*
-						<ReactJson 
-							src={JSON.parse(showResult)} 
-							theme="solarized" 
-							collapsed={false}
-							displayDataTypes={true}
-							name={"Example return value"}
-						/>
-						*/}
 					</div>
 				)
 			} 

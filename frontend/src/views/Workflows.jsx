@@ -12,7 +12,6 @@ import {DataGrid, GridToolbarContainer, GridDensitySelector, GridToolbar} from '
 
 //import JSONPretty from 'react-json-pretty';
 //import JSONPrettyMon from 'react-json-pretty/dist/monikai'
-import ReactJson from 'react-json-view'
 import Dropzone from '../components/Dropzone';
 
 import {Link} from 'react-router-dom';
@@ -1372,181 +1371,11 @@ const Workflows = (props) => {
 		return string.split(search).join(replace);
 	}
 
-	const resultsPaper = (data) => {
-		var boxWidth = "2px"
-		var boxColor = "orange" 
-		if (data.status === "ABORTED" || data.status === "UNFINISHED" || data.status === "FAILURE"){
-			boxColor = "red"	
-		} else if (data.status === "FINISHED" || data.status === "SUCCESS") {
-			boxColor = "green"
-		} else if (data.status === "SKIPPED" || data.status === "EXECUTING") {
-			boxColor = "yellow"
-		} else {
-			boxColor = "green"
-		}
 
-		var t = new Date(data.started_at*1000)
-		var showResult = data.result.trim()
-		const validate = validateJson(showResult)
-
-		if (validate.valid) {
-			showResult = <ReactJson 
-				src={validate.result} 
-				theme="solarized" 
-				collapsed={collapseJson}
-				displayDataTypes={false}
-				name={"Results for "+data.action.label}
-			/>
-		} else {
-			// FIXME - have everything parsed as json, either just for frontend
-			// or in the backend?
-			/*	
-			const newdata = {"result": data.result}
-			showResult = <ReactJson 
-				src={JSON.parse(newdata)} 
-				theme="solarized" 
-				collapsed={collapseJson}
-				displayDataTypes={false}
-				name={"Results for "+data.action.name}
-			/>
-			*/
-		}
-
-		return (
-			<Paper key={data.execution_id} square style={resultPaperAppStyle} onClick={() => {}}>
-				<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", marginRight: "5px", width: boxWidth, backgroundColor: boxColor}}>
-				</div>
-				<Grid container style={{margin: "10px 10px 10px 10px", flex: "1"}}>
-					<Grid style={{display: "flex", flexDirection: "column", width: "100%"}}>
-						<Grid item style={{flex: "1"}}>
-							<h4 style={{marginBottom: "0px", marginTop: "10px"}}><b>Name</b>: {data.action.label}</h4>
-						</Grid>
-						<Grid item style={{flex: "1", justifyContent: "center"}}>
-							App: {data.action.app_name}, Version: {data.action.app_version}
-						</Grid>
-						<Grid item style={{flex: "1", justifyContent: "center"}}>
-							Action: {data.action.name}, Environment: {data.action.environment}, Status: {data.status}
-						</Grid>
-						<div style={{display: "flex", flex: "1"}}>
-							<Grid item style={{flex: "10", justifyContent: "center"}}>
-								Started: {t.toISOString()}
-							</Grid>
-						</div>
-						<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: dividerColor}}/>
-						<div style={{display: "flex", flex: "1"}}>
-							<Grid item style={{flex: "10", justifyContent: "center"}}>
-								{showResult}
-							</Grid>
-						</div>
-					</Grid>
-				</Grid>
-			</Paper>
-		)
-	}
-
-	const resultsHandler = Object.getOwnPropertyNames(selectedExecution).length > 0 && selectedExecution.results !== null ? 
-		<div>
-			{selectedExecution.results.sort((a, b) => a.started_at - b.started_at).map((data, index) => {
-				return (
-					<div key={index}>
-						{resultsPaper(data)}
-					</div>
-				)
-			})}
-		</div>
-		:
-		<div>
-			No results yet 
-		</div>
 
 	const resultsLength = Object.getOwnPropertyNames(selectedExecution).length > 0 && selectedExecution.results !== null ? selectedExecution.results.length : 0 	
 
-	const ExecutionDetails = () => {
-		var starttime = new Date(selectedExecution.started_at*1000)
-		var endtime = new Date(selectedExecution.started_at*1000)
 
-		var parsedArgument = selectedExecution.execution_argument
-		if (selectedExecution.execution_argument !== undefined && selectedExecution.execution_argument.length > 0) {
-			parsedArgument = replaceAll(parsedArgument, " None", " \"None\"");
-		}	
-
-		var arg = null
-		if (selectedExecution.execution_argument !== undefined && selectedExecution.execution_argument.length > 0) {
-			var showResult = selectedExecution.execution_argument.trim()
-			const validate = validateJson(showResult)
-
-			arg = validate.valid ? 
-				<ReactJson 
-					src={validate.result} 
-					theme="solarized" 
-					collapsed={true}
-					displayDataTypes={false}
-					name={"Execution argument / webhook"}
-				/>
-			: showResult
-		}
-
-		var lastresult = null
-		if (selectedExecution.result !== undefined && selectedExecution.result.length > 0) {
-			var showResult = selectedExecution.result.trim()
-			const validate = validateJson(showResult)
-			lastresult = validate.valid ? 
-				<ReactJson 
-					src={validate.result} 
-					theme="solarized" 
-					collapsed={true}
-					displayDataTypes={false}
-					name={"Last result from execution"}
-				/>
-			: showResult
-		}
-
-		/*
-		<div>
-			ID: {selectedExecution.execution_id}
-		</div>
-		<div>
-			<b>Last node:</b> {selectedExecution.workflow.actions.find(data => data.id === selectedExecution.last_node).actions[0].label}
-		</div>
-		*/
-		if (Object.getOwnPropertyNames(selectedExecution).length > 0 && selectedExecution.workflow.actions !== null) {
-			return (
-				<div style={{overflowX: "hidden"}}>
-					<div>
-						<b>Status:</b> {selectedExecution.status}
-					</div>
-					<div>
-						<b>Started:</b> {starttime.toISOString()}
-					</div>
-					<div>
-						<b>Finished:</b> {endtime.toISOString()}
-					</div>
-					{/*
-					<div>
-						<b>Last Result:</b> {lastresult}
-					</div>
-					*/}
-					<div style={{marginTop: 10}}>
-						{arg}
-					</div>
-					<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: dividerColor}}/>
-					{resultsHandler}
-				</div> 
-			)
-		}
-
-		return (
-			executionLoading ?
-				<div style={{marginTop: 25, textAlign: "center"}}>
-					<CircularProgress />
-				</div>
-				: 
-				<h4>
-					There are no executiondetails yet. Click "execute" to run your first one.
-				</h4>
-			
-		)
-	}
 
 	// Can create and set workflows
 	const setNewWorkflow = (name, description, tags, defaultReturnValue, editingWorkflow, redirect) => {

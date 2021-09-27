@@ -6,7 +6,7 @@ import {BrowserView, MobileView} from "react-device-detect";
 import {Link} from 'react-router-dom';
 
 import {Tooltip, Divider, Button, Menu, MenuItem, Typography, Paper, List} from '@material-ui/core';
-import {Edit as EditIcon} from '@material-ui/icons';
+import {Link as LinkIcon, Edit as EditIcon} from '@material-ui/icons';
 
 const Body = {
   maxWidth: '1000px',
@@ -28,6 +28,7 @@ const Docs = (props) => {
   const { globalUrl, selectedDoc, serverside, isMobile, } = props;
 
 	const theme = useTheme();
+	const [mobile, setMobile] = useState(isMobile === true ? true : false);
 	const [data, setData] = useState("");
 	const [firstrequest, setFirstrequest] = useState(true);
 	const [list, setList] = useState([]);
@@ -107,14 +108,21 @@ const Docs = (props) => {
 
 	if (firstrequest) {
 		setFirstrequest(false)
+		if (!serverside)  {
+			if (window.innerWidth < 768) {
+				setMobile(true)
+			}
+		}
 
 		if (selectedDoc !== undefined) {
 			setData(selectedDoc.reason)
 			setList(selectedDoc.list)
 			setListLoaded(true)
 		} else {
-			fetchDocList()
-			fetchDocs(props.match.params.key)
+			if (!serverside) {
+				fetchDocList()
+				fetchDocs(props.match.params.key)
+			}
 		}
 	}
 
@@ -194,10 +202,10 @@ const Docs = (props) => {
 	const markdownStyle = {
 		color: "rgba(255, 255, 255, 0.65)", 
 		flex: "1",
-		maxWidth: isMobile ? "100%" : 750,
+		maxWidth: mobile ? "100%" : 750,
 		overflow: "hidden",
 		paddingBottom: 200, 
-		marginLeft: isMobile ? 0 : 275, 
+		marginLeft: mobile ? 0 : 275, 
 	}
 
 	function OuterLink(props) {
@@ -221,34 +229,39 @@ const Docs = (props) => {
 		)
 	}
 
-	function Heading(props) {
+	const Heading = (props) => {
 		const element = React.createElement(`h${props.level}`, {style: {marginTop: 50}}, props.children)
+		const [hover, setHover] = useState(false)
 
 		var extraInfo = ""
 		if (props.level === 1) {
 			extraInfo = 
 				<div style={{backgroundColor: theme.palette.inputColor, padding: 15, borderRadius: theme.palette.borderRadius, marginBottom: 30, display: "flex",}}>
 					<div style={{flex: 3, display: "flex", vAlign: "center",}}>
-						<Typography style={{display: "inline", marginTop: 6, }}>
-							<a rel="norefferer" target="_blank" href={selectedMeta.link} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>
-								<Button style={{}} variant="outlined">
-									<EditIcon /> &nbsp;&nbsp;Edit
-								</Button>
-							</a>
-						</Typography>
-						<div style={{height: "100%", width: 1, backgroundColor: "white", marginLeft: 50, marginRight: 50, }} />
-						<Typography style={{display: "inline", marginTop: 9, }}>
+						{mobile ? null : 
+								<Typography style={{display: "inline", marginTop: 6, }}>
+									<a rel="norefferer" target="_blank" href={selectedMeta.link} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>
+										<Button style={{}} variant="outlined">
+											<EditIcon /> &nbsp;&nbsp;Edit
+										</Button>
+									</a>
+								</Typography>
+						}
+						{mobile ? null : 
+							<div style={{height: "100%", width: 1, backgroundColor: "white", marginLeft: 50, marginRight: 50, }} />
+						}
+						<Typography style={{display: "inline", marginTop: 11, }}>
 							{selectedMeta.read_time} minute{selectedMeta.read_time === 1 ? "" : "s"} to read
 						</Typography>
 					</div>
 					<div style={{flex: 2}}>
-						{selectedMeta.contributors === undefined || selectedMeta.contributors === null ? "" : 
+						{mobile || selectedMeta.contributors === undefined || selectedMeta.contributors === null ? "" : 
 							<div style={{margin: 10, height: "100%", display: "inline",}}>
 								{selectedMeta.contributors.slice(0,7).map((data, index) => {
 									return (
 											<a rel="norefferer" target="_blank" href={data.url} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>
 												<Tooltip title={data.url} placement="bottom">
-													<img alt={data.url} src={data.image} style={{height: 40, borderRadius: 40, }} />
+													<img alt={data.url} src={data.image} style={{marginTop: 5, marginRight: 10, height: 40, borderRadius: 40, }} />
 												</Tooltip>
 											</a>
 									)
@@ -260,9 +273,20 @@ const Docs = (props) => {
 		}
 
 		return (
-			<Typography>
+			<Typography 
+				onMouseOver={() => {
+					setHover(true)
+				}} >
 				{props.level !== 1 ? <Divider style={{width: "90%", marginTop: 40, backgroundColor: theme.palette.inputColor}} /> : null}
 				{element}
+				{/*hover ? <LinkIcon onMouseOver={() => {setHover(true)}} style={{cursor: "pointer", display: "inline", }} onClick={() => {
+					window.location.href += "#hello"
+					console.log(window.location)
+					//window.history.pushState('page2', 'Title', '/page2.php');
+					//window.history.replaceState('page2', 'Title', '/page2.php');
+				}} /> 
+				: ""
+				*/}
 				{extraInfo}
 			</Typography>
 		)
@@ -345,6 +369,10 @@ const Docs = (props) => {
 				>
 				{list.map((data, index) => {
 					const item = data.name
+					if (item === undefined) {
+						return null
+					}
+
 					const path = "/docs/"+item
 					const newname = item.charAt(0).toUpperCase()+item.substring(1).split("_").join(" ").split("-").join(" ")
 					return (

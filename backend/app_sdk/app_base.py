@@ -36,6 +36,16 @@ class AppBase:
         self.start_time = int(time.time())
         self.result_wrapper_count = 0
 
+        self.action_result = {
+            "action": self.action,
+            "authorization": self.authorization,
+            "execution_id": self.current_execution_id,
+            "result": f"",
+            "started_at": self.start_time,
+            "status": "",
+            "completed_at": int(time.time()),
+        }
+
         if isinstance(self.action, str):
             try:
                 self.action = json.loads(self.action)
@@ -489,7 +499,7 @@ class AppBase:
             #print(f"NEW PARAMS: {new_params}")
             if len(new_params) == 0:
                 print("[WARNING] SHOULD STOP MULTI-EXECUTION BECAUSE FIELDS AREN'T UNIQUE")
-                action_result = {
+                self.action_result = {
                     "action": self.action,
                     "authorization": self.authorization,
                     "execution_id": self.current_execution_id,
@@ -499,7 +509,7 @@ class AppBase:
                     "completed_at": int(time.time()),
                 }
 
-                self.send_result(action_result, {"Content-Type": "application/json", "Authorization": "Bearer %s" % self.authorization}, "/api/v1/streams")
+                self.send_result(self.action_result, {"Content-Type": "application/json", "Authorization": "Bearer %s" % self.authorization}, "/api/v1/streams")
                 exit()
                 #return
             else:
@@ -834,7 +844,7 @@ class AppBase:
         # !!! Let this line stay - its used for some horrible codegeneration / stitching !!! # 
         #STARTCOPY
         stream_path = "/api/v1/streams"
-        action_result = {
+        self.action_result = {
             "action": action,
             "authorization": self.authorization,
             "execution_id": self.current_execution_id,
@@ -861,20 +871,20 @@ class AppBase:
 
         if len(self.action) == 0:
             print("ACTION env not defined")
-            action_result["result"] = "Error in setup ENV: ACTION not defined"
-            self.send_result(action_result, headers, stream_path) 
+            self.action_result["result"] = "Error in setup ENV: ACTION not defined"
+            self.send_result(self.action_result, headers, stream_path) 
             return
 
         if len(self.authorization) == 0:
             print("AUTHORIZATION env not defined")
-            action_result["result"] = "Error in setup ENV: AUTHORIZATION not defined"
-            self.send_result(action_result, headers, stream_path) 
+            self.action_result["result"] = "Error in setup ENV: AUTHORIZATION not defined"
+            self.send_result(self.action_result, headers, stream_path) 
             return
 
         if len(self.current_execution_id) == 0:
             print("EXECUTIONID env not defined")
-            action_result["result"] = "Error in setup ENV: EXECUTIONID not defined"
-            self.send_result(action_result, headers, stream_path) 
+            self.action_result["result"] = "Error in setup ENV: EXECUTIONID not defined"
+            self.send_result(self.action_result, headers, stream_path) 
             return
 
 
@@ -922,21 +932,21 @@ class AppBase:
                     except json.decoder.JSONDecodeError:
                         pass
 
-                    action_result["result"] = "Bad result from backend: %d" % ret.status_code
-                    self.send_result(action_result, headers, stream_path) 
+                    self.action_result["result"] = "Bad result from backend: %d" % ret.status_code
+                    self.send_result(self.action_result, headers, stream_path) 
                     return
             except requests.exceptions.ConnectionError as e:
                 self.logger.info("Connectionerror: %s" %  e)
-                action_result["result"] = "Connection error during startup: %s" % e
-                self.send_result(action_result, headers, stream_path) 
+                self.action_result["result"] = "Connection error during startup: %s" % e
+                self.send_result(self.action_result, headers, stream_path) 
                 return
         else:
             try:
                 fullexecution = json.loads(self.full_execution)
             except json.decoder.JSONDecodeError as e:
                 print("Json decode execution error: %s" % e)  
-                action_result["result"] = "Json error during startup: %s" % e
-                self.send_result(action_result, headers, stream_path) 
+                self.action_result["result"] = "Json error during startup: %s" % e
+                self.send_result(self.action_result, headers, stream_path) 
                 return
 
             print("")
@@ -1993,10 +2003,10 @@ class AppBase:
 
         if not branchcheck:
             self.logger.info("Failed one or more branch conditions.")
-            action_result["result"] = tmpresult
-            action_result["status"] = "SKIPPED"
+            self.action_result["result"] = tmpresult
+            self.action_result["status"] = "SKIPPED"
             try:
-                ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result)
+                ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=self.action_result)
                 self.logger.info("Result: %d" % ret.status_code)
                 if ret.status_code != 200:
                     self.logger.info(ret.text)
@@ -2021,8 +2031,8 @@ class AppBase:
             func = getattr(self, actionname, None)
             if func == None:
                 self.logger.debug(f"Failed executing {actionname} because func is None.")
-                action_result["status"] = "FAILURE" 
-                action_result["result"] = "Function %s doesn't exist." % actionname
+                self.action_result["status"] = "FAILURE" 
+                self.action_result["result"] = "Function %s doesn't exist." % actionname
             elif callable(func):
                 try:
                     if len(action["parameters"]) < 1:
@@ -2385,9 +2395,9 @@ class AppBase:
                                     print("LENGTH OF ARR: %d" % len(resultarray))
                                     if len(resultarray) == 0:
                                         print("[WARNING] Returning empty array because the array length to be looped is 0 (0)")
-                                        action_result["status"] = "SUCCESS" 
-                                        action_result["result"] = "[]"
-                                        self.send_result(action_result, headers, stream_path)
+                                        self.action_result["status"] = "SUCCESS" 
+                                        self.action_result["result"] = "[]"
+                                        self.send_result(self.action_result, headers, stream_path)
                                         return
 
                                     #print("RESULTARRAY: %s" % resultarray)
@@ -2531,10 +2541,10 @@ class AppBase:
                                 params = new_params[0]
                             else:
                                 print("[WARNING] SHOULD STOP EXECUTION BECAUSE FIELDS AREN'T UNIQUE")
-                                action_result["status"] = "SKIPPED"
-                                action_result["result"] = f"A non-unique value was found"  
-                                action_result["completed_at"] = int(time.time())
-                                self.send_result(action_result, headers, stream_path)
+                                self.action_result["status"] = "SKIPPED"
+                                self.action_result["result"] = f"A non-unique value was found"  
+                                self.action_result["completed_at"] = int(time.time())
+                                self.send_result(self.action_result, headers, stream_path)
                                 return
 
                             print("[INFO] Running normal execution (not loop)\n") 
@@ -2764,46 +2774,46 @@ class AppBase:
                                 print("Normal result - no list?")
                                 result = results
 
-                    action_result["status"] = "SUCCESS" 
-                    action_result["result"] = str(result)
-                    if action_result["result"] == "":
-                        action_result["result"] = result
+                    self.action_result["status"] = "SUCCESS" 
+                    self.action_result["result"] = str(result)
+                    if self.action_result["result"] == "":
+                        self.action_result["result"] = result
 
                     self.logger.debug(f"Executed {action['label']}-{action['id']}")#with result: {result}")
                     #self.logger.debug(f"Data: %s" % action_result)
                 except TypeError as e:
                     print("TypeError issue: %s" % e)
-                    action_result["status"] = "FAILURE" 
-                    action_result["result"] = "TypeError: %s" % str(e)
+                    self.action_result["status"] = "FAILURE" 
+                    self.action_result["result"] = "TypeError: %s" % str(e)
             else:
                 print("Function %s doesn't exist?" % action["name"])
                 self.logger.error(f"App {self.__class__.__name__}.{action['name']} is not callable")
-                action_result["status"] = "FAILURE" 
-                action_result["result"] = "Function %s is not callable." % actionname
+                self.action_result["status"] = "FAILURE" 
+                self.action_result["result"] = "Function %s is not callable." % actionname
 
         # https://ptb.discord.com/channels/747075026288902237/882017498550112286/882043773138382890
         except (requests.exceptions.RequestException, TimeoutError) as e:
             print(f"Failed to execute request: {e}")
             self.logger.exception(f"Failed to execute {e}-{action['id']}")
-            action_result["status"] = "SUCCESS" 
+            self.action_result["status"] = "SUCCESS" 
             try:
-                action_result["result"] = json.dumps({
+                self.action_result["result"] = json.dumps({
                     "success": False, 
                     "reason": f"Request error - failing silently. Details: {e}"
                 })
             except json.decoder.JSONDecodeError as e:
-                action_result["result"] = f"Request error: {e}"
+                self.action_result["result"] = f"Request error: {e}"
 
         except Exception as e:
             print(f"Failed to execute: {e}")
             self.logger.exception(f"Failed to execute {e}-{action['id']}")
-            action_result["status"] = "FAILURE" 
-            action_result["result"] = f"General exception: {e}" 
+            self.action_result["status"] = "FAILURE" 
+            self.action_result["result"] = f"General exception: {e}" 
 
-        action_result["completed_at"] = int(time.time())
+        self.action_result["completed_at"] = int(time.time())
 
         # Send the result :)
-        self.send_result(action_result, headers, stream_path)
+        self.send_result(self.action_result, headers, stream_path)
         return
 
     @classmethod
