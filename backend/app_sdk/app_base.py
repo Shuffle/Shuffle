@@ -1644,6 +1644,86 @@ class AppBase:
 
             return template
 
+        # Suboptimal cleanup script for BOdy parsing of OpenAPI
+        # Should have a regex which looks for the value, then goes out and cleans up the key
+        def recurse_cleanup_script(data):
+            try:
+                if not isinstance(data, dict):
+                    newvalue = json.loads(data)
+                else:
+                    newvalue = data
+        
+                deletekeys = []
+                for key, value in newvalue.items():
+                    #print("%s: %s" % (key, value))
+                    if isinstance(value, str) and len(value) == 0:
+                        deletekeys.append(key)
+                        continue
+                            
+                    if isinstance(value, list):
+                        try:
+                            value = json.dumps(value)
+                            print(value)
+                        except:
+                            print("Json parsing issue in recursed value")
+                            pass
+        
+                    if value == "${%s}" % key:
+                        print("Deleting %s because key = value" % key)
+                        deletekeys.append(key)
+                        continue
+                    elif "${" in value and "}" in value:
+                        print("Deleting %s because it contains ${ and }" % key)
+                        deletekeys.append(key)
+                        continue
+        
+                    if isinstance(value, dict):
+                        newvalue[key] = recurse_cleanup_script(value)
+        
+            except json.decoder.JSONDecodeError as e:
+                print("Failed JSON replacement for OpenAPI keys (3) {e}")
+                
+            for deletekey in deletekeys:
+                try:
+                    del newvalue[deletekey]
+                except:
+                    pass
+        
+            try:
+                #print("Post delete: %s" % newvalue)
+                for key, value in newvalue.items():
+                    if isinstance(value, bool):
+                        continue
+                    elif isinstance(value, dict) and not bool(value):
+                        continue
+        
+                    try:
+                        value = json.loads(value)
+                        newvalue[key] = value
+                    except json.decoder.JSONDecodeError as e:
+                        #print("Inner overwrite issue for \"%s\": %s" % (key, e))
+                        continue
+                    except Exception as e:
+                        #print("General error in newvalue items loop: %s" % e)
+                        continue
+        
+                try:
+                    data = json.dumps(newvalue)
+                except json.decoder.JSONDecodeError as e:
+                    print("[WARNING] JsonDecodeError: %s" % e)
+                    data = newvalue
+        
+            except json.decoder.JSONDecodeError as e:
+                print("Failed JSON replacement for OpenAPI keys (2) {e}")
+        
+            #if isinstance(data, str):
+            #    tmpdata = json.dumps(data)
+            #    print(tmpdata)
+            #    foundvalue = re.findall(".*?(${\w+})", tmpdata, re.MULTILINE)
+            #    print("FOUND: %s", foundvalue)
+        
+            return data 
+
         # Parses parameters sent to it and returns whether it did it successfully with the values found
         def parse_params(action, fullexecution, parameter, self):
             # Skip if it starts with $?
@@ -2112,59 +2192,62 @@ class AppBase:
                                     print("KeyError body OpenAPI: %s" % e)
                                     pass
 
-                                
+                                 
                                 print(f"""HANDLING {action["parameters"][counter]["value"]}""")
-                                try:
-                                    newvalue = json.loads(action["parameters"][counter]["value"])
-                                    deletekeys = []
-                                    for key, value in newvalue.items():
-                                        print("%s: %s" % (key, value))
-                                        if isinstance(value, str) and len(value) == 0:
-                                            deletekeys.append(key)
-                                            continue
+                                action["parameters"][counter]["value"] = recurse_cleanup_script(action["parameters"][counter]["value"])
+                                #try:
+                                #    newvalue = json.loads(action["parameters"][counter]["value"])
+                                #    deletekeys = []
+                                #    for key, value in newvalue.items():
+                                #        print("%s: %s" % (key, value))
+                                #        if isinstance(value, str) and len(value) == 0:
+                                #            deletekeys.append(key)
+                                #            continue
 
-                                        if value == "${%s}" % key:
-                                            print("Deleting %s because key = value" % key)
-                                            deletekeys.append(key)
-                                            continue
-                                    
-                                    for deletekey in deletekeys:
-                                        try:
-                                            del newvalue[deletekey]
-                                        except:
-                                            pass
+                                #        if value == "${%s}" % key:
+                                #            print("Deleting %s because key = value" % key)
+                                #            deletekeys.append(key)
+                                #            continue
+                                #    
+                                #    for deletekey in deletekeys:
+                                #        try:
+                                #            del newvalue[deletekey]
+                                #        except:
+                                #            pass
 
-                                    #print("Post delete: %s" % newvalue)
-                                    for key, value in newvalue.items():
-                                        if isinstance(value, bool):
-                                            continue
+                                #    #print("Post delete: %s" % newvalue)
+                                #    for key, value in newvalue.items():
+                                #        if isinstance(value, bool):
+                                #            continue
 
-                                        try:
-                                            value = json.loads(value)
-                                            newvalue[key] = value
-                                        except json.decoder.JSONDecodeError as e:
-                                            print("Inner overwrite issue: %s" % e)
-                                            continue
-                                        except:
-                                            print("General error in newvalue items loop")
-                                            continue
+                                #        try:
+                                #            value = json.loads(value)
+                                #            newvalue[key] = value
+                                #        except json.decoder.JSONDecodeError as e:
+                                #            print("Inner overwrite issue: %s" % e)
+                                #            continue
+                                #        except Exception as e:
+                                #            print("General error in newvalue items loop: %s" % e)
+                                #            continue
 
-                                    try:
-                                        action["parameters"][counter]["value"] = json.dumps(newvalue)
-                                    except json.decoder.JSONDecodeError as e:
-                                        print("[WARNING] JsonDecodeError: %s" % e)
-                                        action["parameters"][counter]["value"] = newvalue
-                                        
+                                #    try:
+                                #        action["parameters"][counter]["value"] = json.dumps(newvalue)
+                                #    except json.decoder.JSONDecodeError as e:
+                                #        print("[WARNING] JsonDecodeError: %s" % e)
+                                #        action["parameters"][counter]["value"] = newvalue
+                                #        
 
-                                except json.decoder.JSONDecodeError as e:
-                                    print("Failed JSON replacement for OpenAPI keys (2) {e}")
-
-                                break
+                                #except json.decoder.JSONDecodeError as e:
+                                #    print("Failed JSON replacement for OpenAPI keys (2) {e}")
 
                         #print(action["parameters"])
+
+                        # This seems redundant now 
                         print("Pre parameters")
                         for parameter in newparams:
                             action["parameters"].append(parameter)
+
+                        self.action = action
 
                         # calltimes is used to handle forloops in the app itself.
                         # 2 kinds of loop - one in gui with one app each, and one like this,

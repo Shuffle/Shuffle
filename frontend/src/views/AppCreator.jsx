@@ -1331,12 +1331,20 @@ const AppCreator = (props) => {
 						const headersplit = header.split("= ")
 						key = headersplit[0]	
 						value = headersplit[1]	
+					} else if (header.length > 0 && header.includes(" =")) {
+						const headersplit = header.split(" =")
+						key = headersplit[0]	
+						value = headersplit[1]	
 					} else if (header.length > 0 && header.includes("=")) {
 						const headersplit = header.split("=")
 						key = headersplit[0]	
 						value = headersplit[1]	
 					} else if (header.length > 0 && header.includes(": ")) {
 						const headersplit = header.split(": ")
+						key = headersplit[0]	
+						value = headersplit[1]	
+					} else if (header.length > 0 && header.includes(" :")) {
+						const headersplit = header.split(" :")
 						key = headersplit[0]	
 						value = headersplit[1]	
 					} else if (header.length > 0 && header.includes(":")) {
