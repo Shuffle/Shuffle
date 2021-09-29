@@ -5,6 +5,7 @@ import (
 
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,8 +15,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
-
-	"golang.org/x/oauth2"
+	//"golang.org/x/oauth2"
 )
 
 func getOutlookAttachment(client *http.Client, emailId, attachmentId string) ([]shuffle.FullEmail, error) {
@@ -131,6 +131,177 @@ func getOutlookProfile(client *http.Client) (shuffle.OutlookProfile, error) {
 	return profile, nil
 }
 
+func handleNewGmailRegister(resp http.ResponseWriter, request *http.Request) {
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
+
+	user, err := shuffle.HandleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("[INFO] Api authentication failed in getting specific trigger: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	code := request.URL.Query().Get("code")
+	if len(code) == 0 {
+		log.Println("No code")
+		resp.WriteHeader(401)
+		return
+	}
+
+	url := fmt.Sprintf("http://%s%s", request.Host, request.URL.EscapedPath())
+	log.Printf("URL: %s", url)
+	ctx := context.Background()
+	_, accessToken, err := shuffle.GetGmailClient(ctx, code, shuffle.OauthToken{}, url)
+	if err != nil {
+		log.Printf("Oauth client failure - outlook register: %s", err)
+		resp.WriteHeader(401)
+		return
+	}
+
+	// This should be possible, and will also give the actual username
+
+	/*
+		profile, err := getOutlookProfile(client)
+		if err != nil {
+			log.Printf("Outlook profile failure: %s", err)
+			resp.WriteHeader(401)
+			return
+		}
+	*/
+
+	// This is a state workaround, which should really be for CSRF checks lol
+	state := request.URL.Query().Get("state")
+	if len(state) == 0 {
+		log.Println("No state")
+		resp.WriteHeader(401)
+		return
+	}
+
+	stateitems := strings.Split(state, "%26")
+	if len(stateitems) == 1 {
+		stateitems = strings.Split(state, "&")
+	}
+
+	// FIXME - trigger auth
+	senderUser := ""
+	trigger := shuffle.TriggerAuth{}
+	for _, item := range stateitems {
+		itemsplit := strings.Split(item, "%3D")
+		if len(itemsplit) == 1 {
+			itemsplit = strings.Split(item, "=")
+		}
+
+		if len(itemsplit) != 2 {
+			continue
+		}
+
+		//log.Printf("ITEM: %#v", itemsplit)
+
+		// Do something here
+		if itemsplit[0] == "workflow_id" {
+			trigger.WorkflowId = itemsplit[1]
+		} else if itemsplit[0] == "trigger_id" {
+			trigger.Id = itemsplit[1]
+		} else if itemsplit[0] == "type" {
+			trigger.Type = itemsplit[1]
+		} else if itemsplit[0] == "start" {
+			trigger.Start = itemsplit[1]
+		} else if itemsplit[0] == "username" {
+			trigger.Username = itemsplit[1]
+			trigger.Owner = itemsplit[1]
+			senderUser = itemsplit[1]
+		}
+	}
+
+	// THis is an override based on the user in oauth return
+	/*
+		if len(profile.Mail) > 0 {
+			trigger.Username = profile.Mail
+		}
+	*/
+
+	trigger.Code = code
+	trigger.OauthToken = shuffle.OauthToken{
+		AccessToken:  accessToken.AccessToken,
+		TokenType:    accessToken.TokenType,
+		RefreshToken: accessToken.RefreshToken,
+		Expiry:       accessToken.Expiry,
+	}
+
+	//log.Printf("Done with client: %#v", accessToken)
+	//log.Printf("Done with client2: %#v", trigger.OauthToken)
+	//resp.WriteHeader(401)
+	//return
+
+	//log.Printf("%#v", trigger)
+	log.Println(trigger.WorkflowId)
+	log.Println(trigger.Id)
+	log.Println(senderUser)
+	log.Println(trigger.Type)
+	log.Printf("STARTNODE: %s", trigger.Start)
+	log.Printf("[INFO] Attempting to set up outlook trigger for %s", senderUser)
+	if trigger.WorkflowId == "" || trigger.Id == "" || senderUser == "" || trigger.Type == "" {
+		log.Printf("[INFO] All oauth items need to contain data to register a new state")
+		resp.WriteHeader(401)
+		return
+	}
+
+	// Should also update the user
+	Userdata, err := shuffle.GetUser(ctx, user.Id)
+	if err != nil {
+		log.Printf("[INFO] Username %s doesn't exist (oauth2): %s", trigger.Username, err)
+		resp.WriteHeader(401)
+		return
+	}
+
+	Userdata.Authentication = append(Userdata.Authentication, shuffle.UserAuth{
+		Name:        "Gmail",
+		Description: "oauth2",
+		Workflows:   []string{trigger.WorkflowId},
+		Username:    trigger.Username,
+		Fields: []shuffle.UserAuthField{
+			shuffle.UserAuthField{
+				Key:   "trigger_id",
+				Value: trigger.Id,
+			},
+			shuffle.UserAuthField{
+				Key:   "username",
+				Value: trigger.Username,
+			},
+			shuffle.UserAuthField{
+				Key:   "code",
+				Value: code,
+			},
+			shuffle.UserAuthField{
+				Key:   "type",
+				Value: trigger.Type,
+			},
+		},
+	})
+
+	// Set apikey for the user if they don't have one
+	err = shuffle.SetUser(ctx, Userdata, false)
+	if err != nil {
+		log.Printf("[WARNING] Failed setting user data for %s: %s (gmail)", Userdata.Username, err)
+		resp.WriteHeader(401)
+		return
+	}
+
+	err = shuffle.SetTriggerAuth(ctx, trigger)
+	if err != nil {
+		log.Printf("[WARNING] Failed to set trigger auth for %s - %s (gmail)", trigger.Username, err)
+		resp.WriteHeader(401)
+		return
+	}
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(`{"success": true}`))
+}
+
 func handleNewOutlookRegister(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
 	if cors {
@@ -155,7 +326,7 @@ func handleNewOutlookRegister(resp http.ResponseWriter, request *http.Request) {
 	url := fmt.Sprintf("http://%s%s", request.Host, request.URL.EscapedPath())
 	log.Println(url)
 	ctx := context.Background()
-	_, accessToken, err := getOutlookClient(ctx, code, shuffle.OauthToken{}, url)
+	_, accessToken, err := shuffle.GetOutlookClient(ctx, code, shuffle.OauthToken{}, url)
 	if err != nil {
 		log.Printf("Oauth client failure - outlook register: %s", err)
 		resp.WriteHeader(401)
@@ -279,61 +450,22 @@ func handleNewOutlookRegister(resp http.ResponseWriter, request *http.Request) {
 	})
 
 	// Set apikey for the user if they don't have one
-	err = shuffle.SetUser(ctx, Userdata, true)
+	err = shuffle.SetUser(ctx, Userdata, false)
 	if err != nil {
-		log.Printf("Failed setting user data for %s: %s", Userdata.Username, err)
+		log.Printf("[WARNING] Failed setting user data for %s: %s (outlook)", Userdata.Username, err)
 		resp.WriteHeader(401)
 		return
 	}
 
 	err = shuffle.SetTriggerAuth(ctx, trigger)
 	if err != nil {
-		log.Printf("Failed to set trigger auth for %s - %s", trigger.Username, err)
+		log.Printf("[WARNING] Failed to set trigger auth for %s - %s (outlook)", trigger.Username, err)
 		resp.WriteHeader(401)
 		return
 	}
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": true}`))
-}
-
-// THis all of a sudden became really horrible.. fml
-func getOutlookClient(ctx context.Context, code string, accessToken shuffle.OauthToken, redirectUri string) (*http.Client, *oauth2.Token, error) {
-
-	conf := &oauth2.Config{
-		ClientID:     "fd55c175-aa30-4fa6-b303-09a29fb3f750",
-		ClientSecret: "14OBKgUpov.D7fe0~hp0z-cIQdP~SlYm.8",
-		Scopes: []string{
-			"Mail.Read",
-		},
-		RedirectURL: redirectUri,
-		Endpoint: oauth2.Endpoint{
-			AuthURL:  "https://login.microsoftonline.com/common/oauth2/authorize",
-			TokenURL: "https://login.microsoftonline.com/common/oauth2/token",
-		},
-	}
-
-	if len(code) > 0 {
-		access_token, err := conf.Exchange(ctx, code)
-		if err != nil {
-			log.Printf("Access_token issue: %s", err)
-			return &http.Client{}, access_token, err
-		}
-
-		client := conf.Client(ctx, access_token)
-		return client, access_token, nil
-	}
-
-	// Manually recreate the oauthtoken
-	access_token := &oauth2.Token{
-		AccessToken:  accessToken.AccessToken,
-		TokenType:    accessToken.TokenType,
-		RefreshToken: accessToken.RefreshToken,
-		Expiry:       accessToken.Expiry,
-	}
-
-	client := conf.Client(ctx, access_token)
-	return client, access_token, nil
 }
 
 func handleGetSpecificTrigger(resp http.ResponseWriter, request *http.Request) {
@@ -427,17 +559,78 @@ func getOutlookSubscriptions(outlookClient *http.Client) (SubscriptionsWrapper, 
 }
 
 type SubscriptionsWrapper struct {
-	OdataContext string         `json:"@odata.context"`
-	Value        []Subscription `json:"value"`
+	OdataContext string                `json:"@odata.context"`
+	Value        []OutlookSubscription `json:"value"`
 }
 
-type Subscription struct {
+type OutlookSubscription struct {
 	ChangeType         string `json:"changeType"`
 	NotificationURL    string `json:"notificationUrl"`
 	Resource           string `json:"resource"`
 	ExpirationDateTime string `json:"expirationDateTime"`
 	ClientState        string `json:"clientState"`
 	Id                 string `json:"id"`
+}
+
+type GmailSubscription struct {
+	TopicName string   `json:"topicName"`
+	LabelIds  []string `json:"labelIds"`
+}
+
+func makeGmailSubscription(client *http.Client, folderIds []string, notificationURL string) (shuffle.SubResponse, error) {
+	fullUrl := "https://www.googleapis.com/gmail/v1/users/me/watch"
+
+	// FIXME - this expires rofl
+	//t := time.Now().Local().Add(time.Minute * time.Duration(4200))
+	//timeFormat := fmt.Sprintf("%d-%02d-%02dT%02d:%02d:%02d.0000000Z", t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second())
+
+	resource := "projects/shuffler/topics/gmail_testing"
+	log.Printf("[INFO] Subscription resource to get(s) for gmail: %s", resource)
+	sub := GmailSubscription{
+		TopicName: resource,
+		LabelIds:  folderIds,
+	}
+	//ClientState:        "This is a test",
+
+	data, err := json.Marshal(sub)
+	if err != nil {
+		log.Printf("Marshal: %s", err)
+		return shuffle.SubResponse{}, err
+	}
+
+	req, err := http.NewRequest(
+		"POST",
+		fullUrl,
+		bytes.NewBuffer(data),
+	)
+	req.Header.Add("Content-Type", "application/json")
+	res, err := client.Do(req)
+	if err != nil {
+		log.Printf("[WARNING] GMAIL Client: %s", err)
+		return shuffle.SubResponse{}, err
+	}
+
+	log.Printf("[INFO] Subscription on GMAIL Status: %d", res.StatusCode)
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Printf("[WARNING] Gmail subscription Body: %s", err)
+		return shuffle.SubResponse{}, err
+	}
+
+	log.Printf("GMAIL RESP: %s", string(body))
+
+	if res.StatusCode != 200 && res.StatusCode != 201 {
+		return shuffle.SubResponse{}, errors.New(fmt.Sprintf("Subscription failed: %s", string(body)))
+	}
+
+	// Use data from body here to create thingy
+	newSub := shuffle.SubResponse{}
+	err = json.Unmarshal(body, &newSub)
+	if err != nil {
+		return shuffle.SubResponse{}, err
+	}
+
+	return newSub, nil
 }
 
 func makeOutlookSubscription(client *http.Client, folderIds []string, notificationURL string) (string, error) {
@@ -449,7 +642,7 @@ func makeOutlookSubscription(client *http.Client, folderIds []string, notificati
 
 	resource := fmt.Sprintf("me/mailfolders('%s')/messages", strings.Join(folderIds, "','"))
 	log.Printf("[INFO] Subscription resource to get(s): %s", resource)
-	sub := Subscription{
+	sub := OutlookSubscription{
 		ChangeType:         "created",
 		ClientState:        "Shuffle subscription",
 		NotificationURL:    notificationURL,
@@ -489,7 +682,7 @@ func makeOutlookSubscription(client *http.Client, folderIds []string, notificati
 	}
 
 	// Use data from body here to create thingy
-	newSub := Subscription{}
+	newSub := OutlookSubscription{}
 	err = json.Unmarshal(body, &newSub)
 	if err != nil {
 		return "", err
@@ -574,7 +767,7 @@ func handleOutlookCallback(resp http.ResponseWriter, request *http.Request) {
 
 	redirectDomain := "localhost:5001"
 	redirectUrl := fmt.Sprintf("http://%s/api/v1/triggers/outlook/register", redirectDomain)
-	outlookClient, _, err := getOutlookClient(ctx, "", hook.OauthToken, redirectUrl)
+	outlookClient, _, err := shuffle.GetOutlookClient(ctx, "", hook.OauthToken, redirectUrl)
 	if err != nil {
 		log.Printf("Oauth client failure - triggerauth: %s", err)
 		resp.WriteHeader(401)
@@ -704,6 +897,96 @@ func removeOutlookSubscription(outlookClient *http.Client, subscriptionId string
 	return nil
 }
 
+func handleGmailSubRemoval(ctx context.Context, user shuffle.User, workflowId, triggerId string) error {
+	// 1. Get the auth for trigger
+	// 2. Stop the subscription
+	// 3. Remove the function
+	// 4. Remove the database entry for auth
+	trigger, err := shuffle.GetTriggerAuth(ctx, triggerId)
+	if err != nil {
+		log.Printf("Trigger auth %s doesn't exist - outlook sub removal.", triggerId)
+		return err
+	}
+	//if runningEnvironment != "cloud" {
+	//	log.Printf("[INFO] SHOULD STOP OUTLOOK SUB ONPREM SYNC WITH CLOUD for workflow ID %s", workflowId)
+	//	org, err := shuffle.GetOrg(ctx, user.ActiveOrg.Id)
+	//	if err != nil {
+	//		log.Printf("[INFO] Failed finding org %s during outlook removal: %s", org.Id, err)
+	//		return err
+	//	}
+
+	//	log.Printf("[INFO] Stopping cloud configuration for trigger %s in org %s for workflow %s", trigger.Id, org.Id, trigger.WorkflowId)
+	//	action := shuffle.CloudSyncJob{
+	//		Type:          "outlook",
+	//		Action:        "stop",
+	//		OrgId:         org.Id,
+	//		PrimaryItemId: trigger.Id,
+	//		SecondaryItem: trigger.Start,
+	//		ThirdItem:     trigger.WorkflowId,
+	//	}
+
+	//	err = executeCloudAction(action, org.SyncConfig.Apikey)
+	//	if err != nil {
+	//		log.Printf("[INFO] Failed cloud action STOP outlook execution: %s", err)
+	//		return err
+	//	} else {
+	//		log.Printf("[INFO] Successfully set STOPPED outlook execution trigger")
+	//	}
+	//} else {
+	//	log.Printf("SHOULD STOP OUTLOOK SUB IN CLOUD")
+	//}
+
+	// Actually delete the thing
+	redirectDomain := "localhost:5001"
+	url := fmt.Sprintf("http://%s/api/v1/triggers/outlook/register", redirectDomain)
+	gmailClient, _, err := shuffle.GetGmailClient(ctx, "", trigger.OauthToken, url)
+	if err != nil {
+		log.Printf("[WARNING] Oauth client failure - gmail delete: %s", err)
+		return err
+	}
+
+	// bytes.NewBuffer(data)
+	fullUrl := "https://www.googleapis.com/gmail/v1/users/me/stop"
+	req, err := http.NewRequest(
+		"POST",
+		fullUrl,
+		nil,
+	)
+	req.Header.Add("Content-Type", "application/json")
+	res, err := gmailClient.Do(req)
+	if err != nil {
+		log.Printf("[WARNING] GMAIL Client (2): %s", err)
+		return err
+	}
+
+	log.Printf("[INFO] Stop subscription on GMAIL Status: %d", res.StatusCode)
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		log.Printf("[WARNING] Gmail subscription Body (2): %s", err)
+		return err
+	}
+
+	log.Printf("GMAIL RESP (%d): %s", res.StatusCode, string(body))
+
+	if res.StatusCode != 200 && res.StatusCode != 201 {
+		return errors.New(fmt.Sprintf("Subscription failed: %s", string(body)))
+	}
+	//notificationURL := fmt.Sprintf("%s/api/v1/hooks/webhook_%s", syncSubUrl, trigger.Id)
+	//curSubscriptions, err := getOutlookSubscriptions(outlookClient)
+	//if err == nil {
+	//	for _, sub := range curSubscriptions.Value {
+	//		if sub.NotificationURL == notificationURL {
+	//			log.Printf("[INFO] Removing subscription %s from gmail for %s", sub.Id, workflowId)
+	//			removeOutlookSubscription(outlookClient, sub.Id)
+	//		}
+	//	}
+	//} else {
+	//	log.Printf("Failed to get subscriptions - need to overwrite")
+	//}
+
+	return nil
+}
+
 // Remove AUTH
 // Remove function
 // Remove subscription
@@ -750,7 +1033,7 @@ func handleOutlookSubRemoval(ctx context.Context, user shuffle.User, workflowId,
 	// Actually delete the thing
 	redirectDomain := "localhost:5001"
 	url := fmt.Sprintf("http://%s/api/v1/triggers/outlook/register", redirectDomain)
-	outlookClient, _, err := getOutlookClient(ctx, "", trigger.OauthToken, url)
+	outlookClient, _, err := shuffle.GetOutlookClient(ctx, "", trigger.OauthToken, url)
 	if err != nil {
 		log.Printf("[WARNING] Oauth client failure - outlook folders: %s", err)
 		return err
@@ -769,6 +1052,83 @@ func handleOutlookSubRemoval(ctx context.Context, user shuffle.User, workflowId,
 	}
 
 	return nil
+}
+
+func handleDeleteGmailSub(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	location := strings.Split(request.URL.String(), "/")
+
+	var workflowId string
+	var triggerId string
+	if location[1] == "api" {
+		if len(location) <= 6 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		workflowId = location[4]
+		triggerId = location[6]
+	}
+
+	if len(workflowId) == 0 || len(triggerId) == 0 {
+		log.Printf("Ids can't be zero when deleting %s", workflowId)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	ctx := context.Background()
+	workflow, err := shuffle.GetWorkflow(ctx, workflowId)
+	if err != nil {
+		log.Printf("[WARNING] Failed getting the workflow locally (delete outlook): %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	user, err := shuffle.HandleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("[WARNING] Api authentication failed in outlook deploy: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Id != workflow.Owner || len(user.Id) == 0 {
+		if workflow.OrgId == user.ActiveOrg.Id && user.Role == "admin" {
+			log.Printf("[INFO] User %s is accessing %s as admin (delete gmail sub)", user.Username, workflow.ID)
+		} else {
+			log.Printf("[WARNING] Wrong user (%s) for workflow %s when deleting gmail ", user.Username, workflow.ID)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+	}
+
+	trigger, err := shuffle.GetTriggerAuth(ctx, triggerId)
+	if err != nil {
+		log.Printf("[WARNING] Wrong user (%s) for workflow %s when deleting gmail (2)", user.Username, workflow.ID)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	err = handleGmailSubRemoval(ctx, user, workflowId, triggerId)
+	if err == nil {
+		// FIXME: Actually delete the hook, not just the data
+		shuffle.DeleteKey(ctx, "gmail_subscription", trigger.SubscriptionId)
+		shuffle.DeleteKey(ctx, "trigger_auth", triggerId)
+	} else {
+		log.Printf("[WARNING] Failed deleting gmail sub: %s", err)
+	}
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(`{"success": true}`))
 }
 
 func handleDeleteOutlookSub(resp http.ResponseWriter, request *http.Request) {
@@ -845,7 +1205,7 @@ func handleDeleteOutlookSub(resp http.ResponseWriter, request *http.Request) {
 // Parses data from the workflow to see whether access is right to subscribe it
 // Creates the cloud function for outlook return
 // Wait for it to be available, then schedule a workflow to it
-func createOutlookSub(resp http.ResponseWriter, request *http.Request) {
+func handleCreateOutlookSub(resp http.ResponseWriter, request *http.Request) {
 	cors := handleCors(resp, request)
 	if cors {
 		return
@@ -934,7 +1294,7 @@ func createOutlookSub(resp http.ResponseWriter, request *http.Request) {
 	// First - lets regenerate an oauth token for outlook.office.com from the original items
 	trigger, err := shuffle.GetTriggerAuth(ctx, curTrigger.ID)
 	if err != nil {
-		log.Printf("[INFO] Trigger %s doesn't exist - outlook sub.", curTrigger.ID)
+		log.Printf("[INFO] Trigger %s doesn't exist - gmail sub.", curTrigger.ID)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": ""}`))
 		return
@@ -944,9 +1304,9 @@ func createOutlookSub(resp http.ResponseWriter, request *http.Request) {
 	//url := fmt.Sprintf("https://shuffler.io")
 	redirectDomain := "localhost:5001"
 	url := fmt.Sprintf("http://%s/api/v1/triggers/outlook/register", redirectDomain)
-	outlookClient, _, err := getOutlookClient(ctx, "", trigger.OauthToken, url)
+	outlookClient, _, err := shuffle.GetOutlookClient(ctx, "", trigger.OauthToken, url)
 	if err != nil {
-		log.Printf("Oauth client failure - triggerauth: %s", err)
+		log.Printf("[WARNING] Oauth client failure for gmail - triggerauth: %s", err)
 		resp.Write([]byte(`{"success": false, "reason": ""}`))
 		resp.WriteHeader(401)
 		return
@@ -1003,12 +1363,14 @@ func createOutlookSub(resp http.ResponseWriter, request *http.Request) {
 
 	maxFails := 5
 	failCnt := 0
-	log.Println(curTrigger.Folders)
+	log.Println("[INFO] Folders: %#v", curTrigger.Folders)
 	for {
 		subId, err := makeOutlookSubscription(outlookClient, curTrigger.Folders, notificationURL)
 		if err != nil {
 			failCnt += 1
-			log.Printf("Failed making oauth subscription, retrying in 5 seconds: %s", err)
+
+			log.Printf("[WARNING] Failed making oauth subscription for outlook, retrying in 5 seconds: %s", err)
+
 			time.Sleep(5 * time.Second)
 			if failCnt == maxFails {
 				log.Printf("Failed to set up subscription %d times.", maxFails)
@@ -1023,7 +1385,7 @@ func createOutlookSub(resp http.ResponseWriter, request *http.Request) {
 		trigger.SubscriptionId = subId
 		err = shuffle.SetTriggerAuth(ctx, *trigger)
 		if err != nil {
-			log.Printf("Failed setting triggerauth: %s", err)
+			log.Printf("[WARNING] Failed setting triggerauth (gmail): %s", err)
 		}
 
 		break
@@ -1034,4 +1396,271 @@ func createOutlookSub(resp http.ResponseWriter, request *http.Request) {
 	//log.Printf("%#v", user)
 	resp.WriteHeader(200)
 	resp.Write([]byte(`{"success": true}`))
+}
+
+// This sets up the sub with outlook itself
+// Parses data from the workflow to see whether access is right to subscribe it
+// Creates the cloud function for outlook return
+// Wait for it to be available, then schedule a workflow to it
+func handleCreateGmailSub(resp http.ResponseWriter, request *http.Request) {
+	cors := handleCors(resp, request)
+	if cors {
+		return
+	}
+
+	location := strings.Split(request.URL.String(), "/")
+
+	var workflowId string
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		workflowId = location[4]
+	}
+
+	ctx := context.Background()
+	workflow, err := shuffle.GetWorkflow(ctx, workflowId)
+	if err != nil {
+		log.Printf("[WARNING] Failed getting the workflow locally (outlook sub): %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	user, err := shuffle.HandleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("Api authentication failed in outlook deploy: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// FIXME - have a check for org etc too..
+	if user.Id != workflow.Owner && user.Role != "admin" {
+		log.Printf("[WARNING] Wrong user (%s) for workflow %s when deploying outlook", user.Username, workflow.ID)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	log.Println("[INFO] Handle gmail subscription for trigger!")
+
+	// Should already be authorized at this point, as the workflow is shared
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		log.Printf("Failed body read for workflow %s", workflow.ID)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// Based on the input data from frontend
+	type CurTrigger struct {
+		Name    string   `json:"name"`
+		Folders []string `json:"folders"`
+		ID      string   `json:"id"`
+	}
+
+	//log.Println(string(body))
+	var curTrigger CurTrigger
+	err = json.Unmarshal(body, &curTrigger)
+	if err != nil {
+		log.Printf("Failed body read unmarshal for trigger %s", workflow.ID)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if len(curTrigger.Folders) == 0 {
+		log.Printf("[WARNING] Error for %s. Choosing folders is required, currently 0", workflow.ID)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	// Now that it's deployed - wait a few seconds before generating:
+	// 1. Oauth2 token thingies for outlook.office.com
+	// 2. Set the url to have the right mailboxes (probably ID?) ("https://outlook.office.com/api/v2.0/me/mailfolders('inbox')/messages")
+	// 3. Set the callback URL to be the new trigger
+	// 4. Run subscription test
+	// 5. Set the subscriptionId to the trigger object
+
+	// First - lets regenerate an oauth token for outlook.office.com from the original items
+	trigger, err := shuffle.GetTriggerAuth(ctx, curTrigger.ID)
+	if err != nil {
+		log.Printf("[INFO] Trigger %s doesn't exist - gmail sub.", curTrigger.ID)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": ""}`))
+		return
+	}
+
+	// url doesn't really matter here
+	//url := fmt.Sprintf("https://shuffler.io")
+	redirectDomain := "localhost:5001"
+	url := fmt.Sprintf("http://%s/api/v1/triggers/gmail/register", redirectDomain)
+	gmailClient, _, err := shuffle.GetGmailClient(ctx, "", trigger.OauthToken, url)
+	if err != nil {
+		log.Printf("[WARNING] Oauth client failure in gmail - triggerauth: %s", err)
+		resp.Write([]byte(`{"success": false, "reason": ""}`))
+		resp.WriteHeader(401)
+		return
+	}
+
+	// Location +
+
+	// This is here simply to let the function start
+	// Usually takes 10 attempts minimum :O
+	// 10 * 5 = 50 seconds. That's waaay too much :(
+
+	/*
+		if runningEnvironment != "cloud" {
+			org, err := shuffle.GetOrg(ctx, user.ActiveOrg.Id)
+			if err != nil {
+				log.Printf("Failed finding org %s: %s", org.Id, err)
+				return
+			}
+			log.Printf("[INFO] Starting cloud configuration TO START trigger %s in org %s for workflow %s", trigger.Id, org.Id, trigger.WorkflowId)
+
+			action := shuffle.CloudSyncJob{
+				Type:          "gmail",
+				Action:        "start",
+				OrgId:         org.Id,
+				PrimaryItemId: trigger.Id,
+				SecondaryItem: trigger.Start,
+				ThirdItem:     workflowId,
+			}
+
+			err = executeCloudAction(action, org.SyncConfig.Apikey)
+			if err != nil {
+				log.Printf("[INFO] Failed cloud action START gmail execution: %s", err)
+				resp.WriteHeader(401)
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+				return
+			} else {
+				log.Printf("[INFO] Successfully set up cloud action trigger")
+			}
+		} else {
+			log.Printf("Should configure a running environment for CLOUD")
+		}
+	*/
+
+	notificationURL := fmt.Sprintf("%s/api/v1/hooks/webhook_%s", syncSubUrl, trigger.Id)
+	//curSubscriptions, err := getOutlookSubscriptions(outlookClient)
+	//if err == nil {
+	//	for _, sub := range curSubscriptions.Value {
+	//		if sub.NotificationURL == notificationURL {
+	//			log.Printf("[INFO] Removing existing subscription %s", sub.Id)
+	//			removeOutlookSubscription(outlookClient, sub.Id)
+	//		}
+	//	}
+	//} else {
+	//	log.Printf("[INFO] Failed to get subscriptions - need to overwrite")
+	//}
+
+	//maxFails := 5
+	//failCnt := 0
+	log.Printf("Starting with notificationURL %s", notificationURL)
+	log.Println("[INFO] Folders: %#v", curTrigger.Folders)
+	for {
+		sub, err := makeGmailSubscription(gmailClient, curTrigger.Folders, notificationURL)
+		if err != nil {
+			//failCnt += 1
+
+			log.Printf("[WARNING] Failed making oauth subscription for gmail, retrying in 5 seconds: %s", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+
+			//time.Sleep(5 * time.Second)
+			//if failCnt == maxFails {
+			//	log.Printf("Failed to set up subscription %d times.", maxFails)
+			//	resp.WriteHeader(401)
+			//	return
+			//}
+
+			//continue
+		}
+
+		// May not need a new one; could just do this in triggerId with search tbh
+		newSub := shuffle.SubscriptionRecipient{
+			HistoryId:  sub.HistoryId,
+			TriggerId:  trigger.Id,
+			Edited:     0,
+			Expiration: sub.Expiration,
+			LastSync:   int(time.Now().Unix()),
+		}
+		err = shuffle.SetSubscriptionRecipient(ctx, newSub, newSub.HistoryId)
+		if err != nil {
+			log.Printf("[WARNING] Failed setting sub ID (gmail): %s", sub.HistoryId)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		// Set the ID somewhere here
+		trigger.SubscriptionId = sub.HistoryId
+		err = shuffle.SetTriggerAuth(ctx, *trigger)
+		if err != nil {
+			log.Printf("[WARNING] Failed setting triggerauth (gmail): %s", err)
+		}
+
+		break
+	}
+
+	log.Printf("[INFO] Successfully handled outlook subscription for trigger %s in workflow %s", curTrigger.ID, workflow.ID)
+
+	//log.Printf("%#v", user)
+	resp.WriteHeader(200)
+	resp.Write([]byte(`{"success": true}`))
+}
+
+func handleGmailRouting(resp http.ResponseWriter, request *http.Request) {
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		log.Printf("[WARNING] Body read error for gmail message: %s", err)
+		resp.WriteHeader(200)
+		return
+	}
+
+	parsedMessage := shuffle.Inputdata{}
+	err = json.Unmarshal(body, &parsedMessage)
+	if err != nil {
+		log.Printf("[WARNING] Unmarshal error for gmail message: %s", err)
+		resp.WriteHeader(200)
+		return
+	}
+
+	log.Printf("GMAIL BODY:\n%s", string(body))
+	parsedData, err := base64.StdEncoding.DecodeString(parsedMessage.Message.Data)
+	if err != nil {
+		log.Printf("[WARNING] Failed base64 decode in gmail routing: %s", err)
+		resp.WriteHeader(200)
+		return
+	}
+
+	log.Printf("Parsed data: %s", string(parsedData))
+	findHistory := shuffle.ParsedMessage{}
+	err = json.Unmarshal(parsedData, &findHistory)
+	if err != nil {
+		log.Printf("[WARNING] Unmarshal error for gmail message (2): %s", err)
+		resp.WriteHeader(200)
+		return
+	}
+
+	// This History ID will match the ID that is received when the subscription is configured.
+	log.Printf("HistoryId: %d. Email: %s", findHistory.HistoryId, findHistory.EmailAddress)
+	ctx := context.Background()
+	subscription, err := shuffle.GetSubscriptionRecipient(ctx, fmt.Sprintf("%d", findHistory.HistoryId))
+	if err != nil {
+		log.Printf("[WARNING] Failed finding gmail history for ID %d: %s. Should the subscription be cancelled?", findHistory.HistoryId, err)
+		resp.WriteHeader(200)
+		return
+	}
+
+	log.Printf("SUB: %#v", subscription)
+
+	resp.WriteHeader(200)
 }

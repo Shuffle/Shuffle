@@ -1647,13 +1647,13 @@ class AppBase:
         # Suboptimal cleanup script for BOdy parsing of OpenAPI
         # Should have a regex which looks for the value, then goes out and cleans up the key
         def recurse_cleanup_script(data):
+            deletekeys = []
             try:
                 if not isinstance(data, dict):
                     newvalue = json.loads(data)
                 else:
                     newvalue = data
         
-                deletekeys = []
                 for key, value in newvalue.items():
                     #print("%s: %s" % (key, value))
                     if isinstance(value, str) and len(value) == 0:

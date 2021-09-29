@@ -4201,10 +4201,10 @@ const AngularWorkflow = (props) => {
 					return
 				}
 
-				if (data.is_valid === false) {
-					alert.error(data.name+" requires hybrid version of Shuffle")
-					return
-				}
+				//if (data.is_valid === false) {
+				//	alert.error(data.name+" requires hybrid version of Shuffle")
+				//	return
+				//}
 
 				const triggerLabel = getNextActionName(data.name)
 
@@ -5570,7 +5570,38 @@ const AngularWorkflow = (props) => {
 			setSelectedTrigger(selectedTrigger)
 		} 
 
-		const setFolders = () => {
+		const setGmailFolders = () => {
+			console.log("In set gmail folders")
+			fetch(globalUrl+"/api/v1/triggers/gmail/getFolders?trigger_id="+selectedTrigger.id, {
+				method: "GET",
+				headers: {"content-type": "application/json"},
+				credentials: "include",
+			})
+			.then((response) => {
+				if (response.status !== 200) {
+					throw new Error("No folders :o!")
+				}
+
+				return response.json()
+			})
+			.then((responseJson) => {
+				if (responseJson !== undefined && responseJson !== null && responseJson.success !== false && responseJson.length > 0) {
+					setTriggerFolders(responseJson)
+				}
+
+				if (workflow.triggers[selectedTriggerIndex].parameters.length === 0 && responseJson.length > 0) {
+					workflow.triggers[selectedTriggerIndex].parameters = [{"value": responseJson[0].displayName, "name": "outlookfolder", "id": responseJson[0].id}]
+					selectedTrigger.parameters = [{"value": responseJson[0].displayName, "name": "outlookfolder", "id": responseJson[0].id}]
+					setWorkflow(workflow)
+					setSelectedTrigger(selectedTrigger)
+				}
+			})
+			.catch(error => {
+				console.log(error.toString())
+			})
+		}
+
+		const setOutlookFolders = () => {
 			fetch(globalUrl+"/api/v1/triggers/outlook/getFolders?trigger_id="+selectedTrigger.id, {
 				method: "GET",
 				headers: {"content-type": "application/json"},
@@ -5584,7 +5615,7 @@ const AngularWorkflow = (props) => {
 				return response.json()
 			})
 			.then((responseJson) => {
-				if (responseJson !== null && responseJson.success !== false) {
+				if (responseJson !== null && responseJson.success !== false && responseJson.length > 0) {
 					setTriggerFolders(responseJson)
 				}
 
@@ -5625,13 +5656,73 @@ const AngularWorkflow = (props) => {
 		// This is horrible hahah
 		if (localFirstrequest) {
 			getTriggerAuth()
-			setFolders()	
+			setOutlookFolders()	
+			setGmailFolders()
 			setLocalFirstrequest(false)
 		}
 
 		const handleButtonRequest = () => {
 
 		}
+
+		const gmailButton = 
+			<Button 
+				fullWidth
+				variant="contained" 
+				style={{flex: 1, marginTop: 10, }} 
+				color="primary"
+				onClick={() => {
+					const redirectUri = isCloud ? "https%3A%2F%2Fshuffler.io%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister" : "http%3A%2F%2Flocalhost:5001%2Fapi%2Fv1%2Ftriggers%2Fgmail%2Fregister"
+
+					const client_id = "253565968129-c0a35knic7q1pdk6i6qk9gdkvr07ci49.apps.googleusercontent.com"
+					const username = isCloud ? userdata.username : userdata.id
+					console.log(redirectUri)
+					console.log("USER: ", username, userdata)
+
+					const branch = workflow.branches.find(branch => branch.source_id === selectedTrigger.id)
+					if (branch === undefined || branch === null) {
+						alert.error("No startnode connected to node. Connect it to an action.")	
+						return
+					}
+
+					console.log("BRANCH: ", branch)
+					const startnode = branch.destination_id
+					const scopes = "https://www.googleapis.com/auth/gmail.readonly"
+					const url = `https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&prompt=consent&client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${scopes}&state=workflow_id%3D${props.match.params.key}%26trigger_id%3D${selectedTrigger.id}%26username%3D${username}%26type%3Dgmail%26start%3d${startnode}`
+					console.log("URL: ", url)
+
+					var newwin = window.open(url, "", "width=200,height=100")
+
+					// Check whether we got a callback somewhere
+					var id = setInterval(function () {
+						fetch(globalUrl+"/api/v1/triggers/gmail/"+selectedTrigger.id, {
+							method: "GET",
+							headers: {"content-type": "application/json"},
+							credentials: "include",
+						})
+						.then((response) => {
+							if (response.status !== 200) {
+								throw new Error("No trigger info :o!")
+							}
+
+							return response.json()
+						})
+						.then((responseJson) => {
+							console.log("RESPONSE: ")
+							setTriggerAuthentication(responseJson)	
+							clearInterval(id)
+							newwin.close()
+							setGmailFolders()
+						})
+						.catch(error => {
+							console.log(error.toString())
+						})
+					}, 2500)
+
+					saveWorkflow(workflow)
+				}} >
+				Gmail	
+			</Button>
 
 		const outlookButton = 
 			<Button 
@@ -5656,7 +5747,7 @@ const AngularWorkflow = (props) => {
 
 					console.log("BRANCH: ", branch)
 					const startnode = branch.destination_id
-					const url = "https://login.microsoftonline.com/common/oauth2/authorize?client_id="+client_id+"&redirect_uri="+redirectUri+"&resource=https%3A%2F%2Fgraph.microsoft.com&response_type=code&scope=Mail.Read+User.Read+https%3A%2F%2Foutlook.office.com%2Fmail.read&state=workflow_id%3D"+props.match.params.key+"%26trigger_id%3D"+selectedTrigger.id+"%26username%3D"+username+"%26type%3Doutlook%26start%3d"+startnode
+					const url = "https://login.microsoftonline.com/common/oauth2/authorize?access_type=offline&client_id="+client_id+"&redirect_uri="+redirectUri+"&resource=https%3A%2F%2Fgraph.microsoft.com&response_type=code&scope=Mail.Read+User.Read+https%3A%2F%2Foutlook.office.com%2Fmail.read&state=workflow_id%3D"+props.match.params.key+"%26trigger_id%3D"+selectedTrigger.id+"%26username%3D"+username+"%26type%3Doutlook%26start%3d"+startnode
 					console.log("URL: ", url)
 
 					var newwin = window.open(url, "", "width=200,height=100")
@@ -5679,7 +5770,7 @@ const AngularWorkflow = (props) => {
 							setTriggerAuthentication(responseJson)	
 							clearInterval(id)
 							newwin.close()
-							setFolders()
+							setOutlookFolders()
 						})
 						.catch(error => {
 							console.log(error.toString())
@@ -5697,17 +5788,18 @@ const AngularWorkflow = (props) => {
 		if (Object.getOwnPropertyNames(triggerAuthentication).length > 0) {
 			// Should get the folders if they don't already exist
 
-			if (triggerAuthentication.type === "outlook") {
+			if (triggerAuthentication.type === "outlook" || triggerAuthentication.type === "gmail" ) {
 				triggerInfo = <div>
 						{selectedTrigger.status === "running" ? null : 
 							<span>
 								<div style={{marginTop: 20, marginBottom: 7, display: "flex"}}>
 									<div style={{width: 17, height: 17, borderRadius: 17 / 2, backgroundColor: "#f85a3e", marginRight: 10}}/>
 									<div style={{flex: "10"}}> 
-										<b>Login </b> 
+										<b>Change auth </b> 
 									</div>
 								</div>
 								{outlookButton}
+								{gmailButton}
 							</span>
 						}
 
@@ -5762,6 +5854,7 @@ const AngularWorkflow = (props) => {
 					}
 					</div>
 			} else if (triggerAuthentication.type === "gmail") {
+				console.log("AUTH: ", triggerAuthentication)
 				triggerInfo = "SPECIAL GMAIL"
 			}
 		}
@@ -5781,13 +5874,7 @@ const AngularWorkflow = (props) => {
 					</div>
 				</div>
 				{outlookButton}	
-				{/*
-				<Button variant="contained" style={{marginLeft: "5px", flex: "1",}} onClick={() => {
-					alert.error("REMOVE THIS FIELD FOR GMAIL - make it oAuth something")
-				}} color="primary">
-					Gmail	
-				</Button>
-				*/}
+				{gmailButton}
 			</div>
 		
 		return(
@@ -6715,9 +6802,10 @@ const AngularWorkflow = (props) => {
 		if (trigger.id === undefined) {
 			return
 		}
-		alert.info("Deleting mail trigger")
 
-		fetch(globalUrl+"/api/v1/workflows/"+props.match.params.key+"/outlook/"+trigger.id, {
+		alert.info("Stopping mail trigger")
+		const requesttype = triggerAuthentication.type 
+		fetch(`${globalUrl}/api/v1/workflows/${props.match.params.key}/${requesttype}/${trigger.id}`, {
     	  method: 'DELETE',
 				headers: {
 					'Content-Type': 'application/json',
@@ -6769,14 +6857,16 @@ const AngularWorkflow = (props) => {
 			folders.push(curfolder.id)
 		}
 
-		alert.info("Creating outlook subscription with name " + trigger.name)
 		const data = {
 			"name": trigger.name,
 			"folders": folders,
 			"id": trigger.id,
 		}
 
-		fetch(globalUrl+"/api/v1/workflows/"+props.match.params.key+"/outlook", {
+		const requesttype = triggerAuthentication.type 
+		alert.info("Creating "+requesttype+" subscription with name " + trigger.name)
+
+		fetch(globalUrl+"/api/v1/workflows/"+props.match.params.key+"/"+requesttype, {
     	  	method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',

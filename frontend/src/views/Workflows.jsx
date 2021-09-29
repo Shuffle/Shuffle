@@ -1794,7 +1794,7 @@ const Workflows = (props) => {
 					}} color="primary">
 						Cancel
 					</Button>
-					<Button style={{}} disabled={newWorkflowName.length === 0} onClick={() => {
+					<Button variant="contained" style={{}} disabled={newWorkflowName.length === 0} onClick={() => {
 						console.log("Tags: ", newWorkflowTags)
 						if (editingWorkflow.id !== undefined) {
 							setNewWorkflow(newWorkflowName, newWorkflowDescription, newWorkflowTags, defaultReturnValue, editingWorkflow, false)
