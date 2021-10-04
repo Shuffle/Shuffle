@@ -6736,6 +6736,12 @@ const AngularWorkflow = (props) => {
 										console.log("Couldn't find webhook URI field: ", copyText)
 									}
 								}}
+								helperText={workflow.triggers[selectedTriggerIndex].parameters[0].value !== undefined && workflow.triggers[selectedTriggerIndex].parameters[0].value !== null && (workflow.triggers[selectedTriggerIndex].parameters[0].value.includes("localhost") || workflow.triggers[selectedTriggerIndex].parameters[0].value.includes("127.0.0.1"))?
+									<span style={{color:"white", marginBottom: 5, marginleft: 5,}}>
+										PS: This does NOT work with localhost. Use your local IP instead. 
+									</span>
+									: null
+								}
 								InputProps={{
 									style:{
 										color: "white",
