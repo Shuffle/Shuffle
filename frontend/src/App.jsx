@@ -49,37 +49,8 @@ if ( window.location.port === "3000") {
 
 const App = (message, props) => {
 	const [userdata, setUserData] = useState({});
-	const [notifications, setNotifications] = useState([
-	{
-		"image": "https://dytvr9ot2sszz.cloudfront.net/whats-new-announcements/billboard_metricsdashbd_sept2021.png",
-		"created_at": 1519211809934,
-		"updated_at": 1519211809934,
-		"title": "some title",
-		"description": "This is a description",
-		"dismissable": true,
-		"personal": false,
-		"org_id": "",
-		"tags": ["tag1", "tag2"],
-		"amount": 3,
-		"id": "123",
-		"read": false,
-	},
-	{
-		"image": "https://dytvr9ot2sszz.cloudfront.net/whats-new-announcements/billboard_metricsdashbd_sept2021.png",
-		"created_at": 1519211809934,
-		"updated_at": 1519211809934,
-		"title": "some title",
-		"description": "This is a description",
-		"dismissable": true,
-		"personal": false,
-		"org_id": "",
-		"tags": ["tag1", "tag2"],
-		"amount": 3,
-		"id": "456",
-		"read": true,
-	}
-	]);
-	const [cookies, setCookie, removeCookie] = useCookies([]);
+	const [notifications, setNotifications] = useState([])
+	const [cookies, setCookie, removeCookie] = useCookies([])
 	const [isLoggedIn, setIsLoggedIn] = useState(false);
 	const [dataset, setDataset] = useState(false);
 	const [isLoaded, setIsLoaded] = useState(false);
@@ -106,7 +77,7 @@ const App = (message, props) => {
 		})
 		.then(response => response.json())
 		.then(responseJson => {
-			if (responseJson.success === true && responseJson.notifications !== null && responseJson.notifications !== undefined) {
+			if (responseJson.success === true && responseJson.notifications !== null && responseJson.notifications !== undefined && responseJson.notifications.length > 0) {
 				console.log("RESP: ", responseJson)
 				setNotifications(responseJson.notifications)
 			}
@@ -157,8 +128,8 @@ const App = (message, props) => {
 		</div> :
 		<div style={{ backgroundColor: "#1F2023", color: "rgba(255, 255, 255, 0.65)", minHeight: "100vh" }}>
 			<ScrollToTop setCurpath={setCurpath} />
-			<Header notifications={notifications} checkLogin={checkLogin} cookies={cookies} removeCookie={removeCookie} isLoaded={isLoaded} globalUrl={globalUrl} setIsLoggedIn={setIsLoggedIn} isLoggedIn={isLoggedIn} userdata={userdata} {...props} />
-			<div style={{marginTop: 60}}/>
+			<Header notifications={notifications} setNotifications={setNotifications} checkLogin={checkLogin} cookies={cookies} removeCookie={removeCookie} isLoaded={isLoaded} globalUrl={globalUrl} setIsLoggedIn={setIsLoggedIn} isLoggedIn={isLoggedIn} userdata={userdata} {...props} />
+			<div style={{height: 60}}/>
 			<Route exact path="/login" render={props => <LoginPage  isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} checkLogin={checkLogin} {...props} />} />
 			<Route exact path="/admin" render={props => <Admin userdata={userdata} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
 			<Route exact path="/admin/:key" render={props => <Admin isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />

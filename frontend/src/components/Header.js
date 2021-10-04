@@ -13,7 +13,7 @@ const hoverColor = "#f85a3e"
 const hoverOutColor = "#e8eaf6"
 
 const Header = props => {
-  const { globalUrl, notifications, isLoggedIn, removeCookie, homePage, isLoaded, userdata, cookies } = props;
+  const { globalUrl, setNotifications, notifications, isLoggedIn, removeCookie, homePage, isLoaded, userdata, cookies } = props;
 	const theme = useTheme();
 
 	const [HomeHoverColor, setHomeHoverColor] = useState(hoverOutColor);
@@ -34,7 +34,7 @@ const Header = props => {
 		// Don't really care about the logout
     fetch(`${globalUrl}/api/v1/notifications/${alert_id}/markasread`, {
 			credentials: "include",
-			method: 'POST',
+			method: 'GET',
 			headers: {
 				'Content-Type': 'application/json',
 			},
@@ -46,16 +46,16 @@ const Header = props => {
 
 			return response.json();
 		}).then(function(responseJson) {	
-			if (responseJson.success !== undefined && responseJson.success) {
-				setTimeout(() => {
-					window.location.reload()
-				}, 2000)
+			if (responseJson.success === true) {
+				const newNotifications = notifications.filter(data => data.id !== alert_id)
+				console.log("NEW NOTIFICATIONS: ", newNotifications)
+				setNotifications(newNotifications)
 			} else {
-				alert.error("Failed changing org: ", responseJson.reason)
+				alert.error("Failed dismissing notification. Please try again later.")
 			}
 		})
 		.catch(error => {
-			console.log("error changing: ", error)
+			console.log("error in notification dismissal: ", error)
 			//removeCookie("session_token", {path: "/"})
 		})
   }
@@ -187,13 +187,22 @@ const Header = props => {
 		const {data} = props
 
 		return (
-			<Paper style={{width: 300, padding: 25, borderBottom: "1px solid rgba(255,255,255,0.4)"}}>
-				<Typography variant="h6">
+			<Paper style={{backgroundColor: theme.palette.surfaceColor, width: 300, padding: 25, borderBottom: "1px solid rgba(255,255,255,0.4)"}}>
+				{/*<Typography variant="h6">
 					{new Date(data.updated_at).toISOString()}
-				</Typography >
-				<Typography variant="h6">
-					{data.title}
-				</Typography >
+				</Typography >*/}
+				{data.reference_url !== undefined && data.reference_url !== null && data.reference_url.length > 0 ?
+					<Link to={data.reference_url} style={{color: "#f86a3e", textDecoration: "none",}}>
+						<Typography variant="h6">
+							{data.title}
+						</Typography >
+					</Link>
+				: 
+					<Typography variant="h6">
+						{data.title}
+					</Typography >
+				}
+
 				{data.image !== undefined && data.image !== null && data.image.length > 0 ? 
 					<img alt={data.title} src={data.image} style={{height: 100, width: 100, }} />
 					: 
@@ -372,7 +381,7 @@ const Header = props => {
 			</div>
 			<div style={{flex: "10", display: "flex", flexDirection: "row-reverse"}}>
 				{avatarMenu}
-				{/*notificationMenu*/}
+				{notificationMenu}
 				{userdata === undefined || userdata.admin === undefined || userdata.admin === null || !userdata.admin ? null : 
 					<Link to="/admin" style={hrefStyle}>
 						<Button color="primary" variant="contained" style={{marginRight: 15, marginTop: 12}}>
