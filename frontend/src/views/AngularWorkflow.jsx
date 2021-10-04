@@ -1944,6 +1944,7 @@ const AngularWorkflow = (props) => {
 					newNodeData.errors = []
 					newNodeData.is_valid = true
 					newNodeData.isValid = true
+					newNodeData.label = parentNode.data("label")+"_copy" 
 
 					cy.add({
 							group: 'nodes',
@@ -8436,30 +8437,39 @@ const AngularWorkflow = (props) => {
 	//console.log(selectedResult)
 	const codePopoutModal = !codeModalOpen ? null : 
 		<Draggable
-			onDrag={(e) => {
+			//onDrag={(e) => {
+			//	if (!dragging) {
+			//		console.log("START")
+			//		setDragging(true)
+			//	}
+			//}}
+			onStart={(e) => {
 				if (!dragging) {
+					console.log("START")
 					setDragging(true)
 				}
 			}}
 			onStop={(e) => {
+				console.log("STOP")
 				if (!dragging) {
 					return
 				}
 
 				setDragging(false)
-
 				const newoffsetX = parseInt(dragPosition.x)-parseInt(e.layerX-e.offsetX)
 				const newoffsetY = parseInt(dragPosition.y)-parseInt(e.layerY-e.offsetY)
 				if ((newoffsetX <= 40 && newoffsetX >= -40) && (newoffsetY <= 40 && newoffsetY >= -40)) {
 					console.log("SKIP X & Y")
 					return
 				}
-
-				setDragPosition({
+				
+				const newPosition = {
 					x: e.layerX-e.offsetX,
 					y: e.layerY-e.offsetY,
-				})
+				}
+				setDragPosition(newPosition)
 			}}
+			//disabled={!newdragging}
 			position={dragPosition}
 		>
 			<Dialog 
@@ -8481,6 +8491,17 @@ const AngularWorkflow = (props) => {
 					},
 				}}
 			>
+				{/*
+				<Tooltip title="Move window" placement="top">
+					<IconButton style={{zIndex: 5000, position: "absolute", cursor: "grab", top: 34, right: 204,}} onMouseDown={(e) => {
+						//console.log("MOUSE DOWN IN HERE")
+						//setDragging(true)
+						//newdragging = true
+					}}>
+						<DoneIcon style={{color: "white"}}/>
+					</IconButton>
+				</Tooltip>
+				*/}
 				<Tooltip title="Find successful execution" placement="top">
 					<IconButton style={{zIndex: 5000, position: "absolute", top: 34, right: 170,}} onClick={(e) => {
 						e.preventDefault()
