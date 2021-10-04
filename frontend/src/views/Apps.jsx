@@ -129,6 +129,7 @@ const Apps = (props) => {
 	const upload = React.useRef(null);
 	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" ? true : false
 	const borderRadius = 3
+	const viewWidth = 590 
 
 	const { start, stop } = useInterval({
 	  	duration: 5000,
@@ -177,6 +178,7 @@ const Apps = (props) => {
 		color: "#ffffff",
 		width: "100%",
 		display: "flex",
+		margin: "auto",
 	}
 
 	const paperAppStyle = {
@@ -473,13 +475,14 @@ const Apps = (props) => {
 
 	const dividerColor = "rgb(225, 228, 232)"
 	const uploadViewPaperStyle = {
-		minWidth: 662.5,
-		maxWidth: 662.5,
+		minWidth: viewWidth,
+		maxWidth: viewWidth,
 		color: "white",
 		borderRadius: 5, 
 		backgroundColor: surfaceColor,
 		display: "flex",
 		marginBottom: 10, 
+		overflow: "hidden",
 	}
 
 	const UploadView = () => {
@@ -761,7 +764,7 @@ const Apps = (props) => {
 				{/*<p><b>Owner:</b> {selectedApp.owner}</p>*/}
 				{selectedApp.privateId !== undefined && selectedApp.privateId.length > 0 ? <p><b>PrivateID:</b> {selectedApp.privateId}</p> : null}
 				<Divider style={{marginBottom: 10, marginTop: 10, backgroundColor: dividerColor}}/>
-				<div style={{padding: 20}}>
+				<div style={{paddingTop: 20, paddingBottom: 20, }}>
 					{selectedApp.link.length > 0 ? <p><b>URL:</b> {selectedApp.link}</p> : null}
 					<div style={{marginTop: 15, marginBottom: 15}}>
 						<b>Actions</b>
@@ -944,9 +947,9 @@ const Apps = (props) => {
   }, [appValidation, isDropzone]);
 
 	const appView = isLoggedIn ? 
-		<Dropzone style={{maxWidth: window.innerWidth > 1366 ? 1366 : 1200, margin: "auto", padding: 20 }} onDrop={uploadFile}>
+		<Dropzone style={{width: viewWidth*2+20, margin: "auto", padding: 20 }} onDrop={uploadFile}>
 			<div style={appViewStyle}>	
-				<div style={{flex: 1, }}>
+				<div style={{flex: 1, maxWidth: viewWidth, marginRight: 10,}}>
 					<Breadcrumbs aria-label="breadcrumb" separator="›" style={{color: "white",}}>
 						<Link to="/apps" style={{textDecoration: "none", color: "inherit",}}>
 							<Typography variant="h6" style={{color: "rgba(255,255,255,0.5)"}}>
@@ -963,9 +966,9 @@ const Apps = (props) => {
 						: null}
 					</Breadcrumbs>
 					<div style={{marginTop: 15}} />
-					<UploadView/>
+					<UploadView />
 				</div>
-				<div style={{flex: 1, marginLeft: 10, marginRight: 10, }}>
+				<div style={{flex: 1, marginLeft: 10, maxWidth: viewWidth, }}>
 					<div style={{display: "flex",}}>
 						<div style={{flex: 1, marginBottom: 15, }}>
 							<Typography variant="h6">

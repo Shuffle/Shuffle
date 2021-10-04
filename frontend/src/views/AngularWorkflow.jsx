@@ -8671,7 +8671,7 @@ const AngularWorkflow = (props) => {
 					minZoom={0.35}
 					maxZoom={2.00}
 					wheelSensitivity={0.25}
-					style={{width: bodyWidth-leftBarSize-5, height: bodyHeight-appBarSize-5, backgroundColor: surfaceColor}} 
+					style={{width: bodyWidth-leftBarSize-15, height: bodyHeight-appBarSize-5, backgroundColor: surfaceColor}} 
 					stylesheet={cystyle}
 					boxSelectionEnabled={true}
 					autounselectify={false}

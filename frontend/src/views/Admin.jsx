@@ -2936,7 +2936,7 @@ const Admin = (props) => {
 
 	const iconStyle = {marginRight: 10}
 	const data = 
-		<div style={{width: 1366, margin: "auto", overflowX: "hidden", marginTop: 25,}}>
+		<div style={{width: 1300, margin: "auto", overflowX: "hidden", marginTop: 25,}}>
 			<Paper style={paperStyle}>
 				<Tabs
 					value={curTab}

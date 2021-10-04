@@ -13,7 +13,7 @@ const Body = {
   minWidth: '768px',
   margin: 'auto',
 	display: "flex",
-	heigth: "100%",
+	height: "100%",
 	color: "white",
 	//textAlign: "center",
 };
@@ -21,6 +21,11 @@ const Body = {
 const dividerColor = "rgb(225, 228, 232)"
 const hrefStyle = {
 	color: "rgba(255, 255, 255, 0.40)", 
+	textDecoration: "none"
+}
+
+const innerHrefStyle = {
+	color: "rgba(255, 255, 255, 0.75)", 
 	textDecoration: "none"
 }
 
@@ -36,6 +41,7 @@ const Docs = (props) => {
 	const [anchorEl, setAnchorEl] = React.useState(null);
 	const [headingSet, setHeadingSet] = React.useState(false);
 	const [selectedMeta, setSelectedMeta] = React.useState({link: "hello", read_time: 2, });
+	const [tocLines, setTocLines] = React.useState([]);
 	const [baseUrl, setBaseUrl] = React.useState(serverside === true ? "" : window.location.href)
 
   function handleClick(event) {
@@ -52,14 +58,14 @@ const Docs = (props) => {
 		position: "relative",
 		padding: 30,
 		paddingTop: 15,
-		borderRadius: 5,
+		height: "80vh", 
+		marginTop: 15,
 	}
 
 	const SideBar = {
 		maxWidth: 250,
 		flex: "1",
 		position: "fixed",
-		marginTop: 35,
 	}
 
 	const fetchDocList = () => {
@@ -98,6 +104,54 @@ const Docs = (props) => {
 
 				if (responseJson.meta !== undefined) {
 					setSelectedMeta(responseJson.meta)
+				}
+
+				//console.log("TOC list: ", responseJson.reason)
+				if (responseJson.reason !== undefined && responseJson.reason !== null) {
+					const splitkey = responseJson.reason.split("\n")
+					var innerTocLines = []
+					var record = false
+					for (var key in splitkey) {
+						const line = splitkey[key]
+						//console.log("Line: ", line)
+						if (line.toLowerCase().includes("table of contents")) {
+							record = true
+							continue
+						}
+
+						if (record && line.length < 3) {
+							record = false
+						}
+
+						if (record) {
+							const parsedline = line.split("](")
+							if (parsedline.length > 1) {
+								parsedline[0] = parsedline[0].replaceAll("*", "")
+								parsedline[0] = parsedline[0].replaceAll("[", "")
+								parsedline[0] = parsedline[0].replaceAll("]", "")
+								parsedline[0] = parsedline[0].replaceAll("(", "")
+								parsedline[0] = parsedline[0].replaceAll(")", "")
+								parsedline[0] = parsedline[0].trim()
+
+								parsedline[1] = parsedline[1].replaceAll("*", "")
+								parsedline[1] = parsedline[1].replaceAll("[", "")
+								parsedline[1] = parsedline[1].replaceAll("]", "")
+								parsedline[1] = parsedline[1].replaceAll(")", "")
+								parsedline[1] = parsedline[1].replaceAll("(", "")
+								parsedline[1] = parsedline[1].trim()
+								console.log(parsedline[0], parsedline[1])
+
+								innerTocLines.push({
+									"text": parsedline[0],
+									"link": parsedline[1]
+								})
+							} else {
+								console.log("Bad line for parsing: ", line)
+							}
+						}
+					}
+				
+					setTocLines(innerTocLines)
 				}
 			} else {
 				setData("# Error\nThis page doesn't exist.")
@@ -230,7 +284,7 @@ const Docs = (props) => {
 	}
 
 	const Heading = (props) => {
-		const element = React.createElement(`h${props.level}`, {style: {marginTop: 50}}, props.children)
+		const element = React.createElement(`h${props.level}`, {style: {marginTop: props.level === 1 ? 20 : 50}}, props.children)
 		const [hover, setHover] = useState(false)
 
 		var extraInfo = ""
@@ -315,11 +369,31 @@ const Docs = (props) => {
 
 							const path = "/docs/"+item
 							const newname = item.charAt(0).toUpperCase()+item.substring(1).split("_").join(" ").split("-").join(" ")
+							const itemMatching = props.match.params.key.toLowerCase() === item.toLowerCase()
+							//const [tocLines, setTocLines] = React.useState([]);
 							return (
 								<li key={index} style={{marginTop: 10,}}>
-									<Link key={index} style={hrefStyle} to={path} onClick={() => {fetchDocs(item)}}>
-										<Typography style={{color: props.match.params.key.toLowerCase() === item.toLowerCase() ? "#f86a3e" : "inherit"}} variant="body1"><b>> {newname}</b></Typography>
+									<Link key={index} style={hrefStyle} to={path} onClick={() => {
+										setTocLines([])
+										fetchDocs(item)
+									}}>
+										<Typography style={{color: itemMatching ? "#f86a3e" : "inherit"}} variant="body1"><b>> {newname}</b></Typography>
 									</Link>
+									{itemMatching && tocLines !== null && tocLines !== undefined && tocLines.length > 0 ? 
+										<div style={{marginLeft: 13}}>
+											{tocLines.map((data, index) => {
+												console.log(data)
+
+												return (
+													<Link key={index} style={innerHrefStyle} to={data.link} onClick={() => {}}>
+														<Typography variant="body2" style={{cursor: "pointer"}}>
+															{data.text}
+														</Typography>
+													</Link>
+												)
+											})}
+										</div>
+									: null}
 								</li>
 							)
 						})}
@@ -422,7 +496,7 @@ const Docs = (props) => {
 		</div>
 
 	return (
-		<div>	
+		<div style={{}}>	
 			{loadedCheck}
 		</div>	
 	)

@@ -5,8 +5,8 @@ import {Link} from 'react-router-dom';
 
 import { useTheme } from '@material-ui/core/styles';
 
-import { Tooltip, List, Avatar, Menu, ListItem, MenuItem, Select, Button, IconButton, Grid } from '@material-ui/core';
-import { Home as HomeIcon, Polymer as PolymerIcon, Apps as AppsIcon, Description as DescriptionIcon} from '@material-ui/icons';
+import { Badge, Typography, Paper, Tooltip, List, Avatar, Menu, ListItem, MenuItem, Select, Button, IconButton, Grid } from '@material-ui/core';
+import { Notifications as NotificationsIcon, Home as HomeIcon, Polymer as PolymerIcon, Apps as AppsIcon, Description as DescriptionIcon} from '@material-ui/icons';
 import { useAlert } from "react-alert";
 
 const hoverColor = "#f85a3e"
@@ -148,12 +148,60 @@ const Header = props => {
     setAnchorEl(null);
   };
 
+	const notifications = [{
+		"image": "https://dytvr9ot2sszz.cloudfront.net/whats-new-announcements/billboard_metricsdashbd_sept2021.png",
+		"date": "1519211809934",
+		"title": "some title",
+		"description": "This is a escription",
+		"dismissable": true,
+		"personal": false,
+		"org_id": "",
+	}]
 
+	const notificationMenu = 
+		<span style={{zIndex: 10001}}>
+			<IconButton color="primary" style={{zIndex: 10001, marginRight: 15, }} aria-controls="simple-menu" aria-haspopup="true" onClick={(event) => {
+				setAnchorEl(event.currentTarget);
+			}}>
+			  <Badge badgeContent={notifications.length} color="primary">
+					<NotificationsIcon color="secondary" style={{height: 35, width: 35,}} alt="Your username here" src="" />
+				</Badge>
+			</IconButton>
+			<Menu
+				id="simple-menu"
+				anchorEl={anchorEl}
+				keepMounted
+				open={Boolean(anchorEl)}
+				style={{zIndex: 10002}}
+				onClose={() => {
+					handleClose()
+				}}
+			>
+				{notifications.map((data, index) => {
+					return (
+						<MenuItem onClick={(event) => {}}>
+							<Paper style={{width: 300, height: 150, }}>
+								<Grid container direction="row" alignItems="center">
+									<Grid item>
+										<Typography variant="h6">
+											{new Date(data.date).toISOString()}
+										</Typography >
+										<Typography variant="h6">
+											{data.title}
+										</Typography >
+									</Grid>
+								</Grid>
+							</Paper>
+						</MenuItem>
+					)
+				})}
+			</Menu>
+		</span>
 
 	// Should be based on some path
 	const avatarMenu = 
-		<span>
-			<IconButton color="primary" style={{marginRight: 15, }} aria-controls="simple-menu" aria-haspopup="true" onClick={(event) => {
+		<span style={{zIndex: 10001}}>
+			<IconButton color="primary" style={{zIndex: 10001, marginRight: 15, }} aria-controls="simple-menu" aria-haspopup="true" onClick={(event) => {
 				setAnchorEl(event.currentTarget);
 			}}>
 				<Avatar style={{height: 35, width: 35,}} alt="Your username here" src="" />
@@ -163,6 +211,7 @@ const Header = props => {
 				anchorEl={anchorEl}
 				keepMounted
 				open={Boolean(anchorEl)}
+				style={{zIndex: 10002}}
 				onClose={() => {
 					handleClose()
 				}}
@@ -188,8 +237,9 @@ const Header = props => {
 
 	// Handle top bar or something
 	const logoCheck = !homePage ?  null : null
+	//<div style={{position: "fixed", top: 0, left: 0, display: "flex"}}>
   const loginTextBrowser = !isLoggedIn ? 
-    	<div style={{display: "flex"}}>
+    <div style={{display: "flex"}}>
 			<List style={{display: "flex", flexDirect: "row"}} component="nav">
 				<ListItem style={{textAlign: "center", marginLeft: "0px"}}>
 					<Link to ="/docs/about" style={hrefStyle}>
@@ -265,6 +315,7 @@ const Header = props => {
 			</div>
 			<div style={{flex: "10", display: "flex", flexDirection: "row-reverse"}}>
 				{avatarMenu}
+				{notificationMenu}
 				{userdata === undefined || userdata.admin === undefined || userdata.admin === null || !userdata.admin ? null : 
 					<Link to="/admin" style={hrefStyle}>
 						<Button color="primary" variant="contained" style={{marginRight: 15, marginTop: 12}}>
@@ -376,7 +427,7 @@ const Header = props => {
 
 	// <Divider style={{height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 	const loadedCheck = 
-		<div style={{minHeight: 60}}>
+		<div style={{minHeight: 60, }}>
 			<BrowserView>
       			{loginTextBrowser}
 			</BrowserView>
@@ -386,10 +437,10 @@ const Header = props => {
 		</div>
     // <div style={{backgroundImage: "linear-gradient(-90deg,#342f78 0,#29255e 50%,#1b1947 100%"}}>
   	return (
-    	<div>
-			{loadedCheck}
+    	<div style={{width: "100%", position: "fixed", minHeight: 60, top: 0, zIndex: 10000, backgroundColor: "inherit",}}>
+				{loadedCheck}
 	    </div>
-  )
+  	)
 }
 
 export default Header;
