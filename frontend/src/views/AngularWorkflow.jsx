@@ -4840,19 +4840,33 @@ const AngularWorkflow = (props) => {
 		overflow: "auto",
 	}
 
+	// Old static one
+	//var rightsidebarStyle = {
+	//	position: "fixed", 
+	//	right: 0, 
+	//	top: appBarSize+1,
+	//	height: "100%",
+	//	bottom: 0,
+	//	minWidth: 350, 
+	//	maxWidth: 350, 
+	//	borderLeft: "1px solid rgb(91, 96, 100)",
+	//	overflow: "scroll",
+	//	overflowX: "auto",
+	//	overflowY: "auto",
+	//	zIndex: 1000,
+	//}
+
 	var rightsidebarStyle = {
 		position: "fixed", 
-		right: 0, 
-		top: appBarSize+1,
-		height: "100%",
-		bottom: 0,
-		minWidth: 350, 
-		maxWidth: 350, 
-		borderLeft: "1px solid rgb(91, 96, 100)",
-		overflow: "scroll",
-		overflowX: "auto",
-		overflowY: "auto",
+		top: appBarSize+25,
+		right: 25, 
+		height: "80vh",
+		width: 350, 
+		border: "1px solid rgb(91, 96, 100)",
 		zIndex: 1000,
+		borderRadius: theme.palette.borderRadius,
+		resize: "both", 
+		overflow: "auto",
 	}
 
 	const setTriggerFolderWrapperMulti = event => {
