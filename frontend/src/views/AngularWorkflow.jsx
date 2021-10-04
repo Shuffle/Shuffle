@@ -6362,6 +6362,8 @@ const AngularWorkflow = (props) => {
 														"value": e.target.value.id,
 													}
 												}
+
+												setWorkflow(workflow)
 											}
 											console.log("STARTNODE: ", startnode)
 										} else {
@@ -6445,7 +6447,7 @@ const AngularWorkflow = (props) => {
 												}
 											}
 
-											if (workflow.id == subworkflow.id) {
+											if (workflow.id === subworkflow.id) {
 												const cybranch = {
 													group: "edges",
 													source: newbranch.source_id,
