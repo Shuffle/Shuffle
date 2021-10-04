@@ -5,7 +5,7 @@ import {Link} from 'react-router-dom';
 
 import { useTheme } from '@material-ui/core/styles';
 
-import { Badge, Typography, Paper, Tooltip, List, Avatar, Menu, ListItem, MenuItem, Select, Button, IconButton, Grid } from '@material-ui/core';
+import { Chip, Badge, Typography, Paper, Tooltip, List, Avatar, Menu, ListItem, MenuItem, Select, Button, IconButton, Grid } from '@material-ui/core';
 import { Notifications as NotificationsIcon, Home as HomeIcon, Polymer as PolymerIcon, Apps as AppsIcon, Description as DescriptionIcon} from '@material-ui/icons';
 import { useAlert } from "react-alert";
 
@@ -13,7 +13,7 @@ const hoverColor = "#f85a3e"
 const hoverOutColor = "#e8eaf6"
 
 const Header = props => {
-  const { globalUrl, isLoggedIn, removeCookie, homePage, isLoaded, userdata, cookies } = props;
+  const { globalUrl, notifications, isLoggedIn, removeCookie, homePage, isLoaded, userdata, cookies } = props;
 	const theme = useTheme();
 
 	const [HomeHoverColor, setHomeHoverColor] = useState(hoverOutColor);
@@ -22,12 +22,43 @@ const Header = props => {
 	const [DocsHoverColor, setDocsHoverColor] = useState(hoverOutColor);
   const [HelpHoverColor, setHelpHoverColor] = useState(hoverOutColor);
   const [anchorEl, setAnchorEl] = React.useState(null);
+  const [anchorElAvatar, setAnchorElAvatar] = React.useState(null);
 	const alert = useAlert()
 
 	const hrefStyle = {
 		color: hoverOutColor,
 		textDecoration: "none",
 	}
+
+	const dismissNotification = (alert_id) => {
+		// Don't really care about the logout
+    fetch(`${globalUrl}/api/v1/notifications/${alert_id}/markasread`, {
+			credentials: "include",
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+		})
+		.then(function(response) {
+			if (response.status !== 200) {
+				console.log("Error in response")
+			}
+
+			return response.json();
+		}).then(function(responseJson) {	
+			if (responseJson.success !== undefined && responseJson.success) {
+				setTimeout(() => {
+					window.location.reload()
+				}, 2000)
+			} else {
+				alert.error("Failed changing org: ", responseJson.reason)
+			}
+		})
+		.catch(error => {
+			console.log("error changing: ", error)
+			//removeCookie("session_token", {path: "/"})
+		})
+  }
 
 	// DEBUG HERE 
 	const handleClickLogout = () => {
@@ -146,17 +177,56 @@ const Header = props => {
 
   const handleClose = () => {
     setAnchorEl(null);
+    setAnchorElAvatar(null);
   };
 
-	const notifications = [{
-		"image": "https://dytvr9ot2sszz.cloudfront.net/whats-new-announcements/billboard_metricsdashbd_sept2021.png",
-		"date": "1519211809934",
-		"title": "some title",
-		"description": "This is a escription",
-		"dismissable": true,
-		"personal": false,
-		"org_id": "",
-	}]
+	const chipStyle = {
+		backgroundColor: "#3d3f43", height: 30, marginRight: 5, paddingLeft: 5, paddingRight: 5, height: 28, cursor: "pointer", borderColor: "#3d3f43", color: "white", 
+	}
+	const NotificationItem = (props) => {
+		const {data} = props
+
+		return (
+			<Paper style={{width: 300, padding: 25, borderBottom: "1px solid rgba(255,255,255,0.4)"}}>
+				<Typography variant="h6">
+					{new Date(data.updated_at).toISOString()}
+				</Typography >
+				<Typography variant="h6">
+					{data.title}
+				</Typography >
+				{data.image !== undefined && data.image !== null && data.image.length > 0 ? 
+					<img alt={data.title} src={data.image} style={{height: 100, width: 100, }} />
+					: 
+					null
+				}
+				<Typography variant="body1">
+					{data.description}
+				</Typography >
+				{/*data.tags !== undefined && data.tags !== null && data.tags.length > 0 ? 
+					data.tags.map((tag, index) => {
+						return (
+							<Chip
+								key={index}
+								style={chipStyle}
+								label={tag}
+								onClick={() => {
+								}}
+								variant="outlined"
+								color="primary"
+							/>
+						)
+					})
+				: null */}
+				{data.read === false ? 
+					<Button color="primary" variant="contained" style={{marginTop: 15}} onClick={() => {
+						dismissNotification(data.id)
+					}}>
+						Dismiss
+					</Button>
+				: null}
+			</Paper>
+		)
+	}
 
 	const notificationMenu = 
 		<span style={{zIndex: 10001}}>
@@ -172,27 +242,14 @@ const Header = props => {
 				anchorEl={anchorEl}
 				keepMounted
 				open={Boolean(anchorEl)}
-				style={{zIndex: 10002}}
+				style={{zIndex: 10002, maxHeight: "100vh", overflowX: "hidden", overflowY: "auto",}}
 				onClose={() => {
 					handleClose()
 				}}
 			>
 				{notifications.map((data, index) => {
 					return (
-						<MenuItem onClick={(event) => {}}>
-							<Paper style={{width: 300, height: 150, }}>
-								<Grid container direction="row" alignItems="center">
-									<Grid item>
-										<Typography variant="h6">
-											{new Date(data.date).toISOString()}
-										</Typography >
-										<Typography variant="h6">
-											{data.title}
-										</Typography >
-									</Grid>
-								</Grid>
-							</Paper>
-						</MenuItem>
+						<NotificationItem data={data} key={index} />
 					)
 				})}
 			</Menu>
@@ -202,15 +259,15 @@ const Header = props => {
 	const avatarMenu = 
 		<span style={{zIndex: 10001}}>
 			<IconButton color="primary" style={{zIndex: 10001, marginRight: 15, }} aria-controls="simple-menu" aria-haspopup="true" onClick={(event) => {
-				setAnchorEl(event.currentTarget);
+				setAnchorElAvatar(event.currentTarget);
 			}}>
 				<Avatar style={{height: 35, width: 35,}} alt="Your username here" src="" />
 			</IconButton>
 			<Menu
 				id="simple-menu"
-				anchorEl={anchorEl}
+				anchorEl={anchorElAvatar}
 				keepMounted
-				open={Boolean(anchorEl)}
+				open={Boolean(anchorElAvatar)}
 				style={{zIndex: 10002}}
 				onClose={() => {
 					handleClose()
@@ -315,7 +372,7 @@ const Header = props => {
 			</div>
 			<div style={{flex: "10", display: "flex", flexDirection: "row-reverse"}}>
 				{avatarMenu}
-				{notificationMenu}
+				{/*notificationMenu*/}
 				{userdata === undefined || userdata.admin === undefined || userdata.admin === null || !userdata.admin ? null : 
 					<Link to="/admin" style={hrefStyle}>
 						<Button color="primary" variant="contained" style={{marginRight: 15, marginTop: 12}}>
