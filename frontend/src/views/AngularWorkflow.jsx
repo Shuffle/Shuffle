@@ -4862,6 +4862,9 @@ const AngularWorkflow = (props) => {
 		right: 25, 
 		height: "80vh",
 		width: 350, 
+		minWidth: 200, 
+		maxWidth: 600,
+		maxHeight: "100vh",
 		border: "1px solid rgb(91, 96, 100)",
 		zIndex: 1000,
 		borderRadius: theme.palette.borderRadius,
@@ -8667,7 +8670,8 @@ const AngularWorkflow = (props) => {
 					elements={elements} 
 					minZoom={0.35}
 					maxZoom={2.00}
-					style={{width: bodyWidth-leftBarSize-15, height: bodyHeight-appBarSize-5, backgroundColor: surfaceColor}} 
+					wheelSensitivity={0.25}
+					style={{width: bodyWidth-leftBarSize-5, height: bodyHeight-appBarSize-5, backgroundColor: surfaceColor}} 
 					stylesheet={cystyle}
 					boxSelectionEnabled={true}
 					autounselectify={false}
