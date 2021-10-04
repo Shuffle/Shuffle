@@ -481,6 +481,7 @@ const ParsedAction = (props) => {
 				}
 			}
 
+			//console.log("CHANGING ACTION COUNT !")
 			selectedActionParameters[count].value = event.target.value
 			selectedAction.parameters[count].value = event.target.value
 			setSelectedAction(selectedAction)

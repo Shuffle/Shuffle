@@ -1892,6 +1892,7 @@ const AngularWorkflow = (props) => {
 	// https://stackoverflow.com/questions/16677856/cy-onselect-callback-only-once
 	const onNodeSelect = (event, newAppAuth) => {
 		const data = event.target.data()
+		//console.log("NEW NODE ID: ", data.id)
 		if (data.isButton) {
 			//console.log("BUTTON CLICKED: ", data)
 			if (data.buttonType === "delete") {
@@ -2043,18 +2044,20 @@ const AngularWorkflow = (props) => {
 		//const branch = workflow.branches.filter(branch => branch.source_id === data.id || branch.destination_id === data.id)
 		//console.log("APPAUTH: ", newAppAuth)
 		//console.log("BRANCHES: ", branch)
-		console.log("CLICK: ", data)
+		//console.log("CLICK: ", data)
 
 		if (data.type === "ACTION") {
 			//setSelectedApp({})
 			//setSelectedAction({})
 			var curaction = workflow.actions.find(a => a.id === data.id)
+			//console.log("PARAMS: ", curaction.parameters[0])
 			//console.log("INSIDE CURACTION: ", curaction)
 			if (!curaction || curaction === undefined) { 
 				//event.target.unselect()
 				alert.error("Action not found. Please remake it.")
 				return
 			}
+
 
 			const curapp = apps.find(a => a.name === curaction.app_name && ((a.app_version === curaction.app_version || (a.loop_versions !== null && a.loop_versions.includes(curaction.app_version)))))
 			//console.log("APP: ", curapp)
@@ -2069,8 +2072,8 @@ const AngularWorkflow = (props) => {
 					actions: [curaction],
 				}
 
-				console.log(tmpapp)
-				console.log(curaction)
+				//console.log(tmpapp)
+				//console.log(curaction)
 				setSelectedApp(tmpapp)
 				//setSelectedAction(JSON.parse(JSON.stringify(curaction)))
 				setSelectedAction(curaction)
@@ -2434,6 +2437,7 @@ const AngularWorkflow = (props) => {
 						if (dstdata.parameters[paramkey].value.length === 0) {
 							dstdata.parameters[paramkey].value = `$${parentlabel}${foundresult}`
 						} else {
+							dstdata.parameters[paramkey].value = `$${parentlabel}${foundresult}`
 							//console.log("Skipping ", dstdata.parameters[paramkey], " because it already has a value")
 						}
 					}
@@ -2654,7 +2658,7 @@ const AngularWorkflow = (props) => {
 				console.log("SHOULD STITCH WITH STARTNODE")
 				cy.add(edgeToBeAdded)
 			}
-
+			
 			if (nodedata.app_name === "Shuffle Tools") {
 				const iconInfo = GetIconInfo(nodedata)
 				const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`
@@ -2667,6 +2671,19 @@ const AngularWorkflow = (props) => {
 				} else {
 					nodedata.iconBackground = iconInfo.iconBackgroundColor
 				}
+			}
+
+			if (nodedata.parameters !== undefined && nodedata.parameters !== null && !nodedata.label.endsWith("_copy")) {
+				var newparameters = []
+					
+				for (var subkey in nodedata.parameters) {
+					var newparam = JSON.parse(JSON.stringify(nodedata.parameters[subkey]))
+					newparam.id = uuidv4()
+					newparam.value = ""
+					newparameters.push(newparam)
+				}
+
+				nodedata.parameters = newparameters
 			}
 
 			if (workflow.actions === undefined || workflow.actions === null) {
