@@ -380,14 +380,14 @@ const Docs = (props) => {
 										<Typography style={{color: itemMatching ? "#f86a3e" : "inherit"}} variant="body1"><b>> {newname}</b></Typography>
 									</Link>
 									{itemMatching && tocLines !== null && tocLines !== undefined && tocLines.length > 0 ? 
-										<div style={{marginLeft: 13}}>
+										<div style={{marginLeft: 5}}>
 											{tocLines.map((data, index) => {
 												console.log(data)
 
 												return (
 													<Link key={index} style={innerHrefStyle} to={data.link} onClick={() => {}}>
 														<Typography variant="body2" style={{cursor: "pointer"}}>
-															{data.text}
+															- {data.text}
 														</Typography>
 													</Link>
 												)

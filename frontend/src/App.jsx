@@ -127,7 +127,7 @@ const App = (message, props) => {
 			<Route exact path="/home" render={props => <LandingPageNew isLoaded={isLoaded} {...props} />} />
 		</div> :
 		<div style={{ backgroundColor: "#1F2023", color: "rgba(255, 255, 255, 0.65)", minHeight: "100vh" }}>
-			<ScrollToTop setCurpath={setCurpath} />
+			<ScrollToTop getUserNotifications={getUserNotifications} setCurpath={setCurpath} />
 			<Header notifications={notifications} setNotifications={setNotifications} checkLogin={checkLogin} cookies={cookies} removeCookie={removeCookie} isLoaded={isLoaded} globalUrl={globalUrl} setIsLoggedIn={setIsLoggedIn} isLoggedIn={isLoggedIn} userdata={userdata} {...props} />
 			<div style={{height: 60}}/>
 			<Route exact path="/login" render={props => <LoginPage  isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} checkLogin={checkLogin} {...props} />} />

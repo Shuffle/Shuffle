@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
+	"crypto/tls"
 	//"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
@@ -48,6 +49,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/storage/memory"
+	githttp "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 
 	// Random
 	xj "github.com/basgys/goxml2json"
@@ -57,7 +59,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	// PROXY overrides
-	// "gopkg.in/src-d/go-git.v4/plumbing/transport/client"
+	"gopkg.in/src-d/go-git.v4/plumbing/transport/client"
 	// githttp "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 
 	// Web
@@ -4131,6 +4133,17 @@ func runInitEs(ctx context.Context) {
 	// FIXME: Isn't this a little backwards?
 	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000)
 	log.Printf("[INFO] Getting and validating workflowapps. Got %d with err %#v", len(workflowapps), err)
+
+	// accept any certificate (might be useful for testing)
+	customGitClient := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+		Timeout: 15 * time.Second,
+	}
+	client.InstallProtocol("http", githttp.NewClient(customGitClient))
+	client.InstallProtocol("https", githttp.NewClient(customGitClient))
+
 	if err != nil && len(workflowapps) == 0 {
 		log.Printf("[WARNING] Failed getting apps (runInit): %s", err)
 	} else if err == nil {
@@ -4156,6 +4169,7 @@ func runInitEs(ctx context.Context) {
 				Password: password,
 			}
 		}
+
 		branch := os.Getenv("SHUFFLE_DOWNLOAD_AUTH_BRANCH")
 		if len(branch) > 0 && branch != "master" && branch != "main" {
 			cloneOptions.ReferenceName = plumbing.ReferenceName(branch)
@@ -4202,7 +4216,7 @@ func runInitEs(ctx context.Context) {
 	}
 	_, err = git.Clone(storer, fs, cloneOptions)
 	if err != nil {
-		log.Printf("Failed loading repo %s into memory: %s", apis, err)
+		log.Printf("[WARNING] Failed loading repo %s into memory: %s", apis, err)
 	} else {
 		log.Printf("[INFO] Finished git clone. Looking for updates to the repo.")
 		dir, err := fs.ReadDir("")
@@ -5898,6 +5912,7 @@ func initHandlers() {
 
 	// Introduced in 0.9.21 to handle notifications for e.g. failed Workflow
 	r.HandleFunc("/api/v1/notifications", shuffle.HandleGetNotifications).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/notifications/clear", shuffle.HandleClearNotifications).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/notifications/{notificationId}/markasread", shuffle.HandleMarkAsRead).Methods("GET", "OPTIONS")
 	//r.HandleFunc("/api/v1/notifications/{notificationId}/markasread", shuffle.HandleMarkAsRead).Methods("GET", "OPTIONS")
 

@@ -1,8 +1,7 @@
 import { useEffect } from 'react';
 import { withRouter } from 'react-router-dom';
-import ReactGA from 'react-ga';
 
-function ScrollToTop({setCurpath, history }) {
+function ScrollToTop({getUserNotifications, setCurpath, history }) {
   useEffect(() => {
     const unlisten = history.listen(() => {
       window.scroll({
@@ -11,14 +10,8 @@ function ScrollToTop({setCurpath, history }) {
 				behavior: "smooth",
 			});
 
-			//ReactGA.event({
-			//	category: "referral",
-			//	action: "new_user_referral",
-			//	label: "",
-			//})
-
-			ReactGA.pageview(window.location.pathname)
 			setCurpath(window.location.pathname)
+			getUserNotifications()
     });
     return () => {
       unlisten();

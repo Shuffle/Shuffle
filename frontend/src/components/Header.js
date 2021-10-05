@@ -30,6 +30,40 @@ const Header = props => {
 		textDecoration: "none",
 	}
 
+  const handleClose = () => {
+    setAnchorEl(null);
+    setAnchorElAvatar(null);
+  };
+
+	const clearNotifications = () => {
+		// Don't really care about the logout
+    fetch(`${globalUrl}/api/v1/notifications/clear`, {
+			credentials: "include",
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+		})
+		.then(function(response) {
+			if (response.status !== 200) {
+				console.log("Error in response")
+			}
+
+			return response.json();
+		}).then(function(responseJson) {	
+			if (responseJson.success === true) {
+				setNotifications([])
+				handleClose()
+			} else {
+				alert.error("Failed dismissing notifications. Please try again later.")
+			}
+		})
+		.catch(error => {
+			console.log("error in notification dismissal: ", error)
+			//removeCookie("session_token", {path: "/"})
+		})
+  }
+
 	const dismissNotification = (alert_id) => {
 		// Don't really care about the logout
     fetch(`${globalUrl}/api/v1/notifications/${alert_id}/markasread`, {
@@ -175,19 +209,17 @@ const Header = props => {
     setAnchorEl(event.currentTarget);
   };
 
-  const handleClose = () => {
-    setAnchorEl(null);
-    setAnchorElAvatar(null);
-  };
 
 	const chipStyle = {
 		backgroundColor: "#3d3f43", height: 30, marginRight: 5, paddingLeft: 5, paddingRight: 5, height: 28, cursor: "pointer", borderColor: "#3d3f43", color: "white", 
 	}
+
+	const notificationWidth = 350
 	const NotificationItem = (props) => {
 		const {data} = props
 
 		return (
-			<Paper style={{backgroundColor: theme.palette.surfaceColor, width: 300, padding: 25, borderBottom: "1px solid rgba(255,255,255,0.4)"}}>
+			<Paper style={{backgroundColor: theme.palette.surfaceColor, width: notificationWidth, padding: 25, borderBottom: "1px solid rgba(255,255,255,0.4)"}}>
 				{/*<Typography variant="h6">
 					{new Date(data.updated_at).toISOString()}
 				</Typography >*/}
@@ -251,11 +283,33 @@ const Header = props => {
 				anchorEl={anchorEl}
 				keepMounted
 				open={Boolean(anchorEl)}
-				style={{zIndex: 10002, maxHeight: "100vh", overflowX: "hidden", overflowY: "auto",}}
+				style={{zIndex: 10002, maxHeight: "90vh", overflowX: "hidden", overflowY: "auto",}}
+				PaperProps={{
+					style: {
+						backgroundColor: theme.palette.surfaceColor,
+					}
+				}}
 				onClose={() => {
 					handleClose()
 				}}
 			>
+				<Paper style={{backgroundColor: theme.palette.surfaceColor, width: notificationWidth, padding: 25, borderBottom: "3px solid rgba(255,255,255,0.4)"}}>
+					<div style={{display: "flex", marginBottom: 5, }}>
+						<Typography variant="h6">
+							Your Notifications ({notifications.length})
+						</Typography>
+						{notifications.length > 1 ? 
+							<Button color="primary" variant="contained" style={{marginLeft: 30, }} onClick={() => {
+								clearNotifications()
+							}}>
+								Flush	
+							</Button>
+						: null}
+					</div>
+					<Typography variant="body2">
+						Notifications are made by Shuffle to help you discover issues or improvements.
+					</Typography >
+				</Paper>
 				{notifications.map((data, index) => {
 					return (
 						<NotificationItem data={data} key={index} />
