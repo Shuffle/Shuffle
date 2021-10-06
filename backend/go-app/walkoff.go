@@ -1080,9 +1080,14 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 			//	log.Printf("Failed to delete webhook: %s", err)
 			//}
 		} else if item.TriggerType == "EMAIL" {
-			err = handleOutlookSubRemoval(ctx, user, workflow.ID, item.ID)
+			err = shuffle.HandleOutlookSubRemoval(ctx, user, workflow.ID, item.ID)
 			if err != nil {
-				log.Printf("Failed to delete email sub: %s", err)
+				log.Printf("Failed to delete OUTLOOK email sub (checking gmail after): %s", err)
+			}
+
+			err = shuffle.HandleGmailSubRemoval(ctx, user, workflow.ID, item.ID)
+			if err != nil {
+				log.Printf("Failed to delete gmail email sub: %s", err)
 			}
 		}
 

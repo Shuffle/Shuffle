@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
-	"crypto/tls"
+	//"crypto/tls"
 	//"crypto/x509"
 	"encoding/hex"
 	"encoding/json"
@@ -49,7 +49,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/storage/memory"
-	githttp "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
+	//githttp "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 
 	// Random
 	xj "github.com/basgys/goxml2json"
@@ -59,7 +59,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	// PROXY overrides
-	"gopkg.in/src-d/go-git.v4/plumbing/transport/client"
+	//"gopkg.in/src-d/go-git.v4/plumbing/transport/client"
 	// githttp "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 
 	// Web
@@ -3591,7 +3591,7 @@ func handleCloudJob(job shuffle.CloudSyncJob) error {
 		if job.Action == "execute" {
 			// FIXME: Get the email
 			ctx := context.Background()
-			maildata := shuffle.MailData{}
+			maildata := shuffle.MailDataOutlook{}
 			err := json.Unmarshal([]byte(job.ThirdItem), &maildata)
 			if err != nil {
 				log.Printf("Maildata unmarshal error: %s", err)
@@ -3613,7 +3613,7 @@ func handleCloudJob(job shuffle.CloudSyncJob) error {
 				return err
 			}
 
-			emails, err := getOutlookEmail(outlookClient, maildata)
+			emails, err := shuffle.GetOutlookEmail(outlookClient, maildata)
 			//log.Printf("EMAILS: %d", len(emails))
 			//log.Printf("INSIDE GET OUTLOOK EMAIL!: %#v, %s", emails, err)
 
@@ -4135,14 +4135,14 @@ func runInitEs(ctx context.Context) {
 	log.Printf("[INFO] Getting and validating workflowapps. Got %d with err %#v", len(workflowapps), err)
 
 	// accept any certificate (might be useful for testing)
-	customGitClient := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-		Timeout: 15 * time.Second,
-	}
-	client.InstallProtocol("http", githttp.NewClient(customGitClient))
-	client.InstallProtocol("https", githttp.NewClient(customGitClient))
+	//customGitClient := &http.Client{
+	//	Transport: &http.Transport{
+	//		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	//	},
+	//	Timeout: 15 * time.Second,
+	//}
+	//client.InstallProtocol("http", githttp.NewClient(customGitClient))
+	//client.InstallProtocol("https", githttp.NewClient(customGitClient))
 
 	if err != nil && len(workflowapps) == 0 {
 		log.Printf("[WARNING] Failed getting apps (runInit): %s", err)
@@ -5855,20 +5855,20 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/get_openapi/{key}", getOpenapi).Methods("GET", "OPTIONS")
 
 	// Specific triggers
-	r.HandleFunc("/api/v1/workflows/{key}/outlook", handleCreateOutlookSub).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/{key}/outlook/{triggerId}", handleDeleteOutlookSub).Methods("DELETE", "OPTIONS")
-	r.HandleFunc("/api/v1/triggers/outlook/register", handleNewOutlookRegister).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/outlook", shuffle.HandleCreateOutlookSub).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/outlook/{triggerId}", shuffle.HandleDeleteOutlookSub).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/triggers/outlook/register", shuffle.HandleNewOutlookRegister).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/triggers/outlook/getFolders", shuffle.HandleGetOutlookFolders).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/triggers/outlook/{key}", handleGetSpecificTrigger).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/triggers/gmail/register", handleNewGmailRegister).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/triggers/outlook/{key}", shuffle.HandleGetSpecificTrigger).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/triggers/gmail/register", shuffle.HandleNewGmailRegister).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/triggers/gmail/getFolders", shuffle.HandleGetGmailFolders).Methods("GET", "OPTIONS")
 
 	// FIXME: This should only be cloud. Done locally with ngrok to test
-	r.HandleFunc("/api/v1/triggers/gmail/routing", handleGmailRouting).Methods("POST", "OPTIONS")
+	//r.HandleFunc("/api/v1/triggers/gmail/routing", handleGmailRouting).Methods("POST", "OPTIONS")
 
-	r.HandleFunc("/api/v1/triggers/gmail/{key}", handleGetSpecificTrigger).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/{key}/gmail", handleCreateGmailSub).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/workflows/{key}/gmail/{triggerId}", handleDeleteGmailSub).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/triggers/gmail/{key}", shuffle.HandleGetSpecificTrigger).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/gmail", shuffle.HandleCreateGmailSub).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/gmail/{triggerId}", shuffle.HandleDeleteGmailSub).Methods("DELETE", "OPTIONS")
 
 	//r.HandleFunc("/api/v1/triggers/gmail/{key}", handleGetSpecificGmailTrigger).Methods("GET", "OPTIONS")
 	//r.HandleFunc("/api/v1/triggers/outlook/getFolders", shuffle.HandleGetOutlookFolders).Methods("GET", "OPTIONS")
@@ -5879,8 +5879,8 @@ func initHandlers() {
 	// EVERYTHING below here is NEW for 0.8.0 (written 25.05.2021)
 	r.HandleFunc("/api/v1/workflows/{key}/publish", makeWorkflowPublic).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/cloud/setup", handleCloudSetup).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/orgs", shuffle.HandleGetOrgs).Methods("GET", "OPTIONS")
-	r.HandleFunc("/api/v1/orgs/", shuffle.HandleGetOrgs).Methods("GET", "OPTIONS")
+	//r.HandleFunc("/api/v1/orgs", shuffle.HandleGetOrgs).Methods("GET", "OPTIONS")
+	//r.HandleFunc("/api/v1/orgs/", shuffle.HandleGetOrgs).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}", shuffle.HandleGetOrg).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}", shuffle.HandleEditOrg).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/create_sub_org", shuffle.HandleCreateSubOrg).Methods("POST", "OPTIONS")

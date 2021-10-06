@@ -187,6 +187,7 @@ const Docs = (props) => {
 	}
 
 	const parseElementScroll = () => {
+		const offset = 45
 		var parent = document.getElementById("markdown_wrapper_outer")
 		if (parent !== null) {
 			//console.log("IN PARENT")
@@ -204,7 +205,12 @@ const Docs = (props) => {
 
 				// Fix location..
 				if (element.innerHTML.toLowerCase() === name) {
-					element.scrollIntoView({behavior: "smooth"})
+					console.log(element.offsetTop)
+					//element.scrollIntoView({behavior: "smooth"})
+					element.scrollTo({
+						top: element.offsetTop+offset,
+						behavior: "smooth"
+					})
 					found = true
 					//element.scrollTo({
 					//	top: element.offsetTop-100,
@@ -226,7 +232,11 @@ const Docs = (props) => {
 
 					// Fix location..
 					if (element.innerHTML.toLowerCase() === name) {
-						element.scrollIntoView({behavior: "smooth"})
+						//element.scrollIntoView({behavior: "smooth"})
+						element.scrollTo({
+							top: element.offsetTop-offset,
+							behavior: "smooth"
+						})
 						found = true
 						//element.scrollTo({
 							//	top: element.offsetTop-100,
