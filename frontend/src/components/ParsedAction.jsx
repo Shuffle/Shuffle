@@ -1556,6 +1556,7 @@ const ParsedAction = (props) => {
 					fullWidth
 					color="primary"
 					placeholder={selectedAction.label}
+					defaultValue={selectedAction.label}
 					onChange={selectedNameChange}
 					onBlur={(e) => {
 						const name = e.target.value

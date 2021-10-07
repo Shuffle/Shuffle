@@ -9248,11 +9248,11 @@ const AngularWorkflow = (props) => {
 			<div style={{zIndex: 5000, position: "absolute", top: 20, right: 54, height: 50, width: 50,}}>
 				{selectedApp.reference_info === undefined || selectedApp.reference_info === null || selectedApp.reference_info.github_url === undefined || selectedApp.reference_info.github_url === null || selectedApp.reference_info.github_url.length === 0 ? 
 					<a rel="norefferer" target="_blank" href={"https://github.com/frikky/shuffle-apps"} style={{textDecoration: "none", color: "#f86a3e"}}>
-						<img alt={`Documentation image for ${selectedApp.name}`} src={selectedApp.large_image} style={{width: 30, height: 30, border: "2px solid rgba(255,255,255,0.6)", borderRadius: theme.palette.borderRadius,}} />
+						<img alt={`Documentation image for ${selectedApp.name}`} src={selectedApp.large_image} style={{width: 30, height: 30, border: "2px solid rgba(255,255,255,0.6)", borderRadius: theme.palette.borderRadius, maxHeight: 30, maxWidth: 30, overflow: "hidden", fontSize: 8, }} />
 					</a>
 					:
 					<a rel="norefferer" target="_blank" href={selectedApp.reference_info.github_url} style={{textDecoration: "none", color: "#f86a3e"}}>
-						<img alt={`Documentation image for ${selectedApp.name}`} src={selectedApp.large_image} style={{width: 30, height: 30, border: "2px solid rgba(255,255,255,0.6)", borderRadius: theme.palette.borderRadius,}} />
+						<img alt={`Documentation image for ${selectedApp.name}`} src={selectedApp.large_image} style={{width: 30, height: 30, border: "2px solid rgba(255,255,255,0.6)", borderRadius: theme.palette.borderRadius, maxWidth: 30, maxHeight: 30, overflow: "hidden", fontSize: 8,}} />
 					</a>
 				}
 			</div>
