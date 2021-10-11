@@ -1521,6 +1521,7 @@ class AppBase:
                                 if variablename.lower() == actionname_lower:
                                     baseresult = variable["value"]
                                     break
+
                         except KeyError as e:
                             print("[INFO] KeyError wf variables: %s" % e)
                             pass

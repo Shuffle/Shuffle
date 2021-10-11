@@ -6,7 +6,8 @@ import {Link} from 'react-router-dom';
 import { useTheme } from '@material-ui/core/styles';
 
 import { Chip, Badge, Typography, Paper, Tooltip, List, Avatar, Menu, ListItem, MenuItem, Select, Button, IconButton, Grid } from '@material-ui/core';
-import { Notifications as NotificationsIcon, Home as HomeIcon, Polymer as PolymerIcon, Apps as AppsIcon, Description as DescriptionIcon} from '@material-ui/icons';
+import { MeetingRoom as MeetingRoomIcon, Settings as SettingsIcon, Notifications as NotificationsIcon, Home as HomeIcon, Polymer as PolymerIcon, Apps as AppsIcon, Description as DescriptionIcon} from '@material-ui/icons';
+//import LogoutIcon from '@mui/icons-material/Logout';
 import { useAlert } from "react-alert";
 
 const hoverColor = "#f85a3e"
@@ -331,7 +332,7 @@ const Header = props => {
 				anchorEl={anchorElAvatar}
 				keepMounted
 				open={Boolean(anchorElAvatar)}
-				style={{zIndex: 10002}}
+				style={{zIndex: 10012}}
 				onClose={() => {
 					handleClose()
 				}}
@@ -341,7 +342,7 @@ const Header = props => {
 					handleClose() 
 				}}>
 					<Link to="/settings" style={hrefStyle}>
-						Settings
+						<SettingsIcon /> Settings
 					</Link>
 				</MenuItem>
 				<MenuItem style={{color: "white"}} onClick={(event) => {
@@ -349,7 +350,7 @@ const Header = props => {
 					handleClose() 
 					handleClickLogout()
 				}}>
-					Logout
+					<MeetingRoomIcon /> Logout
 				</MenuItem>
 			</Menu>
 		</span>

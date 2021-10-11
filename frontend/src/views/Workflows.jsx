@@ -707,6 +707,11 @@ const Workflows = (props) => {
 
 	useEffect(() => {
 		if (workflows.length <= 0 && firstrequest) {
+			const tmpView = localStorage.getItem('view');
+			if (tmpView !== undefined && tmpView !== null) {
+				setView(tmpView)
+			}
+
 			setFirstrequest(false)
 			getAvailableWorkflows()
 		}
@@ -1847,12 +1852,18 @@ const Workflows = (props) => {
 				: null*/}
 				{view === "list" && (
 					<Tooltip color="primary" title={"Grid View"} placement="top">
-						<Button color="primary" variant="text" onClick={() => setView("grid")}><GridOnIcon /></Button>
+						<Button color="primary" variant="text" onClick={() => {
+							localStorage.setItem('view', "grid");
+							setView("grid")
+						}}><GridOnIcon /></Button>
 					</Tooltip>
 				)}
 				{view === "grid" && (
 					<Tooltip color="primary" title={"List View"} placement="top">
-						<Button color="primary" variant="text" onClick={() => setView("list")}><ListIcon /></Button>
+						<Button color="primary" variant="text" onClick={() => {
+							localStorage.setItem('view', "list");
+							setView("list")
+						}}><ListIcon /></Button>
 					</Tooltip>
 				)}
 				<Tooltip color="primary" title={"Import workflows"} placement="top">

@@ -1,7 +1,7 @@
 version: '3'
 services:
   frontend:
-    #build: ./frontend
+    build: ./frontend
     image: ghcr.io/frikky/shuffle-frontend:nightly
     container_name: shuffle-frontend
     hostname: shuffle-frontend
@@ -16,7 +16,7 @@ services:
     depends_on:
       - backend
   backend:
-    #build: ./backend
+    build: ./backend
     image: ghcr.io/frikky/shuffle-backend:nightly
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
@@ -66,7 +66,7 @@ services:
       - CLEANUP=${SHUFFLE_CONTAINER_AUTO_CLEANUP}
     restart: unless-stopped
   opensearch:
-    image: opensearchproject/opensearch:1.0.1
+    image: opensearchproject/opensearch:1.1.0
     hostname: shuffle-opensearch
     container_name: shuffle-opensearch
     environment:

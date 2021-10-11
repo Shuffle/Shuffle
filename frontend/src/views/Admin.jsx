@@ -1015,6 +1015,9 @@ const Admin = (props) => {
 	}
 
 	const getOrgs = () => {
+		// API no longer in use, as it's in handleInfo request
+		return 
+
 		fetch(globalUrl + "/api/v1/orgs", {
 			method: 'GET',
 			headers: {

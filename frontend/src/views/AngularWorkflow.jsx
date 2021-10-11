@@ -36,6 +36,7 @@ import { Element as ScrollElement, animateScroll as scroll, scrollSpy, scroller 
 
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
+const appSorter = "favorite_apps"
 
 // http://apps.cytoscape.org/apps/yfileslayoutalgorithms
 cytoscape.use(edgehandles);
@@ -314,13 +315,16 @@ const AngularWorkflow = (props) => {
 								}
 							}
 
-							if (param.name === "startnode" && outersub.id !== undefined) {
-								console.log("SHOULD SET STARTNODE IN SUBFLOW SELECTION: ", outersub)
-								const innernode = outersub.actions.find(action => action.id === param.value)
-								console.log("FOUND NODE: ", innernode)
-								if (innernode !== undefined && subworkflowStartnode.id !== innernode.id) { 
-									setSubworkflowStartnode(innernode)
-								}
+							console.log("PARAM: ", param)
+							//console.log("PARAMVAL: ", param.value)
+							if (param.name === "startnode" && param.value !== undefined && param.value !== null) {
+								//console.log("SHOULD SET STARTNODE IN SUBFLOW SELECTION: ", outersub)
+								//const innernode = outersub.actions.find(action => action.id === param.value)
+								//console.log("FOUND NODE: ", innernode)
+								//if (innernode !== undefined && subworkflowStartnode.id !== innernode.id) { 
+								//setSubworkflowStartnode(JSON.parse(JSON.stringify(param.value)))
+								setSubworkflowStartnode(param.value)
+								//}
 								/*
 								const sub = responseJson.find(data => data.id === param.value)
 									setSubworkflow(sub)
@@ -780,8 +784,9 @@ const AngularWorkflow = (props) => {
 		}
 	}
 
-	const saveWorkflow = (curworkflow) => {
+	const saveWorkflow = (curworkflow, executionArgument, startNode) => {
 		var success = false
+
 
 		if (isCloud && !isLoggedIn) {
 			console.log("Should redirect to register with redirect.")
@@ -914,6 +919,12 @@ const AngularWorkflow = (props) => {
 			return response.json()
 		})
 		.then((responseJson) => {
+			if (executionArgument !== undefined && startNode !== undefined) {
+				console.log("Running execution AFTER saving")
+				executeWorkflow(executionArgument, startNode, true)
+				return
+			}
+
 			if (!responseJson.success) {
 				console.log(responseJson)
 				alert.error("Failed to save: "+responseJson.reason)
@@ -993,16 +1004,19 @@ const AngularWorkflow = (props) => {
 		return true
 	}
 
-	const executeWorkflow = (executionArgument, startNode) => {
-		if (!lastSaved) {
+	const executeWorkflow = (executionArgument, startNode, hasSaved) => {
+		if (hasSaved === false) {
 			//alert.error("You might have forgotten to save before executing.")
+			//const saveWorkflow = (curworkflow) => {
+			setExecutionRequestStarted(true)
+			saveWorkflow(workflow, executionArgument, startNode)
 			console.log("FIXME: Might have forgotten to save before executing.")
+			return
 		}
 
 		if (workflow.public) {
 			alert.info("Save it to get a new version")
 		}
-
 
 		var returncheck = monitorUpdates()
 		if (!returncheck) {
@@ -1012,7 +1026,6 @@ const AngularWorkflow = (props) => {
 
 		setVisited([])
 		setExecutionRequest({})
-		setExecutionRequestStarted(true)
 		stop()
 
 		var curelements = cy.elements()
@@ -1908,7 +1921,7 @@ const AngularWorkflow = (props) => {
 				//		cy.getElementById(currentNode.data.id).remove()
 				//	}
 				//}
-			} else if (data.buttonType === "set_startnode") {
+			} else if (data.buttonType === "set_startnode" && data.type !== "TRIGGER") {
 				const parentNode = cy.getElementById(data.attachedTo)
 				if (parentNode !== null && parentNode !== undefined) {
 					var oldstartnode = cy.getElementById(workflow.start)
@@ -2640,6 +2653,30 @@ const AngularWorkflow = (props) => {
 		}
 
 		if (nodedata.type === "ACTION") {
+			/*
+			const tmpView = localStorage.getItem(appSorter)
+			const nodekey = nodedata.id
+			if (tmpView === null || tmpView === undefined) {
+				const basedata = {}
+				basedata[nodekey] = 1 
+				localStorage.setItem(appSorter, JSON.stringify(basedata))
+			} else {
+				try {
+					var parsed = JSON.parse(tmpView)	
+					try {
+						parsed[nodekey] += 1
+					} catch {
+						parsed[nodekey] = 1 
+					}
+
+					localStorage.setItem(appSorter, JSON.stringify(parsed))
+				} catch {
+					console.log("Bad data in tmpView: ", tmpView)
+				}
+			}
+			console.log("FAVORITeS: ", tmpView)
+			*/
+
 			if (workflow.actions.length === 1 && workflow.actions[0].id === workflow.start) {
 				const newEdgeUuid = uuidv4()
 				const newcybranch = { 
@@ -2694,6 +2731,12 @@ const AngularWorkflow = (props) => {
 
 			setWorkflow(workflow)
 		} else if (nodedata.type === "TRIGGER") {
+			if (nodedata.is_valid === false) {
+				alert.info("This trigger is not available to you")
+				node.remove()
+				return
+			}
+
 			if (workflow.triggers === undefined) {
 				workflow.triggers = [nodedata]
 			} else {
@@ -2794,8 +2837,7 @@ const AngularWorkflow = (props) => {
 		//	}
 		//} else {
 		//	//console.log("Shouldnt re-add info? ")
-		//}
-		
+		//}	
 	}
 
 	const onEdgeRemoved = (event) => {
@@ -4086,6 +4128,19 @@ const AngularWorkflow = (props) => {
 			"long_description": "Execute a workflow with an unauthicated POST request",
 		}, 
 		{
+			"name": "Schedule",	
+			"type": "TRIGGER",
+			"status": "uninitialized",
+			"description": "Schedule execution time",
+			"trigger_type": "SCHEDULE",
+			"errors": null,
+			"large_image": "data:image/png;base64,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",
+			"label": "Schedule",
+			"is_valid": true,
+			"environment": "onprem",
+			"long_description": "Create a schedule based on cron",
+		},
+		{
 			"name": "Shuffle Workflow",	
 			"type": "TRIGGER",
 			"status": "uninitialized",
@@ -4106,24 +4161,11 @@ const AngularWorkflow = (props) => {
 			"description": "Wait for user input",
 			"trigger_type": "USERINPUT",
 			"errors": null,
-			"is_valid": true,
+			"is_valid": cloudSyncEnabled || isCloud ? true : false,
 			"label": "User input",
 			"environment": "cloud",
 			"long_description": "Take user input to continue execution",
 		}, 
-		{
-			"name": "Schedule",	
-			"type": "TRIGGER",
-			"status": "uninitialized",
-			"description": "Schedule execution time",
-			"trigger_type": "SCHEDULE",
-			"errors": null,
-			"large_image": "data:image/png;base64,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",
-			"label": "Schedule",
-			"is_valid": true,
-			"environment": "onprem",
-			"long_description": "Create a schedule based on cron",
-		},
 		{
 			"name": "Office365",	
 			"type": "TRIGGER",
@@ -5795,7 +5837,8 @@ const AngularWorkflow = (props) => {
 						: "https%3A%2F%2Fshuffler.io%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister" 
 						: "http%3A%2F%2Flocalhost:5001%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister"
 
-					const client_id = "fd55c175-aa30-4fa6-b303-09a29fb3f750"
+					//const client_id = "fd55c175-aa30-4fa6-b303-09a29fb3f750"
+					const client_id = "bb4bff85-0d0b-4f5d-8a69-3cee8029b11a"
 	
 					//isCloud ? userdata.username : 
 					const username = userdata.id
@@ -5808,9 +5851,12 @@ const AngularWorkflow = (props) => {
 						return
 					}
 
+					//console.log("SELECTED: ", selectedTrigger.
+
 					console.log("BRANCH: ", branch)
 					const startnode = branch.destination_id
-					const url = `https://login.microsoftonline.com/common/oauth2/authorize?access_type=offline&client_id=${client_id}&redirect_uri=${redirectUri}&resource=https%3A%2F%2Fgraph.microsoft.com&response_type=code&scope=Mail.Read+User.Read+https%3A%2F%2Foutlook.office.com%2Fmail.read&state=workflow_id%3D${props.match.params.key}%26trigger_id%3D${selectedTrigger.id}username%3D${username}%26type%3Doutlook%26start%3d${startnode}&prompt=login`
+					const url = `https://login.microsoftonline.com/common/oauth2/authorize?access_type=offline&client_id=${client_id}&redirect_uri=${redirectUri}&resource=https%3A%2F%2Fgraph.microsoft.com&response_type=code&scope=Mail.Read+User.Read+https%3A%2F%2Foutlook.office.com%2Fmail.read&prompt=login&state=workflow_id%3D${props.match.params.key}%26trigger_id%3D${selectedTrigger.id}%26username%3D${username}%26type%3Doutlook%26start%3d${startnode}`
+					//const url = `https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&prompt=consent&client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${scopes}&state=workflow_id%3D${props.match.params.key}%26trigger_id%3D${selectedTrigger.id}%26username%3D${username}%26type%3Dgmail%26start%3d${startnode}`
 
 					//const scopes = "https://www.googleapis.com/auth/gmail.readonly"
 					//const url = `https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&prompt=consent&client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${scopes}&state=workflow_id%3D${props.match.params.key}%26trigger_id%3D${selectedTrigger.id}%26username%3D${username}%26type%3Dgmail%26start%3d${startnode}`
@@ -6331,7 +6377,7 @@ const AngularWorkflow = (props) => {
 				workflow.triggers[selectedTriggerIndex].parameters[1] = {"name": "argument", "value": ""}
 				workflow.triggers[selectedTriggerIndex].parameters[2] = {"name": "user_apikey", "value": ""}
 				workflow.triggers[selectedTriggerIndex].parameters[3] = {"name": "startnode", "value": ""}
-				workflow.triggers[selectedTriggerIndex].parameters[4] = {"name": "check_result", "value": "true"}
+				workflow.triggers[selectedTriggerIndex].parameters[4] = {"name": "check_result", "value": "false"}
 
 				console.log("SETTINGS: ", userSettings)
 				if (userSettings !== undefined && userSettings !== null && userSettings.apikey !== null && userSettings.apikey !== undefined && userSettings.apikey.length > 0) {
@@ -6411,24 +6457,23 @@ const AngularWorkflow = (props) => {
 									onChange={(e) => {
 										setUpdate(Math.random())
 										workflow.triggers[selectedTriggerIndex].parameters[0].value = e.target.value.id
-										setSubworkflowStartnode(e.target.value.start)
+										setSubworkflow(e.target.value)
 
 										// Sets the startnode
 										if (e.target.value.id !== workflow.id) {
 											console.log("WORKFLOW: ", e.target.value)
 
-											setSubworkflow(e.target.value)
 											const startnode = e.target.value.actions.find(action => action.id === e.target.value.start)
 											if (startnode !== undefined && startnode !== null) {
-												//ddsetSubworkflowStartnode(innernode)
+												console.log("STARTNODE: ", startnode)
 												setSubworkflowStartnode(startnode)
 
 												try {
-													workflow.triggers[selectedTriggerIndex].parameters[3].value = e.target.value.id
+													workflow.triggers[selectedTriggerIndex].parameters[3].value = startnode.id
 												} catch {
 													workflow.triggers[selectedTriggerIndex].parameters[3] = {
 														"name": "startnode",
-														"value": e.target.value.id,
+														"value": startnode.id,
 													}
 												}
 
@@ -6437,7 +6482,6 @@ const AngularWorkflow = (props) => {
 											console.log("STARTNODE: ", startnode)
 										} else {
 											console.log("WORKFLOW: ", workflow)
-											setSubworkflow(e.target.value)
 										}
 
 										setWorkflow(workflow)
@@ -6471,7 +6515,8 @@ const AngularWorkflow = (props) => {
 											<b>Select the Startnode</b> 
 										</div>
 									</div>
-										<Select
+									<Select
+										defaultValue={""}
 										value={subworkflowStartnode}
 										SelectDisplayProps={{
 											style: {
@@ -6528,6 +6573,7 @@ const AngularWorkflow = (props) => {
 												cy.add(cybranch)
 											}
 
+											console.log("Value to be set: ", e.target.value)
 											try {
 												workflow.triggers[selectedTriggerIndex].parameters[3].value = e.target.value.id
 											} catch {
@@ -6927,7 +6973,7 @@ const AngularWorkflow = (props) => {
 			const item = splitItem[key] 
 			const curfolder = triggerFolders.find(a => a.displayName === item)	
 			if (curfolder === undefined) {
-				alert.error("Something went wrong with outlook folder: "+item)
+				alert.error("Something went wrong with folder selection: "+item)
 				return
 			}
 
@@ -7002,7 +7048,6 @@ const AngularWorkflow = (props) => {
 		}
 
 		const param = trigger.parameters.find(param => param.name === "auth_headers")
-		console.log("PARAM: ", param)
 		var auth = ""	
 		if (param !== undefined && param !== null) {
 			auth = param.value
@@ -7258,7 +7303,7 @@ const AngularWorkflow = (props) => {
 								}}
 								fullWidth
 								color="primary"
-								placeholder={"+474823212,+460203042"}
+								placeholder={"+474823212132,+46020304242"}
 								defaultValue={workflow.triggers[selectedTriggerIndex].parameters[4].value}
 								onBlur={(event) => {
 									workflow.triggers[selectedTriggerIndex].parameters[4].value = event.target.value
@@ -7633,7 +7678,7 @@ const AngularWorkflow = (props) => {
 			<Tooltip color="primary" title="Test Execution" placement="top">
 				<span>
 					<Button disabled={workflow.public || executionRequestStarted || !workflow.isValid} style={{height: boxSize, width: boxSize}} color="primary" variant="contained" onClick={() => {
-						executeWorkflow(executionText, workflow.start)
+						executeWorkflow(executionText, workflow.start, lastSaved)
 					}}>
 						<PlayArrowIcon style={{ fontSize: 60}} />
 					</Button> 				
@@ -8156,12 +8201,12 @@ const AngularWorkflow = (props) => {
 				</Breadcrumbs>
 				<Divider style={{backgroundColor: "rgba(255,255,255,0.6)", marginTop: 10, marginBottom: 10,}}/>
 					<div style={{display: "flex"}}>
-						<h2>Workflow Results</h2>		
+						<h2>Execution info</h2>
 						<Tooltip color="primary" title="Rerun workflow" placement="top" style={{zIndex: 10011}}>
 							<span style={{}}>
 								<Button color="primary" style={{float: "right", marginTop: 20, marginLeft: 10,}} onClick={() => {
 									console.log("DATA: ", executionData)
-									executeWorkflow(executionData.execution_argument, executionData.start)
+									executeWorkflow(executionData.execution_argument, executionData.start, lastSaved)
 									setExecutionModalOpen(false)
 									//executionText, workflow.start)
 								}}>
@@ -8298,12 +8343,12 @@ const AngularWorkflow = (props) => {
 
 							if (triggers.length > 2) {
 								if (data.action.app_name === "shuffle-subflow") {
-									const parsedImage = triggers[1].large_image
+									const parsedImage = triggers[2].large_image
 									actionimg = <img alt={"Shuffle Subflow"} src={parsedImage} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`, borderRadius: executionData.start === data.action.id ? 25 : 5}} />
 								}	
 
 								if (data.action.app_name === "User Input") {
-									actionimg = <img alt={"Shuffle Subflow"} src={triggers[2].large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`, borderRadius: executionData.start === data.action.id ? 25 : 5}} />
+									actionimg = <img alt={"Shuffle Subflow"} src={triggers[3].large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`, borderRadius: executionData.start === data.action.id ? 25 : 5}} />
 								}	
 							}
 
@@ -8439,7 +8484,7 @@ const AngularWorkflow = (props) => {
 			</Drawer>
 
 	// This sucks :)
-	const curapp = !codeModalOpen ? {} : selectedResult.action.app_name === "shuffle-subflow" ? triggers[1] : selectedResult.action.app_name === "User Input" ? triggers[2] : apps.find(a => a.name === selectedResult.action.app_name && a.app_version === selectedResult.action.app_version)
+	const curapp = !codeModalOpen ? {} : selectedResult.action.app_name === "shuffle-subflow" ? triggers[2] : selectedResult.action.app_name === "User Input" ? triggers[3] : apps.find(a => a.name === selectedResult.action.app_name && a.app_version === selectedResult.action.app_version)
 	const imgsize = 50
 	const statusColor = !codeModalOpen ? "red" : selectedResult.status === "FINISHED" || selectedResult.status === "SUCCESS" ? green : selectedResult.status === "ABORTED" || selectedResult.status === "FAILURE" ? "red" : yellow
 	const validate = !codeModalOpen ? "" : validateJson(selectedResult.result.trim())
@@ -8904,16 +8949,20 @@ const AngularWorkflow = (props) => {
 				</DialogContent>
 				<DialogActions>
 	        <Button 
-					style={{borderRadius: "0px"}}
-					onClick={() => {
-						setNewVariableName("")
-						setNewVariableDescription("")
-						setNewVariableValue("")
-						setVariablesModalOpen(false)
-					}} color="primary">
-	        	    	Cancel
-	        	  	</Button>
-	        	<Button style={{borderRadius: "0px"}} disabled={newVariableName.length === 0 || newVariableValue.length === 0} onClick={() => {
+						style={{borderRadius: "0px"}}
+						onClick={() => {
+							setNewVariableName("")
+							setNewVariableDescription("")
+							setNewVariableValue("")
+							setVariablesModalOpen(false)
+						}} color="primary">
+	        	Cancel
+	      	</Button>
+	        <Button 
+						style={{borderRadius: "0px"}} 
+						disabled={newVariableName.length === 0 || newVariableValue.length === 0} 
+						variant={"contained"}
+						onClick={() => {
 						if (workflow.workflow_variables === undefined || workflow.workflow_variables === null) {
 							workflow.workflow_variables = []
 						}
@@ -8946,8 +8995,8 @@ const AngularWorkflow = (props) => {
 						setNewVariableDescription("")
 						setNewVariableValue("")
 					}} color="primary">
-	        	    	Submit	
-	        	  	</Button>
+	        	Submit	
+	        </Button>
 				</DialogActions>
 			</FormControl>
 		</Dialog>

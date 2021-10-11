@@ -730,7 +730,7 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, actionResult.ExecutionId)
 	if err != nil {
-		//log.Printf("Failed getting execution (streamresult) %s: %s", actionResult.ExecutionId, err)
+		log.Printf("Failed getting execution (streamresult) %s: %s", actionResult.ExecutionId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad authorization key or execution_id might not exist."}`)))
 		return
@@ -1910,7 +1910,6 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 
 	//b, err := json.Marshal(workflowExecution)
 	//if err == nil {
-	//	log.Printf("%s", string(b))
 	//	log.Printf("LEN: %d", len(string(b)))
 	//	//workflowExecution.ExecutionOrg.SyncFeatures = Org{}
 	//}
@@ -3095,7 +3094,6 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 
 				// 3. Load this as a "standby" app
 				// FIXME: This should be a function ROFL
-				//log.Printf("%s", string(readFile))
 				swagger, err := openapi3.NewSwaggerLoader().LoadSwaggerFromData([]byte(parsedOpenApi.Body))
 				if err != nil {
 					log.Printf("[WARNING] Swagger validation error in loop (%s): %s. Continuing.", filename, err)

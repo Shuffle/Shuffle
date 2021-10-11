@@ -2602,7 +2602,6 @@ func findValidScheduleAppFolders(rootAppFolder string) ([]string, error) {
 		appFiles, err := ioutil.ReadDir(appFolderLocation)
 		if err != nil {
 			// Invalid app folder (deleted within a few MS lol)
-			log.Printf("%s", err)
 			invalidRootFolders = append(invalidRootFolders, rootfile.Name())
 			continue
 		}
@@ -3168,7 +3167,6 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 	swagger, err := swaggerLoader.LoadSwaggerFromData(body)
 	if err != nil {
 		log.Printf("[ERROR] Swagger validation error: %s", err)
-		//log.Printf("%s", string(body))
 		resp.WriteHeader(500)
 		resp.Write([]byte(`{"success": false, "reason": "Failed verifying openapi"}`))
 		return
