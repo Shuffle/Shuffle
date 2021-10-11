@@ -10,7 +10,6 @@
     "@material-ui/lab": "^4.0.0-alpha.58",
     "@material-ui/styles": "^4.5.2",
     "@material-ui/utils": "^4.11.2",
-    "@mui/icons-material": "^5.0.3",
     "@uiw/react-codemirror": "^3.2.1",
     "@use-it/interval": "^1.0.0",
     "babel-eslint": "^10.1.0",
