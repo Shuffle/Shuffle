@@ -5,17 +5,17 @@ import { GetParsedPaths } from "../views/Apps.jsx";
 import { GetIconInfo } from "../views/Workflows.jsx";
 import { sortByKey } from "../views/AngularWorkflow.jsx";
 import { useTheme } from '@material-ui/core/styles';
+import ShuffleCodeEditor from "../components/ShuffleCodeEditor.jsx";
 import NestedMenuItem from "material-ui-nested-menu-item";
 //import NestedMenuItem from "./NestedMenu.jsx";
 
 import {Popper, TextField, TextareaAutosize, Drawer, Button, Paper, Grid, Tabs, InputAdornment, Tab, ButtonBase, Tooltip, Select, MenuItem, Divider, Dialog, Modal, DialogActions, DialogTitle, InputLabel, DialogContent, FormControl, IconButton, Menu, Input, FormGroup, FormControlLabel, Typography, Checkbox, Breadcrumbs, CircularProgress, Switch, Fade} from '@material-ui/core';
-import {HelpOutline as HelpOutlineIcon, Description as DescriptionIcon, GetApp as GetAppIcon, Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
+import {GetApp as GetAppIcon, Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
 import Autocomplete from '@material-ui/lab/Autocomplete';
 
 import CodeMirror from '@uiw/react-codemirror';
 import 'codemirror/keymap/sublime';
 import 'codemirror/theme/gruvbox-dark.css';
-
 
 const useStyles = makeStyles({
 	notchedOutline: {
@@ -51,6 +51,8 @@ const useStyles = makeStyles({
 
 const ParsedAction = (props) => {
 	const {workflow, setWorkflow, setAction, setSelectedAction, setUpdate, appActionArguments, selectedApp, workflowExecutions, setSelectedResult, selectedAction, setSelectedApp, setSelectedTrigger, setSelectedEdge, setCurrentView, cy, setAuthenticationModalOpen,setVariablesModalOpen, setCodeModalOpen, selectedNameChange, rightsidebarStyle, showEnvironment, selectedActionEnvironment, environments, setNewSelectedAction, appApiViewStyle, globalUrl, setSelectedActionEnvironment, requiresAuthentication, hideExtraTypes, scrollConfig, setScrollConfig, authenticationType, appAuthentication, getAppAuthentication } = props
+	const [codedata, setcodedata] = React.useState("print('Hello')");
+	// const [codelang, setcodelang] = React.useState('python');
 
 	const theme = useTheme();
 	const classes = useStyles()
@@ -481,7 +483,6 @@ const ParsedAction = (props) => {
 				}
 			}
 
-			//console.log("CHANGING ACTION COUNT !")
 			selectedActionParameters[count].value = event.target.value
 			selectedAction.parameters[count].value = event.target.value
 			setSelectedAction(selectedAction)
@@ -851,30 +852,13 @@ const ParsedAction = (props) => {
 										marginLeft: 5,
 										maxWidth: "95%",
 										fontSize: "1em",
-									},
-									 endAdornment: (
-									 	hideExtraTypes ? null :
-									 		<InputAdornment position="end">
-									 			<Tooltip title="Autocomplete the text" placement="top">
-									 				<AddCircleOutlineIcon style={{cursor: "pointer"}} onClick={(event) => {
-									 					setMenuPosition({
-									 						top: event.pageY+10,
-									 						left: event.pageX+10,
-									 					})
-									 					setShowDropdownNumber(count)
-									 					setShowDropdown(true)
-									 					setShowAutocomplete(true)
-									 				}}/>
-									 			</Tooltip>
-									 		</InputAdornment>
-									
-									 )
+									}
 								}}
 								fullWidth
 								multiline={multiline}
 								onClick={() => {
 									console.log("Clicked field: ", clickedFieldId)
-									setExpansionModalOpen(false)
+									setExpansionModalOpen(true)
 									if (setScrollConfig !== undefined && scrollConfig !== null && scrollConfig !== undefined && scrollConfig.selected !== clickedFieldId) {
 										scrollConfig.selected = clickedFieldId
 										setScrollConfig(scrollConfig)
@@ -884,20 +868,14 @@ const ParsedAction = (props) => {
 								id={clickedFieldId}
 								rows={rows}
 								color="primary"
-								defaultValue={data.value}
-								//value={data.value}
-								//options={{
-								//	theme: 'gruvbox-dark',
-								//	keyMap: 'sublime',
-								//	mode: 'python',
-								//}}
+								value={codedata}
+								//defaultValue={data.value}
 								//height={multiline ? 50 : 150}
 
 								type={placeholder.includes("***") || (data.configuration && (data.name.toLowerCase().includes("api") || data.name.toLowerCase().includes("key") || data.name.toLowerCase().includes("pass"))) ? "password" : "text"}
 								placeholder={placeholder}
 								
 								onChange={(event) => {
-									//changeActionParameterCodemirror(event, count, data)
 									changeActionParameter(event, count, data)
 								}}
 								
@@ -927,7 +905,7 @@ const ParsedAction = (props) => {
 							/>
 
 						//console.log("FIELD VALUE: ", data.value)
-            //const regexp = new RegExp("\W+\.", "g")
+            			//const regexp = new RegExp("\W+\.", "g")
 						//let match
 						//while ((match = regexp.exec(data.value)) !== null) {
 						//	console.log(`Found ${match[0]} start=${match.index} end=${regexp.lastIndex}.`);
@@ -958,7 +936,7 @@ const ParsedAction = (props) => {
 										endAdornment: (
 											hideExtraTypes ? null :
 												<InputAdornment position="end">
-													<Tooltip title="Autocomplete the text" placement="top">
+													<Tooltip title="Autocomplete text" placement="top">
 														<AddCircleOutlineIcon style={{cursor: "pointer"}} onClick={(event) => {
 															setMenuPosition({
 																top: event.pageY+10,
@@ -1425,27 +1403,6 @@ const ParsedAction = (props) => {
 		return null
 	}
 
-	const expansionModal = 
-		<Dialog modal 
-			open={expansionModalOpen} 
-			onClose={() => {
-				setExpansionModalOpen(false)
-			}}
-			PaperProps={{
-				style: {
-					backgroundColor: theme.palette.surfaceColor,
-					color: "white",
-					minWidth: 600,
-					padding: 50, 
-				},
-			}}
-		>
-			<DialogTitle><span style={{color: "white"}}>Workflow Variable</span></DialogTitle>
-			<DialogContent>
-				Hello
-			</DialogContent>
-		</Dialog>
-
 	//const CustomPopper = function (props) {
 	//	const classes = useStyles()
 	//	return <Popper {...props} className={classes.root} placement="bottom" />
@@ -1454,13 +1411,20 @@ const ParsedAction = (props) => {
 	const baselabel = selectedAction.label
 	return ( 
 		<div style={appApiViewStyle} id="parsed_action_view">
-			{expansionModal}
+			{<ShuffleCodeEditor
+				codedata={codedata}
+				setcodedata={setcodedata}
+				setExpansionModalOpen={setExpansionModalOpen}
+				expansionModalOpen={expansionModalOpen}
+				// codelang={codelang}
+				// setcodelang={setcodelang}
+			/>}
 			{hideExtraTypes === true ? null : 
 				<span>
 				<div style={{display: "flex", minHeight: 40, marginBottom: 30}}>
 					<div style={{flex: 1}}>
 						<h3 style={{marginBottom: 5}}>{(selectedAction.app_name.charAt(0).toUpperCase()+selectedAction.app_name.substring(1)).replaceAll("_", " ")}</h3>
-						<div style={{display: "flex", marginTop: 10, }}>
+						<div style={{display: "flex",}}>
 							<IconButton style={{marginTop: "auto", marginBottom: "auto", height: 30, paddingLeft: 0, paddingRight: 0}} onClick={() => {
 								console.log("FIND EXAMPLE RESULTS FOR ", selectedAction) 
 								if (workflowExecutions.length > 0) {
@@ -1489,24 +1453,19 @@ const ParsedAction = (props) => {
 									<ArrowLeftIcon style={{color: "white"}}/>
 								</Tooltip>
 							</IconButton>
-							<IconButton style={{marginTop: "auto", marginBottom: "auto", height: 30, paddingLeft: 25, paddingRight: 0}} onClick={() => {
-								setAuthenticationModalOpen(true)
-							}}>
-								<Tooltip color="primary" title="Read app docs" placement="top">
-									<DescriptionIcon style={{color: "white"}} />
-								</Tooltip>
-							</IconButton>
-							<IconButton style={{marginTop: "auto", marginBottom: "auto", height: 30, paddingLeft: 25, paddingRight: 0}} onClick={() => {}}>
-								<a rel="norefferer" href="https://shuffler.io/docs/workflows#nodes" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>
-									<Tooltip color="primary" title="What are actions?" placement="top">
-										<HelpOutlineIcon style={{color: "white"}}/>
-									</Tooltip>
-								</a>
-							</IconButton>
+							<span style={{}}>
+								<Typography style={{marginTop: 5,}}><a rel="norefferer" href="https://shuffler.io/docs/workflows#nodes" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>What are actions?</a></Typography>
+								{selectedAction.errors !== undefined && selectedAction.errors !== null && selectedAction.errors.length > 0 ? 
+									<div>
+										Errors: {selectedAction.errors.join("\n")}
+									</div>
+									: null
+								}
+							</span>
 						</div>
 					</div>
 					<div style={{display: "flex", flexDirection: "column",}}>
-						{/*selectedAction.id === workflow.start ? null : 
+						{selectedAction.id === workflow.start ? null : 
 							<Tooltip color="primary" title={"Make this node the start action"} placement="top">
 								<Button style={{zIndex: 5000, marginTop: 10,}} color="primary" variant="outlined" onClick={(e) => {
 									defineStartnode(e)	
@@ -1514,7 +1473,7 @@ const ParsedAction = (props) => {
 									<KeyboardArrowRightIcon />
 								</Button> 				
 							</Tooltip>
-						*/}
+						}
 						{selectedApp.versions !== null && selectedApp.versions !== undefined && selectedApp.versions.length > 1 ? 
 							<Select
 								defaultValue={selectedAction.app_version}
@@ -1556,7 +1515,6 @@ const ParsedAction = (props) => {
 					fullWidth
 					color="primary"
 					placeholder={selectedAction.label}
-					defaultValue={selectedAction.label}
 					onChange={selectedNameChange}
 					onBlur={(e) => {
 						const name = e.target.value
@@ -1603,7 +1561,7 @@ const ParsedAction = (props) => {
 					<div style={{display: "flex"}}>
 						<Select
 							labelId="select-app-auth"
-							value={Object.getOwnPropertyNames(selectedAction.selectedAuthentication).length === 0 ? "No selection" : selectedAction.selectedAuthentication}
+							value={selectedAction.selectedAuthentication}
 							SelectDisplayProps={{
 								style: {
 									marginLeft: 10,
@@ -1611,32 +1569,14 @@ const ParsedAction = (props) => {
 							}}
 							fullWidth
 							onChange={(e) => {
-								if (e.target.value === "No selection") {
-									selectedAction.selectedAuthentication = {}
-									selectedAction.authentication_id = ""
-
-									for (var key in selectedAction.parameters) {
-										console.log(selectedAction.parameters[key])
-										if (selectedAction.parameters[key].configuration) {
-											selectedAction.parameters[key].value = ""
-										}
-									}
-									setSelectedAction(selectedAction)
-									setUpdate(Math.random())
-								} else {
-									//console.log("CHOSE AN AUTHENTICATION OPTION: ", e.target.value)
-									selectedAction.selectedAuthentication = e.target.value
-									selectedAction.authentication_id = e.target.value.id
-									setSelectedAction(selectedAction)
-									setUpdate(Math.random())
-								}
+								//console.log("CHOSE AN AUTHENTICATION OPTION: ", e.target.value)
+								selectedAction.selectedAuthentication = e.target.value
+								selectedAction.authentication_id = e.target.value.id
+								setSelectedAction(selectedAction)
+								setUpdate(Math.random())
 							}}
 							style={{backgroundColor: theme.palette.inputColor, color: "white", height: 50, maxWidth: rightsidebarStyle.maxWidth-80, borderRadius: theme.palette.borderRadius,}}	
 						>
-
-							<MenuItem style={{backgroundColor: theme.palette.inputColor, color: "white"}} value="No selection">
-								<em>No selection</em>
-							</MenuItem>
 							{selectedAction.authentication.map(data => {
 								//console.log("AUTH DATA: ", data)
 								return(
@@ -1731,7 +1671,7 @@ const ParsedAction = (props) => {
 							<MenuItem style={{backgroundColor: theme.palette.inputColor, color: "white"}} value="No selection">
 								<em>No selection</em>
 							</MenuItem>
-							<Divider style={{backgroundColor: theme.palette.inputColor }} />
+							<Divider />
 							{workflow.execution_variables.map(data => (
 								<MenuItem style={{backgroundColor: theme.palette.inputColor, color: "white"}} value={data.name}>
 									{data.name}
