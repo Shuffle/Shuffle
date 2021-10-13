@@ -1014,7 +1014,8 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 				CreatorOrg: org.CreatorOrg,
 				Image:      org.Image,
 			})
-			// Role:       "admin",
+		} else {
+			log.Printf("[WARNING] Failed to get org %s for user %s", item, userInfo.Username)
 		}
 	}
 
@@ -1036,7 +1037,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 
 	returnData, err := json.Marshal(returnValue)
 	if err != nil {
-		log.Printf("[WARNING] Failed marshalling info: %s", err)
+		log.Printf("[WARNING] Failed marshalling info in handleinfo: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return

@@ -1227,6 +1227,7 @@ const AngularWorkflow = (props) => {
 					if (selectedApp.authentication.required) {
 						//console.log("App requires auth!!")
 						// Setup auth here :)
+						var appUpdates = false
 						const authenticationOptions = []
 						var findAuthId = ""
 						if (selectedAction.authentication_id !== null && selectedAction.authentication_id !== undefined && selectedAction.authentication_id.length > 0) {
@@ -1261,6 +1262,7 @@ const AngularWorkflow = (props) => {
 											console.log("Setting auth at: ", workflow.actions[key], item.id)
 											workflow.actions[key].selectedAuthentication = item
 											workflow.actions[key].authentication_id = item.id
+											appUpdates = true
 											//if (workflow.actions[key].selectedAuthentication === undefined || workflow.actions[key].selectedAuthentication === null || workflow.actions[key].selectedAuthentication.length === 0) {
 											//	console.log("Setting inner auth: ", workflow.actions[key])
 											//}
@@ -1282,12 +1284,16 @@ const AngularWorkflow = (props) => {
 							selectedAction.selectedAuthentication = {}
 						}
 				
-						setSelectedAction(selectedAction)
-						setWorkflow(workflow)
-						saveWorkflow(workflow)
-						//for (var key in 
 
-						alert.info("Added and updated authentication!")
+						if (appUpdates === true) {
+							setAuthenticationModalOpen(false)
+							setSelectedAction(selectedAction)
+							setWorkflow(workflow)
+							saveWorkflow(workflow)
+							alert.info("Added and updated authentication!")
+						} else {
+							alert.error("Failed to find new authentication - did it work?")
+						}
 					} else {
 						alert.info("No authentication to update")
 					}
@@ -2098,6 +2104,7 @@ const AngularWorkflow = (props) => {
 					{
 						"type": 					"oauth2",
 						"redirect_uri": 	curapp.authentication.redirect_uri,
+						"refresh_uri": 		curapp.authentication.refresh_uri,
 						"token_uri": 			curapp.authentication.token_uri,
 						"scope": 					curapp.authentication.scope,
 						"client_id": 			curapp.authentication.client_id,
@@ -2946,7 +2953,7 @@ const AngularWorkflow = (props) => {
 		//console.log(event.keyCode)
 	    switch( event.keyCode ) {
 	    case 27:
-					console.log("ESCAPE")
+					//console.log("ESCAPE")
 					if (configureWorkflowModalOpen === true) {
 						setConfigureWorkflowModalOpen(false)
 					}
@@ -9271,7 +9278,7 @@ const AngularWorkflow = (props) => {
 	
 
 	// This whole part is redundant. Made it part of Arguments instead.
-	console.log(selectedApp)
+	//console.log(selectedApp)
 	const authenticationModal = authenticationModalOpen ? 
 		<Dialog 
 			open={authenticationModalOpen} 

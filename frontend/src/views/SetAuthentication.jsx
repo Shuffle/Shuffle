@@ -91,6 +91,10 @@ const SetAuthentication = (props) => {
 				if (query[0] === "client_secret") {
 					appAuthData.fields.push({"key": "client_secret", "value": query[1]})
 				}
+
+				if (query[0] === "oauth_url") {
+					appAuthData.fields.push({"key": "oauth_url", "value": query[1]})
+				}
 			}
 		}
 

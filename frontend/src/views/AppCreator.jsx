@@ -202,7 +202,7 @@ const AppCreator = (props) => {
 	const actionNonBodyRequest = ["GET", "HEAD", "DELETE", "CONNECT"]
 	const actionBodyRequest = ["POST", "PUT", "PATCH",]
 	//const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth", "JWT", "Oauth2"]
-	const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth"]//, "Oauth2"]
+	const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth", "Oauth2"]
 	const apikeySelection = ["Header", "Query",]
 
 	const [name, setName] = useState("");
@@ -222,7 +222,7 @@ const AppCreator = (props) => {
 	const [parameterName, setParameterName] = useState("");
 	const [parameterLocation, setParameterLocation] = useState(apikeySelection.length > 0 ? apikeySelection[0] : "");
 	const [refreshUrl, setRefreshUrl] = useState("");
-	const [oauth2Scopes, setOauth2Scopes] = useState(["google.com"]);
+	const [oauth2Scopes, setOauth2Scopes] = useState(["OAUTH2.SCOPE.HERE"]);
 	const [projectCategories, setProjectCategories] = useState([]);
 	const [selectedCategory, setSelectedCategory] = useState("");
 
@@ -949,6 +949,10 @@ const AppCreator = (props) => {
 					if (value.flow.authorizationCode.refreshUrl !== undefined) {
   					setRefreshUrl(value.flow.authorizationCode.refreshUrl)
 					}
+					if (value.flow.authorizationCode.scopes !== undefined && value.flow.authorizationCode.scopes !== null && value.flow.authorizationCode.scopes.length > 0) {
+						setOauth2Scopes(value.flow.authorizationCode.scopes)
+					}
+
 				} else if (key === "ApiKeyAuth") {
 					setAuthenticationOption("API key")
 
@@ -1316,7 +1320,7 @@ const AppCreator = (props) => {
 
 				data.paths[item.url][item.method.toLowerCase()].parameters.push(newitem)
 			} else {
-				console.log("Nothing to append?")
+				//console.log("Nothing to append?")
 			}
  
 			// https://swagger.io/docs/specification/describing-request-body/file-upload/
@@ -1438,17 +1442,19 @@ const AppCreator = (props) => {
 						"authorizationUrl": newparamName,
 						"tokenUrl": parameterLocation,
 						"refreshUrl": refreshUrl,
-						"scopes": [],
+						"scopes": oauth2Scopes === undefined || oauth2Scopes === null ? [] : oauth2Scopes,
 					},
 				},
 			}
 
-			if (oauth2Scopes.scopes > 0) {
-				for (var key in oauth2Scopes) {
-					const scope = oauth2Scopes[key]
-					data.components.securitySchemes["Oauth2"]["flow"]["authorizationCode"]["scopes"].push(scope)
-				}
-			}
+			console.log("SCOPES: ", oauth2Scopes)
+
+			//if (oauth2Scopes.scopes > 0) {
+			//	for (var key in oauth2Scopes) {
+			//		const scope = oauth2Scopes[key]
+			//		data.components.securitySchemes["Oauth2"]["flow"]["authorizationCode"]["scopes"].push(scope)
+			//	}
+			//}
 		}
 
 		if (setExtraAuth.length > 0) {
@@ -1747,12 +1753,12 @@ const AppCreator = (props) => {
 	const oauth2Auth = authenticationOption === "Oauth2" ? 
 		<div style={{color: "white", marginTop: 20, }}>
 			<Typography variant="body1">Oauth2 authentication</Typography>
-			<Typography variant="body2" color="textSecondary">
+			<Typography variant="body2" color="textSecondary" style={{marginTop: 10,}}>
 				Base Authorization URL
 			</Typography>
 			<TextField
 				required
-				style={{flex: "1", backgroundColor: inputColor}}
+				style={{margin: 0, flex: "1", backgroundColor: inputColor}}
 				fullWidth={true}
 				placeholder="https://.../oauth2/authorize"
 				type="name"
@@ -1770,12 +1776,12 @@ const AppCreator = (props) => {
 					},
 				}}
 			/>
-			<Typography variant="body2" color="textSecondary">
+			<Typography variant="body2" color="textSecondary" style={{marginTop: 10,}}>
 				Token URL
 			</Typography>
 			<TextField
 				required
-				style={{flex: "1", backgroundColor: inputColor}}
+				style={{margin: 0, flex: "1", backgroundColor: inputColor}}
 				fullWidth={true}
 				placeholder="https://.../oauth2/token"
 				type="name"
@@ -1793,11 +1799,11 @@ const AppCreator = (props) => {
 					},
 				}}
 			/>
-			<Typography variant="body2" color="textSecondary">
+			<Typography variant="body2" color="textSecondary" style={{marginTop: 10,}}>
 				Refresh-token URL
 			</Typography>
 			<TextField
-				style={{flex: "1", backgroundColor: inputColor}}
+				style={{margin: 0, flex: "1", backgroundColor: inputColor}}
 				fullWidth={true}
 				placeholder="The URL to retrieve refresh-tokens at"
 				type="name"
@@ -1810,6 +1816,31 @@ const AppCreator = (props) => {
 					style:{
 						color: "white",
 					},
+				}}
+			/>
+			<Typography variant="body2" color="textSecondary" style={{marginTop: 10,}}>
+				Scopes
+			</Typography>
+			<ChipInput
+				style={{}}
+				InputProps={{
+					style:{
+						color: "white",
+					},
+				}}
+				placeholder="Scopes"
+				color="primary"
+				fullWidth
+				defaultValue={oauth2Scopes}
+				onAdd={(chip) => {
+					oauth2Scopes.push(chip)
+					console.log(oauth2Scopes)
+					setOauth2Scopes(oauth2Scopes)
+				}}
+				onDelete={(chip, index) => {
+					oauth2Scopes.splice(index, 1)
+					console.log(oauth2Scopes)
+					setOauth2Scopes(oauth2Scopes)
 				}}
 			/>
 		</div>
@@ -2429,26 +2460,46 @@ const AppCreator = (props) => {
 						}}
 						onBlur={event => {
 							var parsedurl = event.target.value
-							console.log("URL: ", parsedurl)
+							//console.log("URL: ", parsedurl)
+							if (parsedurl.includes("   ")) {
+								parsedurl = parsedurl.replaceAll("   ", " ")
+							}
+
+							if (parsedurl.includes("  ")) {
+								parsedurl = parsedurl.replaceAll("  ", " ")
+							}
+
+							if (parsedurl.includes("[") && parsedurl.includes("]")) {
+								//console.log("REPLACE1")
+								parsedurl = parsedurl.replaceAll("[", "{")
+								parsedurl = parsedurl.replaceAll("]", "}")
+							}
+
 							if (parsedurl.includes("<") && parsedurl.includes(">")) {
-								console.log("REPLACE")
+								//console.log("REPLACE2")
 								parsedurl = parsedurl.replaceAll("<", "{")
 								parsedurl = parsedurl.replaceAll(">", "}")
 							}
 
+							//console.log("URL2: ", parsedurl)
 							if (parsedurl.startsWith("PUT ") || parsedurl.startsWith("GET ") ||parsedurl.startsWith("POST ") || parsedurl.startsWith("DELETE ") ||parsedurl.startsWith("PATCH ") || parsedurl.startsWith("CONNECT ")) {
+
 								const tmp = parsedurl.split(" ")
 
 								if (tmp.length > 1) {
-									parsedurl = tmp[1]
+									parsedurl = tmp[1].trim()
 									setActionField("url", parsedurl)
 
 									setCurrentActionMethod(tmp[0].toUpperCase())
 									setActionField("method", tmp[0].toUpperCase())
 								}
+							
+								console.log("URL3: ", parsedurl)
 
 								setUpdate(Math.random())
 							} else if (parsedurl.startsWith("curl")) {
+								console.log("URL4: ", parsedurl)
+
 								const request = parseCurl(event.target.value)
 								if (request !== event.target.value && request.method !== undefined && request.method !== null) {
 									if (request.method.toUpperCase() !== currentAction.Method) {

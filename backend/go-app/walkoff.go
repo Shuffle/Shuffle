@@ -771,10 +771,11 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	//log.Printf("Actionresult unmarshal: %s", string(body))
+	log.Printf("[DEBUG] Got workflow result from %s of length %d", request.RemoteAddr, len(body))
 	err = shuffle.ValidateNewWorkerExecution(body)
 	if err == nil {
 		resp.WriteHeader(200)
-		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Success"}`)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "success"}`)))
 		return
 	} else {
 		//log.Printf("[WARNING] Handling other execution variant: %s", err)
@@ -1574,7 +1575,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 
 			newParams := []shuffle.WorkflowAppActionParameter{}
 			if strings.ToLower(curAuth.Type) == "oauth2" {
-				log.Printf("\n\nShould replace auth parameters!!!\n\n")
+				log.Printf("[DEBUG] Should replace auth parameters (Oauth2)")
 
 				for _, param := range curAuth.Fields {
 					if param.Key == "expiration" {
@@ -1588,7 +1589,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 				}
 
 				for _, param := range action.Parameters {
-					log.Printf("Param: %#v", param)
+					//log.Printf("Param: %#v", param)
 					if param.Configuration {
 						continue
 					}

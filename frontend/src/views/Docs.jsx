@@ -139,7 +139,7 @@ const Docs = (props) => {
 								parsedline[1] = parsedline[1].replaceAll(")", "")
 								parsedline[1] = parsedline[1].replaceAll("(", "")
 								parsedline[1] = parsedline[1].trim()
-								console.log(parsedline[0], parsedline[1])
+								//console.log(parsedline[0], parsedline[1])
 
 								innerTocLines.push({
 									"text": parsedline[0],
@@ -205,12 +205,12 @@ const Docs = (props) => {
 
 				// Fix location..
 				if (element.innerHTML.toLowerCase() === name) {
-					console.log(element.offsetTop)
-					//element.scrollIntoView({behavior: "smooth"})
-					element.scrollTo({
-						top: element.offsetTop+offset,
-						behavior: "smooth"
-					})
+					//console.log(element.offsetTop)
+					element.scrollIntoView({behavior: "smooth"})
+					//element.scrollTo({
+					//	top: element.offsetTop+offset,
+					//	behavior: "smooth"
+					//})
 					found = true
 					//element.scrollTo({
 					//	top: element.offsetTop-100,
@@ -222,7 +222,7 @@ const Docs = (props) => {
 			// H#
 			if (!found) {
 				elements = parent.getElementsByTagName('h3')
-				console.log(name)
+				//console.log("NAMe: ", name)
 				found = false
 				for (key in elements) {
 					const element = elements[key]
@@ -232,11 +232,11 @@ const Docs = (props) => {
 
 					// Fix location..
 					if (element.innerHTML.toLowerCase() === name) {
-						//element.scrollIntoView({behavior: "smooth"})
-						element.scrollTo({
-							top: element.offsetTop-offset,
-							behavior: "smooth"
-						})
+						element.scrollIntoView({behavior: "smooth"})
+						//element.scrollTo({
+						//	top: element.offsetTop-offset,
+						//	behavior: "smooth"
+						//})
 						found = true
 						//element.scrollTo({
 							//	top: element.offsetTop-100,
@@ -392,7 +392,7 @@ const Docs = (props) => {
 									{itemMatching && tocLines !== null && tocLines !== undefined && tocLines.length > 0 ? 
 										<div style={{marginLeft: 5}}>
 											{tocLines.map((data, index) => {
-												console.log(data)
+												//console.log(data)
 
 												return (
 													<Link key={index} style={innerHrefStyle} to={data.link} onClick={() => {}}>

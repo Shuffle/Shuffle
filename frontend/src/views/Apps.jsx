@@ -480,7 +480,7 @@ const Apps = (props) => {
 		color: "white",
 		borderRadius: 5, 
 		backgroundColor: surfaceColor,
-		display: "flex",
+		//display: "flex",
 		marginBottom: 10, 
 		overflow: "hidden",
 	}
@@ -522,7 +522,7 @@ const Apps = (props) => {
 			<Link to={editUrl} style={{textDecoration: "none"}}>
 				<Tooltip title={"Edit OpenAPI app"}>
 					<Button
-						variant="outlined"
+						variant="contained"
 						component="label"
 						color="primary"
 						style={{marginTop: 10, marginRight: 10,}}
@@ -700,8 +700,8 @@ const Apps = (props) => {
 				{activateButton}
 				{(props.userdata !== undefined && (props.userdata.role === "admin" || props.userdata.id === selectedApp.owner) || !selectedApp.generated) ? 
 					<div>
-						{downloadButton}
 						{editButton}
+						{downloadButton}
 						{deleteButton}
 					</div>
 				: null}
@@ -977,31 +977,35 @@ const Apps = (props) => {
 						</div>
 						{isCloud ? null : 
 						<span>
+							{isLoading ? null :
 								<Tooltip title={"Reload apps locally"} style={{marginTop: "28px", width: "100%"}} aria-label={"Upload"}>
 									<Button
 										variant="outlined"
 										component="label"
 										color="primary"
 										style={{margin: 5, maxHeight: 50, marginTop: 10}}
+										disabled={isLoading}
 										onClick={() => {
 											hotloadApps()
 										}}
 									>
-										<CachedIcon />
+										{isLoading ? <CircularProgress size={25} /> : <CachedIcon />}
 									</Button>
 								</Tooltip>
+							}
 							<Tooltip title={"Download from Github"} style={{marginTop: "28px", width: "100%"}} aria-label={"Upload"}>
 								<Button
 									variant="outlined"
 									component="label"
 									color="primary"
 									style={{margin: 5, maxHeight: 50, marginTop: 10}}
+									disabled={isLoading}
 									onClick={() => {
 										setOpenApi(baseRepository)
 										setLoadAppsModalOpen(true)
 									}}
 								>
-									<CloudDownloadIcon />
+									{isLoading ? <CircularProgress size={25} /> : <CloudDownloadIcon />}
 								</Button>
 							</Tooltip>
 						</span>

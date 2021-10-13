@@ -350,7 +350,7 @@ const Header = props => {
 					handleClose() 
 					handleClickLogout()
 				}}>
-					<MeetingRoomIcon /> Logout
+					<MeetingRoomIcon /> &nbsp;Logout
 				</MenuItem>
 			</Menu>
 		</span>
@@ -455,7 +455,10 @@ const Header = props => {
 						}}
 						value={userdata.active_org.id}
 						fullWidth
-						style={{marginTop: 5, backgroundColor: theme.palette.surfaceColor, marginRight: 15, color: "white", height: 50, width: 200}}
+						style={{zIndex: 10012, marginTop: 5, backgroundColor: theme.palette.surfaceColor, marginRight: 15, color: "white", height: 50, width: 200}}
+					 	MenuProps={{
+							style: {zIndex: 10012}
+						}}
 						onChange={(e) => {
 							handleClickChangeOrg(e.target.value) 
 						}}
@@ -473,7 +476,7 @@ const Header = props => {
 								<img alt={data.name} src={data.image} style={imageStyle} />
 
 							return (
-								<MenuItem key={index} disabled={data.id === userdata.active_org.id} style={{backgroundColor: theme.palette.inputColor, color: "white"}} value={data.id}>
+								<MenuItem key={index} disabled={data.id === userdata.active_org.id} style={{backgroundColor: theme.palette.inputColor, color: "white", zIndex: 10013,}} value={data.id}>
 
 									<Tooltip color="primary" title={`Suborg of ${data.creator_org}`} placement="left">
 										<div style={{display: "flex"}}>

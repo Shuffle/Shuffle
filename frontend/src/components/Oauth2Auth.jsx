@@ -13,9 +13,10 @@ const AuthenticationOauth2 = (props) => {
 	const [defaultConfigSet, setDefaultConfigSet] = React.useState(authenticationType.client_id !== undefined && authenticationType.client_id !== null && authenticationType.client_id.length > 0 && authenticationType.client_secret !== undefined && authenticationType.client_secret !== null && authenticationType.client_secret.length > 0)
 	const [clientId, setClientId] = React.useState(defaultConfigSet ? authenticationType.client_id : "")
 	const [clientSecret, setClientSecret] = React.useState(defaultConfigSet ? authenticationType.client_secret : "")
+	const [oauthUrl, setOauthUrl] = React.useState("")
 	const [buttonClicked, setButtonClicked] = React.useState(false)
 
-	const [manuallyConfigure, setManuallyConfigure] = React.useState(false)
+	const [manuallyConfigure, setManuallyConfigure] = React.useState(defaultConfigSet ? false : true)
 	const [authenticationOption, setAuthenticationOptions] = React.useState({
 		app: JSON.parse(JSON.stringify(selectedApp)),
 		fields: {},
@@ -31,7 +32,7 @@ const AuthenticationOauth2 = (props) => {
 		return null
 	}
 
-	const handleOauth2Request = (client_id, client_secret) => {
+	const handleOauth2Request = (client_id, client_secret, oauth_url) => {
 		setButtonClicked(true)
 		//if (authenticationType.type === "oauth2" && authenticationType.redirect_uri !== undefined && authenticationType.redirect_uri !== null) {
 		// These are test credentials
@@ -40,17 +41,26 @@ const AuthenticationOauth2 = (props) => {
 
 		const authentication_url = authenticationType.token_uri
 
-		const resources = "UserAuthenticationMethod.ReadWrite.All"
+		var resources = ""
+		console.log("SCOPES: ", resources)
 		if (authenticationType.scope !== undefined && authenticationType.scope !== null) {
-			console.log("EDIT SCOPE!")
+			resources = authenticationType.scope.join(",") 
 		}
 
-		console.log(window.location)
-		//const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" 
-		const redirectUri = `${window.location.protocol}//${window.location.host}/set_authentication`
-		const state = `workflow_id%3D${workflow.id}%26reference_action_id%3d${selectedAction.app_id}%26app_name%3d${selectedAction.app_name}%26app_id%3d${selectedAction.app_id}%26app_version%3d${selectedAction.app_version}%26authentication_url%3d${authentication_url}%26scope%3d${resources}%26client_id%3d${client_id}%26client_secret%3d${client_secret}`
+		resources = ["AaaServer.profile.READ"]
 
-		const url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${resources}&state=${state}`
+		console.log("SCOPES2: ", resources)
+		const redirectUri = `${window.location.protocol}//${window.location.host}/set_authentication`
+		var state = `workflow_id%3D${workflow.id}%26reference_action_id%3d${selectedAction.app_id}%26app_name%3d${selectedAction.app_name}%26app_id%3d${selectedAction.app_id}%26app_version%3d${selectedAction.app_version}%26authentication_url%3d${authentication_url}%26scope%3d${resources}%26client_id%3d${client_id}%26client_secret%3d${client_secret}`
+		if (oauth_url !== undefined && oauth_url !== null && oauth_url.length > 0) {
+			state += `%26oauth_url%3d${oauth_url}`
+			console.log("ADDING OAUTH2 URL: ", state)
+		}
+		const url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${resources}&prompt=consent&state=${state}`
+
+		//const url = `https://accounts.zoho.com/oauth/v2/auth?response_type=code&client_id=${client_id}&scope=AaaServer.profile.Read&redirect_uri=${redirectUri}&prompt=consent`
+		console.log("Full URI: ", url)
+		console.log("Redirect Uri: ", redirectUri)
 		// &resource=https%3A%2F%2Fgraph.microsoft.com&
 		
 		// FIXME: Awful, but works for prototyping
@@ -64,14 +74,11 @@ const AuthenticationOauth2 = (props) => {
 			var open = true
   		const timer = setInterval(() => {
   		  if (newwin.closed) {
+					setButtonClicked(false)
   		    clearInterval(timer);
   		    //alert('"Secure Payment" window closed!');
 
 					getAppAuthentication(true, true)
-					setTimeout(() => {
-						console.log("APPAUTH: ", appAuthentication)
-						setAuthenticationModalOpen(false)
-					}, 1500)
   		  }
   		}, 1000);
 			//do {
@@ -206,6 +213,75 @@ const AuthenticationOauth2 = (props) => {
 
 				{!manuallyConfigure ? null :
 					<span>
+							{selectedApp.authentication.parameters.map((data, index) => { 
+								//console.log(data, index) 
+								if (data.name === "client_id" || data.name === "client_secret") {
+									return null
+								}
+
+								if (data.name !== "url") {
+									return null
+								}
+
+								if (oauthUrl.length === 0) {
+									setOauthUrl(data.value)
+								}
+
+								return (
+									<div key={index} style={{marginTop: 10}}>
+										<LockOpenIcon style={{marginRight: 10}}/>
+										<b>{data.name}</b>
+
+										{data.schema !== undefined && data.schema !== null && data.schema.type === "bool" ? 
+											<Select
+													SelectDisplayProps={{
+														style: {
+															marginLeft: 10,
+														}
+													}}
+													defaultValue={"false"}
+													fullWidth
+													onChange={(e) => {
+														console.log("Value: ", e.target.value)
+														authenticationOption.fields[data.name] = e.target.value
+													}}
+													style={{backgroundColor: theme.palette.surfaceColor, color: "white", height: 50}}
+													>
+														<MenuItem key={"false"} style={{backgroundColor: theme.palette.inputColor, color: "white"}} value={"false"}>
+															false
+														</MenuItem>
+														<MenuItem key={"true"} style={{backgroundColor: theme.palette.inputColor, color: "white"}} value={"true"}>
+															true
+														</MenuItem>
+												</Select>
+											: 
+												<TextField
+													style={{backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius,}} 
+													InputProps={{
+														style:{
+															color: "white",
+															marginLeft: "5px",
+															maxWidth: "95%",
+															height: 50, 
+															fontSize: "1em",
+														},
+													}}
+													fullWidth
+													type={data.example !== undefined && data.example.includes("***") ? "password" : "text"}
+													color="primary"
+													defaultValue={data.value !== undefined && data.value !== null ? data.value : ""}
+													placeholder={data.example} 
+													onChange={(event) => {
+														authenticationOption.fields[data.name] = event.target.value
+														console.log("Setting oauth url")
+														setOauthUrl(event.target.value)
+														//const [oauthUrl, setOauthUrl] = React.useState("")
+													}}
+												/>
+										}
+									</div>
+								)
+						})}
 						<TextField
 								style={{marginTop: 20, backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius,}} 
 								InputProps={{
@@ -248,12 +324,12 @@ const AuthenticationOauth2 = (props) => {
 					}
 				<Button 
 					style={{marginBottom: 40, marginTop: 20, borderRadius: theme.palette.borderRadius}}
-					disabled={clientSecret.length === 0 || clientId.length === 0}
+					disabled={clientSecret.length === 0 || clientId.length === 0 || buttonClicked}
 					variant="contained"
 					fullWidth
 					onClick={() => {
 						//setAuthenticationModalOpen(false)
-						handleOauth2Request(clientId, clientSecret) 
+						handleOauth2Request(clientId, clientSecret, oauthUrl) 
 					}} 
 					color="primary"
 				>
@@ -287,7 +363,9 @@ const AuthenticationOauth2 = (props) => {
 							{manuallyConfigure ? "Use auto-config" : "Manually configure Oauth2"}
 						</Button>
 					</span>
-				: null}
+					: 
+					null
+				}
 			</DialogContent>
 		</div>
 	)
