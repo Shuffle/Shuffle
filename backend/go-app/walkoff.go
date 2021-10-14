@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/frikky/shuffle-shared"
+	"github.com/shuffle/shuffle-shared"
 
 	"bytes"
 	"context"
@@ -709,6 +709,11 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	if request.Body == nil {
+		resp.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		log.Println("Failed reading body for stream result queue")
@@ -762,9 +767,14 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	if request.Body == nil {
+		resp.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
-		log.Println("(3) Failed reading body for workflowqueue")
+		log.Println("[WARNING] (3) Failed reading body for workflowqueue")
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
@@ -2636,25 +2646,18 @@ func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// FIXME - set this to be per user IF logged in,
-	// as there might exist private and public
-	//memcacheName := "all_apps"
-
 	ctx := context.Background()
-	// Just need to be logged in
-	// FIXME - need to be logged in?
 	user, userErr := shuffle.HandleApiAuthentication(resp, request)
 	if userErr != nil {
-		log.Printf("Continuing with apps even without auth")
-		//log.Printf("Api authentication failed in get all apps: %s", userErr)
-		//resp.WriteHeader(401)
-		//resp.Write([]byte(`{"success": false}`))
-		//return
+		log.Printf("[WARNING] Api authentication failed in get all apps - this does NOT require auth in cloud.: %s", userErr)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
 	}
 
 	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000)
 	if err != nil {
-		log.Printf("Failed getting apps (getworkflowapps): %s", err)
+		log.Printf("{WARNING] Failed getting apps (getworkflowapps): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return

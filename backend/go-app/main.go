@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/frikky/shuffle-shared"
+	"github.com/shuffle/shuffle-shared"
 
 	"bufio"
 	"bytes"
@@ -580,23 +580,6 @@ func redirect(w http.ResponseWriter, req *http.Request) {
 		http.StatusTemporaryRedirect)
 }
 
-func parseLoginParameters(resp http.ResponseWriter, request *http.Request) (loginStruct, error) {
-
-	body, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		return loginStruct{}, err
-	}
-
-	var t loginStruct
-
-	err = json.Unmarshal(body, &t)
-	if err != nil {
-		return loginStruct{}, err
-	}
-
-	return t, nil
-}
-
 // No more emails :)
 func checkUsername(Username string) error {
 	// Stupid first check of email loool
@@ -731,6 +714,7 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 	// Only admin can CREATE users, but if there are no users, anyone can make (first)
 	ctx := context.Background()
 	users, countErr := shuffle.GetAllUsers(ctx)
+
 	count := len(users)
 	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
@@ -753,7 +737,7 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// Gets a struct of Username, password
-	data, err := parseLoginParameters(resp, request)
+	data, err := shuffle.ParseLoginParameters(resp, request)
 	if err != nil {
 		log.Printf("Invalid params: %s", err)
 		resp.WriteHeader(401)
@@ -813,7 +797,7 @@ func handleRegister(resp http.ResponseWriter, request *http.Request) {
 
 				err = shuffle.SetEnvironment(ctx, &item)
 				if err != nil {
-					log.Printf("[WARNING] Failed setting up new environment for new org: %s")
+					log.Printf("[WARNING] Failed setting up new environment for new org: %s", err)
 				}
 
 				currentOrg = shuffle.OrgMini{
@@ -1194,7 +1178,7 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// Gets a struct of Username, password
-	data, err := parseLoginParameters(resp, request)
+	data, err := shuffle.ParseLoginParameters(resp, request)
 	if err != nil {
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
@@ -1971,6 +1955,10 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	// 1. Get callback data
 	// 2. Load the configuration
 	// 3. Execute the workflow
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
 
 	path := strings.Split(request.URL.String(), "/")
 	if len(path) < 4 {
@@ -5173,7 +5161,7 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 		// 2. If cloud env found, enable it (un-archive)
 		// 3. If it doesn't create it
 		environments, err := shuffle.GetEnvironments(ctx, org.Id)
-		log.Printf("GETTING ENVS: %#s", environments)
+		log.Printf("GETTING ENVS: %#v", environments)
 		if err == nil {
 
 			// Don't disable, this will be deleted entirely

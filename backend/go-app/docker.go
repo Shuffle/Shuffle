@@ -2,7 +2,7 @@ package main
 
 // Docker
 import (
-	"github.com/frikky/shuffle-shared"
+	"github.com/shuffle/shuffle-shared"
 
 	"archive/tar"
 	//"bufio"
@@ -778,7 +778,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 
 	newClient, err := newdockerclient.NewClientFromEnv()
 	if err != nil {
-		log.Printf("[WARNING] Failed setting up docker env: %s", newClient)
+		log.Printf("[ERROR] Failed setting up docker env: %#v", newClient)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "message": "Couldn't make docker client"}`)))
 		return
@@ -792,7 +792,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if err := newClient.ExportImage(opts); err != nil {
-		log.Printf("[WARNING] FAILED to save image to file: %s", err)
+		log.Printf("[ERROR] FAILED to save image to file: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "message": "Couldn't export image"}`)))
 		return
