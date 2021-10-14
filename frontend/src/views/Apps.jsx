@@ -690,7 +690,7 @@ const Apps = (props) => {
 					</Select>
 				: null }
 				{isCloud ? 
-					<a href={"https://shuffler.io/apps/"+selectedApp.id} style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">
+					<a rel="noopener noreferrer" href={"https://shuffler.io/apps/"+selectedApp.id} style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">
 						<IconButton style={{top: -10, right: 0, position: "absolute", color: "#f85a3e"}} >
 							<OpenInNewIcon style={{}} />
 						</IconButton>
@@ -844,9 +844,9 @@ const Apps = (props) => {
 					<div style={{width: "100%", margin: 25}}>
 						<h2>App Creator</h2>
 						<a rel="noopener noreferrer" href="https://shuffler.io/docs/apps" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">How it works</a>
-						&nbsp;- <a href="https://github.com/frikky/security-openapis" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">Security API's</a>
-						&nbsp;- <a href="https://github.com/APIs-guru/openapi-directory/tree/main/APIs" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">OpenAPI directory</a>
-						&nbsp;- <a href="https://editor.swagger.io/" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">OpenAPI Validator</a>
+						&nbsp;- <a rel="noopener noreferrer" href="https://github.com/frikky/security-openapis" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">Security API's</a>
+						&nbsp;- <a rel="noopener noreferrer" href="https://github.com/APIs-guru/openapi-directory/tree/main/APIs" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">OpenAPI directory</a>
+						&nbsp;- <a rel="noopener noreferrer" href="https://editor.swagger.io/" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">OpenAPI Validator</a>
 						<div/>
 						<Typography variant="body2" color="textSecondary">
 							Apps interact with eachother in workflows. They are created with the app creator, using OpenAPI specification or manually in python. The links above are references to OpenAPI tools and other app repositories. There's thousands of them.
@@ -1056,7 +1056,7 @@ const Apps = (props) => {
 							<Paper square style={uploadViewPaperStyle}>
 								<Typography style={{margin: 10, }}>
 									<span>
-										<a href={"https://shuffler.io/search"} style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">
+										<a rel="noopener noreferrer" href={"https://shuffler.io/search"} style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">
 											Click here 
 										</a> to search ALL apps, not just your activated ones.
 									</span>
@@ -1077,7 +1077,7 @@ const Apps = (props) => {
 									No apps have been created, uploaded or downloaded yet. Click "Load existing apps" above to get the baseline. This may take a while as its building docker images.
 								</Typography>
 								<Typography variant="body1" style={{margin: 10}}>
-									If you're still not able to see any apps, please follow our <a href={"https://shuffler.io/docs/troubleshooting#load_all_apps_locally"} style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">troubleshooting guide for loading apps!</a>
+									If you're still not able to see any apps, please follow our <a rel="noopener noreferrer" href={"https://shuffler.io/docs/troubleshooting#load_all_apps_locally"} style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">troubleshooting guide for loading apps!</a>
 								</Typography>
 							</Paper>
 						}

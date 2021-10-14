@@ -3914,7 +3914,7 @@ const AngularWorkflow = (props) => {
 		return (
 			<div style={appViewStyle}>
 				<div style={variableScrollStyle}>
-						What are <a rel="norefferer" href="https://shuffler.io/docs/workflows#workflow_variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>WORKFLOW variables?</a>
+						What are <a rel="noopener noreferrer" href="https://shuffler.io/docs/workflows#workflow_variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>WORKFLOW variables?</a>
 					{workflow.workflow_variables === null ? 
 					null : workflow.workflow_variables.map((variable, index) => {
 						return (
@@ -3981,7 +3981,7 @@ const AngularWorkflow = (props) => {
 						}}>New workflow variable</Button> 				
 					</div>
 					<Divider style={{marginBottom: 20, marginTop: 20, height: 1, width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
-						What are <a rel="norefferer" target="_blank" href="https://shuffler.io/docs/workflows#execution_variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>EXECUTION variables?</a>
+						What are <a rel="noopener noreferrer" target="_blank" href="https://shuffler.io/docs/workflows#execution_variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>EXECUTION variables?</a>
 					{workflow.execution_variables === null || workflow.execution_variables === undefined ? 
 					null : workflow.execution_variables.map(variable=> {
 						return (
@@ -5363,7 +5363,7 @@ const AngularWorkflow = (props) => {
 			}}
 		>
 		<span style={{position: "absolute", bottom: 10, left: 10, color: "rgba(255,255,255,0.6)",}}>
-			Conditions can't be used for loops [ .# ] <a rel="norefferer" target="_blank" href="https://shuffler.io/docs/workflows#conditions" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more</a> 
+			Conditions can't be used for loops [ .# ] <a rel="noopener noreferrer" target="_blank" href="https://shuffler.io/docs/workflows#conditions" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more</a> 
 		</span>
 		<FormControl>
 			<DialogTitle><span style={{color:"white"}}>Condition</span>
@@ -5630,7 +5630,7 @@ const AngularWorkflow = (props) => {
 				<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 					<div style={{flex: "1"}}>
 						<h3 style={{marginBottom: "5px"}} >Branch: Conditions - {selectedEdgeIndex}</h3>
-						<a rel="norefferer" target="_blank" href="https://shuffler.io/docs/workflows#conditions" style={{textDecoration: "none", color: "#f85a3e"}}>What are conditions?</a>
+						<a rel="noopener noreferrer" target="_blank" href="https://shuffler.io/docs/workflows#conditions" style={{textDecoration: "none", color: "#f85a3e"}}>What are conditions?</a>
 					</div>
 				</div>
 				<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -6005,7 +6005,7 @@ const AngularWorkflow = (props) => {
 				<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 					<div style={{flex: "1"}}>
 						<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}: {selectedTrigger.status}</h3>
-						<a rel="norefferer" target="_blank" href="https://shuffler.io/docs/triggers#email" style={{textDecoration: "none", color: "#f85a3e"}}>What are email triggers?</a>
+						<a rel="noopener noreferrer" target="_blank" href="https://shuffler.io/docs/triggers#email" style={{textDecoration: "none", color: "#f85a3e"}}>What are email triggers?</a>
 					</div>
 				</div>
 				<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -6398,7 +6398,7 @@ const AngularWorkflow = (props) => {
 					<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 						<div style={{flex: "1"}}>
 							<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}</h3>
-							<a rel="norefferer" target="_blank" href="https://shuffler.io/docs/triggers#subflow" style={{textDecoration: "none", color: "#f85a3e"}}>What are subflows?</a>
+							<a rel="noopener noreferrer" target="_blank" href="https://shuffler.io/docs/triggers#subflow" style={{textDecoration: "none", color: "#f85a3e"}}>What are subflows?</a>
 						</div>
 					</div>
 					<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -6512,7 +6512,7 @@ const AngularWorkflow = (props) => {
 							}
 							{workflow.triggers[selectedTriggerIndex].parameters[0].value.length === 0 ? null : 
 								workflow.triggers[selectedTriggerIndex].parameters[0].value === props.match.params.key ? null :
-								<span style={{marginTop: 5}}><a rel="norefferer" href={`/workflows/${workflow.triggers[selectedTriggerIndex].parameters[0].value}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e", marginLeft: 5,}}>Explore selected workflow</a></span>
+								<span style={{marginTop: 5}}><a rel="noopener noreferrer" href={`/workflows/${workflow.triggers[selectedTriggerIndex].parameters[0].value}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e", marginLeft: 5,}}>Explore selected workflow</a></span>
 							}
 
 							{subworkflow === undefined || subworkflow === null || subworkflow.id === undefined || subworkflow.actions === null || subworkflow.actions === undefined || subworkflow.actions.length === 0 ? null : 
@@ -6720,7 +6720,7 @@ const AngularWorkflow = (props) => {
 					<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 						<div style={{flex: "1"}}>
 							<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}: {selectedTrigger.status}</h3>
-							<a rel="norefferer" target="_blank" href="https://shuffler.io/docs/triggers#webhook" style={{textDecoration: "none", color: "#f85a3e"}}>What are webhooks?</a>
+							<a rel="noopener noreferrer" target="_blank" href="https://shuffler.io/docs/triggers#webhook" style={{textDecoration: "none", color: "#f85a3e"}}>What are webhooks?</a>
 						</div>
 					</div>
 					<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -7165,7 +7165,7 @@ const AngularWorkflow = (props) => {
 					<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 						<div style={{flex: "1"}}>
 							<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}: {selectedTrigger.status}</h3>
-							<a rel="norefferer" target="_blank" href="https://shuffler.io/docs/triggers#user_input" style={{textDecoration: "none", color: "#f85a3e"}}>What is the user input trigger?</a>
+							<a rel="noopener noreferrer" target="_blank" href="https://shuffler.io/docs/triggers#user_input" style={{textDecoration: "none", color: "#f85a3e"}}>What is the user input trigger?</a>
 						</div>
 					</div>
 					<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -7343,7 +7343,7 @@ const AngularWorkflow = (props) => {
 					<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
 						<div style={{flex: "1"}}>
 							<h3 style={{marginBottom: "5px"}}>{selectedTrigger.app_name}: {selectedTrigger.status}</h3>
-							<a rel="norefferer" target="_blank" href="https://shuffler.io/docs/triggers#schedule" style={{textDecoration: "none", color: "#f85a3e"}}>What are schedules?</a>
+							<a rel="noopener noreferrer" target="_blank" href="https://shuffler.io/docs/triggers#schedule" style={{textDecoration: "none", color: "#f85a3e"}}>What are schedules?</a>
 						</div>
 					</div>
 					<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
@@ -8261,7 +8261,7 @@ const AngularWorkflow = (props) => {
 										</span>
 
 										:
-										<a rel="norefferer" href={`/workflows/${executionData.execution_source}?view=executions&execution_id=${executionData.execution_parent}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>Parent Workflow</a>
+										<a rel="noopener noreferrer" href={`/workflows/${executionData.execution_source}?view=executions&execution_id=${executionData.execution_parent}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>Parent Workflow</a>
 									:
 									executionData.execution_source
 								} 
@@ -8438,7 +8438,7 @@ const AngularWorkflow = (props) => {
 														See sub-execution
 														</span>
 													:
-													<a rel="norefferer" href={`/workflows/${data.action.parameters[0].value}?view=executions&execution_id=${validate.result.execution_id}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}} onClick={(event) => {
+													<a rel="noopener noreferrer" href={`/workflows/${data.action.parameters[0].value}?view=executions&execution_id=${validate.result.execution_id}`} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}} onClick={(event) => {
 													}}>
 													<OpenInNewIcon />
 													</a>
@@ -8813,7 +8813,7 @@ const AngularWorkflow = (props) => {
 		<FormControl>
 			<DialogTitle><span style={{color: "white"}}>Execution Variable</span></DialogTitle>
 				<DialogContent>
-					Execution Variables are TEMPORARY variables that you can ony be set and used during execution. Learn more <a rel="norefferer" href="https://shuffler.io/docs/workflows#execution_variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>here</a>
+					Execution Variables are TEMPORARY variables that you can ony be set and used during execution. Learn more <a rel="noopener noreferrer" href="https://shuffler.io/docs/workflows#execution_variables" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>here</a>
 					<TextField
 						onBlur={(event) => setNewVariableName(event.target.value)}
 						color="primary"
@@ -9119,7 +9119,7 @@ const AngularWorkflow = (props) => {
 			<div>
 				<DialogTitle><div style={{color: "white"}}>Authentication for {selectedApp.name}</div></DialogTitle>
 				<DialogContent>
-					<a target="_blank" rel="norefferer" href="https://shuffler.io/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is app authentication?</a><div/>
+					<a rel="noopener noreferrer" target="_blank" href="https://shuffler.io/docs/apps#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is app authentication?</a><div/>
 					These are required fields for authenticating with {selectedApp.name} 
 					<div style={{marginTop: 15}}/>
 					<b>Name - what is this used for?</b>
@@ -9304,7 +9304,7 @@ const AngularWorkflow = (props) => {
 		>
 			<div style={{zIndex: 5000, position: "absolute", top: 20, right: 54, height: 50, width: 50,}}>
 				{selectedApp.reference_info === undefined || selectedApp.reference_info === null || selectedApp.reference_info.github_url === undefined || selectedApp.reference_info.github_url === null || selectedApp.reference_info.github_url.length === 0 ? 
-					<a rel="norefferer" target="_blank" href={"https://github.com/frikky/shuffle-apps"} style={{textDecoration: "none", color: "#f86a3e"}}>
+					<a rel="noopener noreferrer" target="_blank" href={"https://github.com/frikky/shuffle-apps"} style={{textDecoration: "none", color: "#f86a3e"}}>
 						<img alt={`Documentation image for ${selectedApp.name}`} src={selectedApp.large_image} style={{width: 30, height: 30, border: "2px solid rgba(255,255,255,0.6)", borderRadius: theme.palette.borderRadius, maxHeight: 30, maxWidth: 30, overflow: "hidden", fontSize: 8, }} />
 					</a>
 					:
@@ -9340,7 +9340,7 @@ const AngularWorkflow = (props) => {
 									There is currently no extended documentation available for this app. 
 								</Typography>
 								<Typography variant="body1" style={{marginTop: 25}}>
-									Want help with this app? <a rel="norefferer" target="_blank" href="https://discord.gg/B2CBzUm" style={{textDecoration: "none", color: "#f86a3e"}}>Join the Discord!</a>
+									Want help with this app? <a rel="noopener noreferrer" target="_blank" href="https://discord.gg/B2CBzUm" style={{textDecoration: "none", color: "#f86a3e"}}>Join the Discord!</a>
 								</Typography>
 
 								<Typography variant="h6" style={{marginTop: 50,}}>
@@ -9349,7 +9349,7 @@ const AngularWorkflow = (props) => {
 								{selectedApp.reference_info === undefined || selectedApp.reference_info === null || selectedApp.reference_info.github_url === undefined || selectedApp.reference_info.github_url === null || selectedApp.reference_info.github_url.length === 0 ? 
 									<span>
 										<Typography variant="body1" style={{marginTop: 25}}>
-											<a rel="norefferer" target="_blank" href={"https://github.com/frikky/shuffle-apps"} style={{textDecoration: "none", color: "#f86a3e"}}>Check it out on Github!</a>
+											<a rel="noopener noreferrer" target="_blank" href={"https://github.com/frikky/shuffle-apps"} style={{textDecoration: "none", color: "#f86a3e"}}>Check it out on Github!</a>
 										</Typography>
 									</span>
 									:
