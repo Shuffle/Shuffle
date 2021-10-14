@@ -1,9 +1,11 @@
 import React, { useEffect} from 'react';
 import { useInterval } from 'react-powerhooks';
 import { makeStyles } from '@material-ui/core/styles';
+import { useTheme } from '@material-ui/core/styles';
 
 import {Avatar, Grid, Paper, Tooltip, Divider, Button, TextField, FormControl, IconButton, Menu, MenuItem, FormControlLabel, Chip, Switch, Typography, Zoom, CircularProgress, Dialog, DialogTitle, DialogActions, DialogContent} from '@material-ui/core';
-import {Close as CloseIcon, Compare as CompareIcon, Maximize as MaximizeIcon, Minimize as MinimizeIcon, AddCircle as AddCircleIcon, Toc as TocIcon, Send as SendIcon, Search as SearchIcon, FileCopy as FileCopyIcon, Delete as DeleteIcon, BubbleChart as BubbleChartIcon, Restore as RestoreIcon, Cached as CachedIcon, GetApp as GetAppIcon, Apps as AppsIcon, Edit as EditIcon, MoreVert as MoreVertIcon, PlayArrow as PlayArrowIcon, Add as AddIcon, Publish as PublishIcon, CloudUpload as CloudUploadIcon, CloudDownload as CloudDownloadIcon} from '@material-ui/icons';
+import {GridOn as GridOnIcon, List as ListIcon, Close as CloseIcon, Compare as CompareIcon, Maximize as MaximizeIcon, Minimize as MinimizeIcon, AddCircle as AddCircleIcon, Toc as TocIcon, Send as SendIcon, Search as SearchIcon, FileCopy as FileCopyIcon, Delete as DeleteIcon, BubbleChart as BubbleChartIcon, Restore as RestoreIcon, Cached as CachedIcon, GetApp as GetAppIcon, Apps as AppsIcon, Edit as EditIcon, MoreVert as MoreVertIcon, PlayArrow as PlayArrowIcon, Add as AddIcon, Publish as PublishIcon, CloudUpload as CloudUploadIcon, CloudDownload as CloudDownloadIcon} from '@material-ui/icons';
+import NestedMenuItem from "material-ui-nested-menu-item";
 //import {Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
 
 //https://next.material-ui.com/components/material-icons/
@@ -11,13 +13,12 @@ import {DataGrid, GridToolbarContainer, GridDensitySelector, GridToolbar} from '
 
 //import JSONPretty from 'react-json-pretty';
 //import JSONPrettyMon from 'react-json-pretty/dist/monikai'
-import ReactJson from 'react-json-view'
 import Dropzone from '../components/Dropzone';
 
 import {Link} from 'react-router-dom';
 import { useAlert } from "react-alert";
 import ChipInput from 'material-ui-chip-input'
-import uuid from "uuid"
+import { v4 as uuidv4 } from 'uuid';
 import CytoscapeWrapper from '../components/RenderCytoscape'
 
 //import mobileImage from '../assets/img/mobile.svg';
@@ -27,6 +28,7 @@ import CytoscapeWrapper from '../components/RenderCytoscape'
 const inputColor = "#383B40"
 const surfaceColor = "#27292D"
 const svgSize = 24
+const imagesize = 22
 
 const flexContainerStyle = {
 	display: "flex",
@@ -46,13 +48,13 @@ const flexBoxStyle = {
 }
 
 const useStyles = makeStyles((theme) => ({
-	root: {
+	datagrid: {
 		border: 0,
 		'& .MuiDataGrid-columnsContainer': {
-		backgroundColor: theme.palette.type === 'light' ? '#fafafa' : '#1d1d1d',
+			backgroundColor: theme.palette.type === 'light' ? '#fafafa' : theme.palette.inputColor,
 		},
 		'& .MuiDataGrid-iconSeparator': {
-		display: 'none',
+			display: 'none',
 		},
 		'& .MuiDataGrid-colCell, .MuiDataGrid-cell': {
 		borderRight: `1px solid ${
@@ -88,19 +90,19 @@ export const GetIconInfo = (action) => {
 		{"key": "cache_get", "values": ["get_cache"]},
 		{"key": "filter", "values": ["filter", "route", "router",]},
 		{"key": "merge", "values": ["join", "merge"]},
-		{"key": "search", "values": ["search", "find", "locate", "index",]},
+		{"key": "search", "values": ["search", "find", "locate", "index", "analyze", "anal", "match"]},
 		{"key": "list", "values": ["list", "head", "options"]},
-		{"key": "download", "values": ["get", "download", "return", "hello_world", "curl",]},
+		{"key": "download", "values": ["capture", "get", "download", "return", "hello_world", "curl", "request", "export", "preview"]},
 		{"key": "add", "values": ["add"]},
 		{"key": "delete", "values": ["delete", "remove", "clear", "clean",]},
-		{"key": "send", "values": ["send", "dispatch", "mail", "forward", "post", "submit", "mark", "set"]},
-		{"key": "repeat", "values": ["repeat", "retry", "pause", "skip",]},
+		{"key": "send", "values": ["send", "dispatch", "mail", "forward", "post", "submit", "mark", "set", "release", ]},
+		{"key": "repeat", "values": ["repeat", "retry", "pause", "skip", "copy", "replicat", ]},
 		{"key": "execute", "values": ["execute", "run", "play", "raise",]},
 		{"key": "extract", "values": ["extract", "unpack", "decompress", "open"]},
 		{"key": "inflate", "values": ["inflate", "pack", "compress",]},
-		{"key": "edit", "values": ["update", "create", "edit", "put", "patch", "change", "replace", "conver", "map", "format", "escape"]},
+		{"key": "edit", "values": ["modify", "update", "create", "edit", "put", "patch", "change", "replace", "conver", "map", "format", "escape", "describe", ]},
 		{"key": "compare", "values": ["compare", "convert", "to", "filter", "translate", "parse"]},
-		{"key": "close", "values": ["close", "stop", "cancel",]},
+		{"key": "close", "values": ["close", "stop", "cancel", "block", ]},
 	]
 
 	var selectedKey = ""
@@ -328,10 +330,11 @@ export const validateJson = (showResult) => {
 const Workflows = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, removeCookie, cookies, userdata} = props;
 	document.title = "Shuffle - Workflows"
-	const referenceUrl = globalUrl+"/api/v1/hooks/"
-
+	const theme = useTheme();
 	const alert = useAlert()
-	const classes = useStyles();
+	const classes = useStyles(theme);
+
+	const referenceUrl = globalUrl+"/api/v1/hooks/"
 
 	var upload = ""
 	const [file, setFile] = React.useState("");
@@ -352,11 +355,17 @@ const Workflows = (props) => {
 	const [downloadUrl, setDownloadUrl] = React.useState("https://github.com/frikky/shuffle-workflows")
 	const [downloadBranch, setDownloadBranch] = React.useState("master")
 	const [loadWorkflowsModalOpen, setLoadWorkflowsModalOpen] = React.useState(false)
+	const [exportModalOpen, setExportModalOpen] = React.useState(false)
+	const [exportData, setExportData] = React.useState("");
 
 	const [modalOpen, setModalOpen] = React.useState(false);
 	const [newWorkflowName, setNewWorkflowName] = React.useState("");
 	const [newWorkflowDescription, setNewWorkflowDescription] = React.useState("");
 	const [newWorkflowTags, setNewWorkflowTags] = React.useState([]);
+
+	const [showExtraOptions, setShowExtraOptions] = React.useState(true);
+	const [defaultReturnValue, setDefaultReturnValue] = React.useState("");
+
 	const [update, setUpdate] = React.useState("test");
 	const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
 	const [publishModalOpen, setPublishModalOpen] = React.useState(false);
@@ -366,6 +375,8 @@ const Workflows = (props) => {
 	const [isDropzone, setIsDropzone] = React.useState(false);
 	const [view, setView] = React.useState("grid")
 	const [filters, setFilters] = React.useState([])
+	const [submitLoading, setSubmitLoading] = React.useState(false)
+
 	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" 
 
 	const findWorkflow = (filters) => {
@@ -390,6 +401,10 @@ const Workflows = (props) => {
 					if (curWorkflow.name.toLowerCase().includes(filter.toLowerCase())) {
 						return true
 					} else if (curWorkflow.tags.includes(filter)) {
+						return true
+					} else if (curWorkflow.owner === filter) {
+						return true
+					} else if (curWorkflow.org_id === filter) {
 						return true
 					} else if (curWorkflow.actions !== null && curWorkflow.actions !== undefined) {
 						const newfilter = filter.toLowerCase()
@@ -460,6 +475,50 @@ const Workflows = (props) => {
 
 		findWorkflow(newfilters) 
 	}
+
+	const exportVerifyModal = exportModalOpen ? 
+		<Dialog
+			open={exportModalOpen}
+			onClose={() => {
+				setExportModalOpen(false)
+				setSelectedWorkflow({})
+			}}
+			PaperProps={{
+				style: {
+					backgroundColor: surfaceColor,
+					color: "white",
+					minWidth: 500,
+					padding: 30,
+				},
+			}}
+		>
+			<DialogTitle style={{marginBottom: 0, }}>
+				<div style={{textAlign: "center", color: "rgba(255,255,255,0.9)"}}>
+					Want to auto-sanitize this workflow before exporting?
+				</div>
+			</DialogTitle>
+			<DialogContent style={{color: "rgba(255,255,255,0.65)", textAlign: "center"}}>
+				<Typography variant="body1" style={{}}>
+					This will make potentially sensitive fields such as username, password, url etc. empty 
+				</Typography>
+				<Button variant="contained" style={{marginTop: 20, }} onClick={() => {
+					setExportModalOpen(false)
+					exportWorkflow(exportData, true)		
+					setExportData("")
+				}} color="primary">
+					Yes
+				</Button>
+				<Button style={{marginTop: 20, }} onClick={() => {
+					setExportModalOpen(false)
+					exportWorkflow(exportData, false)		
+					setExportData("")
+				}} color="primary">
+					No
+				</Button>
+			</DialogContent>
+			
+		</Dialog>
+	: null
 
 	const publishModal = publishModalOpen ? 
 		<Dialog
@@ -564,14 +623,14 @@ const Workflows = (props) => {
 				}
 
 				// Initialize the workflow itself
-				const ret = setNewWorkflow(data.name, data.description, data.tags, {}, false)
+				const ret = setNewWorkflow(data.name, data.description, data.tags, data.default_return_value, {}, false)
 				.then((response) => {
 					if (response !== undefined) {
 						// SET THE FULL THING
 						data.id = response.id
 
 						// Actually create it
-						const ret = setNewWorkflow(data.name, data.description, data.tags, data, false)
+						const ret = setNewWorkflow(data.name, data.description, data.tags, data.default_return_value, data, false)
 						.then((response) => {
 							if (response !== undefined) {
 								alert.success(`Successfully imported ${data.name}`)
@@ -650,6 +709,11 @@ const Workflows = (props) => {
 
 	useEffect(() => {
 		if (workflows.length <= 0 && firstrequest) {
+			const tmpView = localStorage.getItem('view');
+			if (tmpView !== undefined && tmpView !== null) {
+				setView(tmpView)
+			}
+
 			setFirstrequest(false)
 			getAvailableWorkflows()
 		}
@@ -759,7 +823,7 @@ const Workflows = (props) => {
 
 	const exportAllWorkflows = () => {
 		for (var key in workflows) {
-			exportWorkflow(workflows[key])
+			exportWorkflow(workflows[key], false)
 		}
 	}
 
@@ -777,7 +841,7 @@ const Workflows = (props) => {
 					trigger.status = "stopped"
 				}
 
-				const newId = uuid.v4()
+				const newId = uuidv4()
 				if (trigger.trigger_type === "WEBHOOK") {
 					const hookname = "webhook_"+newId
 					if (trigger.parameters !== undefined && trigger.parameters !== null && trigger.parameters.length === 2) {
@@ -825,7 +889,7 @@ const Workflows = (props) => {
 					}
 				}
 
-				const newId = uuid.v4()
+				const newId = uuidv4()
 				for (var branchkey in data.branches) {
 					const branch = data.branches[branchkey]
 					if (branch.source_id === data.actions[key].id) {
@@ -861,6 +925,7 @@ const Workflows = (props) => {
 	}
 
 	const sanitizeWorkflow = (data) => {
+		data = JSON.parse(JSON.stringify(data))
 		data["owner"] = ""
 		console.log("Sanitize start: ", data)
 		data = deduplicateIds(data)
@@ -877,9 +942,13 @@ const Workflows = (props) => {
 		return data
 	}
 
-	const exportWorkflow = (data) => {
+	const exportWorkflow = (data, sanitize) => {
+		data = JSON.parse(JSON.stringify(data))
 		let exportFileDefaultName = data.name+'.json';
-		data = sanitizeWorkflow(data)	
+
+		if (sanitize === true) {
+			data = sanitizeWorkflow(data)	
+		}
 		//return
 
 		// Add correct ID's for triggers
@@ -1035,7 +1104,6 @@ const Workflows = (props) => {
 		)
 	}
 
-
 	const WorkflowPaper = (props) => {
   	const { data } = props;
 		const [open, setOpen] = React.useState(false);
@@ -1061,13 +1129,98 @@ const Workflows = (props) => {
 		}
 
 		var parsedName = data.name
-		if (parsedName !== undefined && parsedName !== null && parsedName.length > 25) {
-			parsedName = parsedName.slice(0,26)+".." 
+		if (parsedName !== undefined && parsedName !== null && parsedName.length > 20) {
+			parsedName = parsedName.slice(0,21)+".." 
 		}
-
 
 		const actions = data.actions !== null ? data.actions.length : 0
 		const [triggers, schedules, webhooks, subflows] = getWorkflowMeta(data)
+
+
+		const workflowMenuButtons = <Menu
+				id="long-menu"
+				anchorEl={anchorEl}
+				keepMounted
+				open={open}
+				onClose={() => {
+					setOpen(false)
+					setAnchorEl(null)
+				}}
+			>
+				<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
+					//console.log("DATA:" ,data)
+					setModalOpen(true)
+					setEditingWorkflow(data)
+					setNewWorkflowName(data.name)
+					setNewWorkflowDescription(data.description)
+					setDefaultReturnValue(data.default_return_value)
+					if (data.tags !== undefined && data.tags !== null) {
+						setNewWorkflowTags(JSON.parse(JSON.stringify(data.tags)))
+					}
+				}} key={"change"}>
+					<EditIcon style={{marginLeft: 0, marginRight: 8}}/>
+					{"Change details"}
+				</MenuItem>
+				<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
+					setSelectedWorkflow(data) 
+					setPublishModalOpen(true)
+				}} key={"publish"}>
+					<CloudUploadIcon style={{marginLeft: 0, marginRight: 8}}/>
+					{"Publish Workflow"}
+				</MenuItem>
+				<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
+					copyWorkflow(data)		
+					setOpen(false)
+				}} key={"duplicate"}>
+					<FileCopyIcon style={{marginLeft: 0, marginRight: 8}}/>
+					{"Duplicate Workflow"}
+				</MenuItem>
+				<NestedMenuItem disabled={userdata.orgs === undefined || userdata.orgs === null || userdata.orgs.length === 1 || userdata.orgs.length >= 0} style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
+					//copyWorkflow(data)		
+					//setOpen(false)
+				}} key={"duplicate"}>
+					<FileCopyIcon style={{marginLeft: 0, marginRight: 8}}/>
+					{"Copy to Child Org"}
+				</NestedMenuItem>
+				<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
+					setExportModalOpen(true)
+					setExportData(data)
+					setOpen(false)
+				}} key={"export"}>
+					<GetAppIcon style={{marginLeft: 0, marginRight: 8}}/>
+					{"Export Workflow"}
+				</MenuItem>
+				<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
+					setDeleteModalOpen(true)
+					setSelectedWorkflowId(data.id)
+					setOpen(false)
+				}} key={"delete"}>
+					<DeleteIcon style={{marginLeft: 0, marginRight: 8}}/>
+					{"Delete Workflow"}
+				</MenuItem>
+			</Menu>
+
+		var image = ""
+		var orgName = ""
+		var orgId = ""
+		if (userdata.orgs !== undefined) {
+			const foundOrg = userdata.orgs.find(org => org.id === data["org_id"])
+			if (foundOrg !== undefined && foundOrg !== null) {
+				//position: "absolute", bottom: 5, right: -5, 
+				const imageStyle = {width: imagesize, height: imagesize, pointerEvents: "none", marginRight: 10, marginLeft: data.creator_org !== undefined && data.creator_org.length > 0 ? 20 : 0, borderRadius: 10, border: foundOrg.id === userdata.active_org.id ? `3px solid ${boxColor}` : null, cursor: "pointer", marginRight: 10, }
+
+				//<Tooltip title={`Org: ${foundOrg.name}`} placement="bottom">
+				image = foundOrg.image === "" ? 
+					<img alt={foundOrg.name} src={theme.palette.defaultImage} style={imageStyle} />
+					:
+					<img alt={foundOrg.name} src={foundOrg.image} style={imageStyle} onClick={() => {
+						//setFilteredWorkflows(newWorkflows)
+					}}/>
+
+				orgName = foundOrg.name
+				orgId = foundOrg.id
+			}
+		}
 
 		return (
 			<Grid item xs={4} style={{padding: "12px 10px 12px 10px",}}>
@@ -1075,6 +1228,15 @@ const Workflows = (props) => {
 					<div style={{position: "absolute", bottom: 1, left: 1, height: 12, width: 12, backgroundColor: boxColor, borderRadius: "0 100px 0 0",}} />
 					<Grid item style={{display: "flex", flexDirection: "column", width: "100%"}}>
 						<Grid item style={{display: "flex", maxHeight: 34,}}>
+							<Tooltip title={`Org "${orgName}"`} placement="bottom">
+								<div styl={{cursor: "pointer"}} onClick={() => {
+									addFilter(orgId) 
+									//setFilters(["Org "+orgName])
+									//setFilteredWorkflows(newWorkflows)
+								}}>
+									{image}
+								</div>
+							</Tooltip>
 							<Tooltip title={`Edit ${data.name}`} placement="bottom">
 								<Typography variant="body1" style={{marginBottom: 0, paddingBottom: 0, maxHeight: 30, flex: 10,}}>
 									<Link to={"/workflows/"+data.id} style={{textDecoration: "none", color: "inherit",}}>
@@ -1184,59 +1346,7 @@ const Workflows = (props) => {
 								>
 								<MoreVertIcon />
 							</IconButton>
-							<Menu
-								id="long-menu"
-								anchorEl={anchorEl}
-								keepMounted
-								open={open}
-								onClose={() => {
-									setOpen(false)
-									setAnchorEl(null)
-								}}
-							>
-								<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
-									setModalOpen(true)
-									setEditingWorkflow(data)
-									setNewWorkflowName(data.name)
-									setNewWorkflowDescription(data.description)
-									if (data.tags !== undefined && data.tags !== null) {
-										setNewWorkflowTags(JSON.parse(JSON.stringify(data.tags)))
-									}
-								}} key={"change"}>
-									<EditIcon style={{marginLeft: 0, marginRight: 8}}/>
-									{"Change details"}
-								</MenuItem>
-								<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
-									setSelectedWorkflow(data) 
-									setPublishModalOpen(true)
-								}} key={"publish"}>
-									<CloudUploadIcon style={{marginLeft: 0, marginRight: 8}}/>
-									{"Publish Workflow"}
-								</MenuItem>
-								<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
-									copyWorkflow(data)		
-									setOpen(false)
-								}} key={"duplicate"}>
-									<FileCopyIcon style={{marginLeft: 0, marginRight: 8}}/>
-									{"Duplicate Workflow"}
-								</MenuItem>
-								<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
-									exportWorkflow(data)		
-									setOpen(false)
-								}} key={"export"}>
-									<GetAppIcon style={{marginLeft: 0, marginRight: 8}}/>
-									{"Export Workflow"}
-								</MenuItem>
-								<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
-									setDeleteModalOpen(true)
-									setSelectedWorkflowId(data.id)
-									setOpen(false)
-								}} key={"delete"}>
-									<DeleteIcon style={{marginLeft: 0, marginRight: 8}}/>
-									{"Delete Workflow"}
-								</MenuItem>
-
-							</Menu>
+							{workflowMenuButtons}	
 						</Grid>
 						{/*
 						<Grid>
@@ -1274,184 +1384,14 @@ const Workflows = (props) => {
 		return string.split(search).join(replace);
 	}
 
-	const resultsPaper = (data) => {
-		var boxWidth = "2px"
-		var boxColor = "orange" 
-		if (data.status === "ABORTED" || data.status === "UNFINISHED" || data.status === "FAILURE"){
-			boxColor = "red"	
-		} else if (data.status === "FINISHED" || data.status === "SUCCESS") {
-			boxColor = "green"
-		} else if (data.status === "SKIPPED" || data.status === "EXECUTING") {
-			boxColor = "yellow"
-		} else {
-			boxColor = "green"
-		}
 
-		var t = new Date(data.started_at*1000)
-		var showResult = data.result.trim()
-		const validate = validateJson(showResult)
-
-		if (validate.valid) {
-			showResult = <ReactJson 
-				src={validate.result} 
-				theme="solarized" 
-				collapsed={collapseJson}
-				displayDataTypes={false}
-				name={"Results for "+data.action.label}
-			/>
-		} else {
-			// FIXME - have everything parsed as json, either just for frontend
-			// or in the backend?
-			/*	
-			const newdata = {"result": data.result}
-			showResult = <ReactJson 
-				src={JSON.parse(newdata)} 
-				theme="solarized" 
-				collapsed={collapseJson}
-				displayDataTypes={false}
-				name={"Results for "+data.action.name}
-			/>
-			*/
-		}
-
-		return (
-			<Paper key={data.execution_id} square style={resultPaperAppStyle} onClick={() => {}}>
-				<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", marginRight: "5px", width: boxWidth, backgroundColor: boxColor}}>
-				</div>
-				<Grid container style={{margin: "10px 10px 10px 10px", flex: "1"}}>
-					<Grid style={{display: "flex", flexDirection: "column", width: "100%"}}>
-						<Grid item style={{flex: "1"}}>
-							<h4 style={{marginBottom: "0px", marginTop: "10px"}}><b>Name</b>: {data.action.label}</h4>
-						</Grid>
-						<Grid item style={{flex: "1", justifyContent: "center"}}>
-							App: {data.action.app_name}, Version: {data.action.app_version}
-						</Grid>
-						<Grid item style={{flex: "1", justifyContent: "center"}}>
-							Action: {data.action.name}, Environment: {data.action.environment}, Status: {data.status}
-						</Grid>
-						<div style={{display: "flex", flex: "1"}}>
-							<Grid item style={{flex: "10", justifyContent: "center"}}>
-								Started: {t.toISOString()}
-							</Grid>
-						</div>
-						<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: dividerColor}}/>
-						<div style={{display: "flex", flex: "1"}}>
-							<Grid item style={{flex: "10", justifyContent: "center"}}>
-								{showResult}
-							</Grid>
-						</div>
-					</Grid>
-				</Grid>
-			</Paper>
-		)
-	}
-
-	const resultsHandler = Object.getOwnPropertyNames(selectedExecution).length > 0 && selectedExecution.results !== null ? 
-		<div>
-			{selectedExecution.results.sort((a, b) => a.started_at - b.started_at).map((data, index) => {
-				return (
-					<div key={index}>
-						{resultsPaper(data)}
-					</div>
-				)
-			})}
-		</div>
-		:
-		<div>
-			No results yet 
-		</div>
 
 	const resultsLength = Object.getOwnPropertyNames(selectedExecution).length > 0 && selectedExecution.results !== null ? selectedExecution.results.length : 0 	
 
-	const ExecutionDetails = () => {
-		var starttime = new Date(selectedExecution.started_at*1000)
-		var endtime = new Date(selectedExecution.started_at*1000)
 
-		var parsedArgument = selectedExecution.execution_argument
-		if (selectedExecution.execution_argument !== undefined && selectedExecution.execution_argument.length > 0) {
-			parsedArgument = replaceAll(parsedArgument, " None", " \"None\"");
-		}	
-
-		var arg = null
-		if (selectedExecution.execution_argument !== undefined && selectedExecution.execution_argument.length > 0) {
-			var showResult = selectedExecution.execution_argument.trim()
-			const validate = validateJson(showResult)
-
-			arg = validate.valid ? 
-				<ReactJson 
-					src={validate.result} 
-					theme="solarized" 
-					collapsed={true}
-					displayDataTypes={false}
-					name={"Execution argument / webhook"}
-				/>
-			: showResult
-		}
-
-		var lastresult = null
-		if (selectedExecution.result !== undefined && selectedExecution.result.length > 0) {
-			var showResult = selectedExecution.result.trim()
-			const validate = validateJson(showResult)
-			lastresult = validate.valid ? 
-				<ReactJson 
-					src={validate.result} 
-					theme="solarized" 
-					collapsed={true}
-					displayDataTypes={false}
-					name={"Last result from execution"}
-				/>
-			: showResult
-		}
-
-		/*
-		<div>
-			ID: {selectedExecution.execution_id}
-		</div>
-		<div>
-			<b>Last node:</b> {selectedExecution.workflow.actions.find(data => data.id === selectedExecution.last_node).actions[0].label}
-		</div>
-		*/
-		if (Object.getOwnPropertyNames(selectedExecution).length > 0 && selectedExecution.workflow.actions !== null) {
-			return (
-				<div style={{overflowX: "hidden"}}>
-					<div>
-						<b>Status:</b> {selectedExecution.status}
-					</div>
-					<div>
-						<b>Started:</b> {starttime.toISOString()}
-					</div>
-					<div>
-						<b>Finished:</b> {endtime.toISOString()}
-					</div>
-					{/*
-					<div>
-						<b>Last Result:</b> {lastresult}
-					</div>
-					*/}
-					<div style={{marginTop: 10}}>
-						{arg}
-					</div>
-					<Divider style={{marginBottom: "10px", marginTop: "10px", height: "1px", width: "100%", backgroundColor: dividerColor}}/>
-					{resultsHandler}
-				</div> 
-			)
-		}
-
-		return (
-			executionLoading ?
-				<div style={{marginTop: 25, textAlign: "center"}}>
-					<CircularProgress />
-				</div>
-				: 
-				<h4>
-					There are no executiondetails yet. Click "execute" to run your first one.
-				</h4>
-			
-		)
-	}
 
 	// Can create and set workflows
-	const setNewWorkflow = (name, description, tags, editingWorkflow, redirect) => {
+	const setNewWorkflow = (name, description, tags, defaultReturnValue, editingWorkflow, redirect) => {
 
 		var method = "POST"
 		var extraData = ""
@@ -1473,6 +1413,12 @@ const Workflows = (props) => {
 		if (tags !== undefined) {
 			workflowdata["tags"] = tags 
 		}
+
+		if (defaultReturnValue !== undefined) {
+			workflowdata["default_return_value"] = defaultReturnValue 
+			//console.log("WORKFLOW: ", workflowdata)
+		}
+
 		//console.log(workflowdata)
 		//return
 
@@ -1483,26 +1429,31 @@ const Workflows = (props) => {
 					'Accept': 'application/json',
 				},
 				body: JSON.stringify(workflowdata),
-	  			credentials: "include",
-    		})
+	  		credentials: "include",
+    })
 		.then((response) => {
 			if (response.status !== 200) {
 				console.log("Status not 200 for workflows :O!")
 				return 
 			}
+			setSubmitLoading(false)
+
 			return response.json()
 		})
     .then((responseJson) => {
 			if (method === "POST" && redirect) {
 				window.location.pathname = "/workflows/"+responseJson["id"] 
+				setModalOpen(false)
 			} else if (!redirect) {
 				// Update :)		
 				setTimeout(() => {
 					getAvailableWorkflows()
 				}, 1000)
 				setImportLoading(false)
+				setModalOpen(false)
 			} else { 
 				alert.info("Successfully changed basic info for workflow")
+				setModalOpen(false)
 			}
 
 			return responseJson
@@ -1510,6 +1461,8 @@ const Workflows = (props) => {
 		.catch(error => {
 			alert.error(error.toString())
 			setImportLoading(false)
+			setModalOpen(false)
+			setSubmitLoading(false)
 		});
 	}
 
@@ -1543,7 +1496,7 @@ const Workflows = (props) => {
 					}
 
 					// Initialize the workflow itself
-					const ret = setNewWorkflow(data.name, data.description, data.tags, {}, false)
+					const ret = setNewWorkflow(data.name, data.description, data.tags, data.default_return_value, {}, false)
 					.then((response) => {
 						if (response !== undefined) {
 							// SET THE FULL THING
@@ -1553,7 +1506,7 @@ const Workflows = (props) => {
 							data.is_valid = false
 
 							// Actually create it
-							const ret = setNewWorkflow(data.name, data.description, data.tags, data, false)
+							const ret = setNewWorkflow(data.name, data.description, data.tags, data.default_return_value, data, false)
 							.then((response) => {
 								if (response !== undefined) {
 									alert.success("Successfully imported "+data.name)
@@ -1598,48 +1551,143 @@ const Workflows = (props) => {
 		return [triggers, schedules, webhooks, subflows]
 	}
 
-	const WorkflowGridView = () => {
+	const WorkflowListView = () => {
 			let workflowData = "";
 			if (workflows.length > 0) {
 				const columns = [
-					{ field: 'title', headerName: 'Title', width: 330, },
-					{ field: 'actions', headerName: 'Actions', width: 200, sortable: false, 
+					{ field: 'image', headerName: 'Logo', width: 42, renderCell: (params) => {
+						const data = params.row.record
+
+						var boxColor = "#FECC00"
+						if (data.is_valid) {
+							boxColor = "#86c142"
+						}
+
+						if (!data.previously_saved) {
+							boxColor = "#f85a3e"
+						}
+
+						var image = ""
+						var orgName = ""
+						var orgId = ""
+						if (userdata.orgs !== undefined) {
+							const foundOrg = userdata.orgs.find(org => org.id === data["org_id"])
+							if (foundOrg !== undefined && foundOrg !== null) {
+								//position: "absolute", bottom: 5, right: -5, 
+								const imageStyle = {width: imagesize+7, height: imagesize+7, pointerEvents: "none", marginLeft: data.creator_org !== undefined && data.creator_org.length > 0 ? 20 : 0, borderRadius: 10, border: foundOrg.id === userdata.active_org.id ? `3px solid ${boxColor}` : null, cursor: "pointer", marginTop: 5, }
+
+								//<Tooltip title={`Org: ${foundOrg.name}`} placement="bottom">
+								image = foundOrg.image === "" ? 
+									<img alt={foundOrg.name} src={theme.palette.defaultImage} style={imageStyle} />
+									:
+									<img alt={foundOrg.name} src={foundOrg.image} style={imageStyle} onClick={() => {
+										//setFilteredWorkflows(newWorkflows)
+									}}/>
+
+								orgName = foundOrg.name
+								orgId = foundOrg.id
+							}
+						}
+
+						return (
+							<div styl={{cursor: "pointer"}} onClick={() => {
+								//addFilter(orgId) 
+								//setFilters(["Org "+orgName])
+								//setFilteredWorkflows(newWorkflows)
+							}}>
+								{image}
+							</div>
+						)
+					}},
+					{ field: 'title', headerName: 'Title', width: 330, renderCell: (params) => {
+						const data = params.row.record
+
+						return (
+							<Grid item>
+								<Link to={`/workflows/{data.id}`} style={{textDecoration: "none", color: "inherit",}}>
+									<Typography>
+										{data.name}
+									</Typography>
+								</Link>
+							</Grid>
+						)
+					}},
+					{/* field: 'category', headerName: 'category', width: 140, renderCell: (params) => {
+						const data = params.row.record
+						const category = data.category === undefined ? "not defined" : data.category
+						return (
+							<Typography>
+								{category}
+							</Typography>
+						)
+					} */},
+					{ field: 'options', headerName: 'Options', width: 200, sortable: false, 
 						disableClickEventBubbling: true,
 						renderCell: (params) => {
 							const data = params.row.record;
+							const actions = data.actions !== null ? data.actions.length : 0
 							let [triggers, schedules, webhooks, subflows] = getWorkflowMeta(data);
 
 							return (
 								<Grid item>
-									<Link to={"/workflows/"+data.id}>
-											<EditIcon style={{background: "#F85A3E",
-	boxShadow: "0px 1px 2px rgba(0, 0, 0, 0.16), 0px 2px 4px rgba(0, 0, 0, 0.12), 0px 1px 8px rgba(0, 0, 0, 0.1)",
-	borderRadius: "4px", color: "black", height: "20px", "width": "20px", fontSize: "small"}} />
-									</Link>
-									<Tooltip color="primary" title="Edit workflow" placement="bottom">
-										<BubbleChartIcon />
-									</Tooltip>
-									<Tooltip color="primary" title="Execute workflow" placement="bottom">
-										<PlayArrowIcon color="secondary" disabled={!data.is_valid} onClick={() => executeWorkflow(data.id)} />
-									</Tooltip>
-									<Tooltip color="primary" title={`Actions: ${data.actions.length}`} placement="bottom">
-										<AppsIcon />
-									</Tooltip>
-									{webhooks > 0 ? 
-										<Tooltip color="primary" title={`Webhooks: ${webhooks}`} placement="bottom">
-											<RestoreIcon />
+									<div style={{display: "flex"}}>
+										<Tooltip color="primary" title="Action amount" placement="bottom">
+											<span style={{color: "#979797", display: "flex"}}>
+												<BubbleChartIcon style={{marginTop: "auto", marginBottom: "auto",}} /> 
+												<Typography style={{marginLeft: 5, marginTop: "auto", marginBottom: "auto",}}>
+													{actions}
+												</Typography>
+											</span>
 										</Tooltip>
-									: null}
-									{schedules > 0 ? 
-										<Tooltip color="primary" title={`Schedules: ${schedules}`} placement="bottom">
-											<RestoreIcon />
+										<Tooltip color="primary" title="Trigger amount" placement="bottom">
+											<span style={{marginLeft: 15, color: "#979797", display: "flex"}}>
+												<RestoreIcon style={{color: "#979797", marginTop: "auto", marginBottom: "auto",}}/> 
+												<Typography style={{marginLeft: 5, marginTop: "auto", marginBottom: "auto",}}>
+													{triggers}
+												</Typography>
+											</span>
 										</Tooltip>
-									: null}
+										<Tooltip color="primary" title="Subflows used" placement="bottom">
+											<span style={{marginLeft: 15, display: "flex", color: "#979797", cursor: "pointer"}} onClick={() => {
+												if (subflows === 0) {
+													alert.info("No subflows for "+data.name)
+													return
+												}
+
+												var newWorkflows = [data]
+												for (var key in data.triggers) {
+													const trigger = data.triggers[key]
+													if (trigger.app_name !== "Shuffle Workflow") {
+														continue
+													}
+
+													if (trigger.parameters !== undefined && trigger.parameters !== null && trigger.parameters.length > 0 && trigger.parameters[0].name === "workflow") {
+														const newWorkflow = workflows.find(item => item.id === trigger.parameters[0].value)	
+														if (newWorkflow !== null && newWorkflow !== undefined) {
+															newWorkflows.push(newWorkflow)
+															continue
+														}
+													}
+												}
+
+												setFilters(["Subflows of "+data.name])
+												setFilteredWorkflows(newWorkflows)
+											}}>
+												<svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg" style={{color: "#979797", marginTop: "auto", marginBottom: "auto",}}>
+													<path d="M0 0H15V15H0V0ZM16 16H18V18H16V16ZM16 13H18V15H16V13ZM16 10H18V12H16V10ZM16 7H18V9H16V7ZM16 4H18V6H16V4ZM13 16H15V18H13V16ZM10 16H12V18H10V16ZM7 16H9V18H7V16ZM4 16H6V18H4V16Z" fill="#979797"/>
+												</svg>
+												<Typography style={{marginLeft: 5, marginTop: "auto", marginBottom: "auto",}}>
+													{subflows}
+												</Typography>
+											</span>
+
+										</Tooltip>
+									</div>
 								</Grid>
 							)
 						}
 					},
-					{ field: 'tags', headerName: 'Tags', maxHeight: 15, width: 390, sortable: false, 
+					{ field: 'tags', headerName: 'Tags', maxHeight: 15, width: 300, sortable: false, 
 						disableClickEventBubbling: true,
 						renderCell: (params) => {
 							const data = params.row.record;
@@ -1665,7 +1713,12 @@ const Workflows = (props) => {
 									</Grid>
 								)
 							}
-						},
+					},
+					{ field: '', headerName: '', maxHeight: 15, width: 100, sortable: false, 
+						disableClickEventBubbling: true,
+						renderCell: (params) => {
+						}
+					}
 				];
 				let rows = [];
 				rows = workflows.map((data, index) => {
@@ -1678,9 +1731,19 @@ const Workflows = (props) => {
 					return obj;
 				});
 				workflowData = 
-					<DataGrid color="primary" className={classes.root} rows={rows} columns={columns} pageSize={5} checkboxSelection autoHeight density="standard" components={{
-						Toolbar: GridToolbar,
-					}} />
+					<DataGrid 
+						color="primary" 
+						className={classes.datagrid}
+						rows={rows} 
+						columns={columns} 
+						pageSize={20} 
+						checkboxSelection 
+						autoHeight 
+						density="standard" 
+						components={{
+							Toolbar: GridToolbar,
+						}} 
+					/>
 			}
 			return (
 				<div style={gridContainer}>
@@ -1726,6 +1789,7 @@ const Workflows = (props) => {
 						placeholder="Name"
 						margin="dense"
 						defaultValue={newWorkflowName}
+						autoFocus
 						fullWidth
 					  />
 					<TextField
@@ -1738,7 +1802,7 @@ const Workflows = (props) => {
 						color="primary"
 						defaultValue={newWorkflowDescription}
 						placeholder="Description"
-						rows="6"
+						rows="3"
 						multiline
 						margin="dense"
 						fullWidth
@@ -1764,32 +1828,56 @@ const Workflows = (props) => {
 							setUpdate("delete "+chip)
 						}}
 					/>
+					{showExtraOptions ? 
+						<TextField
+							onBlur={(event) => setDefaultReturnValue(event.target.value)}
+							InputProps={{
+								style:{
+									color: "white",
+								},
+							}}
+							color="primary"
+							defaultValue={defaultReturnValue}
+							placeholder="Default return value (used for Subflows if the subflow fails)"
+							rows="3"
+							multiline
+							margin="dense"
+							fullWidth
+							/>
+						: null}
 				</DialogContent>
 				<DialogActions>
 					<Button style={{}} onClick={() => {
 						setNewWorkflowName("")
 						setNewWorkflowDescription("")
+						setDefaultReturnValue("")
 						setEditingWorkflow({})
 						setNewWorkflowTags([])
 						setModalOpen(false)
 					}} color="primary">
 						Cancel
 					</Button>
-					<Button style={{}} disabled={newWorkflowName.length === 0} onClick={() => {
+					<Button variant="contained" style={{}} disabled={newWorkflowName.length === 0} onClick={() => {
 						console.log("Tags: ", newWorkflowTags)
 						if (editingWorkflow.id !== undefined) {
-							setNewWorkflow(newWorkflowName, newWorkflowDescription, newWorkflowTags, editingWorkflow, false)
+							setNewWorkflow(newWorkflowName, newWorkflowDescription, newWorkflowTags, defaultReturnValue, editingWorkflow, false)
 							setNewWorkflowName("")
+							setDefaultReturnValue("")
 							setNewWorkflowDescription("")
 							setEditingWorkflow({})
 							setNewWorkflowTags([])
 						} else {
-							setNewWorkflow(newWorkflowName, newWorkflowDescription, newWorkflowTags, {}, true)
+							setNewWorkflow(newWorkflowName, newWorkflowDescription, newWorkflowTags, defaultReturnValue, {}, true)
 						}
 
-						setModalOpen(false)
+						setSubmitLoading(true)
+
 					}} color="primary">
-	        	Submit	
+						{submitLoading ? 
+							<CircularProgress />
+							:
+	        		"Submit"
+						}
 	        </Button>
 				</DialogActions>
 			</FormControl>
@@ -1820,6 +1908,22 @@ const Workflows = (props) => {
 						<Button color="primary" style={{}} variant="text" onClick={() => setModalOpen(true)}><AddIcon /></Button> 				
 					</Tooltip>
 				: null*/}
+				{view === "list" && (
+					<Tooltip color="primary" title={"Grid View"} placement="top">
+						<Button color="primary" variant="text" onClick={() => {
+							localStorage.setItem('view', "grid");
+							setView("grid")
+						}}><GridOnIcon /></Button>
+					</Tooltip>
+				)}
+				{view === "grid" && (
+					<Tooltip color="primary" title={"List View"} placement="top">
+						<Button color="primary" variant="text" onClick={() => {
+							localStorage.setItem('view', "list");
+							setView("list")
+						}}><ListIcon /></Button>
+					</Tooltip>
+				)}
 				<Tooltip color="primary" title={"Import workflows"} placement="top">
 					{importLoading ? 
 						<Button color="primary" style={{}} variant="text" onClick={() => {}}>
@@ -1951,7 +2055,7 @@ const Workflows = (props) => {
 										//backgroundColor: inputColor,
 									},
 								}}
-								placeholder="Filter Your Workflows"
+								placeholder="Add Filter"
 								color="primary"
 								fullWidth
 								value={filters}
@@ -1968,7 +2072,7 @@ const Workflows = (props) => {
 						</div>
 					</div>
 					<div style={{marginTop: 15,}} />
-					{view === "grid" && (
+					{view === "grid" ?
 						<Grid container spacing={4} style={paperAppContainer}>
 							<NewWorkflowPaper />
 							{filteredWorkflows.map((data, index) => {
@@ -1977,11 +2081,9 @@ const Workflows = (props) => {
 								)
 							})}
 						</Grid>
-					)}
-					
-					{/*view === "list" && (
-						<WorkflowGridView />
-					)*/}
+						:
+						<WorkflowListView />
+					}
 
 					<div style={{marginBottom: 100}}/>
 				</div>
@@ -2027,7 +2129,7 @@ const Workflows = (props) => {
 			return response.json()
 		})
     .then((responseJson) => {
-				console.log("DATA: ", responseJson)
+				//console.log("DATA: ", responseJson)
 				if (!responseJson.success) {
 					if (responseJson.reason !== undefined) {
 						alert.error("Failed loading: "+responseJson.reason)
@@ -2154,6 +2256,8 @@ const Workflows = (props) => {
 	      <Button style={{borderRadius: "0px"}} disabled={downloadUrl.length === 0 || !downloadUrl.includes("http")} onClick={() => {
 					handleGithubValidation() 
 				}} color="primary">
+						Submit
+					
 	        Submit	
 	      </Button>
 			</DialogActions>
@@ -2167,6 +2271,7 @@ const Workflows = (props) => {
 			</Dropzone>
 			{modalView}
 			{deleteModal}
+			{exportVerifyModal}
 			{publishModal} 
 			{workflowDownloadModalOpen}
 		</div>

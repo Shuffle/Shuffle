@@ -1,4 +1,4 @@
-FROM golang:1.16.0-buster as builder
+FROM golang:1.17.2-buster as builder
 
 RUN mkdir /app
 WORKDIR /app
@@ -15,8 +15,8 @@ RUN go get github.com/docker/docker/api/types && \
 RUN go build
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o orborus .
 
-FROM alpine:3.12
-RUN apk add --no-cache bash
+FROM alpine:3.14.2
+RUN apk add --no-cache bash tzdata
 COPY --from=builder /app/ /
 
 CMD ["./orborus"]

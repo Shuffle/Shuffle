@@ -1,0 +1,19 @@
+FROM peterclemenko/blackarch as base
+
+FROM base as builder
+
+RUN /bin/pacman -Syu --noconfirm
+
+RUN	/bin/pacman -Sy --noconfirm base-devel libffi musl openssl python python-pip -y
+
+RUN mkdir /install
+WORKDIR /install
+
+COPY requirements.txt /requirements.txt
+RUN pip install --prefix="/install" -r /requirements.txt
+
+FROM base
+
+COPY --from=builder /install /usr/local
+COPY __init__.py /app/walkoff_app_sdk/__init__.py
+COPY app_base.py /app/walkoff_app_sdk/app_base.py

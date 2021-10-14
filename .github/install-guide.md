@@ -18,13 +18,6 @@ cd Shuffle
 3. Fix prerequisites for the Opensearch database (Elasticsearch): 
 ```
 sudo chown 1000:1000 -R shuffle-database 		# Required for Opensearch 
-sudo sysctl -w vm.max_map_count=262144 			# https://www.elastic.co/guide/en/elasticsearch/reference/current/vm-max-map-count.html
-
-# To make the changes permanent, do:
-# 1. Open the file /etc/sysctl.conf
-# 2. Go to the bottom of the file
-# 3. Add this line:
-vm.max_map_count=262144
 ```
 
 4. Run docker-compose.
@@ -38,26 +31,20 @@ When you're done, skip to the "After installation" step below.
 This step is for setting up with Docker on windows from scratch.
 
 1. Make sure you have [Docker](https://docs.docker.com/docker-for-windows/install/) and [docker-compose](https://docs.docker.com/compose/install/) installed. WSL2 may be required.
+
 2. Go to https://github.com/frikky/shuffle/releases and download the latest .zip release (or install git)
+
 3. Unzip the folder and enter it
+
 4. Open the .env file and change the line with "OUTER_HOSTNAME" to contain your IP:
+
 ```
 OUTER_HOSTNAME=YOUR.IP.HERE
 ```
 
-5. Configure max memory (WSL) by opening a new CMD/Powershell window. Required for Elasticsearch
-```
-wsl -d docker-desktop
-sysctl -w vm.max_map_count=262144
-echo "vm.max_map_count = 262144" > /etc/sysctl.d/99-docker-desktop.conf
-echo -e "\nvm.max_map_count = 262144\n" >> /etc/sysctl.d/00-alpine.conf
-
-# https://stackoverflow.com/questions/42111566/elasticsearch-in-windows-docker-image-vm-max-map-count
-```
-
 6. Run docker-compose
 ```
-docker-compose up -d
+docker compose up -d
 ```
 
 ### Configurations (proxies, default users etc.)
@@ -79,9 +66,11 @@ https://shuffler.io/docs/configuration
 * Default database location is in the same folder: ./shuffle-database
 
 # Local development installation
-Local development is pretty straight forward with **ReactJS** and **Golang**. This part is intended to help you run the code for development purposes.
+
+Local development is pretty straight forward with **ReactJS** and **Golang**. This part is intended to help you run the code for development purposes. We recommend having Shuffle running with the Docker-compose, then manually running the portion that you want to test and/or edit.
 
 **PS: You have to stop the Backend Docker container to get this one working**
+
 **PPS: Use the "Launch" branch when developing to get it set up easier**
 
 ## Frontend - ReactJS /w cytoscape
@@ -96,17 +85,25 @@ npm start
 http://localhost:5001 - REST API - requires [>=go1.13](https://golang.org/dl/)
 ```bash
 export SHUFFLE_OPENSEARCH_URL="http://localhost:9200"
+export SHUFFLE_ELASTIC=true
 cd backend/go-app
 go run *.go
 ```
 
+Large portions of the backend is written in another repository - [shuffle-shared](https://github.com/frikky/shuffle-shared). If you want to update any of this code and test in realtime, we recommend following these steps:
+1. Clone shuffle-shared to a local repository
+2. Open the Shuffle backend's go.mod file (./shuffle/backend/go.mod)  (**NOT** in shuffle-shared)
+3. Change the following line to point to your directory AFTER the =>
+```
+//replace github.com/frikky/shuffle-shared => ../../../../git/shuffle-shared
+```
+4. Make the changes you want, then restart the backend server!
+5. With your changes made, make a pull request :fire:
+
 **WINDOWS USERS:** You'll have to to add the "export" part as an environment variable.
 
-## Database - Datastore
-Based on Google datastore
-```
-docker run -p 8000:8000 google/cloud-sdk gcloud beta emulators datastore start --project=shuffle --host-port 0.0.0.0:8000 --no-store-on-disk
-```
+## Database - Opensearch 
+Make sure this is running through the docker-compose, and that the backend points to it with SHUFFLE_OPENSEARCH_URL defined
 
 ## Orborus
 Execution of Workflows:

@@ -4,7 +4,7 @@ import { makeStyles } from '@material-ui/styles';
 import { useTheme } from '@material-ui/core/styles';
 import {Link} from 'react-router-dom';
 
-import {Paper, Card, Tooltip, FormControlLabel, Typography, Switch, Select, MenuItem, Divider, TextField, Button, Tabs, Tab, Grid, List, ListItem, ListItemText, ListItemAvatar, ListItemSecondaryAction, IconButton, Avatar, Zoom,  Dialog, DialogTitle, DialogActions, DialogContent, CircularProgress } from '@material-ui/core';
+import {FormControl, InputLabel, Paper, Card, Tooltip, FormControlLabel, Typography, Switch, Select, MenuItem, Divider, TextField, Button, Tabs, Tab, Grid, List, ListItem, ListItemText, ListItemAvatar, ListItemSecondaryAction, IconButton, Avatar, Zoom,  Dialog, DialogTitle, DialogActions, DialogContent, CircularProgress } from '@material-ui/core';
 
 import {Edit as EditIcon, FileCopy as FileCopyIcon, Publish as PublishIcon, SelectAll as SelectAllIcon, OpenInNew as OpenInNewIcon, CloudDownload as CloudDownloadIcon, Description as DescriptionIcon, Polymer as PolymerIcon, CheckCircle as CheckCircleIcon, Close as CloseIcon, Apps as AppsIcon, Image as ImageIcon, Delete as DeleteIcon, Cached as CachedIcon, AccessibilityNew as AccessibilityNewIcon, Lock as LockIcon, Eco as EcoIcon, Schedule as ScheduleIcon, Cloud as CloudIcon, Business as BusinessIcon} from '@material-ui/icons';
 
@@ -29,6 +29,7 @@ const Admin = (props) => {
 	const [firstRequest, setFirstRequest] = React.useState(true);
 	const [orgRequest, setOrgRequest] = React.useState(true);
 	const [modalUser, setModalUser] = React.useState({});
+	const [orgName, setOrgName] = React.useState("")
 	const [modalOpen, setModalOpen] = React.useState(false);
 
 	const [cloudSyncModalOpen, setCloudSyncModalOpen] = React.useState(false);
@@ -48,7 +49,10 @@ const Admin = (props) => {
 	const [authentication, setAuthentication] = React.useState([]);
 	const [schedules, setSchedules] = React.useState([])
 	const [files, setFiles] = React.useState([])
+	const [selectedNamespace, setSelectedNamespace] = React.useState("default")
+	const [fileNamespaces, setFileNamespaces] = React.useState([]);
 	const [selectedUser, setSelectedUser] = React.useState({})
+	const [newUsername, setNewUsername] = React.useState("");
 	const [newPassword, setNewPassword] = React.useState("");
 	const [selectedUserModalOpen, setSelectedUserModalOpen] = React.useState(false)
 	const [selectedAuthentication, setSelectedAuthentication] = React.useState({})
@@ -155,7 +159,7 @@ const Admin = (props) => {
 					setTimeout(() => {
 						getAppAuthentication() 
 					}, 1000)
-					alert.success("Successfully deleted authentication!")
+					//alert.success("Successfully deleted authentication!")
 				}
 			}),
 		)
@@ -184,8 +188,10 @@ const Admin = (props) => {
 					if (responseJson["success"] === false) {
 						alert.error("Failed stopping schedule")
 					} else {
-						getSchedules()
-						alert.success("Successfully stopped schedule!")
+						setTimeout(() => {
+							getSchedules()
+						}, 1500)
+						//alert.success("Successfully stopped schedule!")
 					}
 				}),
 			)
@@ -365,6 +371,45 @@ const Admin = (props) => {
 			});
 	}
 
+	const createSubOrg = (currentOrgId, name) => {
+		const data = { "name": name, "org_id": currentOrgId}
+		console.log(data)
+		const url = globalUrl + `/api/v1/orgs/${currentOrgId}/create_sub_org`
+
+		fetch(url, {
+			mode: 'cors',
+			method: 'POST',
+			body: JSON.stringify(data),
+			credentials: 'include',
+			crossDomain: true,
+			withCredentials: true,
+			headers: {
+				'Content-Type': 'application/json; charset=utf-8',
+			},
+		})
+			.then(response =>
+				response.json().then(responseJson => {
+					if (responseJson["success"] === false) {
+						if (responseJson.reason !== undefined) {
+							alert.error(responseJson.reason)
+						} else {
+							alert.error("Failed creating suborg")
+						}
+					} else {
+						alert.success("Successfully created suborg!")
+						setSelectedUserModalOpen(false)
+					}
+
+					setOrgName("")
+					setModalOpen(false)
+				}),
+			)
+			.catch(error => {
+				alert.error("Err: " + error.toString())
+			});
+
+	}
+
 	const onPasswordChange = () => {
 		const data = { "username": selectedUser.username, "newpassword": newPassword }
 		const url = globalUrl + '/api/v1/users/passwordchange';
@@ -457,6 +502,10 @@ const Admin = (props) => {
 			if (responseJson["success"] === false) {
 				alert.error("Failed getting org: ", responseJson.readon)
 			} else {
+				if (responseJson.sync_features === undefined || responseJson.sync_features === null) {
+					responseJson.sync_features = {}
+
+				}
 				setSelectedOrganization(responseJson)
 				var lists = {
 					"active": {
@@ -559,19 +608,19 @@ const Admin = (props) => {
 	}
 
 	// Horrible frontend fix for environments
-	const setDefaultEnvironment = (name) => {
-		// FIXME - add some check here ROFL
-		alert.info("Setting default env to " + name)
+	const setDefaultEnvironment = (environment) => {
+		// FIXME - add more checks to this 
+		alert.info("Setting default env to " + environment.name)
 		var newEnv = []
 		for (var key in environments) {
-			if (environments[key].Name == name) {
+			if (environments[key].id == environment.id) {
 				if (environments[key].archived) {
 					alert.error("Can't set archived to default")
 					return
 				}
 
 				environments[key].default = true
-			} else if (environments[key].default == true && environments[key].name !== name) {
+			} else if (environments[key].default == true && environments[key].id !== environment.id) {
 				environments[key].default = false 
 			}
 
@@ -592,11 +641,15 @@ const Admin = (props) => {
 				response.json().then(responseJson => {
 					if (responseJson["success"] === false) {
 						alert.error(responseJson.reason)
-						getEnvironments()
+						setTimeout(() => {
+							getEnvironments()
+						}, 1500)
 					} else {
 						setLoginInfo("")
 						setModalOpen(false)
-						getEnvironments()
+						setTimeout(() => {
+							getEnvironments()
+						}, 1500)
 					}
 				}),
 			)
@@ -632,23 +685,46 @@ const Admin = (props) => {
 		})
 	}
 
-	const deleteEnvironment = (name) => {
+	const deleteEnvironment = (environment) => {
 		// FIXME - add some check here ROFL
-		alert.info("Deleting environment " + name)
+		//const name = environment.name
+
+		//alert.info("Modifying environment " + name)
+		//var newEnv = []
+		//for (var key in environments) {
+		//	if (environments[key].Name == name) {
+		//		if (environments[key].default) {
+		//			alert.error("Can't modify the default environment")
+		//			return
+		//		}
+
+		//		if (environments[key].type === "cloud" && !environments[key].archived) {
+		//			alert.error("Can't modify cloud environments")
+		//			return
+		//		}
+
+		//		environments[key].archived = !environments[key].archived
+		//	}
+
+		//	newEnv.push(environments[key])
+		//}
+		const id = environment.id
+
+		//alert.info("Modifying environment " + environment.Name)
 		var newEnv = []
 		for (var key in environments) {
-			if (environments[key].Name == name) {
+			if (environments[key].id == id) {
 				if (environments[key].default) {
-					alert.error("Can't delete the default environment")
+					alert.error("Can't modify the default environment")
 					return
 				}
 
-				if (environments[key].type === "cloud") {
-					alert.error("Can't delete the cloud environments")
+				if (environments[key].type === "cloud" && !environments[key].archived) {
+					alert.error("Can't modify cloud environments")
 					return
 				}
 
-				environments[key].archived = true
+				environments[key].archived = !environments[key].archived
 			}
 
 			newEnv.push(environments[key])
@@ -795,8 +871,16 @@ const Admin = (props) => {
 				return response.json()
 			})
 			.then((responseJson) => {
-				//console.log(responseJson)
-				setFiles(responseJson)
+				if (responseJson.files !== undefined && responseJson.files !== null) {
+					setFiles(responseJson.files)
+				} else {
+					setFiles([])
+				}
+
+				console.log("NAMESPACES: ", responseJson.namespaces)
+				if (responseJson.namespaces !== undefined && responseJson.namespaces !== null) {
+					setFileNamespaces(responseJson.namespaces)
+				}
 			})
 			.catch(error => {
 				alert.error(error.toString())
@@ -931,6 +1015,9 @@ const Admin = (props) => {
 	}
 
 	const getOrgs = () => {
+		// API no longer in use, as it's in handleInfo request
+		return 
+
 		fetch(globalUrl + "/api/v1/orgs", {
 			method: 'GET',
 			headers: {
@@ -1118,6 +1205,7 @@ const Admin = (props) => {
 					alert.error("Failed setting user: " + responseJson.reason)
 				} else {
 					alert.success("Set the user field " + field + " to " + value)
+					setSelectedUserModalOpen(false)
 				}
 			})
 			.catch(error => {
@@ -1257,6 +1345,44 @@ const Admin = (props) => {
 		>
 			<DialogTitle><span style={{ color: "white" }}><EditIcon style={{marginTop: 5}}/> Editing {selectedUser.username}</span></DialogTitle>
 			<DialogContent>
+				{isCloud ? 
+					null
+					:
+					<div style={{ display: "flex" }}>
+						<TextField
+							style={{ marginTop: 0, backgroundColor: theme.palette.inputColor, flex: 3 , marginRight: 10,}}
+							InputProps={{
+								style: {
+									height: 50,
+									color: "white",
+								},
+							}}
+							color="primary"
+							required
+							fullWidth={true}
+							placeholder="New username"
+							type="text"
+							id="standard-required"
+							autoComplete="username"
+							margin="normal"
+							variant="outlined"
+							defaultValue={selectedUser.username}
+							onChange={e => {
+								setNewUsername(e.target.value)
+							}}
+						/>
+						<Button
+							style={{ maxHeight: 50, flex: 1 }}
+							variant="outlined"
+							color="primary"
+							onClick={() => {
+								setUser(selectedUser.id, "username", newUsername)
+							}}
+						>
+							Submit
+						</Button>
+					</div>
+				}
 				{isCloud ? 
 					null
 					:
@@ -1543,7 +1669,7 @@ const Admin = (props) => {
 						</IconButton>
 					</Tooltip>
 						{selectedOrganization.name.length > 0 ?
-							<OrgHeader setSelectedOrganization={setSelectedOrganization} globalUrl={globalUrl} selectedOrganization={selectedOrganization}/>
+							<OrgHeader userdata={userdata} setSelectedOrganization={setSelectedOrganization} globalUrl={globalUrl} selectedOrganization={selectedOrganization}/>
 						: 
 						<div style={{paddingTop: 250, width: 250, margin: "auto", textAlign: "center"}}>
 							<CircularProgress />
@@ -1657,65 +1783,65 @@ const Admin = (props) => {
 						</div>
 					}
 					<Typography style={{marginTop: 40, marginLeft: 10, marginBottom: 5,}}>Cloud sync features</Typography>
-					<Grid container style={{width: "100%", marginBottom: 15, }}>
-						{Object.keys(selectedOrganization.sync_features).map(function(key, index) {
-							if (key === "schedule") {
-								return null
-							}
+						<Grid container style={{width: "100%", marginBottom: 15, }}>
+							{selectedOrganization.sync_features === undefined || selectedOrganization.sync_features === null ? null : Object.keys(selectedOrganization.sync_features).map(function(key, index) {
+								if (key === "schedule") {
+									return null
+								}
 
-							const item = selectedOrganization.sync_features[key]
-							const newkey = key.replaceAll("_", " ")
-							const griditem = {
-								"primary": newkey,
-								"secondary": item.description === undefined || item.description === null || item.description.length === 0 ? "Not defined yet" : item.description,
-								"limit": item.limit,
-								"usage": 0, 
-								"data_collection": "None",
-								"active": item.active,
-								"icon": <PolymerIcon style={{color: itemColor}}/>,
-							}
+								const item = selectedOrganization.sync_features[key]
+								const newkey = key.replaceAll("_", " ")
+								const griditem = {
+									"primary": newkey,
+									"secondary": item.description === undefined || item.description === null || item.description.length === 0 ? "Not defined yet" : item.description,
+									"limit": item.limit,
+									"usage": 0, 
+									"data_collection": "None",
+									"active": item.active,
+									"icon": <PolymerIcon style={{color: itemColor}}/>,
+								}
 
-							return (
-								<Zoom key={index} >
-									<GridItem data={griditem} />
-								</Zoom>
-							)
-						})}
-					</Grid>
-					<Divider style={{ marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor }} />
-					{isCloud && selectedOrganization.subscriptions !== undefined && selectedOrganization.subscriptions !== null && selectedOrganization.subscriptions.length > 0 ? 
-						<div style={{marginTop: 30, marginBottom: 20}}>
-							<Typography style={{marginTop: 40, marginLeft: 10, marginBottom: 5,}}>
-								Your subscription{selectedOrganization.subscriptions.length > 1 ? "s" : ""}
-							</Typography>
-							<Grid container spacing={3} style={{marginTop: 15}}>
-								{selectedOrganization.subscriptions.reverse().map((sub, index) => {
-									return (
-										<Grid item key={index} xs={4}>
-											<Card elevation={6} style={{backgroundColor: theme.palette.inputColor, color: "white", padding: 25, textAlign: "left",}}>
-													<b>Type</b>: {sub.level}<div/>
-													<b>Recurrence</b>: {sub.recurrence}<div/>
-													{sub.active ? 
-														<div>
-															<b>Started</b>: {new Date(sub.startdate*1000).toISOString()}<div/>
-															<Button variant="outlined" color="primary" style={{marginTop: 15}} onClick={() => {
-																cancelSubscriptions(sub.reference) 
-															}}>
-																Cancel subscription
-															</Button>
-														</div>
-														: 
-														<div>
-															<b>Cancelled</b>: {new Date(sub.cancellationdate*1000).toISOString()}<div/>
-															<Typography color="textSecondary">
-																<b>Status</b>: Deactivated
-															</Typography>
-														</div>
-													}
-											</Card>
-										</Grid>
-									)
+								return (
+									<Zoom key={index} >
+										<GridItem data={griditem} />
+									</Zoom>
+								)
 							})}
+						</Grid>
+						<Divider style={{ marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor }} />
+						{isCloud && selectedOrganization.subscriptions !== undefined && selectedOrganization.subscriptions !== null && selectedOrganization.subscriptions.length > 0 ? 
+							<div style={{marginTop: 30, marginBottom: 20}}>
+								<Typography style={{marginTop: 40, marginLeft: 10, marginBottom: 5,}}>
+									Your subscription{selectedOrganization.subscriptions.length > 1 ? "s" : ""}
+								</Typography>
+								<Grid container spacing={3} style={{marginTop: 15}}>
+									{selectedOrganization.subscriptions.reverse().map((sub, index) => {
+										return (
+											<Grid item key={index} xs={4}>
+												<Card elevation={6} style={{backgroundColor: theme.palette.inputColor, color: "white", padding: 25, textAlign: "left",}}>
+														<b>Type</b>: {sub.level}<div/>
+														<b>Recurrence</b>: {sub.recurrence}<div/>
+														{sub.active ? 
+															<div>
+																<b>Started</b>: {new Date(sub.startdate*1000).toISOString()}<div/>
+																<Button variant="outlined" color="primary" style={{marginTop: 15}} onClick={() => {
+																	cancelSubscriptions(sub.reference) 
+																}}>
+																	Cancel subscription
+																</Button>
+															</div>
+															: 
+															<div>
+																<b>Cancelled</b>: {new Date(sub.cancellationdate*1000).toISOString()}<div/>
+																<Typography color="textSecondary">
+																	<b>Status</b>: Deactivated
+																</Typography>
+															</div>
+														}
+												</Card>
+											</Grid>
+										)
+								})}
 						</Grid>
 							<Divider style={{ marginTop: 20, backgroundColor: theme.palette.inputColor }} />
 						</div>
@@ -1744,14 +1870,20 @@ const Admin = (props) => {
 			}}
 		>
 			<DialogTitle><span style={{ color: "white" }}>
-				{curTab === 1 ? "Add user" : "Add environment"}
+				{curTab === 1 ? "Add user" : curTab === 6 ? "Add Sub-Organization" : "Add environment"}
 			</span></DialogTitle>
 			<DialogContent>
 				{curTab === 1 && isCloud ? 
 					<Typography variant="body1" style={{marginBottom: 10}}>
 						We'll send an email to invite them to your organization.
 					</Typography>
-				: null}
+				: 
+				curTab === 6 ? 
+					<Typography variant="body1" style={{marginBottom: 10}}>
+						The organization created will become a child of your current organization, and be available to you.
+					</Typography>
+				:
+				null }
 				{curTab === 1 ?
 					<div>
 						Username
@@ -1801,6 +1933,31 @@ const Admin = (props) => {
 							</span>
 						}
 					</div>
+					: curTab === 6 ? 
+						<div>
+							Name	
+							<TextField
+								color="primary"
+								style={{ backgroundColor: theme.palette.inputColor }}
+								autoFocus
+								InputProps={{
+									style: {
+										height: "50px",
+										color: "white",
+										fontSize: "1em",
+									},
+								}}
+								required
+								fullWidth={true}
+								placeholder={`${selectedOrganization.name} Copycat Inc.`}
+								id="orgname"
+								margin="normal"
+								variant="outlined"
+								onChange={(event) => {
+									setOrgName(event.target.value)
+								}}
+							/>
+						</div>
 					: curTab === 5 ?
 						<div>
 							Environment Name
@@ -1838,6 +1995,8 @@ const Admin = (props) => {
 						} else {
 							submitUser(modalUser)
 						}
+					} else if (curTab === 6) {
+						createSubOrg(selectedOrganization.id, orgName) 
 					} else if (curTab === 5) {
 						submitEnvironment(modalUser)
 					}
@@ -1889,7 +2048,11 @@ const Admin = (props) => {
 					/>
 					<ListItemText
 						primary="Active"
-						style={{ minWidth: 180, maxWidth: 180 }}
+						style={{ minWidth: 150, maxWidth: 150 }}
+					/>
+					<ListItemText
+						primary="Type"
+						style={{ minWidth: 150 , maxWidth: 150 }}
 					/>
 					<ListItemText
 						primary="Actions"
@@ -1949,10 +2112,9 @@ const Admin = (props) => {
 									value={data.role}
 									fullWidth
 									onChange={(e) => {
-									console.log("VALUE: ", e.target.value)
-
-									setUser(data.id, "role", e.target.value)
-								}}
+										console.log("VALUE: ", e.target.value)
+										setUser(data.id, "role", e.target.value)
+									}}
 										style={{ backgroundColor: theme.palette.surfaceColor, color: "white", height: "50px" }}
 									>
 									<MenuItem style={{ backgroundColor: theme.palette.inputColor, color: "white" }} value={"admin"}>
@@ -1965,10 +2127,14 @@ const Admin = (props) => {
 								}
 								style ={{ minWidth: 135, maxWidth: 135, marginRight: 15,}}
 							/>
-							<ListItemText
-					primary={data.active ? "True" : "False"}
-					style={{ minWidth: 180, maxWidth: 180 }}
-				/>
+					<ListItemText
+						primary={data.active ? "True" : "False"}
+						style={{ minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary={data.login_type === undefined || data.login_type === null || data.login_type.length === 0 ? "Normal" : data.login_type}
+						style={{ minWidth: 150, maxWidth: 150}}
+					/>
 				<ListItemText style={{ display: "flex" }}>
 					<IconButton
 						onClick={() => {
@@ -2021,7 +2187,9 @@ const Admin = (props) => {
 			}
 		}
 
-		getFiles() 
+		setTimeout(() => {
+			getFiles() 
+		}, 2500)
 	}
 
 	const uploadFile = (e) => {
@@ -2061,6 +2229,30 @@ const Admin = (props) => {
 			> 
 				<CachedIcon />
 			</Button>
+
+			{fileNamespaces !== undefined && fileNamespaces !== null && fileNamespaces.length > 1 ? 
+				<FormControl>
+					<InputLabel id="input-namespace-label">Namespace</InputLabel>
+					<Select
+						labelId="input-namespace-select-label"
+						id="input-namespace-select-id"
+						style={{color: "white", minWidth: 100, float: "right",}}
+						value={selectedNamespace}
+						onChange={(event) => {
+							console.log("CHANGE NAMESPACE: ", event.target)
+							setSelectedNamespace(event.target.value)
+						}}
+					>
+						{fileNamespaces.map((data, index) => {
+							return (
+								<MenuItem key={index} value={data} style={{color: "white"}}>{data}</MenuItem>
+							)
+						})}
+						
+					</Select>
+				</FormControl>
+			: null}
+
 			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor}}/>
 			<List>
 				<ListItem>
@@ -2095,7 +2287,15 @@ const Admin = (props) => {
 						primary="File ID"
 					/>
 				</ListItem>
-				{files === undefined || files === null ? null : files.map((file, index) => {
+				{files === undefined || files === null || files.length === 0 ? null : files.map((file, index) => {
+					if (file.namespace === "") {
+						file.namespace = "default"
+					}
+
+					if (file.namespace !== selectedNamespace) {
+						return null
+					}
+
 					var bgColor = "#27292d"
 					if (index % 2 === 0) {
 						bgColor = "#1f2023"
@@ -2303,13 +2503,13 @@ const Admin = (props) => {
 						style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
 					/>
 				</ListItem>
-				{categories.map(data => {
+				{categories.map((data, index) => {
 					if (data.apps.length === 0) {
 						return null
 					}
 
 					return (
-						<ListItem>
+						<ListItem key={index}>
 							<ListItemText
 								primary={data.name}
 								style={{minWidth: 150, maxWidth: 150}}
@@ -2409,6 +2609,7 @@ const Admin = (props) => {
 						bgColor = "#1f2023"
 					}
 
+
 					return (
 						<ListItem key={index} style={{backgroundColor: bgColor}}>
 							<ListItemText
@@ -2489,7 +2690,7 @@ const Admin = (props) => {
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
 				<h2 style={{display: "inline",}}>Environments</h2>
-				<span style={{marginLeft: 25}}>Decides what Orborus environment to execute an action in a workflow in.<a target="_blank" href="https://shuffler.io/docs/organizations#environments" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more</a></span>
+				<span style={{marginLeft: 25}}>Decides what Orborus environment to execute an action in a workflow in. <a target="_blank" href="https://shuffler.io/docs/organizations#environments" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more</a></span>
 			</div>
 			<Button 
 				style={{}} 
@@ -2572,13 +2773,13 @@ const Admin = (props) => {
 								{environment.default ? 
 									null
 									: 
-									<Button variant="outlined" style={{borderRadius: "0px"}} onClick={() => setDefaultEnvironment(environment.Name)} color="primary">Set default</Button>
+									<Button variant="outlined" style={{borderRadius: "0px"}} onClick={() => setDefaultEnvironment(environment)} color="primary">Set default</Button>
 								}
 							</ListItemText>
 							<ListItemText
 								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
 							>
-								<Button disabled={environment.archived} variant="outlined" style={{borderRadius: "0px"}} onClick={() => deleteEnvironment(environment.Name)} color="primary">Archive</Button>
+								<Button variant={environment.archived ? "contained" : "outlined"} style={{borderRadius: "0px"}} onClick={() => deleteEnvironment(environment)} color="primary">{environment.archived ? "Activate" : "Disable"}</Button>
 								{/*<Button disabled={environment.archived} variant="outlined" style={{borderRadius: "0px"}} onClick={() => flushQueue(environment.Name)} color="primary">Flush Queue</Button>*/}
 							</ListItemText>
 							<ListItemText
@@ -2592,7 +2793,7 @@ const Admin = (props) => {
 		</div>
 		: null
 
-	const organizationsTab = curTab === 7 ?
+	const organizationsTab = curTab === 6 ?
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
 				<h2 style={{display: "inline",}}>Organizations</h2>
@@ -2602,27 +2803,30 @@ const Admin = (props) => {
 				style={{}} 
 				variant="contained"
 				color="primary"
-				disabled
 				onClick={() => {
 					setModalOpen(true)
 				}}
 			> 
-				Add organization 
+				Add suborganization 
 			</Button>
 			<Divider style={{marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor}}/>
 			<List>
 				<ListItem>
 					<ListItemText
-						primary="Name"
-						style={{minWidth: 150, maxWidth: 150}}
+						primary="Logo"
+						style={{minWidth: 100, maxWidth: 100}}
 					/>
 					<ListItemText
-						primary="id"
-						style={{minWidth: 200, maxWidth: 200}}
+						primary="Name"
+						style={{minWidth: 250, maxWidth: 250}}
 					/>
 					<ListItemText
 						primary="Your role"
 						style={{minWidth: 150, maxWidth: 150}}
+					/>
+					<ListItemText
+						primary="id"
+						style={{minWidth: 400, maxWidth: 400}}
 					/>
 					<ListItemText
 						primary="Selected"
@@ -2633,24 +2837,40 @@ const Admin = (props) => {
 						style={{minWidth: 150, maxWidth: 150}}
 					/>
 				</ListItem>
-				{organizations !== undefined && organizations !== null && organizations.length > 0 ? 
+				{userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 0 ? 
 					<span>
-						{organizations.map((data, index) => {
+						{userdata.orgs.map((data, index) => {
 							const isSelected = props.userdata.active_org.id === undefined ? "False" : props.userdata.active_org.id === data.id ? "True" : "False"
 
+							const imagesize = 40
+							const imageStyle = {width: imagesize, height: imagesize, pointerEvents: "none", }
+							const image = data.image === "" ? 
+								<img alt={data.name} src={theme.palette.defaultImage} style={imageStyle} />
+								:
+								<img alt={data.name} src={data.image} style={imageStyle} />
+
+							var bgColor = "#27292d"
+							if (index % 2 === 0) {
+								bgColor = "#1f2023"
+							}
+
 							return (
-								<ListItem key={index}>
+								<ListItem key={index} style={{backgroundColor: bgColor,}}>
 									<ListItemText
-										primary={data.name}
-										style={{minWidth: 150, maxWidth: 150}}
+										primary={image}
+										style={{minWidth: 100, maxWidth: 100}}
 									/>
 									<ListItemText
-										primary={data.id}
-										style={{minWidth: 200, maxWidth: 200}}
+										primary={data.name}
+										style={{minWidth: 250, maxWidth: 250}}
 									/>
 									<ListItemText
 										primary={data.role}
 										style={{minWidth: 150, maxWidth: 150}}
+									/>
+									<ListItemText
+										primary={data.id}
+										style={{minWidth: 400, maxWidth: 400}}
 									/>
 									<ListItemText
 										primary={isSelected}
@@ -2673,7 +2893,7 @@ const Admin = (props) => {
 		</div>
 		: null
 
-	const hybridTab = curTab === 6 ?
+	const hybridTab = curTab === 7 ?
 		<div>
 			<div style={{marginTop: 20, marginBottom: 20,}}>
 				<h2 style={{display: "inline",}}>Hybrid</h2>
@@ -2719,7 +2939,7 @@ const Admin = (props) => {
 
 	const iconStyle = {marginRight: 10}
 	const data = 
-		<div style={{width: 1366, margin: "auto", overflowX: "hidden", marginTop: 25,}}>
+		<div style={{width: 1300, margin: "auto", overflowX: "hidden", marginTop: 25,}}>
 			<Paper style={paperStyle}>
 				<Tabs
 					value={curTab}
@@ -2733,21 +2953,21 @@ const Admin = (props) => {
 					<Tab label=<span><DescriptionIcon style={iconStyle} />Files</span> />
 					<Tab label=<span><ScheduleIcon style={iconStyle} />Schedules</span> />
 					{isCloud ? null : <Tab label=<span><EcoIcon style={iconStyle} />Environments</span>/>}
-					{window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><CloudIcon style={iconStyle} /> Hybrid</span>/> : null}
-					{window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><BusinessIcon style={iconStyle} /> Organizations</span>/> : null}
-					{window.location.protocol === "http:" && window.location.port === "3000" ? <Tab label=<span><LockIcon style={iconStyle} />Categories</span>/> : null}
+					{isCloud ? null : <Tab label=<span><BusinessIcon style={iconStyle} /> Organizations</span>/>}
+					{/*window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><CloudIcon style={iconStyle} /> Hybrid</span>/> : null*/}
+					{/*window.location.protocol === "http:" && window.location.port === "3000" ? <Tab label=<span><LockIcon style={iconStyle} />Categories</span>/> : null*/}
 				</Tabs>
 				<Divider style={{marginTop: 0, marginBottom: 10, backgroundColor: "rgb(91, 96, 100)"}} />
 				<div style={{padding: 15}}>
 					{organizationView}
 					{authenticationView}
-					{appCategoryView}
 					{usersView}	
 					{environmentView}
 					{schedulesView}
 					{filesView}
 					{hybridTab}
 					{organizationsTab}
+					{appCategoryView}
 				</div>
 			</Paper>
 		</div>

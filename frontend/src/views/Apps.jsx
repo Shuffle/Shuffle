@@ -9,7 +9,6 @@ import { useTheme } from '@material-ui/core/styles';
 
 import YAML from 'yaml'
 import {Link} from 'react-router-dom';
-import ReactJson from 'react-json-view'
 import { useAlert } from "react-alert";
 import Dropzone from '../components/Dropzone';
 
@@ -130,6 +129,7 @@ const Apps = (props) => {
 	const upload = React.useRef(null);
 	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" ? true : false
 	const borderRadius = 3
+	const viewWidth = 590 
 
 	const { start, stop } = useInterval({
 	  	duration: 5000,
@@ -178,6 +178,7 @@ const Apps = (props) => {
 		color: "#ffffff",
 		width: "100%",
 		display: "flex",
+		margin: "auto",
 	}
 
 	const paperAppStyle = {
@@ -474,13 +475,14 @@ const Apps = (props) => {
 
 	const dividerColor = "rgb(225, 228, 232)"
 	const uploadViewPaperStyle = {
-		minWidth: 662.5,
-		maxWidth: 662.5,
+		minWidth: viewWidth,
+		maxWidth: viewWidth,
 		color: "white",
 		borderRadius: 5, 
 		backgroundColor: surfaceColor,
-		display: "flex",
+		//display: "flex",
 		marginBottom: 10, 
+		overflow: "hidden",
 	}
 
 	const UploadView = () => {
@@ -520,7 +522,7 @@ const Apps = (props) => {
 			<Link to={editUrl} style={{textDecoration: "none"}}>
 				<Tooltip title={"Edit OpenAPI app"}>
 					<Button
-						variant="outlined"
+						variant="contained"
 						component="label"
 						color="primary"
 						style={{marginTop: 10, marginRight: 10,}}
@@ -620,15 +622,6 @@ const Apps = (props) => {
 								</MenuItem>
 							)
 						})}
-						{/*
-						<ReactJson 
-							src={JSON.parse(showResult)} 
-							theme="solarized" 
-							collapsed={false}
-							displayDataTypes={true}
-							name={"Example return value"}
-						/>
-						*/}
 					</div>
 				)
 			} 
@@ -707,8 +700,8 @@ const Apps = (props) => {
 				{activateButton}
 				{(props.userdata !== undefined && (props.userdata.role === "admin" || props.userdata.id === selectedApp.owner) || !selectedApp.generated) ? 
 					<div>
-						{downloadButton}
 						{editButton}
+						{downloadButton}
 						{deleteButton}
 					</div>
 				: null}
@@ -771,7 +764,7 @@ const Apps = (props) => {
 				{/*<p><b>Owner:</b> {selectedApp.owner}</p>*/}
 				{selectedApp.privateId !== undefined && selectedApp.privateId.length > 0 ? <p><b>PrivateID:</b> {selectedApp.privateId}</p> : null}
 				<Divider style={{marginBottom: 10, marginTop: 10, backgroundColor: dividerColor}}/>
-				<div style={{padding: 20}}>
+				<div style={{paddingTop: 20, paddingBottom: 20, }}>
 					{selectedApp.link.length > 0 ? <p><b>URL:</b> {selectedApp.link}</p> : null}
 					<div style={{marginTop: 15, marginBottom: 15}}>
 						<b>Actions</b>
@@ -852,7 +845,7 @@ const Apps = (props) => {
 						<h2>App Creator</h2>
 						<a rel="norefferer" href="https://shuffler.io/docs/apps" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">How it works</a>
 						&nbsp;- <a href="https://github.com/frikky/security-openapis" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">Security API's</a>
-						&nbsp;- <a href="https://apis.guru/browse-apis/" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">OpenAPI directory</a>
+						&nbsp;- <a href="https://github.com/APIs-guru/openapi-directory/tree/main/APIs" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">OpenAPI directory</a>
 						&nbsp;- <a href="https://editor.swagger.io/" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">OpenAPI Validator</a>
 						<div/>
 						<Typography variant="body2" color="textSecondary">
@@ -932,7 +925,11 @@ const Apps = (props) => {
 			console.log("Error in dropzone: ", e)
 		}
 
-		reader.readAsText(files[0]);
+		try {
+			reader.readAsText(files[0]);
+		} catch(error) {
+			alert.error("Failed to read file")
+		}
   };
 
   useEffect(() => {
@@ -950,9 +947,9 @@ const Apps = (props) => {
   }, [appValidation, isDropzone]);
 
 	const appView = isLoggedIn ? 
-		<Dropzone style={{maxWidth: window.innerWidth > 1366 ? 1366 : 1200, margin: "auto", padding: 20 }} onDrop={uploadFile}>
+		<Dropzone style={{width: viewWidth*2+20, margin: "auto", padding: 20 }} onDrop={uploadFile}>
 			<div style={appViewStyle}>	
-				<div style={{flex: 1, }}>
+				<div style={{flex: 1, maxWidth: viewWidth, marginRight: 10,}}>
 					<Breadcrumbs aria-label="breadcrumb" separator="›" style={{color: "white",}}>
 						<Link to="/apps" style={{textDecoration: "none", color: "inherit",}}>
 							<Typography variant="h6" style={{color: "rgba(255,255,255,0.5)"}}>
@@ -969,9 +966,9 @@ const Apps = (props) => {
 						: null}
 					</Breadcrumbs>
 					<div style={{marginTop: 15}} />
-					<UploadView/>
+					<UploadView />
 				</div>
-				<div style={{flex: 1, marginLeft: 10, marginRight: 10, }}>
+				<div style={{flex: 1, marginLeft: 10, maxWidth: viewWidth, }}>
 					<div style={{display: "flex",}}>
 						<div style={{flex: 1, marginBottom: 15, }}>
 							<Typography variant="h6">
@@ -980,35 +977,39 @@ const Apps = (props) => {
 						</div>
 						{isCloud ? null : 
 						<span>
-							<Tooltip title={"Reload apps locally"} style={{marginTop: "28px", width: "100%"}} aria-label={"Upload"}>
-								<Button
-									variant="outlined"
-									component="label"
-									color="primary"
-									style={{margin: 5, maxHeight: 50, marginTop: 10}}
-									onClick={() => {
-										hotloadApps()
-									}}
-								>
-									<CachedIcon />
-								</Button>
-							</Tooltip>
+							{isLoading ? null :
+								<Tooltip title={"Reload apps locally"} style={{marginTop: "28px", width: "100%"}} aria-label={"Upload"}>
+									<Button
+										variant="outlined"
+										component="label"
+										color="primary"
+										style={{margin: 5, maxHeight: 50, marginTop: 10}}
+										disabled={isLoading}
+										onClick={() => {
+											hotloadApps()
+										}}
+									>
+										{isLoading ? <CircularProgress size={25} /> : <CachedIcon />}
+									</Button>
+								</Tooltip>
+							}
 							<Tooltip title={"Download from Github"} style={{marginTop: "28px", width: "100%"}} aria-label={"Upload"}>
 								<Button
 									variant="outlined"
 									component="label"
 									color="primary"
 									style={{margin: 5, maxHeight: 50, marginTop: 10}}
+									disabled={isLoading}
 									onClick={() => {
 										setOpenApi(baseRepository)
 										setLoadAppsModalOpen(true)
 									}}
 								>
-									<CloudDownloadIcon />
+									{isLoading ? <CircularProgress size={25} /> : <CloudDownloadIcon />}
 								</Button>
 							</Tooltip>
 						</span>
-					}
+						}
 					</div>
 					<div style={{height: 50}}>
 						<TextField
@@ -1072,9 +1073,12 @@ const Apps = (props) => {
 							<CircularProgress style={{width: 40, height: 40, margin: "auto"}}/>
 							:
 							<Paper square style={uploadViewPaperStyle}>
-								<h4 style={{margin: 10}}>
+								<Typography variant="body1" style={{margin: 10}}>
 									No apps have been created, uploaded or downloaded yet. Click "Load existing apps" above to get the baseline. This may take a while as its building docker images.
-								</h4>
+								</Typography>
+								<Typography variant="body1" style={{margin: 10}}>
+									If you're still not able to see any apps, please follow our <a href={"https://shuffler.io/docs/troubleshooting#load_all_apps_locally"} style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">troubleshooting guide for loading apps!</a>
+								</Typography>
 							</Paper>
 						}
 					</div>
@@ -1571,11 +1575,13 @@ const Apps = (props) => {
 				<Button style={{borderRadius: "0px"}} onClick={() => setLoadAppsModalOpen(false)} color="primary">
 					Cancel
 				</Button>
-	      <Button style={{borderRadius: "0px"}} disabled={openApi.length === 0 || !openApi.includes("http")} onClick={() => {
-					handleGithubValidation(true) 
-				}} color="primary">
-	      	Force update	
-	      </Button>
+				{isCloud ? null : 
+					<Button style={{borderRadius: "0px"}} disabled={openApi.length === 0 || !openApi.includes("http")} onClick={() => {
+						handleGithubValidation(true) 
+					}} color="primary">
+						Force update	
+					</Button>
+				}
 	      <Button variant="outlined" style={{float: "left", borderRadius: "0px"}} disabled={openApi.length === 0 || !openApi.includes("http")} onClick={() => {
 					handleGithubValidation(false) 
 				}} color="primary">

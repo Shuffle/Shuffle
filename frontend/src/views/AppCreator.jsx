@@ -6,7 +6,7 @@ import {BrowserView, MobileView} from "react-device-detect";
 import {Paper, Typography, FormControlLabel, Button, Divider, Select, MenuItem, FormControl, Switch, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Tooltip, Breadcrumbs, CircularProgress, Chip} from '@material-ui/core';
 import {LockOpen as LockOpenIcon, FileCopy as FileCopyIcon, Delete as DeleteIcon, Remove as RemoveIcon, Add as AddIcon, CheckCircle as CheckCircleIcon, AttachFile as AttachFileIcon, Apps as AppsIcon, ErrorOutline as ErrorOutlineIcon} from '@material-ui/icons';
 
-import uuid from "uuid";
+import { v4 as uuidv4 } from 'uuid';
 import {Link} from 'react-router-dom';
 import YAML from 'yaml'
 import ChipInput from 'material-ui-chip-input'
@@ -65,6 +65,7 @@ const dividerStyle = {
 const appIconStyle = { 
 	marginLeft: "5px",
 }
+
 
 const useStyles = makeStyles({
 	notchedOutline: {
@@ -200,8 +201,7 @@ const AppCreator = (props) => {
 	const increaseAmount = 50
 	const actionNonBodyRequest = ["GET", "HEAD", "DELETE", "CONNECT"]
 	const actionBodyRequest = ["POST", "PUT", "PATCH",]
-	//const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth", "JWT", "Oauth2"]
-	const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth"]
+	const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth", "Oauth2", "JWT"]
 	const apikeySelection = ["Header", "Query",]
 
 	const [name, setName] = useState("");
@@ -220,6 +220,11 @@ const AppCreator = (props) => {
 	const [newWorkflowCategories, setNewWorkflowCategories] = React.useState([]);
 	const [parameterName, setParameterName] = useState("");
 	const [parameterLocation, setParameterLocation] = useState(apikeySelection.length > 0 ? apikeySelection[0] : "");
+	const [refreshUrl, setRefreshUrl] = useState("");
+	const [oauth2Scopes, setOauth2Scopes] = useState([]);
+	const [projectCategories, setProjectCategories] = useState([]);
+	const [selectedCategory, setSelectedCategory] = useState("");
+
 	const [urlPath, setUrlPath] = useState("");
 	//const [urlPathQueries, setUrlPathQueries] = useState([{"name": "test", "required": false}]);
 	const [urlPathQueries, setUrlPathQueries] = useState([]);
@@ -228,6 +233,7 @@ const AppCreator = (props) => {
 	const [firstrequest, setFirstrequest] = React.useState(true)
 	const [basedata, setBasedata] = React.useState({})
 	const [actions, setActions] = useState([])
+	const [filteredActions, setFilteredActions] = useState([])
 	const [errorCode, setErrorCode] = useState("")
 	const [appBuilding, setAppBuilding] = useState(false)
 	const [extraBodyFields, setExtraBodyFields] = useState([])
@@ -285,6 +291,7 @@ const AppCreator = (props) => {
 			"method": actionNonBodyRequest[0],
 		});
 
+	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" 
 
 
 	useEffect(() => {
@@ -388,7 +395,7 @@ const AppCreator = (props) => {
 	const handleGetRef = (parameter, data) => {
 		try {
 			if (parameter === null || parameter["$ref"] === undefined) {
-				console.log("$ref not found in getref: ")
+				//console.log("$ref not found in getref for: ", parameter)
 				return parameter
 			}
 		} catch (e) {
@@ -417,12 +424,6 @@ const AppCreator = (props) => {
 		}
 
 		return newitem 
-
-		//console.log("Should get ", parameter["$ref"])
-		//const subkeys = parameter["$ref"].split("/")
-		// setBasedata(data)
-
-		//	handleGetReference(parameter["$ref"])
 	}
 
 	// Sets the data up as it should be at later points
@@ -468,7 +469,18 @@ const AppCreator = (props) => {
 			document.title = "Apps - "+data.info.title
 
 			if (data.info["x-logo"] !== undefined) {
-				setFileBase64(data.info["x-logo"])
+
+				if (data.info["x-logo"].url !== undefined) {
+					console.log("PARSED LOGO: ", data.info["x-logo"].url) 
+					setFileBase64(data.info["x-logo"].url)
+				} else {
+					setFileBase64(data.info["x-logo"])
+				}
+				console.log("")
+				console.log("")
+				console.log("LOGO: ", data.info["x-logo"])
+				console.log("")
+				console.log("")
 			}
 
 			if (data.info.contact !== undefined) {
@@ -524,6 +536,7 @@ const AppCreator = (props) => {
 
 		var newActions = []
 		var wordlist = {}
+		var all_categories = []
 		if (data.paths !== null && data.paths !== undefined) {
 			for (let [path, pathvalue] of Object.entries(data.paths)) {
 				for (let [method, methodvalue] of Object.entries(pathvalue)) {
@@ -533,8 +546,11 @@ const AppCreator = (props) => {
 					}
 
 					if (!allowedfunctions.includes(method.toUpperCase())) {
-						console.log("Invalid method: ", method, "data: ", methodvalue)
-						alert.info("Skipped method (not allowed): "+method)
+						// Typical YAML issue
+						if (method !== "parameters") {
+							console.log("Invalid method: ", method, "data: ", methodvalue)
+							alert.info("Skipped method (not allowed): "+method)
+						}
 						continue
 					}
 
@@ -542,6 +558,8 @@ const AppCreator = (props) => {
 					if (methodvalue.operationId !== undefined && methodvalue.operationId !== null && methodvalue.operationId.length > 0 && (tmpname === undefined || tmpname.length === 0)) {
 						tmpname = methodvalue.operationId
 					}
+
+					tmpname = tmpname.replaceAll(".", " ")
 
 					var newaction = {
 						"name": tmpname,
@@ -557,8 +575,24 @@ const AppCreator = (props) => {
 						"example_response": "",
 					}
 
-					//console.log("Schema is application/json: ", methodvalue)
-					//console.log("DATA", data)
+					// Finding category
+					if (path.includes("/")) {
+						const pathsplit = path.split("/")
+						var categoryindex = -1
+							// Stupid way of finding a category/grouping
+						for (var key in pathsplit) {
+							if (pathsplit[key].length > 0 && pathsplit[key] !== "v1" && pathsplit[key] !== "v2" && pathsplit[key] !== "api" && pathsplit[key] !== "1.0" && pathsplit[key] !== "apis") {
+								newaction["category"] = pathsplit[key]
+								if (!all_categories.includes(pathsplit[key])) {
+									all_categories.push(pathsplit[key])
+								}
+								break
+							}
+						}
+					}
+
+
+					// Typescript? I think not ;)
 					if (methodvalue["requestBody"] !== undefined) {
 						//console.log("Handle requestbody: ", methodvalue["requestBody"])
 						if (methodvalue["requestBody"]["content"] !== undefined) {
@@ -610,15 +644,13 @@ const AppCreator = (props) => {
 									}
 								}
 							} else {
+								//console.log("REQUESTBODY: ", methodvalue["requestBody"]["content"])
 								if (methodvalue["requestBody"]["content"]["example"] !== undefined) {
 									if (methodvalue["requestBody"]["content"]["example"]["example"] !== undefined) {
 										newaction["body"] = methodvalue["requestBody"]["content"]["example"]["example"] 
 										//JSON.stringify(tmpobject, null, 2)
 									}
-								}
-
-								//console.log(methodvalue["requestBody"]["content"])
-								if (methodvalue["requestBody"]["content"]["multipart/form-data"] !== undefined) {
+								} else if (methodvalue["requestBody"]["content"]["multipart/form-data"] !== undefined) {
 									if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"] !== null) {
 										if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["type"] === "object") {
 											const fieldname = methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["properties"]["fieldname"]
@@ -626,6 +658,63 @@ const AppCreator = (props) => {
 												console.log("FIELDNAME: ", fieldname)
 												newaction.file_field = fieldname["value"]
 											}
+										}
+									}
+								} else {
+
+									var schemas = []
+									const content = methodvalue["requestBody"]["content"]
+									if (content !== undefined && content !== null) {
+										//console.log("CONTENT: ", content)
+										for (const [subkey, subvalue] of Object.entries(content)) {
+											if (subvalue["schema"] !== undefined) {
+												//console.log("SCHEMA: ", subvalue["schema"])
+												if (subvalue["schema"]["$ref"] !== undefined) {
+													//console.log("SCHEMA FOUND REF!")
+
+													if (!schemas.includes(subvalue["schema"]["$ref"])) {
+														schemas.push(subvalue["schema"]["$ref"])
+													}
+												}
+											} else {
+												console.log("ERROR: couldn't find schema for ", subvalue, method)
+											}
+										}
+									}
+
+									if (schemas.length === 1) {
+										const parameter = handleGetRef({"$ref": schemas[0]}, data)
+
+										if (parameter.properties !== undefined && parameter["type"] === "object") {
+											var newbody = {}
+											for (var propkey in parameter.properties) {
+												const parsedkey = propkey.replaceAll(" ", "_").toLowerCase() 
+												if (parameter.properties[propkey].type === undefined) {
+													console.log("Skipping (4): ", parameter.properties[propkey])
+													continue
+												}
+												
+												if (parameter.properties[propkey].type === "string") {
+													if (parameter.properties[propkey].description !== undefined) {
+														newbody[parsedkey] = parameter.properties[propkey].description 
+													} else {
+														newbody[parsedkey] = ""
+													}
+												} else if (parameter.properties[propkey].type.includes("int") || parameter.properties[propkey].type.includes("uint64")) {
+													newbody[parsedkey] = 0
+												} else if (parameter.properties[propkey].type.includes("boolean")) {
+													newbody[parsedkey] = false
+												} else if (parameter.properties[propkey].type.includes("array")) {
+													newbody[parsedkey] = [] 
+												} else {
+													console.log("CANT HANDLE JSON TYPE (4)", parameter.properties[propkey].type, parameter.properties[propkey])
+													newbody[parsedkey] = []
+												}
+											}
+
+											newaction["body"] = JSON.stringify(newbody, null, 2)
+										} else {
+											console.log("CANT HANDLE PARAM: (4) ", parameter.properties)
 										}
 									}
 								}
@@ -669,7 +758,7 @@ const AppCreator = (props) => {
 													for (var propkey in parameter.properties) {
 														const parsedkey = propkey.replaceAll(" ", "_").toLowerCase() 
 														if (parameter.properties[propkey].type === undefined) {
-															console.log("Skipping: ", parameter.properties[propkey])
+															console.log("Skipping (1): ", parameter.properties[propkey])
 															continue
 														}
 														
@@ -681,6 +770,13 @@ const AppCreator = (props) => {
 															}
 														} else if (parameter.properties[propkey].type.includes("int")) {
 															newbody[parsedkey] = 0
+														} else if (parameter.properties[propkey].type.includes("boolean")) {
+															newbody[parsedkey] = false
+														} else if (parameter.properties[propkey].type.includes("array")) {
+															//console.log("Added empty array. Base is: ", parameter.properties[propkey].type)
+
+															//const parameter = handleGetRef(selectedExample["content"]["application/json"]["schema"], data)
+															newbody[parsedkey] = []
 														} else {
 															console.log("CANT HANDLE JSON TYPE ", parameter.properties[propkey].type, parameter.properties[propkey])
 															newbody[parsedkey] = []
@@ -705,7 +801,7 @@ const AppCreator = (props) => {
 															for (var propkey in parameter.properties) {
 																const parsedkey = propkey.replaceAll(" ", "_").toLowerCase() 
 																if (parameter.properties[propkey].type === undefined) {
-																	console.log("Skipping: ", parameter.properties[propkey])
+																	console.log("Skipping (2): ", parameter.properties[propkey])
 																	continue
 																}
 
@@ -717,6 +813,8 @@ const AppCreator = (props) => {
 																	}
 																} else if (parameter.properties[propkey].type.includes("int")) {
 																	newbody[parsedkey] = 0
+																} else if (parameter.properties[propkey].type.includes("boolean")) {
+																	newbody[parsedkey] = false
 																} else {
 																	console.log("CANT HANDLE JSON TYPE (2) ", parameter.properties[propkey].type)
 																	newbody[parsedkey] = []
@@ -740,7 +838,7 @@ const AppCreator = (props) => {
 															for (var propkey in parameter.properties) {
 																const parsedkey = propkey.replaceAll(" ", "_").toLowerCase() 
 																if (parameter.properties[propkey].type === undefined) {
-																	console.log("Skipping: ", parameter.properties[propkey])
+																	console.log("Skipping (3): ", parameter.properties[propkey])
 																	continue
 																}
 
@@ -763,7 +861,7 @@ const AppCreator = (props) => {
 															//newaction.example_response = JSON.stringify(parameter.properties, null, 2)
 														} else {
 															//newaction.example_response = parameter.properties
-															console.log("CANT HANDLE PARAM: (2) ", parameter.properties)
+															console.log("CANT HANDLE PARAM: (3) ", parameter.properties)
 														}
 													}
 												}
@@ -867,6 +965,7 @@ const AppCreator = (props) => {
 							newaction.errors.push("Missing name")
 						}
 					}
+
 					newActions.push(newaction)
 				}
 			}
@@ -897,18 +996,80 @@ const AppCreator = (props) => {
 		}
 
 		
-		console.log("SECURITYSCHEMES: ", securitySchemes)
+		//console.log("SECURITYSCHEMES: ", securitySchemes)
 		if (securitySchemes !== undefined) {
 			// FIXME: Should add Oauth2 (Microsoft) and JWT (Wazuh)
 			//console.log("SECURITY: ", securitySchemes)
 			//if (Object.entries(securitySchemes) > 1 && 
 			var newauth = []
 			for (const [key, value] of Object.entries(securitySchemes)) {
-				if (value.scheme === "bearer") {
+				console.log(key, value)
+				if (key === "jwt") {
+					setAuthenticationOption("JWT")
+					setAuthenticationRequired(true)
+
+					if (value.in !== undefined && value.in !== null && value.in.length > 0) {
+						setParameterName(value.in)
+					}
+				} else if (value.scheme === "bearer") {
 					setAuthenticationOption("Bearer auth")
 					setAuthenticationRequired(true)
-				} else if (key === "oauth2") {
-					alert.info("Can't handle Oauth2 auth yet.")
+				} else if (key === "Oauth2" || key === "Oauth2c") {
+					//alert.info("Can't handle Oauth2 auth yet.")
+					setAuthenticationOption("Oauth2")
+					setAuthenticationRequired(true)
+
+					//console.log("FLOW-1: ", value)
+					const flowkey = value.flow === undefined ? "flows" : "flow"
+					//console.log("FLOW: ", value[flowkey])
+					const basekey = value[flowkey].authorizationCode !== undefined ? "authorizationCode" : "implicit"
+					//console.log("FLOW2: ", value[flowkey][basekey])
+					if (value[flowkey] !== undefined && value[flowkey][basekey] !== undefined) {
+						if (value[flowkey][basekey].authorizationUrl !== undefined && parameterName.length === 0) {
+							setParameterName(value[flowkey][basekey].authorizationUrl)
+						}
+
+						var tokenUrl = ""
+						if (value[flowkey][basekey].tokenUrl !== undefined) {
+							setParameterLocation(value[flowkey][basekey].tokenUrl)
+							tokenUrl = value[flowkey][basekey].tokenUrl
+						} else {
+							setParameterLocation("")
+						}
+
+						if (value[flowkey][basekey].refreshUrl !== undefined) {
+							setRefreshUrl(value[flowkey][basekey].refreshUrl)
+						} else if (tokenUrl.length > 0) {
+							setRefreshUrl(tokenUrl)
+						}
+
+						if (value[flowkey][basekey].scopes !== undefined && value[flowkey][basekey].scopes !== null) {
+							if (value[flowkey][basekey].scopes.length > 0) {
+								setOauth2Scopes(value[flowkey][basekey].scopes)
+							} else {
+								var newscopes = []
+								for (let [scopekey, scopevalue] of Object.entries(value[flowkey][basekey].scopes)) {
+									if (scopekey.startsWith("http")) {
+										const scopekeysplit = scopekey.split("/")	
+										if (scopekeysplit.length < 5) {
+											console.log("Skipping scope: ", scopekey)
+											alert.info("Skipping scope: "+scopekey)
+											continue
+										}
+
+										//console.log("Checking scope for: ", scopekey, scopekeysplit.length)
+									}
+
+									newscopes.push(scopekey)
+								}
+
+								setOauth2Scopes(newscopes)
+							}
+						}
+					} else {
+						console.log("Bad flowkey and basekey for oauth2: ", flowkey, basekey)
+					}
+
 				} else if (key === "ApiKeyAuth") {
 					setAuthenticationOption("API key")
 
@@ -929,11 +1090,12 @@ const AppCreator = (props) => {
 					setAuthenticationOption("Oauth2")
 					setAuthenticationRequired(true)
 				} else {
-					newauth.push({
-						"name": key,
-						"type": value.in,
-						"example": "",
-					})
+					alert.error("Couldn't handle AUTH type: ", key)
+					//newauth.push({
+					//	"name": key,
+					//	"type": value.in,
+					//	"example": "",
+					//})
 				}
 			}
 			
@@ -948,12 +1110,15 @@ const AppCreator = (props) => {
 			setActionAmount(newActions.length)
 		}
 
-		if (newActions.length > 1000) {
+		//const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" 
+		if (newActions.length > 1000 && isCloud) {
 			alert.error("Cut down actions from "+newActions.length+" to 999 because of limit")
 			newActions = newActions.slice(0,999)
 		}
 
+		setProjectCategories(all_categories)
 		setActions(newActions)
+		setFilteredActions(newActions)
   	setIsAppLoaded(true)
 	}
 
@@ -970,7 +1135,7 @@ const AppCreator = (props) => {
 		const basePath = "/"+(splitBase.slice(3, )).join("/")
 		
 		const data = {
-  			"openapi": "3.0",
+  			"openapi": "3.0.0",
   			"info": {
   			  "title": name,
   			  "description": description,
@@ -1097,8 +1262,46 @@ const AppCreator = (props) => {
 			}
 
 			if (item.queries.length > 0) {
+				var skipped = false
 				for (var querykey in item.queries) {
 					const queryitem = item.queries[querykey]
+
+					if (queryitem.name.toLowerCase() == "url") {
+						console.log(item.name+" uses a bad query: url")
+						continue
+						//skipped = true
+						//break
+					}
+
+				 	if (queryitem.name.toLowerCase() == "url"
+					|| queryitem.name.toLowerCase() == "body"
+					|| queryitem.name.toLowerCase() == "self"
+					|| queryitem.name.toLowerCase() == "ssl_verify"
+					|| queryitem.name.toLowerCase() == "queries"
+					|| queryitem.name.toLowerCase() == "headers"
+					|| queryitem.name.includes("[") 
+					|| queryitem.name.includes("]") 
+					|| queryitem.name.includes("{") 
+					|| queryitem.name.includes("}") 
+					|| queryitem.name.includes("(") 
+					|| queryitem.name.includes(")")
+					|| queryitem.name.includes("!")
+					|| queryitem.name.includes("@")
+					|| queryitem.name.includes("#")
+					|| queryitem.name.includes("$")
+					|| queryitem.name.includes("%")
+					|| queryitem.name.includes("^")
+					|| queryitem.name.includes("&")
+					|| queryitem.name.includes(":")
+					|| queryitem.name.includes(";")
+					|| queryitem.name.includes("<")
+					|| queryitem.name.includes(">")
+					|| queryitem.name.includes("\"")
+					|| queryitem.name.includes("\'")
+					) {
+						console.log(item.name+" error: uses a bad query - not adding: ", queryitem.name)
+						continue
+					}
 
 					var newitem = {
 						"in": "query",
@@ -1117,12 +1320,27 @@ const AppCreator = (props) => {
 					data.paths[item.url][item.method.toLowerCase()].parameters.push(newitem)
 					//console.log(queryitem)
 				}
+
+				// Bad code as it doesn't allow for "anything".
+				if (skipped) {
+					alert.info("Bad configuration of "+item.name+". Skipping because queries are invalid.")
+					continue
+				}
 			} 
 			//data.paths[item.url][item.method.toLowerCase()].parameters.push(newitem)
 
 			if (item.paths.length > 0) {
 				for (querykey in item.paths) {
 					const queryitem = item.paths[querykey]
+
+					if (queryitem.toLowerCase() == "url") {
+						queryitem = "action_url"
+					}
+
+					if (queryitem.toLowerCase() == "apikey") {
+						queryitem = "action_apikey"
+					}
+
 					newitem = {
 						"in": "path",
 						"name": queryitem,
@@ -1166,7 +1384,7 @@ const AppCreator = (props) => {
 				}
 			}
 
-			if (item.body !== undefined && item.body.length > 0) {
+			if (item.body !== undefined && item.body !== null && item.body.length > 0) {
 				const required = false
 				newitem = {
 					"in": "body",
@@ -1191,21 +1409,38 @@ const AppCreator = (props) => {
 					},
 				}
 
-				/*
+				data.paths[item.url][item.method.toLowerCase()].parameters.push(newitem)
+			} else if (actionBodyRequest.includes(item.method.toUpperCase())) {
+				// Appending an empty field
+				const required = false
+				newitem = {
+					"in": "body",
+					"name": "body",
+					"multiline": true,
+					"description": "Generated by shuffler.io OpenAPI",
+					"required": required,
+					"example": "",
+					"schema": {
+						"type": "string",
+					},
+				}
+				
+				// FIXME - add application/json if JSON example?
 				data.paths[item.url][item.method.toLowerCase()]["requestBody"] = {
 					"description": "Generated by Shuffler.io",
 					"required": required,
 					"content": {
 						"example": {
-							"example": item.body,
+							"example": "",
 						},
 					},
 				}
-				*/
 
 				data.paths[item.url][item.method.toLowerCase()].parameters.push(newitem)
+			} else {
+				//console.log("Nothing to append?")
 			}
-
+ 
 			// https://swagger.io/docs/specification/describing-request-body/file-upload/
 			if (item.file_field !== undefined && item.file_field !== null && item.file_field.length > 0) {
 				console.log("HANDLE FILEFIELD SAVE: ", item.file_field)
@@ -1237,12 +1472,20 @@ const AppCreator = (props) => {
 						const headersplit = header.split("= ")
 						key = headersplit[0]	
 						value = headersplit[1]	
+					} else if (header.length > 0 && header.includes(" =")) {
+						const headersplit = header.split(" =")
+						key = headersplit[0]	
+						value = headersplit[1]	
 					} else if (header.length > 0 && header.includes("=")) {
 						const headersplit = header.split("=")
 						key = headersplit[0]	
 						value = headersplit[1]	
 					} else if (header.length > 0 && header.includes(": ")) {
 						const headersplit = header.split(": ")
+						key = headersplit[0]	
+						value = headersplit[1]	
+					} else if (header.length > 0 && header.includes(" :")) {
+						const headersplit = header.split(" :")
 						key = headersplit[0]	
 						value = headersplit[1]	
 					} else if (header.length > 0 && header.includes(":")) {
@@ -1279,10 +1522,13 @@ const AppCreator = (props) => {
 				return
 			}
 
+			var newparamName = parameterName.replaceAll("\"", "")
+			newparamName = newparamName.replaceAll("\'", "")
+
 			data.components.securitySchemes["ApiKeyAuth"] = {
 				"type": "apiKey",
 				"in": parameterLocation.toLowerCase(),
-				"name": parameterName,
+				"name": newparamName,
 			}
 		} else if (authenticationOption === "Bearer auth") {
 			data.components.securitySchemes["BearerAuth"] = {
@@ -1291,22 +1537,33 @@ const AppCreator = (props) => {
 				"bearerFormat": "UUID",
 			}
 		} else if (authenticationOption === "JWT") {
-			data.components.securitySchemes["BearerAuth"] = {
+			data.components.securitySchemes["jwt"] = {
 				"type": "http",
 				"scheme": "bearer",
 				"bearerFormat": "JWT",
+				"in": parameterName,
 			}
+				
+			console.log("SECURITYSCHEMES: ", data.components)
 		} else if (authenticationOption === "Basic auth") {
 			data.components.securitySchemes["BasicAuth"] = {
 				"type": "http",
 				"scheme": "basic",
 			}
 		} else if (authenticationOption === "Oauth2") {
+			var newparamName = parameterName.replaceAll("\"", "")
+			newparamName = newparamName.replaceAll("\'", "")
+
+			//parameterName, parameterValue, revocationUrl
 			data.components.securitySchemes["Oauth2"] = {
 				"type": "oauth2",
+				"description": "Oauth2.0 authorizationCode authentication",
 				"flow": {
 					"authorizationCode": {
-
+						"authorizationUrl": newparamName,
+						"tokenUrl": parameterLocation,
+						"refreshUrl": refreshUrl,
+						"scopes": oauth2Scopes === undefined || oauth2Scopes === null ? [] : oauth2Scopes,
 					},
 				},
 			}
@@ -1315,6 +1572,13 @@ const AppCreator = (props) => {
 		if (setExtraAuth.length > 0) {
 			for (var key in extraAuth) {
 				const curauth = extraAuth[key]
+
+				if (curauth.name.toLowerCase() == "url") {
+					alert.error("Can't add extra auth with Name URL")
+					setAppBuilding(false)
+					return
+				}
+
 				data.components.securitySchemes[curauth.name] = {
 					"type": "apiKey",
 					"in": curauth.type,
@@ -1458,6 +1722,7 @@ const AppCreator = (props) => {
 		}
 
 		setActions(actions)
+		setFilteredActions(actions)
 		setUpdate(Math.random())
 	}
 
@@ -1477,6 +1742,7 @@ const AppCreator = (props) => {
 		})
 
 		setActions(actions)
+		setFilteredActions(actions)
 		setActionAmount(actionAmount-1)
 		setUpdate(Math.random())
 	}
@@ -1596,12 +1862,134 @@ const AppCreator = (props) => {
 			})}
 		</div>
 
+	const jwtAuth = authenticationOption === "JWT" ? 
+		<div style={{color: "white", marginTop: 20, }}>
+			<Typography variant="body1">JWT authentication</Typography>
+			<Typography variant="body2" color="textSecondary" style={{marginTop: 10,}}>
+				Authentication path 
+			</Typography>
+			<TextField
+				required
+				style={{margin: 0, flex: "1", backgroundColor: inputColor}}
+				fullWidth={true}
+				placeholder="/security/user/authenticate"
+				type="name"
+				id="standard-required"
+				margin="normal"
+				variant="outlined"
+				defaultValue={parameterName}
+				helperText={<span style={{color:"white", marginBottom: "2px",}}>Must start with / and be a valid path</span>}
+				onBlur={e => setParameterName(e.target.value)}	
+				InputProps={{
+					classes: {
+						notchedOutline: classes.notchedOutline,
+					},
+					style:{
+						color: "white",
+					},
+				}}
+			/>
+		</div>
+		: 
+		null
+
 	const oauth2Auth = authenticationOption === "Oauth2" ? 
 		<div style={{color: "white", marginTop: 20, }}>
 			<Typography variant="body1">Oauth2 authentication</Typography>
-			<Typography variant="body2" color="textSecondary">
-				Add the URL to redirect to 
+			<Typography variant="body2" color="textSecondary" style={{marginTop: 10,}}>
+				Base Authorization URL
 			</Typography>
+			<TextField
+				required
+				style={{margin: 0, flex: "1", backgroundColor: inputColor}}
+				fullWidth={true}
+				placeholder="https://.../oauth2/authorize"
+				type="name"
+				id="standard-required"
+				margin="normal"
+				variant="outlined"
+				value={parameterName}
+				onChange={e => setParameterName(e.target.value)}	
+				InputProps={{
+					classes: {
+						notchedOutline: classes.notchedOutline,
+					},
+					style:{
+						color: "white",
+					},
+				}}
+			/>
+			<Typography variant="body2" color="textSecondary" style={{marginTop: 10,}}>
+				Token URL
+			</Typography>
+			<TextField
+				required
+				style={{margin: 0, flex: "1", backgroundColor: inputColor}}
+				fullWidth={true}
+				placeholder="https://.../oauth2/token"
+				type="name"
+				id="standard-required"
+				margin="normal"
+				variant="outlined"
+				value={parameterLocation}
+				onChange={e => setParameterLocation(e.target.value)}	
+				InputProps={{
+					classes: {
+						notchedOutline: classes.notchedOutline,
+					},
+					style:{
+						color: "white",
+					},
+				}}
+			/>
+			<Typography variant="body2" color="textSecondary" style={{marginTop: 10,}}>
+				Refresh-token URL
+			</Typography>
+			<TextField
+				style={{margin: 0, flex: "1", backgroundColor: inputColor}}
+				fullWidth={true}
+				placeholder="The URL to retrieve refresh-tokens at"
+				type="name"
+				id="standard-required"
+				margin="normal"
+				variant="outlined"
+				value={refreshUrl}
+				onChange={e => setRefreshUrl(e.target.value)}	
+				InputProps={{
+					style:{
+						color: "white",
+					},
+				}}
+			/>
+			<Typography variant="body2" color="textSecondary" style={{marginTop: 10,}}>
+				Scopes
+			</Typography>
+			<ChipInput
+				style={{}}
+				InputProps={{
+					style:{
+						color: "white",
+						maxHeight: 50, 
+					},
+				}}
+				style={{maxHeight: 80, overflowX: "hidden", overflowY: "auto",}}
+				placeholder="Scopes"
+				color="primary"
+				fullWidth
+				value={oauth2Scopes}
+				onAdd={(chip) => {
+					oauth2Scopes.push(chip)
+					console.log(oauth2Scopes)
+					setOauth2Scopes(oauth2Scopes)
+					setUpdate(Math.random())
+				}}
+				onDelete={(chip, index) => {
+					oauth2Scopes.splice(index, 1)
+					console.log(oauth2Scopes)
+					setOauth2Scopes(oauth2Scopes)
+					setUpdate(Math.random())
+				}}
+			/>
 		</div>
 		: null
 
@@ -1621,8 +2009,10 @@ const AppCreator = (props) => {
 				margin="normal"
 				variant="outlined"
 				value={parameterName}
-				helperText={<span style={{color:"white", marginBottom: "2px",}}>Can't be empty. Can't contain any of the following characters: !#$%&'^+-._~|]+$</span>}
-				onChange={e => setParameterName(e.target.value)}	
+				helperText={<span style={{color:"white", marginBottom: "2px",}}>Can't be empty. Can't contain any of the following characters: !#$%&'^"+-._~|]+$</span>}
+				onChange={e => {
+					setParameterName(e.target.value)
+				}}	
 				InputProps={{
 					classes: {
 						notchedOutline: classes.notchedOutline,
@@ -1708,7 +2098,7 @@ const AppCreator = (props) => {
 		null
 		:
 		<div>
-			{actions.slice(0,actionAmount).map((data, index) => {
+			{filteredActions.slice(0,actionAmount).map((data, index) => {
 				var error = data.errors.length > 0 ? 
 					<Tooltip color="primary" title={data.errors.join("\n")} placement="bottom">
 						<ErrorOutlineIcon />
@@ -1806,11 +2196,60 @@ const AppCreator = (props) => {
 		}
 	}
 
+	const HandleIndividualChip = (props) => {
+  	const { chipData, index } = props;
+		const [chipRequired, setChipRequired] = useState(false)
+
+		return (
+			<Tooltip title={chipRequired ? "Make not required" : "Make required"}>
+				<Chip
+					style={{
+						backgroundColor: chipRequired ? "#f86a3e" : "#3d3f43", 
+						height: 30, 
+						margin: 3, 
+						paddingLeft: 5, 
+						paddingRight: 5, 
+						height: 28, 
+						cursor: "pointer", 
+						borderColor: "#3d3f43", 
+						color: "white", 
+					}}
+					label={chipData}
+					onClick={() => {
+						console.log("CLICK: ", chipData)
+						setChipRequired(!chipRequired)
+					}}
+				/>
+			</Tooltip>
+		)
+	}
+
+	const SetExtraBodyField = (props) => {
+  	const { extraBodyFields } = props;
+
+		if (extraBodyFields === undefined || extraBodyFields === null) {
+			return null
+		}
+
+		//const parsedlist = extraBodyFields.join(", ")
+		//console.log("LIST: ", parsedlist)
+
+		return (
+			<span>
+				{extraBodyFields.map((data, index) => {
+					return (
+						<HandleIndividualChip key={index} chipData={data} />
+					)
+				})}
+			</span>
+		)
+	}
+
 	const bodyInfo = actionBodyRequest.includes(currentActionMethod) ?
 		<div style={{marginTop: 10}}>
 			<b>Request Body</b>: {extraBodyFields.length > 0 ? 
 				<Typography style={{display: "inline-block"}}>
-					Variables: {extraBodyFields.join(", ")}
+					<SetExtraBodyField extraBodyFields={extraBodyFields}/>
 				</Typography>
 			: 
 			<Typography style={{display: "inline-block"}}>
@@ -1896,6 +2335,7 @@ const AppCreator = (props) => {
 		}
 
 		setActions(actions)
+		setFilteredActions(actions)
 	}
 
 	const getActionErrors = () => {
@@ -2167,26 +2607,46 @@ const AppCreator = (props) => {
 						}}
 						onBlur={event => {
 							var parsedurl = event.target.value
-							console.log("URL: ", parsedurl)
+							//console.log("URL: ", parsedurl)
+							if (parsedurl.includes("   ")) {
+								parsedurl = parsedurl.replaceAll("   ", " ")
+							}
+
+							if (parsedurl.includes("  ")) {
+								parsedurl = parsedurl.replaceAll("  ", " ")
+							}
+
+							if (parsedurl.includes("[") && parsedurl.includes("]")) {
+								//console.log("REPLACE1")
+								parsedurl = parsedurl.replaceAll("[", "{")
+								parsedurl = parsedurl.replaceAll("]", "}")
+							}
+
 							if (parsedurl.includes("<") && parsedurl.includes(">")) {
-								console.log("REPLACE")
+								//console.log("REPLACE2")
 								parsedurl = parsedurl.replaceAll("<", "{")
 								parsedurl = parsedurl.replaceAll(">", "}")
 							}
 
+							//console.log("URL2: ", parsedurl)
 							if (parsedurl.startsWith("PUT ") || parsedurl.startsWith("GET ") ||parsedurl.startsWith("POST ") || parsedurl.startsWith("DELETE ") ||parsedurl.startsWith("PATCH ") || parsedurl.startsWith("CONNECT ")) {
+
 								const tmp = parsedurl.split(" ")
 
 								if (tmp.length > 1) {
-									parsedurl = tmp[1]
+									parsedurl = tmp[1].trim()
 									setActionField("url", parsedurl)
 
 									setCurrentActionMethod(tmp[0].toUpperCase())
 									setActionField("method", tmp[0].toUpperCase())
 								}
+							
+								console.log("URL3: ", parsedurl)
 
 								setUpdate(Math.random())
 							} else if (parsedurl.startsWith("curl")) {
+								console.log("URL4: ", parsedurl)
+
 								const request = parseCurl(event.target.value)
 								if (request !== event.target.value && request.method !== undefined && request.method !== null) {
 									if (request.method.toUpperCase() !== currentAction.Method) {
@@ -2452,7 +2912,7 @@ const AppCreator = (props) => {
 			tags: passedTags,
 			execution_org: passedOrg,
 			org_id: passedOrg.id,
-			id: uuid.v4(),
+			id: uuidv4(),
 			isValid: true,
 			owner: owner,
 			created: Date.now(),
@@ -2668,7 +3128,7 @@ const AppCreator = (props) => {
 				usage: [{
 					workflow_id: workflow.id,
 				}],
-				id: uuid.v4(),
+				id: uuidv4(),
 				active: true,
 			})
 
@@ -2824,12 +3284,12 @@ const AppCreator = (props) => {
 	const actionView = 
 		<div style={{color: "white", position: "relative",}}>
 			<div style={{position: "absolute", right: 0, top: 0,}}>
-				{actionAmount > 0 && actionAmount < actions.length ? 
+				{actionAmount > 0 && actionAmount < filteredActions.length ? 
 					<Button color="primary" style={{float: "right", borderRadius: 0, textAlign: "center"}} variant="outlined" onClick={() => {
-						setActionAmount(actions.length)
+						setActionAmount(filteredActions.length)
 						/*
-						if (actionAmount+increaseAmount > actions.length) {
-							setActionAmount(actions.length)
+						if (actionAmount+increaseAmount > filteredActions.length) {
+							setActionAmount(filteredActions.length)
 						} else {
 							setActionAmount(actionAmount+increaseAmount)
 						}
@@ -2839,8 +3299,58 @@ const AppCreator = (props) => {
 					</Button>
 				: null}
 			</div>
-			<h2>Actions {actionAmount > 0 ? <span>({actionAmount} / {actions.length})</span> : null}</h2>
-			Actions are the tasks performed by an app - usually single URL paths for REST API's.
+			<Typography variant="h6">Actions {actionAmount > 0 ? <span>({actionAmount} / {filteredActions.length})</span> : null}</Typography>
+			<Typography variant="body2" style={{marginTop: 10, marginBottom: 10}}>
+				Actions are the tasks performed by an app - usually single URL paths for REST API's.
+			</Typography>
+
+			{projectCategories !== undefined && projectCategories !== null && projectCategories.length > 1 ?
+				<div style={{marginTop: 10, marginBottom: 10}}>
+					{projectCategories.map((tag, index) => {
+						const newname = tag.charAt(0).toUpperCase() + tag.slice(1) 
+						return (
+							<Chip
+								key={index}
+								style={{
+									backgroundColor: tag === selectedCategory ? "#f86a3e" : "#3d3f43", 
+									height: 30, 
+									margin: 3, 
+									paddingLeft: 5, 
+									paddingRight: 5, 
+									height: 28, 
+									cursor: "pointer", 
+									borderColor: "#3d3f43", 
+									color: "white", 
+								}}
+								label={newname}
+								onClick={() => {
+									if (selectedCategory === tag) {
+										setFilteredActions(actions)
+										setSelectedCategory("")
+										setActionAmount(50)
+										return
+									}
+
+									const foundActions = actions.filter(data => data.category === tag)
+									setFilteredActions(foundActions)
+									setSelectedCategory(tag)
+									if (actionAmount > foundActions.length) {
+										setActionAmount(foundActions.length)
+									}
+
+									//{filteredActions.slice(0,actionAmount).map((data, index) => {
+									
+									//console.log("Found: ", foundActions)
+									//{filteredActions.slice(0,actionAmount).map((data, index) => {
+									//{actions.slice(0,actionAmount).map((data, index) => {
+								}}
+								variant={selectedCategory === tag ? "contained " : "outlined"}
+								color={selectedCategory === tag ? "primary" : "secondary"}
+							/>
+						)
+					})}
+				</div>
+			: null}
 			<div>
 				{loopActions}
 				<div style={{display: "flex"}}>
@@ -2902,10 +3412,14 @@ const AppCreator = (props) => {
 				0, 0, canvas.width, canvas.height
 			)
 
-			const canvasUrl = canvas.toDataURL()
-			if (canvasUrl !== fileBase64) {
-				//console.log("SET URL TO: ", canvasUrl)
-				setFileBase64(canvasUrl)
+			try {
+				const canvasUrl = canvas.toDataURL()
+				if (canvasUrl !== fileBase64) {
+					//console.log("SET URL TO: ", canvasUrl)
+					setFileBase64(canvasUrl)
+				}
+			} catch (e) {
+				alert.error("Failed to parse canvasurl!")
 			}
 		}
 
@@ -2914,12 +3428,6 @@ const AppCreator = (props) => {
 		//canvas.width = img.width
 		//canvas.height = img.height
 	}
-
-	//const imageInfo = file.length === 0 ? 
-	//	<div style={{textAlign: "center", marginTop: 20}}>
-	//		Upload logo
-	//	</div> :
-	//	<img src={file} id="logo" style={{width: "100%", height: "100%"}} />
 
 	const [imageUploadError, setImageUploadError] = useState("");
 	const [openImageModal, setOpenImageModal] = useState("");
@@ -2930,7 +3438,7 @@ const AppCreator = (props) => {
 	let imageData = fileBase64;
 	let croppedData = file.length > 0 ? file : fileBase64
 
-	const imageInfo = <img src={imageData} id="logo" style={{maxWidth: 174, maxHeight: 174, minWidth: 174, minHeight: 174, objectFit: "contain",}} />
+	const imageInfo = <img crossorigin="anonymous" src={imageData} id="logo" style={{maxWidth: 174, maxHeight: 174, minWidth: 174, minHeight: 174, objectFit: "contain",}} />
 
 	const alternateImg = <AddPhotoAlternateIcon style={{ width: 100, height: 100, flex: "1", display: "flex", flexDirection: "row", margin: "auto", marginTop: 30, marginLeft: 40,}} onClick={() => {
 		upload.click()
@@ -2963,11 +3471,15 @@ const AppCreator = (props) => {
 
 	const onSaveAppIcon = () => {
 		if(editor){
-			setFile("");
-			const canvas = editor.getImageScaledToCanvas();
-			setFileBase64(canvas.toDataURL());
-			setOpenImageModal(false)
-			setDisableImageUpload(true);
+			try {
+				setFile("");
+				const canvas = editor.getImageScaledToCanvas();
+				setFileBase64(canvas.toDataURL())
+				setOpenImageModal(false)
+				setDisableImageUpload(true);
+			} catch (e) {
+				alert.error("Failed to set image. Replace it if this persists.")
+			}
 		}
 	}
 
@@ -3208,6 +3720,7 @@ const AppCreator = (props) => {
 					{bearerAuth}
 					{apiKey}
 					{oauth2Auth}
+					{jwtAuth}
 					{extraKeys}
 
 					{/*authenticationOption === "No authentication" ? null :

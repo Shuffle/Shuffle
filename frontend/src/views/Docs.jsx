@@ -5,14 +5,15 @@ import ReactMarkdown from 'react-markdown';
 import {BrowserView, MobileView} from "react-device-detect";
 import {Link} from 'react-router-dom';
 
-import {Divider, Button, Menu, MenuItem, Typography, Paper, List} from '@material-ui/core';
+import {Tooltip, Divider, Button, Menu, MenuItem, Typography, Paper, List} from '@material-ui/core';
+import {Link as LinkIcon, Edit as EditIcon} from '@material-ui/icons';
 
 const Body = {
   maxWidth: '1000px',
   minWidth: '768px',
   margin: 'auto',
 	display: "flex",
-	heigth: "100%",
+	height: "100%",
 	color: "white",
 	//textAlign: "center",
 };
@@ -23,15 +24,24 @@ const hrefStyle = {
 	textDecoration: "none"
 }
 
+const innerHrefStyle = {
+	color: "rgba(255, 255, 255, 0.75)", 
+	textDecoration: "none"
+}
+
 const Docs = (props) => {
   const { globalUrl, selectedDoc, serverside, isMobile, } = props;
 
 	const theme = useTheme();
+	const [mobile, setMobile] = useState(isMobile === true ? true : false);
 	const [data, setData] = useState("");
 	const [firstrequest, setFirstrequest] = useState(true);
 	const [list, setList] = useState([]);
 	const [, setListLoaded] = useState(false);
 	const [anchorEl, setAnchorEl] = React.useState(null);
+	const [headingSet, setHeadingSet] = React.useState(false);
+	const [selectedMeta, setSelectedMeta] = React.useState({link: "hello", read_time: 2, });
+	const [tocLines, setTocLines] = React.useState([]);
 	const [baseUrl, setBaseUrl] = React.useState(serverside === true ? "" : window.location.href)
 
   function handleClick(event) {
@@ -48,14 +58,14 @@ const Docs = (props) => {
 		position: "relative",
 		padding: 30,
 		paddingTop: 15,
-		borderRadius: 5,
+		height: "80vh", 
+		marginTop: 15,
 	}
 
 	const SideBar = {
 		maxWidth: 250,
 		flex: "1",
 		position: "fixed",
-		marginTop: 35,
 	}
 
 	const fetchDocList = () => {
@@ -71,7 +81,7 @@ const Docs = (props) => {
 			if (responseJson.success) {
 				setList(responseJson.list)
 			} else {
-				setList(["error"])
+				setList(["# Error loading documentation. Please contact us if this persists."])
 			}
 			setListLoaded(true)
 		})
@@ -91,6 +101,58 @@ const Docs = (props) => {
 			if (responseJson.success) {
 				setData(responseJson.reason)
 				document.title = "Shuffle "+docId+" documentation"
+
+				if (responseJson.meta !== undefined) {
+					setSelectedMeta(responseJson.meta)
+				}
+
+				//console.log("TOC list: ", responseJson.reason)
+				if (responseJson.reason !== undefined && responseJson.reason !== null) {
+					const splitkey = responseJson.reason.split("\n")
+					var innerTocLines = []
+					var record = false
+					for (var key in splitkey) {
+						const line = splitkey[key]
+						//console.log("Line: ", line)
+						if (line.toLowerCase().includes("table of contents")) {
+							record = true
+							continue
+						}
+
+						if (record && line.length < 3) {
+							record = false
+						}
+
+						if (record) {
+							const parsedline = line.split("](")
+							if (parsedline.length > 1) {
+								parsedline[0] = parsedline[0].replaceAll("*", "")
+								parsedline[0] = parsedline[0].replaceAll("[", "")
+								parsedline[0] = parsedline[0].replaceAll("]", "")
+								parsedline[0] = parsedline[0].replaceAll("(", "")
+								parsedline[0] = parsedline[0].replaceAll(")", "")
+								parsedline[0] = parsedline[0].trim()
+
+								parsedline[1] = parsedline[1].replaceAll("*", "")
+								parsedline[1] = parsedline[1].replaceAll("[", "")
+								parsedline[1] = parsedline[1].replaceAll("]", "")
+								parsedline[1] = parsedline[1].replaceAll(")", "")
+								parsedline[1] = parsedline[1].replaceAll("(", "")
+								parsedline[1] = parsedline[1].trim()
+								//console.log(parsedline[0], parsedline[1])
+
+								innerTocLines.push({
+									"text": parsedline[0],
+									"link": parsedline[1]
+								})
+							} else {
+								console.log("Bad line for parsing: ", line)
+							}
+						}
+					}
+				
+					setTocLines(innerTocLines)
+				}
 			} else {
 				setData("# Error\nThis page doesn't exist.")
 			}
@@ -100,14 +162,21 @@ const Docs = (props) => {
 
 	if (firstrequest) {
 		setFirstrequest(false)
+		if (!serverside)  {
+			if (window.innerWidth < 768) {
+				setMobile(true)
+			}
+		}
 
 		if (selectedDoc !== undefined) {
 			setData(selectedDoc.reason)
 			setList(selectedDoc.list)
 			setListLoaded(true)
 		} else {
-			fetchDocList()
-			fetchDocs(props.match.params.key)
+			if (!serverside) {
+				fetchDocList()
+				fetchDocs(props.match.params.key)
+			}
 		}
 	}
 
@@ -118,6 +187,7 @@ const Docs = (props) => {
 	}
 
 	const parseElementScroll = () => {
+		const offset = 45
 		var parent = document.getElementById("markdown_wrapper_outer")
 		if (parent !== null) {
 			//console.log("IN PARENT")
@@ -135,7 +205,12 @@ const Docs = (props) => {
 
 				// Fix location..
 				if (element.innerHTML.toLowerCase() === name) {
+					//console.log(element.offsetTop)
 					element.scrollIntoView({behavior: "smooth"})
+					//element.scrollTo({
+					//	top: element.offsetTop+offset,
+					//	behavior: "smooth"
+					//})
 					found = true
 					//element.scrollTo({
 					//	top: element.offsetTop-100,
@@ -147,7 +222,7 @@ const Docs = (props) => {
 			// H#
 			if (!found) {
 				elements = parent.getElementsByTagName('h3')
-				console.log(name)
+				//console.log("NAMe: ", name)
 				found = false
 				for (key in elements) {
 					const element = elements[key]
@@ -158,6 +233,10 @@ const Docs = (props) => {
 					// Fix location..
 					if (element.innerHTML.toLowerCase() === name) {
 						element.scrollIntoView({behavior: "smooth"})
+						//element.scrollTo({
+						//	top: element.offsetTop-offset,
+						//	behavior: "smooth"
+						//})
 						found = true
 						//element.scrollTo({
 							//	top: element.offsetTop-100,
@@ -187,10 +266,10 @@ const Docs = (props) => {
 	const markdownStyle = {
 		color: "rgba(255, 255, 255, 0.65)", 
 		flex: "1",
-		maxWidth: isMobile ? "100%" : 750,
+		maxWidth: mobile ? "100%" : 750,
 		overflow: "hidden",
 		paddingBottom: 200, 
-		marginLeft: isMobile ? 0 : 275, 
+		marginLeft: mobile ? 0 : 275, 
 	}
 
 	function OuterLink(props) {
@@ -214,12 +293,65 @@ const Docs = (props) => {
 		)
 	}
 
-	function Heading(props) {
-		const element = React.createElement(`h${props.level}`, {style: {marginTop: 40}}, props.children)
+	const Heading = (props) => {
+		const element = React.createElement(`h${props.level}`, {style: {marginTop: props.level === 1 ? 20 : 50}}, props.children)
+		const [hover, setHover] = useState(false)
+
+		var extraInfo = ""
+		if (props.level === 1) {
+			extraInfo = 
+				<div style={{backgroundColor: theme.palette.inputColor, padding: 15, borderRadius: theme.palette.borderRadius, marginBottom: 30, display: "flex",}}>
+					<div style={{flex: 3, display: "flex", vAlign: "center",}}>
+						{mobile ? null : 
+								<Typography style={{display: "inline", marginTop: 6, }}>
+									<a rel="norefferer" target="_blank" href={selectedMeta.link} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>
+										<Button style={{}} variant="outlined">
+											<EditIcon /> &nbsp;&nbsp;Edit
+										</Button>
+									</a>
+								</Typography>
+						}
+						{mobile ? null : 
+							<div style={{height: "100%", width: 1, backgroundColor: "white", marginLeft: 50, marginRight: 50, }} />
+						}
+						<Typography style={{display: "inline", marginTop: 11, }}>
+							{selectedMeta.read_time} minute{selectedMeta.read_time === 1 ? "" : "s"} to read
+						</Typography>
+					</div>
+					<div style={{flex: 2}}>
+						{mobile || selectedMeta.contributors === undefined || selectedMeta.contributors === null ? "" : 
+							<div style={{margin: 10, height: "100%", display: "inline",}}>
+								{selectedMeta.contributors.slice(0,7).map((data, index) => {
+									return (
+											<a rel="norefferer" target="_blank" href={data.url} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>
+												<Tooltip title={data.url} placement="bottom">
+													<img alt={data.url} src={data.image} style={{marginTop: 5, marginRight: 10, height: 40, borderRadius: 40, }} />
+												</Tooltip>
+											</a>
+									)
+								})}
+								</div>
+							}
+					</div>
+				</div>
+		}
+
 		return (
-			<Typography>
+			<Typography 
+				onMouseOver={() => {
+					setHover(true)
+				}} >
 				{props.level !== 1 ? <Divider style={{width: "90%", marginTop: 40, backgroundColor: theme.palette.inputColor}} /> : null}
 				{element}
+				{/*hover ? <LinkIcon onMouseOver={() => {setHover(true)}} style={{cursor: "pointer", display: "inline", }} onClick={() => {
+					window.location.href += "#hello"
+					console.log(window.location)
+					//window.history.pushState('page2', 'Title', '/page2.php');
+					//window.history.replaceState('page2', 'Title', '/page2.php');
+				}} /> 
+				: ""
+				*/}
+				{extraInfo}
 			</Typography>
 		)
 	}
@@ -234,19 +366,44 @@ const Docs = (props) => {
 	//	);
 	//}
 
-  const postDataBrowser = 
+  const postDataBrowser = list === undefined || list === null ? null :
 		<div style={Body}>
 			<div style={SideBar}>
 				<Paper style={SidebarPaperStyle}>
 					<List style={{listStyle: "none", paddingLeft: "0", }}>
-						{list.map((item, index) => {
+						{list.map((data, index) => {
+							const item = data.name
+							if (item === undefined) {
+								return null
+							}
+
 							const path = "/docs/"+item
 							const newname = item.charAt(0).toUpperCase()+item.substring(1).split("_").join(" ").split("-").join(" ")
+							const itemMatching = props.match.params.key.toLowerCase() === item.toLowerCase()
+							//const [tocLines, setTocLines] = React.useState([]);
 							return (
-								<li key={index} style={{marginTop: 15,}}>
-									<Link key={index} style={hrefStyle} to={path} onClick={() => {fetchDocs(item)}}>
-										<Typography variant="h6"><b>{newname}</b></Typography>
+								<li key={index} style={{marginTop: 10,}}>
+									<Link key={index} style={hrefStyle} to={path} onClick={() => {
+										setTocLines([])
+										fetchDocs(item)
+									}}>
+										<Typography style={{color: itemMatching ? "#f86a3e" : "inherit"}} variant="body1"><b>> {newname}</b></Typography>
 									</Link>
+									{itemMatching && tocLines !== null && tocLines !== undefined && tocLines.length > 0 ? 
+										<div style={{marginLeft: 5}}>
+											{tocLines.map((data, index) => {
+												//console.log(data)
+
+												return (
+													<Link key={index} style={innerHrefStyle} to={data.link} onClick={() => {}}>
+														<Typography variant="body2" style={{cursor: "pointer"}}>
+															- {data.text}
+														</Typography>
+													</Link>
+												)
+											})}
+										</div>
+									: null}
 								</li>
 							)
 						})}
@@ -278,7 +435,7 @@ const Docs = (props) => {
 		flexDirection: "column",
 	}
 
-	const postDataMobile = 
+	const postDataMobile = list === undefined || list === null ? null :
 		<div style={mobileStyle}>
 			<div>
 				<Button fullWidth aria-controls="simple-menu" aria-haspopup="true" variant="outlined" color="primary" onClick={handleClick}>
@@ -294,7 +451,12 @@ const Docs = (props) => {
 					open={Boolean(anchorEl)}
 					onClose={handleClose}
 				>
-				{list.map((item, index) => {
+				{list.map((data, index) => {
+					const item = data.name
+					if (item === undefined) {
+						return null
+					}
+
 					const path = "/docs/"+item
 					const newname = item.charAt(0).toUpperCase()+item.substring(1).split("_").join(" ").split("-").join(" ")
 					return (
@@ -344,7 +506,7 @@ const Docs = (props) => {
 		</div>
 
 	return (
-		<div>	
+		<div style={{}}>	
 			{loadedCheck}
 		</div>	
 	)

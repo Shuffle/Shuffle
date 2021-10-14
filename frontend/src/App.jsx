@@ -22,6 +22,8 @@ import AdminSetup from "./views/AdminSetup";
 import Admin from "./views/Admin";
 import Docs from "./views/Docs";
 import Introduction from "./views/Introduction";
+import SetAuthentication from "./views/SetAuthentication";
+import SetAuthenticationSSO from "./views/SetAuthenticationSSO";
 
 import LandingPageNew from "./views/LandingpageNew";
 import LoginPage from "./views/LoginPage";
@@ -40,14 +42,15 @@ import {isMobile} from "react-device-detect";
 var globalUrl = window.location.origin
 
 // CORS used for testing purposes. Should only happen with specific port and http
-if (window.location.protocol == "http:" && window.location.port === "3000") {
+if ( window.location.port === "3000") {
 	globalUrl = "http://localhost:5001"
 	//globalUrl = "http://localhost:5002"
 }
 
 const App = (message, props) => {
 	const [userdata, setUserData] = useState({});
-	const [cookies, setCookie, removeCookie] = useCookies([]);
+	const [notifications, setNotifications] = useState([])
+	const [cookies, setCookie, removeCookie] = useCookies([])
 	const [isLoggedIn, setIsLoggedIn] = useState(false);
 	const [dataset, setDataset] = useState(false);
 	const [isLoaded, setIsLoaded] = useState(false);
@@ -55,6 +58,7 @@ const App = (message, props) => {
 
 	useEffect(() => {
 		if (dataset === false) {
+			getUserNotifications()
 			checkLogin()
 			setDataset(true)
 		}
@@ -62,6 +66,25 @@ const App = (message, props) => {
 
 	if (isLoaded && !isLoggedIn && (!window.location.pathname.startsWith("/login") && (!window.location.pathname.startsWith("/docs") && (!window.location.pathname.startsWith("/adminsetup"))))) {
 		window.location = "/login"
+	}
+
+	const getUserNotifications = () => {
+		fetch(`${globalUrl}/api/v1/notifications`, {
+			credentials: "include",
+			headers: {
+				'Content-Type': 'application/json',
+			},
+		})
+		.then(response => response.json())
+		.then(responseJson => {
+			if (responseJson.success === true && responseJson.notifications !== null && responseJson.notifications !== undefined && responseJson.notifications.length > 0) {
+				//console.log("RESP: ", responseJson)
+				setNotifications(responseJson.notifications)
+			}
+		})
+		.catch(error => {
+			console.log("Failed getting notifications for user: ", error) 
+		});
 	}
 
 	const checkLogin = () => {
@@ -75,7 +98,7 @@ const App = (message, props) => {
 		.then(response => response.json())
 		.then(responseJson => {
 			if (responseJson.success === true) {
-				//console.log(responseJson.success)
+				console.log(responseJson)
 				setUserData(responseJson)
 				setIsLoggedIn(true)
 				//console.log("Cookies: ", cookies)
@@ -104,9 +127,10 @@ const App = (message, props) => {
 			<Route exact path="/home" render={props => <LandingPageNew isLoaded={isLoaded} {...props} />} />
 		</div> :
 		<div style={{ backgroundColor: "#1F2023", color: "rgba(255, 255, 255, 0.65)", minHeight: "100vh" }}>
-			<ScrollToTop setCurpath={setCurpath} />
-			<Header cookies={cookies} removeCookie={removeCookie} isLoaded={isLoaded} globalUrl={globalUrl} setIsLoggedIn={setIsLoggedIn} isLoggedIn={isLoggedIn} userdata={userdata} {...props} />
-			<Route exact path="/login" render={props => <LoginPage isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
+			<ScrollToTop getUserNotifications={getUserNotifications} setCurpath={setCurpath} />
+			<Header notifications={notifications} setNotifications={setNotifications} checkLogin={checkLogin} cookies={cookies} removeCookie={removeCookie} isLoaded={isLoaded} globalUrl={globalUrl} setIsLoggedIn={setIsLoggedIn} isLoggedIn={isLoggedIn} userdata={userdata} {...props} />
+			<div style={{height: 60}}/>
+			<Route exact path="/login" render={props => <LoginPage  isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} checkLogin={checkLogin} {...props} />} />
 			<Route exact path="/admin" render={props => <Admin userdata={userdata} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
 			<Route exact path="/admin/:key" render={props => <Admin isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
 			<Route exact path="/settings" render={props => <SettingsPage isLoaded={isLoaded} userdata={userdata} globalUrl={globalUrl} {...props} />} />
@@ -125,6 +149,8 @@ const App = (message, props) => {
 			<Route exact path="/docs" render={props => { window.location.pathname = "/docs/about" }} />
 			<Route exact path="/introduction" render={props => <Introduction isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/introduction/:key" render={props => <Introduction isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
+			<Route exact path="/set_authentication" render={props => <SetAuthentication userdata={userdata} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
+			<Route exact path="/login_sso" render={props => <SetAuthenticationSSO userdata={userdata} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
 			<Route exact path="/" render={props => <LoginPage isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
 		</div>
 

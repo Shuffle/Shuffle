@@ -25,18 +25,18 @@ services:
       - "${BACKEND_PORT}:5001"
     networks:
       - shuffle
-    volumes: 
-      - /var/run/docker.sock:/var/run/docker.sock 
-      - ${SHUFFLE_APP_HOTLOAD_LOCATION}:/shuffle-apps     
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${SHUFFLE_APP_HOTLOAD_LOCATION}:/shuffle-apps
       - ${SHUFFLE_FILE_LOCATION}:/shuffle-files
       #- ${SHUFFLE_OPENSEARCH_CERTIFICATE_FILE}:/shuffle-files/es_certificate
-    env_file: .env 
+    env_file: .env
     environment:
       - SHUFFLE_APP_HOTLOAD_FOLDER=/shuffle-apps
       - SHUFFLE_FILE_LOCATION=/shuffle-files
     restart: unless-stopped
     #depends_on:
-      #- opensearch 
+      #- opensearch #Not necessary because dependancy is handled within the backend itself instead
       #- database
   orborus:
     #build: ./functions/onprem/orborus
@@ -62,11 +62,11 @@ services:
       - SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
       - SHUFFLE_PASS_APP_PROXY=${SHUFFLE_PASS_APP_PROXY}
       - SHUFFLE_ORBORUS_EXECUTION_TIMEOUT=600
-      - SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY=50
+      - SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY=5
       - CLEANUP=${SHUFFLE_CONTAINER_AUTO_CLEANUP}
     restart: unless-stopped
   opensearch:
-    image: opensearchproject/opensearch:1.0.0
+    image: opensearchproject/opensearch:1.1.0
     hostname: shuffle-opensearch
     container_name: shuffle-opensearch
     environment:
@@ -84,7 +84,7 @@ services:
         soft: -1
         hard: -1
       nofile:
-        soft: 65536 # maximum number of open files for the OpenSearch user, set to at least 65536 on modern systems
+        soft: 65536 
         hard: 65536
     volumes:
       - ${DB_LOCATION}:/usr/share/opensearch/data:rw
@@ -93,21 +93,6 @@ services:
     networks:
       - shuffle
     restart: unless-stopped
-  #database:
-  #  #build: ./backend/database
-  #  image: frikky/shuffle:database
-  #  container_name: shuffle-database
-  #  hostname: shuffle-database
-  #  ports:
-  #    - "8000:8000"
-  #  networks:
-  #    - shuffle
-  #  environment:
-  #  -  _JAVA_OPTIONS="-Xmx2g"
-  #  restart: unless-stopped
-  #  volumes:
-  #    - ${DB_LOCATION}:/etc/shuffle
-
 networks:
   shuffle:
     driver: bridge

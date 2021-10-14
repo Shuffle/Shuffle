@@ -8,7 +8,6 @@ ENV PATH /usr/src/app/node_modules/.bin:$PATH
 
 COPY package.json /usr/src/app/package.json
 
-#RUN npm install --verbose
 RUN yarn install 
 
 # copy only required files to not trigger rebuilding every time
@@ -21,7 +20,7 @@ COPY ./*.json /usr/src/app/
 RUN yarn build
 
 # Production environment
-FROM nginx:1.21
+FROM nginx:1.21.3
 
 RUN mkdir -p /usr/share/nginx/html/build
 RUN mkdir -p /usr/share/nginx/html/css

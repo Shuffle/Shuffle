@@ -16,7 +16,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -39,9 +38,9 @@ var environment = os.Getenv("ENVIRONMENT_NAME")
 var baseUrl = os.Getenv("BASE_URL")
 var appCallbackUrl = os.Getenv("BASE_URL")
 var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
+var timezone = os.Getenv("TZ")
 var baseimagename = "frikky/shuffle"
 var registryName = "registry.hub.docker.com"
-var fallbackName = "shuffle-orborus"
 var sleepTime = 2
 var requestCache *cache.Cache
 var topClient *http.Client
@@ -59,38 +58,6 @@ var extra int
 var startAction string
 var results []shuffle.ActionResult
 var allLogs map[string]string
-
-var containerId string
-
-// form container id of current running container
-func getThisContainerId() string {
-	if len(containerId) > 0 {
-		return containerId
-	}
-
-	id := ""
-	cmd := fmt.Sprintf("cat /proc/self/cgroup | grep memory | tail -1 | cut -d/ -f3 | grep -o -E '[0-9A-z]{64}'")
-	out, err := exec.Command("bash", "-c", cmd).Output()
-	if err == nil {
-		id = strings.TrimSpace(string(out))
-
-		//log.Printf("Checking if %s is in %s", ".scope", string(out))
-		if strings.Contains(string(out), ".scope") {
-			id = fallbackName
-		}
-	}
-
-	return id
-}
-
-func init() {
-	containerId = getThisContainerId()
-	if len(containerId) == 0 {
-		log.Printf("[WARNING] No container ID found. Not running containerized? This should only show during testing")
-	} else {
-		log.Printf("[INFO] Found container ID for this worker: %s", containerId)
-	}
-}
 
 // removes every container except itself (worker)
 func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason string, handleResultSend bool) {
@@ -134,62 +101,67 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 		log.Printf("[INFO] NOT cleaning up containers. IDS: %d, CLEANUP env: %s", len(containerIds), cleanupEnv)
 	}
 
-	abortUrl := fmt.Sprintf("%s/api/v1/workflows/%s/executions/%s/abort", baseUrl, workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
+	if len(reason) > 0 && len(nodeId) > 0 {
+		log.Printf("[INFO] Running abort of workflow because it should be finished")
 
-	path := fmt.Sprintf("?reason=%s", url.QueryEscape(reason))
-	if len(nodeId) > 0 {
-		path += fmt.Sprintf("&node=%s", url.QueryEscape(nodeId))
-	}
-	if len(environment) > 0 {
-		path += fmt.Sprintf("&env=%s", url.QueryEscape(environment))
-	}
-
-	//fmt.Println(url.QueryEscape(query))
-	abortUrl += path
-	log.Printf("[INFO] Abort URL: %s", abortUrl)
-
-	req, err := http.NewRequest(
-		"GET",
-		abortUrl,
-		nil,
-	)
-
-	if err != nil {
-		log.Println("[INFO] Failed building request: %s", err)
-	}
-
-	// FIXME: Add an API call to the backend
-	authorization := os.Getenv("AUTHORIZATION")
-	if len(authorization) > 0 {
-		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", authorization))
-	} else {
-		log.Printf("[ERROR] No authorization specified for abort")
-	}
-
-	req.Header.Add("Content-Type", "application/json")
-	client := &http.Client{
-		Transport: &http.Transport{
-			Proxy: nil,
-		},
-	}
-
-	httpProxy := os.Getenv("HTTP_PROXY")
-	httpsProxy := os.Getenv("HTTPS_PROXY")
-	if (len(httpProxy) > 0 || len(httpsProxy) > 0) && baseUrl != "http://shuffle-backend:5001" {
-		client = &http.Client{}
-	} else {
-		if len(httpProxy) > 0 {
-			log.Printf("[INFO] Running with HTTP proxy %s (env: HTTP_PROXY)", httpProxy)
+		abortUrl := fmt.Sprintf("%s/api/v1/workflows/%s/executions/%s/abort", baseUrl, workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
+		path := fmt.Sprintf("?reason=%s", url.QueryEscape(reason))
+		if len(nodeId) > 0 {
+			path += fmt.Sprintf("&node=%s", url.QueryEscape(nodeId))
 		}
-		if len(httpsProxy) > 0 {
-			log.Printf("[INFO] Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
+		if len(environment) > 0 {
+			path += fmt.Sprintf("&env=%s", url.QueryEscape(environment))
 		}
-	}
 
-	log.Printf("[INFO] All App Logs: %#v", allLogs)
-	_, err = client.Do(req)
-	if err != nil {
-		log.Printf("[WARNING] Failed abort request: %s", err)
+		//fmt.Println(url.QueryEscape(query))
+		abortUrl += path
+		log.Printf("[INFO] Abort URL: %s", abortUrl)
+
+		req, err := http.NewRequest(
+			"GET",
+			abortUrl,
+			nil,
+		)
+
+		if err != nil {
+			log.Println("[INFO] Failed building request: %s", err)
+		}
+
+		// FIXME: Add an API call to the backend
+		authorization := os.Getenv("AUTHORIZATION")
+		if len(authorization) > 0 {
+			req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", authorization))
+		} else {
+			log.Printf("[ERROR] No authorization specified for abort")
+		}
+
+		req.Header.Add("Content-Type", "application/json")
+		client := &http.Client{
+			Transport: &http.Transport{
+				Proxy: nil,
+			},
+		}
+
+		httpProxy := os.Getenv("HTTP_PROXY")
+		httpsProxy := os.Getenv("HTTPS_PROXY")
+		if (len(httpProxy) > 0 || len(httpsProxy) > 0) && baseUrl != "http://shuffle-backend:5001" {
+			client = &http.Client{}
+		} else {
+			if len(httpProxy) > 0 {
+				log.Printf("[INFO] Running with HTTP proxy %s (env: HTTP_PROXY)", httpProxy)
+			}
+			if len(httpsProxy) > 0 {
+				log.Printf("[INFO] Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
+			}
+		}
+
+		log.Printf("[INFO] All App Logs: %#v", allLogs)
+		_, err = client.Do(req)
+		if err != nil {
+			log.Printf("[WARNING] Failed abort request: %s", err)
+		}
+	} else {
+		log.Printf("[INFO] NOT running abort during shutdown.")
 	}
 
 	log.Printf("[INFO] Finished shutdown (after %d seconds). ", sleepDuration)
@@ -214,15 +186,8 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 			Type:   "json-file",
 			Config: map[string]string{},
 		},
-		Resources: container.Resources{},
-	}
-
-	// form container id and use it as network source if it's not empty
-	containerId = getThisContainerId()
-	if containerId != "" {
-		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
-	} else {
-		log.Printf("[WARNING] Empty self container id, continue without NetworkMode")
+		Resources:   container.Resources{},
+		NetworkMode: container.NetworkMode(fmt.Sprintf("container:worker-%s", workflowExecution.ExecutionId)),
 	}
 
 	// Removing because log extraction should happen first
@@ -760,6 +725,16 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 				Value: workflowExecution.ExecutionId,
 			})
 
+			action.Parameters = append(action.Parameters, shuffle.WorkflowAppActionParameter{
+				Name:  "source_node",
+				Value: trigger.ID,
+			})
+
+			action.Parameters = append(action.Parameters, shuffle.WorkflowAppActionParameter{
+				Name:  "source_auth",
+				Value: workflowExecution.Authorization,
+			})
+
 			//trigger.LargeImage = ""
 			//err = handleSubworkflowExecution(client, workflowExecution, trigger, action)
 			//if err != nil {
@@ -957,6 +932,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			fmt.Sprintf("AUTHORIZATION=%s", workflowExecution.Authorization),
 			fmt.Sprintf("CALLBACK_URL=%s", baseUrl),
 			fmt.Sprintf("BASE_URL=%s", appCallbackUrl),
+			fmt.Sprintf("TZ=%s", timezone),
 		}
 
 		if strings.ToLower(os.Getenv("SHUFFLE_PASS_APP_PROXY")) == "true" {
@@ -968,13 +944,19 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		// Fixes issue:
 		// standard_init_linux.go:185: exec user process caused "argument list too long"
 		// https://devblogs.microsoft.com/oldnewthing/20100203-00/?p=15083
-		maxSize := 32700 - len(string(actionData)) - 2000
-		if len(executionData) < maxSize {
-			log.Printf("[INFO] ADDING FULL_EXECUTION because size is smaller than %d", maxSize)
-			env = append(env, fmt.Sprintf("FULL_EXECUTION=%s", string(executionData)))
-		} else {
-			log.Printf("[WARNING] Skipping FULL_EXECUTION because size is larger than %d", maxSize)
-		}
+
+		// FIXME: Ensure to NEVER do this anymore
+		// This potentially breaks too much stuff. Better to have the app poll the data.
+		_ = executionData
+		/*
+			maxSize := 32700 - len(string(actionData)) - 2000
+			if len(executionData) < maxSize {
+				log.Printf("[INFO] ADDING FULL_EXECUTION because size is smaller than %d", maxSize)
+				env = append(env, fmt.Sprintf("FULL_EXECUTION=%s", string(executionData)))
+			} else {
+				log.Printf("[WARNING] Skipping FULL_EXECUTION because size is larger than %d", maxSize)
+			}
+		*/
 
 		// Uses a few ways of getting / checking if an app is available
 		// 1. Try original with lowercase
@@ -982,8 +964,8 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		// 3. Add remote repo location
 		images := []string{
 			image,
-			fmt.Sprintf("%s:%s_%s", baseimagename, strings.Replace(action.AppName, " ", "-", -1), action.AppVersion),
 			fmt.Sprintf("%s/%s:%s_%s", registryName, baseimagename, parsedAppname, action.AppVersion),
+			fmt.Sprintf("%s:%s_%s", baseimagename, strings.Replace(action.AppName, " ", "-", -1), action.AppVersion),
 		}
 
 		// If cleanup is set, it should run for efficiency
@@ -1131,7 +1113,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 								if strings.Contains(buildBuf.String(), "errorDetail") {
 									log.Printf("[ERROR] Docker build:\n%s\nERROR ABOVE: Trying to pull tags from: %s", buildBuf.String(), image)
 									log.Printf("[DEBUG] Shutting down (14)")
-									shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
+									shutdown(workflowExecution, action.ID, fmt.Sprintf("Error deploying container: %s", buildBuf.String()), true)
 								}
 
 								log.Printf("[INFO] Successfully downloaded %s", image)
@@ -1958,7 +1940,6 @@ func downloadDockerImageBackend(client *http.Client, imageName string) error {
 		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", authorization))
 	} else {
 		log.Printf("[WARNING] No auth found - running backend download without it.")
-		//req.Header.Add("Authorization", fmt.Sprintf("Bearer db0373c6-1083-4dec-a05d-3ba73f02ccd4"))
 		//return
 	}
 
@@ -2041,6 +2022,12 @@ func main() {
 			log.Printf("Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
 		}
 	}
+
+	if timezone == "" {
+		timezone = "Europe/Amsterdam"
+	}
+
+	log.Printf("[INFO] Running with timezone %s", timezone)
 
 	//imageName := fmt.Sprintf("%s/%s:shuffle_openapi_1.0.0", registryName, baseimagename)
 	//downloadDockerImageBackend(client, imageName)
