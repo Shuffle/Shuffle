@@ -222,7 +222,7 @@ const AppCreator = (props) => {
 	const [parameterName, setParameterName] = useState("");
 	const [parameterLocation, setParameterLocation] = useState(apikeySelection.length > 0 ? apikeySelection[0] : "");
 	const [refreshUrl, setRefreshUrl] = useState("");
-	const [oauth2Scopes, setOauth2Scopes] = useState(["OAUTH2.SCOPE.HERE"]);
+	const [oauth2Scopes, setOauth2Scopes] = useState([]);
 	const [projectCategories, setProjectCategories] = useState([]);
 	const [selectedCategory, setSelectedCategory] = useState("");
 
@@ -396,7 +396,7 @@ const AppCreator = (props) => {
 	const handleGetRef = (parameter, data) => {
 		try {
 			if (parameter === null || parameter["$ref"] === undefined) {
-				//console.log("$ref not found in getref: ")
+				//console.log("$ref not found in getref for: ", parameter)
 				return parameter
 			}
 		} catch (e) {
@@ -425,12 +425,6 @@ const AppCreator = (props) => {
 		}
 
 		return newitem 
-
-		//console.log("Should get ", parameter["$ref"])
-		//const subkeys = parameter["$ref"].split("/")
-		// setBasedata(data)
-
-		//	handleGetReference(parameter["$ref"])
 	}
 
 	// Sets the data up as it should be at later points
@@ -476,7 +470,18 @@ const AppCreator = (props) => {
 			document.title = "Apps - "+data.info.title
 
 			if (data.info["x-logo"] !== undefined) {
-				setFileBase64(data.info["x-logo"])
+
+				if (data.info["x-logo"].url !== undefined) {
+					console.log("PARSED LOGO: ", data.info["x-logo"].url) 
+					setFileBase64(data.info["x-logo"].url)
+				} else {
+					setFileBase64(data.info["x-logo"])
+				}
+				console.log("")
+				console.log("")
+				console.log("LOGO: ", data.info["x-logo"])
+				console.log("")
+				console.log("")
 			}
 
 			if (data.info.contact !== undefined) {
@@ -542,8 +547,11 @@ const AppCreator = (props) => {
 					}
 
 					if (!allowedfunctions.includes(method.toUpperCase())) {
-						console.log("Invalid method: ", method, "data: ", methodvalue)
-						alert.info("Skipped method (not allowed): "+method)
+						// Typical YAML issue
+						if (method !== "parameters") {
+							console.log("Invalid method: ", method, "data: ", methodvalue)
+							alert.info("Skipped method (not allowed): "+method)
+						}
 						continue
 					}
 
@@ -551,6 +559,8 @@ const AppCreator = (props) => {
 					if (methodvalue.operationId !== undefined && methodvalue.operationId !== null && methodvalue.operationId.length > 0 && (tmpname === undefined || tmpname.length === 0)) {
 						tmpname = methodvalue.operationId
 					}
+
+					tmpname = tmpname.replaceAll(".", " ")
 
 					var newaction = {
 						"name": tmpname,
@@ -582,10 +592,8 @@ const AppCreator = (props) => {
 						}
 					}
 
-					//console.log("Category: 
 
-					//console.log("Schema is application/json: ", methodvalue)
-					//console.log("DATA", data)
+					// Typescript? I think not ;)
 					if (methodvalue["requestBody"] !== undefined) {
 						//console.log("Handle requestbody: ", methodvalue["requestBody"])
 						if (methodvalue["requestBody"]["content"] !== undefined) {
@@ -637,15 +645,13 @@ const AppCreator = (props) => {
 									}
 								}
 							} else {
+								//console.log("REQUESTBODY: ", methodvalue["requestBody"]["content"])
 								if (methodvalue["requestBody"]["content"]["example"] !== undefined) {
 									if (methodvalue["requestBody"]["content"]["example"]["example"] !== undefined) {
 										newaction["body"] = methodvalue["requestBody"]["content"]["example"]["example"] 
 										//JSON.stringify(tmpobject, null, 2)
 									}
-								}
-
-								//console.log(methodvalue["requestBody"]["content"])
-								if (methodvalue["requestBody"]["content"]["multipart/form-data"] !== undefined) {
+								} else if (methodvalue["requestBody"]["content"]["multipart/form-data"] !== undefined) {
 									if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"] !== null) {
 										if (methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["type"] === "object") {
 											const fieldname = methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["properties"]["fieldname"]
@@ -653,6 +659,63 @@ const AppCreator = (props) => {
 												console.log("FIELDNAME: ", fieldname)
 												newaction.file_field = fieldname["value"]
 											}
+										}
+									}
+								} else {
+
+									var schemas = []
+									const content = methodvalue["requestBody"]["content"]
+									if (content !== undefined && content !== null) {
+										//console.log("CONTENT: ", content)
+										for (const [subkey, subvalue] of Object.entries(content)) {
+											if (subvalue["schema"] !== undefined) {
+												//console.log("SCHEMA: ", subvalue["schema"])
+												if (subvalue["schema"]["$ref"] !== undefined) {
+													//console.log("SCHEMA FOUND REF!")
+
+													if (!schemas.includes(subvalue["schema"]["$ref"])) {
+														schemas.push(subvalue["schema"]["$ref"])
+													}
+												}
+											} else {
+												console.log("ERROR: couldn't find schema for ", subvalue, method)
+											}
+										}
+									}
+
+									if (schemas.length === 1) {
+										const parameter = handleGetRef({"$ref": schemas[0]}, data)
+
+										if (parameter.properties !== undefined && parameter["type"] === "object") {
+											var newbody = {}
+											for (var propkey in parameter.properties) {
+												const parsedkey = propkey.replaceAll(" ", "_").toLowerCase() 
+												if (parameter.properties[propkey].type === undefined) {
+													console.log("Skipping (4): ", parameter.properties[propkey])
+													continue
+												}
+												
+												if (parameter.properties[propkey].type === "string") {
+													if (parameter.properties[propkey].description !== undefined) {
+														newbody[parsedkey] = parameter.properties[propkey].description 
+													} else {
+														newbody[parsedkey] = ""
+													}
+												} else if (parameter.properties[propkey].type.includes("int") || parameter.properties[propkey].type.includes("uint64")) {
+													newbody[parsedkey] = 0
+												} else if (parameter.properties[propkey].type.includes("boolean")) {
+													newbody[parsedkey] = false
+												} else if (parameter.properties[propkey].type.includes("array")) {
+													newbody[parsedkey] = [] 
+												} else {
+													console.log("CANT HANDLE JSON TYPE (4)", parameter.properties[propkey].type, parameter.properties[propkey])
+													newbody[parsedkey] = []
+												}
+											}
+
+											newaction["body"] = JSON.stringify(newbody, null, 2)
+										} else {
+											console.log("CANT HANDLE PARAM: (4) ", parameter.properties)
 										}
 									}
 								}
@@ -696,7 +759,7 @@ const AppCreator = (props) => {
 													for (var propkey in parameter.properties) {
 														const parsedkey = propkey.replaceAll(" ", "_").toLowerCase() 
 														if (parameter.properties[propkey].type === undefined) {
-															console.log("Skipping: ", parameter.properties[propkey])
+															console.log("Skipping (1): ", parameter.properties[propkey])
 															continue
 														}
 														
@@ -708,6 +771,13 @@ const AppCreator = (props) => {
 															}
 														} else if (parameter.properties[propkey].type.includes("int")) {
 															newbody[parsedkey] = 0
+														} else if (parameter.properties[propkey].type.includes("boolean")) {
+															newbody[parsedkey] = false
+														} else if (parameter.properties[propkey].type.includes("array")) {
+															//console.log("Added empty array. Base is: ", parameter.properties[propkey].type)
+
+															//const parameter = handleGetRef(selectedExample["content"]["application/json"]["schema"], data)
+															newbody[parsedkey] = []
 														} else {
 															console.log("CANT HANDLE JSON TYPE ", parameter.properties[propkey].type, parameter.properties[propkey])
 															newbody[parsedkey] = []
@@ -732,7 +802,7 @@ const AppCreator = (props) => {
 															for (var propkey in parameter.properties) {
 																const parsedkey = propkey.replaceAll(" ", "_").toLowerCase() 
 																if (parameter.properties[propkey].type === undefined) {
-																	console.log("Skipping: ", parameter.properties[propkey])
+																	console.log("Skipping (2): ", parameter.properties[propkey])
 																	continue
 																}
 
@@ -744,6 +814,8 @@ const AppCreator = (props) => {
 																	}
 																} else if (parameter.properties[propkey].type.includes("int")) {
 																	newbody[parsedkey] = 0
+																} else if (parameter.properties[propkey].type.includes("boolean")) {
+																	newbody[parsedkey] = false
 																} else {
 																	console.log("CANT HANDLE JSON TYPE (2) ", parameter.properties[propkey].type)
 																	newbody[parsedkey] = []
@@ -767,7 +839,7 @@ const AppCreator = (props) => {
 															for (var propkey in parameter.properties) {
 																const parsedkey = propkey.replaceAll(" ", "_").toLowerCase() 
 																if (parameter.properties[propkey].type === undefined) {
-																	console.log("Skipping: ", parameter.properties[propkey])
+																	console.log("Skipping (3): ", parameter.properties[propkey])
 																	continue
 																}
 
@@ -790,7 +862,7 @@ const AppCreator = (props) => {
 															//newaction.example_response = JSON.stringify(parameter.properties, null, 2)
 														} else {
 															//newaction.example_response = parameter.properties
-															console.log("CANT HANDLE PARAM: (2) ", parameter.properties)
+															console.log("CANT HANDLE PARAM: (3) ", parameter.properties)
 														}
 													}
 												}
@@ -894,6 +966,7 @@ const AppCreator = (props) => {
 							newaction.errors.push("Missing name")
 						}
 					}
+
 					newActions.push(newaction)
 				}
 			}
@@ -924,33 +997,71 @@ const AppCreator = (props) => {
 		}
 
 		
-		console.log("SECURITYSCHEMES: ", securitySchemes)
+		//console.log("SECURITYSCHEMES: ", securitySchemes)
 		if (securitySchemes !== undefined) {
 			// FIXME: Should add Oauth2 (Microsoft) and JWT (Wazuh)
 			//console.log("SECURITY: ", securitySchemes)
 			//if (Object.entries(securitySchemes) > 1 && 
 			var newauth = []
 			for (const [key, value] of Object.entries(securitySchemes)) {
-				console.log(key, value)
+				//console.log(key, value)
 				if (value.scheme === "bearer") {
 					setAuthenticationOption("Bearer auth")
 					setAuthenticationRequired(true)
-				} else if (key === "Oauth2") {
+				} else if (key === "Oauth2" || key === "Oauth2c") {
 					//alert.info("Can't handle Oauth2 auth yet.")
 					setAuthenticationOption("Oauth2")
 					setAuthenticationRequired(true)
 
-					if (value.flow.authorizationCode.authorizationUrl !== undefined) {
-  					setParameterName(value.flow.authorizationCode.authorizationUrl)
-					}
-					if (value.flow.authorizationCode.tokenUrl !== undefined) {
-  					setParameterLocation(value.flow.authorizationCode.tokenUrl)
-					}
-					if (value.flow.authorizationCode.refreshUrl !== undefined) {
-  					setRefreshUrl(value.flow.authorizationCode.refreshUrl)
-					}
-					if (value.flow.authorizationCode.scopes !== undefined && value.flow.authorizationCode.scopes !== null && value.flow.authorizationCode.scopes.length > 0) {
-						setOauth2Scopes(value.flow.authorizationCode.scopes)
+					//console.log("FLOW-1: ", value)
+					const flowkey = value.flow === undefined ? "flows" : "flow"
+					//console.log("FLOW: ", value[flowkey])
+					const basekey = value[flowkey].authorizationCode !== undefined ? "authorizationCode" : "implicit"
+					//console.log("FLOW2: ", value[flowkey][basekey])
+					if (value[flowkey] !== undefined && value[flowkey][basekey] !== undefined) {
+						if (value[flowkey][basekey].authorizationUrl !== undefined && parameterName.length === 0) {
+							setParameterName(value[flowkey][basekey].authorizationUrl)
+						}
+
+						var tokenUrl = ""
+						if (value[flowkey][basekey].tokenUrl !== undefined) {
+							setParameterLocation(value[flowkey][basekey].tokenUrl)
+							tokenUrl = value[flowkey][basekey].tokenUrl
+						} else {
+							setParameterLocation("")
+						}
+
+						if (value[flowkey][basekey].refreshUrl !== undefined) {
+							setRefreshUrl(value[flowkey][basekey].refreshUrl)
+						} else if (tokenUrl.length > 0) {
+							setRefreshUrl(tokenUrl)
+						}
+
+						if (value[flowkey][basekey].scopes !== undefined && value[flowkey][basekey].scopes !== null) {
+							if (value[flowkey][basekey].scopes.length > 0) {
+								setOauth2Scopes(value[flowkey][basekey].scopes)
+							} else {
+								var newscopes = []
+								for (let [scopekey, scopevalue] of Object.entries(value[flowkey][basekey].scopes)) {
+									if (scopekey.startsWith("http")) {
+										const scopekeysplit = scopekey.split("/")	
+										if (scopekeysplit.length < 5) {
+											console.log("Skipping scope: ", scopekey)
+											alert.info("Skipping scope: "+scopekey)
+											continue
+										}
+
+										//console.log("Checking scope for: ", scopekey, scopekeysplit.length)
+									}
+
+									newscopes.push(scopekey)
+								}
+
+								setOauth2Scopes(newscopes)
+							}
+						}
+					} else {
+						console.log("Bad flowkey and basekey for oauth2: ", flowkey, basekey)
 					}
 
 				} else if (key === "ApiKeyAuth") {
@@ -973,11 +1084,12 @@ const AppCreator = (props) => {
 					setAuthenticationOption("Oauth2")
 					setAuthenticationRequired(true)
 				} else {
-					newauth.push({
-						"name": key,
-						"type": value.in,
-						"example": "",
-					})
+					alert.error("Couldn't handle AUTH type: ", key)
+					//newauth.push({
+					//	"name": key,
+					//	"type": value.in,
+					//	"example": "",
+					//})
 				}
 			}
 			
@@ -1446,15 +1558,6 @@ const AppCreator = (props) => {
 					},
 				},
 			}
-
-			console.log("SCOPES: ", oauth2Scopes)
-
-			//if (oauth2Scopes.scopes > 0) {
-			//	for (var key in oauth2Scopes) {
-			//		const scope = oauth2Scopes[key]
-			//		data.components.securitySchemes["Oauth2"]["flow"]["authorizationCode"]["scopes"].push(scope)
-			//	}
-			//}
 		}
 
 		if (setExtraAuth.length > 0) {
@@ -1826,21 +1929,25 @@ const AppCreator = (props) => {
 				InputProps={{
 					style:{
 						color: "white",
+						maxHeight: 50, 
 					},
 				}}
+				style={{maxHeight: 80, overflowX: "hidden", overflowY: "auto",}}
 				placeholder="Scopes"
 				color="primary"
 				fullWidth
-				defaultValue={oauth2Scopes}
+				value={oauth2Scopes}
 				onAdd={(chip) => {
 					oauth2Scopes.push(chip)
 					console.log(oauth2Scopes)
 					setOauth2Scopes(oauth2Scopes)
+					setUpdate(Math.random())
 				}}
 				onDelete={(chip, index) => {
 					oauth2Scopes.splice(index, 1)
 					console.log(oauth2Scopes)
 					setOauth2Scopes(oauth2Scopes)
+					setUpdate(Math.random())
 				}}
 			/>
 		</div>
@@ -3265,10 +3372,14 @@ const AppCreator = (props) => {
 				0, 0, canvas.width, canvas.height
 			)
 
-			const canvasUrl = canvas.toDataURL()
-			if (canvasUrl !== fileBase64) {
-				//console.log("SET URL TO: ", canvasUrl)
-				setFileBase64(canvasUrl)
+			try {
+				const canvasUrl = canvas.toDataURL()
+				if (canvasUrl !== fileBase64) {
+					//console.log("SET URL TO: ", canvasUrl)
+					setFileBase64(canvasUrl)
+				}
+			} catch (e) {
+				alert.error("Failed to parse canvasurl!")
 			}
 		}
 
@@ -3277,12 +3388,6 @@ const AppCreator = (props) => {
 		//canvas.width = img.width
 		//canvas.height = img.height
 	}
-
-	//const imageInfo = file.length === 0 ? 
-	//	<div style={{textAlign: "center", marginTop: 20}}>
-	//		Upload logo
-	//	</div> :
-	//	<img src={file} id="logo" style={{width: "100%", height: "100%"}} />
 
 	const [imageUploadError, setImageUploadError] = useState("");
 	const [openImageModal, setOpenImageModal] = useState("");
@@ -3293,7 +3398,7 @@ const AppCreator = (props) => {
 	let imageData = fileBase64;
 	let croppedData = file.length > 0 ? file : fileBase64
 
-	const imageInfo = <img src={imageData} id="logo" style={{maxWidth: 174, maxHeight: 174, minWidth: 174, minHeight: 174, objectFit: "contain",}} />
+	const imageInfo = <img crossorigin="anonymous" src={imageData} id="logo" style={{maxWidth: 174, maxHeight: 174, minWidth: 174, minHeight: 174, objectFit: "contain",}} />
 
 	const alternateImg = <AddPhotoAlternateIcon style={{ width: 100, height: 100, flex: "1", display: "flex", flexDirection: "row", margin: "auto", marginTop: 30, marginLeft: 40,}} onClick={() => {
 		upload.click()
@@ -3326,11 +3431,15 @@ const AppCreator = (props) => {
 
 	const onSaveAppIcon = () => {
 		if(editor){
-			setFile("");
-			const canvas = editor.getImageScaledToCanvas();
-			setFileBase64(canvas.toDataURL());
-			setOpenImageModal(false)
-			setDisableImageUpload(true);
+			try {
+				setFile("");
+				const canvas = editor.getImageScaledToCanvas();
+				setFileBase64(canvas.toDataURL())
+				setOpenImageModal(false)
+				setDisableImageUpload(true);
+			} catch (e) {
+				alert.error("Failed to set image. Replace it if this persists.")
+			}
 		}
 	}
 

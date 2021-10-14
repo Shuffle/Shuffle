@@ -1985,8 +1985,10 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	location := strings.Split(request.URL.String(), "/")
 
 	var hookId string
+	var queries string
 	if location[1] == "api" {
 		if len(location) <= 4 {
+			log.Printf("[INFO] Couldn't handle location. Too short in webhook: %d", len(location))
 			resp.WriteHeader(401)
 			resp.Write([]byte(`{"success": false}`))
 			return
@@ -1995,10 +1997,20 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 		hookId = location[4]
 	}
 
+	if strings.Contains(hookId, "?") {
+		splitter := strings.Split(hookId, "?")
+		hookId = splitter[0]
+
+		if len(splitter) > 1 {
+			queries = splitter[1]
+		}
+	}
+
 	// ID: webhook_<UID>
 	if len(hookId) != 44 {
+		log.Printf("[INFO] Couldn't handle hookId. Too short in webhook: %d", len(hookId))
 		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "message": "ID not valid"}`))
+		resp.Write([]byte(`{"success": false, "reason": "Hook ID not valid"}`))
 		return
 	}
 
@@ -2022,19 +2034,19 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	if hook.Status == "stopped" {
 		log.Printf("[WARNING] Not running %s because hook status is stopped", hook.Id)
 		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "The webhook isn't running. Click start to start it"}`)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "The webhook isn't running. Is it running?"}`)))
 		return
 	}
 
 	if len(hook.Workflows) == 0 {
-		log.Printf("Not running because hook isn't connected to any workflows")
+		log.Printf("[DEBUG] Not running because hook isn't connected to any workflows")
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "No workflows are defined"}`)))
 		return
 	}
 
 	if hook.Environment == "cloud" {
-		log.Printf("This should trigger in the cloud. Duplicate action allowed onprem.")
+		log.Printf("[DEBUG] This should trigger in the cloud. Duplicate action allowed onprem.")
 	}
 
 	// Check auth
@@ -2050,10 +2062,14 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
-		log.Printf("Body data error: %s", err)
+		log.Printf("[DEBUG] Body data error: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
 		return
+	}
+
+	if len(queries) > 0 && len(body) == 0 {
+		body = []byte(queries)
 	}
 
 	//log.Printf("BODY: %s", parsedBody)
@@ -5862,7 +5878,6 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/triggers/gmail/register", shuffle.HandleNewGmailRegister).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/triggers/gmail/getFolders", shuffle.HandleGetGmailFolders).Methods("GET", "OPTIONS")
 
-	// FIXME: This should only be cloud. Done locally with ngrok to test
 	//r.HandleFunc("/api/v1/triggers/gmail/routing", handleGmailRouting).Methods("POST", "OPTIONS")
 
 	r.HandleFunc("/api/v1/triggers/gmail/{key}", shuffle.HandleGetSpecificTrigger).Methods("GET", "OPTIONS")

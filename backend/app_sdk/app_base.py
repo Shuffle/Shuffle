@@ -1378,7 +1378,7 @@ class AppBase:
                                 except IndexError:
                                     print("[DEBUG] INDEXERROR: ", parsersplit[outercnt])
                                     #ret = innervalue
-                                    ret, tmp_loop = recurse_json(innervalue, parsersplit[outercnt:])
+                                    ret, tmp_loop = recurse_json(basejson[i], parsersplit[outercnt:])
                                     
                                 newvalue.append(ret)
 
@@ -1738,7 +1738,7 @@ class AppBase:
                 #self.logger.debug(f"\n\nHandle static data with JSON: {data}\n\n")
                 #self.logger.info("STATIC PARSED: %s" % actualitem)
                 if len(actualitem) > 0:
-                    self.logger.info("ACTUAL: ", actualitem)
+                    #self.logger.info("[DEACTUAL: ", actualitem)
                     for replace in actualitem:
                         try:
                             to_be_replaced = replace[0]
@@ -1774,7 +1774,7 @@ class AppBase:
                         #self.logger.info("VALUE: %s" % parameter["value"])
 
             if parameter["variant"] == "WORKFLOW_VARIABLE":
-                self.logger.info("Handling workflow variable")
+                self.logger.info("[DEBUG] Handling workflow variable")
                 found = False
                 try:
                     for item in fullexecution["workflow"]["workflow_variables"]:
@@ -2533,7 +2533,8 @@ class AppBase:
                                     break
                                 except TypeError as e:
                                     newres = ""
-                                    errorstring = "%s" % e
+                                    self.logger.info(f"[DEBUG] Got exec error: {errorstring}")
+                                    errorstring = f"{e}"
                                     if "got an unexpected keyword argument" in errorstring:
                                         fieldsplit = errorstring.split("'")
                                         if len(fieldsplit) > 1:
@@ -2541,7 +2542,7 @@ class AppBase:
                             
                                             try:
                                                 del params[field]
-                                                self.logger.info("Removed field invalid field %s" % field)
+                                                self.logger.info("[WARNING] Removed field invalid field %s" % field)
                                             except KeyError:
                                                 break
                                     else:
@@ -2774,7 +2775,8 @@ class AppBase:
             try:
                 self.action_result["result"] = json.dumps({
                     "success": False, 
-                    "reason": f"Request error - failing silently. Details: {e}"
+                    "reason": f"Request error - failing silently. Details in detail section",
+                    "details": f"{e}",
                 })
             except json.decoder.JSONDecodeError as e:
                 self.action_result["result"] = f"Request error: {e}"

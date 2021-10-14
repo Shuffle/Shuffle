@@ -78,7 +78,7 @@ const App = (message, props) => {
 		.then(response => response.json())
 		.then(responseJson => {
 			if (responseJson.success === true && responseJson.notifications !== null && responseJson.notifications !== undefined && responseJson.notifications.length > 0) {
-				console.log("RESP: ", responseJson)
+				//console.log("RESP: ", responseJson)
 				setNotifications(responseJson.notifications)
 			}
 		})

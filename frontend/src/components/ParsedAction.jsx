@@ -1616,7 +1616,7 @@ const ParsedAction = (props) => {
 									selectedAction.authentication_id = ""
 
 									for (var key in selectedAction.parameters) {
-										console.log(selectedAction.parameters[key])
+										//console.log(selectedAction.parameters[key])
 										if (selectedAction.parameters[key].configuration) {
 											selectedAction.parameters[key].value = ""
 										}

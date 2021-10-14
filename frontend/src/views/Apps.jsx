@@ -845,7 +845,7 @@ const Apps = (props) => {
 						<h2>App Creator</h2>
 						<a href="https://shuffler.io/docs/apps" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">How it works</a>
 						&nbsp;- <a href="https://github.com/frikky/security-openapis" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">Security API's</a>
-						&nbsp;- <a href="https://apis.guru/browse-apis/" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">OpenAPI directory</a>
+						&nbsp;- <a href="https://github.com/APIs-guru/openapi-directory/tree/main/APIs" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">OpenAPI directory</a>
 						&nbsp;- <a href="https://editor.swagger.io/" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">OpenAPI Validator</a>
 						<div/>
 						<Typography variant="body2" color="textSecondary">
@@ -1073,10 +1073,10 @@ const Apps = (props) => {
 							<CircularProgress style={{width: 40, height: 40, margin: "auto"}}/>
 							:
 							<Paper square style={uploadViewPaperStyle}>
-								<Typography variant="h6" style={{margin: 10}}>
+								<Typography variant="body1" style={{margin: 10}}>
 									No apps have been created, uploaded or downloaded yet. Click "Load existing apps" above to get the baseline. This may take a while as its building docker images.
 								</Typography>
-								<Typography variant="h6" style={{margin: 10}}>
+								<Typography variant="body1" style={{margin: 10}}>
 									If you're still not able to see any apps, please follow our <a href={"https://shuffler.io/docs/troubleshooting#load_all_apps_locally"} style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">troubleshooting guide for loading apps!</a>
 								</Typography>
 							</Paper>

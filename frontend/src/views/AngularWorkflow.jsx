@@ -31,8 +31,8 @@ import { GetParsedPaths } from "./Apps.jsx";
 import ConfigureWorkflow from '../components/ConfigureWorkflow.jsx';
 import AuthenticationOauth2 from "../components/Oauth2Auth.jsx";
 import ParsedAction from '../components/ParsedAction.jsx';
-import Scroll from 'react-scroll'
-import { Element as ScrollElement, animateScroll as scroll, scrollSpy, scroller } from 'react-scroll'
+//import Scroll from 'react-scroll'
+//import { Element as ScrollElement, animateScroll as scroll, scrollSpy, scroller } from 'react-scroll'
 
 const surfaceColor = "#27292D"
 const inputColor = "#383B40"
@@ -1008,6 +1008,7 @@ const AngularWorkflow = (props) => {
 		if (hasSaved === false) {
 			//alert.error("You might have forgotten to save before executing.")
 			//const saveWorkflow = (curworkflow) => {
+			//setExecutionRunning(true)
 			setExecutionRequestStarted(true)
 			saveWorkflow(workflow, executionArgument, startNode)
 			console.log("FIXME: Might have forgotten to save before executing.")
@@ -3013,10 +3014,10 @@ const AngularWorkflow = (props) => {
 				}
 	      break;
 			case 83:
-				if (previouskey === 17) {
-					event.preventDefault()
-					saveWorkflow()
-				}
+				//if (previouskey === 17) {
+				//	event.preventDefault()
+				//	saveWorkflow()
+				//}
 	      break;
 			case 70:
 				//if (previouskey === 17) {
@@ -3158,7 +3159,7 @@ const AngularWorkflow = (props) => {
 
 			setEstablished(true)
 			// Validate if the node is just a node lol
-			console.log("CY: ", cy)
+			//console.log("CY: ", cy)
 			//console.log("CY: ", cy.edgehandles())
 			//try {
 			cy.edgehandles({
@@ -5796,7 +5797,7 @@ const AngularWorkflow = (props) => {
 					const url = `https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&prompt=consent&client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${scopes}&state=workflow_id%3D${props.match.params.key}%26trigger_id%3D${selectedTrigger.id}%26username%3D${username}%26type%3Dgmail%26start%3d${startnode}`
 					console.log("URL: ", url)
 
-					var newwin = window.open(url, "", "width=200,height=100")
+					var newwin = window.open(url, "", "width=800,height=600")
 
 					// Check whether we got a callback somewhere
 					var id = setInterval(function () {
@@ -5871,7 +5872,7 @@ const AngularWorkflow = (props) => {
 
 					console.log("URL: ", url)
 
-					var newwin = window.open(url, "", "width=200,height=100")
+					var newwin = window.open(url, "", "width=800,height=600")
 
 					// Check whether we got a callback somewhere
 					var id = setInterval(function () {
@@ -9406,10 +9407,10 @@ const AngularWorkflow = (props) => {
 					//console.log("SCROLL IS NOT 0: ", scrollConfig.top)
 					//rightSideActionView.scrollTop = scrollConfig.top
 					setTimeout(() => {
-						scroller.scrollTo('elements_wrapper', {
-							containerId: 'rightside_actions',
-							offset: scrollConfig.top, 
-						})
+						//scroller.scrollTo('elements_wrapper', {
+						//	containerId: 'rightside_actions',
+						//	offset: scrollConfig.top, 
+						//})
 
 						if (scrollConfig.selected !== undefined && scrollConfig.selected !== null) {
 							const selectedField = document.getElementById(scrollConfig.selected)
@@ -9437,15 +9438,15 @@ const AngularWorkflow = (props) => {
 
 	return (
 		<div>	
-			<ScrollElement name="elements_wrapper">
 				<Prompt
 					when={!lastSaved}
 					message={unloadText}
 				/>
 				{loadedCheck}
-			</ScrollElement>
 		</div>	
 	)
+	// <ScrollElement name="elements_wrapper">
+	// </ScrollElement>
 }
 
 export default AngularWorkflow 

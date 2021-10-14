@@ -2,8 +2,21 @@ import React, {useRef, useState, useEffect, useLayoutEffect} from 'react';
 import { useTheme } from '@material-ui/core/styles';
 
 import { v4 as uuidv4 } from 'uuid';
-import { TextField, Drawer, Button, Paper, Grid, Tabs, InputAdornment, Tab, ButtonBase, Tooltip, Select, MenuItem, Divider, Dialog, Modal, DialogActions, DialogTitle, InputLabel, DialogContent, FormControl, IconButton, Menu, Input, FormGroup, FormControlLabel, Typography, Checkbox, Breadcrumbs, CircularProgress, Switch, Fade } from '@material-ui/core';
+import { ListItemText, TextField, Drawer, Button, Paper, Grid, Tabs, InputAdornment, Tab, ButtonBase, Tooltip, Select, MenuItem, Divider, Dialog, Modal, DialogActions, DialogTitle, InputLabel, DialogContent, FormControl, IconButton, Menu, Input, FormGroup, FormControlLabel, Typography, Checkbox, Breadcrumbs, CircularProgress, Switch, Fade } from '@material-ui/core';
 import { LockOpen as LockOpenIcon } from '@material-ui/icons';
+
+const ITEM_HEIGHT = 55
+const ITEM_PADDING_TOP = 8
+const MenuProps = {
+  PaperProps: {
+    style: {
+      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
+			minWidth: 500,
+      maxWidth: 500,
+			scrollX: "auto",
+    },
+  },
+}
 
 const AuthenticationOauth2 = (props) => {
   const { saveWorkflow, selectedApp, workflow, selectedAction, authenticationType, getAppAuthentication, appAuthentication, setSelectedAction, setNewAppAuth, setAuthenticationModalOpen} = props;
@@ -15,6 +28,8 @@ const AuthenticationOauth2 = (props) => {
 	const [clientSecret, setClientSecret] = React.useState(defaultConfigSet ? authenticationType.client_secret : "")
 	const [oauthUrl, setOauthUrl] = React.useState("")
 	const [buttonClicked, setButtonClicked] = React.useState(false)
+	const [selectedScopes, setSelectedScopes] = React.useState([])
+	const allscopes = authenticationType.scope !== undefined ? authenticationType.scope: [] 
 
 	const [manuallyConfigure, setManuallyConfigure] = React.useState(defaultConfigSet ? false : true)
 	const [authenticationOption, setAuthenticationOptions] = React.useState({
@@ -32,22 +47,16 @@ const AuthenticationOauth2 = (props) => {
 		return null
 	}
 
-	const handleOauth2Request = (client_id, client_secret, oauth_url) => {
+	const handleOauth2Request = (client_id, client_secret, oauth_url, scopes) => {
 		setButtonClicked(true)
-		//if (authenticationType.type === "oauth2" && authenticationType.redirect_uri !== undefined && authenticationType.redirect_uri !== null) {
-		// These are test credentials
-		//const client_id = "dae24316-4bec-4832-b660-4cba6dc2477b"
-		//const client_secret = "._Qu3EvYY-OW_D57uy79qwEo.32qD6.l0z"
-
-		const authentication_url = authenticationType.token_uri
+		console.log("SCOPES: ", scopes)
 
 		var resources = ""
-		console.log("SCOPES: ", resources)
-		if (authenticationType.scope !== undefined && authenticationType.scope !== null) {
-			resources = authenticationType.scope.join(",") 
+		if (scopes !== undefined && scopes !== null & scopes.length > 0) {
+			resources = scopes.join(",")
 		}
 
-		resources = ["AaaServer.profile.READ"]
+		const authentication_url = authenticationType.token_uri
 
 		console.log("SCOPES2: ", resources)
 		const redirectUri = `${window.location.protocol}//${window.location.host}/set_authentication`
@@ -68,7 +77,7 @@ const AuthenticationOauth2 = (props) => {
 		// How can we properly try-catch without breaks on error?
 		try {
 
-			var newwin = window.open(url, "", "width=400,height=200")
+			var newwin = window.open(url, "", "width=800,height=600")
 			//console.log(newwin)
 		
 			var open = true
@@ -176,6 +185,18 @@ const AuthenticationOauth2 = (props) => {
 
 	}
 
+  const handleScopeChange = (event) => {
+    const {
+      target: { value },
+		} = event;
+
+		console.log("VALUE: ", value)
+
+    // On autofill we get a the stringified value.
+    setSelectedScopes(typeof value === 'string' ? value.split(',') : value)
+  }
+
+
 	if (authenticationOption.label === null || authenticationOption.label === undefined) {
 		authenticationOption.label = selectedApp.name+" authentication"
 	}
@@ -282,6 +303,29 @@ const AuthenticationOauth2 = (props) => {
 									</div>
 								)
 						})}
+						{allscopes.length === 0 ? null : 
+							<Select
+								multiple
+								value={selectedScopes}
+								style={{backgroundColor: theme.palette.inputColor, color: "white", }}
+								onChange={(e) => {
+									handleScopeChange(e)
+								}}
+								fullWidth
+								input={<Input id="select-multiple-native" />}
+								renderValue={(selected) => selected.join(', ')}
+								MenuProps={MenuProps}
+							>
+								{allscopes.map((data, index) => {
+									return (
+										<MenuItem key={index} value={data}>
+											<Checkbox checked={selectedScopes.indexOf(data) > -1} />
+											<ListItemText primary={data} />
+										</MenuItem>
+									)
+								})}
+							</Select>
+						}
 						<TextField
 								style={{marginTop: 20, backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius,}} 
 								InputProps={{
@@ -328,8 +372,7 @@ const AuthenticationOauth2 = (props) => {
 					variant="contained"
 					fullWidth
 					onClick={() => {
-						//setAuthenticationModalOpen(false)
-						handleOauth2Request(clientId, clientSecret, oauthUrl) 
+						handleOauth2Request(clientId, clientSecret, oauthUrl, selectedScopes) 
 					}} 
 					color="primary"
 				>

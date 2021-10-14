@@ -5,6 +5,7 @@ import { useTheme } from '@material-ui/core/styles';
 
 import {Avatar, Grid, Paper, Tooltip, Divider, Button, TextField, FormControl, IconButton, Menu, MenuItem, FormControlLabel, Chip, Switch, Typography, Zoom, CircularProgress, Dialog, DialogTitle, DialogActions, DialogContent} from '@material-ui/core';
 import {GridOn as GridOnIcon, List as ListIcon, Close as CloseIcon, Compare as CompareIcon, Maximize as MaximizeIcon, Minimize as MinimizeIcon, AddCircle as AddCircleIcon, Toc as TocIcon, Send as SendIcon, Search as SearchIcon, FileCopy as FileCopyIcon, Delete as DeleteIcon, BubbleChart as BubbleChartIcon, Restore as RestoreIcon, Cached as CachedIcon, GetApp as GetAppIcon, Apps as AppsIcon, Edit as EditIcon, MoreVert as MoreVertIcon, PlayArrow as PlayArrowIcon, Add as AddIcon, Publish as PublishIcon, CloudUpload as CloudUploadIcon, CloudDownload as CloudDownloadIcon} from '@material-ui/icons';
+import NestedMenuItem from "material-ui-nested-menu-item";
 //import {Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
 
 //https://next.material-ui.com/components/material-icons/
@@ -27,6 +28,7 @@ import CytoscapeWrapper from '../components/RenderCytoscape'
 const inputColor = "#383B40"
 const surfaceColor = "#27292D"
 const svgSize = 24
+const imagesize = 22
 
 const flexContainerStyle = {
 	display: "flex",
@@ -1102,7 +1104,6 @@ const Workflows = (props) => {
 		)
 	}
 
-
 	const WorkflowPaper = (props) => {
   	const { data } = props;
 		const [open, setOpen] = React.useState(false);
@@ -1135,7 +1136,69 @@ const Workflows = (props) => {
 		const actions = data.actions !== null ? data.actions.length : 0
 		const [triggers, schedules, webhooks, subflows] = getWorkflowMeta(data)
 
-		const imagesize = 22
+
+		const workflowMenuButtons = <Menu
+				id="long-menu"
+				anchorEl={anchorEl}
+				keepMounted
+				open={open}
+				onClose={() => {
+					setOpen(false)
+					setAnchorEl(null)
+				}}
+			>
+				<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
+					//console.log("DATA:" ,data)
+					setModalOpen(true)
+					setEditingWorkflow(data)
+					setNewWorkflowName(data.name)
+					setNewWorkflowDescription(data.description)
+					setDefaultReturnValue(data.default_return_value)
+					if (data.tags !== undefined && data.tags !== null) {
+						setNewWorkflowTags(JSON.parse(JSON.stringify(data.tags)))
+					}
+				}} key={"change"}>
+					<EditIcon style={{marginLeft: 0, marginRight: 8}}/>
+					{"Change details"}
+				</MenuItem>
+				<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
+					setSelectedWorkflow(data) 
+					setPublishModalOpen(true)
+				}} key={"publish"}>
+					<CloudUploadIcon style={{marginLeft: 0, marginRight: 8}}/>
+					{"Publish Workflow"}
+				</MenuItem>
+				<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
+					copyWorkflow(data)		
+					setOpen(false)
+				}} key={"duplicate"}>
+					<FileCopyIcon style={{marginLeft: 0, marginRight: 8}}/>
+					{"Duplicate Workflow"}
+				</MenuItem>
+				<NestedMenuItem disabled={userdata.orgs === undefined || userdata.orgs === null || userdata.orgs.length === 1 || userdata.orgs.length >= 0} style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
+					//copyWorkflow(data)		
+					//setOpen(false)
+				}} key={"duplicate"}>
+					<FileCopyIcon style={{marginLeft: 0, marginRight: 8}}/>
+					{"Copy to Child Org"}
+				</NestedMenuItem>
+				<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
+					setExportModalOpen(true)
+					setExportData(data)
+					setOpen(false)
+				}} key={"export"}>
+					<GetAppIcon style={{marginLeft: 0, marginRight: 8}}/>
+					{"Export Workflow"}
+				</MenuItem>
+				<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
+					setDeleteModalOpen(true)
+					setSelectedWorkflowId(data.id)
+					setOpen(false)
+				}} key={"delete"}>
+					<DeleteIcon style={{marginLeft: 0, marginRight: 8}}/>
+					{"Delete Workflow"}
+				</MenuItem>
+			</Menu>
 
 		var image = ""
 		var orgName = ""
@@ -1283,62 +1346,7 @@ const Workflows = (props) => {
 								>
 								<MoreVertIcon />
 							</IconButton>
-							<Menu
-								id="long-menu"
-								anchorEl={anchorEl}
-								keepMounted
-								open={open}
-								onClose={() => {
-									setOpen(false)
-									setAnchorEl(null)
-								}}
-							>
-								<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
-									//console.log("DATA:" ,data)
-									setModalOpen(true)
-									setEditingWorkflow(data)
-									setNewWorkflowName(data.name)
-									setNewWorkflowDescription(data.description)
-									setDefaultReturnValue(data.default_return_value)
-									if (data.tags !== undefined && data.tags !== null) {
-										setNewWorkflowTags(JSON.parse(JSON.stringify(data.tags)))
-									}
-								}} key={"change"}>
-									<EditIcon style={{marginLeft: 0, marginRight: 8}}/>
-									{"Change details"}
-								</MenuItem>
-								<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
-									setSelectedWorkflow(data) 
-									setPublishModalOpen(true)
-								}} key={"publish"}>
-									<CloudUploadIcon style={{marginLeft: 0, marginRight: 8}}/>
-									{"Publish Workflow"}
-								</MenuItem>
-								<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
-									copyWorkflow(data)		
-									setOpen(false)
-								}} key={"duplicate"}>
-									<FileCopyIcon style={{marginLeft: 0, marginRight: 8}}/>
-									{"Duplicate Workflow"}
-								</MenuItem>
-								<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
-									setExportModalOpen(true)
-									setExportData(data)
-									setOpen(false)
-								}} key={"export"}>
-									<GetAppIcon style={{marginLeft: 0, marginRight: 8}}/>
-									{"Export Workflow"}
-								</MenuItem>
-								<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
-									setDeleteModalOpen(true)
-									setSelectedWorkflowId(data.id)
-									setOpen(false)
-								}} key={"delete"}>
-									<DeleteIcon style={{marginLeft: 0, marginRight: 8}}/>
-									{"Delete Workflow"}
-								</MenuItem>
-
-							</Menu>
+							{workflowMenuButtons}	
 						</Grid>
 						{/*
 						<Grid>
@@ -1547,6 +1555,50 @@ const Workflows = (props) => {
 			let workflowData = "";
 			if (workflows.length > 0) {
 				const columns = [
+					{ field: 'image', headerName: 'Logo', width: 42, renderCell: (params) => {
+						const data = params.row.record
+
+						var boxColor = "#FECC00"
+						if (data.is_valid) {
+							boxColor = "#86c142"
+						}
+
+						if (!data.previously_saved) {
+							boxColor = "#f85a3e"
+						}
+
+						var image = ""
+						var orgName = ""
+						var orgId = ""
+						if (userdata.orgs !== undefined) {
+							const foundOrg = userdata.orgs.find(org => org.id === data["org_id"])
+							if (foundOrg !== undefined && foundOrg !== null) {
+								//position: "absolute", bottom: 5, right: -5, 
+								const imageStyle = {width: imagesize+7, height: imagesize+7, pointerEvents: "none", marginLeft: data.creator_org !== undefined && data.creator_org.length > 0 ? 20 : 0, borderRadius: 10, border: foundOrg.id === userdata.active_org.id ? `3px solid ${boxColor}` : null, cursor: "pointer", marginTop: 5, }
+
+								//<Tooltip title={`Org: ${foundOrg.name}`} placement="bottom">
+								image = foundOrg.image === "" ? 
+									<img alt={foundOrg.name} src={theme.palette.defaultImage} style={imageStyle} />
+									:
+									<img alt={foundOrg.name} src={foundOrg.image} style={imageStyle} onClick={() => {
+										//setFilteredWorkflows(newWorkflows)
+									}}/>
+
+								orgName = foundOrg.name
+								orgId = foundOrg.id
+							}
+						}
+
+						return (
+							<div styl={{cursor: "pointer"}} onClick={() => {
+								//addFilter(orgId) 
+								//setFilters(["Org "+orgName])
+								//setFilteredWorkflows(newWorkflows)
+							}}>
+								{image}
+							</div>
+						)
+					}},
 					{ field: 'title', headerName: 'Title', width: 330, renderCell: (params) => {
 						const data = params.row.record
 
@@ -1569,7 +1621,7 @@ const Workflows = (props) => {
 							</Typography>
 						)
 					} */},
-					{ field: 'actions', headerName: 'Options', width: 200, sortable: false, 
+					{ field: 'options', headerName: 'Options', width: 200, sortable: false, 
 						disableClickEventBubbling: true,
 						renderCell: (params) => {
 							const data = params.row.record;
@@ -1635,7 +1687,7 @@ const Workflows = (props) => {
 							)
 						}
 					},
-					{/* field: 'tags', headerName: 'Tags', maxHeight: 15, width: 390, sortable: false, 
+					{ field: 'tags', headerName: 'Tags', maxHeight: 15, width: 300, sortable: false, 
 						disableClickEventBubbling: true,
 						renderCell: (params) => {
 							const data = params.row.record;
@@ -1661,7 +1713,12 @@ const Workflows = (props) => {
 									</Grid>
 								)
 							}
-						*/}
+					},
+					{ field: '', headerName: '', maxHeight: 15, width: 100, sortable: false, 
+						disableClickEventBubbling: true,
+						renderCell: (params) => {
+						}
+					}
 				];
 				let rows = [];
 				rows = workflows.map((data, index) => {
@@ -1732,6 +1789,7 @@ const Workflows = (props) => {
 						placeholder="Name"
 						margin="dense"
 						defaultValue={newWorkflowName}
+						autoFocus
 						fullWidth
 					  />
 					<TextField
