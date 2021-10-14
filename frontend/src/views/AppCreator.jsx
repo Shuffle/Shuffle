@@ -201,8 +201,7 @@ const AppCreator = (props) => {
 	const increaseAmount = 50
 	const actionNonBodyRequest = ["GET", "HEAD", "DELETE", "CONNECT"]
 	const actionBodyRequest = ["POST", "PUT", "PATCH",]
-	//const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth", "JWT", "Oauth2"]
-	const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth", "Oauth2"]
+	const authenticationOptions = ["No authentication", "API key", "Bearer auth", "Basic auth", "Oauth2", "JWT"]
 	const apikeySelection = ["Header", "Query",]
 
 	const [name, setName] = useState("");
@@ -1004,8 +1003,15 @@ const AppCreator = (props) => {
 			//if (Object.entries(securitySchemes) > 1 && 
 			var newauth = []
 			for (const [key, value] of Object.entries(securitySchemes)) {
-				//console.log(key, value)
-				if (value.scheme === "bearer") {
+				console.log(key, value)
+				if (key === "jwt") {
+					setAuthenticationOption("JWT")
+					setAuthenticationRequired(true)
+
+					if (value.in !== undefined && value.in !== null && value.in.length > 0) {
+						setParameterName(value.in)
+					}
+				} else if (value.scheme === "bearer") {
 					setAuthenticationOption("Bearer auth")
 					setAuthenticationRequired(true)
 				} else if (key === "Oauth2" || key === "Oauth2c") {
@@ -1531,11 +1537,14 @@ const AppCreator = (props) => {
 				"bearerFormat": "UUID",
 			}
 		} else if (authenticationOption === "JWT") {
-			data.components.securitySchemes["BearerAuth"] = {
+			data.components.securitySchemes["jwt"] = {
 				"type": "http",
 				"scheme": "bearer",
 				"bearerFormat": "JWT",
+				"in": parameterName,
 			}
+				
+			console.log("SECURITYSCHEMES: ", data.components)
 		} else if (authenticationOption === "Basic auth") {
 			data.components.securitySchemes["BasicAuth"] = {
 				"type": "http",
@@ -1852,6 +1861,37 @@ const AppCreator = (props) => {
 				)
 			})}
 		</div>
+
+	const jwtAuth = authenticationOption === "JWT" ? 
+		<div style={{color: "white", marginTop: 20, }}>
+			<Typography variant="body1">JWT authentication</Typography>
+			<Typography variant="body2" color="textSecondary" style={{marginTop: 10,}}>
+				Authentication path 
+			</Typography>
+			<TextField
+				required
+				style={{margin: 0, flex: "1", backgroundColor: inputColor}}
+				fullWidth={true}
+				placeholder="/security/user/authenticate"
+				type="name"
+				id="standard-required"
+				margin="normal"
+				variant="outlined"
+				defaultValue={parameterName}
+				helperText={<span style={{color:"white", marginBottom: "2px",}}>Must start with / and be a valid path</span>}
+				onBlur={e => setParameterName(e.target.value)}	
+				InputProps={{
+					classes: {
+						notchedOutline: classes.notchedOutline,
+					},
+					style:{
+						color: "white",
+					},
+				}}
+			/>
+		</div>
+		: 
+		null
 
 	const oauth2Auth = authenticationOption === "Oauth2" ? 
 		<div style={{color: "white", marginTop: 20, }}>
@@ -3680,6 +3720,7 @@ const AppCreator = (props) => {
 					{bearerAuth}
 					{apiKey}
 					{oauth2Auth}
+					{jwtAuth}
 					{extraKeys}
 
 					{/*authenticationOption === "No authentication" ? null :

@@ -1,4 +1,4 @@
-urllib3==1.25.9
+urllib3==1.26.5
 requests==2.25.1
 MarkupSafe==2.0.1
 liquidpy==0.7.1

@@ -1,4 +1,4 @@
-FROM golang:1.16.0-buster as builder
+FROM golang:1.17.2-buster as builder
 
 # Add files
 RUN mkdir /app
@@ -22,7 +22,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o webapp .
 FROM alpine:latest as certs
 RUN apk --update add ca-certificates
 
-FROM alpine:3.12
+FROM alpine:3.14.2
 
 COPY --from=builder /app/ /app
 COPY --from=builder /app_sdk/ /app_sdk

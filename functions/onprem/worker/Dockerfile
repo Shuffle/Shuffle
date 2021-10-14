@@ -1,4 +1,4 @@
-FROM golang:1.16.0-buster as builder
+FROM golang:1.17.2-buster as builder
 
 WORKDIR /app
 #RUN go get github.com/docker/docker/api/types github.com/docker/docker/api/types/container github.com/docker/docker/client
@@ -25,7 +25,7 @@ RUN go build
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o worker .
 
 ## ALPINE IMAGE
-FROM alpine:3.12
+FROM alpine:3.14.2
 
 ENV SHUFFLE_BASE_IMAGE_REGISTRY=docker.io
 ENV SHUFFLE_BASE_IMAGE_NAME=frikky/shuffle

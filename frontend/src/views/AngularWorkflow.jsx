@@ -9332,29 +9332,29 @@ const AngularWorkflow = (props) => {
 				<div style={{flex: 3, borderLeft: `1px solid ${inputColor}`, padding: "70px 30px 30px 30px", maxHeight: 630, minHeight: 630, overflowY: "auto", overflowX: "hidden"}}>
 					{selectedApp.documentation === undefined || selectedApp.documentation === null || selectedApp.documentation.length === 0 ? 
 							<span style={{textAlign: "center", }}>
-								<Typography variant="h6">
-									Description: {selectedApp.description}
+								<Typography variant="body1" style={{marginLeft: 25, marginRight: 25}}>
+									{selectedApp.description}
 								</Typography>
 								<Divider style={{marginTop: 25, marginBottom: 25, backgroundColor: inputColor, }} />
-								<Typography variant="h4">
+								<Typography variant="h6">
 									There is currently no extended documentation available for this app. 
 								</Typography>
-								<Typography variant="h6" style={{marginTop: 25}}>
+								<Typography variant="body1" style={{marginTop: 25}}>
 									Want help with this app? <a rel="norefferer" target="_blank" href="https://discord.gg/B2CBzUm" style={{textDecoration: "none", color: "#f86a3e"}}>Join the Discord!</a>
 								</Typography>
 
-								<Typography variant="h4" style={{marginTop: 50,}}>
+								<Typography variant="h6" style={{marginTop: 50,}}>
 									Want to help change this app?
 								</Typography>
 								{selectedApp.reference_info === undefined || selectedApp.reference_info === null || selectedApp.reference_info.github_url === undefined || selectedApp.reference_info.github_url === null || selectedApp.reference_info.github_url.length === 0 ? 
 									<span>
-										<Typography variant="h6" style={{marginTop: 25}}>
+										<Typography variant="body1" style={{marginTop: 25}}>
 											<a rel="norefferer" target="_blank" href={"https://github.com/frikky/shuffle-apps"} style={{textDecoration: "none", color: "#f86a3e"}}>Check it out on Github!</a>
 										</Typography>
 									</span>
 									:
 									<span>
-										<Typography variant="h6" style={{marginTop: 25}}>
+										<Typography variant="body1" style={{marginTop: 25}}>
 											<a rel="norefferer" target="_blank" href={selectedApp.reference_info.github_url} style={{textDecoration: "none", color: "#f86a3e"}}>Check it out on Github!</a>
 										</Typography>
 									</span>

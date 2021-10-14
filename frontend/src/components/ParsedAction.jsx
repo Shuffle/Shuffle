@@ -753,6 +753,10 @@ const ParsedAction = (props) => {
 						var placeholder = "Static value"
 						if (data.example !== undefined && data.example !== null && data.example.length > 0) {
 							placeholder = data.example
+
+							if (data.name === "url" && data.value.length === 0) {
+								data.value = data.example
+							}
 						}
 
 						if (data.name.startsWith("${") && data.name.endsWith("}")) {
@@ -1270,6 +1274,13 @@ const ParsedAction = (props) => {
 						}
 						
 						tmpitem = (tmpitem.charAt(0).toUpperCase()+tmpitem.substring(1)).replaceAll("_", " ")
+
+						if (tmpitem === "Username basic") {
+							tmpitem = "Username"
+						} else if (tmpitem === "Password basic") {
+							tmpitem = "Password"
+						}
+
 						const description = data.description === undefined ? "" : data.description 
 						const tooltipDescription = 
 							<span>

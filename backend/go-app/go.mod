@@ -2,7 +2,7 @@ module shuffle
 
 go 1.13
 
-//replace github.com/frikky/shuffle-shared => ../../../../git/shuffle-shared
+replace github.com/shuffle/shuffle-shared => ../../../../git/shuffle-shared
 
 //replace github.com/frikky/kin-openapi => ../../../../git/kin-openapi
 
@@ -23,7 +23,7 @@ require (
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/elastic/go-elasticsearch/v7 v7.13.1 // indirect
 	github.com/frikky/kin-openapi v0.39.0
-	github.com/frikky/shuffle-shared v0.1.14
+	github.com/frikky/shuffle-shared v0.1.15 // indirect
 	github.com/fsouza/go-dockerclient v1.7.2
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-git/go-billy/v5 v5.0.0
@@ -36,6 +36,7 @@ require (
 	github.com/nu7hatch/gouuid v0.0.0-20131221200532-179d4d0c4d8d // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/satori/go.uuid v1.2.0
+	github.com/shuffle/shuffle-shared v0.1.14
 	go4.org v0.0.0-20201209231011-d4a079459e60 // indirect
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	golang.org/x/oauth2 v0.0.0-20210113160501-8b1d76fa0423
