@@ -8,18 +8,19 @@ class Shuffle(Responder):
    def __init__(self):
       Responder.__init__(self)
       self.api_key = self.get_param("config.api_key", "")
-      self.url = self.get_param("config.url", "")
-      self.workflow_id = self.get_param("config.workflow_id", "")
+      self.webhook_url = self.get_param("config.webhook_url", "")
+      self.webhook_id = self.get_param("config.webhook_id", "")
       self.verify = self.get_param('config.verifyssl', True, None)
+      self.data = self.get_param('data')
 
    def run(self):
       Responder.run(self)
-      parsed_url = "%s/api/v1/workflows/%s/execute" % (self.url, self.workflow_id)
       headers = {
-         "Authorization": "Bearer %s"  % self.api_key,
+         "Content-Type": "application/json",
+         "Accept": "application/json",
          "User-Agent": "Cortex-Analyzer"
       }
-      requests.post(parsed_url, headers=headers,verify=self.verify)
+      requests.post(self.webhook_url, headers=headers,verify=self.verify, json=self.data)
 
       self.report({'message': 'message sent'})
 

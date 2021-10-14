@@ -66,6 +66,7 @@ https://shuffler.io/docs/configuration
 * Default database location is in the same folder: ./shuffle-database
 
 # Local development installation
+
 Local development is pretty straight forward with **ReactJS** and **Golang**. This part is intended to help you run the code for development purposes. We recommend having Shuffle running with the Docker-compose, then manually running the portion that you want to test and/or edit.
 
 **PS: You have to stop the Backend Docker container to get this one working**
