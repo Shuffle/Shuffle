@@ -240,8 +240,8 @@ const LoginDialog = props => {
 							</Typography>
 
 							<Typography variant="body2" style={{marginBottom: 20, color: "white",}}>
-								<b>2</b>. Ensure vm.max_map_count is set:<br/><br/>
-								sudo sysctl -w vm.max_map_count=262144 			
+								<b>2</b>. Restart docker-compose:<br/><br/>
+								sudo docker-compose restart 			
 							</Typography>
 						</Paper>
 						<Typography variant="body2" style={{marginBottom: 10, color: "white", marginTop: 20, }}>
