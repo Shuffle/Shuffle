@@ -9308,7 +9308,7 @@ const AngularWorkflow = (props) => {
 						<img alt={`Documentation image for ${selectedApp.name}`} src={selectedApp.large_image} style={{width: 30, height: 30, border: "2px solid rgba(255,255,255,0.6)", borderRadius: theme.palette.borderRadius, maxHeight: 30, maxWidth: 30, overflow: "hidden", fontSize: 8, }} />
 					</a>
 					:
-					<a rel="norefferer" target="_blank" href={selectedApp.reference_info.github_url} style={{textDecoration: "none", color: "#f86a3e"}}>
+					<a rel="noopener noreferrer" target="_blank" href={selectedApp.reference_info.github_url} style={{textDecoration: "none", color: "#f86a3e"}}>
 						<img alt={`Documentation image for ${selectedApp.name}`} src={selectedApp.large_image} style={{width: 30, height: 30, border: "2px solid rgba(255,255,255,0.6)", borderRadius: theme.palette.borderRadius, maxWidth: 30, maxHeight: 30, overflow: "hidden", fontSize: 8,}} />
 					</a>
 				}
@@ -9355,7 +9355,7 @@ const AngularWorkflow = (props) => {
 									:
 									<span>
 										<Typography variant="body1" style={{marginTop: 25}}>
-											<a rel="norefferer" target="_blank" href={selectedApp.reference_info.github_url} style={{textDecoration: "none", color: "#f86a3e"}}>Check it out on Github!</a>
+											<a rel="noopener noreferrer" target="_blank" href={selectedApp.reference_info.github_url} style={{textDecoration: "none", color: "#f86a3e"}}>Check it out on Github!</a>
 										</Typography>
 									</span>
 								}

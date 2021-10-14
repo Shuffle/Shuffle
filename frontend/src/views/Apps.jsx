@@ -843,7 +843,7 @@ const Apps = (props) => {
 				<Paper square style={uploadViewPaperStyle}>
 					<div style={{width: "100%", margin: 25}}>
 						<h2>App Creator</h2>
-						<a rel="norefferer" href="https://shuffler.io/docs/apps" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">How it works</a>
+						<a rel="noopener noreferrer" href="https://shuffler.io/docs/apps" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">How it works</a>
 						&nbsp;- <a href="https://github.com/frikky/security-openapis" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">Security API's</a>
 						&nbsp;- <a href="https://github.com/APIs-guru/openapi-directory/tree/main/APIs" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">OpenAPI directory</a>
 						&nbsp;- <a href="https://editor.swagger.io/" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">OpenAPI Validator</a>
