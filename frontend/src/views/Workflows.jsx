@@ -1604,7 +1604,7 @@ const Workflows = (props) => {
 
 						return (
 							<Grid item>
-								<Link to={`/workflows/{data.id}`} style={{textDecoration: "none", color: "inherit",}}>
+								<Link to={"/workflows/"+data.id} style={{textDecoration: "none", color: "inherit",}}>
 									<Typography>
 										{data.name}
 									</Typography>
