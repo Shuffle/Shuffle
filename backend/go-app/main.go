@@ -3075,7 +3075,7 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 
 	basePath, err := shuffle.BuildStructure(swagger, newmd5)
 	if err != nil {
-		log.Printf("Failed to build base structure: %s", err)
+		log.Printf("[WARNING] Failed to build base structure: %s", err)
 		resp.WriteHeader(500)
 		resp.Write([]byte(`{"success": false, "reason": "Failed building baseline structure"}`))
 		return
@@ -3094,7 +3094,7 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 	// Can't overwrite existing normal app
 	workflowApps, err := shuffle.GetPrioritizedApps(ctx, user)
 	if err != nil {
-		log.Printf("Failed getting all workflow apps from database to verify: %s", err)
+		log.Printf("[WARNING] Failed getting all workflow apps from database to verify: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "Failed to verify existence"}`))
 		return
@@ -3114,7 +3114,7 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 
 	err = shuffle.DumpApi(basePath, api)
 	if err != nil {
-		log.Printf("Failed dumping yaml: %s", err)
+		log.Printf("[WARNING] Failed dumping yaml: %s", err)
 		resp.WriteHeader(500)
 		resp.Write([]byte(`{"success": false, "reason": "Failed dumping yaml"}`))
 		return
