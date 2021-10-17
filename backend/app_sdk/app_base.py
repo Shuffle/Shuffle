@@ -1147,6 +1147,11 @@ class AppBase:
             except TypeError:
                 return data, False
 
+            # Because liquid can handle ALL of this now.
+            # Implemented for >0.9.25
+            self.logger.info("[DEBUG] Skipping parser because use of its been deprecated >0.9.25 due to Liquid implementation")
+            return data, False
+
             wrappers = ["int", "number", "lower", "upper", "trim", "strip", "split", "parse", "len", "length", "lenght", "join", "replace"]
 
             if not any(wrapper in data for wrapper in wrappers):
@@ -1219,7 +1224,7 @@ class AppBase:
 
             if isinstance(data, str) and len(data) > 4:
                 if (data[0] == "{" or data[0] == "[") and (data[len(data)-1] == "]" or data[len(data)-1] == "}"):
-                    self.logger.info("Skipping parser because use of {[ and ]}")
+                    self.logger.info("[DEBUG] Skipping parser because use of {[ and ]}")
                     return data
 
             newdata = []
@@ -1587,10 +1592,11 @@ class AppBase:
 
         # Sending self as it's not a normal function
         def parse_liquid(template, self):
-
-            #self.logger.info("Inside liquid with glob: %s" % globals())
+            
+            errors = False
+            error_msg = ""
             try:
-                if len(template) > 5000000:
+                if len(template) > 10000000:
                     self.logger.info("[DEBUG] Skipping liquid - size too big (%d)" % len(template))
                     return template
 
@@ -1609,21 +1615,37 @@ class AppBase:
                 # Can't handle self yet (?)
                 ret = run.render(**globals())
                 return ret
-                #try:
-                    #run = Liquid(template)
-                    #return ret
-                #except liquid.exceptions.LiquidSyntaxError as  e:
-                #    run = Liquid(template, {'mode': 'python'})
-                #    ret = run.render(**globals())
-                #    return ret
-                #except liquid.exceptions.LiquidRenderError as e:
-                #    self.logger.info("Render error: %s" % e)
             except jinja2.exceptions.TemplateNotFound as e:
-                self.logger.info("[ERROR] Template error: %s" % e)
+                self.logger.info(f"[ERROR] Liquid Template error: {e}")
+                error = True
+                error_msg = e
             except jinja2.exceptions.TemplateSyntaxError as e:
-                self.logger.info("[ERROR] Syntax error: %s" % e)
-            except:
-                self.logger.info("[ERROR] General exception for liquid")
+                self.logger.info(f"[ERROR] Liquid Syntax error: {e}")
+                error = True
+                error_msg = e
+            except Exception as e:
+                self.logger.info(f"[ERROR] General exception for liquid: {e}")
+                error = True
+                error_msg = e
+
+            if error == True:
+                self.action_result["status"] = "FAILURE" 
+                data = {
+                    "success": False,
+                    "input": template,
+                    "reason": f"Failed to parse LiquidPy: {error_msg}",
+                }
+                try:
+                    self.action_result["result"] = json.dumps(data)
+                except Exception as e:
+                    self.action_result["result"] = f"Failed to parse LiquidPy: {error_msg}"
+                    print("[WARNING] Failed to set LiquidPy result")
+
+                self.action_result["completed_at"] = int(time.time())
+                self.send_result(self.action_result, headers, stream_path)
+
+                self.logger.info(f"[ERROR] Sent FAILURE response to backend due to : {e}")
+                os.exit()
 
             return template
 

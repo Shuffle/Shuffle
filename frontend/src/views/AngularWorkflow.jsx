@@ -887,6 +887,8 @@ const AngularWorkflow = (props) => {
 					//console.log(curworkflowTrigger)
 
 					newTriggers.push(curworkflowTrigger)
+				} else {
+					alert.info("No handler for type: "+type)
 				}
 			}
 		}

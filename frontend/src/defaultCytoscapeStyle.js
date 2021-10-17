@@ -14,6 +14,7 @@ const data = [{
 				'margin': '5px',
 				'border-width': '1px',
 				'text-margin-x': '10px',
+				'cursor': 'pointer',
 			}
 		},
 		{
@@ -26,6 +27,7 @@ const data = [{
 				'text-margin-y': '-15px',
 				'width': '5px',
 				"color": "white",
+				'cursor': 'pointer',
 				"line-fill": "linear-gradient",
 				"line-gradient-stop-positions": ["0.0", "100"],
 				"line-gradient-stop-colors": ["grey", "grey"],
