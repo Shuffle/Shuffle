@@ -2555,7 +2555,7 @@ class AppBase:
                                     break
                                 except TypeError as e:
                                     newres = ""
-                                    self.logger.info(f"[DEBUG] Got exec error: {errorstring}")
+                                    self.logger.info(f"[DEBUG] Got exec error: {e}")
                                     errorstring = f"{e}"
                                     if "got an unexpected keyword argument" in errorstring:
                                         fieldsplit = errorstring.split("'")

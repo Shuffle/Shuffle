@@ -36,7 +36,7 @@ const data = [{
 		{
 			selector: `node[type="ACTION"]`,
 			css: {
-				'shape': 'square',
+				'shape': 'roundrectangle',
 				'background-color': '#213243',
 				'border-color': '#81c784',
 				'background-width': '100%',

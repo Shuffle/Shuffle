@@ -4944,7 +4944,7 @@ const AngularWorkflow = (props) => {
 		top: appBarSize+25,
 		right: 25, 
 		height: "80vh",
-		width: 350, 
+		width: 365, 
 		minWidth: 200, 
 		maxWidth: 600,
 		maxHeight: "100vh",
@@ -8570,6 +8570,7 @@ const AngularWorkflow = (props) => {
 						maxHeight: 700,
 						overflowY: "auto",
 						overflowX: "hidden",
+						zIndex: 10012,
 						//boxShadow: "none",
 					},
 				}}
@@ -9301,6 +9302,7 @@ const AngularWorkflow = (props) => {
 					maxHeight: 700,
 					padding: 15, 
 					overflow: "hidden",
+					zIndex: 10012,
 				},
 			}}
 		>

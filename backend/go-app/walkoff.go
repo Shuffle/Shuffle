@@ -4050,9 +4050,19 @@ func LoadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 		if tmpBody.ForceUpdate {
 			dockercli, err := dockerclient.NewEnvClient()
 			if err == nil {
-				_, err := dockercli.ImagePull(ctx, "frikky/shuffle:app_sdk", types.ImagePullOptions{})
-				if err != nil {
-					log.Printf("[WARNING] Failed to download apps with the new App SDK: %s", err)
+
+				appSdk := os.Getenv("SHUFFLE_APP_SDK_VERSION")
+				if len(appSdk) == 0 {
+					_, err := dockercli.ImagePull(ctx, "frikky/shuffle:app_sdk", types.ImagePullOptions{})
+					if err != nil {
+						log.Printf("[WARNING] Failed to download new App SDK: %s", err)
+					}
+				} else {
+					_, err := dockercli.ImagePull(ctx, fmt.Sprintf("%s/%s/shuffle-app_sdk:%s", "ghcr.io", "frikky", appSdk), types.ImagePullOptions{})
+					if err != nil {
+						log.Printf("[WARNING] Failed to download new App SDK %s: %s", err)
+					}
+
 				}
 			} else {
 				log.Printf("[WARNING] Failed to download apps with the new App SDK because of docker cli: %s", err)
