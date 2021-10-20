@@ -1555,7 +1555,7 @@ const Workflows = (props) => {
 			let workflowData = "";
 			if (workflows.length > 0) {
 				const columns = [
-					{ field: 'image', headerName: 'Logo', width: 42, renderCell: (params) => {
+					{ field: 'image', headerName: 'Logo', width: 50, sortable: false, renderCell: (params) => {
 						const data = params.row.record
 
 						var boxColor = "#FECC00"

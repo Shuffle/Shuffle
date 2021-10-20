@@ -101,6 +101,7 @@ const data = [{
 			selector: `node[type="TRIGGER"]`,
 			css: {
 				'shape': 'octagon',
+				'border-radius': '5px',
 				'border-color': 'orange',
 				'background-color': '#213243',
 				'background-width': '100%',
@@ -198,6 +199,16 @@ const data = [{
 			css: {
 				'background-color': '#41dcab',
 				'border-color': '#41dcab',
+				'border-width': '5px',
+				'transition-property': 'background-color',
+				'transition-duration': '0.5s',
+			},
+		},
+		{
+			selector: '.hover-highlight',
+			css: {
+				'background-color': '#5f9265',
+				'border-color': '#5f9265',
 				'border-width': '5px',
 				'transition-property': 'background-color',
 				'transition-duration': '0.5s',

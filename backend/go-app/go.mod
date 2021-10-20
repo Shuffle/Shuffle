@@ -2,6 +2,10 @@ module main
 
 go 1.15
 
+replace github.com/shuffle/shuffle-shared => ../../../../git/shuffle-shared
+//replace github.com/frikky/kin-openapi => ../../../../git/kin-openapi
+//replace github.com/frikky/go-elasticsearch => ../../../../git/go-elasticsearch
+
 require (
 	cloud.google.com/go/datastore v1.6.0
 	cloud.google.com/go/pubsub v1.17.0

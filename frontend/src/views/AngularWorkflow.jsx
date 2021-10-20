@@ -11,7 +11,7 @@ import NestedMenuItem from "material-ui-nested-menu-item";
 import ReactMarkdown from 'react-markdown';
 
 
-import {TextField, Drawer, Button, Paper, Grid, Tabs, InputAdornment, Tab, ButtonBase, Tooltip, Select, MenuItem, Divider, Dialog, Modal, DialogActions, DialogTitle, InputLabel, DialogContent, FormControl, IconButton, Menu, Input, FormGroup, FormControlLabel, Typography, Checkbox, Breadcrumbs, CircularProgress, Switch, Fade} from '@material-ui/core';
+import {Slide, TextField, Drawer, Button, Paper, Grid, Tabs, InputAdornment, Tab, ButtonBase, Tooltip, Select, MenuItem, Divider, Dialog, Modal, DialogActions, DialogTitle, InputLabel, DialogContent, FormControl, IconButton, Menu, Input, FormGroup, FormControlLabel, Typography, Checkbox, Breadcrumbs, CircularProgress, Switch, Fade} from '@material-ui/core';
 import {OpenInNew as OpenInNewIcon,Undo as UndoIcon, FileCopy as FileCopyIcon, GetApp as GetAppIcon, Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
 
 import * as cytoscape from 'cytoscape';
@@ -1260,9 +1260,9 @@ const AngularWorkflow = (props) => {
 									selectedAction.selectedAuthentication = item
 
 									for (var key in workflow.actions) {
-										console.log(workflow.actions[key].app_name)
+										//console.log(workflow.actions[key].app_name)
 										if (workflow.actions[key].app_name == selectedApp.name) {
-											console.log("Setting auth at: ", workflow.actions[key], item.id)
+											//console.log("Setting auth at: ", workflow.actions[key], item.id)
 											workflow.actions[key].selectedAuthentication = item
 											workflow.actions[key].authentication_id = item.id
 											appUpdates = true
@@ -3306,6 +3306,16 @@ const AngularWorkflow = (props) => {
 		}, {
 			duration: animationDuration,	
 		})
+
+		const outgoingEdges = event.target.outgoers('edge')
+		const incomingEdges = event.target.incomers('edge')
+		if (outgoingEdges.length > 0) {
+			outgoingEdges.removeClass('hover-highlight')
+		}
+
+		if (incomingEdges.length > 0) {
+			outgoingEdges.removeClass('hover-highlight')
+		}
 	}
 
 	const buttonColor = "rgba(255,255,255,0.9)"
@@ -3481,6 +3491,16 @@ const AngularWorkflow = (props) => {
 		})
 
 		previousnodecolor = event.target.style("border-color")
+
+		const outgoingEdges = event.target.outgoers('edge')
+		const incomingEdges = event.target.incomers('edge')
+		if (outgoingEdges.length > 0) {
+			outgoingEdges.addClass('hover-highlight')
+		}
+
+		if (incomingEdges.length > 0) {
+			outgoingEdges.addClass('hover-highlight')
+		}
 	}
 
 	const onEdgeHoverOut = (event) => {
@@ -4668,9 +4688,9 @@ const AngularWorkflow = (props) => {
 							</div>
 						:
 							<div style={{textAlign: "center", width: leftBarSize}}>
-								<CircularProgress style={{marginTop: 25, height: 35, width: 35, marginLeft: "auto", marginRight: "auto", }} /> 
+								<CircularProgress style={{marginTop: "27vh", height: 35, width: 35, marginLeft: "auto", marginRight: "auto", }} /> 
 								<Typography variant="body1" color="textSecondary">
-									Loading apps
+									Loading Apps
 								</Typography>
 							</div>
 					}
@@ -7800,46 +7820,46 @@ const AngularWorkflow = (props) => {
 			} 
 
 			return (
-				<div id="rightside_actions" style={rightsidebarStyle}>
-					<ParsedAction 
-						id="rightside_subactions"
-						getAppAuthentication={getAppAuthentication}
-						appAuthentication={appAuthentication}
-						authenticationType={authenticationType}
-						scrollConfig={scrollConfig}
-						setScrollConfig={setScrollConfig}
-						selectedAction={selectedAction}
-						workflow={workflow} 
-						setWorkflow={setWorkflow} 
-						setSelectedAction={setSelectedAction}
-						setUpdate={setUpdate}
-						selectedApp={selectedApp}
-						workflowExecutions={workflowExecutions}
-						setSelectedResult={setSelectedResult}
-						setSelectedApp={setSelectedApp}
-						setSelectedTrigger={setSelectedTrigger}
-						setSelectedEdge={setSelectedEdge}
-						setCurrentView={setCurrentView}
-						cy={cy}
-						setAuthenticationModalOpen={setAuthenticationModalOpen}
+					<div id="rightside_actions" style={rightsidebarStyle}>
+						<ParsedAction 
+							id="rightside_subactions"
+							getAppAuthentication={getAppAuthentication}
+							appAuthentication={appAuthentication}
+							authenticationType={authenticationType}
+							scrollConfig={scrollConfig}
+							setScrollConfig={setScrollConfig}
+							selectedAction={selectedAction}
+							workflow={workflow} 
+							setWorkflow={setWorkflow} 
+							setSelectedAction={setSelectedAction}
+							setUpdate={setUpdate}
+							selectedApp={selectedApp}
+							workflowExecutions={workflowExecutions}
+							setSelectedResult={setSelectedResult}
+							setSelectedApp={setSelectedApp}
+							setSelectedTrigger={setSelectedTrigger}
+							setSelectedEdge={setSelectedEdge}
+							setCurrentView={setCurrentView}
+							cy={cy}
+							setAuthenticationModalOpen={setAuthenticationModalOpen}
 
-						setVariablesModalOpen={setVariablesModalOpen}
-						setLastSaved={setLastSaved}
-						setCodeModalOpen={setCodeModalOpen}
-						selectedNameChange={selectedNameChange}
-						rightsidebarStyle={rightsidebarStyle}
-						showEnvironment={showEnvironment}
-						selectedActionEnvironment={selectedActionEnvironment}
-						environments={environments}
-						setNewSelectedAction={setNewSelectedAction}
-						sortByKey={sortByKey}
-						
-						appApiViewStyle={appApiViewStyle}
-						globalUrl={globalUrl}
-						setSelectedActionEnvironment={setSelectedActionEnvironment}
-						requiresAuthentication={requiresAuthentication}
-					/>
-				</div>
+							setVariablesModalOpen={setVariablesModalOpen}
+							setLastSaved={setLastSaved}
+							setCodeModalOpen={setCodeModalOpen}
+							selectedNameChange={selectedNameChange}
+							rightsidebarStyle={rightsidebarStyle}
+							showEnvironment={showEnvironment}
+							selectedActionEnvironment={selectedActionEnvironment}
+							environments={environments}
+							setNewSelectedAction={setNewSelectedAction}
+							sortByKey={sortByKey}
+							
+							appApiViewStyle={appApiViewStyle}
+							globalUrl={globalUrl}
+							setSelectedActionEnvironment={setSelectedActionEnvironment}
+							requiresAuthentication={requiresAuthentication}
+						/>
+					</div>
 			)
 
 		} else if (Object.getOwnPropertyNames(selectedTrigger).length > 0) {
@@ -8733,60 +8753,70 @@ const AngularWorkflow = (props) => {
 		<div style={{color: "white"}}>
 			<div style={{display: "flex", borderTop: "1px solid rgba(91, 96, 100, 1)"}}>
 				{leftView}
-				<CytoscapeComponent 
-					elements={elements} 
-					minZoom={0.35}
-					maxZoom={2.00}
-					wheelSensitivity={0.25}
-					style={{width: bodyWidth-leftBarSize-15, height: bodyHeight-appBarSize-5, backgroundColor: surfaceColor}} 
-					stylesheet={cystyle}
-					boxSelectionEnabled={true}
-					autounselectify={false}
-					showGrid={true}
-					id="cytoscape_view"
-					cy={(incy) => {
-						// FIXME: There's something specific loading when
-						// you do the first hover of a node. Why is this different?
-						//console.log("CY: ", incy)
-						setCy(incy)
-					}}
-				/>
+				{workflow.id === undefined || workflow.id === null || apps.length === 0 ? 
+					<div style={{width: bodyWidth-leftBarSize-15, height: 150, textAlign: "center"}}>
+						<CircularProgress style={{marginTop: "30vh", height: 35, width: 35, marginLeft: "auto", marginRight: "auto", }} /> 
+						<Typography variant="body1" color="textSecondary">
+							Loading Workflow 
+						</Typography>
+					</div>	
+				: 
+					<CytoscapeComponent 
+						elements={elements} 
+						minZoom={0.35}
+						maxZoom={2.00}
+						wheelSensitivity={0.25}
+						style={{width: bodyWidth-leftBarSize-15, height: bodyHeight-appBarSize-5, backgroundColor: surfaceColor}} 
+						stylesheet={cystyle}
+						boxSelectionEnabled={true}
+						autounselectify={false}
+						showGrid={true}
+						id="cytoscape_view"
+						cy={(incy) => {
+							// FIXME: There's something specific loading when
+							// you do the first hover of a node. Why is this different?
+							//console.log("CY: ", incy)
+							setCy(incy)
+						}}
+					/>
+				}
 			</div>
 			{executionModal}
-			<RightSideBar 
-				scrollConfig={scrollConfig}
-				setScrollConfig={setScrollConfig}
-				selectedAction={selectedAction}
-				workflow={workflow} 
-				setWorkflow={setWorkflow} 
-				setSelectedAction={setSelectedAction}
-				setUpdate={setUpdate}
-				selectedApp={selectedApp}
-				workflowExecutions={workflowExecutions}
-				setSelectedResult={setSelectedResult}
-				setSelectedApp={setSelectedApp}
-				setSelectedTrigger={setSelectedTrigger}
-				setSelectedEdge={setSelectedEdge}
-				setCurrentView={setCurrentView}
-				cy={cy}
-				setAuthenticationModalOpen={setAuthenticationModalOpen}
+			{/*<Slide appear={true} direction="right" timeout={5000} in={true}>*/}
+				<RightSideBar 
+					scrollConfig={scrollConfig}
+					setScrollConfig={setScrollConfig}
+					selectedAction={selectedAction}
+					workflow={workflow} 
+					setWorkflow={setWorkflow} 
+					setSelectedAction={setSelectedAction}
+					setUpdate={setUpdate}
+					selectedApp={selectedApp}
+					workflowExecutions={workflowExecutions}
+					setSelectedResult={setSelectedResult}
+					setSelectedApp={setSelectedApp}
+					setSelectedTrigger={setSelectedTrigger}
+					setSelectedEdge={setSelectedEdge}
+					setCurrentView={setCurrentView}
+					cy={cy}
+					setAuthenticationModalOpen={setAuthenticationModalOpen}
 
-				setVariablesModalOpen={setVariablesModalOpen}
-				setLastSaved={setLastSaved}
-				setCodeModalOpen={setCodeModalOpen}
-				selectedNameChange={selectedNameChange}
-				rightsidebarStyle={rightsidebarStyle}
-				showEnvironment={showEnvironment}
-				selectedActionEnvironment={selectedActionEnvironment}
-				environments={environments}
-				setNewSelectedAction={setNewSelectedAction}
-				sortByKey={sortByKey}
-				
-				appApiViewStyle={appApiViewStyle}
-				globalUrl={globalUrl}
-				setSelectedActionEnvironment={setSelectedActionEnvironment}
-				requiresAuthentication={requiresAuthentication}
-			/>
+					setVariablesModalOpen={setVariablesModalOpen}
+					setLastSaved={setLastSaved}
+					setCodeModalOpen={setCodeModalOpen}
+					selectedNameChange={selectedNameChange}
+					rightsidebarStyle={rightsidebarStyle}
+					showEnvironment={showEnvironment}
+					selectedActionEnvironment={selectedActionEnvironment}
+					environments={environments}
+					setNewSelectedAction={setNewSelectedAction}
+					sortByKey={sortByKey}
+					
+					appApiViewStyle={appApiViewStyle}
+					globalUrl={globalUrl}
+					setSelectedActionEnvironment={setSelectedActionEnvironment}
+					requiresAuthentication={requiresAuthentication}
+				/>
 			<BottomCytoscapeBar />
 			<TopCytoscapeBar />
 		</div> 

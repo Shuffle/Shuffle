@@ -53,10 +53,12 @@ const AuthenticationOauth2 = (props) => {
 
 		var resources = ""
 		if (scopes !== undefined && scopes !== null & scopes.length > 0) {
+			//scopes.push("offline_access")
 			resources = scopes.join(",")
 		}
 
 		const authentication_url = authenticationType.token_uri
+		console.log("AUTH: ", authenticationType)
 
 		console.log("SCOPES2: ", resources)
 		const redirectUri = `${window.location.protocol}//${window.location.host}/set_authentication`
@@ -65,7 +67,14 @@ const AuthenticationOauth2 = (props) => {
 			state += `%26oauth_url%3d${oauth_url}`
 			console.log("ADDING OAUTH2 URL: ", state)
 		}
-		const url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${resources}&prompt=consent&state=${state}`
+
+		if (authenticationType.refresh_uri !== undefined && authenticationType.refresh_uri !== null && authenticationType.refresh_uri.length > 0) {
+			state += `%26refresh_uri%3d${authenticationType.refresh_uri}`
+		} else {
+			state += `%26refresh_uri%3d${authentication_url}`
+		}
+
+		const url = `${authenticationType.redirect_uri}?client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${resources}&prompt=consent&state=${state}&access_type=offline`
 
 		//const url = `https://accounts.zoho.com/oauth/v2/auth?response_type=code&client_id=${client_id}&scope=AaaServer.profile.Read&redirect_uri=${redirectUri}&prompt=consent`
 		console.log("Full URI: ", url)

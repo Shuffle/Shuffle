@@ -5648,6 +5648,7 @@ func initHandlers() {
 	log.Printf("[DEBUG] Initialized Shuffle database connection. Setting up environment.")
 
 	if elasticConfig == "elasticsearch" {
+		time.Sleep(5 * time.Second)
 		go runInitEs(ctx)
 	} else {
 		go runInit(ctx)
