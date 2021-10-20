@@ -1955,9 +1955,18 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	// 1. Get callback data
 	// 2. Load the configuration
 	// 3. Execute the workflow
-	cors := shuffle.HandleCors(resp, request)
-	if cors {
-		return
+	//cors := shuffle.HandleCors(resp, request)
+	//if cors {
+	//	return
+	//}
+
+	if request.Method != "POST" {
+		request.Method = "POST"
+	}
+
+	if request.Body == nil {
+		stringReader := strings.NewReader("")
+		request.Body = ioutil.NopCloser(stringReader)
 	}
 
 	path := strings.Split(request.URL.String(), "/")
@@ -5732,7 +5741,7 @@ func initHandlers() {
 
 	// Triggers
 	r.HandleFunc("/api/v1/hooks/new", shuffle.HandleNewHook).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/hooks/{key}", handleWebhookCallback).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/hooks/{key}", handleWebhookCallback).Methods("POST", "GET", "PATCH", "PUT", "DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/hooks/{key}/delete", shuffle.HandleDeleteHook).Methods("DELETE", "OPTIONS")
 
 	// OpenAPI configuration
