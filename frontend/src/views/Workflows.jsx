@@ -1,15 +1,14 @@
 import React, { useEffect} from 'react';
-import { useInterval } from 'react-powerhooks';
 import { makeStyles } from '@material-ui/core/styles';
 import { useTheme } from '@material-ui/core/styles';
 
-import {Avatar, Grid, Paper, Tooltip, Divider, Button, TextField, FormControl, IconButton, Menu, MenuItem, FormControlLabel, Chip, Switch, Typography, Zoom, CircularProgress, Dialog, DialogTitle, DialogActions, DialogContent} from '@material-ui/core';
-import {GridOn as GridOnIcon, List as ListIcon, Close as CloseIcon, Compare as CompareIcon, Maximize as MaximizeIcon, Minimize as MinimizeIcon, AddCircle as AddCircleIcon, Toc as TocIcon, Send as SendIcon, Search as SearchIcon, FileCopy as FileCopyIcon, Delete as DeleteIcon, BubbleChart as BubbleChartIcon, Restore as RestoreIcon, Cached as CachedIcon, GetApp as GetAppIcon, Apps as AppsIcon, Edit as EditIcon, MoreVert as MoreVertIcon, PlayArrow as PlayArrowIcon, Add as AddIcon, Publish as PublishIcon, CloudUpload as CloudUploadIcon, CloudDownload as CloudDownloadIcon} from '@material-ui/icons';
+import { Grid, Paper, Tooltip,  Button, TextField, FormControl, IconButton, Menu, MenuItem,  Chip,  Typography,  CircularProgress, Dialog, DialogTitle, DialogActions, DialogContent} from '@material-ui/core';
+import {GridOn as GridOnIcon, List as ListIcon, Close as CloseIcon, Compare as CompareIcon, Maximize as MaximizeIcon, Minimize as MinimizeIcon, AddCircle as AddCircleIcon, Toc as TocIcon, Send as SendIcon, Search as SearchIcon, FileCopy as FileCopyIcon, Delete as DeleteIcon, BubbleChart as BubbleChartIcon, Restore as RestoreIcon, Cached as CachedIcon, GetApp as GetAppIcon,  Edit as EditIcon, MoreVert as MoreVertIcon, PlayArrow as PlayArrowIcon, Add as AddIcon, Publish as PublishIcon, CloudUpload as CloudUploadIcon, CloudDownload as CloudDownloadIcon} from '@material-ui/icons';
 import NestedMenuItem from "material-ui-nested-menu-item";
 //import {Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
 
 //https://next.material-ui.com/components/material-icons/
-import {DataGrid, GridToolbarContainer, GridDensitySelector, GridToolbar} from '@material-ui/data-grid';
+import {DataGrid,  GridToolbar} from '@material-ui/data-grid';
 
 //import JSONPretty from 'react-json-pretty';
 //import JSONPrettyMon from 'react-json-pretty/dist/monikai'
@@ -19,33 +18,14 @@ import {Link} from 'react-router-dom';
 import { useAlert } from "react-alert";
 import ChipInput from 'material-ui-chip-input'
 import { v4 as uuidv4 } from 'uuid';
-import CytoscapeWrapper from '../components/RenderCytoscape'
 
-//import mobileImage from '../assets/img/mobile.svg';
-//import bagImage from '../assets/img/bag.svg';
-//import bookImage from '../assets/img/book.svg';
 
 const inputColor = "#383B40"
 const surfaceColor = "#27292D"
 const svgSize = 24
 const imagesize = 22
 
-const flexContainerStyle = {
-	display: "flex",
-	flexDirection: "row",
-	justifyContent: "left",
-	alignContent: "space-between",
-}
 
-const flexBoxStyle = {
-	height: 125,
-	borderRadius: 4,
-	boxSizing: "border-box",
-	letterSpacing: "0.4px",
-	color: "#D6791E",
-	margin: 10, 
-	flex: 1, 
-}
 
 const useStyles = makeStyles((theme) => ({
 	datagrid: {
@@ -258,42 +238,22 @@ export const GetIconInfo = (action) => {
 		console.log(`MISSING PATH FOR ${selectedKey} (find in scope): `, selectedItem.originalIcon.type.type)
 	} 
 	
-	if (selectedItem.originalIcon === undefined || selectedItem.originalIcon === "" && (selectedItem.icon !== "" && selectedItem.icon !== undefined)) {
+	if ((selectedItem.originalIcon === undefined || selectedItem.originalIcon === "") && (selectedItem.icon !== "" && selectedItem.icon !== undefined)) {
 			const svg_pin = <svg width={svgSize} height={svgSize} viewBox={`0 0 ${svgSize} ${svgSize}`} version="1.1" xmlns="http://www.w3.org/2000/svg"><path d={selectedItem.icon} fill={selectedItem.iconColor}></path></svg>
-			//const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin)
 			selectedItem.originalIcon = svg_pin
-			//parsedIcons[selectedKey].originalIcon = svg_pin
-			//console.log("ADDED ICON: ", svg_pin)
+
 	}
 
 	return selectedItem
 }
 
-//const activeWorkflowStyle = {backgroundColor: "#FFF5EE"}
-//const notificationStyle = {backgroundColor: "#E5F9FF"}
-//const activeWorkflowStyle = {backgroundColor: "#3d3f43"}
-const availableWorkflowStyle = {backgroundColor: "#3d3f43"}
-const notificationStyle = {backgroundColor: "#3d3f43"}
-const activeWorkflowStyle = {backgroundColor: "#3d3f43"}
 
-const fontSize_16 = {fontSize: "16px",}
-const counterStyle = {fontSize: "36px",fontWeight:"bold"}
-const blockRightStyle = {textAlign: "right",padding: "20px 20px 0px 0px",width:"100%"}
 
 const chipStyle = {
-	backgroundColor: "#3d3f43", height: 30, marginRight: 5, paddingLeft: 5, paddingRight: 5, height: 28, cursor: "pointer", borderColor: "#3d3f43", color: "white", 
+	backgroundColor: "#3d3f43",  marginRight: 5, paddingLeft: 5, paddingRight: 5, height: 28, cursor: "pointer", borderColor: "#3d3f43", color: "white", 
 }
 
-const flexContentStyle = {
-	display: "flex", 
-	flexDirection: "row"
-}
 
-const iconStyle = {
-	width: "75px",
-	height: "75px",
-	padding: "20px"
-}
 
 export const validateJson = (showResult) => {
 	//showResult = showResult.split(" None").join(" \"None\"")
@@ -302,15 +262,13 @@ export const validateJson = (showResult) => {
 
 	var jsonvalid = true
 	try {
-		const tmp = String(JSON.parse(showResult))
 		if (!showResult.includes("{") && !showResult.includes("[")) {
 			jsonvalid = false
 		}
 	} catch (e) {
-		showResult = showResult.split("\'").join("\"")
+		showResult = showResult.split("'").join("\"")
 
 		try {
-			const tmp = String(JSON.parse(showResult))
 			if (!showResult.includes("{") && !showResult.includes("[")) {
 				jsonvalid = false
 			}
@@ -328,7 +286,7 @@ export const validateJson = (showResult) => {
 }
 
 const Workflows = (props) => {
-  const { globalUrl, isLoggedIn, isLoaded, removeCookie, cookies, userdata} = props;
+  const { globalUrl, isLoggedIn, isLoaded,  userdata} = props;
 	document.title = "Shuffle - Workflows"
 	const theme = useTheme();
 	const alert = useAlert()
@@ -337,19 +295,14 @@ const Workflows = (props) => {
 	const referenceUrl = globalUrl+"/api/v1/hooks/"
 
 	var upload = ""
-	const [file, setFile] = React.useState("");
 
 	const [workflows, setWorkflows] = React.useState([]);
 	const [filteredWorkflows, setFilteredWorkflows] = React.useState([]);
 	const [selectedWorkflow, setSelectedWorkflow] = React.useState({});
-	const [selectedExecution, setSelectedExecution] = React.useState({});
-	const [workflowExecutions, setWorkflowExecutions] = React.useState([]);
 	const [firstrequest, setFirstrequest] = React.useState(true)
 	const [workflowDone, setWorkflowDone] = React.useState(false)
-	const [, setTrackingId] = React.useState("")
 	const [selectedWorkflowId, setSelectedWorkflowId] = React.useState("")
 
-	const [collapseJson, setCollapseJson] = React.useState(false)
 	const [field1, setField1] = React.useState("")
 	const [field2, setField2] = React.useState("")
 	const [downloadUrl, setDownloadUrl] = React.useState("https://github.com/frikky/shuffle-workflows")
@@ -363,14 +316,11 @@ const Workflows = (props) => {
 	const [newWorkflowDescription, setNewWorkflowDescription] = React.useState("");
 	const [newWorkflowTags, setNewWorkflowTags] = React.useState([]);
 
-	const [showExtraOptions, setShowExtraOptions] = React.useState(true);
 	const [defaultReturnValue, setDefaultReturnValue] = React.useState("");
 
-	const [update, setUpdate] = React.useState("test");
 	const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
 	const [publishModalOpen, setPublishModalOpen] = React.useState(false);
 	const [editingWorkflow, setEditingWorkflow] = React.useState({})
-	const [executionLoading, setExecutionLoading] = React.useState(false)
 	const [importLoading, setImportLoading] = React.useState(false)
 	const [isDropzone, setIsDropzone] = React.useState(false);
 	const [view, setView] = React.useState("grid")
@@ -420,8 +370,6 @@ const Workflows = (props) => {
 				})
 			}
 
-			//console.log("FOUND: ", found)
-			//if (found) {
 			if (found.every(v => v === true)) {
 				newWorkflows.push(curWorkflow)
 				continue
@@ -461,9 +409,7 @@ const Workflows = (props) => {
 		}
 
 
-		//console.log("Removing filter index", index)
 		newfilters.splice(index, 1)
-		//console.log("FILTER LENGTH: ", filters.length)
 
 		if (newfilters.length === 0) {
 			newfilters = []
@@ -471,7 +417,6 @@ const Workflows = (props) => {
 		} else {
 			setFilters(newfilters)
 		}
-		//console.log("FILTERS: ", newfilters)
 
 		findWorkflow(newfilters) 
 	}
@@ -623,14 +568,14 @@ const Workflows = (props) => {
 				}
 
 				// Initialize the workflow itself
-				const ret = setNewWorkflow(data.name, data.description, data.tags, data.default_return_value, {}, false)
+				setNewWorkflow(data.name, data.description, data.tags, data.default_return_value, {}, false)
 				.then((response) => {
 					if (response !== undefined) {
 						// SET THE FULL THING
 						data.id = response.id
 
 						// Actually create it
-						const ret = setNewWorkflow(data.name, data.description, data.tags, data.default_return_value, data, false)
+						setNewWorkflow(data.name, data.description, data.tags, data.default_return_value, data, false)
 						.then((response) => {
 							if (response !== undefined) {
 								alert.success(`Successfully imported ${data.name}`)
@@ -651,10 +596,10 @@ const Workflows = (props) => {
 
 	useEffect(() => {
 		if (isDropzone) {
-			//redirectOpenApi();
 			setIsDropzone(false);
 		}
   }, [isDropzone]);
+  
 
 	const getAvailableWorkflows = () => {
 		fetch(globalUrl+"/api/v1/workflows", {
@@ -681,9 +626,6 @@ const Workflows = (props) => {
 			return response.json()
 		})
     .then((responseJson) => {
-			setSelectedExecution({})
-			setWorkflowExecutions([])
-			//console.log(responseJson)
 
 			if (responseJson !== undefined) {
 				setWorkflows(responseJson)
@@ -697,16 +639,14 @@ const Workflows = (props) => {
 				return
 			}
 
-			if (responseJson.length > 0){
-				//setSelectedWorkflow(responseJson[0])
-				//getWorkflowExecution(responseJson[0].id)
-			}
+
     	})
 		.catch(error => {
 			alert.error(error.toString())
 		});
 	}
 
+	// eslint-disable-next-line react-hooks/exhaustive-deps
 	useEffect(() => {
 		if (workflows.length <= 0 && firstrequest) {
 			const tmpView = localStorage.getItem('view');
@@ -717,7 +657,7 @@ const Workflows = (props) => {
 			setFirstrequest(false)
 			getAvailableWorkflows()
 		}
-	})
+	}) 
 
 	const viewStyle = {
 		color: "#ffffff",
@@ -726,7 +666,6 @@ const Workflows = (props) => {
 		minWidth: 1024,
 		maxWidth: 1024,
 		margin: "auto",
-		/*maxHeight: "90vh",*/
 	}
 
 	const emptyWorkflowStyle = {
@@ -745,14 +684,6 @@ const Workflows = (props) => {
 		flexDirection: "column",
 	}
 
-
-	const scrollStyle = {
-		marginTop: "10px",
-		overflow: "scroll",
-		height: "90%",
-		overflowX: "hidden",
-		overflowY: "auto",
-	}
 
 	const paperAppContainer = {
 		display: "flex",
@@ -789,38 +720,6 @@ const Workflows = (props) => {
 		justifyContent: "space-between", 
 	}
 
-	const executeWorkflow = (id) => {
-		alert.show("Executing workflow "+id)
-		setTrackingId(id)
-		fetch(globalUrl+"/api/v1/workflows/"+id+"/execute", {
-    	  method: 'GET',
-				headers: {
-					'Content-Type': 'application/json',
-					'Accept': 'application/json',
-				},
-	  			credentials: "include",
-    		})
-		.then((response) => {
-			if (response.status !== 200) {
-				console.log("Status not 200 for WORKFLOW EXECUTION :O!")
-			} 
-
-			return response.json()
-		})
-    .then((responseJson) => {
-			if (!responseJson.success) {
-				alert.error(responseJson.reason)
-			}
-		})
-		.catch(error => {
-			alert.error(error.toString())
-		});
-	}
-
-	function sleep (time) {
-		return new Promise((resolve) => setTimeout(resolve, time));
-	}
-
 	const exportAllWorkflows = () => {
 		for (var key in workflows) {
 			exportWorkflow(workflows[key], false)
@@ -837,13 +736,12 @@ const Workflows = (props) => {
 					}
 				} 
 				
-				if (trigger.status == "running") {
+				if (trigger.status === "running") {
 					trigger.status = "stopped"
 				}
 
 				const newId = uuidv4()
 				if (trigger.trigger_type === "WEBHOOK") {
-					const hookname = "webhook_"+newId
 					if (trigger.parameters !== undefined && trigger.parameters !== null && trigger.parameters.length === 2) {
 						trigger.parameters[0].value = referenceUrl+"webhook_"+trigger.id
 						trigger.parameters[1].value = "webhook_"+trigger.id
@@ -873,7 +771,7 @@ const Workflows = (props) => {
 		}
 
 		if (data.actions !== null && data.actions !== undefined) {
-			for (var key in data.actions) {
+			for (key in data.actions) {
 				data.actions[key].authentication_id = ""
 
 				for (var subkey in data.actions[key].parameters) {
@@ -890,7 +788,7 @@ const Workflows = (props) => {
 				}
 
 				const newId = uuidv4()
-				for (var branchkey in data.branches) {
+				for ( branchkey in data.branches) {
 					const branch = data.branches[branchkey]
 					if (branch.source_id === data.actions[key].id) {
 						branch.source_id = newId
@@ -905,14 +803,13 @@ const Workflows = (props) => {
 					data.start = newId
 				}
 
-				//data.actions[key].environment = isCloud ? "cloud" : "Shuffle"
 				data.actions[key].environment = ""
 				data.actions[key].id = newId
 			}
 		}
 
 		if (data.workflow_variables !== null && data.workflow_variables !== undefined) {
-			for (var key in data.workflow_variables) {
+			for (key in data.workflow_variables) {
 				const param = data.workflow_variables[key]
 				if (param.name.includes("key") || param.name.includes("user") || param.name.includes("pass") || param.name.includes("api") || param.name.includes("auth") || param.name.includes("secret") || param.name.includes("email")) {
 					param.value = ""
@@ -949,7 +846,6 @@ const Workflows = (props) => {
 		if (sanitize === true) {
 			data = sanitizeWorkflow(data)	
 		}
-		//return
 
 		// Add correct ID's for triggers
 		// Add mag
@@ -1008,8 +904,7 @@ const Workflows = (props) => {
 		data.id = ""
 		data.name = data.name+"_copy"
 		data = deduplicateIds(data) 
-		//console.log("COPIED DATA: ", data)
-		//return
+
 
 		fetch(globalUrl+"/api/v1/workflows", {
     	  method: 'POST',
@@ -1027,7 +922,7 @@ const Workflows = (props) => {
 			}
 			return response.json()
 		})
-    .then((responseJson) => {
+    .then(() => {
 			setTimeout(() => {
 				getAvailableWorkflows()
 			}, 1000)
@@ -1057,7 +952,7 @@ const Workflows = (props) => {
 
 			return response.json()
 		})
-		.then((responseJson) => {
+		.then(() => {
 			setTimeout(() => {
 				getAvailableWorkflows()
 			}, 1000)
@@ -1073,7 +968,7 @@ const Workflows = (props) => {
 	}
 
 
-	const NewWorkflowPaper = (props) => {
+	const NewWorkflowPaper = () => {
 		const [hover, setHover] = React.useState(false)
 
 		const innerColor = "rgba(255,255,255,0.3)"
@@ -1109,10 +1004,7 @@ const Workflows = (props) => {
 		const [open, setOpen] = React.useState(false);
 		const [anchorEl, setAnchorEl] = React.useState(null);
 
-		var boxWidth = "2px"
-		if (selectedWorkflow.id === data.id) {
-			boxWidth = "4px"
-		}
+
 
 		var boxColor = "#FECC00"
 		if (data.is_valid) {
@@ -1134,8 +1026,7 @@ const Workflows = (props) => {
 		}
 
 		const actions = data.actions !== null ? data.actions.length : 0
-		const [triggers, schedules, webhooks, subflows] = getWorkflowMeta(data)
-
+		const [triggers, subflows] = getWorkflowMeta(data) 
 
 		const workflowMenuButtons = <Menu
 				id="long-menu"
@@ -1148,7 +1039,6 @@ const Workflows = (props) => {
 				}}
 			>
 				<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
-					//console.log("DATA:" ,data)
 					setModalOpen(true)
 					setEditingWorkflow(data)
 					setNewWorkflowName(data.name)
@@ -1176,8 +1066,7 @@ const Workflows = (props) => {
 					{"Duplicate Workflow"}
 				</MenuItem>
 				<NestedMenuItem disabled={userdata.orgs === undefined || userdata.orgs === null || userdata.orgs.length === 1 || userdata.orgs.length >= 0} style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
-					//copyWorkflow(data)		
-					//setOpen(false)
+
 				}} key={"duplicate"}>
 					<FileCopyIcon style={{marginLeft: 0, marginRight: 8}}/>
 					{"Copy to Child Org"}
@@ -1207,14 +1096,20 @@ const Workflows = (props) => {
 			const foundOrg = userdata.orgs.find(org => org.id === data["org_id"])
 			if (foundOrg !== undefined && foundOrg !== null) {
 				//position: "absolute", bottom: 5, right: -5, 
-				const imageStyle = {width: imagesize, height: imagesize, pointerEvents: "none", marginRight: 10, marginLeft: data.creator_org !== undefined && data.creator_org.length > 0 ? 20 : 0, borderRadius: 10, border: foundOrg.id === userdata.active_org.id ? `3px solid ${boxColor}` : null, cursor: "pointer", marginRight: 10, }
+				const imageStyle = {
+					width: imagesize, 
+					height: imagesize, 
+					pointerEvents: "none", 
+					marginLeft: data.creator_org !== undefined && data.creator_org.length > 0 ? 20 : 0, 
+					borderRadius: 10, 
+					border: foundOrg.id === userdata.active_org.id ? `3px solid ${boxColor}` : null, 
+					cursor: "pointer", 
+					marginRight: 10 }
 
-				//<Tooltip title={`Org: ${foundOrg.name}`} placement="bottom">
 				image = foundOrg.image === "" ? 
 					<img alt={foundOrg.name} src={theme.palette.defaultImage} style={imageStyle} />
 					:
 					<img alt={foundOrg.name} src={foundOrg.image} style={imageStyle} onClick={() => {
-						//setFilteredWorkflows(newWorkflows)
 					}}/>
 
 				orgName = foundOrg.name
@@ -1231,8 +1126,6 @@ const Workflows = (props) => {
 							<Tooltip title={`Org "${orgName}"`} placement="bottom">
 								<div styl={{cursor: "pointer"}} onClick={() => {
 									addFilter(orgId) 
-									//setFilters(["Org "+orgName])
-									//setFilteredWorkflows(newWorkflows)
 								}}>
 									{image}
 								</div>
@@ -1296,20 +1189,6 @@ const Workflows = (props) => {
 									</Typography>
 								</span>
 							</Tooltip>
-							{/*
-							<Tooltip color="primary" title={`Actions: ${data.actions.length}`} placement="bottom">
-								<AppsIcon />
-							</Tooltip>
-								<Tooltip color="primary" title={`Webhooks: ${webhooks}`} placement="bottom">
-										<RestoreIcon />
-								</Tooltip>
-							: null}
-							{schedules > 0 ? 
-								<Tooltip color="primary" title={`Schedules: ${schedules}`} placement="bottom">
-										<RestoreIcon />
-								</Tooltip>
-							: null}
-							*/}
 						</Grid>
 						<Grid item style={{justifyContent: "left", overflow: "hidden", marginTop: 5,}}>
 							{data.tags !== undefined ?
@@ -1340,23 +1219,13 @@ const Workflows = (props) => {
 								aria-label="more"
 								aria-controls="long-menu"
 								aria-haspopup="true"
-								style={{color: "white"}}
 								onClick={menuClick}
-								style={{padding:"0px",color:"white", color:"#979797"}}
+								style={{padding:"0px", color:"#979797"}}
 								>
 								<MoreVertIcon />
 							</IconButton>
 							{workflowMenuButtons}	
 						</Grid>
-						{/*
-						<Grid>
-							<Link to={"/workflows/"+data.id}>
-								<Tooltip title="Edit workflow" placement="bottom">
-									<EditIcon style={{borderRadius: "4px", color: "#F85A3E", height: 20, width: 20, padding: 7, fontSize: "small"}} />
-								</Tooltip>
-							</Link>	
-						</Grid>
-						*/}
 					</Grid>
 					: null}
 				</Paper>
@@ -1364,29 +1233,6 @@ const Workflows = (props) => {
 		)
 	}
 
-
-
-	const dividerColor = "rgb(225, 228, 232)"
-
-	const resultPaperAppStyle = {
-		minHeight: "100px",
-		minWidth: "100%",
-		overflow: "hidden",
-		maxWidth: "100%",
-		marginTop: "5px",
-		color: "white",
-		backgroundColor: surfaceColor,
-		cursor: "pointer",
-		display: "flex",
-	}
-
-	function replaceAll(string, search, replace) {
-		return string.split(search).join(replace);
-	}
-
-
-
-	const resultsLength = Object.getOwnPropertyNames(selectedExecution).length > 0 && selectedExecution.results !== null ? selectedExecution.results.length : 0 	
 
 
 
@@ -1416,11 +1262,9 @@ const Workflows = (props) => {
 
 		if (defaultReturnValue !== undefined) {
 			workflowdata["default_return_value"] = defaultReturnValue 
-			//console.log("WORKFLOW: ", workflowdata)
 		}
 
-		//console.log(workflowdata)
-		//return
+
 
 		return fetch(globalUrl+"/api/v1/workflows"+extraData, {
     	  method: method,
@@ -1471,7 +1315,6 @@ const Workflows = (props) => {
 		console.log("Importing!")
 
 		setImportLoading(true)
-		const file = event.target.value
 		if (event.target.files.length > 0) {
 			for (var key in event.target.files) {
 				const file = event.target.files[key]
@@ -1496,7 +1339,7 @@ const Workflows = (props) => {
 					}
 
 					// Initialize the workflow itself
-					const ret = setNewWorkflow(data.name, data.description, data.tags, data.default_return_value, {}, false)
+					setNewWorkflow(data.name, data.description, data.tags, data.default_return_value, {}, false)
 					.then((response) => {
 						if (response !== undefined) {
 							// SET THE FULL THING
@@ -1506,7 +1349,7 @@ const Workflows = (props) => {
 							data.is_valid = false
 
 							// Actually create it
-							const ret = setNewWorkflow(data.name, data.description, data.tags, data.default_return_value, data, false)
+							setNewWorkflow(data.name, data.description, data.tags, data.default_return_value, data, false)
 							.then((response) => {
 								if (response !== undefined) {
 									alert.success("Successfully imported "+data.name)
@@ -1529,26 +1372,17 @@ const Workflows = (props) => {
 
 	const getWorkflowMeta = (data) => {
 		let triggers = 0
-		let schedules = 0
-		let webhooks = 0
 		let subflows = 0
 		if (data.triggers !== undefined && data.triggers !== null && data.triggers.length > 0) {
 			triggers = data.triggers.length
 			for (let key in data.triggers) {
-
-				if (data.triggers[key].app_name === "Webhook") {
-					webhooks += 1
-					//webhookImg = data.triggers[key].large_image
-				} else if (data.triggers[key].app_name === "Schedule") {
-					schedules += 1
-					//scheduleImg = data.triggers[key].large_image
-				} else if (data.triggers[key].app_name === "Shuffle Workflow") {
+				 if (data.triggers[key].app_name === "Shuffle Workflow") {
 					subflows += 1
 				}
 			}
 		}
 
-		return [triggers, schedules, webhooks, subflows]
+		return [triggers, subflows]
 	}
 
 	const WorkflowListView = () => {
@@ -1568,8 +1402,6 @@ const Workflows = (props) => {
 						}
 
 						var image = ""
-						var orgName = ""
-						var orgId = ""
 						if (userdata.orgs !== undefined) {
 							const foundOrg = userdata.orgs.find(org => org.id === data["org_id"])
 							if (foundOrg !== undefined && foundOrg !== null) {
@@ -1584,17 +1416,11 @@ const Workflows = (props) => {
 										//setFilteredWorkflows(newWorkflows)
 									}}/>
 
-								orgName = foundOrg.name
-								orgId = foundOrg.id
 							}
 						}
 
 						return (
-							<div styl={{cursor: "pointer"}} onClick={() => {
-								//addFilter(orgId) 
-								//setFilters(["Org "+orgName])
-								//setFilteredWorkflows(newWorkflows)
-							}}>
+							<div styl={{cursor: "pointer"}} >
 								{image}
 							</div>
 						)
@@ -1612,21 +1438,13 @@ const Workflows = (props) => {
 							</Grid>
 						)
 					}},
-					{/* field: 'category', headerName: 'category', width: 140, renderCell: (params) => {
-						const data = params.row.record
-						const category = data.category === undefined ? "not defined" : data.category
-						return (
-							<Typography>
-								{category}
-							</Typography>
-						)
-					} */},
+
 					{ field: 'options', headerName: 'Options', width: 200, sortable: false, 
 						disableClickEventBubbling: true,
 						renderCell: (params) => {
 							const data = params.row.record;
 							const actions = data.actions !== null ? data.actions.length : 0
-							let [triggers, schedules, webhooks, subflows] = getWorkflowMeta(data);
+							let [triggers,  subflows] = getWorkflowMeta(data);
 
 							return (
 								<Grid item>
@@ -1825,10 +1643,9 @@ const Workflows = (props) => {
 						onDelete={(chip, index) => {
 							newWorkflowTags.splice(index, 1)
 							setNewWorkflowTags(newWorkflowTags)
-							setUpdate("delete "+chip)
 						}}
 					/>
-					{showExtraOptions ? 
+					
 						<TextField
 							onBlur={(event) => setDefaultReturnValue(event.target.value)}
 							InputProps={{
@@ -1844,7 +1661,7 @@ const Workflows = (props) => {
 							margin="dense"
 							fullWidth
 							/>
-						: null}
+						
 				</DialogContent>
 				<DialogActions>
 					<Button style={{}} onClick={() => {
@@ -1903,11 +1720,7 @@ const Workflows = (props) => {
 
 		const workflowButtons = 
 			<span>
-				{/*workflows.length > 0 ?
-					<Tooltip color="primary" title={"Create new workflow"} placement="top">
-						<Button color="primary" style={{}} variant="text" onClick={() => setModalOpen(true)}><AddIcon /></Button> 				
-					</Tooltip>
-				: null*/}
+
 				{view === "list" && (
 					<Tooltip color="primary" title={"Grid View"} placement="top">
 						<Button color="primary" variant="text" onClick={() => {
@@ -1992,58 +1805,10 @@ const Workflows = (props) => {
 							<h2>Workflows</h2>
 						</div>
 					</div>
-
-					{/*
-					<div style={flexContainerStyle}>
-						<div style={{...flexBoxStyle, ...activeWorkflowStyle}}>
-							<div style={flexContentStyle}>
-								<div ><img src={mobileImage} style={iconStyle} /></div>
-								<div style={ blockRightStyle }>
-									<div style={counterStyle}>{workflows.length}</div>
-									<div style={fontSize_16}>ACTIVE WORKFLOWS</div>
-								</div>
-							</div>
-						</div>
-						<div style={{...flexBoxStyle, ...availableWorkflowStyle}}>
-							<div style={flexContentStyle}>
-								<div><img src={bookImage} style={iconStyle} /></div>
-								<div style={ blockRightStyle }>
-									<div style={counterStyle}>{workflows.length}</div>
-									<div style={fontSize_16}>AVAILABE WORKFLOWS</div>
-								</div>
-							</div>
-						</div>
-						<div style={{...flexBoxStyle, ...notificationStyle}}>
-							<div style={flexContentStyle}>
-								<div><img src={bagImage} style={iconStyle} /></div>
-								<div style={ blockRightStyle }>
-									<div style={counterStyle}>{workflows.length}</div>
-									<div style={fontSize_16}>NOTIFICATIONS</div>
-								</div>
-							</div>
-						</div>
-					</div>
-					*/}
-
-					{/*
-					chipRenderer={({ value, isFocused, isDisabled, handleClick, handleRequestDelete }, key) => {
-						console.log("VALUE: ", value)
-
-						return (
-							<Chip
-								key={key}
-								style={chipStyle}
-
-							>
-								{value}
-							</Chip>
-						)
-					}}
-					*/}
 					<div style={{display: "flex", margin: "0px 0px 20px 0px"}}>
 						<div style={{flex: 1}}>
 							<Typography style={{marginTop: 7, marginBottom: "auto"}}>
-								<a rel="norefferer" target="_blank" href="https://shuffler.io/docs/workflows" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more about Workflows</a>
+								<a rel="noopener noreferrer"  href="https://shuffler.io/docs/workflows" target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>Learn more about Workflows</a>
 							</Typography>
 						</div>
 						<div style={{flex: 1, float: "right",}}>
@@ -2052,7 +1817,6 @@ const Workflows = (props) => {
 								InputProps={{
 									style:{
 										color: "white",
-										//backgroundColor: inputColor,
 									},
 								}}
 								placeholder="Add Filter"
@@ -2062,7 +1826,7 @@ const Workflows = (props) => {
 								onAdd={(chip) => {
 									addFilter(chip)
 								}}
-								onDelete={(chip, index) => {
+								onDelete={(_, index) => {
 									removeFilter(index)
 								}}
 							/>
@@ -2108,7 +1872,6 @@ const Workflows = (props) => {
 		}
 
 		alert.success("Getting specific workflows from your URL.")
-		var cors = "cors"
 		fetch(globalUrl+"/api/v1/workflows/download_remote", {
     	method: "POST",
 			mode: "cors",
@@ -2129,7 +1892,6 @@ const Workflows = (props) => {
 			return response.json()
 		})
     .then((responseJson) => {
-				//console.log("DATA: ", responseJson)
 				if (!responseJson.success) {
 					if (responseJson.reason !== undefined) {
 						alert.error("Failed loading: "+responseJson.reason)
