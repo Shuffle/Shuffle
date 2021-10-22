@@ -948,6 +948,16 @@ const Workflows = (props) => {
 
 		if (sanitize === true) {
 			data = sanitizeWorkflow(data)	
+
+			if (data.subflows !== null && data.subflows !== undefined) {
+				alert.info("Not exporting with subflows when sanitizing. Please manually export them.")
+				data.subflows = []
+			}
+
+			//	for (var key in data.subflows) {
+			//		if (data.sublof
+			//	}
+			//}
 		}
 		//return
 
@@ -1184,6 +1194,36 @@ const Workflows = (props) => {
 				</NestedMenuItem>*/}
 				<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
 					setExportModalOpen(true)
+
+					if (data.triggers !== null && data.triggers !== undefined) { 
+						var newSubflows = []
+						for (var key in data.triggers) {
+							const trigger = data.triggers[key]
+
+							if (trigger.parameters !== null && trigger.parameters !== undefined) {
+								for (var subkey in trigger.parameters) {
+									const param = trigger.parameters[subkey]
+									if (param.name === "workflow" && param.value !== data.id && !newSubflows.includes(param.value)) {
+										newSubflows.push(param.value)
+									}
+								}
+							}
+						}
+
+						var parsedworkflows = []
+						for (var key in newSubflows) {
+							const foundWorkflow = workflows.find(workflow => workflow.id === newSubflows[key])
+							if (foundWorkflow !== undefined && foundWorkflow !== null) {
+								parsedworkflows.push(foundWorkflow)
+							}
+						}
+						
+						if (parsedworkflows.length > 0) {
+							console.log("Appending subflows during export: ", parsedworkflows.length)
+							data.subflows = parsedworkflows
+						}
+					}
+
 					setExportData(data)
 					setOpen(false)
 				}} key={"export"}>
