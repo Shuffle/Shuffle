@@ -1175,13 +1175,13 @@ const Workflows = (props) => {
 					<FileCopyIcon style={{marginLeft: 0, marginRight: 8}}/>
 					{"Duplicate Workflow"}
 				</MenuItem>
-				<NestedMenuItem disabled={userdata.orgs === undefined || userdata.orgs === null || userdata.orgs.length === 1 || userdata.orgs.length >= 0} style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
+				{/*<NestedMenuItem disabled={userdata.orgs === undefined || userdata.orgs === null || userdata.orgs.length === 1 || userdata.orgs.length >= 0} style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
 					//copyWorkflow(data)		
 					//setOpen(false)
 				}} key={"duplicate"}>
 					<FileCopyIcon style={{marginLeft: 0, marginRight: 8}}/>
 					{"Copy to Child Org"}
-				</NestedMenuItem>
+				</NestedMenuItem>*/}
 				<MenuItem style={{backgroundColor: inputColor, color: "white"}} onClick={() => {
 					setExportModalOpen(true)
 					setExportData(data)

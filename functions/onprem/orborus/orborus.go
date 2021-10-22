@@ -5,7 +5,7 @@ package main
 */
 
 import (
-	"github.com/frikky/shuffle-shared"
+	"github.com/shuffle/shuffle-shared"
 
 	"bytes"
 	"context"

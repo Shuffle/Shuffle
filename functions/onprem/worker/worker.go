@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/frikky/shuffle-shared"
+	"github.com/shuffle/shuffle-shared"
 
 	//"bufio"
 	"bytes"
@@ -964,8 +964,8 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		// 3. Add remote repo location
 		images := []string{
 			image,
+			fmt.Sprintf("%s:%s_%s", baseimagename, parsedAppname, action.AppVersion),
 			fmt.Sprintf("%s/%s:%s_%s", registryName, baseimagename, parsedAppname, action.AppVersion),
-			fmt.Sprintf("%s:%s_%s", baseimagename, strings.Replace(action.AppName, " ", "-", -1), action.AppVersion),
 		}
 
 		// If cleanup is set, it should run for efficiency

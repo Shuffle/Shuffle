@@ -1595,11 +1595,11 @@ const AngularWorkflow = (props) => {
 		if (event.target.data().decorator) {
 			alert.info("This edge can't be edited.")
 		} else {
-			console.log("DATA: ", event.target.data())
+			//console.log("DATA: ", event.target.data())
 			const destinationId = event.target.data("target")
-			console.log("DATA: ", event.target.data())
+			//console.log("DATA: ", event.target.data())
 			const curaction = workflow.actions.find(a => a.id === destinationId)
-			console.log("ACTION: ", curaction)
+			//console.log("ACTION: ", curaction)
 			if (curaction !== undefined && curaction !== null) {
 				if (curaction.app_name == "Shuffle Tools" && curaction.name === "router") {
 					alert.info("Router action can't have incoming conditions")
@@ -2491,7 +2491,7 @@ const AngularWorkflow = (props) => {
 	// Checks for errors in edges when they're added 
 	const onEdgeAdded = (event) => {
 		const edge = event.target.data()
-		console.log("EDGE ADDED: ", edge)
+		//console.log("EDGE ADDED: ", edge)
 		//setLastSaved(false)
 		var targetnode = workflow.triggers.findIndex(data => data.id === edge.target)
 		if (targetnode !== -1) {
@@ -2503,7 +2503,7 @@ const AngularWorkflow = (props) => {
 			}
 		}
 
-		console.log("TARGET: ", event.target.target().data())
+		//console.log("TARGET: ", event.target.target().data())
 		if (event.target.target().data("isButton") === true || event.target.target().data("isDescriptor") === true) {
 			event.target.remove()
 			return
@@ -2511,7 +2511,7 @@ const AngularWorkflow = (props) => {
 
 		targetnode = -1
 		var sourcenode = workflow.triggers.findIndex(data => data.id === edge.source)
-		console.log("SOURCENODE: ", sourcenode)
+		//console.log("SOURCENODE: ", sourcenode)
 		if (sourcenode !== -1) {
 			if (workflow.triggers[sourcenode].app_name === "User Input" || workflow.triggers[sourcenode].app_name === "Shuffle Workflow") {
 				//console.log("NORMAL TRIGGER")

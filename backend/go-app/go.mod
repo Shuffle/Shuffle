@@ -2,7 +2,7 @@ module main
 
 go 1.15
 
-//replace github.com/shuffle/shuffle-shared => ../../../../git/shuffle-shared
+replace github.com/shuffle/shuffle-shared => ../../../../git/shuffle-shared
 //replace github.com/frikky/kin-openapi => ../../../../git/kin-openapi
 //replace github.com/frikky/go-elasticsearch => ../../../../git/go-elasticsearch
 
