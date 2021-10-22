@@ -849,7 +849,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		var trigger shuffle.Trigger
 		err = json.Unmarshal([]byte(actionResult.Result), &trigger)
 		if err != nil {
-			log.Printf("Failed unmarshaling actionresult for user input: %s", err)
+			log.Printf("[WARNING] Failed unmarshaling actionresult for user input: %s", err)
 			resp.WriteHeader(401)
 			resp.Write([]byte(`{"success": false}`))
 			return
@@ -862,21 +862,21 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 
 		err := handleUserInput(trigger, orgId, workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
 		if err != nil {
-			log.Printf("Failed userinput handler: %s", err)
+			log.Printf("[WARNING] Failed userinput handler: %s", err)
 			actionResult.Result = fmt.Sprintf("Cloud error: %s", err)
 			workflowExecution.Results = append(workflowExecution.Results, actionResult)
 			workflowExecution.Status = "ABORTED"
 			err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
 			if err != nil {
-				log.Printf("Failed to set execution during wait")
+				log.Printf("[WARNING] Failed to set execution during wait: %s", err)
 			} else {
-				log.Printf("Successfully set the execution to waiting.")
+				log.Printf("[INFO] Successfully set the execution %s to waiting.", workflowExecution.ExecutionId)
 			}
 
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error: %s"}`, err)))
 		} else {
-			log.Printf("Successful userinput handler")
+			log.Printf("[INFO] Successful userinput handler")
 			resp.WriteHeader(200)
 			resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "CLOUD IS DONE"}`)))
 
@@ -886,7 +886,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 			workflowExecution.Status = actionResult.Status
 			err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
 			if err != nil {
-				log.Printf("Failed ")
+				log.Printf("[WARNING] Failed setting userinput: %s", err)
 			} else {
 				log.Printf("Successfully set the execution to waiting.")
 			}
@@ -1995,7 +1995,7 @@ func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 	// Double unmarshal because of user apps
 	newbody, err := json.Marshal(newapps)
 	if err != nil {
-		log.Printf("Failed unmarshalling all newapps: %s", err)
+		log.Printf("[ERROR] Failed unmarshalling all newapps: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed unpacking workflow apps"}`)))
 		return

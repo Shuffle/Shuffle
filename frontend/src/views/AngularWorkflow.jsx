@@ -1595,6 +1595,19 @@ const AngularWorkflow = (props) => {
 		if (event.target.data().decorator) {
 			alert.info("This edge can't be edited.")
 		} else {
+			console.log("DATA: ", event.target.data())
+			const destinationId = event.target.data("target")
+			console.log("DATA: ", event.target.data())
+			const curaction = workflow.actions.find(a => a.id === destinationId)
+			console.log("ACTION: ", curaction)
+			if (curaction !== undefined && curaction !== null) {
+				if (curaction.app_name == "Shuffle Tools" && curaction.name === "router") {
+					alert.info("Router action can't have incoming conditions")
+					event.target.unselect()
+					return
+				}
+			}
+
 			setSelectedEdgeIndex(workflow.branches.findIndex(data => data.id === event.target.data()["id"]))
 			setSelectedEdge(event.target.data())
 		}
