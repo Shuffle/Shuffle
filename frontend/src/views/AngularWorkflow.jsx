@@ -5803,7 +5803,7 @@ const AngularWorkflow = (props) => {
 			<Button 
 				fullWidth
 				variant="contained" 
-				style={{flex: 1, marginTop: 10, }} 
+				style={{flex: 1, textTransform: "none", textAlign: "left", justifyContent: "flex-start", marginTop: 10, padding: 0, backgroundColor: "#4285f4", color: "white", }} 
 				color="primary"
 				onClick={() => {
 					//const redirectUri = isCloud ? "https%3A%2F%2Fshuffler.io%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister" : "http%3A%2F%2Flocalhost:5001%2Fapi%2Fv1%2Ftriggers%2Fgmail%2Fregister"
@@ -5861,8 +5861,9 @@ const AngularWorkflow = (props) => {
 					}, 2500)
 
 					saveWorkflow(workflow)
-				}} >
-				Sign in with Google	
+				}}>
+				<img style={{margin: 0, }} src="/images/btn_google_light_focus_ios.svg" />
+				<Typography style={{margin: 0, marginLeft: 10, }} variant="body1">Sign in with Google</Typography>
 			</Button>
 
 		const outlookButton = selectedTrigger.name !== "Office365" ? null :
