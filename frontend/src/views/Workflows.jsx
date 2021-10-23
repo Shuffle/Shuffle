@@ -1938,7 +1938,7 @@ const Workflows = (props) => {
 
 					}} color="primary">
 						{submitLoading ? 
-							<CircularProgress />
+							<CircularProgress color="secondary" />
 							:
 	        		"Submit"
 						}
