@@ -3,7 +3,7 @@ import { useInterval } from 'react-powerhooks';
 import { makeStyles } from '@material-ui/core/styles';
 import { useTheme } from '@material-ui/core/styles';
 
-import {Avatar, Grid, Paper, Tooltip, Divider, Button, TextField, FormControl, IconButton, Menu, MenuItem, FormControlLabel, Chip, Switch, Typography, Zoom, CircularProgress, Dialog, DialogTitle, DialogActions, DialogContent} from '@material-ui/core';
+import {Badge, Avatar, Grid, Paper, Tooltip, Divider, Button, TextField, FormControl, IconButton, Menu, MenuItem, FormControlLabel, Chip, Switch, Typography, Zoom, CircularProgress, Dialog, DialogTitle, DialogActions, DialogContent} from '@material-ui/core';
 import {GridOn as GridOnIcon, List as ListIcon, Close as CloseIcon, Compare as CompareIcon, Maximize as MaximizeIcon, Minimize as MinimizeIcon, AddCircle as AddCircleIcon, Toc as TocIcon, Send as SendIcon, Search as SearchIcon, FileCopy as FileCopyIcon, Delete as DeleteIcon, BubbleChart as BubbleChartIcon, Restore as RestoreIcon, Cached as CachedIcon, GetApp as GetAppIcon, Apps as AppsIcon, Edit as EditIcon, MoreVert as MoreVertIcon, PlayArrow as PlayArrowIcon, Add as AddIcon, Publish as PublishIcon, CloudUpload as CloudUploadIcon, CloudDownload as CloudDownloadIcon} from '@material-ui/icons';
 import NestedMenuItem from "material-ui-nested-menu-item";
 //import {Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
@@ -333,6 +333,7 @@ const Workflows = (props) => {
 	const theme = useTheme();
 	const alert = useAlert()
 	const classes = useStyles(theme);
+	const imgSize = 60
 
 	const referenceUrl = globalUrl+"/api/v1/hooks/"
 
@@ -376,6 +377,7 @@ const Workflows = (props) => {
 	const [view, setView] = React.useState("grid")
 	const [filters, setFilters] = React.useState([])
 	const [submitLoading, setSubmitLoading] = React.useState(false)
+	const [actionImageList, setActionImageList] = React.useState([])
 
 	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" 
 
@@ -394,6 +396,7 @@ const Workflows = (props) => {
 				found = filters.map(filter => curWorkflow.name.toLowerCase().includes(filter))
 			} else {
 				found = filters.map(filter => {
+					const newfilter = filter.toLowerCase()
 					if (filter === undefined) {
 						return false
 					}
@@ -407,10 +410,9 @@ const Workflows = (props) => {
 					} else if (curWorkflow.org_id === filter) {
 						return true
 					} else if (curWorkflow.actions !== null && curWorkflow.actions !== undefined) {
-						const newfilter = filter.toLowerCase()
 						for (var key in curWorkflow.actions) {
 							const action = curWorkflow.actions[key]
-							if (action.app_name.toLowerCase().includes(newfilter)) {
+							if (action.app_name.toLowerCase() === newfilter || action.app_name.toLowerCase().includes(newfilter)) {
 								return true
 							}
 						}
@@ -687,6 +689,27 @@ const Workflows = (props) => {
 
 			if (responseJson !== undefined) {
 				setWorkflows(responseJson)
+
+				if (responseJson !== undefined) {
+					var actionnamelist = []
+					var parsedactionlist = []
+					for (var key in responseJson) {
+						for (var actionkey in responseJson[key].actions) {
+							const action = responseJson[key].actions[actionkey]
+							console.log("Action: ", action)
+							if (actionnamelist.includes(action.app_name)) {
+								continue
+							}
+
+							actionnamelist.push(action.app_name)
+							parsedactionlist.push(action)
+						}
+					}
+
+					console.log(parsedactionlist)
+					setActionImageList(parsedactionlist)
+				}
+
 				setFilteredWorkflows(responseJson)
 				setWorkflowDone(true)
 			} else {
@@ -758,6 +781,7 @@ const Workflows = (props) => {
 		display: "flex",
 		flexWrap: 'wrap',
 		alignContent: "space-between",
+		marginTop: 5, 
 	}
 
 	const paperAppStyle = {
@@ -1761,7 +1785,7 @@ const Workflows = (props) => {
 					}
 				];
 				let rows = [];
-				rows = workflows.map((data, index) => {
+				rows = filteredWorkflows.map((data, index) => {
 					let obj = {
 						"id":index+1, 
 						"title":data.name, 
@@ -1769,7 +1793,7 @@ const Workflows = (props) => {
 					}
 
 					return obj;
-				});
+				})
 				workflowData = 
 					<DataGrid 
 						color="primary" 
@@ -2112,6 +2136,34 @@ const Workflows = (props) => {
 						</div>
 					</div>
 					<div style={{marginTop: 15,}} />
+					{actionImageList !== undefined && actionImageList !== null && actionImageList.length > 0 ? 
+						<div style={{display: "flex", maxWidth: 1024, zIndex: 11, border: "1px solid rgba(255,255,255,0.1)", borderRadius: theme.palette.borderRadius, textAlign: "center", overflow: "auto",}}>
+							{actionImageList.map((data, index) => {
+								if (data.large_image === undefined || data.large_image === null || data.large_image.length === 0) {
+									return null
+								}
+
+								if (data.app_name.toLowerCase() === "shuffle tools") {
+									data.large_image = theme.palette.defaultImage
+								}
+
+								return (
+									<span style={{zIndex: 10}}>
+										<IconButton style={{backgroundColor: "transparent", margin: 0, padding: 12, }}  onClick={() => {
+												console.log("FILTER: ", data)	
+												addFilter(data.app_name) 
+										}}>
+											<Tooltip title={`Filter by ${data.app_name}`} placement="top">
+												<Badge badgeContent={0} color="secondary" style={{fontSize: 10}}>
+													<img style={{height: imgSize, width: imgSize, cursor: "pointer", borderRadius: imgSize/2, border: "2px solid rgba(255,255,255,0.7)"}} alt={data.app_name} src={data.large_image}/>
+												</Badge>
+											</Tooltip> 
+										</IconButton>
+									</span>
+								)
+							})}
+						</div>
+					: null}
 					{view === "grid" ?
 						<Grid container spacing={4} style={paperAppContainer}>
 							<NewWorkflowPaper />

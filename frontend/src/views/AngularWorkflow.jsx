@@ -5329,12 +5329,12 @@ const AngularWorkflow = (props) => {
 					<div>
 						<Divider style={{marginTop: "20px", height: "1px", width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
 						<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
-							<Button style={{flex: "1",}} disabled={selectedTrigger.status === "running"} onClick={() => {
+							<Button variant="contained" style={{flex: "1",}} disabled={selectedTrigger.status === "running" || triggerFolders === undefined || triggerFolders === null || triggerFolders.length === 0} onClick={() => {
 								startMailSub(selectedTrigger, selectedTriggerIndex)
 							}} color="primary">
 								Start	
 							</Button>
-							<Button style={{flex: "1",}} disabled={selectedTrigger.status !== "running" } onClick={() => {
+							<Button variant="outlined" style={{flex: "1",}} disabled={selectedTrigger.status !== "running" } onClick={() => {
 								stopMailSub(selectedTrigger, selectedTriggerIndex)
 							}} color="primary">
 								Stop	

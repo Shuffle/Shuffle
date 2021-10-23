@@ -276,7 +276,7 @@ const Header = props => {
 				setAnchorEl(event.currentTarget);
 			}}>
 			  <Badge badgeContent={notifications.length} color="primary">
-					<NotificationsIcon color="secondary" style={{height: 35, width: 35,}} alt="Your username here" src="" />
+					<NotificationsIcon color="secondary" style={{height: 30, width: 30,}} alt="Your username here" src="" />
 				</Badge>
 			</IconButton>
 			<Menu
@@ -325,7 +325,7 @@ const Header = props => {
 			<IconButton color="primary" style={{zIndex: 10001, marginRight: 15, }} aria-controls="simple-menu" aria-haspopup="true" onClick={(event) => {
 				setAnchorElAvatar(event.currentTarget);
 			}}>
-				<Avatar style={{height: 35, width: 35,}} alt="Your username here" src="" />
+				<Avatar style={{height: 30, width: 30,}} alt="Your username here" src="" />
 			</IconButton>
 			<Menu
 				id="simple-menu"
@@ -439,7 +439,7 @@ const Header = props => {
 				{notificationMenu}
 				{userdata === undefined || userdata.admin === undefined || userdata.admin === null || !userdata.admin ? null : 
 					<Link to="/admin" style={hrefStyle}>
-						<Button color="primary" variant="contained" style={{marginRight: 15, marginTop: 12}}>
+						<Button color="primary" variant="outlined" style={{marginRight: 15, marginTop: 12}}>
 							Admin
 						</Button>
 					</Link>
