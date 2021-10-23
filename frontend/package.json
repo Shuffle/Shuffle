@@ -73,10 +73,17 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "lint": "eslint 'src/**/*.{tsx,ts,js,jsx}'",
+    "lint_file": "eslint 'src/views/AngularWorkflow.jsx'"
   },
   "eslintConfig": {
-    "extends": "react-app"
+    "extends": "react-app",
+    "rules":{
+      "jsx-a11y/img-redundant-alt" : "off",
+      "no-redeclare" : "off",
+      "no-loop-func": "off"
+    }
   },
   "browserslist": [
     ">0.2%",

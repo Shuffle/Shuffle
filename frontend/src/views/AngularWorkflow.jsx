@@ -1,4 +1,4 @@
-import React, {useRef, useState, useEffect, useLayoutEffect} from 'react';
+import React, { useState, useEffect, useLayoutEffect} from 'react';
 import { useInterval } from 'react-powerhooks';
 import { useTheme } from '@material-ui/core/styles';
 
@@ -225,7 +225,8 @@ const AngularWorkflow = (props) => {
 	const [showSkippedActions, setShowSkippedActions] = React.useState(false)
 	const [lastExecution, setLastExecution] = React.useState("")
 	const [configureWorkflowModalOpen, setConfigureWorkflowModalOpen] = React.useState(false)
-	const [curpath, setCurpath] = useState(typeof window === 'undefined' || window.location === undefined ? "" : window.location.pathname)
+
+	const curpath = typeof window === 'undefined' || window.location === undefined ? "" : window.location.pathname
 
 	// 0 = normal, 1 = just done, 2 = normal
 	const [savingState, setSavingState] = React.useState(0)
@@ -276,7 +277,9 @@ const AngularWorkflow = (props) => {
 
 	const [lastSaved, setLastSaved] = React.useState(true)
 
-	const [update, setUpdate] = useState("");
+	// eslint-disable-next-line no-unused-vars
+	const [_, setUpdate] = useState(""); // Used for rendring, don't remove 
+
 	const [workflowExecutions, setWorkflowExecutions] = React.useState([]);
 	const [defaultEnvironmentIndex, setDefaultEnvironmentIndex] = React.useState(0)
 
@@ -327,7 +330,6 @@ const AngularWorkflow = (props) => {
 
 				// Sets up subflow trigger with the right info
 				if (trigger_index > -1) {
-					var outersub = {}
 					const trigger = workflow.triggers[trigger_index]
 					if (trigger.parameters.length >= 3) {
 						for (var key in trigger.parameters) {
@@ -335,12 +337,10 @@ const AngularWorkflow = (props) => {
 							if (param.name === "workflow") {
 								if (param.value === workflow.id) {
 									setSubworkflow(workflow)
-									outersub = workflow 
 								} else {
 									const sub = responseJson.find(data => data.id === param.value)
 									if (sub !== undefined && subworkflow.id !== sub.id) { 
 										setSubworkflow(sub)
-										outersub = sub
 									}
 								}
 							}
@@ -530,24 +530,6 @@ const AngularWorkflow = (props) => {
 		});
 	}
 
-	const debugView = workflowExecutions.length > 0 ? 
-		<Draggable> 
-			<div style={{color: "white", position: "fixed", top: appBarSize+65, left: leftBarSize+20, zIndex: 5000, minHeight: 100, padding: 15, maxHeight: 100, maxWidth: 500, overflowX: "hidden",}}>
-				{workflowExecutions.slice(0,15).map((data, index) => {
-					return (
-						<div key={index}>
-							{new Date(data.started_at*1000).toISOString()}
-							, {data.status}
-							{data.result.length > 0 ? ", "+data.result : ", "}
-							{data.execution_argument.length > 0 ? ", "+data.execution_argument : ", "}
-							<Divider style={{backgroundColor: "white"}}/>
-						</div>
-					)
-					return 
-				})}
-			</div>
-		</Draggable>
-		: null
 
 	const fetchUpdates = () => {
 		fetch(globalUrl+"/api/v1/streams/results", {
@@ -747,7 +729,7 @@ const AngularWorkflow = (props) => {
 			}
 		}
 
-		if (responseJson.status === "ABORTED" || responseJson.status === "STOPPED" || responseJson.status === "FAILURE" || responseJson.status == "WAITING") {
+		if (responseJson.status === "ABORTED" || responseJson.status === "STOPPED" || responseJson.status === "FAILURE" || responseJson.status === "WAITING") {
 			stop()
 
 			if (executionRunning) {
@@ -1072,77 +1054,6 @@ const AngularWorkflow = (props) => {
 		});
 	}
 
-	//const handleAppVersioning = (apps) => {
-	//	var newapps = []
-	//	for (var key in apps) {
-	//		var item = apps[key]
-	//		const previtem = newapps.findIndex(data => data.name === item.name)
-	//		if (previtem === -1) {
-	//			item["versions"] = [item.app_version]
-	//			newapps.push(item)
-	//			continue
-	//		}
-
-	//		// THere might be duplicates for some reason..
-	//		if (!newapps[previtem]["versions"].includes(item.app_version)) {
-	//			newapps[previtem]["versions"].push(item.app_version)
-	//		}
-	//	}
-	//	
-	//	// FIXME - handle this, as we can't have more than one of each :)
-	//	//setVersionedApps(newapps)
-	//}
-	
-	// Builtin actions that should ran in Worker and not apps	
-	const getExtraApps = () => {
-		const data = [{
-			name: "Filter",
-			is_valid: true,
-			id: "0ca8887e-b4af-4e3e-887c-87e9d3bc3d3e",
-			link: "https://shuffler.io",
-			app_version: "1.0.0",
-			generated: true,
-			downloaded: false,
-			sharing: false,
-			verified: false,
-			tested: false,
-			owner: "",
-			private_id: "",
-			description: "Filter",
-			environment: "Shuffle",
-			small_image: "",
-			large_image: "",
-			contact_info: {name: "", url: ""},
-			authentication: {required: false, parameters: [],},
-			actions: [{
-				description: "Filter cases",
-				id: "",
-				name: "filter_cases",
-				node_type: "action",
-				environment: "Shuffle",
-				sharing: false,
-				private_id: "",
-				app_id: "",
-				authentication: null,
-				tested: true,
-				parameters: [{
-					description: "",
-					id: "",
-					name: "Field to look for",
-					example: "$testing_1.#.id",
-					value: "",
-					multiline: true,
-					action_field: "",
-					variant: "",
-					required: true,
-					schema: {type: "string"},
-				}]
-			}],
-		}]
-
-		return data
-	}
-
 	// This can be used to only show prioritzed ones later
 	// Right now, it can prioritize authenticated ones
 	//"Testing",
@@ -1197,10 +1108,6 @@ const AngularWorkflow = (props) => {
 						// Setup auth here :)
 						var appUpdates = false
 						const authenticationOptions = []
-						var findAuthId = ""
-						if (selectedAction.authentication_id !== null && selectedAction.authentication_id !== undefined && selectedAction.authentication_id.length > 0) {
-							findAuthId = selectedAction.authentication_id
-						}
 
 						var tmpAuth = JSON.parse(JSON.stringify(responseJson.data))
 						var latest = 0
@@ -1222,7 +1129,7 @@ const AngularWorkflow = (props) => {
 									selectedAction.selectedAuthentication = item
 
 									for (var key in workflow.actions) {
-										if (workflow.actions[key].app_name == selectedApp.name) {
+										if (workflow.actions[key].app_name === selectedApp.name) {
 											workflow.actions[key].selectedAuthentication = item
 											workflow.actions[key].authentication_id = item.id
 											appUpdates = true
@@ -1443,7 +1350,12 @@ const AngularWorkflow = (props) => {
 				// Add error checks
 				console.log("Workflow: ", responseJson)
 				if (!responseJson.public) {
-					if ((!responseJson.previously_saved || (!responseJson.is_valid || (responseJson.errors !== undefined || responseJson.errors !== null || responseJson.errors !== responseJson.errors.length > 0)))) {
+					if ((!responseJson.previously_saved || 
+						(!responseJson.is_valid || 
+							(responseJson.errors !== undefined || 
+								responseJson.errors !== null || 
+								responseJson.errors !== // what
+								(responseJson.errors.length > 0))))) {
 						setConfigureWorkflowModalOpen(true)
 					}
 				}
@@ -1543,7 +1455,7 @@ const AngularWorkflow = (props) => {
 			const curaction = workflow.actions.find(a => a.id === destinationId)
 			//console.log("ACTION: ", curaction)
 			if (curaction !== undefined && curaction !== null) {
-				if (curaction.app_name == "Shuffle Tools" && curaction.name === "router") {
+				if (curaction.app_name === "Shuffle Tools" && curaction.name === "router") {
 					alert.info("Router action can't have incoming conditions")
 					event.target.unselect()
 					return
@@ -1598,7 +1510,6 @@ const AngularWorkflow = (props) => {
 		}
 	}
 
-	var hiddenNodes = []
 	const onNodeDragStop = (event, selectedAction) => {
 		const nodedata = event.target.data()
 		if (nodedata.id === selectedAction.id) {
@@ -1658,7 +1569,6 @@ const AngularWorkflow = (props) => {
 			}
 		}
 
-		const skipnames = []
 		if (nodedata.app_name !== undefined && ((
 			nodedata.app_name !== "Shuffle Tools" &&
 			nodedata.app_name !== "Testing" &&
@@ -1720,13 +1630,6 @@ const AngularWorkflow = (props) => {
 			return
 		}
 
-		if (nodedata.app_name == "Shuffle Tools" || nodedata.app_name == "Testing") {
-
-			// 1. Find location of node
-			// 2. Check if it's within view of another node (inside)
-			// 3. If it is, then hide text
-		}
-
 		if (nodedata.app_name !== undefined) {
 			const allNodes = cy.nodes().jsons()
 			for (var key in allNodes) {
@@ -1758,7 +1661,7 @@ const AngularWorkflow = (props) => {
 			if (elementMouseIsOver !== undefined && elementMouseIsOver !== null) {
 				// Color for #f85a3e translated to rgb
 				const newBorder = "3px solid rgb(248, 90, 62)"
-				if (elementMouseIsOver.style.border != newBorder && elementMouseIsOver.id.includes("rightside")) {
+				if (elementMouseIsOver.style.border !== newBorder && elementMouseIsOver.id.includes("rightside")) {
 					if (elementMouseIsOver.style.border !== undefined) {
 						elementMouseIsOver.style.original_border = elementMouseIsOver.style.border 
 					} else {
@@ -2003,7 +1906,10 @@ const AngularWorkflow = (props) => {
 
 				if (curaction.parameters !== undefined && curaction.parameters !== null && curaction.parameters.length > 0) {
 					for (var key in curaction.parameters) {
-						if (curaction.parameters[key].options !== undefined && curaction.parameters[key].options !== null && curaction.parameters[key].options.length > 0 && curaction.parameters[key].value == "") {
+						if (curaction.parameters[key].options !== undefined && 
+							curaction.parameters[key].options !== null && 
+							curaction.parameters[key].options.length > 0 && 
+							curaction.parameters[key].value === "") {
 							curaction.parameters[key].value = curaction.parameters[key].options[0]
 						}
 					}
@@ -2061,7 +1967,6 @@ const AngularWorkflow = (props) => {
 		var exampledata = item.example === undefined ? "" : item.example
 		if (workflowExecutions.length > 0) {
 			// Look for the ID
-			const found = false
 			for (var key in workflowExecutions) {
 				if (workflowExecutions[key].results === undefined || workflowExecutions[key].results === null) {
 					continue
@@ -2088,14 +1993,12 @@ const AngularWorkflow = (props) => {
 
 				var jsonvalid = true
 				try {
-					const tmp = String(JSON.parse(foundResult.result))
 					if (!foundResult.result.includes("{") && !foundResult.result.includes("[")) {
 						jsonvalid = false
 					}
 				} catch (e) {
 					try {
-						foundResult.result = foundResult.result.split("\'").join("\"")
-						const tmp = String(JSON.parse(foundResult.result))
+						foundResult.result = foundResult.result.split("'").join("\"")
 						if (!foundResult.result.includes("{") && !foundResult.result.includes("[")) {
 							jsonvalid = false
 						}
@@ -2116,7 +2019,6 @@ const AngularWorkflow = (props) => {
 	}
 
 	const GetParamMatch = (paramname, exampledata, basekey) => {
-		const splitkey = "."
 		if (typeof(exampledata) !== "object") {
 			return ""
 		}
@@ -2152,8 +2054,6 @@ const AngularWorkflow = (props) => {
 
 		for (const [key, value] of Object.entries(exampledata)) {
 			// Check if loop or JSON
-			const extra = basekey.length > 0 ? splitkey : ""
-			const basekeyname = `${basekey.slice(1, basekey.length).split(".").join(splitkey)}${extra}${key}`
 
 			if (typeof(value) === 'object') {
 				if (Array.isArray(value)) {
@@ -2278,8 +2178,6 @@ const AngularWorkflow = (props) => {
 		}
 
 		targetnode = -1
-		var sourcenode = workflow.triggers.findIndex(data => data.id === edge.source)
-
 
 
 
@@ -2397,7 +2295,6 @@ const AngularWorkflow = (props) => {
 			}
 
 			// Remove bad startnode
-			const startnode_exists = false
 			for (var key in workflow.actions) {
 				const action = workflow.actions[key]
 				if (action.isStartNode && workflow.start !== action.id) {
@@ -2648,7 +2545,7 @@ const AngularWorkflow = (props) => {
 
 	      break;
 			case 70:
-
+				break;
 			case 65:
 				// As a poweruser myself, I found myself hitting this a few
 				// too many times to just edit text. Need a better bind
@@ -2727,6 +2624,7 @@ const AngularWorkflow = (props) => {
 		window.location.pathname = "/workflows/"+props.match.params.key
 	}
 
+	// eslint-disable-next-line react-hooks/exhaustive-deps
 	useEffect(() => {
 		if (firstrequest) {
 			setFirstrequest(false)
@@ -2819,7 +2717,6 @@ const AngularWorkflow = (props) => {
 	})
 
 
-	var previousnodecolor = ""
 	const animationDuration = 150
 	const onNodeHoverOut = (event) => {
 		const nodedata = event.target.data()
@@ -3027,7 +2924,6 @@ const AngularWorkflow = (props) => {
 			duration: animationDuration,	
 		})
 
-		previousnodecolor = event.target.style("border-color")
 
 		const outgoingEdges = event.target.outgoers('edge')
 		const incomingEdges = event.target.incomers('edge')
@@ -3595,7 +3491,6 @@ const AngularWorkflow = (props) => {
 		)
 	}
 
-	const curTab = 0
 	const handleSetTab = (event, newValue) => {
 		setCurrentView(newValue)
 	}
@@ -4618,43 +4513,6 @@ const AngularWorkflow = (props) => {
 			}
 		}
 
-		const changeActionParameterVariant = (variant) => {
-			if (data.variant === variant) {
-				return
-			}
-
-			data.variant = variant 
-			data.value = "" 
-
-			if (variant === "ACTION_RESULT") {
-				console.log("SHOULD FIND PARENTS OF EDGE")
-
-				// Uses the target's parents, as the target should be executing the checks (I think) 
-				var parents = getParents(workflow.actions.find(a => a.id === selectedEdge["target"]))
-				if (parents.length > 0) {
-					data.action_field = parents[0].label
-				} else {
-					data.action_field = ""
-				}
-			} else if (variant === "WORKFLOW_VARIABLE") {
-				if (workflow.workflow_variables !== null && workflow.workflow_variables !== undefined && workflow.workflow_variables.length > 0) {
-					data.action_field = workflow.workflow_variables[0].name
-				}
-			}
-
-			setSourceValue({})
-			setConditionValue({})
-			setDestinationValue({})
-
-			if (type === "source") {
-				setSourceValue(data)
-				setDestinationValue(destinationValue)
-			} else if (type === "destination") {
-				setDestinationValue(data)
-				setSourceValue(sourceValue)
-			}
-		}
-
 		return (
 			<div>
 				<div style={{marginTop: "20px", marginBottom: "7px", display: "flex"}}>
@@ -4689,7 +4547,6 @@ const AngularWorkflow = (props) => {
 							onChange={(e) => {
 								const autocomplete = e.target.value.autocomplete
 								const newValue = autocomplete.startsWith("$") ? data.value+autocomplete : `${data.value}$${autocomplete}`
-
 								changeActionVariable(data.action_field, newValue)
 							}}
 							>
@@ -5248,7 +5105,7 @@ const AngularWorkflow = (props) => {
 
 					saveWorkflow(workflow)
 				}}>
-				<img style={{margin: 0, }} src="/images/btn_google_light_focus_ios.svg" />
+				<img alt="" style={{margin: 0, }} src="/images/btn_google_light_focus_ios.svg" />
 				<Typography style={{margin: 0, marginLeft: 10, }} variant="body1">Sign in with Google</Typography>
 			</Button>
 
@@ -5492,7 +5349,6 @@ const AngularWorkflow = (props) => {
 	const SubflowSidebar = () => {
 		const [menuPosition, setMenuPosition] = useState(null)
 		const [showDropdown, setShowDropdown] = React.useState(false)
-		const [showAutocomplete, setShowAutocomplete] = React.useState(false)
 		const [actionlist, setActionlist] = React.useState([])
 
 		if (actionlist.length === 0) {
@@ -5525,7 +5381,6 @@ const AngularWorkflow = (props) => {
 					// Find previous execution and their variables
 					if (workflowExecutions.length > 0) {
 						// Look for the ID
-						const found = false
 						for (var key in workflowExecutions) {
 							if (workflowExecutions[key].results === undefined || workflowExecutions[key].results === null) {
 								continue
@@ -5543,14 +5398,12 @@ const AngularWorkflow = (props) => {
 
 							var jsonvalid = true
 							try {
-								const tmp = String(JSON.parse(foundResult.result))
 								if (!foundResult.result.includes("{") && !foundResult.result.includes("[")) {
 									jsonvalid = false
 								}
 							} catch (e) {
 								try {
-									foundResult.result = foundResult.result.split("\'").join("\"")
-									const tmp = String(JSON.parse(foundResult.result))
+									foundResult.result = foundResult.result.split("'").join("\"")
 									if (!foundResult.result.includes("{") && !foundResult.result.includes("[")) {
 										jsonvalid = false
 									}
@@ -5583,7 +5436,6 @@ const AngularWorkflow = (props) => {
   		const { data } = props;
 
 			const handleMenuClose = () => {
-				setShowAutocomplete(false)
 
 
 
@@ -5598,7 +5450,7 @@ const AngularWorkflow = (props) => {
 
 				var toComplete = workflow.triggers[selectedTriggerIndex].parameters[1].value.trim().endsWith("$") ? values[0].autocomplete : "$"+values[0].autocomplete
 				for (var key in values) {
-					if (key == 0 || values[key].autocomplete.length === 0) {
+					if (key === 0 || values[key].autocomplete.length === 0) {
 						continue
 					}
 
@@ -6038,7 +5890,6 @@ const AngularWorkflow = (props) => {
 													})
 													//setShowDropdownNumber(3)
 													setShowDropdown(true)
-													setShowAutocomplete(true)
 												}}/>
 											</Tooltip>
 										</InputAdornment>
@@ -6165,12 +6016,12 @@ const AngularWorkflow = (props) => {
 									selectedTrigger.environment = e.target.value
 									setSelectedTrigger(selectedTrigger)
 									if (e.target.value === "cloud") {
-										var tmpvalue = workflow.triggers[selectedTriggerIndex].parameters[0].value.split("/")
+										const tmpvalue = workflow.triggers[selectedTriggerIndex].parameters[0].value.split("/")
 										const urlpath = tmpvalue.slice(3, tmpvalue.length)
 										const newurl = "https://shuffler.io/"+urlpath.join("/")
 										workflow.triggers[selectedTriggerIndex].parameters[0].value = newurl
 									} else {
-										var tmpvalue = workflow.triggers[selectedTriggerIndex].parameters[0].value.split("/")
+										const tmpvalue = workflow.triggers[selectedTriggerIndex].parameters[0].value.split("/")
 										const urlpath = tmpvalue.slice(3, tmpvalue.length)
 										const newurl = window.location.origin+"/"+urlpath.join("/")
 										workflow.triggers[selectedTriggerIndex].parameters[0].value = newurl
@@ -6922,19 +6773,6 @@ const AngularWorkflow = (props) => {
 		)
 	}
 
-	const NoActionsBar = () => {
-			return (
-				<div style={{position: "fixed", width: "100%", top: 300}}>
-					<div style={{width: 300, margin: "auto"}}>
-						<h3></h3>
-					</div>
-				</div>
-			)
-		
-
-		return null
-	}
-
 	const WorkflowMenu = () => {
 		const [newAnchor, setNewAnchor] = React.useState(null)
 		const [showShuffleMenu, setShowShuffleMenu] = React.useState(false)
@@ -7037,7 +6875,6 @@ const AngularWorkflow = (props) => {
 	}
 
 	const BottomCytoscapeBar = () => {
-		const [anchorEl, setAnchorEl] = React.useState(null)
 
 		const boxSize = 100
 		const executionButton = executionRunning ? 
@@ -7152,7 +6989,11 @@ const AngularWorkflow = (props) => {
 	}
 
 	const RightSideBar = (props) => {
-		const {workflow, setWorkflow, setAction, setSelectedAction, setUpdate, appActionArguments, selectedApp, workflowExecutions, setSelectedResult, selectedAction, setSelectedApp, setSelectedTrigger, setSelectedEdge, setCurrentView, cy, setAuthenticationModalOpen,setVariablesModalOpen, setCodeModalOpen, selectedNameChange, rightsidebarStyle, showEnvironment, selectedActionEnvironment, environments, setNewSelectedAction, appApiViewStyle, globalUrl, setSelectedActionEnvironment, requiresAuthentication, hideExtraTypes, scrollConfig, setScrollConfig } = props
+		const {workflow, setWorkflow, setSelectedAction, setUpdate,  
+			selectedApp, workflowExecutions, setSelectedResult, selectedAction, setSelectedApp, setSelectedTrigger, 
+			setSelectedEdge, setCurrentView, cy, setAuthenticationModalOpen,setVariablesModalOpen, setCodeModalOpen, 
+			selectedNameChange, rightsidebarStyle, showEnvironment, selectedActionEnvironment, environments, setNewSelectedAction, 
+			appApiViewStyle, globalUrl, setSelectedActionEnvironment, requiresAuthentication, scrollConfig, setScrollConfig } = props
 
 		if (!rightSideBarOpen) {
 			return null
@@ -7478,7 +7319,6 @@ const AngularWorkflow = (props) => {
 					<div>
 						{workflowExecutions.map((data, index) => {
 							const statusColor = data.status === "FINISHED" ? green : data.status === "ABORTED" || data.status === "FAILED" ? "red" : yellow
-							const timeElapsed = data.completed_at-data.started_at
 							const resultsLength = data.results !== undefined && data.results !== null ? data.results.length : 0
 
 							const timestamp = new Date(data.started_at*1000).toISOString().split('.')[0].split("T").join(" ")
@@ -7536,8 +7376,7 @@ const AngularWorkflow = (props) => {
 									</Tooltip>
 								</Paper>
 								</Tooltip>
-							)
-							return 
+							) 
 						})}
 					</div>
 					: 
@@ -7667,7 +7506,15 @@ const AngularWorkflow = (props) => {
 					<div style={{display: "flex", marginTop: 10, marginBottom: 30,}}>
 
 						<div>
-							{executionData.status !== undefined && executionData.status !== "ABORTED" && executionData.status !== "FINISHED" && executionData.status !== "FAILURE" && executionData.status !== "WAITING" && !(executionData.results === undefined || executionData.results === null || executionData.results.length === 0 && executionData.status === "EXECUTING")? <CircularProgress style={{marginLeft: 20}}/> : null}
+							{executionData.status !== undefined && 
+							executionData.status !== "ABORTED" && 
+							executionData.status !== "FINISHED" && 
+							executionData.status !== "FAILURE" && 
+							executionData.status !== "WAITING" && 
+							!(executionData.results === undefined || 
+							executionData.results === null || 
+							(executionData.results.length === 0 && // probably ment to be around the or's
+							executionData.status === "EXECUTING"))? <CircularProgress style={{marginLeft: 20}}/> : null}
 						</div>
 					</div>
 					{executionData.results === undefined || executionData.results === null || (executionData.results.length === 0 && executionData.status === "EXECUTING" )?
@@ -8443,10 +8290,8 @@ const AngularWorkflow = (props) => {
 							}}
 						/>
 					<Divider style={{marginTop: 15, marginBottom: 15, backgroundColor: "rgb(91, 96, 100)"}}/>
-					{/*selectedApp.link.length > 0 ? <div style={{marginTop: 15}}><EndpointData /></div> : null*/}
-					<div style={{}}/>
+					<div />
 						{selectedApp.authentication.parameters.map((data, index) => { 
-							//console.log("AUTH: ", data)
 
 							return (
 								<div key={index} style={{marginTop: 10}}>
@@ -8516,39 +8361,6 @@ const AngularWorkflow = (props) => {
 						Submit	
 					</Button>
 				</DialogActions>	
-			</div>
-		)
-	}
-
-	const EndpointData = () => {
-		const [tmpVar, setTmpVar] = React.useState("")
-
-		return (
-			<div>
-				The API endpoint to use (URL) - predefined in the app
-				<TextField
-					style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
-					InputProps={{
-						style:{
-							color: "white",
-							height: 50, 
-							fontSize: "1em",
-						},
-					}}
-					fullWidth
-					type="text"
-					color="primary"
-					placeholder="Bearer token" 
-					defaultValue={selectedApp.link}
-					onChange={(event) => {
-						setTmpVar(event.target.value)
-					}}
-					onBlur={() => {
-						selectedApp.link = tmpVar
-						console.log("LINK: ", selectedApp.link)
-						setSelectedApp(selectedApp)
-					}}
-				/>
 			</div>
 		)
 	}
