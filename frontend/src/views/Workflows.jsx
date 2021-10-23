@@ -1769,7 +1769,7 @@ const Workflows = (props) => {
 					}
 
 					return obj;
-				});
+				})
 				workflowData = 
 					<DataGrid 
 						color="primary" 
@@ -2113,14 +2113,19 @@ const Workflows = (props) => {
 					</div>
 					<div style={{marginTop: 15,}} />
 					{view === "grid" ?
-						<Grid container spacing={4} style={paperAppContainer}>
-							<NewWorkflowPaper />
-							{filteredWorkflows.map((data, index) => {
-								return (
-									<WorkflowPaper key={index} data={data} />
-								)
-							})}
-						</Grid>
+						<span>
+							<div style={{display: "flex"}}>
+								<img style={{height: 50, width: 50}} alt="" src="" />
+							</div>
+							<Grid container spacing={4} style={paperAppContainer}>
+								<NewWorkflowPaper />
+								{filteredWorkflows.map((data, index) => {
+									return (
+										<WorkflowPaper key={index} data={data} />
+									)
+								})}
+							</Grid>
+						</span>
 						:
 						<WorkflowListView />
 					}

@@ -20,6 +20,8 @@ const Settings = (props) => {
 	const [currentPassword, setCurrentPassword] = useState("");
 	const [newPassword, setNewPassword] = useState("");
 	const [newPassword2, setNewPassword2] = useState("");
+	const [file, setFile] = React.useState("")
+	const [fileBase64, setFileBase64] = React.useState(userdata.image === undefined || userdata.image === null ? theme.palette.defaultImage : userdata.image)
 
 	// Used for error messages etc
 	const [formMessage, ] = useState("");
@@ -40,6 +42,7 @@ const Settings = (props) => {
 	const boxStyle = {
 		flex: "1",
 		color: "white",
+		position: "relative",
 		marginLeft: "10px",
 		marginRight: "10px",
 		paddingLeft: "30px",
@@ -168,9 +171,81 @@ const Settings = (props) => {
 	})
 
 	// Random names for type & autoComplete. Didn't research :^)
+	var imageData = file.length > 0 ? file : fileBase64 
+	imageData = imageData === undefined || imageData.length === 0 ? theme.palette.defaultImage : imageData
+	const imageInfo = <img src={imageData} alt="Click to upload an image (174x174)" id="logo" style={{maxWidth: 100, maxHeight: 100, minWidth: 100, minHeight: 100, position: "absolute", top: -80, left: 1020/2-25, borderRadius: 50, objectFit: "contain", border: "2px solid rgba(255,255,255,0.7)"}} />
 	const landingpageData = 
-			<div style={{display: "flex", marginTop: "80px"}}>
+			<div style={{display: "flex", marginTop: 120}}>
 				<Paper style={boxStyle}>
+					{imageInfo}
+					<h2>Settings</h2>
+					<div style={{flex: "1", display: "flex", flexDirection: "row"}}>
+						<TextField
+							style={{backgroundColor: theme.palette.inputColor, flex: "1"}}
+							InputProps={{
+								style:{
+									height: "50px", 
+									color: "white",
+								},
+							}}
+							color="primary"
+							required
+							disabled
+							fullWidth={true}
+							value={username}
+							placeholder="Username"
+							type="username"
+						  id="standard-required"
+							autoComplete="username"
+							margin="normal"
+							variant="outlined"
+      	 			//onChange={e => setUsername(e.target.value)}
+						/>
+					</div>
+					<div style={{flex: "1", display: "flex", flexDirection: "row"}}>
+						<TextField
+							style={{backgroundColor: theme.palette.inputColor, flex: "1", marginRight: "15px"}}
+							InputProps={{
+								style:{
+									height: "50px", 
+									color: "white",
+								},
+							}}
+							color="primary"
+							required
+							fullWidth={true}
+							value={firstname}
+							placeholder="First Name"
+							type="firstname"
+							disabled
+						  id="standard-required"
+							autoComplete="firstname"
+							margin="normal"
+							variant="outlined"
+      	 					onChange={e => setFirstname(e.target.value)}
+						/>
+						<TextField
+							style={{backgroundColor: theme.palette.inputColor, flex: "1", marginLeft: "15px"}}
+							InputProps={{
+								style:{
+									height: "50px", 
+									color: "white",
+								},
+							}}
+							color="primary"
+							required
+							value={lastname}
+							fullWidth={true}
+							placeholder="Last Name"
+							disabled
+							type="lastname"
+						  id="standard-required"
+							autoComplete="lastname"
+							margin="normal"
+							variant="outlined"
+      	 					onChange={e => setLastname(e.target.value)}
+						/>
+					</div>
 					<h2>APIKEY</h2>
 					<a target="_blank" href="/docs/API#authentication" style={{textDecoration: "none", color: "#f85a3e"}}>What is the API key used for?</a>
 					<TextField
@@ -193,78 +268,12 @@ const Settings = (props) => {
 					/>
 					<Button
 						style={{width: "100%", height: "40px", marginTop: "10px"}}
-						variant="contained"
+						variant="outlined"
 						color="primary"
 						onClick={() => generateApikey()}
 					>Re-Generate APIKEY</Button>
 					<Divider style={{marginTop: "40px"}}/>
 					{/*
-					<h2>Settings</h2>
-					<div style={{flex: "1", display: "flex", flexDirection: "row"}}>
-						<TextField
-							style={{backgroundColor: theme.palette.inputColor, flex: "1"}}
-							InputProps={{
-								style:{
-									height: "50px", 
-									color: "white",
-								},
-							}}
-							color="primary"
-							required
-							fullWidth={true}
-							value={username}
-							placeholder="Username"
-							type="username"
-						  	id="standard-required"
-							autoComplete="username"
-							margin="normal"
-							variant="outlined"
-      	 					onChange={e => setUsername(e.target.value)}
-						/>
-					</div>
-					<div style={{flex: "1", display: "flex", flexDirection: "row"}}>
-						<TextField
-							style={{backgroundColor: theme.palette.inputColor, flex: "1", marginRight: "15px"}}
-							InputProps={{
-								style:{
-									height: "50px", 
-									color: "white",
-								},
-							}}
-							color="primary"
-							required
-							fullWidth={true}
-							value={firstname}
-							placeholder="First Name"
-							type="firstname"
-						  	id="standard-required"
-							autoComplete="firstname"
-							margin="normal"
-							variant="outlined"
-      	 					onChange={e => setFirstname(e.target.value)}
-						/>
-						<TextField
-							style={{backgroundColor: theme.palette.inputColor, flex: "1", marginLeft: "15px"}}
-							InputProps={{
-								style:{
-									height: "50px", 
-									color: "white",
-								},
-							}}
-							color="primary"
-							required
-							value={lastname}
-							fullWidth={true}
-							placeholder="Last Name"
-							type="lastname"
-						  	id="standard-required"
-							autoComplete="lastname"
-							margin="normal"
-							variant="outlined"
-      	 					onChange={e => setLastname(e.target.value)}
-						/>
-					</div>
-					<div style={{flex: "1", display: "flex", flexDirection: "row"}}>
 						<TextField
 							style={{backgroundColor: theme.palette.inputColor, flex: "1", marginRight: "15px",}}
 							InputProps={{
