@@ -676,20 +676,10 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	executionRequests, err := shuffle.GetWorkflowQueue(ctx, id)
-	if err != nil {
-		// Skipping as this comes up over and over
-		//log.Printf("(2) Failed reading body for workflowqueue: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
-		return
-	}
-
 	env, err := shuffle.GetEnvironment(ctx, id, "")
 	timeNow := time.Now().Unix()
 	if err == nil && len(env.Id) > 0 && len(env.Name) > 0 {
 		if time.Now().Unix() > env.Edited+60 {
-			log.Printf("[DEBUG] Updating env with IP %s!", request.RemoteAddr)
 			env.RunningIp = request.RemoteAddr
 			env.Checkin = timeNow
 			err = shuffle.SetEnvironment(ctx, env)
@@ -699,11 +689,20 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	executionRequests, err := shuffle.GetWorkflowQueue(ctx, id)
+	if err != nil {
+		// Skipping as this comes up over and over
+		//log.Printf("(2) Failed reading body for workflowqueue: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		return
+	}
+
 	// Checking and updating the environment related to the first execution
 	if len(executionRequests.Data) == 0 {
 		executionRequests.Data = []shuffle.ExecutionRequest{}
 	} else {
-		log.Printf("In workflowqueue with %d", len(executionRequests.Data))
+		//log.Printf("In workflowqueue with %d", len(executionRequests.Data))
 
 		// Try again :)
 		if len(env.Id) == 0 && len(env.Name) == 0 {
@@ -726,9 +725,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 					//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "No env found matching %s"}`, id)))
 					//return
 				} else {
-					log.Printf("Found Env: %#v", env)
 					if timeNow > env.Edited+60 {
-						log.Printf("Updating env with IP %s!", request.RemoteAddr)
 						env.RunningIp = request.RemoteAddr
 						env.Checkin = timeNow
 						err = shuffle.SetEnvironment(ctx, env)
@@ -743,7 +740,6 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		if len(executionRequests.Data) > 10 {
 			executionRequests.Data = executionRequests.Data[0:9]
 		}
-		log.Printf("In workflowqueue with %d (2)", len(executionRequests.Data))
 	}
 
 	newjson, err := json.Marshal(executionRequests)
