@@ -569,7 +569,7 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 	// FIXME: Add authentication?
 	id := request.Header.Get("Org-Id")
 	if len(id) == 0 {
-		log.Printf("No Org-Id header set - confirm")
+		log.Printf("[ERROR] No Org-Id header set - confirm")
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Specify the org-id header."}`)))
 		return
@@ -579,7 +579,7 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 	ctx := context.Background()
 	executionRequests, err := shuffle.GetWorkflowQueue(ctx, id)
 	if err != nil {
-		log.Printf("(1) Failed reading body for workflowqueue: %s", err)
+		log.Printf("[WARNING] (1) Failed reading body for workflowqueue: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Entity parsing error - confirm"}`)))
 		return
@@ -685,11 +685,65 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	env, err := shuffle.GetEnvironment(ctx, id, "")
+	timeNow := time.Now().Unix()
+	if err == nil && len(env.Id) > 0 && len(env.Name) > 0 {
+		if time.Now().Unix() > env.Edited+60 {
+			log.Printf("[DEBUG] Updating env with IP %s!", request.RemoteAddr)
+			env.RunningIp = request.RemoteAddr
+			env.Checkin = timeNow
+			err = shuffle.SetEnvironment(ctx, env)
+			if err != nil {
+				log.Printf("[WARNING] Failed updating environment: %s", err)
+			}
+		}
+	}
+
+	// Checking and updating the environment related to the first execution
 	if len(executionRequests.Data) == 0 {
 		executionRequests.Data = []shuffle.ExecutionRequest{}
 	} else {
-		//log.Printf("[INFO] Executionrequests (%s): %d", id, len(executionRequests.Data))
-		//log.Printf("IDS: %#v", executionRequests.Data[0].ExecutionId)
+		log.Printf("In workflowqueue with %d", len(executionRequests.Data))
+
+		// Try again :)
+		if len(env.Id) == 0 && len(env.Name) == 0 {
+			orgId := ""
+			for _, requestData := range executionRequests.Data {
+				execution, err := shuffle.GetWorkflowExecution(ctx, requestData.ExecutionId)
+				if err == nil {
+					if len(execution.ExecutionOrg) > 0 {
+						orgId = execution.ExecutionOrg
+						break
+					}
+				}
+			}
+
+			if len(orgId) > 0 {
+				env, err := shuffle.GetEnvironment(ctx, id, orgId)
+				if err != nil {
+					log.Printf("[WARNING] No env found matching %s - continuing without updating orborus anyway: %s", id, err)
+					//resp.WriteHeader(401)
+					//resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "No env found matching %s"}`, id)))
+					//return
+				} else {
+					log.Printf("Found Env: %#v", env)
+					if timeNow > env.Edited+60 {
+						log.Printf("Updating env with IP %s!", request.RemoteAddr)
+						env.RunningIp = request.RemoteAddr
+						env.Checkin = timeNow
+						err = shuffle.SetEnvironment(ctx, env)
+						if err != nil {
+							log.Printf("[WARNING] Failed updating environment: %s", err)
+						}
+					}
+				}
+			}
+		}
+
+		if len(executionRequests.Data) > 10 {
+			executionRequests.Data = executionRequests.Data[0:9]
+		}
+		log.Printf("In workflowqueue with %d (2)", len(executionRequests.Data))
 	}
 
 	newjson, err := json.Marshal(executionRequests)

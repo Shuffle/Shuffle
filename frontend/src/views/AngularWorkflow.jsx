@@ -8145,6 +8145,7 @@ const AngularWorkflow = (props) => {
 				<Button 
 					style={{borderRadius: "0px"}}
 					variant="outlined"
+					fullWidth
 					onClick={() => {
 						getWorkflowExecution(props.match.params.key, "")
 					}} color="primary">
