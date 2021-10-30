@@ -370,8 +370,13 @@ const Apps = (props) => {
 			}} />
 
 		var newAppname = data.name
-		newAppname = newAppname.charAt(0).toUpperCase()+newAppname.substring(1)
-		newAppname = newAppname.replaceAll("_", " ")
+		if (newAppname === undefined) {
+			newAppname = "Undefined"
+		} else {
+			newAppname = newAppname.charAt(0).toUpperCase()+newAppname.substring(1)
+			newAppname = newAppname.replaceAll("_", " ")
+		}
+
 		var sharing = "public"
 		if (!data.sharing) {
 			sharing = "private"

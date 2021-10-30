@@ -1,8 +1,10 @@
 package main
 
 /*
-	Orborus exists to listen for new workflow executions and deploy workers.
+	Orborus exists to listen for new workflow executions whcih are deployed as workers.
 */
+
+// frikky@debian:~/git/shuffle/functions/onprem/worker$ docker service create --replicas 5 --name shuffle-workers --env SHUFFLE_SWARM_CONFIG=run --publish published=33333,target=33333 ghcr.io/frikky/shuffle-worker:nightly
 
 import (
 	"github.com/shuffle/shuffle-shared"
@@ -23,6 +25,8 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
+	"github.com/docker/docker/api/types/swarm"
 	//"github.com/docker/docker/api/types/filters"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/satori/go.uuid"
@@ -57,6 +61,7 @@ var runningMode = strings.ToLower(os.Getenv("RUNNING_MODE"))
 var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
 var timezone = os.Getenv("TZ")
 var containerName = os.Getenv("ORBORUS_CONTAINER_NAME")
+var swarmConfig = os.Getenv("SHUFFLE_SWARM_CONFIG")
 var executionIds = []string{}
 
 var dockercli *dockerclient.Client
@@ -129,7 +134,7 @@ func getThisContainerId() {
 
 // Deploys the internal worker whenever something happens
 // https://docs.docker.com/engine/api/sdk/examples/
-func deployWorker(image string, identifier string, env []string) {
+func deployWorker(image string, identifier string, env []string, executionRequest shuffle.ExecutionRequest) {
 	// Binds is the actual "-v" volume.
 	// Max 20% CPU every second
 
@@ -157,6 +162,83 @@ func deployWorker(image string, identifier string, env []string) {
 		Env:   env,
 	}
 
+	//var swarmConfig = os.Getenv("SHUFFLE_SWARM_CONFIG")
+	parsedUuid := uuid.NewV4()
+	if swarmConfig == "run" {
+		// frikky@debian:~/git/shuffle/functions/onprem/worker$ docker service create --replicas 5 --name shuffle-workers --env SHUFFLE_SWARM_CONFIG=run --publish published=33333,target=33333 ghcr.io/frikky/shuffle-worker:nightly
+
+		log.Printf("[DEBUG] Deploying containers with swarm")
+		//containerName := fmt.Sprintf("shuffle-worker-%s", parsedUuid)
+		containerName := fmt.Sprintf("shuffle-workers")
+		serviceSpec := swarm.ServiceSpec{
+			Annotations: swarm.Annotations{
+				Name:   containerName,
+				Labels: map[string]string{},
+			},
+			EndpointSpec: &swarm.EndpointSpec{
+				Ports: []swarm.PortConfig{
+					swarm.PortConfig{
+						Protocol:      swarm.PortConfigProtocolTCP,
+						PublishMode:   swarm.PortConfigPublishModeIngress,
+						Name:          "worker-port",
+						PublishedPort: 33333,
+						TargetPort:    33333,
+					},
+				},
+			},
+			TaskTemplate: swarm.TaskSpec{
+				Resources: &swarm.ResourceRequirements{
+					Reservations: &swarm.Resources{},
+				},
+				ContainerSpec: &swarm.ContainerSpec{
+					Image: image,
+					Env: []string{
+						fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", os.Getenv("SHUFFLE_SWARM_CONFIG")),
+					},
+					Mounts: []mount.Mount{
+						mount.Mount{
+							Source: "/var/run/docker.sock",
+							Target: "/var/run/docker.sock",
+							Type:   mount.TypeBind,
+						},
+					},
+				},
+				RestartPolicy: &swarm.RestartPolicy{
+					Condition: swarm.RestartPolicyConditionNone,
+				},
+				Placement: &swarm.Placement{
+					MaxReplicas: 1,
+				},
+			},
+		}
+
+		if dockerApiVersion != "" {
+			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("DOCKER_API_VERSION=%s", dockerApiVersion))
+		}
+
+		serviceOptions := types.ServiceCreateOptions{}
+		service, err := dockercli.ServiceCreate(
+			context.Background(),
+			serviceSpec,
+			serviceOptions,
+		)
+
+		if err == nil {
+			log.Printf("[DEBUG] Waiting 10 seconds for workers to come awake")
+			time.Sleep(time.Duration(10) * time.Second)
+		}
+
+		log.Printf("Servicecreate request: %#v %#v", service, err)
+
+		err = sendWorkerRequest(executionRequest)
+		if err != nil {
+			log.Printf("[ERROR] Failed worker request: %s", err)
+		} else {
+			log.Printf("[DEBUG] Started worker from request: %s - %#v - %s", containerName, service, err)
+		}
+		return
+	}
+
 	//log.Printf("[INFO] Identifier: %s", identifier)
 	cont, err := dockercli.ContainerCreate(
 		context.Background(),
@@ -169,8 +251,7 @@ func deployWorker(image string, identifier string, env []string) {
 
 	if err != nil {
 		if strings.Contains(fmt.Sprintf("%s", err), "Conflict. The container name ") {
-			uuid := uuid.NewV4()
-			identifier = fmt.Sprintf("%s-%s", identifier, uuid)
+			identifier = fmt.Sprintf("%s-%s", identifier, parsedUuid)
 			log.Printf("[INFO] 2 - Identifier: %s", identifier)
 			cont, err = dockercli.ContainerCreate(
 				context.Background(),
@@ -212,7 +293,7 @@ func deployWorker(image string, identifier string, env []string) {
 		//		return
 		//	}
 
-		//	err = deployWorker(cli, workerImage, containerName, env)
+		//	err = deployWorke(cli, workerImage, containerName, env)
 		//	if err != nil {
 		//		log.Printf("Failed executing worker %s in state %s", execution.ExecutionId, containerStatus)
 		//		return
@@ -263,13 +344,15 @@ func initializeImages() {
 	if baseimageregistry == "" {
 		baseimageregistry = "docker.io"
 		baseimageregistry = "ghcr.io"
-		log.Printf("Setting baseimageregistry")
+		log.Printf("[DEBUG] Setting baseimageregistry")
 	}
 	if baseimagename == "" {
 		baseimagename = "frikky/shuffle"
 		baseimagename = "frikky"
-		log.Printf("Setting baseimagename")
+		log.Printf("[DEBUG] Setting baseimagename")
 	}
+
+	log.Printf("[DEBUG] Setting swarm config to %#v. Default is empty.", swarmConfig)
 
 	// check whether they are the same first
 	images := []string{
@@ -569,6 +652,7 @@ func main() {
 				fmt.Sprintf("CLEANUP=%s", cleanupEnv),
 				fmt.Sprintf("TZ=%s", timezone),
 				fmt.Sprintf("SHUFFLE_PASS_APP_PROXY=%s", os.Getenv("SHUFFLE_PASS_APP_PROXY")),
+				fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", os.Getenv("SHUFFLE_SWARM_CONFIG")),
 			}
 
 			//log.Printf("Running worker with proxy? %s", os.Getenv("SHUFFLE_PASS_WORKER_PROXY"))
@@ -581,7 +665,7 @@ func main() {
 				env = append(env, fmt.Sprintf("DOCKER_API_VERSION=%s", dockerApiVersion))
 			}
 
-			go deployWorker(workerImage, containerName, env)
+			go deployWorker(workerImage, containerName, env, execution)
 
 			log.Printf("[INFO] ExecutionID %s was deployed and to be removed from queue.", execution.ExecutionId)
 			zombiecounter += 1
@@ -787,6 +871,76 @@ func zombiecheck(ctx context.Context, workerTimeout int) error {
 	log.Printf("[INFO] Should REMOVE %d containers.", len(removeContainers))
 	for _, containername := range removeContainers {
 		dockercli.ContainerRemove(ctx, containername, removeOptions)
+	}
+
+	return nil
+}
+
+type ExecutionRequest struct {
+	ExecutionId           string `json:"execution_id"`
+	Authorization         string `json:"authorization"`
+	HTTPProxy             string `json:"http_proxy"`
+	HTTPSProxy            string `json:"https_proxy"`
+	BaseUrl               string `json:"base_url"`
+	EnvironmentName       string `json:"environment_name"`
+	Timezone              string `json:"timezone"`
+	Cleanup               string `json:"cleanup"`
+	ShufflePassProxyToApp string `json:"shuffle_pass_proxy_to_app"`
+}
+
+func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
+	parsedRequest := ExecutionRequest{
+		ExecutionId:           workflowExecution.ExecutionId,
+		Authorization:         workflowExecution.Authorization,
+		BaseUrl:               os.Getenv("BASE_URL"),
+		EnvironmentName:       os.Getenv("ENVIRONMENT_NAME"),
+		Timezone:              os.Getenv("TZ"),
+		Cleanup:               os.Getenv("CLEANUP"),
+		HTTPProxy:             os.Getenv("HTTP_PROXY"),
+		HTTPSProxy:            os.Getenv("HTTPS_PROXY"),
+		ShufflePassProxyToApp: os.Getenv("SHUFFLE_PASS_APP_PROXY"),
+	}
+
+	parsedBaseurl := baseUrl
+	if strings.Contains(baseUrl, ":") {
+		baseUrlSplit := strings.Split(baseUrl, ":")
+		if len(baseUrlSplit) >= 3 {
+			parsedBaseurl = strings.Join(baseUrlSplit[0:2], ":")
+			//parsedRequest.BaseUrl = fmt.Sprintf("%s:33333", parsedBaseurl)
+		}
+	}
+
+	data, err := json.Marshal(parsedRequest)
+	if err != nil {
+		log.Printf("[ERROR] Failed marshalling worker request: %s", err)
+		return err
+	}
+
+	streamUrl := fmt.Sprintf("%s:33333/api/v1/execute", parsedBaseurl)
+	req, err := http.NewRequest(
+		"POST",
+		streamUrl,
+		bytes.NewBuffer([]byte(data)),
+	)
+
+	client := &http.Client{}
+	if err != nil {
+		log.Printf("[ERROR] Failed creating finishing request: %s", err)
+		return err
+	}
+
+	newresp, err := client.Do(req)
+	if err != nil {
+		log.Printf("[ERROR] Error running finishing request: %s", err)
+		return err
+	}
+
+	body, err := ioutil.ReadAll(newresp.Body)
+	if err != nil {
+		log.Printf("[ERROR] Failed reading body: %s", err)
+		return err
+	} else {
+		log.Printf("[INFO] NEWRESP (from backend): %s", string(body))
 	}
 
 	return nil

@@ -444,7 +444,7 @@ const Workflows = (props) => {
 			return
 		}
 
-		if (filters.includes(data)) {
+		if (filters.includes(data) || filters.includes(data.toLowerCase())) {
 			return
 		}
 
@@ -1938,7 +1938,7 @@ const Workflows = (props) => {
 
 					}} color="primary">
 						{submitLoading ? 
-							<CircularProgress />
+							<CircularProgress color="secondary" />
 							:
 	        		"Submit"
 						}
@@ -2061,7 +2061,7 @@ const Workflows = (props) => {
 					<div style={flexContainerStyle}>
 						<div style={{...flexBoxStyle, ...activeWorkflowStyle}}>
 							<div style={flexContentStyle}>
-								<div ><img src={mobileImage} style={iconStyle} /></div>
+								<div><img src={mobileImage} style={iconStyle} /></div>
 								<div style={ blockRightStyle }>
 									<div style={counterStyle}>{workflows.length}</div>
 									<div style={fontSize_16}>ACTIVE WORKFLOWS</div>
@@ -2155,7 +2155,9 @@ const Workflows = (props) => {
 										}}>
 											<Tooltip title={`Filter by ${data.app_name}`} placement="top">
 												<Badge badgeContent={0} color="secondary" style={{fontSize: 10}}>
-													<img style={{height: imgSize, width: imgSize, cursor: "pointer", borderRadius: imgSize/2, border: "2px solid rgba(255,255,255,0.7)"}} alt={data.app_name} src={data.large_image}/>
+													<div style={{height: imgSize, width: imgSize, position: "relative", filter: "brightness(0.6)", backgroundColor: "#000", borderRadius: imgSize/2, zIndex: 100, overflow: "hidden", display: "flex", justifyContent: "center", }}>
+														<img style={{height: imgSize, width: imgSize, position: "absolute", top: -2, left: -2, cursor: "pointer", zIndex: 99, border: "2px solid rgba(255,255,255,0.7)", }} alt={data.app_name} src={data.large_image}/>
+													</div>
 												</Badge>
 											</Tooltip> 
 										</IconButton>

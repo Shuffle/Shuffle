@@ -3846,7 +3846,7 @@ func runInitEs(ctx context.Context) {
 			//}
 
 		} else {
-			log.Printf("[DEBUG] There are %d org(s).", len(activeOrgs))
+			log.Printf("[DEBUG] Found %d org(s) in total.", len(activeOrgs))
 
 			if len(activeOrgs) == 1 {
 				if len(activeOrgs[0].Users) == 0 {

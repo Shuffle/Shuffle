@@ -2717,7 +2717,7 @@ const Admin = (props) => {
 						style={{minWidth: 150, maxWidth: 150}}
 					/>
 					<ListItemText
-						primary="Orborus running (TBD)"
+						primary="Orborus running"
 						style={{minWidth: 200, maxWidth: 200}}
 					/>
 					<ListItemText
@@ -2736,6 +2736,10 @@ const Admin = (props) => {
 						primary="Archived"
 						style={{minWidth: 150, maxWidth: 150}}
 					/>
+					<ListItemText
+						primary="Last Changed"
+						style={{minWidth: 150, maxWidth: 150}}
+					/>
 				</ListItem>
 				{environments === undefined || environments === null ? null : environments.map((environment, index)=> {
 					if (!showArchived && environment.archived) {
@@ -2747,19 +2751,19 @@ const Admin = (props) => {
 						return null
 					}
 
-					//var bgColor = "#27292d"
-					//if (index % 2 === 0) {
-					//	bgColor = "#1f2023"
-					//}
+					var bgColor = "#27292d"
+					if (index % 2 === 0) {
+						bgColor = "#1f2023"
+					}
 
 					return (
-						<ListItem key={index}>
+						<ListItem key={index} style={{backgroundColor: bgColor}}>
 							<ListItemText
 								primary={environment.Name}
 								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
 							/>
 							<ListItemText
-								primary={environment.Type === "cloud" ? "N/A" : "TBD"}
+								primary={environment.Type !== "cloud" ? environment.running_ip === undefined || environment.running_ip === null || environment.running_ip.length === 0 ? "Not started" : environment.running_ip : "N/A"}
 								style={{minWidth: 200, maxWidth: 200, overflow: "hidden"}}
 							/>
 							<ListItemText
@@ -2785,6 +2789,10 @@ const Admin = (props) => {
 							<ListItemText
 								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
 								primary={environment.archived.toString()}
+							/>
+							<ListItemText
+								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
+								primary={environment.edited !== undefined && environment.edited !== null && environment.edited !== 0 ? new Date(environment.edited*1000).toISOString() : 0}
 							/>
 						</ListItem>
 					)
@@ -2907,7 +2915,7 @@ const Admin = (props) => {
 						style={{minWidth: 150, maxWidth: 150}}
 					/>
 					<ListItemText
-						primary="Orborus running (TBD)"
+						primary="Orborus running"
 						style={{minWidth: 200, maxWidth: 200}}
 					/>
 					<ListItemText
