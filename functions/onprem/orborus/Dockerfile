@@ -11,7 +11,7 @@ RUN go get github.com/docker/docker/api/types && \
     go get github.com/mackerelio/go-osstat/cpu && \
     go get github.com/mackerelio/go-osstat/memory && \
     go get github.com/satori/go.uuid && \
-    go get github.com/frikky/shuffle-shared
+    go get github.com/shuffle/shuffle-shared
 RUN go build
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o orborus .
 

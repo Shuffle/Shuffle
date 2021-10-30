@@ -4,16 +4,18 @@ import sys
 import re
 import time 
 import json
+import liquid
 import logging
-import requests
-import urllib.parse
-import http.client
 import urllib3
 import hashlib
-from liquid import Liquid
-import liquid
 import zipfile
+import requests
+import http.client
+import urllib.parse
 from io import BytesIO
+from liquid import Liquid
+
+runtime = os.getenv("SHUFFLE_SWARM_CONFIG", "")
 
 class AppBase:
     __version__ = None
@@ -27,7 +29,7 @@ class AppBase:
         # apikey is for the user / org
         # authorization is for the specific workflow
 
-        self.url = os.getenv("CALLBACK_URL", "https://shuffler.io")
+        self.url = os.getenv("CALLBACK_URL",  "https://shuffler.io")
         self.base_url = os.getenv("BASE_URL", "https://shuffler.io")
         self.action = os.getenv("ACTION", "")
         self.original_action = os.getenv("ACTION", "")
@@ -51,8 +53,10 @@ class AppBase:
             try:
                 self.action = json.loads(self.action)
                 self.original_action = json.loads(self.action)
-            except:
-                self.logger.info("[WARNING] Failed parsing action as JSON")
+            except Exception as e:
+                self.logger.info(f"[WARNING] Failed parsing action as JSON (init): {e}. NOT important if running apps with webserver")
+
+        #print(f"ACTION: {self.action}")
 
         if len(self.base_url) == 0:
             self.base_url = self.url
@@ -80,7 +84,7 @@ class AppBase:
         # I wonder if this actually works 
         self.logger.info(f"[DEBUG] Before last stream result")
         url = "%s%s" % (self.base_url, stream_path)
-        #self.logger.info("[INFO] URL (URL): %s" % url)
+        self.logger.info("[INFO] URL FOR RESULT (URL): %s" % url)
         try:
             ret = requests.post(url, headers=headers, json=action_result)
             #self.logger.info(f"[DEBUG] Result: {ret.status_code}")
@@ -520,8 +524,10 @@ class AppBase:
                 }
 
                 self.send_result(self.action_result, {"Content-Type": "application/json", "Authorization": "Bearer %s" % self.authorization}, "/api/v1/streams")
-                exit()
-                #return
+                if runtime != "run":
+                    exit()
+                else:
+                    return
             else:
                 #subparams = new_params
                 #self.logger.info(f"NEW PARAMS: {new_params}")
@@ -850,7 +856,6 @@ class AppBase:
         return file_ids
     
     async def execute_action(self, action):
-
         # !!! Let this line stay - its used for some horrible codegeneration / stitching !!! # 
         #STARTCOPY
         stream_path = "/api/v1/streams"
@@ -880,19 +885,19 @@ class AppBase:
         }
 
         if len(self.action) == 0:
-            self.logger.info("ACTION env not defined")
+            self.logger.info("[WARNING] ACTION env not defined")
             self.action_result["result"] = "Error in setup ENV: ACTION not defined"
             self.send_result(self.action_result, headers, stream_path) 
             return
 
         if len(self.authorization) == 0:
-            self.logger.info("AUTHORIZATION env not defined")
+            self.logger.info("[WARING] AUTHORIZATION env not defined")
             self.action_result["result"] = "Error in setup ENV: AUTHORIZATION not defined"
             self.send_result(self.action_result, headers, stream_path) 
             return
 
         if len(self.current_execution_id) == 0:
-            self.logger.info("EXECUTIONID env not defined")
+            self.logger.info("[WARNING] EXECUTIONID env not defined")
             self.action_result["result"] = "Error in setup ENV: EXECUTIONID not defined"
             self.send_result(self.action_result, headers, stream_path) 
             return
@@ -918,7 +923,7 @@ class AppBase:
         # Verify whether there are any parameters with ACTION_RESULT required
         # If found, we get the full results list from backend
         fullexecution = {}
-        if len(self.full_execution) == 0:
+        if isinstance(self.full_execution, str) and len(self.full_execution) == 0:
             self.logger.info("[DEBUG] NO EXECUTION - LOADING!")
             try:
                 tmpdata = {
@@ -937,8 +942,8 @@ class AppBase:
                     fullexecution = ret.json()
                 else:
                     try:
-                        self.logger.info("Error: Data: ", ret.json())
-                        self.logger.info("Error with status code for results. Crashing because ACTION_RESULTS or WORKFLOW_VARIABLE can't be handled. Status: %d" % ret.status_code)
+                        self.logger.info("[DEBUG] Error: Data: ", ret.json())
+                        self.logger.info("[DEBUG] Error with status code for results. Crashing because ACTION_RESULTS or WORKFLOW_VARIABLE can't be handled. Status: %d" % ret.status_code)
                     except json.decoder.JSONDecodeError:
                         pass
 
@@ -946,11 +951,12 @@ class AppBase:
                     self.send_result(self.action_result, headers, stream_path) 
                     return
             except requests.exceptions.ConnectionError as e:
-                self.logger.info("Connectionerror: %s" %  e)
+                self.logger.info("[DEBUG] FullExec Connectionerror: %s" %  e)
                 self.action_result["result"] = "Connection error during startup: %s" % e
                 self.send_result(self.action_result, headers, stream_path) 
                 return
         else:
+            self.logger.info(f"[DEBUG] Setting execution to default value with type {type(self.full_execution)}")
             try:
                 fullexecution = json.loads(self.full_execution)
             except json.decoder.JSONDecodeError as e:
@@ -1645,7 +1651,11 @@ class AppBase:
                 self.send_result(self.action_result, headers, stream_path)
 
                 self.logger.info(f"[ERROR] Sent FAILURE response to backend due to : {e}")
-                os.exit()
+        
+                if runtime == "run":
+                    return template
+                else:
+                    os.exit()
 
             return template
 
@@ -2105,7 +2115,7 @@ class AppBase:
         if " " in actionname:
             actionname.replace(" ", "_", -1) 
 
-
+        #print(action)
         #if action.generated:
         #    actionname = actionname.lower()
 
@@ -2113,7 +2123,7 @@ class AppBase:
         try:
             func = getattr(self, actionname, None)
             if func == None:
-                self.logger.debug(f"Failed executing {actionname} because func is None.")
+                self.logger.debug(f"[DEBUG] Failed executing {actionname} because func is None.")
                 self.action_result["status"] = "FAILURE" 
                 self.action_result["result"] = "Function %s doesn't exist." % actionname
             elif callable(func):
@@ -2460,7 +2470,7 @@ class AppBase:
                                 # This part has fucked over so many random JSON usages because of weird paranthesis parsing
 
                                 value = parse_wrapper_start(value, self)
-                                self.logger.info("[DEBUG] Post return: %s" % value)
+                                #self.logger.info("[DEBUG] Post return: %s" % value)
 
                                 #self.logger.info("POST data value: %s" % value)
                                 params[parameter["name"]] = value
@@ -2821,34 +2831,129 @@ class AppBase:
         logger = logging.getLogger(f"{cls.__name__}")
         logger.setLevel(logging.DEBUG)
 
-        #self.logger.info("Started execution: %s!!" % cls)
-        #self.logger.info("Action: %s" % action)
-        #if isinstance(cls, object):
-        #    self.action = cls
 
-        app = cls(redis=None, logger=logger, console_logger=logger)
-        if isinstance(action, str):
-            print("[DEBUG] Normal execution. Action is a string.")
-        elif isinstance(action, object):
-            print("[DEBUG] OBJECT execution. Action is NOT a string.")
-            app.action = action
+        ##############################################
 
-            try:
-                app.authorization = action["authorization"]
-                app.current_execution_id = action["execution_id"]
-            except:
-                pass
+        exposed_port = os.getenv("SHUFFLE_APP_EXPOSED_PORT", "")
+        logger.info(f"[DEBUG] \"{runtime}\" - run indicates microservices. Port: \"{exposed_port}\"")
+        if runtime == "run" and exposed_port != "":
+            # Base port is 33334. Exposed port may differ based on discovery from Worker
+            port = int(exposed_port)
+            logger.info(f"[DEBUG] Starting webserver on port {port} (same as exposed port)")
+            from flask import Flask, request
+            from waitress import serve
+            import asyncio
+        
+            flask_app = Flask(__name__)
+        
+            @flask_app.route("/api/v1/run", methods=["POST"])
+            async def execute():
+                if request.method == "POST":
+                    #print(request.get_json(force=True))
+                    #print("DATA: ", request.data)
+                    requestdata = {}
+                    try:
+                        requestdata = json.loads(request.data)
+                    except Exception as e:
+                        return {
+                            "success": False,
+                            "reason": f"Invalid Action data {e}",
+                        }
+        
+                    logger.info(f"[DEBUG] Datatype: {type(requestdata)}: {requestdata}")
 
-            try:
-                app.url = action["url"]
-            except:
-                pass
+                    # Remaking class for each request
+                    app = cls(redis=None, logger=logger, console_logger=logger)
+                    #print(f"APP: {app}")
+        
+                    try:
+                        #asyncio.run(AppBase.run(action=requestdata), debug=True)
+                        #value = json.dumps(value)
+                        try:
+                            app.full_execution = json.dumps(requestdata["workflow_execution"])
+                        except Exception as e:
+                            logger.info(f"Failed parsing full execution from workflow_execution: {e}")
+                        try:
+                            app.action = requestdata["action"] 
+                        except:
+                            logger.info("Failed parsing action")
 
-            try:
-                app.base_url = action["base_url"]
-            except:
-                pass
+                        try:
+                            app.authorization = requestdata["authorization"]
+                            app.current_execution_id = requestdata["execution_id"]
+                        except:
+                            logger.info("Failed parsing auth and exec id")
+
+                        # BASE URL (backend)
+                        try:
+                            app.url = requestdata["url"]
+                            logger.info(f"BACKEND URL: {app.url}")
+                        except:
+                            logger.info("Failed parsing url")
+
+                        # URL (worker)
+                        try:
+                            app.base_url = requestdata["base_url"]
+                            logger.info(f"WORKER URL: {app.base_url}")
+                        except:
+                            logger.info("Failed parsing base url")
+                        
+                        #await 
+                        await app.execute_action(app.action)
+                    except Exception as e:
+                        return {
+                            "success": False,
+                            "reason": f"Problem in execution {e}",
+                        }
+        
+                    return {
+                        "success": True,
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "reason": f"HTTP method {request.method} not allowed",
+                    }
+        
+            logger.info(f"[DEBUG] Serving on port {port}")
+            serve(flask_app, host="0.0.0.0", port=port)
+            #######################
         else:
-            self.logger.info("ACTION TYPE (unhandled): %s" % type(action))
+            # Has to start like this due to imports in other apps
+            # Move it outside everything?
+            app = cls(redis=None, logger=logger, console_logger=logger)
+            logger.info(f"[DEBUG] Action: {action}")
+            
+            if isinstance(action, str):
+                logger.info("[DEBUG] Normal execution (env var). Action is a string.")
+            elif isinstance(action, object):
+                logger.info("[DEBUG] OBJECT execution (cloud). Action is NOT a string.")
+                app.action = action
 
-        await app.execute_action(app.action)
+                try:
+                    app.authorization = action["authorization"]
+                    app.current_execution_id = action["execution_id"]
+                except:
+                    pass
+
+                # BASE URL (worker)
+                try:
+                    app.url = action["url"]
+                except:
+                    pass
+
+                # Callback URL (backend)
+                try:
+                    app.base_url = action["base_url"]
+                except:
+                    pass
+            else:
+                self.logger.info("ACTION TYPE (unhandled): %s" % type(action))
+
+            await app.execute_action(app.action)
+
+    #app.run(host="0.0.0.0", port=33334)
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(AppBase.run(), debug=True)
