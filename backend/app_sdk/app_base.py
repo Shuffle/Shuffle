@@ -91,7 +91,7 @@ class AppBase:
             #if ret.status_code != 200:
             #    self.logger.info(f"[DEBUG] Shuffle Response: {ret.text}")
         
-            self.logger.info(f"[DEBUG] Successful request: Status= {ret.status_code} & Response= {ret.text}")
+            self.logger.info(f"""[DEBUG] Successful request result request: Status= {ret.status_code} & Response= {ret.text}. Action status: {action_result["status"]}""")
         except requests.exceptions.ConnectionError as e:
             self.logger.info(f"[DEBUG] Unexpected ConnectionError happened: {e}")
             return
@@ -855,7 +855,8 @@ class AppBase:
         self.logger.info("IDS TO RETURN: %s" % file_ids)
         return file_ids
     
-    async def execute_action(self, action):
+    #async def execute_action(self, action):
+    def execute_action(self, action):
         # !!! Let this line stay - its used for some horrible codegeneration / stitching !!! # 
         #STARTCOPY
         stream_path = "/api/v1/streams"
@@ -2015,11 +2016,11 @@ class AppBase:
                 except KeyError:
                     continue
 
-                self.logger.info("Relevant conditions: %s" % branch["conditions"])
+                self.logger.info("[DEBUG] Relevant conditions: %s" % branch["conditions"])
                 successful_conditions = []
                 failed_conditions = []
                 for condition in branch["conditions"]:
-                    self.logger.info("Getting condition value of %s" % condition)
+                    self.logger.info("[DEBUG] Getting condition value of %s" % condition)
 
                     # Parse all values first here
                     sourcevalue = condition["source"]["value"]
@@ -2129,7 +2130,8 @@ class AppBase:
             elif callable(func):
                 try:
                     if len(action["parameters"]) < 1:
-                        result = await func()
+                        #result = await func()
+                        result = func()
                     else:
                         # Potentially parse JSON here
                         # FIXME - add potential authentication as first parameter(s) here
@@ -2561,7 +2563,8 @@ class AppBase:
                             #newres = ""
                             while True:
                                 try:
-                                    newres = await func(**params)
+                                    #newres = await func(**params)
+                                    newres = func(**params)
                                     break
                                 except TypeError as e:
                                     newres = ""
@@ -2636,7 +2639,8 @@ class AppBase:
 
                             self.logger.info("[INFO] Running WITHOUT outer loop (looping)")
                             json_object = False
-                            results = await self.run_recursed_items(func, multi_parameters, {})
+                            #results = await self.run_recursed_items(func, multi_parameters, {})
+                            results = self.run_recursed_items(func, multi_parameters, {})
                             if isinstance(results, dict) or isinstance(results, list):
                                 json_object = True
 
@@ -2847,7 +2851,8 @@ class AppBase:
             flask_app = Flask(__name__)
         
             @flask_app.route("/api/v1/run", methods=["POST"])
-            async def execute():
+            #async def execute():
+            def execute():
                 if request.method == "POST":
                     #print(request.get_json(force=True))
                     #print("DATA: ", request.data)
@@ -2860,12 +2865,12 @@ class AppBase:
                             "reason": f"Invalid Action data {e}",
                         }
         
-                    logger.info(f"[DEBUG] Datatype: {type(requestdata)}: {requestdata}")
+                    #logger.info(f"[DEBUG] Datatype: {type(requestdata)}: {requestdata}")
 
                     # Remaking class for each request
-                    app = cls(redis=None, logger=logger, console_logger=logger)
                     #print(f"APP: {app}")
         
+                    app = cls(redis=None, logger=logger, console_logger=logger)
                     try:
                         #asyncio.run(AppBase.run(action=requestdata), debug=True)
                         #value = json.dumps(value)
@@ -2899,7 +2904,8 @@ class AppBase:
                             logger.info("Failed parsing base url")
                         
                         #await 
-                        await app.execute_action(app.action)
+                        app.execute_action(app.action)
+                        logger.info("\n\n[DEBUG] Done awaiting app action running\n\n")
                     except Exception as e:
                         return {
                             "success": False,
@@ -2908,6 +2914,7 @@ class AppBase:
         
                     return {
                         "success": True,
+                        "reason": "App successfully finished",
                     }
                 else:
                     return {
@@ -2916,7 +2923,15 @@ class AppBase:
                     }
         
             logger.info(f"[DEBUG] Serving on port {port}")
-            serve(flask_app, host="0.0.0.0", port=port)
+            serve(
+                flask_app, 
+                host="0.0.0.0", 
+                port=port, 
+                threads=8,
+                channel_timeout=30,
+                expose_tracebacks=True,
+                asyncore_use_poll=True,
+            )
             #######################
         else:
             # Has to start like this due to imports in other apps
@@ -2950,7 +2965,8 @@ class AppBase:
             else:
                 self.logger.info("ACTION TYPE (unhandled): %s" % type(action))
 
-            await app.execute_action(app.action)
+            #await app.execute_action(app.action)
+            app.execute_action(app.action)
 
     #app.run(host="0.0.0.0", port=33334)
 

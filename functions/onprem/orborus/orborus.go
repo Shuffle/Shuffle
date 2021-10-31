@@ -65,7 +65,6 @@ var timezone = os.Getenv("TZ")
 var containerName = os.Getenv("ORBORUS_CONTAINER_NAME")
 var swarmConfig = os.Getenv("SHUFFLE_SWARM_CONFIG")
 var executionIds = []string{}
-var dockerized bool
 
 var dockercli *dockerclient.Client
 var containerId string
@@ -84,7 +83,6 @@ func init() {
 // form id of current running container
 func getThisContainerId() {
 	fCol := ""
-	dockerized = true
 
 	// some adjusting based on current running mode
 	switch runningMode {
@@ -102,7 +100,6 @@ func getThisContainerId() {
 
 	default:
 		fCol = "3" // for backward-compatibility with production
-		dockerized = false
 		log.Printf("[WARNING] RUNNING_MODE not set - defaulting to Docker (NOT Kubernetes).")
 	}
 
@@ -111,11 +108,13 @@ func getThisContainerId() {
 		out, err := exec.Command("bash", "-c", cmd).Output()
 		if err == nil {
 			containerId = strings.TrimSpace(string(out))
+			log.Printf("[DEBUG] Set containerId network to %s", containerId)
 
 			// cgroup error. Use fallback strategy below.
 			// https://github.com/moby/moby/issues/7015
 			//log.Printf("Checking if %s is in %s", ".scope", string(out))
 			if strings.Contains(string(out), ".scope") {
+				log.Printf("[DEBUG] ContainerId contains scope. setting to empty.")
 				containerId = ""
 				//docker-76c537e9a4b7c7233011f5d70e6b7f2d600b6413ac58a96519b8dca7a3f7117a.scope
 			}
@@ -138,7 +137,7 @@ func getThisContainerId() {
 }
 
 func deployServiceWorkers(image string) {
-	log.Printf("[DEBUG] Validating deployment of workers as services IF swarmConfig = run")
+	log.Printf("[DEBUG] Validating deployment of workers as services IF swarmConfig = run (value: %#v)", swarmConfig)
 	if swarmConfig == "run" {
 		// frikky@debian:~/git/shuffle/functions/onprem/worker$ docker service create --replicas 5 --name shuffle-workers --env SHUFFLE_SWARM_CONFIG=run --publish published=33333,target=33333 ghcr.io/frikky/shuffle-worker:nightly
 		networkName := "shuffle-executions"
@@ -168,10 +167,22 @@ func deployServiceWorkers(image string) {
 		//	serviceOptions,
 		//)
 
-		log.Printf("[DEBUG] Deploying containers for worker with swarm")
 		//containerName := fmt.Sprintf("shuffle-worker-%s", parsedUuid)
-		innerContainerName := fmt.Sprintf("shuffle-workers")
+
 		replicas := uint64(2)
+		scaleReplicas := os.Getenv("SHUFFLE_SCALE_REPLICAS")
+		if len(scaleReplicas) > 0 {
+			log.Printf("[DEBUG] SHUFFLE_SCALE_REPLICAS set to value %#v. Trying to overwrite default (2/node)", scaleReplicas)
+			tmpInt, err := strconv.Atoi(scaleReplicas)
+			if err != nil {
+				log.Printf("[ERROR] %s is not a valid number for replication", scaleReplicas)
+			} else {
+				replicas = uint64(tmpInt)
+			}
+		}
+
+		innerContainerName := fmt.Sprintf("shuffle-workers")
+		log.Printf("[DEBUG] Deploying %d containers for worker with swarm to each node. Service name: %s. Image: %s", replicas, innerContainerName, image)
 
 		serviceSpec := swarm.ServiceSpec{
 			Annotations: swarm.Annotations{
@@ -224,6 +235,10 @@ func deployServiceWorkers(image string) {
 			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("DOCKER_API_VERSION=%s", dockerApiVersion))
 		}
 
+		if len(os.Getenv("SHUFFLE_SCALE_REPLICAS")) > 0 {
+			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("DOCKER_API_VERSION=%s", os.Getenv("SHUFFLE_SCALE_REPLICAS")))
+		}
+
 		serviceOptions := types.ServiceCreateOptions{}
 		_, err = dockercli.ServiceCreate(
 			ctx,
@@ -236,7 +251,7 @@ func deployServiceWorkers(image string) {
 			//time.Sleep(time.Duration(10) * time.Second)
 			//log.Printf("[DEBUG] Servicecreate request: %#v %#v", service, err)
 		} else {
-			if !strings.Contains(fmt.Sprintf("%s", err), "Already Exists") {
+			if !strings.Contains(fmt.Sprintf("%s", err), "Already Exists") && !strings.Contains(fmt.Sprintf("%s", err), "is already in use by service") {
 				log.Printf("[ERROR] Failed making service: %s", err)
 			}
 		}
@@ -264,9 +279,7 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		},
 	}
 
-	if len(containerId) > 0 && dockerized == true {
-		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
-	}
+	hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
 
 	if cleanupEnv == "true" {
 		hostConfig.AutoRemove = true
@@ -280,18 +293,20 @@ func deployWorker(image string, identifier string, env []string, executionReques
 	//var swarmConfig = os.Getenv("SHUFFLE_SWARM_CONFIG")
 	parsedUuid := uuid.NewV4()
 	if swarmConfig == "run" {
-		err := sendWorkerRequest(executionRequest)
-		if err != nil {
-			log.Printf("[ERROR] Failed worker request for %s: %s", executionRequest.ExecutionId, err)
+		go func() {
+			err := sendWorkerRequest(executionRequest)
+			if err != nil {
+				log.Printf("[ERROR] Failed worker request for %s: %s", executionRequest.ExecutionId, err)
 
-			if strings.Contains(fmt.Sprintf("%s", err), "connection refused") {
-				workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
-				go deployServiceWorkers(workerImage)
+				if strings.Contains(fmt.Sprintf("%s", err), "connection refused") || strings.Contains(fmt.Sprintf("%s", err), "EOF") {
+					workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
+					deployServiceWorkers(workerImage)
+				}
+				//return err
+			} else {
+				log.Printf("[DEBUG] Started worker from request with name: %s", executionRequest.ExecutionId)
 			}
-			return err
-		} else {
-			log.Printf("[DEBUG] Started worker from request with name: %s", executionRequest.ExecutionId)
-		}
+		}()
 
 		return nil
 	}
@@ -332,8 +347,29 @@ func deployWorker(image string, identifier string, env []string, executionReques
 	containerStartOptions := types.ContainerStartOptions{}
 	err = dockercli.ContainerStart(context.Background(), cont.ID, containerStartOptions)
 	if err != nil {
-		log.Printf("[ERROR] Failed to start container in environment %s: %s", environment, err)
-		return err
+		log.Printf("[DEBUG] Failed initial container start. Running WITHOUT custom network. Err: %s", err)
+		// Trying to recreate and start WITHOUT network if it's possible. No extended checks. Old execution system (<0.9.30)
+		if strings.Contains(fmt.Sprintf("%s", err), "cannot join network") || strings.Contains(fmt.Sprintf("%s", err), "No such container") {
+			hostConfig.NetworkMode = ""
+			//container.NetworkMode(fmt.Sprintf("container:%s", containerId))
+			cont, err = dockercli.ContainerCreate(
+				context.Background(),
+				config,
+				hostConfig,
+				nil,
+				nil,
+				identifier+"-2",
+			)
+
+			err = dockercli.ContainerStart(context.Background(), cont.ID, containerStartOptions)
+		}
+
+		if err != nil {
+			log.Printf("[ERROR] Failed to start container in environment %s: %s", environment, err)
+			return err
+		} else {
+			log.Printf("[INFO] Container %s was created under environment %s", cont.ID, environment)
+		}
 
 		//stats, err := cli.ContainerInspect(context.Background(), containerName)
 		//if err != nil {
@@ -393,6 +429,7 @@ func initializeImages() {
 		appSdkVersion = "0.8.97"
 		log.Printf("[WARNING] SHUFFLE_APP_SDK_VERSION not defined. Defaulting to %s", appSdkVersion)
 	}
+
 	if workerVersion == "" {
 		workerVersion = "nightly"
 		log.Printf("[WARNING] SHUFFLE_WORKER_VERSION not defined. Defaulting to %s", workerVersion)
@@ -793,6 +830,7 @@ func main() {
 
 // Is this ok to do with Docker? idk :)
 func getRunningWorkers(ctx context.Context, workerTimeout int) int {
+	//log.Printf("[DEBUG] Getting running workers with API version %s", dockerApiVersion)
 	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
 		All: true,
 	})
@@ -803,8 +841,8 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 
 		newVersionSplit := strings.Split(fmt.Sprintf("%s", err), "version is")
 		if len(newVersionSplit) > 1 {
-			dockerApiVersion = strings.TrimSpace(newVersionSplit[1])
-			log.Printf("[INFO] Changed the API version to default to %s", dockerApiVersion)
+			//dockerApiVersion = strings.TrimSpace(newVersionSplit[1])
+			log.Printf("[DEBUG] WANT to change the API version to default to %s?", strings.TrimSpace(newVersionSplit[1]))
 		}
 
 		return maxConcurrency
@@ -852,6 +890,11 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 // Should it check what happened to the execution? idk
 func zombiecheck(ctx context.Context, workerTimeout int) error {
 	executionIds = []string{}
+	if swarmConfig == "run" {
+		//log.Printf("[DEBUG] Skipping Zombie check due to new execution model (swarm)")
+		return nil
+	}
+
 	log.Println("[INFO] Looking for old containers (zombies)")
 	containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
 		All: true,
@@ -966,6 +1009,8 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 		return err
 	}
 
+	//log.Printf("[DEBUG] Data: %s", string(data))
+
 	streamUrl := fmt.Sprintf("%s:33333/api/v1/execute", parsedBaseurl)
 	req, err := http.NewRequest(
 		"POST",
@@ -992,11 +1037,10 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 
 	body, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
-		log.Printf("[ERROR] Failed reading body: %s", err)
+		log.Printf("[ERROR] Failed reading body in worker request: %s", err)
 		return err
-	} else {
-		log.Printf("[INFO] NEWRESP (from backend): %s", string(body))
 	}
 
+	log.Printf("[DEBUG] NEWRESP (from worker request %s): %s (Status: %d)", workflowExecution.ExecutionId, string(body), newresp.StatusCode)
 	return nil
 }
