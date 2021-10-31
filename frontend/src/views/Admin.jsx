@@ -2320,7 +2320,7 @@ const Admin = (props) => {
 										: 
 											<Tooltip title={"Go to workflow"} style={{}} aria-label={"Download"}>
 												<span>
-													<a style={{textDecoration: "none", color: "#f85a3e"}} href={`/workflows/${file.workflow_id}`} target="_blank">
+													<a  rel="noopener noreferrer" style={{textDecoration: "none", color: "#f85a3e"}} href={`/workflows/${file.workflow_id}`} target="_blank">
 														<IconButton disabled={file.workflow_id === "global"}>
 															<OpenInNewIcon style={{color: file.workflow_id !== "global" ? "white" : "grey",}} />
 														</IconButton>
