@@ -17,6 +17,7 @@ COPY ./src /usr/src/app/src/
 COPY ./*.sh /usr/src/app/
 COPY ./*.json /usr/src/app/
 
+RUN rm -rf /usr/src/app/node_modules/webpack
 RUN yarn build
 
 # Production environment

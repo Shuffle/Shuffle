@@ -38,6 +38,7 @@ const OrgHeader = (props) => {
 	const [workflowDownloadBranch, setWorkflowDownloadBranch] = React.useState(selectedOrganization.defaults === undefined ? defaultBranch : selectedOrganization.defaults.workflow_download_branch === undefined || selectedOrganization.defaults.workflow_download_branch.length === 0 ? defaultBranch : selectedOrganization.defaults.workflow_download_branch)
 	const [ssoEntrypoint, setSsoEntrypoint] = React.useState(selectedOrganization.sso_config === undefined ? "" : selectedOrganization.sso_config.sso_entrypoint === undefined || selectedOrganization.sso_config.sso_entrypoint.length === 0 ? "" : selectedOrganization.sso_config.sso_entrypoint)
 	const [ssoCertificate, setSsoCertificate] = React.useState(selectedOrganization.sso_config === undefined ? "" : selectedOrganization.sso_config.sso_certificate === undefined || selectedOrganization.sso_config.sso_certificate.length === 0 ? "" : selectedOrganization.sso_config.sso_certificate)
+	const [notificationWorkflow, setNotificationWorkflow] = React.useState(selectedOrganization.defaults === undefined ? "" : selectedOrganization.defaults.notification_workflow === undefined || selectedOrganization.defaults.notification_workflow.length === 0 ? "" : selectedOrganization.defaults.notification_workflow)
 
 	const [file, setFile] = React.useState("")
 	const [fileBase64, setFileBase64] = React.useState(selectedOrganization.image)
@@ -113,7 +114,7 @@ const OrgHeader = (props) => {
 		setFile(fileObject)
 	}
 
-	console.log("USER: ", userdata)
+	//console.log("USER: ", userdata)
 	const orgSaveButton = 
 		<Tooltip title="Save any unsaved data" placement="bottom">
 			<Button
@@ -126,6 +127,7 @@ const OrgHeader = (props) => {
 					"app_download_branch": appDownloadBranch,
 					"workflow_download_repo": workflowDownloadUrl,
 					"workflow_download_branch": workflowDownloadBranch,
+					"notification_workflow": notificationWorkflow,
 				},
 				{
 					"sso_entrypoint": ssoEntrypoint,
@@ -232,6 +234,35 @@ const OrgHeader = (props) => {
 					</IconButton>
 					{expanded ? 
 						<Grid container spacing={3} style={{textAlign: "left"}}>
+							<Grid item xs={12} style={{}}>
+								<span>
+									<Typography>
+										Notification Workflow ID	
+									</Typography>
+									<TextField
+										required
+										style={{flex: "1", marginTop: "5px", marginRight: "15px", backgroundColor: theme.palette.inputColor}}
+										fullWidth={true}
+										type="name"
+										id="outlined-with-placeholder"
+										margin="normal"
+										variant="outlined"
+										placeholder="ID of the workflow to receive notifications"
+										value={notificationWorkflow}
+										onChange={e => {
+											setNotificationWorkflow(e.target.value)
+										}}
+										InputProps={{
+											classes: {
+												notchedOutline: classes.notchedOutline,
+											},
+											style:{
+												color: "white",
+											},
+										}}
+										/>
+								</span>
+							</Grid>
 							<Grid item xs={6} style={{}}>
 								<span>
 									<Typography>

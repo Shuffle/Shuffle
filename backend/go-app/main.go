@@ -1955,9 +1955,18 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	// 1. Get callback data
 	// 2. Load the configuration
 	// 3. Execute the workflow
-	cors := shuffle.HandleCors(resp, request)
-	if cors {
-		return
+	//cors := shuffle.HandleCors(resp, request)
+	//if cors {
+	//	return
+	//}
+
+	if request.Method != "POST" {
+		request.Method = "POST"
+	}
+
+	if request.Body == nil {
+		stringReader := strings.NewReader("")
+		request.Body = ioutil.NopCloser(stringReader)
 	}
 
 	path := strings.Split(request.URL.String(), "/")
@@ -3837,7 +3846,7 @@ func runInitEs(ctx context.Context) {
 			//}
 
 		} else {
-			log.Printf("[DEBUG] There are %d org(s).", len(activeOrgs))
+			log.Printf("[DEBUG] Found %d org(s) in total.", len(activeOrgs))
 
 			if len(activeOrgs) == 1 {
 				if len(activeOrgs[0].Users) == 0 {
@@ -5639,6 +5648,7 @@ func initHandlers() {
 	log.Printf("[DEBUG] Initialized Shuffle database connection. Setting up environment.")
 
 	if elasticConfig == "elasticsearch" {
+		time.Sleep(5 * time.Second)
 		go runInitEs(ctx)
 	} else {
 		go runInit(ctx)
@@ -5732,7 +5742,7 @@ func initHandlers() {
 
 	// Triggers
 	r.HandleFunc("/api/v1/hooks/new", shuffle.HandleNewHook).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/hooks/{key}", handleWebhookCallback).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/hooks/{key}", handleWebhookCallback).Methods("POST", "GET", "PATCH", "PUT", "DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/hooks/{key}/delete", shuffle.HandleDeleteHook).Methods("DELETE", "OPTIONS")
 
 	// OpenAPI configuration

@@ -95,6 +95,14 @@ const SetAuthentication = (props) => {
 				if (query[0] === "oauth_url") {
 					appAuthData.fields.push({"key": "oauth_url", "value": query[1]})
 				}
+
+				if (query[0] === "refresh_uri") {
+					appAuthData.fields.push({"key": "refresh_uri", "value": query[1]})
+				}
+
+				if (query[0] === "refresh_url") {
+					appAuthData.fields.push({"key": "refresh_url", "value": query[1]})
+				}
 			}
 		}
 

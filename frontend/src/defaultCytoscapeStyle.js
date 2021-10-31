@@ -14,6 +14,7 @@ const data = [{
 				'margin': '5px',
 				'border-width': '1px',
 				'text-margin-x': '10px',
+				'cursor': 'pointer',
 			}
 		},
 		{
@@ -26,6 +27,7 @@ const data = [{
 				'text-margin-y': '-15px',
 				'width': '5px',
 				"color": "white",
+				'cursor': 'pointer',
 				"line-fill": "linear-gradient",
 				"line-gradient-stop-positions": ["0.0", "100"],
 				"line-gradient-stop-colors": ["grey", "grey"],
@@ -34,7 +36,7 @@ const data = [{
 		{
 			selector: `node[type="ACTION"]`,
 			css: {
-				'shape': 'square',
+				'shape': 'roundrectangle',
 				'background-color': '#213243',
 				'border-color': '#81c784',
 				'background-width': '100%',
@@ -99,6 +101,7 @@ const data = [{
 			selector: `node[type="TRIGGER"]`,
 			css: {
 				'shape': 'octagon',
+				'border-radius': '5px',
 				'border-color': 'orange',
 				'background-color': '#213243',
 				'background-width': '100%',
@@ -196,6 +199,16 @@ const data = [{
 			css: {
 				'background-color': '#41dcab',
 				'border-color': '#41dcab',
+				'border-width': '5px',
+				'transition-property': 'background-color',
+				'transition-duration': '0.5s',
+			},
+		},
+		{
+			selector: '.hover-highlight',
+			css: {
+				'background-color': '#5f9265',
+				'border-color': '#5f9265',
 				'border-width': '5px',
 				'transition-property': 'background-color',
 				'transition-duration': '0.5s',
