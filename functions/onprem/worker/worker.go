@@ -23,6 +23,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	//"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/mount"
+	"github.com/docker/docker/api/types/swarm"
 	dockerclient "github.com/docker/docker/client"
 	//"github.com/go-git/go-billy/v5/memfs"
 
@@ -32,6 +33,10 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/patrickmn/go-cache"
 	"github.com/satori/go.uuid"
+
+	// No necessary outside shared
+	"cloud.google.com/go/datastore"
+	"cloud.google.com/go/storage"
 )
 
 // This is getting out of hand :)
@@ -39,6 +44,7 @@ var environment = os.Getenv("ENVIRONMENT_NAME")
 var baseUrl = os.Getenv("BASE_URL")
 var appCallbackUrl = os.Getenv("BASE_URL")
 var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
+var dockerApiVersion = strings.ToLower(os.Getenv("DOCKER_API_VERSION"))
 var timezone = os.Getenv("TZ")
 var baseimagename = "frikky/shuffle"
 var registryName = "registry.hub.docker.com"
@@ -48,19 +54,25 @@ var topClient *http.Client
 var data string
 var requestsSent = 0
 
+/*
 var environments []string
 var parents map[string][]string
 var children map[string][]string
 var visited []string
 var executed []string
 var nextActions []string
-var containerIds []string
 var extra int
 var startAction string
+*/
 var results []shuffle.ActionResult
 var allLogs map[string]string
+var containerIds []string
 
 var executionRunning bool
+
+// New Worker mappings
+var portMappings map[string]int
+var baseport = 33333
 
 // removes every container except itself (worker)
 func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason string, handleResultSend bool) {
@@ -131,11 +143,15 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 		}
 
 		// FIXME: Add an API call to the backend
-		authorization := os.Getenv("AUTHORIZATION")
-		if len(authorization) > 0 {
-			req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", authorization))
+		if os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" {
+			authorization := os.Getenv("AUTHORIZATION")
+			if len(authorization) > 0 {
+				req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", authorization))
+			} else {
+				log.Printf("[ERROR] No authorization specified for abort")
+			}
 		} else {
-			log.Printf("[ERROR] No authorization specified for abort")
+			req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", workflowExecution.Authorization))
 		}
 
 		req.Header.Add("Content-Type", "application/json")
@@ -175,27 +191,57 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 		time.Sleep(time.Duration(sleepDuration) * time.Second)
 		os.Exit(3)
 	} else {
-		log.Printf("[DEBUG] Sending result and resetting values (K8s & Swarm).")
-		environments = []string{}
-		parents = map[string][]string{}
-		children = map[string][]string{}
-		visited = []string{}
-		executed = []string{}
-		nextActions = []string{}
-		containerIds = []string{}
-		extra = 0
-		startAction = ""
-		results = []shuffle.ActionResult{}
-		allLogs = map[string]string{}
+		log.Printf("\n\n[DEBUG] Sending result and resetting values (K8s & Swarm).\n\n")
+		//UpdateExecutionVariables(ctx, workflowExecution.ExecutionId, startAction, children, parents, visited, executed, nextActions, environments, extra)
+
+		/*
+			environments = []string{}
+			parents = map[string][]string{}
+			children = map[string][]string{}
+			visited = []string{}
+			executed = []string{}
+			nextActions = []string{}
+			containerIds = []string{}
+			extra = 0
+			startAction = ""
+			results = []shuffle.ActionResult{}
+			allLogs = map[string]string{}
+		*/
+		requestsSent = 0
 		executionRunning = false
 	}
 	//cacheKey := fmt.Sprintf("workflowexecution-%s", workflowExecution.ExecutionId)
 }
 
 // Deploys the internal worker whenever something happens
-func deployApp(cli *dockerclient.Client, image string, identifier string, env []string, workflowExecution shuffle.WorkflowExecution, actionId string) error {
+func deployApp(cli *dockerclient.Client, image string, identifier string, env []string, workflowExecution shuffle.WorkflowExecution, action shuffle.Action) error {
 	// form basic hostConfig
 	ctx := context.Background()
+
+	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" {
+		//identifier := fmt.Sprintf("%s_%s_%s_%s", appname, appversion, action.ID, workflowExecution.ExecutionId)
+
+		appName := strings.Replace(identifier, fmt.Sprintf("_%s", action.ID), "", -1)
+		appName = strings.Replace(appName, fmt.Sprintf("_%s", workflowExecution.ExecutionId), "", -1)
+		appName = strings.ToLower(appName)
+		log.Printf("[INFO] New appname: %s, image: %s", appName, image)
+
+		exposedPort, err := findAppInfo(image, appName)
+		if err != nil {
+			log.Printf("[ERROR] Failed finding and creating port for %s: %s", appName, err)
+			return err
+		}
+
+		log.Printf("[DEBUG] Should run towards port %d for app %s", exposedPort, appName)
+		err = sendAppRequest(baseUrl, exposedPort, action, workflowExecution)
+		if err != nil {
+			log.Printf("[ERROR] Failed sending request to app %s on port %d: %s", appName, exposedPort, err)
+			return err
+		}
+
+		log.Printf("[DEBUG] Successfully ran request towards port %d for app %s", exposedPort, appName)
+		return nil
+	}
 
 	// Max 10% CPU every second
 	//CPUShares: 128,
@@ -211,7 +257,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 
 	if os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" {
 		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:worker-%s", workflowExecution.ExecutionId))
-		log.Printf("Environments: %#v", env)
+		//log.Printf("Environments: %#v", env)
 	}
 
 	// Removing because log extraction should happen first
@@ -245,7 +291,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 			})
 		}
 	} else {
-		log.Printf("[WARNING] No mounted folders")
+		log.Printf("[WARNING] Not mounting folders")
 	}
 
 	config := &container.Config{
@@ -305,7 +351,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 
 		stats, err := cli.ContainerInspect(ctx, cont.ID)
 		if err != nil {
-			log.Printf("[ERROR] Failed getting container stats")
+			log.Printf("[ERROR] Failed getting container stats for container %s: %s", cont.ID, err)
 		} else {
 			//log.Printf("[INFO] Info for container: %#v", stats)
 			//log.Printf("%#v", stats.Config)
@@ -328,7 +374,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 				//allLogs[actionId] = logs
 
 				if stats.ContainerJSONBase.State.Status == "exited" && !strings.Contains(logs, "Normal execution.") {
-					log.Printf("[WARNING] BAD Execution Logs for %s: %s", actionId, logs)
+					log.Printf("[WARNING] BAD Execution Logs for %s: %s", action.ID, logs)
 					exit = true
 				}
 			}
@@ -530,7 +576,11 @@ func removeIndex(s []string, i int) []string {
 }
 
 func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
+	ctx := context.Background()
+	startAction, extra, children, parents, visited, executed, nextActions, environments := shuffle.GetExecutionVariables(ctx, workflowExecution.ExecutionId)
+
 	log.Printf("[INFO] Inside execution results with %d / %d results", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extra)
+
 	if len(startAction) == 0 {
 		startAction = workflowExecution.Start
 		if len(startAction) == 0 {
@@ -540,11 +590,11 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 	}
 
 	//log.Printf("NEXTACTIONS: %s", nextActions)
-	queueNodes := []string{}
 	//if len(nextActions) == 0 {
 	//	nextActions = append(nextActions, startAction)
 	//}
 
+	queueNodes := []string{}
 	if len(workflowExecution.Results) == 0 {
 		nextActions = []string{startAction}
 	} else {
@@ -602,7 +652,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			}
 
 			if len(appendActions) > 0 {
-				log.Printf("APPENDED NODES: %#v", appendActions)
+				//log.Printf("APPENDED NODES: %#v", appendActions)
 				nextActions = append(nextActions, appendActions...)
 			}
 		}
@@ -1013,7 +1063,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		// If cleanup is set, it should run for efficiency
 		pullOptions := types.ImagePullOptions{}
 		if cleanupEnv == "true" {
-			err = deployApp(dockercli, images[0], identifier, env, workflowExecution, action.ID)
+			err = deployApp(dockercli, images[0], identifier, env, workflowExecution, action)
 			if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 				if strings.Contains(err.Error(), "exited prematurely") {
 					log.Printf("[DEBUG] Shutting down (2)")
@@ -1025,8 +1075,8 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 				executed := false
 				if err == nil {
 					log.Printf("[DEBUG] Downloaded image %s from backend (CLEANUP)", image)
-					//err = deployApp(dockercli, image, identifier, env, workflow, action.ID)
-					err = deployApp(dockercli, image, identifier, env, workflowExecution, action.ID)
+					//err = deployApp(dockercli, image, identifier, env, workflow, action)
+					err = deployApp(dockercli, image, identifier, env, workflowExecution, action)
 					if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 						if strings.Contains(err.Error(), "exited prematurely") {
 							log.Printf("[DEBUG] Shutting down (41)")
@@ -1040,7 +1090,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 
 				if !executed {
 					image = images[2]
-					err = deployApp(dockercli, image, identifier, env, workflowExecution, action.ID)
+					err = deployApp(dockercli, image, identifier, env, workflowExecution, action)
 					if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 						if strings.Contains(err.Error(), "exited prematurely") {
 							log.Printf("[DEBUG] Shutting down (3)")
@@ -1078,7 +1128,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 							log.Printf("[INFO] Successfully downloaded %s", image)
 						}
 
-						err = deployApp(dockercli, image, identifier, env, workflowExecution, action.ID)
+						err = deployApp(dockercli, image, identifier, env, workflowExecution, action)
 						if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 
 							log.Printf("[ERROR] Failed deploying image for the FOURTH time. Aborting if the image doesn't exist")
@@ -1101,7 +1151,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			}
 		} else {
 
-			err = deployApp(dockercli, images[0], identifier, env, workflowExecution, action.ID)
+			err = deployApp(dockercli, images[0], identifier, env, workflowExecution, action)
 			if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 				if strings.Contains(err.Error(), "exited prematurely") {
 					log.Printf("[DEBUG] Shutting down (9)")
@@ -1112,7 +1162,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 				// Trying to replace with lowercase to deploy again. This seems to work with Dockerhub well.
 				// FIXME: Should try to remotely download directly if this persists.
 				image = images[1]
-				err = deployApp(dockercli, image, identifier, env, workflowExecution, action.ID)
+				err = deployApp(dockercli, image, identifier, env, workflowExecution, action)
 				if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 					if strings.Contains(err.Error(), "exited prematurely") {
 						log.Printf("[DEBUG] Shutting down (10)")
@@ -1125,8 +1175,8 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 					executed := false
 					if err == nil {
 						log.Printf("[DEBUG] Downloaded image %s from backend (CLEANUP)", image)
-						//err = deployApp(dockercli, image, identifier, env, workflow, action.ID)
-						err = deployApp(dockercli, image, identifier, env, workflowExecution, action.ID)
+						//err = deployApp(dockercli, image, identifier, env, workflow, action)
+						err = deployApp(dockercli, image, identifier, env, workflowExecution, action)
 						if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 							if strings.Contains(err.Error(), "exited prematurely") {
 								log.Printf("[DEBUG] Shutting down (40)")
@@ -1140,7 +1190,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 
 					if !executed {
 						image = images[2]
-						err = deployApp(dockercli, image, identifier, env, workflowExecution, action.ID)
+						err = deployApp(dockercli, image, identifier, env, workflowExecution, action)
 						if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 							if strings.Contains(err.Error(), "exited prematurely") {
 								log.Printf("[DEBUG] Shutting down (11)")
@@ -1177,7 +1227,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 							}
 						}
 
-						err = deployApp(dockercli, image, identifier, env, workflowExecution, action.ID)
+						err = deployApp(dockercli, image, identifier, env, workflowExecution, action)
 						if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 							log.Printf("[ERROR] Failed deploying image for the FOURTH time. Aborting if the image doesn't exist")
 							if strings.Contains(err.Error(), "exited prematurely") {
@@ -1242,12 +1292,14 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 }
 
 func executionInit(workflowExecution shuffle.WorkflowExecution) error {
-	parents = map[string][]string{}
-	children = map[string][]string{}
+	parents := map[string][]string{}
+	children := map[string][]string{}
+	nextActions := []string{}
+	extra := 0
 
 	results = workflowExecution.Results
 
-	startAction = workflowExecution.Start
+	startAction := workflowExecution.Start
 	log.Printf("[INFO] STARTACTION: %s", startAction)
 	if len(startAction) == 0 {
 		log.Printf("[INFO] Didn't find execution start action. Setting it to workflow start action.")
@@ -1342,7 +1394,7 @@ func executionInit(workflowExecution shuffle.WorkflowExecution) error {
 	pullOptions := types.ImagePullOptions{}
 	_ = pullOptions
 	for _, image := range onpremApps {
-		log.Printf("[INFO] Image: %s", image)
+		//log.Printf("[INFO] Image: %s", image)
 		// Kind of gambling that the image exists.
 		if strings.Contains(image, " ") {
 			image = strings.ReplaceAll(image, " ", "-")
@@ -1361,12 +1413,41 @@ func executionInit(workflowExecution shuffle.WorkflowExecution) error {
 		//log.Printf("Successfully downloaded and built %s", image)
 	}
 
+	ctx := context.Background()
+
+	visited := []string{}
+	executed := []string{}
+	environments := []string{}
+	for _, action := range workflowExecution.Workflow.Actions {
+		found := false
+
+		for _, environment := range environments {
+			if action.Environment == environment {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			environments = append(environments, action.Environment)
+		}
+	}
+	//var visited []string
+	//var executed []string
+	err := shuffle.UpdateExecutionVariables(ctx, workflowExecution.ExecutionId, startAction, children, parents, visited, executed, nextActions, environments, extra)
+	if err != nil {
+		log.Printf("\n\n[ERROR] Failed to update exec variables for execution %s: %s\n\n", workflowExecution.ExecutionId, err)
+	}
+
 	return nil
 }
 
 func handleDefaultExecution(client *http.Client, req *http.Request, workflowExecution shuffle.WorkflowExecution) error {
 	// if no onprem runs (shouldn't happen, but extra check), exit
 	// if there are some, load the images ASAP for the app
+	ctx := context.Background()
+	//startAction, extra, children, parents, visited, executed, nextActions, environments := shuffle.GetExecutionVariables(ctx, workflowExecution.ExecutionId)
+	startAction, extra, _, _, _, _, _, _ := shuffle.GetExecutionVariables(ctx, workflowExecution.ExecutionId)
 
 	err := executionInit(workflowExecution)
 	if err != nil {
@@ -1377,7 +1458,6 @@ func handleDefaultExecution(client *http.Client, req *http.Request, workflowExec
 
 	log.Printf("[DEBUG] DEFAULT EXECUTION Startaction: %s", startAction)
 
-	ctx := context.Background()
 	setWorkflowExecution(ctx, workflowExecution, false)
 
 	streamResultUrl := fmt.Sprintf("%s/api/v1/streams/results", baseUrl)
@@ -1616,6 +1696,7 @@ func runTestExecution(client *http.Client, workflowId, apikey string) (string, s
 }
 
 func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
+	//log.Printf("[DEBUG] Got stream workflow queue")
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		log.Println("(3) Failed reading body for workflowqueue")
@@ -1659,7 +1740,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	if workflowExecution.Status == "FINISHED" {
 		log.Printf("[DEBUG] Workflowexecution is already FINISHED. No further action can be taken")
 		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflowexecution is already finished because it has status %s"}`, workflowExecution.LastNode, workflowExecution.Status)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflowexecution is already finished because it has status %s. Lastnode: %s"}`, workflowExecution.Status, workflowExecution.LastNode)))
 		return
 	}
 
@@ -1829,6 +1910,10 @@ func sendResult(workflowExecution shuffle.WorkflowExecution, data []byte) {
 }
 
 func validateFinished(workflowExecution shuffle.WorkflowExecution) {
+	ctx := context.Background()
+	//startAction, extra, children, parents, visited, executed, nextActions, environments := shuffle.GetExecutionVariables(ctx, workflowExecution.ExecutionId)
+	_, extra, _, _, _, _, _, environments := shuffle.GetExecutionVariables(ctx, workflowExecution.ExecutionId)
+
 	log.Printf("[INFO] VALIDATION. Status: %s, shuffle.Actions: %d, Extra: %d, Results: %d\n", workflowExecution.Status, len(workflowExecution.Workflow.Actions), extra, len(workflowExecution.Results))
 
 	//if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions)+extra {
@@ -1849,6 +1934,7 @@ func validateFinished(workflowExecution shuffle.WorkflowExecution) {
 }
 
 func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
+	//log.Printf("[DEBUG] Got stream result")
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		log.Println("Failed reading body for stream result queue")
@@ -1963,13 +2049,13 @@ func webserverSetup(workflowExecution shuffle.WorkflowExecution) net.Listener {
 		return listener
 	}
 
-	log.Printf("OLD HOSTNAME: %s", appCallbackUrl)
+	log.Printf("[DEBUG] OLD HOSTNAME: %s", appCallbackUrl)
 	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" {
-		log.Printf("\n\nStarting webserver on port 33333 with hostname: %s\n\n", hostname)
-		appCallbackUrl = fmt.Sprintf("http://%s:33333", hostname)
-		listener, err = net.Listen("tcp", ":33333")
+		log.Printf("\n\nStarting webserver on port %d with hostname: %s\n\n", baseport, hostname)
+		appCallbackUrl = fmt.Sprintf("http://%s:%d", hostname, baseport)
+		listener, err = net.Listen("tcp", fmt.Sprintf(":%d", baseport))
 		if err != nil {
-			log.Printf("[ERROR] Failed to assign port to 33333")
+			log.Printf("[ERROR] Failed to assign port to %d: %s", baseport, err)
 			return nil
 		}
 
@@ -1996,9 +2082,8 @@ func runWebserver(listener net.Listener) {
 		r.HandleFunc("/api/v1/execute", handleRunExecution).Methods("POST", "OPTIONS")
 	}
 
-	http.Handle("/", r)
-
 	//log.Fatal(http.ListenAndServe(port, nil))
+	http.Handle("/", r)
 	log.Fatal(http.Serve(listener, nil))
 }
 
@@ -2057,7 +2142,7 @@ func downloadDockerImageBackend(client *http.Client, imageName string) error {
 
 	imageLoadResponse, err := dockercli.ImageLoad(context.Background(), tar, true)
 	if err != nil {
-		log.Printf("[ERROR] Error loading: %s", err)
+		log.Printf("[ERROR] Error loading images: %s", err)
 		return err
 	}
 
@@ -2077,11 +2162,316 @@ func downloadDockerImageBackend(client *http.Client, imageName string) error {
 	return nil
 }
 
+func deploySwarmService(dockercli *dockerclient.Client, name, image string, deployport int) error {
+	log.Printf("[DEBUG] Deploying service for %s to swarm on port %d", name, deployport)
+	//containerName := fmt.Sprintf("shuffle-worker-%s", parsedUuid)
+
+	if len(baseimagename) == 0 {
+		baseimagename = "frikky/shuffle"
+		//var baseimagename = "frikky/shuffle"
+		//var registryName = "registry.hub.docker.com"
+	}
+
+	//image := fmt.Sprintf("%s:%s", baseimagename, name)
+	log.Printf("[DEBUG] Deploying app with name %s with image %s", name, image)
+	containerName := fmt.Sprintf(strings.Replace(name, ".", "-", -1))
+	serviceSpec := swarm.ServiceSpec{
+		Annotations: swarm.Annotations{
+			Name:   containerName,
+			Labels: map[string]string{},
+		},
+		Networks: []swarm.NetworkAttachmentConfig{
+			swarm.NetworkAttachmentConfig{
+				Target: "shuffle-executions",
+			},
+		},
+		EndpointSpec: &swarm.EndpointSpec{
+			Ports: []swarm.PortConfig{
+				swarm.PortConfig{
+					Protocol:      swarm.PortConfigProtocolTCP,
+					PublishMode:   swarm.PortConfigPublishModeIngress,
+					Name:          "app-port",
+					PublishedPort: uint32(deployport),
+					TargetPort:    uint32(deployport),
+				},
+			},
+		},
+		TaskTemplate: swarm.TaskSpec{
+			Resources: &swarm.ResourceRequirements{
+				Reservations: &swarm.Resources{},
+			},
+			ContainerSpec: &swarm.ContainerSpec{
+				Image: image,
+				Env: []string{
+					fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", os.Getenv("SHUFFLE_SWARM_CONFIG")),
+					fmt.Sprintf("SHUFFLE_APP_EXPOSED_PORT=%d", deployport),
+				},
+			},
+			RestartPolicy: &swarm.RestartPolicy{
+				Condition: swarm.RestartPolicyConditionNone,
+			},
+			Placement: &swarm.Placement{
+				MaxReplicas: 5,
+			},
+		},
+	}
+
+	/*
+		Mounts: []mount.Mount{
+			mount.Mount{
+				Source: "/var/run/docker.sock",
+				Target: "/var/run/docker.sock",
+				Type:   mount.TypeBind,
+			},
+		},
+	*/
+
+	if dockerApiVersion != "" {
+		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("DOCKER_API_VERSION=%s", dockerApiVersion))
+	}
+
+	serviceOptions := types.ServiceCreateOptions{}
+	service, err := dockercli.ServiceCreate(
+		context.Background(),
+		serviceSpec,
+		serviceOptions,
+	)
+	_ = service
+
+	if err != nil {
+		log.Printf("[DEBUG] Failed deploying %s with image %s: %s", name, image, err)
+		return err
+	}
+
+	log.Printf("[DEBUG] Successfully deployed service %s with image %s on port %d", name, image, deployport)
+
+	return nil
+}
+
+// Runs data discovery
+func findAppInfo(image, name string) (int, error) {
+	dockercli, err := dockerclient.NewEnvClient()
+	if err != nil {
+		log.Printf("[ERROR] Unable to create docker client (2): %s", err)
+		return -1, err
+	}
+
+	highest := baseport
+	exposedPort := -1
+
+	// Exists as a "cache" layer
+	if portMappings != nil {
+		for key, value := range portMappings {
+			if value > highest {
+				highest = value
+			}
+
+			if key == name {
+				exposedPort = value
+				break
+			}
+		}
+	} else {
+		portMappings = make(map[string]int)
+	}
+
+	//Filters:
+	if exposedPort == -1 {
+		serviceListOptions := types.ServiceListOptions{}
+		services, err := dockercli.ServiceList(
+			context.Background(),
+			serviceListOptions,
+		)
+
+		// Basic self-correction
+		if err != nil {
+			log.Printf("[ERROR] Unable to list services: %s (may continue anyway?)", err)
+			if strings.Contains(fmt.Sprintf("%s", err), "is too new") {
+				// Static for some reason
+				defaultVersion := "1.40"
+				dockerApiVersion = defaultVersion
+				os.Setenv("DOCKER_API_VERSION", defaultVersion)
+				log.Printf("[DEBUG] Setting Docker API to %s default and retrying listing requests", defaultVersion)
+			} else {
+				return -1, err
+			}
+
+			services, err = dockercli.ServiceList(
+				context.Background(),
+				serviceListOptions,
+			)
+
+			if err != nil {
+				log.Printf("[ERROR] Unable to list services (2): %s", err)
+				return -1, err
+			}
+		}
+
+		for _, service := range services {
+			//log.Printf("[INFO] Service: %#v", service.Spec.Annotations.Name)
+
+			for _, endpoint := range service.Spec.EndpointSpec.Ports {
+				if strings.Contains(endpoint.Name, "port") {
+					portMappings[service.Spec.Annotations.Name] = int(endpoint.PublishedPort)
+					if int(endpoint.PublishedPort) > highest {
+						highest = int(endpoint.PublishedPort)
+					}
+
+					if service.Spec.Annotations.Name == name || service.Spec.Annotations.Name == strings.Replace(name, ".", "-", -1) {
+						exposedPort = int(endpoint.PublishedPort)
+						//break
+					}
+				}
+			}
+
+			//log.Printf("%s - %s", service.Spec.Annotations.Name, strings.Replace(name, ".", "-", -1))
+			if service.Spec.Annotations.Name != name && service.Spec.Annotations.Name != strings.Replace(name, ".", "-", -1) {
+				continue
+			}
+
+			// Break if it's the correct port, as it's the right service
+			if exposedPort >= 0 {
+				break
+			}
+		}
+	}
+
+	//log.Printf("[DEBUG] Portmappings: %#v", portMappings)
+
+	if exposedPort >= 0 {
+		log.Printf("[INFO] Found service %s on port %d - no need to deploy another", name, exposedPort)
+	} else {
+		// Increment by 1 for highest port
+		if highest <= baseport {
+			highest = baseport
+		}
+
+		highest += 1
+		err = deploySwarmService(dockercli, name, image, highest)
+		if err != nil {
+			log.Printf("[WARNING] NOT Found service: %s. error: %s", name, err)
+			return highest, err
+		} else {
+			log.Printf("[INFO] Deployed app with name %s", name)
+		}
+
+		exposedPort = highest
+		log.Printf("[DEBUG] Waiting 10 seconds before moving on to let app start")
+		time.Sleep(time.Duration(10) * time.Second)
+	}
+
+	return exposedPort, nil
+}
+
+func sendAppRequest(incomingUrl string, port int, action shuffle.Action, workflowExecution shuffle.WorkflowExecution) error {
+	parsedRequest := shuffle.OrborusExecutionRequest{
+		ExecutionId:           workflowExecution.ExecutionId,
+		Authorization:         workflowExecution.Authorization,
+		EnvironmentName:       os.Getenv("ENVIRONMENT_NAME"),
+		Timezone:              os.Getenv("TZ"),
+		Cleanup:               os.Getenv("CLEANUP"),
+		HTTPProxy:             os.Getenv("HTTP_PROXY"),
+		HTTPSProxy:            os.Getenv("HTTPS_PROXY"),
+		ShufflePassProxyToApp: os.Getenv("SHUFFLE_PASS_APP_PROXY"),
+		BaseUrl:               baseUrl,
+		Action:                action,
+		FullExecution:         workflowExecution,
+	}
+	//var baseUrl = os.Getenv("BASE_URL")
+	//var appCallbackUrl = os.Getenv("BASE_URL")
+
+	parsedBaseurl := incomingUrl
+	if strings.Count(baseUrl, ":") >= 2 {
+		baseUrlSplit := strings.Split(baseUrl, ":")
+		if len(baseUrlSplit) >= 3 {
+			parsedBaseurl = strings.Join(baseUrlSplit[0:2], ":")
+			//parsedRequest.BaseUrl = fmt.Sprintf("%s:33333", parsedBaseurl)
+		}
+	}
+
+	if len(parsedRequest.Url) == 0 {
+		// Fixed callback url to the worker itself
+		if strings.Count(parsedBaseurl, ":") >= 2 {
+			parsedRequest.Url = parsedBaseurl
+		} else {
+			// Callback to worker
+			parsedRequest.Url = fmt.Sprintf("%s:%d", parsedBaseurl, baseport)
+		}
+
+		log.Printf("[DEBUG] Should add a baseurl for the app to get back to: %s", parsedRequest.Url)
+	}
+
+	// FIXME: Swapping because this was confusing during dev
+	tmp := parsedRequest.Url
+	parsedRequest.Url = parsedRequest.BaseUrl
+	parsedRequest.BaseUrl = tmp
+
+	log.Printf("[DEBUG] Worker URL: %s, Backend URL: %s", parsedRequest.BaseUrl, parsedRequest.Url)
+
+	data, err := json.Marshal(parsedRequest)
+	if err != nil {
+		log.Printf("[ERROR] Failed marshalling worker request: %s", err)
+		return err
+	}
+
+	streamUrl := fmt.Sprintf("%s:%d/api/v1/run", parsedBaseurl, port)
+	req, err := http.NewRequest(
+		"POST",
+		streamUrl,
+		bytes.NewBuffer([]byte(data)),
+	)
+
+	client := &http.Client{}
+	if err != nil {
+		log.Printf("[ERROR] Failed creating finishing request: %s", err)
+		return err
+	}
+
+	newresp, err := client.Do(req)
+	if err != nil {
+		log.Printf("[ERROR] Error running finishing request: %s", err)
+		return err
+	}
+
+	body, err := ioutil.ReadAll(newresp.Body)
+	if err != nil {
+		log.Printf("[ERROR] Failed reading body: %s", err)
+		return err
+	} else {
+		log.Printf("[INFO] NEWRESP (from app): %s", string(body))
+	}
+
+	return nil
+}
+
 // Initial loop etc
 func main() {
+	/*
+		appName := "shuffle-tools_1.1.0"
+		image := "frikky/shuffle:shuffle-tools_1.1.0"
+		exposedPort, err := findAppInfo(image, appName)
+		if err != nil {
+			log.Printf("[ERROR] Failed finding and creating port for %s: %s", appName, err)
+			os.Exit(3)
+		}
+
+		log.Printf("[DEBUG] Should run towards port %d for app %s", exposedPort, appName)
+		err = sendAppRequest(appCallbackUrl, exposedPort, shuffle.Action{}, shuffle.WorkflowExecution{})
+		if err != nil {
+			log.Printf("[ERROR] Failed sending request to app %s on port %d: %s", appName, exposedPort, err)
+			os.Exit(3)
+		}
+	*/
+
+	_, err := shuffle.RunInit(datastore.Client{}, storage.Client{}, "", "", false, "")
+	if err != nil {
+		log.Printf("[ERROR] Failed to run worker init: %s", err)
+	} else {
+		log.Printf("[DEBUG] Ran init for worker to set up cache system. Docker version: %s", dockerApiVersion)
+	}
+
 	log.Printf("[INFO] Setting up worker environment")
 	sleepTime := 5
-
 	client := &http.Client{
 		Transport: &http.Transport{
 			Proxy: nil,
@@ -2105,7 +2495,7 @@ func main() {
 		timezone = "Europe/Amsterdam"
 	}
 
-	log.Printf("[INFO] Running with timezone %s", timezone)
+	log.Printf("[INFO] Running with timezone %s and swarm config %#v", timezone, os.Getenv("SHUFFLE_SWARM_CONFIG"))
 	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" {
 		workflowExecution := shuffle.WorkflowExecution{}
 		listener := webserverSetup(workflowExecution)
@@ -2121,6 +2511,8 @@ func main() {
 		//}()
 
 		runWebserver(listener)
+		log.Printf("[ERROR] Stopped listener - exiting.")
+		os.Exit(3)
 	}
 
 	//imageName := fmt.Sprintf("%s/%s:shuffle_openapi_1.0.0", registryName, baseimagename)
@@ -2174,6 +2566,7 @@ func main() {
 	topClient = client
 
 	firstRequest := true
+	environments := []string{}
 	for {
 		// Because of this, it always has updated data.
 		// Removed request requirement from app_sdk
@@ -2319,12 +2712,14 @@ func main() {
 }
 
 func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
-	if executionRunning {
-		log.Println("[WARNING] An execution is already running on this worker")
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "An execution is already running"}`)))
-		return
-	}
+	/*
+		if executionRunning {
+			log.Println("[WARNING] An execution is already running on this worker")
+			resp.WriteHeader(500)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "An execution is already running"}`)))
+			return
+		}
+	*/
 
 	executionRunning = true
 	body, err := ioutil.ReadAll(request.Body)
@@ -2359,6 +2754,7 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	//if strings.ToLower(os.Getenv("SHUFFLE_PASS_APP_PROXY")) == "true" {
+	// Is it ok if these are standard? Should they be update-able after launch? Hmm
 	if len(execRequest.HTTPProxy) > 0 {
 		log.Printf("[DEBUG] Sending proxy info to child process")
 		os.Setenv("SHUFFLE_PASS_APP_PROXY", execRequest.ShufflePassProxyToApp)
@@ -2444,9 +2840,21 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 		executionRunning = false
 		log.Printf("[INFO] Workflow %s is finished. Exiting worker.", workflowExecution.ExecutionId)
 		log.Printf("[DEBUG] Shutting down (20)")
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad status %s"}`, workflowExecution.Status)))
+
+		resp.WriteHeader(200)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad status for execution - already %s. Returning with 200 OK"}`, workflowExecution.Status)))
 		return
+	}
+
+	//ctx := context.Background()
+	//startAction, extra, children, parents, visited, executed, nextActions, environments := shuffle.GetExecutionVariables(ctx, workflowExecution.ExecutionId)
+
+	extra := 0
+	for _, trigger := range workflowExecution.Workflow.Triggers {
+		//log.Printf("Appname trigger (0): %s", trigger.AppName)
+		if trigger.AppName == "User Input" || trigger.AppName == "Shuffle Workflow" {
+			extra += 1
+		}
 	}
 
 	log.Printf("[INFO] Status: %s, Results: %d, actions: %d", workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extra)
@@ -2470,7 +2878,10 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 	if err != nil {
 		log.Printf("[INFO] Workflow setup failed: %s", workflowExecution.ExecutionId, err)
 		log.Printf("[DEBUG] Shutting down (30)")
-		shutdown(workflowExecution, "", "", true)
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error in execution init: %s"}`, err)))
+		return
+		//shutdown(workflowExecution, "", "", true)
 	}
 
 	handleExecutionResult(workflowExecution)

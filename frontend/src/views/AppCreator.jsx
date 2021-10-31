@@ -426,10 +426,16 @@ const AppCreator = (props) => {
 		return newitem 
 	}
 
+	const base64_decode = (str) => {
+		return decodeURIComponent(atob(str).split('').map(function(c) {
+				return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+		}).join(''))
+	}
+
 	// Sets the data up as it should be at later points
 	// This is the data FROM the database, not what's being saved
 	const parseIncomingOpenapiData = (data) => {
-		const parsedapp = data.openapi === undefined ? data : JSON.parse(atob(data.openapi))
+		const parsedapp = data.openapi === undefined ? data : JSON.parse(base64_decode(data.openapi))
 		data = parsedapp.body === undefined ? parsedapp : parsedapp.body
 
 		var jsonvalid = false 

@@ -304,7 +304,7 @@ const Docs = (props) => {
 					<div style={{flex: 3, display: "flex", vAlign: "center",}}>
 						{mobile ? null : 
 								<Typography style={{display: "inline", marginTop: 6, }}>
-									<a rel="norefferer" target="_blank" href={selectedMeta.link} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>
+									<a rel="noopener noreferrer" target="_blank" href={selectedMeta.link} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>
 										<Button style={{}} variant="outlined">
 											<EditIcon /> &nbsp;&nbsp;Edit
 										</Button>
@@ -323,7 +323,7 @@ const Docs = (props) => {
 							<div style={{margin: 10, height: "100%", display: "inline",}}>
 								{selectedMeta.contributors.slice(0,7).map((data, index) => {
 									return (
-											<a rel="norefferer" target="_blank" href={data.url} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>
+											<a rel="noopener noreferrer" target="_blank" href={data.url} target="_blank" style={{textDecoration: "none", color: "#f85a3e"}}>
 												<Tooltip title={data.url} placement="bottom">
 													<img alt={data.url} src={data.image} style={{marginTop: 5, marginRight: 10, height: 40, borderRadius: 40, }} />
 												</Tooltip>

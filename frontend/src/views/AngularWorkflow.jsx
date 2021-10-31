@@ -1723,6 +1723,7 @@ const AngularWorkflow = (props) => {
 					}
 
 					workflow.start = parentNode.data('id')
+					setLastSaved(true)
 					parentNode.data('isStartNode', true) 
 				}
 
@@ -7296,7 +7297,7 @@ const AngularWorkflow = (props) => {
 	}
 	
 	const executionModal = 
-		<Drawer anchor={"right"} open={executionModalOpen} onClose={() => setExecutionModalOpen(false)} style={{resize: "both", overflow: "auto", zIndex: 10005}} PaperProps={{style: {resize: "both", overflow: "auto", minWidth: 400, maxWidth: 400, backgroundColor: "#1F2023", color: "white", fontSize: 18, zIndex: 10005}}}>
+		<Drawer anchor={"right"} open={executionModalOpen} onClose={() => setExecutionModalOpen(false)} style={{resize: "both", overflow: "auto", zIndex: 10005}} PaperProps={{style: {resize: "both", overflow: "auto", minWidth: 420, maxWidth: 420, backgroundColor: "#1F2023", color: "white", fontSize: 18, zIndex: 10005}}}>
 			{executionModalView === 0 ?
 			<div style={{padding: 25, }}>
 				<Breadcrumbs aria-label="breadcrumb" separator="›" style={{color: "white", fontSize: 16}}>
