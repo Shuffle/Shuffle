@@ -236,7 +236,7 @@ func deployServiceWorkers(image string) {
 		}
 
 		if len(os.Getenv("SHUFFLE_SCALE_REPLICAS")) > 0 {
-			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("DOCKER_API_VERSION=%s", os.Getenv("SHUFFLE_SCALE_REPLICAS")))
+			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_SCALE_REPLICAS=%s", os.Getenv("SHUFFLE_SCALE_REPLICAS")))
 		}
 
 		serviceOptions := types.ServiceCreateOptions{}
@@ -301,10 +301,15 @@ func deployWorker(image string, identifier string, env []string, executionReques
 				if strings.Contains(fmt.Sprintf("%s", err), "connection refused") || strings.Contains(fmt.Sprintf("%s", err), "EOF") {
 					workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
 					deployServiceWorkers(workerImage)
+
+					time.Sleep(time.Duration(10) * time.Second)
+					err = sendWorkerRequest(executionRequest)
 				}
-				//return err
-			} else {
+			}
+
+			if err == nil {
 				log.Printf("[DEBUG] Started worker from request with name: %s", executionRequest.ExecutionId)
+				executionIds = append(executionIds, executionRequest.ExecutionId)
 			}
 		}()
 
@@ -347,7 +352,6 @@ func deployWorker(image string, identifier string, env []string, executionReques
 	containerStartOptions := types.ContainerStartOptions{}
 	err = dockercli.ContainerStart(context.Background(), cont.ID, containerStartOptions)
 	if err != nil {
-		log.Printf("[DEBUG] Failed initial container start. Running WITHOUT custom network. Err: %s", err)
 		// Trying to recreate and start WITHOUT network if it's possible. No extended checks. Old execution system (<0.9.30)
 		if strings.Contains(fmt.Sprintf("%s", err), "cannot join network") || strings.Contains(fmt.Sprintf("%s", err), "No such container") {
 			hostConfig.NetworkMode = ""
@@ -362,6 +366,8 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			)
 
 			err = dockercli.ContainerStart(context.Background(), cont.ID, containerStartOptions)
+		} else {
+			log.Printf("[ERROR] Failed initial container start. Quitting as this is NOT a simple network issue. Err: %s", err)
 		}
 
 		if err != nil {
@@ -677,31 +683,34 @@ func main() {
 			// Type string `json:"type"`
 		}
 
-		if len(executionRequests.Data) == 0 {
-			zombiecounter += 1
-			if zombiecounter*sleepTime > workerTimeout {
-				go zombiecheck(ctx, workerTimeout)
-				zombiecounter = 0
+		// Skipping throttling with swarm
+		if swarmConfig != "run" {
+			if len(executionRequests.Data) == 0 {
+				zombiecounter += 1
+				if zombiecounter*sleepTime > workerTimeout {
+					go zombiecheck(ctx, workerTimeout)
+					zombiecounter = 0
+				}
+				time.Sleep(time.Duration(sleepTime) * time.Second)
+				continue
 			}
-			time.Sleep(time.Duration(sleepTime) * time.Second)
-			continue
-		}
 
-		// Anything below here verifies concurrency
-		executionCount := getRunningWorkers(ctx, workerTimeout)
-		if executionCount >= maxConcurrency {
-			if zombiecounter*sleepTime > workerTimeout {
-				go zombiecheck(ctx, workerTimeout)
-				zombiecounter = 0
+			// Anything below here verifies concurrency
+			executionCount := getRunningWorkers(ctx, workerTimeout)
+			if executionCount >= maxConcurrency {
+				if zombiecounter*sleepTime > workerTimeout {
+					go zombiecheck(ctx, workerTimeout)
+					zombiecounter = 0
+				}
+				time.Sleep(time.Duration(sleepTime) * time.Second)
+				continue
 			}
-			time.Sleep(time.Duration(sleepTime) * time.Second)
-			continue
-		}
 
-		allowed := maxConcurrency - executionCount
-		if len(executionRequests.Data) > allowed {
-			log.Printf("[WARNING] Throttle - Cutting down requests from %d to %d (MAX: %d, CUR: %d)", len(executionRequests.Data), allowed, maxConcurrency, executionCount)
-			executionRequests.Data = executionRequests.Data[0:allowed]
+			allowed := maxConcurrency - executionCount
+			if len(executionRequests.Data) > allowed {
+				log.Printf("[WARNING] Throttle - Cutting down requests from %d to %d (MAX: %d, CUR: %d)", len(executionRequests.Data), allowed, maxConcurrency, executionCount)
+				executionRequests.Data = executionRequests.Data[0:allowed]
+			}
 		}
 
 		// New, abortable version. Should check executionid and remove everything else

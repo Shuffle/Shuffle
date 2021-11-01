@@ -278,7 +278,14 @@ export const validateJson = (showResult) => {
 		}
 	}
 
-	const result = jsonvalid ? JSON.parse(showResult) : showResult
+	var result = showResult
+	try {
+		const result = jsonvalid ? JSON.parse(showResult) : showResult
+	} catch (e) {
+		//console.log("Failed parsing JSON even though its valid: ", e)
+		jsonvalid = false
+	}
+	
 	//console.log("VALID: ", jsonvalid, result)
 	return {
 		"valid": jsonvalid, 

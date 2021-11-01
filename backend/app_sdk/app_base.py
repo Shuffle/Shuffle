@@ -9,6 +9,7 @@ import logging
 import urllib3
 import hashlib
 import zipfile
+import asyncio
 import requests
 import http.client
 import urllib.parse
@@ -113,9 +114,11 @@ class AppBase:
             self.logger.info(f"[DEBUG] Expected ProtocolError happened: {e}")
             return
 
-    async def cartesian_product(self, L):
+    #async def cartesian_product(self, L):
+    def cartesian_product(self, L):
         if L:
-            return {(a, ) + b for a in L[0] for b in await self.cartesian_product(L[1:])}
+            #return {(a, ) + b for a in L[0] for b in await self.cartesian_product(L[1:])}
+            return {(a, ) + b for a in L[0] for b in self.cartesian_product(L[1:])}
         else:
             return {()}
 
@@ -251,7 +254,8 @@ class AppBase:
     # Returns a list of all the executions to be done in the inner loop
     # FIXME: Doesn't take into account whether you actually WANT to loop or not
     # Check if the last part of the value is #?
-    async def get_param_multipliers(self, baseparams):
+    #async def get_param_multipliers(self, baseparams):
+    def get_param_multipliers(self, baseparams):
         # Example:
         # {'call': ['hello', 'hello4'], 'call2': ['hello2', 'hello3'], 'call3': '1'}
         # 
@@ -429,7 +433,8 @@ class AppBase:
 
             self.logger.info("[DEBUG] Newlength of array: %d. Lists: %s" % (newlength, all_lists))
             # Get the cartesian product of the arrays
-            cartesian = await self.cartesian_product(all_lists)
+            #cartesian = await self.cartesian_product(all_lists)
+            cartesian = self.cartesian_product(all_lists)
             newlist = []
             for item in cartesian:
                 newlist.append(list(item))
@@ -458,7 +463,8 @@ class AppBase:
             
 
     # Runs recursed versions with inner loops and such 
-    async def run_recursed_items(self, func, baseparams, loop_wrapper):
+    #async def run_recursed_items(self, func, baseparams, loop_wrapper):
+    def run_recursed_items(self, func, baseparams, loop_wrapper):
         #self.logger.info(f"RECURSED ITEMS: {baseparams}")
         has_loop = False
 
@@ -500,13 +506,15 @@ class AppBase:
         results = []
         if has_loop:
             self.logger.info(f"[DEBUG] Should run inner loop: {newparams}")
-            ret = await self.run_recursed_items(func, newparams, loop_wrapper)
+            #ret = await self.run_recursed_items(func, newparams, loop_wrapper)
+            ret = self.run_recursed_items(func, newparams, loop_wrapper)
         else:
             self.logger.info(f"[DEBUG] Should run multiplier check with params (inner): {newparams}")
             # 1. Find the loops that are required and create new multipliers
             # If here: check for multipliers within this scope.
             ret = []
-            param_multiplier = await self.get_param_multipliers(newparams)
+            #param_multiplier = await self.get_param_multipliers(newparams)
+            param_multiplier = self.get_param_multipliers(newparams)
 
             # FIXME: This does a deduplication of the data
             new_params = self.validate_unique_fields(param_multiplier)
@@ -553,7 +561,8 @@ class AppBase:
 
                     while True:
                         try:
-                            tmp = await func(**subparams)
+                            #tmp = await func(**subparams)
+                            tmp = func(**subparams)
                             break
                         except TypeError as e:
                             self.logger.info("BASE TYPEERROR: %s" % e)
@@ -580,6 +589,25 @@ class AppBase:
                         pass
 
                     tmp = "An error occured during execution: %s" % e 
+
+
+                # An attempt at decomposing coroutine results
+                try:
+                    if asyncio.iscoroutine(tmp):
+                        print("In coroutine")
+                        async def parse_value(tmp):
+                            value = await asyncio.gather(
+                                tmp 
+                            )
+
+                            return value[0]
+
+
+                        tmp = asyncio.run(parse_value(tmp))
+                    else:
+                        print("Not in coroutine")
+                except Exception as e:
+                    print("[ERROR] Failed to parse coroutine value for old app: {e}")
 
                 #self.logger.info("RET from execution: %s" % ret)
                 new_value = tmp
@@ -2124,7 +2152,7 @@ class AppBase:
         try:
             func = getattr(self, actionname, None)
             if func == None:
-                self.logger.debug(f"[DEBUG] Failed executing {actionname} because func is None.")
+                self.logger.debug(f"[DEBUG] Failed executing {actionname} because func is None (no function specified).")
                 self.action_result["status"] = "FAILURE" 
                 self.action_result["result"] = "Function %s doesn't exist." % actionname
             elif callable(func):
@@ -2584,6 +2612,23 @@ class AppBase:
                                         raise e
                                         #break
 
+                            # Forcing async wait in case of old apps that use async
+                            try:
+                                if asyncio.iscoroutine(newres):
+                                    print("In coroutine")
+                                    async def parse_value(newres):
+                                        value = await asyncio.gather(
+                                            newres 
+                                        )
+
+                                        return value[0]
+
+                                    newres = asyncio.run(parse_value(newres))
+                                else:
+                                    print("Not in coroutine")
+                            except Exception as e:
+                                print("[ERROR] Failed to parse coroutine value for old app: {e}")
+
                             self.logger.info("\n[INFO] Returned from execution with types %s" % type(newres))
                             #self.logger.info("\n[INFO] Returned from execution with %s of types %s" % (newres, type(newres)))#, newres)
                             if isinstance(newres, tuple):
@@ -2830,7 +2875,7 @@ class AppBase:
         return
 
     @classmethod
-    async def run(cls, action=""):
+    def run(cls, action=""):
         logging.basicConfig(format="{asctime} - {name} - {levelname}:{message}", style='{')
         logger = logging.getLogger(f"{cls.__name__}")
         logger.setLevel(logging.DEBUG)
@@ -2846,12 +2891,15 @@ class AppBase:
             logger.info(f"[DEBUG] Starting webserver on port {port} (same as exposed port)")
             from flask import Flask, request
             from waitress import serve
-            import asyncio
         
             flask_app = Flask(__name__)
         
-            @flask_app.route("/api/v1/run", methods=["POST"])
             #async def execute():
+            @flask_app.route("/api/v1/health", methods=["GET", "POST"])
+            def check_health():
+                return "OK"
+
+            @flask_app.route("/api/v1/run", methods=["POST"])
             def execute():
                 if request.method == "POST":
                     #print(request.get_json(force=True))
@@ -2894,18 +2942,18 @@ class AppBase:
                             app.url = requestdata["url"]
                             logger.info(f"BACKEND URL: {app.url}")
                         except:
-                            logger.info("Failed parsing url")
+                            logger.info("Failed parsing url (backend)")
 
                         # URL (worker)
                         try:
                             app.base_url = requestdata["base_url"]
                             logger.info(f"WORKER URL: {app.base_url}")
                         except:
-                            logger.info("Failed parsing base url")
+                            logger.info("Failed parsing base url (worker)")
                         
                         #await 
                         app.execute_action(app.action)
-                        logger.info("\n\n[DEBUG] Done awaiting app action running\n\n")
+                        logger.info("[DEBUG] Done awaiting app action running")
                     except Exception as e:
                         return {
                             "success": False,
@@ -2923,15 +2971,23 @@ class AppBase:
                     }
         
             logger.info(f"[DEBUG] Serving on port {port}")
-            serve(
-                flask_app, 
+            flask_app.run(
                 host="0.0.0.0", 
                 port=port, 
-                threads=8,
-                channel_timeout=30,
-                expose_tracebacks=True,
-                asyncore_use_poll=True,
+                threaded=True, 
+                processes=1, 
+                debug=False,
             )
+
+            #serve(
+            #    flask_app, 
+            #    host="0.0.0.0", 
+            #    port=port, 
+            #    threads=8,
+            #    channel_timeout=30,
+            #    expose_tracebacks=True,
+            #    asyncore_use_poll=True,
+            #)
             #######################
         else:
             # Has to start like this due to imports in other apps
@@ -2971,5 +3027,5 @@ class AppBase:
     #app.run(host="0.0.0.0", port=33334)
 
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(AppBase.run(), debug=True)
+    AppBase.run()
+    #asyncio.run(AppBase.run(), debug=True)

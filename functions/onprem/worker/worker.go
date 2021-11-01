@@ -54,6 +54,8 @@ var topClient *http.Client
 var data string
 var requestsSent = 0
 
+var hostname string
+
 /*
 var environments []string
 var parents map[string][]string
@@ -1919,7 +1921,7 @@ func validateFinished(workflowExecution shuffle.WorkflowExecution) {
 	//if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions)+extra {
 	if (len(environments) == 1 && requestsSent == 0 && len(workflowExecution.Results) >= 1) || (len(workflowExecution.Results) >= len(workflowExecution.Workflow.Actions) && len(workflowExecution.Workflow.Actions) > 0) {
 		requestsSent += 1
-		log.Printf("[FINISHED] Should send full result to %s", baseUrl)
+		log.Printf("[DEBUG] Should send full result to %s", baseUrl)
 
 		//data = fmt.Sprintf(`{"execution_id": "%s", "authorization": "%s"}`, executionId, authorization)
 		shutdownData, err := json.Marshal(workflowExecution)
@@ -2039,7 +2041,7 @@ func getAvailablePort() (net.Listener, error) {
 }
 
 func webserverSetup(workflowExecution shuffle.WorkflowExecution) net.Listener {
-	hostname := getLocalIP()
+	hostname = getLocalIP()
 
 	// FIXME: This MAY not work because of speed between first
 	// container being launched and port being assigned to webserver
@@ -2406,6 +2408,11 @@ func sendAppRequest(incomingUrl string, port int, action shuffle.Action, workflo
 	parsedRequest.Url = parsedRequest.BaseUrl
 	parsedRequest.BaseUrl = tmp
 
+	if len(hostname) > 0 {
+		log.Printf("[DEBUG] Changing hostname to local hostname in Docker network for WORKER URL")
+		parsedRequest.BaseUrl = fmt.Sprintf("http://%s:%d", hostname, baseport)
+	}
+
 	log.Printf("[DEBUG] Worker URL: %s, Backend URL: %s", parsedRequest.BaseUrl, parsedRequest.Url)
 
 	data, err := json.Marshal(parsedRequest)
@@ -2423,13 +2430,13 @@ func sendAppRequest(incomingUrl string, port int, action shuffle.Action, workflo
 
 	client := &http.Client{}
 	if err != nil {
-		log.Printf("[ERROR] Failed creating finishing request: %s", err)
+		log.Printf("[ERROR] Failed creating app run request: %s", err)
 		return err
 	}
 
 	newresp, err := client.Do(req)
 	if err != nil {
-		log.Printf("[ERROR] Error running finishing request: %s", err)
+		log.Printf("[ERROR] Error running app run request: %s", err)
 		return err
 	}
 
