@@ -2497,7 +2497,7 @@ const AngularWorkflow = (props) => {
 		}
 	}
 
-	var previouskey = 0
+	//var previouskey = 0
 	const handleKeyDown = (event) => {
 	    switch( event.keyCode ) {
 	    case 27:
@@ -2521,25 +2521,65 @@ const AngularWorkflow = (props) => {
 				console.log("RIGHT")
 	      break;
 			case 90:
-				if (previouskey === 17) {
+				if (event.ctrlKey) {
 					console.log("CTRL+Z")
 				}
 
 	      break;
 			case 67:
-				if (previouskey === 17) {
+				console.log(event)
+				if (event.ctrlKey) {
 					console.log("CTRL+C")
+					if (cy !== undefined) {
+						var cydata = cy.$(':selected').jsons()
+						if (cydata !== undefined && cydata !== null && cydata.length > 0) {
+							console.log(cydata)
 
+							const elementName = "copy_element_shuffle"
+							var copyText = document.getElementById(elementName)
+							if (copyText !== null && copyText !== undefined) {
+								const clipboard = navigator.clipboard
+								if (clipboard === undefined) {
+									alert.error("Can only copy over HTTPS (port 3443)")
+									return
+								} 
+
+								navigator.clipboard.writeText(JSON.stringify(cydata))
+								copyText.select()
+								copyText.setSelectionRange(0, 99999); /* For mobile devices */
+								document.execCommand("copy")
+								alert.success(`Copied ${cydata.length} elements`)
+							}
+						}
+					}
 				}
 	      break;
 			case 86:
-				if (previouskey === 17) {
+				if (event.ctrlKey) {
 					console.log("CTRL+V")
+
+					// The below parts are handled in the function handlePaste() 
+					/*
+					const clipboard = navigator.clipboard
+					if (clipboard === undefined || window === undefined || window === null) {
+						alert.error("Can only use cliboard over HTTPS (port 3443)")
+						return
+					} 
+
+					console.log("CLIPBOARD: ", window.clipboardData)
+					const pastedData = window.clipboardData.getData('Text');
+					console.log("PASTED: ", pastedData)
+
+					
+					//var tmpAuth = JSON.parse(JSON.stringify(appAuthentication))
+					var jsonvalid = true
+					var parsedjson = []
+					*/
 				}
 	      break;
 			case 88:
-				if (previouskey === 17) {
-					console.log("CTRL+V")
+				if (event.ctrlKey) {
+					console.log("CTRL+X")
 				}
 	      break;
 			case 83:
@@ -2549,18 +2589,44 @@ const AngularWorkflow = (props) => {
 				break;
 			case 65:
 				// As a poweruser myself, I found myself hitting this a few
-				// too many times to just edit text. Need a better bind
-
-	            break;
-	        default: 
-	            break;
+				// too many times to just edit text. Need a better bind, which does NOT work while inside a field
+	      break;
+	    default: 
+	    	break;
 	    }
 
-		previouskey = event.keyCode
+		//previouskey = event.keyCode
+	}
+
+	const handlePaste = (event) => {
+		event.preventDefault();
+		const clipboard = (event.originalEvent || event).clipboardData.getData('text/plain');
+		//console.log("Text: ", clipboard)
+		//window.document.execCommand('insertText', false, text);
+		//
+		try {
+			const parsedjson = JSON.parse(clipboard)
+			//console.log("Parsed: ", parsedjson)
+
+			for (var key in parsedjson) {
+				const item = parsedjson[key]
+				console.log("Adding: ", item)
+
+				cy.add({
+						group: item.group,
+						data: item.data, 
+						position: item.position,
+				})
+			}
+		} catch (e) {
+			console.log(e)
+			alert.info("Failed parsing clipboard: ", e)
+		}
 	}
 
 	const registerKeys = () => {
 		document.addEventListener("keydown", handleKeyDown);
+		document.addEventListener('paste', handlePaste)
 	}
 
 	const getEnvironments = () => {
