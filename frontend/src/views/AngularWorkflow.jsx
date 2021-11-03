@@ -1723,7 +1723,7 @@ const AngularWorkflow = (props) => {
 					}
 
 					workflow.start = parentNode.data('id')
-					setLastSaved(true)
+					setLastSaved(false)
 					parentNode.data('isStartNode', true) 
 				}
 
@@ -2161,6 +2161,7 @@ const AngularWorkflow = (props) => {
 
 	// Checks for errors in edges when they're added 
 	const onEdgeAdded = (event) => {
+		setLastSaved(false)
 		const edge = event.target.data()
 
 		var targetnode = workflow.triggers.findIndex(data => data.id === edge.target)
@@ -2280,6 +2281,7 @@ const AngularWorkflow = (props) => {
 	}
 
 	const onNodeAdded = (event) => {
+		setLastSaved(false)
 		const node = event.target
 		const nodedata = event.target.data()
 		if (nodedata.finished === false || (nodedata.id !== undefined && nodedata.is_valid === undefined)) {
@@ -2529,6 +2531,13 @@ const AngularWorkflow = (props) => {
 			case 67:
 				console.log(event)
 				if (event.ctrlKey) {
+					if (event.path !== undefined && event.path !== null && event.path.length > 0) {
+						if (event.path[0].localName !== "body") {
+							console.log("Skipping because body is not targeted")
+							return
+						}
+					}
+
 					console.log("CTRL+C")
 					if (cy !== undefined) {
 						var cydata = cy.$(':selected').jsons()
@@ -2556,7 +2565,7 @@ const AngularWorkflow = (props) => {
 	      break;
 			case 86:
 				if (event.ctrlKey) {
-					console.log("CTRL+V")
+					//console.log("CTRL+V")
 
 					// The below parts are handled in the function handlePaste() 
 					/*
@@ -2599,6 +2608,15 @@ const AngularWorkflow = (props) => {
 	}
 
 	const handlePaste = (event) => {
+		//console.log(event)
+		if (event.path !== undefined && event.path !== null && event.path.length > 0) {
+			//console.log(event.path[0])
+			if (event.path[0].localName !== "body") {
+				//console.log("Skipping because body is not targeted")
+				return
+			}
+		}
+
 		event.preventDefault();
 		const clipboard = (event.originalEvent || event).clipboardData.getData('text/plain');
 		//console.log("Text: ", clipboard)
@@ -2619,8 +2637,8 @@ const AngularWorkflow = (props) => {
 				})
 			}
 		} catch (e) {
-			console.log(e)
-			alert.info("Failed parsing clipboard: ", e)
+			console.log("Error pasting: ", e)
+			//alert.info("Failed parsing clipboard: ", e)
 		}
 	}
 
@@ -3235,7 +3253,6 @@ const AngularWorkflow = (props) => {
 	const removeNode = () => {
 		setSelectedApp({})
 		setSelectedAction({})
-
 		const selectedNode = cy.$(':selected')
 		if (selectedNode.data() === undefined) {
 			return
@@ -7762,15 +7779,18 @@ const AngularWorkflow = (props) => {
 		validate.result = JSON.parse(validate.result)
 	}
 
+	var draggingDisabled = false
 	const codePopoutModal = !codeModalOpen ? null : 
 		<Draggable
-
-			onStart={(e) => {
+			onStart={(event) => {
+				console.log(event)
+				console.log(event.srcElement)
 				if (!dragging) {
 					console.log("START")
 					setDragging(true)
 				}
 			}}
+			disabled={draggingDisabled}
 			onStop={(e) => {
 				console.log("STOP")
 				if (!dragging) {
@@ -7813,6 +7833,7 @@ const AngularWorkflow = (props) => {
 				}}
 			>
 
+			<span id="top_bar">
 				<Tooltip title="Find successful execution" placement="top" style={{zIndex: 10011}}>
 					<IconButton style={{zIndex: 5000, position: "absolute", top: 34, right: 170,}} onClick={(e) => {
 						e.preventDefault()
@@ -7866,6 +7887,7 @@ const AngularWorkflow = (props) => {
 						<CloseIcon style={{color: "white"}}/>
 					</IconButton>
 				</Tooltip>
+			</span>
 				<div style={{marginBottom: 40,}}>
 					<div style={{display: "flex", marginBottom: 15,}}>
 						{curapp === null ? null : <img alt={selectedResult.app_name} src={curapp === undefined ? "" : curapp.large_image} style={{marginRight: 20, width: imgsize, height: imgsize, border: `2px solid ${statusColor}`}} />}
