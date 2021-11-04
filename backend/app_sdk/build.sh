@@ -18,7 +18,7 @@ docker push ghcr.io/frikky/$NAME:$VERSION
 docker push ghcr.io/frikky/$NAME:nightly
 docker push ghcr.io/frikky/$NAME:latest
 
-#### BLACKARCH ###
+#### KALI ###
 NAME=shuffle-app_sdk_kali
 docker build . -f Dockerfile_kali -t frikky/shuffle:app_sdk_kali -t frikky/$NAME:$VERSION -t docker.pkg.github.com/frikky/shuffle/$NAME:$VERSION -t ghcr.io/frikky/$NAME:$VERSION
 
