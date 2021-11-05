@@ -45,6 +45,7 @@ var baseUrl = os.Getenv("BASE_URL")
 var appCallbackUrl = os.Getenv("BASE_URL")
 var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
 var dockerApiVersion = strings.ToLower(os.Getenv("DOCKER_API_VERSION"))
+var swarmNetworkName = os.Getenv("SHUFFLE_SWARM_NETWORK_NAME")
 var timezone = os.Getenv("TZ")
 var baseimagename = "frikky/shuffle"
 var registryName = "registry.hub.docker.com"
@@ -69,6 +70,7 @@ var startAction string
 var results []shuffle.ActionResult
 var allLogs map[string]string
 var containerIds []string
+var downloadedImages []string
 
 var executionRunning bool
 
@@ -228,6 +230,12 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		appName = strings.ToLower(appName)
 		log.Printf("[INFO] New appname: %s, image: %s", appName, image)
 
+		if !shuffle.ArrayContains(downloadedImages, image) {
+			log.Printf("[DEBUG] Downloading image %s from backend as it's first iteration", image)
+			downloadDockerImageBackend(&http.Client{}, image)
+			downloadedImages = append(downloadedImages, image)
+		}
+
 		exposedPort, err := findAppInfo(image, appName)
 		if err != nil {
 			log.Printf("[ERROR] Failed finding and creating port for %s: %s", appName, err)
@@ -338,9 +346,40 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 
 	err = cli.ContainerStart(ctx, cont.ID, types.ContainerStartOptions{})
 	if err != nil {
-		log.Printf("[ERROR] Failed to start container in environment %s: %s", environment, err)
-		//shutdown(workflowExecution, workflowExecution.Workflow.ID, true)
-		return err
+		if strings.Contains(fmt.Sprintf("%s", err), "cannot join network") {
+			parsedUuid := uuid.NewV4()
+			identifier = fmt.Sprintf("%s-%s-nonetwork", identifier, parsedUuid)
+			hostConfig = &container.HostConfig{
+				LogConfig: container.LogConfig{
+					Type:   "json-file",
+					Config: map[string]string{},
+				},
+				Resources: container.Resources{},
+			}
+
+			cont, err = cli.ContainerCreate(
+				context.Background(),
+				config,
+				hostConfig,
+				nil,
+				nil,
+				identifier,
+			)
+
+			if err != nil {
+				log.Printf("[ERROR] Container create error (3): %s", err)
+				return err
+			}
+
+			log.Printf("[DEBUG] Running secondary check without network with worker")
+			err = cli.ContainerStart(ctx, cont.ID, types.ContainerStartOptions{})
+		}
+
+		if err != nil {
+			log.Printf("[ERROR] Failed to start container in environment %s: %s", environment, err)
+			//shutdown(workflowExecution, workflowExecution.Workflow.ID, true)
+			return err
+		}
 	}
 
 	log.Printf("[INFO] Container %s was created for %s", cont.ID, identifier)
@@ -375,9 +414,12 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 				// FIXME: Re-add log tracking which can be sent to backend
 				//allLogs[actionId] = logs
 
-				if stats.ContainerJSONBase.State.Status == "exited" && !strings.Contains(logs, "Normal execution.") {
-					log.Printf("[WARNING] BAD Execution Logs for %s: %s", action.ID, logs)
-					exit = true
+				if stats.ContainerJSONBase.State.Status == "exited" && (!strings.Contains(logs, "Normal execution.") && !strings.Contains(logs, "indicates microservices")) {
+
+					if len(logs) > 10 {
+						log.Printf("[ERROR] BAD Execution Logs for %s: %s", action.ID, logs)
+						exit = true
+					}
 				}
 			}
 
@@ -2175,6 +2217,11 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 	}
 
 	//image := fmt.Sprintf("%s:%s", baseimagename, name)
+	networkName := "shuffle-executions"
+	if len(swarmNetworkName) > 0 {
+		networkName = swarmNetworkName
+	}
+
 	log.Printf("[DEBUG] Deploying app with name %s with image %s", name, image)
 	containerName := fmt.Sprintf(strings.Replace(name, ".", "-", -1))
 	serviceSpec := swarm.ServiceSpec{
@@ -2184,7 +2231,7 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 		},
 		Networks: []swarm.NetworkAttachmentConfig{
 			swarm.NetworkAttachmentConfig{
-				Target: "shuffle-executions",
+				Target: networkName,
 			},
 		},
 		EndpointSpec: &swarm.EndpointSpec{
@@ -2505,6 +2552,8 @@ func main() {
 	log.Printf("[INFO] Running with timezone %s and swarm config %#v", timezone, os.Getenv("SHUFFLE_SWARM_CONFIG"))
 	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" {
 		workflowExecution := shuffle.WorkflowExecution{}
+
+		// Forcing download just in case on the first iteration.
 		listener := webserverSetup(workflowExecution)
 		//err := executionInit(workflowExecution)
 		//if err != nil {
@@ -2523,7 +2572,6 @@ func main() {
 	}
 
 	//imageName := fmt.Sprintf("%s/%s:shuffle_openapi_1.0.0", registryName, baseimagename)
-	//downloadDockerImageBackend(client, imageName)
 
 	// WORKER_TESTING_WORKFLOW should be a workflow ID
 	authorization := ""

@@ -64,6 +64,7 @@ var cleanupEnv = strings.ToLower(os.Getenv("CLEANUP"))
 var timezone = os.Getenv("TZ")
 var containerName = os.Getenv("ORBORUS_CONTAINER_NAME")
 var swarmConfig = os.Getenv("SHUFFLE_SWARM_CONFIG")
+var swarmNetworkName = os.Getenv("SHUFFLE_SWARM_NETWORK_NAME")
 var executionIds = []string{}
 
 var dockercli *dockerclient.Client
@@ -141,6 +142,9 @@ func deployServiceWorkers(image string) {
 	if swarmConfig == "run" {
 		// frikky@debian:~/git/shuffle/functions/onprem/worker$ docker service create --replicas 5 --name shuffle-workers --env SHUFFLE_SWARM_CONFIG=run --publish published=33333,target=33333 ghcr.io/frikky/shuffle-worker:nightly
 		networkName := "shuffle-executions"
+		if len(swarmNetworkName) > 0 {
+			networkName = swarmNetworkName
+		}
 		ctx := context.Background()
 
 		//docker network create --driver=overlay workers
@@ -374,7 +378,7 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			log.Printf("[ERROR] Failed to start container in environment %s: %s", environment, err)
 			return err
 		} else {
-			log.Printf("[INFO] Container %s was created under environment %s", cont.ID, environment)
+			log.Printf("[INFO] Container %s was created under environment %s for execution %s", cont.ID, environment, executionRequest.ExecutionId)
 		}
 
 		//stats, err := cli.ContainerInspect(context.Background(), containerName)
@@ -469,7 +473,7 @@ func initializeImages() {
 
 	pullOptions := types.ImagePullOptions{}
 	for _, image := range images {
-		log.Printf("[INFO] Pulling image %s", image)
+		log.Printf("[DEBUG] Pulling image %s", image)
 		reader, err := dockercli.ImagePull(ctx, image, pullOptions)
 		if err != nil {
 			log.Printf("[ERROR] Failed getting image %s: %s", image, err)
@@ -477,7 +481,7 @@ func initializeImages() {
 		}
 
 		io.Copy(os.Stdout, reader)
-		log.Printf("[INFO] Successfully downloaded and built %s", image)
+		log.Printf("[DEBUG] Successfully downloaded and built %s", image)
 	}
 }
 
@@ -772,7 +776,7 @@ func main() {
 			err = deployWorker(workerImage, containerName, env, execution)
 			zombiecounter += 1
 			if err == nil {
-				log.Printf("[INFO] ExecutionID %s was deployed and to be removed from queue.", execution.ExecutionId)
+				//log.Printf("[DEBUG] ExecutionID %s was deployed and to be removed from queue.", execution.ExecutionId)
 				toBeRemoved.Data = append(toBeRemoved.Data, execution)
 				executionIds = append(executionIds, execution.ExecutionId)
 			} else {
