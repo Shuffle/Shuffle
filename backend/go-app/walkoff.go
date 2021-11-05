@@ -577,7 +577,7 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 
 	//setWorkflowqueuetest(id)
 	ctx := context.Background()
-	executionRequests, err := shuffle.GetWorkflowQueue(ctx, id)
+	executionRequests, err := shuffle.GetWorkflowQueue(ctx, id, 100)
 	if err != nil {
 		log.Printf("[WARNING] (1) Failed reading body for workflowqueue: %s", err)
 		resp.WriteHeader(401)
@@ -689,7 +689,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	executionRequests, err := shuffle.GetWorkflowQueue(ctx, id)
+	executionRequests, err := shuffle.GetWorkflowQueue(ctx, id, 100)
 	if err != nil {
 		// Skipping as this comes up over and over
 		//log.Printf("(2) Failed reading body for workflowqueue: %s", err)
@@ -838,7 +838,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "success"}`)))
 		return
 	} else {
-		//log.Printf("[WARNING] Handling other execution variant: %s", err)
+		log.Printf("[DEBUG] Handling other execution variant: %s", err)
 	}
 
 	var actionResult shuffle.ActionResult
@@ -962,9 +962,15 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	//log.Printf("BASE LENGTH: %d", len(workflowExecution.Results))
 	workflowExecution, dbSave, err := shuffle.ParsedExecutionResult(ctx, *workflowExecution, actionResult, false)
 	if err != nil {
-		log.Printf("[ERROR] Failed running of parsedexecution: %s", err)
+		b, suberr := json.Marshal(actionResult)
+		if suberr != nil {
+			log.Printf("[ERROR] Failed running of parsedexecution: %s", err)
+		} else {
+			log.Printf("[ERROR] Failed running of parsedexecution: %s. Data: %s", err, string(b))
+		}
+
 		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed getting execution"}`)))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed updating execution"}`)))
 		return
 	}
 
@@ -1284,7 +1290,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 	workflowExecution, execInfo, _, err := shuffle.PrepareWorkflowExecution(ctx, workflow, request)
 	if err != nil {
 		log.Printf("[WARNING] Failed in prepareExecution: %s", err)
-		return shuffle.WorkflowExecution{}, "", err
+		return shuffle.WorkflowExecution{}, fmt.Sprintf("Failed preparration: %s", err), err
 	}
 
 	err = imageCheckBuilder(execInfo.ImageNames)

@@ -646,7 +646,7 @@ const Workflows = (props) => {
 					for (var key in responseJson) {
 						for (var actionkey in responseJson[key].actions) {
 							const action = responseJson[key].actions[actionkey]
-							console.log("Action: ", action)
+							//console.log("Action: ", action)
 							if (actionnamelist.includes(action.app_name)) {
 								continue
 							}
@@ -656,7 +656,7 @@ const Workflows = (props) => {
 						}
 					}
 
-					console.log(parsedactionlist)
+					//console.log(parsedactionlist)
 					setActionImageList(parsedactionlist)
 				}
 

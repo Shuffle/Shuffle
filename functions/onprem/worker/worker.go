@@ -117,11 +117,11 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 			}
 		*/
 	} else {
-		log.Printf("[INFO] NOT cleaning up containers. IDS: %d, CLEANUP env: %s", len(containerIds), cleanupEnv)
+		log.Printf("[DEBUG] NOT cleaning up containers. IDS: %d, CLEANUP env: %s", len(containerIds), cleanupEnv)
 	}
 
 	if len(reason) > 0 && len(nodeId) > 0 {
-		log.Printf("[INFO] Running abort of workflow because it should be finished")
+		//log.Printf("[INFO] Running abort of workflow because it should be finished")
 
 		abortUrl := fmt.Sprintf("%s/api/v1/workflows/%s/executions/%s/abort", baseUrl, workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
 		path := fmt.Sprintf("?reason=%s", url.QueryEscape(reason))
@@ -134,7 +134,7 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 
 		//fmt.Println(url.QueryEscape(query))
 		abortUrl += path
-		log.Printf("[INFO] Abort URL: %s", abortUrl)
+		log.Printf("[DEBUG] Abort URL: %s", abortUrl)
 
 		req, err := http.NewRequest(
 			"GET",
@@ -178,7 +178,7 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 			}
 		}
 
-		log.Printf("[INFO] All App Logs: %#v", allLogs)
+		log.Printf("[DEBUG] All App Logs: %#v", allLogs)
 		_, err = client.Do(req)
 		if err != nil {
 			log.Printf("[WARNING] Failed abort request: %s", err)
@@ -301,7 +301,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 			})
 		}
 	} else {
-		log.Printf("[WARNING] Not mounting folders")
+		//log.Printf("[WARNING] Not mounting folders")
 	}
 
 	config := &container.Config{
@@ -397,7 +397,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 			//log.Printf("[INFO] Info for container: %#v", stats)
 			//log.Printf("%#v", stats.Config)
 			//log.Printf("%#v", stats.ContainerJSONBase.State)
-			log.Printf("[INFO] EXECUTION STATUS: %s", stats.ContainerJSONBase.State.Status)
+			log.Printf("[DEBUG] EXECUTION STATUS: %s", stats.ContainerJSONBase.State.Status)
 			logOptions := types.ContainerLogsOptions{
 				ShowStdout: true,
 			}
@@ -1352,7 +1352,7 @@ func executionInit(workflowExecution shuffle.WorkflowExecution) error {
 
 	// Setting up extra counter
 	for _, trigger := range workflowExecution.Workflow.Triggers {
-		//log.Printf("Appname trigger (0): %s", trigger.AppName)
+		log.Printf("[DEBUG] Appname trigger (0): %s", trigger.AppName)
 		if trigger.AppName == "User Input" || trigger.AppName == "Shuffle Workflow" {
 			extra += 1
 		}
@@ -2717,28 +2717,13 @@ func main() {
 				//wg.Wait()
 			} else {
 				log.Printf("\n\n[INFO] Running NON-OPTIMIZED execution for type %s with %d environment(s). This only happens when ran manually OR when running with subflows. Status: %s\n\n", workflowExecution.ExecutionSource, len(environments), workflowExecution.Status)
-				//err := executionInit(workflowExecution)
-				//if err != nil {
-				//	log.Printf("[INFO] Workflow setup failed: %s", workflowExecution.ExecutionId, err)
-				//	shutdown(workflowExecution, "", "", true)
-				//}
+				err := executionInit(workflowExecution)
+				if err != nil {
+					log.Printf("[INFO] Workflow setup failed: %s", workflowExecution.ExecutionId, err)
+					shutdown(workflowExecution, "", "", true)
+				}
 
 				// Trying to make worker into microservice~ :)
-				if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" {
-					listener := webserverSetup(workflowExecution)
-					err := executionInit(workflowExecution)
-					if err != nil {
-						log.Printf("[INFO] Workflow setup failed: %s", workflowExecution.ExecutionId, err)
-						log.Printf("[DEBUG] Shutting down (30)")
-						shutdown(workflowExecution, "", "", true)
-					}
-					go func() {
-						time.Sleep(time.Duration(1))
-						handleExecutionResult(workflowExecution)
-					}()
-
-					runWebserver(listener)
-				}
 			}
 		}
 

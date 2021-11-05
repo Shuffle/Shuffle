@@ -1003,6 +1003,24 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	// FIXME: This is bad, but we've had a lot of bugs with edit users, and this is the quick fix.
+	if userInfo.Role == "" && userInfo.ActiveOrg.Role == "" && parsedAdmin == "false" {
+		userInfo.Role = "admin"
+		userInfo.ActiveOrg.Role = "admin"
+		parsedAdmin = "true"
+
+		err = shuffle.SetUser(ctx, &userInfo, true)
+		if err != nil {
+			log.Printf("[WARNING] Automatically asigning user as admin to their org because they don't have a role at all failed: %s", err)
+			resp.WriteHeader(500)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		} else {
+			log.Printf("[DEBUG] Made user %s org-admin as they didn't have any role specified", err)
+
+		}
+	}
+
 	returnValue := shuffle.HandleInfo{
 		Success:   true,
 		Username:  userInfo.Username,
@@ -1017,6 +1035,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 				Expiration: expiration.Unix(),
 			},
 		},
+		EthInfo: userInfo.EthInfo,
 	}
 
 	returnData, err := json.Marshal(returnValue)
@@ -5785,6 +5804,7 @@ func initHandlers() {
 
 	// This is a new API that validates if a key has been seen before.
 	// Not sure what the best course of action is for it.
+	r.HandleFunc("/api/v1/environments/{key}/stop", shuffle.HandleStopExecutions).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/validate_app_values", shuffle.HandleKeyValueCheck).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/get_cache", shuffle.HandleGetCacheKey).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/set_cache", shuffle.HandleSetCacheKey).Methods("POST", "OPTIONS")

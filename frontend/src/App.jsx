@@ -38,6 +38,8 @@ import AlertTemplate from "./components/AlertTemplate";
 import { positions, Provider } from "react-alert";
 import {isMobile} from "react-device-detect";
 
+import detectEthereumProvider from '@metamask/detect-provider';
+
 // Production - backend proxy forwarding in nginx
 var globalUrl = window.location.origin
 
@@ -97,18 +99,113 @@ const App = (message, props) => {
 		})
 		.then(response => response.json())
 		.then(responseJson => {
+			var userInfo = {}
 			if (responseJson.success === true) {
 				console.log(responseJson)
-				setUserData(responseJson)
+
+				userInfo = responseJson
 				setIsLoggedIn(true)
 				//console.log("Cookies: ", cookies)
-
 				// Updating cookie every request
 				for (var key in responseJson["cookies"]) {
 					setCookie(responseJson["cookies"][key].key, responseJson["cookies"][key].value, { path: "/" })
 				}
 			}
+
+			// Handling Ethereum update 
+			detectEthereumProvider()
+			.then((provider) => {
+				if (provider) {
+					if (userInfo.eth_info.account !== undefined && userInfo.eth_info.account !== null && userInfo.eth_info.account.length === 0) {
+						userInfo.eth_info = {}
+						var method = "eth_requestAccounts"
+						var params = []
+						provider.request({
+							method: method,
+							params,
+						})
+						.then((result) => {
+							if (result !== undefined && result !== null && result.length > 0) {
+								userInfo.eth_info.account = result[0]
+
+								// Getting and setting balance for the current user
+								method = "eth_getBalance"
+								params = [
+									userInfo.eth_info.account,
+									"latest"
+								]
+								provider.request({
+									method: method,
+									params,
+								})
+								.then((result) => {
+									if (result !== undefined && result !== null && result.length > 0) {
+										userInfo.parsed_balance = result/1000000000000000000
+									} else {
+										alert.error("Couldn't find balance: ", result)
+									}
+									// The result varies by RPC method.
+									// For example, this method will return a transaction hash hexadecimal string on success.
+								})
+								.catch((error) => {
+									// If the request fails, the Promise will reject with an error.
+									alert.error("Failed getting info from ethereum API: "+error)
+								})
+							} else {
+								alert.error("Couldn't find any user: ", result)
+							}
+						})
+						.catch((error) => {
+							// If the request fails, the Promise will reject with an error.
+							alert.error("Failed getting info from ethereum API: "+error)
+						})
+					}
+				
+					// Register hooks here
+					provider.on('message', (event) => {
+						alert.info("Message from MetaMask: ", event)
+					})
+
+					provider.on('chainChanged', (chainId) => {
+						console.log("Changed chain to: ", chainId)
+		
+						method = "eth_getBalance"
+						params = [
+							userInfo.eth_info.account,
+							"latest"
+						]
+						provider.request({
+							method: method,
+							params,
+						})
+						.then((result) => {
+							console.log("Got result: ", result)
+							if (result !== undefined && result !== null) {
+								userInfo.eth_info.balance = result
+								userInfo.eth_info.parsed_balance = result/1000000000000000000
+								console.log("INFO: ", userInfo)
+								setUserData(userInfo)
+							} else {
+								alert.error("Couldn't find balance: ", result)
+							}
+						})
+						.catch((error) => {
+							// If the request fails, the Promise will reject with an error.
+							alert.error("Failed getting info from ethereum API: "+error)
+						})
+					})
+				}
+			})
+
+			if (userInfo.eth_info !== undefined && userInfo.eth_info.balance !== undefined) { 
+				console.log(userInfo.eth_info.balance)
+				userInfo.eth_info.parsed_balance = userInfo.eth_info.balance/1000000000000000000
+			} 
+
+			console.log("USER: ", userInfo)
+			setUserData(userInfo)
 			setIsLoaded(true)
+
 		})
 		.catch(error => {
 			setIsLoaded(true)
@@ -133,7 +230,9 @@ const App = (message, props) => {
 			<Route exact path="/login" render={props => <LoginPage  isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} checkLogin={checkLogin} {...props} />} />
 			<Route exact path="/admin" render={props => <Admin userdata={userdata} isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
 			<Route exact path="/admin/:key" render={props => <Admin isLoggedIn={isLoggedIn} setIsLoggedIn={setIsLoggedIn} register={true} isLoaded={isLoaded} globalUrl={globalUrl} setCookie={setCookie} cookies={cookies} {...props} />} />
-			<Route exact path="/settings" render={props => <SettingsPage isLoaded={isLoaded} userdata={userdata} globalUrl={globalUrl} {...props} />} />
+			{userdata.id !== undefined ? 
+				<Route exact path="/settings" render={props => <SettingsPage isLoaded={isLoaded} setUserData={setUserData} userdata={userdata} globalUrl={globalUrl} {...props} />} />
+			: null}
 			<Route exact path="/AdminSetup" render={props => <AdminSetup isLoaded={isLoaded} userdata={userdata} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/webhooks" render={props => <Webhooks isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />
 			<Route exact path="/webhooks/:key" render={props => <EditWebhook isLoaded={isLoaded} globalUrl={globalUrl} {...props} />} />

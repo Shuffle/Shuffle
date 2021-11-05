@@ -16,7 +16,7 @@ services:
     depends_on:
       - backend
   backend:
-    #build: ./backend
+    build: ./backend
     image: ghcr.io/frikky/shuffle-backend:nightly
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
@@ -48,7 +48,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - SHUFFLE_APP_SDK_VERSION=0.8.97
-      - SHUFFLE_WORKER_VERSION=0.9.30
+      - SHUFFLE_WORKER_VERSION=0.9.25
       - ORG_ID=${ORG_ID}
       - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
       - BASE_URL=http://${OUTER_HOSTNAME}:${BACKEND_PORT}

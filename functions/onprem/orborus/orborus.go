@@ -217,6 +217,7 @@ func deployServiceWorkers(image string) {
 					Image: image,
 					Env: []string{
 						fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", os.Getenv("SHUFFLE_SWARM_CONFIG")),
+						fmt.Sprintf("SHUFFLE_SWARM_NETWORK_NAME=%s", networkName),
 					},
 					Mounts: []mount.Mount{
 						mount.Mount{

@@ -417,10 +417,10 @@ const Apps = (props) => {
 				}
 			}}>
 				<Grid container style={{margin: 10, flex: "10", maxHeight: 110, overflow: "hidden",}}>
-					<ButtonBase style={{backgroundColor: theme.palette.inputColor, border: 3}}>
+					<ButtonBase style={{backgroundColor: theme.palette.surfaceColor, maxHeight:100, marginTop: 5,}}>
 						{imageline}
 					</ButtonBase>
-					<div style={{marginLeft: "10px", marginTop: "5px", marginBottom: "5px", width: boxWidth, backgroundColor: boxColor}}/>
+					<div style={{marginLeft: "10px", marginTop: 5, marginBottom: 5, width: boxWidth, backgroundColor: boxColor}}/>
 					<Grid container style={{margin: "0px 0px 10px 10px", flex: "1"}}>
 						<Grid style={{display: "flex", flexDirection: "column", }}>
 							<Grid item style={{flex: "1"}}>
@@ -648,7 +648,7 @@ const Apps = (props) => {
 		var baseInfo = newAppname.length > 0 ?
 			<div style={{position: "relative"}}>
 				<div style={{display: "flex"}}>
-					<div style={{marginRight: 15, marginTop: 10}}>
+					<div style={{marginRight: 15, marginTop: 10, backgroundColor: theme.palette.surfaceColor,}}>
 						{imageline}
 					</div>
 					<div style={{maxWidth: "85%", overflow: "hidden"}}>
@@ -846,7 +846,7 @@ const Apps = (props) => {
 		return(
 			<div style={{}}>
 				<Paper square style={uploadViewPaperStyle}>
-					<div style={{width: "100%", margin: 25}}>
+					<div style={{margin: 25}}>
 						<h2>App Creator</h2>
 						<a rel="noopener noreferrer" href="https://shuffler.io/docs/apps" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">How it works</a>
 						&nbsp;- <a rel="noopener noreferrer" href="https://github.com/frikky/security-openapis" style={{textDecoration: "none", color: "#f85a3e"}} target="_blank">Security API's</a>
@@ -885,7 +885,7 @@ const Apps = (props) => {
 					</div>
 				</Paper>
 				<Paper square style={uploadViewPaperStyle}>
-					<div style={{width: "100%", margin: 25}}>
+					<div style={{margin: 25}}>
 						{baseInfo}
 					</div>
 				</Paper>
@@ -1683,7 +1683,6 @@ const Apps = (props) => {
 			</FormControl>
 		</Dialog>
 		: null
-
 
 	const loadedCheck = isLoaded && !firstrequest ?  
 		<div>

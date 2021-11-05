@@ -685,6 +685,31 @@ const Admin = (props) => {
 		})
 	}
 
+	const abortEnvironmentWorkflows = (environment) => {
+		console.log("Aborting all workflows started >10 minutes ago, not finished") 
+
+		fetch(`${globalUrl}/api/v1/environments/${environment}/stop`, {
+				method: 'GET',
+				credentials: "include",
+			})
+			.then((response) => {
+				if (response.status !== 200) {
+					console.log("Status not 200 for apps :O!")
+					return
+				}
+
+				return response.json()
+			})
+			.then((responseJson) => {
+				console.log("Got response for execution: ", responseJson)
+				//console.log("RESPONSE: ", responseJson)
+				//setFiles(responseJson)
+			})
+			.catch(error => {
+				//alert.error(error.toString())
+			})
+	}
+
 	const deleteEnvironment = (environment) => {
 		// FIXME - add some check here ROFL
 		//const name = environment.name
@@ -1375,6 +1400,7 @@ const Admin = (props) => {
 							style={{ maxHeight: 50, flex: 1 }}
 							variant="outlined"
 							color="primary"
+							disabled={selectedUser.role === "admin"}
 							onClick={() => {
 								setUser(selectedUser.id, "username", newUsername)
 							}}
@@ -1410,6 +1436,7 @@ const Admin = (props) => {
 							style={{ maxHeight: 50, flex: 1 }}
 							variant="outlined"
 							color="primary"
+							disabled={selectedUser.role === "admin"}
 							onClick={() => onPasswordChange()}
 						>
 							Submit
@@ -1421,6 +1448,7 @@ const Admin = (props) => {
 					style={{}}
 					variant="outlined"
 					color="primary"
+					disabled={selectedUser.role === "admin"}
 					onClick={() => deleteUser(selectedUser)}
 				>
 					{selectedUser.active ? "Deactivate" : "Activate"}
@@ -1429,6 +1457,7 @@ const Admin = (props) => {
 					style={{}}
 					variant="outlined"
 					color="primary"
+					disabled={selectedUser.role === "admin" && selectedUser.username !== userdata.username}
 					onClick={() => generateApikey(selectedUser)}
 				>
 					Get new API key
@@ -2148,6 +2177,7 @@ const Admin = (props) => {
 						onClick={() => {
 							generateApikey(data)
 						}}
+						disabled={data.role === "admin" && data.username !== userdata.username}
 						variant="outlined"
 						color="primary"
 					>
@@ -2777,14 +2807,20 @@ const Admin = (props) => {
 								{environment.default ? 
 									null
 									: 
-									<Button variant="outlined" style={{borderRadius: "0px"}} onClick={() => setDefaultEnvironment(environment)} color="primary">Set default</Button>
+									<Button variant="outlined" style={{borderRadius: "0px"}} onClick={() => setDefaultEnvironment(environment)} color="primary">Make default</Button>
 								}
 							</ListItemText>
 							<ListItemText
 								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}
 							>
-								<Button variant={environment.archived ? "contained" : "outlined"} style={{borderRadius: "0px"}} onClick={() => deleteEnvironment(environment)} color="primary">{environment.archived ? "Activate" : "Disable"}</Button>
-								{/*<Button disabled={environment.archived} variant="outlined" style={{borderRadius: "0px"}} onClick={() => flushQueue(environment.Name)} color="primary">Flush Queue</Button>*/}
+								<div style={{display: "flex"}}>
+									<Button variant={environment.archived ? "contained" : "outlined"} style={{borderRadius: "0px"}} onClick={() => deleteEnvironment(environment)} color="primary">{environment.archived ? "Activate" : "Disable"}</Button>
+									{/*<Button variant={environment.archived ? "contained" : "outlined"} style={{borderRadius: "0px"}} onClick={() => {
+										console.log("Should clear executions")
+										abortEnvironmentWorkflows(environment)
+									}} color="primary">Clear executions</Button>*/}
+									{/*<Button disabled={environment.archived} variant="outlined" style={{borderRadius: "0px"}} onClick={() => flushQueue(environment.Name)} color="primary">Flush Queue</Button>*/}
+								</div>
 							</ListItemText>
 							<ListItemText
 								style={{minWidth: 150, maxWidth: 150, overflow: "hidden"}}

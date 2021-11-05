@@ -1,12 +1,14 @@
 import React, {useState, useEffect} from 'react';
 
-import {Paper, Button, Divider, TextField} from '@material-ui/core';
+import {Typography, Paper, Button, Divider, TextField} from '@material-ui/core';
 import {Link} from 'react-router-dom';
 import { useAlert } from "react-alert";
 import { useTheme } from '@material-ui/core/styles';
 
+import detectEthereumProvider from '@metamask/detect-provider';
+
 const Settings = (props) => {
-  const { globalUrl, isLoaded, userdata, } = props;
+  const { globalUrl, isLoaded, userdata, setUserData } = props;
 	const theme = useTheme();
 	const alert = useAlert()
 
@@ -29,8 +31,36 @@ const Settings = (props) => {
 
 	const [firstrequest, setFirstRequest] = useState(true)
 
-	const [userInfo, ] = useState(userdata)
 	const [userSettings, setUserSettings] = useState({})
+	console.log(userdata)
+
+
+	/*
+	const [userdata.eth_info, setEthInfo] = useState(userdata.eth_info !== undefined && userdata.eth_info.account !== undefined && userdata.eth_info.account.length > 0 ? userdata.eth_info : {
+		"account": "",
+		"balance": "", 
+	})
+	*/
+
+	/*
+	console.log(userdata.eth_info)
+	if (userdata.eth_info.account.length === 0 && userdata.eth_info !== undefined && userdata.eth_info.account !== undefined && userdata.eth_info.account.length > 0) {
+		setEthInfo(userdata.eth_info)
+	} else if (userdata.eth_info.balance.length > 0 && userdata.eth_info.parsed_balance === undefined) {
+		//console.log(window.ethereum)
+		//console.log(window.ethereum.utils.formatEther(userdata.eth_info.balance))
+		const parsed_balance = parseInt(userdata.eth_info.balance, 16)/1000000000000000000
+		console.log("Parsed balance: ", parsed_balance)
+		userdata.eth_info.parsed_balance = parsed_balance
+		userdata.eth_info.parsed_balance = parsed_balance
+		setEthInfo(userdata.eth_info)
+	} else if (userdata.eth_info !== undefined && userdata.eth_info.balance !== userdata.eth_info.balance) {
+		console.log("Updating balance: ", userdata.eth_info)
+		setEthInfo(userdata.eth_info)
+	}
+	*/
+
+	//Returns the value from a storage position at a given address.
 	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" 
 
 	const bodyDivStyle = {
@@ -133,29 +163,86 @@ const Settings = (props) => {
 
 	// Gotta be a better way of doing this rofl
 	const setFields = () => {
-		if (userInfo.username !== undefined) {
-			if (userInfo.username.length > 0) {
-				setUsername(userInfo.username)
+		if (userdata.username !== undefined) {
+			if (userdata.username.length > 0) {
+				setUsername(userdata.username)
 			}
-			//if (userInfo.firstname.length > 0) {
-			//	setFirstname(userInfo.firstname)
+			//if (userdata.firstname.length > 0) {
+			//	setFirstname(userdata.firstname)
 			//}
-			//if (userInfo.lastname.length > 0) {
-			//	setLastname(userInfo.lastname)
+			//if (userdata.lastname.length > 0) {
+			//	setLastname(userdata.lastname)
 			//}
-			//if (userInfo.title.length > 0) {
-			//	setTitle(userInfo.title)
+			//if (userdata.title.length > 0) {
+			//	setTitle(userdata.title)
 			//}
-			//if (userInfo.companyname.length > 0) {
-			//	setCompanyname(userInfo.companyname)
+			//if (userdata.companyname.length > 0) {
+			//	setCompanyname(userdata.companyname)
 			//}
-			//if (userInfo.phone.length > 0) {
-			//	setPhone(userInfo.phone)
+			//if (userdata.phone.length > 0) {
+			//	setPhone(userdata.phone)
 			//}
-			//if (userInfo.email.length > 0) {
-			//	setEmail(userInfo.email)
+			//if (userdata.email.length > 0) {
+			//	setEmail(userdata.email)
 			//}
 		}
+	}
+
+	const registerProviders = (userdata) => {
+		// Register hooks here
+		detectEthereumProvider()
+		.then((provider) => {
+			if (provider) {
+
+				if (!provider.isMetaMask) {
+					alert.error("Only MetaMask is supported as of now.")
+					return
+				}
+
+				// Find the ethereum network
+				// Get the users' account(s)
+				//alert.info("Connecting to MetaMask")
+				//console.log("Connected: ", provider.isConnected())
+
+				if (!provider.isConnected()) {
+					alert.error("Metamask is not connected.")
+					return
+				}
+
+				provider.on('message', (event) => {
+					alert.info("Ethereum message: ", event)
+				})
+
+				provider.on('chainChanged', (chainId) => {
+					console.log("Changed chain to: ", chainId)
+
+					const method = "eth_getBalance"
+					const params = [
+						userdata.eth_info.account,
+						"latest"
+					]
+					provider.request({
+						method: method,
+						params,
+					})
+					.then((result) => {
+						console.log("Got result: ", result)
+						if (result !== undefined && result !== null) {
+							userdata.eth_info.balance = result
+							userdata.eth_info.parsed_balance = result/1000000000000000000
+							console.log("INFO: ", userdata)
+							setUserData(userdata)
+						} else {
+							alert.error("Couldn't find balance: ", result)
+						}
+					})
+					.catch((error) => {
+						// If the request fails, the Promise will reject with an error.
+						alert.error("Failed getting info from ethereum API: "+error)
+					})
+				})
+			}
+		})
 	}
 
 	// This should "always" have data
@@ -163,9 +250,10 @@ const Settings = (props) => {
 		if (firstrequest) {
 			setFirstRequest(false)
 			getSettings()
+			//registerProviders(userdata)
 		}
 
-		if (Object.getOwnPropertyNames(userInfo).length > 0 && (username === "" && email === "")) { 
+		if (Object.getOwnPropertyNames(userdata).length > 0 && (username === "" && email === "")) { 
 			setFields()
 		} 
 	})
@@ -440,8 +528,212 @@ const Settings = (props) => {
 					Submit password change
 					</Button>
 					<h3>{passwordFormMessage}</h3>
+					<Divider style={{marginTop: "40px"}}/>
+					{userdata !== undefined && userdata.eth_info !== undefined && userdata.eth_info.account.length > 0 ? 
+						<Button
+							style={{height: 40, marginTop: 10}}
+							variant="contained"
+							color="primary"
+							fullWidth={true}
+							onClick={() => {
+								handleEthereumTokenCreation()
+							}}
+						>
+							Create token
+						</Button>
+					: 
+						<Button
+							style={{height: 40, marginTop: 10}}
+							variant="outlined"
+							color="primary"
+							fullWidth={true}
+							onClick={() => {
+								handleEthereumConnection()
+							}}
+						>
+							Authenticate
+						</Button>
+					}
+
+					{userdata.eth_info !== undefined && userdata.eth_info.account !== undefined && userdata.eth_info.account.length > 0 && userdata.eth_info.parsed_balance !== undefined ?
+						<div style={{marginTop: 10, display: "flex",}}>
+							<Paper square style={{borderRadius: theme.palette.borderRadius, padding: 50, backgroundColor: theme.palette.inputColor}}>
+								<Typography>
+									<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Ethereum-icon-purple.svg/480px-Ethereum-icon-purple.svg.png" style={{height: 30 }}/>
+								</Typography>
+								<Typography>
+									{/*window.ethereum.fromWei(userdata.eth_info.balance, "ether")*/}
+									 {userdata.eth_info.parsed_balance.toFixed(4)} ETH
+								</Typography>
+							</Paper>
+						</div>
+					: null}
 				</Paper>
 			</div>
+
+
+	/*
+		0x1	1	Ethereum Main Network (Mainnet)
+		0x3	3	Ropsten Test Network
+		0x4	4	Rinkeby Test Network
+		0x5	5	Goerli Test Network
+		0x2a	42	Kovan Test Network
+	*/
+	const setUser = (userId, field, value) => {
+		const data = { "user_id": userId }
+		data[field] = value
+
+		fetch(globalUrl + "/api/v1/users/updateuser", {
+			method: 'PUT',
+			headers: {
+				'Content-Type': 'application/json',
+				'Accept': 'application/json',
+			},
+			body: JSON.stringify(data),
+			credentials: "include",
+		})
+			.then((response) => {
+				if (response.status !== 200) {
+					console.log("Status not 200 for WORKFLOW EXECUTION :O!")
+				}
+
+				return response.json()
+			})
+			.then((responseJson) => {
+				if (!responseJson.success && responseJson.reason !== undefined) {
+					alert.error("Failed updating user: " + responseJson.reason)
+				}
+			})
+			.catch(error => {
+				console.log(error)
+			});
+	}
+
+	const handleEthereumTokenCreation = async () => {
+		const provider = await detectEthereumProvider();
+		if (!provider) {
+		  console.log('Please install MetaMask!');
+			alert.error("Please download the MetaMask browser extension to authenticate fully!")
+			return
+		}
+
+		
+		if (!provider.isMetaMask) {
+			alert.error("Only MetaMask is supported as of now.")
+			return
+		}
+
+		if (!provider.isConnected()) {
+			alert.error("Metamask is not connected.")
+			return
+		}
+
+		console.log("Should make a token")
+	}
+
+	const handleEthereumConnection = async () => {
+		const provider = await detectEthereumProvider();
+		if (!provider) {
+		  console.log('Please install MetaMask!');
+			alert.error("Please download the MetaMask browser extension to authenticate fully!")
+			return
+		}
+
+		
+		if (!provider.isMetaMask) {
+			alert.error("Only MetaMask is supported as of now.")
+			return
+		}
+
+		// Find the ethereum network
+		// Get the users' account(s)
+		//alert.info("Connecting to MetaMask")
+		//console.log("Connected: ", provider.isConnected())
+
+		if (!provider.isConnected()) {
+			alert.error("Metamask is not connected.")
+			return
+		}
+
+		provider.on('message', (event) => {
+			alert.info("Ethereum message: ", event)
+		})
+
+		/*
+		params: [
+			{
+				from: '0xb60e8dd61c5d32be8058bb8eb970870f07233155',
+				to: '0xd46e8dd67c5d32be8058bb8eb970870f07244567',
+				gas: '0x76c0', // 30400
+				gasPrice: '0x9184e72a000', // 10000000000000
+				value: '0x9184e72a', // 2441406250
+				data:
+					'0xd46e8dd67c5d32be8d46e8dd67c5d32be8058bb8eb970870f072445675058bb8eb970870f072445675',
+			},
+		]
+		*/
+
+		// https://docs.metamask.io/guide/rpc-api.html
+		// Gets accounts - requires previous permissions	
+		//const method = "eth_accounts"
+		//const params = []
+		//
+		// Asks for permission, and gets the accounts 
+		var method = "eth_requestAccounts"
+		var params = []
+		provider.request({
+			method: method,
+			params,
+		})
+  	.then((result) => {
+			if (result !== undefined && result !== null && result.length > 0) {
+				userdata.eth_info.account = result[0]
+
+				// Getting and setting balance for the current user
+				method = "eth_getBalance"
+				params = [
+					userdata.eth_info.account,
+					"latest"
+				]
+				provider.request({
+					method: method,
+					params,
+				})
+				.then((result) => {
+					if (result !== undefined && result !== null && result.length > 0) {
+						userdata.eth_info.balance = result
+						userdata.eth_info.parsed_balance = result/1000000000000000000
+						console.log(userdata.eth_info)
+						setUserData(userdata.eth_info)
+
+						// Updating
+						//if (userdata.eth_info !== userdata.userdata.eth_info) {
+						//}
+
+						setUser(userdata.id, "eth_info", userdata.eth_info) 
+						userdata.userdata.eth_info = userdata.eth_info
+					} else {
+						alert.error("Couldn't find balance: ", result)
+					}
+					// The result varies by RPC method.
+					// For example, this method will return a transaction hash hexadecimal string on success.
+				})
+				.catch((error) => {
+					// If the request fails, the Promise will reject with an error.
+					//setEthInfo(userdata.eth_info)
+					alert.error("Failed getting info from ethereum API: "+error)
+				})
+			} else {
+				alert.error("Couldn't find any user: ", result)
+			}
+  	})
+  	.catch((error) => {
+  	  // If the request fails, the Promise will reject with an error.
+			alert.error("Failed getting info from ethereum API: "+error)
+  	})
+
+		// Gets the users' balance in WEI (one quintilionth ETH)
+	}
 
 	const loadedCheck = isLoaded && !firstrequest ?  
 		<div style={bodyDivStyle}>
