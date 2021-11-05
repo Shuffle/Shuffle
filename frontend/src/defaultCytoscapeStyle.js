@@ -15,6 +15,7 @@ const data = [{
 				'border-width': '1px',
 				'text-margin-x': '10px',
 				'cursor': 'pointer',
+				"z-index": 5001,
 			}
 		},
 		{
@@ -31,6 +32,7 @@ const data = [{
 				"line-fill": "linear-gradient",
 				"line-gradient-stop-positions": ["0.0", "100"],
 				"line-gradient-stop-colors": ["grey", "grey"],
+				"z-index": 5001,
 			},
 		},
 		{
@@ -43,6 +45,23 @@ const data = [{
 				'background-height': '100%',
 				'border-radius': '5px',
 				'z-index': 5001,
+			},
+		},
+		{
+			selector: `node[type="COMMENT"]`,
+			css: {
+				'shape': 'roundrectangle',
+				'background-color': 'data(backgroundcolor)',
+				'border-color': '#ffffff',
+				'color': 'data(color)',
+				'width': 'data(width)',
+				'height': 'data(height)',
+				'border-radius': '5px',
+				"background-opacity": "0.5",
+				'padding': '0px',
+				'margin': '0px',
+				'text-margin-x': '0px',
+				'z-index': 4999,
 			},
 		},
 		{

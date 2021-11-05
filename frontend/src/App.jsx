@@ -198,11 +198,11 @@ const App = (message, props) => {
 			})
 
 			if (userInfo.eth_info !== undefined && userInfo.eth_info.balance !== undefined) { 
-				console.log(userInfo.eth_info.balance)
+				//console.log(userInfo.eth_info.balance)
 				userInfo.eth_info.parsed_balance = userInfo.eth_info.balance/1000000000000000000
 			} 
 
-			console.log("USER: ", userInfo)
+			//console.log("USER: ", userInfo)
 			setUserData(userInfo)
 			setIsLoaded(true)
 

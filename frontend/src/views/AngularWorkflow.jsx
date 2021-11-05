@@ -39,7 +39,9 @@ import {TextField,
 		Checkbox, 
 		Breadcrumbs, 
 		CircularProgress, 
-		Switch} from '@material-ui/core';
+		Switch,
+	} from '@material-ui/core';
+		
 import {OpenInNew as OpenInNewIcon,
 		Undo as UndoIcon,  
 		GetApp as GetAppIcon, 
@@ -68,7 +70,9 @@ import {OpenInNew as OpenInNewIcon,
 		Settings as SettingsIcon, 
 		LockOpen as LockOpenIcon, 
 		ExpandMore as ExpandMoreIcon, 
-		VpnKey as VpnKeyIcon} from '@material-ui/icons';
+		VpnKey as VpnKeyIcon,
+		AddComment as AddCommentIcon,
+} from '@material-ui/icons';
 
 import * as cytoscape from 'cytoscape';
 import * as edgehandles from 'cytoscape-edgehandles';
@@ -246,6 +250,7 @@ const AngularWorkflow = (props) => {
 	})
 
 	// Trigger stuff
+	const [selectedComment, setSelectedComment] = React.useState({});
 	const [selectedTrigger, setSelectedTrigger] = React.useState({});
 	const [selectedTriggerIndex, setSelectedTriggerIndex] = React.useState({});
 	const [selectedEdge, setSelectedEdge] = React.useState({});
@@ -778,6 +783,7 @@ const AngularWorkflow = (props) => {
 		var newTriggers = []
 		var newBranches = []
 		var newVBranches = []
+		var newComments = []
 		for (var key in cyelements) {
 			if (cyelements[key].data === undefined) {
 				continue
@@ -852,6 +858,19 @@ const AngularWorkflow = (props) => {
 					curworkflowTrigger.position = cyelements[key].position()
 
 					newTriggers.push(curworkflowTrigger)
+				} else if (type === "COMMENT") {
+					if (useworkflow.comments === undefined) {
+						useworkflow.comments = []
+					}
+
+					var curworkflowComment = useworkflow.comments.find(a => a.id === cyelements[key].data()["id"])
+					if (curworkflowComment === undefined)  {
+						curworkflowComment = cyelements[key].data() 
+					} 
+
+					curworkflowComment.position = cyelements[key].position()
+
+					newComments.push(curworkflowComment)
 				} else {
 					alert.info("No handler for type: "+type)
 				}
@@ -861,6 +880,7 @@ const AngularWorkflow = (props) => {
 		useworkflow.actions = newActions
 		useworkflow.triggers = newTriggers
 		useworkflow.branches = newBranches
+		useworkflow.comments = newComments 
 		useworkflow.visual_branches = newVBranches
 
 		// Errors are backend defined
@@ -1639,12 +1659,28 @@ const AngularWorkflow = (props) => {
 				}
 			}
 		} else {
-			console.log("No appid? ", nodedata)
+			//console.log("No appid? ", nodedata)
 		}
 
 		if (nodedata.id === selectedAction.id) {
 			return
 		}
+
+		/*
+		// Tried looking for the closest node by position. aStar path not working entirely.
+		console.log("NODE: ", event.target)
+		const closestNode = cy.elements().aStar({
+			root: nodedata.id,
+			goal: 'node',
+			directed: false,
+		})
+
+		if (closestNode.found) {
+			console.log("No closest node found for: ", nodedata.id)
+		} else {
+			console.log("Closest: ", closestNode)
+		}
+		*/
 
 		if (originalLocation.x === 0 && originalLocation.y === 0 && nodedata.position !== undefined) {
 			originalLocation.x = nodedata.position.x 
@@ -1949,14 +1985,15 @@ const AngularWorkflow = (props) => {
 			setSelectedTriggerIndex(trigger_index)
 			setSelectedTrigger(data)
 			setSelectedActionEnvironment(data.env)
+		} else if (data.type === "COMMENT") {
+			setSelectedComment(data)
 		} else {
 			alert.error("Can't handle "+data.type)
+			return
 		}
 
 		setRightSideBarOpen(true)
 		setLastSaved(false)
-
-
 		setScrollConfig({
 			top: 0,
 			left: 0,
@@ -2530,7 +2567,7 @@ const AngularWorkflow = (props) => {
 	      break;
 			case 67:
 				console.log(event)
-				if (event.ctrlKey) {
+				if (event.ctrlKey && !event.shiftKey) {
 					if (event.path !== undefined && event.path !== null && event.path.length > 0) {
 						if (event.path[0].localName !== "body") {
 							console.log("Skipping because body is not targeted")
@@ -2746,7 +2783,7 @@ const AngularWorkflow = (props) => {
 			setEstablished(true)
 			// Validate if the node is just a node lol
 			cy.edgehandles({
-				handleNodes: (el) => el.isNode() && !el.data("isButton") && !el.data("isDescriptor"),
+				handleNodes: (el) => el.isNode() && !el.data("isButton") && !el.data("isDescriptor") && !el.data("type") === "COMMENT",
 				preview: false,
 				toggleOffOnLeave: false,
 				loopAllowed: function( node ){
@@ -2996,11 +3033,14 @@ const AngularWorkflow = (props) => {
 		}
 
 
-		const parsedStyle = {
+		var parsedStyle = {
 			"border-width": "7px",
 			"border-opacity": ".7",
 			'font-size': '25px',
-			'color': 'white',
+		}
+
+		if (nodedata.type !== "COMMENT") {
+			parsedStyle.color = 'white'
 		}
 
 		event.target.animate({
@@ -3141,8 +3181,22 @@ const AngularWorkflow = (props) => {
 			return node;
 		})
 
+		var comments = []
+		if (workflow.comments !== undefined && workflow.comments !== null && workflow.comments.length > 0) {
+			comments = workflow.comments.map(comment => {
+				const node = {}
+				node.position = comment.position
+				node.data = comment 
+
+				node.data._id = comment["id"]
+				node.data.type = "COMMENT"
+
+				return node;
+			})
+		}
+
 		// FIXME - tmp branch update
-		var insertedNodes = [].concat(actions, triggers, decoratorNodes)
+		var insertedNodes = [].concat(actions, triggers, decoratorNodes, comments)
 		insertedNodes = insertedNodes.filter(node => node !== null)
 
 		var edges = workflow.branches.map((branch, index) => {
@@ -6029,6 +6083,173 @@ const AngularWorkflow = (props) => {
 		return null 
 	}
 
+	const CommentSidebar = () => {
+		if (Object.getOwnPropertyNames(selectedComment).length > 0) {
+			/*
+			if (workflow.triggers[selectedTriggerIndex] === undefined) {
+				return null
+			}
+
+			if (workflow.triggers[selectedTriggerIndex].parameters === undefined || workflow.triggers[selectedTriggerIndex].parameters === null || workflow.triggers[selectedTriggerIndex].parameters.length === 0) {
+				workflow.triggers[selectedTriggerIndex].parameters = []
+				workflow.triggers[selectedTriggerIndex].parameters[0] = {"name": "url", "value": referenceUrl+"webhook_"+selectedTrigger.id}
+				workflow.triggers[selectedTriggerIndex].parameters[1] = {"name": "tmp", "value": "webhook_"+selectedTrigger.id}
+				workflow.triggers[selectedTriggerIndex].parameters[2] = {"name": "auth_headers", "value": ""}
+				setWorkflow(workflow)
+			} else {
+				// Always update
+				const newUrl = referenceUrl+"webhook_"+selectedTrigger.id
+				console.log("Validating webhook url: ", newUrl)
+				if (newUrl !== workflow.triggers[selectedTriggerIndex].parameters[0].value) {
+					console.log("Url is wrong - updating")
+					workflow.triggers[selectedTriggerIndex].parameters[0].value = newUrl
+					setWorkflow(workflow)
+				}
+			}
+
+			const trigger_header_auth = workflow.triggers[selectedTriggerIndex].parameters.length > 2 ? workflow.triggers[selectedTriggerIndex].parameters[2].value : ""
+			*/
+
+			return(
+				<div style={appApiViewStyle}>
+					<div style={{display: "flex", height: "40px", marginBottom: "30px"}}>
+						<div style={{flex: "1"}}>
+							<h3 style={{marginBottom: "5px"}}>Comment</h3>
+							<a rel="noopener noreferrer" target="_blank" href="https://shuffler.io/docs/workflows#comments" style={{textDecoration: "none", color: "#f85a3e"}}>What are comments?</a>
+						</div>
+					</div>
+					<Divider style={{marginBottom: 10, marginTop: 10, height: 1, width: "100%", backgroundColor: "rgb(91, 96, 100)"}}/>
+					<div>
+						Name
+					</div>
+					<TextField
+						style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
+						InputProps={{
+							style:{
+								color: "white",
+								marginLeft: "5px",
+								maxWidth: "95%",
+								fontSize: "1em",
+							},
+						}}
+						multiline
+						rows="4"
+						fullWidth
+						color="primary"
+						defaultValue={selectedComment.label}
+						placeholder="Comment"
+						onChange={(event) => {
+							selectedComment.label = event.target.value
+							setSelectedComment(selectedComment)
+						}}
+					/>
+					<div style={{display: "flex", marginTop: 10,}}>
+						<div>
+							<div>
+								Height	
+							</div>
+							<TextField
+								style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
+								InputProps={{
+									style:{
+										color: "white",
+										marginLeft: "5px",
+										maxWidth: "95%",
+										height: 50, 
+										fontSize: "1em",
+									},
+								}}
+								fullWidth
+								color="primary"
+								defaultValue={selectedComment.height}
+								onChange={(event) => {
+									selectedComment.height = event.target.value
+									setSelectedComment(selectedComment)
+								}}
+							/>
+						</div>
+						<div>
+							<div>
+								Width	
+							</div>
+							<TextField
+								style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
+								InputProps={{
+									style:{
+										color: "white",
+										marginLeft: "5px",
+										maxWidth: "95%",
+										height: 50, 
+										fontSize: "1em",
+									},
+								}}
+								fullWidth
+								color="primary"
+								defaultValue={selectedComment.width}
+								onChange={(event) => {
+									selectedComment.width = event.target.value
+									setSelectedComment(selectedComment)
+								}}
+							/>
+						</div>
+					</div> 
+					<div style={{display: "flex", marginTop: 10,}}>
+						<div>
+							<div>
+								Background	
+							</div>
+							<TextField
+								style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
+								InputProps={{
+									style:{
+										color: "white",
+										marginLeft: "5px",
+										maxWidth: "95%",
+										height: 50, 
+										fontSize: "1em",
+									},
+								}}
+								fullWidth
+								color="primary"
+								defaultValue={selectedComment["backgroundcolor"]}
+								onChange={(event) => {
+									selectedComment.backgroundcolor = event.target.value
+									setSelectedComment(selectedComment)
+								}}
+							/>
+						</div>
+						<div>
+							<div>
+								Text Color	
+							</div>
+							<TextField
+								style={{backgroundColor: inputColor, borderRadius: theme.palette.borderRadius,}} 
+								InputProps={{
+									style:{
+										color: "white",
+										marginLeft: "5px",
+										maxWidth: "95%",
+										height: 50, 
+										fontSize: "1em",
+									},
+								}}
+								fullWidth
+								color="primary"
+								defaultValue={selectedComment.color}
+								onChange={(event) => {
+									selectedComment.color = event.target.value
+									setSelectedComment(selectedComment)
+								}}
+							/>
+						</div>
+					</div> 
+				</div>
+			)
+		}
+
+		return null 
+	}
+
 	const WebhookSidebar = () => {
 		if (Object.getOwnPropertyNames(selectedTrigger).length > 0) {
 			if (workflow.triggers[selectedTriggerIndex] === undefined) {
@@ -6959,6 +7180,9 @@ const AngularWorkflow = (props) => {
 	}
 
 	const BottomCytoscapeBar = () => {
+		if (workflow.id === undefined || workflow.id === null || apps.length === 0) {
+			return null
+		}
 
 		const boxSize = 100
 		const executionButton = executionRunning ? 
@@ -7066,10 +7290,43 @@ const AngularWorkflow = (props) => {
 						</Button>
 						</span>
 					</Tooltip>	
+					<Tooltip color="secondary" title="Add comment" placement="top-start">
+						<span>
+						<Button disabled={workflow.public} color="primary" style={{height: 50, marginLeft: 10, }} variant="outlined" onClick={() => {
+							addCommentNode()
+						}}>
+							<AddCommentIcon />
+						</Button>
+						</span>
+					</Tooltip>	
 					{workflow.configuration !== null && workflow.configuration !== undefined && workflow.configuration.exit_on_error !== undefined ? <WorkflowMenu />	 : null}
 				</div>
 			</div>
 		)
+	}
+
+	const addCommentNode = () => {
+		const newId = uuidv4()
+		const position = {
+			x: 300,
+			y: 300,
+		}
+		cy.add({
+			group: "nodes",
+			data: {
+				id: newId,
+				label: "Your comment :)",
+				type: "COMMENT",
+				is_valid: true,
+				decorator: true,
+				width: 250,
+				height: 150,
+				position: position,
+				backgroundcolor: "#1f2023",
+				color: "#ffffff",
+			},
+			position: position,
+		})
 	}
 
 	const RightSideBar = (props) => {
@@ -7131,6 +7388,13 @@ const AngularWorkflow = (props) => {
 					</div>
 			)
 
+		} else if (Object.getOwnPropertyNames(selectedComment).length > 0) {
+			console.log("Returning comment field")
+			return(
+				<div style={rightsidebarStyle}>	
+					<CommentSidebar />
+				</div>
+			)
 		} else if (Object.getOwnPropertyNames(selectedTrigger).length > 0) {
 			if (selectedTrigger.trigger_type === "SCHEDULE") {
 				return(
