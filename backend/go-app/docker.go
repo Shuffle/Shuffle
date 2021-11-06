@@ -797,4 +797,6 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "message": "Couldn't export image"}`)))
 		return
 	}
+
+	//resp.WriteHeader(200)
 }

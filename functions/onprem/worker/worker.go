@@ -72,7 +72,10 @@ var allLogs map[string]string
 var containerIds []string
 var downloadedImages []string
 
-var executionRunning bool
+var executedIds = []string{}
+
+//if !shuffle.ArrayContains(executedIds,
+//fmt.Sprintf("%s_%s", workflowExecution.ExecutionId, action.ID)
 
 // New Worker mappings
 var portMappings map[string]int
@@ -118,6 +121,7 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 		*/
 	} else {
 		log.Printf("[DEBUG] NOT cleaning up containers. IDS: %d, CLEANUP env: %s", len(containerIds), cleanupEnv)
+
 	}
 
 	if len(reason) > 0 && len(nodeId) > 0 {
@@ -212,7 +216,7 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 			allLogs = map[string]string{}
 		*/
 		requestsSent = 0
-		executionRunning = false
+		//executionRunning = false
 	}
 	//cacheKey := fmt.Sprintf("workflowexecution-%s", workflowExecution.ExecutionId)
 }
@@ -232,8 +236,13 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 
 		if !shuffle.ArrayContains(downloadedImages, image) {
 			log.Printf("[DEBUG] Downloading image %s from backend as it's first iteration", image)
-			downloadDockerImageBackend(&http.Client{}, image)
+			// FIXME: Not caring if it's ok or not. Just continuing
+			// This is working as intended, just designed to download an updated
+			// image on every Orborus/new worker restart.
 			downloadedImages = append(downloadedImages, image)
+
+			// Running as coroutine for eventual completeness
+			go downloadDockerImageBackend(&http.Client{}, image)
 		}
 
 		exposedPort, err := findAppInfo(image, appName)
@@ -243,7 +252,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		}
 
 		log.Printf("[DEBUG] Should run towards port %d for app %s", exposedPort, appName)
-		err = sendAppRequest(baseUrl, exposedPort, action, workflowExecution)
+		err = sendAppRequest(baseUrl, appName, exposedPort, action, workflowExecution)
 		if err != nil {
 			log.Printf("[ERROR] Failed sending request to app %s on port %d: %s", appName, exposedPort, err)
 			return err
@@ -327,6 +336,8 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		} else {
 			parsedUuid := uuid.NewV4()
 			identifier = fmt.Sprintf("%s-%s", identifier, parsedUuid)
+			//hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:worker-%s", workflowExecution.ExecutionId))
+
 			log.Printf("[INFO] 2 - Identifier: %s", identifier)
 			cont, err = cli.ContainerCreate(
 				context.Background(),
@@ -341,12 +352,14 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 				log.Printf("[ERROR] Container create error (2): %s", err)
 				return err
 			}
+
+			//log.Printf("[DEBUG] Made new container ID
 		}
 	}
 
 	err = cli.ContainerStart(ctx, cont.ID, types.ContainerStartOptions{})
 	if err != nil {
-		if strings.Contains(fmt.Sprintf("%s", err), "cannot join network") {
+		if strings.Contains(fmt.Sprintf("%s", err), "cannot join network") || strings.Contains(fmt.Sprintf("%s", err), "No such container") {
 			parsedUuid := uuid.NewV4()
 			identifier = fmt.Sprintf("%s-%s-nonetwork", identifier, parsedUuid)
 			hostConfig = &container.HostConfig{
@@ -538,20 +551,20 @@ func handleSubworkflowExecution(client *http.Client, workflowExecution shuffle.W
 		)
 
 		if err != nil {
-			log.Printf("[WARNING] Error building test request: %s", err)
+			log.Printf("[WARNING] Error building test request (4): %s", err)
 			return err
 		}
 
 		req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", apikey))
 		newresp, err := client.Do(req)
 		if err != nil {
-			log.Printf("[DEBUG] Error running test request: %s", err)
+			log.Printf("[DEBUG] Error running test request (4): %s", err)
 			return err
 		}
 
 		body, err := ioutil.ReadAll(newresp.Body)
 		if err != nil {
-			log.Printf("Failed reading body when waiting: %s", err)
+			log.Printf("[WARNING] Failed reading body when waiting (4): %s", err)
 			return err
 		}
 
@@ -589,19 +602,19 @@ func handleSubworkflowExecution(client *http.Client, workflowExecution shuffle.W
 	)
 
 	if err != nil {
-		log.Printf("Error building test request: %s", err)
+		log.Printf("[WARNING] Error building test request (5): %s", err)
 		return err
 	}
 
 	newresp, err := client.Do(req)
 	if err != nil {
-		log.Printf("Error running test request: %s", err)
+		log.Printf("[WARNING] Error running test request (5): %s", err)
 		return err
 	}
 
 	body, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
-		log.Printf("Failed reading body when waiting: %s", err)
+		log.Printf("Failed reading body when waiting (5): %s", err)
 		return err
 	}
 
@@ -622,6 +635,7 @@ func removeIndex(s []string, i int) []string {
 func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 	ctx := context.Background()
 	startAction, extra, children, parents, visited, executed, nextActions, environments := shuffle.GetExecutionVariables(ctx, workflowExecution.ExecutionId)
+	log.Printf("[DEBUG] Getting info for %s. Extra: %d", workflowExecution.ExecutionId, extra)
 
 	log.Printf("[INFO] Inside execution results with %d / %d results", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extra)
 
@@ -1308,6 +1322,10 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 
 	// FIXME - new request here
 	// FIXME - clean up stopped (remove) containers with this execution id
+	err := shuffle.UpdateExecutionVariables(ctx, workflowExecution.ExecutionId, startAction, children, parents, visited, executed, nextActions, environments, extra)
+	if err != nil {
+		log.Printf("\n\n[ERROR] Failed to update exec variables for execution %s: %s (2)\n\n", workflowExecution.ExecutionId, err)
+	}
 
 	if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions)+extra {
 		shutdownCheck := true
@@ -1516,14 +1534,14 @@ func handleDefaultExecution(client *http.Client, req *http.Request, workflowExec
 
 		newresp, err := topClient.Do(req)
 		if err != nil {
-			log.Printf("[ERROR] Failed making request: %s", err)
+			log.Printf("[ERROR] Failed making request (1): %s", err)
 			time.Sleep(time.Duration(sleepTime) * time.Second)
 			continue
 		}
 
 		body, err := ioutil.ReadAll(newresp.Body)
 		if err != nil {
-			log.Printf("[ERROR] Failed reading body: %s", err)
+			log.Printf("[ERROR] Failed reading body (1): %s", err)
 			time.Sleep(time.Duration(sleepTime) * time.Second)
 			continue
 		}
@@ -1637,19 +1655,19 @@ func runSkipAction(client *http.Client, action shuffle.Action, workflowId, workf
 	)
 
 	if err != nil {
-		log.Printf("Error building test request: %s", err)
+		log.Printf("[WARNING] Error building test request (0): %s", err)
 		return err
 	}
 
 	newresp, err := client.Do(req)
 	if err != nil {
-		log.Printf("Error running test request: %s", err)
+		log.Printf("[WARNING] Error running test request (0): %s", err)
 		return err
 	}
 
 	body, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
-		log.Printf("Failed reading body when waiting: %s", err)
+		log.Printf("[WARNING] Failed reading body when waiting (0): %s", err)
 		return err
 	}
 
@@ -1682,13 +1700,13 @@ func runUserInput(client *http.Client, action shuffle.Action, workflowId, workfl
 	)
 
 	if err != nil {
-		log.Printf("Error building test request: %s", err)
+		log.Printf("[WARNING] Error building test request (2): %s", err)
 		return err
 	}
 
 	newresp, err := client.Do(req)
 	if err != nil {
-		log.Printf("Error running test request: %s", err)
+		log.Printf("[WARNING] Error running test request (2): %s", err)
 		return err
 	}
 
@@ -1718,13 +1736,13 @@ func runTestExecution(client *http.Client, workflowId, apikey string) (string, s
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", apikey))
 	newresp, err := client.Do(req)
 	if err != nil {
-		log.Printf("Error running test request: %s", err)
+		log.Printf("[WARNING] Error running test request (3): %s", err)
 		return "", ""
 	}
 
 	body, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
-		log.Printf("Failed reading body: %s", err)
+		log.Printf("[WARNING] Failed reading body: %s", err)
 		return "", ""
 	}
 
@@ -1740,7 +1758,7 @@ func runTestExecution(client *http.Client, workflowId, apikey string) (string, s
 }
 
 func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
-	//log.Printf("[DEBUG] Got stream workflow queue")
+	log.Printf("\n\n[DEBUG] In workflowQueue\n\n")
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		log.Println("(3) Failed reading body for workflowqueue")
@@ -1804,6 +1822,8 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+
+	log.Printf("\n\n[DEBUG] In workflowQueue with transaction\n\n")
 	runWorkflowExecutionTransaction(ctx, 0, workflowExecution.ExecutionId, actionResult, resp)
 
 }
@@ -2115,22 +2135,6 @@ func webserverSetup(workflowExecution shuffle.WorkflowExecution) net.Listener {
 	return listener
 }
 
-func runWebserver(listener net.Listener) {
-	r := mux.NewRouter()
-	r.HandleFunc("/api/v1/streams", handleWorkflowQueue).Methods("POST")
-	r.HandleFunc("/api/v1/streams/results", handleGetStreamResults).Methods("POST", "OPTIONS")
-
-	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" {
-		requestCache = cache.New(5*time.Minute, 10*time.Minute)
-		log.Printf("[DEBUG] Running webserver config for SWARM and K8s")
-		r.HandleFunc("/api/v1/execute", handleRunExecution).Methods("POST", "OPTIONS")
-	}
-
-	//log.Fatal(http.ListenAndServe(port, nil))
-	http.Handle("/", r)
-	log.Fatal(http.Serve(listener, nil))
-}
-
 func downloadDockerImageBackend(client *http.Client, imageName string) error {
 	log.Printf("[DEBUG] Trying to download image %s from backend as it doesn't exist", imageName)
 	data := fmt.Sprintf(`{"name": "%s"}`, imageName)
@@ -2254,6 +2258,9 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 				Env: []string{
 					fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", os.Getenv("SHUFFLE_SWARM_CONFIG")),
 					fmt.Sprintf("SHUFFLE_APP_EXPOSED_PORT=%d", deployport),
+				},
+				Hosts: []string{
+					containerName,
 				},
 			},
 			RestartPolicy: &swarm.RestartPolicy{
@@ -2412,7 +2419,7 @@ func findAppInfo(image, name string) (int, error) {
 	return exposedPort, nil
 }
 
-func sendAppRequest(incomingUrl string, port int, action shuffle.Action, workflowExecution shuffle.WorkflowExecution) error {
+func sendAppRequest(incomingUrl, appName string, port int, action shuffle.Action, workflowExecution shuffle.WorkflowExecution) error {
 	parsedRequest := shuffle.OrborusExecutionRequest{
 		ExecutionId:           workflowExecution.ExecutionId,
 		Authorization:         workflowExecution.Authorization,
@@ -2455,12 +2462,13 @@ func sendAppRequest(incomingUrl string, port int, action shuffle.Action, workflo
 	parsedRequest.Url = parsedRequest.BaseUrl
 	parsedRequest.BaseUrl = tmp
 
+	// Run with proper hostname, but set to shuffle-worker to avoid specific host target.
+	// This means running with VIP instead.
 	if len(hostname) > 0 {
-		log.Printf("[DEBUG] Changing hostname to local hostname in Docker network for WORKER URL")
-		parsedRequest.BaseUrl = fmt.Sprintf("http://%s:%d", hostname, baseport)
+		//parsedRequest.BaseUrl = fmt.Sprintf("http://%s:%d", hostname, baseport)
+		parsedRequest.BaseUrl = fmt.Sprintf("http://shuffle-workers:%d", baseport)
+		log.Printf("[DEBUG] Changing hostname to local hostname in Docker network for WORKER URL: %s", parsedRequest.BaseUrl)
 	}
-
-	log.Printf("[DEBUG] Worker URL: %s, Backend URL: %s", parsedRequest.BaseUrl, parsedRequest.Url)
 
 	data, err := json.Marshal(parsedRequest)
 	if err != nil {
@@ -2468,7 +2476,9 @@ func sendAppRequest(incomingUrl string, port int, action shuffle.Action, workflo
 		return err
 	}
 
-	streamUrl := fmt.Sprintf("%s:%d/api/v1/run", parsedBaseurl, port)
+	//streamUrl := fmt.Sprintf("%s:%d/api/v1/run", parsedBaseurl, port)
+	streamUrl := fmt.Sprintf("http://%s:%d/api/v1/run", appName, port)
+	log.Printf("[DEBUG] Worker URL: %s, Backend URL: %s, Target App: %s", parsedRequest.BaseUrl, parsedRequest.Url, streamUrl)
 	req, err := http.NewRequest(
 		"POST",
 		streamUrl,
@@ -2495,6 +2505,40 @@ func sendAppRequest(incomingUrl string, port int, action shuffle.Action, workflo
 		log.Printf("[INFO] NEWRESP (from app): %s", string(body))
 	}
 
+	// FIXME: Remove
+	/*
+		if len(hostname) > 0 {
+			//streamUrl := fmt.Sprintf("%s:%d/api/v1/run", parsedBaseurl, port)
+			streamUrl := fmt.Sprintf("http://%s:%d/api/v1/run", appName, port)
+			log.Printf("\n\n[DEBUG] Trying execution towards %s", streamUrl)
+			req, err := http.NewRequest(
+				"POST",
+				streamUrl,
+				bytes.NewBuffer([]byte(data)),
+			)
+
+			client := &http.Client{}
+			if err != nil {
+				log.Printf("[ERROR] Failed creating app run request: %s", err)
+				return err
+			}
+
+			newresp, err := client.Do(req)
+			if err != nil {
+				log.Printf("[ERROR] Error running app run request: %s", err)
+				return err
+			}
+
+			body, err := ioutil.ReadAll(newresp.Body)
+			if err != nil {
+				log.Printf("[ERROR] Failed reading body: %s", err)
+				return err
+			} else {
+				log.Printf("[INFO] NEWRESP (from app): %s", string(body))
+			}
+		}
+	*/
+
 	return nil
 }
 
@@ -2517,7 +2561,7 @@ func main() {
 		}
 	*/
 
-	_, err := shuffle.RunInit(datastore.Client{}, storage.Client{}, "", "", false, "")
+	_, err := shuffle.RunInit(datastore.Client{}, storage.Client{}, "", "", true, "")
 	if err != nil {
 		log.Printf("[ERROR] Failed to run worker init: %s", err)
 	} else {
@@ -2551,23 +2595,12 @@ func main() {
 
 	log.Printf("[INFO] Running with timezone %s and swarm config %#v", timezone, os.Getenv("SHUFFLE_SWARM_CONFIG"))
 	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" {
+		// Forcing download just in case on the first iteration.
 		workflowExecution := shuffle.WorkflowExecution{}
 
-		// Forcing download just in case on the first iteration.
 		listener := webserverSetup(workflowExecution)
-		//err := executionInit(workflowExecution)
-		//if err != nil {
-		//	log.Printf("[INFO] Workflow setup failed: %s", workflowExecution.ExecutionId, err)
-		//	log.Printf("[DEBUG] Shutting down (30)")
-		//	shutdown(workflowExecution, "", "", true)
-		//}
-		//go func() {
-		//	time.Sleep(time.Duration(1))
-		//	handleExecutionResult(workflowExecution)
-		//}()
-
 		runWebserver(listener)
-		log.Printf("[ERROR] Stopped listener - exiting.")
+		log.Printf("[ERROR] Stopped listener %#v - exiting.", listener)
 		os.Exit(3)
 	}
 
@@ -2576,11 +2609,13 @@ func main() {
 	// WORKER_TESTING_WORKFLOW should be a workflow ID
 	authorization := ""
 	executionId := ""
+
+	// INFO: Allows you to run a test execution
 	testing := os.Getenv("WORKER_TESTING_WORKFLOW")
 	shuffle_apikey := os.Getenv("WORKER_TESTING_APIKEY")
 	if len(testing) > 0 && len(shuffle_apikey) > 0 {
 		// Execute a workflow and use that info
-		log.Printf("[WARNING] Running test environment for worker by executing workflow %s", testing)
+		log.Printf("[WARNING] Running test environment for worker by executing workflow %s. PS: This may NOT reach the worker in real time, but rather be deployed as a docker container (bad). Instead use AUTHORIZATION and EXECUTIONID for direct testing", testing)
 		authorization, executionId = runTestExecution(client, testing, shuffle_apikey)
 
 	} else {
@@ -2752,41 +2787,17 @@ func main() {
 }
 
 func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
-	/*
-		if executionRunning {
-			log.Println("[WARNING] An execution is already running on this worker")
-			resp.WriteHeader(500)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "An execution is already running"}`)))
-			return
-		}
-	*/
-
-	executionRunning = true
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
-		executionRunning = false
 		log.Println("[WARNING] Failed reading body for stream result queue")
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
 	}
 
-	type ExecutionRequest struct {
-		ExecutionId           string `json:"execution_id"`
-		Authorization         string `json:"authorization"`
-		HTTPProxy             string `json:"http_proxy"`
-		HTTPSProxy            string `json:"https_proxy"`
-		ShufflePassProxyToApp string `json:"shuffle_pass_proxy_to_app`
-		BaseUrl               string `json:"base_url"`
-		EnvironmentName       string `json:"environment_name"`
-		Timezone              string `json:"timezone"`
-		Cleanup               string `json:"cleanup"`
-	}
-
-	var execRequest ExecutionRequest
+	var execRequest shuffle.OrborusExecutionRequest
 	err = json.Unmarshal(body, &execRequest)
 	if err != nil {
-		executionRunning = false
 		log.Printf("[WARNING] Failed shuffle.WorkflowExecution unmarshaling: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
@@ -2824,6 +2835,12 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 		baseUrl = execRequest.BaseUrl
 	}
 
+	// Setting to just have an auth available.
+	if len(execRequest.Authorization) > 0 && len(os.Getenv("AUTHORIZATION")) == 0 {
+		//log.Printf("[DEBUG] Sending proxy info to child process")
+		os.Setenv("AUTHORIZATION", execRequest.Authorization)
+	}
+
 	topClient = &http.Client{}
 	var workflowExecution shuffle.WorkflowExecution
 	data = fmt.Sprintf(`{"execution_id": "%s", "authorization": "%s"}`, execRequest.ExecutionId, execRequest.Authorization)
@@ -2837,8 +2854,7 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 
 	newresp, err := topClient.Do(req)
 	if err != nil {
-		executionRunning = false
-		log.Printf("[ERROR] Failed making request: %s", err)
+		log.Printf("[ERROR] Failed making request (2): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
@@ -2846,15 +2862,13 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 
 	body, err = ioutil.ReadAll(newresp.Body)
 	if err != nil {
-		executionRunning = false
-		log.Printf("[ERROR] Failed reading body: %s", err)
+		log.Printf("[ERROR] Failed reading body (2): %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
 	}
 
 	if newresp.StatusCode != 200 {
-		executionRunning = false
 		log.Printf("[ERROR] Bad statuscode: %d, %s", newresp.StatusCode, string(body))
 
 		if strings.Contains(string(body), "Workflowexecution is already finished") {
@@ -2869,7 +2883,6 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 
 	err = json.Unmarshal(body, &workflowExecution)
 	if err != nil {
-		executionRunning = false
 		log.Printf("[ERROR] Failed workflowExecution unmarshal: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
@@ -2877,7 +2890,6 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	if workflowExecution.Status == "FINISHED" || workflowExecution.Status == "SUCCESS" {
-		executionRunning = false
 		log.Printf("[INFO] Workflow %s is finished. Exiting worker.", workflowExecution.ExecutionId)
 		log.Printf("[DEBUG] Shutting down (20)")
 
@@ -2899,7 +2911,6 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 
 	log.Printf("[INFO] Status: %s, Results: %d, actions: %d", workflowExecution.Status, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions)+extra)
 	if workflowExecution.Status != "EXECUTING" {
-		executionRunning = false
 		log.Printf("[WARNING] Exiting as worker execution has status %s!", workflowExecution.Status)
 		log.Printf("[DEBUG] Shutting down (21)")
 		resp.WriteHeader(401)
@@ -2907,9 +2918,7 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("[DEBUG] Starting execution :O")
-	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+	//log.Printf("[DEBUG] Starting execution :O")
 
 	cacheKey := fmt.Sprintf("workflowexecution-%s", workflowExecution.ExecutionId)
 	requestCache.Set(cacheKey, &workflowExecution, cache.DefaultExpiration)
@@ -2924,5 +2933,29 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 		//shutdown(workflowExecution, "", "", true)
 	}
 
-	handleExecutionResult(workflowExecution)
+	go handleExecutionResult(workflowExecution)
+	resp.WriteHeader(200)
+	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
+}
+
+func runWebserver(listener net.Listener) {
+	r := mux.NewRouter()
+	r.HandleFunc("/api/v1/streams", handleWorkflowQueue).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/streams/results", handleGetStreamResults).Methods("POST", "OPTIONS")
+
+	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" {
+		/*
+			err = dockercli.ServiceRemove(ctx, "shuffle-workers")
+			if err != nil {}
+		*/
+
+		requestCache = cache.New(5*time.Minute, 10*time.Minute)
+		log.Printf("[DEBUG] Running webserver config for SWARM and K8s")
+		r.HandleFunc("/api/v1/execute", handleRunExecution).Methods("POST", "OPTIONS")
+	}
+
+	//log.Fatal(http.ListenAndServe(port, nil))
+	http.Handle("/", r)
+	log.Fatal(http.Serve(listener, nil))
+	log.Printf("[DEBUG] Do we see this?")
 }

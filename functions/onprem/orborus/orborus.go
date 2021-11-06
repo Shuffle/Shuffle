@@ -137,15 +137,64 @@ func getThisContainerId() {
 	log.Printf(`[INFO] Started with containerId "%s"`, containerId)
 }
 
+func cleanupExistingNodes(ctx context.Context) error {
+	serviceListOptions := types.ServiceListOptions{}
+	services, err := dockercli.ServiceList(
+		context.Background(),
+		serviceListOptions,
+	)
+
+	if err != nil {
+		log.Printf("[DEBUG] Failed finding containers: %s", err)
+		return err
+	}
+
+	log.Printf("\n\nFound %d contaienrs", len(services))
+
+	for _, service := range services {
+		log.Printf("[INFO] Service: %#v", service.Spec.Annotations.Name)
+
+		//portFound := false
+		//for _, endpoint := range service.Spec.EndpointSpec.Ports {
+		//	if strings.Contains(endpoint.Name, "port") {
+		//		//portFound = true
+		//	}
+		//}
+
+		if strings.Contains(service.Spec.Annotations.Name, "opensearch") {
+			continue
+		}
+
+		if strings.Contains(service.Spec.TaskTemplate.ContainerSpec.Image, "shuffle") {
+
+			if !strings.Contains(service.Spec.TaskTemplate.ContainerSpec.Image, "shuffle-frontend") &&
+				!strings.Contains(service.Spec.TaskTemplate.ContainerSpec.Image, "shuffle-backend") &&
+				!strings.Contains(service.Spec.TaskTemplate.ContainerSpec.Image, "shuffle-orborus") {
+
+				err = dockercli.ServiceRemove(ctx, service.ID)
+				if err != nil {
+					log.Printf("[DEBUG] Failed to remove service %s", service.Spec.Annotations.Name)
+				} else {
+					log.Printf("[DEBUG] Removed service %#v", service.Spec.TaskTemplate.ContainerSpec.Image)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
 func deployServiceWorkers(image string) {
 	log.Printf("[DEBUG] Validating deployment of workers as services IF swarmConfig = run (value: %#v)", swarmConfig)
 	if swarmConfig == "run" {
+		ctx := context.Background()
+		// Looks for and cleans up all existing items in swarm we can't re-use (Shuffle only)
+		cleanupExistingNodes(ctx)
 		// frikky@debian:~/git/shuffle/functions/onprem/worker$ docker service create --replicas 5 --name shuffle-workers --env SHUFFLE_SWARM_CONFIG=run --publish published=33333,target=33333 ghcr.io/frikky/shuffle-worker:nightly
 		networkName := "shuffle-executions"
 		if len(swarmNetworkName) > 0 {
 			networkName = swarmNetworkName
 		}
-		ctx := context.Background()
 
 		//docker network create --driver=overlay workers
 		networkCreateOptions := types.NetworkCreate{
@@ -188,6 +237,7 @@ func deployServiceWorkers(image string) {
 		innerContainerName := fmt.Sprintf("shuffle-workers")
 		log.Printf("[DEBUG] Deploying %d containers for worker with swarm to each node. Service name: %s. Image: %s", replicas, innerContainerName, image)
 
+		// FIXME: May not need ingress ports. Could use internal services and DNS of swarm itself
 		serviceSpec := swarm.ServiceSpec{
 			Annotations: swarm.Annotations{
 				Name:   innerContainerName,
@@ -225,6 +275,9 @@ func deployServiceWorkers(image string) {
 							Target: "/var/run/docker.sock",
 							Type:   mount.TypeBind,
 						},
+					},
+					Hosts: []string{
+						innerContainerName,
 					},
 				},
 				RestartPolicy: &swarm.RestartPolicy{
@@ -1025,7 +1078,12 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 
 	//log.Printf("[DEBUG] Data: %s", string(data))
 
-	streamUrl := fmt.Sprintf("%s:33333/api/v1/execute", parsedBaseurl)
+	//streamUrl := fmt.Sprintf("http://shuffle-workers:33333/api/v1/execute", parsedBaseurl)
+	streamUrl := fmt.Sprintf("http://shuffle-workers:33333/api/v1/execute")
+	if containerId == "" || containerId == "shuffle-orborus" {
+		streamUrl = fmt.Sprintf("%s:33333/api/v1/execute", parsedBaseurl)
+	}
+
 	req, err := http.NewRequest(
 		"POST",
 		streamUrl,

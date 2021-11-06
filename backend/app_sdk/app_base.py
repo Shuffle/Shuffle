@@ -594,7 +594,7 @@ class AppBase:
                 # An attempt at decomposing coroutine results
                 try:
                     if asyncio.iscoroutine(tmp):
-                        print("In coroutine")
+                        self.logger.info("[DEBUG] In coroutine (2)")
                         async def parse_value(tmp):
                             value = await asyncio.gather(
                                 tmp 
@@ -605,9 +605,9 @@ class AppBase:
 
                         tmp = asyncio.run(parse_value(tmp))
                     else:
-                        print("Not in coroutine")
+                        self.logger.info("[DEBUG] Not in coroutine (2)")
                 except Exception as e:
-                    print("[ERROR] Failed to parse coroutine value for old app: {e}")
+                    self.logger.warning("[ERROR] Failed to parse coroutine value for old app: {e}")
 
                 #self.logger.info("RET from execution: %s" % ret)
                 new_value = tmp
@@ -2615,7 +2615,7 @@ class AppBase:
                             # Forcing async wait in case of old apps that use async
                             try:
                                 if asyncio.iscoroutine(newres):
-                                    print("In coroutine")
+                                    self.logger.info("[DEBUG] In coroutine (1)")
                                     async def parse_value(newres):
                                         value = await asyncio.gather(
                                             newres 
@@ -2625,9 +2625,9 @@ class AppBase:
 
                                     newres = asyncio.run(parse_value(newres))
                                 else:
-                                    print("Not in coroutine")
+                                    self.logger.info("[DEBUG] Not in coroutine (1)")
                             except Exception as e:
-                                print("[ERROR] Failed to parse coroutine value for old app: {e}")
+                                self.logger.warning("[ERROR] Failed to parse coroutine value for old app: {e}")
 
                             self.logger.info("\n[INFO] Returned from execution with types %s" % type(newres))
                             #self.logger.info("\n[INFO] Returned from execution with %s of types %s" % (newres, type(newres)))#, newres)
@@ -2890,7 +2890,7 @@ class AppBase:
             port = int(exposed_port)
             logger.info(f"[DEBUG] Starting webserver on port {port} (same as exposed port)")
             from flask import Flask, request
-            from waitress import serve
+            #from waitress import serve
         
             flask_app = Flask(__name__)
         

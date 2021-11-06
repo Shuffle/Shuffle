@@ -3345,10 +3345,6 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	buildSwaggerApp(resp, body, user)
 }
 
-func healthCheckHandler(resp http.ResponseWriter, request *http.Request) {
-	fmt.Fprint(resp, "OK")
-}
-
 // Creates osfs from folderpath with a basepath as directory base
 func createFs(basepath, pathname string) (billy.Filesystem, error) {
 	log.Printf("[INFO] MemFS base: %s, pathname: %s", basepath, pathname)
@@ -5642,15 +5638,20 @@ func initHandlers() {
 
 	log.Printf("[DEBUG] Starting Shuffle backend - initializing database connection")
 	//requestCache = cache.New(5*time.Minute, 10*time.Minute)
-	dbclient, err = datastore.NewClient(ctx, gceProject, option.WithGRPCDialOption(grpc.WithNoProxy()))
-	if err != nil {
-		log.Fatalf("[DEBUG] Database client error during init: %s", err)
-	}
 
 	//es := shuffle.GetEsConfig()
 	elasticConfig := "elasticsearch"
 	if strings.ToLower(os.Getenv("SHUFFLE_ELASTIC")) == "false" {
 		elasticConfig = ""
+	}
+
+	dbclient, err = datastore.NewClient(ctx, gceProject, option.WithGRPCDialOption(grpc.WithNoProxy()))
+	if err != nil {
+		if elasticConfig == "" {
+			log.Fatalf("[ERROR] Database client error during init: %s. Env: SHUFFLE_ELASTIC=false", err)
+		} else {
+			log.Printf("[DEBUG] Database client error during init: %s. Here for backwards compatibility: not critical.", err)
+		}
 	}
 
 	for {
@@ -5674,7 +5675,7 @@ func initHandlers() {
 	}
 
 	r := mux.NewRouter()
-	r.HandleFunc("/api/v1/_ah/health", healthCheckHandler)
+	r.HandleFunc("/api/v1/_ah/health", shuffle.HealthCheckHandler)
 
 	// Make user related locations
 	// Fix user changes with org
@@ -5805,6 +5806,8 @@ func initHandlers() {
 	// This is a new API that validates if a key has been seen before.
 	// Not sure what the best course of action is for it.
 	r.HandleFunc("/api/v1/environments/{key}/stop", shuffle.HandleStopExecutions).Methods("GET", "POST", "OPTIONS")
+	//r.HandleFunc("/api/v1/environments/{key}/rerun", shuffle.HandleRerunExecutions).Methods("GET", "POST", "OPTIONS")
+
 	r.HandleFunc("/api/v1/orgs/{orgId}/validate_app_values", shuffle.HandleKeyValueCheck).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/get_cache", shuffle.HandleGetCacheKey).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/set_cache", shuffle.HandleSetCacheKey).Methods("POST", "OPTIONS")
