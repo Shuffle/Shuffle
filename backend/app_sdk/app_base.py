@@ -2879,7 +2879,8 @@ class AppBase:
         logging.basicConfig(format="{asctime} - {name} - {levelname}:{message}", style='{')
         logger = logging.getLogger(f"{cls.__name__}")
         logger.setLevel(logging.DEBUG)
-
+                
+        logger.info("[DEBUG] Normal execution.")
 
         ##############################################
 

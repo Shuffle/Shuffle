@@ -401,46 +401,48 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	if workflowExecution.ExecutionSource != "default" {
 		log.Printf("[INFO] Handling NON-default execution source %s - NOT waiting or validating!", workflowExecution.ExecutionSource)
 	} else if workflowExecution.ExecutionSource == "default" {
-		time.Sleep(2 * time.Second)
+		/*
+			time.Sleep(2 * time.Second)
 
-		stats, err := cli.ContainerInspect(ctx, cont.ID)
-		if err != nil {
-			log.Printf("[ERROR] Failed getting container stats for container %s: %s", cont.ID, err)
-		} else {
-			//log.Printf("[INFO] Info for container: %#v", stats)
-			//log.Printf("%#v", stats.Config)
-			//log.Printf("%#v", stats.ContainerJSONBase.State)
-			log.Printf("[DEBUG] EXECUTION STATUS: %s", stats.ContainerJSONBase.State.Status)
-			logOptions := types.ContainerLogsOptions{
-				ShowStdout: true,
-			}
-
-			exit := false
-			out, err := cli.ContainerLogs(ctx, cont.ID, logOptions)
+			stats, err := cli.ContainerInspect(ctx, cont.ID)
 			if err != nil {
-				log.Printf("[INFO] Failed getting logs: %s", err)
+				log.Printf("[ERROR] Failed getting container stats for container %s: %s", cont.ID, err)
 			} else {
-				buf := new(strings.Builder)
-				io.Copy(buf, out)
-				logs := buf.String()
+				//log.Printf("[INFO] Info for container: %#v", stats)
+				//log.Printf("%#v", stats.Config)
+				//log.Printf("%#v", stats.ContainerJSONBase.State)
+				log.Printf("[DEBUG] EXECUTION STATUS: %s", stats.ContainerJSONBase.State.Status)
+				logOptions := types.ContainerLogsOptions{
+					ShowStdout: true,
+				}
 
-				// FIXME: Re-add log tracking which can be sent to backend
-				//allLogs[actionId] = logs
+				exit := false
+				out, err := cli.ContainerLogs(ctx, cont.ID, logOptions)
+				if err != nil {
+					log.Printf("[INFO] Failed getting logs: %s", err)
+				} else {
+					buf := new(strings.Builder)
+					io.Copy(buf, out)
+					logs := buf.String()
 
-				if stats.ContainerJSONBase.State.Status == "exited" && (!strings.Contains(logs, "Normal execution.") && !strings.Contains(logs, "indicates microservices")) {
+					// FIXME: Re-add log tracking which can be sent to backend
+					//allLogs[actionId] = logs
 
-					if len(logs) > 10 {
-						log.Printf("[ERROR] BAD Execution Logs for %s: %s", action.ID, logs)
-						exit = true
+					if stats.ContainerJSONBase.State.Status == "exited" && (!strings.Contains(logs, "Normal execution") && !strings.Contains(logs, "indicates microservices") && !strings.Contains(logs, "starting action result")) {
+						if len(logs) > 10 {
+							log.Printf("[ERROR] BAD Execution Logs for %s: %s", action.ID, logs)
+							exit = true
+						}
 					}
 				}
-			}
 
-			if exit {
-				log.Printf("[DEBUG] ERROR IN CONTAINER DEPLOYMENT - ITS EXITED!")
-				return errors.New(fmt.Sprintf(`{"success": false, "reason": "Container %s exited prematurely.","debug": "docker logs -f %s"}`, cont.ID, cont.ID))
+				if exit {
+					log.Printf("[DEBUG] ERROR IN CONTAINER DEPLOYMENT - ITS EXITED!")
+					return errors.New(fmt.Sprintf(`{"success": false, "reason": "Container %s exited prematurely.","debug": "docker logs -f %s"}`, cont.ID, cont.ID))
+				}
 			}
-		}
+		*/
+		log.Printf("[INFO] Handling DEFAULT execution source %s - SKIPPING wait anyway due to exited issues!", workflowExecution.ExecutionSource)
 	}
 
 	log.Printf("[DEBUG] Deployed container ID %s", cont.ID)

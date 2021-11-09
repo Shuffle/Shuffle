@@ -225,13 +225,14 @@ func deployServiceWorkers(image string) {
 		replicas := uint64(2)
 		scaleReplicas := os.Getenv("SHUFFLE_SCALE_REPLICAS")
 		if len(scaleReplicas) > 0 {
-			log.Printf("[DEBUG] SHUFFLE_SCALE_REPLICAS set to value %#v. Trying to overwrite default (2/node)", scaleReplicas)
 			tmpInt, err := strconv.Atoi(scaleReplicas)
 			if err != nil {
 				log.Printf("[ERROR] %s is not a valid number for replication", scaleReplicas)
 			} else {
 				replicas = uint64(tmpInt)
 			}
+
+			log.Printf("[DEBUG] SHUFFLE_SCALE_REPLICAS set to value %#v. Trying to overwrite default (%d/node)", scaleReplicas, replicas)
 		}
 
 		innerContainerName := fmt.Sprintf("shuffle-workers")
