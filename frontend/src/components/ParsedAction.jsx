@@ -58,6 +58,7 @@ const ParsedAction = (props) => {
 	const classes = useStyles()
 
 	const [expansionModalOpen, setExpansionModalOpen] = React.useState(false);
+	const [fieldCount, setFieldCount] = React.useState(0);
 
 	const keywords = ["len(", "lower(", "upper(", "trim(", "split(", "length(", "number(", "parse(", "join("]
 	const getParents = (action) => {
@@ -490,9 +491,12 @@ const ParsedAction = (props) => {
 			//setUpdate(event.target.value)
 		}
 
-		const changeActionParameterCodemirror = (event, count, data) => {
-			console.log(event)
-			if (data.name.startsWith("${") && data.name.endsWith("}")) {
+		const changeActionParameterCodeMirror = (event, count, data) => {
+			// console.log(event)
+			// if (data.name.startsWith("${") && data.name.endsWith("}")) {
+			// console.log(data)
+			// console.log(count)
+			if (data.startsWith("${") && data.endsWith("}")) {
 				// PARAM FIX - Gonna use the ID field, even though it's a hack
 				const paramcheck = selectedAction.parameters.find(param => param.name === "body")
 				if (paramcheck !== undefined) {
@@ -542,7 +546,7 @@ const ParsedAction = (props) => {
 				}
 			}
 
-			if (event.display.maxLine.text[event.display.maxLine.text.length-1] === "$") {
+			if (event.target.value[event.target.value.length-1] === "$") {
 				if (!showDropdown) {
 					setShowAutocomplete(false)
 					setShowDropdown(true)
@@ -555,7 +559,7 @@ const ParsedAction = (props) => {
 			}
 
 			// bad detection mechanism probably
-			if (event.display.maxLine.text[event.display.maxLine.text.length-1] === "." && actionlist.length > 0) {
+			if (event.target.value[event.target.value.length-1] === "." && actionlist.length > 0) {
 				console.log("GET THE LAST ARGUMENT FOR NODE!")
 				// THIS IS AN EXAMPLE OF SHOWING IT 
 				/*
@@ -627,8 +631,8 @@ const ParsedAction = (props) => {
 				}
 			}
 
-			selectedActionParameters[count].value = event.display.maxLine.text
-			selectedAction.parameters[count].value = event.display.maxLine.text
+			selectedActionParameters[count].value = data
+			selectedAction.parameters[count].value = data
 			setSelectedAction(selectedAction)
 			//setUpdate(Math.random())
 			//setUpdate(event.target.value)
@@ -841,7 +845,21 @@ const ParsedAction = (props) => {
 						const clickedFieldId = "rightside_field_"+count
 						//<TextareaAutosize
 						// <CodeMirror
-						var datafield = 
+
+						const shufflecode = <ShuffleCodeEditor
+							fieldCount = {fieldCount}
+							setFieldCount = {setFieldCount}
+							// editorData = {data.value.valueOf()}
+							changeActionParameterCodeMirror = {changeActionParameterCodeMirror}
+							codedata={codedata}
+							setcodedata={setcodedata}
+							setExpansionModalOpen={setExpansionModalOpen}
+							expansionModalOpen={expansionModalOpen}
+							// codelang={codelang}
+							// setcodelang={setcodelang}
+						/>
+
+						var datafield =
 							<TextField
 								disabled={disabled}
 								style={{backgroundColor: theme.palette.inputColor, borderRadius: theme.palette.borderRadius, border: selectedActionParameters[count].required || selectedActionParameters[count].configuration ? "2px solid #f85a3e" : "", color: "white", width: "100%", fontSize: "1em", }} 
@@ -858,6 +876,8 @@ const ParsedAction = (props) => {
 								multiline={multiline}
 								onClick={() => {
 									console.log("Clicked field: ", clickedFieldId)
+									setFieldCount(count)
+									setcodedata(data.value)
 									setExpansionModalOpen(true)
 									if (setScrollConfig !== undefined && scrollConfig !== null && scrollConfig !== undefined && scrollConfig.selected !== clickedFieldId) {
 										scrollConfig.selected = clickedFieldId
@@ -868,17 +888,17 @@ const ParsedAction = (props) => {
 								id={clickedFieldId}
 								rows={rows}
 								color="primary"
-								value={codedata}
-								//defaultValue={data.value}
-								//height={multiline ? 50 : 150}
+								// value={codedata}
+								defaultValue={data.value}
+								// height={multiline ? 50 : 150}
 
 								type={placeholder.includes("***") || (data.configuration && (data.name.toLowerCase().includes("api") || data.name.toLowerCase().includes("key") || data.name.toLowerCase().includes("pass"))) ? "password" : "text"}
 								placeholder={placeholder}
 								
 								onChange={(event) => {
-									changeActionParameter(event, count, data)
+									// changeActionParameter(event, count, data)
 								}}
-								
+
 								helperText={selectedApp.generated && selectedApp.activated && data.name === "body" ? 
 									<span style={{color:"white", marginBottom: 5, marginleft: 5,}}>
 										{openApiHelperText}
@@ -1335,6 +1355,7 @@ const ParsedAction = (props) => {
 							*/}
 							</div>	
 							{datafield}
+							{shufflecode}
 							{showDropdown && showDropdownNumber === count && data.variant === "STATIC_VALUE" && jsonList.length > 0 ?
 							  <FormControl fullWidth style={{marginTop: 0}}>
 									<InputLabel id="action-autocompleter" style={{marginLeft: 10, color: "white"}}>Autocomplete</InputLabel>
@@ -1411,14 +1432,16 @@ const ParsedAction = (props) => {
 	const baselabel = selectedAction.label
 	return ( 
 		<div style={appApiViewStyle} id="parsed_action_view">
-			{<ShuffleCodeEditor
+			{/* {<ShuffleCodeEditor
+				count = {count}
+				changeActionParameter = {changeActionParameter}
 				codedata={codedata}
 				setcodedata={setcodedata}
 				setExpansionModalOpen={setExpansionModalOpen}
 				expansionModalOpen={expansionModalOpen}
 				// codelang={codelang}
 				// setcodelang={setcodelang}
-			/>}
+			/>} */}
 			{hideExtraTypes === true ? null : 
 				<span>
 				<div style={{display: "flex", minHeight: 40, marginBottom: 30}}>

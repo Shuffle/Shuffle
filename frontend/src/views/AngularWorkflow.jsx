@@ -1,6 +1,7 @@
 import React, {useRef, useState, useEffect, useLayoutEffect} from 'react';
 import { useInterval } from 'react-powerhooks';
 import { useTheme } from '@material-ui/core/styles';
+import ShuffleCodeEditor from "../components/ShuffleCodeEditor.jsx";
 
 import { v4 as uuidv4 } from 'uuid';
 import {Link} from 'react-router-dom';
@@ -168,6 +169,9 @@ const AngularWorkflow = (props) => {
 		left: 0,
 		selected: "",
 	})
+
+	const [codedata, setcodedata] = React.useState("print('Hello')");
+	const [expansionModalOpen, setExpansionModalOpen] = React.useState(false);
 
 	const [history, setHistory] = React.useState([])
 	const [historyIndex, setHistoryIndex] = React.useState(history.length)
@@ -7828,6 +7832,12 @@ const AngularWorkflow = (props) => {
 						globalUrl={globalUrl}
 						setSelectedActionEnvironment={setSelectedActionEnvironment}
 						requiresAuthentication={requiresAuthentication}
+
+						// onClick={() => {
+						// 	// console.log("Clicked field: ", clickedFieldId)
+						// 	setExpansionModalOpen(true)
+						// 	}
+						// }
 					/>
 				</div>
 			)
@@ -9439,6 +9449,20 @@ const AngularWorkflow = (props) => {
 			</ScrollElement>
 		</div>	
 	)
+
+	// const baselabel = selectedAction.label
+	// return ( 
+	// 	<div style={appApiViewStyle} id="parsed_action_view">
+	// 		{<ShuffleCodeEditor
+	// 			codedata={codedata}
+	// 			setcodedata={setcodedata}
+	// 			setExpansionModalOpen={setExpansionModalOpen}
+	// 			expansionModalOpen={expansionModalOpen}
+	// 			// codelang={codelang}
+	// 			// setcodelang={setcodelang}
+	// 		/>}
+	// 	</div>
+	// )
 }
 
 export default AngularWorkflow 
