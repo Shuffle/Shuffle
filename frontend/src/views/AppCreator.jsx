@@ -4331,33 +4331,34 @@ const AppCreator = (props) => {
     canvas.height = 174;
     var ctx = canvas.getContext("2d");
 
-    img.onload = function () {
-      // img, x, y, width, height
-      //ctx.drawImage(img, 174, 174)
-      //console.log("IMG natural: ", img.naturalWidth, img.naturalHeight)
-      //ctx.drawImage(img, 0, 0, 174, 174)
-      ctx.drawImage(
-        img,
-        0,
-        0,
-        img.width,
-        img.height,
-        0,
-        0,
-        canvas.width,
-        canvas.height
-      );
+    if (img)
+      img.onload = function () {
+        // img, x, y, width, height
+        //ctx.drawImage(img, 174, 174)
+        //console.log("IMG natural: ", img.naturalWidth, img.naturalHeight)
+        //ctx.drawImage(img, 0, 0, 174, 174)
+        ctx.drawImage(
+          img,
+          0,
+          0,
+          img.width,
+          img.height,
+          0,
+          0,
+          canvas.width,
+          canvas.height
+        );
 
-      try {
-        const canvasUrl = canvas.toDataURL();
-        if (canvasUrl !== fileBase64) {
-          //console.log("SET URL TO: ", canvasUrl)
-          setFileBase64(canvasUrl);
+        try {
+          const canvasUrl = canvas.toDataURL();
+          if (canvasUrl !== fileBase64) {
+            //console.log("SET URL TO: ", canvasUrl)
+            setFileBase64(canvasUrl);
+          }
+        } catch (e) {
+          alert.error("Failed to parse canvasurl!");
         }
-      } catch (e) {
-        alert.error("Failed to parse canvasurl!");
-      }
-    };
+      };
 
     //console.log(img.width)
     //console.log(img.width)
@@ -4626,8 +4627,7 @@ const AppCreator = (props) => {
                 setOpenImageModal(true);
               }}
             >
-              {!imageData && alternateImg}
-              {imageInfo}
+              {imageData ? imageInfo : alternateImg}
               <input
                 hidden
                 type="file"
