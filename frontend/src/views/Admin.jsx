@@ -11,7 +11,7 @@ import {Edit as EditIcon, FileCopy as FileCopyIcon, Publish as PublishIcon, Sele
 import { useAlert } from "react-alert";
 import Dropzone from '../components/Dropzone';
 import HandlePayment from './HandlePayment'
-import OrgHeader from '../components/OrgHeader'
+import OrgHeader from '../components/OrgHeader.jsx'
 
 const useStyles = makeStyles({
 	notchedOutline: {
@@ -61,6 +61,11 @@ const Admin = (props) => {
 	const [showArchived, setShowArchived] = React.useState(false)
 	const [isDropzone, setIsDropzone] = React.useState(false);
 
+	const [image2FA, setImage2FA] = React.useState("");
+	const [value2FA, setValue2FA] = React.useState("");
+	const [secret2FA, setSecret2FA] = React.useState("");
+	const [show2faSetup, setShow2faSetup] = useState(false)
+
 	useEffect(() => {
 		if (isDropzone) {
 			//redirectOpenApi();
@@ -69,6 +74,36 @@ const Admin = (props) => {
   }, [isDropzone]);
 
 	const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io" 
+
+	const get2faCode = (userId) => {
+		fetch(`${globalUrl}/api/v1/users/${userId}/get2fa`, {
+    	  method: 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json',
+				},
+	  			credentials: "include",
+    		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for apps :O!")
+			}
+
+			return response.json()
+		})
+    .then((responseJson) => {
+			//console.log("RESPONSE: ", responseJson)
+			if (responseJson.success === true) {
+				//alert.info(responseJson.reason)
+				setImage2FA(responseJson.reason)
+				setSecret2FA(responseJson.extra)
+			}
+		})
+		.catch(error => {
+			alert.error(error.toString())
+		});
+	}
+
 	const getApps = () => {
 		fetch(globalUrl+"/api/v1/apps", {
     	  method: 'GET',
@@ -199,6 +234,58 @@ const Admin = (props) => {
 				console.log("Error in userdata: ", error)
 			});
 	}
+
+	const handleVerify2FA = (userId, code) => {
+		const data = {
+			"code": code,
+			"user_id": userId,
+		}
+
+		fetch(`${globalUrl}/api/v1/users/${userId}/set2fa`, {
+			mode: 'cors',
+			method: 'POST',
+			body: JSON.stringify(data),
+			credentials: 'include',
+			crossDomain: true,
+			withCredentials: true,
+			headers: {
+				'Content-Type': 'application/json; charset=utf-8',
+			},
+		})
+		.then(response => {
+			if (response.status === 200) {
+			} else {
+				//alert.info("Wrong code sent.")
+				//alert.info("Wrong code sent. Please try again.")
+			}
+
+			return response.json()
+		})
+    .then((responseJson) => {
+			if (responseJson.success === true) {
+				alert.info("Successfully enabled 2fa")
+
+				setTimeout(() => {
+					getUsers()
+
+					setImage2FA("")
+					setValue2FA("")
+					setSecret2FA("")
+					setShow2faSetup(false)
+					setSelectedUserModalOpen(false)
+				}, 1000)
+
+			} else {
+				alert.info("Wrong code sent. Please try again.")
+				//alert.error("Failed setting 2fa: ", responseJson.reason)
+			}
+		})
+		.catch(error => {
+			alert.info("Wrong code sent. Please try again.")
+			//alert.error("Err: " + error.toString())
+		})
+	}
+	
 
 	const handleStopOrgSync = (org_id) => {
 		if (org_id === undefined || org_id === null) {
@@ -467,7 +554,7 @@ const Admin = (props) => {
 			if (!responseJson.success && responseJson.reason !== undefined) {
 				alert.error("Failed to deactivate user: "+responseJson.reason)
 			} else {
-				alert.success("Deactivated user "+data.id)
+				alert.success("Changed activation for user "+data.id)
 			}
 		})
 
@@ -1291,7 +1378,7 @@ const Admin = (props) => {
 			<DialogTitle><span style={{ color: "white" }}>Edit authentication for {selectedAuthentication.app.name} ({selectedAuthentication.label})</span></DialogTitle>
 			<DialogContent>
 				{selectedAuthentication.fields.map((data, index) => {
-					console.log("DATA: ", data, selectedAuthentication)
+					//console.log("DATA: ", data, selectedAuthentication)
 					return (
 						<div key={index}>
 							<Typography style={{marginBottom: 0, marginTop: 10}}>{data.key}</Typography>
@@ -1356,7 +1443,7 @@ const Admin = (props) => {
 	 : null
 
 	const editUserModal =
-		<Dialog modal
+		<Dialog 
 			open={selectedUserModalOpen}
 			onClose={() => { setSelectedUserModalOpen(false) }}
 			PaperProps={{
@@ -1368,7 +1455,7 @@ const Admin = (props) => {
 				},
 			}}
 		>
-			<DialogTitle><span style={{ color: "white" }}><EditIcon style={{marginTop: 5}}/> Editing {selectedUser.username}</span></DialogTitle>
+			<DialogTitle style={{maxWidth: 450, margin: "auto"}}><span style={{ color: "white" }}><EditIcon style={{marginTop: 5}}/> Editing {selectedUser.username}</span></DialogTitle>
 			<DialogContent>
 				{isCloud ? 
 					null
@@ -1444,25 +1531,91 @@ const Admin = (props) => {
 					</div>
 				}
 				<Divider style={{ marginTop: 20, marginBottom: 20, backgroundColor: theme.palette.inputColor }} />
-				<Button
-					style={{}}
-					variant="outlined"
-					color="primary"
-					disabled={selectedUser.role === "admin"}
-					onClick={() => deleteUser(selectedUser)}
-				>
-					{selectedUser.active ? "Deactivate" : "Activate"}
-				</Button>
-				<Button
-					style={{}}
-					variant="outlined"
-					color="primary"
-					disabled={selectedUser.role === "admin" && selectedUser.username !== userdata.username}
-					onClick={() => generateApikey(selectedUser)}
-				>
-					Get new API key
-				</Button>
-			</DialogContent>
+				<div style={{margin: "auto", maxWidth: 400}}>
+					<Button
+						style={{}}
+						variant="outlined"
+						color="primary"
+						disabled={selectedUser.username === userdata.username}
+						onClick={() => deleteUser(selectedUser)}
+					>
+						{selectedUser.active ? "Deactivate" : "Activate"}
+					</Button>
+					<Button
+						style={{}}
+						variant="outlined"
+						color="primary"
+						disabled={selectedUser.role === "admin" && selectedUser.username !== userdata.username}
+						onClick={() => generateApikey(selectedUser)}
+					>
+						Renew API-key
+					</Button>
+					<Button
+						onClick={() => {
+							run2FASetup(userdata)
+						}}
+						disabled={(selectedUser.role === "admin" && selectedUser.username !== userdata.username) || selectedUser.active === false}
+						variant="outlined"
+						color="primary"
+					>
+						{selectedUser.mfa_info !== undefined && selectedUser.mfa_info !== null && selectedUser.mfa_info.active === true ? "Disable 2FA" : "Enable 2FA"}
+					</Button>
+				</div>
+		{show2faSetup && isCloud ? 
+			<div style={{margin: "auto", maxWidth: 300, minWidth: 300, marginTop: 25, }}>
+				{/*<Divider style={{marginTop: 20, marginBottom: 20}} />*/}
+
+				{secret2FA !== undefined && secret2FA !== null && secret2FA.length > 0 ? 
+					<span>
+						<Typography variant="body2" color="textSecondary">
+							Scan the image below with the two-factor authentication app on your phone. If you can’t use a QR code, use the code {secret2FA} instead. 
+						</Typography>
+					</span>
+				: null}
+				{image2FA !== undefined && image2FA !== null && image2FA.length > 0 ? 
+					<img alt={"2 factor img"} src={image2FA} style={{margin: "auto", marginTop: 25, maxHeight: 200, maxWidth: 200, minWidth: 200, maxWidth: 200, }} />
+					:
+					<CircularProgress />
+				}
+
+				<Typography variant="body2" color="textSecondary">
+					After scanning the QR code image, the app will display a code that you can enter below.
+				</Typography>
+				<div style={{display: "flex"}}>
+					<TextField
+						color="primary"
+						style={{flex: 2, backgroundColor: theme.palette.inputColor, marginRight: 10, }}
+						InputProps={{
+							style: {
+								height: 50,
+								color: "white",
+								fontSize: "1em",
+							},
+							maxLength: 6,
+						}}
+						required
+						fullWidth={true}
+						id="2fa_key"
+						margin="normal"
+						placeholder="6-digit code"
+						variant="outlined"
+						onChange={(event) => {
+							if (event.target.value.length > 6) {
+								return
+							} 
+
+							setValue2FA(event.target.value)
+						}}
+					/>
+					<Button disabled={value2FA.length !== 6} variant="contained" style={{marginTop: 15, height: 50, flex: 1,}} onClick={() => {
+						handleVerify2FA(userdata.id, value2FA) 
+					}} color="primary">
+						Submit
+					</Button>
+				</div>
+			</div>
+			: null}
+		</DialogContent>
 		</Dialog>
 
 	const GridItem = (props) => {
@@ -1574,14 +1727,17 @@ const Admin = (props) => {
 							setCloudSyncApikey(event.target.value)
 						}}
 					/>
-					<Button disabled={(!selectedOrganization.cloud_sync && cloudSyncApikey.length === 0) || loading} variant="contained" style={{ marginLeft: 15, height: 50, borderRadius: "0px" }} onClick={() => {
+					<Button disabled={(!selectedOrganization.cloud_sync && cloudSyncApikey.length === 0) || loading} style={{ marginLeft: 15, height: 50, borderRadius: "0px" }} onClick={() => {
 						setLoading(true)
 						enableCloudSync(
 							cloudSyncApikey,
 							selectedOrganization,
 							selectedOrganization.cloud_sync,
 						)
-					}} color="primary">
+					}} 
+						color="primary"
+						variant={selectedOrganization.cloud_sync === true ? "outlined" : "contained"}
+					>
 						{selectedOrganization.cloud_sync ? 
 							"Stop sync"
 							:
@@ -1698,7 +1854,7 @@ const Admin = (props) => {
 						</IconButton>
 					</Tooltip>
 						{selectedOrganization.name.length > 0 ?
-							<OrgHeader userdata={userdata} setSelectedOrganization={setSelectedOrganization} globalUrl={globalUrl} selectedOrganization={selectedOrganization}/>
+							<OrgHeader isCloud={isCloud} userdata={userdata} setSelectedOrganization={setSelectedOrganization} globalUrl={globalUrl} selectedOrganization={selectedOrganization}/>
 						: 
 						<div style={{paddingTop: 250, width: 250, margin: "auto", textAlign: "center"}}>
 							<CircularProgress />
@@ -1751,7 +1907,7 @@ const Admin = (props) => {
 									{selectedOrganization.cloud_sync_active ? 
 										<Button
 											style={{ width: 150, height: 50, marginLeft: 10, marginTop: 17, }}
-											variant="contained"
+											variant={selectedOrganization.cloud_sync_active === true ? "outlined" : "contained"}
 											color="primary"
 											onClick={() => {
 												handleStopOrgSync(selectedOrganization.id)
@@ -1788,14 +1944,17 @@ const Admin = (props) => {
 										setCloudSyncApikey(event.target.value)
 									}}
 								/>
-								<Button disabled={(!selectedOrganization.cloud_sync && cloudSyncApikey.length === 0) || loading} variant="contained" style={{marginTop: 15, height: 50, width: 150,}} onClick={() => {
+								<Button disabled={(!selectedOrganization.cloud_sync && cloudSyncApikey.length === 0) || loading} style={{marginTop: 15, height: 50, width: 150,}} onClick={() => {
 									setLoading(true)
 									enableCloudSync(
 										cloudSyncApikey,
 										selectedOrganization,
 										selectedOrganization.cloud_sync,
 									)
-								}} color="primary">
+								}} 
+									color="primary" 
+									variant={selectedOrganization.cloud_sync === true ? "outlined" : "contained"}
+								>
 									{selectedOrganization.cloud_sync ? 
 										"Stop sync"
 										:
@@ -2077,11 +2236,15 @@ const Admin = (props) => {
 					/>
 					<ListItemText
 						primary="Active"
-						style={{ minWidth: 150, maxWidth: 150 }}
+						style={{ minWidth: 100, maxWidth: 100, marginLeft: 5,}}
 					/>
 					<ListItemText
 						primary="Type"
-						style={{ minWidth: 150 , maxWidth: 150 }}
+						style={{ minWidth: 100 , maxWidth: 100 }}
+					/>
+					<ListItemText
+						primary="MFA"
+						style={{ minWidth: 100, maxWidth: 100 }}
 					/>
 					<ListItemText
 						primary="Actions"
@@ -2158,11 +2321,15 @@ const Admin = (props) => {
 							/>
 					<ListItemText
 						primary={data.active ? "True" : "False"}
-						style={{ minWidth: 150, maxWidth: 150}}
+						style={{ minWidth: 100, maxWidth: 100}}
 					/>
 					<ListItemText
 						primary={data.login_type === undefined || data.login_type === null || data.login_type.length === 0 ? "Normal" : data.login_type}
-						style={{ minWidth: 150, maxWidth: 150}}
+						style={{ minWidth: 100, maxWidth: 100}}
+					/>
+					<ListItemText
+						primary={data.mfa_info !== undefined && data.mfa_info !== null && data.mfa_info.active === true ? "Active" : "Inactive"}
+						style={{ minWidth: 100, maxWidth: 100}}
 					/>
 				<ListItemText style={{ display: "flex" }}>
 					<IconButton
@@ -2173,7 +2340,7 @@ const Admin = (props) => {
 					>
 						<EditIcon color="primary"/>
 					</IconButton>
-					<Button
+					{/*<Button
 						onClick={() => {
 							generateApikey(data)
 						}}
@@ -2182,7 +2349,7 @@ const Admin = (props) => {
 						color="primary"
 					>
 						New apikey 
-					</Button>
+					</Button>*/}
 				</ListItemText>
 				</ListItem>
 					)
@@ -2190,6 +2357,17 @@ const Admin = (props) => {
 			</List>
 		</div>
 		: null
+
+	const run2FASetup = (data) => {
+		console.log("2fa: ", data)
+		if (!show2faSetup) {
+			get2faCode(data.id) 
+		} else {
+			// Should remove?
+		}
+
+		setShow2faSetup(!show2faSetup)
+	}
 
 	const uploadFiles = (files) => {
 		for (var key in files) {

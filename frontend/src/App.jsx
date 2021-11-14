@@ -115,7 +115,7 @@ const App = (message, props) => {
 			// Handling Ethereum update 
 			detectEthereumProvider()
 			.then((provider) => {
-				if (provider) {
+				if (provider && userInfo.eth_info !== undefined && userInfo.eth_info !== null) {
 					if (userInfo.eth_info.account !== undefined && userInfo.eth_info.account !== null && userInfo.eth_info.account.length === 0) {
 						userInfo.eth_info = {}
 						var method = "eth_requestAccounts"

@@ -36,6 +36,9 @@ const LoginDialog = props => {
   const [loginViewLoading, setLoginViewLoading] = useState(false);
   const [ssoUrl, setSSOUrl] = useState("")
 
+  const [MFAField, setMFAField] = useState(false);
+  const [MFAValue, setMFAValue] = useState("");
+
 	// Used to swap from login to register. True = login, false = register
 
 	const classes = useStyles();
@@ -111,7 +114,11 @@ const LoginDialog = props => {
 		// FIXME - add some check here ROFL
 
 		// Just use this one?
-		var data = { "username": username, "password": password }
+		var data = {"username": username, "password": password}
+		if (MFAValue !== undefined && MFAValue !== null && MFAValue.length > 0) {
+			data["mfa_code"] = MFAValue
+		}
+
 		var baseurl = globalUrl
 		if (register) {
 			var url = baseurl + '/api/v1/users/login';
@@ -132,6 +139,12 @@ const LoginDialog = props => {
 						if (responseJson["success"] === false) {
 							setLoginInfo(responseJson["reason"])
 						} else {
+							if (responseJson["reason"] === "MFA_REDIRECT") {
+								setLoginInfo("MFA required. Please the 6-digit code from your authenticator")
+								setMFAField(true)
+								return
+							}
+
 							setLoginInfo("Successful login, rerouting")
 							for (var key in responseJson["cookies"]) {
 								setCookie(responseJson["cookies"][key].key, responseJson["cookies"][key].value, { path: "/" })
@@ -255,7 +268,7 @@ const LoginDialog = props => {
 					<div>
 						<TextField
 							color="primary"
-							style={{ backgroundColor: theme.palette.inputColor }}
+							style={{ backgroundColor: theme.palette.inputColor, marginTop: 5, }}
 							autoFocus
 							InputProps={{
 								classes: {
@@ -281,7 +294,7 @@ const LoginDialog = props => {
 					<div>
 						<TextField
 							color="primary"
-							style={{ backgroundColor: theme.palette.inputColor }}
+							style={{ backgroundColor: theme.palette.inputColor, marginTop: 5,}}
 							InputProps={{
 								classes: {
 									notchedOutline: classes.notchedOutline,
@@ -303,6 +316,35 @@ const LoginDialog = props => {
 							onChange={onChangePass}
 						/>
 					</div>
+					{MFAField === true ? 
+						<div style={{marginTop: 15}}>
+							5-factor code
+							<TextField
+								color="primary"
+								style={{backgroundColor: theme.palette.inputColor, marginTop: 5, }}
+								InputProps={{
+									classes: {
+										notchedOutline: classes.notchedOutline,
+									},
+									style:{
+										height: "50px", 
+										color: "white",
+										fontSize: "1em",
+									},
+								}}
+								required
+								id="outlined-password-input"
+								fullWidth={true}
+								type="text"
+								placeholder="6-digit code"
+								margin="normal"
+								variant="outlined"
+								onChange={(event) => {
+ 									setMFAValue(event.target.value)
+								}}
+							/>
+						</div>
+					: null}
 					<div style={{ display: "flex", marginTop: "15px" }}>
 						<Button color="primary" variant="contained" type="submit" style={{ flex: "1", }} disabled={!handleValidateForm() || loginLoading}>
   						{loginLoading ? <CircularProgress color="secondary" style={{color: "white",}} /> : "SUBMIT"}

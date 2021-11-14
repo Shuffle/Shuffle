@@ -1,6 +1,6 @@
 import React, {useState, useEffect} from 'react';
 
-import {Typography, Paper, Button, Divider, TextField} from '@material-ui/core';
+import {Grid, Typography, Paper, Button, Divider, TextField} from '@material-ui/core';
 import {Link} from 'react-router-dom';
 import { useAlert } from "react-alert";
 import { useTheme } from '@material-ui/core/styles';
@@ -24,6 +24,9 @@ const Settings = (props) => {
 	const [newPassword2, setNewPassword2] = useState("");
 	const [file, setFile] = React.useState("")
 	const [fileBase64, setFileBase64] = React.useState(userdata.image === undefined || userdata.image === null ? theme.palette.defaultImage : userdata.image)
+	const [loadedValidationWorkflows, setLoadedValidationWorkflows] = React.useState([])
+	const [selfOwnedWorkflows, setSelfOwnedWorkflows] = React.useState([])
+	const [loadedWorkflowCollections, setLoadedWorkflowCollections] = React.useState([])
 
 	// Used for error messages etc
 	const [formMessage, ] = useState("");
@@ -32,7 +35,6 @@ const Settings = (props) => {
 	const [firstrequest, setFirstRequest] = useState(true)
 
 	const [userSettings, setUserSettings] = useState({})
-	console.log(userdata)
 
 
 	/*
@@ -83,6 +85,24 @@ const Settings = (props) => {
 		display: "flex", 
 		flexDirection: "column"
 	}
+
+	const checkOwner = (data, userdata) => {
+		var currentOwner = false
+		if (data.owner.address === userdata.eth_info.account) {
+			currentOwner = true
+		} else {
+			if (data.top_ownerships !== undefined && data.top_ownerships !== null && data.top_ownerships.length === 1) {
+				for (var key in data.top_ownerships) {
+					if (data.top_ownerships[key].owner.address === userdata.eth_info.account) {
+						currentOwner = true
+						break
+					}
+				}
+			}
+		}
+
+		return currentOwner
+	}
 	
 	const onPasswordChange = () => {
 		const data = {"username": userSettings.username, "currentpassword": currentPassword, "newpassword": newPassword, "newpassword2": newPassword2}
@@ -111,6 +131,50 @@ const Settings = (props) => {
 		.catch(error => {
 			setPasswordFormMessage("Something went wrong.")
 		});
+	}
+
+	const loadWorkflowOwnership = () => {
+		fetch(globalUrl+"/api/v1/workflows/collections/untitled-collection-103712081", {
+    	  method: 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json',
+				},
+	  			credentials: "include",
+    		})
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for WORKFLOW EXECUTION :O!")
+			}
+
+			return response.json()
+		})
+    .then((responseJson) => {
+			//console.log("Values: ", responseJson)
+
+			//	const [selfOwnedWorkflows, setSelfOwnedWorkflows] = React.useState([])
+			if (responseJson !== undefined && responseJson !== null) {
+				const filteredOwnerships = responseJson.filter(data => checkOwner(data, userdata) === true)
+				if (filteredOwnerships !== undefined && filteredOwnerships !== null && filteredOwnerships.length > 0) {
+					setSelfOwnedWorkflows(filteredOwnerships)
+				}
+
+				var collections = []
+				for (var key in responseJson) {
+					var collectionname = responseJson[key].collection.name
+					if (!collections.includes(collectionname)) {
+						collections.push(collectionname)
+					}
+				}
+
+				console.log(collections)
+				setLoadedWorkflowCollections(collections)
+				setLoadedValidationWorkflows(responseJson)
+			}
+    })
+		.catch(error => {
+    		console.log(error)
+		})
 	}
 
 	const generateApikey = () => {
@@ -257,6 +321,37 @@ const Settings = (props) => {
 			setFields()
 		} 
 	})
+
+	const ParsedWorkflowView = (props) => {
+		const { data } = props;
+
+		var innerPaperStyle = {
+			backgroundColor: theme.palette.inputColor,
+			display: "flex",
+			flexDirection: "column",
+			padding: "0px 0px 12px 0px",
+			borderRadius: theme.palette.borderRadius,
+		}
+
+		const currentOwner = checkOwner(data, userdata)
+		if (currentOwner === true) {
+			innerPaperStyle.border = "3px solid #f86a3e"
+		}
+			
+		return (
+			<Grid item xs={4} style={{borderRadius: theme.palette.borderRadius,}}>
+				<Paper style={innerPaperStyle}>
+					<img src={data.image_thumbnail_url} alt={data.name} style={{width: "100%", marginBottom: 10, }}/>
+					<Typography variant="body2" color="textSecondary">
+						{data.collection.name}
+					</Typography>
+					<Typography variant="body2">
+						{data.name}
+					</Typography>
+				</Paper>
+			</Grid>
+		)
+	}
 
 	// Random names for type & autoComplete. Didn't research :^)
 	var imageData = file.length > 0 ? file : fileBase64 
@@ -529,45 +624,96 @@ const Settings = (props) => {
 					</Button>
 					<h3>{passwordFormMessage}</h3>
 					<Divider style={{marginTop: "40px"}}/>
-					{userdata !== undefined && userdata.eth_info !== undefined && userdata.eth_info.account.length > 0 ? 
-						<Button
-							style={{height: 40, marginTop: 10}}
-							variant="contained"
-							color="primary"
-							fullWidth={true}
-							onClick={() => {
-								handleEthereumTokenCreation()
-							}}
-						>
-							Create token
-						</Button>
-					: 
-						<Button
-							style={{height: 40, marginTop: 10}}
-							variant="outlined"
-							color="primary"
-							fullWidth={true}
-							onClick={() => {
-								handleEthereumConnection()
-							}}
-						>
-							Authenticate
-						</Button>
-					}
-
-					{userdata.eth_info !== undefined && userdata.eth_info.account !== undefined && userdata.eth_info.account.length > 0 && userdata.eth_info.parsed_balance !== undefined ?
-						<div style={{marginTop: 10, display: "flex",}}>
-							<Paper square style={{borderRadius: theme.palette.borderRadius, padding: 50, backgroundColor: theme.palette.inputColor}}>
-								<Typography>
-									<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Ethereum-icon-purple.svg/480px-Ethereum-icon-purple.svg.png" style={{height: 30 }}/>
-								</Typography>
-								<Typography>
-									{/*window.ethereum.fromWei(userdata.eth_info.balance, "ether")*/}
-									 {userdata.eth_info.parsed_balance.toFixed(4)} ETH
-								</Typography>
-							</Paper>
+					<h2>Platform Earnings</h2>
+					<div style={{display: "flex", width: "100%", }}>
+						<div style={{flex: 1, display: "flex",}}>
+							<div>
+								{userdata.eth_info !== undefined && userdata.eth_info.account !== undefined && userdata.eth_info.account.length > 0 && userdata.eth_info.parsed_balance !== undefined ?
+									<div style={{marginTop: 10, display: "flex", maxHeight: 163.75, }}>
+										<Paper square style={{borderRadius: theme.palette.borderRadius, padding: 50, backgroundColor: theme.palette.inputColor}}>
+											<Typography>
+												<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Ethereum-icon-purple.svg/480px-Ethereum-icon-purple.svg.png" style={{height: 30 }}/>
+											</Typography>
+											<Typography>
+												{/*window.ethereum.fromWei(userdata.eth_info.balance, "ether")*/}
+												 {userdata.eth_info.parsed_balance.toFixed(4)} ETH
+											</Typography>
+										</Paper>
+									</div>
+								: null}
+							</div>
+							<div style={{marginTop: 10, display: "flex", maxHeight: 163.75, marginLeft: 10, }}>
+								<Paper square style={{borderRadius: theme.palette.borderRadius, padding: 50, backgroundColor: theme.palette.inputColor}}>
+									<Typography variant="body2">
+										Owned Workflows
+									</Typography>
+									<Typography variant="h6">
+										{selfOwnedWorkflows.length}
+									</Typography>
+								</Paper>
+							</div>
 						</div>
-					: null}
+						<div style={{flex: 1, marginTop: 20, }}>
+							{userdata !== undefined && userdata.eth_info !== undefined && userdata.eth_info.account.length > 0 ? 
+								<div style={{width: "100%", textAlign: "left",}}>
+									<Typography variant="body2">
+										Address: {userdata.eth_info.account}
+									</Typography>
+									{loadedWorkflowCollections.length > 0 ? 
+										<Typography variant="body2">
+											Collections:&nbsp;
+											{loadedWorkflowCollections.map((data, index) => {
+													var collectionname = data.toLowerCase()
+													collectionname = collectionname.replaceAll("#", "")
+													collectionname = collectionname.replaceAll(" ", "-")
+
+													return (
+														<span key={index}>
+															<a rel="noopener noreferrer" target="_blank" href={`https://opensea.io/collection/${collectionname}`} style={{textDecoration: "none", color: "#f85a3e"}}>{data}</a>&nbsp;
+														</span>
+													)
+											})}
+										</Typography>
+									: null}
+									<Button
+										style={{height: 40, marginTop: 10}}
+										variant="contained"
+										color="primary"
+										fullWidth={true}
+										onClick={() => {
+											//handleEthereumTokenCreation()
+											loadWorkflowOwnership()
+
+										}}
+									>
+										Validate ownership 
+									</Button>
+								</div>
+							: 
+								<Button
+									style={{height: 40, marginTop: 10}}
+									variant="outlined"
+									color="primary"
+									fullWidth={true}
+									onClick={() => {
+										handleEthereumConnection()
+									}}
+								>
+									Authenticate
+								</Button>
+							}
+						</div>
+					</div>
+
+						{loadedValidationWorkflows !== undefined && loadedValidationWorkflows !== null ? 
+							loadedValidationWorkflows.map((data, index) => {
+								return (
+									<Grid container spacing={3} style={{marginTop: 15}}>
+										<ParsedWorkflowView key={index} data={data} />
+									</Grid>
+								)
+							})
+						: null}
 				</Paper>
 			</div>
 
