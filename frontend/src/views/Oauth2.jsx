@@ -1,11 +1,7 @@
-import React, { } from 'react';
+import React from "react";
 
 const Oauth2 = (props) => {
-	return (
-		<div>
-			tmp
-		</div>
-	)
-}
+  return <div>tmp</div>;
+};
 
-export default Oauth2; 
+export default Oauth2;
