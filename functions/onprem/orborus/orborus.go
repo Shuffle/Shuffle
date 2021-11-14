@@ -149,7 +149,7 @@ func cleanupExistingNodes(ctx context.Context) error {
 		return err
 	}
 
-	log.Printf("\n\nFound %d contaienrs", len(services))
+	//log.Printf("\n\nFound %d contaienrs", len(services))
 
 	for _, service := range services {
 		log.Printf("[INFO] Service: %#v", service.Spec.Annotations.Name)
@@ -222,7 +222,7 @@ func deployServiceWorkers(image string) {
 
 		//containerName := fmt.Sprintf("shuffle-worker-%s", parsedUuid)
 
-		replicas := uint64(2)
+		replicas := uint64(1)
 		scaleReplicas := os.Getenv("SHUFFLE_SCALE_REPLICAS")
 		if len(scaleReplicas) > 0 {
 			tmpInt, err := strconv.Atoi(scaleReplicas)
@@ -236,13 +236,37 @@ func deployServiceWorkers(image string) {
 		}
 
 		innerContainerName := fmt.Sprintf("shuffle-workers")
+		parsedConcurrent := uint64(50)
+
+		cnt, _ := findActiveSwarmNodes()
+		nodeCount := uint64(1)
+		if cnt > 0 {
+			nodeCount = uint64(cnt)
+		}
+
+		if cnt == 0 {
+			cnt = 1
+		}
+
+		log.Printf("[DEBUG] Found %d node(s) to replicate over. Defaulting to 1 IF we can't auto-discover them.", cnt)
+		replicatedJobs := uint64(replicas * nodeCount)
+
 		log.Printf("[DEBUG] Deploying %d containers for worker with swarm to each node. Service name: %s. Image: %s", replicas, innerContainerName, image)
 
 		// FIXME: May not need ingress ports. Could use internal services and DNS of swarm itself
+		// https://github.com/moby/moby/blob/e2f740de442bac52b280bc485a3ca5b31567d938/api/types/swarm/service.go#L46
 		serviceSpec := swarm.ServiceSpec{
 			Annotations: swarm.Annotations{
 				Name:   innerContainerName,
 				Labels: map[string]string{},
+			},
+			Mode: swarm.ServiceMode{
+				Replicated: &swarm.ReplicatedService{
+					Replicas: &replicatedJobs,
+				},
+				ReplicatedJob: &swarm.ReplicatedJob{
+					MaxConcurrent: &parsedConcurrent,
+				},
 			},
 			Networks: []swarm.NetworkAttachmentConfig{
 				swarm.NetworkAttachmentConfig{
@@ -269,6 +293,7 @@ func deployServiceWorkers(image string) {
 					Env: []string{
 						fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", os.Getenv("SHUFFLE_SWARM_CONFIG")),
 						fmt.Sprintf("SHUFFLE_SWARM_NETWORK_NAME=%s", networkName),
+						fmt.Sprintf("SHUFFLE_APP_REPLICAS=%d", cnt),
 					},
 					Mounts: []mount.Mount{
 						mount.Mount{
@@ -306,7 +331,7 @@ func deployServiceWorkers(image string) {
 		)
 
 		if err == nil {
-			log.Printf("[DEBUG] Successfully deployed workers with %d replicas", replicas)
+			log.Printf("[DEBUG] Successfully deployed workers with %d replica(s)", replicas)
 			//time.Sleep(time.Duration(10) * time.Second)
 			//log.Printf("[DEBUG] Servicecreate request: %#v %#v", service, err)
 		} else {
@@ -572,6 +597,30 @@ func getStats() {
 	fmt.Printf("[INFO] cpu idle  : %f%%\n", float64(after.Idle-before.Idle)/total*100)
 
 	fmt.Printf("\n")
+}
+
+func findActiveSwarmNodes() (int64, error) {
+	ctx := context.Background()
+	nodes, err := dockercli.NodeList(ctx, types.NodeListOptions{})
+	if err != nil {
+		return 0, err
+	}
+
+	nodeCount := int64(0)
+	for _, node := range nodes {
+		//log.Printf("ID: %s - %#v", node.ID, node.Status.State)
+		if node.Status.State == "ready" {
+			nodeCount += 1
+		}
+	}
+
+	return nodeCount, nil
+
+	/*
+		containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
+			All: true,
+		})
+	*/
 }
 
 // Initial loop etc

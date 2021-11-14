@@ -641,7 +641,7 @@ const Settings = (props) => {
 									<div style={{marginTop: 10, display: "flex", maxHeight: 163.75, }}>
 										<Paper square style={{borderRadius: theme.palette.borderRadius, padding: 50, backgroundColor: theme.palette.inputColor}}>
 											<Typography>
-												<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Ethereum-icon-purple.svg/480px-Ethereum-icon-purple.svg.png" style={{height: 30 }}/>
+												<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Ethereum-icon-purple.svg/480px-Ethereum-icon-purple.svg.png" alt="ethereum-icon" style={{height: 30 }}/>
 											</Typography>
 											<Typography>
 												{/*window.ethereum.fromWei(userdata.eth_info.balance, "ether")*/}

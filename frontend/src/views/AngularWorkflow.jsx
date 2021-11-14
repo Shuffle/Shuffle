@@ -1466,7 +1466,7 @@ const AngularWorkflow = (props) => {
 			const triggercheck = workflow.triggers.find(trigger => trigger.id === event.target.data()["source"])
 			if (triggercheck === undefined) {
 		*/
-		if (event.target.data().decorator) {
+		if (event.target.data("type") !== "COMMENT" && event.target.data().decorator) {
 			alert.info("This edge can't be edited.")
 		} else {
 			//console.log("DATA: ", event.target.data())
@@ -7029,7 +7029,7 @@ const AngularWorkflow = (props) => {
 		return null 
 	}
 
-	const cytoscapeViewWidths = 800
+	const cytoscapeViewWidths = 850
 	const bottomBarStyle = {
 		position: "fixed", 
 		right: 20, 

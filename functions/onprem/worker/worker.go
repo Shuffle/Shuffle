@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -2228,12 +2229,39 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 		networkName = swarmNetworkName
 	}
 
+	replicatedJobs := uint64(1)
+
+	// Sent from Orborus
+	// Should be equal to
+	scaleReplicas := os.Getenv("SHUFFLE_APP_REPLICAS")
+	if len(scaleReplicas) > 0 {
+		tmpInt, err := strconv.Atoi(scaleReplicas)
+		if err != nil {
+			log.Printf("[ERROR] %s is not a valid number for replication", scaleReplicas)
+		} else {
+			replicatedJobs = uint64(tmpInt)
+		}
+
+		log.Printf("[DEBUG] SHUFFLE_APP_REPLICAS set to value %#v. Trying to overwrite default (%d/node)", scaleReplicas, replicatedJobs)
+	}
+
 	log.Printf("[DEBUG] Deploying app with name %s with image %s", name, image)
+	parsedConcurrent := uint64(50)
+
 	containerName := fmt.Sprintf(strings.Replace(name, ".", "-", -1))
 	serviceSpec := swarm.ServiceSpec{
 		Annotations: swarm.Annotations{
 			Name:   containerName,
 			Labels: map[string]string{},
+		},
+		Mode: swarm.ServiceMode{
+			Replicated: &swarm.ReplicatedService{
+				// Max total
+				Replicas: &replicatedJobs,
+			},
+			ReplicatedJob: &swarm.ReplicatedJob{
+				MaxConcurrent: &parsedConcurrent,
+			},
 		},
 		Networks: []swarm.NetworkAttachmentConfig{
 			swarm.NetworkAttachmentConfig{
@@ -2269,7 +2297,8 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 				Condition: swarm.RestartPolicyConditionNone,
 			},
 			Placement: &swarm.Placement{
-				MaxReplicas: 5,
+				// Max per node
+				MaxReplicas: 1,
 			},
 		},
 	}

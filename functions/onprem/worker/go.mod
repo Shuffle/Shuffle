@@ -10,6 +10,6 @@ require (
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/gorilla/mux v1.8.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
-	github.com/shuffle/shuffle-shared v0.1.33
+	github.com/shuffle/shuffle-shared v0.1.35
 	go4.org v0.0.0-20201209231011-d4a079459e60 // indirect
 )
