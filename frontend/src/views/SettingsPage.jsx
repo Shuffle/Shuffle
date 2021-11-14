@@ -170,6 +170,15 @@ const Settings = (props) => {
 				console.log(collections)
 				setLoadedWorkflowCollections(collections)
 				setLoadedValidationWorkflows(responseJson)
+
+				setTimeout(() => {
+					window.scrollTo({
+						top: document.body.scrollHeight,
+						left: 0,
+						behavior: 'smooth'
+					})
+				}, 250)
+
 			}
     })
 		.catch(error => {
@@ -656,6 +665,9 @@ const Settings = (props) => {
 						<div style={{flex: 1, marginTop: 20, }}>
 							{userdata !== undefined && userdata.eth_info !== undefined && userdata.eth_info.account.length > 0 ? 
 								<div style={{width: "100%", textAlign: "left",}}>
+									<Typography variant="body2">
+										Network: TBD
+									</Typography>
 									<Typography variant="body2">
 										Address: {userdata.eth_info.account}
 									</Typography>
