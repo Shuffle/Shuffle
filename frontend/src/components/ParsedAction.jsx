@@ -13,10 +13,6 @@ import {Popper, TextField, TextareaAutosize, Drawer, Button, Paper, Grid, Tabs, 
 import {GetApp as GetAppIcon, Search as SearchIcon, ArrowUpward as ArrowUpwardIcon, Visibility as VisibilityIcon, Done as DoneIcon, Close as CloseIcon, Error as ErrorIcon, FindReplace as FindreplaceIcon, ArrowLeft as ArrowLeftIcon, Cached as CachedIcon, DirectionsRun as DirectionsRunIcon, Add as AddIcon, Polymer as PolymerIcon, FormatListNumbered as FormatListNumberedIcon, Create as CreateIcon, PlayArrow as PlayArrowIcon, AspectRatio as AspectRatioIcon, MoreVert as MoreVertIcon, Apps as AppsIcon, Schedule as ScheduleIcon, FavoriteBorder as FavoriteBorderIcon, Pause as PauseIcon, Delete as DeleteIcon, AddCircleOutline as AddCircleOutlineIcon, Save as SaveIcon, KeyboardArrowLeft as KeyboardArrowLeftIcon, KeyboardArrowRight as KeyboardArrowRightIcon, ArrowBack as ArrowBackIcon, Settings as SettingsIcon, LockOpen as LockOpenIcon, ExpandMore as ExpandMoreIcon, VpnKey as VpnKeyIcon} from '@material-ui/icons';
 import Autocomplete from '@material-ui/lab/Autocomplete';
 
-import CodeMirror from '@uiw/react-codemirror';
-import 'codemirror/keymap/sublime';
-import 'codemirror/theme/gruvbox-dark.css';
-
 const useStyles = makeStyles({
 	notchedOutline: {
 		borderColor: "#f85a3e !important"
@@ -492,10 +488,6 @@ const ParsedAction = (props) => {
 		}
 
 		const changeActionParameterCodeMirror = (event, count, data) => {
-			// console.log(event)
-			// if (data.name.startsWith("${") && data.name.endsWith("}")) {
-			// console.log(data)
-			// console.log(count)
 			if (data.startsWith("${") && data.endsWith("}")) {
 				// PARAM FIX - Gonna use the ID field, even though it's a hack
 				const paramcheck = selectedAction.parameters.find(param => param.name === "body")
@@ -843,18 +835,15 @@ const ParsedAction = (props) => {
 						}
 
 						const clickedFieldId = "rightside_field_"+count
-						//<TextareaAutosize
-						// <CodeMirror
 
 						const shufflecode = <ShuffleCodeEditor
 							fieldCount = {fieldCount}
 							setFieldCount = {setFieldCount}
-							// editorData = {data.value.valueOf()}
 							changeActionParameterCodeMirror = {changeActionParameterCodeMirror}
 							codedata={codedata}
 							setcodedata={setcodedata}
-							setExpansionModalOpen={setExpansionModalOpen}
 							expansionModalOpen={expansionModalOpen}
+							setExpansionModalOpen={setExpansionModalOpen}
 							// codelang={codelang}
 							// setcodelang={setcodelang}
 						/>
@@ -888,16 +877,15 @@ const ParsedAction = (props) => {
 								id={clickedFieldId}
 								rows={rows}
 								color="primary"
-								// value={codedata}
 								defaultValue={data.value}
 								// height={multiline ? 50 : 150}
 
 								type={placeholder.includes("***") || (data.configuration && (data.name.toLowerCase().includes("api") || data.name.toLowerCase().includes("key") || data.name.toLowerCase().includes("pass"))) ? "password" : "text"}
 								placeholder={placeholder}
 								
-								onChange={(event) => {
-									// changeActionParameter(event, count, data)
-								}}
+								// onChange={(event) => {
+								// 	changeActionParameter(event, count, data)
+								// }}
 
 								helperText={selectedApp.generated && selectedApp.activated && data.name === "body" ? 
 									<span style={{color:"white", marginBottom: 5, marginleft: 5,}}>
@@ -1432,16 +1420,6 @@ const ParsedAction = (props) => {
 	const baselabel = selectedAction.label
 	return ( 
 		<div style={appApiViewStyle} id="parsed_action_view">
-			{/* {<ShuffleCodeEditor
-				count = {count}
-				changeActionParameter = {changeActionParameter}
-				codedata={codedata}
-				setcodedata={setcodedata}
-				setExpansionModalOpen={setExpansionModalOpen}
-				expansionModalOpen={expansionModalOpen}
-				// codelang={codelang}
-				// setcodelang={setcodelang}
-			/>} */}
 			{hideExtraTypes === true ? null : 
 				<span>
 				<div style={{display: "flex", minHeight: 40, marginBottom: 30}}>

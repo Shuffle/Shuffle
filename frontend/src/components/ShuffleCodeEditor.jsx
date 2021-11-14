@@ -8,7 +8,6 @@ import 'codemirror/theme/gruvbox-dark.css';
 
 const Textfield = (props) => {
 	const {fieldCount, setFieldCount} = props
-	// const {editorData} = props
 	const {changeActionParameterCodeMirror} = props 
     const {expansionModalOpen, setExpansionModalOpen} = props
     const {codedata, setcodedata} = props
@@ -94,7 +93,6 @@ const Textfield = (props) => {
 				value = {localcodedata}
 				height="200px"
 				onChange={(value) => {
-					// setcodedata(value.getValue())
                     setlocalcodedata(value.getValue())
 				}}
 				options={{
@@ -107,7 +105,6 @@ const Textfield = (props) => {
 			<div
 				style={{
 					display: 'flex',
-					// justifyContent: 'left',
 				}}
 			>
 				<div>
