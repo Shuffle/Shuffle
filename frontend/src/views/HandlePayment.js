@@ -1,7 +1,9 @@
-import React from "react";
+import React from 'react';
 
 const HandlePayment = () => {
-  return null;
-};
+	return (
+		null
+	)
+}
 
-export default HandlePayment;
+export default HandlePayment 

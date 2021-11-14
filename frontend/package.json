@@ -93,7 +93,6 @@
     "not op_mini all"
   ],
   "devDependencies": {
-    "prettier": "2.4.1",
     "promise-window": "^1.2.1"
   }
 }

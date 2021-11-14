@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from "react";
+import React, {useState, useEffect} from 'react';
 
-import Paper from "@material-ui/core/Paper";
+import Paper from '@material-ui/core/Paper';
 
 const bodyDivStyle = {
-  margin: "auto",
-  textAlign: "center",
-  width: "768px",
-};
+	margin: "auto",
+	textAlign: "center",
+	width: "768px",
+}
+
 
 //const tmpdata = {
 //	"username": "frikky",
@@ -22,66 +23,71 @@ const bodyDivStyle = {
 // FIXME - remove tmpdata
 // FIXME: Use isLoggedIn :)
 const Settings = (props) => {
-  const { globalUrl, isLoaded, surfaceColor } = props;
+  	const { globalUrl, isLoaded, surfaceColor, } = props;
 
-  const [firstRequest, setFirstRequest] = useState(true);
-  const boxStyle = {
-    flex: "1",
-    marginLeft: "10px",
-    marginRight: "10px",
-    paddingLeft: "30px",
-    paddingRight: "30px",
-    paddingBottom: "30px",
-    paddingTop: "30px",
-    backgroundColor: surfaceColor,
-    color: "white",
-    display: "flex",
-    flexDirection: "column",
-  };
+  	const [firstRequest, setFirstRequest] = useState(true);
+	const boxStyle = {
+		flex: "1",
+		marginLeft: "10px",
+		marginRight: "10px",
+		paddingLeft: "30px",
+		paddingRight: "30px",
+		paddingBottom: "30px",
+		paddingTop: "30px",
+		backgroundColor: surfaceColor,
+		color: "white",
+		display: "flex", 
+		flexDirection: "column"
+	}
 
-  const registerCall = () => {
-    const url = globalUrl + "/api/v1/register/" + props.match.params.key;
-    fetch(url, {
-      method: "GET",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-      },
-    })
-      .then((response) =>
-        response.json().then((responseJson) => {
-          console.log(responseJson);
-        })
-      )
-      .catch((error) => {
-        console.log("SOMETHING WRONG");
-      });
-  };
+	const registerCall = () => {
+		const url = globalUrl+'/api/v1/register/'+props.match.params.key
+		fetch(url, {
+			method: 'GET',
+			credentials: 'include',
+			headers: {
+				'Content-Type': 'application/json; charset=utf-8',
+			},
+		})
+		.then(response =>
+			response.json().then(responseJson => {
+				console.log(responseJson)
+			}),
+		)
+		.catch(error => {
+			console.log("SOMETHING WRONG")
+		});
+	}
 
-  // This should "always" have data
-  useEffect(() => {
-    if (firstRequest) {
-      setFirstRequest(false);
-      registerCall();
-    }
-  });
+	// This should "always" have data
+	useEffect(() => {
+		if (firstRequest) {
+			setFirstRequest(false)
+			registerCall()	
+		}
+	})
 
-  // Random names for type & autoComplete. Didn't research :^)
-  const landingpageData = (
-    <div style={{ display: "flex", marginTop: "80px" }}>
-      <Paper style={boxStyle}>
-        <h2>Registration verification</h2>
-        <p>Thanks for verifying, redirecting you to our login!</p>
-      </Paper>
-    </div>
-  );
+	// Random names for type & autoComplete. Didn't research :^)
+	const landingpageData = 
+			<div style={{display: "flex", marginTop: "80px"}}>
+				<Paper style={boxStyle}>
+				<h2>Registration verification</h2>
+				<p>Thanks for verifying, redirecting you to our login!</p>
+			</Paper>
+		</div>
 
-  const loadedCheck = isLoaded ? (
-    <div style={bodyDivStyle}>{landingpageData}</div>
-  ) : (
-    <div></div>
-  );
+const loadedCheck = isLoaded ? 
+	<div style={bodyDivStyle}>
+		{landingpageData}
+	</div>
+	:
+	<div>
+	</div>
 
-  return <div>{loadedCheck}</div>;
-};
+return(
+	<div>
+		{loadedCheck}
+	</div>
+)
+}
 export default Settings;
