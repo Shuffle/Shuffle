@@ -1,82 +1,79 @@
-import React, { useState, useEffect, useLayoutEffect } from "react";
-import * as cytoscape from "cytoscape";
-import CytoscapeComponent from "react-cytoscapejs";
-import cystyle from "../defaultCytoscapeStyle";
+import React, {useState, useEffect, useLayoutEffect} from 'react';
+import * as cytoscape from 'cytoscape';
+import CytoscapeComponent from 'react-cytoscapejs';
+import cystyle from '../defaultCytoscapeStyle';
 
-const surfaceColor = "#27292D";
+const surfaceColor = "#27292D"
 const CytoscapeWrapper = (props) => {
   const { globalUrl, inworkflow } = props;
 
-  const [elements, setElements] = useState([]);
-  const [workflow, setWorkflow] = useState(inworkflow);
-  const [cy, setCy] = React.useState();
-  const bodyWidth = 200;
-  const bodyHeight = 150;
+	const [elements, setElements] = useState([])
+	const [workflow, setWorkflow] = useState(inworkflow)
+	const [cy, setCy] = React.useState()
+	const bodyWidth = 200
+	const bodyHeight = 150 
 
-  const setupGraph = () => {
-    const actions = workflow.actions.map((action) => {
-      const node = {};
-      node.position = action.position;
-      node.data = action;
+	const setupGraph = () => {
+		const actions = workflow.actions.map(action => {
+			const node = {}
+			node.position = action.position
+			node.data = action
 
-      node.data._id = action["id"];
-      node.data.type = "ACTION";
-      node.isStartNode = action["id"] === workflow.start;
+			node.data._id = action["id"]
+			node.data.type = "ACTION"
+			node.isStartNode = action["id"] === workflow.start
 
-      var example = "";
-      if (
-        action.example !== undefined &&
-        action.example !== null &&
-        action.example.length > 0
-      ) {
-        example = action.example;
-      }
 
-      node.data.example = example;
-      return node;
-    });
+			var example = ""
+			if (action.example !== undefined && action.example !== null && action.example.length > 0) {
+				example = action.example
+			}
 
-    const triggers = workflow.triggers.map((trigger) => {
-      const node = {};
-      node.position = trigger.position;
-      node.data = trigger;
+			node.data.example = example
+			return node;
+		})
 
-      node.data._id = trigger["id"];
-      node.data.type = "TRIGGER";
+		const triggers = workflow.triggers.map(trigger => {
+			const node = {}
+			node.position = trigger.position
+			node.data = trigger 
 
-      return node;
-    });
+			node.data._id = trigger["id"]
+			node.data.type = "TRIGGER"
 
-    // FIXME - tmp branch update
-    var insertedNodes = [].concat(actions, triggers);
-    const edges = workflow.branches.map((branch, index) => {
-      //workflow.branches[index].conditions = [{
+			return node;
+		})
 
-      const edge = {};
-      var conditions = workflow.branches[index].conditions;
-      if (conditions === undefined || conditions === null) {
-        conditions = [];
-      }
+		// FIXME - tmp branch update
+		var insertedNodes = [].concat(actions, triggers)
+		const edges = workflow.branches.map((branch, index) => {
+			//workflow.branches[index].conditions = [{
 
-      var label = "";
-      if (conditions.length === 1) {
-        label = conditions.length + " condition";
-      } else if (conditions.length > 1) {
-        label = conditions.length + " conditions";
-      }
+			const edge = { };
+			var conditions = workflow.branches[index].conditions
+			if (conditions === undefined || conditions === null) {
+				conditions = []
+			}
 
-      edge.data = {
-        id: branch.id,
-        _id: branch.id,
-        source: branch.source_id,
-        target: branch.destination_id,
-        label: label,
-        conditions: conditions,
-        hasErrors: branch.has_errors,
-      };
+			var label = ""
+			if (conditions.length === 1) {
+				label = conditions.length+" condition"
+			} else if (conditions.length > 1) {
+				label = conditions.length+" conditions"
+			}
 
-      // This is an attempt at prettier edges. The numbers are weird to work with.
-      /*
+			edge.data = {
+				id: branch.id,
+				_id: branch.id,
+				source: branch.source_id,
+				target: branch.destination_id,
+				label: label,
+				conditions: conditions,
+				hasErrors: branch.has_errors
+			};
+
+			// This is an attempt at prettier edges. The numbers are weird to work with.
+			/*
 			//http://manual.graphspace.org/projects/graphspace-python/en/latest/demos/edge-types.html
 			const sourcenode = actions.find(node => node.data._id === branch.source_id)
 			const destinationnode = actions.find(node => node.data._id === branch.destination_id)
@@ -99,59 +96,51 @@ const CytoscapeWrapper = (props) => {
 			}
 			*/
 
-      return edge;
-    });
+			return edge;
+		})
 
-    setWorkflow(workflow);
+		setWorkflow(workflow)
 
-    // Verifies if a branch is valid and skips others
-    var newedges = [];
-    for (var key in edges) {
-      var item = edges[key];
+		// Verifies if a branch is valid and skips others
+		var newedges = []
+		for (var key in edges) {
+			var item = edges[key]
 
-      const sourcecheck = insertedNodes.find(
-        (data) => data.data.id === item.data.source
-      );
-      const destcheck = insertedNodes.find(
-        (data) => data.data.id === item.data.target
-      );
-      if (sourcecheck === undefined || destcheck === undefined) {
-        continue;
-      }
+			const sourcecheck = insertedNodes.find(data => data.data.id === item.data.source)
+			const destcheck = insertedNodes.find(data => data.data.id === item.data.target)
+			if (sourcecheck === undefined || destcheck === undefined) {
+				continue
+			}
 
-      newedges.push(item);
-    }
+			newedges.push(item)
+		}
 
-    insertedNodes = insertedNodes.concat(newedges);
-    setElements(insertedNodes);
-  };
+		insertedNodes = insertedNodes.concat(newedges)
+		setElements(insertedNodes)
+	}
 
-  if (elements.length === 0) {
-    setupGraph();
-  }
+	if (elements.length === 0) {
+		setupGraph()
+	}
 
-  return (
-    <CytoscapeComponent
-      elements={elements}
-      minZoom={0.35}
-      maxZoom={2.0}
-      style={{
-        width: bodyWidth - 15,
-        height: bodyHeight - 5,
-        backgroundColor: surfaceColor,
-      }}
-      stylesheet={cystyle}
-      boxSelectionEnabled={true}
-      autounselectify={false}
-      showGrid={true}
-      cy={(incy) => {
-        // FIXME: There's something specific loading when
-        // you do the first hover of a node. Why is this different?
-        //console.log("CY: ", incy)
-        setCy(incy);
-      }}
-    />
-  );
-};
+	return (
+			<CytoscapeComponent 
+				elements={elements} 
+				minZoom={0.35}
+				maxZoom={2.00}
+				style={{width: bodyWidth-15, height: bodyHeight-5, backgroundColor: surfaceColor}} 
+				stylesheet={cystyle}
+				boxSelectionEnabled={true}
+				autounselectify={false}
+				showGrid={true}
+				cy={(incy) => {
+					// FIXME: There's something specific loading when
+					// you do the first hover of a node. Why is this different?
+					//console.log("CY: ", incy)
+					setCy(incy)
+				}}
+			/>
+	)
+}
 
-export default CytoscapeWrapper;
+export default CytoscapeWrapper 

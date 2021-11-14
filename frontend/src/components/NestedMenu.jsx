@@ -1,9 +1,9 @@
-import React, { useState, useRef, useImperativeHandle } from "react";
-import { makeStyles } from "@material-ui/core/styles";
-import Menu, { MenuProps } from "@material-ui/core/Menu";
-import MenuItem, { MenuItemProps } from "@material-ui/core/MenuItem";
-import ArrowRight from "@material-ui/icons/ArrowRight";
-import clsx from "clsx";
+import React, {useState, useRef, useImperativeHandle} from 'react'
+import {makeStyles} from '@material-ui/core/styles'
+import Menu, {MenuProps} from '@material-ui/core/Menu'
+import MenuItem, {MenuItemProps} from '@material-ui/core/MenuItem'
+import ArrowRight from '@material-ui/icons/ArrowRight'
+import clsx from 'clsx'
 
 //<MenuItemProps, 'button'>
 
@@ -39,15 +39,15 @@ import clsx from "clsx";
 //  /**
 //   * @see https://material-ui.com/api/list-item/
 //   */
-//  button: true;
+//  button: true; 
 //}
 
-const TRANSPARENT = "rgba(0,0,0,0)";
+const TRANSPARENT = 'rgba(0,0,0,0)'
 const useMenuItemStyles = makeStyles((theme) => ({
   root: (props: any) => ({
-    backgroundColor: props.open ? theme.palette.action.hover : TRANSPARENT,
-  }),
-}));
+    backgroundColor: props.open ? theme.palette.action.hover : TRANSPARENT
+  })
+}))
 
 /**
  * Use as a drop-in replacement for `<MenuItem>` when you need to add cascading
@@ -55,11 +55,11 @@ const useMenuItemStyles = makeStyles((theme) => ({
  */
 //const NestedMenuItem = React.forwardRef<NestedMenuItemProps>(
 const NestedMenuItem = (props, ref) => {
-  console.log(props, ref);
-  //function NestedMenuItem(props, ref) {
+	console.log(props, ref)
+	//function NestedMenuItem(props, ref) {
   const {
     parentMenuOpen,
-    component = "div",
+    component = 'div',
     label,
     rightIcon = <ArrowRight />,
     children,
@@ -68,100 +68,94 @@ const NestedMenuItem = (props, ref) => {
     MenuProps = {},
     ContainerProps: ContainerPropsProp = {},
     ...MenuItemProps
-  } = props;
+  } = props
 
-  const [isSubMenuOpen, setIsSubMenuOpen] = useState(false);
+  const [isSubMenuOpen, setIsSubMenuOpen] = useState(false)
 
-  const { ref: containerRefProp, ...ContainerProps } = ContainerPropsProp;
+  const {ref: containerRefProp, ...ContainerProps} = ContainerPropsProp
 
-  const menuItemRef = useRef < HTMLLIElement > null;
-  useImperativeHandle(ref, () => menuItemRef.current);
-  const containerRef = useRef < HTMLDivElement > null;
-  useImperativeHandle(containerRefProp, () => containerRef.current);
-  const menuContainerRef = useRef < HTMLDivElement > null;
 
-  console.log(
-    "PAST THIS: ",
-    containerRefProp,
-    menuItemRef,
-    containerRef,
-    menuContainerRef,
-    ContainerProps
-  );
+  const menuItemRef = useRef<HTMLLIElement>(null)
+  useImperativeHandle(ref, () => menuItemRef.current)
+  const containerRef = useRef<HTMLDivElement>(null)
+  useImperativeHandle(containerRefProp, () => containerRef.current)
+  const menuContainerRef = useRef<HTMLDivElement>(null)
+
+	console.log("PAST THIS: ", containerRefProp, menuItemRef, containerRef, menuContainerRef, ContainerProps)
 
   const handleMouseEnter = (event: React.MouseEvent<HTMLElement>) => {
-    setIsSubMenuOpen(true);
+    setIsSubMenuOpen(true)
 
     if (ContainerProps?.onMouseEnter) {
-      ContainerProps.onMouseEnter(event);
+      ContainerProps.onMouseEnter(event)
     }
-  };
+  }
   const handleMouseLeave = (event: React.MouseEvent<HTMLElement>) => {
-    setIsSubMenuOpen(false);
+    setIsSubMenuOpen(false)
 
     if (ContainerProps?.onMouseLeave) {
-      ContainerProps.onMouseLeave(event);
+      ContainerProps.onMouseLeave(event)
     }
-  };
+  }
 
   // Check if any immediate children are active
   const isSubmenuFocused = () => {
-    const active = containerRef.current?.ownerDocument?.activeElement;
+    const active = containerRef.current?.ownerDocument?.activeElement
     for (const child of menuContainerRef.current?.children ?? []) {
       if (child === active) {
-        return true;
+        return true
       }
     }
-    return false;
-  };
+    return false
+  }
 
   const handleFocus = (event: React.FocusEvent<HTMLElement>) => {
     if (event.target === containerRef.current) {
-      setIsSubMenuOpen(true);
+      setIsSubMenuOpen(true)
     }
 
     if (ContainerProps?.onFocus) {
-      ContainerProps.onFocus(event);
+      ContainerProps.onFocus(event)
     }
-  };
+  }
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "Escape") {
-      return;
+    if (event.key === 'Escape') {
+      return
     }
 
     if (isSubmenuFocused()) {
-      event.stopPropagation();
+      event.stopPropagation()
     }
 
-    const active = containerRef.current?.ownerDocument?.activeElement;
+    const active = containerRef.current?.ownerDocument?.activeElement
 
-    if (event.key === "ArrowLeft" && isSubmenuFocused()) {
-      containerRef.current?.focus();
+    if (event.key === 'ArrowLeft' && isSubmenuFocused()) {
+      containerRef.current?.focus()
     }
 
     if (
-      event.key === "ArrowRight" &&
+      event.key === 'ArrowRight' &&
       event.target === containerRef.current &&
       event.target === active
     ) {
-      console.log("MENU: ", menuContainerRef);
-      const firstChild = menuContainerRef.current.children[0];
-      console.log("FIRST: ", firstChild);
-      firstChild.focus();
+			console.log("MENU: ", menuContainerRef)
+      const firstChild = menuContainerRef.current.children[0]
+			console.log("FIRST: ", firstChild)
+			firstChild.focus()
     }
-  };
-
-  const open = isSubMenuOpen && parentMenuOpen;
-  const menuItemClasses = useMenuItemStyles({ open });
-
-  // Root element must have a `tabIndex` attribute for keyboard navigation
-  let tabIndex;
-  if (!props.disabled) {
-    tabIndex = tabIndexProp !== undefined ? tabIndexProp : -1;
   }
 
-  console.log("PAST 2! ", tabIndex);
+  const open = isSubMenuOpen && parentMenuOpen
+  const menuItemClasses = useMenuItemStyles({open})
+
+  // Root element must have a `tabIndex` attribute for keyboard navigation
+  let tabIndex
+  if (!props.disabled) {
+    tabIndex = tabIndexProp !== undefined ? tabIndexProp : -1
+  }
+
+	console.log("PAST 2! ", tabIndex)
 
   return (
     <div
@@ -184,30 +178,30 @@ const NestedMenuItem = (props, ref) => {
       <Menu
         // Set pointer events to 'none' to prevent the invisible Popover div
         // from capturing events for clicks and hovers
-        style={{ pointerEvents: "none" }}
+        style={{pointerEvents: 'none'}}
         anchorEl={menuItemRef.current}
         anchorOrigin={{
-          vertical: "top",
-          horizontal: "right",
+          vertical: 'top',
+          horizontal: 'right'
         }}
         transformOrigin={{
-          vertical: "top",
-          horizontal: "left",
+          vertical: 'top',
+          horizontal: 'left'
         }}
         open={open}
         autoFocus={false}
         disableAutoFocus
         disableEnforceFocus
         onClose={() => {
-          setIsSubMenuOpen(false);
+          setIsSubMenuOpen(false)
         }}
       >
-        <div ref={menuContainerRef} style={{ pointerEvents: "auto" }}>
+        <div ref={menuContainerRef} style={{pointerEvents: 'auto'}}>
           {children}
         </div>
       </Menu>
     </div>
-  );
-};
+  )
+}
 
-export default NestedMenuItem;
+export default NestedMenuItem
