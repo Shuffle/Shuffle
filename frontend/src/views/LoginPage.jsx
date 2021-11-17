@@ -407,7 +407,7 @@ const LoginDialog = (props) => {
             </div>
             {MFAField === true ? (
               <div style={{ marginTop: 15 }}>
-                5-factor code
+                2-factor code
                 <TextField
                   color="primary"
                   style={{

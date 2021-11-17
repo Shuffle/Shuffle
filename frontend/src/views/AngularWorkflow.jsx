@@ -9,8 +9,10 @@ import { useBeforeunload } from "react-beforeunload";
 import ReactJson from "react-json-view";
 import NestedMenuItem from "material-ui-nested-menu-item";
 import ReactMarkdown from "react-markdown";
+import { useAlert } from "react-alert";
 
 import {
+	Popover,
   TextField,
   Drawer,
   Button,
@@ -85,7 +87,6 @@ import Draggable from "react-draggable";
 import cytoscapestyle from "../defaultCytoscapeStyle";
 import cxtmenu from "cytoscape-cxtmenu";
 
-import { useAlert } from "react-alert";
 import { validateJson, GetIconInfo } from "./Workflows.jsx";
 import { GetParsedPaths } from "./Apps.jsx";
 import ConfigureWorkflow from "../components/ConfigureWorkflow.jsx";
@@ -182,7 +183,7 @@ const svgSize = 24;
 const AngularWorkflow = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, userdata } = props;
   const referenceUrl = globalUrl + "/api/v1/hooks/";
-  const alert = useAlert();
+  const alert = useAlert()
   const theme = useTheme();
   const green = "#86c142";
   const yellow = "#FECC00";
@@ -190,6 +191,7 @@ const AngularWorkflow = (props) => {
   const [bodyWidth, bodyHeight] = useWindowSize();
 
   var to_be_copied = "";
+  const [firstrequest, setFirstrequest] = React.useState(true);
   const [cystyle] = useState(cytoscapestyle);
   const [cy, setCy] = React.useState();
 
@@ -274,7 +276,6 @@ const AngularWorkflow = (props) => {
   const [apps, setApps] = React.useState([]);
   const [filteredApps, setFilteredApps] = React.useState([]);
   const [prioritizedApps, setPrioritizedApps] = React.useState([]);
-  const [firstrequest, setFirstrequest] = React.useState(true);
 
   const [environments, setEnvironments] = React.useState([]);
   const [established, setEstablished] = React.useState(false);
@@ -992,12 +993,28 @@ const AngularWorkflow = (props) => {
 
           var curworkflowComment = useworkflow.comments.find(
             (a) => a.id === cyelements[key].data()["id"]
-          );
+          )
+
           if (curworkflowComment === undefined) {
             curworkflowComment = cyelements[key].data();
           }
 
+					const parsedHeight = parseInt(curworkflowComment["height"])
+					if (!isNaN(parsedHeight)) {
+						curworkflowComment.height = parsedHeight
+					} else {
+						curworkflowComment.width = 150 
+					}
+
+					const parsedWidth = parseInt(curworkflowComment["width"])
+					if (!isNaN(parsedWidth)) {
+						curworkflowComment.width = parsedWidth
+					} else {
+						curworkflowComment.width = 200
+					}
+
           curworkflowComment.position = cyelements[key].position();
+					console.log(curworkflowComment)
 
           newComments.push(curworkflowComment);
         } else {
@@ -1935,6 +1952,7 @@ const AngularWorkflow = (props) => {
 
   // Nodeselectbatching:
   // https://stackoverflow.com/questions/16677856/cy-onselect-callback-only-once
+	// onNodeClick
   const onNodeSelect = (event, newAppAuth) => {
     const data = event.target.data();
     if (data.isButton) {
@@ -2076,9 +2094,13 @@ const AngularWorkflow = (props) => {
     }
 
     if (data.type === "ACTION") {
+			//var curaction = JSON.parse(JSON.stringify(data))
+			// FIXME: Trust it to just work?
+			//event.target.data()
       var curaction = workflow.actions.find((a) => a.id === data.id);
       if (!curaction || curaction === undefined) {
         alert.error("Action not found. Please remake it.");
+        event.target.remove();
         return;
       }
 
@@ -2632,10 +2654,12 @@ const AngularWorkflow = (props) => {
     setLastSaved(false);
     const node = event.target;
     const nodedata = event.target.data();
+		console.log("Node added: ", nodedata)
     if (
       nodedata.finished === false ||
       (nodedata.id !== undefined && nodedata.is_valid === undefined)
     ) {
+			console.log("Returning because node is not valid: ", nodedata)
       return;
     }
 
@@ -2645,6 +2669,7 @@ const AngularWorkflow = (props) => {
       nodedata.isStartNode = true;
     } else {
       if (workflow.actions === null) {
+				console.log("Returning because node has no value")
         return;
       }
 
@@ -2658,6 +2683,13 @@ const AngularWorkflow = (props) => {
     }
 
     if (nodedata.type === "ACTION") {
+				/*
+				var curaction = workflow.actions.find((a) => a.id === nodedata.id);
+				if (curaction === null || curaction === undefined) {
+          alert.error("Node not found. Please remake it.")
+        	event.target.remove();
+				}
+				*/
       if (
         workflow.actions.length === 1 &&
         workflow.actions[0].id === workflow.start
@@ -2894,7 +2926,6 @@ const AngularWorkflow = (props) => {
 
         break;
       case 67:
-        console.log(event);
         if (event.ctrlKey && !event.shiftKey) {
           if (
             event.path !== undefined &&
@@ -3121,6 +3152,7 @@ const AngularWorkflow = (props) => {
 
     // App length necessary cus of cy initialization
     if (
+			// First load - gets the workflow
       elements.length === 0 &&
       workflow.actions !== undefined &&
       !graphSetup &&
@@ -3129,6 +3161,8 @@ const AngularWorkflow = (props) => {
       setGraphSetup(true);
       setupGraph();
     } else if (
+			// 2nd load - configures cytoscape
+			//
       !established &&
       cy !== undefined &&
       apps !== null &&
@@ -3143,11 +3177,16 @@ const AngularWorkflow = (props) => {
       setEstablished(true);
       // Validate if the node is just a node lol
       cy.edgehandles({
-        handleNodes: (el) =>
-          el.isNode() &&
-          !el.data("isButton") &&
-          !el.data("isDescriptor") &&
-          !el.data("type") === "COMMENT",
+        handleNodes: (el) => {
+					if (el.isNode() &&
+					!el.data("isButton") &&
+					!el.data("isDescriptor") &&
+					el.data("type") !== "COMMENT") {
+							return true 
+					}
+
+					return false
+				},
         preview: false,
         toggleOffOnLeave: false,
         loopAllowed: function (node) {
@@ -3175,7 +3214,7 @@ const AngularWorkflow = (props) => {
       });
 
       cy.on("select", "node", (e) => {
-        onNodeSelect(e, appAuthentication);
+      	onNodeSelect(e, appAuthentication);
       });
       cy.on("select", "edge", (e) => onEdgeSelect(e));
 
@@ -3734,8 +3773,8 @@ const AngularWorkflow = (props) => {
       }
     }
 
-    if (selectedNode.data().decorator === true) {
-      alert.info("This edge can't be deleted.");
+    if (selectedNode.data().decorator === true && selectedNode.data("type") !== "COMMENT") {
+      alert.info("This node can't be deleted.");
     } else {
       selectedNode.remove();
     }
@@ -5307,8 +5346,16 @@ const AngularWorkflow = (props) => {
         value: "$exec",
         highlight: "exec",
         autocomplete: "exec",
-        example: "hello",
-      });
+        example: "tmp",
+      })
+      actionlist.push({
+        type: "Shuffle DB",
+        name: "Shuffle DB",
+        value: "shuffle_cache",
+        highlight: "shuffle_cache",
+        autocomplete: "shuffle_cache",
+        example: "tmp",
+      })
 
       if (
         workflow.workflow_variables !== null &&
@@ -6761,7 +6808,7 @@ const AngularWorkflow = (props) => {
         highlight: "exec",
         autocomplete: "exec",
         example: "hello",
-      });
+      })
       if (
         workflow.workflow_variables !== null &&
         workflow.workflow_variables !== undefined &&
@@ -7757,6 +7804,7 @@ const AngularWorkflow = (props) => {
                 }}
                 fullWidth
                 color="primary"
+								placeholder={"150"}
                 defaultValue={selectedComment.height}
                 onChange={(event) => {
                   selectedComment.height = event.target.value;
@@ -7764,7 +7812,7 @@ const AngularWorkflow = (props) => {
                 }}
               />
             </div>
-            <div>
+            <div style={{marginLeft: 5 }}>
               <div>Width</div>
               <TextField
                 style={{
@@ -7782,6 +7830,7 @@ const AngularWorkflow = (props) => {
                 }}
                 fullWidth
                 color="primary"
+								placeholder={"200"}
                 defaultValue={selectedComment.width}
                 onChange={(event) => {
                   selectedComment.width = event.target.value;
@@ -7809,6 +7858,7 @@ const AngularWorkflow = (props) => {
                 }}
                 fullWidth
                 color="primary"
+								placeholder={"#1f2023"}
                 defaultValue={selectedComment["backgroundcolor"]}
                 onChange={(event) => {
                   selectedComment.backgroundcolor = event.target.value;
@@ -7816,7 +7866,7 @@ const AngularWorkflow = (props) => {
                 }}
               />
             </div>
-            <div>
+            <div style={{marginLeft: 5}}>
               <div>Text Color</div>
               <TextField
                 style={{
@@ -7834,6 +7884,7 @@ const AngularWorkflow = (props) => {
                 }}
                 fullWidth
                 color="primary"
+								placeholder={"#ffffff"}
                 defaultValue={selectedComment.color}
                 onChange={(event) => {
                   selectedComment.color = event.target.value;
@@ -9550,7 +9601,6 @@ const AngularWorkflow = (props) => {
         </div>
       );
     } else if (Object.getOwnPropertyNames(selectedComment).length > 0) {
-      console.log("Returning comment field");
       return (
         <div style={rightsidebarStyle}>
           <CommentSidebar />
@@ -9675,21 +9725,57 @@ const AngularWorkflow = (props) => {
       }
 
       return (
-        <ReactJson
-          src={validate.result}
-          theme="solarized"
-          collapsed={true}
-          displayDataTypes={false}
-          enableClipboard={(copy) => {
-            handleReactJsonClipboard(copy);
-          }}
-          onSelect={(select) => {
-            HandleJsonCopy(showResult, select, "exec");
-            console.log("SELECTED!: ", select);
-          }}
-          name={"Execution Argument"}
-        />
-      );
+				<div style={{display: "flex"}}>
+					<IconButton
+						style={{
+							marginTop: "auto",
+							marginBottom: "auto",
+							height: 30,
+							paddingLeft: 0,
+							width: 30,
+						}}
+						onClick={() => {
+							setSelectedResult({
+								"action": {
+									"label": "Execution Argument",
+									"name": "Execution Argument",
+      						"large_image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJYAAACOCAMAAADkWgEmAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAWlBMVEX4Wj69TDgmKCvkVTwlJyskJiokJikkJSkjJSn4Ykf+6+f5h3L////8xLr5alH/9fT7nYz4Wz/919H5cVn/+vr8qpv4XUL94d35e2X//v38t6v4YUbkVDy8SzcVIzHLAAAAAWJLR0QMgbNRYwAAAAlwSFlzAAARsAAAEbAByCf1VAAAAAd0SU1FB+QGGgsvBZ/GkmwAAAFKSURBVHja7dlrTgMxDEXhFgpTiukL2vLc/zbZQH5N7MmReu4KPmlGN4m9WgGzfhgtaOZxM1rQztNoQDvPowHtTKMB7WxHA2TJkiVLlixIZMmSRYgsWbIIkSVLFiGyZMkiRNZirBcma/eKZEW87ZGsOBxPRFbE+R3Jio/LlciKuH0iWfH1/UNkRSR3RRYruSvyWKldkcjK7IpUVl5X5LLSuiKbldQV6aycrihgZXRFCau/K2pY3V1RxersijJWX1cUsnq6opLV0RW1rNldUc2a2RXlrHldsQBrTlfcLwv5EZm/PLIgkHXKPHyQRzXzYoO8BjIvzcgnBvJBxny+Ih/7zNEIcpDEHLshh5TIkS5zAI5cFzCXK8hVFHNxh1xzQpfC0BV6XWTJkkWILFmyCJElSxYhsmTJIkSWLFmEyJIlixBZsmQB8stk/U3/Yb49pVcDMg4AAAAldEVYdGRhdGU6Y3JlYXRlADIwMjAtMDYtMjZUMTE6NDc6MDUrMDI6MDD8QCPmAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDIwLTA2LTI2VDExOjQ3OjA1KzAyOjAwjR2bWgAAAABJRU5ErkJggg==",
+								},
+								"result": validate.valid ? JSON.stringify(validate.result) : validate.result,
+								"status": "SUCCESS" 
+							})
+							setCodeModalOpen(true);
+						}}
+					>
+						<Tooltip
+							color="primary"
+							title="Expand result window"
+							placement="top"
+							style={{ zIndex: 10011 }}
+						>
+							<ArrowLeftIcon style={{ color: "white" }} />
+						</Tooltip>
+					</IconButton>
+					{/*
+					<ShowReactJsonField jsonValue={showResult} validate={validate} collapsed={true} label={"Execution Argument"} autocomplete={"exec"} />
+					*/}
+						
+					<ReactJson
+							src={validate.result}
+							theme={theme.palette.jsonTheme}
+							style={theme.palette.reactJsonStyle}
+							collapsed={true}
+							enableClipboard={(copy) => {
+								handleReactJsonClipboard(copy);
+							}}
+							displayDataTypes={false}
+							onSelect={(select) => {
+								HandleJsonCopy(validate.result, select, "exec");
+							}}
+							name={"Execution Argument"}
+						/>
+				</div>
+      )
     }
 
     return (
@@ -9879,10 +9965,124 @@ const AngularWorkflow = (props) => {
       /* Copy the text inside the text field */
       document.execCommand("copy");
       console.log("COPYING!");
+			alert.info("Copied value to clipboard.")
     } else {
       console.log("Couldn't find element ", elementName);
     }
-  };
+  }
+
+	// Not used because of issue with state updates.
+	const ShowReactJsonField = (props) => {
+		const { validate, jsonValue, collapsed, label, autocomplete } = props
+
+		const [parsedCollapse, setParsedCollapse] = React.useState(collapsed)
+		const [open, setOpen] = React.useState(false);
+		const [anchorPosition, setAnchorPosition] = React.useState({
+			top: 750,
+			left: 16,
+		});
+
+		const isFirstRender = React.useRef(true)
+  	useEffect(() => {
+			console.log("IN useeffectt "+autocomplete)
+
+			if (isFirstRender.current) {
+				isFirstRender.current = false;
+				console.log("IN useeffectt (2)"+collapsed)
+				return;
+			}
+		})
+		/*
+		componentWillUpdate = (nextProps, nextState) => {
+			console.log(nextProps, nextState)
+			  //nextState.value = nextProps.a + nextProps.b;
+		}
+		*/
+
+		const jsonRef = React.useRef()
+
+		return (
+			<span>
+				<ReactJson
+					ref={jsonRef}
+					src={validate.result}
+					theme={theme.palette.jsonTheme}
+					style={theme.palette.reactJsonStyle}
+					collapsed={parsedCollapse}
+					shouldCollapse={(field) => {
+						console.log("FIELD: ", field)	
+					}}
+					enableClipboard={(copy) => {
+						handleReactJsonClipboard(copy);
+					}}
+					displayDataTypes={false}
+					onClick={(event) => {
+						const pos = {
+							top: event.screenX,
+							left: event.screenY,
+						}
+
+						console.log("POS CLICK: ", pos)
+
+						setAnchorPosition(pos)
+					}}
+					onSelect={(select) => {
+						setOpen(true)
+        	
+						setTimeout(() => {
+							setOpen(false)
+						}, 2500)
+
+						//setAnchorPosition({
+						//	top: 300,
+						//	right: 300,
+						//})
+						//setAnchorEl(jsonRef.current)
+						HandleJsonCopy(jsonValue, select, autocomplete);
+						console.log("SELECTED!: ", select);
+					}}
+					name={label}
+				/>
+				{anchorPosition !== null ?
+					<Popover
+						id="mouse-over-popover-right"
+						sx={{
+							pointerEvents: 'none',
+						}}
+						open={open}
+						anchorReference="anchorPosition"
+						anchorPosition={anchorPosition}
+						style={{zIndex: 50000,}}
+						onClose={(event) => {
+							setAnchorPosition({
+								top: 750,
+								left: 16,
+							})
+						}}
+						disableRestoreFocus
+					>
+						<Typography style={{padding: 5 }}>
+							Copying 
+						</Typography>
+					</Popover>
+				: null}
+			</span>
+		)
+	}
+
+	const ShowCopyingTooltip = () => {
+    const [showCopying, setShowCopying] = React.useState(true)
+
+		if (!showCopying) {
+			return false	
+		}
+		
+		return (
+			<Tooltip title={"Copying"} placement="left-start">
+				<div />
+			</Tooltip>
+		)
+	}
 
   const executionModal = (
     <Drawer
@@ -10127,7 +10327,7 @@ const AngularWorkflow = (props) => {
               color="primary"
               title="Rerun workflow"
               placement="top"
-              style={{ zIndex: 10011 }}
+              style={{ zIndex: 50000}}
             >
               <span style={{}}>
                 <Button
@@ -10152,7 +10352,7 @@ const AngularWorkflow = (props) => {
                 color="primary"
                 title="Abort workflow"
                 placement="top"
-                style={{ zIndex: 10011 }}
+                style={{ zIndex: 50000 }}
               >
                 <span style={{}}>
                   <Button
@@ -10485,7 +10685,7 @@ const AngularWorkflow = (props) => {
                           color="primary"
                           title="Expand result window"
                           placement="top"
-                          style={{ zIndex: 10011 }}
+                          style={{ zIndex: 50000 }}
                         >
                           <ArrowLeftIcon style={{ color: "white" }} />
                         </Tooltip>
@@ -10561,20 +10761,26 @@ const AngularWorkflow = (props) => {
                   </div>
                   {validate.valid ? (
                     <span>
-                      <ReactJson
-                        src={validate.result}
-                        theme="solarized"
-                        collapsed={true}
-                        enableClipboard={(copy) => {
-                          handleReactJsonClipboard(copy);
-                        }}
-                        displayDataTypes={false}
-                        onSelect={(select) => {
-                          HandleJsonCopy(showResult, select, data.action.label);
-                          console.log("SELECTED!: ", select);
-                        }}
-                        name={"Results for " + data.action.label}
-                      />
+											{/*
+												<ShowReactJsonField jsonValue={showResult} validate={validate} collapsed={true} label={"Results for "+data.action.label} autocomplete={data.action.label} />
+											*/}
+
+											<ReactJson
+												src={validate.result}
+												theme={theme.palette.jsonTheme}
+												style={theme.palette.reactJsonStyle}
+												collapsed={true}
+												enableClipboard={(copy) => {
+													handleReactJsonClipboard(copy);
+												}}
+												displayDataTypes={false}
+												onSelect={(select) => {
+													HandleJsonCopy(showResult, select, data.action.label);
+													console.log("SELECTED!: ", select);
+												}}
+												name={"Results for " + data.action.label}
+											/>
+
                     </span>
                   ) : (
                     <div
@@ -10645,7 +10851,7 @@ const AngularWorkflow = (props) => {
         console.log(event.srcElement);
         if (!dragging) {
           console.log("START");
-          setDragging(true);
+          //setDragging(true);
         }
       }}
       disabled={draggingDisabled}
@@ -10701,7 +10907,7 @@ const AngularWorkflow = (props) => {
           <Tooltip
             title="Find successful execution"
             placement="top"
-            style={{ zIndex: 10011 }}
+            style={{ zIndex: 50000 }}
           >
             <IconButton
               style={{
@@ -10733,7 +10939,7 @@ const AngularWorkflow = (props) => {
           <Tooltip
             title="Find failed execution"
             placement="top"
-            style={{ zIndex: 10011 }}
+            style={{ zIndex: 50000 }}
           >
             <IconButton
               style={{
@@ -10834,23 +11040,20 @@ const AngularWorkflow = (props) => {
             <b>Status </b> {selectedResult.status}
           </div>
           {validate.valid ? (
-            <ReactJson
-              src={validate.result}
-              theme="solarized"
-              collapsed={selectedResult.result.length < 10000 ? false : true}
-              displayDataTypes={false}
-              enableClipboard={(copy) => {
-                handleReactJsonClipboard(copy);
-              }}
-              onSelect={(select) => {
-                HandleJsonCopy(
-                  JSON.stringify(validate.result),
-                  select,
-                  selectedResult.action.label
-                );
-              }}
-              name={"Results for " + selectedResult.action.label}
-            />
+						<ReactJson
+							src={validate.result}
+							theme={theme.palette.jsonTheme}
+							style={theme.palette.reactJsonStyle}
+							collapsed={selectedResult.result.length < 10000 ? false : true}
+							enableClipboard={(copy) => {
+								handleReactJsonClipboard(copy);
+							}}
+							displayDataTypes={false}
+							onSelect={(select) => {
+								HandleJsonCopy(validate.result, select, selectedResult.action.label);
+							}}
+							name={"Results for " + selectedResult.action.label}
+						/>
           ) : (
             <div>
               <b>Result</b>&nbsp;

@@ -236,7 +236,6 @@ func deployServiceWorkers(image string) {
 		}
 
 		innerContainerName := fmt.Sprintf("shuffle-workers")
-		parsedConcurrent := uint64(50)
 
 		cnt, _ := findActiveSwarmNodes()
 		nodeCount := uint64(1)
@@ -253,6 +252,10 @@ func deployServiceWorkers(image string) {
 
 		log.Printf("[DEBUG] Deploying %d containers for worker with swarm to each node. Service name: %s. Image: %s", replicas, innerContainerName, image)
 
+		if timezone == "" {
+			timezone = "Europe/Amsterdam"
+		}
+
 		// FIXME: May not need ingress ports. Could use internal services and DNS of swarm itself
 		// https://github.com/moby/moby/blob/e2f740de442bac52b280bc485a3ca5b31567d938/api/types/swarm/service.go#L46
 		serviceSpec := swarm.ServiceSpec{
@@ -263,9 +266,6 @@ func deployServiceWorkers(image string) {
 			Mode: swarm.ServiceMode{
 				Replicated: &swarm.ReplicatedService{
 					Replicas: &replicatedJobs,
-				},
-				ReplicatedJob: &swarm.ReplicatedJob{
-					MaxConcurrent: &parsedConcurrent,
 				},
 			},
 			Networks: []swarm.NetworkAttachmentConfig{
@@ -294,6 +294,7 @@ func deployServiceWorkers(image string) {
 						fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", os.Getenv("SHUFFLE_SWARM_CONFIG")),
 						fmt.Sprintf("SHUFFLE_SWARM_NETWORK_NAME=%s", networkName),
 						fmt.Sprintf("SHUFFLE_APP_REPLICAS=%d", cnt),
+						fmt.Sprintf("TZ=%s", timezone),
 					},
 					Mounts: []mount.Mount{
 						mount.Mount{
@@ -331,7 +332,7 @@ func deployServiceWorkers(image string) {
 		)
 
 		if err == nil {
-			log.Printf("[DEBUG] Successfully deployed workers with %d replica(s)", replicas)
+			log.Printf("[DEBUG] Successfully deployed workers with %d replica(s) on %d nodes", replicas, cnt)
 			//time.Sleep(time.Duration(10) * time.Second)
 			//log.Printf("[DEBUG] Servicecreate request: %#v %#v", service, err)
 		} else {

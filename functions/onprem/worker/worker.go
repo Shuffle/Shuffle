@@ -236,14 +236,17 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		log.Printf("[INFO] New appname: %s, image: %s", appName, image)
 
 		if !shuffle.ArrayContains(downloadedImages, image) {
-			log.Printf("[DEBUG] Downloading image %s from backend as it's first iteration", image)
+			log.Printf("[DEBUG] Downloading image %s from backend as it's first iteration for this image on the worker.", image)
 			// FIXME: Not caring if it's ok or not. Just continuing
 			// This is working as intended, just designed to download an updated
 			// image on every Orborus/new worker restart.
 			downloadedImages = append(downloadedImages, image)
 
 			// Running as coroutine for eventual completeness
-			go downloadDockerImageBackend(&http.Client{}, image)
+			//go downloadDockerImageBackend(&http.Client{}, image)
+			// FIXME: With goroutines it got too much trouble of deploying with an older version
+			// Allowing slow startups, as long as it's eventually fast, and uses the same registry as on host.
+			downloadDockerImageBackend(&http.Client{}, image)
 		}
 
 		exposedPort, err := findAppInfo(image, appName)
@@ -2246,7 +2249,6 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 	}
 
 	log.Printf("[DEBUG] Deploying app with name %s with image %s", name, image)
-	parsedConcurrent := uint64(50)
 
 	containerName := fmt.Sprintf(strings.Replace(name, ".", "-", -1))
 	serviceSpec := swarm.ServiceSpec{
@@ -2258,9 +2260,6 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 			Replicated: &swarm.ReplicatedService{
 				// Max total
 				Replicas: &replicatedJobs,
-			},
-			ReplicatedJob: &swarm.ReplicatedJob{
-				MaxConcurrent: &parsedConcurrent,
 			},
 		},
 		Networks: []swarm.NetworkAttachmentConfig{
@@ -2316,6 +2315,13 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 	if dockerApiVersion != "" {
 		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("DOCKER_API_VERSION=%s", dockerApiVersion))
 	}
+
+	// Required for certain apps
+	if timezone == "" {
+		timezone = "Europe/Amsterdam"
+	}
+
+	serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("TZ=%s", timezone))
 
 	serviceOptions := types.ServiceCreateOptions{}
 	service, err := dockercli.ServiceCreate(

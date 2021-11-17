@@ -43,6 +43,7 @@ import {
   Switch,
   Fade,
 } from "@material-ui/core";
+
 import {
   HelpOutline as HelpOutlineIcon,
   Description as DescriptionIcon,
@@ -424,8 +425,8 @@ const ParsedAction = (props) => {
           type: "Shuffle DB",
           name: "Shuffle DB",
           value: "$shuffle_cache",
-          highlight: "shuffle",
-          autocomplete: "shuffle",
+          highlight: "shuffle_cache",
+          autocomplete: "shuffle_cache",
           example: "",
         });
         if (

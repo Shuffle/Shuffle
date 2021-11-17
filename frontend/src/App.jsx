@@ -35,7 +35,7 @@ import { createMuiTheme, MuiThemeProvider } from "@material-ui/core/styles";
 
 import ScrollToTop from "./components/ScrollToTop";
 import AlertTemplate from "./components/AlertTemplate";
-import { positions, Provider } from "react-alert";
+import { useAlert, positions, Provider } from "react-alert";
 import { isMobile } from "react-device-detect";
 
 import detectEthereumProvider from "@metamask/detect-provider";
@@ -51,16 +51,17 @@ if (window.location.port === "3000") {
 
 const App = (message, props) => {
   const [userdata, setUserData] = useState({});
-  const [notifications, setNotifications] = useState([]);
-  const [cookies, setCookie, removeCookie] = useCookies([]);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [dataset, setDataset] = useState(false);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [notifications, setNotifications] = useState([])
+  const [cookies, setCookie, removeCookie] = useCookies([])
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [dataset, setDataset] = useState(false)
+  const [isLoaded, setIsLoaded] = useState(false)
   const [curpath, setCurpath] = useState(
     typeof window === "undefined" || window.location === undefined
       ? ""
       : window.location.pathname
-  );
+  )
+
 
   useEffect(() => {
     if (dataset === false) {
@@ -468,6 +469,7 @@ const App = (message, props) => {
           path="/workflows/:key"
           render={(props) => (
             <AngularWorkflow
+							alert={alert}
               userdata={userdata}
               globalUrl={globalUrl}
               isLoaded={isLoaded}

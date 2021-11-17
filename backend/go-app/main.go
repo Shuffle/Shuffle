@@ -3809,6 +3809,7 @@ func runInitEs(ctx context.Context) {
 
 	log.Printf("[DEBUG] Getting organizations")
 	activeOrgs, err := shuffle.GetAllOrgs(ctx)
+
 	setUsers := false
 	//log.Printf("ORGS: %d", len(activeOrgs))
 	if err != nil {
@@ -3896,6 +3897,7 @@ func runInitEs(ctx context.Context) {
 		}
 	}
 
+	_ = setUsers
 	schedules, err := shuffle.GetAllSchedules(ctx, "ALL")
 	if err != nil {
 		log.Printf("[WARNING] Failed getting schedules during service init: %s", err)
@@ -3937,6 +3939,7 @@ func runInitEs(ctx context.Context) {
 		}
 	}
 
+	parsedApikey := ""
 	users, err := shuffle.GetAllUsers(ctx)
 	if len(users) == 0 {
 		log.Printf("[INFO] Trying to set up user based on environments SHUFFLE_DEFAULT_USERNAME & SHUFFLE_DEFAULT_PASSWORD")
@@ -3947,6 +3950,10 @@ func runInitEs(ctx context.Context) {
 			log.Printf("[DEBUG] SHUFFLE_DEFAULT_USERNAME and SHUFFLE_DEFAULT_PASSWORD not defined as environments. Running without default user.")
 		} else {
 			apikey := os.Getenv("SHUFFLE_DEFAULT_APIKEY")
+
+			if len(parsedApikey) == 0 {
+				parsedApikey = apikey
+			}
 
 			log.Printf("[DEBUG] Creating org for default user %s", username)
 			orgId := uuid.NewV4().String()
@@ -3996,8 +4003,15 @@ func runInitEs(ctx context.Context) {
 				}
 			}
 		}
+	} else {
+		for _, user := range users {
+			if user.Role == "admin" && len(user.ApiKey) > 0 {
+				parsedApikey = user.ApiKey
+				log.Printf("[DEBUG] Using apikey of %s (%s) for cleanup", user.Username, user.Id)
+				break
+			}
+		}
 	}
-	_ = setUsers
 
 	log.Printf("[INFO] Starting cloud schedules for orgs if enabled!")
 	type requestStruct struct {
@@ -4039,6 +4053,57 @@ func runInitEs(ctx context.Context) {
 	if len(forceUpdateEnv) > 0 && forceUpdateEnv == "true" {
 		log.Printf("Forcing to rebuild apps")
 		forceUpdate = true
+	}
+
+	// FIXME: Have this for all envs in all orgs (loop and find).
+	if len(parsedApikey) > 0 {
+		cleanupSchedule := 3600
+		environments := []string{"Shuffle"}
+		log.Printf("[DEBUG] Starting schedule setup for execution cleanup every %d seconds. Running first immediately.", cleanupSchedule)
+		cleanupJob := func() func() {
+			return func() {
+				log.Printf("[INFO] Running schedule for cleaning up or re-running unfinished workflows in %d environments.", len(environments))
+
+				for _, environment := range environments {
+					url := fmt.Sprintf("http://localhost:5001/api/v1/environments/%s/stop", environment)
+					httpClient := &http.Client{}
+					req, err := http.NewRequest(
+						"GET",
+						url,
+						nil,
+					)
+
+					req.Header.Add("Authorization", fmt.Sprintf(`Bearer %s`, parsedApikey))
+					if err != nil {
+						log.Printf("[ERROR] Failed CREATING environment request for %s: %s", environment, err)
+						continue
+
+					}
+
+					newresp, err := httpClient.Do(req)
+					if err != nil {
+						log.Printf("[ERROR] Failed running environment request %s: %s", environment, err)
+						continue
+					}
+
+					respBody, err := ioutil.ReadAll(newresp.Body)
+					if err != nil {
+						log.Printf("[ERROR] Failed setting respbody %s", err)
+						continue
+					}
+					log.Printf("[DEBUG] Successfully ran workflow cleanup request for %s. Body: %s", environment, string(respBody))
+				}
+			}
+		}
+
+		jobret, err := newscheduler.Every(cleanupSchedule).Seconds().Run(cleanupJob())
+		if err != nil {
+			log.Printf("[ERROR] Failed to schedule Cleanup: %s", err)
+		} else {
+			_ = jobret
+		}
+	} else {
+		log.Printf("[DEBUG] Couldn't find a valid API-key, hence couldn't run cleanup")
 	}
 
 	// Getting apps to see if we should initialize a test
