@@ -978,6 +978,24 @@ const ParsedAction = (props) => {
       setUpdate(Math.random());
     };
 
+
+		const returnHelperText = (name, value) => {
+			if (name === undefined || value === undefined) {
+				return ""
+			}
+
+			var helperText = ""
+			console.log("DATA: ", name, value)
+			if (name.includes("url")) {
+				if (value.includes("localhost") || value.includes("127.0.0.1")) {
+					helperText = "Can't use localhost. Please change to an external IP or hostname." 
+				}
+			}
+
+			return helperText
+		}
+
+
     // FIXME: Issue #40 - selectedActionParameters not reset
     if (
       Object.getOwnPropertyNames(selectedAction).length > 0 &&
@@ -1216,6 +1234,7 @@ const ParsedAction = (props) => {
             }
 
             const clickedFieldId = "rightside_field_" + count;
+
             //<TextareaAutosize
             // <CodeMirror
             var datafield = (
@@ -1262,6 +1281,7 @@ const ParsedAction = (props) => {
                 }}
                 fullWidth
                 multiline={multiline}
+                helperText={returnHelperText(data.name, data.value)}
                 onClick={() => {
                   console.log("Clicked field: ", clickedFieldId);
                   setExpansionModalOpen(false);
@@ -1349,6 +1369,8 @@ const ParsedAction = (props) => {
             //	}
             //}
 
+						// Basic helpertext
+
             //const keywords = ["len", "lower", "upper", "trim", "split", "length", "number", "parse", "join"]
             if (
               selectedActionParameters[count].schema !== undefined &&
@@ -1388,6 +1410,7 @@ const ParsedAction = (props) => {
                       </InputAdornment>
                     ),
                   }}
+                	helperText={returnHelperText(data.name, data.value)}
                   fullWidth
                   multiline={multiline}
                   rows="5"

@@ -2100,6 +2100,7 @@ const AngularWorkflow = (props) => {
       var curaction = workflow.actions.find((a) => a.id === data.id);
       if (!curaction || curaction === undefined) {
         alert.error("Action not found. Please remake it.");
+				console.log("NOT FOUND DATA: ", event.target.data())
         event.target.remove();
         return;
       }
@@ -3260,7 +3261,8 @@ const AngularWorkflow = (props) => {
     var parsedStyle = {
       "border-width": "1px",
       "font-size": "18px",
-    };
+			//"cursor": "default",
+    }
 
     if (
       (nodedata.app_name === "Testing" ||
@@ -3450,20 +3452,23 @@ const AngularWorkflow = (props) => {
       "border-width": "7px",
       "border-opacity": ".7",
       "font-size": "25px",
-    };
+			//"cursor": "pointer",
+    }
 
     if (nodedata.type !== "COMMENT") {
       parsedStyle.color = "white";
     }
 
-    event.target.animate(
-      {
-        style: parsedStyle,
-      },
-      {
-        duration: animationDuration,
-      }
-    );
+		if (event.target !== undefined && event.target !== null) {
+			event.target.animate(
+				{
+					style: parsedStyle,
+				},
+				{
+					duration: animationDuration,
+				}
+			);
+		}
 
     const outgoingEdges = event.target.outgoers("edge");
     const incomingEdges = event.target.incomers("edge");
@@ -3511,17 +3516,34 @@ const AngularWorkflow = (props) => {
       sourcecolor !== null &&
       sourcecolor !== undefined &&
       targetcolor !== null &&
-      targetcolor !== undefined
+      targetcolor !== undefined && 
+			!sourcecolor.includes("rgb") &&
+			!targetcolor.includes("rgb") 
     ) {
-      event.target.animate({
-        style: {
-          "target-arrow-color": targetcolor,
-          "line-fill": "linear-gradient",
-          "line-gradient-stop-colors": [sourcecolor, targetcolor],
-          "line-gradient-stop-positions": [0, 1],
-        },
-        duration: 0,
-      });
+			console.log(sourcecolor)
+			console.log(targetcolor)
+			if (event.target !== null && event.target.value !== null) {
+				event.target.animate({
+					style: {
+						"target-arrow-color": targetcolor,
+						"line-fill": "linear-gradient",
+						"line-gradient-stop-colors": [sourcecolor, targetcolor],
+						"line-gradient-stop-positions": [0, 1],
+					},
+					duration: animationDuration,
+				})
+			} else {
+				event.target.animate({
+					style: {
+						"target-arrow-color": targetcolor,
+						"line-fill": "linear-gradient",
+      			"line-gradient-stop-colors": ["#41dcab", "#41dcab"],
+						"line-gradient-stop-positions": [0, 1],
+					},
+					duration: animationDuration,
+				})
+
+			}
     }
   };
 
@@ -5216,7 +5238,7 @@ const AngularWorkflow = (props) => {
 
   const setTriggerFolderWrapperMulti = (event) => {
     const { options } = event.target;
-    const value = [];
+    var value = [];
     for (let i = 0, l = options.length; i < l; i += 1) {
       if (options[i].selected) {
         value.push(options[i].value);
@@ -5227,6 +5249,14 @@ const AngularWorkflow = (props) => {
       selectedTrigger.parameters = [[]];
       workflow.triggers[selectedTriggerIndex].parameters = [[]];
     }
+
+		// Max 1 folder for office for some reason. MailFolders('MAILBOX_ID') in resource 
+		// Can't parse URL with multiple folders.
+		if (selectedTrigger.name === "Office365" & value !== undefined && value !== null && value.length > 1) {
+			alert.info("Max 1 folder at a time allowed for Office365")
+			console.log("VALUE: ", value)
+			value = [value[0]]
+		}
 
     // This is a dirty workaround for the static values in the go backend and datastore db
     const fixedValue = value.join(splitter);
@@ -6447,7 +6477,16 @@ const AngularWorkflow = (props) => {
         <Button
           fullWidth
           variant="contained"
-          style={{ flex: "1" }}
+          style={{
+            flex: 1,
+            textTransform: "none",
+            textAlign: "left",
+            justifyContent: "flex-start",
+            marginTop: 10,
+            backgroundColor: "#2f2f2f",
+            color: "white",
+						padding: "5px 5px 5px 10px", 
+          }}
           color="primary"
           onClick={() => {
             //const redirectUri = isCloud ? "https%3A%2F%2Fshuffler.io%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister" : "http%3A%2F%2Flocalhost:5001%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister"
@@ -6518,7 +6557,14 @@ const AngularWorkflow = (props) => {
             saveWorkflow(workflow);
           }}
         >
-          Sign in with Office365
+          <img
+            alt=""
+            style={{ margin: 0 }}
+            src="/images/ms_symbol_dark.svg"
+          />
+          <Typography style={{ margin: 0, marginLeft: 10 }} variant="body1">
+          	Sign in with Microsoft 
+          </Typography>
         </Button>
       );
 
@@ -6591,7 +6637,7 @@ const AngularWorkflow = (props) => {
                     },
                   }}
                   onChange={(e) => {
-                    setTriggerFolderWrapperMulti(e);
+                    setTriggerFolderWrapperMulti(e)
                   }}
                   fullWidth
                   input={<Input id="select-multiple-native" />}
@@ -10854,7 +10900,7 @@ const AngularWorkflow = (props) => {
           //setDragging(true);
         }
       }}
-      disabled={draggingDisabled}
+      disabled={true}
       onStop={(e) => {
         console.log("STOP");
         if (!dragging) {
@@ -10894,9 +10940,9 @@ const AngularWorkflow = (props) => {
             pointerEvents: "auto",
             backgroundColor: inputColor,
             color: "white",
-            minWidth: 750,
+            minWidth: 650,
             padding: 30,
-            maxHeight: 700,
+            maxHeight: 550,
             overflowY: "auto",
             overflowX: "hidden",
             zIndex: 10012,

@@ -1767,7 +1767,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	log.Printf("\n\n[DEBUG] In workflowQueue\n\n")
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
-		log.Println("(3) Failed reading body for workflowqueue")
+		log.Println("[WARNING] (3) Failed reading body for workflowqueue")
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
@@ -1777,7 +1777,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	var actionResult shuffle.ActionResult
 	err = json.Unmarshal(body, &actionResult)
 	if err != nil {
-		log.Printf("Failed shuffle.ActionResult unmarshaling: %s", err)
+		log.Printf("[ERROR] Failed shuffle.ActionResult unmarshaling: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
 		return
@@ -2502,8 +2502,8 @@ func sendAppRequest(incomingUrl, appName string, port int, action shuffle.Action
 	// Run with proper hostname, but set to shuffle-worker to avoid specific host target.
 	// This means running with VIP instead.
 	if len(hostname) > 0 {
-		//parsedRequest.BaseUrl = fmt.Sprintf("http://%s:%d", hostname, baseport)
-		parsedRequest.BaseUrl = fmt.Sprintf("http://shuffle-workers:%d", baseport)
+		parsedRequest.BaseUrl = fmt.Sprintf("http://%s:%d", hostname, baseport)
+		//parsedRequest.BaseUrl = fmt.Sprintf("http://shuffle-workers:%d", baseport)
 		log.Printf("[DEBUG] Changing hostname to local hostname in Docker network for WORKER URL: %s", parsedRequest.BaseUrl)
 	}
 
@@ -2841,6 +2841,7 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	// FIXME: This should be PER EXECUTION
 	//if strings.ToLower(os.Getenv("SHUFFLE_PASS_APP_PROXY")) == "true" {
 	// Is it ok if these are standard? Should they be update-able after launch? Hmm
 	if len(execRequest.HTTPProxy) > 0 {
@@ -2926,6 +2927,12 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	ctx := context.Background()
+	err = setWorkflowExecution(ctx, workflowExecution, true)
+	if err != nil {
+		log.Printf("[ERROR] Failed initializing execution saving for %s: %s", workflowExecution.ExecutionId, err)
+	}
+
 	if workflowExecution.Status == "FINISHED" || workflowExecution.Status == "SUCCESS" {
 		log.Printf("[INFO] Workflow %s is finished. Exiting worker.", workflowExecution.ExecutionId)
 		log.Printf("[DEBUG] Shutting down (20)")
@@ -2935,7 +2942,6 @@ func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	//ctx := context.Background()
 	//startAction, extra, children, parents, visited, executed, nextActions, environments := shuffle.GetExecutionVariables(ctx, workflowExecution.ExecutionId)
 
 	extra := 0

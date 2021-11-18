@@ -754,6 +754,10 @@ const Settings = (props) => {
                 </div>
               ) : null}
             </div>
+						{userdata.eth_info !== undefined &&
+						userdata.eth_info.account !== undefined &&
+						userdata.eth_info.account.length > 0 &&
+						userdata.eth_info.parsed_balance !== undefined ? (
             <div
               style={{
                 marginTop: 10,
@@ -776,9 +780,10 @@ const Settings = (props) => {
                 </Typography>
               </Paper>
             </div>
+						) : null}
           </div>
           <div style={{ flex: 1, marginTop: 20 }}>
-            {userdata !== undefined &&
+          {userdata !== undefined &&
             userdata.eth_info !== undefined &&
             userdata.eth_info.account.length > 0 ? (
               <div style={{ width: "100%", textAlign: "left" }}>

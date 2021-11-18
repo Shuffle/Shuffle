@@ -505,11 +505,13 @@ class AppBase:
         
         results = []
         if has_loop:
-            self.logger.info(f"[DEBUG] Should run inner loop: {newparams}")
+            #self.logger.info(f"[DEBUG] Should run inner loop: {newparams}")
+            self.logger.info(f"[DEBUG] Should run inner loop")
             #ret = await self.run_recursed_items(func, newparams, loop_wrapper)
             ret = self.run_recursed_items(func, newparams, loop_wrapper)
         else:
-            self.logger.info(f"[DEBUG] Should run multiplier check with params (inner): {newparams}")
+            #self.logger.info(f"[DEBUG] Should run multiplier check with params (inner): {newparams}")
+            self.logger.info(f"[DEBUG] Should run multiplier check with params (inner)")
             # 1. Find the loops that are required and create new multipliers
             # If here: check for multipliers within this scope.
             ret = []

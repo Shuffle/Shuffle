@@ -117,7 +117,7 @@ export const GetIconInfo = (action) => {
     { key: "merge", values: ["join", "merge"] },
     {
       key: "search",
-      values: ["search", "find", "locate", "index", "analyze", "anal", "match"],
+      values: ["search", "find", "locate", "index", "analyze", "anal", "match", "check cache", "check", "verify", "validate"],
     },
     { key: "list", values: ["list", "head", "options"] },
     {
@@ -134,8 +134,8 @@ export const GetIconInfo = (action) => {
         "preview",
       ],
     },
-    { key: "add", values: ["add"] },
-    { key: "delete", values: ["delete", "remove", "clear", "clean"] },
+    { key: "add", values: ["add", "accept", ] },
+    { key: "delete", values: ["delete", "remove", "clear", "clean", "dismiss",] },
     {
       key: "send",
       values: [

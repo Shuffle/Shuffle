@@ -119,6 +119,7 @@ const ConfigureWorkflow = (props) => {
         auth_done: false,
         action_ids: [],
         action: action,
+				update_version: action.app_version,
         app: {},
       };
 
@@ -130,7 +131,13 @@ const ConfigureWorkflow = (props) => {
               app.loop_versions.includes(action.app_version)))
       );
       if (app === undefined || app === null) {
-        console.log("App not found: ", action.app_name);
+        //console.log("App not found: ", action.app_name);
+          
+      	const subapp = apps.find(app => app.name === action.app_name)
+				if (subapp !== undefined && subapp !== null) {
+					newaction.update_version = "1.1.0"
+				}
+
 
         newaction.must_activate = true;
       } else {
@@ -196,7 +203,7 @@ const ConfigureWorkflow = (props) => {
                 tmpaction.app_name === newaction.app_name
             ) !== undefined
           ) {
-            console.log("Action already found.");
+            //console.log("Action already found.");
           } else {
             newactions.push(newaction);
           }
@@ -508,13 +515,42 @@ const ConfigureWorkflow = (props) => {
         {action.must_activate ? (
           <Button
             color="primary"
-            variant="contained"
+            variant="outlined"
             onClick={() => {
               activateApp(action.app_id, action.app_name, action.app_version);
               setItemChanged(true);
             }}
           >
             Activate
+          </Button>
+        ) : null}
+				{action.update_version !== action.app_version ? (
+          <Button
+            color="primary"
+            variant="contained"
+						style={{marginLeft: 5}}
+            onClick={() => {
+							console.log("Set version to: ", action.update_version)
+
+							if (workflow.actions !== null) {
+								//console.log(workflow.actions)
+								alert.info("Setting action to version "+action.update_version)
+								for (var key in workflow.actions) {
+									if (workflow.actions[key].app_name === action.app_name && workflow.actions[key].app_version === action.app_version) {
+										workflow.actions[key].app_version = action.update_version
+
+										if (!itemChanged) {
+											setItemChanged(true)
+										}
+									}
+								}
+
+								action.must_activate = false
+								action.update_version = action.app_version
+							}
+            }}
+          >
+            {action.update_version}
           </Button>
         ) : null}
       </ListItem>
@@ -609,7 +645,7 @@ const ConfigureWorkflow = (props) => {
 					*/}
           <Button
             color="primary"
-            variant={"contained"}
+            variant={itemChanged ? "contained" : "outlined"}
             style={{}}
             onClick={() => {
               if (itemChanged) {
