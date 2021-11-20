@@ -52,6 +52,8 @@ const Textfield = (props) => {
 							backgroundColor: "#f85a3e",
 							padding: 6,
 							paddingBottom: 6,
+							paddingLeft: 12,
+							paddingRight: 12,
 							marginLeft: 20,
 							marginBottom: 50,
 							borderRadius: 10,
@@ -59,13 +61,13 @@ const Textfield = (props) => {
 							fontSize: "75%"
 						}}
 					>
-						Python
+						JavaScript
 					</span>
 				</DialogTitle>
 				<div
 					style={{
 						width: 60,
-						marginLeft: 320,
+						marginLeft: 280,
 						display: 'flex',
 						justifyContent: 'right',
 					}}
@@ -98,7 +100,7 @@ const Textfield = (props) => {
 				options={{
 					theme: 'gruvbox-dark',
 					keyMap: 'sublime',
-					mode: 'python',
+					mode: 'javascript',
 					// mode: {codelang},
 				}}
 			/>
