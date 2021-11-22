@@ -426,6 +426,7 @@ const Settings = (props) => {
       }}
     />
   );
+
   const landingpageData = (
     <div style={{ display: "flex", marginTop: 120 }}>
       <Paper style={boxStyle}>
@@ -789,6 +790,7 @@ const Settings = (props) => {
           <div style={{ flex: 1, marginTop: 20 }}>
           {userdata !== undefined &&
             userdata.eth_info !== undefined &&
+            userdata.eth_info.account !== undefined &&
             userdata.eth_info.account.length > 0 ? (
               <div style={{ width: "100%", textAlign: "left" }}>
                 <Typography variant="body2">Network: TBD</Typography>

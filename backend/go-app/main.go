@@ -3056,7 +3056,7 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 	if test.Editing && len(user.Id) > 0 {
 		// Quick verification test
 		ctx := context.Background()
-		app, err := shuffle.GetApp(ctx, test.Id, user)
+		app, err := shuffle.GetApp(ctx, test.Id, user, false)
 		if err != nil {
 			log.Printf("[WARNING] Error getting app when editing: %s", app.Name)
 			resp.WriteHeader(401)

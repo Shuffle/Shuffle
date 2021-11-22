@@ -2578,7 +2578,7 @@ const Workflows = (props) => {
                 }
 
                 return (
-                  <span style={{ zIndex: 10 }}>
+                  <span key={index} style={{ zIndex: 10 }}>
                     <IconButton
                       style={{
                         backgroundColor: "transparent",

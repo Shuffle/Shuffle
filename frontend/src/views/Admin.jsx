@@ -8,6 +8,8 @@ import {
   FormControl,
   InputLabel,
   Paper,
+	OutlinedInput,
+	Checkbox,
   Card,
   Tooltip,
   FormControlLabel,
@@ -70,6 +72,19 @@ const useStyles = makeStyles({
   },
 });
 
+const ITEM_HEIGHT = 48;
+const ITEM_PADDING_TOP = 8;
+const MenuProps = {
+  PaperProps: {
+    style: {
+      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
+      width: 500,
+    },
+  },
+	getContentAnchorEl: () => null,
+}
+
+
 const Admin = (props) => {
   const { globalUrl, userdata } = props;
 
@@ -88,6 +103,7 @@ const Admin = (props) => {
   const [loading, setLoading] = React.useState(false);
 
   const [selectedOrganization, setSelectedOrganization] = React.useState({});
+	//console.log("Selected: ", selectedOrganization)
   const [organizationFeatures, setOrganizationFeatures] = React.useState({});
   const [loginInfo, setLoginInfo] = React.useState("");
   const [curTab, setCurTab] = React.useState(0);
@@ -95,6 +111,7 @@ const Admin = (props) => {
   const [organizations, setOrganizations] = React.useState([]);
   const [orgSyncResponse, setOrgSyncResponse] = React.useState("");
   const [userSettings, setUserSettings] = React.useState({});
+  const [matchingOrganizations, setMatchingOrganizations] = React.useState([]);
 
   const [environments, setEnvironments] = React.useState([]);
   const [authentication, setAuthentication] = React.useState([]);
@@ -1411,7 +1428,10 @@ const Admin = (props) => {
           alert.error("Failed setting user: " + responseJson.reason);
         } else {
           alert.success("Set the user field " + field + " to " + value);
-          setSelectedUserModalOpen(false);
+
+					if (field !== "suborgs") {
+          	setSelectedUserModalOpen(false);
+					}
         }
       })
       .catch((error) => {
@@ -1557,11 +1577,58 @@ const Admin = (props) => {
     </Dialog>
   ) : null;
 
+	const handleOrgEditChange = (event) => {
+  	if (userdata.id === selectedUser.id) {
+			alert.info("Can't remove orgs from yourself")
+			return
+		}
+
+		setMatchingOrganizations(event.target.value)
+		// Workaround for empty orgs
+		if (event.target.value.length === 0) {
+			event.target.value.push("REMOVE")
+		}
+
+  	setUser(selectedUser.id, "suborgs", event.target.value)
+	}
+
+	const userOrgEdit = selectedUser.id !== undefined && selectedUser.orgs !== undefined && selectedUser.orgs !== null && selectedOrganization.child_orgs !== undefined && selectedOrganization.child_orgs !== null && selectedOrganization.child_orgs.length > 0 ?
+		<FormControl fullWidth sx={{ m: 1,}}>
+			<InputLabel id="demo-multiple-checkbox-label" style={{padding: 5}}>Accessible Sub-Organizations ({selectedUser.orgs? selectedUser.orgs.length-1 : 0})</InputLabel>
+			<Select
+				fullWidth
+				style={{width: "100%", }}
+				disabled={selectedUser.id === userdata.id}
+				labelId="demo-multiple-checkbox-label"
+				id="demo-multiple-checkbox"
+				multiple
+				value={matchingOrganizations}
+				onChange={handleOrgEditChange}
+				input={
+					<OutlinedInput label="Tag" />
+				}
+				renderValue={(selected) => {
+					return selected.join(', ')
+				}}
+				MenuProps={MenuProps}
+			>
+				{selectedOrganization.child_orgs.map((org, index) => (
+					<MenuItem key={index} value={org.id}>
+						<Checkbox checked={matchingOrganizations.indexOf(org.id) > -1} />
+						<ListItemText primary={org.name} />
+					</MenuItem>
+				))}
+			</Select>
+		</FormControl>
+		: null
+
   const editUserModal = (
     <Dialog
       open={selectedUserModalOpen}
       onClose={() => {
         setSelectedUserModalOpen(false);
+				setImage2FA("");
+				setSecret2FA("");
       }}
       PaperProps={{
         style: {
@@ -1620,6 +1687,7 @@ const Admin = (props) => {
             </Button>
           </div>
         )}
+
         {isCloud ? null : (
           <div style={{ display: "flex" }}>
             <TextField
@@ -1657,6 +1725,8 @@ const Admin = (props) => {
             </Button>
           </div>
         )}
+
+				{userOrgEdit}
         <Divider
           style={{
             marginTop: 20,
@@ -1664,7 +1734,7 @@ const Admin = (props) => {
             backgroundColor: theme.palette.inputColor,
           }}
         />
-        <div style={{ margin: "auto", maxWidth: 400 }}>
+        <div style={{ margin: "auto", maxWidth: 450 }}>
           <Button
             style={{}}
             variant="outlined"
@@ -1705,7 +1775,7 @@ const Admin = (props) => {
               : "Enable 2FA"}
           </Button>
         </div>
-        {show2faSetup && isCloud ? (
+        {show2faSetup ? (
           <div
             style={{
               margin: "auto",
@@ -2578,6 +2648,9 @@ const Admin = (props) => {
     </Dialog>
   );
 
+
+
+
   const usersView =
     curTab === 1 ? (
       <div>
@@ -2651,6 +2724,12 @@ const Admin = (props) => {
               primary="MFA"
               style={{ minWidth: 100, maxWidth: 100 }}
             />
+						{selectedOrganization.child_orgs !== undefined && selectedOrganization.child_orgs !== null && selectedOrganization.child_orgs.length > 0 ?
+							<ListItemText
+								primary="Suborgs"
+								style={{ minWidth: 100, maxWidth: 100 }}
+							/>
+						: null}
             <ListItemText
               primary="Actions"
               style={{ minWidth: 180, maxWidth: 180 }}
@@ -2794,11 +2873,40 @@ const Admin = (props) => {
                       }
                       style={{ minWidth: 100, maxWidth: 100 }}
                     />
-                    <ListItemText style={{ display: "flex" }}>
+										{selectedOrganization.child_orgs !== undefined && selectedOrganization.child_orgs !== null && selectedOrganization.child_orgs.length > 0 ?
+											<ListItemText 
+												style={{ display: "flex" }}
+                      	primary={data.orgs === undefined || data.orgs === null ? 0 : data.orgs.length-1}
+											/>
+										: null}
+										<ListItemText style={{ display: "flex" }}>
                       <IconButton
                         onClick={() => {
                           setSelectedUserModalOpen(true);
                           setSelectedUser(data);
+
+													// Find matching orgs between current org and current user's access to those orgs
+          								if (userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 0 && selectedOrganization.child_orgs !== undefined && selectedOrganization.child_orgs !== null && selectedOrganization.child_orgs.length > 0) {
+														console.log("In here?")
+														var active = []
+														for (var key in userdata.orgs) {
+															console.log("ORG: ", userdata.orgs[key])
+															const found = selectedOrganization.child_orgs.find(item => item.id === userdata.orgs[key].id)
+															if (found !== null && found !== undefined) {
+
+																if (data.orgs === undefined || data.orgs === null) {
+																	continue
+																} 
+
+																const subfound = data.orgs.find(item => item === found.id)
+																if (subfound !== null && subfound !== undefined) {
+																	active.push(subfound)
+																}
+															}
+														}
+
+														setMatchingOrganizations(active)
+													}
                         }}
                       >
                         <EditIcon color="primary" />
@@ -2822,14 +2930,17 @@ const Admin = (props) => {
     ) : null;
 
   const run2FASetup = (data) => {
-    console.log("2fa: ", data);
+    console.log("2fa: ", data, show2faSetup);
     if (!show2faSetup) {
       get2faCode(data.id);
     } else {
       // Should remove?
+			setImage2FA("");
+			setSecret2FA("");
     }
 
     setShow2faSetup(!show2faSetup);
+    //setShow2faSetup(true);
   };
 
   const uploadFiles = (files) => {
@@ -3788,6 +3899,7 @@ const Admin = (props) => {
           style={{}}
           variant="contained"
           color="primary"
+					disabled={userdata.admin !== "true"}
           onClick={() => {
             setModalOpen(true);
           }}
@@ -3959,7 +4071,7 @@ const Admin = (props) => {
   // primary={environment.Registered ? "true" : "false"}
 
   const iconStyle = { marginRight: 10 };
-  const data = (
+  const data =  (
     <div
       style={{
         width: 1300,
@@ -3982,6 +4094,7 @@ const Admin = (props) => {
             </span>
           />
           <Tab
+						disabled={userdata.admin !== "true"}
             label=<span>
               <AccessibilityNewIcon style={iconStyle} />
               Users
@@ -3994,12 +4107,14 @@ const Admin = (props) => {
             </span>
           />
           <Tab
+						disabled={userdata.admin !== "true"}
             label=<span>
               <DescriptionIcon style={iconStyle} />
               Files
             </span>
           />
           <Tab
+						disabled={userdata.admin !== "true"}
             label=<span>
               <ScheduleIcon style={iconStyle} />
               Schedules
@@ -4007,7 +4122,7 @@ const Admin = (props) => {
           />
 					<Tab
 						index={5}
-						disabled={isCloud}
+						disabled={isCloud || userdata.admin !== "true"}
 						label=<span>
 							<EcoIcon style={iconStyle} />
 							Environments
