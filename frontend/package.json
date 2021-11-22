@@ -17,7 +17,7 @@
     "babel-eslint": "^10.1.0",
     "class-transformer": "^0.4.0",
     "create-react-app": "^4.0.3",
-    "cytoscape": "^3.20.0",
+    "cytoscape": "^3.15.1",
     "cytoscape-clipboard": "^2.2.1",
     "cytoscape-cxtmenu": "^3.1.1",
     "cytoscape-edgehandles": "^3.6.0",

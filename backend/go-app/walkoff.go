@@ -676,6 +676,13 @@ func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	if user.Role == "org-reader" {
+		log.Printf("[WARNING] Org-reader doesn't have access to stop schedule: %s (%s)", user.Username, user.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Read only user"}`))
+		return
+	}
+
 	location := strings.Split(request.URL.String(), "/")
 
 	var fileId string
@@ -1036,6 +1043,13 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	if user.Role == "org-reader" {
+		log.Printf("[WARNING] Org-reader doesn't have access to run workflow: %s (%s)", user.Username, user.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Read only user"}`))
+		return
+	}
+
 	location := strings.Split(request.URL.String(), "/")
 
 	var fileId string
@@ -1103,6 +1117,13 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("Api authentication failed in schedule workflow: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Role == "org-reader" {
+		log.Printf("[WARNING] Org-reader doesn't have access to stop schedule: %s (%s)", user.Username, user.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Read only user"}`))
 		return
 	}
 
@@ -1355,6 +1376,13 @@ func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("[WARNING] Api authentication failed in schedule workflow: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Role == "org-reader" {
+		log.Printf("[WARNING] Org-reader doesn't have access to schedule workflow: %s (%s)", user.Username, user.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Read only user"}`))
 		return
 	}
 
@@ -1744,11 +1772,18 @@ func validateAppInput(resp http.ResponseWriter, request *http.Request) {
 
 	// Just need to be logged in
 	// FIXME - should have some permissions?
-	_, err := shuffle.HandleApiAuthentication(resp, request)
+	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in set new app: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Role == "org-reader" {
+		log.Printf("[WARNING] Org-reader doesn't have access to delete apps: %s (%s)", user.Username, user.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Read only user"}`))
 		return
 	}
 
@@ -2237,12 +2272,18 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// Just need to be logged in
-	// FIXME - should have some permissions?
-	_, err := shuffle.HandleApiAuthentication(resp, request)
+	user, err := shuffle.HandleApiAuthentication(resp, request)
 	if err != nil {
 		log.Printf("Api authentication failed in set new app: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Role == "org-reader" {
+		log.Printf("[WARNING] Org-reader doesn't have access to set new workflowapp: %s (%s)", user.Username, user.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Read only user"}`))
 		return
 	}
 
@@ -2467,6 +2508,13 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("[WARNING] Api authentication failed in execute SINGLE workflow - CONTINUING ANYWAY: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false, "reason": "You need to sign up to try it out}`))
+		return
+	}
+
+	if user.Role == "org-reader" {
+		log.Printf("[WARNING] Org-reader doesn't have access to execute single action: %s (%s)", user.Username, user.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Read only user"}`))
 		return
 	}
 
@@ -2922,6 +2970,13 @@ func LoadSpecificApps(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("[WARNING] Api authentication failed in load specific apps: %s", err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Role != "admin" {
+		log.Printf("[WARNING] Not admin during app loading: %s (%s).", user.Username, user.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Not admin"}`))
 		return
 	}
 

@@ -2834,7 +2834,7 @@ const Admin = (props) => {
                             }}
                             value={"admin"}
                           >
-                            Admin
+                            Org Admin
                           </MenuItem>
                           <MenuItem
                             style={{
@@ -2843,7 +2843,16 @@ const Admin = (props) => {
                             }}
                             value={"user"}
                           >
-                            User
+                            Org User
+                          </MenuItem>
+													<MenuItem
+                            style={{
+                              backgroundColor: theme.palette.inputColor,
+                              color: "white",
+                            }}
+                            value={"org-reader"}
+                          >
+                           	Org Reader
                           </MenuItem>
                         </Select>
                       }

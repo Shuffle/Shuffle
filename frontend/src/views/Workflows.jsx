@@ -1194,7 +1194,7 @@ const Workflows = (props) => {
       .then((response) => {
         if (response.status !== 200) {
           console.log("Status not 200 for setting workflows :O!");
-          alert.error("Failed deleting workflow");
+          alert.error("Failed deleting workflow. Do you have access?");
         } else {
           alert.success("Deleted workflow " + id);
         }
@@ -1302,7 +1302,7 @@ const Workflows = (props) => {
           style={{ backgroundColor: inputColor, color: "white" }}
           onClick={() => {
             setModalOpen(true);
-            setEditingWorkflow(data);
+            setEditingWorkflow(JSON.parse(JSON.stringify(data)));
             setNewWorkflowName(data.name);
             setNewWorkflowDescription(data.description);
             setDefaultReturnValue(data.default_return_value);
@@ -1728,6 +1728,16 @@ const Workflows = (props) => {
         return response.json();
       })
       .then((responseJson) => {
+				if (responseJson.success === false) {
+					if (responseJson.reason !== undefined) {
+						alert.error("Error setting workflow: ", responseJson.reason)
+					} else {
+						alert.error("Error setting workflow.")
+					}
+
+					return
+				}
+
         if (method === "POST" && redirect) {
           window.location.pathname = "/workflows/" + responseJson["id"];
           setModalOpen(false);
