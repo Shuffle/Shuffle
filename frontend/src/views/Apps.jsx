@@ -983,9 +983,11 @@ const Apps = (props) => {
           ) : null}
 
           {activateButton}
-          {(props.userdata !== undefined &&
+          {(props.userdata !== undefined && 
             (props.userdata.role === "admin" ||
-              props.userdata.id === selectedApp.owner)) ||
+              props.userdata.id === selectedApp.owner ||
+							selectedApp.owner === "" 
+							)) ||
           !selectedApp.generated ? (
             <div>
               {editButton}
