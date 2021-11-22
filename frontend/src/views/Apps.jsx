@@ -726,6 +726,23 @@ const Apps = (props) => {
         </Link>
       ) : null;
 
+    //var editNewButton = editButton === null ?
+    var editNewButton = null
+		/*
+        <Link to={editUrl} style={{ textDecoration: "none" }}>
+          <Tooltip title={"Add your version"}>
+            <Button
+              variant="contained"
+              component="label"
+              color="primary"
+              style={{ marginTop: 10, marginRight: 10 }}
+            >
+              <EditIcon />
+            </Button>
+          </Tooltip>
+        </Link>
+		*/
+
     const activateButton =
       selectedApp.generated && !selectedApp.activated ? (
         <div>
@@ -972,6 +989,7 @@ const Apps = (props) => {
           !selectedApp.generated ? (
             <div>
               {editButton}
+              {editNewButton}
               {downloadButton}
               {deleteButton}
             </div>

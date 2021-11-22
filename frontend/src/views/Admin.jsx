@@ -3972,6 +3972,7 @@ const Admin = (props) => {
         <Tabs
           value={curTab}
           indicatorColor="primary"
+					textColor="primary"
           onChange={setConfig}
           aria-label="disabled tabs example"
         >
@@ -4004,21 +4005,21 @@ const Admin = (props) => {
               Schedules
             </span>
           />
-          {isCloud ? null : (
-            <Tab
-              label=<span>
-                <EcoIcon style={iconStyle} />
-                Environments
-              </span>
-            />
-          )}
-          {isCloud ? null : (
-            <Tab
-              label=<span>
-                <BusinessIcon style={iconStyle} /> Organizations
-              </span>
-            />
-          )}
+					<Tab
+						index={5}
+						disabled={isCloud}
+						label=<span>
+							<EcoIcon style={iconStyle} />
+							Environments
+						</span>
+					/>
+					<Tab
+						index={6}
+						value={6}
+						label=<span>
+							<BusinessIcon style={iconStyle} /> Organizations
+						</span>
+					/>
           {/*window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><CloudIcon style={iconStyle} /> Hybrid</span>/> : null*/}
           {/*window.location.protocol === "http:" && window.location.port === "3000" ? <Tab label=<span><LockIcon style={iconStyle} />Categories</span>/> : null*/}
         </Tabs>

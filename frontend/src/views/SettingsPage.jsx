@@ -397,6 +397,10 @@ const Settings = (props) => {
     );
   };
 
+
+	const runFlex = userdata.eth_info !== undefined && userdata.eth_info.account !== undefined &&
+		userdata.eth_info.account.length > 0 && userdata.eth_info.parsed_balance !== undefined 
+
   // Random names for type & autoComplete. Didn't research :^)
   var imageData = file.length > 0 ? file : fileBase64;
   imageData =
@@ -721,7 +725,7 @@ const Settings = (props) => {
         <h3>{passwordFormMessage}</h3>
         <Divider style={{ marginTop: "40px" }} />
         <h2>Platform Earnings</h2>
-        <div style={{ display: "flex", width: "100%" }}>
+        <div style={{ display: runFlex ? "flex" : "", width: "100%" }}>
           <div style={{ flex: 1, display: "flex" }}>
             <div>
               {userdata.eth_info !== undefined &&

@@ -1397,7 +1397,7 @@ const AngularWorkflow = (props) => {
 
   const getWorkflow = (workflow_id, sourcenode) => {
     console.log(
-      `Getting workflow ${workflow_id} with append value ${sourcenode}`
+      //`Getting workflow ${workflow_id} with append value ${sourcenode}`
     );
 
     fetch(globalUrl + "/api/v1/workflows/" + workflow_id, {
@@ -2098,14 +2098,21 @@ const AngularWorkflow = (props) => {
 			// FIXME: Trust it to just work?
 			//event.target.data()
       var curaction = workflow.actions.find((a) => a.id === data.id);
+			var newapps = JSON.parse(JSON.stringify(apps))
       if (!curaction || curaction === undefined) {
-        alert.error("Action not found. Please remake it.");
 				console.log("NOT FOUND DATA: ", event.target.data())
-        event.target.remove();
-        return;
+				if (data.id !== undefined && data.app_name !== undefined) {
+					//newapps.push(data)
+					workflow.actions.push(data)
+					curaction = data
+				} else {
+        	alert.error("Action not found. Please remake it.");
+					event.target.remove();
+					return;
+				}
       }
 
-      const curapp = apps.find(
+      const curapp = newapps.find(
         (a) =>
           a.name === curaction.app_name &&
           (a.app_version === curaction.app_version ||
@@ -2655,14 +2662,14 @@ const AngularWorkflow = (props) => {
     setLastSaved(false);
     const node = event.target;
     const nodedata = event.target.data();
-		console.log("Node added: ", nodedata)
-    if (
-      nodedata.finished === false ||
+    if (nodedata.finished === false ||
       (nodedata.id !== undefined && nodedata.is_valid === undefined)
     ) {
 			console.log("Returning because node is not valid: ", nodedata)
       return;
     }
+    
+		//parsedApp.data.finished = true;
 
     //console.log("IS IT ADDED TO THE WORKFLOW?: ", nodedata)
     if (node.isNode() && cy.nodes().size() === 1) {
@@ -3413,15 +3420,19 @@ const AngularWorkflow = (props) => {
 
   const onNodeHover = (event) => {
     const nodedata = event.target.data();
+		/*
     if (nodedata.finished === false) {
       return;
     }
+		*/
 
-    var parentNode = cy.$("#" + event.target.data("id"));
-    if (parentNode.data("isButton") || parentNode.data("buttonId")) return;
+    //var parentNode = cy.$("#" + event.target.data("id"));
+    //if (parentNode.data("isButton") || parentNode.data("buttonId")) return;
 
     if (nodedata.app_name !== undefined) {
       const allNodes = cy.nodes().jsons();
+
+    	//if (parentNode.data("isButton") || parentNode.data("buttonId")) return;
 
       var found = false;
       for (var key in allNodes) {
@@ -3443,8 +3454,11 @@ const AngularWorkflow = (props) => {
 
       if (!found) {
         addDeleteButton(event);
-        addCopyButton(event);
-        addStartnodeButton(event);
+
+				if (nodedata.type !== "TRIGGER") {
+					addCopyButton(event);
+					addStartnodeButton(event);
+				}
       }
     }
 
@@ -4772,12 +4786,13 @@ const AngularWorkflow = (props) => {
       if (newAppname.length > maxlen) {
         newAppname = newAppname.slice(0, maxlen) + "..";
       }
+
       newAppname = newAppname.replaceAll("_", " ");
 
       const image = app.large_image;
       const newAppStyle = JSON.parse(JSON.stringify(paperAppStyle));
       const pixelSize = !hover ? "2px" : "4px";
-      newAppStyle.borderLeft = app.is_valid
+      newAppStyle.borderLeft = app.is_valid && app.actions !== null && app.actions !== undefined && app.actions.length > 0 
         ? `${pixelSize} solid ${green}`
         : `${pixelSize} solid ${yellow}`;
 
@@ -9965,6 +9980,11 @@ const AngularWorkflow = (props) => {
     if (typeof copy.name === "string") {
       copy.name = copy.name.replaceAll(" ", "_");
     }
+
+		//lol
+		if (typeof base === 'object' || typeof base === 'dict') {
+			base = JSON.stringify(base)
+		} 
 
     console.log("COPY: ", copy);
     var newitem = JSON.parse(base);
