@@ -862,7 +862,7 @@ const Admin = (props) => {
   };
 
   const abortEnvironmentWorkflows = (environment) => {
-    console.log("Aborting all workflows started >10 minutes ago, not finished");
+    //console.log("Aborting all workflows started >10 minutes ago, not finished");
 
     fetch(`${globalUrl}/api/v1/environments/${environment}/stop`, {
       method: "GET",
@@ -871,8 +871,11 @@ const Admin = (props) => {
       .then((response) => {
         if (response.status !== 200) {
           console.log("Status not 200 for apps :O!");
+					alert.error("Failed aborting dangling workflows")
           return;
-        }
+        } else {
+					alert.info("Aborted all dangling workflows")
+				}
 
         return response.json();
       })
@@ -3736,7 +3739,7 @@ const Admin = (props) => {
             setShowArchived(!showArchived);
           }}
         />{" "}
-        Show archived
+        Show disabled 
         <Divider
           style={{
             marginTop: 20,
@@ -3760,18 +3763,18 @@ const Admin = (props) => {
             />
             <ListItemText
               primary="Default"
-              style={{ minWidth: 150, maxWidth: 150 }}
+              style={{ minWidth: 125, maxWidth: 125}}
             />
             <ListItemText
-              primary="Actions"
-              style={{ minWidth: 150, maxWidth: 150 }}
-            />
-            <ListItemText
-              primary="Archived"
-              style={{ minWidth: 150, maxWidth: 150 }}
+              primary="Disabled"
+              style={{ minWidth: 100, maxWidth: 100 }}
             />
             <ListItemText
               primary="Last Changed"
+              style={{ minWidth: 170, maxWidth: 170}}
+            />
+            <ListItemText
+              primary="Actions"
               style={{ minWidth: 150, maxWidth: 150 }}
             />
           </ListItem>
@@ -3824,8 +3827,8 @@ const Admin = (props) => {
                     />
                     <ListItemText
                       style={{
-                        minWidth: 150,
-                        maxWidth: 150,
+                        minWidth: 125,
+                        maxWidth: 125,
                         overflow: "hidden",
                       }}
                       primary={environment.default ? "true" : null}
@@ -3833,7 +3836,7 @@ const Admin = (props) => {
                       {environment.default ? null : (
                         <Button
                           variant="outlined"
-                          style={{ borderRadius: "0px" }}
+                          style={{ borderRadius: "0px", marginRight: 5,}}
                           onClick={() => setDefaultEnvironment(environment)}
                           color="primary"
                         >
@@ -3843,34 +3846,10 @@ const Admin = (props) => {
                     </ListItemText>
                     <ListItemText
                       style={{
-                        minWidth: 150,
-                        maxWidth: 150,
+                        minWidth: 100,
+                        maxWidth: 100,
                         overflow: "hidden",
-                      }}
-                    >
-                      <div style={{ display: "flex" }}>
-                        <Button
-                          variant={
-                            environment.archived ? "contained" : "outlined"
-                          }
-                          style={{ borderRadius: "0px" }}
-                          onClick={() => deleteEnvironment(environment)}
-                          color="primary"
-                        >
-                          {environment.archived ? "Activate" : "Disable"}
-                        </Button>
-                        {/*<Button variant={environment.archived ? "contained" : "outlined"} style={{borderRadius: "0px"}} onClick={() => {
-										console.log("Should clear executions")
-										abortEnvironmentWorkflows(environment)
-									}} color="primary">Clear executions</Button>*/}
-                        {/*<Button disabled={environment.archived} variant="outlined" style={{borderRadius: "0px"}} onClick={() => flushQueue(environment.Name)} color="primary">Flush Queue</Button>*/}
-                      </div>
-                    </ListItemText>
-                    <ListItemText
-                      style={{
-                        minWidth: 150,
-                        maxWidth: 150,
-                        overflow: "hidden",
+												marginLeft: 10,
                       }}
                       primary={environment.archived.toString()}
                     />
@@ -3888,6 +3867,31 @@ const Admin = (props) => {
                           : 0
                       }
                     />
+                    <ListItemText
+                      style={{
+                        minWidth: 300,
+                        maxWidth: 300,
+                        overflow: "hidden",
+												marginLeft: 10, 
+                      }}
+                    >
+                      <div style={{ display: "flex" }}>
+                        <Button
+                          variant={
+                            environment.archived ? "contained" : "outlined"
+                          }
+                          style={{ borderRadius: "0px" }}
+                          onClick={() => deleteEnvironment(environment)}
+                          color="primary"
+                        >
+                          {environment.archived ? "Activate" : "Disable"}
+                        </Button>
+                        <Button variant={environment.archived ? "contained" : "outlined"} style={{borderRadius: "0px"}} onClick={() => {
+														console.log("Should clear executions for: ", environment)
+														abortEnvironmentWorkflows(environment)
+												}} color="primary">Clear executions</Button>
+                      </div>
+                    </ListItemText>
                   </ListItem>
                 );
               })}

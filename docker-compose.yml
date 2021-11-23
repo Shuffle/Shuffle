@@ -1,7 +1,7 @@
 version: '3'
 services:
   frontend:
-    build: ./frontend
+    #build: ./frontend
     image: ghcr.io/frikky/shuffle-frontend:nightly
     container_name: shuffle-frontend
     hostname: shuffle-frontend
@@ -64,7 +64,7 @@ services:
       - SHUFFLE_SWARM_NETWORK_NAME=shuffle-executions
     restart: unless-stopped
   opensearch:
-    image: opensearchproject/opensearch:1.0.0
+    image: opensearchproject/opensearch:1.1.0
     hostname: shuffle-opensearch
     container_name: shuffle-opensearch
     environment:
