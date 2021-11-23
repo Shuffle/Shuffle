@@ -318,11 +318,6 @@ const AngularWorkflow = (props) => {
   const triggerEnvironments = isCloud ? ["cloud"] : ["onprem", "cloud"];
   const unloadText = "Are you sure you want to leave without saving (CTRL+S)?";
 
-  useBeforeunload(() => {
-    if (!lastSaved) {
-      return unloadText;
-    }
-  });
 
   const [elements, setElements] = useState([]);
   // No point going as fast, as the nodes aren't realtime anymore, but bulk updated.
@@ -1949,6 +1944,17 @@ const AngularWorkflow = (props) => {
 
     document.addEventListener("mousemove", onMouseUpdate, false);
   };
+
+
+  useBeforeunload(() => {
+    if (!lastSaved) {
+      return unloadText;
+    } else {
+    	//document.removeEventListener("mousemove", onMouseUpdate, true);
+			document.removeEventListener("keydown", handleKeyDown, true);
+			document.removeEventListener("paste", handlePaste, true);
+		}
+  });
 
   // Nodeselectbatching:
   // https://stackoverflow.com/questions/16677856/cy-onselect-callback-only-once

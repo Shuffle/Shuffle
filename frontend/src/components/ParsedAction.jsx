@@ -9,6 +9,7 @@ import NestedMenuItem from "material-ui-nested-menu-item";
 //import NestedMenuItem from "./NestedMenu.jsx";
 
 import {
+	ButtonGroup,
   Popper,
   TextField,
   TextareaAutosize,
@@ -85,6 +86,7 @@ import Autocomplete from "@material-ui/lab/Autocomplete";
 import CodeMirror from "@uiw/react-codemirror";
 import "codemirror/keymap/sublime";
 import "codemirror/theme/gruvbox-dark.css";
+import ShuffleCodeEditor from "../components/ShuffleCodeEditor.jsx";
 
 const useStyles = makeStyles({
   notchedOutline: {
@@ -163,6 +165,8 @@ const ParsedAction = (props) => {
   const [expansionModalOpen, setExpansionModalOpen] = React.useState(false);
   const [hideBody, setHideBody] = React.useState(false);
   const [activateHidingBody, setActivateHidingBody] = React.useState(false);
+	const [codedata, setcodedata] = React.useState("");
+	const [fieldCount, setFieldCount] = React.useState(0);
 
   const keywords = [
     "len(",
@@ -649,6 +653,7 @@ const ParsedAction = (props) => {
         console.log("GET THE LAST ARGUMENT FOR NODE!");
         // THIS IS AN EXAMPLE OF SHOWING IT
         /*
+
 				const inputdata = {"data": "1.2.3.4", "dataType": "4.5.6.6"}
 				setJsonList(GetParsedPaths(inputdata, ""))
 				if (!showDropdown) {
@@ -731,95 +736,75 @@ const ParsedAction = (props) => {
       //setUpdate(event.target.value)
     };
 
-    const changeActionParameterCodemirror = (event, count, data) => {
-      console.log(event);
-      if (data.name.startsWith("${") && data.name.endsWith("}")) {
-        // PARAM FIX - Gonna use the ID field, even though it's a hack
-        const paramcheck = selectedAction.parameters.find(
-          (param) => param.name === "body"
-        );
-        if (paramcheck !== undefined) {
-          // Escapes all double quotes
-          const toReplace = event.target.value
-            .trim()
-            .replaceAll('\\"', '"')
-            .replaceAll('"', '\\"');
-          console.log("REPLACE WITH: ", toReplace);
-          if (
-            paramcheck["value_replace"] === undefined ||
-            paramcheck["value_replace"] === null
-          ) {
-            paramcheck["value_replace"] = [
-              {
-                key: data.name,
-                value: toReplace,
-              },
-            ];
+		
+		const changeActionParameterCodeMirror = (event, count, data) => {
+			if (data.startsWith("${") && data.endsWith("}")) {
+				// PARAM FIX - Gonna use the ID field, even though it's a hack
+				const paramcheck = selectedAction.parameters.find(param => param.name === "body")
+				if (paramcheck !== undefined) {
+					// Escapes all double quotes
+					const toReplace = event.target.value.trim().replaceAll("\\\"", "\"").replaceAll("\"", "\\\"");
+					console.log("REPLACE WITH: ", toReplace)
+					if (paramcheck["value_replace"] === undefined || paramcheck["value_replace"] === null) {
+						paramcheck["value_replace"] = [{
+							"key": data.name,
+							"value": toReplace,
+						}]
 
-            console.log("IN IF: ", paramcheck);
-          } else {
-            const subparamindex = paramcheck["value_replace"].findIndex(
-              (param) => param.key === data.name
-            );
-            if (subparamindex === -1) {
-              paramcheck["value_replace"].push({
-                key: data.name,
-                value: toReplace,
-              });
-            } else {
-              paramcheck["value_replace"][subparamindex]["value"] = toReplace;
-            }
+						console.log("IN IF: ", paramcheck)
 
-            console.log("IN ELSE: ", paramcheck);
-          }
-          //console.log("PARAM: ", paramcheck)
-          //if (paramcheck.id === undefined) {
-          //	console.log("Normal paramcheck")
-          //} else {
-          //	selectedActionParameters[count]["value_replace"] = paramcheck
-          //	selectedAction.parameters[count]["value_replace"] = paramcheck
-          //}
+					} else {
+						const subparamindex = paramcheck["value_replace"].findIndex(param => param.key === data.name)
+						if (subparamindex === -1) {
+							paramcheck["value_replace"].push({
+								"key": data.name,
+								"value": toReplace,
+							})
+						} else {
+							paramcheck["value_replace"][subparamindex]["value"] = toReplace 
+						}
 
-          if (paramcheck["value_replace"] === undefined) {
-            selectedActionParameters[count]["value_replace"] = paramcheck;
-            selectedAction.parameters[count]["value_replace"] = paramcheck;
-          } else {
-            selectedActionParameters[count]["value_replace"] =
-              paramcheck["value_replace"];
-            selectedAction.parameters[count]["value_replace"] =
-              paramcheck["value_replace"];
-          }
-          console.log("RESULT: ", selectedAction);
-          setSelectedAction(selectedAction);
-          //setUpdate(Math.random())
-          return;
-        }
-      }
+						console.log("IN ELSE: ", paramcheck)
+					}
+					//console.log("PARAM: ", paramcheck)
+					//if (paramcheck.id === undefined) {
+					//	console.log("Normal paramcheck")
+					//} else {
+					//	selectedActionParameters[count]["value_replace"] = paramcheck
+					//	selectedAction.parameters[count]["value_replace"] = paramcheck
+					//}
 
-      if (
-        event.display.maxLine.text[event.display.maxLine.text.length - 1] ===
-        "$"
-      ) {
-        if (!showDropdown) {
-          setShowAutocomplete(false);
-          setShowDropdown(true);
-          setShowDropdownNumber(count);
-        }
-      } else {
-        if (showDropdown) {
-          setShowDropdown(false);
-        }
-      }
+					if (paramcheck["value_replace"] === undefined) {
+						selectedActionParameters[count]["value_replace"] = paramcheck
+						selectedAction.parameters[count]["value_replace"] = paramcheck
+					} else {
+						selectedActionParameters[count]["value_replace"] = paramcheck["value_replace"]
+						selectedAction.parameters[count]["value_replace"] = paramcheck["value_replace"]
+					}
+					console.log("RESULT: ", selectedAction)
+					setSelectedAction(selectedAction)
+					//setUpdate(Math.random())
+					return
+				}
+			}
 
-      // bad detection mechanism probably
-      if (
-        event.display.maxLine.text[event.display.maxLine.text.length - 1] ===
-          "." &&
-        actionlist.length > 0
-      ) {
-        console.log("GET THE LAST ARGUMENT FOR NODE!");
-        // THIS IS AN EXAMPLE OF SHOWING IT
-        /*
+			if (event.target.value[event.target.value.length-1] === "$") {
+				if (!showDropdown) {
+					setShowAutocomplete(false)
+					setShowDropdown(true)
+					setShowDropdownNumber(count)
+				}
+			} else {
+				if (showDropdown) {
+					setShowDropdown(false)
+				}
+			}
+
+			// bad detection mechanism probably
+			if (event.target.value[event.target.value.length-1] === "." && actionlist.length > 0) {
+				console.log("GET THE LAST ARGUMENT FOR NODE!")
+				// THIS IS AN EXAMPLE OF SHOWING IT 
+				/*
 				const inputdata = {"data": "1.2.3.4", "dataType": "4.5.6.6"}
 				setJsonList(GetParsedPaths(inputdata, ""))
 				if (!showDropdown) {
@@ -830,76 +815,71 @@ const ParsedAction = (props) => {
 				console.log(jsonList)
 				*/
 
-        // Search for the item backwards
-        // 1. Reverse search backwards from . -> $
-        // 2. Search the actionlist for the item
-        // 3. Find the data for the specific item
+				// Search for the item backwards
+				// 1. Reverse search backwards from . -> $
+				// 2. Search the actionlist for the item  
+				// 3. Find the data for the specific item
 
-        var curstring = "";
-        var record = false;
-        for (var key in selectedActionParameters[count].value) {
-          const item = selectedActionParameters[count].value[key];
-          if (record) {
-            curstring += item;
-          }
+				var curstring = ""
+				var record = false
+				for (var key in selectedActionParameters[count].value) {
+					const item = selectedActionParameters[count].value[key]
+					if (record) {
+						curstring += item
+					}
 
-          if (item === "$") {
-            record = true;
-            curstring = "";
-          }
-        }
+					if (item === "$") {
+						record = true
+						curstring = ""
+					}
+				}
 
-        //console.log("CURSTRING: ", curstring)
-        if (curstring.length > 0 && actionlist !== null) {
-          // Search back in the action list
-          curstring = curstring.split(" ").join("_").toLowerCase();
-          var actionItem = actionlist.find(
-            (data) =>
-              data.autocomplete.split(" ").join("_").toLowerCase() === curstring
-          );
-          if (actionItem !== undefined) {
-            console.log("Found item: ", actionItem);
+				//console.log("CURSTRING: ", curstring)
+				if (curstring.length > 0 && actionlist !== null) {
+					// Search back in the action list
+					curstring = curstring.split(" ").join("_").toLowerCase()
+					var actionItem = actionlist.find(data => data.autocomplete.split(" ").join("_").toLowerCase() === curstring)
+					if (actionItem !== undefined) {
+						console.log("Found item: ", actionItem)
 
-            //actionItem.example = actionItem.example.trim()
-            //actionItem.example = actionItem.example.split(" None").join(" \"None\"")
-            //actionItem.example  = actionItem.example.split("\'").join("\"")
+						//actionItem.example = actionItem.example.trim()
+						//actionItem.example = actionItem.example.split(" None").join(" \"None\"")
+						//actionItem.example  = actionItem.example.split("\'").join("\"")
 
-            var jsonvalid = true;
-            try {
-              const tmp = String(JSON.parse(actionItem.example));
-              if (
-                !actionItem.example.includes("{") &&
-                !actionItem.example.includes("[")
-              ) {
-                jsonvalid = false;
-              }
-            } catch (e) {
-              jsonvalid = false;
-            }
+						var jsonvalid = true
+						try {
+							const tmp = String(JSON.parse(actionItem.example))
+							if (!actionItem.example.includes("{") && !actionItem.example.includes("[")) {
+								jsonvalid = false
+							}
+						} catch (e) {
+							jsonvalid = false
+						}
 
-            if (jsonvalid) {
-              setJsonList(GetParsedPaths(JSON.parse(actionItem.example), ""));
+						if (jsonvalid) {
+							setJsonList(GetParsedPaths(JSON.parse(actionItem.example), ""))
 
-              if (!showDropdown) {
-                setShowAutocomplete(false);
-                setShowDropdown(true);
-                setShowDropdownNumber(count);
-              }
-            }
-          }
-        }
-      } else {
-        if (jsonList.length > 0) {
-          setJsonList([]);
-        }
-      }
+							if (!showDropdown) {
+								setShowAutocomplete(false)
+								setShowDropdown(true)
+								setShowDropdownNumber(count)
+							}
+						}
+					}
+				}
+			} else {
+				if (jsonList.length > 0) {
+					setJsonList([])
+				}
+			}
 
-      selectedActionParameters[count].value = event.display.maxLine.text;
-      selectedAction.parameters[count].value = event.display.maxLine.text;
-      setSelectedAction(selectedAction);
-      //setUpdate(Math.random())
-      //setUpdate(event.target.value)
-    };
+			selectedActionParameters[count].value = data
+			selectedAction.parameters[count].value = data
+			setSelectedAction(selectedAction)
+			//setUpdate(Math.random())
+			//setUpdate(event.target.value)
+		}
+
 
     const changeActionParameterVariable = (fieldvalue, count) => {
       //console.log("CALLED THIS ONE WITH VALUE!", fieldvalue)
@@ -1235,6 +1215,16 @@ const ParsedAction = (props) => {
 
             const clickedFieldId = "rightside_field_" + count;
 
+						const shufflecode = <ShuffleCodeEditor
+							fieldCount = {fieldCount}
+							setFieldCount = {setFieldCount}
+							changeActionParameterCodeMirror = {changeActionParameterCodeMirror}
+							codedata={codedata}
+							setcodedata={setcodedata}
+							expansionModalOpen={expansionModalOpen}
+							setExpansionModalOpen={setExpansionModalOpen}
+						/>
+
             //<TextareaAutosize
             // <CodeMirror
             var datafield = (
@@ -1262,20 +1252,34 @@ const ParsedAction = (props) => {
                   },
                   endAdornment: hideExtraTypes ? null : (
                     <InputAdornment position="end">
-                      <Tooltip title="Autocomplete the text" placement="top">
-                        <AddCircleOutlineIcon
-                          style={{ cursor: "pointer" }}
-                          onClick={(event) => {
-                            setMenuPosition({
-                              top: event.pageY + 10,
-                              left: event.pageX + 10,
-                            });
-                            setShowDropdownNumber(count);
-                            setShowDropdown(true);
-                            setShowAutocomplete(true);
-                          }}
-                        />
-                      </Tooltip>
+											<ButtonGroup orientation={multiline ? "vertical" : "horizontal"}>
+												<Tooltip title="Expand window" placement="top">
+													<AspectRatioIcon
+														style={{ cursor: "pointer", margin: multiline ? 5 : 0 ,}}
+														onClick={(event) => {
+															event.preventDefault()
+															setFieldCount(count)
+															setcodedata(data.value)
+															setExpansionModalOpen(true)
+														}}
+													/>
+												</Tooltip>
+												<Tooltip title="Autocomplete the text" placement="top">
+													<AddCircleOutlineIcon
+														style={{ cursor: "pointer", margin: multiline ? 5 : 0, }}
+														onClick={(event) => {
+															event.preventDefault()
+															setMenuPosition({
+																top: event.pageY + 10,
+																left: event.pageX + 10,
+															});
+															setShowDropdownNumber(count);
+															setShowDropdown(true);
+															setShowAutocomplete(true);
+														}}
+													/>
+												</Tooltip>
+											</ButtonGroup>
                     </InputAdornment>
                   ),
                 }}
@@ -1283,6 +1287,7 @@ const ParsedAction = (props) => {
                 multiline={multiline}
                 helperText={returnHelperText(data.name, data.value)}
                 onClick={() => {
+									/*
                   console.log("Clicked field: ", clickedFieldId);
                   setExpansionModalOpen(false);
                   if (
@@ -1295,6 +1300,14 @@ const ParsedAction = (props) => {
                     setScrollConfig(scrollConfig);
                     //console.log("Change field id!")
                   }
+									*/
+
+									console.log("Clicked field: ", clickedFieldId)
+									if (setScrollConfig !== undefined && scrollConfig !== null && scrollConfig !== undefined && scrollConfig.selected !== clickedFieldId) {
+										scrollConfig.selected = clickedFieldId
+										setScrollConfig(scrollConfig)
+										//console.log("Change field id!")
+									}
                 }}
                 id={clickedFieldId}
                 rows={rows}
@@ -1939,6 +1952,7 @@ const ParsedAction = (props) => {
 							*/}
                 </div>
                 {datafield}
+								{shufflecode}
                 {showDropdown &&
                 showDropdownNumber === count &&
                 data.variant === "STATIC_VALUE" &&
@@ -2057,7 +2071,8 @@ const ParsedAction = (props) => {
 
   const expansionModal = (
     <Dialog
-      modal
+      disableEnforceFocus={true}
+      hideBackdrop={true}
       open={expansionModalOpen}
       onClose={() => {
         setExpansionModalOpen(false);
@@ -2068,7 +2083,12 @@ const ParsedAction = (props) => {
           color: "white",
           minWidth: 600,
           padding: 50,
-        },
+          pointerEvents: "auto",
+					maxHeight: 550,
+					overflowY: "auto",
+					overflowX: "hidden",
+					zIndex: 10012,
+        }
       }}
     >
       <DialogTitle>
@@ -2086,6 +2106,7 @@ const ParsedAction = (props) => {
   const baselabel = selectedAction.label;
   return (
     <div style={appApiViewStyle} id="parsed_action_view">
+
       {expansionModal}
       {hideExtraTypes === true ? null : (
         <span>
@@ -2193,6 +2214,7 @@ const ParsedAction = (props) => {
             </div>
             <div style={{ display: "flex", flexDirection: "column" }}>
               {/*selectedAction.id === workflow.start ? null : 
+
 							<Tooltip color="primary" title={"Make this node the start action"} placement="top">
 								<Button style={{zIndex: 5000, marginTop: 10,}} color="primary" variant="outlined" onClick={(e) => {
 									defineStartnode(e)	

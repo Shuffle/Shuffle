@@ -64,7 +64,7 @@ services:
       - SHUFFLE_SWARM_NETWORK_NAME=shuffle-executions
     restart: unless-stopped
   opensearch:
-    image: opensearchproject/opensearch:1.1.0
+    image: opensearchproject/opensearch:1.0.0
     hostname: shuffle-opensearch
     container_name: shuffle-opensearch
     environment:
