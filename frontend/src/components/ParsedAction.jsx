@@ -965,7 +965,7 @@ const ParsedAction = (props) => {
 			}
 
 			var helperText = ""
-			console.log("DATA: ", name, value)
+			//console.log("DATA: ", name, value)
 			if (name.includes("url")) {
 				if (value.includes("localhost") || value.includes("127.0.0.1")) {
 					helperText = "Can't use localhost. Please change to an external IP or hostname." 
@@ -1545,8 +1545,7 @@ const ParsedAction = (props) => {
 
                 console.log("AUTOCOMPLETE1: ", values);
 
-                var toComplete = selectedActionParameters[count].value
-                  .trim()
+                var toComplete = selectedActionParameters[count].value.trim()
                   .endsWith("$")
                   ? values[0].autocomplete
                   : "$" + values[0].autocomplete;

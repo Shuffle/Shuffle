@@ -456,6 +456,44 @@ const ConfigureWorkflow = (props) => {
     );
   };
 
+  const activateApp = (app_id, app_name, app_version) => {
+    fetch(
+      `${globalUrl}/api/v1/apps/${app_id}/activate?app_name=${app_name}&app_version=${app_version}`,
+      {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        credentials: "include",
+      }
+    )
+      .then((response) => {
+        if (response.status !== 200) {
+          //window.location.pathname = "/search"
+          //alert.error("Failed to find this app. Is it public?")
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+        if (responseJson.success === false) {
+        	if (responseJson.reason !== undefined) {
+          	alert.error("Failed to activate the app: "+responseJson.reason);
+					} else {
+          	alert.error("Failed to activate the app");
+					}
+        } else {
+          alert.success("App activated for your organization!");
+        }
+      })
+      .catch((error) => {
+        alert.error(error.toString());
+      });
+  };
+
+
+
   const AppSection = (props) => {
     const { action } = props;
 
@@ -517,7 +555,8 @@ const ConfigureWorkflow = (props) => {
             color="primary"
             variant="outlined"
             onClick={() => {
-              activateApp(action.app_id, action.app_name, action.app_version);
+							console.log("ACTION: ", action)
+              activateApp(action.action.app_id, action.app_name, action.app_version);
               setItemChanged(true);
             }}
           >
@@ -555,38 +594,6 @@ const ConfigureWorkflow = (props) => {
         ) : null}
       </ListItem>
     );
-  };
-
-  const activateApp = (app_id, app_name, app_version) => {
-    fetch(
-      `${globalUrl}/api/v1/apps/app_id/activate?app_name=${app_name}&app_version=${app_version}`,
-      {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        credentials: "include",
-      }
-    )
-      .then((response) => {
-        if (response.status !== 200) {
-          //window.location.pathname = "/search"
-          //alert.error("Failed to find this app. Is it public?")
-        }
-
-        return response.json();
-      })
-      .then((responseJson) => {
-        if (responseJson.success === false) {
-          alert.error("Failed to activate the app");
-        } else {
-          alert.success("App activated for your organization!");
-        }
-      })
-      .catch((error) => {
-        alert.error(error.toString());
-      });
   };
 
   return (

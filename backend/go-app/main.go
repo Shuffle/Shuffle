@@ -5811,6 +5811,7 @@ func initHandlers() {
 
 	// App specific
 	// From here down isnt checked for org specific
+	r.HandleFunc("/api/v1/apps/{appId}/activate", shuffle.ActivateWorkflowApp).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}", shuffle.UpdateWorkflowAppConfig).Methods("PATCH", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}", shuffle.DeleteWorkflowApp).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}/config", shuffle.GetWorkflowAppConfig).Methods("GET", "OPTIONS")

@@ -12,6 +12,7 @@ import ReactMarkdown from "react-markdown";
 import { useAlert } from "react-alert";
 
 import {
+	Zoom,
 	Popover,
   TextField,
   Drawer,
@@ -1614,6 +1615,7 @@ const AngularWorkflow = (props) => {
     setSelectedAction({});
     setSelectedApp({});
     setSelectedTrigger({});
+  	setSelectedComment({})
     //setSelectedEdge({})
 
     // setSelectedTriggerIndex(-1)
@@ -1967,6 +1969,8 @@ const AngularWorkflow = (props) => {
         if (parentNode !== null && parentNode !== undefined) {
           parentNode.remove();
         }
+
+				return
       } else if (
         data.buttonType === "set_startnode" &&
         data.type !== "TRIGGER"
@@ -1990,6 +1994,9 @@ const AngularWorkflow = (props) => {
           setLastSaved(false);
           parentNode.data("isStartNode", true);
         }
+      		
+				//event.target.unselect();
+				return
       } else if (data.buttonType === "copy") {
         console.log("COPY!");
         // 1. Find parent
@@ -2088,10 +2095,12 @@ const AngularWorkflow = (props) => {
               data: newbranch,
             });
           }
+
+      		//event.target.unselect();
+					return
         }
       }
 
-      event.target.unselect();
       return;
     } else if (data.isDescriptor) {
       console.log("Can't select descriptor");
@@ -2244,9 +2253,31 @@ const AngularWorkflow = (props) => {
         setSelectedActionEnvironment(env);
       }
     } else if (data.type === "TRIGGER") {
-      const trigger_index = workflow.triggers.findIndex(
+			if (workflow.triggers === null) {
+				workflow.triggers = []
+			}
+
+      var trigger_index = workflow.triggers.findIndex(
         (a) => a.id === data.id
       );
+
+			console.log("Trigger: ", data, trigger_index)
+			if (trigger_index === -1) {
+				workflow.triggers.push(data)
+				trigger_index = workflow.triggers.length-1
+				setWorkflow(workflow)
+			}
+
+			console.log("Trigger2: ", data, trigger_index)
+			//if (data.id !== undefined && data.app_name !== undefined) {
+			//	//newapps.push(data)
+			//	workflow.actions.push(data)
+			//	curaction = data
+			//} else {
+			//	alert.error("Action not found. Please remake it.");
+			//	event.target.remove();
+			//	return;
+			//}
 
       if (data.app_name === "Shuffle Workflow") {
         getAvailableWorkflows(trigger_index);
@@ -4782,6 +4813,9 @@ const AngularWorkflow = (props) => {
       )
     );
 
+		var delay = -75
+		var runDelay = false
+
     const ParsedAppPaper = (props) => {
       const app = props.app;
       const [hover, setHover] = React.useState(false);
@@ -4977,7 +5011,25 @@ const AngularWorkflow = (props) => {
                   return null;
                 }
 
-                return <ParsedAppPaper key={index} app={app} />;
+								var extraMessage = ""
+								if (index == 2) {
+									extraMessage = <div style={{marginTop: 5}} />
+								}
+
+								delay += 75
+                return (
+									runDelay ? 
+										<Zoom key={index} in={true} style={{ transitionDelay: `${delay}ms` }}>
+											<div>
+												<ParsedAppPaper key={index} app={app} />
+											</div>
+										</Zoom>
+									: 
+									<div>
+										{extraMessage}
+										<ParsedAppPaper key={index} app={app} />
+									</div>
+								)
               })}
             </div>
           ) : apps.length > 0 ? (
@@ -6420,11 +6472,15 @@ const AngularWorkflow = (props) => {
           color="primary"
           onClick={() => {
             console.log("HOST: ", window.location.host);
+            console.log("HOST: ", window.location);
             const redirectUri = isCloud
               ? window.location.host === "localhost:3002"
                 ? "http%3A%2F%2Flocalhost:5002%2Fapi%2Fv1%2Ftriggers%2Fgmail%2Fregister"
                 : "https%3A%2F%2Fshuffler.io%2Fapi%2Fv1%2Ftriggers%2Fgmail%2Fregister"
-              : "http%3A%2F%2Flocalhost:5001%2Fapi%2Fv1%2Ftriggers%2Fgmail%2Fregister";
+              : window.location.protocol === "http:" ? 
+								`http%3A%2F%2F${window.location.host}%2Fapi%2Fv1%2Ftriggers%2Fgmail%2Fregister`
+								:
+								`https%3A%2F%2F${window.location.host}%2Fapi%2Fv1%2Ftriggers%2Fgmail%2Fregister`
 
             const client_id =
               "253565968129-c0a35knic7q1pdk6i6qk9gdkvr07ci49.apps.googleusercontent.com";
@@ -6510,13 +6566,15 @@ const AngularWorkflow = (props) => {
           }}
           color="primary"
           onClick={() => {
-            //const redirectUri = isCloud ? "https%3A%2F%2Fshuffler.io%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister" : "http%3A%2F%2Flocalhost:5001%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister"
-            //const redirectUri = isCloud ? "http%3A%2F%2Flocalhost:5002%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister" : "http%3A%2F%2Flocalhost:5001%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister"
+						console.log(window.location)
             const redirectUri = isCloud
               ? window.location.host === "localhost:3002"
                 ? "http%3A%2F%2Flocalhost:5002%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister"
                 : "https%3A%2F%2Fshuffler.io%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister"
-              : "http%3A%2F%2Flocalhost:5001%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister";
+              : window.location.protocol === "http:" ? 
+								`http%3A%2F%2F${window.location.host}%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister`
+								:
+								`https%3A%2F%2F${window.location.host}%2Fapi%2Fv1%2Ftriggers%2Foutlook%2Fregister`
 
             //const client_id = "fd55c175-aa30-4fa6-b303-09a29fb3f750"
             const client_id = "bb4bff85-0d0b-4f5d-8a69-3cee8029b11a";
@@ -9806,7 +9864,8 @@ const AngularWorkflow = (props) => {
 								"action": {
 									"label": "Execution Argument",
 									"name": "Execution Argument",
-      						"large_image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJYAAACOCAMAAADkWgEmAAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAAWlBMVEX4Wj69TDgmKCvkVTwlJyskJiokJikkJSkjJSn4Ykf+6+f5h3L////8xLr5alH/9fT7nYz4Wz/919H5cVn/+vr8qpv4XUL94d35e2X//v38t6v4YUbkVDy8SzcVIzHLAAAAAWJLR0QMgbNRYwAAAAlwSFlzAAARsAAAEbAByCf1VAAAAAd0SU1FB+QGGgsvBZ/GkmwAAAFKSURBVHja7dlrTgMxDEXhFgpTiukL2vLc/zbZQH5N7MmReu4KPmlGN4m9WgGzfhgtaOZxM1rQztNoQDvPowHtTKMB7WxHA2TJkiVLlixIZMmSRYgsWbIIkSVLFiGyZMkiRNZirBcma/eKZEW87ZGsOBxPRFbE+R3Jio/LlciKuH0iWfH1/UNkRSR3RRYruSvyWKldkcjK7IpUVl5X5LLSuiKbldQV6aycrihgZXRFCau/K2pY3V1RxersijJWX1cUsnq6opLV0RW1rNldUc2a2RXlrHldsQBrTlfcLwv5EZm/PLIgkHXKPHyQRzXzYoO8BjIvzcgnBvJBxny+Ih/7zNEIcpDEHLshh5TIkS5zAI5cFzCXK8hVFHNxh1xzQpfC0BV6XWTJkkWILFmyCJElSxYhsmTJIkSWLFmEyJIlixBZsmQB8stk/U3/Yb49pVcDMg4AAAAldEVYdGRhdGU6Y3JlYXRlADIwMjAtMDYtMjZUMTE6NDc6MDUrMDI6MDD8QCPmAAAAJXRFWHRkYXRlOm1vZGlmeQAyMDIwLTA2LTI2VDExOjQ3OjA1KzAyOjAwjR2bWgAAAABJRU5ErkJggg==",
+      						"large_image": theme.palette.defaultImage,
+      						"image": theme.palette.defaultImage,
 								},
 								"result": validate.valid ? JSON.stringify(validate.result) : validate.result,
 								"status": "SUCCESS" 
@@ -9823,10 +9882,6 @@ const AngularWorkflow = (props) => {
 							<ArrowLeftIcon style={{ color: "white" }} />
 						</Tooltip>
 					</IconButton>
-					{/*
-					<ShowReactJsonField jsonValue={showResult} validate={validate} collapsed={true} label={"Execution Argument"} autocomplete={"exec"} />
-					*/}
-						
 					<ReactJson
 							src={validate.result}
 							theme={theme.palette.jsonTheme}
@@ -9992,6 +10047,10 @@ const AngularWorkflow = (props) => {
 			base = JSON.stringify(base)
 		} 
 
+		if (base_node_name === "execution_argument") {
+			base_node_name = "exec"
+		}
+
     console.log("COPY: ", copy);
     var newitem = JSON.parse(base);
     to_be_copied = "$" + base_node_name.toLowerCase().replaceAll(" ", "_");
@@ -10156,6 +10215,7 @@ const AngularWorkflow = (props) => {
 		)
 	}
 
+	var executionDelay = -75
   const executionModal = (
     <Drawer
       anchor={"right"}
@@ -10209,6 +10269,8 @@ const AngularWorkflow = (props) => {
           {workflowExecutions.length > 0 ? (
             <div>
               {workflowExecutions.map((data, index) => {
+								executionDelay += 75
+
                 const statusColor =
                   data.status === "FINISHED"
                     ? green
@@ -10244,106 +10306,110 @@ const AngularWorkflow = (props) => {
                 }
 
                 return (
-                  <Tooltip
-                    key={data.execution_id}
-                    title={data.result}
-                    placement="left-start"
-                    style={{ zIndex: 10010 }}
-                  >
-                    <Paper
-                      elevation={5}
-                      key={data.execution_id}
-                      square
-                      style={executionPaperStyle}
-                      onMouseOver={() => {}}
-                      onMouseOut={() => {}}
-                      onClick={() => {
-                        if (
-                          (data.result === undefined ||
-                            data.result === null ||
-                            data.result.length === 0) &&
-                          data.status !== "FINISHED" &&
-                          data.status !== "ABORTED"
-                        ) {
-                          start();
-                          setExecutionRunning(true);
-                          setExecutionRequestStarted(false);
-                        }
+									<Zoom key={index} in={true} style={{ transitionDelay: `${executionDelay}ms` }}>
+										<div>
+                  		<Tooltip
+                  		  key={data.execution_id}
+                  		  title={data.result}
+                  		  placement="left-start"
+                  		  style={{ zIndex: 10010 }}
+                  		>
+                  		  <Paper
+                  		    elevation={5}
+                  		    key={data.execution_id}
+                  		    square
+                  		    style={executionPaperStyle}
+                  		    onMouseOver={() => {}}
+                  		    onMouseOut={() => {}}
+                  		    onClick={() => {
+                  		      if (
+                  		        (data.result === undefined ||
+                  		          data.result === null ||
+                  		          data.result.length === 0) &&
+                  		        data.status !== "FINISHED" &&
+                  		        data.status !== "ABORTED"
+                  		      ) {
+                  		        start();
+                  		        setExecutionRunning(true);
+                  		        setExecutionRequestStarted(false);
+                  		      }
 
-                        const cur_execution = {
-                          execution_id: data.execution_id,
-                          authorization: data.authorization,
-                        };
-                        setExecutionRequest(cur_execution);
-                        setExecutionModalView(1);
-                        setExecutionData(data);
-                        handleUpdateResults(data, cur_execution);
-                      }}
-                    >
-                      <div style={{ display: "flex", flex: 1 }}>
-                        <div
-                          style={{
-                            marginLeft: 0,
-                            width: lastExecution === data.execution_id ? 4 : 2,
-                            backgroundColor: statusColor,
-                            marginRight: 5,
-                          }}
-                        />
-                        <div
-                          style={{
-                            height: "100%",
-                            width: 40,
-                            borderColor: "white",
-                            marginRight: 15,
-                          }}
-                        >
-                          {getExecutionSourceImage(data)}
-                        </div>
-                        <div
-                          style={{
-                            marginTop: "auto",
-                            marginBottom: "auto",
-                            marginRight: 15,
-                            fontSize: 13,
-                          }}
-                        >
-                          {timestamp}
-                        </div>
-                        {data.workflow.actions !== null ? (
-                          <Tooltip
-                            color="primary"
-                            title={resultsLength + " actions ran"}
-                            placement="top"
-                          >
-                            <div
-                              style={{
-                                marginRight: 10,
-                                marginTop: "auto",
-                                marginBottom: "auto",
-                              }}
-                            >
-                              {resultsLength}/{calculatedResult}
-                            </div>
-                          </Tooltip>
-                        ) : null}
-                      </div>
-                      <Tooltip title={"Inspect execution"} placement="top">
-                        {lastExecution === data.execution_id ? (
-                          <KeyboardArrowRightIcon
-                            style={{
-                              color: "#f85a3e",
-                              marginTop: "auto",
-                              marginBottom: "auto",
-                            }}
-                          />
-                        ) : (
-                          <KeyboardArrowRightIcon
-                            style={{ marginTop: "auto", marginBottom: "auto" }}
-                          />
-                        )}
-                      </Tooltip>
-                    </Paper>
-                  </Tooltip>
+                  		      const cur_execution = {
+                  		        execution_id: data.execution_id,
+                  		        authorization: data.authorization,
+                  		      };
+                  		      setExecutionRequest(cur_execution);
+                  		      setExecutionModalView(1);
+                  		      setExecutionData(data);
+                  		      handleUpdateResults(data, cur_execution);
+                  		    }}
+                  		  >
+                  		    <div style={{ display: "flex", flex: 1 }}>
+                  		      <div
+                  		        style={{
+                  		          marginLeft: 0,
+                  		          width: lastExecution === data.execution_id ? 4 : 2,
+                  		          backgroundColor: statusColor,
+                  		          marginRight: 5,
+                  		        }}
+                  		      />
+                  		      <div
+                  		        style={{
+                  		          height: "100%",
+                  		          width: 40,
+                  		          borderColor: "white",
+                  		          marginRight: 15,
+                  		        }}
+                  		      >
+                  		        {getExecutionSourceImage(data)}
+                  		      </div>
+                  		      <div
+                  		        style={{
+                  		          marginTop: "auto",
+                  		          marginBottom: "auto",
+                  		          marginRight: 15,
+                  		          fontSize: 13,
+                  		        }}
+                  		      >
+                  		        {timestamp}
+                  		      </div>
+                  		      {data.workflow.actions !== null ? (
+                  		        <Tooltip
+                  		          color="primary"
+                  		          title={resultsLength + " actions ran"}
+                  		          placement="top"
+                  		        >
+                  		          <div
+                  		            style={{
+                  		              marginRight: 10,
+                  		              marginTop: "auto",
+                  		              marginBottom: "auto",
+                  		            }}
+                  		          >
+                  		            {resultsLength}/{calculatedResult}
+                  		          </div>
+                  		        </Tooltip>
+                  		      ) : null}
+                  		    </div>
+                  		    <Tooltip title={"Inspect execution"} placement="top">
+                  		      {lastExecution === data.execution_id ? (
+                  		        <KeyboardArrowRightIcon
+                  		          style={{
+                  		            color: "#f85a3e",
+                  		            marginTop: "auto",
+                  		            marginBottom: "auto",
+                  		          }}
+                  		        />
+                  		      ) : (
+                  		        <KeyboardArrowRightIcon
+                  		          style={{ marginTop: "auto", marginBottom: "auto" }}
+                  		        />
+                  		      )}
+                  		    </Tooltip>
+                  		  </Paper>
+                  		</Tooltip>
+										</div>
+									</Zoom>
                 );
               })}
             </div>
@@ -10833,10 +10899,6 @@ const AngularWorkflow = (props) => {
                   </div>
                   {validate.valid ? (
                     <span>
-											{/*
-												<ShowReactJsonField jsonValue={showResult} validate={validate} collapsed={true} label={"Results for "+data.action.label} autocomplete={data.action.label} />
-											*/}
-
 											<ReactJson
 												src={validate.result}
 												theme={theme.palette.jsonTheme}
@@ -11085,7 +11147,7 @@ const AngularWorkflow = (props) => {
             {curapp === null ? null : (
               <img
                 alt={selectedResult.app_name}
-                src={curapp === undefined ? "" : curapp.large_image}
+                src={curapp === undefined ? theme.palette.defaultImage : curapp.large_image}
                 style={{
                   marginRight: 20,
                   width: imgsize,
@@ -11218,93 +11280,95 @@ const AngularWorkflow = (props) => {
 
   const newView = (
     <div style={{ color: "white" }}>
-      <div
-        style={{ display: "flex", borderTop: "1px solid rgba(91, 96, 100, 1)" }}
-      >
-        {leftView}
-        {workflow.id === undefined ||
-        workflow.id === null ||
-        apps.length === 0 ? (
-          <div
-            style={{
-              width: bodyWidth - leftBarSize - 15,
-              height: 150,
-              textAlign: "center",
-            }}
-          >
-            <CircularProgress
-              style={{
-                marginTop: "30vh",
-                height: 35,
-                width: 35,
-                marginLeft: "auto",
-                marginRight: "auto",
-              }}
-            />
-            <Typography variant="body1" color="textSecondary">
-              Loading Workflow
-            </Typography>
-          </div>
-        ) : (
-          <CytoscapeComponent
-            elements={elements}
-            minZoom={0.35}
-            maxZoom={2.0}
-            wheelSensitivity={0.25}
-            style={{
-              width: bodyWidth - leftBarSize - 15,
-              height: bodyHeight - appBarSize - 5,
-              backgroundColor: surfaceColor,
-            }}
-            stylesheet={cystyle}
-            boxSelectionEnabled={true}
-            autounselectify={false}
-            showGrid={true}
-            id="cytoscape_view"
-            cy={(incy) => {
-              // FIXME: There's something specific loading when
-              // you do the first hover of a node. Why is this different?
-              //console.log("CY: ", incy)
-              setCy(incy);
-            }}
-          />
-        )}
-      </div>
-      {executionModal}
-      <RightSideBar
-        scrollConfig={scrollConfig}
-        setScrollConfig={setScrollConfig}
-        selectedAction={selectedAction}
-        workflow={workflow}
-        setWorkflow={setWorkflow}
-        setSelectedAction={setSelectedAction}
-        setUpdate={setUpdate}
-        selectedApp={selectedApp}
-        workflowExecutions={workflowExecutions}
-        setSelectedResult={setSelectedResult}
-        setSelectedApp={setSelectedApp}
-        setSelectedTrigger={setSelectedTrigger}
-        setSelectedEdge={setSelectedEdge}
-        setCurrentView={setCurrentView}
-        cy={cy}
-        setAuthenticationModalOpen={setAuthenticationModalOpen}
-        setVariablesModalOpen={setVariablesModalOpen}
-        setLastSaved={setLastSaved}
-        setCodeModalOpen={setCodeModalOpen}
-        selectedNameChange={selectedNameChange}
-        rightsidebarStyle={rightsidebarStyle}
-        showEnvironment={showEnvironment}
-        selectedActionEnvironment={selectedActionEnvironment}
-        environments={environments}
-        setNewSelectedAction={setNewSelectedAction}
-        sortByKey={sortByKey}
-        appApiViewStyle={appApiViewStyle}
-        globalUrl={globalUrl}
-        setSelectedActionEnvironment={setSelectedActionEnvironment}
-        requiresAuthentication={requiresAuthentication}
-      />
-      <BottomCytoscapeBar />
-      <TopCytoscapeBar />
+			<div
+				style={{ display: "flex", borderTop: "1px solid rgba(91, 96, 100, 1)" }}
+			>
+				{leftView}
+				{workflow.id === undefined ||
+				workflow.id === null ||
+				apps.length === 0 ? (
+					<div
+						style={{
+							width: bodyWidth - leftBarSize - 15,
+							height: 150,
+							textAlign: "center",
+						}}
+					>
+						<CircularProgress
+							style={{
+								marginTop: "30vh",
+								height: 35,
+								width: 35,
+								marginLeft: "auto",
+								marginRight: "auto",
+							}}
+						/>
+						<Typography variant="body1" color="textSecondary">
+							Loading Workflow
+						</Typography>
+					</div>
+				) : (
+					<Zoom in={true} timeout={1000} style={{ transitionDelay: `${150}ms` }}>
+						<CytoscapeComponent
+							elements={elements}
+							minZoom={0.35}
+							maxZoom={2.0}
+							wheelSensitivity={0.25}
+							style={{
+								width: bodyWidth - leftBarSize - 15,
+								height: bodyHeight - appBarSize - 5,
+								backgroundColor: surfaceColor,
+							}}
+							stylesheet={cystyle}
+							boxSelectionEnabled={true}
+							autounselectify={false}
+							showGrid={true}
+							id="cytoscape_view"
+							cy={(incy) => {
+								// FIXME: There's something specific loading when
+								// you do the first hover of a node. Why is this different?
+								//console.log("CY: ", incy)
+								setCy(incy);
+							}}
+						/>
+					</Zoom>
+				)}
+			</div>
+			{executionModal}
+			<RightSideBar
+				scrollConfig={scrollConfig}
+				setScrollConfig={setScrollConfig}
+				selectedAction={selectedAction}
+				workflow={workflow}
+				setWorkflow={setWorkflow}
+				setSelectedAction={setSelectedAction}
+				setUpdate={setUpdate}
+				selectedApp={selectedApp}
+				workflowExecutions={workflowExecutions}
+				setSelectedResult={setSelectedResult}
+				setSelectedApp={setSelectedApp}
+				setSelectedTrigger={setSelectedTrigger}
+				setSelectedEdge={setSelectedEdge}
+				setCurrentView={setCurrentView}
+				cy={cy}
+				setAuthenticationModalOpen={setAuthenticationModalOpen}
+				setVariablesModalOpen={setVariablesModalOpen}
+				setLastSaved={setLastSaved}
+				setCodeModalOpen={setCodeModalOpen}
+				selectedNameChange={selectedNameChange}
+				rightsidebarStyle={rightsidebarStyle}
+				showEnvironment={showEnvironment}
+				selectedActionEnvironment={selectedActionEnvironment}
+				environments={environments}
+				setNewSelectedAction={setNewSelectedAction}
+				sortByKey={sortByKey}
+				appApiViewStyle={appApiViewStyle}
+				globalUrl={globalUrl}
+				setSelectedActionEnvironment={setSelectedActionEnvironment}
+				requiresAuthentication={requiresAuthentication}
+			/>
+			<BottomCytoscapeBar />
+				<TopCytoscapeBar />
     </div>
   );
 

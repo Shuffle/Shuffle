@@ -26,6 +26,7 @@ import {
   DialogActions,
   DialogContent,
 } from "@material-ui/core";
+
 import {
   GridOn as GridOnIcon,
   List as ListIcon,
@@ -425,7 +426,6 @@ const Workflows = (props) => {
   const [workflows, setWorkflows] = React.useState([]);
   const [filteredWorkflows, setFilteredWorkflows] = React.useState([]);
   const [selectedWorkflow, setSelectedWorkflow] = React.useState({});
-  const [firstrequest, setFirstrequest] = React.useState(true);
   const [workflowDone, setWorkflowDone] = React.useState(false);
   const [selectedWorkflowId, setSelectedWorkflowId] = React.useState("");
 
@@ -854,16 +854,16 @@ const Workflows = (props) => {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (workflows.length <= 0 && firstrequest) {
+    if (workflows.length <= 0) {
       const tmpView = localStorage.getItem("view");
       if (tmpView !== undefined && tmpView !== null) {
         setView(tmpView);
       }
 
-      setFirstrequest(false);
+      //setFirstrequest(false);
       getAvailableWorkflows();
     }
-  });
+  }, [])
 
   const viewStyle = {
     color: "#ffffff",
@@ -1459,7 +1459,7 @@ const Workflows = (props) => {
     }
 
     return (
-      <Grid item xs={4} style={{ padding: "12px 10px 12px 10px" }}>
+			<div style={{width: "100%", position: "relative",}}>
         <Paper square style={paperAppStyle}>
           <div
             style={{
@@ -1646,34 +1646,25 @@ const Workflows = (props) => {
                   })
                 : null}
             </Grid>
-          </Grid>
           {data.actions !== undefined && data.actions !== null ? (
-            <Grid
-              item
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "space-between",
-              }}
-            >
-              <Grid>
-                <IconButton
-                  aria-label="more"
-                  aria-controls="long-menu"
-                  aria-haspopup="true"
-                  onClick={menuClick}
-                  style={{ padding: "0px", color: "#979797" }}
-                >
-                  <MoreVertIcon />
-                </IconButton>
-                {workflowMenuButtons}
-              </Grid>
-            </Grid>
+						<div style={{position: "absolute", top: 10, right: 10, }}>
+							<IconButton
+								aria-label="more"
+								aria-controls="long-menu"
+								aria-haspopup="true"
+								onClick={menuClick}
+								style={{ padding: "0px", color: "#979797" }}
+							>
+								<MoreVertIcon />
+							</IconButton>
+							{workflowMenuButtons}
+						</div>
           ) : null}
-        </Paper>
-      </Grid>
-    );
-  };
+				</Grid>
+			</Paper>
+		</div>
+  )
+  }
 
   // Can create and set workflows
   const setNewWorkflow = (
@@ -2140,7 +2131,8 @@ const Workflows = (props) => {
         };
 
         return obj;
-      });
+      })
+
       workflowData = (
         <DataGrid
           color="primary"
@@ -2467,6 +2459,8 @@ const Workflows = (props) => {
       );
     }
 
+		var workflowDelay = -150
+		var appDelay = -75
     return (
       <div style={viewStyle}>
         <div style={workflowViewStyle}>
@@ -2587,7 +2581,10 @@ const Workflows = (props) => {
                   data.large_image = theme.palette.defaultImage;
                 }
 
+								appDelay += 75
+
                 return (
+									<Zoom key={index} in={true} style={{ transitionDelay: `${appDelay}ms` }}>
                   <span key={index} style={{ zIndex: 10 }}>
                     <IconButton
                       style={{
@@ -2642,15 +2639,26 @@ const Workflows = (props) => {
                       </Tooltip>
                     </IconButton>
                   </span>
+									</Zoom>
                 );
               })}
             </div>
           ) : null}
           {view === "grid" ? (
             <Grid container spacing={4} style={paperAppContainer}>
-              <NewWorkflowPaper />
+							<Zoom in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>
+              	<NewWorkflowPaper />
+							</Zoom>
               {filteredWorkflows.map((data, index) => {
-                return <WorkflowPaper key={index} data={data} />;
+								workflowDelay += 75
+
+                return (
+									<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>
+      							<Grid item xs={4} style={{ padding: "12px 10px 12px 10px" }}>
+											<WorkflowPaper key={index} data={data} />
+      							</Grid>
+									</Zoom>
+								)
               })}
             </Grid>
           ) : (

@@ -587,10 +587,13 @@ class AppBase:
                     try:
                         e = sys.exc_info()[1]
                     except:
-                        self.logger.info("Exc check fail: %s" % e)
+                        self.logger.info("Exec check fail: %s" % e)
                         pass
 
-                    tmp = "An error occured during execution: %s" % e 
+                    tmp = json.dumps({
+                        "success": False,
+                        "reason": f"An error occured during execution: {e}",
+                    })
 
 
                 # An attempt at decomposing coroutine results
@@ -2156,7 +2159,10 @@ class AppBase:
             if func == None:
                 self.logger.debug(f"[DEBUG] Failed executing {actionname} because func is None (no function specified).")
                 self.action_result["status"] = "FAILURE" 
-                self.action_result["result"] = "Function %s doesn't exist." % actionname
+                self.action_result["result"] = json.dumps({
+                    "success": False,
+                    "reason": f"Function {actionname} doesn't exist.",
+                })
             elif callable(func):
                 try:
                     if len(action["parameters"]) < 1:
