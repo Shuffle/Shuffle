@@ -2194,7 +2194,7 @@ const AppCreator = (props) => {
   const extraKeys = (
     <div style={{ marginTop: 50 }}>
       <div style={{ display: "flex" }}>
-        <Typography variant="body1">Extra configuration items</Typography>
+        <Typography variant="body1">Extra authentication</Typography>
         {extraAuth.length === 0 ? (
           <Button
             color="primary"
@@ -3119,6 +3119,15 @@ const AppCreator = (props) => {
     <Dialog
       open={actionsModalOpen}
       fullWidth
+			PaperProps={{
+        style: {
+          backgroundColor: surfaceColor,
+          color: "white",
+          minWidth: 500,
+          maxWidth: 500,
+					maxHeight: 800,
+        },
+      }}
       onClose={() => {
         setUrlPath("");
         setCurrentAction({
@@ -3429,6 +3438,14 @@ const AppCreator = (props) => {
                   }
                 }
               }
+
+							if (baseUrl !== undefined && baseUrl !== null && parsedurl.startsWith(baseUrl)) {
+      					parsedurl = parsedurl.replaceAll(baseUrl, "");
+							}
+
+							if (parsedurl.includes("?")) {
+								parsedurl = parsedurl.split("?")[0]
+							}
 
               if (event.target.value !== parsedurl) {
                 setUrlPath(parsedurl);
@@ -4701,6 +4718,7 @@ const AppCreator = (props) => {
               type="name"
               id="outlined-with-placeholder"
               margin="normal"
+							multiline
               variant="outlined"
               placeholder="A description for the service"
               value={description}
@@ -4779,42 +4797,45 @@ const AppCreator = (props) => {
             setBaseUrl(tmpstring);
           }}
         />
-        <FormControl style={{ marginTop: 30 }} variant="outlined">
-          <Typography variant="body1">Authentication type</Typography>
-          <Select
-            fullWidth
-            onChange={(e) => {
-              setAuthenticationOption(e.target.value);
-              if (e.target.value === "No authentication") {
-                setAuthenticationRequired(false);
-              } else {
-                setAuthenticationRequired(true);
-              }
-            }}
-            value={authenticationOption}
-            style={{
-              backgroundColor: inputColor,
-              color: "white",
-              height: "50px",
-            }}
-          >
-            {authenticationOptions.map((data, index) => (
-              <MenuItem
-                key={index}
-                style={{ backgroundColor: inputColor, color: "white" }}
-                value={data}
-              >
-                {data}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-        {basicAuth}
-        {bearerAuth}
-        {apiKey}
-        {oauth2Auth}
-        {jwtAuth}
-        {extraKeys}
+				<div style={{padding: 25, border: "2px solid rgba(255,255,255,0.7)", borderRadius: theme.palette.borderRadius, }}>
+					<FormControl style={{ }} variant="outlined">
+						<Typography variant="h6">Authentication</Typography>
+						<Select
+							fullWidth
+							onChange={(e) => {
+								setAuthenticationOption(e.target.value);
+								if (e.target.value === "No authentication") {
+									setAuthenticationRequired(false);
+								} else {
+									setAuthenticationRequired(true);
+								}
+							}}
+							value={authenticationOption}
+							style={{
+								backgroundColor: inputColor,
+								color: "white",
+								height: "50px",
+							}}
+						>
+							{authenticationOptions.map((data, index) => (
+								<MenuItem
+									key={index}
+									style={{ backgroundColor: inputColor, color: "white" }}
+									value={data}
+								>
+									{data}
+								</MenuItem>
+							))}
+						</Select>
+					</FormControl>
+					<div style={{marginTop: 15 }} />
+					{basicAuth}
+					{bearerAuth}
+					{apiKey}
+					{oauth2Auth}
+					{jwtAuth}
+					{extraKeys}
+				</div>
 
         {/*authenticationOption === "No authentication" ? null :
 						<FormControlLabel
