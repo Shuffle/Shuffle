@@ -2521,8 +2521,8 @@ const Workflows = (props) => {
               <Typography style={{ marginTop: 7, marginBottom: "auto" }}>
                 <a
                   rel="noopener noreferrer"
-                  href="https://shuffler.io/docs/workflows"
                   target="_blank"
+                  href="https://shuffler.io/docs/workflows"
                   style={{ textDecoration: "none", color: "#f85a3e" }}
                 >
                   Learn more about Workflows

@@ -1764,16 +1764,14 @@ const Admin = (props) => {
               run2FASetup(userdata);
             }}
             disabled={
-              (selectedUser.role === "admin" &&
-                selectedUser.username !== userdata.username) ||
-              selectedUser.active === false
+              (selectedUser.role === "admin" && selectedUser.username !== userdata.username)
             }
             variant="outlined"
             color="primary"
           >
-            {selectedUser.mfa_info !== undefined &&
-            selectedUser.mfa_info !== null &&
-            selectedUser.mfa_info.active === true
+            { selectedUser.mfa_info !== undefined &&
+            	selectedUser.mfa_info !== null &&
+            	selectedUser.mfa_info.active === true
               ? "Disable 2FA"
               : "Enable 2FA"}
           </Button>

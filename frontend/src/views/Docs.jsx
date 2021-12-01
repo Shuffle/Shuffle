@@ -72,13 +72,14 @@ const Docs = (props) => {
     position: "relative",
     padding: 30,
     paddingTop: 15,
-    height: "80vh",
     marginTop: 15,
+		minHeight: "50vh",
+    //height: "50vh",
   };
 
   const SideBar = {
     maxWidth: 250,
-    flex: "1",
+    flex: 1,
     position: "fixed",
   };
 
@@ -649,8 +650,9 @@ const Docs = (props) => {
   //	</Dialog>
   // {imageModal}
 
+	// Padding and zIndex etc set because of footer in cloud.
   const loadedCheck = (
-    <div>
+    <div style={{minHeight: 1000, paddingBottom: 150, zIndex: 50000, }}>
       <BrowserView>{postDataBrowser}</BrowserView>
       <MobileView>{postDataMobile}</MobileView>
     </div>

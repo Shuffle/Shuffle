@@ -2983,6 +2983,16 @@ const AngularWorkflow = (props) => {
             }
           }
 
+					if (
+    			  event.target !== undefined &&
+    			  event.target !== null
+    			) {
+    			  if (event.target.localName !== "body") {
+    			    console.log("Skipping because body is not targeted")
+    			    return;
+    			  }
+					}
+
           console.log("CTRL+C");
           if (cy !== undefined) {
             var cydata = cy.$(":selected").jsons();
@@ -3051,18 +3061,30 @@ const AngularWorkflow = (props) => {
   };
 
   const handlePaste = (event) => {
-    //console.log(event)
+    //console.log("EV: ", event)
     if (
       event.path !== undefined &&
       event.path !== null &&
       event.path.length > 0
     ) {
-      //console.log(event.path[0])
+      console.log("PATH: ", event.path[0])
       if (event.path[0].localName !== "body") {
         //console.log("Skipping because body is not targeted")
         return;
       }
-    }
+    } 
+		
+		console.log("PATH2: ", event.target)
+		if (
+      event.target !== undefined &&
+      event.target !== null
+    ) {
+      if (event.target.localName !== "body") {
+        //console.log("Skipping because body is not targeted")
+        return;
+      }
+		}
+
 
     event.preventDefault();
     const clipboard = (event.originalEvent || event).clipboardData.getData(
@@ -3078,6 +3100,7 @@ const AngularWorkflow = (props) => {
       for (var key in parsedjson) {
         const item = parsedjson[key];
         console.log("Adding: ", item);
+    		item.data.id = uuidv4()
 
         cy.add({
           group: item.group,
@@ -5025,7 +5048,7 @@ const AngularWorkflow = (props) => {
 											</div>
 										</Zoom>
 									: 
-									<div>
+									<div key={index}>
 										{extraMessage}
 										<ParsedAppPaper key={index} app={app} />
 									</div>
@@ -10571,7 +10594,9 @@ const AngularWorkflow = (props) => {
           executionData.completed_at !== null &&
           executionData.completed_at > 0 ? (
             <div style={{ display: "flex" }}>
-              <Typography variant="body1">
+              <Typography variant="body1" onClick={() => {
+								console.log(executionData)	
+							}}>
                 <b>Finished &nbsp;</b>
               </Typography>
               <Typography variant="body1" color="textSecondary">
