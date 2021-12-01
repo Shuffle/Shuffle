@@ -21,11 +21,24 @@ import 'codemirror/theme/gruvbox-dark.css';
 const CodeEditor = (props) => {
 	const {fieldCount, setFieldCount} = props
 	const {changeActionParameterCodeMirror} = props 
-  const {expansionModalOpen, setExpansionModalOpen} = props
-  const {codedata, setcodedata} = props
+  	const {expansionModalOpen, setExpansionModalOpen} = props
+  	const {codedata, setcodedata} = props
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
     // const {codelang, setcodelang} = props
-  const theme = useTheme();
+  	const theme = useTheme();
+
+	const [expOutput, setexpOutput] = React.useState(" ");
+	function expectedOutput(input) {
+		// const obj = JSON.parse(input);
+		// setexpOutput(JSON.stringify(JSON.parse(input), null, 4))
+		var x = document.getElementById("expOutput");
+		x.innerHTML = JSON.stringify(input, null, 4)
+		// x.innerHTML = JSON.stringify(JSON.parse(input), null, 4)
+		// x.appendChild(document.createTextNode(JSON.stringify(JSON.parse(input), null, 4)));
+		// setexpOutput(JSON.stringify(input, null, 4))
+
+		// Variables + Syntax highlighting + Validation
+	}
 
 	return (
 		<Dialog 
@@ -54,35 +67,6 @@ const CodeEditor = (props) => {
 				>
 						Code Editor
 				</DialogTitle>
-				{/* / Removed due to possible confusion between cancel, done and close buttons.
-				<div
-					style={{
-						width: 60,
-						marginLeft: 280,
-						position: "absolute",
-						top: 15,
-						right: 15, 
-					}}
-				>
-					<Tooltip title="Close editor" placement="top">
-						<IconButton
-							style={{
-								color: "white",
-								background: "#27292d",
-								fontSize: 15,
-								width: 50,
-								height: 50,
-								cursor: "pointer"
-							}}
-							onClick={() => {
-								setExpansionModalOpen(false)
-							}}
-						>
-							<FullscreenExitIcon />
-						</IconButton>
-					</Tooltip>
-				</div>
-				*/}
 			</div>
 			<span style={{
 				border: `2px solid ${theme.palette.inputColor}`,
@@ -95,6 +79,7 @@ const CodeEditor = (props) => {
 					}}
 					onChange={(value) => {
 						setlocalcodedata(value.getValue())
+						expectedOutput(value.getValue())
 					}}
 					options={{
 						theme: 'gruvbox-dark',
@@ -104,6 +89,37 @@ const CodeEditor = (props) => {
 					}}
 				/>
 			</span>
+
+			<div>
+				<DialogTitle
+					style={{
+						paddingTop: 30,
+					}}
+				>
+					<span
+						style={{
+							color: "white"
+						}}
+					>
+						Output
+					</span>
+				</DialogTitle>
+				<p
+					id='expOutput'
+					style={{
+						color: "#f85a3e",
+						fontFamily: "monospace",
+						backgroundColor: "#282828",
+						padding: 20,
+						marginTop: -2,
+						border: `2px solid ${theme.palette.inputColor}`,
+						borderRadius: theme.palette.borderRadius,
+					}}
+				>
+					{/* {expOutput} */}
+				</p>
+			</div>
+
 			<div
 				style={{
 					display: 'flex',
