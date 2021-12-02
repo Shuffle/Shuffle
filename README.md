@@ -1,6 +1,6 @@
 <h1 align="center">
 
-[![Shuffle Logo](https://shuffler.io/images/Shuffle_logo.png)](https://shuffler.io)
+[![Shuffle Logo](https://github.com/frikky/Shuffle/blob/launch/frontend/public/images/Shuffle_logo_new.png)](https://shuffler.io)
 
 Shuffle Automation
 
