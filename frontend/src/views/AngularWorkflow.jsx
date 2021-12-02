@@ -6723,7 +6723,7 @@ const AngularWorkflow = (props) => {
                     }}
                   />
                   <div style={{ flex: "10" }}>
-                    <b>Select folders </b>
+                    <b>Select {triggerAuthentication.type === "gmail" ? "labels" : "folders"} (CTRL+click)</b>
                   </div>
                 </div>
                 <Select
