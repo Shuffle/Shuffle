@@ -4676,12 +4676,15 @@ const AppCreator = (props) => {
                 for (var key in invalid) {
                   if (e.target.value.includes(invalid[key])) {
                     alert.error("Can't use " + invalid[key] + " in name");
+										setName(e.target.value.replaceAll(".", "").replaceAll("#", "").replaceAll(":", "").replaceAll(",", ""))
+
                     return;
                   }
                 }
 
                 if (e.target.value.length > 29) {
                   alert.error("Choose a shorter name (max 29).");
+									setName(e.target.value.slice(0,28))
                   return;
                 }
 

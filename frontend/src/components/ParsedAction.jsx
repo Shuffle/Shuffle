@@ -80,7 +80,10 @@ import {
   LockOpen as LockOpenIcon,
   ExpandMore as ExpandMoreIcon,
   VpnKey as VpnKeyIcon,
-} from "@material-ui/icons";
+	AutoFixHigh as AutoFixHighIcon,
+} from '@mui/icons-material';
+//} from "@material-ui/icons";
+
 import Autocomplete from "@material-ui/lab/Autocomplete";
 
 import CodeMirror from "@uiw/react-codemirror";
@@ -2169,7 +2172,7 @@ const ParsedAction = (props) => {
                     marginTop: "auto",
                     marginBottom: "auto",
                     height: 30,
-                    paddingLeft: 25,
+                    marginLeft: 15,
                     paddingRight: 0,
                   }}
                   onClick={() => {
@@ -2189,7 +2192,7 @@ const ParsedAction = (props) => {
                     marginTop: "auto",
                     marginBottom: "auto",
                     height: 30,
-                    paddingLeft: 25,
+                    marginLeft: 15,
                     paddingRight: 0,
                   }}
                   onClick={() => {}}
@@ -2208,6 +2211,40 @@ const ParsedAction = (props) => {
                       <HelpOutlineIcon style={{ color: "white" }} />
                     </Tooltip>
                   </a>
+                </IconButton>
+                <IconButton
+                  style={{
+                    marginTop: "auto",
+                    marginBottom: "auto",
+                    height: 30,
+                    marginLeft: 15,
+                    paddingRight: 0,
+                  }}
+                  onClick={() => {
+                    //setAuthenticationModalOpen(true);
+										console.log("Should enable/disable magic!")
+										console.log("Action: ", selectedAction)
+										if (selectedAction.run_magic_output === undefined) {
+											selectedAction.run_magic_output = true
+										} else {
+											if (selectedAction.run_magic_output === true) {
+												selectedAction.run_magic_output = false
+											} else {
+												selectedAction.run_magic_output = true 
+											}
+										}
+
+										setSelectedAction(selectedAction)
+										setUpdate(Math.random());
+                  }}
+                >
+                  <Tooltip
+                    color="primary"
+                    title={selectedAction.run_magic_output === undefined || selectedAction.run_magic_output === null || selectedAction.run_magic_output === false ? "Click to enable magic parsing" : "Click to disable magic parsing"}
+                    placement="top"
+                  >
+										<AutoFixHighIcon style={{ color: selectedAction.run_magic_output === undefined || selectedAction.run_magic_output === null || selectedAction.run_magic_output === false ? "white" : "#f86a3e"}} />
+                  </Tooltip>
                 </IconButton>
               </div>
             </div>

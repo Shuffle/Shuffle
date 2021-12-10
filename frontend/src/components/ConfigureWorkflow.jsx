@@ -164,7 +164,10 @@ const ConfigureWorkflow = (props) => {
             newaction.must_authenticate = true;
             newaction.action_ids.push(action.id);
           }
-        }
+        } else if (action.authentication_id !== "" && app.authentication.required === true) {
+					console.log("Should verify authentication ID ", action.authentication_id)
+
+				}
 
         newaction.app = app;
       }

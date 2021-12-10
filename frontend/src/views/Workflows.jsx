@@ -398,11 +398,30 @@ export const validateJson = (showResult) => {
 
   var result = showResult;
   try {
-    const result = jsonvalid ? JSON.parse(showResult) : showResult;
+    result = jsonvalid ? JSON.parse(showResult) : showResult;
   } catch (e) {
     //console.log("Failed parsing JSON even though its valid: ", e)
     jsonvalid = false;
   }
+
+	if (jsonvalid === false) {
+
+		if (typeof showResult === 'string') {
+			showResult = showResult.trim()
+		}
+
+		try {
+			var newstr = showResult.replaceAll("'", '"')
+
+			console.log("Try replacements and trimming with new value: ", newstr)
+			result = JSON.parse(newstr)
+			jsonvalid = true
+		} catch (e) {
+
+			console.log("Failed parsing JSON even though its valid (2): ", e)
+			jsonvalid = false
+		}
+	}
 
   //console.log("VALID: ", jsonvalid, result)
   return {
@@ -457,6 +476,8 @@ const Workflows = (props) => {
   const [filters, setFilters] = React.useState([]);
   const [submitLoading, setSubmitLoading] = React.useState(false);
   const [actionImageList, setActionImageList] = React.useState([]);
+
+  const [firstLoad, setFirstLoad] = React.useState(true);
 
   const isCloud =
     window.location.host === "localhost:3002" ||
@@ -839,6 +860,11 @@ const Workflows = (props) => {
 
           setFilteredWorkflows(responseJson);
           setWorkflowDone(true);
+  
+					// Ensures the zooming happens only once per load
+        	setTimeout(() => {
+						setFirstLoad(false)
+					}, 100)
         } else {
           if (isLoggedIn) {
             alert.error("An error occurred while loading workflows");
@@ -1764,6 +1790,7 @@ const Workflows = (props) => {
         if (file.type !== "application/json") {
           if (file.type !== undefined) {
             alert.error("File has to contain valid json");
+    				setImportLoading(false);
           }
 
           continue;
@@ -2581,7 +2608,11 @@ const Workflows = (props) => {
                   data.large_image = theme.palette.defaultImage;
                 }
 
-								appDelay += 75
+								if (firstLoad) {
+									appDelay += 75
+								} else {
+									appDelay = 0
+								}
 
                 return (
 									<Zoom key={index} in={true} style={{ transitionDelay: `${appDelay}ms` }}>
@@ -2650,7 +2681,11 @@ const Workflows = (props) => {
               	<NewWorkflowPaper />
 							</Zoom>
               {filteredWorkflows.map((data, index) => {
-								workflowDelay += 75
+  							if (firstLoad) {
+									workflowDelay += 75
+								} else {
+									workflowDelay = 0
+								}
 
                 return (
 									<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>

@@ -299,6 +299,7 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 				}
 
 				if !downloaded {
+
 					return errors.New(fmt.Sprintf("Failed to build / download images %s", strings.Join(tags, ",")))
 				}
 				//baseDockerName

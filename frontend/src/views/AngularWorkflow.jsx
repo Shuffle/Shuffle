@@ -1754,13 +1754,17 @@ const AngularWorkflow = (props) => {
         var idnumber = -1;
         if (curElement.id.startsWith("rightside_field_")) {
           console.log("FOUND FIELD WITH NUMBER: ", curElement.id);
+
+
+					// Find exact position to put the text
+
           const idsplit = curElement.id.split("_");
           console.log(idsplit);
           if (idsplit.length === 3 && !isNaN(idsplit[2])) {
             console.log("ADDING TO PARAM ", idsplit[2]);
             console.log("PARAM: ", selectedAction);
 
-            selectedAction.parameters[idsplit[2]].value = newValue;
+            selectedAction.parameters[idsplit[2]].value += newValue;
             paramname = selectedAction.parameters[idsplit[2]].name;
             idnumber = idsplit[2];
           }
@@ -1849,7 +1853,7 @@ const AngularWorkflow = (props) => {
   const onNodeDrag = (event, selectedAction) => {
     const nodedata = event.target.data();
     if (nodedata.finished === false) {
-      return;
+			console.log("NOT FINISHED - ADD EXAMPLE BRANCHES TO CLOSEST!!")
     }
 
     if (nodedata.app_name !== undefined) {
@@ -1859,6 +1863,15 @@ const AngularWorkflow = (props) => {
         if (currentNode.data.attachedTo === nodedata.id) {
           cy.getElementById(currentNode.data.id).remove();
         }
+
+				// Calculate location
+				//currentNode.position.x > 
+				//if (nodedata.position.x > 0 && nodedata.position.y > 0) {
+				//	console.log("Positive both")
+				//}
+
+				//console.log(currentNode.position)
+				//console.log(nodedata.position)
       }
     } else {
       //console.log("No appid? ", nodedata)
@@ -2389,6 +2402,9 @@ const AngularWorkflow = (props) => {
       return "";
     }
 
+		console.log("NOT REPLACING ON PURPOSE!!")
+		return ""
+
     // Basically just a stupid if-else :)
     const synonyms = {
       id: [
@@ -2491,6 +2507,7 @@ const AngularWorkflow = (props) => {
 
   // Takes an action as input, then runs through and updates the relevant fields
   // based on previous actions'
+	// Uses lots of synonyms 
   const RunAutocompleter = (dstdata) => {
     // **PS: The right action should already be set here**
     // 1. Check execution argument
@@ -2617,10 +2634,13 @@ const AngularWorkflow = (props) => {
           (data) => data.id === edge.source
         );
         if (targetnode === -1) {
-          alert.error("Can't make arrow to starting node");
-          event.target.remove();
-          found = true;
-          break;
+					if (targetnode.type !== "TRIGGER") {
+						alert.error("Can't make arrow to starting node");
+						event.target.remove();
+						break;
+					}
+						
+					found = true;
         }
       } else if (edge.source === workflow.branches[key].source_id) {
         // FIXME: Verify multi-target for triggers
@@ -2953,16 +2973,16 @@ const AngularWorkflow = (props) => {
         console.log("DELETE");
         break;
       case 38:
-        console.log("UP");
+        //console.log("UP");
         break;
       case 37:
-        console.log("LEFT");
+        //console.log("LEFT");
         break;
       case 40:
-        console.log("DOWN");
+        //console.log("DOWN");
         break;
       case 39:
-        console.log("RIGHT");
+        //console.log("RIGHT");
         break;
       case 90:
         if (event.ctrlKey) {
@@ -3169,7 +3189,12 @@ const AngularWorkflow = (props) => {
           }
         }
 
-        setEnvironments(responseJson);
+				// FIXME: Don't allow multiple in cloud yet. Cloud -> Onprem isn't stable.
+				if (isCloud) {
+          setEnvironments({ name: "Cloud", type: "cloud" });
+				} else {
+        	setEnvironments(responseJson);
+				}
       })
       .catch((error) => {
         alert.error(error.toString());
@@ -3307,7 +3332,7 @@ const AngularWorkflow = (props) => {
       document.title = "Workflow - " + workflow.name;
       registerKeys();
     }
-  });
+  })
 
   const animationDuration = 150;
   const onNodeHoverOut = (event) => {
@@ -3480,11 +3505,9 @@ const AngularWorkflow = (props) => {
 
   const onNodeHover = (event) => {
     const nodedata = event.target.data();
-		/*
     if (nodedata.finished === false) {
       return;
     }
-		*/
 
     //var parentNode = cy.$("#" + event.target.data("id"));
     //if (parentNode.data("isButton") || parentNode.data("buttonId")) return;
@@ -4794,6 +4817,7 @@ const AngularWorkflow = (props) => {
           parameters: parameters,
           isStartNode: false,
           large_image: app.large_image,
+					run_magic_output: true,
           authentication: [],
           execution_variable: undefined,
           example: example,
@@ -6701,6 +6725,9 @@ const AngularWorkflow = (props) => {
                 </div>
                 {outlookButton}
                 {gmailButton}
+								<Typography variant="body2" color="textSecondary">
+									If you have trouble using the triggers, please <a href="https://shuffler.io/contact" rel="noopener noreferrer" target="_blank">contact us</a> to get access
+								</Typography>
               </span>
             )}
 
@@ -10075,7 +10102,10 @@ const AngularWorkflow = (props) => {
 		}
 
     console.log("COPY: ", copy);
-    var newitem = JSON.parse(base);
+
+    //var newitem = JSON.parse(base);
+		var newitem = validateJson(base).result
+
     to_be_copied = "$" + base_node_name.toLowerCase().replaceAll(" ", "_");
     for (var key in copy.namespace) {
       if (copy.namespace[key].includes("Results for")) {
@@ -10292,7 +10322,7 @@ const AngularWorkflow = (props) => {
           {workflowExecutions.length > 0 ? (
             <div>
               {workflowExecutions.map((data, index) => {
-								executionDelay += 75
+								executionDelay += 50
 
                 const statusColor =
                   data.status === "FINISHED"
@@ -10441,7 +10471,7 @@ const AngularWorkflow = (props) => {
           )}
         </div>
       ) : (
-        <div style={{ padding: 25, maxWidth: 365, overflowX: "hidden" }}>
+        <div style={{ padding: "25px 15px 25px 15px", maxWidth: 365, overflowX: "hidden" }}>
           <Breadcrumbs
             aria-label="breadcrumb"
             separator="›"
@@ -10466,13 +10496,13 @@ const AngularWorkflow = (props) => {
                 onClick={() => {}}
               >
                 <ArrowBackIcon style={{ color: "rgba(255,255,255,0.5)" }} />
-              </IconButton>
-              <h2
-                style={{ color: "rgba(255,255,255,0.5)", cursor: "pointer" }}
-                onClick={() => {}}
-              >
-                See other Executions
-              </h2>
+            	</IconButton>
+							<h2
+								style={{ color: "rgba(255,255,255,0.5)", cursor: "pointer" }}
+								onClick={() => {}}
+							>
+								See other Executions
+							</h2>
             </span>
           </Breadcrumbs>
           <Divider
@@ -10482,7 +10512,7 @@ const AngularWorkflow = (props) => {
               marginBottom: 10,
             }}
           />
-          <div style={{ display: "flex" }}>
+          <div style={{ display: "flex", marginLeft: 10, }}>
             <h2>Execution info</h2>
             <Tooltip
               color="primary"
@@ -10531,7 +10561,7 @@ const AngularWorkflow = (props) => {
           </div>
           {executionData.status !== undefined &&
           executionData.status.length > 0 ? (
-            <div style={{ display: "flex" }}>
+            <div style={{ display: "flex", marginLeft: 10, }}>
               <Typography variant="body1">
                 <b>Status &nbsp;&nbsp;</b>
               </Typography>
@@ -10544,7 +10574,7 @@ const AngularWorkflow = (props) => {
           executionData.execution_source !== null &&
           executionData.execution_source.length > 0 &&
           executionData.execution_source !== "default" ? (
-            <div style={{ display: "flex" }}>
+            <div style={{ display: "flex", marginLeft: 10, }}>
               <Typography variant="body1">
                 <b>Source &nbsp;&nbsp;</b>
               </Typography>
@@ -10581,7 +10611,7 @@ const AngularWorkflow = (props) => {
             </div>
           ) : null}
           {executionData.started_at !== undefined ? (
-            <div style={{ display: "flex" }}>
+            <div style={{ display: "flex", marginLeft: 10,  }}>
               <Typography variant="body1">
                 <b>Started &nbsp;&nbsp;</b>
               </Typography>
@@ -10593,7 +10623,7 @@ const AngularWorkflow = (props) => {
           {executionData.completed_at !== undefined &&
           executionData.completed_at !== null &&
           executionData.completed_at > 0 ? (
-            <div style={{ display: "flex" }}>
+            <div style={{ display: "flex", marginLeft: 10, }}>
               <Typography variant="body1" onClick={() => {
 								console.log(executionData)	
 							}}>
@@ -10809,18 +10839,27 @@ const AngularWorkflow = (props) => {
                 <div
                   key={index}
                   style={{
-                    marginBottom: 40,
+                    marginBottom: 20,
                     border:
                       data.action.sub_action === true
-                        ? "1px solid rgba(255,255,255,0.3)"
-                        : null,
+                        ? "1px solid rgba(255,255,255,0.3)" 
+                        : "1px solid rgba(255,255,255, 0.3)",
                     borderRadius: theme.palette.borderRadius,
+                    backgroundColor: theme.palette.inputColor,
+										padding: "15px 10px 10px 10px", 
+										overflow: "hidden",
                   }}
                   onMouseOver={() => {
                     var currentnode = cy.getElementById(data.action.id);
                     if (currentnode.length !== 0) {
                       currentnode.addClass("shuffle-hover-highlight");
                     }
+
+										// Add a hover highlight
+
+										//var copyText = document.getElementById(
+										//	"copy_element_shuffle"
+										//)
                   }}
                   onMouseOut={() => {
                     var currentnode = cy.getElementById(data.action.id);

@@ -2467,6 +2467,7 @@ func handleUserInput(trigger shuffle.Trigger, organizationId string, workflowId 
 
 		log.Printf("[INFO] Should send email to %s during execution.", email)
 	}
+
 	if strings.Contains(triggerType, "sms") {
 		action := shuffle.CloudSyncJob{
 			Type:          "user_input",
@@ -2491,7 +2492,11 @@ func handleUserInput(trigger shuffle.Trigger, organizationId string, workflowId 
 			return err
 		}
 
-		log.Printf("Should send SMS to %s during execution.", sms)
+		log.Printf("[DEBUG] Should send SMS to %s during execution.", sms)
+	}
+
+	if strings.Contains(triggerType, "subflow") {
+		log.Printf("[DEBUG] Should run a subflow with the result for user input.")
 	}
 
 	return nil
@@ -2927,7 +2932,21 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 		for _, item := range buildLaterFirst {
 			err = buildImageMemory(fs, item.Tags, item.Extra, true)
 			if err != nil {
-				log.Printf("Failed image build memory: %s", err)
+				orgId := ""
+
+				log.Printf("[DEBUG] Failed image build memory. Creating notification with org %#v: %s", orgId, err)
+
+				if len(item.Tags) > 0 {
+					err = shuffle.CreateOrgNotification(
+						ctx,
+						fmt.Sprintf("App failed to build"),
+						fmt.Sprintf("The app %s with image %s failed to build. Check backend logs with docker! docker logs shuffle-backend", item.Tags[0], item.Extra),
+						fmt.Sprintf("/apps"),
+						orgId,
+						false,
+					)
+				}
+
 			} else {
 				if len(item.Tags) > 0 {
 					log.Printf("[INFO] Successfully built image %s", item.Tags[0])
