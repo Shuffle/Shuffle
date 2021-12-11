@@ -8705,6 +8705,11 @@ const AngularWorkflow = (props) => {
           name: "sms",
           value: "0000000",
         };
+        workflow.triggers[selectedTriggerIndex].parameters[5] = {
+          name: "subflow",
+          value: "",
+        };
+
         setWorkflow(workflow);
       }
 
@@ -8807,7 +8812,7 @@ const AngularWorkflow = (props) => {
                 }}
               />
               <div style={{ flex: "10" }}>
-                <b>Information: </b>
+                <b>Information</b>
               </div>
             </div>
             <TextField
@@ -8853,13 +8858,33 @@ const AngularWorkflow = (props) => {
                 }}
               />
               <div style={{ flex: "10" }}>
-                <b>Contact options: </b>
+                <b>Contact options</b>
               </div>
             </div>
             <FormGroup
               style={{ paddingLeft: 10, backgroundColor: inputColor }}
               row
             >
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={
+                      workflow.triggers[selectedTriggerIndex].parameters[2] !==
+                        undefined &&
+                      workflow.triggers[
+                        selectedTriggerIndex
+                      ].parameters[2].value.includes("subflow")
+                    }
+                    onChange={() => {
+                      setTriggerOptionsWrapper("subflow");
+                    }}
+                    color="primary"
+                    value="subflow"
+										disabled
+                  />
+                }
+                label={<div style={{ color: "white" }}>Subflow</div>}
+              />
               <FormControlLabel
                 control={
                   <Checkbox
@@ -8916,6 +8941,7 @@ const AngularWorkflow = (props) => {
                 }}
                 fullWidth
                 color="primary"
+								required
                 placeholder={"mail1@company.com,mail2@company.com"}
                 defaultValue={
                   workflow.triggers[selectedTriggerIndex].parameters[3].value
@@ -8955,6 +8981,39 @@ const AngularWorkflow = (props) => {
                 }
                 onBlur={(event) => {
                   workflow.triggers[selectedTriggerIndex].parameters[4].value =
+                    event.target.value;
+                  setWorkflow(workflow);
+                  setUpdate(Math.random());
+                }}
+              />
+            ) : null}
+						{workflow.triggers[selectedTriggerIndex].parameters[2] !==
+              undefined &&
+            workflow.triggers[
+              selectedTriggerIndex
+            ].parameters[2].value.includes("subflow") ? (
+              <TextField
+                style={{
+                  backgroundColor: inputColor,
+                  borderRadius: theme.palette.borderRadius,
+                }}
+                InputProps={{
+                  style: {
+                    color: "white",
+                    marginLeft: "5px",
+                    maxWidth: "95%",
+                    height: 50,
+                    fontSize: "1em",
+                  },
+                }}
+                fullWidth
+                color="primary"
+                placeholder={"ID of another workflow"}
+                defaultValue={
+                  workflow.triggers[selectedTriggerIndex].parameters[5].value
+                }
+                onBlur={(event) => {
+                  workflow.triggers[selectedTriggerIndex].parameters[5].value =
                     event.target.value;
                   setWorkflow(workflow);
                   setUpdate(Math.random());

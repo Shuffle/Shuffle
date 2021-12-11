@@ -400,7 +400,7 @@ export const validateJson = (showResult) => {
   try {
     result = jsonvalid ? JSON.parse(showResult) : showResult;
   } catch (e) {
-    //console.log("Failed parsing JSON even though its valid: ", e)
+    ////console.log("Failed parsing JSON even though its valid: ", e)
     jsonvalid = false;
   }
 
@@ -413,12 +413,12 @@ export const validateJson = (showResult) => {
 		try {
 			var newstr = showResult.replaceAll("'", '"')
 
-			console.log("Try replacements and trimming with new value: ", newstr)
+			//console.log("Try replacements and trimming with new value: ", newstr)
 			result = JSON.parse(newstr)
 			jsonvalid = true
 		} catch (e) {
 
-			console.log("Failed parsing JSON even though its valid (2): ", e)
+			//console.log("Failed parsing JSON even though its valid (2): ", e)
 			jsonvalid = false
 		}
 	}

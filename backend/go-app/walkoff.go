@@ -366,7 +366,7 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, actionResult.ExecutionId)
 	if err != nil {
-		log.Printf("Failed getting execution (streamresult) %s: %s", actionResult.ExecutionId, err)
+		log.Printf("[WARNING] Failed getting execution (streamresult) %s: %s", actionResult.ExecutionId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad authorization key or execution_id might not exist."}`)))
 		return
@@ -494,7 +494,9 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		err := handleUserInput(trigger, orgId, workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
 		if err != nil {
 			log.Printf("[WARNING] Failed userinput handler: %s", err)
-			actionResult.Result = fmt.Sprintf("Cloud error: %s", err)
+
+			actionResult.Result = fmt.Sprintf(`{"success": False, "reason": "%s"}`, err)
+
 			workflowExecution.Results = append(workflowExecution.Results, actionResult)
 			workflowExecution.Status = "ABORTED"
 			err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
@@ -506,12 +508,13 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error: %s"}`, err)))
+			return
 		} else {
 			log.Printf("[INFO] Successful userinput handler")
 			resp.WriteHeader(200)
 			resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "CLOUD IS DONE"}`)))
 
-			actionResult.Result = "Waiting for user feedback based on configuration"
+			actionResult.Result = `{"success": True, "reason": "Waiting for user feedback based on configuration"}`
 
 			workflowExecution.Results = append(workflowExecution.Results, actionResult)
 			workflowExecution.Status = actionResult.Status
@@ -519,7 +522,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 			if err != nil {
 				log.Printf("[WARNING] Failed setting userinput: %s", err)
 			} else {
-				log.Printf("Successfully set the execution to waiting.")
+				log.Printf("[DEBUG] Successfully set the execution to waiting.")
 			}
 		}
 
@@ -1035,13 +1038,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("[INFO] Api authentication failed in execute workflow: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
+	user, userErr := shuffle.HandleApiAuthentication(resp, request)
 
 	if user.Role == "org-reader" {
 		log.Printf("[WARNING] Org-reader doesn't have access to run workflow: %s (%s)", user.Username, user.Id)
@@ -1079,14 +1076,38 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if user.Id != workflow.Owner && user.Role != "scheduler" && user.Role != fmt.Sprintf("workflow_%s", fileId) {
-		if workflow.OrgId == user.ActiveOrg.Id && user.Role == "admin" {
-			log.Printf("[AUDIT] Letting user %s execute %s because they're admin of the same org", user.Username, workflow.ID)
-		} else {
-			log.Printf("[AUDIT] Wrong user (%s) for workflow %s (execute)", user.Username, workflow.ID)
+	executionAuthValid := false
+	newOrgId := ""
+	if userErr != nil {
+		// Check if the execution data has correct info in it! Happens based on subflows.
+		// 1. Parent workflow contains this workflow ID in the source trigger?
+		// 2. Parent workflow's owner is same org?
+		// 3. Parent execution auth is correct
+
+		executionAuthValid, newOrgId = shuffle.RunExecuteAccessValidation(request, workflow)
+		if !executionAuthValid {
+			log.Printf("[INFO] Api authentication failed in execute workflow: %s", userErr)
 			resp.WriteHeader(401)
 			resp.Write([]byte(`{"success": false}`))
 			return
+		} else {
+			log.Printf("[DEBUG] Execution of %s successfully validated and started based on subflow or user input execution", workflow.ID)
+			user.ActiveOrg = shuffle.OrgMini{
+				Id: newOrgId,
+			}
+		}
+	}
+
+	if !executionAuthValid {
+		if user.Id != workflow.Owner && user.Role != "scheduler" && user.Role != fmt.Sprintf("workflow_%s", fileId) {
+			if workflow.OrgId == user.ActiveOrg.Id && user.Role == "admin" {
+				log.Printf("[AUDIT] Letting user %s execute %s because they're admin of the same org", user.Username, workflow.ID)
+			} else {
+				log.Printf("[AUDIT] Wrong user (%s) for workflow %s (execute)", user.Username, workflow.ID)
+				resp.WriteHeader(401)
+				resp.Write([]byte(`{"success": false}`))
+				return
+			}
 		}
 	}
 
@@ -2419,6 +2440,7 @@ func handleUserInput(trigger shuffle.Trigger, organizationId string, workflowId 
 	// E.g. check email
 	sms := ""
 	email := ""
+	subflow := ""
 	triggerType := ""
 	triggerInformation := ""
 	for _, item := range trigger.Parameters {
@@ -2430,11 +2452,14 @@ func handleUserInput(trigger shuffle.Trigger, organizationId string, workflowId 
 			email = item.Value
 		} else if item.Name == "sms" {
 			sms = item.Value
+		} else if item.Name == "subflow" {
+			subflow = item.Value
 		}
 	}
+	_ = subflow
 
 	if len(triggerType) == 0 {
-		log.Printf("No type specified for user input node")
+		log.Printf("[WARNING] No type specified for user input node")
 		return errors.New("No type specified for user input node")
 	}
 

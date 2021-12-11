@@ -65,16 +65,18 @@ class AppBase:
     # Checks output for whether it should be automatically parsed or not
     def run_magic_parser(self, input_data):
         if not isinstance(input_data, str):
+            self.logger.info("[DEBUG] Not string. Returning from magic")
             return input_data
 
         # Don't touch existing JSON/lists
         if (input_data.startswith("[") and input_data.endswith("]")) or (input_data.startswith("{") and input_data.endswith("}")):
+            self.logger.info("[DEBUG] Already JSON-like. Returning from magic")
             return input_data
 
         # Don't touch large data.
         if len(input_data) > 100000:
+            self.logger.info("[DEBUG] Value too large. Returning from magic")
             return input_data
-
 
         new_input = input_data
         try:
@@ -91,6 +93,7 @@ class AppBase:
                     splititem = ","
                 else:
                     new_return.append(item)
+
                     index += 1
                     continue
 
@@ -102,6 +105,7 @@ class AppBase:
 
                     # Prevent large data or infinite loops
                     if index > 10000:
+                        self.logger.info(f"[DEBUG] Infinite loop. Returning default data.")
                         return input_data
 
             fixed_return = []
@@ -120,13 +124,13 @@ class AppBase:
 
             new_input = fixed_return
         except Exception as e:
-            self.logger.info(f"[DEBUG] Failed to run magic parser (2): {e}")
+            self.logger.info(f"[ERROR] Failed to run magic parser (2): {e}")
             return input_data
 
         try:
             new_input = input_data.split()
         except Exception as e:
-            self.logger.info(f"[DEBUG] Failed to run magic parser (1): {e}")
+            self.logger.info(f"[ERROR] Failed to run magic parser (1): {e}")
             return input_data
 
         # Won't ever touch this one?
@@ -134,7 +138,7 @@ class AppBase:
             try:
                 return json.dumps(new_input)
             except Exception as e:
-                self.logger.info(f"[DEBUG] Failed to run magic parser: {e}")
+                self.logger.info(f"[ERROR] Failed to run magic parser: {e}")
             
         return new_input
 
@@ -145,13 +149,14 @@ class AppBase:
             action_result["status"] = "FAILURE"
 
         try:
-            if self.original_action["run_magic_output"] == True:
-                self.logger.warning("[INFO] Action result ran with Magic parser output.")
+            #self.logger.info(f"[DEBUG] ACTION: {self.action}")
+            if self.action["run_magic_output"] == True:
+                self.logger.warning(f"[INFO] Action result ran with Magic parser output.")
                 action_result["result"] = self.run_magic_parser(action_result["result"])
             else:
-                self.logger.warning("[ERROR] Magic output not defined.")
+                self.logger.warning(f"[ERROR] Magic output not defined.")
         except Exception as e:
-            self.logger.warning("[ERROR] Failed to run magic autoparser: {e}")
+            self.logger.warning(f"[ERROR] Failed to run magic autoparser: {e}")
             pass
 
         # Try it with some magic
