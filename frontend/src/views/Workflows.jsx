@@ -2,6 +2,8 @@ import React, { useEffect } from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import { useTheme } from "@material-ui/core/styles";
 
+import SecurityFramework from '../components/SecurityFramework.jsx';
+
 import {
   Badge,
   Avatar,
@@ -153,7 +155,7 @@ export const GetIconInfo = (action) => {
     },
     {
       key: "repeat",
-      values: ["repeat", "retry", "pause", "skip", "copy", "replicat"],
+      values: ["repeat", "retry", "pause", "skip", "copy", "replicat", "demo", ],
     },
     { key: "execute", values: ["execute", "run", "play", "raise"] },
     { key: "extract", values: ["extract", "unpack", "decompress", "open"] },
