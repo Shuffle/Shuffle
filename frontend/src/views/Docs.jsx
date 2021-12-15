@@ -18,8 +18,8 @@ import {
 import { Link as LinkIcon, Edit as EditIcon } from "@material-ui/icons";
 
 const Body = {
-  maxWidth: "1000px",
-  minWidth: "768px",
+  maxWidth: 1000,
+  minWidth: 768,
   margin: "auto",
   display: "flex",
   height: "100%",
@@ -81,6 +81,9 @@ const Docs = (props) => {
     maxWidth: 250,
     flex: 1,
     position: "fixed",
+		maxHeight: "83vh",
+		overflowX: "hidden",
+		overflowY: "auto",
   };
 
   const fetchDocList = () => {

@@ -2132,6 +2132,7 @@ const AngularWorkflow = (props) => {
 				if (data.id !== undefined && data.app_name !== undefined) {
 					//newapps.push(data)
 					workflow.actions.push(data)
+					setWorkflow(workflow)
 					curaction = data
 				} else {
         	alert.error("Action not found. Please remake it.");
@@ -2257,10 +2258,16 @@ const AngularWorkflow = (props) => {
         cy.on("free", "node", (e) => onNodeDragStop(e, curaction));
       }
 
-      if (environments !== undefined && environments !== null) {
-        var env = environments.find((a) => a.Name === curaction.environment);
+			console.log("Object: ", environments)
+      if (environments !== undefined && environments !== null && (typeof environments === "array" || typeof environments === "object")) {
+				var parsedenv = environments
+				if (typeof environments === "object") {
+					parsedenv = [environments]
+				}
+
+        var env = parsedenv.find((a) => a.Name === curaction.environment);
         if (!env || env === undefined) {
-          env = environments[defaultEnvironmentIndex];
+          env = parsedenv[defaultEnvironmentIndex];
         }
 
         setSelectedActionEnvironment(env);
@@ -2384,7 +2391,13 @@ const AngularWorkflow = (props) => {
 
         // Finds the FIRST json only
         if (jsonvalid) {
-          exampledata = JSON.parse(foundResult.result);
+					try {
+          	exampledata = JSON.parse(foundResult.result)
+    			} catch (e) {
+						console.log("Result: ", exampledata)
+
+					}
+
           break;
         }
       }
@@ -2596,10 +2609,17 @@ const AngularWorkflow = (props) => {
       }
     }
 
+		const eventTarget = event.target.target()
+		console.log("BUTTON! Find parent from: ", eventTarget)
+    if (eventTarget.data("isButton") === true) {
+			console.log("ACTUALLY A BUTTON!")
+		}
+
     if (
-      event.target.target().data("isButton") === true ||
-      event.target.target().data("isDescriptor") === true
+      eventTarget.data("isDescriptor") === true ||
+			eventTarget.data("type") === "COMMENT" 
     ) {
+			console.log("Removing because of descriptor or comment")
       event.target.remove();
       return;
     }
@@ -3152,9 +3172,9 @@ const AngularWorkflow = (props) => {
         if (response.status !== 200) {
           console.log("Status not 200 for apps :O!");
           if (isCloud) {
-            setEnvironments({ name: "Cloud", type: "cloud" });
+            setEnvironments([{ Name: "Cloud", Type: "cloud" }]);
           } else {
-            setEnvironments({ name: "Onprem", type: "onprem" });
+            setEnvironments([{ Name: "Onprem", Type: "onprem" }]);
           }
 
           return;
@@ -3191,7 +3211,7 @@ const AngularWorkflow = (props) => {
 
 				// FIXME: Don't allow multiple in cloud yet. Cloud -> Onprem isn't stable.
 				if (isCloud) {
-          setEnvironments({ name: "Cloud", type: "cloud" });
+          setEnvironments([{ Name: "Cloud", Type: "cloud" }]);
 				} else {
         	setEnvironments(responseJson);
 				}
@@ -3505,9 +3525,11 @@ const AngularWorkflow = (props) => {
 
   const onNodeHover = (event) => {
     const nodedata = event.target.data();
-    if (nodedata.finished === false) {
-      return;
-    }
+
+		//console.log("NODE: ", nodedata)
+    //if (nodedata.finished === false) {
+    //  return;
+    //}
 
     //var parentNode = cy.$("#" + event.target.data("id"));
     //if (parentNode.data("isButton") || parentNode.data("buttonId")) return;
@@ -10141,6 +10163,9 @@ const AngularWorkflow = (props) => {
 
       /* Copy the text inside the text field */
       document.execCommand("copy");
+
+      console.log("COPYING!");
+			alert.info("Copied value to clipboard, NOT json path.")
     } else {
       console.log("Failed to copy from " + elementName + ": ", copyText);
     }
@@ -10208,7 +10233,7 @@ const AngularWorkflow = (props) => {
       /* Copy the text inside the text field */
       document.execCommand("copy");
       console.log("COPYING!");
-			alert.info("Copied value to clipboard.")
+			alert.info("Copied JSON path to clipboard.")
     } else {
       console.log("Couldn't find element ", elementName);
     }

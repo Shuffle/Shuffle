@@ -1332,6 +1332,7 @@ const AppCreator = (props) => {
         }
       }
 
+
       if (data.servers !== undefined && data.servers.length > 0) {
         var firstUrl = data.servers[0].url;
         if (
@@ -1366,123 +1367,128 @@ const AppCreator = (props) => {
       //console.log("SECURITY: ", securitySchemes)
       //if (Object.entries(securitySchemes) > 1 &&
       var newauth = [];
-      for (const [key, value] of Object.entries(securitySchemes)) {
-        console.log(key, value);
-        if (key === "jwt") {
-          setAuthenticationOption("JWT");
-          setAuthenticationRequired(true);
+			try {
+      	for (const [key, value] of Object.entries(securitySchemes)) {
+      	  console.log(key, value);
+      	  if (key === "jwt") {
+      	    setAuthenticationOption("JWT");
+      	    setAuthenticationRequired(true);
 
-          if (
-            value.in !== undefined &&
-            value.in !== null &&
-            value.in.length > 0
-          ) {
-            setParameterName(value.in);
-          }
-        } else if (value.scheme === "bearer") {
-          setAuthenticationOption("Bearer auth");
-          setAuthenticationRequired(true);
-        } else if (key === "Oauth2" || key === "Oauth2c") {
-          //alert.info("Can't handle Oauth2 auth yet.")
-          setAuthenticationOption("Oauth2");
-          setAuthenticationRequired(true);
+      	    if (
+      	      value.in !== undefined &&
+      	      value.in !== null &&
+      	      value.in.length > 0
+      	    ) {
+      	      setParameterName(value.in);
+      	    }
+      	  } else if (value.scheme === "bearer") {
+      	    setAuthenticationOption("Bearer auth");
+      	    setAuthenticationRequired(true);
+      	  } else if (key === "Oauth2" || key === "Oauth2c") {
+      	    //alert.info("Can't handle Oauth2 auth yet.")
+      	    setAuthenticationOption("Oauth2");
+      	    setAuthenticationRequired(true);
 
-          //console.log("FLOW-1: ", value)
-          const flowkey = value.flow === undefined ? "flows" : "flow";
-          //console.log("FLOW: ", value[flowkey])
-          const basekey =
-            value[flowkey].authorizationCode !== undefined
-              ? "authorizationCode"
-              : "implicit";
-          //console.log("FLOW2: ", value[flowkey][basekey])
-          if (
-            value[flowkey] !== undefined &&
-            value[flowkey][basekey] !== undefined
-          ) {
-            if (
-              value[flowkey][basekey].authorizationUrl !== undefined &&
-              parameterName.length === 0
-            ) {
-              setParameterName(value[flowkey][basekey].authorizationUrl);
-            }
+      	    //console.log("FLOW-1: ", value)
+      	    const flowkey = value.flow === undefined ? "flows" : "flow";
+      	    //console.log("FLOW: ", value[flowkey])
+      	    const basekey =
+      	      value[flowkey].authorizationCode !== undefined
+      	        ? "authorizationCode"
+      	        : "implicit";
+      	    //console.log("FLOW2: ", value[flowkey][basekey])
+      	    if (
+      	      value[flowkey] !== undefined &&
+      	      value[flowkey][basekey] !== undefined
+      	    ) {
+      	      if (
+      	        value[flowkey][basekey].authorizationUrl !== undefined &&
+      	        parameterName.length === 0
+      	      ) {
+      	        setParameterName(value[flowkey][basekey].authorizationUrl);
+      	      }
 
-            var tokenUrl = "";
-            if (value[flowkey][basekey].tokenUrl !== undefined) {
-              setParameterLocation(value[flowkey][basekey].tokenUrl);
-              tokenUrl = value[flowkey][basekey].tokenUrl;
-            } else {
-              setParameterLocation("");
-            }
+      	      var tokenUrl = "";
+      	      if (value[flowkey][basekey].tokenUrl !== undefined) {
+      	        setParameterLocation(value[flowkey][basekey].tokenUrl);
+      	        tokenUrl = value[flowkey][basekey].tokenUrl;
+      	      } else {
+      	        setParameterLocation("");
+      	      }
 
-            if (value[flowkey][basekey].refreshUrl !== undefined) {
-              setRefreshUrl(value[flowkey][basekey].refreshUrl);
-            } else if (tokenUrl.length > 0) {
-              setRefreshUrl(tokenUrl);
-            }
+      	      if (value[flowkey][basekey].refreshUrl !== undefined) {
+      	        setRefreshUrl(value[flowkey][basekey].refreshUrl);
+      	      } else if (tokenUrl.length > 0) {
+      	        setRefreshUrl(tokenUrl);
+      	      }
 
-            if (
-              value[flowkey][basekey].scopes !== undefined &&
-              value[flowkey][basekey].scopes !== null
-            ) {
-              if (value[flowkey][basekey].scopes.length > 0) {
-                setOauth2Scopes(value[flowkey][basekey].scopes);
-              } else {
-                var newscopes = [];
-                for (let [scopekey, scopevalue] of Object.entries(
-                  value[flowkey][basekey].scopes
-                )) {
-                  if (scopekey.startsWith("http")) {
-                    const scopekeysplit = scopekey.split("/");
-                    if (scopekeysplit.length < 5) {
-                      console.log("Skipping scope: ", scopekey);
-                      alert.info("Skipping scope: " + scopekey);
-                      continue;
-                    }
+      	      if (
+      	        value[flowkey][basekey].scopes !== undefined &&
+      	        value[flowkey][basekey].scopes !== null
+      	      ) {
+      	        if (value[flowkey][basekey].scopes.length > 0) {
+      	          setOauth2Scopes(value[flowkey][basekey].scopes);
+      	        } else {
+      	          var newscopes = [];
+      	          for (let [scopekey, scopevalue] of Object.entries(
+      	            value[flowkey][basekey].scopes
+      	          )) {
+      	            if (scopekey.startsWith("http")) {
+      	              const scopekeysplit = scopekey.split("/");
+      	              if (scopekeysplit.length < 5) {
+      	                console.log("Skipping scope: ", scopekey);
+      	                alert.info("Skipping scope: " + scopekey);
+      	                continue;
+      	              }
 
-                    //console.log("Checking scope for: ", scopekey, scopekeysplit.length)
-                  }
+      	              //console.log("Checking scope for: ", scopekey, scopekeysplit.length)
+      	            }
 
-                  newscopes.push(scopekey);
-                }
+      	            newscopes.push(scopekey);
+      	          }
 
-                setOauth2Scopes(newscopes);
-              }
-            }
-          } else {
-            console.log(
-              "Bad flowkey and basekey for oauth2: ",
-              flowkey,
-              basekey
-            );
-          }
-        } else if (key === "ApiKeyAuth") {
-          setAuthenticationOption("API key");
+      	          setOauth2Scopes(newscopes);
+      	        }
+      	      }
+      	    } else {
+      	      console.log(
+      	        "Bad flowkey and basekey for oauth2: ",
+      	        flowkey,
+      	        basekey
+      	      );
+      	    }
+      	  } else if (key === "ApiKeyAuth" || key === "Token") {
+      	    setAuthenticationOption("API key");
 
-          value.in = value.in.charAt(0).toUpperCase() + value.in.slice(1);
-          setParameterLocation(value.in);
-          if (!apikeySelection.includes(value.in)) {
-            console.log("APIKEY SELECT: ", apikeySelection);
-            alert.error("Might be error in setting up API key authentication");
-          }
+      	    value.in = value.in.charAt(0).toUpperCase() + value.in.slice(1);
+      	    setParameterLocation(value.in);
+      	    if (!apikeySelection.includes(value.in)) {
+      	      console.log("APIKEY SELECT: ", apikeySelection);
+      	      alert.error("Might be error in setting up API key authentication");
+      	    }
 
-          console.log("PARAM NAME: ", value.name);
-          setParameterName(value.name);
-          setAuthenticationRequired(true);
-        } else if (value.scheme === "basic") {
-          setAuthenticationOption("Basic auth");
-          setAuthenticationRequired(true);
-        } else if (value.scheme === "oauth2") {
-          setAuthenticationOption("Oauth2");
-          setAuthenticationRequired(true);
-        } else {
-          alert.error("Couldn't handle AUTH type: ", key);
-          //newauth.push({
-          //	"name": key,
-          //	"type": value.in,
-          //	"example": "",
-          //})
-        }
-      }
+      	    console.log("PARAM NAME: ", value.name);
+      	    setParameterName(value.name);
+      	    setAuthenticationRequired(true);
+      	  } else if (value.scheme === "basic") {
+      	    setAuthenticationOption("Basic auth");
+      	    setAuthenticationRequired(true);
+      	  } else if (value.scheme === "oauth2") {
+      	    setAuthenticationOption("Oauth2");
+      	    setAuthenticationRequired(true);
+      	  } else {
+      	    alert.error("Couldn't handle AUTH type: ", key);
+      	    //newauth.push({
+      	    //	"name": key,
+      	    //	"type": value.in,
+      	    //	"example": "",
+      	    //})
+      	  }
+      	}
+			} catch (e) {
+				alert.error("Failed to handle auth")
+				console.log("Error: ", e)
+			}
 
       if (newauth.length > 0) {
         setExtraAuth(newauth);
@@ -2192,7 +2198,7 @@ const AppCreator = (props) => {
   //console.log("Location: ", parameterLocation)
   //console.log("Name: ", parameterName)
   const extraKeys = (
-    <div style={{ marginTop: 50 }}>
+    <div style={{ marginTop: 50, marginRight: 25, }}>
       <div style={{ display: "flex" }}>
         <Typography variant="body1">Extra authentication</Typography>
         {extraAuth.length === 0 ? (
@@ -4394,7 +4400,7 @@ const AppCreator = (props) => {
 
   const imageInfo = (
     <img
-      crossorigin="anonymous"
+      crossOrigin="anonymous"
       src={imageData}
       id="logo"
       style={{

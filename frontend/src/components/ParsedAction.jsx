@@ -2486,7 +2486,7 @@ const ParsedAction = (props) => {
         </div>
       ) : null}
 
-      {showEnvironment !== undefined && showEnvironment ? (
+      {showEnvironment !== undefined && showEnvironment && environments.length > 1 ? (
         <div style={{ marginTop: "20px" }}>
           <Typography>Environment</Typography>
           <Select
@@ -2515,13 +2515,14 @@ const ParsedAction = (props) => {
               borderRadius: theme.palette.borderRadius,
             }}
           >
-            {environments.map((data) => {
-              if (data.archived) {
+            {environments.map((data, index) => {
+              if (data.archived === true) {
                 return null;
               }
 
               return (
                 <MenuItem
+									key={index}
                   key={data.Name}
                   style={{
                     backgroundColor: theme.palette.inputColor,
@@ -2663,6 +2664,16 @@ const ParsedAction = (props) => {
                 newActionname = data.label;
               }
 
+              var newActiondescription = data.description;
+							console.log("DESC: ", newActiondescription)
+              if (
+                data.description === undefined || data.description === null
+              ) {
+								newActiondescription = "Description: No description defined for this action"
+              } else {
+								newActiondescription = "Description: "+newActiondescription
+							}
+
               const iconInfo = GetIconInfo({ name: data.name });
               const useIcon = iconInfo.originalIcon;
 
@@ -2671,32 +2682,40 @@ const ParsedAction = (props) => {
                 newActionname.substring(1)
               ).replaceAll("_", " ");
 
+
+
               return (
-                <div style={{ display: "flex" }}>
-                  <span
-                    style={{
-                      marginRight: 10,
-                      marginTop: "auto",
-                      marginBottom: "auto",
-                    }}
-                  >
-                    {useIcon}
-                  </span>
-                  <span style={{}}>{newActionname}</span>
-                </div>
+                <Tooltip
+                  color="secondary"
+                  title={newActiondescription}
+                  placement="left"
+                >
+									<div style={{ display: "flex" }}>
+										<span
+											style={{
+												marginRight: 10,
+												marginTop: "auto",
+												marginBottom: "auto",
+											}}
+										>
+											{useIcon}
+										</span>
+										<span style={{}}>{newActionname}</span>
+									</div>
+								</Tooltip>
               );
             }}
             renderInput={(params) => {
               return (
-                <TextField
-                  style={{
-                    backgroundColor: theme.palette.inputColor,
-                    borderRadius: theme.palette.borderRadius,
-                  }}
-                  {...params}
-                  label="Find Actions"
-                  variant="outlined"
-                />
+									<TextField
+										style={{
+											backgroundColor: theme.palette.inputColor,
+											borderRadius: theme.palette.borderRadius,
+										}}
+										{...params}
+										label="Find Actions"
+										variant="outlined"
+                	/>
               );
             }}
           />
