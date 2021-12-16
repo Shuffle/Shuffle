@@ -979,9 +979,9 @@ const ParsedAction = (props) => {
 			return helperText
 		}
 
-		console.log("D: ", selectedAction)
-		console.log("DESC: ", selectedAction.description)
-		console.log("DESC2: ", selectedApp.description)
+		//console.log("D: ", selectedAction)
+		//console.log("DESC: ", selectedAction.description)
+		//console.log("DESC2: ", selectedApp.description)
 
     // FIXME: Issue #40 - selectedActionParameters not reset
     if (
@@ -993,13 +993,14 @@ const ParsedAction = (props) => {
         <div style={{ marginTop: hideExtraTypes ? 10 : 30 }}>
 					<Tooltip
 						color="secondary"
-						title={"Click to learn more"}
+						title={"Click to learn more about this action"}
 						placement="top"
 					>
 						<Button 
 							variant="text" 
 							color="secondary" 
-							style={{textTransform: "none",}}
+							style={{justifyContent: "flex-start", textAlign: "left", textTransform: "none", width: "100%",}}
+							fullWidth
 							onClick={() => {
 								setHiddenDescription(!hiddenDescription)
 							}}
@@ -1112,7 +1113,7 @@ const ParsedAction = (props) => {
               data.configuration &&
               hideExtraTypes
             ) {
-              console.log("GENERATED WITH DATA: ", data);
+              //console.log("GENERATED WITH DATA: ", data);
               return null;
             }
 
@@ -1898,6 +1899,7 @@ const ParsedAction = (props) => {
                           height: 24,
                           marginRight: 10,
                         }}
+												color="primary"
                         onClick={() => {
                           setAuthenticationModalOpen(true);
                         }}
@@ -2092,7 +2094,7 @@ const ParsedAction = (props) => {
 
   const expansionModal = (
     <Dialog
-      disableEnforceFocus={true}
+      disableEnforceFocus={false}
       hideBackdrop={true}
       open={expansionModalOpen}
       onClose={() => {
@@ -2775,16 +2777,24 @@ const ParsedAction = (props) => {
 					</Select>
 				: null*/}
 
-        {selectedAction.description !== undefined && selectedAction.description !== null && selectedAction.description.length > 0 && hideExtraTypes !== true && hiddenDescription === false ? (
+        {selectedAction.description !== undefined && selectedAction.description !== null && selectedAction.description.length > 0 &&  hiddenDescription === false ? (
 						<div
 							style={{
-								marginTop: 10,
+								border: "1px solid rgba(255,255,255,0.6)",
+								borderRadius: theme.palette.borderRadius,
+								marginTop: 15,
 								marginBottom: 10,
 								maxHeight: 60,
 								overflow: "hidden",
+								padding: 15, 
 							}}
 						>
-							{selectedAction.description}
+							<Typography style={{}}>
+								<b>Description</b>
+							</Typography>
+							<Typography style={{}}>
+								{selectedAction.description}
+							</Typography>
 						</div>
 					) : null}
 

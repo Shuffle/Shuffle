@@ -36,6 +36,7 @@ import {
   IconButton,
   Menu,
   Input,
+	Fade,
   FormGroup,
   FormControlLabel,
   Typography,
@@ -5333,6 +5334,10 @@ const AngularWorkflow = (props) => {
   // Starts on current node and climbs UP the tree to the root object.
   // Sends back everything in it's path
   const getParents = (action) => {
+		if (action === undefined || action === null) {
+			return []
+		}
+
     var allkeys = [action.id];
     var handled = [];
     var results = [];
@@ -5865,8 +5870,11 @@ const AngularWorkflow = (props) => {
 
   const conditionsModal = (
     <Dialog
-      modal
+      disableEnforceFocus={true}
+      hideBackdrop={true}
+			disableBackdropClick={true}
       open={conditionsModalOpen}
+      style={{ pointerEvents: "none" }}
       PaperProps={{
         style: {
           backgroundColor: surfaceColor,
@@ -5875,10 +5883,6 @@ const AngularWorkflow = (props) => {
         },
       }}
       onClose={() => {
-        setConditionsModalOpen(false);
-        setSourceValue({});
-        setConditionValue({});
-        setDestinationValue({});
       }}
     >
       <span
@@ -6095,8 +6099,22 @@ const AngularWorkflow = (props) => {
           </div>
         </DialogContent>
         <DialogActions>
+					<Button
+            style={{ borderRadius: "0px" }}
+						variant="text"
+            onClick={() => {
+        			setConditionsModalOpen(false);
+        			setSourceValue({});
+        			setConditionValue({});
+        			setDestinationValue({});
+            }}
+            color="secondary"
+          >
+           	Cancel 
+          </Button>
           <Button
             style={{ borderRadius: "0px" }}
+						variant="contained"
             onClick={() => {
               setSelectedEdge({});
 
@@ -9867,44 +9885,46 @@ const AngularWorkflow = (props) => {
       }
 
       return (
-        <div id="rightside_actions" style={rightsidebarStyle}>
-          <ParsedAction
-            id="rightside_subactions"
-            getAppAuthentication={getAppAuthentication}
-            appAuthentication={appAuthentication}
-            authenticationType={authenticationType}
-            scrollConfig={scrollConfig}
-            setScrollConfig={setScrollConfig}
-            selectedAction={selectedAction}
-            workflow={workflow}
-            setWorkflow={setWorkflow}
-            setSelectedAction={setSelectedAction}
-            setUpdate={setUpdate}
-            selectedApp={selectedApp}
-            workflowExecutions={workflowExecutions}
-            setSelectedResult={setSelectedResult}
-            setSelectedApp={setSelectedApp}
-            setSelectedTrigger={setSelectedTrigger}
-            setSelectedEdge={setSelectedEdge}
-            setCurrentView={setCurrentView}
-            cy={cy}
-            setAuthenticationModalOpen={setAuthenticationModalOpen}
-            setVariablesModalOpen={setVariablesModalOpen}
-            setLastSaved={setLastSaved}
-            setCodeModalOpen={setCodeModalOpen}
-            selectedNameChange={selectedNameChange}
-            rightsidebarStyle={rightsidebarStyle}
-            showEnvironment={showEnvironment}
-            selectedActionEnvironment={selectedActionEnvironment}
-            environments={environments}
-            setNewSelectedAction={setNewSelectedAction}
-            sortByKey={sortByKey}
-            appApiViewStyle={appApiViewStyle}
-            globalUrl={globalUrl}
-            setSelectedActionEnvironment={setSelectedActionEnvironment}
-            requiresAuthentication={requiresAuthentication}
-          />
-        </div>
+				<Fade in={true} style={{ transitionDelay: `$0ms` }}>
+					<div id="rightside_actions" style={rightsidebarStyle}>
+						<ParsedAction
+							id="rightside_subactions"
+							getAppAuthentication={getAppAuthentication}
+							appAuthentication={appAuthentication}
+							authenticationType={authenticationType}
+							scrollConfig={scrollConfig}
+							setScrollConfig={setScrollConfig}
+							selectedAction={selectedAction}
+							workflow={workflow}
+							setWorkflow={setWorkflow}
+							setSelectedAction={setSelectedAction}
+							setUpdate={setUpdate}
+							selectedApp={selectedApp}
+							workflowExecutions={workflowExecutions}
+							setSelectedResult={setSelectedResult}
+							setSelectedApp={setSelectedApp}
+							setSelectedTrigger={setSelectedTrigger}
+							setSelectedEdge={setSelectedEdge}
+							setCurrentView={setCurrentView}
+							cy={cy}
+							setAuthenticationModalOpen={setAuthenticationModalOpen}
+							setVariablesModalOpen={setVariablesModalOpen}
+							setLastSaved={setLastSaved}
+							setCodeModalOpen={setCodeModalOpen}
+							selectedNameChange={selectedNameChange}
+							rightsidebarStyle={rightsidebarStyle}
+							showEnvironment={showEnvironment}
+							selectedActionEnvironment={selectedActionEnvironment}
+							environments={environments}
+							setNewSelectedAction={setNewSelectedAction}
+							sortByKey={sortByKey}
+							appApiViewStyle={appApiViewStyle}
+							globalUrl={globalUrl}
+							setSelectedActionEnvironment={setSelectedActionEnvironment}
+							requiresAuthentication={requiresAuthentication}
+						/>
+					</div>
+				</Fade>
       );
     } else if (Object.getOwnPropertyNames(selectedComment).length > 0) {
       return (
@@ -11572,7 +11592,6 @@ const AngularWorkflow = (props) => {
 
   const executionVariableModal = executionVariablesModalOpen ? (
     <Dialog
-      modal
       open={executionVariablesModalOpen}
       onClose={() => {
         setNewVariableName("");
@@ -12173,14 +12192,18 @@ const AngularWorkflow = (props) => {
   // This whole part is redundant. Made it part of Arguments instead.
   const authenticationModal = authenticationModalOpen ? (
     <Dialog
+      disableEnforceFocus={true}
+      hideBackdrop={true}
       open={authenticationModalOpen}
+			style={{pointerEvents: "none",}}
       onClose={() => {
-        if (configureWorkflowModalOpen) {
-          setSelectedAction({});
-        }
+        //if (configureWorkflowModalOpen) {
+        //  setSelectedAction({});
+        //}
       }}
       PaperProps={{
         style: {
+					pointerEvents: "none",
           backgroundColor: surfaceColor,
           color: "white",
           minWidth: 1100,
