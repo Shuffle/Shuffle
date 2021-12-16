@@ -2613,6 +2613,28 @@ const AngularWorkflow = (props) => {
 		console.log("BUTTON! Find parent from: ", eventTarget)
     if (eventTarget.data("isButton") === true) {
 			console.log("ACTUALLY A BUTTON!")
+    	const parentNode = cy.getElementById(eventTarget.data("attachedTo"))
+			event.target.remove()
+			console.log("Setting it to parentnode: ", parentNode.data())
+			if (parentNode !== undefined && parentNode !== null) {
+				//event.target.data("target", eventTarget.data("attachedTo"))
+
+        const newEdgeUuid = uuidv4()
+        const newcybranch = {
+          source: event.target.data("source"),
+          target: eventTarget.data("attachedTo"),
+          _id: newEdgeUuid,
+          id: newEdgeUuid,
+          hasErrors: event.target.data("hasErrors"),
+        };
+
+        const edgeToBeAdded = {
+          group: "edges",
+          data: newcybranch,
+        }
+
+        cy.add(edgeToBeAdded);
+			}
 		}
 
     if (
@@ -2739,11 +2761,14 @@ const AngularWorkflow = (props) => {
     setLastSaved(false);
     const node = event.target;
     const nodedata = event.target.data();
-    if (nodedata.finished === false ||
-      (nodedata.id !== undefined && nodedata.is_valid === undefined)
+
+    if (nodedata.finished === false || (nodedata.id !== undefined && nodedata.is_valid === undefined)
     ) {
+			//if (nodedata.app_id === undefined) {
 			console.log("Returning because node is not valid: ", nodedata)
       return;
+
+			//}
     }
     
 		//parsedApp.data.finished = true;
@@ -4800,6 +4825,7 @@ const AngularWorkflow = (props) => {
         const actionLabel = getNextActionName(app.name);
         var parameters = null;
         var example = "";
+				var description = ""
 
         if (
           app.actions[0].parameters !== null &&
@@ -4807,6 +4833,7 @@ const AngularWorkflow = (props) => {
         ) {
           parameters = app.actions[0].parameters;
         }
+
         if (
           app.actions[0].returns.example !== undefined &&
           app.actions[0].returns.example !== null &&
@@ -4815,20 +4842,31 @@ const AngularWorkflow = (props) => {
           example = app.actions[0].returns.example;
         }
 
+        if (
+          app.actions[0].description !== undefined &&
+          app.actions[0].description !== null &&
+          app.actions[0].description.length > 0
+        ) {
+					description = app.actions[0].description
+        }
+
         const parsedEnvironments =
           environments === null || environments === []
             ? "cloud"
             : environments[defaultEnvironmentIndex] === undefined
             ? "cloud"
             : environments[defaultEnvironmentIndex].Name;
+
         const newAppData = {
           app_name: app.name,
           app_version: app.app_version,
           app_id: app.id,
           sharing: app.sharing,
           private_id: app.private_id,
+					description: description,
           environment: parsedEnvironments,
           errors: [],
+					finished: false,
           id_: newNodeId,
           _id_: newNodeId,
           id: newNodeId,
@@ -5158,6 +5196,10 @@ const AngularWorkflow = (props) => {
   };
 
   const setNewSelectedAction = (e) => {
+		if (selectedApp.actions === undefined || selectedApp.actions === null) {
+			return
+		}
+
     const newaction = selectedApp.actions.find(
       (a) => a.name === e.target.value
     );
@@ -5214,6 +5256,14 @@ const AngularWorkflow = (props) => {
       newaction.returns.example.length > 0
     ) {
       newSelectedAction.example = newaction.returns.example;
+    }
+
+    if (
+      newaction.description !== undefined &&
+      newaction.description !== null &&
+      newaction.description.length > 0
+    ) {
+      newSelectedAction.description = newaction.description
     }
 
     // FIXME - this is broken sometimes lol

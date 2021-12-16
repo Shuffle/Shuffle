@@ -170,6 +170,7 @@ const ParsedAction = (props) => {
   const [activateHidingBody, setActivateHidingBody] = React.useState(false);
 	const [codedata, setcodedata] = React.useState("");
 	const [fieldCount, setFieldCount] = React.useState(0);
+	const [hiddenDescription, setHiddenDescription] = React.useState(true);
 
   const keywords = [
     "len(",
@@ -978,6 +979,9 @@ const ParsedAction = (props) => {
 			return helperText
 		}
 
+		console.log("D: ", selectedAction)
+		console.log("DESC: ", selectedAction.description)
+		console.log("DESC2: ", selectedApp.description)
 
     // FIXME: Issue #40 - selectedActionParameters not reset
     if (
@@ -987,7 +991,22 @@ const ParsedAction = (props) => {
       var authWritten = false;
       return (
         <div style={{ marginTop: hideExtraTypes ? 10 : 30 }}>
-          <b>Parameters</b>
+					<Tooltip
+						color="secondary"
+						title={"Click to learn more"}
+						placement="top"
+					>
+						<Button 
+							variant="text" 
+							color="secondary" 
+							style={{textTransform: "none",}}
+							onClick={() => {
+								setHiddenDescription(!hiddenDescription)
+							}}
+						>
+							<b>Parameters</b>
+						</Button>
+					</Tooltip>
           {selectedActionParameters.map((data, count) => {
             if (data.variant === "") {
               data.variant = "STATIC_VALUE";
@@ -2665,7 +2684,7 @@ const ParsedAction = (props) => {
               }
 
               var newActiondescription = data.description;
-							console.log("DESC: ", newActiondescription)
+							//console.log("DESC: ", newActiondescription)
               if (
                 data.description === undefined || data.description === null
               ) {
@@ -2756,20 +2775,18 @@ const ParsedAction = (props) => {
 					</Select>
 				: null*/}
 
-        {selectedAction.description !== undefined &&
-        selectedAction.description.length > 0 &&
-        hideExtraTypes !== true ? (
-          <div
-            style={{
-              marginTop: 10,
-              marginBottom: 10,
-              maxHeight: 60,
-              overflow: "hidden",
-            }}
-          >
-            {selectedAction.description}
-          </div>
-        ) : null}
+        {selectedAction.description !== undefined && selectedAction.description !== null && selectedAction.description.length > 0 && hideExtraTypes !== true && hiddenDescription === false ? (
+						<div
+							style={{
+								marginTop: 10,
+								marginBottom: 10,
+								maxHeight: 60,
+								overflow: "hidden",
+							}}
+						>
+							{selectedAction.description}
+						</div>
+					) : null}
 
         <div
           style={{
