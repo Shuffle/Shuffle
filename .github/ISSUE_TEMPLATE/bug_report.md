@@ -23,7 +23,7 @@ A description of what you expected to happen.
 **Screenshots**
 If applicable, add screenshots to help explain your problem.
 
-** Debug logs **
+** Debug logs (NOT APPLICABLE FOR CLOUD)**
 Run the following commands and paste them
 ```
 docker logs shuffle-backend
