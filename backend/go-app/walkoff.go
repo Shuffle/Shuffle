@@ -878,7 +878,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 		return shuffle.WorkflowExecution{}, fmt.Sprintf(`workflow %s is invalid`, workflow.ID), errors.New("Failed getting workflow")
 	}
 
-	workflowExecution, execInfo, _, err := shuffle.PrepareWorkflowExecution(ctx, workflow, request)
+	workflowExecution, execInfo, _, err := shuffle.PrepareWorkflowExecution(ctx, workflow, request, 10)
 	if err != nil {
 		log.Printf("[WARNING] Failed in prepareExecution: %s", err)
 		return shuffle.WorkflowExecution{}, fmt.Sprintf("Failed preparration: %s", err), err

@@ -5873,10 +5873,11 @@ const AngularWorkflow = (props) => {
       disableEnforceFocus={true}
       hideBackdrop={true}
 			disableBackdropClick={true}
-      open={conditionsModalOpen}
       style={{ pointerEvents: "none" }}
+      open={conditionsModalOpen}
       PaperProps={{
         style: {
+          pointerEvents: "auto",
           backgroundColor: surfaceColor,
           color: "white",
           minWidth: 800,
@@ -6394,6 +6395,10 @@ const AngularWorkflow = (props) => {
           color="primary"
           variant="outlined"
           onClick={() => {
+						if (conditionsModalOpen) {
+							return
+						}
+
             setSourceValue({
               name: "source",
               value: "",
@@ -6413,6 +6418,7 @@ const AngularWorkflow = (props) => {
               action_field: "",
               id: conditionId,
             });
+
             setConditionsModalOpen(true);
           }}
           fullWidth
@@ -12192,10 +12198,11 @@ const AngularWorkflow = (props) => {
   // This whole part is redundant. Made it part of Arguments instead.
   const authenticationModal = authenticationModalOpen ? (
     <Dialog
-      disableEnforceFocus={true}
       hideBackdrop={true}
+      disableEnforceFocus={true}
+			disableBackdropClick={true}
+      style={{ pointerEvents: "none" }}
       open={authenticationModalOpen}
-			style={{pointerEvents: "none",}}
       onClose={() => {
         //if (configureWorkflowModalOpen) {
         //  setSelectedAction({});
@@ -12203,7 +12210,7 @@ const AngularWorkflow = (props) => {
       }}
       PaperProps={{
         style: {
-					pointerEvents: "none",
+					pointerEvents: "auto",
           backgroundColor: surfaceColor,
           color: "white",
           minWidth: 1100,
@@ -12353,19 +12360,19 @@ const AngularWorkflow = (props) => {
                 app.
               </Typography>
               <Typography variant="body1" style={{ marginTop: 25 }}>
-                Want help with this app?{" "}
+                Want help help making or using this app?{" "}
                 <a
                   rel="noopener noreferrer"
                   target="_blank"
                   href="https://discord.gg/B2CBzUm"
                   style={{ textDecoration: "none", color: "#f86a3e" }}
                 >
-                  Join the Discord!
+                  Join the community on Discord!
                 </a>
               </Typography>
 
               <Typography variant="h6" style={{ marginTop: 50 }}>
-                Want to help change this app?
+                Want to help change this app directly?
               </Typography>
               {selectedApp.reference_info === undefined ||
               selectedApp.reference_info === null ||
