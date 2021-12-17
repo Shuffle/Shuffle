@@ -1982,7 +1982,8 @@ const AngularWorkflow = (props) => {
       if (data.buttonType === "delete") {
         const parentNode = cy.getElementById(data.attachedTo);
         if (parentNode !== null && parentNode !== undefined) {
-          parentNode.remove();
+  				removeNode(data.attachedTo) 
+          //parentNode.remove()
         }
 
 				return
@@ -2969,7 +2970,7 @@ const AngularWorkflow = (props) => {
     const data = node.data();
 
     if (data.finished === false) {
-      return;
+      return
     }
 
     workflow.actions = workflow.actions.filter((a) => a.id !== data.id);
@@ -3009,7 +3010,7 @@ const AngularWorkflow = (props) => {
         data: data,
       })
 
-			console.log("REMOVED: ", data)
+			//console.log("REMOVED: ", data)
       setHistory(history);
       setHistoryIndex(history.length);
     }
@@ -3926,16 +3927,16 @@ const AngularWorkflow = (props) => {
     setElements(insertedNodes);
   };
 
-  const removeNode = () => {
-    const selectedNode = cy.$(":selected");
+  const removeNode = (nodeId) => {
+    const selectedNode = cy.getElementById(nodeId);
     if (selectedNode.data() === undefined) {
+			console.log("No node to remove")
       return;
     }
 
-		if (selectedNode.data("id") === selectedAction.id) {
-			setSelectedApp({});
-			setSelectedAction({});
-		}
+		//console.log("Removing node: ", selectedNode.data("id"), "Action: ", selectedAction.id)
+
+		// Get selected node
 
     if (selectedNode.data().type === "TRIGGER") {
       console.log("Should remove trigger!");
@@ -3956,14 +3957,33 @@ const AngularWorkflow = (props) => {
       }
     }
 
+		//if (selectedNode.data("id") === selectedAction.id) {
+		//	setSelectedApp({});
+		//	setSelectedAction({});
+    //setSelectedTrigger({});
+    //setSelectedTriggerIndex({});
+		//}
+		const parsedSelection = cy.$(":selected");
     if (selectedNode.data().decorator === true && selectedNode.data("type") !== "COMMENT") {
       alert.info("This node can't be deleted.");
     } else {
       selectedNode.remove();
     }
 
-    setSelectedTrigger({});
-    setSelectedTriggerIndex({});
+		// An attempt at NOT unselecting when removing
+		/*
+		setTimeout(() => {
+			if (parsedSelection.data() !== undefined) {
+				if (parsedSelection.data("id") !== selectedNode.data("id")) {
+					console.log("SHOULD SELECT SINCE ID IS DIFFERENT")
+
+					parsedSelection.select()
+				}
+			}
+
+			console.log("Parsed: ", parsedSelection.data("id"), selectedNode.data("id"))
+		}, 2500)
+		*/
   };
 
   const stopSchedule = (trigger, triggerindex) => {
@@ -9580,7 +9600,7 @@ const AngularWorkflow = (props) => {
   };
 
   const handleHistoryUndo = () => {
-    console.log("history: ", history, "index: ", historyIndex);
+    //console.log("history: ", history, "index: ", historyIndex);
     var item = history[historyIndex - 1];
     if (historyIndex === 0) {
       item = history[historyIndex];
@@ -9591,7 +9611,7 @@ const AngularWorkflow = (props) => {
       return;
     }
 
-    console.log("HANDLE: ", item);
+    //console.log("HANDLE: ", item);
     if (item.type === "node" && item.action === "removed") {
       // Re-add the node
 			console.log("Item: ", item.data)
@@ -9608,7 +9628,7 @@ const AngularWorkflow = (props) => {
         position: item.data.position,
       });
     } else if (item.action === "added") {
-      console.log("Should remove item!");
+      //console.log("Should remove item!");
       const currentitem = cy.getElementById(item.data.id);
       if (currentitem !== undefined && currentitem !== null) {
         currentitem.remove();
@@ -9818,7 +9838,12 @@ const AngularWorkflow = (props) => {
                 style={{ height: 50, marginLeft: 10 }}
                 variant="outlined"
                 onClick={() => {
-                  removeNode();
+    							const selectedNode = cy.$(":selected");
+    							if (selectedNode.data() === undefined) {
+    							  return
+    							}
+
+                  removeNode(selectedNode.data("id"))
                 }}
               >
                 <DeleteIcon />
