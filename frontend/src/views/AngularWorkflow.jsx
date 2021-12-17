@@ -2931,7 +2931,12 @@ const AngularWorkflow = (props) => {
 
   const onEdgeRemoved = (event) => {
     setLastSaved(false);
+
+
     const edge = event.target;
+    if (edge.data("decorator") === true) {
+      return;
+    }
 
     workflow.branches = workflow.branches.filter(
       (a) => a.id !== edge.data().id
@@ -2951,8 +2956,9 @@ const AngularWorkflow = (props) => {
       history.push({
         type: "edge",
         action: "removed",
-        data: edge.data().source,
+        data: edge.data(),
       });
+
       setHistory(history);
       setHistoryIndex(history.length);
     }
@@ -9590,6 +9596,12 @@ const AngularWorkflow = (props) => {
       // Re-add the node
 			console.log("Item: ", item.data)
 
+    	const edge = cy.getElementById(item.data.id).json()
+			if (edge !== null && edge !== undefined) {
+				console.log("Couldn't add node as it exists")
+				return
+			}
+
       cy.add({
         group: "nodes",
         data: item.data,
@@ -9603,10 +9615,23 @@ const AngularWorkflow = (props) => {
       }
 
     } else if (item.type === "edge" && item.action === "removed") {
-      cy.add({
-        group: "edges",
-        data: item.data,
-      });
+    	const sourcenode = cy.getElementById(item.data.source)
+    	const targetnode = cy.getElementById(item.data.target)
+			if (sourcenode === undefined || sourcenode === null || targetnode === undefined || targetnode === null) {
+				console.log("Can't readd bad edge!")
+				return
+			}
+
+    	const edge = cy.getElementById(item.data.id).json()
+			if (edge !== null && edge !== undefined) {
+				console.log("Couldn't add edge as it exists")
+				return
+			}
+
+			cy.add({
+				group: "edges",
+				data: item.data,
+			});
 
     } else {
 			console.log("UNHANDLED: ", item)
