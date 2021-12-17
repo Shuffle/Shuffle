@@ -2769,8 +2769,6 @@ const AngularWorkflow = (props) => {
 			//if (nodedata.app_id === undefined) {
 			console.log("Returning because node is not valid: ", nodedata)
       return;
-
-			//}
     }
     
 		//parsedApp.data.finished = true;
@@ -2854,7 +2852,13 @@ const AngularWorkflow = (props) => {
             JSON.stringify(nodedata.parameters[subkey])
           );
           newparam.id = uuidv4();
-          newparam.value = "";
+
+					if (newparam.value === undefined || newparam.value === null) {
+          	newparam.value = "";
+					} else {
+          	newparam.value = newparam.value;
+					}
+
           newparameters.push(newparam);
         }
 
@@ -2997,7 +3001,9 @@ const AngularWorkflow = (props) => {
         type: "node",
         action: "removed",
         data: data,
-      });
+      })
+
+			console.log("REMOVED: ", data)
       setHistory(history);
       setHistoryIndex(history.length);
     }
@@ -3915,12 +3921,15 @@ const AngularWorkflow = (props) => {
   };
 
   const removeNode = () => {
-    setSelectedApp({});
-    setSelectedAction({});
     const selectedNode = cy.$(":selected");
     if (selectedNode.data() === undefined) {
       return;
     }
+
+		if (selectedNode.data("id") === selectedAction.id) {
+			setSelectedApp({});
+			setSelectedAction({});
+		}
 
     if (selectedNode.data().type === "TRIGGER") {
       console.log("Should remove trigger!");
@@ -9579,6 +9588,7 @@ const AngularWorkflow = (props) => {
     console.log("HANDLE: ", item);
     if (item.type === "node" && item.action === "removed") {
       // Re-add the node
+			console.log("Item: ", item.data)
 
       cy.add({
         group: "nodes",
@@ -9591,7 +9601,16 @@ const AngularWorkflow = (props) => {
       if (currentitem !== undefined && currentitem !== null) {
         currentitem.remove();
       }
-    }
+
+    } else if (item.type === "edge" && item.action === "removed") {
+      cy.add({
+        group: "edges",
+        data: item.data,
+      });
+
+    } else {
+			console.log("UNHANDLED: ", item)
+		}
 
     if (historyIndex > 0) {
       setHistoryIndex(historyIndex - 1);
