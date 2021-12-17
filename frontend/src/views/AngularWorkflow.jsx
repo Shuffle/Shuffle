@@ -1855,6 +1855,7 @@ const AngularWorkflow = (props) => {
     const nodedata = event.target.data();
     if (nodedata.finished === false) {
 			console.log("NOT FINISHED - ADD EXAMPLE BRANCHES TO CLOSEST!!")
+			return
     }
 
     if (nodedata.app_name !== undefined) {
@@ -2282,14 +2283,14 @@ const AngularWorkflow = (props) => {
         (a) => a.id === data.id
       );
 
-			console.log("Trigger: ", data, trigger_index)
+			//console.log("Trigger: ", data, trigger_index)
 			if (trigger_index === -1) {
 				workflow.triggers.push(data)
 				trigger_index = workflow.triggers.length-1
 				setWorkflow(workflow)
 			}
 
-			console.log("Trigger2: ", data, trigger_index)
+			//console.log("Trigger2: ", data, trigger_index)
 			//if (data.id !== undefined && data.app_name !== undefined) {
 			//	//newapps.push(data)
 			//	workflow.actions.push(data)
@@ -3553,9 +3554,9 @@ const AngularWorkflow = (props) => {
     const nodedata = event.target.data();
 
 		//console.log("NODE: ", nodedata)
-    //if (nodedata.finished === false) {
-    //  return;
-    //}
+    if (nodedata.finished === false) {
+      return;
+    }
 
     //var parentNode = cy.$("#" + event.target.data("id"));
     //if (parentNode.data("isButton") || parentNode.data("buttonId")) return;

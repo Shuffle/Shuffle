@@ -922,6 +922,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 			//}
 
 			//log.Printf("Execution request: %#v", executionRequest)
+			executionRequest.Priority = workflowExecution.Priority
 			err = shuffle.SetWorkflowQueue(ctx, executionRequest, environment)
 			if err != nil {
 				log.Printf("[ERROR] Failed adding execution to db: %s", err)
@@ -2577,6 +2578,7 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	workflowExecution.Priority = 10
 	environments, err := shuffle.GetEnvironments(ctx, user.ActiveOrg.Id)
 	environment := "Shuffle"
 	if len(environments) >= 1 {
@@ -2597,6 +2599,7 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		Environments:  []string{environment},
 	}
 
+	executionRequest.Priority = workflowExecution.Priority
 	err = shuffle.SetWorkflowQueue(ctx, executionRequest, environment)
 	if err != nil {
 		log.Printf("[ERROR] Failed adding execution to db: %s", err)
