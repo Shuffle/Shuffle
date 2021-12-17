@@ -864,7 +864,7 @@ const Admin = (props) => {
   const abortEnvironmentWorkflows = (environment) => {
     //console.log("Aborting all workflows started >10 minutes ago, not finished");
 
-    fetch(`${globalUrl}/api/v1/environments/${environment}/stop`, {
+    fetch(`${globalUrl}/api/v1/environments/${environment.id}/stop?deleteall=true`, {
       method: "GET",
       credentials: "include",
     })
@@ -3809,7 +3809,7 @@ const Admin = (props) => {
                           ? environment.running_ip === undefined ||
                             environment.running_ip === null ||
                             environment.running_ip.length === 0
-                            ? "Not started"
+                            ? "Not running"
                             : environment.running_ip
                           : "N/A"
                       }

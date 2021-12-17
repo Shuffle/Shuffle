@@ -208,7 +208,7 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 
 	err = shuffle.DeleteKeys(ctx, parsedId, ids)
 	if err != nil {
-		log.Printf("[ERROR] Failed deleting %d execution keys for org %s", len(ids), id)
+		log.Printf("[ERROR] Failed deleting %d execution keys for org %s: %s", len(ids), id, err)
 	} else {
 		//log.Printf("[INFO] Deleted %d keys from org %s", len(ids), parsedId)
 	}
