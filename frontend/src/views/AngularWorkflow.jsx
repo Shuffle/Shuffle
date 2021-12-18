@@ -10,6 +10,7 @@ import ReactJson from "react-json-view";
 import NestedMenuItem from "material-ui-nested-menu-item";
 import ReactMarkdown from "react-markdown";
 import { useAlert } from "react-alert";
+import theme from '../theme';
 
 import {
 	Zoom,
@@ -186,9 +187,9 @@ const AngularWorkflow = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, userdata } = props;
   const referenceUrl = globalUrl + "/api/v1/hooks/";
   const alert = useAlert()
-  const theme = useTheme();
   const green = "#86c142";
   const yellow = "#FECC00";
+  //const theme = useTheme();
 
   const [bodyWidth, bodyHeight] = useWindowSize();
 
@@ -2761,7 +2762,6 @@ const AngularWorkflow = (props) => {
   };
 
   const onNodeAdded = (event) => {
-    setLastSaved(false);
     const node = event.target;
     const nodedata = event.target.data();
 
@@ -2771,10 +2771,13 @@ const AngularWorkflow = (props) => {
 			console.log("Returning because node is not valid: ", nodedata)
       return;
     }
-    
-		//parsedApp.data.finished = true;
 
-    //console.log("IS IT ADDED TO THE WORKFLOW?: ", nodedata)
+
+		// DONT MOVE THIS LINE RIGHT HERE v
+    setLastSaved(false)
+		// Dont move the line above. May break stuff.
+
+
     if (node.isNode() && cy.nodes().size() === 1) {
       workflow.start = node.data("id");
       nodedata.isStartNode = true;
@@ -3566,8 +3569,8 @@ const AngularWorkflow = (props) => {
   const onNodeHover = (event) => {
     const nodedata = event.target.data();
 
-		//console.log("NODE: ", nodedata)
     if (nodedata.finished === false) {
+			console.log("NODE: ", nodedata)
       return;
     }
 
@@ -12310,7 +12313,7 @@ const AngularWorkflow = (props) => {
           <a
             rel="noopener noreferrer"
             target="_blank"
-            href={"https://github.com/frikky/shuffle-apps"}
+            href={"https://github.com/shuffle/python-apps"}
             style={{ textDecoration: "none", color: "#f86a3e" }}
           >
             <img
@@ -12454,7 +12457,7 @@ const AngularWorkflow = (props) => {
                     <a
                       rel="noopener noreferrer"
                       target="_blank"
-                      href={"https://github.com/frikky/shuffle-apps"}
+                      href={"https://github.com/shuffle/python-apps"}
                       style={{ textDecoration: "none", color: "#f86a3e" }}
                     >
                       Check it out on Github!
