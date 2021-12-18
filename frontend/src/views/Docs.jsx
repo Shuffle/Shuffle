@@ -24,6 +24,7 @@ const Body = {
   display: "flex",
   height: "100%",
   color: "white",
+	position: "relative",
   //textAlign: "center",
 };
 
@@ -80,10 +81,12 @@ const Docs = (props) => {
   const SideBar = {
     maxWidth: 250,
     flex: 1,
-    position: "fixed",
+    position: "sticky",
+		top: 100,
 		maxHeight: "83vh",
 		overflowX: "hidden",
 		overflowY: "auto",
+		zIndex: 10003,
   };
 
   const fetchDocList = () => {
@@ -299,8 +302,8 @@ const Docs = (props) => {
     flex: "1",
     maxWidth: mobile ? "100%" : 750,
     overflow: "hidden",
-    paddingBottom: 200,
-    marginLeft: mobile ? 0 : 275,
+    paddingBottom: 100,
+  	marginLeft: mobile ? 0 : 50,
   };
 
   function OuterLink(props) {
@@ -655,7 +658,7 @@ const Docs = (props) => {
 
 	// Padding and zIndex etc set because of footer in cloud.
   const loadedCheck = (
-    <div style={{minHeight: 1000, paddingBottom: 150, zIndex: 50000, }}>
+    <div style={{minHeight: 1000, paddingBottom: 100, zIndex: 50000, }}>
       <BrowserView>{postDataBrowser}</BrowserView>
       <MobileView>{postDataMobile}</MobileView>
     </div>

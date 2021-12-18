@@ -6,6 +6,7 @@ import { GetIconInfo } from "../views/Workflows.jsx";
 import { sortByKey } from "../views/AngularWorkflow.jsx";
 import { useTheme } from "@material-ui/core/styles";
 import NestedMenuItem from "material-ui-nested-menu-item";
+import theme from '../theme';
 //import NestedMenuItem from "./NestedMenu.jsx";
 
 import {
@@ -162,7 +163,7 @@ const ParsedAction = (props) => {
     getAppAuthentication,
   } = props;
 
-  const theme = useTheme();
+  //const theme = useTheme();
   const classes = useStyles();
 
   const [expansionModalOpen, setExpansionModalOpen] = React.useState(false);
@@ -385,10 +386,8 @@ const ParsedAction = (props) => {
   };
 
   const AppActionArguments = (props) => {
-    const [selectedActionParameters, setSelectedActionParameters] =
-      React.useState([]);
-    const [selectedVariableParameter, setSelectedVariableParameter] =
-      React.useState("");
+    const [selectedActionParameters, setSelectedActionParameters] = React.useState([]);
+    const [selectedVariableParameter, setSelectedVariableParameter] = React.useState("");
     const [actionlist, setActionlist] = React.useState([]);
     const [jsonList, setJsonList] = React.useState([]);
     const [showDropdown, setShowDropdown] = React.useState(false);
@@ -1106,16 +1105,20 @@ const ParsedAction = (props) => {
             var disabled = false;
             var rows = "5";
             var openApiHelperText = "This is an OpenAPI specific field";
+						/*
             if (
               selectedApp.generated &&
               data.name === "url" &&
               data.required &&
-              data.configuration &&
-              hideExtraTypes
+              data.configuration 
             ) {
+							//&&
+              //hideExtraTypes
+							
               //console.log("GENERATED WITH DATA: ", data);
               return null;
             }
+						*/
 
             if (selectedApp.generated && data.name === "headers") {
               //console.log("HEADER: ", data)
@@ -1888,7 +1891,6 @@ const ParsedAction = (props) => {
                 >
                   {data.configuration === true ? (
                     <Tooltip
-                      color="primary"
                       title={`Authenticate ${selectedApp.name}`}
                       placement="top"
                     >
@@ -1898,8 +1900,8 @@ const ParsedAction = (props) => {
                           width: 24,
                           height: 24,
                           marginRight: 10,
+													color: "rgba(255,255,255,0.6)",
                         }}
-												color="primary"
                         onClick={() => {
                           setAuthenticationModalOpen(true);
                         }}
