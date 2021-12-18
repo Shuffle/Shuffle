@@ -521,16 +521,16 @@ const AppCreator = (props) => {
 
       if (data.info["x-logo"] !== undefined) {
         if (data.info["x-logo"].url !== undefined) {
-          console.log("PARSED LOGO: ", data.info["x-logo"].url);
+          //console.log("PARSED LOGO: ", data.info["x-logo"].url);
           setFileBase64(data.info["x-logo"].url);
         } else {
           setFileBase64(data.info["x-logo"]);
         }
-        console.log("");
-        console.log("");
-        console.log("LOGO: ", data.info["x-logo"]);
-        console.log("");
-        console.log("");
+        //console.log("");
+        //console.log("");
+        //console.log("LOGO: ", data.info["x-logo"]);
+        //console.log("");
+        //console.log("");
       }
 
       if (data.info.contact !== undefined) {
@@ -660,14 +660,14 @@ const AppCreator = (props) => {
 
           // Typescript? I think not ;)
           if (methodvalue["requestBody"] !== undefined) {
-            //console.log("Handle requestbody: ", methodvalue["requestBody"])
+            console.log("Handle requestbody: ", methodvalue["requestBody"])
             if (methodvalue["requestBody"]["content"] !== undefined) {
               if (
                 methodvalue["requestBody"]["content"]["application/json"] !==
                 undefined
               ) {
-                newaction["headers"] =
-                  "Content-Type=application/json\nAccept=application/json";
+                //newaction["headers"] = ""
+                //"Content-Type=application/json\nAccept=application/json";
                 if (
                   methodvalue["requestBody"]["content"]["application/json"][
                     "schema"
@@ -733,8 +733,8 @@ const AppCreator = (props) => {
                 undefined
               ) {
                 console.log("METHOD XML: ", methodvalue);
-                newaction["headers"] =
-                  "Content-Type=application/xml\nAccept=application/xml";
+                //newaction["headers"] = ""
+                //"Content-Type=application/xml\nAccept=application/xml";
                 if (
                   methodvalue["requestBody"]["content"]["application/xml"][
                     "schema"
@@ -772,7 +772,6 @@ const AppCreator = (props) => {
                   }
                 }
               } else {
-                //console.log("REQUESTBODY: ", methodvalue["requestBody"]["content"])
                 if (
                   methodvalue["requestBody"]["content"]["example"] !== undefined
                 ) {
@@ -787,7 +786,9 @@ const AppCreator = (props) => {
                       ];
                     //JSON.stringify(tmpobject, null, 2)
                   }
-                } else if (
+                } 
+							
+								if (
                   methodvalue["requestBody"]["content"][
                     "multipart/form-data"
                   ] !== undefined
