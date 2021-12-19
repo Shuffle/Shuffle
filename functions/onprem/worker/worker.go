@@ -74,6 +74,15 @@ var containerIds []string
 var downloadedImages []string
 
 var executedIds = []string{}
+var finishedIds = []string{}
+
+// Images to be autodeployed in the latest version of Shuffle.
+var autoDeploy = map[string]string{
+	"shuffle-subflow:1.0.0": "frikky/shuffle:shuffle-subflow_1.0.0",
+	"http:1.1.0":            "frikky/shuffle:http_1.1.0",
+	"shuffle-tools:1.1.0":   "frikky/shuffle:shuffle-tools_1.1.0",
+	"testing:1.0.0":         "frikky/shuffle:testing_1.0.0",
+}
 
 //if !shuffle.ArrayContains(executedIds,
 //fmt.Sprintf("%s_%s", workflowExecution.ExecutionId, action.ID)
@@ -739,7 +748,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 	// care if it gets stuck in a loop.
 	// FIXME: Force killing a worker should result in a notification somewhere
 	if len(nextActions) == 0 {
-		log.Printf("[INFO] No next action. Finished? Result vs shuffle.Actions: %d - %d", len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
+		log.Printf("[INFO][%s] No next action. Finished? Result vs shuffle.Actions: %d - %d", workflowExecution.ExecutionId, len(workflowExecution.Results), len(workflowExecution.Workflow.Actions))
 		exit := true
 		for _, item := range workflowExecution.Results {
 			if item.Status == "EXECUTING" {
@@ -749,7 +758,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		}
 
 		if len(environments) == 1 {
-			log.Printf("[INFO] Should send results to the backend because environments are %s", environments)
+			log.Printf("[INFO][%s] Should send results to the backend because environments are %s", workflowExecution.ExecutionId, environments)
 			validateFinished(workflowExecution)
 		}
 
@@ -2220,6 +2229,10 @@ func getLocalIP() string {
 		log.Printf("[DEBUG] Found hostname %s since worker is running with \"run\" command", name)
 		return name
 
+		/**
+			Everything below was a test to see if we needed to match directly to a network interface. May require docker network API.
+		**/
+
 		log.Printf("[DEBUG] Looking for IP for the external docker-network %s", swarmNetworkName)
 		// Different process to ensure we find the right IP.
 		// Necessary due to Ingress being added to docker ser
@@ -2769,6 +2782,64 @@ func sendAppRequest(incomingUrl, appName string, port int, action shuffle.Action
 	return nil
 }
 
+// Function to auto-deploy certain apps if "run" is set
+// Has some issues with loading when running multiple workers and such.
+func baseDeploy() {
+	return
+
+	cli, err := dockerclient.NewEnvClient()
+	if err != nil {
+		log.Printf("[ERROR] Unable to create docker client (3): %s", err)
+		return
+	}
+
+	for key, value := range autoDeploy {
+		newNameSplit := strings.Split(key, ":")
+
+		action := shuffle.Action{
+			AppName:    newNameSplit[0],
+			AppVersion: newNameSplit[1],
+			ID:         "TBD",
+		}
+
+		workflowExecution := shuffle.WorkflowExecution{
+			ExecutionId: "TBD",
+		}
+
+		appname := action.AppName
+		appversion := action.AppVersion
+		appname = strings.Replace(appname, ".", "-", -1)
+		appversion = strings.Replace(appversion, ".", "-", -1)
+
+		env := []string{
+			fmt.Sprintf("EXECUTIONID=%s", workflowExecution.ExecutionId),
+			fmt.Sprintf("AUTHORIZATION=%s", workflowExecution.Authorization),
+			fmt.Sprintf("CALLBACK_URL=%s", baseUrl),
+			fmt.Sprintf("BASE_URL=%s", appCallbackUrl),
+			fmt.Sprintf("TZ=%s", timezone),
+		}
+
+		if strings.ToLower(os.Getenv("SHUFFLE_PASS_APP_PROXY")) == "true" {
+			//log.Printf("APPENDING PROXY TO THE APP!")
+			env = append(env, fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")))
+			env = append(env, fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")))
+		}
+
+		identifier := fmt.Sprintf("%s_%s_%s_%s", appname, appversion, action.ID, workflowExecution.ExecutionId)
+		if strings.Contains(identifier, " ") {
+			identifier = strings.ReplaceAll(identifier, " ", "-")
+		}
+
+		//deployApp(cli, value, identifier, env, workflowExecution, action)
+		log.Printf("[DEBUG] Deploying app with identifier %s to ensure basic apps are available from the get-go", identifier)
+		go deployApp(cli, value, identifier, env, workflowExecution, action)
+		//err := deployApp(cli, value, identifier, env, workflowExecution, action)
+		//if err != nil {
+		//	log.Printf("[DEBUG] Failed deploying app %s: %s", value, err)
+		//}
+	}
+}
+
 // Initial loop etc
 func main() {
 	/*
@@ -2824,6 +2895,11 @@ func main() {
 	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" {
 		// Forcing download just in case on the first iteration.
 		workflowExecution := shuffle.WorkflowExecution{}
+
+		//var autoDeploy = []string{"frikky/shuffle:shuffle-subflow_1.0.0", "frikky/shuffle:http_1.1.0", "frikky/shuffle:shuffle-tools_1.1.0", "frikky/shuffle:testing_1.0.0"}
+
+		//go baseDeploy()
+		baseDeploy()
 
 		listener := webserverSetup(workflowExecution)
 		runWebserver(listener)
@@ -3013,7 +3089,14 @@ func main() {
 	}
 }
 
+func checkUnfinishedExecutions() {
+	// Meant as a function that periodically checks whether previous executions have finished or not.
+	// Should probably be based on executedIds and finishedIds
+}
+
 func handleRunExecution(resp http.ResponseWriter, request *http.Request) {
+	checkUnfinishedExecutions()
+
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		log.Println("[WARNING] Failed reading body for stream result queue")
