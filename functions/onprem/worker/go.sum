@@ -578,6 +578,8 @@ github.com/shuffle/shuffle-shared v0.1.54 h1:dHpwot+5RPX8k9EC/8Yd+QYsFqCsqsv+J1w
 github.com/shuffle/shuffle-shared v0.1.54/go.mod h1:2ndjLm4ZOvY6arGFwOgGnkQ457Ke7gka9HDF/EkdIxQ=
 github.com/shuffle/shuffle-shared v0.1.55 h1:feHtTN7Uhr1aMxkMIo3xZbr97599VB2eLekogTj/9Z4=
 github.com/shuffle/shuffle-shared v0.1.55/go.mod h1:2ndjLm4ZOvY6arGFwOgGnkQ457Ke7gka9HDF/EkdIxQ=
+github.com/shuffle/shuffle-shared v0.1.60 h1:Jjb6TfE/KnVfCryIL2vtRHBnBX307slVlGBjaEqgwW4=
+github.com/shuffle/shuffle-shared v0.1.60/go.mod h1:2ndjLm4ZOvY6arGFwOgGnkQ457Ke7gka9HDF/EkdIxQ=
 github.com/shurcooL/sanitized_anchor_name v1.0.0/go.mod h1:1NzhyTcUVG4SuEtjjoZeVRXNmyL/1OwPU0+IJeTBvfc=
 github.com/sirupsen/logrus v1.0.4-0.20170822132746-89742aefa4b2/go.mod h1:pMByvHTf9Beacp5x1UXfOR9xyW/9antXMhjMPG0dEzc=
 github.com/sirupsen/logrus v1.0.6/go.mod h1:pMByvHTf9Beacp5x1UXfOR9xyW/9antXMhjMPG0dEzc=

@@ -250,7 +250,7 @@ func deployServiceWorkers(image string) {
 		log.Printf("[DEBUG] Found %d node(s) to replicate over. Defaulting to 1 IF we can't auto-discover them.", cnt)
 		replicatedJobs := uint64(replicas * nodeCount)
 
-		log.Printf("[DEBUG] Deploying %d containers for worker with swarm to each node. Service name: %s. Image: %s", replicas, innerContainerName, image)
+		log.Printf("[DEBUG] Deploying %d container(s) for worker with swarm to each node. Service name: %s. Image: %s", replicas, innerContainerName, image)
 
 		if timezone == "" {
 			timezone = "Europe/Amsterdam"
@@ -332,7 +332,7 @@ func deployServiceWorkers(image string) {
 		)
 
 		if err == nil {
-			log.Printf("[DEBUG] Successfully deployed workers with %d replica(s) on %d nodes", replicas, cnt)
+			log.Printf("[DEBUG] Successfully deployed workers with %d replica(s) on %d node(s)", replicas, cnt)
 			//time.Sleep(time.Duration(10) * time.Second)
 			//log.Printf("[DEBUG] Servicecreate request: %#v %#v", service, err)
 		} else {
@@ -393,7 +393,6 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			}
 
 			if err == nil {
-				log.Printf("[DEBUG] Started worker from request with name: %s", executionRequest.ExecutionId)
 				executionIds = append(executionIds, executionRequest.ExecutionId)
 			}
 		}()
@@ -727,20 +726,20 @@ func main() {
 	)
 
 	if err != nil {
-		log.Printf("[ERROR] Failed making request builder: %s", err)
+		log.Printf("[ERROR] Failed making request builder during init: %s", err)
 		os.Exit(3)
 	}
 
 	zombiecounter := 0
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Org-Id", orgId)
-	log.Printf("[INFO] Waiting for executions at %s", fullUrl)
+	log.Printf("[INFO] Waiting for executions at %s with Org ID %s", fullUrl, orgId)
 	hasStarted := false
 	for {
-		//log.Printf("Prerequest")
 		//go getStats()
-		newresp, err := client.Do(req)
+		//log.Printf("Prerequest")
 		//log.Printf("Postrequest")
+		newresp, err := client.Do(req)
 		if err != nil {
 			log.Printf("[WARNING] Failed making request: %s", err)
 			zombiecounter += 1
@@ -758,6 +757,10 @@ func main() {
 				log.Printf("[WARNING] Bad statuscode: %d", newresp.StatusCode)
 			}
 		} else {
+			if !hasStarted {
+				log.Printf("[DEBUG] Starting iteration. Got statuscode %d from backend on first request", newresp.StatusCode)
+			}
+
 			hasStarted = true
 		}
 
@@ -1160,10 +1163,11 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 
 	body, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
-		log.Printf("[ERROR] Failed reading body in worker request: %s", err)
+		log.Printf("[ERROR] Failed reading body in worker request body: %s", err)
 		return err
 	}
+	_ = body
 
-	log.Printf("[DEBUG] NEWRESP (from worker request %s): %s (Status: %d)", workflowExecution.ExecutionId, string(body), newresp.StatusCode)
+	log.Printf("[DEBUG] Ran worker from request with execution ID: %s. Worker URL: %s.\n\n DEBUGGING: docker service logs shuffle-workers | grep %s\n\n", workflowExecution.ExecutionId, streamUrl, workflowExecution.ExecutionId)
 	return nil
 }

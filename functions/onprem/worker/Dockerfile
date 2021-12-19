@@ -6,6 +6,7 @@ WORKDIR /app
 #RUN go env -w GO111MODULE=auto 
 COPY worker.go /app/worker.go
 COPY go.mod /app/go.mod
+#COPY go.sum /app/go.sum
 #RUN go
 #COPY go.sum /app/go.sum
 RUN go get

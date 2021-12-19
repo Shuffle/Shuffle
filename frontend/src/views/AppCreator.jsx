@@ -1718,6 +1718,10 @@ const AppCreator = (props) => {
             },
           };
 
+					if (queryitem.example !== undefined) {
+						newitem.example = queryitem.example
+					}
+
           if (queryitem.description !== undefined) {
             newitem.description = queryitem.description;
           }
@@ -2129,7 +2133,7 @@ const AppCreator = (props) => {
   };
 
   const addPathQuery = () => {
-    urlPathQueries.push({ name: "", required: true });
+    urlPathQueries.push({ name: "", required: true, example: "", });
     if (updater === "addupdater") {
       setUpdater("updater");
     } else {
@@ -2613,6 +2617,55 @@ const AppCreator = (props) => {
           return (
             <Paper key={index} style={actionListStyle}>
               <div style={{ marginLeft: "5px", width: "100%" }}>
+								<div style={{display: "flex"}}>
+									<TextField
+										required
+										fullWidth={true}
+										defaultValue={data.name}
+										placeholder={"Query name (key)"}
+										label={"Query Key"}
+										helperText={
+											<span style={{ color: "white", marginBottom: "2px" }}>
+												Click required to flip 
+											</span>
+										}
+										onBlur={(e) => {
+											console.log("IN BLUR: ", e.target.value);
+											urlPathQueries[index].name = e.target.value.replaceAll(
+												"=",
+												""
+											);
+
+											setUrlPathQueries(urlPathQueries);
+										}}
+										style={{flex: 3}}
+										InputProps={{
+											style: {
+												color: "white",
+											},
+										}}
+									/>
+									<TextField
+										fullWidth={true}
+										defaultValue={data.example}
+										placeholder={"Default value"}
+										label={"Example"}
+										onBlur={(e) => {
+											urlPathQueries[index].example = e.target.value.replaceAll(
+												"=",
+												""
+											)
+
+											setUrlPathQueries(urlPathQueries)
+										}}
+										style={{flex: 2}}
+										InputProps={{
+											style: {
+												color: "white",
+											},
+										}}
+									/>
+								</div>
                 <div
                   style={{ cursor: "pointer" }}
                   onClick={() => {
@@ -2624,31 +2677,6 @@ const AppCreator = (props) => {
                     {data.required.toString()}
                   </div>
                 </div>
-                <TextField
-                  required
-                  fullWidth={true}
-                  defaultValue={data.name}
-                  placeholder={"Query name"}
-                  helperText={
-                    <span style={{ color: "white", marginBottom: "2px" }}>
-                      Click required switch
-                    </span>
-                  }
-                  onBlur={(e) => {
-                    console.log("IN BLUR: ", e.target.value);
-                    urlPathQueries[index].name = e.target.value.replaceAll(
-                      "=",
-                      ""
-                    );
-
-                    setUrlPathQueries(urlPathQueries);
-                  }}
-                  InputProps={{
-                    style: {
-                      color: "white",
-                    },
-                  }}
-                />
               </div>
               <div
                 style={{ float: "right", color: "#f85a3e", cursor: "pointer" }}
@@ -2656,7 +2684,7 @@ const AppCreator = (props) => {
                   deletePathQuery(index);
                 }}
               >
-                Delete
+  							<DeleteIcon />
               </div>
             </Paper>
           );
@@ -3451,7 +3479,26 @@ const AppCreator = (props) => {
 							}
 
 							if (parsedurl.includes("?")) {
-								parsedurl = parsedurl.split("?")[0]
+								const parsedurlsplit = parsedurl.split("?")
+								parsedurl = parsedurlsplit[0]
+								
+								//var newqueries = selectedAction.queries === undefined || selectedAction.queries === null ? [] : selectedAction.queries
+
+								const datasplit = parsedurlsplit[1].split("&")
+								for (var key in datasplit) {
+									console.log("Data: ", datasplit[key])
+									var actualkey = datasplit[key]
+									var example = ""
+									if (datasplit[key].includes("=")) {
+										actualkey = datasplit[key].split("=")[0]
+										example = datasplit[key].split("=")[1]
+									}
+
+									const foundPath = urlPathQueries.find(data => data.name === actualkey)
+									if (foundPath === null || foundPath === undefined) {
+										urlPathQueries.push({ name: actualkey, example: example, required: true })
+									}
+								}
 							}
 
               if (event.target.value !== parsedurl) {
@@ -3663,15 +3710,21 @@ const AppCreator = (props) => {
         }
         style={{ backgroundColor: inputColor, color: "white", height: "50px" }}
       >
-        {categories.map((data, index) => (
-          <MenuItem
-            key={index}
-            style={{ backgroundColor: inputColor, color: "white" }}
-            value={data}
-          >
-            {data}
-          </MenuItem>
-        ))}
+        {categories.map((data, index) => {
+					if (data === undefined || data === null || data === "") {
+						return null
+					}
+
+					return (
+						<MenuItem
+							key={index}
+							style={{ backgroundColor: inputColor, color: "white" }}
+							value={data}
+						>
+							{data}
+						</MenuItem>
+        	)
+				})}
       </Select>
       <h4>Tags</h4>
       <ChipInput
