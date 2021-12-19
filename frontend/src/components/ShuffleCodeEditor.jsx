@@ -20,6 +20,7 @@ import 'codemirror/theme/gruvbox-dark.css';
 
 const CodeEditor = (props) => {
 	const {fieldCount, setFieldCount} = props
+	const {actionlist} = props
 	const {changeActionParameterCodeMirror} = props 
   	const {expansionModalOpen, setExpansionModalOpen} = props
   	const {codedata, setcodedata} = props
@@ -29,14 +30,37 @@ const CodeEditor = (props) => {
 
 	const [expOutput, setexpOutput] = React.useState(" ");
 	function expectedOutput(input) {
+		
+		const found = input.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
+		console.log(found)
+
+		for (var i = 0; i < found.length; i++) {
+			// console.log(found[i]);
+
+			for (var j = 0; j < actionlist.length; j++) {
+				if(found[i].slice(1,).toLowerCase() == actionlist[j].autocomplete.toLowerCase()){
+					input = input.replace(found[i], JSON.stringify(actionlist[j].example));
+					// console.log(input)
+					// console.log(actionlist[j].example)
+				}	
+				// console.log(actionlist[j].autocomplete);
+			}
+		}
+
+		try {
+			// var x = document.getElementById("expOutput");
+			// x.innerHTML = JSON.stringify(JSON.parse(input), null, 4)
+			setexpOutput(JSON.stringify(JSON.parse(input), null, 4))
+		} catch (e) {
+			setexpOutput(input)
+		}
+
 		// const obj = JSON.parse(input);
 		// setexpOutput(JSON.stringify(JSON.parse(input), null, 4))
-		var x = document.getElementById("expOutput");
-		x.innerHTML = JSON.stringify(input, null, 4)
-		// x.innerHTML = JSON.stringify(JSON.parse(input), null, 4)
+		// x.innerHTML = "<span style='font-size: 30px'>" + JSON.stringify(input, null, 4) + "</span>"
 		// x.appendChild(document.createTextNode(JSON.stringify(JSON.parse(input), null, 4)));
-		// setexpOutput(JSON.stringify(input, null, 4))
-
+		// setexpOutput(JSON.stringify(input, undefined, 4).replace('\ ', '\n'))
+		// setexpOutput("Hi there \n Hey there")
 		// Variables + Syntax highlighting + Validation
 	}
 
@@ -80,6 +104,7 @@ const CodeEditor = (props) => {
 					onChange={(value) => {
 						setlocalcodedata(value.getValue())
 						expectedOutput(value.getValue())
+						// console.log(actionlist.slice(-1))
 					}}
 					options={{
 						theme: 'gruvbox-dark',
@@ -107,6 +132,7 @@ const CodeEditor = (props) => {
 				<p
 					id='expOutput'
 					style={{
+						whiteSpace: "pre-wrap",
 						color: "#f85a3e",
 						fontFamily: "monospace",
 						backgroundColor: "#282828",
@@ -116,7 +142,7 @@ const CodeEditor = (props) => {
 						borderRadius: theme.palette.borderRadius,
 					}}
 				>
-					{/* {expOutput} */}
+					{expOutput}
 				</p>
 			</div>
 
