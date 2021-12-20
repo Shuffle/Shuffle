@@ -2050,7 +2050,11 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 		}
 
 		if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" {
-			validateFinished(*workflowExecution)
+			finished := validateFinished(*workflowExecution)
+			if !finished {
+				log.Printf("[DEBUG][%s] Handling next node since it's not finished!", workflowExecution.ExecutionId)
+				handleExecutionResult(*workflowExecution)
+			}
 		}
 	} else {
 		log.Printf("[INFO][%s] Skipping setexec with status %s", workflowExecution.ExecutionId, workflowExecution.Status)
@@ -2119,7 +2123,7 @@ func sendResult(workflowExecution shuffle.WorkflowExecution, data []byte) {
 	}
 }
 
-func validateFinished(workflowExecution shuffle.WorkflowExecution) {
+func validateFinished(workflowExecution shuffle.WorkflowExecution) bool {
 	ctx := context.Background()
 	//startAction, extra, children, parents, visited, executed, nextActions, environments := shuffle.GetExecutionVariables(ctx, workflowExecution.ExecutionId)
 	_, extra, _, _, _, _, _, environments := shuffle.GetExecutionVariables(ctx, workflowExecution.ExecutionId)
@@ -2127,7 +2131,7 @@ func validateFinished(workflowExecution shuffle.WorkflowExecution) {
 	log.Printf("[INFO][%s] VALIDATION. Status: %s, shuffle.Actions: %d, Extra: %d, Results: %d\n", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Workflow.Actions), extra, len(workflowExecution.Results))
 
 	//if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions)+extra {
-	if (len(environments) == 1 && requestsSent == 0 && len(workflowExecution.Results) >= 1) || (len(workflowExecution.Results) >= len(workflowExecution.Workflow.Actions) && len(workflowExecution.Workflow.Actions) > 0) {
+	if (len(environments) == 1 && requestsSent == 0 && len(workflowExecution.Results) >= 1 && os.Getenv("SHUFFLE_SWARM_CONFIG") != "run") || (len(workflowExecution.Results) >= len(workflowExecution.Workflow.Actions)+extra && len(workflowExecution.Workflow.Actions) > 0) {
 		if os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" {
 			requestsSent += 1
 		}
@@ -2142,7 +2146,10 @@ func validateFinished(workflowExecution shuffle.WorkflowExecution) {
 		}
 
 		sendResult(workflowExecution, shutdownData)
+		return true
 	}
+
+	return false
 }
 
 func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
