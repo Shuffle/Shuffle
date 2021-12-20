@@ -393,7 +393,8 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			}
 
 			if err == nil {
-				executionIds = append(executionIds, executionRequest.ExecutionId)
+				// FIXME: Readd this? Removed for rerun reasons
+				// executionIds = append(executionIds, executionRequest.ExecutionId)
 			}
 		}()
 

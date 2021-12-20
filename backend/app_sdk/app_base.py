@@ -78,6 +78,10 @@ class AppBase:
             self.logger.info("[DEBUG] Value too large. Returning from magic")
             return input_data
 
+        if not "\n" in input_data and not "," in input_data: 
+            self.logger.info("[DEBUG] No data to autoparse")
+            return input_data
+
         new_input = input_data
         try:
             #new_input.strip()
