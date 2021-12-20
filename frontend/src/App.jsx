@@ -404,7 +404,7 @@ const App = (message, props) => {
           path="/detectionframework"
           render={(props) => (
             <DetectionFramework
-							frameworkData={undefined}
+							frameworkData={FrameworkData}
 							selectedOption={"Draw"}
 							showOptions={false}
 

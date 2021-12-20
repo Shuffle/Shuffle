@@ -152,7 +152,7 @@ func cleanupExistingNodes(ctx context.Context) error {
 	//log.Printf("\n\nFound %d contaienrs", len(services))
 
 	for _, service := range services {
-		log.Printf("[INFO] Service: %#v", service.Spec.Annotations.Name)
+		//log.Printf("[INFO] Service: %#v", service.Spec.Annotations.Name)
 
 		//portFound := false
 		//for _, endpoint := range service.Spec.EndpointSpec.Ports {

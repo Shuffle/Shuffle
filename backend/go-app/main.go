@@ -4071,7 +4071,7 @@ func runInitEs(ctx context.Context) {
 
 	// FIXME: Have this for all envs in all orgs (loop and find).
 	if len(parsedApikey) > 0 {
-		cleanupSchedule := 3600
+		cleanupSchedule := 600
 		environments := []string{"Shuffle"}
 		log.Printf("[DEBUG] Starting schedule setup for execution cleanup every %d seconds. Running first immediately.", cleanupSchedule)
 		cleanupJob := func() func() {
@@ -4079,8 +4079,8 @@ func runInitEs(ctx context.Context) {
 				log.Printf("[INFO] Running schedule for cleaning up or re-running unfinished workflows in %d environments.", len(environments))
 
 				for _, environment := range environments {
-					url := fmt.Sprintf("http://localhost:5001/api/v1/environments/%s/stop", environment)
 					httpClient := &http.Client{}
+					url := fmt.Sprintf("http://localhost:5001/api/v1/environments/%s/stop", environment)
 					req, err := http.NewRequest(
 						"GET",
 						url,
@@ -4106,6 +4106,33 @@ func runInitEs(ctx context.Context) {
 						continue
 					}
 					log.Printf("[DEBUG] Successfully ran workflow cleanup request for %s. Body: %s", environment, string(respBody))
+
+					url = fmt.Sprintf("http://localhost:5001/api/v1/environments/%s/rerun", environment)
+					req, err = http.NewRequest(
+						"GET",
+						url,
+						nil,
+					)
+
+					req.Header.Add("Authorization", fmt.Sprintf(`Bearer %s`, parsedApikey))
+					if err != nil {
+						log.Printf("[ERROR] Failed CREATING environment request to rerun for %s: %s", environment, err)
+						continue
+
+					}
+
+					newresp, err = httpClient.Do(req)
+					if err != nil {
+						log.Printf("[ERROR] Failed running environment request to rerun for %s: %s", environment, err)
+						continue
+					}
+
+					respBody, err = ioutil.ReadAll(newresp.Body)
+					if err != nil {
+						log.Printf("[ERROR] Failed setting respbody %s", err)
+						continue
+					}
+					log.Printf("[DEBUG] Successfully ran workflow RERUN request for %s. Body: %s", environment, string(respBody))
 				}
 			}
 		}
@@ -5899,7 +5926,7 @@ func initHandlers() {
 	// This is a new API that validates if a key has been seen before.
 	// Not sure what the best course of action is for it.
 	r.HandleFunc("/api/v1/environments/{key}/stop", shuffle.HandleStopExecutions).Methods("GET", "POST", "OPTIONS")
-	//r.HandleFunc("/api/v1/environments/{key}/rerun", shuffle.HandleRerunExecutions).Methods("GET", "POST", "OPTIONS")
+	r.HandleFunc("/api/v1/environments/{key}/rerun", shuffle.HandleRerunExecutions).Methods("GET", "POST", "OPTIONS")
 
 	r.HandleFunc("/api/v1/orgs/{orgId}/validate_app_values", shuffle.HandleKeyValueCheck).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/get_cache", shuffle.HandleGetCacheKey).Methods("POST", "OPTIONS")
