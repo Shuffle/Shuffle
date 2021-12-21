@@ -1,0 +1,25 @@
+version: '3'
+services:
+  orborus:
+    image: ghcr.io/frikky/shuffle-orborus:nightly
+    container_name: shuffle-orborus
+    hostname: shuffle-orborus
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - SHUFFLE_APP_SDK_VERSION=nightly
+      - SHUFFLE_WORKER_VERSION=nightly
+      - ORG_ID=Shuffle
+      - ENVIRONMENT_NAME=Shuffle
+      - BASE_URL=http://192.168.86.39:5001
+      - DOCKER_API_VERSION=1.40
+      - SHUFFLE_SCALE_REPLICAS=5
+      - SHUFFLE_SWARM_CONFIG=run
+    restart: unless-stopped
+    networks:
+      - shuffle-executions
+networks:
+  shuffle-executions:
+    driver: overlay
+    external: true
+

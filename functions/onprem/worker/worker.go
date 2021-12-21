@@ -557,6 +557,11 @@ func handleSubworkflowExecution(client *http.Client, workflowExecution shuffle.W
 		}
 	}
 
+	if apikey == "" {
+		log.Printf("[DEBUG][%s] Replacing apikey with parent auth", workflowExecution.ExecutionId)
+		apikey = workflowExecution.Authorization
+	}
+
 	//handleSubworkflowExecution(workflowExecution, action)
 	status := "SUCCESS"
 	baseResult := `{"success": true}`

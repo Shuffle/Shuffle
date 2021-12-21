@@ -1000,6 +1000,7 @@ const ParsedAction = (props) => {
 							color="secondary" 
 							style={{justifyContent: "flex-start", textAlign: "left", textTransform: "none", width: "100%",}}
 							fullWidth
+							disabled={selectedAction.description === undefined || selectedAction.description === null || selectedAction.description.length === 0}
 							onClick={() => {
 								setHiddenDescription(!hiddenDescription)
 							}}
@@ -2654,7 +2655,7 @@ const ParsedAction = (props) => {
                 option === undefined ||
                 option === null ||
                 option.name === undefined ||
-                option.name === undefined
+                option.name === null 
               ) {
                 return null;
               }

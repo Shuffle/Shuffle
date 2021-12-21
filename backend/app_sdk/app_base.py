@@ -1606,7 +1606,7 @@ class AppBase:
                         appendresult += char
 
                 actionname_lower = "exec"
-            elif actionname_lower.startswith("shuffle_cache "): 
+            elif actionname_lower.startswith("shuffle_cache ") or actionname_lower.startswith("shuffle_db "): 
                 actionname_lower = "shuffle_cache"
 
             actionname_lower = actionname_lower.replace(" ", "_", -1)

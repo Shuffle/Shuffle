@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect } from "react";
 import { useInterval } from "react-powerhooks";
-import { useTheme } from "@material-ui/core/styles";
+import { makeStyles, useTheme } from "@material-ui/core/styles";
 
 import { v4 as uuidv4 } from "uuid";
 import { Link } from "react-router-dom";
@@ -80,6 +80,7 @@ import {
   AddComment as AddCommentIcon,
 } from "@material-ui/icons";
 
+import Autocomplete from "@material-ui/lab/Autocomplete";
 import * as cytoscape from "cytoscape";
 import * as edgehandles from "cytoscape-edgehandles";
 import * as clipboard from "cytoscape-clipboard";
@@ -177,6 +178,32 @@ function removeParam(key, sourceURL) {
 
   return rtn;
 }
+
+const useStyles = makeStyles({
+  notchedOutline: {
+    borderColor: "#f85a3e !important",
+  },
+  root: {
+    "& .MuiAutocomplete-listbox": {
+      border: "2px solid #f85a3e",
+      color: "white",
+      fontSize: 18,
+      "& li:nth-child(even)": {
+        backgroundColor: "#CCC",
+      },
+      "& li:nth-child(odd)": {
+        backgroundColor: "#FFF",
+      },
+    },
+  },
+  inputRoot: {
+    color: "white",
+    // This matches the specificity of the default styles at https://github.com/mui-org/material-ui/blob/v4.11.3/packages/material-ui-lab/src/Autocomplete/Autocomplete.js#L90
+    "&:hover .MuiOutlinedInput-notchedOutline": {
+      borderColor: "#f86a3e",
+    },
+  },
+});
 
 const splitter = "|~|";
 const svgSize = 24;
@@ -320,6 +347,7 @@ const AngularWorkflow = (props) => {
   const appBarSize = isCloud ? 75 : 60;
   const triggerEnvironments = isCloud ? ["cloud"] : ["onprem", "cloud"];
   const unloadText = "Are you sure you want to leave without saving (CTRL+S)?";
+  const classes = useStyles();
 
 
   const [elements, setElements] = useState([]);
@@ -5617,7 +5645,7 @@ const AngularWorkflow = (props) => {
       actionlist.push({
         type: "Shuffle DB",
         name: "Shuffle DB",
-        value: "shuffle_cache",
+        value: "$shuffle_cache",
         highlight: "shuffle_cache",
         autocomplete: "shuffle_cache",
         example: "tmp",
@@ -7119,6 +7147,14 @@ const AngularWorkflow = (props) => {
         autocomplete: "exec",
         example: "hello",
       })
+      actionlist.push({
+        type: "Shuffle Database",
+        name: "Shuffle Database",
+        value: "$shuffle_cache",
+        highlight: "shuffle_db",
+        autocomplete: "shuffle_cache",
+        example: "hello",
+      })
       if (
         workflow.workflow_variables !== null &&
         workflow.workflow_variables !== undefined &&
@@ -7537,6 +7573,9 @@ const AngularWorkflow = (props) => {
           value: "false",
         };
 
+				/*
+				// API-key has been replaced by auth key for the execution. 
+				// Parents can now automatically execute children without auth from a user, as long as the subflow in question is owned by the same org and the subflow is actually referencing it during checkin.
         console.log("SETTINGS: ", userSettings);
         if (
           userSettings !== undefined &&
@@ -7550,7 +7589,119 @@ const AngularWorkflow = (props) => {
             value: userSettings.apikey,
           };
         }
+				*/
       }
+
+			const handleSubflowStartnodeSelection = (e) => {
+				setSubworkflowStartnode(e.target.value);
+
+				const branchId = uuidv4();
+				const newbranch = {
+					source_id: workflow.triggers[selectedTriggerIndex].id,
+					destination_id: e.target.value.id,
+					source: workflow.triggers[selectedTriggerIndex].id,
+					target: e.target.value.id,
+					has_errors: false,
+					id: branchId,
+					_id: branchId,
+					label: "Subflow",
+					decorator: true,
+				};
+
+				if (workflow.visual_branches !== undefined) {
+					if (workflow.visual_branches === null) {
+						workflow.visual_branches = [newbranch];
+					} else if (workflow.visual_branches.length === 0) {
+						workflow.visual_branches.push(newbranch);
+					} else {
+						const foundIndex = workflow.visual_branches.findIndex(
+							(branch) => branch.source_id === newbranch.source_id
+						);
+						if (foundIndex !== -1) {
+							const currentEdge = cy.getElementById(
+								workflow.visual_branches[foundIndex].id
+							);
+							if (
+								currentEdge !== undefined &&
+								currentEdge !== null
+							) {
+								currentEdge.remove();
+							}
+						}
+
+						workflow.visual_branches.splice(foundIndex, 1);
+						workflow.visual_branches.push(newbranch);
+					}
+				}
+
+				if (workflow.id === subworkflow.id) {
+					const cybranch = {
+						group: "edges",
+						source: newbranch.source_id,
+						target: newbranch.destination_id,
+						id: branchId,
+						data: newbranch,
+					};
+
+					cy.add(cybranch);
+				}
+
+				console.log("Value to be set: ", e.target.value);
+				try {
+					workflow.triggers[
+						selectedTriggerIndex
+					].parameters[3].value = e.target.value.id;
+				} catch {
+					workflow.triggers[selectedTriggerIndex].parameters[3] =
+						{
+							name: "startnode",
+							value: e.target.value.id,
+						};
+				}
+
+				setWorkflow(workflow);
+			}
+
+			const handleWorkflowSelectionUpdate = (e) => {
+				setUpdate(Math.random());
+				workflow.triggers[
+					selectedTriggerIndex
+				].parameters[0].value = e.target.value.id;
+				setSubworkflow(e.target.value);
+
+				// Sets the startnode
+				if (e.target.value.id !== workflow.id) {
+					console.log("WORKFLOW: ", e.target.value);
+
+					const startnode = e.target.value.actions.find(
+						(action) => action.id === e.target.value.start
+					);
+					if (startnode !== undefined && startnode !== null) {
+						console.log("STARTNODE: ", startnode);
+						setSubworkflowStartnode(startnode);
+
+						try {
+							workflow.triggers[
+								selectedTriggerIndex
+							].parameters[3].value = startnode.id;
+						} catch {
+							workflow.triggers[
+								selectedTriggerIndex
+							].parameters[3] = {
+								name: "startnode",
+								value: startnode.id,
+							};
+						}
+
+						setWorkflow(workflow);
+					}
+					console.log("STARTNODE: ", startnode);
+				} else {
+					console.log("WORKFLOW: ", workflow);
+				}
+
+				setWorkflow(workflow);
+			}
 
       return (
         <div style={appApiViewStyle}>
@@ -7650,95 +7801,81 @@ const AngularWorkflow = (props) => {
                   display: "flex",
                 }}
               >
-                <div
-                  style={{
-                    width: "17px",
-                    height: "17px",
-                    borderRadius: 17 / 2,
-                    backgroundColor: "#f85a3e",
-                    marginRight: "10px",
-                  }}
-                />
                 <div style={{ flex: "10" }}>
                   <b>Select a workflow to execute </b>
                 </div>
               </div>
-              {workflows === undefined ||
-              workflows === null ||
-              workflows.length === 0 ? null : (
-                <Select
-                  value={subworkflow}
-                  SelectDisplayProps={{
-                    style: {
-                      marginLeft: 10,
-                    },
-                  }}
-                  fullWidth
-                  onChange={(e) => {
-                    setUpdate(Math.random());
-                    workflow.triggers[
-                      selectedTriggerIndex
-                    ].parameters[0].value = e.target.value.id;
-                    setSubworkflow(e.target.value);
+						{workflows === undefined ||
+						workflows === null ||
+						workflows.length === 0 ? null : (
+							<Autocomplete
+          		  id="subflow_search"
+          		  autoHighlight
+                value={subworkflow}
+          		  classes={{ inputRoot: classes.inputRoot }}
+          		  ListboxProps={{
+          		    style: {
+          		      backgroundColor: theme.palette.inputColor,
+          		      color: "white",
+          		    },
+          		  }}
+          		  getOptionLabel={(option) => {
+          		    if (
+          		      option === undefined ||
+          		      option === null ||
+          		      option.name === undefined ||
+          		      option.name === null 
+          		    ) {
+          		      return null;
+          		    }
 
-                    // Sets the startnode
-                    if (e.target.value.id !== workflow.id) {
-                      console.log("WORKFLOW: ", e.target.value);
+          		    const newname = (
+          		      option.name.charAt(0).toUpperCase() + option.name.substring(1)
+          		    ).replaceAll("_", " ");
+          		    return newname;
+          		  }}
+          		  options={workflows}
+          		  fullWidth
+          		  style={{
+          		    backgroundColor: theme.palette.inputColor,
+          		    height: 50,
+          		    borderRadius: theme.palette.borderRadius,
+          		  }}
+          		  onChange={(event, newValue) => {
+									handleWorkflowSelectionUpdate({ target: { value: newValue} })
+          		  }}
+          		  renderOption={(data) => {
+									if (data.id === workflow.id) {
+										data = workflow;
+									}
 
-                      const startnode = e.target.value.actions.find(
-                        (action) => action.id === e.target.value.start
-                      );
-                      if (startnode !== undefined && startnode !== null) {
-                        console.log("STARTNODE: ", startnode);
-                        setSubworkflowStartnode(startnode);
-
-                        try {
-                          workflow.triggers[
-                            selectedTriggerIndex
-                          ].parameters[3].value = startnode.id;
-                        } catch {
-                          workflow.triggers[
-                            selectedTriggerIndex
-                          ].parameters[3] = {
-                            name: "startnode",
-                            value: startnode.id,
-                          };
-                        }
-
-                        setWorkflow(workflow);
-                      }
-                      console.log("STARTNODE: ", startnode);
-                    } else {
-                      console.log("WORKFLOW: ", workflow);
-                    }
-
-                    setWorkflow(workflow);
-                  }}
-                  style={{
-                    backgroundColor: inputColor,
-                    color: "white",
-                    height: 50,
-                  }}
-                >
-                  {workflows.map((data, index) => {
-                    if (data.id === workflow.id) {
-                      data = workflow;
-                    }
-
-                    return (
-                      <MenuItem
-                        key={index}
-                        style={{
-                          backgroundColor: inputColor,
-                          color: data.id === workflow.id ? "red" : "white",
-                        }}
-                        value={data}
-                      >
-                        {data.name}
-                      </MenuItem>
-                    );
-                  })}
-                </Select>
+									//key={index}
+									return (
+										<MenuItem
+											style={{
+												backgroundColor: theme.palette.inputColor,
+												color: data.id === workflow.id ? "red" : "white",
+											}}
+											value={data}
+										>
+											{data.name}
+										</MenuItem>
+									)
+          		  }}
+          		  renderInput={(params) => {
+          		    return (
+											<TextField
+												style={{
+													backgroundColor: theme.palette.inputColor,
+													borderRadius: theme.palette.borderRadius,
+												}}
+												{...params}
+												label="Find your workflow"
+												variant="outlined"
+          		      	/>
+          		    );
+          		  }}
+          		/>
               )}
               {workflow.triggers[selectedTriggerIndex].parameters[0].value
                 .length === 0 ? null : workflow.triggers[selectedTriggerIndex]
@@ -7773,113 +7910,63 @@ const AngularWorkflow = (props) => {
                       display: "flex",
                     }}
                   >
-                    <div
-                      style={{
-                        width: "17px",
-                        height: "17px",
-                        borderRadius: 17 / 2,
-                        backgroundColor: "#f85a3e",
-                        marginRight: "10px",
-                      }}
-                    />
                     <div style={{ flex: "10" }}>
                       <b>Select the Startnode</b>
                     </div>
                   </div>
-                  <Select
-                    defaultValue={""}
+									<Autocomplete
+          				  id="subflow_node_search"
+          				  autoHighlight
                     value={subworkflowStartnode}
-                    SelectDisplayProps={{
-                      style: {
-                        marginLeft: 10,
-                      },
-                    }}
-                    fullWidth
-                    onChange={(e) => {
-                      setSubworkflowStartnode(e.target.value);
+          				  classes={{ inputRoot: classes.inputRoot }}
+          				  ListboxProps={{
+          				    style: {
+          				      backgroundColor: theme.palette.inputColor,
+          				      color: "white",
+          				    },
+          				  }}
+										getOptionSelected={(option, value) => option.id === value.id}
+          				  getOptionLabel={(option) => {
+          				    if (
+          				      option === undefined ||
+          				      option === null ||
+          				      option.label === undefined ||
+          				      option.label === null 
+          				    ) {
+          				      return "TMP";
+          				    }
 
-                      const branchId = uuidv4();
-                      const newbranch = {
-                        source_id: workflow.triggers[selectedTriggerIndex].id,
-                        destination_id: e.target.value.id,
-                        source: workflow.triggers[selectedTriggerIndex].id,
-                        target: e.target.value.id,
-                        has_errors: false,
-                        id: branchId,
-                        _id: branchId,
-                        label: "Subflow",
-                        decorator: true,
-                      };
-
-                      if (workflow.visual_branches !== undefined) {
-                        if (workflow.visual_branches === null) {
-                          workflow.visual_branches = [newbranch];
-                        } else if (workflow.visual_branches.length === 0) {
-                          workflow.visual_branches.push(newbranch);
-                        } else {
-                          const foundIndex = workflow.visual_branches.findIndex(
-                            (branch) => branch.source_id === newbranch.source_id
-                          );
-                          if (foundIndex !== -1) {
-                            const currentEdge = cy.getElementById(
-                              workflow.visual_branches[foundIndex].id
-                            );
-                            if (
-                              currentEdge !== undefined &&
-                              currentEdge !== null
-                            ) {
-                              currentEdge.remove();
-                            }
-                          }
-
-                          workflow.visual_branches.splice(foundIndex, 1);
-                          workflow.visual_branches.push(newbranch);
-                        }
-                      }
-
-                      if (workflow.id === subworkflow.id) {
-                        const cybranch = {
-                          group: "edges",
-                          source: newbranch.source_id,
-                          target: newbranch.destination_id,
-                          id: branchId,
-                          data: newbranch,
-                        };
-
-                        cy.add(cybranch);
-                      }
-
-                      console.log("Value to be set: ", e.target.value);
-                      try {
-                        workflow.triggers[
-                          selectedTriggerIndex
-                        ].parameters[3].value = e.target.value.id;
-                      } catch {
-                        workflow.triggers[selectedTriggerIndex].parameters[3] =
-                          {
-                            name: "startnode",
-                            value: e.target.value.id,
-                          };
-                      }
-
-                      setWorkflow(workflow);
-                    }}
-                    style={{
-                      backgroundColor: inputColor,
-                      color: "white",
-                      height: 50,
-                    }}
-                  >
-                    {subworkflow.actions.map((action, index) => {
-                      const isParent = getParents(selectedTrigger).find(
+          				    const newname = (
+          				      option.label.charAt(0).toUpperCase() + option.label.substring(1)
+          				    ).replaceAll("_", " ");
+          				    return newname;
+          				  }}
+                    options={subworkflow.actions}
+          				  fullWidth
+          				  style={{
+          				    backgroundColor: theme.palette.inputColor,
+          				    height: 50,
+          				    borderRadius: theme.palette.borderRadius,
+          				  }}
+          				  onChange={(event, newValue) => {
+											handleSubflowStartnodeSelection({ target: { value: newValue} }) 
+          				  }}
+          				  renderOption={(action) => {
+											const isParent = getParents(selectedTrigger).find(
                         (parent) => parent.id === action.id
-                      );
+                      )
+
                       return (
                         <MenuItem
+                  		    onMouseOver={() => {
+														console.log("Mouse in: ", action.id)
+													}}
+                  		    onMouseOut={() => {
+														console.log("Mouse out: ", action.id)
+													}}
                           disabled={isCloud && isParent}
-                          key={index}
                           style={{
-                            backgroundColor: inputColor,
+                            backgroundColor: theme.palette.inputColor,
                             color: isParent ? "red" : "white",
                           }}
                           value={action}
@@ -7887,8 +7974,21 @@ const AngularWorkflow = (props) => {
                           {action.label}
                         </MenuItem>
                       );
-                    })}
-                  </Select>
+          				  }}
+          				  renderInput={(params) => {
+          				    return (
+													<TextField
+														style={{
+															backgroundColor: theme.palette.inputColor,
+															borderRadius: theme.palette.borderRadius,
+														}}
+														{...params}
+														label="Find your start-node"
+														variant="outlined"
+          				      	/>
+          				    );
+          				  }}
+          				/>
                 </span>
               )}
               <div
@@ -7898,22 +7998,13 @@ const AngularWorkflow = (props) => {
                   display: "flex",
                 }}
               >
-                <div
-                  style={{
-                    width: "17px",
-                    height: "17px",
-                    borderRadius: 17 / 2,
-                    backgroundColor: "#f85a3e",
-                    marginRight: "10px",
-                  }}
-                />
                 <div style={{ flex: "10" }}>
                   <b>Execution Argument</b>
                 </div>
               </div>
               <TextField
                 style={{
-                  backgroundColor: inputColor,
+                  backgroundColor: theme.palette.inputColor,
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
@@ -7962,6 +8053,7 @@ const AngularWorkflow = (props) => {
                   data={workflow.triggers[selectedTriggerIndex]}
                 />
               ) : null}
+							{/*
               <div
                 style={{
                   marginTop: "20px",
@@ -7969,22 +8061,13 @@ const AngularWorkflow = (props) => {
                   display: "flex",
                 }}
               >
-                <div
-                  style={{
-                    width: "17px",
-                    height: "17px",
-                    borderRadius: 17 / 2,
-                    backgroundColor: "#f85a3e",
-                    marginRight: "10px",
-                  }}
-                />
                 <div style={{ flex: "10" }}>
                   <b>API-key </b>
                 </div>
               </div>
               <TextField
                 style={{
-                  backgroundColor: inputColor,
+                  backgroundColor: theme.palette.inputColor,
                   borderRadius: theme.palette.borderRadius,
                 }}
                 InputProps={{
@@ -8008,6 +8091,7 @@ const AngularWorkflow = (props) => {
                   setWorkflow(workflow);
                 }}
               />
+							*/}
             </div>
           </div>
         </div>
