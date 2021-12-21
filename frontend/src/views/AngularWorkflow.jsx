@@ -404,16 +404,13 @@ const AngularWorkflow = (props) => {
                   }
                 }
 
-                console.log("PARAM: ", param);
                 if (
                   param.name === "startnode" &&
                   param.value !== undefined &&
                   param.value !== null
                 ) {
-									console.log("BASE: ", baseSubflow)
       						if (Object.getOwnPropertyNames(baseSubflow).length > 0) {
 										const foundAction = baseSubflow.actions.find(action => action.id === param.value)
-										console.log("FOUND: ", foundAction)
 										if (foundAction !== null && foundAction !== undefined) {
                   		setSubworkflowStartnode(foundAction);
 										}
@@ -1805,7 +1802,6 @@ const AngularWorkflow = (props) => {
           console.log(idsplit);
           if (idsplit.length === 3 && !isNaN(idsplit[2])) {
             console.log("ADDING TO PARAM ", idsplit[2]);
-            console.log("PARAM: ", selectedAction);
 
             selectedAction.parameters[idsplit[2]].value += newValue;
             paramname = selectedAction.parameters[idsplit[2]].name;
@@ -7205,7 +7201,7 @@ const AngularWorkflow = (props) => {
         }
       }
 
-      var parents = getParents(selectedAction);
+      var parents = getParents(selectedTrigger);
       if (parents.length > 1) {
         for (var key in parents) {
           const item = parents[key];
@@ -7298,73 +7294,36 @@ const AngularWorkflow = (props) => {
       };
 
       const handleItemClick = (values) => {
+				console.log("VALUES: ", values)
         if (values === undefined || values === null || values.length === 0) {
           return;
         }
 
-        var toComplete = workflow.triggers[
-          selectedTriggerIndex
-        ].parameters[1].value
+
+				/*
+				workflow.triggers[selectedTriggerIndex].parameters[1].value
           .trim()
           .endsWith("$")
           ? values[0].autocomplete
           : "$" + values[0].autocomplete;
+
         for (var key in values) {
           if (key === 0 || values[key].autocomplete.length === 0) {
             continue;
           }
 
-          toComplete += values[key].autocomplete;
+          toComplete += values[key].autocomplete
         }
+				*/
 
-        // Handles the fields under OpenAPI body to be parsed.
-        if (data.name.startsWith("${") && data.name.endsWith("}")) {
-          console.log("INSIDE VALUE REPLACE: ", data.name, toComplete);
-          // PARAM FIX - Gonna use the ID field, even though it's a hack
-          const paramcheck = selectedAction.parameters.find(
-            (param) => param.name === "body"
-          );
-          if (paramcheck !== undefined) {
-            if (
-              paramcheck["value_replace"] === undefined ||
-              paramcheck["value_replace"] === null
-            ) {
-              paramcheck["value_replace"] = [
-                {
-                  key: data.name,
-                  value: toComplete,
-                },
-              ];
-            } else {
-              const subparamindex = paramcheck["value_replace"].findIndex(
-                (param) => param.key === data.name
-              );
-              if (subparamindex === -1) {
-                paramcheck["value_replace"].push({
-                  key: data.name,
-                  value: toComplete,
-                });
-              } else {
-                paramcheck["value_replace"][subparamindex]["value"] +=
-                  toComplete;
-              }
-            }
+				console.log("SELECTED TRIGGER: ", selectedTrigger)
+				if (selectedTrigger.name === "Shuffle Workflow") {
+        	const toComplete = selectedTrigger.parameters[1].value + "$" + values[0].autocomplete
+					selectedTrigger.parameters[1].value = toComplete
+					setSelectedTrigger(selectedTrigger)
+				}
 
-            workflow.triggers[selectedTriggerIndex].parameters[1][
-              "value_replace"
-            ] = paramcheck;
-            setSelectedAction(selectedAction);
-            setUpdate(Math.random());
-
-            setShowDropdown(false);
-            setMenuPosition(null);
-            return;
-          }
-        }
-
-        setSelectedAction(selectedAction);
         setUpdate(Math.random());
-
         setShowDropdown(false);
         setMenuPosition(null);
       };
@@ -7431,7 +7390,7 @@ const AngularWorkflow = (props) => {
                   }
                 }
               }
-            };
+            }
 
             const handleActionHover = (inside, actionId) => {
               if (cy !== undefined) {
@@ -7494,7 +7453,8 @@ const AngularWorkflow = (props) => {
                       <FormatListNumberedIcon style={iconStyle} />
                     ) : (
                       <ExpandMoreIcon style={iconStyle} />
-                    );
+                    )
+
                   return (
                     <MenuItem
                       key={pathdata.name}
@@ -7832,6 +7792,7 @@ const AngularWorkflow = (props) => {
           		      color: "white",
           		    },
           		  }}
+								getOptionSelected={(option, value) => option.id === value.id}
           		  getOptionLabel={(option) => {
           		    if (
           		      option === undefined ||
@@ -7839,7 +7800,7 @@ const AngularWorkflow = (props) => {
           		      option.name === undefined ||
           		      option.name === null 
           		    ) {
-          		      return null;
+          		      return "Loading";
           		    }
 
           		    const newname = (
@@ -7977,13 +7938,11 @@ const AngularWorkflow = (props) => {
                         <MenuItem
                   		    onMouseOver={() => {
 														if (subworkflow.id === workflow.id) {
-															console.log("Mouse in: ", action.id)
 															handleActionHover(true, action.id) 
 														}
 													}}
                   		    onMouseOut={() => {
 														if (subworkflow.id === workflow.id) {
-															console.log("Mouse out: ", action.id)
 															handleActionHover(false, action.id) 
 														}
 													}}
