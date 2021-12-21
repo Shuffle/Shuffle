@@ -383,18 +383,22 @@ const AngularWorkflow = (props) => {
 
           // Sets up subflow trigger with the right info
           if (trigger_index > -1) {
+						var baseSubflow = {}
             const trigger = workflow.triggers[trigger_index];
             if (trigger.parameters.length >= 3) {
               for (var key in trigger.parameters) {
                 const param = trigger.parameters[key];
+
                 if (param.name === "workflow") {
                   if (param.value === workflow.id) {
                     setSubworkflow(workflow);
+										baseSubflow = workflow
                   } else {
                     const sub = responseJson.find(
                       (data) => data.id === param.value
                     );
                     if (sub !== undefined && subworkflow.id !== sub.id) {
+											baseSubflow = sub
                       setSubworkflow(sub);
                     }
                   }
@@ -406,7 +410,16 @@ const AngularWorkflow = (props) => {
                   param.value !== undefined &&
                   param.value !== null
                 ) {
-                  setSubworkflowStartnode(param.value);
+									console.log("BASE: ", baseSubflow)
+      						if (Object.getOwnPropertyNames(baseSubflow).length > 0) {
+										const foundAction = baseSubflow.actions.find(action => action.id === param.value)
+										console.log("FOUND: ", foundAction)
+										if (foundAction !== null && foundAction !== undefined) {
+                  		setSubworkflowStartnode(foundAction);
+										}
+									} else {
+                  	setSubworkflowStartnode(param.value);
+									}
                 }
               }
             }
@@ -7933,6 +7946,10 @@ const AngularWorkflow = (props) => {
           				      option.label === undefined ||
           				      option.label === null 
           				    ) {
+												if (option.length === 36) {
+
+												}
+
           				      return "TMP";
           				    }
 
@@ -7959,10 +7976,16 @@ const AngularWorkflow = (props) => {
                       return (
                         <MenuItem
                   		    onMouseOver={() => {
-														console.log("Mouse in: ", action.id)
+														if (subworkflow.id === workflow.id) {
+															console.log("Mouse in: ", action.id)
+															handleActionHover(true, action.id) 
+														}
 													}}
                   		    onMouseOut={() => {
-														console.log("Mouse out: ", action.id)
+														if (subworkflow.id === workflow.id) {
+															console.log("Mouse out: ", action.id)
+															handleActionHover(false, action.id) 
+														}
 													}}
                           disabled={isCloud && isParent}
                           style={{
@@ -9685,6 +9708,19 @@ const AngularWorkflow = (props) => {
       </div>
     );
   };
+
+	const handleActionHover = (inside, actionId) => {
+		if (cy !== undefined) {
+			var node = cy.getElementById(actionId);
+			if (node.length > 0) {
+				if (inside) {
+					node.addClass("shuffle-hover-highlight");
+				} else {
+					node.removeClass("shuffle-hover-highlight");
+				}
+			}
+		}
+	}
 
   const handleHistoryUndo = () => {
     //console.log("history: ", history, "index: ", historyIndex);
