@@ -3501,6 +3501,9 @@ const AppCreator = (props) => {
 								}
 							}
 
+							// Found that dashes in the URL doesn't work
+							parsedurl = parsedurl.replace("-", "_")
+
               if (event.target.value !== parsedurl) {
                 setUrlPath(parsedurl);
                 setActionField("url", parsedurl);

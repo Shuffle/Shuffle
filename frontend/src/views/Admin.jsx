@@ -1094,6 +1094,41 @@ const Admin = (props) => {
       });
   };
 
+  const deleteFile = (file) => {
+    fetch(globalUrl + "/api/v1/files/" + file.id, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for file delete :O!");
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+				if (responseJson.success) {
+					alert.info("Successfully deleted file "+file.name)
+					
+				} else if (responseJson.reason !== undefined && responseJson.reason !== null) {
+					alert.error("Failed to delete file: " + responseJson.reason)
+
+				}
+				setTimeout(() => {
+					getFiles();
+				}, 1500);
+
+        console.log(responseJson)
+      })
+      .catch((error) => {
+        alert.error(error.toString());
+      });
+  };
+
   const downloadFile = (file) => {
     fetch(globalUrl + "/api/v1/files/" + file.id + "/content", {
       method: "GET",
@@ -3118,7 +3153,6 @@ const Admin = (props) => {
                 style={{ minWidth: 125, maxWidth: 125 }}
               />
               <ListItemText primary="Actions" />
-              <ListItemText primary="File ID" />
             </ListItem>
             {files === undefined || files === null || files.length === 0
               ? null
@@ -3235,11 +3269,13 @@ const Admin = (props) => {
                         }}
                       />
                       <ListItemText
-                        primary=<Tooltip
-                          title={"Download file"}
-                          style={{}}
-                          aria-label={"Download"}
-                        >
+                        primary=
+												<span style={{display: "flex"}}>
+													<Tooltip
+														title={"Download file"}
+														style={{}}
+														aria-label={"Download"}
+													>
                           <span>
                             <IconButton
                               disabled={file.status !== "active"}
@@ -3256,55 +3292,68 @@ const Admin = (props) => {
                             </IconButton>
                           </span>
                         </Tooltip>
+												<Tooltip
+                          title={"Delete file"}
+                          style={{}}
+                          aria-label={"Delete"}
+                        >
+                          <span>
+                            <IconButton
+                              disabled={file.status !== "active"}
+                              onClick={() => {
+                                deleteFile(file);
+                              }}
+                            >
+                              <DeleteIcon
+                                style={{
+                                  color:
+                                    file.status === "active" ? "white" : "grey",
+                                }}
+                              />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+												<Tooltip
+                          title={"Copy file ID"}
+                          style={{}}
+                          aria-label={"copy"}
+                        >
+													<IconButton
+														onClick={() => {
+															const elementName = "copy_element_shuffle";
+															var copyText = document.getElementById(elementName);
+															if (copyText !== null && copyText !== undefined) {
+																const clipboard = navigator.clipboard;
+																if (clipboard === undefined) {
+																	alert.error(
+																		"Can only copy over HTTPS (port 3443)"
+																	);
+																	return;
+																}
+
+																navigator.clipboard.writeText(file.id);
+																copyText.select();
+																copyText.setSelectionRange(
+																	0,
+																	99999
+																); /* For mobile devices */
+
+																/* Copy the text inside the text field */
+																document.execCommand("copy");
+
+																alert.info(file.id + " copied to clipboard");
+															}
+														}}
+													>
+														<FileCopyIcon style={{ color: "white" }} />
+													</IconButton>
+												</Tooltip>
+												</span>
                         style={{
-                          minWidth: 75,
-                          maxWidth: 75,
+                          minWidth: 150,
+                          maxWidth: 150,
                           overflow: "hidden",
                         }}
-                      />
-                      {/*
-							<ListItemText>
-								<Button 
-									style={{}} 
-									variant="contained"
-									color="primary"
-									disabled
-									onClick={() => deleteSchedule(file)}
-								>
-									Stop schedule	
-								</Button>
-							</ListItemText>
-							*/}
-                      <ListItemText
-                        primary=<IconButton
-                          onClick={() => {
-                            const elementName = "copy_element_shuffle";
-                            var copyText = document.getElementById(elementName);
-                            if (copyText !== null && copyText !== undefined) {
-                              const clipboard = navigator.clipboard;
-                              if (clipboard === undefined) {
-                                alert.error(
-                                  "Can only copy over HTTPS (port 3443)"
-                                );
-                                return;
-                              }
-
-                              navigator.clipboard.writeText(file.id);
-                              copyText.select();
-                              copyText.setSelectionRange(
-                                0,
-                                99999
-                              ); /* For mobile devices */
-
-                              /* Copy the text inside the text field */
-                              document.execCommand("copy");
-
-                              alert.info(file.id + " copied to clipboard");
-                            }
-                          }}
-                        >
-                          <FileCopyIcon style={{ color: "white" }} />
-                        </IconButton>
                       />
                     </ListItem>
                   );
@@ -4095,7 +4144,7 @@ const Admin = (props) => {
         <Tabs
           value={curTab}
           indicatorColor="primary"
-					textColor="primary"
+					textColor="secondary"
           onChange={setConfig}
           aria-label="disabled tabs example"
         >
