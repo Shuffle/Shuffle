@@ -86,7 +86,7 @@ const MenuProps = {
 
 
 const Admin = (props) => {
-  const { globalUrl, userdata } = props;
+  const { globalUrl, userdata, serverside} = props;
 
   var upload = "";
   var to_be_copied = "";
@@ -1357,12 +1357,12 @@ const Admin = (props) => {
     3: "files",
     4: "schedules",
     5: "environments",
-    6: "categories",
+    6: "suborgs",
   };
-  const setConfig = (event, newValue) => {
-    //console.log("Value: ", newValue)
+  const setConfig = (event, inputValue) => {
+		const newValue = parseInt(inputValue)
 
-    setCurTab(parseInt(newValue));
+    setCurTab(newValue)
     if (newValue === 1) {
       document.title = "Shuffle - admin - users";
       getUsers();
@@ -1385,18 +1385,13 @@ const Admin = (props) => {
       document.title = "Shuffle - admin";
     }
 
+  	console.log("NEWVALUE: ", newValue)
+
     if (newValue === 6) {
       console.log("Should get apps for categories.");
     }
 
-    //var theURL = window.location.pathname
-    //FIXME: Add url edits
-    //var theURL = window.location
-    //theURL.replace(`/${views[curTab]}`, `/${views[newValue]}`)
-    //window.history.pushState({"html":response.html,"pageTitle":response.pageTitle},"", urlPath);
-
-    //console.log(newpath)
-    //window.location.pathame = newpath
+		props.history.push(`/admin?tab=${views[newValue]}`)
 
     setModalUser({});
   };
@@ -1408,13 +1403,24 @@ const Admin = (props) => {
       getUsers();
     } else {
       getSettings();
-    }
+    }	
 
-    if (props.match.params.key !== undefined) {
-      //const tmpitem = views[props.match.params.key]
-      setConfig("", props.match.params.key);
-    }
-  }
+		if (serverside !== true && window.location.search !== undefined && window.location.search !== null) {
+			const urlSearchParams = new URLSearchParams(window.location.search)
+			const params = Object.fromEntries(urlSearchParams.entries())
+			const foundTab = params["tab"]
+			if (foundTab !== null && foundTab !== undefined) {
+				for (var key in Object.keys(views)) {
+					const value = views[key]
+					console.log(key, value)
+					if (value === foundTab) {
+						setConfig("", key)
+						break
+					}
+				}
+			}
+		}
+	}
 
   if (
     selectedOrganization.id === undefined &&
