@@ -19,13 +19,46 @@ import 'codemirror/keymap/sublime';
 import 'codemirror/theme/gruvbox-dark.css';
 
 const CodeEditor = (props) => {
-	const {fieldCount, setFieldCount} = props
-	const {changeActionParameterCodeMirror} = props 
-  const {expansionModalOpen, setExpansionModalOpen} = props
-  const {codedata, setcodedata} = props
+	const { fieldCount, setFieldCount, actionlist, changeActionParameterCodeMirror, expansionModalOpen, setExpansionModalOpen, codedata, setcodedata } = props
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
-    // const {codelang, setcodelang} = props
+  // const {codelang, setcodelang} = props
   const theme = useTheme();
+
+	const [expOutput, setexpOutput] = React.useState(" ");
+	function expectedOutput(input) {
+		
+		const found = input.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
+		console.log(found)
+
+		for (var i = 0; i < found.length; i++) {
+			// console.log(found[i]);
+
+			for (var j = 0; j < actionlist.length; j++) {
+				if(found[i].slice(1,).toLowerCase() == actionlist[j].autocomplete.toLowerCase()){
+					input = input.replace(found[i], JSON.stringify(actionlist[j].example));
+					// console.log(input)
+					// console.log(actionlist[j].example)
+				}	
+				// console.log(actionlist[j].autocomplete);
+			}
+		}
+
+		try {
+			// var x = document.getElementById("expOutput");
+			// x.innerHTML = JSON.stringify(JSON.parse(input), null, 4)
+			setexpOutput(JSON.stringify(JSON.parse(input), null, 4))
+		} catch (e) {
+			setexpOutput(input)
+		}
+
+		// const obj = JSON.parse(input);
+		// setexpOutput(JSON.stringify(JSON.parse(input), null, 4))
+		// x.innerHTML = "<span style='font-size: 30px'>" + JSON.stringify(input, null, 4) + "</span>"
+		// x.appendChild(document.createTextNode(JSON.stringify(JSON.parse(input), null, 4)));
+		// setexpOutput(JSON.stringify(input, undefined, 4).replace('\ ', '\n'))
+		// setexpOutput("Hi there \n Hey there")
+		// Variables + Syntax highlighting + Validation
+	}
 
 	return (
 		<Dialog 
@@ -54,35 +87,6 @@ const CodeEditor = (props) => {
 				>
 						Code Editor
 				</DialogTitle>
-				{/* / Removed due to possible confusion between cancel, done and close buttons.
-				<div
-					style={{
-						width: 60,
-						marginLeft: 280,
-						position: "absolute",
-						top: 15,
-						right: 15, 
-					}}
-				>
-					<Tooltip title="Close editor" placement="top">
-						<IconButton
-							style={{
-								color: "white",
-								background: "#27292d",
-								fontSize: 15,
-								width: 50,
-								height: 50,
-								cursor: "pointer"
-							}}
-							onClick={() => {
-								setExpansionModalOpen(false)
-							}}
-						>
-							<FullscreenExitIcon />
-						</IconButton>
-					</Tooltip>
-				</div>
-				*/}
 			</div>
 			<span style={{
 				border: `2px solid ${theme.palette.inputColor}`,
@@ -95,6 +99,8 @@ const CodeEditor = (props) => {
 					}}
 					onChange={(value) => {
 						setlocalcodedata(value.getValue())
+						expectedOutput(value.getValue())
+						// console.log(actionlist.slice(-1))
 					}}
 					options={{
 						theme: 'gruvbox-dark',
@@ -104,6 +110,38 @@ const CodeEditor = (props) => {
 					}}
 				/>
 			</span>
+
+			<div>
+				<DialogTitle
+					style={{
+						paddingTop: 30,
+					}}
+				>
+					<span
+						style={{
+							color: "white"
+						}}
+					>
+						Output
+					</span>
+				</DialogTitle>
+				<p
+					id='expOutput'
+					style={{
+						whiteSpace: "pre-wrap",
+						color: "#f85a3e",
+						fontFamily: "monospace",
+						backgroundColor: "#282828",
+						padding: 20,
+						marginTop: -2,
+						border: `2px solid ${theme.palette.inputColor}`,
+						borderRadius: theme.palette.borderRadius,
+					}}
+				>
+					{expOutput}
+				</p>
+			</div>
+
 			<div
 				style={{
 					display: 'flex',
@@ -125,7 +163,7 @@ const CodeEditor = (props) => {
 							setExpansionModalOpen(false)
 						}}
 					>
-						CANCEL
+						Cancel
 					</button>
 				</div>
 				<div>
@@ -148,7 +186,7 @@ const CodeEditor = (props) => {
 							setcodedata(localcodedata)
 						}}
 					>
-						DONE
+						Done
 					</button>
 				</div>
 			</div>

@@ -1245,6 +1245,7 @@ const ParsedAction = (props) => {
 						const shufflecode = <ShuffleCodeEditor
 							fieldCount = {fieldCount}
 							setFieldCount = {setFieldCount}
+              actionlist = {actionlist}
 							changeActionParameterCodeMirror = {changeActionParameterCodeMirror}
 							codedata={codedata}
 							setcodedata={setcodedata}
@@ -1765,6 +1766,7 @@ const ParsedAction = (props) => {
                         //}}
                         onClick={() => {
                           console.log("CLICKED: ", innerdata);
+                          console.log(innerdata.example)
                           handleItemClick([innerdata]);
                         }}
                       >
