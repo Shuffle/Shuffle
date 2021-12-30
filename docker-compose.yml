@@ -66,7 +66,7 @@ services:
       - CLEANUP=${SHUFFLE_CONTAINER_AUTO_CLEANUP}
     restart: unless-stopped
   opensearch:
-    image: opensearchproject/opensearch:1.2.1
+    image: opensearchproject/opensearch:1.2.3
     hostname: shuffle-opensearch
     container_name: shuffle-opensearch
     environment:
