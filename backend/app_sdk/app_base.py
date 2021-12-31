@@ -73,13 +73,17 @@ class AppBase:
             self.logger.info("[DEBUG] Already JSON-like. Returning from magic")
             return input_data
 
+        if len(input_data) < 3:
+            self.logger.info("[DEBUG] Too short input data")
+            return input_data
+
         # Don't touch large data.
         if len(input_data) > 100000:
             self.logger.info("[DEBUG] Value too large. Returning from magic")
             return input_data
 
         if not "\n" in input_data and not "," in input_data: 
-            self.logger.info("[DEBUG] No data to autoparse")
+            self.logger.info("[DEBUG] No data to autoparse - requires newline or comma")
             return input_data
 
         new_input = input_data

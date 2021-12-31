@@ -85,7 +85,6 @@ var autoDeploy = map[string]string{
 	"testing:1.0.0":         "frikky/shuffle:testing_1.0.0",
 }
 
-//if !shuffle.ArrayContains(executedIds,
 //fmt.Sprintf("%s_%s", workflowExecution.ExecutionId, action.ID)
 
 // New Worker mappings
@@ -853,6 +852,20 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			_ = index
 
 			continue
+		}
+
+		newExecId := fmt.Sprintf("%s_%s", workflowExecution.ExecutionId, nextAction)
+		if !shuffle.ArrayContains(executedIds, newExecId) {
+			executedIds = append(executedIds, newExecId)
+			toRemove = append(toRemove, index)
+		} else {
+			log.Printf("\n\n[DEBUG] %s is already executed. Continuing.", newExecId)
+			continue
+		}
+
+		// max 1000 :o
+		if len(executedIds) >= 1000 {
+			executedIds = executedIds[900:999]
 		}
 
 		if action.AppName == "Shuffle Tools" && (action.Name == "skip_me" || action.Name == "router" || action.Name == "route") {
@@ -2888,7 +2901,8 @@ func main() {
 		}
 	*/
 
-	_, err := shuffle.RunInit(datastore.Client{}, storage.Client{}, "", "", true, "")
+	// Elasticsearch necessary to ensure we'ren ot running with Datastore configurations for minimal/maximal data sizes
+	_, err := shuffle.RunInit(datastore.Client{}, storage.Client{}, "", "", true, "elasticsearch")
 	if err != nil {
 		log.Printf("[ERROR] Failed to run worker init: %s", err)
 	} else {

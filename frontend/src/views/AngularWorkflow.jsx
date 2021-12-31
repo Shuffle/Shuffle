@@ -2059,7 +2059,7 @@ const AngularWorkflow = (props) => {
         const parentNode = cy.getElementById(data.attachedTo);
         if (parentNode !== null && parentNode !== undefined) {
           var newNodeData = JSON.parse(JSON.stringify(parentNode.data()));
-          newNodeData.id = uuidv4.v4();
+          newNodeData.id = uuidv4();
           if (newNodeData.position !== undefined) {
             newNodeData.position = {
               x: newNodeData.position.x + 100,

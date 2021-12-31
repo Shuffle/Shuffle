@@ -2846,82 +2846,6 @@ func getOpenapi(resp http.ResponseWriter, request *http.Request) {
 	resp.Write(data)
 }
 
-func echoOpenapiData(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	// Just here to verify that the user is logged in
-	user, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("Api authentication failed in validate swagger: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Failed authentication"}`))
-		return
-	}
-
-	if user.Role == "org-reader" {
-		log.Printf("[WARNING] Org-reader doesn't have access to echo OpenAPI data: %s (%s)", user.Username, user.Id)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Read only user"}`))
-		return
-	}
-
-	body, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		log.Printf("Bodyreader err: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Failed reading body"}`))
-		return
-	}
-
-	newbody := string(body)
-	newbody = strings.TrimSpace(newbody)
-	if strings.HasPrefix(newbody, "\"") {
-		newbody = newbody[1:len(newbody)]
-	}
-
-	if strings.HasSuffix(newbody, "\"") {
-		newbody = newbody[0 : len(newbody)-1]
-	}
-
-	req, err := http.NewRequest("GET", newbody, nil)
-	if err != nil {
-		log.Printf("[ERROR] Requestbuilder err: %s", err)
-		resp.WriteHeader(500)
-		resp.Write([]byte(`{"success": false, "reason": "Failed building request"}`))
-		return
-	}
-
-	httpClient := &http.Client{}
-	newresp, err := httpClient.Do(req)
-	if err != nil {
-		log.Printf("[ERROR] Grabbing error: %s", err)
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed making remote request to get the data"}`)))
-		return
-	}
-	defer newresp.Body.Close()
-
-	urlbody, err := ioutil.ReadAll(newresp.Body)
-	if err != nil {
-		log.Printf("[ERROR] URLbody error: %s", err)
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't get data from selected uri"}`)))
-		return
-	}
-
-	if newresp.StatusCode >= 400 {
-		resp.WriteHeader(201)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, urlbody)))
-		return
-	}
-
-	resp.WriteHeader(200)
-	resp.Write(urlbody)
-}
-
 func handleSwaggerValidation(body []byte) (shuffle.ParsedOpenApi, error) {
 	type versionCheck struct {
 		Swagger        string `datastore:"swagger" json:"swagger" yaml:"swagger"`
@@ -5888,7 +5812,7 @@ func initHandlers() {
 	// OpenAPI configuration
 	r.HandleFunc("/api/v1/verify_swagger", verifySwagger).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/verify_openapi", verifySwagger).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/get_openapi_uri", echoOpenapiData).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/get_openapi_uri", shuffle.EchoOpenapiData).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/validate_openapi", shuffle.ValidateSwagger).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/get_openapi/{key}", getOpenapi).Methods("GET", "OPTIONS")
 
