@@ -23,6 +23,7 @@ import {
   CircularProgress,
   Chip,
 } from "@material-ui/core";
+
 import {
   LockOpen as LockOpenIcon,
   FileCopy as FileCopyIcon,
@@ -2202,7 +2203,8 @@ const AppCreator = (props) => {
   //console.log("Option: ", authenticationOption)
   //console.log("Location: ", parameterLocation)
   //console.log("Name: ", parameterName)
-  const extraKeys = (
+  //const extraKeys = authenticationOption === "Oauth2" ? null : 
+  const extraKeys = 
     <div style={{ marginTop: 50, marginRight: 25, }}>
       <div style={{ display: "flex" }}>
         <Typography variant="body1">Extra authentication</Typography>
@@ -2367,7 +2369,7 @@ const AppCreator = (props) => {
         );
       })}
     </div>
-  );
+  //);
 
   const jwtAuth =
     authenticationOption === "JWT" ? (
@@ -2417,7 +2419,15 @@ const AppCreator = (props) => {
           color="textSecondary"
           style={{ marginTop: 10 }}
         >
-          Base Authorization URL
+					Find the Authorization URL, Token URL and scopes in question for the API. Ensure the app in question is pointed at https://shuffler.io/set_authentication
+        </Typography>
+
+        <Typography
+          variant="body2"
+          color="textSecondary"
+          style={{ marginTop: 10 }}
+        >
+          Base Authorization URL for Oauth2
         </Typography>
         <TextField
           required
@@ -2430,6 +2440,26 @@ const AppCreator = (props) => {
           variant="outlined"
           value={parameterName}
           onChange={(e) => setParameterName(e.target.value)}
+					onBlur={(event) => {
+            var tmpstring = event.target.value.trim();
+
+            if (
+              tmpstring.length > 4 &&
+              !tmpstring.startsWith("http") &&
+              !tmpstring.startsWith("ftp")
+            ) {
+              alert.error("Auth URL must start with http(s)://");
+            }
+
+						if (tmpstring.includes("?")) {
+							var newtmp = tmpstring.split("?")
+							if (tmpstring.length > 1) {
+								tmpstring = newtmp[0]
+							}
+						}
+
+						setParameterName(tmpstring)
+					}}
           InputProps={{
             classes: {
               notchedOutline: classes.notchedOutline,
@@ -2444,7 +2474,7 @@ const AppCreator = (props) => {
           color="textSecondary"
           style={{ marginTop: 10 }}
         >
-          Token URL
+          Token URL for Oauth2
         </Typography>
         <TextField
           required
@@ -2456,7 +2486,29 @@ const AppCreator = (props) => {
           margin="normal"
           variant="outlined"
           value={parameterLocation}
-          onChange={(e) => setParameterLocation(e.target.value)}
+          onChange={(e) => {
+						setParameterLocation(e.target.value)
+					}}
+					onBlur={(event) => {
+            var tmpstring = event.target.value.trim();
+
+            if (
+              tmpstring.length > 4 &&
+              !tmpstring.startsWith("http") &&
+              !tmpstring.startsWith("ftp")
+            ) {
+              alert.error("Token URL must start with http(s)://");
+            }
+
+						if (tmpstring.includes("?")) {
+							var newtmp = tmpstring.split("?")
+							if (tmpstring.length > 1) {
+								tmpstring = newtmp[0]
+							}
+						}
+
+						setParameterLocation(tmpstring)
+					}}
           InputProps={{
             classes: {
               notchedOutline: classes.notchedOutline,
@@ -2471,7 +2523,7 @@ const AppCreator = (props) => {
           color="textSecondary"
           style={{ marginTop: 10 }}
         >
-          Refresh-token URL
+          Refresh-token URL for Oauth2 (Optional)
         </Typography>
         <TextField
           style={{ margin: 0, flex: "1", backgroundColor: inputColor }}
@@ -2483,6 +2535,26 @@ const AppCreator = (props) => {
           variant="outlined"
           value={refreshUrl}
           onChange={(e) => setRefreshUrl(e.target.value)}
+					onBlur={(event) => {
+            var tmpstring = event.target.value.trim();
+
+            if (
+              tmpstring.length > 4 &&
+              !tmpstring.startsWith("http") &&
+              !tmpstring.startsWith("ftp")
+            ) {
+              alert.error("Refresh URL must start with http(s)://");
+            }
+
+						if (tmpstring.includes("?")) {
+							var newtmp = tmpstring.split("?")
+							if (tmpstring.length > 1) {
+								tmpstring = newtmp[0]
+							}
+						}
+
+						setRefreshUrl(tmpstring)
+					}}
           InputProps={{
             style: {
               color: "white",
@@ -2494,10 +2566,11 @@ const AppCreator = (props) => {
           color="textSecondary"
           style={{ marginTop: 10 }}
         >
-          Scopes
+          Scopes for Oauth2
         </Typography>
         <ChipInput
-          style={{}}
+          style={{border: "2px solid #f86a3e", borderRadius: theme.palette.borderRadius,}}
+					required
           InputProps={{
             style: {
               color: "white",
@@ -2505,7 +2578,7 @@ const AppCreator = (props) => {
             },
           }}
           style={{ maxHeight: 80, overflowX: "hidden", overflowY: "auto" }}
-          placeholder="Scopes"
+          placeholder="Available Oauth2 Scopes"
           color="primary"
           fullWidth
           value={oauth2Scopes}
@@ -3325,7 +3398,6 @@ const AppCreator = (props) => {
             onChange={(e) => {
               setActionField("url", e.target.value);
               setUrlPath(e.target.value);
-              console.log(e.target.value);
             }}
             helperText={
               <span style={{ color: "white", marginBottom: "2px" }}>
@@ -3404,6 +3476,23 @@ const AppCreator = (props) => {
                   if (request.header !== undefined && request.header !== null) {
                     var headers = [];
                     for (let [key, value] of Object.entries(request.header)) {
+											if (value === undefined) {
+												if (key.includes(":")) {
+													const keysplit = key.split(":")
+													key = keysplit[0].trim()
+													value = keysplit[1].trim()
+
+												} else if (key.includes("=")) {
+													const keysplit = key.split("=")
+													key = keysplit[0].trim()
+													value = keysplit[1].trim()
+
+												} else {
+													alert.error("Removed key: ", key)
+													continue
+												}
+											}
+
                       if (
                         parameterName !== undefined &&
                         key.toLowerCase() === parameterName.toLowerCase()
@@ -3411,17 +3500,14 @@ const AppCreator = (props) => {
                         continue;
                       }
 
-                      if (
-                        key === "Authorization" &&
-                        authenticationOption === "Bearer auth"
-                      ) {
+                      if (key === "Authorization") {
                         continue;
                       }
 
                       headers += key + "=" + value + "\n";
                     }
 
-                    setActionField("headers", headers);
+                    setActionField("headers", headers.trim());
                   }
 
                   if (request.body !== undefined && request.body !== null) {
@@ -3503,6 +3589,15 @@ const AppCreator = (props) => {
 
 							// Found that dashes in the URL doesn't work
 							parsedurl = parsedurl.replace("-", "_")
+							console.log("Actions: ", actions)
+
+							if (baseUrl.length === 0 && parsedurl.includes("http")) {
+								const newurl = new URL(encodeURI(parsedurl))
+								newurl.searchParams.delete(parameterName)
+								console.log("New url: ", newurl)
+								parsedurl = newurl.pathname
+								setBaseUrl(newurl.origin)
+							}
 
               if (event.target.value !== parsedurl) {
                 setUrlPath(parsedurl);
@@ -3635,7 +3730,7 @@ const AppCreator = (props) => {
           </Button>
           <Button
             color="primary"
-            variant="outlined"
+            variant={urlPath.length > 0 ? "contained" : "outlined"}
             style={{ borderRadius: "0px" }}
             onClick={() => {
               //console.log(urlPathQueries)
@@ -4353,7 +4448,7 @@ const AppCreator = (props) => {
           <Button
             color="primary"
             style={{ marginTop: "20px", borderRadius: "0px" }}
-            variant="outlined"
+            variant={actions.length === 0 ? "contained" : "outlined"}
             onClick={() => {
               setCurrentAction({
                 name: "",
@@ -4850,6 +4945,7 @@ const AppCreator = (props) => {
             if (tmpstring.endsWith("/")) {
               tmpstring = tmpstring.slice(0, -1);
             }
+
             if (
               tmpstring.length > 4 &&
               !tmpstring.startsWith("http") &&
@@ -4858,7 +4954,12 @@ const AppCreator = (props) => {
               alert.error("URL must start with http(s)://");
             }
 
-            //if (authenticationOption === "No authentication" &&
+						if (tmpstring.includes("?")) {
+							var newtmp = tmpstring.split("?")
+							if (tmpstring.length > 1) {
+								tmpstring = newtmp[0]
+							}
+						}
 
             setBaseUrl(tmpstring);
           }}
@@ -4866,6 +4967,13 @@ const AppCreator = (props) => {
 				<div style={{padding: 25, border: "2px solid rgba(255,255,255,0.7)", borderRadius: theme.palette.borderRadius, }}>
 					<FormControl style={{ }} variant="outlined">
 						<Typography variant="h6">Authentication</Typography>
+						<a
+							target="_blank"
+							href="https://shuffler.io/docs/app_creation#authentication"
+							style={{ textDecoration: "none", color: "#f85a3e" }}
+						>
+							Learn more about app authentication
+						</a>
 						<Select
 							fullWidth
 							onChange={(e) => {
@@ -4874,6 +4982,14 @@ const AppCreator = (props) => {
 									setAuthenticationRequired(false);
 								} else {
 									setAuthenticationRequired(true);
+								}
+
+								if (e.target.value === "Oauth2") {
+									if (parameterLocation === "Header") {
+										setParameterLocation("")
+									}
+
+              		setExtraAuth([])
 								}
 							}}
 							value={authenticationOption}

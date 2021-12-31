@@ -978,9 +978,14 @@ const ParsedAction = (props) => {
 			return helperText
 		}
 
-		//console.log("D: ", selectedAction)
-		//console.log("DESC: ", selectedAction.description)
-		//console.log("DESC2: ", selectedApp.description)
+		console.log("AUTH: ", authenticationType)
+    if (authenticationType.type === "oauth2") {
+			return (
+				<Typography variant="body1" color="textSecondary" style={{marginTop: 15}}> 
+					You must authenticate before using oauth2 apps.
+				</Typography>
+			)
+		}
 
     // FIXME: Issue #40 - selectedActionParameters not reset
     if (

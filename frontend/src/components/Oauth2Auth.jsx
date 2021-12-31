@@ -311,10 +311,7 @@ const AuthenticationOauth2 = (props) => {
       </DialogTitle>
       <DialogContent>
         <span style={{}}>
-          <b>
-            Oauth2 requires a client ID and secret to authenticate. This is
-            usually made in the remote system.
-          </b>
+            Oauth2 requires a client ID and secret to authenticate, defined in the remote system. Your redirect URL is <b>https://shuffler.io/set_authentication</b>.
           <a
             target="_blank"
             rel="norefferer"
@@ -452,32 +449,6 @@ const AuthenticationOauth2 = (props) => {
                 </div>
               );
             })}
-            {allscopes.length === 0 ? null : (
-              <Select
-                multiple
-                value={selectedScopes}
-                style={{
-                  backgroundColor: theme.palette.inputColor,
-                  color: "white",
-                }}
-                onChange={(e) => {
-                  handleScopeChange(e);
-                }}
-                fullWidth
-                input={<Input id="select-multiple-native" />}
-                renderValue={(selected) => selected.join(", ")}
-                MenuProps={MenuProps}
-              >
-                {allscopes.map((data, index) => {
-                  return (
-                    <MenuItem key={index} value={data}>
-                      <Checkbox checked={selectedScopes.indexOf(data) > -1} />
-                      <ListItemText primary={data} />
-                    </MenuItem>
-                  );
-                })}
-              </Select>
-            )}
             <TextField
               style={{
                 marginTop: 20,
@@ -489,8 +460,8 @@ const AuthenticationOauth2 = (props) => {
                   color: "white",
                   marginLeft: "5px",
                   maxWidth: "95%",
-                  height: 50,
                   fontSize: "1em",
+                  height: "50px",
                 },
               }}
               fullWidth
@@ -505,14 +476,15 @@ const AuthenticationOauth2 = (props) => {
               style={{
                 backgroundColor: theme.palette.inputColor,
                 borderRadius: theme.palette.borderRadius,
+								marginBottom: 10, 
               }}
               InputProps={{
                 style: {
                   color: "white",
                   marginLeft: "5px",
                   maxWidth: "95%",
-                  height: 50,
                   fontSize: "1em",
+                  height: "50px",
                 },
               }}
               fullWidth
@@ -523,6 +495,36 @@ const AuthenticationOauth2 = (props) => {
                 //authenticationOption.label = event.target.value
               }}
             />
+            {allscopes.length === 0 ? null : (
+							<span style={{marginTop: 10}}>
+								Scopes
+								<Select
+									multiple
+									value={selectedScopes}
+									style={{
+										backgroundColor: theme.palette.inputColor,
+										color: "white",
+										padding: 5, 
+									}}
+									onChange={(e) => {
+										handleScopeChange(e);
+									}}
+									fullWidth
+									input={<Input id="select-multiple-native" />}
+									renderValue={(selected) => selected.join(", ")}
+									MenuProps={MenuProps}
+								>
+									{allscopes.map((data, index) => {
+										return (
+											<MenuItem key={index} value={data}>
+												<Checkbox checked={selectedScopes.indexOf(data) > -1} />
+												<ListItemText primary={data} />
+											</MenuItem>
+										);
+									})}
+								</Select>
+							</span>
+            )}
           </span>
         )}
         <Button
@@ -532,7 +534,7 @@ const AuthenticationOauth2 = (props) => {
             borderRadius: theme.palette.borderRadius,
           }}
           disabled={
-            clientSecret.length === 0 || clientId.length === 0 || buttonClicked
+            clientSecret.length === 0 || clientId.length === 0 || buttonClicked || selectedScopes.length === 0
           }
           variant="contained"
           fullWidth
