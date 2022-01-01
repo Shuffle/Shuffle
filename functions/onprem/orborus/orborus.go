@@ -28,7 +28,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
-	//"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/swarm"
 	//"github.com/docker/docker/api/types/filters"
 	dockerclient "github.com/docker/docker/client"
@@ -214,6 +214,18 @@ func deployServiceWorkers(image string) {
 				log.Printf("[DEBUG] Failed to create network %s for workers: %s. This is not critical, and containers will still be added", networkName, err)
 			}
 		}
+
+		//containerId = strings.TrimSpace(string(out))
+		if containerId != "" {
+			log.Printf("\n\nShould connect orborus container to worker network as it's running in Docker with name %#v!\n\n", containerId)
+			// https://pkg.go.dev/github.com/docker/docker@v20.10.12+incompatible/api/types/network#EndpointSettings
+			networkConfig := &network.EndpointSettings{}
+			err := dockercli.NetworkConnect(ctx, networkName, containerId, networkConfig)
+			if err != nil {
+				log.Printf("[WARNING] Failed connecting to Orborus to docker network %s: %s", networkName, err)
+			}
+		}
+
 		//serviceOptions := types.ServiceCreateOptions{}
 		//service, err := dockercli.ServiceCreate(
 		//	context.Background(),
