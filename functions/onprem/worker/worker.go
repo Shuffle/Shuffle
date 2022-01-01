@@ -116,7 +116,7 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 	}
 
 	// Might not be necessary because of cleanupEnv hostconfig autoremoval
-	if cleanupEnv == "true" && len(containerIds) > 0 && os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" {
+	if cleanupEnv == "true" && len(containerIds) > 0 && (os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm") {
 		/*
 			ctx := context.Background()
 			dockercli, err := dockerclient.NewEnvClient()
@@ -136,7 +136,7 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 			}
 		*/
 	} else {
-		if os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" {
+		if os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm" {
 			log.Printf("[DEBUG][%s] NOT cleaning up containers. IDS: %d, CLEANUP env: %s", workflowExecution.ExecutionId, len(containerIds), cleanupEnv)
 		}
 	}
@@ -168,7 +168,7 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 		}
 
 		// FIXME: Add an API call to the backend
-		if os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" {
+		if os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm" {
 			authorization := os.Getenv("AUTHORIZATION")
 			if len(authorization) > 0 {
 				req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", authorization))
@@ -212,7 +212,7 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 	//Finished shutdown (after %d seconds). ", sleepDuration)
 
 	// Allows everything to finish in subprocesses (apps)
-	if os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" {
+	if os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm" {
 		time.Sleep(time.Duration(sleepDuration) * time.Second)
 		os.Exit(3)
 	} else {
@@ -243,7 +243,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	// form basic hostConfig
 	ctx := context.Background()
 
-	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" {
+	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
 		//identifier := fmt.Sprintf("%s_%s_%s_%s", appname, appversion, action.ID, workflowExecution.ExecutionId)
 
 		appName := strings.Replace(identifier, fmt.Sprintf("_%s", action.ID), "", -1)
@@ -293,7 +293,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		Resources: container.Resources{},
 	}
 
-	if os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" {
+	if os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm" {
 		hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:worker-%s", workflowExecution.ExecutionId))
 		//log.Printf("Environments: %#v", env)
 	}
@@ -2067,7 +2067,7 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 			return
 		}
 
-		if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" {
+		if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
 			finished := validateFinished(*workflowExecution)
 			if !finished {
 				log.Printf("[DEBUG][%s] Handling next node since it's not finished!", workflowExecution.ExecutionId)
@@ -2107,7 +2107,7 @@ func getWorkflowExecution(ctx context.Context, id string) (*shuffle.WorkflowExec
 }
 
 func sendResult(workflowExecution shuffle.WorkflowExecution, data []byte) {
-	if workflowExecution.ExecutionSource == "default" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" {
+	if workflowExecution.ExecutionSource == "default" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm" {
 		log.Printf("[INFO][%s] Not sending backend info since source is default", workflowExecution.ExecutionId)
 		return
 	}
@@ -2149,8 +2149,8 @@ func validateFinished(workflowExecution shuffle.WorkflowExecution) bool {
 	log.Printf("[INFO][%s] VALIDATION. Status: %s, shuffle.Actions: %d, Extra: %d, Results: %d\n", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Workflow.Actions), extra, len(workflowExecution.Results))
 
 	//if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions)+extra {
-	if (len(environments) == 1 && requestsSent == 0 && len(workflowExecution.Results) >= 1 && os.Getenv("SHUFFLE_SWARM_CONFIG") != "run") || (len(workflowExecution.Results) >= len(workflowExecution.Workflow.Actions)+extra && len(workflowExecution.Workflow.Actions) > 0) {
-		if os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" {
+	if (len(environments) == 1 && requestsSent == 0 && len(workflowExecution.Results) >= 1 && os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm") || (len(workflowExecution.Results) >= len(workflowExecution.Workflow.Actions)+extra && len(workflowExecution.Workflow.Actions) > 0) {
+		if os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm" {
 			requestsSent += 1
 		}
 
@@ -2227,7 +2227,7 @@ func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.Workflo
 	cacheKey := fmt.Sprintf("workflowexecution-%s", workflowExecution.ExecutionId)
 	requestCache.Set(cacheKey, &workflowExecution, cache.DefaultExpiration)
 
-	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" {
+	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
 		return nil
 	}
 
@@ -2253,7 +2253,7 @@ func setWorkflowExecution(ctx context.Context, workflowExecution shuffle.Workflo
 // GetLocalIP returns the non loopback local IP of the host
 func getLocalIP() string {
 
-	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" {
+	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
 		name, err := os.Hostname()
 		if err != nil {
 			log.Printf("[ERROR] Couldn't find hostanme of worker: %s", err)
@@ -2357,7 +2357,7 @@ func webserverSetup(workflowExecution shuffle.WorkflowExecution) net.Listener {
 	}
 
 	log.Printf("[DEBUG] OLD HOSTNAME: %s", appCallbackUrl)
-	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" {
+	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
 		log.Printf("\n\nStarting webserver on port %d with hostname: %s\n\n", baseport, hostname)
 		appCallbackUrl = fmt.Sprintf("http://%s:%d", hostname, baseport)
 		listener, err = net.Listen("tcp", fmt.Sprintf(":%d", baseport))
@@ -2935,7 +2935,7 @@ func main() {
 	}
 
 	log.Printf("[INFO] Running with timezone %s and swarm config %#v", timezone, os.Getenv("SHUFFLE_SWARM_CONFIG"))
-	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" {
+	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
 		// Forcing download just in case on the first iteration.
 		workflowExecution := shuffle.WorkflowExecution{}
 
@@ -3303,7 +3303,7 @@ func runWebserver(listener net.Listener) {
 	r.HandleFunc("/api/v1/streams", handleWorkflowQueue).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/streams/results", handleGetStreamResults).Methods("POST", "OPTIONS")
 
-	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" {
+	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
 		/*
 			err = dockercli.ServiceRemove(ctx, "shuffle-workers")
 			if err != nil {}

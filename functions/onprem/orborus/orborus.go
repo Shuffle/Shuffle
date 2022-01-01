@@ -187,7 +187,7 @@ func cleanupExistingNodes(ctx context.Context) error {
 
 func deployServiceWorkers(image string) {
 	log.Printf("[DEBUG] Validating deployment of workers as services IF swarmConfig = run (value: %#v)", swarmConfig)
-	if swarmConfig == "run" {
+	if swarmConfig == "run" || swarmConfig == "swarm" {
 		ctx := context.Background()
 		// Looks for and cleans up all existing items in swarm we can't re-use (Shuffle only)
 		cleanupExistingNodes(ctx)
@@ -390,7 +390,7 @@ func deployWorker(image string, identifier string, env []string, executionReques
 
 	//var swarmConfig = os.Getenv("SHUFFLE_SWARM_CONFIG")
 	parsedUuid := uuid.NewV4()
-	if swarmConfig == "run" {
+	if swarmConfig == "run" || swarmConfig == "swarm" {
 		go func() {
 			err := sendWorkerRequest(executionRequest)
 			if err != nil {
@@ -734,7 +734,7 @@ func main() {
 	log.Printf("[INFO] Setting up Docker environment. Downloading worker and App SDK!")
 
 	initializeImages()
-	if swarmConfig == "run" {
+	if swarmConfig == "run" || swarmConfig == "swarm" {
 		checkSwarmService(ctx)
 
 	}
@@ -850,7 +850,7 @@ func main() {
 		}
 
 		// Skipping throttling with swarm
-		if swarmConfig != "run" {
+		if swarmConfig != "run" && swarmConfig != "swarm" {
 			if len(executionRequests.Data) == 0 {
 				zombiecounter += 1
 				if zombiecounter*sleepTime > workerTimeout {
@@ -1065,7 +1065,7 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 // Should it check what happened to the execution? idk
 func zombiecheck(ctx context.Context, workerTimeout int) error {
 	executionIds = []string{}
-	if swarmConfig == "run" {
+	if swarmConfig == "run" || swarmConfig == "swarm" {
 		//log.Printf("[DEBUG] Skipping Zombie check due to new execution model (swarm)")
 		return nil
 	}
