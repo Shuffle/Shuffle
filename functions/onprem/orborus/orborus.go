@@ -199,7 +199,8 @@ func deployServiceWorkers(image string) {
 
 		//docker network create --driver=overlay workers
 		networkCreateOptions := types.NetworkCreate{
-			Driver: "overlay",
+			Driver:     "overlay",
+			Attachable: true,
 		}
 		_, err := dockercli.NetworkCreate(
 			ctx,
@@ -209,20 +210,26 @@ func deployServiceWorkers(image string) {
 
 		if err != nil {
 			if strings.Contains(fmt.Sprintf("%s", err), "already exists") {
+				// Try patching for attachable
 
 			} else {
 				log.Printf("[DEBUG] Failed to create network %s for workers: %s. This is not critical, and containers will still be added", networkName, err)
 			}
 		}
 
-		//containerId = strings.TrimSpace(string(out))
+		defaultNetworkAttach := false
 		if containerId != "" {
-			log.Printf("\n\nShould connect orborus container to worker network as it's running in Docker with name %#v!\n\n", containerId)
+			log.Printf("[WARNING] Should connect orborus container to worker network as it's running in Docker with name %#v!", containerId)
 			// https://pkg.go.dev/github.com/docker/docker@v20.10.12+incompatible/api/types/network#EndpointSettings
 			networkConfig := &network.EndpointSettings{}
 			err := dockercli.NetworkConnect(ctx, networkName, containerId, networkConfig)
 			if err != nil {
 				log.Printf("[WARNING] Failed connecting to Orborus to docker network %s: %s", networkName, err)
+			}
+
+			if len(containerId) == 64 && baseUrl == "http://shuffle-backend:5001" {
+				log.Printf("[WARNING] Network MAY not work due to backend being %s and container length 64. Will try to attach shuffle_shuffle network", baseUrl)
+				defaultNetworkAttach = true
 			}
 		}
 
@@ -329,6 +336,15 @@ func deployServiceWorkers(image string) {
 			},
 		}
 
+		if defaultNetworkAttach == true {
+			serviceSpec.Networks = append(serviceSpec.Networks, swarm.NetworkAttachmentConfig{
+				Target: "shuffle_shuffle",
+			})
+
+			// FIXM: Remove this if deployment fails?
+			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_SWARM_OTHER_NETWORK=shuffle_shuffle"))
+		}
+
 		if dockerApiVersion != "" {
 			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("DOCKER_API_VERSION=%s", dockerApiVersion))
 		}
@@ -351,6 +367,21 @@ func deployServiceWorkers(image string) {
 		} else {
 			if !strings.Contains(fmt.Sprintf("%s", err), "Already Exists") && !strings.Contains(fmt.Sprintf("%s", err), "is already in use by service") {
 				log.Printf("[ERROR] Failed making service: %s", err)
+			} else {
+				log.Printf("[WARNING] Failed deploying workers: %s", err)
+				if len(serviceSpec.Networks) > 1 {
+					serviceSpec.Networks = []swarm.NetworkAttachmentConfig{
+						swarm.NetworkAttachmentConfig{
+							Target: "shuffle_shuffle",
+						},
+					}
+
+					_, _ = dockercli.ServiceCreate(
+						ctx,
+						serviceSpec,
+						serviceOptions,
+					)
+				}
 			}
 		}
 

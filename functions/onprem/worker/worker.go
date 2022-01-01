@@ -2542,6 +2542,11 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 		},
 	}
 
+	if len(os.Getenv("SHUFFLE_SWARM_OTHER_NETWORK")) > 0 {
+		serviceSpec.Networks = append(serviceSpec.Networks, swarm.NetworkAttachmentConfig{
+			Target: "shuffle_shuffle",
+		})
+	}
 	/*
 		Mounts: []mount.Mount{
 			mount.Mount{
