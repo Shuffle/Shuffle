@@ -560,11 +560,15 @@ const Admin = (props) => {
             if (responseJson.reason !== undefined) {
               alert.error(responseJson.reason);
             } else {
-              alert.error("Failed creating suborg");
+              alert.error("Failed creating suborg. Please try again");
             }
           } else {
-            alert.success("Successfully created suborg!");
+            alert.success("Successfully created suborg. Reloading in 3 seconds!");
             setSelectedUserModalOpen(false);
+
+            setTimeout(() => {
+							window.location.reload()
+            }, 2500);
           }
 
           setOrgName("");

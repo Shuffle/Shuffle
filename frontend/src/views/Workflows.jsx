@@ -1,8 +1,10 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useContext } from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import { useTheme } from "@material-ui/core/styles";
 
 import SecurityFramework from '../components/SecurityFramework.jsx';
+import { ShepherdTour, ShepherdTourContext } from 'react-shepherd'
+
 
 import {
   Badge,
@@ -2439,7 +2441,104 @@ const Workflows = (props) => {
     </span>
   );
 
+	const tourOptions = {
+		defaultStepOptions: {
+			classes: "shadow-md bg-purple-dark",
+    	scrollTo: true
+		},
+		useModalOverlay: true,
+		tourName: workflows,
+		exitOnEsc: true,
+	}
+
+   //classes: "custom-class-name-1 custom-class-name-2",
+	const newSteps = [
+		{
+    	id: "intro",
+    	scrollTo: true,
+    	beforeShowPromise: function() {
+    	  return new Promise(function(resolve) {
+    	    setTimeout(function() {
+    	      window.scrollTo(0, 0);
+    	      resolve();
+    	    }, 500);
+    	  });
+    	},
+    	buttons: [
+    	  {
+    	    classes: "shepherd-button-primary",
+					style: {
+						backgroundColor: "red",	
+						color: "white", 
+					},
+    	    text: "Next",
+    	    type: "next"
+    	  }
+    	],
+    	highlightClass: "highlight",
+    	showCancelLink: true,
+    	text: [
+    	  "React-Shepherd is a JavaScript library for guiding users through your React app."
+    	],
+    	when: {
+    	  show: () => {
+    	    console.log("show step 1");
+    	  },
+    	  hide: () => {
+    	    console.log("hide step 1");
+    	  }
+    	}
+  },	
+  {
+    	id: "second",
+    	attachTo: {
+    	  element: "second-step",
+    	  on: "top"
+    	},
+    	text: [
+    	  "Yuk eksplorasi hasil Tes Minat Bakat-mu dan rekomendasi <b>Jurusan</b> dan Karier."
+    	],
+    	buttons: [
+    	  {
+    	    classes: "btn btn-info",
+    	    text: "Kembali",
+    	    type: "back"
+    	  },
+    	  {
+    	    classes: "btn btn-success",
+    	    text: "Saya Mengerti",
+    	    type: "cancel"
+    	  }
+    	],
+    	when: {
+    	  show: () => {
+    	    console.log("show stepp");
+    	  },
+    	  hide: () => {
+    	    console.log("complete step");
+    	  }
+    	},
+    	showCancelLink: false,
+    	scrollTo: true,
+    	modalOverlayOpeningPadding: 4,
+    	useModalOverlay: false,
+    	canClickTarget: false
+  	}
+	]
+		
+		function TourButton() {
+		  const tour = useContext(ShepherdTourContext);
+		
+		  return (
+		    <Button variant="contained" color="primary" onClick={tour.start}>
+		      Start Tour
+		    </Button>
+		  );
+		}
+
+	//import { ShepherdTour, ShepherdTourContext } from 'react-shepherd'
   const WorkflowView = () => {
+		/*
     if (workflows.length === 0) {
       return (
         <div style={emptyWorkflowStyle}>
@@ -2467,6 +2566,7 @@ const Workflows = (props) => {
             </div>
             <div style={{ display: "flex" }}>
               <Button
+								id="second-step"
                 color="primary"
                 style={{ marginTop: "20px" }}
                 variant="outlined"
@@ -2487,11 +2587,15 @@ const Workflows = (props) => {
         </div>
       );
     }
+		*/
 
 		var workflowDelay = -150
-		var appDelay = -75
+		var appDelay = -75	
+
+
     return (
       <div style={viewStyle}>
+
         <div style={workflowViewStyle}>
           <div style={{ display: "flex" }}>
             <div style={{ flex: 3 }}>
@@ -2895,6 +2999,11 @@ const Workflows = (props) => {
   const loadedCheck =
     isLoaded && isLoggedIn && workflowDone ? (
       <div>
+				{/*
+				<ShepherdTour steps={newSteps} tourOptions={tourOptions}>
+					<TourButton />
+				</ShepherdTour>
+				*/}
         <Dropzone
           style={{
             maxWidth: window.innerWidth > 1366 ? 1366 : 1200,

@@ -17,6 +17,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -624,6 +625,42 @@ func findActiveSwarmNodes() (int64, error) {
 	*/
 }
 
+// Get IP
+func getLocalIP() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return ""
+	}
+
+	for _, address := range addrs {
+		// check the address type and if it is not a loopback the display it
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String()
+			}
+		}
+	}
+
+	return ""
+}
+
+func checkSwarmService(ctx context.Context) {
+	// https://docs.docker.com/engine/reference/commandline/swarm_init/
+	ip := getLocalIP()
+	log.Printf("[DEBUG] Attempting swarm setup on %s", ip)
+	req := swarm.InitRequest{
+		ListenAddr:    fmt.Sprintf("0.0.0.0:2377", ip),
+		AdvertiseAddr: fmt.Sprintf("%s:2377", ip),
+	}
+
+	ret, err := dockercli.SwarmInit(ctx, req)
+	if err != nil {
+		log.Printf("[WARNING] Swarm init: %s", err)
+	}
+
+	log.Printf("[DEBUG] Swarm info: %s\n\n", ret)
+}
+
 // Initial loop etc
 func main() {
 	log.Println("[INFO] Setting up execution environment")
@@ -685,6 +722,10 @@ func main() {
 	log.Printf("[INFO] Setting up Docker environment. Downloading worker and App SDK!")
 
 	initializeImages()
+	if swarmConfig == "run" {
+		checkSwarmService(ctx)
+
+	}
 
 	//workerName := "worker"
 	//workerVersion := "0.1.0"
