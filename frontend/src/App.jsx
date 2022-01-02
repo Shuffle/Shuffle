@@ -33,6 +33,8 @@ import MyView from "./views/MyView";
 
 import { createMuiTheme, MuiThemeProvider } from "@material-ui/core/styles";
 
+import DetectionFramework from "./components/DetectionFramework.jsx";
+import FrameworkData from "./components/FrameworkData";
 import ScrollToTop from "./components/ScrollToTop";
 import AlertTemplate from "./components/AlertTemplate";
 import { useAlert, positions, Provider } from "react-alert";
@@ -76,6 +78,7 @@ const App = (message, props) => {
     !isLoggedIn &&
     !window.location.pathname.startsWith("/login") &&
     !window.location.pathname.startsWith("/docs") &&
+    !window.location.pathname.startsWith("/detectionframework") &&
     !window.location.pathname.startsWith("/adminsetup")
   ) {
     window.location = "/login";
@@ -133,6 +136,7 @@ const App = (message, props) => {
         }
 
         // Handling Ethereum update
+				{/*
         detectEthereumProvider().then((provider) => {
           if (
             provider &&
@@ -245,6 +249,7 @@ const App = (message, props) => {
           userInfo.eth_info.parsed_balance =
             userInfo.eth_info.balance / 1000000000000000000;
         }
+				*/}
 
         //console.log("USER: ", userInfo)
         setUserData(userInfo);
@@ -393,6 +398,22 @@ const App = (message, props) => {
           exact
           path="/schedules"
           render={(props) => <Schedules globalUrl={globalUrl} {...props} />}
+        />
+        <Route
+          exact
+          path="/detectionframework"
+          render={(props) => (
+            <DetectionFramework
+							frameworkData={FrameworkData}
+							selectedOption={"Draw"}
+							showOptions={false}
+
+              isLoaded={isLoaded}
+              isLoggedIn={isLoggedIn}
+              globalUrl={globalUrl}
+              {...props}
+            />
+          )}
         />
         <Route
           exact

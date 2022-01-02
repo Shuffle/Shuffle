@@ -6,6 +6,7 @@ import { GetIconInfo } from "../views/Workflows.jsx";
 import { sortByKey } from "../views/AngularWorkflow.jsx";
 import { useTheme } from "@material-ui/core/styles";
 import NestedMenuItem from "material-ui-nested-menu-item";
+import theme from '../theme';
 //import NestedMenuItem from "./NestedMenu.jsx";
 
 import {
@@ -80,7 +81,10 @@ import {
   LockOpen as LockOpenIcon,
   ExpandMore as ExpandMoreIcon,
   VpnKey as VpnKeyIcon,
-} from "@material-ui/icons";
+	AutoFixHigh as AutoFixHighIcon,
+} from '@mui/icons-material';
+//} from "@material-ui/icons";
+
 import Autocomplete from "@material-ui/lab/Autocomplete";
 
 import CodeMirror from "@uiw/react-codemirror";
@@ -159,7 +163,7 @@ const ParsedAction = (props) => {
     getAppAuthentication,
   } = props;
 
-  const theme = useTheme();
+  //const theme = useTheme();
   const classes = useStyles();
 
   const [expansionModalOpen, setExpansionModalOpen] = React.useState(false);
@@ -167,6 +171,7 @@ const ParsedAction = (props) => {
   const [activateHidingBody, setActivateHidingBody] = React.useState(false);
 	const [codedata, setcodedata] = React.useState("");
 	const [fieldCount, setFieldCount] = React.useState(0);
+	const [hiddenDescription, setHiddenDescription] = React.useState(true);
 
   const keywords = [
     "len(",
@@ -381,10 +386,8 @@ const ParsedAction = (props) => {
   };
 
   const AppActionArguments = (props) => {
-    const [selectedActionParameters, setSelectedActionParameters] =
-      React.useState([]);
-    const [selectedVariableParameter, setSelectedVariableParameter] =
-      React.useState("");
+    const [selectedActionParameters, setSelectedActionParameters] = React.useState([]);
+    const [selectedVariableParameter, setSelectedVariableParameter] = React.useState("");
     const [actionlist, setActionlist] = React.useState([]);
     const [jsonList, setJsonList] = React.useState([]);
     const [showDropdown, setShowDropdown] = React.useState(false);
@@ -975,6 +978,14 @@ const ParsedAction = (props) => {
 			return helperText
 		}
 
+		console.log("AUTH: ", authenticationType)
+    if (authenticationType.type === "oauth2") {
+			return (
+				<Typography variant="body1" color="textSecondary" style={{marginTop: 15}}> 
+					You must authenticate before using oauth2 apps.
+				</Typography>
+			)
+		}
 
     // FIXME: Issue #40 - selectedActionParameters not reset
     if (
@@ -984,7 +995,24 @@ const ParsedAction = (props) => {
       var authWritten = false;
       return (
         <div style={{ marginTop: hideExtraTypes ? 10 : 30 }}>
-          <b>Parameters</b>
+					<Tooltip
+						color="secondary"
+						title={"Click to learn more about this action"}
+						placement="top"
+					>
+						<Button 
+							variant="text" 
+							color="secondary" 
+							style={{justifyContent: "flex-start", textAlign: "left", textTransform: "none", width: "100%",}}
+							fullWidth
+							disabled={selectedAction.description === undefined || selectedAction.description === null || selectedAction.description.length === 0}
+							onClick={() => {
+								setHiddenDescription(!hiddenDescription)
+							}}
+						>
+							<b>Parameters</b>
+						</Button>
+					</Tooltip>
           {selectedActionParameters.map((data, count) => {
             if (data.variant === "") {
               data.variant = "STATIC_VALUE";
@@ -1083,16 +1111,20 @@ const ParsedAction = (props) => {
             var disabled = false;
             var rows = "5";
             var openApiHelperText = "This is an OpenAPI specific field";
+						/*
             if (
               selectedApp.generated &&
               data.name === "url" &&
               data.required &&
-              data.configuration &&
-              hideExtraTypes
+              data.configuration 
             ) {
-              console.log("GENERATED WITH DATA: ", data);
+							//&&
+              //hideExtraTypes
+							
+              //console.log("GENERATED WITH DATA: ", data);
               return null;
             }
+						*/
 
             if (selectedApp.generated && data.name === "headers") {
               //console.log("HEADER: ", data)
@@ -1867,7 +1899,6 @@ const ParsedAction = (props) => {
                 >
                   {data.configuration === true ? (
                     <Tooltip
-                      color="primary"
                       title={`Authenticate ${selectedApp.name}`}
                       placement="top"
                     >
@@ -1877,6 +1908,7 @@ const ParsedAction = (props) => {
                           width: 24,
                           height: 24,
                           marginRight: 10,
+													color: "rgba(255,255,255,0.6)",
                         }}
                         onClick={() => {
                           setAuthenticationModalOpen(true);
@@ -2072,7 +2104,7 @@ const ParsedAction = (props) => {
 
   const expansionModal = (
     <Dialog
-      disableEnforceFocus={true}
+      disableEnforceFocus={false}
       hideBackdrop={true}
       open={expansionModalOpen}
       onClose={() => {
@@ -2171,7 +2203,7 @@ const ParsedAction = (props) => {
                     marginTop: "auto",
                     marginBottom: "auto",
                     height: 30,
-                    paddingLeft: 25,
+                    marginLeft: 15,
                     paddingRight: 0,
                   }}
                   onClick={() => {
@@ -2191,7 +2223,7 @@ const ParsedAction = (props) => {
                     marginTop: "auto",
                     marginBottom: "auto",
                     height: 30,
-                    paddingLeft: 25,
+                    marginLeft: 15,
                     paddingRight: 0,
                   }}
                   onClick={() => {}}
@@ -2210,6 +2242,40 @@ const ParsedAction = (props) => {
                       <HelpOutlineIcon style={{ color: "white" }} />
                     </Tooltip>
                   </a>
+                </IconButton>
+                <IconButton
+                  style={{
+                    marginTop: "auto",
+                    marginBottom: "auto",
+                    height: 30,
+                    marginLeft: 15,
+                    paddingRight: 0,
+                  }}
+                  onClick={() => {
+                    //setAuthenticationModalOpen(true);
+										console.log("Should enable/disable magic!")
+										console.log("Action: ", selectedAction)
+										if (selectedAction.run_magic_output === undefined) {
+											selectedAction.run_magic_output = true
+										} else {
+											if (selectedAction.run_magic_output === true) {
+												selectedAction.run_magic_output = false
+											} else {
+												selectedAction.run_magic_output = true 
+											}
+										}
+
+										setSelectedAction(selectedAction)
+										setUpdate(Math.random());
+                  }}
+                >
+                  <Tooltip
+                    color="primary"
+                    title={selectedAction.run_magic_output === undefined || selectedAction.run_magic_output === null || selectedAction.run_magic_output === false ? "Click to enable magic parsing" : "Click to disable magic parsing"}
+                    placement="top"
+                  >
+										<AutoFixHighIcon style={{ color: selectedAction.run_magic_output === undefined || selectedAction.run_magic_output === null || selectedAction.run_magic_output === false ? "white" : "#f86a3e"}} />
+                  </Tooltip>
                 </IconButton>
               </div>
             </div>
@@ -2451,7 +2517,7 @@ const ParsedAction = (props) => {
         </div>
       ) : null}
 
-      {showEnvironment !== undefined && showEnvironment ? (
+      {showEnvironment !== undefined && showEnvironment && environments.length > 1 ? (
         <div style={{ marginTop: "20px" }}>
           <Typography>Environment</Typography>
           <Select
@@ -2480,13 +2546,14 @@ const ParsedAction = (props) => {
               borderRadius: theme.palette.borderRadius,
             }}
           >
-            {environments.map((data) => {
-              if (data.archived) {
+            {environments.map((data, index) => {
+              if (data.archived === true) {
                 return null;
               }
 
               return (
                 <MenuItem
+									key={index}
                   key={data.Name}
                   style={{
                     backgroundColor: theme.palette.inputColor,
@@ -2595,7 +2662,7 @@ const ParsedAction = (props) => {
                 option === undefined ||
                 option === null ||
                 option.name === undefined ||
-                option.name === undefined
+                option.name === null 
               ) {
                 return null;
               }
@@ -2628,6 +2695,16 @@ const ParsedAction = (props) => {
                 newActionname = data.label;
               }
 
+              var newActiondescription = data.description;
+							//console.log("DESC: ", newActiondescription)
+              if (
+                data.description === undefined || data.description === null
+              ) {
+								newActiondescription = "Description: No description defined for this action"
+              } else {
+								newActiondescription = "Description: "+newActiondescription
+							}
+
               const iconInfo = GetIconInfo({ name: data.name });
               const useIcon = iconInfo.originalIcon;
 
@@ -2636,32 +2713,40 @@ const ParsedAction = (props) => {
                 newActionname.substring(1)
               ).replaceAll("_", " ");
 
+
+
               return (
-                <div style={{ display: "flex" }}>
-                  <span
-                    style={{
-                      marginRight: 10,
-                      marginTop: "auto",
-                      marginBottom: "auto",
-                    }}
-                  >
-                    {useIcon}
-                  </span>
-                  <span style={{}}>{newActionname}</span>
-                </div>
+                <Tooltip
+                  color="secondary"
+                  title={newActiondescription}
+                  placement="left"
+                >
+									<div style={{ display: "flex" }}>
+										<span
+											style={{
+												marginRight: 10,
+												marginTop: "auto",
+												marginBottom: "auto",
+											}}
+										>
+											{useIcon}
+										</span>
+										<span style={{}}>{newActionname}</span>
+									</div>
+								</Tooltip>
               );
             }}
             renderInput={(params) => {
               return (
-                <TextField
-                  style={{
-                    backgroundColor: theme.palette.inputColor,
-                    borderRadius: theme.palette.borderRadius,
-                  }}
-                  {...params}
-                  label="Find Actions"
-                  variant="outlined"
-                />
+									<TextField
+										style={{
+											backgroundColor: theme.palette.inputColor,
+											borderRadius: theme.palette.borderRadius,
+										}}
+										{...params}
+										label="Find Actions"
+										variant="outlined"
+                	/>
               );
             }}
           />
@@ -2702,20 +2787,26 @@ const ParsedAction = (props) => {
 					</Select>
 				: null*/}
 
-        {selectedAction.description !== undefined &&
-        selectedAction.description.length > 0 &&
-        hideExtraTypes !== true ? (
-          <div
-            style={{
-              marginTop: 10,
-              marginBottom: 10,
-              maxHeight: 60,
-              overflow: "hidden",
-            }}
-          >
-            {selectedAction.description}
-          </div>
-        ) : null}
+        {selectedAction.description !== undefined && selectedAction.description !== null && selectedAction.description.length > 0 &&  hiddenDescription === false ? (
+						<div
+							style={{
+								border: "1px solid rgba(255,255,255,0.6)",
+								borderRadius: theme.palette.borderRadius,
+								marginTop: 15,
+								marginBottom: 10,
+								maxHeight: 60,
+								overflow: "hidden",
+								padding: 15, 
+							}}
+						>
+							<Typography style={{}}>
+								<b>Description</b>
+							</Typography>
+							<Typography style={{}}>
+								{selectedAction.description}
+							</Typography>
+						</div>
+					) : null}
 
         <div
           style={{

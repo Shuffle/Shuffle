@@ -16,7 +16,7 @@ services:
     depends_on:
       - backend
   backend:
-    build: ./backend
+    #build: ./backend
     image: ghcr.io/frikky/shuffle-backend:nightly
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
@@ -59,12 +59,12 @@ services:
       - HTTPS_PROXY=${HTTPS_PROXY}
       - SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
       - SHUFFLE_PASS_APP_PROXY=${SHUFFLE_PASS_APP_PROXY}
-      - SHUFFLE_SCALE_REPLICAS=5
-      - SHUFFLE_SWARM_CONFIG=runn
-      - SHUFFLE_SWARM_NETWORK_NAME=shuffle-executions
+      - SHUFFLE_SWARM_NETWORK_NAME=shuffle_swarm_executions
+      - SHUFFLE_SCALE_REPLICAS=1
+      - SHUFFLE_SWARM_CONFIG=run
     restart: unless-stopped
   opensearch:
-    image: opensearchproject/opensearch:1.1.0
+    image: opensearchproject/opensearch:1.2.3
     hostname: shuffle-opensearch
     container_name: shuffle-opensearch
     environment:
@@ -93,4 +93,6 @@ services:
     restart: unless-stopped
 networks:
   shuffle:
-    driver: bridge
+    driver: overlay 
+    
+#driver: bridge

@@ -2846,82 +2846,6 @@ func getOpenapi(resp http.ResponseWriter, request *http.Request) {
 	resp.Write(data)
 }
 
-func echoOpenapiData(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	// Just here to verify that the user is logged in
-	user, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("Api authentication failed in validate swagger: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Failed authentication"}`))
-		return
-	}
-
-	if user.Role == "org-reader" {
-		log.Printf("[WARNING] Org-reader doesn't have access to echo OpenAPI data: %s (%s)", user.Username, user.Id)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Read only user"}`))
-		return
-	}
-
-	body, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		log.Printf("Bodyreader err: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Failed reading body"}`))
-		return
-	}
-
-	newbody := string(body)
-	newbody = strings.TrimSpace(newbody)
-	if strings.HasPrefix(newbody, "\"") {
-		newbody = newbody[1:len(newbody)]
-	}
-
-	if strings.HasSuffix(newbody, "\"") {
-		newbody = newbody[0 : len(newbody)-1]
-	}
-
-	req, err := http.NewRequest("GET", newbody, nil)
-	if err != nil {
-		log.Printf("[ERROR] Requestbuilder err: %s", err)
-		resp.WriteHeader(500)
-		resp.Write([]byte(`{"success": false, "reason": "Failed building request"}`))
-		return
-	}
-
-	httpClient := &http.Client{}
-	newresp, err := httpClient.Do(req)
-	if err != nil {
-		log.Printf("[ERROR] Grabbing error: %s", err)
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed making remote request to get the data"}`)))
-		return
-	}
-	defer newresp.Body.Close()
-
-	urlbody, err := ioutil.ReadAll(newresp.Body)
-	if err != nil {
-		log.Printf("[ERROR] URLbody error: %s", err)
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't get data from selected uri"}`)))
-		return
-	}
-
-	if newresp.StatusCode >= 400 {
-		resp.WriteHeader(201)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, urlbody)))
-		return
-	}
-
-	resp.WriteHeader(200)
-	resp.Write(urlbody)
-}
-
 func handleSwaggerValidation(body []byte) (shuffle.ParsedOpenApi, error) {
 	type versionCheck struct {
 		Swagger        string `datastore:"swagger" json:"swagger" yaml:"swagger"`
@@ -4071,7 +3995,7 @@ func runInitEs(ctx context.Context) {
 
 	// FIXME: Have this for all envs in all orgs (loop and find).
 	if len(parsedApikey) > 0 {
-		cleanupSchedule := 3600
+		cleanupSchedule := 600
 		environments := []string{"Shuffle"}
 		log.Printf("[DEBUG] Starting schedule setup for execution cleanup every %d seconds. Running first immediately.", cleanupSchedule)
 		cleanupJob := func() func() {
@@ -4079,8 +4003,8 @@ func runInitEs(ctx context.Context) {
 				log.Printf("[INFO] Running schedule for cleaning up or re-running unfinished workflows in %d environments.", len(environments))
 
 				for _, environment := range environments {
-					url := fmt.Sprintf("http://localhost:5001/api/v1/environments/%s/stop", environment)
 					httpClient := &http.Client{}
+					url := fmt.Sprintf("http://localhost:5001/api/v1/environments/%s/stop", environment)
 					req, err := http.NewRequest(
 						"GET",
 						url,
@@ -4106,6 +4030,33 @@ func runInitEs(ctx context.Context) {
 						continue
 					}
 					log.Printf("[DEBUG] Successfully ran workflow cleanup request for %s. Body: %s", environment, string(respBody))
+
+					url = fmt.Sprintf("http://localhost:5001/api/v1/environments/%s/rerun", environment)
+					req, err = http.NewRequest(
+						"GET",
+						url,
+						nil,
+					)
+
+					req.Header.Add("Authorization", fmt.Sprintf(`Bearer %s`, parsedApikey))
+					if err != nil {
+						log.Printf("[ERROR] Failed CREATING environment request to rerun for %s: %s", environment, err)
+						continue
+
+					}
+
+					newresp, err = httpClient.Do(req)
+					if err != nil {
+						log.Printf("[ERROR] Failed running environment request to rerun for %s: %s", environment, err)
+						continue
+					}
+
+					respBody, err = ioutil.ReadAll(newresp.Body)
+					if err != nil {
+						log.Printf("[ERROR] Failed setting respbody %s", err)
+						continue
+					}
+					log.Printf("[DEBUG] Successfully ran workflow RERUN request for %s. Body: %s", environment, string(respBody))
 				}
 			}
 		}
@@ -5861,7 +5812,7 @@ func initHandlers() {
 	// OpenAPI configuration
 	r.HandleFunc("/api/v1/verify_swagger", verifySwagger).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/verify_openapi", verifySwagger).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/get_openapi_uri", echoOpenapiData).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/get_openapi_uri", shuffle.EchoOpenapiData).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/validate_openapi", shuffle.ValidateSwagger).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/get_openapi/{key}", getOpenapi).Methods("GET", "OPTIONS")
 
@@ -5899,7 +5850,7 @@ func initHandlers() {
 	// This is a new API that validates if a key has been seen before.
 	// Not sure what the best course of action is for it.
 	r.HandleFunc("/api/v1/environments/{key}/stop", shuffle.HandleStopExecutions).Methods("GET", "POST", "OPTIONS")
-	//r.HandleFunc("/api/v1/environments/{key}/rerun", shuffle.HandleRerunExecutions).Methods("GET", "POST", "OPTIONS")
+	r.HandleFunc("/api/v1/environments/{key}/rerun", shuffle.HandleRerunExecutions).Methods("GET", "POST", "OPTIONS")
 
 	r.HandleFunc("/api/v1/orgs/{orgId}/validate_app_values", shuffle.HandleKeyValueCheck).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/get_cache", shuffle.HandleGetCacheKey).Methods("POST", "OPTIONS")

@@ -18,12 +18,13 @@ import {
 import { Link as LinkIcon, Edit as EditIcon } from "@material-ui/icons";
 
 const Body = {
-  maxWidth: "1000px",
-  minWidth: "768px",
+  maxWidth: 1000,
+  minWidth: 768,
   margin: "auto",
   display: "flex",
   height: "100%",
   color: "white",
+	position: "relative",
   //textAlign: "center",
 };
 
@@ -72,14 +73,20 @@ const Docs = (props) => {
     position: "relative",
     padding: 30,
     paddingTop: 15,
-    height: "80vh",
     marginTop: 15,
+		minHeight: "50vh",
+    //height: "50vh",
   };
 
   const SideBar = {
     maxWidth: 250,
-    flex: "1",
-    position: "fixed",
+    flex: 1,
+    position: "sticky",
+		top: 100,
+		maxHeight: "83vh",
+		overflowX: "hidden",
+		overflowY: "auto",
+		zIndex: 10003,
   };
 
   const fetchDocList = () => {
@@ -295,8 +302,8 @@ const Docs = (props) => {
     flex: "1",
     maxWidth: mobile ? "100%" : 750,
     overflow: "hidden",
-    paddingBottom: 200,
-    marginLeft: mobile ? 0 : 275,
+    paddingBottom: 100,
+  	marginLeft: mobile ? 0 : 50,
   };
 
   function OuterLink(props) {
@@ -649,8 +656,9 @@ const Docs = (props) => {
   //	</Dialog>
   // {imageModal}
 
+	// Padding and zIndex etc set because of footer in cloud.
   const loadedCheck = (
-    <div>
+    <div style={{minHeight: 1000, paddingBottom: 100, zIndex: 50000, }}>
       <BrowserView>{postDataBrowser}</BrowserView>
       <MobileView>{postDataMobile}</MobileView>
     </div>

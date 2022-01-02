@@ -17,6 +17,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -27,7 +28,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
-	//"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/swarm"
 	//"github.com/docker/docker/api/types/filters"
 	dockerclient "github.com/docker/docker/client"
@@ -152,7 +153,7 @@ func cleanupExistingNodes(ctx context.Context) error {
 	//log.Printf("\n\nFound %d contaienrs", len(services))
 
 	for _, service := range services {
-		log.Printf("[INFO] Service: %#v", service.Spec.Annotations.Name)
+		//log.Printf("[INFO] Service: %#v", service.Spec.Annotations.Name)
 
 		//portFound := false
 		//for _, endpoint := range service.Spec.EndpointSpec.Ports {
@@ -186,7 +187,7 @@ func cleanupExistingNodes(ctx context.Context) error {
 
 func deployServiceWorkers(image string) {
 	log.Printf("[DEBUG] Validating deployment of workers as services IF swarmConfig = run (value: %#v)", swarmConfig)
-	if swarmConfig == "run" {
+	if swarmConfig == "run" || swarmConfig == "swarm" {
 		ctx := context.Background()
 		// Looks for and cleans up all existing items in swarm we can't re-use (Shuffle only)
 		cleanupExistingNodes(ctx)
@@ -198,7 +199,8 @@ func deployServiceWorkers(image string) {
 
 		//docker network create --driver=overlay workers
 		networkCreateOptions := types.NetworkCreate{
-			Driver: "overlay",
+			Driver:     "overlay",
+			Attachable: true,
 		}
 		_, err := dockercli.NetworkCreate(
 			ctx,
@@ -208,11 +210,29 @@ func deployServiceWorkers(image string) {
 
 		if err != nil {
 			if strings.Contains(fmt.Sprintf("%s", err), "already exists") {
+				// Try patching for attachable
 
 			} else {
 				log.Printf("[DEBUG] Failed to create network %s for workers: %s. This is not critical, and containers will still be added", networkName, err)
 			}
 		}
+
+		defaultNetworkAttach := false
+		if containerId != "" {
+			log.Printf("[WARNING] Should connect orborus container to worker network as it's running in Docker with name %#v!", containerId)
+			// https://pkg.go.dev/github.com/docker/docker@v20.10.12+incompatible/api/types/network#EndpointSettings
+			networkConfig := &network.EndpointSettings{}
+			err := dockercli.NetworkConnect(ctx, networkName, containerId, networkConfig)
+			if err != nil {
+				log.Printf("[WARNING] Failed connecting to Orborus to docker network %s: %s", networkName, err)
+			}
+
+			if len(containerId) == 64 && baseUrl == "http://shuffle-backend:5001" {
+				log.Printf("[WARNING] Network MAY not work due to backend being %s and container length 64. Will try to attach shuffle_shuffle network", baseUrl)
+				defaultNetworkAttach = true
+			}
+		}
+
 		//serviceOptions := types.ServiceCreateOptions{}
 		//service, err := dockercli.ServiceCreate(
 		//	context.Background(),
@@ -250,7 +270,7 @@ func deployServiceWorkers(image string) {
 		log.Printf("[DEBUG] Found %d node(s) to replicate over. Defaulting to 1 IF we can't auto-discover them.", cnt)
 		replicatedJobs := uint64(replicas * nodeCount)
 
-		log.Printf("[DEBUG] Deploying %d containers for worker with swarm to each node. Service name: %s. Image: %s", replicas, innerContainerName, image)
+		log.Printf("[DEBUG] Deploying %d container(s) for worker with swarm to each node. Service name: %s. Image: %s", replicas, innerContainerName, image)
 
 		if timezone == "" {
 			timezone = "Europe/Amsterdam"
@@ -316,6 +336,15 @@ func deployServiceWorkers(image string) {
 			},
 		}
 
+		if defaultNetworkAttach == true {
+			serviceSpec.Networks = append(serviceSpec.Networks, swarm.NetworkAttachmentConfig{
+				Target: "shuffle_shuffle",
+			})
+
+			// FIXM: Remove this if deployment fails?
+			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_SWARM_OTHER_NETWORK=shuffle_shuffle"))
+		}
+
 		if dockerApiVersion != "" {
 			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("DOCKER_API_VERSION=%s", dockerApiVersion))
 		}
@@ -332,12 +361,27 @@ func deployServiceWorkers(image string) {
 		)
 
 		if err == nil {
-			log.Printf("[DEBUG] Successfully deployed workers with %d replica(s) on %d nodes", replicas, cnt)
+			log.Printf("[DEBUG] Successfully deployed workers with %d replica(s) on %d node(s)", replicas, cnt)
 			//time.Sleep(time.Duration(10) * time.Second)
 			//log.Printf("[DEBUG] Servicecreate request: %#v %#v", service, err)
 		} else {
 			if !strings.Contains(fmt.Sprintf("%s", err), "Already Exists") && !strings.Contains(fmt.Sprintf("%s", err), "is already in use by service") {
 				log.Printf("[ERROR] Failed making service: %s", err)
+			} else {
+				log.Printf("[WARNING] Failed deploying workers: %s", err)
+				if len(serviceSpec.Networks) > 1 {
+					serviceSpec.Networks = []swarm.NetworkAttachmentConfig{
+						swarm.NetworkAttachmentConfig{
+							Target: "shuffle_shuffle",
+						},
+					}
+
+					_, _ = dockercli.ServiceCreate(
+						ctx,
+						serviceSpec,
+						serviceOptions,
+					)
+				}
 			}
 		}
 
@@ -377,7 +421,7 @@ func deployWorker(image string, identifier string, env []string, executionReques
 
 	//var swarmConfig = os.Getenv("SHUFFLE_SWARM_CONFIG")
 	parsedUuid := uuid.NewV4()
-	if swarmConfig == "run" {
+	if swarmConfig == "run" || swarmConfig == "swarm" {
 		go func() {
 			err := sendWorkerRequest(executionRequest)
 			if err != nil {
@@ -393,8 +437,8 @@ func deployWorker(image string, identifier string, env []string, executionReques
 			}
 
 			if err == nil {
-				log.Printf("[DEBUG] Started worker from request with name: %s", executionRequest.ExecutionId)
-				executionIds = append(executionIds, executionRequest.ExecutionId)
+				// FIXME: Readd this? Removed for rerun reasons
+				// executionIds = append(executionIds, executionRequest.ExecutionId)
 			}
 		}()
 
@@ -624,6 +668,42 @@ func findActiveSwarmNodes() (int64, error) {
 	*/
 }
 
+// Get IP
+func getLocalIP() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return ""
+	}
+
+	for _, address := range addrs {
+		// check the address type and if it is not a loopback the display it
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String()
+			}
+		}
+	}
+
+	return ""
+}
+
+func checkSwarmService(ctx context.Context) {
+	// https://docs.docker.com/engine/reference/commandline/swarm_init/
+	ip := getLocalIP()
+	log.Printf("[DEBUG] Attempting swarm setup on %s", ip)
+	req := swarm.InitRequest{
+		ListenAddr:    fmt.Sprintf("0.0.0.0:2377", ip),
+		AdvertiseAddr: fmt.Sprintf("%s:2377", ip),
+	}
+
+	ret, err := dockercli.SwarmInit(ctx, req)
+	if err != nil {
+		log.Printf("[WARNING] Swarm init: %s", err)
+	}
+
+	log.Printf("[DEBUG] Swarm info: %s\n\n", ret)
+}
+
 // Initial loop etc
 func main() {
 	log.Println("[INFO] Setting up execution environment")
@@ -685,6 +765,10 @@ func main() {
 	log.Printf("[INFO] Setting up Docker environment. Downloading worker and App SDK!")
 
 	initializeImages()
+	if swarmConfig == "run" || swarmConfig == "swarm" {
+		checkSwarmService(ctx)
+
+	}
 
 	//workerName := "worker"
 	//workerVersion := "0.1.0"
@@ -727,20 +811,20 @@ func main() {
 	)
 
 	if err != nil {
-		log.Printf("[ERROR] Failed making request builder: %s", err)
+		log.Printf("[ERROR] Failed making request builder during init: %s", err)
 		os.Exit(3)
 	}
 
 	zombiecounter := 0
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Org-Id", orgId)
-	log.Printf("[INFO] Waiting for executions at %s", fullUrl)
+	log.Printf("[INFO] Waiting for executions at %s with Org ID %s", fullUrl, orgId)
 	hasStarted := false
 	for {
-		//log.Printf("Prerequest")
 		//go getStats()
-		newresp, err := client.Do(req)
+		//log.Printf("Prerequest")
 		//log.Printf("Postrequest")
+		newresp, err := client.Do(req)
 		if err != nil {
 			log.Printf("[WARNING] Failed making request: %s", err)
 			zombiecounter += 1
@@ -758,6 +842,10 @@ func main() {
 				log.Printf("[WARNING] Bad statuscode: %d", newresp.StatusCode)
 			}
 		} else {
+			if !hasStarted {
+				log.Printf("[DEBUG] Starting iteration. Got statuscode %d from backend on first request", newresp.StatusCode)
+			}
+
 			hasStarted = true
 		}
 
@@ -793,7 +881,7 @@ func main() {
 		}
 
 		// Skipping throttling with swarm
-		if swarmConfig != "run" {
+		if swarmConfig != "run" && swarmConfig != "swarm" {
 			if len(executionRequests.Data) == 0 {
 				zombiecounter += 1
 				if zombiecounter*sleepTime > workerTimeout {
@@ -1008,7 +1096,7 @@ func getRunningWorkers(ctx context.Context, workerTimeout int) int {
 // Should it check what happened to the execution? idk
 func zombiecheck(ctx context.Context, workerTimeout int) error {
 	executionIds = []string{}
-	if swarmConfig == "run" {
+	if swarmConfig == "run" || swarmConfig == "swarm" {
 		//log.Printf("[DEBUG] Skipping Zombie check due to new execution model (swarm)")
 		return nil
 	}
@@ -1160,10 +1248,11 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 
 	body, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
-		log.Printf("[ERROR] Failed reading body in worker request: %s", err)
+		log.Printf("[ERROR] Failed reading body in worker request body: %s", err)
 		return err
 	}
+	_ = body
 
-	log.Printf("[DEBUG] NEWRESP (from worker request %s): %s (Status: %d)", workflowExecution.ExecutionId, string(body), newresp.StatusCode)
+	log.Printf("[DEBUG] Ran worker from request with execution ID: %s. Worker URL: %s.\n\n DEBUGGING: docker service logs shuffle-workers | grep %s\n\n", workflowExecution.ExecutionId, streamUrl, workflowExecution.ExecutionId)
 	return nil
 }

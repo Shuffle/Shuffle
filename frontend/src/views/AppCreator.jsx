@@ -23,6 +23,7 @@ import {
   CircularProgress,
   Chip,
 } from "@material-ui/core";
+
 import {
   LockOpen as LockOpenIcon,
   FileCopy as FileCopyIcon,
@@ -521,16 +522,16 @@ const AppCreator = (props) => {
 
       if (data.info["x-logo"] !== undefined) {
         if (data.info["x-logo"].url !== undefined) {
-          console.log("PARSED LOGO: ", data.info["x-logo"].url);
+          //console.log("PARSED LOGO: ", data.info["x-logo"].url);
           setFileBase64(data.info["x-logo"].url);
         } else {
           setFileBase64(data.info["x-logo"]);
         }
-        console.log("");
-        console.log("");
-        console.log("LOGO: ", data.info["x-logo"]);
-        console.log("");
-        console.log("");
+        //console.log("");
+        //console.log("");
+        //console.log("LOGO: ", data.info["x-logo"]);
+        //console.log("");
+        //console.log("");
       }
 
       if (data.info.contact !== undefined) {
@@ -660,14 +661,14 @@ const AppCreator = (props) => {
 
           // Typescript? I think not ;)
           if (methodvalue["requestBody"] !== undefined) {
-            //console.log("Handle requestbody: ", methodvalue["requestBody"])
+            console.log("Handle requestbody: ", methodvalue["requestBody"])
             if (methodvalue["requestBody"]["content"] !== undefined) {
               if (
                 methodvalue["requestBody"]["content"]["application/json"] !==
                 undefined
               ) {
-                newaction["headers"] =
-                  "Content-Type=application/json\nAccept=application/json";
+                //newaction["headers"] = ""
+                //"Content-Type=application/json\nAccept=application/json";
                 if (
                   methodvalue["requestBody"]["content"]["application/json"][
                     "schema"
@@ -733,8 +734,8 @@ const AppCreator = (props) => {
                 undefined
               ) {
                 console.log("METHOD XML: ", methodvalue);
-                newaction["headers"] =
-                  "Content-Type=application/xml\nAccept=application/xml";
+                //newaction["headers"] = ""
+                //"Content-Type=application/xml\nAccept=application/xml";
                 if (
                   methodvalue["requestBody"]["content"]["application/xml"][
                     "schema"
@@ -772,7 +773,6 @@ const AppCreator = (props) => {
                   }
                 }
               } else {
-                //console.log("REQUESTBODY: ", methodvalue["requestBody"]["content"])
                 if (
                   methodvalue["requestBody"]["content"]["example"] !== undefined
                 ) {
@@ -787,7 +787,9 @@ const AppCreator = (props) => {
                       ];
                     //JSON.stringify(tmpobject, null, 2)
                   }
-                } else if (
+                } 
+							
+								if (
                   methodvalue["requestBody"]["content"][
                     "multipart/form-data"
                   ] !== undefined
@@ -1332,6 +1334,7 @@ const AppCreator = (props) => {
         }
       }
 
+
       if (data.servers !== undefined && data.servers.length > 0) {
         var firstUrl = data.servers[0].url;
         if (
@@ -1366,123 +1369,128 @@ const AppCreator = (props) => {
       //console.log("SECURITY: ", securitySchemes)
       //if (Object.entries(securitySchemes) > 1 &&
       var newauth = [];
-      for (const [key, value] of Object.entries(securitySchemes)) {
-        console.log(key, value);
-        if (key === "jwt") {
-          setAuthenticationOption("JWT");
-          setAuthenticationRequired(true);
+			try {
+      	for (const [key, value] of Object.entries(securitySchemes)) {
+      	  console.log(key, value);
+      	  if (key === "jwt") {
+      	    setAuthenticationOption("JWT");
+      	    setAuthenticationRequired(true);
 
-          if (
-            value.in !== undefined &&
-            value.in !== null &&
-            value.in.length > 0
-          ) {
-            setParameterName(value.in);
-          }
-        } else if (value.scheme === "bearer") {
-          setAuthenticationOption("Bearer auth");
-          setAuthenticationRequired(true);
-        } else if (key === "Oauth2" || key === "Oauth2c") {
-          //alert.info("Can't handle Oauth2 auth yet.")
-          setAuthenticationOption("Oauth2");
-          setAuthenticationRequired(true);
+      	    if (
+      	      value.in !== undefined &&
+      	      value.in !== null &&
+      	      value.in.length > 0
+      	    ) {
+      	      setParameterName(value.in);
+      	    }
+      	  } else if (value.scheme === "bearer") {
+      	    setAuthenticationOption("Bearer auth");
+      	    setAuthenticationRequired(true);
+      	  } else if (key === "Oauth2" || key === "Oauth2c") {
+      	    //alert.info("Can't handle Oauth2 auth yet.")
+      	    setAuthenticationOption("Oauth2");
+      	    setAuthenticationRequired(true);
 
-          //console.log("FLOW-1: ", value)
-          const flowkey = value.flow === undefined ? "flows" : "flow";
-          //console.log("FLOW: ", value[flowkey])
-          const basekey =
-            value[flowkey].authorizationCode !== undefined
-              ? "authorizationCode"
-              : "implicit";
-          //console.log("FLOW2: ", value[flowkey][basekey])
-          if (
-            value[flowkey] !== undefined &&
-            value[flowkey][basekey] !== undefined
-          ) {
-            if (
-              value[flowkey][basekey].authorizationUrl !== undefined &&
-              parameterName.length === 0
-            ) {
-              setParameterName(value[flowkey][basekey].authorizationUrl);
-            }
+      	    //console.log("FLOW-1: ", value)
+      	    const flowkey = value.flow === undefined ? "flows" : "flow";
+      	    //console.log("FLOW: ", value[flowkey])
+      	    const basekey =
+      	      value[flowkey].authorizationCode !== undefined
+      	        ? "authorizationCode"
+      	        : "implicit";
+      	    //console.log("FLOW2: ", value[flowkey][basekey])
+      	    if (
+      	      value[flowkey] !== undefined &&
+      	      value[flowkey][basekey] !== undefined
+      	    ) {
+      	      if (
+      	        value[flowkey][basekey].authorizationUrl !== undefined &&
+      	        parameterName.length === 0
+      	      ) {
+      	        setParameterName(value[flowkey][basekey].authorizationUrl);
+      	      }
 
-            var tokenUrl = "";
-            if (value[flowkey][basekey].tokenUrl !== undefined) {
-              setParameterLocation(value[flowkey][basekey].tokenUrl);
-              tokenUrl = value[flowkey][basekey].tokenUrl;
-            } else {
-              setParameterLocation("");
-            }
+      	      var tokenUrl = "";
+      	      if (value[flowkey][basekey].tokenUrl !== undefined) {
+      	        setParameterLocation(value[flowkey][basekey].tokenUrl);
+      	        tokenUrl = value[flowkey][basekey].tokenUrl;
+      	      } else {
+      	        setParameterLocation("");
+      	      }
 
-            if (value[flowkey][basekey].refreshUrl !== undefined) {
-              setRefreshUrl(value[flowkey][basekey].refreshUrl);
-            } else if (tokenUrl.length > 0) {
-              setRefreshUrl(tokenUrl);
-            }
+      	      if (value[flowkey][basekey].refreshUrl !== undefined) {
+      	        setRefreshUrl(value[flowkey][basekey].refreshUrl);
+      	      } else if (tokenUrl.length > 0) {
+      	        setRefreshUrl(tokenUrl);
+      	      }
 
-            if (
-              value[flowkey][basekey].scopes !== undefined &&
-              value[flowkey][basekey].scopes !== null
-            ) {
-              if (value[flowkey][basekey].scopes.length > 0) {
-                setOauth2Scopes(value[flowkey][basekey].scopes);
-              } else {
-                var newscopes = [];
-                for (let [scopekey, scopevalue] of Object.entries(
-                  value[flowkey][basekey].scopes
-                )) {
-                  if (scopekey.startsWith("http")) {
-                    const scopekeysplit = scopekey.split("/");
-                    if (scopekeysplit.length < 5) {
-                      console.log("Skipping scope: ", scopekey);
-                      alert.info("Skipping scope: " + scopekey);
-                      continue;
-                    }
+      	      if (
+      	        value[flowkey][basekey].scopes !== undefined &&
+      	        value[flowkey][basekey].scopes !== null
+      	      ) {
+      	        if (value[flowkey][basekey].scopes.length > 0) {
+      	          setOauth2Scopes(value[flowkey][basekey].scopes);
+      	        } else {
+      	          var newscopes = [];
+      	          for (let [scopekey, scopevalue] of Object.entries(
+      	            value[flowkey][basekey].scopes
+      	          )) {
+      	            if (scopekey.startsWith("http")) {
+      	              const scopekeysplit = scopekey.split("/");
+      	              if (scopekeysplit.length < 5) {
+      	                console.log("Skipping scope: ", scopekey);
+      	                alert.info("Skipping scope: " + scopekey);
+      	                continue;
+      	              }
 
-                    //console.log("Checking scope for: ", scopekey, scopekeysplit.length)
-                  }
+      	              //console.log("Checking scope for: ", scopekey, scopekeysplit.length)
+      	            }
 
-                  newscopes.push(scopekey);
-                }
+      	            newscopes.push(scopekey);
+      	          }
 
-                setOauth2Scopes(newscopes);
-              }
-            }
-          } else {
-            console.log(
-              "Bad flowkey and basekey for oauth2: ",
-              flowkey,
-              basekey
-            );
-          }
-        } else if (key === "ApiKeyAuth") {
-          setAuthenticationOption("API key");
+      	          setOauth2Scopes(newscopes);
+      	        }
+      	      }
+      	    } else {
+      	      console.log(
+      	        "Bad flowkey and basekey for oauth2: ",
+      	        flowkey,
+      	        basekey
+      	      );
+      	    }
+      	  } else if (key === "ApiKeyAuth" || key === "Token") {
+      	    setAuthenticationOption("API key");
 
-          value.in = value.in.charAt(0).toUpperCase() + value.in.slice(1);
-          setParameterLocation(value.in);
-          if (!apikeySelection.includes(value.in)) {
-            console.log("APIKEY SELECT: ", apikeySelection);
-            alert.error("Might be error in setting up API key authentication");
-          }
+      	    value.in = value.in.charAt(0).toUpperCase() + value.in.slice(1);
+      	    setParameterLocation(value.in);
+      	    if (!apikeySelection.includes(value.in)) {
+      	      console.log("APIKEY SELECT: ", apikeySelection);
+      	      alert.error("Might be error in setting up API key authentication");
+      	    }
 
-          console.log("PARAM NAME: ", value.name);
-          setParameterName(value.name);
-          setAuthenticationRequired(true);
-        } else if (value.scheme === "basic") {
-          setAuthenticationOption("Basic auth");
-          setAuthenticationRequired(true);
-        } else if (value.scheme === "oauth2") {
-          setAuthenticationOption("Oauth2");
-          setAuthenticationRequired(true);
-        } else {
-          alert.error("Couldn't handle AUTH type: ", key);
-          //newauth.push({
-          //	"name": key,
-          //	"type": value.in,
-          //	"example": "",
-          //})
-        }
-      }
+      	    console.log("PARAM NAME: ", value.name);
+      	    setParameterName(value.name);
+      	    setAuthenticationRequired(true);
+      	  } else if (value.scheme === "basic") {
+      	    setAuthenticationOption("Basic auth");
+      	    setAuthenticationRequired(true);
+      	  } else if (value.scheme === "oauth2") {
+      	    setAuthenticationOption("Oauth2");
+      	    setAuthenticationRequired(true);
+      	  } else {
+      	    alert.error("Couldn't handle AUTH type: ", key);
+      	    //newauth.push({
+      	    //	"name": key,
+      	    //	"type": value.in,
+      	    //	"example": "",
+      	    //})
+      	  }
+      	}
+			} catch (e) {
+				alert.error("Failed to handle auth")
+				console.log("Error: ", e)
+			}
 
       if (newauth.length > 0) {
         setExtraAuth(newauth);
@@ -1710,6 +1718,10 @@ const AppCreator = (props) => {
               type: "string",
             },
           };
+
+					if (queryitem.example !== undefined) {
+						newitem.example = queryitem.example
+					}
 
           if (queryitem.description !== undefined) {
             newitem.description = queryitem.description;
@@ -2122,7 +2134,7 @@ const AppCreator = (props) => {
   };
 
   const addPathQuery = () => {
-    urlPathQueries.push({ name: "", required: true });
+    urlPathQueries.push({ name: "", required: true, example: "", });
     if (updater === "addupdater") {
       setUpdater("updater");
     } else {
@@ -2191,8 +2203,9 @@ const AppCreator = (props) => {
   //console.log("Option: ", authenticationOption)
   //console.log("Location: ", parameterLocation)
   //console.log("Name: ", parameterName)
-  const extraKeys = (
-    <div style={{ marginTop: 50 }}>
+  //const extraKeys = authenticationOption === "Oauth2" ? null : 
+  const extraKeys = 
+    <div style={{ marginTop: 50, marginRight: 25, }}>
       <div style={{ display: "flex" }}>
         <Typography variant="body1">Extra authentication</Typography>
         {extraAuth.length === 0 ? (
@@ -2356,7 +2369,7 @@ const AppCreator = (props) => {
         );
       })}
     </div>
-  );
+  //);
 
   const jwtAuth =
     authenticationOption === "JWT" ? (
@@ -2406,7 +2419,15 @@ const AppCreator = (props) => {
           color="textSecondary"
           style={{ marginTop: 10 }}
         >
-          Base Authorization URL
+					Find the Authorization URL, Token URL and scopes in question for the API. Ensure the app in question is pointed at https://shuffler.io/set_authentication
+        </Typography>
+
+        <Typography
+          variant="body2"
+          color="textSecondary"
+          style={{ marginTop: 10 }}
+        >
+          Base Authorization URL for Oauth2
         </Typography>
         <TextField
           required
@@ -2419,6 +2440,26 @@ const AppCreator = (props) => {
           variant="outlined"
           value={parameterName}
           onChange={(e) => setParameterName(e.target.value)}
+					onBlur={(event) => {
+            var tmpstring = event.target.value.trim();
+
+            if (
+              tmpstring.length > 4 &&
+              !tmpstring.startsWith("http") &&
+              !tmpstring.startsWith("ftp")
+            ) {
+              alert.error("Auth URL must start with http(s)://");
+            }
+
+						if (tmpstring.includes("?")) {
+							var newtmp = tmpstring.split("?")
+							if (tmpstring.length > 1) {
+								tmpstring = newtmp[0]
+							}
+						}
+
+						setParameterName(tmpstring)
+					}}
           InputProps={{
             classes: {
               notchedOutline: classes.notchedOutline,
@@ -2433,7 +2474,7 @@ const AppCreator = (props) => {
           color="textSecondary"
           style={{ marginTop: 10 }}
         >
-          Token URL
+          Token URL for Oauth2
         </Typography>
         <TextField
           required
@@ -2445,7 +2486,29 @@ const AppCreator = (props) => {
           margin="normal"
           variant="outlined"
           value={parameterLocation}
-          onChange={(e) => setParameterLocation(e.target.value)}
+          onChange={(e) => {
+						setParameterLocation(e.target.value)
+					}}
+					onBlur={(event) => {
+            var tmpstring = event.target.value.trim();
+
+            if (
+              tmpstring.length > 4 &&
+              !tmpstring.startsWith("http") &&
+              !tmpstring.startsWith("ftp")
+            ) {
+              alert.error("Token URL must start with http(s)://");
+            }
+
+						if (tmpstring.includes("?")) {
+							var newtmp = tmpstring.split("?")
+							if (tmpstring.length > 1) {
+								tmpstring = newtmp[0]
+							}
+						}
+
+						setParameterLocation(tmpstring)
+					}}
           InputProps={{
             classes: {
               notchedOutline: classes.notchedOutline,
@@ -2460,7 +2523,7 @@ const AppCreator = (props) => {
           color="textSecondary"
           style={{ marginTop: 10 }}
         >
-          Refresh-token URL
+          Refresh-token URL for Oauth2 (Optional)
         </Typography>
         <TextField
           style={{ margin: 0, flex: "1", backgroundColor: inputColor }}
@@ -2472,6 +2535,26 @@ const AppCreator = (props) => {
           variant="outlined"
           value={refreshUrl}
           onChange={(e) => setRefreshUrl(e.target.value)}
+					onBlur={(event) => {
+            var tmpstring = event.target.value.trim();
+
+            if (
+              tmpstring.length > 4 &&
+              !tmpstring.startsWith("http") &&
+              !tmpstring.startsWith("ftp")
+            ) {
+              alert.error("Refresh URL must start with http(s)://");
+            }
+
+						if (tmpstring.includes("?")) {
+							var newtmp = tmpstring.split("?")
+							if (tmpstring.length > 1) {
+								tmpstring = newtmp[0]
+							}
+						}
+
+						setRefreshUrl(tmpstring)
+					}}
           InputProps={{
             style: {
               color: "white",
@@ -2483,10 +2566,11 @@ const AppCreator = (props) => {
           color="textSecondary"
           style={{ marginTop: 10 }}
         >
-          Scopes
+          Scopes for Oauth2
         </Typography>
         <ChipInput
-          style={{}}
+          style={{border: "2px solid #f86a3e", borderRadius: theme.palette.borderRadius,}}
+					required
           InputProps={{
             style: {
               color: "white",
@@ -2494,7 +2578,7 @@ const AppCreator = (props) => {
             },
           }}
           style={{ maxHeight: 80, overflowX: "hidden", overflowY: "auto" }}
-          placeholder="Scopes"
+          placeholder="Available Oauth2 Scopes"
           color="primary"
           fullWidth
           value={oauth2Scopes}
@@ -2606,6 +2690,55 @@ const AppCreator = (props) => {
           return (
             <Paper key={index} style={actionListStyle}>
               <div style={{ marginLeft: "5px", width: "100%" }}>
+								<div style={{display: "flex"}}>
+									<TextField
+										required
+										fullWidth={true}
+										defaultValue={data.name}
+										placeholder={"Query name (key)"}
+										label={"Query Key"}
+										helperText={
+											<span style={{ color: "white", marginBottom: "2px" }}>
+												Click required to flip 
+											</span>
+										}
+										onBlur={(e) => {
+											console.log("IN BLUR: ", e.target.value);
+											urlPathQueries[index].name = e.target.value.replaceAll(
+												"=",
+												""
+											);
+
+											setUrlPathQueries(urlPathQueries);
+										}}
+										style={{flex: 3}}
+										InputProps={{
+											style: {
+												color: "white",
+											},
+										}}
+									/>
+									<TextField
+										fullWidth={true}
+										defaultValue={data.example}
+										placeholder={"Default value"}
+										label={"Example"}
+										onBlur={(e) => {
+											urlPathQueries[index].example = e.target.value.replaceAll(
+												"=",
+												""
+											)
+
+											setUrlPathQueries(urlPathQueries)
+										}}
+										style={{flex: 2}}
+										InputProps={{
+											style: {
+												color: "white",
+											},
+										}}
+									/>
+								</div>
                 <div
                   style={{ cursor: "pointer" }}
                   onClick={() => {
@@ -2617,31 +2750,6 @@ const AppCreator = (props) => {
                     {data.required.toString()}
                   </div>
                 </div>
-                <TextField
-                  required
-                  fullWidth={true}
-                  defaultValue={data.name}
-                  placeholder={"Query name"}
-                  helperText={
-                    <span style={{ color: "white", marginBottom: "2px" }}>
-                      Click required switch
-                    </span>
-                  }
-                  onBlur={(e) => {
-                    console.log("IN BLUR: ", e.target.value);
-                    urlPathQueries[index].name = e.target.value.replaceAll(
-                      "=",
-                      ""
-                    );
-
-                    setUrlPathQueries(urlPathQueries);
-                  }}
-                  InputProps={{
-                    style: {
-                      color: "white",
-                    },
-                  }}
-                />
               </div>
               <div
                 style={{ float: "right", color: "#f85a3e", cursor: "pointer" }}
@@ -2649,7 +2757,7 @@ const AppCreator = (props) => {
                   deletePathQuery(index);
                 }}
               >
-                Delete
+  							<DeleteIcon />
               </div>
             </Paper>
           );
@@ -3290,7 +3398,6 @@ const AppCreator = (props) => {
             onChange={(e) => {
               setActionField("url", e.target.value);
               setUrlPath(e.target.value);
-              console.log(e.target.value);
             }}
             helperText={
               <span style={{ color: "white", marginBottom: "2px" }}>
@@ -3369,6 +3476,23 @@ const AppCreator = (props) => {
                   if (request.header !== undefined && request.header !== null) {
                     var headers = [];
                     for (let [key, value] of Object.entries(request.header)) {
+											if (value === undefined) {
+												if (key.includes(":")) {
+													const keysplit = key.split(":")
+													key = keysplit[0].trim()
+													value = keysplit[1].trim()
+
+												} else if (key.includes("=")) {
+													const keysplit = key.split("=")
+													key = keysplit[0].trim()
+													value = keysplit[1].trim()
+
+												} else {
+													alert.error("Removed key: ", key)
+													continue
+												}
+											}
+
                       if (
                         parameterName !== undefined &&
                         key.toLowerCase() === parameterName.toLowerCase()
@@ -3376,17 +3500,14 @@ const AppCreator = (props) => {
                         continue;
                       }
 
-                      if (
-                        key === "Authorization" &&
-                        authenticationOption === "Bearer auth"
-                      ) {
+                      if (key === "Authorization") {
                         continue;
                       }
 
                       headers += key + "=" + value + "\n";
                     }
 
-                    setActionField("headers", headers);
+                    setActionField("headers", headers.trim());
                   }
 
                   if (request.body !== undefined && request.body !== null) {
@@ -3444,7 +3565,38 @@ const AppCreator = (props) => {
 							}
 
 							if (parsedurl.includes("?")) {
-								parsedurl = parsedurl.split("?")[0]
+								const parsedurlsplit = parsedurl.split("?")
+								parsedurl = parsedurlsplit[0]
+								
+								//var newqueries = selectedAction.queries === undefined || selectedAction.queries === null ? [] : selectedAction.queries
+
+								const datasplit = parsedurlsplit[1].split("&")
+								for (var key in datasplit) {
+									console.log("Data: ", datasplit[key])
+									var actualkey = datasplit[key]
+									var example = ""
+									if (datasplit[key].includes("=")) {
+										actualkey = datasplit[key].split("=")[0]
+										example = datasplit[key].split("=")[1]
+									}
+
+									const foundPath = urlPathQueries.find(data => data.name === actualkey)
+									if (foundPath === null || foundPath === undefined) {
+										urlPathQueries.push({ name: actualkey, example: example, required: true })
+									}
+								}
+							}
+
+							// Found that dashes in the URL doesn't work
+							parsedurl = parsedurl.replace("-", "_")
+							console.log("Actions: ", actions)
+
+							if (baseUrl.length === 0 && parsedurl.includes("http")) {
+								const newurl = new URL(encodeURI(parsedurl))
+								newurl.searchParams.delete(parameterName)
+								console.log("New url: ", newurl)
+								parsedurl = newurl.pathname
+								setBaseUrl(newurl.origin)
 							}
 
               if (event.target.value !== parsedurl) {
@@ -3578,7 +3730,7 @@ const AppCreator = (props) => {
           </Button>
           <Button
             color="primary"
-            variant="outlined"
+            variant={urlPath.length > 0 ? "contained" : "outlined"}
             style={{ borderRadius: "0px" }}
             onClick={() => {
               //console.log(urlPathQueries)
@@ -3656,15 +3808,21 @@ const AppCreator = (props) => {
         }
         style={{ backgroundColor: inputColor, color: "white", height: "50px" }}
       >
-        {categories.map((data, index) => (
-          <MenuItem
-            key={index}
-            style={{ backgroundColor: inputColor, color: "white" }}
-            value={data}
-          >
-            {data}
-          </MenuItem>
-        ))}
+        {categories.map((data, index) => {
+					if (data === undefined || data === null || data === "") {
+						return null
+					}
+
+					return (
+						<MenuItem
+							key={index}
+							style={{ backgroundColor: inputColor, color: "white" }}
+							value={data}
+						>
+							{data}
+						</MenuItem>
+        	)
+				})}
       </Select>
       <h4>Tags</h4>
       <ChipInput
@@ -4290,7 +4448,7 @@ const AppCreator = (props) => {
           <Button
             color="primary"
             style={{ marginTop: "20px", borderRadius: "0px" }}
-            variant="outlined"
+            variant={actions.length === 0 ? "contained" : "outlined"}
             onClick={() => {
               setCurrentAction({
                 name: "",
@@ -4394,7 +4552,7 @@ const AppCreator = (props) => {
 
   const imageInfo = (
     <img
-      crossorigin="anonymous"
+      crossOrigin="anonymous"
       src={imageData}
       id="logo"
       style={{
@@ -4676,12 +4834,15 @@ const AppCreator = (props) => {
                 for (var key in invalid) {
                   if (e.target.value.includes(invalid[key])) {
                     alert.error("Can't use " + invalid[key] + " in name");
+										setName(e.target.value.replaceAll(".", "").replaceAll("#", "").replaceAll(":", "").replaceAll(",", ""))
+
                     return;
                   }
                 }
 
                 if (e.target.value.length > 29) {
                   alert.error("Choose a shorter name (max 29).");
+									setName(e.target.value.slice(0,28))
                   return;
                 }
 
@@ -4784,6 +4945,7 @@ const AppCreator = (props) => {
             if (tmpstring.endsWith("/")) {
               tmpstring = tmpstring.slice(0, -1);
             }
+
             if (
               tmpstring.length > 4 &&
               !tmpstring.startsWith("http") &&
@@ -4792,7 +4954,12 @@ const AppCreator = (props) => {
               alert.error("URL must start with http(s)://");
             }
 
-            //if (authenticationOption === "No authentication" &&
+						if (tmpstring.includes("?")) {
+							var newtmp = tmpstring.split("?")
+							if (tmpstring.length > 1) {
+								tmpstring = newtmp[0]
+							}
+						}
 
             setBaseUrl(tmpstring);
           }}
@@ -4800,6 +4967,13 @@ const AppCreator = (props) => {
 				<div style={{padding: 25, border: "2px solid rgba(255,255,255,0.7)", borderRadius: theme.palette.borderRadius, }}>
 					<FormControl style={{ }} variant="outlined">
 						<Typography variant="h6">Authentication</Typography>
+						<a
+							target="_blank"
+							href="https://shuffler.io/docs/app_creation#authentication"
+							style={{ textDecoration: "none", color: "#f85a3e" }}
+						>
+							Learn more about app authentication
+						</a>
 						<Select
 							fullWidth
 							onChange={(e) => {
@@ -4808,6 +4982,14 @@ const AppCreator = (props) => {
 									setAuthenticationRequired(false);
 								} else {
 									setAuthenticationRequired(true);
+								}
+
+								if (e.target.value === "Oauth2") {
+									if (parameterLocation === "Header") {
+										setParameterLocation("")
+									}
+
+              		setExtraAuth([])
 								}
 							}}
 							value={authenticationOption}

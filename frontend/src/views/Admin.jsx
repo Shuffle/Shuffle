@@ -86,7 +86,7 @@ const MenuProps = {
 
 
 const Admin = (props) => {
-  const { globalUrl, userdata } = props;
+  const { globalUrl, userdata, serverside} = props;
 
   var upload = "";
   var to_be_copied = "";
@@ -560,11 +560,15 @@ const Admin = (props) => {
             if (responseJson.reason !== undefined) {
               alert.error(responseJson.reason);
             } else {
-              alert.error("Failed creating suborg");
+              alert.error("Failed creating suborg. Please try again");
             }
           } else {
-            alert.success("Successfully created suborg!");
+            alert.success("Successfully created suborg. Reloading in 3 seconds!");
             setSelectedUserModalOpen(false);
+
+            setTimeout(() => {
+							window.location.reload()
+            }, 2500);
           }
 
           setOrgName("");
@@ -864,7 +868,7 @@ const Admin = (props) => {
   const abortEnvironmentWorkflows = (environment) => {
     //console.log("Aborting all workflows started >10 minutes ago, not finished");
 
-    fetch(`${globalUrl}/api/v1/environments/${environment}/stop`, {
+    fetch(`${globalUrl}/api/v1/environments/${environment.id}/stop?deleteall=true`, {
       method: "GET",
       credentials: "include",
     })
@@ -1088,6 +1092,41 @@ const Admin = (props) => {
         ) {
           setFileNamespaces(responseJson.namespaces);
         }
+      })
+      .catch((error) => {
+        alert.error(error.toString());
+      });
+  };
+
+  const deleteFile = (file) => {
+    fetch(globalUrl + "/api/v1/files/" + file.id, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for file delete :O!");
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+				if (responseJson.success) {
+					alert.info("Successfully deleted file "+file.name)
+					
+				} else if (responseJson.reason !== undefined && responseJson.reason !== null) {
+					alert.error("Failed to delete file: " + responseJson.reason)
+
+				}
+				setTimeout(() => {
+					getFiles();
+				}, 1500);
+
+        console.log(responseJson)
       })
       .catch((error) => {
         alert.error(error.toString());
@@ -1322,12 +1361,12 @@ const Admin = (props) => {
     3: "files",
     4: "schedules",
     5: "environments",
-    6: "categories",
+    6: "suborgs",
   };
-  const setConfig = (event, newValue) => {
-    //console.log("Value: ", newValue)
+  const setConfig = (event, inputValue) => {
+		const newValue = parseInt(inputValue)
 
-    setCurTab(parseInt(newValue));
+    setCurTab(newValue)
     if (newValue === 1) {
       document.title = "Shuffle - admin - users";
       getUsers();
@@ -1350,18 +1389,13 @@ const Admin = (props) => {
       document.title = "Shuffle - admin";
     }
 
+  	console.log("NEWVALUE: ", newValue)
+
     if (newValue === 6) {
       console.log("Should get apps for categories.");
     }
 
-    //var theURL = window.location.pathname
-    //FIXME: Add url edits
-    //var theURL = window.location
-    //theURL.replace(`/${views[curTab]}`, `/${views[newValue]}`)
-    //window.history.pushState({"html":response.html,"pageTitle":response.pageTitle},"", urlPath);
-
-    //console.log(newpath)
-    //window.location.pathame = newpath
+		props.history.push(`/admin?tab=${views[newValue]}`)
 
     setModalUser({});
   };
@@ -1373,13 +1407,24 @@ const Admin = (props) => {
       getUsers();
     } else {
       getSettings();
-    }
+    }	
 
-    if (props.match.params.key !== undefined) {
-      //const tmpitem = views[props.match.params.key]
-      setConfig("", props.match.params.key);
-    }
-  }
+		if (serverside !== true && window.location.search !== undefined && window.location.search !== null) {
+			const urlSearchParams = new URLSearchParams(window.location.search)
+			const params = Object.fromEntries(urlSearchParams.entries())
+			const foundTab = params["tab"]
+			if (foundTab !== null && foundTab !== undefined) {
+				for (var key in Object.keys(views)) {
+					const value = views[key]
+					console.log(key, value)
+					if (value === foundTab) {
+						setConfig("", key)
+						break
+					}
+				}
+			}
+		}
+	}
 
   if (
     selectedOrganization.id === undefined &&
@@ -1764,16 +1809,14 @@ const Admin = (props) => {
               run2FASetup(userdata);
             }}
             disabled={
-              (selectedUser.role === "admin" &&
-                selectedUser.username !== userdata.username) ||
-              selectedUser.active === false
+              (selectedUser.role === "admin" && selectedUser.username !== userdata.username)
             }
             variant="outlined"
             color="primary"
           >
-            {selectedUser.mfa_info !== undefined &&
-            selectedUser.mfa_info !== null &&
-            selectedUser.mfa_info.active === true
+            { selectedUser.mfa_info !== undefined &&
+            	selectedUser.mfa_info !== null &&
+            	selectedUser.mfa_info.active === true
               ? "Disable 2FA"
               : "Enable 2FA"}
           </Button>
@@ -3120,7 +3163,6 @@ const Admin = (props) => {
                 style={{ minWidth: 125, maxWidth: 125 }}
               />
               <ListItemText primary="Actions" />
-              <ListItemText primary="File ID" />
             </ListItem>
             {files === undefined || files === null || files.length === 0
               ? null
@@ -3237,11 +3279,13 @@ const Admin = (props) => {
                         }}
                       />
                       <ListItemText
-                        primary=<Tooltip
-                          title={"Download file"}
-                          style={{}}
-                          aria-label={"Download"}
-                        >
+                        primary=
+												<span style={{display: "flex"}}>
+													<Tooltip
+														title={"Download file"}
+														style={{}}
+														aria-label={"Download"}
+													>
                           <span>
                             <IconButton
                               disabled={file.status !== "active"}
@@ -3258,55 +3302,68 @@ const Admin = (props) => {
                             </IconButton>
                           </span>
                         </Tooltip>
+												<Tooltip
+                          title={"Delete file"}
+                          style={{}}
+                          aria-label={"Delete"}
+                        >
+                          <span>
+                            <IconButton
+                              disabled={file.status !== "active"}
+                              onClick={() => {
+                                deleteFile(file);
+                              }}
+                            >
+                              <DeleteIcon
+                                style={{
+                                  color:
+                                    file.status === "active" ? "white" : "grey",
+                                }}
+                              />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+												<Tooltip
+                          title={"Copy file ID"}
+                          style={{}}
+                          aria-label={"copy"}
+                        >
+													<IconButton
+														onClick={() => {
+															const elementName = "copy_element_shuffle";
+															var copyText = document.getElementById(elementName);
+															if (copyText !== null && copyText !== undefined) {
+																const clipboard = navigator.clipboard;
+																if (clipboard === undefined) {
+																	alert.error(
+																		"Can only copy over HTTPS (port 3443)"
+																	);
+																	return;
+																}
+
+																navigator.clipboard.writeText(file.id);
+																copyText.select();
+																copyText.setSelectionRange(
+																	0,
+																	99999
+																); /* For mobile devices */
+
+																/* Copy the text inside the text field */
+																document.execCommand("copy");
+
+																alert.info(file.id + " copied to clipboard");
+															}
+														}}
+													>
+														<FileCopyIcon style={{ color: "white" }} />
+													</IconButton>
+												</Tooltip>
+												</span>
                         style={{
-                          minWidth: 75,
-                          maxWidth: 75,
+                          minWidth: 150,
+                          maxWidth: 150,
                           overflow: "hidden",
                         }}
-                      />
-                      {/*
-							<ListItemText>
-								<Button 
-									style={{}} 
-									variant="contained"
-									color="primary"
-									disabled
-									onClick={() => deleteSchedule(file)}
-								>
-									Stop schedule	
-								</Button>
-							</ListItemText>
-							*/}
-                      <ListItemText
-                        primary=<IconButton
-                          onClick={() => {
-                            const elementName = "copy_element_shuffle";
-                            var copyText = document.getElementById(elementName);
-                            if (copyText !== null && copyText !== undefined) {
-                              const clipboard = navigator.clipboard;
-                              if (clipboard === undefined) {
-                                alert.error(
-                                  "Can only copy over HTTPS (port 3443)"
-                                );
-                                return;
-                              }
-
-                              navigator.clipboard.writeText(file.id);
-                              copyText.select();
-                              copyText.setSelectionRange(
-                                0,
-                                99999
-                              ); /* For mobile devices */
-
-                              /* Copy the text inside the text field */
-                              document.execCommand("copy");
-
-                              alert.info(file.id + " copied to clipboard");
-                            }
-                          }}
-                        >
-                          <FileCopyIcon style={{ color: "white" }} />
-                        </IconButton>
                       />
                     </ListItem>
                   );
@@ -3811,7 +3868,7 @@ const Admin = (props) => {
                           ? environment.running_ip === undefined ||
                             environment.running_ip === null ||
                             environment.running_ip.length === 0
-                            ? "Not started"
+                            ? "Not running"
                             : environment.running_ip
                           : "N/A"
                       }
@@ -4097,7 +4154,7 @@ const Admin = (props) => {
         <Tabs
           value={curTab}
           indicatorColor="primary"
-					textColor="primary"
+					textColor="secondary"
           onChange={setConfig}
           aria-label="disabled tabs example"
         >

@@ -384,12 +384,12 @@ const Settings = (props) => {
       <Grid item xs={4} style={{ borderRadius: theme.palette.borderRadius }}>
         <Paper style={innerPaperStyle}>
           <img
-            src={data.image_thumbnail_url}
+            src={data.image}
             alt={data.name}
             style={{ width: "100%", marginBottom: 10 }}
           />
           <Typography variant="body2" color="textSecondary">
-            {data.collection.name}
+            {data.collection}
           </Typography>
           <Typography variant="body2">{data.name}</Typography>
         </Paper>
@@ -746,7 +746,7 @@ const Settings = (props) => {
                   >
                     <Typography>
                       <img
-                        src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Ethereum-icon-purple.svg/480px-Ethereum-icon-purple.svg.png"
+                        src="/images/social/ethereum.png"
                         alt="ethereum-icon"
                         style={{ height: 30 }}
                       />

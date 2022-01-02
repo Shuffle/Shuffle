@@ -208,7 +208,7 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 
 	err = shuffle.DeleteKeys(ctx, parsedId, ids)
 	if err != nil {
-		log.Printf("[ERROR] Failed deleting %d execution keys for org %s", len(ids), id)
+		log.Printf("[ERROR] Failed deleting %d execution keys for org %s: %s", len(ids), id, err)
 	} else {
 		//log.Printf("[INFO] Deleted %d keys from org %s", len(ids), parsedId)
 	}
@@ -366,7 +366,7 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
 	workflowExecution, err := shuffle.GetWorkflowExecution(ctx, actionResult.ExecutionId)
 	if err != nil {
-		log.Printf("Failed getting execution (streamresult) %s: %s", actionResult.ExecutionId, err)
+		log.Printf("[WARNING] Failed getting execution (streamresult) %s: %s", actionResult.ExecutionId, err)
 		resp.WriteHeader(401)
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad authorization key or execution_id might not exist."}`)))
 		return
@@ -412,7 +412,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	//log.Printf("Actionresult unmarshal: %s", string(body))
-	log.Printf("[DEBUG] Got workflow result from %s of length %d", request.RemoteAddr, len(body))
+	log.Printf("[DEBUG] Got workflow result from %s of length %d.", request.RemoteAddr, len(body))
 	err = shuffle.ValidateNewWorkerExecution(body)
 	if err == nil {
 		resp.WriteHeader(200)
@@ -494,7 +494,9 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		err := handleUserInput(trigger, orgId, workflowExecution.Workflow.ID, workflowExecution.ExecutionId)
 		if err != nil {
 			log.Printf("[WARNING] Failed userinput handler: %s", err)
-			actionResult.Result = fmt.Sprintf("Cloud error: %s", err)
+
+			actionResult.Result = fmt.Sprintf(`{"success": False, "reason": "%s"}`, err)
+
 			workflowExecution.Results = append(workflowExecution.Results, actionResult)
 			workflowExecution.Status = "ABORTED"
 			err = shuffle.SetWorkflowExecution(ctx, *workflowExecution, true)
@@ -506,12 +508,13 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error: %s"}`, err)))
+			return
 		} else {
 			log.Printf("[INFO] Successful userinput handler")
 			resp.WriteHeader(200)
 			resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "CLOUD IS DONE"}`)))
 
-			actionResult.Result = "Waiting for user feedback based on configuration"
+			actionResult.Result = `{"success": True, "reason": "Waiting for user feedback based on configuration"}`
 
 			workflowExecution.Results = append(workflowExecution.Results, actionResult)
 			workflowExecution.Status = actionResult.Status
@@ -519,7 +522,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 			if err != nil {
 				log.Printf("[WARNING] Failed setting userinput: %s", err)
 			} else {
-				log.Printf("Successfully set the execution to waiting.")
+				log.Printf("[DEBUG] Successfully set the execution to waiting.")
 			}
 		}
 
@@ -875,7 +878,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 		return shuffle.WorkflowExecution{}, fmt.Sprintf(`workflow %s is invalid`, workflow.ID), errors.New("Failed getting workflow")
 	}
 
-	workflowExecution, execInfo, _, err := shuffle.PrepareWorkflowExecution(ctx, workflow, request)
+	workflowExecution, execInfo, _, err := shuffle.PrepareWorkflowExecution(ctx, workflow, request, 10)
 	if err != nil {
 		log.Printf("[WARNING] Failed in prepareExecution: %s", err)
 		return shuffle.WorkflowExecution{}, fmt.Sprintf("Failed preparration: %s", err), err
@@ -919,6 +922,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 			//}
 
 			//log.Printf("Execution request: %#v", executionRequest)
+			executionRequest.Priority = workflowExecution.Priority
 			err = shuffle.SetWorkflowQueue(ctx, executionRequest, environment)
 			if err != nil {
 				log.Printf("[ERROR] Failed adding execution to db: %s", err)
@@ -1035,13 +1039,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	user, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("[INFO] Api authentication failed in execute workflow: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
-		return
-	}
+	user, userErr := shuffle.HandleApiAuthentication(resp, request)
 
 	if user.Role == "org-reader" {
 		log.Printf("[WARNING] Org-reader doesn't have access to run workflow: %s (%s)", user.Username, user.Id)
@@ -1079,14 +1077,38 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if user.Id != workflow.Owner && user.Role != "scheduler" && user.Role != fmt.Sprintf("workflow_%s", fileId) {
-		if workflow.OrgId == user.ActiveOrg.Id && user.Role == "admin" {
-			log.Printf("[AUDIT] Letting user %s execute %s because they're admin of the same org", user.Username, workflow.ID)
-		} else {
-			log.Printf("[AUDIT] Wrong user (%s) for workflow %s (execute)", user.Username, workflow.ID)
+	executionAuthValid := false
+	newOrgId := ""
+	if userErr != nil {
+		// Check if the execution data has correct info in it! Happens based on subflows.
+		// 1. Parent workflow contains this workflow ID in the source trigger?
+		// 2. Parent workflow's owner is same org?
+		// 3. Parent execution auth is correct
+
+		executionAuthValid, newOrgId = shuffle.RunExecuteAccessValidation(request, workflow)
+		if !executionAuthValid {
+			log.Printf("[INFO] Api authentication failed in execute workflow: %s", userErr)
 			resp.WriteHeader(401)
 			resp.Write([]byte(`{"success": false}`))
 			return
+		} else {
+			log.Printf("[DEBUG] Execution of %s successfully validated and started based on subflow or user input execution", workflow.ID)
+			user.ActiveOrg = shuffle.OrgMini{
+				Id: newOrgId,
+			}
+		}
+	}
+
+	if !executionAuthValid {
+		if user.Id != workflow.Owner && user.Role != "scheduler" && user.Role != fmt.Sprintf("workflow_%s", fileId) {
+			if workflow.OrgId == user.ActiveOrg.Id && user.Role == "admin" {
+				log.Printf("[AUDIT] Letting user %s execute %s because they're admin of the same org", user.Username, workflow.ID)
+			} else {
+				log.Printf("[AUDIT] Wrong user (%s) for workflow %s (execute)", user.Username, workflow.ID)
+				resp.WriteHeader(401)
+				resp.Write([]byte(`{"success": false}`))
+				return
+			}
 		}
 	}
 
@@ -2419,6 +2441,7 @@ func handleUserInput(trigger shuffle.Trigger, organizationId string, workflowId 
 	// E.g. check email
 	sms := ""
 	email := ""
+	subflow := ""
 	triggerType := ""
 	triggerInformation := ""
 	for _, item := range trigger.Parameters {
@@ -2430,11 +2453,14 @@ func handleUserInput(trigger shuffle.Trigger, organizationId string, workflowId 
 			email = item.Value
 		} else if item.Name == "sms" {
 			sms = item.Value
+		} else if item.Name == "subflow" {
+			subflow = item.Value
 		}
 	}
+	_ = subflow
 
 	if len(triggerType) == 0 {
-		log.Printf("No type specified for user input node")
+		log.Printf("[WARNING] No type specified for user input node")
 		return errors.New("No type specified for user input node")
 	}
 
@@ -2467,6 +2493,7 @@ func handleUserInput(trigger shuffle.Trigger, organizationId string, workflowId 
 
 		log.Printf("[INFO] Should send email to %s during execution.", email)
 	}
+
 	if strings.Contains(triggerType, "sms") {
 		action := shuffle.CloudSyncJob{
 			Type:          "user_input",
@@ -2491,7 +2518,11 @@ func handleUserInput(trigger shuffle.Trigger, organizationId string, workflowId 
 			return err
 		}
 
-		log.Printf("Should send SMS to %s during execution.", sms)
+		log.Printf("[DEBUG] Should send SMS to %s during execution.", sms)
+	}
+
+	if strings.Contains(triggerType, "subflow") {
+		log.Printf("[DEBUG] Should run a subflow with the result for user input.")
 	}
 
 	return nil
@@ -2547,6 +2578,7 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	workflowExecution.Priority = 10
 	environments, err := shuffle.GetEnvironments(ctx, user.ActiveOrg.Id)
 	environment := "Shuffle"
 	if len(environments) >= 1 {
@@ -2567,6 +2599,7 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		Environments:  []string{environment},
 	}
 
+	executionRequest.Priority = workflowExecution.Priority
 	err = shuffle.SetWorkflowQueue(ctx, executionRequest, environment)
 	if err != nil {
 		log.Printf("[ERROR] Failed adding execution to db: %s", err)
@@ -2927,7 +2960,21 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 		for _, item := range buildLaterFirst {
 			err = buildImageMemory(fs, item.Tags, item.Extra, true)
 			if err != nil {
-				log.Printf("Failed image build memory: %s", err)
+				orgId := ""
+
+				log.Printf("[DEBUG] Failed image build memory. Creating notification with org %#v: %s", orgId, err)
+
+				if len(item.Tags) > 0 {
+					err = shuffle.CreateOrgNotification(
+						ctx,
+						fmt.Sprintf("App failed to build"),
+						fmt.Sprintf("The app %s with image %s failed to build. Check backend logs with docker! docker logs shuffle-backend", item.Tags[0], item.Extra),
+						fmt.Sprintf("/apps"),
+						orgId,
+						false,
+					)
+				}
+
 			} else {
 				if len(item.Tags) > 0 {
 					log.Printf("[INFO] Successfully built image %s", item.Tags[0])

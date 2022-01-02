@@ -62,11 +62,112 @@ class AppBase:
         if len(self.base_url) == 0:
             self.base_url = self.url
 
+    # Checks output for whether it should be automatically parsed or not
+    def run_magic_parser(self, input_data):
+        if not isinstance(input_data, str):
+            self.logger.info("[DEBUG] Not string. Returning from magic")
+            return input_data
+
+        # Don't touch existing JSON/lists
+        if (input_data.startswith("[") and input_data.endswith("]")) or (input_data.startswith("{") and input_data.endswith("}")):
+            self.logger.info("[DEBUG] Already JSON-like. Returning from magic")
+            return input_data
+
+        if len(input_data) < 3:
+            self.logger.info("[DEBUG] Too short input data")
+            return input_data
+
+        # Don't touch large data.
+        if len(input_data) > 100000:
+            self.logger.info("[DEBUG] Value too large. Returning from magic")
+            return input_data
+
+        if not "\n" in input_data and not "," in input_data: 
+            self.logger.info("[DEBUG] No data to autoparse - requires newline or comma")
+            return input_data
+
+        new_input = input_data
+        try:
+            #new_input.strip()
+            new_input = input_data.split()
+            new_return = []
+
+            index = 0
+            for item in new_input:
+                splititem = ","
+                if ", " in item:
+                    splititem = ", "
+                elif "," in item:
+                    splititem = ","
+                else:
+                    new_return.append(item)
+
+                    index += 1
+                    continue
+
+                #print("FIX ITEM %s" % item)
+                for subitem in item.split(splititem):
+                    new_return.insert(index, subitem) 
+
+                    index += 1
+
+                    # Prevent large data or infinite loops
+                    if index > 10000:
+                        self.logger.info(f"[DEBUG] Infinite loop. Returning default data.")
+                        return input_data
+
+            fixed_return = []
+            for item in new_return:
+                if not item:
+                    continue
+
+                if not isinstance(item, str):
+                    fixed_return.append(item)
+                    continue
+
+                if item.endswith(","):
+                    item = item[0:-1]
+                
+                fixed_return.append(item)
+
+            new_input = fixed_return
+        except Exception as e:
+            self.logger.info(f"[ERROR] Failed to run magic parser (2): {e}")
+            return input_data
+
+        try:
+            new_input = input_data.split()
+        except Exception as e:
+            self.logger.info(f"[ERROR] Failed to run magic parser (1): {e}")
+            return input_data
+
+        # Won't ever touch this one?
+        if isinstance(input_data, list) or isinstance(input_data, object):
+            try:
+                return json.dumps(new_input)
+            except Exception as e:
+                self.logger.info(f"[ERROR] Failed to run magic parser: {e}")
+            
+        return new_input
+
     # FIXME: Add more info like logs in here.
     # Docker logs: https://forums.docker.com/t/docker-logs-inside-the-docker-container/68190/2
     def send_result(self, action_result, headers, stream_path):
         if action_result["status"] == "EXECUTING":
             action_result["status"] = "FAILURE"
+
+        try:
+            #self.logger.info(f"[DEBUG] ACTION: {self.action}")
+            if self.action["run_magic_output"] == True:
+                self.logger.warning(f"[INFO] Action result ran with Magic parser output.")
+                action_result["result"] = self.run_magic_parser(action_result["result"])
+            else:
+                self.logger.warning(f"[ERROR] Magic output not defined.")
+        except Exception as e:
+            self.logger.warning(f"[ERROR] Failed to run magic autoparser: {e}")
+            pass
+
+        # Try it with some magic
 
         self.logger.info(f"""[DEBUG] Inside Send result with status {action_result["status"]}""")
 
@@ -981,12 +1082,20 @@ class AppBase:
                     except json.decoder.JSONDecodeError:
                         pass
 
-                    self.action_result["result"] = "Bad result from backend: %d" % ret.status_code
+                    self.action_result["result"] = json.dumps({
+                        "success": False,
+                        "reason": f"Bad result from backend during startup of app: {ret.status_code}",
+                        "extended_reason": f"{ret.text}"
+                    })
                     self.send_result(self.action_result, headers, stream_path) 
                     return
             except requests.exceptions.ConnectionError as e:
                 self.logger.info("[DEBUG] FullExec Connectionerror: %s" %  e)
-                self.action_result["result"] = "Connection error during startup: %s" % e
+                self.action_result["result"] = json.dumps({
+                    "success": False,
+                    "reason": f"Connection error during startup: {e}"
+                })
+
                 self.send_result(self.action_result, headers, stream_path) 
                 return
         else:
@@ -1501,7 +1610,7 @@ class AppBase:
                         appendresult += char
 
                 actionname_lower = "exec"
-            elif actionname_lower.startswith("shuffle_cache "): 
+            elif actionname_lower.startswith("shuffle_cache ") or actionname_lower.startswith("shuffle_db "): 
                 actionname_lower = "shuffle_cache"
 
             actionname_lower = actionname_lower.replace(" ", "_", -1)
@@ -2805,7 +2914,7 @@ class AppBase:
                             # Dump the result as a string of a list
                             #self.logger.info("RESULTS: %s" % results)
                             if isinstance(results, list) or isinstance(results, dict):
-                                self.logger.info("JSON OBJECT? ", json_object)
+                                self.logger.info(f"JSON OBJECT? {json_object}")
 
                                 # This part is weird lol
                                 if json_object:

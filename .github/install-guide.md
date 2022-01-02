@@ -17,7 +17,7 @@ cd Shuffle
 
 3. Fix prerequisites for the Opensearch database (Elasticsearch): 
 ```
-sudo chown 1000:1000 -R shuffle-database 		# Required for Opensearch 
+sudo chown -R 1000:1000 shuffle-database 		# Required for Opensearch 
 ```
 
 4. Run docker-compose.

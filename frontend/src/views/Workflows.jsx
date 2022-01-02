@@ -1,6 +1,10 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useContext } from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import { useTheme } from "@material-ui/core/styles";
+
+import SecurityFramework from '../components/SecurityFramework.jsx';
+import { ShepherdTour, ShepherdTourContext } from 'react-shepherd'
+
 
 import {
   Badge,
@@ -153,7 +157,7 @@ export const GetIconInfo = (action) => {
     },
     {
       key: "repeat",
-      values: ["repeat", "retry", "pause", "skip", "copy", "replicat"],
+      values: ["repeat", "retry", "pause", "skip", "copy", "replicat", "demo", ],
     },
     { key: "execute", values: ["execute", "run", "play", "raise"] },
     { key: "extract", values: ["extract", "unpack", "decompress", "open"] },
@@ -398,11 +402,30 @@ export const validateJson = (showResult) => {
 
   var result = showResult;
   try {
-    const result = jsonvalid ? JSON.parse(showResult) : showResult;
+    result = jsonvalid ? JSON.parse(showResult) : showResult;
   } catch (e) {
-    //console.log("Failed parsing JSON even though its valid: ", e)
+    ////console.log("Failed parsing JSON even though its valid: ", e)
     jsonvalid = false;
   }
+
+	if (jsonvalid === false) {
+
+		if (typeof showResult === 'string') {
+			showResult = showResult.trim()
+		}
+
+		try {
+			var newstr = showResult.replaceAll("'", '"')
+
+			//console.log("Try replacements and trimming with new value: ", newstr)
+			result = JSON.parse(newstr)
+			jsonvalid = true
+		} catch (e) {
+
+			//console.log("Failed parsing JSON even though its valid (2): ", e)
+			jsonvalid = false
+		}
+	}
 
   //console.log("VALID: ", jsonvalid, result)
   return {
@@ -457,6 +480,8 @@ const Workflows = (props) => {
   const [filters, setFilters] = React.useState([]);
   const [submitLoading, setSubmitLoading] = React.useState(false);
   const [actionImageList, setActionImageList] = React.useState([]);
+
+  const [firstLoad, setFirstLoad] = React.useState(true);
 
   const isCloud =
     window.location.host === "localhost:3002" ||
@@ -839,6 +864,11 @@ const Workflows = (props) => {
 
           setFilteredWorkflows(responseJson);
           setWorkflowDone(true);
+  
+					// Ensures the zooming happens only once per load
+        	setTimeout(() => {
+						setFirstLoad(false)
+					}, 100)
         } else {
           if (isLoggedIn) {
             alert.error("An error occurred while loading workflows");
@@ -1764,6 +1794,7 @@ const Workflows = (props) => {
         if (file.type !== "application/json") {
           if (file.type !== undefined) {
             alert.error("File has to contain valid json");
+    				setImportLoading(false);
           }
 
           continue;
@@ -2410,7 +2441,104 @@ const Workflows = (props) => {
     </span>
   );
 
+	const tourOptions = {
+		defaultStepOptions: {
+			classes: "shadow-md bg-purple-dark",
+    	scrollTo: true
+		},
+		useModalOverlay: true,
+		tourName: workflows,
+		exitOnEsc: true,
+	}
+
+   //classes: "custom-class-name-1 custom-class-name-2",
+	const newSteps = [
+		{
+    	id: "intro",
+    	scrollTo: true,
+    	beforeShowPromise: function() {
+    	  return new Promise(function(resolve) {
+    	    setTimeout(function() {
+    	      window.scrollTo(0, 0);
+    	      resolve();
+    	    }, 500);
+    	  });
+    	},
+    	buttons: [
+    	  {
+    	    classes: "shepherd-button-primary",
+					style: {
+						backgroundColor: "red",	
+						color: "white", 
+					},
+    	    text: "Next",
+    	    type: "next"
+    	  }
+    	],
+    	highlightClass: "highlight",
+    	showCancelLink: true,
+    	text: [
+    	  "React-Shepherd is a JavaScript library for guiding users through your React app."
+    	],
+    	when: {
+    	  show: () => {
+    	    console.log("show step 1");
+    	  },
+    	  hide: () => {
+    	    console.log("hide step 1");
+    	  }
+    	}
+  },	
+  {
+    	id: "second",
+    	attachTo: {
+    	  element: "second-step",
+    	  on: "top"
+    	},
+    	text: [
+    	  "Yuk eksplorasi hasil Tes Minat Bakat-mu dan rekomendasi <b>Jurusan</b> dan Karier."
+    	],
+    	buttons: [
+    	  {
+    	    classes: "btn btn-info",
+    	    text: "Kembali",
+    	    type: "back"
+    	  },
+    	  {
+    	    classes: "btn btn-success",
+    	    text: "Saya Mengerti",
+    	    type: "cancel"
+    	  }
+    	],
+    	when: {
+    	  show: () => {
+    	    console.log("show stepp");
+    	  },
+    	  hide: () => {
+    	    console.log("complete step");
+    	  }
+    	},
+    	showCancelLink: false,
+    	scrollTo: true,
+    	modalOverlayOpeningPadding: 4,
+    	useModalOverlay: false,
+    	canClickTarget: false
+  	}
+	]
+		
+		function TourButton() {
+		  const tour = useContext(ShepherdTourContext);
+		
+		  return (
+		    <Button variant="contained" color="primary" onClick={tour.start}>
+		      Start Tour
+		    </Button>
+		  );
+		}
+
+	//import { ShepherdTour, ShepherdTourContext } from 'react-shepherd'
   const WorkflowView = () => {
+		/*
     if (workflows.length === 0) {
       return (
         <div style={emptyWorkflowStyle}>
@@ -2438,6 +2566,7 @@ const Workflows = (props) => {
             </div>
             <div style={{ display: "flex" }}>
               <Button
+								id="second-step"
                 color="primary"
                 style={{ marginTop: "20px" }}
                 variant="outlined"
@@ -2458,11 +2587,15 @@ const Workflows = (props) => {
         </div>
       );
     }
+		*/
 
 		var workflowDelay = -150
-		var appDelay = -75
+		var appDelay = -75	
+
+
     return (
       <div style={viewStyle}>
+
         <div style={workflowViewStyle}>
           <div style={{ display: "flex" }}>
             <div style={{ flex: 3 }}>
@@ -2521,8 +2654,8 @@ const Workflows = (props) => {
               <Typography style={{ marginTop: 7, marginBottom: "auto" }}>
                 <a
                   rel="noopener noreferrer"
-                  href="https://shuffler.io/docs/workflows"
                   target="_blank"
+                  href="https://shuffler.io/docs/workflows"
                   style={{ textDecoration: "none", color: "#f85a3e" }}
                 >
                   Learn more about Workflows
@@ -2581,7 +2714,11 @@ const Workflows = (props) => {
                   data.large_image = theme.palette.defaultImage;
                 }
 
-								appDelay += 75
+								if (firstLoad) {
+									appDelay += 75
+								} else {
+									appDelay = 0
+								}
 
                 return (
 									<Zoom key={index} in={true} style={{ transitionDelay: `${appDelay}ms` }}>
@@ -2650,7 +2787,11 @@ const Workflows = (props) => {
               	<NewWorkflowPaper />
 							</Zoom>
               {filteredWorkflows.map((data, index) => {
-								workflowDelay += 75
+  							if (firstLoad) {
+									workflowDelay += 75
+								} else {
+									workflowDelay = 0
+								}
 
                 return (
 									<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>
@@ -2858,6 +2999,11 @@ const Workflows = (props) => {
   const loadedCheck =
     isLoaded && isLoggedIn && workflowDone ? (
       <div>
+				{/*
+				<ShepherdTour steps={newSteps} tourOptions={tourOptions}>
+					<TourButton />
+				</ShepherdTour>
+				*/}
         <Dropzone
           style={{
             maxWidth: window.innerWidth > 1366 ? 1366 : 1200,

@@ -19,14 +19,10 @@ import 'codemirror/keymap/sublime';
 import 'codemirror/theme/gruvbox-dark.css';
 
 const CodeEditor = (props) => {
-	const {fieldCount, setFieldCount} = props
-	const {actionlist} = props
-	const {changeActionParameterCodeMirror} = props 
-  	const {expansionModalOpen, setExpansionModalOpen} = props
-  	const {codedata, setcodedata} = props
+	const { fieldCount, setFieldCount, actionlist, changeActionParameterCodeMirror, expansionModalOpen, setExpansionModalOpen, codedata, setcodedata } = props
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
-    // const {codelang, setcodelang} = props
-  	const theme = useTheme();
+  // const {codelang, setcodelang} = props
+  const theme = useTheme();
 
 	const [validation, setvalidation] = React.useState(" ");
 	function IsJsonString(str) {
@@ -191,7 +187,7 @@ const CodeEditor = (props) => {
 							setExpansionModalOpen(false)
 						}}
 					>
-						CANCEL
+						Cancel
 					</button>
 				</div>
 				<div>
@@ -214,7 +210,7 @@ const CodeEditor = (props) => {
 							setcodedata(localcodedata)
 						}}
 					>
-						DONE
+						Done
 					</button>
 				</div>
 			</div>
