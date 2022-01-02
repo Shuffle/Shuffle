@@ -3,8 +3,8 @@ import { useInterval } from "react-powerhooks";
 import { makeStyles, useTheme } from "@material-ui/core/styles";
 
 import { v4 as uuidv4 } from "uuid";
-import { Link } from "react-router-dom";
-import { Prompt } from "react-router";
+import { Link, useParams } from "react-router-dom";
+// import { Prompt } from "react-router"; // FIXME
 import { useBeforeunload } from "react-beforeunload";
 import ReactJson from "react-json-view";
 import NestedMenuItem from "material-ui-nested-menu-item";
@@ -210,10 +210,16 @@ const svgSize = 24;
 //const referenceUrl = "https://shuffler.io/functions/webhooks/"
 //const referenceUrl = window.location.origin+"/api/v1/hooks/"
 
-const AngularWorkflow = (props) => {
-  const { globalUrl, isLoggedIn, isLoaded, userdata } = props;
+const AngularWorkflow = (defaultprops) => {
+  const { globalUrl, isLoggedIn, isLoaded, userdata } = defaultprops;
   const referenceUrl = globalUrl + "/api/v1/hooks/";
   const alert = useAlert()
+
+	const params = useParams();
+	var props = JSON.parse(JSON.stringify(defaultprops))
+	props.match = {}
+	props.match.params = params
+
   const green = "#86c142";
   const yellow = "#FECC00";
   //const theme = useTheme();
@@ -12636,7 +12642,9 @@ const AngularWorkflow = (props) => {
 
   return (
     <div>
-      <Prompt when={!lastSaved} message={unloadText} />
+      {/* Removed due to missing react router features
+				<Prompt when={!lastSaved} message={unloadText} />
+			*/}
       {loadedCheck}
     </div>
   );

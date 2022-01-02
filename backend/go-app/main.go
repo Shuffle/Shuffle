@@ -1021,6 +1021,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	tutorialsFinished := []string{}
 	returnValue := shuffle.HandleInfo{
 		Success:   true,
 		Username:  userInfo.Username,
@@ -1035,7 +1036,8 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 				Expiration: expiration.Unix(),
 			},
 		},
-		EthInfo: userInfo.EthInfo,
+		EthInfo:   userInfo.EthInfo,
+		Tutorials: tutorialsFinished,
 	}
 
 	returnData, err := json.Marshal(returnValue)

@@ -926,21 +926,23 @@ func main() {
 				log.Printf("[INFO] Executionstatus issue: ", execution.Status)
 			}
 
-			found := false
-			for _, executionId := range executionIds {
-				if execution.ExecutionId == executionId {
-					found = true
-					break
+			/*
+				found := false
+				for _, executionId := range executionIds {
+					if execution.ExecutionId == executionId {
+						found = true
+						break
+					}
 				}
-			}
 
-			// Doesn't work because of USER INPUT
-			if found {
-				log.Printf("[INFO] Skipping duplicate %s", execution.ExecutionId)
-				continue
-			} else {
-				//log.Printf("[INFO] Adding to be ran %s", execution.ExecutionId)
-			}
+				// Doesn't work because of USER INPUT
+				if found {
+					log.Printf("[INFO] Skipping duplicate %s", execution.ExecutionId)
+					continue
+				} else {
+					//log.Printf("[INFO] Adding to be ran %s", execution.ExecutionId)
+				}
+			*/
 
 			// Now, how do I execute this one?
 			// FIXME - if error, check the status of the running one. If it's bad, send data back.
@@ -1241,16 +1243,17 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 		return err
 	}
 
-	if newresp.StatusCode != 200 {
-		log.Printf("[ERROR] Error running request - status code is %d, not 200", newresp.StatusCode)
-		return errors.New(fmt.Sprintf("Bad statuscode: %d - expecting 200", newresp.StatusCode))
-	}
-
 	body, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
 		log.Printf("[ERROR] Failed reading body in worker request body: %s", err)
 		return err
 	}
+
+	if newresp.StatusCode != 200 {
+		log.Printf("[ERROR] Error running request - status code is %d, not 200. Body: %s", newresp.StatusCode, string(body))
+		return errors.New(fmt.Sprintf("Bad statuscode: %d - expecting 200", newresp.StatusCode))
+	}
+
 	_ = body
 
 	log.Printf("[DEBUG] Ran worker from request with execution ID: %s. Worker URL: %s.\n\n DEBUGGING: docker service logs shuffle-workers | grep %s\n\n", workflowExecution.ExecutionId, streamUrl, workflowExecution.ExecutionId)

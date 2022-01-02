@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from "react";
 
-import { Route } from "react-router";
-import { BrowserRouter } from "react-router-dom";
+//import { Route, Routes } from "react-router";
+import { Route, Routes, BrowserRouter } from "react-router-dom";
 import { CookiesProvider } from "react-cookie";
 import { removeCookies, useCookies } from "react-cookie";
 
-import EditSchedule from "./views/EditSchedule";
-import Schedules from "./views/Schedules";
-import Webhooks from "./views/Webhooks";
 import Workflows from "./views/Workflows";
+import GettingStarted from "./views/GettingStarted";
 import EditWebhook from "./views/EditWebhook";
 import AngularWorkflow from "./views/AngularWorkflow";
 
@@ -52,6 +50,7 @@ if (window.location.port === "3000") {
 }
 
 const App = (message, props) => {
+
   const [userdata, setUserData] = useState({});
   const [notifications, setNotifications] = useState([])
   const [cookies, setCookie, removeCookie] = useCookies([])
@@ -271,11 +270,13 @@ const App = (message, props) => {
     window.location.pathname === "/home" ||
     window.location.pathname === "/features" ? (
       <div>
-        <Route
-          exact
-          path="/home"
-          render={(props) => <LandingPageNew isLoaded={isLoaded} {...props} />}
-        />
+				<Routes>
+					<Route
+						exact
+						path="/home"
+						render={(props) => <LandingPageNew isLoaded={isLoaded} {...props} />}
+					/>
+				</Routes>
       </div>
     ) : (
       <div
@@ -303,293 +304,293 @@ const App = (message, props) => {
           {...props}
         />
         <div style={{ height: 60 }} />
-        <Route
-          exact
-          path="/login"
-          render={(props) => (
-            <LoginPage
-              isLoggedIn={isLoggedIn}
-              setIsLoggedIn={setIsLoggedIn}
-              register={true}
-              isLoaded={isLoaded}
-              globalUrl={globalUrl}
-              setCookie={setCookie}
-              cookies={cookies}
-              checkLogin={checkLogin}
-              {...props}
-            />
-          )}
-        />
-        <Route
-          exact
-          path="/admin"
-          render={(props) => (
-            <Admin
-              userdata={userdata}
-              isLoggedIn={isLoggedIn}
-              setIsLoggedIn={setIsLoggedIn}
-              register={true}
-              isLoaded={isLoaded}
-              globalUrl={globalUrl}
-              setCookie={setCookie}
-              cookies={cookies}
-              {...props}
-            />
-          )}
-        />
-        <Route
-          exact
-          path="/admin/:key"
-          render={(props) => (
-            <Admin
-              isLoggedIn={isLoggedIn}
-              setIsLoggedIn={setIsLoggedIn}
-              register={true}
-              isLoaded={isLoaded}
-              globalUrl={globalUrl}
-              setCookie={setCookie}
-              cookies={cookies}
-              {...props}
-            />
-          )}
-        />
-        {userdata.id !== undefined ? (
-          <Route
-            exact
-            path="/settings"
-            render={(props) => (
-              <SettingsPage
-                isLoaded={isLoaded}
-                setUserData={setUserData}
-                userdata={userdata}
-                globalUrl={globalUrl}
-                {...props}
-              />
-            )}
-          />
-        ) : null}
-        <Route
-          exact
-          path="/AdminSetup"
-          render={(props) => (
-            <AdminSetup
-              isLoaded={isLoaded}
-              userdata={userdata}
-              globalUrl={globalUrl}
-              {...props}
-            />
-          )}
-        />
-        <Route
-          exact
-          path="/webhooks"
-          render={(props) => (
-            <Webhooks isLoaded={isLoaded} globalUrl={globalUrl} {...props} />
-          )}
-        />
-        <Route
-          exact
-          path="/webhooks/:key"
-          render={(props) => (
-            <EditWebhook isLoaded={isLoaded} globalUrl={globalUrl} {...props} />
-          )}
-        />
-        <Route
-          exact
-          path="/schedules"
-          render={(props) => <Schedules globalUrl={globalUrl} {...props} />}
-        />
-        <Route
-          exact
-          path="/detectionframework"
-          render={(props) => (
-            <DetectionFramework
-							frameworkData={FrameworkData}
-							selectedOption={"Draw"}
-							showOptions={false}
+				<Routes>
+        	<Route
+        	  exact
+        	  path="/login"
+        	  element={
+        	    <LoginPage
+        	      isLoggedIn={isLoggedIn}
+        	      setIsLoggedIn={setIsLoggedIn}
+        	      register={true}
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+        	      setCookie={setCookie}
+        	      cookies={cookies}
+        	      checkLogin={checkLogin}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	<Route
+        	  exact
+        	  path="/admin"
+        	  element={
+        	    <Admin
+        	      userdata={userdata}
+        	      isLoggedIn={isLoggedIn}
+        	      setIsLoggedIn={setIsLoggedIn}
+        	      register={true}
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+        	      setCookie={setCookie}
+        	      cookies={cookies}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	<Route
+        	  exact
+        	  path="/admin/:key"
+        	  element={
+        	    <Admin
+        	      isLoggedIn={isLoggedIn}
+        	      setIsLoggedIn={setIsLoggedIn}
+        	      register={true}
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+        	      setCookie={setCookie}
+        	      cookies={cookies}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	{userdata.id !== undefined ? (
+        	  <Route
+        	    exact
+        	    path="/settings"
+        	    element={
+        	      <SettingsPage
+        	        isLoaded={isLoaded}
+        	        setUserData={setUserData}
+        	        userdata={userdata}
+        	        globalUrl={globalUrl}
+        	        {...props}
+        	      />
+        	    }
+        	  />
+        	) : null}
+        	<Route
+        	  exact
+        	  path="/AdminSetup"
+        	  element={
+        	    <AdminSetup
+        	      isLoaded={isLoaded}
+        	      userdata={userdata}
+        	      globalUrl={globalUrl}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	<Route
+        	  exact
+        	  path="/detectionframework"
+        	  element={
+        	    <DetectionFramework
+								frameworkData={FrameworkData}
+								selectedOption={"Draw"}
+								showOptions={false}
 
-              isLoaded={isLoaded}
-              isLoggedIn={isLoggedIn}
-              globalUrl={globalUrl}
-              {...props}
-            />
-          )}
-        />
-        <Route
-          exact
-          path="/dashboard"
-          render={(props) => (
-            <Dashboard
-              isLoaded={isLoaded}
-              isLoggedIn={isLoggedIn}
-              globalUrl={globalUrl}
-              {...props}
-            />
-          )}
-        />
-        <Route
-          exact
-          path="/apps/new"
-          render={(props) => (
-            <AppCreator
-              isLoaded={isLoaded}
-              isLoggedIn={isLoggedIn}
-              globalUrl={globalUrl}
-              {...props}
-            />
-          )}
-        />
-        <Route
-          exact
-          path="/apps"
-          render={(props) => (
-            <Apps
-              isLoaded={isLoaded}
-              isLoggedIn={isLoggedIn}
-              globalUrl={globalUrl}
-              userdata={userdata}
-              {...props}
-            />
-          )}
-        />
-        <Route
-          exact
-          path="/apps/edit/:appid"
-          render={(props) => (
-            <AppCreator
-              isLoaded={isLoaded}
-              isLoggedIn={isLoggedIn}
-              globalUrl={globalUrl}
-              {...props}
-            />
-          )}
-        />
-        <Route
-          exact
-          path="/schedules/:key"
-          render={(props) => <EditSchedule globalUrl={globalUrl} {...props} />}
-        />
-        <Route
-          exact
-          path="/workflows"
-          render={(props) => (
-            <Workflows
-              cookies={cookies}
-              removeCookie={removeCookie}
-              isLoaded={isLoaded}
-              isLoggedIn={isLoggedIn}
-              globalUrl={globalUrl}
-              cookies={cookies}
-              userdata={userdata}
-              {...props}
-            />
-          )}
-        />
-        <Route
-          exact
-          path="/workflows/:key"
-          render={(props) => (
-            <AngularWorkflow
-							alert={alert}
-              userdata={userdata}
-              globalUrl={globalUrl}
-              isLoaded={isLoaded}
-              isLoggedIn={isLoggedIn}
-              {...props}
-            />
-          )}
-        />
-        <Route
-          exact
-          path="/docs/:key"
-          render={(props) => (
-            <Docs
-              isMobile={isMobile}
-              isLoaded={isLoaded}
-              globalUrl={globalUrl}
-              {...props}
-            />
-          )}
-        />
-        <Route
-          exact
-          path="/docs"
-          render={(props) => {
-            window.location.pathname = "/docs/about";
-          }}
-        />
-        <Route
-          exact
-          path="/introduction"
-          render={(props) => (
-            <Introduction
-              isLoaded={isLoaded}
-              globalUrl={globalUrl}
-              {...props}
-            />
-          )}
-        />
-        <Route
-          exact
-          path="/introduction/:key"
-          render={(props) => (
-            <Introduction
-              isLoaded={isLoaded}
-              globalUrl={globalUrl}
-              {...props}
-            />
-          )}
-        />
-        <Route
-          exact
-          path="/set_authentication"
-          render={(props) => (
-            <SetAuthentication
-              userdata={userdata}
-              isLoggedIn={isLoggedIn}
-              setIsLoggedIn={setIsLoggedIn}
-              register={true}
-              isLoaded={isLoaded}
-              globalUrl={globalUrl}
-              setCookie={setCookie}
-              cookies={cookies}
-              {...props}
-            />
-          )}
-        />
-        <Route
-          exact
-          path="/login_sso"
-          render={(props) => (
-            <SetAuthenticationSSO
-              userdata={userdata}
-              isLoggedIn={isLoggedIn}
-              setIsLoggedIn={setIsLoggedIn}
-              register={true}
-              isLoaded={isLoaded}
-              globalUrl={globalUrl}
-              setCookie={setCookie}
-              cookies={cookies}
-              {...props}
-            />
-          )}
-        />
-        <Route
-          exact
-          path="/"
-          render={(props) => (
-            <LoginPage
-              isLoggedIn={isLoggedIn}
-              setIsLoggedIn={setIsLoggedIn}
-              register={true}
-              isLoaded={isLoaded}
-              globalUrl={globalUrl}
-              setCookie={setCookie}
-              cookies={cookies}
-              {...props}
-            />
-          )}
-        />
+        	      isLoaded={isLoaded}
+        	      isLoggedIn={isLoggedIn}
+        	      globalUrl={globalUrl}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	<Route
+        	  exact
+        	  path="/dashboard"
+        	  element={
+        	    <Dashboard
+        	      isLoaded={isLoaded}
+        	      isLoggedIn={isLoggedIn}
+        	      globalUrl={globalUrl}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	<Route
+        	  exact
+        	  path="/apps/new"
+        	  element={
+        	    <AppCreator
+        	      isLoaded={isLoaded}
+        	      isLoggedIn={isLoggedIn}
+        	      globalUrl={globalUrl}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	<Route
+        	  exact
+        	  path="/apps"
+        	  element={
+								<Apps
+									isLoaded={isLoaded}
+									isLoggedIn={isLoggedIn}
+									globalUrl={globalUrl}
+									userdata={userdata}
+									{...props}
+        	    	/>
+        	  }
+        	/>
+        	<Route
+        	  exact
+        	  path="/apps/edit/:appid"
+        	  element={
+        	    <AppCreator
+        	      isLoaded={isLoaded}
+        	      isLoggedIn={isLoggedIn}
+        	      globalUrl={globalUrl}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	<Route
+        	  exact
+        	  path="/workflows"
+        	  element={
+        	    <Workflows
+        	      cookies={cookies}
+        	      removeCookie={removeCookie}
+        	      isLoaded={isLoaded}
+        	      isLoggedIn={isLoggedIn}
+        	      globalUrl={globalUrl}
+        	      cookies={cookies}
+        	      userdata={userdata}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	<Route
+        	  exact
+        	  path="/getting-started"
+        	  element={
+        	    <GettingStarted
+        	      cookies={cookies}
+        	      removeCookie={removeCookie}
+        	      isLoaded={isLoaded}
+        	      isLoggedIn={isLoggedIn}
+        	      globalUrl={globalUrl}
+        	      cookies={cookies}
+        	      userdata={userdata}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	<Route
+        	  exact
+        	  path="/workflows/:key"
+        	  element={
+        	    <AngularWorkflow
+								alert={alert}
+        	      userdata={userdata}
+        	      globalUrl={globalUrl}
+        	      isLoaded={isLoaded}
+        	      isLoggedIn={isLoggedIn}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	<Route
+        	  exact
+        	  path="/docs/:key"
+        	  element={
+        	    <Docs
+        	      isMobile={isMobile}
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	<Route
+        	  exact
+        	  path="/docs"
+        	  element={
+							//navigate(`/docs/about`)
+        	    <Docs
+        	      isMobile={isMobile}
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	<Route
+        	  exact
+        	  path="/introduction"
+        	  element={
+        	    <Introduction
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	<Route
+        	  exact
+        	  path="/introduction/:key"
+        	  element={
+        	    <Introduction
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	<Route
+        	  exact
+        	  path="/set_authentication"
+        	  element={
+        	    <SetAuthentication
+        	      userdata={userdata}
+        	      isLoggedIn={isLoggedIn}
+        	      setIsLoggedIn={setIsLoggedIn}
+        	      register={true}
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+        	      setCookie={setCookie}
+        	      cookies={cookies}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	<Route
+        	  exact
+        	  path="/login_sso"
+        	  element={
+        	    <SetAuthenticationSSO
+        	      userdata={userdata}
+        	      isLoggedIn={isLoggedIn}
+        	      setIsLoggedIn={setIsLoggedIn}
+        	      register={true}
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+        	      setCookie={setCookie}
+        	      cookies={cookies}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	<Route
+        	  exact
+        	  path="/"
+        	  element={
+        	    <LoginPage
+        	      isLoggedIn={isLoggedIn}
+        	      setIsLoggedIn={setIsLoggedIn}
+        	      register={true}
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+        	      setCookie={setCookie}
+        	      cookies={cookies}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+				</Routes>
       </div>
     );
 

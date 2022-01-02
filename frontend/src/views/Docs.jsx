@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 import { useTheme } from "@material-ui/core/styles";
 import ReactMarkdown from "react-markdown";
 import { BrowserView, MobileView } from "react-device-detect";
-import { Link } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 
 import {
   Tooltip,
@@ -39,10 +39,26 @@ const innerHrefStyle = {
   textDecoration: "none",
 };
 
-const Docs = (props) => {
-  const { globalUrl, selectedDoc, serverside, isMobile } = props;
+const Docs = (defaultprops) => {
+  const { globalUrl, selectedDoc, serverside, isMobile } = defaultprops;
 
+	let navigate = useNavigate();
   const theme = useTheme();
+
+	// Quickfix for react router 5 -> 6 
+	const params = useParams();
+	var props = JSON.parse(JSON.stringify(defaultprops))
+	props.match = {}
+	props.match.params = params
+
+	useEffect(() => {
+		if (params["key"] === undefined) {
+			navigate("/docs/about")
+			return
+		}
+	}, [])
+	//console.log("PARAMS: ", params)
+
   const [mobile, setMobile] = useState(isMobile === true ? true : false);
   const [data, setData] = useState("");
   const [firstrequest, setFirstrequest] = useState(true);
@@ -201,7 +217,15 @@ const Docs = (props) => {
     } else {
       if (!serverside) {
         fetchDocList();
-        fetchDocs(props.match.params.key);
+
+				console.log("PROPS: ", props)
+				//const propkey = props.match.params.key
+				//if (propkey === undefined) {
+				//	navigate("/docs/about")
+				//	return null
+				//}
+
+        fetchDocs(props.match.params.key)
       }
     }
   }
@@ -410,6 +434,7 @@ const Docs = (props) => {
                 {selectedMeta.contributors.slice(0, 7).map((data, index) => {
                   return (
                     <a
+											key={index}
                       rel="noopener noreferrer"
                       target="_blank"
                       href={data.url}

@@ -1,6 +1,8 @@
 import React, { useEffect, useContext } from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import { useTheme } from "@material-ui/core/styles";
+import { Navigate } from "react-router-dom";
+//import { Redirect } from "react-router-dom";
 
 import SecurityFramework from '../components/SecurityFramework.jsx';
 import { ShepherdTour, ShepherdTourContext } from 'react-shepherd'
@@ -2536,10 +2538,17 @@ const Workflows = (props) => {
 		  );
 		}
 
-	//import { ShepherdTour, ShepherdTourContext } from 'react-shepherd'
   const WorkflowView = () => {
-		/*
     if (workflows.length === 0) {
+			/*
+			console.log("USER: ", userdata)
+			console.log("PROPS: ", props)
+			if (userdata.tutorials !== undefined && userdata.tutorials !== null && !userdata.tutorials.includes("getting-started")) {
+				//return <Redirect to='/getting-started' />;
+				return <Navigate to="/getting-started" replace />;
+			}
+			*/
+		
       return (
         <div style={emptyWorkflowStyle}>
           <Paper style={boxStyle}>
@@ -2585,9 +2594,9 @@ const Workflows = (props) => {
             </div>
           </Paper>
         </div>
-      );
+      )
+
     }
-		*/
 
 		var workflowDelay = -150
 		var appDelay = -75	

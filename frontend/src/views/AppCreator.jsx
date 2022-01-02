@@ -37,7 +37,7 @@ import {
 } from "@material-ui/icons";
 
 import { v4 as uuidv4 } from "uuid";
-import { Link } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import YAML from "yaml";
 import ChipInput from "material-ui-chip-input";
 import { useAlert } from "react-alert";
@@ -220,11 +220,16 @@ const parseCurl = (s) => {
 };
 
 // Should be different if logged in :|
-const AppCreator = (props) => {
-  const { globalUrl, isLoaded } = props;
+const AppCreator = (defaultprops) => {
+  const { globalUrl, isLoaded } = defaultprops;
   const classes = useStyles();
   const alert = useAlert();
   const theme = useTheme();
+
+	const params = useParams();
+	var props = JSON.parse(JSON.stringify(defaultprops))
+	props.match = {}
+	props.match.params = params
 
   var upload = "";
   const increaseAmount = 50;

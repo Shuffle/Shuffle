@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 
 import Paper from "@material-ui/core/Paper";
 
@@ -21,8 +22,13 @@ const bodyDivStyle = {
 // FIXME - add fetch for data fields
 // FIXME - remove tmpdata
 // FIXME: Use isLoggedIn :)
-const Settings = (props) => {
-  const { globalUrl, isLoaded, surfaceColor } = props;
+const Settings = (defaultprops) => {
+  const { globalUrl, isLoaded, surfaceColor } = defaultprops;
+
+	const params = useParams();
+	var props = JSON.parse(JSON.stringify(defaultprops))
+	props.match = {}
+	props.match.params = params
 
   const [firstRequest, setFirstRequest] = useState(true);
   const boxStyle = {

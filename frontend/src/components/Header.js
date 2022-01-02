@@ -29,7 +29,12 @@ import {
   Polymer as PolymerIcon,
   Apps as AppsIcon,
   Description as DescriptionIcon,
+	HelpOutline as HelpOutlineIcon,
 } from "@material-ui/icons";
+
+import {
+	Analytics as AnalyticsIcon,
+} from "@mui/icons-material";
 //import LogoutIcon from '@mui/icons-material/Logout';
 import { useAlert } from "react-alert";
 
@@ -446,8 +451,28 @@ const Header = (props) => {
             handleClose();
           }}
         >
+          <Link to="/docs/about" style={hrefStyle}>
+            <HelpOutlineIcon style={{marginRight: 5 }}/> About 
+          </Link>
+        </MenuItem>
+        <MenuItem
+          onClick={(event) => {
+            event.preventDefault();
+            handleClose();
+          }}
+        >
+          <Link to="/getting-started" style={hrefStyle}>
+            <AnalyticsIcon style={{marginRight: 5 }}/> Get Started 
+          </Link>
+        </MenuItem>
+        <MenuItem
+          onClick={(event) => {
+            event.preventDefault();
+            handleClose();
+          }}
+        >
           <Link to="/settings" style={hrefStyle}>
-            <SettingsIcon /> Settings
+            <SettingsIcon style={{marginRight: 5 }}/> Settings
           </Link>
         </MenuItem>
         <MenuItem
@@ -458,7 +483,7 @@ const Header = (props) => {
             handleClickLogout();
           }}
         >
-          <MeetingRoomIcon /> &nbsp;Logout
+          <MeetingRoomIcon style={{marginRight: 5 }}/> &nbsp;Logout
         </MenuItem>
       </Menu>
     </span>

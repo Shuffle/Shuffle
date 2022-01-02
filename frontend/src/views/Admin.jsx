@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 
 import { makeStyles } from "@material-ui/styles";
 import { useTheme } from "@material-ui/core/styles";
-import { Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 import {
   FormControl,
@@ -92,6 +92,8 @@ const Admin = (props) => {
   var to_be_copied = "";
   const theme = useTheme();
   const classes = useStyles();
+	let navigate = useNavigate();
+
   const [firstRequest, setFirstRequest] = React.useState(true);
   const [orgRequest, setOrgRequest] = React.useState(true);
   const [modalUser, setModalUser] = React.useState({});
@@ -1395,7 +1397,9 @@ const Admin = (props) => {
       console.log("Should get apps for categories.");
     }
 
-		props.history.push(`/admin?tab=${views[newValue]}`)
+		console.log("PROPS: ", props)
+
+		navigate(`/admin?tab=${views[newValue]}`)
 
     setModalUser({});
   };
