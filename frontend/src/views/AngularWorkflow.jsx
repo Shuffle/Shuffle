@@ -11669,6 +11669,7 @@ const AngularWorkflow = (defaultprops) => {
 				{workflow.id === undefined ||
 				workflow.id === null ||
 				apps.length === 0 ? (
+
 					<div
 						style={{
 							width: bodyWidth - leftBarSize - 15,
