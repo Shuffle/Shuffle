@@ -384,6 +384,13 @@ const data = [
       "font-size": "0px",
     },
   },
+	{
+		selector: "node:selected",
+		css: {
+			"border-color": "#f86a3e",
+			"border-width": "7px",
+		},
+	},
 ];
 
 //{

@@ -978,8 +978,8 @@ const ParsedAction = (props) => {
 			return helperText
 		}
 
-		console.log("AUTH: ", authenticationType)
-    if (authenticationType.type === "oauth2") {
+		//console.log("AUTH: ", authenticationType)
+    if (authenticationType !== undefined && authenticationType !== null && authenticationType.type === "oauth2") {
 			return (
 				<Typography variant="body1" color="textSecondary" style={{marginTop: 15}}> 
 					You must authenticate before using oauth2 apps.
@@ -1082,7 +1082,7 @@ const ParsedAction = (props) => {
             ) {
               placeholder = data.example;
 
-              if (data.name === "url" && data.value.length === 0) {
+              if (data.name === "url" && data.value !== undefined && data.value !== null && data.value.length === 0) {
                 data.value = data.example;
               }
             }

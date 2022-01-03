@@ -2584,7 +2584,7 @@ const GettingStarted = (props) => {
 							<Typography color="textSecondary" variant="body2" style={{marginTop: 5,}} >
 								We help with automation, scaling, training and more. Get involved!
 							</Typography>
-							<Link to="" style={{textDecoration: "none",}}>
+							<a href="https://discord.gg/B2CBzUm" style={{textDecoration: "none",}}>
 								<Button
 									variant="outlined"
 									style={{marginTop: 10}}

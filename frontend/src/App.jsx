@@ -31,8 +31,7 @@ import MyView from "./views/MyView";
 
 import { createMuiTheme, MuiThemeProvider } from "@material-ui/core/styles";
 
-import DetectionFramework from "./components/DetectionFramework.jsx";
-import FrameworkData from "./components/FrameworkData";
+import FrameworkWrapper from "./views/FrameworkWrapper.jsx";
 import ScrollToTop from "./components/ScrollToTop";
 import AlertTemplate from "./components/AlertTemplate";
 import { useAlert, positions, Provider } from "react-alert";
@@ -386,8 +385,7 @@ const App = (message, props) => {
         	  exact
         	  path="/detectionframework"
         	  element={
-        	    <DetectionFramework
-								frameworkData={FrameworkData}
+        	    <FrameworkWrapper
 								selectedOption={"Draw"}
 								showOptions={false}
 
