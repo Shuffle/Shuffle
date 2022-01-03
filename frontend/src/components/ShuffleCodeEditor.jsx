@@ -24,24 +24,37 @@ const CodeEditor = (props) => {
   // const {codelang, setcodelang} = props
   const theme = useTheme();
 
+	const [validation, setvalidation] = React.useState(" ");
+	function IsJsonString(str) {
+		try {
+			var o = JSON.parse(str);
+	        if (o && typeof o === "object") {
+				setvalidation("Validation Status: Correct!")
+			}
+		} catch (e) {setvalidation("Validation Status: Incorrect!");}
+	}
+	
 	const [expOutput, setexpOutput] = React.useState(" ");
 	function expectedOutput(input) {
 		
 		const found = input.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
 		console.log(found)
 
-		for (var i = 0; i < found.length; i++) {
-			// console.log(found[i]);
+		try{
+			// When the found array is empty.
+			for (var i = 0; i < found.length; i++) {
+				// console.log(found[i]);
 
-			for (var j = 0; j < actionlist.length; j++) {
-				if(found[i].slice(1,).toLowerCase() == actionlist[j].autocomplete.toLowerCase()){
-					input = input.replace(found[i], JSON.stringify(actionlist[j].example));
-					// console.log(input)
-					// console.log(actionlist[j].example)
-				}	
-				// console.log(actionlist[j].autocomplete);
+				for (var j = 0; j < actionlist.length; j++) {
+					if(found[i].slice(1,).toLowerCase() == actionlist[j].autocomplete.toLowerCase()){
+						input = input.replace(found[i], JSON.stringify(actionlist[j].example));
+						// console.log(input)
+						// console.log(actionlist[j].example)
+					}	
+					// console.log(actionlist[j].autocomplete);
+				}
 			}
-		}
+		} catch (e) {}
 
 		try {
 			// var x = document.getElementById("expOutput");
@@ -100,6 +113,7 @@ const CodeEditor = (props) => {
 					onChange={(value) => {
 						setlocalcodedata(value.getValue())
 						expectedOutput(value.getValue())
+						IsJsonString(value.getValue())
 						// console.log(actionlist.slice(-1))
 					}}
 					options={{
@@ -139,6 +153,16 @@ const CodeEditor = (props) => {
 					}}
 				>
 					{expOutput}
+				</p>
+				<p
+					style={{
+						color: "white",
+						fontFamily: "monospace",
+						padding: 20,
+						marginTop: -15,
+					}}
+				>
+					{validation}
 				</p>
 			</div>
 
