@@ -859,7 +859,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			executedIds = append(executedIds, newExecId)
 			toRemove = append(toRemove, index)
 		} else {
-			log.Printf("\n\n[DEBUG] %s is already executed. Continuing.", newExecId)
+			//log.Printf("\n\n[DEBUG] %s is already executed. Continuing.", newExecId)
 			continue
 		}
 

@@ -23,18 +23,18 @@ const CodeEditor = (props) => {
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
   // const {codelang, setcodelang} = props
   const theme = useTheme();
-
 	const [validation, setvalidation] = React.useState(" ");
+	const [expOutput, setexpOutput] = React.useState(" ");
+
 	function IsJsonString(str) {
 		try {
 			var o = JSON.parse(str);
-	        if (o && typeof o === "object") {
-				setvalidation("Validation Status: Correct!")
+	    if (o && typeof o === "object") {
+				setvalidation("Correct!")
 			}
-		} catch (e) {setvalidation("Validation Status: Incorrect!");}
+		} catch (e) {setvalidation("Incorrect!");}
 	}
 	
-	const [expOutput, setexpOutput] = React.useState(" ");
 	function expectedOutput(input) {
 		
 		const found = input.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
@@ -96,6 +96,7 @@ const CodeEditor = (props) => {
 				<DialogTitle
 					style={{
 						paddingBottom:20,
+						paddingLeft: 10, 
 					}}
 				>
 						Code Editor
@@ -129,6 +130,7 @@ const CodeEditor = (props) => {
 				<DialogTitle
 					style={{
 						paddingTop: 30,
+						paddingLeft: 10, 
 					}}
 				>
 					<span
@@ -150,6 +152,7 @@ const CodeEditor = (props) => {
 						marginTop: -2,
 						border: `2px solid ${theme.palette.inputColor}`,
 						borderRadius: theme.palette.borderRadius,
+						maxHeight: 400,
 					}}
 				>
 					{expOutput}
@@ -159,10 +162,11 @@ const CodeEditor = (props) => {
 						color: "white",
 						fontFamily: "monospace",
 						padding: 20,
+						paddingLeft: 10, 
 						marginTop: -15,
 					}}
 				>
-					{validation}
+					JSON Validation: {validation}
 				</p>
 			</div>
 

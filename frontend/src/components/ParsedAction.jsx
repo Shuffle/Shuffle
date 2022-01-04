@@ -167,7 +167,7 @@ const ParsedAction = (props) => {
   const classes = useStyles();
 
   const [expansionModalOpen, setExpansionModalOpen] = React.useState(false);
-  const [hideBody, setHideBody] = React.useState(false);
+  const [hideBody, setHideBody] = React.useState(true);
   const [activateHidingBody, setActivateHidingBody] = React.useState(false);
 	const [codedata, setcodedata] = React.useState("");
 	const [fieldCount, setFieldCount] = React.useState(0);
@@ -980,11 +980,13 @@ const ParsedAction = (props) => {
 
 		//console.log("AUTH: ", authenticationType)
     if (authenticationType !== undefined && authenticationType !== null && authenticationType.type === "oauth2") {
+			/*
 			return (
 				<Typography variant="body1" color="textSecondary" style={{marginTop: 15}}> 
 					You must authenticate before using oauth2 apps.
 				</Typography>
 			)
+			*/
 		}
 
     // FIXME: Issue #40 - selectedActionParameters not reset
@@ -1074,7 +1076,7 @@ const ParsedAction = (props) => {
               multiline = true;
             }
 
-            var placeholder = "Static value";
+            var placeholder = "Value";
             if (
               data.example !== undefined &&
               data.example !== null &&
@@ -1163,6 +1165,9 @@ const ParsedAction = (props) => {
 
                           for (var key in selectedActionParameters) {
                             var currentItem = selectedActionParameters[key];
+														if (currentItem.name === "ssl_verify") {
+
+														}
 
                             if (currentItem.description === openApiFieldDesc) {
                               currentItem.field_active = !hideBody;
@@ -1191,7 +1196,7 @@ const ParsedAction = (props) => {
                   setActivateHidingBody(true);
                 }
               } else {
-                console.log("SHOW BUTTON");
+                //console.log("SHOW BUTTON");
 
                 rows = "1";
                 disabled = true;

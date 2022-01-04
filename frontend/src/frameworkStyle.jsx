@@ -9,7 +9,7 @@ const data = [{
 				'text-algin': 'center',
 				'width': '85px',
 				'height': '85px',
-				'border-width': '1px',
+				'border-width': '3px',
 				'border-color': '#8a8a8a',
 				'color': '#f85a3e',
 				'text-margin-x': '0px',
@@ -40,6 +40,16 @@ const data = [{
 				'width': '1px',
 				'z-compound-depth': 'top',
 				'font-size': '13px',
+			},
+		},
+		{
+			selector: `node[!is_valid]`,
+			css: {
+				'height': '20px',
+				'width': '20px',
+				'background-color': '#6d9eeb',
+				'border-color': '#4c6ea4',
+				'border-width': '1px',
 			},
 		},
 		{

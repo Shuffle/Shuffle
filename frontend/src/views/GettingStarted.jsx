@@ -30,6 +30,7 @@ import {
 } from "@material-ui/core";
 
 import {
+	Check as CheckIcon,
   GridOn as GridOnIcon,
   List as ListIcon,
   Close as CloseIcon,
@@ -2502,34 +2503,55 @@ const GettingStarted = (props) => {
 
 		const textSpacingDiff = 8
 		const textType = "body2"
+						
+		// Discover <a target="_blank" href="https://shuffler.io/creators" style={{textDecoration: "none", color: "#f86a3e",}}>use-cases made by other creators</a>!
 		const steps = [
 			{
 				html: (
 					<Typography variant={textType} style={{marginTop: textSpacingDiff}}>
 						<Link to="/detectionframework" style={{textDecoration: "none", color: "#f86a3e",}}>Find your integrations</Link> by following our simple detection framework!
 					</Typography>
-				)
-			},
-			{
-				html: (
-					<Typography variant={textType} style={{marginTop: textSpacingDiff}}>
-						<span style={{cursor: "pointer", color: "#f86a3e",}} onClick={() => {setModalOpen(true)}}>
-							Create your first workflow 
-						</span> and learn the ropes.
-					</Typography>
-				)
+				), 
+				tutorial: "find_integrations",
 			},
 			{
 				html: 
 					<Typography variant={textType} style={{marginTop: textSpacingDiff}}>
-						<Link target="_blank" to={{pathname: "https://shuffler.io/creators"}} style={{textDecoration: "none", color: "#f86a3e",}}>Discover use-cases</Link> other creators have made!
+								Discover <span style={{cursor: "pointer", textDecoration: "none", color: "#f86a3e",}} onClick={() => {
+								alert.success("TBD: Coming in version 1.0.0");
+
+								const ele = document.getElementById("shuffle_search_field")
+								if (ele !== undefined && ele !== null) {
+									console.log("Found ele: ", ele)
+									ele.focus()
+									ele.style.borderColor = "#f86a3e"
+									ele.style.borderWidth = "2px"
+
+								} else {
+									alert.success("TBD: Coming in version 1.0.0");
+								}
+							}}>
+							use-cases made by other creators</span>!
+					</Typography>,
+				tutorial: "discover_workflows",
+			},
+			{
+				html: (
+					<Typography variant={textType} style={{marginTop: textSpacingDiff}}>
+						Learn to use Shuffle by&nbsp; 
+						<span style={{cursor: "pointer", color: "#f86a3e",}} onClick={() => {setModalOpen(true)}}>
+							creating your first workflow 
+						</span> and <Link to="/docs" style={{textDecoration: "none", color: "#f86a3e",}}>reading the docs.</Link>
 					</Typography>
+				),
+				tutorial: "learn_shuffle",
 			},
 			{
 				html: 
 					<Typography variant={textType} style={{marginTop: textSpacingDiff}}>
 						Configure your organization <Link to="/admin" style={{textDecoration: "none", color: "#f86a3e",}}>in the admin panel</Link>
-					</Typography>
+					</Typography>,
+				tutorial: "configure_organization",
 			}
 		]
 	
@@ -2544,11 +2566,25 @@ const GettingStarted = (props) => {
 					</Typography>
 					<Paper style={{backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.3)", padding: 40, marginTop: 25, }}>
 						{steps.map((data, index) => {
+							var tutorialFound = false
+							if (userdata.tutorials !== undefined && userdata.tutorials !== null && userdata.tutorials.length > 0 && data.tutorial !== undefined) {
+								const foundTutorial = userdata.tutorials.find(tutorial => tutorial === data.tutorial)
+								if (foundTutorial !== undefined && foundTutorial !== null) {
+									console.log("Found tutorial for ", data.tutorial)
+									tutorialFound = true 
+								}
+							}
+
+								
 							return (
 								<div key={index} style={{display: "flex", marginBottom: index === steps.length-1 ? 0 : 20, }}>
 									<div style={{maxWidth: 50, marginRight: 25, }}>
 										<Typography variant="h6">
-											<b>{index+1}</b>
+											{tutorialFound ? 
+												<CheckIcon style={{color: "green", paddingTop: 5,}} />
+												:
+												<b>{index+1}</b>
+											}
 										</Typography>
 									</div>
 									<div style={{}}>
@@ -2593,7 +2629,7 @@ const GettingStarted = (props) => {
 								>
 									Join Discord community
 								</Button>
-							</Link>
+							</a>
 						</div>
 					</div>
           {/*

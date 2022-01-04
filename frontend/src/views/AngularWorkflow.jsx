@@ -6903,8 +6903,8 @@ const AngularWorkflow = (defaultprops) => {
                 </div>
                 {outlookButton}
                 {gmailButton}
-								<Typography variant="body2" color="textSecondary">
-									If you have trouble using the triggers, please <a href="https://shuffler.io/contact" rel="noopener noreferrer" target="_blank">contact us</a> to get access
+								<Typography variant="body2" color="textSecondary" style={{marginTop: 5}}>
+									If you have trouble using this trigger, please <a href="https://shuffler.io/contact" rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>contact us</a> to get access
 								</Typography>
               </span>
             )}

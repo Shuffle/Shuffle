@@ -2540,14 +2540,11 @@ const Workflows = (props) => {
 
   const WorkflowView = () => {
     if (workflows.length === 0) {
-			/*
 			console.log("USER: ", userdata)
 			console.log("PROPS: ", props)
 			if (userdata.tutorials !== undefined && userdata.tutorials !== null && !userdata.tutorials.includes("getting-started")) {
-				//return <Redirect to='/getting-started' />;
 				return <Navigate to="/getting-started" replace />;
 			}
-			*/
 		
       return (
         <div style={emptyWorkflowStyle}>
