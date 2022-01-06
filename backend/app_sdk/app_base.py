@@ -1488,7 +1488,7 @@ class AppBase:
                         # Means it's a single item -> continue
                         if seconditem == "":
                             print("[INFO] In first - handling %s. Len: %d" % (firstitem, len(basejson)))
-                            if firstitem.lower() == "max" or firstitem.lower() == "last": 
+                            if firstitem.lower() == "max" or firstitem.lower() == "last" or firstitem.lower() == "end": 
                                 firstitem = len(basejson)-1
                             elif firstitem.lower() == "min" or firstitem.lower() == "first": 
                                 firstitem = 0
@@ -1503,14 +1503,14 @@ class AppBase:
                                 newvalue, is_loop = (tmpitem, parsersplit[outercnt+1:])
                         else:
                             print("[INFO] In ELSE - handling %s and %s" % (firstitem, seconditem))
-                            if firstitem.lower() == "max" or firstitem.lower() == "last": 
+                            if firstitem.lower() == "max" or firstitem.lower() == "last" or firstitem.lower() == "end": 
                                 firstitem = len(basejson)-1
                             elif firstitem.lower() == "min" or firstitem.lower() == "first": 
                                 firstitem = 0
                             else:
                                 firstitem = int(firstitem)
 
-                            if seconditem.lower() == "max" or seconditem.lower() == "last": 
+                            if seconditem.lower() == "max" or seconditem.lower() == "last" or firstitem.lower() == "end": 
                                 seconditem = len(basejson)-1
                             elif seconditem.lower() == "min" or seconditem.lower() == "first": 
                                 seconditem = 0

@@ -69,7 +69,7 @@ var nextActions []string
 var extra int
 var startAction string
 */
-var results []shuffle.ActionResult
+//var results []shuffle.ActionResult
 var allLogs map[string]string
 var containerIds []string
 var downloadedImages []string
@@ -660,6 +660,7 @@ func removeIndex(s []string, i int) []string {
 
 func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 	ctx := context.Background()
+
 	startAction, extra, children, parents, visited, executed, nextActions, environments := shuffle.GetExecutionVariables(ctx, workflowExecution.ExecutionId)
 	log.Printf("[DEBUG][%s] Getting info for %s. Extra: %d", workflowExecution.ExecutionId, workflowExecution.ExecutionId, extra)
 	dockercli, err := dockerclient.NewEnvClient()
@@ -840,6 +841,8 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 	// SKIP if it's not onprem
 	toRemove := []int{}
 	//log.Printf("\n\nNEXTACTIONS: %#v\n\n", nextActions)
+	// FIXME: In this loop, there may be an ordering issue where a subflow and other triggers don't wait for all parent nodes to finish, due to that happening farther down in the loop. That means they may execute with only a single parent node actually being finishing.
+	// FIXME: Look at how to fix it by moving it farther down. PS: Fixing this, means it should be fixed in the worker too. Make them generic in shuffle mod
 	for index, nextAction := range nextActions {
 		action := getAction(workflowExecution, nextAction, environment)
 		// check visited and onprem
@@ -852,145 +855,6 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			_ = index
 
 			continue
-		}
-
-		newExecId := fmt.Sprintf("%s_%s", workflowExecution.ExecutionId, nextAction)
-		if !shuffle.ArrayContains(executedIds, newExecId) {
-			executedIds = append(executedIds, newExecId)
-			toRemove = append(toRemove, index)
-		} else {
-			//log.Printf("\n\n[DEBUG] %s is already executed. Continuing.", newExecId)
-			continue
-		}
-
-		// max 1000 :o
-		if len(executedIds) >= 1000 {
-			executedIds = executedIds[900:999]
-		}
-
-		if action.AppName == "Shuffle Tools" && (action.Name == "skip_me" || action.Name == "router" || action.Name == "route") {
-			err := runSkipAction(topClient, action, workflowExecution.Workflow.ID, workflowExecution.ExecutionId, workflowExecution.Authorization, "SKIPPED")
-			if err != nil {
-				log.Printf("[DEBUG][%s] Error in skipme for %s: %s", workflowExecution.ExecutionId, action.Label, err)
-			} else {
-				log.Printf("[INFO][%s] Adding visited (4): %s", workflowExecution.ExecutionId, action.Label)
-
-				visited = append(visited, action.ID)
-				executed = append(executed, action.ID)
-				continue
-			}
-		} else if action.AppName == "Shuffle Workflow" {
-			//log.Printf("SHUFFLE WORKFLOW: %#v", action)
-			action.Environment = environment
-			action.AppName = "shuffle-subflow"
-			action.Name = "run_subflow"
-			action.AppVersion = "1.0.0"
-
-			//appname := action.AppName
-			//appversion := action.AppVersion
-			//appname = strings.Replace(appname, ".", "-", -1)
-			//appversion = strings.Replace(appversion, ".", "-", -1)
-			//	shuffle-subflow_1.0.0
-
-			//visited = append(visited, action.ID)
-			//executed = append(executed, action.ID)
-
-			trigger := shuffle.Trigger{}
-			for _, innertrigger := range workflowExecution.Workflow.Triggers {
-				if innertrigger.ID == action.ID {
-					trigger = innertrigger
-					break
-				}
-			}
-
-			// FIXME: Add startnode from frontend
-			action.Label = trigger.Label
-			action.Parameters = []shuffle.WorkflowAppActionParameter{}
-			for _, parameter := range trigger.Parameters {
-				parameter.Variant = "STATIC_VALUE"
-				action.Parameters = append(action.Parameters, parameter)
-			}
-
-			action.Parameters = append(action.Parameters, shuffle.WorkflowAppActionParameter{
-				Name:  "source_workflow",
-				Value: workflowExecution.Workflow.ID,
-			})
-
-			action.Parameters = append(action.Parameters, shuffle.WorkflowAppActionParameter{
-				Name:  "source_execution",
-				Value: workflowExecution.ExecutionId,
-			})
-
-			action.Parameters = append(action.Parameters, shuffle.WorkflowAppActionParameter{
-				Name:  "source_node",
-				Value: trigger.ID,
-			})
-
-			action.Parameters = append(action.Parameters, shuffle.WorkflowAppActionParameter{
-				Name:  "source_auth",
-				Value: workflowExecution.Authorization,
-			})
-
-			//trigger.LargeImage = ""
-			//err = handleSubworkflowExecution(client, workflowExecution, trigger, action)
-			//if err != nil {
-			//	log.Printf("[ERROR] Failed to execute subworkflow: %s", err)
-			//} else {
-			//	log.Printf("[INFO] Executed subworkflow!")
-			//}
-			//continue
-		} else if action.AppName == "User Input" {
-			log.Printf("[DEBUG] RUNNING USER INPUT!")
-
-			if action.ID == workflowExecution.Start {
-				log.Printf("[DEBUG] Skipping user input because it's the startnode")
-				visited = append(visited, action.ID)
-				executed = append(executed, action.ID)
-				continue
-			} else {
-				log.Printf("[DEBUG] Should stop after this iteration because it's user-input based. %#v", action)
-				trigger := shuffle.Trigger{}
-				for _, innertrigger := range workflowExecution.Workflow.Triggers {
-					if innertrigger.ID == action.ID {
-						trigger = innertrigger
-						break
-					}
-				}
-
-				action.Label = action.Label
-				action.Parameters = []shuffle.WorkflowAppActionParameter{}
-				for _, parameter := range trigger.Parameters {
-					action.Parameters = append(action.Parameters, shuffle.WorkflowAppActionParameter{
-						Name:  parameter.Name,
-						Value: parameter.Value,
-					})
-				}
-
-				trigger.LargeImage = ""
-				triggerData, err := json.Marshal(trigger)
-				if err != nil {
-					log.Printf("[WARNING] Failed unmarshalling action: %s", err)
-					triggerData = []byte("Failed unmarshalling. Cancel execution!")
-				}
-
-				err = runUserInput(topClient, action, workflowExecution.Workflow.ID, workflowExecution, workflowExecution.Authorization, string(triggerData), dockercli)
-				if err != nil {
-					log.Printf("[ERROR] Failed launching backend magic: %s", err)
-					os.Exit(3)
-				} else {
-					log.Printf("[INFO] Launched user input node succesfully!")
-					os.Exit(3)
-				}
-
-				break
-			}
-		} else {
-			//log.Printf("Handling action %#v", action)
-		}
-
-		if len(toRemove) > 0 {
-			//toRemove = []int{}
-			//for index, nextAction := range nextActions {
 		}
 
 		// Not really sure how this edgecase happens.
@@ -1030,12 +894,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 
 		if continueOuter {
 			log.Printf("[INFO] Parents of %s aren't finished: %s", nextAction, strings.Join(parents[nextAction], ", "))
-			//for _, tmpaction := range parents[nextAction] {
-			//	action := getAction(workflowExecution, tmpaction)
-			//	_ = action
-			//	//log.Printf("Parent: %s", action.Label)
-			//}
-			// Find the result of the nodes?
+
 			continue
 		}
 
@@ -1043,9 +902,198 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		actionResult := getResult(workflowExecution, nextAction)
 		if actionResult.Action.ID == action.ID {
 			log.Printf("[INFO] %s already has status %s.", action.ID, actionResult.Status)
+
 			continue
 		} else {
 			log.Printf("[INFO][%s] %s:%s has no status result yet. Should execute.", workflowExecution.ExecutionId, action.Name, action.ID)
+		}
+
+		newExecId := fmt.Sprintf("%s_%s", workflowExecution.ExecutionId, nextAction)
+		_, err := shuffle.GetCache(ctx, newExecId)
+		if err == nil {
+			//log.Printf("\n\n[DEBUG] Already found %s - returning\n\n", newExecId)
+			continue
+		}
+
+		cacheData := []byte("1")
+		err = shuffle.SetCache(ctx, newExecId, cacheData)
+		if err != nil {
+			log.Printf("[WARNING] Failed setting cache for action %s: %s", newExecId, err)
+		} else {
+			log.Printf("\n\n[DEBUG] Adding %s to cache. Name: %s\n\n", newExecId, action.Name)
+		}
+
+		if action.AppName == "Shuffle Tools" && (action.Name == "skip_me" || action.Name == "router" || action.Name == "route") {
+			topClient := &http.Client{
+				Timeout: 3 * time.Second,
+			}
+			err := runSkipAction(topClient, action, workflowExecution.Workflow.ID, workflowExecution.ExecutionId, workflowExecution.Authorization, "SKIPPED")
+			if err != nil {
+				log.Printf("[DEBUG][%s] Error in skipme for %s: %s", workflowExecution.ExecutionId, action.Label, err)
+			} else {
+				log.Printf("[INFO][%s] Adding visited (4): %s", workflowExecution.ExecutionId, action.Label)
+
+				visited = append(visited, action.ID)
+				executed = append(executed, action.ID)
+				continue
+			}
+		} else if action.AppName == "Shuffle Workflow" {
+			//log.Printf("SHUFFLE WORKFLOW: %#v", action)
+			branchesFound := 0
+			parentFinished := 0
+
+			for _, item := range workflowExecution.Workflow.Branches {
+				if item.DestinationID == action.ID {
+					branchesFound += 1
+
+					for _, result := range workflowExecution.Results {
+						if result.Action.ID == item.SourceID {
+							// Check for fails etc
+							if result.Status == "SUCCESS" || result.Status == "SKIPPED" {
+								parentFinished += 1
+							} else {
+								log.Printf("Parent %s has status %s", result.Action.Label, result.Status)
+							}
+
+							break
+						}
+					}
+				}
+			}
+
+			log.Printf("[DEBUG] Should execute %s (?). Branches: %d. Parents done: %d", action.AppName, branchesFound, parentFinished)
+			if branchesFound == parentFinished {
+				action.Environment = environment
+				action.AppName = "shuffle-subflow"
+				action.Name = "run_subflow"
+				action.AppVersion = "1.0.0"
+
+				//appname := action.AppName
+				//appversion := action.AppVersion
+				//appname = strings.Replace(appname, ".", "-", -1)
+				//appversion = strings.Replace(appversion, ".", "-", -1)
+				//	shuffle-subflow_1.0.0
+
+				//visited = append(visited, action.ID)
+				//executed = append(executed, action.ID)
+
+				trigger := shuffle.Trigger{}
+				for _, innertrigger := range workflowExecution.Workflow.Triggers {
+					if innertrigger.ID == action.ID {
+						trigger = innertrigger
+						break
+					}
+				}
+
+				// FIXME: Add startnode from frontend
+				action.Label = trigger.Label
+				action.Parameters = []shuffle.WorkflowAppActionParameter{}
+				for _, parameter := range trigger.Parameters {
+					parameter.Variant = "STATIC_VALUE"
+					action.Parameters = append(action.Parameters, parameter)
+				}
+
+				action.Parameters = append(action.Parameters, shuffle.WorkflowAppActionParameter{
+					Name:  "source_workflow",
+					Value: workflowExecution.Workflow.ID,
+				})
+
+				action.Parameters = append(action.Parameters, shuffle.WorkflowAppActionParameter{
+					Name:  "source_execution",
+					Value: workflowExecution.ExecutionId,
+				})
+
+				action.Parameters = append(action.Parameters, shuffle.WorkflowAppActionParameter{
+					Name:  "source_node",
+					Value: trigger.ID,
+				})
+
+				action.Parameters = append(action.Parameters, shuffle.WorkflowAppActionParameter{
+					Name:  "source_auth",
+					Value: workflowExecution.Authorization,
+				})
+
+				//trigger.LargeImage = ""
+				//err = handleSubworkflowExecution(client, workflowExecution, trigger, action)
+				//if err != nil {
+				//	log.Printf("[ERROR] Failed to execute subworkflow: %s", err)
+				//} else {
+				//	log.Printf("[INFO] Executed subworkflow!")
+				//}
+				//continue
+			}
+		} else if action.AppName == "User Input" {
+			log.Printf("[DEBUG] RUNNING USER INPUT!")
+			branchesFound := 0
+			parentFinished := 0
+
+			for _, item := range workflowExecution.Workflow.Branches {
+				if item.DestinationID == action.ID {
+					branchesFound += 1
+
+					for _, result := range workflowExecution.Results {
+						if result.Action.ID == item.SourceID {
+							// Check for fails etc
+							if result.Status == "SUCCESS" || result.Status == "SKIPPED" {
+								parentFinished += 1
+							} else {
+								log.Printf("Parent %s has status %s", result.Action.Label, result.Status)
+							}
+
+							break
+						}
+					}
+				}
+			}
+
+			log.Printf("[DEBUG] Should execute %s (?). Branches: %d. Parents done: %d", action.AppName, branchesFound, parentFinished)
+			if branchesFound == parentFinished {
+
+				if action.ID == workflowExecution.Start {
+					log.Printf("[DEBUG] Skipping user input because it's the startnode")
+					visited = append(visited, action.ID)
+					executed = append(executed, action.ID)
+					continue
+				} else {
+					log.Printf("[DEBUG] Should stop after this iteration because it's user-input based. %#v", action)
+					trigger := shuffle.Trigger{}
+					for _, innertrigger := range workflowExecution.Workflow.Triggers {
+						if innertrigger.ID == action.ID {
+							trigger = innertrigger
+							break
+						}
+					}
+
+					action.Label = action.Label
+					action.Parameters = []shuffle.WorkflowAppActionParameter{}
+					for _, parameter := range trigger.Parameters {
+						action.Parameters = append(action.Parameters, shuffle.WorkflowAppActionParameter{
+							Name:  parameter.Name,
+							Value: parameter.Value,
+						})
+					}
+
+					trigger.LargeImage = ""
+					triggerData, err := json.Marshal(trigger)
+					if err != nil {
+						log.Printf("[WARNING] Failed unmarshalling action: %s", err)
+						triggerData = []byte("Failed unmarshalling. Cancel execution!")
+					}
+
+					err = runUserInput(topClient, action, workflowExecution.Workflow.ID, workflowExecution, workflowExecution.Authorization, string(triggerData), dockercli)
+					if err != nil {
+						log.Printf("[ERROR] Failed launching backend magic: %s", err)
+						os.Exit(3)
+					} else {
+						log.Printf("[INFO] Launched user input node succesfully!")
+						os.Exit(3)
+					}
+
+					break
+				}
+			}
+		} else {
+			//log.Printf("Handling action %#v", action)
 		}
 
 		appname := action.AppName
@@ -1408,7 +1456,7 @@ func executionInit(workflowExecution shuffle.WorkflowExecution) error {
 	nextActions := []string{}
 	extra := 0
 
-	results = workflowExecution.Results
+	//results = workflowExecution.Results
 
 	startAction := workflowExecution.Start
 	log.Printf("[INFO][%s] STARTACTION: %s", workflowExecution.ExecutionId, startAction)
@@ -1980,7 +2028,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	results = append(results, actionResult)
+	//results = append(results, actionResult)
 
 	log.Printf("[DEBUG][%s] In workflowQueue with transaction", workflowExecution.ExecutionId)
 	runWorkflowExecutionTransaction(ctx, 0, workflowExecution.ExecutionId, actionResult, resp)
@@ -2035,9 +2083,9 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 	log.Printf(`[DEBUG][%s] Got result %s from %s. Execution status: %s. Save: %#v`, actionResult.ExecutionId, actionResult.Status, actionResult.Action.ID, workflowExecution.Status, dbSave)
 	//dbSave := false
 
-	if len(results) != len(workflowExecution.Results) {
-		log.Printf("[DEBUG][%s] There may have been an issue in transaction queue. Result lengths: %d vs %d. Should check which exists the base results, but not in entire execution, then append.", workflowExecution.ExecutionId, len(results), len(workflowExecution.Results))
-	}
+	//if len(results) != len(workflowExecution.Results) {
+	//	log.Printf("[DEBUG][%s] There may have been an issue in transaction queue. Result lengths: %d vs %d. Should check which exists the base results, but not in entire execution, then append.", workflowExecution.ExecutionId, len(results), len(workflowExecution.Results))
+	//}
 
 	// Validating that action results hasn't changed
 	// Handled using cachhing, so actually pretty fast

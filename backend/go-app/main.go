@@ -2885,7 +2885,7 @@ func handleSwaggerValidation(body []byte) (shuffle.ParsedOpenApi, error) {
 		}
 	} else {
 		isJson = true
-		log.Printf("Successfully parsed JSON!")
+		//log.Printf("[DEBUG] Successfully parsed JSON!")
 	}
 
 	if len(version.SwaggerVersion) > 0 && len(version.Swagger) == 0 {

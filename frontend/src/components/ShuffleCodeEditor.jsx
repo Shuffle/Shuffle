@@ -38,7 +38,7 @@ const CodeEditor = (props) => {
 	function expectedOutput(input) {
 		
 		const found = input.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
-		console.log(found)
+		//console.log(found)
 
 		try{
 			// When the found array is empty.

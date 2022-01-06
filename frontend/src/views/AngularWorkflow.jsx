@@ -1056,7 +1056,7 @@ const AngularWorkflow = (defaultprops) => {
 					}
 
           curworkflowComment.position = cyelements[key].position();
-					console.log(curworkflowComment)
+					//console.log(curworkflowComment)
 
           newComments.push(curworkflowComment);
         } else {
@@ -3193,14 +3193,14 @@ const AngularWorkflow = (defaultprops) => {
       event.path !== null &&
       event.path.length > 0
     ) {
-      console.log("PATH: ", event.path[0])
+      //console.log("PATH: ", event.path[0])
       if (event.path[0].localName !== "body") {
         //console.log("Skipping because body is not targeted")
         return;
       }
     } 
 		
-		console.log("PATH2: ", event.target)
+		//console.log("PATH2: ", event.target)
 		if (
       event.target !== undefined &&
       event.target !== null
@@ -7643,6 +7643,11 @@ const AngularWorkflow = (defaultprops) => {
 
 			const handleWorkflowSelectionUpdate = (e) => {
 				setUpdate(Math.random());
+
+				if (e.target.value === undefined || e.target.value === null || e.target.value.id === undefined) {
+					return null
+				}
+
 				workflow.triggers[
 					selectedTriggerIndex
 				].parameters[0].value = e.target.value.id;
@@ -10268,7 +10273,7 @@ const AngularWorkflow = (defaultprops) => {
     return (
       <div>
         <h3>Execution Argument</h3>
-        <div style={{ maxHeight: 200, overflowY: "scroll" }}>
+        <div style={{ maxHeight: 200, overflowY: "auto" }}>
           {executionData.execution_argument}
         </div>
       </div>
@@ -10415,11 +10420,11 @@ const AngularWorkflow = (defaultprops) => {
 			base = JSON.stringify(base)
 		} 
 
-		if (base_node_name === "execution_argument") {
+		if (base_node_name === "execution_argument" || base_node_name === "Execution Argument") {
 			base_node_name = "exec"
 		}
 
-    console.log("COPY: ", copy);
+    console.log("COPY: ", base_node_name, copy);
 
     //var newitem = JSON.parse(base);
 		var newitem = validateJson(base).result
@@ -11352,10 +11357,13 @@ const AngularWorkflow = (defaultprops) => {
     : selectedResult.status === "ABORTED" || selectedResult.status === "FAILURE"
     ? "red"
     : yellow;
+
   const validate = !codeModalOpen
     ? ""
     : validateJson(selectedResult.result.trim());
+
   if (validate.valid && typeof validate.result === "string") {
+		console.log(validate.result)
     validate.result = JSON.parse(validate.result);
   }
 
@@ -11691,7 +11699,7 @@ const AngularWorkflow = (defaultprops) => {
 						</Typography>
 					</div>
 				) : (
-					<Zoom in={true} timeout={1000} style={{ transitionDelay: `${150}ms` }}>
+					<Fade in={true} timeout={1000} style={{ transitionDelay: `${150}ms` }}>
 						<CytoscapeComponent
 							elements={elements}
 							minZoom={0.35}
@@ -11714,7 +11722,7 @@ const AngularWorkflow = (defaultprops) => {
 								setCy(incy);
 							}}
 						/>
-					</Zoom>
+					</Fade>
 				)}
 			</div>
 			{executionModal}

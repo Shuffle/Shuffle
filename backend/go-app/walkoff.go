@@ -1040,7 +1040,6 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	user, userErr := shuffle.HandleApiAuthentication(resp, request)
-
 	if user.Role == "org-reader" {
 		log.Printf("[WARNING] Org-reader doesn't have access to run workflow: %s (%s)", user.Username, user.Id)
 		resp.WriteHeader(401)
@@ -2171,7 +2170,7 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 	}
 
 	if appCounter > 0 {
-		log.Printf("Preloaded %d OpenApi apps in folder %s!", appCounter, extra)
+		//log.Printf("Preloaded %d OpenApi apps in folder %s!", appCounter, extra)
 	}
 
 	return nil

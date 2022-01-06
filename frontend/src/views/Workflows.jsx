@@ -429,7 +429,11 @@ export const validateJson = (showResult) => {
 		}
 	}
 
-  //console.log("VALID: ", jsonvalid, result)
+	if (jsonvalid && typeof result === "number") {
+		jsonvalid = false
+	}
+
+  //console.log("VALID: ", jsonvalid, result, typeof result)
   return {
     valid: jsonvalid,
     result: result,
