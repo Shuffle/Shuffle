@@ -2568,6 +2568,7 @@ const AngularWorkflow = (defaultprops) => {
   // Takes an action as input, then runs through and updates the relevant fields
   // based on previous actions'
 	// Uses lots of synonyms 
+	// autocomplete
   const RunAutocompleter = (dstdata) => {
     // **PS: The right action should already be set here**
     // 1. Check execution argument
@@ -5292,14 +5293,33 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     // Does this one find the wrong one?
-    var newSelectedAction = selectedAction;
+    var newSelectedAction = JSON.parse(JSON.stringify(selectedAction))
     newSelectedAction.name = newaction.name;
-    newSelectedAction.parameters = JSON.parse(
-      JSON.stringify(newaction.parameters)
-    );
+    newSelectedAction.parameters = JSON.parse(JSON.stringify(newaction.parameters))
     newSelectedAction.errors = [];
     newSelectedAction.isValid = true;
     newSelectedAction.is_valid = true;
+
+		// Simmple action swap autocompleter
+		if (selectedAction.parameters !== undefined && newSelectedAction.parameters !== undefined && selectedAction.id === newSelectedAction.id) {
+			//console.log("OLD: ", selectedAction, "NEW: ", newSelectedAction)
+			for (var paramkey in selectedAction.parameters) {
+				const param = selectedAction.parameters[paramkey];
+				if (param.value === null || param.value === undefined || param.value.length === 0) {
+					continue
+				}
+
+				const newParamIndex = newSelectedAction.parameters.findIndex(paramdata => paramdata.name === param.name)
+				console.log("INDEX: ", newParamIndex)
+				if (newParamIndex < 0) {
+					console.log("NOT FOUND: ", param)
+					continue
+				}
+
+				console.log("FOUND: ", param)
+				newSelectedAction.parameters[newParamIndex].value = param.value
+			}
+		}
 
     if (newSelectedAction.app_name === "Shuffle Tools") {
       const iconInfo = GetIconInfo(newSelectedAction);
@@ -5326,6 +5346,7 @@ const AngularWorkflow = (defaultprops) => {
         foundnode.data(newSelectedAction);
       }
     }
+
 
     // Takes an action as input, then runs through and updates the relevant fields
     // based on previous actions'
@@ -9253,7 +9274,7 @@ const AngularWorkflow = (defaultprops) => {
         workflow.triggers[selectedTriggerIndex].parameters = [];
         workflow.triggers[selectedTriggerIndex].parameters[0] = {
           name: "cron",
-          value: isCloud ? "*/15 * * * *" : "120",
+          value: isCloud ? "*/25 * * * *" : "60",
         };
         workflow.triggers[selectedTriggerIndex].parameters[1] = {
           name: "execution_argument",
@@ -9327,12 +9348,12 @@ const AngularWorkflow = (defaultprops) => {
                 if (e.target.value === "cloud") {
                   console.log("Set cloud config");
                   workflow.triggers[selectedTriggerIndex].parameters[0].value =
-                    "*/15 * * * *";
+                    "*/25 * * * *";
                 } else {
                   console.log("Set cloud config");
 
                   workflow.triggers[selectedTriggerIndex].parameters[0].value =
-                    "120";
+                    "60";
                 }
 
                 setWorkflow(workflow);

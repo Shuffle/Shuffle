@@ -1265,6 +1265,7 @@ const ParsedAction = (props) => {
 
             //<TextareaAutosize
             // <CodeMirror
+            //fullWidth
             var datafield = (
               <TextField
                 disabled={disabled}
@@ -1321,7 +1322,6 @@ const ParsedAction = (props) => {
                     </InputAdornment>
                   ),
                 }}
-                fullWidth
                 multiline={multiline}
                 helperText={returnHelperText(data.name, data.value)}
                 onClick={() => {

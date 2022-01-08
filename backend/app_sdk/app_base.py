@@ -681,7 +681,12 @@ class AppBase:
                                     except KeyError:
                                         break
                             else:
-                                raise e
+                                raise json.dumps({
+                                    "success": False,
+                                    "reason": "You may be running an old version of this action. Please delete and remake the node.",
+                                    "exception": f"TypeError: {e}",
+                                })
+                                
 
                 except:
                     e = ""
@@ -2389,7 +2394,11 @@ class AppBase:
                         for parameter in action["parameters"]:
                             check, value, is_loop = parse_params(action, fullexecution, parameter, self)
                             if check:
-                                raise "Value check error: %s" % Exception(check)
+                                raise json.dumps({
+                                    "success": False,
+                                    "reason": "Parameter {parameter} has an issue",
+                                    "exception": f"Value Check Error: {check}",
+                                })
 
                             # Custom format for ${name[0,1,2,...]}$
                             #submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"
@@ -2726,8 +2735,11 @@ class AppBase:
                                             except KeyError:
                                                 break
                                     else:
-                                        raise e
-                                        #break
+                                        raise json.dumps({
+                                            "success": False,
+                                            "reason": "You may be running an old version of this action. Please delete and remake the node.",
+                                            "exception": f"TypeError: {e}",
+                                        })
 
                             # Forcing async wait in case of old apps that use async
                             try:
