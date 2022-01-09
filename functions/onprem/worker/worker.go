@@ -270,11 +270,25 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 			return err
 		}
 
-		//log.Printf("[DEBUG][%s] Should run towards port %d for app %s", workflowExecution.ExecutionId, exposedPort, appName)
-		err = sendAppRequest(baseUrl, appName, exposedPort, action, workflowExecution)
-		if err != nil {
-			log.Printf("[ERROR] Failed sending request to app %s on port %d: %s", appName, exposedPort, err)
-			return err
+		log.Printf("[DEBUG][%s] Should run towards port %d for app %s. DELAY: %d", workflowExecution.ExecutionId, exposedPort, appName, action.ExecutionDelay)
+		if action.ExecutionDelay > 0 {
+			//log.Printf("[DEBUG] Running app %s with delay of %d", action.Name, action.ExecutionDelay)
+			waitTime := time.Duration(action.ExecutionDelay) * time.Second
+
+			time.AfterFunc(waitTime, func() {
+				err = sendAppRequest(baseUrl, appName, exposedPort, action, workflowExecution)
+				if err != nil {
+					log.Printf("[ERROR] Failed sending SCHEDULED request to app %s on port %d: %s", appName, exposedPort, err)
+				}
+			})
+
+		} else {
+			//log.Printf("[DEBUG] Running app %s NORMALLY as there is no delay set", action.Name)
+			err = sendAppRequest(baseUrl, appName, exposedPort, action, workflowExecution)
+			if err != nil {
+				log.Printf("[ERROR] Failed sending request to app %s on port %d: %s", appName, exposedPort, err)
+				return err
+			}
 		}
 
 		//log.Printf("[DEBUG] Successfully ran request towards port %d for app %s", exposedPort, appName)
@@ -337,6 +351,22 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		Env:   env,
 	}
 
+	if action.ExecutionDelay > 0 {
+		log.Printf("[DEBUG] Running app %s in docker with delay of %d", action.Name, action.ExecutionDelay)
+		waitTime := time.Duration(action.ExecutionDelay) * time.Second
+
+		time.AfterFunc(waitTime, func() {
+			DeployContainer(ctx, cli, config, hostConfig, identifier, workflowExecution)
+		})
+	} else {
+		log.Printf("[DEBUG] Running app %s in docker NORMALLY as there is no delay set", action.Name)
+		return DeployContainer(ctx, cli, config, hostConfig, identifier, workflowExecution)
+	}
+
+	return nil
+}
+
+func DeployContainer(ctx context.Context, cli *dockerclient.Client, config *container.Config, hostConfig *container.HostConfig, identifier string, workflowExecution shuffle.WorkflowExecution) error {
 	cont, err := cli.ContainerCreate(
 		ctx,
 		config,
@@ -420,74 +450,12 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	if workflowExecution.ExecutionSource != "default" {
 		log.Printf("[INFO] Handling NON-default execution source %s - NOT waiting or validating!", workflowExecution.ExecutionSource)
 	} else if workflowExecution.ExecutionSource == "default" {
-		/*
-			time.Sleep(2 * time.Second)
-
-			stats, err := cli.ContainerInspect(ctx, cont.ID)
-			if err != nil {
-				log.Printf("[ERROR] Failed getting container stats for container %s: %s", cont.ID, err)
-			} else {
-				//log.Printf("[INFO] Info for container: %#v", stats)
-				//log.Printf("%#v", stats.Config)
-				//log.Printf("%#v", stats.ContainerJSONBase.State)
-				log.Printf("[DEBUG] EXECUTION STATUS: %s", stats.ContainerJSONBase.State.Status)
-				logOptions := types.ContainerLogsOptions{
-					ShowStdout: true,
-				}
-
-				exit := false
-				out, err := cli.ContainerLogs(ctx, cont.ID, logOptions)
-				if err != nil {
-					log.Printf("[INFO] Failed getting logs: %s", err)
-				} else {
-					buf := new(strings.Builder)
-					io.Copy(buf, out)
-					logs := buf.String()
-
-					// FIXME: Re-add log tracking which can be sent to backend
-					//allLogs[actionId] = logs
-
-					if stats.ContainerJSONBase.State.Status == "exited" && (!strings.Contains(logs, "Normal execution") && !strings.Contains(logs, "indicates microservices") && !strings.Contains(logs, "starting action result")) {
-						if len(logs) > 10 {
-							log.Printf("[ERROR] BAD Execution Logs for %s: %s", action.ID, logs)
-							exit = true
-						}
-					}
-				}
-
-				if exit {
-					log.Printf("[DEBUG] ERROR IN CONTAINER DEPLOYMENT - ITS EXITED!")
-					return errors.New(fmt.Sprintf(`{"success": false, "reason": "Container %s exited prematurely.","debug": "docker logs -f %s"}`, cont.ID, cont.ID))
-				}
-			}
-		*/
 		log.Printf("[INFO] Handling DEFAULT execution source %s - SKIPPING wait anyway due to exited issues!", workflowExecution.ExecutionSource)
 	}
 
 	log.Printf("[DEBUG] Deployed container ID %s", cont.ID)
-
-	/*
-		//log.Printf("%#v", stats.Config.Status)
-		//ContainerJSONtoConfig(cj dockType.ContainerJSON) ContainerConfig {
-			listOptions := types.ContainerListOptions{
-				Filters: filters.Args{
-					map[string][]string{"ancestor": {"<imagename>:<version>"}},
-				},
-			}
-			containers, err := cli.ContainerList(ctx, listOptions)
-	*/
-
-	//log.Printf("%#v", cont.Status)
-	//config := ContainerJSONtoConfig(stats)
-	//log.Printf("CONFIG: %#v", config)
-
-	/*
-		logOptions := types.ContainerLogsOptions{
-			ShowStdout: true,
-		}
-	*/
-
 	containerIds = append(containerIds, cont.ID)
+
 	return nil
 }
 
@@ -986,6 +954,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 				}
 
 				// FIXME: Add startnode from frontend
+				action.ExecutionDelay = trigger.ExecutionDelay
 				action.Label = trigger.Label
 				action.Parameters = []shuffle.WorkflowAppActionParameter{}
 				for _, parameter := range trigger.Parameters {

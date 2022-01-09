@@ -2410,7 +2410,7 @@ const ParsedAction = (props) => {
 								}}
 							/>
 						</div>
-						{!isCloud ? null :
+						{/*!isCloud ? null :*/}
 							<div style={{flex: 1, marginLeft: 5,}}>
 								<Tooltip
 									color="primary"
@@ -2442,7 +2442,7 @@ const ParsedAction = (props) => {
 									</span>
 								</Tooltip>
 							</div>
-						}
+						{/**/}
 					</div>
         </span>
       )}

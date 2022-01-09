@@ -7783,7 +7783,6 @@ const AngularWorkflow = (defaultprops) => {
 							/>
 						</div>
 						<div>
-						{!isCloud  ? null :
 							<div style={{flex: 1, marginLeft: 5,}}>
 								<Tooltip
 									color="primary"
@@ -7825,7 +7824,6 @@ const AngularWorkflow = (defaultprops) => {
 									</span>
 								</Tooltip>
 							</div>
-							}
 						</div>
 					</div>
           <FormControlLabel
