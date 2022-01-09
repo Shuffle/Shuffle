@@ -419,7 +419,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "success"}`)))
 		return
 	} else {
-		log.Printf("[DEBUG] Handling other execution variant: %s", err)
+		log.Printf("[DEBUG] Handling other execution variant (subflow): %s", err)
 	}
 
 	var actionResult shuffle.ActionResult
@@ -1058,6 +1058,9 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		fileId = location[4]
+		if strings.Contains(fileId, "?") {
+			fileId = strings.Split(fileId, "?")[0]
+		}
 	}
 
 	if len(fileId) != 36 {
@@ -1072,7 +1075,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 	if err != nil && workflow.ID == "" {
 		log.Printf("[WARNING] Failed getting the workflow locally (execute workflow): %s", err)
 		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false}`))
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflow with ID %s doesn't exist."}`, fileId)))
 		return
 	}
 

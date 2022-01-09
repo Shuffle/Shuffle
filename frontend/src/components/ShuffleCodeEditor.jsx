@@ -13,6 +13,8 @@ import {
 } from "@material-ui/icons";
 
 import { useTheme } from '@material-ui/core/styles';
+import { validateJson } from "../views/Workflows.jsx";
+import ReactJson from "react-json-view";
 
 import CodeMirror from '@uiw/react-codemirror';
 import 'codemirror/keymap/sublime';
@@ -23,18 +25,9 @@ const CodeEditor = (props) => {
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
   // const {codelang, setcodelang} = props
   const theme = useTheme();
-	const [validation, setvalidation] = React.useState(" ");
-	const [expOutput, setexpOutput] = React.useState(" ");
+	const [validation, setValidation] = React.useState(false);
+	const [expOutput, setExpOutput] = React.useState(" ");
 
-	function IsJsonString(str) {
-		try {
-			var o = JSON.parse(str);
-	    if (o && typeof o === "object") {
-				setvalidation("Correct!")
-			}
-		} catch (e) {setvalidation("Incorrect!");}
-	}
-	
 	function expectedOutput(input) {
 		
 		const found = input.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
@@ -56,21 +49,15 @@ const CodeEditor = (props) => {
 			}
 		} catch (e) {}
 
-		try {
-			// var x = document.getElementById("expOutput");
-			// x.innerHTML = JSON.stringify(JSON.parse(input), null, 4)
-			setexpOutput(JSON.stringify(JSON.parse(input), null, 4))
-		} catch (e) {
-			setexpOutput(input)
+		const tmpValidation = validateJson(input.valueOf()) 
+		//setValidation(true)
+		if (tmpValidation.valid === true) {
+			setValidation(true)
+			setExpOutput(tmpValidation.result)
+		} else {
+			setExpOutput(input.valueOf())
+			setValidation(false)
 		}
-
-		// const obj = JSON.parse(input);
-		// setexpOutput(JSON.stringify(JSON.parse(input), null, 4))
-		// x.innerHTML = "<span style='font-size: 30px'>" + JSON.stringify(input, null, 4) + "</span>"
-		// x.appendChild(document.createTextNode(JSON.stringify(JSON.parse(input), null, 4)));
-		// setexpOutput(JSON.stringify(input, undefined, 4).replace('\ ', '\n'))
-		// setexpOutput("Hi there \n Hey there")
-		// Variables + Syntax highlighting + Validation
 	}
 
 	return (
@@ -108,14 +95,12 @@ const CodeEditor = (props) => {
 			}}>
 				<CodeMirror
 					value = {localcodedata}
-					height="200px"
+					height="250px"
 					style={{
 					}}
 					onChange={(value) => {
 						setlocalcodedata(value.getValue())
 						expectedOutput(value.getValue())
-						IsJsonString(value.getValue())
-						// console.log(actionlist.slice(-1))
 					}}
 					options={{
 						theme: 'gruvbox-dark',
@@ -141,22 +126,47 @@ const CodeEditor = (props) => {
 						Output
 					</span>
 				</DialogTitle>
-				<p
-					id='expOutput'
-					style={{
-						whiteSpace: "pre-wrap",
-						color: "#f85a3e",
-						fontFamily: "monospace",
-						backgroundColor: "#282828",
-						padding: 20,
-						marginTop: -2,
-						border: `2px solid ${theme.palette.inputColor}`,
-						borderRadius: theme.palette.borderRadius,
-						maxHeight: 400,
-					}}
-				>
-					{expOutput}
-				</p>
+				{validation === true ? 
+					<ReactJson
+						src={expOutput}
+						theme={theme.palette.jsonTheme}
+						style={{
+							borderRadius: 5,
+							border: "1px solid rgba(255,255,255,0.7)",
+							padding: 5, 
+							maxHeight: 250, 
+							minheight: 250, 
+							overflow: "auto",
+						}}
+						collapsed={false}
+						enableClipboard={(copy) => {
+							//handleReactJsonClipboard(copy);
+						}}
+						displayDataTypes={false}
+						onSelect={(select) => {
+							//HandleJsonCopy(validate.result, select, "exec");
+						}}
+						name={"JSON autocompletion"}
+					/>
+				:
+					<p
+						id='expOutput'
+						style={{
+							whiteSpace: "pre-wrap",
+							color: "#f85a3e",
+							fontFamily: "monospace",
+							backgroundColor: "#282828",
+							padding: 20,
+							marginTop: -2,
+							border: `2px solid ${theme.palette.inputColor}`,
+							borderRadius: theme.palette.borderRadius,
+							maxHeight: 250,
+							overflow: "auto", 
+						}}
+					>
+						{expOutput}
+					</p>
+				}
 				<p
 					style={{
 						color: "white",
@@ -166,7 +176,7 @@ const CodeEditor = (props) => {
 						marginTop: -15,
 					}}
 				>
-					JSON Validation: {validation}
+					JSON Validation: {validation ? "Correct" : "Incorrect"}
 				</p>
 			</div>
 

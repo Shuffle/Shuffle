@@ -3960,7 +3960,7 @@ func runInitEs(ctx context.Context) {
 
 	for _, org := range activeOrgs {
 		if !org.CloudSync {
-			log.Printf("[WARNING] Skipping org syncCheck for %s because sync isn't set (1).", org.Id)
+			log.Printf("[INFO] Skipping org syncCheck for %s because sync isn't set (1).", org.Id)
 			continue
 		}
 

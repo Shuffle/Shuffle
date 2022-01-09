@@ -161,6 +161,8 @@ const ParsedAction = (props) => {
     authenticationType,
     appAuthentication,
     getAppAuthentication,
+		actionDelayChange,
+		isCloud,
   } = props;
 
   //const theme = useTheme();
@@ -1015,6 +1017,26 @@ const ParsedAction = (props) => {
 							<b>Parameters</b>
 						</Button>
 					</Tooltip>
+        	{selectedAction.description !== undefined && selectedAction.description !== null && selectedAction.description.length > 0 &&  hiddenDescription === false ? (
+						<div
+							style={{
+								border: "1px solid rgba(255,255,255,0.6)",
+								borderRadius: theme.palette.borderRadius,
+								marginTop: 15,
+								marginBottom: 10,
+								maxHeight: 70,
+								overflow: "auto",
+								padding: 15, 
+							}}
+						>
+							<Typography style={{}}>
+								<b>Description</b>
+							</Typography>
+							<Typography style={{}}>
+								{selectedAction.description}
+							</Typography>
+						</div>
+					) : null}
           {selectedActionParameters.map((data, count) => {
             if (data.variant === "") {
               data.variant = "STATIC_VALUE";
@@ -2282,6 +2304,7 @@ const ParsedAction = (props) => {
 										<AutoFixHighIcon style={{ color: selectedAction.run_magic_output === undefined || selectedAction.run_magic_output === null || selectedAction.run_magic_output === false ? "white" : "#f86a3e"}} />
                   </Tooltip>
                 </IconButton>
+
               </div>
             </div>
             <div style={{ display: "flex", flexDirection: "column" }}>
@@ -2351,39 +2374,76 @@ const ParsedAction = (props) => {
               backgroundColor: "rgb(91, 96, 100)",
             }}
           />
-          <Typography>Name</Typography>
-          <TextField
-            style={theme.palette.textFieldStyle}
-            InputProps={{
-              style: theme.palette.innerTextfieldStyle,
-            }}
-            fullWidth
-            color="primary"
-            placeholder={selectedAction.label}
-            defaultValue={selectedAction.label}
-            onChange={selectedNameChange}
-            onBlur={(e) => {
-              const name = e.target.value;
-              console.log("CHANGED FROM2: ", baselabel);
-              console.log("CHANGED TO: ", name);
-              for (var key in workflow.actions) {
-                for (var subkey in workflow.actions[key].parameters) {
-                  const param = workflow.actions[key].parameters[subkey];
-                  if (param.value.includes(baselabel)) {
-                    //if (param.value.toLowerCase().includes(baselabel)) {
-                    console.log("FOUND: ", param);
-                    workflow.actions[key].parameters[subkey].value.replaceAll(
-                      baselabel,
-                      e.target.value
-                    );
-                  }
-                }
-              }
+					<div style={{display: "flex"}}>
+						<div style={{flex: 5}}>
+							<Typography>Name</Typography>
+							<TextField
+								style={theme.palette.textFieldStyle}
+								InputProps={{
+									style: theme.palette.innerTextfieldStyle,
+								}}
+								fullWidth
+								color="primary"
+								placeholder={selectedAction.label}
+								defaultValue={selectedAction.label}
+								onChange={selectedNameChange}
+								onBlur={(e) => {
+									const name = e.target.value;
+									console.log("CHANGED FROM2: ", baselabel);
+									console.log("CHANGED TO: ", name);
+									for (var key in workflow.actions) {
+										for (var subkey in workflow.actions[key].parameters) {
+											const param = workflow.actions[key].parameters[subkey];
+											if (param.value.includes(baselabel)) {
+												//if (param.value.toLowerCase().includes(baselabel)) {
+												console.log("FOUND: ", param);
+												workflow.actions[key].parameters[subkey].value.replaceAll(
+													baselabel,
+													e.target.value
+												);
+											}
+										}
+									}
 
-              console.log("DID REPLACE ACTUALLY WORK?? - Something is buggy.");
-              setWorkflow(workflow);
-            }}
-          />
+									console.log("DID REPLACE ACTUALLY WORK?? - Something is buggy.");
+									setWorkflow(workflow);
+								}}
+							/>
+						</div>
+						{!isCloud ? null :
+							<div style={{flex: 1, marginLeft: 5,}}>
+								<Tooltip
+									color="primary"
+									title={"Delay before action executes (in seconds)"}
+									placement="top"
+								>
+									<span>
+										<Typography>Delay</Typography>
+										<TextField
+											style={{
+												backgroundColor: theme.palette.inputColor,
+												borderRadius: theme.palette.borderRadius,
+												color: "white",
+												width: 50,
+												height: 50,
+												fontSize: "1em",
+											}}
+											InputProps={{
+												style: theme.palette.innerTextfieldStyle,
+											}}
+											placeholder={selectedAction.execution_delay}
+											defaultValue={selectedAction.execution_delay}
+											onChange={(event) => {
+												if (actionDelayChange !== undefined) {
+													actionDelayChange(event) 
+												}
+											}}
+										/>
+									</span>
+								</Tooltip>
+							</div>
+						}
+					</div>
         </span>
       )}
       {selectedApp.name !== undefined &&
@@ -2791,27 +2851,6 @@ const ParsedAction = (props) => {
 						})}
 					</Select>
 				: null*/}
-
-        {selectedAction.description !== undefined && selectedAction.description !== null && selectedAction.description.length > 0 &&  hiddenDescription === false ? (
-						<div
-							style={{
-								border: "1px solid rgba(255,255,255,0.6)",
-								borderRadius: theme.palette.borderRadius,
-								marginTop: 15,
-								marginBottom: 10,
-								maxHeight: 60,
-								overflow: "hidden",
-								padding: 15, 
-							}}
-						>
-							<Typography style={{}}>
-								<b>Description</b>
-							</Typography>
-							<Typography style={{}}>
-								{selectedAction.description}
-							</Typography>
-						</div>
-					) : null}
 
         <div
           style={{

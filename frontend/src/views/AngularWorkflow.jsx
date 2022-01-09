@@ -2173,11 +2173,9 @@ const AngularWorkflow = (defaultprops) => {
 			// FIXME: Trust it to just work?
 			//event.target.data()
       var curaction = workflow.actions.find((a) => a.id === data.id);
-			var newapps = JSON.parse(JSON.stringify(apps))
       if (!curaction || curaction === undefined) {
 				console.log("NOT FOUND DATA: ", event.target.data())
 				if (data.id !== undefined && data.app_name !== undefined) {
-					//newapps.push(data)
 					workflow.actions.push(data)
 					setWorkflow(workflow)
 					curaction = data
@@ -2188,6 +2186,7 @@ const AngularWorkflow = (defaultprops) => {
 				}
       }
 
+			var newapps = JSON.parse(JSON.stringify(apps))
       const curapp = newapps.find(
         (a) =>
           a.name === curaction.app_name &&
@@ -5310,13 +5309,10 @@ const AngularWorkflow = (defaultprops) => {
 				}
 
 				const newParamIndex = newSelectedAction.parameters.findIndex(paramdata => paramdata.name === param.name)
-				console.log("INDEX: ", newParamIndex)
 				if (newParamIndex < 0) {
-					console.log("NOT FOUND: ", param)
 					continue
 				}
 
-				console.log("FOUND: ", param)
 				newSelectedAction.parameters[newParamIndex].value = param.value
 			}
 		}
@@ -5352,8 +5348,6 @@ const AngularWorkflow = (defaultprops) => {
     // based on previous actions'
     newSelectedAction = RunAutocompleter(newSelectedAction);
 
-    console.log("ACTION: ", newSelectedAction);
-
     if (
       newaction.returns.example !== undefined &&
       newaction.returns.example !== null &&
@@ -5377,7 +5371,17 @@ const AngularWorkflow = (defaultprops) => {
     //}
     //setSelectedActionEnvironment(env)
 
+
+    console.log("ACTION: ", newSelectedAction);
     setSelectedAction(newSelectedAction);
+		if (workflow.actions !== undefined && workflow.actions !== null && workflow.actions.length > 0) {
+			const foundActionIndex = workflow.actions.findIndex(actiondata => actiondata.id === newSelectedAction.id)
+			console.log("Found action on index ", foundActionIndex)
+			if (foundActionIndex >= 0) {
+				workflow.actions[foundActionIndex] = newSelectedAction
+				setWorkflow(workflow)
+			}
+		}
     setUpdate(Math.random());
 
     // FIXME - should change icon-node (descriptor) as well
@@ -5406,7 +5410,6 @@ const AngularWorkflow = (defaultprops) => {
   // appname & version
   // description
   // ACTION select
-  //
   const selectedNameChange = (event) => {
     event.target.value = event.target.value.replaceAll("(", "");
     event.target.value = event.target.value.replaceAll(")", "");
@@ -5428,6 +5431,22 @@ const AngularWorkflow = (defaultprops) => {
     selectedAction.label = event.target.value;
     setSelectedAction(selectedAction);
   };
+
+	const actionDelayChange = (event) => {
+		if (isNaN(event.target.value)) {
+			console.log("NAN: ", event.target.value)
+			return
+		}
+
+		const parsedNumber = parseInt(event.target.value)
+		if (parsedNumber > 86400) {
+			console.log("Max number is 1 day (86400)")
+			return
+		}
+
+		selectedAction.execution_delay = parsedNumber
+    setSelectedAction(selectedAction)
+	}
 
   const selectedTriggerChange = (event) => {
     selectedTrigger.label = event.target.value;
@@ -7595,6 +7614,10 @@ const AngularWorkflow = (defaultprops) => {
 			const handleSubflowStartnodeSelection = (e) => {
 				setSubworkflowStartnode(e.target.value);
 
+				if (e.target.value === null || e.target.value === undefined) {
+					return
+				}
+
 				const branchId = uuidv4();
 				const newbranch = {
 					source_id: workflow.triggers[selectedTriggerIndex].id,
@@ -7736,26 +7759,75 @@ const AngularWorkflow = (defaultprops) => {
               backgroundColor: "rgb(91, 96, 100)",
             }}
           />
-          <div>Name</div>
-          <TextField
-            style={{
-              backgroundColor: inputColor,
-              borderRadius: theme.palette.borderRadius,
-            }}
-            InputProps={{
-              style: {
-                color: "white",
-                marginLeft: "5px",
-                maxWidth: "95%",
-                height: 50,
-                fontSize: "1em",
-              },
-            }}
-            fullWidth
-            color="primary"
-            placeholder={selectedTrigger.label}
-            onChange={selectedTriggerChange}
-          />
+					<div style={{display: "flex"}}>
+						<div style={{flex: 5}}>
+          		<Typography>Name</Typography>
+							<TextField
+								style={{
+									backgroundColor: inputColor,
+									borderRadius: theme.palette.borderRadius,
+								}}
+								InputProps={{
+									style: {
+										color: "white",
+										marginLeft: "5px",
+										maxWidth: "95%",
+										height: 50,
+										fontSize: "1em",
+									},
+								}}
+								fullWidth
+								color="primary"
+								placeholder={selectedTrigger.label}
+								onChange={selectedTriggerChange}
+							/>
+						</div>
+						<div>
+						{!isCloud  ? null :
+							<div style={{flex: 1, marginLeft: 5,}}>
+								<Tooltip
+									color="primary"
+									title={"Delay before action executes (in seconds)"}
+									placement="top"
+								>
+									<span>
+										<Typography>Delay</Typography>
+										<TextField
+											style={{
+												backgroundColor: theme.palette.inputColor,
+												borderRadius: theme.palette.borderRadius,
+												color: "white",
+												width: 50,
+												height: 50,
+												fontSize: "1em",
+											}}
+											InputProps={{
+												style: theme.palette.innerTextfieldStyle,
+											}}
+											placeholder={selectedTrigger.execution_delay}
+											defaultValue={selectedAction.execution_delay}
+											onChange={(event) => {
+												if (isNaN(event.target.value)) {
+													console.log("NAN: ", event.target.value)
+													return
+												}
+
+												const parsedNumber = parseInt(event.target.value)
+												if (parsedNumber > 86400) {
+													console.log("Max number is 1 day (86400)")
+													return
+												}
+
+												selectedTrigger.execution_delay = parseInt(event.target.value)
+												setSelectedTrigger(selectedTrigger)
+											}}
+										/>
+									</span>
+								</Tooltip>
+							</div>
+							}
+						</div>
+					</div>
           <FormControlLabel
             control={
               <Checkbox
@@ -7798,18 +7870,39 @@ const AngularWorkflow = (defaultprops) => {
           />
           <div style={{ flex: "6", marginTop: "20px" }}>
             <div>
-              <b>Parameters</b>
-              <div
-                style={{
-                  marginTop: "20px",
-                  marginBottom: "7px",
-                  display: "flex",
-                }}
-              >
-                <div style={{ flex: "10" }}>
-                  <b>Select a workflow to execute </b>
-                </div>
-              </div>
+							<div style={{display: "flex"}}>
+								<div
+									style={{
+										marginTop: "20px",
+										marginBottom: "7px",
+										display: "flex",
+										flex: 5,
+									}}
+								>
+									<div style={{ flex: "10" }}>
+										<b>Select a workflow to execute </b>
+									</div>
+								</div>
+              		{workflow.triggers[selectedTriggerIndex].parameters[0].value
+              		  .length === 0 ? null : workflow.triggers[selectedTriggerIndex]
+              		    .parameters[0].value === props.match.params.key ? null : (
+										<div style={{marginLeft: 5, flex: 1}}>
+											<a
+												rel="noopener noreferrer"
+												href={`/workflows/${workflow.triggers[selectedTriggerIndex].parameters[0].value}`}
+												target="_blank"
+												style={{
+													textDecoration: "none",
+													color: "#f85a3e",
+													marginLeft: 5,
+													marginTop: 10,
+												}}
+											>
+												<OpenInNewIcon />
+											</a>
+										</div>
+              		)}
+							</div>
 						{workflows === undefined ||
 						workflows === null ||
 						workflows.length === 0 ? null : (
@@ -7832,7 +7925,7 @@ const AngularWorkflow = (defaultprops) => {
           		      option.name === undefined ||
           		      option.name === null 
           		    ) {
-          		      return "Loading";
+          		      return "No Workflow Selected";
           		    }
 
           		    const newname = (
@@ -7882,24 +7975,6 @@ const AngularWorkflow = (defaultprops) => {
           		    );
           		  }}
           		/>
-              )}
-              {workflow.triggers[selectedTriggerIndex].parameters[0].value
-                .length === 0 ? null : workflow.triggers[selectedTriggerIndex]
-                  .parameters[0].value === props.match.params.key ? null : (
-                <span style={{ marginTop: 5 }}>
-                  <a
-                    rel="noopener noreferrer"
-                    href={`/workflows/${workflow.triggers[selectedTriggerIndex].parameters[0].value}`}
-                    target="_blank"
-                    style={{
-                      textDecoration: "none",
-                      color: "#f85a3e",
-                      marginLeft: 5,
-                    }}
-                  >
-                    Explore selected workflow
-                  </a>
-                </span>
               )}
 
               {subworkflow === undefined ||
@@ -8131,7 +8206,7 @@ const AngularWorkflow = (defaultprops) => {
 			} else {
 				// Always update
 				const newUrl = referenceUrl+"webhook_"+selectedTrigger.id
-				console.log("Validating webhook url: ", newUrl)
+				//console.log("Validating webhook url: ", newUrl)
 				if (newUrl !== workflow.triggers[selectedTriggerIndex].parameters[0].value) {
 					console.log("Url is wrong - updating")
 					workflow.triggers[selectedTriggerIndex].parameters[0].value = newUrl
@@ -8336,7 +8411,7 @@ const AngularWorkflow = (defaultprops) => {
       } else {
         // Always update
         const newUrl = referenceUrl + "webhook_" + selectedTrigger.id;
-        console.log("Validating webhook url: ", newUrl);
+        //console.log("Validating webhook url: ", newUrl);
         if (
           newUrl !== workflow.triggers[selectedTriggerIndex].parameters[0].value
         ) {
@@ -10079,6 +10154,8 @@ const AngularWorkflow = (defaultprops) => {
 					<div id="rightside_actions" style={rightsidebarStyle}>
 						<ParsedAction
 							id="rightside_subactions"
+							isCloud={isCloud}
+							actionDelayChange={actionDelayChange}
 							getAppAuthentication={getAppAuthentication}
 							appAuthentication={appAuthentication}
 							authenticationType={authenticationType}
@@ -11275,7 +11352,7 @@ const AngularWorkflow = (defaultprops) => {
                                 );
                               }}
                             >
-                              See sub-execution
+                            	<OpenInNewIcon />
                             </span>
                           ) : (
                             <a
