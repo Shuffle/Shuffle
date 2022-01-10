@@ -8,6 +8,7 @@ ENV PATH /usr/src/app/node_modules/.bin:$PATH
 
 COPY package.json /usr/src/app/package.json
 
+RUN yarn config set "strict-ssl" false -g
 RUN yarn install 
 
 # copy only required files to not trigger rebuilding every time
