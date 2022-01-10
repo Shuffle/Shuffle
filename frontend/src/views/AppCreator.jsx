@@ -663,10 +663,14 @@ const AppCreator = (defaultprops) => {
               }
             }
           }
+					
+					if (path === "/files/{file_id}/content") {
+						console.log("Method: ", path, method, methodvalue)
+					}
 
           // Typescript? I think not ;)
           if (methodvalue["requestBody"] !== undefined) {
-            console.log("Handle requestbody: ", methodvalue["requestBody"])
+            //console.log("Handle requestbody: ", methodvalue["requestBody"], method, path)
             if (methodvalue["requestBody"]["content"] !== undefined) {
               if (
                 methodvalue["requestBody"]["content"]["application/json"] !==
@@ -816,11 +820,26 @@ const AppCreator = (defaultprops) => {
                         methodvalue["requestBody"]["content"][
                           "multipart/form-data"
                         ]["schema"]["properties"]["fieldname"];
+
                       if (fieldname !== undefined) {
-                        console.log("FIELDNAME: ", fieldname);
+                        //console.log("FIELDNAME: ", fieldname);
                         newaction.file_field = fieldname["value"];
-                      }
-                    }
+                      } else {
+												for (const [subkey, subvalue] of Object.entries(methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["properties"])) {
+													if (subkey.includes("file")) {
+														console.log("Found subkey field for file: ", path, method, methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["properties"])
+														newaction.file_field = subkey
+														break
+													}
+												}
+
+												if (newaction.file_field === undefined || newaction.file_field === null || newaction.file_field.length === 0) {
+													console.log("No file fieldname found: ", methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"]["properties"])
+												}
+											}
+                    } else {
+											console.log("No type found: ", methodvalue["requestBody"]["content"]["multipart/form-data"]["schema"])
+										}
                   }
                 } else {
                   var schemas = [];
@@ -838,11 +857,11 @@ const AppCreator = (defaultprops) => {
                           }
                         }
                       } else {
-                        console.log(
-                          "ERROR: couldn't find schema for ",
-                          subvalue,
-                          method
-                        );
+												if (subvalue["example"] !== undefined && subvalue["example"] !== null) {
+                    			newaction["body"] = subvalue["example"]
+												} else {
+                        	console.log("ERROR: couldn't find schema for ", subvalue, method, path);
+												}
                       }
                     }
                   }
@@ -1388,10 +1407,34 @@ const AppCreator = (defaultprops) => {
       	    ) {
       	      setParameterName(value.in);
       	    }
+
       	  } else if (value.scheme === "bearer") {
       	    setAuthenticationOption("Bearer auth");
       	    setAuthenticationRequired(true);
-      	  } else if (key === "Oauth2" || key === "Oauth2c") {
+
+      	  } else if (key === "ApiKeyAuth" || key === "Token") {
+      	    setAuthenticationOption("API key");
+
+      	    value.in = value.in.charAt(0).toUpperCase() + value.in.slice(1);
+      	    setParameterLocation(value.in);
+      	    if (!apikeySelection.includes(value.in)) {
+      	      console.log("APIKEY SELECT: ", apikeySelection);
+      	      alert.error("Might be error in setting up API key authentication");
+      	    }
+
+      	    console.log("PARAM NAME: ", value.name);
+      	    setParameterName(value.name);
+      	    setAuthenticationRequired(true);
+
+      	  } else if (value.scheme === "basic") {
+      	    setAuthenticationOption("Basic auth");
+      	    setAuthenticationRequired(true);
+
+      	  } else if (value.scheme === "oauth2") {
+      	    setAuthenticationOption("Oauth2");
+      	    setAuthenticationRequired(true);
+
+      	  } else if (value.type === "oauth2" || key === "Oauth2" || key === "Oauth2c" || (key !== undefined && key!== null && key.toLowerCase().includes("oauth2"))) {
       	    //alert.info("Can't handle Oauth2 auth yet.")
       	    setAuthenticationOption("Oauth2");
       	    setAuthenticationRequired(true);
@@ -1399,14 +1442,12 @@ const AppCreator = (defaultprops) => {
       	    //console.log("FLOW-1: ", value)
       	    const flowkey = value.flow === undefined ? "flows" : "flow";
       	    //console.log("FLOW: ", value[flowkey])
-      	    const basekey =
-      	      value[flowkey].authorizationCode !== undefined
+      	    const basekey = value[flowkey].authorizationCode !== undefined
       	        ? "authorizationCode"
       	        : "implicit";
+
       	    //console.log("FLOW2: ", value[flowkey][basekey])
-      	    if (
-      	      value[flowkey] !== undefined &&
-      	      value[flowkey][basekey] !== undefined
+      	    if (value[flowkey] !== undefined && value[flowkey][basekey] !== undefined
       	    ) {
       	      if (
       	        value[flowkey][basekey].authorizationUrl !== undefined &&
@@ -1464,25 +1505,6 @@ const AppCreator = (defaultprops) => {
       	        basekey
       	      );
       	    }
-      	  } else if (key === "ApiKeyAuth" || key === "Token") {
-      	    setAuthenticationOption("API key");
-
-      	    value.in = value.in.charAt(0).toUpperCase() + value.in.slice(1);
-      	    setParameterLocation(value.in);
-      	    if (!apikeySelection.includes(value.in)) {
-      	      console.log("APIKEY SELECT: ", apikeySelection);
-      	      alert.error("Might be error in setting up API key authentication");
-      	    }
-
-      	    console.log("PARAM NAME: ", value.name);
-      	    setParameterName(value.name);
-      	    setAuthenticationRequired(true);
-      	  } else if (value.scheme === "basic") {
-      	    setAuthenticationOption("Basic auth");
-      	    setAuthenticationRequired(true);
-      	  } else if (value.scheme === "oauth2") {
-      	    setAuthenticationOption("Oauth2");
-      	    setAuthenticationRequired(true);
       	  } else {
       	    alert.error("Couldn't handle AUTH type: ", key);
       	    //newauth.push({
@@ -1687,6 +1709,7 @@ const AppCreator = (defaultprops) => {
             queryitem.name.toLowerCase() == "ssl_verify" ||
             queryitem.name.toLowerCase() == "queries" ||
             queryitem.name.toLowerCase() == "headers" ||
+            queryitem.name.toLowerCase() == "access_token" ||
             queryitem.name.includes("[") ||
             queryitem.name.includes("]") ||
             queryitem.name.includes("{") ||
@@ -2208,8 +2231,8 @@ const AppCreator = (defaultprops) => {
   //console.log("Option: ", authenticationOption)
   //console.log("Location: ", parameterLocation)
   //console.log("Name: ", parameterName)
-  //const extraKeys = authenticationOption === "Oauth2" ? null : 
-  const extraKeys = 
+	//const extraKeys = 
+  const extraKeys = authenticationOption === "Oauth2" ? null : 
     <div style={{ marginTop: 50, marginRight: 25, }}>
       <div style={{ display: "flex" }}>
         <Typography variant="body1">Extra authentication</Typography>

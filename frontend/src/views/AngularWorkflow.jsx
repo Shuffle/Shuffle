@@ -11291,7 +11291,7 @@ const AngularWorkflow = (defaultprops) => {
 											color="primary"
 											title="See executions with similar results (not identical)"
 											placement="top"
-											style={{ zIndex: 50000, marginLeft: 20,}}
+											style={{ zIndex: 50000, marginLeft: 50,}}
 										>
 											<IconButton
 													style={{

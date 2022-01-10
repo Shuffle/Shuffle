@@ -40,7 +40,7 @@ import {
 import { useTheme } from "@material-ui/core/styles";
 
 import YAML from "yaml";
-import { Link } from "react-router-dom";
+import { useNavigate, Link, useParams } from "react-router-dom";
 import { useAlert } from "react-alert";
 import Dropzone from "../components/Dropzone";
 
@@ -172,6 +172,8 @@ const Apps = (props) => {
   const theme = useTheme();
   const baseRepository = "https://github.com/frikky/shuffle-apps";
   const alert = useAlert();
+	let navigate = useNavigate();
+
   const [selectedApp, setSelectedApp] = React.useState({});
   const [firstrequest, setFirstrequest] = React.useState(true);
   const [apps, setApps] = React.useState([]);
@@ -220,7 +222,7 @@ const Apps = (props) => {
       document.title = "Shuffle - Apps";
 
       if (!isLoggedIn && isLoaded) {
-        window.location = "/login";
+        navigate("/login")
       }
 
       setFirstrequest(false);
@@ -1932,7 +1934,7 @@ const Apps = (props) => {
   };
 
   const redirectOpenApi = () => {
-    window.location.href = "/apps/new?id=" + appValidation;
+    navigate(`/apps/new?id=${appValidation}`)
   };
 
   const handleGithubValidation = (forceUpdate) => {

@@ -1,7 +1,7 @@
 #!/bin/sh
 docker stop shuffle-frontend
 docker rm shuffle-frontend
-docker rmi frikky/shuffle:frontend
+#docker rmi ghcr.io/frikky/shuffle-frontend:nightly
 
 echo "Running build for website"
 #sudo npm run build

@@ -574,7 +574,7 @@ const ParsedAction = (props) => {
     });
 
     const changeActionParameter = (event, count, data) => {
-      //console.log(event)
+			console.log("Action change: ", selectedAction, data)
       if (data.name.startsWith("${") && data.name.endsWith("}")) {
         // PARAM FIX - Gonna use the ID field, even though it's a hack
         const paramcheck = selectedAction.parameters.find(
@@ -637,6 +637,7 @@ const ParsedAction = (props) => {
           return;
         }
       }
+
 
       if (event.target.value[event.target.value.length - 1] === "$") {
         if (!showDropdown) {
@@ -736,8 +737,32 @@ const ParsedAction = (props) => {
       //console.log("CHANGING ACTION COUNT !")
       selectedActionParameters[count].value = event.target.value;
       selectedAction.parameters[count].value = event.target.value;
+
+			var forceUpdate = false 
+			if (selectedAction.app_name === "Shuffle Tools" && selectedAction.name === "filter_list" && data.name === "input_list") {
+				//console.log("FILTER LIST!: ", event, count, data)
+				const parsedvalue = event.target.value
+				if (parsedvalue.includes("#")) {
+					const splitparsed = parsedvalue.split(".#.")
+					//console.log("Cant contain #: ", splitparsed)
+					if (splitparsed.length > 1) {
+						data.value = splitparsed[0]
+
+						selectedActionParameters[count].value = splitparsed[0]
+						selectedAction.parameters[count].value = splitparsed[0]
+
+						//changeActionParameter({target: {value: splitparsed[1]}}, 
+          	selectedActionParameters[1].value = splitparsed[1] 
+      			selectedAction.parameters[1].value = splitparsed[1] 
+						forceUpdate = true
+					}
+				}
+			}
+
       setSelectedAction(selectedAction);
-      //setUpdate(Math.random())
+			if (forceUpdate) {
+      	setUpdate(Math.random())
+			}
       //setUpdate(event.target.value)
     };
 
@@ -1288,6 +1313,8 @@ const ParsedAction = (props) => {
             //<TextareaAutosize
             // <CodeMirror
             //fullWidth
+						
+						
             var datafield = (
               <TextField
                 disabled={disabled}
@@ -1887,11 +1914,12 @@ const ParsedAction = (props) => {
             ).replaceAll("_", " ");
 
             if (tmpitem === "Username basic") {
-              tmpitem = "Username";
+              tmpitem = "Username"
             } else if (tmpitem === "Password basic") {
-              tmpitem = "Password";
+              tmpitem = "Password"
             }
 
+ 
             const description =
               data.description === undefined ? "" : data.description;
             const tooltipDescription = (
@@ -2447,10 +2475,10 @@ const ParsedAction = (props) => {
         </span>
       )}
       {selectedApp.name !== undefined &&
-      selectedAction.authentication !== null &&
-      selectedAction.authentication !== undefined &&
-      selectedAction.authentication.length === 0 &&
-      requiresAuthentication ? (
+				selectedAction.authentication !== null &&
+				selectedAction.authentication !== undefined &&
+				selectedAction.authentication.length === 0 &&
+				requiresAuthentication ? (
         <div style={{ marginTop: 15 }}>
           <Tooltip
             color="primary"
@@ -2480,8 +2508,8 @@ const ParsedAction = (props) => {
         </div>
       ) : null}
       {selectedAction.authentication !== undefined &&
-      selectedAction.authentication !== null &&
-      selectedAction.authentication.length > 0 ? (
+				selectedAction.authentication !== null &&
+				selectedAction.authentication.length > 0 ? (
         <div style={{ marginTop: 15 }}>
           <Typography>Authentication</Typography>
           <div style={{ display: "flex" }}>
