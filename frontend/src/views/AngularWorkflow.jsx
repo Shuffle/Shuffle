@@ -3,7 +3,7 @@ import { useInterval } from "react-powerhooks";
 import { makeStyles, useTheme } from "@material-ui/core/styles";
 
 import { v4 as uuidv4 } from "uuid";
-import { Link, useParams } from "react-router-dom";
+import { useNavigate, Link, useParams } from "react-router-dom";
 // import { Prompt } from "react-router"; // FIXME
 import { useBeforeunload } from "react-beforeunload";
 import ReactJson from "react-json-view";
@@ -79,6 +79,10 @@ import {
   VpnKey as VpnKeyIcon,
   AddComment as AddCommentIcon,
 } from "@material-ui/icons";
+
+import {
+		Preview as PreviewIcon,
+} from '@mui/icons-material';
 
 import Autocomplete from "@material-ui/lab/Autocomplete";
 import * as cytoscape from "cytoscape";
@@ -214,6 +218,7 @@ const AngularWorkflow = (defaultprops) => {
   const { globalUrl, isLoggedIn, isLoaded, userdata } = defaultprops;
   const referenceUrl = globalUrl + "/api/v1/hooks/";
   const alert = useAlert()
+	let navigate = useNavigate();
 
 	const params = useParams();
 	var props = JSON.parse(JSON.stringify(defaultprops))
@@ -3335,6 +3340,17 @@ const AngularWorkflow = (defaultprops) => {
         typeof window === "undefined" || window.location === undefined
           ? ""
           : window.location.search;
+			const tmpExec = new URLSearchParams(cursearch).get("execution_highlight");
+      if (
+        tmpExec !== undefined &&
+        tmpExec !== null &&
+        tmpExec === "executions"
+      ) {
+        setExecutionModalOpen(true)
+        const newitem = removeParam("execution_highlight", cursearch);
+        props.history.push(curpath + newitem);
+			}
+
       const tmpView = new URLSearchParams(cursearch).get("view");
       if (
         tmpView !== undefined &&
@@ -11254,6 +11270,48 @@ const AngularWorkflow = (defaultprops) => {
                 }
               }
 
+
+							var similarActionsView = null
+							if (data.similar_actions !== undefined && data.similar_actions !== null) {
+								var minimumMatch = 85
+								var matching_executions = []
+								for (var k in data.similar_actions){
+									if (data.similar_actions.hasOwnProperty(k)) {
+										if (data.similar_actions[k].similarity > minimumMatch) {
+											matching_executions.push(data.similar_actions[k].execution_id)
+										}
+									}
+								}
+
+								if (matching_executions.length !== 0) {
+									var parsed_url = matching_executions.join(",")
+
+									similarActionsView = 
+										<Tooltip
+											color="primary"
+											title="See executions with similar results (not identical)"
+											placement="top"
+											style={{ zIndex: 50000, marginLeft: 20,}}
+										>
+											<IconButton
+													style={{
+														marginTop: "auto",
+														marginBottom: "auto",
+														height: 30,
+														paddingLeft: 0,
+														width: 30,
+													}}
+													onClick={() => {
+														navigate(`?execution_highlight=${parsed_url}`)
+													}}
+												>
+													<PreviewIcon style={{ color: "rgba(255,255,255,0.5)" }}/>
+											</IconButton>
+										</Tooltip>
+								}
+							}
+
+
               return (
                 <div
                   key={index}
@@ -11376,9 +11434,10 @@ const AngularWorkflow = (defaultprops) => {
                     <Typography variant="body1">
                       <b>Status&nbsp;</b>
                     </Typography>
-                    <Typography variant="body1" color="textSecondary">
+                    <Typography variant="body1" color="textSecondary" style={{marginRight: 15,}}>
                       {data.status}
                     </Typography>
+										{similarActionsView}
                   </div>
                   {validate.valid ? (
                     <span>

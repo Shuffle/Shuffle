@@ -12,6 +12,10 @@ import {
 	FullscreenExit as FullscreenExitIcon,
 } from "@material-ui/icons";
 
+import {
+	AutoFixHigh as AutoFixHighIcon,
+} from '@mui/icons-material';
+
 import { useTheme } from '@material-ui/core/styles';
 import { validateJson } from "../views/Workflows.jsx";
 import ReactJson from "react-json-view";
@@ -27,6 +31,22 @@ const CodeEditor = (props) => {
   const theme = useTheme();
 	const [validation, setValidation] = React.useState(false);
 	const [expOutput, setExpOutput] = React.useState(" ");
+
+	const autoFormat = (input) => {
+		if (validation !== true) {
+			return
+		}
+
+		try {
+			input = JSON.stringify(JSON.parse(input), null, 4)
+		} catch (e) {
+			console.log("Failed magic JSON stringification: ", e)
+		}
+
+		if (input !== localcodedata) {
+			setlocalcodedata(input)
+		}
+	}
 
 	function expectedOutput(input) {
 		
@@ -80,14 +100,34 @@ const CodeEditor = (props) => {
 					display: 'flex',
 				}}
 			>
-				<DialogTitle
-					style={{
-						paddingBottom:20,
-						paddingLeft: 10, 
-					}}
-				>
-						Code Editor
-				</DialogTitle>
+				<div style={{display: "flex"}}>
+					<DialogTitle
+						style={{
+							paddingBottom:20,
+							paddingLeft: 10, 
+						}}
+					>
+							Code Editor
+					</DialogTitle>
+					<IconButton
+						style={{
+							marginLeft: 400, 
+							height: 50, 
+							width: 50, 
+						}}
+						onClick={() => {
+							autoFormat(localcodedata) 
+						}}
+					>
+						<Tooltip
+							color="primary"
+							title={"Auto format data"}
+							placement="top"
+						>
+							<AutoFixHighIcon style={{color: "rgba(255,255,255,0.7)"}}/>
+						</Tooltip>
+					</IconButton>
+				</div>
 			</div>
 			<span style={{
 				border: `2px solid ${theme.palette.inputColor}`,
