@@ -14,17 +14,20 @@ The Docker setup is done with docker-compose
 git clone https://github.com/frikky/Shuffle
 cd Shuffle
 ```
-
-3. Fix prerequisites for the Opensearch database (Elasticsearch): 
-```
-sudo chown -R 1000:1000 shuffle-database 		# Required for Opensearch 
-```
-
-4. Run docker-compose.
+3. Run docker-compose.
 ```
 docker-compose up -d
 ```
+#Wait till the process is completed, shuffle-database folder will now be created.(Fixed the earlier step)
 
+4. Prerequisites for the Opensearch database (Elasticsearch): 
+```
+sudo chown -R 1000:1000 shuffle-database 		# Required for Opensearch 
+```
+5. Restart docker-compose.
+```
+sudo docker-compose restart
+```
 When you're done, skip to the "After installation" step below.
 
 ## Windows with WSL  
