@@ -577,7 +577,7 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 
 	//setWorkflowqueuetest(id)
 	ctx := context.Background()
-	executionRequests, err := shuffle.GetWorkflowQueue(ctx, id)
+	executionRequests, err := shuffle.GetWorkflowQueue(ctx, id, 10)
 	if err != nil {
 		log.Printf("(1) Failed reading body for workflowqueue: %s", err)
 		resp.WriteHeader(401)
@@ -676,7 +676,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	executionRequests, err := shuffle.GetWorkflowQueue(ctx, id)
+	executionRequests, err := shuffle.GetWorkflowQueue(ctx, id, 10)
 	if err != nil {
 		// Skipping as this comes up over and over
 		//log.Printf("(2) Failed reading body for workflowqueue: %s", err)
