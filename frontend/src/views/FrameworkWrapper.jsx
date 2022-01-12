@@ -38,12 +38,11 @@ const Framework = (props) => {
 						alert.error("Failed loading: " + responseJson.reason)
 					} else {
 						alert.error("Failed to load framework for your org.")
-
 					}
+				} else {
+					setFrameworkLoaded(true)
+					setFrameworkData(responseJson)
 				}
-
-				setFrameworkLoaded(true)
-				setFrameworkData(responseJson)
 			})
       .catch((error) => {
         alert.error(error.toString());

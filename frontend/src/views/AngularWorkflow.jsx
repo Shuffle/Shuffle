@@ -3404,8 +3404,8 @@ const AngularWorkflow = (defaultprops) => {
 
 					return false
 				},
-        preview: false,
-        toggleOffOnLeave: false,
+        preview: true,
+        toggleOffOnLeave: true,
         loopAllowed: function (node) {
           return false;
         },
@@ -3473,6 +3473,11 @@ const AngularWorkflow = (defaultprops) => {
         }
       }
     }
+
+		const cytoscapeElement = document.getElementById("cytoscape_view")
+		if (cytoscapeElement !== undefined && cytoscapeElement !== null) {
+			cytoscapeElement.style.cursor = "default"
+		}
 
     var parsedStyle = {
       "border-width": "1px",
@@ -3634,6 +3639,11 @@ const AngularWorkflow = (defaultprops) => {
 			console.log("NODE: ", nodedata)
       return;
     }
+
+		const cytoscapeElement = document.getElementById("cytoscape_view")
+		if (cytoscapeElement !== undefined && cytoscapeElement !== null) {
+			cytoscapeElement.style.cursor = "pointer"
+		}
 
     //var parentNode = cy.$("#" + event.target.data("id"));
     //if (parentNode.data("isButton") || parentNode.data("buttonId")) return;

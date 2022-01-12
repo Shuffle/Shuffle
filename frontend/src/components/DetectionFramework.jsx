@@ -32,6 +32,13 @@ import * as cytoscape from "cytoscape";
 
 cytoscape.use(edgehandles);
 
+
+const svgSize = 23
+const parsedDatatypeImages = {
+	"Cases": encodeURI(`data:image/svg+xml;utf-8,<svg fill="rgb(255,245,0)" width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M15.6408 8.39233H18.0922V10.0287H15.6408V8.39233ZM0.115234 8.39233H2.56663V10.0287H0.115234V8.39233ZM9.92083 0.21051V2.66506H8.28656V0.21051H9.92083ZM3.31839 2.25596L5.05889 4.00687L3.89856 5.16051L2.15807 3.42596L3.31839 2.25596ZM13.1485 3.99869L14.8808 2.25596L16.0493 3.42596L14.3088 5.16051L13.1485 3.99869ZM9.10369 4.30142C10.404 4.30142 11.651 4.81863 12.5705 5.73926C13.4899 6.65989 14.0065 7.90854 14.0065 9.21051C14.0065 11.0269 13.0178 12.6141 11.5551 13.4651V14.9378C11.5551 15.1548 11.469 15.3629 11.3158 15.5163C11.1625 15.6698 10.9547 15.756 10.738 15.756H7.46943C7.25271 15.756 7.04487 15.6698 6.89163 15.5163C6.73839 15.3629 6.6523 15.1548 6.6523 14.9378V13.4651C5.18963 12.6141 4.2009 11.0269 4.2009 9.21051C4.2009 7.90854 4.71744 6.65989 5.63689 5.73926C6.55635 4.81863 7.80339 4.30142 9.10369 4.30142ZM10.738 16.5741V17.3923C10.738 17.6093 10.6519 17.8174 10.4986 17.9709C10.3454 18.1243 10.1375 18.2105 9.92083 18.2105H8.28656C8.06984 18.2105 7.862 18.1243 7.70876 17.9709C7.55552 17.8174 7.46943 17.6093 7.46943 17.3923V16.5741H10.738ZM8.28656 14.1196H9.92083V12.3769C11.3345 12.0169 12.3722 10.7323 12.3722 9.21051C12.3722 8.34253 12.0279 7.5101 11.4149 6.89634C10.8019 6.28259 9.97056 5.93778 9.10369 5.93778C8.23683 5.93778 7.40546 6.28259 6.79249 6.89634C6.17953 7.5101 5.83516 8.34253 5.83516 9.21051C5.83516 10.7323 6.87292 12.0169 8.28656 12.3769V14.1196Z" /></svg>`),
+	"EDR & AV": encodeURI(`data:image/svg+xml;utf-8,<svg fill="rgb(248,90,62)" width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="M19.1722 8.9957L17.0737 6.60487L17.3661 3.44004L14.2615 2.73483L12.6361 -3.28068e-08L9.71206 1.25561L6.78803 -3.28068e-08L5.16261 2.73483L2.05797 3.43144L2.35038 6.59627L0.251953 8.9957L2.35038 11.3865L2.05797 14.56L5.16261 15.2652L6.78803 18L9.71206 16.7358L12.6361 17.9914L14.2615 15.2566L17.3661 14.5514L17.0737 11.3865L19.1722 8.9957ZM10.5721 13.2957H8.85205V11.5757H10.5721V13.2957ZM10.5721 9.85571H8.85205V4.69565H10.5721V9.85571Z" /></svg>`),
+}
+
 export const usecases = {
 	"None": {
 		"manual": [],
@@ -517,9 +524,10 @@ const Framework = (props) => {
 	const [graphDone, setGraphDone] = React.useState(false)
 	const [cyDone, setCyDone] = React.useState(false)
 	const [discoveryData, setDiscoveryData] = React.useState({})
-	const [selectionOpen, setSelectionOpen] = React.useState(false)
+	const [selectionOpen, setSelectionOpen] = React.useState(true)
 	const [newSelectedApp, setNewSelectedApp] = React.useState({})
 	const [defaultSearch, setDefaultSearch] = React.useState("")
+	const [animationStarted, setAnimationStarted] = React.useState(false)
 
   const alert = useAlert()
 
@@ -706,12 +714,62 @@ const Framework = (props) => {
 	}
 
 	const animationDuration = 150;
+	const nodeAddDuration = 2500;
+
+	if (cy !== undefined && cyDone && !animationStarted) {
+		const foundelement = cy.getElementById("CASES")
+
+		console.log("FOUND: ", foundelement)
+		if (foundelement !== undefined && foundelement !== null) {
+			setAnimationStarted(true)
+
+			var parsedStyle = {
+				"ghost": "yes",
+				"border-color": "#f86a3e",
+				"border-width": "10px",
+				"border-opacity": ".7",
+			}
+
+			var parsedStyle2 = {
+				"ghost": "yes",
+      	"border-width": "7px",
+			}
+
+			for (var i = 0; i < 10; i++) {
+				foundelement.animate(
+					{
+						style: parsedStyle,
+					},
+					{
+						duration: nodeAddDuration,
+					}
+				).delay(1000)
+
+				foundelement.animate(
+					{
+						style: parsedStyle2,
+					},
+					{
+						duration: nodeAddDuration,
+					}
+				)
+			}
+		}
+	}
+
+	const onNodeAdded = (event) => {
+		//if (event.target.data("animate") === true) {
+		//}
+	}
+
 	const onNodeHover = (event) => {
     const nodedata = event.target.data();
-		console.log("Node IN: ", nodedata)
-		//if (nodedata.is_valid !== true) {
-		//	console.log("Is missing valid?")
-		//}
+    	
+
+		const cytoscapeElement = document.getElementById("cytoscape_view")
+		if (cytoscapeElement !== undefined && cytoscapeElement !== null) {
+			cytoscapeElement.style.cursor = "pointer"
+		}
 
 		var parsedStyle = {
       "border-width": "7px",
@@ -736,7 +794,12 @@ const Framework = (props) => {
 
 	const onNodeHoverOut = (event) => {
     const nodedata = event.target.data();
-		console.log("Node OUT: ", nodedata)
+		//console.log("Node OUT: ", nodedata)
+		
+		const cytoscapeElement = document.getElementById("cytoscape_view")
+		if (cytoscapeElement !== undefined && cytoscapeElement !== null) {
+			cytoscapeElement.style.cursor = "default"
+		}
 
 		var parsedStyle = {
       "border-width": "3px",
@@ -762,15 +825,15 @@ const Framework = (props) => {
 		}
 	
 		setDiscoveryData(data)
-		setSelectionOpen(false)
+		setSelectionOpen(true)
 		setNewSelectedApp({})
 
 		setDefaultSearch(data.label.charAt(0).toUpperCase()+(data.label.substring(1)).toLowerCase())
 	}
 
   const onEdgeSelect = (event) => {
-		console.log("Edge selected!")
-		event.target.remove()
+		console.log("Edge selected!", event.target.data())
+		//event.target.remove()
 	}
 
 	if (graphDone && cyDone === false) {
@@ -785,6 +848,7 @@ const Framework = (props) => {
 
 		cy.on("mouseover", "node", (e) => {onNodeHover(e)})
     cy.on("mouseout", "node", (e) => onNodeHoverOut(e));
+    cy.on("add", "node", (e) => onNodeAdded(e));
 
 		setCyDone(true)
 	}
@@ -823,6 +887,7 @@ const Framework = (props) => {
 							</svg>`) : parsedFrameworkData.Cases.large_image,
 						label: securityFramework[0].text.toUpperCase(),
 						id: securityFramework[0].text.toUpperCase(),
+						animate: true,
 					},
 					renderedPosition: {
 						x: baselocationX,
@@ -848,6 +913,7 @@ const Framework = (props) => {
 							</svg>`) : parsedFrameworkData.IAM.large_image,
 						label: securityFramework[3].text.toUpperCase(),
 						id: securityFramework[3].text.toUpperCase(),
+						animate: false,
 					},
 					renderedPosition: {
 						x: baselocationX+shiftradius+(shiftradius/shiftmodifier),
@@ -873,6 +939,7 @@ const Framework = (props) => {
 							</svg>`) : parsedFrameworkData.Assets.large_image,
 						label: securityFramework[2].text.toUpperCase(), 
 						id: securityFramework[2].text.toUpperCase(),
+						animate: false,
 					},
 					renderedPosition: {
 						x: baselocationX+shiftradius*2,
@@ -898,6 +965,7 @@ const Framework = (props) => {
 							</svg>`): parsedFrameworkData.Intel.large_image,
 						label: securityFramework[4].text.toUpperCase(),
 						id: securityFramework[4].text.toUpperCase(),
+						animate: false,
 					},
 					renderedPosition: {
 						x: baselocationX+shiftradius+(shiftradius/shiftmodifier),
@@ -923,6 +991,7 @@ const Framework = (props) => {
 							</svg>`) : parsedFrameworkData.Comms.large_image,
 						label: securityFramework[5].text.toUpperCase(), 
 						id: securityFramework[5].text.toUpperCase(),
+						animate: false,
 					},
 					renderedPosition: {
 						x: baselocationX,
@@ -948,6 +1017,7 @@ const Framework = (props) => {
 							</svg>`) : parsedFrameworkData["EDR & AV"].large_image,
 						label: securityFramework[7].text.toUpperCase(), 
 						id: securityFramework[7].text.toUpperCase(),
+						animate: false,
 					},
 					renderedPosition: {
 						x: baselocationX-shiftradius-(shiftradius/shiftmodifier),
@@ -973,6 +1043,7 @@ const Framework = (props) => {
 						</svg>`) :  parsedFrameworkData.Network.large_image,
 						label:  securityFramework[6].text.toUpperCase(),
 						id: securityFramework[6].text.toUpperCase(),
+						animate: false,
 					},
 					renderedPosition: {
 						x: baselocationX-shiftradius*2,
@@ -998,6 +1069,7 @@ const Framework = (props) => {
 						</svg>`) : parsedFrameworkData.SIEM.large_image,
 						label: securityFramework[1].text.toUpperCase(),
 						id: securityFramework[1].text.toUpperCase(),
+						animate: false,
 					},
 					renderedPosition: {
 						x: baselocationX-shiftradius-(shiftradius/shiftmodifier),
@@ -1092,7 +1164,7 @@ const Framework = (props) => {
 				}
 		})
 
-		console.log("NODES: " , nodes)
+		//console.log("NODES: " , nodes)
 		for (var key in nodes) {
 			cy.add(nodes[key]).lock()
 		}
@@ -1108,6 +1180,23 @@ const Framework = (props) => {
 	const UsecaseHandler = (props) => {
 		const { data, index, diff } = props
 
+		const leftImage = data.left_image !== undefined ? parsedDatatypeImages[data.left_image] : undefined
+		const rightImage = data.right_image !== undefined ? parsedDatatypeImages[data.right_image] : undefined
+
+		if (leftImage === undefined) {
+			console.log("LEFT MISSING: ", leftImage)
+		}
+
+		if (rightImage === undefined) {
+			console.log("Right MISSING: ", rightImage)
+		}
+
+		const parsedRightImage = <img src={rightImage} style={{position: "absolute", top: 15, left: 22,}} alt="" />
+		const parsedRightText = <div style={{position: "absolute", top: 40, textAlign: "center", width: 65, margin: "auto",}}><Typography color="textSecondary" style={{textAlign: "center", fontSize: 12, }}>{data.right_text}</Typography></div>
+
+		const parsedLeftImage = <img src={leftImage} style={{position: "absolute", top: 15, left: 22,}} alt="" />
+		const parsedLeftText = <div style={{position: "absolute", top: 40, textAlign: "center", width: 65, margin: "auto",}}><Typography color="textSecondary" style={{textAlign: "center", fontSize: 12,}}>{data.left_text}</Typography></div>
+
 		const svgSize = 20
 		var svgIcon = <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
 			<path d="M1 4H15.2772" stroke="#AFAFAF" stroke-linecap="round"/>
@@ -1117,6 +1206,7 @@ const Framework = (props) => {
 			<path d="M4.21436 16L1.00007 13" stroke="#AFAFAF" stroke-linecap="round"/>
 			<path d="M4.21436 10L1.00007 13" stroke="#AFAFAF" stroke-linecap="round"/>
 		</svg>
+
 		if (data.direction === "right") {
 			svgIcon = <svg width="16" height="8" viewBox="0 0 16 8" fill="none" xmlns="http://www.w3.org/2000/svg">
 				<path d="M0.847656 4.16553H14.1479" stroke="#AFAFAF" stroke-linecap="round"/>
@@ -1133,18 +1223,62 @@ const Framework = (props) => {
 		}
 
 		//<img alt={"usecase_directional_arrow_"+index} style={{height: 30, width: 30}} src={parsedDirectionImage} />
+		//
+		const handleHover = () => {
+			//console.log("Hover IN: ", data.automated)
+
+			const allEdges = cy.edges().jsons()
+			for (var key in allEdges) {
+				const newedge = allEdges[key]
+				const foundelement = cy.getElementById(newedge.data.id)
+				if (foundelement !== undefined && foundelement !== null) {
+					foundelement.remove()
+				}
+			}
+
+			//const newedges = usecases[value][parsedType]
+			for (var key in data.automated) {
+				data.automated[key].label = parseInt(key)+1
+
+				if (data.automated[key].description !== undefined && data.automated[key].description !== null && data.automated[key].description.length > 0) {
+					data.automated[key].label = (parseInt(key)+1)+" "+data.automated[key].description
+				}
+
+				cy.add({
+					group: "edges", 
+					data: data.automated[key],
+				})
+			}
+		}
+
+		const handleHoverOut = () => {
+			//console.log("Hover out: ", data.automated)
+			//const allEdges = cy.edges().jsons()
+			//for (var key in allEdges) {
+			//	const newedge = allEdges[key]
+			//	const foundelement = cy.getElementById(newedge.data.id)
+			//	if (foundelement !== undefined && foundelement !== null) {
+			//		foundelement.remove()
+			//	}
+			//}
+		}
+
 		return (
-				<Paper style={{width: 250, maxHeight: 400, overflow: "hidden", zIndex: 12500, padding: 15, backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.2)", position: "absolute", top: diff, right: 50, }}>
+				<Paper style={{marginBottom: 15, width: 250, maxHeight: 400, overflow: "hidden", zIndex: 12500, padding: 15, backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.2)", }} onMouseOver={handleHover} onMouseOut={handleHoverOut}>
 					<Typography style={{textAlign: "center"}}>
-						Usecase {index+1}
+						{data.name}
 					</Typography>
 					<div style={{display: "flex", width: 200, margin: "auto", marginTop: 15, }}>
-						<div style={{backgroundColor: theme.palette.inputColor, height: 75, width: 75, borderRadius: theme.palette.borderRadius, border: "1px solid rgba(255,255,255,0.7)", marginRight: 15,}}>
+						<div style={{backgroundColor: theme.palette.inputColor, height: 75, width: 75, borderRadius: theme.palette.borderRadius, border: "1px solid rgba(255,255,255,0.7)", marginRight: 15, position: "relative",}}>
+							{parsedLeftImage}
+							{parsedLeftText}
 						</div>
 						<div style={{backgroundColor: theme.palette.inputColor, maxHeight: 30, maxWidth: 30, height: 30, width: 30, borderRadius: theme.palette.borderRadius, border: "1px solid rgba(255,255,255,0.7)", marginTop: 22, padding: "10px 0px 0px 9px",}}>
 							{svgIcon}
 						</div>
-						<div style={{backgroundColor: theme.palette.inputColor, height: 75, width: 75, borderRadius: theme.palette.borderRadius, border: "1px solid rgba(255,255,255,0.7)", marginLeft: 15,}}>
+						<div style={{backgroundColor: theme.palette.inputColor, height: 75, width: 75, borderRadius: theme.palette.borderRadius, border: "1px solid rgba(255,255,255,0.7)", marginLeft: 15, position: "relative",}}>
+							{parsedRightImage}
+							{parsedRightText}
 						</div>
 					</div>
 				</Paper>
@@ -1154,26 +1288,38 @@ const Framework = (props) => {
 
 	const selectedUsecases = [
 	{
-		"name": "Sync from ticket system 1 to 2 and back to 1",
+		"name": "Sync tickets",
 		"description": "Do cool shit weeeee - this just ensure they are syncing",
-		"image1": "cases",
-		"image2": "cases",
+		"left_text": "Cases",
+		"right_text": "Cases",
+		"left_image": "Cases",
+		"right_image": "Cases",
 		"direction": "both",
+		"manual": [],
 		"automated": [
 			{
-				"source":	"BOTTOM_LEFT",
-				"target":	"COMMS",
-				"description": "Email received",
+				"source":	"CASES",
+				"target":	"SHUFFLE",
+				"description": "Get cases",
+				"human": false,
+			},
+			{
+				"source":	"SHUFFLE",
+				"target":	"CASES",
+				"description": "Update cases",
 				"human": false,
 			},
 		]
 	},
 	{
-		"name": "Send alerts when a ticket is created",
+		"name": "Forward alerts with enrichment",
 		"description": "Do cool shit weeeee - this just ensure they are syncing",
-		"image1": "cases",
-		"image2": "comms",
+		"left_text": "EDR & AV",
+		"right_text": "Cases",
+		"left_image": "EDR & AV",
+		"right_image": "Cases",
 		"direction": "right",
+		"manual": [],
 		"automated": [
 			{
 				"source":	"BOTTOM_LEFT",
@@ -1204,7 +1350,10 @@ const Framework = (props) => {
 			}
   		{
 				Object.getOwnPropertyNames(discoveryData).length > 0 ? 
-					<div>
+					<div style={{position: "absolute", top: 20, right: 50, }}>
+						<Typography variant="h6" color="textPrimary" style={{marginBottom: 10, textAlign: "center",}}>
+							Use-cases
+						</Typography>
 						{selectedUsecases.map((data, index) => {
 							usecasediff += 175
 
@@ -1258,7 +1407,7 @@ const Framework = (props) => {
 										"id": "",
 										"objectID": "remove",
 									})
-									setSelectionOpen(false)
+									setSelectionOpen(true)
 									setDefaultSearch("")
 
 									const foundelement = cy.getElementById(discoveryData.id)
@@ -1298,8 +1447,7 @@ const Framework = (props) => {
 									newSelectedApp.name !== undefined && newSelectedApp.name !== null && newSelectedApp.name.length > 0 ?
 										newSelectedApp.name
 										: 
-										"No app selected"
-
+										`No ${discoveryData.label} app chosen`
 								}
 							</Typography>
 						</div>

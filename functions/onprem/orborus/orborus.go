@@ -4,6 +4,9 @@ package main
 	Orborus exists to listen for new workflow executions whcih are deployed as workers.
 */
 
+// FIXME:
+// 2022/01/12 17:13:36 [WARNING] Swarm init: Error response from daemon: manager stopped: failed to listen on remote API address: listen tcp: address tcp/2377%!(EXTRA string=172.23.0.2): unknown port
+
 // frikky@debian:~/git/shuffle/functions/onprem/worker$ docker service create --replicas 5 --name shuffle-workers --env SHUFFLE_SWARM_CONFIG=run --publish published=33333,target=33333 ghcr.io/frikky/shuffle-worker:nightly
 
 import (
