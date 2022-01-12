@@ -3586,7 +3586,7 @@ const Admin = (props) => {
           <h2 style={{ display: "inline" }}>App Authentication</h2>
           <span style={{ marginLeft: 25 }}>
             Control the authentication options for individual apps.{" "}
-            <b>Actions can be destructive!</b>
+            PS: Actions performed here can be destructive!
           </span>
           &nbsp;
           <a
@@ -3594,7 +3594,7 @@ const Admin = (props) => {
             href="https://shuffler.io/docs/organizations#app_authentication"
             style={{ textDecoration: "none", color: "#f85a3e" }}
           >
-            Learn more
+            Learn more about authentication
           </a>
         </div>
         <Divider
@@ -3618,21 +3618,27 @@ const Admin = (props) => {
               primary="App Name"
               style={{ minWidth: 175, maxWidth: 175, marginLeft: 10 }}
             />
-            <ListItemText
+            {/*<ListItemText
               primary="Ready"
               style={{ minWidth: 100, maxWidth: 100 }}
-            />
+            />*/}
             <ListItemText
               primary="Workflows"
-              style={{ minWidth: 110, maxWidth: 110, overflow: "hidden" }}
+              style={{ minWidth: 100, maxWidth: 100, overflow: "hidden" }}
             />
+						{/*
             <ListItemText
-              primary="Actions"
-              style={{ minWidth: 110, maxWidth: 110, overflow: "hidden" }}
+              primary="App Usage"
+              style={{ minWidth: 100, maxWidth: 100, overflow: "hidden" }}
             />
+						*/}
             <ListItemText
               primary="Fields"
-              style={{ minWidth: 200, maxWidth: 200, overflow: "hidden" }}
+              style={{ minWidth: 125, maxWidth: 125, overflow: "hidden" }}
+            />
+            <ListItemText
+              primary="Last Edited"
+              style={{ minWidth: 225, maxWidth: 225, overflow: "hidden" }}
             />
             <ListItemText primary="Actions" />
           </ListItem>
@@ -3644,13 +3650,15 @@ const Admin = (props) => {
                   bgColor = "#1f2023";
                 }
 
+								console.log("Auth data: ", data)
+
                 return (
                   <ListItem key={index} style={{ backgroundColor: bgColor }}>
                     <ListItemText
                       primary=<img
                         alt=""
                         src={data.app.large_image}
-                        style={{ maxWidth: 50 }}
+                        style={{ maxWidth: 50, borderRadius: theme.palette.borderRadius, }}
                       />
                       style={{ minWidth: 75, maxWidth: 75 }}
                     />
@@ -3666,28 +3674,34 @@ const Admin = (props) => {
                       primary={data.app.name}
                       style={{ minWidth: 175, maxWidth: 175, marginLeft: 10 }}
                     />
+										{/*
                     <ListItemText
                       primary={data.defined === false ? "No" : "Yes"}
-                      style={{ minWidth: 100, maxWidth: 100, marginLeft: 10 }}
+                      style={{ minWidth: 100, maxWidth: 100, }}
                     />
+										*/}
                     <ListItemText
                       primary={
                         data.workflow_count === null ? 0 : data.workflow_count
                       }
                       style={{
-                        minWidth: 110,
-                        maxWidth: 110,
+                        minWidth: 100,
+                        maxWidth: 100,
+												textAlign: "center",
                         overflow: "hidden",
                       }}
                     />
+										{/*
                     <ListItemText
                       primary={data.node_count}
                       style={{
                         minWidth: 110,
                         maxWidth: 110,
+												textAlign: "center",
                         overflow: "hidden",
                       }}
                     />
+										*/}
                     <ListItemText
                       primary={
                         data.fields === null || data.fields === undefined
@@ -3699,11 +3713,19 @@ const Admin = (props) => {
                               .join(", ")
                       }
                       style={{
-                        minWidth: 200,
-                        maxWidth: 200,
+                        minWidth: 125,
+                        maxWidth: 125,
                         overflow: "hidden",
                       }}
                     />
+										<ListItemText
+											style={{
+												maxWidth: 225,
+												minWidth: 225,
+												overflow: "hidden",
+											}}
+											primary={new Date(data.edited * 1000).toISOString()}
+										/>
                     <ListItemText>
                       <IconButton
                         onClick={() => {

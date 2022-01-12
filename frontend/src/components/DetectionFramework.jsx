@@ -576,7 +576,7 @@ const Framework = (props) => {
 
 		const foundelement = cy.getElementById(discoveryData.id)
 		if (foundelement !== undefined && foundelement !== null) {
-			console.log("element: ", foundelement)
+			//console.log("element: ", foundelement)
 			foundelement.data("large_image", newSelectedApp.image_url)
 			foundelement.data("text_margin_y", "60px")
 			foundelement.data("margin_x", "0px")
@@ -1105,7 +1105,88 @@ const Framework = (props) => {
 		changeUsecase(selectedOption, usecaseType) 
 	}
 
+	const UsecaseHandler = (props) => {
+		const { data, index, diff } = props
+
+		const svgSize = 20
+		var svgIcon = <svg width="17" height="17" viewBox="0 0 17 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+			<path d="M1 4H15.2772" stroke="#AFAFAF" stroke-linecap="round"/>
+			<path d="M13 1L16 4" stroke="#AFAFAF" stroke-linecap="round"/>
+			<path d="M12.7856 7L15.9999 4" stroke="#AFAFAF" stroke-linecap="round"/>
+			<path d="M16 13L1.72276 13" stroke="#AFAFAF" stroke-linecap="round"/>
+			<path d="M4.21436 16L1.00007 13" stroke="#AFAFAF" stroke-linecap="round"/>
+			<path d="M4.21436 10L1.00007 13" stroke="#AFAFAF" stroke-linecap="round"/>
+		</svg>
+		if (data.direction === "right") {
+			svgIcon = <svg width="16" height="8" viewBox="0 0 16 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+				<path d="M0.847656 4.16553H14.1479" stroke="#AFAFAF" stroke-linecap="round"/>
+				<path d="M11.8268 1.37085L14.8211 4.16556" stroke="#AFAFAF" stroke-linecap="round"/>
+				<path d="M11.8268 6.96024L14.8211 4.16553" stroke="#AFAFAF" stroke-linecap="round"/>
+			</svg>
+		} else if (data.direction === "left") {
+			svgIcon = <svg width="16" height="8" viewBox="0 0 16 8" fill="none" xmlns="http://www.w3.org/2000/svg">
+				<path d="M14.5031 4.16577L1.20278 4.16577" stroke="#AFAFAF" stroke-linecap="round"/>
+				<path d="M3.52393 6.96045L0.529589 4.16573" stroke="#AFAFAF" stroke-linecap="round"/>
+				<path d="M3.52393 1.37106L0.529589 4.16577" stroke="#AFAFAF" stroke-linecap="round"/>
+			</svg>
+
+		}
+
+		//<img alt={"usecase_directional_arrow_"+index} style={{height: 30, width: 30}} src={parsedDirectionImage} />
+		return (
+				<Paper style={{width: 250, maxHeight: 400, overflow: "hidden", zIndex: 12500, padding: 15, backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.2)", position: "absolute", top: diff, right: 50, }}>
+					<Typography style={{textAlign: "center"}}>
+						Usecase {index+1}
+					</Typography>
+					<div style={{display: "flex", width: 200, margin: "auto", marginTop: 15, }}>
+						<div style={{backgroundColor: theme.palette.inputColor, height: 75, width: 75, borderRadius: theme.palette.borderRadius, border: "1px solid rgba(255,255,255,0.7)", marginRight: 15,}}>
+						</div>
+						<div style={{backgroundColor: theme.palette.inputColor, maxHeight: 30, maxWidth: 30, height: 30, width: 30, borderRadius: theme.palette.borderRadius, border: "1px solid rgba(255,255,255,0.7)", marginTop: 22, padding: "10px 0px 0px 9px",}}>
+							{svgIcon}
+						</div>
+						<div style={{backgroundColor: theme.palette.inputColor, height: 75, width: 75, borderRadius: theme.palette.borderRadius, border: "1px solid rgba(255,255,255,0.7)", marginLeft: 15,}}>
+						</div>
+					</div>
+				</Paper>
+
+		)
+	}
+
+	const selectedUsecases = [
+	{
+		"name": "Sync from ticket system 1 to 2 and back to 1",
+		"description": "Do cool shit weeeee - this just ensure they are syncing",
+		"image1": "cases",
+		"image2": "cases",
+		"direction": "both",
+		"automated": [
+			{
+				"source":	"BOTTOM_LEFT",
+				"target":	"COMMS",
+				"description": "Email received",
+				"human": false,
+			},
+		]
+	},
+	{
+		"name": "Send alerts when a ticket is created",
+		"description": "Do cool shit weeeee - this just ensure they are syncing",
+		"image1": "cases",
+		"image2": "comms",
+		"direction": "right",
+		"automated": [
+			{
+				"source":	"BOTTOM_LEFT",
+				"target":	"COMMS",
+				"description": "Email received",
+				"human": false,
+			},
+		]
+	}
+	]
+
 	//autounselectify={true}
+	var usecasediff = -100
 	return (
 		<div style={{margin: "auto", backgroundColor: theme.palette.surfaceColor, position: "relative", }}>
 			{showOptions === false ? null : 
@@ -1123,6 +1204,19 @@ const Framework = (props) => {
 			}
   		{
 				Object.getOwnPropertyNames(discoveryData).length > 0 ? 
+					<div>
+						{selectedUsecases.map((data, index) => {
+							usecasediff += 175
+
+							return (
+								<UsecaseHandler data={data} index={index} key={index} diff={usecasediff} />
+							)
+						})}
+					</div>
+				: null}
+
+  		{
+				Object.getOwnPropertyNames(discoveryData).length > 0 ? 
 					<Paper style={{width: 250, maxHeight: 400, overflow: "hidden", zIndex: 12500, padding: 25, paddingRight: 35, backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.2)", position: "absolute", top: 50, left: 50, }}>
 						<Tooltip
 							title="Close window"
@@ -1132,6 +1226,9 @@ const Framework = (props) => {
 							<IconButton
 								style={{ zIndex: 12501, position: "absolute", top: 10, right: 10}}
 								onClick={(e) => {
+									//cy.elements().unselectify();
+									cy.elements().unselect()
+
 									e.preventDefault();
 									setDiscoveryData({})
 									setDefaultSearch("")

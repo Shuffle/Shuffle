@@ -1426,6 +1426,10 @@ const AppCreator = (defaultprops) => {
       	    setParameterName(value.name);
       	    setAuthenticationRequired(true);
 
+      	    if (value.description !== undefined && value.description !== null && value.description.length > 0) {
+  						setRefreshUrl(value.description)
+						}
+
       	  } else if (value.scheme === "basic") {
       	    setAuthenticationOption("Basic auth");
       	    setAuthenticationRequired(true);
@@ -1702,6 +1706,13 @@ const AppCreator = (defaultprops) => {
             //break
           }
 
+          if (queryitem.name.toLowerCase() == "file_id") {
+						item.queries[querykey].name = "fileid"
+            continue;
+            //skipped = true
+            //break
+          }
+
           if (
             queryitem.name.toLowerCase() == "url" ||
             queryitem.name.toLowerCase() == "body" ||
@@ -1733,7 +1744,8 @@ const AppCreator = (defaultprops) => {
             console.log(
               item.name + " error: uses a bad query - not adding: ",
               queryitem.name
-            );
+            )
+
             continue;
           }
 
@@ -1996,7 +2008,8 @@ const AppCreator = (defaultprops) => {
         type: "apiKey",
         in: parameterLocation.toLowerCase(),
         name: newparamName,
-      };
+				description: refreshUrl,
+      }
     } else if (authenticationOption === "Bearer auth") {
       data.components.securitySchemes["BearerAuth"] = {
         type: "http",
@@ -2240,7 +2253,7 @@ const AppCreator = (defaultprops) => {
           <Button
             color="primary"
             style={{ maxWidth: 50, marginLeft: 15 }}
-            variant="contained"
+            variant="outlined"
             onClick={() => {
               console.log("ADD NEW!");
               extraAuth.push(defaultAuth);
@@ -2631,71 +2644,94 @@ const AppCreator = (defaultprops) => {
       <div style={{ color: "white", marginTop: 20 }}>
         <Typography variant="body1">API key authentication</Typography>
         <Typography variant="body2" color="textSecondary">
-          Add the name of the field used for authentication, e.g. "X-APIKEY"
+          Add the name of the field used for authentication, e.g. "X-APIKEY". Should NOT be your actual API-key.
         </Typography>
-        <TextField
-          required
-          style={{ flex: "1", backgroundColor: inputColor }}
-          fullWidth={true}
-          placeholder="Field Name (not token)"
-          type="name"
-          id="standard-required"
-          margin="normal"
-          variant="outlined"
-          value={parameterName}
-          helperText={
-            <span style={{ color: "white", marginBottom: "2px" }}>
-              Can't be empty. Can't contain any of the following characters:
-              !#$%&'^"+-._~|]+$
-            </span>
-          }
-          onChange={(e) => {
-            setParameterName(e.target.value);
-          }}
-          InputProps={{
-            classes: {
-              notchedOutline: classes.notchedOutline,
-            },
-            style: {
-              color: "white",
-            },
-          }}
-        />
-        Field type
-        <Select
-          fullWidth
-          onChange={(e) => {
-            setParameterLocation(e.target.value);
-          }}
-          value={parameterLocation}
-          style={{
-            borderRadius: 5,
-            backgroundColor: inputColor,
-            paddingLeft: "10px",
-            color: "white",
-            height: "50px",
-          }}
-          inputProps={{
-            name: "age",
-            id: "outlined-age-simple",
-          }}
-        >
-          {apikeySelection.map((data, index) => {
-            if (data === undefined) {
-              return null;
-            }
+				<div style={{display: "flex", marginTop: 10, }}>
+					<div style={{flex: 4,}}>
+        		Key	
+						<TextField
+							required
+							style={{ marginTop: 0, backgroundColor: inputColor }}
+							fullWidth={true}
+							placeholder="Field Name (key, NOT your actual API-key)"
+							type="name"
+							id="standard-required"
+							margin="normal"
+							variant="outlined"
+							value={parameterName}
+							helperText={
+								<span style={{ color: "white", marginBottom: "2px" }}>
+									Can't be empty or contain any of the following: !#$%&'^"+-._~|]+$
+								</span>
+							}
+							onChange={(e) => {
+								setParameterName(e.target.value);
+							}}
+							InputProps={{
+								classes: {
+									notchedOutline: classes.notchedOutline,
+								},
+								style: {
+									color: "white",
+								},
+							}}
+						/>
+					</div>
+					<div style={{marginLeft: 5, flex: 1,}}>
+        		Field type
+        		<Select
+        		  fullWidth
+        		  onChange={(e) => {
+        		    setParameterLocation(e.target.value);
+        		  }}
+        		  value={parameterLocation}
+        		  style={{
+        		    borderRadius: 5,
+        		    backgroundColor: inputColor,
+        		    paddingLeft: 10,
+        		    color: "white",
+        		    height: 57,
+        		  }}
+        		  inputProps={{
+        		    name: "age",
+        		    id: "outlined-age-simple",
+        		  }}
+        		>
+        		  {apikeySelection.map((data, index) => {
+        		    if (data === undefined) {
+        		      return null;
+        		    }
 
-            return (
-              <MenuItem
-                key={index}
-                style={{ backgroundColor: inputColor, color: "white" }}
-                value={data}
-              >
-                {data}
-              </MenuItem>
-            );
-          })}
-        </Select>
+        		    return (
+        		      <MenuItem
+        		        key={index}
+        		        style={{ backgroundColor: inputColor, color: "white" }}
+        		        value={data}
+        		      >
+        		        {data}
+        		      </MenuItem>
+        		    );
+        		  })}
+        		</Select>
+					</div>
+					<div style={{marginLeft: 5, flex: 1,}}>
+        		Value prefix	
+						<TextField
+							style={{ marginTop: 0, flex: "1", backgroundColor: inputColor }}
+							fullWidth={true}
+							placeholder="Token, SSWS..."
+							type="name"
+							id="standard-notrequired"
+							margin="normal"
+							variant="outlined"
+							value={refreshUrl}
+							onChange={(e) => {
+								// Just reusing this state
+      	        setRefreshUrl(e.target.value);
+							}}
+						/>
+					</div>
+				</div>
       </div>
     ) : null;
 

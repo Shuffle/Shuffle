@@ -3340,6 +3340,8 @@ const AngularWorkflow = (defaultprops) => {
         typeof window === "undefined" || window.location === undefined
           ? ""
           : window.location.search;
+
+			// FIXME: Don't check specific one here
 			const tmpExec = new URLSearchParams(cursearch).get("execution_highlight");
       if (
         tmpExec !== undefined &&

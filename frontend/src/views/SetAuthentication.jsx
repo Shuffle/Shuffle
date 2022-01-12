@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect, useLayoutEffect } from "react";
 
 import { Typography, CircularProgress } from "@material-ui/core";
+import theme from '../theme';
 
 const SetAuthentication = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, userdata } = props;
@@ -127,22 +128,57 @@ const SetAuthentication = (props) => {
       body: JSON.stringify(appAuthData),
     })
       .then((response) => {
+          const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
+					const tmpView = new URLSearchParams(cursearch).get("state");
+      		if (
+      		  tmpView !== undefined &&
+      		  tmpView !== null &&
+      		  tmpView.length > 0
+      		) {
+						console.log("State to find app name from: ", tmpView)
+      		}
+
         if (response.status !== 200) {
           console.log("Status not 200 for oauth2 authentication");
           setFailed(true);
-        }
+        } else {
+        	setFinished(true);
+					setTimeout(() => {
+						window.close();
+					}, 2500);
+				}
 
         return response.json();
       })
       .then((responseJson) => {
         //setUserSettings(responseJson)
         console.log("Resp: ", responseJson);
-        setFinished(true);
-        setResponse(responseJson.reason);
 
-        setTimeout(() => {
-          window.close();
-        }, 1000);
+				if (responseJson.reason !== undefined) {
+        	setResponse(responseJson.reason);
+        	setFinished(true);
+
+				} else {
+          const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
+					var tmpView = new URLSearchParams(cursearch).get("error_description");
+      		if (
+      		  tmpView !== undefined &&
+      		  tmpView !== null &&
+      		  tmpView.length > 0
+      		) {
+						setResponse(tmpView)
+      		} else {
+						tmpView = new URLSearchParams(cursearch).get("error");
+      			if (
+      			  tmpView !== undefined &&
+      			  tmpView !== null &&
+      			  tmpView.length > 0
+      			) {
+							setResponse(tmpView)
+						}
+					}
+				}
+
       })
       .catch((error) => {
         console.log(error);
@@ -150,15 +186,23 @@ const SetAuthentication = (props) => {
   }
 
   return (
-    <div style={{ width: 1000, margin: "auto", itemAlign: "center" }}>
+    <div style={{ maringTop: 50, padding: 50, border: "1px solid rgba(255,255,255,0.6)", borderRadius: theme.palette.borderRadius,  width: 500, margin: "auto", itemAlign: "center", textAlign: "center",}}>
+      <Typography
+        variant="h4"
+        style={{ marginLeft: "auto", marginRight: "auto", marginTop: 50}}
+      >
+				Oauth2 setup
+      </Typography>
       <Typography
         variant="h6"
-        style={{ marginLeft: "auto", marginRight: "auto", marginTop: 200 }}
+        style={{ marginLeft: "auto", marginRight: "auto", marginTop: 50}}
       >
         {!finished ? (
-          <CircularProgress />
+					failed ? 
+						null :
+          	<CircularProgress />
         ) : (
-          "DONE WITH AUTH - this will close soon!!"
+          "Done - this window should close within 3 seconds."
         )}
         <div />
         {failed ? "Failed setup. Error: " : ""} {response}
