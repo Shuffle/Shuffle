@@ -113,8 +113,8 @@ const AuthenticationOauth2 = (props) => {
 
     var resources = "";
     if (scopes !== undefined && (scopes !== null) & (scopes.length > 0)) {
-      //scopes.push("offline_access")
-      resources = scopes.join(",");
+      resources = scopes.join(" ");
+      //resources = scopes.join(",");
     }
 
     const authentication_url = authenticationType.token_uri;

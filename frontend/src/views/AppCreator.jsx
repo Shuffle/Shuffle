@@ -322,7 +322,7 @@ const AppCreator = (defaultprops) => {
 
   const [currentActionMethod, setCurrentActionMethod] = useState(
     actionNonBodyRequest[0]
-  );
+  )
   const [currentAction, setCurrentAction] = useState({
     name: "",
     file_field: "",
@@ -1551,6 +1551,7 @@ const AppCreator = (defaultprops) => {
   };
 
   // Saving the app that's been configured.
+	// Save SAVE app
   const submitApp = () => {
     alert.info("Uploading and building app " + name);
     setAppBuilding(true);
@@ -1608,8 +1609,9 @@ const AppCreator = (defaultprops) => {
     }
 
     // Handles actions
+		var handledPaths = []
     for (var key in actions) {
-      var item = actions[key];
+      var item = JSON.parse(JSON.stringify(actions[key]))
       if (item.errors.length > 0) {
         alert.error("Saving with error in action " + item.name);
       }
@@ -1617,6 +1619,27 @@ const AppCreator = (defaultprops) => {
       if (item.name === undefined && item.description !== undefined) {
         item.name = item.description;
       }
+
+			// Basic way to allow multiple of the same path 
+			var pathjoin = item.url+"_"+item.method.toLowerCase()
+			if (handledPaths.includes(pathjoin)) {
+				console.log("ALREADY INCLUDED: ", pathjoin)
+
+				// Max 100 of same lol
+				for (var i = 0; i < 100; i++) {
+					item.url = item.url+"_shuffle_replace_"+i
+
+					pathjoin = item.url+"_"+item.method.toLowerCase()
+					if (handledPaths.includes(pathjoin)) {
+						continue
+					}
+
+					console.log("FOUND NEW: ", item.url)
+					break
+				}
+			}
+
+			handledPaths.push(pathjoin)
 
       if (data.paths[item.url] === null || data.paths[item.url] === undefined) {
         data.paths[item.url] = {};

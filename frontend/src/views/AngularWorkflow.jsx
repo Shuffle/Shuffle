@@ -3143,7 +3143,7 @@ const AngularWorkflow = (defaultprops) => {
                 copyText.select();
                 copyText.setSelectionRange(0, 99999); /* For mobile devices */
                 document.execCommand("copy");
-                alert.success(`Copied ${cydata.length} elements`);
+                alert.success(`Copied ${cydata.length} element(s)`);
               }
             }
           }
