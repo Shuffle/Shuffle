@@ -1294,7 +1294,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 						return
 					}
 
-					log.Printf("[DEBUG][%s] Failed deploy. Downloading image %s", workflowExecution.ExecutionId, image)
+					log.Printf("[DEBUG][%s] Failed deploy. Downloading image %s: %s", workflowExecution.ExecutionId, image, err)
 					err := downloadDockerImageBackend(topClient, image)
 					executed := false
 					if err == nil {
@@ -1322,7 +1322,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 								return
 							}
 
-							log.Printf("[WARNING] Failed deploying image THREE TIMES. Attempting to download %s as last resort from backend and dockerhub.", image)
+							log.Printf("[WARNING] Failed deploying image THREE TIMES. Attempting to download %s as last resort from backend and dockerhub: %s", image, err)
 
 							reader, err := dockercli.ImagePull(context.Background(), image, pullOptions)
 							if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {

@@ -641,6 +641,12 @@ const AppCreator = (defaultprops) => {
             example_response: "",
           };
 
+					if (newaction.url !== undefined && newaction.url !== null && newaction.url.includes("_shuffle_replace_")) {
+						const regex = /_shuffle_replace_\d/i;
+						//console.log("NEW: ", 
+						newaction.url = newaction.url.replace(regex, "")
+					}
+
           // Finding category
           if (path.includes("/")) {
             const pathsplit = path.split("/");
@@ -665,8 +671,9 @@ const AppCreator = (defaultprops) => {
           }
 					
 					if (path === "/files/{file_id}/content") {
-						console.log("Method: ", path, method, methodvalue)
+						console.log("FILE DOWNLOAD Method: ", path, method, methodvalue)
 					}
+
 
           // Typescript? I think not ;)
           if (methodvalue["requestBody"] !== undefined) {
@@ -1353,6 +1360,8 @@ const AppCreator = (defaultprops) => {
               newaction.errors.push("Missing name");
             }
           }
+
+
 
           newActions.push(newaction);
         }

@@ -1348,7 +1348,7 @@ const Framework = (props) => {
 					})}
 				</div>
 			}
-  		{
+  		{/*
 				Object.getOwnPropertyNames(discoveryData).length > 0 ? 
 					<div style={{position: "absolute", top: 20, right: 50, }}>
 						<Typography variant="h6" color="textPrimary" style={{marginBottom: 10, textAlign: "center",}}>
@@ -1362,7 +1362,7 @@ const Framework = (props) => {
 							)
 						})}
 					</div>
-				: null}
+				: null*/}
 
   		{
 				Object.getOwnPropertyNames(discoveryData).length > 0 ? 
@@ -1457,15 +1457,15 @@ const Framework = (props) => {
 									<Typography variant="body2" color="textSecondary" style={{marginTop: 10, marginBottom: 10, }}>
 										{discoveryData.description}
 									</Typography>
-									{isCloud && defaultSearch !== undefined && defaultSearch.length > 0 ? 
-										<WorkflowSearch 
+									{/*isCloud && defaultSearch !== undefined && defaultSearch.length > 0 ? 
+										{<WorkflowSearch 
 											newSelectedApp={newSelectedApp}
 											setNewSelectedApp={setNewSelectedApp}
 											defaultSearch={defaultSearch}
-										/>
+										/>}
 										: 
 										null
-									}
+									*/}
 								</span>
 							: 
 								selectionOpen 
