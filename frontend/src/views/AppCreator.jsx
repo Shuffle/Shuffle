@@ -513,6 +513,7 @@ const AppCreator = (defaultprops) => {
     }
 
     setBasedata(data);
+		console.log("DATA: ", data)
     if (data.info !== null && data.info !== undefined) {
       if (data.info.title !== undefined && data.info.title !== null) {
         if (data.info.title.length > 29) {
@@ -547,7 +548,7 @@ const AppCreator = (defaultprops) => {
         data.info["x-categories"] !== undefined &&
         data.info["x-categories"].length > 0
       ) {
-        if (typeof data.info["x-categories"] == "array") {
+        if (typeof data.info["x-categories"] === "array") {
         } else {
         }
         setNewWorkflowCategories(data.info["x-categories"]);
@@ -559,7 +560,7 @@ const AppCreator = (defaultprops) => {
       for (var key in data.tags) {
         if (data.tags[key].name.length > 50) {
           console.log(
-            "Skipping tag cus it's too long: ",
+            "Skipping tag because it's too long: ",
             data.tags[key].name.length
           );
           continue;
@@ -594,6 +595,7 @@ const AppCreator = (defaultprops) => {
       "PATCH",
       "PUT",
     ];
+
 
     var newActions = [];
     var wordlist = {};
@@ -920,7 +922,8 @@ const AppCreator = (defaultprops) => {
                           console.log(
                             "CANT HANDLE JSON TYPE (4)",
                             parameter.properties[propkey].type,
-                            parameter.properties[propkey]
+                            parameter.properties[propkey],
+														path
                           );
                           newbody[parsedkey] = [];
                         }
@@ -930,7 +933,8 @@ const AppCreator = (defaultprops) => {
                     } else {
                       console.log(
                         "CANT HANDLE PARAM: (4) ",
-                        parameter.properties
+                        parameter.properties,
+												path
                       );
                     }
                   }
@@ -1421,7 +1425,7 @@ const AppCreator = (defaultprops) => {
       	    setAuthenticationOption("Bearer auth");
       	    setAuthenticationRequired(true);
 
-      	  } else if (key === "ApiKeyAuth" || key === "Token") {
+      	  } else if (key === "ApiKeyAuth" || key === "Token" || ((value.in === "header" || value.in === "query") && value.name !== undefined)) {
       	    setAuthenticationOption("API key");
 
       	    value.in = value.in.charAt(0).toUpperCase() + value.in.slice(1);
@@ -1436,7 +1440,10 @@ const AppCreator = (defaultprops) => {
       	    setAuthenticationRequired(true);
 
       	    if (value.description !== undefined && value.description !== null && value.description.length > 0) {
-  						setRefreshUrl(value.description)
+							// Don't want a real description - just the ones we're replacing with
+							if ((value.description.split(" ").length - 1) <= 2) {
+  							setRefreshUrl(value.description)
+							}
 						}
 
       	  } else if (value.scheme === "basic") {
@@ -1447,7 +1454,7 @@ const AppCreator = (defaultprops) => {
       	    setAuthenticationOption("Oauth2");
       	    setAuthenticationRequired(true);
 
-      	  } else if (value.type === "oauth2" || key === "Oauth2" || key === "Oauth2c" || (key !== undefined && key!== null && key.toLowerCase().includes("oauth2"))) {
+      	  } else if (value.type === "oauth2" || key === "Oauth2" || key === "Oauth2c" || (key !== undefined && key !== null && key.toLowerCase().includes("oauth2"))) {
       	    //alert.info("Can't handle Oauth2 auth yet.")
       	    setAuthenticationOption("Oauth2");
       	    setAuthenticationRequired(true);

@@ -2995,7 +2995,11 @@ class AppBase:
             self.logger.info(f"Failed to execute: {e}")
             self.logger.exception(f"Failed to execute {e}-{action['id']}")
             self.action_result["status"] = "FAILURE" 
-            self.action_result["result"] = f"General exception: {e}" 
+            #self.action_result["result"] = f"General exception: {e}" 
+            self.action_result["result"] = json.dumps({
+                "success": False,
+                "reason": f"General exception: {e}",
+            })
 
         self.action_result["completed_at"] = int(time.time())
 

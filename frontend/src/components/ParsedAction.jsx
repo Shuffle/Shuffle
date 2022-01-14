@@ -421,100 +421,102 @@ const ParsedAction = (props) => {
         }
 
         // Loops parent nodes' old results to fix autocomplete
-        var parents = getParents(selectedAction);
-        if (parents.length > 1) {
-          for (var key in parents) {
-            const item = parents[key];
-            if (item.label === "Execution Argument") {
-              continue;
-            }
+				if (getParents !== undefined) {
+        	var parents = getParents(selectedAction);
+        	if (parents.length > 1) {
+        	  for (var key in parents) {
+        	    const item = parents[key];
+        	    if (item.label === "Execution Argument") {
+        	      continue;
+        	    }
 
-            var exampledata = item.example === undefined ? "" : item.example;
-            // Find previous execution and their variables
-            //exampledata === "" &&
-            if (workflowExecutions.length > 0) {
-              // Look for the ID
-              const found = false;
-              for (var key in workflowExecutions) {
-                if (
-                  workflowExecutions[key].results === undefined ||
-                  workflowExecutions[key].results === null
-                ) {
-                  continue;
-                }
+        	    var exampledata = item.example === undefined ? "" : item.example;
+        	    // Find previous execution and their variables
+        	    //exampledata === "" &&
+        	    if (workflowExecutions.length > 0) {
+        	      // Look for the ID
+        	      const found = false;
+        	      for (var key in workflowExecutions) {
+        	        if (
+        	          workflowExecutions[key].results === undefined ||
+        	          workflowExecutions[key].results === null
+        	        ) {
+        	          continue;
+        	        }
 
-                var foundResult = workflowExecutions[key].results.find(
-                  (result) => result.action.id === item.id
-                );
-                if (foundResult === undefined) {
-                  continue;
-                }
+        	        var foundResult = workflowExecutions[key].results.find(
+        	          (result) => result.action.id === item.id
+        	        );
+        	        if (foundResult === undefined) {
+        	          continue;
+        	        }
 
-                foundResult.result = foundResult.result.trim();
-                foundResult.result = foundResult.result
-                  .split(" None")
-                  .join(' "None"');
-                foundResult.result = foundResult.result
-                  .split(" False")
-                  .join(" false");
-                foundResult.result = foundResult.result
-                  .split(" True")
-                  .join(" true");
+        	        foundResult.result = foundResult.result.trim();
+        	        foundResult.result = foundResult.result
+        	          .split(" None")
+        	          .join(' "None"');
+        	        foundResult.result = foundResult.result
+        	          .split(" False")
+        	          .join(" false");
+        	        foundResult.result = foundResult.result
+        	          .split(" True")
+        	          .join(" true");
 
-                var jsonvalid = true;
-                try {
-                  const tmp = String(JSON.parse(foundResult.result));
-                  if (
-                    !foundResult.result.includes("{") &&
-                    !foundResult.result.includes("[")
-                  ) {
-                    jsonvalid = false;
-                  }
-                } catch (e) {
-                  try {
-                    foundResult.result = foundResult.result
-                      .split("'")
-                      .join('"');
-                    const tmp = String(JSON.parse(foundResult.result));
-                    if (
-                      !foundResult.result.includes("{") &&
-                      !foundResult.result.includes("[")
-                    ) {
-                      jsonvalid = false;
-                    }
-                  } catch (e) {
-                    jsonvalid = false;
-                  }
-                }
+        	        var jsonvalid = true;
+        	        try {
+        	          const tmp = String(JSON.parse(foundResult.result));
+        	          if (
+        	            !foundResult.result.includes("{") &&
+        	            !foundResult.result.includes("[")
+        	          ) {
+        	            jsonvalid = false;
+        	          }
+        	        } catch (e) {
+        	          try {
+        	            foundResult.result = foundResult.result
+        	              .split("'")
+        	              .join('"');
+        	            const tmp = String(JSON.parse(foundResult.result));
+        	            if (
+        	              !foundResult.result.includes("{") &&
+        	              !foundResult.result.includes("[")
+        	            ) {
+        	              jsonvalid = false;
+        	            }
+        	          } catch (e) {
+        	            jsonvalid = false;
+        	          }
+        	        }
 
-                // Finds the FIRST json only
-                if (jsonvalid) {
-                  exampledata = JSON.parse(foundResult.result);
-                  break;
-                }
-                //else {
-                //	console.log("Invalid JSON: ", foundResult.result)
-                //}
-              }
-            }
+        	        // Finds the FIRST json only
+        	        if (jsonvalid) {
+        	          exampledata = JSON.parse(foundResult.result);
+        	          break;
+        	        }
+        	        //else {
+        	        //	console.log("Invalid JSON: ", foundResult.result)
+        	        //}
+        	      }
+        	    }
 
-            // 1. Take
-            const itemlabelComplete =
-              item.label === null || item.label === undefined
-                ? ""
-                : item.label.split(" ").join("_");
-            const actionvalue = {
-              type: "action",
-              id: item.id,
-              name: item.label,
-              autocomplete: itemlabelComplete,
-              example: exampledata,
-            };
-            actionlist.push(actionvalue);
-          }
-        }
+        	    // 1. Take
+        	    const itemlabelComplete =
+        	      item.label === null || item.label === undefined
+        	        ? ""
+        	        : item.label.split(" ").join("_");
+        	    const actionvalue = {
+        	      type: "action",
+        	      id: item.id,
+        	      name: item.label,
+        	      autocomplete: itemlabelComplete,
+        	      example: exampledata,
+        	    };
+        	    actionlist.push(actionvalue);
+        	  }
+        	}
 
-        setActionlist(actionlist);
+        	setActionlist(actionlist);
+				}
       }
     });
 
@@ -897,7 +899,7 @@ const ParsedAction = (props) => {
       selectedActionParameters[count].variant = data;
       selectedActionParameters[count].value = "";
 
-      if (data === "ACTION_RESULT") {
+      if (data === "ACTION_RESULT" && getParents !== undefined) {
         var parents = getParents(selectedAction);
         if (parents.length > 0) {
           selectedActionParameters[count].action_field = parents[0].label;

@@ -259,6 +259,7 @@ const AngularWorkflow = (defaultprops) => {
 
   const [history, setHistory] = React.useState([]);
   const [historyIndex, setHistoryIndex] = React.useState(history.length);
+	const [variableInfo, setVariableInfo] = React.useState({})
 
   const [appAuthentication, setAppAuthentication] = React.useState([]);
   const [variablesModalOpen, setVariablesModalOpen] = React.useState(false);
@@ -267,11 +268,9 @@ const AngularWorkflow = (defaultprops) => {
   const [authenticationModalOpen, setAuthenticationModalOpen] =
     React.useState(false);
   const [conditionsModalOpen, setConditionsModalOpen] = React.useState(false);
-  const [newVariableName, setNewVariableName] = React.useState("");
   const [authenticationType, setAuthenticationType] = React.useState("");
-  const [newVariableDescription, setNewVariableDescription] =
-    React.useState("");
-  const [newVariableValue, setNewVariableValue] = React.useState("");
+
+
   const [workflowDone, setWorkflowDone] = React.useState(false);
   const [authLoaded, setAuthLoaded] = React.useState(false);
   const [localFirstrequest, setLocalFirstrequest] = React.useState(true);
@@ -674,6 +673,7 @@ const AngularWorkflow = (defaultprops) => {
         return response.json();
       })
       .then((responseJson) => {
+				console.log("RESPONSE: ", responseJson)
         handleUpdateResults(responseJson, executionRequest);
       })
       .catch((error) => {
@@ -4200,18 +4200,26 @@ const AngularWorkflow = (defaultprops) => {
       setAnchorEl(event.currentTarget);
     };
 
-    const deleteVariable = (variableName) => {
-      console.log("Delete:", variableName);
-      workflow.workflow_variables = workflow.workflow_variables.filter(
-        (data) => data.name !== variableName
-      );
+    const deleteVariable = (variableIndex) => {
+      //console.log("Delete:", variableName);
+			if (workflow.workflow_variables !== undefined && workflow.workflow_variables !== null && workflow.workflow_variables.length > variableIndex) {
+				workflow.workflow_variables.splice(variableIndex, 1)
+			}
+
+      //workflow.workflow_variables = workflow.workflow_variables.filter(
+      //  (data) => data.name !== variableName
+      //);
       setWorkflow(workflow);
     };
 
-    const deleteExecutionVariable = (variableName) => {
-      workflow.execution_variables = workflow.execution_variables.filter(
-        (data) => data.name !== variableName
-      );
+    const deleteExecutionVariable = (variableIndex) => {
+			if (workflow.execution_variables !== undefined && workflow.execution_variables !== null && workflow.execution_variables.length > variableIndex) {
+				workflow.execution_variables.splice(variableIndex, 1)
+			}
+
+      //workflow.execution_variables = workflow.execution_variables.filter(
+      //  (data) => data.name !== variableName
+      //);
       setWorkflow(workflow);
     };
 
@@ -4261,9 +4269,12 @@ const AngularWorkflow = (defaultprops) => {
                             overflow: "hidden",
                           }}
                           onClick={() => {
-                            setNewVariableName(variable.name);
-                            setNewVariableDescription(variable.description);
-                            setNewVariableValue(variable.value);
+														setVariableInfo({
+															"name": variable.name,
+															"description": variable.description,
+															"value": variable.value,
+															"index": index,
+														})
                             setVariablesModalOpen(true);
                           }}
                         >
@@ -4301,9 +4312,12 @@ const AngularWorkflow = (defaultprops) => {
                               }}
                               onClick={() => {
                                 setOpen(false);
-                                setNewVariableName(variable.name);
-                                setNewVariableDescription(variable.description);
-                                setNewVariableValue(variable.value);
+																setVariableInfo({
+																	"name": variable.name,
+																	"description": variable.description,
+																	"value": variable.value,
+																	"index": index,
+																})
                                 setVariablesModalOpen(true);
                               }}
                               key={"Edit"}
@@ -4316,7 +4330,7 @@ const AngularWorkflow = (defaultprops) => {
                                 color: "white",
                               }}
                               onClick={() => {
-                                deleteVariable(variable.name);
+                                deleteVariable(index);
                                 setOpen(false);
                               }}
                               key={"Delete"}
@@ -4365,7 +4379,7 @@ const AngularWorkflow = (defaultprops) => {
           {workflow.execution_variables === null ||
           workflow.execution_variables === undefined
             ? null
-            : workflow.execution_variables.map((variable) => {
+            : workflow.execution_variables.map((variable, index) => {
                 return (
                   <div>
                     <Paper square style={paperVariableStyle} onClick={() => {}}>
@@ -4388,7 +4402,13 @@ const AngularWorkflow = (defaultprops) => {
                             overflow: "hidden",
                           }}
                           onClick={() => {
-                            setNewVariableName(variable.name);
+                            //setNewVariableName(variable.name);
+														setVariableInfo({
+															"name": variable.name,
+															"description": variable.description,
+															"value": variable.value,
+															"index": index,
+														})
                             setExecutionVariablesModalOpen(true);
                           }}
                         >
@@ -4426,7 +4446,13 @@ const AngularWorkflow = (defaultprops) => {
                               }}
                               onClick={() => {
                                 setOpen(false);
-                                setNewVariableName(variable.name);
+                                //setNewVariableName(variable.name);
+																setVariableInfo({
+																	"name": variable.name,
+																	"description": variable.description,
+																	"value": variable.value,
+																	"index": index,
+																})
                                 setExecutionVariablesModalOpen(true);
                               }}
                               key={"Edit"}
@@ -4439,7 +4465,7 @@ const AngularWorkflow = (defaultprops) => {
                                 color: "white",
                               }}
                               onClick={() => {
-                                deleteExecutionVariable(variable.name);
+                                deleteExecutionVariable(index);
                                 setOpen(false);
                               }}
                               key={"Delete"}
@@ -5548,7 +5574,6 @@ const AngularWorkflow = (defaultprops) => {
     // Remove on the end as we don't want to remove everything
     results = results.filter((data) => data.id !== action.id);
     results = results.filter((data) => data.type === "ACTION" || data.app_name === "Shuffle Workflow" || data.app_name === "User Input");
-		console.log("RESULTS:", results)
     results.push({ label: "Execution Argument", type: "INTERNAL" });
     return results;
   };
@@ -11904,266 +11929,309 @@ const AngularWorkflow = (defaultprops) => {
     </div>
   );
 
-  const executionVariableModal = executionVariablesModalOpen ? (
-    <Dialog
-      open={executionVariablesModalOpen}
-      onClose={() => {
-        setNewVariableName("");
-        setExecutionVariablesModalOpen(false);
-      }}
-      PaperProps={{
-        style: {
-          backgroundColor: surfaceColor,
-          color: "white",
-        },
-      }}
-    >
-      <FormControl>
-        <DialogTitle>
-          <span style={{ color: "white" }}>Execution Variable</span>
-        </DialogTitle>
-        <DialogContent>
-          Execution Variables are TEMPORARY variables that you can ony be set
-          and used during execution. Learn more{" "}
-          <a
-            rel="noopener noreferrer"
-            href="https://shuffler.io/docs/workflows#execution_variables"
-            target="_blank"
-            style={{ textDecoration: "none", color: "#f85a3e" }}
-          >
-            here
-          </a>
-          <TextField
-            onBlur={(event) => setNewVariableName(event.target.value)}
-            color="primary"
-            placeholder="Name"
-            style={{ marginTop: 25 }}
-            InputProps={{
-              style: {
-                color: "white",
-              },
-            }}
-            margin="dense"
-            fullWidth
-            defaultValue={newVariableName}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button
-            style={{ borderRadius: "0px" }}
-            onClick={() => {
-              setNewVariableName("");
-              setExecutionVariablesModalOpen(false);
-            }}
-            color="primary"
-          >
-            Cancel
-          </Button>
-          <Button
-            style={{ borderRadius: "0px" }}
-            disabled={newVariableName.length === 0}
-            onClick={() => {
-              console.log("VARIABLES! ", newVariableName);
-              if (
-                workflow.execution_variables === undefined ||
-                workflow.execution_variables === null
-              ) {
-                workflow.execution_variables = [];
-              }
+  const ExecutionVariableModal = (props) => {
+		const { variableInfo } = props
 
-              // try to find one with the same name
-              const found = workflow.execution_variables.findIndex(
-                (data) => data.name === newVariableName
-              );
-              //console.log(found)
-              if (found !== -1) {
-                if (newVariableName.length > 0) {
-                  workflow.execution_variables[found].name = newVariableName;
-                }
-              } else {
-                workflow.execution_variables.push({
-                  name: newVariableName,
-                  description: "An execution variable",
-                  value: "",
-                  id: uuidv4(),
-                });
-              }
+		const [newVariableName, setNewVariableName] = React.useState(variableInfo.name !== undefined ? variableInfo.name : "");
+		const [newVariableDescription, setNewVariableDescription] = React.useState(variableInfo.description !== undefined ? variableInfo.description : "");
+		const [newVariableValue, setNewVariableValue] = React.useState(variableInfo.value !== undefined ? variableInfo.value : "");
 
-              setExecutionVariablesModalOpen(false);
-              setNewVariableName("");
-              setWorkflow(workflow);
-            }}
-            color="primary"
-          >
-            Submit
-          </Button>
-        </DialogActions>
-        {workflowExecutions.length > 0 ? (
-          <DialogContent>
-            <Divider
-              style={{
-                backgroundColor: "white",
-                marginTop: 15,
-                marginBottom: 15,
-              }}
-            />
-            <b style={{ marginBottom: 10 }}>Values from last 3 executions</b>
-            {workflowExecutions.slice(0, 3).map((execution, index) => {
-              if (
-                execution.execution_variables === undefined ||
-                execution.execution_variables === null ||
-                execution.execution_variables === 0
-              ) {
-                return null;
-              }
+		if (!executionVariablesModalOpen) {
+			return null
+		}
 
-              const variable = execution.execution_variables.find(
-                (data) => data.name === newVariableName
-              );
-              if (variable === undefined || variable.value === undefined) {
-                return null;
-              }
+		return (
+    	<Dialog
+    	  open={executionVariablesModalOpen}
+    	  onClose={() => {
+    	    setNewVariableName("");
+    	    setExecutionVariablesModalOpen(false);
+    	  }}
+    	  PaperProps={{
+    	    style: {
+    	      backgroundColor: surfaceColor,
+    	      color: "white",
+    	    },
+    	  }}
+    	>
+    	  <FormControl>
+    	    <DialogTitle>
+    	      <span style={{ color: "white" }}>Execution Variable</span>
+    	    </DialogTitle>
+    	    <DialogContent>
+    	      Execution Variables are TEMPORARY variables that you can ony be set
+    	      and used during execution. Learn more{" "}
+    	      <a
+    	        rel="noopener noreferrer"
+    	        href="https://shuffler.io/docs/workflows#execution_variables"
+    	        target="_blank"
+    	        style={{ textDecoration: "none", color: "#f85a3e" }}
+    	      >
+    	        here
+    	      </a>
+    	      <TextField
+    	        onBlur={(event) => setNewVariableName(event.target.value)}
+    	        color="primary"
+    	        placeholder="Name"
+    	        style={{ marginTop: 25 }}
+    	        InputProps={{
+    	          style: {
+    	            color: "white",
+    	          },
+    	        }}
+    	        margin="dense"
+    	        fullWidth
+    	        defaultValue={newVariableName}
+    	      />
+    	    </DialogContent>
+    	    <DialogActions>
+    	      <Button
+    	        style={{ borderRadius: "0px" }}
+    	        onClick={() => {
+    	          setNewVariableName("");
+    	          setExecutionVariablesModalOpen(false);
+    	        }}
+    	        color="primary"
+    	      >
+    	        Cancel
+    	      </Button>
+    	      <Button
+    	        style={{ borderRadius: "0px" }}
+    	        disabled={newVariableName.length === 0}
+    	        onClick={() => {
+    	          console.log("VARIABLES! ", newVariableName);
+    	          if (
+    	            workflow.execution_variables === undefined ||
+    	            workflow.execution_variables === null
+    	          ) {
+    	            workflow.execution_variables = [];
+    	          }
 
-              return (
-                <div>
-                  {index + 1}: {variable.value}
-                </div>
-              );
-            })}
-          </DialogContent>
-        ) : null}
-      </FormControl>
-    </Dialog>
-  ) : null;
+    	          // try to find one with the same name
+    	          const found = workflow.execution_variables.findIndex(
+    	            (data) => data.name === newVariableName
+    	          );
+    	          //console.log(found)
+    	          if (found !== -1) {
+    	            if (newVariableName.length > 0) {
+    	              workflow.execution_variables[found].name = newVariableName;
+    	            }
+    	          } else {
+    	            workflow.execution_variables.push({
+    	              name: newVariableName,
+    	              description: "An execution variable",
+    	              value: "",
+    	              id: uuidv4(),
+    	            });
+    	          }
 
-  const variablesModal = variablesModalOpen ? (
-    <Dialog
-      open={variablesModalOpen}
-      onClose={() => {
-        setNewVariableName("");
-        setNewVariableDescription("");
-        setNewVariableValue("");
-        setVariablesModalOpen(false);
-      }}
-      PaperProps={{
-        style: {
-          backgroundColor: surfaceColor,
-          color: "white",
-        },
-      }}
-    >
-      <FormControl>
-        <DialogTitle>
-          <span style={{ color: "white" }}>Workflow Variable</span>
-        </DialogTitle>
-        <DialogContent>
-          <TextField
-            onBlur={(event) => setNewVariableName(event.target.value)}
-            color="primary"
-            placeholder="Name"
-            InputProps={{
-              style: {
-                color: "white",
-              },
-            }}
-            margin="dense"
-            fullWidth
-            defaultValue={newVariableName}
-          />
-          <TextField
-            onBlur={(event) => setNewVariableDescription(event.target.value)}
-            color="primary"
-            placeholder="Description"
-            margin="dense"
-            fullWidth
-            InputProps={{
-              style: {
-                color: "white",
-              },
-            }}
-            defaultValue={newVariableDescription}
-          />
-          <TextField
-            onChange={(event) => setNewVariableValue(event.target.value)}
-            rows="6"
-            multiline
-            color="primary"
-            placeholder="Value"
-            margin="dense"
-            InputProps={{
-              style: {
-                color: "white",
-              },
-            }}
-            fullWidth
-            defaultValue={newVariableValue}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button
-            style={{ borderRadius: "0px" }}
-            onClick={() => {
-              setNewVariableName("");
-              setNewVariableDescription("");
-              setNewVariableValue("");
-              setVariablesModalOpen(false);
-            }}
-            color="primary"
-          >
-            Cancel
-          </Button>
-          <Button
-            style={{ borderRadius: "0px" }}
-            disabled={
-              newVariableName.length === 0 || newVariableValue.length === 0
-            }
-            variant={"contained"}
-            onClick={() => {
-              if (
-                workflow.workflow_variables === undefined ||
-                workflow.workflow_variables === null
-              ) {
-                workflow.workflow_variables = [];
-              }
+    	          setExecutionVariablesModalOpen(false);
+    	          setNewVariableName("");
+    	          setWorkflow(workflow);
+    	        }}
+    	        color="primary"
+    	      >
+    	        Submit
+    	      </Button>
+    	    </DialogActions>
+    	    {workflowExecutions.length > 0 ? (
+    	      <DialogContent>
+    	        <Divider
+    	          style={{
+    	            backgroundColor: "white",
+    	            marginTop: 15,
+    	            marginBottom: 15,
+    	          }}
+    	        />
+    	        <b style={{ marginBottom: 10 }}>Values from last 3 executions</b>
+    	        {workflowExecutions.slice(0, 3).map((execution, index) => {
+    	          if (
+    	            execution.execution_variables === undefined ||
+    	            execution.execution_variables === null ||
+    	            execution.execution_variables === 0
+    	          ) {
+    	            return null;
+    	          }
 
-              // try to find one with the same name
-              const found = workflow.workflow_variables.findIndex(
-                (data) => data.name === newVariableName
-              );
-              if (found !== -1) {
-                if (newVariableName.length > 0) {
-                  workflow.workflow_variables[found].name = newVariableName;
-                }
-                if (newVariableDescription.length > 0) {
-                  workflow.workflow_variables[found].description =
-                    newVariableDescription;
-                }
-                if (newVariableValue.length > 0) {
-                  workflow.workflow_variables[found].value = newVariableValue;
-                }
-              } else {
-                workflow.workflow_variables.push({
-                  name: newVariableName,
-                  description: newVariableDescription,
-                  value: newVariableValue,
-                  id: uuidv4(),
-                });
-              }
+    	          const variable = execution.execution_variables.find(
+    	            (data) => data.name === newVariableName
+    	          );
+    	          if (variable === undefined || variable.value === undefined) {
+    	            return null;
+    	          }
 
-              setWorkflow(workflow);
-              setVariablesModalOpen(false);
-              setNewVariableName("");
-              setNewVariableDescription("");
-              setNewVariableValue("");
-            }}
-            color="primary"
-          >
-            Submit
-          </Button>
-        </DialogActions>
-      </FormControl>
-    </Dialog>
-  ) : null;
+    	          return (
+    	            <div>
+    	              {index + 1}: {variable.value}
+    	            </div>
+    	          );
+    	        })}
+    	      </DialogContent>
+    	    ) : null}
+    	  </FormControl>
+    	</Dialog>
+		)
+	}
+
+  const VariablesModal = (props) => {
+		const { setVariableInfo, variableInfo } = props
+
+		const [newVariableName, setNewVariableName] = React.useState(variableInfo.name !== undefined ? variableInfo.name : "");
+		const [newVariableDescription, setNewVariableDescription] = React.useState(variableInfo.description !== undefined ? variableInfo.description : "");
+		const [newVariableValue, setNewVariableValue] = React.useState(variableInfo.value !== undefined ? variableInfo.value : "");
+
+		if (!variablesModalOpen) {
+			return null
+		}
+
+		return (
+    	<Dialog
+    	  open={variablesModalOpen}
+    	  onClose={() => {
+    	    setNewVariableName("");
+    	    setNewVariableDescription("");
+    	    setNewVariableValue("");
+    	    setVariablesModalOpen(false);
+    	  }}
+    	  PaperProps={{
+    	    style: {
+    	      backgroundColor: surfaceColor,
+    	      color: "white",
+    	    },
+    	  }}
+    	>
+    	  <FormControl>
+    	    <DialogTitle>
+    	      <span style={{ color: "white" }}>Workflow Variable</span>
+    	    </DialogTitle>
+    	    <DialogContent>
+    	      <TextField
+    	        onBlur={(event) => setNewVariableName(event.target.value)}
+    	        color="primary"
+    	        placeholder="Name"
+    	        InputProps={{
+    	          style: {
+    	            color: "white",
+    	          },
+    	        }}
+    	        margin="dense"
+    	        fullWidth
+    	        defaultValue={newVariableName}
+    	      />
+    	      <TextField
+    	        onBlur={(event) => setNewVariableDescription(event.target.value)}
+    	        color="primary"
+    	        placeholder="Description"
+    	        margin="dense"
+    	        fullWidth
+    	        InputProps={{
+    	          style: {
+    	            color: "white",
+    	          },
+    	        }}
+    	        defaultValue={newVariableDescription}
+    	      />
+    	      <TextField
+    	        onChange={(event) => setNewVariableValue(event.target.value)}
+    	        rows="6"
+    	        multiline
+    	        color="primary"
+    	        placeholder="Value"
+    	        margin="dense"
+    	        InputProps={{
+    	          style: {
+    	            color: "white",
+    	          },
+    	        }}
+    	        fullWidth
+    	        defaultValue={newVariableValue}
+    	      />
+    	    </DialogContent>
+    	    <DialogActions>
+    	      <Button
+    	        style={{ borderRadius: "0px" }}
+    	        onClick={() => {
+    	          setNewVariableName("");
+    	          setNewVariableDescription("");
+    	          setNewVariableValue("");
+    	          setVariablesModalOpen(false);
+    	        }}
+    	        color="primary"
+    	      >
+    	        Cancel
+    	      </Button>
+    	      <Button
+    	        style={{ borderRadius: "0px" }}
+    	        disabled={
+    	          newVariableName.length === 0 || newVariableValue.length === 0
+    	        }
+    	        variant={"contained"}
+    	        onClick={() => {
+								var handled = false
+    	          if (
+    	            workflow.workflow_variables === undefined ||
+    	            workflow.workflow_variables === null
+    	          ) {
+    	            workflow.workflow_variables = [];
+    	          } else {
+									if (variableInfo.index !== undefined && variableInfo.index !== null && variableInfo.index >= 0) {
+										if (newVariableName.length > 0) {
+											workflow.workflow_variables[variableInfo.index].name = newVariableName;
+										}
+										if (newVariableDescription.length > 0) {
+											workflow.workflow_variables[variableInfo.index].description =
+												newVariableDescription;
+										}
+										if (newVariableValue.length > 0) {
+											workflow.workflow_variables[variableInfo.index].value = newVariableValue;
+										}
+
+										handled = true 
+									}
+								}
+
+								if (!handled) {
+    	          	// try to find one with the same name
+    	          	const found = workflow.workflow_variables.findIndex(
+    	          	  (data) => data.name === newVariableName
+    	          	);
+    	          	if (found !== -1) {
+    	          	  if (newVariableName.length > 0) {
+    	          	    workflow.workflow_variables[found].name = newVariableName;
+    	          	  }
+    	          	  if (newVariableDescription.length > 0) {
+    	          	    workflow.workflow_variables[found].description =
+    	          	      newVariableDescription;
+    	          	  }
+    	          	  if (newVariableValue.length > 0) {
+    	          	    workflow.workflow_variables[found].value = newVariableValue;
+    	          	  }
+    	          	} else {
+    	          	  workflow.workflow_variables.push({
+    	          	    name: newVariableName,
+    	          	    description: newVariableDescription,
+    	          	    value: newVariableValue,
+    	          	    id: uuidv4(),
+    	          	  });
+    	          	}
+								}
+
+								setVariableInfo({})
+    	          setWorkflow(workflow);
+    	          setVariablesModalOpen(false);
+    	          setNewVariableName("");
+    	          setNewVariableDescription("");
+    	          setNewVariableValue("");
+    	        }}
+    	        color="primary"
+    	      >
+    	        Submit
+    	      </Button>
+    	    </DialogActions>
+    	  </FormControl>
+    	</Dialog>
+		)
+	}
 
   const AuthenticationData = (props) => {
     const selectedApp = props.app;
@@ -12736,8 +12804,8 @@ const AngularWorkflow = (defaultprops) => {
     isLoaded && workflowDone ? (
       <div>
         {newView}
-        {variablesModal}
-        {executionVariableModal}
+        <VariablesModal variableInfo={variableInfo} setVariableInfo={setVariableInfo} />
+        <ExecutionVariableModal variableInfo={variableInfo} setVariableInfo={setVariableInfo} />
         {conditionsModal}
         {authenticationModal}
         {codePopoutModal}
