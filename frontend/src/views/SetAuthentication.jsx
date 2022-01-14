@@ -18,6 +18,7 @@ const SetAuthentication = (props) => {
     //session_state
     const urlSearchParams = new URLSearchParams(window.location.search);
     const params = Object.fromEntries(urlSearchParams.entries());
+		console.log("PARAMS: ", params)
 
     const authenticationStore = [];
     var appAuthData = {
@@ -29,19 +30,16 @@ const SetAuthentication = (props) => {
       },
       fields: [],
       type: "oauth2",
-    };
+    }
 
     if (window !== undefined && window !== null) {
-      console.log(window.location);
+      //console.log(window.location);
       appAuthData.fields.push({
         key: "redirect_uri",
         value: window.location.origin + window.location.pathname,
       });
     }
 
-    if (params.code !== undefined && params.code !== null) {
-      appAuthData.fields.push({ key: "code", value: params.code });
-    }
 
     if (params.session_state !== undefined && params.session_state !== null) {
       appAuthData.fields.push({
@@ -50,12 +48,34 @@ const SetAuthentication = (props) => {
       });
     }
 
+		var externalData = {
+			handleExternal: false,
+			user: "",
+			type: "",
+			code: "",
+		}
+
+    if (params.code !== undefined && params.code !== null) {
+      appAuthData.fields.push({ key: "code", value: params.code });
+			externalData.code = params.code
+    }
+
     if (params.state !== undefined && params.state !== null) {
       const paramsplit = params.state.split("&");
       console.log(paramsplit);
       for (var key in paramsplit) {
         const query = paramsplit[key].split("=");
-        console.log(query);
+        console.log("K:V: ", key, query);
+				if (query.length > 1) {
+					if (query[0] === "type" && query[1] === "github"){ 
+						externalData.handleExternal = true 
+						externalData.type = "github" 
+					}
+
+					if (query[0] === "username" || query[0] === "user"){ 
+						externalData.user = query[1] 
+					}
+				}
 
         if (query.length !== 2) {
           console.log("INVALID QUERY: ", query);
@@ -116,7 +136,79 @@ const SetAuthentication = (props) => {
       }
     }
 
-    console.log(appAuthData);
+		if (externalData.handleExternal) {
+			console.log("RUN EXTERNAL!!: ", externalData)
+			
+			fetch(globalUrl + "/api/v1/triggers/github/register", {
+				method: "PUT",
+				headers: {
+					"Content-Type": "application/json",
+					Accept: "application/json",
+				},
+				credentials: "include",
+				body: JSON.stringify(externalData),
+			})
+			.then((response) => {
+					const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
+					const tmpView = new URLSearchParams(cursearch).get("state");
+					if (
+						tmpView !== undefined &&
+						tmpView !== null &&
+						tmpView.length > 0
+					) {
+						console.log("State to find app name from: ", tmpView)
+					}
+
+				if (response.status !== 200) {
+					console.log("Status not 200 for oauth2 authentication");
+					setFailed(true);
+				} else {
+					setFinished(true);
+					//setTimeout(() => {
+					//	window.close();
+					//}, 2500);
+				}
+
+				return response.json();
+			})
+			.then((responseJson) => {
+				//setUserSettings(responseJson)
+				console.log("Resp: ", responseJson);
+
+				if (responseJson.reason !== undefined) {
+					setResponse(responseJson.reason);
+					setFinished(true);
+
+				} else {
+					const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
+					var tmpView = new URLSearchParams(cursearch).get("error_description");
+					if (
+						tmpView !== undefined &&
+						tmpView !== null &&
+						tmpView.length > 0
+					) {
+						setResponse(tmpView)
+					} else {
+						tmpView = new URLSearchParams(cursearch).get("error");
+						if (
+							tmpView !== undefined &&
+							tmpView !== null &&
+							tmpView.length > 0
+						) {
+							setResponse(tmpView)
+						}
+					}
+				}
+
+			})
+			.catch((error) => {
+				console.log(error);
+			});
+
+		return
+	}
+
+	console.log(appAuthData);
 
     fetch(globalUrl + "/api/v1/apps/authentication", {
       method: "PUT",

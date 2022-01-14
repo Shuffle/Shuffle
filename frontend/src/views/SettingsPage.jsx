@@ -728,17 +728,19 @@ const Settings = (props) => {
         <h2>Platform Earnings</h2>
         <div style={{ display: runFlex ? "flex" : "", width: "100%" }}>
 					<div>
-						<Button
-							style={{ height: 40, marginTop: 10 }}
-							variant="outlined"
-							color="primary"
-							fullWidth={true}
-							onClick={() => {
-								handleEthereumConnection();
-							}}
-						>
-							Connect to Github
-						</Button>
+  					{isCloud ?
+							<Button
+								style={{ height: 40, marginTop: 10 }}
+								variant="outlined"
+								color="primary"
+								fullWidth={true}
+								onClick={() => {
+									handleGithubConnection();
+								}}
+							>
+								Connect to Github
+							</Button>
+						: null}
 					</div>
           <div style={{ flex: 1, display: "flex" }}>
             <div>
@@ -913,6 +915,64 @@ const Settings = (props) => {
         console.log(error);
       });
   };
+
+  const handleGithubConnection = () => {
+		console.log("GITHUB CONNECT WOO")
+  	//result = RestClient.post('https://github.com/login/oauth/access_token',
+
+		console.log("HOST: ", window.location.host);
+		console.log("HOST: ", window.location);
+		const redirectUri = isCloud
+			? window.location.host === "localhost:3002"
+				? "http%3A%2F%2Flocalhost:3002%2Fset_authentication"
+				: "https%3A%2F%2Fshuffler.io%2Fset_authentication"
+			: window.location.protocol === "http:" ? 
+				`http%3A%2F%2F${window.location.host}%2Fset_authentication`
+				:
+				`https%3A%2F%2F${window.location.host}%2Fset_authentication`
+
+
+		const client_id = "3d272b1b782b100b1e61"
+		const username = userdata.id;
+		const scopes = "user:email";
+
+		const url = `https://github.com/login/oauth/authorize?access_type=offline&prompt=consent&client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${scopes}&state=username%3D${username}%26type%3Dgithub`
+
+		console.log("URL: ", url);
+
+		var newwin = window.open(url, "", "width=800,height=600");
+
+		// Check whether we got a callback somewhere
+		//var id = setInterval(function () {
+		//	fetch(
+		//		globalUrl + "/api/v1/triggers/gmail/" + selectedTrigger.id,
+		//		{
+		//			method: "GET",
+		//			headers: { "content-type": "application/json" },
+		//			credentials: "include",
+		//		}
+		//	)
+		//		.then((response) => {
+		//			if (response.status !== 200) {
+		//				throw new Error("No trigger info :o!");
+		//			}
+
+		//			return response.json();
+		//		})
+		//		.then((responseJson) => {
+		//			console.log("RESPONSE: ");
+		//			setTriggerAuthentication(responseJson);
+		//			clearInterval(id);
+		//			newwin.close();
+		//			setGmailFolders();
+		//		})
+		//		.catch((error) => {
+		//			console.log(error.toString());
+		//		});
+		//}, 2500);
+
+		//saveWorkflow(workflow);
+	}
 
   const handleEthereumTokenCreation = async () => {
     const provider = await detectEthereumProvider();
