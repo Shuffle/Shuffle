@@ -727,6 +727,19 @@ const Settings = (props) => {
         <Divider style={{ marginTop: "40px" }} />
         <h2>Platform Earnings</h2>
         <div style={{ display: runFlex ? "flex" : "", width: "100%" }}>
+					<div>
+						<Button
+							style={{ height: 40, marginTop: 10 }}
+							variant="outlined"
+							color="primary"
+							fullWidth={true}
+							onClick={() => {
+								handleEthereumConnection();
+							}}
+						>
+							Connect to Github
+						</Button>
+					</div>
           <div style={{ flex: 1, display: "flex" }}>
             <div>
               {userdata.eth_info !== undefined &&

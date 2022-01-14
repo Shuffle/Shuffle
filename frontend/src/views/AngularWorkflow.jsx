@@ -11998,6 +11998,7 @@ const AngularWorkflow = (defaultprops) => {
     	      <Button
     	        style={{ borderRadius: "0px" }}
     	        disabled={newVariableName.length === 0}
+							variant="contained"
     	        onClick={() => {
     	          console.log("VARIABLES! ", newVariableName);
     	          if (

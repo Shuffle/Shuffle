@@ -25,7 +25,9 @@ import {
   DialogActions,
   DialogContent,
   CircularProgress,
+  Zoom,
 } from "@material-ui/core";
+
 import {
   LockOpen as LockOpenIcon,
   OpenInNew as OpenInNewIcon,
@@ -201,6 +203,7 @@ const Apps = (props) => {
 
   const [isDropzone, setIsDropzone] = React.useState(false);
   const upload = React.useRef(null);
+  const [firstLoad, setFirstLoad] = React.useState(true);
   const isCloud =
     window.location.host === "localhost:3002" ||
     window.location.host === "shuffler.io"
@@ -343,7 +346,9 @@ const Apps = (props) => {
           }
         }
 
-        //runAppSearch("")
+				//setTimeout(() => {
+				//	setFirstLoad(false)
+				//}, 5000)
       })
       .catch((error) => {
         alert.error(error.toString());
@@ -435,7 +440,10 @@ const Apps = (props) => {
   };
 
   // dropdown with copy etc I guess
-  const appPaper = (data) => {
+  const AppPaper = (props) => {
+		const { app } = props
+		const data = app
+
     if (data.name === "" && data.id === "") {
       return null;
     }
@@ -1376,6 +1384,7 @@ const Apps = (props) => {
     }
   }, [appValidation, isDropzone]);
 
+	var appDelay = -75 
   const appView = isLoggedIn ? (
     <Dropzone
       style={{ width: viewWidth * 2 + 20, margin: "auto", padding: 20 }}
@@ -1504,13 +1513,28 @@ const Apps = (props) => {
             {apps.length > 0 ? (
               filteredApps.length > 0 ? (
                 <div style={{ height: "75vh", overflowY: "auto" }}>
-                  {filteredApps.map((app) => {
-                    return appPaper(app);
+                  {filteredApps.map((app, index) => {
+										if (firstLoad) {
+											appDelay += 75
+										} else {
+											//return returnData 
+                    	return <AppPaper app={app} />
+										}
+
+                    return (
+											<Zoom key={index} in={true} style={{ transitionDelay: `${appDelay}ms` }}>
+												<span>
+													<AppPaper app={app} />
+												</span>
+											</Zoom>
+										)
                   })}
                   {cursearch.length > 0
                     ? null
-                    : searchableApps.map((app) => {
-                        return appPaper(app);
+                    : searchableApps.map((app, index) => {
+                        return (
+													<AppPaper app={app} />
+												)
                       })}
                 </div>
               ) : (

@@ -2605,7 +2605,6 @@ const Workflows = (props) => {
 
     return (
       <div style={viewStyle}>
-
         <div style={workflowViewStyle}>
           <div style={{ display: "flex" }}>
             <div style={{ flex: 3 }}>
@@ -2724,71 +2723,75 @@ const Workflows = (props) => {
                   data.large_image = theme.palette.defaultImage;
                 }
 
+								const returnData = 
+									<span key={index} style={{ zIndex: 10 }}>
+										<IconButton
+											style={{
+												backgroundColor: "transparent",
+												margin: 0,
+												padding: 12,
+											}}
+											onClick={() => {
+												console.log("FILTER: ", data);
+												addFilter(data.app_name);
+											}}
+										>
+											<Tooltip
+												title={`Filter by ${data.app_name}`}
+												placement="top"
+											>
+												<Badge
+													badgeContent={0}
+													color="secondary"
+													style={{ fontSize: 10 }}
+												>
+													<div
+														style={{
+															height: imgSize,
+															width: imgSize,
+															position: "relative",
+															filter: "brightness(0.6)",
+															backgroundColor: "#000",
+															borderRadius: imgSize / 2,
+															zIndex: 100,
+															overflow: "hidden",
+															display: "flex",
+															justifyContent: "center",
+														}}
+													>
+														<img
+															style={{
+																height: imgSize,
+																width: imgSize,
+																position: "absolute",
+																top: -2,
+																left: -2,
+																cursor: "pointer",
+																zIndex: 99,
+																border: "2px solid rgba(255,255,255,0.7)",
+															}}
+															alt={data.app_name}
+															src={data.large_image}
+														/>
+													</div>
+												</Badge>
+											</Tooltip>
+										</IconButton>
+									</span>
+
 								if (firstLoad) {
 									appDelay += 75
 								} else {
-									appDelay = 0
+									//appDelay = 0
+									return returnData 
 								}
 
                 return (
 									<Zoom key={index} in={true} style={{ transitionDelay: `${appDelay}ms` }}>
-                  <span key={index} style={{ zIndex: 10 }}>
-                    <IconButton
-                      style={{
-                        backgroundColor: "transparent",
-                        margin: 0,
-                        padding: 12,
-                      }}
-                      onClick={() => {
-                        console.log("FILTER: ", data);
-                        addFilter(data.app_name);
-                      }}
-                    >
-                      <Tooltip
-                        title={`Filter by ${data.app_name}`}
-                        placement="top"
-                      >
-                        <Badge
-                          badgeContent={0}
-                          color="secondary"
-                          style={{ fontSize: 10 }}
-                        >
-                          <div
-                            style={{
-                              height: imgSize,
-                              width: imgSize,
-                              position: "relative",
-                              filter: "brightness(0.6)",
-                              backgroundColor: "#000",
-                              borderRadius: imgSize / 2,
-                              zIndex: 100,
-                              overflow: "hidden",
-                              display: "flex",
-                              justifyContent: "center",
-                            }}
-                          >
-                            <img
-                              style={{
-                                height: imgSize,
-                                width: imgSize,
-                                position: "absolute",
-                                top: -2,
-                                left: -2,
-                                cursor: "pointer",
-                                zIndex: 99,
-                                border: "2px solid rgba(255,255,255,0.7)",
-                              }}
-                              alt={data.app_name}
-                              src={data.large_image}
-                            />
-                          </div>
-                        </Badge>
-                      </Tooltip>
-                    </IconButton>
-                  </span>
+										{returnData}
 									</Zoom>
-                );
-              })}
+              );
+            })}
             </div>
           ) : null}
           {view === "grid" ? (
@@ -2796,11 +2799,16 @@ const Workflows = (props) => {
 							<Zoom in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>
               	<NewWorkflowPaper />
 							</Zoom>
+
               {filteredWorkflows.map((data, index) => {
   							if (firstLoad) {
 									workflowDelay += 75
 								} else {
-									workflowDelay = 0
+									return (
+      							<Grid item xs={4} style={{ padding: "12px 10px 12px 10px" }}>
+											<WorkflowPaper key={index} data={data} />
+      							</Grid>
+									)
 								}
 
                 return (
