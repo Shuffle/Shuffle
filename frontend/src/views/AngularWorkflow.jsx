@@ -2362,6 +2362,7 @@ const AngularWorkflow = (defaultprops) => {
         }
       }
 
+			console.log("DATA: ", data)
       setSelectedTriggerIndex(trigger_index);
       setSelectedTrigger(data);
       setSelectedActionEnvironment(data.env);
@@ -5527,8 +5528,12 @@ const AngularWorkflow = (defaultprops) => {
 
         for (var i = 0; i < incomingEdges.length; i++) {
           var tmp = incomingEdges[i];
-          if (!allkeys.includes(tmp.data().source)) {
-            allkeys.push(tmp.data().source);
+					if (tmp.data("decorator")) {
+						continue
+					}
+
+          if (!allkeys.includes(tmp.data("source"))) {
+            allkeys.push(tmp.data("source"));
           }
         }
       }
@@ -5540,9 +5545,10 @@ const AngularWorkflow = (defaultprops) => {
       iterations += 1;
     }
 
-    // Remove self
+    // Remove on the end as we don't want to remove everything
     results = results.filter((data) => data.id !== action.id);
-    results = results.filter((data) => data.type !== "TRIGGER");
+    results = results.filter((data) => data.type === "ACTION" || data.app_name === "Shuffle Workflow" || data.app_name === "User Input");
+		console.log("RESULTS:", results)
     results.push({ label: "Execution Argument", type: "INTERNAL" });
     return results;
   };
@@ -7302,44 +7308,11 @@ const AngularWorkflow = (defaultprops) => {
                 continue;
               }
 
-              foundResult.result = foundResult.result.trim();
-              foundResult.result = foundResult.result
-                .split(" None")
-                .join(' "None"');
-              foundResult.result = foundResult.result
-                .split(" False")
-                .join(" false");
-              foundResult.result = foundResult.result
-                .split(" True")
-                .join(" true");
-
-              var jsonvalid = true;
-              try {
-                if (
-                  !foundResult.result.includes("{") &&
-                  !foundResult.result.includes("[")
-                ) {
-                  jsonvalid = false;
-                }
-              } catch (e) {
-                try {
-                  foundResult.result = foundResult.result.split("'").join('"');
-                  if (
-                    !foundResult.result.includes("{") &&
-                    !foundResult.result.includes("[")
-                  ) {
-                    jsonvalid = false;
-                  }
-                } catch (e) {
-                  jsonvalid = false;
-                }
-              }
-
-              // Finds the FIRST json only
-              if (jsonvalid) {
-                exampledata = JSON.parse(foundResult.result);
-                break;
-              }
+							const validated = validateJson(foundResult.result) 
+							if (validated.valid) {
+								exampledata = validateJson.result
+								break
+							}
             }
           }
 
@@ -7350,7 +7323,7 @@ const AngularWorkflow = (defaultprops) => {
             name: item.label,
             autocomplete: `${item.label.split(" ").join("_")}`,
             example: exampledata,
-          };
+          }
           actionlist.push(actionvalue);
         }
       }
@@ -10181,6 +10154,7 @@ const AngularWorkflow = (defaultprops) => {
 						<ParsedAction
 							id="rightside_subactions"
 							isCloud={isCloud}
+							getParents={getParents}
 							actionDelayChange={actionDelayChange}
 							getAppAuthentication={getAppAuthentication}
 							appAuthentication={appAuthentication}

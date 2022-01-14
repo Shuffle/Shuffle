@@ -162,6 +162,7 @@ const ParsedAction = (props) => {
     appAuthentication,
     getAppAuthentication,
 		actionDelayChange,
+		getParents,
 		isCloud,
   } = props;
 
@@ -186,62 +187,6 @@ const ParsedAction = (props) => {
     "parse(",
     "join(",
   ];
-  const getParents = (action) => {
-    if (cy === undefined) {
-      return [];
-    }
-
-    var allkeys = [action.id];
-    var handled = [];
-    var results = [];
-
-    while (true) {
-      for (var key in allkeys) {
-        var currentnode = cy.getElementById(allkeys[key]);
-        if (currentnode === undefined) {
-          continue;
-        }
-
-        if (handled.includes(currentnode.data("id"))) {
-          continue;
-        } else {
-          // Get the name / label here too?
-          handled.push(currentnode.data("id"));
-          results.push(currentnode.data());
-        }
-
-        if (currentnode.length === 0) {
-          continue;
-        }
-
-        const incomingEdges = currentnode.incomers("edge");
-        if (incomingEdges.length === 0) {
-          continue;
-        }
-
-        for (var i = 0; i < incomingEdges.length; i++) {
-          var tmp = incomingEdges[i];
-          if (!allkeys.includes(tmp.data().source)) {
-            allkeys.push(tmp.data().source);
-          }
-        }
-      }
-      if (results.length === allkeys.length) {
-        break;
-      }
-    }
-
-    // Some obscure bug made this have to be done.. zz
-    results = results.filter(
-      (data) =>
-        data !== undefined && action !== undefined && data.id !== action.id
-    );
-    results = results.filter(
-      (data) => data !== undefined && data.type !== "TRIGGER"
-    );
-    results.push({ label: "Execution Argument", type: "INTERNAL" });
-    return results;
-  };
 
   const getApp = (appId, setApp) => {
     fetch(globalUrl + "/api/v1/apps/" + appId + "/config?openapi=false", {
