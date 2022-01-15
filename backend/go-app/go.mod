@@ -2,7 +2,7 @@ module main
 
 go 1.15
 
-//replace github.com/shuffle/shuffle-shared => ../../../../git/shuffle-shared
+replace github.com/shuffle/shuffle-shared => ../../../../git/shuffle-shared
 
 //replace github.com/frikky/kin-openapi => ../../../../git/kin-openapi
 //replace github.com/frikky/go-elasticsearch => ../../../../git/go-elasticsearch
@@ -14,7 +14,7 @@ require (
 	github.com/basgys/goxml2json v1.1.0
 	github.com/carlescere/scheduler v0.0.0-20170109141437-ee74d2f83d82
 	github.com/docker/docker v20.10.9+incompatible
-	github.com/frikky/kin-openapi v0.40.0
+	github.com/frikky/kin-openapi v0.41.0
 	github.com/fsouza/go-dockerclient v1.7.4
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-git/go-billy/v5 v5.3.1

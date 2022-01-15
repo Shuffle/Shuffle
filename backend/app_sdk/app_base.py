@@ -13,6 +13,7 @@ import asyncio
 import requests
 import http.client
 import urllib.parse
+import jinja2 
 from io import BytesIO
 from liquid import Liquid
 
@@ -1764,6 +1765,7 @@ class AppBase:
 
                 #self.logger.info(globals())
                 self.logger.info("[DEBUG] Running liquid with data of length %d" % len(template))
+                #self.logger.info(f"[DEBUG] Data: {template}")
                 run = Liquid(template, mode="wild", from_file=False)
 
                 # Can't handle self yet (?)
@@ -1777,6 +1779,36 @@ class AppBase:
                 self.logger.info(f"[ERROR] Liquid Syntax error: {e}")
                 error = True
                 error_msg = e
+            except TypeError as e:
+                try:
+                    if "string as left operand" in f"{e}":
+                        #print(f"HANDLE REPLACE: {template}")
+                        split_left = template.split("|")
+                        if len(split_left) < 2:
+                            return template
+
+                        splititem = split_left[0]
+                        additem = "{{"
+                        if "{{" in splititem:
+                            splititem = splititem.replace("{{", "", -1)
+
+                        if "{%" in splititem:
+                            splititem = splititem.replace("{%", "", -1)
+                            additem = "{%"
+
+                        splititem = "%s \"%s\"" % (additem, splititem.strip())
+                        parsed_template = template.replace(split_left[0], splititem)
+                        run = Liquid(parsed_template, mode="wild", from_file=False)
+                        return run.render(**globals())
+
+                except Exception as e:
+                    print(f"SubError in Liquid: {e}")
+                    #return template
+
+                self.logger.info(f"[ERROR] Liquid TypeError error: {e}")
+                error = True
+                error_msg = e
+
             except Exception as e:
                 self.logger.info(f"[ERROR] General exception for liquid: {e}")
                 error = True
@@ -2468,6 +2500,11 @@ class AppBase:
                                             newvalue = tmpitem.replace(str(actualitem[index][0]), str(json_replacement[i]), 1)
 
                                         try:
+                                            newvalue = parse_liquid(newvalue, self)
+                                        except Exception as e:
+                                            self.logger.info(f"[WARNING] Failed liquid parsing in loop (2): {e}")
+
+                                        try:
                                             newvalue = json.loads(newvalue)
                                         except json.decoder.JSONDecodeError as e:
                                             self.logger.info("DECODER ERROR: %s" % e)
@@ -2477,7 +2514,7 @@ class AppBase:
 
                                     self.logger.info("New replacement: %s" % new_replacement)
 
-                                    # New
+                                    # FIXME: Should this use new_replacement?
                                     tmpitem = tmpitem.replace(actualitem[index][0], replacement, 1)
 
                                     # This code handles files.
@@ -2579,6 +2616,10 @@ class AppBase:
                                             #self.logger.info("REPLACING %s with %s" % (key, replacement))
                                             #replacement = parse_wrapper_start(replacement)
                                             tmpitem = tmpitem.replace(key, replacement, -1)
+                                            try:
+                                                tmpitem = parse_liquid(tmpitem, self)
+                                            except Exception as e:
+                                                self.logger.info(f"[WARNING] Failed liquid parsing in loop (2): {e}")
 
 
                                         # This code handles files.

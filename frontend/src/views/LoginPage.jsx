@@ -10,7 +10,9 @@ import {
   Paper,
   Typography,
 } from "@material-ui/core";
+
 import { useTheme } from "@material-ui/core/styles";
+import { useNavigate } from "react-router-dom";
 
 const hrefStyle = {
   color: "white",
@@ -31,6 +33,7 @@ const useStyles = makeStyles({
 
 const LoginDialog = (props) => {
   const theme = useTheme();
+	let navigate = useNavigate();
 
   const {
     globalUrl,
@@ -62,7 +65,8 @@ const LoginDialog = (props) => {
   };
 
   if (isLoggedIn === true) {
-    window.location.pathname = "/workflows";
+    //window.location.pathname = "/workflows";
+    navigate("/workflows")
   }
 
   const checkAdmin = () => {
@@ -99,7 +103,7 @@ const LoginDialog = (props) => {
             }
 
             if (responseJson.reason === "stay") {
-              window.location.pathname = "/adminsetup";
+              navigate("/adminsetup")
             }
           }
         })
@@ -176,7 +180,7 @@ const LoginDialog = (props) => {
 
               setIsLoggedIn(true);
 
-              window.location.pathname = "/workflows";
+              navigate("/workflows")
             }
           })
         )
@@ -468,7 +472,7 @@ const LoginDialog = (props) => {
                     style={{ flex: "1", marginTop: 5 }}
                     onClick={() => {
                       console.log("CLICK");
-                      window.location = ssoUrl;
+                      navigate(ssoUrl)
                     }}
                   >
                     Use SSO

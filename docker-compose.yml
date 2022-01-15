@@ -61,7 +61,7 @@ services:
       - SHUFFLE_PASS_APP_PROXY=${SHUFFLE_PASS_APP_PROXY}
       - SHUFFLE_SWARM_NETWORK_NAME=shuffle_swarm_executions
       - SHUFFLE_SCALE_REPLICAS=1
-      - SHUFFLE_SWARM_CONFIG=run
+      - SHUFFLE_SWARM_CONFIG=runn
     restart: unless-stopped
   opensearch:
     image: opensearchproject/opensearch:1.2.3
@@ -93,6 +93,7 @@ services:
     restart: unless-stopped
 networks:
   shuffle:
-    driver: overlay 
+    driver: bridge
     
+#driver: overlay 
 #driver: bridge
