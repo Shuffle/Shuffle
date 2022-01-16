@@ -2820,6 +2820,7 @@ class AppBase:
                                     self.logger.info("[INFO] NO FILES TO HANDLE")
 
                                 tmp_result = {
+                                    "success": True,
                                     "result": newres[0], 
                                     "file_ids": file_ids
                                 }

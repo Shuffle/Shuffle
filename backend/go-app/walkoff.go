@@ -1655,7 +1655,7 @@ func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000)
+	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000, 0)
 	if err != nil {
 		log.Printf("{WARNING] Failed getting apps (getworkflowapps): %s", err)
 		resp.WriteHeader(401)
@@ -1753,7 +1753,7 @@ func getSpecificApps(resp http.ResponseWriter, request *http.Request) {
 	// FIXME - continue the search here with github repos etc.
 	// Caching might be smart :D
 	ctx := context.Background()
-	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000)
+	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000, 0)
 	if err != nil {
 		log.Printf("Error: Failed getting workflowapps: %s", err)
 		resp.WriteHeader(401)
@@ -2030,7 +2030,7 @@ func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
 func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, onlyname string) error {
 
 	ctx := context.Background()
-	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000)
+	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000, 0)
 	appCounter := 0
 	if err != nil {
 		log.Printf("Failed to get existing generated apps")
@@ -2329,7 +2329,7 @@ func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	ctx := context.Background()
-	allapps, err := shuffle.GetAllWorkflowApps(ctx, 1000)
+	allapps, err := shuffle.GetAllWorkflowApps(ctx, 1000, 0)
 	if err != nil {
 		log.Printf("Failed getting apps to verify: %s", err)
 		resp.WriteHeader(401)
@@ -2797,7 +2797,7 @@ func IterateAppGithubFolders(ctx context.Context, fs billy.Filesystem, dir []os.
 				}
 
 				if len(allapps) == 0 {
-					allapps, err = shuffle.GetAllWorkflowApps(ctx, 0)
+					allapps, err = shuffle.GetAllWorkflowApps(ctx, 0, 0)
 					if err != nil {
 						log.Printf("[WARNING] Failed getting apps to verify: %s", err)
 						continue

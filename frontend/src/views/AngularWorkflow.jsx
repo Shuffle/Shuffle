@@ -1434,7 +1434,7 @@ const AngularWorkflow = (defaultprops) => {
           //);
 
 					var tmpFiltered = responseJson.filter((app) => !internalIds.includes(app.name))
-					tmpFiltered = sortByKey(tmpFiltered, "activated")
+					//tmpFiltered = sortByKey(tmpFiltered, "activated")
           setFilteredApps(tmpFiltered)
 
         	//!(!app.activated && app.generated)
@@ -1806,8 +1806,6 @@ const AngularWorkflow = (defaultprops) => {
 				currentedge.style('control-point-distance', edgeCurve.distance)
 				currentedge.style('control-point-weight', edgeCurve.weight)
 			}
-
-
 		}
 
     if (styledElements.length === 1) {
@@ -4028,8 +4026,8 @@ const AngularWorkflow = (defaultprops) => {
 			const destinationnode = actions.find(node => node.data._id === branch.destination_id)
 			if (sourcenode !== undefined && destinationnode !== undefined && branch.source_id !== branch.destination_id) { 
 				//node.data._id = action["id"]
-				console.log("SOURCE: ", sourcenode.position)
-				console.log("DESTINATIONNODE: ", destinationnode.position)
+				//console.log("SOURCE: ", sourcenode.position)
+				//console.log("DESTINATIONNODE: ", destinationnode.position)
 
 				const edgeCurve = calculateEdgeCurve(sourcenode, destinationnode)
 				edge.style = {
@@ -5184,10 +5182,14 @@ const AngularWorkflow = (defaultprops) => {
       const image = app.large_image;
       const newAppStyle = JSON.parse(JSON.stringify(paperAppStyle));
       const pixelSize = !hover ? "2px" : "4px";
-      //) && !(!app.activated && app.generated)
-      newAppStyle.borderLeft = app.is_valid && app.actions !== null && app.actions !== undefined && app.actions.length > 0 && !(app.activated && app.generated)
+      //newAppStyle.borderLeft = app.is_valid && app.actions !== null && app.actions !== undefined && app.actions.length > 0 && !(app.activated && app.generated)
+      newAppStyle.borderLeft = app.is_valid && app.actions !== null && app.actions !== undefined && app.actions.length > 0 
         ? `${pixelSize} solid ${green}`
         : `${pixelSize} solid ${yellow}`;
+
+			if (!app.activated && app.generated) {
+        newAppStyle.borderLeft = `${pixelSize} solid ${yellow}`;
+			}
 
       return (
         <Draggable

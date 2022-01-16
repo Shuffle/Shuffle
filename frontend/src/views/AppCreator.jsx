@@ -283,6 +283,7 @@ const AppCreator = (defaultprops) => {
   const [appBuilding, setAppBuilding] = useState(false);
   const [extraBodyFields, setExtraBodyFields] = useState([]);
   const [fileUploadEnabled, setFileUploadEnabled] = useState(false);
+  const [fileDownloadEnabled, setFileDownloadEnabled] = useState(false);
   const [actionAmount, setActionAmount] = useState(increaseAmount);
   const defaultAuth = {
     name: "",
@@ -954,6 +955,7 @@ const AppCreator = (defaultprops) => {
                   methodvalue.responses.default.content["text/plain"] !==
                   undefined
                 ) {
+									console.log("RESP: ", path, methodvalue.responses.default.content["text/plain"])
                   if (
                     methodvalue.responses.default.content["text/plain"][
                       "schema"
@@ -967,8 +969,13 @@ const AppCreator = (defaultprops) => {
                       newaction.example_response =
                         methodvalue.responses.default.content["text/plain"][
                           "schema"
-                        ]["example"];
+                        ]["example"]
+
                     }
+
+                    if (methodvalue.responses.default.content["text/plain"]["schema"]["format"] === "binary" && methodvalue.responses.default.content["text/plain"]["schema"]["type"] === "string") {
+                  		newaction.example_response = "shuffle_file_download"
+										}
                   }
                 }
               }
@@ -1636,6 +1643,7 @@ const AppCreator = (defaultprops) => {
         item.name = item.description;
       }
 
+
 			// Basic way to allow multiple of the same path 
 			var pathjoin = item.url+"_"+item.method.toLowerCase()
 			if (handledPaths.includes(pathjoin)) {
@@ -1699,38 +1707,60 @@ const AppCreator = (defaultprops) => {
 
       if (
         item.example_response !== undefined &&
+        item.example_response !== null &&
         item.example_response.length > 0
       ) {
-        // FIXME: Shallow copy of the string
-        var showResult = Object.assign("", item.example_response).trim();
-        showResult = showResult.split(" None").join(' "None"');
-        showResult = showResult.split("'").join('"');
-        showResult = showResult.split(" False").join(" false");
-        showResult = showResult.split(" True").join(" true");
 
-        var jsonvalid = true;
-        try {
-          const tmp = String(JSON.parse(showResult));
-          if (!showResult.includes("{") && !showResult.includes("[")) {
-            jsonvalid = false;
-          }
-        } catch (e) {
-          jsonvalid = false;
-        }
+				if (item["example_response"] === "shuffle_file_download") {
+					console.log("Download as file: ", item)
 
-        data.paths[item.url][item.method.toLowerCase()].responses["default"][
-          "content"
-        ]["text/plain"].schema.type = "string";
-        if (jsonvalid) {
-          // FIXME: Add a JSON parser here - don't run it as a string.
-          data.paths[item.url][item.method.toLowerCase()].responses["default"][
-            "content"
-          ]["text/plain"].schema.example = showResult;
-        } else {
-          data.paths[item.url][item.method.toLowerCase()].responses["default"][
-            "content"
-          ]["text/plain"].schema.example = item.example_response;
-        }
+					data.paths[item.url][item.method.toLowerCase()].responses["default"]["content"]["text/plain"].schema.type = "string"
+					data.paths[item.url][item.method.toLowerCase()].responses["default"]["content"]["text/plain"].schema.format = "binary"
+
+					/*
+					schema:
+						type: object
+						properties:
+							username:
+								type: string
+							avatar:          # <-- image embedded into JSON
+								type: string
+								format: byte
+								description: Base64-encoded contents of the avatar image
+					*/
+
+				} else {
+					// FIXME: Shallow copy of the string
+					var showResult = Object.assign("", item.example_response).trim();
+					showResult = showResult.split(" None").join(' "None"');
+					showResult = showResult.split("'").join('"');
+					showResult = showResult.split(" False").join(" false");
+					showResult = showResult.split(" True").join(" true");
+
+					var jsonvalid = true;
+					try {
+						const tmp = String(JSON.parse(showResult));
+						if (!showResult.includes("{") && !showResult.includes("[")) {
+							jsonvalid = false;
+						}
+					} catch (e) {
+						jsonvalid = false;
+					}
+
+					data.paths[item.url][item.method.toLowerCase()].responses["default"][
+						"content"
+					]["text/plain"].schema.type = "string";
+					if (jsonvalid) {
+						// FIXME: Add a JSON parser here - don't run it as a string.
+						data.paths[item.url][item.method.toLowerCase()].responses["default"][
+							"content"
+						]["text/plain"].schema.example = showResult;
+					} else {
+						data.paths[item.url][item.method.toLowerCase()].responses["default"][
+							"content"
+						]["text/plain"].schema.example = item.example_response;
+					}
+				}
       }
 
       if (item.queries.length > 0) {
@@ -2915,9 +2945,10 @@ const AppCreator = (defaultprops) => {
 
           const url = data.url;
           const hasFile =
-            data["file_field"] !== undefined &&
+            (data["file_field"] !== undefined &&
             data["file_field"] !== null &&
-            data["file_field"].length > 0;
+            data["file_field"].length > 0) || data["example_response"] === "shuffle_file_download"
+
           return (
             <Paper key={index} style={actionListStyle}>
               {error}
@@ -3135,7 +3166,7 @@ const AppCreator = (defaultprops) => {
     </div>
   ) : null;
 
-  const exampleResponse = (
+  const exampleResponse = fileDownloadEnabled ? null : (
     <div style={{}}>
       <b>Example success response</b>
       <TextField
@@ -3747,6 +3778,29 @@ const AppCreator = (defaultprops) => {
               }}
             >
               Enable Fileupload
+            </Button>
+          ) : null}
+          {currentActionMethod === "GET" ? (
+            <Button
+              color="primary"
+              variant={fileDownloadEnabled ? "contained" : "outlined"}
+              style={{
+                marginLeft: 10,
+                marginTop: "5px",
+                marginBottom: "10px",
+                borderRadius: "0px",
+              }}
+              onClick={() => {
+                setFileDownloadEnabled(!fileDownloadEnabled);
+                if (fileDownloadEnabled) {
+                  setActionField("example_response", "");
+								} else {
+                  setActionField("example_response", "shuffle_file_download");
+								}
+                setUpdate(Math.random());
+              }}
+            >
+							Download as file
             </Button>
           ) : null}
           {fileUploadEnabled ? (

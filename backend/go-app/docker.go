@@ -699,7 +699,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 	// REBUILDS THE APP
 	if len(img.ID) == 0 {
 		if len(img2.ID) == 0 {
-			workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 0)
+			workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 0, 0)
 			log.Printf("[INFO] Getting workflowapps for a rebuild. Got %d with err %#v", len(workflowapps), err)
 			if err == nil {
 				imageName := ""
