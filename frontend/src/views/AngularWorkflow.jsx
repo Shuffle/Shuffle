@@ -1665,6 +1665,10 @@ const AngularWorkflow = (defaultprops) => {
 		}
 		*/
 
+  	cy.removeListener("select");
+		cy.on("select", "node", (e) => onNodeSelect(e, appAuthentication));
+		cy.on("select", "edge", (e) => onEdgeSelect(e));
+
     // FIXME - check if they have value before overriding like this for no reason.
     // Would save a lot of time (400~ ms -> 30ms)
     //console.log("ACTION: ", selectedAction)
@@ -1800,7 +1804,7 @@ const AngularWorkflow = (defaultprops) => {
 				continue
 			}
 
-			const edgeCurve = calculateEdgeCurve(sourcenode.data(), destinationnode.data()) 
+			const edgeCurve = calculateEdgeCurve(sourcenode.position(), destinationnode.position()) 
       const currentedge = cy.getElementById(edge.data.id)
 			if (currentedge !== undefined && currentedge !== null) {
 				currentedge.style('control-point-distance', edgeCurve.distance)
@@ -3485,8 +3489,11 @@ const AngularWorkflow = (defaultprops) => {
       });
 
       cy.on("boxend", (e) => {
-        console.log("END");
-        cy.removeListener("select");
+				console.log("END: ", cy)
+				var cydata = cy.$(":selected").jsons();
+				if (cydata !== undefined && cydata !== null && cydata.length > 0) {
+        	alert.success(`Selected ${cydata.length} element(s). CTRL+C to copy them.`);
+				}
       });
 
       cy.on("select", "node", (e) => {
@@ -3842,9 +3849,9 @@ const AngularWorkflow = (defaultprops) => {
 
 	// Thanks :)
 	// https://codepen.io/guillaumethomas/pen/xxbbBKO
-	const calculateEdgeCurve = (sourcenode, destinationnode) => {
-		const xParsed = destinationnode.position.x - sourcenode.position.x
-		const yParsed = destinationnode.position.y - sourcenode.position.y
+	const calculateEdgeCurve = (sourcenodePosition, destinationnodePosition) => {
+		const xParsed = destinationnodePosition.x - sourcenodePosition.x
+		const yParsed = destinationnodePosition.y - sourcenodePosition.y
 
 		const z = Math.sqrt(xParsed * xParsed + yParsed * yParsed);
 		const costheta = xParsed / z;
@@ -4029,7 +4036,7 @@ const AngularWorkflow = (defaultprops) => {
 				//console.log("SOURCE: ", sourcenode.position)
 				//console.log("DESTINATIONNODE: ", destinationnode.position)
 
-				const edgeCurve = calculateEdgeCurve(sourcenode, destinationnode)
+				const edgeCurve = calculateEdgeCurve(sourcenode.position, destinationnode.position)
 				edge.style = {
 					'control-point-distance':  edgeCurve.distance,
 					'control-point-weight': edgeCurve.weight,
