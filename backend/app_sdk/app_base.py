@@ -2782,7 +2782,7 @@ class AppBase:
                                             "exception": f"TypeError: {e}",
                                         })
 
-                            # Forcing async wait in case of old apps that use async
+                            # Forcing async wait in case of old apps that use async (backwards compatibility)
                             try:
                                 if asyncio.iscoroutine(newres):
                                     self.logger.info("[DEBUG] In coroutine (1)")
@@ -2802,7 +2802,7 @@ class AppBase:
                             self.logger.info("\n[INFO] Returned from execution with types %s" % type(newres))
                             #self.logger.info("\n[INFO] Returned from execution with %s of types %s" % (newres, type(newres)))#, newres)
                             if isinstance(newres, tuple):
-                                self.logger.info("[INFO] Handling return as tuple")
+                                self.logger.info(f"[INFO] Handling return as tuple: {newres}")
                                 # Handles files.
                                 filedata = ""
                                 file_ids = []
@@ -2858,111 +2858,6 @@ class AppBase:
                             results = self.run_recursed_items(func, multi_parameters, {})
                             if isinstance(results, dict) or isinstance(results, list):
                                 json_object = True
-
-                            #for i in range(0, minlength):
-                            #    # To be able to use the results as a list:
-                            #    self.logger.info("1: %s" % multi_parameters)
-                            #    #baseparams = json.loads(json.dumps(multi_parameters))
-                            #    baseparams = copy.deepcopy(multi_parameters)
-
-                            #    self.logger.info("2: %s: %s" % (type(baseparams), baseparams))
-
-                            #    self.logger.info("4")
-                            #    self.logger.info("Running with params (1): %s" % baseparams) 
-
-                            #    results = await self.run_recursed_items(func, baseparams, {})
-                            #    if isinstance(results, dict) or isinstance(results, list):
-                            #        json_object = True
-
-                                # {'call': ['GoogleSafebrowsing_2_0', 'VirusTotal_GetReport_3_0']}
-                                # 1. Check if list length is same as minlength
-                                # 2. If NOT same length, duplicate based on length of array
-                                # arraylength = 3 ["1", "2", "3"]
-                                # arraylength = 4 ["1", "2", "3", "4"]
-                                # minlength = 12 - 12/3 = 4 per item = ["1", "1", "1", "1", "2", "2", ...]
-
-                                #try:
-                                #    firstlist = True
-                                #    for key, value in baseparams.items():
-                                #        self.logger.info("Itemtype: %s" % type(value))
-                                #        if isinstance(value, list):
-                                #            try:
-                                #                newvalue = value[i]
-                                #            except IndexError:
-                                #                pass
-
-                                #            if len(value) != minlength and len(value) > 0:
-                                #                newarray = []
-                                #                self.logger.info("VALUE: ", value)
-                                #                additiontime = minlength/len(value)
-                                #                self.logger.info("Bad length for value: %d - should be %d. Additiontime: %d" % (len(value), minlength, additiontime))
-                                #                if firstlist:
-                                #                    self.logger.info("Running normal list (FIRST)")
-                                #                    for subvalue in value:
-                                #                        for number in range(int(additiontime)):
-                                #                            newarray.append(subvalue)
-                                #                else:
-                                #                    #self.logger.info("Running secondary lists")
-                                #                    ## 1. Set up length of array
-                                #                    ## 2. Put values spread out
-                                #                    # FIXME: This works well, except if lists are same length
-                                #                    newarray = [""] * minlength
-
-                                #                    cnt = 0
-                                #                    for number in range(int(additiontime)):
-                                #                        for subvaluerange in range(len(value)):
-                                #                            # newlocation = number+(additiontime*subvaluerange)
-                                #                            # self.logger.info("%d+(%d*%d) = %d. VAL: %s" % (number, additiontime, subvaluerange, newlocation, value[subvaluerange]))
-                                #                            # Reverse if same length?
-                                #                            if int(minlength/len(value)) == len(value):
-                                #                                tmp = int(len(value)-subvaluerange-1)
-                                #                                self.logger.info("NEW: %d" % tmp)
-                                #                                newarray[cnt] = value[tmp] 
-                                #                            else:
-                                #                                newarray[cnt] = value[subvaluerange] 
-                                #                            cnt += 1
-
-                                #                #self.logger.info("Newarray =", newarray)
-                                #                newvalue = newarray[i]
-                                #                firstlist = False
-
-                                #            baseparams[key] = newvalue
-
-                                #    self.logger.info("3")
-                                #except IndexError as e:
-                                #    self.logger.info("IndexError: %s" % e)
-                                #    baseparams[key] = "IndexError: %s" % e
-                                #except KeyError as e:
-                                #    self.logger.info("KeyError: %s" % e)
-                                #    baseparams[key] = "KeyError: %s" % e
-                                #self.logger.info("4")
-                                #self.logger.info("Running with params (1): %s" % baseparams) 
-
-                                #results = await self.run_recursed_items(func, baseparams, {})
-                                #if isinstance(results, dict) or isinstance(results, list):
-                                #    json_object = True
-
-                                # Check the structure here. If "isloop", try to recurse?
-                                # ret, is_loop = recurse_json(innervalue, parsersplit[outercnt+1:])
-                                #ret = await func(**baseparams)
-                                #self.logger.info("Return from execution: %s" % ret)
-                                #if ret == None:
-                                #    results.append("")
-                                #    json_object = False
-                                #elif isinstance(ret, dict) or isinstance(ret, list):
-                                #    results.append(ret)
-                                #    json_object = True
-                                #else:
-                                #    ret = ret.replace("\"", "\\\"", -1)
-
-                                #    try:
-                                #        results.append(json.loads(ret))
-                                #        json_object = True
-                                #    except json.decoder.JSONDecodeError as e:
-                                #        #self.logger.info("Json: %s" % e)
-                                #        results.append(ret)
-
-                                #self.logger.info("Inner ret parsed: %s" % ret)
 
                             # Dump the result as a string of a list
                             #self.logger.info("RESULTS: %s" % results)

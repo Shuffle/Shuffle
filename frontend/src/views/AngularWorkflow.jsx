@@ -1425,13 +1425,19 @@ const AngularWorkflow = (defaultprops) => {
             responseJson.filter((app) => internalIds.includes(app.name))
           );
         } else {
-          setFilteredApps(
-            responseJson.filter(
-              (app) =>
-                !internalIds.includes(app.name) &&
-                !(!app.activated && app.generated)
-            )
-          );
+          //setFilteredApps(
+          //  responseJson.filter(
+          //    (app) =>
+          //      !internalIds.includes(app.name) &&
+          //      !(!app.activated && app.generated)
+          //  )
+          //);
+
+					var tmpFiltered = responseJson.filter((app) => !internalIds.includes(app.name))
+					tmpFiltered = sortByKey(tmpFiltered, "activated")
+          setFilteredApps(tmpFiltered)
+
+        	//!(!app.activated && app.generated)
           setPrioritizedApps(
             responseJson.filter((app) => internalIds.includes(app.name))
           );
@@ -1781,6 +1787,29 @@ const AngularWorkflow = (defaultprops) => {
       return;
     }
 
+		const connected = event.target.connectedEdges().jsons()
+		for (var key in connected) {
+			const edge = connected[key]
+			//console.log("EDGE:", edge)
+
+			//const edge = edgeBase.json()
+
+      const sourcenode = cy.getElementById(edge.data.source)
+      const destinationnode = cy.getElementById(edge.data.target)
+			if (sourcenode === undefined || sourcenode === null || destinationnode === undefined || destinationnode === null) {
+				continue
+			}
+
+			const edgeCurve = calculateEdgeCurve(sourcenode.data(), destinationnode.data()) 
+      const currentedge = cy.getElementById(edge.data.id)
+			if (currentedge !== undefined && currentedge !== null) {
+				currentedge.style('control-point-distance', edgeCurve.distance)
+				currentedge.style('control-point-weight', edgeCurve.weight)
+			}
+
+
+		}
+
     if (styledElements.length === 1) {
       console.log(
         "Should reset location and autofill: ",
@@ -1931,6 +1960,8 @@ const AngularWorkflow = (defaultprops) => {
     if (nodedata.id === selectedAction.id) {
       return;
     }
+
+
 
     /*
 		// Tried looking for the closest node by position. aStar path not working entirely.
@@ -2381,6 +2412,34 @@ const AngularWorkflow = (defaultprops) => {
       selected: "",
     });
   };
+
+	const activateApp = (appid) => {
+		fetch(globalUrl+"/api/v1/apps/"+appid+"/activate", {
+    	  method: 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json',
+				},
+	  		credentials: "include",
+    })
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Failed to activate")
+			}
+
+			return response.json()
+		})
+		.then((responseJson) => {
+			if (responseJson.success === false) {
+				alert.error("Failed to activate the app")
+			} else {
+				alert.success("App activated for your organization!")
+			}
+		})
+		.catch(error => {
+			alert.error(error.toString())
+		});
+	}
 
   const GetExampleResult = (item) => {
     var exampledata = item.example === undefined ? "" : item.example;
@@ -3426,6 +3485,7 @@ const AngularWorkflow = (defaultprops) => {
         console.log("START");
         cy.removeListener("select");
       });
+
       cy.on("boxend", (e) => {
         console.log("END");
         cy.removeListener("select");
@@ -3726,7 +3786,7 @@ const AngularWorkflow = (defaultprops) => {
       return;
     }
 
-    event.target.removeStyle();
+    //event.target.removeStyle();
   };
 
   // This is here to have a proper transition for lines
@@ -3756,6 +3816,7 @@ const AngularWorkflow = (defaultprops) => {
     ) {
 			console.log(sourcecolor)
 			console.log(targetcolor)
+
 			if (event.target !== null && event.target.value !== null) {
 				event.target.animate({
 					style: {
@@ -3779,7 +3840,52 @@ const AngularWorkflow = (defaultprops) => {
 
 			}
     }
-  };
+  }
+
+	// Thanks :)
+	// https://codepen.io/guillaumethomas/pen/xxbbBKO
+	const calculateEdgeCurve = (sourcenode, destinationnode) => {
+		const xParsed = destinationnode.position.x - sourcenode.position.x
+		const yParsed = destinationnode.position.y - sourcenode.position.y
+
+		const z = Math.sqrt(xParsed * xParsed + yParsed * yParsed);
+		const costheta = xParsed / z;
+		const alpha = 0.25;
+		var controlPointDistance = [-alpha * yParsed * costheta, alpha * yParsed * costheta];
+		var controlPointWeight = [alpha, 1-alpha]
+
+		//'control-point-weight': ['0.33', '0.66'],
+		//var controlPointWeight = ["0.33", "0.66"]
+		//var controlPointDistance = ["33%", "-66%"]
+		//var controlPointWeight = ["0.00", "1.00"]
+		/*
+		if (yParsed !== 0) {
+			//const degreeFound = Math.atan2(xParsed / yParsed)
+			const degreeFound = Math.atan2(xParsed, yParsed) * 180 / Math.PI
+
+			if (degreeFound > 90 && degreeFound < 180) {
+				console.log("TOPRIGHT")
+			} else if (degreeFound < 90 && degreeFound > 0) {
+				console.log("BOTTOMRIGHT")
+			} else if (degreeFound < 0 && degreeFound > -90) {
+				console.log("BOTTOMLEFT")
+				//controlPointWeight = ["0.20", "0.80"]
+				//controlPointWeight = "0.7"
+				//controlPointDistance = "50%" 
+
+			} else if (degreeFound < -90 && degreeFound > -180) {
+				console.log("TOPLEFT")
+			} else {
+				console.log("STRAIGHT!")
+			}
+		}
+		*/
+
+		return {
+			"distance": controlPointDistance,
+			"weight": controlPointWeight,
+		}
+	}
 
   const setupGraph = () => {
     const actions = workflow.actions.map((action) => {
@@ -3916,7 +4022,7 @@ const AngularWorkflow = (defaultprops) => {
       };
 
       // This is an attempt at prettier edges. The numbers are weird to work with.
-      /*
+			// Bezier curves
 			//http://manual.graphspace.org/projects/graphspace-python/en/latest/demos/edge-types.html
 			const sourcenode = actions.find(node => node.data._id === branch.source_id)
 			const destinationnode = actions.find(node => node.data._id === branch.destination_id)
@@ -3925,19 +4031,12 @@ const AngularWorkflow = (defaultprops) => {
 				console.log("SOURCE: ", sourcenode.position)
 				console.log("DESTINATIONNODE: ", destinationnode.position)
 
-				var opposite = true 
-				if (sourcenode.position.x > destinationnode.position.x) {
-					opposite = false 
-				} else {
-					opposite = true 
-				}
-
+				const edgeCurve = calculateEdgeCurve(sourcenode, destinationnode)
 				edge.style = {
-					'control-point-distance': opposite ? ["25%", "-75%"] : ["-10%", "90%"],
-					'control-point-weight': ['0.3', '0.7'],
+					'control-point-distance':  edgeCurve.distance,
+					'control-point-weight': edgeCurve.weight,
 				}
 			}
-			*/
 
       return edge;
     });
@@ -4846,6 +4945,13 @@ const AngularWorkflow = (defaultprops) => {
 
     var newAppData = parsedApp.data;
     if (newAppData.type === "ACTION") {
+	
+			//const activateApp = (appid) => {
+			if (newAppData.activated === false) {
+				console.log("SHOULD ACTIVATE!")
+				activateApp(newAppData.app_id) 
+			}
+
       // AUTHENTICATION
       if (app.authentication.required) {
         // Setup auth here :)
@@ -4995,6 +5101,7 @@ const AngularWorkflow = (defaultprops) => {
             ? "cloud"
             : environments[defaultEnvironmentIndex].Name;
 
+      	// activated: app.generated === true ? app.activated === false ? false : true : true,
         const newAppData = {
           app_name: app.name,
           app_version: app.app_version,
@@ -5077,7 +5184,8 @@ const AngularWorkflow = (defaultprops) => {
       const image = app.large_image;
       const newAppStyle = JSON.parse(JSON.stringify(paperAppStyle));
       const pixelSize = !hover ? "2px" : "4px";
-      newAppStyle.borderLeft = app.is_valid && app.actions !== null && app.actions !== undefined && app.actions.length > 0 
+      //) && !(!app.activated && app.generated)
+      newAppStyle.borderLeft = app.is_valid && app.actions !== null && app.actions !== undefined && app.actions.length > 0 && !(app.activated && app.generated)
         ? `${pixelSize} solid ${green}`
         : `${pixelSize} solid ${yellow}`;
 

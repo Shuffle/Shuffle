@@ -801,3 +801,111 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 
 	//resp.WriteHeader(200)
 }
+
+func activateWorkflowAppDocker(resp http.ResponseWriter, request *http.Request) {
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
+
+	user, err := shuffle.HandleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("[WARNING] Api authentication failed in get active apps: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Role == "org-reader" {
+		log.Printf("[WARNING] Org-reader doesn't have access to activate workflow app (shared): %s (%s)", user.Username, user.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Read only user"}`))
+		return
+	}
+
+	ctx := context.Background()
+	location := strings.Split(request.URL.String(), "/")
+	var fileId string
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		fileId = location[4]
+	}
+
+	app, err := shuffle.GetApp(ctx, fileId, user, false)
+	if err != nil {
+		appName := request.URL.Query().Get("app_name")
+		appVersion := request.URL.Query().Get("app_version")
+
+		if len(appName) > 0 && len(appVersion) > 0 {
+			apps, err := shuffle.FindWorkflowAppByName(ctx, appName)
+			//log.Printf("[INFO] Found %d apps for %s", len(apps), appName)
+			if err != nil || len(apps) == 0 {
+				log.Printf("[WARNING] Error getting app %s (app config): %s", appName, err)
+				resp.WriteHeader(401)
+				resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+				return
+			}
+
+			selectedApp := shuffle.WorkflowApp{}
+			for _, app := range apps {
+				if !app.Sharing && !app.Public {
+					continue
+				}
+
+				if app.Name == appName {
+					selectedApp = app
+				}
+
+				if app.Name == appName && app.AppVersion == appVersion {
+					selectedApp = app
+				}
+			}
+
+			app = &selectedApp
+		} else {
+			log.Printf("[WARNING] Error getting app with ID %s (app config): %s", fileId, err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+			return
+		}
+	}
+
+	if app.Sharing || app.Public {
+		org, err := shuffle.GetOrg(ctx, user.ActiveOrg.Id)
+		if err == nil {
+			added := false
+			if !shuffle.ArrayContains(org.ActiveApps, app.ID) {
+				org.ActiveApps = append(org.ActiveApps, app.ID)
+				added = true
+			}
+
+			if added {
+				err = shuffle.SetOrg(ctx, *org, org.Id)
+				if err != nil {
+					log.Printf("[WARNING] Failed setting org when autoadding apps on save: %s", err)
+				} else {
+					log.Printf("[INFO] Added public app %s (%s) to org %s (%s)", app.Name, app.ID, user.ActiveOrg.Name, user.ActiveOrg.Id)
+					cacheKey := fmt.Sprintf("apps_%s", user.Id)
+					shuffle.DeleteCache(ctx, cacheKey)
+				}
+			}
+		}
+	} else {
+		log.Printf("[WARNING] User is trying to activate %s which is NOT public", app.Name)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	log.Printf("[DEBUG] App %s (%s) activated for org %s by user %s", app.Name, app.ID, user.ActiveOrg.Id, user.Username)
+
+	// If onprem, it should autobuild the container(s) from here
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(`{"success": true}`))
+}
