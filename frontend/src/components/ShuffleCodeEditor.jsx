@@ -1,12 +1,15 @@
 import React, {useState, useEffect, useLayoutEffect} from 'react';
 import {
-	IconButton, 
+	IconButton,
 	Dialog, 
 	Modal, 
 	Tooltip,
 	DialogTitle, 
 	DialogContent
 } from '@material-ui/core';
+
+import Checkbox from '@mui/material/Checkbox';
+import { orange } from '@mui/material/colors';
 
 import {
 	FullscreenExit as FullscreenExitIcon,
@@ -27,10 +30,11 @@ import 'codemirror/theme/gruvbox-dark.css';
 const CodeEditor = (props) => {
 	const { fieldCount, setFieldCount, actionlist, changeActionParameterCodeMirror, expansionModalOpen, setExpansionModalOpen, codedata, setcodedata } = props
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
-  // const {codelang, setcodelang} = props
-  const theme = useTheme();
+  	// const {codelang, setcodelang} = props
+  	const theme = useTheme();
 	const [validation, setValidation] = React.useState(false);
 	const [expOutput, setExpOutput] = React.useState(" ");
+	const [linewrap, setlinewrap] = React.useState(true);
 
 	const autoFormat = (input) => {
 		if (validation !== true) {
@@ -129,13 +133,14 @@ const CodeEditor = (props) => {
 					</IconButton>
 				</div>
 			</div>
+			
 			<span style={{
 				border: `2px solid ${theme.palette.inputColor}`,
 				borderRadius: theme.palette.borderRadius,
 			}}>
 				<CodeMirror
 					value = {localcodedata}
-					height="250px"
+					height="200px"
 					style={{
 					}}
 					onChange={(value) => {
@@ -146,10 +151,47 @@ const CodeEditor = (props) => {
 						theme: 'gruvbox-dark',
 						keyMap: 'sublime',
 						mode: 'javascript',
+						lineWrapping: linewrap,
 						// mode: {codelang},
 					}}
 				/>
 			</span>
+
+			<div
+				style={{
+					marginBottom: -30,
+				}}
+			>
+				<p
+					style={{
+						color: "white",
+						fontFamily: "monospace",
+						paddingLeft: 480,
+						width: 100,
+						display: 'inline',
+					}}
+				>
+					Line Wrap
+					<Checkbox
+						onClick={() => {
+							if (linewrap) {
+								setlinewrap(false)
+							}
+							if (!linewrap){
+								setlinewrap(true)
+							}
+						}}
+						defaultChecked
+						size="small"
+						sx={{
+							color: orange[600],
+							'&.Mui-checked': {
+							  color: orange[800],
+							},
+						}}
+					/>
+				</p>
+			</div>
 
 			<div>
 				<DialogTitle
@@ -172,8 +214,8 @@ const CodeEditor = (props) => {
 						theme={theme.palette.jsonTheme}
 						style={{
 							borderRadius: 5,
-							border: "1px solid rgba(255,255,255,0.7)",
-							padding: 5, 
+							border: `2px solid ${theme.palette.inputColor}`,
+							padding: 10, 
 							maxHeight: 250, 
 							minheight: 250, 
 							overflow: "auto",
