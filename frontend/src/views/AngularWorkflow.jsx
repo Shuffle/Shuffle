@@ -916,6 +916,39 @@ const AngularWorkflow = (defaultprops) => {
     }
   };
 
+	const sendStreamRequest = (body) => {
+		console.log("Stream not activated yet.")
+		return
+		// Session may be important here huh 
+		body.user_id = userdata.id
+
+		fetch(globalUrl + "/api/v1/workflows/" + props.match.params.key + "/stream", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(body),
+      credentials: "include",
+    })
+		.then((response) => {
+			setSavingState(0);
+			if (response.status !== 200) {
+				console.log("Status not 200 for setting workflows :O!");
+			}
+
+			return response.json();
+		})
+    .then((responseJson) => {
+			console.log("RESP: ", responseJson)
+		})
+		.catch((error) => {
+			console.log("Stream error: ", error.toString())
+			//alert.error(error.toString());
+		})
+
+	}
+
   const saveWorkflow = (curworkflow, executionArgument, startNode) => {
     var success = false;
 
@@ -1929,6 +1962,13 @@ const AngularWorkflow = (defaultprops) => {
       x: 0,
       y: 0,
     };
+
+		sendStreamRequest({
+			"item": "node", 
+			"type": "move", 
+			"id": nodedata.id, 
+			"location": {"x": event.target.position("x"), "y": event.target.position("y")}
+		})
   };
 
   const onNodeDrag = (event, selectedAction) => {
@@ -2708,6 +2748,18 @@ const AngularWorkflow = (defaultprops) => {
     setLastSaved(false);
     const edge = event.target.data();
 
+		const sourcenode = cy.getElementById(edge.source)
+		const destinationnode = cy.getElementById(edge.target)
+		if (sourcenode === undefined || sourcenode === null || destinationnode === undefined || destinationnode === null) {
+		} else {
+			const edgeCurve = calculateEdgeCurve(sourcenode.position(), destinationnode.position()) 
+			const currentedge = cy.getElementById(edge.id)
+			if (currentedge !== undefined && currentedge !== null) {
+				currentedge.style('control-point-distance', edgeCurve.distance)
+				currentedge.style('control-point-weight', edgeCurve.weight)
+			}
+		}
+
     var targetnode = workflow.triggers.findIndex(
       (data) => data.id === edge.target
     );
@@ -3460,6 +3512,7 @@ const AngularWorkflow = (defaultprops) => {
 					if (el.isNode() &&
 					!el.data("isButton") &&
 					!el.data("isDescriptor") &&
+					!el.data("isSuggestion") &&
 					el.data("type") !== "COMMENT") {
 							return true 
 					}
@@ -3476,7 +3529,7 @@ const AngularWorkflow = (defaultprops) => {
       cy.fit(null, 200);
 
       cy.on("boxselect", "node", (e) => {
-        if (e.target.data("isButton") || e.target.data("isDescriptor")) {
+        if (e.target.data("isButton") || e.target.data("isDescriptor") || e.target.data("isSuggestion")) {
           e.target.unselect();
         }
 
@@ -3662,6 +3715,41 @@ const AngularWorkflow = (defaultprops) => {
     });
   };
 
+	const addSuggestionButtons = (event) => {
+    var parentNode = cy.$("#" + event.target.data("id"));
+    if (parentNode.data("isButton") || parentNode.data("buttonId")) return;
+
+    const px = parentNode.position("x") + 300;
+    const py = parentNode.position("y") + 0;
+    const circleId = (newNodeId = uuidv4());
+
+    parentNode.data("circleId", circleId);
+
+		var appid = "1234"
+		var suggestions = [{
+				app_name: "TheHive",
+				app_version: "1.1.0",
+				app_id: appid,
+				sharing: false,
+				private_id: false,
+				isStartNode: false,
+				label: "Suggestion 1",
+				large_image: "data:image/png;base64,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",
+				finished: false,
+        is_valid: true,
+				isSuggestion: true,
+        attachedTo: event.target.data("id"),
+		}]
+    //isButton: true,
+
+    cy.add({
+      group: "nodes",
+      data: suggestions[0],
+    	position: { x: px, y: py },
+      locked: true,
+    });
+  }
+
   const addDeleteButton = (event) => {
     var parentNode = cy.$("#" + event.target.data("id"));
     if (parentNode.data("isButton") || parentNode.data("buttonId")) return;
@@ -3717,8 +3805,6 @@ const AngularWorkflow = (defaultprops) => {
     if (nodedata.app_name !== undefined) {
       const allNodes = cy.nodes().jsons();
 
-    	//if (parentNode.data("isButton") || parentNode.data("buttonId")) return;
-
       var found = false;
       for (var key in allNodes) {
         const currentNode = allNodes[key];
@@ -3744,6 +3830,8 @@ const AngularWorkflow = (defaultprops) => {
 					addCopyButton(event);
 					addStartnodeButton(event);
 				}
+
+				//addSuggestionButtons(event)
       }
     }
 
@@ -3811,6 +3899,8 @@ const AngularWorkflow = (defaultprops) => {
     const targetcolor = cy
       .getElementById(event.target.data("target"))
       .style("border-color");
+
+		//console.log(sourcecolor, targetcolor)
     if (
       sourcecolor !== null &&
       sourcecolor !== undefined &&
@@ -5476,8 +5566,19 @@ const AngularWorkflow = (defaultprops) => {
 			//console.log("OLD: ", selectedAction, "NEW: ", newSelectedAction)
 			for (var paramkey in selectedAction.parameters) {
 				const param = selectedAction.parameters[paramkey];
+
 				if (param.value === null || param.value === undefined || param.value.length === 0) {
 					continue
+				}
+
+				if (param.name === "body") {
+					//console.log("Param: ", param)
+					continue
+				}
+
+				if (param.name === "headers") {
+					console.log("Swap header?")
+					//newSelectedAction.parameters[newParamIndex].value = param.value
 				}
 
 				const newParamIndex = newSelectedAction.parameters.findIndex(paramdata => paramdata.name === param.name)
@@ -10950,14 +11051,37 @@ const AngularWorkflow = (defaultprops) => {
                   		        setExecutionRequestStarted(false);
                   		      }
 
+														// Ensuring we have the latest version of the result.
+														// Especially important IF the result is > 1 Mb in cloud
+														var checkStarted = false
+														if (isCloud && data.results !== undefined && data.results !== null && data.results.length > 0) {
+															for (var key in data.results) {
+																if (data.results[key].status !== "SUCCESS") {
+																	continue
+																}
+
+																if (data.results[key].result.includes("too large")) {
+                  		      			setExecutionData({});
+																	checkStarted = true 
+																	start();
+																	setExecutionRunning(true);
+																	setExecutionRequestStarted(false);
+																	break
+																}
+															}
+														}
+
                   		      const cur_execution = {
                   		        execution_id: data.execution_id,
                   		        authorization: data.authorization,
                   		      };
                   		      setExecutionRequest(cur_execution);
                   		      setExecutionModalView(1);
-                  		      setExecutionData(data);
-                  		      handleUpdateResults(data, cur_execution);
+
+														if (!checkStarted) {
+                  		      	handleUpdateResults(data, cur_execution);
+                  		      	setExecutionData(data);
+														}
                   		    }}
                   		  >
                   		    <div style={{ display: "flex", flex: 1 }}>

@@ -99,7 +99,7 @@ type UserInputSubflow struct {
 
 // removes every container except itself (worker)
 func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason string, handleResultSend bool) {
-	log.Printf("[INFO][%s] Shutdown (%s) started with reason %#v. Result amount: %d. ResultsSent: %d, Send result: %#v", workflowExecution.ExecutionId, workflowExecution.Status, reason, len(workflowExecution.Results), requestsSent, handleResultSend)
+	log.Printf("[INFO][%s] Shutdown (%s) started with reason %#v. Result amount: %d. ResultsSent: %d, Send result: %#v, Parenent: %#v", workflowExecution.ExecutionId, workflowExecution.Status, reason, len(workflowExecution.Results), requestsSent, handleResultSend, workflowExecution.ExecutionParent)
 	//reason := "Error in execution"
 
 	sleepDuration := 1
@@ -349,6 +349,21 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	config := &container.Config{
 		Image: image,
 		Env:   env,
+	}
+
+	// Checking as late as possible, just in case.
+	newExecId := fmt.Sprintf("%s_%s", workflowExecution.ExecutionId, action.ID)
+	_, err := shuffle.GetCache(ctx, newExecId)
+	if err == nil {
+		log.Printf("\n\n[DEBUG] Result for %s already found - returning\n\n", newExecId)
+		return nil
+	}
+	cacheData := []byte("1")
+	err = shuffle.SetCache(ctx, newExecId, cacheData)
+	if err != nil {
+		log.Printf("[WARNING] Failed setting cache for action %s: %s", newExecId, err)
+	} else {
+		log.Printf("[DEBUG] Adding %s to cache. Name: %s", newExecId, action.Name)
 	}
 
 	if action.ExecutionDelay > 0 {
@@ -687,7 +702,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 				if isSkipped {
 					//log.Printf("Skipping %s as all parents are done", item.Action.Label)
 					if !arrayContains(visited, item.Action.ID) {
-						log.Printf("[INFO][%s] Adding visited (1): %s", workflowExecution.ExecutionId, item.Action.Label)
+						//log.Printf("[INFO][%s] Adding visited (1): %s", workflowExecution.ExecutionId, item.Action.Label)
 						visited = append(visited, item.Action.ID)
 					}
 				} else {
@@ -696,7 +711,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 				}
 			} else {
 				if item.Status == "FINISHED" {
-					log.Printf("[INFO][%s] Adding visited (2): %s", workflowExecution.ExecutionId, item.Action.Label)
+					//log.Printf("[INFO][%s] Adding visited (2): %s", workflowExecution.ExecutionId, item.Action.Label)
 					visited = append(visited, item.Action.ID)
 				}
 			}
@@ -874,22 +889,27 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			continue
 		} else {
 			log.Printf("[INFO][%s] %s:%s has no status result yet. Should execute.", workflowExecution.ExecutionId, action.Name, action.ID)
+
+			// Check cache here too.
 		}
 
+		// Rerunning this multiple places, as timing is the hardest part here.
 		newExecId := fmt.Sprintf("%s_%s", workflowExecution.ExecutionId, nextAction)
 		_, err := shuffle.GetCache(ctx, newExecId)
 		if err == nil {
-			//log.Printf("\n\n[DEBUG] Already found %s - returning\n\n", newExecId)
+			log.Printf("\n\n[DEBUG] Already found %s (1) - returning\n\n", newExecId)
 			continue
 		}
 
-		cacheData := []byte("1")
-		err = shuffle.SetCache(ctx, newExecId, cacheData)
-		if err != nil {
-			log.Printf("[WARNING] Failed setting cache for action %s: %s", newExecId, err)
-		} else {
-			log.Printf("\n\n[DEBUG] Adding %s to cache. Name: %s\n\n", newExecId, action.Name)
-		}
+		/*
+			cacheData := []byte("1")
+			err = shuffle.SetCache(ctx, newExecId, cacheData)
+			if err != nil {
+				log.Printf("[WARNING] Failed setting cache for action %s: %s", newExecId, err)
+			} else {
+				log.Printf("\n\n[DEBUG] Adding %s to cache. Name: %s\n\n", newExecId, action.Name)
+			}
+		*/
 
 		if action.AppName == "Shuffle Tools" && (action.Name == "skip_me" || action.Name == "router" || action.Name == "route") {
 			topClient := &http.Client{
@@ -899,7 +919,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			if err != nil {
 				log.Printf("[DEBUG][%s] Error in skipme for %s: %s", workflowExecution.ExecutionId, action.Label, err)
 			} else {
-				log.Printf("[INFO][%s] Adding visited (4): %s", workflowExecution.ExecutionId, action.Label)
+				//log.Printf("[INFO][%s] Adding visited (4): %s", workflowExecution.ExecutionId, action.Label)
 
 				visited = append(visited, action.ID)
 				executed = append(executed, action.ID)
@@ -1373,7 +1393,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			}
 		}
 
-		log.Printf("[INFO][%s] Adding visited (3): %s (%s). Actions: %d, Results: %d", workflowExecution.ExecutionId, action.Label, action.ID, len(workflowExecution.Workflow.Actions), len(workflowExecution.Results))
+		//log.Printf("[INFO][%s] Adding visited (3): %s (%s). Actions: %d, Results: %d", workflowExecution.ExecutionId, action.Label, action.ID, len(workflowExecution.Workflow.Actions), len(workflowExecution.Results))
 
 		visited = append(visited, action.ID)
 		executed = append(executed, action.ID)
@@ -1396,7 +1416,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 	if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions)+extra {
 		shutdownCheck := true
 		for _, result := range workflowExecution.Results {
-			if result.Status == "EXECUTING" {
+			if result.Status == "EXECUTING" || result.Status == "WAITING" {
 				// Cleaning up executing stuff
 				shutdownCheck = false
 				// USED TO BE CONTAINER REMOVAL
@@ -1436,7 +1456,7 @@ func executionInit(workflowExecution shuffle.WorkflowExecution) error {
 
 	// Setting up extra counter
 	for _, trigger := range workflowExecution.Workflow.Triggers {
-		log.Printf("[DEBUG] Appname trigger (0): %s", trigger.AppName)
+		//log.Printf("[DEBUG] Appname trigger (0): %s", trigger.AppName)
 		if trigger.AppName == "User Input" || trigger.AppName == "Shuffle Workflow" {
 			extra += 1
 		}
@@ -2049,7 +2069,8 @@ func runWorkflowExecutionTransaction(ctx context.Context, attempts int64, workfl
 			return
 		}
 	}
-	log.Printf(`[DEBUG][%s] Got result %s from %s. Execution status: %s. Save: %#v`, actionResult.ExecutionId, actionResult.Status, actionResult.Action.ID, workflowExecution.Status, dbSave)
+
+	log.Printf(`[DEBUG][%s] Got result %s from %s. Execution status: %s. Save: %#v. Parent: %#v`, actionResult.ExecutionId, actionResult.Status, actionResult.Action.ID, workflowExecution.Status, dbSave, workflowExecution.ExecutionParent)
 	//dbSave := false
 
 	//if len(results) != len(workflowExecution.Results) {
@@ -2163,10 +2184,19 @@ func validateFinished(workflowExecution shuffle.WorkflowExecution) bool {
 	//startAction, extra, children, parents, visited, executed, nextActions, environments := shuffle.GetExecutionVariables(ctx, workflowExecution.ExecutionId)
 	_, extra, _, _, _, _, _, environments := shuffle.GetExecutionVariables(ctx, workflowExecution.ExecutionId)
 
-	log.Printf("[INFO][%s] VALIDATION. Status: %s, shuffle.Actions: %d, Extra: %d, Results: %d\n", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Workflow.Actions), extra, len(workflowExecution.Results))
+	log.Printf("[INFO][%s] VALIDATION. Status: %s, shuffle.Actions: %d, Extra: %d, Results: %d. Parent: %#v\n", workflowExecution.ExecutionId, workflowExecution.Status, len(workflowExecution.Workflow.Actions), extra, len(workflowExecution.Results), workflowExecution.ExecutionParent)
 
 	//if len(workflowExecution.Results) == len(workflowExecution.Workflow.Actions)+extra {
 	if (len(environments) == 1 && requestsSent == 0 && len(workflowExecution.Results) >= 1 && os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm") || (len(workflowExecution.Results) >= len(workflowExecution.Workflow.Actions)+extra && len(workflowExecution.Workflow.Actions) > 0) {
+		if workflowExecution.Status == "FINISHED" {
+			for _, result := range workflowExecution.Results {
+				if result.Status == "EXECUTING" || result.Status == "WAITING" {
+					log.Printf("[WARNING] NOT returning full result, as a result may be unfinished: %s (%s) - %s", result.Action.Label, result.Action.ID, result.Status)
+					return false
+				}
+			}
+		}
+
 		if os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm" {
 			requestsSent += 1
 		}
@@ -2754,6 +2784,8 @@ func sendAppRequest(incomingUrl, appName string, port int, action shuffle.Action
 		} else {
 			// Callback to worker
 			parsedRequest.Url = fmt.Sprintf("%s:%d", parsedBaseurl, baseport)
+
+			//parsedRequest.Url
 		}
 
 		//log.Printf("[DEBUG][%s] Should add a baseurl for the app to get back to: %s", workflowExecution.ExecutionId, parsedRequest.Url)
@@ -2763,6 +2795,8 @@ func sendAppRequest(incomingUrl, appName string, port int, action shuffle.Action
 	tmp := parsedRequest.Url
 	parsedRequest.Url = parsedRequest.BaseUrl
 	parsedRequest.BaseUrl = tmp
+
+	//http://3e05d1e7d7a0:33333,
 
 	// Run with proper hostname, but set to shuffle-worker to avoid specific host target.
 	// This means running with VIP instead.
@@ -2793,15 +2827,39 @@ func sendAppRequest(incomingUrl, appName string, port int, action shuffle.Action
 		return err
 	}
 
+	// Checking as LATE as possible, ensuring we don't rerun what's already ran
+	ctx := context.Background()
+	newExecId := fmt.Sprintf("%s_%s", workflowExecution.ExecutionId, action.ID)
+	_, err = shuffle.GetCache(ctx, newExecId)
+	if err == nil {
+		log.Printf("\n\n[DEBUG] Result for %s already found (PRE REQUEST) - returning\n\n", newExecId)
+		return nil
+	}
+
+	cacheData := []byte("1")
+	err = shuffle.SetCache(ctx, newExecId, cacheData)
+	if err != nil {
+		log.Printf("[WARNING] Failed setting cache for action %s: %s", newExecId, err)
+	} else {
+		log.Printf("[DEBUG] Adding %s to cache. Name: %s", newExecId, action.Name)
+	}
+
+	// FIXME:
+
 	newresp, err := client.Do(req)
 	if err != nil {
+		if strings.Contains(fmt.Sprintf("%s", err), "timeout awaiting response") {
+			return nil
+		}
+
 		log.Printf("[ERROR] Error running app run request: %s", err)
+
 		return err
 	}
 
 	body, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
-		log.Printf("[ERROR] Failed reading body: %s", err)
+		log.Printf("[ERROR] Failed reading app request body body: %s", err)
 		return err
 	} else {
 		log.Printf("[INFO][%s] NEWRESP (from app): %s", workflowExecution.ExecutionId, string(body))
@@ -3060,7 +3118,7 @@ func main() {
 			//workflowExecution.StartedAt = int64(time.Now().Unix())
 
 			cacheKey := fmt.Sprintf("workflowexecution-%s", workflowExecution.ExecutionId)
-			requestCache = cache.New(5*time.Minute, 10*time.Minute)
+			requestCache = cache.New(60*time.Minute, 120*time.Minute)
 			requestCache.Set(cacheKey, &workflowExecution, cache.DefaultExpiration)
 			for _, action := range workflowExecution.Workflow.Actions {
 				found := false
@@ -3331,7 +3389,7 @@ func runWebserver(listener net.Listener) {
 			if err != nil {}
 		*/
 
-		requestCache = cache.New(5*time.Minute, 10*time.Minute)
+		requestCache = cache.New(60*time.Minute, 120*time.Minute)
 		log.Printf("[DEBUG] Running webserver config for SWARM and K8s")
 		r.HandleFunc("/api/v1/execute", handleRunExecution).Methods("POST", "OPTIONS")
 	}

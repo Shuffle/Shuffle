@@ -171,10 +171,34 @@ const ParsedAction = (props) => {
 
   const [expansionModalOpen, setExpansionModalOpen] = React.useState(false);
   const [hideBody, setHideBody] = React.useState(true);
-  const [activateHidingBody, setActivateHidingBody] = React.useState(false);
+  const [activateHidingBodyButton, setActivateHidingBodyButton] = React.useState(false);
+
 	const [codedata, setcodedata] = React.useState("");
 	const [fieldCount, setFieldCount] = React.useState(0);
 	const [hiddenDescription, setHiddenDescription] = React.useState(true);
+
+  useEffect(() => {
+		
+		//if (data.startsWith("${") && data.endsWith("}")) {
+		//}
+				// PARAM FIX - Gonna use the ID field, even though it's a hack
+		const paramcheck = selectedAction.parameters.find(param => param.name === "body")
+		console.log("LOADED! Change hideBody based on input? Action: ", selectedAction, paramcheck)
+		if (paramcheck !== undefined && paramcheck !== null) {
+			if (paramcheck.id === "TOGGLED"){ 
+  			setHideBody(false)
+  			setActivateHidingBodyButton(false)
+				console.log("TOGGLED BODY!")
+			} else {
+  			setHideBody(true)
+
+				if (paramcheck.id === "UNTOGGLED") {
+  				setActivateHidingBodyButton(false)
+					console.log("UNTOGGLED!")
+				}
+			}
+		}
+	}, [])
 
   const keywords = [
     "len(",
@@ -521,7 +545,7 @@ const ParsedAction = (props) => {
     });
 
     const changeActionParameter = (event, count, data) => {
-			console.log("Action change: ", selectedAction, data)
+			//console.log("Action change: ", selectedAction, data)
       if (data.name.startsWith("${") && data.name.endsWith("}")) {
         // PARAM FIX - Gonna use the ID field, even though it's a hack
         const paramcheck = selectedAction.parameters.find(
@@ -533,6 +557,7 @@ const ParsedAction = (props) => {
             .trim()
             .replaceAll('\\"', '"')
             .replaceAll('"', '\\"');
+
           console.log("REPLACE WITH: ", toReplace);
           if (
             paramcheck["value_replace"] === undefined ||
@@ -1155,12 +1180,23 @@ const ParsedAction = (props) => {
                           color: theme.palette.primary.secondary,
                         }}
                         onChange={(event) => {
-                          setHideBody(!hideBody);
+													var tag = "TOGGLED"
+													if (hideBody) {
+														tag = "UNTOGGLED"
+													} 
 
+                          setHideBody(!hideBody);
+			
                           for (var key in selectedActionParameters) {
                             var currentItem = selectedActionParameters[key];
 														if (currentItem.name === "ssl_verify") {
 
+														}
+
+														if (currentItem.name === "body") {
+															// FIXME: Workaround for toggling, as actions don't have IDs. 
+															// May screw up something in the future.
+															currentItem.id = tag
 														}
 
                             if (currentItem.description === openApiFieldDesc) {
@@ -1176,7 +1212,7 @@ const ParsedAction = (props) => {
                   />
                 </Tooltip>
               </div>
-            );
+            )
 
             if (selectedApp.generated && data.name === "body") {
               const regex = /\${(\w+)}/g;
@@ -1184,10 +1220,10 @@ const ParsedAction = (props) => {
 
               hideBodyButton = hideBodyButtonValue;
               if (found === null || !hideBody) {
-                //setExtraBodyFields([])
+								console.log("Should hide body? ", found)
                 //
                 if (found === null) {
-                  setActivateHidingBody(true);
+                  setActivateHidingBodyButton(true);
                 }
               } else {
                 //console.log("SHOW BUTTON");
@@ -1240,7 +1276,7 @@ const ParsedAction = (props) => {
               }
             }
 
-            if (activateHidingBody === true) {
+            if (activateHidingBodyButton === true) {
               hideBodyButton = "";
             }
 
@@ -2777,6 +2813,19 @@ const ParsedAction = (props) => {
               );
             }}
             renderInput={(params) => {
+							if (params.inputProps !== undefined && params.inputProps !== null && params.inputProps.value !== undefined && params.inputProps.value !== null) {
+								const prefixes = ["Post", "Put", "Patch"]
+								for (var key in prefixes) {
+									if (params.inputProps.value.startsWith(prefixes[key])) {
+										params.inputProps.value = params.inputProps.value.replace(prefixes[key]+" ", "", -1)
+										if (params.inputProps.value.length > 1) {
+											params.inputProps.value = params.inputProps.value.charAt(0).toUpperCase()+params.inputProps.value.substring(1)
+										}
+										break
+									}
+								}
+							}
+
               return (
 									<TextField
 										style={{

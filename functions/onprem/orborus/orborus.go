@@ -222,16 +222,16 @@ func deployServiceWorkers(image string) {
 
 		defaultNetworkAttach := false
 		if containerId != "" {
-			log.Printf("[WARNING] Should connect orborus container to worker network as it's running in Docker with name %#v!", containerId)
+			log.Printf("[DEBUG] Should connect orborus container to worker network as it's running in Docker with name %#v!", containerId)
 			// https://pkg.go.dev/github.com/docker/docker@v20.10.12+incompatible/api/types/network#EndpointSettings
 			networkConfig := &network.EndpointSettings{}
 			err := dockercli.NetworkConnect(ctx, networkName, containerId, networkConfig)
 			if err != nil {
-				log.Printf("[WARNING] Failed connecting to Orborus to docker network %s: %s", networkName, err)
+				log.Printf("[ERROR] Failed connecting to Orborus to docker network %s: %s", networkName, err)
 			}
 
 			if len(containerId) == 64 && baseUrl == "http://shuffle-backend:5001" {
-				log.Printf("[WARNING] Network MAY not work due to backend being %s and container length 64. Will try to attach shuffle_shuffle network", baseUrl)
+				log.Printf("[ERROR] Network MAY not work due to backend being %s and container length 64. Will try to attach shuffle_shuffle network", baseUrl)
 				defaultNetworkAttach = true
 			}
 		}
@@ -782,7 +782,8 @@ func main() {
 	//workerImage := fmt.Sprintf("%s/%s:worker%s", baseimageregistry, baseimagename, baseimagetagsuffix)
 	workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
 
-	go deployServiceWorkers(workerImage)
+	//go deployServiceWorkers(workerImage)
+	deployServiceWorkers(workerImage)
 
 	log.Printf("[INFO] Finished configuring docker environment")
 

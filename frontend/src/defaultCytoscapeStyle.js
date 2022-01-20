@@ -160,6 +160,20 @@ const data = [
     },
   },
   {
+    selector: "node[?isSuggestion]",
+    css: {
+      shape: "ellipse",
+      width: "30px",
+      height: "30px",
+      "z-index": "5002",
+      "font-size": "0px",
+      border: "1px solid rgba(255,255,255,0.9)",
+      "background-image": "data(large_image)",
+      "background-color": "data(iconBackground)",
+      label: "data(label)",
+    },
+  },
+  {
     selector: "node[?isDescriptor]",
     css: {
       shape: "ellipse",
