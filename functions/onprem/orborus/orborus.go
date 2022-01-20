@@ -201,9 +201,19 @@ func deployServiceWorkers(image string) {
 		}
 
 		//docker network create --driver=overlay workers
+		// Specific subnet?
 		networkCreateOptions := types.NetworkCreate{
 			Driver:     "overlay",
 			Attachable: true,
+			IPAM: &network.IPAM{
+				Driver: "overlay",
+				Config: []network.IPAMConfig{
+					network.IPAMConfig{
+						Subnet:  "10.224.224.0/24",
+						Gateway: "10.224.224.1",
+					},
+				},
+			},
 		}
 		_, err := dockercli.NetworkCreate(
 			ctx,
@@ -425,25 +435,25 @@ func deployWorker(image string, identifier string, env []string, executionReques
 	//var swarmConfig = os.Getenv("SHUFFLE_SWARM_CONFIG")
 	parsedUuid := uuid.NewV4()
 	if swarmConfig == "run" || swarmConfig == "swarm" {
-		go func() {
-			err := sendWorkerRequest(executionRequest)
-			if err != nil {
-				log.Printf("[ERROR] Failed worker request for %s: %s", executionRequest.ExecutionId, err)
+		// Stopping goroutine, as it just becomes too fast on startup
+		err := sendWorkerRequest(executionRequest)
+		if err != nil {
+			log.Printf("[ERROR] Failed worker request for %s: %s", executionRequest.ExecutionId, err)
 
-				if strings.Contains(fmt.Sprintf("%s", err), "connection refused") || strings.Contains(fmt.Sprintf("%s", err), "EOF") {
-					workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
-					deployServiceWorkers(workerImage)
+			if strings.Contains(fmt.Sprintf("%s", err), "connection refused") || strings.Contains(fmt.Sprintf("%s", err), "EOF") {
+				workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
+				deployServiceWorkers(workerImage)
 
-					time.Sleep(time.Duration(10) * time.Second)
-					err = sendWorkerRequest(executionRequest)
-				}
+				time.Sleep(time.Duration(10) * time.Second)
+				err = sendWorkerRequest(executionRequest)
 			}
+		}
 
-			if err == nil {
-				// FIXME: Readd this? Removed for rerun reasons
-				// executionIds = append(executionIds, executionRequest.ExecutionId)
-			}
-		}()
+		if err == nil {
+			// FIXME: Readd this? Removed for rerun reasons
+			// executionIds = append(executionIds, executionRequest.ExecutionId)
+		}
+		//}()
 
 		return nil
 	}
@@ -752,7 +762,8 @@ func main() {
 	}
 
 	ctx := context.Background()
-	go zombiecheck(ctx, workerTimeout)
+	// Run by default from now
+	zombiecheck(ctx, workerTimeout)
 
 	log.Printf("[INFO] Running towards %s with Org %s", baseUrl, orgId)
 	httpProxy := os.Getenv("HTTP_PROXY")
@@ -768,22 +779,15 @@ func main() {
 	log.Printf("[INFO] Setting up Docker environment. Downloading worker and App SDK!")
 
 	initializeImages()
+
+	workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
 	if swarmConfig == "run" || swarmConfig == "swarm" {
 		checkSwarmService(ctx)
+		log.Printf("[DEBUG] Deploying worker image %s to swarm", workerImage)
+		deployServiceWorkers(workerImage)
 
+		//deployServiceWorkers(workerImage)
 	}
-
-	//workerName := "worker"
-	//workerVersion := "0.1.0"
-	//workerImage := fmt.Sprintf("docker.pkg.github.com/frikky/shuffle/%s:%s", workerName, workerVersion)
-	//workerImage := fmt.Sprintf("%s/worker:%s", baseimagename, workerVersion)
-	// workerImage := fmt.Sprintf("docker.io/%s:worker", baseimagename)
-	// fmt.Sprintf("%s/%s:app_sdk%s", baseimageregistry, baseimagename, baseimagetagsuffix),
-	//workerImage := fmt.Sprintf("%s/%s:worker%s", baseimageregistry, baseimagename, baseimagetagsuffix)
-	workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
-
-	//go deployServiceWorkers(workerImage)
-	deployServiceWorkers(workerImage)
 
 	log.Printf("[INFO] Finished configuring docker environment")
 
