@@ -1755,6 +1755,10 @@ class AppBase:
                     self.logger.info("[DEBUG] Skipping liquid - size too big (%d)" % len(template))
                     return template
 
+                if "${" in template and "}$" in template:
+                    self.logger.info("[DEBUG] Shuffle loop shouldn't run in liquid. Data length: %d" % len(template))
+                    return template
+
                 #if not "{{" in template or not "}}" in template: 
                 #    if not "{%" in template or not "%}" in template: 
                 #        self.logger.info("Skipping liquid - missing {{ }} and {% %}")

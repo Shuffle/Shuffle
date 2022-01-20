@@ -1712,8 +1712,6 @@ const AppCreator = (defaultprops) => {
       ) {
 
 				if (item["example_response"] === "shuffle_file_download") {
-					console.log("Download as file: ", item)
-
 					data.paths[item.url][item.method.toLowerCase()].responses["default"]["content"]["text/plain"].schema.type = "string"
 					data.paths[item.url][item.method.toLowerCase()].responses["default"]["content"]["text/plain"].schema.format = "binary"
 

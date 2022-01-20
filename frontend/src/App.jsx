@@ -26,6 +26,7 @@ import SetAuthenticationSSO from "./views/SetAuthenticationSSO";
 import LandingPageNew from "./views/LandingpageNew";
 import LoginPage from "./views/LoginPage";
 import SettingsPage from "./views/SettingsPage";
+import KeepAlive from "./views/KeepAlive.jsx";
 
 import MyView from "./views/MyView";
 
@@ -561,6 +562,22 @@ const App = (message, props) => {
         	  element={
         	    <SetAuthenticationSSO
         	      userdata={userdata}
+        	      isLoggedIn={isLoggedIn}
+        	      setIsLoggedIn={setIsLoggedIn}
+        	      register={true}
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+        	      setCookie={setCookie}
+        	      cookies={cookies}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	<Route
+        	  exact
+        	  path="/keepalive"
+        	  element={
+        	    <KeepAlive
         	      isLoggedIn={isLoggedIn}
         	      setIsLoggedIn={setIsLoggedIn}
         	      register={true}
