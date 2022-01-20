@@ -9,6 +9,10 @@ package main
 
 // frikky@debian:~/git/shuffle/functions/onprem/worker$ docker service create --replicas 5 --name shuffle-workers --env SHUFFLE_SWARM_CONFIG=run --publish published=33333,target=33333 ghcr.io/frikky/shuffle-worker:nightly
 
+//  Potential issues:
+// Default network could be same as on the host
+// Ingress network may not exist (default)
+
 import (
 	"github.com/shuffle/shuffle-shared"
 
@@ -200,13 +204,39 @@ func deployServiceWorkers(image string) {
 			networkName = swarmNetworkName
 		}
 
+		ingressOptions := types.NetworkCreate{
+			Driver:     "overlay",
+			Attachable: false,
+			Ingress:    true,
+			IPAM: &network.IPAM{
+				Driver: "default",
+				Config: []network.IPAMConfig{
+					network.IPAMConfig{
+						Subnet:  "10.225.225.0/24",
+						Gateway: "10.225.225.1",
+					},
+				},
+			},
+		}
+
+		_, err := dockercli.NetworkCreate(
+			ctx,
+			"ingress",
+			ingressOptions,
+		)
+
+		if err != nil {
+			log.Printf("[WARNING] Ingress network may already exist: %s", err)
+		}
+
 		//docker network create --driver=overlay workers
 		// Specific subnet?
 		networkCreateOptions := types.NetworkCreate{
 			Driver:     "overlay",
 			Attachable: true,
+			Ingress:    false,
 			IPAM: &network.IPAM{
-				Driver: "overlay",
+				Driver: "default",
 				Config: []network.IPAMConfig{
 					network.IPAMConfig{
 						Subnet:  "10.224.224.0/24",
@@ -215,7 +245,7 @@ func deployServiceWorkers(image string) {
 				},
 			},
 		}
-		_, err := dockercli.NetworkCreate(
+		_, err = dockercli.NetworkCreate(
 			ctx,
 			networkName,
 			networkCreateOptions,
@@ -435,7 +465,9 @@ func deployWorker(image string, identifier string, env []string, executionReques
 	//var swarmConfig = os.Getenv("SHUFFLE_SWARM_CONFIG")
 	parsedUuid := uuid.NewV4()
 	if swarmConfig == "run" || swarmConfig == "swarm" {
-		// Stopping goroutine, as it just becomes too fast on startup
+		// FIXME: Should we handle replies properly?
+		// In certain cases, a workflow may e.g. be aborted already. If it's aborted, that returns
+		// a 401 from the worker, which returns an error here
 		err := sendWorkerRequest(executionRequest)
 		if err != nil {
 			log.Printf("[ERROR] Failed worker request for %s: %s", executionRequest.ExecutionId, err)
@@ -785,6 +817,8 @@ func main() {
 		checkSwarmService(ctx)
 		log.Printf("[DEBUG] Deploying worker image %s to swarm", workerImage)
 		deployServiceWorkers(workerImage)
+		log.Printf("[DEBUG] Waiting 30 seconds to ensure workers are deployed. Run: \"docker service ls\" for more info")
+		time.Sleep(time.Duration(30) * time.Second)
 
 		//deployServiceWorkers(workerImage)
 	}
@@ -847,7 +881,7 @@ func main() {
 		// FIXME - add check for StatusCode
 		if newresp.StatusCode != 200 {
 			if hasStarted {
-				log.Printf("[WARNING] Bad statuscode: %d", newresp.StatusCode)
+				log.Printf("[WARNING] Bad statuscode from backend: %d", newresp.StatusCode)
 			}
 		} else {
 			if !hasStarted {
@@ -1258,8 +1292,8 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 	}
 
 	if newresp.StatusCode != 200 {
-		log.Printf("[ERROR] Error running request - status code is %d, not 200. Body: %s", newresp.StatusCode, string(body))
-		return errors.New(fmt.Sprintf("Bad statuscode: %d - expecting 200", newresp.StatusCode))
+		log.Printf("[ERROR] Error running worker request - status code is %d, not 200. Body: %s", newresp.StatusCode, string(body))
+		return errors.New(fmt.Sprintf("Bad statuscode from worker: %d - expecting 200", newresp.StatusCode))
 	}
 
 	_ = body
