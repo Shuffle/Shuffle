@@ -5,7 +5,8 @@ import {
 	Modal, 
 	Tooltip,
 	DialogTitle, 
-	DialogContent
+	DialogContent,
+	Typography
 } from '@material-ui/core';
 
 import Checkbox from '@mui/material/Checkbox';
@@ -26,6 +27,7 @@ import ReactJson from "react-json-view";
 import CodeMirror from '@uiw/react-codemirror';
 import 'codemirror/keymap/sublime';
 import 'codemirror/theme/gruvbox-dark.css';
+import 'codemirror/theme/duotone-light.css';
 
 const CodeEditor = (props) => {
 	const { fieldCount, setFieldCount, actionlist, changeActionParameterCodeMirror, expansionModalOpen, setExpansionModalOpen, codedata, setcodedata } = props
@@ -35,6 +37,7 @@ const CodeEditor = (props) => {
 	const [validation, setValidation] = React.useState(false);
 	const [expOutput, setExpOutput] = React.useState(" ");
 	const [linewrap, setlinewrap] = React.useState(true);
+	const [codeTheme, setcodeTheme] = React.useState("gruvbox-dark");
 
 	const autoFormat = (input) => {
 		if (validation !== true) {
@@ -148,7 +151,7 @@ const CodeEditor = (props) => {
 						expectedOutput(value.getValue())
 					}}
 					options={{
-						theme: 'gruvbox-dark',
+						theme: codeTheme,
 						keyMap: 'sublime',
 						mode: 'javascript',
 						lineWrapping: linewrap,
@@ -162,12 +165,13 @@ const CodeEditor = (props) => {
 					marginBottom: -30,
 				}}
 			>
-				<p
+				<Typography
+					variant = 'body2'
+					color = 'textSecondary'
 					style={{
 						color: "white",
-						fontFamily: "monospace",
-						paddingLeft: 480,
-						width: 100,
+						paddingLeft: 360,
+						width: 50,
 						display: 'inline',
 					}}
 				>
@@ -190,7 +194,39 @@ const CodeEditor = (props) => {
 							},
 						}}
 					/>
-				</p>
+				</Typography>
+
+				<Typography
+					variant = 'body2'
+					color = 'textSecondary'
+					style={{
+						color: "white",
+						paddingLeft: 10,
+						width: 100,
+						display: 'inline',
+					}}
+				>
+					Dark Theme
+					<Checkbox
+						onClick={() => {
+							if (codeTheme == "gruvbox-dark") {
+								setcodeTheme("duotone-light")
+							}
+							if (codeTheme == "duotone-light"){
+								setcodeTheme("gruvbox-dark")
+							}
+						}}
+						defaultChecked
+						size="small"
+						sx={{
+							color: orange[600],
+							'&.Mui-checked': {
+							  color: orange[800],
+							},
+						}}
+					/>
+				</Typography>
+
 			</div>
 
 			<div>
