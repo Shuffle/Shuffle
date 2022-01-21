@@ -257,6 +257,7 @@ const Settings = (props) => {
           console.log("Status not 200 for WORKFLOW EXECUTION :O!");
         }
 
+
         return response.json();
       })
       .then((responseJson) => {
@@ -402,11 +403,14 @@ const Settings = (props) => {
 		userdata.eth_info.account.length > 0 && userdata.eth_info.parsed_balance !== undefined 
 
   // Random names for type & autoComplete. Didn't research :^)
-  var imageData = file.length > 0 ? file : fileBase64;
-  imageData =
-    imageData === undefined || imageData.length === 0
-      ? theme.palette.defaultImage
-      : imageData;
+  //var imageData = file.length > 0 ? file : fileBase64;
+  //imageData = imageData === undefined || imageData.length === 0
+  //    ? theme.palette.defaultImage
+  //    : imageData;
+
+	const imageData = userSettings.image === undefined || userSettings.image == null || userSettings.image.length === 0 ? theme.palette.defaultImage : userSettings.image
+	console.log("settings: ", userSettings)
+	console.log("Image: ", imageData)
   const imageInfo = (
     <img
       src={imageData}
@@ -934,7 +938,7 @@ const Settings = (props) => {
 
 		const client_id = "3d272b1b782b100b1e61"
 		const username = userdata.id;
-		const scopes = "user:email";
+		const scopes = "read:user";
 
 		const url = `https://github.com/login/oauth/authorize?access_type=offline&prompt=consent&client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${scopes}&state=username%3D${username}%26type%3Dgithub`
 

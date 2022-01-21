@@ -183,7 +183,7 @@ const ParsedAction = (props) => {
 		//}
 				// PARAM FIX - Gonna use the ID field, even though it's a hack
 		const paramcheck = selectedAction.parameters.find(param => param.name === "body")
-		console.log("LOADED! Change hideBody based on input? Action: ", selectedAction, paramcheck)
+		//console.log("LOADED! Change hideBody based on input? Action: ", selectedAction, paramcheck)
 		if (paramcheck !== undefined && paramcheck !== null) {
 			if (paramcheck.id === "TOGGLED"){ 
   			setHideBody(false)

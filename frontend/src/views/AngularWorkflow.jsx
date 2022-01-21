@@ -673,7 +673,7 @@ const AngularWorkflow = (defaultprops) => {
         return response.json();
       })
       .then((responseJson) => {
-				console.log("RESPONSE: ", responseJson)
+				//console.log("RESPONSE: ", responseJson)
         handleUpdateResults(responseJson, executionRequest);
       })
       .catch((error) => {
@@ -7066,7 +7066,7 @@ const AngularWorkflow = (defaultprops) => {
                   return response.json();
                 })
                 .then((responseJson) => {
-                  console.log("RESPONSE: ");
+                  //console.log("RESPONSE: ");
                   setTriggerAuthentication(responseJson);
                   clearInterval(id);
                   newwin.close();

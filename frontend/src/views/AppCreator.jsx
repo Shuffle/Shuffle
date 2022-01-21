@@ -618,6 +618,7 @@ const AppCreator = (defaultprops) => {
             continue;
           }
 
+					//console.log("METHOD: ", methodvalue)
           var tmpname = methodvalue.summary;
           if (
             methodvalue.operationId !== undefined &&
@@ -628,7 +629,13 @@ const AppCreator = (defaultprops) => {
             tmpname = methodvalue.operationId;
           }
 
-          tmpname = tmpname.replaceAll(".", " ");
+					if (tmpname !== undefined && tmpname !== null) {
+          	tmpname = tmpname.replaceAll(".", " ");
+					}
+
+					if ((tmpname === undefined || tmpname === null) && methodvalue.description !== undefined && methodvalue.description !== null && methodvalue.description.length > 0) {
+						tmpname = methodvalue.description.replaceAll(".", " ").replaceAll("_", " ")
+					}
 
           var newaction = {
             name: tmpname,
@@ -739,9 +746,9 @@ const AppCreator = (defaultprops) => {
                     var newbody = {};
                     // Can handle default, required, description and type
                     for (var propkey in retRef.properties) {
-                      const parsedkey = propkey
-                        .replaceAll(" ", "_")
-                        .toLowerCase();
+											console.log("replace: ", propkey)
+
+                      const parsedkey = propkey.replaceAll(" ", "_").toLowerCase();
                       newbody[parsedkey] = "${" + parsedkey + "}";
                     }
 
@@ -885,9 +892,8 @@ const AppCreator = (defaultprops) => {
                     ) {
                       var newbody = {};
                       for (var propkey in parameter.properties) {
-                        const parsedkey = propkey
-                          .replaceAll(" ", "_")
-                          .toLowerCase();
+												console.log("propkey2: ", propkey)
+                      	const parsedkey = propkey.replaceAll(" ", "_").toLowerCase();
                         if (parameter.properties[propkey].type === undefined) {
                           console.log(
                             "Skipping (4): ",
@@ -1022,9 +1028,8 @@ const AppCreator = (defaultprops) => {
                         ) {
                           var newbody = {};
                           for (var propkey in parameter.properties) {
-                            const parsedkey = propkey
-                              .replaceAll(" ", "_")
-                              .toLowerCase();
+														console.log("propkey3: ", propkey)
+                            const parsedkey = propkey.replaceAll(" ", "_").toLowerCase();
                             if (
                               parameter.properties[propkey].type === undefined
                             ) {
@@ -1112,9 +1117,8 @@ const AppCreator = (defaultprops) => {
                             ) {
                               var newbody = {};
                               for (var propkey in parameter.properties) {
-                                const parsedkey = propkey
-                                  .replaceAll(" ", "_")
-                                  .toLowerCase();
+																console.log("propkey4: ", propkey)
+                                const parsedkey = propkey.replaceAll(" ", "_").toLowerCase();
                                 if (
                                   parameter.properties[propkey].type ===
                                   undefined
@@ -1197,6 +1201,7 @@ const AppCreator = (defaultprops) => {
                             ) {
                               var newbody = {};
                               for (var propkey in parameter.properties) {
+																console.log("propkey5: ", propkey)
                                 const parsedkey = propkey
                                   .replaceAll(" ", "_")
                                   .toLowerCase();
@@ -2068,6 +2073,7 @@ const AppCreator = (defaultprops) => {
         return;
       }
 
+			console.log("Paramname: ", parameterName)
       var newparamName = parameterName.replaceAll('"', "");
       newparamName = newparamName.replaceAll("'", "");
 
@@ -2098,6 +2104,7 @@ const AppCreator = (defaultprops) => {
         scheme: "basic",
       };
     } else if (authenticationOption === "Oauth2") {
+			console.log("oauth2: ", parameterName)
       var newparamName = parameterName.replaceAll('"', "");
       newparamName = newparamName.replaceAll("'", "");
 
