@@ -6,6 +6,7 @@ import { GetIconInfo } from "../views/Workflows.jsx";
 import { sortByKey } from "../views/AngularWorkflow.jsx";
 import { useTheme } from "@material-ui/core/styles";
 import NestedMenuItem from "material-ui-nested-menu-item";
+import { useAlert } from "react-alert";
 import theme from '../theme';
 //import NestedMenuItem from "./NestedMenu.jsx";
 
@@ -168,6 +169,7 @@ const ParsedAction = (props) => {
 
   //const theme = useTheme();
   const classes = useStyles();
+  const alert = useAlert()
 
   const [expansionModalOpen, setExpansionModalOpen] = React.useState(false);
   const [hideBody, setHideBody] = React.useState(true);
