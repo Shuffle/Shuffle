@@ -340,8 +340,7 @@ const AngularWorkflow = (defaultprops) => {
   const [_, setUpdate] = useState(""); // Used for rendring, don't remove
 
   const [workflowExecutions, setWorkflowExecutions] = React.useState([]);
-  const [defaultEnvironmentIndex, setDefaultEnvironmentIndex] =
-    React.useState(0);
+  const [defaultEnvironmentIndex, setDefaultEnvironmentIndex] = React.useState(0);
 
   // This should all be set once, not on every iteration
   // Use states and don't update lol

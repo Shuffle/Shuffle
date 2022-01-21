@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useLayoutEffect } from "react";
 import { makeStyles, createStyles } from "@material-ui/core/styles";
 
+import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
 import { GetParsedPaths } from "../views/Apps.jsx";
-import { GetIconInfo } from "../views/Workflows.jsx";
 import { sortByKey } from "../views/AngularWorkflow.jsx";
 import { useTheme } from "@material-ui/core/styles";
 import NestedMenuItem from "material-ui-nested-menu-item";
@@ -306,6 +306,8 @@ const ParsedAction = (props) => {
       });
   };
 
+
+
   const defineStartnode = () => {
     if (cy === undefined) {
       return;
@@ -393,14 +395,46 @@ const ParsedAction = (props) => {
 
       if (actionlist.length === 0) {
         // FIXME: Have previous execution values in here
-        actionlist.push({
-          type: "Execution Argument",
-          name: "Execution Argument",
-          value: "$exec",
-          highlight: "exec",
-          autocomplete: "exec",
-          example: "",
-        });
+				if (workflowExecutions.length > 0) {
+					for (var key in workflowExecutions) {
+						if (
+							workflowExecutions[key].execution_argument === undefined ||
+							workflowExecutions[key].execution_argument === null ||
+							workflowExecutions[key].execution_argument.length === 0 
+						) {
+							continue;
+						}
+
+						console.log("EXEC: ", workflowExecutions[key].execution_argument)
+					
+						const valid = validateJson(workflowExecutions[key].execution_argument)
+						console.log("VALID: ", valid)
+						if (valid.valid) {
+							actionlist.push({
+								type: "Execution Argument",
+								name: "Execution Argument",
+								value: "$exec",
+								highlight: "exec",
+								autocomplete: "exec",
+								example: valid.result,
+							})
+							break
+						}
+					}
+
+				}
+
+				if (actionlist.length === 0) {
+					actionlist.push({
+						type: "Execution Argument",
+						name: "Execution Argument",
+						value: "$exec",
+						highlight: "exec",
+						autocomplete: "exec",
+						example: "",
+					})
+				}
+
         actionlist.push({
           type: "Shuffle DB",
           name: "Shuffle DB",
@@ -477,51 +511,11 @@ const ParsedAction = (props) => {
         	          continue;
         	        }
 
-        	        foundResult.result = foundResult.result.trim();
-        	        foundResult.result = foundResult.result
-        	          .split(" None")
-        	          .join(' "None"');
-        	        foundResult.result = foundResult.result
-        	          .split(" False")
-        	          .join(" false");
-        	        foundResult.result = foundResult.result
-        	          .split(" True")
-        	          .join(" true");
-
-        	        var jsonvalid = true;
-        	        try {
-        	          const tmp = String(JSON.parse(foundResult.result));
-        	          if (
-        	            !foundResult.result.includes("{") &&
-        	            !foundResult.result.includes("[")
-        	          ) {
-        	            jsonvalid = false;
-        	          }
-        	        } catch (e) {
-        	          try {
-        	            foundResult.result = foundResult.result
-        	              .split("'")
-        	              .join('"');
-        	            const tmp = String(JSON.parse(foundResult.result));
-        	            if (
-        	              !foundResult.result.includes("{") &&
-        	              !foundResult.result.includes("[")
-        	            ) {
-        	              jsonvalid = false;
-        	            }
-        	          } catch (e) {
-        	            jsonvalid = false;
-        	          }
-        	        }
-
-        	        // Finds the FIRST json only
-        	        if (jsonvalid) {
+									const valid = validateJson(foundResult)
+									if (valid.valid) {
         	          exampledata = JSON.parse(foundResult.result);
         	          break;
         	        }
-        	        //else {
-        	        //	console.log("Invalid JSON: ", foundResult.result)
-        	        //}
         	      }
         	    }
 
@@ -545,6 +539,59 @@ const ParsedAction = (props) => {
 				}
       }
     });
+
+
+		const calculateHelpertext = (input_data) => {
+			var helperText = ""
+			var looperText = ""
+			const found = input_data.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
+
+			if (found !== null) {
+				try {
+					// When the found array is empty.
+					for (var i = 0; i < found.length; i++) {
+						const variableSplit = found[i].split(".#")
+						if ((variableSplit.length-1) > 1) {
+							//console.log("Larger than 1: ", variableSplit)
+							if (looperText.length === 0) {
+								looperText += "PS: Double looping (.#) may cause problems."
+							}
+						}
+
+						var foundSlice = false
+						for (var j = 0; j < actionlist.length; j++) {
+							//console.log("ACTION: ", found[i], actionlist[j])
+							//console.log("ACTION :", found[i].split(".")[0].slice(1,).toLowerCase(), actionlist[j].autocomplete.toLowerCase())
+							if(found[i].split(".")[0].slice(1,).toLowerCase() == actionlist[j].autocomplete.toLowerCase()){
+								//console.log("Found: ", found[i])
+								// Validate path?
+
+								foundSlice = true
+							}	
+						}
+
+						if (!foundSlice) {
+							if (!helperText.includes("Invalid variables")) {
+								helperText+= "Invalid variables: "
+							}
+							helperText+= found[i] + ", "
+						}
+					}
+				} catch (e) {
+					console.log("Parsing error: ", e)
+				}
+			}
+
+			if (looperText.length > 0) {
+				if (helperText.length > 0) {
+					helperText += ". "
+				}
+
+				helperText += looperText
+			}
+
+			return helperText
+		}
 
     const changeActionParameter = (event, count, data) => {
 			//console.log("Action change: ", selectedAction, data)
@@ -1284,21 +1331,27 @@ const ParsedAction = (props) => {
 
             const clickedFieldId = "rightside_field_" + count;
 
-						const shufflecode = <ShuffleCodeEditor
-							fieldCount = {fieldCount}
-							setFieldCount = {setFieldCount}
-              actionlist = {actionlist}
-							changeActionParameterCodeMirror = {changeActionParameterCodeMirror}
-							codedata={codedata}
-							setcodedata={setcodedata}
-							expansionModalOpen={expansionModalOpen}
-							setExpansionModalOpen={setExpansionModalOpen}
-						/>
+						const shufflecode = fieldCount !== count ? null : 
+						(
+							<ShuffleCodeEditor
+								fieldCount = {fieldCount}
+								setFieldCount = {setFieldCount}
+								actionlist = {actionlist}
+								changeActionParameterCodeMirror = {changeActionParameterCodeMirror}
+								codedata={codedata}
+								setcodedata={setcodedata}
+								expansionModalOpen={expansionModalOpen}
+								setExpansionModalOpen={setExpansionModalOpen}
+							/>
+						)
 
             //<TextareaAutosize
             // <CodeMirror
             //fullWidth
-						
+            var baseHelperText = ""
+						if (data.value.length > 0) {
+							baseHelperText = calculateHelpertext(data.value)
+						}
 						
             var datafield = (
               <TextField
@@ -1407,7 +1460,7 @@ const ParsedAction = (props) => {
                   //changeActionParameterCodemirror(event, count, data)
                   changeActionParameter(event, count, data);
                 }}
-                helperText={
+                helperText={baseHelperText.length > 0 ? baseHelperText : 
                   selectedApp.generated &&
                   selectedApp.activated &&
                   data.name === "body" ? (
@@ -1425,15 +1478,7 @@ const ParsedAction = (props) => {
                   ) : null
                 }
                 onBlur={(event) => {
-                  // Super basic check
-                  //if (event.target.value.startsWith("{")) {
-                  //	console.log("VALIDATING JSON")
-                  //	try {
-                  //		JSON.parse(event.target.value)
-                  //	} catch (e) {
-                  //		alert.error("Failed to parse json: ", e)
-                  //	}
-                  //}
+									baseHelperText = calculateHelpertext(event.target.value)
                 }}
               />
             );

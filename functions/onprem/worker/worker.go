@@ -1517,7 +1517,7 @@ func executionInit(workflowExecution shuffle.WorkflowExecution) error {
 	onpremApps := []string{}
 	toExecuteOnprem := []string{}
 	for _, action := range workflowExecution.Workflow.Actions {
-		if action.Environment != environment {
+		if strings.ToLower(action.Environment) != strings.ToLower(environment) {
 			continue
 		}
 
@@ -1599,7 +1599,7 @@ func handleDefaultExecution(client *http.Client, req *http.Request, workflowExec
 
 	err := executionInit(workflowExecution)
 	if err != nil {
-		log.Printf("[INFO] Workflow setup failed: %s", workflowExecution.ExecutionId, err)
+		log.Printf("[INFO] Workflow setup failed for %s: %s", workflowExecution.ExecutionId, err)
 		log.Printf("[DEBUG] Shutting down (18)")
 		shutdown(workflowExecution, "", "", true)
 	}

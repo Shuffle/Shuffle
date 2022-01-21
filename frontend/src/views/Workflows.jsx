@@ -381,9 +381,27 @@ const chipStyle = {
 };
 
 export const validateJson = (showResult) => {
-  //showResult = showResult.split(" None").join(" \"None\"")
-  showResult = showResult.split(" False").join(" false");
-  showResult = showResult.split(" True").join(" true");
+	console.log("INPUT: ", showResult, typeof showResult)
+	if (typeof showResult === 'string') {
+  	//showResult = showResult.split(" None").join(" \"None\"")
+		showResult = showResult.split(" False").join(" false");
+		showResult = showResult.split(" True").join(" true");
+		//return {
+		//	valid: false,
+		//	result: showResult,
+		//};
+	}
+
+	//if (typeof showResult === undefined) {
+
+	//}
+
+	if (typeof showResult === "object" || typeof showResult === "array") {
+  	return {
+  	  valid: true,
+  	  result: showResult,
+  	};
+	}
 
   var jsonvalid = true;
   try {
