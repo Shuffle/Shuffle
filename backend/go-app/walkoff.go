@@ -21,6 +21,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	dockerclient "github.com/docker/docker/client"
+
 	//gyaml "github.com/ghodss/yaml"
 
 	"github.com/h2non/filetype"
@@ -34,6 +35,7 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/storage/memory"
 	http2 "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
+
 	//"github.com/gorilla/websocket"
 	//"google.golang.org/appengine"
 	//"google.golang.org/appengine/memcache"
@@ -142,7 +144,7 @@ func createSchedule(ctx context.Context, scheduleId, workflowId, name, startNode
 }
 
 func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -243,7 +245,7 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 // FIXME: Authenticate this one? Can org ID be auth enough?
 // (especially since we have a default: shuffle)
 func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -335,7 +337,7 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 }
 
 func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -393,7 +395,7 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 }
 
 func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -666,7 +668,7 @@ func handleExecutionStatistics(execution shuffle.WorkflowExecution) {
 }
 
 func deleteWorkflow(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -1034,7 +1036,7 @@ func cloudExecuteAction(execution shuffle.WorkflowExecution) error {
 }
 
 func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -1131,7 +1133,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 }
 
 func stopSchedule(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -1281,7 +1283,7 @@ func stopSchedule(resp http.ResponseWriter, request *http.Request) {
 }
 
 func stopScheduleGCP(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -1390,7 +1392,7 @@ func deleteSchedule(ctx context.Context, id string) error {
 }
 
 func scheduleWorkflow(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -1641,7 +1643,7 @@ func setExampleresult(ctx context.Context, result shuffle.AppExecutionExample) e
 }
 
 func getWorkflowApps(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -1714,7 +1716,7 @@ func handleGetfile(resp http.ResponseWriter, request *http.Request) ([]byte, err
 
 // Basically a search for apps that aren't activated yet
 func getSpecificApps(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -1789,7 +1791,7 @@ func getSpecificApps(resp http.ResponseWriter, request *http.Request) {
 }
 
 func validateAppInput(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -1910,7 +1912,7 @@ func loadGithubWorkflows(url, username, password, userId, branch, orgId string) 
 }
 
 func loadSpecificWorkflows(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -1972,7 +1974,7 @@ func loadSpecificWorkflows(resp http.ResponseWriter, request *http.Request) {
 }
 
 func handleAppHotloadRequest(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -2290,7 +2292,7 @@ func iterateWorkflowGithubFolders(fs billy.Filesystem, dir []os.FileInfo, extra 
 }
 
 func setNewWorkflowApp(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}

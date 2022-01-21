@@ -1,12 +1,14 @@
 package main
 
 import (
+	uuid "github.com/satori/go.uuid"
 	"github.com/shuffle/shuffle-shared"
 
 	"bufio"
 	"bytes"
 	"context"
 	"crypto/md5"
+
 	//"crypto/tls"
 	//"crypto/x509"
 	"encoding/hex"
@@ -21,6 +23,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+
 	//"regexp"
 	"strings"
 	"time"
@@ -49,12 +52,12 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/storage/memory"
+
 	//githttp "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 
 	// Random
 	xj "github.com/basgys/goxml2json"
 	newscheduler "github.com/carlescere/scheduler"
-	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/yaml.v3"
 
@@ -706,7 +709,7 @@ func createNewUser(username, password, role, apikey string, org shuffle.OrgMini)
 }
 
 func handleRegister(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -835,7 +838,7 @@ func handleCookie(request *http.Request) bool {
 }
 
 func handleInfo(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -1118,7 +1121,7 @@ func increaseStatisticsField(ctx context.Context, fieldname, id string, amount i
 
 // FIXME - forward this to emails or whatever CRM system in use
 func handleContact(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -1164,7 +1167,8 @@ func handleContact(resp http.ResponseWriter, request *http.Request) {
 }
 
 func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	log.Printf("In admin login request?")
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -1193,7 +1197,7 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 }
 
 func handleLogin(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -1418,8 +1422,12 @@ func fixUserOrg(ctx context.Context, user *shuffle.User) *shuffle.User {
 }
 
 // Used for testing only. Shouldn't impact production.
-func handleCors(resp http.ResponseWriter, request *http.Request) bool {
-	allowedOrigins := "http://localhost:3000"
+/*
+func shuffle.HandleCors(resp http.ResponseWriter, request *http.Request) bool {
+	// Used for Codespace dev
+	allowedOrigins := "https://frikky-shuffle-5gvr4xx62w64-3000.githubpreview.dev"
+	//origin := request.Header["Origin"]
+	//log.Printf("Origin: %s", origin)
 	//allowedOrigins := "http://localhost:3002"
 
 	resp.Header().Set("Vary", "Origin")
@@ -1436,6 +1444,7 @@ func handleCors(resp http.ResponseWriter, request *http.Request) bool {
 
 	return false
 }
+*/
 
 func parseWorkflowParameters(resp http.ResponseWriter, request *http.Request) (map[string]interface{}, error) {
 	body, err := ioutil.ReadAll(request.Body)
@@ -1580,7 +1589,7 @@ func SearchNested(obj interface{}, key string) (interface{}, bool) {
 }
 
 func handleSetHook(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -1768,7 +1777,7 @@ func verifyHook(hook shuffle.Hook) (bool, string) {
 }
 
 func setSpecificSchedule(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -1828,7 +1837,7 @@ func setSpecificSchedule(resp http.ResponseWriter, request *http.Request) {
 }
 
 func getSpecificWebhook(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -1880,7 +1889,7 @@ func getSpecificWebhook(resp http.ResponseWriter, request *http.Request) {
 
 // Starts a new webhook
 func handleDeleteSchedule(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -1935,7 +1944,7 @@ func handleDeleteSchedule(resp http.ResponseWriter, request *http.Request) {
 
 // Starts a new webhook
 func handleNewSchedule(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -2229,7 +2238,7 @@ func getSpecificSchedule(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -2295,7 +2304,7 @@ func loadYaml(fileLocation string) (ApiYaml, error) {
 
 // This should ALWAYS come from an OUTPUT
 func executeSchedule(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -2788,7 +2797,7 @@ type Result struct {
 // r.HandleFunc("/api/v1/docs/{key}", getDocs).Methods("GET", "OPTIONS")
 
 func getOpenapi(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -3254,7 +3263,7 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 
 // Creates an app from the app builder
 func verifySwagger(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -4999,7 +5008,7 @@ func handleStopCloudSync(syncUrl string, org shuffle.Org) (*shuffle.Org, error) 
 	This is here to both enable and disable cloud sync features for an organization
 */
 func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -5687,10 +5696,15 @@ func initHandlers() {
 	dbclient, err = datastore.NewClient(ctx, gceProject, option.WithGRPCDialOption(grpc.WithNoProxy()))
 	if err != nil {
 		if elasticConfig == "" {
-			log.Fatalf("[ERROR] Database client error during init: %s. Env: SHUFFLE_ELASTIC=false", err)
+			log.Printf("[ERROR] Database client error during init: %s. Env: SHUFFLE_ELASTIC=false", err)
 		} else {
-			log.Printf("[DEBUG] Database client error during init: %s. Here for backwards compatibility: not critical.", err)
+			if !strings.Contains(fmt.Sprintf("%s", err), "find default credentials") {
+				log.Printf("[DEBUG] Database client error info during init: %s. Here for backwards compatibility: not critical.", err)
+			}
+			dbclient = &datastore.Client{}
 		}
+	} else {
+		//log.Printf("Database client initiated: %s", dbclient)
 	}
 
 	for {
@@ -5887,6 +5901,9 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/notifications/clear", shuffle.HandleClearNotifications).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/notifications/{notificationId}/markasread", shuffle.HandleMarkAsRead).Methods("GET", "OPTIONS")
 	//r.HandleFunc("/api/v1/notifications/{notificationId}/markasread", shuffle.HandleMarkAsRead).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/users/notifications", shuffle.HandleGetNotifications).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/users/notifications/clear", shuffle.HandleClearNotifications).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/users/notifications/{notificationId}/markasread", shuffle.HandleMarkAsRead).Methods("GET", "OPTIONS")
 
 	http.Handle("/", r)
 }

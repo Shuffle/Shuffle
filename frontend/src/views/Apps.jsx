@@ -515,7 +515,11 @@ const Apps = (props) => {
       valid = "false";
     }
 
-    if (data.actions === null || data.actions.length === 0) {
+		if (data.actions === undefined || data.actions === null) {
+			data.actions = []
+		}
+
+    if (data === undefined || data.actions === undefined || data.actions === null || data.actions.length === 0) {
       valid = "false";
     }
 

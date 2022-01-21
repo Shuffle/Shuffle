@@ -44,6 +44,7 @@ const LoginDialog = (props) => {
     register,
     checkLogin,
   } = props;
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [firstRequest, setFirstRequest] = useState(true);
@@ -143,7 +144,7 @@ const LoginDialog = (props) => {
 
     var baseurl = globalUrl;
     if (register) {
-      var url = baseurl + "/api/v1/users/login";
+      var url = baseurl + "/api/v1/login";
       fetch(url, {
         mode: "cors",
         method: "POST",

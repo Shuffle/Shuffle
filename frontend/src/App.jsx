@@ -49,6 +49,12 @@ if (window.location.port === "3000") {
   //globalUrl = "http://localhost:5002"
 }
 
+if (globalUrl.includes("githubpreview.dev")) {
+	//globalUrl = globalUrl.replace("3000", "5001")
+	globalUrl = "https://frikky-shuffle-5gvr4xx62w64-5001.githubpreview.dev"
+}
+console.log("global: ", globalUrl)
+
 const App = (message, props) => {
 
   const [userdata, setUserData] = useState({});
@@ -70,7 +76,7 @@ const App = (message, props) => {
       checkLogin();
       setDataset(true);
     }
-  });
+  }, []);
 
   if (
     isLoaded &&
@@ -84,11 +90,12 @@ const App = (message, props) => {
   }
 
   const getUserNotifications = () => {
-    fetch(`${globalUrl}/api/v1/notifications`, {
+    fetch(`${globalUrl}/api/v1/users/notifications`, {
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
       },
+			cors: "cors",
     })
       .then((response) => response.json())
       .then((responseJson) => {
@@ -109,7 +116,7 @@ const App = (message, props) => {
 
   const checkLogin = () => {
     var baseurl = globalUrl;
-    fetch(baseurl + "/api/v1/users/getinfo", {
+    fetch(`${globalUrl}/api/v1/getinfo`, {
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
