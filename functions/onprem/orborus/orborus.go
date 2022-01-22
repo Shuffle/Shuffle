@@ -37,9 +37,11 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/swarm"
+
 	//"github.com/docker/docker/api/types/filters"
 	dockerclient "github.com/docker/docker/client"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
+
 	//network "github.com/docker/docker/api/types/network"
 	//natting "github.com/docker/go-connections/nat"
 	"github.com/mackerelio/go-osstat/cpu"
@@ -538,8 +540,14 @@ func deployWorker(image string, identifier string, env []string, executionReques
 				nil,
 				identifier+"-2",
 			)
+			if err != nil {
+				log.Printf("[ERROR] Failed to CREATE container (2): %s", err)
+			}
 
 			err = dockercli.ContainerStart(context.Background(), cont.ID, containerStartOptions)
+			if err != nil {
+				log.Printf("[ERROR] Failed to start container (2): %s", err)
+			}
 		} else {
 			log.Printf("[ERROR] Failed initial container start. Quitting as this is NOT a simple network issue. Err: %s", err)
 		}

@@ -2612,7 +2612,13 @@ class AppBase:
                                     for i in range(0, curminlength): 
                                         tmpitem = json.loads(json.dumps(parameter["value"]))
                                         for key, value in replacements.items():
-                                            replacement = json.dumps(json.loads(value)[i])
+                                            replacement = value
+                                            try:
+                                                replacement = json.dumps(json.loads(value)[i])
+                                            except IndexError as e:
+                                                self.logger.info(f"[ERROR] Failed handling value parsing with index: {e}")
+                                                pass
+
                                             if replacement.startswith("\"") and replacement.endswith("\""):
                                                 replacement = replacement[1:len(replacement)-1]
                                             #except json.decoder.JSONDecodeError as e:

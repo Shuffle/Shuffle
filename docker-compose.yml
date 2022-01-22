@@ -64,7 +64,7 @@ services:
       - SHUFFLE_SWARM_CONFIG=runn
     restart: unless-stopped
   opensearch:
-    image: opensearchproject/opensearch:1.2.3
+    image: opensearchproject/opensearch:1.2.4
     hostname: shuffle-opensearch
     container_name: shuffle-opensearch
     environment:
