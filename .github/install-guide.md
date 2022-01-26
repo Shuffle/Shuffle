@@ -51,7 +51,7 @@ docker compose up -d
 https://shuffler.io/docs/configuration
 
 ### After installation 
-1. After installation, go to http://localhost:3001/adminsetup (or your servername - https is on port 3443)
+1. After installation, go to http://localhost:3001 (or your servername - https is on port 3443)
 2. Now set up your admin account (username & password). Shuffle doesn't have a default username and password. 
 3. Sign in with the same Username & Password! Go to /apps and see if you have any apps yet. If not - you may need to [configure proxies](https://shuffler.io/docs/configuration#production_readiness)
 4. Check out https://shuffler.io/docs/configuration as it has a lot of useful information to get started
