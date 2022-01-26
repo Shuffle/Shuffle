@@ -1022,11 +1022,11 @@ class AppBase:
             pass
 
         self.action = copy.deepcopy(action)
-        self.logger.info("[DEBUG] Sending starting action result (EXECUTING)")
+        self.logger.info(f"[DEBUG] Sending starting action result (EXECUTING). Param replace: {replace_params}")
 
         headers = {
             "Content-Type": "application/json",     
-            "Authorization": "Bearer %s" % self.authorization
+            "Authorization": f"Bearer {self.authorization}" 
         }
 
         if len(self.action) == 0:
@@ -1122,6 +1122,32 @@ class AppBase:
 
 
         self.full_execution = fullexecution
+
+        try:
+            if replace_params == True:
+                for inner_action in self.full_execution["workflow"]["actions"]:
+                    self.logger.info("[DEBUG] ID: %s vs %s" % (inner_action["id"], self.action["id"]))
+
+                    # In case of some kind of magic, we're just doing params
+                    if inner_action["id"] == self.action["id"]:
+                        self.logger.info("FOUND!")
+
+                        if isinstance(self.action, str):
+                            self.logger.info("Params is in string object for self.action?")
+                        else:
+                            self.action["parameters"] = inner_action["parameters"]
+                            self.action_result["action"]["parameters"] = inner_action["parameters"]
+
+                        if isinstance(self.original_action, str):
+                            self.logger.info("Params for original actions is in string object?")
+                        else:
+                            self.original_action["parameters"] = inner_action["parameters"]
+
+                        break
+
+        except Exception as e:
+            self.logger.info(f"[WARNING] Failed in replace params action parsing: {e}")
+
         self.logger.info("[DEBUG] AFTER FULLEXEC stream result (init)")
 
         # Gets the value at the parenthesis level you want
@@ -2186,7 +2212,7 @@ class AppBase:
                 return True
             else:
                 print("[DEBUG] Condition: can't handle %s yet. Setting to true" % check)
-                    
+
             return False
 
         def check_branch_conditions(action, fullexecution, self):
@@ -2197,21 +2223,48 @@ class AppBase:
             except KeyError:
                 return True, ""
 
+
+            available_checks = [
+                "=",
+                "equals",
+                "!=",
+                "does not equal",
+                ">",
+                "larger than",
+                "<",
+                "less than",
+                ">=",
+                "<=",
+                "startswith",
+                "endswith",
+                "contains",
+                "contains_any_of",
+                "re",
+                "matches regex",
+            ]
+
             relevantbranches = []
+            correct_branches = 0
+            matching_branches = 0
             for branch in fullexecution["workflow"]["branches"]:
                 if branch["destination_id"] != action["id"]:
                     continue
 
+                matching_branches += 1
                 # Remove anything without a condition
                 try:
                     if (branch["conditions"]) == 0 or branch["conditions"] == None:
+                        correct_branches += 1
                         continue
                 except KeyError:
+                    correct_branches += 1
                     continue
 
                 self.logger.info("[DEBUG] Relevant conditions: %s" % branch["conditions"])
                 successful_conditions = []
                 failed_conditions = []
+                successful_conditions = 0
+                total_conditions = len(branch["conditions"])
                 for condition in branch["conditions"]:
                     self.logger.info("[DEBUG] Getting condition value of %s" % condition)
 
@@ -2219,6 +2272,7 @@ class AppBase:
                     sourcevalue = condition["source"]["value"]
                     check, sourcevalue, is_loop = parse_params(action, fullexecution, condition["source"], self)
                     if check:
+                        continue
                         return False, {"success": False, "reason": "Failed condition (1): %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)}
 
                     #sourcevalue = sourcevalue.encode("utf-8")
@@ -2227,28 +2281,11 @@ class AppBase:
 
                     check, destinationvalue, is_loop = parse_params(action, fullexecution, condition["destination"], self)
                     if check:
+                        continue
                         return False, {"success": False, "reason": "Failed condition (2): %s %s %s because %s" % (sourcevalue, condition["condition"]["value"], destinationvalue, check)}
 
                     #destinationvalue = destinationvalue.encode("utf-8")
                     destinationvalue = parse_wrapper_start(destinationvalue, self)
-                    available_checks = [
-                        "=",
-                        "equals",
-                        "!=",
-                        "does not equal",
-                        ">",
-                        "larger than",
-                        "<",
-                        "less than",
-                        ">=",
-                        "<=",
-                        "startswith",
-                        "endswith",
-                        "contains",
-                        "contains_any_of",
-                        "re",
-                        "matches regex",
-                    ]
 
                     if not condition["condition"]["value"] in available_checks:
                         self.logger.warning("Skipping %s %s %s because %s is invalid." % (sourcevalue, condition["condition"]["value"], destinationvalue, condition["condition"]["value"]))
@@ -2265,14 +2302,29 @@ class AppBase:
                     except KeyError:
                         pass
 
-                    if not validation:
-                        self.logger.info("Failed condition check for %s %s %s." % (sourcevalue, condition["condition"]["value"], destinationvalue))
-                        return False, {"success": False, "reason": "Failed condition (3): %s %s %s" % (sourcevalue, condition["condition"]["value"], destinationvalue)}
+                    if validation == True:
+                        successful_conditions += 1
 
+                    #if not validation:
+                    #    self.logger.info("Failed condition check for %s %s %s." % (sourcevalue, condition["condition"]["value"], destinationvalue))
+                    #    return False, {"success": False, "reason": "Failed condition (3): %s %s %s" % (sourcevalue, condition["condition"]["value"], destinationvalue)}
 
-                # Make a general parser here, at least to get param["name"] = param["value"] in maparameter[string]string
-                #for condition in branch.conditons:
+                self.logger.info("CONDITIONS VS SUCCESS: %d vs %d" % (total_conditions, successful_conditions))
+
+                if total_conditions == successful_conditions:
+                    correct_branches += 1
     
+            if matching_branches == 0:
+                return True, ""
+
+            if matching_branches > 0 and correct_branches > 0:
+                return True, ""
+
+            self.logger.info("[DEBUG] Correct branches vs matching branches: %d vs %d" % (correct_branches, matching_branches))
+            return False, {"success": False, "reason": "Minimum of one branch must be correct. Total: %d of %d" % (correct_branches, matching_branches)}
+
+            #Correct branches vs matching branches: 1 vs 1
+            #if 
             return True, ""
 
 
