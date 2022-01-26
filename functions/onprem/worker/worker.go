@@ -1163,13 +1163,46 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		// if everything is generated during execution
 		//log.Printf("[DEBUG][%s] Deployed with CALLBACK_URL %s and BASE_URL %s", workflowExecution.ExecutionId, appCallbackUrl, baseUrl)
 		env := []string{
-			fmt.Sprintf("ACTION=%s", string(actionData)),
 			fmt.Sprintf("EXECUTIONID=%s", workflowExecution.ExecutionId),
 			fmt.Sprintf("AUTHORIZATION=%s", workflowExecution.Authorization),
 			fmt.Sprintf("CALLBACK_URL=%s", baseUrl),
 			fmt.Sprintf("BASE_URL=%s", appCallbackUrl),
 			fmt.Sprintf("TZ=%s", timezone),
 		}
+
+		if len(actionData) >= 100000 {
+			log.Printf("[WARNING] Omitting some data from action execution. Length: %d. Fix in SDK!", len(actionData))
+			newParams := []shuffle.WorkflowAppActionParameter{}
+			for _, param := range action.Parameters {
+				paramData, err := json.Marshal(param)
+				if err != nil {
+					log.Printf("[WARNING] Failed to marshal param %s: %s", param.Name, err)
+					newParams = append(newParams, param)
+					continue
+				}
+
+				if len(paramData) >= 50000 {
+					log.Printf("[WARNING] Removing a lot of data from param %s with length %d", param.Name, len(paramData))
+					param.Value = "SHUFFLE_AUTO_REMOVED"
+				}
+
+				newParams = append(newParams, param)
+			}
+
+			action.Parameters = newParams
+			actionData, err = json.Marshal(action)
+			if err == nil {
+				log.Printf("[DEBUG] Ran data replace on action %s. new length: %d", action.Name, len(actionData))
+			} else {
+				log.Printf("[WARNING] Failed to marshal new actionData: %s", err)
+
+			}
+		} else {
+			log.Printf("[DEBUG] Actiondata is NOT 100000 in length. Adding as normal.")
+		}
+
+		actionEnv := fmt.Sprintf("ACTION=%s", string(actionData))
+		env = append(env, actionEnv)
 
 		if strings.ToLower(os.Getenv("SHUFFLE_PASS_APP_PROXY")) == "true" {
 			//log.Printf("APPENDING PROXY TO THE APP!")
