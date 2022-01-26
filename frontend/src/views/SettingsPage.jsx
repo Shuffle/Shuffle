@@ -77,7 +77,7 @@ const Settings = (props) => {
   //Returns the value from a storage position at a given address.
   const isCloud =
     window.location.host === "localhost:3002" ||
-    window.location.host === "shuffler.io";
+    window.location.host === "shuffler.io"
 
   const bodyDivStyle = {
     margin: "auto",
@@ -409,8 +409,6 @@ const Settings = (props) => {
   //    : imageData;
 
 	const imageData = userSettings.image === undefined || userSettings.image == null || userSettings.image.length === 0 ? theme.palette.defaultImage : userSettings.image
-	console.log("settings: ", userSettings)
-	console.log("Image: ", imageData)
   const imageInfo = (
     <img
       src={imageData}
@@ -921,11 +919,11 @@ const Settings = (props) => {
   };
 
   const handleGithubConnection = () => {
-		console.log("GITHUB CONNECT WOO")
+		console.log("GITHUB CONNECT WOO: ", isCloud)
   	//result = RestClient.post('https://github.com/login/oauth/access_token',
 
 		console.log("HOST: ", window.location.host);
-		console.log("HOST: ", window.location);
+		console.log("Location: ", window.location);
 		const redirectUri = isCloud
 			? window.location.host === "localhost:3002"
 				? "http%3A%2F%2Flocalhost:3002%2Fset_authentication"
@@ -935,6 +933,7 @@ const Settings = (props) => {
 				:
 				`https%3A%2F%2F${window.location.host}%2Fset_authentication`
 
+		console.log("redirect: ", redirectUri)
 
 		const client_id = "3d272b1b782b100b1e61"
 		const username = userdata.id;

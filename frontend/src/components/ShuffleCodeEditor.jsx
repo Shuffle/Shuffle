@@ -92,6 +92,7 @@ const CodeEditor = (props) => {
 					color: "white",
 					minWidth: 600,
 					padding: 25, 
+					border: theme.palette.defaultBorder,
 				},
 			}}
 		>

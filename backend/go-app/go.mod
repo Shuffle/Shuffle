@@ -2,7 +2,7 @@ module main
 
 go 1.16
 
-replace github.com/shuffle/shuffle-shared => ../../../shuffle-shared
+//replace github.com/shuffle/shuffle-shared => ../../../shuffle-shared
 
 //replace github.com/frikky/kin-openapi => ../../../../git/kin-openapi
 //replace github.com/frikky/go-elasticsearch => ../../../../git/go-elasticsearch
@@ -23,7 +23,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/h2non/filetype v1.1.3
 	github.com/satori/go.uuid v1.2.0
-	github.com/shuffle/shuffle-shared v0.1.84
+	github.com/shuffle/shuffle-shared v0.1.86
 	go4.org v0.0.0-20201209231011-d4a079459e60 // indirect
 	golang.org/x/crypto v0.0.0-20220112180741-5e0467b6c7ce
 	google.golang.org/api v0.65.0

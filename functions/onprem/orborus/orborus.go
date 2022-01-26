@@ -805,7 +805,7 @@ func main() {
 	// Run by default from now
 	zombiecheck(ctx, workerTimeout)
 
-	log.Printf("[INFO] Running towards %s with Org %s", baseUrl, orgId)
+	log.Printf("[INFO] Running towards %s (BASE_URL) with Org %s", baseUrl, orgId)
 	httpProxy := os.Getenv("HTTP_PROXY")
 	httpsProxy := os.Getenv("HTTPS_PROXY")
 

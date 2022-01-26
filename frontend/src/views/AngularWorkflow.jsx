@@ -1132,14 +1132,18 @@ const AngularWorkflow = (defaultprops) => {
       })
       .then((responseJson) => {
         if (executionArgument !== undefined && startNode !== undefined) {
-          console.log("Running execution AFTER saving");
+          //console.log("Running execution AFTER saving");
           executeWorkflow(executionArgument, startNode, true);
           return;
         }
 
         if (!responseJson.success) {
           console.log(responseJson);
-          alert.error("Failed to save: " + responseJson.reason);
+					if (responseJson.reason !== undefined && responseJson.reason !== null) {
+          	alert.error("Failed to save: " + responseJson.reason);
+					} else {
+          	alert.error("Failed to save. Please contact your admin if this is unexpected.")
+					}
         } else {
           if (
             responseJson.new_id !== undefined &&
@@ -6279,6 +6283,7 @@ const AngularWorkflow = (defaultprops) => {
           backgroundColor: surfaceColor,
           color: "white",
           minWidth: 800,
+					border: theme.palette.defaultBorder,
         },
       }}
       onClose={() => {
@@ -11211,7 +11216,7 @@ const AngularWorkflow = (defaultprops) => {
                   color="primary"
                   style={{ float: "right", marginTop: 20, marginLeft: 10 }}
                   onClick={() => {
-                    console.log("DATA: ", executionData);
+                    //console.log("DATA: ", executionData);
                     executeWorkflow(
                       executionData.execution_argument,
                       executionData.start,
@@ -11830,6 +11835,7 @@ const AngularWorkflow = (defaultprops) => {
             overflowY: "auto",
             overflowX: "hidden",
             zIndex: 10012,
+						border: theme.palette.defaultBorder,
           },
         }}
       >
@@ -12773,6 +12779,7 @@ const AngularWorkflow = (defaultprops) => {
             color: "white",
             minWidth: 600,
             padding: 50,
+						border: theme.palette.defaultBorder,
           },
         }}
       >
@@ -12836,6 +12843,7 @@ const AngularWorkflow = (defaultprops) => {
           padding: 15,
           overflow: "hidden",
           zIndex: 10012,
+					border: theme.palette.defaultBorder,
         },
       }}
     >

@@ -381,7 +381,7 @@ const chipStyle = {
 };
 
 export const validateJson = (showResult) => {
-	console.log("INPUT: ", showResult, typeof showResult)
+	//console.log("INPUT: ", showResult, typeof showResult)
 	if (typeof showResult === 'string') {
   	//showResult = showResult.split(" None").join(" \"None\"")
 		showResult = showResult.split(" False").join(" false");
@@ -2451,7 +2451,7 @@ const Workflows = (props) => {
         </Tooltip>
       ) : null}
       {isCloud ? null : (
-        <Tooltip color="primary" title={"Download workflows"} placement="top">
+        <Tooltip color="primary" title={"Import workflows to Shuffle"} placement="top">
           <Button
             color="primary"
             style={{}}

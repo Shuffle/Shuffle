@@ -180,23 +180,21 @@ const ParsedAction = (props) => {
 	const [hiddenDescription, setHiddenDescription] = React.useState(true);
 
   useEffect(() => {
-		
-		//if (data.startsWith("${") && data.endsWith("}")) {
-		//}
-				// PARAM FIX - Gonna use the ID field, even though it's a hack
-		const paramcheck = selectedAction.parameters.find(param => param.name === "body")
-		//console.log("LOADED! Change hideBody based on input? Action: ", selectedAction, paramcheck)
-		if (paramcheck !== undefined && paramcheck !== null) {
-			if (paramcheck.id === "TOGGLED"){ 
-  			setHideBody(false)
-  			setActivateHidingBodyButton(false)
-				console.log("TOGGLED BODY!")
-			} else {
-  			setHideBody(true)
-
-				if (paramcheck.id === "UNTOGGLED") {
+		if (selectedAction.parameters !== null && selectedAction.parameters !== undefined) {
+			const paramcheck = selectedAction.parameters.find(param => param.name === "body")
+			//console.log("LOADED! Change hideBody based on input? Action: ", selectedAction, paramcheck)
+			if (paramcheck !== undefined && paramcheck !== null) {
+				if (paramcheck.id === "TOGGLED"){ 
+  				setHideBody(false)
   				setActivateHidingBodyButton(false)
-					console.log("UNTOGGLED!")
+					console.log("TOGGLED BODY!")
+				} else {
+  				setHideBody(true)
+
+					if (paramcheck.id === "UNTOGGLED") {
+  					setActivateHidingBodyButton(false)
+						console.log("UNTOGGLED!")
+					}
 				}
 			}
 		}
@@ -513,9 +511,11 @@ const ParsedAction = (props) => {
 
 									const valid = validateJson(foundResult)
 									if (valid.valid) {
-        	          exampledata = JSON.parse(foundResult.result);
+        	          exampledata = valid.result;
         	          break;
-        	        }
+        	        } else {
+        	          exampledata = foundResult;
+									}
         	      }
         	    }
 
@@ -2382,9 +2382,12 @@ const ParsedAction = (props) => {
                 <Select
                   defaultValue={selectedAction.app_version}
                   onChange={(event) => {
+										console.log("VAL: ", event.target.value)
+										console.log("App: ", selectedApp)
                     const newversion = selectedApp.versions.find(
                       (tmpApp) => tmpApp.version == event.target.value
                     );
+
                     console.log("NEWVERSION: ", newversion);
                     if (newversion !== undefined && newversion !== null) {
                       getApp(newversion.id, true);

@@ -472,8 +472,9 @@ const LoginDialog = (props) => {
                     type="button"
                     style={{ flex: "1", marginTop: 5 }}
                     onClick={() => {
-                      console.log("CLICK");
-                      navigate(ssoUrl)
+                      //console.log("CLICK SSO");
+											window.location.href = ssoUrl
+                      //navigate(ssoUrl)
                     }}
                   >
                     Use SSO

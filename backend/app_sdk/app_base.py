@@ -1010,8 +1010,12 @@ class AppBase:
         }
 
         # Simple validation of parameters in general
+        replace_params = False
         try:
             tmp_parameters = action["parameters"]
+            for param in tmp_parameters:
+                if param["value"] == "SHUFFLE_AUTO_REMOVED":
+                    replace_params = True
         except KeyError:
             action["parameters"] = []
         except TypeError:
@@ -1509,17 +1513,23 @@ class AppBase:
                                 newvalue, is_loop = (tmpitem, parsersplit[outercnt+1:])
                         else:
                             print("[INFO] In ELSE - handling %s and %s" % (firstitem, seconditem))
-                            if firstitem.lower() == "max" or firstitem.lower() == "last" or firstitem.lower() == "end": 
-                                firstitem = len(basejson)-1
-                            elif firstitem.lower() == "min" or firstitem.lower() == "first": 
-                                firstitem = 0
+                            if isinstance(firstitem, str):
+                                if firstitem.lower() == "max" or firstitem.lower() == "last" or firstitem.lower() == "end": 
+                                    firstitem = len(basejson)-1
+                                elif firstitem.lower() == "min" or firstitem.lower() == "first": 
+                                    firstitem = 0
+                                else:
+                                    firstitem = int(firstitem)
                             else:
                                 firstitem = int(firstitem)
 
-                            if seconditem.lower() == "max" or seconditem.lower() == "last" or firstitem.lower() == "end": 
-                                seconditem = len(basejson)-1
-                            elif seconditem.lower() == "min" or seconditem.lower() == "first": 
-                                seconditem = 0
+                            if isinstance(seconditem, str): 
+                                if seconditem.lower() == "max" or seconditem.lower() == "last" or firstitem.lower() == "end": 
+                                    seconditem = len(basejson)-1
+                                elif seconditem.lower() == "min" or seconditem.lower() == "first": 
+                                    seconditem = 0
+                                else:
+                                    seconditem = int(seconditem)
                             else:
                                 seconditem = int(seconditem)
 
