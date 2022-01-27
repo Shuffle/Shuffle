@@ -11059,6 +11059,14 @@ const AngularWorkflow = (defaultprops) => {
 														// Especially important IF the result is > 1 Mb in cloud
 														var checkStarted = false
 														if (isCloud && data.results !== undefined && data.results !== null && data.results.length > 0) {
+
+															if (data.execution_argument !== undefined && data.execution_argument !== null && data.execution_argument.includes("too large")) {
+																setExecutionData({});
+																checkStarted = true 
+																start();
+																setExecutionRunning(true);
+																setExecutionRequestStarted(false);
+															} else {
 															for (var key in data.results) {
 																if (data.results[key].status !== "SUCCESS") {
 																	continue
@@ -11072,6 +11080,7 @@ const AngularWorkflow = (defaultprops) => {
 																	setExecutionRequestStarted(false);
 																	break
 																}
+															}
 															}
 														}
 

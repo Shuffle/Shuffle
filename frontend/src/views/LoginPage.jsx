@@ -181,7 +181,8 @@ const LoginDialog = (props) => {
 
               setIsLoggedIn(true);
 
-              navigate("/workflows")
+              //navigate("/workflows")
+							window.location.href = "/workflows"
             }
           })
         )
