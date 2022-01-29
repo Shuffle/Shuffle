@@ -49,6 +49,8 @@ const MenuProps = {
       scrollX: "auto",
     },
   },
+  variant: "menu",
+  getContentAnchorEl: null,
 };
 
 const AuthenticationOauth2 = (props) => {
@@ -84,6 +86,7 @@ const AuthenticationOauth2 = (props) => {
   const [oauthUrl, setOauthUrl] = React.useState("");
   const [buttonClicked, setButtonClicked] = React.useState(false);
   const [selectedScopes, setSelectedScopes] = React.useState([]);
+  const [offlineAccess, setOfflineAccess] = React.useState(true);
   const allscopes =
     authenticationType.scope !== undefined ? authenticationType.scope : [];
 
@@ -113,6 +116,10 @@ const AuthenticationOauth2 = (props) => {
 
     var resources = "";
     if (scopes !== undefined && (scopes !== null) & (scopes.length > 0)) {
+			if (offlineAccess === true && !scopes.includes("offline_access")) {
+				scopes.push("offline_access")
+			}
+
       resources = scopes.join(" ");
       //resources = scopes.join(",");
     }
@@ -496,34 +503,47 @@ const AuthenticationOauth2 = (props) => {
               }}
             />
             {allscopes.length === 0 ? null : (
-							<span style={{marginTop: 10}}>
-								Scopes
-								<Select
-									multiple
-									value={selectedScopes}
-									style={{
-										backgroundColor: theme.palette.inputColor,
-										color: "white",
-										padding: 5, 
-									}}
-									onChange={(e) => {
-										handleScopeChange(e);
-									}}
-									fullWidth
-									input={<Input id="select-multiple-native" />}
-									renderValue={(selected) => selected.join(", ")}
-									MenuProps={MenuProps}
-								>
-									{allscopes.map((data, index) => {
-										return (
-											<MenuItem key={index} value={data}>
-												<Checkbox checked={selectedScopes.indexOf(data) > -1} />
-												<ListItemText primary={data} />
-											</MenuItem>
-										);
-									})}
-								</Select>
-							</span>
+							<div style={{width: "100%", marginTop: 10, display: "flex"}}>
+								<span>
+									Scopes
+									<Select
+										multiple
+										value={selectedScopes}
+										style={{
+											backgroundColor: theme.palette.inputColor,
+											color: "white",
+											padding: 5, 
+										}}
+										onChange={(e) => {
+											handleScopeChange(e)
+										}}
+										fullWidth
+										input={<Input id="select-multiple-native" />}
+										renderValue={(selected) => selected.join(", ")}
+										MenuProps={MenuProps}
+									>
+										{allscopes.map((data, index) => {
+											return (
+												<MenuItem key={index} value={data}>
+													<Checkbox checked={selectedScopes.indexOf(data) > -1} />
+													<ListItemText primary={data} />
+												</MenuItem>
+											);
+										})}
+									</Select>
+								</span>
+								<span>
+									<Tooltip
+										color="primary"
+										title={"Automatic Refresh (default: true)"}
+										placement="top"
+									>
+										<Checkbox style={{paddingTop: 10}} color="secondary" checked={offlineAccess} onClick={() => {
+											setOfflineAccess(!offlineAccess)
+										}}/>
+									</Tooltip>
+								</span>
+							</div>
             )}
           </span>
         )}

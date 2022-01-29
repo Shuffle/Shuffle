@@ -2558,6 +2558,7 @@ const ParsedAction = (props) => {
               SelectDisplayProps={{
                 style: {
                   marginLeft: 10,
+									maxWidth: 250,
                 },
               }}
               fullWidth
@@ -2631,6 +2632,7 @@ const ParsedAction = (props) => {
             >
               <IconButton
                 color="primary"
+								variant="outlined"
                 style={{}}
                 onClick={() => {
                   setAuthenticationModalOpen(true);
