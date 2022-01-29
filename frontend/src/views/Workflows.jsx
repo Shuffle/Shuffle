@@ -2823,7 +2823,7 @@ const Workflows = (props) => {
 									workflowDelay += 75
 								} else {
 									return (
-      							<Grid item xs={4} style={{ padding: "12px 10px 12px 10px" }}>
+      							<Grid key={index} item xs={4} style={{ padding: "12px 10px 12px 10px" }}>
 											<WorkflowPaper key={index} data={data} />
       							</Grid>
 									)

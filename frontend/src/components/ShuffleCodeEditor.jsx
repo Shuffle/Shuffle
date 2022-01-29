@@ -82,6 +82,8 @@ const CodeEditor = (props) => {
 
 	return (
 		<Dialog 
+      disableEnforceFocus={true}
+      hideBackdrop={true}
 			open={expansionModalOpen} 
 			onClose={() => {
 				//setExpansionModalOpen(false)
@@ -93,6 +95,7 @@ const CodeEditor = (props) => {
 					minWidth: 600,
 					padding: 25, 
 					border: theme.palette.defaultBorder,
+					zIndex: 10012,
 				},
 			}}
 		>

@@ -139,15 +139,15 @@ class AppBase:
         try:
             new_input = input_data.split()
         except Exception as e:
-            self.logger.info(f"[ERROR] Failed to run magic parser (1): {e}")
+            self.logger.info(f"[ERROR] Failed to run magic parser during split (1): {e}")
             return input_data
 
         # Won't ever touch this one?
-        if isinstance(input_data, list) or isinstance(input_data, object):
+        if isinstance(new_input, list) or isinstance(new_input, object):
             try:
                 return json.dumps(new_input)
             except Exception as e:
-                self.logger.info(f"[ERROR] Failed to run magic parser: {e}")
+                self.logger.info(f"[ERROR] Failed to run magic parser (3): {e}")
             
         return new_input
 
@@ -165,7 +165,7 @@ class AppBase:
             else:
                 self.logger.warning(f"[ERROR] Magic output not defined.")
         except Exception as e:
-            self.logger.warning(f"[ERROR] Failed to run magic autoparser: {e}")
+            self.logger.warning(f"[ERROR] Failed to run magic autoparser (send result): {e}")
             pass
 
         # Try it with some magic
@@ -2871,7 +2871,7 @@ class AppBase:
                             except Exception as e:
                                 self.logger.warning("[ERROR] Failed to parse coroutine value for old app: {e}")
 
-                            self.logger.info("\n[INFO] Returned from execution with types %s" % type(newres))
+                            self.logger.info("\n[INFO] Returned from execution with type(s) %s" % type(newres))
                             #self.logger.info("\n[INFO] Returned from execution with %s of types %s" % (newres, type(newres)))#, newres)
                             if isinstance(newres, tuple):
                                 self.logger.info(f"[INFO] Handling return as tuple: {newres}")
