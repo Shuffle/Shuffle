@@ -1112,6 +1112,21 @@ const AngularWorkflow = (defaultprops) => {
     useworkflow.errors = [];
     useworkflow.previously_saved = true;
 
+		if (cy !== undefined) {
+			// scale: 0.3,
+			// bg: "#27292d",
+			const cyImageData = cy.png({
+				output: "base64uri",
+				maxWidth: 480,
+				maxHeight: 270,
+			})
+
+			console.log("CY: ", cyImageData)
+			if (cyImageData !== undefined && cyImageData !== null && cyImageData.length > 0) {
+				useworkflow.image = cyImageData
+			}
+		}
+
     setLastSaved(true);
     fetch(globalUrl + "/api/v1/workflows/" + props.match.params.key, {
       method: "PUT",
