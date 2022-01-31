@@ -352,7 +352,7 @@ const Docs = (defaultprops) => {
   }
 
   function Img(props) {
-    return <img style={{ maxWidth: "100%" }} alt={props.alt} src={props.src} />;
+    return <img style={{ borderRadius: theme.palette.borderRadius, maxWidth: "100%", marginTop: 15, marginBottom: 15, }} alt={props.alt} src={props.src} />;
   }
 
   function CodeHandler(props) {

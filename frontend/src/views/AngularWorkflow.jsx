@@ -14,6 +14,7 @@ import theme from '../theme';
 
 import {
 	Zoom,
+	Avatar,
 	Popover,
   TextField,
   Drawer,
@@ -45,7 +46,12 @@ import {
   Breadcrumbs,
   CircularProgress,
   Switch,
+	Chip,
 } from "@material-ui/core";
+
+import {
+	AvatarGroup,
+} from "@mui/material"
 
 import {
   OpenInNew as OpenInNewIcon,
@@ -248,6 +254,9 @@ const AngularWorkflow = (defaultprops) => {
   const [subworkflowStartnode, setSubworkflowStartnode] = React.useState("");
   const [leftViewOpen, setLeftViewOpen] = React.useState(true);
   const [leftBarSize, setLeftBarSize] = React.useState(350);
+  const [creatorProfile, setCreatorProfile] = React.useState({});
+  const [appGroup, setAppGroup] = React.useState([]);
+  const [triggerGroup, setTriggerGroup] = React.useState([]);
   const [executionText, setExecutionText] = React.useState("");
   const [executionRequestStarted, setExecutionRequestStarted] =
     React.useState(false);
@@ -1346,7 +1355,7 @@ const AngularWorkflow = (defaultprops) => {
     })
       .then((response) => {
         if (response.status !== 200) {
-          console.log("Status not 200 for apps :O!");
+          console.log("Status not 200 for app auth :O!");
         }
 
         return response.json();
@@ -1460,6 +1469,10 @@ const AngularWorkflow = (defaultprops) => {
         return response.json();
       })
       .then((responseJson) => {
+				if (responseJson.success === false) {
+					return
+				}
+
         // FIXME - handle versions on left bar
         //handleAppVersioning(responseJson)
         //var tmpapps = []
@@ -1495,7 +1508,7 @@ const AngularWorkflow = (defaultprops) => {
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        alert.error("App loading error: ", error.toString());
       });
   };
 
@@ -1530,11 +1543,50 @@ const AngularWorkflow = (defaultprops) => {
           responseJson.errors = [];
         }
 
+        if (responseJson.actions === undefined || responseJson.actions === null) {
+          responseJson.actions = [];
+        }
+
+        if (responseJson.triggers === undefined || responseJson.triggers === null) {
+          responseJson.triggers = [];
+        }
+
         if (responseJson.public) {
           alert.info(
-            "This workflow is public. You will have to save it to make it your own!"
+            "This workflow is public. Save the workflow to "
           );
+				
+					console.log("RESP: ", responseJson)
+					if (Object.getOwnPropertyNames(creatorProfile).length === 0) {
+						getUserProfile("frikky") 
+					}
+
+					//{appGroup.map((data, index) => {
+					//const [appGroup, setAppGroup] = React.useState([]);
+					var appsFound = []
+					for (var key in responseJson.actions) {
+						const parsedAction = responseJson.actions[key]
+						if (parsedAction.large_image === undefined || parsedAction.large_image === null || parsedAction.large_image === "") {
+							continue
+						}
+						if (appsFound.findIndex(data => data.app_name === parsedAction.app_name) < 0){
+							appsFound.push(parsedAction)
+						}
+					}
+
+					setAppGroup(appsFound)
+
+					appsFound = []
+					for (var key in responseJson.triggers) {
+						const parsedAction = responseJson.triggers[key]
+						if (appsFound.findIndex(data => data.app_name === parsedAction.app_name) < 0){
+							appsFound.push(parsedAction)
+						}
+					}
+
+					setTriggerGroup(appsFound)
         }
+
 
         // Appends SUBFLOWS. Does NOT run during normal grabbing of workflows.
         if (sourcenode.id !== undefined) {
@@ -2107,9 +2159,11 @@ const AngularWorkflow = (defaultprops) => {
     if (!lastSaved) {
       return unloadText;
     } else {
-    	//document.removeEventListener("mousemove", onMouseUpdate, true);
-			document.removeEventListener("keydown", handleKeyDown, true);
-			document.removeEventListener("paste", handlePaste, true);
+			if (workflow.public === false) {
+				//document.removeEventListener("mousemove", onMouseUpdate, true);
+				document.removeEventListener("keydown", handleKeyDown, true);
+				document.removeEventListener("paste", handlePaste, true);
+			}
 		}
   });
 
@@ -3393,7 +3447,7 @@ const AngularWorkflow = (defaultprops) => {
     })
       .then((response) => {
         if (response.status !== 200) {
-          console.log("Status not 200 for apps :O!");
+          console.log("Status not 200 for envs :O!");
           if (isCloud) {
             setEnvironments([{ Name: "Cloud", Type: "cloud" }]);
           } else {
@@ -3820,7 +3874,7 @@ const AngularWorkflow = (defaultprops) => {
     //var parentNode = cy.$("#" + event.target.data("id"));
     //if (parentNode.data("isButton") || parentNode.data("buttonId")) return;
 
-    if (nodedata.app_name !== undefined) {
+    if (nodedata.app_name !== undefined && !workflow.public === true) {
       const allNodes = cy.nodes().jsons();
 
       var found = false;
@@ -9893,6 +9947,10 @@ const AngularWorkflow = (defaultprops) => {
   };
 
   const TopCytoscapeBar = (props) => {
+		if (workflow.public === true) {
+			return null
+		}
+
     return (
       <div style={topBarStyle}>
         <div style={{ margin: "0px 10px 0px 10px" }}>
@@ -9916,10 +9974,6 @@ const AngularWorkflow = (defaultprops) => {
               </h2>
             </Link>
             <h2 style={{ margin: 0 }}>{workflow.name}</h2>
-
-            {workflow.public ? (
-              <h2 style={{ margin: 0 }}>Public Workflow PREVIEW</h2>
-            ) : null}
           </Breadcrumbs>
         </div>
       </div>
@@ -10518,66 +10572,202 @@ const AngularWorkflow = (defaultprops) => {
   //	executeWorkflowWebsocket()
   //}}>Execute websocket</Button>
   //
+		
+	const getUserProfile = (username) => {
+    fetch(`${globalUrl}/api/v1/users/creators/${username}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for WORKFLOW EXECUTION :O!");
+			}
 
-  const leftView = leftViewOpen ? (
-    <div
-      style={{
-        minWidth: leftBarSize,
-        maxWidth: leftBarSize,
-        borderRight: "1px solid rgb(91, 96, 100)",
-      }}
-    >
-      <HandleLeftView />
-    </div>
-  ) : (
-    <div
-      style={{
-        minWidth: leftBarSize,
-        maxWidth: leftBarSize,
-        borderRight: "1px solid rgb(91, 96, 100)",
-      }}
-    >
-      <div
-        style={{ cursor: "pointer", height: 20, marginTop: 10, marginLeft: 10 }}
-        onClick={() => {
-          setLeftViewOpen(true);
-          setLeftBarSize(350);
-        }}
-      >
-        <Tooltip color="primary" title="Maximize" placement="top">
-          <KeyboardArrowRightIcon />
-        </Tooltip>
-      </div>
-    </div>
-  );
 
-  const executionPaperStyle = {
-    minWidth: "95%",
-    maxWidth: "95%",
-    marginTop: "5px",
-    color: "white",
-    marginBottom: 10,
-    padding: 5,
-    backgroundColor: surfaceColor,
-    cursor: "pointer",
-    display: "flex",
-    minHeight: 40,
-    maxHeight: 40,
-  };
+			return response.json();
+		})
+		.then((responseJson) => {
+			console.log("FOUND USER FOR: ", username, responseJson)
+			if (responseJson.success !== false) {
+				setCreatorProfile(responseJson)
+			}
+		})
+		.catch((error) => {
+			console.log(error);
+		})
+  }
+	
+  const leftView = workflow.public === true ? 
+			<div style={{minHeight: "80vh", height: "100%", minWidth: leftBarSize-70, maxWidth: leftBarSize-70, zIndex: 0, padding: 35, borderRight: "1px solid rgba(91,96,100,1)",}}> 
+				<Typography variant="h6" color="textPrimary" style={{
+						margin: "0px 0px 0px 0px",
+					}}
+				>
+        	{workflow.name}
+        </Typography>
+				<Typography variant="body2" color="textSecondary">
+					This workflow is public	and <span style={{color: "#f86a3e", cursor: "pointer", }} onClick={() => {
+            saveWorkflow()
+					}}>must be saved</span> to be used in your organization.
+				</Typography>
+				{Object.getOwnPropertyNames(creatorProfile).length !== 0 && creatorProfile.github_avatar !== undefined  && creatorProfile.github_avatar !== null ? 
+					<div style={{display: "flex", marginTop: 10, }}>
+						<IconButton color="primary" style={{padding: 0, marginRight: 10, }} aria-controls="simple-menu" aria-haspopup="true" onClick={(event) => {
+						}}>
+							<Link to={`/creators/${creatorProfile.github_username}`} style={{textDecoration: "none", color: "#f86a3e"}}>
+								<Avatar style={{height: 30, width: 30,}} alt={"Workflow creator"} src={creatorProfile.github_avatar} />
+							</Link>
+						</IconButton>
+						<Typography variant="body1" color="textSecondary" style={{color: ""}}>
+							Shared by <Link to={`/creators/${creatorProfile.github_username}`} style={{textDecoration: "none", color: "#f86a3e"}}>{creatorProfile.github_username}</Link>
+						</Typography>
+					</div>
+				: null}
+			<div style={{marginTop: 15}} />
+			{workflow.tags !== undefined && workflow.tags !== null && workflow.tags.length > 0 ?
+				<div style={{display: "flex", overflow: "hidden",marginTop: 5, }}>
+					<Typography variant="body1" style={{marginRight: 10, }}>
+						Tags
+					</Typography>
+					<div style={{display: "flex"}}>
+						{workflow.tags.map((tag, index) => {
+							if (index >= 3) {
+								return null;
+							}
 
-  const parsedExecutionArgument = () => {
-    var showResult = executionData.execution_argument.trim();
-    const validate = validateJson(showResult);
+							return (
+								<Chip
+									key={index}
+									style={{backgroundColor: "#3d3f43", height: 30, marginRight: 5, paddingLeft: 5, paddingRight: 5, height: 28, cursor: "pointer", borderColor: "#3d3f43", color: "white",}}
+									label={tag}
+									variant="outlined"
+									color="primary"
+								/>
+							);
+						})}
+					</div>
+				</div>
+			: null }
+			<div style={{display: "flex", marginTop: 10, }}>
+				<Typography variant="body1">
+					Mitre Att&ck: 
+				</Typography>
+				<Typography variant="body1" color="textSecondary">
+					TBD
+				</Typography>
+			</div>
+			{appGroup.length > 0 ? 
+				<div style={{display: "flex", marginTop: 10, }}>
+					<Typography variant="body1">
+						Apps
+					</Typography>
+					<AvatarGroup max={6} style={{marginLeft: 10, }}>
+						{appGroup.map((data, index) => {
+							return (
+								<Link to={`/apps/${data.app_id}`}>
+									<Avatar alt={data.app_name} src={data.large_image} style={{width: 30, height: 30}}/>
+								</Link>
+							)
+						})}
+					</AvatarGroup>
+				</div>
+			: null}
+			{triggerGroup.length > 0 ? 
+				<div style={{display: "flex", marginTop: 10, }}>
+					<Typography variant="body1">
+						Triggers	
+					</Typography>
+					<AvatarGroup max={6} style={{marginLeft: 10, }}>
+						{triggerGroup.map((data, index) => {
+							return (
+								<Avatar alt={data.app_name} src={data.large_image} style={{width: 30, height: 30}}/>
+							)
+						})}
+					</AvatarGroup>
+				</div>
+			: null}
+			<div style={{display: "flex", marginTop: 10, }}>
+				<Typography variant="body1">
+					Related Workflows:
+				</Typography>
+				<Typography variant="body1" color="textSecondary">
+					TBD
+				</Typography>
+			</div>
+			{workflow.description !== undefined && workflow.description !== null && workflow.description.length > 0 ?
+				<div style={{marginTop: 5, }}>
+					<Typography variant="body1">
+						Description 
+					</Typography>
+					<Typography variant="body1" color="textSecondary">
+						{workflow.description} 
+					</Typography>
+				</div>
+			: null}
+		</div>
+	: leftViewOpen ? (
+	<div
+		style={{
+			minWidth: leftBarSize,
+			maxWidth: leftBarSize,
+			borderRight: "1px solid rgb(91, 96, 100)",
+		}}
+	>
+		<HandleLeftView />
+	</div>
+) : (
+	<div
+		style={{
+			minWidth: leftBarSize,
+			maxWidth: leftBarSize,
+			borderRight: "1px solid rgb(91, 96, 100)",
+		}}
+	>
+		<div
+			style={{ cursor: "pointer", height: 20, marginTop: 10, marginLeft: 10 }}
+			onClick={() => {
+				setLeftViewOpen(true);
+				setLeftBarSize(350);
+			}}
+		>
+			<Tooltip color="primary" title="Maximize" placement="top">
+				<KeyboardArrowRightIcon />
+			</Tooltip>
+		</div>
+	</div>
+);
 
-    if (validate.valid) {
-      if (typeof validate.result === "string") {
-        try {
-          validate.result = JSON.parse(validate.result);
-        } catch (e) {
-          console.log("Error: ", e);
-          validate.valid = false;
-        }
-      }
+const executionPaperStyle = {
+	minWidth: "95%",
+	maxWidth: "95%",
+	marginTop: "5px",
+	color: "white",
+	marginBottom: 10,
+	padding: 5,
+	backgroundColor: surfaceColor,
+	cursor: "pointer",
+	display: "flex",
+	minHeight: 40,
+	maxHeight: 40,
+};
+
+const parsedExecutionArgument = () => {
+	var showResult = executionData.execution_argument.trim();
+	const validate = validateJson(showResult);
+
+	if (validate.valid) {
+		if (typeof validate.result === "string") {
+			try {
+				validate.result = JSON.parse(validate.result);
+			} catch (e) {
+				console.log("Error: ", e);
+				validate.valid = false;
+			}
+		}
 
       return (
 				<div style={{display: "flex"}}>

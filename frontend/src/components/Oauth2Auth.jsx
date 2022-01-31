@@ -114,6 +114,10 @@ const AuthenticationOauth2 = (props) => {
     setButtonClicked(true);
     console.log("SCOPES: ", scopes);
 
+		client_id = client_id.trim()
+		client_secret = client_secret.trim()
+		oauth_url = oauth_url.trim()
+
     var resources = "";
     if (scopes !== undefined && (scopes !== null) & (scopes.length > 0)) {
 			if (offlineAccess === true && !scopes.includes("offline_access")) {

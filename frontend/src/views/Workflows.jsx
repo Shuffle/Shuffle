@@ -34,6 +34,10 @@ import {
 } from "@material-ui/core";
 
 import {
+  AvatarGroup,
+} from "@mui/material"
+
+import {
   GridOn as GridOnIcon,
   List as ListIcon,
   Close as CloseIcon,
@@ -1310,6 +1314,30 @@ const Workflows = (props) => {
     );
   };
 
+	const getWorkflowAppgroup = (data) => {
+		if (data.actions === undefined || data.actions === null) {
+			return [] 
+		}
+
+		var appsFound = []
+		for (var key in data.actions) {
+			const parsedAction = data.actions[key]
+			if (parsedAction.large_image === undefined || parsedAction.large_image === null || parsedAction.large_image === "") {
+				continue
+			}
+
+			if (parsedAction.app_name === "Shuffle Tools" || parsedAction.app_id === "bc78f35c6c6351b07a09b7aed5d29652") {
+				continue
+			}
+
+			if (appsFound.findIndex(data => data.app_name === parsedAction.app_name) < 0){
+				appsFound.push(parsedAction)
+			}
+		}
+
+		return appsFound
+	}
+
   const WorkflowPaper = (props) => {
     const { data } = props;
     const [open, setOpen] = React.useState(false);
@@ -1339,6 +1367,7 @@ const Workflows = (props) => {
     }
 
     const actions = data.actions !== null ? data.actions.length : 0;
+		const appGroup = getWorkflowAppgroup(data)
     const [triggers, subflows] = getWorkflowMeta(data);
 
     const workflowMenuButtons = (
@@ -1561,22 +1590,48 @@ const Workflows = (props) => {
               </Tooltip>
             </Grid>
             <Grid item style={workflowActionStyle}>
-              <Tooltip color="primary" title="Action amount" placement="bottom">
-                <span style={{ color: "#979797", display: "flex" }}>
-                  <BubbleChartIcon
-                    style={{ marginTop: "auto", marginBottom: "auto" }}
-                  />
-                  <Typography
-                    style={{
-                      marginLeft: 5,
-                      marginTop: "auto",
-                      marginBottom: "auto",
-                    }}
-                  >
-                    {actions}
-                  </Typography>
-                </span>
-              </Tooltip>
+							{appGroup.length > 0 ? 
+								<div style={{display: "flex", marginTop: 8, }}>
+									<AvatarGroup max={4} style={{marginLeft: 5, maxHeight: 24,}}>
+										{appGroup.map((data, index) => {
+											return (
+												<div
+													style={{
+														height: 24,
+														width: 24,
+														filter: "brightness(0.6)",
+														cursor: "pointer",
+													}}
+													onClick={() => {
+                  					addFilter(data.app_name);
+													}}
+												>
+													<Tooltip color="primary" title={data.app_name} placement="bottom">
+														<Avatar alt={data.app_name} src={data.large_image} style={{width: 24, height: 24}}/>
+													</Tooltip>
+												</div>
+											)
+										})}
+									</AvatarGroup>
+								</div>
+								: 
+								<Tooltip color="primary" title="Action amount" placement="bottom">
+									<span style={{ color: "#979797", display: "flex" }}>
+										<BubbleChartIcon
+											style={{ marginTop: "auto", marginBottom: "auto" }}
+										/>
+										<Typography
+											style={{
+												marginLeft: 5,
+												marginTop: "auto",
+												marginBottom: "auto",
+											}}
+										>
+											{actions}
+										</Typography>
+									</span>
+								</Tooltip>
+							}
               <Tooltip
                 color="primary"
                 title="Trigger amount"
@@ -1681,7 +1736,7 @@ const Workflows = (props) => {
                 marginTop: 5,
               }}
             >
-              {data.tags !== undefined
+              {data.tags !== undefined && data.tags !== null
                 ? data.tags.map((tag, index) => {
                     if (index >= 3) {
                       return null;
