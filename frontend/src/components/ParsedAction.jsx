@@ -1349,7 +1349,7 @@ const ParsedAction = (props) => {
             // <CodeMirror
             //fullWidth
             var baseHelperText = ""
-						if (data.value.length > 0) {
+						if (data !== undefined && data !== null && data.value !== undefined && data.value !== null && data.value.length > 0) {
 							baseHelperText = calculateHelpertext(data.value)
 						}
 						
