@@ -97,6 +97,30 @@ const OrgHeader = (props) => {
       ? ""
       : selectedOrganization.defaults.notification_workflow
   );
+  const [openidClientId, setOpenidClientId] = React.useState(
+    selectedOrganization.sso_config === undefined
+      ? ""
+      : selectedOrganization.sso_config.client_id === undefined ||
+        selectedOrganization.sso_config.client_id.length === 0
+      ? ""
+      : selectedOrganization.sso_config.client_id
+  );
+  const [openidAuthorization, setOpenidAuthorization] = React.useState(
+    selectedOrganization.sso_config === undefined
+      ? ""
+      : selectedOrganization.sso_config.openid_authorization === undefined ||
+        selectedOrganization.sso_config.openid_authorization.length === 0
+      ? ""
+      : selectedOrganization.sso_config.openid_authorization
+  );
+  const [openidToken, setOpenidToken] = React.useState(
+    selectedOrganization.sso_config === undefined
+      ? ""
+      : selectedOrganization.sso_config.openid_token=== undefined ||
+        selectedOrganization.sso_config.openid_token.length === 0
+      ? ""
+      : selectedOrganization.sso_config.openidtoken_
+	)
 
   const [file, setFile] = React.useState("");
   const [fileBase64, setFileBase64] = React.useState(
@@ -145,6 +169,7 @@ const OrgHeader = (props) => {
     defaults,
     sso_config
   ) => {
+
     const data = {
       name: name,
       description: description,
@@ -216,6 +241,9 @@ const OrgHeader = (props) => {
             {
               sso_entrypoint: ssoEntrypoint,
               sso_certificate: ssoCertificate,
+              client_id: openidClientId,
+              openid_authorization: openidAuthorization,
+              openid_token: openidToken,
             }
           )
         }
@@ -548,79 +576,200 @@ const OrgHeader = (props) => {
                 </span>
               </Grid>
             )}
-            <Grid item xs={6} style={{}}>
-              <span>
-                <Typography>SSO Entrypoint (IdP)</Typography>
-                <TextField
-                  required
-                  style={{
-                    flex: "1",
-                    marginTop: "5px",
-                    marginRight: "15px",
-                    backgroundColor: theme.palette.inputColor,
-                  }}
-                  fullWidth={true}
-                  type="name"
-                  multiline={true}
-                  rows={2}
-                  disabled={
-                    selectedOrganization.manager_orgs !== undefined &&
-                    selectedOrganization.manager_orgs !== null &&
-                    selectedOrganization.manager_orgs.length > 0
-                  }
-                  id="outlined-with-placeholder"
-                  margin="normal"
-                  variant="outlined"
-                  placeholder="The entrypoint URL from your provider"
-                  value={ssoEntrypoint}
-                  onChange={(e) => {
-                    setSsoEntrypoint(e.target.value);
-                  }}
-                  InputProps={{
-                    classes: {
-                      notchedOutline: classes.notchedOutline,
-                    },
-                    style: {
-                      color: "white",
-                    },
-                  }}
-                />
-              </span>
-            </Grid>
-            <Grid item xs={6} style={{}}>
-              <span>
-                <Typography>SSO Certificate (X509)</Typography>
-                <TextField
-                  required
-                  style={{
-                    flex: "1",
-                    marginTop: "5px",
-                    marginRight: "15px",
-                    backgroundColor: theme.palette.inputColor,
-                  }}
-                  fullWidth={true}
-                  type="name"
-                  id="outlined-with-placeholder"
-                  margin="normal"
-                  variant="outlined"
-                  multiline={true}
-                  rows={2}
-                  placeholder="The X509 certificate to use"
-                  value={ssoCertificate}
-                  onChange={(e) => {
-                    setSsoCertificate(e.target.value);
-                  }}
-                  InputProps={{
-                    classes: {
-                      notchedOutline: classes.notchedOutline,
-                    },
-                    style: {
-                      color: "white",
-                    },
-                  }}
-                />
-              </span>
-            </Grid>
+						{isCloud ? null : 
+						<Grid item xs={12} style={{marginTop: 50 }}>
+							<Typography variant="h4" style={{textAlign: "center",}}>OpenID connect</Typography>
+							<Grid container style={{marginTop: 10, }}>
+            		<Grid item xs={4} style={{}}>
+            		  <span>
+            		    <Typography>Client ID</Typography>
+            		    <TextField
+            		      required
+            		      style={{
+            		        flex: "1",
+            		        marginTop: "5px",
+            		        marginRight: "15px",
+            		        backgroundColor: theme.palette.inputColor,
+            		      }}
+            		      fullWidth={true}
+            		      type="name"
+            		      multiline={true}
+            		      rows={2}
+            		      disabled={
+            		        selectedOrganization.manager_orgs !== undefined &&
+            		        selectedOrganization.manager_orgs !== null &&
+            		        selectedOrganization.manager_orgs.length > 0
+            		      }
+            		      id="outlined-with-placeholder"
+            		      margin="normal"
+            		      variant="outlined"
+            		      placeholder="The OpenID client ID from the identity provider"
+            		      value={openidClientId}
+            		      onChange={(e) => {
+            		        setOpenidClientId(e.target.value);
+            		      }}
+            		      InputProps={{
+            		        classes: {
+            		          notchedOutline: classes.notchedOutline,
+            		        },
+            		        style: {
+            		          color: "white",
+            		        },
+            		      }}
+            		    />
+            		  </span>
+            		</Grid>
+            		<Grid item xs={4} style={{}}>
+            		  <span>
+            		    <Typography>Authorization URL</Typography>
+            		    <TextField
+            		      required
+            		      style={{
+            		        flex: "1",
+            		        marginTop: "5px",
+            		        marginRight: "15px",
+            		        backgroundColor: theme.palette.inputColor,
+            		      }}
+            		      fullWidth={true}
+            		      type="name"
+            		      id="outlined-with-placeholder"
+            		      margin="normal"
+            		      variant="outlined"
+            		      multiline={true}
+            		      rows={2}
+            		      placeholder="The OpenID authorization URL (usually ends with /authorize)"
+            		      value={openidAuthorization}
+            		      onChange={(e) => {
+            		        setOpenidAuthorization(e.target.value)
+            		      }}
+            		      InputProps={{
+            		        classes: {
+            		          notchedOutline: classes.notchedOutline,
+            		        },
+            		        style: {
+            		          color: "white",
+            		        },
+            		      }}
+            		    />
+            		  </span>
+            		</Grid>
+            		<Grid item xs={4} style={{}}>
+            		  <span>
+            		    <Typography>Token URL</Typography>
+            		    <TextField
+            		      required
+            		      style={{
+            		        flex: "1",
+            		        marginTop: "5px",
+            		        marginRight: "15px",
+            		        backgroundColor: theme.palette.inputColor,
+            		      }}
+            		      fullWidth={true}
+            		      type="name"
+            		      id="outlined-with-placeholder"
+            		      margin="normal"
+            		      variant="outlined"
+            		      multiline={true}
+            		      rows={2}
+            		      placeholder="The OpenID token URL (usually ends with /token)"
+            		      value={openidToken}
+            		      onChange={(e) => {
+            		        setOpenidToken(e.target.value)
+            		      }}
+            		      InputProps={{
+            		        classes: {
+            		          notchedOutline: classes.notchedOutline,
+            		        },
+            		        style: {
+            		          color: "white",
+            		        },
+            		      }}
+            		    />
+            		  </span>
+            		</Grid>
+							</Grid>
+						</Grid>
+						}
+						{isCloud ? null : 
+						<Grid item xs={12} style={{marginTop: 50,}}>
+            	<Typography variant="h4" style={{textAlign: "center",}}>SAML SSO (v1.1)</Typography>
+							<Grid container style={{marginTop: 10, }}>
+            		<Grid item xs={6} style={{}}>
+            		  <span>
+            		    <Typography>SSO Entrypoint (IdP)</Typography>
+            		    <TextField
+            		      required
+            		      style={{
+            		        flex: "1",
+            		        marginTop: "5px",
+            		        marginRight: "15px",
+            		        backgroundColor: theme.palette.inputColor,
+            		      }}
+            		      fullWidth={true}
+            		      type="name"
+            		      multiline={true}
+            		      rows={2}
+            		      disabled={
+            		        selectedOrganization.manager_orgs !== undefined &&
+            		        selectedOrganization.manager_orgs !== null &&
+            		        selectedOrganization.manager_orgs.length > 0
+            		      }
+            		      id="outlined-with-placeholder"
+            		      margin="normal"
+            		      variant="outlined"
+            		      placeholder="The entrypoint URL from your provider"
+            		      value={ssoEntrypoint}
+            		      onChange={(e) => {
+            		        setSsoEntrypoint(e.target.value);
+            		      }}
+            		      InputProps={{
+            		        classes: {
+            		          notchedOutline: classes.notchedOutline,
+            		        },
+            		        style: {
+            		          color: "white",
+            		        },
+            		      }}
+            		    />
+            		  </span>
+            		</Grid>
+            		<Grid item xs={6} style={{}}>
+            		  <span>
+            		    <Typography>SSO Certificate (X509)</Typography>
+            		    <TextField
+            		      required
+            		      style={{
+            		        flex: "1",
+            		        marginTop: "5px",
+            		        marginRight: "15px",
+            		        backgroundColor: theme.palette.inputColor,
+            		      }}
+            		      fullWidth={true}
+            		      type="name"
+            		      id="outlined-with-placeholder"
+            		      margin="normal"
+            		      variant="outlined"
+            		      multiline={true}
+            		      rows={2}
+            		      placeholder="The X509 certificate to use"
+            		      value={ssoCertificate}
+            		      onChange={(e) => {
+            		        setSsoCertificate(e.target.value);
+            		      }}
+            		      InputProps={{
+            		        classes: {
+            		          notchedOutline: classes.notchedOutline,
+            		        },
+            		        style: {
+            		          color: "white",
+            		        },
+            		      }}
+            		    />
+            		  </span>
+            		</Grid>
+            	</Grid>
+						</Grid>
+						}
             {/*
 							<span style={{textAlign: "center"}}>
 								{expanded ? 

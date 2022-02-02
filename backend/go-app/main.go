@@ -11,6 +11,7 @@ import (
 
 	//"crypto/tls"
 	//"crypto/x509"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -18,6 +19,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -52,6 +54,8 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/storage/memory"
+
+	//cv "github.com/nirasan/go-oauth-pkce-code-verifier"
 
 	//githttp "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 
@@ -1166,8 +1170,16 @@ func handleContact(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(fmt.Sprintf(`{"success": true, "message": "Thanks for reaching out. We will contact you soon!"}`)))
 }
 
+func verifier() (*shuffle.CodeVerifier, error) {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	b := make([]byte, 32, 32)
+	for i := 0; i < 32; i++ {
+		b[i] = byte(r.Intn(255))
+	}
+	return shuffle.CreateCodeVerifierFromBytes(b)
+}
+
 func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
-	log.Printf("In admin login request?")
 	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
@@ -1190,10 +1202,63 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	//ssoUrl = org.SSOConfig.SOSOEntrypoint
-	redirectUri := shuffle.SSOUrl
+	baseSSOUrl := ""
+	handled := []string{}
+	for _, user := range users {
+		if shuffle.ArrayContains(handled, user.ActiveOrg.Id) {
+			continue
+		}
+
+		handled = append(handled, user.ActiveOrg.Id)
+		org, err := shuffle.GetOrg(ctx, user.ActiveOrg.Id)
+		if err != nil {
+			log.Printf("[WARNING] Error getting org in admin check: %s", err)
+			continue
+		}
+
+		// No childorg setup, only parent org
+		if len(org.ManagerOrgs) > 0 || len(org.CreatorOrg) > 0 {
+			continue
+		}
+
+		// Should run calculations
+		if len(org.SSOConfig.OpenIdAuthorization) > 0 {
+			log.Printf("[DEBUG] Found OpenID url (PKCE). Extra redirect check: %s", request.URL.String())
+			baseSSOUrl = org.SSOConfig.OpenIdAuthorization
+
+			codeChallenge := uuid.NewV4().String()
+			//h.Write([]byte(v.Value))
+			verifier, verifiererr := verifier()
+			if verifiererr == nil {
+				codeChallenge = verifier.Value
+			}
+
+			//log.Printf("[DEBUG] Got challenge value %s (pre state)", codeChallenge)
+
+			redirectUrl := url.QueryEscape("http://localhost:5001/api/v1/login_openid")
+			state := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("org=%s&challenge=%s&redirect=%s", org.Id, codeChallenge, redirectUrl)))
+
+			// has to happen after initial value is stored
+			if verifiererr == nil {
+				codeChallenge = verifier.CodeChallengeS256()
+			}
+
+			//log.Printf("[DEBUG] Got challenge value %s (POST state)", codeChallenge)
+
+			baseSSOUrl += fmt.Sprintf("?client_id=%s&response_type=code&scope=openid&redirect_uri=%s&state=%s&code_challenge_method=S256&code_challenge=%s", org.SSOConfig.OpenIdClientId, redirectUrl, state, codeChallenge)
+			break
+		}
+
+		if len(org.SSOConfig.SSOEntrypoint) > 0 {
+			log.Printf("[DEBUG] Found SAML SSO url")
+			baseSSOUrl = org.SSOConfig.SSOEntrypoint
+			break
+		}
+	}
+
+	log.Printf("[DEBUG] URL: %s", baseSSOUrl)
 	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "redirect", "sso_url": "%s"}`, redirectUri)))
+	resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "redirect", "sso_url": "%s"}`, baseSSOUrl)))
 }
 
 func handleLogin(resp http.ResponseWriter, request *http.Request) {
@@ -3324,11 +3389,6 @@ func createFs(basepath, pathname string) (billy.Filesystem, error) {
 					log.Printf("Src error: %s", err)
 					return err
 				}
-
-				//if strings.Contains(path, "yaml") {
-				//	log.Printf("PATH: %s -> %s", path, fullpath)
-				//	//log.Printf("DATA: %s", string(srcData))
-				//}
 
 				dst, err := fs.Create(fullpath)
 				if err != nil {
@@ -5882,7 +5942,8 @@ func initHandlers() {
 	// Docker orborus specific - downloads an image
 	r.HandleFunc("/api/v1/get_docker_image", getDockerImage).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/migrate_database", migrateDatabase).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/login_sso", shuffle.HandleSSO).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/login_sso", shuffle.HandleSSO).Methods("GET", "POST", "OPTIONS")
+	r.HandleFunc("/api/v1/login_openid", shuffle.HandleOpenId).Methods("GET", "OPTIONS")
 
 	// Important for email, IDS etc. Create this by:
 	// PS: For cloud, this has to use cloud storage.

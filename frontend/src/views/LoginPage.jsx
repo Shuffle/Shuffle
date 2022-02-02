@@ -1,5 +1,5 @@
 /* eslint-disable react/no-multi-comp */
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { makeStyles } from "@material-ui/styles";
 import { useInterval } from "react-powerhooks";
 
@@ -54,6 +54,7 @@ const LoginDialog = (props) => {
 
   const [MFAField, setMFAField] = useState(false);
   const [MFAValue, setMFAValue] = useState("");
+
 
   // Used to swap from login to register. True = login, false = register
 
@@ -468,6 +469,7 @@ const LoginDialog = (props) => {
                 <div style={{ textAlign: "center", margin: 10 }}>
                   <Button
                     fullWidth
+										id="sso_button"
                     color="secondary"
                     variant="outlined"
                     type="button"
@@ -490,6 +492,16 @@ const LoginDialog = (props) => {
   );
 
   const loadedCheck = isLoaded ? <div>{basedata}</div> : <div></div>;
+
+	useEffect(() => {
+		if (ssoUrl !== undefined && ssoUrl !== null && ssoUrl.length > 0) {
+			//id="sso_button"
+    	const ssoBtn = document.getElementById("sso_button");
+			if (ssoBtn !== undefined && ssoBtn !== null) {
+				console.log("SSO BTN: ", ssoBtn)
+			}
+		}
+	}, [ssoUrl])
 
   return <div>{loadedCheck}</div>;
 };
