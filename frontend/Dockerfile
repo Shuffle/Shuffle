@@ -20,7 +20,7 @@ COPY ./*.json /usr/src/app/
 RUN yarn build
 
 # Production environment
-FROM nginx:1.21.3
+FROM nginx:stable
 
 RUN mkdir -p /usr/share/nginx/html/build
 RUN mkdir -p /usr/share/nginx/html/css
