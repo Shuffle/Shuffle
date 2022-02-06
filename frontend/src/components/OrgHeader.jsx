@@ -116,10 +116,10 @@ const OrgHeader = (props) => {
   const [openidToken, setOpenidToken] = React.useState(
     selectedOrganization.sso_config === undefined
       ? ""
-      : selectedOrganization.sso_config.openid_token=== undefined ||
+      : selectedOrganization.sso_config.openid_token === undefined ||
         selectedOrganization.sso_config.openid_token.length === 0
       ? ""
-      : selectedOrganization.sso_config.openidtoken_
+      : selectedOrganization.sso_config.openid_token
 	)
 
   const [file, setFile] = React.useState("");

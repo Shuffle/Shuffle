@@ -1596,6 +1596,7 @@ const Workflows = (props) => {
 										{appGroup.map((data, index) => {
 											return (
 												<div
+													key={index}
 													style={{
 														height: 24,
 														width: 24,
@@ -1734,6 +1735,8 @@ const Workflows = (props) => {
                 justifyContent: "left",
                 overflow: "hidden",
                 marginTop: 5,
+								maxHeight: 28,
+								overflow: "hidden",
               }}
             >
               {data.tags !== undefined && data.tags !== null
@@ -2055,30 +2058,54 @@ const Workflows = (props) => {
             const data = params.row.record;
             const actions = data.actions !== null ? data.actions.length : 0;
             let [triggers, subflows] = getWorkflowMeta(data);
+						const appGroup = getWorkflowAppgroup(data)
 
             return (
               <Grid item>
                 <div style={{ display: "flex" }}>
-                  <Tooltip
-                    color="primary"
-                    title="Action amount"
-                    placement="bottom"
-                  >
-                    <span style={{ color: "#979797", display: "flex" }}>
-                      <BubbleChartIcon
-                        style={{ marginTop: "auto", marginBottom: "auto" }}
-                      />
-                      <Typography
-                        style={{
-                          marginLeft: 5,
-                          marginTop: "auto",
-                          marginBottom: "auto",
-                        }}
-                      >
-                        {actions}
-                      </Typography>
-                    </span>
-                  </Tooltip>
+									{appGroup.length > 0 ? 
+									<div style={{display: "flex", marginTop: 3, }}>
+											<AvatarGroup max={4} style={{marginLeft: 5, maxHeight: 24,}}>
+												{appGroup.map((data, index) => {
+													return (
+														<div
+															key={index}
+															style={{
+																height: 24,
+																width: 24,
+																filter: "brightness(0.6)",
+																cursor: "pointer",
+															}}
+															onClick={() => {
+                		  					addFilter(data.app_name);
+															}}
+														>
+															<Tooltip color="primary" title={data.app_name} placement="bottom">
+																<Avatar alt={data.app_name} src={data.large_image} style={{width: 24, height: 24}}/>
+															</Tooltip>
+														</div>
+													)
+												})}
+											</AvatarGroup>
+										</div>
+										: 
+										<Tooltip color="primary" title="Action amount" placement="bottom">
+											<span style={{ color: "#979797", display: "flex" }}>
+												<BubbleChartIcon
+													style={{ marginTop: "auto", marginBottom: "auto" }}
+												/>
+												<Typography
+													style={{
+														marginLeft: 5,
+														marginTop: "auto",
+														marginBottom: "auto",
+													}}
+												>
+													{actions}
+												</Typography>
+											</span>
+										</Tooltip>
+									}
                   <Tooltip
                     color="primary"
                     title="Trigger amount"

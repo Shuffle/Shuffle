@@ -1154,8 +1154,8 @@ const Admin = (props) => {
       })
       .then((respdata) => {
         if (respdata.length === 0) {
-          alert.error("Failed getting file");
-          return;
+					alert.error("Failed getting file. Is it deleted?");
+					return;
         }
 
         var blob = new Blob([respdata], {
@@ -3101,12 +3101,12 @@ const Admin = (props) => {
           {fileNamespaces !== undefined &&
           fileNamespaces !== null &&
           fileNamespaces.length > 1 ? (
-            <FormControl>
-              <InputLabel id="input-namespace-label">Namespace</InputLabel>
+            <FormControl style={{minWidth: 150, maxWidth: 150,}}>
+              <InputLabel id="input-namespace-label">File Category</InputLabel>
               <Select
                 labelId="input-namespace-select-label"
                 id="input-namespace-select-id"
-                style={{ color: "white", minWidth: 100, float: "right" }}
+                style={{ color: "white", minWidth: 150, maxWidth: 150, float: "right" }}
                 value={selectedNamespace}
                 onChange={(event) => {
                   console.log("CHANGE NAMESPACE: ", event.target);

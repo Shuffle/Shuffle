@@ -5036,6 +5036,7 @@ const AppCreator = (defaultprops) => {
                 marginTop: "5px",
                 marginRight: "15px",
                 backgroundColor: inputColor,
+								maxHeight: 200,
               }}
               fullWidth={true}
               type="name"

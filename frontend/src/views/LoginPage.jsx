@@ -32,9 +32,6 @@ const useStyles = makeStyles({
 });
 
 const LoginDialog = (props) => {
-  const theme = useTheme();
-	let navigate = useNavigate();
-
   const {
     globalUrl,
     isLoaded,
@@ -44,6 +41,10 @@ const LoginDialog = (props) => {
     register,
     checkLogin,
   } = props;
+
+  const theme = useTheme();
+	let navigate = useNavigate();
+  const classes = useStyles();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -58,7 +59,10 @@ const LoginDialog = (props) => {
 
   // Used to swap from login to register. True = login, false = register
 
-  const classes = useStyles();
+	useEffect(() => {
+		checkAdmin() 
+	}, [loginViewLoading])
+
   // Error messages etc
   const [loginInfo, setLoginInfo] = useState("");
 
@@ -267,6 +271,7 @@ const LoginDialog = (props) => {
             }}
           />
         </div>
+
         {loginViewLoading ? (
           <div style={{ textAlign: "center", marginTop: 50 }}>
             <Typography

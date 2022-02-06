@@ -1235,7 +1235,14 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 
 			//log.Printf("[DEBUG] Got challenge value %s (pre state)", codeChallenge)
 
-			redirectUrl := url.QueryEscape("http://localhost:5001/api/v1/login_openid")
+			// https://192.168.55.222:3443/api/v1/login_openid
+			//location := strings.Split(request.URL.String(), "/")
+			//redirectUrl := url.QueryEscape("http://localhost:5001/api/v1/login_openid")
+			redirectUrl := url.QueryEscape(fmt.Sprintf("http://%s/api/v1/login_openid", request.Host))
+			if strings.Contains(request.Host, "shuffle-backend") && !strings.Contains(os.Getenv("BASE_URL"), "shuffle-backend") {
+				redirectUrl = url.QueryEscape(fmt.Sprintf("%s/api/v1/login_openid", os.Getenv("BASE_URL")))
+			}
+
 			state := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("org=%s&challenge=%s&redirect=%s", org.Id, codeChallenge, redirectUrl)))
 
 			// has to happen after initial value is stored
@@ -1256,7 +1263,7 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	log.Printf("[DEBUG] URL: %s", baseSSOUrl)
+	//log.Printf("[DEBUG] OpenID URL: %s", baseSSOUrl)
 	resp.WriteHeader(200)
 	resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "redirect", "sso_url": "%s"}`, baseSSOUrl)))
 }

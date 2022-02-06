@@ -517,6 +517,8 @@ const AuthenticationOauth2 = (props) => {
 											backgroundColor: theme.palette.inputColor,
 											color: "white",
 											padding: 5, 
+											minWidth: 300,
+											maxWidth: 300,
 										}}
 										onChange={(e) => {
 											handleScopeChange(e)
@@ -542,7 +544,7 @@ const AuthenticationOauth2 = (props) => {
 										title={"Automatic Refresh (default: true)"}
 										placement="top"
 									>
-										<Checkbox style={{paddingTop: 10}} color="secondary" checked={offlineAccess} onClick={() => {
+										<Checkbox style={{paddingTop: 20}} color="secondary" checked={offlineAccess} onClick={() => {
 											setOfflineAccess(!offlineAccess)
 										}}/>
 									</Tooltip>

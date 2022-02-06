@@ -342,6 +342,7 @@ const AngularWorkflow = (defaultprops) => {
   const [executionModalOpen, setExecutionModalOpen] = React.useState(false);
   const [executionModalView, setExecutionModalView] = React.useState(0);
   const [executionData, setExecutionData] = React.useState({});
+  const [appsLoaded, setAppsLoaded] = React.useState(false);
 
   const [lastSaved, setLastSaved] = React.useState(true);
 
@@ -552,13 +553,17 @@ const AngularWorkflow = (defaultprops) => {
       })
       .then((responseJson) => {
         if (
-          responseJson.apikey === undefined ||
+					responseJson.success === true &&
+          (responseJson.apikey === undefined ||
           responseJson.apikey.length === 0 ||
-          responseJson.apikey === null
+          responseJson.apikey === null)
         ) {
           generateApikey();
         }
-        setUserSettings(responseJson);
+
+				if (responseJson.success === true) {
+        	setUserSettings(responseJson)
+				}
       })
       .catch((error) => {
         console.log(error);
@@ -1462,6 +1467,7 @@ const AngularWorkflow = (defaultprops) => {
       credentials: "include",
     })
       .then((response) => {
+				setAppsLoaded(true)
         if (response.status !== 200) {
           console.log("Status not 200 for apps :O!");
         }
@@ -1508,6 +1514,7 @@ const AngularWorkflow = (defaultprops) => {
         }
       })
       .catch((error) => {
+				setAppsLoaded(true)
         alert.error("App loading error: ", error.toString());
       });
   };
@@ -3561,19 +3568,23 @@ const AngularWorkflow = (defaultprops) => {
       !graphSetup &&
       Object.getOwnPropertyNames(workflow).length > 0
     ) {
+
       setGraphSetup(true);
       setupGraph();
+			console.log("In graph setup")
     } else if (
 			// 2nd load - configures cytoscape
 			//
       !established &&
       cy !== undefined &&
-      apps !== null &&
+      ((apps !== null &&
       apps !== undefined &&
-      apps.length > 0 &&
+      apps.length > 0) || workflow.public === true) &&
       Object.getOwnPropertyNames(workflow).length > 0 &&
       authLoaded
     ) {
+			
+			console.log("In POST graph setup!")
       //This part has to load LAST, as it's kind of not async.
       //This means we need everything else to happen first.
 
@@ -4203,6 +4214,8 @@ const AngularWorkflow = (defaultprops) => {
 					'control-point-distance':  edgeCurve.distance,
 					'control-point-weight': edgeCurve.weight,
 				}
+			} else {
+				console.log("FAILED node curve handling")
 			}
 
       return edge;
@@ -10591,7 +10604,6 @@ const AngularWorkflow = (defaultprops) => {
 			return response.json();
 		})
 		.then((responseJson) => {
-			console.log("FOUND USER FOR: ", username, responseJson)
 			if (responseJson.success !== false) {
 				setCreatorProfile(responseJson)
 			}
@@ -10668,7 +10680,7 @@ const AngularWorkflow = (defaultprops) => {
 					<AvatarGroup max={6} style={{marginLeft: 10, }}>
 						{appGroup.map((data, index) => {
 							return (
-								<Link to={`/apps/${data.app_id}`}>
+								<Link key={index} to={`/apps/${data.app_id}`}>
 									<Avatar alt={data.app_name} src={data.large_image} style={{width: 30, height: 30}}/>
 								</Link>
 							)
@@ -12302,8 +12314,7 @@ const parsedExecutionArgument = () => {
 				{leftView}
 				{workflow.id === undefined ||
 				workflow.id === null ||
-				apps.length === 0 ? (
-
+				appsLoaded === false ? (
 					<div
 						style={{
 							width: bodyWidth - leftBarSize - 15,
