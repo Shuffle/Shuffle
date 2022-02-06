@@ -484,10 +484,29 @@ const AppCreator = (defaultprops) => {
   // Sets the data up as it should be at later points
   // This is the data FROM the database, not what's being saved
   const parseIncomingOpenapiData = (data) => {
+	
+		console.log("Data: ", data)
+		var parsedDecoded = ""
+		try { 
+			const decoded = base64_decode(data.openapi)
+			parsedDecoded = decoded
+    } catch (e) {
+			console.log("Failed JSON parsing: ", e)
+			parsedDecoded = data
+		}
+
+		if (data.openapi === null)  {
+			alert.info("Failed to load OpenAPI for app. Please contact support if this persists.")
+    	setIsAppLoaded(true);
+			return
+		}
+
+		console.log("Decoded: ", parsedDecoded)
     const parsedapp =
-      data.openapi === undefined
+      data.openapi === undefined || data.openapi === null 
         ? data
-        : JSON.parse(base64_decode(data.openapi));
+        : JSON.parse(parsedDecoded);
+
     data = parsedapp.body === undefined ? parsedapp : parsedapp.body;
 
     var jsonvalid = false;
@@ -1611,6 +1630,14 @@ const AppCreator = (defaultprops) => {
       id: props.match.params.appid,
     };
 
+		if (isEditing === false) {
+			var urlParams = new URLSearchParams(window.location.search);
+			if (urlParams !== undefined && urlParams !== null && urlParams.has("id")) {
+				data.id = urlParams.get("id")
+			}
+      //id: props.match.params.appid,
+		}
+
     if (basedata.info !== undefined && basedata.info.contact !== undefined) {
       data.info["contact"] = basedata.info.contact;
     } else if (contact === "") {
@@ -2083,6 +2110,9 @@ const AppCreator = (defaultprops) => {
         name: newparamName,
 				description: refreshUrl,
       }
+
+			console.log("Full auth component: ", data.components.securitySchemes["ApiKeyAuth"])
+
     } else if (authenticationOption === "Bearer auth") {
       data.components.securitySchemes["BearerAuth"] = {
         type: "http",
@@ -5036,7 +5066,8 @@ const AppCreator = (defaultprops) => {
                 marginTop: "5px",
                 marginRight: "15px",
                 backgroundColor: inputColor,
-								maxHeight: 200,
+								maxHeight: 250,
+								overflow: "auto",
               }}
               fullWidth={true}
               type="name"
