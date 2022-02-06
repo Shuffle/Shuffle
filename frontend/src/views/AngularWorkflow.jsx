@@ -1515,7 +1515,7 @@ const AngularWorkflow = (defaultprops) => {
       })
       .catch((error) => {
 				setAppsLoaded(true)
-        alert.error("App loading error: ", error.toString());
+        alert.error("App loading error: "+error.toString());
       });
   };
 
@@ -3084,6 +3084,7 @@ const AngularWorkflow = (defaultprops) => {
           nodedata.iconBackground = iconInfo.iconBackgroundColor;
         }
       }
+
 
       if (
         nodedata.parameters !== undefined &&
@@ -5134,6 +5135,8 @@ const AngularWorkflow = (defaultprops) => {
 
       // AUTHENTICATION
       if (app.authentication.required) {
+				console.log("App auth is required!")
+
         // Setup auth here :)
         const authenticationOptions = [];
         var findAuthId = "";
@@ -5145,6 +5148,7 @@ const AngularWorkflow = (defaultprops) => {
           findAuthId = newAppData.authentication_id;
         }
 
+				console.log("Found auth: ", findAuthId)
         var tmpAuth = JSON.parse(JSON.stringify(appAuthentication));
         for (var key in tmpAuth) {
           var item = tmpAuth[key];

@@ -3650,7 +3650,26 @@ const Admin = (props) => {
                   bgColor = "#1f2023";
                 }
 
-								console.log("Auth data: ", data)
+								//console.log("Auth data: ", data)
+								if (data.type === "oauth2") {
+									data.fields = [
+									{
+										"key": "url",
+										"value": "Secret. Replaced during app execution!",
+									},
+									{
+										"key": "client_id",
+										"value": "Secret. Replaced during app execution!",
+									},
+									{
+										"key": "client_secret",
+										"value": "Secret. Replaced during app execution!",
+									},
+									{
+										"key": "scope",
+										"value": "Secret. Replaced during app execution!",
+									}]
+								}
 
                 return (
                   <ListItem key={index} style={{ backgroundColor: bgColor }}>

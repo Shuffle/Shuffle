@@ -2,6 +2,7 @@ import React, { useEffect, useContext } from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import { useTheme } from "@material-ui/core/styles";
 
+import ReactGA from 'react-ga';
 import SecurityFramework from '../components/SecurityFramework.jsx';
 
 import {
@@ -67,7 +68,7 @@ import { DataGrid, GridToolbar } from "@material-ui/data-grid";
 //import JSONPrettyMon from 'react-json-pretty/dist/monikai'
 import Dropzone from "../components/Dropzone";
 
-import { Link } from "react-router-dom";
+import { useNavigate, Link, useParams } from "react-router-dom";
 import { useAlert } from "react-alert";
 import ChipInput from "material-ui-chip-input";
 import { v4 as uuidv4 } from "uuid";
@@ -440,6 +441,7 @@ const GettingStarted = (props) => {
   const theme = useTheme();
   const alert = useAlert();
   const classes = useStyles(theme);
+	let navigate = useNavigate();
   const imgSize = 60;
 
   const referenceUrl = globalUrl + "/api/v1/hooks/";
@@ -2504,12 +2506,19 @@ const GettingStarted = (props) => {
 		const textSpacingDiff = 8
 		const textType = "body2"
 						
-		// Discover <a target="_blank" href="https://shuffler.io/creators" style={{textDecoration: "none", color: "#f86a3e",}}>use-cases made by other creators</a>!
+		// Discover <a target="_blank" href="https://shuffler.io/search?tab=workflows" style={{textDecoration: "none", color: "#f86a3e",}}>use-cases made by us and other creators</a>!
 		const steps = [
 			{
 				html: (
-					<Typography variant={textType} style={{marginTop: textSpacingDiff}}>
-						<Link to="/detectionframework" style={{textDecoration: "none", color: "#f86a3e",}}>Find your integrations</Link> by following our simple detection framework!
+					<Typography variant={textType} style={{marginTop: textSpacingDiff}} onClick={() => {
+						if (isCloud) {
+							ReactGA.event({
+								category: "getting-started",
+								action: `integerations_find_click`,
+							})
+						}
+					}}>
+						<Link to="/detectionframework" style={{textDecoration: "none", color: "#f86a3e",}}>Discover your apps</Link> by following our simple security model!
 					</Typography>
 				), 
 				tutorial: "find_integrations",
@@ -2517,27 +2526,45 @@ const GettingStarted = (props) => {
 			{
 				html: 
 					<Typography variant={textType} style={{marginTop: textSpacingDiff}}>
-								Discover <span style={{cursor: "pointer", textDecoration: "none", color: "#f86a3e",}} onClick={() => {
+							Discover <span style={{cursor: "pointer", textDecoration: "none", color: "#f86a3e",}} onClick={() => {
+    
+  						if (isCloud) {
+								navigate(`/search?tab=workflows`)
+
+								ReactGA.event({
+									category: "getting-started",
+									action: `workflow_find_click`,
+								})
+								return
+							} else {
 								alert.success("TBD: Coming in version 1.0.0");
+							}
 
-								const ele = document.getElementById("shuffle_search_field")
-								if (ele !== undefined && ele !== null) {
-									console.log("Found ele: ", ele)
-									ele.focus()
-									ele.style.borderColor = "#f86a3e"
-									ele.style.borderWidth = "2px"
+							const ele = document.getElementById("shuffle_search_field")
+							if (ele !== undefined && ele !== null) {
+								console.log("Found ele: ", ele)
+								ele.focus()
+								ele.style.borderColor = "#f86a3e"
+								ele.style.borderWidth = "2px"
 
-								} else {
-									alert.success("TBD: Coming in version 1.0.0");
-								}
-							}}>
-							use-cases made by other creators</span>!
+							} else {
+								alert.success("TBD: Coming in version 1.0.0");
+							}
+						}}>
+						use-cases made by other creators</span>!
 					</Typography>,
 				tutorial: "discover_workflows",
 			},
 			{
 				html: (
-					<Typography variant={textType} style={{marginTop: textSpacingDiff}}>
+					<Typography variant={textType} style={{marginTop: textSpacingDiff}} onClick={() => {
+						if (isCloud) {
+							ReactGA.event({
+								category: "getting-started",
+								action: `create_workflow_click`,
+							})
+						}
+					}}>
 						Learn to use Shuffle by&nbsp; 
 						<span style={{cursor: "pointer", color: "#f86a3e",}} onClick={() => {setModalOpen(true)}}>
 							creating your first workflow 
