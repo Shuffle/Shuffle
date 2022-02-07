@@ -225,7 +225,11 @@ const Apps = (props) => {
       document.title = "Shuffle - Apps";
 
       if (!isLoggedIn && isLoaded) {
-        navigate("/login")
+				if (isCloud) {
+        	navigate("/search?tab=apps")
+        } else {
+        	navigate("/login")
+				}
       }
 
       setFirstrequest(false);

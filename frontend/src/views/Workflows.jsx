@@ -856,7 +856,7 @@ const Workflows = (props) => {
           console.log("Status not 200 for workflows :O!: ", response.status);
 
           if (isCloud) {
-            window.location.pathname = "/login";
+            window.location.pathname = "/search?tab=workflows";
           }
 
           alert.info("Failed getting workflows.");

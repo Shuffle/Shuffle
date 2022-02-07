@@ -16,7 +16,7 @@ services:
     depends_on:
       - backend
   backend:
-    build: ./backend
+    #build: ./backend
     image: ghcr.io/frikky/shuffle-backend:nightly
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
@@ -50,7 +50,7 @@ services:
       - SHUFFLE_WORKER_VERSION=nightly
       - ORG_ID=${ORG_ID}
       - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
-      - BASE_URL=https://${OUTER_HOSTNAME}:${BACKEND_PORT}
+      - BASE_URL=http://${OUTER_HOSTNAME}:${BACKEND_PORT}
       - DOCKER_API_VERSION=1.40
       - SHUFFLE_BASE_IMAGE_NAME=${SHUFFLE_BASE_IMAGE_NAME}
       - SHUFFLE_BASE_IMAGE_REGISTRY=${SHUFFLE_BASE_IMAGE_REGISTRY}
@@ -69,8 +69,7 @@ services:
     container_name: shuffle-opensearch
     environment:
       - bootstrap.memory_lock=true
-      - "OPENSEARCH_JAVA_OPTS=-Xms1024m -Xmx1024m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
-      - plugins.security.disabled=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms2048m -Xmx2048m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
       - cluster.routing.allocation.disk.threshold_enabled=false
       - cluster.name=shuffle-cluster
       - node.name=shuffle-opensearch
@@ -86,8 +85,6 @@ services:
         hard: 65536
     volumes:
       - ${DB_LOCATION}:/usr/share/opensearch/data:rw
-    ports:
-      - 9200:9200
     networks:
       - shuffle
     restart: unless-stopped

@@ -2321,7 +2321,7 @@ class AppBase:
                 return True, ""
 
             self.logger.info("[DEBUG] Correct branches vs matching branches: %d vs %d" % (correct_branches, matching_branches))
-            return False, {"success": False, "reason": "Minimum of one branch must be correct. Total: %d of %d" % (correct_branches, matching_branches)}
+            return False, {"success": False, "reason": "Minimum of one branch's conditions must be correct to continue. Total: %d of %d" % (correct_branches, matching_branches)}
 
             #Correct branches vs matching branches: 1 vs 1
             #if 

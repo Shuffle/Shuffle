@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useLayoutEffect } from "react";
+import ReactDOM from "react-dom"
 import { useInterval } from "react-powerhooks";
 import { makeStyles, useTheme } from "@material-ui/core/styles";
 
@@ -1565,7 +1566,8 @@ const AngularWorkflow = (defaultprops) => {
 				
 					console.log("RESP: ", responseJson)
 					if (Object.getOwnPropertyNames(creatorProfile).length === 0) {
-						getUserProfile("frikky") 
+						//getUserProfile("frikky") 
+						getUserProfile(responseJson.id) 
 					}
 
 					//{appGroup.map((data, index) => {
@@ -1775,78 +1777,83 @@ const AngularWorkflow = (defaultprops) => {
 		}
 		*/
 
-  	cy.removeListener("select");
-		cy.on("select", "node", (e) => onNodeSelect(e, appAuthentication));
-		cy.on("select", "edge", (e) => onEdgeSelect(e));
+  	//cy.removeListener("select");
+		//cy.on("select", "node", (e) => onNodeSelect(e, appAuthentication));
+		//cy.on("select", "edge", (e) => onEdgeSelect(e));
+
 
     // FIXME - check if they have value before overriding like this for no reason.
     // Would save a lot of time (400~ ms -> 30ms)
     //console.log("ACTION: ", selectedAction)
     //console.log("APP: ", selectedApp)
-    setSelectedAction({});
-    setSelectedApp({});
-    setSelectedTrigger({});
-  	setSelectedComment({})
-    //setSelectedEdge({})
 
-    // setSelectedTriggerIndex(-1)
-    //setSelectedActionEnvironment({})
-    setSelectedEdge({});
-    //setTriggerAuthentication({})
-    //setSelectedTriggerIndex(-1)
-    //setTriggerFolders([])
+		ReactDOM.unstable_batchedUpdates(() => {
+			setSelectedAction({});
+			setSelectedApp({});
+			setSelectedTrigger({});
+			setSelectedComment({})
+			setSelectedEdge({});
 
-    // Can be used for right side view
-    setRightSideBarOpen(false);
-    setScrollConfig({
-      top: 0,
-      left: 0,
-      selected: "",
-    });
-    console.timeEnd("UNSELECT");
+			setSelectedEdge({})
+			setSelectedActionEnvironment({})
+			setTriggerAuthentication({})
+			setSelectedTriggerIndex(-1)
+			setTriggerFolders([])
+
+			// Can be used for right side view
+			setRightSideBarOpen(false);
+			setScrollConfig({
+				top: 0,
+				left: 0,
+				selected: "",
+			});
+			console.timeEnd("UNSELECT");
+		})
   };
 
   const onEdgeSelect = (event) => {
-    setRightSideBarOpen(true);
-    setLastSaved(false);
+		ReactDOM.unstable_batchedUpdates(() => {
+    	setRightSideBarOpen(true);
+    	setLastSaved(false);
 
-    /*
-		 // Used to not be able to edit trigger-based branches. 
-			const triggercheck = workflow.triggers.find(trigger => trigger.id === event.target.data()["source"])
-			if (triggercheck === undefined) {
-		*/
-    if (
-      event.target.data("type") !== "COMMENT" &&
-      event.target.data().decorator
-    ) {
-      alert.info("This edge can't be edited.");
-    } else {
-      //console.log("DATA: ", event.target.data())
-      const destinationId = event.target.data("target");
-      //console.log("DATA: ", event.target.data())
-      const curaction = workflow.actions.find((a) => a.id === destinationId);
-      //console.log("ACTION: ", curaction)
-      if (curaction !== undefined && curaction !== null) {
-        if (
-          curaction.app_name === "Shuffle Tools" &&
-          curaction.name === "router"
-        ) {
-          alert.info("Router action can't have incoming conditions");
-          event.target.unselect();
-          return;
-        }
-      }
+    	/*
+			 // Used to not be able to edit trigger-based branches. 
+				const triggercheck = workflow.triggers.find(trigger => trigger.id === event.target.data()["source"])
+				if (triggercheck === undefined) {
+			*/
+    	if (
+    	  event.target.data("type") !== "COMMENT" &&
+    	  event.target.data().decorator
+    	) {
+    	  alert.info("This edge can't be edited.");
+    	} else {
+    	  //console.log("DATA: ", event.target.data())
+    	  const destinationId = event.target.data("target");
+    	  //console.log("DATA: ", event.target.data())
+    	  const curaction = workflow.actions.find((a) => a.id === destinationId);
+    	  //console.log("ACTION: ", curaction)
+    	  if (curaction !== undefined && curaction !== null) {
+    	    if (
+    	      curaction.app_name === "Shuffle Tools" &&
+    	      curaction.name === "router"
+    	    ) {
+    	      alert.info("Router action can't have incoming conditions");
+    	      event.target.unselect();
+    	      return;
+    	    }
+    	  }
 
-      setSelectedEdgeIndex(
-        workflow.branches.findIndex(
-          (data) => data.id === event.target.data()["id"]
-        )
-      );
-      setSelectedEdge(event.target.data());
-    }
+    	  setSelectedEdgeIndex(
+    	    workflow.branches.findIndex(
+    	      (data) => data.id === event.target.data()["id"]
+    	    )
+    	  );
+    	  setSelectedEdge(event.target.data());
+    	}
 
-    setSelectedAction({});
-    setSelectedTrigger({});
+    	setSelectedAction({});
+    	setSelectedTrigger({});
+		})
   };
 
   // Comparing locations between nodes and setting views
@@ -2178,360 +2185,364 @@ const AngularWorkflow = (defaultprops) => {
   // https://stackoverflow.com/questions/16677856/cy-onselect-callback-only-once
 	// onNodeClick
   const onNodeSelect = (event, newAppAuth) => {
-    const data = event.target.data();
-    if (data.isButton) {
-      if (data.buttonType === "delete") {
-        const parentNode = cy.getElementById(data.attachedTo);
-        if (parentNode !== null && parentNode !== undefined) {
-  				removeNode(data.attachedTo) 
-          //parentNode.remove()
-        }
+		// Otherwise everything is SUPER slow
+		ReactDOM.unstable_batchedUpdates(() => {
+    	const data = event.target.data();
+    	if (data.isButton) {
+    	  if (data.buttonType === "delete") {
+    	    const parentNode = cy.getElementById(data.attachedTo);
+    	    if (parentNode !== null && parentNode !== undefined) {
+  					removeNode(data.attachedTo) 
+    	      //parentNode.remove()
+    	    }
 
-				return
-      } else if (
-        data.buttonType === "set_startnode" &&
-        data.type !== "TRIGGER"
-      ) {
-        const parentNode = cy.getElementById(data.attachedTo);
-        if (parentNode !== null && parentNode !== undefined) {
-          var oldstartnode = cy.getElementById(workflow.start);
-          if (
-            oldstartnode !== null &&
-            oldstartnode !== undefined &&
-            oldstartnode.length > 0
-          ) {
-            try {
-              oldstartnode[0].data("isStartNode", false);
-            } catch (e) {
-              console.log("Startnode error: ", e);
-            }
-          }
-
-          workflow.start = parentNode.data("id");
-          setLastSaved(false);
-          parentNode.data("isStartNode", true);
-        }
-      		
-				//event.target.unselect();
-				return
-      } else if (data.buttonType === "copy") {
-        console.log("COPY!");
-        // 1. Find parent
-        // 2. Find branches for parent
-        // 3. Make a new node that's moved a little bit
-        const parentNode = cy.getElementById(data.attachedTo);
-        if (parentNode !== null && parentNode !== undefined) {
-          var newNodeData = JSON.parse(JSON.stringify(parentNode.data()));
-          newNodeData.id = uuidv4();
-          if (newNodeData.position !== undefined) {
-            newNodeData.position = {
-              x: newNodeData.position.x + 100,
-              y: newNodeData.position.y + 100,
-            };
-          }
-
-          newNodeData.isStartNode = false;
-          newNodeData.errors = [];
-          newNodeData.is_valid = true;
-          newNodeData.isValid = true;
-          newNodeData.label = parentNode.data("label") + "_copy";
-
-          cy.add({
-            group: "nodes",
-            data: newNodeData,
-            position: newNodeData.position,
-          });
-
-          // Readding the icon after moving the node
-          if (
-            newNodeData.app_name !== "Testing" ||
-            newNodeData.app_name !== "Shuffle Workflow"
-          ) {
-          } else {
-            const iconInfo = GetIconInfo(newNodeData);
-            const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`;
-            const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin);
-
-            const offset = newNodeData.isStartNode ? 36 : 44;
-            const decoratorNode = {
-              position: {
-                x: newNodeData.position.x + offset,
-                y: newNodeData.position.y + offset,
-              },
-              locked: true,
-              data: {
-                isDescriptor: true,
-                isValid: true,
-                is_valid: true,
-                label: "",
-                image: svgpin_Url,
-                imageColor: iconInfo.iconBackgroundColor,
-                attachedTo: newNodeData.id,
-              },
-            };
-
-            cy.add(decoratorNode).unselectify();
-          }
-
-          workflow.actions.push(newNodeData);
-
-          const sourcebranches = workflow.branches.filter(
-            (foundbranch) => foundbranch.source_id === parentNode.data("id")
-          );
-          const destinationbranches = workflow.branches.filter(
-            (foundbranch) =>
-              foundbranch.destination_id === parentNode.data("id")
-          );
-
-          for (var key in sourcebranches) {
-            var newbranch = JSON.parse(JSON.stringify(sourcebranches[key]));
-            newbranch.id = uuidv4();
-            newbranch.source_id = newNodeData.id;
-
-            newbranch._id = newbranch.id;
-            newbranch.source = newbranch.source_id;
-            newbranch.target = newbranch.destination_id;
-            cy.add({
-              group: "edges",
-              data: newbranch,
-            });
-          }
-
-          for (var key in destinationbranches) {
-            var newbranch = JSON.parse(
-              JSON.stringify(destinationbranches[key])
-            );
-            newbranch.id = uuidv4();
-            newbranch.destination_id = newNodeData.id;
-
-            newbranch._id = newbranch.id;
-            newbranch.source = newbranch.source_id;
-            newbranch.target = newbranch.destination_id;
-            cy.add({
-              group: "edges",
-              data: newbranch,
-            });
-          }
-
-      		//event.target.unselect();
 					return
-        }
-      }
+    	  } else if (
+    	    data.buttonType === "set_startnode" &&
+    	    data.type !== "TRIGGER"
+    	  ) {
+    	    const parentNode = cy.getElementById(data.attachedTo);
+    	    if (parentNode !== null && parentNode !== undefined) {
+    	      var oldstartnode = cy.getElementById(workflow.start);
+    	      if (
+    	        oldstartnode !== null &&
+    	        oldstartnode !== undefined &&
+    	        oldstartnode.length > 0
+    	      ) {
+    	        try {
+    	          oldstartnode[0].data("isStartNode", false);
+    	        } catch (e) {
+    	          console.log("Startnode error: ", e);
+    	        }
+    	      }
 
-      return;
-    } else if (data.isDescriptor) {
-      console.log("Can't select descriptor");
-      event.target.unselect();
-      return;
-    }
+    	      workflow.start = parentNode.data("id");
+    	      setLastSaved(false);
+    	      parentNode.data("isStartNode", true);
+    	    }
+    	  		
+					//event.target.unselect();
+					return
+    	  } else if (data.buttonType === "copy") {
+    	    console.log("COPY!");
+    	    // 1. Find parent
+    	    // 2. Find branches for parent
+    	    // 3. Make a new node that's moved a little bit
+    	    const parentNode = cy.getElementById(data.attachedTo);
+    	    if (parentNode !== null && parentNode !== undefined) {
+    	      var newNodeData = JSON.parse(JSON.stringify(parentNode.data()));
+    	      newNodeData.id = uuidv4();
+    	      if (newNodeData.position !== undefined) {
+    	        newNodeData.position = {
+    	          x: newNodeData.position.x + 100,
+    	          y: newNodeData.position.y + 100,
+    	        };
+    	      }
 
-    if (data.type === "ACTION") {
-			//var curaction = JSON.parse(JSON.stringify(data))
-			// FIXME: Trust it to just work?
-			//event.target.data()
-      var curaction = workflow.actions.find((a) => a.id === data.id);
-      if (!curaction || curaction === undefined) {
-				console.log("NOT FOUND DATA: ", event.target.data())
-				if (data.id !== undefined && data.app_name !== undefined) {
-					workflow.actions.push(data)
+    	      newNodeData.isStartNode = false;
+    	      newNodeData.errors = [];
+    	      newNodeData.is_valid = true;
+    	      newNodeData.isValid = true;
+    	      newNodeData.label = parentNode.data("label") + "_copy";
+
+    	      cy.add({
+    	        group: "nodes",
+    	        data: newNodeData,
+    	        position: newNodeData.position,
+    	      });
+
+    	      // Readding the icon after moving the node
+    	      if (
+    	        newNodeData.app_name !== "Testing" ||
+    	        newNodeData.app_name !== "Shuffle Workflow"
+    	      ) {
+    	      } else {
+    	        const iconInfo = GetIconInfo(newNodeData);
+    	        const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`;
+    	        const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin);
+
+    	        const offset = newNodeData.isStartNode ? 36 : 44;
+    	        const decoratorNode = {
+    	          position: {
+    	            x: newNodeData.position.x + offset,
+    	            y: newNodeData.position.y + offset,
+    	          },
+    	          locked: true,
+    	          data: {
+    	            isDescriptor: true,
+    	            isValid: true,
+    	            is_valid: true,
+    	            label: "",
+    	            image: svgpin_Url,
+    	            imageColor: iconInfo.iconBackgroundColor,
+    	            attachedTo: newNodeData.id,
+    	          },
+    	        };
+
+    	        cy.add(decoratorNode).unselectify();
+    	      }
+
+    	      workflow.actions.push(newNodeData);
+
+    	      const sourcebranches = workflow.branches.filter(
+    	        (foundbranch) => foundbranch.source_id === parentNode.data("id")
+    	      );
+    	      const destinationbranches = workflow.branches.filter(
+    	        (foundbranch) =>
+    	          foundbranch.destination_id === parentNode.data("id")
+    	      );
+
+    	      for (var key in sourcebranches) {
+    	        var newbranch = JSON.parse(JSON.stringify(sourcebranches[key]));
+    	        newbranch.id = uuidv4();
+    	        newbranch.source_id = newNodeData.id;
+
+    	        newbranch._id = newbranch.id;
+    	        newbranch.source = newbranch.source_id;
+    	        newbranch.target = newbranch.destination_id;
+    	        cy.add({
+    	          group: "edges",
+    	          data: newbranch,
+    	        });
+    	      }
+
+    	      for (var key in destinationbranches) {
+    	        var newbranch = JSON.parse(
+    	          JSON.stringify(destinationbranches[key])
+    	        );
+    	        newbranch.id = uuidv4();
+    	        newbranch.destination_id = newNodeData.id;
+
+    	        newbranch._id = newbranch.id;
+    	        newbranch.source = newbranch.source_id;
+    	        newbranch.target = newbranch.destination_id;
+    	        cy.add({
+    	          group: "edges",
+    	          data: newbranch,
+    	        });
+    	      }
+
+    	  		//event.target.unselect();
+						return
+    	    }
+    	  }
+
+    	  return;
+    	} else if (data.isDescriptor) {
+    	  console.log("Can't select descriptor");
+    	  event.target.unselect();
+    	  return;
+    	}
+
+    	if (data.type === "ACTION") {
+				//var curaction = JSON.parse(JSON.stringify(data))
+				// FIXME: Trust it to just work?
+				//event.target.data()
+    	  var curaction = workflow.actions.find((a) => a.id === data.id);
+    	  if (!curaction || curaction === undefined) {
+					console.log("NOT FOUND DATA: ", event.target.data())
+					if (data.id !== undefined && data.app_name !== undefined) {
+						workflow.actions.push(data)
+						setWorkflow(workflow)
+						curaction = data
+					} else {
+    	    	alert.error("Action not found. Please remake it.");
+						event.target.remove();
+						return;
+					}
+    	  }
+
+				var newapps = JSON.parse(JSON.stringify(apps))
+    	  const curapp = newapps.find(
+    	    (a) =>
+    	      a.name === curaction.app_name &&
+    	      (a.app_version === curaction.app_version ||
+    	        (a.loop_versions !== null &&
+    	          a.loop_versions.includes(curaction.app_version)))
+    	  );
+    	  if (!curapp || curapp === undefined) {
+    	    alert.error(
+    	      `App ${curaction.app_name}:${curaction.app_version} not found. Is it activated?`
+    	    );
+
+    	    const tmpapp = {
+    	      name: curaction.app_name,
+    	      app_name: curaction.app_name,
+    	      app_version: curaction.app_version,
+    	      id: curaction.app_id,
+    	      actions: [curaction],
+    	    };
+
+    	    setSelectedApp(tmpapp);
+    	    setSelectedAction(curaction);
+    	  } else {
+    	    setAuthenticationType(
+    	      curapp.authentication.type === "oauth2" &&
+    	        curapp.authentication.redirect_uri !== undefined &&
+    	        curapp.authentication.redirect_uri !== null
+    	        ? {
+    	            type: "oauth2",
+    	            redirect_uri: curapp.authentication.redirect_uri,
+    	            refresh_uri: curapp.authentication.refresh_uri,
+    	            token_uri: curapp.authentication.token_uri,
+    	            scope: curapp.authentication.scope,
+    	            client_id: curapp.authentication.client_id,
+    	            client_secret: curapp.authentication.client_secret,
+    	          }
+    	        : {
+    	            type: "",
+    	          }
+    	    );
+
+    	    const requiresAuth = curapp.authentication.required; //&& ((curapp.authentication.parameters !== undefined && curapp.authentication.parameters !== null) || (curapp.authentication.type === "oauth2" && curapp.authentication.redirect_uri !== undefined && curapp.authentication.redirect_uri !== null))
+    	    setRequiresAuthentication(requiresAuth);
+    	    if (curapp.authentication.required) {
+    	      //console.log("App requires auth.")
+    	      // Setup auth here :)
+    	      const authenticationOptions = [];
+    	      var findAuthId = "";
+    	      if (
+    	        curaction.authentication_id !== null &&
+    	        curaction.authentication_id !== undefined &&
+    	        curaction.authentication_id.length > 0
+    	      ) {
+    	        findAuthId = curaction.authentication_id;
+    	      }
+
+    	      var tmpAuth = JSON.parse(JSON.stringify(newAppAuth));
+
+    	      for (var key in tmpAuth) {
+    	        var item = tmpAuth[key];
+
+    	        const newfields = {};
+    	        for (var filterkey in item.fields) {
+    	          newfields[item.fields[filterkey].key] =
+    	            item.fields[filterkey].value;
+    	        }
+
+    	        item.fields = newfields;
+    	        if (item.app.name === curapp.name) {
+    	          authenticationOptions.push(item);
+    	          if (item.id === findAuthId) {
+    	            curaction.selectedAuthentication = item;
+    	          }
+    	        }
+    	      }
+
+    	      curaction.authentication = authenticationOptions;
+    	      if (
+    	        curaction.selectedAuthentication === null ||
+    	        curaction.selectedAuthentication === undefined ||
+    	        curaction.selectedAuthentication.length === ""
+    	      ) {
+    	        curaction.selectedAuthentication = {};
+    	      }
+    	    } else {
+    	      curaction.authentication = [];
+    	      curaction.authentication_id = "";
+    	      curaction.selectedAuthentication = {};
+    	    }
+
+    	    if (
+    	      curaction.parameters !== undefined &&
+    	      curaction.parameters !== null &&
+    	      curaction.parameters.length > 0
+    	    ) {
+    	      for (var key in curaction.parameters) {
+    	        if (
+    	          curaction.parameters[key].options !== undefined &&
+    	          curaction.parameters[key].options !== null &&
+    	          curaction.parameters[key].options.length > 0 &&
+    	          curaction.parameters[key].value === ""
+    	        ) {
+    	          curaction.parameters[key].value =
+    	            curaction.parameters[key].options[0];
+    	        }
+    	      }
+    	    }
+
+    	    setSelectedApp(curapp);
+    	    setSelectedAction(curaction);
+
+    	    cy.removeListener("drag");
+    	    cy.removeListener("free");
+    	    cy.on("drag", "node", (e) => onNodeDrag(e, curaction));
+    	    cy.on("free", "node", (e) => onNodeDragStop(e, curaction));
+    	  }
+
+				console.log("Object: ", environments)
+    	  if (environments !== undefined && environments !== null && (typeof environments === "array" || typeof environments === "object")) {
+					var parsedenv = environments
+					if (typeof environments === "object") {
+						parsedenv = [environments]
+					}
+
+    	    var env = parsedenv.find((a) => a.Name === curaction.environment);
+    	    if (!env || env === undefined) {
+    	      env = parsedenv[defaultEnvironmentIndex];
+    	    }
+
+    	    setSelectedActionEnvironment(env);
+    	  }
+    	} else if (data.type === "TRIGGER") {
+				if (workflow.triggers === null) {
+					workflow.triggers = []
+				}
+
+    	  var trigger_index = workflow.triggers.findIndex(
+    	    (a) => a.id === data.id
+    	  );
+
+				//console.log("Trigger: ", data, trigger_index)
+				if (trigger_index === -1) {
+					workflow.triggers.push(data)
+					trigger_index = workflow.triggers.length-1
 					setWorkflow(workflow)
-					curaction = data
-				} else {
-        	alert.error("Action not found. Please remake it.");
-					event.target.remove();
-					return;
-				}
-      }
-
-			var newapps = JSON.parse(JSON.stringify(apps))
-      const curapp = newapps.find(
-        (a) =>
-          a.name === curaction.app_name &&
-          (a.app_version === curaction.app_version ||
-            (a.loop_versions !== null &&
-              a.loop_versions.includes(curaction.app_version)))
-      );
-      if (!curapp || curapp === undefined) {
-        alert.error(
-          `App ${curaction.app_name}:${curaction.app_version} not found. Is it activated?`
-        );
-
-        const tmpapp = {
-          name: curaction.app_name,
-          app_name: curaction.app_name,
-          app_version: curaction.app_version,
-          id: curaction.app_id,
-          actions: [curaction],
-        };
-
-        setSelectedApp(tmpapp);
-        setSelectedAction(curaction);
-      } else {
-        setAuthenticationType(
-          curapp.authentication.type === "oauth2" &&
-            curapp.authentication.redirect_uri !== undefined &&
-            curapp.authentication.redirect_uri !== null
-            ? {
-                type: "oauth2",
-                redirect_uri: curapp.authentication.redirect_uri,
-                refresh_uri: curapp.authentication.refresh_uri,
-                token_uri: curapp.authentication.token_uri,
-                scope: curapp.authentication.scope,
-                client_id: curapp.authentication.client_id,
-                client_secret: curapp.authentication.client_secret,
-              }
-            : {
-                type: "",
-              }
-        );
-
-        const requiresAuth = curapp.authentication.required; //&& ((curapp.authentication.parameters !== undefined && curapp.authentication.parameters !== null) || (curapp.authentication.type === "oauth2" && curapp.authentication.redirect_uri !== undefined && curapp.authentication.redirect_uri !== null))
-        setRequiresAuthentication(requiresAuth);
-        if (curapp.authentication.required) {
-          //console.log("App requires auth.")
-          // Setup auth here :)
-          const authenticationOptions = [];
-          var findAuthId = "";
-          if (
-            curaction.authentication_id !== null &&
-            curaction.authentication_id !== undefined &&
-            curaction.authentication_id.length > 0
-          ) {
-            findAuthId = curaction.authentication_id;
-          }
-
-          var tmpAuth = JSON.parse(JSON.stringify(newAppAuth));
-
-          for (var key in tmpAuth) {
-            var item = tmpAuth[key];
-
-            const newfields = {};
-            for (var filterkey in item.fields) {
-              newfields[item.fields[filterkey].key] =
-                item.fields[filterkey].value;
-            }
-
-            item.fields = newfields;
-            if (item.app.name === curapp.name) {
-              authenticationOptions.push(item);
-              if (item.id === findAuthId) {
-                curaction.selectedAuthentication = item;
-              }
-            }
-          }
-
-          curaction.authentication = authenticationOptions;
-          if (
-            curaction.selectedAuthentication === null ||
-            curaction.selectedAuthentication === undefined ||
-            curaction.selectedAuthentication.length === ""
-          ) {
-            curaction.selectedAuthentication = {};
-          }
-        } else {
-          curaction.authentication = [];
-          curaction.authentication_id = "";
-          curaction.selectedAuthentication = {};
-        }
-
-        if (
-          curaction.parameters !== undefined &&
-          curaction.parameters !== null &&
-          curaction.parameters.length > 0
-        ) {
-          for (var key in curaction.parameters) {
-            if (
-              curaction.parameters[key].options !== undefined &&
-              curaction.parameters[key].options !== null &&
-              curaction.parameters[key].options.length > 0 &&
-              curaction.parameters[key].value === ""
-            ) {
-              curaction.parameters[key].value =
-                curaction.parameters[key].options[0];
-            }
-          }
-        }
-
-        setSelectedApp(curapp);
-        setSelectedAction(curaction);
-
-        cy.removeListener("drag");
-        cy.removeListener("free");
-        cy.on("drag", "node", (e) => onNodeDrag(e, curaction));
-        cy.on("free", "node", (e) => onNodeDragStop(e, curaction));
-      }
-
-			console.log("Object: ", environments)
-      if (environments !== undefined && environments !== null && (typeof environments === "array" || typeof environments === "object")) {
-				var parsedenv = environments
-				if (typeof environments === "object") {
-					parsedenv = [environments]
 				}
 
-        var env = parsedenv.find((a) => a.Name === curaction.environment);
-        if (!env || env === undefined) {
-          env = parsedenv[defaultEnvironmentIndex];
-        }
+				//console.log("Trigger2: ", data, trigger_index)
+				//if (data.id !== undefined && data.app_name !== undefined) {
+				//	//newapps.push(data)
+				//	workflow.actions.push(data)
+				//	curaction = data
+				//} else {
+				//	alert.error("Action not found. Please remake it.");
+				//	event.target.remove();
+				//	return;
+				//}
 
-        setSelectedActionEnvironment(env);
-      }
-    } else if (data.type === "TRIGGER") {
-			if (workflow.triggers === null) {
-				workflow.triggers = []
-			}
+    	  if (data.app_name === "Shuffle Workflow") {
+    	    getAvailableWorkflows(trigger_index);
+    	    getSettings();
+    	  } else if (data.app_name === "Webhook") {
+    	    if (workflow.triggers[trigger_index].parameters !== undefined) {
+    	      workflow.triggers[trigger_index].parameters[0] = {
+    	        name: "url",
+    	        value: referenceUrl + "webhook_" + selectedTrigger.id,
+    	      };
+    	    }
+    	  }
 
-      var trigger_index = workflow.triggers.findIndex(
-        (a) => a.id === data.id
-      );
+				console.log("DATA: ", data)
+    	  setSelectedTriggerIndex(trigger_index);
+    	  setSelectedTrigger(data);
+    	  setSelectedActionEnvironment(data.env);
+    	} else if (data.type === "COMMENT") {
+    	  setSelectedComment(data);
+    	} else {
+    	  alert.error("Can't handle " + data.type);
+    	  return;
+    	}
 
-			//console.log("Trigger: ", data, trigger_index)
-			if (trigger_index === -1) {
-				workflow.triggers.push(data)
-				trigger_index = workflow.triggers.length-1
-				setWorkflow(workflow)
-			}
-
-			//console.log("Trigger2: ", data, trigger_index)
-			//if (data.id !== undefined && data.app_name !== undefined) {
-			//	//newapps.push(data)
-			//	workflow.actions.push(data)
-			//	curaction = data
-			//} else {
-			//	alert.error("Action not found. Please remake it.");
-			//	event.target.remove();
-			//	return;
-			//}
-
-      if (data.app_name === "Shuffle Workflow") {
-        getAvailableWorkflows(trigger_index);
-        getSettings();
-      } else if (data.app_name === "Webhook") {
-        if (workflow.triggers[trigger_index].parameters !== undefined) {
-          workflow.triggers[trigger_index].parameters[0] = {
-            name: "url",
-            value: referenceUrl + "webhook_" + selectedTrigger.id,
-          };
-        }
-      }
-
-			console.log("DATA: ", data)
-      setSelectedTriggerIndex(trigger_index);
-      setSelectedTrigger(data);
-      setSelectedActionEnvironment(data.env);
-    } else if (data.type === "COMMENT") {
-      setSelectedComment(data);
-    } else {
-      alert.error("Can't handle " + data.type);
-      return;
-    }
-
-    setRightSideBarOpen(true);
-    setLastSaved(false);
-    setScrollConfig({
-      top: 0,
-      left: 0,
-      selected: "",
-    });
+    	setRightSideBarOpen(true);
+			setSelectedComment({})
+    	setLastSaved(false);
+    	setScrollConfig({
+    	  top: 0,
+    	  left: 0,
+    	  selected: "",
+    	});
+		})
   };
 
 	const activateApp = (appid) => {
@@ -10590,6 +10601,7 @@ const AngularWorkflow = (defaultprops) => {
   //}}>Execute websocket</Button>
   //
 		
+	// Searhc by username, userId, workflow, appId should all work
 	const getUserProfile = (username) => {
     fetch(`${globalUrl}/api/v1/users/creators/${username}`, {
       method: "GET",
@@ -10608,6 +10620,7 @@ const AngularWorkflow = (defaultprops) => {
 			return response.json();
 		})
 		.then((responseJson) => {
+			console.log("Found creator: ", responseJson)
 			if (responseJson.success !== false) {
 				setCreatorProfile(responseJson)
 			}
@@ -12347,7 +12360,7 @@ const parsedExecutionArgument = () => {
 							maxZoom={2.0}
 							wheelSensitivity={0.25}
 							style={{
-								width: bodyWidth - leftBarSize - 15,
+								width: bodyWidth - leftBarSize - 25,
 								height: bodyHeight - appBarSize - 5,
 								backgroundColor: surfaceColor,
 							}}
