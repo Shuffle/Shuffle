@@ -3637,8 +3637,8 @@ const Admin = (props) => {
               style={{ minWidth: 125, maxWidth: 125, overflow: "hidden" }}
             />
             <ListItemText
-              primary="Last Edited"
-              style={{ minWidth: 225, maxWidth: 225, overflow: "hidden" }}
+              primary="Created"
+              style={{ minWidth: 230, maxWidth: 230, overflow: "hidden" }}
             />
             <ListItemText primary="Actions" />
           </ListItem>
@@ -3739,11 +3739,11 @@ const Admin = (props) => {
                     />
 										<ListItemText
 											style={{
-												maxWidth: 225,
-												minWidth: 225,
+												maxWidth: 230,
+												minWidth: 230,
 												overflow: "hidden",
 											}}
-											primary={new Date(data.edited * 1000).toISOString()}
+											primary={new Date(data.created * 1000).toISOString()}
 										/>
                     <ListItemText>
                       <IconButton
