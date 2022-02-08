@@ -39,7 +39,6 @@ services:
       #- opensearch #Not necessary because dependancy is handled within the backend itself instead
       #- database
   orborus:
-    #build: ./functions/onprem/orborus
     image: ghcr.io/frikky/shuffle-orborus:latest
     container_name: shuffle-orborus
     hostname: shuffle-orborus
@@ -48,7 +47,6 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      - SHUFFLE_APP_SDK_VERSION=latest
       - SHUFFLE_WORKER_VERSION=latest
       - ORG_ID=${ORG_ID}
       - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
@@ -61,18 +59,17 @@ services:
       - HTTPS_PROXY=${HTTPS_PROXY}
       - SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
       - SHUFFLE_PASS_APP_PROXY=${SHUFFLE_PASS_APP_PROXY}
-      - SHUFFLE_ORBORUS_EXECUTION_TIMEOUT=600
-      - SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY=5
-      - CLEANUP=${SHUFFLE_CONTAINER_AUTO_CLEANUP}
+      - SHUFFLE_SWARM_NETWORK_NAME=shuffle_swarm_executions
+      - SHUFFLE_SCALE_REPLICAS=1
+      - SHUFFLE_SWARM_CONFIG=runn
     restart: unless-stopped
   opensearch:
-    image: opensearchproject/opensearch:1.2.3
+    image: opensearchproject/opensearch:1.2.4
     hostname: shuffle-opensearch
     container_name: shuffle-opensearch
     environment:
       - bootstrap.memory_lock=true
-      - "OPENSEARCH_JAVA_OPTS=-Xms1024m -Xmx1024m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
-      - plugins.security.disabled=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms2048m -Xmx2048m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
       - cluster.routing.allocation.disk.threshold_enabled=false
       - cluster.name=shuffle-cluster
       - node.name=shuffle-opensearch
@@ -96,3 +93,6 @@ services:
 networks:
   shuffle:
     driver: bridge
+    
+#driver: overlay 
+#driver: bridge
