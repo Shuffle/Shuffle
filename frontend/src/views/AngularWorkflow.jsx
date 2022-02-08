@@ -2335,6 +2335,7 @@ const AngularWorkflow = (defaultprops) => {
     	}
 
     	if (data.type === "ACTION") {
+				setSelectedComment({})
 				//var curaction = JSON.parse(JSON.stringify(data))
 				// FIXME: Trust it to just work?
 				//event.target.data()
@@ -2485,6 +2486,7 @@ const AngularWorkflow = (defaultprops) => {
     	    setSelectedActionEnvironment(env);
     	  }
     	} else if (data.type === "TRIGGER") {
+				setSelectedComment({})
 				if (workflow.triggers === null) {
 					workflow.triggers = []
 				}
@@ -2535,7 +2537,6 @@ const AngularWorkflow = (defaultprops) => {
     	}
 
     	setRightSideBarOpen(true);
-			setSelectedComment({})
     	setLastSaved(false);
     	setScrollConfig({
     	  top: 0,

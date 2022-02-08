@@ -499,13 +499,23 @@ const LoginDialog = (props) => {
   const loadedCheck = isLoaded ? <div>{basedata}</div> : <div></div>;
 
 	useEffect(() => {
-		if (ssoUrl !== undefined && ssoUrl !== null && ssoUrl.length > 0) {
-			//id="sso_button"
-    	const ssoBtn = document.getElementById("sso_button");
-			if (ssoBtn !== undefined && ssoBtn !== null) {
-				console.log("SSO BTN: ", ssoBtn)
+		setTimeout(() => {
+			if (ssoUrl !== undefined && ssoUrl !== null && ssoUrl.length > 0) {
+				//id="sso_button"
+    		const ssoBtn = document.getElementById("sso_button");
+				if (ssoBtn !== undefined && ssoBtn !== null) {
+					console.log("SSO BTN: ", ssoBtn)
+					const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
+					var tmpView = new URLSearchParams(cursearch).get("autologin");
+					if (tmpView !== undefined && tmpView !== null) {
+						if (tmpView === "true") {
+							console.log("Tmp: ", tmpView)
+							ssoBtn.click()
+						}
+					}
+				}
 			}
-		}
+		}, 200);
 	}, [ssoUrl])
 
   return <div>{loadedCheck}</div>;

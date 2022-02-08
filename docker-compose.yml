@@ -1,7 +1,7 @@
 version: '3'
 services:
   frontend:
-    #build: ./frontend
+    build: ./frontend
     image: ghcr.io/frikky/shuffle-frontend:nightly
     container_name: shuffle-frontend
     hostname: shuffle-frontend
@@ -85,6 +85,8 @@ services:
         hard: 65536
     volumes:
       - ${DB_LOCATION}:/usr/share/opensearch/data:rw
+    ports:
+      - 9200:9200
     networks:
       - shuffle
     restart: unless-stopped
