@@ -6179,7 +6179,6 @@ const AngularWorkflow = (defaultprops) => {
         }}
         fullWidth
         multiline={multiline}
-        rows={5}
         color="primary"
         defaultValue={data.value}
         placeholder={placeholder}
@@ -8751,6 +8750,10 @@ const AngularWorkflow = (defaultprops) => {
           name: "auth_headers",
           value: "",
         };
+        workflow.triggers[selectedTriggerIndex].parameters[3] = {
+          name: "custom_response_body",
+          value: "",
+        };
         setWorkflow(workflow);
       } else {
         // Always update
@@ -8978,10 +8981,48 @@ const AngularWorkflow = (defaultprops) => {
                 onBlur={(e) => {
                   setTriggerCronWrapper(e.target.value);
                 }}
-              />
+              /> 
               <div
                 style={{
                   marginTop: "20px",
+                  marginBottom: "7px",
+                  display: "flex",
+                }}
+              >
+                <Button
+                  variant="contained"
+                  style={{ flex: "1" }}
+                  disabled={selectedTrigger.status === "running"}
+                  onClick={() => {
+                    newWebhook(workflow.triggers[selectedTriggerIndex]);
+                  }}
+                  color="primary"
+                >
+                  Start
+                </Button>
+                <Button
+                  variant="contained"
+                  style={{ flex: "1" }}
+                  disabled={selectedTrigger.status !== "running"}
+                  onClick={() => {
+                    deleteWebhook(selectedTrigger, selectedTriggerIndex);
+                  }}
+                  color="primary"
+                >
+                  Stop
+                </Button>
+              </div>
+              <Divider
+                style={{
+                  marginTop: "20px",
+                  height: "1px",
+                  width: "100%",
+                  backgroundColor: "rgb(91, 96, 100)",
+                }}
+              />
+							<div
+                style={{
+                  marginTop: 25,
                   marginBottom: "7px",
                   display: "flex",
                 }}
@@ -8996,7 +9037,7 @@ const AngularWorkflow = (defaultprops) => {
                   }}
                 />
                 <div style={{ flex: "10" }}>
-                  <b>Required headers</b>
+                  <b>Authentication headers</b>
                 </div>
               </div>
               <div>
@@ -9036,43 +9077,62 @@ const AngularWorkflow = (defaultprops) => {
                   }}
                 />
               </div>
-              <Divider
-                style={{
-                  marginTop: "20px",
-                  height: "1px",
-                  width: "100%",
-                  backgroundColor: "rgb(91, 96, 100)",
-                }}
-              />
-              <div
+							<div
                 style={{
                   marginTop: "20px",
                   marginBottom: "7px",
                   display: "flex",
                 }}
               >
-                <Button
-                  variant="contained"
-                  style={{ flex: "1" }}
+                <div
+                  style={{
+                    width: "17px",
+                    height: "17px",
+                    borderRadius: 17 / 2,
+                    backgroundColor: yellow,
+                    marginRight: "10px",
+                  }}
+                />
+                <div style={{ flex: "10" }}>
+                  <b>Custom Response</b>
+                </div>
+              </div>
+              <div style={{marginBottom: 20, }}>
+                <TextField
+                  style={{
+                    backgroundColor: inputColor,
+                    borderRadius: theme.palette.borderRadius,
+                  }}
+                  id="webhook_uri_header"
+                  onClick={() => {}}
+                  InputProps={{
+                    style: {
+                      color: "white",
+                      marginLeft: "5px",
+                      maxWidth: "95%",
+                      fontSize: "1em",
+                    },
+                  }}
+                  fullWidth
+                  multiline
+                  rows="4"
+                  defaultValue={trigger_header_auth}
+                  color="primary"
                   disabled={selectedTrigger.status === "running"}
-                  onClick={() => {
-                    newWebhook(workflow.triggers[selectedTriggerIndex]);
+                  placeholder={"OK"}
+                  onBlur={(e) => {
+                    const value = e.target.value;
+                    if (selectedTrigger.parameters === null) {
+                      selectedTrigger.parameters = [];
+                    }
+
+                    workflow.triggers[selectedTriggerIndex].parameters[3] = {
+                      value: value,
+                      name: "custom_response_body",
+                    };
+                    setWorkflow(workflow);
                   }}
-                  color="primary"
-                >
-                  Start
-                </Button>
-                <Button
-                  variant="contained"
-                  style={{ flex: "1" }}
-                  disabled={selectedTrigger.status !== "running"}
-                  onClick={() => {
-                    deleteWebhook(selectedTrigger, selectedTriggerIndex);
-                  }}
-                  color="primary"
-                >
-                  Stop
-                </Button>
+                />
               </div>
             </div>
           </div>
@@ -9242,6 +9302,14 @@ const AngularWorkflow = (defaultprops) => {
       auth = param.value;
     }
 
+		const customRespParam = trigger.parameters.find(
+      (param) => param.name === "custom_response_body"
+    )
+    var custom_response = "";
+    if (customRespParam !== undefined && customRespParam !== null) {
+      custom_response = customRespParam.value;
+    }
+
     console.log("TRIG: ", trigger);
     const data = {
       name: hookname,
@@ -9251,6 +9319,7 @@ const AngularWorkflow = (defaultprops) => {
       start: startNode,
       environment: trigger.environment,
       auth: auth,
+			custom_response: custom_response,
     };
 
     fetch(globalUrl + "/api/v1/hooks/new", {
