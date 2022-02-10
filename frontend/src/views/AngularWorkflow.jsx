@@ -107,6 +107,7 @@ import { GetParsedPaths } from "./Apps.jsx";
 import ConfigureWorkflow from "../components/ConfigureWorkflow.jsx";
 import AuthenticationOauth2 from "../components/Oauth2Auth.jsx";
 import ParsedAction from "../components/ParsedAction.jsx";
+import PaperComponent from "../components/PaperComponent.jsx"
 
 const surfaceColor = "#27292D";
 const inputColor = "#383B40";
@@ -6370,10 +6371,14 @@ const AngularWorkflow = (defaultprops) => {
 
   const conditionsModal = (
     <Dialog
+      PaperComponent={PaperComponent}
+			aria-labelledby="draggable-dialog-title"
       disableEnforceFocus={true}
       hideBackdrop={true}
 			disableBackdropClick={true}
       style={{ pointerEvents: "none" }}
+      PaperComponent={PaperComponent}
+			aria-labelledby="draggable-dialog-title"
       open={conditionsModalOpen}
       PaperProps={{
         style: {
@@ -6406,7 +6411,7 @@ const AngularWorkflow = (defaultprops) => {
         </a>
       </span>
       <FormControl>
-        <DialogTitle>
+    		<DialogTitle id="draggable-dialog-title" style={{cursor: "move",}}>
           <span style={{ color: "white" }}>Condition</span>
         </DialogTitle>
         <DialogContent style={{}}>
@@ -11248,6 +11253,14 @@ const parsedExecutionArgument = () => {
       open={executionModalOpen}
       onClose={() => setExecutionModalOpen(false)}
       style={{ resize: "both", overflow: "auto", zIndex: 10005 }}
+      hideBackdrop={true}
+			variant="temporary"
+			onEscapeKeyDown={() => {
+				setExecutionModalOpen(false)
+			}}
+			onBackdropClick={() => {
+				setExecutionModalOpen(false)
+			}}
       PaperProps={{
         style: {
           resize: "both",
@@ -11258,6 +11271,7 @@ const parsedExecutionArgument = () => {
           color: "white",
           fontSize: 18,
           zIndex: 10005,
+					borderLeft: theme.palette.defaultBorder,
         },
       }}
     >
@@ -12134,6 +12148,8 @@ const parsedExecutionArgument = () => {
       position={dragPosition}
     >
       <Dialog
+				PaperComponent={PaperComponent}
+				aria-labelledby="draggable-dialog-title"
         disableEnforceFocus={true}
         style={{ pointerEvents: "none" }}
         hideBackdrop={true}
@@ -12502,19 +12518,27 @@ const parsedExecutionArgument = () => {
 		return (
     	<Dialog
     	  open={executionVariablesModalOpen}
+				PaperComponent={PaperComponent}
+				hideBackdrop={true}
+				disableEnforceFocus={true}
+				disableBackdropClick={true}
+				style={{ pointerEvents: "none" }}
+				aria-labelledby="draggable-dialog-title"
     	  onClose={() => {
     	    setNewVariableName("");
     	    setExecutionVariablesModalOpen(false);
     	  }}
     	  PaperProps={{
     	    style: {
+          	pointerEvents: "auto",
     	      backgroundColor: surfaceColor,
     	      color: "white",
+						border: theme.palette.defaultBorder,
     	    },
     	  }}
     	>
     	  <FormControl>
-    	    <DialogTitle>
+    			<DialogTitle id="draggable-dialog-title" style={{cursor: "move",}}>
     	      <span style={{ color: "white" }}>Execution Variable</span>
     	    </DialogTitle>
     	    <DialogContent>
@@ -12646,6 +12670,12 @@ const parsedExecutionArgument = () => {
 
 		return (
     	<Dialog
+				PaperComponent={PaperComponent}
+				aria-labelledby="draggable-dialog-title"
+				hideBackdrop={true}
+				disableEnforceFocus={true}
+				disableBackdropClick={true}
+				style={{ pointerEvents: "none" }}
     	  open={variablesModalOpen}
     	  onClose={() => {
     	    setNewVariableName("");
@@ -12655,13 +12685,15 @@ const parsedExecutionArgument = () => {
     	  }}
     	  PaperProps={{
     	    style: {
+          	pointerEvents: "auto",
     	      backgroundColor: surfaceColor,
     	      color: "white",
+						border: theme.palette.defaultBorder,
     	    },
     	  }}
     	>
     	  <FormControl>
-    	    <DialogTitle>
+    	    <DialogTitle id="draggable-dialog-title" style={{cursor: "move",}}>
     	      <span style={{ color: "white" }}>Workflow Variable</span>
     	    </DialogTitle>
     	    <DialogContent>
@@ -12817,7 +12849,7 @@ const parsedExecutionArgument = () => {
     ) {
       return (
         <DialogContent style={{ textAlign: "center", marginTop: 50 }}>
-          <Typography variant="h4">
+          <Typography variant="h4" id="draggable-dialog-title" style={{cursor: "move",}}>
             {selectedApp.name} does not require authentication
           </Typography>
         </DialogContent>
@@ -12923,7 +12955,7 @@ const parsedExecutionArgument = () => {
 
     return (
       <div>
-        <DialogTitle>
+    	  <DialogTitle id="draggable-dialog-title" style={{cursor: "move",}}>
           <div style={{ color: "white" }}>
             Authentication for {selectedApp.name}
           </div>
@@ -13135,6 +13167,8 @@ const parsedExecutionArgument = () => {
   // This whole part is redundant. Made it part of Arguments instead.
   const authenticationModal = authenticationModalOpen ? (
     <Dialog
+      PaperComponent={PaperComponent}
+			aria-labelledby="draggable-dialog-title"
       hideBackdrop={true}
       disableEnforceFocus={true}
 			disableBackdropClick={true}
