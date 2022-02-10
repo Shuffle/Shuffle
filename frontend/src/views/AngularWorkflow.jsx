@@ -11253,13 +11253,12 @@ const parsedExecutionArgument = () => {
       open={executionModalOpen}
       onClose={() => setExecutionModalOpen(false)}
       style={{ resize: "both", overflow: "auto", zIndex: 10005 }}
-      hideBackdrop={true}
+      hideBackdrop={false}
 			variant="temporary"
-			onEscapeKeyDown={() => {
-				setExecutionModalOpen(false)
-			}}
-			onBackdropClick={() => {
-				setExecutionModalOpen(false)
+			BackdropProps={{
+				style: {
+					backgroundColor: "transparent",
+				}
 			}}
       PaperProps={{
         style: {
