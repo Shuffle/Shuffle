@@ -19,6 +19,7 @@ import {
 import { useTheme } from '@material-ui/core/styles';
 import { validateJson } from "../views/Workflows.jsx";
 import ReactJson from "react-json-view";
+import PaperComponent from "../components/PaperComponent.jsx"
 
 import CodeMirror from '@uiw/react-codemirror';
 import 'codemirror/keymap/sublime';
@@ -84,10 +85,14 @@ const CodeEditor = (props) => {
 		<Dialog 
       disableEnforceFocus={true}
       hideBackdrop={true}
+			disableBackdropClick={true}
 			open={expansionModalOpen} 
 			onClose={() => {
-				//setExpansionModalOpen(false)
+				console.log("In closer")
+				changeActionParameterCodeMirror({target: {value: ""}}, fieldCount, localcodedata)
 			}}
+      PaperComponent={PaperComponent}
+			aria-labelledby="draggable-dialog-title"
 			PaperProps={{
 				style: {
 					backgroundColor: theme.palette.surfaceColor,
@@ -106,7 +111,9 @@ const CodeEditor = (props) => {
 			>
 				<div style={{display: "flex"}}>
 					<DialogTitle
+					  id="draggable-dialog-title"
 						style={{
+							cursor: "move",
 							paddingBottom:20,
 							paddingLeft: 10, 
 						}}

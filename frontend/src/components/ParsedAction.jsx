@@ -488,7 +488,7 @@ const ParsedAction = (props) => {
         	      continue;
         	    }
 
-        	    var exampledata = item.example === undefined ? "" : item.example;
+        	    var exampledata = item.example === undefined || item.example === null ? "" : item.example;
         	    // Find previous execution and their variables
         	    //exampledata === "" &&
         	    if (workflowExecutions.length > 0) {
@@ -505,9 +505,13 @@ const ParsedAction = (props) => {
         	        var foundResult = workflowExecutions[key].results.find(
         	          (result) => result.action.id === item.id
         	        );
-        	        if (foundResult === undefined) {
+        	        if (foundResult === undefined || foundResult === null) {
         	          continue;
         	        }
+
+									if (foundResult.result !== undefined && foundResult.result !== null) {
+										foundResult = foundResult.result
+									}
 
 									const valid = validateJson(foundResult)
 									if (valid.valid) {
@@ -524,6 +528,7 @@ const ParsedAction = (props) => {
         	      item.label === null || item.label === undefined
         	        ? ""
         	        : item.label.split(" ").join("_");
+
         	    const actionvalue = {
         	      type: "action",
         	      id: item.id,
@@ -535,6 +540,7 @@ const ParsedAction = (props) => {
         	  }
         	}
 
+					console.log("ACTIONLIST: ", actionlist)
         	setActionlist(actionlist);
 				}
       }

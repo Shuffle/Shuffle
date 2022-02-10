@@ -2353,7 +2353,8 @@ const AngularWorkflow = (defaultprops) => {
 					}
     	  }
 
-				var newapps = JSON.parse(JSON.stringify(apps))
+				//var newapps = JSON.parse(JSON.stringify(apps))
+				var newapps = apps
     	  const curapp = newapps.find(
     	    (a) =>
     	      a.name === curaction.app_name &&
