@@ -5320,7 +5320,7 @@ const AngularWorkflow = (defaultprops) => {
           parameters: parameters,
           isStartNode: false,
           large_image: app.large_image,
-					run_magic_output: true,
+					run_magic_output: false,
           authentication: [],
           execution_variable: undefined,
           example: example,

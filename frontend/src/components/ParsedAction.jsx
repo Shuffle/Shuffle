@@ -489,6 +489,7 @@ const ParsedAction = (props) => {
         	    }
 
         	    var exampledata = item.example === undefined || item.example === null ? "" : item.example;
+							console.log("EXAMPLE: ", exampledata)
         	    // Find previous execution and their variables
         	    //exampledata === "" &&
         	    if (workflowExecutions.length > 0) {
@@ -512,6 +513,7 @@ const ParsedAction = (props) => {
 									if (foundResult.result !== undefined && foundResult.result !== null) {
 										foundResult = foundResult.result
 									}
+									console.log("VALID RESULT: ", foundResult)
 
 									const valid = validateJson(foundResult)
 									if (valid.valid) {
