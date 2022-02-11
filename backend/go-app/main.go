@@ -3939,7 +3939,7 @@ func runInitEs(ctx context.Context) {
 		}
 
 		for _, schedule := range schedules {
-			if strings.toToLower(schedule.Environment) == "cloud" {
+			if strings.ToLower(schedule.Environment) == "cloud" {
 				log.Printf("Skipping cloud schedule")
 				continue
 			}
