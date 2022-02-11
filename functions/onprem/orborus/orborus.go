@@ -65,7 +65,7 @@ var baseimagename = os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
 var baseimageregistry = os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")
 var baseimagetagsuffix = os.Getenv("SHUFFLE_BASE_IMAGE_TAG_SUFFIX")
 
-var orgId = os.Getenv("ORG_ID")
+//var orgId = os.Getenv("ORG_ID")
 var baseUrl = os.Getenv("BASE_URL")
 var environment = os.Getenv("ENVIRONMENT_NAME")
 var dockerApiVersion = os.Getenv("DOCKER_API_VERSION")
@@ -767,8 +767,12 @@ func main() {
 		//baseUrl = "http://localhost:5001"
 	}
 
-	if orgId == "" {
-		log.Printf("[ERROR] Org not defined. Set variable ORG_ID based on your org")
+	//if orgId == "" {
+	//	log.Printf("[ERROR] Org not defined. Set variable ORG_ID based on your org")
+	//	os.Exit(3)
+	//}
+	if environment == "" {
+		log.Printf("[ERROR] Environment not defined. Set variable ENVIRONMENT_NAME to configure it.")
 		os.Exit(3)
 	}
 
@@ -805,7 +809,7 @@ func main() {
 	// Run by default from now
 	zombiecheck(ctx, workerTimeout)
 
-	log.Printf("[INFO] Running towards %s (BASE_URL) with Org %s", baseUrl, orgId)
+	log.Printf("[INFO] Running towards %s (BASE_URL) with Org %s", baseUrl, environment)
 	httpProxy := os.Getenv("HTTP_PROXY")
 	httpsProxy := os.Getenv("HTTPS_PROXY")
 
@@ -868,7 +872,7 @@ func main() {
 	zombiecounter := 0
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Org-Id", orgId)
-	log.Printf("[INFO] Waiting for executions at %s with Org ID %s", fullUrl, orgId)
+	log.Printf("[INFO] Waiting for executions at %s with Environment %s", fullUrl, environment)
 	hasStarted := false
 	for {
 		//go getStats()
@@ -1053,7 +1057,7 @@ func main() {
 			}
 
 			result.Header.Add("Content-Type", "application/json")
-			result.Header.Add("Org-Id", orgId)
+			result.Header.Add("Org-Id", environment)
 
 			resultResp, err := client.Do(result)
 			if err != nil {
