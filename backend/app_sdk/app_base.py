@@ -1519,6 +1519,11 @@ class AppBase:
                         newvalue = []
                         firstitem = actualitem[0][0]
                         seconditem = actualitem[0][1]
+                        if isinstance(firstitem, int):
+                            firstitem = str(firstitem)
+                        if isinstance(seconditem, int):
+                            seconditem = str(seconditem)
+
                         print("[DEBUG] ACTUAL PARSED: %s" % actualitem)
 
                         # Means it's a single item -> continue
@@ -1858,8 +1863,8 @@ class AppBase:
                 self.action_result["status"] = "FAILURE" 
                 data = {
                     "success": False,
-                    "input": template,
                     "reason": f"Failed to parse LiquidPy: {error_msg}",
+                    "input": template,
                 }
                 try:
                     self.action_result["result"] = json.dumps(data)

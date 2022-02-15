@@ -871,7 +871,7 @@ func main() {
 
 	zombiecounter := 0
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Org-Id", orgId)
+	req.Header.Add("Org-Id", environment)
 	log.Printf("[INFO] Waiting for executions at %s with Environment %s", fullUrl, environment)
 	hasStarted := false
 	for {

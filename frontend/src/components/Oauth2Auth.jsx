@@ -121,7 +121,10 @@ const AuthenticationOauth2 = (props) => {
     var resources = "";
     if (scopes !== undefined && (scopes !== null) & (scopes.length > 0)) {
 			if (offlineAccess === true && !scopes.includes("offline_access")) {
-				scopes.push("offline_access")
+				if (authenticationType.redirect_uri.includes("microsoft")) {
+					console.log("Appending offline access")
+					scopes.push("offline_access")
+				}
 			}
 
       resources = scopes.join(" ");

@@ -1591,6 +1591,9 @@ const ParsedAction = (props) => {
 
               datafield = (
                 <Select
+									MenuProps={{
+										disableScrollLock: true,
+									}}
                   SelectDisplayProps={{
                     style: {
                       marginLeft: 10,
@@ -2091,6 +2094,9 @@ const ParsedAction = (props) => {
                       Autocomplete
                     </InputLabel>
                     <Select
+											MenuProps={{
+			          				disableScrollLock: true,
+								      }}
                       labelId="action-autocompleter"
                       SelectDisplayProps={{
                         style: {
@@ -2388,6 +2394,9 @@ const ParsedAction = (props) => {
               selectedApp.versions !== undefined &&
               selectedApp.versions.length > 1 ? (
                 <Select
+									MenuProps={{
+										disableScrollLock: true,
+									}}
                   defaultValue={selectedAction.app_version}
                   onChange={(event) => {
 										console.log("VAL: ", event.target.value)
@@ -2466,6 +2475,7 @@ const ParsedAction = (props) => {
 											if (param.value.includes(baselabel)) {
 												//if (param.value.toLowerCase().includes(baselabel)) {
 												console.log("FOUND: ", param);
+
 												workflow.actions[key].parameters[subkey].value.replaceAll(
 													baselabel,
 													e.target.value
@@ -2555,6 +2565,9 @@ const ParsedAction = (props) => {
           <Typography>Authentication</Typography>
           <div style={{ display: "flex" }}>
             <Select
+							MenuProps={{
+								disableScrollLock: true,
+							}}
               labelId="select-app-auth"
               value={
                 Object.getOwnPropertyNames(
@@ -2657,6 +2670,9 @@ const ParsedAction = (props) => {
         <div style={{ marginTop: "20px" }}>
           <Typography>Environment</Typography>
           <Select
+						MenuProps={{
+							disableScrollLock: true,
+						}}
             value={
               selectedActionEnvironment === undefined ||
               selectedActionEnvironment.Name === undefined
@@ -2711,6 +2727,9 @@ const ParsedAction = (props) => {
         <div style={{ marginTop: "20px" }}>
           <Typography>Set execution variable (optional)</Typography>
           <Select
+						MenuProps={{
+							disableScrollLock: true,
+						}}
             value={
               selectedAction.execution_variable !== undefined
                 ? selectedAction.execution_variable.name
@@ -2903,6 +2922,9 @@ const ParsedAction = (props) => {
 
         {/*setNewSelectedAction !== undefined ? 
 					<Select
+						MenuProps={{
+							disableScrollLock: true,
+						}}
 						value={selectedAction.name}
 						fullWidth
 						onChange={setNewSelectedAction}

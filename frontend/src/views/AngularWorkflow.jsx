@@ -1477,6 +1477,22 @@ const AngularWorkflow = (defaultprops) => {
         return response.json();
       })
       .then((responseJson) => {
+				if (responseJson === null) {
+					console.log("No response")
+					const pretend_apps = [{
+						"name": "TBD",
+						"app_name": "TBD",
+						"app_version": "TBD",
+						"description": "TBD",
+						"version": "TBD",
+						"large_image": "",
+					}]
+					setApps(pretend_apps)
+					setFilteredApps(pretend_apps)
+          setPrioritizedApps(pretend_apps);
+					return
+				}
+
 				if (responseJson.success === false) {
 					return
 				}
@@ -5657,12 +5673,14 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     // Does this one find the wrong one?
-    var newSelectedAction = JSON.parse(JSON.stringify(selectedAction))
+    //var newSelectedAction = JSON.parse(JSON.stringify(selectedAction))
+    var newSelectedAction = selectedAction
     newSelectedAction.name = newaction.name;
     newSelectedAction.parameters = JSON.parse(JSON.stringify(newaction.parameters))
     newSelectedAction.errors = [];
     newSelectedAction.isValid = true;
     newSelectedAction.is_valid = true;
+		console.log(newSelectedAction)
 
 		// Simmple action swap autocompleter
 		if (selectedAction.parameters !== undefined && newSelectedAction.parameters !== undefined && selectedAction.id === newSelectedAction.id) {
@@ -5804,6 +5822,7 @@ const AngularWorkflow = (defaultprops) => {
     event.target.value = event.target.value.replaceAll(".", "");
     event.target.value = event.target.value.replaceAll(",", "");
     event.target.value = event.target.value.replaceAll(" ", "_");
+
     selectedAction.label = event.target.value;
     setSelectedAction(selectedAction);
   };
@@ -6240,6 +6259,9 @@ const AngularWorkflow = (defaultprops) => {
               Autocomplete
             </InputLabel>
             <Select
+							MenuProps={{
+								disableScrollLock: true,
+							}}
               labelId="action-autocompleter"
               SelectDisplayProps={{
                 style: {
@@ -7356,6 +7378,9 @@ const AngularWorkflow = (defaultprops) => {
                   </div>
                 </div>
                 <Select
+									MenuProps={{
+										disableScrollLock: true,
+									}}
                   multiple
                   native
                   rows="10"
@@ -8830,6 +8855,9 @@ const AngularWorkflow = (defaultprops) => {
           <div style={{ marginTop: "20px" }}>
             <Typography>Environment</Typography>
             <Select
+							MenuProps={{
+								disableScrollLock: true,
+							}}
               value={selectedTrigger.environment}
               disabled={selectedTrigger.status === "running"}
               SelectDisplayProps={{
@@ -9828,6 +9856,9 @@ const AngularWorkflow = (defaultprops) => {
           <div style={{ marginTop: "20px" }}>
             <Typography>Environment</Typography>
             <Select
+							MenuProps={{
+								disableScrollLock: true,
+							}}
               value={selectedTrigger.environment}
               disabled={selectedTrigger.status === "running"}
               SelectDisplayProps={{
@@ -13012,6 +13043,9 @@ const parsedExecutionArgument = () => {
                 data.schema !== null &&
                 data.schema.type === "bool" ? (
                   <Select
+										MenuProps={{
+											disableScrollLock: true,
+										}}
                     SelectDisplayProps={{
                       style: {
                         marginLeft: 10,
