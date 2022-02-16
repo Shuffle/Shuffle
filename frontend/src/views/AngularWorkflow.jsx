@@ -735,200 +735,202 @@ const AngularWorkflow = (defaultprops) => {
     // Loop nodes and find results
     // Update on every interval? idk
 
-    if (JSON.stringify(responseJson) !== JSON.stringify(executionData)) {
-      // FIXME: If another is selected, don't edit..
-      // Doesn't work because this is some async garbage
-      if (
-        executionData.execution_id === undefined ||
-        (responseJson.execution_id === executionData.execution_id &&
-          responseJson.results !== undefined &&
-          responseJson.results !== null)
-      ) {
-        if (
-          executionData.status !== responseJson.status ||
-          executionData.result !== responseJson.result ||
-          executionData.results.length !== responseJson.results.length
-        ) {
-          setExecutionData(responseJson);
-        } else {
-          console.log("NOT updating state.");
-        }
-      }
-    }
+		ReactDOM.unstable_batchedUpdates(() => {
+    	if (JSON.stringify(responseJson) !== JSON.stringify(executionData)) {
+    	  // FIXME: If another is selected, don't edit..
+    	  // Doesn't work because this is some async garbage
+    	  if (
+    	    executionData.execution_id === undefined ||
+    	    (responseJson.execution_id === executionData.execution_id &&
+    	      responseJson.results !== undefined &&
+    	      responseJson.results !== null)
+    	  ) {
+    	    if (
+    	      executionData.status !== responseJson.status ||
+    	      executionData.result !== responseJson.result ||
+    	      executionData.results.length !== responseJson.results.length
+    	    ) {
+    	      setExecutionData(responseJson);
+    	    } else {
+    	      console.log("NOT updating state.");
+    	    }
+    	  }
+    	}
 
-    if (responseJson.execution_id !== executionRequest.execution_id) {
-      cy.elements().removeClass(
-        "success-highlight failure-highlight executing-highlight"
-      );
-      return;
-    }
+    	if (responseJson.execution_id !== executionRequest.execution_id) {
+    	  cy.elements().removeClass(
+    	    "success-highlight failure-highlight executing-highlight"
+    	  );
+    	  return;
+    	}
 
-    if (responseJson.results !== null && responseJson.results.length > 0) {
-      for (var key in responseJson.results) {
-        var item = responseJson.results[key];
-        var currentnode = cy.getElementById(item.action.id);
-        if (currentnode.length === 0) {
-          continue;
-        }
+    	if (responseJson.results !== null && responseJson.results.length > 0) {
+    	  for (var key in responseJson.results) {
+    	    var item = responseJson.results[key];
+    	    var currentnode = cy.getElementById(item.action.id);
+    	    if (currentnode.length === 0) {
+    	      continue;
+    	    }
 
-        currentnode = currentnode[0];
-        const outgoingEdges = currentnode.outgoers("edge");
-        const incomingEdges = currentnode.incomers("edge");
+    	    currentnode = currentnode[0];
+    	    const outgoingEdges = currentnode.outgoers("edge");
+    	    const incomingEdges = currentnode.incomers("edge");
 
-        switch (item.status) {
-          case "EXECUTING":
-            currentnode.removeClass("not-executing-highlight");
-            currentnode.removeClass("success-highlight");
-            currentnode.removeClass("failure-highlight");
-            currentnode.removeClass("shuffle-hover-highlight");
-            currentnode.removeClass("awaiting-data-highlight");
-            incomingEdges.addClass("success-highlight");
-            currentnode.addClass("executing-highlight");
-            break;
-          case "SKIPPED":
-            currentnode.removeClass("not-executing-highlight");
-            currentnode.removeClass("success-highlight");
-            currentnode.removeClass("failure-highlight");
-            currentnode.removeClass("shuffle-hover-highlight");
-            currentnode.removeClass("awaiting-data-highlight");
-            currentnode.removeClass("executing-highlight");
-            currentnode.addClass("skipped-highlight");
-            break;
-          case "WAITING":
-            currentnode.removeClass("not-executing-highlight");
-            currentnode.removeClass("success-highlight");
-            currentnode.removeClass("failure-highlight");
-            currentnode.removeClass("shuffle-hover-highlight");
-            currentnode.removeClass("awaiting-data-highlight");
-            currentnode.addClass("executing-highlight");
+    	    switch (item.status) {
+    	      case "EXECUTING":
+    	        currentnode.removeClass("not-executing-highlight");
+    	        currentnode.removeClass("success-highlight");
+    	        currentnode.removeClass("failure-highlight");
+    	        currentnode.removeClass("shuffle-hover-highlight");
+    	        currentnode.removeClass("awaiting-data-highlight");
+    	        incomingEdges.addClass("success-highlight");
+    	        currentnode.addClass("executing-highlight");
+    	        break;
+    	      case "SKIPPED":
+    	        currentnode.removeClass("not-executing-highlight");
+    	        currentnode.removeClass("success-highlight");
+    	        currentnode.removeClass("failure-highlight");
+    	        currentnode.removeClass("shuffle-hover-highlight");
+    	        currentnode.removeClass("awaiting-data-highlight");
+    	        currentnode.removeClass("executing-highlight");
+    	        currentnode.addClass("skipped-highlight");
+    	        break;
+    	      case "WAITING":
+    	        currentnode.removeClass("not-executing-highlight");
+    	        currentnode.removeClass("success-highlight");
+    	        currentnode.removeClass("failure-highlight");
+    	        currentnode.removeClass("shuffle-hover-highlight");
+    	        currentnode.removeClass("awaiting-data-highlight");
+    	        currentnode.addClass("executing-highlight");
 
-            if (!visited.includes(item.action.label)) {
-              if (executionRunning) {
-                visited.push(item.action.label);
-                setVisited(visited);
-              }
-            }
+    	        if (!visited.includes(item.action.label)) {
+    	          if (executionRunning) {
+    	            visited.push(item.action.label);
+    	            setVisited(visited);
+    	          }
+    	        }
 
-            // FIXME - add outgoing nodes to executing
-            //const outgoingNodes = outgoingEdges.find().data().target
-            if (outgoingEdges.length > 0) {
-              outgoingEdges.addClass("success-highlight");
-            }
-            break;
-          case "SUCCESS":
-            currentnode.removeClass("not-executing-highlight");
-            currentnode.removeClass("executing-highlight");
-            currentnode.removeClass("failure-highlight");
-            currentnode.removeClass("shuffle-hover-highlight");
-            currentnode.removeClass("awaiting-data-highlight");
-            currentnode.addClass("success-highlight");
-            incomingEdges.addClass("success-highlight");
-            outgoingEdges.addClass("success-highlight");
+    	        // FIXME - add outgoing nodes to executing
+    	        //const outgoingNodes = outgoingEdges.find().data().target
+    	        if (outgoingEdges.length > 0) {
+    	          outgoingEdges.addClass("success-highlight");
+    	        }
+    	        break;
+    	      case "SUCCESS":
+    	        currentnode.removeClass("not-executing-highlight");
+    	        currentnode.removeClass("executing-highlight");
+    	        currentnode.removeClass("failure-highlight");
+    	        currentnode.removeClass("shuffle-hover-highlight");
+    	        currentnode.removeClass("awaiting-data-highlight");
+    	        currentnode.addClass("success-highlight");
+    	        incomingEdges.addClass("success-highlight");
+    	        outgoingEdges.addClass("success-highlight");
 
-            if (
-              visited !== undefined &&
-              visited !== null &&
-              !visited.includes(item.action.label)
-            ) {
-              if (executionRunning) {
-                visited.push(item.action.label);
-                setVisited(visited);
-              }
-            }
+    	        if (
+    	          visited !== undefined &&
+    	          visited !== null &&
+    	          !visited.includes(item.action.label)
+    	        ) {
+    	          if (executionRunning) {
+    	            visited.push(item.action.label);
+    	            setVisited(visited);
+    	          }
+    	        }
 
-            // FIXME - add outgoing nodes to executing
-            //const outgoingNodes = outgoingEdges.find().data().target
-            if (outgoingEdges.length > 0) {
-              for (var i = 0; i < outgoingEdges.length; i++) {
-                const edge = outgoingEdges[i];
-                const targetnode = cy.getElementById(edge.data().target);
-                if (
-                  targetnode !== undefined &&
-                  !targetnode.classes().includes("success-highlight") &&
-                  !targetnode.classes().includes("failure-highlight")
-                ) {
-                  targetnode.removeClass("not-executing-highlight");
-                  targetnode.removeClass("success-highlight");
-                  targetnode.removeClass("shuffle-hover-highlight");
-                  targetnode.removeClass("failure-highlight");
-                  targetnode.removeClass("awaiting-data-highlight");
-                  targetnode.addClass("executing-highlight");
-                }
-              }
-            }
-            break;
-          case "FAILURE":
-            //When status comes as failure, allow user to start workflow execution
-            if (executionRunning) {
-              setExecutionRunning(false);
-            }
+    	        // FIXME - add outgoing nodes to executing
+    	        //const outgoingNodes = outgoingEdges.find().data().target
+    	        if (outgoingEdges.length > 0) {
+    	          for (var i = 0; i < outgoingEdges.length; i++) {
+    	            const edge = outgoingEdges[i];
+    	            const targetnode = cy.getElementById(edge.data().target);
+    	            if (
+    	              targetnode !== undefined &&
+    	              !targetnode.classes().includes("success-highlight") &&
+    	              !targetnode.classes().includes("failure-highlight")
+    	            ) {
+    	              targetnode.removeClass("not-executing-highlight");
+    	              targetnode.removeClass("success-highlight");
+    	              targetnode.removeClass("shuffle-hover-highlight");
+    	              targetnode.removeClass("failure-highlight");
+    	              targetnode.removeClass("awaiting-data-highlight");
+    	              targetnode.addClass("executing-highlight");
+    	            }
+    	          }
+    	        }
+    	        break;
+    	      case "FAILURE":
+    	        //When status comes as failure, allow user to start workflow execution
+    	        if (executionRunning) {
+    	          setExecutionRunning(false);
+    	        }
 
-            currentnode.removeClass("not-executing-highlight");
-            currentnode.removeClass("executing-highlight");
-            currentnode.removeClass("success-highlight");
-            currentnode.removeClass("awaiting-data-highlight");
-            currentnode.removeClass("shuffle-hover-highlight");
-            currentnode.addClass("failure-highlight");
+    	        currentnode.removeClass("not-executing-highlight");
+    	        currentnode.removeClass("executing-highlight");
+    	        currentnode.removeClass("success-highlight");
+    	        currentnode.removeClass("awaiting-data-highlight");
+    	        currentnode.removeClass("shuffle-hover-highlight");
+    	        currentnode.addClass("failure-highlight");
 
-            if (!visited.includes(item.action.label)) {
-              if (
-                item.action.result !== undefined &&
-                item.action.result !== null &&
-                !item.action.result.includes("failed condition")
-              ) {
-                alert.error(
-                  "Error for " +
-                    item.action.label +
-                    " with result " +
-                    item.result
-                );
-              }
-              visited.push(item.action.label);
-              setVisited(visited);
-            }
-            break;
-          case "AWAITING_DATA":
-            currentnode.removeClass("not-executing-highlight");
-            currentnode.removeClass("executing-highlight");
-            currentnode.removeClass("success-highlight");
-            currentnode.removeClass("failure-highlight");
-            currentnode.removeClass("shuffle-hover-highlight");
-            currentnode.addClass("awaiting-data-highlight");
-            break;
-          default:
-            console.log("DEFAULT?");
-            break;
-        }
-      }
-    }
+    	        if (!visited.includes(item.action.label)) {
+    	          if (
+    	            item.action.result !== undefined &&
+    	            item.action.result !== null &&
+    	            !item.action.result.includes("failed condition")
+    	          ) {
+    	            alert.error(
+    	              "Error for " +
+    	                item.action.label +
+    	                " with result " +
+    	                item.result
+    	            );
+    	          }
+    	          visited.push(item.action.label);
+    	          setVisited(visited);
+    	        }
+    	        break;
+    	      case "AWAITING_DATA":
+    	        currentnode.removeClass("not-executing-highlight");
+    	        currentnode.removeClass("executing-highlight");
+    	        currentnode.removeClass("success-highlight");
+    	        currentnode.removeClass("failure-highlight");
+    	        currentnode.removeClass("shuffle-hover-highlight");
+    	        currentnode.addClass("awaiting-data-highlight");
+    	        break;
+    	      default:
+    	        console.log("DEFAULT?");
+    	        break;
+    	    }
+    	  }
+    	}
 
-    if (
-      responseJson.status === "ABORTED" ||
-      responseJson.status === "STOPPED" ||
-      responseJson.status === "FAILURE" ||
-      responseJson.status === "WAITING"
-    ) {
-      stop();
+    	if (
+    	  responseJson.status === "ABORTED" ||
+    	  responseJson.status === "STOPPED" ||
+    	  responseJson.status === "FAILURE" ||
+    	  responseJson.status === "WAITING"
+    	) {
+    	  stop();
 
-      if (executionRunning) {
-        setExecutionRunning(false);
-      }
+    	  if (executionRunning) {
+    	    setExecutionRunning(false);
+    	  }
 
-      var curelements = cy.elements();
-      for (var i = 0; i < curelements.length; i++) {
-        if (curelements[i].classes().includes("executing-highlight")) {
-          curelements[i].removeClass("executing-highlight");
-          curelements[i].addClass("failure-highlight");
-        }
-      }
+    	  var curelements = cy.elements();
+    	  for (var i = 0; i < curelements.length; i++) {
+    	    if (curelements[i].classes().includes("executing-highlight")) {
+    	      curelements[i].removeClass("executing-highlight");
+    	      curelements[i].addClass("failure-highlight");
+    	    }
+    	  }
 
-      getWorkflowExecution(props.match.params.key, "");
-    } else if (responseJson.status === "FINISHED") {
-      setExecutionRunning(false);
-      stop();
-      getWorkflowExecution(props.match.params.key, "");
-      setUpdate(Math.random());
-    }
+    	  getWorkflowExecution(props.match.params.key, "");
+    	} else if (responseJson.status === "FINISHED") {
+    	  setExecutionRunning(false);
+    	  stop();
+    	  getWorkflowExecution(props.match.params.key, "");
+    	  setUpdate(Math.random());
+    	}
+		})
   };
 
 	const sendStreamRequest = (body) => {
@@ -973,253 +975,252 @@ const AngularWorkflow = (defaultprops) => {
       return;
     }
 
-    setSavingState(2);
+    	setSavingState(2);
 
-    // This might not be the right course of action, but seems logical, as items could be running already
-    // Makes it possible to update with a version in current render
-    stop();
-    var useworkflow = workflow;
-    if (curworkflow !== undefined) {
-      useworkflow = curworkflow;
-    }
+    	// This might not be the right course of action, but seems logical, as items could be running already
+    	// Makes it possible to update with a version in current render
+    	stop();
+    	var useworkflow = workflow;
+    	if (curworkflow !== undefined) {
+    	  useworkflow = curworkflow;
+    	}
 
-    var cyelements = cy.elements();
-    var newActions = [];
-    var newTriggers = [];
-    var newBranches = [];
-    var newVBranches = [];
-    var newComments = [];
-    for (var key in cyelements) {
-      if (cyelements[key].data === undefined) {
-        continue;
-      }
+    	var cyelements = cy.elements();
+    	var newActions = [];
+    	var newTriggers = [];
+    	var newBranches = [];
+    	var newVBranches = [];
+    	var newComments = [];
+    	for (var key in cyelements) {
+    	  if (cyelements[key].data === undefined) {
+    	    continue;
+    	  }
 
-      var type = cyelements[key].data()["type"];
-      if (type === undefined) {
-        if (
-          cyelements[key].data().source === undefined ||
-          cyelements[key].data().target === undefined
-        ) {
-          continue;
-        }
+    	  var type = cyelements[key].data()["type"];
+    	  if (type === undefined) {
+    	    if (
+    	      cyelements[key].data().source === undefined ||
+    	      cyelements[key].data().target === undefined
+    	    ) {
+    	      continue;
+    	    }
 
-        var parsedElement = {
-          id: cyelements[key].data().id,
-          source_id: cyelements[key].data().source,
-          destination_id: cyelements[key].data().target,
-          conditions: cyelements[key].data().conditions,
-          decorator: cyelements[key].data().decorator,
-        };
+    	    var parsedElement = {
+    	      id: cyelements[key].data().id,
+    	      source_id: cyelements[key].data().source,
+    	      destination_id: cyelements[key].data().target,
+    	      conditions: cyelements[key].data().conditions,
+    	      decorator: cyelements[key].data().decorator,
+    	    };
 
-        if (parsedElement.decorator) {
-          newVBranches.push(parsedElement);
-        } else {
-          newBranches.push(parsedElement);
-        }
-      } else {
-        if (type === "ACTION") {
-          const cyelement = cyelements[key].data();
-          const elementid =
-            cyelement.id === undefined || cyelement.id === null
-              ? cyelement["_id"]
-              : cyelement.id;
+    	    if (parsedElement.decorator) {
+    	      newVBranches.push(parsedElement);
+    	    } else {
+    	      newBranches.push(parsedElement);
+    	    }
+    	  } else {
+    	    if (type === "ACTION") {
+    	      const cyelement = cyelements[key].data();
+    	      const elementid =
+    	        cyelement.id === undefined || cyelement.id === null
+    	          ? cyelement["_id"]
+    	          : cyelement.id;
 
-          var curworkflowAction = useworkflow.actions.find(
-            (a) =>
-              a !== undefined &&
-              (a["id"] === elementid || a["_id"] === elementid)
-          );
-          if (curworkflowAction === undefined) {
-            curworkflowAction = cyelements[key].data();
-          }
+    	      var curworkflowAction = useworkflow.actions.find(
+    	        (a) =>
+    	          a !== undefined &&
+    	          (a["id"] === elementid || a["_id"] === elementid)
+    	      );
+    	      if (curworkflowAction === undefined) {
+    	        curworkflowAction = cyelements[key].data();
+    	      }
 
-          curworkflowAction.position = cyelements[key].position();
+    	      curworkflowAction.position = cyelements[key].position();
 
-          // workaround to fix some edgecases
-          if (
-            curworkflowAction.parameters === "" ||
-            curworkflowAction.parameters === null
-          ) {
-            curworkflowAction.parameters = [];
-          }
+    	      // workaround to fix some edgecases
+    	      if (
+    	        curworkflowAction.parameters === "" ||
+    	        curworkflowAction.parameters === null
+    	      ) {
+    	        curworkflowAction.parameters = [];
+    	      }
 
-          if (
-            curworkflowAction.example === undefined ||
-            curworkflowAction.example === "" ||
-            curworkflowAction.example === null
-          ) {
-            if (cyelements[key].data().example !== undefined) {
-              curworkflowAction.example = cyelements[key].data().example;
-            }
-          }
+    	      if (
+    	        curworkflowAction.example === undefined ||
+    	        curworkflowAction.example === "" ||
+    	        curworkflowAction.example === null
+    	      ) {
+    	        if (cyelements[key].data().example !== undefined) {
+    	          curworkflowAction.example = cyelements[key].data().example;
+    	        }
+    	      }
 
-          // Override just in this place
-          curworkflowAction.errors = [];
-          curworkflowAction.isValid = true;
+    	      // Override just in this place
+    	      curworkflowAction.errors = [];
+    	      curworkflowAction.isValid = true;
 
-          // Cleans up OpenAPI items
-          var newparams = [];
-          for (var key in curworkflowAction.parameters) {
-            const thisitem = curworkflowAction.parameters[key];
-            if (thisitem.name.startsWith("${") && thisitem.name.endsWith("}")) {
-              continue;
-            }
+    	      // Cleans up OpenAPI items
+    	      var newparams = [];
+    	      for (var key in curworkflowAction.parameters) {
+    	        const thisitem = curworkflowAction.parameters[key];
+    	        if (thisitem.name.startsWith("${") && thisitem.name.endsWith("}")) {
+    	          continue;
+    	        }
 
-            newparams.push(thisitem);
-          }
+    	        newparams.push(thisitem);
+    	      }
 
-          curworkflowAction.parameters = newparams;
-          newActions.push(curworkflowAction);
-        } else if (type === "TRIGGER") {
-          var curworkflowTrigger = useworkflow.triggers.find(
-            (a) => a.id === cyelements[key].data()["id"]
-          );
-          if (curworkflowTrigger === undefined) {
-            curworkflowTrigger = cyelements[key].data();
-          }
+    	      curworkflowAction.parameters = newparams;
+    	      newActions.push(curworkflowAction);
+    	    } else if (type === "TRIGGER") {
+    	      var curworkflowTrigger = useworkflow.triggers.find(
+    	        (a) => a.id === cyelements[key].data()["id"]
+    	      );
+    	      if (curworkflowTrigger === undefined) {
+    	        curworkflowTrigger = cyelements[key].data();
+    	      }
 
-          curworkflowTrigger.position = cyelements[key].position();
+    	      curworkflowTrigger.position = cyelements[key].position();
 
-          newTriggers.push(curworkflowTrigger);
-        } else if (type === "COMMENT") {
-          if (useworkflow.comments === undefined) {
-            useworkflow.comments = [];
-          }
+    	      newTriggers.push(curworkflowTrigger);
+    	    } else if (type === "COMMENT") {
+    	      if (useworkflow.comments === undefined) {
+    	        useworkflow.comments = [];
+    	      }
 
-          var curworkflowComment = useworkflow.comments.find(
-            (a) => a.id === cyelements[key].data()["id"]
-          )
+    	      var curworkflowComment = useworkflow.comments.find(
+    	        (a) => a.id === cyelements[key].data()["id"]
+    	      )
 
-          if (curworkflowComment === undefined) {
-            curworkflowComment = cyelements[key].data();
-          }
+    	      if (curworkflowComment === undefined) {
+    	        curworkflowComment = cyelements[key].data();
+    	      }
 
-					const parsedHeight = parseInt(curworkflowComment["height"])
-					if (!isNaN(parsedHeight)) {
-						curworkflowComment.height = parsedHeight
-					} else {
-						curworkflowComment.width = 150 
-					}
+						const parsedHeight = parseInt(curworkflowComment["height"])
+						if (!isNaN(parsedHeight)) {
+							curworkflowComment.height = parsedHeight
+						} else {
+							curworkflowComment.width = 150 
+						}
 
-					const parsedWidth = parseInt(curworkflowComment["width"])
-					if (!isNaN(parsedWidth)) {
-						curworkflowComment.width = parsedWidth
-					} else {
-						curworkflowComment.width = 200
-					}
+						const parsedWidth = parseInt(curworkflowComment["width"])
+						if (!isNaN(parsedWidth)) {
+							curworkflowComment.width = parsedWidth
+						} else {
+							curworkflowComment.width = 200
+						}
 
-          curworkflowComment.position = cyelements[key].position();
-					//console.log(curworkflowComment)
+    	      curworkflowComment.position = cyelements[key].position();
+						//console.log(curworkflowComment)
 
-          newComments.push(curworkflowComment);
-        } else {
-          alert.info("No handler for type: " + type);
-        }
-      }
-    }
+    	      newComments.push(curworkflowComment);
+    	    } else {
+    	      alert.info("No handler for type: " + type);
+    	    }
+    	  }
+    	}
 
-    useworkflow.actions = newActions;
-    useworkflow.triggers = newTriggers;
-    useworkflow.branches = newBranches;
-    useworkflow.comments = newComments;
-    useworkflow.visual_branches = newVBranches;
+    	useworkflow.actions = newActions;
+    	useworkflow.triggers = newTriggers;
+    	useworkflow.branches = newBranches;
+    	useworkflow.comments = newComments;
+    	useworkflow.visual_branches = newVBranches;
 
-    // Errors are backend defined
-    useworkflow.errors = [];
-    useworkflow.previously_saved = true;
+    	// Errors are backend defined
+    	useworkflow.errors = [];
+    	useworkflow.previously_saved = true;
 
-		if (cy !== undefined) {
-			// scale: 0.3,
-			// bg: "#27292d",
-			const cyImageData = cy.png({
-				output: "base64uri",
-				maxWidth: 480,
-				maxHeight: 270,
-			})
+			if (cy !== undefined) {
+				// scale: 0.3,
+				// bg: "#27292d",
+				const cyImageData = cy.png({
+					output: "base64uri",
+					maxWidth: 480,
+					maxHeight: 270,
+				})
 
-			console.log("CY: ", cyImageData)
-			if (cyImageData !== undefined && cyImageData !== null && cyImageData.length > 0) {
-				useworkflow.image = cyImageData
+				if (cyImageData !== undefined && cyImageData !== null && cyImageData.length > 0) {
+					useworkflow.image = cyImageData
+				}
 			}
-		}
 
-    setLastSaved(true);
-    fetch(globalUrl + "/api/v1/workflows/" + props.match.params.key, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(useworkflow),
-      credentials: "include",
-    })
-      .then((response) => {
-        setSavingState(0);
-        if (response.status !== 200) {
-          console.log("Status not 200 for setting workflows :O!");
-        }
+    	setLastSaved(true);
+    	fetch(globalUrl + "/api/v1/workflows/" + props.match.params.key, {
+    	  method: "PUT",
+    	  headers: {
+    	    "Content-Type": "application/json",
+    	    Accept: "application/json",
+    	  },
+    	  body: JSON.stringify(useworkflow),
+    	  credentials: "include",
+    	})
+    	  .then((response) => {
+    	    setSavingState(0);
+    	    if (response.status !== 200) {
+    	      console.log("Status not 200 for setting workflows :O!");
+    	    }
 
-        return response.json();
-      })
-      .then((responseJson) => {
-        if (executionArgument !== undefined && startNode !== undefined) {
-          //console.log("Running execution AFTER saving");
-          executeWorkflow(executionArgument, startNode, true);
-          return;
-        }
+    	    return response.json();
+    	  })
+    	  .then((responseJson) => {
+    	    if (executionArgument !== undefined && startNode !== undefined) {
+    	      //console.log("Running execution AFTER saving");
+    	      executeWorkflow(executionArgument, startNode, true);
+    	      return;
+    	    }
 
-        if (!responseJson.success) {
-          console.log(responseJson);
-					if (responseJson.reason !== undefined && responseJson.reason !== null) {
-          	alert.error("Failed to save: " + responseJson.reason);
-					} else {
-          	alert.error("Failed to save. Please contact your admin if this is unexpected.")
-					}
-        } else {
-          if (
-            responseJson.new_id !== undefined &&
-            responseJson.new_id !== null
-          ) {
-            window.location.pathname = "/workflows/" + responseJson.new_id;
-          }
+    	    if (!responseJson.success) {
+    	      console.log(responseJson);
+						if (responseJson.reason !== undefined && responseJson.reason !== null) {
+    	      	alert.error("Failed to save: " + responseJson.reason);
+						} else {
+    	      	alert.error("Failed to save. Please contact your admin if this is unexpected.")
+						}
+    	    } else {
+    	      if (
+    	        responseJson.new_id !== undefined &&
+    	        responseJson.new_id !== null
+    	      ) {
+    	        window.location.pathname = "/workflows/" + responseJson.new_id;
+    	      }
 
-          success = true;
-          if (responseJson.errors !== undefined) {
-            workflow.errors = responseJson.errors;
-            if (responseJson.errors.length === 0) {
-              workflow.isValid = true;
-              workflow.is_valid = true;
+    	      success = true;
+    	      if (responseJson.errors !== undefined) {
+    	        workflow.errors = responseJson.errors;
+    	        if (responseJson.errors.length === 0) {
+    	          workflow.isValid = true;
+    	          workflow.is_valid = true;
 
-              const cyelements = cy.elements();
-              for (var i = 0; i < cyelements.length; i++) {
-                cyelements[i].removeStyle();
-                cyelements[i].data().is_valid = true;
-                cyelements[i].data().errors = [];
-              }
+    	          const cyelements = cy.elements();
+    	          for (var i = 0; i < cyelements.length; i++) {
+    	            cyelements[i].removeStyle();
+    	            cyelements[i].data().is_valid = true;
+    	            cyelements[i].data().errors = [];
+    	          }
 
-              for (var key in workflow.actions) {
-                workflow.actions[key].is_valid = true;
-                workflow.actions[key].errors = [];
-              }
-            }
+    	          for (var key in workflow.actions) {
+    	            workflow.actions[key].is_valid = true;
+    	            workflow.actions[key].errors = [];
+    	          }
+    	        }
 
-            for (var key in workflow.errors) {
-              alert.info(workflow.errors[key]);
-            }
+    	        for (var key in workflow.errors) {
+    	          alert.info(workflow.errors[key]);
+    	        }
 
-            setWorkflow(workflow);
-          }
+    	        setWorkflow(workflow);
+    	      }
 
-          setSavingState(1);
-          setTimeout(() => {
-            setSavingState(0);
-          }, 1500);
-        }
-      })
-      .catch((error) => {
-        setSavingState(0);
-        alert.error(error.toString());
-      });
+    	      setSavingState(1);
+    	      setTimeout(() => {
+    	        setSavingState(0);
+    	      }, 1500);
+    	    }
+    	  })
+    	  .catch((error) => {
+    	    setSavingState(0);
+    	    alert.error(error.toString());
+    	  });
 
     return success;
   };

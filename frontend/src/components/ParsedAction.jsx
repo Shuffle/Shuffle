@@ -542,7 +542,7 @@ const ParsedAction = (props) => {
         	  }
         	}
 
-					console.log("ACTIONLIST: ", actionlist)
+					//console.log("ACTIONLIST: ", actionlist)
         	setActionlist(actionlist);
 				}
       }

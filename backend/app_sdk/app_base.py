@@ -16,6 +16,7 @@ import urllib.parse
 import jinja2 
 from io import BytesIO
 from liquid import Liquid
+#import barely_json
 
 runtime = os.getenv("SHUFFLE_SWARM_CONFIG", "")
 
@@ -171,6 +172,7 @@ class AppBase:
         # Try it with some magic
 
         self.logger.info(f"""[DEBUG] Inside Send result with status {action_result["status"]}""")
+        #if isinstance(action_result, 
 
         # FIXME: Add cleanup of parameters to not send to frontend here
         params = {}
@@ -1745,7 +1747,7 @@ class AppBase:
                 basejson = json.loads(baseresult)
             except json.decoder.JSONDecodeError as e:
                 try:
-                    baseresult = baseresult.replace("\'", "\"")
+                    #baseresult = baseresult.replace("\'", "\"")
                     basejson = json.loads(baseresult)
                 except json.decoder.JSONDecodeError as e:
                     print("Parser issue with JSON: %s" % e)
@@ -2333,6 +2335,27 @@ class AppBase:
             return True, ""
 
 
+        #
+        #
+        #
+        #
+        # CONT
+        # CONT
+        # CONT
+        # CONT
+        # CONT
+        # CONT
+        # CONT
+        # CONT
+        # CONT
+        # CONT
+        # CONT
+        # CONT
+        # CONT
+        #
+        #
+        #
+        #
 
         # THE START IS ACTUALLY RIGHT HERE :O
         # Checks whether conditions are met, otherwise set 

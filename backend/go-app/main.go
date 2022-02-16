@@ -5177,8 +5177,19 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 
 		_, err = handleStopCloudSync(syncPath, *org)
 		if err != nil {
+			ret := shuffle.ResultChecker{
+				Success: false,
+				Reason:  err,
+			}
+
 			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+			b, err := json.Marshal(requestData)
+			if err != nil {
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+				return
+			}
+
+			resp.Write([]byte(fmt.Sprintf(b)))
 		} else {
 			resp.WriteHeader(200)
 			resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Successfully disabled cloud sync for org."}`)))
