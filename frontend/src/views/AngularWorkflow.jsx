@@ -2237,8 +2237,9 @@ const AngularWorkflow = (defaultprops) => {
     	      setLastSaved(false);
     	      parentNode.data("isStartNode", true);
     	    }
-    	  		
+    	
 					//event.target.unselect();
+					setRightSideBarOpen(true);
 					return
     	  } else if (data.buttonType === "copy") {
     	    console.log("COPY!");
@@ -5680,7 +5681,7 @@ const AngularWorkflow = (defaultprops) => {
     newSelectedAction.errors = [];
     newSelectedAction.isValid = true;
     newSelectedAction.is_valid = true;
-		console.log(newSelectedAction)
+		//console.log(newSelectedAction)
 
 		// Simmple action swap autocompleter
 		if (selectedAction.parameters !== undefined && newSelectedAction.parameters !== undefined && selectedAction.id === newSelectedAction.id) {
@@ -6394,7 +6395,6 @@ const AngularWorkflow = (defaultprops) => {
   const conditionsModal = (
     <Dialog
       PaperComponent={PaperComponent}
-			aria-labelledby="draggable-dialog-title"
       disableEnforceFocus={true}
       hideBackdrop={true}
 			disableBackdropClick={true}
@@ -12138,45 +12138,6 @@ const parsedExecutionArgument = () => {
 
   var draggingDisabled = false;
   const codePopoutModal = !codeModalOpen ? null : (
-    <Draggable
-      onStart={(event) => {
-        console.log(event);
-        console.log(event.srcElement);
-        if (!dragging) {
-          console.log("START");
-          //setDragging(true);
-        }
-      }}
-      disabled={true}
-      onStop={(e) => {
-        console.log("STOP");
-        if (!dragging) {
-          return;
-        }
-
-        setDragging(false);
-        const newoffsetX =
-          parseInt(dragPosition.x) - parseInt(e.layerX - e.offsetX);
-        const newoffsetY =
-          parseInt(dragPosition.y) - parseInt(e.layerY - e.offsetY);
-        if (
-          newoffsetX <= 40 &&
-          newoffsetX >= -40 &&
-          newoffsetY <= 40 &&
-          newoffsetY >= -40
-        ) {
-          console.log("SKIP X & Y");
-          return;
-        }
-
-        const newPosition = {
-          x: e.layerX - e.offsetX,
-          y: e.layerY - e.offsetY,
-        };
-        setDragPosition(newPosition);
-      }}
-      position={dragPosition}
-    >
       <Dialog
 				PaperComponent={PaperComponent}
 				aria-labelledby="draggable-dialog-title"
@@ -12321,10 +12282,12 @@ const parsedExecutionArgument = () => {
 
             <div>
               <div
+    						id="draggable-dialog-title"
                 style={{
                   fontSize: 24,
                   marginTop: "auto",
                   marginBottom: "auto",
+									cursor: "move",
                 }}
               >
                 <b>{selectedResult.action.label}</b>
@@ -12437,7 +12400,6 @@ const parsedExecutionArgument = () => {
           </div>
         </div>
       </Dialog>
-    </Draggable>
   );
 
   const newView = (
