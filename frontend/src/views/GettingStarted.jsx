@@ -2226,53 +2226,55 @@ const GettingStarted = (props) => {
 	
     return (
       <div style={viewStyle}>
-				<Dialog
-					open={videoViewOpen}
-					onClose={() => {
-						setVideoViewOpen(false)
-					}}
-					PaperProps={{
-						style: {
-							backgroundColor: surfaceColor,
-							color: "white",
-							minWidth: 560,
-							minHeight: 415,
-							textAlign: "center",
-						},
-					}}
-				>
-      		<DialogTitle>
-						Welcome to Shuffle!	
-      		</DialogTitle>
-
-          <Tooltip
-            title="Close window"
-            placement="top"
-            style={{ zIndex: 10011 }}
-          >
-            <IconButton
-              style={{ zIndex: 5000, position: "absolute", top: 10, right: 34 }}
-              onClick={(e) => {
-                e.preventDefault();
-                setVideoViewOpen(false)
-              }}
-            >
-              <CloseIcon style={{ color: "white" }} />
-            </IconButton>
-          </Tooltip>
-
-					<iframe 
-						width="560"
-						height="315" 
-						style={{margin: "0px auto 0px auto", width: 560, height: 315,}}
-						src="https://www.youtube-nocookie.com/embed/rO7k9q3OgC0" 
-						title="Introduction video" 
-						frameborder="0"
-						allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-						allowfullscreen
+				{isCloud ? 
+					<Dialog
+						open={videoViewOpen}
+						onClose={() => {
+							setVideoViewOpen(false)
+						}}
+						PaperProps={{
+							style: {
+								backgroundColor: surfaceColor,
+								color: "white",
+								minWidth: 560,
+								minHeight: 415,
+								textAlign: "center",
+							},
+						}}
 					>
-					</iframe>
-				</Dialog>
+      			<DialogTitle>
+							Welcome to Shuffle!	
+      			</DialogTitle>
+
+        	  <Tooltip
+        	    title="Close window"
+        	    placement="top"
+        	    style={{ zIndex: 10011 }}
+        	  >
+        	    <IconButton
+        	      style={{ zIndex: 5000, position: "absolute", top: 10, right: 34 }}
+        	      onClick={(e) => {
+        	        e.preventDefault();
+        	        setVideoViewOpen(false)
+        	      }}
+        	    >
+        	      <CloseIcon style={{ color: "white" }} />
+        	    </IconButton>
+        	  </Tooltip>
+
+						<iframe 
+							width="560"
+							height="315" 
+							style={{margin: "0px auto 0px auto", width: 560, height: 315,}}
+							src="https://www.youtube-nocookie.com/embed/rO7k9q3OgC0" 
+							title="Introduction video" 
+							frameborder="0"
+							allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+							allowfullscreen
+						>
+						</iframe>
+					</Dialog>
+				: null}
         <div style={workflowViewStyle}>
 					<Typography variant="h1" style={{fontSize: 30, marginTop: 25, }}>
 						Getting Started with Shuffle

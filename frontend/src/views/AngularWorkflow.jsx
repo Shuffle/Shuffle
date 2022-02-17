@@ -659,7 +659,8 @@ const AngularWorkflow = (defaultprops) => {
               });
 
               const newitem = removeParam("execution_id", cursearch);
-              props.history.push(curpath + newitem);
+							navigate(curpath + newitem)
+              //props.history.push(curpath + newitem);
             }
           }
         }
@@ -3576,7 +3577,8 @@ const AngularWorkflow = (defaultprops) => {
       ) {
         setExecutionModalOpen(true)
         const newitem = removeParam("execution_highlight", cursearch);
-        props.history.push(curpath + newitem);
+				navigate(curpath + newitem)
+        //props.history.push(curpath + newitem);
 			}
 
       const tmpView = new URLSearchParams(cursearch).get("view");
@@ -3588,7 +3590,9 @@ const AngularWorkflow = (defaultprops) => {
         setExecutionModalOpen(true);
 
         const newitem = removeParam("view", cursearch);
-        props.history.push(curpath + newitem);
+				navigate(curpath + newitem)
+				//navigate(`?execution_highlight=${parsed_url}`)
+        //props.history.push(curpath + newitem);
       }
       return;
     }
