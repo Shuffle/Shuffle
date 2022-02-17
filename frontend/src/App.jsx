@@ -84,7 +84,8 @@ const App = (message, props) => {
     !window.location.pathname.startsWith("/login") &&
     !window.location.pathname.startsWith("/docs") &&
     !window.location.pathname.startsWith("/detectionframework") &&
-    !window.location.pathname.startsWith("/adminsetup")
+    !window.location.pathname.startsWith("/adminsetup") &&
+    !window.location.pathname.startsWith("/dashboard")
   ) {
     window.location = "/login";
   }

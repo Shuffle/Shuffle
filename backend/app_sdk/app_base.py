@@ -1811,7 +1811,8 @@ class AppBase:
                 #    return template
 
                 #self.logger.info(globals())
-                self.logger.info("[DEBUG] Running liquid with data of length %d" % len(template))
+                if len(template) > 100:
+                    self.logger.info("[DEBUG] Running liquid with data of length %d" % len(template))
                 #self.logger.info(f"[DEBUG] Data: {template}")
                 run = Liquid(template, mode="wild", from_file=False)
 
@@ -2763,7 +2764,7 @@ class AppBase:
                                     multi_parameters[parameter["name"]] = resultarray
                             else:
                                 # Parses things like int(value)
-                                self.logger.info("[DEBUG] Normal parsing (not looping)")#with data %s" % value)
+                                #self.logger.info("[DEBUG] Normal parsing (not looping)")#with data %s" % value)
                                 # This part has fucked over so many random JSON usages because of weird paranthesis parsing
 
                                 value = parse_wrapper_start(value, self)
