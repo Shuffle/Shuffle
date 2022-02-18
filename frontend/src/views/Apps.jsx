@@ -291,9 +291,9 @@ const Apps = (props) => {
         if (response.status !== 200) {
           console.log("Status not 200 for apps :O!");
 
-          if (isCloud) {
-            window.location.pathname = "/search";
-          }
+          //if (isCloud) {
+          //  window.location.pathname = "/search";
+          //}
         }
 
         return response.json();
