@@ -358,6 +358,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		log.Printf("\n\n[DEBUG] Result for %s already found - returning\n\n", newExecId)
 		return nil
 	}
+
 	cacheData := []byte("1")
 	err = shuffle.SetCache(ctx, newExecId, cacheData)
 	if err != nil {
@@ -371,17 +372,17 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		waitTime := time.Duration(action.ExecutionDelay) * time.Second
 
 		time.AfterFunc(waitTime, func() {
-			DeployContainer(ctx, cli, config, hostConfig, identifier, workflowExecution)
+			DeployContainer(ctx, cli, config, hostConfig, identifier, workflowExecution, newExecId)
 		})
 	} else {
 		log.Printf("[DEBUG] Running app %s in docker NORMALLY as there is no delay set", action.Name)
-		return DeployContainer(ctx, cli, config, hostConfig, identifier, workflowExecution)
+		return DeployContainer(ctx, cli, config, hostConfig, identifier, workflowExecution, newExecId)
 	}
 
 	return nil
 }
 
-func DeployContainer(ctx context.Context, cli *dockerclient.Client, config *container.Config, hostConfig *container.HostConfig, identifier string, workflowExecution shuffle.WorkflowExecution) error {
+func DeployContainer(ctx context.Context, cli *dockerclient.Client, config *container.Config, hostConfig *container.HostConfig, identifier string, workflowExecution shuffle.WorkflowExecution, newExecId string) error {
 	cont, err := cli.ContainerCreate(
 		ctx,
 		config,
@@ -395,6 +396,11 @@ func DeployContainer(ctx context.Context, cli *dockerclient.Client, config *cont
 		//log.Printf("[ERROR] Failed creating container: %s", err)
 		if !strings.Contains(err.Error(), "Conflict. The container name") {
 			log.Printf("[ERROR] Container CREATE error (1): %s", err)
+
+			err = shuffle.DeleteCache(ctx, newExecId)
+			if err != nil {
+				log.Printf("[ERROR] FAILED Deleting cache for %s: %s", newExecId, err)
+			}
 
 			return err
 		} else {
@@ -414,6 +420,11 @@ func DeployContainer(ctx context.Context, cli *dockerclient.Client, config *cont
 
 			if err != nil {
 				log.Printf("[ERROR] Container create error (2): %s", err)
+				err = shuffle.DeleteCache(ctx, newExecId)
+				if err != nil {
+					log.Printf("[ERROR] FAILED Deleting cache for %s: %s", newExecId, err)
+				}
+
 				return err
 			}
 
@@ -445,6 +456,12 @@ func DeployContainer(ctx context.Context, cli *dockerclient.Client, config *cont
 
 			if err != nil {
 				log.Printf("[ERROR] Container create error (3): %s", err)
+
+				err = shuffle.DeleteCache(ctx, newExecId)
+				if err != nil {
+					log.Printf("[ERROR] FAILED Deleting cache for %s: %s", newExecId, err)
+				}
+
 				return err
 			}
 
@@ -454,6 +471,12 @@ func DeployContainer(ctx context.Context, cli *dockerclient.Client, config *cont
 
 		if err != nil {
 			log.Printf("[ERROR] Failed to start container in environment %s: %s", environment, err)
+
+			err = shuffle.DeleteCache(ctx, newExecId)
+			if err != nil {
+				log.Printf("[ERROR] FAILED Deleting cache for %s: %s", newExecId, err)
+			}
+
 			//shutdown(workflowExecution, workflowExecution.Workflow.ID, true)
 			return err
 		}
