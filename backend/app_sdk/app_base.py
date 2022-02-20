@@ -15,10 +15,51 @@ import http.client
 import urllib.parse
 import jinja2 
 from io import BytesIO
-from liquid import Liquid
-#import barely_json
+from liquid import Liquid, defaults
 
 runtime = os.getenv("SHUFFLE_SWARM_CONFIG", "")
+
+###
+###
+###
+#### Filters for liquidpy
+###
+###
+###
+
+defaults.MODE = 'wild'
+defaults.FROM_FILE = False
+from liquid.filters.manager import FilterManager
+from liquid.filters.standard import standard_filter_manager
+
+shuffle_filters = FilterManager()
+for key, value in standard_filter_manager.filters.items():
+    shuffle_filters.filters[key] = value
+
+@shuffle_filters.register
+def plus(a, b):
+    a = int(a)
+    b = int(b)
+    return standard_filter_manager.filters["plus"](a, b)
+
+@shuffle_filters.register
+def minus(a, b):
+    a = int(a)
+    b = int(b)
+    return standard_filter_manager.filters["minus"](a, b)
+
+#print(standard_filter_manager.filters)
+#print(shuffle_filters.filters)
+print(Liquid("{{ '10' | plus: 1}}", filters=shuffle_filters.filters).render())
+print(Liquid("{{ '10' | minus: 1}}", filters=shuffle_filters.filters).render())
+
+###
+###
+###
+###
+###
+###
+###
 
 class AppBase:
     __version__ = None
