@@ -823,7 +823,7 @@ class AppBase:
         returns = []
         for item in value:
             self.logger.info("VALUE: %s" % item)
-            if len(item) != 36:
+            if len(item) != 36 and not item.startswith("file_"):
                 self.logger.info("Bad length for file value %s" % item)
                 continue
                 #return {

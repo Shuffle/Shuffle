@@ -2,11 +2,16 @@ data = ""
 with open("categories.rtf", "r") as tmp:
     data = tmp.read()
 
-fixed_json = {}
+fixed_json = []
 linearity = 0
 heading = ""
 subheading = ""
 subsubheading = ""
+
+cnt = -1
+subcnt = -1
+
+colors = ["#c51152", "#3cba54", "#4885ed", "#4a148c", "#f4c20d"]
 for line in data.split("\n"):
     if line == "rich":
         continue
@@ -30,16 +35,23 @@ for line in data.split("\n"):
         continue
 
     if linearity == 2:
-        fixed_json[line] = {} 
+        #if cnt >= 0:
+        #    for key, value in fixed_json[cnt].items():
+        #        print(key, value)
+
+
+        cnt += 1 
+        subcnt = -1
+        fixed_json.append({"name": line, "color": colors[cnt], "list": []})
         heading = line 
     elif linearity == 4:
-        fixed_json[heading][line] = {"name": "", "description": "", "image": ""} 
         subheading = line
+        fixed_json[cnt]["list"].append({"name": line, "items": {}})
+        subcnt += 1
     elif linearity == 6:
-        fixed_json[heading][subheading][line] = {"name": "", "description": "", "image": ""} 
-        subsubheading = line
+        fixed_json[cnt]["list"][subcnt]["items"] = {"name": line, "items": {}}
     elif linearity == 8:
-        fixed_json[heading][subheading][subsubheading][line] = {"name": "", "description": "", "image": ""} 
+        fixed_json[cnt]["list"][subcnt]["items"]["items"] = {"name": line, "items": {}}
     else:
         print("No handler for %s" % line)
 
@@ -47,6 +59,7 @@ for line in data.split("\n"):
 #print(data)
 import json
 filename = "categories.json"
+fixed_json.sort(key=lambda x: x["name"])
 with open(filename, "w+") as tmp:
     tmp.write(json.dumps(fixed_json, indent=4))
 

@@ -5875,9 +5875,12 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/apps/authentication/{appauthId}/config", shuffle.SetAuthenticationConfig).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/authentication/{appauthId}", shuffle.DeleteAppAuthentication).Methods("DELETE", "OPTIONS")
 
-	// Related to
+	// Related to NFT things
 	r.HandleFunc("/api/v1/workflows/collections/load", shuffle.LoadCollections).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/collections/{key}", shuffle.HandleGetCollection).Methods("GET", "OPTIONS")
+
+	// Related to use-cases that are not directly workflows.
+	r.HandleFunc("/api/v1/workflows/usecases", shuffle.LoadUsecases).Methods("GET", "OPTIONS")
 
 	// Legacy app things
 	r.HandleFunc("/api/v1/workflows/apps/validate", validateAppInput).Methods("POST", "OPTIONS")

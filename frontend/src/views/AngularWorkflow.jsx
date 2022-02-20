@@ -1351,7 +1351,7 @@ const AngularWorkflow = (defaultprops) => {
   // This can be used to only show prioritzed ones later
   // Right now, it can prioritize authenticated ones
   //"Testing",
-  const internalIds = ["Shuffle Tools", "http"];
+  const internalIds = ["Shuffle Tools", "http", "email"];
 
   const getAppAuthentication = (reset, updateAction) => {
     fetch(globalUrl + "/api/v1/apps/authentication", {

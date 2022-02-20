@@ -375,8 +375,10 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 			DeployContainer(ctx, cli, config, hostConfig, identifier, workflowExecution, newExecId)
 		})
 	} else {
-		log.Printf("[DEBUG] Running app %s in docker NORMALLY as there is no delay set", action.Name)
-		return DeployContainer(ctx, cli, config, hostConfig, identifier, workflowExecution, newExecId)
+		log.Printf("[DEBUG] Running app %s in docker NORMALLY as there is no delay set with identifier %s", action.Name, identifier)
+		returnvalue := DeployContainer(ctx, cli, config, hostConfig, identifier, workflowExecution, newExecId)
+		log.Printf("[DEBUG] Normal deploy ret: %s", returnvalue)
+		return returnvalue
 	}
 
 	return nil
@@ -397,9 +399,9 @@ func DeployContainer(ctx context.Context, cli *dockerclient.Client, config *cont
 		if !strings.Contains(err.Error(), "Conflict. The container name") {
 			log.Printf("[ERROR] Container CREATE error (1): %s", err)
 
-			err = shuffle.DeleteCache(ctx, newExecId)
-			if err != nil {
-				log.Printf("[ERROR] FAILED Deleting cache for %s: %s", newExecId, err)
+			cacheErr := shuffle.DeleteCache(ctx, newExecId)
+			if cacheErr != nil {
+				log.Printf("[ERROR] FAILED Deleting cache for %s: %s", newExecId, cacheErr)
 			}
 
 			return err
@@ -420,9 +422,10 @@ func DeployContainer(ctx context.Context, cli *dockerclient.Client, config *cont
 
 			if err != nil {
 				log.Printf("[ERROR] Container create error (2): %s", err)
-				err = shuffle.DeleteCache(ctx, newExecId)
-				if err != nil {
-					log.Printf("[ERROR] FAILED Deleting cache for %s: %s", newExecId, err)
+
+				cacheErr := shuffle.DeleteCache(ctx, newExecId)
+				if cacheErr != nil {
+					log.Printf("[ERROR] FAILED Deleting cache for %s: %s", newExecId, cacheErr)
 				}
 
 				return err
@@ -457,9 +460,9 @@ func DeployContainer(ctx context.Context, cli *dockerclient.Client, config *cont
 			if err != nil {
 				log.Printf("[ERROR] Container create error (3): %s", err)
 
-				err = shuffle.DeleteCache(ctx, newExecId)
-				if err != nil {
-					log.Printf("[ERROR] FAILED Deleting cache for %s: %s", newExecId, err)
+				cacheErr := shuffle.DeleteCache(ctx, newExecId)
+				if cacheErr != nil {
+					log.Printf("[ERROR] FAILED Deleting cache for %s: %s", newExecId, cacheErr)
 				}
 
 				return err
@@ -472,9 +475,9 @@ func DeployContainer(ctx context.Context, cli *dockerclient.Client, config *cont
 		if err != nil {
 			log.Printf("[ERROR] Failed to start container in environment %s: %s", environment, err)
 
-			err = shuffle.DeleteCache(ctx, newExecId)
-			if err != nil {
-				log.Printf("[ERROR] FAILED Deleting cache for %s: %s", newExecId, err)
+			cacheErr := shuffle.DeleteCache(ctx, newExecId)
+			if cacheErr != nil {
+				log.Printf("[ERROR] FAILED Deleting cache for %s: %s", newExecId, cacheErr)
 			}
 
 			//shutdown(workflowExecution, workflowExecution.Workflow.ID, true)
@@ -1352,6 +1355,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		} else {
 
 			err = deployApp(dockercli, images[0], identifier, env, workflowExecution, action)
+			log.Printf("[DEBUG] Failed deploying app? %s", err)
 			if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 				if strings.Contains(err.Error(), "exited prematurely") {
 					log.Printf("[DEBUG] Shutting down (9)")

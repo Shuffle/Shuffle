@@ -1,522 +1,260 @@
-{
-    "1. Collect & Distribute": {
-        "2-way Ticket synchronization": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Email management": {
-            "name": "",
-            "description": "",
-            "image": "",
-            "Attachments": {
-                "name": "",
-                "description": "",
-                "image": ""
+[
+    {
+        "name": "1. Collect & Distribute",
+        "color": "#c51152",
+        "list": [
+            {
+                "name": "2-way Ticket synchronization",
+                "items": {}
             },
-            "Manage senders": {
-                "name": "",
-                "description": "",
-                "image": ""
+            {
+                "name": "Email management",
+                "items": {
+                    "name": "Release a quarantined message",
+                    "items": {}
+                }
             },
-            "Manage URLs": {
-                "name": "",
-                "description": "",
-                "image": ""
+            {
+                "name": "EDR to ticket",
+                "items": {
+                    "name": "Get host information",
+                    "items": {}
+                }
             },
-            "Encode & Decode URLs": {
-                "name": "",
-                "description": "",
-                "image": ""
+            {
+                "name": "SIEM to ticket",
+                "items": {}
             },
-            "Release a quarantined message": {
-                "name": "",
-                "description": "",
-                "image": ""
+            {
+                "name": "ChatOps",
+                "items": {}
+            },
+            {
+                "name": "Threat Intel received",
+                "items": {}
+            },
+            {
+                "name": "Domain investigation with LetsEncrypt",
+                "items": {}
+            },
+            {
+                "name": "Botnet tracker",
+                "items": {}
+            },
+            {
+                "name": "Get running containers",
+                "items": {}
+            },
+            {
+                "name": "Assign tickets",
+                "items": {}
+            },
+            {
+                "name": "Firewall alerts",
+                "items": {
+                    "name": "URL filtering",
+                    "items": {}
+                }
+            },
+            {
+                "name": "IDS/IPS alerts",
+                "items": {
+                    "name": "Manage policies",
+                    "items": {}
+                }
+            },
+            {
+                "name": "Deduplicate information",
+                "items": {}
+            },
+            {
+                "name": "Correlate information",
+                "items": {}
             }
-        },
-        "EDR to ticket": {
-            "name": "",
-            "description": "",
-            "image": "",
-            "Fetch incidents & events": {
-                "name": "",
-                "description": "",
-                "image": ""
-            },
-            "Quarantine files": {
-                "name": "",
-                "description": "",
-                "image": ""
-            },
-            "Quarantine host (respond)": {
-                "name": "",
-                "description": "",
-                "image": ""
-            },
-            "Get host information": {
-                "name": "",
-                "description": "",
-                "image": ""
-            }
-        },
-        "SIEM to ticket": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "ChatOps": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Threat Intel received": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Domain investigation with LetsEncrypt": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Botnet tracker": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Get running containers": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Assign tickets": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Firewall alerts": {
-            "name": "",
-            "description": "",
-            "image": "",
-            "Block/accept policies": {
-                "name": "",
-                "description": "",
-                "image": ""
-            },
-            "Add addresses and ports to groups": {
-                "name": "",
-                "description": "",
-                "image": ""
-            },
-            "Support custom URL categories": {
-                "name": "",
-                "description": "",
-                "image": ""
-            },
-            "Fetch logs for specific address": {
-                "name": "",
-                "description": "",
-                "image": ""
-            },
-            "URL filtering": {
-                "name": "",
-                "description": "",
-                "image": ""
-            }
-        },
-        "IDS/IPS alerts": {
-            "name": "",
-            "description": "",
-            "image": "",
-            "Get/Fetch alerts": {
-                "name": "",
-                "description": "",
-                "image": ""
-            },
-            "Receive alerts real-time": {
-                "name": "",
-                "description": "",
-                "image": ""
-            },
-            "Get PCAP files": {
-                "name": "",
-                "description": "",
-                "image": ""
-            },
-            "Get network logs": {
-                "name": "",
-                "description": "",
-                "image": ""
-            },
-            "Manage policies": {
-                "name": "",
-                "description": "",
-                "image": ""
-            }
-        },
-        "Deduplicate information": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Correlate information": {
-            "name": "",
-            "description": "",
-            "image": ""
-        }
+        ]
     },
-    "3. Detect": {
-        "Search SIEM (Sigma)": {
-            "name": "",
-            "description": "",
-            "image": "",
-            "Network": {
-                "name": "",
-                "description": "",
-                "image": ""
+    {
+        "name": "2. Enrich",
+        "color": "#f4c20d",
+        "list": [
+            {
+                "name": "Internal Enrichment",
+                "items": {
+                    "name": "...",
+                    "items": {}
+                }
             },
-            "Endpoint": {
-                "name": "",
-                "description": "",
-                "image": ""
+            {
+                "name": "External historical Enrichment",
+                "items": {
+                    "name": "...",
+                    "items": {}
+                }
+            },
+            {
+                "name": "Realtime",
+                "items": {
+                    "name": "Analyze screenshots",
+                    "items": {}
+                }
+            },
+            {
+                "name": "Ticketing webhook verification",
+                "items": {}
             }
-        },
-        "Search EDR (OSQuery)": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Search emails (Phish)": {
-            "name": "",
-            "description": "",
-            "image": "",
-            "Check malware": {
-                "name": "",
-                "description": "",
-                "image": ""
-            },
-            "Check targeted": {
-                "name": "",
-                "description": "",
-                "image": ""
-            },
-            "Check headers and IOCs": {
-                "name": "",
-                "description": "",
-                "image": ""
-            }
-        },
-        "Search IOCs (ioc-finder)": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Search files (Yara)": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Correlate tickets": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Honeypot access": {
-            "name": "",
-            "description": "",
-            "image": "",
-            "S3 Honeypot": {
-                "name": "",
-                "description": "",
-                "image": ""
-            },
-            "SSH Honeypot": {
-                "name": "",
-                "description": "",
-                "image": ""
-            },
-            "FTP honeypot": {
-                "name": "",
-                "description": "",
-                "image": ""
-            },
-            "Network honeypot": {
-                "name": "",
-                "description": "",
-                "image": ""
-            },
-            "...": {
-                "name": "",
-                "description": "",
-                "image": ""
-            }
-        }
+        ]
     },
-    "Verify": {
-        "Discover vulnerabilities": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Discover assets": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Ensure policies are followed": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Find Inactive users": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Ensure access rights match HR systems": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Ensure onboarding is followed": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Third party apps in SaaS": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Devices used for your cloud account": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Too much access in GCP/Azure/AWS/ other clouds": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Certificate validation": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Monitor new DNS entries for domain with passive DNS": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Monitor and track password dumps": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Monitor for mentions of domain on darknet sites": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Reporting": {
-            "name": "",
-            "description": "",
-            "image": "",
-            "Automation time saved": {
-                "name": "",
-                "description": "",
-                "image": ""
+    {
+        "name": "3. Detect",
+        "color": "#3cba54",
+        "list": [
+            {
+                "name": "Search SIEM (Sigma)",
+                "items": {
+                    "name": "Endpoint",
+                    "items": {}
+                }
             },
-            "Automation money saved": {
-                "name": "",
-                "description": "",
-                "image": ""
+            {
+                "name": "Search EDR (OSQuery)",
+                "items": {}
             },
-            "Incident response report": {
-                "name": "",
-                "description": "",
-                "image": ""
+            {
+                "name": "Search emails (Phish)",
+                "items": {
+                    "name": "Check headers and IOCs",
+                    "items": {}
+                }
             },
-            "Department cost": {
-                "name": "",
-                "description": "",
-                "image": ""
+            {
+                "name": "Search IOCs (ioc-finder)",
+                "items": {}
             },
-            "Monthly reports": {
-                "name": "",
-                "description": "",
-                "image": "",
-                "EDR alerts": {
-                    "name": "",
-                    "description": "",
-                    "image": ""
-                },
-                "SIEM alerts": {
-                    "name": "",
-                    "description": "",
-                    "image": ""
-                },
-                "Emails quarantined": {
-                    "name": "",
-                    "description": "",
-                    "image": ""
-                },
-                "...": {
-                    "name": "",
-                    "description": "",
-                    "image": ""
+            {
+                "name": "Search files (Yara)",
+                "items": {}
+            },
+            {
+                "name": "Correlate tickets",
+                "items": {}
+            },
+            {
+                "name": "Honeypot access",
+                "items": {
+                    "name": "...",
+                    "items": {}
                 }
             }
-        }
+        ]
     },
-    "4. Respond": {
-        "Eradicate malware": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Quarantine host(s)": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Trigger scans": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Update indicators (FW, EDR, SIEM...)": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Autoblock activity when threat intel is received": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Lock/Delete/Reset account": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Lock vault": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Increase authentication": {
-            "name": "",
-            "description": "",
-            "image": ""
-        },
-        "Get policies from assets": {
-            "name": "",
-            "description": "",
-            "image": ""
-        }
+    {
+        "name": "4. Respond",
+        "color": "#4a148c",
+        "list": [
+            {
+                "name": "Eradicate malware",
+                "items": {}
+            },
+            {
+                "name": "Quarantine host(s)",
+                "items": {}
+            },
+            {
+                "name": "Trigger scans",
+                "items": {}
+            },
+            {
+                "name": "Update indicators (FW, EDR, SIEM...)",
+                "items": {}
+            },
+            {
+                "name": "Autoblock activity when threat intel is received",
+                "items": {}
+            },
+            {
+                "name": "Lock/Delete/Reset account",
+                "items": {}
+            },
+            {
+                "name": "Lock vault",
+                "items": {}
+            },
+            {
+                "name": "Increase authentication",
+                "items": {}
+            },
+            {
+                "name": "Get policies from assets",
+                "items": {}
+            }
+        ]
     },
-    "2. Enrich": {
-        "Internal Enrichment": {
-            "name": "",
-            "description": "",
-            "image": "",
-            "Users": {
-                "name": "",
-                "description": "",
-                "image": ""
+    {
+        "name": "5. Verify",
+        "color": "#4885ed",
+        "list": [
+            {
+                "name": "Discover vulnerabilities",
+                "items": {}
             },
-            "Hostnames": {
-                "name": "",
-                "description": "",
-                "image": ""
+            {
+                "name": "Discover assets",
+                "items": {}
             },
-            "IPs": {
-                "name": "",
-                "description": "",
-                "image": ""
+            {
+                "name": "Ensure policies are followed",
+                "items": {}
             },
-            "Departments": {
-                "name": "",
-                "description": "",
-                "image": ""
+            {
+                "name": "Find Inactive users",
+                "items": {}
             },
-            "Role": {
-                "name": "",
-                "description": "",
-                "image": ""
+            {
+                "name": "Ensure access rights match HR systems",
+                "items": {}
             },
-            "Software": {
-                "name": "",
-                "description": "",
-                "image": ""
+            {
+                "name": "Ensure onboarding is followed",
+                "items": {}
             },
-            "...": {
-                "name": "",
-                "description": "",
-                "image": ""
+            {
+                "name": "Third party apps in SaaS",
+                "items": {}
+            },
+            {
+                "name": "Devices used for your cloud account",
+                "items": {}
+            },
+            {
+                "name": "Too much access in GCP/Azure/AWS/ other clouds",
+                "items": {}
+            },
+            {
+                "name": "Certificate validation",
+                "items": {}
+            },
+            {
+                "name": "Monitor new DNS entries for domain with passive DNS",
+                "items": {}
+            },
+            {
+                "name": "Monitor and track password dumps",
+                "items": {}
+            },
+            {
+                "name": "Monitor for mentions of domain on darknet sites",
+                "items": {}
+            },
+            {
+                "name": "Reporting",
+                "items": {
+                    "name": "Monthly reports",
+                    "items": {
+                        "name": "...",
+                        "items": {}
+                    }
+                }
             }
-        },
-        "External historical Enrichment": {
-            "name": "",
-            "description": "",
-            "image": "",
-            "IPs": {
-                "name": "",
-                "description": "",
-                "image": ""
-            },
-            "URLs": {
-                "name": "",
-                "description": "",
-                "image": ""
-            },
-            "Hashes": {
-                "name": "",
-                "description": "",
-                "image": ""
-            },
-            "Files": {
-                "name": "",
-                "description": "",
-                "image": ""
-            },
-            "...": {
-                "name": "",
-                "description": "",
-                "image": ""
-            }
-        },
-        "Realtime": {
-            "name": "",
-            "description": "",
-            "image": "",
-            "File detonation": {
-                "name": "",
-                "description": "",
-                "image": ""
-            },
-            "URL detonation": {
-                "name": "",
-                "description": "",
-                "image": ""
-            },
-            "PCAP analysis": {
-                "name": "",
-                "description": "",
-                "image": ""
-            },
-            "Analyze screenshots": {
-                "name": "",
-                "description": "",
-                "image": ""
-            }
-        },
-        "Ticketing webhook verification": {
-            "name": "",
-            "description": "",
-            "image": ""
-        }
+        ]
     }
-}
+]

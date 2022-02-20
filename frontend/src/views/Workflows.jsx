@@ -12,6 +12,9 @@ import {
   Badge,
   Avatar,
   Grid,
+	InputLabel,
+	Select,
+	ListSubheader,
   Paper,
   Tooltip,
   Divider,
@@ -31,6 +34,9 @@ import {
   DialogTitle,
   DialogActions,
   DialogContent,
+	OutlinedInput,
+	Checkbox,
+	ListItemText,
 } from "@material-ui/core";
 
 import {
@@ -62,6 +68,8 @@ import {
   Publish as PublishIcon,
   CloudUpload as CloudUploadIcon,
   CloudDownload as CloudDownloadIcon,
+  ExpandLess as ExpandLessIcon,
+  ExpandMore as ExpandMoreIcon,
 } from "@material-ui/icons";
 
 import NestedMenuItem from "material-ui-nested-menu-item";
@@ -475,6 +483,8 @@ const Workflows = (props) => {
   var upload = "";
 
   const [workflows, setWorkflows] = React.useState([]);
+  const [_, setUpdate] = React.useState(""); // Used for rendering, don't remove
+  const [selectedUsecases, setSelectedUsecases] = React.useState([]);
   const [filteredWorkflows, setFilteredWorkflows] = React.useState([]);
   const [selectedWorkflow, setSelectedWorkflow] = React.useState({});
   const [workflowDone, setWorkflowDone] = React.useState(false);
@@ -510,6 +520,8 @@ const Workflows = (props) => {
   const [actionImageList, setActionImageList] = React.useState([]);
 
   const [firstLoad, setFirstLoad] = React.useState(true);
+  const [showMoreClicked, setShowMoreClicked] = React.useState(false);
+  const [usecases, setUsecases] = React.useState([]);
 
   const isCloud =
     window.location.host === "localhost:3002" ||
@@ -869,8 +881,10 @@ const Workflows = (props) => {
       .then((responseJson) => {
         if (responseJson !== undefined) {
           setWorkflows(responseJson);
+					fetchUsecases(responseJson)
 
           if (responseJson !== undefined) {
+
             var actionnamelist = [];
             var parsedactionlist = [];
             for (var key in responseJson) {
@@ -910,6 +924,83 @@ const Workflows = (props) => {
       });
   };
 
+	const handleKeysetting = (categorydata, workflows) => {
+		console.log("Workflows: ", workflows)
+		//workflows[0].category = ["detect"]
+		//workflows[0].usecase_ids = ["Correlate tickets"]
+
+		if (workflows !== undefined && workflows !== null) {
+			const newcategories = []
+			for (var key in categorydata) {
+				var category = categorydata[key]
+				category.matches = []
+
+				for (var subcategorykey in category.list) {
+					var subcategory = category.list[subcategorykey]
+					subcategory.matches = []
+
+					for (var workflowkey in workflows) {
+						const workflow = workflows[workflowkey]
+
+						if (workflow.usecase_ids !== undefined && workflow.usecase_ids !== null) {
+							for (var usecasekey in workflow.usecase_ids) {
+								if (workflow.usecase_ids[usecasekey].toLowerCase() === subcategory.name.toLowerCase()) {
+									console.log("Got match: ", workflow.usecase_ids[usecasekey])
+
+									category.matches.push({
+										"workflow": workflow.id,
+										"category": subcategory.name,
+									})
+									subcategory.matches.push(workflow.id)
+									break
+								}
+							}
+						}
+
+						if (subcategory.matches.length > 0) {
+							break
+						}
+					}
+				}
+
+				newcategories.push(category)
+			} 
+
+			console.log("Categories: ", newcategories)
+			setUsecases(newcategories)
+		} else {
+  		setUsecases(categorydata)
+		}
+	}
+
+  const fetchUsecases = (workflows) => {
+    fetch(globalUrl + "/api/v1/workflows/usecases", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for usecases");
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+				if (responseJson.success !== false) {
+					console.log("Usecases: ", responseJson)
+					handleKeysetting(responseJson, workflows)
+				}
+      })
+      .catch((error) => {
+        //alert.error("ERROR: " + error.toString());
+        console.log("ERROR: " + error.toString());
+      });
+  };
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (workflows.length <= 0) {
@@ -918,7 +1009,6 @@ const Workflows = (props) => {
         setView(tmpView);
       }
 
-      //setFirstrequest(false);
       getAvailableWorkflows();
     }
   }, [])
@@ -1392,6 +1482,11 @@ const Workflows = (props) => {
             if (data.tags !== undefined && data.tags !== null) {
               setNewWorkflowTags(JSON.parse(JSON.stringify(data.tags)));
             }
+
+						console.log("Editing: ", data)
+						if (data.usecase_ids !== undefined && data.usecase_ids !== null && data.usecase_ids.length > 0) {
+							setSelectedUsecases(data.usecase_ids)
+						}
           }}
           key={"change"}
         >
@@ -1785,7 +1880,8 @@ const Workflows = (props) => {
     tags,
     defaultReturnValue,
     editingWorkflow,
-    redirect
+    redirect,
+		currentUsecases,
   ) => {
     var method = "POST";
     var extraData = "";
@@ -1811,6 +1907,12 @@ const Workflows = (props) => {
     if (defaultReturnValue !== undefined) {
       workflowdata["default_return_value"] = defaultReturnValue;
     }
+
+		if (currentUsecases !== undefined && currentUsecases !== null) {
+			workflowdata["usecase_ids"] = currentUsecases 
+			//workflows[0].category = ["detect"]
+			//workflows[0].usecase_ids = ["Correlate tickets"]
+		}
 
     return fetch(globalUrl + "/api/v1/workflows" + extraData, {
       method: method,
@@ -2289,6 +2391,7 @@ const Workflows = (props) => {
     return <div style={gridContainer}>{workflowData}</div>;
   };
 
+	var total_count = 0
   const modalView = modalOpen ? (
     <Dialog
       open={modalOpen}
@@ -2331,6 +2434,7 @@ const Workflows = (props) => {
             }}
             color="primary"
             placeholder="Name"
+						required
             margin="dense"
             defaultValue={newWorkflowName}
             autoFocus
@@ -2346,47 +2450,115 @@ const Workflows = (props) => {
             color="primary"
             defaultValue={newWorkflowDescription}
             placeholder="Description"
-            rows="3"
             multiline
             margin="dense"
             fullWidth
           />
-          <ChipInput
-            style={{ marginTop: 10 }}
-            InputProps={{
-              style: {
-                color: "white",
-              },
-            }}
-            placeholder="Tags"
-            color="primary"
-            fullWidth
-            value={newWorkflowTags}
-            onAdd={(chip) => {
-              newWorkflowTags.push(chip);
-              setNewWorkflowTags(newWorkflowTags);
-            }}
-            onDelete={(chip, index) => {
-              newWorkflowTags.splice(index, 1);
-              setNewWorkflowTags(newWorkflowTags);
-            }}
-          />
+					<div style={{display: "flex", marginTop: 10, }}>
+						<ChipInput
+							style={{ flex: 1}}
+							InputProps={{
+								style: {
+									color: "white",
+								},
+							}}
+							placeholder="Tags"
+							color="primary"
+							fullWidth
+							value={newWorkflowTags}
+							onAdd={(chip) => {
+								newWorkflowTags.push(chip);
+								setNewWorkflowTags(newWorkflowTags);
+							}}
+							onDelete={(chip, index) => {
+								newWorkflowTags.splice(index, 1);
+								setNewWorkflowTags(newWorkflowTags);
+							}}
+						/>
+      			<FormControl style={{flex: 1, marginLeft: 5, }}>
+      			  <InputLabel htmlFor="grouped-select-usecase">Usecases</InputLabel>
+      			  <Select 
+								defaultValue="" 
+								id="grouped-select" 
+								label="Usecases" 
+								multiple
+								value={selectedUsecases}
+								renderValue={(selected) => selected.join(', ')}
+								onChange={(event) => {
+									console.log("Changed: ", event)
+								}}
+							>
+      			    <MenuItem value="">
+      			      <em>None</em>
+      			    </MenuItem>
+								{usecases.map((usecase, index) => {
+									console.log(usecase)
+									return (
+										<span key={index}>
+											<ListSubheader
+												style={{color: usecase.color}}
+											>
+												{usecase.name}
+											</ListSubheader>
+											{usecase.list.map((subcase, subindex) => {
+												//console.log(subcase)
+												total_count += 1
+												return (
+													<MenuItem value={total_count} onClick={(event) => {
+														if (selectedUsecases.includes(subcase.name)) {
+															const itemIndex = selectedUsecases.indexOf(subcase.name)
+															if (itemIndex > -1) {
+																selectedUsecases.splice(itemIndex, 1)
+															}
+														} else {
+															selectedUsecases.push(subcase.name)
+														}
 
-          <TextField
-            onBlur={(event) => setDefaultReturnValue(event.target.value)}
-            InputProps={{
-              style: {
-                color: "white",
-              },
-            }}
-            color="primary"
-            defaultValue={defaultReturnValue}
-            placeholder="Default return value (used for Subflows if the subflow fails)"
-            rows="3"
-            multiline
-            margin="dense"
-            fullWidth
-          />
+    	  										setUpdate(Math.random());
+														setSelectedUsecases(selectedUsecases)
+													}}>
+              							<Checkbox style={{color: selectedUsecases.includes(subcase.name) ? usecase.color : theme.palette.inputColor}} checked={selectedUsecases.includes(subcase.name)} />
+							              <ListItemText primary={subcase.name} />
+													</MenuItem>
+												)
+											})}
+										</span>
+									)
+								})}
+      			  </Select>
+      			</FormControl>
+					</div>
+
+  				{showMoreClicked ? 
+						<span>
+							<TextField
+								onBlur={(event) => setDefaultReturnValue(event.target.value)}
+								InputProps={{
+									style: {
+										color: "white",
+									},
+								}}
+								color="primary"
+								defaultValue={defaultReturnValue}
+								placeholder="Default return value (used for Subflows if the subflow fails)"
+								rows="3"
+								multiline
+								margin="dense"
+								fullWidth
+							/>
+						</span>
+					: null}
+          <Tooltip color="primary" title={"Add more details"} placement="top">
+						<IconButton
+							style={{ color: "white", margin: "auto", marginTop: 10, textAlign: "center", width: 50,}}
+							onClick={() => {
+								setShowMoreClicked(!showMoreClicked);
+							}}
+						>
+							{showMoreClicked ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+						</IconButton>
+					</Tooltip>
+
         </DialogContent>
         <DialogActions>
           <Button
@@ -2398,6 +2570,7 @@ const Workflows = (props) => {
               setEditingWorkflow({});
               setNewWorkflowTags([]);
               setModalOpen(false);
+							setSelectedUsecases([])
             }}
             color="primary"
           >
@@ -2416,8 +2589,10 @@ const Workflows = (props) => {
                   newWorkflowTags,
                   defaultReturnValue,
                   editingWorkflow,
-                  false
+                  false,
+									selectedUsecases,
                 );
+
                 setNewWorkflowName("");
                 setDefaultReturnValue("");
                 setNewWorkflowDescription("");
@@ -2430,11 +2605,13 @@ const Workflows = (props) => {
                   newWorkflowTags,
                   defaultReturnValue,
                   {},
-                  true
+                  true,
+									selectedUsecases,
                 );
               }
 
               setSubmitLoading(true);
+							setSelectedUsecases([])
             }}
             color="primary"
           >
@@ -2758,6 +2935,37 @@ const Workflows = (props) => {
 						)
 					}}
 					*/}
+  		
+					{usecases !== null && usecases !== undefined && usecases.length > 0 ? 
+						<div style={{ display: "flex",}}>
+							{usecases.map((usecase, index) => {
+								console.log(usecase)
+								return (
+									<Chip
+										key={usecase.name}
+										style={{
+											backgroundColor: "#3d3f43",
+											backgroundColor: theme.palette.surfaceColor,
+											marginRight: 10, 
+											paddingLeft: 5,
+											paddingRight: 5,
+											height: 28,
+											cursor: "pointer",
+											border: `1px solid ${usecase.color}`,
+											color: "white",
+										}}
+										label={`${usecase.name} (${usecase.matches.length}/${usecase.list.length})`}
+										onClick={() => {
+											console.log("Clicked!")
+  										addFilter(usecase.name.slice(3,usecase.name.length))
+										}}
+										variant="outlined"
+										color="primary"
+									/>
+								)
+							})}
+						</div>
+					: null}
           <div style={{ display: "flex", margin: "0px 0px 20px 0px" }}>
             <div style={{ flex: 1 }}>
               <Typography style={{ marginTop: 7, marginBottom: "auto" }}>
@@ -3108,7 +3316,7 @@ const Workflows = (props) => {
           }}
           color="primary"
         >
-          Submit Submit
+          Submit
         </Button>
       </DialogActions>
     </Dialog>

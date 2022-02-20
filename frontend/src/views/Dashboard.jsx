@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useInterval } from "react-powerhooks";
 // nodejs library that concatenates classes
 import classNames from "classnames";
@@ -32,18 +32,316 @@ import {
 	RadialPointSeries,
 	RadialArea,
 	RadialLine,
+	TreeMap,
+	TreeMapSeries,
+	TreeMapLabel,
+	TreeMapRect,
 } from 'reaviz';
 
-const keys = [
-	{ key: '1. Collect & Distribute', data: 2 },
-	{ key: '2. Enrich', data: 11 },
-	{ key: '3. Detect', data: 3 },
-	{ key: '4. Respond', data: 4 },
-	{ key: '5. Report', data: 12 },
-	{ key: '6. Validate', data: 7, color: "red",},
+const categorydata = [
+    {
+        "name": "1. Collect & Distribute",
+        "list": [
+            {
+                "name": "2-way Ticket synchronization",
+                "items": {}
+            },
+            {
+                "name": "Email management",
+                "items": {
+                    "name": "Release a quarantined message",
+                    "items": {}
+                }
+            },
+            {
+                "name": "EDR to ticket",
+                "items": {
+                    "name": "Get host information",
+                    "items": {}
+                }
+            },
+            {
+                "name": "SIEM to ticket",
+                "items": {}
+            },
+            {
+                "name": "ChatOps",
+                "items": {}
+            },
+            {
+                "name": "Threat Intel received",
+                "items": {}
+            },
+            {
+                "name": "Domain investigation with LetsEncrypt",
+                "items": {}
+            },
+            {
+                "name": "Botnet tracker",
+                "items": {}
+            },
+            {
+                "name": "Get running containers",
+                "items": {}
+            },
+            {
+                "name": "Assign tickets",
+                "items": {}
+            },
+            {
+                "name": "Firewall alerts",
+                "items": {
+                    "name": "URL filtering",
+                    "items": {}
+                }
+            },
+            {
+                "name": "IDS/IPS alerts",
+                "items": {
+                    "name": "Manage policies",
+                    "items": {}
+                }
+            },
+            {
+                "name": "Deduplicate information",
+                "items": {}
+            },
+            {
+                "name": "Correlate information",
+                "items": {}
+            }
+        ]
+    },
+    {
+        "name": "3. Detect",
+        "list": [
+            {
+                "name": "Search SIEM (Sigma)",
+                "items": {
+                    "name": "Endpoint",
+                    "items": {}
+                }
+            },
+            {
+                "name": "Search EDR (OSQuery)",
+                "items": {}
+            },
+            {
+                "name": "Search emails (Phish)",
+                "items": {
+                    "name": "Check headers and IOCs",
+                    "items": {}
+                }
+            },
+            {
+                "name": "Search IOCs (ioc-finder)",
+                "items": {}
+            },
+            {
+                "name": "Search files (Yara)",
+                "items": {}
+            },
+            {
+                "name": "Correlate tickets",
+                "items": {}
+            },
+            {
+                "name": "Honeypot access",
+                "items": {
+                    "name": "...",
+                    "items": {}
+                }
+            }
+        ]
+    },
+    {
+        "name": "Verify",
+        "list": [
+            {
+                "name": "Discover vulnerabilities",
+                "items": {}
+            },
+            {
+                "name": "Discover assets",
+                "items": {}
+            },
+            {
+                "name": "Ensure policies are followed",
+                "items": {}
+            },
+            {
+                "name": "Find Inactive users",
+                "items": {}
+            },
+            {
+                "name": "Ensure access rights match HR systems",
+                "items": {}
+            },
+            {
+                "name": "Ensure onboarding is followed",
+                "items": {}
+            },
+            {
+                "name": "Third party apps in SaaS",
+                "items": {}
+            },
+            {
+                "name": "Devices used for your cloud account",
+                "items": {}
+            },
+            {
+                "name": "Too much access in GCP/Azure/AWS/ other clouds",
+                "items": {}
+            },
+            {
+                "name": "Certificate validation",
+                "items": {}
+            },
+            {
+                "name": "Monitor new DNS entries for domain with passive DNS",
+                "items": {}
+            },
+            {
+                "name": "Monitor and track password dumps",
+                "items": {}
+            },
+            {
+                "name": "Monitor for mentions of domain on darknet sites",
+                "items": {}
+            },
+            {
+                "name": "Reporting",
+                "items": {
+                    "name": "Monthly reports",
+                    "items": {
+                        "name": "...",
+                        "items": {}
+                    }
+                }
+            }
+        ]
+    },
+    {
+        "name": "4. Respond",
+        "list": [
+            {
+                "name": "Eradicate malware",
+                "items": {}
+            },
+            {
+                "name": "Quarantine host(s)",
+                "items": {}
+            },
+            {
+                "name": "Trigger scans",
+                "items": {}
+            },
+            {
+                "name": "Update indicators (FW, EDR, SIEM...)",
+                "items": {}
+            },
+            {
+                "name": "Autoblock activity when threat intel is received",
+                "items": {}
+            },
+            {
+                "name": "Lock/Delete/Reset account",
+                "items": {}
+            },
+            {
+                "name": "Lock vault",
+                "items": {}
+            },
+            {
+                "name": "Increase authentication",
+                "items": {}
+            },
+            {
+                "name": "Trigger scans",
+                "items": {}
+            },
+            {
+                "name": "Get policies from assets",
+                "items": {}
+            }
+        ]
+    },
+    {
+        "name": "2. Enrich",
+        "list": [
+            {
+                "name": "Internal Enrichment",
+                "items": {
+                    "name": "...",
+                    "items": {}
+                }
+            },
+            {
+                "name": "External historical Enrichment",
+                "items": {
+                    "name": "...",
+                    "items": {}
+                }
+            },
+            {
+                "name": "Realtime",
+                "items": {
+                    "name": "Analyze screenshots",
+                    "items": {}
+                }
+            },
+            {
+                "name": "Ticketing webhook verification",
+                "items": {}
+            }
+        ]
+    }
 ]
 
-const RadialChart = () => {
+const TreeChart = ({keys}) => {
+  const [hovered, setHovered] = useState("");
+
+	return (
+		<div style={{cursor: "pointer",}} onClick={() => {
+			console.log("Click: ", hovered)	
+		}}>
+			<TreeMap
+				id="all_categories"
+				height={500}
+				width={1000}
+				data={keys}
+				margins={10}
+				series={
+					<TreeMapSeries
+						colorScheme={(info) => {
+							return info.color
+						}}
+						label={
+							<TreeMapLabel 
+								fontSize="15px"
+								fill="#ffffff"
+								wrap={false}
+							/>
+						}
+						rect={
+							<TreeMapRect 
+								cursor="pointer"
+								animated={true}
+								onClick={(event) => {
+									console.log("Click: ", event)
+								}}
+							/>
+						}
+					/>
+				}
+			/>
+		</div>
+	)
+  //axis={<RadialAxis type="category" />}
+}
+    
+
+const RadialChart = ({keys}) => {
   const [hovered, setHovered] = useState("");
 
 	return (
@@ -137,10 +435,69 @@ const Dashboard = (props) => {
   const [stats, setStats] = useState({});
   const [changeme, setChangeme] = useState("");
   const [statsRan, setStatsRan] = useState(false);
+	const [keys, setKeys] = useState([])
+	const [treeKeys, setTreeKeys] = useState([])
+
+	//const keys = [
+	//	{ key: '1. Collect & Distribute', data: 2 },
+	//	{ key: '2. Enrich', data: 11 },
+	//	{ key: '3. Detect', data: 3 },
+	//	{ key: '4. Respond', data: 4 },
+	//	{ key: 'Validation', data: 7, color: "red",},
+	//]
 
   document.title = "Shuffle - dashboard";
   var dayGraphLabels = [60, 80, 65, 130, 80, 105, 90, 130, 70, 115, 60, 130];
   var dayGraphData = [60, 80, 65, 130, 80, 105, 90, 130, 70, 115, 60, 130];
+
+	const handleKeysetting = (categorydata) => {
+		var allCategories = []
+		var treeCategories = []
+		for (key in categorydata) {
+			const category = categorydata[key]
+			console.log("cat: ", category)
+			allCategories.push({"key": category.name, "data": category.list.length,})
+			treeCategories.push({"key": category.name, "data": 100, "color": category.color,})
+			for (var subkey in category.list) {
+				treeCategories.push({"key": category.list[subkey].name, "data": 20, "color": category.color})
+			}
+		} 
+
+		setKeys(allCategories)
+		setTreeKeys(treeCategories)
+	}
+
+  const fetchUsecases = () => {
+    fetch(globalUrl + "/api/v1/workflows/usecases", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for usecases");
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+				if (responseJson.success !== false) {
+					console.log("Usecases: ", responseJson)
+					handleKeysetting(responseJson)
+				}
+      })
+      .catch((error) => {
+        //alert.error("ERROR: " + error.toString());
+        console.log("ERROR: " + error.toString());
+      });
+  };
+
+  useEffect(() => {
+		fetchUsecases()
+  }, []);
 
   const fetchdata = (stats_id) => {
     fetch(globalUrl + "/api/v1/stats/" + stats_id, {
@@ -291,8 +648,8 @@ const Dashboard = (props) => {
   if (firstRequest) {
     console.log("HELO");
     setFirstRequest(false);
-    start();
-    runUpdate();
+    //start();
+    //runUpdate();
   } else if (!statsRan) {
     // FIXME: Run this under runUpdate schedule?
     // 1. Fix labels in dayGraphy.data
@@ -391,8 +748,14 @@ const Dashboard = (props) => {
     ) : null;
 
   const data = (
-    <div className="content">
-			<RadialChart />
+    <div className="content" style={{paddingBottom: 200}}>
+			{keys.length > 0 ?
+				<RadialChart keys={keys} />
+			: null}
+
+			{treeKeys.length > 0 ? 
+				<TreeChart keys={treeKeys} />
+			: null}
 			{/*
 			<StackedBarSeries
 				type="stackedDiverging"
