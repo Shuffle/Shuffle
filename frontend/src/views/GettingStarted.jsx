@@ -2191,7 +2191,7 @@ const GettingStarted = (props) => {
 								ele.style.borderWidth = "2px"
 
 							} else {
-								alert.success("TBD: Coming in version 1.0.0");
+								//alert.success("TBD: Coming in version 1.0.0");
 							}
 						}}>
 						workflows made by other creators</span>!
@@ -2211,7 +2211,7 @@ const GettingStarted = (props) => {
 						Learn to use Shuffle by&nbsp; 
 						<span style={{cursor: "pointer", color: "#f86a3e",}} onClick={() => {setModalOpen(true)}}>
 							creating your first workflow 
-						</span> and <Link to="/docs" style={{textDecoration: "none", color: "#f86a3e",}}>reading the docs.</Link>
+						</span> and <Link to="/docs/getting_started" style={{textDecoration: "none", color: "#f86a3e",}}>reading the docs.</Link>
 					</Typography>
 				),
 				tutorial: "learn_shuffle",

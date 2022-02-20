@@ -15,7 +15,7 @@ import theme from "./theme";
 import Apps from "./views/Apps";
 import AppCreator from "./views/AppCreator";
 
-import Dashboard from "./views/Dashboard";
+import Dashboard from "./views/Dashboard.jsx";
 import AdminSetup from "./views/AdminSetup";
 import Admin from "./views/Admin";
 import Docs from "./views/Docs";

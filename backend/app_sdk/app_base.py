@@ -3,6 +3,7 @@ import copy
 import sys
 import re
 import time 
+import base64
 import json
 import liquid
 import logging
@@ -48,10 +49,52 @@ def minus(a, b):
     b = int(b)
     return standard_filter_manager.filters["minus"](a, b)
 
+@shuffle_filters.register
+def multiply(a, b):
+    a = int(a)
+    b = int(b)
+    return standard_filter_manager.filters["multiply"](a, b)
+
+@shuffle_filters.register
+def divide(a, b):
+    a = int(a)
+    b = int(b)
+    return standard_filter_manager.filters["divide"](a, b)
+
+@shuffle_filters.register
+def md5(a):
+    a = str(a)
+    return hashlib.md5(a.encode('utf-8')).hexdigest()
+    
+@shuffle_filters.register
+def sha256(a):
+    a = str(a)
+    return hashlib.sha256(str(a).encode("utf-8")).hexdigest() 
+
+@shuffle_filters.register
+def md5_base64(a):
+    a = str(a)
+    foundhash = hashlib.md5(a.encode('utf-8')).hexdigest()
+    return base64.b64encode(foundhash.encode('utf-8'))
+    
+@shuffle_filters.register
+def base64_encode(a):
+    a = str(a)
+    return base64.b64encode(a.encode('utf-8')).decode()
+
+@shuffle_filters.register
+def base64_decode(a):
+    a = str(a)
+    return base64.b64decode(a).decode()
+
 #print(standard_filter_manager.filters)
 #print(shuffle_filters.filters)
-print(Liquid("{{ '10' | plus: 1}}", filters=shuffle_filters.filters).render())
-print(Liquid("{{ '10' | minus: 1}}", filters=shuffle_filters.filters).render())
+#print(Liquid("{{ '10' | plus: 1}}", filters=shuffle_filters.filters).render())
+#print(Liquid("{{ '10' | minus: 1}}", filters=shuffle_filters.filters).render())
+#print(Liquid("{{ asd | size }}", filters=shuffle_filters.filters).render())
+#print(Liquid("{{ 'asd' | md5 }}", filters=shuffle_filters.filters).render())
+#print(Liquid("{{ 'asd' | sha256 }}", filters=shuffle_filters.filters).render())
+#print(Liquid("{{ 'asd' | md5_base64 | base64_decode }}", filters=shuffle_filters.filters).render())
 
 ###
 ###
@@ -1855,7 +1898,7 @@ class AppBase:
                 if len(template) > 100:
                     self.logger.info("[DEBUG] Running liquid with data of length %d" % len(template))
                 #self.logger.info(f"[DEBUG] Data: {template}")
-                run = Liquid(template, mode="wild", from_file=False)
+                run = Liquid(template, mode="wild", from_file=False, filters=shuffle_filters.filters)
 
                 # Can't handle self yet (?)
                 ret = run.render(**globals())

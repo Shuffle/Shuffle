@@ -812,7 +812,7 @@ const Dashboard = (props) => {
 			</div>
 
 			{usecases !== null && usecases !== undefined && usecases.length > 0 ? 
-				<div style={{ display: "flex", marginLeft: 100,}}>
+				<div style={{ display: "flex", marginLeft: 120,}}>
 					{usecases.map((usecase, index) => {
 						return (
 							<Chip

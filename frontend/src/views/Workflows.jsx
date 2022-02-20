@@ -2885,7 +2885,7 @@ const Workflows = (props) => {
     return (
       <div style={viewStyle}>
         <div style={workflowViewStyle}>
-          <div style={{ display: "flex" }}>
+          <div style={{ display: "flex", marginTop: 25, }}>
             <div style={{ flex: 1 }}>
 							<Typography variant="h1" style={{fontSize: 30}}>
               	Workflows
@@ -2994,9 +2994,9 @@ const Workflows = (props) => {
 												backgroundColor: filters.includes(usecase.name.toLowerCase()) ? usecase.color : theme.palette.surfaceColor,
 												borderRadius: theme.palette.borderRadius,
 												marginRight: index === usecases.length-1 ? 0 : 10, 
-												height: 65,
+												height: 60,
 												cursor: "pointer",
-												border: `1px solid ${usecase.color}`,
+												border: `2px solid ${usecase.color}`,
 												overflow: "hidden",
 												padding: 10,
 											}}
@@ -3017,7 +3017,7 @@ const Workflows = (props) => {
 													{usecase.name}
 												</Typography>
 												<Typography variant="body2" color="textSecondary">
-													Finished: {usecase.matches.length}/{usecase.list.length}
+													In use: {usecase.matches.length}/{usecase.list.length}
 												</Typography>
 											</a>
 										</Paper>
