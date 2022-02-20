@@ -10,15 +10,18 @@ import { useAlert } from "react-alert";
 
 import {
 	Typography,
+	Grid,
+	Paper,
+	Chip,
 } from "@material-ui/core";
 
 // core components
-import {
-  chartExample1,
-  chartExample2,
-  chartExample3,
-  chartExample4,
-} from "../charts.js";
+//import {
+//  chartExample1,
+//  chartExample2,
+//  chartExample3,
+//  chartExample4,
+//} from "../charts.js";
 
 import { 
 	RadialBarChart, 
@@ -298,6 +301,47 @@ const categorydata = [
     }
 ]
 
+const UsecaseListComponent = ({keys}) => {
+	if (keys === undefined || keys === null || keys.length === 0) {
+		return null
+	}
+
+	return (
+		<div style={{marginTop: 25, minHeight: 1000,}}>
+			<Typography variant="h1">
+				Shuffle usecases
+			</Typography>
+			<Typography variant="body1">
+				Usecases in Shuffle are divided into {keys.length} type{keys.length === 1 ? "" : "s"}. 
+			</Typography>
+			{keys.map((usecase, index) => {
+				return (
+					<div key={index} style={{marginTop: index === 0 ? 50 : 100}}>
+						<Typography variant="h6">
+							{usecase.name}
+						</Typography>
+      			<Grid container spacing={3} style={{marginTop: 25}}>
+							{usecase.list.map((subcase, subindex) => {
+								return (
+      						<Grid item xs={4} key={subindex} style={{minHeight: 110,}}>
+										<Paper style={{padding: "30px 30px 20px 30px", minHeight: 110, cursor: "pointer", border: `1px solid ${usecase.color}`}} onClick={() => {
+											console.log("Clicked: ", subcase.name)
+										}}>
+											<Typography variant="body1">
+												<b>{subcase.name}</b>
+											</Typography>
+										</Paper>
+      						</Grid>
+								)
+							})}
+      			</Grid>
+					</div>
+				)
+			})}
+		</div>
+	)
+}
+
 const TreeChart = ({keys}) => {
   const [hovered, setHovered] = useState("");
 
@@ -307,8 +351,6 @@ const TreeChart = ({keys}) => {
 		}}>
 			<TreeMap
 				id="all_categories"
-				height={500}
-				width={1000}
 				data={keys}
 				margins={10}
 				series={
@@ -341,12 +383,15 @@ const TreeChart = ({keys}) => {
 }
     
 
-const RadialChart = ({keys}) => {
+const RadialChart = ({keys, setSelectedCategory}) => {
   const [hovered, setHovered] = useState("");
 
 	return (
 		<div style={{cursor: "pointer",}} onClick={() => {
 			console.log("Click: ", hovered)	
+			if (setSelectedCategory !== undefined) {
+				setSelectedCategory(hovered)
+			}
 		}}>
 			<RadialAreaChart
 				id="workflow_categories"
@@ -355,10 +400,12 @@ const RadialChart = ({keys}) => {
 				data={keys}
     		axis={<RadialAxis type="category" />}
 				series={
-
 					<RadialAreaSeries 
 						interpolation="smooth"
-						colorScheme={'#f86a3e'}
+						colorScheme={(colorInput) => {
+							console.log("Color: ", colorInput)
+							return '#f86a3e'
+						}}
 						animated={false}
 						id="workflow_series_id"
 						style={{cursor: "pointer",}}
@@ -381,7 +428,6 @@ const RadialChart = ({keys}) => {
 								}}
 								isRadial={true}
 								onValueEnter={(event) => {
-									console.log("Entered: ", event.value.x)
 									if (hovered !== event.value.x) {
 										setHovered(event.value.x)
 									}
@@ -394,7 +440,7 @@ const RadialChart = ({keys}) => {
 										}}
 										content={(data, color) => {
 											return (
-												<div style={{backgroundColor: theme.palette.inputColor, border: "1px solid rgba(255,255,255,0.3)", color: "white", padding: 5, cursor: "pointer",}}>
+												<div style={{borderRadius: theme.palette.borderRadius, backgroundColor: theme.palette.inputColor, border: "1px solid rgba(255,255,255,0.3)", color: "white", padding: 5, cursor: "pointer",}}>
 													<Typography variant="body1">
 														{data.x}
 													</Typography>
@@ -438,15 +484,24 @@ const Dashboard = (props) => {
 	const [keys, setKeys] = useState([])
 	const [treeKeys, setTreeKeys] = useState([])
 
-	//const keys = [
-	//	{ key: '1. Collect & Distribute', data: 2 },
-	//	{ key: '2. Enrich', data: 11 },
-	//	{ key: '3. Detect', data: 3 },
-	//	{ key: '4. Respond', data: 4 },
-	//	{ key: 'Validation', data: 7, color: "red",},
-	//]
+  const [selectedUsecaseCategory, setSelectedUsecaseCategory] = useState("");
+  const [selectedUsecases, setSelectedUsecases] = useState([]);
+  const [usecases, setUsecases] = useState([]);
 
-  document.title = "Shuffle - dashboard";
+	useEffect(() => {
+		console.log("Changed: ", selectedUsecaseCategory)
+		if (selectedUsecaseCategory.length === 0) {
+			setSelectedUsecases(usecases)
+		} else {
+			const foundUsecase = usecases.find(data => data.name === selectedUsecaseCategory)
+			if (foundUsecase !== undefined && foundUsecase !== null) {
+				console.log("FOUND: ", foundUsecase)
+				setSelectedUsecases([foundUsecase])
+			}
+		}
+	}, [selectedUsecaseCategory])
+
+  document.title = "Shuffle - usecases";
   var dayGraphLabels = [60, 80, 65, 130, 80, 105, 90, 130, 70, 115, 60, 130];
   var dayGraphData = [60, 80, 65, 130, 80, 105, 90, 130, 70, 115, 60, 130];
 
@@ -455,8 +510,7 @@ const Dashboard = (props) => {
 		var treeCategories = []
 		for (key in categorydata) {
 			const category = categorydata[key]
-			console.log("cat: ", category)
-			allCategories.push({"key": category.name, "data": category.list.length,})
+			allCategories.push({"key": category.name, "data": category.list.length, "color": category.color})
 			treeCategories.push({"key": category.name, "data": 100, "color": category.color,})
 			for (var subkey in category.list) {
 				treeCategories.push({"key": category.list[subkey].name, "data": 20, "color": category.color})
@@ -487,6 +541,8 @@ const Dashboard = (props) => {
 				if (responseJson.success !== false) {
 					console.log("Usecases: ", responseJson)
 					handleKeysetting(responseJson)
+					setUsecases(responseJson)
+  				setSelectedUsecases(responseJson)
 				}
       })
       .catch((error) => {
@@ -748,20 +804,52 @@ const Dashboard = (props) => {
     ) : null;
 
   const data = (
-    <div className="content" style={{paddingBottom: 200}}>
-			{keys.length > 0 ?
-				<RadialChart keys={keys} />
+    <div className="content" style={{width: 1000, margin: "auto", paddingBottom: 200, textAlign: "center",}}>
+			<div style={{width: 500, margin: "auto"}}>
+				{keys.length > 0 ?
+					<RadialChart keys={keys} setSelectedCategory={setSelectedUsecaseCategory} />
+				: null}
+			</div>
+
+			{usecases !== null && usecases !== undefined && usecases.length > 0 ? 
+				<div style={{ display: "flex", marginLeft: 100,}}>
+					{usecases.map((usecase, index) => {
+						return (
+							<Chip
+								key={usecase.name}
+								style={{
+									backgroundColor: selectedUsecaseCategory === usecase.name ? usecase.color : theme.palette.surfaceColor,
+									marginRight: 10, 
+									paddingLeft: 5,
+									paddingRight: 5,
+									height: 28,
+									cursor: "pointer",
+									border: `1px solid ${usecase.color}`,
+									color: "white",
+								}}
+								label={`${usecase.name} (${usecase.list.length})`}
+								onClick={() => {
+									console.log("Clicked: ", usecase.name)
+									if (selectedUsecaseCategory === usecase.name) {
+										setSelectedUsecaseCategory("")
+									} else {
+										setSelectedUsecaseCategory(usecase.name)
+									}
+									//addFilter(usecase.name.slice(3,usecase.name.length))
+								}}
+								variant="outlined"
+								color="primary"
+							/>
+						)
+					})}
+				</div>
 			: null}
+
+			<UsecaseListComponent keys={selectedUsecases} />
 
 			{treeKeys.length > 0 ? 
 				<TreeChart keys={treeKeys} />
 			: null}
-			{/*
-			<StackedBarSeries
-				type="stackedDiverging"
-				data={keys}
-			/>
-			*/}
 
       {newdata}
     </div>

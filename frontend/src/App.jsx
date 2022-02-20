@@ -85,7 +85,7 @@ const App = (message, props) => {
     !window.location.pathname.startsWith("/docs") &&
     !window.location.pathname.startsWith("/detectionframework") &&
     !window.location.pathname.startsWith("/adminsetup") &&
-    !window.location.pathname.startsWith("/dashboard")
+    !window.location.pathname.startsWith("/usecases")
   ) {
     window.location = "/login";
   }
@@ -407,7 +407,7 @@ const App = (message, props) => {
         	/>
         	<Route
         	  exact
-        	  path="/dashboard"
+        	  path="/usecases"
         	  element={
         	    <Dashboard
         	      isLoaded={isLoaded}

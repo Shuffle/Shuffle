@@ -2160,7 +2160,7 @@ const GettingStarted = (props) => {
 							})
 						}
 					}}>
-						<Link to="/detectionframework" style={{textDecoration: "none", color: "#f86a3e",}}>Discover your apps</Link> by following our simple security model!
+						<Link to="/detectionframework" style={{textDecoration: "none", color: "#f86a3e",}}>Find relevant apps</Link> and start your automation journey
 					</Typography>
 				), 
 				tutorial: "find_integrations",
@@ -2168,7 +2168,8 @@ const GettingStarted = (props) => {
 			{
 				html: 
 					<Typography variant={textType} style={{marginTop: textSpacingDiff}}>
-							Discover <span style={{cursor: "pointer", textDecoration: "none", color: "#f86a3e",}} onClick={() => {
+							Discover <Link to="/usecases" style={{cursor: "pointer", textDecoration: "none", color: "#f86a3e",}}>Use Case ideas</Link> and&nbsp;
+							<span style={{cursor: "pointer", textDecoration: "none", color: "#f86a3e",}} onClick={() => {
     
   						if (isCloud) {
 								navigate(`/search?tab=workflows`)
@@ -2193,7 +2194,7 @@ const GettingStarted = (props) => {
 								alert.success("TBD: Coming in version 1.0.0");
 							}
 						}}>
-						use-cases made by other creators</span>!
+						workflows made by other creators</span>!
 					</Typography>,
 				tutorial: "discover_workflows",
 			},

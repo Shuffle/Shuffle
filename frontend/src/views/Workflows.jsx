@@ -2475,58 +2475,60 @@ const Workflows = (props) => {
 								setNewWorkflowTags(newWorkflowTags);
 							}}
 						/>
-      			<FormControl style={{flex: 1, marginLeft: 5, }}>
-      			  <InputLabel htmlFor="grouped-select-usecase">Usecases</InputLabel>
-      			  <Select 
-								defaultValue="" 
-								id="grouped-select" 
-								label="Usecases" 
-								multiple
-								value={selectedUsecases}
-								renderValue={(selected) => selected.join(', ')}
-								onChange={(event) => {
-									console.log("Changed: ", event)
-								}}
-							>
-      			    <MenuItem value="">
-      			      <em>None</em>
-      			    </MenuItem>
-								{usecases.map((usecase, index) => {
-									console.log(usecase)
-									return (
-										<span key={index}>
-											<ListSubheader
-												style={{color: usecase.color}}
-											>
-												{usecase.name}
-											</ListSubheader>
-											{usecase.list.map((subcase, subindex) => {
-												//console.log(subcase)
-												total_count += 1
-												return (
-													<MenuItem value={total_count} onClick={(event) => {
-														if (selectedUsecases.includes(subcase.name)) {
-															const itemIndex = selectedUsecases.indexOf(subcase.name)
-															if (itemIndex > -1) {
-																selectedUsecases.splice(itemIndex, 1)
+						{usecases !== null && usecases !== undefined && usecases.length > 0 ? 
+      				<FormControl style={{flex: 1, marginLeft: 5, }}>
+      				  <InputLabel htmlFor="grouped-select-usecase">Usecases</InputLabel>
+      				  <Select 
+									defaultValue="" 
+									id="grouped-select" 
+									label="Matching Usecase" 
+									multiple
+									value={selectedUsecases}
+									renderValue={(selected) => selected.join(', ')}
+									onChange={(event) => {
+										console.log("Changed: ", event)
+									}}
+								>
+      				    <MenuItem value="">
+      				      <em>None</em>
+      				    </MenuItem>
+									{usecases.map((usecase, index) => {
+										console.log(usecase)
+										return (
+											<span key={index}>
+												<ListSubheader
+													style={{color: usecase.color}}
+												>
+													{usecase.name}
+												</ListSubheader>
+												{usecase.list.map((subcase, subindex) => {
+													//console.log(subcase)
+													total_count += 1
+													return (
+														<MenuItem key={subindex} value={total_count} onClick={(event) => {
+															if (selectedUsecases.includes(subcase.name)) {
+																const itemIndex = selectedUsecases.indexOf(subcase.name)
+																if (itemIndex > -1) {
+																	selectedUsecases.splice(itemIndex, 1)
+																}
+															} else {
+																selectedUsecases.push(subcase.name)
 															}
-														} else {
-															selectedUsecases.push(subcase.name)
-														}
 
-    	  										setUpdate(Math.random());
-														setSelectedUsecases(selectedUsecases)
-													}}>
-              							<Checkbox style={{color: selectedUsecases.includes(subcase.name) ? usecase.color : theme.palette.inputColor}} checked={selectedUsecases.includes(subcase.name)} />
-							              <ListItemText primary={subcase.name} />
-													</MenuItem>
-												)
-											})}
-										</span>
-									)
-								})}
-      			  </Select>
-      			</FormControl>
+    	  											setUpdate(Math.random());
+															setSelectedUsecases(selectedUsecases)
+														}}>
+            	  							<Checkbox style={{color: selectedUsecases.includes(subcase.name) ? usecase.color : theme.palette.inputColor}} checked={selectedUsecases.includes(subcase.name)} />
+								              <ListItemText primary={subcase.name} />
+														</MenuItem>
+													)
+												})}
+											</span>
+										)
+									})}
+      				  </Select>
+      				</FormControl>
+						: null}
 					</div>
 
   				{showMoreClicked ? 
@@ -2643,7 +2645,7 @@ const Workflows = (props) => {
       {view === "list" && (
         <Tooltip color="primary" title={"Grid View"} placement="top">
           <Button
-            color="primary"
+            color="secondary"
             variant="text"
             onClick={() => {
               localStorage.setItem("view", "grid");
@@ -2657,7 +2659,7 @@ const Workflows = (props) => {
       {view === "grid" && (
         <Tooltip color="primary" title={"List View"} placement="top">
           <Button
-            color="primary"
+            color="secondary"
             variant="text"
             onClick={() => {
               localStorage.setItem("view", "list");
@@ -2670,12 +2672,12 @@ const Workflows = (props) => {
       )}
       <Tooltip color="primary" title={"Import workflows"} placement="top">
         {importLoading ? (
-          <Button color="primary" style={{}} variant="text" onClick={() => {}}>
+          <Button color="secondary" style={{}} variant="text" onClick={() => {}}>
             <CircularProgress style={{ maxHeight: 15, maxWidth: 15 }} />
           </Button>
         ) : (
           <Button
-            color="primary"
+            color="secondary"
             style={{}}
             variant="text"
             onClick={() => upload.click()}
@@ -2698,7 +2700,7 @@ const Workflows = (props) => {
           placement="top"
         >
           <Button
-            color="primary"
+            color="secondary"
             style={{}}
             variant="text"
             onClick={() => {
@@ -2884,8 +2886,51 @@ const Workflows = (props) => {
       <div style={viewStyle}>
         <div style={workflowViewStyle}>
           <div style={{ display: "flex" }}>
-            <div style={{ flex: 3 }}>
-              <h2>Workflows</h2>
+            <div style={{ flex: 1 }}>
+							<Typography variant="h1" style={{fontSize: 30}}>
+              	Workflows
+							</Typography>
+            </div>
+						{/*
+            <div style={{ flex: 1 }}>
+              <Typography style={{ marginTop: 7, marginBottom: "auto" }}>
+                <a
+                  rel="noopener noreferrer"
+                  target="_blank"
+                  href="https://shuffler.io/docs/workflows"
+                  style={{ textDecoration: "none", color: "#f85a3e" }}
+                >
+                  Learn more about Workflows
+                </a>
+              </Typography>
+            </div>
+						*/}
+						<div style={{ display: "flex", margin: "0px 0px 20px 0px" }}>
+							<div style={{ flex: 1, float: "right" }}>
+								<ChipInput
+									style={{}}
+									InputProps={{
+										style: {
+											color: "white",
+											maxWidth: 275,
+											minWidth: 275,
+										},
+									}}
+									placeholder="Add Filter"
+									color="primary"
+									fullWidth
+									value={filters}
+									onAdd={(chip) => {
+										addFilter(chip);
+									}}
+									onDelete={(_, index) => {
+										removeFilter(index);
+									}}
+								/>
+							</div>
+						</div>
+            <div style={{ flex: 1, textAlign: "right" }}>
+              {workflowButtons}
             </div>
           </div>
           {/*
@@ -2936,73 +2981,51 @@ const Workflows = (props) => {
 					}}
 					*/}
   		
-					{usecases !== null && usecases !== undefined && usecases.length > 0 ? 
-						<div style={{ display: "flex",}}>
-							{usecases.map((usecase, index) => {
-								console.log(usecase)
-								return (
-									<Chip
-										key={usecase.name}
-										style={{
-											backgroundColor: "#3d3f43",
-											backgroundColor: theme.palette.surfaceColor,
-											marginRight: 10, 
-											paddingLeft: 5,
-											paddingRight: 5,
-											height: 28,
-											cursor: "pointer",
-											border: `1px solid ${usecase.color}`,
-											color: "white",
-										}}
-										label={`${usecase.name} (${usecase.matches.length}/${usecase.list.length})`}
-										onClick={() => {
-											console.log("Clicked!")
-  										addFilter(usecase.name.slice(3,usecase.name.length))
-										}}
-										variant="outlined"
-										color="primary"
-									/>
-								)
-							})}
-						</div>
-					: null}
-          <div style={{ display: "flex", margin: "0px 0px 20px 0px" }}>
-            <div style={{ flex: 1 }}>
-              <Typography style={{ marginTop: 7, marginBottom: "auto" }}>
-                <a
-                  rel="noopener noreferrer"
-                  target="_blank"
-                  href="https://shuffler.io/docs/workflows"
-                  style={{ textDecoration: "none", color: "#f85a3e" }}
-                >
-                  Learn more about Workflows
-                </a>
-              </Typography>
-            </div>
-            <div style={{ flex: 1, float: "right" }}>
-              <ChipInput
-                style={{}}
-                InputProps={{
-                  style: {
-                    color: "white",
-                  },
-                }}
-                placeholder="Add Filter"
-                color="primary"
-                fullWidth
-                value={filters}
-                onAdd={(chip) => {
-                  addFilter(chip);
-                }}
-                onDelete={(_, index) => {
-                  removeFilter(index);
-                }}
-              />
-            </div>
-            <div style={{ float: "right", flex: 1, textAlign: "right" }}>
-              {workflowButtons}
-            </div>
-          </div>
+					<div style={{width: "100%",}}>
+						{usecases !== null && usecases !== undefined && usecases.length > 0 ? 
+							<div style={{ display: "flex",}}>
+								{usecases.map((usecase, index) => {
+									console.log(usecase)
+									return (
+										<Paper
+											key={usecase.name}
+											style={{
+												flex: 1,
+												backgroundColor: filters.includes(usecase.name.toLowerCase()) ? usecase.color : theme.palette.surfaceColor,
+												borderRadius: theme.palette.borderRadius,
+												marginRight: index === usecases.length-1 ? 0 : 10, 
+												height: 65,
+												cursor: "pointer",
+												border: `1px solid ${usecase.color}`,
+												overflow: "hidden",
+												padding: 10,
+											}}
+											onClick={() => {
+												console.log("Clicked!")
+												return
+												if (filters.includes(usecase.name.toLowerCase())) {
+													addFilter(usecase.name)
+												} else {
+													const foundIndex = filters.indexOf(usecase.name.toLowerCase())
+  												removeFilter(foundIndex) 
+												}
+
+											}}
+										>
+											<a href={`/usecases?selected=${usecase.name}`} rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", }}>
+												<Typography variant="body1" color="textPrimary">
+													{usecase.name}
+												</Typography>
+												<Typography variant="body2" color="textSecondary">
+													Finished: {usecase.matches.length}/{usecase.list.length}
+												</Typography>
+											</a>
+										</Paper>
+									)
+								})}
+							</div>
+						: null}
+					</div>
           <div style={{ marginTop: 15 }} />
           {actionImageList !== undefined &&
           actionImageList !== null &&
