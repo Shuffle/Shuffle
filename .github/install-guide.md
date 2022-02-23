@@ -10,18 +10,19 @@ The Docker setup is done with docker-compose
 
 1. Make sure you have [Docker](https://docs.docker.com/get-docker/) and [docker-compose](https://docs.docker.com/compose/install/) installed.
 2. Download Shuffle
-```
+```bash
 git clone https://github.com/frikky/Shuffle
 cd Shuffle
 ```
 
 3. Fix prerequisites for the Opensearch database (Elasticsearch): 
-```
-sudo chown -R 1000:1000 shuffle-database 		# Required for Opensearch 
+```bash
+mkdir shuffle-database
+sudo chown -R 1000:1000 shuffle-database
 ```
 
 4. Run docker-compose.
-```
+```bash
 docker-compose up -d
 ```
 
@@ -38,12 +39,12 @@ This step is for setting up with Docker on windows from scratch.
 
 4. Open the .env file and change the line with "OUTER_HOSTNAME" to contain your IP:
 
-```
+```bash
 OUTER_HOSTNAME=YOUR.IP.HERE
 ```
 
 6. Run docker-compose
-```
+```bash
 docker compose up -d
 ```
 
