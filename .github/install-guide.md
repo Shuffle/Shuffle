@@ -45,7 +45,7 @@ OUTER_HOSTNAME=YOUR.IP.HERE
 
 6. Run docker-compose
 ```bash
-docker compose up -d
+docker-compose up -d
 ```
 
 ### Configurations (proxies, default users etc.)
