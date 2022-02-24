@@ -201,7 +201,7 @@ func deployServiceWorkers(image string) {
 		// Looks for and cleans up all existing items in swarm we can't re-use (Shuffle only)
 		cleanupExistingNodes(ctx)
 		// frikky@debian:~/git/shuffle/functions/onprem/worker$ docker service create --replicas 5 --name shuffle-workers --env SHUFFLE_SWARM_CONFIG=run --publish published=33333,target=33333 ghcr.io/frikky/shuffle-worker:nightly
-		networkName := "shuffle-executions"
+		networkName := "shuffle_swarm_executions"
 		if len(swarmNetworkName) > 0 {
 			networkName = swarmNetworkName
 		}
@@ -809,7 +809,7 @@ func main() {
 	// Run by default from now
 	zombiecheck(ctx, workerTimeout)
 
-	log.Printf("[INFO] Running towards %s (BASE_URL) with Org %s", baseUrl, environment)
+	log.Printf("[INFO] Running towards %s (BASE_URL) with environment name %s", baseUrl, environment)
 	httpProxy := os.Getenv("HTTP_PROXY")
 	httpsProxy := os.Getenv("HTTPS_PROXY")
 
@@ -856,6 +856,8 @@ func main() {
 			log.Printf("[INFO] Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
 		}
 	}
+
+	client.Timeout = 10 * time.Second
 
 	fullUrl := fmt.Sprintf("%s/api/v1/workflows/queue", baseUrl)
 	req, err := http.NewRequest(

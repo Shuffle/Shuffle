@@ -275,7 +275,6 @@ const AppCreator = (defaultprops) => {
   const [urlPathQueries, setUrlPathQueries] = useState([]);
   const [update, setUpdate] = useState("");
   const [urlPathParameters] = useState([]);
-  const [firstrequest, setFirstrequest] = React.useState(true);
   const [basedata, setBasedata] = React.useState({});
   const [actions, setActions] = useState([]);
   const [filteredActions, setFilteredActions] = useState([]);
@@ -343,16 +342,13 @@ const AppCreator = (defaultprops) => {
     window.location.host === "shuffler.io";
 
   useEffect(() => {
-    if (firstrequest) {
-      setFirstrequest(false);
-      if (window.location.pathname.includes("apps/edit")) {
-        setIsEditing(true);
-        handleEditApp();
-      } else {
-        checkQuery();
-      }
-    }
-  });
+		if (window.location.pathname.includes("apps/edit")) {
+			setIsEditing(true);
+			handleEditApp();
+		} else {
+			checkQuery();
+		}
+  }, []);
 
   const handleEditApp = () => {
     fetch(globalUrl + "/api/v1/apps/" + props.match.params.appid + "/config", {
@@ -1635,6 +1631,7 @@ const AppCreator = (defaultprops) => {
 			if (urlParams !== undefined && urlParams !== null && urlParams.has("id")) {
 				data.id = urlParams.get("id")
 			}
+
       //id: props.match.params.appid,
 		}
 
@@ -5267,7 +5264,7 @@ const AppCreator = (defaultprops) => {
   );
 
   const loadedCheck =
-    isLoaded && isAppLoaded && !firstrequest ? (
+    isLoaded && isAppLoaded ? (
       <div>
         <div style={bodyDivStyle}>{landingpageDataBrowser}</div>
         {newActionModal}

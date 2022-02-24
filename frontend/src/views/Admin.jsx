@@ -3185,7 +3185,7 @@ const Admin = (props) => {
                   }
 
                   return (
-                    <ListItem key={index} style={{ backgroundColor: bgColor }}>
+                    <ListItem key={index} style={{ backgroundColor: bgColor, maxHeight: 100, overflow: "hidden",}}>
                       <ListItemText
                         style={{
                           maxWidth: 225,

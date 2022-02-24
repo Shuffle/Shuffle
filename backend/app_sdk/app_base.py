@@ -39,8 +39,16 @@ for key, value in standard_filter_manager.filters.items():
 
 @shuffle_filters.register
 def plus(a, b):
-    a = int(a)
-    b = int(b)
+    try:
+        a = int(a)
+    except:
+        a = 0
+
+    try:
+        b = int(b)
+    except:
+        b = 0
+
     return standard_filter_manager.filters["plus"](a, b)
 
 @shuffle_filters.register
@@ -274,11 +282,42 @@ class AppBase:
         self.logger.info(f"[DEBUG] Before last stream result")
         url = "%s%s" % (self.base_url, stream_path)
         self.logger.info("[INFO] URL FOR RESULT (URL): %s" % url)
+
+        # FIXME: Adding retries here.
         try:
-            ret = requests.post(url, headers=headers, json=action_result)
-            #self.logger.info(f"[DEBUG] Result: {ret.status_code}")
-            #if ret.status_code != 200:
-            #    self.logger.info(f"[DEBUG] Shuffle Response: {ret.text}")
+            finished = False
+            for i in range (0, 5):
+                try:
+                    ret = requests.post(url, headers=headers, json=action_result, timeout=10)
+
+                    self.logger.info(f"[DEBUG] Result: {ret.status_code} (break on 200)")
+                    if ret.status_code == 200 or ret.status_code == 201:
+                        finished = True
+                        break
+                    else:
+                        self.logger.info(f"[DEBUG] RESP: {ret.text}")
+
+                except (requests.exceptions.RequestException, TimeoutError) as e:
+                    time.sleep(5)
+                    continue
+                except requests.exceptions.ConnectionError as e:
+                    time.sleep(5)
+                    continue
+                except http.client.RemoteDisconnected as e:
+                    time.sleep(5)
+                    continue
+                except urllib3.exceptions.ProtocolError as e:
+                    time.sleep(5)
+                    continue
+
+                time.sleep(5)
+
+            if not finished:
+                # Not sure why this would work tho :)
+                action_result["status"] = "FAILURE"
+                action_result["result"] = f"POST error: {e}"
+                self.logger.info(f"[DEBUG] Before typeerror stream result: {e}")
+                ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result)
         
             self.logger.info(f"""[DEBUG] Successful request result request: Status= {ret.status_code} & Response= {ret.text}. Action status: {action_result["status"]}""")
         except requests.exceptions.ConnectionError as e:
@@ -2445,7 +2484,7 @@ class AppBase:
         # THE START IS ACTUALLY RIGHT HERE :O
         # Checks whether conditions are met, otherwise set 
         branchcheck, tmpresult = check_branch_conditions(action, fullexecution, self)
-        if isinstance(tmpresult, object) or isinstance(tmpresult, list):
+        if isinstance(tmpresult, object) or isinstance(tmpresult, list) or isinstance(tmpresult, dict):
             self.logger.info("[DEBUG] Fixing branch return as object -> string")
             try:
                 #tmpresult = tmpresult.replace("'", "\"")
@@ -2453,19 +2492,14 @@ class AppBase:
             except json.decoder.JSONDecodeError as e:
                 self.logger.info(f"[WARNING] Failed condition parsing {tmpresult} to string")
 
+        # IF branches fail: Exit!
         if not branchcheck:
             self.logger.info("Failed one or more branch conditions.")
             self.action_result["result"] = tmpresult
             self.action_result["status"] = "SKIPPED"
-            try:
-                ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=self.action_result)
-                self.logger.info("Result: %d" % ret.status_code)
-                if ret.status_code != 200:
-                    self.logger.info(ret.text)
-            except requests.exceptions.ConnectionError as e:
-                self.logger.exception(e)
+            self.action_result["completed_at"] = int(time.time())
 
-            self.logger.info("\n\n[DEBUG] RETURNING BECAUSE A BRANCH FAILED: %s\n\n" % tmpresult)
+            self.send_result(self.action_result, headers, stream_path)
             return
 
         # Replace name cus there might be issues
