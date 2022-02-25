@@ -37,37 +37,37 @@ shuffle_filters = FilterManager()
 for key, value in standard_filter_manager.filters.items():
     shuffle_filters.filters[key] = value
 
-@shuffle_filters.register
-def plus(a, b):
-    try:
-        a = int(a)
-    except:
-        a = 0
-
-    try:
-        b = int(b)
-    except:
-        b = 0
-
-    return standard_filter_manager.filters["plus"](a, b)
-
-@shuffle_filters.register
-def minus(a, b):
-    a = int(a)
-    b = int(b)
-    return standard_filter_manager.filters["minus"](a, b)
-
-@shuffle_filters.register
-def multiply(a, b):
-    a = int(a)
-    b = int(b)
-    return standard_filter_manager.filters["multiply"](a, b)
-
-@shuffle_filters.register
-def divide(a, b):
-    a = int(a)
-    b = int(b)
-    return standard_filter_manager.filters["divide"](a, b)
+#@shuffle_filters.register
+#def plus(a, b):
+#    try:
+#        a = int(a)
+#    except:
+#        a = 0
+#
+#    try:
+#        b = int(b)
+#    except:
+#        b = 0
+#
+#    return standard_filter_manager.filters["plus"](a, b)
+#
+#@shuffle_filters.register
+#def minus(a, b):
+#    a = int(a)
+#    b = int(b)
+#    return standard_filter_manager.filters["minus"](a, b)
+#
+#@shuffle_filters.register
+#def multiply(a, b):
+#    a = int(a)
+#    b = int(b)
+#    return standard_filter_manager.filters["multiply"](a, b)
+#
+#@shuffle_filters.register
+#def divide(a, b):
+#    a = int(a)
+#    b = int(b)
+#    return standard_filter_manager.filters["divide"](a, b)
 
 @shuffle_filters.register
 def md5(a):
