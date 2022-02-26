@@ -89,12 +89,18 @@ def md5_base64(a):
 @shuffle_filters.register
 def base64_encode(a):
     a = str(a)
-    return base64.b64encode(a.encode('utf-8')).decode()
+    try:
+        return base64.b64encode(a.encode('utf-8')).decode()
+    except:
+        return base64.b64encode(a).decode()
 
 @shuffle_filters.register
 def base64_decode(a):
     a = str(a)
-    return base64.b64decode(a).decode()
+    try:
+        return base64.b64decode(a).decode()
+    except:
+        return base64.b64decode(a)
 
 #print(standard_filter_manager.filters)
 #print(shuffle_filters.filters)
@@ -124,9 +130,6 @@ class AppBase:
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         ch.setFormatter(formatter)
         logger.addHandler(ch)
-
-
-
 
         self.redis=redis
         self.console_logger = logger if logger is not None else logging.getLogger("AppBaseLogger")
@@ -1073,6 +1076,7 @@ class AppBase:
             #return value.json()
             return {"success": False}
 
+    # Wrapper for set_files
     def set_file(self, infiles):
         return self.set_files(infiles)
 
@@ -2136,7 +2140,11 @@ class AppBase:
             except:
                 self.logger.info("Error in initial replacement of escaped dollar!")
 
-            #self.logger.info("POST input value: %s" % parameter["value"])
+            # Basic fix in case variant isn't set
+            try:
+                self.logger.info("[DEBUG] Parameter variant: %s" % parameter["variant"])
+            except:
+                parameter["variant"] = "STATIC_VALUE"
 
             # Regex to find all the things
             if parameter["variant"] == "STATIC_VALUE":
