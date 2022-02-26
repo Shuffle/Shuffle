@@ -303,10 +303,18 @@ class AppBase:
             if len(action_result["action"]["parameters"]) == 0:
                 action_result["action"]["parameters"] = []
 
-            action_result["action"]["parameters"].append({
-                "name": "shuffle_action_logs",
-                "value": log_contents,
-            })
+            param_found = False
+            for param in action_result["action"]["parameters"]:
+                if param["name"] == "shuffle_action_logs": 
+                    param_found = True
+                    break
+
+            if not param_found:
+                action_result["action"]["parameters"].append({
+                    "name": "shuffle_action_logs",
+                    "value": log_contents,
+                })
+
         except Exception as e:
             print(f"Failed adding parameter: {e}") 
 

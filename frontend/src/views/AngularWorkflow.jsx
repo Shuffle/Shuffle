@@ -12141,6 +12141,45 @@ const parsedExecutionArgument = () => {
     validate.result = JSON.parse(validate.result);
   }
 
+	const AppResultVariable = ({data}) => {
+		const [open, setOpen] = React.useState(false)
+		const showVariable = data.value.length < 60
+		console.log("Value: ", data.value)
+
+		return (
+			<div style={{maxWidth: 600, overflowX: "hidden", }}>
+        <IconButton
+					style={{
+						marginBottom: 0, marginTop: 5, cursor: "pointer", 
+					}}
+					onClick={() => {
+						if (!showVariable) {
+							setOpen(!open)
+						}
+					}}
+				>
+					<Typography
+						variant="body1"
+						style={{}}
+					>
+						<b>{data.name}</b>: {showVariable ? data.value : null}
+					</Typography>
+				</IconButton>
+				{open ? 
+					<Typography
+						variant="body2"
+						style={{
+							whiteSpace: 'pre-line',
+						}}
+						color="textSecondary"
+					>
+						{data.value}
+					</Typography>
+				: null}
+			</div>
+		)
+	}
+
   var draggingDisabled = false;
   const codePopoutModal = !codeModalOpen ? null : (
       <Dialog
@@ -12374,7 +12413,7 @@ const parsedExecutionArgument = () => {
                   variant="h6"
                   style={{ marginBottom: 0, marginTop: 0 }}
                 >
-                  Variables
+                  Variables <span style={{fontSize: 10}}>(click to expand)</span>
                 </Typography>
                 {selectedResult.action.parameters.map((data, index) => {
                   if (data.value.length === 0) {
@@ -12390,14 +12429,7 @@ const parsedExecutionArgument = () => {
                   }
 
                   return (
-                    <div key={index} style={{}}>
-                      <Typography
-                        variant="body1"
-                        style={{ marginBottom: 0, marginTop: 5 }}
-                      >
-                        <b>{data.name}</b>: {data.value}
-                      </Typography>
-                    </div>
+										<AppResultVariable key={index} data={data}/>
                   );
                 })}
               </div>
