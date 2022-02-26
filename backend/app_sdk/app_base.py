@@ -15,6 +15,7 @@ import requests
 import http.client
 import urllib.parse
 import jinja2 
+from io import StringIO as StringBuffer
 from io import BytesIO
 from liquid import Liquid, defaults
 
@@ -118,6 +119,15 @@ class AppBase:
 
     def __init__(self, redis=None, logger=None, console_logger=None):#, docker_client=None):
         self.logger = logger if logger is not None else logging.getLogger("AppBaseLogger")
+        self.log_capture_string = StringBuffer()
+        ch = logging.StreamHandler(self.log_capture_string)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        ch.setFormatter(formatter)
+        logger.addHandler(ch)
+
+
+
+
         self.redis=redis
         self.console_logger = logger if logger is not None else logging.getLogger("AppBaseLogger")
 
@@ -282,6 +292,20 @@ class AppBase:
         self.logger.info(f"[DEBUG] Before last stream result")
         url = "%s%s" % (self.base_url, stream_path)
         self.logger.info("[INFO] URL FOR RESULT (URL): %s" % url)
+
+        try:
+            log_contents = self.log_capture_string.getvalue()
+            #print("RESULTS: %s" % log_contents)
+            self.logger.info("[WARNING] Got logs of length {len(log_contents)}")
+            if len(action_result["action"]["parameters"]) == 0:
+                action_result["action"]["parameters"] = []
+
+            action_result["action"]["parameters"].append({
+                "name": "shuffle_action_logs",
+                "value": log_contents,
+            })
+        except Exception as e:
+            print(f"Failed adding parameter: {e}") 
 
         # FIXME: Adding retries here.
         try:
@@ -2889,6 +2913,13 @@ class AppBase:
                                 #self.logger.info("[DEBUG] Post return: %s" % value)
 
                                 #self.logger.info("POST data value: %s" % value)
+
+                                try:
+                                    if str(value).startswith("b'") and str(value).endswith("'"):
+                                        value = value[2:-1]
+                                except Exception as e:
+                                    print(f"Value rawbytes Exception: {e}")
+
                                 params[parameter["name"]] = value
                                 multi_parameters[parameter["name"]] = value 
 
@@ -3161,6 +3192,11 @@ class AppBase:
 
         # Send the result :)
         self.send_result(self.action_result, headers, stream_path)
+        try:
+            self.log_capture_string.close()
+        except:
+            pass
+
         return
 
     @classmethod
