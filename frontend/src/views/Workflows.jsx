@@ -930,7 +930,7 @@ const Workflows = (props) => {
 		//workflows[0].usecase_ids = ["Correlate tickets"]
 
 		if (workflows !== undefined && workflows !== null) {
-			const newcategories = []
+			var newcategories = []
 			for (var key in categorydata) {
 				var category = categorydata[key]
 				category.matches = []
@@ -2493,7 +2493,7 @@ const Workflows = (props) => {
       				      <em>None</em>
       				    </MenuItem>
 									{usecases.map((usecase, index) => {
-										console.log(usecase)
+										//console.log(usecase)
 										return (
 											<span key={index}>
 												<ListSubheader
@@ -2714,7 +2714,7 @@ const Workflows = (props) => {
       {isCloud ? null : (
         <Tooltip color="primary" title={"Import workflows to Shuffle"} placement="top">
           <Button
-            color="primary"
+            color="secondary"
             style={{}}
             variant="text"
             onClick={() => setLoadWorkflowsModalOpen(true)}
@@ -2985,7 +2985,7 @@ const Workflows = (props) => {
 						{usecases !== null && usecases !== undefined && usecases.length > 0 ? 
 							<div style={{ display: "flex",}}>
 								{usecases.map((usecase, index) => {
-									console.log(usecase)
+									//console.log(usecase)
 									return (
 										<Paper
 											key={usecase.name}

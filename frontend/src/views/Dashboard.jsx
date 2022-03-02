@@ -9,11 +9,20 @@ import theme from '../theme';
 import { useAlert } from "react-alert";
 
 import {
+	Tooltip,
+	IconButton,
 	Typography,
 	Grid,
 	Paper,
 	Chip,
 } from "@material-ui/core";
+
+import {
+  Close as CloseIcon,
+	DoneAll as DoneAllIcon,
+} from "@material-ui/icons";
+
+import WorkflowPaper from "../components/WorkflowPaper.jsx"
 
 // core components
 //import {
@@ -41,267 +50,9 @@ import {
 	TreeMapRect,
 } from 'reaviz';
 
-const categorydata = [
-    {
-        "name": "1. Collect & Distribute",
-        "list": [
-            {
-                "name": "2-way Ticket synchronization",
-                "items": {}
-            },
-            {
-                "name": "Email management",
-                "items": {
-                    "name": "Release a quarantined message",
-                    "items": {}
-                }
-            },
-            {
-                "name": "EDR to ticket",
-                "items": {
-                    "name": "Get host information",
-                    "items": {}
-                }
-            },
-            {
-                "name": "SIEM to ticket",
-                "items": {}
-            },
-            {
-                "name": "ChatOps",
-                "items": {}
-            },
-            {
-                "name": "Threat Intel received",
-                "items": {}
-            },
-            {
-                "name": "Domain investigation with LetsEncrypt",
-                "items": {}
-            },
-            {
-                "name": "Botnet tracker",
-                "items": {}
-            },
-            {
-                "name": "Get running containers",
-                "items": {}
-            },
-            {
-                "name": "Assign tickets",
-                "items": {}
-            },
-            {
-                "name": "Firewall alerts",
-                "items": {
-                    "name": "URL filtering",
-                    "items": {}
-                }
-            },
-            {
-                "name": "IDS/IPS alerts",
-                "items": {
-                    "name": "Manage policies",
-                    "items": {}
-                }
-            },
-            {
-                "name": "Deduplicate information",
-                "items": {}
-            },
-            {
-                "name": "Correlate information",
-                "items": {}
-            }
-        ]
-    },
-    {
-        "name": "3. Detect",
-        "list": [
-            {
-                "name": "Search SIEM (Sigma)",
-                "items": {
-                    "name": "Endpoint",
-                    "items": {}
-                }
-            },
-            {
-                "name": "Search EDR (OSQuery)",
-                "items": {}
-            },
-            {
-                "name": "Search emails (Phish)",
-                "items": {
-                    "name": "Check headers and IOCs",
-                    "items": {}
-                }
-            },
-            {
-                "name": "Search IOCs (ioc-finder)",
-                "items": {}
-            },
-            {
-                "name": "Search files (Yara)",
-                "items": {}
-            },
-            {
-                "name": "Correlate tickets",
-                "items": {}
-            },
-            {
-                "name": "Honeypot access",
-                "items": {
-                    "name": "...",
-                    "items": {}
-                }
-            }
-        ]
-    },
-    {
-        "name": "Verify",
-        "list": [
-            {
-                "name": "Discover vulnerabilities",
-                "items": {}
-            },
-            {
-                "name": "Discover assets",
-                "items": {}
-            },
-            {
-                "name": "Ensure policies are followed",
-                "items": {}
-            },
-            {
-                "name": "Find Inactive users",
-                "items": {}
-            },
-            {
-                "name": "Ensure access rights match HR systems",
-                "items": {}
-            },
-            {
-                "name": "Ensure onboarding is followed",
-                "items": {}
-            },
-            {
-                "name": "Third party apps in SaaS",
-                "items": {}
-            },
-            {
-                "name": "Devices used for your cloud account",
-                "items": {}
-            },
-            {
-                "name": "Too much access in GCP/Azure/AWS/ other clouds",
-                "items": {}
-            },
-            {
-                "name": "Certificate validation",
-                "items": {}
-            },
-            {
-                "name": "Monitor new DNS entries for domain with passive DNS",
-                "items": {}
-            },
-            {
-                "name": "Monitor and track password dumps",
-                "items": {}
-            },
-            {
-                "name": "Monitor for mentions of domain on darknet sites",
-                "items": {}
-            },
-            {
-                "name": "Reporting",
-                "items": {
-                    "name": "Monthly reports",
-                    "items": {
-                        "name": "...",
-                        "items": {}
-                    }
-                }
-            }
-        ]
-    },
-    {
-        "name": "4. Respond",
-        "list": [
-            {
-                "name": "Eradicate malware",
-                "items": {}
-            },
-            {
-                "name": "Quarantine host(s)",
-                "items": {}
-            },
-            {
-                "name": "Trigger scans",
-                "items": {}
-            },
-            {
-                "name": "Update indicators (FW, EDR, SIEM...)",
-                "items": {}
-            },
-            {
-                "name": "Autoblock activity when threat intel is received",
-                "items": {}
-            },
-            {
-                "name": "Lock/Delete/Reset account",
-                "items": {}
-            },
-            {
-                "name": "Lock vault",
-                "items": {}
-            },
-            {
-                "name": "Increase authentication",
-                "items": {}
-            },
-            {
-                "name": "Trigger scans",
-                "items": {}
-            },
-            {
-                "name": "Get policies from assets",
-                "items": {}
-            }
-        ]
-    },
-    {
-        "name": "2. Enrich",
-        "list": [
-            {
-                "name": "Internal Enrichment",
-                "items": {
-                    "name": "...",
-                    "items": {}
-                }
-            },
-            {
-                "name": "External historical Enrichment",
-                "items": {
-                    "name": "...",
-                    "items": {}
-                }
-            },
-            {
-                "name": "Realtime",
-                "items": {
-                    "name": "Analyze screenshots",
-                    "items": {}
-                }
-            },
-            {
-                "name": "Ticketing webhook verification",
-                "items": {}
-            }
-        ]
-    }
-]
-
-const UsecaseListComponent = ({keys}) => {
+const UsecaseListComponent = ({keys, isCloud}) => {
+	const [expandedIndex, setExpandedIndex] = useState(-1);
+	const [expandedItem, setExpandedItem] = useState(-1);
 	if (keys === undefined || keys === null || keys.length === 0) {
 		return null
 	}
@@ -322,14 +73,112 @@ const UsecaseListComponent = ({keys}) => {
 						</Typography>
       			<Grid container spacing={3} style={{marginTop: 25}}>
 							{usecase.list.map((subcase, subindex) => {
+								if (subcase.matches === undefined || subcase.matches === null) {
+									subcase.matches = []
+								}
+
+								const selectedItem = subindex === expandedItem && index === expandedIndex
+								const finished = subcase.matches.length > 0
+								//const backgroundColor = selectedItem ? "inherit" : finished ?  "inherit" : usecase.color
+								const backgroundColor = "inherit"
+								const itemBorder = `${selectedItem ? "3px" : expandedItem >= 0 ? "0px" : "1px"} solid ${usecase.color}`
+
 								return (
-      						<Grid item xs={4} key={subindex} style={{minHeight: 110,}}>
-										<Paper style={{padding: "30px 30px 20px 30px", minHeight: 110, cursor: "pointer", border: `1px solid ${usecase.color}`}} onClick={() => {
-											console.log("Clicked: ", subcase.name)
+      						<Grid item xs={selectedItem ? 12 : 4} key={subindex} style={{minHeight: 110,}} onClick={() => {
+										if (selectedItem) {
+										} else {
+											setExpandedIndex(index)
+											setExpandedItem(subindex)
+										}
+									}}>
+										<Paper style={{padding: "30px 30px 30px 30px", minHeight: 75, cursor: !selectedItem ? "pointer" : "default", border: itemBorder, backgroundColor: backgroundColor,}} onClick={() => {
+											console.log("Clicked: ", subcase)
 										}}>
-											<Typography variant="body1">
-												<b>{subcase.name}</b>
-											</Typography>
+											{!selectedItem ? 
+												<div style={{textAlign: "left", position: "relative",}}>
+													<Typography variant="h6">
+														<b>{subcase.name}</b>
+													</Typography>
+													{finished ? 
+														<Tooltip
+															title="A workflow has been assigned"
+															placement="top"
+														>
+															<IconButton
+																style={{ position: "absolute", top: -20, right: -20}}
+																onClick={(e) => {
+																}}
+															>
+																<DoneAllIcon style={{ color: usecase.color }} />
+															</IconButton>
+														</Tooltip>
+													: null}
+												</div>
+											: 
+												<div style={{textAlign: "left", position: "relative",}}>
+													<Typography variant="h6">
+														<b>{subcase.name}</b>
+													</Typography>
+													<Typography variant="body2">
+														Description: {subcase.description}
+													</Typography>
+          								<Tooltip
+          								  title="Close window"
+          								  placement="top"
+          								  style={{ zIndex: 10011 }}
+          								>
+          								  <IconButton
+          								    style={{ position: "absolute", top: 0, right: 0}}
+          								    onClick={(e) => {
+																setExpandedItem(-1)
+																setExpandedIndex(-1)
+          								    }}
+          								  >
+          								    <CloseIcon style={{ color: "white" }} />
+          								  </IconButton>
+          								</Tooltip>
+													<div style={{marginTop: 25, display: "flex", minHeight: 400, maxHeight: 400, }}>
+														<img
+															alt={subcase.name}
+															src={"/images/detectionframework.png"}
+															style={{
+																flex: 1,
+																height: 400,
+																width: 400, 
+																borderRadius: theme.palette.borderRadius,
+																border: "1px solid rgba(255,255,255,0.3)",
+															}}
+														/>
+														<div style={{flex: 1, marginLeft: 10, textAlign: "center",}}>
+															<Typography variant="h6">
+																Your workflow{subcase.matches.length === 1 ? "" : "s"} ({subcase.matches.length})
+															</Typography>
+															{subcase.matches.length > 0 ? 
+																<Grid container xs={3} style={{maxWidth: 325, margin: "auto", marginTop: 10, itemAlign: "center", }}>
+																	{subcase.matches.map((workflow, workflowindex) => {
+																		return (
+																			<Grid index={workflowindex} xs={12}>
+																				<WorkflowPaper key={workflowindex} data={workflow} />
+																			</Grid>
+																		)
+																	})}
+																</Grid>
+															: 
+																<div>
+																	<Typography variant="body1" color="textSecondary">
+																		No workflow selected yet.
+																	</Typography>
+																</div>
+															}
+															{isCloud !== false ? 
+																<Typography variant="h6">
+																	Public workflows	
+																</Typography>
+															: null}
+														</div>
+													</div>
+												</div>
+											}
 										</Paper>
       						</Grid>
 								)
@@ -403,7 +252,6 @@ const RadialChart = ({keys, setSelectedCategory}) => {
 					<RadialAreaSeries 
 						interpolation="smooth"
 						colorScheme={(colorInput) => {
-							console.log("Color: ", colorInput)
 							return '#f86a3e'
 						}}
 						animated={false}
@@ -473,7 +321,7 @@ const RadialChart = ({keys, setSelectedCategory}) => {
 // This is the start of a dashboard that can be used.
 // What data do we fill in here? Idk
 const Dashboard = (props) => {
-  const { globalUrl } = props;
+  const { globalUrl, isLoggedIn } = props;
   const alert = useAlert();
   const [bigChartData, setBgChartData] = useState("data1");
   const [dayAmount, setDayAmount] = useState(7);
@@ -487,6 +335,44 @@ const Dashboard = (props) => {
   const [selectedUsecaseCategory, setSelectedUsecaseCategory] = useState("");
   const [selectedUsecases, setSelectedUsecases] = useState([]);
   const [usecases, setUsecases] = useState([]);
+  const [workflows, setWorkflows] = useState([]);
+
+  const isCloud =
+    window.location.host === "localhost:3002" ||
+    window.location.host === "shuffler.io";
+
+  const getAvailableWorkflows = () => {
+    fetch(globalUrl + "/api/v1/workflows", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+		.then((response) => {
+			if (response.status !== 200) {
+				fetchUsecases()
+				console.log("Status not 200 for workflows :O!: ", response.status);
+				return;
+			}
+
+			return response.json();
+		})
+		.then((responseJson) => {
+			fetchUsecases(responseJson)
+
+			console.log("Resp: ", responseJson)
+			if (responseJson !== undefined) {
+				//setWorkflows(responseJson);
+				//fetchUsecases(responseJson)
+			}
+		})
+		.catch((error) => {
+			fetchUsecases()
+			//alert.error(error.toString());
+		});
+	}
 
 	useEffect(() => {
 		console.log("Changed: ", selectedUsecaseCategory)
@@ -521,7 +407,7 @@ const Dashboard = (props) => {
 		setTreeKeys(treeCategories)
 	}
 
-  const fetchUsecases = () => {
+  const fetchUsecases = (workflows) => {
     fetch(globalUrl + "/api/v1/workflows/usecases", {
       method: "GET",
       headers: {
@@ -540,9 +426,62 @@ const Dashboard = (props) => {
       .then((responseJson) => {
 				if (responseJson.success !== false) {
 					console.log("Usecases: ", responseJson)
-					handleKeysetting(responseJson)
-					setUsecases(responseJson)
-  				setSelectedUsecases(responseJson)
+					if (workflows !== undefined && workflows !== null && workflows.length > 0) {
+						console.log("Got workflows: ", workflows)
+						var categorydata = responseJson
+
+						var newcategories = []
+						for (var key in categorydata) {
+							var category = categorydata[key]
+							category.matches = []
+
+							for (var subcategorykey in category.list) {
+								var subcategory = category.list[subcategorykey]
+								subcategory.matches = []
+
+								for (var workflowkey in workflows) {
+									const workflow = workflows[workflowkey]
+
+									if (workflow.usecase_ids !== undefined && workflow.usecase_ids !== null) {
+										for (var usecasekey in workflow.usecase_ids) {
+											if (workflow.usecase_ids[usecasekey].toLowerCase() === subcategory.name.toLowerCase()) {
+												console.log("Got match: ", workflow.usecase_ids[usecasekey])
+
+												category.matches.push({
+													"workflow": workflow.id,
+													"category": subcategory.name,
+												})
+
+												subcategory.matches.push(workflow)
+												break
+											}
+										}
+									}
+
+									if (subcategory.matches.length > 0) {
+										break
+									}
+								}
+							}
+
+							newcategories.push(category)
+						} 
+
+						console.log("Categories: ", newcategories)
+						if (newcategories !== undefined && newcategories !== null && newcategories.length > 0) {
+							handleKeysetting(newcategories)
+							setUsecases(newcategories)
+							setSelectedUsecases(newcategories)
+						} else {
+							handleKeysetting(responseJson)
+							setUsecases(responseJson)
+							setSelectedUsecases(responseJson)
+						}
+					} else {
+						handleKeysetting(responseJson)
+						setUsecases(responseJson)
+						setSelectedUsecases(responseJson)
+					}
 				}
       })
       .catch((error) => {
@@ -552,7 +491,8 @@ const Dashboard = (props) => {
   };
 
   useEffect(() => {
-		fetchUsecases()
+  	getAvailableWorkflows() 
+		//fetchUsecases()
   }, []);
 
   const fetchdata = (stats_id) => {
@@ -845,7 +785,7 @@ const Dashboard = (props) => {
 				</div>
 			: null}
 
-			<UsecaseListComponent keys={selectedUsecases} />
+			<UsecaseListComponent keys={selectedUsecases} isCloud={isCloud} />
 
 			{treeKeys.length > 0 ? 
 				<TreeChart keys={treeKeys} />
