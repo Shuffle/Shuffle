@@ -12,6 +12,7 @@ import NestedMenuItem from "material-ui-nested-menu-item";
 import ReactMarkdown from "react-markdown";
 import { useAlert } from "react-alert";
 import theme from '../theme';
+import { isMobile } from "react-device-detect" 
 
 import {
 	Zoom,
@@ -46,6 +47,7 @@ import {
   Checkbox,
   Breadcrumbs,
   CircularProgress,
+	SwipeableDrawer,
   Switch,
 	Chip,
 } from "@material-ui/core";
@@ -254,8 +256,8 @@ const AngularWorkflow = (defaultprops) => {
   const [userSettings, setUserSettings] = React.useState({});
   const [subworkflow, setSubworkflow] = React.useState({});
   const [subworkflowStartnode, setSubworkflowStartnode] = React.useState("");
-  const [leftViewOpen, setLeftViewOpen] = React.useState(true);
-  const [leftBarSize, setLeftBarSize] = React.useState(350);
+  const [leftViewOpen, setLeftViewOpen] = React.useState(isMobile ? false : true);
+  const [leftBarSize, setLeftBarSize] = React.useState(isMobile ? 0 : 350);
   const [creatorProfile, setCreatorProfile] = React.useState({});
   const [appGroup, setAppGroup] = React.useState([]);
   const [triggerGroup, setTriggerGroup] = React.useState([]);
@@ -369,6 +371,7 @@ const AngularWorkflow = (defaultprops) => {
   const triggerEnvironments = isCloud ? ["cloud"] : ["onprem", "cloud"];
   const unloadText = "Are you sure you want to leave without saving (CTRL+S)?";
   const classes = useStyles();
+	const cytoscapeWidth = isMobile ? bodyWidth - leftBarSize : bodyWidth - leftBarSize - 25
 
 
   const [elements, setElements] = useState([]);
@@ -3551,152 +3554,6 @@ const AngularWorkflow = (defaultprops) => {
     window.location.pathname = "/workflows/" + props.match.params.key;
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (firstrequest) {
-      setFirstrequest(false);
-      getWorkflow(props.match.params.key, {});
-      getApps();
-      getAppAuthentication();
-      getEnvironments();
-      getWorkflowExecution(props.match.params.key, "");
-      getAvailableWorkflows(-1);
-      getSettings();
-
-      const cursearch =
-        typeof window === "undefined" || window.location === undefined
-          ? ""
-          : window.location.search;
-
-			// FIXME: Don't check specific one here
-			const tmpExec = new URLSearchParams(cursearch).get("execution_highlight");
-      if (
-        tmpExec !== undefined &&
-        tmpExec !== null &&
-        tmpExec === "executions"
-      ) {
-        setExecutionModalOpen(true)
-        const newitem = removeParam("execution_highlight", cursearch);
-				navigate(curpath + newitem)
-        //props.history.push(curpath + newitem);
-			}
-
-      const tmpView = new URLSearchParams(cursearch).get("view");
-      if (
-        tmpView !== undefined &&
-        tmpView !== null &&
-        tmpView === "executions"
-      ) {
-        setExecutionModalOpen(true);
-
-        const newitem = removeParam("view", cursearch);
-				navigate(curpath + newitem)
-				//navigate(`?execution_highlight=${parsed_url}`)
-        //props.history.push(curpath + newitem);
-      }
-      return;
-    }
-
-    // App length necessary cus of cy initialization
-    if (
-			// First load - gets the workflow
-      elements.length === 0 &&
-      workflow.actions !== undefined &&
-      !graphSetup &&
-      Object.getOwnPropertyNames(workflow).length > 0
-    ) {
-
-      setGraphSetup(true);
-      setupGraph();
-			console.log("In graph setup")
-    } else if (
-			// 2nd load - configures cytoscape
-			//
-      !established &&
-      cy !== undefined &&
-      ((apps !== null &&
-      apps !== undefined &&
-      apps.length > 0) || workflow.public === true) &&
-      Object.getOwnPropertyNames(workflow).length > 0 &&
-      authLoaded
-    ) {
-			
-			console.log("In POST graph setup!")
-      //This part has to load LAST, as it's kind of not async.
-      //This means we need everything else to happen first.
-
-      setEstablished(true);
-      // Validate if the node is just a node lol
-      cy.edgehandles({
-        handleNodes: (el) => {
-					if (el.isNode() &&
-					!el.data("isButton") &&
-					!el.data("isDescriptor") &&
-					!el.data("isSuggestion") &&
-					el.data("type") !== "COMMENT") {
-							return true 
-					}
-
-					return false
-				},
-        preview: true,
-        toggleOffOnLeave: true,
-        loopAllowed: function (node) {
-          return false;
-        },
-      });
-
-      cy.fit(null, 200);
-
-      cy.on("boxselect", "node", (e) => {
-        if (e.target.data("isButton") || e.target.data("isDescriptor") || e.target.data("isSuggestion")) {
-          e.target.unselect();
-        }
-
-        e.target.addClass("selected");
-      });
-
-      cy.on("boxstart", (e) => {
-        console.log("START");
-        cy.removeListener("select");
-      });
-
-      cy.on("boxend", (e) => {
-				console.log("END: ", cy)
-				var cydata = cy.$(":selected").jsons();
-				if (cydata !== undefined && cydata !== null && cydata.length > 0) {
-        	alert.success(`Selected ${cydata.length} element(s). CTRL+C to copy them.`);
-				}
-      });
-
-      cy.on("select", "node", (e) => {
-      	onNodeSelect(e, appAuthentication);
-      });
-      cy.on("select", "edge", (e) => onEdgeSelect(e));
-
-      cy.on("unselect", (e) => onUnselect(e));
-
-      cy.on("add", "node", (e) => onNodeAdded(e));
-      cy.on("add", "edge", (e) => onEdgeAdded(e));
-      cy.on("remove", "node", (e) => onNodeRemoved(e));
-      cy.on("remove", "edge", (e) => onEdgeRemoved(e));
-
-      cy.on("mouseover", "edge", (e) => onEdgeHover(e));
-      cy.on("mouseout", "edge", (e) => onEdgeHoverOut(e));
-      cy.on("mouseover", "node", (e) => onNodeHover(e));
-      cy.on("mouseout", "node", (e) => onNodeHoverOut(e));
-
-      // Handles dragging
-      cy.on("drag", "node", (e) => onNodeDrag(e, selectedAction));
-      cy.on("free", "node", (e) => onNodeDragStop(e, selectedAction));
-
-      cy.on("cxttap", "node", (e) => onCtxTap(e));
-
-      document.title = "Workflow - " + workflow.name;
-      registerKeys();
-    }
-  })
-
   const animationDuration = 150;
   const onNodeHoverOut = (event) => {
     const nodedata = event.target.data();
@@ -4377,6 +4234,152 @@ const AngularWorkflow = (defaultprops) => {
 		*/
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  //useEffect(() => {
+    if (firstrequest) {
+      setFirstrequest(false);
+      getWorkflow(props.match.params.key, {});
+      getApps();
+      getAppAuthentication();
+      getEnvironments();
+      getWorkflowExecution(props.match.params.key, "");
+      getAvailableWorkflows(-1);
+      getSettings();
+
+      const cursearch =
+        typeof window === "undefined" || window.location === undefined
+          ? ""
+          : window.location.search;
+
+			// FIXME: Don't check specific one here
+			const tmpExec = new URLSearchParams(cursearch).get("execution_highlight");
+      if (
+        tmpExec !== undefined &&
+        tmpExec !== null &&
+        tmpExec === "executions"
+      ) {
+        setExecutionModalOpen(true)
+        const newitem = removeParam("execution_highlight", cursearch);
+				navigate(curpath + newitem)
+        //props.history.push(curpath + newitem);
+			}
+
+      const tmpView = new URLSearchParams(cursearch).get("view");
+      if (
+        tmpView !== undefined &&
+        tmpView !== null &&
+        tmpView === "executions"
+      ) {
+        setExecutionModalOpen(true);
+
+        const newitem = removeParam("view", cursearch);
+				navigate(curpath + newitem)
+				//navigate(`?execution_highlight=${parsed_url}`)
+        //props.history.push(curpath + newitem);
+      }
+      return;
+    }
+
+    // App length necessary cus of cy initialization
+    if (
+			// First load - gets the workflow
+      elements.length === 0 &&
+      workflow.actions !== undefined &&
+      !graphSetup &&
+      Object.getOwnPropertyNames(workflow).length > 0
+    ) {
+
+      setGraphSetup(true);
+      setupGraph();
+			console.log("In graph setup")
+    } else if (
+			// 2nd load - configures cytoscape
+			//
+      !established &&
+      cy !== undefined &&
+      ((apps !== null &&
+      apps !== undefined &&
+      apps.length > 0) || workflow.public === true) &&
+      Object.getOwnPropertyNames(workflow).length > 0 &&
+      authLoaded
+    ) {
+			
+			console.log("In POST graph setup!")
+      //This part has to load LAST, as it's kind of not async.
+      //This means we need everything else to happen first.
+
+      setEstablished(true);
+      // Validate if the node is just a node lol
+      cy.edgehandles({
+        handleNodes: (el) => {
+					if (el.isNode() &&
+					!el.data("isButton") &&
+					!el.data("isDescriptor") &&
+					!el.data("isSuggestion") &&
+					el.data("type") !== "COMMENT") {
+							return true 
+					}
+
+					return false
+				},
+        preview: true,
+        toggleOffOnLeave: true,
+        loopAllowed: function (node) {
+          return false;
+        },
+      });
+
+      cy.fit(null, 200);
+
+      cy.on("boxselect", "node", (e) => {
+        if (e.target.data("isButton") || e.target.data("isDescriptor") || e.target.data("isSuggestion")) {
+          e.target.unselect();
+        }
+
+        e.target.addClass("selected");
+      });
+
+      cy.on("boxstart", (e) => {
+        console.log("START");
+        cy.removeListener("select");
+      });
+
+      cy.on("boxend", (e) => {
+				console.log("END: ", cy)
+				var cydata = cy.$(":selected").jsons();
+				if (cydata !== undefined && cydata !== null && cydata.length > 0) {
+        	alert.success(`Selected ${cydata.length} element(s). CTRL+C to copy them.`);
+				}
+      });
+
+      cy.on("select", "node", (e) => {
+      	onNodeSelect(e, appAuthentication);
+      });
+      cy.on("select", "edge", (e) => onEdgeSelect(e));
+
+      cy.on("unselect", (e) => onUnselect(e));
+
+      cy.on("add", "node", (e) => onNodeAdded(e));
+      cy.on("add", "edge", (e) => onEdgeAdded(e));
+      cy.on("remove", "node", (e) => onNodeRemoved(e));
+      cy.on("remove", "edge", (e) => onEdgeRemoved(e));
+
+      cy.on("mouseover", "edge", (e) => onEdgeHover(e));
+      cy.on("mouseout", "edge", (e) => onEdgeHoverOut(e));
+      cy.on("mouseover", "node", (e) => onNodeHover(e));
+      cy.on("mouseout", "node", (e) => onNodeHoverOut(e));
+
+      // Handles dragging
+      cy.on("drag", "node", (e) => onNodeDrag(e, selectedAction));
+      cy.on("free", "node", (e) => onNodeDragStop(e, selectedAction));
+
+      cy.on("cxttap", "node", (e) => onCtxTap(e));
+
+      document.title = "Workflow - " + workflow.name;
+      registerKeys();
+    }
+  //})
+
   const stopSchedule = (trigger, triggerindex) => {
     fetch(
       globalUrl +
@@ -4478,15 +4481,16 @@ const AngularWorkflow = (defaultprops) => {
     marginRight: 5,
     display: "flex",
     flexDirection: "column",
-    height: "100%",
+    minHeight: isMobile ? bodyHeight-appBarSize*4 : "100%",
+    maxHeight: isMobile ? bodyHeight-appBarSize*4 : "100%",
   };
 
   const paperAppStyle = {
     borderRadius: theme.palette.borderRadius,
-    minHeight: 100,
-    maxHeight: 100,
-    minWidth: "100%",
-    maxWidth: "100%",
+    minHeight: isMobile ? 50 : 100,
+    maxHeight: isMobile ? 50 : 100,
+    minWidth: isMobile ? 50 : "100%",
+    maxWidth: isMobile ? 50 : "100%",
     marginTop: "5px",
     color: "white",
     backgroundColor: surfaceColor,
@@ -4542,7 +4546,7 @@ const AngularWorkflow = (defaultprops) => {
     const variableScrollStyle = {
       margin: 15,
       overflow: "scroll",
-      height: "66vh",
+      height: isMobile ? "100%" : "66vh",
       overflowX: "auto",
       overflowY: "auto",
       flex: "10",
@@ -4834,8 +4838,8 @@ const AngularWorkflow = (defaultprops) => {
     }
 
     const tabStyle = {
-      maxWidth: leftBarSize / 3,
-      minWidth: leftBarSize / 3,
+      maxWidth: isMobile ? leftBarSize : leftBarSize / 3,
+      minWidth: isMobile ? leftBarSize : leftBarSize / 3,
       flex: 1,
       textTransform: "none",
     };
@@ -4845,12 +4849,14 @@ const AngularWorkflow = (defaultprops) => {
       marginRight: 5,
     };
 
+		const parsedHeight = isMobile ? bodyHeight - appBarSize*4 : bodyHeight - appBarSize - 50
     return (
       <div>
         <div
           style={{
-            minHeight: bodyHeight - appBarSize - 50,
-            maxHeight: bodyHeight - appBarSize - 50,
+            minHeight: parsedHeight, 
+            maxHeight: parsedHeight, 
+						overflow: "hidden",
           }}
         >
           {thisview}
@@ -4861,6 +4867,8 @@ const AngularWorkflow = (defaultprops) => {
           indicatorColor="primary"
           onChange={handleSetTab}
           aria-label="Left sidebar tab"
+					orientation={isMobile ? "vertical" : "horizontal"}
+					style={{}}
         >
           <Tab
             label={
@@ -4868,7 +4876,7 @@ const AngularWorkflow = (defaultprops) => {
                 <Grid item>
                   <AppsIcon style={iconStyle} />
                 </Grid>
-                <Grid item>Apps</Grid>
+                {isMobile ? null : <Grid item>Apps</Grid>}
               </Grid>
             }
             style={tabStyle}
@@ -4879,7 +4887,7 @@ const AngularWorkflow = (defaultprops) => {
                 <Grid item>
                   <ScheduleIcon style={iconStyle} />
                 </Grid>
-                <Grid item>Triggers</Grid>
+                {isMobile ? null : <Grid item>Triggers</Grid>}
               </Grid>
             }
             style={tabStyle}
@@ -4890,7 +4898,7 @@ const AngularWorkflow = (defaultprops) => {
                 <Grid item>
                   <FavoriteBorderIcon style={iconStyle} />
                 </Grid>
-                <Grid item>Variables</Grid>
+                {isMobile ? null : <Grid item>Variables</Grid>}
               </Grid>
             }
             style={tabStyle}
@@ -5003,12 +5011,12 @@ const AngularWorkflow = (defaultprops) => {
           {triggers.map((trigger, index) => {
             var imageline =
               trigger.large_image.length === 0 ? (
-                <img alt="" style={{ width: "80px", pointerEvents: "none" }} />
+                <img alt="" style={{ width: isMobile ? 40 : 80, pointerEvents: "none" }} />
               ) : (
                 <img
                   alt=""
                   src={trigger.large_image}
-                  style={{ width: 80, height: 80, pointerEvents: "none" }}
+                  style={{ width: isMobile ? 40 : 80, height: isMobile ? 40 : 80, pointerEvents: "none" }}
                 />
               );
 
@@ -5031,8 +5039,8 @@ const AngularWorkflow = (defaultprops) => {
                 <Paper square style={paperAppStyle} onClick={() => {}}>
                   <div
                     style={{
-                      marginLeft: "10px",
-                      marginTop: "5px",
+                      marginLeft: isMobile ? 0 : "10px",
+                      marginTop: isMobile ? 10 : "5px",
                       marginBottom: "5px",
                       width: "2px",
                       backgroundColor: color,
@@ -5041,28 +5049,30 @@ const AngularWorkflow = (defaultprops) => {
                   ></div>
                   <Grid
                     container
-                    style={{ margin: "10px 10px 10px 10px", flex: "10" }}
+                    style={{ margin: isMobile ? "10px 0px 0px 0px" : "10px 10px 10px 10px", flex: "10" }}
                   >
                     <Grid item>
                       <ButtonBase>{imageline}</ButtonBase>
                     </Grid>
-                    <Grid
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        marginLeft: "20px",
-                      }}
-                    >
-                      <Grid item style={{ flex: "1" }}>
-                        <h3 style={{ marginBottom: "0px", marginTop: "10px" }}>
-                          {trigger.name}
-                        </h3>
-                      </Grid>
-                      <Grid item style={{ flex: "1" }}>
-                        {trigger.description}
-                      </Grid>
-                    </Grid>
-                  </Grid>
+										{isMobile ? null : 
+											<Grid
+												style={{
+													display: "flex",
+													flexDirection: "column",
+													marginLeft: "20px",
+												}}
+											>
+												<Grid item style={{ flex: "1" }}>
+													<h3 style={{ marginBottom: "0px", marginTop: "10px" }}>
+														{trigger.name}
+													</h3>
+												</Grid>
+												<Grid item style={{ flex: "1" }}>
+													{trigger.description}
+												</Grid>
+											</Grid>
+										}
+									</Grid>
                 </Paper>
               </Draggable>
             );
@@ -5236,8 +5246,8 @@ const AngularWorkflow = (defaultprops) => {
 
   const appScrollStyle = {
     overflow: "scroll",
-    maxHeight: bodyHeight - appBarSize - 55 - 50,
-    minHeight: bodyHeight - appBarSize - 55 - 50,
+    maxHeight: isMobile ? bodyHeight-appBarSize*4 : bodyHeight - appBarSize - 55 - 50,
+    minHeight: isMobile ? bodyHeight-appBarSize*4 : bodyHeight - appBarSize - 55 - 50,
     marginTop: 1,
     overflowY: "auto",
     overflowX: "hidden",
@@ -5245,6 +5255,9 @@ const AngularWorkflow = (defaultprops) => {
 
   const handleAppDrag = (e, app) => {
     const cycontainer = cy.container();
+
+		//console.log("e: ", e)
+		//console.log("Offset: ", cycontainer)
 
     // Chrome lol
     if (
@@ -5437,6 +5450,94 @@ const AngularWorkflow = (defaultprops) => {
             onMouseOut={() => {
               setHover(false);
             }}
+						onClick={() => {
+							if (isMobile) {
+        				newNodeId = uuidv4();
+        				const actionType = "ACTION";
+        				const actionLabel = getNextActionName(app.name);
+        				var parameters = null;
+        				var example = "";
+								var description = ""
+
+        				if (
+        				  app.actions[0].parameters !== null &&
+        				  app.actions[0].parameters.length > 0
+        				) {
+        				  parameters = app.actions[0].parameters;
+        				}
+
+        				if (
+        				  app.actions[0].returns.example !== undefined &&
+        				  app.actions[0].returns.example !== null &&
+        				  app.actions[0].returns.example.length > 0
+        				) {
+        				  example = app.actions[0].returns.example;
+        				}
+
+        				if (
+        				  app.actions[0].description !== undefined &&
+        				  app.actions[0].description !== null &&
+        				  app.actions[0].description.length > 0
+        				) {
+									description = app.actions[0].description
+        				}
+
+        				const parsedEnvironments =
+        				  environments === null || environments === []
+        				    ? "cloud"
+        				    : environments[defaultEnvironmentIndex] === undefined
+        				    ? "cloud"
+        				    : environments[defaultEnvironmentIndex].Name;
+
+      					// activated: app.generated === true ? app.activated === false ? false : true : true,
+        				const newAppData = {
+        				  app_name: app.name,
+        				  app_version: app.app_version,
+        				  app_id: app.id,
+        				  sharing: app.sharing,
+        				  private_id: app.private_id,
+									description: description,
+        				  environment: parsedEnvironments,
+        				  errors: [],
+									finished: false,
+        				  id_: newNodeId,
+        				  _id_: newNodeId,
+        				  id: newNodeId,
+        				  is_valid: true,
+        				  label: actionLabel,
+        				  type: actionType,
+        				  name: app.actions[0].name,
+        				  parameters: parameters,
+        				  isStartNode: false,
+        				  large_image: app.large_image,
+									run_magic_output: false,
+        				  authentication: [],
+        				  execution_variable: undefined,
+        				  example: example,
+        				  category:
+        				    app.categories !== null &&
+        				    app.categories !== undefined &&
+        				    app.categories.length > 0
+        				      ? app.categories[0]
+        				      : "",
+        				  authentication_id: "",
+        				  finished: false,
+        				};
+
+								const nodeToBeAdded = {
+        				  group: "nodes",
+        				  data: newAppData,
+        				  renderedPosition: {
+        				    x: 100,
+        				    y: 100,
+        				  },
+        				};
+
+        				parsedApp = nodeToBeAdded;
+        				cy.add(nodeToBeAdded);
+
+							}
+						}}
           >
             <Grid
               container
@@ -5451,49 +5552,51 @@ const AngularWorkflow = (defaultprops) => {
                     userDrag: "none",
                     userSelect: "none",
                     borderRadius: theme.palette.borderRadius,
-                    height: 80,
-                    width: 80,
+                    height: isMobile ? 40 : 80,
+                    width: isMobile ? 40 : 80,
                   }}
                 />
               </Grid>
-              <Grid
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  marginLeft: "20px",
-                  minWidth: 185,
-                  maxWidth: 185,
-                  overflow: "hidden",
-                  maxHeight: 77,
-                }}
-              >
-                <Grid item style={{ flex: 1 }}>
-                  <Typography
-                    variant="body1"
-                    style={{ marginBottom: 0, marginTop: 5 }}
-                  >
-                    {newAppname}
-                  </Typography>
-                </Grid>
-                <Grid item style={{ flex: 1 }}>
-                  <Typography variant="body2" color="textSecondary">
-                    Version: {app.app_version}
-                  </Typography>
-                </Grid>
-                <Grid
-                  item
-                  style={{
-                    flex: 1,
-                    width: "100%",
-                    maxHeight: 27,
-                    overflow: "hidden",
-                  }}
-                >
-                  <Typography variant="body2" color="textSecondary">
-                    {app.description}
-                  </Typography>
-                </Grid>
-              </Grid>
+							{isMobile ? null : 
+								<Grid
+									style={{
+										display: "flex",
+										flexDirection: "column",
+										marginLeft: "20px",
+										minWidth: 185,
+										maxWidth: 185,
+										overflow: "hidden",
+										maxHeight: 77,
+									}}
+								>
+									<Grid item style={{ flex: 1 }}>
+										<Typography
+											variant="body1"
+											style={{ marginBottom: 0, marginTop: 5 }}
+										>
+											{newAppname}
+										</Typography>
+									</Grid>
+									<Grid item style={{ flex: 1 }}>
+										<Typography variant="body2" color="textSecondary">
+											Version: {app.app_version}
+										</Typography>
+									</Grid>
+									<Grid
+										item
+										style={{
+											flex: 1,
+											width: "100%",
+											maxHeight: 27,
+											overflow: "hidden",
+										}}
+									>
+										<Typography variant="body2" color="textSecondary">
+											{app.description}
+										</Typography>
+									</Grid>
+								</Grid>
+							}
             </Grid>
           </Paper>
         </Draggable>
@@ -5949,7 +6052,7 @@ const AngularWorkflow = (defaultprops) => {
     top: appBarSize + 25,
     right: 25,
     height: "80vh",
-    width: 365,
+    width: isMobile ? "100%" : 365,
     minWidth: 200,
     maxWidth: 600,
     maxHeight: "100vh",
@@ -6412,7 +6515,7 @@ const AngularWorkflow = (defaultprops) => {
           pointerEvents: "auto",
           backgroundColor: surfaceColor,
           color: "white",
-          minWidth: 800,
+          minWidth: isMobile ? "90%" : 800,
 					border: theme.palette.defaultBorder,
         },
       }}
@@ -10066,12 +10169,13 @@ const AngularWorkflow = (defaultprops) => {
     return null;
   };
 
-  const cytoscapeViewWidths = 850;
+  const cytoscapeViewWidths = isMobile ? 50 : 850;
   const bottomBarStyle = {
     position: "fixed",
-    right: 20,
-    left: leftBarSize,
-    bottom: 0,
+    right: isMobile ? 20 : 20,
+    bottom: isMobile ? undefined : 0,
+		top: isMobile ? appBarSize + 55 : undefined,
+    left: isMobile ? undefined : leftBarSize,
     minWidth: cytoscapeViewWidths,
     maxWidth: cytoscapeViewWidths,
     marginLeft: 20,
@@ -10082,8 +10186,8 @@ const AngularWorkflow = (defaultprops) => {
   const topBarStyle = {
     position: "fixed",
     right: 0,
-    left: leftBarSize + 20,
-    top: appBarSize + 20,
+    left: isMobile ? 20 : leftBarSize + 20,
+    top: isMobile ? 30 : appBarSize + 20,
   };
 
   const TopCytoscapeBar = (props) => {
@@ -10226,7 +10330,30 @@ const AngularWorkflow = (defaultprops) => {
             </Button>
           </span>
         </Tooltip>
-      </div>
+				{isMobile ? 
+					<Tooltip
+						color="secondary"
+						title="Show apps"
+						placement="top-start"
+					>
+						<span>
+							<Button
+								disabled={workflow.public}
+								color="primary"
+								style={{ height: 50, marginLeft: 10 }}
+								variant="outlined"
+								onClick={(event) => {
+									console.log("Show apps!")
+  								setLeftBarSize(leftViewOpen ? 0 : 60)
+  								setLeftViewOpen(!leftViewOpen)
+								}}
+							>
+                <AppsIcon />
+							</Button>
+						</span>
+					</Tooltip>
+				: null}
+			</div>
     );
   };
 
@@ -10315,7 +10442,7 @@ const AngularWorkflow = (defaultprops) => {
       return null;
     }
 
-    const boxSize = 100;
+    const boxSize = isMobile ? 50 : 100;
     const executionButton = executionRunning ? (
       <Tooltip color="primary" title="Stop execution" placement="top">
         <span>
@@ -10327,7 +10454,7 @@ const AngularWorkflow = (defaultprops) => {
               abortExecution();
             }}
           >
-            <PauseIcon style={{ fontSize: 60 }} />
+            <PauseIcon style={{ fontSize: isMobile ? 30 : 60 }} />
           </Button>
         </span>
       </Tooltip>
@@ -10345,7 +10472,7 @@ const AngularWorkflow = (defaultprops) => {
               executeWorkflow(executionText, workflow.start, lastSaved);
             }}
           >
-            <PlayArrowIcon style={{ fontSize: 60 }} />
+            <PlayArrowIcon style={{ fontSize: isMobile ? 30 : 60 }} />
           </Button>
         </span>
       </Tooltip>
@@ -10356,13 +10483,17 @@ const AngularWorkflow = (defaultprops) => {
         {executionButton}
         <div
           style={{
-            marginLeft: "10px",
-            left: boxSize,
+            marginLeft: isMobile ? 0 : 10,
+						marginTop: isMobile ? 5 : 0,
+            left: isMobile ? -10 : boxSize,
+						top: isMobile ? boxSize : undefined,
             bottom: 0,
             position: "absolute",
+						display: "flex",
+						flexDirection: isMobile ? "column" : "row",
           }}
         >
-          {workflow.public ? null : (
+          {isMobile || workflow.public ? null : (
             <Tooltip
               color="primary"
               title="An argument to be used for execution. This is a variable available to every node in your workflow."
@@ -10599,94 +10730,67 @@ const AngularWorkflow = (defaultprops) => {
       return null;
     }
 
+		var defaultReturn = null
     if (Object.getOwnPropertyNames(selectedAction).length > 0) {
       if (Object.getOwnPropertyNames(selectedAction).length === 0) {
         return null;
       }
 
-      return (
-				<Fade in={true} style={{ transitionDelay: `$0ms` }}>
-					<div id="rightside_actions" style={rightsidebarStyle}>
-						<ParsedAction
-							id="rightside_subactions"
-							isCloud={isCloud}
-							getParents={getParents}
-							actionDelayChange={actionDelayChange}
-							getAppAuthentication={getAppAuthentication}
-							appAuthentication={appAuthentication}
-							authenticationType={authenticationType}
-							scrollConfig={scrollConfig}
-							setScrollConfig={setScrollConfig}
-							selectedAction={selectedAction}
-							workflow={workflow}
-							setWorkflow={setWorkflow}
-							setSelectedAction={setSelectedAction}
-							setUpdate={setUpdate}
-							selectedApp={selectedApp}
-							workflowExecutions={workflowExecutions}
-							setSelectedResult={setSelectedResult}
-							setSelectedApp={setSelectedApp}
-							setSelectedTrigger={setSelectedTrigger}
-							setSelectedEdge={setSelectedEdge}
-							setCurrentView={setCurrentView}
-							cy={cy}
-							setAuthenticationModalOpen={setAuthenticationModalOpen}
-							setVariablesModalOpen={setVariablesModalOpen}
-							setLastSaved={setLastSaved}
-							setCodeModalOpen={setCodeModalOpen}
-							selectedNameChange={selectedNameChange}
-							rightsidebarStyle={rightsidebarStyle}
-							showEnvironment={showEnvironment}
-							selectedActionEnvironment={selectedActionEnvironment}
-							environments={environments}
-							setNewSelectedAction={setNewSelectedAction}
-							sortByKey={sortByKey}
-							appApiViewStyle={appApiViewStyle}
-							globalUrl={globalUrl}
-							setSelectedActionEnvironment={setSelectedActionEnvironment}
-							requiresAuthentication={requiresAuthentication}
-						/>
-					</div>
-				</Fade>
-      );
+			defaultReturn = <ParsedAction
+				id="rightside_subactions"
+				isCloud={isCloud}
+				getParents={getParents}
+				actionDelayChange={actionDelayChange}
+				getAppAuthentication={getAppAuthentication}
+				appAuthentication={appAuthentication}
+				authenticationType={authenticationType}
+				scrollConfig={scrollConfig}
+				setScrollConfig={setScrollConfig}
+				selectedAction={selectedAction}
+				workflow={workflow}
+				setWorkflow={setWorkflow}
+				setSelectedAction={setSelectedAction}
+				setUpdate={setUpdate}
+				selectedApp={selectedApp}
+				workflowExecutions={workflowExecutions}
+				setSelectedResult={setSelectedResult}
+				setSelectedApp={setSelectedApp}
+				setSelectedTrigger={setSelectedTrigger}
+				setSelectedEdge={setSelectedEdge}
+				setCurrentView={setCurrentView}
+				cy={cy}
+				setAuthenticationModalOpen={setAuthenticationModalOpen}
+				setVariablesModalOpen={setVariablesModalOpen}
+				setLastSaved={setLastSaved}
+				setCodeModalOpen={setCodeModalOpen}
+				selectedNameChange={selectedNameChange}
+				rightsidebarStyle={rightsidebarStyle}
+				showEnvironment={showEnvironment}
+				selectedActionEnvironment={selectedActionEnvironment}
+				environments={environments}
+				setNewSelectedAction={setNewSelectedAction}
+				sortByKey={sortByKey}
+				appApiViewStyle={appApiViewStyle}
+				globalUrl={globalUrl}
+				setSelectedActionEnvironment={setSelectedActionEnvironment}
+				requiresAuthentication={requiresAuthentication}
+			/>
+
     } else if (Object.getOwnPropertyNames(selectedComment).length > 0) {
-      return (
-        <div style={rightsidebarStyle}>
-          <CommentSidebar />
-        </div>
-      );
+			defaultReturn = <CommentSidebar />
     } else if (Object.getOwnPropertyNames(selectedTrigger).length > 0) {
       if (selectedTrigger.trigger_type === "SCHEDULE") {
-        return (
-          <div style={rightsidebarStyle}>
-            <ScheduleSidebar />
-          </div>
-        );
+				defaultReturn = <ScheduleSidebar />
       } else if (selectedTrigger.trigger_type === "WEBHOOK") {
-        return (
-          <div style={rightsidebarStyle}>
-            <WebhookSidebar />
-          </div>
-        );
+				defaultReturn = <WebhookSidebar />
       } else if (selectedTrigger.trigger_type === "SUBFLOW") {
-        return (
-          <div style={rightsidebarStyle}>
-            <SubflowSidebar />
-          </div>
-        );
+				defaultReturn = <SubflowSidebar />
       } else if (selectedTrigger.trigger_type === "EMAIL") {
-        return (
-          <div style={rightsidebarStyle}>
-            <EmailSidebar />
-          </div>
-        );
+				defaultReturn = <EmailSidebar />
       } else if (selectedTrigger.trigger_type === "USERINPUT") {
-        return (
-          <div style={rightsidebarStyle}>
-            <UserinputSidebar />
-          </div>
-        );
+				defaultReturn = <UserinputSidebar />
       } else if (selectedTrigger.trigger_type === undefined) {
+				//defaultReturn = <UserinputSidebar />
         return null;
       } else {
         console.log(
@@ -10696,14 +10800,46 @@ const AngularWorkflow = (defaultprops) => {
         return null;
       }
     } else if (Object.getOwnPropertyNames(selectedEdge).length > 0) {
-      return (
-        <div style={rightsidebarStyle}>
-          <EdgeSidebar />
-        </div>
-      );
+			defaultReturn = <EdgeSidebar />
     }
 
-    return null;
+		const iOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+
+		const drawerBleeding = 56;
+		return (
+			isMobile ? 
+				<SwipeableDrawer
+					anchor={"bottom"}
+					disableBackdropTransition={!iOS} 
+					disableDiscovery={iOS}
+					open={true}
+					onClose={() => {
+						console.log("Close!")
+						//setRightSideBarOpen(false)
+						cy.elements().unselect()
+					}}
+					disableSwipeToOpen={false}
+					ModalProps={{
+						keepMounted: true,
+					}}
+					PaperProps={{
+						style: {
+							maxHeight: "70%",
+							overflow: "auto",
+						}
+					}}
+				>
+					{defaultReturn}
+				</SwipeableDrawer>
+			: 
+				<Fade in={true} style={{ transitionDelay: `$0ms` }}>
+					<div id="rightside_actions" style={rightsidebarStyle}>
+						{defaultReturn}
+					</div>
+				</Fade>
+		);
+
+    //return null;
   };
 
   // This can execute a workflow with firestore. Used for test, as datastore is old and stuff
@@ -10850,17 +10986,25 @@ const AngularWorkflow = (defaultprops) => {
 				</div>
 			: null}
 		</div>
+	: isMobile && leftViewOpen ? 
+		<div
+			style={{
+				borderRight: "1px solid rgb(91, 96, 100)",
+			}}
+		>
+				<HandleLeftView />
+		</div>
 	: leftViewOpen ? (
-	<div
-		style={{
-			minWidth: leftBarSize,
-			maxWidth: leftBarSize,
-			borderRight: "1px solid rgb(91, 96, 100)",
-		}}
-	>
-		<HandleLeftView />
-	</div>
-) : (
+		<div
+			style={{
+				minWidth: leftBarSize,
+				maxWidth: leftBarSize,
+				borderRight: "1px solid rgb(91, 96, 100)",
+			}}
+		>
+				<HandleLeftView />
+		</div>
+	) : (
 	<div
 		style={{
 			minWidth: leftBarSize,
@@ -11284,10 +11428,12 @@ const parsedExecutionArgument = () => {
 
 	var executionDelay = -75
   const executionModal = (
-    <Drawer
+		<Drawer
       anchor={"right"}
       open={executionModalOpen}
-      onClose={() => setExecutionModalOpen(false)}
+      onClose={() => {
+				setExecutionModalOpen(false)
+			}}
       style={{ resize: "both", overflow: "auto", zIndex: 10005 }}
       hideBackdrop={false}
 			variant="temporary"
@@ -11300,8 +11446,8 @@ const parsedExecutionArgument = () => {
         style: {
           resize: "both",
           overflow: "auto",
-          minWidth: 420,
-          maxWidth: 420,
+          minWidth: isMobile ? "100%" : 420,
+          maxWidth: isMobile ? "100%" : 420,
           backgroundColor: "#1F2023",
           color: "white",
           fontSize: 18,
@@ -11310,8 +11456,25 @@ const parsedExecutionArgument = () => {
         },
       }}
     >
+			{isMobile ? 
+				<Tooltip
+					title="Close window"
+					placement="top"
+					style={{ zIndex: 10011 }}
+				>
+					<IconButton
+						style={{ zIndex: 5000, position: "absolute", top: 10 , right: 10 }}
+						onClick={(e) => {
+							e.preventDefault();
+							setExecutionModalOpen(false)
+						}}
+					>
+						<CloseIcon style={{ color: "white" }} />
+					</IconButton>
+				</Tooltip>
+			: null}
       {executionModalView === 0 ? (
-        <div style={{ padding: 25 }}>
+        <div style={{ padding: isMobile ? "0px 0px 0px 10px" : 25 }}>
           <Breadcrumbs
             aria-label="breadcrumb"
             separator="›"
@@ -11525,7 +11688,7 @@ const parsedExecutionArgument = () => {
           )}
         </div>
       ) : (
-        <div style={{ padding: "25px 15px 25px 15px", maxWidth: 365, overflowX: "hidden" }}>
+        <div style={{ padding: isMobile ? "0px 10px 25px 10px" : "25px 15px 25px 15px", maxWidth: isMobile ? "100%" : 365, overflowX: "hidden" }}>
           <Breadcrumbs
             aria-label="breadcrumb"
             separator="›"
@@ -12107,7 +12270,7 @@ const parsedExecutionArgument = () => {
           )}
         </div>
       )}
-    </Drawer>
+		</Drawer>
   );
 
   // This sucks :)
@@ -12194,7 +12357,7 @@ const parsedExecutionArgument = () => {
             pointerEvents: "auto",
             backgroundColor: inputColor,
             color: "white",
-            minWidth: 650,
+            minWidth: isMobile ? "90%" : 650,
             padding: 30,
             maxHeight: 550,
             overflowY: "auto",
@@ -12444,6 +12607,7 @@ const parsedExecutionArgument = () => {
 			<div
 				style={{ display: "flex", borderTop: "1px solid rgba(91, 96, 100, 1)" }}
 			>
+				{/*isMobile ? null : leftView*/}
 				{leftView}
 				{workflow.id === undefined ||
 				workflow.id === null ||
@@ -12476,7 +12640,7 @@ const parsedExecutionArgument = () => {
 							maxZoom={2.0}
 							wheelSensitivity={0.25}
 							style={{
-								width: bodyWidth - leftBarSize - 25,
+								width: cytoscapeWidth,
 								height: bodyHeight - appBarSize - 5,
 								backgroundColor: surfaceColor,
 							}}
@@ -12529,7 +12693,7 @@ const parsedExecutionArgument = () => {
 				requiresAuthentication={requiresAuthentication}
 			/>
 			<BottomCytoscapeBar />
-				<TopCytoscapeBar />
+			<TopCytoscapeBar />
     </div>
   );
 
@@ -12563,6 +12727,7 @@ const parsedExecutionArgument = () => {
     	      backgroundColor: surfaceColor,
     	      color: "white",
 						border: theme.palette.defaultBorder,
+						maxWidth: "100%",
     	    },
     	  }}
     	>
@@ -12718,6 +12883,7 @@ const parsedExecutionArgument = () => {
     	      backgroundColor: surfaceColor,
     	      color: "white",
 						border: theme.palette.defaultBorder,
+						maxWidth: isMobile ? bodyWidth-100 : "100%",
     	    },
     	  }}
     	>
@@ -13308,10 +13474,10 @@ const parsedExecutionArgument = () => {
           style={{
             flex: 2,
             padding: 0,
-            minHeight: 650,
-            maxHeight: 650,
+            minHeight: isMobile ? "90%" : 650,
+            maxHeight: isMobile ? "90%" : 650,
             overflowY: "auto",
-            overflowX: "hidden",
+            overflowX: isMobile ? "auto" : "hidden",
           }}
         >
           {authenticationType.type === "oauth2" ? (

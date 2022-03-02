@@ -6,6 +6,7 @@ import { Navigate } from "react-router-dom";
 
 import SecurityFramework from '../components/SecurityFramework.jsx';
 import { ShepherdTour, ShepherdTourContext } from 'react-shepherd'
+import { isMobile } from "react-device-detect" 
 
 
 import {
@@ -1017,8 +1018,8 @@ const Workflows = (props) => {
     color: "#ffffff",
     width: "100%",
     display: "flex",
-    minWidth: 1024,
-    maxWidth: 1024,
+    minWidth: isMobile ? "100%" : 1024,
+    maxWidth: isMobile ? "100%" : 1024,
     margin: "auto",
   };
 
@@ -1038,6 +1039,7 @@ const Workflows = (props) => {
     flexDirection: "column",
   };
 
+	//flexDirection: !isMobile ? "column" : "row",
   const paperAppContainer = {
     display: "flex",
     flexWrap: "wrap",
@@ -1382,7 +1384,7 @@ const Workflows = (props) => {
     };
 
     return (
-      <Grid item xs={4} style={{ padding: "12px 10px 12px 10px" }}>
+      <Grid item xs={isMobile ? 12 : 4} style={{ padding: "12px 10px 12px 10px" }}>
         <Paper
           square
           style={setupPaperStyle}
@@ -2402,7 +2404,8 @@ const Workflows = (props) => {
         style: {
           backgroundColor: surfaceColor,
           color: "white",
-          minWidth: "800px",
+          minWidth: isMobile ? "90%" : "800px",
+          maxWidth: isMobile ? "90%" : "800px",
         },
       }}
     >
@@ -2905,30 +2908,32 @@ const Workflows = (props) => {
               </Typography>
             </div>
 						*/}
-						<div style={{ display: "flex", margin: "0px 0px 20px 0px" }}>
-							<div style={{ flex: 1, float: "right" }}>
-								<ChipInput
-									style={{}}
-									InputProps={{
-										style: {
-											color: "white",
-											maxWidth: 275,
-											minWidth: 275,
-										},
-									}}
-									placeholder="Add Filter"
-									color="primary"
-									fullWidth
-									value={filters}
-									onAdd={(chip) => {
-										addFilter(chip);
-									}}
-									onDelete={(_, index) => {
-										removeFilter(index);
-									}}
-								/>
+						{isMobile ? null : 
+							<div style={{ display: "flex", margin: "0px 0px 20px 0px" }}>
+								<div style={{ flex: 1, float: "right" }}>
+									<ChipInput
+										style={{}}
+										InputProps={{
+											style: {
+												color: "white",
+												maxWidth: 275,
+												minWidth: 275,
+											},
+										}}
+										placeholder="Add Filter"
+										color="primary"
+										fullWidth
+										value={filters}
+										onAdd={(chip) => {
+											addFilter(chip);
+										}}
+										onDelete={(_, index) => {
+											removeFilter(index);
+										}}
+									/>
+								</div>
 							</div>
-						</div>
+						}
             <div style={{ flex: 1, textAlign: "right" }}>
               {workflowButtons}
             </div>
@@ -2982,8 +2987,8 @@ const Workflows = (props) => {
 					*/}
   		
 					<div style={{width: "100%",}}>
-						{usecases !== null && usecases !== undefined && usecases.length > 0 ? 
-							<div style={{ display: "flex",}}>
+						{!isMobile && usecases !== null && usecases !== undefined && usecases.length > 0 ? 
+							<div style={{ display: "flex", }}>
 								{usecases.map((usecase, index) => {
 									//console.log(usecase)
 									return (
@@ -3136,7 +3141,7 @@ const Workflows = (props) => {
 									workflowDelay += 75
 								} else {
 									return (
-      							<Grid key={index} item xs={4} style={{ padding: "12px 10px 12px 10px" }}>
+      							<Grid key={index} item xs={isMobile ? 12 : 4} style={{ padding: "12px 10px 12px 10px" }}>
 											<WorkflowPaper key={index} data={data} />
       							</Grid>
 									)
@@ -3144,7 +3149,7 @@ const Workflows = (props) => {
 
                 return (
 									<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>
-      							<Grid item xs={4} style={{ padding: "12px 10px 12px 10px" }}>
+      							<Grid item xs={isMobile ? 12 : 4} style={{ padding: "12px 10px 12px 10px" }}>
 											<WorkflowPaper key={index} data={data} />
       							</Grid>
 									</Zoom>
@@ -3355,7 +3360,7 @@ const Workflows = (props) => {
 				*/}
         <Dropzone
           style={{
-            maxWidth: window.innerWidth > 1366 ? 1366 : 1200,
+            maxWidth: window.innerWidth > 1366 ? 1366 : isMobile ? "100%" : 1200,
             margin: "auto",
             padding: 20,
           }}
