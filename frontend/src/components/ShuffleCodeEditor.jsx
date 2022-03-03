@@ -6,7 +6,8 @@ import {
 	Tooltip,
 	DialogTitle, 
 	DialogContent,
-	Typography
+	Typography,
+	Paper
 } from '@material-ui/core';
 
 import Checkbox from '@mui/material/Checkbox';
@@ -17,18 +18,19 @@ import {
 } from "@material-ui/icons";
 
 import {
-	AutoFixHigh as AutoFixHighIcon,
+	AutoFixHigh as AutoFixHighIcon, CompressOutlined,
 } from '@mui/icons-material';
 
 import { useTheme } from '@material-ui/core/styles';
 import { validateJson } from "../views/Workflows.jsx";
 import ReactJson from "react-json-view";
-import PaperComponent from "../components/PaperComponent.jsx"
+import PaperComponent from "../components/PaperComponent.jsx";
 
 import CodeMirror from '@uiw/react-codemirror';
 import 'codemirror/keymap/sublime';
 import 'codemirror/theme/gruvbox-dark.css';
 import 'codemirror/theme/duotone-light.css';
+import { padding, textAlign } from '@mui/system';
 
 const CodeEditor = (props) => {
 	const { fieldCount, setFieldCount, actionlist, changeActionParameterCodeMirror, expansionModalOpen, setExpansionModalOpen, codedata, setcodedata } = props
@@ -39,6 +41,17 @@ const CodeEditor = (props) => {
 	const [expOutput, setExpOutput] = React.useState(" ");
 	const [linewrap, setlinewrap] = React.useState(true);
 	const [codeTheme, setcodeTheme] = React.useState("gruvbox-dark");
+	const [editorPopupOpen, setEditorPopupOpen] = React.useState(false);
+
+	const [currentCharacter, setCurrentCharacter] = React.useState(-1);
+	const [currentLine, setCurrentLine] = React.useState(-1);
+
+	const [variableOccurences, setVariableOccurences] = React.useState([]);
+	const [currentLocation, setCurrentLocation] = React.useState([]);
+	const [currentVariable, setCurrentVariable] = React.useState("");
+	// useEffect(() => {
+	// 	console.log(currentLocation)
+	// }, [currentLocation])
 
 	const autoFormat = (input) => {
 		if (validation !== true) {
@@ -56,6 +69,173 @@ const CodeEditor = (props) => {
 		}
 	}
 
+	function findIndex(line, loc) {
+		// var temp_arr = []
+		// for(var i=0; i<string.length; i++) {
+		// 	if (string[i] === "$") temp_arr.push(i);
+		// }
+		// return temp_arr
+		// var line = currentLine
+		// var loc = currentCharacter
+		// console.log(line)
+		// console.log(loc)
+		var code_line = localcodedata.split('\n')[line]
+		var dollar_occurences = []
+		var dollar_occurences_len = []
+		var variable_ranges = []
+		var popup = false
+
+		for(var ch=0; ch<code_line.length; ch++){
+			if(code_line[ch] == '$'){
+				dollar_occurences.push(ch)
+			}
+		}
+
+		var variable_occurences = code_line.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
+
+		try{
+			for(var occ = 0; occ<variable_occurences.length; occ++){
+				dollar_occurences_len.push(variable_occurences[occ].length)
+			}
+		} catch (e) {}
+
+		for(var occ = 0; occ<dollar_occurences.length; occ++){
+			// var temp_arr = []
+			// for(var occ_len = 0; occ_len<dollar_occurences_len[occ]; occ_len++){
+			// 	temp_arr.push(dollar_occurences[occ]+occ_len)
+			// }
+			// if(temp_arr === []){temp_arr=[dollar_occurences[occ]]}
+			// temp_arr.push(temp_arr[temp_arr.length-1]+1)
+			// variable_ranges.push(temp_arr)
+			var temp_arr = [dollar_occurences[occ]]
+			for(var occ_len = 0; occ_len<dollar_occurences_len[occ]; occ_len++){
+				temp_arr.push(dollar_occurences[occ]+occ_len+1)
+			}
+			if(temp_arr.length==1){temp_arr.push(temp_arr[temp_arr.length-1]+1)}
+			variable_ranges.push(temp_arr)
+		}
+
+		for(var occ = 0; occ<variable_ranges.length; occ++){
+			for(var occ1 = 0; occ1<variable_ranges[occ].length; occ1++){
+				// console.log(variable_ranges[occ][occ1])
+				if(loc == variable_ranges[occ][occ1]){
+					popup = true
+					setCurrentLocation([line, dollar_occurences[occ]])
+					console.log("Current Location : "+dollar_occurences[occ])
+					try{
+						setCurrentVariable(variable_occurences[occ])
+						console.log("Current Variable : "+variable_occurences[occ])
+					} catch (e) {
+						// setCurrentVariable("")
+						// console.log("Current Variable : Nothing")
+					}
+					occ = Infinity
+					break
+				}
+			}
+		}
+		setEditorPopupOpen(popup)
+
+		// console.log(variable_occurences)
+		// console.log(dollar_occurences_len)
+		// console.log(variable_ranges)
+		// console.log(dollar_occurences)
+	}
+
+	function highlight_variables(value){
+		// value.markText({line:0, ch:2}, {line:0, ch:8}, {"css": "background-color: #f85a3e; border-radius: 4px; color: white"})
+		// value.markText({line:0, ch:13}, {line:0, ch:15}, {"css": "background-color: #f85a3e; border-radius: 4px; color: white"})
+		// value.markText({line:0, ch:19}, {line:0, ch:26}, {"css": "background-color: #f85a3e; border-radius: 4px; color: white"})
+		// value.markText({line:0, ch:31}, {line:0, ch:35}, {"css": "background-color: #f85a3e; border-radius: 4px; color: white"})
+		// value.markText({line:0, ch:69}, {line:0, ch:73}, {"css": "background-color: #f85a3e; border-radius: 4px; color: white"})
+
+		// var code_variables = value.getValue().match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
+		// console.log(code_variables)
+		
+		// var regex = /[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g
+		// var code_variables_loc = regex.exec(value.getValue())
+		// console.log(code_variables_loc)
+		// while ((code_variables_loc = regex.exec(value.getValue())) != null) {
+		// 	console.log(code_variables_loc);
+		// }
+		// var code_variables_loc = regex.exec(value.getValue())
+		// console.log(code_variables_loc)
+
+		var code_lines = localcodedata.split('\n')
+		for (var i = 0; i<code_lines.length; i++){
+			var current_code_line = code_lines[i]
+			// console.log(current_code_line)
+
+			var variable_occurence = current_code_line.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
+
+			// console.log(variable_occurence)
+			// console.log()
+
+			// for (var j = 0; j < actionlist.length; j++) {
+			// 	if(found[i].slice(1,).toLowerCase() == actionlist[j].autocomplete.toLowerCase()){
+			// 		input = input.replace(found[i], JSON.stringify(actionlist[j].example));
+			// 		console.log(input)
+			// 		console.log(actionlist[j].example)
+			// 	}
+			// 	console.log(actionlist[j].autocomplete);
+			// }
+
+			var dollar_occurence = []
+			for(var ch=0; ch<current_code_line.length; ch++){
+				if(current_code_line[ch] == '$'){
+					dollar_occurence.push(ch)
+				}
+			}
+			console.log(dollar_occurence)
+
+			var dollar_occurence_len = []
+			try{
+				for(var occ = 0; occ<variable_occurence.length; occ++){
+					dollar_occurence_len.push(variable_occurence[occ].length)
+				}
+			} catch (e) {}
+			console.log(dollar_occurence_len)
+
+			try{
+				for (var occ = 0; occ<variable_occurence.length; occ++){
+					// value.markText({line:i, ch:dollar_occurence[occ]}, {line:i, ch:dollar_occurence_len[occ]+dollar_occurence[occ]}, {"css": "background-color: #8b8e26; border-radius: 4px; color: white"})
+					var correctVariable = actionlist.find(action => action.autocomplete.toLowerCase() === variable_occurence[occ].slice(1,).toLowerCase())
+					if(correctVariable == undefined) {
+						value.markText({line:i, ch:dollar_occurence[occ]}, {line:i, ch:dollar_occurence_len[occ]+dollar_occurence[occ]}, {"css": "background-color: red; border-radius: 4px; color: white"})
+					}
+					else{
+						value.markText({line:i, ch:dollar_occurence[occ]}, {line:i, ch:dollar_occurence_len[occ]+dollar_occurence[occ]}, {"css": "background-color: #8b8e26; border-radius: 4px; color: white"})
+					}
+					// console.log(correctVariables)
+				}
+			} catch (e) {}
+		}
+	}
+
+	// function findlocation(arr) {
+	// 	for(var i=0; i<arr.length; i++) {
+	// 		if (arr[i] != variableOccurences[i]){
+	// 			return arr[i]
+	// 		};
+	// 	}
+	// 	return null
+	// }
+
+	// function findVariables(string){
+	// 	if (currentLocation != -1){
+	// 		return string.slice(currentLocation+1).match(/[a-zA-Z0-9_.#-]*/g)[0]
+	// 	}
+	// 	return ""
+	// }
+
+	function replaceVariables(index, str){
+		var updatedCode = localcodedata.slice(0,index) + "$" + str + localcodedata.slice(index+currentVariable.length+1,)
+		setlocalcodedata(updatedCode)
+		setEditorPopupOpen(false)
+		setCurrentLocation(0)
+		// console.log(index)
+	}
+
 	function expectedOutput(input) {
 		
 		const found = input.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
@@ -71,13 +251,13 @@ const CodeEditor = (props) => {
 						input = input.replace(found[i], JSON.stringify(actionlist[j].example));
 						// console.log(input)
 						// console.log(actionlist[j].example)
-					}	
+					}
 					// console.log(actionlist[j].autocomplete);
 				}
 			}
 		} catch (e) {}
 
-		const tmpValidation = validateJson(input.valueOf()) 
+		const tmpValidation = validateJson(input.valueOf())
 		//setValidation(true)
 		if (tmpValidation.valid === true) {
 			setValidation(true)
@@ -89,23 +269,24 @@ const CodeEditor = (props) => {
 	}
 
 	return (
-		<Dialog 
-      disableEnforceFocus={true}
-      hideBackdrop={true}
+		<Dialog
+			disableEnforceFocus={true}
+			hideBackdrop={true}
 			disableBackdropClick={true}
 			open={expansionModalOpen} 
 			onClose={() => {
 				console.log("In closer")
 				changeActionParameterCodeMirror({target: {value: ""}}, fieldCount, localcodedata)
+				//setExpansionModalOpen(false)
 			}}
-      PaperComponent={PaperComponent}
+			PaperComponent={PaperComponent}
 			aria-labelledby="draggable-dialog-title"
 			PaperProps={{
 				style: {
 					backgroundColor: theme.palette.surfaceColor,
 					color: "white",
 					minWidth: 600,
-					padding: 25, 
+					padding: 25,
 					border: theme.palette.defaultBorder,
 					zIndex: 10012,
 				},
@@ -118,7 +299,7 @@ const CodeEditor = (props) => {
 			>
 				<div style={{display: "flex"}}>
 					<DialogTitle
-					  id="draggable-dialog-title"
+						id="draggable-dialog-title"
 						style={{
 							cursor: "move",
 							paddingBottom:20,
@@ -157,9 +338,37 @@ const CodeEditor = (props) => {
 					height="200px"
 					style={{
 					}}
+					onCursorActivity = {(value) => {
+						// console.log(value.getCursor())
+						setCurrentCharacter(value.getCursor().ch)
+						setCurrentLine(value.getCursor().line)
+						findIndex(value.getCursor().line, value.getCursor().ch)
+						highlight_variables(value)
+					}}
 					onChange={(value) => {
 						setlocalcodedata(value.getValue())
 						expectedOutput(value.getValue())
+						// console.log(value.getValue().split('\n')[value.getCursor().line])
+						// console.log(value.getCursor())
+						// console.log(value)
+						// console.log(value.getValue().indexOf('$'))
+						// console.log(value.display.input.prevInput)
+						if(value.display.input.prevInput.startsWith('$') || value.display.input.prevInput.endsWith('$')){
+							setEditorPopupOpen(true)
+							// console.log(findIndex(value.getValue()))
+							// console.log(findlocation(findIndex(value.getValue())))
+								// setCurrentLocation(findlocation(findIndex(value.getValue())))
+							// console.log(currentLocation)
+							// console.log(findVariables(findlocation(findIndex(value.getValue())), value.getValue()))
+							// setCurrentVariable(findVariables(findlocation(findIndex(value.getValue())), value.getValue()))
+							// console.log(actionlist)
+						}
+							// setVariableOccurences(findIndex(value.getValue()))
+							// setCurrentVariable(findVariables(value.getValue()))
+							// console.log(currentLocation)
+							// console.log(currentVariable)
+						// console.log(findIndex(value.getValue()))
+						// highlight_variables(value)
 					}}
 					options={{
 						theme: codeTheme,
@@ -170,6 +379,41 @@ const CodeEditor = (props) => {
 					}}
 				/>
 			</span>
+			{editorPopupOpen ?
+				<Paper
+					style={{
+						padding: 10,
+						width: 250,
+						// textOverflow: 'ellipsis'
+					}}
+				>
+					{actionlist.map((data, index) => {
+						// console.log(data)
+						return (
+							<div
+								style={{
+									// textOverflow: 'ellipsis'
+								}}
+							>
+								<button
+									onClick={() => {replaceVariables(currentLocation, data.autocomplete)}}
+									style={{
+										backgroundColor: 'transparent',
+										color: 'white',
+										border: 'none',
+										padding: 7.5,
+										cursor: 'pointer',
+										width: '100%',
+										textAlign: 'left'
+									}}
+								>
+									${data.autocomplete.substring(0, 25)}
+								</button>
+							</div>
+						)
+					})}
+				</Paper>
+			: null}
 
 			<div
 				style={{
@@ -346,8 +590,8 @@ const CodeEditor = (props) => {
 							cursor: "pointer"
 						}}
 						onClick={(event) => {
-							console.log(codedata)
-							console.log(fieldCount)
+							// console.log(codedata)
+							// console.log(fieldCount)
 							changeActionParameterCodeMirror(event, fieldCount, localcodedata)
 							setExpansionModalOpen(false)
 							setcodedata(localcodedata)
