@@ -225,7 +225,11 @@ const Apps = (props) => {
       document.title = "Shuffle - Apps";
 
       if (!isLoggedIn && isLoaded) {
-        navigate("/login")
+				if (isCloud) {
+        	navigate("/search?tab=apps")
+        } else {
+        	navigate("/login")
+				}
       }
 
       setFirstrequest(false);
@@ -287,9 +291,9 @@ const Apps = (props) => {
         if (response.status !== 200) {
           console.log("Status not 200 for apps :O!");
 
-          if (isCloud) {
-            window.location.pathname = "/search";
-          }
+          //if (isCloud) {
+          //  window.location.pathname = "/search";
+          //}
         }
 
         return response.json();
@@ -515,7 +519,11 @@ const Apps = (props) => {
       valid = "false";
     }
 
-    if (data.actions === null || data.actions.length === 0) {
+		if (data.actions === undefined || data.actions === null) {
+			data.actions = []
+		}
+
+    if (data === undefined || data.actions === undefined || data.actions === null || data.actions.length === 0) {
       valid = "false";
     }
 
@@ -717,6 +725,8 @@ const Apps = (props) => {
         </Tooltip>
       ) : null;
 
+		// FIXME: Add /apps/new?id=<PUBLIC> to allow for changes of the original
+		// Should always reference the original ID.
     var editButton =
       selectedApp.activated &&
       selectedApp.private_id !== undefined &&
@@ -737,10 +747,10 @@ const Apps = (props) => {
       ) : null;
 
     //var editNewButton = editButton === null ?
-    var editNewButton = null
-		/*
-        <Link to={editUrl} style={{ textDecoration: "none" }}>
-          <Tooltip title={"Add your version"}>
+		console.log("User, & genrrated, activate: ", props.userdata, selectedApp.generated, selectedApp.activated)
+    var editNewButton = selectedApp.generated && selectedApp.activated && props.userdata.id !== selectedApp.owner ? 
+        <Link to={activateUrl} style={{ textDecoration: "none" }}>
+          <Tooltip title={"Edit this public app to your liking"}>
             <Button
               variant="contained"
               component="label"
@@ -751,9 +761,9 @@ const Apps = (props) => {
             </Button>
           </Tooltip>
         </Link>
-		*/
+			: null
 
-    const activateButton =
+    const activateButton = 
       selectedApp.generated && !selectedApp.activated ? (
         <div>
           <Link to={activateUrl} style={{ textDecoration: "none" }}>
@@ -993,15 +1003,14 @@ const Apps = (props) => {
           ) : null}
 
           {activateButton}
+        	{editNewButton}
           {(props.userdata !== undefined && 
             (props.userdata.role === "admin" ||
               props.userdata.id === selectedApp.owner ||
 							selectedApp.owner === "" 
-							)) ||
-          !selectedApp.generated ? (
+							)) || !selectedApp.generated ? (
             <div>
               {editButton}
-              {editNewButton}
               {downloadButton}
               {deleteButton}
             </div>
@@ -1817,7 +1826,11 @@ const Apps = (props) => {
         if (responseJson.success) {
           alert.success("Successfully updated app configuration");
         } else {
-          alert.error("Error updating app configuration");
+					if (responseJson.reason !== undefined && responseJson.reason !== null) {
+          	alert.error("Error: "+responseJson.reason);
+					} else {
+          	alert.error("Error updating app configuration");
+					}
         }
       })
       .catch((error) => {

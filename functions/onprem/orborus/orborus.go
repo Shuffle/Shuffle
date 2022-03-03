@@ -37,9 +37,11 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/swarm"
+
 	//"github.com/docker/docker/api/types/filters"
 	dockerclient "github.com/docker/docker/client"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
+
 	//network "github.com/docker/docker/api/types/network"
 	//natting "github.com/docker/go-connections/nat"
 	"github.com/mackerelio/go-osstat/cpu"
@@ -63,7 +65,7 @@ var baseimagename = os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
 var baseimageregistry = os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")
 var baseimagetagsuffix = os.Getenv("SHUFFLE_BASE_IMAGE_TAG_SUFFIX")
 
-var orgId = os.Getenv("ORG_ID")
+//var orgId = os.Getenv("ORG_ID")
 var baseUrl = os.Getenv("BASE_URL")
 var environment = os.Getenv("ENVIRONMENT_NAME")
 var dockerApiVersion = os.Getenv("DOCKER_API_VERSION")
@@ -199,7 +201,7 @@ func deployServiceWorkers(image string) {
 		// Looks for and cleans up all existing items in swarm we can't re-use (Shuffle only)
 		cleanupExistingNodes(ctx)
 		// frikky@debian:~/git/shuffle/functions/onprem/worker$ docker service create --replicas 5 --name shuffle-workers --env SHUFFLE_SWARM_CONFIG=run --publish published=33333,target=33333 ghcr.io/frikky/shuffle-worker:nightly
-		networkName := "shuffle-executions"
+		networkName := "shuffle_swarm_executions"
 		if len(swarmNetworkName) > 0 {
 			networkName = swarmNetworkName
 		}
@@ -538,8 +540,14 @@ func deployWorker(image string, identifier string, env []string, executionReques
 				nil,
 				identifier+"-2",
 			)
+			if err != nil {
+				log.Printf("[ERROR] Failed to CREATE container (2): %s", err)
+			}
 
 			err = dockercli.ContainerStart(context.Background(), cont.ID, containerStartOptions)
+			if err != nil {
+				log.Printf("[ERROR] Failed to start container (2): %s", err)
+			}
 		} else {
 			log.Printf("[ERROR] Failed initial container start. Quitting as this is NOT a simple network issue. Err: %s", err)
 		}
@@ -759,8 +767,12 @@ func main() {
 		//baseUrl = "http://localhost:5001"
 	}
 
-	if orgId == "" {
-		log.Printf("[ERROR] Org not defined. Set variable ORG_ID based on your org")
+	//if orgId == "" {
+	//	log.Printf("[ERROR] Org not defined. Set variable ORG_ID based on your org")
+	//	os.Exit(3)
+	//}
+	if environment == "" {
+		log.Printf("[ERROR] Environment not defined. Set variable ENVIRONMENT_NAME to configure it.")
 		os.Exit(3)
 	}
 
@@ -797,7 +809,7 @@ func main() {
 	// Run by default from now
 	zombiecheck(ctx, workerTimeout)
 
-	log.Printf("[INFO] Running towards %s with Org %s", baseUrl, orgId)
+	log.Printf("[INFO] Running towards %s (BASE_URL) with environment name %s", baseUrl, environment)
 	httpProxy := os.Getenv("HTTP_PROXY")
 	httpsProxy := os.Getenv("HTTPS_PROXY")
 
@@ -845,6 +857,8 @@ func main() {
 		}
 	}
 
+	client.Timeout = 10 * time.Second
+
 	fullUrl := fmt.Sprintf("%s/api/v1/workflows/queue", baseUrl)
 	req, err := http.NewRequest(
 		"GET",
@@ -859,8 +873,8 @@ func main() {
 
 	zombiecounter := 0
 	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add("Org-Id", orgId)
-	log.Printf("[INFO] Waiting for executions at %s with Org ID %s", fullUrl, orgId)
+	req.Header.Add("Org-Id", environment)
+	log.Printf("[INFO] Waiting for executions at %s with Environment %s", fullUrl, environment)
 	hasStarted := false
 	for {
 		//go getStats()
@@ -1045,7 +1059,7 @@ func main() {
 			}
 
 			result.Header.Add("Content-Type", "application/json")
-			result.Header.Add("Org-Id", orgId)
+			result.Header.Add("Org-Id", environment)
 
 			resultResp, err := client.Do(result)
 			if err != nil {

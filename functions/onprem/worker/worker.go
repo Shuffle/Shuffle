@@ -358,6 +358,7 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		log.Printf("\n\n[DEBUG] Result for %s already found - returning\n\n", newExecId)
 		return nil
 	}
+
 	cacheData := []byte("1")
 	err = shuffle.SetCache(ctx, newExecId, cacheData)
 	if err != nil {
@@ -371,17 +372,19 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 		waitTime := time.Duration(action.ExecutionDelay) * time.Second
 
 		time.AfterFunc(waitTime, func() {
-			DeployContainer(ctx, cli, config, hostConfig, identifier, workflowExecution)
+			DeployContainer(ctx, cli, config, hostConfig, identifier, workflowExecution, newExecId)
 		})
 	} else {
-		log.Printf("[DEBUG] Running app %s in docker NORMALLY as there is no delay set", action.Name)
-		return DeployContainer(ctx, cli, config, hostConfig, identifier, workflowExecution)
+		log.Printf("[DEBUG] Running app %s in docker NORMALLY as there is no delay set with identifier %s", action.Name, identifier)
+		returnvalue := DeployContainer(ctx, cli, config, hostConfig, identifier, workflowExecution, newExecId)
+		log.Printf("[DEBUG] Normal deploy ret: %s", returnvalue)
+		return returnvalue
 	}
 
 	return nil
 }
 
-func DeployContainer(ctx context.Context, cli *dockerclient.Client, config *container.Config, hostConfig *container.HostConfig, identifier string, workflowExecution shuffle.WorkflowExecution) error {
+func DeployContainer(ctx context.Context, cli *dockerclient.Client, config *container.Config, hostConfig *container.HostConfig, identifier string, workflowExecution shuffle.WorkflowExecution, newExecId string) error {
 	cont, err := cli.ContainerCreate(
 		ctx,
 		config,
@@ -395,6 +398,11 @@ func DeployContainer(ctx context.Context, cli *dockerclient.Client, config *cont
 		//log.Printf("[ERROR] Failed creating container: %s", err)
 		if !strings.Contains(err.Error(), "Conflict. The container name") {
 			log.Printf("[ERROR] Container CREATE error (1): %s", err)
+
+			cacheErr := shuffle.DeleteCache(ctx, newExecId)
+			if cacheErr != nil {
+				log.Printf("[ERROR] FAILED Deleting cache for %s: %s", newExecId, cacheErr)
+			}
 
 			return err
 		} else {
@@ -414,6 +422,12 @@ func DeployContainer(ctx context.Context, cli *dockerclient.Client, config *cont
 
 			if err != nil {
 				log.Printf("[ERROR] Container create error (2): %s", err)
+
+				cacheErr := shuffle.DeleteCache(ctx, newExecId)
+				if cacheErr != nil {
+					log.Printf("[ERROR] FAILED Deleting cache for %s: %s", newExecId, cacheErr)
+				}
+
 				return err
 			}
 
@@ -445,6 +459,12 @@ func DeployContainer(ctx context.Context, cli *dockerclient.Client, config *cont
 
 			if err != nil {
 				log.Printf("[ERROR] Container create error (3): %s", err)
+
+				cacheErr := shuffle.DeleteCache(ctx, newExecId)
+				if cacheErr != nil {
+					log.Printf("[ERROR] FAILED Deleting cache for %s: %s", newExecId, cacheErr)
+				}
+
 				return err
 			}
 
@@ -454,6 +474,12 @@ func DeployContainer(ctx context.Context, cli *dockerclient.Client, config *cont
 
 		if err != nil {
 			log.Printf("[ERROR] Failed to start container in environment %s: %s", environment, err)
+
+			cacheErr := shuffle.DeleteCache(ctx, newExecId)
+			if cacheErr != nil {
+				log.Printf("[ERROR] FAILED Deleting cache for %s: %s", newExecId, cacheErr)
+			}
+
 			//shutdown(workflowExecution, workflowExecution.Workflow.ID, true)
 			return err
 		}
@@ -1163,13 +1189,46 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		// if everything is generated during execution
 		//log.Printf("[DEBUG][%s] Deployed with CALLBACK_URL %s and BASE_URL %s", workflowExecution.ExecutionId, appCallbackUrl, baseUrl)
 		env := []string{
-			fmt.Sprintf("ACTION=%s", string(actionData)),
 			fmt.Sprintf("EXECUTIONID=%s", workflowExecution.ExecutionId),
 			fmt.Sprintf("AUTHORIZATION=%s", workflowExecution.Authorization),
 			fmt.Sprintf("CALLBACK_URL=%s", baseUrl),
 			fmt.Sprintf("BASE_URL=%s", appCallbackUrl),
 			fmt.Sprintf("TZ=%s", timezone),
 		}
+
+		if len(actionData) >= 100000 {
+			log.Printf("[WARNING] Omitting some data from action execution. Length: %d. Fix in SDK!", len(actionData))
+			newParams := []shuffle.WorkflowAppActionParameter{}
+			for _, param := range action.Parameters {
+				paramData, err := json.Marshal(param)
+				if err != nil {
+					log.Printf("[WARNING] Failed to marshal param %s: %s", param.Name, err)
+					newParams = append(newParams, param)
+					continue
+				}
+
+				if len(paramData) >= 50000 {
+					log.Printf("[WARNING] Removing a lot of data from param %s with length %d", param.Name, len(paramData))
+					param.Value = "SHUFFLE_AUTO_REMOVED"
+				}
+
+				newParams = append(newParams, param)
+			}
+
+			action.Parameters = newParams
+			actionData, err = json.Marshal(action)
+			if err == nil {
+				log.Printf("[DEBUG] Ran data replace on action %s. new length: %d", action.Name, len(actionData))
+			} else {
+				log.Printf("[WARNING] Failed to marshal new actionData: %s", err)
+
+			}
+		} else {
+			log.Printf("[DEBUG] Actiondata is NOT 100000 in length. Adding as normal.")
+		}
+
+		actionEnv := fmt.Sprintf("ACTION=%s", string(actionData))
+		env = append(env, actionEnv)
 
 		if strings.ToLower(os.Getenv("SHUFFLE_PASS_APP_PROXY")) == "true" {
 			//log.Printf("APPENDING PROXY TO THE APP!")
@@ -1296,6 +1355,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		} else {
 
 			err = deployApp(dockercli, images[0], identifier, env, workflowExecution, action)
+			log.Printf("[DEBUG] Failed deploying app? %s", err)
 			if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
 				if strings.Contains(err.Error(), "exited prematurely") {
 					log.Printf("[DEBUG] Shutting down (9)")
@@ -1517,7 +1577,7 @@ func executionInit(workflowExecution shuffle.WorkflowExecution) error {
 	onpremApps := []string{}
 	toExecuteOnprem := []string{}
 	for _, action := range workflowExecution.Workflow.Actions {
-		if action.Environment != environment {
+		if strings.ToLower(action.Environment) != strings.ToLower(environment) {
 			continue
 		}
 
@@ -1599,7 +1659,7 @@ func handleDefaultExecution(client *http.Client, req *http.Request, workflowExec
 
 	err := executionInit(workflowExecution)
 	if err != nil {
-		log.Printf("[INFO] Workflow setup failed: %s", workflowExecution.ExecutionId, err)
+		log.Printf("[INFO] Workflow setup failed for %s: %s", workflowExecution.ExecutionId, err)
 		log.Printf("[DEBUG] Shutting down (18)")
 		shutdown(workflowExecution, "", "", true)
 	}

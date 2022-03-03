@@ -6,12 +6,16 @@ import { Navigate } from "react-router-dom";
 
 import SecurityFramework from '../components/SecurityFramework.jsx';
 import { ShepherdTour, ShepherdTourContext } from 'react-shepherd'
+import { isMobile } from "react-device-detect" 
 
 
 import {
   Badge,
   Avatar,
   Grid,
+	InputLabel,
+	Select,
+	ListSubheader,
   Paper,
   Tooltip,
   Divider,
@@ -31,7 +35,14 @@ import {
   DialogTitle,
   DialogActions,
   DialogContent,
+	OutlinedInput,
+	Checkbox,
+	ListItemText,
 } from "@material-ui/core";
+
+import {
+  AvatarGroup,
+} from "@mui/material"
 
 import {
   GridOn as GridOnIcon,
@@ -58,6 +69,8 @@ import {
   Publish as PublishIcon,
   CloudUpload as CloudUploadIcon,
   CloudDownload as CloudDownloadIcon,
+  ExpandLess as ExpandLessIcon,
+  ExpandMore as ExpandMoreIcon,
 } from "@material-ui/icons";
 
 import NestedMenuItem from "material-ui-nested-menu-item";
@@ -381,9 +394,27 @@ const chipStyle = {
 };
 
 export const validateJson = (showResult) => {
-  //showResult = showResult.split(" None").join(" \"None\"")
-  showResult = showResult.split(" False").join(" false");
-  showResult = showResult.split(" True").join(" true");
+	//console.log("INPUT: ", showResult, typeof showResult)
+	if (typeof showResult === 'string') {
+  	//showResult = showResult.split(" None").join(" \"None\"")
+		showResult = showResult.split(" False").join(" false");
+		showResult = showResult.split(" True").join(" true");
+		//return {
+		//	valid: false,
+		//	result: showResult,
+		//};
+	}
+
+	//if (typeof showResult === undefined) {
+
+	//}
+
+	if (typeof showResult === "object" || typeof showResult === "array") {
+  	return {
+  	  valid: true,
+  	  result: showResult,
+  	};
+	}
 
   var jsonvalid = true;
   try {
@@ -453,6 +484,8 @@ const Workflows = (props) => {
   var upload = "";
 
   const [workflows, setWorkflows] = React.useState([]);
+  const [_, setUpdate] = React.useState(""); // Used for rendering, don't remove
+  const [selectedUsecases, setSelectedUsecases] = React.useState([]);
   const [filteredWorkflows, setFilteredWorkflows] = React.useState([]);
   const [selectedWorkflow, setSelectedWorkflow] = React.useState({});
   const [workflowDone, setWorkflowDone] = React.useState(false);
@@ -488,6 +521,8 @@ const Workflows = (props) => {
   const [actionImageList, setActionImageList] = React.useState([]);
 
   const [firstLoad, setFirstLoad] = React.useState(true);
+  const [showMoreClicked, setShowMoreClicked] = React.useState(false);
+  const [usecases, setUsecases] = React.useState([]);
 
   const isCloud =
     window.location.host === "localhost:3002" ||
@@ -834,7 +869,7 @@ const Workflows = (props) => {
           console.log("Status not 200 for workflows :O!: ", response.status);
 
           if (isCloud) {
-            window.location.pathname = "/login";
+            window.location.pathname = "/search?tab=workflows";
           }
 
           alert.info("Failed getting workflows.");
@@ -847,8 +882,10 @@ const Workflows = (props) => {
       .then((responseJson) => {
         if (responseJson !== undefined) {
           setWorkflows(responseJson);
+					fetchUsecases(responseJson)
 
           if (responseJson !== undefined) {
+
             var actionnamelist = [];
             var parsedactionlist = [];
             for (var key in responseJson) {
@@ -888,6 +925,83 @@ const Workflows = (props) => {
       });
   };
 
+	const handleKeysetting = (categorydata, workflows) => {
+		console.log("Workflows: ", workflows)
+		//workflows[0].category = ["detect"]
+		//workflows[0].usecase_ids = ["Correlate tickets"]
+
+		if (workflows !== undefined && workflows !== null) {
+			var newcategories = []
+			for (var key in categorydata) {
+				var category = categorydata[key]
+				category.matches = []
+
+				for (var subcategorykey in category.list) {
+					var subcategory = category.list[subcategorykey]
+					subcategory.matches = []
+
+					for (var workflowkey in workflows) {
+						const workflow = workflows[workflowkey]
+
+						if (workflow.usecase_ids !== undefined && workflow.usecase_ids !== null) {
+							for (var usecasekey in workflow.usecase_ids) {
+								if (workflow.usecase_ids[usecasekey].toLowerCase() === subcategory.name.toLowerCase()) {
+									console.log("Got match: ", workflow.usecase_ids[usecasekey])
+
+									category.matches.push({
+										"workflow": workflow.id,
+										"category": subcategory.name,
+									})
+									subcategory.matches.push(workflow.id)
+									break
+								}
+							}
+						}
+
+						if (subcategory.matches.length > 0) {
+							break
+						}
+					}
+				}
+
+				newcategories.push(category)
+			} 
+
+			console.log("Categories: ", newcategories)
+			setUsecases(newcategories)
+		} else {
+  		setUsecases(categorydata)
+		}
+	}
+
+  const fetchUsecases = (workflows) => {
+    fetch(globalUrl + "/api/v1/workflows/usecases", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for usecases");
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+				if (responseJson.success !== false) {
+					console.log("Usecases: ", responseJson)
+					handleKeysetting(responseJson, workflows)
+				}
+      })
+      .catch((error) => {
+        //alert.error("ERROR: " + error.toString());
+        console.log("ERROR: " + error.toString());
+      });
+  };
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (workflows.length <= 0) {
@@ -896,7 +1010,6 @@ const Workflows = (props) => {
         setView(tmpView);
       }
 
-      //setFirstrequest(false);
       getAvailableWorkflows();
     }
   }, [])
@@ -905,8 +1018,8 @@ const Workflows = (props) => {
     color: "#ffffff",
     width: "100%",
     display: "flex",
-    minWidth: 1024,
-    maxWidth: 1024,
+    minWidth: isMobile ? "100%" : 1024,
+    maxWidth: isMobile ? "100%" : 1024,
     margin: "auto",
   };
 
@@ -926,6 +1039,7 @@ const Workflows = (props) => {
     flexDirection: "column",
   };
 
+	//flexDirection: !isMobile ? "column" : "row",
   const paperAppContainer = {
     display: "flex",
     flexWrap: "wrap",
@@ -1270,7 +1384,7 @@ const Workflows = (props) => {
     };
 
     return (
-      <Grid item xs={4} style={{ padding: "12px 10px 12px 10px" }}>
+      <Grid item xs={isMobile ? 12 : 4} style={{ padding: "12px 10px 12px 10px" }}>
         <Paper
           square
           style={setupPaperStyle}
@@ -1291,6 +1405,30 @@ const Workflows = (props) => {
       </Grid>
     );
   };
+
+	const getWorkflowAppgroup = (data) => {
+		if (data.actions === undefined || data.actions === null) {
+			return [] 
+		}
+
+		var appsFound = []
+		for (var key in data.actions) {
+			const parsedAction = data.actions[key]
+			if (parsedAction.large_image === undefined || parsedAction.large_image === null || parsedAction.large_image === "") {
+				continue
+			}
+
+			if (parsedAction.app_name === "Shuffle Tools" || parsedAction.app_id === "bc78f35c6c6351b07a09b7aed5d29652") {
+				continue
+			}
+
+			if (appsFound.findIndex(data => data.app_name === parsedAction.app_name) < 0){
+				appsFound.push(parsedAction)
+			}
+		}
+
+		return appsFound
+	}
 
   const WorkflowPaper = (props) => {
     const { data } = props;
@@ -1321,6 +1459,7 @@ const Workflows = (props) => {
     }
 
     const actions = data.actions !== null ? data.actions.length : 0;
+		const appGroup = getWorkflowAppgroup(data)
     const [triggers, subflows] = getWorkflowMeta(data);
 
     const workflowMenuButtons = (
@@ -1345,6 +1484,11 @@ const Workflows = (props) => {
             if (data.tags !== undefined && data.tags !== null) {
               setNewWorkflowTags(JSON.parse(JSON.stringify(data.tags)));
             }
+
+						console.log("Editing: ", data)
+						if (data.usecase_ids !== undefined && data.usecase_ids !== null && data.usecase_ids.length > 0) {
+							setSelectedUsecases(data.usecase_ids)
+						}
           }}
           key={"change"}
         >
@@ -1543,22 +1687,49 @@ const Workflows = (props) => {
               </Tooltip>
             </Grid>
             <Grid item style={workflowActionStyle}>
-              <Tooltip color="primary" title="Action amount" placement="bottom">
-                <span style={{ color: "#979797", display: "flex" }}>
-                  <BubbleChartIcon
-                    style={{ marginTop: "auto", marginBottom: "auto" }}
-                  />
-                  <Typography
-                    style={{
-                      marginLeft: 5,
-                      marginTop: "auto",
-                      marginBottom: "auto",
-                    }}
-                  >
-                    {actions}
-                  </Typography>
-                </span>
-              </Tooltip>
+							{appGroup.length > 0 ? 
+								<div style={{display: "flex", marginTop: 8, }}>
+									<AvatarGroup max={4} style={{marginLeft: 5, maxHeight: 24,}}>
+										{appGroup.map((data, index) => {
+											return (
+												<div
+													key={index}
+													style={{
+														height: 24,
+														width: 24,
+														filter: "brightness(0.6)",
+														cursor: "pointer",
+													}}
+													onClick={() => {
+                  					addFilter(data.app_name);
+													}}
+												>
+													<Tooltip color="primary" title={data.app_name} placement="bottom">
+														<Avatar alt={data.app_name} src={data.large_image} style={{width: 24, height: 24}}/>
+													</Tooltip>
+												</div>
+											)
+										})}
+									</AvatarGroup>
+								</div>
+								: 
+								<Tooltip color="primary" title="Action amount" placement="bottom">
+									<span style={{ color: "#979797", display: "flex" }}>
+										<BubbleChartIcon
+											style={{ marginTop: "auto", marginBottom: "auto" }}
+										/>
+										<Typography
+											style={{
+												marginLeft: 5,
+												marginTop: "auto",
+												marginBottom: "auto",
+											}}
+										>
+											{actions}
+										</Typography>
+									</span>
+								</Tooltip>
+							}
               <Tooltip
                 color="primary"
                 title="Trigger amount"
@@ -1661,9 +1832,11 @@ const Workflows = (props) => {
                 justifyContent: "left",
                 overflow: "hidden",
                 marginTop: 5,
+								maxHeight: 28,
+								overflow: "hidden",
               }}
             >
-              {data.tags !== undefined
+              {data.tags !== undefined && data.tags !== null
                 ? data.tags.map((tag, index) => {
                     if (index >= 3) {
                       return null;
@@ -1709,7 +1882,8 @@ const Workflows = (props) => {
     tags,
     defaultReturnValue,
     editingWorkflow,
-    redirect
+    redirect,
+		currentUsecases,
   ) => {
     var method = "POST";
     var extraData = "";
@@ -1735,6 +1909,12 @@ const Workflows = (props) => {
     if (defaultReturnValue !== undefined) {
       workflowdata["default_return_value"] = defaultReturnValue;
     }
+
+		if (currentUsecases !== undefined && currentUsecases !== null) {
+			workflowdata["usecase_ids"] = currentUsecases 
+			//workflows[0].category = ["detect"]
+			//workflows[0].usecase_ids = ["Correlate tickets"]
+		}
 
     return fetch(globalUrl + "/api/v1/workflows" + extraData, {
       method: method,
@@ -1982,30 +2162,54 @@ const Workflows = (props) => {
             const data = params.row.record;
             const actions = data.actions !== null ? data.actions.length : 0;
             let [triggers, subflows] = getWorkflowMeta(data);
+						const appGroup = getWorkflowAppgroup(data)
 
             return (
               <Grid item>
                 <div style={{ display: "flex" }}>
-                  <Tooltip
-                    color="primary"
-                    title="Action amount"
-                    placement="bottom"
-                  >
-                    <span style={{ color: "#979797", display: "flex" }}>
-                      <BubbleChartIcon
-                        style={{ marginTop: "auto", marginBottom: "auto" }}
-                      />
-                      <Typography
-                        style={{
-                          marginLeft: 5,
-                          marginTop: "auto",
-                          marginBottom: "auto",
-                        }}
-                      >
-                        {actions}
-                      </Typography>
-                    </span>
-                  </Tooltip>
+									{appGroup.length > 0 ? 
+									<div style={{display: "flex", marginTop: 3, }}>
+											<AvatarGroup max={4} style={{marginLeft: 5, maxHeight: 24,}}>
+												{appGroup.map((data, index) => {
+													return (
+														<div
+															key={index}
+															style={{
+																height: 24,
+																width: 24,
+																filter: "brightness(0.6)",
+																cursor: "pointer",
+															}}
+															onClick={() => {
+                		  					addFilter(data.app_name);
+															}}
+														>
+															<Tooltip color="primary" title={data.app_name} placement="bottom">
+																<Avatar alt={data.app_name} src={data.large_image} style={{width: 24, height: 24}}/>
+															</Tooltip>
+														</div>
+													)
+												})}
+											</AvatarGroup>
+										</div>
+										: 
+										<Tooltip color="primary" title="Action amount" placement="bottom">
+											<span style={{ color: "#979797", display: "flex" }}>
+												<BubbleChartIcon
+													style={{ marginTop: "auto", marginBottom: "auto" }}
+												/>
+												<Typography
+													style={{
+														marginLeft: 5,
+														marginTop: "auto",
+														marginBottom: "auto",
+													}}
+												>
+													{actions}
+												</Typography>
+											</span>
+										</Tooltip>
+									}
                   <Tooltip
                     color="primary"
                     title="Trigger amount"
@@ -2189,6 +2393,7 @@ const Workflows = (props) => {
     return <div style={gridContainer}>{workflowData}</div>;
   };
 
+	var total_count = 0
   const modalView = modalOpen ? (
     <Dialog
       open={modalOpen}
@@ -2199,7 +2404,8 @@ const Workflows = (props) => {
         style: {
           backgroundColor: surfaceColor,
           color: "white",
-          minWidth: "800px",
+          minWidth: isMobile ? "90%" : "800px",
+          maxWidth: isMobile ? "90%" : "800px",
         },
       }}
     >
@@ -2231,6 +2437,7 @@ const Workflows = (props) => {
             }}
             color="primary"
             placeholder="Name"
+						required
             margin="dense"
             defaultValue={newWorkflowName}
             autoFocus
@@ -2246,47 +2453,117 @@ const Workflows = (props) => {
             color="primary"
             defaultValue={newWorkflowDescription}
             placeholder="Description"
-            rows="3"
             multiline
             margin="dense"
             fullWidth
           />
-          <ChipInput
-            style={{ marginTop: 10 }}
-            InputProps={{
-              style: {
-                color: "white",
-              },
-            }}
-            placeholder="Tags"
-            color="primary"
-            fullWidth
-            value={newWorkflowTags}
-            onAdd={(chip) => {
-              newWorkflowTags.push(chip);
-              setNewWorkflowTags(newWorkflowTags);
-            }}
-            onDelete={(chip, index) => {
-              newWorkflowTags.splice(index, 1);
-              setNewWorkflowTags(newWorkflowTags);
-            }}
-          />
+					<div style={{display: "flex", marginTop: 10, }}>
+						<ChipInput
+							style={{ flex: 1}}
+							InputProps={{
+								style: {
+									color: "white",
+								},
+							}}
+							placeholder="Tags"
+							color="primary"
+							fullWidth
+							value={newWorkflowTags}
+							onAdd={(chip) => {
+								newWorkflowTags.push(chip);
+								setNewWorkflowTags(newWorkflowTags);
+							}}
+							onDelete={(chip, index) => {
+								newWorkflowTags.splice(index, 1);
+								setNewWorkflowTags(newWorkflowTags);
+							}}
+						/>
+						{usecases !== null && usecases !== undefined && usecases.length > 0 ? 
+      				<FormControl style={{flex: 1, marginLeft: 5, }}>
+      				  <InputLabel htmlFor="grouped-select-usecase">Usecases</InputLabel>
+      				  <Select 
+									defaultValue="" 
+									id="grouped-select" 
+									label="Matching Usecase" 
+									multiple
+									value={selectedUsecases}
+									renderValue={(selected) => selected.join(', ')}
+									onChange={(event) => {
+										console.log("Changed: ", event)
+									}}
+								>
+      				    <MenuItem value="">
+      				      <em>None</em>
+      				    </MenuItem>
+									{usecases.map((usecase, index) => {
+										//console.log(usecase)
+										return (
+											<span key={index}>
+												<ListSubheader
+													style={{color: usecase.color}}
+												>
+													{usecase.name}
+												</ListSubheader>
+												{usecase.list.map((subcase, subindex) => {
+													//console.log(subcase)
+													total_count += 1
+													return (
+														<MenuItem key={subindex} value={total_count} onClick={(event) => {
+															if (selectedUsecases.includes(subcase.name)) {
+																const itemIndex = selectedUsecases.indexOf(subcase.name)
+																if (itemIndex > -1) {
+																	selectedUsecases.splice(itemIndex, 1)
+																}
+															} else {
+																selectedUsecases.push(subcase.name)
+															}
 
-          <TextField
-            onBlur={(event) => setDefaultReturnValue(event.target.value)}
-            InputProps={{
-              style: {
-                color: "white",
-              },
-            }}
-            color="primary"
-            defaultValue={defaultReturnValue}
-            placeholder="Default return value (used for Subflows if the subflow fails)"
-            rows="3"
-            multiline
-            margin="dense"
-            fullWidth
-          />
+    	  											setUpdate(Math.random());
+															setSelectedUsecases(selectedUsecases)
+														}}>
+            	  							<Checkbox style={{color: selectedUsecases.includes(subcase.name) ? usecase.color : theme.palette.inputColor}} checked={selectedUsecases.includes(subcase.name)} />
+								              <ListItemText primary={subcase.name} />
+														</MenuItem>
+													)
+												})}
+											</span>
+										)
+									})}
+      				  </Select>
+      				</FormControl>
+						: null}
+					</div>
+
+  				{showMoreClicked ? 
+						<span>
+							<TextField
+								onBlur={(event) => setDefaultReturnValue(event.target.value)}
+								InputProps={{
+									style: {
+										color: "white",
+									},
+								}}
+								color="primary"
+								defaultValue={defaultReturnValue}
+								placeholder="Default return value (used for Subflows if the subflow fails)"
+								rows="3"
+								multiline
+								margin="dense"
+								fullWidth
+							/>
+						</span>
+					: null}
+          <Tooltip color="primary" title={"Add more details"} placement="top">
+						<IconButton
+							style={{ color: "white", margin: "auto", marginTop: 10, textAlign: "center", width: 50,}}
+							onClick={() => {
+								setShowMoreClicked(!showMoreClicked);
+							}}
+						>
+							{showMoreClicked ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+						</IconButton>
+					</Tooltip>
+
         </DialogContent>
         <DialogActions>
           <Button
@@ -2298,6 +2575,7 @@ const Workflows = (props) => {
               setEditingWorkflow({});
               setNewWorkflowTags([]);
               setModalOpen(false);
+							setSelectedUsecases([])
             }}
             color="primary"
           >
@@ -2316,8 +2594,10 @@ const Workflows = (props) => {
                   newWorkflowTags,
                   defaultReturnValue,
                   editingWorkflow,
-                  false
+                  false,
+									selectedUsecases,
                 );
+
                 setNewWorkflowName("");
                 setDefaultReturnValue("");
                 setNewWorkflowDescription("");
@@ -2330,11 +2610,13 @@ const Workflows = (props) => {
                   newWorkflowTags,
                   defaultReturnValue,
                   {},
-                  true
+                  true,
+									selectedUsecases,
                 );
               }
 
               setSubmitLoading(true);
+							setSelectedUsecases([])
             }}
             color="primary"
           >
@@ -2366,7 +2648,7 @@ const Workflows = (props) => {
       {view === "list" && (
         <Tooltip color="primary" title={"Grid View"} placement="top">
           <Button
-            color="primary"
+            color="secondary"
             variant="text"
             onClick={() => {
               localStorage.setItem("view", "grid");
@@ -2380,7 +2662,7 @@ const Workflows = (props) => {
       {view === "grid" && (
         <Tooltip color="primary" title={"List View"} placement="top">
           <Button
-            color="primary"
+            color="secondary"
             variant="text"
             onClick={() => {
               localStorage.setItem("view", "list");
@@ -2393,12 +2675,12 @@ const Workflows = (props) => {
       )}
       <Tooltip color="primary" title={"Import workflows"} placement="top">
         {importLoading ? (
-          <Button color="primary" style={{}} variant="text" onClick={() => {}}>
+          <Button color="secondary" style={{}} variant="text" onClick={() => {}}>
             <CircularProgress style={{ maxHeight: 15, maxWidth: 15 }} />
           </Button>
         ) : (
           <Button
-            color="primary"
+            color="secondary"
             style={{}}
             variant="text"
             onClick={() => upload.click()}
@@ -2421,7 +2703,7 @@ const Workflows = (props) => {
           placement="top"
         >
           <Button
-            color="primary"
+            color="secondary"
             style={{}}
             variant="text"
             onClick={() => {
@@ -2433,9 +2715,9 @@ const Workflows = (props) => {
         </Tooltip>
       ) : null}
       {isCloud ? null : (
-        <Tooltip color="primary" title={"Download workflows"} placement="top">
+        <Tooltip color="primary" title={"Import workflows to Shuffle"} placement="top">
           <Button
-            color="primary"
+            color="secondary"
             style={{}}
             variant="text"
             onClick={() => setLoadWorkflowsModalOpen(true)}
@@ -2606,9 +2888,54 @@ const Workflows = (props) => {
     return (
       <div style={viewStyle}>
         <div style={workflowViewStyle}>
-          <div style={{ display: "flex" }}>
-            <div style={{ flex: 3 }}>
-              <h2>Workflows</h2>
+          <div style={{ display: "flex", marginTop: 25, }}>
+            <div style={{ flex: 1 }}>
+							<Typography variant="h1" style={{fontSize: 30}}>
+              	Workflows
+							</Typography>
+            </div>
+						{/*
+            <div style={{ flex: 1 }}>
+              <Typography style={{ marginTop: 7, marginBottom: "auto" }}>
+                <a
+                  rel="noopener noreferrer"
+                  target="_blank"
+                  href="https://shuffler.io/docs/workflows"
+                  style={{ textDecoration: "none", color: "#f85a3e" }}
+                >
+                  Learn more about Workflows
+                </a>
+              </Typography>
+            </div>
+						*/}
+						{isMobile ? null : 
+							<div style={{ display: "flex", margin: "0px 0px 20px 0px" }}>
+								<div style={{ flex: 1, float: "right" }}>
+									<ChipInput
+										style={{}}
+										InputProps={{
+											style: {
+												color: "white",
+												maxWidth: 275,
+												minWidth: 275,
+											},
+										}}
+										placeholder="Add Filter"
+										color="primary"
+										fullWidth
+										value={filters}
+										onAdd={(chip) => {
+											addFilter(chip);
+										}}
+										onDelete={(_, index) => {
+											removeFilter(index);
+										}}
+									/>
+								</div>
+							</div>
+						}
+            <div style={{ flex: 1, textAlign: "right" }}>
+              {workflowButtons}
             </div>
           </div>
           {/*
@@ -2658,43 +2985,52 @@ const Workflows = (props) => {
 						)
 					}}
 					*/}
-          <div style={{ display: "flex", margin: "0px 0px 20px 0px" }}>
-            <div style={{ flex: 1 }}>
-              <Typography style={{ marginTop: 7, marginBottom: "auto" }}>
-                <a
-                  rel="noopener noreferrer"
-                  target="_blank"
-                  href="https://shuffler.io/docs/workflows"
-                  style={{ textDecoration: "none", color: "#f85a3e" }}
-                >
-                  Learn more about Workflows
-                </a>
-              </Typography>
-            </div>
-            <div style={{ flex: 1, float: "right" }}>
-              <ChipInput
-                style={{}}
-                InputProps={{
-                  style: {
-                    color: "white",
-                  },
-                }}
-                placeholder="Add Filter"
-                color="primary"
-                fullWidth
-                value={filters}
-                onAdd={(chip) => {
-                  addFilter(chip);
-                }}
-                onDelete={(_, index) => {
-                  removeFilter(index);
-                }}
-              />
-            </div>
-            <div style={{ float: "right", flex: 1, textAlign: "right" }}>
-              {workflowButtons}
-            </div>
-          </div>
+  		
+					<div style={{width: "100%",}}>
+						{!isMobile && usecases !== null && usecases !== undefined && usecases.length > 0 ? 
+							<div style={{ display: "flex", }}>
+								{usecases.map((usecase, index) => {
+									//console.log(usecase)
+									return (
+										<Paper
+											key={usecase.name}
+											style={{
+												flex: 1,
+												backgroundColor: filters.includes(usecase.name.toLowerCase()) ? usecase.color : theme.palette.surfaceColor,
+												borderRadius: theme.palette.borderRadius,
+												marginRight: index === usecases.length-1 ? 0 : 10, 
+												height: 60,
+												cursor: "pointer",
+												border: `2px solid ${usecase.color}`,
+												overflow: "hidden",
+												padding: 10,
+											}}
+											onClick={() => {
+												console.log("Clicked!")
+												return
+												if (filters.includes(usecase.name.toLowerCase())) {
+													addFilter(usecase.name)
+												} else {
+													const foundIndex = filters.indexOf(usecase.name.toLowerCase())
+  												removeFilter(foundIndex) 
+												}
+
+											}}
+										>
+											<a href={`/usecases?selected=${usecase.name}`} rel="noopener noreferrer" target="_blank" style={{ textDecoration: "none", }}>
+												<Typography variant="body1" color="textPrimary">
+													{usecase.name}
+												</Typography>
+												<Typography variant="body2" color="textSecondary">
+													In use: {usecase.matches.length}/{usecase.list.length}
+												</Typography>
+											</a>
+										</Paper>
+									)
+								})}
+							</div>
+						: null}
+					</div>
           <div style={{ marginTop: 15 }} />
           {actionImageList !== undefined &&
           actionImageList !== null &&
@@ -2805,7 +3141,7 @@ const Workflows = (props) => {
 									workflowDelay += 75
 								} else {
 									return (
-      							<Grid item xs={4} style={{ padding: "12px 10px 12px 10px" }}>
+      							<Grid key={index} item xs={isMobile ? 12 : 4} style={{ padding: "12px 10px 12px 10px" }}>
 											<WorkflowPaper key={index} data={data} />
       							</Grid>
 									)
@@ -2813,7 +3149,7 @@ const Workflows = (props) => {
 
                 return (
 									<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>
-      							<Grid item xs={4} style={{ padding: "12px 10px 12px 10px" }}>
+      							<Grid item xs={isMobile ? 12 : 4} style={{ padding: "12px 10px 12px 10px" }}>
 											<WorkflowPaper key={index} data={data} />
       							</Grid>
 									</Zoom>
@@ -3008,7 +3344,7 @@ const Workflows = (props) => {
           }}
           color="primary"
         >
-          Submit Submit
+          Submit
         </Button>
       </DialogActions>
     </Dialog>
@@ -3024,7 +3360,7 @@ const Workflows = (props) => {
 				*/}
         <Dropzone
           style={{
-            maxWidth: window.innerWidth > 1366 ? 1366 : 1200,
+            maxWidth: window.innerWidth > 1366 ? 1366 : isMobile ? "100%" : 1200,
             margin: "auto",
             padding: 20,
           }}

@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	//"github.com/docker/docker"
 	"github.com/docker/docker/api/types"
 	//"github.com/docker/docker/api/types/container"
@@ -417,7 +418,7 @@ func stopWebhook(image string, identifier string) error {
 
 // Starts a new webhook
 func handleStopHookDocker(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -502,7 +503,7 @@ var webhook = `{
 // Starts a new webhook
 func handleDeleteHookDocker(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -619,7 +620,7 @@ func hookTest() {
 
 //https://stackoverflow.com/questions/23935141/how-to-copy-docker-images-from-one-host-to-another-without-using-a-repository
 func getDockerImage(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}

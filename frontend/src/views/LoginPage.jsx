@@ -1,5 +1,5 @@
 /* eslint-disable react/no-multi-comp */
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { makeStyles } from "@material-ui/styles";
 import { useInterval } from "react-powerhooks";
 
@@ -32,9 +32,6 @@ const useStyles = makeStyles({
 });
 
 const LoginDialog = (props) => {
-  const theme = useTheme();
-	let navigate = useNavigate();
-
   const {
     globalUrl,
     isLoaded,
@@ -44,6 +41,11 @@ const LoginDialog = (props) => {
     register,
     checkLogin,
   } = props;
+
+  const theme = useTheme();
+	let navigate = useNavigate();
+  const classes = useStyles();
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [firstRequest, setFirstRequest] = useState(true);
@@ -54,9 +56,13 @@ const LoginDialog = (props) => {
   const [MFAField, setMFAField] = useState(false);
   const [MFAValue, setMFAValue] = useState("");
 
+
   // Used to swap from login to register. True = login, false = register
 
-  const classes = useStyles();
+	useEffect(() => {
+		checkAdmin() 
+	}, [loginViewLoading])
+
   // Error messages etc
   const [loginInfo, setLoginInfo] = useState("");
 
@@ -143,7 +149,7 @@ const LoginDialog = (props) => {
 
     var baseurl = globalUrl;
     if (register) {
-      var url = baseurl + "/api/v1/users/login";
+      var url = baseurl + "/api/v1/login";
       fetch(url, {
         mode: "cors",
         method: "POST",
@@ -180,7 +186,8 @@ const LoginDialog = (props) => {
 
               setIsLoggedIn(true);
 
-              navigate("/workflows")
+              //navigate("/workflows")
+							window.location.href = "/workflows"
             }
           })
         )
@@ -264,6 +271,7 @@ const LoginDialog = (props) => {
             }}
           />
         </div>
+
         {loginViewLoading ? (
           <div style={{ textAlign: "center", marginTop: 50 }}>
             <Typography
@@ -466,13 +474,15 @@ const LoginDialog = (props) => {
                 <div style={{ textAlign: "center", margin: 10 }}>
                   <Button
                     fullWidth
+										id="sso_button"
                     color="secondary"
                     variant="outlined"
                     type="button"
                     style={{ flex: "1", marginTop: 5 }}
                     onClick={() => {
-                      console.log("CLICK");
-                      navigate(ssoUrl)
+                      //console.log("CLICK SSO");
+											window.location.href = ssoUrl
+                      //navigate(ssoUrl)
                     }}
                   >
                     Use SSO
@@ -487,6 +497,26 @@ const LoginDialog = (props) => {
   );
 
   const loadedCheck = isLoaded ? <div>{basedata}</div> : <div></div>;
+
+	useEffect(() => {
+		setTimeout(() => {
+			if (ssoUrl !== undefined && ssoUrl !== null && ssoUrl.length > 0) {
+				//id="sso_button"
+    		const ssoBtn = document.getElementById("sso_button");
+				if (ssoBtn !== undefined && ssoBtn !== null) {
+					console.log("SSO BTN: ", ssoBtn)
+					const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
+					var tmpView = new URLSearchParams(cursearch).get("autologin");
+					if (tmpView !== undefined && tmpView !== null) {
+						if (tmpView === "true") {
+							console.log("Tmp: ", tmpView)
+							ssoBtn.click()
+						}
+					}
+				}
+			}
+		}, 200);
+	}, [ssoUrl])
 
   return <div>{loadedCheck}</div>;
 };

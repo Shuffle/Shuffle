@@ -1154,8 +1154,8 @@ const Admin = (props) => {
       })
       .then((respdata) => {
         if (respdata.length === 0) {
-          alert.error("Failed getting file");
-          return;
+					alert.error("Failed getting file. Is it deleted?");
+					return;
         }
 
         var blob = new Blob([respdata], {
@@ -3101,12 +3101,12 @@ const Admin = (props) => {
           {fileNamespaces !== undefined &&
           fileNamespaces !== null &&
           fileNamespaces.length > 1 ? (
-            <FormControl>
-              <InputLabel id="input-namespace-label">Namespace</InputLabel>
+            <FormControl style={{minWidth: 150, maxWidth: 150,}}>
+              <InputLabel id="input-namespace-label">File Category</InputLabel>
               <Select
                 labelId="input-namespace-select-label"
                 id="input-namespace-select-id"
-                style={{ color: "white", minWidth: 100, float: "right" }}
+                style={{ color: "white", minWidth: 150, maxWidth: 150, float: "right" }}
                 value={selectedNamespace}
                 onChange={(event) => {
                   console.log("CHANGE NAMESPACE: ", event.target);
@@ -3185,7 +3185,7 @@ const Admin = (props) => {
                   }
 
                   return (
-                    <ListItem key={index} style={{ backgroundColor: bgColor }}>
+                    <ListItem key={index} style={{ backgroundColor: bgColor, maxHeight: 100, overflow: "hidden",}}>
                       <ListItemText
                         style={{
                           maxWidth: 225,
@@ -3637,8 +3637,8 @@ const Admin = (props) => {
               style={{ minWidth: 125, maxWidth: 125, overflow: "hidden" }}
             />
             <ListItemText
-              primary="Last Edited"
-              style={{ minWidth: 225, maxWidth: 225, overflow: "hidden" }}
+              primary="Created"
+              style={{ minWidth: 230, maxWidth: 230, overflow: "hidden" }}
             />
             <ListItemText primary="Actions" />
           </ListItem>
@@ -3650,7 +3650,26 @@ const Admin = (props) => {
                   bgColor = "#1f2023";
                 }
 
-								console.log("Auth data: ", data)
+								//console.log("Auth data: ", data)
+								if (data.type === "oauth2") {
+									data.fields = [
+									{
+										"key": "url",
+										"value": "Secret. Replaced during app execution!",
+									},
+									{
+										"key": "client_id",
+										"value": "Secret. Replaced during app execution!",
+									},
+									{
+										"key": "client_secret",
+										"value": "Secret. Replaced during app execution!",
+									},
+									{
+										"key": "scope",
+										"value": "Secret. Replaced during app execution!",
+									}]
+								}
 
                 return (
                   <ListItem key={index} style={{ backgroundColor: bgColor }}>
@@ -3720,11 +3739,11 @@ const Admin = (props) => {
                     />
 										<ListItemText
 											style={{
-												maxWidth: 225,
-												minWidth: 225,
+												maxWidth: 230,
+												minWidth: 230,
 												overflow: "hidden",
 											}}
-											primary={new Date(data.edited * 1000).toISOString()}
+											primary={new Date(data.created * 1000).toISOString()}
 										/>
                     <ListItemText>
                       <IconButton

@@ -16,6 +16,7 @@ const theme = createMuiTheme({
     surfaceColor: "#27292d",
     inputColor: "#383B40",
     borderRadius: 5,
+    defaultBorder: "1px solid rgba(255,255,255,0.3)",
 		jsonTheme: "brewer",
 		reactJsonStyle: {
 			borderRadius: 5,

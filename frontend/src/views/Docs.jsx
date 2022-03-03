@@ -102,7 +102,7 @@ const Docs = (defaultprops) => {
 		maxHeight: "83vh",
 		overflowX: "hidden",
 		overflowY: "auto",
-		zIndex: 10003,
+		zIndex: 1000,
   };
 
   const fetchDocList = () => {
@@ -140,6 +140,11 @@ const Docs = (defaultprops) => {
         if (responseJson.success) {
           setData(responseJson.reason);
           document.title = "Shuffle " + docId + " documentation";
+
+					if (responseJson.reason !== undefined && responseJson.reason !== null && responseJson.reason.includes("404: Not Found")) {
+						navigate("/docs")
+						return
+					}
 
           if (responseJson.meta !== undefined) {
             setSelectedMeta(responseJson.meta);
@@ -352,7 +357,7 @@ const Docs = (defaultprops) => {
   }
 
   function Img(props) {
-    return <img style={{ maxWidth: "100%" }} alt={props.alt} src={props.src} />;
+    return <img style={{ borderRadius: theme.palette.borderRadius, maxWidth: "100%", marginTop: 15, marginBottom: 15, }} alt={props.alt} src={props.src} />;
   }
 
   function CodeHandler(props) {
@@ -517,7 +522,8 @@ const Docs = (defaultprops) => {
                 const newname =
                   item.charAt(0).toUpperCase() +
                   item.substring(1).split("_").join(" ").split("-").join(" ");
-                const itemMatching =
+
+                const itemMatching = props.match.params.key === undefined ? false : 
                   props.match.params.key.toLowerCase() === item.toLowerCase();
                 //const [tocLines, setTocLines] = React.useState([]);
                 return (

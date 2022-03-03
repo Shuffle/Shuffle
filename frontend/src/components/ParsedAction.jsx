@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useLayoutEffect } from "react";
 import { makeStyles, createStyles } from "@material-ui/core/styles";
 
+import { validateJson, GetIconInfo } from "../views/Workflows.jsx";
 import { GetParsedPaths } from "../views/Apps.jsx";
-import { GetIconInfo } from "../views/Workflows.jsx";
 import { sortByKey } from "../views/AngularWorkflow.jsx";
 import { useTheme } from "@material-ui/core/styles";
 import NestedMenuItem from "material-ui-nested-menu-item";
+import { useAlert } from "react-alert";
 import theme from '../theme';
 //import NestedMenuItem from "./NestedMenu.jsx";
 
@@ -168,6 +169,7 @@ const ParsedAction = (props) => {
 
   //const theme = useTheme();
   const classes = useStyles();
+  const alert = useAlert()
 
   const [expansionModalOpen, setExpansionModalOpen] = React.useState(false);
   const [hideBody, setHideBody] = React.useState(true);
@@ -178,23 +180,21 @@ const ParsedAction = (props) => {
 	const [hiddenDescription, setHiddenDescription] = React.useState(true);
 
   useEffect(() => {
-		
-		//if (data.startsWith("${") && data.endsWith("}")) {
-		//}
-				// PARAM FIX - Gonna use the ID field, even though it's a hack
-		const paramcheck = selectedAction.parameters.find(param => param.name === "body")
-		console.log("LOADED! Change hideBody based on input? Action: ", selectedAction, paramcheck)
-		if (paramcheck !== undefined && paramcheck !== null) {
-			if (paramcheck.id === "TOGGLED"){ 
-  			setHideBody(false)
-  			setActivateHidingBodyButton(false)
-				console.log("TOGGLED BODY!")
-			} else {
-  			setHideBody(true)
-
-				if (paramcheck.id === "UNTOGGLED") {
+		if (selectedAction.parameters !== null && selectedAction.parameters !== undefined) {
+			const paramcheck = selectedAction.parameters.find(param => param.name === "body")
+			//console.log("LOADED! Change hideBody based on input? Action: ", selectedAction, paramcheck)
+			if (paramcheck !== undefined && paramcheck !== null) {
+				if (paramcheck.id === "TOGGLED"){ 
+  				setHideBody(false)
   				setActivateHidingBodyButton(false)
-					console.log("UNTOGGLED!")
+					console.log("TOGGLED BODY!")
+				} else {
+  				setHideBody(true)
+
+					if (paramcheck.id === "UNTOGGLED") {
+  					setActivateHidingBodyButton(false)
+						console.log("UNTOGGLED!")
+					}
 				}
 			}
 		}
@@ -304,6 +304,8 @@ const ParsedAction = (props) => {
       });
   };
 
+
+
   const defineStartnode = () => {
     if (cy === undefined) {
       return;
@@ -391,14 +393,46 @@ const ParsedAction = (props) => {
 
       if (actionlist.length === 0) {
         // FIXME: Have previous execution values in here
-        actionlist.push({
-          type: "Execution Argument",
-          name: "Execution Argument",
-          value: "$exec",
-          highlight: "exec",
-          autocomplete: "exec",
-          example: "",
-        });
+				if (workflowExecutions.length > 0) {
+					for (var key in workflowExecutions) {
+						if (
+							workflowExecutions[key].execution_argument === undefined ||
+							workflowExecutions[key].execution_argument === null ||
+							workflowExecutions[key].execution_argument.length === 0 
+						) {
+							continue;
+						}
+
+						console.log("EXEC: ", workflowExecutions[key].execution_argument)
+					
+						const valid = validateJson(workflowExecutions[key].execution_argument)
+						console.log("VALID: ", valid)
+						if (valid.valid) {
+							actionlist.push({
+								type: "Execution Argument",
+								name: "Execution Argument",
+								value: "$exec",
+								highlight: "exec",
+								autocomplete: "exec",
+								example: valid.result,
+							})
+							break
+						}
+					}
+
+				}
+
+				if (actionlist.length === 0) {
+					actionlist.push({
+						type: "Execution Argument",
+						name: "Execution Argument",
+						value: "$exec",
+						highlight: "exec",
+						autocomplete: "exec",
+						example: "",
+					})
+				}
+
         actionlist.push({
           type: "Shuffle DB",
           name: "Shuffle DB",
@@ -454,7 +488,8 @@ const ParsedAction = (props) => {
         	      continue;
         	    }
 
-        	    var exampledata = item.example === undefined ? "" : item.example;
+        	    var exampledata = item.example === undefined || item.example === null ? "" : item.example;
+							console.log("EXAMPLE: ", exampledata)
         	    // Find previous execution and their variables
         	    //exampledata === "" &&
         	    if (workflowExecutions.length > 0) {
@@ -471,55 +506,22 @@ const ParsedAction = (props) => {
         	        var foundResult = workflowExecutions[key].results.find(
         	          (result) => result.action.id === item.id
         	        );
-        	        if (foundResult === undefined) {
+        	        if (foundResult === undefined || foundResult === null) {
         	          continue;
         	        }
 
-        	        foundResult.result = foundResult.result.trim();
-        	        foundResult.result = foundResult.result
-        	          .split(" None")
-        	          .join(' "None"');
-        	        foundResult.result = foundResult.result
-        	          .split(" False")
-        	          .join(" false");
-        	        foundResult.result = foundResult.result
-        	          .split(" True")
-        	          .join(" true");
+									if (foundResult.result !== undefined && foundResult.result !== null) {
+										foundResult = foundResult.result
+									}
+									console.log("VALID RESULT: ", foundResult)
 
-        	        var jsonvalid = true;
-        	        try {
-        	          const tmp = String(JSON.parse(foundResult.result));
-        	          if (
-        	            !foundResult.result.includes("{") &&
-        	            !foundResult.result.includes("[")
-        	          ) {
-        	            jsonvalid = false;
-        	          }
-        	        } catch (e) {
-        	          try {
-        	            foundResult.result = foundResult.result
-        	              .split("'")
-        	              .join('"');
-        	            const tmp = String(JSON.parse(foundResult.result));
-        	            if (
-        	              !foundResult.result.includes("{") &&
-        	              !foundResult.result.includes("[")
-        	            ) {
-        	              jsonvalid = false;
-        	            }
-        	          } catch (e) {
-        	            jsonvalid = false;
-        	          }
-        	        }
-
-        	        // Finds the FIRST json only
-        	        if (jsonvalid) {
-        	          exampledata = JSON.parse(foundResult.result);
+									const valid = validateJson(foundResult)
+									if (valid.valid) {
+        	          exampledata = valid.result;
         	          break;
-        	        }
-        	        //else {
-        	        //	console.log("Invalid JSON: ", foundResult.result)
-        	        //}
+        	        } else {
+        	          exampledata = foundResult;
+									}
         	      }
         	    }
 
@@ -528,6 +530,7 @@ const ParsedAction = (props) => {
         	      item.label === null || item.label === undefined
         	        ? ""
         	        : item.label.split(" ").join("_");
+
         	    const actionvalue = {
         	      type: "action",
         	      id: item.id,
@@ -539,10 +542,64 @@ const ParsedAction = (props) => {
         	  }
         	}
 
+					//console.log("ACTIONLIST: ", actionlist)
         	setActionlist(actionlist);
 				}
       }
     });
+
+
+		const calculateHelpertext = (input_data) => {
+			var helperText = ""
+			var looperText = ""
+			const found = input_data.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
+
+			if (found !== null) {
+				try {
+					// When the found array is empty.
+					for (var i = 0; i < found.length; i++) {
+						const variableSplit = found[i].split(".#")
+						if ((variableSplit.length-1) > 1) {
+							//console.log("Larger than 1: ", variableSplit)
+							if (looperText.length === 0) {
+								looperText += "PS: Double looping (.#) may cause problems."
+							}
+						}
+
+						var foundSlice = false
+						for (var j = 0; j < actionlist.length; j++) {
+							//console.log("ACTION: ", found[i], actionlist[j])
+							//console.log("ACTION :", found[i].split(".")[0].slice(1,).toLowerCase(), actionlist[j].autocomplete.toLowerCase())
+							if(found[i].split(".")[0].slice(1,).toLowerCase() == actionlist[j].autocomplete.toLowerCase()){
+								//console.log("Found: ", found[i])
+								// Validate path?
+
+								foundSlice = true
+							}	
+						}
+
+						if (!foundSlice) {
+							if (!helperText.includes("Invalid variables")) {
+								helperText+= "Invalid variables: "
+							}
+							helperText+= found[i] + ", "
+						}
+					}
+				} catch (e) {
+					console.log("Parsing error: ", e)
+				}
+			}
+
+			if (looperText.length > 0) {
+				if (helperText.length > 0) {
+					helperText += ". "
+				}
+
+				helperText += looperText
+			}
+
+			return helperText
+		}
 
     const changeActionParameter = (event, count, data) => {
 			//console.log("Action change: ", selectedAction, data)
@@ -1282,21 +1339,27 @@ const ParsedAction = (props) => {
 
             const clickedFieldId = "rightside_field_" + count;
 
-						const shufflecode = <ShuffleCodeEditor
-							fieldCount = {fieldCount}
-							setFieldCount = {setFieldCount}
-              actionlist = {actionlist}
-							changeActionParameterCodeMirror = {changeActionParameterCodeMirror}
-							codedata={codedata}
-							setcodedata={setcodedata}
-							expansionModalOpen={expansionModalOpen}
-							setExpansionModalOpen={setExpansionModalOpen}
-						/>
+						const shufflecode = fieldCount !== count ? null : 
+						(
+							<ShuffleCodeEditor
+								fieldCount = {fieldCount}
+								setFieldCount = {setFieldCount}
+								actionlist = {actionlist}
+								changeActionParameterCodeMirror = {changeActionParameterCodeMirror}
+								codedata={codedata}
+								setcodedata={setcodedata}
+								expansionModalOpen={expansionModalOpen}
+								setExpansionModalOpen={setExpansionModalOpen}
+							/>
+						)
 
             //<TextareaAutosize
             // <CodeMirror
             //fullWidth
-						
+            var baseHelperText = ""
+						if (data !== undefined && data !== null && data.value !== undefined && data.value !== null && data.value.length > 0) {
+							baseHelperText = calculateHelpertext(data.value)
+						}
 						
             var datafield = (
               <TextField
@@ -1405,7 +1468,7 @@ const ParsedAction = (props) => {
                   //changeActionParameterCodemirror(event, count, data)
                   changeActionParameter(event, count, data);
                 }}
-                helperText={
+                helperText={baseHelperText.length > 0 ? baseHelperText : 
                   selectedApp.generated &&
                   selectedApp.activated &&
                   data.name === "body" ? (
@@ -1423,15 +1486,7 @@ const ParsedAction = (props) => {
                   ) : null
                 }
                 onBlur={(event) => {
-                  // Super basic check
-                  //if (event.target.value.startsWith("{")) {
-                  //	console.log("VALIDATING JSON")
-                  //	try {
-                  //		JSON.parse(event.target.value)
-                  //	} catch (e) {
-                  //		alert.error("Failed to parse json: ", e)
-                  //	}
-                  //}
+									baseHelperText = calculateHelpertext(event.target.value)
                 }}
               />
             );
@@ -1536,6 +1591,9 @@ const ParsedAction = (props) => {
 
               datafield = (
                 <Select
+									MenuProps={{
+										disableScrollLock: true,
+									}}
                   SelectDisplayProps={{
                     style: {
                       marginLeft: 10,
@@ -2036,6 +2094,9 @@ const ParsedAction = (props) => {
                       Autocomplete
                     </InputLabel>
                     <Select
+											MenuProps={{
+			          				disableScrollLock: true,
+								      }}
                       labelId="action-autocompleter"
                       SelectDisplayProps={{
                         style: {
@@ -2333,11 +2394,17 @@ const ParsedAction = (props) => {
               selectedApp.versions !== undefined &&
               selectedApp.versions.length > 1 ? (
                 <Select
+									MenuProps={{
+										disableScrollLock: true,
+									}}
                   defaultValue={selectedAction.app_version}
                   onChange={(event) => {
+										console.log("VAL: ", event.target.value)
+										console.log("App: ", selectedApp)
                     const newversion = selectedApp.versions.find(
                       (tmpApp) => tmpApp.version == event.target.value
                     );
+
                     console.log("NEWVERSION: ", newversion);
                     if (newversion !== undefined && newversion !== null) {
                       getApp(newversion.id, true);
@@ -2408,6 +2475,7 @@ const ParsedAction = (props) => {
 											if (param.value.includes(baselabel)) {
 												//if (param.value.toLowerCase().includes(baselabel)) {
 												console.log("FOUND: ", param);
+
 												workflow.actions[key].parameters[subkey].value.replaceAll(
 													baselabel,
 													e.target.value
@@ -2497,6 +2565,9 @@ const ParsedAction = (props) => {
           <Typography>Authentication</Typography>
           <div style={{ display: "flex" }}>
             <Select
+							MenuProps={{
+								disableScrollLock: true,
+							}}
               labelId="select-app-auth"
               value={
                 Object.getOwnPropertyNames(
@@ -2508,6 +2579,7 @@ const ParsedAction = (props) => {
               SelectDisplayProps={{
                 style: {
                   marginLeft: 10,
+									maxWidth: 250,
                 },
               }}
               fullWidth
@@ -2581,6 +2653,7 @@ const ParsedAction = (props) => {
             >
               <IconButton
                 color="primary"
+								variant="outlined"
                 style={{}}
                 onClick={() => {
                   setAuthenticationModalOpen(true);
@@ -2597,6 +2670,9 @@ const ParsedAction = (props) => {
         <div style={{ marginTop: "20px" }}>
           <Typography>Environment</Typography>
           <Select
+						MenuProps={{
+							disableScrollLock: true,
+						}}
             value={
               selectedActionEnvironment === undefined ||
               selectedActionEnvironment.Name === undefined
@@ -2651,6 +2727,9 @@ const ParsedAction = (props) => {
         <div style={{ marginTop: "20px" }}>
           <Typography>Set execution variable (optional)</Typography>
           <Select
+						MenuProps={{
+							disableScrollLock: true,
+						}}
             value={
               selectedAction.execution_variable !== undefined
                 ? selectedAction.execution_variable.name
@@ -2843,6 +2922,9 @@ const ParsedAction = (props) => {
 
         {/*setNewSelectedAction !== undefined ? 
 					<Select
+						MenuProps={{
+							disableScrollLock: true,
+						}}
 						value={selectedAction.name}
 						fullWidth
 						onChange={setNewSelectedAction}

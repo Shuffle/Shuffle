@@ -15,7 +15,7 @@ import theme from "./theme";
 import Apps from "./views/Apps";
 import AppCreator from "./views/AppCreator";
 
-import Dashboard from "./views/Dashboard";
+import Dashboard from "./views/Dashboard.jsx";
 import AdminSetup from "./views/AdminSetup";
 import Admin from "./views/Admin";
 import Docs from "./views/Docs";
@@ -49,6 +49,12 @@ if (window.location.port === "3000") {
   //globalUrl = "http://localhost:5002"
 }
 
+if (globalUrl.includes("githubpreview.dev")) {
+	//globalUrl = globalUrl.replace("3000", "5001")
+	globalUrl = "https://frikky-shuffle-5gvr4xx62w64-5001.githubpreview.dev"
+}
+console.log("global: ", globalUrl)
+
 const App = (message, props) => {
 
   const [userdata, setUserData] = useState({});
@@ -70,7 +76,7 @@ const App = (message, props) => {
       checkLogin();
       setDataset(true);
     }
-  });
+  }, []);
 
   if (
     isLoaded &&
@@ -78,17 +84,19 @@ const App = (message, props) => {
     !window.location.pathname.startsWith("/login") &&
     !window.location.pathname.startsWith("/docs") &&
     !window.location.pathname.startsWith("/detectionframework") &&
-    !window.location.pathname.startsWith("/adminsetup")
+    !window.location.pathname.startsWith("/adminsetup") &&
+    !window.location.pathname.startsWith("/usecases")
   ) {
     window.location = "/login";
   }
 
   const getUserNotifications = () => {
-    fetch(`${globalUrl}/api/v1/notifications`, {
+    fetch(`${globalUrl}/api/v1/users/notifications`, {
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
       },
+			cors: "cors",
     })
       .then((response) => response.json())
       .then((responseJson) => {
@@ -109,7 +117,7 @@ const App = (message, props) => {
 
   const checkLogin = () => {
     var baseurl = globalUrl;
-    fetch(baseurl + "/api/v1/users/getinfo", {
+    fetch(`${globalUrl}/api/v1/getinfo`, {
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
@@ -399,7 +407,7 @@ const App = (message, props) => {
         	/>
         	<Route
         	  exact
-        	  path="/dashboard"
+        	  path="/usecases"
         	  element={
         	    <Dashboard
         	      isLoaded={isLoaded}

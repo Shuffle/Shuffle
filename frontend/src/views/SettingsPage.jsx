@@ -77,7 +77,7 @@ const Settings = (props) => {
   //Returns the value from a storage position at a given address.
   const isCloud =
     window.location.host === "localhost:3002" ||
-    window.location.host === "shuffler.io";
+    window.location.host === "shuffler.io"
 
   const bodyDivStyle = {
     margin: "auto",
@@ -257,6 +257,7 @@ const Settings = (props) => {
           console.log("Status not 200 for WORKFLOW EXECUTION :O!");
         }
 
+
         return response.json();
       })
       .then((responseJson) => {
@@ -402,11 +403,12 @@ const Settings = (props) => {
 		userdata.eth_info.account.length > 0 && userdata.eth_info.parsed_balance !== undefined 
 
   // Random names for type & autoComplete. Didn't research :^)
-  var imageData = file.length > 0 ? file : fileBase64;
-  imageData =
-    imageData === undefined || imageData.length === 0
-      ? theme.palette.defaultImage
-      : imageData;
+  //var imageData = file.length > 0 ? file : fileBase64;
+  //imageData = imageData === undefined || imageData.length === 0
+  //    ? theme.palette.defaultImage
+  //    : imageData;
+
+	const imageData = userSettings.image === undefined || userSettings.image == null || userSettings.image.length === 0 ? theme.palette.defaultImage : userSettings.image
   const imageInfo = (
     <img
       src={imageData}
@@ -729,17 +731,22 @@ const Settings = (props) => {
         <div style={{ display: runFlex ? "flex" : "", width: "100%" }}>
 					<div>
   					{isCloud ?
-							<Button
-								style={{ height: 40, marginTop: 10 }}
-								variant="outlined"
-								color="primary"
-								fullWidth={true}
-								onClick={() => {
-									handleGithubConnection();
-								}}
-							>
-								Connect to Github
-							</Button>
+							<span>
+								<Typography variant="body1" color="textSecondary">
+									By connecting your Github account, you agree to our <a href="/docs/terms_of_service" target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}}>Terms of Service</a>, and acknowledge that your non-sensitive data will be turned into a <a target="_blank" style={{ textDecoration: "none", color: "#f86a3e"}} href="https://shuffler.io/search?tab=creators">creator account</a>. This enables you to earn a passive income from Shuffle. This IS reversible.
+								</Typography>
+								<Button
+									style={{ height: 40, marginTop: 10 }}
+									variant="outlined"
+									color="primary"
+									fullWidth={true}
+									onClick={() => {
+										handleGithubConnection();
+									}}
+								>
+									Connect to Github
+								</Button>
+							</span>
 						: null}
 					</div>
           <div style={{ flex: 1, display: "flex" }}>
@@ -859,7 +866,7 @@ const Settings = (props) => {
                   handleEthereumConnection();
                 }}
               >
-                Authenticate
+                Authenticate Metamask Wallet
               </Button>
             )}
           </div>
@@ -917,11 +924,11 @@ const Settings = (props) => {
   };
 
   const handleGithubConnection = () => {
-		console.log("GITHUB CONNECT WOO")
+		console.log("GITHUB CONNECT WOO: ", isCloud)
   	//result = RestClient.post('https://github.com/login/oauth/access_token',
 
 		console.log("HOST: ", window.location.host);
-		console.log("HOST: ", window.location);
+		console.log("Location: ", window.location);
 		const redirectUri = isCloud
 			? window.location.host === "localhost:3002"
 				? "http%3A%2F%2Flocalhost:3002%2Fset_authentication"
@@ -931,10 +938,11 @@ const Settings = (props) => {
 				:
 				`https%3A%2F%2F${window.location.host}%2Fset_authentication`
 
+		console.log("redirect: ", redirectUri)
 
 		const client_id = "3d272b1b782b100b1e61"
 		const username = userdata.id;
-		const scopes = "user:email";
+		const scopes = "read:user";
 
 		const url = `https://github.com/login/oauth/authorize?access_type=offline&prompt=consent&client_id=${client_id}&redirect_uri=${redirectUri}&response_type=code&scope=${scopes}&state=username%3D${username}%26type%3Dgithub`
 

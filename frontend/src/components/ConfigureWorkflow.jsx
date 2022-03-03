@@ -556,7 +556,7 @@ const ConfigureWorkflow = (props) => {
         {action.must_activate ? (
           <Button
             color="primary"
-            variant="outlined"
+            variant="contained"
             onClick={() => {
 							console.log("ACTION: ", action)
               activateApp(action.action.app_id, action.app_name, action.app_version);
@@ -666,7 +666,7 @@ const ConfigureWorkflow = (props) => {
               }
             }}
           >
-            Finish setup
+          	Close window 
           </Button>
         </ButtonGroup>
       </div>

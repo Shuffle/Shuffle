@@ -1,46 +1,327 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useInterval } from "react-powerhooks";
 // nodejs library that concatenates classes
 import classNames from "classnames";
+import theme from '../theme';
+
 // react plugin used to create charts
-import { Line, Bar } from "react-chartjs-2";
+//import { Line, Bar } from "react-chartjs-2";
 import { useAlert } from "react-alert";
 
-// https://demos.creative-tim.com/black-dashboard-react/?ref=appseed#/admin/dashboard
-
-// reactstrap components
 import {
-  Button,
-  ButtonGroup,
-  Card,
-  CardHeader,
-  CardBody,
-  CardTitle,
-  DropdownToggle,
-  DropdownMenu,
-  DropdownItem,
-  UncontrolledDropdown,
-  Label,
-  FormGroup,
-  Input,
-  Table,
-  Row,
-  Col,
-  UncontrolledTooltip,
-} from "reactstrap";
+	Tooltip,
+	IconButton,
+	Typography,
+	Grid,
+	Paper,
+	Chip,
+} from "@material-ui/core";
+
+import {
+  Close as CloseIcon,
+	DoneAll as DoneAllIcon,
+} from "@material-ui/icons";
+
+import WorkflowPaper from "../components/WorkflowPaper.jsx"
 
 // core components
-import {
-  chartExample1,
-  chartExample2,
-  chartExample3,
-  chartExample4,
-} from "../charts.js";
+//import {
+//  chartExample1,
+//  chartExample2,
+//  chartExample3,
+//  chartExample4,
+//} from "../charts.js";
+
+import { 
+	RadialBarChart, 
+	RadialAreaChart, 
+	RadialAxis,
+	StackedBarSeries,
+	TooltipArea,
+	ChartTooltip,
+	TooltipTemplate,
+	RadialAreaSeries,
+	RadialPointSeries,
+	RadialArea,
+	RadialLine,
+	TreeMap,
+	TreeMapSeries,
+	TreeMapLabel,
+	TreeMapRect,
+} from 'reaviz';
+
+const UsecaseListComponent = ({keys, isCloud}) => {
+	const [expandedIndex, setExpandedIndex] = useState(-1);
+	const [expandedItem, setExpandedItem] = useState(-1);
+	if (keys === undefined || keys === null || keys.length === 0) {
+		return null
+	}
+
+	return (
+		<div style={{marginTop: 25, minHeight: 1000,}}>
+			<Typography variant="h1">
+				Shuffle usecases
+			</Typography>
+			<Typography variant="body1">
+				Usecases in Shuffle are divided into {keys.length} type{keys.length === 1 ? "" : "s"}. 
+			</Typography>
+			{keys.map((usecase, index) => {
+				return (
+					<div key={index} style={{marginTop: index === 0 ? 50 : 100}}>
+						<Typography variant="h6">
+							{usecase.name}
+						</Typography>
+      			<Grid container spacing={3} style={{marginTop: 25}}>
+							{usecase.list.map((subcase, subindex) => {
+								if (subcase.matches === undefined || subcase.matches === null) {
+									subcase.matches = []
+								}
+
+								const selectedItem = subindex === expandedItem && index === expandedIndex
+								const finished = subcase.matches.length > 0
+								//const backgroundColor = selectedItem ? "inherit" : finished ?  "inherit" : usecase.color
+								const backgroundColor = "inherit"
+								const itemBorder = `${selectedItem ? "3px" : expandedItem >= 0 ? "0px" : "1px"} solid ${usecase.color}`
+
+								return (
+      						<Grid item xs={selectedItem ? 12 : 4} key={subindex} style={{minHeight: 110,}} onClick={() => {
+										if (selectedItem) {
+										} else {
+											setExpandedIndex(index)
+											setExpandedItem(subindex)
+										}
+									}}>
+										<Paper style={{padding: "30px 30px 30px 30px", minHeight: 75, cursor: !selectedItem ? "pointer" : "default", border: itemBorder, backgroundColor: backgroundColor,}} onClick={() => {
+											console.log("Clicked: ", subcase)
+										}}>
+											{!selectedItem ? 
+												<div style={{textAlign: "left", position: "relative",}}>
+													<Typography variant="h6">
+														<b>{subcase.name}</b>
+													</Typography>
+													{finished ? 
+														<Tooltip
+															title="A workflow has been assigned"
+															placement="top"
+														>
+															<IconButton
+																style={{ position: "absolute", top: -20, right: -20}}
+																onClick={(e) => {
+																}}
+															>
+																<DoneAllIcon style={{ color: usecase.color }} />
+															</IconButton>
+														</Tooltip>
+													: null}
+												</div>
+											: 
+												<div style={{textAlign: "left", position: "relative",}}>
+													<Typography variant="h6">
+														<b>{subcase.name}</b>
+													</Typography>
+													<Typography variant="body2">
+														Description: {subcase.description}
+													</Typography>
+          								<Tooltip
+          								  title="Close window"
+          								  placement="top"
+          								  style={{ zIndex: 10011 }}
+          								>
+          								  <IconButton
+          								    style={{ position: "absolute", top: 0, right: 0}}
+          								    onClick={(e) => {
+																setExpandedItem(-1)
+																setExpandedIndex(-1)
+          								    }}
+          								  >
+          								    <CloseIcon style={{ color: "white" }} />
+          								  </IconButton>
+          								</Tooltip>
+													<div style={{marginTop: 25, display: "flex", minHeight: 400, maxHeight: 400, }}>
+														<img
+															alt={subcase.name}
+															src={"/images/detectionframework.png"}
+															style={{
+																flex: 1,
+																height: 400,
+																width: 400, 
+																borderRadius: theme.palette.borderRadius,
+																border: "1px solid rgba(255,255,255,0.3)",
+															}}
+														/>
+														<div style={{flex: 1, marginLeft: 10, textAlign: "center",}}>
+															<Typography variant="h6">
+																Your workflow{subcase.matches.length === 1 ? "" : "s"} ({subcase.matches.length})
+															</Typography>
+															{subcase.matches.length > 0 ? 
+																<Grid container xs={3} style={{maxWidth: 325, margin: "auto", marginTop: 10, itemAlign: "center", }}>
+																	{subcase.matches.map((workflow, workflowindex) => {
+																		return (
+																			<Grid index={workflowindex} xs={12}>
+																				<WorkflowPaper key={workflowindex} data={workflow} />
+																			</Grid>
+																		)
+																	})}
+																</Grid>
+															: 
+																<div>
+																	<Typography variant="body1" color="textSecondary">
+																		No workflow selected yet.
+																	</Typography>
+																</div>
+															}
+															{isCloud !== false ? 
+																<Typography variant="h6">
+																	Public workflows	
+																</Typography>
+															: null}
+														</div>
+													</div>
+												</div>
+											}
+										</Paper>
+      						</Grid>
+								)
+							})}
+      			</Grid>
+					</div>
+				)
+			})}
+		</div>
+	)
+}
+
+const TreeChart = ({keys}) => {
+  const [hovered, setHovered] = useState("");
+
+	return (
+		<div style={{cursor: "pointer",}} onClick={() => {
+			console.log("Click: ", hovered)	
+		}}>
+			<TreeMap
+				id="all_categories"
+				data={keys}
+				margins={10}
+				series={
+					<TreeMapSeries
+						colorScheme={(info) => {
+							return info.color
+						}}
+						label={
+							<TreeMapLabel 
+								fontSize="15px"
+								fill="#ffffff"
+								wrap={false}
+							/>
+						}
+						rect={
+							<TreeMapRect 
+								cursor="pointer"
+								animated={true}
+								onClick={(event) => {
+									console.log("Click: ", event)
+								}}
+							/>
+						}
+					/>
+				}
+			/>
+		</div>
+	)
+  //axis={<RadialAxis type="category" />}
+}
+    
+
+const RadialChart = ({keys, setSelectedCategory}) => {
+  const [hovered, setHovered] = useState("");
+
+	return (
+		<div style={{cursor: "pointer",}} onClick={() => {
+			console.log("Click: ", hovered)	
+			if (setSelectedCategory !== undefined) {
+				setSelectedCategory(hovered)
+			}
+		}}>
+			<RadialAreaChart
+				id="workflow_categories"
+				height={500}
+				width={500}
+				data={keys}
+    		axis={<RadialAxis type="category" />}
+				series={
+					<RadialAreaSeries 
+						interpolation="smooth"
+						colorScheme={(colorInput) => {
+							return '#f86a3e'
+						}}
+						animated={false}
+						id="workflow_series_id"
+						style={{cursor: "pointer",}}
+						line={
+							<RadialLine
+								color={"#000000"}
+								data={(data, color) => {
+									console.log("INFO: ", data, color)
+									return (
+										null
+									)
+								}}
+							/>
+						}
+						tooltip={
+							<TooltipArea
+								color={"#000000"}
+								style={{
+									backgroundColor: "red",
+								}}
+								isRadial={true}
+								onValueEnter={(event) => {
+									if (hovered !== event.value.x) {
+										setHovered(event.value.x)
+									}
+								}}
+								tooltip={
+									<ChartTooltip
+										followCursor={true}
+										modifiers={{
+											offset: '5px, 5px'
+										}}
+										content={(data, color) => {
+											return (
+												<div style={{borderRadius: theme.palette.borderRadius, backgroundColor: theme.palette.inputColor, border: "1px solid rgba(255,255,255,0.3)", color: "white", padding: 5, cursor: "pointer",}}>
+													<Typography variant="body1">
+														{data.x}
+													</Typography>
+												</div>
+											)
+											/*
+												<TooltipTemplate
+													color={"#ffffff"}
+													value={{
+														x: data.x,
+													}}
+												/>
+											)
+											*/
+										}
+									}
+									/>
+								}
+							/>
+	
+						}
+					/>
+				}
+			/>
+		</div>
+	)
+  //axis={<RadialAxis type="category" />}
+}
 
 // This is the start of a dashboard that can be used.
 // What data do we fill in here? Idk
 const Dashboard = (props) => {
-  const { globalUrl } = props;
+  const { globalUrl, isLoggedIn } = props;
   const alert = useAlert();
   const [bigChartData, setBgChartData] = useState("data1");
   const [dayAmount, setDayAmount] = useState(7);
@@ -48,10 +329,171 @@ const Dashboard = (props) => {
   const [stats, setStats] = useState({});
   const [changeme, setChangeme] = useState("");
   const [statsRan, setStatsRan] = useState(false);
+	const [keys, setKeys] = useState([])
+	const [treeKeys, setTreeKeys] = useState([])
 
-  document.title = "Shuffle - dashboard";
+  const [selectedUsecaseCategory, setSelectedUsecaseCategory] = useState("");
+  const [selectedUsecases, setSelectedUsecases] = useState([]);
+  const [usecases, setUsecases] = useState([]);
+  const [workflows, setWorkflows] = useState([]);
+
+  const isCloud =
+    window.location.host === "localhost:3002" ||
+    window.location.host === "shuffler.io";
+
+  const getAvailableWorkflows = () => {
+    fetch(globalUrl + "/api/v1/workflows", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+		.then((response) => {
+			if (response.status !== 200) {
+				fetchUsecases()
+				console.log("Status not 200 for workflows :O!: ", response.status);
+				return;
+			}
+
+			return response.json();
+		})
+		.then((responseJson) => {
+			fetchUsecases(responseJson)
+
+			console.log("Resp: ", responseJson)
+			if (responseJson !== undefined) {
+				//setWorkflows(responseJson);
+				//fetchUsecases(responseJson)
+			}
+		})
+		.catch((error) => {
+			fetchUsecases()
+			//alert.error(error.toString());
+		});
+	}
+
+	useEffect(() => {
+		console.log("Changed: ", selectedUsecaseCategory)
+		if (selectedUsecaseCategory.length === 0) {
+			setSelectedUsecases(usecases)
+		} else {
+			const foundUsecase = usecases.find(data => data.name === selectedUsecaseCategory)
+			if (foundUsecase !== undefined && foundUsecase !== null) {
+				console.log("FOUND: ", foundUsecase)
+				setSelectedUsecases([foundUsecase])
+			}
+		}
+	}, [selectedUsecaseCategory])
+
+  document.title = "Shuffle - usecases";
   var dayGraphLabels = [60, 80, 65, 130, 80, 105, 90, 130, 70, 115, 60, 130];
   var dayGraphData = [60, 80, 65, 130, 80, 105, 90, 130, 70, 115, 60, 130];
+
+	const handleKeysetting = (categorydata) => {
+		var allCategories = []
+		var treeCategories = []
+		for (key in categorydata) {
+			const category = categorydata[key]
+			allCategories.push({"key": category.name, "data": category.list.length, "color": category.color})
+			treeCategories.push({"key": category.name, "data": 100, "color": category.color,})
+			for (var subkey in category.list) {
+				treeCategories.push({"key": category.list[subkey].name, "data": 20, "color": category.color})
+			}
+		} 
+
+		setKeys(allCategories)
+		setTreeKeys(treeCategories)
+	}
+
+  const fetchUsecases = (workflows) => {
+    fetch(globalUrl + "/api/v1/workflows/usecases", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for usecases");
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+				if (responseJson.success !== false) {
+					console.log("Usecases: ", responseJson)
+					if (workflows !== undefined && workflows !== null && workflows.length > 0) {
+						console.log("Got workflows: ", workflows)
+						var categorydata = responseJson
+
+						var newcategories = []
+						for (var key in categorydata) {
+							var category = categorydata[key]
+							category.matches = []
+
+							for (var subcategorykey in category.list) {
+								var subcategory = category.list[subcategorykey]
+								subcategory.matches = []
+
+								for (var workflowkey in workflows) {
+									const workflow = workflows[workflowkey]
+
+									if (workflow.usecase_ids !== undefined && workflow.usecase_ids !== null) {
+										for (var usecasekey in workflow.usecase_ids) {
+											if (workflow.usecase_ids[usecasekey].toLowerCase() === subcategory.name.toLowerCase()) {
+												console.log("Got match: ", workflow.usecase_ids[usecasekey])
+
+												category.matches.push({
+													"workflow": workflow.id,
+													"category": subcategory.name,
+												})
+
+												subcategory.matches.push(workflow)
+												break
+											}
+										}
+									}
+
+									if (subcategory.matches.length > 0) {
+										break
+									}
+								}
+							}
+
+							newcategories.push(category)
+						} 
+
+						console.log("Categories: ", newcategories)
+						if (newcategories !== undefined && newcategories !== null && newcategories.length > 0) {
+							handleKeysetting(newcategories)
+							setUsecases(newcategories)
+							setSelectedUsecases(newcategories)
+						} else {
+							handleKeysetting(responseJson)
+							setUsecases(responseJson)
+							setSelectedUsecases(responseJson)
+						}
+					} else {
+						handleKeysetting(responseJson)
+						setUsecases(responseJson)
+						setSelectedUsecases(responseJson)
+					}
+				}
+      })
+      .catch((error) => {
+        //alert.error("ERROR: " + error.toString());
+        console.log("ERROR: " + error.toString());
+      });
+  };
+
+  useEffect(() => {
+  	getAvailableWorkflows() 
+		//fetchUsecases()
+  }, []);
 
   const fetchdata = (stats_id) => {
     fetch(globalUrl + "/api/v1/stats/" + stats_id, {
@@ -76,7 +518,8 @@ const Dashboard = (props) => {
         setChangeme(stats_id);
       })
       .catch((error) => {
-        alert.error("ERROR: " + error.toString());
+        //alert.error("ERROR: " + error.toString());
+        console.log("ERROR: " + error.toString());
       });
   };
 
@@ -201,8 +644,8 @@ const Dashboard = (props) => {
   if (firstRequest) {
     console.log("HELO");
     setFirstRequest(false);
-    start();
-    runUpdate();
+    //start();
+    //runUpdate();
   } else if (!statsRan) {
     // FIXME: Run this under runUpdate schedule?
     // 1. Fix labels in dayGraphy.data
@@ -301,158 +744,54 @@ const Dashboard = (props) => {
     ) : null;
 
   const data = (
-    <div className="content">
+    <div className="content" style={{width: 1000, margin: "auto", paddingBottom: 200, textAlign: "center",}}>
+			<div style={{width: 500, margin: "auto"}}>
+				{keys.length > 0 ?
+					<RadialChart keys={keys} setSelectedCategory={setSelectedUsecaseCategory} />
+				: null}
+			</div>
+
+			{usecases !== null && usecases !== undefined && usecases.length > 0 ? 
+				<div style={{ display: "flex", marginLeft: 120,}}>
+					{usecases.map((usecase, index) => {
+						return (
+							<Chip
+								key={usecase.name}
+								style={{
+									backgroundColor: selectedUsecaseCategory === usecase.name ? usecase.color : theme.palette.surfaceColor,
+									marginRight: 10, 
+									paddingLeft: 5,
+									paddingRight: 5,
+									height: 28,
+									cursor: "pointer",
+									border: `1px solid ${usecase.color}`,
+									color: "white",
+								}}
+								label={`${usecase.name} (${usecase.list.length})`}
+								onClick={() => {
+									console.log("Clicked: ", usecase.name)
+									if (selectedUsecaseCategory === usecase.name) {
+										setSelectedUsecaseCategory("")
+									} else {
+										setSelectedUsecaseCategory(usecase.name)
+									}
+									//addFilter(usecase.name.slice(3,usecase.name.length))
+								}}
+								variant="outlined"
+								color="primary"
+							/>
+						)
+					})}
+				</div>
+			: null}
+
+			<UsecaseListComponent keys={selectedUsecases} isCloud={isCloud} />
+
+			{treeKeys.length > 0 ? 
+				<TreeChart keys={treeKeys} />
+			: null}
+
       {newdata}
-      <Row>
-        <Col xs="12">
-          <div className="chart-area">
-            <Line data={dayGraph.data} options={dayGraph.options} />
-          </div>
-        </Col>
-        <Col xs="12">
-          <Card className="card-chart">
-            <CardHeader>
-              <Row>
-                <Col className="text-left" sm="6">
-                  <h5 className="card-category">Total Shipments</h5>
-                  <CardTitle tag="h2">Workflows</CardTitle>
-                </Col>
-                <Col sm="6">
-                  <ButtonGroup
-                    className="btn-group-toggle float-right"
-                    data-toggle="buttons"
-                  >
-                    <Button
-                      tag="label"
-                      className={classNames("btn-simple", {
-                        active: bigChartData === "data1",
-                      })}
-                      color="info"
-                      id="0"
-                      size="sm"
-                      onClick={() => setBgChartData("data1")}
-                    >
-                      <input
-                        defaultChecked
-                        className="d-none"
-                        name="options"
-                        type="radio"
-                      />
-                      <span className="d-none d-sm-block d-md-block d-lg-block d-xl-block">
-                        Accounts
-                      </span>
-                      <span className="d-block d-sm-none">
-                        <i className="tim-icons icon-single-02" />
-                      </span>
-                    </Button>
-                    <Button
-                      color="info"
-                      id="1"
-                      size="sm"
-                      tag="label"
-                      className={classNames("btn-simple", {
-                        active: bigChartData === "data2",
-                      })}
-                      onClick={() => setBgChartData("data2")}
-                    >
-                      <input className="d-none" name="options" type="radio" />
-                      <span className="d-none d-sm-block d-md-block d-lg-block d-xl-block">
-                        Purchases
-                      </span>
-                      <span className="d-block d-sm-none">
-                        <i className="tim-icons icon-gift-2" />
-                      </span>
-                    </Button>
-                    <Button
-                      color="info"
-                      id="2"
-                      size="sm"
-                      tag="label"
-                      className={classNames("btn-simple", {
-                        active: bigChartData === "data3",
-                      })}
-                      onClick={() => setBgChartData("data3")}
-                    >
-                      <input className="d-none" name="options" type="radio" />
-                      <span className="d-none d-sm-block d-md-block d-lg-block d-xl-block">
-                        Sessions
-                      </span>
-                      <span className="d-block d-sm-none">
-                        <i className="tim-icons icon-tap-02" />
-                      </span>
-                    </Button>
-                  </ButtonGroup>
-                </Col>
-              </Row>
-            </CardHeader>
-            <CardBody>
-              <div className="chart-area">
-                <Line
-                  data={chartExample1[bigChartData]}
-                  options={chartExample1.options}
-                />
-              </div>
-            </CardBody>
-          </Card>
-        </Col>
-      </Row>
-      <Row>
-        <Col lg="4">
-          <Card className="card-chart">
-            <CardHeader>
-              <h5 className="card-category">Total Shipments</h5>
-              <CardTitle tag="h3">
-                <i className="tim-icons icon-bell-55 text-info" /> 763,215
-              </CardTitle>
-            </CardHeader>
-            <CardBody>
-              <div className="chart-area">
-                <Line
-                  data={chartExample2.data}
-                  options={chartExample2.options}
-                />
-              </div>
-            </CardBody>
-          </Card>
-        </Col>
-        <Col lg="4">
-          <Card className="card-chart">
-            <CardHeader>
-              <h5 className="card-category">Daily Sales</h5>
-              <CardTitle tag="h3">
-                <i className="tim-icons icon-delivery-fast text-primary" />{" "}
-                3,500€
-              </CardTitle>
-            </CardHeader>
-            <CardBody>
-              <div className="chart-area">
-                <Bar
-                  data={chartExample3.data}
-                  options={chartExample3.options}
-                />
-              </div>
-            </CardBody>
-          </Card>
-        </Col>
-        <Col lg="4">
-          <Card className="card-chart">
-            <CardHeader>
-              <h5 className="card-category">Completed Tasks</h5>
-              <CardTitle tag="h3">
-                <i className="tim-icons icon-send text-success" /> 12,100K
-              </CardTitle>
-            </CardHeader>
-            <CardBody>
-              <div className="chart-area">
-                <Line
-                  data={chartExample4.data}
-                  options={chartExample4.options}
-                />
-              </div>
-            </CardBody>
-          </Card>
-        </Col>
-      </Row>
     </div>
   );
 

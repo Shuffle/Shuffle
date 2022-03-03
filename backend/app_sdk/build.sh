@@ -3,7 +3,7 @@
 
 ### DEFAULT 
 NAME=shuffle-app_sdk
-VERSION=0.9.50
+VERSION=0.9.61
 
 docker rmi docker.pkg.github.com/frikky/shuffle/$NAME:$VERSION --force
 docker build . -f Dockerfile -t frikky/shuffle:app_sdk -t frikky/$NAME:$VERSION -t docker.pkg.github.com/frikky/shuffle/$NAME:$VERSION -t ghcr.io/frikky/$NAME:$VERSION -t ghcr.io/frikky/$NAME:nightly
@@ -19,17 +19,17 @@ docker push ghcr.io/frikky/$NAME:nightly
 docker push ghcr.io/frikky/$NAME:latest
 
 #### KALI ###
-NAME=shuffle-app_sdk_kali
-docker build . -f Dockerfile_kali -t frikky/shuffle:app_sdk_kali -t frikky/$NAME:$VERSION -t docker.pkg.github.com/frikky/shuffle/$NAME:$VERSION -t ghcr.io/frikky/$NAME:$VERSION
-
-docker push frikky/shuffle:app_sdk_kali
-docker push ghcr.io/frikky/$NAME:$VERSION
-docker push ghcr.io/frikky/$NAME:nightly
+#NAME=shuffle-app_sdk_kali
+#docker build . -f Dockerfile_kali -t frikky/shuffle:app_sdk_kali -t frikky/$NAME:$VERSION -t docker.pkg.github.com/frikky/shuffle/$NAME:$VERSION -t ghcr.io/frikky/$NAME:$VERSION
+#
+#docker push frikky/shuffle:app_sdk_kali
+#docker push ghcr.io/frikky/$NAME:$VERSION
+#docker push ghcr.io/frikky/$NAME:nightly
 
 ### BLACKARCH ###
-NAME=shuffle-app_sdk_blackarch
-docker build . -f Dockerfile_blackarch -t frikky/shuffle:app_sdk_blackarch -t frikky/$NAME:$VERSION -t docker.pkg.github.com/frikky/shuffle/$NAME:$VERSION -t ghcr.io/frikky/$NAME:$VERSION
-
-docker push frikky/shuffle:app_sdk_blackarch
-docker push ghcr.io/frikky/$NAME:$VERSION
-docker push ghcr.io/frikky/$NAME:nightly
+#NAME=shuffle-app_sdk_blackarch
+#docker build . -f Dockerfile_blackarch -t frikky/shuffle:app_sdk_blackarch -t frikky/$NAME:$VERSION -t docker.pkg.github.com/frikky/shuffle/$NAME:$VERSION -t ghcr.io/frikky/$NAME:$VERSION
+#
+#docker push frikky/shuffle:app_sdk_blackarch
+#docker push ghcr.io/frikky/$NAME:$VERSION
+#docker push ghcr.io/frikky/$NAME:nightly

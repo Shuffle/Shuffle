@@ -35,6 +35,7 @@ import {
 
 import {
 	Analytics as AnalyticsIcon,
+	Lightbulb as LightbulbIcon,
 } from "@mui/icons-material";
 //import LogoutIcon from '@mui/icons-material/Logout';
 import { useAlert } from "react-alert";
@@ -464,6 +465,16 @@ const Header = (props) => {
         >
           <Link to="/getting-started" style={hrefStyle}>
             <AnalyticsIcon style={{marginRight: 5 }}/> Get Started 
+          </Link>
+        </MenuItem>
+        <MenuItem
+          onClick={(event) => {
+            event.preventDefault();
+            handleClose();
+          }}
+        >
+          <Link to="/usecases" style={hrefStyle}>
+            <LightbulbIcon style={{marginRight: 5 }}/> Use Cases 
           </Link>
         </MenuItem>
         <MenuItem

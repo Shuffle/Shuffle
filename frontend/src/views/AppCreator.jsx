@@ -275,7 +275,6 @@ const AppCreator = (defaultprops) => {
   const [urlPathQueries, setUrlPathQueries] = useState([]);
   const [update, setUpdate] = useState("");
   const [urlPathParameters] = useState([]);
-  const [firstrequest, setFirstrequest] = React.useState(true);
   const [basedata, setBasedata] = React.useState({});
   const [actions, setActions] = useState([]);
   const [filteredActions, setFilteredActions] = useState([]);
@@ -343,16 +342,13 @@ const AppCreator = (defaultprops) => {
     window.location.host === "shuffler.io";
 
   useEffect(() => {
-    if (firstrequest) {
-      setFirstrequest(false);
-      if (window.location.pathname.includes("apps/edit")) {
-        setIsEditing(true);
-        handleEditApp();
-      } else {
-        checkQuery();
-      }
-    }
-  });
+		if (window.location.pathname.includes("apps/edit")) {
+			setIsEditing(true);
+			handleEditApp();
+		} else {
+			checkQuery();
+		}
+  }, []);
 
   const handleEditApp = () => {
     fetch(globalUrl + "/api/v1/apps/" + props.match.params.appid + "/config", {
@@ -484,10 +480,29 @@ const AppCreator = (defaultprops) => {
   // Sets the data up as it should be at later points
   // This is the data FROM the database, not what's being saved
   const parseIncomingOpenapiData = (data) => {
+	
+		console.log("Data: ", data)
+		var parsedDecoded = ""
+		try { 
+			const decoded = base64_decode(data.openapi)
+			parsedDecoded = decoded
+    } catch (e) {
+			console.log("Failed JSON parsing: ", e)
+			parsedDecoded = data
+		}
+
+		if (data.openapi === null)  {
+			alert.info("Failed to load OpenAPI for app. Please contact support if this persists.")
+    	setIsAppLoaded(true);
+			return
+		}
+
+		console.log("Decoded: ", parsedDecoded)
     const parsedapp =
-      data.openapi === undefined
+      data.openapi === undefined || data.openapi === null 
         ? data
-        : JSON.parse(base64_decode(data.openapi));
+        : JSON.parse(parsedDecoded);
+
     data = parsedapp.body === undefined ? parsedapp : parsedapp.body;
 
     var jsonvalid = false;
@@ -618,6 +633,7 @@ const AppCreator = (defaultprops) => {
             continue;
           }
 
+					//console.log("METHOD: ", methodvalue)
           var tmpname = methodvalue.summary;
           if (
             methodvalue.operationId !== undefined &&
@@ -628,7 +644,13 @@ const AppCreator = (defaultprops) => {
             tmpname = methodvalue.operationId;
           }
 
-          tmpname = tmpname.replaceAll(".", " ");
+					if (tmpname !== undefined && tmpname !== null) {
+          	tmpname = tmpname.replaceAll(".", " ");
+					}
+
+					if ((tmpname === undefined || tmpname === null) && methodvalue.description !== undefined && methodvalue.description !== null && methodvalue.description.length > 0) {
+						tmpname = methodvalue.description.replaceAll(".", " ").replaceAll("_", " ")
+					}
 
           var newaction = {
             name: tmpname,
@@ -739,9 +761,9 @@ const AppCreator = (defaultprops) => {
                     var newbody = {};
                     // Can handle default, required, description and type
                     for (var propkey in retRef.properties) {
-                      const parsedkey = propkey
-                        .replaceAll(" ", "_")
-                        .toLowerCase();
+											console.log("replace: ", propkey)
+
+                      const parsedkey = propkey.replaceAll(" ", "_").toLowerCase();
                       newbody[parsedkey] = "${" + parsedkey + "}";
                     }
 
@@ -885,9 +907,8 @@ const AppCreator = (defaultprops) => {
                     ) {
                       var newbody = {};
                       for (var propkey in parameter.properties) {
-                        const parsedkey = propkey
-                          .replaceAll(" ", "_")
-                          .toLowerCase();
+												console.log("propkey2: ", propkey)
+                      	const parsedkey = propkey.replaceAll(" ", "_").toLowerCase();
                         if (parameter.properties[propkey].type === undefined) {
                           console.log(
                             "Skipping (4): ",
@@ -1022,9 +1043,8 @@ const AppCreator = (defaultprops) => {
                         ) {
                           var newbody = {};
                           for (var propkey in parameter.properties) {
-                            const parsedkey = propkey
-                              .replaceAll(" ", "_")
-                              .toLowerCase();
+														console.log("propkey3: ", propkey)
+                            const parsedkey = propkey.replaceAll(" ", "_").toLowerCase();
                             if (
                               parameter.properties[propkey].type === undefined
                             ) {
@@ -1112,9 +1132,8 @@ const AppCreator = (defaultprops) => {
                             ) {
                               var newbody = {};
                               for (var propkey in parameter.properties) {
-                                const parsedkey = propkey
-                                  .replaceAll(" ", "_")
-                                  .toLowerCase();
+																console.log("propkey4: ", propkey)
+                                const parsedkey = propkey.replaceAll(" ", "_").toLowerCase();
                                 if (
                                   parameter.properties[propkey].type ===
                                   undefined
@@ -1197,6 +1216,7 @@ const AppCreator = (defaultprops) => {
                             ) {
                               var newbody = {};
                               for (var propkey in parameter.properties) {
+																console.log("propkey5: ", propkey)
                                 const parsedkey = propkey
                                   .replaceAll(" ", "_")
                                   .toLowerCase();
@@ -1605,6 +1625,15 @@ const AppCreator = (defaultprops) => {
       },
       id: props.match.params.appid,
     };
+
+		if (isEditing === false) {
+			var urlParams = new URLSearchParams(window.location.search);
+			if (urlParams !== undefined && urlParams !== null && urlParams.has("id")) {
+				data.id = urlParams.get("id")
+			}
+
+      //id: props.match.params.appid,
+		}
 
     if (basedata.info !== undefined && basedata.info.contact !== undefined) {
       data.info["contact"] = basedata.info.contact;
@@ -2068,6 +2097,7 @@ const AppCreator = (defaultprops) => {
         return;
       }
 
+			console.log("Paramname: ", parameterName)
       var newparamName = parameterName.replaceAll('"', "");
       newparamName = newparamName.replaceAll("'", "");
 
@@ -2077,6 +2107,9 @@ const AppCreator = (defaultprops) => {
         name: newparamName,
 				description: refreshUrl,
       }
+
+			console.log("Full auth component: ", data.components.securitySchemes["ApiKeyAuth"])
+
     } else if (authenticationOption === "Bearer auth") {
       data.components.securitySchemes["BearerAuth"] = {
         type: "http",
@@ -2098,6 +2131,7 @@ const AppCreator = (defaultprops) => {
         scheme: "basic",
       };
     } else if (authenticationOption === "Oauth2") {
+			console.log("oauth2: ", parameterName)
       var newparamName = parameterName.replaceAll('"', "");
       newparamName = newparamName.replaceAll("'", "");
 
@@ -5029,6 +5063,8 @@ const AppCreator = (defaultprops) => {
                 marginTop: "5px",
                 marginRight: "15px",
                 backgroundColor: inputColor,
+								maxHeight: 250,
+								overflow: "auto",
               }}
               fullWidth={true}
               type="name"
@@ -5228,7 +5264,7 @@ const AppCreator = (defaultprops) => {
   );
 
   const loadedCheck =
-    isLoaded && isAppLoaded && !firstrequest ? (
+    isLoaded && isAppLoaded ? (
       <div>
         <div style={bodyDivStyle}>{landingpageDataBrowser}</div>
         {newActionModal}
