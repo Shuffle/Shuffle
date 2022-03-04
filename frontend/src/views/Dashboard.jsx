@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useInterval } from "react-powerhooks";
+import DetectionFramework from "../components/DetectionFramework.jsx";
 // nodejs library that concatenates classes
 import classNames from "classnames";
 import theme from '../theme';
@@ -52,7 +53,7 @@ import {
 	TreeMapRect,
 } from 'reaviz';
 
-const UsecaseListComponent = ({keys, isCloud}) => {
+const UsecaseListComponent = ({keys, isCloud, globalUrl}) => {
 	const [expandedIndex, setExpandedIndex] = useState(-1);
 	const [expandedItem, setExpandedItem] = useState(-1);
 	if (keys === undefined || keys === null || keys.length === 0) {
@@ -230,17 +231,37 @@ const UsecaseListComponent = ({keys, isCloud}) => {
           									</Tooltip>
 													</div>
 													<div style={{marginTop: 25, display: "flex", minHeight: 400, maxHeight: 400, }}>
-														<img
-															alt={subcase.name}
-															src={"/images/detectionframework.png"}
-															style={{
-																flex: 1,
-																height: 400,
+														{/*
+															<img
+																alt={subcase.name}
+																src={"/images/detectionframework.png"}
+																style={{
+																	flex: 1,
+																	height: 400,
+																	width: 400, 
+																	borderRadius: theme.palette.borderRadius,
+																	border: "1px solid rgba(255,255,255,0.3)",
+																}}
+															/>
+														*/}
+
+														<div style={{
+																height: 400, 
 																width: 400, 
 																borderRadius: theme.palette.borderRadius,
 																border: "1px solid rgba(255,255,255,0.3)",
-															}}
-														/>
+															}}>
+															<DetectionFramework 
+																frameworkData={undefined}
+																selectedOption={"Draw"}
+																showOptions={false}
+																isLoaded={true}
+																isLoggedIn={true}
+																globalUrl={globalUrl}
+																size={0.7}
+															/>
+														</div>
+
 														<div style={{flex: 1, marginLeft: 10, textAlign: "center",}}>
 															<Typography variant="h6">
 																Your workflow{subcase.matches.length === 1 ? "" : "s"} ({subcase.matches.length})
@@ -249,7 +270,7 @@ const UsecaseListComponent = ({keys, isCloud}) => {
 																<Grid container xs={3} style={{maxWidth: 325, margin: "auto", marginTop: 10, itemAlign: "center", }}>
 																	{subcase.matches.map((workflow, workflowindex) => {
 																		return (
-																			<Grid index={workflowindex} xs={12}>
+																			<Grid key={workflowindex} item index={workflowindex} xs={12}>
 																				<WorkflowPaper key={workflowindex} data={workflow} />
 																			</Grid>
 																		)
@@ -877,7 +898,7 @@ const Dashboard = (props) => {
 				</div>
 			: null}
 
-			<UsecaseListComponent keys={selectedUsecases} isCloud={isCloud} />
+			<UsecaseListComponent keys={selectedUsecases} isCloud={isCloud} globalUrl={globalUrl} />
 
 			{treeKeys.length > 0 ? 
 				<TreeChart keys={treeKeys} />

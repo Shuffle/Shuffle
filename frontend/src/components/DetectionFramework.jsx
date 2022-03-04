@@ -518,7 +518,7 @@ export const usecases = {
 }
 
 const Framework = (props) => {
-  const {globalUrl, isLoaded, showOptions, selectedOption, rolling, frameworkData, } = props;
+  const {globalUrl, isLoaded, showOptions, selectedOption, rolling, frameworkData, size } = props;
 	const [cy, setCy] = React.useState()
 	const [edgesStarted, setEdgesStarted] = React.useState(false)
 	const [graphDone, setGraphDone] = React.useState(false)
@@ -528,6 +528,7 @@ const Framework = (props) => {
 	const [newSelectedApp, setNewSelectedApp] = React.useState({})
 	const [defaultSearch, setDefaultSearch] = React.useState("")
 	const [animationStarted, setAnimationStarted] = React.useState(false)
+	const scale = size === undefined ? 1 : size > 5 ? 3 : size
 
   const alert = useAlert()
 
@@ -584,11 +585,10 @@ const Framework = (props) => {
 
 		const foundelement = cy.getElementById(discoveryData.id)
 		if (foundelement !== undefined && foundelement !== null) {
-			//console.log("element: ", foundelement)
 			foundelement.data("large_image", newSelectedApp.image_url)
 			foundelement.data("text_margin_y", "60px")
 			foundelement.data("margin_x", "0px")
-			foundelement.data("margin_y", "50x")
+			foundelement.data("margin_y", "50px")
 			foundelement.data("width", "85px")
 			foundelement.data("height", "85px")
 		}
@@ -602,6 +602,7 @@ const Framework = (props) => {
     window.location.host === "shuffler.io";
 
   const imgSize = 50;
+	var parsedFrameworkData = frameworkData 
 
 	if (frameworkData !== undefined) {
 		if (frameworkData.cases !== undefined) {
@@ -622,28 +623,27 @@ const Framework = (props) => {
 		if (frameworkData.network !== undefined) {
 			frameworkData.Network = frameworkData.network
 		}
+		if (frameworkData.iam !== undefined) {
+			frameworkData.IAM = frameworkData.iam
+		}
 		if (frameworkData.edr !== undefined) {
 			frameworkData["EDR & AV"] = frameworkData.edr
 		}
-	}
 
-	const parsedFrameworkData = frameworkData 
-	/*
-	=== undefined ? 
-		{
-			"Cases": {},
-			"IAM": {},
-			"SIEM": {},
+		parsedFrameworkData = frameworkData 
+	} else { 
+		console.log("No frameworkdata: ")
+		parsedFrameworkData = {
+			"Cases": 	{},  
+			"SIEM": 	{},
 			"Assets": {},
-			"Intel": {},
-			"Comms": {},
+			"IAM": {},
+			"Intel": 	{},
+			"Comms": 	{},
 			"Network": {},
 			"EDR & AV": {},
 		}
-		: 
-		frameworkData 
-	*/
-
+	}
 
 	// 0 = automated, 1 = manual
 	const [usecaseType, setUsecaseType] = React.useState(0)
@@ -735,6 +735,8 @@ const Framework = (props) => {
       	"border-width": "7px",
 			}
 
+			/*
+			// Animation
 			for (var i = 0; i < 10; i++) {
 				foundelement.animate(
 					{
@@ -754,6 +756,7 @@ const Framework = (props) => {
 					}
 				)
 			}
+			*/
 		}
 	}
 
@@ -871,22 +874,26 @@ const Framework = (props) => {
 
 	if (cy !== undefined && cy.elements().length === 0 && parsedFrameworkData !== undefined) {
 		//'background-image': 'data(small_image)',
-		const shiftradius = 115
-		const baselocationX = 285
-		const baselocationY = 50 
-		const shiftmodifier = 3
+		const shiftradius = 115*scale
+		const baselocationX = 285*scale
+		const baselocationY = 50*scale
+		const shiftmodifier = 3*scale
 
-		const svgSize = 40 
+		const svgSize = `${40*scale}px`
 
 		console.log("Framework: ", parsedFrameworkData)
-		const defaultSize = "85px"
-		const iconSize = "45px"
-		const textMarginDefault = "14px"
-		const textMarginImage = "60px"
+		const fontSize = `${12*scale}px`
+		const defaultSize = `${85*scale}px`
+		const iconSize = `${45*scale}px`
+		const textMarginDefault = `${14*scale}px`
+		const textMarginImage = `${60*scale}px`
 		const nodes = [
 			{
 					group: "nodes",
 					data: {
+						boxwidth: defaultSize,
+						boxheight: defaultSize,
+						font_size: fontSize,
 						is_valid: true,
 						isValid: true,
 						errors: [],
@@ -894,8 +901,8 @@ const Framework = (props) => {
 						description: parsedFrameworkData.Cases.description === undefined ? "" : parsedFrameworkData.Cases.description,
 						app_id: parsedFrameworkData.Cases.id === undefined ? "" : parsedFrameworkData.Cases.id,
 						text_margin_y: parsedFrameworkData.Cases.large_image === undefined ? textMarginDefault : textMarginImage,
-						margin_x: parsedFrameworkData.Cases.large_image === undefined ? '32px' : "0px",
-						margin_y: parsedFrameworkData.Cases.large_image === undefined ? '19px' : "50x",
+						margin_x: parsedFrameworkData.Cases.large_image === undefined ? `${32*scale}px` : "0px",
+						margin_y: parsedFrameworkData.Cases.large_image === undefined ? `${19*scale}px` : `0px`,
 						width: parsedFrameworkData.Cases.large_image === undefined ? iconSize : defaultSize,
 						height: parsedFrameworkData.Cases.large_image === undefined ? iconSize : defaultSize,
 						large_image: parsedFrameworkData.Cases.large_image === undefined ? encodeURI(`data:image/svg+xml;utf-8,<svg fill="rgb(248,90,62)" width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg">
@@ -913,6 +920,9 @@ const Framework = (props) => {
 			{
 					group: "nodes",
 					data: {
+						font_size: fontSize,
+						boxwidth: defaultSize,
+						boxheight: defaultSize,
 						is_valid: true,
 						isValid: true,
 						errors: [],
@@ -920,8 +930,8 @@ const Framework = (props) => {
 						description: parsedFrameworkData.IAM.description === undefined ? "" : parsedFrameworkData.IAM.description,
 						app_id: parsedFrameworkData.IAM.id === undefined ? "" : parsedFrameworkData.IAM.id,
 						text_margin_y: parsedFrameworkData.IAM.large_image === undefined ? textMarginDefault : textMarginImage,
-						margin_x: parsedFrameworkData.IAM.large_image === undefined ? '32px' : "0px",
-						margin_y: parsedFrameworkData.IAM.large_image === undefined ? '19px' : "0px",
+						margin_x: parsedFrameworkData.IAM.large_image === undefined ? `${32*scale}px` : "0px",
+						margin_y: parsedFrameworkData.IAM.large_image === undefined ? `${19*scale}px` : `0px`,
 						width: parsedFrameworkData.IAM.large_image === undefined ? iconSize : defaultSize,
 						height: parsedFrameworkData.IAM.large_image === undefined ? iconSize : defaultSize,
 						large_image: parsedFrameworkData.IAM.large_image === undefined ? encodeURI(`data:image/svg+xml;utf-8,<svg fill="rgb(248,90,62)" width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg">
@@ -939,6 +949,9 @@ const Framework = (props) => {
 			{
 					group: "nodes",
 					data: {
+						font_size: fontSize,
+						boxwidth: defaultSize,
+						boxheight: defaultSize,
 						is_valid: true,
 						isValid: true,
 						errors: [],
@@ -946,8 +959,8 @@ const Framework = (props) => {
 						description: parsedFrameworkData.Assets.description === undefined ? "" : parsedFrameworkData.Assets.description,
 						app_id: parsedFrameworkData.Assets.id === undefined ? "" : parsedFrameworkData.Assets.id,
 						text_margin_y: parsedFrameworkData.Assets.large_image === undefined ? textMarginDefault : textMarginImage,
-						margin_x: parsedFrameworkData.Assets.large_image === undefined ? '32px' : "0px",
-						margin_y: parsedFrameworkData.Assets.large_image === undefined ? '19px' : "0px",
+						margin_x: parsedFrameworkData.Assets.large_image === undefined ? `${32*scale}px` : "0px",
+						margin_y: parsedFrameworkData.Assets.large_image === undefined ? `${19*scale}px` : `0px`,
 						width: parsedFrameworkData.Assets.large_image === undefined ? iconSize : defaultSize,
 						height: parsedFrameworkData.Assets.large_image === undefined ? iconSize : defaultSize,
 						large_image: parsedFrameworkData.Assets.large_image === undefined ? encodeURI(`data:image/svg+xml;utf-8,<svg fill="rgb(248,90,62)" width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg">
@@ -965,6 +978,9 @@ const Framework = (props) => {
 			{
 					group: "nodes",
 					data: {
+						font_size: fontSize,
+						boxwidth: defaultSize,
+						boxheight: defaultSize,
 						is_valid: true,
 						isValid: true,
 						errors: [],
@@ -972,8 +988,8 @@ const Framework = (props) => {
 						description: parsedFrameworkData.Intel.description === undefined ? "" : parsedFrameworkData.Intel.description,
 						app_id: parsedFrameworkData.Intel.id === undefined ? "" : parsedFrameworkData.Intel.id,
 						text_margin_y: parsedFrameworkData.Intel.large_image === undefined ? textMarginDefault : textMarginImage,
-						margin_x: parsedFrameworkData.Intel.large_image === undefined ? '32px' : "0px",
-						margin_y: parsedFrameworkData.Intel.large_image === undefined ? '19px' : "0px",
+						margin_x: parsedFrameworkData.Intel.large_image === undefined ? `${32*scale}px` : "0px",
+						margin_y: parsedFrameworkData.Intel.large_image === undefined ? `${19*scale}px` : `0px`,
 						width: parsedFrameworkData.Intel.large_image === undefined ? iconSize : defaultSize,
 						height: parsedFrameworkData.Intel.large_image === undefined ? iconSize : defaultSize,
 						large_image: parsedFrameworkData.Intel.large_image === undefined ? encodeURI(`data:image/svg+xml;utf-8,<svg fill="rgb(248,90,62)" width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg">
@@ -991,6 +1007,9 @@ const Framework = (props) => {
 			{
 					group: "nodes",
 					data: {
+						font_size: fontSize,
+						boxwidth: defaultSize,
+						boxheight: defaultSize,
 						is_valid: true,
 						isValid: true,
 						errors: [],
@@ -998,8 +1017,8 @@ const Framework = (props) => {
 						description: parsedFrameworkData.Comms.description === undefined ? "" : parsedFrameworkData.Comms.description,
 						app_id: parsedFrameworkData.Comms.id === undefined ? "" : parsedFrameworkData.Comms.id,
 						text_margin_y: parsedFrameworkData.Comms.large_image === undefined ? textMarginDefault : textMarginImage,
-						margin_x: parsedFrameworkData.Comms.large_image === undefined ? '32px' : "0px",
-						margin_y: parsedFrameworkData.Comms.large_image === undefined ? '19px' : "0px",
+						margin_x: parsedFrameworkData.Comms.large_image === undefined ? `${32*scale}px` : "0px",
+						margin_y: parsedFrameworkData.Comms.large_image === undefined ? `${19*scale}px` : `0px`,
 						width: parsedFrameworkData.Comms.large_image === undefined ? iconSize : defaultSize,
 						height: parsedFrameworkData.Comms.large_image === undefined ? iconSize : defaultSize,
 						large_image: parsedFrameworkData.Comms.large_image === undefined ? encodeURI(`data:image/svg+xml;utf-8,<svg fill="rgb(248,90,62)" width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg">
@@ -1017,6 +1036,9 @@ const Framework = (props) => {
 			{
 					group: "nodes",
 					data: {
+						font_size: fontSize,
+						boxwidth: defaultSize,
+						boxheight: defaultSize,
 						is_valid: true,
 						isValid: true,
 						errors: [],
@@ -1024,8 +1046,8 @@ const Framework = (props) => {
 						description: parsedFrameworkData["EDR & AV"].description === undefined ? "" : parsedFrameworkData["EDR & AV"].description,
 						app_id: parsedFrameworkData["EDR & AV"].id === undefined ? "" : parsedFrameworkData["EDR & AV"].id,
 						text_margin_y: parsedFrameworkData["EDR & AV"].large_image === undefined ? textMarginDefault : textMarginImage,
-						margin_x: parsedFrameworkData["EDR & AV"].large_image === undefined ? '32px' : "0px",
-						margin_y: parsedFrameworkData["EDR & AV"].large_image === undefined ? '19px' : "0px",
+						margin_x: parsedFrameworkData["EDR & AV"].large_image === undefined ? `${32*scale}px` : "0px",
+						margin_y: parsedFrameworkData["EDR & AV"].large_image === undefined ? `${19*scale}px` : `0px`,
 						width: parsedFrameworkData["EDR & AV"].large_image === undefined ? iconSize : defaultSize,
 						height: parsedFrameworkData["EDR & AV"].large_image === undefined ? iconSize : defaultSize,
 						large_image: parsedFrameworkData["EDR & AV"].large_image === undefined ? encodeURI(`data:image/svg+xml;utf-8,<svg fill="rgb(248,90,62)" width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg">
@@ -1043,6 +1065,9 @@ const Framework = (props) => {
 			{
 					group: "nodes",
 					data: {
+						font_size: fontSize,
+						boxwidth: defaultSize,
+						boxheight: defaultSize,
 						is_valid: true,
 						isValid: true,
 						errors: [],
@@ -1050,8 +1075,8 @@ const Framework = (props) => {
 						description: parsedFrameworkData.Network.description === undefined ? "" : parsedFrameworkData.Network.description,
 						app_id: parsedFrameworkData.Network.id === undefined ? "" : parsedFrameworkData.Network.id,
 						text_margin_y: parsedFrameworkData.Network.large_image === undefined ? textMarginDefault : textMarginImage,
-						margin_x: parsedFrameworkData.Network.large_image === undefined ? '32px' : "0px",
-						margin_y: parsedFrameworkData.Network.large_image === undefined ? '19px' : "0px",
+						margin_x: parsedFrameworkData.Network.large_image === undefined ? `${32*scale}px` : "0px",
+						margin_y: parsedFrameworkData.Network.large_image === undefined ? `${19*scale}px` : `0px`,
 						width: parsedFrameworkData.Network.large_image === undefined ? iconSize : defaultSize,
 						height: parsedFrameworkData.Network.large_image === undefined ? iconSize : defaultSize,
 						large_image:  parsedFrameworkData.Network.large_image === undefined ? encodeURI(`data:image/svg+xml;utf-8,<svg fill="rgb(248,90,62)" width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg">
@@ -1069,6 +1094,9 @@ const Framework = (props) => {
 			{
 					group: "nodes",
 					data: {
+						font_size: fontSize,
+						boxwidth: defaultSize,
+						boxheight: defaultSize,
 						is_valid: true,
 						isValid: true,
 						errors: [],
@@ -1076,8 +1104,8 @@ const Framework = (props) => {
 						description: parsedFrameworkData.SIEM.description === undefined ? "" : parsedFrameworkData.SIEM.description,
 						app_id: parsedFrameworkData.SIEM.id === undefined ? "" : parsedFrameworkData.SIEM.id,
 						text_margin_y: parsedFrameworkData.SIEM.large_image === undefined ? textMarginDefault : textMarginImage,
-						margin_x: parsedFrameworkData.SIEM.large_image === undefined ? '32px' : "0px",
-						margin_y: parsedFrameworkData.SIEM.large_image === undefined ? '19px' : "0px",
+						margin_x: parsedFrameworkData.SIEM.large_image === undefined ? `${32*scale}px` : "0px",
+						margin_y: parsedFrameworkData.SIEM.large_image === undefined ? `${19*scale}px` : `0px`,
 						width: parsedFrameworkData.SIEM.large_image === undefined ? iconSize : defaultSize,
 						height: parsedFrameworkData.SIEM.large_image === undefined ? iconSize : defaultSize,
 						large_image: parsedFrameworkData.SIEM.large_image === undefined ? encodeURI(`data:image/svg+xml;utf-8,<svg fill="rgb(248,90,62)" width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg">
@@ -1098,6 +1126,9 @@ const Framework = (props) => {
 		nodes.push({
 				group: "nodes",
 				data: {
+					font_size: fontSize,
+					width: defaultSize,
+					height: defaultSize,
 					id: "SHUFFLE",
 					is_valid: true,
 					isValid: true,
@@ -1526,7 +1557,7 @@ const Framework = (props) => {
 				elements={elements} 
 				minZoom={0.35}
 				maxZoom={2.00}
-				style={{width: 560, height: 560, backgroundColor: "transparent", margin: "auto",}} 
+				style={{width: 560*scale, height: 560*scale, backgroundColor: "transparent", margin: "auto",}} 
 				stylesheet={frameworkStyle}
 				boxSelectionEnabled={false}
 				panningEnabled={false}
