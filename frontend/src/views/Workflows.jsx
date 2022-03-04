@@ -2257,8 +2257,6 @@ const Workflows = (props) => {
 					handleGithubValidation() 
 				}} color="primary">
 						Submit
-					
-	        Submit	
 	      </Button>
 			</DialogActions>
 		</Dialog>
