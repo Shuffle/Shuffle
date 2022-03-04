@@ -20,6 +20,8 @@ import {
 import {
   Close as CloseIcon,
 	DoneAll as DoneAllIcon,
+	Description as DescriptionIcon,
+	PlayArrow as PlayArrowIcon,
 } from "@material-ui/icons";
 
 import WorkflowPaper from "../components/WorkflowPaper.jsx"
@@ -87,8 +89,10 @@ const UsecaseListComponent = ({keys, isCloud}) => {
       						<Grid item xs={selectedItem ? 12 : 4} key={subindex} style={{minHeight: 110,}} onClick={() => {
 										if (selectedItem) {
 										} else {
-											setExpandedIndex(index)
-											setExpandedItem(subindex)
+											if (subcase.description !== undefined && subcase.description !== null && subcase.description.length > 0) {
+												setExpandedIndex(index)
+												setExpandedItem(subindex)
+											}
 										}
 									}}>
 										<Paper style={{padding: "30px 30px 30px 30px", minHeight: 75, cursor: !selectedItem ? "pointer" : "default", border: itemBorder, backgroundColor: backgroundColor,}} onClick={() => {
@@ -96,23 +100,67 @@ const UsecaseListComponent = ({keys, isCloud}) => {
 										}}>
 											{!selectedItem ? 
 												<div style={{textAlign: "left", position: "relative",}}>
-													<Typography variant="h6">
+													<Typography variant="h6" style={{maxWidth: 215}}>
 														<b>{subcase.name}</b>
 													</Typography>
-													{finished ? 
-														<Tooltip
-															title="A workflow has been assigned"
-															placement="top"
-														>
-															<IconButton
-																style={{ position: "absolute", top: -20, right: -20}}
-																onClick={(e) => {
-																}}
+													<div style={{position: "absolute", top: -26, right: -20, width: 50, }}>
+														{finished ? 
+															<Tooltip
+																title="A workflow has been assigned for this use case"
+																placement="top"
 															>
-																<DoneAllIcon style={{ color: usecase.color }} />
-															</IconButton>
-														</Tooltip>
+																<IconButton
+																	style={{}}
+																	onClick={(e) => {
+																	}}
+																>
+																	<DoneAllIcon style={{ color: usecase.color }} />
+																</IconButton>
+															</Tooltip>
+														: null}
+													{subcase.blogpost !== null && subcase.blogpost !== undefined && subcase.blogpost.length > 0 ? 
+															<a 
+																href={subcase.blogpost}
+																rel="noopener noreferrer"
+																target="_blank"
+                  							style={{ textDecoration: "none", color: "#f85a3e" }}
+															>
+																<Tooltip
+																	title="Click to visit the blogpost"
+																	placement="top"
+																>
+																	<IconButton
+																		style={{paddingTop: 5, }}
+																		onClick={(e) => {
+																		}}
+																	>
+																		<DescriptionIcon style={{ color: usecase.color }} />
+																	</IconButton>
+																</Tooltip>
+															</a>
+														: null}
+														{subcase.video !== null && subcase.video !== undefined && subcase.video.length > 0 ? 
+															<a 
+																href={subcase.video}
+																rel="noopener noreferrer"
+																target="_blank"
+                  							style={{ textDecoration: "none", color: "#f85a3e" }}
+															>
+																<Tooltip
+																	title="Click to see a video for this usecase"
+																	placement="top"
+																>
+																	<IconButton
+																		style={{paddingTop: 5,}}
+																		onClick={(e) => {
+																		}}
+																	>
+            												<PlayArrowIcon style={{ color: usecase.color }} />
+																	</IconButton>
+																</Tooltip>
+															</a>
 													: null}
+													</div>
 												</div>
 											: 
 												<div style={{textAlign: "left", position: "relative",}}>
@@ -122,21 +170,65 @@ const UsecaseListComponent = ({keys, isCloud}) => {
 													<Typography variant="body2">
 														Description: {subcase.description}
 													</Typography>
-          								<Tooltip
-          								  title="Close window"
-          								  placement="top"
-          								  style={{ zIndex: 10011 }}
-          								>
-          								  <IconButton
-          								    style={{ position: "absolute", top: 0, right: 0}}
-          								    onClick={(e) => {
-																setExpandedItem(-1)
-																setExpandedIndex(-1)
-          								    }}
-          								  >
-          								    <CloseIcon style={{ color: "white" }} />
-          								  </IconButton>
-          								</Tooltip>
+													<div style={{ position: "absolute", top: 0, right: 0 }}>
+														{subcase.blogpost !== null && subcase.blogpost !== undefined && subcase.blogpost.length > 0 ? 
+																<a 
+																	href={subcase.blogpost}
+																	rel="noopener noreferrer"
+																	target="_blank"
+                  								style={{ textDecoration: "none", color: "#f85a3e" }}
+																>
+																	<Tooltip
+																		title="Click to visit the blogpost"
+																		placement="top"
+																	>
+																		<IconButton
+																			style={{paddingTop: 5, }}
+																			onClick={(e) => {
+																			}}
+																		>
+																			<DescriptionIcon style={{ color: usecase.color }} />
+																		</IconButton>
+																	</Tooltip>
+																</a>
+															: null}
+															{subcase.video !== null && subcase.video !== undefined && subcase.video.length > 0 ? 
+																<a 
+																	href={subcase.video}
+																	rel="noopener noreferrer"
+																	target="_blank"
+                  								style={{ textDecoration: "none", color: "#f85a3e" }}
+																>
+																	<Tooltip
+																		title="See video for this use case"
+																		placement="top"
+																	>
+																		<IconButton
+																			style={{paddingTop: 5,}}
+																			onClick={(e) => {
+																			}}
+																		>
+            													<PlayArrowIcon style={{ color: usecase.color }} />
+																		</IconButton>
+																	</Tooltip>
+																</a>
+														: null}
+          									<Tooltip
+          									  title="Close window"
+          									  placement="top"
+          									  style={{ zIndex: 10011 }}
+          									>
+          									  <IconButton
+          									    style={{}}
+          									    onClick={(e) => {
+																	setExpandedItem(-1)
+																	setExpandedIndex(-1)
+          									    }}
+          									  >
+          									    <CloseIcon style={{ color: "white" }} />
+          									  </IconButton>
+          									</Tooltip>
+													</div>
 													<div style={{marginTop: 25, display: "flex", minHeight: 400, maxHeight: 400, }}>
 														<img
 															alt={subcase.name}
