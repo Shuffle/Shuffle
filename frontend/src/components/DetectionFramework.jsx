@@ -831,9 +831,23 @@ const Framework = (props) => {
 		setDefaultSearch(data.label.charAt(0).toUpperCase()+(data.label.substring(1)).toLowerCase())
 	}
 
+  const onEdgeAdded = (event) => {
+		//event.target.data("human", false)
+	}
+
   const onEdgeSelect = (event) => {
+		console.log(event)
+
+		if (event.target.data("human") === undefined) {
+			event.target.data("human", true)
+		} else if (event.target.data("human") === true) {
+      event.target.remove()
+			return
+			//event.target.data("human", false)
+		}
+
 		console.log("Edge selected!", event.target.data())
-		//event.target.remove()
+		event.target.unselect()
 	}
 
 	if (graphDone && cyDone === false) {
@@ -842,6 +856,8 @@ const Framework = (props) => {
 
     cy.fit(null, 200);
     cy.on("select", "edge", (e) => onEdgeSelect(e));
+    cy.on("add", "edge", (e) => onEdgeAdded(e));
+
 		cy.on("select", "node", (e) => {
 			onNodeSelect(e)
 		})

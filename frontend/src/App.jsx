@@ -84,6 +84,7 @@ const App = (message, props) => {
     !window.location.pathname.startsWith("/login") &&
     !window.location.pathname.startsWith("/docs") &&
     !window.location.pathname.startsWith("/detectionframework") &&
+    !window.location.pathname.startsWith("/appframework") &&
     !window.location.pathname.startsWith("/adminsetup") &&
     !window.location.pathname.startsWith("/usecases")
   ) {
@@ -393,6 +394,21 @@ const App = (message, props) => {
         	<Route
         	  exact
         	  path="/detectionframework"
+        	  element={
+        	    <FrameworkWrapper
+								selectedOption={"Draw"}
+								showOptions={false}
+
+        	      isLoaded={isLoaded}
+        	      isLoggedIn={isLoggedIn}
+        	      globalUrl={globalUrl}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	<Route
+        	  exact
+        	  path="/app"
         	  element={
         	    <FrameworkWrapper
 								selectedOption={"Draw"}
