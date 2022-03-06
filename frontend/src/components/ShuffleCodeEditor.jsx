@@ -228,12 +228,20 @@ const CodeEditor = (props) => {
 	// 	return ""
 	// }
 
-	function replaceVariables(index, str){
-		var updatedCode = localcodedata.slice(0,index) + "$" + str + localcodedata.slice(index+currentVariable.length+1,)
-		setlocalcodedata(updatedCode)
-		setEditorPopupOpen(false)
-		setCurrentLocation(0)
+	function replaceVariables(swapVariable){
+		// var updatedCode = localcodedata.slice(0,index) + "$" + str + localcodedata.slice(index+currentVariable.length+1,)
+		// setlocalcodedata(updatedCode)
+		// setEditorPopupOpen(false)
+		// setCurrentLocation(0)
 		// console.log(index)
+		// console.log(currentLocation)
+
+		var code_lines = localcodedata.split('\n')
+		code_lines[currentLine] = code_lines[currentLine].slice(0,currentLocation[1]) + "$" + swapVariable + code_lines[currentLine].slice(currentLocation[1]+currentVariable.length,)
+		// console.log(code_lines)
+		var updatedCode = code_lines.join('\n')
+		// console.log(updatedCode)
+		setlocalcodedata(updatedCode)
 	}
 
 	function expectedOutput(input) {
@@ -342,6 +350,7 @@ const CodeEditor = (props) => {
 						// console.log(value.getCursor())
 						setCurrentCharacter(value.getCursor().ch)
 						setCurrentLine(value.getCursor().line)
+						// console.log(value.getCursor().ch, value.getCursor().line)
 						findIndex(value.getCursor().line, value.getCursor().ch)
 						highlight_variables(value)
 					}}
@@ -382,6 +391,7 @@ const CodeEditor = (props) => {
 			{editorPopupOpen ?
 				<Paper
 					style={{
+						margin: 10,
 						padding: 10,
 						width: 250,
 						// textOverflow: 'ellipsis'
@@ -396,7 +406,10 @@ const CodeEditor = (props) => {
 								}}
 							>
 								<button
-									onClick={() => {replaceVariables(currentLocation, data.autocomplete)}}
+									onClick={() => {
+										replaceVariables(data.autocomplete)
+										// console.log(currentCharacter, currentLine)
+									}}
 									style={{
 										backgroundColor: 'transparent',
 										color: 'white',
@@ -426,7 +439,7 @@ const CodeEditor = (props) => {
 					color = 'textSecondary'
 					style={{
 						color: "white",
-						paddingLeft: 360,
+						paddingLeft: 340,
 						width: 50,
 						display: 'inline',
 					}}

@@ -12,3 +12,8 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
 }
+
+.cm-tab::before{
+  content: "———";
+  margin-right: -13px;
+}
