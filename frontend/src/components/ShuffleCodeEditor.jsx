@@ -420,6 +420,7 @@ const CodeEditor = (props) => {
 					marginBottom: -30,
 				}}
 			>
+				{/*
 				<Typography
 					variant = 'body2'
 					color = 'textSecondary'
@@ -481,6 +482,7 @@ const CodeEditor = (props) => {
 						}}
 					/>
 				</Typography>
+				*/}
 
 			</div>
 

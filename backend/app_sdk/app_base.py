@@ -162,7 +162,7 @@ class AppBase:
                 self.action = json.loads(self.action)
                 self.original_action = json.loads(self.action)
             except Exception as e:
-                self.logger.info(f"[WARNING] Failed parsing action as JSON (init): {e}. NOT important if running apps with webserver")
+                self.logger.info(f"[DEBUG] Failed parsing action as JSON (init): {e}. NOT important if running apps with webserver. This is NOT critical.")
 
         #print(f"ACTION: {self.action}")
 
