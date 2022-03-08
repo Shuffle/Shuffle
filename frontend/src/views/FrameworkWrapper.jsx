@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import ReactDOM from "react-dom"
 
 import DetectionFramework from "../components/DetectionFramework.jsx";
 import { useAlert } from "react-alert";
@@ -39,14 +40,18 @@ const Framework = (props) => {
 					} else {
 						alert.error("Failed to load framework for your org.")
 					}
-				} else {
+
 					setFrameworkLoaded(true)
-					setFrameworkData(responseJson)
+				} else {
+					ReactDOM.unstable_batchedUpdates(() => {
+						setFrameworkData(responseJson)
+						setFrameworkLoaded(true)
+					})
 				}
 			})
       .catch((error) => {
-        alert.error(error.toString());
 				setFrameworkLoaded(true)
+        alert.error(error.toString());
       })
 		}
 
@@ -63,7 +68,7 @@ const Framework = (props) => {
 					</Button>
 				</Link>
 			</div>
-			{frameworkLoaded === true ? 
+			{frameworkLoaded === true && isLoaded ? 
 				<DetectionFramework 
 					frameworkData={frameworkData}
 					selectedOption={"Draw"}

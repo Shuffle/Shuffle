@@ -165,6 +165,8 @@ const ParsedAction = (props) => {
 		actionDelayChange,
 		getParents,
 		isCloud,
+		lastSaved,
+		setLastSaved,
   } = props;
 
   //const theme = useTheme();
@@ -1487,6 +1489,9 @@ const ParsedAction = (props) => {
                 }
                 onBlur={(event) => {
 									baseHelperText = calculateHelpertext(event.target.value)
+									if (setLastSaved !== undefined) {
+										setLastSaved(false)
+									}
                 }}
               />
             );
@@ -2201,35 +2206,6 @@ const ParsedAction = (props) => {
     return null;
   };
 
-  const expansionModal = (
-    <Dialog
-      disableEnforceFocus={false}
-      hideBackdrop={true}
-      open={expansionModalOpen}
-      onClose={() => {
-        setExpansionModalOpen(false);
-      }}
-      PaperProps={{
-        style: {
-          backgroundColor: theme.palette.surfaceColor,
-          color: "white",
-          minWidth: 600,
-          padding: 50,
-          pointerEvents: "auto",
-					maxHeight: 550,
-					overflowY: "auto",
-					overflowX: "hidden",
-					zIndex: 10012,
-        }
-      }}
-    >
-      <DialogTitle>
-        <span style={{ color: "white" }}>Workflow Variable</span>
-      </DialogTitle>
-      <DialogContent>Hello</DialogContent>
-    </Dialog>
-  );
-
   //const CustomPopper = function (props) {
   //	const classes = useStyles()
   //	return <Popper {...props} className={classes.root} placement="bottom" />
@@ -2239,7 +2215,6 @@ const ParsedAction = (props) => {
   return (
     <div style={appApiViewStyle} id="parsed_action_view">
 
-      {expansionModal}
       {hideExtraTypes === true ? null : (
         <span>
           <div style={{ display: "flex", minHeight: 40, marginBottom: 30 }}>

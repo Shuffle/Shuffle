@@ -509,6 +509,8 @@ const Workflows = (props) => {
   const [newWorkflowTags, setNewWorkflowTags] = React.useState([]);
 
   const [defaultReturnValue, setDefaultReturnValue] = React.useState("");
+  const [blogpost, setBlogpost] = React.useState("");
+  const [status, setStatus] = React.useState("test");
 
   const [deleteModalOpen, setDeleteModalOpen] = React.useState(false);
   const [publishModalOpen, setPublishModalOpen] = React.useState(false);
@@ -816,7 +818,10 @@ const Workflows = (props) => {
           data.tags,
           data.default_return_value,
           {},
-          false
+          false,
+					[],
+					"",
+					data.status,
         )
           .then((response) => {
             if (response !== undefined) {
@@ -830,7 +835,10 @@ const Workflows = (props) => {
                 data.tags,
                 data.default_return_value,
                 data,
-                false
+                false,
+								[],
+								"",
+								data.status
               ).then((response) => {
                 if (response !== undefined) {
                   alert.success(`Successfully imported ${data.name}`);
@@ -883,12 +891,18 @@ const Workflows = (props) => {
         if (responseJson !== undefined) {
           setWorkflows(responseJson);
 					fetchUsecases(responseJson)
+								
+					var setProdFilter = false 
 
           if (responseJson !== undefined) {
-
             var actionnamelist = [];
             var parsedactionlist = [];
             for (var key in responseJson) {
+							const workflow = responseJson[key]
+							if (workflow.status === "production") {
+								setProdFilter = true 
+							}
+
               for (var actionkey in responseJson[key].actions) {
                 const action = responseJson[key].actions[actionkey];
                 //console.log("Action: ", action)
@@ -905,10 +919,22 @@ const Workflows = (props) => {
             setActionImageList(parsedactionlist);
           }
 
-          setFilteredWorkflows(responseJson);
-          setWorkflowDone(true);
-  
+								
+					if (setProdFilter === true) {
+            setFilters(["status:production"]);
+						const newWorkflows = responseJson.filter(workflow => workflow.status === "production")
+						console.log(newWorkflows)
+						if (newWorkflows !== undefined && newWorkflows !== null) {
+          		setFilteredWorkflows(newWorkflows);
+						} else {
+          		setFilteredWorkflows(responseJson);
+						}
+					} else { 
+          	setFilteredWorkflows(responseJson);
+					}
+
 					// Ensures the zooming happens only once per load
+          setWorkflowDone(true);
         	setTimeout(() => {
 						setFirstLoad(false)
 					}, 100)
@@ -946,7 +972,7 @@ const Workflows = (props) => {
 						if (workflow.usecase_ids !== undefined && workflow.usecase_ids !== null) {
 							for (var usecasekey in workflow.usecase_ids) {
 								if (workflow.usecase_ids[usecasekey].toLowerCase() === subcategory.name.toLowerCase()) {
-									console.log("Got match: ", workflow.usecase_ids[usecasekey])
+									//console.log("Got match: ", workflow.usecase_ids[usecasekey])
 
 									category.matches.push({
 										"workflow": workflow.id,
@@ -1247,7 +1273,8 @@ const Workflows = (props) => {
 
     // Add correct ID's for triggers
     // Add mag
-
+		
+		data.status = "test"
     let dataStr = JSON.stringify(data);
     let dataUri =
       "data:application/json;charset=utf-8," + encodeURIComponent(dataStr);
@@ -1638,6 +1665,7 @@ const Workflows = (props) => {
       }
     }
 
+		console.log("data: ", data)
     return (
 			<div style={{width: "100%", position: "relative",}}>
         <Paper square style={paperAppStyle}>
@@ -1667,7 +1695,16 @@ const Workflows = (props) => {
                   {image}
                 </div>
               </Tooltip>
-              <Tooltip title={`Edit ${data.name}`} placement="bottom">
+              <Tooltip arrow title={
+								<span style={{}}>
+									{data.image !== undefined && data.image !== null && data.image.length > 0 ? 
+										<img src={data.image} alt={data.name} style={{backgroundColor: theme.palette.surfaceColor, maxHeight: 250, minHeigth: 250, borderRadius: theme.palette.borderRadius, }} />
+									: null}
+									<Typography>
+										Edit {data.name}
+									</Typography>
+								</span>
+							} placement="bottom">
                 <Typography
                   variant="body1"
                   style={{
@@ -1732,7 +1769,7 @@ const Workflows = (props) => {
 							}
               <Tooltip
                 color="primary"
-                title="Trigger amount"
+                title="Amount of triggers"
                 placement="bottom"
               >
                 <span
@@ -1884,6 +1921,8 @@ const Workflows = (props) => {
     editingWorkflow,
     redirect,
 		currentUsecases,
+		inputblogpost,
+		inputstatus,
   ) => {
     var method = "POST";
     var extraData = "";
@@ -1905,6 +1944,8 @@ const Workflows = (props) => {
     if (tags !== undefined) {
       workflowdata["tags"] = tags;
     }
+		workflowdata["blogpost"] = inputblogpost 
+		workflowdata["status"] = inputstatus 
 
     if (defaultReturnValue !== undefined) {
       workflowdata["default_return_value"] = defaultReturnValue;
@@ -2005,7 +2046,10 @@ const Workflows = (props) => {
             data.tags,
             data.default_return_value,
             {},
-            false
+            false,
+						[],
+						"",
+						data.status,
           )
             .then((response) => {
               if (response !== undefined) {
@@ -2022,7 +2066,10 @@ const Workflows = (props) => {
                   data.tags,
                   data.default_return_value,
                   data,
-                  false
+                  false,
+									[],
+									"",
+									data.status,
                 ).then((response) => {
                   if (response !== undefined) {
                     alert.success("Successfully imported " + data.name);
@@ -2212,7 +2259,7 @@ const Workflows = (props) => {
 									}
                   <Tooltip
                     color="primary"
-                    title="Trigger amount"
+                    title="Amount of triggers"
                     placement="bottom"
                   >
                     <span
@@ -2535,7 +2582,41 @@ const Workflows = (props) => {
 					</div>
 
   				{showMoreClicked ? 
-						<span>
+						<span style={{marginTop: 25, }}>
+							<TextField
+								onBlur={(event) => {
+									if (event.target.value.toLowerCase() === "test") {
+										setStatus("test")
+									} else if (event.target.value.toLowerCase() === "production") {
+										setStatus("production")
+									}
+								}}
+								InputProps={{
+									style: {
+										color: "white",
+									},
+								}}
+								color="primary"
+								defaultValue={status}
+								placeholder="The status of the workflow. Can be test or production."
+								rows="1"
+								margin="dense"
+								fullWidth
+							/>
+							<TextField
+								onBlur={(event) => setBlogpost(event.target.value)}
+								InputProps={{
+									style: {
+										color: "white",
+									},
+								}}
+								color="primary"
+								defaultValue={blogpost}
+								placeholder="A blogpost or other reference for how this work workflow was built, and what it's for."
+								rows="1"
+								margin="dense"
+								fullWidth
+							/>
 							<TextField
 								onBlur={(event) => setDefaultReturnValue(event.target.value)}
 								InputProps={{
@@ -2596,6 +2677,8 @@ const Workflows = (props) => {
                   editingWorkflow,
                   false,
 									selectedUsecases,
+									blogpost,
+									status,
                 );
 
                 setNewWorkflowName("");
@@ -2612,6 +2695,8 @@ const Workflows = (props) => {
                   {},
                   true,
 									selectedUsecases,
+									blogpost,
+									status,
                 );
               }
 
@@ -2999,7 +3084,6 @@ const Workflows = (props) => {
 												backgroundColor: filters.includes(usecase.name.toLowerCase()) ? usecase.color : theme.palette.surfaceColor,
 												borderRadius: theme.palette.borderRadius,
 												marginRight: index === usecases.length-1 ? 0 : 10, 
-												height: 60,
 												cursor: "pointer",
 												border: `2px solid ${usecase.color}`,
 												overflow: "hidden",

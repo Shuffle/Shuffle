@@ -12,6 +12,7 @@ import {
 
 import Checkbox from '@mui/material/Checkbox';
 import { orange } from '@mui/material/colors';
+import { isMobile } from "react-device-detect" 
 
 import {
 	FullscreenExit as FullscreenExitIcon,
@@ -86,7 +87,7 @@ const CodeEditor = (props) => {
 		var popup = false
 
 		for(var ch=0; ch<code_line.length; ch++){
-			if(code_line[ch] == '$'){
+			if(code_line[ch] === '$'){
 				dollar_occurences.push(ch)
 			}
 		}
@@ -118,7 +119,7 @@ const CodeEditor = (props) => {
 		for(var occ = 0; occ<variable_ranges.length; occ++){
 			for(var occ1 = 0; occ1<variable_ranges[occ].length; occ1++){
 				// console.log(variable_ranges[occ][occ1])
-				if(loc == variable_ranges[occ][occ1]){
+				if(loc === variable_ranges[occ][occ1]){
 					popup = true
 					setCurrentLocation([line, dollar_occurences[occ]])
 					console.log("Current Location : "+dollar_occurences[occ])
@@ -172,7 +173,7 @@ const CodeEditor = (props) => {
 			// console.log()
 
 			// for (var j = 0; j < actionlist.length; j++) {
-			// 	if(found[i].slice(1,).toLowerCase() == actionlist[j].autocomplete.toLowerCase()){
+			// 	if(found[i].slice(1,).toLowerCase() === actionlist[j].autocomplete.toLowerCase()){
 			// 		input = input.replace(found[i], JSON.stringify(actionlist[j].example));
 			// 		console.log(input)
 			// 		console.log(actionlist[j].example)
@@ -182,7 +183,7 @@ const CodeEditor = (props) => {
 
 			var dollar_occurence = []
 			for(var ch=0; ch<current_code_line.length; ch++){
-				if(current_code_line[ch] == '$'){
+				if(current_code_line[ch] === '$'){
 					dollar_occurence.push(ch)
 				}
 			}
@@ -200,11 +201,11 @@ const CodeEditor = (props) => {
 				for (var occ = 0; occ<variable_occurence.length; occ++){
 					// value.markText({line:i, ch:dollar_occurence[occ]}, {line:i, ch:dollar_occurence_len[occ]+dollar_occurence[occ]}, {"css": "background-color: #8b8e26; border-radius: 4px; color: white"})
 					var correctVariable = actionlist.find(action => action.autocomplete.toLowerCase() === variable_occurence[occ].slice(1,).toLowerCase())
-					if(correctVariable == undefined) {
-						value.markText({line:i, ch:dollar_occurence[occ]}, {line:i, ch:dollar_occurence_len[occ]+dollar_occurence[occ]}, {"css": "background-color: red; border-radius: 4px; color: white"})
+					if(correctVariable === undefined) {
+						value.markText({line:i, ch:dollar_occurence[occ]}, {line:i, ch:dollar_occurence_len[occ]+dollar_occurence[occ]}, {"css": "background-color: #f86a3e; padding-top: 2px; padding-bottom: 2px; color: white"})
 					}
 					else{
-						value.markText({line:i, ch:dollar_occurence[occ]}, {line:i, ch:dollar_occurence_len[occ]+dollar_occurence[occ]}, {"css": "background-color: #8b8e26; border-radius: 4px; color: white"})
+						value.markText({line:i, ch:dollar_occurence[occ]}, {line:i, ch:dollar_occurence_len[occ]+dollar_occurence[occ]}, {"css": "background-color: #8b8e26; padding-top: 2px; padding-bottom: 2px; color: white"})
 					}
 					// console.log(correctVariables)
 				}
@@ -237,7 +238,13 @@ const CodeEditor = (props) => {
 		// console.log(currentLocation)
 
 		var code_lines = localcodedata.split('\n')
-		code_lines[currentLine] = code_lines[currentLine].slice(0,currentLocation[1]) + "$" + swapVariable + code_lines[currentLine].slice(currentLocation[1]+currentVariable.length,)
+		var parsedVariable = currentVariable
+		if (currentVariable === undefined || currentVariable === null) {
+			console.log("Location: ", currentLocation)
+			parsedVariable= "$"
+		}
+
+		code_lines[currentLine] = code_lines[currentLine].slice(0,currentLocation[1]) + "$" + swapVariable + code_lines[currentLine].slice(currentLocation[1]+parsedVariable.length,)
 		// console.log(code_lines)
 		var updatedCode = code_lines.join('\n')
 		// console.log(updatedCode)
@@ -255,7 +262,7 @@ const CodeEditor = (props) => {
 				// console.log(found[i]);
 
 				for (var j = 0; j < actionlist.length; j++) {
-					if(found[i].slice(1,).toLowerCase() == actionlist[j].autocomplete.toLowerCase()){
+					if(found[i].slice(1,).toLowerCase() === actionlist[j].autocomplete.toLowerCase()){
 						input = input.replace(found[i], JSON.stringify(actionlist[j].example));
 						// console.log(input)
 						// console.log(actionlist[j].example)
@@ -293,8 +300,8 @@ const CodeEditor = (props) => {
 				style: {
 					backgroundColor: theme.palette.surfaceColor,
 					color: "white",
-					minWidth: 600,
-					padding: 25,
+					minWidth: isMobile ? "100%" : 600,
+					padding: isMobile ? "25px 10px 25px 10px" : 25,
 					border: theme.palette.defaultBorder,
 					zIndex: 10012,
 				},
@@ -318,7 +325,7 @@ const CodeEditor = (props) => {
 					</DialogTitle>
 					<IconButton
 						style={{
-							marginLeft: 400, 
+							marginLeft: isMobile ? "80%" : 400, 
 							height: 50, 
 							width: 50, 
 						}}
@@ -393,7 +400,7 @@ const CodeEditor = (props) => {
 					style={{
 						margin: 10,
 						padding: 10,
-						width: 250,
+						width: isMobile ? "100%" : 250,
 						// textOverflow: 'ellipsis'
 					}}
 				>
@@ -478,10 +485,10 @@ const CodeEditor = (props) => {
 					Dark Theme
 					<Checkbox
 						onClick={() => {
-							if (codeTheme == "gruvbox-dark") {
+							if (codeTheme === "gruvbox-dark") {
 								setcodeTheme("duotone-light")
 							}
-							if (codeTheme == "duotone-light"){
+							if (codeTheme === "duotone-light"){
 								setcodeTheme("gruvbox-dark")
 							}
 						}}
@@ -500,68 +507,70 @@ const CodeEditor = (props) => {
 			</div>
 
 			<div>
-				<DialogTitle
-					style={{
-						paddingTop: 30,
-						paddingLeft: 10, 
-					}}
-				>
-					<span
+				{isMobile ? null : 
+					<DialogTitle
 						style={{
-							color: "white"
+							paddingTop: 30,
+							paddingLeft: 10, 
 						}}
 					>
-						Output
-					</span>
-				</DialogTitle>
-				{validation === true ? 
-					<ReactJson
-						src={expOutput}
-						theme={theme.palette.jsonTheme}
-						style={{
-							borderRadius: 5,
-							border: `2px solid ${theme.palette.inputColor}`,
-							padding: 10, 
-							maxHeight: 250, 
-							minheight: 250, 
-							overflow: "auto",
-						}}
-						collapsed={false}
-						enableClipboard={(copy) => {
-							//handleReactJsonClipboard(copy);
-						}}
-						displayDataTypes={false}
-						onSelect={(select) => {
-							//HandleJsonCopy(validate.result, select, "exec");
-						}}
-						name={"JSON autocompletion"}
-					/>
-				:
-					<p
-						id='expOutput'
-						style={{
-							whiteSpace: "pre-wrap",
-							color: "#f85a3e",
-							fontFamily: "monospace",
-							backgroundColor: "#282828",
-							padding: 20,
-							marginTop: -2,
-							border: `2px solid ${theme.palette.inputColor}`,
-							borderRadius: theme.palette.borderRadius,
-							maxHeight: 250,
-							overflow: "auto", 
-						}}
-					>
-						{expOutput}
-					</p>
+						<span
+							style={{
+								color: "white"
+							}}
+						>
+							Output
+						</span>
+					</DialogTitle>
+				}
+				{isMobile ? null : 
+					validation === true ? 
+						<ReactJson
+							src={expOutput}
+							theme={theme.palette.jsonTheme}
+							style={{
+								borderRadius: 5,
+								border: `2px solid ${theme.palette.inputColor}`,
+								padding: 10, 
+								maxHeight: 250, 
+								minheight: 250, 
+								overflow: "auto",
+							}}
+							collapsed={false}
+							enableClipboard={(copy) => {
+								//handleReactJsonClipboard(copy);
+							}}
+							displayDataTypes={false}
+							onSelect={(select) => {
+								//HandleJsonCopy(validate.result, select, "exec");
+							}}
+							name={"JSON autocompletion"}
+						/>
+					:
+						<p
+							id='expOutput'
+							style={{
+								whiteSpace: "pre-wrap",
+								color: "#f85a3e",
+								fontFamily: "monospace",
+								backgroundColor: "#282828",
+								padding: 20,
+								marginTop: -2,
+								border: `2px solid ${theme.palette.inputColor}`,
+								borderRadius: theme.palette.borderRadius,
+								maxHeight: 250,
+								overflow: "auto", 
+							}}
+						>
+							{expOutput}
+						</p>
 				}
 				<p
 					style={{
 						color: "white",
 						fontFamily: "monospace",
-						padding: 20,
-						paddingLeft: 10, 
-						marginTop: -15,
+						margin: 20,
+						marginTop: 30,
 					}}
 				>
 					JSON Validation: {validation ? "Correct" : "Incorrect"}
@@ -573,48 +582,44 @@ const CodeEditor = (props) => {
 					display: 'flex',
 				}}
 			>
-				<div>
-					<button
-						style={{
-							color: "white",
-							background: "#383b49",
-							border: "none",
-							height: 35,
-							width: 290,
-							marginLeft: 5,
-							marginTop: 20,
-							cursor: "pointer"
-						}}
-						onClick={() => {
-							setExpansionModalOpen(false)
-						}}
-					>
-						Cancel
-					</button>
-				</div>
-				<div>
-					<button
-						style={{
-							color: "white",
-							background: "#f85a3e",
-							border: "none",
-							height: 35,
-							width: 290,
-							marginLeft: 10,
-							marginTop: 20,
-							cursor: "pointer"
-						}}
-						onClick={(event) => {
-							// console.log(codedata)
-							// console.log(fieldCount)
-							changeActionParameterCodeMirror(event, fieldCount, localcodedata)
-							setExpansionModalOpen(false)
-							setcodedata(localcodedata)
-						}}
-					>
-						Done
-					</button>
-				</div>
+				<button
+					style={{
+						color: "white",
+						background: "#383b49",
+						border: "none",
+						height: 35,
+						flex: 1,
+						marginLeft: 5,
+						marginTop: 20,
+						cursor: "pointer"
+					}}
+					onClick={() => {
+						setExpansionModalOpen(false)
+					}}
+				>
+					Cancel
+				</button>
+				<button
+					style={{
+						color: "white",
+						background: "#f85a3e",
+						border: "none",
+						height: 35,
+						flex: 1, 
+						marginLeft: 10,
+						marginTop: 20,
+						cursor: "pointer"
+					}}
+					onClick={(event) => {
+						// console.log(codedata)
+						// console.log(fieldCount)
+						changeActionParameterCodeMirror(event, fieldCount, localcodedata)
+						setExpansionModalOpen(false)
+						setcodedata(localcodedata)
+					}}
+				>
+					Done
+				</button>
 			</div>
 		</Dialog>)
 }

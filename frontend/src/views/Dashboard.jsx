@@ -4,6 +4,7 @@ import DetectionFramework from "../components/DetectionFramework.jsx";
 // nodejs library that concatenates classes
 import classNames from "classnames";
 import theme from '../theme';
+import { useNavigate, Link, useParams } from "react-router-dom";
 
 // react plugin used to create charts
 //import { Line, Bar } from "react-chartjs-2";
@@ -11,7 +12,9 @@ import { useAlert } from "react-alert";
 
 import {
 	Tooltip,
+	TextField,
 	IconButton,
+	Button,
 	Typography,
 	Grid,
 	Paper,
@@ -23,6 +26,7 @@ import {
 	DoneAll as DoneAllIcon,
 	Description as DescriptionIcon,
 	PlayArrow as PlayArrowIcon,
+	Edit as EditIcon,
 } from "@material-ui/icons";
 
 import WorkflowPaper from "../components/WorkflowPaper.jsx"
@@ -53,12 +57,113 @@ import {
 	TreeMapRect,
 } from 'reaviz';
 
-const UsecaseListComponent = ({keys, isCloud, globalUrl}) => {
+const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLoggedIn}) => {
 	const [expandedIndex, setExpandedIndex] = useState(-1);
 	const [expandedItem, setExpandedItem] = useState(-1);
+	const [inputUsecase, setInputUsecase] = useState({});
+
+	const [editing, setEditing] = useState(false);
+	const [description, setDescription] = useState("");
+	const [video, setVideo] = useState("");
+	const [blogpost, setBlogpost] = useState("");
+
+	const [mitreTags, setMitreTags] = useState([]);
+	let navigate = useNavigate();
 	if (keys === undefined || keys === null || keys.length === 0) {
 		return null
 	}
+
+	const getUsecase = (name, index, subindex) => {
+    fetch(globalUrl + "/api/v1/workflows/usecases/"+name.replaceAll(" ", "_"), {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for framework!");
+			}
+
+			return response.json();
+		})
+		.then((responseJson) => {
+			if (responseJson.success === false) {
+				setInputUsecase({
+					"name": name,
+				})
+			} else {
+				setInputUsecase(responseJson)
+			}
+
+			setExpandedIndex(index)
+			setExpandedItem(subindex)
+		})
+		.catch((error) => {
+			//alert.error(error.toString());
+			setInputUsecase({})
+			setExpandedIndex(index)
+			setExpandedItem(subindex)
+		})
+	}
+
+	const setUsecaseItem = (inputUsecase) => {
+		var parsedUsecase = inputUsecase
+
+		if (blogpost !== inputUsecase.blogpost) {
+			inputUsecase.blogpost = blogpost
+			parsedUsecase.blogpost = blogpost 
+		}
+
+		if (video !== inputUsecase.video) {
+			inputUsecase.video = video 
+			parsedUsecase.video = video 
+		}
+
+		if (description !== inputUsecase.description) {
+			inputUsecase.description = description 
+			parsedUsecase.description = description
+		}
+
+		if (mitreTags !== inputUsecase.mitre) {
+			inputUsecase.mitre = mitreTags
+			parsedUsecase.mitre = mitreTags 
+		}
+
+    fetch(globalUrl + "/api/v1/workflows/usecases", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(parsedUsecase),
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for framework!");
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+				if (responseJson.success === false) {
+					if (responseJson.reason !== undefined) {
+						//alert.error("Failed updating: " + responseJson.reason)
+					} else {
+						//alert.error("Failed to update framework for your org.")
+					}
+				} else {
+					//alert.info("Updated usecase.")
+				}
+			})
+      .catch((error) => {
+        //alert.error(error.toString());
+				//setFrameworkLoaded(true)
+      })
+		}
 
 	return (
 		<div style={{marginTop: 25, minHeight: 1000,}}>
@@ -81,6 +186,23 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl}) => {
 								}
 
 								const selectedItem = subindex === expandedItem && index === expandedIndex
+								if (selectedItem && subcase.name !== undefined && inputUsecase.name !== undefined) { 
+									if (subcase.name.toLowerCase().replaceAll(" ", "_") === inputUsecase.name.toLowerCase().replaceAll(" ", "_")) {
+										console.log("Input: ", inputUsecase)
+										if (inputUsecase.description !== undefined && inputUsecase.description !== null) {
+											subcase.description = inputUsecase.description
+										}
+
+										if (inputUsecase.blogpost !== undefined && inputUsecase.blogpost !== null) {
+											subcase.blogpost = inputUsecase.blogpost
+										}
+
+										if (inputUsecase.video !== undefined && inputUsecase.video !== null) {
+											subcase.video = inputUsecase.video
+										}
+									}
+								}
+
 								const finished = subcase.matches.length > 0
 								//const backgroundColor = selectedItem ? "inherit" : finished ?  "inherit" : usecase.color
 								const backgroundColor = "inherit"
@@ -90,14 +212,12 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl}) => {
       						<Grid item xs={selectedItem ? 12 : 4} key={subindex} style={{minHeight: 110,}} onClick={() => {
 										if (selectedItem) {
 										} else {
-											if (subcase.description !== undefined && subcase.description !== null && subcase.description.length > 0) {
-												setExpandedIndex(index)
-												setExpandedItem(subindex)
-											}
+											//if (subcase.description !== undefined && subcase.description !== null && subcase.description.length > 0) {
+											getUsecase(subcase.name, index, subindex) 
+											//}
 										}
 									}}>
 										<Paper style={{padding: "30px 30px 30px 30px", minHeight: 75, cursor: !selectedItem ? "pointer" : "default", border: itemBorder, backgroundColor: backgroundColor,}} onClick={() => {
-											console.log("Clicked: ", subcase)
 										}}>
 											{!selectedItem ? 
 												<div style={{textAlign: "left", position: "relative",}}>
@@ -131,7 +251,7 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl}) => {
 																	placement="top"
 																>
 																	<IconButton
-																		style={{paddingTop: 5, }}
+																		style={{marginTop: finished ? 5 : 40, }}
 																		onClick={(e) => {
 																		}}
 																	>
@@ -168,10 +288,37 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl}) => {
 													<Typography variant="h6">
 														<b>{subcase.name}</b>
 													</Typography>
-													<Typography variant="body2">
-														Description: {subcase.description}
-													</Typography>
 													<div style={{ position: "absolute", top: 0, right: 0 }}>
+														{isLoggedIn === true ? 
+															<Tooltip
+																title="Click to edit"
+																placement="top"
+															>
+																<IconButton
+																	style={{paddingTop: 5, }}
+																	onClick={(e) => {
+																		setEditing(true)
+																		if (subcase.description !== undefined && subcase.description !== null) {
+																			setDescription(subcase.description)
+																		}
+
+																		if (subcase.blogpost !== undefined && subcase.blogpost !== null) {
+																			setBlogpost(subcase.blogpost)
+																		}
+
+																		if (subcase.video !== undefined && subcase.video !== null) {
+																			setVideo(subcase.video)
+																		}
+
+																		if (subcase.mitre !== undefined && subcase.mitre !== null) {
+																			setMitreTags(subcase.mitre)
+																		}
+																	}}
+																>
+																	<EditIcon style={{ color: usecase.color }} />
+																</IconButton>
+															</Tooltip>
+														: null}
 														{subcase.blogpost !== null && subcase.blogpost !== undefined && subcase.blogpost.length > 0 ? 
 																<a 
 																	href={subcase.blogpost}
@@ -224,6 +371,8 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl}) => {
           									    onClick={(e) => {
 																	setExpandedItem(-1)
 																	setExpandedIndex(-1)
+																	setEditing(false)
+																	setInputUsecase({})
           									    }}
           									  >
           									    <CloseIcon style={{ color: "white" }} />
@@ -231,65 +380,168 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl}) => {
           									</Tooltip>
 													</div>
 													<div style={{marginTop: 25, display: "flex", minHeight: 400, maxHeight: 400, }}>
-														{/*
-															<img
-																alt={subcase.name}
-																src={"/images/detectionframework.png"}
-																style={{
-																	flex: 1,
-																	height: 400,
+														{editing ? 
+															<div style={{flex: 1, marginRight: 50, }}>
+																<Typography variant="h6">
+																	Editing!
+																</Typography>
+																<TextField
+          											  style={{
+          											    marginTop: 10,
+          											    marginRight: 10,
+          											  }}
+																	variant="outlined"
+          											  fullWidth
+          											  color="primary"
+																	label="Description"
+          											  placeholder={"Description"}
+																	value={description}
+																	onChange={(event) => {
+																		setDescription(event.target.value)
+																	}}
+          											  id="descriptionEditng"
+          											/>
+																<TextField
+          											  style={{
+          											    marginTop: 10,
+          											    marginRight: 10,
+          											  }}
+																	variant="outlined"
+          											  fullWidth
+          											  color="primary"
+																	label="Blogpost"
+          											  placeholder={"Blogpost"}
+																	value={blogpost}
+																	onChange={(event) => {
+																		setBlogpost(event.target.value)
+																	}}
+          											  id="blogpostEditing"
+          											/>
+																<TextField
+          											  style={{
+          											    marginTop: 10,
+          											    marginRight: 10,
+          											  }}
+																	variant="outlined"
+          											  fullWidth
+          											  color="primary"
+																	label="Video"
+          											  placeholder={"Video"}
+																	value={video}
+																	onChange={(event) => {
+																		setVideo(event.target.value)
+																	}}
+          											  id="videoEditing"
+          											/>
+																<div
+																	style={{
+																		display: 'flex',
+																	}}
+																>
+																	<Button
+																		style={{
+																			color: "white",
+																			background: "#383b49",
+																			border: "none",
+																			height: 35,
+																			flex: 1,
+																			marginLeft: 5,
+																			marginTop: 20,
+																			cursor: "pointer"
+																		}}
+																		onClick={() => {
+																			setDescription("")
+																			setVideo("")
+																			setBlogpost("")
+																			setEditing(false)
+																		}}
+																	>
+																		Cancel
+																	</Button>
+																	<Button
+																		style={{
+																			color: "white",
+																			background: "#f85a3e",
+																			border: "none",
+																			height: 35,
+																			flex: 1, 
+																			marginLeft: 10,
+																			marginTop: 20,
+																			cursor: "pointer"
+																		}}
+																		onClick={(event) => {
+																			setEditing(false)
+																			setUsecaseItem(inputUsecase) 
+																			setDescription("")
+																			setVideo("")
+																			setBlogpost("")
+																		}}
+																	>
+																		Save	
+																	</Button>
+																</div>
+															</div>
+															: 
+																<div style={{flex: 1, textAlign: "left",}}>
+																	<Typography variant="body1">
+																		{subcase.description}
+																	</Typography>
+																	<Typography variant="h6" style={{marginTop: 15, }}>
+																		Your workflow{subcase.matches.length === 1 ? "" : "s"} ({subcase.matches.length})
+																	</Typography>
+																	{subcase.matches.length > 0 ? 
+																		<Grid container xs={3} style={{maxWidth: 325, marginTop: 10, }}>
+																			{subcase.matches.map((workflow, workflowindex) => {
+																				return (
+																					<Grid key={workflowindex} item index={workflowindex} xs={12}>
+																						<WorkflowPaper key={workflowindex} data={workflow} />
+																					</Grid>
+																				)
+																			})}
+																		</Grid>
+																	: 
+																		<div>
+																			<Typography variant="body1" color="textSecondary">
+																				No workflow selected yet.
+																			</Typography>
+																		</div>
+																	}
+																	{isCloud !== false ? 
+																		<div>
+																			<Typography variant="h6" style={{marginTop: 15, cursor: "pointer",}} onClick={() => {
+																				navigate("/search?tab=workflows&q="+subcase.name)
+																			}}>
+																				Public workflows	
+																			</Typography>
+																			{/*
+																			<div>
+																				<Typography variant="body1" color="textSecondary">
+																					No workflows yet.
+																				</Typography>
+																			</div>
+																			*/}
+																		</div>
+																	: null}
+																</div>
+															}
+															<div style={{
+																	height: 400, 
 																	width: 400, 
 																	borderRadius: theme.palette.borderRadius,
 																	border: "1px solid rgba(255,255,255,0.3)",
-																}}
-															/>
-														*/}
-
-														<div style={{
-																height: 400, 
-																width: 400, 
-																borderRadius: theme.palette.borderRadius,
-																border: "1px solid rgba(255,255,255,0.3)",
-															}}>
-															<DetectionFramework 
-																frameworkData={undefined}
-																selectedOption={"Draw"}
-																showOptions={false}
-																isLoaded={true}
-																isLoggedIn={true}
-																globalUrl={globalUrl}
-																size={0.7}
-															/>
+																}}>
+																<DetectionFramework 
+																	inputUsecase={inputUsecase}
+																	frameworkData={frameworkData}
+																	selectedOption={"Draw"}
+																	showOptions={false}
+																	isLoaded={true}
+																	isLoggedIn={true}
+																	globalUrl={globalUrl}
+																	size={0.7}
+																/>
+															</div>
 														</div>
-
-														<div style={{flex: 1, marginLeft: 10, textAlign: "center",}}>
-															<Typography variant="h6">
-																Your workflow{subcase.matches.length === 1 ? "" : "s"} ({subcase.matches.length})
-															</Typography>
-															{subcase.matches.length > 0 ? 
-																<Grid container xs={3} style={{maxWidth: 325, margin: "auto", marginTop: 10, itemAlign: "center", }}>
-																	{subcase.matches.map((workflow, workflowindex) => {
-																		return (
-																			<Grid key={workflowindex} item index={workflowindex} xs={12}>
-																				<WorkflowPaper key={workflowindex} data={workflow} />
-																			</Grid>
-																		)
-																	})}
-																</Grid>
-															: 
-																<div>
-																	<Typography variant="body1" color="textSecondary">
-																		No workflow selected yet.
-																	</Typography>
-																</div>
-															}
-															{isCloud !== false ? 
-																<Typography variant="h6">
-																	Public workflows	
-																</Typography>
-															: null}
-														</div>
-													</div>
 												</div>
 											}
 										</Paper>
@@ -449,10 +701,43 @@ const Dashboard = (props) => {
   const [selectedUsecases, setSelectedUsecases] = useState([]);
   const [usecases, setUsecases] = useState([]);
   const [workflows, setWorkflows] = useState([]);
+  const [frameworkData, setFrameworkData] = useState(undefined);
 
   const isCloud =
     window.location.host === "localhost:3002" ||
     window.location.host === "shuffler.io";
+
+	const getFramework = () => {
+    fetch(globalUrl + "/api/v1/apps/frameworkConfiguration", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for framework!");
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+				if (responseJson.success === false) {
+					if (responseJson.reason !== undefined) {
+						//alert.error("Failed loading: " + responseJson.reason)
+					} else {
+						//alert.error("Failed to load framework for your org.")
+					}
+				} else {
+					setFrameworkData(responseJson)
+				}
+			})
+      .catch((error) => {
+        alert.error(error.toString());
+      })
+		}
 
   const getAvailableWorkflows = () => {
     fetch(globalUrl + "/api/v1/workflows", {
@@ -605,6 +890,7 @@ const Dashboard = (props) => {
 
   useEffect(() => {
   	getAvailableWorkflows() 
+		getFramework() 
 		//fetchUsecases()
   }, []);
 
@@ -865,7 +1151,7 @@ const Dashboard = (props) => {
 			</div>
 
 			{usecases !== null && usecases !== undefined && usecases.length > 0 ? 
-				<div style={{ display: "flex", marginLeft: 120,}}>
+				<div style={{ display: "flex", marginLeft: 180, }}>
 					{usecases.map((usecase, index) => {
 						return (
 							<Chip
@@ -898,7 +1184,13 @@ const Dashboard = (props) => {
 				</div>
 			: null}
 
-			<UsecaseListComponent keys={selectedUsecases} isCloud={isCloud} globalUrl={globalUrl} />
+			<UsecaseListComponent 
+				isLoggedIn={isLoggedIn}
+				frameworkData={frameworkData}
+				keys={selectedUsecases} 
+				isCloud={isCloud} 
+				globalUrl={globalUrl} 
+			/>
 
 			{treeKeys.length > 0 ? 
 				<TreeChart keys={treeKeys} />

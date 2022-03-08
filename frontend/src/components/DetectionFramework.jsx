@@ -4,7 +4,7 @@ import { securityFramework } from "./LandingpageUsecases.jsx";
 import CytoscapeComponent from 'react-cytoscapejs';
 import frameworkStyle from '../frameworkStyle.jsx';
 import WorkflowSearch from './Workflowsearch.jsx';
-import uuid from "uuid";
+import { v4 as uuidv4 } from "uuid";
 import theme from '../theme';
 import { useAlert } from "react-alert";
 
@@ -518,7 +518,7 @@ export const usecases = {
 }
 
 const Framework = (props) => {
-  const {globalUrl, isLoaded, showOptions, selectedOption, rolling, frameworkData, size } = props;
+  const {globalUrl, isLoaded, showOptions, selectedOption, rolling, frameworkData, size, inputUsecase, isLoggedIn, } = props;
 	const [cy, setCy] = React.useState()
 	const [edgesStarted, setEdgesStarted] = React.useState(false)
 	const [graphDone, setGraphDone] = React.useState(false)
@@ -531,6 +531,50 @@ const Framework = (props) => {
 	const scale = size === undefined ? 1 : size > 5 ? 3 : size
 
   const alert = useAlert()
+
+	const setUsecaseItem = (inputUsecase) => {
+		var parsedUsecase = inputUsecase
+		const edges = cy.edges().jsons()
+
+		parsedUsecase.process = []
+		for (var key in edges) {
+			const edge = edges[key]
+			console.log("Edge: ", edge)
+			parsedUsecase.process.push(edge.data)
+		}
+
+    fetch(globalUrl + "/api/v1/workflows/usecases", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(parsedUsecase),
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for framework!");
+        }
+
+        return response.json();
+      })
+      .then((responseJson) => {
+				if (responseJson.success === false) {
+					if (responseJson.reason !== undefined) {
+						alert.error("Failed updating: " + responseJson.reason)
+					} else {
+						alert.error("Failed to update framework for your org.")
+					}
+				} else {
+					alert.info("Updated usecase.")
+				}
+			})
+      .catch((error) => {
+        alert.error(error.toString());
+				//setFrameworkLoaded(true)
+      })
+		}
 
 	const setFrameworkItem = (data) => {
     fetch(globalUrl + "/api/v1/apps/frameworkConfiguration", {
@@ -586,16 +630,17 @@ const Framework = (props) => {
 		const foundelement = cy.getElementById(discoveryData.id)
 		if (foundelement !== undefined && foundelement !== null) {
 			foundelement.data("large_image", newSelectedApp.image_url)
-			foundelement.data("text_margin_y", "60px")
 			foundelement.data("margin_x", "0px")
-			foundelement.data("margin_y", "50px")
-			foundelement.data("width", "85px")
-			foundelement.data("height", "85px")
+			foundelement.data("margin_y", "0px")
+			foundelement.data("text_margin_y", `${60*scale}px`)
+			foundelement.data("width", `${85*scale}px`)
+			foundelement.data("height", `${85*scale}px`)
 		}
 
 		setFrameworkItem(submitValue) 
 
 	}, [newSelectedApp])
+
 
   const isCloud =
     window.location.host === "localhost:3002" ||
@@ -649,7 +694,6 @@ const Framework = (props) => {
 	const [usecaseType, setUsecaseType] = React.useState(0)
 	const [selectedUsecase, setSelectedUsecase] = React.useState(selectedOption !== undefined ? selectedOption : "Phishing")
 
-
 	const elements = []
 	const surfaceColor = "#27292D"
 
@@ -680,12 +724,15 @@ const Framework = (props) => {
 
 		setSelectedUsecase(value)
 
-		const allEdges = cy.edges().jsons()
-		for (var key in allEdges) {
-			const newedge = allEdges[key]
-			const foundelement = cy.getElementById(newedge.data.id)
-			if (foundelement !== undefined && foundelement !== null) {
-				foundelement.remove()
+		const edges = cy.edges()
+		if (edges !== undefined) {
+			const allEdges = edges.jsons()
+			for (var key in allEdges) {
+				const newedge = allEdges[key]
+				const foundelement = cy.getElementById(newedge.data.id)
+				if (foundelement !== undefined && foundelement !== null) {
+					foundelement.remove()
+				}
 			}
 		}
 
@@ -719,7 +766,6 @@ const Framework = (props) => {
 	if (cy !== undefined && cyDone && !animationStarted) {
 		const foundelement = cy.getElementById("CASES")
 
-		console.log("FOUND: ", foundelement)
 		if (foundelement !== undefined && foundelement !== null) {
 			setAnimationStarted(true)
 
@@ -819,6 +865,7 @@ const Framework = (props) => {
     )
 	}
 
+
 	const onNodeSelect = (event) => {
     const data = event.target.data();
 		console.log("Node: ", data)
@@ -841,7 +888,7 @@ const Framework = (props) => {
   const onEdgeSelect = (event) => {
 		console.log(event)
 
-		if (event.target.data("human") === undefined) {
+		if (event.target.data("human") === undefined || event.target.data("human") === false) {
 			event.target.data("human", true)
 		} else if (event.target.data("human") === true) {
       event.target.remove()
@@ -854,9 +901,6 @@ const Framework = (props) => {
 	}
 
 	if (graphDone && cyDone === false) {
-		//const [cyDone, setCyDone] = React.useState(false)
-		console.log("IN CYDONe")
-
     cy.fit(null, 200);
     cy.on("select", "edge", (e) => onEdgeSelect(e));
     cy.on("add", "edge", (e) => onEdgeAdded(e));
@@ -878,8 +922,8 @@ const Framework = (props) => {
 		const baselocationX = 285*scale
 		const baselocationY = 50*scale
 		const shiftmodifier = 3*scale
-
 		const svgSize = `${40*scale}px`
+
 
 		console.log("Framework: ", parsedFrameworkData)
 		const fontSize = `${12*scale}px`
@@ -1217,6 +1261,27 @@ const Framework = (props) => {
 		}
 
 		changeUsecase(selectedUsecase, usecaseType)
+
+		if (inputUsecase !== undefined && inputUsecase !== null) {
+			console.log("Got usecase: ", inputUsecase)
+
+			for (var key in inputUsecase.process) {
+				if (inputUsecase.process[key].source === "" || inputUsecase.process[key].target === "") {
+					continue
+				}
+
+				console.log("Edge: ", inputUsecase.process[key])
+				inputUsecase.process[key].label = parseInt(key)+1
+				inputUsecase.process[key].id = uuidv4();
+
+				cy.add({
+					group: "edges", 
+					data: inputUsecase.process[key],
+				})
+			}
+			//changeUsecase(inputUsecase, 0)
+			//setSelectedUsecase(value)
+		}
 	}
 
 	if (selectedOption !== undefined && selectedUsecase !== selectedOption) {
@@ -1571,6 +1636,13 @@ const Framework = (props) => {
 					setCy(incy)
 				}}
 			/>
+			{isCloud && inputUsecase !== undefined && inputUsecase !== null && isLoggedIn === true && Object.keys(inputUsecase).length > 0 ? 
+				<Button  color="secondary" variant={"outlined"} style={{position: "absolute", bottom: -10, right: 0,}} onClick={() => {
+					setUsecaseItem(inputUsecase) 
+				}}>
+					Save
+				</Button>
+			: null}
 		</div>
 	)
 }
