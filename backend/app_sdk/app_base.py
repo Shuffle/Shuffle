@@ -316,7 +316,7 @@ class AppBase:
                 })
 
         except Exception as e:
-            print(f"Failed adding parameter: {e}") 
+            print(f"[WARNING] Failed adding parameter for logs: {e}") 
 
         # FIXME: Adding retries here.
         try:
@@ -357,7 +357,6 @@ class AppBase:
             self.logger.info(f"""[DEBUG] Successful request result request: Status= {ret.status_code} & Response= {ret.text}. Action status: {action_result["status"]}""")
         except requests.exceptions.ConnectionError as e:
             self.logger.info(f"[DEBUG] Unexpected ConnectionError happened: {e}")
-            return
         except TypeError as e:
             #self.logger.exception(e)
             action_result["status"] = "FAILURE"
@@ -371,10 +370,14 @@ class AppBase:
             self.logger.info(f"[DEBUG] TypeError request: Status= {ret.status_code} & Response= {ret.text}")
         except http.client.RemoteDisconnected as e:
             self.logger.info(f"[DEBUG] Expected Remotedisconnect happened: {e}")
-            return
         except urllib3.exceptions.ProtocolError as e:
             self.logger.info(f"[DEBUG] Expected ProtocolError happened: {e}")
-            return
+
+        try:
+            self.log_capture_string.flush()
+        except Exception as e:
+            print(f"[WARNING] Failed to flush logs: {e}") 
+            pass
 
     #async def cartesian_product(self, L):
     def cartesian_product(self, L):
