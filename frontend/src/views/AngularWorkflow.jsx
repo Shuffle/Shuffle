@@ -10537,7 +10537,7 @@ const AngularWorkflow = (defaultprops) => {
               />
             </Tooltip>
           )}
-					{userdata.avatar === creatorProfile.github_avatar ? null :
+					{/*userdata.avatar === creatorProfile.github_avatar ? null :*/}
           	<Tooltip color="primary" title="Save (ctrl+s)" placement="top">
           	  <span>
           	    <Button
@@ -10563,7 +10563,6 @@ const AngularWorkflow = (defaultprops) => {
           	    </Button>
           	  </span>
           	</Tooltip>
-					}
           {workflow.public ? (
             <Tooltip
               color="secondary"

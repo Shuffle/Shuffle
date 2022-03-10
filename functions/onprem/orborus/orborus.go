@@ -373,7 +373,7 @@ func deployServiceWorkers(image string) {
 					},
 				},
 				RestartPolicy: &swarm.RestartPolicy{
-					Condition: swarm.RestartPolicyConditionNone,
+					Condition: swarm.RestartPolicyConditionOnFailure,
 				},
 				Placement: &swarm.Placement{
 					MaxReplicas: replicas,

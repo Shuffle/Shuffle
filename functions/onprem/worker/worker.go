@@ -70,12 +70,9 @@ var extra int
 var startAction string
 */
 //var results []shuffle.ActionResult
-var allLogs map[string]string
-var containerIds []string
+//var allLogs map[string]string
+//var containerIds []string
 var downloadedImages []string
-
-var executedIds = []string{}
-var finishedIds = []string{}
 
 // Images to be autodeployed in the latest version of Shuffle.
 var autoDeploy = map[string]string{
@@ -116,7 +113,8 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 	}
 
 	// Might not be necessary because of cleanupEnv hostconfig autoremoval
-	if cleanupEnv == "true" && len(containerIds) > 0 && (os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm") {
+	//if cleanupEnv == "true" && len(containerIds) > 0 && (os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm") {
+	if cleanupEnv == "true" && (os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm") {
 		/*
 			ctx := context.Background()
 			dockercli, err := dockerclient.NewEnvClient()
@@ -137,7 +135,7 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 		*/
 	} else {
 		if os.Getenv("SHUFFLE_SWARM_CONFIG") != "run" && os.Getenv("SHUFFLE_SWARM_CONFIG") != "swarm" {
-			log.Printf("[DEBUG][%s] NOT cleaning up containers. IDS: %d, CLEANUP env: %s", workflowExecution.ExecutionId, len(containerIds), cleanupEnv)
+			log.Printf("[DEBUG][%s] NOT cleaning up containers. IDS: %d, CLEANUP env: %s", workflowExecution.ExecutionId, 0, cleanupEnv)
 		}
 	}
 
@@ -199,7 +197,7 @@ func shutdown(workflowExecution shuffle.WorkflowExecution, nodeId string, reason
 			}
 		}
 
-		log.Printf("[DEBUG][%s] All App Logs: %#v", workflowExecution.ExecutionId, allLogs)
+		//log.Printf("[DEBUG][%s] All App Logs: %#v", workflowExecution.ExecutionId, allLogs)
 		_, err = client.Do(req)
 		if err != nil {
 			log.Printf("[WARNING][%s] Failed abort request: %s", workflowExecution.ExecutionId, err)
@@ -495,7 +493,7 @@ func DeployContainer(ctx context.Context, cli *dockerclient.Client, config *cont
 	}
 
 	log.Printf("[DEBUG] Deployed container ID %s", cont.ID)
-	containerIds = append(containerIds, cont.ID)
+	//containerIds = append(containerIds, cont.ID)
 
 	return nil
 }
@@ -2466,6 +2464,7 @@ func webserverSetup(workflowExecution shuffle.WorkflowExecution) net.Listener {
 	log.Printf("[DEBUG] OLD HOSTNAME: %s", appCallbackUrl)
 	if os.Getenv("SHUFFLE_SWARM_CONFIG") == "run" || os.Getenv("SHUFFLE_SWARM_CONFIG") == "swarm" {
 		log.Printf("\n\nStarting webserver on port %d with hostname: %s\n\n", baseport, hostname)
+
 		appCallbackUrl = fmt.Sprintf("http://%s:%d", hostname, baseport)
 		listener, err = net.Listen("tcp", fmt.Sprintf(":%d", baseport))
 		if err != nil {
