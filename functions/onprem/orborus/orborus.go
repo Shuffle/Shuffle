@@ -361,13 +361,6 @@ func deployServiceWorkers(image string) {
 						fmt.Sprintf("SHUFFLE_APP_REPLICAS=%d", cnt),
 						fmt.Sprintf("TZ=%s", timezone),
 					},
-					Mounts: []mount.Mount{
-						mount.Mount{
-							Source: "/var/run/docker.sock",
-							Target: "/var/run/docker.sock",
-							Type:   mount.TypeBind,
-						},
-					},
 					Hosts: []string{
 						innerContainerName,
 					},
@@ -396,6 +389,18 @@ func deployServiceWorkers(image string) {
 
 		if len(os.Getenv("SHUFFLE_SCALE_REPLICAS")) > 0 {
 			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_SCALE_REPLICAS=%s", os.Getenv("SHUFFLE_SCALE_REPLICAS")))
+		}
+
+		if len(os.Getenv("DOCKER_HOST")) > 0 {
+			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("DOCKER_HOST=%s", os.Getenv("DOCKER_HOST")))
+		} else {
+			serviceSpec.TaskTemplate.ContainerSpec.Mounts = []mount.Mount{
+				mount.Mount{
+					Source: "/var/run/docker.sock",
+					Target: "/var/run/docker.sock",
+					Type:   mount.TypeBind,
+				},
+			}
 		}
 
 		serviceOptions := types.ServiceCreateOptions{}
@@ -803,6 +808,12 @@ func main() {
 		} else {
 			log.Printf("[WARNING] Env SHUFFLE_ORBORUS_EXECUTION_CONCURRENCY must be a number, not %s. Defaulted to %d", workerTimeoutEnv, maxConcurrency)
 		}
+	}
+
+	if len(os.Getenv("DOCKER_HOST")) > 0 {
+		log.Printf("[DEBUG] Running docker with socket proxy %s instead of default", os.Getenv("DOCKER_HOST"))
+	} else {
+		log.Printf("[DEBUG] Running docker with default socket /var/run/docker.sock")
 	}
 
 	ctx := context.Background()

@@ -61,7 +61,10 @@ services:
       - SHUFFLE_SWARM_NETWORK_NAME=shuffle_swarm_executions
       - SHUFFLE_SCALE_REPLICAS=1
       - SHUFFLE_SWARM_CONFIG=runn
+      #- DOCKER_HOST=tcp://docker-socket-proxy:2375
     restart: unless-stopped
+    security_opt:
+      - seccomp:unconfined
   opensearch:
     image: opensearchproject/opensearch:1.2.4
     hostname: shuffle-opensearch
@@ -89,6 +92,30 @@ services:
     networks:
       - shuffle
     restart: unless-stopped
+  #docker-socket-proxy:
+  #  image: tecnativa/docker-socket-proxy
+  #  privileged: true
+  #  environment:
+  #    - SERVICES=1
+  #    - TASKS=1
+  #    - NETWORKS=1
+  #    - NODES=1
+  #    - BUILD=1
+  #    - IMAGES=1
+  #    - GRPC=1
+  #    - CONTAINERS=1
+  #    - PLUGINS=1
+  #    - SYSTEM=1
+  #    - VOLUMES=1
+  #    - INFO=1
+  #    - DISTRIBUTION=1
+  #    - POST=1
+  #    - AUTH=1
+  #    - SECRETS=1
+  #  volumes:
+  #    - /var/run/docker.sock:/var/run/docker.sock
+  #  networks:
+  #    - shuffle
 networks:
   shuffle:
     driver: bridge

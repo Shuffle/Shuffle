@@ -1909,10 +1909,10 @@ class AppBase:
                 basejson = json.loads(baseresult)
             except json.decoder.JSONDecodeError as e:
                 try:
-                    #baseresult = baseresult.replace("\'", "\"")
+                    baseresult = baseresult.replace("\'", "\"")
                     basejson = json.loads(baseresult)
                 except json.decoder.JSONDecodeError as e:
-                    print("Parser issue with JSON: %s" % e)
+                    print(f"[ERROR] Parser issue with JSON for {baseresult}: {e}")
                     return str(baseresult)+str(appendresult), False
 
             print("[INFO] After fourth parser return as JSON")
