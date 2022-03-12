@@ -299,8 +299,10 @@ func deployApp(cli *dockerclient.Client, image string, identifier string, env []
 	//CPUPeriod: 100000,
 	hostConfig := &container.HostConfig{
 		LogConfig: container.LogConfig{
-			Type:   "json-file",
-			Config: map[string]string{},
+			Type: "json-file",
+			Config: map[string]string{
+				"max-size": "10m",
+			},
 		},
 		Resources: container.Resources{},
 	}
@@ -440,8 +442,10 @@ func DeployContainer(ctx context.Context, cli *dockerclient.Client, config *cont
 			identifier = fmt.Sprintf("%s-%s-nonetwork", identifier, parsedUuid)
 			hostConfig = &container.HostConfig{
 				LogConfig: container.LogConfig{
-					Type:   "json-file",
-					Config: map[string]string{},
+					Type: "json-file",
+					Config: map[string]string{
+						"max-size": "10m",
+					},
 				},
 				Resources: container.Resources{},
 			}
@@ -2627,6 +2631,12 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 		TaskTemplate: swarm.TaskSpec{
 			Resources: &swarm.ResourceRequirements{
 				Reservations: &swarm.Resources{},
+			},
+			LogDriver: &swarm.Driver{
+				Name: "json-file",
+				Options: map[string]string{
+					"max-size": "10m",
+				},
 			},
 			ContainerSpec: &swarm.ContainerSpec{
 				Image: image,

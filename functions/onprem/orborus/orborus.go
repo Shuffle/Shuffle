@@ -353,6 +353,12 @@ func deployServiceWorkers(image string) {
 				Resources: &swarm.ResourceRequirements{
 					Reservations: &swarm.Resources{},
 				},
+				LogDriver: &swarm.Driver{
+					Name: "json-file",
+					Options: map[string]string{
+						"max-size": "10m",
+					},
+				},
 				ContainerSpec: &swarm.ContainerSpec{
 					Image: image,
 					Env: []string{
@@ -449,13 +455,16 @@ func deployWorker(image string, identifier string, env []string, executionReques
 	//CPUShares: 256,
 	hostConfig := &container.HostConfig{
 		LogConfig: container.LogConfig{
-			Type:   "json-file",
-			Config: map[string]string{},
+			Type: "json-file",
+			Config: map[string]string{
+				"max-size": "10m",
+			},
 		},
 		Resources: container.Resources{},
-		Binds: []string{
-			"/var/run/docker.sock:/var/run/docker.sock:rw",
-		},
+	}
+
+	if len(os.Getenv("DOCKER_HOST")) == 0 {
+		hostConfig.Binds = []string{"/var/run/docker.sock:/var/run/docker.sock:rw"}
 	}
 
 	hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
@@ -1033,6 +1042,10 @@ func main() {
 
 			if dockerApiVersion != "" {
 				env = append(env, fmt.Sprintf("DOCKER_API_VERSION=%s", dockerApiVersion))
+			}
+
+			if len(os.Getenv("DOCKER_HOST")) > 0 {
+				env = append(env, fmt.Sprintf("DOCKER_HOST=%s", os.Getenv("DOCKER_HOST")))
 			}
 
 			err = deployWorker(workerImage, containerName, env, execution)
