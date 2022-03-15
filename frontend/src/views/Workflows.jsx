@@ -1299,31 +1299,32 @@ const Workflows = (props) => {
       body: JSON.stringify(data),
       credentials: "include",
     })
-      .then((response) => {
-        if (response.status !== 200) {
-          console.log("Status not 200 for workflow publish :O!");
-        } else {
-          if (isCloud) {
-            alert.success("Successfully published workflow");
-          } else {
-            alert.success(
-              "Successfully published workflow to https://shuffler.io"
-            );
-          }
-        }
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for workflow publish :O!");
+			} else {
+				if (isCloud) {
+					alert.success("Successfully published workflow");
+				} else {
+					alert.success(
+						"Successfully published workflow to https://shuffler.io"
+					);
+				}
+			}
 
-        return response.json();
-      })
-      .then((responseJson) => {
-        if (responseJson.reason !== undefined) {
-          alert.error("Failed publishing: ", responseJson.reason);
-        }
+			return response.json();
+		})
+		.then((responseJson) => {
+			if (responseJson.reason !== undefined) {
+				alert.error("Failed publishing: ", responseJson.reason);
+			}
 
-        getAvailableWorkflows();
-      })
-      .catch((error) => {
-        alert.error(error.toString());
-      });
+			getAvailableWorkflows();
+		})
+		.catch((error) => {
+			alert.error("Failed publishing: is the workflow valid? Remember to save the workflow first.")
+			console.log(error.toString());
+		});
   };
 
   const copyWorkflow = (data) => {

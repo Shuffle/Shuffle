@@ -1052,14 +1052,15 @@ const Admin = (props) => {
       })
       .then((responseJson) => {
         //console.log("RESP: ", responseJson)
-        if (responseJson.success) {
+        if (responseJson.success === true) {
           handleFileUpload(responseJson.id, file);
         } else {
           alert.error("Failed to upload file ", filename);
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+				alert.error("Failed to upload file ", filename)
+        console.log(error.toString());
       });
   };
 

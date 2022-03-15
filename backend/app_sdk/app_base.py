@@ -15,6 +15,7 @@ import requests
 import http.client
 import urllib.parse
 import jinja2 
+import datetime
 from io import StringIO as StringBuffer
 from io import BytesIO
 from liquid import Liquid, defaults
@@ -125,11 +126,12 @@ class AppBase:
 
     def __init__(self, redis=None, logger=None, console_logger=None):#, docker_client=None):
         self.logger = logger if logger is not None else logging.getLogger("AppBaseLogger")
-        self.log_capture_string = StringBuffer()
-        ch = logging.StreamHandler(self.log_capture_string)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        ch.setFormatter(formatter)
-        logger.addHandler(ch)
+
+        #self.log_capture_string = StringBuffer()
+        #ch = logging.StreamHandler(self.log_capture_string)
+        #formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        #ch.setFormatter(formatter)
+        #logger.addHandler(ch)
 
         self.redis=redis
         self.console_logger = logger if logger is not None else logging.getLogger("AppBaseLogger")
@@ -294,12 +296,14 @@ class AppBase:
         # I wonder if this actually works 
         self.logger.info(f"[DEBUG] Before last stream result")
         url = "%s%s" % (self.base_url, stream_path)
-        self.logger.info("[INFO] URL FOR RESULT (URL): %s" % url)
+        self.logger.info(f"[INFO] URL FOR RESULT (URL): {url}")
 
         try:
-            log_contents = self.log_capture_string.getvalue()
+            #log_contents = self.log_capture_string.getvalue()
+            log_contents = "disabled"
+
             #print("RESULTS: %s" % log_contents)
-            self.logger.info("[WARNING] Got logs of length {len(log_contents)}")
+            self.logger.info(f"[WARNING] Got logs of length {len(log_contents)}")
             if len(action_result["action"]["parameters"]) == 0:
                 action_result["action"]["parameters"] = []
 
@@ -373,11 +377,12 @@ class AppBase:
         except urllib3.exceptions.ProtocolError as e:
             self.logger.info(f"[DEBUG] Expected ProtocolError happened: {e}")
 
-        try:
-            self.log_capture_string.flush()
-        except Exception as e:
-            print(f"[WARNING] Failed to flush logs: {e}") 
-            pass
+        #try:
+        #    self.log_capture_string.flush()
+        #    self.log_capture_string.close()
+        #except Exception as e:
+        #    print(f"[WARNING] Failed to flush logs: {e}") 
+        #    pass
 
     #async def cartesian_product(self, L):
     def cartesian_product(self, L):
@@ -3022,6 +3027,17 @@ class AppBase:
 
                             self.logger.info("[INFO] Running normal execution (not loop)\n") 
 
+                            try:
+                                for key, value in params.items():
+                                    try:
+                                        if isinstance(value, str):
+                                            params[key] = ast.literal_eval(value)
+                                    except Exception as e:
+                                        self.logger.info("[DEBUG] Failed parsing value with ast: {e}")
+                                        continue
+                            except Exception as e:
+                                self.logger.info("[DEBUG] Failed looping objects. Non critical: {e}")
+
                             #newres = await func(**params)
                             #self.logger.info("PARAMS: %s" % params)
                             #newres = ""
@@ -3211,10 +3227,17 @@ class AppBase:
 
         # Send the result :)
         self.send_result(self.action_result, headers, stream_path)
-        try:
-            self.log_capture_string.close()
-        except:
-            pass
+
+        #try:
+        #    try:
+        #        self.log_capture_string.flush()
+        #    except Exception as e:
+        #        print(f"[WARNING] Failed to flush logs (2): {e}") 
+        #        pass
+
+        #    self.log_capture_string.close()
+        #except:
+        #    print(f"[WARNING] Failed to close logs (2): {e}") 
 
         return
 
@@ -3238,6 +3261,7 @@ class AppBase:
             #from waitress import serve
         
             flask_app = Flask(__name__)
+            #flask_app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(minutes=5)
         
             #async def execute():
             @flask_app.route("/api/v1/health", methods=["GET", "POST"])
@@ -3270,31 +3294,31 @@ class AppBase:
                         try:
                             app.full_execution = json.dumps(requestdata["workflow_execution"])
                         except Exception as e:
-                            logger.info(f"Failed parsing full execution from workflow_execution: {e}")
+                            logger.info(f"[ERROR] Failed parsing full execution from workflow_execution: {e}")
                         try:
                             app.action = requestdata["action"] 
-                        except:
-                            logger.info("Failed parsing action")
+                        except Exception as e:
+                            logger.info(f"[ERROR] Failed parsing action: {e}")
 
                         try:
                             app.authorization = requestdata["authorization"]
                             app.current_execution_id = requestdata["execution_id"]
-                        except:
-                            logger.info("Failed parsing auth and exec id")
+                        except Exception as e:
+                            logger.info(f"[ERROR] Failed parsing auth and exec id: {e}")
 
                         # BASE URL (backend)
                         try:
                             app.url = requestdata["url"]
                             logger.info(f"BACKEND URL: {app.url}")
-                        except:
-                            logger.info("Failed parsing url (backend)")
+                        except Exception as e:
+                            logger.info(f"[ERROR] Failed parsing url (backend): {e}")
 
                         # URL (worker)
                         try:
                             app.base_url = requestdata["base_url"]
                             logger.info(f"WORKER URL: {app.base_url}")
-                        except:
-                            logger.info("Failed parsing base url (worker)")
+                        except Exception as e:
+                            logger.info(f"[ERROR] Failed parsing base url (worker): {e}")
                         
                         #await 
                         app.execute_action(app.action)
@@ -3316,6 +3340,7 @@ class AppBase:
                     }
         
             logger.info(f"[DEBUG] Serving on port {port}")
+
             flask_app.run(
                 host="0.0.0.0", 
                 port=port, 

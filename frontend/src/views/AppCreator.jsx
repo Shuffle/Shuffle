@@ -3168,7 +3168,7 @@ const AppCreator = (defaultprops) => {
         style={{ flex: "1", marginRight: "15px", backgroundColor: inputColor }}
         fullWidth={true}
         placeholder={
-          '{\n\t"username": "${username}",\n\t"apikey": "${apikey}",\n\t"search": "1.2.3.5"}'
+          '{\n\t"example": "${example}",\n\t"apikey": "${apikey}",\n\t"search": "1.2.3.5"\n}'
         }
         margin="normal"
         variant="outlined"
