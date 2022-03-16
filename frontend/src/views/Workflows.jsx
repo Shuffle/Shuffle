@@ -1699,7 +1699,7 @@ const Workflows = (props) => {
               <Tooltip arrow title={
 								<span style={{}}>
 									{data.image !== undefined && data.image !== null && data.image.length > 0 ? 
-										<img src={data.image} alt={data.name} style={{backgroundColor: theme.palette.surfaceColor, maxHeight: 250, minHeigth: 250, borderRadius: theme.palette.borderRadius, }} />
+										<img src={data.image} alt={data.name} style={{backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette.borderRadius, }} />
 									: null}
 									<Typography>
 										Edit {data.name}

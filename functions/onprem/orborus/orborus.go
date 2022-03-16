@@ -366,6 +366,7 @@ func deployServiceWorkers(image string) {
 						fmt.Sprintf("SHUFFLE_SWARM_NETWORK_NAME=%s", networkName),
 						fmt.Sprintf("SHUFFLE_APP_REPLICAS=%d", cnt),
 						fmt.Sprintf("TZ=%s", timezone),
+						fmt.Sprintf("SHUFFLE_LOGS_DISABLED=%s", os.Getenv("SHUFFLE_LOGS_DISABLED")),
 					},
 					Hosts: []string{
 						innerContainerName,
@@ -1032,6 +1033,7 @@ func main() {
 				fmt.Sprintf("TZ=%s", timezone),
 				fmt.Sprintf("SHUFFLE_PASS_APP_PROXY=%s", os.Getenv("SHUFFLE_PASS_APP_PROXY")),
 				fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", os.Getenv("SHUFFLE_SWARM_CONFIG")),
+				fmt.Sprintf("SHUFFLE_LOGS_DISABLED=%s", os.Getenv("SHUFFLE_LOGS_DISABLED")),
 			}
 
 			//log.Printf("Running worker with proxy? %s", os.Getenv("SHUFFLE_PASS_WORKER_PROXY"))

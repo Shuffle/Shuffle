@@ -127,11 +127,12 @@ class AppBase:
     def __init__(self, redis=None, logger=None, console_logger=None):#, docker_client=None):
         self.logger = logger if logger is not None else logging.getLogger("AppBaseLogger")
 
-        #self.log_capture_string = StringBuffer()
-        #ch = logging.StreamHandler(self.log_capture_string)
-        #formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        #ch.setFormatter(formatter)
-        #logger.addHandler(ch)
+        if not os.getenv("SHUFFLE_LOGS_DISABLED") == "true":
+            self.log_capture_string = StringBuffer()
+            ch = logging.StreamHandler(self.log_capture_string)
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            ch.setFormatter(formatter)
+            logger.addHandler(ch)
 
         self.redis=redis
         self.console_logger = logger if logger is not None else logging.getLogger("AppBaseLogger")
@@ -299,8 +300,9 @@ class AppBase:
         self.logger.info(f"[INFO] URL FOR RESULT (URL): {url}")
 
         try:
-            #log_contents = self.log_capture_string.getvalue()
             log_contents = "disabled"
+            if not os.getenv("SHUFFLE_LOGS_DISABLED") == "true":
+                log_contents = self.log_capture_string.getvalue()
 
             #print("RESULTS: %s" % log_contents)
             self.logger.info(f"[WARNING] Got logs of length {len(log_contents)}")
@@ -377,12 +379,14 @@ class AppBase:
         except urllib3.exceptions.ProtocolError as e:
             self.logger.info(f"[DEBUG] Expected ProtocolError happened: {e}")
 
-        #try:
-        #    self.log_capture_string.flush()
-        #    self.log_capture_string.close()
-        #except Exception as e:
-        #    print(f"[WARNING] Failed to flush logs: {e}") 
-        #    pass
+        
+        if not os.getenv("SHUFFLE_LOGS_DISABLED") == "true":
+            try:
+                self.log_capture_string.flush()
+                self.log_capture_string.close()
+            except Exception as e:
+                print(f"[WARNING] Failed to flush logs: {e}") 
+                pass
 
     #async def cartesian_product(self, L):
     def cartesian_product(self, L):
@@ -3201,7 +3205,7 @@ class AppBase:
 
         # https://ptb.discord.com/channels/747075026288902237/882017498550112286/882043773138382890
         except (requests.exceptions.RequestException, TimeoutError) as e:
-            self.logger.info(f"Failed to execute request: {e}")
+            self.logger.info(f"Failed to execute request (requests): {e}")
             self.logger.exception(f"Failed to execute {e}-{action['id']}")
             self.action_result["status"] = "SUCCESS" 
             try:

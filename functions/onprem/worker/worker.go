@@ -1196,6 +1196,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			fmt.Sprintf("CALLBACK_URL=%s", baseUrl),
 			fmt.Sprintf("BASE_URL=%s", appCallbackUrl),
 			fmt.Sprintf("TZ=%s", timezone),
+			fmt.Sprintf("SHUFFLE_LOGS_DISABLED=%s", os.Getenv("SHUFFLE_LOGS_DISABLED")),
 		}
 
 		if len(actionData) >= 100000 {
@@ -1932,6 +1933,7 @@ func runUserInput(client *http.Client, action shuffle.Action, workflowId string,
 			fmt.Sprintf("CALLBACK_URL=%s", baseUrl),
 			fmt.Sprintf("BASE_URL=%s", appCallbackUrl),
 			fmt.Sprintf("TZ=%s", timezone),
+			fmt.Sprintf("SHUFFLE_LOGS_DISABLED=%s", os.Getenv("SHUFFLE_LOGS_DISABLED")),
 		}
 
 		if strings.ToLower(os.Getenv("SHUFFLE_PASS_APP_PROXY")) == "true" {
@@ -2641,8 +2643,9 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 			ContainerSpec: &swarm.ContainerSpec{
 				Image: image,
 				Env: []string{
-					fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", os.Getenv("SHUFFLE_SWARM_CONFIG")),
 					fmt.Sprintf("SHUFFLE_APP_EXPOSED_PORT=%d", deployport),
+					fmt.Sprintf("SHUFFLE_SWARM_CONFIG=%s", os.Getenv("SHUFFLE_SWARM_CONFIG")),
+					fmt.Sprintf("SHUFFLE_LOGS_DISABLED=%s", os.Getenv("SHUFFLE_LOGS_DISABLED")),
 				},
 				Hosts: []string{
 					containerName,
@@ -3006,6 +3009,7 @@ func baseDeploy() {
 			fmt.Sprintf("CALLBACK_URL=%s", baseUrl),
 			fmt.Sprintf("BASE_URL=%s", appCallbackUrl),
 			fmt.Sprintf("TZ=%s", timezone),
+			fmt.Sprintf("SHUFFLE_LOGS_DISABLED=%s", os.Getenv("SHUFFLE_LOGS_DISABLED")),
 		}
 
 		if strings.ToLower(os.Getenv("SHUFFLE_PASS_APP_PROXY")) == "true" {
