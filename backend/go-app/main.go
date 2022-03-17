@@ -2262,10 +2262,11 @@ func executeCloudAction(action shuffle.CloudSyncJob, apikey string) error {
 		return err
 	}
 
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	client := &http.Client{
-		Transport: transport,
-	}
+	//transport := http.DefaultTransport.(*http.Transport).Clone()
+	//client := &http.Client{
+	//	Transport: transport,
+	//}
+	client := &http.Client{}
 
 	syncUrl := fmt.Sprintf("%s/api/v1/cloud/sync/handle_action", syncUrl)
 	req, err := http.NewRequest(
@@ -3810,11 +3811,11 @@ func runInitEs(ctx context.Context) {
 
 	httpProxy := os.Getenv("HTTP_PROXY")
 	if len(httpProxy) > 0 {
-		log.Printf("Running with HTTP proxy %s (env: HTTP_PROXY)", httpProxy)
+		log.Printf("[INFO] Running with HTTP proxy %s (env: HTTP_PROXY)", httpProxy)
 	}
 	httpsProxy := os.Getenv("HTTPS_PROXY")
 	if len(httpsProxy) > 0 {
-		log.Printf("Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
+		log.Printf("[INFO] Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
 	}
 
 	defaultEnv := os.Getenv("ORG_ID")
