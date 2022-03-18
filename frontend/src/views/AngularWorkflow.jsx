@@ -1198,8 +1198,9 @@ const AngularWorkflow = (defaultprops) => {
     	          workflow.is_valid = true;
 
     	          const cyelements = cy.elements();
+    	          
     	          for (var i = 0; i < cyelements.length; i++) {
-    	            cyelements[i].removeStyle();
+									//cyelements[i].removeStyle();
     	            cyelements[i].data().is_valid = true;
     	            cyelements[i].data().errors = [];
     	          }
