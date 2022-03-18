@@ -2256,10 +2256,7 @@ const AngularWorkflow = (defaultprops) => {
     	    }
 
 					return
-    	  } else if (
-    	    data.buttonType === "set_startnode" &&
-    	    data.type !== "TRIGGER"
-    	  ) {
+    	  } else if (data.buttonType === "set_startnode" && data.type !== "TRIGGER") {
     	    const parentNode = cy.getElementById(data.attachedTo);
     	    if (parentNode !== null && parentNode !== undefined) {
     	      var oldstartnode = cy.getElementById(workflow.start);
@@ -3844,7 +3841,11 @@ const AngularWorkflow = (defaultprops) => {
       if (!found) {
         addDeleteButton(event);
 
-				if (nodedata.type !== "TRIGGER") {
+				if (nodedata.type === "TRIGGER") {
+					if (nodedata.trigger_type === "SUBFLOW" || nodedata.trigger_type === "USERINPUT") {
+						addCopyButton(event);
+					}
+				} else { 
 					addCopyButton(event);
 					addStartnodeButton(event);
 				}
