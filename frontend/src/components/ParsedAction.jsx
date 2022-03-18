@@ -405,10 +405,7 @@ const ParsedAction = (props) => {
 							continue;
 						}
 
-						console.log("EXEC: ", workflowExecutions[key].execution_argument)
-					
 						const valid = validateJson(workflowExecutions[key].execution_argument)
-						console.log("VALID: ", valid)
 						if (valid.valid) {
 							actionlist.push({
 								type: "Execution Argument",
@@ -1846,6 +1843,7 @@ const ParsedAction = (props) => {
                       parsedPaths = GetParsedPaths(innerdata.example, "");
                     }
 
+										const coverColor = "#82ccc3"
                     return parsedPaths.length > 0 ? (
                       <NestedMenuItem
                         key={innerdata.name}
@@ -1875,16 +1873,50 @@ const ParsedAction = (props) => {
                           handleItemClick([innerdata]);
                         }}
                       >
+												<MenuItem
+													key={innerdata.name}
+													style={{
+														backgroundColor: theme.palette.inputColor,
+														marginLeft: 15,
+														color: "white",
+														minWidth: 250,
+														maxWidth: 250,
+														padding: 0, 
+														position: "relative",
+													}}
+													value={innerdata}
+													onMouseOver={() => {
+														//console.log("HOVER: ", pathdata);
+													}}
+													onClick={() => {
+														handleItemClick([innerdata]);
+													}}
+												>
+													<Typography variant="h6" style={{paddingBottom: 5}}>
+                        		{innerdata.name}
+													</Typography>
+												</MenuItem>
                         {parsedPaths.map((pathdata, index) => {
                           // FIXME: Should be recursive in here
+                          //<VpnKeyIcon style={iconStyle} />
                           const icon =
                             pathdata.type === "value" ? (
-                              <VpnKeyIcon style={iconStyle} />
+															<span style={{marginLeft: 9, }} />
                             ) : pathdata.type === "list" ? (
-                              <FormatListNumberedIcon style={iconStyle} />
+                              <FormatListNumberedIcon style={{marginLeft: 9, marginRight: 10, }} />
                             ) : (
-                              <ExpandMoreIcon style={iconStyle} />
+															<AddCircleOutlineIcon style={{marginLeft: 9, marginRight: 10, color: coverColor}}/>
                             );
+                          //<ExpandMoreIcon style={iconStyle} />
+
+													console.log("Path: ", pathdata)
+													const indentation_count = (pathdata.name.match(/\./g) || []).length+1
+													const baseIndent = <div style={{marginLeft: 20, height: 30, width: 1, backgroundColor: coverColor,}} />
+													//const boxPadding = pathdata.type === "object" ? "10px 0px 0px 0px" : 0
+													const boxPadding = 0 
+													const namesplit = pathdata.name.split(".")
+													const newname = namesplit[namesplit.length-1]
+													console.log(newname)
                           return (
                             <MenuItem
                               key={pathdata.name}
@@ -1893,10 +1925,11 @@ const ParsedAction = (props) => {
                                 color: "white",
                                 minWidth: 250,
                                 maxWidth: 250,
+																padding: boxPadding, 
                               }}
                               value={pathdata}
                               onMouseOver={() => {
-                                console.log("HOVER: ", pathdata);
+                                //console.log("HOVER: ", pathdata);
                               }}
                               onClick={() => {
                                 handleItemClick([innerdata, pathdata]);
@@ -1907,8 +1940,13 @@ const ParsedAction = (props) => {
                                 title={`Ex. value: ${pathdata.value}`}
                                 placement="left"
                               >
-                                <div style={{ display: "flex" }}>
-                                  {icon} {pathdata.name}
+                                <div style={{ display: "flex", height: 30, }}>
+																	{Array(indentation_count).fill().map((subdata, subindex) => {
+																		return (
+																			baseIndent
+																		)
+																	})}
+                                  {icon} {newname}
                                 </div>
                               </Tooltip>
                             </MenuItem>
@@ -2192,10 +2230,10 @@ const ParsedAction = (props) => {
                   </FormControl>
                 ) : null}
                 {showDropdown &&
-                showDropdownNumber === count &&
-                data.variant === "STATIC_VALUE" &&
-                jsonList.length === 0 ? (
-                  <ActionlistWrapper actionlist={actionlist} />
+                	showDropdownNumber === count &&
+                	data.variant === "STATIC_VALUE" &&
+                	jsonList.length === 0 ? (
+                	  <ActionlistWrapper actionlist={actionlist} />
                 ) : null}
               </div>
             );
