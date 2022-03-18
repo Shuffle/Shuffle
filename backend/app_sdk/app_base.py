@@ -357,8 +357,8 @@ class AppBase:
             if not finished:
                 # Not sure why this would work tho :)
                 action_result["status"] = "FAILURE"
-                action_result["result"] = f"POST error: {e}"
-                self.logger.info(f"[DEBUG] Before typeerror stream result: {e}")
+                action_result["result"] = f"POST failed to get info!"
+                self.logger.info(f"[DEBUG] Before typeerror stream result - NOT finished")
                 ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result)
         
             self.logger.info(f"""[DEBUG] Successful request result request: Status= {ret.status_code} & Response= {ret.text}. Action status: {action_result["status"]}""")

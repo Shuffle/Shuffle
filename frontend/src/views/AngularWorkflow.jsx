@@ -2002,6 +2002,11 @@ const AngularWorkflow = (defaultprops) => {
       if (curElement !== null && curElement !== undefined) {
         curElement.style.border = curElement.style.original_border;
         var newValue = "$" + nodedata.label.toLowerCase().replaceAll(" ", "_");
+				if (nodedata.type === "TRIGGER") {
+					if (nodedata.trigger_type === "WEBHOOK" || nodedata.trigger_type === "SCHEDULE" || nodedata.trigger_type === "EMAIL") {
+        		var newValue = "$exec"
+					}
+				}
         var paramname = "";
         var idnumber = -1;
         if (curElement.id.startsWith("rightside_field_")) {
@@ -2401,7 +2406,10 @@ const AngularWorkflow = (defaultprops) => {
 						setWorkflow(workflow)
 						curaction = data
 					} else {
-    	    	alert.error("Action not found. Please remake it.");
+    				if (workflow.public !== true) {
+    	    		alert.error("Action not found. Please remake it.");
+						}
+
 						event.target.remove();
 						return;
 					}
