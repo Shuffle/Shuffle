@@ -2583,7 +2583,7 @@ const AngularWorkflow = (defaultprops) => {
     	    if (workflow.triggers[trigger_index].parameters !== undefined) {
     	      workflow.triggers[trigger_index].parameters[0] = {
     	        name: "url",
-    	        value: referenceUrl + "webhook_" + selectedTrigger.id,
+    	        value: referenceUrl + "webhook_" + workflow.triggers[trigger_index].id,
     	      };
     	    }
     	  }
