@@ -16,6 +16,7 @@ def lambda_handler(event, context):
     http = urllib3.PoolManager()
     ret = http.request('POST', webhook, body=json.dumps(event["Records"][0]).encode("utf-8"))
     if ret.status != 200:
-        return "Bad status code for webhook: %d" % ret.status_code
+        return "Bad status code for webhook: %d" % ret.status
         
     print("Status code: %d\nData: %s" % (ret.status, ret.data))
+    return "Successfully started with data %s" % ret.data

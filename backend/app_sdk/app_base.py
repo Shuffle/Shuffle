@@ -279,6 +279,7 @@ class AppBase:
 
         # Try it with some magic
 
+        action_result["completed_at"] = int(time.time())
         self.logger.info(f"""[DEBUG] Inside Send result with status {action_result["status"]}""")
         #if isinstance(action_result, 
 
@@ -300,7 +301,7 @@ class AppBase:
         self.logger.info(f"[INFO] URL FOR RESULT (URL): {url}")
 
         try:
-            log_contents = "disabled"
+            log_contents = "disabled: add env SHUFFLE_LOGS_DISABLED=true to Orborus to re-enable logs for apps"
             if not os.getenv("SHUFFLE_LOGS_DISABLED") == "true":
                 log_contents = self.log_capture_string.getvalue()
 

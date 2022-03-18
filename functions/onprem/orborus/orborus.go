@@ -398,6 +398,12 @@ func deployServiceWorkers(image string) {
 			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_SCALE_REPLICAS=%s", os.Getenv("SHUFFLE_SCALE_REPLICAS")))
 		}
 
+		if strings.ToLower(os.Getenv("SHUFFLE_PASS_WORKER_PROXY")) == "true" {
+			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")))
+			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")))
+			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")))
+		}
+
 		if len(os.Getenv("DOCKER_HOST")) > 0 {
 			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("DOCKER_HOST=%s", os.Getenv("DOCKER_HOST")))
 		} else {
@@ -568,10 +574,10 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		}
 
 		if err != nil {
-			log.Printf("[ERROR] Failed to start container in environment %s: %s", environment, err)
+			log.Printf("[ERROR] Failed to start worker container in environment %s: %s", environment, err)
 			return err
 		} else {
-			log.Printf("[INFO] Container %s was created under environment %s for execution %s", cont.ID, environment, executionRequest.ExecutionId)
+			log.Printf("[INFO] Worker Container %s was created under environment %s for execution %s: docker logs %s", cont.ID, environment, executionRequest.ExecutionId, cont.ID)
 		}
 
 		//stats, err := cli.ContainerInspect(context.Background(), containerName)
@@ -596,7 +602,7 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		//	}
 		//}
 	} else {
-		log.Printf("[INFO] Container %s was created under environment %s", cont.ID, environment)
+		log.Printf("[INFO] Worker Container %s was created under environment %s: docker logs %s", cont.ID, environment, cont.ID)
 	}
 
 	return nil
@@ -1040,6 +1046,7 @@ func main() {
 			if strings.ToLower(os.Getenv("SHUFFLE_PASS_WORKER_PROXY")) == "true" {
 				env = append(env, fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")))
 				env = append(env, fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")))
+				env = append(env, fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")))
 			}
 
 			if dockerApiVersion != "" {

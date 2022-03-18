@@ -1237,6 +1237,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 			//log.Printf("APPENDING PROXY TO THE APP!")
 			env = append(env, fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")))
 			env = append(env, fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")))
+			env = append(env, fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")))
 		}
 
 		// Fixes issue:
@@ -1940,6 +1941,7 @@ func runUserInput(client *http.Client, action shuffle.Action, workflowId string,
 			//log.Printf("APPENDING PROXY TO THE APP!")
 			env = append(env, fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")))
 			env = append(env, fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")))
+			env = append(env, fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")))
 		}
 
 		err = deployApp(dockercli, "frikky/shuffle:shuffle-subflow_1.0.0", identifier, env, workflowExecution, newAction)
@@ -2666,6 +2668,13 @@ func deploySwarmService(dockercli *dockerclient.Client, name, image string, depl
 			Target: "shuffle_shuffle",
 		})
 	}
+
+	if strings.ToLower(os.Getenv("SHUFFLE_PASS_APP_PROXY")) == "true" {
+		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")))
+		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")))
+		serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")))
+	}
+
 	/*
 		Mounts: []mount.Mount{
 			mount.Mount{
@@ -3016,6 +3025,7 @@ func baseDeploy() {
 			//log.Printf("APPENDING PROXY TO THE APP!")
 			env = append(env, fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")))
 			env = append(env, fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")))
+			env = append(env, fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")))
 		}
 
 		identifier := fmt.Sprintf("%s_%s_%s_%s", appname, appversion, action.ID, workflowExecution.ExecutionId)
