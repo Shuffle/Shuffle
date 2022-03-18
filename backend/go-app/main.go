@@ -3732,12 +3732,12 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 				if err != nil {
 					log.Printf("[WARNING] Failed setting organization when stopping sync: %s", err)
 				} else {
-					log.Printf("[INFO] Successfully STOPPED org cloud sync for %s", org.Id)
+					log.Printf("[INFO] Successfully STOPPED org cloud sync for %s (%s)", org.Name, org.Id)
 				}
 
 				return errors.New("Stopped schedule for org locally because of bad apikey.")
 			} else {
-				return errors.New(fmt.Sprintf("Failed finding the schedule for org %s", org.Id))
+				return errors.New(fmt.Sprintf("Failed finding the schedule for org %s (%s)", org.Name, org.Id))
 			}
 		}
 
@@ -4048,7 +4048,7 @@ func runInitEs(ctx context.Context) {
 			continue
 		}
 
-		log.Printf("[DEBUG] Should start schedule for org %s", org.Name)
+		log.Printf("[DEBUG] Should start schedule for org %s (%s)", org.Name, org.Id)
 		job := func() {
 			err := remoteOrgJobHandler(org, interval)
 			if err != nil {
@@ -4737,7 +4737,7 @@ func runInit(ctx context.Context) {
 			continue
 		}
 
-		log.Printf("[DEBUG] Should start schedule for org %s", org.Name)
+		log.Printf("[DEBUG] Should start schedule for org %s (%s)", org.Name, org.Id)
 		job := func() {
 			err := remoteOrgJobHandler(org, interval)
 			if err != nil {

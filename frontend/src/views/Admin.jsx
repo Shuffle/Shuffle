@@ -1636,6 +1636,7 @@ const Admin = (props) => {
 			return
 		}
 
+		console.log("event: ", event.target.value)
 		setMatchingOrganizations(event.target.value)
 		// Workaround for empty orgs
 		if (event.target.value.length === 0) {
@@ -1643,6 +1644,7 @@ const Admin = (props) => {
 		}
 
   	setUser(selectedUser.id, "suborgs", event.target.value)
+  	//setUser(selectedUser.id, "suborgs", matchingOrganizations)
 	}
 
 	const userOrgEdit = selectedUser.id !== undefined && selectedUser.orgs !== undefined && selectedUser.orgs !== null && selectedOrganization.child_orgs !== undefined && selectedOrganization.child_orgs !== null && selectedOrganization.child_orgs.length > 0 ?

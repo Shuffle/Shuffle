@@ -2881,8 +2881,6 @@ const ParsedAction = (props) => {
                 newActionname.substring(1)
               ).replaceAll("_", " ");
 
-
-
               return (
                 <Tooltip
                   color="secondary"

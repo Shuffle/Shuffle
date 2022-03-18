@@ -1852,6 +1852,7 @@ const AngularWorkflow = (defaultprops) => {
 			setTriggerAuthentication({})
 			setSelectedTriggerIndex(-1)
 			setTriggerFolders([])
+  		setSubworkflow({})
 
 			// Can be used for right side view
 			setRightSideBarOpen(false);
@@ -2417,6 +2418,7 @@ const AngularWorkflow = (defaultprops) => {
 
 				//var newapps = JSON.parse(JSON.stringify(apps))
 				var newapps = apps
+		console.log(event.target.data())
     	  const curapp = newapps.find(
     	    (a) =>
     	      a.name === curaction.app_name &&
@@ -2607,7 +2609,7 @@ const AngularWorkflow = (defaultprops) => {
     	  selected: "",
     	});
 		})
-  };
+  }
 
 	const activateApp = (appid) => {
 		fetch(globalUrl+"/api/v1/apps/"+appid+"/activate", {
@@ -5815,10 +5817,18 @@ const AngularWorkflow = (defaultprops) => {
     const newaction = selectedApp.actions.find(
       (a) => a.name === e.target.value
     );
+
     if (newaction === undefined || newaction === null) {
       alert.error("Failed to find the action");
       return;
     }
+
+		if (workflow.actions !== undefined && workflow.actions !== null) {
+			const foundInfo = workflow.actions.find(ac => ac.id === selectedAction.id)
+			console.log("aigo: ", foundInfo)
+		}
+
+		console.log("PRe: ", selectedAction)
 
     // Does this one find the wrong one?
     //var newSelectedAction = JSON.parse(JSON.stringify(selectedAction))
@@ -5832,7 +5842,7 @@ const AngularWorkflow = (defaultprops) => {
 
 		// Simmple action swap autocompleter
 		if (selectedAction.parameters !== undefined && newSelectedAction.parameters !== undefined && selectedAction.id === newSelectedAction.id) {
-			//console.log("OLD: ", selectedAction, "NEW: ", newSelectedAction)
+			console.log("OLD: ", selectedAction, "NEW: ", newSelectedAction)
 			for (var paramkey in selectedAction.parameters) {
 				const param = selectedAction.parameters[paramkey];
 
@@ -5914,7 +5924,7 @@ const AngularWorkflow = (defaultprops) => {
     //setSelectedActionEnvironment(env)
 
 
-    console.log("ACTION: ", newSelectedAction);
+    console.log("NEW ACTION: ", newSelectedAction);
     setSelectedAction(newSelectedAction);
 		if (workflow.actions !== undefined && workflow.actions !== null && workflow.actions.length > 0) {
 			const foundActionIndex = workflow.actions.findIndex(actiondata => actiondata.id === newSelectedAction.id)
