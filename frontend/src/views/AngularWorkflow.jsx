@@ -1512,7 +1512,6 @@ const AngularWorkflow = (defaultprops) => {
         //var tmpapps = []
         //tmpapps = tmpapps.concat(getExtraApps())
         //tmpapps = tmpapps.concat(responseJson)
-        console.log("APPS: ", responseJson);
         setApps(responseJson);
 
         if (isCloud) {
@@ -3614,17 +3613,28 @@ const AngularWorkflow = (defaultprops) => {
 			cytoscapeElement.style.cursor = "default"
 		}
 
+		// Skipping node editing if it's the selected one
+		if (cy !== undefined) {
+			const typeIds = cy.elements('node:selected').jsons();
+			for (var idkey in typeIds) {
+				const item = typeIds[idkey]
+				if (item.data.id === nodedata.id) {
+					console.log("items: ", item.data.id, nodedata.id)
+					return
+				}
+			}
+		}
+		//if (nodedata.id === selectedAction.id || nodedata.id === selectedTrigger.id) {
+		//	return
+		//}
+
     var parsedStyle = {
       "border-width": "1px",
       "font-size": "18px",
 			//"cursor": "default",
     }
 
-    if (
-      (nodedata.app_name === "Testing" ||
-        nodedata.app_name === "Shuffle Tools") &&
-      !nodedata.isStartNode
-    ) {
+    if ((nodedata.app_name === "Testing" || nodedata.app_name === "Shuffle Tools") && !nodedata.isStartNode) {
       parsedStyle = {
         "border-width": "1px",
         "font-size": "0px",
@@ -3861,6 +3871,16 @@ const AngularWorkflow = (defaultprops) => {
       "font-size": "25px",
 			//"cursor": "pointer",
     }
+
+		const typeIds = cy.elements('node:selected').jsons();
+		for (var idkey in typeIds) {
+			const item = typeIds[idkey]
+			if (item.data.id === nodedata.id) {
+				//console.log("items: ", item.data.id, nodedata.id)
+				parsedStyle["border-width"] = "12px"
+				break
+			}
+		}
 
     if (nodedata.type !== "COMMENT") {
       parsedStyle.color = "white";
