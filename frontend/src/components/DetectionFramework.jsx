@@ -922,7 +922,9 @@ const Framework = (props) => {
 		const baselocationX = 285*scale
 		const baselocationY = 50*scale
 		const shiftmodifier = 3*scale
-		const svgSize = `${40*scale}px`
+		//const svgSize = `${40*scale}px`
+		const svgSize = `${40}px`
+		console.log("Size: ", svgSize)
 
 
 		console.log("Framework: ", parsedFrameworkData)

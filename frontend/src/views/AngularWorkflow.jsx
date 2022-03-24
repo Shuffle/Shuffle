@@ -1795,103 +1795,103 @@ const AngularWorkflow = (defaultprops) => {
 		//
 
 		// Wait for new node to possibly be selected
-		setTimeout(() => {
-			const typeIds = cy.elements('node:selected').jsons();
-			console.log("Found: ", typeIds)
-			for (var idkey in typeIds) {
-				const item = typeIds[idkey]
-				console.log("items: ", item)
-				if (item.data.isButton === true) {
-					console.log("Reselect old node & return - or just return?")
-					
-					if (item.data.buttonType === "delete" && item.data.attachedTo === nodedata.id) {
-						console.log("delete of same node!")
-					}
-					return
+		//setTimeout(() => {
+		const typeIds = cy.elements('node:selected').jsons();
+		console.log("Found: ", typeIds)
+		for (var idkey in typeIds) {
+			const item = typeIds[idkey]
+			console.log("items: ", item)
+			if (item.data.isButton === true) {
+				console.log("Reselect old node & return - or just return?")
+				
+				if (item.data.buttonType === "delete" && item.data.attachedTo === nodedata.id) {
+					console.log("delete of same node!")
 				}
+				return
 			}
+		}
 
-    	//if (nodedata.app_name === undefined && nodedata.source === undefined) {
-    	//  return;
-    	//}
-    	//event.target.removeClass("selected");
-			//
-
-
-
+		//if (nodedata.app_name === undefined && nodedata.source === undefined) {
+		//  return;
+		//}
+		//event.target.removeClass("selected");
+		//
 
 
-			//// If button is clicked, select current node
 
-    	// Attempt at rewrite of name in other actions in following nodes.
-    	// Should probably be done in the onBlur for the textfield instead
-    	/*
-			if (event.target.data().type === "ACTION") {
-				const nodeaction = event.target.data()
-				const curaction = workflow.actions.find(a => a.id === nodeaction.id)
-				console.log("workflowaction: ", curaction)
-				console.log("nodeaction: ", nodeaction)
-				if (nodeaction.label !== curaction.label) {
-					console.log("BEACH!")
 
-					var params = []
-					const fixedName = "$"+curaction.label.toLowerCase().replace(" ", "_")
-					for (var actionkey in workflow.actions) {
-						if (workflow.actions[actionkey].id === curaction.id) {
+
+		//// If button is clicked, select current node
+
+		// Attempt at rewrite of name in other actions in following nodes.
+		// Should probably be done in the onBlur for the textfield instead
+		/*
+		if (event.target.data().type === "ACTION") {
+			const nodeaction = event.target.data()
+			const curaction = workflow.actions.find(a => a.id === nodeaction.id)
+			console.log("workflowaction: ", curaction)
+			console.log("nodeaction: ", nodeaction)
+			if (nodeaction.label !== curaction.label) {
+				console.log("BEACH!")
+
+				var params = []
+				const fixedName = "$"+curaction.label.toLowerCase().replace(" ", "_")
+				for (var actionkey in workflow.actions) {
+					if (workflow.actions[actionkey].id === curaction.id) {
+						continue
+					}
+
+					for (var paramkey in workflow.actions[actionkey].parameters) {
+						const param = workflow.actions[actionkey].parameters[paramkey]
+						if (param.value === null || param.value === undefined || !param.value.includes("$")) {
 							continue
 						}
 
-						for (var paramkey in workflow.actions[actionkey].parameters) {
-							const param = workflow.actions[actionkey].parameters[paramkey]
-							if (param.value === null || param.value === undefined || !param.value.includes("$")) {
-								continue
-							}
-
-							const innername = param.value.toLowerCase().replace(" ", "_")
-							if (innername.includes(fixedName)) {
-								//workflow.actions[actionkey].parameters[paramkey].replace(
-								//console.log("FOUND!: ", innername)
-							}
+						const innername = param.value.toLowerCase().replace(" ", "_")
+						if (innername.includes(fixedName)) {
+							//workflow.actions[actionkey].parameters[paramkey].replace(
+							//console.log("FOUND!: ", innername)
 						}
 					}
 				}
 			}
-			*/
+		}
+		*/
 
-  		//cy.removeListener("select");
-			//cy.on("select", "node", (e) => onNodeSelect(e, appAuthentication));
-			//cy.on("select", "edge", (e) => onEdgeSelect(e));
+		//cy.removeListener("select");
+		//cy.on("select", "node", (e) => onNodeSelect(e, appAuthentication));
+		//cy.on("select", "edge", (e) => onEdgeSelect(e));
 
 
-    	// FIXME - check if they have value before overriding like this for no reason.
-    	// Would save a lot of time (400~ ms -> 30ms)
-    	//console.log("ACTION: ", selectedAction)
-    	//console.log("APP: ", selectedApp)
+		// FIXME - check if they have value before overriding like this for no reason.
+		// Would save a lot of time (400~ ms -> 30ms)
+		//console.log("ACTION: ", selectedAction)
+		//console.log("APP: ", selectedApp)
 
-			ReactDOM.unstable_batchedUpdates(() => {
-				setSelectedAction({});
-				setSelectedApp({});
-				setSelectedTrigger({});
-				setSelectedComment({})
-				setSelectedEdge({});
+		ReactDOM.unstable_batchedUpdates(() => {
+			setSelectedAction({});
+			setSelectedApp({});
+			setSelectedTrigger({});
+			setSelectedComment({})
+			setSelectedEdge({});
 
-				setSelectedEdge({})
-				setSelectedActionEnvironment({})
-				setTriggerAuthentication({})
-				setSelectedTriggerIndex(-1)
-				setTriggerFolders([])
-				setSubworkflow({})
+			setSelectedEdge({})
+			setSelectedActionEnvironment({})
+			setTriggerAuthentication({})
+			setSelectedTriggerIndex(-1)
+			setTriggerFolders([])
+			setSubworkflow({})
 
-				// Can be used for right side view
-				setRightSideBarOpen(false);
-				setScrollConfig({
-					top: 0,
-					left: 0,
-					selected: "",
-				});
+			// Can be used for right side view
+			setRightSideBarOpen(false);
+			setScrollConfig({
+				top: 0,
+				left: 0,
+				selected: "",
+			});
 				//console.timeEnd("UNSELECT");
-			})
-		}, 150)
+		})
+		//}, 150)
   };
 
   const onEdgeSelect = (event) => {
@@ -3600,7 +3600,12 @@ const AngularWorkflow = (defaultprops) => {
 
 				// FIXME: Don't allow multiple in cloud yet. Cloud -> Onprem isn't stable.
 				if (isCloud) {
-          setEnvironments([{ Name: "Cloud", Type: "cloud" }]);
+					console.log("Envs: ", responseJson)
+					if (responseJson.length > 0) {
+        		setEnvironments(responseJson);
+					} else {
+          	setEnvironments([{ Name: "Cloud", Type: "cloud" }]);
+					}
 				} else {
         	setEnvironments(responseJson);
 				}

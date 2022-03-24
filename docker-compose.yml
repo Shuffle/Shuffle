@@ -27,8 +27,8 @@ services:
       - shuffle
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${SHUFFLE_APP_HOTLOAD_LOCATION}:/shuffle-apps
-      - ${SHUFFLE_FILE_LOCATION}:/shuffle-files
+      - ${SHUFFLE_APP_HOTLOAD_LOCATION}:/shuffle-apps:z
+      - ${SHUFFLE_FILE_LOCATION}:/shuffle-files:z
       #- ${SHUFFLE_OPENSEARCH_CERTIFICATE_FILE}:/shuffle-files/es_certificate
     env_file: .env
     environment:

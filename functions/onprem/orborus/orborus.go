@@ -65,6 +65,10 @@ var baseimagename = os.Getenv("SHUFFLE_BASE_IMAGE_NAME")
 var baseimageregistry = os.Getenv("SHUFFLE_BASE_IMAGE_REGISTRY")
 var baseimagetagsuffix = os.Getenv("SHUFFLE_BASE_IMAGE_TAG_SUFFIX")
 
+// Used for cloud with auth
+var auth = os.Getenv("AUTH")
+var org = os.Getenv("ORG")
+
 //var orgId = os.Getenv("ORG_ID")
 var baseUrl = os.Getenv("BASE_URL")
 var environment = os.Getenv("ENVIRONMENT_NAME")
@@ -901,6 +905,15 @@ func main() {
 	zombiecounter := 0
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Org-Id", environment)
+
+	if len(auth) > 0 {
+		req.Header.Add("Authorization", auth)
+	}
+
+	if len(org) > 0 {
+		req.Header.Add("Org", org)
+	}
+
 	log.Printf("[INFO] Waiting for executions at %s with Environment %s", fullUrl, environment)
 	hasStarted := false
 	for {

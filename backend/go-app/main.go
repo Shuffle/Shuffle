@@ -4,6 +4,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"github.com/shuffle/shuffle-shared"
 
+	"archive/zip"
 	"bufio"
 	"bytes"
 	"context"
@@ -5759,6 +5760,63 @@ func makeWorkflowPublic(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 }
 
+func handleAppZipUpload(resp http.ResponseWriter, request *http.Request) {
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
+
+	//https://stackoverflow.com/questions/22964950/http-request-formfile-handle-zip-files
+	request.ParseMultipartForm(32 << 20)
+	f, _, err := request.FormFile("shuffle_file")
+	if err != nil {
+		log.Printf("[ERROR] Couldn't upload file: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Failed uploading file. Correct usage is: shuffle_file=@filepath"}`))
+		return
+	}
+
+	fileSize, err := f.Seek(0, 2) //2 = from end
+	if err != nil {
+		panic(err)
+	}
+	_, err = f.Seek(0, 0)
+	if err != nil {
+		panic(err)
+	}
+
+	buf := new(bytes.Buffer)
+	fileSize, err = io.Copy(buf, f)
+	if err != nil {
+		panic(err)
+	}
+
+	zipdata, err := zip.NewReader(bytes.NewReader(buf.Bytes()), fileSize)
+	if err != nil {
+		panic(err)
+	}
+
+	for _, item := range zipdata.File {
+		log.Printf("\n\nName: %s\n\n", item.FileHeader.Name)
+		log.Printf("item: %#v", item)
+
+		rr, err := item.Open()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		_, err = io.Copy(os.Stdout, rr)
+		if err != nil {
+			log.Fatal(err)
+		}
+		rr.Close()
+
+	}
+
+	resp.WriteHeader(200)
+	resp.Write([]byte("OK"))
+}
+
 func initHandlers() {
 	var err error
 	ctx := context.Background()
@@ -5857,6 +5915,7 @@ func initHandlers() {
 
 	// App specific
 	// From here down isnt checked for org specific
+	r.HandleFunc("/api/v1/apps/upload", handleAppZipUpload).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}/activate", activateWorkflowAppDocker).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/frameworkConfiguration", shuffle.GetFrameworkConfiguration).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/frameworkConfiguration", shuffle.SetFrameworkConfiguration).Methods("POST", "OPTIONS")

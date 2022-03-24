@@ -19,4 +19,4 @@ curl http://localhost:5001/api/v1/apps/upload -H "Authorization: Bearer db0373c6
 #curl http://localhost:5001/api/v1/files/create -H "Authorization: Bearer c5b4c827-65ec-47f4-9e8a-234cdba38959" -d '{"filename": "rule2.yar", "org_id": "b4e88fe9-352b-47b4-b280-960181670acf", "workflow_id": "global", "namespace": "yara"}'
 #curl http://localhost:5001/api/v1/files/5cb941ad-fa1c-4444-a685-92024b1fa31c/upload -H "Authorization: Bearer c5b4c827-65ec-47f4-9e8a-234cdba38959" -F 'shuffle_file=@upload.sh'
 
-curl http://localhost:5001/api/v1/files/namespaces/yara -H "Authorization: Bearer c5b4c827-65ec-47f4-9e8a-234cdba38959" --output rules.zip
+#curl http://localhost:5001/api/v1/files/namespaces/yara -H "Authorization: Bearer c5b4c827-65ec-47f4-9e8a-234cdba38959" --output rules.zip

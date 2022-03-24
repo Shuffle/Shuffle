@@ -1,4 +1,5 @@
 import os
+import ast
 import copy
 import sys
 import re
@@ -273,9 +274,10 @@ class AppBase:
                 action_result["result"] = self.run_magic_parser(action_result["result"])
             else:
                 self.logger.warning(f"[ERROR] Magic output not defined.")
+        except KeyError as e:
+            self.logger.warning(f"[ERROR] Failed to run magic autoparser (send result) - keyerror: {e}")
         except Exception as e:
             self.logger.warning(f"[ERROR] Failed to run magic autoparser (send result): {e}")
-            pass
 
         # Try it with some magic
 
@@ -383,8 +385,9 @@ class AppBase:
         
         if not os.getenv("SHUFFLE_LOGS_DISABLED") == "true":
             try:
-                self.log_capture_string.flush()
-                self.log_capture_string.close()
+                pass
+                #self.log_capture_string.flush()
+                #self.log_capture_string.close()
             except Exception as e:
                 print(f"[WARNING] Failed to flush logs: {e}") 
                 pass
@@ -973,6 +976,20 @@ class AppBase:
 
         filebytes = BytesIO(ret1.content)
         myzipfile = zipfile.ZipFile(filebytes)
+
+        # Unzip and build here!
+        #for member in files.namelist():
+        #    filename = os.path.basename(member)
+        #    if not filename:
+        #        continue
+
+        #    self.logger.info("File: %s" % member)
+        #    source = files.open(member)
+        #    with open("%s/%s" % (basedir, source.name), "wb+") as tmp:
+        #        filedata = source.read()
+        #        self.logger.info("Filedata (%s): %s" % (source.name, filedata))
+        #        tmp.write(filedata)
+
         return myzipfile
 
     # Things to consider for files:
@@ -2594,8 +2611,6 @@ class AppBase:
                                 params[item["key"]] = item["value"]
                         except KeyError:
                             self.logger.info("[DEBUG] No authentication specified!")
-                            pass
-                                #action["authentication"] 
 
                         # Fixes OpenAPI body parameters for later.
                         newparams = []
@@ -3038,7 +3053,7 @@ class AppBase:
                                         if isinstance(value, str):
                                             params[key] = ast.literal_eval(value)
                                     except Exception as e:
-                                        self.logger.info("[DEBUG] Failed parsing value with ast: {e}")
+                                        self.logger.info(f"[DEBUG] Failed parsing value with ast: {e}")
                                         continue
                             except Exception as e:
                                 self.logger.info("[DEBUG] Failed looping objects. Non critical: {e}")
@@ -3206,8 +3221,8 @@ class AppBase:
 
         # https://ptb.discord.com/channels/747075026288902237/882017498550112286/882043773138382890
         except (requests.exceptions.RequestException, TimeoutError) as e:
-            self.logger.info(f"Failed to execute request (requests): {e}")
-            self.logger.exception(f"Failed to execute {e}-{action['id']}")
+            self.logger.info(f"[ERROR] Failed to execute request (requests): {e}")
+            self.logger.exception(f"[ERROR] Failed to execute {e}-{action['id']}")
             self.action_result["status"] = "SUCCESS" 
             try:
                 self.action_result["result"] = json.dumps({
@@ -3219,8 +3234,8 @@ class AppBase:
                 self.action_result["result"] = f"Request error: {e}"
 
         except Exception as e:
-            self.logger.info(f"Failed to execute: {e}")
-            self.logger.exception(f"Failed to execute {e}-{action['id']}")
+            self.logger.info(f"[ERROR] Failed to execute: {e}")
+            self.logger.exception(f"[ERROR] Failed to execute {e}-{action['id']}")
             self.action_result["status"] = "FAILURE" 
             #self.action_result["result"] = f"General exception: {e}" 
             self.action_result["result"] = json.dumps({

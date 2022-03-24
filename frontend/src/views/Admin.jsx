@@ -1010,8 +1010,9 @@ const Admin = (props) => {
       body: file,
     })
       .then((response) => {
-        if (response.status !== 200) {
+        if (response.status !== 200 && response.status !== 201) {
           console.log("Status not 200 for apps :O!");
+          alert.error("File was created, but failed to upload.")
           return;
         }
 
@@ -1022,16 +1023,20 @@ const Admin = (props) => {
         //setFiles(responseJson)
       })
       .catch((error) => {
-        //alert.error(error.toString())
+        alert.error(error.toString())
       });
   };
 
   const handleCreateFile = (filename, file) => {
-    const data = {
+    var data = {
       filename: filename,
       org_id: selectedOrganization.id,
       workflow_id: "global",
     };
+
+		if (selectedNamespace !== undefined && selectedNamespace !== null && selectedNamespace.length > 0 && selectedNamespace !== "default") {
+			data.namespace = selectedNamespace
+		}
 
     fetch(globalUrl + "/api/v1/files/create", {
       method: "POST",
@@ -3991,7 +3996,7 @@ const Admin = (props) => {
                         >
                           {environment.archived ? "Activate" : "Disable"}
                         </Button>
-                        <Button variant={environment.archived ? "contained" : "outlined"} style={{borderRadius: "0px"}} onClick={() => {
+                        <Button variant={"outlined"} style={{borderRadius: "0px"}} onClick={() => {
 														console.log("Should clear executions for: ", environment)
 														abortEnvironmentWorkflows(environment)
 												}} color="primary">Clear executions</Button>
@@ -4240,7 +4245,7 @@ const Admin = (props) => {
           />
 					<Tab
 						index={5}
-						disabled={isCloud || userdata.admin !== "true"}
+						disabled={userdata.admin !== "true"}
 						label=<span>
 							<EcoIcon style={iconStyle} />
 							Environments

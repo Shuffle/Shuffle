@@ -74,7 +74,7 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 	}
 
 	const getUsecase = (name, index, subindex) => {
-    fetch(globalUrl + "/api/v1/workflows/usecases/"+name.replaceAll(" ", "_"), {
+    fetch(`${globalUrl}/api/v1/workflows/usecases/${escape(name.replaceAll(" ", "_"))}`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -100,7 +100,20 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 
 			setExpandedIndex(index)
 			setExpandedItem(subindex)
-		})
+
+			setTimeout(() => {
+				//console.log("Scroll!")
+				const found = document.getElementById("selected_box");
+				console.log("Found to scroll: ", found)
+				if (found !== undefined && found !== null) {
+					//console.log("FOUND!!")
+					found.scrollTo({
+						top: 100,
+						behavior: "smooth",
+					})
+				}
+			}, 100);
+})
 		.catch((error) => {
 			//alert.error(error.toString());
 			setInputUsecase({})
@@ -224,67 +237,77 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 													<Typography variant="h6" style={{maxWidth: 215}}>
 														<b>{subcase.name}</b>
 													</Typography>
-													<div style={{position: "absolute", top: -26, right: -20, width: 50, }}>
-														{finished ? 
-															<Tooltip
-																title="A workflow has been assigned for this use case"
-																placement="top"
-															>
-																<IconButton
-																	style={{}}
-																	onClick={(e) => {
-																	}}
-																>
-																	<DoneAllIcon style={{ color: usecase.color }} />
-																</IconButton>
-															</Tooltip>
-														: null}
-													{subcase.blogpost !== null && subcase.blogpost !== undefined && subcase.blogpost.length > 0 ? 
-															<a 
-																href={subcase.blogpost}
-																rel="noopener noreferrer"
-																target="_blank"
-                  							style={{ textDecoration: "none", color: "#f85a3e" }}
-															>
+															{finished ? 
 																<Tooltip
-																	title="Click to visit the blogpost"
+																	title="A workflow has been assigned for this use case"
 																	placement="top"
 																>
 																	<IconButton
-																		style={{marginTop: finished ? 5 : 40, }}
+																		style={{
+																				position: "absolute",
+																				bottom: 15,
+																				right: -15,
+																		}}
 																		onClick={(e) => {
 																		}}
 																	>
-																		<DescriptionIcon style={{ color: usecase.color }} />
+																		<DoneAllIcon style={{ color: usecase.color }} />
 																	</IconButton>
 																</Tooltip>
-															</a>
-														: null}
-														{subcase.video !== null && subcase.video !== undefined && subcase.video.length > 0 ? 
-															<a 
-																href={subcase.video}
-																rel="noopener noreferrer"
-																target="_blank"
-                  							style={{ textDecoration: "none", color: "#f85a3e" }}
-															>
-																<Tooltip
-																	title="Click to see a video for this usecase"
-																	placement="top"
+															: null}
+															{subcase.blogpost !== null && subcase.blogpost !== undefined && subcase.blogpost.length > 0 ? 
+																<a 
+																	href={subcase.blogpost}
+																	rel="noopener noreferrer"
+																	target="_blank"
+                  								style={{ textDecoration: "none", color: "#f85a3e" }}
 																>
-																	<IconButton
-																		style={{paddingTop: 5,}}
-																		onClick={(e) => {
-																		}}
+																	<Tooltip
+																		title="Click to visit the blogpost"
+																		placement="top"
 																	>
-            												<PlayArrowIcon style={{ color: usecase.color }} />
-																	</IconButton>
-																</Tooltip>
-															</a>
-													: null}
-													</div>
+																		<IconButton
+																			style={{
+																				position: "absolute",
+																				bottom: -25,
+																				right: -15,
+																			}}
+																			onClick={(e) => {
+																			}}
+																		>
+																			<DescriptionIcon style={{ color: usecase.color }} />
+																		</IconButton>
+																	</Tooltip>
+																</a>
+															: null}
+															{subcase.video !== null && subcase.video !== undefined && subcase.video.length > 0 ? 
+																<a 
+																	href={subcase.video}
+																	rel="noopener noreferrer"
+																	target="_blank"
+																	style={{ textDecoration: "none", color: "#f85a3e" }}
+																>
+																	<Tooltip
+																		title="Click to see a video for this usecase"
+																		placement="top"
+																	>
+																		<IconButton
+																			style={{
+																				position: "absolute",
+																				bottom: -65,
+																				right: -15,
+																			}}
+																			onClick={(e) => {
+																			}}
+																		>
+																			<PlayArrowIcon style={{ color: usecase.color }} />
+																		</IconButton>
+																	</Tooltip>
+																</a>
+															: null}
 												</div>
 											: 
-												<div style={{textAlign: "left", position: "relative",}}>
+												<div style={{textAlign: "left", position: "relative",}} id="selected_box">
 													<Typography variant="h6">
 														<b>{subcase.name}</b>
 													</Typography>
@@ -482,7 +505,7 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 																</div>
 															</div>
 															: 
-																<div style={{flex: 1, textAlign: "left",}}>
+																<div style={{flex: 1, textAlign: "left", marginRight: 10, }}>
 																	<Typography variant="body1">
 																		{subcase.description}
 																	</Typography>
