@@ -1666,7 +1666,6 @@ const Workflows = (props) => {
       }
     }
 
-		console.log("data: ", data)
     return (
 			<div style={{width: "100%", position: "relative",}}>
         <Paper square style={paperAppStyle}>

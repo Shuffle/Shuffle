@@ -5796,6 +5796,7 @@ func handleAppZipUpload(resp http.ResponseWriter, request *http.Request) {
 		panic(err)
 	}
 
+	// https://github.com/alexmullins/zip/blob/master/example_test.go
 	for _, item := range zipdata.File {
 		log.Printf("\n\nName: %s\n\n", item.FileHeader.Name)
 		log.Printf("item: %#v", item)

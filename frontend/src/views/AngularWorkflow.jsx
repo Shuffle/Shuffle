@@ -1615,7 +1615,7 @@ const AngularWorkflow = (defaultprops) => {
         }
 
         if (responseJson.public) {
-          alert.info("This workflow is public. Save the workflow to start using it.");
+          alert.info("This workflow is public. Save the workflow to use it in your organization.");
 				
 					console.log("RESP: ", responseJson)
 					if (Object.getOwnPropertyNames(creatorProfile).length === 0) {
@@ -2445,7 +2445,10 @@ const AngularWorkflow = (defaultprops) => {
 
 				//var newapps = JSON.parse(JSON.stringify(apps))
 				var newapps = apps
-		console.log(event.target.data())
+				if (apps === null || apps === undefined || apps.length === 0) {
+					newapps = filteredApps
+				}
+
     	  const curapp = newapps.find(
     	    (a) =>
     	      a.name === curaction.app_name &&
@@ -2454,9 +2457,8 @@ const AngularWorkflow = (defaultprops) => {
     	          a.loop_versions.includes(curaction.app_version)))
     	  );
     	  if (!curapp || curapp === undefined) {
-    	    alert.error(
-    	      `App ${curaction.app_name}:${curaction.app_version} not found. Is it activated?`
-    	    );
+					console.log("APPS: ", newapps)
+    	    //alert.error(`App ${curaction.app_name}:${curaction.app_version} not found. Is it activated?`);
 
     	    const tmpapp = {
     	      name: curaction.app_name,
@@ -3601,7 +3603,7 @@ const AngularWorkflow = (defaultprops) => {
 				// FIXME: Don't allow multiple in cloud yet. Cloud -> Onprem isn't stable.
 				if (isCloud) {
 					console.log("Envs: ", responseJson)
-					if (responseJson.length > 0) {
+					if (responseJson !== undefined && responseJson !== null && responseJson.length > 0) {
         		setEnvironments(responseJson);
 					} else {
           	setEnvironments([{ Name: "Cloud", Type: "cloud" }]);
@@ -11025,7 +11027,7 @@ const AngularWorkflow = (defaultprops) => {
 					<AvatarGroup max={6} style={{marginLeft: 10, }}>
 						{triggerGroup.map((data, index) => {
 							return (
-								<Avatar alt={data.app_name} src={data.large_image} style={{width: 30, height: 30}}/>
+								<Avatar key={index} alt={data.app_name} src={data.large_image} style={{width: 30, height: 30}}/>
 							)
 						})}
 					</AvatarGroup>
@@ -11034,12 +11036,13 @@ const AngularWorkflow = (defaultprops) => {
 
 			<div style={{display: "flex", marginTop: 10, }}>
 				<Typography variant="body1">
-					Mitre Att&ck: 
+					Mitre Att&ck:&nbsp; 
 				</Typography>
 				<Typography variant="body1" color="textSecondary">
 					TBD
 				</Typography>
 			</div>
+			{/*
 			<div style={{display: "flex", marginTop: 10, }}>
 				<Typography variant="body1">
 					Related Workflows:
@@ -11048,6 +11051,7 @@ const AngularWorkflow = (defaultprops) => {
 					TBD
 				</Typography>
 			</div>
+			*/}
 			{workflow.description !== undefined && workflow.description !== null && workflow.description.length > 0 ?
 				<div style={{marginTop: 5, }}>
 					<Typography variant="body1">
@@ -11059,17 +11063,37 @@ const AngularWorkflow = (defaultprops) => {
 				</div>
 			: null}
 			{userdata.avatar === creatorProfile.github_avatar ? 
-				<Button
-					color="secondary"
-					variant="outlined"
-					fullWidth
-					style={{marginTop: 15, }}
-					onClick={() => {
-						setEditWorkflowDetails(true)
-					}}
-				>
-					Edit Details 
-				</Button>
+				<div style={{marginTop: 50, }}>
+					<Button
+						color="primary"
+						variant="contained"
+						fullWidth
+						style={{marginTop: 15, }}
+						onClick={() => {
+							//setEditWorkflowDetails(true)
+							workflow.public = false
+							setWorkflow(workflow)
+							setUpdate(Math.random());
+						}}
+					>
+						Edit Workflow 
+					</Button>
+					<Button
+						color="secondary"
+						disabled
+						variant="outlined"
+						fullWidth
+						style={{marginTop: 15, }}
+						onClick={() => {
+							// setEditWorkflowDetails(true)
+							// workflow.public = false
+							// setWorkflow(workflow)
+							// setUpdate(Math.random());
+						}}
+					>
+						Unpublish Workflow	
+					</Button>
+				</div>
 			: null}
 		</div>
 	: isMobile && leftViewOpen ? 
