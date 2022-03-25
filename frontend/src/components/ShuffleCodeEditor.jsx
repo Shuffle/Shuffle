@@ -459,7 +459,7 @@ const CodeEditor = (props) => {
 						padding: 10,
 						width: isMobile ? "100%" : 250,
 						height: 95,
-						overflowY: 'scroll',
+						overflowY: 'auto',
 						// textOverflow: 'ellipsis'
 					}}
 				>
