@@ -54,6 +54,59 @@ const CodeEditor = (props) => {
 	// 	console.log(currentLocation)
 	// }, [currentLocation])
 
+	// const [allVariable, setAllVariable] = React.useState([]);
+	var allVariable = []
+	var mainVariables = []
+	
+	// console.log(actionlist.length)
+	for(var i=0; i<actionlist.length; i++){
+		allVariable.push('$'+actionlist[i].autocomplete.toLowerCase())
+		mainVariables.push('$'+actionlist[i].autocomplete.toLowerCase())
+		// console.log(actionlist[i])
+		console.log(actionlist[i].example.length)
+		// for(var j=0; j<actionlist[i].example.length; j++){
+		// 	console.log(j)
+		// 	allVariable.push('$'+actionlist[i].example[j].toLowerCase().substring(0, 25))
+		// }
+		for(let key in actionlist[i].example){
+			// console.log(key)
+			allVariable.push('$'+actionlist[i].autocomplete.toLowerCase()+'.'+key)
+		}
+	}
+
+	// {actionlist.map((data, index) => {
+		// console.log(data)
+		// console.log(actionlist.length)
+		// console.log(data.autocomplete)
+		// allVariable.push('$'+data.autocomplete.substring(0, 25))
+		// return (
+		// 	<div
+		// 		style={{
+		// 			// textOverflow: 'ellipsis'
+		// 		}}
+		// 	>
+		// 		<button
+		// 			onClick={() => {
+		// 				replaceVariables(data.autocomplete)
+		// 				// console.log(currentCharacter, currentLine)
+		// 			}}
+		// 			style={{
+		// 				backgroundColor: 'transparent',
+		// 				color: 'white',
+		// 				border: 'none',
+		// 				padding: 7.5,
+		// 				cursor: 'pointer',
+		// 				width: '100%',
+		// 				textAlign: 'left'
+		// 			}}
+		// 		>
+		// 			${data.autocomplete.substring(0, 25)}
+		// 			{Object.keys(data.example).forEach(key => key)}
+		// 		</button>
+		// 	</div>
+		// )
+	// })}
+
 	const autoFormat = (input) => {
 		if (validation !== true) {
 			return
@@ -198,10 +251,13 @@ const CodeEditor = (props) => {
 			console.log(dollar_occurence_len)
 
 			try{
+				// console.log(variable_occurence)
 				for (var occ = 0; occ<variable_occurence.length; occ++){
 					// value.markText({line:i, ch:dollar_occurence[occ]}, {line:i, ch:dollar_occurence_len[occ]+dollar_occurence[occ]}, {"css": "background-color: #8b8e26; border-radius: 4px; color: white"})
-					var correctVariable = actionlist.find(action => action.autocomplete.toLowerCase() === variable_occurence[occ].slice(1,).toLowerCase())
-					if(correctVariable === undefined) {
+					// var correctVariable = actionlist.find(action => action.autocomplete.toLowerCase() === variable_occurence[occ].slice(1,).toLowerCase())
+					var correctVariable = allVariable.includes(variable_occurence[occ].toLowerCase())
+					// console.log(actionlist)
+					if(!correctVariable) {
 						value.markText({line:i, ch:dollar_occurence[occ]}, {line:i, ch:dollar_occurence_len[occ]+dollar_occurence[occ]}, {"css": "background-color: #f86a3e; padding-top: 2px; padding-bottom: 2px; color: white"})
 					}
 					else{
@@ -364,6 +420,7 @@ const CodeEditor = (props) => {
 					onChange={(value) => {
 						setlocalcodedata(value.getValue())
 						expectedOutput(value.getValue())
+						// console.log(allVariable)
 						// console.log(value.getValue().split('\n')[value.getCursor().line])
 						// console.log(value.getCursor())
 						// console.log(value)
@@ -401,10 +458,12 @@ const CodeEditor = (props) => {
 						margin: 10,
 						padding: 10,
 						width: isMobile ? "100%" : 250,
+						height: 95,
+						overflowY: 'scroll',
 						// textOverflow: 'ellipsis'
 					}}
 				>
-					{actionlist.map((data, index) => {
+					{mainVariables.map((data, index) => {
 						// console.log(data)
 						return (
 							<div
@@ -414,7 +473,7 @@ const CodeEditor = (props) => {
 							>
 								<button
 									onClick={() => {
-										replaceVariables(data.autocomplete)
+										replaceVariables(data.substring(1,))
 										// console.log(currentCharacter, currentLine)
 									}}
 									style={{
@@ -427,7 +486,8 @@ const CodeEditor = (props) => {
 										textAlign: 'left'
 									}}
 								>
-									${data.autocomplete.substring(0, 25)}
+									{data.substring(0, 25)}
+									{/* {Object.keys(data.example).forEach(key => key)} */}
 								</button>
 							</div>
 						)
