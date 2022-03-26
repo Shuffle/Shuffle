@@ -74,6 +74,7 @@ import {
   Pause as PauseIcon,
   Delete as DeleteIcon,
   AddCircleOutline as AddCircleOutlineIcon,
+  Circle as  CircleIcon,
   Save as SaveIcon,
   KeyboardArrowLeft as KeyboardArrowLeftIcon,
   KeyboardArrowRight as KeyboardArrowRightIcon,
@@ -1905,7 +1906,7 @@ const ParsedAction = (props) => {
                             ) : pathdata.type === "list" ? (
                               <FormatListNumberedIcon style={{marginLeft: 9, marginRight: 10, }} />
                             ) : (
-															<AddCircleOutlineIcon style={{marginLeft: 9, marginRight: 10, color: coverColor}}/>
+															<Circle style={{marginLeft: 9, marginRight: 10, color: coverColor}}/>
                             );
                           //<ExpandMoreIcon style={iconStyle} />
 

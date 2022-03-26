@@ -713,6 +713,9 @@ const Workflows = (props) => {
             Before publishing, we will sanitize all inputs, remove references to
             you, randomize ID's and remove your authentication.
           </Typography>
+          <Typography variant="body1" style={{ marginBottom: 20 }}>
+						The published workflow is yours, and you can always change your public workflows after they are released.
+          </Typography>
         </div>
         <Button
           variant="contained"

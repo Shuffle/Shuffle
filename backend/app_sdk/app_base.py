@@ -3050,7 +3050,7 @@ class AppBase:
                             try:
                                 for key, value in params.items():
                                     try:
-                                        if isinstance(value, str):
+                                        if isinstance(value, str) and ((value.startswith("{") and value.endswith("}")) or (value.startswith("[") and value.endswith("]"))):
                                             params[key] = ast.literal_eval(value)
                                     except Exception as e:
                                         self.logger.info(f"[DEBUG] Failed parsing value with ast: {e}")
