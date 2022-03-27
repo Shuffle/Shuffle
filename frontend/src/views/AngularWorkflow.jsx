@@ -12021,11 +12021,7 @@ const parsedExecutionArgument = () => {
             <CircularProgress />
           ) : (
             executionData.results.map((data, index) => {
-              if (
-                executionData.results.length !== 1 &&
-                !showSkippedActions &&
-                (data.status === "SKIPPED")
-              ) {
+              if (executionData.results.length !== 1 && !showSkippedActions && (data.status === "SKIPPED") ) {
                 return null;
               }
 
@@ -12409,15 +12405,14 @@ const parsedExecutionArgument = () => {
     ? ""
     : validateJson(selectedResult.result.trim());
 
+	console.log("RESULT: ", validate.result)
   if (validate.valid && typeof validate.result === "string") {
-		console.log(validate.result)
     validate.result = JSON.parse(validate.result);
   }
 
 	const AppResultVariable = ({data}) => {
 		const [open, setOpen] = React.useState(false)
 		const showVariable = data.value.length < 60
-		console.log("Value: ", data.value)
 
 		return (
 			<div style={{maxWidth: 600, overflowX: "hidden", }}>

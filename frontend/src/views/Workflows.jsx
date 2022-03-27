@@ -394,32 +394,23 @@ const chipStyle = {
 };
 
 export const validateJson = (showResult) => {
-	//console.log("INPUT: ", showResult, typeof showResult)
+	console.log("INPUT: ", showResult, typeof showResult)
 	if (typeof showResult === 'string') {
-  	//showResult = showResult.split(" None").join(" \"None\"")
-		showResult = showResult.split(" False").join(" false");
-		showResult = showResult.split(" True").join(" true");
-		//return {
-		//	valid: false,
-		//	result: showResult,
-		//};
+		showResult = showResult.split(" False").join(" false")
+		showResult = showResult.split(" True").join(" true")
 	}
-
-	//if (typeof showResult === undefined) {
-
-	//}
 
 	if (typeof showResult === "object" || typeof showResult === "array") {
   	return {
   	  valid: true,
   	  result: showResult,
-  	};
+  	}
 	}
 
-  var jsonvalid = true;
+  var jsonvalid = true
   try {
     if (!showResult.includes("{") && !showResult.includes("[")) {
-      jsonvalid = false;
+      jsonvalid = false
     }
   } catch (e) {
     showResult = showResult.split("'").join('"');
@@ -462,6 +453,32 @@ export const validateJson = (showResult) => {
 
 	if (jsonvalid && typeof result === "number") {
 		jsonvalid = false
+	}
+
+	console.log("RES: ", result)
+	// This is where we start recursing
+	if (jsonvalid) {
+		// Check fields if they can be parsed too 
+    try {
+			for (const [key, value] of Object.entries(result)) {
+				if (typeof value === "string" && (value.startsWith("{") || value.startsWith("["))) {
+					console.log("INSIDE: ", key, value);
+					const inside_result = validateJson(value)
+					console.log("Inside: ", inside_result)
+					if (inside_result.valid) {
+						console.log("Replacing value since it's valid JSON!")
+						if (typeof inside_result.result === "string") {
+          		const newres = JSON.parse(inside_result.result)
+							result[key] = newres 
+						} else {
+							result[key] = inside_result.result
+						}
+					}
+				}
+			}
+		} catch (e) {
+			console.log("Failed parsing inside json subvalues: ", e)
+		}
 	}
 
   //console.log("VALID: ", jsonvalid, result, typeof result)

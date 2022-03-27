@@ -3070,12 +3070,14 @@ class AppBase:
 
                             #newres = ""
                             iteration_count = 0
+                            found_error = ""
                             while True:
                                 iteration_count += 1
                                 if iteration_count > 10:
                                     newres = {
                                         "success": False,
                                         "reason": "Iteration count more than 10. This happens if the input to the action is wrong. Try remaking the action, and contact support@shuffler.io if this persists.", 
+                                        "details": found_error,
                                     }
                                     break
 
@@ -3085,14 +3087,25 @@ class AppBase:
                                 except TypeError as e:
                                     newres = ""
                                     self.logger.info(f"[DEBUG] Got exec error: {e}")
+                                    try:
+                                        e = json.loads(f"{e}")
+                                    except:
+                                        e = f"{e}"
+
+                                    found_error = e 
                                     errorstring = f"{e}"
 
                                     if "the JSON object must be" in errorstring:
                                         self.logger.info("[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly?")
+                                        try:
+                                            e = json.loads(f"{e}")
+                                        except:
+                                            e = f"{e}"
+
                                         raise Exception(json.dumps({
                                             "success": False,
                                             "reason": "An exception occurred while running this function. See exception for more details and contact support if this persists (support@shuffler.io)",
-                                            "exception": f"{e}",
+                                            "exception": e,
                                         }))
                                     elif "got an unexpected keyword argument" in errorstring:
                                         fieldsplit = errorstring.split("'")
@@ -3112,10 +3125,16 @@ class AppBase:
                                         })
                                 except Exception as e:
                                     self.logger.info("[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly?")
+
+                                    try:
+                                        e = json.loads(f"{e}")
+                                    except:
+                                        e = f"{e}"
+
                                     raise Exception(json.dumps({
                                         "success": False,
                                         "reason": "An exception occurred while running this function. See exception for more details and contact support if this persists (support@shuffler.io)",
-                                        "exception": f"{e}",
+                                        "exception": e,
                                     }))
 
                             # Forcing async wait in case of old apps that use async (backwards compatibility)
@@ -3256,6 +3275,11 @@ class AppBase:
             self.logger.exception(f"[ERROR] Failed to execute {e}-{action['id']}")
             self.action_result["status"] = "SUCCESS" 
             try:
+                e = json.loads(f"{e}")
+            except:
+                e = f"{e}"
+
+            try:
                 self.action_result["result"] = json.dumps({
                     "success": False, 
                     "reason": f"Request error - failing silently. Details in detail section",
@@ -3268,9 +3292,14 @@ class AppBase:
             self.logger.info(f"[ERROR] Failed to execute: {e}")
             self.logger.exception(f"[ERROR] Failed to execute {e}-{action['id']}")
             self.action_result["status"] = "FAILURE" 
+            try:
+                e = json.loads(f"{e}")
+            except:
+                e = f"{e}"
+
             self.action_result["result"] = json.dumps({
                 "success": False,
-                "reason": f"General exception.",
+                "reason": f"General exception",
                 "details": e,
             })
 
