@@ -1906,7 +1906,7 @@ const ParsedAction = (props) => {
                             ) : pathdata.type === "list" ? (
                               <FormatListNumberedIcon style={{marginLeft: 9, marginRight: 10, }} />
                             ) : (
-															<Circle style={{marginLeft: 9, marginRight: 10, color: coverColor}}/>
+															<CircleIcon style={{marginLeft: 9, marginRight: 10, color: coverColor}}/>
                             );
                           //<ExpandMoreIcon style={iconStyle} />
 

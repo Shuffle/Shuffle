@@ -11978,13 +11978,13 @@ const parsedExecutionArgument = () => {
           executionData.results.length > 1 &&
           executionData.results.find(
             (result) =>
-              result.status === "SKIPPED" || result.status === "FAILURE"
+              result.status === "SKIPPED" 
           ) ? (
             <FormControlLabel
               style={{ color: "white", marginBottom: 10 }}
               label={
                 <div style={{ color: "white" }}>
-                  Show failed / skipped actions
+                  Show skipped actions
                 </div>
               }
               control={
@@ -12024,7 +12024,7 @@ const parsedExecutionArgument = () => {
               if (
                 executionData.results.length !== 1 &&
                 !showSkippedActions &&
-                (data.status === "SKIPPED" || data.status === "FAILURE")
+                (data.status === "SKIPPED")
               ) {
                 return null;
               }

@@ -858,11 +858,12 @@ class AppBase:
                                     except KeyError:
                                         break
                             else:
-                                raise json.dumps({
+                                raise Exception(json.dumps({
                                     "success": False,
                                     "reason": "You may be running an old version of this action. Please delete and remake the node.",
                                     "exception": f"TypeError: {e}",
-                                })
+                                }))
+                                break
                                 
 
                 except:
@@ -1974,7 +1975,7 @@ class AppBase:
             try:
                 return json.dumps(json.loads(returndata)), is_loop
             except json.decoder.JSONDecodeError as e:
-                print("Error in decoder: %s" % e)
+                print("[ERROR] Error in decoder: %s" % e)
                 return returndata, is_loop
 
         # Sending self as it's not a normal function
@@ -2707,11 +2708,11 @@ class AppBase:
                         for parameter in action["parameters"]:
                             check, value, is_loop = parse_params(action, fullexecution, parameter, self)
                             if check:
-                                raise json.dumps({
+                                raise Exception(json.dumps({
                                     "success": False,
                                     "reason": "Parameter {parameter} has an issue",
-                                    "exception": f"Value Check Error: {check}",
-                                })
+                                    "exception": f"Value Error: {check}",
+                                }))
 
                             # Custom format for ${name[0,1,2,...]}$
                             #submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"
@@ -3045,32 +3046,55 @@ class AppBase:
                                 self.send_result(self.action_result, headers, stream_path)
                                 return
 
-                            self.logger.info("[INFO] Running normal execution (not loop)\n") 
+                            self.logger.info("[INFO] Running normal execution (not loop)\n\n") 
 
+                            # Added literal evaluation of anything resembling a string
+                            # The goal is to parse objects that e.g. use single quotes and the like
+                            # FIXME: add this to Multi exec as well.
                             try:
                                 for key, value in params.items():
                                     try:
                                         if isinstance(value, str) and ((value.startswith("{") and value.endswith("}")) or (value.startswith("[") and value.endswith("]"))):
                                             params[key] = ast.literal_eval(value)
                                     except Exception as e:
-                                        self.logger.info(f"[DEBUG] Failed parsing value with ast: {e}")
-                                        continue
+                                        try:
+                                            params[key] = json.loads(value)
+                                        except json.decoder.JSONDecodeError as e:
+                                            self.logger.info(f"[DEBUG] Failed parsing value with ast and json.loads - noncritical. Trying next: {e}")
+                                            continue
                             except Exception as e:
                                 self.logger.info("[DEBUG] Failed looping objects. Non critical: {e}")
 
-                            #newres = await func(**params)
-                            #self.logger.info("PARAMS: %s" % params)
+                            # Uncomment below to get the param input
+                            # self.logger.info(f"[DEBUG] PARAMS: {params}")
+
                             #newres = ""
+                            iteration_count = 0
                             while True:
+                                iteration_count += 1
+                                if iteration_count > 10:
+                                    newres = {
+                                        "success": False,
+                                        "reason": "Iteration count more than 10. This happens if the input to the action is wrong. Try remaking the action, and contact support@shuffler.io if this persists.", 
+                                    }
+                                    break
+
                                 try:
-                                    #newres = await func(**params)
                                     newres = func(**params)
                                     break
                                 except TypeError as e:
                                     newres = ""
                                     self.logger.info(f"[DEBUG] Got exec error: {e}")
                                     errorstring = f"{e}"
-                                    if "got an unexpected keyword argument" in errorstring:
+
+                                    if "the JSON object must be" in errorstring:
+                                        self.logger.info("[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly?")
+                                        raise Exception(json.dumps({
+                                            "success": False,
+                                            "reason": "An exception occurred while running this function. See exception for more details and contact support if this persists (support@shuffler.io)",
+                                            "exception": f"{e}",
+                                        }))
+                                    elif "got an unexpected keyword argument" in errorstring:
                                         fieldsplit = errorstring.split("'")
                                         if len(fieldsplit) > 1:
                                             field = fieldsplit[1]
@@ -3081,11 +3105,18 @@ class AppBase:
                                             except KeyError:
                                                 break
                                     else:
-                                        raise json.dumps({
+                                        newres = json.dumps({
                                             "success": False,
                                             "reason": "You may be running an old version of this action. Please delete and remake the node.",
                                             "exception": f"TypeError: {e}",
                                         })
+                                except Exception as e:
+                                    self.logger.info("[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly?")
+                                    raise Exception(json.dumps({
+                                        "success": False,
+                                        "reason": "An exception occurred while running this function. See exception for more details and contact support if this persists (support@shuffler.io)",
+                                        "exception": f"{e}",
+                                    }))
 
                             # Forcing async wait in case of old apps that use async (backwards compatibility)
                             try:
@@ -3104,7 +3135,7 @@ class AppBase:
                             except Exception as e:
                                 self.logger.warning("[ERROR] Failed to parse coroutine value for old app: {e}")
 
-                            self.logger.info("\n[INFO] Returned from execution with type(s) %s" % type(newres))
+                            self.logger.info("\n\n\n[INFO] Returned from execution with type(s) %s" % type(newres))
                             #self.logger.info("\n[INFO] Returned from execution with %s of types %s" % (newres, type(newres)))#, newres)
                             if isinstance(newres, tuple):
                                 self.logger.info(f"[INFO] Handling return as tuple: {newres}")
@@ -3210,7 +3241,7 @@ class AppBase:
                     self.logger.debug(f"[DEBUG] Executed {action['label']}-{action['id']}")#with result: {result}")
                     #self.logger.debug(f"Data: %s" % action_result)
                 except TypeError as e:
-                    self.logger.info("TypeError issue: %s" % e)
+                    self.logger.info("[ERROR] TypeError issue: %s" % e)
                     self.action_result["status"] = "FAILURE" 
                     self.action_result["result"] = "TypeError: %s" % str(e)
             else:
@@ -3228,7 +3259,7 @@ class AppBase:
                 self.action_result["result"] = json.dumps({
                     "success": False, 
                     "reason": f"Request error - failing silently. Details in detail section",
-                    "details": f"{e}",
+                    "details": e,
                 })
             except json.decoder.JSONDecodeError as e:
                 self.action_result["result"] = f"Request error: {e}"
@@ -3237,15 +3268,14 @@ class AppBase:
             self.logger.info(f"[ERROR] Failed to execute: {e}")
             self.logger.exception(f"[ERROR] Failed to execute {e}-{action['id']}")
             self.action_result["status"] = "FAILURE" 
-            #self.action_result["result"] = f"General exception: {e}" 
             self.action_result["result"] = json.dumps({
                 "success": False,
-                "reason": f"General exception: {e}",
+                "reason": f"General exception.",
+                "details": e,
             })
 
-        self.action_result["completed_at"] = int(time.time())
-
         # Send the result :)
+        self.action_result["completed_at"] = int(time.time())
         self.send_result(self.action_result, headers, stream_path)
 
         #try:
