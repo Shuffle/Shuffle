@@ -455,7 +455,6 @@ export const validateJson = (showResult) => {
 		jsonvalid = false
 	}
 
-	console.log("RES: ", result)
 	// This is where we start recursing
 	if (jsonvalid) {
 		// Check fields if they can be parsed too 

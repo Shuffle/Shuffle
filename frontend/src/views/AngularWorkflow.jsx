@@ -10908,6 +10908,11 @@ const AngularWorkflow = (defaultprops) => {
 		const iOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
 
 		const drawerBleeding = 56;
+		if (defaultReturn === undefined || defaultReturn === null) {
+			console.log("DEFAULT RETURN: ", defaultReturn)
+			return null
+		}
+
 		return (
 			isMobile ? 
 				<SwipeableDrawer
