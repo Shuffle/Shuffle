@@ -529,7 +529,7 @@ const AppCreator = (defaultprops) => {
     }
 
     setBasedata(data);
-		console.log("DATA: ", data)
+		console.log("Info: ", data)
     if (data.info !== null && data.info !== undefined) {
       if (data.info.title !== undefined && data.info.title !== null) {
         if (data.info.title.length > 29) {
@@ -571,6 +571,7 @@ const AppCreator = (defaultprops) => {
       }
     }
 
+		console.log("Tags: ", data.tags)
     if (data.tags !== undefined && data.tags.length > 0) {
       var newtags = [];
       for (var key in data.tags) {
@@ -616,6 +617,7 @@ const AppCreator = (defaultprops) => {
     var newActions = [];
     var wordlist = {};
     var all_categories = [];
+		console.log("Paths: ", data.paths)
     if (data.paths !== null && data.paths !== undefined) {
       for (let [path, pathvalue] of Object.entries(data.paths)) {
         for (let [method, methodvalue] of Object.entries(pathvalue)) {
@@ -711,23 +713,13 @@ const AppCreator = (defaultprops) => {
                 //newaction["headers"] = ""
                 //"Content-Type=application/json\nAccept=application/json";
                 if (
-                  methodvalue["requestBody"]["content"]["application/json"][
-                    "schema"
-                  ] !== undefined &&
-                  methodvalue["requestBody"]["content"]["application/json"][
-                    "schema"
-                  ] !== null
+                  methodvalue["requestBody"]["content"]["application/json"]["schema"] !== undefined && methodvalue["requestBody"]["content"]["application/json"]["schema"] !== null
                 ) {
-                  if (
-                    methodvalue["requestBody"]["content"]["application/json"][
-                      "schema"
-                    ]["properties"] !== undefined
-                  ) {
+                  console.log("Schema: ", methodvalue["requestBody"]["content"]["application/json"]["schema"])
+                  if (methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"] !== undefined) {
                     var tmpobject = {};
                     for (let [prop, propvalue] of Object.entries(
-                      methodvalue["requestBody"]["content"]["application/json"][
-                        "schema"
-                      ]["properties"]
+                      methodvalue["requestBody"]["content"]["application/json"]["schema"]["properties"]
                     )) {
                       tmpobject[prop] = `\$\{${prop}\}`;
                     }
@@ -745,13 +737,7 @@ const AppCreator = (defaultprops) => {
 
                     newaction["body"] = JSON.stringify(tmpobject, null, 2);
                   } else if (
-                    methodvalue["requestBody"]["content"]["application/json"][
-                      "schema"
-                    ]["$ref"] !== undefined &&
-                    methodvalue["requestBody"]["content"]["application/json"][
-                      "schema"
-                    ]["$ref"] !== null
-                  ) {
+                    methodvalue["requestBody"]["content"]["application/json"]["schema"]["$ref"] !== undefined && methodvalue["requestBody"]["content"]["application/json"]["schema"]["$ref"] !== null) {
                     const retRef = handleGetRef(
                       methodvalue["requestBody"]["content"]["application/json"][
                         "schema"
@@ -879,11 +865,11 @@ const AppCreator = (defaultprops) => {
                   if (content !== undefined && content !== null) {
                     //console.log("CONTENT: ", content)
                     for (const [subkey, subvalue] of Object.entries(content)) {
-                      if (subvalue["schema"] !== undefined) {
-                        //console.log("SCHEMA: ", subvalue["schema"])
-                        if (subvalue["schema"]["$ref"] !== undefined) {
-                          //console.log("SCHEMA FOUND REF!")
+                      if (subvalue["schema"] !== undefined && subvalue["schema"] !== null) {
+                        console.log("SCHEMA: ", subvalue["schema"])
+                        if (subvalue["schema"]["$ref"] !== undefined && subvalue["schema"]["$ref"] !== null) {
 
+                          console.log("SCHEMA FOUND REF!")
                           if (!schemas.includes(subvalue["schema"]["$ref"])) {
                             schemas.push(subvalue["schema"]["$ref"]);
                           }
@@ -1016,18 +1002,11 @@ const AppCreator = (defaultprops) => {
                     selectedExample["content"]["application/json"] !== undefined
                   ) {
                     if (
-                      selectedExample["content"]["application/json"][
-                        "schema"
-                      ] !== undefined &&
-                      selectedExample["content"]["application/json"][
-                        "schema"
-                      ] !== null
+                      selectedExample["content"]["application/json"]["schema"] !== undefined &&
+                    	selectedExample["content"]["application/json"]["schema"] !== null
                     ) {
-                      if (
-                        selectedExample["content"]["application/json"][
-                          "schema"
-                        ]["$ref"] !== undefined
-                      ) {
+											console.log("JSON: ", selectedExample["content"]["application/json"]["schema"])
+                      if (selectedExample["content"]["application/json"]["schema"]["$ref"] !== undefined) {
                         //console.log("REF EXAMPLE: ", selectedExample["content"]["application/json"]["schema"])
                         const parameter = handleGetRef(
                           selectedExample["content"]["application/json"][

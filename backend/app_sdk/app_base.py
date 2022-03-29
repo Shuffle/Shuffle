@@ -3188,13 +3188,15 @@ class AppBase:
                                 try:
                                     result += json.dumps(newres, indent=4)
                                 except json.JSONDecodeError as e:
-                                    self.logger.info("Failed decoding result: %s" % e)
-
+                                    self.logger.info("[WARNING] Failed decoding result: %s" % e)
                                     try:
                                         result += str(newres)
                                     except ValueError:
                                         result += "Failed autocasting. Can't handle %s type from function. Must be string" % type(newres)
                                         self.logger.info("Can't handle type %s value from function" % (type(newres)))
+                                except Exception as e:
+                                    self.logger.info("[ERROR] Failed to json dump. Returning as string.")
+                                    result += str(newres)
                             else:
                                 try:
                                     result += str(newres)
@@ -3299,7 +3301,7 @@ class AppBase:
 
             self.action_result["result"] = json.dumps({
                 "success": False,
-                "reason": f"General exception",
+                "reason": f"General exception in the app. See shuffle action logs for more details.",
                 "details": e,
             })
 

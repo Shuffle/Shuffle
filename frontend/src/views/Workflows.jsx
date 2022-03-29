@@ -394,7 +394,6 @@ const chipStyle = {
 };
 
 export const validateJson = (showResult) => {
-	console.log("INPUT: ", showResult, typeof showResult)
 	if (typeof showResult === 'string') {
 		showResult = showResult.split(" False").join(" false")
 		showResult = showResult.split(" True").join(" true")
@@ -1976,7 +1975,9 @@ const Workflows = (props) => {
 			//workflows[0].usecase_ids = ["Correlate tickets"]
 		}
 
-    return fetch(globalUrl + "/api/v1/workflows" + extraData, {
+		const new_url = `${globalUrl}/api/v1/workflows${extraData}`
+		console.log("Got new url: ", new_url)
+    return fetch(new_url, {
       method: method,
       headers: {
         "Content-Type": "application/json",
@@ -2012,7 +2013,7 @@ const Workflows = (props) => {
           // Update :)
           setTimeout(() => {
             getAvailableWorkflows();
-          }, 1000);
+          }, 2500);
           setImportLoading(false);
           setModalOpen(false);
         } else {
@@ -2035,6 +2036,7 @@ const Workflows = (props) => {
 
     setImportLoading(true);
     if (event.target.files.length > 0) {
+    	console.log("Files: !", event.target.files.length);
       for (var key in event.target.files) {
         const file = event.target.files[key];
         if (file.type !== "application/json") {
@@ -2057,6 +2059,8 @@ const Workflows = (props) => {
             setImportLoading(false);
             return;
           }
+    
+					console.log("File being loaded: ", data.name);
 
           // Initialize the workflow itself
           setNewWorkflow(

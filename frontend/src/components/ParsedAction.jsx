@@ -489,7 +489,6 @@ const ParsedAction = (props) => {
         	    }
 
         	    var exampledata = item.example === undefined || item.example === null ? "" : item.example;
-							console.log("EXAMPLE: ", exampledata)
         	    // Find previous execution and their variables
         	    //exampledata === "" &&
         	    if (workflowExecutions.length > 0) {
@@ -513,7 +512,6 @@ const ParsedAction = (props) => {
 									if (foundResult.result !== undefined && foundResult.result !== null) {
 										foundResult = foundResult.result
 									}
-									console.log("VALID RESULT: ", foundResult)
 
 									const valid = validateJson(foundResult)
 									if (valid.valid) {
@@ -2249,7 +2247,8 @@ const ParsedAction = (props) => {
   //	const classes = useStyles()
   //	return <Popper {...props} className={classes.root} placement="bottom" />
   //}
-
+  //console.log("env: ", selectedActionEnvironment)
+	
   const baselabel = selectedAction.label;
   return (
     <div style={appApiViewStyle} id="parsed_action_view">

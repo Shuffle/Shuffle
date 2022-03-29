@@ -1100,6 +1100,17 @@ const AngularWorkflow = (defaultprops) => {
 
     	      if (curworkflowComment === undefined) {
     	        curworkflowComment = cyelements[key].data();
+							try {
+								curworkflowComment.position.x = parseInt(curworkflowComment.position.x)
+							} catch (e) {
+								console.log("Failed to parse position Y of comment: ", curworkflowComment.position.x)
+							}
+
+							try {
+								curworkflowComment.position.y = parseInt(curworkflowComment.position.y)
+							} catch (e) {
+								console.log("Failed to parse position Y of comment: ", curworkflowComment.position.y)
+							}
     	      }
 
 						const parsedHeight = parseInt(curworkflowComment["height"])
@@ -10909,7 +10920,6 @@ const AngularWorkflow = (defaultprops) => {
 
 		const drawerBleeding = 56;
 		if (defaultReturn === undefined || defaultReturn === null) {
-			console.log("DEFAULT RETURN: ", defaultReturn)
 			return null
 		}
 
@@ -12410,7 +12420,6 @@ const parsedExecutionArgument = () => {
     ? ""
     : validateJson(selectedResult.result.trim());
 
-	console.log("RESULT: ", validate.result)
   if (validate.valid && typeof validate.result === "string") {
     validate.result = JSON.parse(validate.result);
   }
