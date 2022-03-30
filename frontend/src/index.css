@@ -17,3 +17,17 @@ code {
   content: "———";
   margin-right: -13px;
 }
+
+/* .cm-string{
+  z-index: -1;
+}
+
+.CodeMirror-selected{
+  background-color: #007500 !important;
+  z-index: 100 !important;
+} */
+
+.CodeMirror-selectedtext{
+  background-color: rgba(28, 47, 69, 0.6) !important;
+  color: rgb(255, 255, 255) !important;
+}
