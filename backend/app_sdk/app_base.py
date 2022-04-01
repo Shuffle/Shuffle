@@ -275,9 +275,9 @@ class AppBase:
             else:
                 self.logger.warning(f"[ERROR] Magic output not defined.")
         except KeyError as e:
-            self.logger.warning(f"[ERROR] Failed to run magic autoparser (send result) - keyerror: {e}")
+            self.logger.warning(f"[DEBUG] Failed to run magic autoparser (send result) - keyerror: {e}")
         except Exception as e:
-            self.logger.warning(f"[ERROR] Failed to run magic autoparser (send result): {e}")
+            self.logger.warning(f"[DEBUG] Failed to run magic autoparser (send result): {e}")
 
         # Try it with some magic
 
@@ -383,11 +383,13 @@ class AppBase:
             self.logger.info(f"[DEBUG] Expected ProtocolError happened: {e}")
 
         
+        # FIXME: Re-enable data flushing otherwise we'll overload it all
+        # Or nah?
         if not os.getenv("SHUFFLE_LOGS_DISABLED") == "true":
             try:
-                pass
-                #self.log_capture_string.flush()
+                self.log_capture_string.flush()
                 #self.log_capture_string.close()
+                #pass
             except Exception as e:
                 print(f"[WARNING] Failed to flush logs: {e}") 
                 pass
@@ -1150,10 +1152,10 @@ class AppBase:
                 pass
 
             ret = requests.post("%s%s" % (self.url, create_path), headers=headers, json=data)
-            self.logger.info(f"Ret CREATE: {ret.text}")
+            #self.logger.info(f"Ret CREATE: {ret.text}")
             cur_id = ""
             if ret.status_code == 200:
-                self.logger.info("RET: %s" % ret.text)
+                #self.logger.info("RET: %s" % ret.text)
                 ret_json = ret.json()
                 if not ret_json["success"]:
                     self.logger.info("Not success in file upload creation.")
@@ -1907,10 +1909,10 @@ class AppBase:
                                     baseresult = variable["value"]
                                     break
                         except KeyError as e:
-                            print("[INFO] KeyError exec variables: %s" % e)
+                            #print("[INFO] KeyError exec variables: %s" % e)
                             pass
                         except TypeError as e:
-                            print("[INFO] TypeError exec variables: %s" % e)
+                            #print("[INFO] TypeError exec variables: %s" % e)
                             pass
         
             except KeyError as error:
@@ -1975,7 +1977,6 @@ class AppBase:
             try:
                 return json.dumps(json.loads(returndata)), is_loop
             except json.decoder.JSONDecodeError as e:
-                print("[ERROR] Error in decoder: %s" % e)
                 return returndata, is_loop
 
         # Sending self as it's not a normal function
@@ -1984,6 +1985,7 @@ class AppBase:
             errors = False
             error_msg = ""
             try:
+                self.logger.info("In liquid")
                 if len(template) > 10000000:
                     self.logger.info("[DEBUG] Skipping liquid - size too big (%d)" % len(template))
                     return template
@@ -2001,8 +2003,8 @@ class AppBase:
                 #    return template
 
                 #self.logger.info(globals())
-                if len(template) > 100:
-                    self.logger.info("[DEBUG] Running liquid with data of length %d" % len(template))
+                #if len(template) > 100:
+                #    self.logger.info("[DEBUG] Running liquid with data of length %d" % len(template))
                 #self.logger.info(f"[DEBUG] Data: {template}")
                 run = Liquid(template, mode="wild", from_file=False, filters=shuffle_filters.filters)
 
@@ -2052,6 +2054,7 @@ class AppBase:
                 error = True
                 error_msg = e
 
+            self.logger.info("Done in liquid")
             if error == True:
                 self.action_result["status"] = "FAILURE" 
                 data = {
@@ -2166,7 +2169,8 @@ class AppBase:
             #match = ".*?([$]{1}([a-zA-Z0-9 _-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,})[$/, ]?"
             #match = ".*?([$]{1}([a-zA-Z0-9 _-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,})"
 
-            match = ".*?([$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,})" # Removed space - no longer ok. Force underscore.
+            #match = ".*?([$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,})" # Removed space - no longer ok. Force underscore.
+            match = "([$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,})" # Removed .*? to make it work with large amounts of data
 
             # Extra replacements for certain scenarios
             escaped_dollar = "\\$"
@@ -2181,18 +2185,21 @@ class AppBase:
 
             # Basic fix in case variant isn't set
             try:
-                self.logger.info("[DEBUG] Parameter variant: %s" % parameter["variant"])
+                self.logger.info(f"[DEBUG] Parameter variant: {parameter['variant']} of length {len(parameter['value'])}")
             except:
                 parameter["variant"] = "STATIC_VALUE"
 
             # Regex to find all the things
-            if parameter["variant"] == "STATIC_VALUE":
+            # Should just go in here if data is ... not so big
+            #if parameter["variant"] == "STATIC_VALUE" and len(parameter["value"]) < 1000000:
+            if parameter["variant"] == "STATIC_VALUE" and len(parameter["value"]) < 5000000:
                 data = parameter["value"]
                 actualitem = re.findall(match, data, re.MULTILINE)
                 #self.logger.debug(f"\n\nHandle static data with JSON: {data}\n\n")
                 #self.logger.info("STATIC PARSED: %s" % actualitem)
+                self.logger.info("[INFO] Done with regex matching")
                 if len(actualitem) > 0:
-                    #self.logger.info("[DEACTUAL: ", actualitem)
+                    self.logger.info("[DEBUG] Matches: ", actualitem)
                     for replace in actualitem:
                         try:
                             to_be_replaced = replace[0]
@@ -2204,8 +2211,7 @@ class AppBase:
                         # Trying without string dumping.
 
                         value, is_loop = get_json_value(fullexecution, to_be_replaced) 
-                        #self.logger.info("\n\nType of value: %s. Value: %s" % (type(value), value))
-                        self.logger.info("\n\nType of value: %s" % type(value))
+                        #self.logger.info(f"\n\nType of value: {type(value)}")
                         if isinstance(value, str):
                             parameter["value"] = parameter["value"].replace(to_be_replaced, value)
                         elif isinstance(value, dict) or isinstance(value, list):
@@ -2219,13 +2225,15 @@ class AppBase:
                             #    parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value))
                             #    self.logger.info("Failed parsing value as string?")
                         else:
-                            self.logger.info("Unknown type %s" % type(value))
+                            self.logger.info("[WARNING] Unknown type %s" % type(value))
                             try:
                                 parameter["value"] = parameter["value"].replace(to_be_replaced, json.dumps(value))
                             except json.decoder.JSONDecodeError as e:
                                 parameter["value"] = parameter["value"].replace(to_be_replaced, value)
 
                         #self.logger.info("VALUE: %s" % parameter["value"])
+            else:
+                self.logger.info(f"[ERROR] Not running static variant regex parsing (slow) on value with length {len(parameter['value'])}. Max is 5Mb~.")
 
             if parameter["variant"] == "WORKFLOW_VARIABLE":
                 self.logger.info("[DEBUG] Handling workflow variable")
@@ -2311,7 +2319,7 @@ class AppBase:
                 parameter["value"] = parameter["value"].replace(end_variable, "", -1)
                 parameter["value"] = parameter["value"].replace(escape_replacement, "$", -1)
             except:
-                self.logger.info("Error in datareplacement")
+                self.logger.info(f"[ERROR] Problem in datareplacement: {e}")
 
             # Just here in case it breaks 
             # Implemented 02.08.2021
@@ -2321,9 +2329,6 @@ class AppBase:
             except:
                 pass
 
-            #self.logger.info("Replaced data: %s" % parameter["value"])
-
-            #self.logger.info("POST liquid: %s" % parameter["value"])
             return "", parameter["value"], is_loop
 
         def run_validation(sourcevalue, check, destinationvalue):
@@ -3444,7 +3449,7 @@ class AppBase:
             # Has to start like this due to imports in other apps
             # Move it outside everything?
             app = cls(redis=None, logger=logger, console_logger=logger)
-            logger.info(f"[DEBUG] Action: {action}")
+            #logger.info(f"[DEBUG] Action: {action}")
             
             if isinstance(action, str):
                 logger.info("[DEBUG] Normal execution (env var). Action is a string.")
