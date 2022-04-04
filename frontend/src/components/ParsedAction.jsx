@@ -2687,9 +2687,9 @@ const ParsedAction = (props) => {
 							disableScrollLock: true,
 						}}
             value={
-              selectedActionEnvironment === undefined ||
-              selectedActionEnvironment.Name === undefined
-                ? ""
+              selectedActionEnvironment === undefined || selectedActionEnvironment === null ||
+              selectedActionEnvironment.Name === undefined || selectedActionEnvironment.Name === null 
+                ? isCloud ? "Cloud" : "Shuffle"
                 : selectedActionEnvironment.Name
             }
             SelectDisplayProps={{
@@ -2738,13 +2738,17 @@ const ParsedAction = (props) => {
       workflow.execution_variables !== null &&
       workflow.execution_variables.length > 0 ? (
         <div style={{ marginTop: "20px" }}>
-          <Typography>Set execution variable (optional)</Typography>
+          <Typography>Execution variable (optional)</Typography>
           <Select
 						MenuProps={{
 							disableScrollLock: true,
 						}}
             value={
               selectedAction.execution_variable !== undefined
+              && selectedAction.execution_variable !== null 
+              && selectedAction.execution_variable.name !== undefined 
+              && selectedAction.execution_variable.name !== null 
+              && selectedAction.execution_variable.name.length > 0 
                 ? selectedAction.execution_variable.name
                 : "No selection"
             }

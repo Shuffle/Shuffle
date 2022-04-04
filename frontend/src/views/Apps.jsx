@@ -544,7 +544,6 @@ const Apps = (props) => {
             data.name = newAppname;
             setSelectedApp(data);
 
-            console.log(data);
             if (
               data.actions !== undefined &&
               data.actions !== null &&
@@ -747,20 +746,21 @@ const Apps = (props) => {
       ) : null;
 
     //var editNewButton = editButton === null ?
-		console.log("User, & genrrated, activate: ", props.userdata, selectedApp.generated, selectedApp.activated)
     var editNewButton = selectedApp.generated && selectedApp.activated && props.userdata.id !== selectedApp.owner ? 
-        <Link to={activateUrl} style={{ textDecoration: "none" }}>
-          <Tooltip title={"Edit this public app to your liking"}>
-            <Button
-              variant="contained"
-              component="label"
-              color="primary"
-              style={{ marginTop: 10, marginRight: 10 }}
-            >
-              <EditIcon />
-            </Button>
-          </Tooltip>
-        </Link>
+				isCloud ? 
+					<Link to={activateUrl} style={{ textDecoration: "none" }}>
+						<Tooltip title={"Edit this public app to your liking"}>
+							<Button
+								variant="contained"
+								component="label"
+								color="primary"
+								style={{ marginTop: 10, marginRight: 10 }}
+							>
+								<EditIcon />
+							</Button>
+						</Tooltip>
+					</Link>
+				: null
 			: null
 
     const activateButton = 

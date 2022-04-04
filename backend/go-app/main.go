@@ -1224,7 +1224,7 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 
 		// Should run calculations
 		if len(org.SSOConfig.OpenIdAuthorization) > 0 {
-			log.Printf("[DEBUG] Found OpenID url (PKCE). Extra redirect check: %s", request.URL.String())
+			log.Printf("[DEBUG] Found OpenID url (PKCE!!). Extra redirect check: %s", request.URL.String())
 			baseSSOUrl = org.SSOConfig.OpenIdAuthorization
 
 			codeChallenge := uuid.NewV4().String()

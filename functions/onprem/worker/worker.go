@@ -77,8 +77,8 @@ var downloadedImages []string
 // Images to be autodeployed in the latest version of Shuffle.
 var autoDeploy = map[string]string{
 	"shuffle-subflow:1.0.0": "frikky/shuffle:shuffle-subflow_1.0.0",
-	"http:1.1.0":            "frikky/shuffle:http_1.1.0",
-	"shuffle-tools:1.1.0":   "frikky/shuffle:shuffle-tools_1.1.0",
+	"http:1.3.0":            "frikky/shuffle:http_1.3.0",
+	"shuffle-tools:1.2.0":   "frikky/shuffle:shuffle-tools_1.2.0",
 	"testing:1.0.0":         "frikky/shuffle:testing_1.0.0",
 }
 
@@ -1549,10 +1549,10 @@ func executionInit(workflowExecution shuffle.WorkflowExecution) error {
 				}
 
 				if trigger.ID == branch.SourceID {
-					log.Printf("[INFO] shuffle.Trigger %s is the source!", trigger.AppName)
+					//log.Printf("[INFO] shuffle.Trigger %s is the source!", trigger.AppName)
 					sourceFound = true
 				} else if trigger.ID == branch.DestinationID {
-					log.Printf("[INFO] shuffle.Trigger %s is the destination!", trigger.AppName)
+					//log.Printf("[INFO] shuffle.Trigger %s is the destination!", trigger.AppName)
 					destinationFound = true
 				}
 			}
@@ -2824,8 +2824,8 @@ func findAppInfo(image, name string) (int, error) {
 		exposedPort = highest
 
 		if appsInitialized {
-			log.Printf("[DEBUG] Waiting 10 seconds before moving on to let app start")
-			time.Sleep(time.Duration(10) * time.Second)
+			log.Printf("[DEBUG] Waiting 30 seconds before moving on to let app start")
+			time.Sleep(time.Duration(30) * time.Second)
 		}
 	}
 

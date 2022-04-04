@@ -460,9 +460,7 @@ export const validateJson = (showResult) => {
     try {
 			for (const [key, value] of Object.entries(result)) {
 				if (typeof value === "string" && (value.startsWith("{") || value.startsWith("["))) {
-					console.log("INSIDE: ", key, value);
 					const inside_result = validateJson(value)
-					console.log("Inside: ", inside_result)
 					if (inside_result.valid) {
 						console.log("Replacing value since it's valid JSON!")
 						if (typeof inside_result.result === "string") {
@@ -970,7 +968,6 @@ const Workflows = (props) => {
   };
 
 	const handleKeysetting = (categorydata, workflows) => {
-		console.log("Workflows: ", workflows)
 		//workflows[0].category = ["detect"]
 		//workflows[0].usecase_ids = ["Correlate tickets"]
 
@@ -1011,7 +1008,6 @@ const Workflows = (props) => {
 				newcategories.push(category)
 			} 
 
-			console.log("Categories: ", newcategories)
 			setUsecases(newcategories)
 		} else {
   		setUsecases(categorydata)
@@ -1036,7 +1032,6 @@ const Workflows = (props) => {
       })
       .then((responseJson) => {
 				if (responseJson.success !== false) {
-					console.log("Usecases: ", responseJson)
 					handleKeysetting(responseJson, workflows)
 				}
       })
@@ -1976,7 +1971,6 @@ const Workflows = (props) => {
 		}
 
 		const new_url = `${globalUrl}/api/v1/workflows${extraData}`
-		console.log("Got new url: ", new_url)
     return fetch(new_url, {
       method: method,
       headers: {

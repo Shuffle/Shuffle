@@ -1985,7 +1985,7 @@ class AppBase:
             errors = False
             error_msg = ""
             try:
-                self.logger.info("In liquid")
+                #self.logger.info("In liquid")
                 if len(template) > 10000000:
                     self.logger.info("[DEBUG] Skipping liquid - size too big (%d)" % len(template))
                     return template
@@ -2197,9 +2197,9 @@ class AppBase:
                 actualitem = re.findall(match, data, re.MULTILINE)
                 #self.logger.debug(f"\n\nHandle static data with JSON: {data}\n\n")
                 #self.logger.info("STATIC PARSED: %s" % actualitem)
-                self.logger.info("[INFO] Done with regex matching")
+                #self.logger.info("[INFO] Done with regex matching")
                 if len(actualitem) > 0:
-                    self.logger.info("[DEBUG] Matches: ", actualitem)
+                    #self.logger.info("[DEBUG] Matches: ", actualitem)
                     for replace in actualitem:
                         try:
                             to_be_replaced = replace[0]
@@ -3078,7 +3078,7 @@ class AppBase:
                             found_error = ""
                             while True:
                                 iteration_count += 1
-                                if iteration_count > 10:
+                                if iteration_count >= 10:
                                     newres = {
                                         "success": False,
                                         "reason": "Iteration count more than 10. This happens if the input to the action is wrong. Try remaking the action, and contact support@shuffler.io if this persists.", 
@@ -3091,7 +3091,7 @@ class AppBase:
                                     break
                                 except TypeError as e:
                                     newres = ""
-                                    self.logger.info(f"[DEBUG] Got exec error: {e}")
+                                    self.logger.info(f"[DEBUG] Got exec type error: {e}")
                                     try:
                                         e = json.loads(f"{e}")
                                     except:
@@ -3107,11 +3107,12 @@ class AppBase:
                                         except:
                                             e = f"{e}"
 
-                                        raise Exception(json.dumps({
+                                        newres = json.dumps({
                                             "success": False,
                                             "reason": "An exception occurred while running this function. See exception for more details and contact support if this persists (support@shuffler.io)",
                                             "exception": e,
-                                        }))
+                                        })
+                                        break
                                     elif "got an unexpected keyword argument" in errorstring:
                                         fieldsplit = errorstring.split("'")
                                         if len(fieldsplit) > 1:
@@ -3125,9 +3126,10 @@ class AppBase:
                                     else:
                                         newres = json.dumps({
                                             "success": False,
-                                            "reason": "You may be running an old version of this action. Please delete and remake the node.",
+                                            "reason": "You may be running an old version of this action. Try remaking the node, then contact us at support@shuffler.io if it doesn't work with all these details.",
                                             "exception": f"TypeError: {e}",
                                         })
+                                        break
                                 except Exception as e:
                                     self.logger.info("[ERROR] Something is wrong with the input for this function. Are lists and JSON data handled parsed properly?")
 
@@ -3136,11 +3138,12 @@ class AppBase:
                                     except:
                                         e = f"{e}"
 
-                                    raise Exception(json.dumps({
+                                    newres = json.dumps({
                                         "success": False,
                                         "reason": "An exception occurred while running this function. See exception for more details and contact support if this persists (support@shuffler.io)",
                                         "exception": e,
-                                    }))
+                                    })
+                                    break
 
                             # Forcing async wait in case of old apps that use async (backwards compatibility)
                             try:

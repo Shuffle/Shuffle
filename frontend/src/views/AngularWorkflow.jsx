@@ -1079,6 +1079,10 @@ const AngularWorkflow = (defaultprops) => {
     	      curworkflowAction.parameters = newparams;
     	      newActions.push(curworkflowAction);
     	    } else if (type === "TRIGGER") {
+    	      if (useworkflow.triggers === undefined || useworkflow.triggers === null) {
+    	        useworkflow.triggers = [];
+    	      }
+
     	      var curworkflowTrigger = useworkflow.triggers.find(
     	        (a) => a.id === cyelements[key].data()["id"]
     	      );
@@ -1090,7 +1094,7 @@ const AngularWorkflow = (defaultprops) => {
 
     	      newTriggers.push(curworkflowTrigger);
     	    } else if (type === "COMMENT") {
-    	      if (useworkflow.comments === undefined) {
+    	      if (useworkflow.comments === undefined || useworkflow.comments === null) {
     	        useworkflow.comments = [];
     	      }
 
@@ -2567,6 +2571,7 @@ const AngularWorkflow = (defaultprops) => {
     	      }
     	    }
 
+					console.log("ACTION: ", curaction)
     	    setSelectedApp(curapp);
     	    setSelectedAction(curaction);
 
@@ -8544,22 +8549,34 @@ const AngularWorkflow = (defaultprops) => {
           		  onChange={(event, newValue) => {
 									handleWorkflowSelectionUpdate({ target: { value: newValue} })
           		  }}
-          		  renderOption={(data) => {
+          		  renderOption={(data, index) => {
 									if (data.id === workflow.id) {
 										data = workflow;
 									}
 
 									//key={index}
 									return (
-										<MenuItem
-											style={{
-												backgroundColor: theme.palette.inputColor,
-												color: data.id === workflow.id ? "red" : "white",
-											}}
-											value={data}
-										>
-											{data.name}
-										</MenuItem>
+											<Tooltip arrow placement="left" title={
+												<span style={{}}>
+													{data.image !== undefined && data.image !== null && data.image.length > 0 ? 
+														<img src={data.image} alt={data.name} style={{backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette.borderRadius, }} />
+													: null}
+													<Typography>
+														Choose {data.name}
+													</Typography>
+												</span>
+											} placement="bottom">
+											<MenuItem
+												style={{
+													backgroundColor: theme.palette.inputColor,
+													color: data.id === workflow.id ? "red" : "white",
+												}}
+												key={index}
+												value={data}
+											>
+												{data.name}
+											</MenuItem>
+										</Tooltip>
 									)
           		  }}
           		  renderInput={(params) => {
