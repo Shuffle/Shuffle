@@ -704,8 +704,21 @@ const AppCreator = (defaultprops) => {
 
           // Typescript? I think not ;)
           if (methodvalue["requestBody"] !== undefined) {
-            //console.log("Handle requestbody: ", methodvalue["requestBody"], method, path)
-            if (methodvalue["requestBody"]["content"] !== undefined) {
+            if (methodvalue["requestBody"]["$ref"] !== undefined && methodvalue["requestBody"]["$ref"] !== null) {
+							// Handle ref
+							//
+							console.log("Ref: ", methodvalue["requestBody"]["$ref"])
+              const parameter = handleGetRef({ $ref:  methodvalue["requestBody"]["$ref"]}, data);
+							console.log("PARAM: ", parameter)
+							if (parameter.content !== undefined && parameter.content !== null) {
+								methodvalue["requestBody"]["content"] = parameter.content
+								console.log("Set content!")
+							}
+						}
+						
+						if (methodvalue["requestBody"]["content"] !== undefined) {
+							// Handle content - XML or JSON
+							//
               if (
                 methodvalue["requestBody"]["content"]["application/json"] !==
                 undefined
@@ -1688,6 +1701,7 @@ const AppCreator = (defaultprops) => {
         item.name = found.join("");
       }
 
+			// Workaround for proper responses. No default as JSON for now
       data.paths[item.url][item.method.toLowerCase()] = {
         responses: {
           default: {
@@ -1713,11 +1727,7 @@ const AppCreator = (defaultprops) => {
 
       //console.log("ACTION: ", item)
 
-      if (
-        item.example_response !== undefined &&
-        item.example_response !== null &&
-        item.example_response.length > 0
-      ) {
+      if (item.example_response !== undefined && item.example_response !== null && item.example_response.length > 0) {
 
 				if (item["example_response"] === "shuffle_file_download") {
 					data.paths[item.url][item.method.toLowerCase()].responses["default"]["content"]["text/plain"].schema.type = "string"
@@ -1771,8 +1781,16 @@ const AppCreator = (defaultprops) => {
 
       if (item.queries.length > 0) {
         var skipped = false;
+				var querynames = []
         for (var querykey in item.queries) {
           const queryitem = item.queries[querykey];
+
+					// A fix for duplicate items
+					if (querynames.includes(queryitem.name.toLowerCase())) {
+						continue
+					}
+
+					querynames.push(queryitem.name.toLowerCase())
 
           if (queryitem.name.toLowerCase() == "url") {
             console.log(item.name + " uses a bad query: url");
