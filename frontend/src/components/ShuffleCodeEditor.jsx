@@ -29,6 +29,7 @@ import PaperComponent from "../components/PaperComponent.jsx";
 
 import CodeMirror from '@uiw/react-codemirror';
 import 'codemirror/keymap/sublime';
+import 'codemirror/addon/selection/mark-selection.js'
 import 'codemirror/theme/gruvbox-dark.css';
 import 'codemirror/theme/duotone-light.css';
 import { padding, textAlign } from '@mui/system';
@@ -258,7 +259,7 @@ const CodeEditor = (props) => {
 					var correctVariable = allVariable.includes(variable_occurence[occ].toLowerCase())
 					// console.log(actionlist)
 					if(!correctVariable) {
-						value.markText({line:i, ch:dollar_occurence[occ]}, {line:i, ch:dollar_occurence_len[occ]+dollar_occurence[occ]}, {"css": "background-color: #f86a3e; padding-top: 2px; padding-bottom: 2px; color: white"})
+						value.markText({line:i, ch:dollar_occurence[occ]}, {line:i, ch:dollar_occurence_len[occ]+dollar_occurence[occ]}, {"css": "background-color: rgb(248, 106, 62, 0.9); padding-top: 2px; padding-bottom: 2px; color: white"})
 					}
 					else{
 						value.markText({line:i, ch:dollar_occurence[occ]}, {line:i, ch:dollar_occurence_len[occ]+dollar_occurence[occ]}, {"css": "background-color: #8b8e26; padding-top: 2px; padding-bottom: 2px; color: white"})
@@ -444,6 +445,7 @@ const CodeEditor = (props) => {
 						// highlight_variables(value)
 					}}
 					options={{
+						styleSelectedText: true,
 						theme: codeTheme,
 						keyMap: 'sublime',
 						mode: 'javascript',
