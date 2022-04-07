@@ -1,7 +1,7 @@
 version: '3'
 services:
   frontend:
-    #build: ./frontend
+    build: ./frontend
     image: ghcr.io/frikky/shuffle-frontend:nightly
     container_name: shuffle-frontend
     hostname: shuffle-frontend
@@ -58,9 +58,9 @@ services:
       - HTTPS_PROXY=${HTTPS_PROXY}
       - SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
       - SHUFFLE_PASS_APP_PROXY=${SHUFFLE_PASS_APP_PROXY}
-      - SHUFFLE_SWARM_NETWORK_NAME=shuffle_swarm_executions
       - SHUFFLE_SCALE_REPLICAS=1
-      - SHUFFLE_SWARM_CONFIG=runn
+      - SHUFFLE_SWARM_CONFIG=run
+      - SHUFFLE_SWARM_NETWORK_NAME=shuffle_swarm_executions
       #- DOCKER_HOST=tcp://docker-socket-proxy:2375
     restart: unless-stopped
     security_opt:
@@ -118,6 +118,5 @@ services:
   #    - shuffle
 networks:
   shuffle:
-    driver: bridge
-    
-#driver: overlay 
+    driver: overlay 
+    #driver: bridge

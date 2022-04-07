@@ -341,20 +341,28 @@ class AppBase:
                     else:
                         self.logger.info(f"[DEBUG] RESP: {ret.text}")
 
-                except (requests.exceptions.RequestException, TimeoutError) as e:
-                    time.sleep(5)
+                except requests.exceptions.RequestException as e:
+                    self.logger.info(f"[DEBUG] Request problem: {e}")
+                    #time.sleep(5)
+                    continue
+                except TimeoutError as e:
+                    self.logger.info(f"[DEBUG] Timeout or request: {e}")
+                    #time.sleep(5)
                     continue
                 except requests.exceptions.ConnectionError as e:
-                    time.sleep(5)
+                    self.logger.info(f"[DEBUG] Connectionerror: {e}")
+                    #time.sleep(5)
                     continue
                 except http.client.RemoteDisconnected as e:
-                    time.sleep(5)
+                    self.logger.info(f"[DEBUG] Remote: {e}")
+                    #time.sleep(5)
                     continue
                 except urllib3.exceptions.ProtocolError as e:
-                    time.sleep(5)
+                    self.logger.info(f"[DEBUG] Protocol err: {e}")
+                    #time.sleep(5)
                     continue
 
-                time.sleep(5)
+                #time.sleep(5)
 
             if not finished:
                 # Not sure why this would work tho :)
@@ -2516,7 +2524,7 @@ class AppBase:
                     #    self.logger.info("Failed condition check for %s %s %s." % (sourcevalue, condition["condition"]["value"], destinationvalue))
                     #    return False, {"success": False, "reason": "Failed condition (3): %s %s %s" % (sourcevalue, condition["condition"]["value"], destinationvalue)}
 
-                self.logger.info("CONDITIONS VS SUCCESS: %d vs %d" % (total_conditions, successful_conditions))
+                #self.logger.info("CONDITIONS VS SUCCESS: %d vs %d" % (total_conditions, successful_conditions))
 
                 if total_conditions == successful_conditions:
                     correct_branches += 1
@@ -3347,7 +3355,7 @@ class AppBase:
             port = int(exposed_port)
             logger.info(f"[DEBUG] Starting webserver on port {port} (same as exposed port)")
             from flask import Flask, request
-            #from waitress import serve
+            from waitress import serve
         
             flask_app = Flask(__name__)
             #flask_app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(minutes=5)
@@ -3377,6 +3385,7 @@ class AppBase:
                     #print(f"APP: {app}")
         
                     app = cls(redis=None, logger=logger, console_logger=logger)
+                    extra_info = ""
                     try:
                         #asyncio.run(AppBase.run(action=requestdata), debug=True)
                         #value = json.dumps(value)
@@ -3384,16 +3393,20 @@ class AppBase:
                             app.full_execution = json.dumps(requestdata["workflow_execution"])
                         except Exception as e:
                             logger.info(f"[ERROR] Failed parsing full execution from workflow_execution: {e}")
+                            extra_info += f"\n{e}"
+
                         try:
                             app.action = requestdata["action"] 
                         except Exception as e:
                             logger.info(f"[ERROR] Failed parsing action: {e}")
+                            extra_info += f"\n{e}"
 
                         try:
                             app.authorization = requestdata["authorization"]
                             app.current_execution_id = requestdata["execution_id"]
                         except Exception as e:
                             logger.info(f"[ERROR] Failed parsing auth and exec id: {e}")
+                            extra_info += f"\n{e}"
 
                         # BASE URL (backend)
                         try:
@@ -3401,6 +3414,7 @@ class AppBase:
                             logger.info(f"BACKEND URL: {app.url}")
                         except Exception as e:
                             logger.info(f"[ERROR] Failed parsing url (backend): {e}")
+                            extra_info += f"\n{e}"
 
                         # URL (worker)
                         try:
@@ -3408,6 +3422,7 @@ class AppBase:
                             logger.info(f"WORKER URL: {app.base_url}")
                         except Exception as e:
                             logger.info(f"[ERROR] Failed parsing base url (worker): {e}")
+                            extra_info += f"\n{e}"
                         
                         #await 
                         app.execute_action(app.action)
@@ -3416,11 +3431,13 @@ class AppBase:
                         return {
                             "success": False,
                             "reason": f"Problem in execution {e}",
+                            "execution_issues": extra_info,
                         }
         
                     return {
                         "success": True,
                         "reason": "App successfully finished",
+                        "execution_issues": extra_info,
                     }
                 else:
                     return {
@@ -3430,23 +3447,23 @@ class AppBase:
         
             logger.info(f"[DEBUG] Serving on port {port}")
 
-            flask_app.run(
-                host="0.0.0.0", 
-                port=port, 
-                threaded=True, 
-                processes=1, 
-                debug=False,
-            )
-
-            #serve(
-            #    flask_app, 
+            #flask_app.run(
             #    host="0.0.0.0", 
             #    port=port, 
-            #    threads=8,
-            #    channel_timeout=30,
-            #    expose_tracebacks=True,
-            #    asyncore_use_poll=True,
+            #    threaded=True, 
+            #    processes=1, 
+            #    debug=False,
             #)
+
+            serve(
+                flask_app, 
+                host="0.0.0.0", 
+                port=port, 
+                threads=8,
+                channel_timeout=30,
+                expose_tracebacks=True,
+                asyncore_use_poll=True,
+            )
             #######################
         else:
             # Has to start like this due to imports in other apps

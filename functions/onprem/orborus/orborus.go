@@ -273,7 +273,7 @@ func deployServiceWorkers(image string) {
 			networkConfig := &network.EndpointSettings{}
 			err := dockercli.NetworkConnect(ctx, networkName, containerId, networkConfig)
 			if err != nil {
-				log.Printf("[ERROR] Failed connecting to Orborus to docker network %s: %s", networkName, err)
+				log.Printf("[ERROR] Failed connecting Orborus to docker network %s: %s", networkName, err)
 			}
 
 			if len(containerId) == 64 && baseUrl == "http://shuffle-backend:5001" {
@@ -1358,6 +1358,6 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 
 	_ = body
 
-	log.Printf("[DEBUG] Ran worker from request with execution ID: %s. Worker URL: %s.\n\n DEBUGGING: docker service logs shuffle-workers | grep %s\n\n", workflowExecution.ExecutionId, streamUrl, workflowExecution.ExecutionId)
+	log.Printf("[DEBUG] Ran worker from request with execution ID: %s. Worker URL: %s. DEBUGGING: docker service logs shuffle-workers | grep %s", workflowExecution.ExecutionId, streamUrl, workflowExecution.ExecutionId)
 	return nil
 }

@@ -639,6 +639,7 @@ const AngularWorkflow = (defaultprops) => {
             typeof window === "undefined" || window.location === undefined
               ? ""
               : window.location.search;
+
           var tmpView = new URLSearchParams(cursearch).get("execution_id");
           if (
             execution_id !== undefined &&
@@ -653,6 +654,7 @@ const AngularWorkflow = (defaultprops) => {
             const execution = responseJson.find(
               (data) => data.execution_id === tmpView
             );
+
             if (execution !== null && execution !== undefined) {
               setExecutionData(execution);
               setExecutionModalView(1);
@@ -666,7 +668,25 @@ const AngularWorkflow = (defaultprops) => {
               const newitem = removeParam("execution_id", cursearch);
 							navigate(curpath + newitem)
               //props.history.push(curpath + newitem);
-            }
+            } else {
+							console.log("Couldn't find execution for execution ID. Retrying as user to get ", tmpView)
+
+    	  			//setExecutionRequestStarted(true);
+            	const cur_execution = {
+              	execution_id: tmpView,
+            		//authorization: data.authorization,
+              }
+              setExecutionModalView(1);
+              setExecutionRequest(cur_execution);
+    	    		start();
+
+              const newitem = removeParam("execution_id", cursearch);
+							navigate(curpath + newitem)
+
+							setTimeout(() => {
+								stop()
+							}, 5000);
+						}
           }
         }
       })
@@ -12248,7 +12268,7 @@ const parsedExecutionArgument = () => {
                   }}
                   onMouseOver={() => {
                     var currentnode = cy.getElementById(data.action.id);
-                    if (currentnode.length !== 0) {
+                    if (currentnode !== undefined && currentnode !== null && currentnode.length !== 0) {
                       currentnode.addClass("shuffle-hover-highlight");
                     }
 

@@ -656,7 +656,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("[DEBUG] Image to load: %s", version.Name)
+	//log.Printf("[DEBUG] Image to load: %s", version.Name)
 	dockercli, err := client.NewEnvClient()
 	if err != nil {
 		log.Printf("[WARNING] Unable to create docker client: %s", err)
@@ -701,16 +701,16 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 	if len(img.ID) == 0 {
 		if len(img2.ID) == 0 {
 			workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 0, 0)
-			log.Printf("[INFO] Getting workflowapps for a rebuild. Got %d with err %#v", len(workflowapps), err)
+			//log.Printf("[INFO] Getting workflowapps for a rebuild. Got %d with err %#v", len(workflowapps), err)
 			if err == nil {
 				imageName := ""
 				imageVersion := ""
 				newNameSplit := strings.Split(version.Name, ":")
 				if len(newNameSplit) == 2 {
-					log.Printf("[DEBUG] Found name %#v", newNameSplit)
+					//log.Printf("[DEBUG] Found name %#v", newNameSplit)
 
 					findVersionSplit := strings.Split(newNameSplit[1], "_")
-					log.Printf("[DEBUG] Found another split %#v", findVersionSplit)
+					//log.Printf("[DEBUG] Found another split %#v", findVersionSplit)
 					if len(findVersionSplit) == 2 {
 						imageVersion = findVersionSplit[len(findVersionSplit)-1]
 						imageName = findVersionSplit[0]
@@ -776,7 +776,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	//log.Printf("[INFO] Img found (%s): %#v", tagFound, img)
-	log.Printf("[INFO] Img found to be downloaded by client: %s", tagFound)
+	//log.Printf("[INFO] Img found to be downloaded by client: %s", tagFound)
 
 	newClient, err := newdockerclient.NewClientFromEnv()
 	if err != nil {

@@ -912,7 +912,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		// get action status
 		actionResult := getResult(workflowExecution, nextAction)
 		if actionResult.Action.ID == action.ID {
-			log.Printf("[INFO] %s already has status %s.", action.ID, actionResult.Status)
+			//log.Printf("[INFO] %s already has status %s.", action.ID, actionResult.Status)
 
 			continue
 		} else {
@@ -925,7 +925,7 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		newExecId := fmt.Sprintf("%s_%s", workflowExecution.ExecutionId, nextAction)
 		_, err := shuffle.GetCache(ctx, newExecId)
 		if err == nil {
-			log.Printf("\n\n[DEBUG] Already found %s (1) - returning\n\n", newExecId)
+			//log.Printf("\n\n[DEBUG] Already found %s (1) - returning\n\n", newExecId)
 			continue
 		}
 
@@ -1359,8 +1359,8 @@ func handleExecutionResult(workflowExecution shuffle.WorkflowExecution) {
 		} else {
 
 			err = deployApp(dockercli, images[0], identifier, env, workflowExecution, action)
-			log.Printf("[DEBUG] Failed deploying app? %s", err)
 			if err != nil && !strings.Contains(err.Error(), "Conflict. The container name") {
+				log.Printf("[DEBUG] Failed deploying app? %s", err)
 				if strings.Contains(err.Error(), "exited prematurely") {
 					log.Printf("[DEBUG] Shutting down (9)")
 					shutdown(workflowExecution, action.ID, fmt.Sprintf("%s", err.Error()), true)
@@ -2074,7 +2074,7 @@ func handleWorkflowQueue(resp http.ResponseWriter, request *http.Request) {
 	if workflowExecution.Status == "ABORTED" || workflowExecution.Status == "FAILURE" {
 
 		if workflowExecution.Workflow.Configuration.ExitOnError {
-			log.Printf("Workflowexecution already has status %s. No further action can be taken", workflowExecution.Status)
+			log.Printf("[WARNING] Workflowexecution already has status %s. No further action can be taken", workflowExecution.Status)
 			resp.WriteHeader(401)
 			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Workflowexecution is aborted because of %s with result %s and status %s"}`, workflowExecution.LastNode, workflowExecution.Result, workflowExecution.Status)))
 			return
@@ -2922,7 +2922,7 @@ func sendAppRequest(incomingUrl, appName string, port int, action shuffle.Action
 	if err != nil {
 		log.Printf("[WARNING] Failed setting cache for action %s: %s", newExecId, err)
 	} else {
-		log.Printf("[DEBUG] Adding %s to cache. Name: %s", newExecId, action.Name)
+		log.Printf("[DEBUG] Adding %s to cache (%s)", newExecId, action.Name)
 	}
 
 	// FIXME:
@@ -3035,7 +3035,8 @@ func baseDeploy() {
 
 		//deployApp(cli, value, identifier, env, workflowExecution, action)
 		log.Printf("[DEBUG] Deploying app with identifier %s to ensure basic apps are available from the get-go", identifier)
-		deployApp(cli, value, identifier, env, workflowExecution, action)
+		err = deployApp(cli, value, identifier, env, workflowExecution, action)
+		_ = err
 		//err := deployApp(cli, value, identifier, env, workflowExecution, action)
 		//if err != nil {
 		//	log.Printf("[DEBUG] Failed deploying app %s: %s", value, err)

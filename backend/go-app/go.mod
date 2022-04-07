@@ -24,7 +24,7 @@ require (
 	github.com/h2non/filetype v1.1.3
 	github.com/nirasan/go-oauth-pkce-code-verifier v0.0.0-20170819232839-0fbfe93532da // indirect
 	github.com/satori/go.uuid v1.2.0
-	github.com/shuffle/shuffle-shared v0.2.17
+	github.com/shuffle/shuffle-shared v0.2.27
 	go4.org v0.0.0-20201209231011-d4a079459e60 // indirect
 	golang.org/x/crypto v0.0.0-20220112180741-5e0467b6c7ce
 	google.golang.org/api v0.65.0

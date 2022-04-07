@@ -376,10 +376,22 @@ func handleGetStreamResults(resp http.ResponseWriter, request *http.Request) {
 
 	// Authorization is done here
 	if workflowExecution.Authorization != actionResult.Authorization {
-		log.Printf("[WARNING] Bad authorization key when getting stream results %s.", actionResult.ExecutionId)
-		resp.WriteHeader(401)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad authorization key or execution_id might not exist."}`)))
-		return
+		user, err := shuffle.HandleApiAuthentication(resp, request)
+		if err != nil {
+			log.Printf("[WARNING] Api authentication failed in exec grabbing workflow: %s", err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad authorization key or execution_id might not exist."}`)))
+			return
+		}
+
+		if len(workflowExecution.ExecutionOrg) > 0 && user.ActiveOrg.Id == workflowExecution.ExecutionOrg && user.Role == "admin" {
+			log.Printf("[DEBUG] Correct org for execution!")
+		} else {
+			log.Printf("[WARNING] Bad authorization key when getting stream results %s.", actionResult.ExecutionId)
+			resp.WriteHeader(401)
+			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Bad authorization key or execution_id might not exist."}`)))
+			return
+		}
 	}
 
 	newjson, err := json.Marshal(workflowExecution)
@@ -828,7 +840,7 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 	if workflow.ID == "" || workflow.ID != id {
 		tmpworkflow, err := shuffle.GetWorkflow(ctx, id)
 		if err != nil {
-			log.Printf("[WARNING] Failed getting the workflow locally (execution setup): %s", err)
+			//log.Printf("[WARNING] Failed getting the workflow locally (execution setup): %s", err)
 			return shuffle.WorkflowExecution{}, "Failed getting workflow", err
 		}
 
