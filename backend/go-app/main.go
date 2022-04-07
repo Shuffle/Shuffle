@@ -4075,7 +4075,7 @@ func runInitEs(ctx context.Context) {
 
 	// FIXME: Have this for all envs in all orgs (loop and find).
 	if len(parsedApikey) > 0 {
-		cleanupSchedule := 600
+		cleanupSchedule := 300
 		environments := []string{"Shuffle"}
 		log.Printf("[DEBUG] Starting schedule setup for execution cleanup every %d seconds. Running first immediately.", cleanupSchedule)
 		cleanupJob := func() func() {

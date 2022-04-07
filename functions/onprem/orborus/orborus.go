@@ -495,23 +495,24 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		// FIXME: Should we handle replies properly?
 		// In certain cases, a workflow may e.g. be aborted already. If it's aborted, that returns
 		// a 401 from the worker, which returns an error here
-		err := sendWorkerRequest(executionRequest)
-		if err != nil {
-			log.Printf("[ERROR] Failed worker request for %s: %s", executionRequest.ExecutionId, err)
+		go sendWorkerRequest(executionRequest)
+		//err := sendWorkerRequest(executionRequest)
+		//if err != nil {
+		//	log.Printf("[ERROR] Failed worker request for %s: %s", executionRequest.ExecutionId, err)
 
-			if strings.Contains(fmt.Sprintf("%s", err), "connection refused") || strings.Contains(fmt.Sprintf("%s", err), "EOF") {
-				workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
-				deployServiceWorkers(workerImage)
+		//	if strings.Contains(fmt.Sprintf("%s", err), "connection refused") || strings.Contains(fmt.Sprintf("%s", err), "EOF") {
+		//		workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
+		//		deployServiceWorkers(workerImage)
 
-				time.Sleep(time.Duration(10) * time.Second)
-				err = sendWorkerRequest(executionRequest)
-			}
-		}
+		//		time.Sleep(time.Duration(10) * time.Second)
+		//		err = sendWorkerRequest(executionRequest)
+		//	}
+		//}
 
-		if err == nil {
-			// FIXME: Readd this? Removed for rerun reasons
-			// executionIds = append(executionIds, executionRequest.ExecutionId)
-		}
+		//if err == nil {
+		//	// FIXME: Readd this? Removed for rerun reasons
+		//	// executionIds = append(executionIds, executionRequest.ExecutionId)
+		//}
 		//}()
 
 		return nil
@@ -1327,21 +1328,36 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 		streamUrl = fmt.Sprintf("%s:33333/api/v1/execute", parsedBaseurl)
 	}
 
+	client := &http.Client{}
 	req, err := http.NewRequest(
 		"POST",
 		streamUrl,
 		bytes.NewBuffer([]byte(data)),
 	)
-
-	client := &http.Client{}
 	if err != nil {
 		log.Printf("[ERROR] Failed creating worker request: %s", err)
+		if strings.Contains(fmt.Sprintf("%s", err), "connection refused") || strings.Contains(fmt.Sprintf("%s", err), "EOF") {
+			workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
+			deployServiceWorkers(workerImage)
+
+			time.Sleep(time.Duration(10) * time.Second)
+			//err = sendWorkerRequest(executionRequest)
+		}
+
 		return err
 	}
 
 	newresp, err := client.Do(req)
 	if err != nil {
 		log.Printf("[ERROR] Error running worker request: %s", err)
+		if strings.Contains(fmt.Sprintf("%s", err), "connection refused") || strings.Contains(fmt.Sprintf("%s", err), "EOF") {
+			workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
+			deployServiceWorkers(workerImage)
+
+			time.Sleep(time.Duration(10) * time.Second)
+			//err = sendWorkerRequest(executionRequest)
+		}
+
 		return err
 	}
 
@@ -1353,6 +1369,13 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 
 	if newresp.StatusCode != 200 {
 		log.Printf("[ERROR] Error running worker request - status code is %d, not 200. Body: %s", newresp.StatusCode, string(body))
+
+		workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
+		deployServiceWorkers(workerImage)
+
+		time.Sleep(time.Duration(10) * time.Second)
+		//err = sendWorkerRequest(executionRequest)
+
 		return errors.New(fmt.Sprintf("Bad statuscode from worker: %d - expecting 200", newresp.StatusCode))
 	}
 

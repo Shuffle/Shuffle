@@ -2466,6 +2466,23 @@ class AppBase:
                     continue
 
                 matching_branches += 1
+
+                # Find if previous is skipped or failed. Skipped != correct branch
+                try:
+                    should_skip = False
+                    for res in fullexecution["results"]:
+                        if res["action"]["id"] == branch["source_id"]:
+                            if res["status"] == "FAILURE" or res["status"] == "SKIPPED":
+                                should_skip = True 
+
+                            break
+
+                    if should_skip:
+                        continue
+                except Exception as e:
+                    self.logger.info("[WARNING] Failed handling check of if parent is skipped") 
+
+
                 # Remove anything without a condition
                 try:
                     if (branch["conditions"]) == 0 or branch["conditions"] == None:
@@ -2474,6 +2491,8 @@ class AppBase:
                 except KeyError:
                     correct_branches += 1
                     continue
+
+                # FIXME: Check if the previous node has a result or not 
 
                 self.logger.info("[DEBUG] Relevant conditions: %s" % branch["conditions"])
                 successful_conditions = []
@@ -2534,6 +2553,8 @@ class AppBase:
 
             if matching_branches > 0 and correct_branches > 0:
                 return True, ""
+
+            # FIXME: Check if previous branches are at all finished
 
             self.logger.info("[DEBUG] Correct branches vs matching branches: %d vs %d" % (correct_branches, matching_branches))
             return False, {"success": False, "reason": "Minimum of one branch's conditions must be correct to continue. Total: %d of %d" % (correct_branches, matching_branches)}
