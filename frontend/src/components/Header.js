@@ -670,57 +670,81 @@ const Header = (props) => {
           >
             {userdata.orgs.map((data, index) => {
               if (
-                data.name === undefined ||
-                data.name === null ||
-                data.name.length === 0
-              ) {
-                return null;
-              }
+									data.name === undefined ||
+									data.name === null ||
+									data.name.length === 0
+								) {
+									return null;
+								}
 
-              const imagesize = 22;
-              const imageStyle = {
-                width: imagesize,
-                height: imagesize,
-                pointerEvents: "none",
-                marginRight: 10,
-                marginLeft:
-                  data.creator_org !== undefined && data.creator_org.length > 0
-                    ? 20
-                    : 0,
-              };
-              const image =
-                data.image === "" ? (
-                  <img
-                    alt={data.name}
-                    src={theme.palette.defaultImage}
-                    style={imageStyle}
-                  />
-                ) : (
-                  <img alt={data.name} src={data.image} style={imageStyle} />
-                );
+								const imagesize = 22
+								console.log("Org: ", data)
 
-              return (
-                <MenuItem
-                  key={index}
-                  disabled={data.id === userdata.active_org.id}
-                  style={{
-                    backgroundColor: theme.palette.inputColor,
-                    color: "white",
-                    zIndex: 10013,
-                  }}
-                  value={data.id}
-                >
-                  <Tooltip
-                    color="primary"
-                    title={`Suborg of ${data.creator_org}`}
-                    placement="left"
-                  >
-                    <div style={{ display: "flex" }}>
-                      {image} {data.name}
-                    </div>
-                  </Tooltip>
-                </MenuItem>
-              );
+								//if (data.creator_org !== undefined && data.creator_org !== null && data.creator_org.length > 0 && data.fixed !== true) {
+								var skipOrg = false 
+								if (data.creator_org !== undefined && data.creator_org !== null && data.creator_org.length > 0) {
+									// Finds the parent org
+									for (var key in userdata.child_orgs) {
+										if (data.child_orgs[key].id === data.creator_org) {
+											skipOrg = true 
+											break
+										}
+									}
+
+									if (skipOrg) {
+										return null
+									}
+								}
+
+								// Reordering to have suborgs with access under original org
+								if (data.child_orgs !== undefined && data.child_orgs !== null) {
+									var cnt = 0
+									for (var key in data.child_orgs) {
+										const childorg = data.child_orgs[key]
+										const foundIndex = userdata.orgs.findIndex(item => item.id === childorg.id)
+										if (foundIndex !== -1) {
+											const newindex = parseInt(index)+parseInt(cnt)
+
+											var newitem = userdata.orgs[foundIndex]
+											newitem.fixed = true
+											userdata.orgs.splice(newindex+1, 0, newitem)
+											userdata.orgs.splice(foundIndex+1, 1)
+										} else {
+											console.log("ORG NOT FOUND IN LIST: ", childorg)
+
+										}
+
+										// This is stupid :)
+										cnt += 1
+									}
+								}
+
+								//console.log("ORG: ", data)
+								const imageStyle = {
+									width: imagesize, 
+									height: imagesize, 
+									pointerEvents: "none", 
+									marginRight: 10, 
+									marginLeft: data.creator_org !== undefined && data.creator_org !== null && data.creator_org.length > 0 ? 20 : 0,
+								}
+
+								const parsedTitle = data.creator_org !== undefined && data.creator_org !== null && data.creator_org.length > 0 ? `Suborg of ${data.creator_org}` : ""
+
+								const image = data.image === "" ? 
+									<img alt={data.name} src={theme.palette.defaultImage} style={imageStyle} />
+									:
+									<img alt={data.name} src={data.image} style={imageStyle} />
+
+								return (
+									<MenuItem key={index} disabled={data.id === userdata.active_org.id} style={{backgroundColor: theme.palette.inputColor, color: "white", height: 40,}} value={data.id}>
+
+										<Tooltip color="primary" title={parsedTitle} placement="left">
+											<div style={{display: "flex"}}>
+												{image} {data.name}
+											</div>
+										</Tooltip>
+									</MenuItem>
+								)
             })}
           </Select>
         )}

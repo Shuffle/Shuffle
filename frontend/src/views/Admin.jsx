@@ -1800,9 +1800,12 @@ const Admin = (props) => {
             variant="outlined"
             color="primary"
             disabled={selectedUser.username === userdata.username}
-            onClick={() => deleteUser(selectedUser)}
+            onClick={() => {
+							deleteUser(selectedUser)
+        			setSelectedUserModalOpen(false);
+						}}
           >
-            {selectedUser.active ? "Deactivate" : "Activate"}
+            {selectedUser.active ? "Delete from org" : "Delete from org"}
           </Button>
           <Button
             style={{}}
