@@ -2247,7 +2247,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 			*/
 
 			resp.WriteHeader(200)
-			resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
+			resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s"}`, workflowExecution.ExecutionId)))
 			return
 		}
 
@@ -3237,14 +3237,6 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 		fmt.Sprintf("%s:%s", baseDockerName, versionName),
 	}
 
-	err = buildImage(dockerTags, dockerLocation)
-	if err != nil {
-		log.Printf("[ERROR] Docker build error: %s", err)
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error in Docker build: %s"}`, err)))
-		return
-	}
-
 	found := false
 	foundNumber := 0
 	log.Printf("[INFO] Checking for api with ID %s", newmd5)
@@ -3327,6 +3319,16 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 	cacheKey = fmt.Sprintf("workflowapps-sorted-1000")
 	shuffle.DeleteCache(ctx, cacheKey)
 	shuffle.DeleteCache(ctx, fmt.Sprintf("apps_%s", user.Id))
+
+	// Doing this last to ensure we can copy the docker image over
+	// even though builds fail
+	err = buildImage(dockerTags, dockerLocation)
+	if err != nil {
+		log.Printf("[ERROR] Docker build error: %s", err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error in Docker build: %s"}`, err)))
+		return
+	}
 
 	log.Printf("[DEBUG] Successfully built app %s (%s)", api.Name, api.ID)
 	if len(user.Id) > 0 {
