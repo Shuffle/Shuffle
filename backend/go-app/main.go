@@ -1029,6 +1029,10 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	if os.Getenv("SHUFFLE_CHAT_DISABLED") == "true" {
+		chatDisabled = true
+	}
+
 	tutorialsFinished := []string{}
 	returnValue := shuffle.HandleInfo{
 		Success:   true,
@@ -1044,8 +1048,9 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 				Expiration: expiration.Unix(),
 			},
 		},
-		EthInfo:   userInfo.EthInfo,
-		Tutorials: tutorialsFinished,
+		EthInfo:      userInfo.EthInfo,
+		Tutorials:    tutorialsFinished,
+		ChatDisabled: chatDisabled,
 	}
 
 	returnData, err := json.Marshal(returnValue)

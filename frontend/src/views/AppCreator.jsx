@@ -1810,6 +1810,7 @@ const AppCreator = (defaultprops) => {
             queryitem.name.toLowerCase() == "url" ||
             queryitem.name.toLowerCase() == "body" ||
             queryitem.name.toLowerCase() == "self" ||
+            queryitem.name.toLowerCase() == "query" ||
             queryitem.name.toLowerCase() == "ssl_verify" ||
             queryitem.name.toLowerCase() == "queries" ||
             queryitem.name.toLowerCase() == "headers" ||

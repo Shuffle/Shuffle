@@ -2494,7 +2494,7 @@ class AppBase:
 
                 # FIXME: Check if the previous node has a result or not 
 
-                self.logger.info("[DEBUG] Relevant conditions: %s" % branch["conditions"])
+                #self.logger.info("[DEBUG] Relevant conditions: %s" % branch["conditions"])
                 successful_conditions = []
                 failed_conditions = []
                 successful_conditions = 0

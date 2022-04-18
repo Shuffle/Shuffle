@@ -453,7 +453,7 @@ const Header = (props) => {
             handleClose();
           }}
         >
-          <Link to="/docs/about" style={hrefStyle}>
+          <Link to="/docs" style={hrefStyle}>
             <HelpOutlineIcon style={{marginRight: 5 }}/> About 
           </Link>
         </MenuItem>
@@ -508,7 +508,7 @@ const Header = (props) => {
     <div style={{ display: "flex" }}>
       <List style={{ display: "flex", flexDirect: "row" }} component="nav">
         <ListItem style={{ textAlign: "center", marginLeft: "0px" }}>
-          <Link to="/docs/about" style={hrefStyle}>
+          <Link to="/docs" style={hrefStyle}>
             <div
               onMouseOver={handleSoarHover}
               onMouseOut={handleSoarHoverOut}
@@ -585,7 +585,7 @@ const Header = (props) => {
        			</ListItem>
 						*/}
           <ListItem style={{ textAlign: "center" }}>
-            <Link to="/docs/about" style={hrefStyle}>
+            <Link to="/docs" style={hrefStyle}>
               <div
                 onMouseOver={handleDocsHover}
                 onMouseOut={handleDocsHoverOut}
@@ -678,7 +678,6 @@ const Header = (props) => {
 								}
 
 								const imagesize = 22
-								console.log("Org: ", data)
 
 								//if (data.creator_org !== undefined && data.creator_org !== null && data.creator_org.length > 0 && data.fixed !== true) {
 								var skipOrg = false 
@@ -773,7 +772,7 @@ const Header = (props) => {
           </Link>
         </ListItem>
         <ListItem style={{ textAlign: "center" }}>
-          <Link to="/docs/about" style={hrefStyle}>
+          <Link to="/docs" style={hrefStyle}>
             <div
               onMouseOver={handleSoarHover}
               onMouseOut={handleSoarHoverOut}

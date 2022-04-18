@@ -261,7 +261,7 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 
 	//log.Printf("RESPONSE: %#v", imageBuildResponse)
 	//log.Printf("Response: %#v", imageBuildResponse.Body)
-	log.Printf("[DEBUG] IMAGERESPONSE: %#v", imageBuildResponse.Body)
+	//log.Printf("[DEBUG] IMAGERESPONSE: %#v", imageBuildResponse.Body)
 
 	if imageBuildResponse.Body != nil {
 		defer imageBuildResponse.Body.Close()

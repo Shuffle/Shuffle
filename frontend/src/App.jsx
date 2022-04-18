@@ -39,6 +39,7 @@ import { useAlert, positions, Provider } from "react-alert";
 import { isMobile } from "react-device-detect";
 
 import detectEthereumProvider from "@metamask/detect-provider";
+import Drift from "react-driftjs";
 
 // Production - backend proxy forwarding in nginx
 var globalUrl = window.location.origin;
@@ -275,6 +276,10 @@ const App = (message, props) => {
     position: positions.BOTTOM_LEFT,
   };
 
+	const handleFirstInteraction = (event) => {
+		console.log("First interaction: ", event)
+	}
+
   const includedData =
     window.location.pathname === "/home" ||
     window.location.pathname === "/features" ? (
@@ -299,6 +304,20 @@ const App = (message, props) => {
           getUserNotifications={getUserNotifications}
           setCurpath={setCurpath}
         />
+				{!isLoaded ? null : 
+					<Drift 
+						appId="zfk9i7w3yizf" 
+						attributes={{
+							name: userdata.username === undefined || userdata.username === null ? "OSS user" : `${userdata.username} - OSS`,
+						}}
+						eventHandlers={[
+							{ 
+								event: "conversation:firstInteraction", 
+								function: handleFirstInteraction 
+							},
+						]}
+					/>
+				}
         <Header
           notifications={notifications}
           setNotifications={setNotifications}

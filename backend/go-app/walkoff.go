@@ -150,6 +150,7 @@ func handleGetWorkflowqueueConfirm(resp http.ResponseWriter, request *http.Reque
 	}
 
 	// FIXME: Add authentication?
+	// Cloud has auth.
 	id := request.Header.Get("Org-Id")
 	if len(id) == 0 {
 		log.Printf("[ERROR] No Org-Id header set - confirm")

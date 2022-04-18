@@ -89,7 +89,7 @@ func init() {
 
 	dockercli, err = dockerclient.NewEnvClient()
 	if err != nil {
-		panic(fmt.Sprintf("Unable to create docker client: %s", err))
+		log.Printf("Unable to create docker client: %s", err)
 	}
 
 	getThisContainerId()
@@ -203,7 +203,7 @@ func deployServiceWorkers(image string) {
 	if swarmConfig == "run" || swarmConfig == "swarm" {
 		ctx := context.Background()
 		// Looks for and cleans up all existing items in swarm we can't re-use (Shuffle only)
-		cleanupExistingNodes(ctx)
+
 		// frikky@debian:~/git/shuffle/functions/onprem/worker$ docker service create --replicas 5 --name shuffle-workers --env SHUFFLE_SWARM_CONFIG=run --publish published=33333,target=33333 ghcr.io/frikky/shuffle-worker:nightly
 		networkName := "shuffle_swarm_executions"
 		if len(swarmNetworkName) > 0 {
@@ -495,7 +495,9 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		// FIXME: Should we handle replies properly?
 		// In certain cases, a workflow may e.g. be aborted already. If it's aborted, that returns
 		// a 401 from the worker, which returns an error here
-		go sendWorkerRequest(executionRequest)
+		//go sendWorkerRequest(executionRequest)
+		sendWorkerRequest(executionRequest)
+
 		//err := sendWorkerRequest(executionRequest)
 		//if err != nil {
 		//	log.Printf("[ERROR] Failed worker request for %s: %s", executionRequest.ExecutionId, err)
@@ -859,10 +861,15 @@ func main() {
 	workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
 	if swarmConfig == "run" || swarmConfig == "swarm" {
 		checkSwarmService(ctx)
+
+		log.Printf("[DEBUG] Cleaning up containers from previous run")
+		cleanupExistingNodes(ctx)
+		time.Sleep(time.Duration(5) * time.Second)
+
 		log.Printf("[DEBUG] Deploying worker image %s to swarm", workerImage)
 		deployServiceWorkers(workerImage)
-		log.Printf("[DEBUG] Waiting 30 seconds to ensure workers are deployed. Run: \"docker service ls\" for more info")
-		time.Sleep(time.Duration(30) * time.Second)
+		log.Printf("[DEBUG] Waiting 45 seconds to ensure workers are deployed. Run: \"docker service ls\" for more info")
+		time.Sleep(time.Duration(45) * time.Second)
 
 		//deployServiceWorkers(workerImage)
 	}
@@ -900,7 +907,7 @@ func main() {
 
 	if err != nil {
 		log.Printf("[ERROR] Failed making request builder during init: %s", err)
-		os.Exit(3)
+		return
 	}
 
 	zombiecounter := 0
@@ -1336,6 +1343,7 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 	)
 	if err != nil {
 		log.Printf("[ERROR] Failed creating worker request: %s", err)
+
 		if strings.Contains(fmt.Sprintf("%s", err), "connection refused") || strings.Contains(fmt.Sprintf("%s", err), "EOF") {
 			workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
 			deployServiceWorkers(workerImage)
@@ -1349,7 +1357,7 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 
 	newresp, err := client.Do(req)
 	if err != nil {
-		log.Printf("[ERROR] Error running worker request: %s", err)
+		log.Printf("[ERROR] Error running worker request (1): %s", err)
 		if strings.Contains(fmt.Sprintf("%s", err), "connection refused") || strings.Contains(fmt.Sprintf("%s", err), "EOF") {
 			workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
 			deployServiceWorkers(workerImage)
@@ -1368,7 +1376,7 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 	}
 
 	if newresp.StatusCode != 200 {
-		log.Printf("[ERROR] Error running worker request - status code is %d, not 200. Body: %s", newresp.StatusCode, string(body))
+		log.Printf("[ERROR] Error running worker request (2) - status code is %d, not 200. Body: %s", newresp.StatusCode, string(body))
 
 		workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
 		deployServiceWorkers(workerImage)

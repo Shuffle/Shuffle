@@ -6,6 +6,9 @@ import { BrowserView, MobileView } from "react-device-detect";
 import { useParams, useNavigate, Link } from "react-router-dom";
 
 import {
+	Grid,
+	TextField, 
+	IconButton,
   Tooltip,
   Divider,
   Button,
@@ -15,7 +18,11 @@ import {
   Paper,
   List,
 } from "@material-ui/core";
-import { Link as LinkIcon, Edit as EditIcon } from "@material-ui/icons";
+
+import { 
+	Link as LinkIcon, 
+	Edit as EditIcon,
+} from "@material-ui/icons";
 
 const Body = {
   maxWidth: 1000,
@@ -50,12 +57,13 @@ const Docs = (defaultprops) => {
 	var props = JSON.parse(JSON.stringify(defaultprops))
 	props.match = {}
 	props.match.params = params
+	console.log("Props: ", props.match.params)
 
 	useEffect(() => {
-		if (params["key"] === undefined) {
-			navigate("/docs/about")
-			return
-		}
+		//if (params["key"] === undefined) {
+		//	navigate("/docs/about")
+		//	return
+		//}
 	}, [])
 	//console.log("PARAMS: ", params)
 
@@ -229,8 +237,12 @@ const Docs = (defaultprops) => {
 				//	navigate("/docs/about")
 				//	return null
 				//}
+				//
+				if (props.match.params.key === undefined) {
 
-        fetchDocs(props.match.params.key)
+				} else {
+        	fetchDocs(props.match.params.key)
+				}
       }
     }
   }
@@ -404,7 +416,6 @@ const Docs = (defaultprops) => {
                   rel="noopener noreferrer"
                   target="_blank"
                   href={selectedMeta.link}
-                  target="_blank"
                   style={{ textDecoration: "none", color: "#f85a3e" }}
                 >
                   <Button style={{}} variant="outlined">
@@ -506,6 +517,59 @@ const Docs = (defaultprops) => {
   //	);
   //}
 
+
+	const CustomButton = (props) => {
+		const {title, icon, link} = props
+
+		const [hover, setHover] = useState(false)
+
+		return (
+			<a 
+				href={link}
+        rel="noopener noreferrer"
+        target="_blank"
+        style={{ textDecoration: "none", color: "inherit", flex: 1, margin: 10, }}
+			>
+				<div style={{cursor: hover ? "pointer" : "default", borderRadius: theme.palette.borderRadius, flex: 1, border: "1px solid rgba(255,255,255,0.3)", backgroundColor: hover ? theme.palette.surfaceColor : theme.palette.inputColor, padding: 25, }} onMouseOver={() => {
+						setHover(true)
+					}}
+					onMouseOut={() => {
+						setHover(false);
+					}}
+				>
+					{icon}
+					<Typography variant="body1" style={{}} >
+						{title}
+					</Typography>
+				</div>
+			</a>
+		)
+	}
+
+
+	const DocumentationButton = (props) => {
+		const {item, link} = props
+
+		const [hover, setHover] = useState(false);
+
+		return (
+			<Link to={link} >
+				<div style={{width: "100%", height: 80, cursor: hover ? "pointer" : "default", borderRadius: theme.palette.borderRadius, border: "1px solid rgba(255,255,255,0.3)", backgroundColor: hover ? theme.palette.surfaceColor : theme.palette.inputColor, }}
+				onMouseOver={() => {
+					setHover(true)
+				}}
+				onMouseOut={() => {
+					setHover(false);
+				}}
+				>
+					<Typography variant="body1" style={{}} >
+						{item}
+					</Typography>
+				</div>
+			</Link>
+		)
+	}
+
   const postDataBrowser =
     list === undefined || list === null ? null : (
       <div style={Body}>
@@ -576,6 +640,77 @@ const Docs = (defaultprops) => {
             </List>
           </Paper>
         </div>
+				{props.match.params.key === undefined ?
+				<div style={{
+					color: "rgba(255, 255, 255, 0.65)",
+					flex: "1",
+					maxWidth: mobile ? "100%" : 750,
+					overflow: "hidden",
+					paddingBottom: 100,
+					marginLeft: mobile ? 0 : 50,
+					marginTop: 50, 
+					textAlign: "center",
+					maxWidth: 500,
+				}}>
+					<Typography variant="h4" style={{textAlign: "center",}}>
+						Documentation
+					</Typography>
+					<div style={{display: "flex", marginTop: 25, }}>
+						<CustomButton title="Create Support Ticket" icon=<img src="" style={{height: 35, width: 35, border: "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette.borderRadius, }} /> link="http://172.17.14.113" />
+						<CustomButton title="Ask the community" icon=<img src="" style={{height: 35, width: 35, border: "1px solid rgba(255,255,255,0.3)", borderRadius: theme.palette.borderRadius, }} /> link="https://discord.gg/B2CBzUm" />
+					</div>
+					
+					<Grid container spacing={2} style={{marginTop: 50, }}>
+						{list.map((data, index) => {
+							const item = data.name;
+							if (item === undefined) {
+								return null;
+							}
+
+							const path = "/docs/" + item;
+							const newname =
+								item.charAt(0).toUpperCase() +
+								item.substring(1).split("_").join(" ").split("-").join(" ");
+
+							const itemMatching = props.match.params.key === undefined ? false : 
+								props.match.params.key.toLowerCase() === item.toLowerCase();
+
+							return (
+								<Grid item xs={4}>
+									<DocumentationButton key={index} item={newname} />
+								</Grid>
+							)
+						})}
+					</Grid>
+
+					{/*
+					<TextField
+						required
+						style={{
+							flex: "1", 
+							backgroundColor: theme.palette.inputColor,
+							height: 50, 
+						}}
+						InputProps={{
+							style:{
+								color: "white",
+								height: 50, 
+							},
+						}}
+						placeholder={"Search Knowledgebase"}
+						color="primary"
+						fullWidth={true}
+						type="firstname"
+						id={"Searchfield"}
+						margin="normal"
+						variant="outlined"
+						onChange={(event) => {
+							console.log("Change: ", event.target.value)
+						}}
+					/>
+					*/}
+				</div>
+				:
         <div id="markdown_wrapper_outer" style={markdownStyle}>
           <ReactMarkdown
             id="markdown_wrapper"
@@ -589,6 +724,7 @@ const Docs = (defaultprops) => {
             }}
           />
         </div>
+				}
       </div>
     );
 
