@@ -305,18 +305,20 @@ const App = (message, props) => {
           setCurpath={setCurpath}
         />
 				{!isLoaded ? null : 
-					<Drift 
-						appId="zfk9i7w3yizf" 
-						attributes={{
-							name: userdata.username === undefined || userdata.username === null ? "OSS user" : `${userdata.username} - OSS`,
-						}}
-						eventHandlers={[
-							{ 
-								event: "conversation:firstInteraction", 
-								function: handleFirstInteraction 
-							},
-						]}
-					/>
+					userdata.chat_disabled === true ? null : 
+						<Drift 
+							appId="zfk9i7w3yizf" 
+							attributes={{
+								name: userdata.username === undefined || userdata.username === null ? "OSS user" : `${userdata.username} - OSS`,
+							}}
+							eventHandlers={[
+								{ 
+									event: "conversation:firstInteraction", 
+									function: handleFirstInteraction 
+								},
+							]}
+						/>
+					
 				}
         <Header
           notifications={notifications}

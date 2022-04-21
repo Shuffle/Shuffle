@@ -277,7 +277,7 @@ func deployServiceWorkers(image string) {
 			}
 
 			if len(containerId) == 64 && baseUrl == "http://shuffle-backend:5001" {
-				log.Printf("[ERROR] Network MAY not work due to backend being %s and container length 64. Will try to attach shuffle_shuffle network", baseUrl)
+				log.Printf("[WARNING] Network MAY not work due to backend being %s and container length 64. Will try to attach shuffle_shuffle network", baseUrl)
 				defaultNetworkAttach = true
 			}
 		}
@@ -1341,9 +1341,9 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 		streamUrl,
 		bytes.NewBuffer([]byte(data)),
 	)
+
 	if err != nil {
 		log.Printf("[ERROR] Failed creating worker request: %s", err)
-
 		if strings.Contains(fmt.Sprintf("%s", err), "connection refused") || strings.Contains(fmt.Sprintf("%s", err), "EOF") {
 			workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
 			deployServiceWorkers(workerImage)
@@ -1357,7 +1357,7 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 
 	newresp, err := client.Do(req)
 	if err != nil {
-		log.Printf("[ERROR] Error running worker request (1): %s", err)
+		log.Printf("[ERROR] Error running worker request to %s (1): %s", streamUrl, err)
 		if strings.Contains(fmt.Sprintf("%s", err), "connection refused") || strings.Contains(fmt.Sprintf("%s", err), "EOF") {
 			workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
 			deployServiceWorkers(workerImage)
@@ -1371,17 +1371,22 @@ func sendWorkerRequest(workflowExecution shuffle.ExecutionRequest) error {
 
 	body, err := ioutil.ReadAll(newresp.Body)
 	if err != nil {
-		log.Printf("[ERROR] Failed reading body in worker request body: %s", err)
+		log.Printf("[ERROR] Failed reading body in worker request body to worker on %s: %s", streamUrl, err)
 		return err
 	}
 
 	if newresp.StatusCode != 200 {
-		log.Printf("[ERROR] Error running worker request (2) - status code is %d, not 200. Body: %s", newresp.StatusCode, string(body))
+		log.Printf("[WARNING] POTENTIAL error running worker request (2) - status code is %d for %s, not 200. Body: %s", newresp.StatusCode, streamUrl, string(body))
 
-		workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
-		deployServiceWorkers(workerImage)
+		// In case of old executions
+		if strings.Contains(string(body), "Bad status ") {
+			return nil
+		}
 
-		time.Sleep(time.Duration(10) * time.Second)
+		//workerImage := fmt.Sprintf("%s/%s/shuffle-worker:%s", baseimageregistry, baseimagename, workerVersion)
+		//deployServiceWorkers(workerImage)
+
+		//time.Sleep(time.Duration(10) * time.Second)
 		//err = sendWorkerRequest(executionRequest)
 
 		return errors.New(fmt.Sprintf("Bad statuscode from worker: %d - expecting 200", newresp.StatusCode))
