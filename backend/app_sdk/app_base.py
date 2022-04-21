@@ -3089,11 +3089,12 @@ class AppBase:
                                 for key, value in params.items():
                                     try:
                                         if isinstance(value, str) and ((value.startswith("{") and value.endswith("}")) or (value.startswith("[") and value.endswith("]"))):
-                                            params[key] = ast.literal_eval(value)
+                                            params[key] = json.loads(value)
                                     except Exception as e:
                                         try:
-                                            params[key] = json.loads(value)
-                                        except json.decoder.JSONDecodeError as e:
+                                            if isinstance(value, str) and ((value.startswith("{") and value.endswith("}")) or (value.startswith("[") and value.endswith("]"))):
+                                                params[key] = ast.literal_eval(value)
+                                        except Exception as e:
                                             self.logger.info(f"[DEBUG] Failed parsing value with ast and json.loads - noncritical. Trying next: {e}")
                                             continue
                             except Exception as e:
