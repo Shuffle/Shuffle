@@ -1697,6 +1697,7 @@ class AppBase:
                     #    value = value.replace(" ", "_", -1)
 
                     actualitem = re.findall(match, value, re.MULTILINE)
+                    # Goes here if loop 
                     if value == "#":
                         newvalue = []
                         for innervalue in basejson:
@@ -1715,6 +1716,7 @@ class AppBase:
                         # it as multi execution
                         return newvalue, True
 
+                    # Checks specific regex like #1-2 for index 1-2 in a loop
                     elif len(actualitem) > 0:
 
                         is_loop = True
@@ -1797,9 +1799,12 @@ class AppBase:
                                 return basejson, False
                             elif isinstance(basejson[value], str):
                                 try:
-                                    basejson = json.loads(basejson[value])
+                                    if (basejson[value].endswith("}") and basejson[value].endswith("}")) or (basejson[value].startswith("[") and basejson[value].endswith("]")):
+                                        basejson = json.loads(basejson[value])
+                                    else:
+                                        return str(basejson[value]), False
                                 except json.decoder.JSONDecodeError as e:
-                                    return basejson[value], False
+                                    return str(basejson[value]), False
                             else:
                                 basejson = basejson[value]
                         except KeyError as e:
@@ -1815,11 +1820,14 @@ class AppBase:
                             elif isinstance(basejson[value], str):
                                 print(f"[INFO] LOADING STRING '%s' AS JSON" % basejson[value]) 
                                 try:
-                                    basejson = json.loads(basejson[value])
                                     print("[DEBUG] BASEJSON: %s" % basejson)
+                                    if (basejson[value].endswith("}") and basejson[value].endswith("}")) or (basejson[value].startswith("[") and basejson[value].endswith("]")):
+                                        basejson = json.loads(basejson[value])
+                                    else:
+                                        return str(basejson[value]), False
                                 except json.decoder.JSONDecodeError as e:
                                     print("[DEBUG] RETURNING BECAUSE '%s' IS A NORMAL STRING (1)" % basejson[value])
-                                    return basejson[value], False
+                                    return str(basejson[value]), False
                             else:
                                 basejson = basejson[value]
                             
@@ -1929,10 +1937,12 @@ class AppBase:
             print(f"[INFO] After first trycatch. Baseresult")#, baseresult)
         
             # 2. Find the JSON data
+            # Returns if there isn't any JSON in the base ($nodename)
             if len(baseresult) == 0:
                 return ""+appendresult, False
         
             print("[INFO] After second return")
+            # Returns if the result is JUST something like $nodename, not $nodename.value
             if len(parsersplit) == 1:
                 returndata = str(baseresult)+str(appendresult)
                 print("[DEBUG] RETURNING!")#: %s" % returndata)
@@ -1941,6 +1951,7 @@ class AppBase:
             baseresult = baseresult.replace(" True,", " true,")
             baseresult = baseresult.replace(" False", " false,")
 
+            # Tries to actually read it as JSON with some stupid formatting
             print("[INFO] After third parser return - Formatted")#, baseresult)
             basejson = {}
             try:
@@ -1954,6 +1965,7 @@ class AppBase:
                     return str(baseresult)+str(appendresult), False
 
             print("[INFO] After fourth parser return as JSON")
+            # Finds the ACTUAL value which is in the $nodename.value.test - focusing on value.test
             data, is_loop = recurse_json(basejson, parsersplit[1:])
             parseditem = data
 
@@ -1982,8 +1994,15 @@ class AppBase:
             # New in 0.8.97: Don't return items without lists
             #self.logger.info("RETURNDATA: %s" % returndata)
             #return returndata, is_loop
+
+            # 0.9.70:
+            # The {} and [] checks are required because e.g. 7e7 is valid JSON for some reason...
+            # This breaks EVERYTHING
             try:
-                return json.dumps(json.loads(returndata)), is_loop
+                if (returndata.endswith("}") and returndata.endswith("}")) or (returndata.startswith("[") and returndata.endswith("]")):
+                    return json.dumps(json.loads(returndata)), is_loop
+                else:
+                    return returndata, is_loop
             except json.decoder.JSONDecodeError as e:
                 return returndata, is_loop
 
@@ -2200,7 +2219,8 @@ class AppBase:
             # Regex to find all the things
             # Should just go in here if data is ... not so big
             #if parameter["variant"] == "STATIC_VALUE" and len(parameter["value"]) < 1000000:
-            if parameter["variant"] == "STATIC_VALUE" and len(parameter["value"]) < 5000000:
+            #if parameter["variant"] == "STATIC_VALUE" and len(parameter["value"]) < 5000000:
+            if parameter["variant"] == "STATIC_VALUE":
                 data = parameter["value"]
                 actualitem = re.findall(match, data, re.MULTILINE)
                 #self.logger.debug(f"\n\nHandle static data with JSON: {data}\n\n")
