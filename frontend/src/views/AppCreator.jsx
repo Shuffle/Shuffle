@@ -481,7 +481,6 @@ const AppCreator = (defaultprops) => {
   // This is the data FROM the database, not what's being saved
   const parseIncomingOpenapiData = (data) => {
 	
-		console.log("Data: ", data)
 		var parsedDecoded = ""
 		try { 
 			const decoded = base64_decode(data.openapi)

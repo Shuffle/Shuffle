@@ -2,7 +2,7 @@
 
 ### DEFAULT 
 NAME=shuffle-app_sdk
-VERSION=0.9.69
+VERSION=0.9.70
 
 docker rmi docker.pkg.github.com/frikky/shuffle/$NAME:$VERSION --force
 docker build . -f Dockerfile -t frikky/shuffle:app_sdk -t frikky/$NAME:$VERSION -t docker.pkg.github.com/frikky/shuffle/$NAME:$VERSION -t ghcr.io/frikky/$NAME:$VERSION -t ghcr.io/frikky/$NAME:nightly
@@ -21,7 +21,11 @@ docker build . -f Dockerfile_ubuntu -t frikky/shuffle:app_sdk_ubuntu -t frikky/$
 docker push frikky/shuffle:app_sdk_ubuntu
 docker push ghcr.io/frikky/$NAME:$VERSION
 
-
+#### Alpine GRPC 
+NAME=shuffle-app_sdk_grpc
+docker build . -f Dockerfile_alpine_grpc -t frikky/shuffle:app_sdk_grpc -t frikky/$NAME:$VERSION -t docker.pkg.github.com/frikky/shuffle/$NAME:$VERSION -t ghcr.io/frikky/$NAME:$VERSION
+docker push frikky/shuffle:app_sdk_grpc
+docker push ghcr.io/frikky/$NAME:$VERSION
 
 
 

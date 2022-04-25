@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
+	"strconv"
 
 	//"crypto/tls"
 	//"crypto/x509"
@@ -1029,6 +1030,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	chatDisabled := false
 	if os.Getenv("SHUFFLE_CHAT_DISABLED") == "true" {
 		chatDisabled = true
 	}
@@ -4083,6 +4085,19 @@ func runInitEs(ctx context.Context) {
 	// FIXME: Have this for all envs in all orgs (loop and find).
 	if len(parsedApikey) > 0 {
 		cleanupSchedule := 300
+
+		if len(os.Getenv("SHUFFLE_RERUN_SCHEDULE")) > 0 {
+			newfrequency, err := strconv.Atoi(os.Getenv("SHUFFLE_RERUN_SCHEDULE"))
+			if err == nil {
+				cleanupSchedule = newfrequency
+
+				if cleanupSchedule < 300 {
+					log.Printf("[WARNING] A Cleanupschedule of less than 300 seconds won't help.")
+					cleanupSchedule = 300
+				}
+			}
+		}
+
 		environments := []string{"Shuffle"}
 		log.Printf("[DEBUG] Starting schedule setup for execution cleanup every %d seconds. Running first immediately.", cleanupSchedule)
 		cleanupJob := func() func() {

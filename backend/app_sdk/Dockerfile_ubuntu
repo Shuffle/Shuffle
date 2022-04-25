@@ -13,6 +13,9 @@ COPY requirements.txt /requirements.txt
 RUN pip install --prefix="/install" -r /requirements.txt
 
 FROM base
+RUN apt-get update
+RUN apt-get dist-upgrade -y
+RUN apt install build-essential libffi-dev musl-dev openssl python3 python3-pip -y
 
 COPY --from=builder /install /usr/local
 COPY __init__.py /app/walkoff_app_sdk/__init__.py

@@ -273,7 +273,7 @@ class AppBase:
                 self.logger.warning(f"[INFO] Action result ran with Magic parser output.")
                 action_result["result"] = self.run_magic_parser(action_result["result"])
             else:
-                self.logger.warning(f"[ERROR] Magic output not defined.")
+                self.logger.warning(f"[WARNING] Magic output not defined.")
         except KeyError as e:
             self.logger.warning(f"[DEBUG] Failed to run magic autoparser (send result) - keyerror: {e}")
         except Exception as e:

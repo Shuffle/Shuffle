@@ -495,8 +495,8 @@ func deployWorker(image string, identifier string, env []string, executionReques
 		// FIXME: Should we handle replies properly?
 		// In certain cases, a workflow may e.g. be aborted already. If it's aborted, that returns
 		// a 401 from the worker, which returns an error here
-		//go sendWorkerRequest(executionRequest)
-		sendWorkerRequest(executionRequest)
+		go sendWorkerRequest(executionRequest)
+		//sendWorkerRequest(executionRequest)
 
 		//err := sendWorkerRequest(executionRequest)
 		//if err != nil {
@@ -931,6 +931,7 @@ func main() {
 		newresp, err := client.Do(req)
 		if err != nil {
 			log.Printf("[WARNING] Failed making request: %s", err)
+
 			zombiecounter += 1
 			if zombiecounter*sleepTime > workerTimeout {
 				go zombiecheck(ctx, workerTimeout)

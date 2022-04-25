@@ -3133,13 +3133,15 @@ const Workflows = (props) => {
 						: null}
 					</div>
           <div style={{ marginTop: 15 }} />
-          {actionImageList !== undefined &&
+          {!isMobile &&
+					actionImageList !== undefined &&
           actionImageList !== null &&
           actionImageList.length > 0 ? (
             <div
               style={{
                 display: "flex",
-                maxWidth: 1024,
+                maxWidth: isMobile ? "100%" : 1024,
+                minWidth: isMobile ? "100%" : 1024,
                 zIndex: 11,
                 border: "1px solid rgba(255,255,255,0.1)",
                 borderRadius: theme.palette.borderRadius,

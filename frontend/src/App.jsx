@@ -84,6 +84,7 @@ const App = (message, props) => {
     !isLoggedIn &&
     !window.location.pathname.startsWith("/login") &&
     !window.location.pathname.startsWith("/docs") &&
+    !window.location.pathname.startsWith("/support") &&
     !window.location.pathname.startsWith("/detectionframework") &&
     !window.location.pathname.startsWith("/appframework") &&
     !window.location.pathname.startsWith("/adminsetup") &&
@@ -552,6 +553,19 @@ const App = (message, props) => {
         	<Route
         	  exact
         	  path="/docs"
+        	  element={
+							//navigate(`/docs/about`)
+        	    <Docs
+        	      isMobile={isMobile}
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	<Route
+        	  exact
+        	  path="/support"
         	  element={
 							//navigate(`/docs/about`)
         	    <Docs

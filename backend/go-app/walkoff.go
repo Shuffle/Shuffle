@@ -321,8 +321,8 @@ func handleGetWorkflowqueue(resp http.ResponseWriter, request *http.Request) {
 			}
 		}
 
-		if len(executionRequests.Data) > 10 {
-			executionRequests.Data = executionRequests.Data[0:9]
+		if len(executionRequests.Data) > 50 {
+			executionRequests.Data = executionRequests.Data[0:49]
 		}
 	}
 
@@ -895,8 +895,8 @@ func handleExecution(id string, workflow shuffle.Workflow, request *http.Request
 
 	workflowExecution, execInfo, _, err := shuffle.PrepareWorkflowExecution(ctx, workflow, request, 10)
 	if err != nil {
-		log.Printf("[WARNING] Failed in prepareExecution: %s", err)
-		return shuffle.WorkflowExecution{}, fmt.Sprintf("Failed preparration: %s", err), err
+		log.Printf("[WARNING] Failed in prepareExecution for execution Id %s: %s", workflowExecution.ExecutionId, err)
+		return workflowExecution, fmt.Sprintf("Failed preparration: %s", err), err
 	}
 
 	err = imageCheckBuilder(execInfo.ImageNames)
@@ -1134,7 +1134,6 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 	user.ActiveOrg.Users = []shuffle.UserMini{}
 	workflow.ExecutingOrg = user.ActiveOrg
 	workflowExecution, executionResp, err := handleExecution(fileId, *workflow, request)
-
 	if err == nil {
 		resp.WriteHeader(200)
 		resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
@@ -1142,7 +1141,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	resp.WriteHeader(500)
-	resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, executionResp)))
+	resp.Write([]byte(fmt.Sprintf(`{"success": false, "execution_id": "%s", "authorization": "%s", "reason": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization, executionResp)))
 }
 
 func stopSchedule(resp http.ResponseWriter, request *http.Request) {
