@@ -57,7 +57,7 @@
     "react-powerhooks": "0.0.7",
     "react-router": "^4.3.1",
     "react-router-dom": "^4.3.1",
-    "react-scripts": "^4.0.1",
+    "react-scripts": "^5.0.0",
     "reactstrap": "^7.1.0",
     "shellwords": "^0.1.1",
     "simplebar": "^4.2.3",
