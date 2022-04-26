@@ -88,7 +88,7 @@ http://localhost:5001 - REST API - requires [>=go1.13](https://golang.org/dl/)
 export SHUFFLE_OPENSEARCH_URL="http://localhost:9200"
 export SHUFFLE_ELASTIC=true
 cd backend/go-app
-go run *.go
+go run main.go walkoff.go docker.go
 ```
 
 Large portions of the backend is written in another repository - [shuffle-shared](https://github.com/frikky/shuffle-shared). If you want to update any of this code and test in realtime, we recommend following these steps:
