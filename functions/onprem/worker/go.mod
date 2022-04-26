@@ -5,7 +5,7 @@ go 1.15
 //replace github.com/shuffle/shuffle-shared => ../../../../../git/shuffle-shared
 
 require (
-	github.com/containerd/containerd v1.5.7 // indirect
+	github.com/containerd/containerd v1.6.3 // indirect
 	github.com/docker/docker v20.10.9+incompatible
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/gorilla/mux v1.8.0
