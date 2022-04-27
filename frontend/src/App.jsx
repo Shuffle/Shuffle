@@ -310,7 +310,7 @@ const App = (message, props) => {
 						<Drift 
 							appId="zfk9i7w3yizf" 
 							attributes={{
-								name: userdata.username === undefined || userdata.username === null ? "OSS user" : `${userdata.username} - OSS`,
+								name: userdata.username === undefined || userdata.username === null ? "OSS user" : `OSS ${userdata.username}`,
 							}}
 							eventHandlers={[
 								{ 
