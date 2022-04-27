@@ -39,7 +39,7 @@ services:
       #- opensearch #Not necessary because dependancy is handled within the backend itself instead
       #- database
   orborus:
-    image: ghcr.io/frikky/shuffle-orborus:nightly
+    image: ghcr.io/frikky/shuffle-orborus:latest
     container_name: shuffle-orborus
     hostname: shuffle-orborus
     networks:
@@ -47,7 +47,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      - SHUFFLE_WORKER_VERSION=nightly
+      - SHUFFLE_WORKER_VERSION=latest
       - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
       - BASE_URL=http://${OUTER_HOSTNAME}:5001
       - DOCKER_API_VERSION=1.40
@@ -58,10 +58,9 @@ services:
       - HTTPS_PROXY=${HTTPS_PROXY}
       - SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
       - SHUFFLE_PASS_APP_PROXY=${SHUFFLE_PASS_APP_PROXY}
+      - SHUFFLE_SWARM_NETWORK_NAME=shuffle_swarm_executions
       - SHUFFLE_SCALE_REPLICAS=1
       - SHUFFLE_SWARM_CONFIG=runn
-      - SHUFFLE_SWARM_NETWORK_NAME=shuffle_swarm_executions
-      #- DOCKER_HOST=tcp://docker-socket-proxy:2375
     restart: unless-stopped
     security_opt:
       - seccomp:unconfined
