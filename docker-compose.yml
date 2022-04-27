@@ -1,7 +1,6 @@
 version: '3'
 services:
   frontend:
-    #build: ./frontend
     image: ghcr.io/frikky/shuffle-frontend:latest
     container_name: shuffle-frontend
     hostname: shuffle-frontend
@@ -16,7 +15,6 @@ services:
     depends_on:
       - backend
   backend:
-    build: ./backend
     image: ghcr.io/frikky/shuffle-backend:latest
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
@@ -29,15 +27,11 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${SHUFFLE_APP_HOTLOAD_LOCATION}:/shuffle-apps:z
       - ${SHUFFLE_FILE_LOCATION}:/shuffle-files:z
-      #- ${SHUFFLE_OPENSEARCH_CERTIFICATE_FILE}:/shuffle-files/es_certificate
     env_file: .env
     environment:
       - SHUFFLE_APP_HOTLOAD_FOLDER=/shuffle-apps
       - SHUFFLE_FILE_LOCATION=/shuffle-files
     restart: unless-stopped
-    #depends_on:
-      #- opensearch #Not necessary because dependancy is handled within the backend itself instead
-      #- database
   orborus:
     image: ghcr.io/frikky/shuffle-orborus:latest
     container_name: shuffle-orborus
