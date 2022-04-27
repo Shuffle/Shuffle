@@ -1,9 +1,9 @@
-@import url('./css/nunito.css');
+@import url("./css/nunito.css");
 
 body {
   margin: 0;
   padding: 0;
-	font-family: "Nunito Sans", sans-serif;
+  font-family: "Nunito Sans", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -11,4 +11,23 @@ body {
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
+}
+
+.cm-tab::before{
+  content: "———";
+  margin-right: -13px;
+}
+
+/* .cm-string{
+  z-index: -1;
+}
+
+.CodeMirror-selected{
+  background-color: #007500 !important;
+  z-index: 100 !important;
+} */
+
+.CodeMirror-selectedtext{
+  background-color: rgba(28, 47, 69, 0.6) !important;
+  color: rgb(255, 255, 255) !important;
 }

@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	//"github.com/docker/docker"
 	"github.com/docker/docker/api/types"
 	//"github.com/docker/docker/api/types/container"
@@ -260,7 +261,7 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 
 	//log.Printf("RESPONSE: %#v", imageBuildResponse)
 	//log.Printf("Response: %#v", imageBuildResponse.Body)
-	log.Printf("[DEBUG] IMAGERESPONSE: %#v", imageBuildResponse.Body)
+	//log.Printf("[DEBUG] IMAGERESPONSE: %#v", imageBuildResponse.Body)
 
 	if imageBuildResponse.Body != nil {
 		defer imageBuildResponse.Body.Close()
@@ -299,6 +300,7 @@ func buildImageMemory(fs billy.Filesystem, tags []string, dockerfileFolder strin
 				}
 
 				if !downloaded {
+
 					return errors.New(fmt.Sprintf("Failed to build / download images %s", strings.Join(tags, ",")))
 				}
 				//baseDockerName
@@ -416,7 +418,7 @@ func stopWebhook(image string, identifier string) error {
 
 // Starts a new webhook
 func handleStopHookDocker(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -501,7 +503,7 @@ var webhook = `{
 // Starts a new webhook
 func handleDeleteHookDocker(resp http.ResponseWriter, request *http.Request) {
 	ctx := context.Background()
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -618,7 +620,7 @@ func hookTest() {
 
 //https://stackoverflow.com/questions/23935141/how-to-copy-docker-images-from-one-host-to-another-without-using-a-repository
 func getDockerImage(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -654,7 +656,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("[DEBUG] Image to load: %s", version.Name)
+	//log.Printf("[DEBUG] Image to load: %s", version.Name)
 	dockercli, err := client.NewEnvClient()
 	if err != nil {
 		log.Printf("[WARNING] Unable to create docker client: %s", err)
@@ -698,17 +700,17 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 	// REBUILDS THE APP
 	if len(img.ID) == 0 {
 		if len(img2.ID) == 0 {
-			workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 0)
-			log.Printf("[INFO] Getting workflowapps for a rebuild. Got %d with err %#v", len(workflowapps), err)
+			workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 0, 0)
+			//log.Printf("[INFO] Getting workflowapps for a rebuild. Got %d with err %#v", len(workflowapps), err)
 			if err == nil {
 				imageName := ""
 				imageVersion := ""
 				newNameSplit := strings.Split(version.Name, ":")
 				if len(newNameSplit) == 2 {
-					log.Printf("[DEBUG] Found name %#v", newNameSplit)
+					//log.Printf("[DEBUG] Found name %#v", newNameSplit)
 
 					findVersionSplit := strings.Split(newNameSplit[1], "_")
-					log.Printf("[DEBUG] Found another split %#v", findVersionSplit)
+					//log.Printf("[DEBUG] Found another split %#v", findVersionSplit)
 					if len(findVersionSplit) == 2 {
 						imageVersion = findVersionSplit[len(findVersionSplit)-1]
 						imageName = findVersionSplit[0]
@@ -774,7 +776,7 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	//log.Printf("[INFO] Img found (%s): %#v", tagFound, img)
-	log.Printf("[INFO] Img found to be downloaded by client: %s", tagFound)
+	//log.Printf("[INFO] Img found to be downloaded by client: %s", tagFound)
 
 	newClient, err := newdockerclient.NewClientFromEnv()
 	if err != nil {
@@ -797,4 +799,114 @@ func getDockerImage(resp http.ResponseWriter, request *http.Request) {
 		resp.Write([]byte(fmt.Sprintf(`{"success": false, "message": "Couldn't export image"}`)))
 		return
 	}
+
+	//resp.WriteHeader(200)
+}
+
+func activateWorkflowAppDocker(resp http.ResponseWriter, request *http.Request) {
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
+
+	user, err := shuffle.HandleApiAuthentication(resp, request)
+	if err != nil {
+		log.Printf("[WARNING] Api authentication failed in get active apps: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	if user.Role == "org-reader" {
+		log.Printf("[WARNING] Org-reader doesn't have access to activate workflow app (shared): %s (%s)", user.Username, user.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Read only user"}`))
+		return
+	}
+
+	ctx := context.Background()
+	location := strings.Split(request.URL.String(), "/")
+	var fileId string
+	if location[1] == "api" {
+		if len(location) <= 4 {
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		}
+
+		fileId = location[4]
+	}
+
+	app, err := shuffle.GetApp(ctx, fileId, user, false)
+	if err != nil {
+		appName := request.URL.Query().Get("app_name")
+		appVersion := request.URL.Query().Get("app_version")
+
+		if len(appName) > 0 && len(appVersion) > 0 {
+			apps, err := shuffle.FindWorkflowAppByName(ctx, appName)
+			//log.Printf("[INFO] Found %d apps for %s", len(apps), appName)
+			if err != nil || len(apps) == 0 {
+				log.Printf("[WARNING] Error getting app %s (app config): %s", appName, err)
+				resp.WriteHeader(401)
+				resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+				return
+			}
+
+			selectedApp := shuffle.WorkflowApp{}
+			for _, app := range apps {
+				if !app.Sharing && !app.Public {
+					continue
+				}
+
+				if app.Name == appName {
+					selectedApp = app
+				}
+
+				if app.Name == appName && app.AppVersion == appVersion {
+					selectedApp = app
+				}
+			}
+
+			app = &selectedApp
+		} else {
+			log.Printf("[WARNING] Error getting app with ID %s (app config): %s", fileId, err)
+			resp.WriteHeader(401)
+			resp.Write([]byte(`{"success": false, "reason": "App doesn't exist"}`))
+			return
+		}
+	}
+
+	if app.Sharing || app.Public {
+		org, err := shuffle.GetOrg(ctx, user.ActiveOrg.Id)
+		if err == nil {
+			added := false
+			if !shuffle.ArrayContains(org.ActiveApps, app.ID) {
+				org.ActiveApps = append(org.ActiveApps, app.ID)
+				added = true
+			}
+
+			if added {
+				err = shuffle.SetOrg(ctx, *org, org.Id)
+				if err != nil {
+					log.Printf("[WARNING] Failed setting org when autoadding apps on save: %s", err)
+				} else {
+					log.Printf("[INFO] Added public app %s (%s) to org %s (%s)", app.Name, app.ID, user.ActiveOrg.Name, user.ActiveOrg.Id)
+					cacheKey := fmt.Sprintf("apps_%s", user.Id)
+					shuffle.DeleteCache(ctx, cacheKey)
+				}
+			}
+		}
+	} else {
+		log.Printf("[WARNING] User is trying to activate %s which is NOT public", app.Name)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false}`))
+		return
+	}
+
+	log.Printf("[DEBUG] App %s (%s) activated for org %s by user %s", app.Name, app.ID, user.ActiveOrg.Id, user.Username)
+
+	// If onprem, it should autobuild the container(s) from here
+
+	resp.WriteHeader(200)
+	resp.Write([]byte(`{"success": true}`))
 }

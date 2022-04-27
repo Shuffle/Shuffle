@@ -1,3 +1,6 @@
-const data = [{"name": "cloud", "type": "cloud"}, {"name": "onprem", "type": "onprem"}]
+const data = [
+  { name: "cloud", type: "cloud" },
+  { name: "onprem", type: "onprem" },
+];
 
-export default data; 
+export default data;

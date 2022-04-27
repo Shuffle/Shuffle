@@ -8,6 +8,7 @@ ENV PATH /usr/src/app/node_modules/.bin:$PATH
 
 COPY package.json /usr/src/app/package.json
 
+RUN yarn config set "strict-ssl" false -g
 RUN yarn install 
 
 # copy only required files to not trigger rebuilding every time
@@ -17,10 +18,11 @@ COPY ./src /usr/src/app/src/
 COPY ./*.sh /usr/src/app/
 COPY ./*.json /usr/src/app/
 
+RUN rm -rf /usr/src/app/node_modules/webpack
 RUN yarn build
 
 # Production environment
-FROM nginx:1.21.3
+FROM nginx:1.21.5
 
 RUN mkdir -p /usr/share/nginx/html/build
 RUN mkdir -p /usr/share/nginx/html/css

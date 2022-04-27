@@ -1,14 +1,19 @@
 package main
 
 import (
+	uuid "github.com/satori/go.uuid"
 	"github.com/shuffle/shuffle-shared"
 
+	"archive/zip"
 	"bufio"
 	"bytes"
 	"context"
 	"crypto/md5"
+	"strconv"
+
 	//"crypto/tls"
 	//"crypto/x509"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -16,11 +21,13 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
+
 	//"regexp"
 	"strings"
 	"time"
@@ -49,12 +56,14 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/storage/memory"
+
+	//cv "github.com/nirasan/go-oauth-pkce-code-verifier"
+
 	//githttp "gopkg.in/src-d/go-git.v4/plumbing/transport/http"
 
 	// Random
 	xj "github.com/basgys/goxml2json"
 	newscheduler "github.com/carlescere/scheduler"
-	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/yaml.v3"
 
@@ -706,7 +715,7 @@ func createNewUser(username, password, role, apikey string, org shuffle.OrgMini)
 }
 
 func handleRegister(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -835,7 +844,7 @@ func handleCookie(request *http.Request) bool {
 }
 
 func handleInfo(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -1003,6 +1012,30 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		}
 	}
 
+	// FIXME: This is bad, but we've had a lot of bugs with edit users, and this is the quick fix.
+	if userInfo.Role == "" && userInfo.ActiveOrg.Role == "" && parsedAdmin == "false" {
+		userInfo.Role = "admin"
+		userInfo.ActiveOrg.Role = "admin"
+		parsedAdmin = "true"
+
+		err = shuffle.SetUser(ctx, &userInfo, true)
+		if err != nil {
+			log.Printf("[WARNING] Automatically asigning user as admin to their org because they don't have a role at all failed: %s", err)
+			resp.WriteHeader(500)
+			resp.Write([]byte(`{"success": false}`))
+			return
+		} else {
+			log.Printf("[DEBUG] Made user %s org-admin as they didn't have any role specified", err)
+
+		}
+	}
+
+	chatDisabled := false
+	if os.Getenv("SHUFFLE_CHAT_DISABLED") == "true" {
+		chatDisabled = true
+	}
+
+	tutorialsFinished := []string{}
 	returnValue := shuffle.HandleInfo{
 		Success:   true,
 		Username:  userInfo.Username,
@@ -1017,6 +1050,9 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 				Expiration: expiration.Unix(),
 			},
 		},
+		EthInfo:      userInfo.EthInfo,
+		Tutorials:    tutorialsFinished,
+		ChatDisabled: chatDisabled,
 	}
 
 	returnData, err := json.Marshal(returnValue)
@@ -1097,7 +1133,7 @@ func increaseStatisticsField(ctx context.Context, fieldname, id string, amount i
 
 // FIXME - forward this to emails or whatever CRM system in use
 func handleContact(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -1142,8 +1178,17 @@ func handleContact(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(fmt.Sprintf(`{"success": true, "message": "Thanks for reaching out. We will contact you soon!"}`)))
 }
 
+func verifier() (*shuffle.CodeVerifier, error) {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	b := make([]byte, 32, 32)
+	for i := 0; i < 32; i++ {
+		b[i] = byte(r.Intn(255))
+	}
+	return shuffle.CreateCodeVerifierFromBytes(b)
+}
+
 func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -1165,14 +1210,74 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	//ssoUrl = org.SSOConfig.SOSOEntrypoint
-	redirectUri := shuffle.SSOUrl
+	baseSSOUrl := ""
+	handled := []string{}
+	for _, user := range users {
+		if shuffle.ArrayContains(handled, user.ActiveOrg.Id) {
+			continue
+		}
+
+		handled = append(handled, user.ActiveOrg.Id)
+		org, err := shuffle.GetOrg(ctx, user.ActiveOrg.Id)
+		if err != nil {
+			log.Printf("[WARNING] Error getting org in admin check: %s", err)
+			continue
+		}
+
+		// No childorg setup, only parent org
+		if len(org.ManagerOrgs) > 0 || len(org.CreatorOrg) > 0 {
+			continue
+		}
+
+		// Should run calculations
+		if len(org.SSOConfig.OpenIdAuthorization) > 0 {
+			log.Printf("[DEBUG] Found OpenID url (PKCE!!). Extra redirect check: %s", request.URL.String())
+			baseSSOUrl = org.SSOConfig.OpenIdAuthorization
+
+			codeChallenge := uuid.NewV4().String()
+			//h.Write([]byte(v.Value))
+			verifier, verifiererr := verifier()
+			if verifiererr == nil {
+				codeChallenge = verifier.Value
+			}
+
+			//log.Printf("[DEBUG] Got challenge value %s (pre state)", codeChallenge)
+
+			// https://192.168.55.222:3443/api/v1/login_openid
+			//location := strings.Split(request.URL.String(), "/")
+			//redirectUrl := url.QueryEscape("http://localhost:5001/api/v1/login_openid")
+			redirectUrl := url.QueryEscape(fmt.Sprintf("http://%s/api/v1/login_openid", request.Host))
+			if strings.Contains(request.Host, "shuffle-backend") && !strings.Contains(os.Getenv("BASE_URL"), "shuffle-backend") {
+				redirectUrl = url.QueryEscape(fmt.Sprintf("%s/api/v1/login_openid", os.Getenv("BASE_URL")))
+			}
+
+			state := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("org=%s&challenge=%s&redirect=%s", org.Id, codeChallenge, redirectUrl)))
+
+			// has to happen after initial value is stored
+			if verifiererr == nil {
+				codeChallenge = verifier.CodeChallengeS256()
+			}
+
+			//log.Printf("[DEBUG] Got challenge value %s (POST state)", codeChallenge)
+
+			baseSSOUrl += fmt.Sprintf("?client_id=%s&response_type=code&scope=openid&redirect_uri=%s&state=%s&code_challenge_method=S256&code_challenge=%s", org.SSOConfig.OpenIdClientId, redirectUrl, state, codeChallenge)
+			break
+		}
+
+		if len(org.SSOConfig.SSOEntrypoint) > 0 {
+			log.Printf("[DEBUG] Found SAML SSO url")
+			baseSSOUrl = org.SSOConfig.SSOEntrypoint
+			break
+		}
+	}
+
+	//log.Printf("[DEBUG] OpenID URL: %s", baseSSOUrl)
 	resp.WriteHeader(200)
-	resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "redirect", "sso_url": "%s"}`, redirectUri)))
+	resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "redirect", "sso_url": "%s"}`, baseSSOUrl)))
 }
 
 func handleLogin(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -1397,8 +1502,12 @@ func fixUserOrg(ctx context.Context, user *shuffle.User) *shuffle.User {
 }
 
 // Used for testing only. Shouldn't impact production.
-func handleCors(resp http.ResponseWriter, request *http.Request) bool {
-	allowedOrigins := "http://localhost:3000"
+/*
+func shuffle.HandleCors(resp http.ResponseWriter, request *http.Request) bool {
+	// Used for Codespace dev
+	allowedOrigins := "https://frikky-shuffle-5gvr4xx62w64-3000.githubpreview.dev"
+	//origin := request.Header["Origin"]
+	//log.Printf("Origin: %s", origin)
 	//allowedOrigins := "http://localhost:3002"
 
 	resp.Header().Set("Vary", "Origin")
@@ -1415,6 +1524,7 @@ func handleCors(resp http.ResponseWriter, request *http.Request) bool {
 
 	return false
 }
+*/
 
 func parseWorkflowParameters(resp http.ResponseWriter, request *http.Request) (map[string]interface{}, error) {
 	body, err := ioutil.ReadAll(request.Body)
@@ -1559,7 +1669,7 @@ func SearchNested(obj interface{}, key string) (interface{}, bool) {
 }
 
 func handleSetHook(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -1747,7 +1857,7 @@ func verifyHook(hook shuffle.Hook) (bool, string) {
 }
 
 func setSpecificSchedule(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -1807,7 +1917,7 @@ func setSpecificSchedule(resp http.ResponseWriter, request *http.Request) {
 }
 
 func getSpecificWebhook(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -1859,7 +1969,7 @@ func getSpecificWebhook(resp http.ResponseWriter, request *http.Request) {
 
 // Starts a new webhook
 func handleDeleteSchedule(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -1914,7 +2024,7 @@ func handleDeleteSchedule(resp http.ResponseWriter, request *http.Request) {
 
 // Starts a new webhook
 func handleNewSchedule(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -1955,9 +2065,18 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 	// 1. Get callback data
 	// 2. Load the configuration
 	// 3. Execute the workflow
-	cors := shuffle.HandleCors(resp, request)
-	if cors {
-		return
+	//cors := shuffle.HandleCors(resp, request)
+	//if cors {
+	//	return
+	//}
+
+	if request.Method != "POST" {
+		request.Method = "POST"
+	}
+
+	if request.Body == nil {
+		stringReader := strings.NewReader("")
+		request.Body = ioutil.NopCloser(stringReader)
 	}
 
 	path := strings.Split(request.URL.String(), "/")
@@ -2135,7 +2254,7 @@ func handleWebhookCallback(resp http.ResponseWriter, request *http.Request) {
 			*/
 
 			resp.WriteHeader(200)
-			resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s", "authorization": "%s"}`, workflowExecution.ExecutionId, workflowExecution.Authorization)))
+			resp.Write([]byte(fmt.Sprintf(`{"success": true, "execution_id": "%s"}`, workflowExecution.ExecutionId)))
 			return
 		}
 
@@ -2151,10 +2270,11 @@ func executeCloudAction(action shuffle.CloudSyncJob, apikey string) error {
 		return err
 	}
 
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	client := &http.Client{
-		Transport: transport,
-	}
+	//transport := http.DefaultTransport.(*http.Transport).Clone()
+	//client := &http.Client{
+	//	Transport: transport,
+	//}
+	client := &http.Client{}
 
 	syncUrl := fmt.Sprintf("%s/api/v1/cloud/sync/handle_action", syncUrl)
 	req, err := http.NewRequest(
@@ -2199,7 +2319,7 @@ func getSpecificSchedule(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -2265,7 +2385,7 @@ func loadYaml(fileLocation string) (ApiYaml, error) {
 
 // This should ALWAYS come from an OUTPUT
 func executeSchedule(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -2758,7 +2878,7 @@ type Result struct {
 // r.HandleFunc("/api/v1/docs/{key}", getDocs).Methods("GET", "OPTIONS")
 
 func getOpenapi(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -2818,75 +2938,6 @@ func getOpenapi(resp http.ResponseWriter, request *http.Request) {
 	resp.Write(data)
 }
 
-func echoOpenapiData(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
-	if cors {
-		return
-	}
-
-	// Just here to verify that the user is logged in
-	_, err := shuffle.HandleApiAuthentication(resp, request)
-	if err != nil {
-		log.Printf("Api authentication failed in validate swagger: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Failed authentication"}`))
-		return
-	}
-
-	body, err := ioutil.ReadAll(request.Body)
-	if err != nil {
-		log.Printf("Bodyreader err: %s", err)
-		resp.WriteHeader(401)
-		resp.Write([]byte(`{"success": false, "reason": "Failed reading body"}`))
-		return
-	}
-
-	newbody := string(body)
-	newbody = strings.TrimSpace(newbody)
-	if strings.HasPrefix(newbody, "\"") {
-		newbody = newbody[1:len(newbody)]
-	}
-
-	if strings.HasSuffix(newbody, "\"") {
-		newbody = newbody[0 : len(newbody)-1]
-	}
-
-	req, err := http.NewRequest("GET", newbody, nil)
-	if err != nil {
-		log.Printf("[ERROR] Requestbuilder err: %s", err)
-		resp.WriteHeader(500)
-		resp.Write([]byte(`{"success": false, "reason": "Failed building request"}`))
-		return
-	}
-
-	httpClient := &http.Client{}
-	newresp, err := httpClient.Do(req)
-	if err != nil {
-		log.Printf("[ERROR] Grabbing error: %s", err)
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Failed making remote request to get the data"}`)))
-		return
-	}
-	defer newresp.Body.Close()
-
-	urlbody, err := ioutil.ReadAll(newresp.Body)
-	if err != nil {
-		log.Printf("[ERROR] URLbody error: %s", err)
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Can't get data from selected uri"}`)))
-		return
-	}
-
-	if newresp.StatusCode >= 400 {
-		resp.WriteHeader(201)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, urlbody)))
-		return
-	}
-
-	resp.WriteHeader(200)
-	resp.Write(urlbody)
-}
-
 func handleSwaggerValidation(body []byte) (shuffle.ParsedOpenApi, error) {
 	type versionCheck struct {
 		Swagger        string `datastore:"swagger" json:"swagger" yaml:"swagger"`
@@ -2924,7 +2975,7 @@ func handleSwaggerValidation(body []byte) (shuffle.ParsedOpenApi, error) {
 		}
 	} else {
 		isJson = true
-		log.Printf("Successfully parsed JSON!")
+		//log.Printf("[DEBUG] Successfully parsed JSON!")
 	}
 
 	if len(version.SwaggerVersion) > 0 && len(version.Swagger) == 0 {
@@ -3193,14 +3244,6 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 		fmt.Sprintf("%s:%s", baseDockerName, versionName),
 	}
 
-	err = buildImage(dockerTags, dockerLocation)
-	if err != nil {
-		log.Printf("[ERROR] Docker build error: %s", err)
-		resp.WriteHeader(500)
-		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error in Docker build: %s"}`, err)))
-		return
-	}
-
 	found := false
 	foundNumber := 0
 	log.Printf("[INFO] Checking for api with ID %s", newmd5)
@@ -3284,6 +3327,16 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 	shuffle.DeleteCache(ctx, cacheKey)
 	shuffle.DeleteCache(ctx, fmt.Sprintf("apps_%s", user.Id))
 
+	// Doing this last to ensure we can copy the docker image over
+	// even though builds fail
+	err = buildImage(dockerTags, dockerLocation)
+	if err != nil {
+		log.Printf("[ERROR] Docker build error: %s", err)
+		resp.WriteHeader(500)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Error in Docker build: %s"}`, err)))
+		return
+	}
+
 	log.Printf("[DEBUG] Successfully built app %s (%s)", api.Name, api.ID)
 	if len(user.Id) > 0 {
 		resp.WriteHeader(200)
@@ -3293,7 +3346,7 @@ func buildSwaggerApp(resp http.ResponseWriter, body []byte, user shuffle.User) {
 
 // Creates an app from the app builder
 func verifySwagger(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -3307,6 +3360,13 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	if user.Role == "org-reader" {
+		log.Printf("[WARNING] Org-reader doesn't have access to check swagger doc: %s (%s)", user.Username, user.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Read only user"}`))
+		return
+	}
+
 	body, err := ioutil.ReadAll(request.Body)
 	if err != nil {
 		resp.WriteHeader(401)
@@ -3315,10 +3375,6 @@ func verifySwagger(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	buildSwaggerApp(resp, body, user)
-}
-
-func healthCheckHandler(resp http.ResponseWriter, request *http.Request) {
-	fmt.Fprint(resp, "OK")
 }
 
 // Creates osfs from folderpath with a basepath as directory base
@@ -3351,11 +3407,6 @@ func createFs(basepath, pathname string) (billy.Filesystem, error) {
 					log.Printf("Src error: %s", err)
 					return err
 				}
-
-				//if strings.Contains(path, "yaml") {
-				//	log.Printf("PATH: %s -> %s", path, fullpath)
-				//	//log.Printf("DATA: %s", string(srcData))
-				//}
 
 				dst, err := fs.Create(fullpath)
 				if err != nil {
@@ -3691,12 +3742,12 @@ func remoteOrgJobController(org shuffle.Org, body []byte) error {
 				if err != nil {
 					log.Printf("[WARNING] Failed setting organization when stopping sync: %s", err)
 				} else {
-					log.Printf("[INFO] Successfully STOPPED org cloud sync for %s", org.Id)
+					log.Printf("[INFO] Successfully STOPPED org cloud sync for %s (%s)", org.Name, org.Id)
 				}
 
 				return errors.New("Stopped schedule for org locally because of bad apikey.")
 			} else {
-				return errors.New(fmt.Sprintf("Failed finding the schedule for org %s", org.Id))
+				return errors.New(fmt.Sprintf("Failed finding the schedule for org %s (%s)", org.Name, org.Id))
 			}
 		}
 
@@ -3770,11 +3821,11 @@ func runInitEs(ctx context.Context) {
 
 	httpProxy := os.Getenv("HTTP_PROXY")
 	if len(httpProxy) > 0 {
-		log.Printf("Running with HTTP proxy %s (env: HTTP_PROXY)", httpProxy)
+		log.Printf("[INFO] Running with HTTP proxy %s (env: HTTP_PROXY)", httpProxy)
 	}
 	httpsProxy := os.Getenv("HTTPS_PROXY")
 	if len(httpsProxy) > 0 {
-		log.Printf("Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
+		log.Printf("[INFO] Running with HTTPS proxy %s (env: HTTPS_PROXY)", httpsProxy)
 	}
 
 	defaultEnv := os.Getenv("ORG_ID")
@@ -3785,6 +3836,7 @@ func runInitEs(ctx context.Context) {
 
 	log.Printf("[DEBUG] Getting organizations")
 	activeOrgs, err := shuffle.GetAllOrgs(ctx)
+
 	setUsers := false
 	//log.Printf("ORGS: %d", len(activeOrgs))
 	if err != nil {
@@ -3837,7 +3889,7 @@ func runInitEs(ctx context.Context) {
 			//}
 
 		} else {
-			log.Printf("[DEBUG] There are %d org(s).", len(activeOrgs))
+			log.Printf("[DEBUG] Found %d org(s) in total.", len(activeOrgs))
 
 			if len(activeOrgs) == 1 {
 				if len(activeOrgs[0].Users) == 0 {
@@ -3872,6 +3924,7 @@ func runInitEs(ctx context.Context) {
 		}
 	}
 
+	_ = setUsers
 	schedules, err := shuffle.GetAllSchedules(ctx, "ALL")
 	if err != nil {
 		log.Printf("[WARNING] Failed getting schedules during service init: %s", err)
@@ -3897,7 +3950,7 @@ func runInitEs(ctx context.Context) {
 		}
 
 		for _, schedule := range schedules {
-			if schedule.Environment == "cloud" {
+			if strings.ToLower(schedule.Environment) == "cloud" {
 				log.Printf("Skipping cloud schedule")
 				continue
 			}
@@ -3913,6 +3966,7 @@ func runInitEs(ctx context.Context) {
 		}
 	}
 
+	parsedApikey := ""
 	users, err := shuffle.GetAllUsers(ctx)
 	if len(users) == 0 {
 		log.Printf("[INFO] Trying to set up user based on environments SHUFFLE_DEFAULT_USERNAME & SHUFFLE_DEFAULT_PASSWORD")
@@ -3923,6 +3977,10 @@ func runInitEs(ctx context.Context) {
 			log.Printf("[DEBUG] SHUFFLE_DEFAULT_USERNAME and SHUFFLE_DEFAULT_PASSWORD not defined as environments. Running without default user.")
 		} else {
 			apikey := os.Getenv("SHUFFLE_DEFAULT_APIKEY")
+
+			if len(parsedApikey) == 0 {
+				parsedApikey = apikey
+			}
 
 			log.Printf("[DEBUG] Creating org for default user %s", username)
 			orgId := uuid.NewV4().String()
@@ -3972,8 +4030,15 @@ func runInitEs(ctx context.Context) {
 				}
 			}
 		}
+	} else {
+		for _, user := range users {
+			if user.Role == "admin" && len(user.ApiKey) > 0 {
+				parsedApikey = user.ApiKey
+				log.Printf("[DEBUG] Using apikey of %s (%s) for cleanup", user.Username, user.Id)
+				break
+			}
+		}
 	}
-	_ = setUsers
 
 	log.Printf("[INFO] Starting cloud schedules for orgs if enabled!")
 	type requestStruct struct {
@@ -3982,7 +4047,7 @@ func runInitEs(ctx context.Context) {
 
 	for _, org := range activeOrgs {
 		if !org.CloudSync {
-			log.Printf("[WARNING] Skipping org syncCheck for %s because sync isn't set (1).", org.Id)
+			log.Printf("[INFO] Skipping org syncCheck for %s because sync isn't set (1).", org.Id)
 			continue
 		}
 
@@ -3993,7 +4058,7 @@ func runInitEs(ctx context.Context) {
 			continue
 		}
 
-		log.Printf("[DEBUG] Should start schedule for org %s", org.Name)
+		log.Printf("[DEBUG] Should start schedule for org %s (%s)", org.Name, org.Id)
 		job := func() {
 			err := remoteOrgJobHandler(org, interval)
 			if err != nil {
@@ -4017,9 +4082,100 @@ func runInitEs(ctx context.Context) {
 		forceUpdate = true
 	}
 
+	// FIXME: Have this for all envs in all orgs (loop and find).
+	if len(parsedApikey) > 0 {
+		cleanupSchedule := 300
+
+		if len(os.Getenv("SHUFFLE_RERUN_SCHEDULE")) > 0 {
+			newfrequency, err := strconv.Atoi(os.Getenv("SHUFFLE_RERUN_SCHEDULE"))
+			if err == nil {
+				cleanupSchedule = newfrequency
+
+				if cleanupSchedule < 300 {
+					log.Printf("[WARNING] A Cleanupschedule of less than 300 seconds won't help.")
+					cleanupSchedule = 300
+				}
+			}
+		}
+
+		environments := []string{"Shuffle"}
+		log.Printf("[DEBUG] Starting schedule setup for execution cleanup every %d seconds. Running first immediately.", cleanupSchedule)
+		cleanupJob := func() func() {
+			return func() {
+				log.Printf("[INFO] Running schedule for cleaning up or re-running unfinished workflows in %d environments.", len(environments))
+
+				for _, environment := range environments {
+					httpClient := &http.Client{}
+					url := fmt.Sprintf("http://localhost:5001/api/v1/environments/%s/stop", environment)
+					req, err := http.NewRequest(
+						"GET",
+						url,
+						nil,
+					)
+
+					req.Header.Add("Authorization", fmt.Sprintf(`Bearer %s`, parsedApikey))
+					if err != nil {
+						log.Printf("[ERROR] Failed CREATING environment request for %s: %s", environment, err)
+						continue
+
+					}
+
+					newresp, err := httpClient.Do(req)
+					if err != nil {
+						log.Printf("[ERROR] Failed running environment request %s: %s", environment, err)
+						continue
+					}
+
+					respBody, err := ioutil.ReadAll(newresp.Body)
+					if err != nil {
+						log.Printf("[ERROR] Failed setting respbody %s", err)
+						continue
+					}
+					log.Printf("[DEBUG] Successfully ran workflow cleanup request for %s. Body: %s", environment, string(respBody))
+
+					url = fmt.Sprintf("http://localhost:5001/api/v1/environments/%s/rerun", environment)
+					req, err = http.NewRequest(
+						"GET",
+						url,
+						nil,
+					)
+
+					req.Header.Add("Authorization", fmt.Sprintf(`Bearer %s`, parsedApikey))
+					if err != nil {
+						log.Printf("[ERROR] Failed CREATING environment request to rerun for %s: %s", environment, err)
+						continue
+
+					}
+
+					newresp, err = httpClient.Do(req)
+					if err != nil {
+						log.Printf("[ERROR] Failed running environment request to rerun for %s: %s", environment, err)
+						continue
+					}
+
+					respBody, err = ioutil.ReadAll(newresp.Body)
+					if err != nil {
+						log.Printf("[ERROR] Failed setting respbody %s", err)
+						continue
+					}
+					log.Printf("[DEBUG] Successfully ran workflow RERUN request for %s. Body: %s", environment, string(respBody))
+				}
+			}
+		}
+
+		jobret, err := newscheduler.Every(cleanupSchedule).Seconds().Run(cleanupJob())
+		if err != nil {
+			log.Printf("[ERROR] Failed to schedule Cleanup: %s", err)
+		} else {
+			_ = jobret
+		}
+	} else {
+		log.Printf("[DEBUG] Couldn't find a valid API-key, hence couldn't run cleanup")
+	}
+
 	// Getting apps to see if we should initialize a test
 	// FIXME: Isn't this a little backwards?
-	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000)
+	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000, 0)
 	log.Printf("[INFO] Getting and validating workflowapps. Got %d with err %#v", len(workflowapps), err)
 
 	// accept any certificate (might be useful for testing)
@@ -4604,7 +4760,7 @@ func runInit(ctx context.Context) {
 			continue
 		}
 
-		log.Printf("[DEBUG] Should start schedule for org %s", org.Name)
+		log.Printf("[DEBUG] Should start schedule for org %s (%s)", org.Name, org.Id)
 		job := func() {
 			err := remoteOrgJobHandler(org, interval)
 			if err != nil {
@@ -4671,7 +4827,7 @@ func runInit(ctx context.Context) {
 	}
 
 	// Getting apps to see if we should initialize a test
-	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000)
+	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000, 0)
 	log.Printf("[INFO] Getting and validating workflowapps. Got %d with err %s", len(workflowapps), err)
 	if err != nil && len(workflowapps) == 0 {
 		log.Printf("[WARNING] Failed getting apps (runInit): %s", err)
@@ -4943,7 +5099,7 @@ func handleStopCloudSync(syncUrl string, org shuffle.Org) (*shuffle.Org, error) 
 	This is here to both enable and disable cloud sync features for an organization
 */
 func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
-	cors := handleCors(resp, request)
+	cors := shuffle.HandleCors(resp, request)
 	if cors {
 		return
 	}
@@ -5045,8 +5201,19 @@ func handleCloudSetup(resp http.ResponseWriter, request *http.Request) {
 
 		_, err = handleStopCloudSync(syncPath, *org)
 		if err != nil {
+			ret := shuffle.ResultChecker{
+				Success: false,
+				Reason:  fmt.Sprintf("%s", err),
+			}
+
 			resp.WriteHeader(401)
-			resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+			b, err := json.Marshal(ret)
+			if err != nil {
+				resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+				return
+			}
+
+			resp.Write(b)
 		} else {
 			resp.WriteHeader(200)
 			resp.Write([]byte(fmt.Sprintf(`{"success": true, "reason": "Successfully disabled cloud sync for org."}`)))
@@ -5286,7 +5453,7 @@ func migrateDatabase(resp http.ResponseWriter, request *http.Request) {
 		log.Printf("[DEBUG] Found %d workflows(s) to be migrated", len(workflows))
 	}
 
-	apps, err := shuffle.GetAllWorkflowApps(ctx, 0)
+	apps, err := shuffle.GetAllWorkflowApps(ctx, 0, 0)
 	if err != nil {
 		log.Printf("[ERROR] Failed getting apps: %#v", err)
 	} else {
@@ -5482,6 +5649,13 @@ func makeWorkflowPublic(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
+	if user.Role == "org-reader" {
+		log.Printf("[WARNING] Org-reader doesn't have access publish workflow: %s (%s)", user.Username, user.Id)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Read only user"}`))
+		return
+	}
+
 	location := strings.Split(request.URL.String(), "/")
 	var fileId string
 	if location[1] == "api" {
@@ -5608,21 +5782,89 @@ func makeWorkflowPublic(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(fmt.Sprintf(`{"success": true}`)))
 }
 
+func handleAppZipUpload(resp http.ResponseWriter, request *http.Request) {
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
+
+	//https://stackoverflow.com/questions/22964950/http-request-formfile-handle-zip-files
+	request.ParseMultipartForm(32 << 20)
+	f, _, err := request.FormFile("shuffle_file")
+	if err != nil {
+		log.Printf("[ERROR] Couldn't upload file: %s", err)
+		resp.WriteHeader(401)
+		resp.Write([]byte(`{"success": false, "reason": "Failed uploading file. Correct usage is: shuffle_file=@filepath"}`))
+		return
+	}
+
+	fileSize, err := f.Seek(0, 2) //2 = from end
+	if err != nil {
+		panic(err)
+	}
+	_, err = f.Seek(0, 0)
+	if err != nil {
+		panic(err)
+	}
+
+	buf := new(bytes.Buffer)
+	fileSize, err = io.Copy(buf, f)
+	if err != nil {
+		panic(err)
+	}
+
+	zipdata, err := zip.NewReader(bytes.NewReader(buf.Bytes()), fileSize)
+	if err != nil {
+		panic(err)
+	}
+
+	// https://github.com/alexmullins/zip/blob/master/example_test.go
+	for _, item := range zipdata.File {
+		log.Printf("\n\nName: %s\n\n", item.FileHeader.Name)
+		log.Printf("item: %#v", item)
+
+		rr, err := item.Open()
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		_, err = io.Copy(os.Stdout, rr)
+		if err != nil {
+			log.Fatal(err)
+		}
+		rr.Close()
+
+	}
+
+	resp.WriteHeader(200)
+	resp.Write([]byte("OK"))
+}
+
 func initHandlers() {
 	var err error
 	ctx := context.Background()
 
 	log.Printf("[DEBUG] Starting Shuffle backend - initializing database connection")
 	//requestCache = cache.New(5*time.Minute, 10*time.Minute)
-	dbclient, err = datastore.NewClient(ctx, gceProject, option.WithGRPCDialOption(grpc.WithNoProxy()))
-	if err != nil {
-		log.Fatalf("[DEBUG] Database client error during init: %s", err)
-	}
 
 	//es := shuffle.GetEsConfig()
 	elasticConfig := "elasticsearch"
 	if strings.ToLower(os.Getenv("SHUFFLE_ELASTIC")) == "false" {
 		elasticConfig = ""
+	}
+
+	dbclient, err = datastore.NewClient(ctx, gceProject, option.WithGRPCDialOption(grpc.WithNoProxy()))
+	if err != nil {
+		if elasticConfig == "" {
+			log.Printf("[ERROR] Database client error during init: %s. Env: SHUFFLE_ELASTIC=false", err)
+		} else {
+			if !strings.Contains(fmt.Sprintf("%s", err), "find default credentials") {
+				log.Printf("[DEBUG] Database client error info during init: %s. Here for backwards compatibility: not critical.", err)
+			}
+			dbclient = &datastore.Client{}
+		}
+	} else {
+		//log.Printf("Database client initiated: %s", dbclient)
 	}
 
 	for {
@@ -5639,13 +5881,14 @@ func initHandlers() {
 	log.Printf("[DEBUG] Initialized Shuffle database connection. Setting up environment.")
 
 	if elasticConfig == "elasticsearch" {
+		time.Sleep(5 * time.Second)
 		go runInitEs(ctx)
 	} else {
 		go runInit(ctx)
 	}
 
 	r := mux.NewRouter()
-	r.HandleFunc("/api/v1/_ah/health", healthCheckHandler)
+	r.HandleFunc("/api/v1/_ah/health", shuffle.HealthCheckHandler)
 
 	// Make user related locations
 	// Fix user changes with org
@@ -5661,6 +5904,8 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/users/updateuser", shuffle.HandleUpdateUser).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/users/{user}", shuffle.DeleteUser).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/users/passwordchange", shuffle.HandlePasswordChange).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/users/{key}/get2fa", shuffle.HandleGet2fa).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/users/{key}/set2fa", shuffle.HandleSet2fa).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/users", shuffle.HandleGetUsers).Methods("GET", "OPTIONS")
 
 	// General - duplicates and old.
@@ -5693,6 +5938,10 @@ func initHandlers() {
 
 	// App specific
 	// From here down isnt checked for org specific
+	r.HandleFunc("/api/v1/apps/upload", handleAppZipUpload).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/{appId}/activate", activateWorkflowAppDocker).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/frameworkConfiguration", shuffle.GetFrameworkConfiguration).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/apps/frameworkConfiguration", shuffle.SetFrameworkConfiguration).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}", shuffle.UpdateWorkflowAppConfig).Methods("PATCH", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}", shuffle.DeleteWorkflowApp).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/{appId}/config", shuffle.GetWorkflowAppConfig).Methods("GET", "OPTIONS")
@@ -5708,6 +5957,13 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/apps/authentication", shuffle.AddAppAuthentication).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/authentication/{appauthId}/config", shuffle.SetAuthenticationConfig).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/apps/authentication/{appauthId}", shuffle.DeleteAppAuthentication).Methods("DELETE", "OPTIONS")
+
+	// Related to NFT things
+	r.HandleFunc("/api/v1/workflows/collections/load", shuffle.LoadCollections).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/collections/{key}", shuffle.HandleGetCollection).Methods("GET", "OPTIONS")
+
+	// Related to use-cases that are not directly workflows.
+	r.HandleFunc("/api/v1/workflows/usecases", shuffle.LoadUsecases).Methods("GET", "OPTIONS")
 
 	// Legacy app things
 	r.HandleFunc("/api/v1/workflows/apps/validate", validateAppInput).Methods("POST", "OPTIONS")
@@ -5726,19 +5982,23 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/workflows/download_remote", loadSpecificWorkflows).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/execute", executeWorkflow).Methods("GET", "POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}/schedule/{schedule}", stopSchedule).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/stream", shuffle.HandleStreamWorkflow).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/{key}/stream", shuffle.HandleStreamWorkflowUpdate).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}", deleteWorkflow).Methods("DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}", shuffle.SaveWorkflow).Methods("PUT", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/{key}", shuffle.GetSpecificWorkflow).Methods("GET", "OPTIONS")
 
 	// Triggers
 	r.HandleFunc("/api/v1/hooks/new", shuffle.HandleNewHook).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/hooks/{key}", handleWebhookCallback).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/hooks", shuffle.HandleNewHook).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/hooks/{key}", handleWebhookCallback).Methods("POST", "GET", "PATCH", "PUT", "DELETE", "OPTIONS")
 	r.HandleFunc("/api/v1/hooks/{key}/delete", shuffle.HandleDeleteHook).Methods("DELETE", "OPTIONS")
+	r.HandleFunc("/api/v1/hooks/{key}", shuffle.HandleDeleteHook).Methods("DELETE", "OPTIONS")
 
 	// OpenAPI configuration
 	r.HandleFunc("/api/v1/verify_swagger", verifySwagger).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/verify_openapi", verifySwagger).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/get_openapi_uri", echoOpenapiData).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/get_openapi_uri", shuffle.EchoOpenapiData).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/validate_openapi", shuffle.ValidateSwagger).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/get_openapi/{key}", getOpenapi).Methods("GET", "OPTIONS")
 
@@ -5775,6 +6035,9 @@ func initHandlers() {
 
 	// This is a new API that validates if a key has been seen before.
 	// Not sure what the best course of action is for it.
+	r.HandleFunc("/api/v1/environments/{key}/stop", shuffle.HandleStopExecutions).Methods("GET", "POST", "OPTIONS")
+	r.HandleFunc("/api/v1/environments/{key}/rerun", shuffle.HandleRerunExecutions).Methods("GET", "POST", "OPTIONS")
+
 	r.HandleFunc("/api/v1/orgs/{orgId}/validate_app_values", shuffle.HandleKeyValueCheck).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/get_cache", shuffle.HandleGetCacheKey).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/orgs/{orgId}/set_cache", shuffle.HandleSetCacheKey).Methods("POST", "OPTIONS")
@@ -5783,7 +6046,8 @@ func initHandlers() {
 	// Docker orborus specific - downloads an image
 	r.HandleFunc("/api/v1/get_docker_image", getDockerImage).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/migrate_database", migrateDatabase).Methods("POST", "OPTIONS")
-	r.HandleFunc("/api/v1/login_sso", shuffle.HandleSSO).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/login_sso", shuffle.HandleSSO).Methods("GET", "POST", "OPTIONS")
+	r.HandleFunc("/api/v1/login_openid", shuffle.HandleOpenId).Methods("GET", "OPTIONS")
 
 	// Important for email, IDS etc. Create this by:
 	// PS: For cloud, this has to use cloud storage.
@@ -5802,6 +6066,9 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/notifications/clear", shuffle.HandleClearNotifications).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/notifications/{notificationId}/markasread", shuffle.HandleMarkAsRead).Methods("GET", "OPTIONS")
 	//r.HandleFunc("/api/v1/notifications/{notificationId}/markasread", shuffle.HandleMarkAsRead).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/users/notifications", shuffle.HandleGetNotifications).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/users/notifications/clear", shuffle.HandleClearNotifications).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/users/notifications/{notificationId}/markasread", shuffle.HandleMarkAsRead).Methods("GET", "OPTIONS")
 
 	http.Handle("/", r)
 }

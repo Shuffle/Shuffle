@@ -2,7 +2,7 @@ version: '3'
 services:
   frontend:
     #build: ./frontend
-    image: ghcr.io/frikky/shuffle-frontend:latest
+    image: ghcr.io/frikky/shuffle-frontend:nightly
     container_name: shuffle-frontend
     hostname: shuffle-frontend
     ports:
@@ -16,8 +16,8 @@ services:
     depends_on:
       - backend
   backend:
-    #build: ./backend
-    image: ghcr.io/frikky/shuffle-backend:latest
+    build: ./backend
+    image: ghcr.io/frikky/shuffle-backend:nightly
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
     # Here for debugging:
@@ -27,8 +27,8 @@ services:
       - shuffle
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - ${SHUFFLE_APP_HOTLOAD_LOCATION}:/shuffle-apps
-      - ${SHUFFLE_FILE_LOCATION}:/shuffle-files
+      - ${SHUFFLE_APP_HOTLOAD_LOCATION}:/shuffle-apps:z
+      - ${SHUFFLE_FILE_LOCATION}:/shuffle-files:z
       #- ${SHUFFLE_OPENSEARCH_CERTIFICATE_FILE}:/shuffle-files/es_certificate
     env_file: .env
     environment:
@@ -48,9 +48,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - SHUFFLE_WORKER_VERSION=latest
-      - ORG_ID=${ORG_ID}
       - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
-      - BASE_URL=http://${OUTER_HOSTNAME}:${BACKEND_PORT}
+      - BASE_URL=http://${OUTER_HOSTNAME}:5001
       - DOCKER_API_VERSION=1.40
       - SHUFFLE_BASE_IMAGE_NAME=${SHUFFLE_BASE_IMAGE_NAME}
       - SHUFFLE_BASE_IMAGE_REGISTRY=${SHUFFLE_BASE_IMAGE_REGISTRY}
@@ -63,13 +62,15 @@ services:
       - SHUFFLE_SCALE_REPLICAS=1
       - SHUFFLE_SWARM_CONFIG=runn
     restart: unless-stopped
+    security_opt:
+      - seccomp:unconfined
   opensearch:
     image: opensearchproject/opensearch:1.2.4
     hostname: shuffle-opensearch
     container_name: shuffle-opensearch
     environment:
       - bootstrap.memory_lock=true
-      - "OPENSEARCH_JAVA_OPTS=-Xms2048m -Xmx2048m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+      - "OPENSEARCH_JAVA_OPTS=-Xms1024m -Xmx1024m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
       - cluster.routing.allocation.disk.threshold_enabled=false
       - cluster.name=shuffle-cluster
       - node.name=shuffle-opensearch
@@ -84,15 +85,37 @@ services:
         soft: 65536 
         hard: 65536
     volumes:
-      - ${DB_LOCATION}:/usr/share/opensearch/data:rw
+      - ${DB_LOCATION}:/usr/share/opensearch/data:z
     ports:
       - 9200:9200
     networks:
       - shuffle
     restart: unless-stopped
+  #docker-socket-proxy:
+  #  image: tecnativa/docker-socket-proxy
+  #  privileged: true
+  #  environment:
+  #    - SERVICES=1
+  #    - TASKS=1
+  #    - NETWORKS=1
+  #    - NODES=1
+  #    - BUILD=1
+  #    - IMAGES=1
+  #    - GRPC=1
+  #    - CONTAINERS=1
+  #    - PLUGINS=1
+  #    - SYSTEM=1
+  #    - VOLUMES=1
+  #    - INFO=1
+  #    - DISTRIBUTION=1
+  #    - POST=1
+  #    - AUTH=1
+  #    - SECRETS=1
+  #  volumes:
+  #    - /var/run/docker.sock:/var/run/docker.sock
+  #  networks:
+  #    - shuffle
 networks:
   shuffle:
     driver: bridge
-    
-#driver: overlay 
-#driver: bridge
+    #driver: overlay 
