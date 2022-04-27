@@ -100,15 +100,14 @@ Below is the folder structure with a short explanation
 ```bash
 ├── README.md				# What you're reading right now
 ├── backend					# Contains backend related code.
-│   ├── go-app 			# The backend golang webserver
+│   ├── go-app 			# The backend golang webserver
 │   └── app_sdk			# The SDK used for apps
 ├── frontend				# Contains frontend code. ReactJS, Material UI and cytoscape
 ├── functions				# Has execution and extension resources, such as the Wazuh integration
-│   ├── onprem				# Code for onprem solutions
-│   │   ├── Orborus 	# Distributes execution locations
-│   │   ├── Worker		# Runs a workflow
+│   ├── onprem				# Code for onprem solutions
+│   │   ├── Orborus 	# Distributes execution locations
+│   │   ├── Worker		# Runs a workflow
 └ docker-compose.yml 	# Used for deployments
 ```
 
-**It's in BETA (0.8.60)** - [Get in touch](https://shuffler.io/contact), send a mail to [frikky@shuffler.io](mailto:frikky@shuffler.io) or poke me on twitter [@frikkylikeme](https://twitter.com/frikkylikeme)
-
+**It's in BETA** - [Get in touch](https://shuffler.io/contact), send a mail to [frikky@shuffler.io](mailto:frikky@shuffler.io) or poke me on twitter [@frikkylikeme](https://twitter.com/frikkylikeme)
