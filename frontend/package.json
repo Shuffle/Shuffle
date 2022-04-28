@@ -64,7 +64,7 @@
     "react-powerhooks": "0.0.7",
     "react-router": "6.2.1",
     "react-router-dom": "6.2.1",
-    "react-scripts": "^4.0.1",
+    "react-scripts": "^5.0.0",
     "react-shepherd": "^3.3.6",
     "reactstrap": "^7.1.0",
     "reaviz": "^12.1.0",
