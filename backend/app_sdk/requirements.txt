@@ -3,5 +3,5 @@ requests==2.25.1
 MarkupSafe==2.0.1
 liquidpy==0.7.3
 flask[async]==2.0.2
-waitress==2.1.0
+waitress==2.1.1
 #flask==1.1.2
