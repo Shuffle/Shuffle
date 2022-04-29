@@ -20,7 +20,7 @@
     "@uiw/react-codemirror": "^3.2.1",
     "@use-it/interval": "^1.0.0",
     "babel-eslint": "^10.1.0",
-    "class-transformer": "^0.4.0",
+    "class-transformer": "^0.5.1",
     "create-react-app": "^4.0.3",
     "cytoscape": "^3.15.1",
     "cytoscape-clipboard": "^2.2.1",
