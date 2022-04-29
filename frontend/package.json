@@ -63,7 +63,7 @@
     "react-markdown-github": "^3.3.1",
     "react-powerhooks": "0.0.7",
     "react-router": "6.2.1",
-    "react-router-dom": "6.2.1",
+    "react-router-dom": "6.3.0",
     "react-scripts": "^4.0.1",
     "react-shepherd": "^3.3.6",
     "reactstrap": "^7.1.0",
