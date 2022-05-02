@@ -1,0 +1,34 @@
+version: '3'
+services:
+  opensearch-node1:
+    image: opensearchproject/opensearch:latest
+    hostname: shuffle-database
+    container_name: shuffle-opensearch
+    environment:
+      - cluster.name=shuffle-cluster
+      - node.name=shuffle-opensearch
+      - discovery.seed_hosts=shuffle-opensearch
+      - cluster.initial_master_nodes=shuffle-opensearch
+      - bootstrap.memory_lock=true # along with the memlock settings below, disables swapping
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+      - cluster.routing.allocation.disk.threshold_enabled=false
+      - opendistro_security.disabled=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536 # maximum number of open files for the OpenSearch user, set to at least 65536 on modern systems
+        hard: 65536
+    volumes:
+      - ~/git/shuffle/shuffle-database:/usr/share/opensearch/data
+    ports:
+      - 9200:9200
+    networks:
+      - opensearch-net
+
+volumes:
+  opensearch-data1:
+
+networks:
+  opensearch-net:

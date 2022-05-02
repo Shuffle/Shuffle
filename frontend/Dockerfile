@@ -1,5 +1,5 @@
 # Build environment
-FROM node as builder
+FROM node:14 as builder
 
 RUN mkdir /usr/src/app
 
@@ -8,7 +8,7 @@ ENV PATH /usr/src/app/node_modules/.bin:$PATH
 
 COPY package.json /usr/src/app/package.json
 
-#RUN npm install --verbose
+RUN yarn config set "strict-ssl" false -g
 RUN yarn install 
 
 # copy only required files to not trigger rebuilding every time
@@ -18,14 +18,11 @@ COPY ./src /usr/src/app/src/
 COPY ./*.sh /usr/src/app/
 COPY ./*.json /usr/src/app/
 
-# There were issues with the webpack installer from package.json
 RUN rm -rf /usr/src/app/node_modules/webpack
-#RUN yarn add webpack@4.42.0
-
 RUN yarn build
 
 # Production environment
-FROM nginx:latest
+FROM nginx:1.21.5
 
 RUN mkdir -p /usr/share/nginx/html/build
 RUN mkdir -p /usr/share/nginx/html/css

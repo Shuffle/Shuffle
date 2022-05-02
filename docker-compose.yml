@@ -2,7 +2,7 @@ version: '3'
 services:
   frontend:
     #build: ./frontend
-    image: ghcr.io/frikky/shuffle-frontend:0.8.56
+    image: ghcr.io/frikky/shuffle-frontend:nightly
     container_name: shuffle-frontend
     hostname: shuffle-frontend
     ports:
@@ -16,8 +16,8 @@ services:
     depends_on:
       - backend
   backend:
-    #build: ./backend
-    image: ghcr.io/frikky/shuffle-backend:0.8.56
+    build: ./backend
+    image: ghcr.io/frikky/shuffle-backend:nightly
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
     # Here for debugging:
@@ -25,27 +25,21 @@ services:
       - "${BACKEND_PORT}:5001"
     networks:
       - shuffle
-    volumes: 
-      - /var/run/docker.sock:/var/run/docker.sock 
-      - ${SHUFFLE_APP_HOTLOAD_LOCATION}:/shuffle-apps     
-      - ${SHUFFLE_FILE_LOCATION}:/shuffle-files
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${SHUFFLE_APP_HOTLOAD_LOCATION}:/shuffle-apps:z
+      - ${SHUFFLE_FILE_LOCATION}:/shuffle-files:z
+      #- ${SHUFFLE_OPENSEARCH_CERTIFICATE_FILE}:/shuffle-files/es_certificate
+    env_file: .env
     environment:
-      - DATASTORE_EMULATOR_HOST=shuffle-database:8000
       - SHUFFLE_APP_HOTLOAD_FOLDER=/shuffle-apps
       - SHUFFLE_FILE_LOCATION=/shuffle-files
-      - ORG_ID=${ORG_ID}
-      - SHUFFLE_APP_DOWNLOAD_LOCATION=${SHUFFLE_APP_DOWNLOAD_LOCATION}
-      - SHUFFLE_DEFAULT_USERNAME=${SHUFFLE_DEFAULT_USERNAME}
-      - SHUFFLE_DEFAULT_PASSWORD=${SHUFFLE_DEFAULT_PASSWORD}
-      - SHUFFLE_DEFAULT_APIKEY=${SHUFFLE_DEFAULT_APIKEY}
-      - HTTP_PROXY=${SHUFFLE_HTTP_PROXY}
-      - HTTPS_PROXY=${SHUFFLE_HTTPS_PROXY}
     restart: unless-stopped
-    depends_on:
-      - database
+    #depends_on:
+      #- opensearch #Not necessary because dependancy is handled within the backend itself instead
+      #- database
   orborus:
-    #build: ./functions/onprem/orborus
-    image: ghcr.io/frikky/shuffle-orborus:0.8.5
+    image: ghcr.io/frikky/shuffle-orborus:nightly
     container_name: shuffle-orborus
     hostname: shuffle-orborus
     networks:
@@ -53,33 +47,76 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      - SHUFFLE_APP_SDK_VERSION=0.8.51
-      - SHUFFLE_WORKER_VERSION=0.8.54
-      - ORG_ID=${ORG_ID}
+      - SHUFFLE_WORKER_VERSION=nightly
       - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
-      - BASE_URL=http://${OUTER_HOSTNAME}:${BACKEND_PORT}
+      - BASE_URL=http://${OUTER_HOSTNAME}:5001
       - DOCKER_API_VERSION=1.40
-      - HTTP_PROXY=${SHUFFLE_HTTP_PROXY}
-      - HTTPS_PROXY=${SHUFFLE_HTTPS_PROXY}
-      - SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
-      - SHUFFLE_ORBORUS_EXECUTION_TIMEOUT=600
       - SHUFFLE_BASE_IMAGE_NAME=${SHUFFLE_BASE_IMAGE_NAME}
       - SHUFFLE_BASE_IMAGE_REGISTRY=${SHUFFLE_BASE_IMAGE_REGISTRY}
       - SHUFFLE_BASE_IMAGE_TAG_SUFFIX=${SHUFFLE_BASE_IMAGE_TAG_SUFFIX}
-      - CLEANUP=${SHUFFLE_CONTAINER_AUTO_CLEANUP}
+      - HTTP_PROXY=${HTTP_PROXY}
+      - HTTPS_PROXY=${HTTPS_PROXY}
+      - SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
+      - SHUFFLE_PASS_APP_PROXY=${SHUFFLE_PASS_APP_PROXY}
+      - SHUFFLE_SCALE_REPLICAS=1
+      - SHUFFLE_SWARM_CONFIG=runn
+      - SHUFFLE_SWARM_NETWORK_NAME=shuffle_swarm_executions
+      #- DOCKER_HOST=tcp://docker-socket-proxy:2375
     restart: unless-stopped
-  database:
-    #build: ./backend/database
-    image: frikky/shuffle:database
-    container_name: shuffle-database
-    hostname: shuffle-database
+    security_opt:
+      - seccomp:unconfined
+  opensearch:
+    image: opensearchproject/opensearch:1.2.4
+    hostname: shuffle-opensearch
+    container_name: shuffle-opensearch
+    environment:
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms1024m -Xmx1024m" # minimum and maximum Java heap size, recommend setting both to 50% of system RAM
+      - cluster.routing.allocation.disk.threshold_enabled=false
+      - cluster.name=shuffle-cluster
+      - node.name=shuffle-opensearch
+      - discovery.seed_hosts=shuffle-opensearch
+      - cluster.initial_master_nodes=shuffle-opensearch
+      - node.store.allow_mmap=false
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536 
+        hard: 65536
+    volumes:
+      - ${DB_LOCATION}:/usr/share/opensearch/data:z
     ports:
-      - "8000:8000"
+      - 9200:9200
     networks:
       - shuffle
     restart: unless-stopped
-    volumes:
-      - ${DB_LOCATION}:/etc/shuffle
+  #docker-socket-proxy:
+  #  image: tecnativa/docker-socket-proxy
+  #  privileged: true
+  #  environment:
+  #    - SERVICES=1
+  #    - TASKS=1
+  #    - NETWORKS=1
+  #    - NODES=1
+  #    - BUILD=1
+  #    - IMAGES=1
+  #    - GRPC=1
+  #    - CONTAINERS=1
+  #    - PLUGINS=1
+  #    - SYSTEM=1
+  #    - VOLUMES=1
+  #    - INFO=1
+  #    - DISTRIBUTION=1
+  #    - POST=1
+  #    - AUTH=1
+  #    - SECRETS=1
+  #  volumes:
+  #    - /var/run/docker.sock:/var/run/docker.sock
+  #  networks:
+  #    - shuffle
 networks:
   shuffle:
     driver: bridge
+    #driver: overlay 
