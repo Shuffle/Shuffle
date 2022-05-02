@@ -1,8 +1,7 @@
 version: '3'
 services:
   frontend:
-    #build: ./frontend
-    image: ghcr.io/frikky/shuffle-frontend:nightly
+    image: ghcr.io/frikky/shuffle-frontend:latest
     container_name: shuffle-frontend
     hostname: shuffle-frontend
     ports:
@@ -16,8 +15,7 @@ services:
     depends_on:
       - backend
   backend:
-    build: ./backend
-    image: ghcr.io/frikky/shuffle-backend:nightly
+    image: ghcr.io/frikky/shuffle-backend:latest
     container_name: shuffle-backend
     hostname: ${BACKEND_HOSTNAME}
     # Here for debugging:
@@ -29,17 +27,13 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ${SHUFFLE_APP_HOTLOAD_LOCATION}:/shuffle-apps:z
       - ${SHUFFLE_FILE_LOCATION}:/shuffle-files:z
-      #- ${SHUFFLE_OPENSEARCH_CERTIFICATE_FILE}:/shuffle-files/es_certificate
     env_file: .env
     environment:
       - SHUFFLE_APP_HOTLOAD_FOLDER=/shuffle-apps
       - SHUFFLE_FILE_LOCATION=/shuffle-files
     restart: unless-stopped
-    #depends_on:
-      #- opensearch #Not necessary because dependancy is handled within the backend itself instead
-      #- database
   orborus:
-    image: ghcr.io/frikky/shuffle-orborus:nightly
+    image: ghcr.io/frikky/shuffle-orborus:latest
     container_name: shuffle-orborus
     hostname: shuffle-orborus
     networks:
@@ -47,7 +41,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      - SHUFFLE_WORKER_VERSION=nightly
+      - SHUFFLE_WORKER_VERSION=latest
       - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
       - BASE_URL=http://${OUTER_HOSTNAME}:5001
       - DOCKER_API_VERSION=1.40
@@ -58,10 +52,9 @@ services:
       - HTTPS_PROXY=${HTTPS_PROXY}
       - SHUFFLE_PASS_WORKER_PROXY=${SHUFFLE_PASS_WORKER_PROXY}
       - SHUFFLE_PASS_APP_PROXY=${SHUFFLE_PASS_APP_PROXY}
+      - SHUFFLE_SWARM_NETWORK_NAME=shuffle_swarm_executions
       - SHUFFLE_SCALE_REPLICAS=1
       - SHUFFLE_SWARM_CONFIG=runn
-      - SHUFFLE_SWARM_NETWORK_NAME=shuffle_swarm_executions
-      #- DOCKER_HOST=tcp://docker-socket-proxy:2375
     restart: unless-stopped
     security_opt:
       - seccomp:unconfined
