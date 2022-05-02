@@ -87,9 +87,13 @@ http://localhost:5001 - REST API - requires [>=go1.13](https://golang.org/dl/)
 ```bash
 export SHUFFLE_OPENSEARCH_URL="http://localhost:9200"
 export SHUFFLE_ELASTIC=true
+export SHUFFLE_OPENSEARCH_USERNAME=admin
+export SHUFFLE_OPENSEARCH_PASSWORD=admin
+export SHUFFLE_OPENSEARCH_SKIPSSL_VERIFY=true
 cd backend/go-app
-go run *.go
+go run main.go walkoff.go docker.go
 ```
+**WINDOWS USERS:** Follow [this guide](https://www.wikihow.com/Create-an-Environment-Variable-in-Windows-10) to add environment variables in your machine.
 
 Large portions of the backend is written in another repository - [shuffle-shared](https://github.com/frikky/shuffle-shared). If you want to update any of this code and test in realtime, we recommend following these steps:
 1. Clone shuffle-shared to a local repository
@@ -100,8 +104,6 @@ Large portions of the backend is written in another repository - [shuffle-shared
 ```
 4. Make the changes you want, then restart the backend server!
 5. With your changes made, make a pull request :fire:
-
-**WINDOWS USERS:** You'll have to to add the "export" part as an environment variable.
 
 ## Database - Opensearch 
 Make sure this is running through the docker-compose, and that the backend points to it with SHUFFLE_OPENSEARCH_URL defined
@@ -121,7 +123,5 @@ export ENVIRONMENT_NAME=Shuffle
 export BASE_URL=http://YOUR-IP:5001
 export DOCKER_API_VERSION=1.40
 ```
-
-**WINDOWS USERS:** You'll have to to add the "export" part as an environment variable.
 
 AND THAT's it - hopefully it worked. If it didn't please email [frikky@shuffler.io](mailto:frikky@shuffler.io)
