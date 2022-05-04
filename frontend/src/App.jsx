@@ -28,7 +28,7 @@ import LoginPage from "./views/LoginPage";
 import SettingsPage from "./views/SettingsPage";
 import KeepAlive from "./views/KeepAlive.jsx";
 import Partner from "./views/Partner.jsx";
-
+import Contact from "./views/Contact.jsx";
 import MyView from "./views/MyView";
 
 import { createMuiTheme, MuiThemeProvider } from "@material-ui/core/styles";
@@ -670,6 +670,17 @@ const App = (message, props) => {
 						path="/partner"
 						element={
 							<Partner
+								isLoaded={isLoaded}
+								globalUrl={globalUrl}
+								{...props}
+							/>
+						}
+					/>
+					<Route
+						exact
+						path="/contact"
+						element={
+							<Contact
 								isLoaded={isLoaded}
 								globalUrl={globalUrl}
 								{...props}
