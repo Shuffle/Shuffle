@@ -1,5 +1,33 @@
-import { React, props } from "react";
+import { React, props, Component } from "react";
 import { Grid, Container } from '@mui/material'
+import { makeStyles } from "@material-ui/core/styles";
+import DoneIcon from '@mui/icons-material/Done';
+import CloseIcon from '@mui/icons-material/Close';
+import Table from "@material-ui/core/Table";
+import TableBody from "@material-ui/core/TableBody";
+import TableCell from "@material-ui/core/TableCell";
+import TableContainer from "@material-ui/core/TableContainer";
+import TableHead from "@material-ui/core/TableHead";
+import TableRow from "@material-ui/core/TableRow";
+import { Paper, Button } from '@mui/material';
+
+const useStyles = makeStyles({
+    table: {
+        minWidth: 550,
+    }
+});
+
+function createData(name, calories, fat, carbs, protein) {
+    return { name, calories, fat, carbs, protein };
+}
+
+const rows = [
+    createData("Community support", <DoneIcon />, <DoneIcon />, <DoneIcon />),
+    createData("Priority support", <CloseIcon />, <CloseIcon />, <DoneIcon />),
+    createData("Personal onboarding", <CloseIcon />, "60 minutes", <DoneIcon />),
+    createData("Users", "No limit", "No limit", "No limit"),
+    createData("Apps", "No limit", "No limit", "No limit"),
+];
 
 const title = {
     //margin : "30px",
@@ -7,6 +35,7 @@ const title = {
 }
 
 const Partnerpage = (props) => {
+    const classes = useStyles();
     return (
         <Container maxWidth="xl">
             <center>
@@ -80,7 +109,43 @@ const Partnerpage = (props) => {
                     <p>Reduce overhead by using a comprehensive, single-agent platform for all customers. Affordable subscription-based pricing for our partners, so they can buy what they actually require and expand as needed.</p>
                 </Grid>
             </Grid>
-        </Container>
+            <Grid><h2>Explore our partnership plans</h2></Grid>
+            <TableContainer
+                component={Paper}
+                style={{
+                    color: "white",
+                    backgroundColor: "rgb(39, 41, 45) ",
+                }}
+            >
+                <Table
+                    className={classes.table}
+                    size="small"
+                    aria-label="a dense table"
+                >
+                    <TableHead>
+                        <TableRow>
+                            <TableCell></TableCell>
+                            <TableCell align="right">Free</TableCell>
+                            <TableCell align="right">Hybrid</TableCell>
+                            <TableCell align="right">Enterprise / MSSP</TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {rows.map((row) => (
+                            <TableRow key={row.name}>
+                                <TableCell component="th" scope="row">
+                                    {row.name}
+                                </TableCell>
+                                <TableCell align="right">{row.calories}</TableCell>
+                                <TableCell align="right">{row.fat}</TableCell>
+                                <TableCell align="right">{row.carbs}</TableCell>
+                                <TableCell align="right">{row.protein}</TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </TableContainer>
+        </Container >
     );
 };
 
