@@ -1391,6 +1391,39 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 	resp.Write([]byte(loginData))
 }
 
+func handleContactPartner(resp http.ResponseWriter, request *http.Request) {
+	cors := shuffle.HandleCors(resp, request)
+	if cors {
+		return
+	}
+	body, err := ioutil.ReadAll(request.Body)
+	if err != nil {
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		return
+	}
+
+	var t shuffle.Contact
+	err = json.Unmarshal(body, &t)
+	if err != nil {
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "%s"}`, err)))
+		return
+	}
+
+	if len(t.Email) < 3 || len(t.Message) == 0 {
+		resp.WriteHeader(401)
+		resp.Write([]byte(fmt.Sprintf(`{"success": false, "reason": "Please fill a valid email and message"}`)))
+		return
+	}
+
+	mailContent := fmt.Sprintf("Firsname: %s\nLastname: %s\nTitle: %s\nCompanyname: %s\nPhone: %s\nEmail: %s\nMessage: %s", t.Firstname, t.Lastname, t.Title, t.Companyname, t.Phone, t.Email, t.Message)
+	log.Printf("Sending contact from %s", t.Email)
+	log.Printf("Mail Content : %s", mailContent)
+
+	resp.WriteHeader(200)
+}
+
 func fixOrgUser(ctx context.Context, org *shuffle.Org) *shuffle.Org {
 	//found := false
 	//for _, id := range user.Orgs {
@@ -5911,6 +5944,7 @@ func initHandlers() {
 	// General - duplicates and old.
 	r.HandleFunc("/api/v1/getusers", shuffle.HandleGetUsers).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/login", handleLogin).Methods("POST", "OPTIONS")
+	r.HandleFunc("/api/v1/contactpartner", handleContactPartner).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/logout", shuffle.HandleLogout).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/register", handleRegister).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/checkusers", checkAdminLogin).Methods("GET", "OPTIONS")

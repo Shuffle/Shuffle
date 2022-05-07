@@ -10,6 +10,9 @@ import TableContainer from "@material-ui/core/TableContainer";
 import TableHead from "@material-ui/core/TableHead";
 import TableRow from "@material-ui/core/TableRow";
 import { Paper, Button } from '@mui/material';
+import Contact from "./Contact.jsx";
+import AliceCarousel from 'react-alice-carousel';
+import 'react-alice-carousel/lib/alice-carousel.css';
 
 const useStyles = makeStyles({
     table: {
@@ -17,16 +20,41 @@ const useStyles = makeStyles({
     }
 });
 
-function createData(name, calories, fat, carbs, protein) {
-    return { name, calories, fat, carbs, protein };
+const handleDragStart = (e) => e.preventDefault();
+
+const items = [
+    <img src="images/Partner-1.png" onDragStart={handleDragStart} role="presentation" />,
+    <img src="images/partner3.png" onDragStart={handleDragStart} role="presentation" />,
+    <img src="images/partner-4.png" onDragStart={handleDragStart} role="presentation" />,
+];
+
+const items1 = [
+    <img src="images/shuffle-partner1.png" onDragStart={handleDragStart} role="presentation" />,
+    <img src="images/partner3.png" onDragStart={handleDragStart} role="presentation" />,
+    <img src="images/partner-4.png" onDragStart={handleDragStart} role="presentation" />,
+];
+
+function createData(type, Authorized, SilverPartner, GoldPartner) {
+    return { type, Authorized, SilverPartner, GoldPartner };
 }
 
 const rows = [
-    createData("Community support", <DoneIcon />, <DoneIcon />, <DoneIcon />),
-    createData("Priority support", <CloseIcon />, <CloseIcon />, <DoneIcon />),
-    createData("Personal onboarding", <CloseIcon />, "60 minutes", <DoneIcon />),
-    createData("Users", "No limit", "No limit", "No limit"),
-    createData("Apps", "No limit", "No limit", "No limit"),
+    createData("Authorized to resell Shuffle services", <CloseIcon />, <CloseIcon />, <CloseIcon />),
+    createData("Access to deal registration", <CloseIcon />, <CloseIcon />, <CloseIcon />),
+    createData("List price for initial tiers", <CloseIcon />, <CloseIcon />, <CloseIcon />),
+    createData("UseListed as Partner on our websiters", " ", <CloseIcon />, <CloseIcon />),
+    createData("Access to renewals", " ", <CloseIcon />, <CloseIcon />),
+    createData("Price protection policy", " ", <CloseIcon />, <CloseIcon />),
+    createData("Pre-sales assistance", " ", <CloseIcon />, <CloseIcon />),
+    createData("Support portal access", " ", <CloseIcon />, <CloseIcon />),
+    createData("Access to a demo environment", " ", <CloseIcon />, <CloseIcon />),
+    createData("Support portal access ", " ", <CloseIcon />, <CloseIcon />),
+    createData("Centralized partner console", " ", <CloseIcon />, <CloseIcon />),
+    createData("Console walkthrough", " ", <CloseIcon />, <CloseIcon />),
+    createData("Can run demos", " ", <CloseIcon />, <CloseIcon />),
+    createData("Press release to announce partnership", " ", <CloseIcon />, <CloseIcon />),
+    createData("Co-Marketing campaigns", " ", <CloseIcon />, <CloseIcon />),
+    createData("Discounts", "10%", "20%", "30%"),
 ];
 
 const title = {
@@ -36,12 +64,13 @@ const title = {
 
 const Partnerpage = (props) => {
     const classes = useStyles();
+    const { globalUrl, surfaceColor, newColor, mini, textColor, inputColor } = props;
     return (
         <Container maxWidth="xl">
             <center>
                 <h1>Partner with Shuffle</h1>
             </center>
-            <center><p>Wazuh offers our partners an affordable and best-in-class solution for threat prevention, detection, and response. They can use it to protect their customers, focusing on delivering the best possible security services.</p>
+            <center><p>Shuffle offers our partners an affordable and best-in-class solution for threat prevention, detection, and response. They can use it to protect their customers, focusing on delivering the best possible security services.</p>
             </center>
             <Grid container spacing={2} style={{ maxWidth: "1450px", margin: "auto auto 10px", color: "white", backgroundColor: "rgb(39, 41, 45)", padding: "5px" }}>
                 <Grid item xs={12}  >
@@ -125,26 +154,37 @@ const Partnerpage = (props) => {
                     <TableHead>
                         <TableRow>
                             <TableCell></TableCell>
-                            <TableCell align="right">Free</TableCell>
-                            <TableCell align="right">Hybrid</TableCell>
-                            <TableCell align="right">Enterprise / MSSP</TableCell>
+                            <TableCell align="right">Authorized</TableCell>
+                            <TableCell align="right">Silver Partner</TableCell>
+                            <TableCell align="right">Gold Partner</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {rows.map((row) => (
-                            <TableRow key={row.name}>
+                            <TableRow key={row.type}>
                                 <TableCell component="th" scope="row">
-                                    {row.name}
+                                    {row.type}
                                 </TableCell>
-                                <TableCell align="right">{row.calories}</TableCell>
-                                <TableCell align="right">{row.fat}</TableCell>
-                                <TableCell align="right">{row.carbs}</TableCell>
-                                <TableCell align="right">{row.protein}</TableCell>
+                                <TableCell align="right">{row.Authorized}</TableCell>
+                                <TableCell align="right">{row.SilverPartner}</TableCell>
+                                <TableCell align="right">{row.GoldPartner}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
                 </Table>
             </TableContainer>
+            <Grid><h2>What our customers say about us</h2></Grid>
+            <Grid><AliceCarousel disableButtonsControls={true} mouseTracking items={items} /></Grid>
+            <Grid><h1>Find a Partner</h1>
+                <p>Looking for a unique solution or service from a trusted and capable Shuffle partner? We have a global partner ecosystem ready to adapt to your business needs.</p>
+            </Grid>
+            <Grid><AliceCarousel disableButtonsControls={true} mouseTracking items={items1} /></Grid>
+            <Grid>
+                <Contact
+                    globalUrl={globalUrl}
+                    {...props}
+                />
+            </Grid>
         </Container >
     );
 };

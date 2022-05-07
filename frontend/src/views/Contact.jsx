@@ -1,7 +1,7 @@
-import React, {useState} from 'react';
+import React, { useState } from 'react';
 import { useAlert } from "react-alert";
-import {BrowserView, MobileView} from "react-device-detect";
-import {Paper, Button, Typography, TextField} from '@material-ui/core';
+import { BrowserView, MobileView } from "react-device-detect";
+import { Paper, Button, Typography, TextField } from '@material-ui/core';
 
 const bodyDivStyle = {
 	margin: "auto",
@@ -11,9 +11,9 @@ const bodyDivStyle = {
 
 // Should be different if logged in :|
 const Contact = (props) => {
-  const { globalUrl, surfaceColor, newColor, mini, textColor, inputColor} = props;
+	const { globalUrl, surfaceColor, newColor, mini, textColor, inputColor } = props;
 	const alert = useAlert()
-	
+
 	const minimize = mini !== undefined && mini
 	const textcolor = textColor !== undefined ? textColor : "#ffffff"
 	const inputcolor = newColor !== undefined ? newColor : inputColor
@@ -27,20 +27,20 @@ const Contact = (props) => {
 		paddingBottom: "30px",
 		paddingTop: "30px",
 		backgroundColor: surfaceColor,
-		display: "flex", 
+		display: "flex",
 		flexDirection: "column"
 	}
-	
+
 	const bodyTextStyle = {
-		color: "#ffffff",	
+		color: "#ffffff",
 	}
 
 	const [firstname, setFirstname] = useState("");
-	const [lastname, ] = useState("");
-	const [title, ] = useState("");
-	const [companyname, ] = useState("");
+	const [lastname, setLastname] = useState("");
+	const [title, setTitle] = useState("");
+	const [companyname, setCompanyname] = useState("");
 	const [email, setEmail] = useState("");
-	const [phone, ] = useState("");
+	const [phone, setPhone] = useState("");
 	const [message, setMessage] = useState("");
 
 	const [formMessage, setFormMessage] = useState("");
@@ -57,92 +57,53 @@ const Contact = (props) => {
 		}
 		console.log(data)
 
-		fetch(globalUrl+"/api/v1/contact", {
-    	  	method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify(data),
-    	})
-    	.then(response => response.json())
-		.then(response => {
-			if (response.success === true) {
-				setFormMessage(response.message)
-				alert.info("Thanks for submitting!")
-				setMessage("")
-				//setEmail("")
-				//setName("")
-			} else {
-				const msg = "Something went wrong. Please contact frikky@shuffler.io directly."
-				if (response.reason !== undefined && response.reason !== null) {
-					setFormMessage(response.reason)
+		fetch(globalUrl + "/api/v1/contactpartner", {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify(data),
+		})
+			.then(response => response.json())
+			.then(response => {
+				if (response.success === true) {
+					setFormMessage(response.message)
+					alert.info("Thanks for submitting!")
+					setMessage("")
+					//setEmail("")
+					//setName("")
 				} else {
-					setFormMessage(msg)
-					alert.error(msg)
+					const msg = "Something went wrong. Please contact frikky@shuffler.io directly."
+					if (response.reason !== undefined && response.reason !== null) {
+						setFormMessage(response.reason)
+					} else {
+						setFormMessage(msg)
+						alert.error(msg)
+					}
 				}
-			}
-    })
-		.catch(error => {
-    		console.log(error)
-		});
+			})
+			.catch(error => {
+				console.log(error)
+			});
 	}
 
 	// Random names for type & autoComplete. Didn't research :^)
-	const landingpageDataBrowser = 
+	const landingpageDataBrowser =
 		<div>
-			<div style={{paddingTop: 100}}/>
+			<div style={{ paddingTop: 100 }} />
 			<div style={bodyTextStyle}>
-				<Typography variant="body1" style={{color: "#f85a3e"}}>Contact us</Typography>
+				<Typography variant="body1" style={{ color: "#f85a3e" }}>Contact us</Typography>
 				<Typography variant="h6" >Lets talk!</Typography>
 			</div>
-			<div style={{display: "flex", marginTop: 15,}}>
+			<div style={{ display: "flex", marginTop: 15, }}>
 				<Paper elevation={mini === true ? 0 : 0} style={boxStyle}>
-					<Typography variant="h6" style={{color: "white", marginTop: 10, marginBottom: 10,}}>Contact Details</Typography>
-					<div style={{flex: "1", display: "flex", flexDirection: "row"}}>
+					<Typography variant="h6" style={{ color: "white", marginTop: 10, marginBottom: 10, }}>Contact Details</Typography>
+					<div style={{ flex: "1", display: "flex", flexDirection: "row" }}>
 						<TextField
 							required
-							style={{flex: "1", marginRight: "15px", backgroundColor: inputcolor}}
+							style={{ flex: "1", marginRight: "15px", backgroundColor: inputcolor }}
 							InputProps={{
-								style:{
-									color: textcolor,
-								},
-							}}
-							color="primary"
-							fullWidth={true}
-							placeholder="Name"
-							type="firstname"
-						  id={minimize ? "contact_name_mini" : "contact_name"}
-							autoComplete="firstname"
-							margin="normal"
-							variant="outlined"
-      	 			onChange={e => setFirstname(e.target.value)}
-						/>
-						<TextField
-							required
-							style={{flex: "1", backgroundColor: inputcolor}}
-							InputProps={{
-								style:{
-									color: textcolor,
-								},
-							}}
-							color="primary"
-							fullWidth={true}
-							placeholder="Email"
-							type="email"
-						  id={minimize ? "email_field_contact_mini" : "email_field_contact"}
-							autoComplete="email"
-							margin="normal"
-							variant="outlined"
-      	 					onChange={e => setEmail(e.target.value)}
-						/>
-					</div>
-					{/*
-					<div style={{flex: "1", display: "flex", flexDirection: "row"}}>
-						<TextField
-							required
-							style={{flex: "1", marginRight: "15px", backgroundColor: inputcolor}}
-							InputProps={{
-								style:{
+								style: {
 									color: textcolor,
 								},
 							}}
@@ -150,16 +111,16 @@ const Contact = (props) => {
 							fullWidth={true}
 							placeholder="First Name"
 							type="firstname"
-						  	id="standard-required"
+							id="standard-required"
 							autoComplete="firstname"
 							margin="normal"
 							variant="outlined"
-      	 					onChange={e => setFirstname(e.target.value)}
+							onChange={e => setFirstname(e.target.value)}
 						/>
 						<TextField
-							style={{flex: "1", marginLeft: "15px", backgroundColor: inputcolor}}
+							style={{ flex: "1", marginLeft: "15px", backgroundColor: inputcolor }}
 							InputProps={{
-								style:{
+								style: {
 									color: textcolor,
 								},
 							}}
@@ -167,35 +128,56 @@ const Contact = (props) => {
 							fullWidth={true}
 							placeholder="Last Name"
 							type="lastname"
-						  	id="standard"
+							id="standard"
 							autoComplete="lastname"
 							margin="normal"
 							variant="outlined"
-      	 			onChange={e => setLastname(e.target.value)}
+							onChange={e => setLastname(e.target.value)}
 						/>
 					</div>
-					<div style={{flex: "1", display: "flex", flexDirection: "row"}}>
+					<div style={{ flex: "1", display: "flex", flexDirection: "row" }}>
 						<TextField
-							style={{flex: "1", marginRight: "15px", backgroundColor: inputcolor}}
+							required
+							style={{ flex: "1", backgroundColor: inputcolor }}
 							InputProps={{
-								style:{
+								style: {
 									color: textcolor,
 								},
 							}}
 							color="primary"
 							fullWidth={true}
-							placeholder="Job Title"
-							type="jobtitle"
-						  	id="standard-required"
-							autoComplete="jobtitle"
+							placeholder="Business Email"
+							type="email"
+							id={minimize ? "email_field_contact_mini" : "email_field_contact"}
+							autoComplete="email"
 							margin="normal"
 							variant="outlined"
-      	 					onChange={e => setTitle(e.target.value)}
+							onChange={e => setEmail(e.target.value)}
 						/>
 						<TextField
-							style={{flex: "1", marginLeft: "15px", backgroundColor: inputcolor}}
+							required
+							style={{ flex: "1", marginLeft: "25px", backgroundColor: inputcolor }}
 							InputProps={{
-								style:{
+								style: {
+									color: textcolor,
+								},
+							}}
+							color="primary"
+							fullWidth={true}
+							placeholder="Email Confirmation"
+							type="email"
+							id={minimize ? "email_field_contact_mini" : "email_field_contact"}
+							autoComplete="email"
+							margin="normal"
+							variant="outlined"
+							onChange={e => setEmail(e.target.value)}
+						/>
+					</div>
+					<div style={{ flex: "1", display: "flex", flexDirection: "row" }}>
+						<TextField
+							style={{ flex: "1", marginLeft: "15px", backgroundColor: inputcolor }}
+							InputProps={{
+								style: {
 									color: textcolor,
 								},
 							}}
@@ -203,36 +185,16 @@ const Contact = (props) => {
 							fullWidth={true}
 							type="companyname"
 							placeholder="Company Name"
-						  	id="standard-required"
+							id="standard-required"
 							autoComplete="companyname"
 							margin="normal"
 							variant="outlined"
-      	 					onChange={e => setCompanyname(e.target.value)}
-						/>
-					</div>
-					<div style={{flex: "1", display: "flex", flexDirection: "row"}}>
-						<TextField
-							required
-							style={{flex: "1", marginRight: "15px", backgroundColor: inputcolor}}
-							InputProps={{
-								style:{
-									color: textcolor,
-								},
-							}}
-							color="primary"
-							fullWidth={true}
-							placeholder="Email"
-							type="email"
-						  	id="standard-required"
-							autoComplete="email"
-							margin="normal"
-							variant="outlined"
-      	 					onChange={e => setEmail(e.target.value)}
+							onChange={e => setCompanyname(e.target.value)}
 						/>
 						<TextField
-							style={{flex: "1", marginLeft: "15px", backgroundColor: inputcolor}}
+							style={{ flex: "1", marginLeft: "15px", backgroundColor: inputcolor }}
 							InputProps={{
-								style:{
+								style: {
 									color: textcolor,
 								},
 							}}
@@ -240,27 +202,26 @@ const Contact = (props) => {
 							fullWidth={true}
 							type="phone"
 							placeholder="Phone number"
-						  	id="standard-required"
+							id="standard-required"
 							autoComplete="phone"
 							margin="normal"
 							variant="outlined"
-      	 					onChange={e => setPhone(e.target.value)}
+							onChange={e => setPhone(e.target.value)}
 						/>
 					</div>
-					*/}
-					<div style={{flex: 1}}>
-						<Typography variant="h6" style={{color: "white", marginTop: 10, marginBottom: 10,}}>Message</Typography>
+					<div style={{ flex: 1 }}>
+						<Typography variant="h6" style={{ color: "white", marginTop: 10, marginBottom: 10, }}>Message</Typography>
 					</div>
-					<div style={{flex: 4}}>
+					<div style={{ flex: 4 }}>
 						<TextField
 							multiline
 							InputProps={{
-								style:{
+								style: {
 									color: textcolor,
 								},
 							}}
 							color="primary"
-							style={{flex: "1", backgroundColor: inputcolor}} 
+							style={{ flex: "1", backgroundColor: inputcolor }}
 							rows="6"
 							fullWidth={true}
 							placeholder="What can we help you with?"
@@ -268,45 +229,45 @@ const Contact = (props) => {
 							id="filled-multiline-static"
 							margin="normal"
 							variant="outlined"
-      	 			onChange={e => setMessage(e.target.value)}
+							onChange={e => setMessage(e.target.value)}
 						/>
 					</div>
 					<Button
 						disabled={email.length <= 0 || message.length <= 0}
-						style={{width: "100%", height: "60px", marginTop: "10px"}}
+						style={{ width: "100%", height: "60px", marginTop: "10px" }}
 						variant="contained"
 						color="primary"
 						onClick={submitContact}
 					>
-					Submit	
+						Submit
 					</Button>
-					<Typography variant="body1" style={{color: "white", marginTop: 10,}}>
+					<Typography variant="body1" style={{ color: "white", marginTop: 10, }}>
 						{formMessage}
 					</Typography>
 				</Paper>
 			</div>
 		</div>
-	
-	const landingpageDataMobile = 
-		<div style={{paddingBottom: "50px"}}>
-			{minimize ?  
-			<div style={{color: textcolor, textAlign: "center"}}>
-				<Typography variant="h4" style={{marginTop: 15, }}>Contact us</Typography>
-			</div> 
-			:
-			<div style={{color: textcolor, textAlign: "center"}}>
-				<h3 style={{}}>Contact us</h3>
-				<h2>What can we do for you?</h2>
-			</div> }
-			<div style={{display: "flex", marginTop: 10,}}>
+
+	const landingpageDataMobile =
+		<div style={{ paddingBottom: "50px" }}>
+			{minimize ?
+				<div style={{ color: textcolor, textAlign: "center" }}>
+					<Typography variant="h4" style={{ marginTop: 15, }}>Contact us</Typography>
+				</div>
+				:
+				<div style={{ color: textcolor, textAlign: "center" }}>
+					<h3 style={{}}>Contact us</h3>
+					<h2>What can we do for you?</h2>
+				</div>}
+			<div style={{ display: "flex", marginTop: 10, }}>
 				<Paper elevation={mini === true ? 0 : 0} style={boxStyle}>
-					<Typography variant="h6" style={{color: textcolor}}>Contact Details</Typography>
-					<div style={{flex: "1", display: "flex", flexDirection: "row"}}>
+					<Typography variant="h6" style={{ color: textcolor }}>Contact Details</Typography>
+					<div style={{ flex: "1", display: "flex", flexDirection: "row" }}>
 						<TextField
 							required
-							style={{flex: "1", backgroundColor: inputcolor}}
+							style={{ flex: "1", backgroundColor: inputcolor }}
 							InputProps={{
-								style:{
+								style: {
 									color: textcolor,
 								},
 							}}
@@ -314,19 +275,19 @@ const Contact = (props) => {
 							fullWidth={true}
 							placeholder="Name"
 							type="firstname"
-						  id="firstname"
+							id="firstname"
 							autoComplete="firstname"
 							margin="normal"
 							variant="outlined"
-      	 			onChange={e => setFirstname(e.target.value)}
+							onChange={e => setFirstname(e.target.value)}
 						/>
 					</div>
-					<div style={{flex: "1", display: "flex", flexDirection: "row"}}>
+					<div style={{ flex: "1", display: "flex", flexDirection: "row" }}>
 						<TextField
 							required
-							style={{flex: "1", backgroundColor: inputcolor}}
+							style={{ flex: "1", backgroundColor: inputcolor }}
 							InputProps={{
-								style:{
+								style: {
 									color: textcolor,
 								},
 							}}
@@ -334,22 +295,22 @@ const Contact = (props) => {
 							fullWidth={true}
 							placeholder="Email"
 							type="email"
-						  id="email-field-contact"
+							id="email-field-contact"
 							autoComplete="email"
 							margin="normal"
 							variant="outlined"
-      	 			onChange={e => setEmail(e.target.value)}
+							onChange={e => setEmail(e.target.value)}
 						/>
 					</div>
-					<div style={{flex: 1, marginTop: 20,}}>
-						<Typography variant="h6" style={{color: textcolor}}>Message</Typography>
+					<div style={{ flex: 1, marginTop: 20, }}>
+						<Typography variant="h6" style={{ color: textcolor }}>Message</Typography>
 					</div>
-					<div style={{flex: 4}}>
+					<div style={{ flex: 4 }}>
 						<TextField
 							multiline
-							style={{flex: "1", backgroundColor: inputcolor}}
+							style={{ flex: "1", backgroundColor: inputcolor }}
 							InputProps={{
-								style:{
+								style: {
 									color: textcolor,
 								},
 							}}
@@ -361,17 +322,17 @@ const Contact = (props) => {
 							type="message"
 							margin="normal"
 							variant="outlined"
-      	 			onChange={e => setMessage(e.target.value)}
+							onChange={e => setMessage(e.target.value)}
 						/>
 					</div>
 					<Button
 						disabled={email.length <= 0 || message.length <= 0}
-						style={{width: "100%", height: "60px", marginTop: "10px"}}
+						style={{ width: "100%", height: "60px", marginTop: "10px" }}
 						variant="contained"
 						color="primary"
 						onClick={submitContact}
 					>
-					Submit	
+						Submit
 					</Button>
 					<h3>{formMessage}</h3>
 				</Paper>
@@ -379,12 +340,12 @@ const Contact = (props) => {
 		</div>
 
 
-	const loadedCheck = 
+	const loadedCheck =
 		<div>
-			{minimize ? 
+			{minimize ?
 				landingpageDataMobile
-				:	
-				<div style={{paddingBottom: 250}}>
+				:
+				<div style={{ paddingBottom: 250 }}>
 					<BrowserView>
 						<div style={bodyDivStyle}>{landingpageDataBrowser}</div>
 					</BrowserView>
@@ -395,7 +356,7 @@ const Contact = (props) => {
 			}
 		</div>
 
-	return(
+	return (
 		<div>
 			{loadedCheck}
 		</div>
