@@ -282,6 +282,35 @@ func deployServiceWorkers(image string) {
 			}
 		}
 
+		if len(os.Getenv("DOCKER_HOST")) > 0 {
+			log.Printf("[DEBUG] Deploying docker socket proxy to the network %s as the DOCKER_HOST variable is set", networkName)
+			if err == nil {
+				containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
+					All: true,
+				})
+
+				if err == nil {
+					for _, container := range containers {
+						if strings.Contains(strings.ToLower(container.Image), "docker-socket-proxy") {
+							networkConfig := &network.EndpointSettings{}
+							err := dockercli.NetworkConnect(ctx, networkName, container.ID, networkConfig)
+							if err != nil {
+								log.Printf("[ERROR] Failed connecting Docker socket proxy to docker network %s: %s", networkName, err)
+							} else {
+								log.Printf("[INFO] Attached the docker socket proxy to the execution network")
+							}
+
+							break
+						}
+					}
+				} else {
+					log.Printf("[WARNING] Failed listing containers when deploying socket proxy on swarm: %s", err)
+				}
+			} else {
+				log.Printf("[WARNING] Failed listing and finding the right image for docker socket proxy: %s", err)
+			}
+		}
+
 		//serviceOptions := types.ServiceCreateOptions{}
 		//service, err := dockercli.ServiceCreate(
 		//	context.Background(),
@@ -385,13 +414,15 @@ func deployServiceWorkers(image string) {
 			},
 		}
 
-		if defaultNetworkAttach == true {
+		if defaultNetworkAttach == true || strings.ToLower(os.Getenv("SHUFFLE_DEFAULT_NETWORK_ATTACH")) == "true" {
+			targetName := "shuffle_shuffle"
+			log.Printf("[DEBUG] Adding network attach for network %s to worker in swarm", targetName)
 			serviceSpec.Networks = append(serviceSpec.Networks, swarm.NetworkAttachmentConfig{
-				Target: "shuffle_shuffle",
+				Target: targetName,
 			})
 
 			// FIXM: Remove this if deployment fails?
-			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_SWARM_OTHER_NETWORK=shuffle_shuffle"))
+			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("SHUFFLE_SWARM_OTHER_NETWORK=%s", targetName))
 		}
 
 		if dockerApiVersion != "" {
@@ -835,6 +866,7 @@ func main() {
 
 	if len(os.Getenv("DOCKER_HOST")) > 0 {
 		log.Printf("[DEBUG] Running docker with socket proxy %s instead of default", os.Getenv("DOCKER_HOST"))
+
 	} else {
 		log.Printf("[DEBUG] Running docker with default socket /var/run/docker.sock")
 	}
