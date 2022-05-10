@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { makeStyles } from "@material-ui/styles";
 import { useTheme } from "@material-ui/core/styles";
 import { useNavigate, Link } from "react-router-dom";
+import countries from "../components/Countries.jsx"
 
 import {
   FormControl,
@@ -36,7 +37,12 @@ import {
   DialogActions,
   DialogContent,
   CircularProgress,
+	Box,
 } from "@material-ui/core";
+
+import {
+	Autocomplete,
+} from "@mui/material"
 
 import {
   Edit as EditIcon,
@@ -105,6 +111,7 @@ const Admin = (props) => {
   const [loading, setLoading] = React.useState(false);
 
   const [selectedOrganization, setSelectedOrganization] = React.useState({});
+  const [selectedDealModalOpen, setSelectedDealModalOpen] = React.useState(false);
 	//console.log("Selected: ", selectedOrganization)
   const [organizationFeatures, setOrganizationFeatures] = React.useState({});
   const [loginInfo, setLoginInfo] = React.useState("");
@@ -139,6 +146,17 @@ const Admin = (props) => {
   const [value2FA, setValue2FA] = React.useState("");
   const [secret2FA, setSecret2FA] = React.useState("");
   const [show2faSetup, setShow2faSetup] = useState(false);
+
+  const [dealName, setDealName] = React.useState("");
+  const [dealAddress, setDealAddress] = React.useState("");
+  const [dealType, setDealType] = React.useState("MSSP");
+  const [dealCountry, setDealCountry] = React.useState("United States");
+  const [dealCurrency, setDealCurrency] = React.useState("USD");
+  const [dealStatus, setDealStatus] = React.useState("initiated");
+  const [dealValue, setDealValue] = React.useState("");
+  const [dealDiscount, setDealDiscount] = React.useState("");
+  const [dealerror, setDealerror] = React.useState("");
+  const [dealList, setDealList] = React.useState([]);
 
   useEffect(() => {
     if (isDropzone) {
@@ -648,6 +666,45 @@ const Admin = (props) => {
       });
   };
 
+	const handleGetDeals = (orgId) => {
+		console.log("Get deals!")
+
+    if (orgId.length === 0) {
+      alert.error(
+        "Organization ID not defined. Please contact us on https://shuffler.io if this persists logout."
+      );
+      return;
+    }
+
+    const url = `${globalUrl}/api/v1/orgs/${orgId}/deals`
+    fetch(url, {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Bad status code in get deals: ", response.status)
+			}
+
+			return response.json();
+		})
+		.then((responseJson) => {
+			console.log("Got deals: ", responseJson)
+			if (responseJson.success === false) {
+				alert.error("Failed loading deals. Contact support if this persists")
+			} else { 
+  			setDealList(responseJson)
+			}
+		})
+		.catch((error) => {
+			console.log("Error getting org deals: ", error);
+			alert.error("Failed getting deals for your org. Contact support if this persists.");
+		});
+	}
+
   const handleGetOrg = (orgId) => {
     if (orgId.length === 0) {
       alert.error(
@@ -674,7 +731,7 @@ const Admin = (props) => {
       })
       .then((responseJson) => {
         if (responseJson["success"] === false) {
-          alert.error("Failed getting org: ", responseJson.readon);
+          alert.error("Failed getting your org: ", responseJson.readon);
         } else {
           if (
             responseJson.sync_features === undefined ||
@@ -682,6 +739,12 @@ const Admin = (props) => {
           ) {
             responseJson.sync_features = {};
           }
+
+					if (isCloud && responseJson.partner_info !== undefined && responseJson.partner_info.reseller === true) {
+						handleGetDeals(orgId)
+					}
+
+
           setSelectedOrganization(responseJson);
           var lists = {
             active: {
@@ -1682,6 +1745,235 @@ const Admin = (props) => {
 		</FormControl>
 		: null
 
+
+	const products = [
+		{ code: '', label: 'MSSP', phone: '' },
+		{ code: '', label: 'Enterprise', phone: '' },
+		{ code: '', label: 'Consultancy', phone: '' },
+		{ code: '', label: 'Support', phone: '' },
+	]
+
+	const addDealModal = (
+    <Dialog
+      open={selectedDealModalOpen}
+      onClose={() => {
+        setSelectedDealModalOpen(false);
+
+      }}
+      PaperProps={{
+        style: {
+          backgroundColor: theme.palette.surfaceColor,
+          color: "white",
+          minWidth: "800px",
+          minHeight: "320px",
+        },
+      }}
+    >
+      <DialogTitle style={{ maxWidth: 450, margin: "auto" }}>
+        <span style={{ color: "white" }}>
+					Register new deal
+        </span>
+      </DialogTitle>
+      <DialogContent>
+				<div style={{ display: "flex" }}>
+					<TextField
+						style={{
+							marginTop: 0,
+							backgroundColor: theme.palette.inputColor,
+							flex: 3,
+							marginRight: 10,
+						}}
+						InputProps={{
+							style: {
+								height: 50,
+								color: "white",
+							},
+						}}
+						color="primary"
+						required
+						fullWidth={true}
+						placeholder="Name"
+						type="text"
+						id="standard-required"
+						autoComplete="username"
+						margin="normal"
+						label="Name"
+						variant="outlined"
+						defaultValue={dealName}
+						onChange={(e) => {
+							setDealName(e.target.value)
+						}}
+					/>
+					<TextField
+						style={{
+							marginTop: 0,
+							backgroundColor: theme.palette.inputColor,
+							flex: 3,
+							marginRight: 10,
+						}}
+						InputProps={{
+							style: {
+								height: 50,
+								color: "white",
+							},
+						}}
+						color="primary"
+						required
+						fullWidth={true}
+						placeholder="Address"
+						label="Address"
+						type="text"
+						id="standard-required"
+						autoComplete="username"
+						margin="normal"
+						variant="outlined"
+						defaultValue={dealAddress}
+						onChange={(e) => {
+							setDealAddress(e.target.value)
+						}}
+					/>
+				</div>
+				<div style={{ display: "flex", marginTop: 10, }}>
+					<TextField
+						style={{
+							marginTop: 0,
+							backgroundColor: theme.palette.inputColor,
+							flex: 1,
+							marginRight: 10,
+						}}
+						InputProps={{
+							style: {
+								height: 50,
+								color: "white",
+							},
+						}}
+						color="primary"
+						required
+						fullWidth={true}
+						placeholder="1000"
+						label="Value (USD)"
+						type="text"
+						id="standard-required"
+						margin="normal"
+						variant="outlined"
+						defaultValue={dealValue}
+						onChange={(e) => {
+							setDealValue(e.target.value)
+						}}
+					/>
+					<Autocomplete
+						id="country-select"
+						sx={{width: 250}}
+						options={countries}
+						variant="outlined"
+						autoHighlight
+						getOptionLabel={(option) => option.label}
+          	onChange={(event, newValue) => {
+							setDealCountry(newValue.label)
+						}}
+						renderOption={(props, option) => (
+							<Box component="li" sx={{ '& > img': { mr: 2, flexShrink: 0 } }} {...props}>
+								<img
+									loading="lazy"
+									width="20"
+									src={`https://flagcdn.com/w20/${option.code.toLowerCase()}.png`}
+									srcSet={`https://flagcdn.com/w40/${option.code.toLowerCase()}.png 2x`}
+									alt=""
+								/>
+								{option.label} ({option.code}) +{option.phone}
+							</Box>
+						)}
+						renderInput={(params) => (
+							<TextField
+								{...params}
+								style={{
+									backgroundColor: theme.palette.inputColor,
+									flex: 1,
+									marginTop: 0, 
+									marginRight: 10, 
+								}}
+								variant="outlined"
+								label="Choose a country"
+								defaultValue={dealCountry}
+								inputProps={{
+									...params.inputProps,
+									autoComplete: 'new-password', // disable autocomplete and autofill
+								}}
+							/>
+						)}
+					/>
+					<Autocomplete
+						id="product-select"
+						sx={{width: 250}}
+						options={products}
+						variant="outlined"
+						autoHighlight
+          	onChange={(event, newValue) => {
+							setDealType(newValue)
+						}}
+						getOptionLabel={(option) => option.label}
+						renderOption={(props, option) => (
+							<Box component="li" sx={{ '& > img': { mr: 2, flexShrink: 0 } }} {...props}>
+								{option.label} 
+							</Box>
+						)}
+						renderInput={(params) => (
+							<TextField
+								{...params}
+								style={{
+									backgroundColor: theme.palette.inputColor,
+									flex: 1,
+									marginTop: 0, 
+								}}
+								variant="outlined"
+								label="Choose a product"
+								defaultValue={dealType}
+								inputProps={{
+									...params.inputProps,
+									autoComplete: 'new-password', // disable autocomplete and autofill
+								}}
+							/>
+						)}
+					/>
+				</div>
+				{dealerror.length > 0 ? 
+					<Typography variant="body1" color="textSecondary" style={{margin: 10, }}>
+						error registering: {dealerror}
+					</Typography>
+				: null}
+				<div style={{display: "flex", width: 300, margin: "auto"}}>
+					<Button
+						style={{ maxHeight: 50, flex: 1, margin: 5, }}
+						variant="outlined"
+						color="secondary"
+						disabled={false}
+						onClick={() => {
+        			setSelectedDealModalOpen(false);
+
+							//setDealName("")
+							//setDealAddress("")
+							//setDealCountry("")
+							//setDealValue("")
+						}}
+					>
+						Cancel	
+					</Button>
+					<Button
+						style={{ maxHeight: 50, flex: 1, margin: 5, }}
+						variant="contained"
+						color="primary"
+						disabled={dealName.length <= 3 || dealAddress.length <= 3 || dealCountry.length === 0 || dealValue.length === 0 || dealType.length === 0}
+						onClick={() => {
+							submitDeal(dealName, dealAddress, dealCountry, dealValue) 
+						}}
+					>
+						Submit
+					</Button>
+				</div>
+      </DialogContent>
+    </Dialog>
+  );
+
   const editUserModal = (
     <Dialog
       open={selectedUserModalOpen}
@@ -2115,6 +2407,60 @@ const Admin = (props) => {
     </Dialog>
   );
 
+	const submitDeal = (dealName, dealAddress, dealCountry, dealValue) => {
+		if (dealerror.length > 0) {
+			setDealerror("")
+		}
+
+		const orgId = selectedOrganization.id;
+    const data = {
+			reseller_org: orgId,
+			name: dealName,
+			address: dealAddress,
+			country: dealCountry,
+			value: dealValue,
+    };
+
+    const url = `${globalUrl}/api/v1/orgs/${orgId}/deals`
+    fetch(url, {
+      mode: "cors",
+      method: "POST",
+      body: JSON.stringify(data),
+      credentials: "include",
+      crossDomain: true,
+      withCredentials: true,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+      },
+    })
+		.then(function (response) {
+			if (response.status !== 200) {
+				console.log("Error in response");
+			}
+
+			return response.json();
+		})
+		.then(function (responseJson) {
+			if (responseJson.success === true) {
+				setSelectedDealModalOpen(false);
+				alert.success("Added new deal! We will be in touch shortly with an update.");
+
+				setDealName("")
+				setDealAddress("")
+				setDealValue("")
+				setDealCountry("United States")
+				setDealType("MSSP")
+			} else {
+				setDealerror(responseJson.reason)
+			}
+		})
+		.catch(function (error) {
+			//console.log("Error: ", error);
+			setDealerror(error.toString())
+			alert.error("Failed adding deal reg: ", error)
+		});
+	}
+
   const cancelSubscriptions = (subscription_id) => {
     console.log(selectedOrganization);
     const orgId = selectedOrganization.id;
@@ -2450,6 +2796,169 @@ const Admin = (props) => {
                 backgroundColor: theme.palette.inputColor,
               }}
             />
+
+						{isCloud && selectedOrganization.partner_info !== undefined && selectedOrganization.partner_info.reseller === true ?
+              <div style={{ marginTop: 30, marginBottom: 200, }}>
+                <Typography
+                  style={{ marginTop: 40, marginLeft: 10, marginBottom: 5 }}
+              		variant="h6"
+                >
+                 	Reseller dashboard 
+                </Typography>
+								<Button
+									variant="contained"
+									color="primary"
+									style={{ margin: 15, }}
+									onClick={() => {
+      							setSelectedDealModalOpen(true)
+									}}
+								>
+									Add deal
+								</Button>
+								<Button
+									style={{ marginLeft: 5, marginRight: 15 }}
+									variant="contained"
+									color="primary"
+									onClick={() => {
+										handleGetDeals(userdata.active_org.id) 
+									}}
+								>
+									<CachedIcon />
+								</Button>
+								<List>
+        				  <ListItem>
+        				    <ListItemText
+        				      primary="Name"
+        				      style={{ 
+												minWidth: 200, 
+												maxWidth: 200,
+											}}
+        				    />
+        				    <ListItemText
+        				      primary="Status"
+        				      style={{ minWidth: 150, maxWidth: 150, marginLeft: 5 }}
+        				    />
+        				    <ListItemText
+        				      primary="Value"
+        				      style={{ minWidth: 125, maxWidth: 125 }}
+        				    />
+        				    <ListItemText
+        				      primary="Discount"
+        				      style={{ minWidth: 100, maxWidth: 100 }}
+        				    />
+
+        				    <ListItemText
+        				      primary="Address"
+        				      style={{
+        				        marginleft: 10,
+        				        minWidth: 100,
+        				        maxWidth: 100,
+        				        overflow: "hidden",
+        				      }}
+        				    />
+        				    <ListItemText
+        				      primary="Country"
+        				      style={{
+        				        marginleft: 10,
+        				        minWidth: 100,
+        				        maxWidth: 100,
+        				        overflow: "hidden",
+        				      }}
+        				    />
+
+        				    <ListItemText
+        				      primary="Created"
+        				      style={{ minWidth: 200, maxWidth: 100 }}
+        				    />
+        				    <ListItemText
+        				      primary="Last edited"
+        				      style={{ minWidth: 200, maxWidth: 100 }}
+        				    />
+        				  </ListItem>
+									<Divider />
+								{dealList.length === 0 ? 
+                	<Typography variant="h6" style={{textAlign: "center", margin: "auto", width: 600, marginTop: 50, marginBottom: 50, }}>
+										No deals registered yet. Click "Add deal" to register one
+									</Typography>
+								: 
+									dealList.map((deal, index) => {
+                		var bgColor = "#27292d";
+                		if (index % 2 === 0) {
+                		  bgColor = "#1f2023";
+                		}
+
+										return (
+                  		<ListItem key={index} style={{ backgroundColor: bgColor }}>
+        				  		  <ListItemText
+        				  		    primary={deal.name}
+        				  		    style={{ 
+														minWidth: 200, 
+														maxWidth: 200,
+														overflow: "hidden",
+													}}
+        				  		  />
+        				  		  <ListItemText
+        				  		    primary={deal.status}
+        				  		    style={{ 
+														minWidth: 150, 
+														maxWidth: 150, 
+														marginLeft: 5,
+														color: deal.status.toLowerCase() === "requested" ? "yellow" : deal.status.toLowerCase() === "denied" || deal.status.toLowerCase() === "cancelled" ? "red" : "green",
+													}}
+        				  		  />
+        				  		  <ListItemText
+        				  		    primary={`\$${deal.value}`}
+        				  		    style={{ minWidth: 125, maxWidth: 125 }}
+        				  		  />
+        				  		  <ListItemText
+        				  		    primary={deal.discount.length === 0 ? "TBD" : deal.discount}
+        				  		    style={{ minWidth: 100, maxWidth: 100 }}
+        				  		  />
+
+        				  		  <ListItemText
+        				  		    primary={deal.address}
+        				  		    style={{
+        				  		      marginleft: 10,
+        				  		      minWidth: 100,
+        				  		      maxWidth: 100,
+        				  		      overflow: "hidden",
+        				  		    }}
+        				  		  />
+        				  		  <ListItemText
+        				  		    primary={deal.country}
+        				  		    style={{
+        				  		      marginleft: 10,
+        				  		      minWidth: 100,
+        				  		      maxWidth: 100,
+        				  		      overflow: "hidden",
+        				  		    }}
+        				  		  />
+
+        				  		  <ListItemText
+                          primary={new Date(deal.created * 1000).toISOString()}
+        				  		    style={{ minWidth: 200, maxWidth: 200 }}
+        				  		  />
+        				  		  <ListItemText
+                          primary={new Date(deal.edited * 1000).toISOString()}
+        				  		    style={{ minWidth: 200, maxWidth: 200 }}
+        				  		  />
+        				  		</ListItem>
+										)
+									})
+								}
+								</List>
+
+								<Divider
+									style={{
+										marginTop: 20,
+										marginBottom: 20,
+										backgroundColor: theme.palette.inputColor,
+									}}
+								/>
+							</div>
+						: null}
+
+
             {isCloud &&
             selectedOrganization.subscriptions !== undefined &&
             selectedOrganization.subscriptions !== null &&
@@ -4291,6 +4800,7 @@ const Admin = (props) => {
       {modalView}
       {cloudSyncModal}
       {editUserModal}
+			{addDealModal}
       {editAuthenticationModal}
       {data}
       <TextField

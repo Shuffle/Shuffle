@@ -167,6 +167,8 @@ const ParsedAction = (props) => {
 		isCloud,
 		lastSaved,
 		setLastSaved,
+		//expansionModalOpen,
+		//setExpansionModalOpen,
   } = props;
 
   //const theme = useTheme();
@@ -1395,7 +1397,7 @@ const ParsedAction = (props) => {
 														}}
 													/>
 												</Tooltip>
-												<Tooltip title="Autocomplete the text" placement="top">
+												<Tooltip title="Autocomplete text" placement="top">
 													<AddCircleOutlineIcon
 														style={{ cursor: "pointer", margin: multiline ? 5 : 0, }}
 														onClick={(event) => {

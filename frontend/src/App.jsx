@@ -319,7 +319,6 @@ const App = (message, props) => {
 								},
 							]}
 						/>
-					
 				}
         <Header
           notifications={notifications}

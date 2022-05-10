@@ -598,7 +598,7 @@ const Docs = (defaultprops) => {
 				Documentation
 			</Typography>
 			<div style={{display: "flex", marginTop: 25, }}>
-				<CustomButton title="Open a Ticket" icon=<img src="/images/Shuffle_logo_new.png" style={{height: 35, width: 35, border: "", borderRadius: theme.palette.borderRadius, }} /> link="https://support.shuffler.io" />
+				<CustomButton title="Open a Ticket" icon=<img src="/images/Shuffle_logo_new.png" style={{height: 35, width: 35, border: "", borderRadius: theme.palette.borderRadius, }} /> link="mailto:support@shuffler.io" />
 				<CustomButton title="Ask the community" icon=<img src="/images/social/discord.png" style={{height: 35, width: 35, border: "", borderRadius: theme.palette.borderRadius, }} /> link="https://discord.gg/B2CBzUm" />
 			</div>
 

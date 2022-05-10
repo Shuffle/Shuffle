@@ -1511,7 +1511,7 @@ const Apps = (props) => {
               fullWidth
               color="primary"
               id="app_search_field"
-              placeholder={"Search apps"}
+              placeholder={"Search your apps"}
               onChange={(event) => {
                 handleSearchChange(event.target.value);
                 setCursearch(event.target.value);

@@ -1048,6 +1048,10 @@ func cloudExecuteAction(execution shuffle.WorkflowExecution) error {
 	return nil
 }
 
+// 1. Check CORS
+// 2. Check authentication
+// 3. Check authorization
+// 4. Run the actual function
 func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 	cors := shuffle.HandleCors(resp, request)
 	if cors {
@@ -1104,8 +1108,8 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 
 		executionAuthValid, newOrgId = shuffle.RunExecuteAccessValidation(request, workflow)
 		if !executionAuthValid {
-			log.Printf("[INFO] Api authentication failed in execute workflow: %s", userErr)
-			resp.WriteHeader(401)
+			log.Printf("[INFO] Api authorization failed in execute workflow: %s", userErr)
+			resp.WriteHeader(403)
 			resp.Write([]byte(`{"success": false}`))
 			return
 		} else {
@@ -1122,7 +1126,7 @@ func executeWorkflow(resp http.ResponseWriter, request *http.Request) {
 				log.Printf("[AUDIT] Letting user %s execute %s because they're admin of the same org", user.Username, workflow.ID)
 			} else {
 				log.Printf("[AUDIT] Wrong user (%s) for workflow %s (execute)", user.Username, workflow.ID)
-				resp.WriteHeader(401)
+				resp.WriteHeader(403)
 				resp.Write([]byte(`{"success": false}`))
 				return
 			}
@@ -2606,7 +2610,7 @@ func executeSingleAction(resp http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	log.Printf("[INFO] Execution: %s should execute onprem with execution environment \"%s\". Workflow: %s", workflowExecution.ExecutionId, environment, workflowExecution.Workflow.ID)
+	log.Printf("[INFO] Execution (single action): %s should execute onprem with execution environment \"%s\". Workflow: %s", workflowExecution.ExecutionId, environment, workflowExecution.Workflow.ID)
 
 	executionRequest := shuffle.ExecutionRequest{
 		ExecutionId:   workflowExecution.ExecutionId,

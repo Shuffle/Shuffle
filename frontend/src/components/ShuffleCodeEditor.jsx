@@ -7,7 +7,10 @@ import {
 	DialogTitle, 
 	DialogContent,
 	Typography,
-	Paper
+	Paper,
+	Menu,
+	MenuItem,
+	Button,
 } from '@material-ui/core';
 
 import Checkbox from '@mui/material/Checkbox';
@@ -34,11 +37,16 @@ import 'codemirror/theme/gruvbox-dark.css';
 import 'codemirror/theme/duotone-light.css';
 import { padding, textAlign } from '@mui/system';
 
+const liquidFilters = [
+	{"name": "Size", "value": "size", "example": ""},
+	{"name": "Date", "value": "date", "example": `{{ "now" | date: "%s" }}`},
+]
+
 const CodeEditor = (props) => {
 	const { fieldCount, setFieldCount, actionlist, changeActionParameterCodeMirror, expansionModalOpen, setExpansionModalOpen, codedata, setcodedata } = props
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
   	// const {codelang, setcodelang} = props
-  	const theme = useTheme();
+  const theme = useTheme();
 	const [validation, setValidation] = React.useState(false);
 	const [expOutput, setExpOutput] = React.useState(" ");
 	const [linewrap, setlinewrap] = React.useState(true);
@@ -51,6 +59,9 @@ const CodeEditor = (props) => {
 	const [variableOccurences, setVariableOccurences] = React.useState([]);
 	const [currentLocation, setCurrentLocation] = React.useState([]);
 	const [currentVariable, setCurrentVariable] = React.useState("");
+	const [anchorEl, setAnchorEl] = React.useState(null);
+	const liquidOpen = Boolean(anchorEl);
+
 	// useEffect(() => {
 	// 	console.log(currentLocation)
 	// }, [currentLocation])
@@ -340,11 +351,23 @@ const CodeEditor = (props) => {
 		}
 	}
 
+
+	const handleClick = (item) => {
+		if (item === undefined || item.value === undefined) {
+			return
+		}
+
+		setlocalcodedata(localcodedata+" "+item.value)
+		setAnchorEl(null)
+	}
+
 	return (
 		<Dialog
-			disableEnforceFocus={true}
-			hideBackdrop={true}
+			aria-labelledby="draggable-code-modal"
 			disableBackdropClick={true}
+			disableEnforceFocus={true}
+      //style={{ pointerEvents: "none" }}
+			hideBackdrop={true}
 			open={expansionModalOpen} 
 			onClose={() => {
 				console.log("In closer")
@@ -352,7 +375,6 @@ const CodeEditor = (props) => {
 				//setExpansionModalOpen(false)
 			}}
 			PaperComponent={PaperComponent}
-			aria-labelledby="draggable-dialog-title"
 			PaperProps={{
 				style: {
 					backgroundColor: theme.palette.surfaceColor,
@@ -400,10 +422,46 @@ const CodeEditor = (props) => {
 					</IconButton>
 				</div>
 			</div>
-			
+				
+			<Button
+				id="basic-button"
+				aria-haspopup="true"
+				aria-controls={liquidOpen ? 'basic-menu' : undefined}
+				aria-expanded={liquidOpen ? 'true' : undefined}
+				style={{
+				  textTransform: "none",
+					width: 200, 
+					marginLeft: 200,
+				}}
+				onClick={(event) => {
+					setAnchorEl(event.currentTarget);
+				}}
+			>
+				Liquid 
+			</Button>
+			<Menu
+				id="basic-menu"
+				anchorEl={anchorEl}
+				open={liquidOpen}
+				onClose={() => {
+					setAnchorEl(null);
+				}}
+				MenuListProps={{
+					'aria-labelledby': 'basic-button',
+				}}
+			>
+				{liquidFilters.map((item, index) => {
+					return (
+						<MenuItem onClick={() => {
+							handleClick(item)
+						}}>{item.name}</MenuItem>
+					)
+				})}
+			</Menu>
 			<span style={{
 				border: `2px solid ${theme.palette.inputColor}`,
 				borderRadius: theme.palette.borderRadius,
+				position: "relative",
 			}}>
 				<CodeMirror
 					value = {localcodedata}
