@@ -1,7 +1,7 @@
 {
   "name": "shuffler",
   "homepage": "https://shuffler.io",
-  "version": "0.9.61",
+  "version": "1.0.0",
   "private": true,
   "dependencies": {
     "@babel/core": "^7.15.8",
