@@ -17,6 +17,7 @@ import http.client
 import urllib.parse
 import jinja2 
 import datetime
+import dateutil
 from io import StringIO as StringBuffer
 from io import BytesIO
 from liquid import Liquid, defaults
@@ -103,6 +104,18 @@ def base64_decode(a):
         return base64.b64decode(a).decode()
     except:
         return base64.b64decode(a)
+
+@shuffle_filters.register
+def json_parse(a):
+    return json.loads(str(a))
+
+@shuffle_filters.register
+def as_object(a):
+    return json.loads(str(a))
+
+@shuffle_filters.register
+def ast(a):
+    return ast.literal_eval(str(a))
 
 #print(standard_filter_manager.filters)
 #print(shuffle_filters.filters)
