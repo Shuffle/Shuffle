@@ -1650,7 +1650,7 @@ const AngularWorkflow = (defaultprops) => {
         }
 
         if (responseJson.public) {
-          alert.info("This workflow is public. Save the workflow to use it in your organization.");
+          //alert.info("This workflow is public. Save the workflow to use it in your organization.");
 				
 					console.log("RESP: ", responseJson)
 					if (Object.getOwnPropertyNames(creatorProfile).length === 0) {
@@ -11004,6 +11004,7 @@ const AngularWorkflow = (defaultprops) => {
   //
 		
 	
+
   const leftView = workflow.public === true ? 
 			<div style={{minHeight: "80vh", height: "100%", minWidth: leftBarSize-70, maxWidth: leftBarSize-70, zIndex: 0, padding: 35, borderRight: "1px solid rgba(91,96,100,1)",}}> 
 				<Typography variant="h6" color="textPrimary" style={{
@@ -11015,7 +11016,7 @@ const AngularWorkflow = (defaultprops) => {
 				<Typography variant="body2" color="textSecondary">
 					This workflow is public	and <span style={{color: "#f86a3e", cursor: "pointer", }} onClick={() => {
             saveWorkflow()
-					}}>must be saved</span> to be used in your organization.
+					}}>must be saved</span> or exported before use.
 				</Typography>
 				{Object.getOwnPropertyNames(creatorProfile).length !== 0 && creatorProfile.github_avatar !== undefined  && creatorProfile.github_avatar !== null ? 
 					<div style={{display: "flex", marginTop: 10, }}>
@@ -11055,6 +11056,27 @@ const AngularWorkflow = (defaultprops) => {
 					</div>
 				</div>
 			: null }
+
+			{workflow.blogpost !== undefined && workflow.blogpost !== null && workflow.blogpost.length > 0 ? 
+				<div style={{
+					marginTop: 10, 
+					maxWidth: "100%", 
+					overflow: "hidden",
+				}}>
+					<Typography variant="body1">
+            <a 
+              href={workflow.blogpost}
+              style={{ textDecoration: "none", color: "#f86a3e" }}
+              rel="noopener noreferrer"
+              target="_blank"
+            >
+							Related blog & docs
+						</a>
+					</Typography>
+				</div>
+				: null
+			}
+
 			{appGroup.length > 0 ? 
 				<div style={{display: "flex", marginTop: 10, }}>
 					<Typography variant="body1">
@@ -11071,6 +11093,7 @@ const AngularWorkflow = (defaultprops) => {
 					</AvatarGroup>
 				</div>
 			: null}
+
 			{triggerGroup.length > 0 ? 
 				<div style={{display: "flex", marginTop: 10, }}>
 					<Typography variant="body1">
@@ -11086,6 +11109,7 @@ const AngularWorkflow = (defaultprops) => {
 				</div>
 			: null}
 
+			{/*
 			<div style={{display: "flex", marginTop: 10, }}>
 				<Typography variant="body1">
 					Mitre Att&ck:&nbsp; 
@@ -11094,6 +11118,8 @@ const AngularWorkflow = (defaultprops) => {
 					TBD
 				</Typography>
 			</div>
+			*/}
+
 			{/*
 			<div style={{display: "flex", marginTop: 10, }}>
 				<Typography variant="body1">
@@ -11104,16 +11130,70 @@ const AngularWorkflow = (defaultprops) => {
 				</Typography>
 			</div>
 			*/}
+			
+			{workflow.video !== undefined && workflow.video !== null && workflow.video.length > 0 ? 
+				<div style={{
+					marginTop: 10, 
+					maxWidth: "100%", 
+					overflow: "hidden",
+				}}>
+					<Typography variant="body1">
+						Video	
+					</Typography>
+					{
+						workflow.video.includes("loom.com/share") && workflow.video.split("/").length > 4 ? 
+						<div>
+							<iframe 
+								src={`https://www.loom.com/embed/${workflow.video.split("/")[4]}`}
+								frameBorder={false}
+								webkitallowFullscreen={true}
+								mozallowFullscreen={true}
+								allowFullscreen={true}
+								style={{
+									"top": 0, 
+									"left": 0,
+									"maxWidth": 270,
+									"minWidth": 270,
+								}}
+							/>
+						</div>
+						: 
+						workflow.video.includes("youtube.com") && workflow.video.split("/").length > 3 && workflow.video.includes("v=") 
+						? 
+							<div>
+								<iframe 
+									src={`https://www.youtube.com/embed/${((new URL(workflow.video)).searchParams).get("v")}`}
+									frameBorder={false}
+									webkitallowFullscreen={true}
+									mozallowFullscreen={true}
+									allowFullscreen={true}
+									style={{
+										"top": 0, 
+										"left": 0,
+										"maxWidth": 270,
+										"minWidth": 270,
+									}}
+								/>
+							</div>
+						: 
+						<Typography variant="body1">
+							{workflow.video}
+						</Typography>
+					}	
+				</div>
+			: null}
+
 			{workflow.description !== undefined && workflow.description !== null && workflow.description.length > 0 ?
 				<div style={{marginTop: 5, }}>
 					<Typography variant="body1">
 						Description 
 					</Typography>
-					<Typography variant="body1" color="textSecondary">
+					<Typography variant="body1" color="textSecondary" style={{maxWidth: "100%", maxHeight: 250, overflowX: "hidden"}}>
 						{workflow.description} 
 					</Typography>
 				</div>
 			: null}
+
 			{userdata.avatar === creatorProfile.github_avatar ? 
 				<div style={{marginTop: 50, }}>
 					<Button

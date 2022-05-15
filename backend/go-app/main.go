@@ -1265,7 +1265,7 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		if len(org.SSOConfig.SSOEntrypoint) > 0 {
-			log.Printf("[DEBUG] Found SAML SSO url")
+			log.Printf("[DEBUG] Found SAML SSO url: %s", org.SSOConfig.SSOEntrypoint)
 			baseSSOUrl = org.SSOConfig.SSOEntrypoint
 			break
 		}

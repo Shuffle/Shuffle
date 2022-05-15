@@ -59,7 +59,8 @@ const Docs = (defaultprops) => {
 
 	// Quickfix for react router 5 -> 6 
 	const params = useParams();
-	var props = JSON.parse(JSON.stringify(defaultprops))
+	//var props = JSON.parse(JSON.stringify(defaultprops))
+	var props = Object.assign({selected: false}, defaultprops);
 	props.match = {}
 	props.match.params = params
 

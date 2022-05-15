@@ -690,7 +690,7 @@ const OrgHeader = (props) => {
 							</Grid>
 						</Grid>
 						}
-						{isCloud ? null : 
+						{/*isCloud ? null : */}
 						<Grid item xs={12} style={{marginTop: 50,}}>
             	<Typography variant="h4" style={{textAlign: "center",}}>SAML SSO (v1.1)</Typography>
 							<Grid container style={{marginTop: 10, }}>
@@ -769,7 +769,6 @@ const OrgHeader = (props) => {
             		</Grid>
             	</Grid>
 						</Grid>
-						}
             {/*
 							<span style={{textAlign: "center"}}>
 								{expanded ? 

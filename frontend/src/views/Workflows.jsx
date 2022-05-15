@@ -83,7 +83,7 @@ import { DataGrid, GridToolbar } from "@material-ui/data-grid";
 //import JSONPrettyMon from 'react-json-pretty/dist/monikai'
 import Dropzone from "../components/Dropzone";
 
-import { Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAlert } from "react-alert";
 import ChipInput from "material-ui-chip-input";
 import { v4 as uuidv4 } from "uuid";
@@ -487,6 +487,8 @@ export const validateJson = (showResult) => {
 const Workflows = (props) => {
   const { globalUrl, isLoggedIn, isLoaded, userdata } = props;
   document.title = "Shuffle - Workflows";
+	let navigate = useNavigate();
+
   const theme = useTheme();
   const alert = useAlert();
   const classes = useStyles(theme);
@@ -893,7 +895,7 @@ const Workflows = (props) => {
           console.log("Status not 200 for workflows :O!: ", response.status);
 
           if (isCloud) {
-            window.location.pathname = "/search?tab=workflows";
+            navigate("/search?tab=workflows")
           }
 
           alert.info("Failed getting workflows.");
