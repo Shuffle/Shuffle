@@ -22,7 +22,7 @@ RUN rm -rf /usr/src/app/node_modules/webpack
 RUN yarn build
 
 # Production environment
-FROM nginx:1.21.5
+FROM nginx:latest
 
 RUN mkdir -p /usr/share/nginx/html/build
 RUN mkdir -p /usr/share/nginx/html/css
