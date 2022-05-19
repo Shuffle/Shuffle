@@ -380,17 +380,17 @@ class AppBase:
             if not finished:
                 # Not sure why this would work tho :)
                 action_result["status"] = "FAILURE"
-                action_result["result"] = f"POST failed to get info!"
-                self.logger.info(f"[DEBUG] Before typeerror stream result - NOT finished")
+                action_result["result"] = json.dumps({"success": False, "reason": "POST error: Failed connecting to %s over 5 retries" % url})
+                self.logger.info(f"[DEBUG] Before typeerror stream result - NOT finished after 5 requests")
                 ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result)
         
             self.logger.info(f"""[DEBUG] Successful request result request: Status= {ret.status_code} & Response= {ret.text}. Action status: {action_result["status"]}""")
         except requests.exceptions.ConnectionError as e:
             self.logger.info(f"[DEBUG] Unexpected ConnectionError happened: {e}")
         except TypeError as e:
-            #self.logger.exception(e)
             action_result["status"] = "FAILURE"
-            action_result["result"] = f"POST error: {e}"
+            action_result["result"] = json.dumps({"success": False, "reason": "Typeerror when sending to backend URL %s" % url})
+
             self.logger.info(f"[DEBUG] Before typeerror stream result: {e}")
             ret = requests.post("%s%s" % (self.base_url, stream_path), headers=headers, json=action_result)
             #self.logger.info(f"[DEBUG] Result: {ret.status_code}")
@@ -2471,6 +2471,12 @@ class AppBase:
             except KeyError:
                 return True, ""
 
+            # Startnode should always run - no need to check incoming
+            try:
+                if action["id"] == fullexecution["start"]:
+                    return True, ""
+            except Exception as error:
+                self.logger.info(f"[WARNING] Failed checking startnode: {error}")
 
             available_checks = [
                 "=",

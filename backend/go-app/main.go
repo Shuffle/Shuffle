@@ -981,7 +981,8 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	org, err := shuffle.GetOrg(ctx, userInfo.ActiveOrg.Id)
-	if err == nil {
+	//if err == nil {
+	if len(org.Id) > 0 {
 		userInfo.ActiveOrg = shuffle.OrgMini{
 			Id:         org.Id,
 			Name:       org.Name,
@@ -990,6 +991,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 			Image:      org.Image,
 		}
 	}
+	//}
 
 	userInfo.ActiveOrg.Users = []shuffle.UserMini{}
 	userOrgs := []shuffle.OrgMini{}
@@ -1000,7 +1002,8 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		}
 
 		org, err := shuffle.GetOrg(ctx, item)
-		if err == nil {
+		_ = err
+		if len(org.Id) > 0 {
 			userOrgs = append(userOrgs, shuffle.OrgMini{
 				Id:         org.Id,
 				Name:       org.Name,
