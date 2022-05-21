@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useInterval } from "react-powerhooks";
 import DetectionFramework from "../components/DetectionFramework.jsx";
+import { makeStyles, useTheme } from "@material-ui/core/styles";
 // nodejs library that concatenates classes
 import classNames from "classnames";
 import theme from '../theme';
@@ -9,6 +10,7 @@ import { useNavigate, Link, useParams } from "react-router-dom";
 // react plugin used to create charts
 //import { Line, Bar } from "react-chartjs-2";
 import { useAlert } from "react-alert";
+import Autocomplete from "@material-ui/lab/Autocomplete";
 
 import {
 	Tooltip,
@@ -19,6 +21,7 @@ import {
 	Grid,
 	Paper,
 	Chip,
+	Checkbox,
 } from "@material-ui/core";
 
 import {
@@ -27,9 +30,13 @@ import {
 	Description as DescriptionIcon,
 	PlayArrow as PlayArrowIcon,
 	Edit as EditIcon,
+	CheckBox as CheckBoxIcon,
+	CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon,
+	OpenInNew as OpenInNewIcon,
 } from "@material-ui/icons";
 
 import WorkflowPaper from "../components/WorkflowPaper.jsx"
+import { removeParam } from "../views/AngularWorkflow.jsx"
 
 // core components
 //import {
@@ -57,7 +64,33 @@ import {
 	TreeMapRect,
 } from 'reaviz';
 
-const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLoggedIn}) => {
+const useStyles = makeStyles({
+  notchedOutline: {
+    borderColor: "#f85a3e !important",
+  },
+  root: {
+    "& .MuiAutocomplete-listbox": {
+      border: "2px solid #f85a3e",
+      color: "white",
+      fontSize: 18,
+      "& li:nth-child(even)": {
+        backgroundColor: "#CCC",
+      },
+      "& li:nth-child(odd)": {
+        backgroundColor: "#FFF",
+      },
+    },
+  },
+  inputRoot: {
+    color: "white",
+    // This matches the specificity of the default styles at https://github.com/mui-org/material-ui/blob/v4.11.3/packages/material-ui-lab/src/Autocomplete/Autocomplete.js#L90
+    "&:hover .MuiOutlinedInput-notchedOutline": {
+      borderColor: "#f86a3e",
+    },
+  },
+});
+
+const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLoggedIn, workflows, setWorkflows}) => {
 	const [expandedIndex, setExpandedIndex] = useState(-1);
 	const [expandedItem, setExpandedItem] = useState(-1);
 	const [inputUsecase, setInputUsecase] = useState({});
@@ -67,8 +100,13 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 	const [video, setVideo] = useState("");
 	const [blogpost, setBlogpost] = useState("");
 
-	const [mitreTags, setMitreTags] = useState([]);
+	const [selectedWorkflows, setSelectedWorkflows] = useState([])
+	const [firstLoad, setFirstLoad] = useState(true)
+
+  const classes = useStyles();
 	let navigate = useNavigate();
+
+	const [mitreTags, setMitreTags] = useState([]);
 	if (keys === undefined || keys === null || keys.length === 0) {
 		return null
 	}
@@ -104,7 +142,6 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 			setTimeout(() => {
 				//console.log("Scroll!")
 				const found = document.getElementById("selected_box");
-				console.log("Found to scroll: ", found)
 				if (found !== undefined && found !== null) {
 					//console.log("FOUND!!")
 					found.scrollTo({
@@ -112,6 +149,9 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 						behavior: "smooth",
 					})
 				}
+
+				setFirstLoad(true)
+				setSelectedWorkflows([])
 			}, 100);
 })
 		.catch((error) => {
@@ -119,6 +159,9 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 			setInputUsecase({})
 			setExpandedIndex(index)
 			setExpandedItem(subindex)
+
+			setFirstLoad(true)
+			setSelectedWorkflows([])
 		})
 	}
 
@@ -178,6 +221,44 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
       })
 		}
 
+  const setWorkflow = (workflowdata) => {
+		const new_url = `${globalUrl}/api/v1/workflows/${workflowdata.id}`
+
+    fetch(new_url, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(workflowdata),
+      credentials: "include",
+    })
+		.then((response) => {
+			if (response.status !== 200) {
+				console.log("Status not 200 for workflows :O!");
+				return;
+			}
+
+			return response.json();
+		})
+		.then((responseJson) => {
+			if (responseJson.success === false) {
+				if (responseJson.reason !== undefined) {
+					alert.error("Error updating workflow: ", responseJson.reason)
+				} else {
+					alert.error("Error updating workflow.")
+				}
+
+				return
+			}
+
+			return responseJson;
+		})
+		.catch((error) => {
+			alert.error("Problem setting workflow: ", error.toString());
+		});
+  };
+
 	return (
 		<div style={{marginTop: 25, minHeight: 1000,}}>
 			<Typography variant="h1">
@@ -194,14 +275,19 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 						</Typography>
       			<Grid container spacing={3} style={{marginTop: 25}}>
 							{usecase.list.map((subcase, subindex) => {
+								const selectedItem = subindex === expandedItem && index === expandedIndex
+
 								if (subcase.matches === undefined || subcase.matches === null) {
 									subcase.matches = []
+								} else {
+									if (selectedItem && subcase.matches.length > 0 && selectedWorkflows.length === 0 && firstLoad === true) {
+										setFirstLoad(false)
+										setSelectedWorkflows(subcase.matches)
+									}
 								}
 
-								const selectedItem = subindex === expandedItem && index === expandedIndex
 								if (selectedItem && subcase.name !== undefined && inputUsecase.name !== undefined) { 
 									if (subcase.name.toLowerCase().replaceAll(" ", "_") === inputUsecase.name.toLowerCase().replaceAll(" ", "_")) {
-										console.log("Input: ", inputUsecase)
 										if (inputUsecase.description !== undefined && inputUsecase.description !== null) {
 											subcase.description = inputUsecase.description
 										}
@@ -213,21 +299,32 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 										if (inputUsecase.video !== undefined && inputUsecase.video !== null) {
 											subcase.video = inputUsecase.video
 										}
+
+										if (inputUsecase.extra_buttons !== undefined && inputUsecase.extra_buttons !== null) {
+											subcase.extra_buttons = inputUsecase.extra_buttons
+										}
 									}
 								}
 
-								const finished = subcase.matches.length > 0
 								//const backgroundColor = selectedItem ? "inherit" : finished ?  "inherit" : usecase.color
-								const backgroundColor = "inherit"
+								const finished = subcase.matches.length > 0
+								const backgroundColor = theme.palette.surfaceColor
+								//"inherit"
 								const itemBorder = `${selectedItem ? "3px" : expandedItem >= 0 ? "0px" : "1px"} solid ${usecase.color}`
 
+								const fixedName = subcase.name.toLowerCase().replace("_", " ")
+
 								return (
-      						<Grid item xs={selectedItem ? 12 : 4} key={subindex} style={{minHeight: 110,}} onClick={() => {
+      						<Grid id={fixedName} item xs={selectedItem ? 12 : 4} key={subindex} style={{minHeight: 110,}} onClick={() => {
+
+										//setSelectedWorkflows([])
 										if (selectedItem) {
 										} else {
-											//if (subcase.description !== undefined && subcase.description !== null && subcase.description.length > 0) {
 											getUsecase(subcase.name, index, subindex) 
-											//}
+											navigate(`/usecases?selected_object=${fixedName}`)
+
+											//const newitem = removeParam("selected_object", cursearch);
+											//navigate(curpath + newitem)
 										}
 									}}>
 										<Paper style={{padding: "30px 30px 30px 30px", minHeight: 75, cursor: !selectedItem ? "pointer" : "default", border: itemBorder, backgroundColor: backgroundColor,}} onClick={() => {
@@ -307,7 +404,7 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 															: null}
 												</div>
 											: 
-												<div style={{textAlign: "left", position: "relative",}} id="selected_box">
+												<div style={{textAlign: "left", position: "relative", }} id="selected_box">
 													<Typography variant="h6">
 														<b>{subcase.name}</b>
 													</Typography>
@@ -402,7 +499,7 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
           									  </IconButton>
           									</Tooltip>
 													</div>
-													<div style={{marginTop: 25, display: "flex", minHeight: 400, maxHeight: 400, }}>
+													<div style={{marginTop: 25, display: "flex", minHeight: 400, maxHeight: 400, marginRight: 15, }}>
 														{editing ? 
 															<div style={{flex: 1, marginRight: 50, }}>
 																<Typography variant="h6">
@@ -506,14 +603,149 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 															</div>
 															: 
 																<div style={{flex: 1, textAlign: "left", marginRight: 10, }}>
-																	<Typography variant="body1">
+																	<Typography variant="body1" color="textSecondary">
 																		{subcase.description}
 																	</Typography>
-																	<Typography variant="h6" style={{marginTop: 15, }}>
-																		Your workflow{subcase.matches.length === 1 ? "" : "s"} ({subcase.matches.length})
+																	<Typography variant="body1" style={{marginTop: 15, marginBottom: 10, }}>
+																		Select relevant workflows
 																	</Typography>
-																	{subcase.matches.length > 0 ? 
-																		<Grid container xs={3} style={{maxWidth: 325, marginTop: 10, }}>
+
+																	{workflows !== undefined && workflows !== null && workflows.length > 0 ?
+																		<Autocomplete
+																			multiple
+          													  id="workflow_matching"
+          													  options={workflows}
+          													  autoHighlight
+              											  value={selectedWorkflows}
+          													  classes={{ inputRoot: classes.inputRoot }}
+          													  ListboxProps={{
+          													    style: {
+          													      backgroundColor: theme.palette.inputColor,
+          													      color: "white",
+          													    },
+          													  }}
+																			getOptionSelected={(option, value) => option.id === value.id}
+          													  getOptionLabel={(option) => {
+
+          													    if (
+          													      option === undefined ||
+          													      option === null ||
+          													      option.name === undefined ||
+          													      option.name === null 
+          													    ) {
+          													      return "No Workflow Selected";
+          													    }
+
+          													    const newname = (option.name.charAt(0).toUpperCase() + option.name.substring(1)).replaceAll("_", " ");
+
+          													    return newname;
+          													  }}
+          													  fullWidth
+          													  style={{
+          													    backgroundColor: theme.palette.inputColor,
+          													    height: 50,
+          													    borderRadius: theme.palette.borderRadius,
+          													  }}
+          													  onChange={(event, newValue) => {
+																				console.log("CLICK: ", newValue)
+																				//handleWorkflowSelectionUpdate({ target: { value: newValue} })
+																				//setSelectedWorkflows=
+																				//var newvalue = []
+																				//for (var key in newValue) {
+																				//	if (newValue[key].id !== undefined) {
+																				//		newvalue.push(newValue[key].id)
+																				//	}
+																				//}
+
+																				// Doing this way as you may want to remove some too
+																				for (var key in workflows) {
+																					if (!newValue.find(data => data.id === workflows[key].id)) {
+																						// Check if it has the one in it
+																						if (workflows[key]["usecase_ids"] !== undefined && workflows[key]["usecase_ids"] !== null && workflows[key]["usecase_ids"].includes(subcase.name)) {
+																							const filtered = workflows[key]["usecase_ids"].filter(data => data !== subcase.name)
+																							if (filtered !== undefined && filtered !== null) {
+																								//console.log("Removing: ", workflows[key].name, workflows[key])
+																								workflows[key]["usecase_ids"] = filtered
+  																					
+																								setWorkflow(workflows[key]) 
+																							}
+																						}
+
+																						continue
+																					}
+
+																					if (workflows[key]["usecase_ids"] === undefined || workflows[key]["usecase_ids"] === null) {
+																						workflows[key]["usecase_ids"] = [subcase.name]
+																						console.log("Setting: ", workflows[key].name)
+																						setWorkflow(workflows[key]) 
+
+																					} else if (!workflows[key]["usecase_ids"].includes(subcase.name)) {
+																						workflows[key]["usecase_ids"].push(subcase.name)
+																						console.log("Adding: ", workflows[key].name)
+																						setWorkflow(workflows[key]) 
+
+																					}
+																				}
+
+																				setWorkflows(workflows)
+																				console.log("New: ", newValue)
+																				setSelectedWorkflows(newValue)
+                												//setUpdate(Math.random())
+          													  }}
+      																renderOption={(props, option) => {
+																				//console.log("In options?: ", props, option)
+
+																				var newname = props.name
+																				if (newname === undefined || newname === null) {
+																					newname = "placeholder"
+																				}
+
+																				if (newname.length > 2) {
+																					newname = newname.charAt(0).toUpperCase() + newname.substring(1)
+																				}
+																				return (
+																					<li {...props}>
+																						<Tooltip arrow placement="left" title={
+																							<span style={{}}>
+																								{props.image !== undefined && props.image !== null && props.image.length > 0 ? 
+																									<img src={props.image} alt={newname} style={{backgroundColor: theme.palette.surfaceColor, maxHeight: 200, minHeigth: 200, borderRadius: theme.palette.borderRadius, }} />
+																								: null}
+																								<Typography>
+																									Choose {newname}
+																								</Typography>
+																							</span>
+																							} placement="bottom">
+																							<span>
+																								<Checkbox
+																									icon={<CheckBoxOutlineBlankIcon fontSize="small" />}
+																									checkedIcon={<CheckBoxIcon fontSize="small" />}
+																									style={{ marginRight: 8 }}
+																									checked={option.selected}
+																								/>
+																								{newname}
+																							</span>
+																						</Tooltip>
+																					</li>
+      																	)
+																			}}
+          													  renderInput={(params) => {
+          													    return (
+																						<TextField
+																							style={{
+																								backgroundColor: theme.palette.inputColor,
+																								borderRadius: theme.palette.borderRadius,
+																							}}
+																							{...params}
+																							label="Find your workflows"
+																							variant="outlined"
+          													      	/>
+          													    );
+          													  }}
+          													/>
+																	: null}
+
+																	{/*subcase.matches.length > 0 ? 
+																		<Grid container style={{maxWidth: 325, marginTop: 10, }}>
 																			{subcase.matches.map((workflow, workflowindex) => {
 																				return (
 																					<Grid key={workflowindex} item index={workflowindex} xs={12}>
@@ -528,13 +760,16 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 																				No workflow selected yet.
 																			</Typography>
 																		</div>
-																	}
-																	{isCloud !== false ? 
-																		<div>
-																			<Typography variant="h6" style={{marginTop: 15, cursor: "pointer",}} onClick={() => {
-																				navigate("/search?tab=workflows&q="+subcase.name)
-																			}}>
-																				Public workflows	
+																	*/}
+																	<div style={{marginTop: 35}}>
+																		<a
+																			href={`https://shuffler.io/search?tab=workflows&q=${subcase.name}`}
+																			rel="noopener noreferrer"
+																			target="_blank"
+																			style={{ textDecoration: "none", color: "white", marginRight: 5, }}
+																		>
+																			<Typography variant="body1" style={{marginTop: 15, cursor: "pointer",}} onClick={() => {}}>
+																				See Public Workflows <OpenInNewIcon style={{marginTop: 5, marginLeft: 15, }}/>
 																			</Typography>
 																			{/*
 																			<div>
@@ -543,8 +778,40 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 																				</Typography>
 																			</div>
 																			*/}
+																		</a>
+																	</div>
+
+
+																	<div style={{display: "flex"}}>
+																		{subcase.extra_buttons !== undefined && subcase.extra_buttons !== null && subcase.extra_buttons.length > 0 ?
+																			subcase.extra_buttons.map((subdata, index) => {
+																				var highlight = false
+																				var baseTypeInfo = subcase.type !== undefined ? subcase.type : "communication"
+																				if (frameworkData[baseTypeInfo] !== undefined && frameworkData[baseTypeInfo] !== null && subdata.app !== undefined && subdata.app !== null) {
+																					if (frameworkData[baseTypeInfo].name.toLowerCase().replaceAll("_", " ") === subdata.app.toLowerCase().replaceAll("_", " ")) {
+																						highlight = true
+																					}
+																				}
+
+																				return (
+																					<a 
+																						key={index}
+																						href={subdata.link}
+																						rel="noopener noreferrer"
+																						target="_blank"
+                  													style={{ textDecoration: "none", color: "rgba(255,255,255,0.7)", marginRight: 5, }}
+																					>
+																						<div style={{width: 140, display: "flex", borderRadius: theme.palette.borderRadius, cursor: "pointer", border: highlight ? "2px solid #f86a3e" : "1px solid rgba(255,255,255,0.7)", backgroundColor: theme.palette.inputColor, padding: 15, }}>
+																							<img src={subdata.image} style={{width: 40, height: 40, }} />
+																							<Typography variant="body1" style={{marginLeft: 15, marginTop: 6,}}>
+																								{subdata.name}
+																							</Typography>
+																						</div>
+																					</a>
+																				)
+																		})
+																		: null}
 																		</div>
-																	: null}
 																</div>
 															}
 															<div style={{
@@ -726,9 +993,62 @@ const Dashboard = (props) => {
   const [workflows, setWorkflows] = useState([]);
   const [frameworkData, setFrameworkData] = useState(undefined);
 
+	let navigate = useNavigate();
   const isCloud =
     window.location.host === "localhost:3002" ||
     window.location.host === "shuffler.io";
+
+
+	useEffect(() => {
+		if (selectedUsecaseCategory.length === 0) {
+			setSelectedUsecases(usecases)
+		} else {
+			const foundUsecase = usecases.find(data => data.name === selectedUsecaseCategory)
+			if (foundUsecase !== undefined && foundUsecase !== null) {
+				setSelectedUsecases([foundUsecase])
+			}
+		}
+	}, [selectedUsecaseCategory])
+
+	const checkSelectedParams = () => {
+		const urlSearchParams = new URLSearchParams(window.location.search)
+		const params = Object.fromEntries(urlSearchParams.entries())
+
+		const curpath = typeof window === "undefined" || window.location === undefined ? "" : window.location.pathname;
+		const cursearch = typeof window === "undefined" || window.location === undefined ? "" : window.location.search;
+
+		const foundQuery = params["selected"]
+		if (foundQuery !== null && foundQuery !== undefined) {
+			setSelectedUsecaseCategory(foundQuery)
+
+      const newitem = removeParam("selected", cursearch);
+			navigate(curpath + newitem)
+		}
+
+		const foundQuery2 = params["selected_object"]
+		if (foundQuery2 !== null && foundQuery2 !== undefined) {
+			console.log("Got selected_object: ", foundQuery2)
+
+			const queryName = foundQuery2.toLowerCase().replaceAll("_", " ")
+			// Waiting a bit for it to render
+			setTimeout(() => {
+				const foundItem = document.getElementById(queryName)
+				if (foundItem !== undefined && foundItem !== null) { 
+					foundItem.click()
+				} else { 
+					//console.log("Couldn't find item with name ", queryName)
+				}
+			}, 100);
+		}
+
+	}
+
+	useEffect(() => {
+		if (usecases.length > 0) {
+			console.log(usecases)
+			checkSelectedParams()
+		}
+	}, [usecases])
 
 	const getFramework = () => {
     fetch(globalUrl + "/api/v1/apps/frameworkConfiguration", {
@@ -783,10 +1103,8 @@ const Dashboard = (props) => {
 		.then((responseJson) => {
 			fetchUsecases(responseJson)
 
-			console.log("Resp: ", responseJson)
 			if (responseJson !== undefined) {
-				//setWorkflows(responseJson);
-				//fetchUsecases(responseJson)
+				setWorkflows(responseJson);
 			}
 		})
 		.catch((error) => {
@@ -795,18 +1113,6 @@ const Dashboard = (props) => {
 		});
 	}
 
-	useEffect(() => {
-		console.log("Changed: ", selectedUsecaseCategory)
-		if (selectedUsecaseCategory.length === 0) {
-			setSelectedUsecases(usecases)
-		} else {
-			const foundUsecase = usecases.find(data => data.name === selectedUsecaseCategory)
-			if (foundUsecase !== undefined && foundUsecase !== null) {
-				console.log("FOUND: ", foundUsecase)
-				setSelectedUsecases([foundUsecase])
-			}
-		}
-	}, [selectedUsecaseCategory])
 
   document.title = "Shuffle - usecases";
   var dayGraphLabels = [60, 80, 65, 130, 80, 105, 90, 130, 70, 115, 60, 130];
@@ -846,9 +1152,7 @@ const Dashboard = (props) => {
       })
       .then((responseJson) => {
 				if (responseJson.success !== false) {
-					console.log("Usecases: ", responseJson)
 					if (workflows !== undefined && workflows !== null && workflows.length > 0) {
-						console.log("Got workflows: ", workflows)
 						var categorydata = responseJson
 
 						var newcategories = []
@@ -866,7 +1170,6 @@ const Dashboard = (props) => {
 									if (workflow.usecase_ids !== undefined && workflow.usecase_ids !== null) {
 										for (var usecasekey in workflow.usecase_ids) {
 											if (workflow.usecase_ids[usecasekey].toLowerCase() === subcategory.name.toLowerCase()) {
-												console.log("Got match: ", workflow.usecase_ids[usecasekey])
 
 												category.matches.push({
 													"workflow": workflow.id,
@@ -888,7 +1191,6 @@ const Dashboard = (props) => {
 							newcategories.push(category)
 						} 
 
-						console.log("Categories: ", newcategories)
 						if (newcategories !== undefined && newcategories !== null && newcategories.length > 0) {
 							handleKeysetting(newcategories)
 							setUsecases(newcategories)
@@ -1064,7 +1366,6 @@ const Dashboard = (props) => {
   });
 
   if (firstRequest) {
-    console.log("HELO");
     setFirstRequest(false);
     //start();
     //runUpdate();
@@ -1213,6 +1514,8 @@ const Dashboard = (props) => {
 				keys={selectedUsecases} 
 				isCloud={isCloud} 
 				globalUrl={globalUrl} 
+				workflows={workflows}
+				setWorkflows={setWorkflows}
 			/>
 
 			{treeKeys.length > 0 ? 

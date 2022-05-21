@@ -166,7 +166,7 @@ export function sortByKey(array, key) {
   });
 }
 
-function removeParam(key, sourceURL) {
+export function removeParam(key, sourceURL) {
   if (sourceURL === undefined) {
     return;
   }
@@ -1611,10 +1611,6 @@ const AngularWorkflow = (defaultprops) => {
   }
 
   const getWorkflow = (workflow_id, sourcenode) => {
-    console.log(
-      //`Getting workflow ${workflow_id} with append value ${sourcenode}`
-    );
-
     fetch(globalUrl + "/api/v1/workflows/" + workflow_id, {
       method: "GET",
       headers: {
@@ -1716,6 +1712,11 @@ const AngularWorkflow = (defaultprops) => {
               nodefound = true;
             }
 
+        		if (responseJson.public) {
+							node.data.is_valid = true
+							node.is_valid = true
+						}
+
             var example = "";
             if (
               action.example !== undefined &&
@@ -1757,6 +1758,7 @@ const AngularWorkflow = (defaultprops) => {
               return null;
             }
 
+
             edge.data = {
               id: branch.id,
               _id: branch.id,
@@ -1768,6 +1770,11 @@ const AngularWorkflow = (defaultprops) => {
               decorator: false,
               source_workflow: responseJson.id,
             };
+
+        		if (responseJson.public) {
+							edge.data.is_valid = true
+							edge.is_valid = true
+						}
 
             return edge;
           });
@@ -4124,6 +4131,11 @@ const AngularWorkflow = (defaultprops) => {
       node.data.type = "ACTION";
       node.isStartNode = action["id"] === workflow.start;
 
+			if (workflow.public === true) {
+				node.data.is_valid = true
+				node.is_valid = true
+			}
+
       var example = "";
       if (
         action.example !== undefined &&
@@ -4431,14 +4443,8 @@ const AngularWorkflow = (defaultprops) => {
     } else if (
 			// 2nd load - configures cytoscape
 			//
-      !established &&
-      cy !== undefined &&
-      ((apps !== null &&
-      apps !== undefined &&
-      apps.length > 0) || workflow.public === true) &&
-      Object.getOwnPropertyNames(workflow).length > 0 &&
-      authLoaded
-    ) {
+      !established && cy !== undefined &&
+      ((apps !== null && apps !== undefined && apps.length > 0) || workflow.public === true) && Object.getOwnPropertyNames(workflow).length > 0 && authLoaded) {
 			
 			console.log("In POST graph setup!")
       //This part has to load LAST, as it's kind of not async.
@@ -10824,6 +10830,7 @@ const AngularWorkflow = (defaultprops) => {
       x: 300,
       y: 300,
     };
+
     cy.add({
       group: "nodes",
       data: {

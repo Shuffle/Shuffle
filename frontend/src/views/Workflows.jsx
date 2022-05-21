@@ -3038,7 +3038,7 @@ const Workflows = (props) => {
 								</div>
 							</div>
 						}
-            <div style={{ flex: 1, textAlign: "right" }}>
+            <div style={{ flex: 1, textAlign: "right", }}>
               {workflowButtons}
             </div>
           </div>
@@ -3090,7 +3090,7 @@ const Workflows = (props) => {
 					}}
 					*/}
   		
-					<div style={{width: "100%",}}>
+					<div style={{width: "100%", minHeight: isMobile ? 0 : 71, maxHeight: isMobile ? 0 : 71, }}>
 						{!isMobile && usecases !== null && usecases !== undefined && usecases.length > 0 ? 
 							<div style={{ display: "flex", }}>
 								{usecases.map((usecase, index) => {

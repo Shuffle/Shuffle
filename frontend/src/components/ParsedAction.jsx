@@ -183,6 +183,13 @@ const ParsedAction = (props) => {
 	const [fieldCount, setFieldCount] = React.useState(0);
 	const [hiddenDescription, setHiddenDescription] = React.useState(true);
 
+
+  useEffect(() => {
+		if (setLastSaved !== undefined) {
+			setLastSaved(false)
+		}
+	}, [expansionModalOpen])
+
   useEffect(() => {
 		if (selectedAction.parameters !== null && selectedAction.parameters !== undefined) {
 			const paramcheck = selectedAction.parameters.find(param => param.name === "body")

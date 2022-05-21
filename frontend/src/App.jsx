@@ -64,11 +64,7 @@ const App = (message, props) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [dataset, setDataset] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
-  const [curpath, setCurpath] = useState(
-    typeof window === "undefined" || window.location === undefined
-      ? ""
-      : window.location.pathname
-  )
+  const [curpath, setCurpath] = useState(typeof window === "undefined" || window.location === undefined ? "" : window.location.pathname)
 
 
   useEffect(() => {
@@ -303,6 +299,7 @@ const App = (message, props) => {
       >
         <ScrollToTop
           getUserNotifications={getUserNotifications}
+					curpath={curpath}
           setCurpath={setCurpath}
         />
 				{!isLoaded ? null : 

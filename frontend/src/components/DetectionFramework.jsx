@@ -924,10 +924,7 @@ const Framework = (props) => {
 		const shiftmodifier = 3*scale
 		//const svgSize = `${40*scale}px`
 		const svgSize = `${40}px`
-		console.log("Size: ", svgSize)
 
-
-		console.log("Framework: ", parsedFrameworkData)
 		const fontSize = `${12*scale}px`
 		const defaultSize = `${85*scale}px`
 		const iconSize = `${45*scale}px`
@@ -1265,14 +1262,11 @@ const Framework = (props) => {
 		changeUsecase(selectedUsecase, usecaseType)
 
 		if (inputUsecase !== undefined && inputUsecase !== null) {
-			console.log("Got usecase: ", inputUsecase)
-
 			for (var key in inputUsecase.process) {
 				if (inputUsecase.process[key].source === "" || inputUsecase.process[key].target === "") {
 					continue
 				}
 
-				console.log("Edge: ", inputUsecase.process[key])
 				inputUsecase.process[key].label = parseInt(key)+1
 				inputUsecase.process[key].id = uuidv4();
 

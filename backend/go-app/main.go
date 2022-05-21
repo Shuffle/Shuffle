@@ -1038,6 +1038,18 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		chatDisabled = true
 	}
 
+	orgPriorities := org.Priorities
+	if len(org.Priorities) < 5 {
+		log.Printf("[WARNING] Should find and add priorities as length is less than 5 for org %s", userInfo.ActiveOrg.Id)
+		newPriorities, err := shuffle.GetPriorities(ctx, org)
+		if err != nil {
+			log.Printf("[WARNING] Failed getting new priorities for org %s: %s", org.Id, err)
+			//orgPriorities = []shuffle.Priority{}
+		} else {
+			orgPriorities = newPriorities
+		}
+	}
+
 	tutorialsFinished := []string{}
 	returnValue := shuffle.HandleInfo{
 		Success:   true,
@@ -1056,6 +1068,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 		EthInfo:      userInfo.EthInfo,
 		Tutorials:    tutorialsFinished,
 		ChatDisabled: chatDisabled,
+		Priorities:   orgPriorities,
 	}
 
 	returnData, err := json.Marshal(returnValue)
@@ -5966,7 +5979,9 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/workflows/collections/{key}", shuffle.HandleGetCollection).Methods("GET", "OPTIONS")
 
 	// Related to use-cases that are not directly workflows.
+	r.HandleFunc("/api/v1/workflows/usecases/{key}", shuffle.HandleGetUsecase).Methods("GET", "OPTIONS")
 	r.HandleFunc("/api/v1/workflows/usecases", shuffle.LoadUsecases).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/workflows/usecases", shuffle.UpdateUsecases).Methods("POST", "OPTIONS")
 
 	// Legacy app things
 	r.HandleFunc("/api/v1/workflows/apps/validate", validateAppInput).Methods("POST", "OPTIONS")

@@ -2051,8 +2051,9 @@ func iterateOpenApiGithub(fs billy.Filesystem, dir []os.FileInfo, extra string, 
 	workflowapps, err := shuffle.GetAllWorkflowApps(ctx, 1000, 0)
 	appCounter := 0
 	if err != nil {
-		log.Printf("Failed to get existing generated apps")
+		log.Printf("[WARNING] Failed to get existing generated apps for OpenAPI verification: %s", err)
 	}
+
 	for _, file := range dir {
 		if len(onlyname) > 0 && file.Name() != onlyname {
 			continue
