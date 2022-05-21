@@ -75,7 +75,6 @@ const CodeEditor = (props) => {
 		allVariable.push('$'+actionlist[i].autocomplete.toLowerCase())
 		mainVariables.push('$'+actionlist[i].autocomplete.toLowerCase())
 		// console.log(actionlist[i])
-		console.log(actionlist[i].example.length)
 		// for(var j=0; j<actionlist[i].example.length; j++){
 		// 	console.log(j)
 		// 	allVariable.push('$'+actionlist[i].example[j].toLowerCase().substring(0, 25))
@@ -160,12 +159,12 @@ const CodeEditor = (props) => {
 		var variable_occurences = code_line.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
 
 		try{
-			for(var occ = 0; occ<variable_occurences.length; occ++){
+			for(var occ = 0; occ < variable_occurences.length; occ++){
 				dollar_occurences_len.push(variable_occurences[occ].length)
 			}
 		} catch (e) {}
 
-		for(var occ = 0; occ<dollar_occurences.length; occ++){
+		for(var occ = 0; occ < dollar_occurences.length; occ++){
 			// var temp_arr = []
 			// for(var occ_len = 0; occ_len<dollar_occurences_len[occ]; occ_len++){
 			// 	temp_arr.push(dollar_occurences[occ]+occ_len)
@@ -174,10 +173,13 @@ const CodeEditor = (props) => {
 			// temp_arr.push(temp_arr[temp_arr.length-1]+1)
 			// variable_ranges.push(temp_arr)
 			var temp_arr = [dollar_occurences[occ]]
-			for(var occ_len = 0; occ_len<dollar_occurences_len[occ]; occ_len++){
+			for(var occ_len = 0; occ_len < dollar_occurences_len[occ]; occ_len++){
 				temp_arr.push(dollar_occurences[occ]+occ_len+1)
 			}
-			if(temp_arr.length==1){temp_arr.push(temp_arr[temp_arr.length-1]+1)}
+
+			if(temp_arr.length==1) {
+				temp_arr.push(temp_arr[temp_arr.length-1]+1)
+			}
 			variable_ranges.push(temp_arr)
 		}
 

@@ -1839,15 +1839,13 @@ const AngularWorkflow = (defaultprops) => {
 		// Wait for new node to possibly be selected
 		//setTimeout(() => {
 		const typeIds = cy.elements('node:selected').jsons();
-		console.log("Found: ", typeIds)
 		for (var idkey in typeIds) {
 			const item = typeIds[idkey]
-			console.log("items: ", item)
 			if (item.data.isButton === true) {
-				console.log("Reselect old node & return - or just return?")
+				//console.log("Reselect old node & return - or just return?")
 				
 				if (item.data.buttonType === "delete" && item.data.attachedTo === nodedata.id) {
-					console.log("delete of same node!")
+					//console.log("delete of same node!")
 				}
 				return
 			}
@@ -3699,7 +3697,6 @@ const AngularWorkflow = (defaultprops) => {
 			for (var idkey in typeIds) {
 				const item = typeIds[idkey]
 				if (item.data.id === nodedata.id) {
-					console.log("items: ", item.data.id, nodedata.id)
 					return
 				}
 			}

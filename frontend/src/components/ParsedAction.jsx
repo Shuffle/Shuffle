@@ -2257,7 +2257,7 @@ const ParsedAction = (props) => {
   //}
   //console.log("env: ", selectedActionEnvironment)
 	
-  const baselabel = selectedAction.label;
+  var baselabel = selectedAction.label;
   return (
     <div style={appApiViewStyle} id="parsed_action_view">
 
@@ -2490,23 +2490,86 @@ const ParsedAction = (props) => {
 									const name = e.target.value;
 									console.log("CHANGED FROM2: ", baselabel);
 									console.log("CHANGED TO: ", name);
+
+									const parsedBaseLabel = "$"+baselabel.toLowerCase().replaceAll(" ", "_")
+									const newname = "$"+name.toLowerCase().replaceAll(" ", "_")
+
+									// Change in actions, triggers & conditions
+									// Highlight the changes somehow with a glow?
+
 									for (var key in workflow.actions) {
+										if (workflow.actions[key].id === selectedAction.id) {
+											continue
+										}
+
 										for (var subkey in workflow.actions[key].parameters) {
 											const param = workflow.actions[key].parameters[subkey];
-											if (param.value.includes(baselabel)) {
-												//if (param.value.toLowerCase().includes(baselabel)) {
-												console.log("FOUND: ", param);
+											if (!param.value.includes("$")) {
+												continue
+											}
 
-												workflow.actions[key].parameters[subkey].value.replaceAll(
-													baselabel,
-													e.target.value
-												);
+											console.log("PARAM: ", param)
+
+											// Should have a smarter way of discovering node names
+											// Do regex? 
+											// Finding index(es) and replacing at the location
+											
+
+											try {
+												var cnt = -1
+												var previous = 0
+												while (true) {
+													cnt += 1 
+													// Need to make sure e.g. changing the first here doesn't change the 2nd
+													// $change_me
+													// $change_me_2
+													
+													const foundindex = param.value.toLowerCase().indexOf(parsedBaseLabel, previous)
+													if (foundindex === previous && foundindex !== 0) {
+														break
+													}
+	
+													if (foundindex >= 0) {
+														previous = foundindex+newname.length
+														// Need to add diff of length to word
+	
+														// Check location:
+														// If it's a-zA-Z_ then don't replace
+														if (param.value.length > foundindex+parsedBaseLabel.length) {
+															console.log("Validate length if valid key if it's valid - don't replace if it is: ", param.value[foundindex+parsedBaseLabel.length])
+															const regex = /[a-zA-Z0-9_]/g;
+															const match = param.value[foundindex+parsedBaseLabel.length].match(regex);
+															if (match !== null) {
+																continue
+															}
+	
+															console.log("Matching: ", match)
+														}
+														
+														console.log("Found: ", foundindex)
+														console.log("Old found: ", workflow.actions[key].parameters[subkey].value)
+														const extralength = newname.length-parsedBaseLabel.length
+														param.value = param.value.substring(0, foundindex) + newname + param.value.substring(foundindex-extralength+newname.length, param.value.length)
+														console.log("New: ", workflow.actions[key].parameters[subkey].value)
+													} else { 
+														break
+													}
+	
+													// Break no matter what after 5 replaces. May need to increase
+													if (cnt >= 5) {
+														break
+													}
+	
+												}
+            					} catch (e) {
+												console.log("Failed value replacement based on index: ", e)
 											}
 										}
 									}
 
 									console.log("DID REPLACE ACTUALLY WORK?? - Something is buggy.");
 									setWorkflow(workflow);
+									baselabel = name
 								}}
 							/>
 						</div>
