@@ -2488,9 +2488,6 @@ const ParsedAction = (props) => {
 								onChange={selectedNameChange}
 								onBlur={(e) => {
 									const name = e.target.value;
-									console.log("CHANGED FROM2: ", baselabel);
-									console.log("CHANGED TO: ", name);
-
 									const parsedBaseLabel = "$"+baselabel.toLowerCase().replaceAll(" ", "_")
 									const newname = "$"+name.toLowerCase().replaceAll(" ", "_")
 
@@ -2508,12 +2505,9 @@ const ParsedAction = (props) => {
 												continue
 											}
 
-											console.log("PARAM: ", param)
-
 											// Should have a smarter way of discovering node names
 											// Do regex? 
 											// Finding index(es) and replacing at the location
-											
 
 											try {
 												var cnt = -1
@@ -2536,20 +2530,17 @@ const ParsedAction = (props) => {
 														// Check location:
 														// If it's a-zA-Z_ then don't replace
 														if (param.value.length > foundindex+parsedBaseLabel.length) {
-															console.log("Validate length if valid key if it's valid - don't replace if it is: ", param.value[foundindex+parsedBaseLabel.length])
 															const regex = /[a-zA-Z0-9_]/g;
 															const match = param.value[foundindex+parsedBaseLabel.length].match(regex);
 															if (match !== null) {
 																continue
 															}
-	
-															console.log("Matching: ", match)
 														}
 														
-														console.log("Found: ", foundindex)
 														console.log("Old found: ", workflow.actions[key].parameters[subkey].value)
 														const extralength = newname.length-parsedBaseLabel.length
 														param.value = param.value.substring(0, foundindex) + newname + param.value.substring(foundindex-extralength+newname.length, param.value.length)
+
 														console.log("New: ", workflow.actions[key].parameters[subkey].value)
 													} else { 
 														break

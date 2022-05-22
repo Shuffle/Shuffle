@@ -1151,6 +1151,7 @@ const Dashboard = (props) => {
         return response.json();
       })
       .then((responseJson) => {
+				// Matching workflows with usecases
 				if (responseJson.success !== false) {
 					if (workflows !== undefined && workflows !== null && workflows.length > 0) {
 						var categorydata = responseJson

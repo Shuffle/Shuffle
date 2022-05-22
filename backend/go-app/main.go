@@ -1041,7 +1041,7 @@ func handleInfo(resp http.ResponseWriter, request *http.Request) {
 	orgPriorities := org.Priorities
 	if len(org.Priorities) < 5 {
 		log.Printf("[WARNING] Should find and add priorities as length is less than 5 for org %s", userInfo.ActiveOrg.Id)
-		newPriorities, err := shuffle.GetPriorities(ctx, org)
+		newPriorities, err := shuffle.GetPriorities(ctx, userInfo, org)
 		if err != nil {
 			log.Printf("[WARNING] Failed getting new priorities for org %s: %s", org.Id, err)
 			//orgPriorities = []shuffle.Priority{}
@@ -1247,7 +1247,6 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 
 		// Should run calculations
 		if len(org.SSOConfig.OpenIdAuthorization) > 0 {
-			log.Printf("[DEBUG] Found OpenID url (PKCE!!). Extra redirect check: %s", request.URL.String())
 			baseSSOUrl = org.SSOConfig.OpenIdAuthorization
 
 			codeChallenge := uuid.NewV4().String()
@@ -1276,7 +1275,20 @@ func checkAdminLogin(resp http.ResponseWriter, request *http.Request) {
 
 			//log.Printf("[DEBUG] Got challenge value %s (POST state)", codeChallenge)
 
-			baseSSOUrl += fmt.Sprintf("?client_id=%s&response_type=code&scope=openid&redirect_uri=%s&state=%s&code_challenge_method=S256&code_challenge=%s", org.SSOConfig.OpenIdClientId, redirectUrl, state, codeChallenge)
+			if len(org.SSOConfig.OpenIdClientSecret) > 0 {
+
+				//baseSSOUrl += fmt.Sprintf("?client_id=%s&response_type=code&scope=openid&redirect_uri=%s&state=%s&client_secret=%s", org.SSOConfig.OpenIdClientId, redirectUrl, state, org.SSOConfig.OpenIdClientSecret)
+				state := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf("org=%s&redirect=%s&challenge=%s", org.Id, redirectUrl, org.SSOConfig.OpenIdClientSecret)))
+				log.Printf("URL: %s", redirectUrl)
+
+				baseSSOUrl += fmt.Sprintf("?client_id=%s&response_type=id_token&scope=openid&redirect_uri=%s&state=%s&response_mode=form_post&nonce=%s", org.SSOConfig.OpenIdClientId, redirectUrl, state, state)
+				//baseSSOUrl += fmt.Sprintf("&client_secret=%s", org.SSOConfig.OpenIdClientSecret)
+				log.Printf("[DEBUG] Found OpenID url (client secret). Extra redirect check: %s - %s", request.URL.String(), baseSSOUrl)
+			} else {
+				log.Printf("[DEBUG] Found OpenID url (PKCE!!). Extra redirect check: %s", request.URL.String())
+				baseSSOUrl += fmt.Sprintf("?client_id=%s&response_type=code&scope=openid&redirect_uri=%s&state=%s&code_challenge_method=S256&code_challenge=%s", org.SSOConfig.OpenIdClientId, redirectUrl, state, codeChallenge)
+			}
+
 			break
 		}
 
@@ -6065,7 +6077,7 @@ func initHandlers() {
 	r.HandleFunc("/api/v1/get_docker_image", getDockerImage).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/migrate_database", migrateDatabase).Methods("POST", "OPTIONS")
 	r.HandleFunc("/api/v1/login_sso", shuffle.HandleSSO).Methods("GET", "POST", "OPTIONS")
-	r.HandleFunc("/api/v1/login_openid", shuffle.HandleOpenId).Methods("GET", "OPTIONS")
+	r.HandleFunc("/api/v1/login_openid", shuffle.HandleOpenId).Methods("GET", "POST", "OPTIONS")
 
 	// Important for email, IDS etc. Create this by:
 	// PS: For cloud, this has to use cloud storage.

@@ -1607,7 +1607,7 @@ const Framework = (props) => {
 								/>
 								: 
 								<div>
-									Coming in 1.0.0. <a style={{ textDecoration: "none", color: "#f85a3e" }} href="https://shuffler.io/register" target="_blank">Register for Shuffle cloud</a> to try an early version now. 
+									Coming soon. <a style={{ textDecoration: "none", color: "#f85a3e" }} href="https://shuffler.io/register" target="_blank">Register for Shuffle cloud</a> to try an early version now. 
 								</div>
 						: null}
 							</div>
