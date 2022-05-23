@@ -448,7 +448,8 @@ const ParsedAction = (props) => {
           highlight: "shuffle_cache",
           autocomplete: "shuffle_cache",
           example: "",
-        });
+        })
+
         if (
           workflow.workflow_variables !== null &&
           workflow.workflow_variables !== undefined &&
@@ -489,6 +490,7 @@ const ParsedAction = (props) => {
         // Loops parent nodes' old results to fix autocomplete
 				if (getParents !== undefined) {
         	var parents = getParents(selectedAction);
+
         	if (parents.length > 1) {
         	  for (var key in parents) {
         	    const item = parents[key];
@@ -544,6 +546,7 @@ const ParsedAction = (props) => {
         	      autocomplete: itemlabelComplete,
         	      example: exampledata,
         	    };
+
         	    actionlist.push(actionvalue);
         	  }
         	}
@@ -1441,7 +1444,7 @@ const ParsedAction = (props) => {
                   }
 									*/
 
-									console.log("Clicked field: ", clickedFieldId)
+									//console.log("Clicked field: ", clickedFieldId)
 									if (setScrollConfig !== undefined && scrollConfig !== null && scrollConfig !== undefined && scrollConfig.selected !== clickedFieldId) {
 										scrollConfig.selected = clickedFieldId
 										setScrollConfig(scrollConfig)
@@ -1851,114 +1854,110 @@ const ParsedAction = (props) => {
                     }
 
 										const coverColor = "#82ccc3"
+										//menuPosition.left -= 50
+										//menuPosition.top -= 250 
+										console.log(menuPosition)
                     return parsedPaths.length > 0 ? (
                       <NestedMenuItem
                         key={innerdata.name}
                         label={
-                          <div style={{ display: "flex" }}>
+                          <div style={{ display: "flex", marginLeft: 0, }}>
                             {icon} {innerdata.name}
                           </div>
                         }
                         parentMenuOpen={!!menuPosition}
                         style={{
-                          backgroundColor: theme.palette.inputColor,
                           color: "white",
                           minWidth: 250,
                           maxWidth: 250,
-                          maxHeight: 650,
-                          scrollX: "",
+                          maxHeight: 50,
+                          overflow: "hidden",
                         }}
-                        //PaperProps={{
-                        //	style: {
-                        //		maxHeight: 400,
-                        //		width: 250,
-                        //	}
-                        //}}
                         onClick={() => {
                           console.log("CLICKED: ", innerdata);
                           console.log(innerdata.example)
                           handleItemClick([innerdata]);
                         }}
                       >
-												<MenuItem
-													key={innerdata.name}
-													style={{
-														backgroundColor: theme.palette.inputColor,
-														marginLeft: 15,
-														color: "white",
-														minWidth: 250,
-														maxWidth: 250,
-														padding: 0, 
-														position: "relative",
-													}}
-													value={innerdata}
-													onMouseOver={() => {
-														//console.log("HOVER: ", pathdata);
-													}}
-													onClick={() => {
-														handleItemClick([innerdata]);
-													}}
-												>
-													<Typography variant="h6" style={{paddingBottom: 5}}>
-                        		{innerdata.name}
-													</Typography>
-												</MenuItem>
-                        {parsedPaths.map((pathdata, index) => {
-                          // FIXME: Should be recursive in here
-                          //<VpnKeyIcon style={iconStyle} />
-                          const icon =
-                            pathdata.type === "value" ? (
-															<span style={{marginLeft: 9, }} />
-                            ) : pathdata.type === "list" ? (
-                              <FormatListNumberedIcon style={{marginLeft: 9, marginRight: 10, }} />
-                            ) : (
-															<CircleIcon style={{marginLeft: 9, marginRight: 10, color: coverColor}}/>
-                            );
-                          //<ExpandMoreIcon style={iconStyle} />
+												<Paper style={{minHeight: 500, maxHeight: 500, minWidth: 275, maxWidth: 275, position: "fixed", top: menuPosition.top-200, left: menuPosition.left-455, padding: "10px 0px 10px 10px", backgroundColor: theme.palette.inputColor, overflow: "hidden", overflowY: "auto", border: "1px solid rgba(255,255,255,0.3)",}}>
+													<MenuItem
+														key={innerdata.name}
+														style={{
+															backgroundColor: theme.palette.inputColor,
+															marginLeft: 15,
+															color: "white",
+															minWidth: 250,
+															maxWidth: 250,
+															padding: 0, 
+															position: "relative",
+														}}
+														value={innerdata}
+														onMouseOver={() => {
+															//console.log("HOVER: ", pathdata);
+														}}
+														onClick={() => {
+															handleItemClick([innerdata]);
+														}}
+													>
+														<Typography variant="h6" style={{paddingBottom: 5}}>
+                        			{innerdata.name}
+														</Typography>
+													</MenuItem>
+                        	{parsedPaths.map((pathdata, index) => {
+                        	  // FIXME: Should be recursive in here
+                        	  //<VpnKeyIcon style={iconStyle} />
+                        	  const icon =
+                        	    pathdata.type === "value" ? (
+																<span style={{marginLeft: 9, }} />
+                        	    ) : pathdata.type === "list" ? (
+                        	      <FormatListNumberedIcon style={{marginLeft: 9, marginRight: 10, }} />
+                        	    ) : (
+																<CircleIcon style={{marginLeft: 9, marginRight: 10, color: coverColor}}/>
+                        	    );
+                        	  //<ExpandMoreIcon style={iconStyle} />
 
-													console.log("Path: ", pathdata)
-													const indentation_count = (pathdata.name.match(/\./g) || []).length+1
-													const baseIndent = <div style={{marginLeft: 20, height: 30, width: 1, backgroundColor: coverColor,}} />
-													//const boxPadding = pathdata.type === "object" ? "10px 0px 0px 0px" : 0
-													const boxPadding = 0 
-													const namesplit = pathdata.name.split(".")
-													const newname = namesplit[namesplit.length-1]
-													console.log(newname)
-                          return (
-                            <MenuItem
-                              key={pathdata.name}
-                              style={{
-                                backgroundColor: theme.palette.inputColor,
-                                color: "white",
-                                minWidth: 250,
-                                maxWidth: 250,
-																padding: boxPadding, 
-                              }}
-                              value={pathdata}
-                              onMouseOver={() => {
-                                //console.log("HOVER: ", pathdata);
-                              }}
-                              onClick={() => {
-                                handleItemClick([innerdata, pathdata]);
-                              }}
-                            >
-                              <Tooltip
-                                color="primary"
-                                title={`Ex. value: ${pathdata.value}`}
-                                placement="left"
-                              >
-                                <div style={{ display: "flex", height: 30, }}>
-																	{Array(indentation_count).fill().map((subdata, subindex) => {
-																		return (
-																			baseIndent
-																		)
-																	})}
-                                  {icon} {newname}
-                                </div>
-                              </Tooltip>
-                            </MenuItem>
-                          );
-                        })}
+														const indentation_count = (pathdata.name.match(/\./g) || []).length+1
+														const baseIndent = <div style={{marginLeft: 20, height: 30, width: 1, backgroundColor: coverColor,}} />
+														//const boxPadding = pathdata.type === "object" ? "10px 0px 0px 0px" : 0
+														const boxPadding = 0 
+														const namesplit = pathdata.name.split(".")
+														const newname = namesplit[namesplit.length-1]
+                        	  return (
+                        	    <MenuItem
+                        	      key={pathdata.name}
+                        	      style={{
+                        	        backgroundColor: theme.palette.inputColor,
+                        	        color: "white",
+                        	        minWidth: 250,
+                        	        maxWidth: 250,
+																	padding: boxPadding, 
+                        	      }}
+                        	      value={pathdata}
+                        	      onMouseOver={() => {
+                        	        //console.log("HOVER: ", pathdata);
+                        	      }}
+                        	      onClick={() => {
+                        	        handleItemClick([innerdata, pathdata]);
+                        	      }}
+                        	    >
+                        	      <Tooltip
+                        	        color="primary"
+                        	        title={`Ex. value: ${pathdata.value}`}
+                        	        placement="left"
+                        	      >
+                        	        <div style={{ display: "flex", height: 30, }}>
+																		{Array(indentation_count).fill().map((subdata, subindex) => {
+																			return (
+																				baseIndent
+																			)
+																		})}
+                        	          {icon} {newname}
+                        	        </div>
+                        	      </Tooltip>
+                        	    </MenuItem>
+                        	  );
+                        	})}
+												</Paper>
                       </NestedMenuItem>
                     ) : (
                       <MenuItem
@@ -1968,7 +1967,7 @@ const ParsedAction = (props) => {
                           color: "white",
                           minWidth: 250,
                           maxWidth: 250,
-                          marginRight: 250,
+                          marginRight: 0,
                         }}
                         value={innerdata}
                         onMouseOver={() => handleMouseover()}

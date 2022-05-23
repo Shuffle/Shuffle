@@ -856,7 +856,7 @@ const Header = (props) => {
         position: "fixed",
         minHeight: 60,
         top: 0,
-        zIndex: 10000,
+        //zIndex: 10000,
         backgroundColor: "inherit",
       }}
     >

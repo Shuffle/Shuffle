@@ -16,6 +16,7 @@ import {
 import Checkbox from '@mui/material/Checkbox';
 import { orange } from '@mui/material/colors';
 import { isMobile } from "react-device-detect" 
+import { GetParsedPaths } from "../views/Apps.jsx";
 
 import {
 	FullscreenExit as FullscreenExitIcon,
@@ -39,7 +40,12 @@ import { padding, textAlign } from '@mui/system';
 
 const liquidFilters = [
 	{"name": "Size", "value": "size", "example": ""},
-	{"name": "Date", "value": "date", "example": `{{ "now" | date: "%s" }}`},
+	{"name": "Date", "value": `date: "%Y%M%d"`, "example": `{{ "now" | date: "%s" }}`},
+]
+
+const mathFilters = [
+	{"name": "Plus", "value": "plus: 1", "example": `{{ "1" | plus: 1 }}`},
+	{"name": "Minus", "value": "minus: 1", "example": `{{ "1" | minus: 1 }}`},
 ]
 
 const CodeEditor = (props) => {
@@ -60,63 +66,37 @@ const CodeEditor = (props) => {
 	const [currentLocation, setCurrentLocation] = React.useState([]);
 	const [currentVariable, setCurrentVariable] = React.useState("");
 	const [anchorEl, setAnchorEl] = React.useState(null);
+	const [anchorEl2, setAnchorEl2] = React.useState(null);
+	const [mainVariables, setMainVariables] = React.useState([]);
+	const [availableVariables, setAvailableVariables] = React.useState([]);
 	const liquidOpen = Boolean(anchorEl);
+	const mathOpen = Boolean(anchorEl2);
 
-	// useEffect(() => {
-	// 	console.log(currentLocation)
-	// }, [currentLocation])
 
-	// const [allVariable, setAllVariable] = React.useState([]);
-	var allVariable = []
-	var mainVariables = []
-	
-	// console.log(actionlist.length)
-	for(var i=0; i<actionlist.length; i++){
-		allVariable.push('$'+actionlist[i].autocomplete.toLowerCase())
-		mainVariables.push('$'+actionlist[i].autocomplete.toLowerCase())
-		// console.log(actionlist[i])
-		// for(var j=0; j<actionlist[i].example.length; j++){
-		// 	console.log(j)
-		// 	allVariable.push('$'+actionlist[i].example[j].toLowerCase().substring(0, 25))
-		// }
-		for(let key in actionlist[i].example){
-			// console.log(key)
-			allVariable.push('$'+actionlist[i].autocomplete.toLowerCase()+'.'+key)
+	useEffect(() => {
+		var allVariables = []
+		var tmpVariables = []
+
+		for(var i=0; i < actionlist.length; i++){
+			allVariables.push('$'+actionlist[i].autocomplete.toLowerCase())
+			tmpVariables.push('$'+actionlist[i].autocomplete.toLowerCase())
+
+			var parsedPaths = []
+			if (typeof actionlist[i].example === "object") {
+				parsedPaths = GetParsedPaths(actionlist[i].example, "");
+			}
+
+			for (var key in parsedPaths) {
+				const fullpath = "$"+actionlist[i].autocomplete.toLowerCase()+parsedPaths[key].autocomplete
+				if (!allVariables.includes(fullpath)) {
+					allVariables.push(fullpath)
+				}
+			}
 		}
-	}
 
-	// {actionlist.map((data, index) => {
-		// console.log(data)
-		// console.log(actionlist.length)
-		// console.log(data.autocomplete)
-		// allVariable.push('$'+data.autocomplete.substring(0, 25))
-		// return (
-		// 	<div
-		// 		style={{
-		// 			// textOverflow: 'ellipsis'
-		// 		}}
-		// 	>
-		// 		<button
-		// 			onClick={() => {
-		// 				replaceVariables(data.autocomplete)
-		// 				// console.log(currentCharacter, currentLine)
-		// 			}}
-		// 			style={{
-		// 				backgroundColor: 'transparent',
-		// 				color: 'white',
-		// 				border: 'none',
-		// 				padding: 7.5,
-		// 				cursor: 'pointer',
-		// 				width: '100%',
-		// 				textAlign: 'left'
-		// 			}}
-		// 		>
-		// 			${data.autocomplete.substring(0, 25)}
-		// 			{Object.keys(data.example).forEach(key => key)}
-		// 		</button>
-		// 	</div>
-		// )
-	// })}
+		setAvailableVariables(allVariables)
+		setMainVariables(tmpVariables)
+	}, [])
 
 	const autoFormat = (input) => {
 		if (validation !== true) {
@@ -134,7 +114,7 @@ const CodeEditor = (props) => {
 		}
 	}
 
-	function findIndex(line, loc) {
+	const findIndex = (line, loc) => {
 		// var temp_arr = []
 		// for(var i=0; i<string.length; i++) {
 		// 	if (string[i] === "$") temp_arr.push(i);
@@ -189,14 +169,15 @@ const CodeEditor = (props) => {
 				if(loc === variable_ranges[occ][occ1]){
 					popup = true
 					setCurrentLocation([line, dollar_occurences[occ]])
-					console.log("Current Location : "+dollar_occurences[occ])
+
 					try{
 						setCurrentVariable(variable_occurences[occ])
-						console.log("Current Variable : "+variable_occurences[occ])
+
 					} catch (e) {
 						// setCurrentVariable("")
 						// console.log("Current Variable : Nothing")
 					}
+
 					occ = Infinity
 					break
 				}
@@ -210,7 +191,7 @@ const CodeEditor = (props) => {
 		// console.log(dollar_occurences)
 	}
 
-	function highlight_variables(value){
+	const highlight_variables = (value) => {
 		// value.markText({line:0, ch:2}, {line:0, ch:8}, {"css": "background-color: #f85a3e; border-radius: 4px; color: white"})
 		// value.markText({line:0, ch:13}, {line:0, ch:15}, {"css": "background-color: #f85a3e; border-radius: 4px; color: white"})
 		// value.markText({line:0, ch:19}, {line:0, ch:26}, {"css": "background-color: #f85a3e; border-radius: 4px; color: white"})
@@ -230,7 +211,7 @@ const CodeEditor = (props) => {
 		// console.log(code_variables_loc)
 
 		var code_lines = localcodedata.split('\n')
-		for (var i = 0; i<code_lines.length; i++){
+		for (var i = 0; i < code_lines.length; i++){
 			var current_code_line = code_lines[i]
 			// console.log(current_code_line)
 
@@ -254,7 +235,7 @@ const CodeEditor = (props) => {
 					dollar_occurence.push(ch)
 				}
 			}
-			console.log(dollar_occurence)
+			//console.log(dollar_occurence)
 
 			var dollar_occurence_len = []
 			try{
@@ -262,14 +243,15 @@ const CodeEditor = (props) => {
 					dollar_occurence_len.push(variable_occurence[occ].length)
 				}
 			} catch (e) {}
-			console.log(dollar_occurence_len)
+
+			//console.log(dollar_occurence_len)
 
 			try{
 				// console.log(variable_occurence)
-				for (var occ = 0; occ<variable_occurence.length; occ++){
+				for (var occ = 0; occ < variable_occurence.length; occ++){
 					// value.markText({line:i, ch:dollar_occurence[occ]}, {line:i, ch:dollar_occurence_len[occ]+dollar_occurence[occ]}, {"css": "background-color: #8b8e26; border-radius: 4px; color: white"})
 					// var correctVariable = actionlist.find(action => action.autocomplete.toLowerCase() === variable_occurence[occ].slice(1,).toLowerCase())
-					var correctVariable = allVariable.includes(variable_occurence[occ].toLowerCase())
+					var correctVariable = availableVariables.includes(variable_occurence[occ].toLowerCase())
 					// console.log(actionlist)
 					if(!correctVariable) {
 						value.markText({line:i, ch:dollar_occurence[occ]}, {line:i, ch:dollar_occurence_len[occ]+dollar_occurence[occ]}, {"css": "background-color: rgb(248, 106, 62, 0.9); padding-top: 2px; padding-bottom: 2px; color: white"})
@@ -299,7 +281,7 @@ const CodeEditor = (props) => {
 	// 	return ""
 	// }
 
-	function replaceVariables(swapVariable){
+	const replaceVariables = (swapVariable) => {
 		// var updatedCode = localcodedata.slice(0,index) + "$" + str + localcodedata.slice(index+currentVariable.length+1,)
 		// setlocalcodedata(updatedCode)
 		// setEditorPopupOpen(false)
@@ -321,7 +303,7 @@ const CodeEditor = (props) => {
 		setlocalcodedata(updatedCode)
 	}
 
-	function expectedOutput(input) {
+	const expectedOutput = (input) => {
 		
 		const found = input.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
 		//console.log(found)
@@ -359,8 +341,9 @@ const CodeEditor = (props) => {
 			return
 		}
 
-		setlocalcodedata(localcodedata+" "+item.value)
+		setlocalcodedata(localcodedata+" | "+item.value+" }}")
 		setAnchorEl(null)
+		setAnchorEl2(null)
 	}
 
 	return (
@@ -425,41 +408,78 @@ const CodeEditor = (props) => {
 				</div>
 			</div>
 				
-			<Button
-				id="basic-button"
-				aria-haspopup="true"
-				aria-controls={liquidOpen ? 'basic-menu' : undefined}
-				aria-expanded={liquidOpen ? 'true' : undefined}
-				style={{
-				  textTransform: "none",
-					width: 200, 
-					marginLeft: 200,
-				}}
-				onClick={(event) => {
-					setAnchorEl(event.currentTarget);
-				}}
-			>
-				Liquid 
-			</Button>
-			<Menu
-				id="basic-menu"
-				anchorEl={anchorEl}
-				open={liquidOpen}
-				onClose={() => {
-					setAnchorEl(null);
-				}}
-				MenuListProps={{
-					'aria-labelledby': 'basic-button',
-				}}
-			>
-				{liquidFilters.map((item, index) => {
-					return (
-						<MenuItem onClick={() => {
-							handleClick(item)
-						}}>{item.name}</MenuItem>
-					)
-				})}
-			</Menu>
+			<div style={{display: "flex"}}>
+				<Button
+					id="basic-button"
+					aria-haspopup="true"
+					aria-controls={liquidOpen ? 'basic-menu' : undefined}
+					aria-expanded={liquidOpen ? 'true' : undefined}
+					variant="outlined"
+					style={{
+					  textTransform: "none",
+						width: 100, 
+					}}
+					onClick={(event) => {
+						setAnchorEl(event.currentTarget);
+					}}
+				>
+					Filters 
+				</Button>
+				<Menu
+					id="basic-menu"
+					anchorEl={anchorEl}
+					open={liquidOpen}
+					onClose={() => {
+						setAnchorEl(null);
+					}}
+					MenuListProps={{
+						'aria-labelledby': 'basic-button',
+					}}
+				>
+					{liquidFilters.map((item, index) => {
+						return (
+							<MenuItem onClick={() => {
+								handleClick(item)
+							}}>{item.name}</MenuItem>
+						)
+					})}
+				</Menu>
+				<Button
+					id="basic-button"
+					aria-haspopup="true"
+					aria-controls={mathOpen ? 'basic-menu' : undefined}
+					aria-expanded={mathOpen ? 'true' : undefined}
+					variant="outlined"
+					style={{
+					  textTransform: "none",
+						width: 100, 
+					}}
+					onClick={(event) => {
+						setAnchorEl2(event.currentTarget);
+					}}
+				>
+					Math 
+				</Button>
+				<Menu
+					id="basic-menu"
+					anchorEl={anchorEl2}
+					open={mathOpen}
+					onClose={() => {
+						setAnchorEl2(null);
+					}}
+					MenuListProps={{
+						'aria-labelledby': 'basic-button',
+					}}
+				>
+					{mathFilters.map((item, index) => {
+						return (
+							<MenuItem onClick={() => {
+								handleClick(item)
+							}}>{item.name}</MenuItem>
+						)
+					})}
+				</Menu>
+			</div>
 			<span style={{
 				border: `2px solid ${theme.palette.inputColor}`,
 				borderRadius: theme.palette.borderRadius,
