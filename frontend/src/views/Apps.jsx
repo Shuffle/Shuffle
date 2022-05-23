@@ -1442,7 +1442,7 @@ const Apps = (props) => {
             </div>
             {isCloud ? null : (
               <span>
-                {isLoading ? null : (
+                {props.userdata === undefined || props.userdata === null || props.userdata.role !== "admin" || isLoading ? null : (
                   <Tooltip
                     title={"Reload apps locally"}
                     style={{ marginTop: "28px", width: "100%" }}
@@ -1466,29 +1466,32 @@ const Apps = (props) => {
                     </Button>
                   </Tooltip>
                 )}
-                <Tooltip
-                  title={"Download from Github"}
-                  style={{ marginTop: "28px", width: "100%" }}
-                  aria-label={"Upload"}
-                >
-                  <Button
-                    variant="outlined"
-                    component="label"
-                    color="primary"
-                    style={{ margin: 5, maxHeight: 50, marginTop: 10 }}
-                    disabled={isLoading}
-                    onClick={() => {
-                      setOpenApi(baseRepository);
-                      setLoadAppsModalOpen(true);
-                    }}
-                  >
-                    {isLoading ? (
-                      <CircularProgress size={25} />
-                    ) : (
-                      <CloudDownloadIcon />
-                    )}
-                  </Button>
-                </Tooltip>
+
+                {props.userdata === undefined || props.userdata === null || props.userdata.role !== "admin" ? null : 
+									<Tooltip
+										title={"Download from Github"}
+										style={{ marginTop: "28px", width: "100%" }}
+										aria-label={"Upload"}
+									>
+										<Button
+											variant="outlined"
+											component="label"
+											color="primary"
+											style={{ margin: 5, maxHeight: 50, marginTop: 10 }}
+											disabled={isLoading}
+											onClick={() => {
+												setOpenApi(baseRepository);
+												setLoadAppsModalOpen(true);
+											}}
+										>
+											{isLoading ? (
+												<CircularProgress size={25} />
+											) : (
+												<CloudDownloadIcon />
+											)}
+										</Button>
+									</Tooltip>
+								}
               </span>
             )}
           </div>
