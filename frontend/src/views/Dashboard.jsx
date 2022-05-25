@@ -327,7 +327,7 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 											//navigate(curpath + newitem)
 										}
 									}}>
-										<Paper style={{padding: "30px 30px 30px 30px", minHeight: 75, cursor: !selectedItem ? "pointer" : "default", border: itemBorder, backgroundColor: backgroundColor,}} onClick={() => {
+										<Paper style={{padding: 25, minHeight: 75, cursor: !selectedItem ? "pointer" : "default", border: itemBorder, backgroundColor: backgroundColor,}} onClick={() => {
 										}}>
 											{!selectedItem ? 
 												<div style={{textAlign: "left", position: "relative",}}>
@@ -606,9 +606,12 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 																	<Typography variant="body1" color="textSecondary">
 																		{subcase.description}
 																	</Typography>
-																	<Typography variant="body1" style={{marginTop: 15, marginBottom: 10, }}>
-																		Select relevant workflows
-																	</Typography>
+
+																	{workflows !== undefined && workflows !== null && workflows.length > 0 ?
+																		<Typography variant="body1" style={{marginTop: 15, marginBottom: 10, }}>
+																			Select relevant workflows
+																		</Typography>
+																	: null}
 
 																	{workflows !== undefined && workflows !== null && workflows.length > 0 ?
 																		<Autocomplete
@@ -761,7 +764,50 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 																			</Typography>
 																		</div>
 																	*/}
-																	<div style={{marginTop: 35}}>
+
+																	{subcase.extra_buttons !== undefined && subcase.extra_buttons !== null && subcase.extra_buttons.length > 0 ?
+																		<div style={{marginTop: 25, }}>
+																			<Typography variant="body1" style={{marginTop: 0,}} onClick={() => {}}>
+																				Examples
+																			</Typography>
+																			<div style={{display: "flex"}}>
+																				{subcase.extra_buttons.map((subdata, index) => {
+																					var highlight = false
+																					var baseTypeInfo = subcase.type !== undefined ? subcase.type : "communication"
+																					if (frameworkData !== undefined && frameworkData !== null) {
+																						if (frameworkData[baseTypeInfo] !== undefined && frameworkData[baseTypeInfo] !== null && subdata.app !== undefined && subdata.app !== null) {
+																							if (frameworkData[baseTypeInfo].name.toLowerCase().replaceAll("_", " ") === subdata.app.toLowerCase().replaceAll("_", " ")) {
+																								highlight = true
+																							}
+																						}
+																					}
+
+																					var marginTop = 6
+																					if (subdata.name.includes(" ") && subdata.name.length > 10) {
+																						marginTop = 0
+																					}
+
+																					return (
+																						<a 
+																							key={index}
+																							href={subdata.link}
+																							rel="noopener noreferrer"
+																							target="_blank"
+																							style={{ textDecoration: "none", color: "rgba(255,255,255,0.7)", marginRight: 5, }}
+																						>
+																							<div style={{width: 160, display: "flex", borderRadius: theme.palette.borderRadius, cursor: "pointer", border: highlight ? "2px solid #f86a3e" : "1px solid rgba(255,255,255,0.7)", backgroundColor: theme.palette.inputColor, padding: "0px 0px 15px 15px", overflow: "hidden",}}>
+																								<img src={subdata.image} style={{width: 40, height: 40, borderRadius: theme.palette.borderRadius, marginTop: 15, }} />
+																								<Typography variant="body1" style={{lineHeight: "95%", marginLeft: 12, marginTop: marginTop === 0 ? 19 : 25, maxHeight: 34, }}>
+																									{subdata.name}
+																								</Typography>
+																							</div>
+																						</a>
+																					)
+																				})}
+																			</div>
+																		</div>
+																	: null}
+																	<div style={{marginTop: 20}}>
 																		<a
 																			href={`https://shuffler.io/search?tab=workflows&q=${subcase.name}`}
 																			rel="noopener noreferrer"
@@ -769,7 +815,7 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 																			style={{ textDecoration: "none", color: "white", marginRight: 5, }}
 																		>
 																			<Typography variant="body1" style={{marginTop: 15, cursor: "pointer",}} onClick={() => {}}>
-																				See Public Workflows <OpenInNewIcon style={{marginTop: 5, marginLeft: 15, }}/>
+																				See other Public Workflows for {} <OpenInNewIcon style={{marginTop: 5, marginLeft: 15, }}/>
 																			</Typography>
 																			{/*
 																			<div>
@@ -780,43 +826,11 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 																			*/}
 																		</a>
 																	</div>
-
-
-																	<div style={{display: "flex"}}>
-																		{subcase.extra_buttons !== undefined && subcase.extra_buttons !== null && subcase.extra_buttons.length > 0 ?
-																			subcase.extra_buttons.map((subdata, index) => {
-																				var highlight = false
-																				var baseTypeInfo = subcase.type !== undefined ? subcase.type : "communication"
-																				if (frameworkData[baseTypeInfo] !== undefined && frameworkData[baseTypeInfo] !== null && subdata.app !== undefined && subdata.app !== null) {
-																					if (frameworkData[baseTypeInfo].name.toLowerCase().replaceAll("_", " ") === subdata.app.toLowerCase().replaceAll("_", " ")) {
-																						highlight = true
-																					}
-																				}
-
-																				return (
-																					<a 
-																						key={index}
-																						href={subdata.link}
-																						rel="noopener noreferrer"
-																						target="_blank"
-                  													style={{ textDecoration: "none", color: "rgba(255,255,255,0.7)", marginRight: 5, }}
-																					>
-																						<div style={{width: 140, display: "flex", borderRadius: theme.palette.borderRadius, cursor: "pointer", border: highlight ? "2px solid #f86a3e" : "1px solid rgba(255,255,255,0.7)", backgroundColor: theme.palette.inputColor, padding: 15, }}>
-																							<img src={subdata.image} style={{width: 40, height: 40, }} />
-																							<Typography variant="body1" style={{marginLeft: 15, marginTop: 6,}}>
-																								{subdata.name}
-																							</Typography>
-																						</div>
-																					</a>
-																				)
-																		})
-																		: null}
-																		</div>
 																</div>
 															}
 															<div style={{
-																	height: 400, 
-																	width: 400, 
+																	height: 350, 
+																	width: 350, 
 																	borderRadius: theme.palette.borderRadius,
 																	border: "1px solid rgba(255,255,255,0.3)",
 																}}>
@@ -828,7 +842,7 @@ const UsecaseListComponent = ({keys, isCloud, globalUrl, frameworkData, isLogged
 																	isLoaded={true}
 																	isLoggedIn={true}
 																	globalUrl={globalUrl}
-																	size={0.7}
+																	size={0.6}
 																/>
 															</div>
 														</div>

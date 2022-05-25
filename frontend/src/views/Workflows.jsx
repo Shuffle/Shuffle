@@ -3242,6 +3242,11 @@ const Workflows = (props) => {
 							</Zoom>
 
               {filteredWorkflows.map((data, index) => {
+								// Shouldn't be a part of this list
+								if (data.public === true) {
+									return null
+								}
+
   							if (firstLoad) {
 									workflowDelay += 75
 								} else {

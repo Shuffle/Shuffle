@@ -98,6 +98,13 @@ export const GetParsedPaths = (inputdata, basekey) => {
         name: "Node",
         autocomplete: `${basekey.replaceAll(" ", "_")}`,
       });
+
+      //parsedValues.push({
+      //  type: "value",
+      //  name: `${basekey} length`,
+      //  autocomplete: `{{ ${basekey.replaceAll(" ", "_")} | size }}`,
+      //});
+
       parsedValues.push({
         type: "list",
         name: `${splitkey}list`,
@@ -120,6 +127,13 @@ export const GetParsedPaths = (inputdata, basekey) => {
           name: basekeyname,
           autocomplete: `${basekey}.${key.replaceAll(" ", "_")}`,
         });
+
+        //parsedValues.push({
+        //  type: "value",
+        //  name: `${basekeyname} length`,
+        //  autocomplete: "{{ "+`${basekey}.${key.replaceAll(" ", "_")} | size }}`,
+        //});
+
         parsedValues.push({
           type: "list",
           name: `${basekeyname}${splitkey}list`,

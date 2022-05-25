@@ -607,7 +607,7 @@ const OrgHeader = (props) => {
 						{/*isCloud ? null : */}
 						<Grid item xs={12} style={{marginTop: 50,}}>
             	<Typography variant="h4" style={{textAlign: "center",}}>SAML SSO (v1.1)</Typography>
-							<Grid container style={{marginTop: 10, }}>
+							<Grid container style={{marginTop: 20, }}>
             		<Grid item xs={6} style={{}}>
             		  <span>
             		    <Typography>SSO Entrypoint (IdP)</Typography>
@@ -682,6 +682,11 @@ const OrgHeader = (props) => {
             		  </span>
             		</Grid>
             	</Grid>
+							{isCloud ? 
+								<Typography variant="body2" style={{textAlign: "left",}} color="textSecondary">
+									IdP URL for Shuffle: https://shuffler.io/api/v1/login_sso
+								</Typography>
+							: null}
 						</Grid>
 						{isCloud ? null : (
               <Grid item xs={6} style={{}}>

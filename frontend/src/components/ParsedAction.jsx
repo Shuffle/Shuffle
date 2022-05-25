@@ -83,6 +83,7 @@ import {
   ExpandMore as ExpandMoreIcon,
   VpnKey as VpnKeyIcon,
 	AutoFixHigh as AutoFixHighIcon,
+	SquareFoot as SquareFootIcon,
 } from '@mui/icons-material';
 //} from "@material-ui/icons";
 
@@ -167,6 +168,7 @@ const ParsedAction = (props) => {
 		isCloud,
 		lastSaved,
 		setLastSaved,
+		setShowVideo,
 		//expansionModalOpen,
 		//setExpansionModalOpen,
   } = props;
@@ -525,8 +527,12 @@ const ParsedAction = (props) => {
 
 									const valid = validateJson(foundResult)
 									if (valid.valid) {
-        	          exampledata = valid.result;
-        	          break;
+										if (valid.result.success === false) {
+											//console.log("Skipping success false autocomplete")
+										} else {
+        	          	exampledata = valid.result;
+        	          	break;
+										}
         	        } else {
         	          exampledata = foundResult;
 									}
@@ -777,6 +783,10 @@ const ParsedAction = (props) => {
       selectedAction.parameters[count].value = event.target.value;
 
 			var forceUpdate = false 
+			if (isCloud && (selectedAction.app_name === "Shuffle Tools" || selectedAction.app_name === "email") && (selectedAction.name === "send_email_shuffle" || selectedAction.name === "send_sms_shuffle") && data.name === "apikey") {
+				console.log("APIKEY - this shouldn't show up!")
+			}
+
 			if (selectedAction.app_name === "Shuffle Tools" && selectedAction.name === "filter_list" && data.name === "input_list") {
 				//console.log("FILTER LIST!: ", event, count, data)
 				const parsedvalue = event.target.value
@@ -1140,6 +1150,16 @@ const ParsedAction = (props) => {
               );
             }
 
+						// Added autofill to make this ALOT simpler
+						if (isCloud && (selectedAction.app_name === "Shuffle Tools" || selectedAction.app_name === "email") && (selectedAction.name === "send_email_shuffle" || selectedAction.name === "send_sms_shuffle") && data.name === "apikey") {
+							if (selectedActionParameters[count].length === 0) {
+								selectedAction.parameters[count].value = "TMP: Will be replaced during execution if cloud"
+								setSelectedAction(selectedAction)
+							}
+
+							return null
+						}
+
             var staticcolor = "inherit";
             var actioncolor = "inherit";
             var varcolor = "inherit";
@@ -1429,8 +1449,15 @@ const ParsedAction = (props) => {
                 multiline={multiline}
                 helperText={returnHelperText(data.name, data.value)}
                 onClick={() => {
+                  console.log("Clicked field: ", clickedFieldId, data.name)
+									if (data.name === "file_id") {
+										console.log("show file video?")
+										if (setShowVideo !== undefined) {
+											setShowVideo("https://www.youtube.com/embed/DPYowyTbsSk")
+										}
+									}
+                  //(data.name.toLowerCase().includes("api") ||
 									/*
-                  console.log("Clicked field: ", clickedFieldId);
                   setExpansionModalOpen(false);
                   if (
                     setScrollConfig !== undefined &&
@@ -1689,6 +1716,7 @@ const ParsedAction = (props) => {
                   .endsWith("$")
                   ? values[0].autocomplete
                   : "$" + values[0].autocomplete;
+
                 toComplete = toComplete.toLowerCase().replaceAll(" ", "_");
                 console.log("AUTOCOMPLETE: ", toComplete);
                 for (var key in values) {
@@ -1951,7 +1979,30 @@ const ParsedAction = (props) => {
 																				baseIndent
 																			)
 																		})}
-                        	          {icon} {newname}
+                        	          {icon} {newname} 
+																		{pathdata.type === "list" ? <SquareFootIcon style={{marginleft: 10, }} onClick={(e) => {
+																			e.preventDefault()
+																			e.stopPropagation()
+
+																			console.log("INNER: ", innerdata, pathdata)
+                											
+																			// Removing .list from autocomplete
+																			var newname = pathdata.name
+																			if (newname.length > 5) {
+																				newname = newname.slice(0, newname.length-5)
+																			}
+																			selectedActionParameters[count].value += `{{ $${innerdata.name}.${newname} | size }}`
+                											selectedAction.parameters[count].value = selectedActionParameters[count].value;
+                											setSelectedAction(selectedAction);
+                											setUpdate(Math.random());
+                											setShowDropdown(false);
+                											setMenuPosition(null);
+
+																			// innerdata.name
+																			// pathdata.name
+              												//handleItemClick([innerdata, newpathdata])
+																			//console.log("CLICK LENGTH!")
+																		}} /> : null}
                         	        </div>
                         	      </Tooltip>
                         	    </MenuItem>
@@ -2036,6 +2087,10 @@ const ParsedAction = (props) => {
             {
               /*<div style={{width: 17, height: 17, borderRadius: 17 / 2, backgroundColor: itemColor, marginRight: 10, marginTop: 2, marginTop: "auto", marginBottom: "auto",}}/>*/
             }
+
+						//console.log(data.configuration)
+
+						const buttonTitle = `Authenticate ${selectedApp.name.replaceAll("_", " ")}`
             return (
               <div key={data.name}>
                 {hideBodyButton}
@@ -2044,7 +2099,7 @@ const ParsedAction = (props) => {
                 >
                   {data.configuration === true ? (
                     <Tooltip
-                      title={`Authenticate ${selectedApp.name}`}
+                      title={buttonTitle}
                       placement="top"
                     >
                       <LockOpenIcon

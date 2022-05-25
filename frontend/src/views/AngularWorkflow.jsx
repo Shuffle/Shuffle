@@ -349,6 +349,7 @@ const AngularWorkflow = (defaultprops) => {
   const [executionModalView, setExecutionModalView] = React.useState(0);
   const [executionData, setExecutionData] = React.useState({});
   const [appsLoaded, setAppsLoaded] = React.useState(false);
+  const [showVideo, setShowVideo] = React.useState("");
 
   const [lastSaved, setLastSaved] = React.useState(true);
 
@@ -1850,6 +1851,9 @@ const AngularWorkflow = (defaultprops) => {
 				return
 			}
 		}
+
+		// Unselecting all
+		//cy.elements().unselect()
 
 		//if (nodedata.app_name === undefined && nodedata.source === undefined) {
 		//  return;
@@ -5882,6 +5886,7 @@ const AngularWorkflow = (defaultprops) => {
 
   const getNextActionName = (appName) => {
     var highest = "";
+
     const allitems = workflow.actions.concat(workflow.triggers);
     for (var key in allitems) {
       const item = allitems[key];
@@ -5899,6 +5904,8 @@ const AngularWorkflow = (defaultprops) => {
         }
       }
     }
+
+		appName = appName.replaceAll(" ", "_")
 
     if (highest) {
       return appName + "_" + (parseInt(highest) + 1);
@@ -5923,10 +5930,7 @@ const AngularWorkflow = (defaultprops) => {
 
 		if (workflow.actions !== undefined && workflow.actions !== null) {
 			const foundInfo = workflow.actions.find(ac => ac.id === selectedAction.id)
-			console.log("aigo: ", foundInfo)
 		}
-
-		console.log("PRe: ", selectedAction)
 
     // Does this one find the wrong one?
     //var newSelectedAction = JSON.parse(JSON.stringify(selectedAction))
@@ -5940,7 +5944,6 @@ const AngularWorkflow = (defaultprops) => {
 
 		// Simmple action swap autocompleter
 		if (selectedAction.parameters !== undefined && newSelectedAction.parameters !== undefined && selectedAction.id === newSelectedAction.id) {
-			console.log("OLD: ", selectedAction, "NEW: ", newSelectedAction)
 			for (var paramkey in selectedAction.parameters) {
 				const param = selectedAction.parameters[paramkey];
 
@@ -5981,14 +5984,12 @@ const AngularWorkflow = (defaultprops) => {
         newSelectedAction.fillGradient.length > 0
       ) {
         newSelectedAction.fillstyle = "linear-gradient";
-        console.log("GRADIENT!: ", newSelectedAction);
       } else {
         newSelectedAction.iconBackground = iconInfo.iconBackgroundColor;
       }
 
       const foundnode = cy.getElementById(newSelectedAction.id);
       if (foundnode !== null && foundnode !== undefined) {
-        console.log("UPDATING NODE!");
         foundnode.data(newSelectedAction);
       }
     }
@@ -10890,6 +10891,7 @@ const AngularWorkflow = (defaultprops) => {
 
 			defaultReturn = <ParsedAction
 				id="rightside_subactions"
+				setShowVideo={setShowVideo}
 				isCloud={isCloud}
 				getParents={getParents}
 				actionDelayChange={actionDelayChange}
@@ -11152,7 +11154,7 @@ const AngularWorkflow = (defaultprops) => {
 								frameBorder={false}
 								webkitallowFullscreen={true}
 								mozallowFullscreen={true}
-								allowFullscreen={true}
+								allowFullScreen={true}
 								style={{
 									"top": 0, 
 									"left": 0,
@@ -11170,7 +11172,7 @@ const AngularWorkflow = (defaultprops) => {
 									frameBorder={false}
 									webkitallowFullscreen={true}
 									mozallowFullscreen={true}
-									allowFullscreen={true}
+									allowFullScreen={true}
 									style={{
 										"top": 0, 
 										"left": 0,
@@ -13883,6 +13885,39 @@ const parsedExecutionArgument = () => {
         {codePopoutModal}
         {configureWorkflowModal}
 				{editWorkflowModal}
+
+				{showVideo !== undefined && showVideo.length > 0 ? 
+					<div style={{borderRadius: theme.palette.borderRadius, zIndex: 12501, position: "fixed", left: 40, bottom: 150, width: 300,}}>
+      			<IconButton
+      			  style={{
+      			    zIndex: 12502,
+      			    position: "absolute",
+      			    top: 6,
+      			    right: 6,
+      			    color: "white",
+      			  }}
+      			  onClick={() => {
+      			    setShowVideo("")
+      			  }}
+      			>
+      			  <CloseIcon />
+      			</IconButton>
+						<iframe 
+							src={showVideo}
+							frameBorder={false}
+							webkitallowFullscreen={true}
+							mozallowFullscreen={true}
+							allowFullScreen={true}
+							style={{
+								"top": 0, 
+								"left": 0,
+								"maxWidth": 300,
+								"minWidth": 300,
+							}}
+						/>
+					</div>
+				: null}
+
         <TextField
           id="copy_element_shuffle"
           value={to_be_copied}

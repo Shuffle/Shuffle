@@ -48,6 +48,11 @@ const mathFilters = [
 	{"name": "Minus", "value": "minus: 1", "example": `{{ "1" | minus: 1 }}`},
 ]
 
+const pythonFilters = [
+	{"name": "Hello World", "value": `{% python %}\nprint("hello world")\n{% endpython %}`, "example": ``},
+	{"name": "Handle JSON", "value": `{% python %}\nimport json\njsondata = json.loads("""$nodename""")\n{% endpython %}`, "example": ``},
+]
+
 const CodeEditor = (props) => {
 	const { fieldCount, setFieldCount, actionlist, changeActionParameterCodeMirror, expansionModalOpen, setExpansionModalOpen, codedata, setcodedata } = props
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
@@ -67,10 +72,12 @@ const CodeEditor = (props) => {
 	const [currentVariable, setCurrentVariable] = React.useState("");
 	const [anchorEl, setAnchorEl] = React.useState(null);
 	const [anchorEl2, setAnchorEl2] = React.useState(null);
+	const [anchorEl3, setAnchorEl3] = React.useState(null);
 	const [mainVariables, setMainVariables] = React.useState([]);
 	const [availableVariables, setAvailableVariables] = React.useState([]);
 	const liquidOpen = Boolean(anchorEl);
 	const mathOpen = Boolean(anchorEl2);
+	const pythonOpen = Boolean(anchorEl3);
 
 
 	useEffect(() => {
@@ -337,13 +344,19 @@ const CodeEditor = (props) => {
 
 
 	const handleClick = (item) => {
-		if (item === undefined || item.value === undefined) {
+		if (item === undefined || item.value === undefined || item.value === null) {
 			return
 		}
 
-		setlocalcodedata(localcodedata+" | "+item.value+" }}")
+		if (!item.value.includes("{%")) {
+			setlocalcodedata(localcodedata+" | "+item.value+" }}")
+		} else {
+			setlocalcodedata(localcodedata+item.value)
+		}
+
 		setAnchorEl(null)
 		setAnchorEl2(null)
+		setAnchorEl3(null)
 	}
 
 	return (
@@ -479,6 +492,41 @@ const CodeEditor = (props) => {
 						)
 					})}
 				</Menu>
+				<Button
+					id="basic-button"
+					aria-haspopup="true"
+					aria-controls={pythonOpen ? 'basic-menu' : undefined}
+					aria-expanded={pythonOpen ? 'true' : undefined}
+					variant="outlined"
+					style={{
+					  textTransform: "none",
+						width: 100, 
+					}}
+					onClick={(event) => {
+						setAnchorEl3(event.currentTarget);
+					}}
+				>
+					Python	
+				</Button>
+				<Menu
+					id="basic-menu"
+					anchorEl={anchorEl3}
+					open={pythonOpen}
+					onClose={() => {
+						setAnchorEl3(null);
+					}}
+					MenuListProps={{
+						'aria-labelledby': 'basic-button',
+					}}
+				>
+					{pythonFilters.map((item, index) => {
+						return (
+							<MenuItem onClick={() => {
+								handleClick(item)
+							}}>{item.name}</MenuItem>
+						)
+					})}
+				</Menu>
 			</div>
 			<span style={{
 				border: `2px solid ${theme.palette.inputColor}`,
@@ -528,7 +576,7 @@ const CodeEditor = (props) => {
 						styleSelectedText: true,
 						theme: codeTheme,
 						keyMap: 'sublime',
-						mode: 'javascript',
+						mode: 'python',
 						lineWrapping: linewrap,
 						// mode: {codelang},
 					}}
