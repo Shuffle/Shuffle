@@ -1884,7 +1884,6 @@ const ParsedAction = (props) => {
 										const coverColor = "#82ccc3"
 										//menuPosition.left -= 50
 										//menuPosition.top -= 250 
-										console.log(menuPosition)
                     return parsedPaths.length > 0 ? (
                       <NestedMenuItem
                         key={innerdata.name}
@@ -2369,7 +2368,7 @@ const ParsedAction = (props) => {
                     title="See previous results for this action"
                     placement="top"
                   >
-                    <ArrowLeftIcon style={{ color: "white" }} />
+                    <ArrowLeftIcon style={{ color: "rgba(255,255,255,0.7)" }} />
                   </Tooltip>
                 </IconButton>
                 <IconButton
@@ -2389,7 +2388,7 @@ const ParsedAction = (props) => {
                     title="Read app docs"
                     placement="top"
                   >
-                    <DescriptionIcon style={{ color: "white" }} />
+                    <DescriptionIcon style={{ color: "rgba(255,255,255,0.7)" }} />
                   </Tooltip>
                 </IconButton>
                 <IconButton
@@ -2413,7 +2412,7 @@ const ParsedAction = (props) => {
                       title="What are actions?"
                       placement="top"
                     >
-                      <HelpOutlineIcon style={{ color: "white" }} />
+                      <HelpOutlineIcon style={{ color: "rgba(255,255,255,0.7)" }} />
                     </Tooltip>
                   </a>
                 </IconButton>
@@ -2448,7 +2447,7 @@ const ParsedAction = (props) => {
                     title={selectedAction.run_magic_output === undefined || selectedAction.run_magic_output === null || selectedAction.run_magic_output === false ? "Click to enable magic parsing" : "Click to disable magic parsing"}
                     placement="top"
                   >
-										<AutoFixHighIcon style={{ color: selectedAction.run_magic_output === undefined || selectedAction.run_magic_output === null || selectedAction.run_magic_output === false ? "white" : "#f86a3e"}} />
+										<AutoFixHighIcon style={{ color: selectedAction.run_magic_output === undefined || selectedAction.run_magic_output === null || selectedAction.run_magic_output === false ? "rgba(255,255,255,0.7)" : "#f86a3e"}} />
                   </Tooltip>
                 </IconButton>
 
@@ -2529,7 +2528,7 @@ const ParsedAction = (props) => {
           />
 					<div style={{display: "flex"}}>
 						<div style={{flex: 5}}>
-							<Typography>Name</Typography>
+							<Typography style={{color: "rgba(255,255,255,0.7)"}}>Name</Typography>
 							<TextField
 								style={theme.palette.textFieldStyle}
 								InputProps={{
@@ -2626,7 +2625,7 @@ const ParsedAction = (props) => {
 									placement="top"
 								>
 									<span>
-										<Typography>Delay</Typography>
+										<Typography style={{color: "rgba(255,255,255,0.7)"}}>Delay</Typography>
 										<TextField
 											style={{
 												backgroundColor: theme.palette.inputColor,
@@ -2691,7 +2690,7 @@ const ParsedAction = (props) => {
 				selectedAction.authentication !== null &&
 				selectedAction.authentication.length > 0 ? (
         <div style={{ marginTop: 15 }}>
-          <Typography>Authentication</Typography>
+          <Typography style={{color: "rgba(255,255,255,0.7)"}}>Authentication</Typography>
           <div style={{ display: "flex" }}>
             <Select
 							MenuProps={{
@@ -2797,7 +2796,7 @@ const ParsedAction = (props) => {
 
       {showEnvironment !== undefined && showEnvironment && environments.length > 1 ? (
         <div style={{ marginTop: "20px" }}>
-          <Typography>Environment</Typography>
+          <Typography style={{color: "rgba(255,255,255,0.7)"}}>Environment</Typography>
           <Select
 						MenuProps={{
 							disableScrollLock: true,
