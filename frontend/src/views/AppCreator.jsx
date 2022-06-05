@@ -289,8 +289,8 @@ const AppCreator = (defaultprops) => {
     type: "header",
     example: "",
   };
-  const [extraAuth, setExtraAuth] = useState([]);
 
+  const [extraAuth, setExtraAuth] = useState([]);
   const [app, setApp] = useState({});
   const [appAuthentication, setAppAuthentication] = React.useState([]);
   const [selectedAction, setSelectedAction] = useState({});
@@ -1420,6 +1420,8 @@ const AppCreator = (defaultprops) => {
 
     //console.log("SECURITYSCHEMES: ", securitySchemes)
     if (securitySchemes !== undefined) {
+			console.log("NEWAUTH: ", securitySchemes)
+			var valueset = false
       // FIXME: Should add Oauth2 (Microsoft) and JWT (Wazuh)
       //console.log("SECURITY: ", securitySchemes)
       //if (Object.entries(securitySchemes) > 1 &&
@@ -1444,18 +1446,31 @@ const AppCreator = (defaultprops) => {
       	    setAuthenticationRequired(true);
 
       	  } else if (key === "ApiKeyAuth" || key === "Token" || ((value.in === "header" || value.in === "query") && value.name !== undefined)) {
-      	    setAuthenticationOption("API key");
+						if (authenticationOption === "" || authenticationOption === "No authentication") {
+      	    	setAuthenticationOption("API key");
+						}
 
-      	    value.in = value.in.charAt(0).toUpperCase() + value.in.slice(1);
-      	    setParameterLocation(value.in);
-      	    if (!apikeySelection.includes(value.in)) {
-      	      console.log("APIKEY SELECT: ", apikeySelection);
-      	      alert.error("Might be error in setting up API key authentication");
-      	    }
+						if (valueset === false) {
+							valueset = true 
+      	    	value.in = value.in.charAt(0).toUpperCase() + value.in.slice(1)
 
-      	    console.log("PARAM NAME: ", value.name);
-      	    setParameterName(value.name);
-      	    setAuthenticationRequired(true);
+      	    	setParameterLocation(value.in);
+      	    	if (!apikeySelection.includes(value.in)) {
+      	    	  console.log("APIKEY SELECT: ", apikeySelection);
+      	    	  alert.error("Might be error in setting up API key authentication");
+      	    	}
+
+      	    	console.log("PARAM NAME: ", value.name);
+      	    	setParameterName(value.name);
+      	    	setAuthenticationRequired(true);
+						} else {
+      	    	newauth.push({
+      	    		"name": key,
+      	    		"type": value.in.toLowerCase(),
+								"in": value.in.toLowerCase(),
+      	    		"example": "",
+      	    	})
+						}
 
       	    if (value.description !== undefined && value.description !== null && value.description.length > 0) {
 							// Don't want a real description - just the ones we're replacing with
@@ -2365,6 +2380,7 @@ const AppCreator = (defaultprops) => {
           <span style={{ width: 50 }} />
         )}
       </div>
+
       {extraAuth.map((value, index) => {
         return (
           <span
