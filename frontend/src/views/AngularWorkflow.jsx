@@ -111,6 +111,7 @@ import ConfigureWorkflow from "../components/ConfigureWorkflow.jsx";
 import AuthenticationOauth2 from "../components/Oauth2Auth.jsx";
 import ParsedAction from "../components/ParsedAction.jsx";
 import PaperComponent from "../components/PaperComponent.jsx"
+import ExtraApps from "../components/ExtraApps.jsx" 
 
 const surfaceColor = "#27292D";
 const inputColor = "#383B40";
@@ -2509,6 +2510,32 @@ const AngularWorkflow = (defaultprops) => {
     	        (a.loop_versions !== null &&
     	          a.loop_versions.includes(curaction.app_version)))
     	  );
+
+				if (curaction.template === true) {
+					//newapps.
+					const parsedname = curaction.name.replaceAll(" ", "_").toLowerCase()
+					console.log("FIND AN ACTION AMONG THE APPS THAT MATCHES NAME: ", parsedname)
+
+					curaction.matching_actions = []
+					for (var key in newapps) {
+						for (var subkey in newapps[key].actions) {
+							const tmpaction = newapps[key].actions[subkey]
+							if (tmpaction.name.replaceAll(" ", "_").toLowerCase() === parsedname) {
+								console.log("MATCH!: ", newapps[key])
+								curaction.matching_actions.push({
+									"app_name": newapps[key].name,
+									"app_version": newapps[key].app_version,
+									"app_id": newapps[key].id,
+									"action": tmpaction,
+									"large_image": newapps[key].large_image,
+									"app_index": key,
+									"action_index": subkey,
+								})
+							}
+						}
+					}
+				}
+
     	  if (!curapp || curapp === undefined) {
 					console.log("APPS: ", newapps)
     	    //alert.error(`App ${curaction.app_name}:${curaction.app_version} not found. Is it activated?`);
@@ -4983,6 +5010,7 @@ const AngularWorkflow = (defaultprops) => {
     var thisview = (
       <AppView
         allApps={apps}
+        extraApps={ExtraApps}
         prioritizedApps={prioritizedApps}
         filteredApps={filteredApps}
       />
@@ -5337,7 +5365,7 @@ const AngularWorkflow = (defaultprops) => {
 			}
 
       // AUTHENTICATION
-      if (app.authentication.required) {
+      if (app.authentication !== undefined && app.authentication !== null && app.authentication.required === true) {
 				console.log("App auth is required!")
 
         // Setup auth here :)
@@ -5462,6 +5490,7 @@ const AngularWorkflow = (defaultprops) => {
 				var description = ""
 
         if (
+          app.actions[0].parameters !== undefined &&
           app.actions[0].parameters !== null &&
           app.actions[0].parameters.length > 0
         ) {
@@ -5469,6 +5498,8 @@ const AngularWorkflow = (defaultprops) => {
         }
 
         if (
+					app.actions[0].returns !== undefined &&
+					app.actions[0].returns !== null &&
           app.actions[0].returns.example !== undefined &&
           app.actions[0].returns.example !== null &&
           app.actions[0].returns.example.length > 0
@@ -5524,6 +5555,7 @@ const AngularWorkflow = (defaultprops) => {
               : "",
           authentication_id: "",
           finished: false,
+					template: app.template === true ? true : false, 
         };
 
         // FIXME: overwrite category if the ACTION chosen has a different category
@@ -5548,10 +5580,12 @@ const AngularWorkflow = (defaultprops) => {
   };
 
   const AppView = (props) => {
-    const { allApps, prioritizedApps, filteredApps } = props;
+    const { allApps, prioritizedApps, filteredApps, extraApps } = props;
+  	//extraApps,
     const [visibleApps, setVisibleApps] = React.useState(
-      prioritizedApps.concat(
-        filteredApps.filter((innerapp) => !internalIds.includes(innerapp.id))
+			Array.prototype.concat.apply(
+      	prioritizedApps,
+        filteredApps.filter((innerapp) => !internalIds.includes(innerapp.id)),
       )
     );
 
@@ -5841,7 +5875,7 @@ const AngularWorkflow = (defaultprops) => {
               runSearch(event.target.value);
             }}
           />
-          {visibleApps.length > 0 ? (
+          {visibleApps.length > extraApps.length ? (
             <div style={appScrollStyle}>
               {visibleApps.map((app, index) => {
                 if (app.invalid) {

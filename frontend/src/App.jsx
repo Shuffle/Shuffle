@@ -16,6 +16,7 @@ import Apps from "./views/Apps";
 import AppCreator from "./views/AppCreator";
 
 import Dashboard from "./views/Dashboard.jsx";
+import DashboardView from "./views/DashboardViews.jsx";
 import AdminSetup from "./views/AdminSetup";
 import Admin from "./views/Admin";
 import Docs from "./views/Docs";
@@ -640,6 +641,18 @@ const App = (message, props) => {
         	      globalUrl={globalUrl}
         	      setCookie={setCookie}
         	      cookies={cookies}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+        	<Route
+        	  exact
+        	  path="/dashboards"
+        	  element={
+        	    <DashboardView
+        	      isLoaded={isLoaded}
+        	      isLoggedIn={isLoggedIn}
+        	      globalUrl={globalUrl}
         	      {...props}
         	    />
         	  }

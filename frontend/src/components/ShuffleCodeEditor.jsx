@@ -451,7 +451,7 @@ const CodeEditor = (props) => {
 				>
 					{liquidFilters.map((item, index) => {
 						return (
-							<MenuItem onClick={() => {
+							<MenuItem key={index} onClick={() => {
 								handleClick(item)
 							}}>{item.name}</MenuItem>
 						)
@@ -486,7 +486,7 @@ const CodeEditor = (props) => {
 				>
 					{mathFilters.map((item, index) => {
 						return (
-							<MenuItem onClick={() => {
+							<MenuItem key={index} onClick={() => {
 								handleClick(item)
 							}}>{item.name}</MenuItem>
 						)
@@ -521,7 +521,7 @@ const CodeEditor = (props) => {
 				>
 					{pythonFilters.map((item, index) => {
 						return (
-							<MenuItem onClick={() => {
+							<MenuItem key={index} onClick={() => {
 								handleClick(item)
 							}}>{item.name}</MenuItem>
 						)

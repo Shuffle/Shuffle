@@ -1064,6 +1064,8 @@ const ParsedAction = (props) => {
 			*/
 		}
 
+		console.log("APP: ", selectedApp)
+
     // FIXME: Issue #40 - selectedActionParameters not reset
     if (
       Object.getOwnPropertyNames(selectedAction).length > 0 &&
@@ -1090,6 +1092,114 @@ const ParsedAction = (props) => {
 							<b>Parameters</b>
 						</Button>
 					</Tooltip>
+					{selectedAction.template === true && selectedAction.matching_actions !== undefined && selectedAction.matching_actions !== null && selectedAction.matching_actions.length > 0 ?
+						<div>
+							<Typography variant="body1">
+								Select an app you want to use 
+							</Typography>
+          		<Autocomplete
+          		  id="template_action_search"
+          		  autoHighlight
+          		  value={selectedAction}
+          		  classes={{ inputRoot: classes.inputRoot }}
+          		  ListboxProps={{
+          		    style: {
+          		      backgroundColor: theme.palette.inputColor,
+          		      color: "white",
+          		    },
+          		  }}
+          		  getOptionLabel={(option) => {
+									console.log("LABEL: ", option)
+          		    if (
+          		      option === undefined ||
+          		      option === null ||
+          		      option.app_name === undefined ||
+          		      option.app_name === null 
+          		    ) {
+          		      return null;
+          		    }
+
+          		    const newname = (
+          		      option.app_name.charAt(0).toUpperCase() + option.app_name.substring(1)
+          		    ).replaceAll("_", " ");
+          		    return newname;
+          		  }}
+          		  options={selectedAction.matching_actions}
+          		  fullWidth
+          		  style={{
+          		    backgroundColor: theme.palette.inputColor,
+          		    height: 50,
+          		    borderRadius: theme.palette.borderRadius,
+          		  }}
+          		  onChange={(event, newValue) => {
+									console.log("SELECT: ", event, newValue)
+          		    // Workaround with event lol
+          		    //if (newValue !== undefined && newValue !== null) {
+          		    //  setNewSelectedAction({ target: { value: newValue.name } });
+          		    //}
+          		  }}
+          		  renderOption={(data) => {
+          		    var newActionname = data.app_name;
+          		    if (
+          		      data.label !== undefined &&
+          		      data.label !== null &&
+          		      data.label.length > 0
+          		    ) {
+          		      newActionname = data.label;
+          		    }
+
+          		    const iconInfo = GetIconInfo({ name: data.app_name });
+          		    const useIcon = iconInfo.originalIcon;
+
+          		    newActionname = (
+          		      newActionname.charAt(0).toUpperCase() +
+          		      newActionname.substring(1)
+          		    ).replaceAll("_", " ");
+
+									return (
+										<div style={{ display: "flex" }}>
+											<span
+												style={{
+													marginRight: 10,
+													marginTop: "auto",
+													marginBottom: "auto",
+												}}
+											>
+												{useIcon}
+											</span>
+											<span style={{}}>{newActionname}</span>
+										</div>
+          		    );
+          		  }}
+          		  renderInput={(params) => {
+									if (params.inputProps !== undefined && params.inputProps !== null && params.inputProps.value !== undefined && params.inputProps.value !== null) {
+										const prefixes = ["Post", "Put", "Patch"]
+										for (var key in prefixes) {
+											if (params.inputProps.value.startsWith(prefixes[key])) {
+												params.inputProps.value = params.inputProps.value.replace(prefixes[key]+" ", "", -1)
+												if (params.inputProps.value.length > 1) {
+													params.inputProps.value = params.inputProps.value.charAt(0).toUpperCase()+params.inputProps.value.substring(1)
+												}
+												break
+											}
+										}
+									}
+
+          		    return (
+											<TextField
+												style={{
+													backgroundColor: theme.palette.inputColor,
+													borderRadius: theme.palette.borderRadius,
+												}}
+												{...params}
+												label="Find App to Translate"
+												variant="outlined"
+          		      	/>
+          		    );
+          		  }}
+          		/>
+						</div>
+					: null}
         	{selectedAction.description !== undefined && selectedAction.description !== null && selectedAction.description.length > 0 &&  hiddenDescription === false ? (
 						<div
 							style={{
