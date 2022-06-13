@@ -111,6 +111,7 @@ import ConfigureWorkflow from "../components/ConfigureWorkflow.jsx";
 import AuthenticationOauth2 from "../components/Oauth2Auth.jsx";
 import ParsedAction from "../components/ParsedAction.jsx";
 import PaperComponent from "../components/PaperComponent.jsx"
+import ExtraApps from "../components/ExtraApps.jsx" 
 
 const surfaceColor = "#27292D";
 const inputColor = "#383B40";
@@ -451,7 +452,8 @@ const AngularWorkflow = (defaultprops) => {
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        //alert.error(error.toString());
+        console.log("Workflow error: ", error.toString())
       });
   };
 
@@ -539,7 +541,7 @@ const AngularWorkflow = (defaultprops) => {
         setUserSettings(responseJson);
       })
       .catch((error) => {
-        console.log(error);
+        console.log("Apikey error: ", error);
       });
   };
 
@@ -574,7 +576,7 @@ const AngularWorkflow = (defaultprops) => {
 				}
       })
       .catch((error) => {
-        console.log(error);
+        console.log("Settings error: ", error);
       });
   };
 
@@ -608,7 +610,8 @@ const AngularWorkflow = (defaultprops) => {
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        //alert.error(error.toString());
+        console.log("New auth error: ", error.toString());
       });
   };
 
@@ -692,7 +695,8 @@ const AngularWorkflow = (defaultprops) => {
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        //alert.error(error.toString());
+        console.log("Get execution error: ", error.toString());
       });
   };
 
@@ -719,7 +723,7 @@ const AngularWorkflow = (defaultprops) => {
         handleUpdateResults(responseJson, executionRequest);
       })
       .catch((error) => {
-        console.log("Error: ", error);
+        console.log("Execution result Error: ", error);
         stop();
       });
   };
@@ -751,7 +755,8 @@ const AngularWorkflow = (defaultprops) => {
         return response.json();
       })
       .catch((error) => {
-        alert.error(error.toString());
+        //alert.error(error.toString());
+        console.log("Abort error: ", error.toString());
       });
   };
 
@@ -1262,7 +1267,8 @@ const AngularWorkflow = (defaultprops) => {
     	  })
     	  .catch((error) => {
     	    setSavingState(0);
-    	    alert.error(error.toString());
+    	    //alert.error(error.toString());
+    	    console.log("Save workflow error: ", error.toString());
     	  });
 
     return success;
@@ -1387,7 +1393,8 @@ const AngularWorkflow = (defaultprops) => {
     	    start();
     	  })
     	  .catch((error) => {
-    	    alert.error(error.toString());
+    	    //alert.error(error.toString());
+    	    console.log("Execute workflow err: ", error.toString());
     	  });
 			})
   };
@@ -1501,7 +1508,8 @@ const AngularWorkflow = (defaultprops) => {
       })
       .catch((error) => {
         setAuthLoaded(true);
-        alert.error("Auth loading error: " + error.toString());
+        //alert.error("Auth loading error: " + error.toString());
+        console.log("AppAuth error: " + error.toString());
       });
   };
 
@@ -1578,7 +1586,8 @@ const AngularWorkflow = (defaultprops) => {
       })
       .catch((error) => {
 				setAppsLoaded(true)
-        alert.error("App loading error: "+error.toString());
+        //alert.error("App loading error: "+error.toString());
+        console.log("App loading error: "+error.toString());
       });
   };
 
@@ -1607,7 +1616,7 @@ const AngularWorkflow = (defaultprops) => {
 			}
 		})
 		.catch((error) => {
-			console.log(error);
+			console.log("Get userprofile error: ", error);
 		})
   }
 
@@ -1825,7 +1834,8 @@ const AngularWorkflow = (defaultprops) => {
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        //alert.error(error.toString());
+        console.log("Get workflows error: ", error.toString());
       });
   };
 
@@ -2500,6 +2510,32 @@ const AngularWorkflow = (defaultprops) => {
     	        (a.loop_versions !== null &&
     	          a.loop_versions.includes(curaction.app_version)))
     	  );
+
+				if (curaction.template === true) {
+					//newapps.
+					const parsedname = curaction.name.replaceAll(" ", "_").toLowerCase()
+					console.log("FIND AN ACTION AMONG THE APPS THAT MATCHES NAME: ", parsedname)
+
+					curaction.matching_actions = []
+					for (var key in newapps) {
+						for (var subkey in newapps[key].actions) {
+							const tmpaction = newapps[key].actions[subkey]
+							if (tmpaction.name.replaceAll(" ", "_").toLowerCase() === parsedname) {
+								console.log("MATCH!: ", newapps[key])
+								curaction.matching_actions.push({
+									"app_name": newapps[key].name,
+									"app_version": newapps[key].app_version,
+									"app_id": newapps[key].id,
+									"action": tmpaction,
+									"large_image": newapps[key].large_image,
+									"app_index": key,
+									"action_index": subkey,
+								})
+							}
+						}
+					}
+				}
+
     	  if (!curapp || curapp === undefined) {
 					console.log("APPS: ", newapps)
     	    //alert.error(`App ${curaction.app_name}:${curaction.app_version} not found. Is it activated?`);
@@ -2709,7 +2745,8 @@ const AngularWorkflow = (defaultprops) => {
 			}
 		})
 		.catch(error => {
-			alert.error(error.toString())
+			//alert.error(error.toString())
+			console.log("Activate app error: ", error.toString())
 		});
 	}
 
@@ -3658,7 +3695,8 @@ const AngularWorkflow = (defaultprops) => {
 				}
       })
       .catch((error) => {
-        alert.error(error.toString());
+        //alert.error(error.toString());
+        console.log("Get environments error: ", error.toString());
       });
   };
 
@@ -4563,7 +4601,8 @@ const AngularWorkflow = (defaultprops) => {
         saveWorkflow(workflow);
       })
       .catch((error) => {
-        alert.error(error.toString());
+        //alert.error(error.toString());
+        console.log("Stop schedule error: ", error.toString());
       });
   };
 
@@ -4615,7 +4654,8 @@ const AngularWorkflow = (defaultprops) => {
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        //alert.error(error.toString());
+        console.log("Get schedule error: ", error.toString());
       });
   };
 
@@ -4970,6 +5010,7 @@ const AngularWorkflow = (defaultprops) => {
     var thisview = (
       <AppView
         allApps={apps}
+        extraApps={ExtraApps}
         prioritizedApps={prioritizedApps}
         filteredApps={filteredApps}
       />
@@ -5063,14 +5104,14 @@ const AngularWorkflow = (defaultprops) => {
       is_valid: true,
       label: "Webhook",
       environment: "onprem",
-      description: "Simple HTTP webhook",
+      description: "Custom HTTP input",
       long_description: "Execute a workflow with an unauthicated POST request",
     },
     {
       name: "Schedule",
       type: "TRIGGER",
       status: "uninitialized",
-      description: "Schedule execution time",
+      description: "Specify time",
       trigger_type: "SCHEDULE",
       errors: null,
       large_image:
@@ -5091,7 +5132,7 @@ const AngularWorkflow = (defaultprops) => {
       is_valid: true,
       label: "Subflow",
       environment: "onprem",
-      description: "Control another workflow",
+      description: "Control a workflow",
       long_description: "Execute another workflow from this workflow",
     },
     {
@@ -5112,7 +5153,7 @@ const AngularWorkflow = (defaultprops) => {
       name: "Office365",
       type: "TRIGGER",
       status: "uninitialized",
-      description: "Starts upon O365 email",
+      description: "O365 email trigger",
       trigger_type: "EMAIL",
       errors: null,
       is_valid: cloudSyncEnabled || isCloud ? true : false,
@@ -5126,7 +5167,7 @@ const AngularWorkflow = (defaultprops) => {
       name: "Gmail",
       type: "TRIGGER",
       status: "uninitialized",
-      description: "Trigger based on Gmail",
+      description: "Gmail email trigger",
       trigger_type: "EMAIL",
       errors: null,
       is_valid: cloudSyncEnabled || isCloud ? true : false,
@@ -5203,10 +5244,11 @@ const AngularWorkflow = (defaultprops) => {
 													display: "flex",
 													flexDirection: "column",
 													marginLeft: "20px",
+													overflow: "hidden",
 												}}
 											>
-												<Grid item style={{ flex: "1" }}>
-													<h3 style={{ marginBottom: "0px", marginTop: "10px" }}>
+												<Grid item style={{ flex: "1", overflow: "hidden",}}>
+													<h3 style={{ marginBottom: "0px", marginTop: "10px", overflow: "hidden" }}>
 														{trigger.name}
 													</h3>
 												</Grid>
@@ -5323,7 +5365,7 @@ const AngularWorkflow = (defaultprops) => {
 			}
 
       // AUTHENTICATION
-      if (app.authentication.required) {
+      if (app.authentication !== undefined && app.authentication !== null && app.authentication.required === true) {
 				console.log("App auth is required!")
 
         // Setup auth here :)
@@ -5448,6 +5490,7 @@ const AngularWorkflow = (defaultprops) => {
 				var description = ""
 
         if (
+          app.actions[0].parameters !== undefined &&
           app.actions[0].parameters !== null &&
           app.actions[0].parameters.length > 0
         ) {
@@ -5455,6 +5498,8 @@ const AngularWorkflow = (defaultprops) => {
         }
 
         if (
+					app.actions[0].returns !== undefined &&
+					app.actions[0].returns !== null &&
           app.actions[0].returns.example !== undefined &&
           app.actions[0].returns.example !== null &&
           app.actions[0].returns.example.length > 0
@@ -5510,6 +5555,7 @@ const AngularWorkflow = (defaultprops) => {
               : "",
           authentication_id: "",
           finished: false,
+					template: app.template === true ? true : false, 
         };
 
         // FIXME: overwrite category if the ACTION chosen has a different category
@@ -5534,10 +5580,12 @@ const AngularWorkflow = (defaultprops) => {
   };
 
   const AppView = (props) => {
-    const { allApps, prioritizedApps, filteredApps } = props;
+    const { allApps, prioritizedApps, filteredApps, extraApps } = props;
+  	//extraApps,
     const [visibleApps, setVisibleApps] = React.useState(
-      prioritizedApps.concat(
-        filteredApps.filter((innerapp) => !internalIds.includes(innerapp.id))
+			Array.prototype.concat.apply(
+      	prioritizedApps,
+        filteredApps.filter((innerapp) => !internalIds.includes(innerapp.id)),
       )
     );
 
@@ -5827,7 +5875,7 @@ const AngularWorkflow = (defaultprops) => {
               runSearch(event.target.value);
             }}
           />
-          {visibleApps.length > 0 ? (
+          {visibleApps.length > extraApps.length ? (
             <div style={appScrollStyle}>
               {visibleApps.map((app, index) => {
                 if (app.invalid) {
@@ -7293,7 +7341,7 @@ const AngularWorkflow = (defaultprops) => {
           }
         })
         .catch((error) => {
-          console.log(error.toString());
+          console.log("Get gmail folder error: ", error.toString());
         });
     };
 
@@ -7347,7 +7395,7 @@ const AngularWorkflow = (defaultprops) => {
           }
         })
         .catch((error) => {
-          console.log(error.toString());
+          console.log("Get outlook folders error: ", error.toString());
         });
     };
 
@@ -7368,7 +7416,8 @@ const AngularWorkflow = (defaultprops) => {
           setTriggerAuthentication(responseJson);
         })
         .catch((error) => {
-          console.log(error.toString());
+          //console.log(error.toString());
+          console.log("Set outlook auth error: ", error.toString());
         });
     };
 
@@ -7458,7 +7507,7 @@ const AngularWorkflow = (defaultprops) => {
                   setGmailFolders();
                 })
                 .catch((error) => {
-                  console.log(error.toString());
+                  console.log("Set gmail trigg error: ", error.toString());
                 });
             }, 2500);
 
@@ -7556,7 +7605,7 @@ const AngularWorkflow = (defaultprops) => {
                   setOutlookFolders();
                 })
                 .catch((error) => {
-                  console.log(error.toString());
+                  console.log("Set outlook trigger error: ", error.toString());
                 });
             }, 2500);
 
@@ -9476,7 +9525,8 @@ const AngularWorkflow = (defaultprops) => {
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        //alert.error(error.toString());
+        console.log("Stop mailsub error: ", error.toString());
       });
   };
 
@@ -9552,7 +9602,8 @@ const AngularWorkflow = (defaultprops) => {
         }
       })
       .catch((error) => {
-        alert.error(error.toString());
+        //alert.error(error.toString());
+        console.log("Start mailsub error: ", error.toString());
       });
   };
 
@@ -9636,7 +9687,8 @@ const AngularWorkflow = (defaultprops) => {
         }
       })
       .catch((error) => {
-        console.log(error.toString());
+        //console.log(error.toString());
+        console.log("New webhook error: ", error.toString());
       });
   };
 
@@ -9679,7 +9731,8 @@ const AngularWorkflow = (defaultprops) => {
         setSelectedTrigger(trigger);
       })
       .catch((error) => {
-        alert.error(error.toString());
+        //alert.error(error.toString());
+        alert.error("Delete webhook error: ", error.toString());
       });
   };
 

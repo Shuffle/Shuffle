@@ -352,7 +352,7 @@ class AppBase:
                         finished = True
                         break
                     else:
-                        self.logger.info(f"[DEBUG] RESP: {ret.text}")
+                        self.logger.info(f"[ERROR] RESP: {ret.text}")
 
                 except requests.exceptions.RequestException as e:
                     self.logger.info(f"[DEBUG] Request problem: {e}")

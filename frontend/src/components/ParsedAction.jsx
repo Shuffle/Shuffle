@@ -1064,6 +1064,8 @@ const ParsedAction = (props) => {
 			*/
 		}
 
+		console.log("APP: ", selectedApp)
+
     // FIXME: Issue #40 - selectedActionParameters not reset
     if (
       Object.getOwnPropertyNames(selectedAction).length > 0 &&
@@ -1090,6 +1092,114 @@ const ParsedAction = (props) => {
 							<b>Parameters</b>
 						</Button>
 					</Tooltip>
+					{selectedAction.template === true && selectedAction.matching_actions !== undefined && selectedAction.matching_actions !== null && selectedAction.matching_actions.length > 0 ?
+						<div>
+							<Typography variant="body1">
+								Select an app you want to use 
+							</Typography>
+          		<Autocomplete
+          		  id="template_action_search"
+          		  autoHighlight
+          		  value={selectedAction}
+          		  classes={{ inputRoot: classes.inputRoot }}
+          		  ListboxProps={{
+          		    style: {
+          		      backgroundColor: theme.palette.inputColor,
+          		      color: "white",
+          		    },
+          		  }}
+          		  getOptionLabel={(option) => {
+									console.log("LABEL: ", option)
+          		    if (
+          		      option === undefined ||
+          		      option === null ||
+          		      option.app_name === undefined ||
+          		      option.app_name === null 
+          		    ) {
+          		      return null;
+          		    }
+
+          		    const newname = (
+          		      option.app_name.charAt(0).toUpperCase() + option.app_name.substring(1)
+          		    ).replaceAll("_", " ");
+          		    return newname;
+          		  }}
+          		  options={selectedAction.matching_actions}
+          		  fullWidth
+          		  style={{
+          		    backgroundColor: theme.palette.inputColor,
+          		    height: 50,
+          		    borderRadius: theme.palette.borderRadius,
+          		  }}
+          		  onChange={(event, newValue) => {
+									console.log("SELECT: ", event, newValue)
+          		    // Workaround with event lol
+          		    //if (newValue !== undefined && newValue !== null) {
+          		    //  setNewSelectedAction({ target: { value: newValue.name } });
+          		    //}
+          		  }}
+          		  renderOption={(data) => {
+          		    var newActionname = data.app_name;
+          		    if (
+          		      data.label !== undefined &&
+          		      data.label !== null &&
+          		      data.label.length > 0
+          		    ) {
+          		      newActionname = data.label;
+          		    }
+
+          		    const iconInfo = GetIconInfo({ name: data.app_name });
+          		    const useIcon = iconInfo.originalIcon;
+
+          		    newActionname = (
+          		      newActionname.charAt(0).toUpperCase() +
+          		      newActionname.substring(1)
+          		    ).replaceAll("_", " ");
+
+									return (
+										<div style={{ display: "flex" }}>
+											<span
+												style={{
+													marginRight: 10,
+													marginTop: "auto",
+													marginBottom: "auto",
+												}}
+											>
+												{useIcon}
+											</span>
+											<span style={{}}>{newActionname}</span>
+										</div>
+          		    );
+          		  }}
+          		  renderInput={(params) => {
+									if (params.inputProps !== undefined && params.inputProps !== null && params.inputProps.value !== undefined && params.inputProps.value !== null) {
+										const prefixes = ["Post", "Put", "Patch"]
+										for (var key in prefixes) {
+											if (params.inputProps.value.startsWith(prefixes[key])) {
+												params.inputProps.value = params.inputProps.value.replace(prefixes[key]+" ", "", -1)
+												if (params.inputProps.value.length > 1) {
+													params.inputProps.value = params.inputProps.value.charAt(0).toUpperCase()+params.inputProps.value.substring(1)
+												}
+												break
+											}
+										}
+									}
+
+          		    return (
+											<TextField
+												style={{
+													backgroundColor: theme.palette.inputColor,
+													borderRadius: theme.palette.borderRadius,
+												}}
+												{...params}
+												label="Find App to Translate"
+												variant="outlined"
+          		      	/>
+          		    );
+          		  }}
+          		/>
+						</div>
+					: null}
         	{selectedAction.description !== undefined && selectedAction.description !== null && selectedAction.description.length > 0 &&  hiddenDescription === false ? (
 						<div
 							style={{
@@ -1884,7 +1994,6 @@ const ParsedAction = (props) => {
 										const coverColor = "#82ccc3"
 										//menuPosition.left -= 50
 										//menuPosition.top -= 250 
-										console.log(menuPosition)
                     return parsedPaths.length > 0 ? (
                       <NestedMenuItem
                         key={innerdata.name}
@@ -2369,7 +2478,7 @@ const ParsedAction = (props) => {
                     title="See previous results for this action"
                     placement="top"
                   >
-                    <ArrowLeftIcon style={{ color: "white" }} />
+                    <ArrowLeftIcon style={{ color: "rgba(255,255,255,0.7)" }} />
                   </Tooltip>
                 </IconButton>
                 <IconButton
@@ -2389,7 +2498,7 @@ const ParsedAction = (props) => {
                     title="Read app docs"
                     placement="top"
                   >
-                    <DescriptionIcon style={{ color: "white" }} />
+                    <DescriptionIcon style={{ color: "rgba(255,255,255,0.7)" }} />
                   </Tooltip>
                 </IconButton>
                 <IconButton
@@ -2413,7 +2522,7 @@ const ParsedAction = (props) => {
                       title="What are actions?"
                       placement="top"
                     >
-                      <HelpOutlineIcon style={{ color: "white" }} />
+                      <HelpOutlineIcon style={{ color: "rgba(255,255,255,0.7)" }} />
                     </Tooltip>
                   </a>
                 </IconButton>
@@ -2448,7 +2557,7 @@ const ParsedAction = (props) => {
                     title={selectedAction.run_magic_output === undefined || selectedAction.run_magic_output === null || selectedAction.run_magic_output === false ? "Click to enable magic parsing" : "Click to disable magic parsing"}
                     placement="top"
                   >
-										<AutoFixHighIcon style={{ color: selectedAction.run_magic_output === undefined || selectedAction.run_magic_output === null || selectedAction.run_magic_output === false ? "white" : "#f86a3e"}} />
+										<AutoFixHighIcon style={{ color: selectedAction.run_magic_output === undefined || selectedAction.run_magic_output === null || selectedAction.run_magic_output === false ? "rgba(255,255,255,0.7)" : "#f86a3e"}} />
                   </Tooltip>
                 </IconButton>
 
@@ -2529,7 +2638,7 @@ const ParsedAction = (props) => {
           />
 					<div style={{display: "flex"}}>
 						<div style={{flex: 5}}>
-							<Typography>Name</Typography>
+							<Typography style={{color: "rgba(255,255,255,0.7)"}}>Name</Typography>
 							<TextField
 								style={theme.palette.textFieldStyle}
 								InputProps={{
@@ -2626,7 +2735,7 @@ const ParsedAction = (props) => {
 									placement="top"
 								>
 									<span>
-										<Typography>Delay</Typography>
+										<Typography style={{color: "rgba(255,255,255,0.7)"}}>Delay</Typography>
 										<TextField
 											style={{
 												backgroundColor: theme.palette.inputColor,
@@ -2691,7 +2800,7 @@ const ParsedAction = (props) => {
 				selectedAction.authentication !== null &&
 				selectedAction.authentication.length > 0 ? (
         <div style={{ marginTop: 15 }}>
-          <Typography>Authentication</Typography>
+          <Typography style={{color: "rgba(255,255,255,0.7)"}}>Authentication</Typography>
           <div style={{ display: "flex" }}>
             <Select
 							MenuProps={{
@@ -2797,7 +2906,7 @@ const ParsedAction = (props) => {
 
       {showEnvironment !== undefined && showEnvironment && environments.length > 1 ? (
         <div style={{ marginTop: "20px" }}>
-          <Typography>Environment</Typography>
+          <Typography style={{color: "rgba(255,255,255,0.7)"}}>Environment</Typography>
           <Select
 						MenuProps={{
 							disableScrollLock: true,

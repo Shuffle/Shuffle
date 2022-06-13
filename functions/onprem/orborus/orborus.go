@@ -28,6 +28,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -442,12 +443,23 @@ func deployServiceWorkers(image string) {
 		if len(os.Getenv("DOCKER_HOST")) > 0 {
 			serviceSpec.TaskTemplate.ContainerSpec.Env = append(serviceSpec.TaskTemplate.ContainerSpec.Env, fmt.Sprintf("DOCKER_HOST=%s", os.Getenv("DOCKER_HOST")))
 		} else {
-			serviceSpec.TaskTemplate.ContainerSpec.Mounts = []mount.Mount{
-				mount.Mount{
-					Source: "/var/run/docker.sock",
-					Target: "/var/run/docker.sock",
-					Type:   mount.TypeBind,
-				},
+			if runtime.GOOS == "windows" {
+				serviceSpec.TaskTemplate.ContainerSpec.Mounts = []mount.Mount{
+					mount.Mount{
+						Source: `\\.\pipe\docker_engine`,
+						Target: `\\.\pipe\docker_engine`,
+						Type:   mount.TypeBind,
+					},
+				}
+			} else {
+				serviceSpec.TaskTemplate.ContainerSpec.Mounts = []mount.Mount{
+					mount.Mount{
+						Source: "/var/run/docker.sock",
+						Target: "/var/run/docker.sock",
+						Type:   mount.TypeBind,
+					},
+				}
+
 			}
 		}
 
@@ -506,7 +518,11 @@ func deployWorker(image string, identifier string, env []string, executionReques
 	}
 
 	if len(os.Getenv("DOCKER_HOST")) == 0 {
-		hostConfig.Binds = []string{"/var/run/docker.sock:/var/run/docker.sock:rw"}
+		if runtime.GOOS == "windows" {
+			hostConfig.Binds = []string{`\\.\pipe\docker_engine:\\.\pipe\docker_engine`}
+		} else {
+			hostConfig.Binds = []string{"/var/run/docker.sock:/var/run/docker.sock:rw"}
+		}
 	}
 
 	hostConfig.NetworkMode = container.NetworkMode(fmt.Sprintf("container:%s", containerId))
@@ -868,7 +884,7 @@ func main() {
 		log.Printf("[DEBUG] Running docker with socket proxy %s instead of default", os.Getenv("DOCKER_HOST"))
 
 	} else {
-		log.Printf("[DEBUG] Running docker with default socket /var/run/docker.sock")
+		log.Printf(`[DEBUG] Running docker with default socket /var/run/docker.sock or `)
 	}
 
 	ctx := context.Background()
