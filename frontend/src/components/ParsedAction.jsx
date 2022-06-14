@@ -1064,7 +1064,7 @@ const ParsedAction = (props) => {
 			*/
 		}
 
-		console.log("APP: ", selectedApp)
+		//console.log("APP: ", selectedApp)
 
     // FIXME: Issue #40 - selectedActionParameters not reset
     if (
@@ -1994,6 +1994,21 @@ const ParsedAction = (props) => {
 										const coverColor = "#82ccc3"
 										//menuPosition.left -= 50
 										//menuPosition.top -= 250 
+										console.log("POS: ", menuPosition1)
+										var menuPosition1 = menuPosition
+										if (menuPosition1 === null) {
+											menuPosition1 = {
+												"left": 0,
+												"top": 0,
+											}
+										} else if (menuPosition1.top === null || menuPosition1.top === undefined) {
+											menuPosition1.top = 0
+										} else if (menuPosition1.left === null || menuPosition1.left === undefined) {
+											menuPosition1.left = 0
+										}
+
+										console.log("POS1: ", menuPosition1)
+
                     return parsedPaths.length > 0 ? (
                       <NestedMenuItem
                         key={innerdata.name}
@@ -2016,7 +2031,7 @@ const ParsedAction = (props) => {
                           handleItemClick([innerdata]);
                         }}
                       >
-												<Paper style={{minHeight: 500, maxHeight: 500, minWidth: 275, maxWidth: 275, position: "fixed", top: menuPosition.top-200, left: menuPosition.left-455, padding: "10px 0px 10px 10px", backgroundColor: theme.palette.inputColor, overflow: "hidden", overflowY: "auto", border: "1px solid rgba(255,255,255,0.3)",}}>
+												<Paper style={{minHeight: 500, maxHeight: 500, minWidth: 275, maxWidth: 275, position: "fixed", top: menuPosition1.top-200, left: menuPosition1.left-455, padding: "10px 0px 10px 10px", backgroundColor: theme.palette.inputColor, overflow: "hidden", overflowY: "auto", border: "1px solid rgba(255,255,255,0.3)",}}>
 													<MenuItem
 														key={innerdata.name}
 														style={{

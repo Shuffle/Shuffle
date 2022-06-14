@@ -3197,7 +3197,7 @@ const AngularWorkflow = (defaultprops) => {
     if (nodedata.finished === false || (nodedata.id !== undefined && nodedata.is_valid === undefined)
     ) {
 			//if (nodedata.app_id === undefined) {
-			console.log("Returning because node is not valid: ", nodedata)
+			//console.log("Returning because node is not valid: ", nodedata)
       return;
     }
 
