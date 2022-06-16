@@ -112,6 +112,7 @@ import AuthenticationOauth2 from "../components/Oauth2Auth.jsx";
 import ParsedAction from "../components/ParsedAction.jsx";
 import PaperComponent from "../components/PaperComponent.jsx"
 import ExtraApps from "../components/ExtraApps.jsx" 
+import EditWorkflow from "../components/EditWorkflow.jsx" 
 
 const surfaceColor = "#27292D";
 const inputColor = "#383B40";
@@ -351,6 +352,7 @@ const AngularWorkflow = (defaultprops) => {
   const [executionData, setExecutionData] = React.useState({});
   const [appsLoaded, setAppsLoaded] = React.useState(false);
   const [showVideo, setShowVideo] = React.useState("");
+	const [editWorkflowModalOpen, setEditWorkflowModalOpen] = React.useState(false);
 
   const [lastSaved, setLastSaved] = React.useState(true);
 
@@ -1715,6 +1717,9 @@ const AngularWorkflow = (defaultprops) => {
 
             node.data = action;
 
+						node.data.canConnect = false 
+						node.data.is_valid = true
+						node.data.isValid = true
             node.data._id = action["id"];
             node.data.type = "ACTION";
             node.data.source_workflow = responseJson.id;
@@ -1740,6 +1745,27 @@ const AngularWorkflow = (defaultprops) => {
             return node;
           });
 
+    			var triggers = responseJson.triggers.map((trigger) => {
+    			  const node = {};
+      
+						console.log("Only add workflow: ", trigger.app_name)
+						if (trigger.app_name !== "Shuffle Workflow" && trigger.app_name !== "User Input") {
+							return null
+						}
+
+    			  node.position = trigger.position;
+    			  node.data = trigger;
+
+						node.data.canConnect = false 
+    			  node.data.id = trigger["id"];
+    			  node.data._id = trigger["id"];
+    			  node.data.type = "TRIGGER";
+
+    			  return node;
+    			});
+
+          triggers = triggers.filter((trigger) => trigger !== null);
+    			const insertedNodes = [].concat(actions, triggers);
           var edges = responseJson.branches.map((branch, index) => {
             const edge = {};
             var conditions = responseJson.branches[index].conditions;
@@ -1754,14 +1780,14 @@ const AngularWorkflow = (defaultprops) => {
               label = conditions.length + " conditions";
             }
 
-            const sourceFound = actions.findIndex(
+            const sourceFound = insertedNodes.findIndex(
               (action) => action.data.id === branch.source_id
             );
             if (sourceFound < 0) {
               return null;
             }
 
-            const destinationFound = actions.findIndex(
+            const destinationFound = insertedNodes.findIndex(
               (action) => action.data.id === branch.destination_id
             );
             if (destinationFound < 0) {
@@ -1791,7 +1817,7 @@ const AngularWorkflow = (defaultprops) => {
 
           edges = edges.filter((edge) => edge !== null);
           cy.removeListener("add");
-          cy.add(actions);
+          cy.add(insertedNodes)
           cy.add(edges);
 
           if (nodefound === true) {
@@ -10777,7 +10803,7 @@ const AngularWorkflow = (defaultprops) => {
           ) : null}
           <Tooltip
             color="secondary"
-            title="Fit to screen (ctrl+f)"
+            title="Fit to screen"
             placement="top"
           >
             <span>
@@ -10870,6 +10896,27 @@ const AngularWorkflow = (defaultprops) => {
           workflow.configuration.exit_on_error !== undefined ? (
             <WorkflowMenu />
           ) : null}
+					<Tooltip
+            color="secondary"
+            title="Edit workflow details"
+            placement="top"
+          >
+            <span>
+              <Button
+              	disabled={workflow.public}
+                color="primary"
+                style={{ height: 50, marginLeft: 10 }}
+                variant="outlined"
+                onClick={() => {
+									console.log("SHOW EDIT VIEW!")
+
+									setEditWorkflowModalOpen(true)
+								}}
+              >
+								<EditIcon />
+              </Button>
+            </span>
+          </Tooltip>
         </div>
       </div>
     );
@@ -13938,6 +13985,15 @@ const parsedExecutionArgument = () => {
         {codePopoutModal}
         {configureWorkflowModal}
 				{editWorkflowModal}
+
+				{editWorkflowModalOpen === true ? 
+					<EditWorkflow
+						workflow={workflow}
+						setWorkflow={setWorkflow}
+						modalOpen={editWorkflowModalOpen}
+						setModalOpen={setEditWorkflowModalOpen}
+					/>
+				: null}
 
 				{showVideo !== undefined && showVideo.length > 0 ? 
 					<div style={{borderRadius: theme.palette.borderRadius, zIndex: 12501, position: "fixed", left: 40, bottom: 150, width: 300,}}>

@@ -174,6 +174,15 @@ const data = [
     },
   },
   {
+    selector: "node[?canConnect]",
+    css: {
+      "border-color": "#f86a3e",
+      "border-width": "10px",
+      "z-index": "5002",
+      "background-color": "#f86a3e",
+    },
+  },
+  {
     selector: "node[?isDescriptor]",
     css: {
       shape: "ellipse",
