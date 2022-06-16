@@ -41,6 +41,7 @@ import { isMobile } from "react-device-detect";
 
 import detectEthereumProvider from "@metamask/detect-provider";
 import Drift from "react-driftjs";
+import DashboardPage from "./views/TempDashboard.jsx";
 
 // Production - backend proxy forwarding in nginx
 var globalUrl = window.location.origin;
@@ -641,6 +642,17 @@ const App = (message, props) => {
         	      globalUrl={globalUrl}
         	      setCookie={setCookie}
         	      cookies={cookies}
+        	      {...props}
+        	    />
+        	  }
+        	/>
+			<Route
+        	  exact
+        	  path="/testdashboard"
+        	  element={
+        	    <DashboardPage
+        	      isLoaded={isLoaded}
+        	      globalUrl={globalUrl}
         	      {...props}
         	    />
         	  }
