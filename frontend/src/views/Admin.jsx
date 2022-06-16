@@ -776,7 +776,7 @@ const Admin = (props) => {
   };
 
   const inviteUser = (data) => {
-    console.log("INPUT: ", data);
+    //console.log("INPUT: ", data);
     setLoginInfo("");
 
     // Just use this one?

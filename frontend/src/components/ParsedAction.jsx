@@ -1994,7 +1994,7 @@ const ParsedAction = (props) => {
 										const coverColor = "#82ccc3"
 										//menuPosition.left -= 50
 										//menuPosition.top -= 250 
-										console.log("POS: ", menuPosition1)
+										//console.log("POS: ", menuPosition1)
 										var menuPosition1 = menuPosition
 										if (menuPosition1 === null) {
 											menuPosition1 = {
@@ -2007,7 +2007,7 @@ const ParsedAction = (props) => {
 											menuPosition1.left = 0
 										}
 
-										console.log("POS1: ", menuPosition1)
+										//console.log("POS1: ", menuPosition1)
 
                     return parsedPaths.length > 0 ? (
                       <NestedMenuItem
