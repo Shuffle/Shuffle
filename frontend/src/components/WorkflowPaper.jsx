@@ -91,6 +91,11 @@ const WorkflowPaper = (props) => {
 		}
 
 		//console.log("IMG: ", data)
+		var parsedUrl = `workflows/${data.objectID}`
+
+		if (data.__queryID !== undefined && data.__queryID !== null) {
+			parsedUrl += `?queryID=${data.__queryID}`
+		}
 
     return (
 			<div style={{width: "100%", position: "relative",}}>
@@ -134,7 +139,7 @@ const WorkflowPaper = (props) => {
                   }}
                 >
                   <Link
-                    to={"/workflows/" + data.objectID}
+                    to={parsedUrl}
                     style={{ textDecoration: "none", color: "inherit" }}
                   >
                     {parsedName}

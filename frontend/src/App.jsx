@@ -23,6 +23,7 @@ import Docs from "./views/Docs";
 import Introduction from "./views/Introduction";
 import SetAuthentication from "./views/SetAuthentication";
 import SetAuthenticationSSO from "./views/SetAuthenticationSSO";
+import Search from "./views/Search.jsx";
 
 import LandingPageNew from "./views/LandingpageNew";
 import LoginPage from "./views/LoginPage";
@@ -56,7 +57,7 @@ if (globalUrl.includes("githubpreview.dev")) {
 	//globalUrl = globalUrl.replace("3000", "5001")
 	globalUrl = "https://frikky-shuffle-5gvr4xx62w64-5001.githubpreview.dev"
 }
-console.log("global: ", globalUrl)
+//console.log("global: ", globalUrl)
 
 const App = (message, props) => {
 
@@ -128,7 +129,7 @@ const App = (message, props) => {
       .then((responseJson) => {
         var userInfo = {};
         if (responseJson.success === true) {
-          console.log(responseJson);
+          //console.log("USER: ", responseJson);
 
           userInfo = responseJson;
           setIsLoggedIn(true);
@@ -368,6 +369,7 @@ const App = (message, props) => {
         	    />
         	  }
         	/>
+					<Route exact path="/search" element={<Search serverside={false} isLoaded={isLoaded} userdata={userdata} globalUrl={globalUrl} surfaceColor={theme.palette.surfaceColor} inputColor={theme.palette.inputColor} {...props} /> } />
         	<Route
         	  exact
         	  path="/admin/:key"
