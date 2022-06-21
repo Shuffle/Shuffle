@@ -208,18 +208,14 @@ const AppGrid = props => {
 											})
 										}
 
-										console.log(searchClient)
 										//const searchClient = algoliasearch("L55H18ZINA", "a19be455e7e75ee8f20a93d26b9fc6d6")
+										console.log(searchClient)
 										aa('init', {
 											appId: searchClient.appId,
 											apiKey: searchClient.transporter.queryParameters["x-algolia-api-key"]
 										})
 
-										console.log("DATA: ", data)
-
 										const timestamp = new Date().getTime()
-										console.log("Timestamp: ", timestamp)
-										
 										aa('sendEvents', [
 											{
 												eventType: 'click',

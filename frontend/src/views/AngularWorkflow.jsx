@@ -13,6 +13,7 @@ import ReactMarkdown from "react-markdown";
 import { useAlert } from "react-alert";
 import theme from '../theme';
 import { isMobile } from "react-device-detect" 
+import aa from 'search-insights'
 
 import {
 	Zoom,
@@ -10746,7 +10747,7 @@ const AngularWorkflow = (defaultprops) => {
             </Tooltip>
           )}
 					{/*userdata.avatar === creatorProfile.github_avatar ? null :*/}
-          	<Tooltip color="primary" title="Save (ctrl+s)" placement="top">
+          	<Tooltip color="primary" title="Save Workflow" placement="top">
           	  <span>
           	    <Button
           	      disabled={savingState !== 0}
@@ -10759,7 +10760,39 @@ const AngularWorkflow = (defaultprops) => {
           	      variant={
           	        lastSaved && !workflow.public ? "outlined" : "contained"
           	      }
-          	      onClick={() => saveWorkflow()}
+          	      onClick={() => {
+										saveWorkflow()
+
+										if (workflow.public === true) {
+											console.log("Public!")
+
+											const tmpurl = new URL(window.location.href)
+											const searchParams = tmpurl.searchParams
+											const queryID = searchParams.get('queryID')
+
+											if (queryID !== undefined && queryID !== null) {
+												aa('init', {
+														appId: "JNSS5CFDZZ",
+														apiKey: "db08e40265e2941b9a7d8f644b6e5240",
+												})
+
+												const timestamp = new Date().getTime()
+												aa('sendEvents', [
+													{
+														eventType: 'conversion',
+														eventName: 'Public Workflow Saved',
+														index: 'workflows',
+														objectIDs: [workflow.id],
+														timestamp: timestamp,
+														queryID: queryID,
+														userToken: userdata === undefined || userdata === null || userdata.id === undefined ? "" : userdata.id,
+													}
+												])
+											} else {
+												console.log("No query to handle")
+											}
+										}
+									}}
           	    >
           	      {savingState === 2 ? (
           	        <CircularProgress style={{ height: 35, width: 35 }} />

@@ -26,17 +26,16 @@ import {
 import {Close as CloseIcon, Folder as FolderIcon, Polymer as PolymerIcon, LibraryBooks as LibraryBooksIcon} from '@material-ui/icons'
 
 import algoliasearch from 'algoliasearch/lite';
+import aa from 'search-insights'
 import { InstantSearch, Configure, connectSearchBox, connectHits, Index } from 'react-instantsearch-dom';
 //import { InstantSearch, SearchBox, Hits, connectSearchBox, connectHits, Index } from 'react-instantsearch-dom';
 
 // https://www.algolia.com/doc/api-reference/widgets/search-box/react/
-//const searchClient = algoliasearch("WIC466KTV8", "fff61b6ae3802ec2b47fed9ab50b532e")
 const chipStyle = {
 	backgroundColor: "#3d3f43", height: 30, marginRight: 5, paddingLeft: 5, paddingRight: 5, height: 28, cursor: "pointer", borderColor: "#3d3f43", color: "white",
 }
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
-//const searchClient = algoliasearch("L55H18ZINA", "a19be455e7e75ee8f20a93d26b9fc6d6")
 const SearchField = props => {
 	const { serverside, } = props
 	const theme = useTheme();
@@ -213,6 +212,24 @@ const SearchField = props => {
 									//console.log("CLICK")
 									setSearchOpen(true)
 
+									aa('init', {
+											appId: searchClient.appId,
+											apiKey: searchClient.transporter.queryParameters["x-algolia-api-key"]
+									})
+
+									const timestamp = new Date().getTime()
+									aa('sendEvents', [
+										{
+											eventType: 'click',
+											eventName: 'Product Clicked',
+											index: 'workflows',
+											objectIDs: [hit.objectID],
+											timestamp: timestamp,
+											queryID: hit.__queryID,
+											positions: [hit.__position],
+										}
+									])
+
 									if (!isCloud) {
 										event.preventDefault()
 										window.open(parsedUrl, '_blank');
@@ -386,6 +403,24 @@ const SearchField = props => {
 									console.log("CLICK")
 									setSearchOpen(true)
 
+									aa('init', {
+											appId: searchClient.appId,
+											apiKey: searchClient.transporter.queryParameters["x-algolia-api-key"]
+									})
+
+									const timestamp = new Date().getTime()
+									aa('sendEvents', [
+										{
+											eventType: 'click',
+											eventName: 'Product Clicked',
+											index: 'appsearch',
+											objectIDs: [hit.objectID],
+											timestamp: timestamp,
+											queryID: hit.__queryID,
+											positions: [hit.__position],
+										}
+									])
+
 									if (!isCloud) {
 										event.preventDefault()
 										window.open(parsedUrl, '_blank');
@@ -518,6 +553,24 @@ const SearchField = props => {
 
 						return (
 							<Link key={hit.objectID} to={parsedUrl} style={{textDecoration: "none", color: "white",}} onClick={(event) => {
+								aa('init', {
+										appId: searchClient.appId,
+										apiKey: searchClient.transporter.queryParameters["x-algolia-api-key"]
+								})
+
+								const timestamp = new Date().getTime()
+								aa('sendEvents', [
+									{
+										eventType: 'click',
+										eventName: 'Product Clicked',
+										index: 'documentation',
+										objectIDs: [hit.objectID],
+										timestamp: timestamp,
+										queryID: hit.__queryID,
+										positions: [hit.__position],
+									}
+								])
+
 								console.log("CLICK")
 								setSearchOpen(true)
 							}}>
