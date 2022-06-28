@@ -7055,8 +7055,10 @@ const AngularWorkflow = (defaultprops) => {
               }
 
               var currentedge = cy.getElementById(selectedEdge.id);
-              if (currentedge !== undefined && currentedge !== null) {
-                currentedge.data().label = label;
+              if (currentedge !== undefined && currentedge !== null && label !== undefined) {
+                currentedge.data("label", label)
+								//.label = label;
+    	          //oldstartnode[0].data("isStartNode", false);
               }
 
               setSelectedEdge(selectedEdge);

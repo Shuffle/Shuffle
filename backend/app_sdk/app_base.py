@@ -2025,7 +2025,6 @@ class AppBase:
             errors = False
             error_msg = ""
             try:
-                #self.logger.info("In liquid")
                 if len(template) > 10000000:
                     self.logger.info("[DEBUG] Skipping liquid - size too big (%d)" % len(template))
                     return template
@@ -2240,7 +2239,6 @@ class AppBase:
                 #self.logger.info("STATIC PARSED: %s" % actualitem)
                 #self.logger.info("[INFO] Done with regex matching")
                 if len(actualitem) > 0:
-                    #self.logger.info("[DEBUG] Matches: ", actualitem)
                     for replace in actualitem:
                         try:
                             to_be_replaced = replace[0]
@@ -2798,7 +2796,7 @@ class AppBase:
                                 }))
 
                             if parameter["name"] == "body": 
-                                self.logger.info("[INFO] Should debug field with liquid and other checks as it's BODY: %s" % value)
+                                self.logger.info(f"[INFO] Should debug field with liquid and other checks as it's BODY: {value}")
 
                             # Custom format for ${name[0,1,2,...]}$
                             #submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"
