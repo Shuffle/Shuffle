@@ -2714,6 +2714,8 @@ class AppBase:
                             if parameter["name"] == "body": 
                                 bodyindex = counter
                                 #self.logger.info("PARAM: %s" % parameter)
+
+                                # FIXMe: This should also happen after liquid & param parsing..
                                 try:
                                     values = parameter["value_replace"]
                                     if values != None:
@@ -2721,16 +2723,24 @@ class AppBase:
                                         for val in values:
                                             replace_value = val["value"]
                                             replace_key = val["key"]
+
                                             if (val["value"].startswith("{") and val["value"].endswith("}")) or (val["value"].startswith("[") and val["value"].endswith("]")):
                                                 self.logger.info(f"""Trying to parse as JSON: {val["value"]}""")
                                                 try:
-                                                    value_replace = json.loads(val["value"])
-                                                    # If it gets here, remove the "" infront and behind the key as well since this is preventing the JSON from being loaded
+                                                    newval = val["value"]
+
+                                                    # If it gets here, remove the "" infront and behind the key as well 
+                                                    # since this is preventing the JSON from being loaded
+                                                    tmpvalue = json.loads(newval)
                                                     replace_key = f"\"{replace_key}\""
                                                 except json.decoder.JSONDecodeError as e:
-                                                    self.logger.info("Failed JSON replacement for OpenAPI %s", val["key"])
+                                                    self.logger.info("[WARNING] Failed JSON replacement for OpenAPI %s", val["key"])
+
                                             elif val["value"].lower() == "true" or val["value"].lower() == "false":
                                                 replace_key = f"\"{replace_key}\""
+                                            else:
+                                                if "\"" in replace_value and not "\\\"" in replace_value:
+                                                    replace_value = replace_value.replace("\"", "\\\"", -1)
 
                                             action["parameters"][counter]["value"] = action["parameters"][counter]["value"].replace(replace_key, replace_value, 1)
 
@@ -2786,6 +2796,9 @@ class AppBase:
                                     "reason": "Parameter {parameter} has an issue",
                                     "exception": f"Value Error: {check}",
                                 }))
+
+                            if parameter["name"] == "body": 
+                                self.logger.info("[INFO] Should debug field with liquid and other checks as it's BODY: %s" % value)
 
                             # Custom format for ${name[0,1,2,...]}$
                             #submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"
@@ -3126,6 +3139,13 @@ class AppBase:
                             # FIXME: add this to Multi exec as well.
                             try:
                                 for key, value in params.items():
+                                    if "-" in key:
+                                        try:
+                                            newkey = key.replace("-", "_", -1).lower()
+                                            params[newkey] = params[key]
+                                        except Exception as e:
+                                            self.logger.info("[DEBUG] Failed updating key with dash in it: %s" % e)
+
                                     try:
                                         if isinstance(value, str) and ((value.startswith("{") and value.endswith("}")) or (value.startswith("[") and value.endswith("]"))):
                                             params[key] = json.loads(value)

@@ -91,8 +91,7 @@ const WorkflowPaper = (props) => {
 		}
 
 		//console.log("IMG: ", data)
-		var parsedUrl = `workflows/${data.objectID}`
-
+		var parsedUrl = `/workflows/${data.objectID}`
 		if (data.__queryID !== undefined && data.__queryID !== null) {
 			parsedUrl += `?queryID=${data.__queryID}`
 		}

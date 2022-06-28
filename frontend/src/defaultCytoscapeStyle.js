@@ -163,8 +163,8 @@ const data = [
     selector: "node[?isSuggestion]",
     css: {
       shape: "ellipse",
-      width: "30px",
-      height: "30px",
+      width: "50px",
+      height: "50px",
       "z-index": "5002",
       "font-size": "0px",
       border: "1px solid rgba(255,255,255,0.9)",

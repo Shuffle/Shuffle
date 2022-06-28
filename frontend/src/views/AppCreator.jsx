@@ -1421,14 +1421,15 @@ const AppCreator = (defaultprops) => {
     //console.log("SECURITYSCHEMES: ", securitySchemes)
     if (securitySchemes !== undefined) {
 			console.log("NEWAUTH: ", securitySchemes)
-			var valueset = false
       // FIXME: Should add Oauth2 (Microsoft) and JWT (Wazuh)
       //console.log("SECURITY: ", securitySchemes)
       //if (Object.entries(securitySchemes) > 1 &&
       var newauth = [];
 			try {
+				var optionset = false 
       	for (const [key, value] of Object.entries(securitySchemes)) {
       	  console.log(key, value);
+
       	  if (key === "jwt") {
       	    setAuthenticationOption("JWT");
       	    setAuthenticationRequired(true);
@@ -1439,19 +1440,21 @@ const AppCreator = (defaultprops) => {
       	      value.in.length > 0
       	    ) {
       	      setParameterName(value.in);
+							optionset = true 
       	    }
 
       	  } else if (value.scheme === "bearer") {
       	    setAuthenticationOption("Bearer auth");
       	    setAuthenticationRequired(true);
+						optionset = true 
 
       	  } else if (key === "ApiKeyAuth" || key === "Token" || ((value.in === "header" || value.in === "query") && value.name !== undefined)) {
-						if (authenticationOption === "" || authenticationOption === "No authentication") {
-      	    	setAuthenticationOption("API key");
-						}
+						//if (optionset === false) {
+						//	optionset = true 
+						//}
 
-						if (valueset === false) {
-							valueset = true 
+						if (optionset === false) {
+							optionset = true 
       	    	value.in = value.in.charAt(0).toUpperCase() + value.in.slice(1)
 
       	    	setParameterLocation(value.in);
@@ -1461,8 +1464,16 @@ const AppCreator = (defaultprops) => {
       	    	}
 
       	    	console.log("PARAM NAME: ", value.name);
+      	    	setAuthenticationOption("API key");
       	    	setParameterName(value.name);
       	    	setAuthenticationRequired(true);
+
+      	    	newauth.push({
+      	    		"name": key,
+      	    		"type": value.in.toLowerCase(),
+								"in": value.in.toLowerCase(),
+      	    		"example": "",
+							})
 						} else {
       	    	newauth.push({
       	    		"name": key,
@@ -1482,15 +1493,18 @@ const AppCreator = (defaultprops) => {
       	  } else if (value.scheme === "basic") {
       	    setAuthenticationOption("Basic auth");
       	    setAuthenticationRequired(true);
+						optionset = true 
 
       	  } else if (value.scheme === "oauth2") {
       	    setAuthenticationOption("Oauth2");
       	    setAuthenticationRequired(true);
+						optionset = true 
 
       	  } else if (value.type === "oauth2" || key === "Oauth2" || key === "Oauth2c" || (key !== undefined && key !== null && key.toLowerCase().includes("oauth2"))) {
       	    //alert.info("Can't handle Oauth2 auth yet.")
       	    setAuthenticationOption("Oauth2");
       	    setAuthenticationRequired(true);
+						optionset = true 
 
       	    //console.log("FLOW-1: ", value)
       	    const flowkey = value.flow === undefined ? "flows" : "flow";
@@ -1573,6 +1587,7 @@ const AppCreator = (defaultprops) => {
 			}
 
       if (newauth.length > 0) {
+				newauth = newauth.filter(data => data.name != "ApiKeyAuth")
         setExtraAuth(newauth);
       }
     }
@@ -1645,9 +1660,9 @@ const AppCreator = (defaultprops) => {
       data.info["contact"] = basedata.info.contact;
     } else if (contact === "") {
       data.info["contact"] = {
-        name: "@frikkylikeme",
-        url: "https://twitter.com/frikkylikeme",
-        email: "frikky@shuffler.io",
+        name: "@shuffle_platform",
+        url: "https://twitter.com/shuffleio",
+        email: "support@shuffler.io",
       };
     } else {
       data.info["contact"] = contact;

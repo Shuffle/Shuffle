@@ -3752,6 +3752,7 @@ const AngularWorkflow = (defaultprops) => {
         ) {
           cy.getElementById(currentNode.data.id).remove();
         }
+
       }
     }
 
@@ -3892,7 +3893,7 @@ const AngularWorkflow = (defaultprops) => {
     if (parentNode.data("isButton") || parentNode.data("buttonId")) return;
 
     const px = parentNode.position("x") + 300;
-    const py = parentNode.position("y") + 0;
+    const py = parentNode.position("y") + 100;
     const circleId = (newNodeId = uuidv4());
 
     parentNode.data("circleId", circleId);
@@ -3920,7 +3921,50 @@ const AngularWorkflow = (defaultprops) => {
     	position: { x: px, y: py },
       locked: true,
     });
+
+		//suggestions[0].id = uuidv4()
+    //cy.add({
+    //  group: "nodes",
+    //  data: suggestions[0],
+    //	position: { x: parentNode.position("x") + 300, y: parentNode.position("y") - 100},
+    //  locked: true,
+    //});
   }
+
+  const addDeleteButton2 = (event) => {
+    var parentNode = cy.$("#" + event.target.data("id"));
+    if (parentNode.data("isButton") || parentNode.data("buttonId")) return;
+
+    const px = parentNode.position("x") + 100;
+    const py = parentNode.position("y") + 35;
+    const circleId = (newNodeId = uuidv4());
+
+    parentNode.data("circleId", circleId);
+
+    const iconInfo = {
+      icon: "M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z",
+      iconColor: buttonColor,
+      iconBackgroundColor: buttonBackgroundColor,
+    };
+    const svg_pin = `<svg width="${svgSize}" height="${svgSize}" viewBox="0 0 ${svgSize} ${svgSize}" version="1.1" xmlns="http://www.w3.org/2000/svg"><path d="${iconInfo.icon}" fill="${iconInfo.iconColor}"></path></svg>`;
+    const svgpin_Url = encodeURI("data:image/svg+xml;utf-8," + svg_pin);
+
+    cy.add({
+      group: "nodes",
+      data: {
+        weight: 30,
+        id: circleId,
+        name: "This is autocomplete",
+        buttonType: "delete",
+        attachedTo: event.target.data("id"),
+        icon: svgpin_Url,
+        iconBackground: iconInfo.iconBackgroundColor,
+        is_valid: true,
+      },
+      position: { x: px, y: py },
+      locked: true,
+    });
+  };
 
   const addDeleteButton = (event) => {
     var parentNode = cy.$("#" + event.target.data("id"));
@@ -3981,11 +4025,18 @@ const AngularWorkflow = (defaultprops) => {
       for (var key in allNodes) {
         const currentNode = allNodes[key];
         if (
-          currentNode.data.isButton &&
+          (currentNode.data.isButton || currentNode.data.isSuggestion) &&
           currentNode.data.attachedTo !== nodedata.id
         ) {
           cy.getElementById(currentNode.data.id).remove();
         }
+
+        /*if (
+          currentNode.data.isSuggestion &&
+          currentNode.data.attachedTo !== nodedata.id
+        ) {
+          cy.getElementById(currentNode.data.id).remove();
+        }*/
 
         if (
           currentNode.data.isButton &&
@@ -4007,7 +4058,10 @@ const AngularWorkflow = (defaultprops) => {
 					addStartnodeButton(event);
 				}
 
-				//addSuggestionButtons(event)
+				// autocomplete
+				// right click
+				// suggestions
+        //addSuggestionButtons(event);
       }
     }
 
@@ -5037,7 +5091,7 @@ const AngularWorkflow = (defaultprops) => {
     var thisview = (
       <AppView
         allApps={apps}
-        extraApps={ExtraApps}
+        extraApps={[]}
         prioritizedApps={prioritizedApps}
         filteredApps={filteredApps}
       />
@@ -5825,15 +5879,10 @@ const AngularWorkflow = (defaultprops) => {
       if (value.length > 0) {
         var newApps = allApps.filter(
           (app) =>
-            app.name
-              .toLowerCase()
-              .includes(
-                value.trim().toLowerCase() ||
-                  app.description
-                    .toLowerCase()
-                    .includes(value.trim().toLowerCase())
-              ) && !(!app.activated && app.generated)
-        );
+            app.name.toLowerCase().includes(value.trim().toLowerCase())
+						||
+            app.description.toLowerCase().includes(value.trim().toLowerCase())
+        )
 
         // Extend search
         if (newApps.length === 0) {
@@ -6914,7 +6963,7 @@ const AngularWorkflow = (defaultprops) => {
                 >
                   contains any of
                 </MenuItem>
-                <MenuItem
+                {/*<MenuItem
                   style={menuItemStyle}
                   onClick={(e) => {
                     conditionValue.value = "matches regex";
@@ -6924,7 +6973,7 @@ const AngularWorkflow = (defaultprops) => {
                   key={"matches regex"}
                 >
                   matches regex
-                </MenuItem>
+                </MenuItem>*/}
                 <MenuItem
                   style={menuItemStyle}
                   onClick={(e) => {
@@ -10665,11 +10714,7 @@ const AngularWorkflow = (defaultprops) => {
   };
 
   const BottomCytoscapeBar = () => {
-    if (
-      workflow.id === undefined ||
-      workflow.id === null ||
-      apps.length === 0
-    ) {
+    if (workflow.id === undefined || workflow.id === null || (!workflow.public && apps.length === 0)) {
       return null;
     }
 
@@ -11333,7 +11378,7 @@ const AngularWorkflow = (defaultprops) => {
 				</div>
 			: null}
 
-			{userdata.avatar === creatorProfile.github_avatar ? 
+			{userdata.avatar === creatorProfile.github_avatar && userdata.avatar !== undefined ? 
 				<div style={{marginTop: 50, }}>
 					<Button
 						color="primary"
