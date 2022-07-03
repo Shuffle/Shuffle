@@ -117,6 +117,22 @@ def as_object(a):
 def ast(a):
     return ast.literal_eval(str(a))
 
+@shuffle_filters.register
+def escape_string(a):
+    a = str(a)
+    return a.replace("\\\'", "\'", -1).replace("\\\"", "\"", -1).replace("'", "\\\'", -1).replace("\"", "\\\"", -1)
+
+@shuffle_filters.register
+def json_escape(a):
+    a = str(a)
+    return a.replace("\\\'", "\'", -1).replace("\\\"", "\"", -1).replace("'", "\\\\\'", -1).replace("\"", "\\\\\"", -1)
+
+# By default using json escape to add all backslashes
+@shuffle_filters.register
+def escape(a):
+    a = str(a)
+    return json_escape(a)
+
 #print(standard_filter_manager.filters)
 #print(shuffle_filters.filters)
 #print(Liquid("{{ '10' | plus: 1}}", filters=shuffle_filters.filters).render())
