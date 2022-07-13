@@ -41,6 +41,7 @@ import { padding, textAlign } from '@mui/system';
 const liquidFilters = [
 	{"name": "Size", "value": "size", "example": ""},
 	{"name": "Date", "value": `date: "%Y%M%d"`, "example": `{{ "now" | date: "%s" }}`},
+	{"name": "Escape String", "value": `{{ \"\"\"'string with weird'" quotes\"\"\" | escape_string }}`, "example": ``},
 ]
 
 const mathFilters = [
@@ -50,7 +51,7 @@ const mathFilters = [
 
 const pythonFilters = [
 	{"name": "Hello World", "value": `{% python %}\nprint("hello world")\n{% endpython %}`, "example": ``},
-	{"name": "Handle JSON", "value": `{% python %}\nimport json\njsondata = json.loads("""$nodename""")\n{% endpython %}`, "example": ``},
+	{"name": "Handle JSON", "value": `{% python %}\nimport json\njsondata = json.loads(r"""$nodename""")\n{% endpython %}`, "example": ``},
 ]
 
 const CodeEditor = (props) => {
@@ -348,7 +349,7 @@ const CodeEditor = (props) => {
 			return
 		}
 
-		if (!item.value.includes("{%")) {
+		if (!item.value.includes("{%") && !item.value.includes("{{")) {
 			setlocalcodedata(localcodedata+" | "+item.value+" }}")
 		} else {
 			setlocalcodedata(localcodedata+item.value)
@@ -582,7 +583,7 @@ const CodeEditor = (props) => {
 					}}
 				/>
 			</span>
-			{editorPopupOpen ?
+			{/*editorPopupOpen ?
 				<Paper
 					style={{
 						margin: 10,
@@ -617,13 +618,12 @@ const CodeEditor = (props) => {
 									}}
 								>
 									{data.substring(0, 25)}
-									{/* {Object.keys(data.example).forEach(key => key)} */}
 								</button>
 							</div>
 						)
 					})}
 				</Paper>
-			: null}
+			: null*/}
 
 			<div
 				style={{

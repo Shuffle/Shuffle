@@ -5,6 +5,7 @@ import { useTheme } from '@material-ui/core/styles';
 import {Link} from 'react-router-dom';
 
 import { Search as SearchIcon, CloudQueue as CloudQueueIcon, Code as CodeIcon } from '@material-ui/icons';
+import aa from 'search-insights'
 
 import algoliasearch from 'algoliasearch/lite';
 import { InstantSearch, Configure, connectSearchBox, connectHits } from 'react-instantsearch-dom';
@@ -13,12 +14,19 @@ import {
 	Grid, 
 	Paper, 
 	TextField, 
+	Avatar, 
 	ButtonBase, 
 	InputAdornment, 
 	Typography, 
 	Button, 
-	Tooltip
+	Tooltip,
+	List,
+	ListItem,
+	ListItemAvatar,
+	ListItemText,
 } from '@material-ui/core';
+
+import {Close as CloseIcon, Folder as FolderIcon, Polymer as PolymerIcon, LibraryBooks as LibraryBooksIcon} from '@material-ui/icons'
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 const DocsGrid = props => {
@@ -139,92 +147,99 @@ const DocsGrid = props => {
 		//}
 
 		return (
-			<Grid container spacing={2}>
+			<List>
 				{hits.map((data, index) => {
 					workflowDelay += 50
-
-					const paperStyle = {
-						backgroundColor: index === mouseHoverIndex ? "rgba(255,255,255,0.8)" : theme.palette.inputColor,
-						color: index === mouseHoverIndex ? theme.palette.inputColor : "rgba(255,255,255,0.8)", 
-						border: `1px solid ${innerColor}`, 
-						padding: 15,
+				
+					const innerlistitemStyle = {
+						width: "100%",
+						overflowX: "hidden",
+						overflowY: "hidden",
+						borderBottom: "1px solid rgba(255,255,255,0.4)",
+						backgroundColor: mouseHoverIndex === index ? "#1f2023" : "inherit",
 						cursor: "pointer",
-						position: "relative",
-						minHeight: 116,
+						marginLeft: 5, 
+						marginRight: 5,
+						maxHeight: 75,
+						minHeight: 75,
+						maxWidth: 420,
+						minWidth: "100%", 
 					}
-	
-					if (counted === 12/xs*rowHandler) {
-						return null
-					}
+
+					//if (counted === 12/xs*rowHandler) {
+					//	return null
+					//}
+
+					console.log("DATA: ", data)
 
 					counted += 1
-					var parsedname = ""
-					for (var key = 0; key < data.name.length; key++) {
-						var character = data.name.charAt(key)
-						if (character === character.toUpperCase()) {
-							//console.log(data.name[key], data.name[key+1])
-							if (data.name.charAt(key+1) !== undefined && data.name.charAt(key+1) === data.name.charAt(key+1).toUpperCase()) {
-							} else {
-								parsedname += " "
-							}
-						}
+					var name = data.name === undefined ? 
+							data.filename.charAt(0).toUpperCase() + data.filename.slice(1).replaceAll("_", " ") + " - " + data.title : 
+							(data.name.charAt(0).toUpperCase()+data.name.slice(1)).replaceAll("_", " ")
 
-						parsedname += character
+					if (name.length > 100) {
+						name = name.slice(0, 100)+"..."
 					}
-					
-					parsedname = (parsedname.charAt(0).toUpperCase()+parsedname.substring(1)).replaceAll("_", " ")
+
+					const secondaryText = data.data !== undefined ? data.data.slice(0, 100)+"..." : ""
+					const baseImage = <PolymerIcon /> 
+					const avatar = data.image_url === undefined ? 
+						baseImage
+						:
+						<Avatar 
+							src={data.image_url}
+							variant="rounded"
+						/>
+
+					var parsedUrl = data.urlpath !== undefined ? data.urlpath : ""
+					parsedUrl += `?queryID=${data.__queryID}`
 
 					return (
 						<Zoom key={index} in={true} style={{ transitionDelay: `${workflowDelay}ms` }}>
-							<Grid item xs={xs} key={index}>
-								<Link to={`/docs/${data.objectID}?queryID=${data.__queryID}`} style={{textDecoration: "none", color: "#f85a3e"}}>
-									<Paper elevation={0} style={paperStyle} onMouseOver={() => {
-										setMouseHoverIndex(index)
-										/*
-										ReactGA.event({
-											category: "app_grid_view",
-											action: `search_bar_click`,
-											label: "",
-										})
-										*/
-									}} onMouseOut={() => {
-										setMouseHoverIndex(-1)
-									}} onClick={() => {
-										ReactGA.event({
-											category: "docs_grid_view",
-											action: `docs_${parsedname}_${data.id}_click`,
-											label: "",
-										})
-									}}>
-										<ButtonBase style={{padding: 5, borderRadius: 3, minHeight: 100, minWidth: 100,}}>
-											<img alt={data.name} src={data.image_url} style={{width: "100%", maxWidth: 100, minWidth: 100, minHeight: 100, maxHeight: 100, display: "block", margin: "0 auto"}} />
-										</ButtonBase>
-										<div/>
-										{index === mouseHoverIndex || showName === true ? 
-											parsedname
-											: 
-											null
-										}
-										{data.generated ?
-											<Tooltip title={"Created with App editor"} style={{marginTop: "28px", width: "100%"}} aria-label={data.name}>
-												{data.invalid ? 
-													<CloudQueueIcon style={{position: "absolute", top: 1, left: 3, height: 16, width: 16, color: theme.palette.primary.main }}/> 
-													:
-													<CloudQueueIcon style={{position: "absolute", top: 1, left: 3, height: 16, width: 16, color:  "rgba(255,255,255,0.95)",}}/> 
-												}
-											</Tooltip>
-											: 
-											<Tooltip title={"Created with python (custom app)"} style={{marginTop: "28px", width: "100%"}} aria-label={data.name}>
-												<CodeIcon style={{position: "absolute", top: 1, left: 3, height: 16, width: 16, color:  "rgba(255,255,255,0.95)",}}/> 
-											</Tooltip>
-										}
-									</Paper>
-								</Link>
-							</Grid>
+							<Link key={data.objectID} to={parsedUrl} style={{textDecoration: "none", color: "white",}} onClick={(event) => {
+								aa('init', {
+										appId: searchClient.appId,
+										apiKey: searchClient.transporter.queryParameters["x-algolia-api-key"]
+								})
+
+								const timestamp = new Date().getTime()
+								aa('sendEvents', [
+									{
+										eventType: 'click',
+										eventName: 'Product Clicked Appgrid',
+										index: 'documentation',
+										objectIDs: [data.objectID],
+										timestamp: timestamp,
+										queryID: data.__queryID,
+										positions: [data.__position],
+									}
+								])
+
+								console.log("CLICK")
+							}}>
+								<ListItem key={data.objectID} style={innerlistitemStyle} onMouseOver={() => {
+									setMouseHoverIndex(index)	
+								}}>
+									<ListItemAvatar>
+										{avatar}
+									</ListItemAvatar>
+									<ListItemText
+										primary={name}
+										secondary={secondaryText}
+									/>
+									{/*
+									<ListItemSecondaryAction>
+										<IconButton edge="end" aria-label="delete">
+											<DeleteIcon />
+										</IconButton>
+									</ListItemSecondaryAction>
+									*/}
+								</ListItem>
+							</Link>
 						</Zoom>
 					)
 				})}
-			</Grid>
+			</List>
 		)
 	}
 

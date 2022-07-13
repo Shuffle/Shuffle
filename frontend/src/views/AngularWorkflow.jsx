@@ -1120,6 +1120,9 @@ const AngularWorkflow = (defaultprops) => {
     	      }
 
     	      curworkflowTrigger.position = cyelements[key].position();
+						if (curworkflowTrigger.canConnect === false) {
+							continue
+						}
 
     	      newTriggers.push(curworkflowTrigger);
     	    } else if (type === "COMMENT") {
@@ -11433,114 +11436,114 @@ const AngularWorkflow = (defaultprops) => {
 				<HandleLeftView />
 		</div>
 	) : (
-	<div
-		style={{
-			minWidth: leftBarSize,
-			maxWidth: leftBarSize,
-			borderRight: "1px solid rgb(91, 96, 100)",
-		}}
-	>
-		<div
-			style={{ cursor: "pointer", height: 20, marginTop: 10, marginLeft: 10 }}
-			onClick={() => {
-				setLeftViewOpen(true);
-				setLeftBarSize(350);
-			}}
-		>
-			<Tooltip color="primary" title="Maximize" placement="top">
-				<KeyboardArrowRightIcon />
-			</Tooltip>
-		</div>
-	</div>
-);
-
-const executionPaperStyle = {
-	minWidth: "95%",
-	maxWidth: "95%",
-	marginTop: "5px",
-	color: "white",
-	marginBottom: 10,
-	padding: 5,
-	backgroundColor: surfaceColor,
-	cursor: "pointer",
-	display: "flex",
-	minHeight: 40,
-	maxHeight: 40,
-};
-
-const parsedExecutionArgument = () => {
-	var showResult = executionData.execution_argument.trim();
-	const validate = validateJson(showResult);
-
-	if (validate.valid) {
-		if (typeof validate.result === "string") {
-			try {
-				validate.result = JSON.parse(validate.result);
-			} catch (e) {
-				console.log("Error: ", e);
-				validate.valid = false;
-			}
-		}
-
-      return (
-				<div style={{display: "flex"}}>
-					<IconButton
-						style={{
-							marginTop: "auto",
-							marginBottom: "auto",
-							height: 30,
-							paddingLeft: 0,
-							width: 30,
-						}}
-						onClick={() => {
-							setSelectedResult({
-								"action": {
-									"label": "Execution Argument",
-									"name": "Execution Argument",
-      						"large_image": theme.palette.defaultImage,
-      						"image": theme.palette.defaultImage,
-								},
-								"result": validate.valid ? JSON.stringify(validate.result) : validate.result,
-								"status": "SUCCESS" 
-							})
-							setCodeModalOpen(true);
-						}}
-					>
-						<Tooltip
-							color="primary"
-							title="Expand result window"
-							placement="top"
-							style={{ zIndex: 10011 }}
-						>
-							<ArrowLeftIcon style={{ color: "white" }} />
-						</Tooltip>
-					</IconButton>
-					<ReactJson
-							src={validate.result}
-							theme={theme.palette.jsonTheme}
-							style={theme.palette.reactJsonStyle}
-							collapsed={true}
-							enableClipboard={(copy) => {
-								handleReactJsonClipboard(copy);
-							}}
-							displayDataTypes={false}
-							onSelect={(select) => {
-								HandleJsonCopy(validate.result, select, "exec");
-							}}
-							name={"Execution Argument"}
-						/>
+			<div
+				style={{
+					minWidth: leftBarSize,
+					maxWidth: leftBarSize,
+					borderRight: "1px solid rgb(91, 96, 100)",
+				}}
+			>
+				<div
+					style={{ cursor: "pointer", height: 20, marginTop: 10, marginLeft: 10 }}
+					onClick={() => {
+						setLeftViewOpen(true);
+						setLeftBarSize(350);
+					}}
+				>
+					<Tooltip color="primary" title="Maximize" placement="top">
+						<KeyboardArrowRightIcon />
+					</Tooltip>
 				</div>
-      )
-    }
+			</div>
+		);
 
-    return (
-      <div>
-        <h3>Execution Argument</h3>
-        <div style={{ maxHeight: 200, overflowY: "auto" }}>
-          {executionData.execution_argument}
-        </div>
-      </div>
-    );
+	const executionPaperStyle = {
+		minWidth: "95%",
+		maxWidth: "95%",
+		marginTop: "5px",
+		color: "white",
+		marginBottom: 10,
+		padding: 5,
+		backgroundColor: surfaceColor,
+		cursor: "pointer",
+		display: "flex",
+		minHeight: 40,
+		maxHeight: 40,
+	};
+
+	const parsedExecutionArgument = () => {
+		var showResult = executionData.execution_argument.trim();
+		const validate = validateJson(showResult);
+
+		if (validate.valid) {
+			if (typeof validate.result === "string") {
+				try {
+					validate.result = JSON.parse(validate.result);
+				} catch (e) {
+					console.log("Error: ", e);
+					validate.valid = false;
+				}
+			}
+
+  	    return (
+					<div style={{display: "flex"}}>
+						<IconButton
+							style={{
+								marginTop: "auto",
+								marginBottom: "auto",
+								height: 30,
+								paddingLeft: 0,
+								width: 30,
+							}}
+							onClick={() => {
+								setSelectedResult({
+									"action": {
+										"label": "Execution Argument",
+										"name": "Execution Argument",
+  	    						"large_image": theme.palette.defaultImage,
+  	    						"image": theme.palette.defaultImage,
+									},
+									"result": validate.valid ? JSON.stringify(validate.result) : validate.result,
+									"status": "SUCCESS" 
+								})
+								setCodeModalOpen(true);
+							}}
+						>
+							<Tooltip
+								color="primary"
+								title="Expand result window"
+								placement="top"
+								style={{ zIndex: 10011 }}
+							>
+								<ArrowLeftIcon style={{ color: "white" }} />
+							</Tooltip>
+						</IconButton>
+						<ReactJson
+								src={validate.result}
+								theme={theme.palette.jsonTheme}
+								style={theme.palette.reactJsonStyle}
+								collapsed={true}
+								enableClipboard={(copy) => {
+									handleReactJsonClipboard(copy);
+								}}
+								displayDataTypes={false}
+								onSelect={(select) => {
+									HandleJsonCopy(validate.result, select, "exec");
+								}}
+								name={"Execution Argument"}
+							/>
+					</div>
+  	    )
+  	  }
+
+  	  return (
+  	    <div>
+  	      <h3>Execution Argument</h3>
+  	      <div style={{ maxHeight: 200, overflowY: "auto" }}>
+  	        {executionData.execution_argument}
+  	      </div>
+  	    </div>
+  	  );
   };
 
   const getExecutionSourceImage = (execution) => {
@@ -12175,7 +12178,12 @@ const parsedExecutionArgument = () => {
                       executionData.execution_argument,
                       executionData.start,
                       lastSaved
-                    );
+                    )
+
+										if (executionText === undefined || executionText === null || executionText.length === 0) {
+											setExecutionText(executionData.execution_argument)
+										}
+
                     setExecutionModalOpen(false);
                   }}
                 >

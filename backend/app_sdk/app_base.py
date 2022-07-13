@@ -2109,6 +2109,9 @@ class AppBase:
                 error = True
                 error_msg = e
 
+            if "fmt" in error_msg and "liquid_date" in error_msg:
+                return template
+
             self.logger.info("Done in liquid")
             if error == True:
                 self.action_result["status"] = "FAILURE" 
@@ -2117,6 +2120,7 @@ class AppBase:
                     "reason": f"Failed to parse LiquidPy: {error_msg}",
                     "input": template,
                 }
+
                 try:
                     self.action_result["result"] = json.dumps(data)
                 except Exception as e:

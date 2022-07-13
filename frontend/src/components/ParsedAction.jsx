@@ -1295,6 +1295,19 @@ const ParsedAction = (props) => {
               if (data.name === "url" && data.value !== undefined && data.value !== null && data.value.length === 0) {
                 data.value = data.example;
               }
+
+							if (data.value.length === 0) {
+              	if (data.name.toLowerCase() === "headers") {
+									data.value = data.example
+								}
+							}
+
+							/*
+              	if (data.name !== "queries" && data.name !== "key" && data.name !== "value" ) {
+									data.value = data.example
+								}
+							}
+							*/
             }
 
             if (data.name.startsWith("${") && data.name.endsWith("}")) {
@@ -3269,13 +3282,30 @@ const ParsedAction = (props) => {
 								for (var line in descSplit) {
 									if (descSplit[line].includes("http") && descSplit[line].includes("://")) {
 										const urlsplit = descSplit[line].split("/")
-										extraUrl = "/"+urlsplit.slice(3, urlsplit.length-1).join("/")
+										try {
+											extraUrl = "/"+urlsplit.slice(3, urlsplit.length).join("/")
+										} catch (e) {
+											console.log("Failed - running with -1")
+											extraUrl = "/"+urlsplit.slice(3, urlsplit.length-1).join("/")
+										}
+
+
+										console.log("NO BASEURL TOO!! Why missing last one in certain scenarios (sevco)?", extraUrl, urlsplit, descSplit[line])
 										break
 									} 
 								}
 
 								if (extraUrl.length > 0) {
+									if (extraUrl.includes(" ")) {
+										extraUrl = extraUrl.split(" ")[0]
+									}
+
+									if (extraUrl.includes("#")) {
+										extraUrl = extraUrl.split("#")[0]
+									}
 									extraDescription = `${method} ${extraUrl}`
+								} else {
+									console.log("No url found. Check again :)")
 								}
 							}
 
