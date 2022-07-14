@@ -518,7 +518,7 @@ export const usecases = {
 }
 
 const Framework = (props) => {
-  const {globalUrl, isLoaded, showOptions, selectedOption, rolling, frameworkData, size, inputUsecase, isLoggedIn, } = props;
+  const { globalUrl, isLoaded, showOptions, selectedOption, rolling, frameworkData, size, inputUsecase, isLoggedIn, color } = props;
 	const [cy, setCy] = React.useState()
 	const [edgesStarted, setEdgesStarted] = React.useState(false)
 	const [graphDone, setGraphDone] = React.useState(false)
@@ -1371,8 +1371,10 @@ const Framework = (props) => {
 			//}
 		}
 
+		const bgColor = color === undefined || color === null || color.length === 0 ? theme.palette.surfaceColor : color
+
 		return (
-				<Paper style={{marginBottom: 15, width: 250, maxHeight: 400, overflow: "hidden", zIndex: 12500, padding: 15, backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.2)", }} onMouseOver={handleHover} onMouseOut={handleHoverOut}>
+				<Paper style={{marginBottom: 15, width: 250, maxHeight: 400, overflow: "hidden", zIndex: 12500, padding: 15, backgroundColor: bgColor, border: "1px solid rgba(255,255,255,0.2)", }} onMouseOver={handleHover} onMouseOut={handleHoverOut}>
 					<Typography style={{textAlign: "center"}}>
 						{data.name}
 					</Typography>

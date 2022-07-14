@@ -245,6 +245,7 @@ const Docs = (defaultprops) => {
 				if (props.match.params.key === undefined) {
 
 				} else {
+					console.log("DOCID: ", props.match.params.key)
         	fetchDocs(props.match.params.key)
 				}
       }
@@ -272,7 +273,8 @@ const Docs = (defaultprops) => {
         .split("_")
         .join(" ")
         .split("-")
-        .join(" ");
+        .join(" ")
+				.split("?")[0]
 
       //console.log(name)
       var found = false;
