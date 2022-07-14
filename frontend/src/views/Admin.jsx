@@ -3,14 +3,20 @@ import React, { useState, useEffect } from "react";
 import { makeStyles } from "@material-ui/styles";
 import { useTheme } from "@material-ui/core/styles";
 import { useNavigate, Link } from "react-router-dom";
-import countries from "../components/Countries.jsx"
+import countries from "../components/Countries.jsx";
+import CodeEditor from "../components/ShuffleCodeEditor.jsx";
+import getLocalCodeData from "../components/ShuffleCodeEditor.jsx";
 
+
+import AddIcon from "@mui/icons-material/Add";
+import ClearIcon from '@mui/icons-material/Clear';
+//import ToggleButton from '@mui/material/ToggleButton';
 import {
   FormControl,
   InputLabel,
   Paper,
-	OutlinedInput,
-	Checkbox,
+  OutlinedInput,
+  Checkbox,
   Card,
   Tooltip,
   FormControlLabel,
@@ -37,12 +43,10 @@ import {
   DialogActions,
   DialogContent,
   CircularProgress,
-	Box,
+  Box,
 } from "@material-ui/core";
 
-import {
-	Autocomplete,
-} from "@mui/material"
+import { Autocomplete } from "@mui/material";
 
 import {
   Edit as EditIcon,
@@ -71,6 +75,7 @@ import { useAlert } from "react-alert";
 import Dropzone from "../components/Dropzone";
 import HandlePayment from "./HandlePayment";
 import OrgHeader from "../components/OrgHeader.jsx";
+import { display, style } from "@mui/system";
 
 const useStyles = makeStyles({
   notchedOutline: {
@@ -87,18 +92,43 @@ const MenuProps = {
       width: 500,
     },
   },
-	getContentAnchorEl: () => null,
-}
+  getContentAnchorEl: () => null,
+};
+
+
+const FileCategoryInput = (props) => {
+  const isSet = props.isSet;
+  console.log("inside filecategoryinput");  
+  console.log("isset value" , isSet);
+  if (isSet){
+    return (
+        <TextField
+              onBlur={""}
+              InputProps={{
+                style: {
+                  color: "white",
+                },
+              }}
+              color="primary"
+              placeholder="File category name"
+              required
+              margin="dense"
+              defaultValue={""}
+              autoFocus
+              fullWidth
+            />
+    )}
+  }
 
 
 const Admin = (props) => {
-  const { globalUrl, userdata, serverside} = props;
+  const { globalUrl, userdata, serverside } = props;
 
   var upload = "";
   var to_be_copied = "";
   const theme = useTheme();
   const classes = useStyles();
-	let navigate = useNavigate();
+  let navigate = useNavigate();
 
   const [firstRequest, setFirstRequest] = React.useState(true);
   const [orgRequest, setOrgRequest] = React.useState(true);
@@ -111,8 +141,9 @@ const Admin = (props) => {
   const [loading, setLoading] = React.useState(false);
 
   const [selectedOrganization, setSelectedOrganization] = React.useState({});
-  const [selectedDealModalOpen, setSelectedDealModalOpen] = React.useState(false);
-	//console.log("Selected: ", selectedOrganization)
+  const [selectedDealModalOpen, setSelectedDealModalOpen] =
+    React.useState(false);
+  //console.log("Selected: ", selectedOrganization)
   const [organizationFeatures, setOrganizationFeatures] = React.useState({});
   const [loginInfo, setLoginInfo] = React.useState("");
   const [curTab, setCurTab] = React.useState(0);
@@ -158,6 +189,8 @@ const Admin = (props) => {
   const [dealerror, setDealerror] = React.useState("");
   const [dealList, setDealList] = React.useState([]);
 
+  const [fileContent, setFileContent] = React.useState("");
+  
   useEffect(() => {
     if (isDropzone) {
       //redirectOpenApi();
@@ -168,6 +201,46 @@ const Admin = (props) => {
   const isCloud =
     window.location.host === "localhost:3002" ||
     window.location.host === "shuffler.io";
+
+  const [openEditor, setOpenEditor] = React.useState(false);
+  const [renderTextBox, setRenderTextBox] = React.useState(false);
+  const [openFileId, setOpenFileId] = React.useState(false);
+  const allowedFileTypes = ["txt", "py", "yaml","yml","json"]
+
+  const runUpdateText = (text) =>{
+    fetch(`${globalUrl}/api/v1/files/${openFileId}/edit`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body:text,
+      credentials: "include",
+    }).then((response) => {
+        if (response.status !== 200) {
+          console.log("Can't update file");
+        }
+        return response.json();
+      })
+    //console.log(text);
+  }
+
+  const handleKeyDown = (event) => {
+    if (event.key === 'Enter') {
+
+      console.log('do validate')
+      console.log("new namespace name->",event.target.value);      
+      fileNamespaces.push(event.target.value);
+      setSelectedNamespace(event.target.value);
+      setRenderTextBox(false);
+    }
+    if (event.key === 'Escape'){ // not working for some reasons
+      console.log('escape pressed')
+      setRenderTextBox(false);  
+    }
+
+  }
+  
 
   const get2faCode = (userId) => {
     fetch(`${globalUrl}/api/v1/users/${userId}/get2fa`, {
@@ -583,11 +656,13 @@ const Admin = (props) => {
               alert.error("Failed creating suborg. Please try again");
             }
           } else {
-            alert.success("Successfully created suborg. Reloading in 3 seconds!");
+            alert.success(
+              "Successfully created suborg. Reloading in 3 seconds!"
+            );
             setSelectedUserModalOpen(false);
 
             setTimeout(() => {
-							window.location.reload()
+              window.location.reload();
             }, 2500);
           }
 
@@ -666,8 +741,8 @@ const Admin = (props) => {
       });
   };
 
-	const handleGetDeals = (orgId) => {
-		console.log("Get deals!")
+  const handleGetDeals = (orgId) => {
+    console.log("Get deals!");
 
     if (orgId.length === 0) {
       alert.error(
@@ -676,7 +751,7 @@ const Admin = (props) => {
       return;
     }
 
-    const url = `${globalUrl}/api/v1/orgs/${orgId}/deals`
+    const url = `${globalUrl}/api/v1/orgs/${orgId}/deals`;
     fetch(url, {
       method: "GET",
       credentials: "include",
@@ -684,26 +759,28 @@ const Admin = (props) => {
         "Content-Type": "application/json",
       },
     })
-		.then((response) => {
-			if (response.status !== 200) {
-				console.log("Bad status code in get deals: ", response.status)
-			}
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Bad status code in get deals: ", response.status);
+        }
 
-			return response.json();
-		})
-		.then((responseJson) => {
-			console.log("Got deals: ", responseJson)
-			if (responseJson.success === false) {
-				alert.error("Failed loading deals. Contact support if this persists")
-			} else { 
-  			setDealList(responseJson)
-			}
-		})
-		.catch((error) => {
-			console.log("Error getting org deals: ", error);
-			alert.error("Failed getting deals for your org. Contact support if this persists.");
-		});
-	}
+        return response.json();
+      })
+      .then((responseJson) => {
+        console.log("Got deals: ", responseJson);
+        if (responseJson.success === false) {
+          alert.error("Failed loading deals. Contact support if this persists");
+        } else {
+          setDealList(responseJson);
+        }
+      })
+      .catch((error) => {
+        console.log("Error getting org deals: ", error);
+        alert.error(
+          "Failed getting deals for your org. Contact support if this persists."
+        );
+      });
+  };
 
   const handleGetOrg = (orgId) => {
     if (orgId.length === 0) {
@@ -740,10 +817,13 @@ const Admin = (props) => {
             responseJson.sync_features = {};
           }
 
-					if (isCloud && responseJson.partner_info !== undefined && responseJson.partner_info.reseller === true) {
-						handleGetDeals(orgId)
-					}
-
+          if (
+            isCloud &&
+            responseJson.partner_info !== undefined &&
+            responseJson.partner_info.reseller === true
+          ) {
+            handleGetDeals(orgId);
+          }
 
           setSelectedOrganization(responseJson);
           var lists = {
@@ -933,18 +1013,21 @@ const Admin = (props) => {
   const abortEnvironmentWorkflows = (environment) => {
     //console.log("Aborting all workflows started >10 minutes ago, not finished");
 
-    fetch(`${globalUrl}/api/v1/environments/${environment.id}/stop?deleteall=true`, {
-      method: "GET",
-      credentials: "include",
-    })
+    fetch(
+      `${globalUrl}/api/v1/environments/${environment.id}/stop?deleteall=true`,
+      {
+        method: "GET",
+        credentials: "include",
+      }
+    )
       .then((response) => {
         if (response.status !== 200) {
           console.log("Status not 200 for apps :O!");
-					alert.error("Failed aborting dangling workflows")
+          alert.error("Failed aborting dangling workflows");
           return;
         } else {
-					alert.info("Aborted all dangling workflows")
-				}
+          alert.info("Aborted all dangling workflows");
+        }
 
         return response.json();
       })
@@ -1075,7 +1158,7 @@ const Admin = (props) => {
       .then((response) => {
         if (response.status !== 200 && response.status !== 201) {
           console.log("Status not 200 for apps :O!");
-          alert.error("File was created, but failed to upload.")
+          alert.error("File was created, but failed to upload.");
           return;
         }
 
@@ -1086,7 +1169,7 @@ const Admin = (props) => {
         //setFiles(responseJson)
       })
       .catch((error) => {
-        alert.error(error.toString())
+        alert.error(error.toString());
       });
   };
 
@@ -1097,9 +1180,14 @@ const Admin = (props) => {
       workflow_id: "global",
     };
 
-		if (selectedNamespace !== undefined && selectedNamespace !== null && selectedNamespace.length > 0 && selectedNamespace !== "default") {
-			data.namespace = selectedNamespace
-		}
+    if (
+      selectedNamespace !== undefined &&
+      selectedNamespace !== null &&
+      selectedNamespace.length > 0 &&
+      selectedNamespace !== "default"
+    ) {
+      data.namespace = selectedNamespace;
+    }
 
     fetch(globalUrl + "/api/v1/files/create", {
       method: "POST",
@@ -1127,7 +1215,7 @@ const Admin = (props) => {
         }
       })
       .catch((error) => {
-				alert.error("Failed to upload file ", filename)
+        alert.error("Failed to upload file ", filename);
         console.log(error.toString());
       });
   };
@@ -1186,23 +1274,66 @@ const Admin = (props) => {
         return response.json();
       })
       .then((responseJson) => {
-				if (responseJson.success) {
-					alert.info("Successfully deleted file "+file.name)
-					
-				} else if (responseJson.reason !== undefined && responseJson.reason !== null) {
-					alert.error("Failed to delete file: " + responseJson.reason)
+        if (responseJson.success) {
+          alert.info("Successfully deleted file " + file.name);
+        } else if (
+          responseJson.reason !== undefined &&
+          responseJson.reason !== null
+        ) {
+          alert.error("Failed to delete file: " + responseJson.reason);
+        }
+        setTimeout(() => {
+          getFiles();
+        }, 1500);
 
-				}
-				setTimeout(() => {
-					getFiles();
-				}, 1500);
-
-        console.log(responseJson)
+        console.log(responseJson);
       })
       .catch((error) => {
         alert.error(error.toString());
       });
   };
+
+  const readFileData = (file) => {
+    fetch(globalUrl + "/api/v1/files/" + file.id + "/content", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      credentials: "include",
+    })
+      .then((response) => {
+        if (response.status !== 200) {
+          console.log("Status not 200 for file :O!");
+          return "";
+        }
+        return response.text();
+      })
+      .then((respdata) => {
+          // console.log("respdata ->", respdata);
+          // console.log("respdata type ->", typeof(respdata));
+        
+        if (respdata.length === 0) {
+          alert.error("Failed getting file. Is it deleted?");
+          return;
+        }
+        return respdata
+      })
+      .then((responseData) => {
+      
+      setFileContent(responseData);
+      //console.log("filecontent state ",fileContent);
+      })
+      .catch((error) => {
+        alert.error(error.toString());
+      });
+  };
+
+  var localData = "";
+
+  // useEffect(() => {
+  //   console.log('confirm', fileContent);
+  // }, [fileContent])
 
   const downloadFile = (file) => {
     fetch(globalUrl + "/api/v1/files/" + file.id + "/content", {
@@ -1223,8 +1354,8 @@ const Admin = (props) => {
       })
       .then((respdata) => {
         if (respdata.length === 0) {
-					alert.error("Failed getting file. Is it deleted?");
-					return;
+          alert.error("Failed getting file. Is it deleted?");
+          return;
         }
 
         var blob = new Blob([respdata], {
@@ -1435,9 +1566,9 @@ const Admin = (props) => {
     6: "suborgs",
   };
   const setConfig = (event, inputValue) => {
-		const newValue = parseInt(inputValue)
+    const newValue = parseInt(inputValue);
 
-    setCurTab(newValue)
+    setCurTab(newValue);
     if (newValue === 1) {
       document.title = "Shuffle - admin - users";
       getUsers();
@@ -1460,15 +1591,15 @@ const Admin = (props) => {
       document.title = "Shuffle - admin";
     }
 
-  	console.log("NEWVALUE: ", newValue)
+    console.log("NEWVALUE: ", newValue);
 
     if (newValue === 6) {
       console.log("Should get apps for categories.");
     }
 
-		console.log("PROPS: ", props)
+    console.log("PROPS: ", props);
 
-		navigate(`/admin?tab=${views[newValue]}`)
+    navigate(`/admin?tab=${views[newValue]}`);
 
     setModalUser({});
   };
@@ -1480,24 +1611,28 @@ const Admin = (props) => {
       getUsers();
     } else {
       getSettings();
-    }	
+    }
 
-		if (serverside !== true && window.location.search !== undefined && window.location.search !== null) {
-			const urlSearchParams = new URLSearchParams(window.location.search)
-			const params = Object.fromEntries(urlSearchParams.entries())
-			const foundTab = params["tab"]
-			if (foundTab !== null && foundTab !== undefined) {
-				for (var key in Object.keys(views)) {
-					const value = views[key]
-					console.log(key, value)
-					if (value === foundTab) {
-						setConfig("", key)
-						break
-					}
-				}
-			}
-		}
-	}
+    if (
+      serverside !== true &&
+      window.location.search !== undefined &&
+      window.location.search !== null
+    ) {
+      const urlSearchParams = new URLSearchParams(window.location.search);
+      const params = Object.fromEntries(urlSearchParams.entries());
+      const foundTab = params["tab"];
+      if (foundTab !== null && foundTab !== undefined) {
+        for (var key in Object.keys(views)) {
+          const value = views[key];
+          console.log(key, value);
+          if (value === foundTab) {
+            setConfig("", key);
+            break;
+          }
+        }
+      }
+    }
+  }
 
   if (
     selectedOrganization.id === undefined &&
@@ -1550,9 +1685,9 @@ const Admin = (props) => {
         } else {
           alert.success("Set the user field " + field + " to " + value);
 
-					if (field !== "suborgs") {
-          	setSelectedUserModalOpen(false);
-					}
+          if (field !== "suborgs") {
+            setSelectedUserModalOpen(false);
+          }
         }
       })
       .catch((error) => {
@@ -1698,67 +1833,72 @@ const Admin = (props) => {
     </Dialog>
   ) : null;
 
-	const handleOrgEditChange = (event) => {
-  	if (userdata.id === selectedUser.id) {
-			alert.info("Can't remove orgs from yourself")
-			return
-		}
+  const handleOrgEditChange = (event) => {
+    if (userdata.id === selectedUser.id) {
+      alert.info("Can't remove orgs from yourself");
+      return;
+    }
 
-		console.log("event: ", event.target.value)
-		setMatchingOrganizations(event.target.value)
-		// Workaround for empty orgs
-		if (event.target.value.length === 0) {
-			event.target.value.push("REMOVE")
-		}
+    console.log("event: ", event.target.value);
+    setMatchingOrganizations(event.target.value);
+    // Workaround for empty orgs
+    if (event.target.value.length === 0) {
+      event.target.value.push("REMOVE");
+    }
 
-  	setUser(selectedUser.id, "suborgs", event.target.value)
-  	//setUser(selectedUser.id, "suborgs", matchingOrganizations)
-	}
+    setUser(selectedUser.id, "suborgs", event.target.value);
+    //setUser(selectedUser.id, "suborgs", matchingOrganizations)
+  };
 
-	const userOrgEdit = selectedUser.id !== undefined && selectedUser.orgs !== undefined && selectedUser.orgs !== null && selectedOrganization.child_orgs !== undefined && selectedOrganization.child_orgs !== null && selectedOrganization.child_orgs.length > 0 ?
-		<FormControl fullWidth sx={{ m: 1,}}>
-			<InputLabel id="demo-multiple-checkbox-label" style={{padding: 5}}>Accessible Sub-Organizations ({selectedUser.orgs? selectedUser.orgs.length-1 : 0})</InputLabel>
-			<Select
-				fullWidth
-				style={{width: "100%", }}
-				disabled={selectedUser.id === userdata.id}
-				labelId="demo-multiple-checkbox-label"
-				id="demo-multiple-checkbox"
-				multiple
-				value={matchingOrganizations}
-				onChange={handleOrgEditChange}
-				input={
-					<OutlinedInput label="Tag" />
-				}
-				renderValue={(selected) => {
-					return selected.join(', ')
-				}}
-				MenuProps={MenuProps}
-			>
-				{selectedOrganization.child_orgs.map((org, index) => (
-					<MenuItem key={index} value={org.id}>
-						<Checkbox checked={matchingOrganizations.indexOf(org.id) > -1} />
-						<ListItemText primary={org.name} />
-					</MenuItem>
-				))}
-			</Select>
-		</FormControl>
-		: null
+  const userOrgEdit =
+    selectedUser.id !== undefined &&
+    selectedUser.orgs !== undefined &&
+    selectedUser.orgs !== null &&
+    selectedOrganization.child_orgs !== undefined &&
+    selectedOrganization.child_orgs !== null &&
+    selectedOrganization.child_orgs.length > 0 ? (
+      <FormControl fullWidth sx={{ m: 1 }}>
+        <InputLabel id="demo-multiple-checkbox-label" style={{ padding: 5 }}>
+          Accessible Sub-Organizations (
+          {selectedUser.orgs ? selectedUser.orgs.length - 1 : 0})
+        </InputLabel>
+        <Select
+          fullWidth
+          style={{ width: "100%" }}
+          disabled={selectedUser.id === userdata.id}
+          labelId="demo-multiple-checkbox-label"
+          id="demo-multiple-checkbox"
+          multiple
+          value={matchingOrganizations}
+          onChange={handleOrgEditChange}
+          input={<OutlinedInput label="Tag" />}
+          renderValue={(selected) => {
+            return selected.join(", ");
+          }}
+          MenuProps={MenuProps}
+        >
+          {selectedOrganization.child_orgs.map((org, index) => (
+            <MenuItem key={index} value={org.id}>
+              <Checkbox checked={matchingOrganizations.indexOf(org.id) > -1} />
+              <ListItemText primary={org.name} />
+            </MenuItem>
+          ))}
+        </Select>
+      </FormControl>
+    ) : null;
 
+  const products = [
+    { code: "", label: "MSSP", phone: "" },
+    { code: "", label: "Enterprise", phone: "" },
+    { code: "", label: "Consultancy", phone: "" },
+    { code: "", label: "Support", phone: "" },
+  ];
 
-	const products = [
-		{ code: '', label: 'MSSP', phone: '' },
-		{ code: '', label: 'Enterprise', phone: '' },
-		{ code: '', label: 'Consultancy', phone: '' },
-		{ code: '', label: 'Support', phone: '' },
-	]
-
-	const addDealModal = (
+  const addDealModal = (
     <Dialog
       open={selectedDealModalOpen}
       onClose={() => {
         setSelectedDealModalOpen(false);
-
       }}
       PaperProps={{
         style: {
@@ -1770,206 +1910,222 @@ const Admin = (props) => {
       }}
     >
       <DialogTitle style={{ maxWidth: 450, margin: "auto" }}>
-        <span style={{ color: "white" }}>
-					Register new deal
-        </span>
+        <span style={{ color: "white" }}>Register new deal</span>
       </DialogTitle>
       <DialogContent>
-				<div style={{ display: "flex" }}>
-					<TextField
-						style={{
-							marginTop: 0,
-							backgroundColor: theme.palette.inputColor,
-							flex: 3,
-							marginRight: 10,
-						}}
-						InputProps={{
-							style: {
-								height: 50,
-								color: "white",
-							},
-						}}
-						color="primary"
-						required
-						fullWidth={true}
-						placeholder="Name"
-						type="text"
-						id="standard-required"
-						autoComplete="username"
-						margin="normal"
-						label="Name"
-						variant="outlined"
-						defaultValue={dealName}
-						onChange={(e) => {
-							setDealName(e.target.value)
-						}}
-					/>
-					<TextField
-						style={{
-							marginTop: 0,
-							backgroundColor: theme.palette.inputColor,
-							flex: 3,
-							marginRight: 10,
-						}}
-						InputProps={{
-							style: {
-								height: 50,
-								color: "white",
-							},
-						}}
-						color="primary"
-						required
-						fullWidth={true}
-						placeholder="Address"
-						label="Address"
-						type="text"
-						id="standard-required"
-						autoComplete="username"
-						margin="normal"
-						variant="outlined"
-						defaultValue={dealAddress}
-						onChange={(e) => {
-							setDealAddress(e.target.value)
-						}}
-					/>
-				</div>
-				<div style={{ display: "flex", marginTop: 10, }}>
-					<TextField
-						style={{
-							marginTop: 0,
-							backgroundColor: theme.palette.inputColor,
-							flex: 1,
-							marginRight: 10,
-						}}
-						InputProps={{
-							style: {
-								height: 50,
-								color: "white",
-							},
-						}}
-						color="primary"
-						required
-						fullWidth={true}
-						placeholder="1000"
-						label="Value (USD)"
-						type="text"
-						id="standard-required"
-						margin="normal"
-						variant="outlined"
-						defaultValue={dealValue}
-						onChange={(e) => {
-							setDealValue(e.target.value)
-						}}
-					/>
-					<Autocomplete
-						id="country-select"
-						sx={{width: 250}}
-						options={countries}
-						variant="outlined"
-						autoHighlight
-						getOptionLabel={(option) => option.label}
-          	onChange={(event, newValue) => {
-							setDealCountry(newValue.label)
-						}}
-						renderOption={(props, option) => (
-							<Box component="li" sx={{ '& > img': { mr: 2, flexShrink: 0 } }} {...props}>
-								<img
-									loading="lazy"
-									width="20"
-									src={`https://flagcdn.com/w20/${option.code.toLowerCase()}.png`}
-									srcSet={`https://flagcdn.com/w40/${option.code.toLowerCase()}.png 2x`}
-									alt=""
-								/>
-								{option.label} ({option.code}) +{option.phone}
-							</Box>
-						)}
-						renderInput={(params) => (
-							<TextField
-								{...params}
-								style={{
-									backgroundColor: theme.palette.inputColor,
-									flex: 1,
-									marginTop: 0, 
-									marginRight: 10, 
-								}}
-								variant="outlined"
-								label="Choose a country"
-								defaultValue={dealCountry}
-								inputProps={{
-									...params.inputProps,
-									autoComplete: 'new-password', // disable autocomplete and autofill
-								}}
-							/>
-						)}
-					/>
-					<Autocomplete
-						id="product-select"
-						sx={{width: 250}}
-						options={products}
-						variant="outlined"
-						autoHighlight
-          	onChange={(event, newValue) => {
-							setDealType(newValue)
-						}}
-						getOptionLabel={(option) => option.label}
-						renderOption={(props, option) => (
-							<Box component="li" sx={{ '& > img': { mr: 2, flexShrink: 0 } }} {...props}>
-								{option.label} 
-							</Box>
-						)}
-						renderInput={(params) => (
-							<TextField
-								{...params}
-								style={{
-									backgroundColor: theme.palette.inputColor,
-									flex: 1,
-									marginTop: 0, 
-								}}
-								variant="outlined"
-								label="Choose a product"
-								defaultValue={dealType}
-								inputProps={{
-									...params.inputProps,
-									autoComplete: 'new-password', // disable autocomplete and autofill
-								}}
-							/>
-						)}
-					/>
-				</div>
-				{dealerror.length > 0 ? 
-					<Typography variant="body1" color="textSecondary" style={{margin: 10, }}>
-						error registering: {dealerror}
-					</Typography>
-				: null}
-				<div style={{display: "flex", width: 300, margin: "auto"}}>
-					<Button
-						style={{ maxHeight: 50, flex: 1, margin: 5, }}
-						variant="outlined"
-						color="secondary"
-						disabled={false}
-						onClick={() => {
-        			setSelectedDealModalOpen(false);
+        <div style={{ display: "flex" }}>
+          <TextField
+            style={{
+              marginTop: 0,
+              backgroundColor: theme.palette.inputColor,
+              flex: 3,
+              marginRight: 10,
+            }}
+            InputProps={{
+              style: {
+                height: 50,
+                color: "white",
+              },
+            }}
+            color="primary"
+            required
+            fullWidth={true}
+            placeholder="Name"
+            type="text"
+            id="standard-required"
+            autoComplete="username"
+            margin="normal"
+            label="Name"
+            variant="outlined"
+            defaultValue={dealName}
+            onChange={(e) => {
+              setDealName(e.target.value);
+            }}
+          />
+          <TextField
+            style={{
+              marginTop: 0,
+              backgroundColor: theme.palette.inputColor,
+              flex: 3,
+              marginRight: 10,
+            }}
+            InputProps={{
+              style: {
+                height: 50,
+                color: "white",
+              },
+            }}
+            color="primary"
+            required
+            fullWidth={true}
+            placeholder="Address"
+            label="Address"
+            type="text"
+            id="standard-required"
+            autoComplete="username"
+            margin="normal"
+            variant="outlined"
+            defaultValue={dealAddress}
+            onChange={(e) => {
+              setDealAddress(e.target.value);
+            }}
+          />
+        </div>
+        <div style={{ display: "flex", marginTop: 10 }}>
+          <TextField
+            style={{
+              marginTop: 0,
+              backgroundColor: theme.palette.inputColor,
+              flex: 1,
+              marginRight: 10,
+            }}
+            InputProps={{
+              style: {
+                height: 50,
+                color: "white",
+              },
+            }}
+            color="primary"
+            required
+            fullWidth={true}
+            placeholder="1000"
+            label="Value (USD)"
+            type="text"
+            id="standard-required"
+            margin="normal"
+            variant="outlined"
+            defaultValue={dealValue}
+            onChange={(e) => {
+              setDealValue(e.target.value);
+            }}
+          />
+          <Autocomplete
+            id="country-select"
+            sx={{ width: 250 }}
+            options={countries}
+            variant="outlined"
+            autoHighlight
+            getOptionLabel={(option) => option.label}
+            onChange={(event, newValue) => {
+              setDealCountry(newValue.label);
+            }}
+            renderOption={(props, option) => (
+              <Box
+                component="li"
+                sx={{ "& > img": { mr: 2, flexShrink: 0 } }}
+                {...props}
+              >
+                <img
+                  loading="lazy"
+                  width="20"
+                  src={`https://flagcdn.com/w20/${option.code.toLowerCase()}.png`}
+                  srcSet={`https://flagcdn.com/w40/${option.code.toLowerCase()}.png 2x`}
+                  alt=""
+                />
+                {option.label} ({option.code}) +{option.phone}
+              </Box>
+            )}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                style={{
+                  backgroundColor: theme.palette.inputColor,
+                  flex: 1,
+                  marginTop: 0,
+                  marginRight: 10,
+                }}
+                variant="outlined"
+                label="Choose a country"
+                defaultValue={dealCountry}
+                inputProps={{
+                  ...params.inputProps,
+                  autoComplete: "new-password", // disable autocomplete and autofill
+                }}
+              />
+            )}
+          />
+          <Autocomplete
+            id="product-select"
+            sx={{ width: 250 }}
+            options={products}
+            variant="outlined"
+            autoHighlight
+            onChange={(event, newValue) => {
+              setDealType(newValue);
+            }}
+            getOptionLabel={(option) => option.label}
+            renderOption={(props, option) => (
+              <Box
+                component="li"
+                sx={{ "& > img": { mr: 2, flexShrink: 0 } }}
+                {...props}
+              >
+                {option.label}
+              </Box>
+            )}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                style={{
+                  backgroundColor: theme.palette.inputColor,
+                  flex: 1,
+                  marginTop: 0,
+                }}
+                variant="outlined"
+                label="Choose a product"
+                defaultValue={dealType}
+                inputProps={{
+                  ...params.inputProps,
+                  autoComplete: "new-password", // disable autocomplete and autofill
+                }}
+              />
+            )}
+          />
+        </div>
+        {dealerror.length > 0 ? (
+          <Typography
+            variant="body1"
+            color="textSecondary"
+            style={{ margin: 10 }}
+          >
+            error registering: {dealerror}
+          </Typography>
+        ) : null}
+        <div style={{ display: "flex", width: 300, margin: "auto" }}>
+          <Button
+            style={{ maxHeight: 50, flex: 1, margin: 5 }}
+            variant="outlined"
+            color="secondary"
+            disabled={false}
+            onClick={() => {
+              setSelectedDealModalOpen(false);
 
-							//setDealName("")
-							//setDealAddress("")
-							//setDealCountry("")
-							//setDealValue("")
-						}}
-					>
-						Cancel	
-					</Button>
-					<Button
-						style={{ maxHeight: 50, flex: 1, margin: 5, }}
-						variant="contained"
-						color="primary"
-						disabled={dealName.length <= 3 || dealAddress.length <= 3 || dealCountry.length === 0 || dealValue.length === 0 || dealType.length === 0}
-						onClick={() => {
-							submitDeal(dealName, dealAddress, dealCountry, dealValue) 
-						}}
-					>
-						Submit
-					</Button>
-				</div>
+              //setDealName("")
+              //setDealAddress("")
+              //setDealCountry("")
+              //setDealValue("")
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            style={{ maxHeight: 50, flex: 1, margin: 5 }}
+            variant="contained"
+            color="primary"
+            disabled={
+              dealName.length <= 3 ||
+              dealAddress.length <= 3 ||
+              dealCountry.length === 0 ||
+              dealValue.length === 0 ||
+              dealType.length === 0
+            }
+            onClick={() => {
+              submitDeal(dealName, dealAddress, dealCountry, dealValue);
+            }}
+          >
+            Submit
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -1979,8 +2135,8 @@ const Admin = (props) => {
       open={selectedUserModalOpen}
       onClose={() => {
         setSelectedUserModalOpen(false);
-				setImage2FA("");
-				setSecret2FA("");
+        setImage2FA("");
+        setSecret2FA("");
       }}
       PaperProps={{
         style: {
@@ -2078,7 +2234,7 @@ const Admin = (props) => {
           </div>
         )}
 
-				{userOrgEdit}
+        {userOrgEdit}
         <Divider
           style={{
             marginTop: 20,
@@ -2093,9 +2249,9 @@ const Admin = (props) => {
             color="primary"
             disabled={selectedUser.username === userdata.username}
             onClick={() => {
-							deleteUser(selectedUser)
-        			setSelectedUserModalOpen(false);
-						}}
+              deleteUser(selectedUser);
+              setSelectedUserModalOpen(false);
+            }}
           >
             {selectedUser.active ? "Delete from org" : "Delete from org"}
           </Button>
@@ -2116,14 +2272,15 @@ const Admin = (props) => {
               run2FASetup(userdata);
             }}
             disabled={
-              (selectedUser.role === "admin" && selectedUser.username !== userdata.username)
+              selectedUser.role === "admin" &&
+              selectedUser.username !== userdata.username
             }
             variant="outlined"
             color="primary"
           >
-            { selectedUser.mfa_info !== undefined &&
-            	selectedUser.mfa_info !== null &&
-            	selectedUser.mfa_info.active === true
+            {selectedUser.mfa_info !== undefined &&
+            selectedUser.mfa_info !== null &&
+            selectedUser.mfa_info.active === true
               ? "Disable 2FA"
               : "Enable 2FA"}
           </Button>
@@ -2407,21 +2564,21 @@ const Admin = (props) => {
     </Dialog>
   );
 
-	const submitDeal = (dealName, dealAddress, dealCountry, dealValue) => {
-		if (dealerror.length > 0) {
-			setDealerror("")
-		}
+  const submitDeal = (dealName, dealAddress, dealCountry, dealValue) => {
+    if (dealerror.length > 0) {
+      setDealerror("");
+    }
 
-		const orgId = selectedOrganization.id;
+    const orgId = selectedOrganization.id;
     const data = {
-			reseller_org: orgId,
-			name: dealName,
-			address: dealAddress,
-			country: dealCountry,
-			value: dealValue,
+      reseller_org: orgId,
+      name: dealName,
+      address: dealAddress,
+      country: dealCountry,
+      value: dealValue,
     };
 
-    const url = `${globalUrl}/api/v1/orgs/${orgId}/deals`
+    const url = `${globalUrl}/api/v1/orgs/${orgId}/deals`;
     fetch(url, {
       mode: "cors",
       method: "POST",
@@ -2433,33 +2590,35 @@ const Admin = (props) => {
         "Content-Type": "application/json; charset=utf-8",
       },
     })
-		.then(function (response) {
-			if (response.status !== 200) {
-				console.log("Error in response");
-			}
+      .then(function (response) {
+        if (response.status !== 200) {
+          console.log("Error in response");
+        }
 
-			return response.json();
-		})
-		.then(function (responseJson) {
-			if (responseJson.success === true) {
-				setSelectedDealModalOpen(false);
-				alert.success("Added new deal! We will be in touch shortly with an update.");
+        return response.json();
+      })
+      .then(function (responseJson) {
+        if (responseJson.success === true) {
+          setSelectedDealModalOpen(false);
+          alert.success(
+            "Added new deal! We will be in touch shortly with an update."
+          );
 
-				setDealName("")
-				setDealAddress("")
-				setDealValue("")
-				setDealCountry("United States")
-				setDealType("MSSP")
-			} else {
-				setDealerror(responseJson.reason)
-			}
-		})
-		.catch(function (error) {
-			//console.log("Error: ", error);
-			setDealerror(error.toString())
-			alert.error("Failed adding deal reg: ", error)
-		});
-	}
+          setDealName("");
+          setDealAddress("");
+          setDealValue("");
+          setDealCountry("United States");
+          setDealType("MSSP");
+        } else {
+          setDealerror(responseJson.reason);
+        }
+      })
+      .catch(function (error) {
+        //console.log("Error: ", error);
+        setDealerror(error.toString());
+        alert.error("Failed adding deal reg: ", error);
+      });
+  };
 
   const cancelSubscriptions = (subscription_id) => {
     console.log(selectedOrganization);
@@ -2796,169 +2955,190 @@ const Admin = (props) => {
                 backgroundColor: theme.palette.inputColor,
               }}
             />
-
-						{isCloud && selectedOrganization.partner_info !== undefined && selectedOrganization.partner_info.reseller === true ?
-              <div style={{ marginTop: 30, marginBottom: 200, }}>
+            {isCloud &&
+            selectedOrganization.partner_info !== undefined &&
+            selectedOrganization.partner_info.reseller === true ? (
+              <div style={{ marginTop: 30, marginBottom: 200 }}>
                 <Typography
                   style={{ marginTop: 40, marginLeft: 10, marginBottom: 5 }}
-              		variant="h6"
+                  variant="h6"
                 >
-                 	Reseller dashboard 
+                  Reseller dashboard
                 </Typography>
-								<Button
-									variant="contained"
-									color="primary"
-									style={{ margin: 15, }}
-									onClick={() => {
-      							setSelectedDealModalOpen(true)
-									}}
-								>
-									Add deal
-								</Button>
-								<Button
-									style={{ marginLeft: 5, marginRight: 15 }}
-									variant="contained"
-									color="primary"
-									onClick={() => {
-										handleGetDeals(userdata.active_org.id) 
-									}}
-								>
-									<CachedIcon />
-								</Button>
-								<List>
-        				  <ListItem>
-        				    <ListItemText
-        				      primary="Name"
-        				      style={{ 
-												minWidth: 200, 
-												maxWidth: 200,
-											}}
-        				    />
-        				    <ListItemText
-        				      primary="Status"
-        				      style={{ minWidth: 150, maxWidth: 150, marginLeft: 5 }}
-        				    />
-        				    <ListItemText
-        				      primary="Value"
-        				      style={{ minWidth: 125, maxWidth: 125 }}
-        				    />
-        				    <ListItemText
-        				      primary="Discount"
-        				      style={{ minWidth: 100, maxWidth: 100 }}
-        				    />
+                <Button
+                  variant="contained"
+                  color="primary"
+                  style={{ margin: 15 }}
+                  onClick={() => {
+                    setSelectedDealModalOpen(true);
+                  }}
+                >
+                  Add deal
+                </Button>
+                <Button
+                  style={{ marginLeft: 5, marginRight: 15 }}
+                  variant="contained"
+                  color="primary"
+                  onClick={() => {
+                    handleGetDeals(userdata.active_org.id);
+                  }}
+                >
+                  <CachedIcon />
+                </Button>
+                <List>
+                  <ListItem>
+                    <ListItemText
+                      primary="Name"
+                      style={{
+                        minWidth: 200,
+                        maxWidth: 200,
+                      }}
+                    />
+                    <ListItemText
+                      primary="Status"
+                      style={{ minWidth: 150, maxWidth: 150, marginLeft: 5 }}
+                    />
+                    <ListItemText
+                      primary="Value"
+                      style={{ minWidth: 125, maxWidth: 125 }}
+                    />
+                    <ListItemText
+                      primary="Discount"
+                      style={{ minWidth: 100, maxWidth: 100 }}
+                    />
 
-        				    <ListItemText
-        				      primary="Address"
-        				      style={{
-        				        marginleft: 10,
-        				        minWidth: 100,
-        				        maxWidth: 100,
-        				        overflow: "hidden",
-        				      }}
-        				    />
-        				    <ListItemText
-        				      primary="Country"
-        				      style={{
-        				        marginleft: 10,
-        				        minWidth: 100,
-        				        maxWidth: 100,
-        				        overflow: "hidden",
-        				      }}
-        				    />
+                    <ListItemText
+                      primary="Address"
+                      style={{
+                        marginleft: 10,
+                        minWidth: 100,
+                        maxWidth: 100,
+                        overflow: "hidden",
+                      }}
+                    />
+                    <ListItemText
+                      primary="Country"
+                      style={{
+                        marginleft: 10,
+                        minWidth: 100,
+                        maxWidth: 100,
+                        overflow: "hidden",
+                      }}
+                    />
 
-        				    <ListItemText
-        				      primary="Created"
-        				      style={{ minWidth: 200, maxWidth: 100 }}
-        				    />
-        				    <ListItemText
-        				      primary="Last edited"
-        				      style={{ minWidth: 200, maxWidth: 100 }}
-        				    />
-        				  </ListItem>
-									<Divider />
-								{dealList.length === 0 ? 
-                	<Typography variant="h6" style={{textAlign: "center", margin: "auto", width: 600, marginTop: 50, marginBottom: 50, }}>
-										No deals registered yet. Click "Add deal" to register one
-									</Typography>
-								: 
-									dealList.map((deal, index) => {
-                		var bgColor = "#27292d";
-                		if (index % 2 === 0) {
-                		  bgColor = "#1f2023";
-                		}
+                    <ListItemText
+                      primary="Created"
+                      style={{ minWidth: 200, maxWidth: 100 }}
+                    />
+                    <ListItemText
+                      primary="Last edited"
+                      style={{ minWidth: 200, maxWidth: 100 }}
+                    />
+                  </ListItem>
+                  <Divider />
+                  {dealList.length === 0 ? (
+                    <Typography
+                      variant="h6"
+                      style={{
+                        textAlign: "center",
+                        margin: "auto",
+                        width: 600,
+                        marginTop: 50,
+                        marginBottom: 50,
+                      }}
+                    >
+                      No deals registered yet. Click "Add deal" to register one
+                    </Typography>
+                  ) : (
+                    dealList.map((deal, index) => {
+                      var bgColor = "#27292d";
+                      if (index % 2 === 0) {
+                        bgColor = "#1f2023";
+                      }
 
-										return (
-                  		<ListItem key={index} style={{ backgroundColor: bgColor }}>
-        				  		  <ListItemText
-        				  		    primary={deal.name}
-        				  		    style={{ 
-														minWidth: 200, 
-														maxWidth: 200,
-														overflow: "hidden",
-													}}
-        				  		  />
-        				  		  <ListItemText
-        				  		    primary={deal.status}
-        				  		    style={{ 
-														minWidth: 150, 
-														maxWidth: 150, 
-														marginLeft: 5,
-														color: deal.status.toLowerCase() === "requested" ? "yellow" : deal.status.toLowerCase() === "denied" || deal.status.toLowerCase() === "cancelled" ? "red" : "green",
-													}}
-        				  		  />
-        				  		  <ListItemText
-        				  		    primary={`\$${deal.value}`}
-        				  		    style={{ minWidth: 125, maxWidth: 125 }}
-        				  		  />
-        				  		  <ListItemText
-        				  		    primary={deal.discount.length === 0 ? "TBD" : deal.discount}
-        				  		    style={{ minWidth: 100, maxWidth: 100 }}
-        				  		  />
+                      return (
+                        <ListItem
+                          key={index}
+                          style={{ backgroundColor: bgColor }}
+                        >
+                          <ListItemText
+                            primary={deal.name}
+                            style={{
+                              minWidth: 200,
+                              maxWidth: 200,
+                              overflow: "hidden",
+                            }}
+                          />
+                          <ListItemText
+                            primary={deal.status}
+                            style={{
+                              minWidth: 150,
+                              maxWidth: 150,
+                              marginLeft: 5,
+                              color:
+                                deal.status.toLowerCase() === "requested"
+                                  ? "yellow"
+                                  : deal.status.toLowerCase() === "denied" ||
+                                    deal.status.toLowerCase() === "cancelled"
+                                  ? "red"
+                                  : "green",
+                            }}
+                          />
+                          <ListItemText
+                            primary={`\$${deal.value}`}
+                            style={{ minWidth: 125, maxWidth: 125 }}
+                          />
+                          <ListItemText
+                            primary={
+                              deal.discount.length === 0 ? "TBD" : deal.discount
+                            }
+                            style={{ minWidth: 100, maxWidth: 100 }}
+                          />
 
-        				  		  <ListItemText
-        				  		    primary={deal.address}
-        				  		    style={{
-        				  		      marginleft: 10,
-        				  		      minWidth: 100,
-        				  		      maxWidth: 100,
-        				  		      overflow: "hidden",
-        				  		    }}
-        				  		  />
-        				  		  <ListItemText
-        				  		    primary={deal.country}
-        				  		    style={{
-        				  		      marginleft: 10,
-        				  		      minWidth: 100,
-        				  		      maxWidth: 100,
-        				  		      overflow: "hidden",
-        				  		    }}
-        				  		  />
+                          <ListItemText
+                            primary={deal.address}
+                            style={{
+                              marginleft: 10,
+                              minWidth: 100,
+                              maxWidth: 100,
+                              overflow: "hidden",
+                            }}
+                          />
+                          <ListItemText
+                            primary={deal.country}
+                            style={{
+                              marginleft: 10,
+                              minWidth: 100,
+                              maxWidth: 100,
+                              overflow: "hidden",
+                            }}
+                          />
 
-        				  		  <ListItemText
-                          primary={new Date(deal.created * 1000).toISOString()}
-        				  		    style={{ minWidth: 200, maxWidth: 200 }}
-        				  		  />
-        				  		  <ListItemText
-                          primary={new Date(deal.edited * 1000).toISOString()}
-        				  		    style={{ minWidth: 200, maxWidth: 200 }}
-        				  		  />
-        				  		</ListItem>
-										)
-									})
-								}
-								</List>
+                          <ListItemText
+                            primary={new Date(
+                              deal.created * 1000
+                            ).toISOString()}
+                            style={{ minWidth: 200, maxWidth: 200 }}
+                          />
+                          <ListItemText
+                            primary={new Date(deal.edited * 1000).toISOString()}
+                            style={{ minWidth: 200, maxWidth: 200 }}
+                          />
+                        </ListItem>
+                      );
+                    })
+                  )}
+                </List>
 
-								<Divider
-									style={{
-										marginTop: 20,
-										marginBottom: 20,
-										backgroundColor: theme.palette.inputColor,
-									}}
-								/>
-							</div>
-						: null}
-
-
+                <Divider
+                  style={{
+                    marginTop: 20,
+                    marginBottom: 20,
+                    backgroundColor: theme.palette.inputColor,
+                  }}
+                />
+              </div>
+            ) : null}
             {isCloud &&
             selectedOrganization.subscriptions !== undefined &&
             selectedOrganization.subscriptions !== null &&
@@ -3218,9 +3398,6 @@ const Admin = (props) => {
     </Dialog>
   );
 
-
-
-
   const usersView =
     curTab === 1 ? (
       <div>
@@ -3294,12 +3471,14 @@ const Admin = (props) => {
               primary="MFA"
               style={{ minWidth: 100, maxWidth: 100 }}
             />
-						{selectedOrganization.child_orgs !== undefined && selectedOrganization.child_orgs !== null && selectedOrganization.child_orgs.length > 0 ?
-							<ListItemText
-								primary="Suborgs"
-								style={{ minWidth: 100, maxWidth: 100 }}
-							/>
-						: null}
+            {selectedOrganization.child_orgs !== undefined &&
+            selectedOrganization.child_orgs !== null &&
+            selectedOrganization.child_orgs.length > 0 ? (
+              <ListItemText
+                primary="Suborgs"
+                style={{ minWidth: 100, maxWidth: 100 }}
+              />
+            ) : null}
             <ListItemText
               primary="Actions"
               style={{ minWidth: 180, maxWidth: 180 }}
@@ -3415,14 +3594,14 @@ const Admin = (props) => {
                           >
                             Org User
                           </MenuItem>
-													<MenuItem
+                          <MenuItem
                             style={{
                               backgroundColor: theme.palette.inputColor,
                               color: "white",
                             }}
                             value={"org-reader"}
                           >
-                           	Org Reader
+                            Org Reader
                           </MenuItem>
                         </Select>
                       }
@@ -3452,40 +3631,63 @@ const Admin = (props) => {
                       }
                       style={{ minWidth: 100, maxWidth: 100 }}
                     />
-										{selectedOrganization.child_orgs !== undefined && selectedOrganization.child_orgs !== null && selectedOrganization.child_orgs.length > 0 ?
-											<ListItemText 
-												style={{ display: "flex" }}
-                      	primary={data.orgs === undefined || data.orgs === null ? 0 : data.orgs.length-1}
-											/>
-										: null}
-										<ListItemText style={{ display: "flex" }}>
+                    {selectedOrganization.child_orgs !== undefined &&
+                    selectedOrganization.child_orgs !== null &&
+                    selectedOrganization.child_orgs.length > 0 ? (
+                      <ListItemText
+                        style={{ display: "flex" }}
+                        primary={
+                          data.orgs === undefined || data.orgs === null
+                            ? 0
+                            : data.orgs.length - 1
+                        }
+                      />
+                    ) : null}
+                    <ListItemText style={{ display: "flex" }}>
                       <IconButton
                         onClick={() => {
                           setSelectedUserModalOpen(true);
                           setSelectedUser(data);
 
-													// Find matching orgs between current org and current user's access to those orgs
-          								if (userdata.orgs !== undefined && userdata.orgs !== null && userdata.orgs.length > 0 && selectedOrganization.child_orgs !== undefined && selectedOrganization.child_orgs !== null && selectedOrganization.child_orgs.length > 0) {
-														console.log("In here?")
-														var active = []
-														for (var key in userdata.orgs) {
-															console.log("ORG: ", userdata.orgs[key])
-															const found = selectedOrganization.child_orgs.find(item => item.id === userdata.orgs[key].id)
-															if (found !== null && found !== undefined) {
+                          // Find matching orgs between current org and current user's access to those orgs
+                          if (
+                            userdata.orgs !== undefined &&
+                            userdata.orgs !== null &&
+                            userdata.orgs.length > 0 &&
+                            selectedOrganization.child_orgs !== undefined &&
+                            selectedOrganization.child_orgs !== null &&
+                            selectedOrganization.child_orgs.length > 0
+                          ) {
+                            console.log("In here?");
+                            var active = [];
+                            for (var key in userdata.orgs) {
+                              console.log("ORG: ", userdata.orgs[key]);
+                              const found =
+                                selectedOrganization.child_orgs.find(
+                                  (item) => item.id === userdata.orgs[key].id
+                                );
+                              if (found !== null && found !== undefined) {
+                                if (
+                                  data.orgs === undefined ||
+                                  data.orgs === null
+                                ) {
+                                  continue;
+                                }
 
-																if (data.orgs === undefined || data.orgs === null) {
-																	continue
-																} 
+                                const subfound = data.orgs.find(
+                                  (item) => item === found.id
+                                );
+                                if (
+                                  subfound !== null &&
+                                  subfound !== undefined
+                                ) {
+                                  active.push(subfound);
+                                }
+                              }
+                            }
 
-																const subfound = data.orgs.find(item => item === found.id)
-																if (subfound !== null && subfound !== undefined) {
-																	active.push(subfound)
-																}
-															}
-														}
-
-														setMatchingOrganizations(active)
-													}
+                            setMatchingOrganizations(active);
+                          }
                         }}
                       >
                         <EditIcon color="primary" />
@@ -3514,8 +3716,8 @@ const Admin = (props) => {
       get2faCode(data.id);
     } else {
       // Should remove?
-			setImage2FA("");
-			setSecret2FA("");
+      setImage2FA("");
+      setSecret2FA("");
     }
 
     setShow2faSetup(!show2faSetup);
@@ -3596,6 +3798,8 @@ const Admin = (props) => {
           >
             <PublishIcon /> Upload files
           </Button>
+          {/* <FileCategoryInput
+                   isSet={renderTextBox} /> */}
           <input
             hidden
             type="file"
@@ -3621,12 +3825,17 @@ const Admin = (props) => {
           {fileNamespaces !== undefined &&
           fileNamespaces !== null &&
           fileNamespaces.length > 1 ? (
-            <FormControl style={{minWidth: 150, maxWidth: 150,}}>
+            <FormControl style={{ minWidth: 150, maxWidth: 150 }}>
               <InputLabel id="input-namespace-label">File Category</InputLabel>
               <Select
                 labelId="input-namespace-select-label"
                 id="input-namespace-select-id"
-                style={{ color: "white", minWidth: 150, maxWidth: 150, float: "right" }}
+                style={{
+                  color: "white",
+                  minWidth: 150,
+                  maxWidth: 150,
+                  float: "right",
+                }}
                 value={selectedNamespace}
                 onChange={(event) => {
                   console.log("CHANGE NAMESPACE: ", event.target);
@@ -3647,7 +3856,58 @@ const Admin = (props) => {
               </Select>
             </FormControl>
           ) : null}
-
+          <div style={{display: "inline-flex", position:"relative"}}>
+          {renderTextBox ? 
+          
+          <Tooltip title={"Close"} style={{}} aria-label={""}>
+            <Button
+              style={{ marginLeft: 5, marginRight: 15 }}
+              color="primary"
+              onClick={() => {
+                setRenderTextBox(false);
+                console.log(" close clicked")
+                }}
+            >
+              <ClearIcon/>
+            </Button>
+          </Tooltip>
+          :
+          <Tooltip title={"Add new file category"} style={{}} aria-label={""}>
+            <Button
+              style={{ marginLeft: 5, marginRight: 15 }}
+              color="primary"
+              onClick={() => {
+                setRenderTextBox(true);
+                }}
+            >
+              <AddIcon/>
+            </Button>
+          </Tooltip> }
+          {renderTextBox && <TextField
+                onKeyPress={(event)=>{
+                  handleKeyDown(event);
+                }}
+                InputProps={{
+                  style: {
+                    color: "white",
+                  },
+                }}
+                color="primary"
+                placeholder="File category name"
+                required
+                margin="dense"
+                defaultValue={""}
+                autoFocus
+              />}</div>
+          <CodeEditor
+            expansionModalOpen={openEditor}
+            setExpansionModalOpen={setOpenEditor}
+            setcodedata = {setFileContent}
+            codedata={fileContent}
+            isFileEditor = {true}
+            key = {fileContent} //https://reactjs.org/docs/reconciliation.html#recursing-on-children
+            runUpdateText = {runUpdateText}
+          />
           <Divider
             style={{
               marginTop: 20,
@@ -3655,6 +3915,7 @@ const Admin = (props) => {
               backgroundColor: theme.palette.inputColor,
             }}
           />
+
           <List>
             <ListItem>
               <ListItemText
@@ -3705,7 +3966,14 @@ const Admin = (props) => {
                   }
 
                   return (
-                    <ListItem key={index} style={{ backgroundColor: bgColor, maxHeight: 100, overflow: "hidden",}}>
+                    <ListItem
+                      key={index}
+                      style={{
+                        backgroundColor: bgColor,
+                        maxHeight: 100,
+                        overflow: "hidden",
+                      }}
+                    >
                       <ListItemText
                         style={{
                           maxWidth: 225,
@@ -3803,90 +4071,126 @@ const Admin = (props) => {
                         }}
                       />
                       <ListItemText
-                        primary=
-												<span style={{display: "flex"}}>
-													<Tooltip
-														title={"Download file"}
-														style={{}}
-														aria-label={"Download"}
-													>
-                          <span>
+                        primary=<span style={{ display:"inline"}}>
+                          <Tooltip
+                            title={"Edit File"}
+                            style={{}}
+                            aria-label={"Edit"}
+                          >
+                            <span>
+                              <IconButton
+                                disabled={file.filesize < 100000 && file.status === ("active") && allowedFileTypes.includes(file.filename.split(".")[1]) === true ? false: true}
+                                style = {{padding: "6px"}}
+                                onClick={() => {
+                                  setOpenEditor(true)
+                                  setOpenFileId(file.id)
+                                  readFileData(file)
+                                }}
+                              >
+                                <EditIcon
+                                  style={{
+                                    color:
+                                    file.filesize < 100000 && file.status === ("active") && allowedFileTypes.includes(file.filename.split(".")[1]) === true 
+                                        ? "white"
+                                        : "grey",
+                                  }}
+                                />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                          <Tooltip
+                            title={"Download file"}
+                            style={{}}
+                            aria-label={"Download"}
+                          >
+                            <span>
+                              <IconButton
+                                style = {{padding: "6px"}}
+                                disabled={file.status !== "active"}
+                                onClick={() => {
+                                  downloadFile(file);
+                                }}
+                              >
+                                <CloudDownloadIcon
+                                  style={{
+                                    color:
+                                      file.status === "active"
+                                        ? "white"
+                                        : "grey",
+                                  }}
+                                />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                          <Tooltip
+                            title={"Delete file"}
+                            style={{}}
+                            aria-label={"Delete"}
+                          >
+                            <span>
+                              <IconButton
+                                disabled={file.status !== "active"}
+                                style = {{padding: "6px"}}
+                                onClick={() => {
+                                  deleteFile(file);
+                                }}
+                              >
+                                <DeleteIcon
+                                  style={{
+                                    color:
+                                      file.status === "active"
+                                        ? "white"
+                                        : "grey",
+                                  }}
+                                />
+                              </IconButton>
+                            </span>
+                          </Tooltip>
+                          <Tooltip
+                            title={"Copy file ID"}
+                            style={{}}
+                            aria-label={"copy"}
+                          >
                             <IconButton
-                              disabled={file.status !== "active"}
+                              style = {{padding: "6px"}}
                               onClick={() => {
-                                downloadFile(file);
+                                const elementName = "copy_element_shuffle";
+                                var copyText =
+                                  document.getElementById(elementName);
+                                if (
+                                  copyText !== null &&
+                                  copyText !== undefined
+                                ) {
+                                  const clipboard = navigator.clipboard;
+                                  if (clipboard === undefined) {
+                                    alert.error(
+                                      "Can only copy over HTTPS (port 3443)"
+                                    );
+                                    return;
+                                  }
+
+                                  navigator.clipboard.writeText(file.id);
+                                  copyText.select();
+                                  copyText.setSelectionRange(
+                                    0,
+                                    99999
+                                  ); /* For mobile devices */
+
+                                  /* Copy the text inside the text field */
+                                  document.execCommand("copy");
+
+                                  alert.info(file.id + " copied to clipboard");
+                                }
                               }}
                             >
-                              <CloudDownloadIcon
-                                style={{
-                                  color:
-                                    file.status === "active" ? "white" : "grey",
-                                }}
-                              />
+                              <FileCopyIcon style={{ color: "white" }} />
                             </IconButton>
-                          </span>
-                        </Tooltip>
-												<Tooltip
-                          title={"Delete file"}
-                          style={{}}
-                          aria-label={"Delete"}
-                        >
-                          <span>
-                            <IconButton
-                              disabled={file.status !== "active"}
-                              onClick={() => {
-                                deleteFile(file);
-                              }}
-                            >
-                              <DeleteIcon
-                                style={{
-                                  color:
-                                    file.status === "active" ? "white" : "grey",
-                                }}
-                              />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-												<Tooltip
-                          title={"Copy file ID"}
-                          style={{}}
-                          aria-label={"copy"}
-                        >
-													<IconButton
-														onClick={() => {
-															const elementName = "copy_element_shuffle";
-															var copyText = document.getElementById(elementName);
-															if (copyText !== null && copyText !== undefined) {
-																const clipboard = navigator.clipboard;
-																if (clipboard === undefined) {
-																	alert.error(
-																		"Can only copy over HTTPS (port 3443)"
-																	);
-																	return;
-																}
-
-																navigator.clipboard.writeText(file.id);
-																copyText.select();
-																copyText.setSelectionRange(
-																	0,
-																	99999
-																); /* For mobile devices */
-
-																/* Copy the text inside the text field */
-																document.execCommand("copy");
-
-																alert.info(file.id + " copied to clipboard");
-															}
-														}}
-													>
-														<FileCopyIcon style={{ color: "white" }} />
-													</IconButton>
-												</Tooltip>
-												</span>
+                          </Tooltip>
+                        </span>
                         style={{
-                          minWidth: 150,
-                          maxWidth: 150,
-                          overflow: "hidden",
+                          minWidth: 250,
+                          maxWidth: 250,
+                          // overflow: "hidden",
                         }}
                       />
                     </ListItem>
@@ -4105,8 +4409,8 @@ const Admin = (props) => {
         <div style={{ marginTop: 20, marginBottom: 20 }}>
           <h2 style={{ display: "inline" }}>App Authentication</h2>
           <span style={{ marginLeft: 25 }}>
-            Control the authentication options for individual apps.{" "}
-            PS: Actions performed here can be destructive!
+            Control the authentication options for individual apps. PS: Actions
+            performed here can be destructive!
           </span>
           &nbsp;
           <a
@@ -4146,7 +4450,7 @@ const Admin = (props) => {
               primary="Workflows"
               style={{ minWidth: 100, maxWidth: 100, overflow: "hidden" }}
             />
-						{/*
+            {/*
             <ListItemText
               primary="App Usage"
               style={{ minWidth: 100, maxWidth: 100, overflow: "hidden" }}
@@ -4170,26 +4474,27 @@ const Admin = (props) => {
                   bgColor = "#1f2023";
                 }
 
-								//console.log("Auth data: ", data)
-								if (data.type === "oauth2") {
-									data.fields = [
-									{
-										"key": "url",
-										"value": "Secret. Replaced during app execution!",
-									},
-									{
-										"key": "client_id",
-										"value": "Secret. Replaced during app execution!",
-									},
-									{
-										"key": "client_secret",
-										"value": "Secret. Replaced during app execution!",
-									},
-									{
-										"key": "scope",
-										"value": "Secret. Replaced during app execution!",
-									}]
-								}
+                //console.log("Auth data: ", data)
+                if (data.type === "oauth2") {
+                  data.fields = [
+                    {
+                      key: "url",
+                      value: "Secret. Replaced during app execution!",
+                    },
+                    {
+                      key: "client_id",
+                      value: "Secret. Replaced during app execution!",
+                    },
+                    {
+                      key: "client_secret",
+                      value: "Secret. Replaced during app execution!",
+                    },
+                    {
+                      key: "scope",
+                      value: "Secret. Replaced during app execution!",
+                    },
+                  ];
+                }
 
                 return (
                   <ListItem key={index} style={{ backgroundColor: bgColor }}>
@@ -4197,7 +4502,10 @@ const Admin = (props) => {
                       primary=<img
                         alt=""
                         src={data.app.large_image}
-                        style={{ maxWidth: 50, borderRadius: theme.palette.borderRadius, }}
+                        style={{
+                          maxWidth: 50,
+                          borderRadius: theme.palette.borderRadius,
+                        }}
                       />
                       style={{ minWidth: 75, maxWidth: 75 }}
                     />
@@ -4213,7 +4521,7 @@ const Admin = (props) => {
                       primary={data.app.name}
                       style={{ minWidth: 175, maxWidth: 175, marginLeft: 10 }}
                     />
-										{/*
+                    {/*
                     <ListItemText
                       primary={data.defined === false ? "No" : "Yes"}
                       style={{ minWidth: 100, maxWidth: 100, }}
@@ -4226,11 +4534,11 @@ const Admin = (props) => {
                       style={{
                         minWidth: 100,
                         maxWidth: 100,
-												textAlign: "center",
+                        textAlign: "center",
                         overflow: "hidden",
                       }}
                     />
-										{/*
+                    {/*
                     <ListItemText
                       primary={data.node_count}
                       style={{
@@ -4257,14 +4565,14 @@ const Admin = (props) => {
                         overflow: "hidden",
                       }}
                     />
-										<ListItemText
-											style={{
-												maxWidth: 230,
-												minWidth: 230,
-												overflow: "hidden",
-											}}
-											primary={new Date(data.created * 1000).toISOString()}
-										/>
+                    <ListItemText
+                      style={{
+                        maxWidth: 230,
+                        minWidth: 230,
+                        overflow: "hidden",
+                      }}
+                      primary={new Date(data.created * 1000).toISOString()}
+                    />
                     <ListItemText>
                       <IconButton
                         onClick={() => {
@@ -4361,7 +4669,7 @@ const Admin = (props) => {
             setShowArchived(!showArchived);
           }}
         />{" "}
-        Show disabled 
+        Show disabled
         <Divider
           style={{
             marginTop: 20,
@@ -4385,7 +4693,7 @@ const Admin = (props) => {
             />
             <ListItemText
               primary="Default"
-              style={{ minWidth: 125, maxWidth: 125}}
+              style={{ minWidth: 125, maxWidth: 125 }}
             />
             <ListItemText
               primary="Disabled"
@@ -4393,7 +4701,7 @@ const Admin = (props) => {
             />
             <ListItemText
               primary="Last Changed"
-              style={{ minWidth: 170, maxWidth: 170}}
+              style={{ minWidth: 170, maxWidth: 170 }}
             />
             <ListItemText
               primary="Actions"
@@ -4458,7 +4766,7 @@ const Admin = (props) => {
                       {environment.default ? null : (
                         <Button
                           variant="outlined"
-                          style={{ borderRadius: "0px", marginRight: 5,}}
+                          style={{ borderRadius: "0px", marginRight: 5 }}
                           onClick={() => setDefaultEnvironment(environment)}
                           color="primary"
                         >
@@ -4471,7 +4779,7 @@ const Admin = (props) => {
                         minWidth: 100,
                         maxWidth: 100,
                         overflow: "hidden",
-												marginLeft: 10,
+                        marginLeft: 10,
                       }}
                       primary={environment.archived.toString()}
                     />
@@ -4494,7 +4802,7 @@ const Admin = (props) => {
                         minWidth: 300,
                         maxWidth: 300,
                         overflow: "hidden",
-												marginLeft: 10, 
+                        marginLeft: 10,
                       }}
                     >
                       <div style={{ display: "flex" }}>
@@ -4508,10 +4816,20 @@ const Admin = (props) => {
                         >
                           {environment.archived ? "Activate" : "Disable"}
                         </Button>
-                        <Button variant={"outlined"} style={{borderRadius: "0px"}} onClick={() => {
-														console.log("Should clear executions for: ", environment)
-														abortEnvironmentWorkflows(environment)
-												}} color="primary">Clear executions</Button>
+                        <Button
+                          variant={"outlined"}
+                          style={{ borderRadius: "0px" }}
+                          onClick={() => {
+                            console.log(
+                              "Should clear executions for: ",
+                              environment
+                            );
+                            abortEnvironmentWorkflows(environment);
+                          }}
+                          color="primary"
+                        >
+                          Clear executions
+                        </Button>
                       </div>
                     </ListItemText>
                   </ListItem>
@@ -4534,7 +4852,7 @@ const Admin = (props) => {
           style={{}}
           variant="contained"
           color="primary"
-					disabled={userdata.admin !== "true"}
+          disabled={userdata.admin !== "true"}
           onClick={() => {
             setModalOpen(true);
           }}
@@ -4706,7 +5024,7 @@ const Admin = (props) => {
   // primary={environment.Registered ? "true" : "false"}
 
   const iconStyle = { marginRight: 10 };
-  const data =  (
+  const data = (
     <div
       style={{
         width: 1300,
@@ -4719,7 +5037,7 @@ const Admin = (props) => {
         <Tabs
           value={curTab}
           indicatorColor="primary"
-					textColor="secondary"
+          textColor="secondary"
           onChange={setConfig}
           aria-label="disabled tabs example"
         >
@@ -4729,7 +5047,7 @@ const Admin = (props) => {
             </span>
           />
           <Tab
-						disabled={userdata.admin !== "true"}
+            disabled={userdata.admin !== "true"}
             label=<span>
               <AccessibilityNewIcon style={iconStyle} />
               Users
@@ -4742,34 +5060,34 @@ const Admin = (props) => {
             </span>
           />
           <Tab
-						disabled={userdata.admin !== "true"}
+            disabled={userdata.admin !== "true"}
             label=<span>
               <DescriptionIcon style={iconStyle} />
               Files
             </span>
           />
           <Tab
-						disabled={userdata.admin !== "true"}
+            disabled={userdata.admin !== "true"}
             label=<span>
               <ScheduleIcon style={iconStyle} />
               Schedules
             </span>
           />
-					<Tab
-						index={5}
-						disabled={userdata.admin !== "true"}
-						label=<span>
-							<EcoIcon style={iconStyle} />
-							Environments
-						</span>
-					/>
-					<Tab
-						index={6}
-						value={6}
-						label=<span>
-							<BusinessIcon style={iconStyle} /> Organizations
-						</span>
-					/>
+          <Tab
+            index={5}
+            disabled={userdata.admin !== "true"}
+            label=<span>
+              <EcoIcon style={iconStyle} />
+              Environments
+            </span>
+          />
+          <Tab
+            index={6}
+            value={6}
+            label=<span>
+              <BusinessIcon style={iconStyle} /> Organizations
+            </span>
+          />
           {/*window.location.protocol == "http:" && window.location.port === "3000" ? <Tab label=<span><CloudIcon style={iconStyle} /> Hybrid</span>/> : null*/}
           {/*window.location.protocol === "http:" && window.location.port === "3000" ? <Tab label=<span><LockIcon style={iconStyle} />Categories</span>/> : null*/}
         </Tabs>
@@ -4800,7 +5118,7 @@ const Admin = (props) => {
       {modalView}
       {cloudSyncModal}
       {editUserModal}
-			{addDealModal}
+      {addDealModal}
       {editAuthenticationModal}
       {data}
       <TextField

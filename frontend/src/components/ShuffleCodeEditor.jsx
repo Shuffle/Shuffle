@@ -23,7 +23,7 @@ import {
 } from "@material-ui/icons";
 
 import {
-	AutoFixHigh as AutoFixHighIcon, CompressOutlined,
+	AutoFixHigh as AutoFixHighIcon, CompressOutlined, QrCodeScannerOutlined,
 } from '@mui/icons-material';
 
 import { useTheme } from '@material-ui/core/styles';
@@ -37,6 +37,7 @@ import 'codemirror/addon/selection/mark-selection.js'
 import 'codemirror/theme/gruvbox-dark.css';
 import 'codemirror/theme/duotone-light.css';
 import { padding, textAlign } from '@mui/system';
+import data from '../frameworkStyle.jsx';
 
 const liquidFilters = [
 	{"name": "Size", "value": "size", "example": ""},
@@ -55,7 +56,7 @@ const pythonFilters = [
 ]
 
 const CodeEditor = (props) => {
-	const { fieldCount, setFieldCount, actionlist, changeActionParameterCodeMirror, expansionModalOpen, setExpansionModalOpen, codedata, setcodedata } = props
+	const { fieldCount, setFieldCount, actionlist, changeActionParameterCodeMirror, expansionModalOpen, setExpansionModalOpen, codedata, setcodedata, isFileEditor, runUpdateText } = props
 	const [localcodedata, setlocalcodedata] = React.useState(codedata === undefined || codedata === null || codedata.length === 0 ? "" : codedata);
   	// const {codelang, setcodelang} = props
   const theme = useTheme();
@@ -80,10 +81,15 @@ const CodeEditor = (props) => {
 	const mathOpen = Boolean(anchorEl2);
 	const pythonOpen = Boolean(anchorEl3);
 
+	// console.log("is it file editor? - ", isFileEditor);
 
 	useEffect(() => {
 		var allVariables = []
 		var tmpVariables = []
+
+		if (actionlist === undefined || actionlist === null) {
+			return
+		}
 
 		for(var i=0; i < actionlist.length; i++){
 			allVariables.push('$'+actionlist[i].autocomplete.toLowerCase())
@@ -367,7 +373,7 @@ const CodeEditor = (props) => {
 			disableEnforceFocus={true}
       //style={{ pointerEvents: "none" }}
 			hideBackdrop={true}
-			open={expansionModalOpen} 
+			open={expansionModalOpen}
 			onClose={() => {
 				console.log("In closer")
 				changeActionParameterCodeMirror({target: {value: ""}}, fieldCount, localcodedata)
@@ -385,6 +391,26 @@ const CodeEditor = (props) => {
 				},
 			}}
 		>
+		{ isFileEditor ? 
+			<div
+			style={{
+				display: 'flex',
+			}}
+		>
+			<div style={{display: "flex"}}>
+				<DialogTitle
+					id="draggable-dialog-title"
+					style={{
+						cursor: "move",
+						paddingBottom:20,
+						paddingLeft: 10, 
+					}}
+				>
+						File Editor
+				</DialogTitle> 
+			</div>
+		</div>	
+			:
 			<div
 				style={{
 					display: 'flex',
@@ -420,8 +446,10 @@ const CodeEditor = (props) => {
 						</Tooltip>
 					</IconButton>
 				</div>
-			</div>
-				
+			</div>   }
+
+		
+			{ isFileEditor ? null :
 			<div style={{display: "flex"}}>
 				<Button
 					id="basic-button"
@@ -527,8 +555,8 @@ const CodeEditor = (props) => {
 							}}>{item.name}</MenuItem>
 						)
 					})}
-				</Menu>
-			</div>
+				</Menu> 
+			</div> }
 			<span style={{
 				border: `2px solid ${theme.palette.inputColor}`,
 				borderRadius: theme.palette.borderRadius,
@@ -536,7 +564,7 @@ const CodeEditor = (props) => {
 			}}>
 				<CodeMirror
 					value = {localcodedata}
-					height="200px"
+					height=	{isFileEditor ? "450px" : "200px"}
 					style={{
 					}}
 					onCursorActivity = {(value) => {
@@ -695,7 +723,7 @@ const CodeEditor = (props) => {
 				*/}
 
 			</div>
-
+				{isFileEditor ? null :
 			<div>
 				{isMobile ? null : 
 					<DialogTitle
@@ -765,11 +793,12 @@ const CodeEditor = (props) => {
 				>
 					JSON Validation: {validation ? "Correct" : "Incorrect"}
 				</p>
-			</div>
+			</div> }
 
 			<div
 				style={{
 					display: 'flex',
+					paddingTop : 30, // maybe handle this as well?
 				}}
 			>
 				<button
@@ -784,7 +813,7 @@ const CodeEditor = (props) => {
 						cursor: "pointer"
 					}}
 					onClick={() => {
-						setExpansionModalOpen(false)
+						setExpansionModalOpen(false);
 					}}
 				>
 					Cancel
@@ -794,6 +823,7 @@ const CodeEditor = (props) => {
 						color: "white",
 						background: "#f85a3e",
 						border: "none",
+
 						height: 35,
 						flex: 1, 
 						marginLeft: 10,
@@ -803,9 +833,15 @@ const CodeEditor = (props) => {
 					onClick={(event) => {
 						// console.log(codedata)
 						// console.log(fieldCount)
+						if (isFileEditor === true){
+							runUpdateText(localcodedata);
+							setcodedata(localcodedata);
+							setExpansionModalOpen(false)
+						}
+						else {
 						changeActionParameterCodeMirror(event, fieldCount, localcodedata)
 						setExpansionModalOpen(false)
-						setcodedata(localcodedata)
+						setcodedata(localcodedata)}
 					}}
 				>
 					Done
