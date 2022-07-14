@@ -1295,6 +1295,19 @@ const ParsedAction = (props) => {
               if (data.name === "url" && data.value !== undefined && data.value !== null && data.value.length === 0) {
                 data.value = data.example;
               }
+
+							if (data.value.length === 0) {
+              	if (data.name.toLowerCase() === "headers") {
+									data.value = data.example
+								}
+							}
+
+							/*
+              	if (data.name !== "queries" && data.name !== "key" && data.name !== "value" ) {
+									data.value = data.example
+								}
+							}
+							*/
             }
 
             if (data.name.startsWith("${") && data.name.endsWith("}")) {
@@ -2666,6 +2679,117 @@ const ParsedAction = (props) => {
 
 									// Change in actions, triggers & conditions
 									// Highlight the changes somehow with a glow?
+									//
+									// Should make it a function lol
+									if (workflow.branches !== undefined && workflow.branches !== null) {	
+										for (var key in workflow.branches) {
+											for (var subkey in workflow.branches[key].conditions) {
+												const condition = workflow.branches[key].conditions[subkey]
+												const sourceparam = condition.source
+												const destinationparam = condition.destination
+
+												// Should have a smarter way of discovering node names
+												// Finding index(es) and replacing at the location
+												if (sourceparam.value.includes("$")) {
+													try {
+														var cnt = -1
+														var previous = 0
+														while (true) {
+															cnt += 1 
+															// Need to make sure e.g. changing the first here doesn't change the 2nd
+															// $change_me
+															// $change_me_2
+															
+															const foundindex = sourceparam.value.toLowerCase().indexOf(parsedBaseLabel, previous)
+															if (foundindex === previous && foundindex !== 0) {
+																break
+															}
+	
+															if (foundindex >= 0) {
+																previous = foundindex+newname.length
+																// Need to add diff of length to word
+	
+																// Check location:
+																// If it's a-zA-Z_ then don't replace
+																if (sourceparam.value.length > foundindex+parsedBaseLabel.length) {
+																	const regex = /[a-zA-Z0-9_]/g;
+																	const match = sourceparam.value[foundindex+parsedBaseLabel.length].match(regex);
+																	if (match !== null) {
+																		continue
+																	}
+																}
+																
+																console.log("Old found: ", workflow.branches[key].conditions[subkey].source.value)
+																const extralength = newname.length-parsedBaseLabel.length
+																sourceparam.value = sourceparam.value.substring(0, foundindex) + newname + sourceparam.value.substring(foundindex-extralength+newname.length, sourceparam.value.length)
+
+																console.log("New: ", workflow.branches[key].conditions[subkey].source.value)
+															} else { 
+																break
+															}
+	
+															// Break no matter what after 5 replaces. May need to increase
+															if (cnt >= 5) {
+																break
+															}
+	
+														}
+            							} catch (e) {
+														console.log("Failed value replacement based on index: ", e)
+													}
+												}
+
+												if (destinationparam.value.includes("$")) {
+													try {
+														var cnt = -1
+														var previous = 0
+														while (true) {
+															cnt += 1 
+															// Need to make sure e.g. changing the first here doesn't change the 2nd
+															// $change_me
+															// $change_me_2
+															
+															const foundindex = destinationparam.value.toLowerCase().indexOf(parsedBaseLabel, previous)
+															if (foundindex === previous && foundindex !== 0) {
+																break
+															}
+	
+															if (foundindex >= 0) {
+																previous = foundindex+newname.length
+																// Need to add diff of length to word
+	
+																// Check location:
+																// If it's a-zA-Z_ then don't replace
+																if (destinationparam.value.length > foundindex+parsedBaseLabel.length) {
+																	const regex = /[a-zA-Z0-9_]/g;
+																	const match = destinationparam.value[foundindex+parsedBaseLabel.length].match(regex);
+																	if (match !== null) {
+																		continue
+																	}
+																}
+																
+																console.log("Old found: ", workflow.branches[key].conditions[subkey].destination.value)
+																const extralength = newname.length-parsedBaseLabel.length
+																destinationparam.value = destinationparam.value.substring(0, foundindex) + newname + destinationparam.value.substring(foundindex-extralength+newname.length, destinationparam.value.length)
+
+																console.log("New: ", workflow.branches[key].conditions[subkey].destination.value)
+															} else { 
+																break
+															}
+	
+															// Break no matter what after 5 replaces. May need to increase
+															if (cnt >= 5) {
+																break
+															}
+	
+														}
+            							} catch (e) {
+														console.log("Failed value replacement based on index: ", e)
+													}
+												}
+											}
+										}
+									}
 
 									for (var key in workflow.actions) {
 										if (workflow.actions[key].id === selectedAction.id) {
@@ -2681,6 +2805,7 @@ const ParsedAction = (props) => {
 											// Should have a smarter way of discovering node names
 											// Do regex? 
 											// Finding index(es) and replacing at the location
+											//
 
 											try {
 												var cnt = -1
@@ -3157,13 +3282,30 @@ const ParsedAction = (props) => {
 								for (var line in descSplit) {
 									if (descSplit[line].includes("http") && descSplit[line].includes("://")) {
 										const urlsplit = descSplit[line].split("/")
-										extraUrl = "/"+urlsplit.slice(3, urlsplit.length-1).join("/")
+										try {
+											extraUrl = "/"+urlsplit.slice(3, urlsplit.length).join("/")
+										} catch (e) {
+											console.log("Failed - running with -1")
+											extraUrl = "/"+urlsplit.slice(3, urlsplit.length-1).join("/")
+										}
+
+
+										console.log("NO BASEURL TOO!! Why missing last one in certain scenarios (sevco)?", extraUrl, urlsplit, descSplit[line])
 										break
 									} 
 								}
 
 								if (extraUrl.length > 0) {
+									if (extraUrl.includes(" ")) {
+										extraUrl = extraUrl.split(" ")[0]
+									}
+
+									if (extraUrl.includes("#")) {
+										extraUrl = extraUrl.split("#")[0]
+									}
 									extraDescription = `${method} ${extraUrl}`
+								} else {
+									console.log("No url found. Check again :)")
 								}
 							}
 

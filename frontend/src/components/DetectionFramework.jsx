@@ -1599,18 +1599,13 @@ const Framework = (props) => {
 						</div>
 						<div style={{marginTop: 10}}>
 						{selectionOpen ? 
-							isCloud && defaultSearch !== undefined && defaultSearch.length > 0 ? 
-								<WorkflowSearch 
-									defaultSearch={defaultSearch}
-									newSelectedApp={newSelectedApp}
-									setNewSelectedApp={setNewSelectedApp}
-								/>
-								: 
-								<div>
-									Coming soon. <a style={{ textDecoration: "none", color: "#f85a3e" }} href="https://shuffler.io/register" target="_blank">Register for Shuffle cloud</a> to try an early version now. 
-								</div>
+							<WorkflowSearch 
+								defaultSearch={defaultSearch}
+								newSelectedApp={newSelectedApp}
+								setNewSelectedApp={setNewSelectedApp}
+							/>
 						: null}
-							</div>
+						</div>
 					</Paper>
 					: null
 			}

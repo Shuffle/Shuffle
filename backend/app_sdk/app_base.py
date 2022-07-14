@@ -117,6 +117,22 @@ def as_object(a):
 def ast(a):
     return ast.literal_eval(str(a))
 
+@shuffle_filters.register
+def escape_string(a):
+    a = str(a)
+    return a.replace("\\\'", "\'", -1).replace("\\\"", "\"", -1).replace("'", "\\\'", -1).replace("\"", "\\\"", -1)
+
+@shuffle_filters.register
+def json_escape(a):
+    a = str(a)
+    return a.replace("\\\'", "\'", -1).replace("\\\"", "\"", -1).replace("'", "\\\\\'", -1).replace("\"", "\\\\\"", -1)
+
+# By default using json escape to add all backslashes
+@shuffle_filters.register
+def escape(a):
+    a = str(a)
+    return json_escape(a)
+
 #print(standard_filter_manager.filters)
 #print(shuffle_filters.filters)
 #print(Liquid("{{ '10' | plus: 1}}", filters=shuffle_filters.filters).render())
@@ -2025,7 +2041,6 @@ class AppBase:
             errors = False
             error_msg = ""
             try:
-                #self.logger.info("In liquid")
                 if len(template) > 10000000:
                     self.logger.info("[DEBUG] Skipping liquid - size too big (%d)" % len(template))
                     return template
@@ -2094,6 +2109,9 @@ class AppBase:
                 error = True
                 error_msg = e
 
+            if "fmt" in error_msg and "liquid_date" in error_msg:
+                return template
+
             self.logger.info("Done in liquid")
             if error == True:
                 self.action_result["status"] = "FAILURE" 
@@ -2102,6 +2120,7 @@ class AppBase:
                     "reason": f"Failed to parse LiquidPy: {error_msg}",
                     "input": template,
                 }
+
                 try:
                     self.action_result["result"] = json.dumps(data)
                 except Exception as e:
@@ -2240,7 +2259,6 @@ class AppBase:
                 #self.logger.info("STATIC PARSED: %s" % actualitem)
                 #self.logger.info("[INFO] Done with regex matching")
                 if len(actualitem) > 0:
-                    #self.logger.info("[DEBUG] Matches: ", actualitem)
                     for replace in actualitem:
                         try:
                             to_be_replaced = replace[0]
@@ -2798,7 +2816,7 @@ class AppBase:
                                 }))
 
                             if parameter["name"] == "body": 
-                                self.logger.info("[INFO] Should debug field with liquid and other checks as it's BODY: %s" % value)
+                                self.logger.info(f"[INFO] Should debug field with liquid and other checks as it's BODY: {value}")
 
                             # Custom format for ${name[0,1,2,...]}$
                             #submatch = "([${]{2}([0-9a-zA-Z_-]+)(\[.*\])[}$]{2})"

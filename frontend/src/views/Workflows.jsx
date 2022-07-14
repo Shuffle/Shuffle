@@ -8,7 +8,6 @@ import SecurityFramework from '../components/SecurityFramework.jsx';
 import { ShepherdTour, ShepherdTourContext } from 'react-shepherd'
 import { isMobile } from "react-device-detect" 
 
-
 import {
   Badge,
   Avatar,
@@ -88,6 +87,7 @@ import { useAlert } from "react-alert";
 import ChipInput from "material-ui-chip-input";
 import { v4 as uuidv4 } from "uuid";
 
+
 const inputColor = "#383B40";
 const surfaceColor = "#27292D";
 const svgSize = 24;
@@ -133,8 +133,8 @@ export const GetIconInfo = (action) => {
   const iconList = [
     { key: "cache_add", values: ["set_cache"] },
     { key: "cache_get", values: ["get_cache"] },
-    { key: "filter", values: ["filter", "route", "router"] },
-    { key: "merge", values: ["join", "merge"] },
+    { key: "filter", values: ["filter"] },
+    { key: "merge", values: ["join", "merge", "route", "router"] },
     {
       key: "search",
       values: ["search", "find", "locate", "index", "analyze", "anal", "match", "check cache", "check", "verify", "validate"],
@@ -412,6 +412,7 @@ export const validateJson = (showResult) => {
       jsonvalid = false
     }
   } catch (e) {
+		console.log("Bug1: ", e)
     showResult = showResult.split("'").join('"');
 
     try {
@@ -419,14 +420,17 @@ export const validateJson = (showResult) => {
         jsonvalid = false;
       }
     } catch (e) {
+			console.log("Bug2: ", e)
+
       jsonvalid = false;
     }
   }
 
   var result = showResult;
   try {
-    result = jsonvalid ? JSON.parse(showResult) : showResult;
+    result = jsonvalid ? JSON.parse(showResult, {"storeAsString": true}) : showResult;
   } catch (e) {
+		console.log("Bug3: ", e)
     ////console.log("Failed parsing JSON even though its valid: ", e)
     jsonvalid = false;
   }
@@ -444,6 +448,7 @@ export const validateJson = (showResult) => {
 			result = JSON.parse(newstr)
 			jsonvalid = true
 		} catch (e) {
+			console.log("Bug4: ", e)
 
 			//console.log("Failed parsing JSON even though its valid (2): ", e)
 			jsonvalid = false
@@ -477,7 +482,6 @@ export const validateJson = (showResult) => {
 		}
 	}
 
-  //console.log("VALID: ", jsonvalid, result, typeof result)
   return {
     valid: jsonvalid,
     result: result,
@@ -1116,10 +1120,15 @@ const Workflows = (props) => {
     justifyContent: "space-between",
   };
 
-  const exportAllWorkflows = () => {
-    for (var key in workflows) {
-      exportWorkflow(workflows[key], false);
+  const exportAllWorkflows = (allWorkflows) => {
+		for (var i = 0; i < allWorkflows.length; i++) {
+			setTimeout(() => {
+				console.log(workflows[i].name)
+      	exportWorkflow(workflows[i], false)
+			}, i * 200);
     }
+
+    alert.info(`exporting and keeping original for all ${workflows.length} workflows`);
   };
 
   const deduplicateIds = (data) => {
@@ -2811,7 +2820,7 @@ const Workflows = (props) => {
             style={{}}
             variant="text"
             onClick={() => {
-              exportAllWorkflows();
+              exportAllWorkflows(workflows);
             }}
           >
             <GetAppIcon />
