@@ -4079,7 +4079,7 @@ const Admin = (props) => {
                           >
                             <span>
                               <IconButton
-                                disabled={file.filesize < 100000 && file.status === ("active") && allowedFileTypes.includes(file.filename.split(".")[1]) === true ? false: true}
+                                disabled={isCloud || file.filesize < 100000 && file.status === ("active") && allowedFileTypes.includes(file.filename.split(".")[1]) === true ? false: true}
                                 style = {{padding: "6px"}}
                                 onClick={() => {
                                   setOpenEditor(true)
