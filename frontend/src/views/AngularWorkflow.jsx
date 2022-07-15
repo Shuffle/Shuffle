@@ -2865,8 +2865,8 @@ const AngularWorkflow = (defaultprops) => {
       return "";
     }
 
-		console.log("NOT REPLACING ON PURPOSE!!")
-		return ""
+		//console.log("NOT REPLACING ON PURPOSE!!")
+		//return ""
 
     // Basically just a stupid if-else :)
     const synonyms = {
@@ -2900,6 +2900,7 @@ const AngularWorkflow = (defaultprops) => {
         "value",
         "item",
       ],
+			tags: ["tags", "taxonomies"],
     };
 
     // 1. Find the right synonym
@@ -2942,6 +2943,7 @@ const AngularWorkflow = (defaultprops) => {
           if (toreturn.length > 0) {
             break;
           }
+
         } else {
           var selectedkey = "";
           if (isNaN(key)) {
@@ -2959,8 +2961,8 @@ const AngularWorkflow = (defaultprops) => {
         }
       } else {
         if (selectedsynonyms.includes(key.toLowerCase())) {
-          toreturn = `${basekey}.${key}`;
-          break;
+          toreturn = `${basekey}.${key}`
+          break
         }
       }
     }
@@ -2982,15 +2984,21 @@ const AngularWorkflow = (defaultprops) => {
       const param = dstdata.parameters[paramkey];
       // Skip authentication params
       if (param.configuration) {
-        continue;
+        continue
       }
+
+			if (param.options !== undefined && param.options !== null && param.options.length > 0) {
+				continue
+			}
 
       const paramname = param.name.toLowerCase().trim().replaceAll("_", " ");
 
       const foundresult = GetParamMatch(paramname, exampledata, "");
       if (foundresult.length > 0) {
+				console.log("FOUND ReS for field: ", dstdata.parameters[paramkey].name, foundresult)
         if (dstdata.parameters[paramkey].value.length === 0) {
           dstdata.parameters[paramkey].value = `$${parentlabel}${foundresult}`;
+          dstdata.parameters[paramkey].autocompleted = true
         }
       }
     }
@@ -3012,8 +3020,12 @@ const AngularWorkflow = (defaultprops) => {
           const param = dstdata.parameters[paramkey];
           // Skip authentication params
           if (param.configuration) {
-            continue;
+            continue
           }
+
+					if (param.options !== undefined && param.options !== null && param.options.length > 0) {
+						continue
+					}
 
           const paramname = param.name
             .toLowerCase()
@@ -3023,13 +3035,10 @@ const AngularWorkflow = (defaultprops) => {
           const foundresult = GetParamMatch(paramname, exampledata, "");
           if (foundresult.length > 0) {
             if (dstdata.parameters[paramkey].value.length === 0) {
-              dstdata.parameters[
-                paramkey
-              ].value = `$${parentlabel}${foundresult}`;
+              dstdata.parameters[paramkey].value = `$${parentlabel}${foundresult}`;
+          		dstdata.parameters[paramkey].autocompleted = true
             } else {
-              dstdata.parameters[
-                paramkey
-              ].value = `$${parentlabel}${foundresult}`;
+              //dstdata.parameters[paramkey].value = `$${parentlabel}${foundresult}`;
             }
           }
         }
@@ -3192,7 +3201,7 @@ const AngularWorkflow = (defaultprops) => {
       newdst !== null
     ) {
       const dstdata = RunAutocompleter(newdst.data());
-      console.log("DST: ", dstdata);
+      console.log("AUTO DST: ", dstdata);
     }
 
     var newbranch = {
@@ -6060,8 +6069,8 @@ const AngularWorkflow = (defaultprops) => {
 		}
 
     // Does this one find the wrong one?
-    //var newSelectedAction = JSON.parse(JSON.stringify(selectedAction))
-    var newSelectedAction = selectedAction
+    //var newSelectedAction = selectedAction
+    var newSelectedAction = JSON.parse(JSON.stringify(selectedAction))
     newSelectedAction.name = newaction.name;
     newSelectedAction.parameters = JSON.parse(JSON.stringify(newaction.parameters))
     newSelectedAction.errors = [];
@@ -6071,8 +6080,10 @@ const AngularWorkflow = (defaultprops) => {
 
 		// Simmple action swap autocompleter
 		if (selectedAction.parameters !== undefined && newSelectedAction.parameters !== undefined && selectedAction.id === newSelectedAction.id) {
+			console.log("IN ACTION SWAPP")
 			for (var paramkey in selectedAction.parameters) {
 				const param = selectedAction.parameters[paramkey];
+				console.log("PARAM: ", param.name, param.value)
 
 				if (param.value === null || param.value === undefined || param.value.length === 0) {
 					continue
@@ -6088,12 +6099,19 @@ const AngularWorkflow = (defaultprops) => {
 					//newSelectedAction.parameters[newParamIndex].value = param.value
 				}
 
+				// Not doing options fields
+
 				const newParamIndex = newSelectedAction.parameters.findIndex(paramdata => paramdata.name === param.name)
 				if (newParamIndex < 0) {
 					continue
 				}
+				console.log("xisting value: ", newSelectedAction.parameters[newParamIndex].value)
 
 				newSelectedAction.parameters[newParamIndex].value = param.value
+				newSelectedAction.parameters[newParamIndex].autocompleted = true
+				if (param.options !== undefined && param.options !== null && param.options.length > 0) {
+					newSelectedAction.parameters[newParamIndex].autocompleted = false 
+				}
 			}
 		}
 
@@ -6122,8 +6140,8 @@ const AngularWorkflow = (defaultprops) => {
     }
 
 
-    // Takes an action as input, then runs through and updates the relevant fields
-    // based on previous actions'
+    // Takes an action as input, then runs through and updates the relevant parameters based on previous actions' results (parent nodes)
+		// Further checks if those fields are already set in a previously used action
     newSelectedAction = RunAutocompleter(newSelectedAction);
 
     if (

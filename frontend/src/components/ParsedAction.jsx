@@ -772,6 +772,8 @@ const ParsedAction = (props) => {
       }
 
       //console.log("CHANGING ACTION COUNT !")
+			selectedActionParameters[count].autocompleted = false
+			selectedAction.parameters[count].autocompleted = false 
       selectedActionParameters[count].value = event.target.value;
       selectedAction.parameters[count].value = event.target.value;
 
@@ -944,6 +946,8 @@ const ParsedAction = (props) => {
 				}
 			}
 
+			selectedActionParameters[count].autocompleted = false
+			selectedAction.parameters[count].autocompleted = false 
 			selectedActionParameters[count].value = data
 			selectedAction.parameters[count].value = data
 			setSelectedAction(selectedAction)
@@ -1824,15 +1828,12 @@ const ParsedAction = (props) => {
                   return;
                 }
 
-                console.log("AUTOCOMPLETE1: ", values);
-
                 var toComplete = selectedActionParameters[count].value.trim()
                   .endsWith("$")
                   ? values[0].autocomplete
                   : "$" + values[0].autocomplete;
 
                 toComplete = toComplete.toLowerCase().replaceAll(" ", "_");
-                console.log("AUTOCOMPLETE: ", toComplete);
                 for (var key in values) {
                   if (key == 0 || values[key].autocomplete.length === 0) {
                     continue;
@@ -2223,6 +2224,8 @@ const ParsedAction = (props) => {
 						//console.log(data.configuration)
 
 						const buttonTitle = `Authenticate ${selectedApp.name.replaceAll("_", " ")}`
+						const hasAutocomplete = data.autocompleted === true
+						console.log("AUTOCOMPLeTe: ", hasAutocomplete)
             return (
               <div key={data.name}>
                 {hideBodyButton}
@@ -2248,6 +2251,20 @@ const ParsedAction = (props) => {
                       />
                     </Tooltip>
                   ) : null}
+
+									{hasAutocomplete === true ? 
+										<Tooltip
+											color="primary"
+											title={"Field was autocompleted by Shuffle based on previous actions (same fields or parent nodes)"}
+											placement="top"
+										>
+											<AutoFixHighIcon style={{ 
+												color: "rgba(255,255,255,0.7)" ,
+												marginRight: 10, 
+											}}/>
+										</Tooltip>
+										: 
+									null}
 
                   <div
                     style={{
@@ -3190,7 +3207,7 @@ const ParsedAction = (props) => {
               },
             }}
 						filterOptions={(options, { inputValue }) => {
-							console.log("Option contains?: ", inputValue, options)
+							//console.log("Option contains?: ", inputValue, options)
 							const lowercaseValue = inputValue.toLowerCase()
 							options = options.filter(x => x.name.replaceAll("_", " ").toLowerCase().includes(lowercaseValue) || x.description.toLowerCase().includes(lowercaseValue))
 
