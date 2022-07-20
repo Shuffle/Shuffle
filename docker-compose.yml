@@ -26,12 +26,13 @@ services:
     networks:
       - shuffle
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      #- /var/run/docker.sock:/var/run/docker.sock
       - ${SHUFFLE_APP_HOTLOAD_LOCATION}:/shuffle-apps:z
       - ${SHUFFLE_FILE_LOCATION}:/shuffle-files:z
       #- ${SHUFFLE_OPENSEARCH_CERTIFICATE_FILE}:/shuffle-files/es_certificate
     env_file: .env
     environment:
+      - DOCKER_HOST=tcp://docker-socket-proxy:2375
       - SHUFFLE_APP_HOTLOAD_FOLDER=/shuffle-apps
       - SHUFFLE_FILE_LOCATION=/shuffle-files
     restart: unless-stopped
@@ -39,14 +40,15 @@ services:
       #- opensearch #Not necessary because dependancy is handled within the backend itself instead
       #- database
   orborus:
-    image: ghcr.io/frikky/shuffle-orborus:latest
+    image: ghcr.io/frikky/shuffle-orborus:nightly
     container_name: shuffle-orborus
     hostname: shuffle-orborus
     networks:
       - shuffle
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+    #volumes:
+    #  - /var/run/docker.sock:/var/run/docker.sock
     environment:
+      - DOCKER_HOST=tcp://docker-socket-proxy:2375
       - SHUFFLE_WORKER_VERSION=latest
       - ENVIRONMENT_NAME=${ENVIRONMENT_NAME}
       - BASE_URL=http://${OUTER_HOSTNAME}:5001
@@ -91,31 +93,33 @@ services:
     networks:
       - shuffle
     restart: unless-stopped
-  #docker-socket-proxy:
-  #  image: tecnativa/docker-socket-proxy
-  #  container_name: shuffle-frontend
-  #  privileged: true
-  #  environment:
-  #    - SERVICES=1
-  #    - TASKS=1
-  #    - NETWORKS=1
-  #    - NODES=1
-  #    - BUILD=1
-  #    - IMAGES=1
-  #    - GRPC=1
-  #    - CONTAINERS=1
-  #    - PLUGINS=1
-  #    - SYSTEM=1
-  #    - VOLUMES=1
-  #    - INFO=1
-  #    - DISTRIBUTION=1
-  #    - POST=1
-  #    - AUTH=1
-  #    - SECRETS=1
-  #  volumes:
-  #    - /var/run/docker.sock:/var/run/docker.sock
-  #  networks:
-  #    - shuffle
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy
+    container_name: shuffle-frontend
+    hostname: docker-socket-proxy
+    privileged: true
+    environment:
+      - SERVICES=1
+      - TASKS=1
+      - NETWORKS=1
+      - NODES=1
+      - BUILD=1
+      - IMAGES=1
+      - GRPC=1
+      - CONTAINERS=1
+      - PLUGINS=1
+      - SYSTEM=1
+      - VOLUMES=1
+      - INFO=1
+      - DISTRIBUTION=1
+      - POST=1
+      - AUTH=1
+      - SECRETS=1
+      - SWARM=1
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - shuffle
 networks:
   shuffle:
     driver: bridge

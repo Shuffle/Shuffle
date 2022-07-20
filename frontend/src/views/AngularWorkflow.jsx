@@ -6080,10 +6080,8 @@ const AngularWorkflow = (defaultprops) => {
 
 		// Simmple action swap autocompleter
 		if (selectedAction.parameters !== undefined && newSelectedAction.parameters !== undefined && selectedAction.id === newSelectedAction.id) {
-			console.log("IN ACTION SWAPP")
 			for (var paramkey in selectedAction.parameters) {
 				const param = selectedAction.parameters[paramkey];
-				console.log("PARAM: ", param.name, param.value)
 
 				if (param.value === null || param.value === undefined || param.value.length === 0) {
 					continue
@@ -6095,7 +6093,7 @@ const AngularWorkflow = (defaultprops) => {
 				}
 
 				if (param.name === "headers") {
-					console.log("Swap header?")
+					console.log("Swap header? For now, yes")
 					//newSelectedAction.parameters[newParamIndex].value = param.value
 				}
 
@@ -6105,7 +6103,6 @@ const AngularWorkflow = (defaultprops) => {
 				if (newParamIndex < 0) {
 					continue
 				}
-				console.log("xisting value: ", newSelectedAction.parameters[newParamIndex].value)
 
 				newSelectedAction.parameters[newParamIndex].value = param.value
 				newSelectedAction.parameters[newParamIndex].autocompleted = true
@@ -10853,7 +10850,7 @@ const AngularWorkflow = (defaultprops) => {
 														objectIDs: [workflow.id],
 														timestamp: timestamp,
 														queryID: queryID,
-														userToken: userdata === undefined || userdata === null || userdata.id === undefined ? "" : userdata.id,
+														userToken: userdata === undefined || userdata === null || userdata.id === undefined ? "unauthenticated" : userdata.id,
 													}
 												])
 											} else {

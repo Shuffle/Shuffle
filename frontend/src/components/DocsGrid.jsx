@@ -30,7 +30,7 @@ import {Close as CloseIcon, Folder as FolderIcon, Polymer as PolymerIcon, Librar
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 const DocsGrid = props => {
-	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs }  = props
+	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, userdata, }  = props
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows
 	const xs = parsedXs === undefined || parsedXs === null ? isMobile ? 6 : 2 : parsedXs
 	const theme = useTheme();
@@ -212,6 +212,7 @@ const DocsGrid = props => {
 										timestamp: timestamp,
 										queryID: data.__queryID,
 										positions: [data.__position],
+										userToken: userdata === undefined || userdata === null || userdata.id === undefined ? "unauthenticated" : userdata.id,
 									}
 								])
 

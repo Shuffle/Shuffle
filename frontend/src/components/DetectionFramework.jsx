@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { securityFramework } from "./LandingpageUsecases.jsx";
 import CytoscapeComponent from 'react-cytoscapejs';
 import frameworkStyle from '../frameworkStyle.jsx';
-import WorkflowSearch from './Workflowsearch.jsx';
+import AppSearch from './Appsearch.jsx';
 import { v4 as uuidv4 } from "uuid";
 import theme from '../theme';
 import { useAlert } from "react-alert";
@@ -518,7 +518,8 @@ export const usecases = {
 }
 
 const Framework = (props) => {
-  const { globalUrl, isLoaded, showOptions, selectedOption, rolling, frameworkData, size, inputUsecase, isLoggedIn, color } = props;
+  const { globalUrl, isLoaded, showOptions, selectedOption, rolling, frameworkData, size, inputUsecase, isLoggedIn, color, discoveryWrapper, setDiscoveryWrapper} = props;
+
 	const [cy, setCy] = React.useState()
 	const [edgesStarted, setEdgesStarted] = React.useState(false)
 	const [graphDone, setGraphDone] = React.useState(false)
@@ -531,6 +532,24 @@ const Framework = (props) => {
 	const scale = size === undefined ? 1 : size > 5 ? 3 : size
 
   const alert = useAlert()
+
+	useEffect(() => {
+		console.log("DISCWRAP CHANG: ", discoveryWrapper)
+
+		if (discoveryWrapper === undefined || discoveryWrapper.id === "SHUFFLE" || discoveryWrapper.id === undefined || cy === undefined) {
+			return
+		}
+
+		// Find the node and click it?
+		const nodes = cy.nodes().jsons()
+		for (var key in nodes) {
+			const node = nodes[key]
+			console.log("NOD: ", node)
+
+      //cy.getElementById(node.data.id).click();
+		}
+		//setDiscoveryData(discoveryWrapper)
+	}, [discoveryWrapper])
 
 	const setUsecaseItem = (inputUsecase) => {
 		var parsedUsecase = inputUsecase
@@ -1372,6 +1391,7 @@ const Framework = (props) => {
 		}
 
 		const bgColor = color === undefined || color === null || color.length === 0 ? theme.palette.surfaceColor : color
+		console.log("BGCOLOR: ", bgColor)
 
 		return (
 				<Paper style={{marginBottom: 15, width: 250, maxHeight: 400, overflow: "hidden", zIndex: 12500, padding: 15, backgroundColor: bgColor, border: "1px solid rgba(255,255,255,0.2)", }} onMouseOver={handleHover} onMouseOut={handleHoverOut}>
@@ -1443,8 +1463,10 @@ const Framework = (props) => {
 
 	//autounselectify={true}
 	var usecasediff = -100
+	const bgColor = color === undefined || color === null || color.length === 0 ? theme.palette.surfaceColor : color
+
 	return (
-		<div style={{margin: "auto", backgroundColor: theme.palette.surfaceColor, position: "relative", }}>
+		<div style={{margin: "auto", backgroundColor: bgColor, position: "relative", }}>
 			{showOptions === false ? null : 
 				<div style={{textAlign: "center",}}>
 					{Object.keys(usecases).map((data, index) => {
@@ -1568,7 +1590,7 @@ const Framework = (props) => {
 										{discoveryData.description}
 									</Typography>
 									{/*isCloud && defaultSearch !== undefined && defaultSearch.length > 0 ? 
-										{<WorkflowSearch 
+										{<
 											newSelectedApp={newSelectedApp}
 											setNewSelectedApp={setNewSelectedApp}
 											defaultSearch={defaultSearch}
@@ -1601,7 +1623,7 @@ const Framework = (props) => {
 						</div>
 						<div style={{marginTop: 10}}>
 						{selectionOpen ? 
-							<WorkflowSearch 
+							<AppSearch
 								defaultSearch={defaultSearch}
 								newSelectedApp={newSelectedApp}
 								setNewSelectedApp={setNewSelectedApp}

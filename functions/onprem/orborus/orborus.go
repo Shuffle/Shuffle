@@ -285,31 +285,31 @@ func deployServiceWorkers(image string) {
 
 		if len(os.Getenv("DOCKER_HOST")) > 0 {
 			log.Printf("[DEBUG] Deploying docker socket proxy to the network %s as the DOCKER_HOST variable is set", networkName)
+			//if err == nil {
+			containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
+				All: true,
+			})
+
 			if err == nil {
-				containers, err := dockercli.ContainerList(ctx, types.ContainerListOptions{
-					All: true,
-				})
-
-				if err == nil {
-					for _, container := range containers {
-						if strings.Contains(strings.ToLower(container.Image), "docker-socket-proxy") {
-							networkConfig := &network.EndpointSettings{}
-							err := dockercli.NetworkConnect(ctx, networkName, container.ID, networkConfig)
-							if err != nil {
-								log.Printf("[ERROR] Failed connecting Docker socket proxy to docker network %s: %s", networkName, err)
-							} else {
-								log.Printf("[INFO] Attached the docker socket proxy to the execution network")
-							}
-
-							break
+				for _, container := range containers {
+					if strings.Contains(strings.ToLower(container.Image), "docker-socket-proxy") {
+						networkConfig := &network.EndpointSettings{}
+						err := dockercli.NetworkConnect(ctx, networkName, container.ID, networkConfig)
+						if err != nil {
+							log.Printf("[ERROR] Failed connecting Docker socket proxy to docker network %s: %s", networkName, err)
+						} else {
+							log.Printf("[INFO] Attached the docker socket proxy to the execution network")
 						}
+
+						break
 					}
-				} else {
-					log.Printf("[WARNING] Failed listing containers when deploying socket proxy on swarm: %s", err)
 				}
 			} else {
-				log.Printf("[WARNING] Failed listing and finding the right image for docker socket proxy: %s", err)
+				log.Printf("[ERROR] Failed listing containers when deploying socket proxy on swarm: %s", err)
 			}
+			//} else {
+			//	log.Printf("[ERROR] Failed listing and finding the right image for docker socket proxy: %s", err)
+			//}
 		}
 
 		//serviceOptions := types.ServiceCreateOptions{}
@@ -689,7 +689,7 @@ func initializeImages() {
 	ctx := context.Background()
 
 	if appSdkVersion == "" {
-		appSdkVersion = "0.8.97"
+		appSdkVersion = "1.0.0"
 		log.Printf("[WARNING] SHUFFLE_APP_SDK_VERSION not defined. Defaulting to %s", appSdkVersion)
 	}
 

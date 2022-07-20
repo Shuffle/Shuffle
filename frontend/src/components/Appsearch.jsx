@@ -175,7 +175,7 @@ const WorkflowSearch = props => {
 							//})
 						}}>
 							<div style={{display: "flex"}}>
-								{/*<img alt={data.name} src={data.image_url} style={{width: "100%", maxWidth: 30, minWidth: 30, minHeight: 30, maxHeight: 30, display: "block", }} />*/}
+								<img alt={data.name} src={data.image_url} style={{width: "100%", maxWidth: 30, minWidth: 30, minHeight: 30, maxHeight: 30, display: "block", }} />
 								<Typography variant="body1" style={{marginTop: 2, marginLeft: 10, }}>
 									{parsedname}
 								</Typography>
@@ -193,7 +193,7 @@ const WorkflowSearch = props => {
 
 	return (
 		<div style={{width: "100%", textAlign: "center", position: "relative", height: "100%",}}>
-			<InstantSearch searchClient={searchClient} indexName="workflows">
+			<InstantSearch searchClient={searchClient} indexName="appsearch">
 				{/* showSearch === false ? null : 
 					<div style={{maxWidth: 450, margin: "auto", }}>
 						<CustomSearchBox />

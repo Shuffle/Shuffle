@@ -37,7 +37,8 @@ const chipStyle = {
 
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 const SearchField = props => {
-	const { serverside, } = props
+	const { serverside, userdata } = props
+
 	const theme = useTheme();
 	let navigate = useNavigate();
 	const borderRadius = 3
@@ -227,6 +228,7 @@ const SearchField = props => {
 											timestamp: timestamp,
 											queryID: hit.__queryID,
 											positions: [hit.__position],
+											userToken: userdata === undefined || userdata === null || userdata.id === undefined ? "unauthenticated" : userdata.id,
 										}
 									])
 

@@ -43,6 +43,7 @@ const liquidFilters = [
 	{"name": "Size", "value": "size", "example": ""},
 	{"name": "Date", "value": `date: "%Y%M%d"`, "example": `{{ "now" | date: "%s" }}`},
 	{"name": "Escape String", "value": `{{ \"\"\"'string with weird'" quotes\"\"\" | escape_string }}`, "example": ``},
+	{"name": "Flatten", "value": `flatten`, "example": `{{ [1, [1, 2], [2, 3, 4]] | flatten }}`},
 ]
 
 const mathFilters = [

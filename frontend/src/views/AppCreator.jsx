@@ -1660,7 +1660,7 @@ const AppCreator = (defaultprops) => {
       data.info["contact"] = basedata.info.contact;
     } else if (contact === "") {
       data.info["contact"] = {
-        name: "@shuffle_platform",
+        name: "@Anonymous Shuffle User",
         url: "https://twitter.com/shuffleio",
         email: "support@shuffler.io",
       };

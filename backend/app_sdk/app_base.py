@@ -127,11 +127,23 @@ def json_escape(a):
     a = str(a)
     return a.replace("\\\'", "\'", -1).replace("\\\"", "\"", -1).replace("'", "\\\\\'", -1).replace("\"", "\\\\\"", -1)
 
+@shuffle_filters.register
+def escape_json(a):
+    a = str(a)
+    return a.replace("\\\'", "\'", -1).replace("\\\"", "\"", -1).replace("'", "\\\\\'", -1).replace("\"", "\\\\\"", -1)
+
 # By default using json escape to add all backslashes
 @shuffle_filters.register
 def escape(a):
     a = str(a)
     return json_escape(a)
+
+@shuffle_filters.register
+def flatten(a):
+    a = list(a)
+
+    flat_list = [a for xs in xss for a in xs]
+    return flat_list
 
 #print(standard_filter_manager.filters)
 #print(shuffle_filters.filters)

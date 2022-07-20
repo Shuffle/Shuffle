@@ -1318,6 +1318,7 @@ const ParsedAction = (props) => {
               const paramcheck = selectedAction.parameters.find(
                 (param) => param.name === "body"
               );
+
               if (paramcheck !== undefined && paramcheck !== null) {
                 if (
                   paramcheck["value_replace"] !== undefined &&
@@ -1459,7 +1460,7 @@ const ParsedAction = (props) => {
                     description: openApiFieldDesc,
                     example: "",
                     id: "",
-                    multiline: false,
+                    multiline: true,
                     name: tmpitem,
                     options: null,
                     required: false,
@@ -1507,6 +1508,28 @@ const ParsedAction = (props) => {
 						if (data !== undefined && data !== null && data.value !== undefined && data.value !== null && data.value.length > 0) {
 							baseHelperText = calculateHelpertext(data.value)
 						}
+
+
+            var tmpitem = data.name.valueOf();
+            if (data.name.startsWith("${") && data.name.endsWith("}")) {
+              tmpitem = tmpitem.slice(2, data.name.length - 1);
+            }
+
+            if (tmpitem === "from_shuffle") {
+							tmpitem = "from"
+						}
+
+            tmpitem = (
+              tmpitem.charAt(0).toUpperCase() + tmpitem.substring(1)
+            ).replaceAll("_", " ");
+
+            if (tmpitem === "Username basic") {
+              tmpitem = "Username"
+            } else if (tmpitem === "Password basic") {
+              tmpitem = "Password"
+						}
+
+						multiline = data.name.startsWith("${") && data.name.endsWith("}") ? true : multiline
 						
             var datafield = (
               <TextField
@@ -1564,7 +1587,7 @@ const ParsedAction = (props) => {
                     </InputAdornment>
                   ),
                 }}
-                multiline={multiline}
+                multiline={data.name.startsWith("${") && data.name.endsWith("}") ? true : multiline}
                 helperText={returnHelperText(data.name, data.value)}
                 onClick={() => {
                   console.log("Clicked field: ", clickedFieldId, data.name)
@@ -1597,7 +1620,7 @@ const ParsedAction = (props) => {
 									}
                 }}
                 id={clickedFieldId}
-                rows={rows}
+                rows={data.name.startsWith("${") && data.name.endsWith("}") ? 2 : rows}
                 color="primary"
                 defaultValue={data.value}
                 //value={data.value}
@@ -1631,13 +1654,8 @@ const ParsedAction = (props) => {
                     >
                       {openApiHelperText}
                     </span>
-                  ) : data.name.startsWith("${") && data.name.endsWith("}") ? (
-                    <span
-                      style={{ color: "white", marginBottom: 5, marginLeft: 5 }}
-                    >
-                      OpenAPI helperfield
-                    </span>
-                  ) : null
+                  ) : data.name.startsWith("${") && data.name.endsWith("}") ? 
+										null : null	
                 }
                 onBlur={(event) => {
 									baseHelperText = calculateHelpertext(event.target.value)
@@ -2173,26 +2191,6 @@ const ParsedAction = (props) => {
                 </Menu>
               );
             };
-
-            var tmpitem = data.name.valueOf();
-            if (data.name.startsWith("${") && data.name.endsWith("}")) {
-              tmpitem = tmpitem.slice(2, data.name.length - 1);
-            }
-
-            if (tmpitem === "from_shuffle") {
-							tmpitem = "from"
-						}
-
-            tmpitem = (
-              tmpitem.charAt(0).toUpperCase() + tmpitem.substring(1)
-            ).replaceAll("_", " ");
-
-            if (tmpitem === "Username basic") {
-              tmpitem = "Username"
-            } else if (tmpitem === "Password basic") {
-              tmpitem = "Password"
-						}
-
  
             const description =
               data.description === undefined ? "" : data.description;
@@ -2535,7 +2533,7 @@ const ParsedAction = (props) => {
                 >
                   <Tooltip
                     color="primary"
-                    title="Read app docs"
+                    title="Find app documentation"
                     placement="top"
                   >
                     <DescriptionIcon style={{ color: "rgba(255,255,255,0.7)" }} />
@@ -2566,6 +2564,7 @@ const ParsedAction = (props) => {
                     </Tooltip>
                   </a>
                 </IconButton>
+								{/*
                 <IconButton
                   style={{
                     marginTop: "auto",
@@ -2598,6 +2597,28 @@ const ParsedAction = (props) => {
                     placement="top"
                   >
 										<AutoFixHighIcon style={{ color: selectedAction.run_magic_output === undefined || selectedAction.run_magic_output === null || selectedAction.run_magic_output === false ? "rgba(255,255,255,0.7)" : "#f86a3e"}} />
+                  </Tooltip>
+                </IconButton>
+								*/}
+                <IconButton
+                  style={{
+                    marginTop: "auto",
+                    marginBottom: "auto",
+                    height: 30,
+                    marginLeft: 15,
+                    paddingRight: 0,
+                  }}
+                  onClick={() => {
+                  }}
+                >
+                  <Tooltip
+                    color="primary"
+                    title={"Find related workflows"}
+                    placement="top"
+                  >
+										<a href={`https://shuffler.io/search?tab=workflows&q=${selectedAction.app_name}`} target="_blank">
+											<SearchIcon style={{ color: "rgba(255,255,255,0.7)"}} />
+										</a>
                   </Tooltip>
                 </IconButton>
 

@@ -523,7 +523,7 @@ const Header = (props) => {
 			{!isLoaded ? null : 
 				userdata.chat_disabled === true ? null : 
 				<div style={{flex: 1, marginTop: 5,}}>
-					<SearchField serverside={false} />
+					<SearchField serverside={false} userdata={userdata} />
 				</div>
 			}
       <div style={{ flex: 1, display: "flex", flexDirection: "row-reverse" }}>
@@ -629,7 +629,7 @@ const Header = (props) => {
 			{!isLoaded ? null : 
 				userdata.chat_disabled === true ? null : 
 				<div style={{flex: 1, marginTop: 5,}}>
-					<SearchField serverside={false} />
+					<SearchField serverside={false} userdata={userdata} />
 				</div>
 			}
       <div

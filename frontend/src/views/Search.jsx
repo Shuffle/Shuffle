@@ -146,16 +146,16 @@ const Search = (props) => {
 					/>
 				</Tabs>
 				{curTab === 0 ? 
-					<AppGrid maxRows={3} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile} />
+					<AppGrid maxRows={3} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile} userdata={userdata} />
 				: 
 				curTab === 1 ?
-					<WorkflowGrid maxRows={3} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile} />
+					<WorkflowGrid maxRows={3} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile}  userdata={userdata} />
 				:
 				curTab === 2 ?
-					<DocsGrid maxRows={3} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile} />
+					<DocsGrid maxRows={3} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile}  userdata={userdata} />
 				: 
 				curTab === 3 ?
-					<CreatorGrid maxRows={3} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile} />
+					<CreatorGrid maxRows={3} showSuggestion={true} globalUrl={globalUrl} isMobile={isMobile}  userdata={userdata} />
 				: 
 				null}
 			</div>
