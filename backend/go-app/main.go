@@ -1389,6 +1389,7 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 			Value:      Userdata.Session,
 			Expiration: expiration.Unix(),
 		})
+
 		loginData = fmt.Sprintf(`{"success": true, "cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]}`, Userdata.Session, expiration.Unix())
 		newData, err := json.Marshal(returnValue)
 		if err == nil {

@@ -5,6 +5,7 @@ import {
 	Grid, 
 	Container,
   Fade,
+	Typography, 
 } from '@mui/material';
 import theme from '../theme';
 import { useNavigate, Link } from "react-router-dom";
@@ -68,21 +69,26 @@ const Welcome = (props) => {
 							</div>
             </Grid>
 						{frameworkData === undefined || window.location.href.includes("tab=3") ? null :
-							<Fade>
-								<DetectionFramework
-										inputUsecase={inputUsecase}
-										frameworkData={frameworkData}
-										selectedOption={"Draw"}
-										showOptions={false}
-										isLoaded={true}
-										isLoggedIn={true}
-										globalUrl={globalUrl}
-										size={0.8}
-										color={theme.palette.platformColor}
-										discoveryWrapper={discoveryWrapper}
-										setDiscoveryWrapper={setDiscoveryWrapper}
-								/>
-							</Fade>
+							<div style={{marginTop: 25}}>
+								<Typography variant="h6" style={{textAlign: "center", marginBottom: 25, }}>
+									App Framework
+								</Typography>
+								<Fade>
+										<DetectionFramework
+												inputUsecase={inputUsecase}
+												frameworkData={frameworkData}
+												selectedOption={"Draw"}
+												showOptions={false}
+												isLoaded={true}
+												isLoggedIn={true}
+												globalUrl={globalUrl}
+												size={0.8}
+												color={theme.palette.platformColor}
+												discoveryWrapper={discoveryWrapper}
+												setDiscoveryWrapper={setDiscoveryWrapper}
+										/>
+								</Fade>
+							</div>
 						}
 				</Grid>
     )

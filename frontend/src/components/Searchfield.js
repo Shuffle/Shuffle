@@ -54,9 +54,7 @@ const SearchField = props => {
 		return null
 	}
 
-  const isCloud =
-    window.location.host === "localhost:3002" ||
-    window.location.host === "shuffler.io";
+  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
 
 	if (window.location.pathname !== oldPath) {
 		setSearchOpen(false)
@@ -204,6 +202,7 @@ const SearchField = props => {
 							const appGroup = hit.action_references === undefined || hit.action_references === null ? [] : hit.action_references
 							const avatar = baseImage
 
+							console.log("CLOUD: ", isCloud)
 							var parsedUrl = isCloud ? `/workflows/${hit.objectID}` : `https://shuffler.io/workflows/${hit.objectID}`
 							parsedUrl += `?queryID=${hit.__queryID}`
 

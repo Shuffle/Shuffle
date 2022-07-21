@@ -2160,7 +2160,7 @@ const GettingStarted = (props) => {
 							})
 						}
 					}}>
-						<Link to="/detectionframework" style={{textDecoration: "none", color: "#f86a3e",}}>Find relevant apps</Link> and start your automation journey
+						<Link to="/welcome?tab=2" style={{textDecoration: "none", color: "#f86a3e",}}>Find relevant apps</Link> and start your automation journey
 					</Typography>
 				), 
 				tutorial: "find_integrations",

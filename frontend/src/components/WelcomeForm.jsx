@@ -110,7 +110,7 @@ const WelcomeForm = (props) => {
 				"user_id": userId,
 			}
 
-			const url = `${globalUrl}/api/v1/updateuser`
+			const url = `${globalUrl}/api/v1/users/updateuser`
 			fetch(url, {
 				mode: "cors",
 				method: "PUT",
@@ -139,7 +139,7 @@ const WelcomeForm = (props) => {
 			});
 		}
 
-		const sendOrgUpdate = (orgname, company_type, orgId) => {
+		const sendOrgUpdate = (orgname, company_type, orgId, priority) => {
 			var data = {
 				org_id: orgId,
 			};
@@ -150,6 +150,10 @@ const WelcomeForm = (props) => {
 
 			if (company_type.length > 0) {
 				data.company_type = company_type 
+			}
+
+			if (priority.length > 0) {
+				data.priority = priority
 			}
 
 			const url = globalUrl + `/api/v1/orgs/${orgId}`;
@@ -222,7 +226,7 @@ const WelcomeForm = (props) => {
 					navigate(`/welcome?tab=2`)
 		
 					if (userdata.active_org !== undefined && userdata.active_org.id !== undefined && userdata.active_org.id !== null && userdata.active_org.id.length > 0) {
-						sendOrgUpdate(orgName, orgType, userdata.active_org.id) 
+						sendOrgUpdate(orgName, orgType, userdata.active_org.id, "") 
 					}
 
 					if (userdata.id !== undefined && userdata.id !== null && userdata.id.length > 0) {
@@ -294,7 +298,7 @@ const WelcomeForm = (props) => {
 		}
 
 		const newButtonStyle = {
-			padding: 25, 
+			padding: 22, 
 			flex: 1, 
 			margin: buttonMargin,
 			minWidth: buttonWidth, 
@@ -306,6 +310,11 @@ const WelcomeForm = (props) => {
             case 0:
                 return (
                     <Grid container spacing={1} style={{width: "100%", marginTop: 20, minHeight: sizing, maxHeight: sizing, }}>
+											{/*isCloud ? null :
+												<Typography variant="body1" style={{marginLeft: 8, marginTop: 10, marginRight: 30, }} color="textSecondary">
+														This data will be used within the product and NOT be shared unless <a href="https://shuffler.io/docs/organizations#cloud_synchronization" target="_blank" rel="norefferer" style={{color: "#f86a3e", textDecoration: "none"}}>cloud synchronization</a> is configured.
+													</Typography>
+											*/}
 											<Typography variant="body1" style={{marginLeft: 8, marginTop: 10, marginRight: 30, }} color="textSecondary">
 												We need some more information in order to understand how we best can help you find relevant Usecases in Shuffle. Giving us this info is optional, but encouraged.
 											</Typography> 
@@ -384,8 +393,10 @@ const WelcomeForm = (props) => {
                 return (
                     <div style={{minHeight: sizing, maxHeight: sizing, marginTop: 20,}}>
 												<Typography variant="body1" style={{marginLeft: 8, marginTop: 25, marginRight: 30, marginBottom: 0, }} color="textSecondary">
-													Find the most relevant apps, then we'll help you find the most relevant workflows
+													Find your apps, then we'll help you find relevant workflows. Can't find what you're looking for? Contact support: <a href="mailto:support@shuffler.io" style={{color: "#f86a3e", textDecoration: "none"}}>support@shuffler.io</a>
 												</Typography>
+												{/*The app framework helps us access and authenticate the most important APIs for you. */}
+
 												{/*
                         <Grid item xs={10}>
                             <FormControl fullWidth={true}>
@@ -461,27 +472,14 @@ const WelcomeForm = (props) => {
                 )
             case 2:
                 return (
-                    <div style={{display: "flex", marginTop: 25, width: 1366, minHeight: sizing, maxHeight: sizing, }}>
-                        <Grid item xs={10} style={{width: "100%", flex: 6, }}>
-                            <Typography variant="body1" style={{}} color="textSecondary">
-															What processes are you interested in? This will help us suggest relevant Workflows.
+                    <div style={{display: "flex", marginTop: 25, width: 1200, minHeight: sizing, maxHeight: sizing, }}>
+                        <Grid item xs={10} style={{width: "100%", flex: 5, }}>
+														<Typography variant="body1" style={{marginLeft: 8, marginTop: 0, marginRight: 30, marginBottom: 0, maxWidth: 500, }} color="textSecondary">
+															What usecases are you interested in? This will help us suggest relevant Workflows.
 														</Typography>
 
                             <Grid item xs={5} style={{marginTop: 15, display: "flex", flexDirection: "column", width: "100%",}}>
-															<Button variant={defaultSearch === "Phishing" ? "contained" : "outlined"} startIcon={<EmailIcon />} style={newButtonStyle} onClick={() => {
-																console.log("Plus the email comms tool")
-																setDefaultSearch("Phishing")
-																setSelectionOpen(false)
-
-																setTimeout(function(){
-																	setSelectionOpen(true)
-																}, 150)
-															}}>
-																	Phishing
-															</Button>
 															<Button variant={defaultSearch === "Enrichment" ? "contained" : "outlined"} startIcon={<SearchIcon />} style={newButtonStyle}  onClick={() => {
-																	console.log("Plus the Intel tool")
-
 																	setDefaultSearch("Enrichment")
 
 																	setSelectionOpen(false)
@@ -489,31 +487,47 @@ const WelcomeForm = (props) => {
 																	setTimeout(function(){
 																		setSelectionOpen(true)
 																	}, 150)
+
+																	sendOrgUpdate("", "", userdata.active_org.id, "2. Enrich") 
 																}}>
 																	Enrichment
 															</Button>
-															<Button variant={defaultSearch === "Detection" ? "contained" : "outlined"} startIcon={<NewReleasesIcon />} style={newButtonStyle}  onClick={() => {
-																console.log("Plus the siem tool")
+															<Button variant={defaultSearch === "Phishing" ? "contained" : "outlined"} startIcon={<EmailIcon />} style={newButtonStyle} onClick={() => {
+																setDefaultSearch("Phishing")
+																setSelectionOpen(false)
 
+																setTimeout(function(){
+																	setSelectionOpen(true)
+																}, 150)
+
+																sendOrgUpdate("", "", userdata.active_org.id, "Email management") 
+															}}>
+																	Phishing
+															</Button>
+															<Button disabled={true} variant={defaultSearch === "Detection" ? "contained" : "outlined"} startIcon={<NewReleasesIcon />} style={newButtonStyle}  onClick={() => {
 																setDefaultSearch("Detection")
 																setSelectionOpen(false)
 
 																setTimeout(function(){
 																	setSelectionOpen(true)
 																}, 150);
+
+																sendOrgUpdate("", "", userdata.active_org.id, "3. Detect") 
 															}}>
 																	Detection
 															</Button>
-															{/*
-															<Button variant="outlined" startIcon={<NewReleasesIcon />} style={{padding: 10, flex: 1, minWidth: buttonWidth, maxWidth: buttonWidth,  }} onClick={() => {
-																console.log("Plus the edr tool")
-
+															<Button disabled={true} variant={defaultSearch === "Response" ? "contained" : "outlined"} startIcon={<NewReleasesIcon />} style={newButtonStyle} onClick={() => {
 																setDefaultSearch("Response")
-																setSelectionOpen(true)
+																setSelectionOpen(false)
+
+																setTimeout(function(){
+																	setSelectionOpen(true)
+																}, 150);
+
+																sendOrgUpdate("", "", userdata.active_org.id, "4. Respond") 
 															}}>
 																	Response
 															</Button>
-															*/}
                             </Grid>
                         </Grid>
 												{/*
@@ -531,7 +545,7 @@ const WelcomeForm = (props) => {
 														/>
                         </Grid>
 												*/}
-												<div style={{marginTop: 15, flex: 5, }}>
+												<div style={{marginTop: 15, flex: 6, }}>
 													{selectionOpen === true ?
 														<WorkflowSearch
 															ConfiguredHits={NewHits}
@@ -578,11 +592,6 @@ const WelcomeForm = (props) => {
 							/>
             : null*/}
 						<div>
-						{isCloud ? null :
-							<Typography>
-								This data will be used within the product and NOT be shared unless <a href="https://shuffler.io/docs/organizations#cloud_synchronization" target="_blank" rel="norefferer" style={{color: "#f86a3e", textDecoration: "none"}}>cloud synchronization</a> is configured.
-							</Typography>
-						}
                 {activeStep === steps.length ? (
                     <div paddingTop="20px">
                         You Will be Redirected to getting Start Page Wait for 5-sec.
