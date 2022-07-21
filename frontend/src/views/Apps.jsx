@@ -1456,7 +1456,7 @@ const Apps = (props) => {
             </div>
             {isCloud ? null : (
               <span>
-                {props.userdata === undefined || props.userdata === null || props.userdata.role !== "admin" || isLoading ? null : (
+                {userdata === undefined || userdata === null || isLoading ? null : (
                   <Tooltip
                     title={"Reload apps locally"}
                     style={{ marginTop: "28px", width: "100%" }}
@@ -1481,7 +1481,7 @@ const Apps = (props) => {
                   </Tooltip>
                 )}
 
-                {props.userdata === undefined || props.userdata === null || props.userdata.role !== "admin" ? null : 
+                {userdata === undefined || userdata === null || userdata.role !== "admin" ? null : 
 									<Tooltip
 										title={"Download from Github"}
 										style={{ marginTop: "28px", width: "100%" }}
