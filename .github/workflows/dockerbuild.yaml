@@ -32,18 +32,17 @@ jobs:
            version: nightly
            experimental: true 
     steps:
-      -
-        name: Checkout
+      - name: Checkout
         uses: actions/checkout@v2
-      -
-        name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
-      -
-        name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
-      -
-        name: Login to DockerHub
-        uses: docker/login-action@v1 
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -64,15 +63,20 @@ jobs:
           #,linux/386 - no node image I guess?
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.app }}:${{ matrix.version }}
+
+      - name: Login to Ghcr 
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: frikky
+          password: ${{ secrets.GHCR_PW }} 
+
       - name: Ghcr Build and push
         id: docker_build
         uses: docker/build-push-action@v2
         env:
           BUILDX_NO_DEFAULT_LOAD: true
         with:
-          registry: ghcr.io
-          username: "frikky"
-          password: ${{ secrets.GHCR_PW }}
           context: ${{ matrix.path }}/
           file: ${{ matrix.path }}/Dockerfile          
           platforms: linux/amd64,linux/arm64

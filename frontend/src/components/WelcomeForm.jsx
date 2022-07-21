@@ -580,7 +580,7 @@ const WelcomeForm = (props) => {
 						<div>
 						{isCloud ? null :
 							<Typography>
-								This data will be used within the product and NOT be shared unless <a href="" target="_blank" rel="norefferer">cloud synchronization</a> is configured.
+								This data will be used within the product and NOT be shared unless <a href="https://shuffler.io/docs/organizations#cloud_synchronization" target="_blank" rel="norefferer" style={{color: "#f86a3e", textDecoration: "none"}}>cloud synchronization</a> is configured.
 							</Typography>
 						}
                 {activeStep === steps.length ? (

@@ -1362,7 +1362,18 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 	}
 
 	// FIXME - have timeout here
+	tutorialsFinished := Userdata.PersonalInfo.Tutorials
+	returnValue := shuffle.HandleInfo{
+		Success:   true,
+		Tutorials: tutorialsFinished,
+	}
+
 	loginData := `{"success": true}`
+	newData, err := json.Marshal(returnValue)
+	if err == nil {
+		loginData = string(newData)
+	}
+
 	if len(Userdata.Session) != 0 {
 		log.Println("[INFO] User session already exists - resetting it")
 		expiration := time.Now().Add(3600 * time.Second)
@@ -1373,7 +1384,16 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 			Expires: expiration,
 		})
 
+		returnValue.Cookies = append(returnValue.Cookies, shuffle.SessionCookie{
+			Key:        "session_token",
+			Value:      Userdata.Session,
+			Expiration: expiration.Unix(),
+		})
 		loginData = fmt.Sprintf(`{"success": true, "cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]}`, Userdata.Session, expiration.Unix())
+		newData, err := json.Marshal(returnValue)
+		if err == nil {
+			loginData = string(newData)
+		}
 		//log.Printf("SESSION LENGTH MORE THAN 0 IN LOGIN: %s", Userdata.Session)
 
 		err = shuffle.SetSession(ctx, Userdata, Userdata.Session)
@@ -1410,7 +1430,17 @@ func handleLogin(resp http.ResponseWriter, request *http.Request) {
 			return
 		}
 
+		returnValue.Cookies = append(returnValue.Cookies, shuffle.SessionCookie{
+			Key:        "session_token",
+			Value:      sessionToken,
+			Expiration: expiration.Unix(),
+		})
+
 		loginData = fmt.Sprintf(`{"success": true, "cookies": [{"key": "session_token", "value": "%s", "expiration": %d}]}`, sessionToken, expiration.Unix())
+		newData, err := json.Marshal(returnValue)
+		if err == nil {
+			loginData = string(newData)
+		}
 	}
 
 	log.Printf("[INFO] %s SUCCESSFULLY LOGGED IN with session %s", data.Username, Userdata.Session)
