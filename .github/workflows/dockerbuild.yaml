@@ -23,6 +23,14 @@ jobs:
            path: functions/onprem/orborus
            version: nightly
            experimental: true 
+         - app: worker 
+           path: functions/onprem/worker
+           version: nightly
+           experimental: true 
+         - app: app_sdk 
+           path: backend/app_sdk
+           version: nightly
+           experimental: true 
     steps:
       -
         name: Checkout
