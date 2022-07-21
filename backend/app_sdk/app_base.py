@@ -3391,12 +3391,22 @@ class AppBase:
                 except TypeError as e:
                     self.logger.info("[ERROR] TypeError issue: %s" % e)
                     self.action_result["status"] = "FAILURE" 
-                    self.action_result["result"] = "TypeError: %s" % str(e)
+                    self.action_result["result"] = json.dumps({
+                        "success": False, 
+                        "reason": f"Typeerror. Most likely due to a list that should've been a string. See details for more info.",
+                        "details": e,
+                    })
+                    #self.action_result["result"] = "TypeError: %s" % str(e)
             else:
                 self.logger.info("[DEBUG] Function %s doesn't exist?" % action["name"])
                 self.logger.error(f"[ERROR] App {self.__class__.__name__}.{action['name']} is not callable")
                 self.action_result["status"] = "FAILURE" 
-                self.action_result["result"] = "Function %s is not callable." % actionname
+                #self.action_result["result"] = "Function %s is not callable." % actionname
+
+                self.action_result["result"] = json.dumps({
+                    "success": False, 
+                    "reason": f"Function %s doesn't exist." % actionname,
+                })
 
         # https://ptb.discord.com/channels/747075026288902237/882017498550112286/882043773138382890
         except (requests.exceptions.RequestException, TimeoutError) as e:
