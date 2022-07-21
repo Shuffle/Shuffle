@@ -98,7 +98,7 @@ const WorkflowSearch = props => {
 					type="search"
 					color="primary"
 					defaultValue={defaultSearch}
-					placeholder={`Find ${defaultSearch} Apps...`}
+					placeholder={`Find ${defaultSearch} Workflows...`}
 					id="shuffle_workflow_search_field"
 					onChange={(event) => {
 						refine(event.currentTarget.value)

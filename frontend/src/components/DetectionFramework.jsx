@@ -529,25 +529,40 @@ const Framework = (props) => {
 	const [newSelectedApp, setNewSelectedApp] = React.useState({})
 	const [defaultSearch, setDefaultSearch] = React.useState("")
 	const [animationStarted, setAnimationStarted] = React.useState(false)
+	const [paperTitle, setPaperTitle] = React.useState("")
 	const scale = size === undefined ? 1 : size > 5 ? 3 : size
 
   const alert = useAlert()
 
 	useEffect(() => {
-		console.log("DISCWRAP CHANG: ", discoveryWrapper)
-
+		//console.log("DISCWRAP CHANG: ", discoveryWrapper)
 		if (discoveryWrapper === undefined || discoveryWrapper.id === "SHUFFLE" || discoveryWrapper.id === undefined || cy === undefined) {
+			setDiscoveryData({})
+
+			if (cy !== undefined) {
+				cy.nodes().unselect()
+			}
+
 			return
 		}
+			
 
 		// Find the node and click it?
-		const nodes = cy.nodes().jsons()
-		for (var key in nodes) {
-			const node = nodes[key]
-			console.log("NOD: ", node)
+		setTimeout(() => {
+			const nodes = cy.nodes().jsons()
+			for (var key in nodes) {
+				const node = nodes[key]
+				//console.log("NOD: ", node.data, discoveryWrapper.id)
+				if (node.data.id === discoveryWrapper.id) {
+					const tmpnode = cy.getElementById(node.data.id)
+					if (tmpnode !== undefined) {
+						tmpnode.select()
+					}
 
-      //cy.getElementById(node.data.id).click();
-		}
+					setPaperTitle(discoveryWrapper.id)
+				}
+			}
+		}, 50,)
 		//setDiscoveryData(discoveryWrapper)
 	}, [discoveryWrapper])
 
@@ -638,6 +653,11 @@ const Framework = (props) => {
 
 		if (newSelectedApp.objectID === undefined || newSelectedApp.objectID === undefined  || newSelectedApp.objectID.length === 0) {
 			return
+		}
+
+		if (paperTitle.length > 0) {
+			setDiscoveryWrapper({})
+			setSelectionOpen(false)
 		}
 
 		const submitValue = {
@@ -1498,7 +1518,15 @@ const Framework = (props) => {
 
   		{
 				Object.getOwnPropertyNames(discoveryData).length > 0 ? 
-					<Paper style={{width: 250, maxHeight: 400, overflow: "hidden", zIndex: 12500, padding: 25, paddingRight: 35, backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.2)", position: "absolute", top: 50, left: 50, }}>
+					<Paper style={{width: 275, maxHeight: 400, overflow: "hidden", zIndex: 12500, padding: 25, paddingRight: 35, backgroundColor: theme.palette.surfaceColor, border: "1px solid rgba(255,255,255,0.2)", position: "absolute", top: 50, left: 50, }}>
+						{paperTitle.length > 0 ? 
+							<span>
+								<Typography variant="h6" style={{textAlign: "center"}}>
+									{paperTitle}
+								</Typography>
+								<Divider style={{marginTop: 5, marginBottom: 5 }} />
+							</span>
+						: null}
 						<Tooltip
 							title="Close window"
 							placement="top"
@@ -1513,6 +1541,7 @@ const Framework = (props) => {
 									e.preventDefault();
 									setDiscoveryData({})
 									setDefaultSearch("")
+									setPaperTitle("")
 								}}
 							>
 								<CloseIcon style={{ color: "white", height: 15, width: 15, }} />
@@ -1586,7 +1615,7 @@ const Framework = (props) => {
 						<div>
 							{discoveryData !== undefined && discoveryData.name !== undefined && discoveryData.name !== null && discoveryData.name.length > 0 ? 
 								<span>
-									<Typography variant="body2" color="textSecondary" style={{marginTop: 10, marginBottom: 10, }}>
+									<Typography variant="body2" color="textSecondary" style={{marginTop: 10, marginBottom: 10, maxHeight: 75, overflowY: "auto", overflowX: "hidden", }}>
 										{discoveryData.description}
 									</Typography>
 									{/*isCloud && defaultSearch !== undefined && defaultSearch.length > 0 ? 
@@ -1622,13 +1651,13 @@ const Framework = (props) => {
 							}
 						</div>
 						<div style={{marginTop: 10}}>
-						{selectionOpen ? 
-							<AppSearch
-								defaultSearch={defaultSearch}
-								newSelectedApp={newSelectedApp}
-								setNewSelectedApp={setNewSelectedApp}
-							/>
-						: null}
+							{selectionOpen ? 
+								<AppSearch
+									defaultSearch={defaultSearch}
+									newSelectedApp={newSelectedApp}
+									setNewSelectedApp={setNewSelectedApp}
+								/>
+							: null}
 						</div>
 					</Paper>
 					: null

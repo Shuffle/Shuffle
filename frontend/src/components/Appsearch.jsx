@@ -14,6 +14,9 @@ import { Grid, Paper, TextField, ButtonBase, InputAdornment, Typography, Button,
 const searchClient = algoliasearch("JNSS5CFDZZ", "db08e40265e2941b9a7d8f644b6e5240")
 const WorkflowSearch = props => {
 	const { maxRows, showName, showSuggestion, isMobile, globalUrl, parsedXs, newSelectedApp, setNewSelectedApp, defaultSearch, showSearch, ConfiguredHits }  = props
+
+  const isCloud = window.location.host === "localhost:3002" || window.location.host === "shuffler.io";
+
 	const rowHandler = maxRows === undefined || maxRows === null ? 50 : maxRows
 	const xs = parsedXs === undefined || parsedXs === null ? 12 : parsedXs
 	const theme = useTheme();
@@ -164,15 +167,17 @@ const WorkflowSearch = props => {
 						}} onMouseOut={() => {
 							setMouseHoverIndex(-1)
 						}} onClick={() => {
-							setNewSelectedApp(data)
-							//if (data.objectID !== data.objectID) {
-							//}
+							if (setNewSelectedApp !== undefined) {
+								setNewSelectedApp(data)
+							}
 
-							//ReactGA.event({
-							//	category: "app_search",
-							//	action: `app_${parsedname}_${data.id}_click`,
-							//	label: "",
-							//})
+							if (isCloud) {
+								ReactGA.event({
+									category: "app_search",
+									action: `app_${parsedname}_${data.id}_personalize_click`,
+									label: "",
+								})
+							}
 						}}>
 							<div style={{display: "flex"}}>
 								<img alt={data.name} src={data.image_url} style={{width: "100%", maxWidth: 30, minWidth: 30, minHeight: 30, maxHeight: 30, display: "block", }} />

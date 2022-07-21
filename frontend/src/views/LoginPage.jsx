@@ -185,8 +185,11 @@ const LoginDialog = (props) => {
               }
 
               setIsLoggedIn(true);
+							if (!responseJson.tutorials.includes("welcome")) {
+								console.log("RUN Welcome!!")
+								window.location.pathname = "/welcome" 
+							}
 
-              //navigate("/workflows")
 							window.location.href = "/workflows"
             }
           })
