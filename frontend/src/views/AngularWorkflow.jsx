@@ -1259,7 +1259,7 @@ const AngularWorkflow = (defaultprops) => {
     	        }
 
     	        for (var key in workflow.errors) {
-    	          alert.info(workflow.errors[key]);
+    	          //alert.info(workflow.errors[key]);
     	        }
 
     	        setWorkflow(workflow);

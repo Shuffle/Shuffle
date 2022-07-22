@@ -1302,6 +1302,8 @@ const ParsedAction = (props) => {
 
 							if (data.value.length === 0) {
               	if (data.name.toLowerCase() === "headers") {
+									console.log("Should show headers field instead with + and -!")
+
 									data.value = data.example
 								}
 							}
@@ -1665,6 +1667,198 @@ const ParsedAction = (props) => {
                 }}
               />
             );
+		
+						// Finds headers from a string to be used for autocompletion
+						const findHeaders = (inputdata) => {
+							const splitdata = inputdata.split("\n")
+
+							var foundnewline = false
+							var allValues = []
+							for (var key in splitdata) {
+								const line = splitdata[key]
+								if (line === "") {
+									foundnewline = true 
+									continue
+								}
+
+								const splitvalue = ""
+								if (line.includes(":")) {
+									splitvalue = ":"
+								}
+
+								if (line.includes("=")) {
+									splitvalue = "="
+								}
+
+								if (splitvalue.length === 0){
+									allValues.push({
+										key: line,
+										value: "",
+									})
+									continue
+								}
+
+								const splitKeys = line.split(splitvalue)
+								if (splitKeys.length > 1) {
+									allValues.push({
+										key: splitKeys[0].trim(),
+										value: splitKeys[1].trim(),
+									})
+								} else {
+									console.log("No keys for ", line)
+								}
+							}
+
+							// Just add one
+							if (foundnewline) {
+								allValues.push({
+									key: "",
+									value: "",
+								})
+							}
+
+							return allValues
+						}
+
+						if (data.name.toLowerCase() === "headers") {
+							//var tmpheaders = findHeaders(data.value)
+							var tmpheaders = findHeaders(selectedActionParameters[count].value)
+							datafield = 
+								<div>
+									{tmpheaders.map((inputdata, index) => {
+										const oldkey = inputdata.key
+										const oldval = inputdata.value
+
+										return (
+											<span key={index}>
+												<div style={{display: "flex"}}>
+													<TextField
+														placeholder="Key"
+														style={{flex: 5}}
+														defaultValue={inputdata.key}
+														onBlur={(e) => {
+															console.log("Change from oldkey to new: ", oldkey, e.target.value)
+
+															// Find the right line to replace!
+															//const newval = selectedActionParameters[count].value.replace(oldval, e.target.value, 1)
+															const tmpsplit = selectedActionParameters[count].value.split("\n")
+															var valsplit = []
+															var add_empty = false
+															for (var key in tmpsplit) {
+																if (tmpsplit[key] === "") {
+																	add_empty = true
+																	continue
+																}
+
+																valsplit.push(tmpsplit[key])
+															}
+
+															if (add_empty) {
+																valsplit.push("")
+															}
+															console.log("Split: ", valsplit)
+
+															var newarr = []
+															for (var key in valsplit) {
+																const line = valsplit[key]
+
+																if (key == index) {
+																	if (oldkey === "") {
+																		if (line.includes("=") || line.includes(":")) {
+																			newarr.push(e.target.value + line)
+																		} else {
+																			newarr.push(e.target.value + ": " + line)
+																		}
+																	} else {
+																		newarr.push(line.replace(oldkey, e.target.value, 1))
+																	}
+
+																} else {
+																	newarr.push(line)
+																}
+															}
+
+															const newval = newarr.join("\n")
+															console.log("Fixed: ", newval)
+
+      												selectedActionParameters[count].value = newval
+      												selectedAction.parameters[count].value = newval
+      												setSelectedAction(selectedAction)
+          										setSelectedActionParameters(selectedActionParameters)
+														}}
+													/>
+													<TextField
+														placeholder="Value"
+														style={{flex: 6}}
+														defaultValue={inputdata.value}
+														onBlur={(e) => {
+															console.log("Change from oldval to new: ", oldval, e.target.value)
+
+															// Find the right line to replace!
+															//const newval = selectedActionParameters[count].value.replace(oldval, e.target.value, 1)
+															const tmpsplit = selectedActionParameters[count].value.split("\n")
+															var valsplit = []
+															var add_empty = false
+															for (var key in tmpsplit) {
+																if (tmpsplit[key] === "") {
+																	add_empty = true
+																	continue
+																}
+
+																valsplit.push(tmpsplit[key])
+															}
+
+															if (add_empty) {
+																valsplit.push("")
+															}
+															console.log("Split: ", valsplit)
+
+															var newarr = []
+															for (var key in valsplit) {
+																const line = valsplit[key]
+
+																if (key == index) {
+																	if (oldval === "") {
+																		if (line.includes("=") || line.includes(":")) {
+																			newarr.push(line + e.target.value)
+																		} else {
+																			newarr.push(line + ": " + e.target.value)
+																		}
+																	} else {
+																		newarr.push(line.replace(oldval, e.target.value, 1))
+																	}
+
+																} else {
+																	newarr.push(line)
+																}
+															}
+
+															const newval = newarr.join("\n")
+															console.log("Fixed: ", newval)
+
+      												selectedActionParameters[count].value = newval
+      												selectedAction.parameters[count].value = newval
+      												setSelectedAction(selectedAction)
+          										setSelectedActionParameters(selectedActionParameters)
+														}}
+													/>
+												</div>
+											</span>
+										)
+									})}
+									<Button variant="outlined" fullWidth onClick={() => {
+										console.log("Add header")
+
+										selectedActionParameters[count].value += "\n"
+										selectedAction.parameters[count].value += "\n"
+          					setSelectedActionParameters(selectedActionParameters)
+										setSelectedAction(selectedAction)
+										setUpdate(Math.random())
+									}}>
+										<AddIcon style={{ marginRight: 10 }} /> Add header
+									</Button>
+								</div>
+						}
 
             //console.log("FIELD VALUE: ", data.value)
             //const regexp = new RegExp("\W+\.", "g")
@@ -2223,7 +2417,6 @@ const ParsedAction = (props) => {
 
 						const buttonTitle = `Authenticate ${selectedApp.name.replaceAll("_", " ")}`
 						const hasAutocomplete = data.autocompleted === true
-						console.log("AUTOCOMPLeTe: ", hasAutocomplete)
             return (
               <div key={data.name}>
                 {hideBodyButton}
@@ -2550,8 +2743,8 @@ const ParsedAction = (props) => {
                   onClick={() => {}}
                 >
                   <a
-                    rel="norefferer"
                     href="https://shuffler.io/docs/workflows#nodes"
+                    rel="norefferer"
                     target="_blank"
                     style={{ textDecoration: "none", color: "#f85a3e" }}
                   >

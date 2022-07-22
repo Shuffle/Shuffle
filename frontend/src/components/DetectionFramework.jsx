@@ -552,13 +552,18 @@ const Framework = (props) => {
 			const nodes = cy.nodes().jsons()
 			for (var key in nodes) {
 				const node = nodes[key]
-				//console.log("NOD: ", node.data, discoveryWrapper.id)
-				if (node.data.id === discoveryWrapper.id) {
+				var newSearchName = discoveryWrapper.id.valueOf()
+				if (newSearchName === "EMAIL") {
+					newSearchName = "COMMS"
+				}
+
+				if (node.data.id === newSearchName) {
 					const tmpnode = cy.getElementById(node.data.id)
 					if (tmpnode !== undefined) {
 						tmpnode.select()
 					}
 
+					setDefaultSearch(discoveryWrapper.id)
 					setPaperTitle(discoveryWrapper.id)
 				}
 			}

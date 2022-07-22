@@ -425,7 +425,7 @@ const WelcomeForm = (props) => {
 															<Button disabled={finishedApps.includes("INTEL")} variant={defaultSearch === "INTEL" ? "contained" : "outlined"}  style={buttonStyle} startIcon={<NewReleasesIcon />} onClick={(event) => { onNodeSelect("INTEL") }} >
 																	Intel
 															</Button>
-															<Button disabled={finishedApps.includes("COMMS")} variant={defaultSearch === "COMMS" ? "contained" : "outlined"} style={buttonStyle} startIcon={<EmailIcon />} onClick={(event) => { onNodeSelect("COMMS") }} >
+															<Button disabled={finishedApps.includes("COMMS")} variant={defaultSearch === "EMAIL" ? "contained" : "outlined"} style={buttonStyle} startIcon={<EmailIcon />} onClick={(event) => { onNodeSelect("EMAIL") }} >
 																	Email
 															</Button>
                             </div>

@@ -17,10 +17,19 @@ import Checkbox from '@mui/material/Checkbox';
 import { orange } from '@mui/material/colors';
 import { isMobile } from "react-device-detect" 
 import { GetParsedPaths } from "../views/Apps.jsx";
+import NestedMenuItem from "material-ui-nested-menu-item";
 
 import {
 	FullscreenExit as FullscreenExitIcon,
-} from "@material-ui/icons";
+	Extension as ExtensionIcon, 
+  Apps as AppsIcon,
+  FavoriteBorder as FavoriteBorderIcon,
+  Schedule as ScheduleIcon,
+  FormatListNumbered as FormatListNumberedIcon,
+	SquareFoot as SquareFootIcon,
+  Circle as  CircleIcon,
+  Add as AddIcon,
+} from '@mui/icons-material';
 
 import {
 	AutoFixHigh as AutoFixHighIcon, CompressOutlined, QrCodeScannerOutlined,
@@ -38,6 +47,7 @@ import 'codemirror/theme/gruvbox-dark.css';
 import 'codemirror/theme/duotone-light.css';
 import { padding, textAlign } from '@mui/system';
 import data from '../frameworkStyle.jsx';
+import { useNavigate, Link, useParams } from "react-router-dom";
 
 const liquidFilters = [
 	{"name": "Size", "value": "size", "example": ""},
@@ -78,10 +88,21 @@ const CodeEditor = (props) => {
 	const [anchorEl3, setAnchorEl3] = React.useState(null);
 	const [mainVariables, setMainVariables] = React.useState([]);
 	const [availableVariables, setAvailableVariables] = React.useState([]);
+
+  const [menuPosition, setMenuPosition] = useState(null);
+  const [showAutocomplete, setShowAutocomplete] = React.useState(false);
+
 	const liquidOpen = Boolean(anchorEl);
 	const mathOpen = Boolean(anchorEl2);
 	const pythonOpen = Boolean(anchorEl3);
 
+	const handleMenuClose = () => {
+		setShowAutocomplete(false);
+
+		setMenuPosition(null);
+	}
+
+	let navigate = useNavigate();
 	// console.log("is it file editor? - ", isFileEditor);
 
 	useEffect(() => {
@@ -323,21 +344,61 @@ const CodeEditor = (props) => {
 		const found = input.match(/[$]{1}([a-zA-Z0-9_-]+\.?){1}([a-zA-Z0-9#_-]+\.?){0,}/g)
 		//console.log(found)
 
+		// Whelp this is inefficient af. Single loop pls
 		try{
 			// When the found array is empty.
 			for (var i = 0; i < found.length; i++) {
-				// console.log(found[i]);
+				found[i] = found[i].toLowerCase()
 
+				var valuefound = false
 				for (var j = 0; j < actionlist.length; j++) {
 					if(found[i].slice(1,).toLowerCase() === actionlist[j].autocomplete.toLowerCase()){
-						input = input.replace(found[i], JSON.stringify(actionlist[j].example));
-						// console.log(input)
-						// console.log(actionlist[j].example)
+						valuefound = true 
+						try {
+							input = input.replace(found[i], JSON.stringify(actionlist[j].example));
+						} catch (e) { 
+							input = input.replace(found[i], actionlist[j].example)
+						}
+					} else {
 					}
-					// console.log(actionlist[j].autocomplete);
+				}
+
+				if (!valuefound && availableVariables.includes(found[i])) {
+					var shouldbreak = false
+					for (var k=0; k < actionlist.length; k++){
+						var parsedPaths = []
+						if (typeof actionlist[k].example === "object") {
+							parsedPaths = GetParsedPaths(actionlist[k].example, "");
+						}
+
+						for (var key in parsedPaths) {
+							const fullpath = "$"+actionlist[k].autocomplete.toLowerCase()+parsedPaths[key].autocomplete
+							if (fullpath === found[i]) {
+								//if (actionlist[k].example === undefined) {
+								//	actionlist[k].example = "TMP"
+								//}
+
+								try {
+									input = input.replace(found[i], JSON.stringify(actionlist[k].example))
+								} catch (e) {
+									input = input.replace(found[i], actionlist[k].example)
+								}
+
+								shouldbreak = true 
+								console.log("New input: ", input)
+								break
+							}
+						}
+
+						if (shouldbreak) {
+							break
+						}
+					}
 				}
 			}
-		} catch (e) {}
+		} catch (e) {
+			console.log("Replace error: ", e)
+		}
 
 		const tmpValidation = validateJson(input.valueOf())
 		//setValidation(true)
@@ -350,6 +411,29 @@ const CodeEditor = (props) => {
 		}
 	}
 
+  const handleItemClick = (values) => {
+		if (
+			values === undefined ||
+			values === null ||
+			values.length === 0
+		) {
+			return;
+		}
+
+		var toComplete = localcodedata.trim().endsWith("$") ? values[0].autocomplete : "$" + values[0].autocomplete;
+
+		toComplete = toComplete.toLowerCase().replaceAll(" ", "_");
+		for (var key in values) {
+			if (key == 0 || values[key].autocomplete.length === 0) {
+				continue;
+			}
+
+			toComplete += values[key].autocomplete;
+		}
+
+		setlocalcodedata(localcodedata+toComplete)
+		setMenuPosition(null)
+	}
 
 	const handleClick = (item) => {
 		if (item === undefined || item.value === undefined || item.value === null) {
@@ -430,7 +514,30 @@ const CodeEditor = (props) => {
 					</DialogTitle>
 					<IconButton
 						style={{
-							marginLeft: isMobile ? "80%" : 400, 
+							marginLeft: isMobile ? "80%" : 350, 
+							height: 50, 
+							width: 50, 
+						}}
+						onClick={() => {
+							
+						}}
+					>
+						<Tooltip
+							color="primary"
+							title={"Test Liquid in the playground"}
+							placement="top"
+						>
+							<a 
+								href="https://pwwang.github.io/liquidpy/playground/"
+								rel="norefferer"
+                target="_blank"
+							>
+								<ExtensionIcon style={{color: "rgba(255,255,255,0.7)"}}/>
+							</a>
+						</Tooltip>
+					</IconButton>
+					<IconButton
+						style={{
 							height: 50, 
 							width: 50, 
 						}}
@@ -557,7 +664,264 @@ const CodeEditor = (props) => {
 						)
 					})}
 				</Menu> 
-			</div> }
+				<Button
+					id="basic-button"
+					aria-haspopup="true"
+					aria-controls={!!menuPosition ? 'basic-menu' : undefined}
+					aria-expanded={!!menuPosition ? 'true' : undefined}
+					variant="outlined"
+					style={{
+					  textTransform: "none",
+						width: 130, 
+						marginLeft: 170, 
+					}}
+					onClick={(event) => {
+						setMenuPosition({
+							top: event.pageY,
+							left: event.pageX,
+						})
+					}}
+				>
+					<AddIcon /> Autocomplete 
+				</Button>
+				<Menu
+					anchorReference="anchorPosition"
+					anchorPosition={menuPosition}
+					onClose={() => {
+						handleMenuClose();
+					}}
+					open={!!menuPosition}
+					style={{
+						color: "white",
+						marginTop: 2,
+						maxHeight: 650,
+					}}
+				>
+					{actionlist.map((innerdata) => {
+						const icon =
+							innerdata.type === "action" ? (
+								<AppsIcon style={{ marginRight: 10 }} />
+							) : innerdata.type === "workflow_variable" ||
+								innerdata.type === "execution_variable" ? (
+								<FavoriteBorderIcon style={{ marginRight: 10 }} />
+							) : (
+								<ScheduleIcon style={{ marginRight: 10 }} />
+							);
+
+						const handleExecArgumentHover = (inside) => {
+							var exec_text_field = document.getElementById(
+								"execution_argument_input_field"
+							);
+							if (exec_text_field !== null) {
+								if (inside) {
+									exec_text_field.style.border = "2px solid #f85a3e";
+								} else {
+									exec_text_field.style.border = "";
+								}
+							}
+						};
+
+						const handleActionHover = (inside, actionId) => {
+						};
+
+						const handleMouseover = () => {
+							if (innerdata.type === "Execution Argument") {
+								handleExecArgumentHover(true);
+							} else if (innerdata.type === "action") {
+								handleActionHover(true, innerdata.id);
+							}
+						};
+
+						const handleMouseOut = () => {
+							if (innerdata.type === "Execution Argument") {
+								handleExecArgumentHover(false);
+							} else if (innerdata.type === "action") {
+								handleActionHover(false, innerdata.id);
+							}
+						};
+
+						var parsedPaths = [];
+						if (typeof innerdata.example === "object") {
+							parsedPaths = GetParsedPaths(innerdata.example, "");
+						}
+
+						const coverColor = "#82ccc3"
+						//menuPosition.left -= 50
+						//menuPosition.top -= 250 
+						//console.log("POS: ", menuPosition1)
+						var menuPosition1 = menuPosition
+						if (menuPosition1 === null) {
+							menuPosition1 = {
+								"left": 0,
+								"top": 0,
+							}
+						} else if (menuPosition1.top === null || menuPosition1.top === undefined) {
+							menuPosition1.top = 0
+						} else if (menuPosition1.left === null || menuPosition1.left === undefined) {
+							menuPosition1.left = 0
+						}
+
+						//console.log("POS1: ", menuPosition1)
+
+						return parsedPaths.length > 0 ? (
+							<NestedMenuItem
+								key={innerdata.name}
+								label={
+									<div style={{ display: "flex", marginLeft: 0, }}>
+										{icon} {innerdata.name}
+									</div>
+								}
+								parentMenuOpen={!!menuPosition}
+								style={{
+									color: "white",
+									minWidth: 250,
+									maxWidth: 250,
+									maxHeight: 50,
+									overflow: "hidden",
+								}}
+								onClick={() => {
+									console.log("CLICKED: ", innerdata);
+									console.log(innerdata.example)
+									handleItemClick([innerdata]);
+								}}
+							>
+								<Paper style={{minHeight: 500, maxHeight: 500, minWidth: 275, maxWidth: 275, position: "fixed", top: menuPosition1.top-200, left: menuPosition1.left-270, padding: "10px 0px 10px 10px", backgroundColor: theme.palette.inputColor, overflow: "hidden", overflowY: "auto", border: "1px solid rgba(255,255,255,0.3)",}}>
+									<MenuItem
+										key={innerdata.name}
+										style={{
+											backgroundColor: theme.palette.inputColor,
+											marginLeft: 15,
+											color: "white",
+											minWidth: 250,
+											maxWidth: 250,
+											padding: 0, 
+											position: "relative",
+										}}
+										value={innerdata}
+										onMouseOver={() => {
+											//console.log("HOVER: ", pathdata);
+										}}
+										onClick={() => {
+											handleItemClick([innerdata]);
+										}}
+									>
+										<Typography variant="h6" style={{paddingBottom: 5}}>
+											{innerdata.name}
+										</Typography>
+									</MenuItem>
+									{parsedPaths.map((pathdata, index) => {
+										// FIXME: Should be recursive in here
+										//<VpnKeyIcon style={iconStyle} />
+										const icon =
+											pathdata.type === "value" ? (
+												<span style={{marginLeft: 9, }} />
+											) : pathdata.type === "list" ? (
+												<FormatListNumberedIcon style={{marginLeft: 9, marginRight: 10, }} />
+											) : (
+												<CircleIcon style={{marginLeft: 9, marginRight: 10, color: coverColor}}/>
+											);
+										//<ExpandMoreIcon style={iconStyle} />
+
+										const indentation_count = (pathdata.name.match(/\./g) || []).length+1
+										const baseIndent = <div style={{marginLeft: 20, height: 30, width: 1, backgroundColor: coverColor,}} />
+										//const boxPadding = pathdata.type === "object" ? "10px 0px 0px 0px" : 0
+										const boxPadding = 0 
+										const namesplit = pathdata.name.split(".")
+										const newname = namesplit[namesplit.length-1]
+										return (
+											<MenuItem
+												key={pathdata.name}
+												style={{
+													backgroundColor: theme.palette.inputColor,
+													color: "white",
+													minWidth: 250,
+													maxWidth: 250,
+													padding: boxPadding, 
+												}}
+												value={pathdata}
+												onMouseOver={() => {
+													//console.log("HOVER: ", pathdata);
+												}}
+												onClick={() => {
+													handleItemClick([innerdata, pathdata]);
+												}}
+											>
+												<Tooltip
+													color="primary"
+													title={`Ex. value: ${pathdata.value}`}
+													placement="left"
+												>
+													<div style={{ display: "flex", height: 30, }}>
+														{Array(indentation_count).fill().map((subdata, subindex) => {
+															return (
+																baseIndent
+															)
+														})}
+														{icon} {newname} 
+														{pathdata.type === "list" ? <SquareFootIcon style={{marginleft: 10, }} onClick={(e) => {
+															e.preventDefault()
+															e.stopPropagation()
+
+															console.log("INNER: ", innerdata, pathdata)
+															
+															// Removing .list from autocomplete
+															var newname = pathdata.name
+															if (newname.length > 5) {
+																newname = newname.slice(0, newname.length-5)
+															}
+
+															//selectedActionParameters[count].value += `{{ $${innerdata.name}.${newname} | size }}`
+															//selectedAction.parameters[count].value = selectedActionParameters[count].value;
+															//setSelectedAction(selectedAction);
+															//setShowDropdown(false);
+															setMenuPosition(null);
+
+															// innerdata.name
+															// pathdata.name
+															//handleItemClick([innerdata, newpathdata])
+															//console.log("CLICK LENGTH!")
+														}} /> : null}
+													</div>
+												</Tooltip>
+											</MenuItem>
+										);
+									})}
+								</Paper>
+							</NestedMenuItem>
+						) : (
+							<MenuItem
+								key={innerdata.name}
+								style={{
+									backgroundColor: theme.palette.inputColor,
+									color: "white",
+									minWidth: 250,
+									maxWidth: 250,
+									marginRight: 0,
+								}}
+								value={innerdata}
+								onMouseOver={() => handleMouseover()}
+								onMouseOut={() => {
+									handleMouseOut();
+								}}
+								onClick={() => {
+									handleItemClick([innerdata]);
+								}}
+							>
+								<Tooltip
+									color="primary"
+									title={`Value: ${innerdata.value}`}
+									placement="left"
+								>
+									<div style={{ display: "flex" }}>
+										{icon} {innerdata.name}
+									</div>
+								</Tooltip>
+							</MenuItem>
+						);
+					})}
+				</Menu>
+
+</div> }
 			<span style={{
 				border: `2px solid ${theme.palette.inputColor}`,
 				borderRadius: theme.palette.borderRadius,
@@ -579,26 +943,11 @@ const CodeEditor = (props) => {
 					onChange={(value) => {
 						setlocalcodedata(value.getValue())
 						expectedOutput(value.getValue())
-						// console.log(allVariable)
-						// console.log(value.getValue().split('\n')[value.getCursor().line])
-						// console.log(value.getCursor())
-						// console.log(value)
-						// console.log(value.getValue().indexOf('$'))
-						// console.log(value.display.input.prevInput)
+
 						if(value.display.input.prevInput.startsWith('$') || value.display.input.prevInput.endsWith('$')){
 							setEditorPopupOpen(true)
-							// console.log(findIndex(value.getValue()))
-							// console.log(findlocation(findIndex(value.getValue())))
-								// setCurrentLocation(findlocation(findIndex(value.getValue())))
-							// console.log(currentLocation)
-							// console.log(findVariables(findlocation(findIndex(value.getValue())), value.getValue()))
-							// setCurrentVariable(findVariables(findlocation(findIndex(value.getValue())), value.getValue()))
-							// console.log(actionlist)
 						}
-							// setVariableOccurences(findIndex(value.getValue()))
-							// setCurrentVariable(findVariables(value.getValue()))
-							// console.log(currentLocation)
-							// console.log(currentVariable)
+
 						// console.log(findIndex(value.getValue()))
 						// highlight_variables(value)
 					}}

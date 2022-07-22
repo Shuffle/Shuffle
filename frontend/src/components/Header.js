@@ -522,7 +522,7 @@ const Header = (props) => {
       </List>
 			{!isLoaded ? null : 
 				userdata.chat_disabled === true ? null : 
-				<div style={{flex: 1, marginTop: 5,}}>
+				<div style={{flex: 1, }}>
 					<SearchField serverside={false} userdata={userdata} />
 				</div>
 			}
@@ -628,7 +628,7 @@ const Header = (props) => {
       </div>
 			{!isLoaded ? null : 
 				userdata.chat_disabled === true ? null : 
-				<div style={{flex: 1, marginTop: 5,}}>
+				<div style={{flex: 1, }}>
 					<SearchField serverside={false} userdata={userdata} />
 				</div>
 			}

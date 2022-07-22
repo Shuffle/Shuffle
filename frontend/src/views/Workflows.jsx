@@ -412,7 +412,6 @@ export const validateJson = (showResult) => {
       jsonvalid = false
     }
   } catch (e) {
-		console.log("Bug1: ", e)
     showResult = showResult.split("'").join('"');
 
     try {
@@ -420,7 +419,6 @@ export const validateJson = (showResult) => {
         jsonvalid = false;
       }
     } catch (e) {
-			console.log("Bug2: ", e)
 
       jsonvalid = false;
     }
@@ -430,7 +428,6 @@ export const validateJson = (showResult) => {
   try {
     result = jsonvalid ? JSON.parse(showResult, {"storeAsString": true}) : showResult;
   } catch (e) {
-		console.log("Bug3: ", e)
     ////console.log("Failed parsing JSON even though its valid: ", e)
     jsonvalid = false;
   }
@@ -448,7 +445,6 @@ export const validateJson = (showResult) => {
 			result = JSON.parse(newstr)
 			jsonvalid = true
 		} catch (e) {
-			console.log("Bug4: ", e)
 
 			//console.log("Failed parsing JSON even though its valid (2): ", e)
 			jsonvalid = false

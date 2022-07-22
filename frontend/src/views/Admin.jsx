@@ -3765,6 +3765,7 @@ const Admin = (props) => {
     uploadFiles(files);
   };
 
+
   const filesView =
     curTab === 3 ? (
       <Dropzone
@@ -3965,6 +3966,8 @@ const Admin = (props) => {
                     bgColor = "#1f2023";
                   }
 
+									const isDisabledButton = isCloud || file.filesize < 100000 && file.status === ("active") && allowedFileTypes.includes(file.filename.split(".")[1]) === true
+
                   return (
                     <ListItem
                       key={index}
@@ -4079,7 +4082,7 @@ const Admin = (props) => {
                           >
                             <span>
                               <IconButton
-                                disabled={isCloud || file.filesize < 100000 && file.status === ("active") && allowedFileTypes.includes(file.filename.split(".")[1]) === true ? false: true}
+                                disabled={isDisabledButton ? false : true}
                                 style = {{padding: "6px"}}
                                 onClick={() => {
                                   setOpenEditor(true)
@@ -4089,8 +4092,7 @@ const Admin = (props) => {
                               >
                                 <EditIcon
                                   style={{
-                                    color:
-                                    file.filesize < 100000 && file.status === ("active") && allowedFileTypes.includes(file.filename.split(".")[1]) === true 
+                                    color: isDisabledButton === true 
                                         ? "white"
                                         : "grey",
                                   }}

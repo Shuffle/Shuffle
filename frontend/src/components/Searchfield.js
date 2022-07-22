@@ -83,7 +83,7 @@ const SearchField = props => {
 			*/
 
 		return (
-		  <form id="search_form" noValidate type="searchbox" action="" role="search" onClick={() => {
+		  <form id="search_form" noValidate type="searchbox" action="" role="search" style={{margin: isCloud ? 10 : 0, }} onClick={() => {
 			}}>
 				<TextField 
 					fullWidth
@@ -202,7 +202,6 @@ const SearchField = props => {
 							const appGroup = hit.action_references === undefined || hit.action_references === null ? [] : hit.action_references
 							const avatar = baseImage
 
-							console.log("CLOUD: ", isCloud)
 							var parsedUrl = isCloud ? `/workflows/${hit.objectID}` : `https://shuffler.io/workflows/${hit.objectID}`
 							parsedUrl += `?queryID=${hit.__queryID}`
 
