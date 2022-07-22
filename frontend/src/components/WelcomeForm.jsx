@@ -598,11 +598,11 @@ const WelcomeForm = (props) => {
                         <Button onClick={handleReset}>Reset</Button>
                         <script>
                             setTimeout(function() {
-                            	navigate("/getting-started")
+                            	navigate("/workflows")
 														}, 5000);
                         </script>
                         <Button>
-													<Link style={{color: "#f86a3e", }} to="/getting-started" className="btn btn-primary">
+													<Link style={{color: "#f86a3e", }} to="/workflows" className="btn btn-primary">
 														Getting Started
 													</Link>
 												</Button>

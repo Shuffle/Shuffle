@@ -208,7 +208,7 @@ const SearchField = props => {
 
 							// <a rel="noopener noreferrer" href="https://www.algolia.com/" target="_blank" style={{textDecoration: "none", color: "white"}}>
 							return (
-								<Link key={hit.objectID} to={{ pathname: isCloud ? parsedUrl : `/workflows/${hit.objectID}` }} rel="noopener noreferrer" style={{textDecoration: "none", color: "white",}} onClick={(event) => {
+								<Link key={hit.objectID} to={{ pathname: parsedUrl }} rel="noopener noreferrer" style={{textDecoration: "none", color: "white",}} onClick={(event) => {
 									//console.log("CLICK")
 									setSearchOpen(true)
 
@@ -221,7 +221,7 @@ const SearchField = props => {
 									aa('sendEvents', [
 										{
 											eventType: 'click',
-											eventName: 'Product Clicked',
+											eventName: 'Workflow Clicked',
 											index: 'workflows',
 											objectIDs: [hit.objectID],
 											timestamp: timestamp,
@@ -400,7 +400,7 @@ const SearchField = props => {
 							parsedUrl += `?queryID=${hit.__queryID}`
 
 							return (
-								<Link key={hit.objectID} to={{ pathname: isCloud ? parsedUrl : `/apps/${hit.objectID}` }} style={{textDecoration: "none", color: "white",}} onClick={(event) => {
+								<Link key={hit.objectID} to={{ pathname: parsedUrl }} style={{textDecoration: "none", color: "white",}} onClick={(event) => {
 									console.log("CLICK")
 									setSearchOpen(true)
 
@@ -413,12 +413,13 @@ const SearchField = props => {
 									aa('sendEvents', [
 										{
 											eventType: 'click',
-											eventName: 'Product Clicked',
+											eventName: 'App Clicked',
 											index: 'appsearch',
 											objectIDs: [hit.objectID],
 											timestamp: timestamp,
 											queryID: hit.__queryID,
 											positions: [hit.__position],
+											userToken: userdata === undefined || userdata === null || userdata.id === undefined ? "unauthenticated" : userdata.id,
 										}
 									])
 
@@ -563,12 +564,13 @@ const SearchField = props => {
 								aa('sendEvents', [
 									{
 										eventType: 'click',
-										eventName: 'Product Clicked',
+										eventName: 'Document Clicked',
 										index: 'documentation',
 										objectIDs: [hit.objectID],
 										timestamp: timestamp,
 										queryID: hit.__queryID,
 										positions: [hit.__position],
+										userToken: userdata === undefined || userdata === null || userdata.id === undefined ? "unauthenticated" : userdata.id,
 									}
 								])
 
