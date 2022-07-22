@@ -58,7 +58,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           #,linux/386 - no node image I guess?
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.app }}:nightly
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/shuffle-${{ matrix.app }}:nightly
 
       #- name: Login to Ghcr 
       #  uses: docker/login-action@v2
