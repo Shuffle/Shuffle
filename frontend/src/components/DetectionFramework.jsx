@@ -616,6 +616,8 @@ const Framework = (props) => {
 		}
 
 	const setFrameworkItem = (data) => {
+		console.log("UPLOAD: ", data)
+
     fetch(globalUrl + "/api/v1/apps/frameworkConfiguration", {
       method: "POST",
       headers: {
@@ -669,7 +671,11 @@ const Framework = (props) => {
 			"type": discoveryData.id,
 			"name": newSelectedApp.name,
 			"id": newSelectedApp.objectID,
+			"large_image": newSelectedApp.image_url,
+			"description": newSelectedApp.description,
 		}
+
+		console.log("APP: ", newSelectedApp)
 
 		const foundelement = cy.getElementById(discoveryData.id)
 		if (foundelement !== undefined && foundelement !== null) {
